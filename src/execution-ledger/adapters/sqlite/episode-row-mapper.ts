@@ -124,6 +124,34 @@ export interface AppendCommandReceiptInput {
   readonly recorded_at: string;
 }
 
+export interface DecodedIssueProjectionRow {
+  readonly outboxId: string;
+  readonly episodeId: string;
+  readonly sourceEventSequence: number;
+  readonly operationKind: "create";
+  readonly objectKind: "issue";
+  readonly repository: string;
+  readonly targetLogicalKey: string;
+  readonly intentRevision: number;
+  readonly idempotencyKey: string;
+  readonly payloadVersion: 1;
+  readonly canonicalPayloadJson: string;
+  readonly payloadDigest: string;
+  readonly status: "pending" | "leased" | "deferred" | "acknowledged" | "blocked";
+  readonly attemptCount: number;
+  readonly nextAttemptAt: string;
+  readonly leaseOwner: string | null;
+  readonly leaseExpiresAt: string | null;
+  readonly ackObservationId: string | null;
+  readonly createdAt: string;
+  readonly lastAttemptAt: string | null;
+  readonly payload: unknown;
+}
+
+export interface DecodedAppendCommandReceipt extends AppendCommandReceiptInput {
+  readonly receipt_digest: string;
+}
+
 export function mapExecutionEpisodeEventToRow(
   event: PersistedExecutionEpisodeEvent | PersistableExecutionEpisodeEvent,
   custody: EpisodeWriteCustody,
@@ -233,6 +261,249 @@ export function mapAppendCommandReceiptToRow(
   receiptDigest: string,
 ): ExecutionEpisodeEventRow {
   return Object.freeze({ ...receipt, receipt_digest: receiptDigest });
+}
+
+export function decodeDriveSelectionRow(
+  row: ExecutionEpisodeEventRow,
+): DriveSelectionIntent | undefined {
+  const episodeId = requiredText(row, "episode_id");
+  const selectionRevision = safeInteger(row.selection_revision);
+  const selectedEventSequence = safeInteger(row.selected_event_sequence);
+  const model = requiredText(row, "model");
+  const compatibilityResult = requiredText(row, "compatibility_result");
+  const rationaleDigest = digestText(row, "rationale_digest");
+  const overrideUsed = safeInteger(row.override_used);
+  const overrideActor = nullableText(row, "override_actor");
+  const overrideReason = nullableText(row, "override_reason");
+  const overrideEvidenceDigest = nullableText(row, "override_evidence_digest");
+  const selectedAt = isoText(row, "selected_at");
+  const selectionDigest = digestText(row, "selection_digest");
+  if (
+    !episodeId ||
+    selectionRevision === undefined ||
+    selectedEventSequence !== 2 ||
+    !model ||
+    !DRIVE_MODELS.has(model) ||
+    (compatibilityResult !== "compatible" && compatibilityResult !== "override_required") ||
+    !rationaleDigest ||
+    (overrideUsed !== 0 && overrideUsed !== 1) ||
+    overrideActor === undefined ||
+    overrideReason === undefined ||
+    overrideEvidenceDigest === undefined ||
+    !selectedAt ||
+    !selectionDigest ||
+    (overrideUsed === 0 &&
+      (overrideActor !== null || overrideReason !== null || overrideEvidenceDigest !== null)) ||
+    (overrideUsed === 1 &&
+      (overrideActor === null || overrideReason === null || overrideEvidenceDigest === null ||
+        !/^[a-f0-9]{64}$/.test(overrideEvidenceDigest)))
+  )
+    return undefined;
+  const value = {
+    episodeId,
+    selectionRevision,
+    selectedEventSequence: 2 as const,
+    model: model as DriveSelectionIntent["model"],
+    compatibilityResult: compatibilityResult as DriveSelectionIntent["compatibilityResult"],
+    rationaleDigest,
+    overrideUsed: overrideUsed === 1,
+    overrideActor,
+    overrideReason,
+    overrideEvidenceDigest,
+    selectedAt,
+  };
+  if (sha256(canonicalizeExecutionPayload(value)) !== selectionDigest) return undefined;
+  return Object.freeze({ ...value, selectionDigest });
+}
+
+export function decodeIssueProjectionRow(
+  row: ExecutionEpisodeEventRow,
+): DecodedIssueProjectionRow | undefined {
+  const outboxId = requiredText(row, "outbox_id");
+  const episodeId = requiredText(row, "episode_id");
+  const sourceEventSequence = safeInteger(row.source_event_sequence);
+  const operationKind = requiredText(row, "operation_kind");
+  const objectKind = requiredText(row, "object_kind");
+  const repository = requiredText(row, "repository");
+  const targetLogicalKey = requiredText(row, "target_logical_key");
+  const intentRevision = safeInteger(row.intent_revision);
+  const idempotencyKey = digestText(row, "idempotency_key");
+  const payloadVersion = safeInteger(row.payload_version);
+  const canonicalPayloadJson = requiredText(row, "canonical_payload_json");
+  const payloadDigest = digestText(row, "payload_digest");
+  const status = requiredText(row, "status");
+  const attemptCount = safeInteger(row.attempt_count);
+  const nextAttemptAt = isoText(row, "next_attempt_at");
+  const leaseOwner = nullableText(row, "lease_owner");
+  const leaseExpiresAt = nullableText(row, "lease_expires_at");
+  const ackObservationId = nullableText(row, "ack_observation_id");
+  const createdAt = isoText(row, "created_at");
+  const lastAttemptAt = nullableText(row, "last_attempt_at");
+  if (
+    !outboxId ||
+    !episodeId ||
+    sourceEventSequence === undefined ||
+    sourceEventSequence < 0 ||
+    operationKind !== "create" ||
+    objectKind !== "issue" ||
+    !repository ||
+    !targetLogicalKey ||
+    intentRevision === undefined ||
+    !idempotencyKey ||
+    payloadVersion !== 1 ||
+    !canonicalPayloadJson ||
+    !payloadDigest ||
+    !status ||
+    !OUTBOX_STATUSES.has(status) ||
+    attemptCount === undefined ||
+    attemptCount < 0 ||
+    !nextAttemptAt ||
+    leaseOwner === undefined ||
+    leaseExpiresAt === undefined ||
+    ackObservationId === undefined ||
+    !createdAt ||
+    lastAttemptAt === undefined ||
+    outboxId !== deterministicOutboxId(idempotencyKey)
+  )
+    return undefined;
+  let payload: unknown;
+  try {
+    payload = JSON.parse(canonicalPayloadJson);
+  } catch {
+    return undefined;
+  }
+  if (
+    canonicalizeExecutionPayload(payload) !== canonicalPayloadJson ||
+    sha256(canonicalPayloadJson) !== payloadDigest
+  )
+    return undefined;
+  return Object.freeze({
+    outboxId,
+    episodeId,
+    sourceEventSequence,
+    operationKind: "create",
+    objectKind: "issue",
+    repository,
+    targetLogicalKey,
+    intentRevision,
+    idempotencyKey,
+    payloadVersion: 1,
+    canonicalPayloadJson,
+    payloadDigest,
+    status: status as DecodedIssueProjectionRow["status"],
+    attemptCount,
+    nextAttemptAt,
+    leaseOwner,
+    leaseExpiresAt,
+    ackObservationId,
+    createdAt,
+    lastAttemptAt,
+    payload,
+  });
+}
+
+export function decodeExecutionEpisodeProjectionRow(
+  row: ExecutionEpisodeEventRow,
+): ExecutionEpisodeProjection | undefined {
+  const episodeId = requiredText(row, "episode_id");
+  const eventSequence = safeInteger(row.current_event_sequence);
+  const state = requiredText(row, "current_state");
+  const lastEventDigest = digestText(row, "current_event_digest");
+  const blockReason = requiredText(row, "block_reason");
+  const actionsJson = requiredText(row, "next_legal_actions_json");
+  const latestHead = commitText(row, "latest_head");
+  const mergeReadiness = requiredText(row, "merge_readiness");
+  const driveModel = requiredText(row, "drive_model");
+  const reentryLayer = requiredText(row, "reentry_layer");
+  const rebuiltAt = isoText(row, "rebuilt_at");
+  if (
+    !episodeId ||
+    eventSequence === undefined ||
+    eventSequence < 0 ||
+    !state ||
+    !/^E(?:[0-9]|1[0-5])$/.test(state) ||
+    !lastEventDigest ||
+    !blockReason ||
+    !actionsJson ||
+    !latestHead ||
+    !mergeReadiness ||
+    !MERGE_READINESS.has(mergeReadiness) ||
+    !driveModel ||
+    !DRIVE_MODELS.has(driveModel) ||
+    !reentryLayer ||
+    !/^L(?:[0-9]|1[0-4])$/.test(reentryLayer) ||
+    !rebuiltAt
+  )
+    return undefined;
+  let actions: unknown;
+  try {
+    actions = JSON.parse(actionsJson);
+  } catch {
+    return undefined;
+  }
+  if (
+    !Array.isArray(actions) ||
+    actions.some((action) => typeof action !== "string") ||
+    canonicalizeExecutionPayload(actions) !== actionsJson
+  )
+    return undefined;
+  return Object.freeze({
+    episodeId,
+    state: state as ExecutionEpisodeProjection["state"],
+    eventSequence,
+    lastEventDigest,
+    nextLegalActions: Object.freeze(actions as string[]),
+    blockReason,
+    latestHead,
+    mergeReadiness: mergeReadiness as ExecutionEpisodeProjection["mergeReadiness"],
+    driveModel: driveModel as ExecutionEpisodeProjection["driveModel"],
+    reentryLayer: reentryLayer as ExecutionEpisodeProjection["reentryLayer"],
+    rebuiltAt,
+  });
+}
+
+export function decodeAppendCommandReceiptRow(
+  row: ExecutionEpisodeEventRow,
+): DecodedAppendCommandReceipt | undefined {
+  const commandId = requiredText(row, "command_id");
+  const commandType = requiredText(row, "command_type");
+  const subjectKind = requiredText(row, "subject_kind");
+  const subjectKey = requiredText(row, "subject_key");
+  const planAssetId = nullableText(row, "plan_asset_id");
+  const planRevision = nullableInteger(row, "plan_revision");
+  const commandPayloadDigest = digestText(row, "command_payload_digest");
+  const resultKind = requiredText(row, "result_kind");
+  const resultRef = requiredText(row, "result_ref");
+  const recordedAt = isoText(row, "recorded_at");
+  const receiptDigest = digestText(row, "receipt_digest");
+  if (
+    !commandId?.startsWith("command:") ||
+    !commandType?.startsWith("execution_episode.") ||
+    subjectKind !== "execution_episode" ||
+    !subjectKey ||
+    planAssetId !== null ||
+    planRevision !== null ||
+    !commandPayloadDigest ||
+    resultKind !== "episode_event" ||
+    !resultRef?.startsWith("event:") ||
+    !recordedAt ||
+    !receiptDigest ||
+    receiptDigest !== receiptRowDigest(row)
+  )
+    return undefined;
+  return Object.freeze({
+    command_id: commandId,
+    command_type: commandType,
+    subject_kind: "execution_episode",
+    subject_key: subjectKey,
+    plan_asset_id: null,
+    plan_revision: null,
+    command_payload_digest: commandPayloadDigest,
+    result_kind: "episode_event",
+    result_ref: resultRef,
+    recorded_at: recordedAt,
+    receipt_digest: receiptDigest,
+  });
 }
 
 export function rowValues(
@@ -355,6 +626,35 @@ function metadataMatches(
   });
 }
 
+const DRIVE_MODELS = new Set([
+  "discovery",
+  "scrum",
+  "reverse",
+  "redesign",
+  "recovery",
+  "incident",
+  "refactor",
+  "retrofit",
+  "add-feature",
+  "research",
+  "design-bottomup",
+  "version-up",
+]);
+
+const OUTBOX_STATUSES = new Set([
+  "pending",
+  "leased",
+  "deferred",
+  "acknowledged",
+  "blocked",
+]);
+
+const MERGE_READINESS = new Set(["blocked", "eligible", "merged", "closed"]);
+
+function deterministicOutboxId(idempotencyKey: string): string {
+  return `outbox:${sha256(`github-outbox-id:v1\0${idempotencyKey}`).slice(0, 32)}`;
+}
+
 function requiredPayloadText(payload: Record<string, unknown>, key: string): string {
   const value = payload[key];
   if (typeof value !== "string" || !value.trim()) throw new Error(`episode-payload-${key}-invalid`);
@@ -364,6 +664,25 @@ function requiredPayloadText(payload: Record<string, unknown>, key: string): str
 function requiredText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
   const value = row[key];
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function nullableText(row: ExecutionEpisodeEventRow, key: string): string | null | undefined {
+  const value = row[key];
+  if (value === null) return null;
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function nullableInteger(row: ExecutionEpisodeEventRow, key: string): number | null | undefined {
+  const value = row[key];
+  if (value === null) return null;
+  return safeInteger(value);
+}
+
+function isoText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
+  const value = requiredText(row, key);
+  if (!value) return undefined;
+  const time = Date.parse(value);
+  return Number.isFinite(time) && new Date(time).toISOString() === value ? value : undefined;
 }
 
 function digestText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
@@ -377,6 +696,8 @@ function commitText(row: ExecutionEpisodeEventRow, key: string): string | undefi
 }
 
 function safeInteger(value: unknown): number | undefined {
+  if (value === null || value === undefined || (typeof value === "string" && !value.trim()))
+    return undefined;
   const number = typeof value === "number" ? value : Number(value);
   return Number.isSafeInteger(number) ? number : undefined;
 }
@@ -389,4 +710,11 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function receiptRowDigest(row: ExecutionEpisodeEventRow): string {
+  const frame = Object.entries(row)
+    .filter(([key]) => key !== "receipt_digest")
+    .sort(([left], [right]) => Buffer.from(left).compare(Buffer.from(right)));
+  return sha256(JSON.stringify(frame));
 }

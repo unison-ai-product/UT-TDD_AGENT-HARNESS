@@ -11,7 +11,11 @@ import {
   EXECUTION_EPISODE_EVENT_COLUMNS,
   EXECUTION_EPISODE_PROJECTION_COLUMNS,
   GITHUB_PROJECTION_OUTBOX_COLUMNS,
+  decodeAppendCommandReceiptRow,
+  decodeDriveSelectionRow,
   decodeExecutionEpisodeEventRow,
+  decodeExecutionEpisodeProjectionRow,
+  decodeIssueProjectionRow,
   insertSql,
   mapAppendCommandReceiptToRow,
   mapDriveSelectionToRow,
@@ -145,7 +149,98 @@ describe("execution episode row mapper", () => {
       "INSERT INTO drive_model_selections (episode_id, selection_revision",
     );
   });
+
+  it("typed fromRow decoderはcanonical/digest/nullable/identityをfail-closeする", () => {
+    const selection = mapDriveSelectionToRow(selectionFixture());
+    const outbox = mapIssueProjectionToRow(outboxFixture());
+    const projection = mapExecutionEpisodeProjectionToRow(projectionFixture());
+    const receiptBase = {
+      command_id: "command:row-mapper",
+      command_type: "execution_episode.request_escape",
+      subject_kind: "execution_episode" as const,
+      subject_key: "episode:row-mapper",
+      plan_asset_id: null,
+      plan_revision: null,
+      command_payload_digest: COMMAND_DIGEST,
+      result_kind: "episode_event" as const,
+      result_ref: "event:row-mapper",
+      recorded_at: "2026-07-17T01:00:00.000Z",
+    };
+    const receipt = mapAppendCommandReceiptToRow(receiptBase, sha256(JSON.stringify(Object.entries(receiptBase).sort())));
+
+    expect(decodeDriveSelectionRow(selection)).toBeDefined();
+    expect(decodeIssueProjectionRow(outbox)).toBeDefined();
+    expect(decodeExecutionEpisodeProjectionRow(projection)).toBeDefined();
+    expect(decodeAppendCommandReceiptRow(receipt)).toBeDefined();
+    expect(decodeDriveSelectionRow({ ...selection, override_used: 2 })).toBeUndefined();
+    expect(decodeDriveSelectionRow({ ...selection, selection_digest: "0".repeat(64) })).toBeUndefined();
+    expect(decodeIssueProjectionRow({ ...outbox, status: "unknown" })).toBeUndefined();
+    expect(decodeIssueProjectionRow({ ...outbox, outbox_id: "outbox:wrong" })).toBeUndefined();
+    expect(decodeExecutionEpisodeProjectionRow({ ...projection, next_legal_actions_json: "not-json" })).toBeUndefined();
+    expect(decodeAppendCommandReceiptRow({ ...receipt, receipt_digest: "0".repeat(64) })).toBeUndefined();
+  });
 });
+
+function selectionFixture(): DriveSelectionIntent {
+  const value = {
+    episodeId: "episode:row-mapper",
+    selectionRevision: 1,
+    selectedEventSequence: 2 as const,
+    model: "recovery" as const,
+    compatibilityResult: "compatible" as const,
+    rationaleDigest: "b".repeat(64),
+    overrideUsed: false,
+    overrideActor: null,
+    overrideReason: null,
+    overrideEvidenceDigest: null,
+    selectedAt: "2026-07-17T01:00:00.000Z",
+  };
+  return { ...value, selectionDigest: sha256(canonicalizeExecutionPayload(value)) };
+}
+
+function outboxFixture(): IssueProjectionIntent {
+  const payload = {
+    schema: "github.issue.intent.v1",
+    episodeId: "episode:row-mapper",
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+  };
+  const canonicalPayloadJson = canonicalizeExecutionPayload(payload);
+  const idempotencyKey = "d".repeat(64);
+  return {
+    outboxId: `outbox:${sha256(`github-outbox-id:v1\0${idempotencyKey}`).slice(0, 32)}`,
+    episodeId: "episode:row-mapper",
+    sourceEventSequence: 3,
+    operationKind: "create",
+    objectKind: "issue",
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    targetLogicalKey: "episode:row-mapper:issue",
+    intentRevision: 1,
+    idempotencyKey,
+    payloadVersion: 1,
+    canonicalPayloadJson,
+    payloadDigest: sha256(canonicalPayloadJson),
+    status: "pending",
+    attemptCount: 0,
+    nextAttemptAt: "2026-07-17T01:00:00.000Z",
+    createdAt: "2026-07-17T01:00:00.000Z",
+  };
+}
+
+function projectionFixture(): ExecutionEpisodeProjection {
+  return {
+    episodeId: "episode:row-mapper",
+    state: "E3",
+    eventSequence: 3,
+    lastEventDigest: "f".repeat(64),
+    nextLegalActions: ["confirm_issue_projection"],
+    blockReason: "issue_projection_pending",
+    latestHead: SHA,
+    mergeReadiness: "blocked",
+    driveModel: "recovery",
+    reentryLayer: "L7",
+    rebuiltAt: "2026-07-17T01:00:00.000Z",
+  };
+}
 
 function fixtureEvent(): PersistedExecutionEpisodeEvent {
   const payload = Object.freeze({
