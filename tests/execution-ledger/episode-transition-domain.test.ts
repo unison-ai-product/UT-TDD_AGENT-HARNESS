@@ -12,6 +12,30 @@ const SHA = "a".repeat(40);
 const DIGEST = "b".repeat(64);
 
 describe("Execution Episode E1-E3 domain decisions (PLAN-L7-436)", () => {
+  it("U-EXEP-003: E3からIssue投影確認E4を証拠付きで受理する", () => {
+    const decision = decideExecutionTransition(eventsThroughE3(), {
+      type: "confirm_issue_projection",
+      commandId: "command:recovery-70:e4",
+      episodeId: "episode:recovery-70",
+      expectedSequence: 4,
+      sourceCommit: SHA,
+      observedHead: SHA,
+      policyRevision: "policy:escape-v1",
+      actor: "codex",
+      occurredAt: "2026-07-16T08:34:00.000Z",
+      evidence: {
+        externalIssueId: "123",
+        externalIssueUrl: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/123",
+        remoteVersion: "etag:issue-123-v1",
+        projectionDigest: DIGEST,
+      },
+    } as never);
+    expect(decision).toMatchObject({
+      ok: true,
+      events: [{ sequence: 4, state: "E4", kind: "issue_projected" }],
+    });
+  });
+
   it("U-EXEP-003: E1分類→E2駆動選択→E3 Issue intentを唯一遷移表どおり生成する", () => {
     const e0 = initialEvents();
     const e1 = decideExecutionTransition(e0, classify());
@@ -189,6 +213,13 @@ function eventsThroughE2() {
   const e2 = decideExecutionTransition(e1, selectDrive());
   if (!e2.ok) throw new Error("E2 fixture must pass");
   return [...e1, ...e2.events];
+}
+
+function eventsThroughE3() {
+  const e2 = eventsThroughE2();
+  const e3 = decideExecutionTransition(e2, requestIssue());
+  if (!e3.ok) throw new Error("E3 fixture must pass");
+  return [...e2, ...e3.events];
 }
 
 function envelope<const TSequence extends 1 | 2 | 3>(sequence: TSequence) {
