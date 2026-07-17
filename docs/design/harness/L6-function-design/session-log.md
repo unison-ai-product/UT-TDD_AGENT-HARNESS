@@ -114,7 +114,7 @@ compressPlanDigest(events, planId, prev):
 - 圧縮: `.ut-tdd/logs/plan/<plan_id>.digest.json` (gitignored、durable)
 - hook 実体: `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (bun, 環境非依存)。**variant 分岐 = stdin JSON の `hook_event_name` を正 (SessionStart / PostToolUse / Stop) とし、CLI command (`session start` / `hook post-tool-use` / `session summary`) を fallback** に持つ (m-2)。settings.json は 3 event に対応する UT-TDD CLI command を登録し、Claude Code が渡す `hook_event_name` で handler を選ぶ。
 - `.gitignore` に `.ut-tdd/logs/` を追加。
-- `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash)` / `Stop` に登録。**`blockOnFailure` を付けない (fail-open)**。
+- `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)` / `Stop` に登録。**`blockOnFailure` を付けない (fail-open)**。Windows ネイティブ Claude Code の主シェルツール `PowerShell` を matcher に含める (PLAN-RECOVERY-13 / issue #86: 除外時は Windows セッションのシェル操作が session log / hook_events から構造的に欠落する)。
 
 ## §6 fail-open 設計 (agent-guard fail-close との対比)
 

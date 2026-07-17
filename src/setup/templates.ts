@@ -399,7 +399,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "    ],",
     '    "PostToolUse": [',
     "      {",
-    '        "matcher": "Edit|Write|MultiEdit|Bash",',
+    '        "matcher": "Edit|Write|MultiEdit|Bash|PowerShell",',
     '        "hooks": [',
     "          {",
     '            "type": "command",',

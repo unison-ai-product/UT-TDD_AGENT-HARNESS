@@ -62,8 +62,10 @@ export interface RuntimeSkillInvocationProjectionInput {
 }
 
 function verificationVerbFromSessionTarget(event: RuntimeSessionLogProjection): string | null {
-  if (event.event_type !== "tool_use" || event.tool !== "Bash") return null;
-  const match = String(event.target ?? "").match(/^Bash \(([^)]+)\)$/);
+  if (event.event_type !== "tool_use" || !["Bash", "PowerShell"].includes(event.tool ?? "")) {
+    return null;
+  }
+  const match = String(event.target ?? "").match(/^(?:Bash|PowerShell) \(([^)]+)\)$/);
   if (!match) return null;
   const verb = match[1];
   return ["doctor", "eslint", "lint", "test", "tsc", "vitest"].includes(verb) ? verb : null;
@@ -75,6 +77,7 @@ export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProje
   const verb = verificationVerbFromSessionTarget(event);
   if (!verb) return;
   const planId = deps.resolvePlanId(event.plan_id);
+  const shell = event.tool === "PowerShell" ? "powershell" : "bash";
   const status = event.outcome === "error" ? "failed" : "passed";
   const testRunId = deps.stableId(
     "test-run-runtime",
@@ -87,11 +90,11 @@ export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProje
       test_run_id: testRunId,
       session_id: event.session_id,
       plan_id: planId,
-      command: event.target ?? `Bash (${verb})`,
+      command: event.target ?? `${event.tool} (${verb})`,
       runner: verb === "doctor" ? "ut-tdd" : "bun",
       runtime: "hook-session-log",
       os: "",
-      shell: "bash",
+      shell,
       scope: "runtime-hook",
       started_at: event.ts,
       completed_at: event.ts,

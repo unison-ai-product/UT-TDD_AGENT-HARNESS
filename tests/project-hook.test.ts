@@ -30,7 +30,7 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
       ],
       PostToolUse: [
         {
-          matcher: "Edit|Write|MultiEdit|Bash",
+          matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
           hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use' }],
         },
       ],
