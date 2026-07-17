@@ -105,7 +105,7 @@ export interface ExecutionEpisodeTransition {
 interface ExecutionTransitionEnvelope {
   readonly commandId: string;
   readonly episodeId: string;
-  readonly expectedSequence: 1 | 2 | 3;
+  readonly expectedSequence: ExecutionEpisodeSequence;
   readonly sourceCommit: string;
   readonly observedHead: string;
   readonly policyRevision: string;
@@ -148,10 +148,199 @@ export interface RequestIssueProjectionCommand extends ExecutionTransitionEnvelo
   readonly labels: readonly string[];
 }
 
+export type ExecutionEpisodeSequence = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+
+export interface IssueProjectionEvidence {
+  readonly externalIssueId: string;
+  readonly externalIssueUrl: string;
+  readonly remoteVersion: string;
+  readonly projectionDigest: string;
+}
+
+export interface DrivePlanFreezeEvidence {
+  readonly planAssetId: string;
+  readonly planRevision: number;
+  readonly vPairObligationsDigest: string;
+  readonly branch: string;
+  readonly baseSha: string;
+}
+
+export interface DriveVerificationEvidence {
+  readonly profile: string;
+  readonly testedCommit: string;
+  readonly evidenceDigest: string;
+  readonly verdict: "green";
+}
+
+export interface ReentryProposalEvidence {
+  readonly targetAssetId: string;
+  readonly targetRevision: number;
+  readonly targetLayer: ForwardLayer;
+  readonly targetState: string;
+  readonly rationaleDigest: string;
+}
+
+export interface IntermediateTestEvidence {
+  readonly profile: string;
+  readonly command: string;
+  readonly runner: string;
+  readonly exitCode: 0;
+  readonly evidenceDigest: string;
+  readonly testedCommit: string;
+}
+
+export interface ReentryCertificateEvidence {
+  readonly certificateId: string;
+  readonly certificateDigest: string;
+  readonly driveVerificationDigest: string;
+  readonly intermediateEvidenceDigest: string;
+  readonly originRevision: number;
+  readonly targetRevision: number;
+  readonly sourceCommit: string;
+  readonly observedHead: string;
+  readonly policyRevision: string;
+}
+
+export interface ForwardReentryEvidence {
+  readonly certificateId: string;
+  readonly certificateDigest: string;
+  readonly acceptedPlanAssetId: string;
+  readonly acceptedPlanRevision: number;
+  readonly resumeLayer: ForwardLayer;
+  readonly resumeState: string;
+}
+
+export interface PostReentryTestEvidence extends IntermediateTestEvidence {}
+
+export interface DraftPrProjectionEvidence {
+  readonly prNumber: number;
+  readonly prNodeId: string;
+  readonly baseSha: string;
+  readonly headSha: string;
+  readonly issueNumber: number;
+  readonly planAssetId: string;
+  readonly planRevision: number;
+  readonly projectionDigest: string;
+}
+
+export interface CrossReviewEvidence {
+  readonly reviewerRuntime: string;
+  readonly reviewerModel: string;
+  readonly authorRuntime: string;
+  readonly authorModel: string;
+  readonly verdict: "pass";
+  readonly reviewDigest: string;
+  readonly reviewedHead: string;
+}
+
+export interface MergeEvidence {
+  readonly mergeSha: string;
+  readonly baseSha: string;
+  readonly requiredChecksDigest: string;
+  readonly reconciledHead: string;
+  readonly remoteObservationId: string;
+}
+
+export interface ClosureEvidence {
+  readonly mainCiRunId: string;
+  readonly mainCiCommit: string;
+  readonly issueCloseObservationId: string;
+  readonly outcome: string;
+  readonly learningDigest: string;
+  readonly upstreamAction: string;
+}
+
+export interface ConfirmIssueProjectionCommand extends ExecutionTransitionEnvelope {
+  readonly type: "confirm_issue_projection";
+  readonly expectedSequence: 4;
+  readonly evidence: IssueProjectionEvidence;
+}
+
+export interface FreezeDrivePlanCommand extends ExecutionTransitionEnvelope {
+  readonly type: "freeze_drive_plan";
+  readonly expectedSequence: 5;
+  readonly evidence: DrivePlanFreezeEvidence;
+}
+
+export interface RecordDriveVerificationCommand extends ExecutionTransitionEnvelope {
+  readonly type: "record_drive_verification";
+  readonly expectedSequence: 6;
+  readonly evidence: DriveVerificationEvidence;
+}
+
+export interface ProposeReentryCommand extends ExecutionTransitionEnvelope {
+  readonly type: "propose_reentry";
+  readonly expectedSequence: 7;
+  readonly evidence: ReentryProposalEvidence;
+}
+
+export interface RecordForwardIntermediateTestCommand extends ExecutionTransitionEnvelope {
+  readonly type: "record_forward_intermediate_test";
+  readonly expectedSequence: 8;
+  readonly evidence: IntermediateTestEvidence;
+}
+
+export interface IssueReentryCertificateCommand extends ExecutionTransitionEnvelope {
+  readonly type: "issue_reentry_certificate";
+  readonly expectedSequence: 9;
+  readonly evidence: ReentryCertificateEvidence;
+}
+
+export interface ReenterForwardCommand extends ExecutionTransitionEnvelope {
+  readonly type: "reenter_forward";
+  readonly expectedSequence: 10;
+  readonly evidence: ForwardReentryEvidence;
+}
+
+export interface RecordPostReentryTestCommand extends ExecutionTransitionEnvelope {
+  readonly type: "record_post_reentry_test";
+  readonly expectedSequence: 11;
+  readonly evidence: PostReentryTestEvidence;
+}
+
+export interface ConfirmDraftPrProjectionCommand extends ExecutionTransitionEnvelope {
+  readonly type: "confirm_draft_pr_projection";
+  readonly expectedSequence: 12;
+  readonly evidence: DraftPrProjectionEvidence;
+}
+
+export interface AcceptCrossReviewCommand extends ExecutionTransitionEnvelope {
+  readonly type: "accept_cross_review";
+  readonly expectedSequence: 13;
+  readonly evidence: CrossReviewEvidence;
+}
+
+export interface ConfirmMergeCommand extends ExecutionTransitionEnvelope {
+  readonly type: "confirm_merge";
+  readonly expectedSequence: 14;
+  readonly evidence: MergeEvidence;
+}
+
+export interface CloseEpisodeCommand extends ExecutionTransitionEnvelope {
+  readonly type: "close_episode";
+  readonly expectedSequence: 15;
+  readonly evidence: ClosureEvidence;
+}
+
+export type ExecutionEvidenceCommand =
+  | ConfirmIssueProjectionCommand
+  | FreezeDrivePlanCommand
+  | RecordDriveVerificationCommand
+  | ProposeReentryCommand
+  | RecordForwardIntermediateTestCommand
+  | IssueReentryCertificateCommand
+  | ReenterForwardCommand
+  | RecordPostReentryTestCommand
+  | ConfirmDraftPrProjectionCommand
+  | AcceptCrossReviewCommand
+  | ConfirmMergeCommand
+  | CloseEpisodeCommand;
+
 export type ExecutionTransitionCommand =
   | ClassifyEscapeCommand
   | SelectDriveModelCommand
-  | RequestIssueProjectionCommand;
+  | RequestIssueProjectionCommand
+  | ExecutionEvidenceCommand;
 
 export interface ExecutionTransitionEvent extends ExecutionEpisodeEvent {
   readonly eventId: string;
@@ -631,8 +820,8 @@ function validateTransitionCustody(
     return transitionFailure("episode-time-regression", "occurredAt");
   if (
     command.sourceCommit !== root.sourceCommit ||
-      command.observedHead !== root.observedHead ||
-      command.policyRevision !== root.policyRevision
+    command.policyRevision !== root.policyRevision ||
+    (command.expectedSequence <= 3 && command.observedHead !== root.observedHead)
   )
     return transitionFailure("episode-custody-continuity-invalid", "command");
   return undefined;
@@ -695,6 +884,143 @@ function validateSpecificTransition(
     )
       return transitionFailure("episode-issue-projection-invalid", "intent");
   }
+  if ("evidence" in command) return validateEvidenceTransition(root, command);
+  return undefined;
+}
+
+function validateEvidenceTransition(
+  root: EscapeObservedPayload,
+  command: ExecutionEvidenceCommand,
+): ExecutionTransitionDecision | undefined {
+  const evidence = command.evidence as unknown as Record<string, unknown>;
+  const text = (key: string): string =>
+    typeof evidence[key] === "string" ? (evidence[key] as string) : "";
+  const positive = (key: string): boolean =>
+    Number.isSafeInteger(evidence[key]) && Number(evidence[key]) > 0;
+  const digestValue = (key: string): boolean => validDigest(text(key));
+  const commitValue = (key: string): boolean => validCommit(text(key));
+  const requiredText = (keys: readonly string[]): boolean =>
+    keys.every((key) => text(key).trim().length > 0);
+
+  if (command.type === "confirm_issue_projection") {
+    if (
+      !requiredText(["externalIssueId", "externalIssueUrl", "remoteVersion"]) ||
+      !digestValue("projectionDigest")
+    )
+      return transitionFailure("episode-issue-projection-evidence-invalid", "evidence");
+  }
+  if (command.type === "freeze_drive_plan") {
+    if (
+      !requiredText(["planAssetId", "branch"]) ||
+      !positive("planRevision") ||
+      !digestValue("vPairObligationsDigest") ||
+      !commitValue("baseSha")
+    )
+      return transitionFailure("episode-drive-plan-evidence-invalid", "evidence");
+  }
+  if (command.type === "record_drive_verification") {
+    if (
+      !requiredText(["profile", "testedCommit"]) ||
+      !commitValue("testedCommit") ||
+      !digestValue("evidenceDigest") ||
+      evidence.verdict !== "green"
+    )
+      return transitionFailure("episode-drive-verification-evidence-invalid", "evidence");
+  }
+  if (command.type === "propose_reentry") {
+    if (
+      !requiredText(["targetAssetId", "targetLayer", "targetState"]) ||
+      !positive("targetRevision") ||
+      !validLayer(text("targetLayer")) ||
+      !digestValue("rationaleDigest") ||
+      !root.reentry ||
+      text("targetAssetId") !== root.reentry.assetId ||
+      Number(evidence.targetRevision) !== root.reentry.revision
+    )
+      return transitionFailure("episode-reentry-proposal-invalid", "evidence");
+  }
+  if (command.type === "record_forward_intermediate_test" || command.type === "record_post_reentry_test") {
+    if (
+      !requiredText(["profile", "command", "runner", "testedCommit"]) ||
+      !commitValue("testedCommit") ||
+      !digestValue("evidenceDigest") ||
+      evidence.exitCode !== 0
+    )
+      return transitionFailure("episode-test-evidence-invalid", "evidence");
+  }
+  if (command.type === "issue_reentry_certificate") {
+    if (
+      !requiredText(["certificateId", "sourceCommit", "observedHead", "policyRevision"]) ||
+      !digestValue("certificateDigest") ||
+      !digestValue("driveVerificationDigest") ||
+      !digestValue("intermediateEvidenceDigest") ||
+      !positive("originRevision") ||
+      !positive("targetRevision") ||
+      !commitValue("sourceCommit") ||
+      !commitValue("observedHead") ||
+      text("sourceCommit") !== root.sourceCommit ||
+      text("policyRevision") !== root.policyRevision ||
+      Number(evidence.originRevision) !== root.origin.revision ||
+      Number(evidence.targetRevision) !== root.reentry?.revision
+    )
+      return transitionFailure("episode-reentry-certificate-invalid", "evidence");
+  }
+  if (command.type === "reenter_forward") {
+    if (
+      !requiredText(["certificateId", "certificateDigest", "acceptedPlanAssetId", "resumeLayer", "resumeState"]) ||
+      !positive("acceptedPlanRevision") ||
+      !validLayer(text("resumeLayer")) ||
+      !digestValue("certificateDigest") ||
+      !root.reentry ||
+      text("acceptedPlanAssetId") !== root.reentry.assetId ||
+      Number(evidence.acceptedPlanRevision) !== root.reentry.revision
+    )
+      return transitionFailure("episode-forward-reentry-invalid", "evidence");
+  }
+  if (command.type === "confirm_draft_pr_projection") {
+    if (
+      !positive("prNumber") ||
+      !requiredText(["prNodeId", "baseSha", "headSha", "planAssetId"]) ||
+      !positive("issueNumber") ||
+      !positive("planRevision") ||
+      !commitValue("baseSha") ||
+      !commitValue("headSha") ||
+      !digestValue("projectionDigest")
+    )
+      return transitionFailure("episode-draft-pr-evidence-invalid", "evidence");
+  }
+  if (command.type === "accept_cross_review") {
+    if (
+      !requiredText(["reviewerRuntime", "reviewerModel", "authorRuntime", "authorModel", "reviewedHead"]) ||
+      evidence.verdict !== "pass" ||
+      !digestValue("reviewDigest") ||
+      !commitValue("reviewedHead") ||
+      (text("reviewerRuntime") === text("authorRuntime") &&
+        text("reviewerModel") === text("authorModel")) ||
+      text("reviewedHead") !== command.observedHead
+    )
+      return transitionFailure("episode-cross-review-evidence-invalid", "evidence");
+  }
+  if (command.type === "confirm_merge") {
+    if (
+      !requiredText(["mergeSha", "baseSha", "reconciledHead", "remoteObservationId"]) ||
+      !commitValue("mergeSha") ||
+      !commitValue("baseSha") ||
+      !commitValue("reconciledHead") ||
+      !digestValue("requiredChecksDigest") ||
+      text("reconciledHead") !== command.observedHead
+    )
+      return transitionFailure("episode-merge-evidence-invalid", "evidence");
+  }
+  if (command.type === "close_episode") {
+    if (
+      !requiredText(["mainCiRunId", "mainCiCommit", "issueCloseObservationId", "outcome", "upstreamAction"]) ||
+      !commitValue("mainCiCommit") ||
+      !digestValue("learningDigest") ||
+      text("mainCiCommit") !== command.observedHead
+    )
+      return transitionFailure("episode-closure-evidence-invalid", "evidence");
+  }
   return undefined;
 }
 
@@ -724,6 +1050,11 @@ function transitionPayload(
       rationaleDigest: command.rationaleDigest,
       selectionRevision: command.selectionRevision,
       override: command.override ? { ...command.override } : undefined,
+    };
+  if (command.type !== "request_issue_projection")
+    return {
+      ...common,
+      evidence: { ...command.evidence },
     };
   const projection = issueProjectionPayload(root, command);
   const projectionPayloadDigest = digest(canonical(projection));
@@ -875,6 +1206,14 @@ function digest(value: string): string {
 
 function validDigest(value: string): boolean {
   return /^(?:sha256:)?[a-f0-9]{64}$/.test(value);
+}
+
+function validCommit(value: string): boolean {
+  return /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value);
+}
+
+function validLayer(value: string): boolean {
+  return /^L(?:[0-9]|1[0-4])$/.test(value);
 }
 
 function rule(ruleId: string, path: string): EpisodeViolation {
