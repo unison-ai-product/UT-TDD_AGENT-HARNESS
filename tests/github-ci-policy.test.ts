@@ -10,7 +10,7 @@ import {
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy";
 
-const SOURCE_WORKFLOW = `
+const SOURCE_LEG_WORKFLOW = `
 name: harness-check
 on:
   push:
@@ -60,6 +60,32 @@ jobs:
       - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
+const SOURCE_WORKFLOW = SOURCE_LEG_WORKFLOW.replace(
+  "jobs:\n  harness-check:",
+  `jobs:
+  harness-check-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run lint
+  harness-check-aggregate:
+    name: harness-check-aggregate
+    needs: [harness-check, harness-check-windows]
+    if: \${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Linux and Windows success
+        run: |
+          if [ "\${{ needs.harness-check.result }}" != "success" ] || [ "\${{ needs.harness-check-windows.result }}" != "success" ]; then
+            exit 1
+          fi
+  harness-check:`,
+);
+
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
     {
@@ -90,6 +116,77 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
 }
 
 describe("github-ci-policy lint", () => {
+  it("U-CIPOL-013: accepts Linux and Windows runtime legs behind one final aggregate gate", () => {
+    const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW));
+
+    expect(result.ok).toBe(true);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("U-CIPOL-014: rejects a runtime workflow without the Windows leg or final aggregate gate", () => {
+    const result = analyzeGithubCiPolicy(docs(SOURCE_LEG_WORKFLOW));
+
+    expect(result.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_runtime_leg",
+      detail: "jobs.harness-check-windows",
+    });
+    expect(result.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_aggregate_gate",
+      detail: "jobs.harness-check-aggregate",
+    });
+  });
+
+  it("U-CIPOL-015: requires the aggregate gate to depend on both runtime legs", () => {
+    for (const missing of ["harness-check", "harness-check-windows"] as const) {
+      const remaining = missing === "harness-check" ? "harness-check-windows" : "harness-check";
+      const workflow = SOURCE_WORKFLOW.replace(
+        "needs: [harness-check, harness-check-windows]",
+        `needs: [${remaining}]`,
+      );
+      const result = analyzeGithubCiPolicy(docs(workflow));
+
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "invalid_aggregate_needs",
+        detail: `harness-check-aggregate.needs must equal harness-check,harness-check-windows (missing=${missing})`,
+      });
+    }
+  });
+
+  it("U-CIPOL-016: requires always() so a failed runtime leg reaches the aggregate verdict", () => {
+    const workflow = SOURCE_WORKFLOW.replace("    if: \${{ always() }}\n", "");
+    const result = analyzeGithubCiPolicy(docs(workflow));
+
+    expect(result.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_aggregate_always",
+      detail: "harness-check-aggregate.if must equal ${{ always() }}",
+    });
+  });
+
+  it("U-CIPOL-017: requires explicit success guards for both runtime results", () => {
+    for (const missing of ["harness-check", "harness-check-windows"] as const) {
+      const workflow = SOURCE_WORKFLOW.replace(
+        `\${{ needs.${missing}.result }}`,
+        "success",
+      );
+      const result = analyzeGithubCiPolicy(docs(workflow));
+
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_aggregate_result_guard",
+        detail: `aggregate verdict must require needs.${missing}.result == success`,
+      });
+    }
+  });
+
   it("U-CIPOL-001: accepts universal source and Pack harness-check workflows", () => {
     const result = analyzeGithubCiPolicy(docs());
 
