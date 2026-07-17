@@ -79,17 +79,17 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
     const event = decision.events[0];
 
     return this.transaction.run(() => {
+      if (!executionLedgerRowsValid(this.db))
+        return {
+          commit: false,
+          value: failed("episode-ledger-integrity-invalid", "ledger"),
+        };
       const receipt = this.db
         .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
         .get(command.commandId);
       if (receipt) {
         if (receipt.command_payload_digest !== event.commandPayloadDigest)
           return { commit: false, value: failed("episode-command-payload-conflict", "commandId") };
-        if (!executionLedgerRowsValid(this.db))
-          return {
-            commit: false,
-            value: failed("episode-ledger-integrity-invalid", "ledger"),
-          };
         return { commit: true, value: this.replay(String(receipt.result_ref)) };
       }
       if (
@@ -127,17 +127,17 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
     if (!custody.runtime.trim() || !custody.model.trim())
       return failed("episode-custody-invalid", "custody");
     return this.transaction.run(() => {
+      if (!executionLedgerRowsValid(this.db))
+        return {
+          commit: false,
+          value: failed("episode-ledger-integrity-invalid", "ledger"),
+        };
       const receipt = this.db
         .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
         .get(command.commandId);
       if (receipt) {
         if (receipt.command_payload_digest !== executionCommandPayloadDigest(command))
           return { commit: false, value: failed("episode-command-payload-conflict", "commandId") };
-        if (!executionLedgerRowsValid(this.db))
-          return {
-            commit: false,
-            value: failed("episode-ledger-integrity-invalid", "ledger"),
-          };
         return {
           commit: true,
           value: this.replayTransition(String(receipt.result_ref), command.episodeId),
@@ -279,6 +279,8 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
         WHERE episode_id = ?`,
       )
       .run(...rowValues(updateColumns, row), projection.episodeId);
+    const changed = Number(this.db.prepare("SELECT changes() AS count").get()?.count ?? 0);
+    if (changed !== 1) throw new Error("projection:not-found");
   }
 
   private insertTransitionReceipt(
@@ -335,7 +337,7 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
     if (!row) return failed("episode-ledger-integrity-invalid", "receipt.result_ref");
     const sequence = Number(row.event_sequence);
     const event = history[sequence];
-    const reduction = reduceExecutionEpisode(history);
+    const reduction = reduceExecutionEpisode(history.slice(0, sequence + 1));
     if (!event || !reduction.ok)
       return failed("episode-ledger-integrity-invalid", "receipt.result_ref");
     const transition = EXECUTION_EPISODE_TRANSITIONS[sequence];

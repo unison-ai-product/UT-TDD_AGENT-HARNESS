@@ -217,6 +217,61 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
     });
   });
 
+  it("U-EXEP-005: 後続event追記後もE1 replayは当時のsnapshotを再現する", () => {
+    withLedger((db) => {
+      const repository = new SqliteExecutionEpisodeRepository(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+      const created = repository.transition(classify(), CUSTODY);
+      expect(repository.transition(selectDrive(), CUSTODY)).toMatchObject({ ok: true });
+      expect(repository.transition(requestIssue(), CUSTODY)).toMatchObject({ ok: true });
+      const before = ledgerRows(db);
+
+      expect(repository.transition(classify(), CUSTODY)).toMatchObject({
+        ok: true,
+        status: "replayed",
+        eventIds: created.ok ? created.eventIds : [],
+        snapshot: {
+          state: "E1",
+          eventSequence: 1,
+          nextLegalCommands: ["select_drive_model"],
+        },
+      });
+      expect(ledgerRows(db)).toEqual(before);
+    });
+  });
+
+  it("U-EXEP-006: 新規transition前に既存台帳改変をfail-closeしwrite 0に保つ", () => {
+    withLedger((db) => {
+      const repository = new SqliteExecutionEpisodeRepository(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+      db.prepare("DELETE FROM execution_episode_projection").run();
+      const before = ledgerRows(db);
+
+      expect(repository.transition(classify(), CUSTODY)).toMatchObject({
+        ok: false,
+        violations: [{ ruleId: "episode-ledger-integrity-invalid", path: "ledger" }],
+      });
+      expect(ledgerRows(db)).toEqual(before);
+    });
+  });
+
+  it("U-EXEP-008: projection UPDATE対象消失を検出しtransition全体をrollbackする", () => {
+    withLedger((db) => {
+      const setupRepository = new SqliteExecutionEpisodeRepository(db);
+      expect(setupRepository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+      const before = ledgerRows(db);
+      const repository = new SqliteExecutionEpisodeRepository(db, undefined, {
+        after(boundary) {
+          if (boundary === "episode-event")
+            db.prepare("DELETE FROM execution_episode_projection").run();
+        },
+      });
+
+      expect(() => repository.transition(classify(), CUSTODY)).toThrow("projection:not-found");
+      expect(ledgerRows(db)).toEqual(before);
+    });
+  });
+
   it("U-EXEP-006: E1追記後もE0 receipt replayを正規台帳として受理する", () => {
     withLedger((db) => {
       const repository = new SqliteExecutionEpisodeRepository(db);
