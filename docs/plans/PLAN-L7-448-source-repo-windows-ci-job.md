@@ -24,7 +24,8 @@ generates:
     artifact_type: config
 dependencies:
   parent: null
-  requires: []
+  requires:
+    - docs/plans/PLAN-REVERSE-448-source-repo-windows-ci-job-backfill.md
   references:
     - .github/workflows/harness-check.yml
     - docs/plans/PLAN-L7-235-pack-windows-ci-job.md
