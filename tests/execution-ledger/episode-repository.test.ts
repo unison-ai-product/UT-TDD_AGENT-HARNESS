@@ -85,6 +85,45 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
     },
   );
 
+  it.each([
+    { state: "E1", boundary: "episode-event" },
+    { state: "E1", boundary: "episode-projection" },
+    { state: "E1", boundary: "receipt" },
+    { state: "E2", boundary: "episode-event" },
+    { state: "E2", boundary: "drive-selection" },
+    { state: "E2", boundary: "episode-projection" },
+    { state: "E2", boundary: "receipt" },
+    { state: "E3", boundary: "episode-event" },
+    { state: "E3", boundary: "outbox-intent" },
+    { state: "E3", boundary: "episode-projection" },
+    { state: "E3", boundary: "receipt" },
+  ] as const)(
+    "U-EXEP-008: $state遷移の$boundary faultで全台帳rowを直前snapshotへrollbackする",
+    ({ state, boundary }) => {
+      withLedger((db) => {
+        const setupRepository = new SqliteExecutionEpisodeRepository(db);
+        expect(setupRepository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+        if (state === "E2" || state === "E3") {
+          expect(setupRepository.transition(classify(), CUSTODY)).toMatchObject({ ok: true });
+        }
+        if (state === "E3") {
+          expect(setupRepository.transition(selectDrive(), CUSTODY)).toMatchObject({ ok: true });
+        }
+        const before = ledgerRows(db);
+        const repository = new SqliteExecutionEpisodeRepository(db, undefined, {
+          after(current) {
+            if (current === boundary) throw new Error(`fault:${boundary}`);
+          },
+        });
+        const command =
+          state === "E1" ? classify() : state === "E2" ? selectDrive() : requestIssue();
+
+        expect(() => repository.transition(command, CUSTODY)).toThrow(`fault:${boundary}`);
+        expect(ledgerRows(db)).toEqual(before);
+      });
+    },
+  );
+
   it("U-EXEP-006: replay前に保存済みrow全体を検証しDB改変を成功として隠さない", () => {
     withLedger((db) => {
       const repository = new SqliteExecutionEpisodeRepository(db);
@@ -322,4 +361,10 @@ function counts(db: HarnessDb): Record<string, number> {
       Number(db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()?.count ?? 0),
     ]),
   );
+}
+
+function ledgerRows(db: HarnessDb): Record<(typeof TABLES)[number], unknown[]> {
+  return Object.fromEntries(
+    TABLES.map((table) => [table, db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()]),
+  ) as Record<(typeof TABLES)[number], unknown[]>;
 }

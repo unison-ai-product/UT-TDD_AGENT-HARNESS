@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { SqliteExecutionEpisodeRepository } from "../../src/execution-ledger/adapters/sqlite/episode-repository.js";
-import type { RequestForwardEscape } from "../../src/execution-ledger/domain/execution-episode.js";
+import type {
+  ClassifyEscapeCommand,
+  RequestForwardEscape,
+  RequestIssueProjectionCommand,
+  SelectDriveModelCommand,
+} from "../../src/execution-ledger/domain/execution-episode.js";
 import {
   ledgerRowDigest,
   ledgerSchemaDdl,
@@ -11,6 +16,7 @@ import { openHarnessDb, type HarnessDb } from "../../src/state-db/index.js";
 
 const SHA = "a".repeat(40);
 const DIGEST = "b".repeat(64);
+const CUSTODY = { runtime: "codex", model: "test-model" } as const;
 
 describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
   it.each([
@@ -31,7 +37,79 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
       db.close();
     }
   });
+
+  it.each([
+    ["missing selection", removeDriveSelection],
+    ["tampered selection", tamperDriveSelection],
+    ["extra selection", addDriveSelection],
+  ] as const)("U-EXEP-010: E2 event↔drive selection %sをfail-closeする", (_label, tamper) => {
+    const db = transitionedEpisodeLedger("E2");
+    try {
+      tamper(db);
+      expect(migratePlanLedger(db)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it.each([
+    ["missing intent", removeIssueIntent],
+    ["tampered intent", tamperIssueIntent],
+    ["extra intent", addIssueIntent],
+  ] as const)("U-EXEP-011: E3 event↔GitHub outbox %sをfail-closeする", (_label, tamper) => {
+    const db = transitionedEpisodeLedger("E3");
+    try {
+      tamper(db);
+      expect(migratePlanLedger(db)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+    } finally {
+      db.close();
+    }
+  });
 });
+
+function removeDriveSelection(db: HarnessDb): void {
+  withoutTrigger(db, "drive_model_selections", "no_delete", () => {
+    db.prepare("DELETE FROM drive_model_selections").run();
+  });
+}
+
+function tamperDriveSelection(db: HarnessDb): void {
+  withoutUpdateTrigger(db, "drive_model_selections", () => {
+    db.prepare("UPDATE drive_model_selections SET rationale_digest = ?").run("c".repeat(64));
+  });
+}
+
+function addDriveSelection(db: HarnessDb): void {
+  db.prepare(`INSERT INTO drive_model_selections
+    SELECT episode_id, 2, selected_event_sequence, model, compatibility_result,
+      rationale_digest, override_used, override_actor, override_reason,
+      override_evidence_digest, selected_at, selection_digest
+    FROM drive_model_selections WHERE selection_revision = 1`).run();
+}
+
+function removeIssueIntent(db: HarnessDb): void {
+  db.prepare("DELETE FROM github_projection_outbox").run();
+}
+
+function tamperIssueIntent(db: HarnessDb): void {
+  db.prepare("UPDATE github_projection_outbox SET repository = 'other/repository'").run();
+}
+
+function addIssueIntent(db: HarnessDb): void {
+  db.prepare(`INSERT INTO github_projection_outbox
+    SELECT outbox_id || ':extra', episode_id, source_event_sequence, operation_kind,
+      object_kind, repository, target_logical_key, 2, idempotency_key || ':extra',
+      payload_version, canonical_payload_json, payload_digest, status, attempt_count,
+      next_attempt_at, lease_owner, lease_expires_at, ack_observation_id, created_at,
+      last_attempt_at
+    FROM github_projection_outbox WHERE intent_revision = 1`).run();
+}
 
 function tamperEventPayload(db: HarnessDb): void {
   withoutUpdateTrigger(db, "execution_episode_events", () => {
@@ -63,7 +141,16 @@ function tamperReceiptBinding(db: HarnessDb): void {
 }
 
 function withoutUpdateTrigger(db: HarnessDb, table: string, mutate: () => void): void {
-  const triggerName = `trg_${table}_no_update`;
+  withoutTrigger(db, table, "no_update", mutate);
+}
+
+function withoutTrigger(
+  db: HarnessDb,
+  table: string,
+  suffix: "no_update" | "no_delete",
+  mutate: () => void,
+): void {
+  const triggerName = `trg_${table}_${suffix}`;
   db.exec(`DROP TRIGGER ${triggerName}`);
   try {
     mutate();
@@ -72,6 +159,18 @@ function withoutUpdateTrigger(db: HarnessDb, table: string, mutate: () => void):
     if (!ddl) throw new Error(`trigger DDL missing: ${triggerName}`);
     db.exec(ddl);
   }
+}
+
+function transitionedEpisodeLedger(state: "E2" | "E3"): HarnessDb {
+  const db = episodeLedger();
+  const repository = new SqliteExecutionEpisodeRepository(db);
+  expect(repository.transition(classify(), CUSTODY)).toMatchObject({ ok: true });
+  expect(repository.transition(selectDrive(), CUSTODY)).toMatchObject({ ok: true });
+  if (state === "E3") {
+    expect(repository.transition(requestIssue(), CUSTODY)).toMatchObject({ ok: true });
+  }
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
+  return db;
 }
 
 function episodeLedger(): HarnessDb {
@@ -107,6 +206,55 @@ function seedPlan(db: HarnessDb, assetId: string): void {
     "fixture",
     "2026-07-16T00:00:00.000Z",
   );
+}
+
+function transitionEnvelope<const TSequence extends 1 | 2 | 3>(sequence: TSequence) {
+  return {
+    commandId: `command:recovery-70:e${sequence}`,
+    episodeId: "episode:recovery-70",
+    expectedSequence: sequence,
+    sourceCommit: SHA,
+    observedHead: SHA,
+    policyRevision: "policy:escape-v1",
+    actor: "codex",
+    occurredAt: `2026-07-16T08:3${sequence}:00.000Z`,
+  };
+}
+
+function classify(): ClassifyEscapeCommand {
+  return {
+    type: "classify_escape",
+    ...transitionEnvelope(1),
+    escapeType: "reopened",
+    classificationRuleRevision: "escape-classification:v1",
+    verificationTarget: {
+      kind: "assumption",
+      assetId: "plan:doctor-singleton",
+      revision: 1,
+      statementDigest: DIGEST,
+    },
+  };
+}
+
+function selectDrive(): SelectDriveModelCommand {
+  return {
+    type: "select_drive_model",
+    ...transitionEnvelope(2),
+    model: "recovery",
+    compatibilityResult: "compatible",
+    rationaleDigest: DIGEST,
+    selectionRevision: 1,
+  };
+}
+
+function requestIssue(): RequestIssueProjectionCommand {
+  return {
+    type: "request_issue_projection",
+    ...transitionEnvelope(3),
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    intentRevision: 1,
+    labels: ["forward-escape", "drive:recovery"],
+  };
 }
 
 function request(): RequestForwardEscape {
