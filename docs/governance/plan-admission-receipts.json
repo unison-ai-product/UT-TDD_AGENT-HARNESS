@@ -1,4 +1,21 @@
 {
   "schema_version": "ut-tdd.plan-admission-receipts/v1",
-  "records": []
+  "records": [
+    {
+      "sequence": 1,
+      "previous_record_digest": null,
+      "record_digest": "sha256:0f6786d2c9d1eb90ccdc2f551e13fb12570be48cc0a5c840822cc43244fb4ddc",
+      "command_id": "plan-recovery-16-20260717-03",
+      "receipt_id": "certificate:890b18d79d85d8d7cc2591c7146af5e2",
+      "receipt_digest": "sha256:788d4e4a908c402b959ef126680de1ae77d2a5406ce5331f22fe01eaa938dd11",
+      "decision_digest": "sha256:0efc93ef88ad7ea536d8e8583cadc60ea7c3fea1415ed2d4c817646e537223f9",
+      "binding": {
+        "path": "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
+        "plan_id": "PLAN-RECOVERY-16-plan-revision-authoring",
+        "asset_id": "plan:890b18d79d85d8d7cc2591c7146af5e2",
+        "revision": 1,
+        "content_digest": "sha256:cf32dffbf904cd25af919fc49f89a0b5c48474b3beb2b3540a2159a9e27dc261"
+      }
+    }
+  ]
 }
