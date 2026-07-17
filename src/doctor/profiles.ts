@@ -111,6 +111,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "forward-freeze-contracts",
   "refactor-qa-release-contracts",
   "roadmap",
+  "deliverable-plan-trace",
   "impl-plan-trace",
   "oracle-test-trace",
   "tracked-canonical",

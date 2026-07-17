@@ -29,6 +29,7 @@ export interface ProjectionFindingInput {
   subjectId: string;
   source: string;
   evidencePath?: string;
+  nextAction?: string;
 }
 
 export class SqliteProjectionStore
@@ -68,6 +69,7 @@ export class SqliteProjectionStore
         source: input.source,
         status: "open",
         evidence_path: input.evidencePath ?? "",
+        next_action: input.nextAction ?? "",
       },
     });
   }
