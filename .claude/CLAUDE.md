@@ -25,7 +25,7 @@ only. Do not enable hooks that depend on personal legacy runtime paths.
 - `PreToolUse(Agent|Task)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`
 - `PreToolUse(Edit|Write|MultiEdit)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"`
 - `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`
-- `PostToolUse(Edit|Write|MultiEdit|Bash)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`
+- `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`
 - `Stop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary`
 - `SubagentStop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook subagent-stop`
 

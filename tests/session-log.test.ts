@@ -336,6 +336,52 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     );
   });
 
+  // PLAN-RECOVERY-13 / issue #86: Windows ネイティブの主シェルツール PowerShell を
+  // shell tool として捕捉する (session jsonl に tool_use / commit が乗る)。
+  it("U-SLOG-013: PowerShell tool_use は session jsonl へ記録され、git commit は commit event になる", () => {
+    const deps = mockDeps({ headCommit: () => "ps12345" });
+    deps.files.set(statePath, "PLAN-RECOVERY-13-powershell-session-log-visibility");
+    onPostToolUse(
+      {
+        session_id: "ps-session",
+        tool_name: "PowerShell",
+        tool_input: { command: "bun run typecheck" },
+      },
+      deps,
+    );
+    const log = deps.files.get(sessionPath("ps-session")) ?? "";
+    expect(log).toContain('"event_type":"tool_use"');
+    expect(log).toContain('"tool":"PowerShell"');
+    expect(log).toContain("PowerShell (tsc)");
+
+    onPostToolUse(
+      {
+        session_id: "ps-session",
+        tool_name: "PowerShell",
+        tool_input: { command: "git commit -m x" },
+      },
+      deps,
+    );
+    const log2 = deps.files.get(sessionPath("ps-session")) ?? "";
+    expect(log2).toContain('"event_type":"commit"');
+    expect(log2).toContain('"target":"ps12345"');
+  });
+
+  it("U-SLOG-014: summarize は PowerShell を Bash と同様に verb 分類し、引数を残さない", () => {
+    expect(
+      summarize({ tool_name: "PowerShell", tool_input: { command: "bun x vitest run tests/x" } }),
+    ).toBe("PowerShell (vitest)");
+    expect(
+      summarize({
+        tool_name: "PowerShell",
+        tool_input: { command: "Get-Process -Name secret-arg" },
+      }),
+    ).toBe("PowerShell (powershell)");
+    expect(summarize({ tool_name: "PowerShell", tool_input: {} })).toBe(
+      "PowerShell (powershell)",
+    );
+  });
+
   // PLAN-RECOVERY-05 item 2: Bash の検証 verb を target に分類して残す (引数は残さない)。
   it("U-SLOG-007: summarize classifies Bash into a verb token; unclassified stays (bash)", () => {
     expect(

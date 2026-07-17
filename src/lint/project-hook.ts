@@ -87,7 +87,7 @@ export const REQUIRED = [
   {
     id: "post-tool-use",
     event: "PostToolUse",
-    matcher: "Edit|Write|MultiEdit|Bash",
+    matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
     commandParts: ["src/cli.ts", "hook post-tool-use"],
     wrapperCommand: wrapperCommand("hook post-tool-use"),
   },

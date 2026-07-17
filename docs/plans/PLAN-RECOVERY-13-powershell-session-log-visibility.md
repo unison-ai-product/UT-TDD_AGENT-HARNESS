@@ -63,12 +63,22 @@ Windows セッションのシェル操作だけ監査可視性が構造的に低
   に分散しているため、一点だけ直すと rule-drift / project-hook lint が Red になる。
   三点同時更新が必須。
 
-## 設計判断 (着手時に PO 確認)
+## 設計判断 (採択済み 2026-07-17)
 
-- 推奨: matcher へ `PowerShell` を明示追加 (`Edit|Write|MultiEdit|Bash|PowerShell`)。
+- **採択: 案 A = matcher へ `PowerShell` を明示追加** (`Edit|Write|MultiEdit|Bash|PowerShell`)。
   理由 = 既知 tool 名の明示列挙は fail-close 方針と整合し、wildcard 化より安全。
-- 代替: shell 系 tool の包括 matcher (将来の tool 名追加に強いが、意図しない tool の
+  PO の包括推進指示 (2026-07-17「ガンガン進めてプルリクまで」) に基づき推奨案を先行採択
+  (PR レビューで覆せる可逆判断)。
+- 代替 (不採択): shell 系 tool の包括 matcher (将来の tool 名追加に強いが、意図しない tool の
   捕捉と log ノイズのリスク)。
+
+## 実装時の追加所見 (2026-07-17)
+
+matcher 五点に加え、**runtime 側 `src/runtime/session-log.ts` にも第 2 の除外層**があった:
+`onPostToolUse` の shell 判定 regex (`Bash|exec_command|local_shell`) と `summarize` の
+Bash 特別扱いが PowerShell を除外しており、matcher だけ直しても PowerShell 経由の
+`git commit` が commit event にならず、verb 分類 (引数リーク防止) も効かない。
+同 slice で `PowerShell` を両箇所へ追加した (U-SLOG-013/014 で固定)。
 
 ## 実装対象 (実装着手時に generates へ昇格)
 

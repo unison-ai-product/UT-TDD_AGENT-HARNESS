@@ -123,14 +123,14 @@ export function summarize(input: SessionHookInput): string {
   // Bash は引数を残さず固定の検証 verb token だけを hint にする (PLAN-RECOVERY-05 item 2)。
   // attempt-escalation が「同じ検証コマンドの連続失敗」を grouping できるよう、command を
   // whitelist verb (vitest/tsc/doctor/lint/...) に分類して埋める。未分類/非 Bash は従来どおり。
-  if (tool === "Bash" && !path) {
+  if ((tool === "Bash" || tool === "PowerShell") && !path) {
     const verb = classifyVerificationVerb(String(ti.command ?? ""));
-    return sanitize(`${tool} (${verb ?? "bash"})`);
+    return sanitize(`${tool} (${verb ?? tool.toLowerCase()})`);
   }
   if (path) {
     return maskSecrets(`${tool} ${path}`.trim());
   }
-  const hint = tool === "Bash" ? "(bash)" : "";
+  const hint = tool === "Bash" ? "(bash)" : tool === "PowerShell" ? "(powershell)" : "";
   return sanitize(`${tool} ${hint}`.trim());
 }
 
@@ -431,7 +431,10 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
   try {
     const shellInput = input.tool_input as { command?: unknown; cmd?: unknown };
     const cmd = String(shellInput?.command ?? shellInput?.cmd ?? "");
-    const isShellTool = /^(?:Bash|exec_command|local_shell)$/i.test(input.tool_name ?? "");
+    // PowerShell は Windows ネイティブ Claude Code の主シェルツール (PLAN-RECOVERY-13 / issue #86)。
+    const isShellTool = /^(?:Bash|PowerShell|exec_command|local_shell)$/i.test(
+      input.tool_name ?? "",
+    );
     const isCommit = isShellTool && /\bgit\s+commit\b/i.test(cmd);
     const isMemoryWrite = isMemoryWriteInput(input);
     const observedOutcome = outcomeOf(input);
