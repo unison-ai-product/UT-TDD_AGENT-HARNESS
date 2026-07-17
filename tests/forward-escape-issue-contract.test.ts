@@ -5,13 +5,13 @@ import { describe, expect, it } from "vitest";
 import {
   checkDriveModelAlignment,
   classifyForwardBoundary,
+  type ForwardEscapeIssuePort,
   OFF_FORWARD_DRIVE_MODELS,
   projectForwardEscapeIssue,
+  type RequestForwardEscape,
   reconcileIssueProjection,
   renderForwardEscapeIssueBody,
   validateForwardEscape,
-  type ForwardEscapeIssuePort,
-  type RequestForwardEscape,
 } from "../src/execution/forward-escape";
 
 function validCommand(overrides: Partial<RequestForwardEscape> = {}): RequestForwardEscape {
@@ -45,14 +45,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   it("U-EXISSUE-001: 通常Forward辺はIssueなしで通り、off-Forward辺だけがIssueを要求する", () => {
     expect(classifyForwardBoundary({ signal: "descend" })).toBe("inside_forward");
     expect(classifyForwardBoundary({ signal: "freeze" })).toBe("inside_forward");
-    for (const signal of [
-      "blocked",
-      "rejected",
-      "reopened",
-      "superseded",
-      "preemptive",
-      "defer",
-    ]) {
+    for (const signal of ["blocked", "rejected", "reopened", "superseded", "preemptive", "defer"]) {
       expect(classifyForwardBoundary({ signal }), signal).toBe("forward_escape");
     }
     expect(classifyForwardBoundary({ signal: "yolo" })).toBe("invalid");
@@ -67,7 +60,10 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     expect(unknown.violations.map((v) => v.code)).toContain("unknown-drive-model");
     for (const tech of ["be", "fe", "fullstack", "db", "agent", "normal"]) {
       const mixed = validateForwardEscape(validCommand({ drive_model: tech }), emptyLedger);
-      expect(mixed.violations.map((v) => v.code), tech).toContain("tech-drive-confusion");
+      expect(
+        mixed.violations.map((v) => v.code),
+        tech,
+      ).toContain("tech-drive-confusion");
     }
     const aligned = checkDriveModelAlignment({
       command_drive_model: "recovery",
@@ -130,7 +126,8 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
           return { ok: false, reason: "timeout" };
         }
         const existing = created.find((c) => c.idempotency_key === request.idempotency_key);
-        if (!existing) created.push({ idempotency_key: request.idempotency_key, title: request.title });
+        if (!existing)
+          created.push({ idempotency_key: request.idempotency_key, title: request.title });
         return {
           ok: true,
           binding: {
