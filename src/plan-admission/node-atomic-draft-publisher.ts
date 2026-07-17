@@ -24,8 +24,11 @@ export type DraftPublisherFaultPoint =
   | "stage:before-write"
   | "stage:after-write"
   | "publish:after-backup-rename"
+  | "publish:before-preimage-restore"
+  | "publish:after-target-link"
   | "publish:after-target-rename"
   | "restore:before-artifact"
+  | "restore:after-target-remove"
   | "finalize:before-artifact"
   | "finalize:after-artifact";
 
@@ -133,15 +136,16 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
           !regularFile(item.rollbackPath) ||
           !digestEqual(sha256File(item.rollbackPath), item.expectedPreimage.digest)
         ) {
-          renameSync(item.rollbackPath, item.targetPath);
-          item.backupMoved = false;
+          this.injectFault("publish:before-preimage-restore", item.logicalPath);
+          restoreRollbackNoClobber(item);
           throw new Error(`artifact preimage mismatch: ${item.logicalPath}`);
         }
         this.injectFault("publish:after-backup-rename", item.logicalPath);
       }
       linkSync(item.temporaryPath, item.targetPath);
-      rmSync(item.temporaryPath);
       item.targetPublished = true;
+      this.injectFault("publish:after-target-link", item.logicalPath);
+      rmSync(item.temporaryPath);
       syncDirectory(dirname(item.targetPath));
       this.injectFault("publish:after-target-rename", item.logicalPath);
     }
@@ -162,12 +166,11 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
           throw new Error(`artifact postimage mismatch: ${item.logicalPath}`);
         }
         rmSync(item.targetPath);
+        item.targetPublished = false;
+        this.injectFault("restore:after-target-remove", item.logicalPath);
       }
       if (item.backupMoved) {
-        if (existsSync(item.targetPath)) {
-          throw new Error(`artifact postimage mismatch: ${item.logicalPath}`);
-        }
-        renameSync(item.rollbackPath, item.targetPath);
+        restoreRollbackNoClobber(item);
       }
       rmSync(item.temporaryPath, { force: true });
       if (!item.backupMoved) rmSync(item.rollbackPath, { force: true });
@@ -287,6 +290,26 @@ function digestEqual(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function restoreRollbackNoClobber(item: StagedArtifact): void {
+  if (existsSync(item.targetPath)) {
+    if (!sameFile(item.targetPath, item.rollbackPath)) {
+      throw new Error(`artifact postimage mismatch: ${item.logicalPath}`);
+    }
+  } else {
+    linkSync(item.rollbackPath, item.targetPath);
+    syncDirectory(dirname(item.targetPath));
+  }
+  rmSync(item.rollbackPath);
+  item.backupMoved = false;
+  syncDirectory(dirname(item.targetPath));
+}
+
+function sameFile(left: string, right: string): boolean {
+  const a = lstatSync(left, { bigint: true });
+  const b = lstatSync(right, { bigint: true });
+  return a.dev === b.dev && a.ino === b.ino;
 }
 
 function syncFile(path: string): void {

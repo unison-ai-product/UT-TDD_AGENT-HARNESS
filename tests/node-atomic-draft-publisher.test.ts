@@ -209,6 +209,67 @@ describe("NodeAtomicDraftPublisher", () => {
     expect(() => f.publisher.restore(token)).toThrow(/postimage/);
     expect(readFileSync(join(f.root, f.source), "utf8")).toBe("concurrent-after-publish");
   });
+
+  it("U-PADM-051: target link後のtemp cleanup faultから旧版へrestoreできる", () => {
+    let failed = false;
+    const f = fixture((point, path) => {
+      if (point === "publish:after-target-link" && path === f.source && !failed) {
+        failed = true;
+        throw new Error("temp-cleanup-fault");
+      }
+    });
+    const token = f.publisher.stage(f.artifacts);
+
+    expect(() => f.publisher.publish(token)).toThrow("temp-cleanup-fault");
+    f.publisher.restore(token);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("old-source");
+    expect(readFileSync(join(f.root, f.projection), "utf8")).toBe("old-projection");
+  });
+
+  it("U-PADM-052: postimage削除後のfaultからrestoreを再開できる", () => {
+    let failed = false;
+    const f = fixture((point, path) => {
+      if (point === "restore:after-target-remove" && path === f.projection && !failed) {
+        failed = true;
+        throw new Error("restore-window-fault");
+      }
+    });
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+
+    expect(() => f.publisher.restore(token)).toThrow("restore-window-fault");
+    f.publisher.restore(token);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("old-source");
+    expect(readFileSync(join(f.root, f.projection), "utf8")).toBe("old-projection");
+  });
+
+  it("U-PADM-053: preimage mismatch復元窓の外部作成を上書きしない", () => {
+    const f = fixture((point, path) => {
+      if (point === "publish:before-preimage-restore" && path === f.source) {
+        writeFileSync(join(f.root, f.source), "concurrent-restore-window", "utf8");
+      }
+    });
+    const token = f.publisher.stage([
+      { ...f.artifacts[0], expectedPreimage: preimage("expected-other-source") },
+      { ...f.artifacts[1], expectedPreimage: preimage("old-projection") },
+    ]);
+
+    expect(() => f.publisher.publish(token)).toThrow(/postimage/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("concurrent-restore-window");
+  });
+
+  it("U-PADM-054: restore窓の外部作成をrollback renameで上書きしない", () => {
+    const f = fixture((point, path) => {
+      if (point === "restore:after-target-remove" && path === f.projection) {
+        writeFileSync(join(f.root, f.projection), "concurrent-restore", "utf8");
+      }
+    });
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+
+    expect(() => f.publisher.restore(token)).toThrow(/postimage/);
+    expect(readFileSync(join(f.root, f.projection), "utf8")).toBe("concurrent-restore");
+  });
 });
 
 function preimage(content: string) {
