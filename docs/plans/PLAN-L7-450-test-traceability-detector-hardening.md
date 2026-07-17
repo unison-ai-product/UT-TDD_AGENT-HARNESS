@@ -52,7 +52,9 @@ plan-artifact-existence / impl-plan-trace / missing-test-plan-id の相補網に
   所有 PLAN が draft のとき merged-plan-status (hard) が禁止する。正しい導線 (confirm と同時に
   宣言) が warn の next_action に現れない。PR #89 が CI Red で実証。
 - **W2 多重所有 silent last-wins**: `planGeneratedPathMap` は同一 artifact_path の複数 PLAN 宣言を
-  無警告で last-wins 採用する (実例: PLAN-REVERSE-448 と PLAN-L7-448 の同一 doc 二重宣言)。
+  無警告で last-wins 採用する。監査時に疑った PLAN-REVERSE-448 / PLAN-L7-448 は再照合の結果、
+  異なる artifact_path を宣言しており実例ではなかった。このため合成 fixture で退化を固定し、
+  live repo は重複 0 を正例として固定する。
 - **W3 scripts/.claude の trace 盲点**: impl-plan-trace は src/ のみ、missing-test-plan-id は
   tests/ のみを被覆する。merged-plan-status は宣言済み generates しか見ないため、scripts/ と
   .claude/ に無宣言で merge された成果物だけが trace 網の外に残る。
@@ -69,14 +71,17 @@ live-tree 測定の hybrid transience は本 PLAN のスコープ外 (issue #77 
    confirmed 所有候補あり=「generates へ宣言」、draft 所有候補あり=「PLAN confirm と同時に宣言
    (merged-plan-status 整合)」、候補なし=従来文言。
 2. **W2**: `planGeneratedPathMultiMap` で複数 PLAN が同一 artifact_path を宣言した場合に
-   `duplicate-artifact-ownership` warn finding を投影する (採用規則は現行 last-wins を維持しつつ
-   明示化)。
+   `duplicate-artifact-ownership` finding を投影する。legacy baseline 外の新規重複は fail-close とし、
+   last-wins で所有者を暗黙確定しない。既存重複が棚卸しで判明した場合だけ、所有候補・理由・
+   解消期限を持つ baseline 台帳へ明示し、台帳外の重複は拒否する。
 3. **W3**: trace 網を scripts/ と .claude/ へ拡張する。設計判断 (Step 1): impl-plan-trace の
    対象 root 拡張か、独立 check (`deliverable-plan-trace`) の新設か。既存 baseline (歴史的
-   無宣言物) は棚卸しして baseline ledger 化し、増分のみ fail-close する。
-4. **W4**: 新規 test file (tests/ 配下 *.test.ts) が PLAN generates に無い場合の**増分 gate** を
-   追加する。初期は warn 集計 (doctor)、閾値運用の実績を見て fail-close 昇格 (W3 と同じ
-   baseline + 増分方式。再蓄積カーブを止めることが AC)。
+   無宣言物) は `docs/governance/deliverable-trace-debt-audit.md` に `artifact_path` / `owner_plan` /
+   `justification` / `promote_by` を持つ縮小専用台帳として固定し、実装側集合との双方向一致を
+   hard gate で検査する。台帳外の増分は fail-close する。
+4. **W4**: 新規 test file (tests/ 配下 *.test.ts) が PLAN generates に無い場合の**増分 hard gate**を
+   追加する。既存 debt は W3 と同じ監査台帳へ明示し、台帳外の新規 orphan は同一PRのCIで
+   fail-closeする。doctor は集計と remediation を表示するが、severityをwarnへ弱めない。
 
 ## Steps (TDD Red 先行)
 
@@ -84,17 +89,17 @@ live-tree 測定の hybrid transience は本 PLAN のスコープ外 (issue #77 
 |---|---|---|
 | 1 | W3 方式の設計判断 (trace 拡張 vs 新設 check) + baseline 棚卸し | 直列 |
 | 2 | W1/W2 unit oracle Red → projection 改修 | 直列 |
-| 3 | W3/W4 unit oracle Red → gate 実装 (baseline + 増分 fail-close) | 直列 |
-| 4 | real-repo regression (現 repo で W2 実例が warn 化、増分 0 で green) | 直列 |
+| 3 | W3/W4 unit oracle Red → 台帳双方向一致 + 増分 fail-close gate 実装 | 直列 |
+| 4 | real-repo regression (W2/W3/W4 の台帳外増分 0 で green、合成重複/orphan fixture は Red) | 直列 |
 | 5 | cross-provider blind review (非 author runtime) → confirm | 直列 |
 
 ## DoD
 
 - [ ] W1: missing-test-plan-id の next_action が所有候補 PLAN status で分岐する (unit oracle 固定)。
-- [ ] W2: 多重所有が `duplicate-artifact-ownership` warn として投影される (REVERSE-448/L7-448 の
-      実例が real-repo regression で検出される)。
-- [ ] W3: scripts/.claude の無宣言 merged 成果物が baseline + 増分方式で検出される (負例:
-      baseline 済み歴史物は fail しない)。
-- [ ] W4: 新規 orphan test file の増分が doctor で検出される (再蓄積 regression: 宣言なし test
-      追加 fixture で fail、宣言ありで green)。
+- [ ] W2: 合成 fixture の多重所有が `duplicate-artifact-ownership` でfail-closeし、live repoは
+      台帳外重複0でgreenとなる。所有者をlast-winsで暗黙確定しない。
+- [ ] W3: scripts/.claude の無宣言 merged 成果物が縮小専用baseline台帳 + 増分方式で検出される。
+      台帳と実装側集合の片方向欠落もfailし、台帳済み歴史物だけはfailしない。
+- [ ] W4: 新規 orphan test file の台帳外増分がCIでfail-closeする (宣言なし fixture でexit非0、
+      宣言ありでgreen)。doctor表示とCI判定が同じfinding集合を参照する。
 - [ ] PLAN-REVERSE-450 R0-R4 で実装観測が L6/test-design へ gap-only backfill されている。

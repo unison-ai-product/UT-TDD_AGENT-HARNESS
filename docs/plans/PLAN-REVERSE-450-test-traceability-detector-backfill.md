@@ -31,8 +31,9 @@ dependencies:
 
 # PLAN-REVERSE-450: test-traceability 検出器強化 backfill
 
-R0 で W1-W4 実装 (remediation 分岐 / duplicate-artifact-ownership warn / deliverable trace 拡張 /
-増分 gate) を観測する。R1-R3 で実装事実と L7-450 の想定 (baseline 棚卸し結果、fail-close 昇格条件、
-採用規則の明示化) の差分だけを記録し (gap-only)、R4 で Forward 再合流条件を固定する。
+R0 で W1-W4 実装 (remediation 分岐 / duplicate-artifact-ownership fail-close / deliverable trace 拡張 /
+台帳外増分 hard gate) を観測する。R1-R3 で実装事実と L7-450 の想定 (baseline 棚卸し結果、
+縮小専用台帳との双方向一致、CI/doctor の finding 集合共有) の差分だけを記録し (gap-only)、
+R4 で Forward 再合流条件を固定する。
 実装結果で設計を自動承認せず、trace 対象 root の追加や severity 変更は PLAN/ADR へ戻す。
 再蓄積カーブが実際に止まったか (W4 AC) を R2 の照合点に含める。
