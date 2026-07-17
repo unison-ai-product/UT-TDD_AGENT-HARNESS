@@ -27,6 +27,7 @@ export interface EpisodeRepositoryPort {
     command: ExecutionTransitionCommand,
     custody: EpisodeWriteCustody,
   ): EpisodeRepositoryResult;
+  rebuildProjections(): number;
 }
 
 export interface EpisodeTransitionSnapshot {

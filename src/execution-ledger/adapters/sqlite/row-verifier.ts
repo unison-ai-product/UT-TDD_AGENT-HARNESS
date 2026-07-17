@@ -34,42 +34,58 @@ interface VerifiedStream {
 
 export function executionLedgerRowsValid(db: ExecutionLedgerReadDb): boolean {
   try {
-    const roots = db.prepare("SELECT * FROM execution_episodes ORDER BY episode_id").all();
-    const eventRows = db
-      .prepare("SELECT * FROM execution_episode_events ORDER BY episode_id, event_sequence")
-      .all();
+    const core = verifyCoreRows(db);
+    if (!core) return false;
     const projections = db
       .prepare("SELECT * FROM execution_episode_projection ORDER BY episode_id")
       .all();
-    const receipts = db
-      .prepare(
-        "SELECT * FROM append_command_receipts WHERE subject_kind = 'execution_episode' ORDER BY command_id",
-      )
-      .all();
-    const selections = db
-      .prepare("SELECT * FROM drive_model_selections ORDER BY episode_id, selection_revision")
-      .all();
-    const outbox = db
-      .prepare("SELECT * FROM github_projection_outbox ORDER BY episode_id, source_event_sequence")
-      .all();
-
-    const streams = verifyStreams(eventRows);
-    if (!streams || roots.length !== streams.size || projections.length !== streams.size) return false;
-    if (!roots.every((root) => rootMatchesStream(root, streams.get(String(root.episode_id)))))
-      return false;
+    if (projections.length !== core.streams.size) return false;
     if (
       !projections.every((projection) =>
-        projectionMatchesStream(projection, streams.get(String(projection.episode_id))),
+        projectionMatchesStream(projection, core.streams.get(String(projection.episode_id))),
       )
     )
       return false;
-    if (!receiptsMatchEvents(receipts, eventRows)) return false;
-    if (!selectionsMatchStreams(selections, streams)) return false;
-    if (!outboxMatchesStreams(outbox, streams)) return false;
     return true;
   } catch {
     return false;
   }
+}
+
+export function executionLedgerSourceRowsValid(db: ExecutionLedgerReadDb): boolean {
+  try {
+    return verifyCoreRows(db) !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+function verifyCoreRows(
+  db: ExecutionLedgerReadDb,
+): { readonly streams: ReadonlyMap<string, VerifiedStream> } | undefined {
+  const roots = db.prepare("SELECT * FROM execution_episodes ORDER BY episode_id").all();
+  const eventRows = db
+    .prepare("SELECT * FROM execution_episode_events ORDER BY episode_id, event_sequence")
+    .all();
+  const receipts = db
+    .prepare(
+      "SELECT * FROM append_command_receipts WHERE subject_kind = 'execution_episode' ORDER BY command_id",
+    )
+    .all();
+  const selections = db
+    .prepare("SELECT * FROM drive_model_selections ORDER BY episode_id, selection_revision")
+    .all();
+  const outbox = db
+    .prepare("SELECT * FROM github_projection_outbox ORDER BY episode_id, source_event_sequence")
+    .all();
+  const streams = verifyStreams(eventRows);
+  if (!streams || roots.length !== streams.size) return undefined;
+  if (!roots.every((root) => rootMatchesStream(root, streams.get(String(root.episode_id)))))
+    return undefined;
+  if (!receiptsMatchEvents(receipts, eventRows)) return undefined;
+  if (!selectionsMatchStreams(selections, streams)) return undefined;
+  if (!outboxMatchesStreams(outbox, streams)) return undefined;
+  return Object.freeze({ streams });
 }
 
 function selectionsMatchStreams(

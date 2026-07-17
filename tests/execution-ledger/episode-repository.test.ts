@@ -192,6 +192,25 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
     });
   });
 
+  it("U-EXEP-009: projection全削除後もevent正本からexternal intentを変えず同値再構築する", () => {
+    withLedger((db) => {
+      const repository = new SqliteExecutionEpisodeRepository(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+      expect(repository.transition(classify(), CUSTODY)).toMatchObject({ ok: true });
+      expect(repository.transition(selectDrive(), CUSTODY)).toMatchObject({ ok: true });
+      expect(repository.transition(requestIssue(), CUSTODY)).toMatchObject({ ok: true });
+      const projection = db.prepare("SELECT * FROM execution_episode_projection").get();
+      const outbox = db.prepare("SELECT * FROM github_projection_outbox").all();
+
+      db.prepare("DELETE FROM execution_episode_projection").run();
+      expect(db.prepare("SELECT count(*) AS count FROM execution_episode_projection").get()).toEqual({ count: 0 });
+      expect(repository.rebuildProjections()).toBe(1);
+
+      expect(db.prepare("SELECT * FROM execution_episode_projection").get()).toEqual(projection);
+      expect(db.prepare("SELECT * FROM github_projection_outbox").all()).toEqual(outbox);
+    });
+  });
+
   it("U-EXEP-005: E1 command再送をwrite 0でreplayし、異payloadを構造化拒否する", () => {
     withLedger((db) => {
       const repository = new SqliteExecutionEpisodeRepository(db);

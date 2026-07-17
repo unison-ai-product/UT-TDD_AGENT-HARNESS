@@ -25,7 +25,10 @@ import {
   type LedgerTransactionPort,
 } from "../../../plan-asset/ledger/transaction.js";
 import type { HarnessDb } from "../../../state-db/index.js";
-import { executionLedgerRowsValid } from "./row-verifier.js";
+import {
+  executionLedgerRowsValid,
+  executionLedgerSourceRowsValid,
+} from "./row-verifier.js";
 import { projectExecutionEpisode } from "../../application/episode-projector.js";
 import {
   APPEND_COMMAND_RECEIPT_COLUMNS,
@@ -180,6 +183,26 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
           },
         } satisfies EpisodeRepositoryResult,
       };
+    });
+  }
+
+  rebuildProjections(): number {
+    return this.transaction.run(() => {
+      if (!executionLedgerSourceRowsValid(this.db))
+        throw new Error("episode-ledger-source-integrity-invalid");
+      const episodeIds = this.db
+        .prepare("SELECT episode_id FROM execution_episodes ORDER BY episode_id")
+        .all()
+        .map((row) => String(row.episode_id));
+      this.db.prepare("DELETE FROM execution_episode_projection").run();
+      for (const episodeId of episodeIds) {
+        const events = this.loadHistory(episodeId);
+        if (events.length === 0) throw new Error("episode-stream-not-found");
+        this.insertProjection(events);
+      }
+      if (!executionLedgerRowsValid(this.db))
+        throw new Error("episode-ledger-rebuild-integrity-invalid");
+      return { commit: true, value: episodeIds.length };
     });
   }
 
