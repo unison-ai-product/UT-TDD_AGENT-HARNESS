@@ -1005,16 +1005,40 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         },
         evidencePath: ".ut-tdd/logs/session/session-runtime-1.jsonl",
       });
+      projectRuntimeTestRunFromSessionEvent({
+        db,
+        plans,
+        event: {
+          ts: "2026-06-29T00:03:00Z",
+          session_id: "session-runtime-1",
+          plan_id: "PLAN-L7-193-runtime-test-run-provenance",
+          event_type: "tool_use",
+          tool: "PowerShell",
+          target: "PowerShell (tsc)",
+          outcome: "ok",
+        },
+        evidencePath: ".ut-tdd/logs/session/session-runtime-1.jsonl",
+      });
 
       const rows = db
         .prepare(
           "SELECT session_id, command, runner, runtime, scope, exit_code, status, evidence_path FROM test_runs",
         )
         .all();
-      expect(rows).toHaveLength(1);
+      expect(rows).toHaveLength(2);
       expect(rows[0]).toMatchObject({
         session_id: "session-runtime-1",
         command: "Bash (vitest)",
+        runner: "bun",
+        runtime: "hook-session-log",
+        scope: "runtime-hook",
+        exit_code: 0,
+        status: "passed",
+        evidence_path: ".ut-tdd/logs/session/session-runtime-1.jsonl",
+      });
+      expect(rows[1]).toMatchObject({
+        session_id: "session-runtime-1",
+        command: "PowerShell (tsc)",
         runner: "bun",
         runtime: "hook-session-log",
         scope: "runtime-hook",
