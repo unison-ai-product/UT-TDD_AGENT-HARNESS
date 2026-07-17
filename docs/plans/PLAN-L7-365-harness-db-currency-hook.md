@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-07
-updated: 2026-07-07
+updated: 2026-07-17
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -106,6 +106,13 @@ check-registry へ登録 → `tests/` に currency + fail-open regression を追
   stale の場合は `:memory:` rebuild で登録整合を評価する。stale の責務は `db-currency` に集約する。
 - Stop hook 自動 rebuild、token ingest 統合、DB consumer 側の stale 警告は未実装。次 slice で
   `PLAN-L7-366-takeover-surface-warn-actionable` と接続して surface 改善へ進める。
+- 2026-07-17: **staleness 再発を実測 (GitHub issue #78、2026-07-16)** — doctor `db-currency` が
+  violation 2 (stale_plan_registry=-31, stale_plan_registry_fingerprint) で fail。docs/plans 793 件に対し
+  persisted plan registry が 31 件遅延、`ut-tdd db rebuild` (rows 176,951 再投影) で解消した。
+  gate (L7-369 slice) は機能したが、本 PLAN の残スコープ (hook 駆動 rebuild = Step 2) が未実装のため
+  他ランタイムの merge 後に手動 rebuild 依存が残ることの実証。issue #78 の対応案 —
+  merge/checkout 境界 or doctor 冒頭での stale 検知時に (a) 自動 re-projection するか
+  (b) rebuild remediation 付き fail に留めるか — は Step 1 の設計判断へ取り込む。
 
 ## DoD / 受入基準
 
