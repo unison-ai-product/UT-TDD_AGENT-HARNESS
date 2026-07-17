@@ -149,12 +149,12 @@ export class LegacyPlanRevisionBootstrapTransaction {
     const aliasEvent = {
       alias_event_id: `alias:${input.commandId}:1`,
       asset_id: value.assetId,
-      asset_revision: 1,
+      sequence: 1,
       command_id: input.commandId,
       command_payload_digest: value.commandPayloadDigest,
       event_kind: "assigned",
       alias: input.planId,
-      effective_revision: 1,
+      revision: 1,
       reason: "legacy bootstrap",
       occurred_at: input.occurredAt,
     };
@@ -348,12 +348,12 @@ export class LegacyPlanRevisionBootstrapTransaction {
     const expectedAliasEvent = {
       alias_event_id: aliasEventId,
       asset_id: expected.assetId,
-      asset_revision: 1,
+      sequence: 1,
       command_id: input.commandId,
       command_payload_digest: expected.commandPayloadDigest,
       event_kind: "assigned",
       alias: input.planId,
-      effective_revision: 1,
+      revision: 1,
       reason: "legacy bootstrap",
       occurred_at: input.occurredAt,
     };

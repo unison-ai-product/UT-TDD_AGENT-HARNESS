@@ -198,6 +198,20 @@ describe("legacy PLAN revision bootstrap transaction", () => {
       ruleId: "plan-revision-receipt-binding-invalid",
     });
   });
+
+  it("U-PA-REV-BOOT-010: alias event digestはschema列名で永続化し再migration後もreplayできる", () => {
+    const { db, ledger } = fixture();
+    const input = bootstrap();
+
+    expect(ledger.bootstrap(input)).toMatchObject({ ok: true, replayed: false });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+    expect(ledger.bootstrap(input)).toMatchObject({
+      ok: true,
+      replayed: true,
+      assetId: derivedAssetId(),
+      revision: 2,
+    });
+  });
 });
 
 function fixture() {

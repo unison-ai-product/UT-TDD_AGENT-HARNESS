@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   type AppendPlanRevisionInput,
   PlanRevisionLedgerTransaction,
+  replayBindingFailures,
 } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
@@ -69,6 +70,11 @@ describe("PLAN revision ledger transaction", () => {
     expect(db.prepare("SELECT recorded_at FROM plan_admission_receipts").get()).toEqual({
       recorded_at: input.occurredAt,
     });
+    if (!first.ok) throw new Error("initial revision append failed");
+    const receipt = db
+      .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
+      .get(input.commandId);
+    expect(replayBindingFailures(db, input, first, receipt as Record<string, unknown>)).toEqual([]);
     expect(ledger.append(input)).toEqual(first.ok ? { ...first, replayed: true } : first);
     expect(ledger.append({ ...input, reason: "different" })).toEqual({
       ok: false,
@@ -117,7 +123,6 @@ function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
   expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
-  const ledger = new PlanRevisionLedgerTransaction(db);
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
     "plan:adopted",
     "2026-07-15T00:00:00.000Z",
@@ -136,18 +141,22 @@ function fixture() {
     "adopt",
     "2026-07-15T00:00:00.000Z",
   );
+  const aliasEvent = {
+    alias_event_id: "alias:plan:adopted:1",
+    asset_id: "plan:adopted",
+    sequence: 1,
+    command_id: "command:adopt-alias",
+    command_payload_digest: sha("adopt-alias-command"),
+    event_kind: "assigned",
+    alias: "PLAN-L4-31",
+    revision: 1,
+    reason: "adopt",
+    occurred_at: "2026-07-15T00:00:00.000Z",
+  };
+  const aliasEventDigest = ledgerRowDigest(aliasEvent, "event_digest");
   db.prepare("INSERT INTO plan_alias_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
-    "alias:plan:adopted:1",
-    "plan:adopted",
-    1,
-    "command:adopt-alias",
-    sha("adopt-alias-command"),
-    "assigned",
-    "PLAN-L4-31",
-    1,
-    "adopt",
-    "2026-07-15T00:00:00.000Z",
-    sha("alias-event"),
+    ...Object.values(aliasEvent),
+    aliasEventDigest,
   );
   db.prepare("INSERT INTO plan_aliases VALUES (?, ?, ?, ?, ?, ?)").run(
     "alias-current:plan:adopted",
@@ -155,8 +164,10 @@ function fixture() {
     "PLAN-L4-31",
     1,
     null,
-    sha("alias-event"),
+    aliasEventDigest,
   );
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  const ledger = new PlanRevisionLedgerTransaction(db);
   return { db, ledger };
 }
 

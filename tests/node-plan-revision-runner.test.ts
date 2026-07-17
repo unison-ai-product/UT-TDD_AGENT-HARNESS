@@ -13,7 +13,7 @@ import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-comman
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
 import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
-import { migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
+import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../src/state-db/index.js";
 
 const roots: string[] = [];
@@ -371,13 +371,30 @@ function seedAdopted(
       "adopt",
       "2026-07-15T00:00:00.000Z",
     );
+  const aliasEvent = {
+    alias_event_id: `alias-event:${bound}:1`,
+    asset_id: bound,
+    sequence: 1,
+    command_id: `command:alias:${bound}:1`,
+    command_payload_digest: sha(`alias-command:${bound}`),
+    event_kind: "assigned",
+    alias: planId,
+    revision: 1,
+    reason: "adopt",
+    occurred_at: "2026-07-15T00:00:00.000Z",
+  };
+  const aliasEventDigest = ledgerRowDigest(aliasEvent, "event_digest");
+  db.prepare("INSERT INTO plan_alias_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    ...Object.values(aliasEvent),
+    aliasEventDigest,
+  );
   db.prepare("INSERT INTO plan_aliases VALUES (?, ?, ?, ?, ?, ?)").run(
     planId,
     bound,
     planId,
     1,
     null,
-    sha("alias").slice(7),
+    aliasEventDigest,
   );
 }
 

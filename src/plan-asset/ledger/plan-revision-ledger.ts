@@ -184,7 +184,7 @@ export class PlanRevisionLedgerTransaction {
   }
 }
 
-interface ValidRevision {
+export interface ValidRevision {
   readonly canonicalPayloadDigest: string;
   readonly commandPayloadDigest: string;
   readonly certificateDigest: string;
@@ -197,6 +197,17 @@ export function replayBindingValid(
   expected: ValidRevision,
   receipt: Record<string, unknown>,
 ): boolean {
+  return replayBindingFailures(db, input, expected, receipt).length === 0;
+}
+
+/** binding不一致を列単位で返し、fail-close判定の診断可能性を保つ。 */
+export function replayBindingFailures(
+  db: HarnessDb,
+  input: AppendPlanRevisionInput,
+  expected: ValidRevision,
+  receipt: Record<string, unknown>,
+): readonly string[] {
+  const failures: string[] = [];
   const revision = input.baseRevision + 1;
   const eventId = `admission:${input.certificateId}`;
   const expectedReceipt = {
@@ -211,8 +222,10 @@ export function replayBindingValid(
     result_ref: input.certificateId,
     recorded_at: input.occurredAt,
   };
-  if (!rowEquals(receipt, expectedReceipt)) return false;
-  if (receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest")) return false;
+  failures.push(...rowDifferences("receipt", receipt, expectedReceipt));
+  if (receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest")) {
+    failures.push("receipt.receipt_digest");
+  }
 
   const expectedAdmission = {
     admission_event_id: eventId,
@@ -232,51 +245,60 @@ export function replayBindingValid(
   const event = db
     .prepare("SELECT * FROM plan_admission_events WHERE command_id = ?")
     .get(input.commandId);
-  if (!event || !rowEquals(event, expectedAdmission)) return false;
-  if (event.event_digest !== ledgerRowDigest(event, "event_digest")) return false;
+  if (!event) failures.push("event.missing");
+  else {
+    failures.push(...rowDifferences("event", event, expectedAdmission));
+    if (event.event_digest !== ledgerRowDigest(event, "event_digest")) {
+      failures.push("event.event_digest");
+    }
+  }
   const admission = db
     .prepare("SELECT * FROM plan_admission_receipts WHERE command_id = ?")
     .get(input.commandId);
-  if (
-    !admission ||
-    !rowEquals(admission, {
-      certificate_id: input.certificateId,
-      admission_event_id: eventId,
-      command_id: input.commandId,
-      command_payload_digest: expected.commandPayloadDigest,
-      plan_asset_id: input.assetId,
-      plan_revision: revision,
-      plan_id: input.planId,
-      source_path: input.sourcePath,
-      content_digest: input.contentDigest,
-      route_tuple_digest: input.routeTupleDigest,
-      certificate_digest: expected.certificateDigest,
-      recorded_at: input.occurredAt,
-    })
-  )
-    return false;
+  const expectedAdmissionReceipt = {
+    certificate_id: input.certificateId,
+    admission_event_id: eventId,
+    command_id: input.commandId,
+    command_payload_digest: expected.commandPayloadDigest,
+    plan_asset_id: input.assetId,
+    plan_revision: revision,
+    plan_id: input.planId,
+    source_path: input.sourcePath,
+    content_digest: input.contentDigest,
+    route_tuple_digest: input.routeTupleDigest,
+    certificate_digest: expected.certificateDigest,
+    recorded_at: input.occurredAt,
+  };
+  if (!admission) failures.push("admission.missing");
+  else failures.push(...rowDifferences("admission", admission, expectedAdmissionReceipt));
   const stored = db
     .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = ?")
     .get(input.assetId, revision);
-  return Boolean(
-    stored &&
-      rowEquals(stored, {
-        asset_id: input.assetId,
-        revision,
-        canonical_payload_json: input.canonicalPayloadJson,
-        canonical_payload_digest: expected.canonicalPayloadDigest,
-        body_digest: input.bodyDigest,
-        source_path: input.sourcePath,
-        source_commit: input.sourceCommit,
-        actor: input.actor,
-        reason: input.reason,
-        occurred_at: input.occurredAt,
-      }),
-  );
+  const expectedRevision = {
+    asset_id: input.assetId,
+    revision,
+    canonical_payload_json: input.canonicalPayloadJson,
+    canonical_payload_digest: expected.canonicalPayloadDigest,
+    body_digest: input.bodyDigest,
+    source_path: input.sourcePath,
+    source_commit: input.sourceCommit,
+    actor: input.actor,
+    reason: input.reason,
+    created_at: input.occurredAt,
+  };
+  if (!stored) failures.push("revision.missing");
+  else failures.push(...rowDifferences("revision", stored, expectedRevision));
+  return failures;
 }
 
-function rowEquals(row: Record<string, unknown>, expected: Record<string, unknown>): boolean {
-  return Object.entries(expected).every(([key, value]) => row[key] === value);
+function rowDifferences(
+  prefix: string,
+  row: Record<string, unknown>,
+  expected: Record<string, unknown>,
+): string[] {
+  return Object.entries(expected)
+    .filter(([key, value]) => row[key] !== value)
+    .map(([key]) => `${prefix}.${key}`);
 }
 
 function validate(input: AppendPlanRevisionInput):
