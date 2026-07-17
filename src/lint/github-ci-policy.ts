@@ -96,6 +96,7 @@ const REQUIRED_PULL_REQUEST_TYPES = [
 const REQUIRED_CONCURRENCY_GROUP =
   "harness-check-$" + "{{ github.workflow }}-$" + "{{ github.head_ref || github.ref }}";
 const REQUIRED_CANCEL_IN_PROGRESS = "$" + "{{ github.ref != 'refs/heads/main' }}";
+const REQUIRED_AGGREGATE_IF = "$" + "{{ always() }}";
 
 const PULL_REQUEST_ACTIVITY_TYPES = new Set([
   "assigned",
@@ -245,8 +246,23 @@ function checkRuntimeAggregate(input: {
       detail: `jobs.${RUNTIME_LEGS[index]}`,
     });
   }
-  const aggregate = recordValue(input.jobs["harness-check"]) as WorkflowJob | null;
-  if (!aggregate) {
+  const aggregateValue = input.jobs["harness-check"];
+  const aggregate = recordValue(aggregateValue) as WorkflowJob | null;
+  if (aggregateValue === undefined) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "missing_aggregate_gate",
+      detail: "jobs.harness-check",
+    });
+  } else if (!aggregate) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "malformed_workflow_shape",
+      detail: "jobs.harness-check must be a mapping",
+    });
+  } else if (aggregate.needs === undefined) {
     pushViolation({
       violations: input.violations,
       doc: input.doc,
@@ -265,12 +281,12 @@ function checkRuntimeAggregate(input: {
         detail: `harness-check.needs must equal ${RUNTIME_LEGS.join(",")} (missing=${missing.join(",") || "none"})`,
       });
     }
-    if (aggregate.if !== "${{ always() }}") {
+    if (aggregate.if !== REQUIRED_AGGREGATE_IF) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
         reason: "missing_aggregate_always",
-        detail: "harness-check.if must equal ${{ always() }}",
+        detail: `harness-check.if must equal ${REQUIRED_AGGREGATE_IF}`,
       });
     }
     const aggregateSteps = Array.isArray(aggregate.steps)

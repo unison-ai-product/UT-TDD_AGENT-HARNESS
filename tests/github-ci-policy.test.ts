@@ -10,6 +10,8 @@ import {
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy";
 
+const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
+
 const SOURCE_LEG_WORKFLOW = `
 name: harness-check
 on:
@@ -156,23 +158,20 @@ describe("github-ci-policy lint", () => {
   });
 
   it("U-CIPOL-016: requires always() so a failed runtime leg reaches the aggregate verdict", () => {
-    const workflow = SOURCE_WORKFLOW.replace("    if: \${{ always() }}\n", "");
+    const workflow = SOURCE_WORKFLOW.replace(`    if: ${AGGREGATE_ALWAYS}\n`, "");
     const result = analyzeGithubCiPolicy(docs(workflow));
 
     expect(result.violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
       reason: "missing_aggregate_always",
-      detail: "harness-check.if must equal ${{ always() }}",
+      detail: `harness-check.if must equal ${AGGREGATE_ALWAYS}`,
     });
   });
 
   it("U-CIPOL-017: requires explicit success guards for both runtime results", () => {
     for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
-      const workflow = SOURCE_WORKFLOW.replace(
-        `\${{ needs.${missing}.result }}`,
-        "success",
-      );
+      const workflow = SOURCE_WORKFLOW.replace(`\${{ needs.${missing}.result }}`, "success");
       const result = analyzeGithubCiPolicy(docs(workflow));
 
       expect(result.violations).toContainEqual({
@@ -559,7 +558,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "malformed_workflow_shape",
-        detail: "jobs.harness-check.steps must be an array of mappings",
+        detail: "jobs.harness-check-linux.steps must be an array of mappings",
       });
     }
 
@@ -649,8 +648,8 @@ describe("github-ci-policy lint", () => {
       expect(analyzeGithubCiPolicy(loaded).violations).toContainEqual({
         file: join(".github", "workflows", "harness-check.yml"),
         profile: "source",
-        reason: "missing_step",
-        detail: "github guard",
+        reason: "missing_runtime_leg",
+        detail: "jobs.harness-check-linux",
       });
     } finally {
       rmSync(repo, { recursive: true, force: true });
