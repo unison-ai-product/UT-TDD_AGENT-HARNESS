@@ -153,12 +153,18 @@ describe("db-currency lint", () => {
   });
 
   it("U-DBCURRENCY-006: Stop-hook refresh fails open (returns a reason instead of throwing) when rebuild is impossible", () => {
-    // repoRoot に .ut-tdd を作れない/触れないケースの代表として、存在しないパスを与える。
-    const bogusRoot = join(tmpdir(), "ut-tdd-stop-refresh-missing", "no-such-dir");
+    // .ut-tdd の位置に通常ファイルを置き、harness.db の親ディレクトリを作成不能にする
+    // (DB open 不能の代表ケース。lock 等の他の失敗も同じ catch 境界に落ちる)。
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-refresh-broken-"));
+    try {
+      writeFileSync(join(root, ".ut-tdd"), "not a directory", "utf8");
 
-    const refresh = refreshHarnessDbOnStop({ repoRoot: bogusRoot, skipTokenIngest: true });
+      const refresh = refreshHarnessDbOnStop({ repoRoot: root, skipTokenIngest: true });
 
-    expect(refresh.ok).toBe(false);
-    expect(refresh.skippedReason).toBeTruthy();
+      expect(refresh.ok).toBe(false);
+      expect(refresh.skippedReason).toBeTruthy();
+    } finally {
+      removeTestTree(root);
+    }
   });
 });
