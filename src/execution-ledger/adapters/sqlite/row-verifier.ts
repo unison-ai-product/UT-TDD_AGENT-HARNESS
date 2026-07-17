@@ -6,7 +6,13 @@ import {
   reduceExecutionEpisode,
 } from "../../domain/execution-episode.js";
 import { projectExecutionEpisode } from "../../application/episode-projector.js";
-import { decodeExecutionEpisodeEventRow } from "./episode-row-mapper.js";
+import {
+  decodeAppendCommandReceiptRow,
+  decodeDriveSelectionRow,
+  decodeExecutionEpisodeEventRow,
+  decodeExecutionEpisodeProjectionRow,
+  decodeIssueProjectionRow,
+} from "./episode-row-mapper.js";
 
 interface ReadStatement {
   all(...params: unknown[]): Record<string, unknown>[];
@@ -73,6 +79,8 @@ function selectionsMatchStreams(
     stream.events.filter((event) => event.kind === "drive_selected"),
   );
   if (rows.length !== expectedEvents.length) return false;
+  const decodedRows = rows.map(decodeDriveSelectionRow);
+  if (decodedRows.some((row) => row === undefined)) return false;
   const actual = uniqueRowMap(rows, (row) =>
     selectionKey(row.episode_id, row.selection_revision),
   );
@@ -125,6 +133,8 @@ function outboxMatchesStreams(
     stream.events.filter((event) => event.kind === "issue_requested"),
   );
   if (rows.length !== expectedEvents.length) return false;
+  const decodedRows = rows.map(decodeIssueProjectionRow);
+  if (decodedRows.some((row) => row === undefined)) return false;
   const actual = uniqueRowMap(rows, (row) =>
     outboxKey(row.episode_id, row.source_event_sequence, row.intent_revision),
   );
@@ -279,6 +289,7 @@ function projectionMatchesStream(
   stream: VerifiedStream | undefined,
 ): boolean {
   if (!stream) return false;
+  if (!decodeExecutionEpisodeProjectionRow(projection)) return false;
   const expected = projectExecutionEpisode(stream.events);
   if (!expected.ok) return false;
   const value = expected.projection;
@@ -306,6 +317,8 @@ function receiptsMatchEvents(
   eventRows: readonly Record<string, unknown>[],
 ): boolean {
   if (receipts.length !== eventRows.length) return false;
+  const decodedReceipts = receipts.map(decodeAppendCommandReceiptRow);
+  if (decodedReceipts.some((receipt) => receipt === undefined)) return false;
   const byEventId = uniqueRowMap(eventRows, (event) => String(event.event_id));
   const byResultRef = uniqueRowMap(receipts, (receipt) => String(receipt.result_ref));
   if (!byEventId || !byResultRef) return false;
