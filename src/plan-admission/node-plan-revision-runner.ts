@@ -78,7 +78,9 @@ export class NodePlanRevisionRunner {
       const publisher =
         this.deps.publisher?.() ?? new NodeAtomicDraftPublisher({ rootDir: this.deps.repoRoot });
       const renderer = new RevisionRenderer(
-        new TrackedReceiptRenderer({ read: () => snapshot.projectionText }),
+        new TrackedReceiptRenderer<PlanRevisionExecutionPayload>({
+          read: () => snapshot.projectionText,
+        }),
         snapshot.sourceByteDigest,
         snapshot.projectionByteDigest,
       );
@@ -133,7 +135,7 @@ export class NodePlanRevisionRunner {
 
 class RevisionRenderer {
   constructor(
-    private readonly delegate: TrackedReceiptRenderer,
+    private readonly delegate: TrackedReceiptRenderer<PlanRevisionExecutionPayload>,
     private readonly sourceDigest: `sha256:${string}`,
     private readonly projectionDigest: `sha256:${string}`,
   ) {}
@@ -143,12 +145,8 @@ class RevisionRenderer {
     receipt: PlanRevisionReceipt,
   ): readonly [DraftArtifact, DraftArtifact] {
     if (!receipt.certificateDigest) throw new Error("plan-revision-receipt-incomplete");
-    const compatible = {
-      ...command,
-      payload: { canonical: {} as never, admission: command.payload.admission },
-    };
     const [source, projection] = this.delegate.render(
-      compatible,
+      command,
       receipt as PlanRevisionReceipt & { certificateDigest: string },
     );
     return [

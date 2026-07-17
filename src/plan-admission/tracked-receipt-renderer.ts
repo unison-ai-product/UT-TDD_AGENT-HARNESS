@@ -9,6 +9,7 @@ import type {
   DraftReceiptBinding,
   PlanDraftCommand,
 } from "./plan-draft-service";
+import type { PlanAdmissionRequest } from "./policy";
 import { evaluatePlanAdmission } from "./policy";
 import {
   parseTrackedReceiptProjection,
@@ -18,6 +19,10 @@ import {
 } from "./tracked-receipt-projection";
 
 export type TrackedReceiptDraftPayload = PlanDraftExecutionPayload;
+
+interface AdmissionBearingPayload {
+  readonly admission: PlanAdmissionRequest;
+}
 
 export interface TrackedReceiptDraftReceipt extends DraftReceiptBinding {
   readonly certificateDigest: string;
@@ -31,13 +36,14 @@ export interface TrackedReceiptProjectionReader {
  * 確定済みledger receiptからPLAN frontmatterとGit管理projectionを同時生成する。
  * projection本文はcommand payloadから受け取らず、既存の追跡対象をreader経由で取得する。
  */
-export class TrackedReceiptRenderer
-  implements DraftArtifactRendererPort<TrackedReceiptDraftPayload, TrackedReceiptDraftReceipt>
+export class TrackedReceiptRenderer<
+  TPayload extends AdmissionBearingPayload = TrackedReceiptDraftPayload,
+> implements DraftArtifactRendererPort<TPayload, TrackedReceiptDraftReceipt>
 {
   constructor(private readonly projections: TrackedReceiptProjectionReader) {}
 
   render(
-    command: PlanDraftCommand<TrackedReceiptDraftPayload>,
+    command: PlanDraftCommand<TPayload>,
     receipt: TrackedReceiptDraftReceipt,
   ): readonly [
     source: { path: string; content: string },
@@ -128,7 +134,7 @@ export class TrackedReceiptRenderer
 }
 
 function receiptFrontmatter(input: {
-  command: PlanDraftCommand<TrackedReceiptDraftPayload>;
+  command: PlanDraftCommand<AdmissionBearingPayload>;
   receipt: TrackedReceiptDraftReceipt;
   contentDigest: string;
   decisionDigest: string;
@@ -219,7 +225,7 @@ function toJsonRecord(record: TrackedReceiptRecord): Record<string, unknown> {
 }
 
 function selfVerify(input: {
-  command: PlanDraftCommand<TrackedReceiptDraftPayload>;
+  command: PlanDraftCommand<AdmissionBearingPayload>;
   receipt: TrackedReceiptDraftReceipt;
   source: string;
   projection: string;
@@ -257,7 +263,7 @@ function selfVerify(input: {
     );
 }
 
-function rejectCallerProjection(payload: TrackedReceiptDraftPayload): void {
+function rejectCallerProjection(payload: AdmissionBearingPayload): void {
   if (Object.keys(payload).some((key) => key.toLowerCase().includes("projection")))
     throw new Error("tracked-receipt-caller-projection-forbidden");
 }
