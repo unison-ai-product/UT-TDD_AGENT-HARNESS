@@ -377,9 +377,7 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
         tool_input: { command: "Get-Process -Name secret-arg" },
       }),
     ).toBe("PowerShell (powershell)");
-    expect(summarize({ tool_name: "PowerShell", tool_input: {} })).toBe(
-      "PowerShell (powershell)",
-    );
+    expect(summarize({ tool_name: "PowerShell", tool_input: {} })).toBe("PowerShell (powershell)");
   });
 
   // PLAN-RECOVERY-05 item 2: Bash の検証 verb を target に分類して残す (引数は残さない)。
