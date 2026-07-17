@@ -19,20 +19,18 @@ agent_slots:
   - role: qa
     slot_label: "QA - ci-policy DAG 検査 / trace block / policy diff の unit oracle Red 先行"
 review_evidence:
-  - reviewer: intra_runtime_subagent
-    review_kind: intra_runtime_subagent
+  - reviewer: codex-subagent-post-test-ci-recovery-review
+    review_kind: cross_agent
     worker_model: claude-fable-5
-    reviewer_model: claude-opus-4-8
+    reviewer_model: gpt-5
     tests_green_at: "2026-07-17T19:35:00+09:00"
-    reviewed_at: "2026-07-17T19:25:00+09:00"
+    reviewed_at: "2026-07-17T20:21:00+09:00"
     verdict: pass
     scope: >-
-      blind-reviewer (claim-blind/spec-blind 二レーン) が W3-W6 実装を独立判定。
-      初回 FLAG 2 件 (Issue Forms 4 本の drive_model 等欠落 + 退化 oracle /
-      branchMatches ~DEFAULT_BRANCH fail-open) を d0cec8d2 で解消し、
-      両所見とも機械 oracle (U-L7-451-W5-001 全 form ループ / U-L7-451-W6-005)
-      へ固定して green を実測。他攻撃 (schema 代表性 / exit code 契約 /
-      degrade / YAML injection / trace fail-close) は反駁済み。
+      Claude blind-reviewerのpre-test攻撃で得たFLAG 2件と修正結果を入力に含め、
+      PR #104 の失敗4系統と修正差分をCodexがpost-testでcross-runtime再攻撃した。
+      実repo参照2件のisolation契約、DB close後のretry cleanup、Reverse未完了を
+      claimしないDoD境界をPASSとし、pre-test承認entryは正本から除外した。
     green_commands:
       - kind: typecheck
         command: "bun run typecheck"
@@ -50,18 +48,6 @@ review_evidence:
         completed_at: "2026-07-17T19:20:00+09:00"
         evidence_path: .ut-tdd/audit/A-L7-451-lint.log
         output_digest: "sha256:86580aae589db1e6"
-  - reviewer: codex-subagent-post-test-ci-recovery-review
-    review_kind: cross_agent
-    worker_model: claude-fable-5
-    reviewer_model: gpt-5
-    tests_green_at: "2026-07-17T19:35:00+09:00"
-    reviewed_at: "2026-07-17T20:21:00+09:00"
-    verdict: pass
-    scope: >-
-      PR #104 の失敗4系統と修正差分をcross-runtimeで再攻撃した。実repo参照2件の
-      isolation契約、DB close後のretry cleanup、Reverse未完了をclaimしないDoD境界は
-      PASS。元のClaudeレビュー時刻の変更は証拠偽装になるためFLAGとして撤回し、
-      本entryをテストGreen後の独立再レビュー証跡として追加した。
 generates:
   - artifact_path: docs/plans/PLAN-L7-451-github-ops-phase1-visibility-and-policy.md
     artifact_type: markdown_doc
