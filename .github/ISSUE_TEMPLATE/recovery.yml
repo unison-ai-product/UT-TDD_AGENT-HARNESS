@@ -1,0 +1,63 @@
+# PLAN-L7-451 W5: Forward escape (Recovery) Issue Form。項目は PLAN-L6-83 の
+# Issue 本文規定 (origin 4-tuple / escape reason / drive model / reentry target) 準拠。
+# 人間がここで書いた内容は Ledger の正本を直接更新しない (drift/command candidate 扱い)。
+name: Recovery
+description: 壊れた不変条件からの回復 episode を起票する (Forward escape)
+title: "Recovery: "
+labels: ["ut-tdd", "drive:recovery"]
+body:
+  - type: input
+    id: origin_plan
+    attributes:
+      label: Origin PLAN ID
+      placeholder: PLAN-L7-xxx
+    validations:
+      required: true
+  - type: input
+    id: origin_revision
+    attributes:
+      label: Origin PLAN revision
+    validations:
+      required: false
+  - type: textarea
+    id: observed_state
+    attributes:
+      label: Observed state (壊れた不変条件・観測事実)
+    validations:
+      required: true
+  - type: input
+    id: reason_code
+    attributes:
+      label: Failure / drift reason code
+    validations:
+      required: true
+  - type: input
+    id: observed_head
+    attributes:
+      label: Observed HEAD (git SHA)
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence path / digest
+    validations:
+      required: true
+  - type: dropdown
+    id: drive_model
+    attributes:
+      label: Suggested drive model
+      options:
+        - recovery
+        - incident
+        - reverse
+        - redesign
+        - discovery
+    validations:
+      required: true
+  - type: input
+    id: reentry_target
+    attributes:
+      label: Reentry target (Forward 再合流先 PLAN / layer)
+    validations:
+      required: true

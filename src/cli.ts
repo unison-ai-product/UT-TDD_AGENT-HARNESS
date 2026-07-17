@@ -49,7 +49,15 @@ import { computeSkillMetrics } from "./feedback/engine";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
+import { collectJobSummary, renderJobSummary } from "./github/job-summary";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
+import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace";
+import {
+  diffRepositoryPolicy,
+  normalizeRulesets,
+  parseRepositoryPolicy,
+  renderPolicyDiff,
+} from "./github/repository-policy";
 import { loadRelationGraphSourceSet } from "./graph/loader";
 import {
   checkHandoverBypass,
@@ -3136,6 +3144,160 @@ github
       process.exitCode = result.ok ? 0 : 1;
     },
   );
+
+// PLAN-L7-451 W3: $GITHUB_STEP_SUMMARY 向け projection。summary 生成失敗で CI を
+// red にしないため、常に exit 0 で degrade する (判定正本は gate 実測)。
+github
+  .command("summary")
+  .description("GitHub Actions Job Summary 向け markdown を stdout へ出力 (read-only projection)")
+  .option("--db <path>", "harness.db path (default: .ut-tdd/harness.db)")
+  .action((opts: { db?: string }) => {
+    try {
+      const repoRoot = process.cwd();
+      const data = collectJobSummary({
+        dbPath: opts.db ?? defaultHarnessDbPath(repoRoot),
+        repoRoot,
+        headSha: gitHead() ?? "",
+        branch: gitBranch() ?? "",
+      });
+      process.stdout.write(renderJobSummary(data));
+    } catch (error) {
+      process.stdout.write(`## UT-TDD harness summary\n\n> summary degraded: ${String(error)}\n`);
+    }
+  });
+
+const githubPr = github
+  .command("pr")
+  .description("typed PR trace contract — <!-- ut-tdd:trace/v1 --> block (PLAN-L7-451 W4)");
+
+githubPr
+  .command("render")
+  .description("PR body へ貼る trace block を生成する (手入力しない)")
+  .requiredOption("--plan <planId>", "PLAN ID (PLAN-L7-451 など)")
+  .requiredOption("--route-mode <mode>", "route mode (add-feature / recovery / reverse など)")
+  .option("--head <sha>", "subject HEAD SHA (default: git rev-parse HEAD)")
+  .option("--base <sha>", "base SHA (default: git rev-parse origin/main)")
+  .option("--plan-revision <n>", "PLAN revision")
+  .option("--episode-id <id>", "execution episode ID (Forward 外のみ)")
+  .option("--issue-number <n>", "GitHub issue number (Forward 外のみ)")
+  .action(
+    (opts: {
+      plan: string;
+      routeMode: string;
+      head?: string;
+      base?: string;
+      planRevision?: string;
+      episodeId?: string;
+      issueNumber?: string;
+    }) => {
+      try {
+        const resolve = (ref: string): string =>
+          execFileSync("git", ["rev-parse", ref], { encoding: "utf8" }).trim();
+        const block = renderPrTraceBlock({
+          plan_id: opts.plan,
+          route_mode: opts.routeMode,
+          subject_head: opts.head ?? resolve("HEAD"),
+          base_sha: opts.base ?? resolve("origin/main"),
+          plan_revision: opts.planRevision,
+          episode_id: opts.episodeId,
+          issue_number: opts.issueNumber,
+        });
+        process.stdout.write(`${block}\n`);
+      } catch (error) {
+        process.stderr.write(`pr render failed: ${String(error)}\n`);
+        process.exitCode = 1;
+      }
+    },
+  );
+
+githubPr
+  .command("validate")
+  .description("PR body の trace block を検証する (欠落・破損は fail-close)")
+  .requiredOption("--body-file <path>", "PR body を書いたファイル")
+  .option("--json", "JSON output")
+  .action((opts: { bodyFile: string; json?: boolean }) => {
+    if (!existsSync(opts.bodyFile)) {
+      process.stderr.write(`pr validate: body file not found: ${opts.bodyFile}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const result = validatePrTraceBody(readFileSync(opts.bodyFile, "utf8"));
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else if (result.ok) {
+      process.stdout.write(`pr trace — OK (plan_id=${result.fields.plan_id})\n`);
+    } else {
+      process.stdout.write("pr trace — FAIL\n");
+      for (const finding of result.findings) {
+        process.stdout.write(`  - [${finding.code}] ${finding.message}\n`);
+      }
+    }
+    process.exitCode = result.ok ? 0 : 1;
+  });
+
+// PLAN-L7-451 W6: repository policy 監査 (read-only)。適用操作は含めない。
+const githubPolicy = github
+  .command("policy")
+  .description("repository policy 監査 — authoring source と GitHub 現物の照合 (read-only)");
+
+const REPOSITORY_POLICY_PATH = "docs/governance/github-repository-policy.yaml";
+
+function fetchRulesetsViaGh(repository: string): unknown[] {
+  const list = JSON.parse(
+    execFileSync("gh", ["api", `repos/${repository}/rulesets?includes_parents=true`], {
+      encoding: "utf8",
+    }),
+  ) as Array<Record<string, unknown>>;
+  return list.map((entry) =>
+    JSON.parse(
+      execFileSync("gh", ["api", `repos/${repository}/rulesets/${String(entry.id)}`], {
+        encoding: "utf8",
+      }),
+    ),
+  );
+}
+
+githubPolicy
+  .command("inspect")
+  .description("GitHub 現物の Rulesets を取得して表示する")
+  .action(() => {
+    try {
+      const policy = parseRepositoryPolicy(readFileSync(REPOSITORY_POLICY_PATH, "utf8"));
+      const rulesets = fetchRulesetsViaGh(policy.repository);
+      process.stdout.write(`${JSON.stringify(normalizeRulesets(rulesets), null, 2)}\n`);
+    } catch (error) {
+      process.stderr.write(`policy inspect failed (gh/外部障害): ${String(error)}\n`);
+      process.exitCode = 3;
+    }
+  });
+
+githubPolicy
+  .command("diff")
+  .description("authoring source と現物の乖離を finding 列挙 (乖離 exit 1 / gh 障害 exit 3)")
+  .option("--observed-file <path>", "gh を使わず観測 JSON (raw rulesets) をファイルから読む")
+  .action((opts: { observedFile?: string }) => {
+    let policy: ReturnType<typeof parseRepositoryPolicy>;
+    try {
+      policy = parseRepositoryPolicy(readFileSync(REPOSITORY_POLICY_PATH, "utf8"));
+    } catch (error) {
+      process.stderr.write(`policy diff failed (authoring source): ${String(error)}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    let observedRaw: unknown;
+    try {
+      observedRaw = opts.observedFile
+        ? JSON.parse(readFileSync(opts.observedFile, "utf8"))
+        : fetchRulesetsViaGh(policy.repository);
+    } catch (error) {
+      process.stderr.write(`policy diff failed (gh/外部障害): ${String(error)}\n`);
+      process.exitCode = 3;
+      return;
+    }
+    const result = diffRepositoryPolicy(policy, normalizeRulesets(observedRaw));
+    process.stdout.write(renderPolicyDiff(result));
+    process.exitCode = result.ok ? 0 : 1;
+  });
 
 registerFeedbackCommands(program);
 

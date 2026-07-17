@@ -1,0 +1,50 @@
+# PLAN-L7-451 W5: Redesign episode の Issue Form (PLAN-L6-83 準拠)。
+name: Redesign
+description: 確定済み設計の作り直しが必要になった episode を起票する
+title: "Redesign: "
+labels: ["ut-tdd", "drive:redesign"]
+body:
+  - type: input
+    id: origin_plan
+    attributes:
+      label: Origin PLAN ID
+    validations:
+      required: true
+  - type: textarea
+    id: observed_state
+    attributes:
+      label: Observed state (設計が成立しなくなった根拠)
+    validations:
+      required: true
+  - type: input
+    id: reason_code
+    attributes:
+      label: Reason code
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence path / digest
+    validations:
+      required: true
+  - type: input
+    id: observed_head
+    attributes:
+      label: Observed HEAD (git SHA)
+    validations:
+      required: true
+  - type: dropdown
+    id: drive_model
+    attributes:
+      label: Drive model
+      options:
+        - redesign
+    validations:
+      required: true
+  - type: input
+    id: reentry_target
+    attributes:
+      label: Reentry target (Forward 再合流先 PLAN / layer)
+    validations:
+      required: true
