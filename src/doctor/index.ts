@@ -119,6 +119,7 @@ export {
   checkProjectHooks,
 } from "./runtime-surface";
 export {
+  checkDeliverablePlanTrace,
   checkImplPlanTrace,
   checkMergedPlanStatus,
   checkOracleTestTrace,

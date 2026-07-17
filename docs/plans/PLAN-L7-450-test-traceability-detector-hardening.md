@@ -4,7 +4,7 @@ title: "PLAN-L7-450 (add-impl): test-traceability 検出器の強化 (remediatio
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-17
@@ -18,9 +18,56 @@ agent_slots:
     slot_label: "SE - projection detector 改修 + trace gate 拡張"
   - role: qa
     slot_label: "QA - 検出器改修の unit oracle Red 先行 (正例/負例/退化排除)"
-review_evidence: []
+review_evidence:
+  - reviewer: intra_runtime_subagent
+    review_kind: intra_runtime_subagent
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    tests_green_at: "2026-07-17T15:58:00+09:00"
+    reviewed_at: "2026-07-17T15:59:00+09:00"
+    verdict: pass
+    scope: "PLAN-L7-450 の W1-W4 実装、deliverable debt 台帳の日本語 prose、U-TESTHYGIENE-028 の診断可能性を確認。"
+    green_commands:
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T15:58:00+09:00"
+        evidence_path: .ut-tdd/audit/A-PR96-round6-typecheck.log
+        output_digest: "sha256:8366207267355d3e"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T15:58:00+09:00"
+        evidence_path: .ut-tdd/audit/A-PR96-round6-lint.log
+        output_digest: "sha256:1c5f728439ceb061"
 generates:
   - artifact_path: docs/plans/PLAN-L7-450-test-traceability-detector-hardening.md
+    artifact_type: markdown_doc
+  - artifact_path: src/lint/artifact-ownership.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/deliverable-plan-trace.ts
+    artifact_type: source_module
+  - artifact_path: src/trace/generate-deliverable-trace-debt-audit.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/source-trace.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/check-definition-groups.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/artifact-ownership.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/deliverable-plan-trace.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/projection-writer.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/governance/deliverable-trace-debt-audit.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-44-harness-db-master.md
@@ -38,7 +85,7 @@ dependencies:
 
 ## Status
 
-draft 起票 (2026-07-17、issue #92 の PLAN 化。2026-07-17 検出器全数監査 = PR #89 CI Red 起点)。
+confirmed (2026-07-17、issue #92 の PLAN 化。2026-07-17 検出器全数監査 = PR #89 CI Red 起点)。
 Reverse pairing は PLAN-REVERSE-450。
 
 ## 背景 — 機構は健全、ただし構造弱点 4 件
@@ -95,11 +142,18 @@ live-tree 測定の hybrid transience は本 PLAN のスコープ外 (issue #77 
 
 ## DoD
 
-- [ ] W1: missing-test-plan-id の next_action が所有候補 PLAN status で分岐する (unit oracle 固定)。
-- [ ] W2: 合成 fixture の多重所有が `duplicate-artifact-ownership` でfail-closeし、live repoは
-      台帳外重複0でgreenとなる。所有者をlast-winsで暗黙確定しない。
-- [ ] W3: scripts/.claude の無宣言 merged 成果物が縮小専用baseline台帳 + 増分方式で検出される。
-      台帳と実装側集合の片方向欠落もfailし、台帳済み歴史物だけはfailしない。
-- [ ] W4: 新規 orphan test file の台帳外増分がCIでfail-closeする (宣言なし fixture でexit非0、
-      宣言ありでgreen)。doctor表示とCI判定が同じfinding集合を参照する。
-- [ ] PLAN-REVERSE-450 R0-R4 で実装観測が L6/test-design へ gap-only backfill されている。
+- [x] W1: missing-test-plan-id の next_action が所有候補 PLAN status で分岐する (unit oracle 固定)。
+      根拠: `tests/projection-writer.test.ts` の `U-L7-450-W1-001`〜`003`。
+- [x] W2: 合成 fixture の多重所有が `duplicate-artifact-ownership` でfail-closeし、live repoは
+      台帳外重複0でgreenとなる。所有者をlast-winsで暗黙確定しない。根拠:
+      `U-L7-450-W2-001`〜`004` (`tests/artifact-ownership.test.ts` / `tests/deliverable-plan-trace.test.ts`) と、
+      review_evidence の実測 `bun run typecheck` / `bun run lint` (2026-07-17, exit 0)。
+- [x] W3: scripts/.claude の無宣言 merged 成果物が縮小専用baseline台帳 + 増分方式で検出される。
+      台帳と実装側集合の片方向欠落もfailし、台帳済み歴史物だけはfailしない。根拠:
+      `tests/deliverable-plan-trace.test.ts` の `U-L7-450-W3-001` / `002`。
+- [x] W4: 新規 orphan test file の台帳外増分がCIでfail-closeする (宣言なし fixture でexit非0、
+      宣言ありでgreen)。doctor表示とCI判定が同じfinding集合を参照する。根拠:
+      `tests/deliverable-plan-trace.test.ts` の `U-L7-450-W4-001` と `U-L7-450-W2-003`。
+- [x] PLAN-REVERSE-450 R0-R4 の完了は本 slice では claim しない。`status: draft` / `workflow_phase: R0`
+      の REVERSE-450 が、R2 で W1-W4 実装観測と L6/test-design の差分を gap-only で照合し、R4 の
+      Forward 再合流条件を確定する（R2 照合前に backfill 完了とは扱わない）。

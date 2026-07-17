@@ -1,5 +1,10 @@
 import { existsSync } from "node:fs";
 import {
+  analyzeDeliverableTraceGate,
+  deliverablePlanTraceMessages,
+  loadDeliverablePlanTraceInput,
+} from "../lint/deliverable-plan-trace";
+import {
   analyzeImplPlanTrace,
   implPlanTraceMessages,
   loadImplPlanTraceInput,
@@ -81,6 +86,25 @@ export function checkImplPlanTrace(repoRoot: string): { messages: string[]; ok: 
   } catch {
     return {
       messages: ["impl-plan-trace - violation: src/PLAN trace could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/** W2/W3/W4: deliverable ownership and PLAN trace debt are one fail-closed finding set. */
+export function checkDeliverablePlanTrace(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["deliverable-plan-trace - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const result = analyzeDeliverableTraceGate(loadDeliverablePlanTraceInput(repoRoot));
+    return { messages: deliverablePlanTraceMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: ["deliverable-plan-trace - violation: trace debt ledger could not be read"],
       ok: false,
     };
   }
