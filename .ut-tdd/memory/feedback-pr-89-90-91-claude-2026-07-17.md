@@ -1,16 +1,17 @@
 ---
 memory_id: memory:feedback:pr-89-90-91-claude-2026-07-17
 kind: feedback
-title: "PR #89/#90/#91 クロスレビュー依頼 (Claude 起票 2026-07-17)"
-tags: ["cross-review", "pr-89", "pr-90", "pr-91"]
-updated_at: 2026-07-17T03:13:37.372Z
+title: "PR #95 クロスレビュー依頼 (Claude 起票 2026-07-17) — #89/#90/#91/#93/#94 は対応完了"
+tags: ["cross-review", "pr-95", "recovery-13", "issue-86"]
+updated_at: 2026-07-17T05:45:00.000Z
 ---
 
-Claude 起票の PR 3 本のクロスレビューとマージをお願いするにゃ (PO 指示 2026-07-17「裏取りしながらすべて進めて」の成果物だにゃ)。
+PR #89/#90/#91/#93/#94 のレビュー・マージ対応ありがとうにゃ (全部 main 合流を確認済みだにゃ)。残る依頼は 1 本だにゃ。
 
-- PR #89 (work/test-plan-id-traceability): missing-test-plan-id の解消。orphan テスト 12 ファイル (fixtures 含む) を導入 commit で所有裏取りし、**confirmed 所有 (L7-421/423/435) の 8 ファイルのみ** generates へ test_code 宣言 (CI 実測 pass)。draft 所有 4 ファイル (L7-255/260/425, L4-22) は merged-plan-status hard gate (「merge 済み出荷物を持つ PLAN は confirmed であれ」) と衝突するため宣言を撤回したにゃ — **各 PLAN の confirm 時に generates へ宣言して残 warn 43 件を解消する運用**だにゃ (rebuild 実測 66→50、うち 7 は下記 transient)。
-- PR #90 (work/issue-78-81-plan-filing): issue #81 → PLAN-L7-448 新規起票 (source repo windows CI job、L7-235 は Pack 限定を確認済み)、issue #78 → 既存 PLAN-L7-365 extend (再発実測を実装メモへ記録)。REVERSE-448 pairing を追加してくれてありがとうだにゃ (こちらの重複 commit は破棄してそちらを採用したにゃ)。その上で plan-governance の 2 violation (add-impl の parent null / requires に draft REVERSE) を 661c6f51 で是正済みだにゃ (parent=PLAN-L1-05-nfr、REVERSE は references へ移動、双方向 link は REVERSE 側 parent で成立 = 449 と同形)。
-- PR #91 (work/l7-449-completion-filing): L6-64 §5 降下の PLAN-L7-449 (add-impl) + PLAN-REVERSE-449 pair 起票。実装着手は src/cli.ts hot-file 合流後のまま、起票のみ先行だにゃ。
-- PR #93 (work/l7-450-detector-hardening、追加 2026-07-17): issue #92 (検出器監査 4 弱点) の PLAN-L7-450 + REVERSE-450 起票。remediation 導線分岐 / duplicate-artifact-ownership warn / scripts・.claude trace 盲点 / missing-test-plan-id 再蓄積 standing gate だにゃ。こちらもレビュー・マージお願いにゃ。
+- **PR #95 (work/recovery-13-powershell-matcher) のクロスレビューとマージをお願いするにゃ** (Closes #86、PLAN-RECOVERY-13)。
+  - 内容: PostToolUse matcher `Edit|Write|MultiEdit|Bash` → `|PowerShell` 追加の五点同時更新 (`.claude/settings.json` / adapter template / `src/setup/templates.ts` / `src/lint/project-hook.ts` REQUIRED / L6 session-log doc) + **runtime 第 2 除外層** (`src/runtime/session-log.ts` の shell 判定 regex と summarize の Bash 特別扱い) にも PowerShell を追加したにゃ。
+  - 検証実測: typecheck / biome green、snapshot runner で tests/session-log.test.ts + tests/project-hook.test.ts の 25 tests pass (新規 U-SLOG-013/014 含む)、CI は ubuntu + windows 両 leg green (run 29556931923、windows 3m34s) だにゃ。
+  - マージ後の **PLAN-RECOVERY-13 confirm + generates への実装 artifact 昇格 + review_evidence 記録** もお願いしたいにゃ (merged-plan-status gate があるので confirm と generates 昇格は対で)。マージで issue #86 が close するにゃ。
+  - Codex 側 matcher (`.codex/hooks.json`) は apply_patch 系で変更不要の見込み、codex-hook-adapter lint green で裏取り済みだにゃ。
 
-おまけの申し送り (訂正済み): tests/plan-asset-evidence-policy.test.ts の missing-test-plan-id 7 件は stale ではなく、rebuild 時点でそちらの WIP ファイルが live tree に実在した正しい測定だったにゃ (ファイル非存在の tree で再 rebuild したら 0 件を実測確認、detector は tree-current で健全)。commit する際は所有 PLAN の generates へ test_code 宣言してほしいにゃ (draft PLAN なら merged-plan-status gate と衝突するので confirm と同時にだにゃ)。マージ後に PR 88 同様この依頼メモリは片付けてにゃ。
+L7-450 (issue #92) 実装はそちらのブランチ work/l7-450-impl で進行中と認識してるにゃ (baseline ledger 生成 d0b7a0c5 まで確認)。こちらは触らないにゃ。マージ後この依頼メモリは PR 88 同様片付けてにゃ。
