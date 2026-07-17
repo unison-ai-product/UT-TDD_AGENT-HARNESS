@@ -1,10 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { analyzeArtifactOwnership } from "../src/lint/artifact-ownership";
+import { analyzeArtifactOwnership } from "./artifact-ownership";
 import {
   analyzeDeliverablePlanTrace,
   loadDeliverablePlanTraceInput,
-} from "../src/lint/deliverable-plan-trace";
+} from "./deliverable-plan-trace";
 
 const repoRoot = process.cwd();
 const input = loadDeliverablePlanTraceInput(repoRoot);
@@ -23,10 +23,12 @@ const owner = "PLAN-REVERSE-450-test-traceability-detector-backfill";
 const promoteBy = "2026-08-31";
 const rows = [
   ...orphanPaths.map(
-    (path) => `| \`${path}\` | orphan-deliverable | \`${owner}\` | W3/W4 generated inventory: historical untraced deliverable | ${promoteBy} |`,
+    (path) =>
+      `| \`${path}\` | orphan-deliverable | \`${owner}\` | W3/W4 generated inventory: historical untraced deliverable | ${promoteBy} |`,
   ),
   ...duplicatePaths.map(
-    (path) => `| \`${path}\` | duplicate-artifact-ownership | \`${owner}\` | W2 generated inventory: multiple PLAN generates declarations | ${promoteBy} |`,
+    (path) =>
+      `| \`${path}\` | duplicate-artifact-ownership | \`${owner}\` | W2 generated inventory: multiple PLAN generates declarations | ${promoteBy} |`,
   ),
 ];
 const content = `# deliverable trace debt audit
@@ -39,7 +41,7 @@ PLAN \`generates\` 未宣言成果物と複数 PLAN 所有を、解析器の実�
 
 ## 再生成
 
-\`bun scripts/generate-deliverable-trace-debt-audit.ts\` が \`loadDeliverablePlanTraceInput\` と
+\`bun src/lint/generate-deliverable-trace-debt-audit.ts\` が \`loadDeliverablePlanTraceInput\` と
 \`artifact-ownership\` と同じ PLAN \`generates\` 実測集合からこのファイルを機械生成する。台帳は
 orphan と duplicate ownership を別集合として双方向突合し、remediation owner は
 \`${owner}\`、\`promote_by\` は台帳無期限化を防ぐ期限である。
@@ -48,4 +50,8 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 | --- | --- | --- | --- | --- |
 ${rows.join("\n")}
 `;
-writeFileSync(join(repoRoot, "docs", "governance", "deliverable-trace-debt-audit.md"), content, "utf8");
+writeFileSync(
+  join(repoRoot, "docs", "governance", "deliverable-trace-debt-audit.md"),
+  content,
+  "utf8",
+);

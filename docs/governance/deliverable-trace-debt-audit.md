@@ -8,7 +8,7 @@ PLAN `generates` 未宣言成果物と複数 PLAN 所有を、解析器の実測
 
 ## 再生成
 
-`bun scripts/generate-deliverable-trace-debt-audit.ts` が `loadDeliverablePlanTraceInput` と
+`bun src/lint/generate-deliverable-trace-debt-audit.ts` が `loadDeliverablePlanTraceInput` と
 `artifact-ownership` と同じ PLAN `generates` 実測集合からこのファイルを機械生成する。台帳は
 orphan と duplicate ownership を別集合として双方向突合し、remediation owner は
 `PLAN-REVERSE-450-test-traceability-detector-backfill`、`promote_by` は台帳無期限化を防ぐ期限である。
@@ -43,7 +43,6 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 | `.claude/agents/pmo-tech-news.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `.claude/hooks/agent-guard.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `.claude/settings.local.json` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `scripts/generate-deliverable-trace-debt-audit.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `scripts/git-hooks/pre-push` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `scripts/git-hooks/secret-scan-diff.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `scripts/ut-tdd` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
