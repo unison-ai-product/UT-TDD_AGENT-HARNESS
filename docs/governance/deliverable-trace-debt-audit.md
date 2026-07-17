@@ -15,17 +15,6 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 
 | artifact_path | debt_kind | owner_plan | justification | promote_by |
 | --- | --- | --- | --- | --- |
-| `.claude/agent-memory/code-reviewer/MEMORY.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_l4_catalog_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_plan001_w1_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_plan_l4_14_fe_coverage_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_plan_l7_52_wbs04_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_plan_l7_53_learning_engine_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_pr46_vmodel_engine_swap_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_pr51_blind_reviewer_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_reverse03_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_skill_index_creator_review.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/agent-memory/code-reviewer/project_ut_tdd_harness.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `.claude/agents/be-api.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `.claude/agents/be-logic.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `.claude/agents/blind-reviewer.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
@@ -42,7 +31,6 @@ orphan と duplicate ownership を別集合として双方向突合し、remedia
 | `.claude/agents/pmo-tech-fork.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `.claude/agents/pmo-tech-news.md` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `.claude/hooks/agent-guard.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
-| `.claude/settings.local.json` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `scripts/git-hooks/pre-push` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `scripts/git-hooks/secret-scan-diff.ts` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |
 | `scripts/ut-tdd` | orphan-deliverable | `PLAN-REVERSE-450-test-traceability-detector-backfill` | W3/W4 generated inventory: historical untraced deliverable | 2026-08-31 |

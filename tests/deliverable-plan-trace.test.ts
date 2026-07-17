@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeDeliverablePlanTrace,
   analyzeDeliverableTraceGate,
+  isDeliverableArtifactPath,
 } from "../src/lint/deliverable-plan-trace";
 
 describe("PLAN-L7-450 W4/W3 deliverable trace", () => {
@@ -35,6 +36,12 @@ describe("PLAN-L7-450 W4/W3 deliverable trace", () => {
       "orphan-deliverable",
       "stale-deliverable-trace-debt",
     ]);
+  });
+
+  it("U-L7-450-W3-002: ignores gitignored Claude runtime state in every workspace", () => {
+    expect(isDeliverableArtifactPath(".claude/agent-memory/reviewer/MEMORY.md")).toBe(false);
+    expect(isDeliverableArtifactPath(".claude/settings.local.json")).toBe(false);
+    expect(isDeliverableArtifactPath(".claude/agents/code-reviewer.md")).toBe(true);
   });
 
   it("U-L7-450-W2-003: duplicate ownership shares the same fail-closed gate finding set", () => {

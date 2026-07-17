@@ -47,6 +47,22 @@ export interface DeliverablePlanTraceInput {
   ownershipBaseline: Set<string>;
 }
 
+/**
+ * Runtime-local Claude state is intentionally gitignored and cannot be a PLAN
+ * deliverable. Keep it outside this repository-deliverable gate so a clean CI
+ * snapshot and a developer worktree observe the same artifact set.
+ */
+export function isDeliverableArtifactPath(path: string): boolean {
+  if (path === ".claude/settings.local.json" || path.startsWith(".claude/agent-memory/")) {
+    return false;
+  }
+  return (
+    path.startsWith("scripts/") ||
+    path.startsWith(".claude/") ||
+    /\/tests\/.*\.test\.ts$/.test(`/${path}`)
+  );
+}
+
 function listFiles(dir: string, repoRoot: string, output: string[]): void {
   if (!statSync(dir).isDirectory()) return;
   for (const entry of readdirSync(dir)) {
@@ -101,12 +117,7 @@ export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlan
       // Optional roots are an empty set in consumer repositories.
     }
   }
-  const scopedArtifacts = artifactFiles.filter(
-    (path) =>
-      path.startsWith("scripts/") ||
-      path.startsWith(".claude/") ||
-      /\/tests\/.*\.test\.ts$/.test(`/${path}`),
-  );
+  const scopedArtifacts = artifactFiles.filter(isDeliverableArtifactPath);
   const tracedPaths = new Set<string>();
   const ownersByPath = new Map<string, string[]>();
   for (const file of readdirSync(join(repoRoot, "docs", "plans")).filter((name) =>
@@ -131,7 +142,7 @@ export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlan
     artifactFiles: scopedArtifacts.sort(),
     tracedPaths,
     ownersByPath,
-    baseline: ledger.baseline,
+    baseline: new Map([...ledger.baseline].filter(([path]) => isDeliverableArtifactPath(path))),
     ownershipBaseline: ledger.ownershipBaseline,
   };
 }
