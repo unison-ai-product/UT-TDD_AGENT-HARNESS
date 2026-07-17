@@ -23,8 +23,8 @@ review_evidence:
     review_kind: intra_runtime_subagent
     worker_model: claude-fable-5
     reviewer_model: claude-opus-4-8
-    tests_green_at: "2026-07-17T20:58:00+09:00"
-    reviewed_at: "2026-07-17T21:00:00+09:00"
+    tests_green_at: "2026-07-17T21:00:00+09:00"
+    reviewed_at: "2026-07-17T21:05:00+09:00"
     verdict: pass
     scope: >-
       blind-reviewer (claim-blind/spec-blind) が U-EXISSUE-001..006 と契約実装を
