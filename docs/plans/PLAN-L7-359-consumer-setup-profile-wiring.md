@@ -76,7 +76,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-03T17:59:00+09:00"
         evidence_path: tests/project-hook.test.ts
-        output_digest: "sha256:4511c45a4669d52bc3e81e6e98089e5c99367a02b1429abfbb09ffc53c233e88"
+        output_digest: "sha256:e9a48d7c27efa10cda6df8cae8db23419d6d1be1838f78809020ce5ed6883f55"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -93,7 +94,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-03T17:46:00+09:00"
         evidence_path: src/lint/project-hook.ts
-        output_digest: "sha256:40185d1c975350a5d60ce08efea439a3987f452beccb19ffef54986cfd022259"
+        output_digest: "sha256:3ee0c431d526566915c7a3fc15857757077fb82342af5dea07b515d6a9b4e5ae"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-359: consumer setup profile wiring

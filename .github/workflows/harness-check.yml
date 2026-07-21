@@ -73,7 +73,13 @@ jobs:
         run: bun src/cli.ts audit quality --include-tests --limit 20
 
       - name: doctor (governance hard gates)
-        run: bun src/cli.ts doctor
+        # PLAN-L7-420 Step 2: green-command-digest は L7-132/L7-194/L7-303 で opt-in strict として
+        # 設計されたが、CI がこのフラグ無しで doctor を回していたため strict gate がどの自動経路でも
+        # 走っていなかった (G-1)。PLAN-L7-420 Step 1 で不一致 49 件 (30 PLAN) を rerun-bound correction
+        # で是正し尽くしたことを前提に、ここで CI へ hard 投入する。
+        # telemetry-provenance (L7-192) は現状 runtime capture gap が残るため、投入は期限付き deferral
+        # (PLAN-L7-420 §telemetry-provenance strict deferral 参照)。
+        run: bun src/cli.ts doctor --strict-green-command-digest
 
       # PLAN-L7-451 W3: 人間向け projection。判定正本は上の gate 実測であり、
       # summary 生成は常に exit 0 (失敗で CI を red にしない)。

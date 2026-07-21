@@ -1,4 +1,5 @@
 import { checkHandoverOutstandingAnchor } from "../handover/index";
+import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging";
 import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import type { LintResult } from "../plan/lint";
 import {
@@ -288,6 +289,9 @@ export function buildDoctorCheckDefinitionGroups(
             ok: options.strictGreenCommandDigest === true ? result.mismatches.length === 0 : true,
           };
         }),
+        full("advisory-strict-gate-aging", () =>
+          checkAdvisoryGateAging({ repoRoot: deps.repoRoot }),
+        ),
         full("forward-convergence", () => checkForwardConvergence(deps.repoRoot)),
         full("forward-convergence-audit", () => checkForwardConvergenceAudit(deps.repoRoot)),
       ],

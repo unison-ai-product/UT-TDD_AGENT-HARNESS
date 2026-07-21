@@ -55,8 +55,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T15:48:20+09:00"
         evidence_path: src/setup/distribution.ts
-        output_digest: "sha256:5a3973f79ed9becd5f23c4feff467513814de7ea381d75a4d2e339aa8b8edca9"
-        anchor_commit: 88bd16355b3ad7cd0b1b7eb65b318102f4ba23d1
+        output_digest: "sha256:7aa60c09a8fb635782c93a1fd83b09b47cfbd380db7a748c9f229d8ce3950918"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -64,8 +64,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T15:48:30+09:00"
         evidence_path: src/cli/distribution.ts
-        output_digest: "sha256:abcf66c52213b9a7396815d137d11df17ff4ade7aaffe7d09de8abd6a428dd3f"
-        anchor_commit: 88bd16355b3ad7cd0b1b7eb65b318102f4ba23d1
+        output_digest: "sha256:a80b4ee4655c91138c683121650faa6451b74ccd8cbaf8f45da5aeb65550f421"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: unit_test
         command: "bun x vitest run tests/distribution-acceptance.test.ts"
         runner: bun
@@ -73,8 +73,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T15:50:31+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:295cdc5cf164724e6fdde8e4e13f0ea18c4a8c78731fa20e4aa84b5c8ac3cbfe"
-        anchor_commit: 88bd16355b3ad7cd0b1b7eb65b318102f4ba23d1
+        output_digest: "sha256:378f52b4a3780d841556be86344f0257fba8574296fb8f4de3822f7256016b3e"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-413 (troubleshoot): distribution export の整合性欠陥 4 件

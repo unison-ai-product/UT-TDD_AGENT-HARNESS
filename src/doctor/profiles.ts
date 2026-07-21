@@ -144,6 +144,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "frontend-design-coverage",
   "handover-outstanding",
   "green-command-digest",
+  "advisory-strict-gate-aging",
   "forward-convergence",
   "forward-convergence-audit",
 ] as const;

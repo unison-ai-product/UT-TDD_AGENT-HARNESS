@@ -47,10 +47,10 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-09T17:04:00+09:00"
-    tests_green_at: "2026-07-09T17:01:00+09:00"
+    reviewed_at: "2026-07-21T00:10:00+09:00"
+    tests_green_at: "2026-07-21T00:10:00+09:00"
     verdict: approve
-    scope: "stableId helper 共通化、L4/L5/L6/L7 設計 back-fill、projection/feedback/skill/workflow consumer 置換、targeted tests と db rebuild の確認。"
+    scope: "stableId helper 共通化、L4/L5/L6/L7 設計 back-fill、projection/feedback/skill/workflow consumer 置換、targeted tests と db rebuild の確認。2026-07-21: PLAN-L7-420 Step 1 rerun-bound correction で smoke エントリの evidence_path (.ut-tdd/harness.db、gitignored/未 commit の構造的欠陥) を committed audit log へ張り替え、typecheck/lint/unit_test は同日の Step 1 一括再実行 (bun run typecheck / bun run lint / 全 vitest) で再確認した。"
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
@@ -82,13 +82,13 @@ review_evidence:
         output_digest: "sha256:ddbd23941724d316a083f6463a71200f86f4932fd76ad292a7d5f8e7993158a7"
         anchor_commit: 740f83f985da717310271e2e2d46ce2a5e4134a5
       - kind: smoke
-        command: "bun run src\\cli.ts db rebuild"
+        command: "bun src/cli.ts db rebuild --json"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-09T16:59:00+09:00"
-        evidence_path: .ut-tdd/harness.db
-        output_digest: "sha256:5eed98b02aec042de344c6f10e6ad8ad14b2a82d26a7a47d9fed0f4c91abd61a"
+        completed_at: "2026-07-21T00:00:00+09:00"
+        evidence_path: .ut-tdd/audit/A-L7-420-l7-406-db-rebuild-correction-2026-07-21.log
+        output_digest: "sha256:8d6e20a8e9530ec9ea1b3c2708036e34fadb3c7077036da6b8a614368c380da8"
 ---
 
 # PLAN-L7-406: stable ID helper consolidation
@@ -118,3 +118,22 @@ DB に引き込む V-model 改善では、検出器ごとの local regex copy �
 
 `src/assets/catalog.ts` と `src/guardrail/ledger.ts` には独自 ID 正規化が残るが、現時点では asset key / guardrail
 ledger 固有の責務であり、この PLAN は projection / feedback / skill / workflow の共通 row ID 生成に絞る。
+
+## 2026-07-21 Rerun-Bound Correction (PLAN-L7-420 Step 1)
+
+`kind: smoke` の green_command が `evidence_path: .ut-tdd/harness.db` を指していたが、この経路は
+`.gitignore` で常に除外される生成物 (rebuildable runtime state) であり、commit されたことが一度もない。
+よって file-hash evidence 契約 (`green-command-digest`) を構造的に一度も満たせない設計ミスだった
+(stale digest ではなく evidence_path 選定そのものの欠陥)。
+
+是正: `bun src/cli.ts db rebuild --json` を再実行し (exit 0)、その実出力を
+`.ut-tdd/audit/A-L7-420-l7-406-db-rebuild-correction-2026-07-21.log` として保存した上で、
+`green_commands[].evidence_path` / `output_digest` をそのログへ張り替えた。この監査ログは
+PLAN-L7-420 の blind review 是正 slice の commit に含めて追跡する (commit 自体は orchestrator が
+本 slice の commit 操作で行う。是正編集時点ではまだ untracked)。`exit_code` (0) と検証意図
+(db rebuild が smoke evidence として green であること) は変更していないが、`command` は
+evidence_path 張り替えに伴い `bun run src\cli.ts db rebuild` (Windows バックスラッシュ表記、
+JSON 出力なし) から `bun src/cli.ts db rebuild --json` (追跡可能な committed ログを生成する
+実行形) へ更新した — これは PLAN-L7-420 の是正対象 30 PLAN のうち command 表記が変わった
+唯一の例外である (他は digest/anchor/evidence_path のみの是正、詳細は PLAN-L7-420 の
+Step 1 実施記録 §FLAG 是正記録 参照)。

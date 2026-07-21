@@ -53,8 +53,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-16T17:10:02+09:00"
         evidence_path: tests/node-plan-draft-runner.test.ts
-        output_digest: "sha256:77965ac5416bad549b6fb69079aacb059544059921139589508ec5baed0d8238"
-        anchor_commit: 975984a3837987f05bb67a28bbfd800e9458d1d4
+        output_digest: "sha256:e69fd63c64fa65b8fcb06019d5229f48ff7313119349a8a957d24a187e0014ff"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 generates:
   - artifact_path: docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     artifact_type: markdown_doc

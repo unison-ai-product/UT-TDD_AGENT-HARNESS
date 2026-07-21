@@ -69,7 +69,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-07T14:29:54+09:00"
         evidence_path: docs/templates/adapter/.claude/CLAUDE.md
-        output_digest: "sha256:4160aa165c09d2061332c2e7f5a058ac1519ae7ac528cfeaafd23dc50b98526d"
+        output_digest: "sha256:fae692e5780e9bcce701feac947a9106e400d41aa7773f1bd0153f17147af9a4"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
