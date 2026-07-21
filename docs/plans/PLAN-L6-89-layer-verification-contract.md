@@ -8,6 +8,8 @@ route_signal: design_correction
 route_mode: redesign
 created: 2026-07-21
 updated: 2026-07-21
+revision_note: "rev2: PLAN-L6-86 (draft) を requires から references へ移動
+  (plan-governance requires_not_ready 解消。graph 束縛は §5 の記述で維持)"
 owner: PO / Claude (Fable orchestrator)
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -28,8 +30,8 @@ dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
   requires:
     - docs/plans/PLAN-L6-72-forward-fsm-evidence-policy-contracts.md
-    - docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
   references:
+    - docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
     - docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -43,18 +45,18 @@ supersedes:
   - PLAN-L6-72-forward-fsm-evidence-policy-contracts
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ffcb68c5c115107bfeb9ad33557e897b
-  command_id: plan-l6-89-20260721-01
-  admitted_at: 2026-07-21T18:50:00.000+09:00
-  source_digest: sha256:23c7239650bf0709e24252a3601e2f3bf61627f32b54a525c4c96b02a61eb77b
+  receipt_id: certificate:1b610f799a3031186b4aaa4c46d45b4c
+  command_id: plan-l6-89-20260721-02
+  admitted_at: 2026-07-21T19:55:00.000+09:00
+  source_digest: sha256:ae0f3d224c205f4321f9b24434778b33c2377d1b5c6d1c548bfcb402cfaa88eb
   decision_digest: sha256:83c0bfb106d870f8c88c24f0e0259dee8d55fdb648af0f909e1a95ab114572d4
-  receipt_digest: sha256:6cd82789426001caf1c143ce3c9e40cec54c7857684725ad1d6c3a8e9e534d86
+  receipt_digest: sha256:04d2935526d6357e8e7a25b376e36f43328d3f57279207fc6103c2cc3b868e34
   binding:
     path: docs/plans/PLAN-L6-89-layer-verification-contract.md
     plan_id: PLAN-L6-89-layer-verification-contract
     asset_id: plan:ffcb68c5c115107bfeb9ad33557e897b
-    revision: 1
-    content_digest: sha256:23c7239650bf0709e24252a3601e2f3bf61627f32b54a525c4c96b02a61eb77b
+    revision: 2
+    content_digest: sha256:ae0f3d224c205f4321f9b24434778b33c2377d1b5c6d1c548bfcb402cfaa88eb
   route:
     signal: design_correction
     mode: redesign
