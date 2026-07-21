@@ -4,7 +4,9 @@
 - orchestrator: claude-fable-5
 - author (withheld from reviewer packet): Codex (owner: PO / Codex, commits fc679482 / d42e3204 / 54e02c98)
 - review_kind: cross_agent (author=Codex family, reviewer=Claude family)
-- reviewed_at: 2026-07-21T18:22:40+09:00
+- reviewed_at: 2026-07-21T18:22:40+09:00 (blind review 報告の返却時刻。PLAN frontmatter の
+  `reviewed_at: 18:24:00` は orchestrator の判定受理時刻で、`tests_green_at: 18:23:35` の後
+  という IMP-077 順序で記録している — 両時刻は同一レビューの別 milestone)
 - base: origin/main 2c34ac34f343e54eb6a0e90f2348cc5420883604
 - 対象:
   - docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md
