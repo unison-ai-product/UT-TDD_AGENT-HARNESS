@@ -13,6 +13,9 @@ import {
 } from "../src/lint/github-ci-policy";
 
 const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
+// PLAN-L7-455 (troubleshoot): doc-only lane 分岐の canonical if 条件式。
+const LANE_FULL_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
+const LANE_DOC_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
 
 const SOURCE_LEG_WORKFLOW = `
 name: harness-check
@@ -41,6 +44,45 @@ jobs:
       - run: bun src/cli.ts doctor
 `;
 
+// PLAN-L7-455 (troubleshoot): 実運用に近い形 (classify step + full/doc lane 条件付き step) の
+// runtime leg fixture。skip 可能な step は保守的 allowlist (typecheck/db rebuild/full
+// tests/audit quality/full doctor) に限定し、github guard / lint は lane に依らず常に実行する。
+const SOURCE_LEG_WORKFLOW_WITH_LANE = `
+name: harness-check
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: harness-check-\${{ github.workflow }}-\${{ github.head_ref || github.ref }}
+  cancel-in-progress: \${{ github.ref != 'refs/heads/main' }}
+jobs:
+  harness-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - id: classify
+        run: bun src/cli.ts github classify-changes
+      - run: bun src/cli.ts github guard
+      - if: ${LANE_FULL_IF}
+        run: bun run typecheck
+      - if: ${LANE_FULL_IF}
+        run: bun src/cli.ts db rebuild --json
+      - if: ${LANE_FULL_IF}
+        run: bun run test
+      - if: ${LANE_DOC_IF}
+        run: bun run test:doc-lane
+      - run: bun run lint
+      - if: ${LANE_FULL_IF}
+        run: bun src/cli.ts audit quality --include-tests
+      - if: ${LANE_FULL_IF}
+        run: bun src/cli.ts doctor
+`;
+
 const PACK_WORKFLOW = `
 name: harness-check
 on:
@@ -66,6 +108,25 @@ jobs:
 `;
 
 const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
+  harness-check-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run lint
+  harness-check:
+    needs: [harness-check-linux, harness-check-windows]
+    if: \${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Linux and Windows success
+        run: ${REQUIRED_AGGREGATE_COMMAND}
+`;
+
+const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  harness-check:", "  harness-check-linux:")}
   harness-check-windows:
     runs-on: windows-latest
     steps:
@@ -820,6 +881,106 @@ describe("github-ci-policy lint", () => {
       profile: "pack",
       reason: "forbidden_source_full_tests",
       detail: "Pack CI must use bun run test:pack instead of source full bun run test",
+    });
+  });
+
+  // PLAN-L7-455 (troubleshoot, issue #109): doc-only lane 絞り込みが検証弱化にならないことの
+  // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
+  describe("PLAN-L7-455 doc-only lane skip safety", () => {
+    it("U-CIPOL-021: accepts a real-shaped workflow with canonical full/doc lane step conditions", () => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE));
+
+      expect(result.ok).toBe(true);
+      expect(result.violations).toEqual([]);
+    });
+
+    it("U-CIPOL-022: 負例 — rejects a required check (github guard) hidden behind a non-allowlisted lane=='full' skip", () => {
+      const guardSkipped = SOURCE_WORKFLOW_WITH_LANE.replace(
+        "      - run: bun src/cli.ts github guard",
+        `      - if: ${LANE_FULL_IF}\n        run: bun src/cli.ts github guard`,
+      );
+      const result = analyzeGithubCiPolicy(docs(guardSkipped));
+
+      expect(result.ok).toBe(false);
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "forbidden_lane_skip_step",
+        detail:
+          "jobs.harness-check-linux step \"bun src/cli.ts github guard\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
+      });
+    });
+
+    it("U-CIPOL-022b: 負例 — rejects lint (biome) hidden behind a lane=='full' skip", () => {
+      const lintSkipped = SOURCE_WORKFLOW_WITH_LANE.replace(
+        "      - run: bun run lint",
+        `      - if: ${LANE_FULL_IF}\n        run: bun run lint`,
+      );
+      const result = analyzeGithubCiPolicy(docs(lintSkipped));
+
+      expect(result.violations.map((violation) => violation.reason)).toContain(
+        "forbidden_lane_skip_step",
+      );
+    });
+
+    it("U-CIPOL-023: 負例 — rejects a required full-lane check (full doctor) mis-conditioned on lane=='doc'", () => {
+      const doctorMisrouted = SOURCE_WORKFLOW_WITH_LANE.replace(
+        `      - if: ${LANE_FULL_IF}\n        run: bun src/cli.ts doctor`,
+        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor`,
+      );
+      const result = analyzeGithubCiPolicy(docs(doctorMisrouted));
+
+      expect(result.ok).toBe(false);
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "forbidden_lane_skip_step",
+        detail:
+          "jobs.harness-check-linux step \"bun src/cli.ts doctor\" is a required full-lane check but is conditioned on lane=='doc'",
+      });
+    });
+
+    it("U-CIPOL-024: 負例 — rejects a non-canonical lane condition expression", () => {
+      const garbled = SOURCE_WORKFLOW_WITH_LANE.replace(
+        `      - if: ${LANE_FULL_IF}\n        run: bun run typecheck`,
+        `      - if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: bun run typecheck`,
+      );
+      const result = analyzeGithubCiPolicy(docs(garbled));
+
+      expect(result.ok).toBe(false);
+      expect(
+        result.violations.some(
+          (violation) =>
+            violation.reason === "forbidden_lane_skip_step" &&
+            violation.detail.includes("non-canonical lane condition"),
+        ),
+      ).toBe(true);
+    });
+
+    it("U-CIPOL-025: 負例 — rejects a job-level lane skip on a runtime leg (aggregate must always be reachable)", () => {
+      const jobLevelSkip = SOURCE_WORKFLOW_WITH_LANE.replace(
+        "  harness-check-linux:\n    runs-on: ubuntu-latest",
+        `  harness-check-linux:\n    if: ${LANE_FULL_IF}\n    runs-on: ubuntu-latest`,
+      );
+      const result = analyzeGithubCiPolicy(docs(jobLevelSkip));
+
+      expect(result.ok).toBe(false);
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "forbidden_job_level_lane_skip",
+        detail:
+          "jobs.harness-check-linux must not carry a job-level if (lane classification must stay step-scoped, never skip the whole job)",
+      });
+    });
+
+    it("U-CIPOL-026: doc-lane-only steps (e.g. test:doc-lane) never trip the full-lane skip allowlist (substring-collision regression)", () => {
+      // "bun run test:doc-lane" と "bun run test:fast" は "bun run test" の prefix-substring だが、
+      // それぞれ doc lane 専用 / full lane 専用の別 script であり誤って allowlist に混入してはならない。
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE));
+      expect(
+        result.violations.some((violation) => violation.detail.includes("test:doc-lane")),
+      ).toBe(false);
     });
   });
 });
