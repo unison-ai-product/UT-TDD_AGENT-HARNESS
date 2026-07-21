@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { inspectAuthoringRecoveryDbEvidence } from "../src/plan-admission/authoring-recovery-db-evidence";
 import {
   assertNoUnresolvedAuthoringRecovery,
   findUnresolvedAuthoringRecovery,
@@ -50,6 +51,9 @@ describe("authoring recovery boundary gate", () => {
       expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual(["redesign:1"]);
 
       seedCommittedEvidence(db);
+      for (const binding of db.prepare("SELECT * FROM authoring_command_revision_bindings").all())
+        expect(binding.binding_digest).toBe(ledgerRowDigest(binding, "binding_digest"));
+      expect(inspectAuthoringRecoveryDbEvidence(db, "redesign:1")).toBe("complete");
       expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual([]);
 
       writeFileSync(join(root, "target.txt.tmp"), "post");

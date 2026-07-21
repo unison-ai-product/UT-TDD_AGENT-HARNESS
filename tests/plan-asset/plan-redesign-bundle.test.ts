@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -465,11 +465,46 @@ db.close();`;
     expect(
       db.prepare("SELECT strategy FROM authoring_recovery_assessment_events").get(),
     ).toBeUndefined();
-    const result = new PlanRedesignBundleCoordinator(db).publishDurable(
+    const coordinator = new PlanRedesignBundleCoordinator(db);
+    const result = coordinator.publishDurable(
       input,
       new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
     );
-    expect(result).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });
+    let convergedInput = input;
+    if (!committedBeforeCrash) {
+      expect(result).toEqual({ ok: false, ruleId: "plan-redesign-publication-rolled-back" });
+      expect(
+        db
+          .prepare(
+            "SELECT event_kind FROM authoring_command_group_phase_events ORDER BY sequence DESC LIMIT 1",
+          )
+          .get(),
+      ).toEqual({ event_kind: "rolled_back" });
+      expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
+      expect(
+        Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_revision_bindings").get()?.n),
+      ).toBe(0);
+      expect(readFileSync(join(root, input.origin.sourcePath), "utf8")).toBe(real.originBase);
+      expect(existsSync(join(root, input.replacement.sourcePath))).toBe(false);
+      expect(readFileSync(join(root, input.projection.path), "utf8")).toBe(real.initialProjection);
+      for (const artifact of real.supporting) {
+        expect(readFileSync(join(root, artifact.path), "utf8")).toBe(artifact.baseContent);
+      }
+      expect(
+        readdirSync(root, { recursive: true })
+          .map(String)
+          .filter((name) => name.includes(".ut-tdd-draft-") || name.includes(".ut-tdd-identity-")),
+      ).toEqual([]);
+      convergedInput = recommand(input, `redesign:98:resume:${faultPoint.slice(0, 2)}`);
+      expect(
+        coordinator.publishDurable(
+          convergedInput,
+          new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
+        ),
+      ).toMatchObject({ ok: true, replayed: false });
+    } else {
+      expect(result).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });
+    }
     expect(
       Number(
         db
@@ -566,7 +601,7 @@ db.close();`;
     ).toEqual([]);
     expect(
       new PlanRedesignBundleCoordinator(db).publishDurable(
-        input,
+        convergedInput,
         new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
       ),
     ).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });

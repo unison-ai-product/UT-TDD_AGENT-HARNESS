@@ -38,7 +38,10 @@ function output(command: string, args: string[], cwd: string): string | null {
 export function resolveBunBinary(
   runtime = (globalThis as { Bun?: { which?: (command: string) => string | undefined } }).Bun,
 ): string {
-  return runtime?.which?.("bun") ?? (process.versions.bun ? process.execPath : "bun");
+  const discovered = runtime?.which?.("bun");
+  if (process.platform === "win32" && process.versions.bun && discovered?.endsWith(".cmd"))
+    return process.execPath;
+  return discovered ?? (process.versions.bun ? process.execPath : "bun");
 }
 
 export function canonicalPath(path: string): string {

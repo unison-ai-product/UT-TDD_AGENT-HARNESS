@@ -572,7 +572,9 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     const rollbackPath = `${targetPath}${suffix}.rollback`;
     const parent = DirectoryIdentity.capture(dirname(targetPath), input.path);
     parent.assertCurrent(input.path);
-    if (regularDigest(targetPath, input.postimage)) {
+    const unchangedPreimage =
+      input.preimage.kind === "sha256" && input.preimage.digest === input.postimage;
+    if (regularDigest(targetPath, input.postimage) && !unchangedPreimage) {
       rmSync(targetPath);
       parent.assertCurrent(input.path);
     }
@@ -584,16 +586,24 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
           logicalPath: input.path,
           role: "rollback",
         });
-        linkSync(rollbackPath, targetPath);
-        assertRegularDigest({
-          path: targetPath,
-          digest: input.preimage.digest,
-          logicalPath: input.path,
-          role: "restored preimage",
-        });
-        if (!sameFile(rollbackPath, targetPath))
-          throw new Error(`artifact rollback link CAS mismatch: ${input.path}`);
-        parent.assertCurrent(input.path);
+        if (regularDigest(targetPath, input.preimage.digest)) {
+          // preimage == postimage のmemberはpublish後もtargetが正しいため、
+          // 既存targetを上書きせずcustodyだけ検証してrollback auxiliaryを除去する。
+          parent.assertCurrent(input.path);
+        } else {
+          if (existsSync(targetPath))
+            throw new Error(`artifact rollback occupied target: ${input.path}`);
+          linkSync(rollbackPath, targetPath);
+          assertRegularDigest({
+            path: targetPath,
+            digest: input.preimage.digest,
+            logicalPath: input.path,
+            role: "restored preimage",
+          });
+          if (!sameFile(rollbackPath, targetPath))
+            throw new Error(`artifact rollback link CAS mismatch: ${input.path}`);
+          parent.assertCurrent(input.path);
+        }
       } else {
         assertRegularDigest({
           path: targetPath,

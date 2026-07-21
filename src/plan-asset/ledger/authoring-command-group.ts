@@ -567,7 +567,16 @@ type Admission =
     };
 
 function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefined {
-  const members = [...input.members].sort((a, b) => a.memberId.localeCompare(b.memberId));
+  const members = input.members
+    .map((member) => ({
+      memberId: member.memberId,
+      artifactPath: member.artifactPath,
+      contentDigest: member.contentDigest,
+      expectedPreimage: JSON.parse(
+        stableJson(member.expectedPreimage),
+      ) as AuthoringCommandGroupMember["expectedPreimage"],
+    }))
+    .sort((a, b) => a.memberId.localeCompare(b.memberId));
   if (
     !input.groupId ||
     !validDigest(input.commandPayloadDigest) ||

@@ -79,7 +79,10 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       })
     )
       return { receiptDigest: receipt(input) };
-    if (targetHasDigest(this.rootDir, artifact.path, input.contentDigest)) {
+    const unchangedPreimage =
+      artifact.expectedPreimage.kind === "sha256" &&
+      artifact.expectedPreimage.digest === `sha256:${input.contentDigest}`;
+    if (targetHasDigest(this.rootDir, artifact.path, input.contentDigest) && !unchangedPreimage) {
       atomic.verifySingleArtifactCustody({
         tokenId,
         path: artifact.path,

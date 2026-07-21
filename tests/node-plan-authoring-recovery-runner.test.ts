@@ -250,6 +250,7 @@ function sha(value: string): string {
 }
 
 function testBunBinary(): string {
+  if (process.env.UT_TDD_BUN_BINARY) return process.env.UT_TDD_BUN_BINARY;
   const npmExecPath = process.env.npm_execpath;
   if (process.platform === "win32" && npmExecPath?.toLowerCase().endsWith("bunx.exe")) {
     return join(dirname(npmExecPath), "bun.exe");

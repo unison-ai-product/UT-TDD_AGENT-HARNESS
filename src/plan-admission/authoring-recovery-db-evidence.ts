@@ -23,7 +23,7 @@ export function inspectAuthoringRecoveryDbEvidence(
     .all(...childIds);
   const bindings = db
     .prepare(
-      `SELECT asset_id, revision, artifact_role FROM authoring_command_revision_bindings
+      `SELECT * FROM authoring_command_revision_bindings
        WHERE group_id = ? ORDER BY artifact_role`,
     )
     .all(groupId);
