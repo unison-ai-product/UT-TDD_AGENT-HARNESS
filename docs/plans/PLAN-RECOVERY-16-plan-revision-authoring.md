@@ -4,13 +4,11 @@ title: "PLAN-RECOVERY-16: legacy PLAN revision authoring recovery"
 kind: recovery
 layer: cross
 drive: agent
-status: draft
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
 updated: 2026-07-17
 owner: PO / TL
-github_issue_id: 102
 backprop_decision: required
 backprop_decision_reason: Redesign supersessionとplan admissionを同時に満たすrevision
   authoring契約が欠落しており、L6 admission contractとL7実装へ戻す必要がある。
@@ -43,6 +41,8 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/node-plan-revision-runner.test.ts
     artifact_type: test_code
+  - artifact_path: tests/plan-content-binding.test.ts
+    artifact_type: test_code
   - artifact_path: tests/plan-asset/plan-revision-bootstrap.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/plan-revision-ledger.test.ts
@@ -58,20 +58,22 @@ dependencies:
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
     - docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md
 review_evidence: []
+status: draft
+github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9a57f2b6ff15815ebbe4df6b7c5adab3
-  command_id: plan-recovery-16-20260717-04
-  admitted_at: 2026-07-17T21:15:00.000+09:00
-  source_digest: sha256:68b0ed0da3300860697f5b0968cfe68c7c9dbfc06275757723e8674436710627
+  receipt_id: certificate:bd4aa388b26e66499896845b2ee8fc08
+  command_id: plan-recovery-16-20260721-05
+  admitted_at: 2026-07-21T11:30:00.000+09:00
+  source_digest: sha256:26bd013bec8ac2eafaa99eed4249e5563fd61fd61eab6d15294d6c2e9467132a
   decision_digest: sha256:0efc93ef88ad7ea536d8e8583cadc60ea7c3fea1415ed2d4c817646e537223f9
-  receipt_digest: sha256:f2beea69995a8d7f97ccbc3b189e3291a50cfe77f0e592f52fe8769b4bad1384
+  receipt_digest: sha256:592e2bfb726878e5e7e5d77aee016cbcbf78c52e990a1bc0a74a0ea7dcbdf46a
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:890b18d79d85d8d7cc2591c7146af5e2
-    revision: 2
-    content_digest: sha256:68b0ed0da3300860697f5b0968cfe68c7c9dbfc06275757723e8674436710627
+    revision: 3
+    content_digest: sha256:26bd013bec8ac2eafaa99eed4249e5563fd61fd61eab6d15294d6c2e9467132a
   route:
     signal: regression_dev
     mode: recovery
