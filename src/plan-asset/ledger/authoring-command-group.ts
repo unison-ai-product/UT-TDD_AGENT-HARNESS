@@ -590,11 +590,13 @@ function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefin
     !input.occurredAt ||
     members.length === 0 ||
     new Set(members.map((member) => member.memberId)).size !== members.length ||
-    new Set(members.map((member) => member.artifactPath)).size !== members.length ||
+    new Set(members.map((member) => portableArtifactPathKey(member.artifactPath))).size !==
+      members.length ||
     members.some(
       (member) =>
         !member.memberId ||
         !member.artifactPath ||
+        portableArtifactPathKey(member.artifactPath) === undefined ||
         !validDigest(member.contentDigest) ||
         !validPreimage(member.expectedPreimage) ||
         isSecretLike(member.artifactPath),
@@ -608,6 +610,25 @@ function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefin
   )
     return undefined;
   return { ...input, members, memberSetDigest: sha(JSON.stringify(members)) };
+}
+
+/** repo相対のlexical pathとWindows名規則を同時に正規化しportable aliasを拒否する。 */
+function portableArtifactPathKey(path: string): string | undefined {
+  const normalized = path.replaceAll("\\", "/").normalize("NFC");
+  if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:/.test(normalized)) return undefined;
+  const segments: string[] = [];
+  for (const raw of normalized.split("/")) {
+    if (!raw || raw === ".") continue;
+    if (raw === "..") {
+      if (segments.length === 0) return undefined;
+      segments.pop();
+      continue;
+    }
+    const portable = raw.replace(/[ .]+$/u, "");
+    if (!portable || portable === "." || portable === "..") return undefined;
+    segments.push(portable.toLowerCase());
+  }
+  return segments.length > 0 ? segments.join("/") : undefined;
 }
 
 function insertHeaderAndMembers(db: HarnessDb, input: NormalizedGroup): void {

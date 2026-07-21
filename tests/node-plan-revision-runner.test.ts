@@ -303,7 +303,10 @@ describe("NodePlanRevisionRunner", () => {
 
   it("U-PA-REV-022: caller decisionと再評価結果の不一致はwrite 0で拒否する", () => {
     const f = fixture("adopted");
-    const forged = { ...f.input, decision: { ...f.input.decision, issueRequired: false } };
+    const forged = {
+      ...f.input,
+      decision: { ...f.input.decision, issueRequired: !f.input.decision.issueRequired },
+    };
     expect(() => f.runner.run(forged)).toThrow("plan-revision-admission-decision-mismatch");
     expect(writeSet(f.db)).toEqual(f.before);
   });
@@ -395,27 +398,14 @@ function fixture(mode: Mode, drift: Drift = {}) {
       : "plan:adopted";
   const basePayload = canonicalPlanPayload(oldSource).payload;
   const admission: PlanAdmissionRequest = {
-    routeSignal: "design_correction",
-    routeMode: "redesign",
+    routeSignal: "forward",
+    routeMode: "forward",
     kind: "design",
     layer: "L6",
     subDoc: "function-spec",
     drive: "agent",
-    branch: "work/redesign-plan-31",
+    branch: "work/forward-plan-31",
     status: "draft",
-    issue: {
-      provider: "github",
-      issueId: 102,
-      episodeId: "E4-102",
-      projectionDigest: sha("issue"),
-    },
-    origin: { planId, revision: 1, digest: sha(basePayload) },
-    transitionDirection: "design_to_implementation",
-    implementationDisposition: "discarded",
-    reentry: { targetPlanId: planId, targetRevision: 2, phase: "forward_merge" },
-    implementationTarget: { targetPlanId: "PLAN-L7-31", targetRevision: 1 },
-    escapeReason: "design replacement",
-    supersedes: [planId],
   };
   const decision = evaluatePlanAdmission(admission);
   if (!decision.ok) throw new Error(`fixture admission invalid: ${decision.violations.join(",")}`);
@@ -443,19 +433,6 @@ function fixture(mode: Mode, drift: Drift = {}) {
       drive: admission.drive,
       branch: admission.branch,
       status: admission.status,
-      issue: {
-        provider: "github",
-        issue_id: 102,
-        episode_id: "E4-102",
-        projection_digest: sha("issue"),
-      },
-      origin: { plan_id: planId, revision: 1, digest: sha(basePayload) },
-      transition_direction: "design_to_implementation",
-      implementation_disposition: "discarded",
-      reentry: { target_plan_id: planId, target_revision: 2, phase: "forward_merge" },
-      implementation_target: { target_plan_id: "PLAN-L7-31", target_revision: 1 },
-      escape_reason: "design replacement",
-      supersedes: [planId],
     },
     source: {
       path: sourcePath,

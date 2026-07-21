@@ -1,6 +1,15 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import {
+  existsSync,
+  linkSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   authoringCommandGroupValid,
   authoringOperationGroupValid,
@@ -28,13 +37,15 @@ export class NodePlanAuthoringRecoveryExecutor {
     },
   ): { state: "rolled_back" | "committed"; strategy: Strategy } {
     db.exec("BEGIN IMMEDIATE");
+    let compensation: ArtifactMutationCompensation | undefined;
+    let dbCommitted = false;
     try {
       if (
         !authoringCommandGroupValid(db, input.commandId) ||
         !authoringOperationGroupValid(db, input.commandId)
       )
         throw new Error("plan-recovery-command-corrupt");
-      const snapshot = loadSnapshot(db, input.commandId);
+      const snapshot = loadSnapshot(db, input.commandId, this.repoRoot);
       if (
         snapshot.assessmentDigest !== input.expectedAssessmentDigest ||
         snapshot.fencingToken !== input.expectedFencingToken
@@ -45,6 +56,11 @@ export class NodePlanAuthoringRecoveryExecutor {
       const publisher = new NodeAtomicDraftPublisher({ rootDir: this.repoRoot });
       if (input.strategy === "rollback") {
         if (snapshot.evidenceLane !== "zero") throw new Error("plan-recovery-db-evidence-present");
+        for (const artifact of snapshot.artifacts)
+          publisher.verifySingleArtifactRestoreReadiness(artifactCapability(artifact));
+        compensation = ArtifactMutationCompensation.capture(this.repoRoot, snapshot.artifacts);
+        for (const artifact of snapshot.artifacts)
+          publisher.verifySingleArtifactRestoreReadiness(artifactCapability(artifact));
         for (const artifact of snapshot.artifacts) {
           publisher.restoreSingleArtifactPublication(artifactCapability(artifact));
           verifyRestored(this.repoRoot, artifact);
@@ -54,6 +70,9 @@ export class NodePlanAuthoringRecoveryExecutor {
         appendTerminal(db, snapshot, "rolled_back");
         const result = { state: "rolled_back" as const, strategy: input.strategy };
         db.exec("COMMIT");
+        dbCommitted = true;
+        compensation.commit();
+        compensation = undefined;
         return result;
       }
       if (snapshot.evidenceLane !== "complete")
@@ -73,6 +92,15 @@ export class NodePlanAuthoringRecoveryExecutor {
       }
       for (const artifact of snapshot.artifacts) {
         if (artifactFinalized(this.repoRoot, artifact)) continue;
+        publisher.verifySingleArtifactRecoveryReadiness(artifactCapability(artifact));
+      }
+      compensation = ArtifactMutationCompensation.capture(this.repoRoot, snapshot.artifacts);
+      for (const artifact of snapshot.artifacts) {
+        if (artifactFinalized(this.repoRoot, artifact)) continue;
+        publisher.verifySingleArtifactRecoveryReadiness(artifactCapability(artifact));
+      }
+      for (const artifact of snapshot.artifacts) {
+        if (artifactFinalized(this.repoRoot, artifact)) continue;
         const capability = artifactCapability(artifact);
         publisher.recoverSingleArtifactPublication(capability);
         publisher.verifySingleArtifactCustody(capability);
@@ -87,12 +115,85 @@ export class NodePlanAuthoringRecoveryExecutor {
       appendPublishedAndCommitted(db, snapshot);
       const result = { state: "committed" as const, strategy: input.strategy };
       db.exec("COMMIT");
+      dbCommitted = true;
+      compensation.commit();
+      compensation = undefined;
       return result;
     } catch (error) {
+      if (dbCommitted) throw error;
+      try {
+        compensation?.rollback();
+      } catch (compensationError) {
+        db.exec("ROLLBACK");
+        throw new AggregateError(
+          [error, compensationError],
+          "plan-recovery-filesystem-compensation-failed",
+        );
+      }
       db.exec("ROLLBACK");
       throw error;
     }
   }
+}
+
+type CapturedPath = {
+  readonly path: string;
+  readonly backup?: string;
+  readonly content?: Buffer;
+};
+
+/** DB transaction外のartifact mutationを全member単位で補償する同一volume snapshot。 */
+class ArtifactMutationCompensation {
+  private constructor(
+    private readonly directory: string,
+    private readonly entries: readonly CapturedPath[],
+  ) {}
+
+  static capture(root: string, artifacts: readonly Artifact[]): ArtifactMutationCompensation {
+    const parent = join(root, ".ut-tdd");
+    mkdirSync(parent, { recursive: true });
+    const directory = mkdtempSync(join(parent, ".recovery-compensation-"));
+    try {
+      const entries = mutationPaths(root, artifacts).map((path, index): CapturedPath => {
+        if (!existsSync(path)) return { path };
+        const stat = lstatSync(path);
+        if (!stat.isFile() || stat.isSymbolicLink())
+          throw new Error("plan-recovery-compensation-path-invalid");
+        const backup = join(directory, String(index));
+        linkSync(path, backup);
+        return { path, backup, content: readFileSync(path) };
+      });
+      return new ArtifactMutationCompensation(directory, entries);
+    } catch (error) {
+      rmSync(directory, { recursive: true, force: true });
+      throw error;
+    }
+  }
+
+  rollback(): void {
+    for (const entry of this.entries) if (existsSync(entry.path)) rmSync(entry.path);
+    for (const entry of this.entries) {
+      if (!entry.backup || !entry.content) continue;
+      mkdirSync(dirname(entry.path), { recursive: true });
+      writeFileSync(entry.backup, entry.content);
+      linkSync(entry.backup, entry.path);
+    }
+    this.commit();
+  }
+
+  commit(): void {
+    rmSync(this.directory, { recursive: true, force: true });
+  }
+}
+
+function mutationPaths(root: string, artifacts: readonly Artifact[]): string[] {
+  return [
+    ...new Set(
+      artifacts
+        .flatMap((artifact) => [artifact.targetPath, ...auxiliaryPaths(artifact)])
+        .map((path) => safe(root, path)),
+    ),
+  ];
 }
 
 function artifactFinalized(root: string, artifact: Artifact): boolean {
@@ -129,7 +230,7 @@ type Snapshot = {
   evidenceLane: "zero" | "complete";
 };
 
-function loadSnapshot(db: HarnessDb, commandId: string): Snapshot {
+function loadSnapshot(db: HarnessDb, commandId: string, repoRoot: string): Snapshot {
   const row = db
     .prepare(
       `SELECT header.command_payload_digest, header.created_at, operation.operation_id,
@@ -172,7 +273,7 @@ function loadSnapshot(db: HarnessDb, commandId: string): Snapshot {
   if (artifacts.length === 0) throw new Error("plan-recovery-command-corrupt");
   const last = phase.at(-1);
   if (!last) throw new Error("plan-recovery-command-corrupt");
-  const evidenceLane = inspectAuthoringRecoveryDbEvidence(db, commandId);
+  const evidenceLane = inspectAuthoringRecoveryDbEvidence(db, commandId, repoRoot);
   return {
     commandId,
     commandPayloadDigest: String(row.command_payload_digest),

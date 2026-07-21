@@ -31,7 +31,7 @@ export function ensureAuthoringRecoveryAssessment(
       db.exec("COMMIT");
       return;
     }
-    const evidence = { lane: inspectAuthoringRecoveryDbEvidence(db, commandId) };
+    const evidence = { lane: inspectAuthoringRecoveryDbEvidence(db, commandId, repoRoot) };
     if (
       (context.state === "committed" && evidence.lane !== "complete") ||
       (context.state === "rolled_back" && evidence.lane !== "zero")

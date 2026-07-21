@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   existsSync,
   linkSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -14,6 +15,8 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { resolveBunBinary } from "../scripts/run-vitest-snapshot.js";
 import { inspectAuthoringRecoveryDbEvidence } from "../src/plan-admission/authoring-recovery-db-evidence.js";
+import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.js";
+import { NodePlanAuthoringRecoveryExecutor } from "../src/plan-admission/node-plan-authoring-recovery-executor.js";
 import { NodePlanAuthoringRecoveryRunner } from "../src/plan-admission/node-plan-authoring-recovery-runner.js";
 import { AuthoringCommandGroupJournal } from "../src/plan-asset/ledger/authoring-command-group.js";
 import { derivePlanRevisionDigests } from "../src/plan-asset/ledger/plan-revision-ledger.js";
@@ -100,6 +103,146 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
       exitCode: 0,
     });
   });
+
+  it("assessment後に後段member custodyを失っても全memberをmutationしない", () => {
+    const fixture = recoveryFixture();
+    const status = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    const origin = join(fixture.root, "docs", "a.md");
+    const replacement = join(fixture.root, "docs", "b.md");
+    writeFileSync(replacement, "foreign-custody");
+    const paths = [
+      origin,
+      replacement,
+      ...["origin", "replacement"].map((memberId) =>
+        join(
+          fixture.root,
+          `.ut-tdd-draft-authoring-${sha(`${fixture.groupId}\0${memberId}`).slice(0, 32)}-0-published.identity`,
+        ),
+      ),
+    ];
+    const before = filesystemInventory(paths);
+
+    const db = openHarnessDb(fixture.dbPath);
+    expect(() =>
+      new NodePlanAuthoringRecoveryExecutor(fixture.root).execute(db, {
+        commandId: fixture.groupId,
+        strategy: "rollback",
+        expectedAssessmentDigest: String(status.assessment_digest),
+        expectedFencingToken: String(status.fencing_token),
+      }),
+    ).toThrow("artifact rollback unexpected target: docs/b.md");
+    db.close();
+    expect(filesystemInventory(paths)).toEqual(before);
+  });
+
+  for (const strategy of ["roll_forward", "finalize"] as const) {
+    it(`${strategy} assessment後の後段custody lossでも全memberをmutationしない`, () => {
+      const fixture = recoveryFixture();
+      const seeded = openHarnessDb(fixture.dbPath);
+      seedCompleteEvidence(seeded, fixture.groupId);
+      const artifacts = seeded
+        .prepare("SELECT * FROM authoring_operation_artifacts WHERE group_id = ? ORDER BY ordinal")
+        .all(fixture.groupId);
+      seeded.close();
+      const [origin, replacement] = artifacts;
+      if (!origin || !replacement) throw new Error("two recovery artifacts required");
+      const makeOriginRecoverable = () => {
+        const target = join(fixture.root, String(origin.target_path));
+        const publishedPin = join(fixture.root, String(origin.pin_path));
+        const temporary = join(fixture.root, String(origin.temporary_path));
+        const temporaryPin = publishedPin.replace("published.identity", "temporary.identity");
+        rmSync(target);
+        rmSync(publishedPin);
+        writeFileSync(temporary, recoveryPlanSource);
+        linkSync(temporary, temporaryPin);
+      };
+      if (strategy === "roll_forward") makeOriginRecoverable();
+      const status = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+      expect(status.strategy).toBe(strategy);
+      if (strategy === "finalize") makeOriginRecoverable();
+      writeFileSync(join(fixture.root, String(replacement.target_path)), "foreign-custody");
+      const paths = artifacts.flatMap((artifact) => {
+        const pin = join(fixture.root, String(artifact.pin_path));
+        return [
+          join(fixture.root, String(artifact.target_path)),
+          join(fixture.root, String(artifact.temporary_path)),
+          join(fixture.root, String(artifact.rollback_path)),
+          pin,
+          pin.replace("published.identity", "temporary.identity"),
+          pin.replace("published.identity", "rollback.identity"),
+        ];
+      });
+      const before = filesystemInventory(paths);
+      const db = openHarnessDb(fixture.dbPath);
+      expect(() =>
+        new NodePlanAuthoringRecoveryExecutor(fixture.root).execute(db, {
+          commandId: fixture.groupId,
+          strategy,
+          expectedAssessmentDigest: String(status.assessment_digest),
+          expectedFencingToken: String(status.fencing_token),
+        }),
+      ).toThrow();
+      db.close();
+      expect(filesystemInventory(paths)).toEqual(before);
+    });
+  }
+
+  for (const strategy of ["rollback", "roll_forward", "finalize"] as const) {
+    it(`${strategy} member間faultで後段custodyが変化しても全memberを補償復元する`, () => {
+      const fixture = recoveryFixture();
+      const seeded = openHarnessDb(fixture.dbPath);
+      if (strategy !== "rollback") seedCompleteEvidence(seeded, fixture.groupId);
+      const artifacts = seeded
+        .prepare("SELECT * FROM authoring_operation_artifacts WHERE group_id = ? ORDER BY ordinal")
+        .all(fixture.groupId);
+      seeded.close();
+      const [origin, replacement] = artifacts;
+      if (!origin || !replacement) throw new Error("two recovery artifacts required");
+      const makeOriginRecoverable = () => {
+        const target = join(fixture.root, String(origin.target_path));
+        const publishedPin = join(fixture.root, String(origin.pin_path));
+        const temporary = join(fixture.root, String(origin.temporary_path));
+        const temporaryPin = publishedPin.replace("published.identity", "temporary.identity");
+        rmSync(target);
+        rmSync(publishedPin);
+        writeFileSync(temporary, recoveryPlanSource);
+        linkSync(temporary, temporaryPin);
+      };
+      if (strategy === "roll_forward") makeOriginRecoverable();
+      const status = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+      expect(status.strategy).toBe(strategy);
+      if (strategy === "finalize") makeOriginRecoverable();
+      const paths = artifacts.flatMap((artifact) => {
+        const pin = join(fixture.root, String(artifact.pin_path));
+        return [
+          join(fixture.root, String(artifact.target_path)),
+          join(fixture.root, String(artifact.temporary_path)),
+          join(fixture.root, String(artifact.rollback_path)),
+          pin,
+          pin.replace("published.identity", "temporary.identity"),
+          pin.replace("published.identity", "rollback.identity"),
+        ];
+      });
+      const before = filesystemInventory(paths);
+      let faults = 0;
+      const db = openHarnessDb(fixture.dbPath);
+      expect(() =>
+        new NodePlanAuthoringRecoveryExecutor(fixture.root, () => {
+          faults += 1;
+          if (faults !== 1) return;
+          writeFileSync(join(fixture.root, String(replacement.target_path)), "member-race");
+          throw new Error("member-race");
+        }).execute(db, {
+          commandId: fixture.groupId,
+          strategy,
+          expectedAssessmentDigest: String(status.assessment_digest),
+          expectedFencingToken: String(status.fencing_token),
+        }),
+      ).toThrow("member-race");
+      db.close();
+      expect(filesystemInventory(paths)).toEqual(before);
+    });
+  }
 
   it("DB evidence 0件の偽committed terminalをcleanとして報告しない", () => {
     const fixture = recoveryFixture();
@@ -212,6 +355,69 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     expect([readFileSync(origin, "utf8"), readFileSync(replacement, "utf8")]).toEqual(before);
   });
 
+  it("event/admission/appendを共同再計算してもpublication sourceと異なるcontentを拒否する", () => {
+    const fixture = recoveryFixture();
+    const db = openHarnessDb(fixture.dbPath);
+    seedCompleteEvidence(db, fixture.groupId);
+    const forged = revisionEvidence(
+      fixture.groupId,
+      "origin",
+      "asset:1",
+      "docs/a.md",
+      sha("forged-plan-content"),
+    );
+    const event = db
+      .prepare("SELECT * FROM plan_admission_events WHERE command_id = ?")
+      .get(`${fixture.groupId}:origin`) as Record<string, unknown>;
+    const append = db
+      .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
+      .get(`${fixture.groupId}:origin`) as Record<string, unknown>;
+    db.exec("DROP TRIGGER trg_plan_admission_events_no_update");
+    db.exec("DROP TRIGGER trg_plan_admission_receipts_no_update");
+    db.exec("DROP TRIGGER trg_append_command_receipts_no_update");
+    const forgedEvent = {
+      ...event,
+      command_payload_digest: forged.derived.commandPayloadDigest,
+      content_digest: forged.input.contentDigest,
+      certificate_digest: forged.derived.certificateDigest,
+    };
+    db.prepare(
+      `UPDATE plan_admission_events SET command_payload_digest = ?, content_digest = ?,
+         certificate_digest = ?, event_digest = ? WHERE command_id = ?`,
+    ).run(
+      forged.derived.commandPayloadDigest,
+      forged.input.contentDigest,
+      forged.derived.certificateDigest,
+      ledgerRowDigest(forgedEvent, "event_digest"),
+      forged.input.commandId,
+    );
+    db.prepare(
+      `UPDATE plan_admission_receipts SET command_payload_digest = ?, content_digest = ?,
+         certificate_digest = ? WHERE command_id = ?`,
+    ).run(
+      forged.derived.commandPayloadDigest,
+      forged.input.contentDigest,
+      forged.derived.certificateDigest,
+      forged.input.commandId,
+    );
+    const forgedAppend = {
+      ...append,
+      command_payload_digest: forged.derived.commandPayloadDigest,
+    };
+    db.prepare(
+      "UPDATE append_command_receipts SET command_payload_digest = ?, receipt_digest = ? WHERE command_id = ?",
+    ).run(
+      forged.derived.commandPayloadDigest,
+      ledgerRowDigest(forgedAppend, "receipt_digest"),
+      forged.input.commandId,
+    );
+
+    expect(() => inspectAuthoringRecoveryDbEvidence(db, fixture.groupId, fixture.root)).toThrow(
+      "plan-recovery-db-evidence-mismatch",
+    );
+    db.close();
+  });
+
   it("自己整合digestへ差し替えた非canonical artifactでもassessmentとmutationを拒否する", () => {
     const fixture = recoveryFixture();
     const current = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
@@ -250,7 +456,7 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
         execute: true,
       }),
     ).toThrow("plan-recovery-command-corrupt");
-    expect(readFileSync(target, "utf8")).toBe("postimage");
+    expect(readFileSync(target, "utf8")).toBe(recoveryPlanSource);
     expect(readFileSync(decoy, "utf8")).toBe("decoy");
     const verified = openHarnessDb(fixture.dbPath);
     expect(
@@ -305,7 +511,7 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
         execute: true,
       }),
     ).toThrow("plan-recovery-command-corrupt");
-    expect(readFileSync(target, "utf8")).toBe("postimage");
+    expect(readFileSync(target, "utf8")).toBe(recoveryPlanSource);
   });
 
   it("roll_forwardはauxiliaryを除去して1回のcommitted terminalへ収束する", () => {
@@ -325,7 +531,7 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     );
     rmSync(target);
     rmSync(publishedPin);
-    writeFileSync(temporary, "postimage");
+    writeFileSync(temporary, recoveryPlanSource);
     linkSync(temporary, temporaryPin);
 
     const status = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
@@ -529,7 +735,7 @@ function recoveryFixture(withoutAssessment = false) {
     replacementRevision.input.reason,
     replacementRevision.input.occurredAt,
   );
-  const content = "postimage";
+  const content = recoveryPlanSource;
   const input = {
     groupId,
     commandPayloadDigest: digest,
@@ -586,6 +792,19 @@ function recoveryFixture(withoutAssessment = false) {
     groupId,
     runner: new NodePlanAuthoringRecoveryRunner(root, () => openHarnessDb(dbPath)),
   };
+}
+
+function filesystemInventory(paths: readonly string[]) {
+  return paths.map((path) => {
+    if (!existsSync(path)) return { path, exists: false as const };
+    const stat = lstatSync(path);
+    return {
+      path,
+      exists: true as const,
+      ino: stat.ino,
+      content: createHash("sha256").update(readFileSync(path)).digest("hex"),
+    };
+  });
 }
 
 function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
@@ -661,7 +880,13 @@ function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
   }
 }
 
-function revisionEvidence(groupId: string, role: string, assetId: string, sourcePath: string) {
+function revisionEvidence(
+  groupId: string,
+  role: string,
+  assetId: string,
+  sourcePath: string,
+  contentDigest = recoveryPlanContentDigest,
+) {
   const input = {
     commandId: `${groupId}:${role}`,
     assetId,
@@ -669,7 +894,7 @@ function revisionEvidence(groupId: string, role: string, assetId: string, source
     baseRevision: 1,
     basePayloadDigest: sha("{}"),
     canonicalPayloadJson: JSON.stringify({ plan_id: `PLAN-${role}` }),
-    contentDigest: sha("postimage"),
+    contentDigest,
     bodyDigest: digest,
     sourcePath,
     sourceCommit: "b".repeat(40),
@@ -684,6 +909,13 @@ function revisionEvidence(groupId: string, role: string, assetId: string, source
 
 const digest = "a".repeat(64);
 const now = "2026-07-21T00:00:00Z";
+const recoveryPlanSource = "---\nplan_id: PLAN-recovery-fixture\n---\n# Recovery fixture\n";
+const recoveryPlanContentDigest = requireCanonicalDigest(recoveryPlanSource);
+function requireCanonicalDigest(source: string): string {
+  const value = canonicalPlanContentDigest(source)?.slice(7);
+  if (!value) throw new Error("recovery fixture must be a canonical PLAN");
+  return value;
+}
 function sha(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }

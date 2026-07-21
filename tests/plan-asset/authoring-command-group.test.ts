@@ -145,6 +145,33 @@ describe("authoring command group durable journal", () => {
       ruleId: "authoring-command-group-rolled-back",
     });
   });
+
+  it("U-PA-GROUP-005: Windowsで同一になるcase違いartifact pathをwrite前に拒否する", () => {
+    for (const [label, artifactPath] of [
+      ["case", "DOCS/TEST-DESIGN/TEST.MD"],
+      ["separator", "docs\\test-design\\test.md"],
+      ["dot-segment", "docs/other/../test-design/test.md"],
+      ["windows-trailing-dot", "docs/test-design/test.md."],
+      ["windows-trailing-space", "docs/test-design/test.md "],
+    ] as const) {
+      const db = memoryDb();
+      const input = group();
+      const duplicate = {
+        ...input,
+        members: [
+          ...input.members,
+          { ...input.members[0], memberId: `${label}-duplicate`, artifactPath },
+        ],
+      };
+
+      expect(
+        new AuthoringCommandGroupJournal(db).execute(duplicate, recordingPublisher([])),
+      ).toEqual({ ok: false, ruleId: "authoring-command-group-input-invalid" });
+      expect(db.prepare("SELECT COUNT(*) n FROM authoring_command_group_headers").get()).toEqual({
+        n: 0,
+      });
+    }
+  });
 });
 
 function group() {

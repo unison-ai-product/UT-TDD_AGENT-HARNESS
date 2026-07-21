@@ -557,6 +557,74 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
   }
 
   /** DirectoryIdentity CASを再利用し、単一memberをpreimageへ安全に復元する。 */
+  verifySingleArtifactRestoreReadiness(input: {
+    readonly tokenId: string;
+    readonly path: string;
+    readonly preimage: ArtifactPreimage;
+    readonly postimage: `sha256:${string}`;
+  }): void {
+    const paths = this.singleArtifactPaths(input);
+    const targetHasPostimage = regularDigest(paths.target, input.postimage);
+    const targetHasPreimage =
+      input.preimage.kind === "sha256" && regularDigest(paths.target, input.preimage.digest);
+    if (input.preimage.kind === "absent") {
+      if (existsSync(paths.rollback) || existsSync(paths.rollbackPin))
+        throw new Error(`artifact rollback custody unexpected: ${input.path}`);
+      if (existsSync(paths.target) && !targetHasPostimage)
+        throw new Error(`artifact rollback unexpected target: ${input.path}`);
+    } else {
+      if (existsSync(paths.rollback))
+        assertRegularDigest({
+          path: paths.rollback,
+          digest: input.preimage.digest,
+          logicalPath: input.path,
+          role: "rollback",
+        });
+      if (
+        targetHasPostimage &&
+        input.preimage.digest !== input.postimage &&
+        !existsSync(paths.rollback)
+      )
+        throw new Error(`artifact rollback custody missing: ${input.path}`);
+      if (!targetHasPostimage && !targetHasPreimage && !existsSync(paths.rollback))
+        throw new Error(`artifact preimage custody missing: ${input.path}`);
+    }
+    this.verifyExistingSingleArtifactAuxiliaries(input, paths);
+  }
+
+  /** recovery mutation前に単一memberのroll-forward custodyをread-onlyで検証する。 */
+  verifySingleArtifactRecoveryReadiness(input: {
+    readonly tokenId: string;
+    readonly path: string;
+    readonly preimage: ArtifactPreimage;
+    readonly postimage: `sha256:${string}`;
+  }): void {
+    const paths = this.singleArtifactPaths(input);
+    this.verifyExistingSingleArtifactAuxiliaries(input, paths);
+    if (regularDigest(paths.target, input.postimage)) {
+      if (existsSync(paths.temporary) && !sameFile(paths.target, paths.temporary))
+        throw new Error(`artifact target custody mismatch: ${input.path}`);
+      if (existsSync(paths.publishedPin) && !sameFile(paths.target, paths.publishedPin))
+        throw new Error(`artifact published custody mismatch: ${input.path}`);
+      return;
+    }
+    if (!existsSync(paths.temporary))
+      throw new Error(`artifact recovery temporary missing: ${input.path}`);
+    if (input.preimage.kind === "sha256") {
+      if (existsSync(paths.target))
+        assertRegularDigest({
+          path: paths.target,
+          digest: input.preimage.digest,
+          logicalPath: input.path,
+          role: "preimage",
+        });
+      else if (!existsSync(paths.rollback))
+        throw new Error(`artifact recovery preimage custody missing: ${input.path}`);
+    } else if (existsSync(paths.target)) {
+      throw new Error(`artifact recovery unexpected target: ${input.path}`);
+    }
+  }
+
   restoreSingleArtifactPublication(input: {
     readonly tokenId: string;
     readonly path: string;
@@ -810,6 +878,50 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       throw new Error(`symlink成果物は拒否されました: ${logicalPath}`);
     }
     return targetPath;
+  }
+
+  private singleArtifactPaths(input: {
+    readonly tokenId: string;
+    readonly path: string;
+    readonly preimage: ArtifactPreimage;
+    readonly postimage: `sha256:${string}`;
+  }) {
+    if (!/^[A-Za-z0-9_-]+$/.test(input.tokenId)) throw new Error("invalid authoring token id");
+    validatePreimage(input.preimage, input.path);
+    validateDigest(input.postimage, "authoring postimage");
+    const target = this.resolveTarget(input.path);
+    const suffix = `.ut-tdd-draft-${input.tokenId}`;
+    return {
+      target,
+      temporary: `${target}${suffix}.tmp`,
+      rollback: `${target}${suffix}.rollback`,
+      temporaryPin: this.identityPinPath(input.tokenId, 0, "temporary"),
+      rollbackPin: this.identityPinPath(input.tokenId, 0, "rollback"),
+      publishedPin: this.identityPinPath(input.tokenId, 0, "published"),
+    };
+  }
+
+  private verifyExistingSingleArtifactAuxiliaries(
+    input: {
+      readonly path: string;
+      readonly preimage: ArtifactPreimage;
+      readonly postimage: `sha256:${string}`;
+    },
+    paths: ReturnType<NodeAtomicDraftPublisher["singleArtifactPaths"]>,
+  ): void {
+    const auxiliaries: Array<readonly [string, `sha256:${string}`, string]> = [
+      [paths.temporary, input.postimage, "temporary"],
+      [paths.temporaryPin, input.postimage, "temporary identity pin"],
+      [paths.publishedPin, input.postimage, "published identity pin"],
+    ];
+    if (input.preimage.kind === "sha256")
+      auxiliaries.push(
+        [paths.rollback, input.preimage.digest, "rollback"],
+        [paths.rollbackPin, input.preimage.digest, "rollback identity pin"],
+      );
+    for (const [path, digest, role] of auxiliaries) {
+      if (existsSync(path)) assertRegularDigest({ path, digest, logicalPath: input.path, role });
+    }
   }
 
   private identityPinPath(tokenId: string, artifactIndex: number, role: string): string {

@@ -123,7 +123,7 @@ function committedEvidenceComplete(
   afterParentCapture?: (path: string) => void,
   beforeStableReturn?: (path: string) => void,
 ): boolean {
-  if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "complete") return false;
+  if (inspectAuthoringRecoveryDbEvidence(db, groupId, repoRoot) !== "complete") return false;
   const bindings = db
     .prepare(
       "SELECT asset_id, revision, artifact_role FROM authoring_command_revision_bindings WHERE group_id = ? ORDER BY artifact_role",

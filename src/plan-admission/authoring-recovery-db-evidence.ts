@@ -1,6 +1,10 @@
+import { createHash } from "node:crypto";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { isAbsolute, relative, resolve } from "node:path";
 import { derivePlanRevisionDigests } from "../plan-asset/ledger/plan-revision-ledger.js";
 import { ledgerRowDigest } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
+import { canonicalPlanContentDigest } from "./diff-fence.js";
 
 export type AuthoringRecoveryDbEvidenceLane = "zero" | "complete";
 
@@ -8,6 +12,7 @@ export type AuthoringRecoveryDbEvidenceLane = "zero" | "complete";
 export function inspectAuthoringRecoveryDbEvidence(
   db: HarnessDb,
   groupId: string,
+  repoRoot?: string,
 ): AuthoringRecoveryDbEvidenceLane {
   const childIds = [`${groupId}:origin`, `${groupId}:replacement`] as const;
   const receipts = db
@@ -96,6 +101,9 @@ export function inspectAuthoringRecoveryDbEvidence(
       artifact.group_id !== groupId ||
       artifact.member_id !== role ||
       artifact.target_path !== storedRevision.source_path ||
+      (repoRoot !== undefined &&
+        publicationContentDigest(repoRoot, artifact) !==
+          normalizedDigest(admission.content_digest)) ||
       receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest") ||
       admissionEvent.event_digest !== ledgerRowDigest(admissionEvent, "event_digest") ||
       receipt.command_type !== "plan.revise" ||
@@ -130,4 +138,37 @@ export function inspectAuthoringRecoveryDbEvidence(
   }
   if (expectedRoles.size !== 0) throw new Error("plan-recovery-db-evidence-mismatch");
   return "complete";
+}
+
+/** complete laneのpublication custodyから、receiptを除外したPLAN本文digestを復元する。 */
+function publicationContentDigest(
+  repoRoot: string,
+  artifact: Record<string, unknown>,
+): string | undefined {
+  const expectedPostimage = normalizedDigest(artifact.postimage_digest);
+  for (const logicalPath of [artifact.target_path, artifact.temporary_path, artifact.pin_path]) {
+    const path = safePath(repoRoot, String(logicalPath));
+    if (!existsSync(path)) continue;
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.isSymbolicLink()) continue;
+    const source = readFileSync(path, "utf8");
+    if (`sha256:${createHash("sha256").update(source).digest("hex")}` !== expectedPostimage)
+      continue;
+    return canonicalPlanContentDigest(source);
+  }
+  return undefined;
+}
+
+function safePath(repoRoot: string, logicalPath: string): string {
+  if (!logicalPath || isAbsolute(logicalPath)) throw new Error("plan-recovery-path-invalid");
+  const root = resolve(repoRoot);
+  const path = resolve(root, logicalPath);
+  const rel = relative(root, path);
+  if (rel.startsWith("..") || isAbsolute(rel)) throw new Error("plan-recovery-path-invalid");
+  return path;
+}
+
+function normalizedDigest(value: unknown): string {
+  const digest = String(value);
+  return digest.startsWith("sha256:") ? digest : `sha256:${digest}`;
 }
