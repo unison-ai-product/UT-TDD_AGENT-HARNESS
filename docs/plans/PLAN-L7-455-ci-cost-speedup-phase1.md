@@ -4,7 +4,7 @@ title: "PLAN-L7-455 (troubleshoot): GitHub CI の重要部分絞り込み・高�
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-21
@@ -38,7 +38,25 @@ dependencies:
     - docs/plans/PLAN-L7-221-github-ci-policy-gate.md
     - docs/plans/PLAN-RECOVERY-15-cross-os-ci-aggregate-gate.md
     - docs/plans/PLAN-L7-420-ci-strict-evidence-gates.md
-review_evidence: []
+review_evidence:
+  - reviewer: blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-21T16:40:00+09:00"
+    tests_green_at: "2026-07-21T16:03:00+09:00"
+    verdict: approve
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    scope: "worktree wt-issue-109 変更一式 (harness-check.yml doc lane 分岐 + bun cache、change-lane.ts fail-close 分類器、cli classify-changes、checkLaneSkipSafety detector + 負例 U-CIPOL-021〜026)。初回 blind review FLAG (docs/plans/** と root md が doc lane に乗り governance hard-gate を迂回可能) → allowlist を docs/** (plans 除く) + .ut-tdd/memory/** へ縮小、攻撃再現負例を追加 → focused 再レビューで PASS (reviewer が独立攻撃プローブで全ケース full への fail-close を実証)。"
+    green_commands:
+      - kind: unit_test
+        command: "UT_TDD_TEST_EXECUTION_ROOT=$PWD UT_TDD_TEST_FENCE_ROOT=$PWD UT_TDD_HEAD_SNAPSHOT_ROOT=<mktemp -d detached copy> bunx vitest run tests/change-lane.test.ts tests/github-ci-policy.test.ts → 58/58 green (orchestrator 実測)。typecheck 0 / biome clean / plan lint OK"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-21T16:03:00+09:00"
+        evidence_path: tests/change-lane.test.ts
+        output_digest: "sha256:d167eb10aefa141907e11704ff64b348511f8eaaa72c89c54504eadb22aa34d6"
+        anchor_commit: d5acb1eccd7918fbe1d688a321f2ee010689a7d9
 ---
 
 # PLAN-L7-455 (troubleshoot): GitHub CI 高速化 Phase 1
