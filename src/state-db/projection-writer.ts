@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { performance } from "node:perf_hooks";
 import { parse as parseYaml } from "yaml";
@@ -98,7 +99,12 @@ import { projectSpecIr } from "./spec-ir-projections";
 import { clearRebuildableProjectionTables } from "./sqlite-projection-rebuild";
 import { type ProjectionFindingInput, SqliteProjectionStore } from "./sqlite-projection-store";
 import { runSqliteTransaction } from "./sqlite-transaction";
-import type { RunUsage } from "./token-tracker";
+import {
+  loadRepoScopedRuntimeSessionUsage,
+  type RepoScopeIngestStats,
+  type RunUsage,
+  type SessionScanDirs,
+} from "./token-tracker";
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
 
 export type { ProjectionEvent } from "../projection/contracts/projection-store";
@@ -128,6 +134,8 @@ export interface RebuildHarnessDbResult {
     verificationEvidence?: VerificationEvidenceProjection;
   };
   timings?: ProjectionTiming[];
+  /** repo スコープ token telemetry ingest の走査統計 (issue #82、可視化用)。 */
+  tokenIngest?: RepoScopeIngestStats;
 }
 
 export {
@@ -708,6 +716,30 @@ export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
       });
     }
   });
+}
+
+/**
+ * repo スコープの session ディレクトリを解決する (env override > OS default)。doctor 経路
+ * (`projectRuntimeModelTelemetryForDoctor`、src/doctor/db-projection.ts) と同じ解決順を踏襲する。
+ */
+function repoScopedSessionDirs(): SessionScanDirs {
+  return {
+    claudeDirs: [process.env.UT_TDD_CLAUDE_SESSIONS_DIR ?? join(homedir(), ".claude", "projects")],
+    codexDirs: [process.env.UT_TDD_CODEX_SESSIONS_DIR ?? join(homedir(), ".codex", "sessions")],
+  };
+}
+
+/**
+ * repo スコープの実測 token/cost telemetry を model_runs へ投入する (issue #82、PLAN-L7-454)。
+ * `loadRepoScopedRuntimeSessionUsage` で **この repo に帰属する session usage のみ** (Claude
+ * project-slug ディレクトリ / Codex session cwd フィルタ) を取得し `projectTokenUsage` へ渡す。
+ * cold-start (該当ログ不在) は no-op。個別ファイルの読取失敗は loadRepoScopedRuntimeSessionUsage 内で
+ * fail-open 済み (rebuild 全体を落とさない)。
+ */
+export function projectRepoScopedTokenUsage(repoRoot: string, db: HarnessDb): RepoScopeIngestStats {
+  const { usages, stats } = loadRepoScopedRuntimeSessionUsage(repoRoot, repoScopedSessionDirs());
+  projectTokenUsage(db, usages);
+  return stats;
 }
 
 function planStatusMap(repoRoot: string): Map<string, string> {
@@ -2533,6 +2565,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
   const ownsDb = input.db === undefined;
   const db = input.db ?? openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
   const timings: ProjectionTiming[] = [];
+  let tokenIngestStats: RepoScopeIngestStats | undefined;
   const time = <T>(id: string, run: () => T): T => {
     if (input.timing !== true) return run();
     const started = performance.now();
@@ -2585,6 +2618,18 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectSkillEvaluations(db);
         projectPocEvaluations(db);
       });
+      // repo スコープ token telemetry ingest (issue #82、PLAN-L7-454): 従来 model_runs には
+      // review-evidence 由来行しか無かった実測欠落を是正する。model-operational (token 効率集計) より
+      // 前に走らせ、同一 rebuild 内の projectModelEvaluations が新規 token 行を反映できるようにする。
+      // 専用の timing id で計測し、他の projection と切り分けて可視化する。session ログ読取の想定外失敗は
+      // fail-open とし、rebuild 全体を落とさない (cold-start / 権限エラー等でも継続)。
+      time("token-telemetry", () => {
+        try {
+          tokenIngestStats = projectRepoScopedTokenUsage(repoRoot, db);
+        } catch {
+          tokenIngestStats = undefined;
+        }
+      });
       time("model-operational", () => {
         projectModelEvaluations(db, repoRoot);
         projectOperationalMetrics(db);
@@ -2636,6 +2681,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       },
     };
     if (input.timing === true) result.timings = timings;
+    if (tokenIngestStats !== undefined) result.tokenIngest = tokenIngestStats;
     return result;
   } finally {
     if (ownsDb) db.close();

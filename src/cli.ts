@@ -1468,6 +1468,15 @@ db.command("rebuild")
     process.stdout.write(
       "  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection\n",
     );
+    if (r.tokenIngest) {
+      const t = r.tokenIngest;
+      process.stdout.write(
+        `  token telemetry (repo-scoped, issue #82): claude files matched ${t.claudeFilesScanned}/${t.claudeFilesChecked} ` +
+          `(project dir resolved=${t.claudeProjectDirResolved}, foreign repo ${t.claudeFilesForeignRepo}, unknown cwd ${t.claudeFilesSkippedUnknownCwd}), ` +
+          `codex files matched ${t.codexFilesMatched}/${t.codexFilesChecked} ` +
+          `(foreign repo ${t.codexFilesForeignRepo}, unknown cwd ${t.codexFilesSkippedUnknownCwd})\n`,
+      );
+    }
   });
 db.command("scope-preview")
   .description("preview document/activation detection scope from harness.db profiles")
