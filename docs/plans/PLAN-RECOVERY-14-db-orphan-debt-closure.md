@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-14 (recovery): harness.db orphan データ負債の収束 
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
@@ -37,7 +37,25 @@ dependencies:
     - docs/plans/PLAN-L7-363-routine-gate-run-projection.md
     - docs/plans/PLAN-L7-365-harness-db-currency-hook.md
     - docs/plans/PLAN-L7-409-runtime-plan-context-join-signal.md
-review_evidence: []
+review_evidence:
+  - reviewer: blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-21T15:20:00+09:00"
+    tests_green_at: "2026-07-21T14:10:00+09:00"
+    verdict: approve
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    scope: "worktree wt-issue-87 変更一式 (projection-writer.ts drive_run_id join 修正 + alias 解決、U-DBPROJ-GATE-02/03/04、PLAN 本文)。初回 blind review はコード/テスト PASS + 見出し実測境界超過で FLAG → 見出し是正 (実 17 件の全件帰属は再測定待ち) → focused 再レビューで PASS (確定/未確定境界の一貫性を L110/L124/L278 で確認)。"
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/projection-writer.test.ts -t 'PLAN-RECOVERY-14' → U-DBPROJ-GATE-02/03/04 3 passed。bunx vitest run tests/drive-db-registration.test.ts → 7 passed。typecheck 0 errors / biome clean / plan lint OK (Step 4 実施記録参照)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-21T14:10:00+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:5b6cb68715df80dba11564602f7c9d51844f7816e7f5b280186c4308d11cd4fb"
+        anchor_commit: 73ca280e7362776de980d0719f69817abdc533ab
 ---
 
 # PLAN-RECOVERY-14 (recovery): harness.db orphan データ負債の収束
