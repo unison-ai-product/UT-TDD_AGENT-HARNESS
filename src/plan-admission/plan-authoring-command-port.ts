@@ -12,6 +12,7 @@ export interface PlanPublicationArtifactManifest {
 }
 
 export interface PlanRedesignRevisionManifest {
+  readonly revision_mode: "append" | "legacy_bootstrap";
   readonly command_id: string;
   readonly asset_id: string;
   readonly plan_id: string;
@@ -29,6 +30,22 @@ export interface PlanRedesignRevisionManifest {
   readonly occurred_at: string;
   readonly source_content: string;
   readonly expected_preimage: ExpectedPlanPreimage;
+  /** runnerがpolicyを再評価するcanonical admission本体。 */
+  readonly admission: PlanAdmissionRequest;
+  readonly bootstrap?: {
+    readonly repository_identity: string;
+    readonly identity_algorithm: "ut-tdd-plan-legacy-v1";
+    readonly identity_input_json: string;
+    readonly identity_digest: string;
+    readonly base_canonical_payload_json: string;
+    readonly base_canonical_payload_digest: string;
+    readonly base_body_digest: string;
+    readonly base_source_path: string;
+    readonly base_source_commit: string;
+    readonly base_source_blob_oid: string;
+    readonly base_source_content: string;
+    readonly base_source_content_digest: string;
+  };
 }
 
 export interface PlanRedesignBundleManifest {

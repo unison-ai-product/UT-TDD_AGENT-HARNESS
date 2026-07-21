@@ -62,6 +62,7 @@ describe("plan revise CLI registrar", () => {
     );
 
     const revision = {
+      revision_mode: "append" as const,
       command_id: "redesign:1:replacement",
       asset_id: "asset:replacement",
       plan_id: "PLAN-L6-2",
@@ -79,6 +80,14 @@ describe("plan revise CLI registrar", () => {
       occurred_at: "2026-07-17T10:00:00.000Z",
       source_content: "---\nplan_id: PLAN-L6-2\n---\nreplacement",
       expected_preimage: { kind: "absent" },
+      admission: {
+        routeSignal: "forward",
+        routeMode: "forward",
+        kind: "design",
+        layer: "L6",
+        drive: "agent",
+        branch: "work/redesign",
+      },
     };
     const v2 = {
       version: 2,
@@ -88,10 +97,25 @@ describe("plan revise CLI registrar", () => {
       replacement: revision,
       origin: {
         ...revision,
+        revision_mode: "legacy_bootstrap" as const,
         command_id: "redesign:1:origin",
         asset_id: "asset:origin",
         plan_id: "PLAN-L6-1",
         source_path: "docs/plans/origin.md",
+        bootstrap: {
+          repository_identity: "owner/repository",
+          identity_algorithm: "ut-tdd-plan-legacy-v1",
+          identity_input_json: '["owner/repository","PLAN-L6-1"]',
+          identity_digest: digest,
+          base_canonical_payload_json: "{}",
+          base_canonical_payload_digest: digest,
+          base_body_digest: digest,
+          base_source_path: "docs/plans/origin.md",
+          base_source_commit: "b".repeat(40),
+          base_source_blob_oid: "c".repeat(40),
+          base_source_content: "---\nplan_id: PLAN-L6-1\n---\nbase",
+          base_source_content_digest: digest,
+        },
       },
       reentry: { target_plan_id: "PLAN-L6-1", target_revision: 2, phase: "forward_merge" },
       projection: {
@@ -110,7 +134,11 @@ describe("plan revise CLI registrar", () => {
     };
     const result = await run(JSON.stringify(v2));
     expect(result.execute).toHaveBeenCalledWith({
-      manifest: expect.objectContaining({ version: 2, operation: "redesign_bundle" }),
+      manifest: expect.objectContaining({
+        version: 2,
+        operation: "redesign_bundle",
+        origin: expect.objectContaining({ revision_mode: "legacy_bootstrap" }),
+      }),
     });
   });
 

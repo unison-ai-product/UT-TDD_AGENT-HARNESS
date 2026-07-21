@@ -15,6 +15,7 @@ import {
   TRACKED_RECEIPT_SCHEMA,
 } from "../../src/plan-admission/tracked-receipt-projection.js";
 import { TrackedReceiptRenderer } from "../../src/plan-admission/tracked-receipt-renderer.js";
+import { deriveLegacyAssetId } from "../../src/plan-asset/adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
 import {
   deriveRedesignPublication,
@@ -47,6 +48,69 @@ describe("Redesign bundle coordinator", () => {
     expect(result).toMatchObject({ ok: true, replayed: false });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
     expect(Number(db.prepare("SELECT COUNT(*) n FROM append_command_receipts").get()?.n)).toBe(2);
+  });
+
+  it("U-PA-REDESIGN-001A: legacy originはrev1 bootstrapとrev2 correctionを同一bundleで確定する", () => {
+    const db = openHarnessDb(":memory:");
+    opened.push(db);
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+    seed(db, "plan:replacement", "PLAN-L6-88");
+    const current = bundle();
+    const baseFrontmatter = {
+      plan_id: "PLAN-L4-31",
+      title: "Test performance",
+      kind: "design",
+      layer: "L4",
+      drive: "agent",
+      route_signal: "forward",
+      route_mode: "forward",
+      status: "draft",
+      pair_artifact: "docs/test-design/harness/L9-system-test-design.md",
+      generates: [
+        {
+          artifact_path: "docs/design/harness/L4-basic-design/architecture.md",
+          artifact_type: "design_doc",
+        },
+      ],
+    };
+    const baseSource = source(baseFrontmatter, "Legacy PLAN body.\n");
+    const identityInputJson = JSON.stringify([current.repositoryIdentity, current.origin.planId]);
+    const origin = {
+      ...current.origin,
+      repositoryIdentity: current.repositoryIdentity,
+      identityAlgorithm: "ut-tdd-plan-legacy-v1" as const,
+      identityInputJson,
+      identityDigest: sha(identityInputJson),
+      baseCanonicalPayloadJson: stable(baseFrontmatter),
+      baseCanonicalPayloadDigest: sha(stable(baseFrontmatter)),
+      baseBodyDigest: sha("Legacy PLAN body.\n"),
+      baseSourcePath: current.origin.sourcePath,
+      baseSourceCommit: "a".repeat(40),
+      baseSourceBlobOid: "c".repeat(40),
+      baseSourceContent: baseSource,
+      baseSourceContentDigest: sha(baseSource),
+    };
+    const partial = { ...current, origin };
+    const input = { ...partial, commandPayloadDigest: redesignBundlePayloadDigest(partial) };
+
+    expect(
+      new PlanRedesignBundleCoordinator(db).publishDurable(input, memoryPublisher()),
+    ).toMatchObject({
+      ok: true,
+      replayed: false,
+      origin: { revision: 2, replayed: false },
+      replacement: { revision: 2, replayed: false },
+    });
+    expect(
+      db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all(deriveLegacyAssetId(current.repositoryIdentity, current.origin.planId)),
+    ).toEqual([{ revision: 1 }, { revision: 2 }]);
+    expect(
+      db
+        .prepare("SELECT revision FROM plan_revisions WHERE asset_id = ? ORDER BY revision")
+        .all("plan:replacement"),
+    ).toEqual([{ revision: 1 }, { revision: 2 }]);
   });
 
   it("U-PA-REDESIGN-002: 片肺publish faultは両revisionをrollbackする", () => {

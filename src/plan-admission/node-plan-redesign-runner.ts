@@ -5,15 +5,23 @@ import {
   type RedesignBundleInput,
   redesignBundlePayloadDigest,
 } from "../plan-asset/ledger/plan-redesign-bundle.js";
+import type { BootstrapLegacyPlanRevisionInput } from "../plan-asset/ledger/plan-revision-bootstrap.js";
 import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision-ledger.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { NodeAuthoringArtifactPublisher } from "./node-authoring-artifact-publisher.js";
 import type { PlanRedesignBundleManifest } from "./plan-authoring-command-port.js";
+import { validatePlanRedesignBundleManifest } from "./plan-redesign-command-assembler.js";
+import {
+  NodeGitCommandPort,
+  type TrustedGitBlob,
+  TrustedGitBlobResolver,
+} from "./trusted-git-blob-resolver.js";
 
 export interface NodePlanRedesignRunnerDeps {
   readonly repoRoot: string;
   readonly openDb?: () => HarnessDb;
+  readonly gitResolver?: Pick<TrustedGitBlobResolver, "resolve">;
 }
 
 /** v2 manifestをexact publication factoryへ通し、bundle coordinatorへ到達させる兄弟runner。 */
@@ -21,13 +29,18 @@ export class NodePlanRedesignRunner {
   constructor(private readonly deps: NodePlanRedesignRunnerDeps) {}
 
   run(input: { manifest: PlanRedesignBundleManifest }) {
-    const { manifest } = input;
+    const manifest = validatePlanRedesignBundleManifest(input.manifest);
     if (
       manifest.replacement.command_id !== `${manifest.command_id}:replacement` ||
       manifest.origin.command_id !== `${manifest.command_id}:origin`
     ) {
       throw new Error("plan-redesign-command-binding-invalid");
     }
+    verifyLegacyBootstrapGitBinding(
+      manifest,
+      this.deps.gitResolver ??
+        new TrustedGitBlobResolver(new NodeGitCommandPort(this.deps.repoRoot)),
+    );
     const artifacts = {
       origin: artifact({
         memberId: "origin",
@@ -111,14 +124,46 @@ export class NodePlanRedesignRunner {
   }
 }
 
+function verifyLegacyBootstrapGitBinding(
+  manifest: PlanRedesignBundleManifest,
+  resolver: Pick<TrustedGitBlobResolver, "resolve">,
+): void {
+  for (const revision of [manifest.origin, manifest.replacement]) {
+    if (revision.revision_mode !== "legacy_bootstrap") continue;
+    if (!revision.bootstrap) throw new Error("plan-redesign-bootstrap-fields-missing");
+    const base = revision.bootstrap;
+    const actual = resolver.resolve(base.base_source_commit, base.base_source_path);
+    assertBootstrapBinding(base, actual);
+  }
+}
+
+function assertBootstrapBinding(
+  base: NonNullable<PlanRedesignBundleManifest["origin"]["bootstrap"]>,
+  actual: TrustedGitBlob,
+): void {
+  if (actual.commitOid !== base.base_source_commit)
+    throw new Error("plan-redesign-bootstrap-source-commit-mismatch");
+  if (actual.sourcePath !== base.base_source_path)
+    throw new Error("plan-redesign-bootstrap-source-path-mismatch");
+  if (actual.blobOid !== base.base_source_blob_oid)
+    throw new Error("plan-redesign-bootstrap-blob-oid-mismatch");
+  const declaredBytes = Buffer.from(base.base_source_content, "utf8");
+  if (!actual.bytes.equals(declaredBytes))
+    throw new Error("plan-redesign-bootstrap-source-content-mismatch");
+  if (sha(actual.bytes) !== unprefix(base.base_source_content_digest))
+    throw new Error("plan-redesign-bootstrap-source-content-digest-mismatch");
+}
+
 export function createNodePlanRedesignRunner(repoRoot: string): NodePlanRedesignRunner {
   return new NodePlanRedesignRunner({ repoRoot });
 }
 
-function revision(value: PlanRedesignBundleManifest["origin"]): AppendPlanRevisionInput & {
-  readonly sourceContent: string;
-} {
-  return {
+function revision(
+  value: PlanRedesignBundleManifest["origin"],
+):
+  | (AppendPlanRevisionInput & { readonly sourceContent: string })
+  | (BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string }) {
+  const common = {
     commandId: value.command_id,
     assetId: value.asset_id,
     planId: value.plan_id,
@@ -135,6 +180,24 @@ function revision(value: PlanRedesignBundleManifest["origin"]): AppendPlanRevisi
     certificateId: value.certificate_id,
     occurredAt: value.occurred_at,
     sourceContent: value.source_content,
+  };
+  if (value.revision_mode === "append") return common;
+  if (!value.bootstrap) throw new Error("plan-redesign-bootstrap-fields-missing");
+  const { assetId: _assetId, basePayloadDigest: _basePayloadDigest, ...bootstrapCommon } = common;
+  return {
+    ...bootstrapCommon,
+    repositoryIdentity: value.bootstrap.repository_identity,
+    identityAlgorithm: value.bootstrap.identity_algorithm,
+    identityInputJson: value.bootstrap.identity_input_json,
+    identityDigest: unprefix(value.bootstrap.identity_digest),
+    baseCanonicalPayloadJson: value.bootstrap.base_canonical_payload_json,
+    baseCanonicalPayloadDigest: unprefix(value.bootstrap.base_canonical_payload_digest),
+    baseBodyDigest: unprefix(value.bootstrap.base_body_digest),
+    baseSourcePath: value.bootstrap.base_source_path,
+    baseSourceCommit: value.bootstrap.base_source_commit,
+    baseSourceBlobOid: value.bootstrap.base_source_blob_oid,
+    baseSourceContent: value.bootstrap.base_source_content,
+    baseSourceContentDigest: unprefix(value.bootstrap.base_source_content_digest),
   };
 }
 
@@ -158,7 +221,7 @@ function withoutMemberId<T extends { readonly memberId: string }>(value: T): Omi
   return artifact;
 }
 
-function sha(value: string): string {
+function sha(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
 }
 function unprefix(value: string): string {

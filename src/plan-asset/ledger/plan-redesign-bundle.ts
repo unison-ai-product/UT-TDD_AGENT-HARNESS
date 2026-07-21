@@ -21,14 +21,16 @@ import {
 } from "./plan-revision-ledger.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
+type RedesignRevisionInput =
+  | (AppendPlanRevisionInput & { readonly sourceContent: string })
+  | (BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string });
+
 export interface RedesignBundleInput {
   readonly commandId: string;
   readonly commandPayloadDigest: string;
   readonly repositoryIdentity: string;
-  readonly replacement:
-    | (AppendPlanRevisionInput & { readonly sourceContent: string })
-    | (BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string });
-  readonly origin: AppendPlanRevisionInput & { readonly sourceContent: string };
+  readonly replacement: RedesignRevisionInput;
+  readonly origin: RedesignRevisionInput;
   readonly reentry: {
     readonly targetPlanId: string;
     readonly targetRevision: number;
@@ -224,19 +226,9 @@ export class PlanRedesignBundleCoordinator {
     readonly commit: boolean;
     readonly value: RedesignBundleResult;
   } {
-    const replacement = isBootstrap(input.replacement)
-      ? this.bootstrap.prepare(input.replacement, () => undefined)
-      : this.revisions.prepare(
-          input.replacement,
-          () => undefined,
-          redesignRevisionGroupCapability(),
-        );
+    const replacement = this.prepareRevision(input.replacement);
     if (!replacement.value.ok) return { commit: false, value: replacement.value };
-    const origin = this.revisions.prepare(
-      input.origin,
-      () => undefined,
-      redesignRevisionGroupCapability(),
-    );
+    const origin = this.prepareRevision(input.origin);
     if (!origin.value.ok) return { commit: false, value: origin.value };
     const value = {
       ok: true as const,
@@ -245,6 +237,12 @@ export class PlanRedesignBundleCoordinator {
       origin: origin.value,
     };
     return { commit: true, value };
+  }
+
+  private prepareRevision(input: RedesignRevisionInput) {
+    return isBootstrap(input)
+      ? this.bootstrap.prepare(input, () => undefined)
+      : this.revisions.prepare(input, () => undefined, redesignRevisionGroupCapability());
   }
 
   /**
@@ -259,14 +257,12 @@ export class PlanRedesignBundleCoordinator {
     if (invalid) return { ok: false, ruleId: invalid };
     const revisionBindings = [
       {
-        assetId: input.origin.assetId,
+        assetId: revisionAssetId(input.repositoryIdentity, input.origin),
         revision: input.origin.baseRevision + 1,
         artifactRole: "origin",
       },
       {
-        assetId: isBootstrap(input.replacement)
-          ? deriveLegacyAssetId(input.repositoryIdentity, input.replacement.planId)
-          : input.replacement.assetId,
+        assetId: revisionAssetId(input.repositoryIdentity, input.replacement),
         revision: input.replacement.baseRevision + 1,
         artifactRole: "replacement",
       },
@@ -491,9 +487,13 @@ function validatePublicationGroup(
 }
 
 function isBootstrap(
-  input: RedesignBundleInput["replacement"],
+  input: RedesignRevisionInput,
 ): input is BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string } {
   return "identityAlgorithm" in input;
+}
+
+function revisionAssetId(repositoryIdentity: string, input: RedesignRevisionInput): string {
+  return isBootstrap(input) ? deriveLegacyAssetId(repositoryIdentity, input.planId) : input.assetId;
 }
 
 function parseFrontmatter(value: string): Record<string, unknown> | undefined {

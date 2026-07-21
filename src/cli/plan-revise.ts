@@ -142,6 +142,7 @@ const publicationArtifactSchema = z
   .strict();
 const appendRevisionSchema = z
   .object({
+    revision_mode: z.enum(["append", "legacy_bootstrap"]),
     command_id: z.string().min(1),
     asset_id: z.string().min(1),
     plan_id: z.string().min(1),
@@ -159,8 +160,32 @@ const appendRevisionSchema = z
     occurred_at: z.string().datetime({ offset: true }),
     source_content: z.string().min(1),
     expected_preimage: expectedPreimageSchema,
+    admission: z.custom<PlanAdmissionRequest>(
+      (value) => value !== null && typeof value === "object",
+    ),
+    bootstrap: z
+      .object({
+        repository_identity: z.string().min(1),
+        identity_algorithm: z.literal("ut-tdd-plan-legacy-v1"),
+        identity_input_json: z.string().min(1),
+        identity_digest: digestSchema,
+        base_canonical_payload_json: z.string().min(2),
+        base_canonical_payload_digest: digestSchema,
+        base_body_digest: digestSchema,
+        base_source_path: repositoryPathSchema,
+        base_source_commit: gitOidSchema,
+        base_source_blob_oid: gitOidSchema,
+        base_source_content: z.string().min(1),
+        base_source_content_digest: digestSchema,
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.revision_mode === "legacy_bootstrap") !== Boolean(value.bootstrap))
+      context.addIssue({ code: "custom", message: "legacy bootstrap fields mismatch" });
+  });
 const redesignManifestSchema = z
   .object({
     version: z.literal(2),
