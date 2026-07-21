@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   statSync,
   symlinkSync,
@@ -13,6 +14,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertBatchVitestArgs,
+  assertNotRoot,
   assertSnapshotContentMatch,
   assertSnapshotFingerprint,
   copyReferenceRuntimeInputs,
@@ -21,6 +23,7 @@ import {
   removeSnapshot,
   resolveBunBinary,
   resolveSnapshotSource,
+  runSnapshotTests,
   sealReference,
   snapshotContentFingerprint,
   unsealReference,
@@ -237,6 +240,56 @@ describe("vitest snapshot runner", () => {
     } finally {
       removeTestTree(execution);
       removeTestTree(reference);
+    }
+  });
+
+  it("U-TESTHYGIENE-048: fails closed before seal when running as root (uid=0)", () => {
+    expect(() => assertNotRoot(() => 0)).toThrow(
+      "vitest snapshot runner refuses to run as root (uid=0)",
+    );
+    expect(() => assertNotRoot(() => 0)).toThrow(/chmod-based reference seal/);
+    expect(() => assertNotRoot(() => 0)).toThrow(/Re-run as a non-root user/);
+  });
+
+  it("U-TESTHYGIENE-049: passes through unaffected for non-root uid and platforms without getuid", () => {
+    expect(() => assertNotRoot(() => 1000)).not.toThrow();
+    expect(() => assertNotRoot(undefined)).not.toThrow();
+  });
+
+  it("U-TESTHYGIENE-050: runSnapshotTests entrypoint fails closed before any snapshot side effect when uid=0 is injected", () => {
+    const before = new Set(readdirSync(tmpdir()));
+    let created: string[] = [];
+    try {
+      expect(() => runSnapshotTests(["--reporter=dot"], process.cwd(), () => 0)).toThrow(
+        "vitest snapshot runner refuses to run as root (uid=0)",
+      );
+      created = readdirSync(tmpdir()).filter(
+        (entry) => !before.has(entry) && entry.startsWith("ut-tdd-vitest-"),
+      );
+      expect(created).toEqual([]);
+    } finally {
+      for (const entry of created) removeTestTree(join(tmpdir(), entry));
+    }
+  });
+
+  it("U-TESTHYGIENE-051: runSnapshotTests entrypoint reaches past the root guard for a non-root injected uid", () => {
+    const missingRepoRoot = join(tmpdir(), `ut-tdd-missing-repo-${process.pid}-${Date.now()}`);
+    const before = new Set(readdirSync(tmpdir()));
+    let thrown: unknown;
+    let created: string[] = [];
+    try {
+      try {
+        runSnapshotTests(["--reporter=dot"], missingRepoRoot, () => 1000);
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeDefined();
+      expect(String(thrown)).not.toMatch(/refuses to run as root/);
+    } finally {
+      created = readdirSync(tmpdir()).filter(
+        (entry) => !before.has(entry) && entry.startsWith("ut-tdd-vitest-"),
+      );
+      for (const entry of created) removeTestTree(join(tmpdir(), entry));
     }
   });
 

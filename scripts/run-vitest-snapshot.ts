@@ -143,6 +143,16 @@ export function assertBatchVitestArgs(args: readonly string[]): void {
     throw new Error("vitest snapshot runner is batch-only; watch mode would observe a stale snapshot");
 }
 
+export function assertNotRoot(getuid = process.getuid): void {
+  if (!getuid || getuid() !== 0) return;
+  throw new Error(
+    "vitest snapshot runner refuses to run as root (uid=0); chmod-based reference seal " +
+      "(0o555/0o444) is a DAC permission that root bypasses, so the reference tree would not " +
+      "be protected and the suite would fail late with an unrelated " +
+      "'snapshot reference fingerprint mismatch' instead of this cause. Re-run as a non-root user.",
+  );
+}
+
 export function finishSnapshotCleanup(
   primaryError: unknown,
   cleanups: Array<() => void>,
@@ -235,8 +245,10 @@ export function unsealReference(referenceRoot: string): void {
 export function runSnapshotTests(
   args = process.argv.slice(2),
   repoRoot = process.cwd(),
+  getuid = process.getuid,
 ): void {
   assertBatchVitestArgs(args);
+  assertNotRoot(getuid);
   const snapshotRoot = join(
     tmpdir(),
     `ut-tdd-vitest-${process.pid}-${Date.now()}`,
