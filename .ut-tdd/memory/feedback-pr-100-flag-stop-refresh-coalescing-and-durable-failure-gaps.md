@@ -28,4 +28,4 @@ U-DBCURRENCY-016のWindows CIで3 processが`won`となった。原子linkの排
 
 正規traceはPLAN-L7-365の`generates`へ`src/state-db/stop-refresh-coordinator.ts`を追加し、テスト資産`tests/db-currency.test.ts`は既存PLAN-L7-369の所有を維持する。direct debt baselineは使用しない。static evidenceはtypecheck Green、Biome Green、coding-rules changed source 0 violation、test-repository-isolation Green。対象snapshotとCIは未実施のため、verdictは引き続きFLAG・merge禁止とする。
 
-PR HEAD `3e07e535` のCIではWindowsと対象`tests/db-currency.test.ts` 25/25はGreenだったが、Linux/aggregateはPLAN-L7-365が`tests/db-currency.test.ts`を重複所有し、かつ不正な`artifact_type: test`を指定したためRedとなった。テスト資産の正規所有者は既存PLAN-L7-369のまま維持し、PLAN-L7-365は新規coordinator sourceだけを所有するよう是正した。再CIが未完了のため、verdictは引き続きFLAG・merge禁止とする。
+PR HEAD `3e07e535` のCIではWindowsと対象`tests/db-currency.test.ts` 25/25はGreenだったが、Linux/aggregateはPLAN-L7-365が`tests/db-currency.test.ts`を重複所有し、かつ不正な`artifact_type: test`を指定したためRedとなった。テスト資産の正規所有者は既存PLAN-L7-369のまま維持し、PLAN-L7-365は新規coordinator sourceだけを所有するよう`2abcbb22`で是正した。同HEADのLinux / Windows / aggregate CIはすべてGreenとなり、対象テスト25/25、singleton/coalescing、durable failure、child identity handoff、PID reuseのHigh解除条件を満たした。クロスレビュー判定をPASSへ更新し、merge可能とする。
