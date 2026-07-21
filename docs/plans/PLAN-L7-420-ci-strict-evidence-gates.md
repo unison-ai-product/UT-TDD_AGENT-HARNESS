@@ -45,6 +45,24 @@ dependencies:
     - docs/plans/PLAN-L7-194-green-command-digest-hard-gate.md
     - docs/plans/PLAN-L7-192-db-telemetry-provenance-enforcement.md
 review_evidence:
+  - reviewer: blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-21T17:25:00+09:00"
+    tests_green_at: "2026-07-21T17:11:00+09:00"
+    verdict: approve
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    scope: "worktree wt-issue-80 変更一式 (49 digest 是正 30 PLAN + 自身追記、CI strict 投入、advisory-strict-gate-aging 新設)。blind review 3 巡: 1 巡目は環境停止で検証不能 FLAG、2 巡目 FLAG 4 件 (claim 数字不一致 / command claim 過剰一般化 / audit log 追跡状態不整合 / promotedInCi の workflow 非連動) — 一方 digest 48 件の実測一致・mismatch 0・CI flag 投入は reviewer が独立反証済み。是正 (数字訂正・例外明示・記述訂正・stripYamlComments による実効内容照合 + 負例 2 件) 後の 3 巡目 focused で PASS (22/22 tests、mismatch 0、コメント誤マッチ反例の解消を reviewer が確認)。"
+    green_commands:
+      - kind: unit_test
+        command: "UT_TDD_TEST_EXECUTION_ROOT=$PWD UT_TDD_TEST_FENCE_ROOT=$PWD UT_TDD_HEAD_SNAPSHOT_ROOT=<mktemp -d detached copy> bunx vitest run tests/advisory-strict-gate-aging.test.ts → 22/22 green (orchestrator 実測)。checkGreenCommandDigests mismatch 0 / typecheck 0 / biome clean / plan lint OK"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-21T17:11:00+09:00"
+        evidence_path: tests/advisory-strict-gate-aging.test.ts
+        output_digest: "sha256:4fee39488b915ad125067fbf4ac8df18418ea9e9b48d21a381ccdad1cdd4529d"
+        anchor_commit: c30eb75b34aec08ee456f0c31d1c30ea8f1c80e6
   - reviewer: claude-be-logic
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-21T14:30:00+09:00"
