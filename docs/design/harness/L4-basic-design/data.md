@@ -249,6 +249,11 @@ member set digestを所有する。phase履歴はappend-onlyであり、個別�
 異なるpayloadまたはmember集合を同じgroupへ差し替える操作を拒否する。これにより検出器の都合で単一成果物へ縮小せず、
 Lごとの設計・検証ペアを一括差し替え単位として保持する。
 
+`PlanRedesignBundleCoordinator.publishDurable`は、replacement revision、origin訂正revision、投影を同じ
+`commandPayloadDigest`へ束縛する。revision write-setをSQLiteへ確定した後、command group Sagaで実filesystemへ公開する。
+途中faultでrevisionだけが先行しても未完了を成功へ読み替えず、`recovery_required`から同一member集合を再送して収束させる。
+実filesystem adapterは既存targetのcontent digestが一致する場合だけ「journal append直前の停止」と判定し、同じreceiptを返す。
+
 ## §9 carry → L5 詳細設計
 
 - 各集約の **物理 schema 詳細** (JSON フィールド型・必須/任意・default) は L5 physical-data (D-DB) で確定

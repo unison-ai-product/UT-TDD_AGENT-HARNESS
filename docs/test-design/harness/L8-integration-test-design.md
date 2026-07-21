@@ -307,3 +307,8 @@ GitHub remote stateだけをGreen証拠にしない。`IT-CIAGG-01..05` は
 L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証するL8 ascentであり、構造検査、結果値の
 全負例、receipt鮮度、runtime/template profile分離、branch protection/E14消費境界の全てがGreenに
 なるまで「両OS CI済み」またはmerge可能を主張しない。
+## Redesign bundle実filesystem統合
+
+| Test ID | 入力 | 実行 | Oracle |
+|---|---|---|---|
+| `U-PA-REDESIGN-005` | Issue #98の`PLAN-L4-31@2`、`PLAN-L6-88`、projection、実SQLite file、実filesystem root | `publishDurable`実行後にDBをclose/reopenし同commandを再送 | 2 revisionと3 filesystem成果物が同じcommand digestへ束縛され、phase terminalは`committed`。再起動後はrevision/groupともreplayedで外部書込みを再送しない |
