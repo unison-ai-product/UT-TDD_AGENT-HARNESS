@@ -36,8 +36,11 @@
 
 ## L6-83 の生存 finding (差し戻し理由)
 
-1. **U-EXISSUE-* 未執筆**: AC (§5-§6) が要求する L7 oracle が
-   L7-unit-test-design.md に存在せず、L6↔L7 pair-freeze が未完 (他 2 doc は pair 済の非対称)。
+1. **U-EXISSUE-* の pair-freeze 部分未完** (2026-07-21 訂正あり、下記「訂正」参照):
+   L7-unit-test-design.md には `U-EXISSUE-007..016` が実在する一方、L6-83 §5 の
+   oracle 1〜6 (Forward 境界 / 三面 fail-close / stale revision / 冪等再送 /
+   GitHub 障害 / Issue 本文 mutation) は `U-EXISSUE-001..006` として未執筆で、
+   `CANDIDATE-EXEP-*` / `CANDIDATE-GHISS-*` (未昇格 candidate) に留まる。
 2. **三面 route_mode 照合の成立点未定義**: §2 は E3/E4 (Issue 生成) 時点で
    Issue body / Ledger event / PLAN route_mode の三面一致を要求するが、
    escape PLAN の materialization は L4-30 E5 (`drive_plan_frozen`) であり、
@@ -45,6 +48,17 @@
    (underspecification、L7 前に L6-83 改訂で明示要)。
 
 依存 PLAN (L6-72 / L6-50 / L6-84) 内で 2 が解決済みかは本レビュー範囲外・未確認。
+
+## 訂正 (2026-07-21、同日)
+
+初版の finding 1 は「U-EXISSUE-* が L7 test-design に 0 件」としたが、これは reviewer の
+grep が古い base branch (work/l7-451 系) の tree で実行されたための誤検出。origin/main
+(2c34ac34) の L7-unit-test-design.md「PLAN-L7-436〜439 Execution Ledger / GitHub連動
+oracle」節には `U-EXISSUE-007..016` が実在する (`grep -o "U-EXISSUE-0[0-9][0-9]" | sort -u`
+で確認)。正しい残 gap は「§5 oracle 1〜6 が U- へ未昇格 (CANDIDATE-* のみ)」であり、
+finding 1 を上記のとおり縮小訂正した。finding 2 (三面 route_mode 照合の成立点未定義) は
+現 main の §2/§3 でも変わらず生存。FLAG verdict 自体は維持する (gap は縮小したが未完)。
+基準点を HEAD に固定せず branch tree で測った本件は、検証基準点規律の違反事例として記録する。
 
 ## 処置
 
