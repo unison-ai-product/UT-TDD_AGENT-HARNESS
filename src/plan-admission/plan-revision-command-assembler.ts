@@ -19,6 +19,7 @@ export interface PlanRevisionManifest {
   readonly version: 1;
   readonly command_id: string;
   readonly plan_id: string;
+  readonly actor: string;
   readonly recorded_at: string;
   readonly base: {
     readonly asset_id: string;

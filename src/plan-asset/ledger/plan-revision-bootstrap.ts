@@ -257,16 +257,16 @@ export class LegacyPlanRevisionBootstrapTransaction {
       return { ok: false, ruleId: "plan-revision-command-conflict" };
     }
     if (
-      !replayBindingValid(
-        this.db,
-        {
+      !replayBindingValid({
+        db: this.db,
+        input: {
           ...input,
           assetId: expected.assetId,
           basePayloadDigest: input.baseCanonicalPayloadDigest,
         },
         expected,
         receipt,
-      ) ||
+      }) ||
       !this.bootstrapBindingValid(input, expected)
     ) {
       return { ok: false, ruleId: "plan-revision-receipt-binding-invalid" };

@@ -10,8 +10,8 @@ import type {
 } from "./plan-draft-service.js";
 
 export class DraftJournalIntegrityError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "DraftJournalIntegrityError";
   }
 }
@@ -121,12 +121,13 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
     });
   }
 
-  commit(
-    commandId: string,
-    payloadDigest: string,
-    receipt: DraftReceiptBinding,
-    cleanup: DraftCleanupOperation,
-  ): void {
+  commit(input: {
+    commandId: string;
+    payloadDigest: string;
+    receipt: DraftReceiptBinding;
+    cleanup: DraftCleanupOperation;
+  }): void {
+    const { commandId, payloadDigest, receipt, cleanup } = input;
     assertCleanupOperation(cleanup);
     this.transition({ commandId, payloadDigest, status: "committed", receipt, cleanup });
   }
@@ -175,7 +176,7 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
           "UPDATE plan_draft_journal SET failure_reason=?, journal_digest=? WHERE command_id=?",
         )
         .run(reason, ledgerRowDigest(next, "journal_digest"), commandId);
-      this.appendCleanupEvent(commandId, payloadDigest, "pending", reason);
+      this.appendCleanupEvent({ commandId, payloadDigest, eventKind: "pending", reason });
     });
   }
 
@@ -188,7 +189,7 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
         throw new DraftJournalIntegrityError("draft-journal-command-conflict");
       const cleanup = this.cleanupBinding(commandId, payloadDigest);
       if (cleanup.status === "completed") return;
-      this.appendCleanupEvent(commandId, payloadDigest, "completed");
+      this.appendCleanupEvent({ commandId, payloadDigest, eventKind: "completed" });
       const next = { ...current, failure_reason: null };
       this.db
         .prepare(
@@ -271,7 +272,12 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
           commandId,
         );
       if (status === "committed" && cleanup)
-        this.appendCleanupEvent(commandId, payloadDigest, "pending", undefined, cleanup);
+        this.appendCleanupEvent({
+          commandId,
+          payloadDigest,
+          eventKind: "pending",
+          initial: cleanup,
+        });
     });
   }
 
@@ -290,13 +296,13 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
     if (legacyUnknown) {
       const journal = this.current(commandId);
       const latestJournalEvent = this.latestEvent(commandId);
-      assertLegacyUnknownOperation(
-        legacyUnknown,
+      assertLegacyUnknownOperation({
+        row: legacyUnknown,
         commandId,
         payloadDigest,
-        String(journal?.journal_digest),
-        String(latestJournalEvent?.event_digest),
-      );
+        journalDigest: String(journal?.journal_digest),
+        latestJournalEventDigest: String(latestJournalEvent?.event_digest),
+      });
       throw new DraftJournalRecoveryRequiredError(commandId, String(legacyUnknown.failure_reason));
     }
     let previous: string | null = null;
@@ -328,13 +334,14 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
     };
   }
 
-  private appendCleanupEvent(
-    commandId: string,
-    payloadDigest: string,
-    eventKind: "pending" | "completed",
-    reason?: string,
-    initial?: DraftCleanupOperation,
-  ): void {
+  private appendCleanupEvent(input: {
+    commandId: string;
+    payloadDigest: string;
+    eventKind: "pending" | "completed";
+    reason?: string;
+    initial?: DraftCleanupOperation;
+  }): void {
+    const { commandId, payloadDigest, eventKind, reason, initial } = input;
     const previous = this.db
       .prepare(
         "SELECT * FROM plan_draft_artifact_operation_events WHERE command_id = ? ORDER BY sequence DESC LIMIT 1",
@@ -448,18 +455,22 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
   }
 }
 
-function assertLegacyUnknownOperation(
-  row: Record<string, unknown>,
-  commandId: string,
-  payloadDigest: string,
-  journalDigest: string,
-  latestJournalEventDigest: string,
-): void {
+function assertLegacyUnknownOperation(input: {
+  row: Record<string, unknown>;
+  commandId: string;
+  payloadDigest: string;
+  journalDigest: string;
+  latestJournalEventDigest: string;
+}): void {
+  const { row, commandId, payloadDigest, journalDigest, latestJournalEventDigest } = input;
   let operation: unknown;
   try {
     operation = JSON.parse(String(row.operation_json));
-  } catch {
-    throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-invalid");
+  } catch (cause) {
+    const error = new DraftJournalIntegrityError("draft-journal-cleanup-binding-invalid", {
+      cause,
+    });
+    throw error;
   }
   const value = operation as Record<string, unknown> | null;
   if (
@@ -542,8 +553,11 @@ function parseCleanupOperation(value: string): DraftCleanupOperation {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
-  } catch {
-    throw new DraftJournalIntegrityError("draft-journal-cleanup-operation-invalid");
+  } catch (cause) {
+    const error = new DraftJournalIntegrityError("draft-journal-cleanup-operation-invalid", {
+      cause,
+    });
+    throw error;
   }
   assertCleanupOperation(parsed);
   return parsed;

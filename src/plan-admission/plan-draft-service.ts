@@ -58,15 +58,17 @@ export interface DraftCleanupBinding {
 export interface DraftJournalPort<TReceipt extends DraftReceiptBinding> {
   find(commandId: string): DraftJournalEntry<TReceipt> | undefined;
   recordIntent(command: DraftJournalCommand): void;
-  commit(
-    commandId: string,
-    payloadDigest: string,
-    receipt: TReceipt,
-    cleanup: DraftCleanupOperation,
-  ): void;
+  commit(input: DraftJournalCommit<TReceipt>): void;
   markRecoveryRequired(commandId: string, payloadDigest: string, reason: string): void;
   markCleanupPending(commandId: string, payloadDigest: string, reason: string): void;
   completeCleanup(commandId: string, payloadDigest: string): void;
+}
+
+export interface DraftJournalCommit<TReceipt extends DraftReceiptBinding> {
+  commandId: string;
+  payloadDigest: string;
+  receipt: TReceipt;
+  cleanup: DraftCleanupOperation;
 }
 
 export interface DraftJournalCommand {
@@ -94,6 +96,8 @@ export interface DraftPublisherPort {
   publish(token: DraftPublishToken): void;
   restore(token: DraftPublishToken): void;
   finalize(token: DraftPublishToken): void;
+  /** 呼出し側がtokenを再試行しないterminal境界で、保持中のOS資源を解放する。 */
+  dispose(token: DraftPublishToken): void;
   describeCleanup(
     token: DraftPublishToken,
     requestDigest: `sha256:${string}`,
@@ -189,9 +193,14 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
     }
     try {
       if (!cleanup) throw new Error("公開済みartifactのcleanup capabilityがありません");
-      this.ports.journal.commit(command.commandId, command.commandPayloadDigest, receipt, cleanup);
+      this.ports.journal.commit({
+        commandId: command.commandId,
+        payloadDigest: command.commandPayloadDigest,
+        receipt,
+        cleanup,
+      });
     } catch (cause) {
-      this.markCommittedRecovery(command, cause);
+      this.markCommittedRecovery(command, token, cause);
     }
     if (token) this.finalizePublished(command, token, receipt);
     return { status: "created", receipt };
@@ -239,15 +248,23 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
     cause: unknown,
   ): never {
     let restoreFailure: unknown;
+    let disposeFailure: unknown;
     if (token) {
       try {
         this.ports.publisher.restore(token);
       } catch (error) {
         restoreFailure = error;
+      } finally {
+        try {
+          this.ports.publisher.dispose(token);
+        } catch (error) {
+          disposeFailure = error;
+        }
       }
     }
-    const reason = restoreFailure
-      ? `draft失敗後のrestoreにも失敗: ${errorText(restoreFailure)}`
+    const recoveryFailure = aggregateFailures(restoreFailure, disposeFailure);
+    const reason = recoveryFailure
+      ? `draft失敗後のrestore/resource解放に失敗: ${errorText(recoveryFailure)}`
       : token
         ? `draft失敗。artifactはrestore済み: ${errorText(cause)}`
         : `draft失敗。artifact変更なし: ${errorText(cause)}`;
@@ -261,14 +278,29 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
       const journalDetail = errorText(journalFailure);
       throw new PlanDraftRecoveryRequiredError(
         `${reason}; recovery_requiredの記録にも失敗: ${journalDetail}`,
-        { cause },
+        { cause: aggregateFailures(cause, recoveryFailure) },
       );
     }
-    throw new PlanDraftRecoveryRequiredError(reason, { cause });
+    throw new PlanDraftRecoveryRequiredError(reason, {
+      cause: aggregateFailures(cause, recoveryFailure),
+    });
   }
 
-  private markCommittedRecovery(command: PlanDraftCommand<TPayload>, cause: unknown): never {
-    const reason = `ledger/file公開後にjournal commit失敗: ${errorText(cause)}`;
+  private markCommittedRecovery(
+    command: PlanDraftCommand<TPayload>,
+    token: DraftPublishToken | undefined,
+    cause: unknown,
+  ): never {
+    let disposeFailure: unknown;
+    if (token) {
+      try {
+        this.ports.publisher.dispose(token);
+      } catch (error) {
+        disposeFailure = error;
+      }
+    }
+    const terminalFailure = aggregateFailures(cause, disposeFailure);
+    const reason = `ledger/file公開後にjournal commit失敗: ${errorText(terminalFailure)}`;
     try {
       this.ports.journal.markRecoveryRequired(
         command.commandId,
@@ -280,10 +312,10 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
       const journalDetail = errorText(journalFailure);
       throw new PlanDraftRecoveryRequiredError(
         `${reason}; recovery_requiredの記録にも失敗: ${journalDetail}`,
-        { cause },
+        { cause: terminalFailure },
       );
     }
-    throw new PlanDraftRecoveryRequiredError(reason, { cause });
+    throw new PlanDraftRecoveryRequiredError(reason, { cause: terminalFailure });
   }
 
   private finalizePublished(
@@ -302,7 +334,14 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
         this.ports.journal.completeCleanup(command.commandId, command.commandPayloadDigest);
         return;
       } catch (cause) {
-        const reason = `ledger/file/journal確定済みだがartifact cleanup未完了: ${errorText(cause)}`;
+        let disposeFailure: unknown;
+        try {
+          this.ports.publisher.dispose(token);
+        } catch (error) {
+          disposeFailure = error;
+        }
+        const cleanupFailure = aggregateFailures(cause, disposeFailure);
+        const reason = `ledger/file/journal確定済みだがartifact cleanup未完了: ${errorText(cleanupFailure)}`;
         try {
           this.ports.journal.markCleanupPending(
             command.commandId,
@@ -310,13 +349,14 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
             reason,
           );
         } catch (journalFailure) {
-          throw new PlanDraftCleanupPendingError(
+          const pending = new PlanDraftCleanupPendingError(
             `${reason}; cleanup_pendingの記録にも失敗: ${errorText(journalFailure)}`,
             receipt,
-            { cause: firstFailure },
+            { cause: aggregateFailures(firstFailure, cleanupFailure, journalFailure) },
           );
+          throw pending;
         }
-        throw new PlanDraftCleanupPendingError(reason, receipt, { cause });
+        throw new PlanDraftCleanupPendingError(reason, receipt, { cause: cleanupFailure });
       }
     }
   }
@@ -324,6 +364,12 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function aggregateFailures(...failures: readonly unknown[]): unknown {
+  const present = failures.filter((failure) => failure !== undefined);
+  if (present.length <= 1) return present[0];
+  return new AggregateError(present, "primary operation and resource release failed");
 }
 
 function normalizeDigest(value: string): `sha256:${string}` {

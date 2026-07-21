@@ -95,6 +95,7 @@ const revisionManifestSchema = z
     version: z.literal(1),
     command_id: z.string().min(1),
     plan_id: z.string().min(1),
+    actor: z.string().trim().min(1),
     recorded_at: z.string().datetime({ offset: true }),
     base: z
       .object({

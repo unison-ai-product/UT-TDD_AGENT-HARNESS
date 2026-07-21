@@ -2,11 +2,13 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   closeSync,
   existsSync,
+  fstatSync,
   fsyncSync,
   linkSync,
   lstatSync,
   openSync,
   readFileSync,
+  readSync,
   realpathSync,
   rmSync,
   statSync,
@@ -28,6 +30,7 @@ export type DraftPublisherFaultPoint =
   | "publish:after-backup-rename"
   | "publish:before-preimage-restore"
   | "publish:after-target-link"
+  | "publish:after-target-compensation-remove"
   | "publish:after-target-rename"
   | "restore:before-artifact"
   | "restore:after-target-remove"
@@ -50,6 +53,7 @@ export interface NodePathMutationSafety {
   readonly strategy: "pre-post-identity-cas-with-verified-compensation";
   readonly detectedDrift: "fail-close";
   readonly syscallInstantRaceClosure: "not-provable-with-node-fs";
+  readonly contentCas: "held-descriptor-bytes-with-pre-post-name-binding";
 }
 
 export const NODE_PATH_MUTATION_SAFETY: NodePathMutationSafety = Object.freeze({
@@ -57,6 +61,7 @@ export const NODE_PATH_MUTATION_SAFETY: NodePathMutationSafety = Object.freeze({
   strategy: "pre-post-identity-cas-with-verified-compensation",
   detectedDrift: "fail-close",
   syscallInstantRaceClosure: "not-provable-with-node-fs",
+  contentCas: "held-descriptor-bytes-with-pre-post-name-binding",
 });
 
 interface StagedArtifact {
@@ -132,12 +137,12 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         this.injectFault("stage:before-write", artifact.path);
         writeFileSync(item.temporaryPath, artifact.content, { encoding: "utf8", flag: "wx" });
         syncFile(item.temporaryPath);
-        item.temporaryIdentity = FileIdentity.capture(
-          item.temporaryPath,
-          item.postimageDigest,
-          artifact.path,
-          "temporary",
-        );
+        item.temporaryIdentity = FileIdentity.capture({
+          path: item.temporaryPath,
+          digest: item.postimageDigest,
+          logicalPath: artifact.path,
+          role: "temporary",
+        });
         syncDirectory(dirname(item.targetPath));
         this.injectFault("stage:after-write", artifact.path);
       }
@@ -175,12 +180,12 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         // EEXIST fail-closeを利用して、補助pathもCAS/no-clobberにする。
         linkSync(item.targetPath, item.rollbackPath);
         item.backupMoved = true;
-        item.rollbackIdentity = FileIdentity.capture(
-          item.rollbackPath,
-          item.expectedPreimage.digest,
-          item.logicalPath,
-          "rollback",
-        );
+        item.rollbackIdentity = FileIdentity.capture({
+          path: item.rollbackPath,
+          digest: item.expectedPreimage.digest,
+          logicalPath: item.logicalPath,
+          role: "rollback",
+        });
         item.parentIdentity.assertCurrent(item.logicalPath);
         if (!sameFile(item.targetPath, item.rollbackPath)) {
           throw new Error(`artifact rollback identity mismatch: ${item.logicalPath}`);
@@ -202,12 +207,12 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       item.parentIdentity.assertCurrent(item.logicalPath);
       linkSync(item.temporaryPath, item.targetPath);
       item.targetPublished = true;
-      item.publishedIdentity = FileIdentity.capture(
-        item.targetPath,
-        item.postimageDigest,
-        item.logicalPath,
-        "published target",
-      );
+      item.publishedIdentity = FileIdentity.capture({
+        path: item.targetPath,
+        digest: item.postimageDigest,
+        logicalPath: item.logicalPath,
+        role: "published target",
+      });
       this.injectFault("publish:after-target-link", item.logicalPath);
       item.parentIdentity.assertCurrent(item.logicalPath);
       try {
@@ -217,16 +222,28 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       } catch (cause) {
         // Nodeはdirfd/linkatを公開しないためassert→syscall間のparent交換を完全には
         // 消せない。操作後に同一file objectと確認できる場合だけcompensateする。
+        let compensationFailure: unknown;
         if (safeSameFile(item.targetPath, item.temporaryPath)) {
-          rmSync(item.targetPath);
-          item.parentIdentity.assertCurrent(item.logicalPath);
-          if (existsSync(item.targetPath))
-            throw new Error(`artifact target compensation race: ${item.logicalPath}`);
-          item.targetPublished = false;
-          syncDirectory(dirname(item.targetPath));
+          let removed = false;
+          try {
+            rmSync(item.targetPath);
+            removed = true;
+            this.injectFault("publish:after-target-compensation-remove", item.logicalPath);
+            item.parentIdentity.assertCurrent(item.logicalPath);
+            if (existsSync(item.targetPath))
+              throw new Error(`artifact target compensation race: ${item.logicalPath}`);
+            syncDirectory(dirname(item.targetPath));
+          } catch (error) {
+            compensationFailure = error;
+          } finally {
+            if (removed) {
+              item.targetPublished = false;
+              item.publishedIdentity?.release();
+            }
+          }
         }
         throw new AggregateError(
-          [cause],
+          compensationFailure === undefined ? [cause] : [cause, compensationFailure],
           `artifact publish postcondition failed: ${item.logicalPath}`,
         );
       }
@@ -234,6 +251,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       item.parentIdentity.assertCurrent(item.logicalPath);
       if (existsSync(item.temporaryPath))
         throw new Error(`artifact temporary removal race: ${item.logicalPath}`);
+      item.temporaryIdentity?.release();
       syncDirectory(dirname(item.targetPath));
       this.injectFault("publish:after-target-rename", item.logicalPath);
     }
@@ -259,6 +277,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         if (existsSync(item.targetPath))
           throw new Error(`artifact target removal race: ${item.logicalPath}`);
         item.targetPublished = false;
+        item.publishedIdentity?.release();
         this.injectFault("restore:after-target-remove", item.logicalPath);
         item.parentIdentity.assertCurrent(item.logicalPath);
       }
@@ -271,6 +290,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         rmSync(item.temporaryPath);
         if (existsSync(item.temporaryPath))
           throw new Error(`artifact temporary removal race: ${item.logicalPath}`);
+        item.temporaryIdentity?.release();
       }
       item.parentIdentity.assertCurrent(item.logicalPath);
       if (existsSync(item.rollbackPath)) {
@@ -298,6 +318,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         rmSync(item.temporaryPath);
         if (existsSync(item.temporaryPath))
           throw new Error(`artifact temporary removal race: ${item.logicalPath}`);
+        item.temporaryIdentity?.release();
       }
       item.parentIdentity.assertCurrent(item.logicalPath);
       if (item.backupMoved) {
@@ -305,16 +326,27 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         rmSync(item.rollbackPath);
         if (existsSync(item.rollbackPath))
           throw new Error(`artifact rollback removal race: ${item.logicalPath}`);
+        item.rollbackIdentity?.release();
         item.backupMoved = false;
       } else if (existsSync(item.rollbackPath)) {
         throw new Error(`unexpected rollback artifact: ${item.logicalPath}`);
       }
       syncDirectory(dirname(item.targetPath));
+      item.publishedIdentity?.release();
       item.finalized = true;
       this.injectFault("finalize:after-artifact", item.logicalPath);
     }
     this.tokens.delete(token.id);
     this.finalizedTokens.add(token);
+  }
+
+  dispose(portToken: DraftPublishToken): void {
+    if (this.isFinalizedToken(portToken)) return;
+    const token = this.requireToken(portToken);
+    const errors = releaseArtifactIdentities(token.artifacts);
+    this.tokens.delete(token.id);
+    if (errors.length > 0)
+      throw new AggregateError(errors, `token resource release failed: ${token.id}`);
   }
 
   describeCleanup(
@@ -368,9 +400,19 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       }
       const parent = DirectoryIdentity.capture(dirname(targetPath), artifact.path);
       parent.assertCurrent(artifact.path);
-      assertRegularDigest(targetPath, artifact.postimage, artifact.path, "postimage");
+      assertRegularDigest({
+        path: targetPath,
+        digest: artifact.postimage,
+        logicalPath: artifact.path,
+        role: "postimage",
+      });
       if (existsSync(artifact.temporaryPath)) {
-        assertRegularDigest(artifact.temporaryPath, artifact.postimage, artifact.path, "temporary");
+        assertRegularDigest({
+          path: artifact.temporaryPath,
+          digest: artifact.postimage,
+          logicalPath: artifact.path,
+          role: "temporary",
+        });
         rmSync(artifact.temporaryPath);
         parent.assertCurrent(artifact.path);
         if (existsSync(artifact.temporaryPath))
@@ -380,12 +422,12 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         if (artifact.preimage.kind !== "sha256") {
           throw new Error(`unexpected rollback artifact: ${artifact.path}`);
         }
-        assertRegularDigest(
-          artifact.rollbackPath,
-          artifact.preimage.digest,
-          artifact.path,
-          "rollback",
-        );
+        assertRegularDigest({
+          path: artifact.rollbackPath,
+          digest: artifact.preimage.digest,
+          logicalPath: artifact.path,
+          role: "rollback",
+        });
         rmSync(artifact.rollbackPath);
         parent.assertCurrent(artifact.path);
         if (existsSync(artifact.rollbackPath))
@@ -445,6 +487,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       item.parentIdentity.assertCurrent(item.logicalPath);
       if (existsSync(item.temporaryPath))
         throw new Error(`artifact temporary removal race: ${item.logicalPath}`);
+      item.temporaryIdentity?.release();
     }
     if (existsSync(item.rollbackPath)) {
       if (!item.backupMoved) throw new Error(`unexpected rollback artifact: ${item.logicalPath}`);
@@ -453,6 +496,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       item.parentIdentity.assertCurrent(item.logicalPath);
       if (existsSync(item.rollbackPath))
         throw new Error(`artifact rollback removal race: ${item.logicalPath}`);
+      item.rollbackIdentity?.release();
     }
     syncDirectory(dirname(item.targetPath));
   }
@@ -464,6 +508,10 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         this.removeStageFiles(item);
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
+      } finally {
+        item.temporaryIdentity?.release();
+        item.rollbackIdentity?.release();
+        item.publishedIdentity?.release();
       }
     }
     return errors;
@@ -486,21 +534,32 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
 
 /** Filesystem pathだけでなく、stage時に解決したdirectory objectを固定する。 */
 class DirectoryIdentity {
-  private constructor(
-    private readonly path: string,
-    private readonly canonicalPath: string,
-    private readonly device: bigint,
-    private readonly inode: bigint,
-  ) {}
+  private readonly path: string;
+  private readonly canonicalPath: string;
+  private readonly device: bigint;
+  private readonly inode: bigint;
+
+  private constructor(input: {
+    path: string;
+    canonicalPath: string;
+    device: bigint;
+    inode: bigint;
+  }) {
+    this.path = input.path;
+    this.canonicalPath = input.canonicalPath;
+    this.device = input.device;
+    this.inode = input.inode;
+  }
 
   static capture(path: string, logicalPath: string): DirectoryIdentity {
     try {
       const canonicalPath = realpathSync.native(path);
       const stat = statSync(canonicalPath, { bigint: true });
       if (!stat.isDirectory()) throw new Error("not directory");
-      return new DirectoryIdentity(path, canonicalPath, stat.dev, stat.ino);
-    } catch {
-      throw new Error(`artifact parent unavailable: ${logicalPath}`);
+      return new DirectoryIdentity({ path, canonicalPath, device: stat.dev, inode: stat.ino });
+    } catch (cause) {
+      const error = new Error(`artifact parent unavailable: ${logicalPath}`, { cause });
+      throw error;
     }
   }
 
@@ -516,49 +575,113 @@ class DirectoryIdentity {
       ) {
         throw new Error("identity mismatch");
       }
-    } catch {
-      throw new Error(`artifact parent drift: ${logicalPath}`);
+    } catch (cause) {
+      const error = new Error(`artifact parent drift: ${logicalPath}`, { cause });
+      throw error;
     }
   }
 }
 
 /** Path nameではなくstage時のregular-file objectと内容CASを固定する。 */
 class FileIdentity {
-  private constructor(
-    private readonly path: string,
-    private readonly device: bigint,
-    private readonly inode: bigint,
-    private readonly digest: `sha256:${string}`,
-  ) {}
+  private released = false;
 
-  static capture(
-    path: string,
-    digest: `sha256:${string}`,
-    logicalPath: string,
-    role: string,
-  ): FileIdentity {
-    if (!regularFile(path) || !digestEqual(sha256File(path), digest)) {
-      throw new Error(`artifact ${role} CAS mismatch: ${logicalPath}`);
+  private readonly path: string;
+  private readonly descriptor: number;
+  private readonly device: bigint;
+  private readonly inode: bigint;
+  private readonly digest: `sha256:${string}`;
+
+  private constructor(input: {
+    path: string;
+    descriptor: number;
+    device: bigint;
+    inode: bigint;
+    digest: `sha256:${string}`;
+  }) {
+    this.path = input.path;
+    this.descriptor = input.descriptor;
+    this.device = input.device;
+    this.inode = input.inode;
+    this.digest = input.digest;
+  }
+
+  static capture(input: {
+    path: string;
+    digest: `sha256:${string}`;
+    logicalPath: string;
+    role: string;
+  }): FileIdentity {
+    const { path, digest, logicalPath, role } = input;
+    let descriptor: number | undefined;
+    try {
+      descriptor = openSync(path, "r");
+      const opened = fstatSync(descriptor, { bigint: true });
+      const named = lstatSync(path, { bigint: true });
+      const actualDigest = sha256Descriptor(descriptor);
+      const openedAfter = fstatSync(descriptor, { bigint: true });
+      const namedAfter = lstatSync(path, { bigint: true });
+      if (
+        !opened.isFile() ||
+        !named.isFile() ||
+        named.isSymbolicLink() ||
+        opened.dev !== named.dev ||
+        opened.ino !== named.ino ||
+        openedAfter.dev !== opened.dev ||
+        openedAfter.ino !== opened.ino ||
+        namedAfter.dev !== opened.dev ||
+        namedAfter.ino !== opened.ino ||
+        !digestEqual(actualDigest, digest)
+      ) {
+        throw new Error("identity mismatch");
+      }
+      return new FileIdentity({
+        path,
+        descriptor,
+        device: opened.dev,
+        inode: opened.ino,
+        digest,
+      });
+    } catch (cause) {
+      if (descriptor !== undefined) closeSync(descriptor);
+      throw new Error(`artifact ${role} CAS mismatch: ${logicalPath}`, { cause });
     }
-    const stat = lstatSync(path, { bigint: true });
-    return new FileIdentity(path, stat.dev, stat.ino, digest);
   }
 
   assertCurrent(logicalPath: string, role: string): void {
     try {
-      const stat = lstatSync(this.path, { bigint: true });
+      if (this.released) throw new Error("identity released");
+      const opened = fstatSync(this.descriptor, { bigint: true });
+      const named = lstatSync(this.path, { bigint: true });
+      const actualDigest = sha256Descriptor(this.descriptor);
+      const openedAfter = fstatSync(this.descriptor, { bigint: true });
+      const namedAfter = lstatSync(this.path, { bigint: true });
       if (
-        !stat.isFile() ||
-        stat.isSymbolicLink() ||
-        stat.dev !== this.device ||
-        stat.ino !== this.inode ||
-        !digestEqual(sha256File(this.path), this.digest)
+        !opened.isFile() ||
+        !named.isFile() ||
+        named.isSymbolicLink() ||
+        opened.dev !== this.device ||
+        opened.ino !== this.inode ||
+        named.dev !== opened.dev ||
+        named.ino !== opened.ino ||
+        openedAfter.dev !== opened.dev ||
+        openedAfter.ino !== opened.ino ||
+        namedAfter.dev !== opened.dev ||
+        namedAfter.ino !== opened.ino ||
+        !digestEqual(actualDigest, this.digest)
       ) {
         throw new Error("identity mismatch");
       }
-    } catch {
-      throw new Error(`artifact ${role} CAS mismatch: ${logicalPath}`);
+    } catch (cause) {
+      const error = new Error(`artifact ${role} CAS mismatch: ${logicalPath}`, { cause });
+      throw error;
     }
+  }
+
+  release(): void {
+    if (this.released) return;
+    closeSync(this.descriptor);
+    this.released = true;
   }
 }
 
@@ -594,6 +717,37 @@ function sha256File(path: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
 }
 
+function sha256Descriptor(descriptor: number): `sha256:${string}` {
+  const hash = createHash("sha256");
+  const buffer = Buffer.allocUnsafe(64 * 1024);
+  let position = 0;
+  for (;;) {
+    const bytesRead = readSync(descriptor, buffer, 0, buffer.length, position);
+    if (bytesRead === 0) break;
+    hash.update(buffer.subarray(0, bytesRead));
+    position += bytesRead;
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+function releaseArtifactIdentities(artifacts: readonly StagedArtifact[]): Error[] {
+  const errors: Error[] = [];
+  for (const item of artifacts) {
+    for (const identity of [
+      item.temporaryIdentity,
+      item.rollbackIdentity,
+      item.publishedIdentity,
+    ]) {
+      try {
+        identity?.release();
+      } catch (error) {
+        errors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+    }
+  }
+  return errors;
+}
+
 function sha256(content: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(content).digest("hex")}`;
 }
@@ -620,6 +774,7 @@ function restoreRollbackNoClobber(item: StagedArtifact): void {
   rmSync(item.rollbackPath);
   if (existsSync(item.rollbackPath))
     throw new Error(`artifact rollback removal race: ${item.logicalPath}`);
+  item.rollbackIdentity?.release();
   item.backupMoved = false;
   syncDirectory(dirname(item.targetPath));
 }
@@ -657,12 +812,13 @@ function assertPublishedIdentity(item: StagedArtifact): void {
   item.publishedIdentity.assertCurrent(item.logicalPath, "published target");
 }
 
-function assertRegularDigest(
-  path: string,
-  digest: `sha256:${string}`,
-  logicalPath: string,
-  role: string,
-): void {
+function assertRegularDigest(input: {
+  path: string;
+  digest: `sha256:${string}`;
+  logicalPath: string;
+  role: string;
+}): void {
+  const { path, digest, logicalPath, role } = input;
   if (!existsSync(path) || !regularFile(path) || !digestEqual(sha256File(path), digest)) {
     throw new Error(`artifact ${role} CAS mismatch: ${logicalPath}`);
   }

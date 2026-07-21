@@ -14,6 +14,7 @@ function manifest(overrides: Record<string, unknown> = {}): string {
     version: 1,
     command_id: "revise-1",
     plan_id: "PLAN-L4-31",
+    actor: "codex",
     recorded_at: "2026-07-17T10:00:00.000Z",
     base: {
       asset_id: "asset-plan-l4-31",

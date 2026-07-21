@@ -14,7 +14,15 @@ export function bindPlanSourceToAdmission(input: {
     throw new Error("plan-revision-source-plan-id-mismatch");
   const admission = input.admission;
   // Receipt is an output of the ledger transaction, never part of its content preimage.
-  const { admission_receipt: _priorReceipt, ...sourceFrontmatter } = parsed.frontmatter;
+  const {
+    admission_receipt: _priorReceipt,
+    workflow_phase: _priorWorkflowPhase,
+    status: _priorStatus,
+    sub_doc: _priorSubDoc,
+    github_issue_id: _priorGithubIssueId,
+    supersedes: _priorSupersedes,
+    ...sourceFrontmatter
+  } = parsed.frontmatter;
   const frontmatter = {
     ...sourceFrontmatter,
     kind: admission.kind,
@@ -26,6 +34,7 @@ export function bindPlanSourceToAdmission(input: {
     ...(admission.status ? { status: admission.status } : {}),
     ...(admission.subDoc ? { sub_doc: admission.subDoc } : {}),
     ...(admission.issue ? { github_issue_id: admission.issue.issueId } : {}),
+    ...(admission.supersedes ? { supersedes: [...admission.supersedes] } : {}),
   };
   const source = `---\n${stringify(frontmatter)}---\n${parsed.body}`;
   const contentDigest = canonicalPlanContentDigest(source);

@@ -455,7 +455,43 @@ describe("NodeAtomicDraftPublisher", () => {
       strategy: "pre-post-identity-cas-with-verified-compensation",
       detectedDrift: "fail-close",
       syscallInstantRaceClosure: "not-provable-with-node-fs",
+      contentCas: "held-descriptor-bytes-with-pre-post-name-binding",
     });
+  });
+
+  it("U-PADM-068: target削除後の補償失敗でもstateを確定しprimaryと補償原因を保持する", () => {
+    let parentMoved = false;
+    const f = fixture((point, path) => {
+      if (point === "publish:after-target-link" && path === f.source) {
+        writeFileSync(join(f.root, f.source), "tampered-postimage", "utf8");
+      }
+      if (point === "publish:after-target-compensation-remove" && path === f.source) {
+        const parent = join(f.root, "docs", "plans");
+        renameSync(parent, `${parent}-moved`);
+        mkdirSync(parent);
+        parentMoved = true;
+      }
+    });
+    const token = f.publisher.stage(f.artifacts);
+
+    try {
+      f.publisher.publish(token);
+      throw new Error("expected AggregateError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError);
+      expect((error as AggregateError).errors).toHaveLength(2);
+    }
+    expect(parentMoved).toBe(true);
+    expect(() => f.publisher.dispose(token)).not.toThrow();
+    expect(() => f.publisher.restore(token)).toThrow(/未知または別publisher/);
+  });
+
+  it("U-PADM-069: terminal disposeは未完了tokenを再利用不能にする", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+
+    expect(() => f.publisher.dispose(token)).not.toThrow();
+    expect(() => f.publisher.publish(token)).toThrow(/未知または別publisher/);
   });
 });
 

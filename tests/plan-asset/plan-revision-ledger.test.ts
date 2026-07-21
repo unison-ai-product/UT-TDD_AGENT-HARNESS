@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   type AppendPlanRevisionInput,
+  derivePlanRevisionDigests,
   PlanRevisionLedgerTransaction,
   replayBindingFailures,
 } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
@@ -14,6 +15,19 @@ afterEach(() => {
 });
 
 describe("PLAN revision ledger transaction", () => {
+  it.each([
+    ["sourceCommit", { sourceCommit: "c".repeat(40) }],
+    ["actor", { actor: "forged" }],
+    ["reason", { reason: "forged" }],
+    ["occurredAt", { occurredAt: "2026-07-17T00:00:01.000Z" }],
+  ] as const)("U-PA-REV-037: %s改変は保存receiptと独立したcommand digest再導出で検出可能", (_field, change) => {
+    const original = derivePlanRevisionDigests(revision());
+    const changed = derivePlanRevisionDigests(revision(change));
+
+    expect(changed.commandPayloadDigest).not.toBe(original.commandPayloadDigest);
+    expect(changed.certificateDigest).not.toBe(original.certificateDigest);
+  });
+
   it("U-PA-REV-001: adopt済みassetへN+1 revisionとreceiptをatomic appendする", () => {
     const { db, ledger } = fixture();
     const result = ledger.append(revision());
@@ -74,7 +88,14 @@ describe("PLAN revision ledger transaction", () => {
     const receipt = db
       .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
       .get(input.commandId);
-    expect(replayBindingFailures(db, input, first, receipt as Record<string, unknown>)).toEqual([]);
+    expect(
+      replayBindingFailures({
+        db,
+        input,
+        expected: first,
+        receipt: receipt as Record<string, unknown>,
+      }),
+    ).toEqual([]);
     expect(ledger.append(input)).toEqual(first.ok ? { ...first, replayed: true } : first);
     expect(ledger.append({ ...input, reason: "different" })).toEqual({
       ok: false,

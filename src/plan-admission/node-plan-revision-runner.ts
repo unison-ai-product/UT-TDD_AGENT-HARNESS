@@ -3,7 +3,12 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.js";
 import { LegacyPlanRevisionBootstrapTransaction } from "../plan-asset/ledger/plan-revision-bootstrap.js";
-import { PlanRevisionLedgerTransaction } from "../plan-asset/ledger/plan-revision-ledger.js";
+import {
+  type AppendPlanRevisionInput,
+  derivePlanRevisionDigests,
+  PlanRevisionLedgerTransaction,
+  replayBindingValid,
+} from "../plan-asset/ledger/plan-revision-ledger.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
@@ -39,10 +44,9 @@ import { TrackedReceiptRenderer } from "./tracked-receipt-renderer.js";
 export interface NodePlanRevisionRunnerDeps {
   repoRoot: string;
   sourceCommit: () => string;
-  sourceBlobOid: (path: string) => string;
-  actor: () => string;
+  sourceBlobOid: (commit: string, path: string) => string;
   readText: (path: string) => string;
-  headText: (path: string) => string;
+  headText: (commit: string, path: string) => string;
   repositoryIdentity?: () => string;
   openDb?: () => HarnessDb;
   publisher?: () => DraftPublisherPort;
@@ -68,17 +72,26 @@ export class NodePlanRevisionRunner {
         const expectedRequest = planRevisionReplayBindingDigest(input.manifest, input.admission);
         if (!digestEqual(prior.cleanup.operation.requestDigest, expectedRequest))
           throw new Error("plan-revision-replay-request-conflict");
-        assertCommittedReplayBinding(db, input.manifest, input.admission, prior.receipt);
+        assertCommittedReplayBinding({
+          db,
+          manifest: input.manifest,
+          admission: input.admission,
+          receipt: prior.receipt,
+          expectedActor: input.manifest.actor,
+          repositoryIdentity: requireRepositoryIdentity(this.deps.repositoryIdentity),
+          baseSource: this.boundBaseSource(input.manifest),
+        });
         try {
           publisher.resumeCleanup(prior.cleanup.operation);
           if (prior.cleanup.status === "pending")
             journal.completeCleanup(input.manifest.command_id, prior.payloadDigest);
         } catch (cause) {
-          throw new PlanDraftCleanupPendingError(
+          const pending = new PlanDraftCleanupPendingError(
             "plan-revision-replay-artifact-binding-invalid",
             prior.receipt as PlanRevisionReceipt,
             { cause },
           );
+          throw pending;
         }
         return { status: "replayed" as const, receipt: prior.receipt as PlanRevisionReceipt };
       }
@@ -99,7 +112,7 @@ export class NodePlanRevisionRunner {
           sourceCommit: base.sourceCommit,
           sourceBlobOid: base.sourceBlobOid,
           headSource: base.headSource,
-          actor: this.deps.actor(),
+          actor: input.manifest.actor,
         },
         legacy,
       });
@@ -133,10 +146,10 @@ export class NodePlanRevisionRunner {
     const sourceCommit = this.deps.sourceCommit();
     if (sourceCommit !== manifest.base.source_commit)
       throw new Error("plan-revision-source-commit-drift");
-    const sourceBlobOid = this.deps.sourceBlobOid(manifest.source.path);
+    const sourceBlobOid = this.deps.sourceBlobOid(sourceCommit, manifest.source.path);
     if (sourceBlobOid !== manifest.base.source_blob_oid)
       throw new Error("plan-revision-source-blob-drift");
-    const headSource = this.deps.headText(manifest.source.path);
+    const headSource = this.deps.headText(sourceCommit, manifest.source.path);
     const headDigest = prefixedSha(headSource);
     if (!digestEqual(headDigest, manifest.base.source_content_digest))
       throw new Error("plan-revision-head-content-drift");
@@ -172,22 +185,37 @@ export class NodePlanRevisionRunner {
       repositoryIdentity: base.repositoryIdentity,
     };
   }
+
+  private boundBaseSource(manifest: PlanRevisionManifest): string {
+    const blob = this.deps.sourceBlobOid(manifest.base.source_commit, manifest.source.path);
+    if (blob !== manifest.base.source_blob_oid) throw new Error("plan-revision-source-blob-drift");
+    const source = this.deps.headText(manifest.base.source_commit, manifest.source.path);
+    if (!digestEqual(prefixedSha(source), manifest.base.source_content_digest))
+      throw new Error("plan-revision-head-content-drift");
+    return source;
+  }
 }
 
-function assertCommittedReplayBinding(
-  db: HarnessDb,
-  manifest: PlanRevisionManifest,
-  admission: PlanAdmissionRequest,
-  receipt: import("./plan-draft-service.js").DraftReceiptBinding,
-): void {
+function assertCommittedReplayBinding(binding: {
+  db: HarnessDb;
+  manifest: PlanRevisionManifest;
+  admission: PlanAdmissionRequest;
+  receipt: import("./plan-draft-service.js").DraftReceiptBinding;
+  expectedActor: string;
+  repositoryIdentity: string;
+  baseSource: string;
+}): void {
+  const { db, manifest, admission, receipt, expectedActor, repositoryIdentity, baseSource } =
+    binding;
   if (receipt.assetId !== manifest.base.asset_id || receipt.revision !== manifest.base.revision + 1)
     throw new Error("plan-revision-replay-receipt-conflict");
   const revision = db
     .prepare(
-      `SELECT canonical_payload_json, canonical_payload_digest, body_digest, source_path
+      `SELECT canonical_payload_json, canonical_payload_digest, body_digest, source_path,
+              source_commit, actor, reason
        FROM plan_revisions WHERE asset_id = ? AND revision = ?`,
     )
-    .get(receipt.assetId, receipt.revision);
+    .get(receipt.assetId, receipt.revision) as Record<string, unknown> | undefined;
   const bound = bindPlanSourceToAdmission({
     source: manifest.source.content,
     planId: manifest.plan_id,
@@ -210,18 +238,82 @@ function assertCommittedReplayBinding(
     .get(receipt.assetId, manifest.base.revision);
   if (!base || !digestEqual(String(base.canonical_payload_digest), manifest.base.revision_digest))
     throw new Error("plan-revision-replay-base-conflict");
-  const event = db
-    .prepare(
-      `SELECT content_digest, route_tuple_digest FROM plan_admission_events
-       WHERE command_id = ? AND plan_asset_id = ? AND plan_revision = ?`,
-    )
-    .get(manifest.command_id, receipt.assetId, receipt.revision);
+  const appendReceipt = db
+    .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
+    .get(manifest.command_id) as Record<string, unknown> | undefined;
+  if (!appendReceipt) throw new Error("plan-revision-replay-ledger-conflict");
+  const certificateId = `certificate:${rawSha(manifest.command_id).slice(0, 32)}`;
+  if (receipt.certificateId !== certificateId)
+    throw new Error("plan-revision-replay-certificate-conflict");
+  const contentDigest = unprefix(bound.contentDigest);
+  const routeTupleDigest = rawSha(stableJson(admission));
+  const ledgerInput: AppendPlanRevisionInput = {
+    commandId: manifest.command_id,
+    assetId: receipt.assetId,
+    planId: manifest.plan_id,
+    baseRevision: manifest.base.revision,
+    basePayloadDigest: unprefix(manifest.base.revision_digest),
+    canonicalPayloadJson: desired.payload,
+    contentDigest,
+    bodyDigest: rawSha(desired.body),
+    sourcePath: manifest.source.path,
+    sourceCommit: manifest.base.source_commit,
+    actor: expectedActor,
+    reason: admission.escapeReason ?? `route:${admission.routeSignal}`,
+    routeTupleDigest,
+    certificateId,
+    occurredAt: manifest.recorded_at,
+  };
+  const derived = derivePlanRevisionDigests(ledgerInput);
+  const legacy = revisionUsesLegacyBootstrap(db, receipt.assetId, manifest.command_id);
+  const commandPayloadDigest = legacy
+    ? unprefix(
+        assemblePlanRevisionCommand({
+          manifest,
+          admission,
+          environment: {
+            repositoryIdentity,
+            sourceCommit: manifest.base.source_commit,
+            sourceBlobOid: manifest.base.source_blob_oid,
+            headSource: baseSource,
+            actor: expectedActor,
+          },
+          legacy: true,
+        }).commandPayloadDigest,
+      )
+    : derived.commandPayloadDigest;
   if (
-    !event ||
-    !digestEqual(String(event.content_digest), bound.contentDigest) ||
-    !digestEqual(String(event.route_tuple_digest), prefixedSha(stableJson(admission)))
+    !digestEqual(String(receipt.commandPayloadDigest), commandPayloadDigest) ||
+    !digestEqual(String(appendReceipt.command_payload_digest), commandPayloadDigest)
   )
-    throw new Error("plan-revision-replay-admission-conflict");
+    throw new Error("plan-revision-replay-command-conflict");
+  const certificateDigest = legacy
+    ? rawSha(
+        stableJson({
+          commandPayloadDigest,
+          assetId: receipt.assetId,
+          revision: receipt.revision,
+          planId: manifest.plan_id,
+          contentDigest,
+          routeTupleDigest,
+        }),
+      )
+    : derived.certificateDigest;
+  if (!receipt.certificateDigest || !digestEqual(receipt.certificateDigest, certificateDigest))
+    throw new Error("plan-revision-replay-certificate-conflict");
+  if (
+    !replayBindingValid({
+      db,
+      input: ledgerInput,
+      expected: {
+        canonicalPayloadDigest: derived.canonicalPayloadDigest,
+        commandPayloadDigest,
+        certificateDigest,
+      },
+      receipt: appendReceipt,
+    })
+  )
+    throw new Error("plan-revision-replay-ledger-conflict");
 }
 
 export function revisionUsesLegacyBootstrap(
@@ -237,6 +329,7 @@ export function revisionUsesLegacyBootstrap(
          JOIN append_command_receipts receipt
            ON receipt.plan_asset_id = provenance.asset_id
           AND receipt.command_id = ?
+          AND receipt.plan_revision = provenance.revision + 1
          WHERE provenance.asset_id = ? AND provenance.revision = 1`,
       )
       .get(commandId, assetId),
@@ -270,20 +363,13 @@ export function createNodePlanRevisionRunner(repoRoot: string): NodePlanRevision
   return new NodePlanRevisionRunner({
     repoRoot,
     sourceCommit: () => git(repoRoot, ["rev-parse", "HEAD"]),
-    sourceBlobOid: (path) => git(repoRoot, ["rev-parse", `HEAD:${path}`]),
-    headText: (path) =>
-      execFileSync("git", ["-C", repoRoot, "show", `HEAD:${path}`], { encoding: "utf8" }),
+    sourceBlobOid: (commit, path) => git(repoRoot, ["rev-parse", `${commit}:${path}`]),
+    headText: (commit, path) =>
+      execFileSync("git", ["-C", repoRoot, "show", `${commit}:${path}`], { encoding: "utf8" }),
     repositoryIdentity: () => {
       const identity = loadProjectIdentityFromHead({ repoRoot });
       if (!identity.ok) throw new Error(identity.error.ruleId);
       return identity.value.repositoryIdentity;
-    },
-    actor: () => {
-      try {
-        return git(repoRoot, ["config", "user.name"]) || "ut-tdd";
-      } catch {
-        return "ut-tdd";
-      }
     },
     readText: (path) => readFileSync(path, "utf8"),
   });
@@ -401,7 +487,13 @@ function normalizeDigest(value: string): `sha256:${string}` {
   return (value.startsWith("sha256:") ? value : `sha256:${value}`) as `sha256:${string}`;
 }
 function prefixedSha(value: string): `sha256:${string}` {
-  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+  return `sha256:${rawSha(value)}`;
+}
+function rawSha(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+function unprefix(value: string): string {
+  return value.startsWith("sha256:") ? value.slice(7) : value;
 }
 function digestEqual(left: string, right: string): boolean {
   return normalizeDigest(left) === normalizeDigest(right);

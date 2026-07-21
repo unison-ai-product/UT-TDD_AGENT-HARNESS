@@ -70,6 +70,24 @@ describe("NodePlanRevisionRunner", () => {
     expect(
       revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, "command:next-revision"),
     ).toBe(false);
+    const nextReceipt = {
+      command_id: "command:next-revision",
+      command_type: "plan.revise",
+      subject_kind: "plan_revision",
+      subject_key: `${f.manifest.base.asset_id}:3`,
+      plan_asset_id: f.manifest.base.asset_id,
+      plan_revision: 3,
+      command_payload_digest: sha("next-command"),
+      result_kind: "admission_certificate",
+      result_ref: "certificate:next",
+      recorded_at: "2026-07-17T01:00:00.000Z",
+    };
+    f.db
+      .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(...Object.values(nextReceipt), ledgerRowDigest(nextReceipt, "receipt_digest"));
+    expect(
+      revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, "command:next-revision"),
+    ).toBe(false);
   });
 
   it.each([
@@ -86,6 +104,13 @@ describe("NodePlanRevisionRunner", () => {
     expect(readFileSync(join(f.root, f.manifest.projection.path), "utf8")).toBe(
       publishedProjection,
     );
+  });
+
+  it("U-PA-REV-038: authoring actorはmanifestに束縛され環境actor再導出なしで正当replayできる", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+
+    expect(f.runner.run(f.input)).toMatchObject({ status: "replayed" });
   });
 
   it("U-PA-REV-030: committed replay時のworking projection欠落を拒否する", () => {
@@ -131,6 +156,88 @@ describe("NodePlanRevisionRunner", () => {
     });
 
     expect(() => f.runner.run(f.input)).toThrow("plan-ledger-unavailable");
+  });
+
+  it("U-PA-REV-033: committed replayは再digest済みcertificate改変も全binding再証明で拒否する", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    tamperAppendOnly(f.db, "trg_plan_admission_events_no_update", () => {
+      const event = f.db
+        .prepare("SELECT * FROM plan_admission_events WHERE command_id = ?")
+        .get(f.manifest.command_id) as Record<string, unknown>;
+      const changed = { ...event, certificate_digest: "0".repeat(64) };
+      f.db
+        .prepare(
+          "UPDATE plan_admission_events SET certificate_digest = ?, event_digest = ? WHERE command_id = ?",
+        )
+        .run(
+          changed.certificate_digest,
+          ledgerRowDigest(changed, "event_digest"),
+          f.manifest.command_id,
+        );
+      f.db
+        .prepare("UPDATE plan_admission_receipts SET certificate_digest = ? WHERE command_id = ?")
+        .run(changed.certificate_digest, f.manifest.command_id);
+    });
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-certificate-conflict");
+  });
+
+  it("U-PA-REV-034: committed replayは再digest済みappend receipt改変も全binding再証明で拒否する", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    tamperAppendOnly(f.db, "trg_append_command_receipts_no_update", () => {
+      const receipt = f.db
+        .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
+        .get(f.manifest.command_id) as Record<string, unknown>;
+      const changed = { ...receipt, recorded_at: "2026-07-17T00:00:01.000Z" };
+      f.db
+        .prepare(
+          "UPDATE append_command_receipts SET recorded_at = ?, receipt_digest = ? WHERE command_id = ?",
+        )
+        .run(
+          changed.recorded_at,
+          ledgerRowDigest(changed, "receipt_digest"),
+          f.manifest.command_id,
+        );
+    });
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-ledger-conflict");
+  });
+
+  it("U-PA-REV-035: committed replayは再digest済みadmission改変も全binding再証明で拒否する", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    tamperAppendOnly(f.db, "trg_plan_admission_events_no_update", () => {
+      const event = f.db
+        .prepare("SELECT * FROM plan_admission_events WHERE command_id = ?")
+        .get(f.manifest.command_id) as Record<string, unknown>;
+      const changed = { ...event, route_tuple_digest: "0".repeat(64) };
+      f.db
+        .prepare(
+          "UPDATE plan_admission_events SET route_tuple_digest = ?, event_digest = ? WHERE command_id = ?",
+        )
+        .run(
+          changed.route_tuple_digest,
+          ledgerRowDigest(changed, "event_digest"),
+          f.manifest.command_id,
+        );
+      f.db
+        .prepare("UPDATE plan_admission_receipts SET route_tuple_digest = ? WHERE command_id = ?")
+        .run(changed.route_tuple_digest, f.manifest.command_id);
+    });
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-ledger-conflict");
+  });
+
+  it("U-PA-REV-036: committed replayは保存済みactorを期待値に流用せずauthoring actor改変を拒否する", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    f.db
+      .prepare("UPDATE plan_revisions SET actor = ? WHERE asset_id = ? AND revision = ?")
+      .run("forged-actor", f.manifest.base.asset_id, 2);
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-ledger-conflict");
   });
 
   it.each([
@@ -299,6 +406,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
     version: 1,
     command_id: "command:revise-node-31",
     plan_id: planId,
+    actor: "codex",
     recorded_at: "2026-07-17T00:00:00.000Z",
     base: {
       asset_id: assetId,
@@ -350,7 +458,6 @@ function fixture(mode: Mode, drift: Drift = {}) {
     repoRoot: root,
     sourceCommit: () => drift.sourceCommit ?? sourceCommit,
     sourceBlobOid: () => drift.sourceBlobOid ?? sourceBlobOid,
-    actor: () => "codex",
     readText: (path: string) => readFileSync(path, "utf8"),
     headText: () => drift.headSource ?? oldSource,
     ...(drift.omitRepositoryIdentity ? {} : { repositoryIdentity: () => "repo:test" }),

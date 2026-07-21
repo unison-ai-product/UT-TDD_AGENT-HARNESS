@@ -55,12 +55,12 @@ describe("SqliteDraftJournal", () => {
     if (!result.ok) throw new Error(result.ruleId);
     const boundIntent = { ...intent, payloadDigest: result.commandPayloadDigest };
     journal.recordIntent(boundIntent);
-    journal.commit(
-      boundIntent.commandId,
-      boundIntent.payloadDigest,
-      boundReceipt(boundIntent.payloadDigest),
-      cleanup(),
-    );
+    journal.commit({
+      commandId: boundIntent.commandId,
+      payloadDigest: boundIntent.payloadDigest,
+      receipt: boundReceipt(boundIntent.payloadDigest),
+      cleanup: cleanup(),
+    });
 
     expect(journal.find(intent.commandId)).toEqual({
       status: "committed",
@@ -86,12 +86,12 @@ describe("SqliteDraftJournal", () => {
       payloadDigest: intent.payloadDigest,
     });
     expect(() =>
-      journal.commit(
-        intent.commandId,
-        intent.payloadDigest,
-        boundReceipt(intent.payloadDigest),
-        cleanup(),
-      ),
+      journal.commit({
+        commandId: intent.commandId,
+        payloadDigest: intent.payloadDigest,
+        receipt: boundReceipt(intent.payloadDigest),
+        cleanup: cleanup(),
+      }),
     ).toThrow(/transition-invalid/);
   });
 
@@ -132,7 +132,12 @@ describe("SqliteDraftJournal", () => {
     const boundIntent = { ...intent, payloadDigest: result.commandPayloadDigest };
     const committed = boundReceipt(boundIntent.payloadDigest);
     journal.recordIntent(boundIntent);
-    journal.commit(boundIntent.commandId, boundIntent.payloadDigest, committed, cleanup());
+    journal.commit({
+      commandId: boundIntent.commandId,
+      payloadDigest: boundIntent.payloadDigest,
+      receipt: committed,
+      cleanup: cleanup(),
+    });
 
     journal.markCleanupPending(
       boundIntent.commandId,
@@ -161,12 +166,12 @@ describe("SqliteDraftJournal", () => {
     if (!result.ok) throw new Error(result.ruleId);
     const boundIntent = { ...intent, payloadDigest: result.commandPayloadDigest };
     journal.recordIntent(boundIntent);
-    journal.commit(
-      boundIntent.commandId,
-      boundIntent.payloadDigest,
-      boundReceipt(boundIntent.payloadDigest),
-      cleanup(),
-    );
+    journal.commit({
+      commandId: boundIntent.commandId,
+      payloadDigest: boundIntent.payloadDigest,
+      receipt: boundReceipt(boundIntent.payloadDigest),
+      cleanup: cleanup(),
+    });
     journal.markCleanupPending(boundIntent.commandId, boundIntent.payloadDigest, "process exit");
 
     const restarted = new SqliteDraftJournal(db, () => "2026-07-15T00:02:00.000Z");
@@ -190,12 +195,12 @@ describe("SqliteDraftJournal", () => {
     if (!result.ok) throw new Error(result.ruleId);
     const boundIntent = { ...intent, payloadDigest: result.commandPayloadDigest };
     journal.recordIntent(boundIntent);
-    journal.commit(
-      boundIntent.commandId,
-      boundIntent.payloadDigest,
-      boundReceipt(boundIntent.payloadDigest),
-      cleanup(),
-    );
+    journal.commit({
+      commandId: boundIntent.commandId,
+      payloadDigest: boundIntent.payloadDigest,
+      receipt: boundReceipt(boundIntent.payloadDigest),
+      cleanup: cleanup(),
+    });
     downgradeCleanupSchema(db, version);
 
     const restarted = new SqliteDraftJournal(db);

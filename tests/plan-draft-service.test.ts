@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type DraftArtifact,
   type DraftCleanupOperation,
+  type DraftJournalCommit,
   type DraftJournalEntry,
   type DraftJournalPort,
   type DraftLedgerPort,
@@ -63,6 +64,7 @@ const cleanup = (): DraftCleanupOperation => ({
 class Journal implements DraftJournalPort<Receipt> {
   entry?: DraftJournalEntry<Receipt>;
   failCommit = false;
+  failCleanupPending = false;
 
   constructor(private readonly events: string[]) {}
 
@@ -76,12 +78,8 @@ class Journal implements DraftJournalPort<Receipt> {
     this.entry = { status: "intent", payloadDigest: intent.payloadDigest };
   }
 
-  commit(
-    _id: string,
-    digest: string,
-    committedReceipt: Receipt,
-    operation: DraftCleanupOperation,
-  ): void {
+  commit(input: DraftJournalCommit<Receipt>): void {
+    const { payloadDigest: digest, receipt: committedReceipt, cleanup: operation } = input;
     this.events.push("journal.commit");
     if (this.failCommit) throw new Error("journal commit failed");
     this.entry = {
@@ -99,6 +97,7 @@ class Journal implements DraftJournalPort<Receipt> {
 
   markCleanupPending(_id: string, digest: string, reason: string): void {
     this.events.push(`journal.cleanup:${reason}`);
+    if (this.failCleanupPending) throw new Error("cleanup pending journal failed");
     if (!this.entry || this.entry.status !== "committed") throw new Error("not committed");
     this.entry = {
       ...this.entry,
@@ -142,6 +141,10 @@ class Publisher implements DraftPublisherPort {
   finalize(): void {
     this.events.push("publisher.finalize");
     if (this.finalizeFailures-- > 0) throw new Error("finalize failed");
+  }
+
+  dispose(): void {
+    this.events.push("publisher.dispose");
   }
 
   describeCleanup(
@@ -252,6 +255,7 @@ describe("PlanDraftService", () => {
       "publisher.publish",
       "ledger.rollback",
       "publisher.restore",
+      "publisher.dispose",
       "journal.recovery:draft失敗。artifactはrestore済み: ledger failed",
     ]);
     expect(f.journal.entry?.status).toBe("recovery_required");
@@ -272,6 +276,7 @@ describe("PlanDraftService", () => {
       "publisher.publish",
       "ledger.commit",
       "journal.commit",
+      "publisher.dispose",
       "journal.recovery:ledger/file公開後にjournal commit失敗: journal commit failed",
     ]);
     expect(f.events).not.toContain("publisher.restore");
@@ -295,7 +300,7 @@ describe("PlanDraftService", () => {
     const f = fixture({ ledgerFailure: true });
     f.publisher.failRestore = true;
 
-    expect(() => f.service.execute(command)).toThrow(/restoreにも失敗/);
+    expect(() => f.service.execute(command)).toThrow(/restore\/resource解放に失敗/);
     const firstRun = [...f.events];
     expect(() => f.service.execute(command)).toThrow(/自動再実行できません/);
     expect(f.events.slice(firstRun.length)).toEqual(["validator.validate", "journal.find"]);
@@ -323,6 +328,7 @@ describe("PlanDraftService", () => {
       status: "committed",
       cleanup: { status: "pending", reason: expect.stringContaining("artifact cleanup未完了") },
     });
+    expect(f.events).toContain("publisher.dispose");
     const beforeReplay = [...f.events];
     expect(f.service.execute(command)).toEqual({ status: "replayed", receipt: receipt() });
     expect(f.events.slice(beforeReplay.length)).toEqual([
@@ -330,6 +336,27 @@ describe("PlanDraftService", () => {
       "journal.find",
       "publisher.resume-cleanup",
       "journal.cleanup-complete",
+    ]);
+  });
+
+  it("U-PADM-071: cleanup-pending記録失敗は全障害をcauseに保持する", () => {
+    const f = fixture();
+    f.publisher.finalizeFailures = 2;
+    f.journal.failCleanupPending = true;
+
+    let failure: unknown;
+    try {
+      f.service.execute(command);
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(PlanDraftCleanupPendingError);
+    expect((failure as Error).cause).toBeInstanceOf(AggregateError);
+    expect(((failure as Error).cause as AggregateError).errors).toMatchObject([
+      { message: "finalize failed" },
+      { message: "finalize failed" },
+      { message: "cleanup pending journal failed" },
     ]);
   });
 });

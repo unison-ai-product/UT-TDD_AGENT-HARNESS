@@ -68,7 +68,7 @@ export class PlanRevisionLedgerTransaction {
           validated.commandPayloadDigest,
         )
           ? { ok: false, ruleId: "plan-revision-command-conflict" }
-          : replayBindingValid(this.db, input, validated, replay)
+          : replayBindingValid({ db: this.db, input, expected: validated, receipt: replay })
             ? {
                 ok: true,
                 replayed: true,
@@ -190,23 +190,38 @@ export interface ValidRevision {
   readonly certificateDigest: string;
 }
 
+/** 永続値を参照せず、revision inputだけから全digest連鎖を導出する。 */
+export function derivePlanRevisionDigests(input: AppendPlanRevisionInput): ValidRevision {
+  const canonicalPayloadDigest = sha(input.canonicalPayloadJson);
+  const commandPayloadDigest = sha(JSON.stringify({ ...input, canonicalPayloadDigest }));
+  const certificateDigest = sha(
+    JSON.stringify({
+      commandPayloadDigest,
+      assetId: input.assetId,
+      revision: input.baseRevision + 1,
+      planId: input.planId,
+      contentDigest: input.contentDigest,
+      routeTupleDigest: input.routeTupleDigest,
+    }),
+  );
+  return { canonicalPayloadDigest, commandPayloadDigest, certificateDigest };
+}
+
+export interface ReplayBindingInput {
+  readonly db: HarnessDb;
+  readonly input: AppendPlanRevisionInput;
+  readonly expected: ValidRevision;
+  readonly receipt: Record<string, unknown>;
+}
+
 /** Replayはcommand digestだけでなく、永続化した全bindingを再証明する。 */
-export function replayBindingValid(
-  db: HarnessDb,
-  input: AppendPlanRevisionInput,
-  expected: ValidRevision,
-  receipt: Record<string, unknown>,
-): boolean {
-  return replayBindingFailures(db, input, expected, receipt).length === 0;
+export function replayBindingValid(binding: ReplayBindingInput): boolean {
+  return replayBindingFailures(binding).length === 0;
 }
 
 /** binding不一致を列単位で返し、fail-close判定の診断可能性を保つ。 */
-export function replayBindingFailures(
-  db: HarnessDb,
-  input: AppendPlanRevisionInput,
-  expected: ValidRevision,
-  receipt: Record<string, unknown>,
-): readonly string[] {
+export function replayBindingFailures(binding: ReplayBindingInput): readonly string[] {
+  const { db, input, expected, receipt } = binding;
   const failures: string[] = [];
   const revision = input.baseRevision + 1;
   const eventId = `admission:${input.certificateId}`;
@@ -332,19 +347,7 @@ function validate(input: AppendPlanRevisionInput):
   } catch {
     return { ok: false, ruleId: "plan-revision-payload-invalid" };
   }
-  const canonicalPayloadDigest = sha(input.canonicalPayloadJson);
-  const commandPayloadDigest = sha(JSON.stringify({ ...input, canonicalPayloadDigest }));
-  const certificateDigest = sha(
-    JSON.stringify({
-      commandPayloadDigest,
-      assetId: input.assetId,
-      revision: input.baseRevision + 1,
-      planId: input.planId,
-      contentDigest: input.contentDigest,
-      routeTupleDigest: input.routeTupleDigest,
-    }),
-  );
-  return { ok: true, canonicalPayloadDigest, commandPayloadDigest, certificateDigest };
+  return { ok: true, ...derivePlanRevisionDigests(input) };
 }
 
 function validSha(value: string): boolean {
