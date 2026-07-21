@@ -1,6 +1,7 @@
 import type { PlanAuthoringRecoveryRunner } from "../cli/plan-authoring-recovery.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
+import { ensureAuthoringRecoveryAssessment } from "./node-plan-authoring-recovery-assessor.js";
 import { NodePlanAuthoringRecoveryExecutor } from "./node-plan-authoring-recovery-executor.js";
 
 export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRunner {
@@ -11,7 +12,10 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
 
   status(commandId: string): unknown {
     try {
-      return this.withDb((db) => classify(status(db, commandId)));
+      return this.withDb((db) => {
+        ensureAuthoringRecoveryAssessment(db, this.repoRoot, commandId);
+        return classify(status(db, commandId));
+      });
     } catch (error) {
       return {
         state: "corrupt",
@@ -54,6 +58,7 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
     execute: boolean;
   }): unknown {
     return this.withDb((db) => {
+      ensureAuthoringRecoveryAssessment(db, this.repoRoot, input.commandId);
       const current = status(db, input.commandId);
       if (!current) throw new Error("plan-recovery-command-not-found");
       if (!input.execute) return { ...current, dry_run: true };
@@ -85,7 +90,11 @@ function classify(value: Record<string, unknown> | undefined) {
   if (!value) return { state: "corrupt", exitCode: 3 };
   const state = String(value.state);
   if (["committed", "rolled_back"].includes(state)) return { ...value, exitCode: 0 };
-  if (state === "recovery_required" && value.assessment_digest && value.fencing_token)
+  if (
+    ["prepared", "member_started", "member_published", "recovery_required"].includes(state) &&
+    value.assessment_digest &&
+    value.fencing_token
+  )
     return { ...value, exitCode: 2 };
   return { ...value, state: "corrupt", exitCode: 3 };
 }

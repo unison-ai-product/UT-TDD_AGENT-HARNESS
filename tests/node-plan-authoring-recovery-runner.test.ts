@@ -61,9 +61,16 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     });
   });
 
-  it("FS mutation途中kill後もSQLite lockが解放されfresh connectionで再開できる", () => {
-    const fixture = recoveryFixture();
+  it("assessment 0件のkill状態をfresh statusが査定し、executor途中kill後も再開できる", () => {
+    const fixture = recoveryFixture(true);
+    const before = openHarnessDb(fixture.dbPath);
+    expect(
+      before.prepare("SELECT COUNT(*) count FROM authoring_recovery_assessment_events").get()
+        ?.count,
+    ).toBe(0);
+    before.close();
     const status = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    expect(status).toMatchObject({ state: "prepared", exitCode: 2 });
     const executorUrl = pathToFileURL(
       join(process.cwd(), "src/plan-admission/node-plan-authoring-recovery-executor.ts"),
     ).href;
@@ -96,7 +103,7 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
   });
 });
 
-function recoveryFixture() {
+function recoveryFixture(withoutAssessment = false) {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-recovery-runner-"));
   roots.push(root);
   mkdirSync(join(root, ".ut-tdd"), { recursive: true });
@@ -143,14 +150,19 @@ function recoveryFixture() {
       revisionBindings: [{ assetId: "asset:1", revision: 1, artifactRole: memberId }],
     },
   };
-  expect(() =>
-    new AuthoringCommandGroupJournal(db).execute(input, {
-      publish() {
-        throw new Error("crash");
-      },
-      acknowledge() {},
-    }),
-  ).toThrow("crash");
+  const journal = new AuthoringCommandGroupJournal(db);
+  if (withoutAssessment) {
+    expect(journal.prepareWithinTransaction(input)).toMatchObject({ ok: true });
+  } else {
+    expect(() =>
+      journal.execute(input, {
+        publish() {
+          throw new Error("crash");
+        },
+        acknowledge() {},
+      }),
+    ).toThrow("crash");
+  }
   db.close();
   const target = join(root, "docs", "a.md");
   writeFileSync(target, content);
