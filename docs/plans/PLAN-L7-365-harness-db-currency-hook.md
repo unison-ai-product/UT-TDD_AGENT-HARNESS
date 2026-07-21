@@ -24,8 +24,6 @@ generates:
     artifact_type: source_module
   - artifact_path: src/state-db/stop-refresh-coordinator.ts
     artifact_type: source_module
-  - artifact_path: tests/db-currency.test.ts
-    artifact_type: test
 dependencies:
   parent: docs/plans/PLAN-L5-01-physical-data.md
   requires: []
