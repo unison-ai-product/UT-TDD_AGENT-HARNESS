@@ -39,6 +39,24 @@ dependencies:
     - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
 review_evidence:
   - reviewer: blind-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-21T14:44:00+09:00"
+    tests_green_at: "2026-07-21T14:39:00+09:00"
+    verdict: approve
+    worker_model: gpt-5.6-sol
+    reviewer_model: gpt-5.6-sol
+    scope: "HEAD a0fda541 の初回 Codex FLAG 解除差分を read-only claim-blind/spec-blind 再レビュー。repository-read exact contract=2、L7 test-design U-TESTHYGIENE-048〜052、Windows ACL command/runtime evidence境界、diff hygieneを確認。attack 4件は全てartifact/test citationで反駁され、未反駁High/MediumなしのPASS。GitHub両OS/aggregateは別のmerge gateとしてpending扱い。"
+    green_commands:
+      - kind: unit_test
+        command: "execution/fence/head rootをworktreeへ固定した bun x vitest run tests/vitest-snapshot-runner.test.ts tests/doctor-test-repository-isolation.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-21T14:39:00+09:00"
+        evidence_path: tests/vitest-snapshot-runner.test.ts
+        output_digest: "31 passed (snapshot runner 18 + repository isolation 13)"
+        anchor_commit: a0fda541f1a0755e2a4a874c906c0a3fe1f64ea8
+  - reviewer: blind-reviewer
     review_kind: cross_provider
     reviewed_at: "2026-07-21T12:20:00+09:00"
     tests_green_at: "2026-07-21T11:55:00+09:00"
