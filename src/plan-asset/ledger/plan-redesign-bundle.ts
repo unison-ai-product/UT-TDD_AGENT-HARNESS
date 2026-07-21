@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
+import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
 import {
   type AuthoringArtifactPublisher,
   type AuthoringCommandGroupInput,
@@ -20,6 +21,12 @@ export interface RedesignBundleInput {
     | (AppendPlanRevisionInput & { readonly sourceContent: string })
     | (BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string });
   readonly origin: AppendPlanRevisionInput & { readonly sourceContent: string };
+  readonly reentry: {
+    readonly targetPlanId: string;
+    readonly targetRevision: number;
+    readonly phase: "forward_merge";
+  };
+  readonly projection: { readonly path: string; readonly contentDigest: string };
 }
 
 export type RedesignBundleResult =
@@ -55,29 +62,31 @@ export class PlanRedesignBundleCoordinator {
     this.groups = new AuthoringCommandGroupJournal(db);
   }
 
-  transact(
-    input: RedesignBundleInput,
-    publish: (result: Extract<RedesignBundleResult, { ok: true }>) => void,
-  ): RedesignBundleResult {
+  transact(input: RedesignBundleInput): RedesignBundleResult {
     const invalid = validateBundle(input);
     if (invalid) return { ok: false, ruleId: invalid };
     return this.transaction.run<RedesignBundleResult>(() => {
-      const replacement = isBootstrap(input.replacement)
-        ? this.bootstrap.prepare(input.replacement, () => undefined)
-        : this.revisions.prepare(input.replacement, () => undefined);
-      if (!replacement.value.ok) return { commit: false, value: replacement.value };
-      const origin = this.revisions.prepare(input.origin, () => undefined);
-      if (!origin.value.ok) return { commit: false, value: origin.value };
-      const value = {
-        ok: true as const,
-        replayed: replacement.value.replayed && origin.value.replayed,
-        replacement: replacement.value,
-        origin: origin.value,
-      };
-      // 両write setがpreparedになった後だけ外部publishへ進む。
-      publish(value);
-      return { commit: true, value };
+      return this.prepareRevisions(input);
     });
+  }
+
+  private prepareRevisions(input: RedesignBundleInput): {
+    readonly commit: boolean;
+    readonly value: RedesignBundleResult;
+  } {
+    const replacement = isBootstrap(input.replacement)
+      ? this.bootstrap.prepare(input.replacement, () => undefined)
+      : this.revisions.prepare(input.replacement, () => undefined);
+    if (!replacement.value.ok) return { commit: false, value: replacement.value };
+    const origin = this.revisions.prepare(input.origin, () => undefined);
+    if (!origin.value.ok) return { commit: false, value: origin.value };
+    const value = {
+      ok: true as const,
+      replayed: replacement.value.replayed && origin.value.replayed,
+      replacement: replacement.value,
+      origin: origin.value,
+    };
+    return { commit: true, value };
   }
 
   /**
@@ -91,12 +100,18 @@ export class PlanRedesignBundleCoordinator {
   ): RedesignBundlePublicationResult {
     const groupInvalid = validatePublicationGroup(input, group);
     if (groupInvalid) return { ok: false, ruleId: groupInvalid };
-    const revisions = this.transact(input, () => undefined);
-    if (!revisions.ok) return revisions;
+    const prepared = this.transaction.run<RedesignBundleResult>(() => {
+      const revisions = this.prepareRevisions(input);
+      if (!revisions.value.ok) return revisions;
+      const intent = this.groups.prepareWithinTransaction(group);
+      if (!intent.ok) return { commit: false, value: intent };
+      return revisions;
+    });
+    if (!prepared.ok) return prepared;
     const publication = this.groups.execute(group, publisher);
     if (!publication.ok) return publication;
     return {
-      ...revisions,
+      ...prepared,
       publicationReplayed: publication.replayed,
       publishedMemberIds: publication.publishedMemberIds,
     };
@@ -114,12 +129,27 @@ function validateBundle(input: RedesignBundleInput): string | undefined {
     input.replacement.occurredAt !== input.origin.occurredAt
   )
     return "plan-redesign-bundle-binding-invalid";
-  const replacement = parseFrontmatter(input.replacement.canonicalPayloadJson);
+  const replacement = parseCanonicalPlan(input.replacement);
+  const origin = parseCanonicalPlan(input.origin);
+  if (!replacement || !origin) return "plan-redesign-bundle-source-binding-invalid";
   const supersedes = replacement?.supersedes;
-  if (!Array.isArray(supersedes) || !supersedes.includes(input.origin.planId))
+  if (
+    replacement.route_mode !== "redesign" ||
+    !Array.isArray(supersedes) ||
+    supersedes.length !== 1 ||
+    supersedes[0] !== input.origin.planId
+  )
     return "plan-redesign-bundle-supersedes-missing";
-  if (!input.origin.sourceContent.includes(input.replacement.planId))
+  if (!containsPlanReference(origin, input.origin.sourceContent, input.replacement.planId))
     return "plan-redesign-bundle-origin-back-reference-missing";
+  if (
+    input.reentry.targetPlanId !== input.origin.planId ||
+    input.reentry.targetRevision !== input.origin.baseRevision + 1 ||
+    input.reentry.phase !== "forward_merge" ||
+    !input.projection.path ||
+    !/^[a-f0-9]{64}$/.test(input.projection.contentDigest)
+  )
+    return "plan-redesign-bundle-reentry-binding-invalid";
   if (
     sha(input.origin.sourceContent) !== input.origin.contentDigest ||
     sha(input.replacement.sourceContent) !== input.replacement.contentDigest
@@ -141,7 +171,7 @@ function validatePublicationGroup(
 ): string | undefined {
   if (
     group.groupId !== input.commandId ||
-    group.commandPayloadDigest !== input.commandPayloadDigest ||
+    group.commandPayloadDigest !== redesignPublicationPayloadDigest(input, group.members) ||
     group.occurredAt !== input.origin.occurredAt
   )
     return "plan-redesign-publication-binding-invalid";
@@ -155,6 +185,11 @@ function validatePublicationGroup(
             member.artifactPath === artifact.sourcePath &&
             member.contentDigest === artifact.contentDigest,
         ),
+    ) ||
+    !group.members.some(
+      (member) =>
+        member.artifactPath === input.projection.path &&
+        member.contentDigest === input.projection.contentDigest,
     )
   )
     return "plan-redesign-publication-members-invalid";
@@ -176,6 +211,45 @@ function parseFrontmatter(value: string): Record<string, unknown> | undefined {
   } catch {
     return undefined;
   }
+}
+
+function parseCanonicalPlan(
+  input: Pick<AppendPlanRevisionInput, "planId" | "canonicalPayloadJson"> & {
+    readonly sourceContent: string;
+  },
+): Record<string, unknown> | undefined {
+  const parsed = parseLegacyPlanSource(input.sourceContent);
+  const canonical = parseFrontmatter(input.canonicalPayloadJson);
+  if (
+    !parsed ||
+    !canonical ||
+    parsed.planId !== input.planId ||
+    stableJson(parsed.frontmatter) !== stableJson(canonical)
+  )
+    return undefined;
+  return canonical;
+}
+
+function containsPlanReference(
+  frontmatter: Record<string, unknown>,
+  source: string,
+  planId: string,
+): boolean {
+  if (frontmatter.plan_id === planId) return false;
+  const core = planId.match(/^(PLAN-[A-Z0-9]+-\d+)/)?.[1] ?? planId;
+  return new RegExp(`\\b${core.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(source);
+}
+
+export function redesignPublicationPayloadDigest(
+  input: RedesignBundleInput,
+  members: readonly AuthoringCommandGroupInput["members"][number][],
+): string {
+  return sha(
+    stableJson({
+      bundleDigest: input.commandPayloadDigest,
+      members: [...members].sort((a, b) => a.memberId.localeCompare(b.memberId)),
+    }),
+  );
 }
 
 function sha(value: string): string {

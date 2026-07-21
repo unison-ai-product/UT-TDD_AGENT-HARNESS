@@ -8,6 +8,9 @@ export interface AuthoringCommandGroupMember {
   readonly memberId: string;
   readonly artifactPath: string;
   readonly contentDigest: string;
+  readonly expectedPreimage:
+    | { readonly kind: "absent" }
+    | { readonly kind: "sha256"; readonly digest: `sha256:${string}` };
 }
 
 export interface AuthoringCommandGroupInput {
@@ -22,6 +25,8 @@ export interface AuthoringArtifactPublisher {
   publish(input: AuthoringCommandGroupMember & { readonly groupId: string }): {
     readonly receiptDigest: string;
   };
+  /** member_publishedがdurableになった後だけ一時custodyを解放する。 */
+  acknowledge(input: AuthoringCommandGroupMember & { readonly groupId: string }): void;
 }
 
 export type AuthoringCommandGroupResult =
@@ -47,18 +52,26 @@ export class AuthoringCommandGroupJournal {
     if (!normalized) return { ok: false, ruleId: "authoring-command-group-input-invalid" };
     const admitted = this.admit(normalized);
     if (!admitted.ok) return admitted;
+    if (admitted.rolledBack) return { ok: false, ruleId: "authoring-command-group-rolled-back" };
     if (admitted.committed)
       return { ok: true, replayed: true, publishedMemberIds: admitted.published };
 
     const published = new Set(admitted.published);
+    const started = new Set(admitted.started);
     try {
       for (const member of normalized.members) {
-        if (published.has(member.memberId)) continue;
+        if (published.has(member.memberId)) {
+          publisher.acknowledge({ ...member, groupId: normalized.groupId });
+          continue;
+        }
+        if (!started.has(member.memberId))
+          this.appendPhase(normalized, "member_started", member.memberId);
         const receipt = publisher.publish({ ...member, groupId: normalized.groupId });
         if (!validDigest(receipt.receiptDigest))
           throw new Error("publisher-receipt-digest-invalid");
         this.appendPhase(normalized, "member_published", member.memberId, receipt.receiptDigest);
         published.add(member.memberId);
+        publisher.acknowledge({ ...member, groupId: normalized.groupId });
       }
       this.appendPhase(normalized, "committed");
       return { ok: true, replayed: admitted.replayed, publishedMemberIds: [...published] };
@@ -68,43 +81,66 @@ export class AuthoringCommandGroupJournal {
     }
   }
 
+  /**
+   * 呼出元が保持する `BEGIN IMMEDIATE` の内側でgroup intentを確定する。
+   * revision write-setとpublish discovery recordの間にcrash windowを作らないための合成境界。
+   */
+  prepareWithinTransaction(input: AuthoringCommandGroupInput): AuthoringCommandGroupResult {
+    const normalized = normalize(input);
+    if (!normalized) return { ok: false, ruleId: "authoring-command-group-input-invalid" };
+    const admitted = this.admitWithinTransaction(normalized);
+    if (!admitted.ok) return admitted;
+    if (admitted.rolledBack) return { ok: false, ruleId: "authoring-command-group-rolled-back" };
+    return {
+      ok: true,
+      replayed: admitted.replayed,
+      publishedMemberIds: admitted.published,
+    };
+  }
+
   private admit(input: NormalizedGroup): Admission {
-    return new ImmediateLedgerTransaction(this.db).run<Admission>(() => {
-      const header = this.db
-        .prepare("SELECT * FROM authoring_command_group_headers WHERE group_id = ?")
-        .get(input.groupId);
-      if (!header) {
-        insertHeaderAndMembers(this.db, input);
-        insertPhase(this.db, input, "prepared", 1);
-        return {
-          commit: true,
-          value: { ok: true, replayed: false, committed: false, published: [] },
-        };
-      }
-      if (!headerMatches(header, input) || !membersMatch(this.db, input))
-        return {
-          commit: false,
-          value: { ok: false, ruleId: "authoring-command-group-replay-binding-invalid" },
-        };
-      const events = phaseEvents(this.db, input.groupId);
-      if (!eventsValid(events, input))
-        return {
-          commit: false,
-          value: { ok: false, ruleId: "authoring-command-group-journal-invalid" },
-        };
-      const published = events
-        .filter((event) => event.event_kind === "member_published")
-        .map((event) => String(event.member_id));
+    return new ImmediateLedgerTransaction(this.db).run<Admission>(() => ({
+      commit: true,
+      value: this.admitWithinTransaction(input),
+    }));
+  }
+
+  private admitWithinTransaction(input: NormalizedGroup): Admission {
+    const header = this.db
+      .prepare("SELECT * FROM authoring_command_group_headers WHERE group_id = ?")
+      .get(input.groupId);
+    if (!header) {
+      insertHeaderAndMembers(this.db, input);
+      insertPhase(this.db, input, "prepared", 1);
       return {
-        commit: true,
-        value: {
-          ok: true,
-          replayed: true,
-          committed: events.at(-1)?.event_kind === "committed",
-          published,
-        },
+        ok: true,
+        replayed: false,
+        committed: false,
+        rolledBack: false,
+        published: [],
+        started: [],
       };
-    });
+    }
+    if (!headerMatches(header, input) || !membersMatch(this.db, input))
+      return { ok: false, ruleId: "authoring-command-group-replay-binding-invalid" };
+    const events = phaseEvents(this.db, input.groupId);
+    if (!eventsValid(events, input))
+      return { ok: false, ruleId: "authoring-command-group-journal-invalid" };
+    const published = events
+      .filter((event) => event.event_kind === "member_published")
+      .map((event) => String(event.member_id));
+    const started = events
+      .filter((event) => event.event_kind === "member_started")
+      .map((event) => String(event.member_id))
+      .filter((memberId) => !published.includes(memberId));
+    return {
+      ok: true,
+      replayed: true,
+      committed: events.at(-1)?.event_kind === "committed",
+      rolledBack: events.at(-1)?.event_kind === "rolled_back",
+      published,
+      started,
+    };
   }
 
   private appendPhase(
@@ -125,6 +161,7 @@ export class AuthoringCommandGroupJournal {
 
 type PhaseKind =
   | "prepared"
+  | "member_started"
   | "member_published"
   | "committed"
   | "recovery_required"
@@ -139,7 +176,9 @@ type Admission =
       readonly ok: true;
       readonly replayed: boolean;
       readonly committed: boolean;
+      readonly rolledBack: boolean;
       readonly published: readonly string[];
+      readonly started: readonly string[];
     };
 
 function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefined {
@@ -156,6 +195,7 @@ function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefin
         !member.memberId ||
         !member.artifactPath ||
         !validDigest(member.contentDigest) ||
+        !validPreimage(member.expectedPreimage) ||
         isSecretLike(member.artifactPath),
     )
   )
@@ -182,8 +222,9 @@ function insertHeaderAndMembers(db: HarnessDb, input: NormalizedGroup): void {
       ordinal: index + 1,
       artifact_path: member.artifactPath,
       content_digest: member.contentDigest,
+      expected_preimage_json: stableJson(member.expectedPreimage),
     };
-    db.prepare("INSERT INTO authoring_command_group_members VALUES (?, ?, ?, ?, ?, ?)").run(
+    db.prepare("INSERT INTO authoring_command_group_members VALUES (?, ?, ?, ?, ?, ?, ?)").run(
       ...Object.values(row),
       ledgerRowDigest(row, "member_digest"),
     );
@@ -243,6 +284,7 @@ function membersMatch(db: HarnessDb, input: NormalizedGroup): boolean {
         row.member_id === expected?.memberId &&
         row.artifact_path === expected.artifactPath &&
         row.content_digest === expected.contentDigest &&
+        row.expected_preimage_json === stableJson(expected.expectedPreimage) &&
         Number(row.ordinal) === index + 1 &&
         row.member_digest === ledgerRowDigest(row, "member_digest")
       );
@@ -262,6 +304,7 @@ function eventsValid(events: readonly Record<string, unknown>[], input: Normaliz
   if (events.length === 0 || events[0]?.event_kind !== "prepared") return false;
   let previous: string | null = null;
   const published = new Set<string>();
+  const started = new Set<string>();
   let terminal = false;
   for (const [index, event] of events.entries()) {
     const kind = String(event.event_kind);
@@ -275,15 +318,27 @@ function eventsValid(events: readonly Record<string, unknown>[], input: Normaliz
     )
       return false;
     if (kind === "prepared" && index !== 0) return false;
-    if (kind === "member_published") {
+    if (kind === "member_started") {
       if (
         !memberId ||
+        published.has(memberId) ||
+        started.has(memberId) ||
+        event.publish_receipt_digest !== null ||
+        !input.members.some((m) => m.memberId === memberId)
+      )
+        return false;
+      started.add(memberId);
+    } else if (kind === "member_published") {
+      if (
+        !memberId ||
+        !started.has(memberId) ||
         published.has(memberId) ||
         !input.members.some((m) => m.memberId === memberId)
       )
         return false;
       if (!validDigest(String(event.publish_receipt_digest))) return false;
       published.add(memberId);
+      started.delete(memberId);
     } else if (kind === "committed") {
       if (
         published.size !== input.members.length ||
@@ -292,7 +347,12 @@ function eventsValid(events: readonly Record<string, unknown>[], input: Normaliz
       )
         return false;
       terminal = true;
-    } else if (kind === "rolled_back") terminal = true;
+    } else if (kind === "recovery_required") {
+      if (memberId || event.publish_receipt_digest !== null || !event.failure_reason) return false;
+    } else if (kind === "rolled_back") {
+      if (memberId || event.publish_receipt_digest !== null) return false;
+      terminal = true;
+    } else if (kind !== "prepared") return false;
     previous = String(event.event_digest);
   }
   return true;
@@ -305,6 +365,25 @@ function safeFailure(error: unknown): string {
 
 function validDigest(value: string): boolean {
   return /^[a-f0-9]{64}$/.test(value);
+}
+
+function validPreimage(value: AuthoringCommandGroupMember["expectedPreimage"]): boolean {
+  return (
+    value.kind === "absent" ||
+    (value.kind === "sha256" && /^sha256:[a-f0-9]{64}$/.test(value.digest))
+  );
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function sha(value: string): string {

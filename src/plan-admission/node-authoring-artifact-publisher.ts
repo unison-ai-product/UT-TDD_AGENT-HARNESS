@@ -54,7 +54,8 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
     if (
       !artifact ||
       artifact.path !== input.artifactPath ||
-      sha(artifact.content) !== input.contentDigest
+      sha(artifact.content) !== input.contentDigest ||
+      stableJson(artifact.expectedPreimage) !== stableJson(input.expectedPreimage)
     ) {
       throw new Error("authoring artifact binding invalid");
     }
@@ -62,8 +63,6 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
     const tokenId = `authoring-${sha(key).slice(0, 32)}`;
     const pending = this.pending.get(key);
     if (pending) {
-      pending.atomic.finalize(pending.token);
-      this.pending.delete(key);
       return { receiptDigest: receipt(input) };
     }
     const atomic = new NodeAtomicDraftPublisher({
@@ -72,7 +71,7 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       createId: () => tokenId,
     });
     if (targetHasDigest(this.rootDir, artifact.path, input.contentDigest)) {
-      atomic.resumeSingleArtifactCleanup({
+      atomic.verifySingleArtifactCustody({
         tokenId,
         path: artifact.path,
         preimage: artifact.expectedPreimage,
@@ -91,8 +90,6 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
     try {
       atomic.publish(token);
       this.pending.set(key, { atomic, token });
-      atomic.finalize(token);
-      this.pending.delete(key);
       return { receiptDigest: receipt(input) };
     } catch (error) {
       if (!this.pending.has(key)) {
@@ -108,6 +105,32 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       }
       throw error;
     }
+  }
+
+  acknowledge(input: AuthoringCommandGroupMember & { readonly groupId: string }): void {
+    const artifact = this.artifacts.get(input.memberId);
+    if (
+      !artifact ||
+      artifact.path !== input.artifactPath ||
+      sha(artifact.content) !== input.contentDigest ||
+      stableJson(artifact.expectedPreimage) !== stableJson(input.expectedPreimage)
+    )
+      throw new Error("authoring artifact binding invalid");
+    const key = `${input.groupId}\0${input.memberId}`;
+    const tokenId = `authoring-${sha(key).slice(0, 32)}`;
+    const pending = this.pending.get(key);
+    if (pending) {
+      pending.atomic.finalize(pending.token);
+      this.pending.delete(key);
+      return;
+    }
+    const atomic = new NodeAtomicDraftPublisher({ rootDir: this.rootDir, createId: () => tokenId });
+    atomic.resumeSingleArtifactCleanup({
+      tokenId,
+      path: artifact.path,
+      preimage: artifact.expectedPreimage,
+      postimage: `sha256:${input.contentDigest}`,
+    });
   }
 }
 
@@ -125,4 +148,16 @@ function receipt(input: AuthoringCommandGroupMember & { readonly groupId: string
 
 function sha(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }

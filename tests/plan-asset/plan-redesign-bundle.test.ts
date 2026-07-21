@@ -2,11 +2,14 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { analyzePlanSupersession, parseSupersedePlan } from "../../src/lint/plan-supersession.js";
 import { NodeAuthoringArtifactPublisher } from "../../src/plan-admission/node-authoring-artifact-publisher.js";
+import { evaluatePlanAdmission } from "../../src/plan-admission/policy.js";
 import {
   PlanRedesignBundleCoordinator,
   type RedesignBundleInput,
   redesignBundlePayloadDigest,
+  redesignPublicationPayloadDigest,
 } from "../../src/plan-asset/ledger/plan-redesign-bundle.js";
 import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
@@ -21,13 +24,9 @@ afterEach(() => {
 describe("Redesign bundle coordinator", () => {
   it("U-PA-REDESIGN-001: replacementとorigin correctionを一つのtransactionで確定する", () => {
     const { db, coordinator } = fixture();
-    const published: string[] = [];
-    const result = coordinator.transact(bundle(), (prepared) => {
-      published.push(prepared.replacement.assetId, prepared.origin.assetId);
-    });
+    const result = coordinator.transact(bundle());
 
     expect(result).toMatchObject({ ok: true, replayed: false });
-    expect(published).toEqual(["plan:replacement", "plan:origin"]);
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
     expect(Number(db.prepare("SELECT COUNT(*) n FROM append_command_receipts").get()?.n)).toBe(2);
   });
@@ -35,19 +34,46 @@ describe("Redesign bundle coordinator", () => {
   it("U-PA-REDESIGN-002: 片肺publish faultは両revisionをrollbackする", () => {
     const { db, coordinator } = fixture();
 
-    expect(() =>
-      coordinator.transact(bundle(), () => {
-        throw new Error("second-artifact-publish-failed");
-      }),
-    ).toThrow("second-artifact-publish-failed");
+    expect(coordinator.transact(bundle({ origin: { baseRevision: 0 } }))).toEqual({
+      ok: false,
+      ruleId: "plan-revision-input-invalid",
+    });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
     expect(Number(db.prepare("SELECT COUNT(*) n FROM append_command_receipts").get()?.n)).toBe(0);
   });
 
+  it("U-PA-REDESIGN-002B: group intent不整合はrevisionとpreparedを同じBEGINでrollbackする", () => {
+    const { db, coordinator } = fixture();
+    const input = bundle();
+    const invalidGroup = {
+      groupId: input.commandId,
+      commandPayloadDigest: sha("wrong"),
+      occurredAt: input.origin.occurredAt,
+      members: [
+        {
+          memberId: "origin",
+          artifactPath: input.origin.sourcePath,
+          contentDigest: input.origin.contentDigest,
+          expectedPreimage: { kind: "absent" as const },
+        },
+      ],
+    };
+    expect(
+      coordinator.publishDurable(input, invalidGroup, {
+        publish: () => ({ receiptDigest: sha("unused") }),
+        acknowledge() {},
+      }),
+    ).toEqual({ ok: false, ruleId: "plan-redesign-publication-binding-invalid" });
+    expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
+    expect(
+      Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_group_headers").get()?.n),
+    ).toBe(0);
+  });
+
   it("U-PA-REDESIGN-003: replayは両bindingが揃う場合だけ成功し、片肺改ざんを拒否する", () => {
     const { db, coordinator } = fixture();
-    expect(coordinator.transact(bundle(), () => undefined)).toMatchObject({ ok: true });
-    expect(coordinator.transact(bundle(), () => undefined)).toMatchObject({
+    expect(coordinator.transact(bundle())).toMatchObject({ ok: true });
+    expect(coordinator.transact(bundle())).toMatchObject({
       ok: true,
       replayed: true,
     });
@@ -60,7 +86,7 @@ describe("Redesign bundle coordinator", () => {
       "tampered",
       "redesign:98:origin",
     );
-    expect(coordinator.transact(bundle(), () => undefined)).toEqual({
+    expect(coordinator.transact(bundle())).toEqual({
       ok: false,
       ruleId: "plan-revision-receipt-binding-invalid",
     });
@@ -70,12 +96,50 @@ describe("Redesign bundle coordinator", () => {
     ["stale origin", { origin: { baseRevision: 0 } }, "plan-revision-input-invalid"],
     [
       "supersedes欠落",
-      { replacementPayload: '{"status":"draft"}' },
+      {
+        replacementPayload: stable({
+          plan_id: "PLAN-L6-88",
+          title: "Snapshot runner performance redesign",
+          kind: "redesign",
+          layer: "L6",
+          drive: "agent",
+          route_signal: "regression_dev",
+          route_mode: "redesign",
+          status: "draft",
+        }),
+        replacementSource: source(
+          {
+            plan_id: "PLAN-L6-88",
+            title: "Snapshot runner performance redesign",
+            kind: "redesign",
+            layer: "L6",
+            drive: "agent",
+            route_signal: "regression_dev",
+            route_mode: "redesign",
+            status: "draft",
+          },
+          "Replacement for PLAN-L4-31.\n",
+        ),
+      },
       "plan-redesign-bundle-supersedes-missing",
     ],
     [
       "back-reference欠落",
-      { originSource: "origin correction only" },
+      {
+        originSource: source(
+          {
+            plan_id: "PLAN-L4-31",
+            title: "Test performance",
+            kind: "design",
+            layer: "L4",
+            drive: "agent",
+            route_signal: "forward",
+            route_mode: "forward",
+            status: "confirmed",
+          },
+          "origin correction only\n",
+        ),
+      },
       "plan-redesign-bundle-origin-back-reference-missing",
     ],
     [
@@ -85,7 +149,7 @@ describe("Redesign bundle coordinator", () => {
     ],
   ])("U-PA-REDESIGN-004: %sをwrite前にfail-closeする", (_name, change, ruleId) => {
     const { db, coordinator } = fixture();
-    expect(coordinator.transact(bundle(change), () => undefined)).toEqual({ ok: false, ruleId });
+    expect(coordinator.transact(bundle(change))).toEqual({ ok: false, ruleId });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
   });
 
@@ -127,14 +191,16 @@ describe("Redesign bundle coordinator", () => {
     ];
     const group = {
       groupId: input.commandId,
-      commandPayloadDigest: input.commandPayloadDigest,
+      commandPayloadDigest: "",
       occurredAt: input.origin.occurredAt,
       members: artifacts.map((artifact) => ({
         memberId: artifact.memberId,
         artifactPath: artifact.path,
         contentDigest: sha(artifact.content),
+        expectedPreimage: artifact.expectedPreimage,
       })),
     };
+    group.commandPayloadDigest = redesignPublicationPayloadDigest(input, group.members);
     const result = new PlanRedesignBundleCoordinator(db).publishDurable(
       input,
       group,
@@ -148,6 +214,41 @@ describe("Redesign bundle coordinator", () => {
       input.replacement.sourceContent,
     );
     expect(readFileSync(join(root, "docs/projections/issue-98.json"), "utf8")).toBe(projection);
+    expect(
+      evaluatePlanAdmission({
+        routeSignal: "design_correction",
+        routeMode: "redesign",
+        kind: "design",
+        layer: "L6",
+        drive: "agent",
+        branch: "work/redesign-test-performance",
+        issue: {
+          provider: "github",
+          issueId: 98,
+          episodeId: "E4-98",
+          projectionDigest: `sha256:${sha(projection)}`,
+        },
+        origin: { planId: "PLAN-L4-31", revision: 1, digest: `sha256:${sha("origin")}` },
+        transitionDirection: "design_to_implementation",
+        implementationDisposition: "discarded",
+        reentry: { targetPlanId: "PLAN-L4-31", targetRevision: 2, phase: "forward_merge" },
+        implementationTarget: { targetPlanId: "PLAN-L6-88", targetRevision: 2 },
+        escapeReason: "snapshot runner architecture requires redesign",
+        supersedes: ["PLAN-L4-31"],
+      }),
+    ).toMatchObject({ ok: true });
+    expect(
+      analyzePlanSupersession([
+        parseSupersedePlan(
+          "PLAN-L4-31-nfr-verification-foundation-architecture.md",
+          input.origin.sourceContent,
+        ),
+        parseSupersedePlan(
+          "PLAN-L6-88-snapshot-runner-performance-redesign.md",
+          input.replacement.sourceContent,
+        ),
+      ]),
+    ).toMatchObject({ ok: true });
     db.close();
     opened.splice(opened.indexOf(db), 1);
 
@@ -218,11 +319,34 @@ function seed(db: ReturnType<typeof openHarnessDb>, assetId: string, planId: str
 }
 
 function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
-  const replacementPayload = String(
-    change.replacementPayload ?? '{"status":"draft","supersedes":["PLAN-L4-31"]}',
+  const replacementFrontmatter = {
+    plan_id: "PLAN-L6-88",
+    title: "Snapshot runner performance redesign",
+    kind: "redesign",
+    layer: "L6",
+    drive: "agent",
+    route_signal: "regression_dev",
+    route_mode: "redesign",
+    status: "draft",
+    supersedes: ["PLAN-L4-31"],
+  };
+  const replacementPayload = String(change.replacementPayload ?? stable(replacementFrontmatter));
+  const replacementSource = String(
+    change.replacementSource ?? source(replacementFrontmatter, "Replacement for PLAN-L4-31.\n"),
   );
-  const replacementSource = "PLAN-L6-88 replacement supersedes PLAN-L4-31";
-  const originSource = String(change.originSource ?? "訂正: PLAN-L6-88 が後継として置換する。");
+  const originFrontmatter = {
+    plan_id: "PLAN-L4-31",
+    title: "Test performance",
+    kind: "design",
+    layer: "L4",
+    drive: "agent",
+    route_signal: "forward",
+    route_mode: "forward",
+    status: "confirmed",
+  };
+  const originSource = String(
+    change.originSource ?? source(originFrontmatter, "訂正: PLAN-L6-88 が後継として置換する。\n"),
+  );
   const common = {
     baseRevision: 1,
     basePayloadDigest: sha('{"status":"draft"}'),
@@ -243,7 +367,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
       canonicalPayloadJson: replacementPayload,
       contentDigest: sha(replacementSource),
       sourceContent: replacementSource,
-      sourcePath: "docs/plans/PLAN-L6-88.md",
+      sourcePath: "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md",
       certificateId: "certificate:replacement",
     },
     origin: {
@@ -252,17 +376,53 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
       commandId: "redesign:98:origin",
       assetId: "plan:origin",
       planId: "PLAN-L4-31",
-      canonicalPayloadJson: '{"status":"draft"}',
+      canonicalPayloadJson: stable(originFrontmatter),
       contentDigest: sha(originSource),
       sourceContent: originSource,
-      sourcePath: "docs/plans/PLAN-L4-31.md",
+      sourcePath: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
       certificateId: "certificate:origin",
+    },
+    reentry: {
+      targetPlanId: "PLAN-L4-31",
+      targetRevision: 2,
+      phase: "forward_merge" as const,
+    },
+    projection: {
+      path: "docs/projections/issue-98.json",
+      contentDigest: sha(
+        JSON.stringify({
+          origin: "PLAN-L4-31@2",
+          replacement: "PLAN-L6-88@2",
+          drive_model: "redesign",
+        }),
+      ),
     },
   };
   return {
     ...input,
     commandPayloadDigest: String(change.commandDigest ?? redesignBundlePayloadDigest(input)),
   };
+}
+
+function source(frontmatter: Record<string, unknown>, body: string): string {
+  const lines = Object.entries(frontmatter).flatMap(([key, value]) =>
+    Array.isArray(value)
+      ? [`${key}:`, ...value.map((item) => `  - ${item}`)]
+      : [`${key}: ${value}`],
+  );
+  return `---\n${lines.join("\n")}\n---\n${body}`;
+}
+
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stable(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function openE2eDb(path: string): HarnessDb {

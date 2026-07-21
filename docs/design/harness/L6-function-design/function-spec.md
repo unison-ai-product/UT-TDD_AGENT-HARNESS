@@ -1163,10 +1163,10 @@ subject/revisionを勝手に変更しない。最低10,000列または全state×
 | `SourceHasher.hash` | `(frames: Array<{ label; bytes }>, algorithm='sha256') -> Digest` | `labelLength+label+byteLength+bytes`でframe化し、文字列連結collisionを禁止。改行/encodingを勝手に正規化しない |
 | `ReceiptStore.append` | `(receipt, expectedPreviousDigest?) -> Result<AppendReceipt, ReceiptConflict>` | append-only、receipt ID/digest冪等。既存ID異payload、previous digest不一致をconflict |
 | `ReceiptStore.load` | `(ruleId, contractRevision) -> Receipt[]` | rule/revision/verifiedAt/receiptIdの決定論順。DB空集合をauthoring receiptの代替にしない |
-| `AuthoringCommandGroupJournal.execute` | `(input: { groupId; commandPayloadDigest; occurredAt; members[] }, publisher) -> AuthoringCommandGroupResult` | memberをID昇順でcanonical化し、header/member/`prepared`を先に原子確定する。各publish成功を`member_published`でappendし、全member receipt後だけ`committed`。同一groupの異payload/member集合は`authoring-command-group-replay-binding-invalid` |
+| `AuthoringCommandGroupJournal.execute` | `(input: { groupId; commandPayloadDigest; occurredAt; members[] }, publisher) -> AuthoringCommandGroupResult` | memberをID昇順でcanonical化し、header/member/`prepared`をrevisionと同じtransactionで原子確定する。`member_started`→publish→`member_published`→cleanup ackの順とし、全member receipt後だけ`committed`。同一groupの異payload/member/preimage集合は`authoring-command-group-replay-binding-invalid` |
 | `AuthoringArtifactPublisher.publish` | `({ groupId; memberId; artifactPath; contentDigest }) -> { receiptDigest }` | `groupId+memberId`をidempotency keyとして扱う。再送で二重副作用を作らず、receiptはSHA-256。journal/DBを正本として本文を創作しない |
-| `PlanRedesignBundleCoordinator.publishDurable` | `(bundle, group, publisher) -> RedesignBundlePublicationResult` | bundle command ID/digest/timeとgroupを一致させ、replacement/origin sourceに加えて1件以上のprojection memberを必須化。revision確定後にdurable groupを実行し、外部faultは`recovery_required`から再開 |
-| `NodeAuthoringArtifactPublisher.publish` | `(group member) -> { receiptDigest }` | member ID/path/content digest/preimageを事前供給された本文へ再束縛し、group/memberから導出する決定論tokenで`NodeAtomicDraftPublisher`の1-artifact stage/publish/finalizeを実行。target digest一致時は残存temporary/rollback/identity pinをCAS検証してcleanup後、決定論receiptを返す。publish faultはrestore、finalize faultは保持tokenから再開 |
+| `PlanRedesignBundleCoordinator.publishDurable` | `(bundle, group, publisher) -> RedesignBundlePublicationResult` | YAML sourceとcanonical payload、redesign/supersedes/back-reference/reentry/projection、全N member manifestを厳密束縛する。revision 2件とgroup intentを単一transactionで確定し、外部faultは`recovery_required`から再開 |
+| `NodeAuthoringArtifactPublisher.publish/acknowledge` | `(group member) -> { receiptDigest } / void` | member ID/path/content digest/preimageをdurable manifestへ再束縛し、決定論tokenでstage/publishする。target digest一致だけの再送は拒否し、published identity pinとの同一inode/content custodyを要求する。journalが`member_published`を確定した後だけacknowledgeでcleanupし、finalize faultは同じcustodyから再開 |
 
 reservation event空集合は`unreserved`、最初の`reserved`はsequence 1とする。許可遷移は
 `unreserved→active(reserved)`、`active→released(released)`、`active→expired(expired)`だけで、released/expiredはterminal。
@@ -1175,7 +1175,7 @@ releaseとexpireの競合は`BEGIN IMMEDIATE`で先にreceiptを確定したcomm
 `plan-id-reservation-command-conflict`。reconstructはsequence、event/command identity、token hash、expiry条件を再検証し、
 event全削除→canonical ledger再読込後のstate/event/command payload digest集合差0を要求する。
 
-command groupの許可phaseは`prepared`をsequence 1とし、`member_published`は宣言済memberごとに最大1件、
+command groupの許可phaseは`prepared`をsequence 1とし、各memberは`member_started`を先行させて`member_published`へ一度だけ進み、
 `committed`は全memberがpublishedの場合だけterminalとする。`recovery_required`は再開可能であり、完了済memberを再送せず、
 未完memberだけを同じidempotency keyでpublisherへ渡す。header/member/phase eventのdigest、previous chain、payload binding、
 member set digestのいずれかが不一致ならpublish前にfail-closeする。

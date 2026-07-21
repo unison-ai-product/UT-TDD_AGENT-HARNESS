@@ -444,6 +444,34 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
   }
 
   /** command-groupの1 memberをprocess再起動後にfinalizeする限定recovery surface。 */
+  verifySingleArtifactCustody(input: {
+    readonly tokenId: string;
+    readonly path: string;
+    readonly preimage: ArtifactPreimage;
+    readonly postimage: `sha256:${string}`;
+  }): void {
+    if (!/^[A-Za-z0-9_-]+$/.test(input.tokenId)) throw new Error("invalid authoring token id");
+    validatePreimage(input.preimage, input.path);
+    validateDigest(input.postimage, "authoring postimage");
+    const targetPath = this.resolveTarget(input.path);
+    const pin = this.identityPinPath(input.tokenId, 0, "published");
+    assertRegularDigest({
+      path: targetPath,
+      digest: input.postimage,
+      logicalPath: input.path,
+      role: "postimage",
+    });
+    assertRegularDigest({
+      path: pin,
+      digest: input.postimage,
+      logicalPath: input.path,
+      role: "published identity pin",
+    });
+    if (!sameFile(targetPath, pin))
+      throw new Error(`artifact published custody mismatch: ${input.path}`);
+  }
+
+  /** command-groupの1 memberをprocess再起動後にfinalizeする限定recovery surface。 */
   resumeSingleArtifactCleanup(input: {
     readonly tokenId: string;
     readonly path: string;

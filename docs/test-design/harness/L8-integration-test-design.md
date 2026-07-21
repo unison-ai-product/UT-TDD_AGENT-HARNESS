@@ -311,4 +311,4 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 
 | Test ID | 入力 | 実行 | Oracle |
 |---|---|---|---|
-| `U-PA-REDESIGN-005` | Issue #98の`PLAN-L4-31@2`、`PLAN-L6-88`、projection、実SQLite file、実filesystem root | `publishDurable`実行後にDBをclose/reopenし同commandを再送 | 2 revisionと3 filesystem成果物が同じcommand digestへ束縛され、phase terminalは`committed`。再起動後はrevision/groupともreplayedで外部書込みを再送しない |
+| `U-PA-REDESIGN-005` | Issue #98の実path `PLAN-L4-31@2`、`PLAN-L6-88`、projection、実SQLite file、隔離git/filesystem root | `publishDurable`後にDB close/reopenし、admission policyとplan-supersessionを実sourceで実行 | 2 revisionと全filesystem成果物/preimageが同じcommand digestへ束縛され、両gate Green、phase terminal=`committed`。再起動後はrevision/groupともreplayedで外部書込みを再送しない |

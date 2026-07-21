@@ -252,7 +252,10 @@ Lごとの設計・検証ペアを一括差し替え単位として保持する�
 `PlanRedesignBundleCoordinator.publishDurable`は、replacement revision、origin訂正revision、投影を同じ
 `commandPayloadDigest`へ束縛する。revision write-setをSQLiteへ確定した後、command group Sagaで実filesystemへ公開する。
 途中faultでrevisionだけが先行しても未完了を成功へ読み替えず、`recovery_required`から同一member集合を再送して収束させる。
-実filesystem adapterは既存targetのcontent digestが一致する場合だけ「journal append直前の停止」と判定し、同じreceiptを返す。
+revision write-setと全member（`expectedPreimage`を含む）の`prepared` intentは同じ`BEGIN IMMEDIATE`で確定する。
+実filesystem adapterは既存targetのcontent digestだけでは成功と判定しない。`member_started`と、同じ決定論tokenから
+生成したidentity pinがtargetと同一inode/contentであることをcustody証拠として要求する。`member_published`をdurable appendした
+後だけcleanupをackし、target単独の偶然一致や外部差替えをreplayへ昇格させない。
 
 ## §9 carry → L5 詳細設計
 

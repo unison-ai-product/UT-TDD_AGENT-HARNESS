@@ -557,6 +557,7 @@ const v7Tables: readonly TableDef[] = [
       requiredCol("ordinal", "INTEGER"),
       requiredCol("artifact_path"),
       requiredCol("content_digest"),
+      requiredCol("expected_preimage_json"),
       requiredCol("member_digest"),
     ],
     primaryKey: ["group_id", "member_id"],
@@ -592,6 +593,7 @@ const v7Tables: readonly TableDef[] = [
     checks: [
       enumCheck("event_kind", [
         "prepared",
+        "member_started",
         "member_published",
         "committed",
         "recovery_required",
@@ -1217,6 +1219,7 @@ function authoringCommandGroupsValid(db: HarnessDb): boolean {
       members.some(
         (member, index) =>
           Number(member.ordinal) !== index + 1 ||
+          !validExpectedPreimageJson(member.expected_preimage_json) ||
           member.member_digest !== ledgerRowDigest(member, "member_digest"),
       )
     )
@@ -1225,6 +1228,7 @@ function authoringCommandGroupsValid(db: HarnessDb): boolean {
       memberId: member.member_id,
       artifactPath: member.artifact_path,
       contentDigest: member.content_digest,
+      expectedPreimage: JSON.parse(String(member.expected_preimage_json)),
     }));
     if (
       header.member_set_digest !==
@@ -1239,6 +1243,7 @@ function authoringCommandGroupsValid(db: HarnessDb): boolean {
     if (events.length === 0 || events[0]?.event_kind !== "prepared") return false;
     let previous: string | null = null;
     const published = new Set<string>();
+    const started = new Set<string>();
     let terminal = false;
     for (const [index, event] of events.entries()) {
       const kind = String(event.event_kind);
@@ -1252,23 +1257,58 @@ function authoringCommandGroupsValid(db: HarnessDb): boolean {
       )
         return false;
       if (kind === "prepared" && index !== 0) return false;
-      if (kind === "member_published") {
+      if (kind === "member_started") {
         if (
           !memberId ||
+          started.has(memberId) ||
+          published.has(memberId) ||
+          event.publish_receipt_digest !== null ||
+          !members.some((member) => member.member_id === memberId)
+        )
+          return false;
+        started.add(memberId);
+      } else if (kind === "member_published") {
+        if (
+          !memberId ||
+          !started.has(memberId) ||
           published.has(memberId) ||
           !members.some((member) => member.member_id === memberId) ||
           !/^[a-f0-9]{64}$/.test(String(event.publish_receipt_digest))
         )
           return false;
         published.add(memberId);
+        started.delete(memberId);
       } else if (kind === "committed") {
-        if (published.size !== members.length) return false;
+        if (published.size !== members.length || memberId || event.publish_receipt_digest !== null)
+          return false;
         terminal = true;
-      } else if (kind === "rolled_back") terminal = true;
+      } else if (kind === "recovery_required") {
+        if (memberId || event.publish_receipt_digest !== null || !event.failure_reason)
+          return false;
+      } else if (kind === "rolled_back") {
+        if (memberId || event.publish_receipt_digest !== null) return false;
+        terminal = true;
+      } else if (kind !== "prepared") return false;
       previous = String(event.event_digest);
     }
   }
   return true;
+}
+
+function validExpectedPreimageJson(value: unknown): boolean {
+  try {
+    const parsed = JSON.parse(String(value)) as Record<string, unknown>;
+    const keys = Object.keys(parsed).sort();
+    return (
+      (parsed.kind === "absent" && keys.length === 1 && keys[0] === "kind") ||
+      (parsed.kind === "sha256" &&
+        keys.join(",") === "digest,kind" &&
+        typeof parsed.digest === "string" &&
+        /^sha256:[a-f0-9]{64}$/.test(parsed.digest))
+    );
+  } catch {
+    return false;
+  }
 }
 
 function artifactOperationEventsValid(db: HarnessDb): boolean {

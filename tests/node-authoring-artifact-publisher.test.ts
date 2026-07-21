@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.js";
@@ -50,8 +50,11 @@ describe("Node authoring artifact publisher", () => {
           .map((row) => row.event_kind),
       ).toEqual([
         "prepared",
+        "member_started",
         "member_published",
+        "member_started",
         "member_published",
+        "member_started",
         "recovery_required",
         "member_published",
         "committed",
@@ -78,15 +81,19 @@ describe("Node authoring artifact publisher", () => {
     });
     const member = group([artifact]).members[0];
     if (!member) throw new Error("fixture member missing");
-    expect(() => publisher.publish({ ...member, groupId: "redesign:98" })).toThrow(
+    const published = publisher.publish({ ...member, groupId: "redesign:98" });
+    expect(() => publisher.acknowledge({ ...member, groupId: "redesign:98" })).toThrow(
       "fault-before-finalize",
     );
-    const recovered = publisher.publish({ ...member, groupId: "redesign:98" });
+    publisher.acknowledge({ ...member, groupId: "redesign:98" });
     const replayed = new NodeAuthoringArtifactPublisher({
       rootDir: root,
       artifacts: [artifact],
-    }).publish({ ...member, groupId: "redesign:98" });
-    expect(recovered).toEqual(replayed);
+    });
+    replayed.acknowledge({ ...member, groupId: "redesign:98" });
+    expect(published.receiptDigest).toBe(
+      sha(`redesign:98\0${member.memberId}\0${member.artifactPath}\0${member.contentDigest}`),
+    );
   });
 
   it("U-PA-GROUP-007: target link直後のprocess停止を決定論tokenからcleanupしてreceiptを再構成する", () => {
@@ -118,6 +125,21 @@ describe("Node authoring artifact publisher", () => {
       ),
     });
     expect(readdirSync(root).filter((name) => name.startsWith(".ut-tdd-draft-"))).toEqual([]);
+  });
+
+  it("U-PA-GROUP-008: target postimage単独一致をcustodyのない成功へ昇格しない", () => {
+    const root = fixtureRoot();
+    const [artifact] = artifactsFor();
+    if (!artifact) throw new Error("fixture missing");
+    writeFileSync(join(root, artifact.path), artifact.content, "utf8");
+    const member = group([artifact]).members[0];
+    if (!member) throw new Error("fixture member missing");
+    expect(() =>
+      new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts: [artifact] }).publish({
+        ...member,
+        groupId: "redesign:98",
+      }),
+    ).toThrow("published identity pin CAS mismatch");
   });
 });
 
@@ -161,6 +183,7 @@ function group(artifacts: readonly NodeAuthoringArtifact[]) {
       memberId: artifact.memberId,
       artifactPath: artifact.path,
       contentDigest: sha(artifact.content),
+      expectedPreimage: artifact.expectedPreimage,
     })),
   };
 }

@@ -860,6 +860,7 @@ function seedAuthoringCommandGroup(db: ReturnType<typeof openHarnessDb>): void {
       memberId: "member:1",
       artifactPath: "docs/plans/PLAN-L4-31-test-performance-redesign.md",
       contentDigest: digest,
+      expectedPreimage: { kind: "absent" },
     },
   ];
   const header = {
@@ -879,8 +880,9 @@ function seedAuthoringCommandGroup(db: ReturnType<typeof openHarnessDb>): void {
     ordinal: 1,
     artifact_path: memberSet[0].artifactPath,
     content_digest: memberSet[0].contentDigest,
+    expected_preimage_json: JSON.stringify(memberSet[0].expectedPreimage),
   };
-  db.prepare("INSERT INTO authoring_command_group_members VALUES (?, ?, ?, ?, ?, ?)").run(
+  db.prepare("INSERT INTO authoring_command_group_members VALUES (?, ?, ?, ?, ?, ?, ?)").run(
     ...Object.values(member),
     ledgerRowDigest(member, "member_digest"),
   );

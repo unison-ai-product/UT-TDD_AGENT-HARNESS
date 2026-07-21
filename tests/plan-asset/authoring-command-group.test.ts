@@ -45,6 +45,7 @@ describe("authoring command group durable journal", () => {
         }
         return { receiptDigest: sha(`${member.groupId}:${member.memberId}`) };
       },
+      acknowledge() {},
     };
     const journal = new AuthoringCommandGroupJournal(db);
     expect(() => journal.execute(group(), publisher)).toThrow("disk-full");
@@ -54,7 +55,9 @@ describe("authoring command group durable journal", () => {
         .all(),
     ).toEqual([
       { event_kind: "prepared" },
+      { event_kind: "member_started" },
       { event_kind: "member_published" },
+      { event_kind: "member_started" },
       { event_kind: "recovery_required" },
     ]);
     expect(journal.execute(group(), publisher)).toMatchObject({ ok: true, replayed: true });
@@ -74,6 +77,7 @@ describe("authoring command group durable journal", () => {
           }
           return { receiptDigest: sha(member.memberId) };
         },
+        acknowledge() {},
       }),
     ).toThrow("process-crash-boundary");
     db.close();
@@ -83,6 +87,7 @@ describe("authoring command group durable journal", () => {
     expect(
       new AuthoringCommandGroupJournal(db).execute(group(), {
         publish: (member) => ({ receiptDigest: sha(member.memberId) }),
+        acknowledge() {},
       }),
     ).toMatchObject({ ok: true, replayed: true });
     expect(
@@ -123,9 +128,24 @@ function group() {
     commandPayloadDigest: sha("redesign-command"),
     occurredAt: "2026-07-21T04:00:00.000Z",
     members: [
-      { memberId: "test", artifactPath: "docs/test-design/test.md", contentDigest: sha("test") },
-      { memberId: "plan", artifactPath: "docs/plans/plan.md", contentDigest: sha("plan") },
-      { memberId: "design", artifactPath: "docs/design/design.md", contentDigest: sha("design") },
+      {
+        memberId: "test",
+        artifactPath: "docs/test-design/test.md",
+        contentDigest: sha("test"),
+        expectedPreimage: { kind: "absent" },
+      },
+      {
+        memberId: "plan",
+        artifactPath: "docs/plans/plan.md",
+        contentDigest: sha("plan"),
+        expectedPreimage: { kind: "absent" },
+      },
+      {
+        memberId: "design",
+        artifactPath: "docs/design/design.md",
+        contentDigest: sha("design"),
+        expectedPreimage: { kind: "absent" },
+      },
     ],
   } as const;
 }
@@ -136,6 +156,7 @@ function recordingPublisher(calls: string[]): AuthoringArtifactPublisher {
       calls.push(member.memberId);
       return { receiptDigest: sha(`${member.groupId}:${member.memberId}`) };
     },
+    acknowledge() {},
   };
 }
 
