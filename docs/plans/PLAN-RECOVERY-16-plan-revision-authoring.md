@@ -33,6 +33,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/cli/plan-revise.ts
     artifact_type: source_module
+  - artifact_path: src/cli/plan-redesign.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/authoring-recovery-db-evidence.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-authoring-artifact-publisher.ts
@@ -47,6 +49,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-plan-revision-runner.ts
     artifact_type: source_module
+  - artifact_path: src/plan-admission/issue-projection-evidence-resolver.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/plan-authoring-command-runner.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-authoring-command-port.ts
@@ -55,9 +59,15 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-content-binding.ts
     artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-redesign-command-assembler.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/plan-revision-command-assembler.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-revision-ledger-adapter.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/trusted-git-blob-resolver.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/tracked-receipt-renderer.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/authoring-command-group.ts
     artifact_type: source_module
@@ -87,7 +97,11 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/node-plan-authoring-recovery-runner.test.ts
     artifact_type: test_code
+  - artifact_path: tests/node-plan-redesign-runner.test.ts
+    artifact_type: test_code
   - artifact_path: tests/node-plan-revision-runner.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/issue-projection-evidence-resolver.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/authoring-command-group.test.ts
     artifact_type: test_code
@@ -102,6 +116,10 @@ generates:
   - artifact_path: tests/plan-authoring-command-runner.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-content-binding.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-redesign-cli.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-redesign-command-assembler.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-revise-cli.test.ts
     artifact_type: test_code

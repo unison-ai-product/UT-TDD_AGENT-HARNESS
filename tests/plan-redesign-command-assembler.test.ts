@@ -85,10 +85,7 @@ describe("redesign bundle manifest assembler", () => {
     expect(first.origin.admission).toEqual(originAdmission);
     expect(first.replacement.admission).toEqual({
       ...replacementAdmission,
-      issue: {
-        ...replacementAdmission.issue,
-        projectionDigest: `sha256:${hash(fixture().projection.content)}`,
-      },
+      issue: replacementAdmission.issue,
       origin: { planId: "PLAN-L6-1", revision: 1, digest: `sha256:${digest}` },
       reentry: fixture().reentry,
     });
@@ -122,9 +119,7 @@ describe("redesign bundle manifest assembler", () => {
       digest: `sha256:${digest}`,
     });
     expect(manifest.replacement.admission.reentry).toEqual(input.reentry);
-    expect(manifest.replacement.admission.issue?.projectionDigest).toBe(
-      `sha256:${hash(input.projection.content)}`,
-    );
+    expect(manifest.replacement.admission.issue?.projectionDigest).toBe(digest);
   });
 
   it.each([
@@ -138,17 +133,6 @@ describe("redesign bundle manifest assembler", () => {
       "別reentry",
       { reentry: { targetPlanId: "PLAN-L6-1", targetRevision: 3, phase: "forward_merge" } },
     ],
-    [
-      "別projection",
-      {
-        issue: {
-          provider: "github",
-          issueId: 102,
-          episodeId: "E4-102",
-          projectionDigest: `sha256:${"e".repeat(64)}`,
-        },
-      },
-    ],
   ] as const)("policy-validな%s substitutionをrunner境界で拒否する", (_label, substitution) => {
     const manifest = assemblePlanRedesignBundleManifest(fixture());
     expect(() =>
@@ -160,6 +144,15 @@ describe("redesign bundle manifest assembler", () => {
         },
       }),
     ).toThrow("plan-redesign-admission-cross-binding-invalid");
+  });
+
+  it("IssueProjected証跡digestをtracked receipt projection全文digestへ上書きしない", () => {
+    const input = fixture();
+    const manifest = assemblePlanRedesignBundleManifest({
+      ...input,
+      projection: { ...input.projection, content: '{"changed":true}' },
+    });
+    expect(manifest.replacement.admission.issue?.projectionDigest).toBe(digest);
   });
 
   it("runner境界はpolicyを再評価しroute digest/certificateの自己申告偽装を拒否する", () => {

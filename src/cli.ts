@@ -36,6 +36,7 @@ import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { registerPlanAuthoringRecoveryCommands } from "./cli/plan-authoring-recovery";
 import { registerPlanDraftCommand } from "./cli/plan-draft";
+import { registerPlanRedesignCommand } from "./cli/plan-redesign";
 import { registerPlanRevisionCommand } from "./cli/plan-revise";
 import { contextSuggest } from "./context/doc-router";
 import { runDoctor } from "./doctor";
@@ -1221,6 +1222,7 @@ const plan = program.command("plan").description("PLAN 操作");
 registerPlanAssetCommands(plan);
 registerPlanAdmissionCommands(plan);
 registerPlanDraftCommand(plan, { runner: createNodePlanDraftRunner(process.cwd()) });
+registerPlanRedesignCommand(plan);
 registerPlanRevisionCommand(plan, {
   runner: new PlanAuthoringCommandDispatcher(
     createNodePlanRevisionRunner(process.cwd()),

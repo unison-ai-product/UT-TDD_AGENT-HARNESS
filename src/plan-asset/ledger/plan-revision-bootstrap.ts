@@ -115,7 +115,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
 
   private appendAssetAndRevisions(
     input: BootstrapLegacyPlanRevisionInput,
-    value: ValidBootstrap,
+    value: ValidLegacyPlanRevisionBootstrap,
   ): void {
     this.db
       .prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)")
@@ -195,7 +195,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
 
   private appendAdmissionAndReceipt(
     input: BootstrapLegacyPlanRevisionInput,
-    value: ValidBootstrap,
+    value: ValidLegacyPlanRevisionBootstrap,
   ): void {
     const eventId = `admission:${input.certificateId}`;
     const admission = {
@@ -256,7 +256,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
 
   private replay(
     input: BootstrapLegacyPlanRevisionInput,
-    expected: ValidBootstrap,
+    expected: ValidLegacyPlanRevisionBootstrap,
   ): AppendPlanRevisionResult | undefined {
     const receipt = this.db
       .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
@@ -294,7 +294,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
 
   private bootstrapBindingValid(
     input: BootstrapLegacyPlanRevisionInput,
-    expected: ValidBootstrap,
+    expected: ValidLegacyPlanRevisionBootstrap,
   ): boolean {
     const asset = this.db
       .prepare("SELECT * FROM plan_assets WHERE asset_id = ?")
@@ -396,7 +396,7 @@ function matches(row: Record<string, unknown>, expected: Record<string, unknown>
   return Object.entries(expected).every(([key, value]) => row[key] === value);
 }
 
-interface ValidBootstrap {
+export interface ValidLegacyPlanRevisionBootstrap {
   readonly ok: true;
   readonly assetId: string;
   readonly canonicalPayloadDigest: string;
@@ -404,9 +404,10 @@ interface ValidBootstrap {
   readonly certificateDigest: string;
 }
 
-function validateBootstrap(
+/** filesystemやDBへ触れず、legacy bootstrap revisionのreceipt bindingを導出する。 */
+export function deriveLegacyPlanRevisionBootstrap(
   input: BootstrapLegacyPlanRevisionInput,
-): ValidBootstrap | { readonly ok: false; readonly ruleId: string } {
+): ValidLegacyPlanRevisionBootstrap | { readonly ok: false; readonly ruleId: string } {
   if (
     input.identityAlgorithm !== "ut-tdd-plan-legacy-v1" ||
     input.identityInputJson !== JSON.stringify([input.repositoryIdentity, input.planId]) ||
@@ -456,6 +457,12 @@ function validateBootstrap(
     }),
   );
   return { ok: true, assetId, canonicalPayloadDigest, commandPayloadDigest, certificateDigest };
+}
+
+function validateBootstrap(
+  input: BootstrapLegacyPlanRevisionInput,
+): ValidLegacyPlanRevisionBootstrap | { readonly ok: false; readonly ruleId: string } {
+  return deriveLegacyPlanRevisionBootstrap(input);
 }
 
 function validCommonInput(input: BootstrapLegacyPlanRevisionInput): boolean {

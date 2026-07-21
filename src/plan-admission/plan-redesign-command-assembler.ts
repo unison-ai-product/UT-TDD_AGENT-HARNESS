@@ -102,7 +102,6 @@ export function validatePlanRedesignBundleManifest(
           targetRevision: manifest.reentry.target_revision,
           phase: manifest.reentry.phase,
         },
-        projection: manifest.projection,
       }),
     )
   )
@@ -156,14 +155,10 @@ function bindReplacementAdmission(input: {
   readonly origin: Pick<PlanRedesignRevisionSeed, "planId" | "baseRevision" | "basePayloadDigest">;
   readonly replacement: Pick<PlanRedesignRevisionSeed, "admission">;
   readonly reentry: PlanRedesignAssemblyInput["reentry"];
-  readonly projection: Pick<PlanPublicationArtifactManifest, "content">;
 }): PlanAdmissionRequest {
   const admission = input.replacement.admission;
   return {
     ...admission,
-    ...(admission.issue
-      ? { issue: { ...admission.issue, projectionDigest: prefixedSha(input.projection.content) } }
-      : {}),
     origin: {
       planId: input.origin.planId,
       revision: input.origin.baseRevision,
@@ -257,10 +252,6 @@ function normalize(value: string): string {
 
 function prefixed(value: string): `sha256:${string}` {
   return `sha256:${normalize(value)}`;
-}
-
-function prefixedSha(value: string): `sha256:${string}` {
-  return `sha256:${sha(value)}`;
 }
 
 function fail(ruleId: string): never {

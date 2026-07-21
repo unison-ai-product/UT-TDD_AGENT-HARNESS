@@ -1,17 +1,31 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { isAbsolute, relative, resolve } from "node:path";
 import {
   deriveRedesignPublication,
   PlanRedesignBundleCoordinator,
   type RedesignBundleInput,
   redesignBundlePayloadDigest,
 } from "../plan-asset/ledger/plan-redesign-bundle.js";
-import type { BootstrapLegacyPlanRevisionInput } from "../plan-asset/ledger/plan-revision-bootstrap.js";
-import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision-ledger.js";
+import {
+  type BootstrapLegacyPlanRevisionInput,
+  deriveLegacyPlanRevisionBootstrap,
+} from "../plan-asset/ledger/plan-revision-bootstrap.js";
+import {
+  type AppendPlanRevisionInput,
+  derivePlanRevisionDigests,
+} from "../plan-asset/ledger/plan-revision-ledger.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
+import {
+  type IssueProjectionEvidenceClaim,
+  SqliteIssueProjectionEvidenceResolver,
+} from "./issue-projection-evidence-resolver.js";
 import { NodeAuthoringArtifactPublisher } from "./node-authoring-artifact-publisher.js";
 import type { PlanRedesignBundleManifest } from "./plan-authoring-command-port.js";
 import { validatePlanRedesignBundleManifest } from "./plan-redesign-command-assembler.js";
+import { TRACKED_RECEIPT_SCHEMA } from "./tracked-receipt-projection.js";
+import { TrackedReceiptRenderer } from "./tracked-receipt-renderer.js";
 import {
   NodeGitCommandPort,
   type TrustedGitBlob,
@@ -22,6 +36,10 @@ export interface NodePlanRedesignRunnerDeps {
   readonly repoRoot: string;
   readonly openDb?: () => HarnessDb;
   readonly gitResolver?: Pick<TrustedGitBlobResolver, "resolve">;
+  readonly readText?: (path: string) => string;
+  readonly issueProjectionResolver?: {
+    readonly resolve: (claim: IssueProjectionEvidenceClaim) => unknown;
+  };
 }
 
 /** v2 manifestをexact publication factoryへ通し、bundle coordinatorへ到達させる兄弟runner。 */
@@ -41,25 +59,19 @@ export class NodePlanRedesignRunner {
       this.deps.gitResolver ??
         new TrustedGitBlobResolver(new NodeGitCommandPort(this.deps.repoRoot)),
     );
-    const artifacts = {
-      origin: artifact({
-        memberId: "origin",
-        path: manifest.origin.source_path,
-        content: manifest.origin.source_content,
-        expectedPreimage: preimage(manifest.origin.expected_preimage),
-      }),
-      replacement: artifact({
-        memberId: "replacement",
-        path: manifest.replacement.source_path,
-        content: manifest.replacement.source_content,
-        expectedPreimage: preimage(manifest.replacement.expected_preimage),
-      }),
-      projection: artifact({
-        memberId: "projection",
-        path: manifest.projection.path,
-        content: manifest.projection.content,
-        expectedPreimage: preimage(manifest.projection.expected_preimage),
-      }),
+    const revisions = {
+      origin: revision(manifest.origin),
+      replacement: revision(manifest.replacement),
+    };
+    const artifacts = new RedesignReceiptArtifactAssembler({
+      projectionText: () =>
+        manifest.projection.expected_preimage.kind === "absent"
+          ? `${JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] }, null, 2)}\n`
+          : (this.deps.readText ?? ((path) => readFileSync(path, "utf8")))(
+              resolveTrackedPath(this.deps.repoRoot, manifest.projection.path),
+            ),
+    }).assemble({ manifest, revisions });
+    const otherArtifacts = {
       pairs: manifest.pairs.map((item) =>
         artifact({
           memberId: `pair:${sha(item.path)}` as const,
@@ -81,23 +93,20 @@ export class NodePlanRedesignRunner {
       origin: withoutMemberId(artifacts.origin),
       replacement: withoutMemberId(artifacts.replacement),
       projection: withoutMemberId(artifacts.projection),
-      pairs: artifacts.pairs,
-      upstream: artifacts.upstream,
+      pairs: otherArtifacts.pairs,
+      upstream: otherArtifacts.upstream,
     });
     const partial = {
       commandId: manifest.command_id,
       repositoryIdentity: manifest.repository_identity,
-      replacement: revision(manifest.replacement),
-      origin: revision(manifest.origin),
+      replacement: revisions.replacement,
+      origin: revisions.origin,
       reentry: {
         targetPlanId: manifest.reentry.target_plan_id,
         targetRevision: manifest.reentry.target_revision,
         phase: manifest.reentry.phase,
       },
-      projection: {
-        path: manifest.projection.path,
-        contentDigest: sha(manifest.projection.content),
-      },
+      projection: bindRenderedProjection(artifacts.projection),
       publication,
     };
     const bundle: RedesignBundleInput = {
@@ -106,6 +115,13 @@ export class NodePlanRedesignRunner {
     };
     const db = this.deps.openDb?.() ?? openPlanLedger({ repoRoot: this.deps.repoRoot });
     try {
+      const issue = manifest.replacement.admission.issue;
+      if (!issue) throw new Error("plan-redesign-issue-projection-evidence-missing");
+      (this.deps.issueProjectionResolver ?? new SqliteIssueProjectionEvidenceResolver(db)).resolve({
+        issueId: issue.issueId,
+        episodeId: issue.episodeId,
+        projectionDigest: issue.projectionDigest,
+      });
       const coordinator = new PlanRedesignBundleCoordinator(db);
       const publisher = new NodeAuthoringArtifactPublisher({
         rootDir: this.deps.repoRoot,
@@ -113,8 +129,8 @@ export class NodePlanRedesignRunner {
           artifacts.origin,
           artifacts.replacement,
           artifacts.projection,
-          ...artifacts.pairs,
-          ...artifacts.upstream,
+          ...otherArtifacts.pairs,
+          ...otherArtifacts.upstream,
         ].map(({ path, ...value }) => ({ ...value, path })),
       });
       return coordinator.publishDurable(bundle, publisher);
@@ -122,6 +138,88 @@ export class NodePlanRedesignRunner {
       db.close();
     }
   }
+}
+
+/** bundle/DB bindingはcaller manifestでなくrendererが確定したtracked projectionを正本にする。 */
+export function bindRenderedProjection(input: { readonly path: string; readonly content: string }) {
+  return { path: input.path, contentDigest: sha(input.content) };
+}
+
+type RedesignRevision = ReturnType<typeof revision>;
+
+/** ledgerと同じpure導出receiptから、2 PLANと単一projectionをorigin→replacement順に生成する。 */
+export class RedesignReceiptArtifactAssembler {
+  constructor(private readonly deps: { readonly projectionText: () => string }) {}
+
+  assemble(input: {
+    readonly manifest: PlanRedesignBundleManifest;
+    readonly revisions: {
+      readonly origin: RedesignRevision;
+      readonly replacement: RedesignRevision;
+    };
+  }) {
+    let projection = this.deps.projectionText();
+    const render = (role: "origin" | "replacement", revisionInput: RedesignRevision) => {
+      const manifestRevision = input.manifest[role];
+      const receipt = derivedReceipt(revisionInput);
+      const renderer = new TrackedReceiptRenderer({ read: () => projection });
+      const [source, nextProjection] = renderer.render(
+        {
+          commandId: manifestRevision.command_id,
+          commandPayloadDigest: `sha256:${receipt.commandPayloadDigest}`,
+          planId: manifestRevision.plan_id,
+          recordedAt: manifestRevision.occurred_at,
+          payload: { admission: manifestRevision.admission },
+          source: { path: manifestRevision.source_path, content: manifestRevision.source_content },
+          projectionPath: input.manifest.projection.path,
+        },
+        receipt,
+      );
+      projection = nextProjection.content;
+      return artifact({
+        memberId: role,
+        path: source.path,
+        content: source.content,
+        expectedPreimage: preimage(manifestRevision.expected_preimage),
+      });
+    };
+    const origin = render("origin", input.revisions.origin);
+    const replacement = render("replacement", input.revisions.replacement);
+    return {
+      origin,
+      replacement,
+      projection: artifact({
+        memberId: "projection",
+        path: input.manifest.projection.path,
+        content: projection,
+        expectedPreimage: preimage(input.manifest.projection.expected_preimage),
+      }),
+    };
+  }
+}
+
+function derivedReceipt(input: RedesignRevision) {
+  const derived =
+    "identityAlgorithm" in input
+      ? deriveLegacyPlanRevisionBootstrap(input)
+      : { ok: true as const, assetId: input.assetId, ...derivePlanRevisionDigests(input) };
+  if (!derived.ok) throw new Error(derived.ruleId);
+  return {
+    assetId: derived.assetId,
+    revision: input.baseRevision + 1,
+    certificateId: input.certificateId,
+    certificateDigest: derived.certificateDigest,
+    commandPayloadDigest: derived.commandPayloadDigest,
+  };
+}
+
+function resolveTrackedPath(repoRoot: string, path: string): string {
+  const root = resolve(repoRoot);
+  const target = resolve(root, path);
+  const rel = relative(root, target);
+  if (!rel || rel.startsWith("..") || isAbsolute(rel))
+    throw new Error("plan-redesign-projection-path-invalid");
+  return target;
 }
 
 function verifyLegacyBootstrapGitBinding(
