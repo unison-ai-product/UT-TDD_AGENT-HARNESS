@@ -1441,6 +1441,11 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-TESTHYGIENE-045` | `vitest-snapshot-runner.test.ts` | batch-only runner | `--watch`／`-w`／`--watch=...`はstale snapshotを監視するためfail-close、通常引数は許可 |
 | `U-TESTHYGIENE-046` | `vitest-snapshot-runner.test.ts` | watch script contract | live sourceを観測できない`test:watch` scriptはmanifestに存在しない |
 | `U-TESTHYGIENE-047` | `vitest-snapshot-runner.test.ts` | Bun runtime resolution | Vitest workerのNode binaryを継承せず、Bun runtimeのabsolute executableをsnapshot install/rebuild/Vitestに使う |
+| `U-TESTHYGIENE-048` | `vitest-snapshot-runner.test.ts` | POSIX root guard | `uid=0`はchmod sealを迂回できるため、原因・非root再実行を示してfail-fastする |
+| `U-TESTHYGIENE-049` | `vitest-snapshot-runner.test.ts` | root guard非対象 | `uid!=0`と`getuid`不在のWindowsはguardを素通りし、既存seal経路を維持する |
+| `U-TESTHYGIENE-050` | `vitest-snapshot-runner.test.ts` | entrypoint副作用境界 | `uid=0`はsnapshot一時領域を作る前に拒否され、seal前だけでなく全runner副作用前のfail-fastとなる |
+| `U-TESTHYGIENE-051` | `vitest-snapshot-runner.test.ts` | 非root entrypoint | `uid!=0`はguard後段へ到達し、root誤判定で処理を遮断しない |
+| `U-TESTHYGIENE-052` | `vitest-snapshot-runner.test.ts` | Windows ACL seal command | 対象identityへ継承付き`WD,AD` denyを再帰適用し、identity空値はfail-closeする。通常権限での実write拒否は036、Administratorによるtake-ownership等の明示bypass後の改変検出は042が担う |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。

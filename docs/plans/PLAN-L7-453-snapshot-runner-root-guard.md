@@ -27,6 +27,10 @@ generates:
     artifact_type: script
   - artifact_path: tests/vitest-snapshot-runner.test.ts
     artifact_type: test_code
+  - artifact_path: src/doctor/test-repository-isolation.ts
+    artifact_type: source_module
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires: []
@@ -84,8 +88,12 @@ Docker CI / devcontainer で root 実行すると、suite 実行中の reference
   設計で自然にスキップされる。**win32 の `sealReference` は seal 自体が
   no-op なのではない** — `attrib`/`icacls` による ACL 拒否ベースの seal を
   実行している (`sealReference` 実装参照)。Administrator 昇格実行時に当該
-  ACL 拒否がどこまで実効するかは別軸の課題であり、本 PLAN のスコープ外
-  (uid=0 の DAC bypass 問題とは異なる)。
+  ACL 拒否がどこまで実効するかは別軸である。通常権限での実write拒否は
+  `U-TESTHYGIENE-036`、継承付き `WD,AD` deny command契約は
+  `U-TESTHYGIENE-052`、明示bypass後の改変検出はfingerprint oracle
+  `U-TESTHYGIENE-042`が担う。CI runnerはAdministrator昇格tokenを持たないため、
+  take-ownership等のAdministrator明示bypassそのものは本PLANの完了証拠に数えない
+  (uid=0 のDAC bypass問題とは異なる実行環境境界)。
 
 ## 工程表
 
@@ -113,7 +121,7 @@ Docker CI / devcontainer で root 実行すると、suite 実行中の reference
       メッセージで throw することを純関数レベルで実測) に加え、
       `U-TESTHYGIENE-050` (`runSnapshotTests(["--reporter=dot"], process.cwd(), () => 0)`
       が同メッセージで throw し、かつ呼び出し前後で `tmpdir()` に
-      `ut-tdd-vitest-*` 新規エントリが **1 件も作られない**ことを実測 — 
+      `ut-tdd-vitest-*` 新規エントリが **1 件も作られない**ことを実測 —
       `createSnapshot` / `sealReference` を含むどの副作用よりも手前で
       fail-fast することを entrypoint 経路で直接検証)。`runSnapshotTests` は
       `assertBatchVitestArgs` 直後・`snapshotRoot` 等の一時パス組み立てより前に
@@ -125,30 +133,30 @@ Docker CI / devcontainer で root 実行すると、suite 実行中の reference
       throw しない) に加え、`U-TESTHYGIENE-051`
       (`runSnapshotTests(["--reporter=dot"], <存在しない repoRoot>, () => 1000)`
       が guard の `"refuses to run as root"` メッセージでは **なく**、guard を
-      通過した後段 (`createSnapshot` の `ENOENT`) で失敗することを実測 — 
+      通過した後段 (`createSnapshot` の `ENOENT`) で失敗することを実測 —
       非 root uid では guard が後続処理をブロックしないことを entrypoint
-      経路で直接確認)。既存 13 件 + 新規 4 件 (048-051) = 17 件 green。
+      経路で直接確認)。既存 13 件 + 新規 5 件 (048-052) = 18 件 green。
 - [x] typecheck / 対象 vitest / plan lint green。review evidence を記録。
       根拠: `bun run typecheck` exit 0 (2026-07-21)。
       `bun run lint` (`biome check src tests`) 544 files fixes なし (2026-07-21)。
       `bun src/cli.ts plan lint` `plan-schedule — OK` (2026-07-21)。
-      vitest 17 tests green — **実行経路の注記**: 正規経路
+      vitest 18 tests green — **実行経路の注記**: 正規経路
       `bun scripts/run-vitest-snapshot.ts tests/vitest-snapshot-runner.test.ts`
       は `resolveSnapshotSource` が git top-level では常に `kind: "git"` を
       選び、**直近コミット (HEAD) を `git clone` した detached snapshot**
       に対して実行する設計 (PLAN-L7-421 の detached-HEAD 保護そのもの)。
       本 PLAN の変更はこの worktree で未コミットのため、正規経路のみでは
       本変更を検証できない (HEAD 実測は変更前の 13 件のまま green になる
-      だけで、新規 4 件を通さない — 実際に正規経路一発目でこれを確認し、
+      だけで新規テストを通さない — 実際に正規経路一発目でこれを確認し、
       誤って「green」と早合点しかけた反省点)。そのため
       `UT_TDD_TEST_EXECUTION_ROOT` / `UT_TDD_TEST_FENCE_ROOT` /
       `UT_TDD_HEAD_SNAPSHOT_ROOT` を worktree 自身に向けて `bun x vitest run`
       を直接実行し (clone/install/db-rebuild 工程を経ずに `global-setup.ts` の
       fence 要件だけを満たす診断的実行経路)、未コミットの実コードに対して
-      17 tests green を実測した。加えて `assertNotRoot` /
+      18 tests green を実測した。加えて `assertNotRoot` /
       `runSnapshotTests` を直接 import する独立スクリプトでも同一 4 分岐を
       再実測し一致を確認 (詳細は最終報告)。**commit 後に正規経路
       (`bun scripts/run-vitest-snapshot.ts`) での再確認が必要** — orchestrator
-      による commit 後、同コマンドを再実行して 17 tests green を確認すること。
+      による commit 後、同コマンドを再実行して 18 tests green を確認すること。
       review_evidence: gpt-5.6-sol blind review (初回 FLAG → 是正 → 再 review
       PASS、2026-07-21) を frontmatter に記録済み。

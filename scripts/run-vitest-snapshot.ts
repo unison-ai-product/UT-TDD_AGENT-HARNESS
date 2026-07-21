@@ -218,12 +218,27 @@ export function sealReference(referenceRoot: string): void {
   }
   const identity = output("whoami", [], referenceRoot);
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
-  run("attrib", ["+R", join(referenceRoot, "*"), "/S"], referenceRoot);
-  run(
-    "icacls",
-    [referenceRoot, "/deny", `${identity}:(OI)(CI)(WD,AD)`, "/T", "/C", "/Q"],
-    referenceRoot,
-  );
+  for (const command of windowsSealCommands(referenceRoot, identity))
+    run(command.file, command.args, referenceRoot);
+}
+
+export interface WindowsSealCommand {
+  file: "attrib" | "icacls";
+  args: string[];
+}
+
+export function windowsSealCommands(
+  referenceRoot: string,
+  identity: string,
+): WindowsSealCommand[] {
+  if (!identity.trim()) throw new Error("reference snapshot identity cannot be empty");
+  return [
+    { file: "attrib", args: ["+R", join(referenceRoot, "*"), "/S"] },
+    {
+      file: "icacls",
+      args: [referenceRoot, "/deny", `${identity}:(OI)(CI)(WD,AD)`, "/T", "/C", "/Q"],
+    },
+  ];
 }
 
 export function unsealReference(referenceRoot: string): void {

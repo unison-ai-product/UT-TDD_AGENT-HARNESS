@@ -27,6 +27,7 @@ import {
   sealReference,
   snapshotContentFingerprint,
   unsealReference,
+  windowsSealCommands,
 } from "../scripts/run-vitest-snapshot";
 import { removeTestTree } from "./support/temp-tree";
 
@@ -291,6 +292,19 @@ describe("vitest snapshot runner", () => {
       );
       for (const entry of created) removeTestTree(join(tmpdir(), entry));
     }
+  });
+
+  it("U-TESTHYGIENE-052: Windows seal contract denies inherited write-data and add-file rights", () => {
+    expect(windowsSealCommands("C:\\snapshot", "HOST\\runner")).toEqual([
+      { file: "attrib", args: ["+R", "C:\\snapshot\\*", "/S"] },
+      {
+        file: "icacls",
+        args: ["C:\\snapshot", "/deny", "HOST\\runner:(OI)(CI)(WD,AD)", "/T", "/C", "/Q"],
+      },
+    ]);
+    expect(() => windowsSealCommands("C:\\snapshot", " ")).toThrow(
+      "reference snapshot identity cannot be empty",
+    );
   });
 
   it("U-TESTHYGIENE-022: propagates final snapshot cleanup failure", () => {
