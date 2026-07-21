@@ -64,6 +64,22 @@
         "revision": 1,
         "content_digest": "sha256:4a0542de34b03b142f6d00a12551eea786ed8136974c8820bad0de65a75a845c"
       }
+    },
+    {
+      "sequence": 5,
+      "previous_record_digest": "sha256:3629162a0da66d64f15c5e76662d5f2520b47cfeaa32a1a84e6ac79eef74d67d",
+      "record_digest": "sha256:7bb324f2c85987dbc3c9d82bea334d7fff3c1726bfb8958a1a68bac1da8f8262",
+      "command_id": "plan-l6-90-20260721-02",
+      "receipt_id": "certificate:6f8694cea426b4c519701a1555bf4dc7",
+      "receipt_digest": "sha256:0fc17b48f3e57459c2798def5b4a7351cca9885a49c902936c37f5897711b345",
+      "decision_digest": "sha256:94cc2de363ffdb5ddc3aa3898dd7164a28fbb755d89932cbe80db4f1267ef7a8",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-90-ci-responsibility-contract.md",
+        "plan_id": "PLAN-L6-90-ci-responsibility-contract",
+        "asset_id": "plan:b16164ab91330ced198c273e62915d81",
+        "revision": 2,
+        "content_digest": "sha256:3bad56f2706d6a2ef4c72a6827184f433f48e3702db9cda398bfd2d3bd68fa2d"
+      }
     }
   ]
 }

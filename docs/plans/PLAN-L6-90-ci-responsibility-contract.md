@@ -9,6 +9,8 @@ route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-21
 updated: 2026-07-21
+revision_note: "rev2: references の PLAN-L7-221 実 path 修正 (-gate.md)。PLAN-L7-455
+  参照は PR #112 merge で実体化する前方参照"
 owner: PO / Claude (Fable orchestrator)
 parent_design: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -30,7 +32,7 @@ dependencies:
     - docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
   references:
     - docs/plans/PLAN-L7-455-ci-cost-speedup-phase1.md
-    - docs/plans/PLAN-L7-221-github-ci-policy.md
+    - docs/plans/PLAN-L7-221-github-ci-policy-gate.md
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
   blocks: []
 review_evidence: []
@@ -39,18 +41,18 @@ sub_doc: function-spec
 github_issue_id: 109
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:b16164ab91330ced198c273e62915d81
-  command_id: plan-l6-90-20260721-01
-  admitted_at: 2026-07-21T21:05:00.000+09:00
-  source_digest: sha256:4a0542de34b03b142f6d00a12551eea786ed8136974c8820bad0de65a75a845c
+  receipt_id: certificate:6f8694cea426b4c519701a1555bf4dc7
+  command_id: plan-l6-90-20260721-02
+  admitted_at: 2026-07-21T21:15:00.000+09:00
+  source_digest: sha256:3bad56f2706d6a2ef4c72a6827184f433f48e3702db9cda398bfd2d3bd68fa2d
   decision_digest: sha256:94cc2de363ffdb5ddc3aa3898dd7164a28fbb755d89932cbe80db4f1267ef7a8
-  receipt_digest: sha256:459663da8db6b4e7abd53b19508e5eab0861be877eeaf3bf78f7cb80bf847a75
+  receipt_digest: sha256:0fc17b48f3e57459c2798def5b4a7351cca9885a49c902936c37f5897711b345
   binding:
     path: docs/plans/PLAN-L6-90-ci-responsibility-contract.md
     plan_id: PLAN-L6-90-ci-responsibility-contract
     asset_id: plan:b16164ab91330ced198c273e62915d81
-    revision: 1
-    content_digest: sha256:4a0542de34b03b142f6d00a12551eea786ed8136974c8820bad0de65a75a845c
+    revision: 2
+    content_digest: sha256:3bad56f2706d6a2ef4c72a6827184f433f48e3702db9cda398bfd2d3bd68fa2d
   route:
     signal: feature_addition
     mode: add-feature
