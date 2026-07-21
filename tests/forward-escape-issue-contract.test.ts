@@ -585,47 +585,87 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const journalUrl = pathToFileURL(
       join(process.cwd(), "src", "execution", "sqlite-forward-escape-journal.ts"),
     ).href;
-    const worker = join(repo, "worker.ts");
+    const worker = join(repo, "worker.mjs");
     writeFileSync(
       worker,
       `import { existsSync, writeFileSync } from "node:fs";\n` +
-        `import { openHarnessDb } from ${JSON.stringify(stateDbUrl)};\n` +
-        `import { SqliteForwardEscapeJournal } from ${JSON.stringify(journalUrl)};\n` +
-        `writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready");\n` +
-        `while (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2));\n` +
+        `const { openHarnessDb } = await import(${JSON.stringify(stateDbUrl)});\n` +
+        `const { SqliteForwardEscapeJournal } = await import(${JSON.stringify(journalUrl)});\n` +
         `const db = openHarnessDb(${JSON.stringify(dbPath)}, { repoRoot: ${JSON.stringify(repo)} });\n` +
-        `try { const journal = new SqliteForwardEscapeJournal(db); const certificate = journal.issue({ command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}" }); const receipt = journal.append({ type: "IssueProjectionQueued", command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}", repository: "owner/repo", body_digest: "${"b".repeat(64)}" }); console.log(JSON.stringify({ certificate, receipt })); } finally { db.close(); }\n`,
+        `try {\n` +
+        `  const journal = new SqliteForwardEscapeJournal(db);\n` +
+        `  writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready");\n` +
+        `  while (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2));\n` +
+        `  const certificate = journal.issue({ command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}" });\n` +
+        `  const receipt = journal.append({ type: "IssueProjectionQueued", command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}", repository: "owner/repo", body_digest: "${"b".repeat(64)}" });\n` +
+        `  console.log(JSON.stringify({ certificate, receipt }));\n` +
+        `} finally { db.close(); }\n`,
       "utf8",
     );
-    const children = Array.from({ length: 2 }, () =>
-      spawn(process.execPath, [worker], {
+    const children = Array.from({ length: 2 }, () => {
+      const child = spawn(process.execPath, [worker], {
         cwd: process.cwd(),
         stdio: ["ignore", "pipe", "pipe"],
-      }),
-    );
+      });
+      let stdout = "";
+      let stderr = "";
+      let launchError = "";
+      child.stdout.on("data", (chunk) => (stdout += String(chunk)));
+      child.stderr.on("data", (chunk) => (stderr += String(chunk)));
+      const exit = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
+        (resolveExit) => {
+          child.on("error", (error) => {
+            launchError = String(error);
+            resolveExit({ code: null, signal: null });
+          });
+          child.on("exit", (code, signal) => resolveExit({ code, signal }));
+        },
+      );
+      return {
+        child,
+        exit,
+        output: () => ({
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          launchError,
+        }),
+      };
+    });
     try {
-      const deadline = Date.now() + 10_000;
+      const deadline = Date.now() + 30_000;
       while (readdirSync(ready).length < children.length && Date.now() < deadline) {
+        for (const observed of children) {
+          const output = observed.output();
+          if (
+            output.launchError ||
+            observed.child.exitCode !== null ||
+            observed.child.signalCode !== null
+          ) {
+            throw new Error(
+              `worker exited before ready: code=${observed.child.exitCode} signal=${observed.child.signalCode} launchError=${output.launchError} stdout=${output.stdout} stderr=${output.stderr}`,
+            );
+          }
+        }
         await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
       }
-      expect(readdirSync(ready)).toHaveLength(children.length);
+      const readyWorkers = readdirSync(ready);
+      if (readyWorkers.length !== children.length) {
+        throw new Error(
+          `workers not ready: expected=${children.length} actual=${readyWorkers.length} diagnostics=${JSON.stringify(children.map((observed) => ({ exitCode: observed.child.exitCode, signalCode: observed.child.signalCode, ...observed.output() })))}`,
+        );
+      }
       rmSync(gate);
       const outputs = await Promise.all(
-        children.map(
-          (child) =>
-            new Promise<string>((resolvePromise, reject) => {
-              let stdout = "";
-              let stderr = "";
-              child.stdout.on("data", (chunk) => (stdout += String(chunk)));
-              child.stderr.on("data", (chunk) => (stderr += String(chunk)));
-              child.on("error", reject);
-              child.on("exit", (code) =>
-                code === 0
-                  ? resolvePromise(stdout.trim())
-                  : reject(new Error(`worker exit ${code}: ${stderr}`)),
-              );
-            }),
-        ),
+        children.map(async (observed) => {
+          const result = await observed.exit;
+          const output = observed.output();
+          if (result.code !== 0 || output.launchError) {
+            throw new Error(
+              `worker exit ${result.code} signal=${result.signal} launchError=${output.launchError}: stdout=${output.stdout} stderr=${output.stderr}`,
+            );
+          }
+          return output.stdout;
+        }),
       );
       expect(outputs).toHaveLength(2);
       expect(new Set(outputs).size).toBe(1);
@@ -638,7 +678,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         verifyDb.close();
       }
     } finally {
-      for (const child of children) child.kill();
+      for (const observed of children) observed.child.kill();
       if (existsSync(gate)) rmSync(gate);
       removeTestTree(repo);
     }

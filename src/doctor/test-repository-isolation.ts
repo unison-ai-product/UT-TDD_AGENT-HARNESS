@@ -31,6 +31,7 @@ global-setup-fence:1 vitest-snapshot-runner:1
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
+forward-escape-issue-contract:3
 `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
