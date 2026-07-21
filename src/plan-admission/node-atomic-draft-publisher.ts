@@ -87,7 +87,7 @@ interface NodeDraftPublishToken extends DraftPublishToken {
 }
 
 /**
- * 2つのDraft成果物を同一filesystem上のrenameで公開するNode adapter。
+ * N個の成果物を同一filesystem上のrenameで公開するNode adapter。
  * filesystemは複数pathの単一atomic commitを提供しないため、既存版をrollback
  * fileへ退避し、部分公開時にもrestore可能なtokenを維持する。
  */
@@ -105,8 +105,11 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
   }
 
   stage(artifacts: readonly DraftArtifact[]): DraftPublishToken {
-    if (artifacts.length !== 2 || new Set(artifacts.map((item) => item.path)).size !== 2) {
-      throw new Error("draft publisherは相異なるsource/projectionの2成果物を要求します");
+    if (
+      artifacts.length === 0 ||
+      new Set(artifacts.map((item) => item.path)).size !== artifacts.length
+    ) {
+      throw new Error("draft publisherは1個以上の相異なる成果物を要求します");
     }
     const id = this.createId();
     if (!/^[A-Za-z0-9_-]+$/.test(id))

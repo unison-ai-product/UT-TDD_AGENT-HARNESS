@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
 import {
+  type AuthoringArtifactPublisher,
+  type AuthoringCommandGroupInput,
+  AuthoringCommandGroupJournal,
+} from "./authoring-command-group.js";
+import {
   type BootstrapLegacyPlanRevisionInput,
   LegacyPlanRevisionBootstrapTransaction,
 } from "./plan-revision-bootstrap.js";
@@ -10,6 +15,7 @@ import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transa
 
 export interface RedesignBundleInput {
   readonly commandId: string;
+  readonly commandPayloadDigest: string;
   readonly replacement:
     | (AppendPlanRevisionInput & { readonly sourceContent: string })
     | (BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string });
@@ -25,19 +31,28 @@ export type RedesignBundleResult =
     }
   | { readonly ok: false; readonly ruleId: string };
 
+export type RedesignBundlePublicationResult =
+  | (Extract<RedesignBundleResult, { ok: true }> & {
+      readonly publicationReplayed: boolean;
+      readonly publishedMemberIds: readonly string[];
+    })
+  | { readonly ok: false; readonly ruleId: string };
+
 /**
  * replacementのsupersedesとoriginの訂正back-referenceを一つのSQLite transactionへ閉じる。
- * callbackは両PLANと投影を単一publisher tokenで公開し、例外時はledger全体をrollbackする。
+ * transact callbackはtransaction内adapter向け。実filesystem公開はpublishDurableのSagaを使う。
  */
 export class PlanRedesignBundleCoordinator {
   private readonly transaction: LedgerTransactionPort;
   private readonly revisions: PlanRevisionLedgerTransaction;
   private readonly bootstrap: LegacyPlanRevisionBootstrapTransaction;
+  private readonly groups: AuthoringCommandGroupJournal;
 
   constructor(db: HarnessDb, transaction?: LedgerTransactionPort) {
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
     this.revisions = new PlanRevisionLedgerTransaction(db, transaction);
     this.bootstrap = new LegacyPlanRevisionBootstrapTransaction(db, transaction);
+    this.groups = new AuthoringCommandGroupJournal(db);
   }
 
   transact(
@@ -64,11 +79,35 @@ export class PlanRedesignBundleCoordinator {
       return { commit: true, value };
     });
   }
+
+  /**
+   * revision write-setを先にdurable化し、同じcommand bindingのN成果物Sagaを実行する。
+   * filesystem fault時はgroup journalがrecovery_requiredを保持し、同じ入力で再開する。
+   */
+  publishDurable(
+    input: RedesignBundleInput,
+    group: AuthoringCommandGroupInput,
+    publisher: AuthoringArtifactPublisher,
+  ): RedesignBundlePublicationResult {
+    const groupInvalid = validatePublicationGroup(input, group);
+    if (groupInvalid) return { ok: false, ruleId: groupInvalid };
+    const revisions = this.transact(input, () => undefined);
+    if (!revisions.ok) return revisions;
+    const publication = this.groups.execute(group, publisher);
+    if (!publication.ok) return publication;
+    return {
+      ...revisions,
+      publicationReplayed: publication.replayed,
+      publishedMemberIds: publication.publishedMemberIds,
+    };
+  }
 }
 
 function validateBundle(input: RedesignBundleInput): string | undefined {
   if (
     !input.commandId ||
+    !/^[a-f0-9]{64}$/.test(input.commandPayloadDigest) ||
+    input.commandPayloadDigest !== redesignBundlePayloadDigest(input) ||
     input.replacement.commandId !== `${input.commandId}:replacement` ||
     input.origin.commandId !== `${input.commandId}:origin` ||
     input.replacement.planId === input.origin.planId ||
@@ -86,6 +125,38 @@ function validateBundle(input: RedesignBundleInput): string | undefined {
     sha(input.replacement.sourceContent) !== input.replacement.contentDigest
   )
     return "plan-redesign-bundle-source-binding-invalid";
+  return undefined;
+}
+
+export function redesignBundlePayloadDigest(
+  input: Omit<RedesignBundleInput, "commandPayloadDigest">,
+): string {
+  return sha(stableJson(input));
+}
+
+function validatePublicationGroup(
+  input: RedesignBundleInput,
+  group: AuthoringCommandGroupInput,
+): string | undefined {
+  if (
+    group.groupId !== input.commandId ||
+    group.commandPayloadDigest !== input.commandPayloadDigest ||
+    group.occurredAt !== input.origin.occurredAt
+  )
+    return "plan-redesign-publication-binding-invalid";
+  const required = [input.replacement, input.origin];
+  if (
+    group.members.length < 3 ||
+    required.some(
+      (artifact) =>
+        !group.members.some(
+          (member) =>
+            member.artifactPath === artifact.sourcePath &&
+            member.contentDigest === artifact.contentDigest,
+        ),
+    )
+  )
+    return "plan-redesign-publication-members-invalid";
   return undefined;
 }
 
@@ -108,4 +179,16 @@ function parseFrontmatter(value: string): Record<string, unknown> | undefined {
 
 function sha(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
 }

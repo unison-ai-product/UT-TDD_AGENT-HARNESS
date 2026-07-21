@@ -1,15 +1,21 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { NodeAuthoringArtifactPublisher } from "../../src/plan-admission/node-authoring-artifact-publisher.js";
 import {
   PlanRedesignBundleCoordinator,
   type RedesignBundleInput,
+  redesignBundlePayloadDigest,
 } from "../../src/plan-asset/ledger/plan-redesign-bundle.js";
 import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
-import { openHarnessDb } from "../../src/state-db/index.js";
+import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
+const roots: string[] = [];
 afterEach(() => {
   for (const db of opened.splice(0)) db.close();
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("Redesign bundle coordinator", () => {
@@ -72,17 +78,87 @@ describe("Redesign bundle coordinator", () => {
       { originSource: "origin correction only" },
       "plan-redesign-bundle-origin-back-reference-missing",
     ],
+    [
+      "bundle payload digest差替え",
+      { commandDigest: sha("different") },
+      "plan-redesign-bundle-binding-invalid",
+    ],
   ])("U-PA-REDESIGN-004: %sをwrite前にfail-closeする", (_name, change, ruleId) => {
     const { db, coordinator } = fixture();
     expect(coordinator.transact(bundle(change), () => undefined)).toEqual({ ok: false, ruleId });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
+  });
+
+  it("U-PA-REDESIGN-005: #98のL4-31 rev2・L6-88・projectionを実filesystemへ一群publishし再起動replayする", () => {
+    const root = join(process.cwd(), ".ut-tdd", `redesign-e2e-${randomUUID()}`);
+    roots.push(root);
+    mkdirSync(join(root, "docs", "plans"), { recursive: true });
+    mkdirSync(join(root, "docs", "projections"), { recursive: true });
+    const dbPath = join(root, ".ut-tdd", "ledger", "harness.db");
+    mkdirSync(join(root, ".ut-tdd", "ledger"), { recursive: true });
+    let db = openE2eDb(dbPath);
+    seed(db, "plan:origin", "PLAN-L4-31");
+    seed(db, "plan:replacement", "PLAN-L6-88");
+    const input = bundle();
+    const projection = JSON.stringify({
+      origin: "PLAN-L4-31@2",
+      replacement: "PLAN-L6-88@2",
+      drive_model: "redesign",
+    });
+    const artifacts = [
+      {
+        memberId: "origin",
+        path: input.origin.sourcePath,
+        content: input.origin.sourceContent,
+      },
+      {
+        memberId: "replacement",
+        path: input.replacement.sourcePath,
+        content: input.replacement.sourceContent,
+      },
+      { memberId: "projection", path: "docs/projections/issue-98.json", content: projection },
+    ];
+    const group = {
+      groupId: input.commandId,
+      commandPayloadDigest: input.commandPayloadDigest,
+      occurredAt: input.origin.occurredAt,
+      members: artifacts.map((artifact) => ({
+        memberId: artifact.memberId,
+        artifactPath: artifact.path,
+        contentDigest: sha(artifact.content),
+      })),
+    };
+    const result = new PlanRedesignBundleCoordinator(db).publishDurable(
+      input,
+      group,
+      new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
+    );
+    expect(result).toMatchObject({ ok: true, replayed: false, publicationReplayed: false });
+    expect(readFileSync(join(root, input.origin.sourcePath), "utf8")).toBe(
+      input.origin.sourceContent,
+    );
+    expect(readFileSync(join(root, input.replacement.sourcePath), "utf8")).toBe(
+      input.replacement.sourceContent,
+    );
+    expect(readFileSync(join(root, "docs/projections/issue-98.json"), "utf8")).toBe(projection);
+    db.close();
+    opened.splice(opened.indexOf(db), 1);
+
+    db = openE2eDb(dbPath);
+    expect(
+      new PlanRedesignBundleCoordinator(db).publishDurable(
+        input,
+        group,
+        new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
+      ),
+    ).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });
   });
 });
 
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
   seed(db, "plan:origin", "PLAN-L4-31");
   seed(db, "plan:replacement", "PLAN-L6-88");
   return { db, coordinator: new PlanRedesignBundleCoordinator(db) };
@@ -150,7 +226,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
     routeTupleDigest: sha("redesign|forward_merge"),
     occurredAt: "2026-07-21T00:00:00.000Z",
   };
-  return {
+  const input = {
     commandId: "redesign:98",
     replacement: {
       ...common,
@@ -176,6 +252,17 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
       certificateId: "certificate:origin",
     },
   };
+  return {
+    ...input,
+    commandPayloadDigest: String(change.commandDigest ?? redesignBundlePayloadDigest(input)),
+  };
+}
+
+function openE2eDb(path: string): HarnessDb {
+  const db = openHarnessDb(path);
+  opened.push(db);
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+  return db;
 }
 
 function sha(value: string): string {
