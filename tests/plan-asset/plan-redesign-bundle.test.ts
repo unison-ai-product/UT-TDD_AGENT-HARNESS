@@ -110,13 +110,20 @@ describe("Redesign bundle coordinator", () => {
         memberId: "origin",
         path: input.origin.sourcePath,
         content: input.origin.sourceContent,
+        expectedPreimage: { kind: "absent" as const },
       },
       {
         memberId: "replacement",
         path: input.replacement.sourcePath,
         content: input.replacement.sourceContent,
+        expectedPreimage: { kind: "absent" as const },
       },
-      { memberId: "projection", path: "docs/projections/issue-98.json", content: projection },
+      {
+        memberId: "projection",
+        path: "docs/projections/issue-98.json",
+        content: projection,
+        expectedPreimage: { kind: "absent" as const },
+      },
     ];
     const group = {
       groupId: input.commandId,

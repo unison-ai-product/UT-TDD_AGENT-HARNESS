@@ -15,11 +15,11 @@ export interface NodeAuthoringArtifact {
   readonly memberId: string;
   readonly path: string;
   readonly content: string;
-  readonly expectedPreimage?: ArtifactPreimage;
+  readonly expectedPreimage: ArtifactPreimage;
 }
 
 export interface NodeAuthoringArtifactPublisherOptions
-  extends Pick<NodeAtomicDraftPublisherOptions, "rootDir" | "injectFault" | "createId"> {
+  extends Pick<NodeAtomicDraftPublisherOptions, "rootDir" | "injectFault"> {
   readonly artifacts: readonly NodeAuthoringArtifact[];
 }
 
@@ -30,13 +30,16 @@ export interface NodeAuthoringArtifactPublisherOptions
  */
 export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublisher {
   private readonly rootDir: string;
-  private readonly atomic: NodeAtomicDraftPublisher;
+  private readonly injectFault: NodeAtomicDraftPublisherOptions["injectFault"];
   private readonly artifacts: ReadonlyMap<string, NodeAuthoringArtifact>;
-  private readonly pending = new Map<string, DraftPublishToken>();
+  private readonly pending = new Map<
+    string,
+    { readonly atomic: NodeAtomicDraftPublisher; readonly token: DraftPublishToken }
+  >();
 
   constructor(options: NodeAuthoringArtifactPublisherOptions) {
     this.rootDir = resolve(options.rootDir);
-    this.atomic = new NodeAtomicDraftPublisher(options);
+    this.injectFault = options.injectFault;
     const artifacts = new Map(options.artifacts.map((artifact) => [artifact.memberId, artifact]));
     if (artifacts.size !== options.artifacts.length) {
       throw new Error("authoring artifact member id duplicated");
@@ -56,17 +59,29 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       throw new Error("authoring artifact binding invalid");
     }
     const key = `${input.groupId}\0${input.memberId}`;
+    const tokenId = `authoring-${sha(key).slice(0, 32)}`;
     const pending = this.pending.get(key);
     if (pending) {
-      this.atomic.finalize(pending);
+      pending.atomic.finalize(pending.token);
       this.pending.delete(key);
       return { receiptDigest: receipt(input) };
     }
+    const atomic = new NodeAtomicDraftPublisher({
+      rootDir: this.rootDir,
+      injectFault: this.injectFault,
+      createId: () => tokenId,
+    });
     if (targetHasDigest(this.rootDir, artifact.path, input.contentDigest)) {
+      atomic.resumeSingleArtifactCleanup({
+        tokenId,
+        path: artifact.path,
+        preimage: artifact.expectedPreimage,
+        postimage: `sha256:${input.contentDigest}`,
+      });
       return { receiptDigest: receipt(input) };
     }
 
-    const token = this.atomic.stage([
+    const token = atomic.stage([
       {
         path: artifact.path,
         content: artifact.content,
@@ -74,16 +89,16 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       },
     ]);
     try {
-      this.atomic.publish(token);
-      this.pending.set(key, token);
-      this.atomic.finalize(token);
+      atomic.publish(token);
+      this.pending.set(key, { atomic, token });
+      atomic.finalize(token);
       this.pending.delete(key);
       return { receiptDigest: receipt(input) };
     } catch (error) {
       if (!this.pending.has(key)) {
         try {
-          this.atomic.restore(token);
-          this.atomic.dispose(token);
+          atomic.restore(token);
+          atomic.dispose(token);
         } catch (recoveryError) {
           throw new AggregateError(
             [error, recoveryError],

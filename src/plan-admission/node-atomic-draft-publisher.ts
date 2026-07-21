@@ -443,6 +443,64 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     }
   }
 
+  /** command-groupの1 memberをprocess再起動後にfinalizeする限定recovery surface。 */
+  resumeSingleArtifactCleanup(input: {
+    readonly tokenId: string;
+    readonly path: string;
+    readonly preimage: ArtifactPreimage;
+    readonly postimage: `sha256:${string}`;
+  }): void {
+    if (!/^[A-Za-z0-9_-]+$/.test(input.tokenId)) throw new Error("invalid authoring token id");
+    validatePreimage(input.preimage, input.path);
+    validateDigest(input.postimage, "authoring postimage");
+    const targetPath = this.resolveTarget(input.path);
+    const suffix = `.ut-tdd-draft-${input.tokenId}`;
+    const temporaryPath = `${targetPath}${suffix}.tmp`;
+    const rollbackPath = `${targetPath}${suffix}.rollback`;
+    const parent = DirectoryIdentity.capture(dirname(targetPath), input.path);
+    parent.assertCurrent(input.path);
+    assertRegularDigest({
+      path: targetPath,
+      digest: input.postimage,
+      logicalPath: input.path,
+      role: "postimage",
+    });
+    removeRecoveryArtifact({
+      path: temporaryPath,
+      expected: input.postimage,
+      logicalPath: input.path,
+      role: "temporary",
+      parent,
+    });
+    if (existsSync(rollbackPath)) {
+      if (input.preimage.kind !== "sha256") {
+        throw new Error(`unexpected rollback artifact: ${input.path}`);
+      }
+      removeRecoveryArtifact({
+        path: rollbackPath,
+        expected: input.preimage.digest,
+        logicalPath: input.path,
+        role: "rollback",
+        parent,
+      });
+    }
+    const identityPins: Array<[string, `sha256:${string}`]> = [
+      ["temporary", input.postimage],
+      ["published", input.postimage],
+    ];
+    if (input.preimage.kind === "sha256") identityPins.push(["rollback", input.preimage.digest]);
+    for (const [role, expected] of identityPins) {
+      removeRecoveryArtifact({
+        path: this.identityPinPath(input.tokenId, 0, role),
+        expected,
+        logicalPath: input.path,
+        role: `${role} identity pin`,
+        parent,
+      });
+    }
+    syncDirectory(dirname(targetPath));
+  }
+
   private resolveTarget(logicalPath: string): string {
     if (isAbsolute(logicalPath))
       throw new Error(`成果物pathはrepository相対である必要があります: ${logicalPath}`);
@@ -839,6 +897,26 @@ function assertRegularDigest(input: {
   if (!existsSync(path) || !regularFile(path) || !digestEqual(sha256File(path), digest)) {
     throw new Error(`artifact ${role} CAS mismatch: ${logicalPath}`);
   }
+}
+
+function removeRecoveryArtifact(input: {
+  readonly path: string;
+  readonly expected: `sha256:${string}`;
+  readonly logicalPath: string;
+  readonly role: string;
+  readonly parent: DirectoryIdentity;
+}): void {
+  if (!existsSync(input.path)) return;
+  assertRegularDigest({
+    path: input.path,
+    digest: input.expected,
+    logicalPath: input.logicalPath,
+    role: input.role,
+  });
+  rmSync(input.path);
+  input.parent.assertCurrent(input.logicalPath);
+  if (existsSync(input.path))
+    throw new Error(`artifact ${input.role} removal race: ${input.logicalPath}`);
 }
 
 function safeSameFile(left: string, right: string): boolean {

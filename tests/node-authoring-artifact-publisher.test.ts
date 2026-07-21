@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.js";
 import {
   type NodeAuthoringArtifact,
   NodeAuthoringArtifactPublisher,
@@ -23,7 +24,6 @@ describe("Node authoring artifact publisher", () => {
     const publisher = new NodeAuthoringArtifactPublisher({
       rootDir: root,
       artifacts,
-      createId: () => `group-${randomUUID()}`,
       injectFault(point, path) {
         if (fault && point === "publish:after-target-link" && path.endsWith("L6-88.md")) {
           fault = false;
@@ -88,6 +88,37 @@ describe("Node authoring artifact publisher", () => {
     }).publish({ ...member, groupId: "redesign:98" });
     expect(recovered).toEqual(replayed);
   });
+
+  it("U-PA-GROUP-007: target link直後のprocess停止を決定論tokenからcleanupしてreceiptを再構成する", () => {
+    const root = fixtureRoot();
+    const [artifact] = artifactsFor();
+    if (!artifact) throw new Error("fixture missing");
+    const member = group([artifact]).members[0];
+    if (!member) throw new Error("fixture member missing");
+    const key = `redesign:98\0${member.memberId}`;
+    const tokenId = `authoring-${sha(key).slice(0, 32)}`;
+    const crashed = new NodeAtomicDraftPublisher({
+      rootDir: root,
+      createId: () => tokenId,
+      injectFault(point) {
+        if (point === "publish:after-target-link") throw new Error("simulated-process-stop");
+      },
+    });
+    const token = crashed.stage([artifact]);
+    expect(() => crashed.publish(token)).toThrow("simulated-process-stop");
+
+    expect(
+      new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts: [artifact] }).publish({
+        ...member,
+        groupId: "redesign:98",
+      }),
+    ).toEqual({
+      receiptDigest: sha(
+        `redesign:98\0${member.memberId}\0${member.artifactPath}\0${member.contentDigest}`,
+      ),
+    });
+    expect(readdirSync(root).filter((name) => name.startsWith(".ut-tdd-draft-"))).toEqual([]);
+  });
 });
 
 function fixtureRoot(): string {
@@ -100,9 +131,24 @@ function fixtureRoot(): string {
 
 function artifactsFor() {
   return [
-    { memberId: "origin", path: "docs/plans/PLAN-L4-31.md", content: "origin revision 2" },
-    { memberId: "replacement", path: "docs/plans/PLAN-L6-88.md", content: "replacement" },
-    { memberId: "projection", path: "docs/projections/issue-98.json", content: "{}" },
+    {
+      memberId: "origin",
+      path: "docs/plans/PLAN-L4-31.md",
+      content: "origin revision 2",
+      expectedPreimage: { kind: "absent" },
+    },
+    {
+      memberId: "replacement",
+      path: "docs/plans/PLAN-L6-88.md",
+      content: "replacement",
+      expectedPreimage: { kind: "absent" },
+    },
+    {
+      memberId: "projection",
+      path: "docs/projections/issue-98.json",
+      content: "{}",
+      expectedPreimage: { kind: "absent" },
+    },
   ] as const;
 }
 
