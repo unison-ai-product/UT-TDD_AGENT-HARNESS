@@ -1,8 +1,8 @@
 ---
 plan_id: PLAN-L7-456-gate-run-orphan-projection-fix
-title: "PLAN-L7-456 (impl): gate-run projection の false orphan 修正"
-kind: impl
-layer: L7
+title: "PLAN-L7-456 (recovery): gate-run projection の false orphan 修正"
+kind: recovery
+layer: cross
 drive: db
 status: confirmed
 route_signal: regression_dev
