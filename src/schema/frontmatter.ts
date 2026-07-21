@@ -154,7 +154,7 @@ const frontmatterBaseSchema = z.object({
   /** §6.8.2 Issue 起点スパイン: 解決対象 GitHub Issue 番号 (任意、Phase 0-B で recommended)。
    *  feature/hotfix branch の close 漏れ機械検知 + PR `Closes #NN` 連携に使う。 */
   github_issue_id: z.number().int().positive().nullable().optional(),
-  backprop_decision: z.enum(["not_required"]).optional(),
+  backprop_decision: z.enum(["required", "not_required"]).optional(),
   backprop_decision_reason: z.string().optional(),
   /** PLAN-DISCOVERY-09 version-up: 将来版へ保全 (deferred-but-committed-future) する PLAN のマーカー。
    *  status=draft でのみ有効 (landed には付与不可、Codex Critical: landing-time 除外禁止)。label は

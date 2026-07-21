@@ -35,6 +35,7 @@ import { registerFeedbackCommands } from "./cli/feedback";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { registerPlanDraftCommand } from "./cli/plan-draft";
+import { registerPlanRevisionCommand } from "./cli/plan-revise";
 import { contextSuggest } from "./context/doc-router";
 import { runDoctor } from "./doctor";
 import {
@@ -105,6 +106,7 @@ import {
 } from "./memory/index";
 import { lintPlanWithGate } from "./plan/lint";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
+import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner";
 import {
   type AdapterContextInjection,
   type AdapterProvider,
@@ -1172,6 +1174,7 @@ const plan = program.command("plan").description("PLAN 操作");
 registerPlanAssetCommands(plan);
 registerPlanAdmissionCommands(plan);
 registerPlanDraftCommand(plan, { runner: createNodePlanDraftRunner(process.cwd()) });
+registerPlanRevisionCommand(plan, { runner: createNodePlanRevisionRunner(process.cwd()) });
 plan
   .command("lint [path]")
   .description("PLAN lint")

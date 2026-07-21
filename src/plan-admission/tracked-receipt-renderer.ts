@@ -3,12 +3,13 @@ import { stringify } from "yaml";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory";
 import { frontmatterSchema } from "../schema/frontmatter";
 import { canonicalPlanContentDigest } from "./diff-fence";
-import type { PlanDraftExecutionPayload } from "./plan-draft-command-assembler";
+import { bindPlanSourceToAdmission } from "./plan-content-binding";
 import type {
   DraftArtifactRendererPort,
   DraftReceiptBinding,
   PlanDraftCommand,
 } from "./plan-draft-service";
+import type { PlanAdmissionRequest } from "./policy";
 import { evaluatePlanAdmission } from "./policy";
 import {
   parseTrackedReceiptProjection,
@@ -17,7 +18,14 @@ import {
   trackedReceiptRecordDigest,
 } from "./tracked-receipt-projection";
 
-export type TrackedReceiptDraftPayload = PlanDraftExecutionPayload;
+export interface AdmissionBearingPayload {
+  readonly admission: PlanAdmissionRequest;
+}
+
+/** Rendererが必要とする最小契約。assemblerの具象payloadへ逆依存しない。 */
+export interface TrackedReceiptDraftPayload extends AdmissionBearingPayload {
+  readonly canonical?: unknown;
+}
 
 export interface TrackedReceiptDraftReceipt extends DraftReceiptBinding {
   readonly certificateDigest: string;
@@ -31,13 +39,14 @@ export interface TrackedReceiptProjectionReader {
  * 確定済みledger receiptからPLAN frontmatterとGit管理projectionを同時生成する。
  * projection本文はcommand payloadから受け取らず、既存の追跡対象をreader経由で取得する。
  */
-export class TrackedReceiptRenderer
-  implements DraftArtifactRendererPort<TrackedReceiptDraftPayload, TrackedReceiptDraftReceipt>
+export class TrackedReceiptRenderer<
+  TPayload extends AdmissionBearingPayload = TrackedReceiptDraftPayload,
+> implements DraftArtifactRendererPort<TPayload, TrackedReceiptDraftReceipt>
 {
   constructor(private readonly projections: TrackedReceiptProjectionReader) {}
 
   render(
-    command: PlanDraftCommand<TrackedReceiptDraftPayload>,
+    command: PlanDraftCommand<TPayload>,
     receipt: TrackedReceiptDraftReceipt,
   ): readonly [
     source: { path: string; content: string },
@@ -52,21 +61,15 @@ export class TrackedReceiptRenderer
 
     const decisionDigest = digest(command.payload.admission);
     const admission = command.payload.admission;
-    const baseFrontmatter = {
-      ...parsedSource.frontmatter,
-      kind: admission.kind,
-      layer: admission.layer,
-      drive: admission.drive,
-      route_signal: admission.routeSignal,
-      route_mode: admission.routeMode,
-      ...(admission.workflowPhase ? { workflow_phase: admission.workflowPhase } : {}),
-      ...(admission.status ? { status: admission.status } : {}),
-      ...(admission.subDoc ? { sub_doc: admission.subDoc } : {}),
-      ...(admission.issue ? { github_issue_id: admission.issue.issueId } : {}),
-    };
-    const unsignedSource = `---\n${stringify(baseFrontmatter)}---\n${parsedSource.body}`;
-    const contentDigest = canonicalPlanContentDigest(unsignedSource);
-    if (!contentDigest) throw new Error("tracked-receipt-source-invalid");
+    const bound = bindPlanSourceToAdmission({
+      source: command.source.content,
+      planId: command.planId,
+      admission,
+    });
+    const parsedBound = parseLegacyPlanSource(bound.source);
+    if (!parsedBound) throw new Error("tracked-receipt-source-invalid");
+    const baseFrontmatter = parsedBound.frontmatter;
+    const contentDigest = bound.contentDigest;
     const frontmatter = {
       ...baseFrontmatter,
       admission_receipt: receiptFrontmatter({
@@ -128,7 +131,7 @@ export class TrackedReceiptRenderer
 }
 
 function receiptFrontmatter(input: {
-  command: PlanDraftCommand<TrackedReceiptDraftPayload>;
+  command: PlanDraftCommand<AdmissionBearingPayload>;
   receipt: TrackedReceiptDraftReceipt;
   contentDigest: string;
   decisionDigest: string;
@@ -219,7 +222,7 @@ function toJsonRecord(record: TrackedReceiptRecord): Record<string, unknown> {
 }
 
 function selfVerify(input: {
-  command: PlanDraftCommand<TrackedReceiptDraftPayload>;
+  command: PlanDraftCommand<AdmissionBearingPayload>;
   receipt: TrackedReceiptDraftReceipt;
   source: string;
   projection: string;
@@ -257,7 +260,7 @@ function selfVerify(input: {
     );
 }
 
-function rejectCallerProjection(payload: TrackedReceiptDraftPayload): void {
+function rejectCallerProjection(payload: AdmissionBearingPayload): void {
   if (Object.keys(payload).some((key) => key.toLowerCase().includes("projection")))
     throw new Error("tracked-receipt-caller-projection-forbidden");
 }
