@@ -37,7 +37,7 @@ dependencies:
     - docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
 review_evidence:
   - reviewer: blind-reviewer
-    review_kind: cross_provider
+    review_kind: cross_agent
     reviewed_at: "2026-07-21T12:48:00+09:00"
     tests_green_at: "2026-07-21T12:53:00+09:00"
     verdict: approve
