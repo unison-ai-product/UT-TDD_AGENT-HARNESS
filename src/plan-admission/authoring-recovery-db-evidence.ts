@@ -1,3 +1,4 @@
+import { ledgerRowDigest } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 
 export type AuthoringRecoveryDbEvidenceLane = "zero" | "complete";
@@ -10,13 +11,13 @@ export function inspectAuthoringRecoveryDbEvidence(
   const childIds = [`${groupId}:origin`, `${groupId}:replacement`] as const;
   const receipts = db
     .prepare(
-      `SELECT command_id, plan_asset_id, plan_revision FROM append_command_receipts
+      `SELECT * FROM append_command_receipts
        WHERE command_id IN (?, ?) ORDER BY command_id`,
     )
     .all(...childIds);
   const admissions = db
     .prepare(
-      `SELECT command_id, plan_asset_id, plan_revision FROM plan_admission_receipts
+      `SELECT * FROM plan_admission_receipts
        WHERE command_id IN (?, ?) ORDER BY command_id`,
     )
     .all(...childIds);
@@ -34,20 +35,44 @@ export function inspectAuthoringRecoveryDbEvidence(
   for (const binding of bindings) {
     const role = String(binding.artifact_role);
     if (!expectedRoles.delete(role)) throw new Error("plan-recovery-db-evidence-mismatch");
+    if (binding.binding_digest !== ledgerRowDigest(binding, "binding_digest"))
+      throw new Error("plan-recovery-db-evidence-mismatch");
     const commandId = `${groupId}:${role}`;
     const receipt = receipts.find((row) => row.command_id === commandId);
     const admission = admissions.find((row) => row.command_id === commandId);
+    const admissionEvent = admission
+      ? db
+          .prepare("SELECT * FROM plan_admission_events WHERE admission_event_id = ?")
+          .get(admission.admission_event_id)
+      : undefined;
     const revision = db
       .prepare("SELECT 1 FROM plan_revisions WHERE asset_id = ? AND revision = ?")
       .get(binding.asset_id, binding.revision);
     if (
       !receipt ||
       !admission ||
+      !admissionEvent ||
       !revision ||
+      receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest") ||
+      admissionEvent.event_digest !== ledgerRowDigest(admissionEvent, "event_digest") ||
+      receipt.command_type !== "plan.revise" ||
+      receipt.subject_kind !== "plan_revision" ||
+      receipt.subject_key !== `${binding.asset_id}:${Number(binding.revision)}` ||
+      receipt.result_kind !== "admission_certificate" ||
+      receipt.result_ref !== admission.certificate_id ||
+      receipt.command_payload_digest !== admission.command_payload_digest ||
+      receipt.recorded_at !== admission.recorded_at ||
       receipt.plan_asset_id !== binding.asset_id ||
       Number(receipt.plan_revision) !== Number(binding.revision) ||
       admission.plan_asset_id !== binding.asset_id ||
-      Number(admission.plan_revision) !== Number(binding.revision)
+      Number(admission.plan_revision) !== Number(binding.revision) ||
+      admissionEvent.command_id !== admission.command_id ||
+      admissionEvent.command_payload_digest !== admission.command_payload_digest ||
+      admissionEvent.plan_asset_id !== admission.plan_asset_id ||
+      Number(admissionEvent.plan_revision) !== Number(admission.plan_revision) ||
+      admissionEvent.certificate_id !== admission.certificate_id ||
+      admissionEvent.certificate_digest !== admission.certificate_digest ||
+      admissionEvent.occurred_at !== admission.recorded_at
     )
       throw new Error("plan-recovery-db-evidence-mismatch");
   }

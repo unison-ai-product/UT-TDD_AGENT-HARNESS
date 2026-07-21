@@ -7,7 +7,7 @@ import {
   assertNoUnresolvedAuthoringRecovery,
   findUnresolvedAuthoringRecovery,
 } from "../src/plan-asset/ledger/authoring-recovery-gate";
-import { migratePlanLedger } from "../src/plan-asset/ledger/schema";
+import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema";
 import { type HarnessDb, openHarnessDb } from "../src/state-db/index";
 
 const roots: string[] = [];
@@ -171,25 +171,73 @@ function seedGroup(
 function seedCommittedEvidence(db: HarnessDb): void {
   for (const role of ["origin", "replacement"] as const) {
     const asset = `asset:${role}`;
+    const commandId = `redesign:1:${role}`;
+    const certificateId = `certificate:${role}`;
+    const admissionEventId = `admission:${role}`;
     db.prepare("INSERT INTO plan_assets VALUES (?, 'now', 'commit', 'sha256-v1')").run(asset);
     db.prepare(
       "INSERT INTO plan_revisions VALUES (?, 1, '{}', 'payload', 'body', ?, 'commit', 'actor', 'reason', 'now')",
     ).run(asset, `${role}.md`);
+    const binding = {
+      group_id: "redesign:1",
+      asset_id: asset,
+      revision: 1,
+      artifact_role: role,
+      bound_at: "now",
+    };
+    db.prepare("INSERT INTO authoring_command_revision_bindings VALUES (?, ?, ?, ?, ?, ?)").run(
+      ...Object.values(binding),
+      ledgerRowDigest(binding, "binding_digest"),
+    );
+    const admission = {
+      admission_event_id: admissionEventId,
+      command_id: commandId,
+      command_payload_digest: "payload",
+      event_kind: "admitted",
+      plan_asset_id: asset,
+      plan_revision: 1,
+      plan_id: `PLAN-${role}`,
+      source_path: `${role}.md`,
+      content_digest: "content",
+      route_tuple_digest: "route",
+      certificate_id: certificateId,
+      certificate_digest: "certificate",
+      occurred_at: "now",
+    };
     db.prepare(
-      "INSERT INTO authoring_command_revision_bindings VALUES (?, ?, 1, ?, 'now', 'digest')",
-    ).run("redesign:1", asset, role);
+      "INSERT INTO plan_admission_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(admission), ledgerRowDigest(admission, "event_digest"));
     db.prepare(
-      "INSERT INTO append_command_receipts VALUES (?, 'plan.revise', 'plan_revision', ?, ?, 1, 'payload', 'admission_certificate', ?, 'now', 'receipt')",
-    ).run(`redesign:1:${role}`, `${asset}:1`, asset, `certificate:${role}`);
-    db.prepare(
-      "INSERT INTO plan_admission_receipts VALUES (?, ?, ?, 'payload', ?, 1, ?, ?, 'content', 'route', 'certificate', 'now')",
+      "INSERT INTO plan_admission_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).run(
-      `certificate:${role}`,
-      `admission:${role}`,
-      `redesign:1:${role}`,
+      certificateId,
+      admissionEventId,
+      commandId,
+      "payload",
       asset,
+      1,
       `PLAN-${role}`,
       `${role}.md`,
+      "content",
+      "route",
+      "certificate",
+      "now",
+    );
+    const receipt = {
+      command_id: commandId,
+      command_type: "plan.revise",
+      subject_kind: "plan_revision",
+      subject_key: `${asset}:1`,
+      plan_asset_id: asset,
+      plan_revision: 1,
+      command_payload_digest: "payload",
+      result_kind: "admission_certificate",
+      result_ref: certificateId,
+      recorded_at: "now",
+    };
+    db.prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      ...Object.values(receipt),
+      ledgerRowDigest(receipt, "receipt_digest"),
     );
   }
 }

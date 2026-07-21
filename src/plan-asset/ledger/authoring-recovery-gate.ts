@@ -1,6 +1,15 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+} from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { inspectAuthoringRecoveryDbEvidence } from "../../plan-admission/authoring-recovery-db-evidence.js";
 import type { HarnessDb } from "../../state-db/index.js";
 
 export interface UnresolvedAuthoringRecovery {
@@ -48,7 +57,7 @@ export function assertNoUnresolvedAuthoringRecovery(db: HarnessDb, repoRoot = pr
   );
 }
 
-function groupIsSemanticallyTerminal(
+export function groupIsSemanticallyTerminal(
   db: HarnessDb,
   repoRoot: string,
   groupId: string,
@@ -90,6 +99,7 @@ function committedEvidenceComplete(
   groupId: string,
   artifacts: readonly Record<string, unknown>[],
 ): boolean {
+  if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "complete") return false;
   const bindings = db
     .prepare(
       "SELECT asset_id, revision, artifact_role FROM authoring_command_revision_bindings WHERE group_id = ? ORDER BY artifact_role",
@@ -132,6 +142,7 @@ function rolledBackEvidenceClean(
   groupId: string,
   artifacts: readonly Record<string, unknown>[],
 ): boolean {
+  if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "zero") return false;
   const evidence = Number(
     db
       .prepare(
@@ -199,8 +210,22 @@ function safePath(repoRoot: string, path: string): string {
 
 function digestMatchesRegular(path: string, digest: string): boolean {
   if (!existsSync(path)) return false;
-  const stat = lstatSync(path);
-  if (!stat.isFile() || stat.isSymbolicLink()) return false;
-  const actual = createHash("sha256").update(readFileSync(path)).digest("hex");
-  return digest === actual || digest === `sha256:${actual}`;
+  const before = lstatSync(path);
+  if (!before.isFile() || before.isSymbolicLink()) return false;
+  const fd = openSync(path, "r");
+  try {
+    const opened = fstatSync(fd);
+    if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino) return false;
+    const actual = createHash("sha256").update(readFileSync(fd)).digest("hex");
+    const after = lstatSync(path);
+    return (
+      after.isFile() &&
+      !after.isSymbolicLink() &&
+      after.dev === opened.dev &&
+      after.ino === opened.ino &&
+      (digest === actual || digest === `sha256:${actual}`)
+    );
+  } finally {
+    closeSync(fd);
+  }
 }

@@ -55,7 +55,7 @@ describe("Redesign bundle coordinator", () => {
       coordinator.publishDurable(bundle({ origin: { baseRevision: 0 } }), memoryPublisher()),
     ).toEqual({
       ok: false,
-      ruleId: "plan-revision-input-invalid",
+      ruleId: "plan-redesign-bundle-reentry-binding-invalid",
     });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
     expect(Number(db.prepare("SELECT COUNT(*) n FROM append_command_receipts").get()?.n)).toBe(0);
@@ -126,7 +126,7 @@ describe("Redesign bundle coordinator", () => {
     });
   });
 
-  it("U-PA-REDESIGN-002D: receiptありfaultはrollbackせず同bindingをroll-forwardする", () => {
+  it("U-PA-REDESIGN-002D: 片側receiptだけ残るpartial DB evidenceをfail-closeする", () => {
     const { db, coordinator } = fixture();
     let count = 0;
     expect(() =>
@@ -137,6 +137,7 @@ describe("Redesign bundle coordinator", () => {
           return { receiptDigest: sha(`${member.groupId}\0${member.memberId}`) };
         },
         acknowledge() {},
+        rollback() {},
       }),
     ).toThrow("fault-after-receipt");
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
@@ -145,9 +146,9 @@ describe("Redesign bundle coordinator", () => {
         .prepare("SELECT event_kind FROM authoring_command_group_phase_events ORDER BY sequence")
         .all(),
     ).toContainEqual({ event_kind: "recovery_required" });
-    expect(coordinator.publishDurable(bundle(), memoryPublisher())).toMatchObject({
-      ok: true,
-      replayed: true,
+    expect(coordinator.publishDurable(bundle(), memoryPublisher())).toEqual({
+      ok: false,
+      ruleId: "plan-revision-receipt-binding-invalid",
     });
   });
 
@@ -173,7 +174,7 @@ describe("Redesign bundle coordinator", () => {
         },
         pairs: [],
       }),
-    ).toThrow("plan-redesign-publication-pair-required");
+    ).toThrow("plan-redesign-publication-pair-closure-invalid");
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
     expect(
       Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_group_headers").get()?.n),
@@ -263,7 +264,11 @@ describe("Redesign bundle coordinator", () => {
   });
 
   it.each([
-    ["stale origin", { origin: { baseRevision: 0 } }, "plan-revision-input-invalid"],
+    [
+      "stale origin",
+      { origin: { baseRevision: 0 } },
+      "plan-redesign-bundle-reentry-binding-invalid",
+    ],
     [
       "supersedes欠落",
       {
@@ -276,6 +281,13 @@ describe("Redesign bundle coordinator", () => {
           route_signal: "regression_dev",
           route_mode: "redesign",
           status: "draft",
+          pair_artifact: "docs/test-design/harness/L7-unit-test-design.md",
+          generates: [
+            {
+              artifact_path: "docs/design/harness/L6-function-design/function-spec.md",
+              artifact_type: "design_doc",
+            },
+          ],
         }),
         replacementSource: source(
           {
@@ -287,6 +299,13 @@ describe("Redesign bundle coordinator", () => {
             route_signal: "regression_dev",
             route_mode: "redesign",
             status: "draft",
+            pair_artifact: "docs/test-design/harness/L7-unit-test-design.md",
+            generates: [
+              {
+                artifact_path: "docs/design/harness/L6-function-design/function-spec.md",
+                artifact_type: "design_doc",
+              },
+            ],
           },
           "Replacement for PLAN-L4-31.\n",
         ),
@@ -306,6 +325,13 @@ describe("Redesign bundle coordinator", () => {
             route_signal: "forward",
             route_mode: "forward",
             status: "confirmed",
+            pair_artifact: "docs/test-design/harness/L9-system-test-design.md",
+            generates: [
+              {
+                artifact_path: "docs/design/harness/L4-basic-design/architecture.md",
+                artifact_type: "design_doc",
+              },
+            ],
           },
           "origin correction only\n",
         ),
@@ -411,7 +437,10 @@ if (!migratePlanLedger(db).ok) process.exit(87);
 const publisher = new NodeAuthoringArtifactPublisher({ rootDir: ${JSON.stringify(root)}, artifacts: ${JSON.stringify(artifacts)} });
 new PlanRedesignBundleCoordinator(db, undefined, (point) => { if (point === ${JSON.stringify(faultPoint)}) process.exit(86); }).publishDurable(input, publisher);
 db.close();`;
-    const child = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+    const child = spawnSync(process.env.UT_TDD_BUN_BINARY ?? "bun", ["-"], {
+      input: script,
+      encoding: "utf8",
+    });
     expect(child.status, child.stderr).toBe(86);
 
     db = openE2eDb(dbPath);
@@ -713,7 +742,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
           memberId: "pair:L7",
           path: "docs/test-design/harness/L7-unit-test-design.md",
           content: source(
-            { pair_artifact: "docs/design/harness/L6-function-design/" },
+            { pair_artifact: "docs/design/harness/L6-function-design/function-spec.md" },
             "paired verification update",
           ),
           expectedPreimage: { kind: "absent" },
@@ -722,7 +751,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
           memberId: "pair:L9",
           path: "docs/test-design/harness/L9-system-test-design.md",
           content: source(
-            { pair_artifact: "docs/design/harness/L4-basic-design/" },
+            { pair_artifact: "docs/design/harness/L4-basic-design/architecture.md" },
             "paired verification update",
           ),
           expectedPreimage: { kind: "absent" },
@@ -841,6 +870,13 @@ function realTrackedBundle(): {
     route_mode: "redesign",
     github_issue_id: 98,
     supersedes: [originPlanId],
+    pair_artifact: unitPairPath,
+    generates: [
+      {
+        artifact_path: "docs/design/harness/L6-function-design/function-spec.md",
+        artifact_type: "design_doc",
+      },
+    ],
   };
   const replacementPreReceipt = `---\n${stringify(replacementFrontmatter)}---\n# PLAN-L6-88\n\n${replacementPlanId} supersedes ${originPlanId}.\n`;
   const emptyProjection = `${JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] }, null, 2)}\n`;
@@ -1073,12 +1109,7 @@ function revisionInput(
 }
 
 function source(frontmatter: Record<string, unknown>, body: string): string {
-  const lines = Object.entries(frontmatter).flatMap(([key, value]) =>
-    Array.isArray(value)
-      ? [`${key}:`, ...value.map((item) => `  - ${item}`)]
-      : [`${key}: ${value}`],
-  );
-  return `---\n${lines.join("\n")}\n---\n${body}`;
+  return `---\n${stringify(frontmatter)}---\n${body}`;
 }
 
 function stable(value: unknown): string {

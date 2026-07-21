@@ -38,6 +38,7 @@ export class NodePlanAuthoringRecoveryExecutor {
         if (snapshot.evidenceLane !== "zero") throw new Error("plan-recovery-db-evidence-present");
         for (const artifact of snapshot.artifacts) {
           publisher.restoreSingleArtifactPublication(artifactCapability(artifact));
+          verifyRestored(this.repoRoot, artifact);
           this.injectFault("after-artifact-mutation");
         }
         appendRecoveryEvidence(db, snapshot, "restore");
@@ -195,6 +196,13 @@ function tokenId(pinPath: string): string {
 }
 function verifyFinalized(root: string, artifact: Artifact): void {
   assertDigest(safe(root, artifact.targetPath), artifact.postimage);
+  assertAuxZero(root, artifact);
+}
+function verifyRestored(root: string, artifact: Artifact): void {
+  const target = safe(root, artifact.targetPath);
+  if (artifact.preimage.kind === "absent") {
+    if (existsSync(target)) throw new Error("plan-recovery-restore-mismatch");
+  } else assertDigest(target, artifact.preimage.digest);
   assertAuxZero(root, artifact);
 }
 function assertAuxZero(root: string, artifact: Artifact): void {

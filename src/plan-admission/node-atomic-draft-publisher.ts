@@ -585,6 +585,15 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
           role: "rollback",
         });
         linkSync(rollbackPath, targetPath);
+        assertRegularDigest({
+          path: targetPath,
+          digest: input.preimage.digest,
+          logicalPath: input.path,
+          role: "restored preimage",
+        });
+        if (!sameFile(rollbackPath, targetPath))
+          throw new Error(`artifact rollback link CAS mismatch: ${input.path}`);
+        parent.assertCurrent(input.path);
       } else {
         assertRegularDigest({
           path: targetPath,
@@ -623,6 +632,19 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         role: `${role} identity pin`,
         parent,
       });
+    if (input.preimage.kind === "absent") {
+      if (existsSync(targetPath))
+        throw new Error(`artifact rollback restore mismatch: ${input.path}`);
+    } else {
+      assertRegularDigest({
+        path: targetPath,
+        digest: input.preimage.digest,
+        logicalPath: input.path,
+        role: "restored preimage",
+      });
+    }
+    if ([temporaryPath, rollbackPath].some(existsSync))
+      throw new Error(`artifact rollback auxiliary remains: ${input.path}`);
     syncDirectory(dirname(targetPath));
   }
 

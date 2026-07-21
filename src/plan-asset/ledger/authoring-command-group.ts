@@ -499,7 +499,7 @@ function insertOperationDescriptor(db: HarnessDb, input: NormalizedGroup): void 
       postimage_digest: `sha256:${member.contentDigest}`,
     };
     db.prepare(
-      "INSERT INTO authoring_operation_artifacts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO authoring_operation_artifacts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).run(...Object.values(row), ledgerRowDigest(row, "artifact_digest"));
   });
 }

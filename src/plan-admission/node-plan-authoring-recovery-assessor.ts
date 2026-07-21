@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
+import { groupIsSemanticallyTerminal } from "../plan-asset/ledger/authoring-recovery-gate.js";
 import { ledgerRowDigest } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
@@ -13,11 +14,23 @@ export function ensureAuthoringRecoveryAssessment(
   db.exec("BEGIN IMMEDIATE");
   try {
     const context = loadContext(db, commandId);
-    if (!context || ["committed", "rolled_back"].includes(context.state)) {
+    if (!context) {
+      db.exec("COMMIT");
+      return;
+    }
+    if (
+      ["committed", "rolled_back"].includes(context.state) &&
+      groupIsSemanticallyTerminal(db, repoRoot, commandId, context.state)
+    ) {
       db.exec("COMMIT");
       return;
     }
     const evidence = { lane: inspectAuthoringRecoveryDbEvidence(db, commandId) };
+    if (
+      (context.state === "committed" && evidence.lane !== "complete") ||
+      (context.state === "rolled_back" && evidence.lane !== "zero")
+    )
+      throw new Error("plan-recovery-terminal-evidence-conflict");
     const custody = inspectCustody(repoRoot, context.artifacts, context.published.length, evidence);
     const latest = db
       .prepare(

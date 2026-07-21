@@ -1,4 +1,5 @@
 import type { PlanAuthoringRecoveryRunner } from "../cli/plan-authoring-recovery.js";
+import { findUnresolvedAuthoringRecovery } from "../plan-asset/ledger/authoring-recovery-gate.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { ensureAuthoringRecoveryAssessment } from "./node-plan-authoring-recovery-assessor.js";
@@ -14,7 +15,10 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
     try {
       return this.withDb((db) => {
         ensureAuthoringRecoveryAssessment(db, this.repoRoot, commandId);
-        return classify(status(db, commandId));
+        const unresolved = findUnresolvedAuthoringRecovery(db, this.repoRoot).groups.includes(
+          commandId,
+        );
+        return classify(status(db, commandId), unresolved);
       });
     } catch (error) {
       return {
@@ -86,10 +90,17 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
   }
 }
 
-function classify(value: Record<string, unknown> | undefined) {
+function classify(value: Record<string, unknown> | undefined, unresolved = false) {
   if (!value) return { state: "corrupt", exitCode: 3 };
   const state = String(value.state);
-  if (["committed", "rolled_back"].includes(state)) return { ...value, exitCode: 0 };
+  if (["committed", "rolled_back"].includes(state) && !unresolved) return { ...value, exitCode: 0 };
+  if (
+    ["committed", "rolled_back"].includes(state) &&
+    unresolved &&
+    value.assessment_digest &&
+    value.fencing_token
+  )
+    return { ...value, terminal_state: state, state: "recovery_required", exitCode: 2 };
   if (
     ["prepared", "member_started", "member_published", "recovery_required"].includes(state) &&
     value.assessment_digest &&
