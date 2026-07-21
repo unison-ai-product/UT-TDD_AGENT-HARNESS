@@ -175,7 +175,7 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { buildScopeDryRunPreview } from "./state-db/scope-preview";
-import { refreshHarnessDbOnStop, spawnDetachedStopRefresh } from "./state-db/stop-refresh";
+import { runCoalescedStopRefresh, spawnDetachedStopRefresh } from "./state-db/stop-refresh";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -976,7 +976,7 @@ session
     // Stop hook の timeout 予算 (5s) を消費しないよう detached で fire-and-forget 起動し、
     // fail-open — 起動失敗は警告のみで session 終了 (exit 0) を妨げない。
     const refresh = spawnDetachedStopRefresh({ repoRoot });
-    if (!refresh.launched) {
+    if (!refresh.launched && !refresh.coalesced) {
       process.stderr.write(`session-log: db refresh not launched (${refresh.reason})\n`);
     }
     process.stdout.write(`session-log: summary ${input.session_id ?? "ut-tdd-cli"}\n`);
@@ -987,8 +987,17 @@ session
   .description(
     "Stop 境界の on-disk harness.db refresh (session summary から detached 起動される内部エントリ)",
   )
-  .action(() => {
-    const r = refreshHarnessDbOnStop({ repoRoot: requireRuntimeRepoRoot() });
+  .requiredOption("--generation <id>", "Stop refresh lease generation")
+  .action((opts: { generation: string }) => {
+    const result = runCoalescedStopRefresh({
+      repoRoot: requireRuntimeRepoRoot(),
+      generation: opts.generation,
+    });
+    const r = result.runs.at(-1);
+    if (!result.owned || !r) {
+      process.stderr.write("session-log: db refresh skipped (stale-generation)\n");
+      return;
+    }
     if (!r.ok) {
       process.stderr.write(`session-log: db refresh skipped (${r.skippedReason})\n`);
     }

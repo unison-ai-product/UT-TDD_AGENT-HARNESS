@@ -4,6 +4,17 @@ import { join } from "node:path";
 import { defaultHarnessDbPath, openHarnessDb } from "./index";
 import { migrate } from "./migration";
 import { projectModelEvaluations, projectTokenUsage, rebuildHarnessDb } from "./projection-writer";
+import {
+  acquireStopRefreshLease,
+  claimStopRefreshDemand,
+  completeStopRefreshDemand,
+  joinStopRefreshLease,
+  markStopRefreshDirty,
+  recordStopRefreshFailure,
+  releaseStopRefreshLease,
+  retryStopRefreshDemand,
+  transferStopRefreshLease,
+} from "./stop-refresh-coordinator";
 import { loadRuntimeSessionUsage } from "./token-tracker";
 
 export interface StopRefreshResult {
@@ -88,6 +99,7 @@ export function refreshHarnessDbOnStop(options: StopRefreshOptions): StopRefresh
 }
 
 export interface DetachedSpawnHandle {
+  pid?: number;
   unref(): void;
   /** node:child_process の error event (非同期起動失敗、例: ENOENT)。未処理だと process が落ちる。 */
   on?(event: "error", listener: (error: Error) => void): unknown;
@@ -111,6 +123,7 @@ export interface SpawnStopRefreshOptions {
 export interface SpawnStopRefreshResult {
   launched: boolean;
   reason?: string;
+  coalesced?: boolean;
 }
 
 /**
@@ -120,31 +133,110 @@ export interface SpawnStopRefreshResult {
  * hook 自体は即 return する。fail-open: 起動失敗は理由を返すだけで hook を落とさない。
  */
 export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): SpawnStopRefreshResult {
+  if (!markStopRefreshDirty(options.repoRoot)) {
+    return { launched: false, reason: "dirty-marker-unavailable" };
+  }
+  const lease = acquireStopRefreshLease(options.repoRoot);
+  if (!lease.acquired) {
+    return lease.reason === "active"
+      ? { launched: false, coalesced: true, reason: "active-owner" }
+      : { launched: false, reason: "coordinator-unavailable" };
+  }
+  const generation = lease.owner.generation;
   try {
     const execPath = options.execPath ?? process.execPath;
     const scriptPath = options.scriptPath ?? process.argv[1];
     if (!execPath || !scriptPath) {
+      releaseStopRefreshLease(options.repoRoot, generation);
       return { launched: false, reason: "missing-entrypoint" };
     }
     const spawnImpl: DetachedSpawnImpl =
       options.spawnImpl ??
       ((command, args, opts) => spawn(command, args, opts) as unknown as DetachedSpawnHandle);
-    const child = spawnImpl(execPath, [scriptPath, "session", "db-refresh"], {
-      cwd: options.repoRoot,
-      detached: true,
-      stdio: "ignore",
-    });
+    const child = spawnImpl(
+      execPath,
+      [scriptPath, "session", "db-refresh", "--generation", generation],
+      {
+        cwd: options.repoRoot,
+        detached: true,
+        stdio: "ignore",
+      },
+    );
     // 非同期起動失敗 (ENOENT 等) は error event で届く。未処理のままだと親 process が
     // 落ちて fail-open 契約を破るため、必ず握りつぶす (blind review 2nd round の FLAG 対応)。
     child.on?.("error", () => {
-      /* fail-open: refresh は best-effort、hook を落とさない */
+      // dirty remains durable. Releasing only our generation lets the next Stop retry.
+      releaseStopRefreshLease(options.repoRoot, generation);
     });
+    if (
+      typeof child.pid !== "number" ||
+      child.pid <= 0 ||
+      !transferStopRefreshLease(options.repoRoot, generation, process.pid, child.pid)
+    ) {
+      releaseStopRefreshLease(options.repoRoot, generation);
+      child.unref();
+      return { launched: false, reason: "ownership-handoff-failed" };
+    }
     child.unref();
     return { launched: true };
   } catch (error) {
+    releaseStopRefreshLease(options.repoRoot, generation);
     return {
       launched: false,
       reason: `spawn-error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+}
+
+/** Worker side: one initial run plus at most one coalesced rerun. */
+export function runCoalescedStopRefresh(
+  options: StopRefreshOptions & {
+    generation: string;
+    /** deterministic unit oracle; production uses refreshHarnessDbOnStop. */
+    refresh?: (options: StopRefreshOptions) => StopRefreshResult;
+  },
+): {
+  runs: StopRefreshResult[];
+  owned: boolean;
+} {
+  const runs: StopRefreshResult[] = [];
+  let releasable = true;
+  // Idempotently complete ownership handoff even if the parent exited immediately after spawn.
+  if (!joinStopRefreshLease(options.repoRoot, options.generation)) {
+    return { runs, owned: false };
+  }
+  if (!claimStopRefreshDemand(options.repoRoot, options.generation)) {
+    releaseStopRefreshLease(options.repoRoot, options.generation);
+    return { runs, owned: false };
+  }
+  try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let result: StopRefreshResult;
+      try {
+        result = (options.refresh ?? refreshHarnessDbOnStop)(options);
+      } catch (error) {
+        const reason = `refresh-threw: ${error instanceof Error ? error.message : String(error)}`;
+        const recorded = recordStopRefreshFailure(options.repoRoot, options.generation, reason);
+        const retried = retryStopRefreshDemand(options.repoRoot, options.generation);
+        releasable = recorded && retried;
+        break;
+      }
+      runs.push(result);
+      if (!result.ok) {
+        const recorded = recordStopRefreshFailure(
+          options.repoRoot,
+          options.generation,
+          result.skippedReason ?? "refresh-failed",
+        );
+        const retried = retryStopRefreshDemand(options.repoRoot, options.generation);
+        releasable = recorded && retried;
+        break;
+      }
+      completeStopRefreshDemand(options.repoRoot, options.generation);
+      if (attempt === 1 || !claimStopRefreshDemand(options.repoRoot, options.generation)) break;
+    }
+  } finally {
+    if (releasable) releaseStopRefreshLease(options.repoRoot, options.generation);
+  }
+  return { runs, owned: true };
 }

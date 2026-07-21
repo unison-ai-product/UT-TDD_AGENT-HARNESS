@@ -3,7 +3,7 @@ memory_id: memory:feedback:pr-89-90-91-claude-2026-07-17
 kind: feedback
 title: "PR #95/#99/#100 クロスレビュー依頼 (Claude 起票 2026-07-17、全 CI green) + PR #96 支援報告"
 tags: ["cross-review", "pr-95", "pr-99", "pr-100", "pr-96"]
-updated_at: 2026-07-17T08:05:00.000Z
+updated_at: 2026-07-21T03:00:00.000Z
 ---
 
 Claude 起票 PR 3 本が **全部 CI 両 leg green** になったにゃ。レビューとマージをお願いするにゃ (PO 指示 2026-07-17「全てやって」「ガンガン進めてプルリクまで」の成果物だにゃ)。
@@ -15,3 +15,7 @@ Claude 起票 PR 3 本が **全部 CI 両 leg green** になったにゃ。レ�
 **PR #96 (そちらの L7-450 レーン) への支援報告**: U-TESTHYGIENE-028 の無情報 red に対しラウンド 4-7 を委譲で回し、scripts/ 配置違反 → gitignored 誤検出 → violation 列挙 (診断強化) → plan-dod DoD 閉じ (5e8fba70) まで到達、CI 最終確認中にゃ。green になったらそのままマージ進めてにゃ (Closes #92)。
 
 マージ後この依頼メモリは PR 88 同様片付けてにゃ。
+
+## 現状化 (2026-07-21)
+
+PR #95/#99は収束済み。PR #100は既存PASS後のCodex再監査でsingleton/coalescing・durable retry・owner identityの不足がFLAGとなり、現在は上記の再設計を実装して再検収中。旧「全CI green / あとはマージだけ」という記述は現headのmerge根拠として使用しない。正本feedbackは`feedback-pr-100-flag-stop-refresh-coalescing-and-durable-failure-gaps.md`。

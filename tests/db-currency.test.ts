@@ -1,12 +1,36 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
-import { refreshHarnessDbOnStop, spawnDetachedStopRefresh } from "../src/state-db/stop-refresh";
+import {
+  refreshHarnessDbOnStop,
+  runCoalescedStopRefresh,
+  spawnDetachedStopRefresh,
+} from "../src/state-db/stop-refresh";
+import {
+  acquireStopRefreshLease,
+  joinStopRefreshLease,
+  markStopRefreshDirty,
+  recordStopRefreshFailure,
+  releaseStopRefreshLease,
+  stopRefreshDirtyPath,
+  transferStopRefreshLease,
+} from "../src/state-db/stop-refresh-coordinator";
 import { removeTestTree } from "./support/temp-tree";
 
 const currentStats: DriveDbRegistrationStats = {
@@ -169,6 +193,7 @@ describe("db-currency lint", () => {
   });
 
   it("U-DBCURRENCY-007: Stop hook launches the refresh detached so the 5s hook budget is not consumed", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-launch-"));
     const calls: Array<{
       command: string;
       args: string[];
@@ -177,13 +202,14 @@ describe("db-currency lint", () => {
     }> = [];
 
     const result = spawnDetachedStopRefresh({
-      repoRoot: "/repo",
+      repoRoot: root,
       execPath: "/usr/bin/bun",
       scriptPath: "/repo/src/cli.ts",
       spawnImpl: (command, args, options) => {
         const call = { command, args, options, unrefCalled: false };
         calls.push(call);
         return {
+          pid: 7001,
           unref: () => {
             call.unrefCalled = true;
           },
@@ -194,14 +220,18 @@ describe("db-currency lint", () => {
     expect(result.launched).toBe(true);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.command).toBe("/usr/bin/bun");
-    expect(calls[0]?.args).toEqual(["/repo/src/cli.ts", "session", "db-refresh"]);
-    expect(calls[0]?.options).toEqual({ cwd: "/repo", detached: true, stdio: "ignore" });
+    expect(calls[0]?.args.slice(0, 3)).toEqual(["/repo/src/cli.ts", "session", "db-refresh"]);
+    expect(calls[0]?.args[3]).toBe("--generation");
+    expect(calls[0]?.args[4]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(calls[0]?.options).toEqual({ cwd: root, detached: true, stdio: "ignore" });
     expect(calls[0]?.unrefCalled).toBe(true);
+    removeTestTree(root);
   });
 
   it("U-DBCURRENCY-008: detached launch fails open (returns a reason instead of throwing)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-launch-fail-"));
     const result = spawnDetachedStopRefresh({
-      repoRoot: "/repo",
+      repoRoot: root,
       execPath: "/usr/bin/bun",
       scriptPath: "/repo/src/cli.ts",
       spawnImpl: () => {
@@ -211,20 +241,436 @@ describe("db-currency lint", () => {
 
     expect(result.launched).toBe(false);
     expect(result.reason).toContain("spawn EPERM");
+    expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+    removeTestTree(root);
   });
 
   it("U-DBCURRENCY-009: a real async spawn failure (ENOENT) is handled and does not crash the caller", async () => {
     // spawnImpl 非注入 = real node:child_process.spawn。存在しない executable の起動失敗は
     // 同期 throw でなく error event で届く。listener 未登録なら process ごと落ちる (real oracle)。
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-async-fail-"));
     const result = spawnDetachedStopRefresh({
-      repoRoot: tmpdir(),
+      repoRoot: root,
       execPath: join(tmpdir(), "ut-tdd-no-such-executable-xyz"),
       scriptPath: "irrelevant.ts",
     });
 
-    // 非同期失敗は同期には観測できないため launched=true が正しい契約。
-    expect(result.launched).toBe(true);
+    // PIDを得られないspawnはownership handoff未成立として同期fail-openする。
+    expect(result.launched).toBe(false);
+    expect(result.reason).toBe("ownership-handoff-failed");
     // error event が発火しきるまで待つ。listener が無ければここで unhandled error になり fail する。
     await new Promise((resolve) => setTimeout(resolve, 500));
+    removeTestTree(root);
+  });
+
+  it("U-DBCURRENCY-010: 100 concurrent Stops coalesce behind one owner and one dirty marker", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-coalesce-"));
+    try {
+      let spawns = 0;
+      const spawnImpl = () => {
+        spawns += 1;
+        return { pid: 7002, unref: () => {} };
+      };
+      const results = Array.from({ length: 100 }, () =>
+        spawnDetachedStopRefresh({
+          repoRoot: root,
+          execPath: "bun",
+          scriptPath: "cli.ts",
+          spawnImpl,
+        }),
+      );
+      expect(spawns).toBe(1);
+      expect(results.filter((result) => result.coalesced)).toHaveLength(99);
+      const state = join(root, ".ut-tdd", "state", "stop-refresh");
+      expect(existsSync(join(state, "active"))).toBe(true);
+      expect(existsSync(join(state, "dirty"))).toBe(true);
+      expect(readdirSync(join(state, "generations"))).toHaveLength(1);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-011: a live owner is never reclaimed by elapsed time and release is generation-specific", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-live-owner-"));
+    try {
+      const first = acquireStopRefreshLease(root, {
+        pid: 41,
+        host: "machine",
+        now: () => 0,
+        generation: () => "generation-a",
+        isPidAlive: () => true,
+      });
+      expect(first.acquired).toBe(true);
+      const afterYears = acquireStopRefreshLease(root, {
+        pid: 42,
+        host: "machine",
+        now: () => 100 * 365 * 24 * 60 * 60 * 1000,
+        generation: () => "generation-b",
+        isPidAlive: () => true,
+      });
+      expect(afterYears).toMatchObject({ acquired: false, reason: "active" });
+      releaseStopRefreshLease(root, "generation-b");
+      expect(
+        acquireStopRefreshLease(root, {
+          pid: 43,
+          host: "machine",
+          generation: () => "generation-c",
+          isPidAlive: () => true,
+        }).acquired,
+      ).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-012: completion performs at most one rerun and preserves later demand", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-rerun-"));
+    try {
+      expect(markStopRefreshDirty(root)).toBe(true);
+      const lease = acquireStopRefreshLease(root, {
+        generation: () => "generation-rerun",
+      });
+      expect(lease.acquired).toBe(true);
+      let calls = 0;
+      const result = runCoalescedStopRefresh({
+        repoRoot: root,
+        generation: "generation-rerun",
+        skipTokenIngest: true,
+        refresh: () => {
+          calls += 1;
+          // Stop arrives during both runs. First causes exactly one rerun; second remains durable.
+          markStopRefreshDirty(root);
+          return { ok: true, rebuilt: true, tokenRunsIngested: 0 };
+        },
+      });
+      expect(result.owned).toBe(true);
+      expect(calls).toBe(2);
+      expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+
+      const next = acquireStopRefreshLease(root, { generation: () => "generation-next" });
+      expect(next.acquired).toBe(true);
+      const consumed = runCoalescedStopRefresh({
+        repoRoot: root,
+        generation: "generation-next",
+        refresh: () => ({ ok: true, rebuilt: true, tokenRunsIngested: 0 }),
+      });
+      expect(consumed.runs).toHaveLength(1);
+      expect(existsSync(stopRefreshDirtyPath(root))).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-013: async spawn failure leaves durable retry demand and releases its owner", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-async-oracle-"));
+    try {
+      const result = spawnDetachedStopRefresh({
+        repoRoot: root,
+        execPath: "missing",
+        scriptPath: "cli.ts",
+        spawnImpl: () => ({
+          pid: 7003,
+          unref: () => {},
+          on: (_event, listener) => queueMicrotask(() => listener(new Error("ENOENT"))),
+        }),
+      });
+      expect(result.launched).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+      const retry = acquireStopRefreshLease(root, { generation: () => "retry-generation" });
+      expect(retry.acquired).toBe(true);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-014: rebuild failure restores durable demand before releasing the lease", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-rebuild-fail-"));
+    try {
+      markStopRefreshDirty(root);
+      const lease = acquireStopRefreshLease(root, { generation: () => "failed-run" });
+      expect(lease.acquired).toBe(true);
+      const result = runCoalescedStopRefresh({
+        repoRoot: root,
+        generation: "failed-run",
+        refresh: () => ({
+          ok: false,
+          rebuilt: false,
+          tokenRunsIngested: 0,
+          skippedReason: "rebuild-failed",
+        }),
+      });
+      expect(result.runs).toHaveLength(1);
+      expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+      expect(readdirSync(join(root, ".ut-tdd", "state", "stop-refresh", "failures"))).toHaveLength(
+        1,
+      );
+      expect(acquireStopRefreshLease(root, { generation: () => "retry" }).acquired).toBe(true);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-015: detached ownership transfers to the live child before parent exit", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-child-owner-"));
+    try {
+      const launched = spawnDetachedStopRefresh({
+        repoRoot: root,
+        execPath: "bun",
+        scriptPath: "cli.ts",
+        spawnImpl: () => ({ pid: 9001, unref: () => {}, on: () => {} }),
+      });
+      expect(launched.launched).toBe(true);
+      const contender = acquireStopRefreshLease(root, {
+        pid: 9002,
+        generation: () => "must-not-win",
+        isPidAlive: (pid) => pid === 9001,
+      });
+      expect(contender).toMatchObject({ acquired: false, reason: "active" });
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-016: separate worker processes race to exactly one generation owner", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-process-race-"));
+    const gate = join(root, "gate");
+    const ready = join(root, "ready");
+    mkdirSync(ready);
+    writeFileSync(gate, "wait", "utf8");
+    const modulePath = pathToFileURL(
+      join(process.cwd(), "src", "state-db", "stop-refresh-coordinator.ts"),
+    ).href;
+    const worker = join(root, "worker.ts");
+    writeFileSync(
+      worker,
+      `import { existsSync, writeFileSync } from "node:fs";\nimport { acquireStopRefreshLease } from ${JSON.stringify(modulePath)};\nwriteFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready");\nwhile (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2));\nconst lease = acquireStopRefreshLease(${JSON.stringify(root)});\nconsole.log(lease.acquired ? "won" : "lost");\nif (lease.acquired) await new Promise((resolve) => setTimeout(resolve, 500));\n`,
+      "utf8",
+    );
+    try {
+      const children = Array.from({ length: 12 }, () =>
+        spawn(process.execPath, [worker], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }),
+      );
+      const deadline = Date.now() + 10_000;
+      while (readdirSync(ready).length < children.length && Date.now() < deadline) {
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+      }
+      expect(readdirSync(ready)).toHaveLength(children.length);
+      rmSync(gate);
+      const verdicts = await Promise.all(
+        children.map(
+          (child) =>
+            new Promise<string>((resolvePromise, reject) => {
+              let stdout = "";
+              child.stdout.on("data", (chunk) => (stdout += String(chunk)));
+              child.on("error", reject);
+              child.on("exit", (code) =>
+                code === 0
+                  ? resolvePromise(stdout.trim())
+                  : reject(new Error(`worker exit ${code}`)),
+              );
+            }),
+        ),
+      );
+      expect(verdicts.filter((value) => value === "won")).toHaveLength(1);
+      expect(verdicts.filter((value) => value === "lost")).toHaveLength(11);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-017: state root junction escape and active-record tamper fail closed", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-path-tamper-"));
+    const outside = mkdtempSync(join(tmpdir(), "ut-tdd-stop-path-outside-"));
+    try {
+      mkdirSync(join(root, ".ut-tdd", "state"), { recursive: true });
+      symlinkSync(
+        outside,
+        join(root, ".ut-tdd", "state", "stop-refresh"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      expect(markStopRefreshDirty(root)).toBe(false);
+      expect(readdirSync(outside)).toEqual([]);
+    } finally {
+      removeTestTree(root);
+      removeTestTree(outside);
+    }
+  });
+
+  it("U-DBCURRENCY-018: child claim is acknowledged before the parent claim is retired", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-handoff-ack-"));
+    try {
+      const parentPid = process.pid;
+      const childPid = process.pid + 100_000;
+      const lease = acquireStopRefreshLease(root, {
+        pid: parentPid,
+        generation: () => "handoff-generation",
+      });
+      expect(lease.acquired).toBe(true);
+      expect(
+        transferStopRefreshLease({
+          repoRoot: root,
+          generation: "handoff-generation",
+          fromPid: parentPid,
+          toPid: childPid,
+        }),
+      ).toBe(true);
+      const generation = join(
+        root,
+        ".ut-tdd",
+        "state",
+        "stop-refresh",
+        "generations",
+        "handoff-generation",
+      );
+      expect(existsSync(join(generation, `claim-${parentPid}.json`))).toBe(true);
+      expect(joinStopRefreshLease(root, "handoff-generation", childPid)).toBe(true);
+      expect(existsSync(join(generation, `ack-${childPid}.json`))).toBe(true);
+      expect(existsSync(join(generation, `claim-${childPid}.json`))).toBe(false);
+      expect(existsSync(join(generation, `claim-${parentPid}.json`))).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-019: foreign-host unverifiable owner is quarantined only after bounded TTL", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-foreign-owner-"));
+    try {
+      expect(
+        acquireStopRefreshLease(root, {
+          pid: 51,
+          host: "old-machine",
+          now: () => 0,
+          generation: () => "foreign-old",
+          isPidAlive: () => true,
+        }).acquired,
+      ).toBe(true);
+      expect(
+        acquireStopRefreshLease(root, {
+          pid: 52,
+          host: "new-machine",
+          now: () => 60_001,
+          ttlMs: 60_000,
+          generation: () => "foreign-new",
+          isPidAlive: () => true,
+        }).acquired,
+      ).toBe(true);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-020: active record digest tamper cannot release or acquire a generation", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-owner-tamper-"));
+    try {
+      expect(acquireStopRefreshLease(root, { generation: () => "tamper-owner" }).acquired).toBe(
+        true,
+      );
+      const active = join(root, ".ut-tdd", "state", "stop-refresh", "active");
+      const record = JSON.parse(readFileSync(active, "utf8")) as Record<string, unknown>;
+      writeFileSync(active, `${JSON.stringify({ ...record, pid: 999_999 })}\n`, "utf8");
+      releaseStopRefreshLease(root, "tamper-owner");
+      expect(existsSync(active)).toBe(true);
+      expect(acquireStopRefreshLease(root, { generation: () => "must-not-acquire" })).toMatchObject(
+        { acquired: false, reason: "active" },
+      );
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-021: a live joined child remains owner beyond TTL", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-live-child-"));
+    const child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], {
+      stdio: "ignore",
+    });
+    try {
+      await new Promise<void>((resolvePromise, reject) => {
+        child.once("spawn", resolvePromise);
+        child.once("error", reject);
+      });
+      if (!child.pid) throw new Error("child pid unavailable");
+      const startedAt = Date.now();
+      const lease = acquireStopRefreshLease(root, {
+        pid: process.pid,
+        now: () => startedAt,
+        generation: () => "live-child-generation",
+      });
+      expect(lease.acquired).toBe(true);
+      expect(
+        transferStopRefreshLease({
+          repoRoot: root,
+          generation: "live-child-generation",
+          fromPid: process.pid,
+          toPid: child.pid,
+        }),
+      ).toBe(true);
+      expect(joinStopRefreshLease(root, "live-child-generation", child.pid)).toBe(true);
+      const contender = acquireStopRefreshLease(root, {
+        now: () => startedAt + 60_001,
+        ttlMs: 60_000,
+        generation: () => "must-not-reclaim-live-child",
+      });
+      expect(contender).toMatchObject({ acquired: false, reason: "active" });
+    } finally {
+      child.kill();
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-022: a same-host worker crash before join is reclaimed without TTL delay", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-prejoin-crash-"));
+    const child = spawn(process.execPath, ["-e", "process.exit(0)"], { stdio: "ignore" });
+    try {
+      await new Promise<void>((resolvePromise, reject) => {
+        child.once("spawn", resolvePromise);
+        child.once("error", reject);
+      });
+      if (!child.pid) throw new Error("child pid unavailable");
+      const lease = acquireStopRefreshLease(root, {
+        pid: process.pid,
+        generation: () => "prejoin-crash-generation",
+      });
+      expect(lease.acquired).toBe(true);
+      expect(
+        transferStopRefreshLease({
+          repoRoot: root,
+          generation: "prejoin-crash-generation",
+          fromPid: process.pid,
+          toPid: child.pid,
+        }),
+      ).toBe(true);
+      await new Promise<void>((resolvePromise) => child.once("exit", () => resolvePromise()));
+      // Model the detached parent having exited too: both recorded owners are now confirmed dead.
+      const reclaimed = acquireStopRefreshLease(root, {
+        isPidAlive: () => false,
+        generation: () => "post-crash-generation",
+      });
+      expect(reclaimed.acquired).toBe(true);
+    } finally {
+      child.kill();
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-023: failure receipts retain safe codes without persisting exception details", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-failure-redaction-"));
+    try {
+      expect(recordStopRefreshFailure(root, "generation-safe", "rebuild-failed")).toBe(true);
+      expect(
+        recordStopRefreshFailure(root, "generation-secret", "refresh-threw: token=secret-value"),
+      ).toBe(true);
+      const failureDir = join(root, ".ut-tdd", "state", "stop-refresh", "failures");
+      const reasons = readdirSync(failureDir).map((name) =>
+        JSON.parse(readFileSync(join(failureDir, name), "utf8")),
+      );
+      expect(reasons.map((receipt) => receipt.reason).sort()).toEqual([
+        "rebuild-failed",
+        "redacted",
+      ]);
+      expect(JSON.stringify(reasons)).not.toContain("secret-value");
+    } finally {
+      removeTestTree(root);
+    }
   });
 });
