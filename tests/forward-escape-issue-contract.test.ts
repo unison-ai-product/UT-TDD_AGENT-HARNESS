@@ -21,6 +21,7 @@ import {
 } from "../src/execution/forward-escape";
 import { SqliteForwardEscapeJournal } from "../src/execution/sqlite-forward-escape-journal";
 import { openHarnessDb } from "../src/state-db/index";
+import { migrate } from "../src/state-db/migration";
 import { removeTestTree } from "./support/temp-tree";
 
 function validCommand(overrides: Partial<RequestForwardEscape> = {}): RequestForwardEscape {
@@ -105,6 +106,12 @@ function validated(
   expect(result.violations).toHaveLength(0);
   if (!result.validated) throw new Error("test fixture did not validate");
   return result.validated;
+}
+
+function openForwardEscapeDb(path: string, repoRoot: string) {
+  const db = openHarnessDb(path, { repoRoot });
+  migrate(db);
+  return db;
 }
 
 describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
@@ -235,7 +242,12 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const validatedEvent = validated(command, custody);
     const persisted: JournalEvent[] = [];
     const journal = memoryJournal(persisted);
-    const first = projectForwardEscapeIssue(validatedEvent, flakyPort, journal, custody);
+    const first = projectForwardEscapeIssue({
+      validated: validatedEvent,
+      port: flakyPort,
+      journal,
+      custody,
+    });
     expect(first.type).toBe("IssueProjectionDeferred");
     expect(journal.eventsFor(command.command_id).map((event) => event.type)).toEqual([
       "IssueProjectionQueued",
@@ -243,9 +255,19 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     ]);
     // process restart: the durable journal is reused by a new projector invocation.
     const restartedJournal = memoryJournal(persisted);
-    const second = projectForwardEscapeIssue(validatedEvent, flakyPort, restartedJournal, custody);
+    const second = projectForwardEscapeIssue({
+      validated: validatedEvent,
+      port: flakyPort,
+      journal: restartedJournal,
+      custody,
+    });
     expect(second.type).toBe("IssueProjected");
-    const third = projectForwardEscapeIssue(validatedEvent, flakyPort, restartedJournal, custody);
+    const third = projectForwardEscapeIssue({
+      validated: validatedEvent,
+      port: flakyPort,
+      journal: restartedJournal,
+      custody,
+    });
     expect(third.type).toBe("IssueProjected");
     expect(created).toHaveLength(1);
     expect(restartedJournal.eventsFor(command.command_id).at(-1)?.type).toBe("IssueProjected");
@@ -258,7 +280,12 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       },
     };
     expect(() =>
-      projectForwardEscapeIssue(validCommand() as never, port, memoryJournal(), memoryCustody()),
+      projectForwardEscapeIssue({
+        validated: validCommand() as never,
+        port,
+        journal: memoryJournal(),
+        custody: memoryCustody(),
+      }),
     ).toThrow("forward-escape-e2-required");
   });
 
@@ -286,12 +313,12 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       { ...validBinding, observed_revision: "" },
     ]) {
       const journal = memoryJournal();
-      const event = projectForwardEscapeIssue(
-        validatedEvent,
-        { createOrGetIssue: () => ({ ok: true, binding }) },
+      const event = projectForwardEscapeIssue({
+        validated: validatedEvent,
+        port: { createOrGetIssue: () => ({ ok: true, binding }) },
         journal,
         custody,
-      );
+      });
       expect(event.type).toBe("IssueProjectionDeferred");
       expect(journal.eventsFor(command.command_id).at(-1)?.type).toBe("IssueProjectionDeferred");
     }
@@ -310,7 +337,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   it("U-EXISSUE-010: SQLite close/reopen後もE2 custodyとoutbox chainを復元する", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-"));
     const dbPath = join(repo, ".ut-tdd", "harness.db");
-    let db = openHarnessDb(dbPath, { repoRoot: repo });
+    let db = openForwardEscapeDb(dbPath, repo);
     try {
       let journal = new SqliteForwardEscapeJournal(db);
       const event = validated(validCommand(), journal);
@@ -332,15 +359,25 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         },
       };
       db.close();
-      db = openHarnessDb(dbPath, { repoRoot: repo });
+      db = openForwardEscapeDb(dbPath, repo);
       journal = new SqliteForwardEscapeJournal(db);
       expect(journal.verify(event)).toBe(true);
-      const first = projectForwardEscapeIssue(event, port, journal, journal);
+      const first = projectForwardEscapeIssue({
+        validated: event,
+        port,
+        journal,
+        custody: journal,
+      });
       expect(first.type).toBe("IssueProjected");
       db.close();
-      db = openHarnessDb(dbPath, { repoRoot: repo });
+      db = openForwardEscapeDb(dbPath, repo);
       journal = new SqliteForwardEscapeJournal(db);
-      const replay = projectForwardEscapeIssue(event, port, journal, journal);
+      const replay = projectForwardEscapeIssue({
+        validated: event,
+        port,
+        journal,
+        custody: journal,
+      });
       expect(replay).toEqual(first);
       expect(calls).toBe(1);
     } finally {
@@ -367,12 +404,12 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       }),
     };
     expect(() =>
-      projectForwardEscapeIssue(
-        { ...event, certificate: { ...event.certificate, certificate_id: "forged" } },
+      projectForwardEscapeIssue({
+        validated: { ...event, certificate: { ...event.certificate, certificate_id: "forged" } },
         port,
-        memoryJournal(),
+        journal: memoryJournal(),
         custody,
-      ),
+      }),
     ).toThrow("forward-escape-e2-required");
     const stale = memoryJournal([
       {
@@ -383,9 +420,9 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         body_digest: "0".repeat(64),
       },
     ]);
-    expect(() => projectForwardEscapeIssue(event, port, stale, custody)).toThrow(
-      "projection-journal-payload-mismatch",
-    );
+    expect(() =>
+      projectForwardEscapeIssue({ validated: event, port, journal: stale, custody }),
+    ).toThrow("projection-journal-payload-mismatch");
     let appends = 0;
     const failingJournal: ForwardEscapeProjectionJournal = {
       eventsFor: () => [],
@@ -395,9 +432,9 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         return { durable: true, event_digest: "queued" };
       },
     };
-    expect(() => projectForwardEscapeIssue(event, port, failingJournal, custody)).toThrow(
-      "disk-full-after-remote-success",
-    );
+    expect(() =>
+      projectForwardEscapeIssue({ validated: event, port, journal: failingJournal, custody }),
+    ).toThrow("disk-full-after-remote-success");
     expect(appends).toBe(2); // false Deferred appendを試みない
   });
 
@@ -417,7 +454,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   ])("U-EXISSUE-013: SQLite %s 改変をclose/reopen後のchain検査で拒否する", (_label, sql, mutation, expected) => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-tamper-"));
     const dbPath = join(repo, ".ut-tdd", "harness.db");
-    let db = openHarnessDb(dbPath, { repoRoot: repo });
+    let db = openForwardEscapeDb(dbPath, repo);
     try {
       const journal = new SqliteForwardEscapeJournal(db);
       const event = validated(validCommand(), journal);
@@ -432,7 +469,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       });
       db.prepare(sql).run(mutation, event.command.command_id);
       db.close();
-      db = openHarnessDb(dbPath, { repoRoot: repo });
+      db = openForwardEscapeDb(dbPath, repo);
       expect(() => new SqliteForwardEscapeJournal(db).eventsFor(event.command.command_id)).toThrow(
         expected,
       );
@@ -445,14 +482,14 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   it("U-EXISSUE-014: SQLite E2 certificate改変をclose/reopen後のcustody照合で拒否する", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-cert-tamper-"));
     const dbPath = join(repo, ".ut-tdd", "harness.db");
-    let db = openHarnessDb(dbPath, { repoRoot: repo });
+    let db = openForwardEscapeDb(dbPath, repo);
     try {
       const event = validated(validCommand(), new SqliteForwardEscapeJournal(db));
       db.prepare(
         "UPDATE forward_escape_validation_certificates SET event_digest = ? WHERE command_id = ?",
       ).run("f".repeat(64), event.command.command_id);
       db.close();
-      db = openHarnessDb(dbPath, { repoRoot: repo });
+      db = openForwardEscapeDb(dbPath, repo);
       expect(new SqliteForwardEscapeJournal(db).verify(event)).toBe(false);
     } finally {
       db.close();

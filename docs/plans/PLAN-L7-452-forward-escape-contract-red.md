@@ -18,38 +18,6 @@ agent_slots:
     slot_label: "SE - 契約判定関数 (classify/validate/project/reconcile) の純粋実装"
   - role: qa
     slot_label: "QA - U-EXISSUE-001..006 の Red 先行固定"
-review_evidence:
-  - reviewer: intra_runtime_subagent
-    review_kind: intra_runtime_subagent
-    worker_model: claude-fable-5
-    reviewer_model: claude-opus-4-8
-    tests_green_at: "2026-07-17T21:00:00+09:00"
-    reviewed_at: "2026-07-17T21:05:00+09:00"
-    verdict: pass
-    scope: >-
-      blind-reviewer (claim-blind/spec-blind) が U-EXISSUE-001..006 と契約実装を
-      独立判定。初回 FLAG 2 件 (origin_layer 空の fail-open / U-006 の値重複による
-      退化 oracle) を修正 commit で解消し、空 layer 負例と行除去 mutation の
-      render→digest→reconcile 連結 oracle へ機械固定して HEAD snapshot green
-      (6 tests) を実測。軽微所見 (duplicate 完全一致盲点 / issue-missing への
-      再配置畳み込み) は PLAN-REVERSE-452 の R2 照合項目へ record。
-    green_commands:
-      - kind: typecheck
-        command: "bun run typecheck"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-17T21:00:00+09:00"
-        evidence_path: .ut-tdd/audit/A-L7-452-typecheck.log
-        output_digest: "sha256:8366207267355d3e"
-      - kind: lint
-        command: "bun run lint"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-17T21:00:00+09:00"
-        evidence_path: .ut-tdd/audit/A-L7-452-lint.log
-        output_digest: "sha256:4a5605cc2e6d9a44"
 generates:
   - artifact_path: docs/plans/PLAN-L7-452-forward-escape-contract-red.md
     artifact_type: markdown_doc

@@ -473,12 +473,17 @@ function validBinding(
 }
 
 /** E3→E4 projection。失敗は Deferred として返し、event を失わない (throw しない)。 */
+export interface ProjectForwardEscapeIssueInput {
+  readonly validated: ValidatedForwardEscape;
+  readonly port: ForwardEscapeIssuePort;
+  readonly journal: ForwardEscapeProjectionJournal;
+  readonly custody: Pick<ForwardEscapeCustodyPort, "verify">;
+}
+
 export function projectForwardEscapeIssue(
-  validated: ValidatedForwardEscape,
-  port: ForwardEscapeIssuePort,
-  journal: ForwardEscapeProjectionJournal,
-  custody: Pick<ForwardEscapeCustodyPort, "verify">,
+  input: ProjectForwardEscapeIssueInput,
 ): IssueProjectionEvent {
+  const { validated, port, journal, custody } = input;
   if (
     validated.type !== "ForwardEscapeValidated" ||
     validated.sequence !== "E2" ||

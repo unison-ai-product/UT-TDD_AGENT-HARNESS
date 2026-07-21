@@ -42,6 +42,7 @@ function parseProjectionEvent(raw: string, commandId: string): DurableIssueProje
   try {
     value = JSON.parse(raw);
   } catch {
+    // JSON構文エラーをadapter固有のintegrity failureへ変換し、raw parser errorを外へ漏らさない。
     throw new ForwardEscapeJournalIntegrityError("projection-journal-event-invalid");
   }
   const event = record(value);
