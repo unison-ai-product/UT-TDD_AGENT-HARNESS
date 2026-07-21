@@ -1,0 +1,166 @@
+import { createHash } from "node:crypto";
+import type { PlanRedesignBundleManifest } from "../cli/plan-revise.js";
+import {
+  deriveRedesignPublication,
+  PlanRedesignBundleCoordinator,
+  type RedesignBundleInput,
+  redesignBundlePayloadDigest,
+} from "../plan-asset/ledger/plan-redesign-bundle.js";
+import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision-ledger.js";
+import { openPlanLedger } from "../plan-asset/ledger/schema.js";
+import type { HarnessDb } from "../state-db/index.js";
+import { NodeAuthoringArtifactPublisher } from "./node-authoring-artifact-publisher.js";
+
+export interface NodePlanRedesignRunnerDeps {
+  readonly repoRoot: string;
+  readonly openDb?: () => HarnessDb;
+}
+
+/** v2 manifestをexact publication factoryへ通し、bundle coordinatorへ到達させる兄弟runner。 */
+export class NodePlanRedesignRunner {
+  constructor(private readonly deps: NodePlanRedesignRunnerDeps) {}
+
+  run(input: { manifest: PlanRedesignBundleManifest }) {
+    const { manifest } = input;
+    if (
+      manifest.replacement.command_id !== `${manifest.command_id}:replacement` ||
+      manifest.origin.command_id !== `${manifest.command_id}:origin`
+    ) {
+      throw new Error("plan-redesign-command-binding-invalid");
+    }
+    const artifacts = {
+      origin: artifact(
+        "origin",
+        manifest.origin.source_path,
+        manifest.origin.source_content,
+        preimage(manifest.origin.expected_preimage),
+      ),
+      replacement: artifact(
+        "replacement",
+        manifest.replacement.source_path,
+        manifest.replacement.source_content,
+        preimage(manifest.replacement.expected_preimage),
+      ),
+      projection: artifact(
+        "projection",
+        manifest.projection.path,
+        manifest.projection.content,
+        preimage(manifest.projection.expected_preimage),
+      ),
+      pairs: manifest.pairs.map((item) =>
+        artifact(
+          `pair:${sha(item.path)}` as const,
+          item.path,
+          item.content,
+          preimage(item.expected_preimage),
+        ),
+      ),
+      upstream: manifest.upstream.map((item) =>
+        artifact(
+          `upstream:${sha(item.path)}` as const,
+          item.path,
+          item.content,
+          preimage(item.expected_preimage),
+        ),
+      ),
+    };
+    const publication = deriveRedesignPublication({
+      origin: withoutMemberId(artifacts.origin),
+      replacement: withoutMemberId(artifacts.replacement),
+      projection: withoutMemberId(artifacts.projection),
+      pairs: artifacts.pairs,
+      upstream: artifacts.upstream,
+    });
+    const partial = {
+      commandId: manifest.command_id,
+      repositoryIdentity: manifest.repository_identity,
+      replacement: revision(manifest.replacement),
+      origin: revision(manifest.origin),
+      reentry: {
+        targetPlanId: manifest.reentry.target_plan_id,
+        targetRevision: manifest.reentry.target_revision,
+        phase: manifest.reentry.phase,
+      },
+      projection: {
+        path: manifest.projection.path,
+        contentDigest: sha(manifest.projection.content),
+      },
+      publication,
+    };
+    const bundle: RedesignBundleInput = {
+      ...partial,
+      commandPayloadDigest: redesignBundlePayloadDigest(partial),
+    };
+    const db = this.deps.openDb?.() ?? openPlanLedger({ repoRoot: this.deps.repoRoot });
+    try {
+      const coordinator = new PlanRedesignBundleCoordinator(db);
+      const publisher = new NodeAuthoringArtifactPublisher({
+        rootDir: this.deps.repoRoot,
+        artifacts: [
+          artifacts.origin,
+          artifacts.replacement,
+          artifacts.projection,
+          ...artifacts.pairs,
+          ...artifacts.upstream,
+        ].map(({ path, ...value }) => ({ ...value, path })),
+      });
+      return coordinator.publishDurable(bundle, publisher);
+    } finally {
+      db.close();
+    }
+  }
+}
+
+export function createNodePlanRedesignRunner(repoRoot: string): NodePlanRedesignRunner {
+  return new NodePlanRedesignRunner({ repoRoot });
+}
+
+function revision(value: PlanRedesignBundleManifest["origin"]): AppendPlanRevisionInput & {
+  readonly sourceContent: string;
+} {
+  return {
+    commandId: value.command_id,
+    assetId: value.asset_id,
+    planId: value.plan_id,
+    baseRevision: value.base_revision,
+    basePayloadDigest: unprefix(value.base_payload_digest),
+    canonicalPayloadJson: value.canonical_payload_json,
+    contentDigest: unprefix(value.content_digest),
+    bodyDigest: unprefix(value.body_digest),
+    sourcePath: value.source_path,
+    sourceCommit: value.source_commit,
+    actor: value.actor,
+    reason: value.reason,
+    routeTupleDigest: unprefix(value.route_tuple_digest),
+    certificateId: value.certificate_id,
+    occurredAt: value.occurred_at,
+    sourceContent: value.source_content,
+  };
+}
+
+function artifact<T extends string>(
+  memberId: T,
+  path: string,
+  content: string,
+  expectedPreimage: { kind: "absent" } | { kind: "sha256"; digest: `sha256:${string}` },
+) {
+  return { memberId, path, content, expectedPreimage };
+}
+
+function preimage(value: { kind: "absent" } | { kind: "sha256"; digest: string }) {
+  return value.kind === "absent"
+    ? ({ kind: "absent" } as const)
+    : ({ kind: "sha256", digest: `sha256:${unprefix(value.digest)}` as const } as const);
+}
+
+function withoutMemberId<T extends { readonly memberId: string }>(value: T): Omit<T, "memberId"> {
+  const { memberId: _memberId, ...artifact } = value;
+  return artifact;
+}
+
+function sha(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+function unprefix(value: string): string {
+  return value.startsWith("sha256:") ? value.slice(7) : value;
+}

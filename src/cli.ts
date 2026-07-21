@@ -34,6 +34,7 @@ import { registerDistributionCommands } from "./cli/distribution";
 import { registerFeedbackCommands } from "./cli/feedback";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
+import { registerPlanAuthoringRecoveryCommands } from "./cli/plan-authoring-recovery";
 import { registerPlanDraftCommand } from "./cli/plan-draft";
 import { registerPlanRevisionCommand } from "./cli/plan-revise";
 import { contextSuggest } from "./context/doc-router";
@@ -105,8 +106,11 @@ import {
   writeMemoryEntry,
 } from "./memory/index";
 import { lintPlanWithGate } from "./plan/lint";
+import { NodePlanAuthoringRecoveryRunner } from "./plan-admission/node-plan-authoring-recovery-runner";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
+import { createNodePlanRedesignRunner } from "./plan-admission/node-plan-redesign-runner";
 import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner";
+import { PlanAuthoringCommandDispatcher } from "./plan-admission/plan-authoring-command-runner";
 import {
   type AdapterContextInjection,
   type AdapterProvider,
@@ -1174,7 +1178,13 @@ const plan = program.command("plan").description("PLAN 操作");
 registerPlanAssetCommands(plan);
 registerPlanAdmissionCommands(plan);
 registerPlanDraftCommand(plan, { runner: createNodePlanDraftRunner(process.cwd()) });
-registerPlanRevisionCommand(plan, { runner: createNodePlanRevisionRunner(process.cwd()) });
+registerPlanRevisionCommand(plan, {
+  runner: new PlanAuthoringCommandDispatcher(
+    createNodePlanRevisionRunner(process.cwd()),
+    createNodePlanRedesignRunner(process.cwd()),
+  ),
+});
+registerPlanAuthoringRecoveryCommands(plan, new NodePlanAuthoringRecoveryRunner(process.cwd()));
 plan
   .command("lint [path]")
   .description("PLAN lint")

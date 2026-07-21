@@ -54,6 +54,66 @@ async function run(input: string) {
 }
 
 describe("plan revise CLI registrar", () => {
+  it("v1 redesign迂回を拒否しv2 redesign_bundleをdispatcherへ渡す", async () => {
+    const legacy = JSON.parse(manifest()) as { admission: Record<string, unknown> };
+    legacy.admission.route_mode = "redesign";
+    expect(() => parsePlanRevisionManifest(JSON.stringify(legacy))).toThrow(
+      "redesign bundleはversion 2",
+    );
+
+    const revision = {
+      command_id: "redesign:1:replacement",
+      asset_id: "asset:replacement",
+      plan_id: "PLAN-L6-2",
+      base_revision: 1,
+      base_payload_digest: digest,
+      canonical_payload_json: "{}",
+      content_digest: digest,
+      body_digest: digest,
+      source_path: "docs/plans/replacement.md",
+      source_commit: "b".repeat(40),
+      actor: "codex",
+      reason: "redesign",
+      route_tuple_digest: digest,
+      certificate_id: "certificate:replacement",
+      occurred_at: "2026-07-17T10:00:00.000Z",
+      source_content: "---\nplan_id: PLAN-L6-2\n---\nreplacement",
+      expected_preimage: { kind: "absent" },
+    };
+    const v2 = {
+      version: 2,
+      operation: "redesign_bundle",
+      command_id: "redesign:1",
+      repository_identity: "owner/repository",
+      replacement: revision,
+      origin: {
+        ...revision,
+        command_id: "redesign:1:origin",
+        asset_id: "asset:origin",
+        plan_id: "PLAN-L6-1",
+        source_path: "docs/plans/origin.md",
+      },
+      reentry: { target_plan_id: "PLAN-L6-1", target_revision: 2, phase: "forward_merge" },
+      projection: {
+        path: "docs/governance/plan-admission-receipts.json",
+        content: "{}",
+        expected_preimage: { kind: "absent" },
+      },
+      pairs: [
+        {
+          path: "docs/test-design/pair.md",
+          content: "pair",
+          expected_preimage: { kind: "absent" },
+        },
+      ],
+      upstream: [],
+    };
+    const result = await run(JSON.stringify(v2));
+    expect(result.execute).toHaveBeenCalledWith({
+      manifest: expect.objectContaining({ version: 2, operation: "redesign_bundle" }),
+    });
+  });
+
   it("strict manifestとAdmission decisionをrunner portへ渡す", async () => {
     const result = await run(manifest());
     expect(process.exitCode).toBe(0);

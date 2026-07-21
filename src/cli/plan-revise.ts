@@ -114,20 +114,85 @@ const revisionManifestSchema = z
       .object({ path: z.literal("docs/governance/plan-admission-receipts.json") })
       .strict(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (value.admission.route_mode === "redesign" || value.admission.route_signal === "redesign") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["admission", "route_mode"],
+        message: "redesign bundleはversion 2 operation:redesign_bundleが必須です",
+      });
+    }
+  });
 
 export type PlanRevisionManifest = z.infer<typeof revisionManifestSchema>;
 
-export interface PlanRevisionCommandRunner<TResult> {
-  run(input: {
-    manifest: PlanRevisionManifest;
-    admission: PlanAdmissionRequest;
-    decision: Extract<AdmissionDecision, { ok: true }>;
-  }): TResult;
+const expectedPreimageSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("absent") }).strict(),
+  z.object({ kind: z.literal("sha256"), digest: digestSchema }).strict(),
+]);
+const publicationArtifactSchema = z
+  .object({
+    path: repositoryPathSchema,
+    content: z.string().min(1),
+    expected_preimage: expectedPreimageSchema,
+  })
+  .strict();
+const appendRevisionSchema = z
+  .object({
+    command_id: z.string().min(1),
+    asset_id: z.string().min(1),
+    plan_id: z.string().min(1),
+    base_revision: z.number().int().positive(),
+    base_payload_digest: digestSchema,
+    canonical_payload_json: z.string().min(2),
+    content_digest: digestSchema,
+    body_digest: digestSchema,
+    source_path: repositoryPathSchema,
+    source_commit: gitOidSchema,
+    actor: z.string().trim().min(1),
+    reason: z.string().min(1),
+    route_tuple_digest: digestSchema,
+    certificate_id: z.string().min(1),
+    occurred_at: z.string().datetime({ offset: true }),
+    source_content: z.string().min(1),
+    expected_preimage: expectedPreimageSchema,
+  })
+  .strict();
+const redesignManifestSchema = z
+  .object({
+    version: z.literal(2),
+    operation: z.literal("redesign_bundle"),
+    command_id: z.string().min(1),
+    repository_identity: z.string().min(1),
+    replacement: appendRevisionSchema,
+    origin: appendRevisionSchema,
+    reentry: targetSchema.extend({ phase: z.literal("forward_merge") }).strict(),
+    projection: publicationArtifactSchema,
+    pairs: z.array(publicationArtifactSchema).min(1),
+    upstream: z.array(publicationArtifactSchema).default([]),
+  })
+  .strict();
+
+export type PlanRedesignBundleManifest = z.infer<typeof redesignManifestSchema>;
+export type PlanAuthoringManifest = PlanRevisionManifest | PlanRedesignBundleManifest;
+
+export interface PlanAuthoringCommandRunner<TResult> {
+  run(
+    input:
+      | {
+          manifest: PlanRevisionManifest;
+          admission: PlanAdmissionRequest;
+          decision: Extract<AdmissionDecision, { ok: true }>;
+        }
+      | { manifest: PlanRedesignBundleManifest },
+  ): TResult;
 }
 
+export type PlanRevisionCommandRunner<TResult> = PlanAuthoringCommandRunner<TResult>;
+
 export interface PlanRevisionCliDeps<TResult> {
-  runner: PlanRevisionCommandRunner<TResult>;
+  runner: PlanAuthoringCommandRunner<TResult>;
   readText?: (path: string) => string;
   writeOutput?: (text: string) => void;
 }
@@ -146,6 +211,12 @@ export function registerPlanRevisionCommand<TResult>(
         const manifest = parsePlanRevisionManifest(
           (deps.readText ?? ((path: string) => readFileSync(path, "utf8")))(options.manifest),
         );
+        if (manifest.version === 2) {
+          const result = deps.runner.run({ manifest });
+          write(`${JSON.stringify({ ok: true, result })}\n`);
+          process.exitCode = 0;
+          return;
+        }
         const admission = toAdmissionRequest(manifest.admission);
         const decision = evaluatePlanAdmission(admission);
         if (!decision.ok) {
@@ -163,7 +234,7 @@ export function registerPlanRevisionCommand<TResult>(
     });
 }
 
-export function parsePlanRevisionManifest(text: string): PlanRevisionManifest {
+export function parsePlanRevisionManifest(text: string): PlanAuthoringManifest {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -172,7 +243,9 @@ export function parsePlanRevisionManifest(text: string): PlanRevisionManifest {
     const detail = errorText(error);
     throw new Error(`manifest JSONを解析できません: ${detail}`);
   }
-  return revisionManifestSchema.parse(parsed);
+  return z
+    .union([revisionManifestSchema, redesignManifestSchema])
+    .parse(parsed) as PlanAuthoringManifest;
 }
 
 function toAdmissionRequest(input: PlanRevisionManifest["admission"]): PlanAdmissionRequest {
