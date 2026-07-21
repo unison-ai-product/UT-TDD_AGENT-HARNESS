@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-12 (recovery): 設計 doc 実態乖離の一括 back-merge
 kind: recovery
 layer: cross
 drive: agent
-status: confirmed
+status: draft
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
@@ -40,10 +40,10 @@ review_evidence:
     review_kind: cross_agent
     reviewed_at: "2026-07-21T12:48:00+09:00"
     tests_green_at: "2026-07-21T12:53:00+09:00"
-    verdict: approve
+    verdict: superseded_by_cross_review_flag
     worker_model: claude-sonnet-5
     reviewer_model: gpt-5.6-sol
-    scope: "worktree 変更一式 (L5 physical-data 4 テーブル back-merge + 列型注記 / L6 function-spec stale model ID の MODEL_IDS 参照化 / src/lint/model-id-doc-drift.ts 新設 + doctor full profile 配線 / governance README・repository-structure 是正) を `ut-tdd codex --role blind-reviewer` (gpt-5.6-sol) が blind review。初回 FLAG 2 点 (列型注記欠落 / AC の live-tree 実行経路が 0 tests) → 是正 → 再 FLAG 1 点 (3 env 変数=cwd 経路は workspace-roots.ts 契約違反で第三者再実行不能) → mktemp -d detached copy 経路へ是正 → 再々 review で reviewer 自身が AC 記載コマンドをそのまま実行し 8/8 green (exit 0) を再現、契約適合 (snapshot root ≠ cwd) も確認して判定 PASS。"
+    scope: "履歴証跡 (現在の閉鎖根拠ではない)。worktree 変更一式を blind review して当時 PASS としたが、後続 PR #107 クロスレビューで lint→team module cycle、生 literal oracle 不足、review_before_test を検出したため superseded。修正 HEAD の定量検証後に別 runtime が再レビューするまで approve へ戻さない。"
     green_commands:
       - kind: unit_test
         command: "mktemp -d の独立ディレクトリへ .claude/ と docs/ を実体コピーし UT_TDD_HEAD_SNAPSHOT_ROOT に指定、UT_TDD_TEST_EXECUTION_ROOT/UT_TDD_TEST_FENCE_ROOT=live tree cwd で bunx vitest run tests/model-id-ssot-drift.test.ts (8 tests、負例 regression 含む)。commit 14dda22f 後に正規経路 bun scripts/run-vitest-snapshot.ts tests/model-id-ssot-drift.test.ts でも 8 passed (8) を再確認"
@@ -59,6 +59,16 @@ review_evidence:
 # PLAN-RECOVERY-12 (recovery): 設計 doc 実態乖離の一括 back-merge
 
 GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/85
+
+## 2026-07-21 クロスレビュー再オープン
+
+PR #107 の独立クロスレビューで、`src/lint/model-id-doc-drift.ts` の
+`lint -> team` 依存による module cycle と、現行 catalog 値の生 literal を許す
+oracle 不足を検出した。さらに先行 `review_evidence` は `reviewed_at < tests_green_at`
+であり、定量検証後レビューの順序契約を満たさなかった。このため `confirmed` を撤回して
+`draft` へ戻す。修正後の定量検証を先に完了し、その HEAD を別 runtime が再レビューした
+新規 evidence を追記するまで再 confirmed しない。先行 evidence は当時の試行履歴として
+保持するが、現在の閉鎖根拠には使わない。
 
 ## 背景 (2026-07-17 設計実態フルチェック監査での実測)
 

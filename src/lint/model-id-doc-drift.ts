@@ -7,13 +7,12 @@
  * (issue #85 で発見された `gpt-5.5` / `claude-sonnet-4-6` / `gpt-5.4` の stale literal 残留)。
  *
  * この module は doc prose 中の「model-id 形状の生 literal」を検出する純関数を提供する。
- * `MODEL_IDS` カタログに載っている値は許可 (現行値の引用は許す)、カタログ外の
- * gpt- / claude- 形状トークンは drift として fail-close する。
+ * 現行値を含むすべての gpt- / claude- 形状トークンを drift として fail-close し、
+ * 設計 doc には `MODEL_IDS.*` の symbol 参照だけを許可する。
  */
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { MODEL_IDS } from "../team/model-policy";
 
 const MODEL_ID_SHAPE = /\b((?:gpt-\d+(?:\.\d+)?(?:-[a-z0-9]+)*)|(?:claude-[a-z]+-\d+(?:-\d+)?))\b/g;
 
@@ -33,25 +32,17 @@ export interface ModelIdDocDriftFileResult extends ModelIdDocDriftResult {
 }
 
 /**
- * doc 本文中の model-id 形状トークンを走査し、`allowedIds` (通常は `MODEL_IDS` の全値) に
- * 含まれないものを offender として返す。純関数 (fs アクセスなし、呼び出し側が text を渡す)。
+ * doc 本文中の model-id 形状トークンを走査し、すべてを offender として返す。
+ * 純関数 (fs アクセスなし、呼び出し側が text を渡す)。
  */
-export function findStaleModelIdLiterals(
-  text: string,
-  allowedIds: ReadonlySet<string>,
-): ModelIdDocDriftResult {
+export function findStaleModelIdLiterals(text: string): ModelIdDocDriftResult {
   const offenders = new Set<string>();
   for (const match of text.matchAll(MODEL_ID_SHAPE)) {
     const token = match[1];
-    if (!allowedIds.has(token)) offenders.add(token);
+    offenders.add(token);
   }
   const sorted = [...offenders].sort();
   return { offenders: sorted, ok: sorted.length === 0 };
-}
-
-/** `MODEL_IDS` (claude+codex) の全値を allowed set として組み立てる (doctor/test 共有 SSoT)。 */
-export function allModelIds(): ReadonlySet<string> {
-  return new Set<string>([...Object.values(MODEL_IDS.claude), ...Object.values(MODEL_IDS.codex)]);
 }
 
 /** doctor 用 I/O loader: 対象 doc を読み込む (fs アクセスをここへ隔離)。 */
@@ -63,13 +54,13 @@ export function loadModelIdDocDriftTexts(repoRoot: string): { path: string; text
 }
 
 /** 対象 doc 群を走査し、doc ごとの結果を返す。 */
-export function analyzeModelIdDocDrift(
-  files: { path: string; text: string }[],
-  allowedIds: ReadonlySet<string> = allModelIds(),
-): { files: ModelIdDocDriftFileResult[]; ok: boolean } {
+export function analyzeModelIdDocDrift(files: { path: string; text: string }[]): {
+  files: ModelIdDocDriftFileResult[];
+  ok: boolean;
+} {
   const results = files.map((f) => ({
     path: f.path,
-    ...findStaleModelIdLiterals(f.text, allowedIds),
+    ...findStaleModelIdLiterals(f.text),
   }));
   return { files: results, ok: results.every((r) => r.ok) };
 }

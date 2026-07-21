@@ -33,10 +33,6 @@ import { headSnapshotRoot } from "./support/workspace-roots";
 
 const repoRoot = headSnapshotRoot();
 const CLAUDE_CATALOG = new Set<string>(Object.values(MODEL_IDS.claude));
-const ALL_MODEL_IDS = new Set<string>([
-  ...Object.values(MODEL_IDS.claude),
-  ...Object.values(MODEL_IDS.codex),
-]);
 // PLAN-RECOVERY-12 (issue #85): これらは L6 function-spec.md の model routing addendum に
 // 実際に残留していた stale literal (gpt-5.5 / claude-sonnet-4-6 / gpt-5.4)。現行 doc からは
 // 是正済みだが、負例 regression 用の fixture corpus として保持する。
@@ -135,7 +131,7 @@ describe("U-MODELID-SSOT: model ID single source of truth", () => {
       "function-spec.md",
     );
     const text = readFileSync(docPath, "utf8");
-    const result = findStaleModelIdLiterals(text, ALL_MODEL_IDS);
+    const result = findStaleModelIdLiterals(text);
     expect(result.offenders).toEqual([]);
     expect(result.ok).toBe(true);
   });
@@ -145,13 +141,19 @@ describe("U-MODELID-SSOT: model ID single source of truth", () => {
     // literals that were previously found in docs/design/harness/L6-function-design/
     // function-spec.md (issue #85), rather than only asserting the current doc is clean.
     const injected = `ティア表: T0 = {claude: claude-opus-4-8, codex: gpt-5.5}, T1 = {claude: claude-sonnet-4-6, codex: gpt-5.4}`;
-    const result = findStaleModelIdLiterals(injected, ALL_MODEL_IDS);
+    const result = findStaleModelIdLiterals(injected);
     expect(result.ok).toBe(false);
     for (const literal of KNOWN_STALE_LITERALS) {
       expect(result.offenders).toContain(literal);
     }
-    // sanity: a doc using only catalog-current literals stays clean (no false positive).
-    const clean = `T0 = {claude: claude-opus-4-8, codex: gpt-5.6-sol}`;
-    expect(findStaleModelIdLiterals(clean, ALL_MODEL_IDS).ok).toBe(true);
+    // 現行 catalog 値であっても doc に生 literal を再導入すれば SSoT が二重化する。
+    // 「現在は一致する」ことを clean とみなさず、symbol 参照だけを許可する。
+    const currentRawLiterals = `T0 = {claude: claude-opus-4-8, codex: gpt-5.6-sol}`;
+    const currentResult = findStaleModelIdLiterals(currentRawLiterals);
+    expect(currentResult.ok).toBe(false);
+    expect(currentResult.offenders).toEqual(["claude-opus-4-8", "gpt-5.6-sol"]);
+
+    const symbolic = `T0 = {claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier}`;
+    expect(findStaleModelIdLiterals(symbolic).ok).toBe(true);
   });
 });
