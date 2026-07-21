@@ -14,7 +14,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, win32 } from "node:path";
 
 function run(
   command: string,
@@ -233,7 +233,7 @@ export function windowsSealCommands(
 ): WindowsSealCommand[] {
   if (!identity.trim()) throw new Error("reference snapshot identity cannot be empty");
   return [
-    { file: "attrib", args: ["+R", join(referenceRoot, "*"), "/S"] },
+    { file: "attrib", args: ["+R", win32.join(referenceRoot, "*"), "/S"] },
     {
       file: "icacls",
       args: [referenceRoot, "/deny", `${identity}:(OI)(CI)(WD,AD)`, "/T", "/C", "/Q"],

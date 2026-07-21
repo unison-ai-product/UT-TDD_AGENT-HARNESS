@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-421 で導入済みの reference seal 機構の前提条件 (非 root 実行) を機械強制する堅牢化であり、新規 L0/L1 要件ではない。seal の設計自体は変更しない。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — incident原因とroot/Windows実行環境境界の分析"
   - role: se
     slot_label: "SE — uid=0 検出 fail-fast の実装 (scripts/run-vitest-snapshot.ts)"
   - role: qa
@@ -23,20 +25,16 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-453-snapshot-runner-root-guard.md
     artifact_type: markdown_doc
-  - artifact_path: scripts/run-vitest-snapshot.ts
-    artifact_type: script
-  - artifact_path: tests/vitest-snapshot-runner.test.ts
-    artifact_type: test_code
-  - artifact_path: src/doctor/test-repository-isolation.ts
-    artifact_type: source_module
-  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
-    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
+    - scripts/run-vitest-snapshot.ts
+    - src/doctor/test-repository-isolation.ts
+    - tests/vitest-snapshot-runner.test.ts
+    - docs/test-design/harness/L7-unit-test-design.md
 review_evidence:
   - reviewer: blind-reviewer
     review_kind: intra_runtime_subagent
@@ -54,10 +52,10 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-21T14:39:00+09:00"
         evidence_path: tests/vitest-snapshot-runner.test.ts
-        output_digest: "31 passed (snapshot runner 18 + repository isolation 13)"
+        output_digest: "sha256:d05b7dc96c43cd6505579e58a16fcefeb5b3a94af817c4313101a66c138d5f79"
         anchor_commit: a0fda541f1a0755e2a4a874c906c0a3fe1f64ea8
   - reviewer: blind-reviewer
-    review_kind: cross_provider
+    review_kind: cross_agent
     reviewed_at: "2026-07-21T12:20:00+09:00"
     tests_green_at: "2026-07-21T11:55:00+09:00"
     verdict: approve
