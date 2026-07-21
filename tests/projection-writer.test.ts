@@ -944,6 +944,226 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
+  it("U-DBPROJ-GATE-02 (PLAN-RECOVERY-14): gate-run-derived workflow_runs joins the plan's documented drive_runs row (no false workflow_orphans)", () => {
+    // Regression for the drive-db-registration `workflow_orphans` false-positive root
+    // cause: projectGateRunEvidence previously stamped drive_run_id via
+    // stableId("gate-drive", planId), a different id namespace than the
+    // stableId("drive-run", `${planId}:documented`) row projectDriveRuns always
+    // creates for every projected plan — so every gate-derived workflow_runs row was
+    // an unconditional orphan regardless of whether the plan was real and current.
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-orphan-fix-"));
+    const planId = "PLAN-TEST-recovery-14-gate-orphan";
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "plans", `${planId}.md`),
+        [
+          "---",
+          `plan_id: ${planId}`,
+          'title: "gate orphan join fixture"',
+          "kind: impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "created: 2026-07-17",
+          "updated: 2026-07-17",
+          "---",
+          "",
+          "# gate orphan join fixture",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      writeFileSync(
+        join(root, ".ut-tdd", "gate_runs", "G4-attempt-1.json"),
+        `${JSON.stringify(
+          {
+            schema_version: 1,
+            gate_run_id: "gate-run:G4:recovery-14-attempt-1",
+            gate_id: "G4",
+            plan_id: planId,
+            status: "passed",
+            checked_at: "2026-07-17T00:00:00.000Z",
+            session_id: "session-recovery-14",
+            mode: "hybrid",
+            tier: "cross_agent",
+            review_kind: "cross_agent",
+            static_applicable: true,
+            source: "ut-tdd gate",
+            messages: [],
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const driveRunId = String(
+          db.prepare("SELECT drive_run_id FROM drive_runs WHERE plan_id = ?").get(planId)
+            ?.drive_run_id,
+        );
+        const workflowRow = db
+          .prepare("SELECT drive_run_id FROM workflow_runs WHERE plan_id = ?")
+          .get(planId) as { drive_run_id?: string } | undefined;
+        expect(workflowRow?.drive_run_id).toBe(driveRunId);
+
+        const orphan = db
+          .prepare(
+            `SELECT COUNT(*) AS value
+             FROM workflow_runs w
+             LEFT JOIN drive_runs d ON d.drive_run_id = w.drive_run_id
+             WHERE d.drive_run_id IS NULL`,
+          )
+          .get() as { value: number };
+        expect(orphan.value).toBe(0);
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-DBPROJ-GATE-03 (PLAN-RECOVERY-14): gate-run evidence resolves legacy short plan_id aliases like other DB-linked projections", () => {
+    // gate_runs projection previously skipped the resolveProjectedPlanId alias
+    // resolution that projectHookEvents / model_runs / skill projections already apply
+    // (PLAN migrations that append a descriptive suffix to a plan_id leave older gate
+    // evidence pointing at the bare prefix). Unresolved aliases become permanent
+    // orphan_gate_run rows even though the PLAN is live under its current id.
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-alias-fix-"));
+    const shortPlanId = "PLAN-TEST-recovery-14-alias";
+    const currentPlanId = `${shortPlanId}-full-title`;
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "plans", `${currentPlanId}.md`),
+        [
+          "---",
+          `plan_id: ${currentPlanId}`,
+          'title: "gate alias fixture"',
+          "kind: impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "created: 2026-07-17",
+          "updated: 2026-07-17",
+          "---",
+          "",
+          "# gate alias fixture",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      writeFileSync(
+        join(root, ".ut-tdd", "gate_runs", "G4-attempt-1.json"),
+        `${JSON.stringify(
+          {
+            schema_version: 1,
+            gate_run_id: "gate-run:G4:recovery-14-alias-attempt-1",
+            gate_id: "G4",
+            plan_id: shortPlanId,
+            status: "passed",
+            checked_at: "2026-07-17T00:00:00.000Z",
+            session_id: "session-recovery-14-alias",
+            mode: "hybrid",
+            tier: "cross_agent",
+            review_kind: "cross_agent",
+            static_applicable: true,
+            source: "ut-tdd gate",
+            messages: [],
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const gateRow = db
+          .prepare("SELECT plan_id FROM gate_runs WHERE gate_run_id = ?")
+          .get("gate-run:G4:recovery-14-alias-attempt-1") as { plan_id?: string } | undefined;
+        expect(gateRow?.plan_id).toBe(currentPlanId);
+
+        const orphanGate = db
+          .prepare(
+            `SELECT COUNT(*) AS value
+             FROM gate_runs g
+             WHERE COALESCE(g.plan_id, '') <> ''
+               AND NOT EXISTS (SELECT 1 FROM plan_registry p WHERE p.plan_id = g.plan_id)`,
+          )
+          .get() as { value: number };
+        expect(orphanGate.value).toBe(0);
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-DBPROJ-GATE-04 (PLAN-RECOVERY-14): gate-run evidence for a genuinely nonexistent PLAN stays a fail-closed orphan_gate_run (negative regression)", () => {
+    // The alias-resolution and drive_run_id join fixes above must not silently swallow
+    // real orphans: evidence referencing a plan_id that never existed (typo, deleted
+    // PLAN, ad-hoc test run) must still trip gate-run-coverage.
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-real-orphan-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      writeFileSync(
+        join(root, ".ut-tdd", "gate_runs", "G4-attempt-1.json"),
+        `${JSON.stringify(
+          {
+            schema_version: 1,
+            gate_run_id: "gate-run:G4:recovery-14-real-orphan-attempt-1",
+            gate_id: "G4",
+            plan_id: "PLAN-DOES-NOT-EXIST-RECOVERY-14",
+            status: "passed",
+            checked_at: "2026-07-17T00:00:00.000Z",
+            session_id: "session-recovery-14-real-orphan",
+            mode: "hybrid",
+            tier: "cross_agent",
+            review_kind: "cross_agent",
+            static_applicable: true,
+            source: "ut-tdd gate",
+            messages: [],
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const orphanGate = db
+          .prepare(
+            `SELECT COUNT(*) AS value
+             FROM gate_runs g
+             WHERE COALESCE(g.plan_id, '') <> ''
+               AND NOT EXISTS (SELECT 1 FROM plan_registry p WHERE p.plan_id = g.plan_id)`,
+          )
+          .get() as { value: number };
+        expect(orphanGate.value).toBe(1);
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("projects runtime test_runs from session-log verification events with session provenance", () => {
     const db = openHarnessDb(":memory:");
     try {
