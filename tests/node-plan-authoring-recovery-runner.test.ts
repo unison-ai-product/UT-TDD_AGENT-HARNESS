@@ -8,6 +8,7 @@ import { resolveBunBinary } from "../scripts/run-vitest-snapshot.js";
 import { inspectAuthoringRecoveryDbEvidence } from "../src/plan-admission/authoring-recovery-db-evidence.js";
 import { NodePlanAuthoringRecoveryRunner } from "../src/plan-admission/node-plan-authoring-recovery-runner.js";
 import { AuthoringCommandGroupJournal } from "../src/plan-asset/ledger/authoring-command-group.js";
+import { derivePlanRevisionDigests } from "../src/plan-asset/ledger/plan-revision-ledger.js";
 import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../src/state-db/index.js";
 import { openHarnessDb } from "../src/state-db/index.js";
@@ -180,6 +181,57 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     verified.close();
   });
 
+  it("既存committedのsemantic recoveryはterminalを二重追記せずphase chainを保つ", () => {
+    const fixture = recoveryFixture();
+    const seeded = openHarnessDb(fixture.dbPath);
+    seedCompleteEvidence(seeded, fixture.groupId);
+    const artifact = seeded
+      .prepare("SELECT * FROM authoring_operation_artifacts WHERE group_id = ?")
+      .get(fixture.groupId);
+    seeded.close();
+
+    const initial = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    expect(
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: String(initial.strategy) as "finalize" | "roll_forward",
+        expectedAssessmentDigest: String(initial.assessment_digest),
+        execute: true,
+      }),
+    ).toMatchObject({ state: "committed" });
+
+    const target = join(fixture.root, String(artifact?.target_path));
+    const publishedPin = join(fixture.root, String(artifact?.pin_path));
+    linkSync(target, publishedPin);
+    const recovery = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    expect(recovery).toMatchObject({
+      state: "recovery_required",
+      terminal_state: "committed",
+      strategy: "finalize",
+    });
+    expect(
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: "finalize",
+        expectedAssessmentDigest: String(recovery.assessment_digest),
+        execute: true,
+      }),
+    ).toMatchObject({ state: "committed", strategy: "finalize" });
+
+    const verified = openHarnessDb(fixture.dbPath);
+    expect(
+      Number(
+        verified
+          .prepare(
+            "SELECT COUNT(*) count FROM authoring_command_group_phase_events WHERE group_id = ? AND event_kind = 'committed'",
+          )
+          .get(fixture.groupId)?.count,
+      ),
+    ).toBe(1);
+    expect(migratePlanLedger(verified)).toMatchObject({ ok: true });
+    verified.close();
+  });
+
   it("assessment 0件のkill状態をfresh statusが査定し、executor途中kill後も再開できる", () => {
     const fixture = recoveryFixture(true);
     const before = openHarnessDb(fixture.dbPath);
@@ -234,6 +286,7 @@ function recoveryFixture(withoutAssessment = false) {
   const dbPath = join(root, ".ut-tdd", "harness.db");
   const db = openHarnessDb(dbPath);
   migratePlanLedger(db);
+  const groupId = "recovery:test";
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
     "asset:1",
     now,
@@ -252,7 +305,19 @@ function recoveryFixture(withoutAssessment = false) {
     "test",
     now,
   );
-  const groupId = "recovery:test";
+  const originRevision = revisionEvidence(groupId, "origin", "asset:1", "docs/a.md");
+  db.prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    "asset:1",
+    2,
+    originRevision.input.canonicalPayloadJson,
+    originRevision.derived.canonicalPayloadDigest,
+    originRevision.input.bodyDigest,
+    originRevision.input.sourcePath,
+    originRevision.input.sourceCommit,
+    originRevision.input.actor,
+    originRevision.input.reason,
+    originRevision.input.occurredAt,
+  );
   const memberId = "origin";
   const content = "postimage";
   const input = {
@@ -270,7 +335,7 @@ function recoveryFixture(withoutAssessment = false) {
     operation: {
       repositoryIdentity: "owner/repo",
       baseCommit: "b".repeat(40),
-      revisionBindings: [{ assetId: "asset:1", revision: 1, artifactRole: memberId }],
+      revisionBindings: [{ assetId: "asset:1", revision: 2, artifactRole: memberId }],
     },
   };
   const journal = new AuthoringCommandGroupJournal(db);
@@ -318,6 +383,19 @@ function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
     "test",
     now,
   );
+  const replacementRevision = revisionEvidence(groupId, "replacement", "asset:2", "docs/b.md");
+  db.prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    "asset:2",
+    2,
+    replacementRevision.input.canonicalPayloadJson,
+    replacementRevision.derived.canonicalPayloadDigest,
+    replacementRevision.input.bodyDigest,
+    replacementRevision.input.sourcePath,
+    replacementRevision.input.sourceCommit,
+    replacementRevision.input.actor,
+    replacementRevision.input.reason,
+    replacementRevision.input.occurredAt,
+  );
   for (const [role, asset, path] of [
     ["origin", "asset:1", "docs/a.md"],
     ["replacement", "asset:2", "docs/b.md"],
@@ -325,10 +403,11 @@ function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
     const commandId = `${groupId}:${role}`;
     const certificateId = `certificate:${role}`;
     const admissionEventId = `admission:${role}`;
+    const revision = revisionEvidence(groupId, role, asset, path);
     const binding = {
       group_id: groupId,
       asset_id: asset,
-      revision: 1,
+      revision: 2,
       artifact_role: role,
       bound_at: now,
     };
@@ -339,16 +418,16 @@ function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
     const admission = {
       admission_event_id: admissionEventId,
       command_id: commandId,
-      command_payload_digest: digest,
+      command_payload_digest: revision.derived.commandPayloadDigest,
       event_kind: "admitted",
       plan_asset_id: asset,
-      plan_revision: 1,
+      plan_revision: 2,
       plan_id: `PLAN-${role}`,
       source_path: path,
-      content_digest: digest,
-      route_tuple_digest: digest,
+      content_digest: revision.input.contentDigest,
+      route_tuple_digest: revision.input.routeTupleDigest,
       certificate_id: certificateId,
-      certificate_digest: digest,
+      certificate_digest: revision.derived.certificateDigest,
       occurred_at: now,
     };
     db.prepare(
@@ -360,24 +439,24 @@ function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
       certificateId,
       admissionEventId,
       commandId,
-      digest,
+      revision.derived.commandPayloadDigest,
       asset,
-      1,
+      2,
       `PLAN-${role}`,
       path,
-      digest,
-      digest,
-      digest,
+      revision.input.contentDigest,
+      revision.input.routeTupleDigest,
+      revision.derived.certificateDigest,
       now,
     );
     const receipt = {
       command_id: commandId,
       command_type: "plan.revise",
       subject_kind: "plan_revision",
-      subject_key: `${asset}:1`,
+      subject_key: `${asset}:2`,
       plan_asset_id: asset,
-      plan_revision: 1,
-      command_payload_digest: digest,
+      plan_revision: 2,
+      command_payload_digest: revision.derived.commandPayloadDigest,
       result_kind: "admission_certificate",
       result_ref: certificateId,
       recorded_at: now,
@@ -387,6 +466,27 @@ function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
       ledgerRowDigest(receipt, "receipt_digest"),
     );
   }
+}
+
+function revisionEvidence(groupId: string, role: string, assetId: string, sourcePath: string) {
+  const input = {
+    commandId: `${groupId}:${role}`,
+    assetId,
+    planId: `PLAN-${role}`,
+    baseRevision: 1,
+    basePayloadDigest: sha("{}"),
+    canonicalPayloadJson: JSON.stringify({ plan_id: `PLAN-${role}` }),
+    contentDigest: digest,
+    bodyDigest: digest,
+    sourcePath,
+    sourceCommit: "b".repeat(40),
+    actor: "test",
+    reason: "test",
+    routeTupleDigest: digest,
+    certificateId: `certificate:${role}`,
+    occurredAt: now,
+  };
+  return { input, derived: derivePlanRevisionDigests(input) };
 }
 
 const digest = "a".repeat(64);

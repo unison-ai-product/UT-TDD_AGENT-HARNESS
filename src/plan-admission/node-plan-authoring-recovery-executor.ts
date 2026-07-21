@@ -107,6 +107,7 @@ type Snapshot = {
   published: Set<string>;
   lastEventDigest: string;
   lastSequence: number;
+  lastEventKind: string;
   started: Set<string>;
   evidenceLane: "zero" | "complete";
 };
@@ -172,6 +173,7 @@ function loadSnapshot(db: HarnessDb, commandId: string): Snapshot {
     ),
     lastEventDigest: String(last.event_digest),
     lastSequence: Number(last.sequence),
+    lastEventKind: String(last.event_kind),
     evidenceLane,
   };
 }
@@ -302,6 +304,7 @@ function appendRecoveryEvidence(
 }
 
 function appendPublishedAndCommitted(db: HarnessDb, snapshot: Snapshot): void {
+  if (isTerminalPhase(snapshot.lastEventKind)) return;
   let sequence = snapshot.lastSequence;
   let previous = snapshot.lastEventDigest;
   for (const artifact of snapshot.artifacts.filter((a) => !snapshot.published.has(a.memberId))) {
@@ -326,7 +329,11 @@ function appendPublishedAndCommitted(db: HarnessDb, snapshot: Snapshot): void {
   appendPhase(db, snapshot, sequence, previous, "committed");
 }
 function appendTerminal(db: HarnessDb, snapshot: Snapshot, kind: "rolled_back"): void {
+  if (isTerminalPhase(snapshot.lastEventKind)) return;
   appendPhase(db, snapshot, snapshot.lastSequence, snapshot.lastEventDigest, kind);
+}
+function isTerminalPhase(kind: string): boolean {
+  return kind === "committed" || kind === "rolled_back";
 }
 function appendPhase(
   db: HarnessDb,

@@ -11,6 +11,7 @@ import {
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { inspectAuthoringRecoveryDbEvidence } from "../../plan-admission/authoring-recovery-db-evidence.js";
 import type { HarnessDb } from "../../state-db/index.js";
+import { authoringCommandGroupValid, ledgerRowDigest } from "./schema.js";
 
 export interface UnresolvedAuthoringRecovery {
   readonly draftCommands: readonly string[];
@@ -63,9 +64,11 @@ export function groupIsSemanticallyTerminal(
   groupId: string,
   phase: string,
   afterParentCapture: ((path: string) => void) | undefined = undefined,
+  beforeStableReturn: ((path: string) => void) | undefined = undefined,
 ): boolean {
   if (phase !== "committed" && phase !== "rolled_back") return false;
   try {
+    if (!authoringCommandGroupValid(db, groupId)) return false;
     const descriptor = db
       .prepare("SELECT * FROM authoring_operation_descriptors WHERE group_id = ?")
       .get(groupId);
@@ -81,14 +84,32 @@ export function groupIsSemanticallyTerminal(
         .get(groupId)?.member_count,
     );
     if (
+      descriptor.descriptor_digest !== ledgerRowDigest(descriptor, "descriptor_digest") ||
       artifacts.length === 0 ||
       artifacts.length !== memberCount ||
-      artifacts.length !== Number(descriptor.artifact_count)
+      artifacts.length !== Number(descriptor.artifact_count) ||
+      artifacts.some(
+        (artifact) => artifact.artifact_digest !== ledgerRowDigest(artifact, "artifact_digest"),
+      )
     )
       return false;
     return phase === "committed"
-      ? committedEvidenceComplete(db, repoRoot, groupId, artifacts, afterParentCapture)
-      : rolledBackEvidenceClean(db, repoRoot, groupId, artifacts, afterParentCapture);
+      ? committedEvidenceComplete(
+          db,
+          repoRoot,
+          groupId,
+          artifacts,
+          afterParentCapture,
+          beforeStableReturn,
+        )
+      : rolledBackEvidenceClean(
+          db,
+          repoRoot,
+          groupId,
+          artifacts,
+          afterParentCapture,
+          beforeStableReturn,
+        );
   } catch {
     return false;
   }
@@ -100,6 +121,7 @@ function committedEvidenceComplete(
   groupId: string,
   artifacts: readonly Record<string, unknown>[],
   afterParentCapture?: (path: string) => void,
+  beforeStableReturn?: (path: string) => void,
 ): boolean {
   if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "complete") return false;
   const bindings = db
@@ -136,9 +158,16 @@ function committedEvidenceComplete(
         String(artifact.target_path),
         (path) => digestMatchesRegular(path, String(artifact.postimage_digest)),
         afterParentCapture,
+        beforeStableReturn,
       ) &&
       auxiliaryPaths(artifact).every((path) =>
-        inspectStablePath(repoRoot, path, (resolved) => !existsSync(resolved), afterParentCapture),
+        inspectStablePath(
+          repoRoot,
+          path,
+          (resolved) => !existsSync(resolved),
+          afterParentCapture,
+          beforeStableReturn,
+        ),
       )
     );
   });
@@ -150,6 +179,7 @@ function rolledBackEvidenceClean(
   groupId: string,
   artifacts: readonly Record<string, unknown>[],
   afterParentCapture?: (path: string) => void,
+  beforeStableReturn?: (path: string) => void,
 ): boolean {
   if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "zero") return false;
   const evidence = Number(
@@ -182,11 +212,18 @@ function rolledBackEvidenceClean(
           ? !existsSync(target)
           : typeof preimage.digest === "string" && digestMatchesRegular(target, preimage.digest),
       afterParentCapture,
+      beforeStableReturn,
     );
     return (
       restored &&
       auxiliaryPaths(artifact).every((path) =>
-        inspectStablePath(repoRoot, path, (resolved) => !existsSync(resolved), afterParentCapture),
+        inspectStablePath(
+          repoRoot,
+          path,
+          (resolved) => !existsSync(resolved),
+          afterParentCapture,
+          beforeStableReturn,
+        ),
       )
     );
   });
@@ -208,14 +245,49 @@ function inspectStablePath<T>(
   path: string,
   inspect: (resolved: string) => T,
   afterParentCapture?: (path: string) => void,
+  beforeStableReturn?: (path: string) => void,
 ): T {
   const resolved = safePath(repoRoot, path);
   const parent = DirectoryIdentity.capture(dirname(resolved));
+  const leaf = PathIdentity.capture(resolved);
   afterParentCapture?.(path);
   parent.assertCurrent();
+  leaf.assertCurrent();
   const result = inspect(resolved);
+  beforeStableReturn?.(path);
   parent.assertCurrent();
+  leaf.assertCurrent();
   return result;
+}
+
+class PathIdentity {
+  private constructor(
+    private readonly path: string,
+    private readonly state: string,
+  ) {}
+
+  static capture(path: string): PathIdentity {
+    return new PathIdentity(path, PathIdentity.read(path));
+  }
+
+  assertCurrent(): void {
+    if (PathIdentity.read(this.path) !== this.state)
+      throw new Error("authoring-recovery-leaf-drift");
+  }
+
+  private static read(path: string): string {
+    if (!existsSync(path)) return "absent";
+    const stat = lstatSync(path);
+    return [
+      stat.isFile(),
+      stat.isSymbolicLink(),
+      stat.dev,
+      stat.ino,
+      stat.size,
+      stat.mtimeMs,
+      stat.ctimeMs,
+    ].join(":");
+  }
 }
 
 class DirectoryIdentity {

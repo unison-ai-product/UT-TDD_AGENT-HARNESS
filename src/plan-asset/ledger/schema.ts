@@ -1518,88 +1518,97 @@ function authoringRecoveryRowsValid(db: HarnessDb): boolean {
 
 function authoringCommandGroupsValid(db: HarnessDb): boolean {
   const headers = db.prepare("SELECT * FROM authoring_command_group_headers").all();
-  for (const header of headers) {
-    if (header.header_digest !== ledgerRowDigest(header, "header_digest")) return false;
-    const members = db
-      .prepare("SELECT * FROM authoring_command_group_members WHERE group_id = ? ORDER BY ordinal")
-      .all(header.group_id);
+  return headers.every((header) => authoringCommandGroupRowValid(db, header));
+}
+
+/** recovery gateから単一command groupのdigest chainと遷移を再検証する。 */
+export function authoringCommandGroupValid(db: HarnessDb, groupId: string): boolean {
+  const header = db
+    .prepare("SELECT * FROM authoring_command_group_headers WHERE group_id = ?")
+    .get(groupId);
+  return Boolean(header && authoringCommandGroupRowValid(db, header));
+}
+
+function authoringCommandGroupRowValid(db: HarnessDb, header: Record<string, unknown>): boolean {
+  if (header.header_digest !== ledgerRowDigest(header, "header_digest")) return false;
+  const members = db
+    .prepare("SELECT * FROM authoring_command_group_members WHERE group_id = ? ORDER BY ordinal")
+    .all(header.group_id);
+  if (
+    members.length !== Number(header.member_count) ||
+    members.some(
+      (member, index) =>
+        Number(member.ordinal) !== index + 1 ||
+        !validExpectedPreimageJson(member.expected_preimage_json) ||
+        member.member_digest !== ledgerRowDigest(member, "member_digest"),
+    )
+  )
+    return false;
+  const memberSet = members.map((member) => ({
+    memberId: member.member_id,
+    artifactPath: member.artifact_path,
+    contentDigest: member.content_digest,
+    expectedPreimage: JSON.parse(String(member.expected_preimage_json)),
+  }));
+  if (
+    header.member_set_digest !==
+    createHash("sha256").update(JSON.stringify(memberSet)).digest("hex")
+  )
+    return false;
+  const events = db
+    .prepare(
+      "SELECT * FROM authoring_command_group_phase_events WHERE group_id = ? ORDER BY sequence",
+    )
+    .all(header.group_id);
+  if (events.length === 0 || events[0]?.event_kind !== "prepared") return false;
+  let previous: string | null = null;
+  const published = new Set<string>();
+  const started = new Set<string>();
+  let terminal = false;
+  for (const [index, event] of events.entries()) {
+    const kind = String(event.event_kind);
+    const memberId = event.member_id === null ? undefined : String(event.member_id);
     if (
-      members.length !== Number(header.member_count) ||
-      members.some(
-        (member, index) =>
-          Number(member.ordinal) !== index + 1 ||
-          !validExpectedPreimageJson(member.expected_preimage_json) ||
-          member.member_digest !== ledgerRowDigest(member, "member_digest"),
-      )
+      terminal ||
+      Number(event.sequence) !== index + 1 ||
+      event.command_payload_digest !== header.command_payload_digest ||
+      event.previous_event_digest !== previous ||
+      event.event_digest !== ledgerRowDigest(event, "event_digest")
     )
       return false;
-    const memberSet = members.map((member) => ({
-      memberId: member.member_id,
-      artifactPath: member.artifact_path,
-      contentDigest: member.content_digest,
-      expectedPreimage: JSON.parse(String(member.expected_preimage_json)),
-    }));
-    if (
-      header.member_set_digest !==
-      createHash("sha256").update(JSON.stringify(memberSet)).digest("hex")
-    )
-      return false;
-    const events = db
-      .prepare(
-        "SELECT * FROM authoring_command_group_phase_events WHERE group_id = ? ORDER BY sequence",
-      )
-      .all(header.group_id);
-    if (events.length === 0 || events[0]?.event_kind !== "prepared") return false;
-    let previous: string | null = null;
-    const published = new Set<string>();
-    const started = new Set<string>();
-    let terminal = false;
-    for (const [index, event] of events.entries()) {
-      const kind = String(event.event_kind);
-      const memberId = event.member_id === null ? undefined : String(event.member_id);
+    if (kind === "prepared" && index !== 0) return false;
+    if (kind === "member_started") {
       if (
-        terminal ||
-        Number(event.sequence) !== index + 1 ||
-        event.command_payload_digest !== header.command_payload_digest ||
-        event.previous_event_digest !== previous ||
-        event.event_digest !== ledgerRowDigest(event, "event_digest")
+        !memberId ||
+        started.has(memberId) ||
+        published.has(memberId) ||
+        event.publish_receipt_digest !== null ||
+        !members.some((member) => member.member_id === memberId)
       )
         return false;
-      if (kind === "prepared" && index !== 0) return false;
-      if (kind === "member_started") {
-        if (
-          !memberId ||
-          started.has(memberId) ||
-          published.has(memberId) ||
-          event.publish_receipt_digest !== null ||
-          !members.some((member) => member.member_id === memberId)
-        )
-          return false;
-        started.add(memberId);
-      } else if (kind === "member_published") {
-        if (
-          !memberId ||
-          !started.has(memberId) ||
-          published.has(memberId) ||
-          !members.some((member) => member.member_id === memberId) ||
-          !/^[a-f0-9]{64}$/.test(String(event.publish_receipt_digest))
-        )
-          return false;
-        published.add(memberId);
-        started.delete(memberId);
-      } else if (kind === "committed") {
-        if (published.size !== members.length || memberId || event.publish_receipt_digest !== null)
-          return false;
-        terminal = true;
-      } else if (kind === "recovery_required") {
-        if (memberId || event.publish_receipt_digest !== null || !event.failure_reason)
-          return false;
-      } else if (kind === "rolled_back") {
-        if (memberId || event.publish_receipt_digest !== null) return false;
-        terminal = true;
-      } else if (kind !== "prepared") return false;
-      previous = String(event.event_digest);
-    }
+      started.add(memberId);
+    } else if (kind === "member_published") {
+      if (
+        !memberId ||
+        !started.has(memberId) ||
+        published.has(memberId) ||
+        !members.some((member) => member.member_id === memberId) ||
+        !/^[a-f0-9]{64}$/.test(String(event.publish_receipt_digest))
+      )
+        return false;
+      published.add(memberId);
+      started.delete(memberId);
+    } else if (kind === "committed") {
+      if (published.size !== members.length || memberId || event.publish_receipt_digest !== null)
+        return false;
+      terminal = true;
+    } else if (kind === "recovery_required") {
+      if (memberId || event.publish_receipt_digest !== null || !event.failure_reason) return false;
+    } else if (kind === "rolled_back") {
+      if (memberId || event.publish_receipt_digest !== null) return false;
+      terminal = true;
+    } else if (kind !== "prepared") return false;
+    previous = String(event.event_digest);
   }
   return true;
 }

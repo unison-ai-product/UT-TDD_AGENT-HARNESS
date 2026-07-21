@@ -9,7 +9,12 @@ import {
   findUnresolvedAuthoringRecovery,
   groupIsSemanticallyTerminal,
 } from "../src/plan-asset/ledger/authoring-recovery-gate";
-import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema";
+import { derivePlanRevisionDigests } from "../src/plan-asset/ledger/plan-revision-ledger";
+import {
+  authoringCommandGroupValid,
+  ledgerRowDigest,
+  migratePlanLedger,
+} from "../src/plan-asset/ledger/schema";
 import { type HarnessDb, openHarnessDb } from "../src/state-db/index";
 
 const roots: string[] = [];
@@ -48,10 +53,24 @@ describe("authoring recovery boundary gate", () => {
     const { db, root } = fixture();
     try {
       seedGroup(db, "committed", sha("post"), { kind: "absent" });
+      expect(
+        authoringCommandGroupValid(db, "redesign:1"),
+        JSON.stringify({
+          header: db.prepare("SELECT * FROM authoring_command_group_headers").get(),
+          members: db.prepare("SELECT * FROM authoring_command_group_members").all(),
+          events: db.prepare("SELECT * FROM authoring_command_group_phase_events").all(),
+        }),
+      ).toBe(true);
       writeFileSync(join(root, "target.txt"), "post");
       expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual(["redesign:1"]);
 
       seedCommittedEvidence(db);
+      for (const artifact of db.prepare("SELECT * FROM authoring_operation_artifacts").all())
+        expect(artifact.artifact_digest).toBe(ledgerRowDigest(artifact, "artifact_digest"));
+      const descriptor = db.prepare("SELECT * FROM authoring_operation_descriptors").get();
+      expect(descriptor?.descriptor_digest).toBe(
+        ledgerRowDigest(descriptor ?? {}, "descriptor_digest"),
+      );
       for (const binding of db.prepare("SELECT * FROM authoring_command_revision_bindings").all())
         expect(binding.binding_digest).toBe(ledgerRowDigest(binding, "binding_digest"));
       expect(inspectAuthoringRecoveryDbEvidence(db, "redesign:1")).toBe("complete");
@@ -98,6 +117,35 @@ describe("authoring recovery boundary gate", () => {
     }
   });
 
+  it("eventとreceiptを共同改ざんし行digestを再計算してもrevision由来digestと不一致なら拒否する", () => {
+    const { db } = fixture();
+    try {
+      seedCommittedEvidence(db);
+      const event = db
+        .prepare("SELECT * FROM plan_admission_events WHERE admission_event_id = ?")
+        .get("admission:origin") as Record<string, unknown>;
+      const forged: Record<string, unknown> = { ...event, content_digest: "forged-content" };
+      db.exec("DROP TRIGGER trg_plan_admission_events_no_update");
+      db.exec("DROP TRIGGER trg_plan_admission_receipts_no_update");
+      db.prepare(
+        "UPDATE plan_admission_events SET content_digest = ?, event_digest = ? WHERE admission_event_id = ?",
+      ).run(
+        forged.content_digest,
+        ledgerRowDigest(forged, "event_digest"),
+        forged.admission_event_id,
+      );
+      db.prepare(
+        "UPDATE plan_admission_receipts SET content_digest = ? WHERE admission_event_id = ?",
+      ).run(forged.content_digest, forged.admission_event_id);
+
+      expect(() => inspectAuthoringRecoveryDbEvidence(db, "redesign:1")).toThrow(
+        "plan-recovery-db-evidence-mismatch",
+      );
+    } finally {
+      db.close();
+    }
+  });
+
   it("偽rolled_backはDB evidence、preimage不一致、aux残存の各laneでblockする", () => {
     const { db, root } = fixture();
     try {
@@ -114,6 +162,20 @@ describe("authoring recovery boundary gate", () => {
       db.prepare(
         "INSERT INTO authoring_command_revision_bindings VALUES ('redesign:1', 'asset:origin', 1, 'origin', 'now', 'digest')",
       ).run();
+      expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual(["redesign:1"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("terminal phaseのdigest chainが壊れていればfilesystemがcleanでもblockする", () => {
+    const { db, root } = fixture();
+    try {
+      seedGroup(db, "rolled_back", sha("post"), { kind: "absent" });
+      db.exec("DROP TRIGGER trg_authoring_command_group_phase_events_no_update");
+      db.prepare(
+        "UPDATE authoring_command_group_phase_events SET event_digest = 'forged' WHERE group_id = ? AND event_kind = 'rolled_back'",
+      ).run("redesign:1");
       expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual(["redesign:1"]);
     } finally {
       db.close();
@@ -159,6 +221,26 @@ describe("authoring recovery boundary gate", () => {
       db.close();
     }
   });
+
+  it.each([
+    "target.txt",
+    "target.txt.tmp",
+  ])("同一directory内で%sを判定後に生成するleaf TOCTOUをfail-closeする", (attackedPath) => {
+    const { db, root } = fixture();
+    try {
+      seedGroup(db, "rolled_back", sha("post"), { kind: "absent" });
+      let attacked = false;
+      expect(
+        groupIsSemanticallyTerminal(db, root, "redesign:1", "rolled_back", undefined, (path) => {
+          if (attacked || path !== attackedPath) return;
+          attacked = true;
+          writeFileSync(join(root, attackedPath), "raced");
+        }),
+      ).toBe(false);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 function fixture(): { db: HarnessDb; root: string } {
@@ -177,53 +259,90 @@ function seedGroup(
   preimage: { kind: "absent" } | { kind: "sha256"; digest: string },
   targetPath = "target.txt",
 ): void {
+  const member = {
+    group_id: "redesign:1",
+    member_id: "source",
+    ordinal: 1,
+    artifact_path: targetPath,
+    content_digest: postimage.replace("sha256:", ""),
+    expected_preimage_json: JSON.stringify(preimage),
+  };
+  const memberSet = [
+    {
+      memberId: member.member_id,
+      artifactPath: member.artifact_path,
+      contentDigest: member.content_digest,
+      expectedPreimage: preimage,
+    },
+  ];
+  const header = {
+    group_id: "redesign:1",
+    command_payload_digest: "payload",
+    member_set_digest: rawSha(JSON.stringify(memberSet)),
+    member_count: 1,
+    created_at: "2026-07-21",
+  };
   db.prepare("INSERT INTO authoring_command_group_headers VALUES (?, ?, ?, ?, ?, ?)").run(
-    "redesign:1",
-    "payload",
-    "members",
-    1,
-    "2026-07-21",
-    "header",
+    ...Object.values(header),
+    ledgerRowDigest(header, "header_digest"),
   );
   db.prepare("INSERT INTO authoring_command_group_members VALUES (?, ?, ?, ?, ?, ?, ?)").run(
-    "redesign:1",
-    "source",
-    1,
-    targetPath,
-    postimage.replace("sha256:", ""),
-    JSON.stringify(preimage),
-    "member",
+    ...Object.values(member),
+    ledgerRowDigest(member, "member_digest"),
   );
-  db.prepare(
-    `INSERT INTO authoring_command_group_phase_events
-     VALUES ('phase:1', 'redesign:1', 1, 'payload', ?, NULL, NULL, NULL, '2026-07-21', NULL, 'event')`,
-  ).run(phase);
+  let previous: string | null = null;
+  const kinds =
+    phase === "committed"
+      ? ["prepared", "member_started", "member_published", "committed"]
+      : ["prepared", "rolled_back"];
+  for (const [index, kind] of kinds.entries()) {
+    const memberEvent = kind === "member_started" || kind === "member_published";
+    const event = {
+      phase_event_id: `phase:${index + 1}`,
+      group_id: "redesign:1",
+      sequence: index + 1,
+      command_payload_digest: "payload",
+      event_kind: kind,
+      member_id: memberEvent ? "source" : null,
+      publish_receipt_digest: kind === "member_published" ? rawSha("published") : null,
+      failure_reason: null,
+      occurred_at: "2026-07-21",
+      previous_event_digest: previous,
+    };
+    previous = ledgerRowDigest(event, "event_digest");
+    db.prepare(
+      "INSERT INTO authoring_command_group_phase_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(event), previous);
+  }
+  const descriptor = {
+    operation_id: "operation:1",
+    group_id: "redesign:1",
+    command_payload_digest: "payload",
+    repository_identity: "repo",
+    base_commit: "commit",
+    artifact_count: 1,
+    prepared_at: "2026-07-21",
+  };
   db.prepare("INSERT INTO authoring_operation_descriptors VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
-    "operation:1",
-    "redesign:1",
-    "payload",
-    "repo",
-    "commit",
-    1,
-    "2026-07-21",
-    "descriptor",
+    ...Object.values(descriptor),
+    ledgerRowDigest(descriptor, "descriptor_digest"),
   );
+  const artifact = {
+    operation_id: "operation:1",
+    group_id: "redesign:1",
+    member_id: "source",
+    ordinal: 1,
+    artifact_role: "source",
+    target_path: targetPath,
+    temporary_path: "target.txt.tmp",
+    rollback_path: "target.txt.rollback",
+    pin_path: ".ut-tdd-draft-token-0-published.identity",
+    expected_preimage_json: JSON.stringify(preimage),
+    postimage_digest: postimage,
+  };
   db.prepare(
     "INSERT INTO authoring_operation_artifacts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "operation:1",
-    "redesign:1",
-    "source",
-    1,
-    "source",
-    targetPath,
-    "target.txt.tmp",
-    "target.txt.rollback",
-    ".ut-tdd-draft-token-0-published.identity",
-    JSON.stringify(preimage),
-    postimage,
-    "artifact",
-  );
+  ).run(...Object.values(artifact), ledgerRowDigest(artifact, "artifact_digest"));
 }
 
 function seedCommittedEvidence(db: HarnessDb): void {
@@ -232,14 +351,36 @@ function seedCommittedEvidence(db: HarnessDb): void {
     const commandId = `redesign:1:${role}`;
     const certificateId = `certificate:${role}`;
     const admissionEventId = `admission:${role}`;
+    const canonicalPayloadJson = JSON.stringify({ plan_id: `PLAN-${role}` });
     db.prepare("INSERT INTO plan_assets VALUES (?, 'now', 'commit', 'sha256-v1')").run(asset);
     db.prepare(
-      "INSERT INTO plan_revisions VALUES (?, 1, '{}', 'payload', 'body', ?, 'commit', 'actor', 'reason', 'now')",
-    ).run(asset, `${role}.md`);
+      "INSERT INTO plan_revisions VALUES (?, 1, '{}', ?, 'base-body', ?, 'commit', 'actor', 'base', 'before')",
+    ).run(asset, rawSha("{}"), `${role}.md`);
+    const revisionInput = {
+      commandId,
+      assetId: asset,
+      planId: `PLAN-${role}`,
+      baseRevision: 1,
+      basePayloadDigest: rawSha("{}"),
+      canonicalPayloadJson,
+      contentDigest: "content",
+      bodyDigest: "body",
+      sourcePath: `${role}.md`,
+      sourceCommit: "commit",
+      actor: "actor",
+      reason: "reason",
+      routeTupleDigest: "route",
+      certificateId,
+      occurredAt: "now",
+    };
+    const derived = derivePlanRevisionDigests(revisionInput);
+    db.prepare(
+      "INSERT INTO plan_revisions VALUES (?, 2, ?, ?, 'body', ?, 'commit', 'actor', 'reason', 'now')",
+    ).run(asset, canonicalPayloadJson, derived.canonicalPayloadDigest, `${role}.md`);
     const binding = {
       group_id: "redesign:1",
       asset_id: asset,
-      revision: 1,
+      revision: 2,
       artifact_role: role,
       bound_at: "now",
     };
@@ -250,16 +391,16 @@ function seedCommittedEvidence(db: HarnessDb): void {
     const admission = {
       admission_event_id: admissionEventId,
       command_id: commandId,
-      command_payload_digest: "payload",
+      command_payload_digest: derived.commandPayloadDigest,
       event_kind: "admitted",
       plan_asset_id: asset,
-      plan_revision: 1,
+      plan_revision: 2,
       plan_id: `PLAN-${role}`,
       source_path: `${role}.md`,
       content_digest: "content",
       route_tuple_digest: "route",
       certificate_id: certificateId,
-      certificate_digest: "certificate",
+      certificate_digest: derived.certificateDigest,
       occurred_at: "now",
     };
     db.prepare(
@@ -271,24 +412,24 @@ function seedCommittedEvidence(db: HarnessDb): void {
       certificateId,
       admissionEventId,
       commandId,
-      "payload",
+      derived.commandPayloadDigest,
       asset,
-      1,
+      2,
       `PLAN-${role}`,
       `${role}.md`,
       "content",
       "route",
-      "certificate",
+      derived.certificateDigest,
       "now",
     );
     const receipt = {
       command_id: commandId,
       command_type: "plan.revise",
       subject_kind: "plan_revision",
-      subject_key: `${asset}:1`,
+      subject_key: `${asset}:2`,
       plan_asset_id: asset,
-      plan_revision: 1,
-      command_payload_digest: "payload",
+      plan_revision: 2,
+      command_payload_digest: derived.commandPayloadDigest,
       result_kind: "admission_certificate",
       result_ref: certificateId,
       recorded_at: "now",
@@ -301,5 +442,9 @@ function seedCommittedEvidence(db: HarnessDb): void {
 }
 
 function sha(value: string): string {
-  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+  return `sha256:${rawSha(value)}`;
+}
+
+function rawSha(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
