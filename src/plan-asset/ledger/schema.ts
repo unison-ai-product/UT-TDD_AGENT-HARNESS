@@ -17,7 +17,10 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
-import { deriveAuthoringOperationArtifact } from "./authoring-operation-provenance.js";
+import {
+  canonicalPortableArtifactPath,
+  deriveAuthoringOperationArtifact,
+} from "./authoring-operation-provenance.js";
 import { committedRevisionPredicateForSchema } from "./revision-visibility.js";
 
 export const LEDGER_SCHEMA_VERSION = 8;
@@ -1634,8 +1637,13 @@ function authoringCommandGroupRowValid(db: HarnessDb, header: Record<string, unk
   const members = db
     .prepare("SELECT * FROM authoring_command_group_members WHERE group_id = ? ORDER BY ordinal")
     .all(header.group_id);
+  const portablePaths = members.map((member) =>
+    canonicalPortableArtifactPath(member.artifact_path),
+  );
   if (
     members.length !== Number(header.member_count) ||
+    portablePaths.some((path) => path === undefined) ||
+    new Set(portablePaths).size !== members.length ||
     members.some(
       (member, index) =>
         Number(member.ordinal) !== index + 1 ||

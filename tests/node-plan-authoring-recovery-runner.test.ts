@@ -19,6 +19,7 @@ import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.js"
 import { NodePlanAuthoringRecoveryExecutor } from "../src/plan-admission/node-plan-authoring-recovery-executor.js";
 import { NodePlanAuthoringRecoveryRunner } from "../src/plan-admission/node-plan-authoring-recovery-runner.js";
 import { AuthoringCommandGroupJournal } from "../src/plan-asset/ledger/authoring-command-group.js";
+import { deriveAuthoringOperationArtifact } from "../src/plan-asset/ledger/authoring-operation-provenance.js";
 import { derivePlanRevisionDigests } from "../src/plan-asset/ledger/plan-revision-ledger.js";
 import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../src/state-db/index.js";
@@ -458,6 +459,114 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     ).toThrow("plan-recovery-command-corrupt");
     expect(readFileSync(target, "utf8")).toBe(recoveryPlanSource);
     expect(readFileSync(decoy, "utf8")).toBe("decoy");
+    const verified = openHarnessDb(fixture.dbPath);
+    expect(
+      Number(
+        verified.prepare("SELECT COUNT(*) count FROM authoring_recovery_assessment_events").get()
+          ?.count,
+      ),
+    ).toBe(beforeAssessmentCount);
+    verified.close();
+  });
+
+  it("member/artifact/headerをportable aliasへ共同改ざんしてもstatus/recover mutation 0で拒否する", () => {
+    const fixture = recoveryFixture();
+    const current = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    const target = join(fixture.root, "docs", "a.md");
+    const beforeTarget = readFileSync(target);
+    const db = openHarnessDb(fixture.dbPath);
+    const beforeAssessmentCount = Number(
+      db.prepare("SELECT COUNT(*) count FROM authoring_recovery_assessment_events").get()?.count,
+    );
+    for (const table of [
+      "authoring_command_group_headers",
+      "authoring_command_group_members",
+      "authoring_operation_artifacts",
+    ]) {
+      for (const trigger of db
+        .prepare(
+          `SELECT name FROM sqlite_master WHERE type = 'trigger' AND sql LIKE ? AND sql LIKE '%UPDATE%'`,
+        )
+        .all(`%${table}%`))
+        db.exec(`DROP TRIGGER ${String(trigger.name)}`);
+    }
+    const member = db
+      .prepare(
+        "SELECT * FROM authoring_command_group_members WHERE group_id = ? AND member_id = 'replacement'",
+      )
+      .get(fixture.groupId) as Record<string, unknown>;
+    const aliasPath = "docs/A.md";
+    const forgedMember = { ...member, artifact_path: aliasPath };
+    db.prepare(
+      "UPDATE authoring_command_group_members SET artifact_path = ?, member_digest = ? WHERE group_id = ? AND member_id = ?",
+    ).run(
+      aliasPath,
+      ledgerRowDigest(forgedMember, "member_digest"),
+      fixture.groupId,
+      member.member_id,
+    );
+    const members = db
+      .prepare("SELECT * FROM authoring_command_group_members WHERE group_id = ? ORDER BY ordinal")
+      .all(fixture.groupId);
+    const memberSet = members.map((row) => ({
+      memberId: row.member_id,
+      artifactPath: row.artifact_path,
+      contentDigest: row.content_digest,
+      expectedPreimage: JSON.parse(String(row.expected_preimage_json)),
+    }));
+    const header = db
+      .prepare("SELECT * FROM authoring_command_group_headers WHERE group_id = ?")
+      .get(fixture.groupId) as Record<string, unknown>;
+    const forgedHeader = { ...header, member_set_digest: sha(JSON.stringify(memberSet)) };
+    db.prepare(
+      "UPDATE authoring_command_group_headers SET member_set_digest = ?, header_digest = ? WHERE group_id = ?",
+    ).run(
+      forgedHeader.member_set_digest,
+      ledgerRowDigest(forgedHeader, "header_digest"),
+      fixture.groupId,
+    );
+    const artifact = db
+      .prepare(
+        "SELECT * FROM authoring_operation_artifacts WHERE group_id = ? AND member_id = 'replacement'",
+      )
+      .get(fixture.groupId) as Record<string, unknown>;
+    const canonical = deriveAuthoringOperationArtifact({
+      groupId: fixture.groupId,
+      memberId: String(member.member_id),
+      artifactPath: aliasPath,
+    });
+    const forgedArtifact: Record<string, unknown> = {
+      ...artifact,
+      target_path: aliasPath,
+      temporary_path: canonical.temporaryPath,
+      rollback_path: canonical.rollbackPath,
+      pin_path: canonical.pinPath,
+    };
+    db.prepare(
+      `UPDATE authoring_operation_artifacts SET target_path = ?, temporary_path = ?,
+       rollback_path = ?, pin_path = ?, artifact_digest = ?
+       WHERE operation_id = ? AND member_id = ?`,
+    ).run(
+      forgedArtifact.target_path,
+      forgedArtifact.temporary_path,
+      forgedArtifact.rollback_path,
+      forgedArtifact.pin_path,
+      ledgerRowDigest(forgedArtifact, "artifact_digest"),
+      forgedArtifact.operation_id,
+      forgedArtifact.member_id,
+    );
+    db.close();
+
+    expect(fixture.runner.status(fixture.groupId)).toMatchObject({ state: "corrupt", exitCode: 3 });
+    expect(() =>
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: "rollback",
+        expectedAssessmentDigest: String(current.assessment_digest),
+        execute: true,
+      }),
+    ).toThrow("plan-recovery-command-corrupt");
+    expect(readFileSync(target)).toEqual(beforeTarget);
     const verified = openHarnessDb(fixture.dbPath);
     expect(
       Number(
