@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-12 (recovery): 設計 doc 実態乖離の一括 back-merge
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
@@ -35,7 +35,25 @@ dependencies:
     - docs/plans/PLAN-L3-05-harness-telemetry-closure.md
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
-review_evidence: []
+review_evidence:
+  - reviewer: blind-reviewer
+    review_kind: cross_provider
+    reviewed_at: "2026-07-21T12:48:00+09:00"
+    tests_green_at: "2026-07-21T12:53:00+09:00"
+    verdict: approve
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    scope: "worktree 変更一式 (L5 physical-data 4 テーブル back-merge + 列型注記 / L6 function-spec stale model ID の MODEL_IDS 参照化 / src/lint/model-id-doc-drift.ts 新設 + doctor full profile 配線 / governance README・repository-structure 是正) を `ut-tdd codex --role blind-reviewer` (gpt-5.6-sol) が blind review。初回 FLAG 2 点 (列型注記欠落 / AC の live-tree 実行経路が 0 tests) → 是正 → 再 FLAG 1 点 (3 env 変数=cwd 経路は workspace-roots.ts 契約違反で第三者再実行不能) → mktemp -d detached copy 経路へ是正 → 再々 review で reviewer 自身が AC 記載コマンドをそのまま実行し 8/8 green (exit 0) を再現、契約適合 (snapshot root ≠ cwd) も確認して判定 PASS。"
+    green_commands:
+      - kind: unit_test
+        command: "mktemp -d の独立ディレクトリへ .claude/ と docs/ を実体コピーし UT_TDD_HEAD_SNAPSHOT_ROOT に指定、UT_TDD_TEST_EXECUTION_ROOT/UT_TDD_TEST_FENCE_ROOT=live tree cwd で bunx vitest run tests/model-id-ssot-drift.test.ts (8 tests、負例 regression 含む)。commit 14dda22f 後に正規経路 bun scripts/run-vitest-snapshot.ts tests/model-id-ssot-drift.test.ts でも 8 passed (8) を再確認"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-21T12:53:00+09:00"
+        evidence_path: tests/model-id-ssot-drift.test.ts
+        output_digest: "sha256:b9e0219af764cb2c589be9ee4dd77548c934bd40ebe405d553ac3ef64db768f7"
+        anchor_commit: 14dda22fc6aab513ed982e56c6161964d725076f
 ---
 
 # PLAN-RECOVERY-12 (recovery): 設計 doc 実態乖離の一括 back-merge
