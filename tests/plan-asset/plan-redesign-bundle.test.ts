@@ -83,6 +83,31 @@ describe("Redesign bundle coordinator", () => {
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
   });
 
+  it("U-PA-REDESIGN-002D: receiptありfaultはrollbackせず同bindingをroll-forwardする", () => {
+    const { db, coordinator } = fixture();
+    let count = 0;
+    expect(() =>
+      coordinator.publishDurable(bundle(), {
+        publish(member) {
+          count += 1;
+          if (count === 2) throw new Error("fault-after-receipt");
+          return { receiptDigest: sha(`${member.groupId}\0${member.memberId}`) };
+        },
+        acknowledge() {},
+      }),
+    ).toThrow("fault-after-receipt");
+    expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
+    expect(
+      db
+        .prepare("SELECT event_kind FROM authoring_command_group_phase_events ORDER BY sequence")
+        .all(),
+    ).toContainEqual({ event_kind: "recovery_required" });
+    expect(coordinator.publishDurable(bundle(), memoryPublisher())).toMatchObject({
+      ok: true,
+      replayed: true,
+    });
+  });
+
   it("U-PA-REDESIGN-002B: group intent不整合はrevisionとpreparedを同じBEGINでrollbackする", () => {
     const { db } = fixture();
     const input = bundle();

@@ -178,6 +178,14 @@ export class AuthoringCommandGroupJournal {
     const events = phaseEvents(this.db, normalized.groupId);
     if (!eventsValid(events, normalized))
       throw new Error("authoring-command-group-journal-invalid");
+    const prior = events.find(
+      (event) => event.member_id === memberId && event.event_kind === "member_published",
+    );
+    if (prior) {
+      if (prior.publish_receipt_digest !== receiptDigest)
+        throw new Error("authoring-command-group-receipt-conflict");
+      return;
+    }
     if (
       !events.some((event) => event.member_id === memberId && event.event_kind === "member_started")
     )
@@ -500,6 +508,20 @@ function insertRevisionBinding(
   input: NormalizedGroup,
   binding: NonNullable<AuthoringCommandGroupInput["operation"]>["revisionBindings"][number],
 ): void {
+  const existing = db
+    .prepare(
+      "SELECT * FROM authoring_command_revision_bindings WHERE group_id = ? AND asset_id = ? AND revision = ?",
+    )
+    .get(input.groupId, binding.assetId, binding.revision);
+  if (existing) {
+    if (
+      existing.artifact_role !== binding.artifactRole ||
+      existing.bound_at !== input.occurredAt ||
+      existing.binding_digest !== ledgerRowDigest(existing, "binding_digest")
+    )
+      throw new Error("authoring-command-revision-binding-conflict");
+    return;
+  }
   const row = {
     group_id: input.groupId,
     asset_id: binding.assetId,
