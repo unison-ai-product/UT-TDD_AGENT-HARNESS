@@ -1,15 +1,24 @@
 import type { PlanAuthoringRecoveryRunner } from "../cli/plan-authoring-recovery.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
+import { NodePlanAuthoringRecoveryExecutor } from "./node-plan-authoring-recovery-executor.js";
 
 export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRunner {
   constructor(
-    repoRoot: string,
+    private readonly repoRoot: string,
     private readonly openDb: () => HarnessDb = () => openPlanLedger({ repoRoot }),
   ) {}
 
   status(commandId: string): unknown {
-    return this.withDb((db) => status(db, commandId));
+    try {
+      return this.withDb((db) => classify(status(db, commandId)));
+    } catch (error) {
+      return {
+        state: "corrupt",
+        exitCode: 3,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   list(unresolvedOnly: boolean): unknown {
@@ -41,17 +50,24 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
   recover(input: {
     commandId: string;
     strategy: "rollback" | "roll_forward" | "finalize";
-    expectedAssessmentDigest: string;
+    expectedAssessmentDigest?: string;
     execute: boolean;
   }): unknown {
     return this.withDb((db) => {
       const current = status(db, input.commandId);
       if (!current) throw new Error("plan-recovery-command-not-found");
+      if (!input.execute) return { ...current, dry_run: true };
+      if (!input.expectedAssessmentDigest) throw new Error("plan-recovery-assessment-required");
       if (current.assessment_digest !== input.expectedAssessmentDigest)
         throw new Error("plan-recovery-assessment-drift");
       if (current.strategy !== input.strategy) throw new Error("plan-recovery-strategy-ineligible");
-      if (input.execute) throw new Error("plan-recovery-executor-required");
-      return { ...current, dry_run: true };
+      const result = new NodePlanAuthoringRecoveryExecutor(this.repoRoot).execute(db, {
+        commandId: input.commandId,
+        strategy: input.strategy,
+        expectedAssessmentDigest: input.expectedAssessmentDigest,
+        expectedFencingToken: String(current.fencing_token),
+      });
+      return { ...result, dry_run: false };
     });
   }
 
@@ -63,6 +79,15 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
       db.close();
     }
   }
+}
+
+function classify(value: Record<string, unknown> | undefined) {
+  if (!value) return { state: "corrupt", exitCode: 3 };
+  const state = String(value.state);
+  if (["committed", "rolled_back"].includes(state)) return { ...value, exitCode: 0 };
+  if (state === "recovery_required" && value.assessment_digest && value.fencing_token)
+    return { ...value, exitCode: 2 };
+  return { ...value, state: "corrupt", exitCode: 3 };
 }
 
 function status(db: HarnessDb, commandId: string): Record<string, unknown> | undefined {

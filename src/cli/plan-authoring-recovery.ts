@@ -6,7 +6,7 @@ export interface PlanAuthoringRecoveryRunner {
   recover(input: {
     commandId: string;
     strategy: "rollback" | "roll_forward" | "finalize";
-    expectedAssessmentDigest: string;
+    expectedAssessmentDigest?: string;
     execute: boolean;
   }): unknown;
 }
@@ -21,7 +21,11 @@ export function registerPlanAuthoringRecoveryCommands(
   recovery
     .command("status")
     .requiredOption("--command <id>")
-    .action((options: { command: string }) => write(runner.status(options.command)));
+    .action((options: { command: string }) => {
+      const result = runner.status(options.command) as { exitCode?: number };
+      process.exitCode = result.exitCode ?? 3;
+      write(result);
+    });
   recovery
     .command("list")
     .option("--all", "terminal stateも含める")
@@ -30,13 +34,13 @@ export function registerPlanAuthoringRecoveryCommands(
     .command("recover")
     .requiredOption("--command <id>")
     .requiredOption("--strategy <strategy>")
-    .requiredOption("--expected-assessment-digest <digest>")
+    .option("--expected-assessment-digest <digest>")
     .option("--execute", "dry-runではなく実行する")
     .action(
       (options: {
         command: string;
         strategy: string;
-        expectedAssessmentDigest: string;
+        expectedAssessmentDigest?: string;
         execute?: boolean;
       }) => {
         if (
@@ -47,7 +51,9 @@ export function registerPlanAuthoringRecoveryCommands(
           runner.recover({
             commandId: options.command,
             strategy: options.strategy as "rollback" | "roll_forward" | "finalize",
-            expectedAssessmentDigest: options.expectedAssessmentDigest,
+            ...(options.expectedAssessmentDigest
+              ? { expectedAssessmentDigest: options.expectedAssessmentDigest }
+              : {}),
             execute: options.execute === true,
           }),
         );
