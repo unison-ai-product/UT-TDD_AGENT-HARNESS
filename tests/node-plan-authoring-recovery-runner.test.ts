@@ -1,6 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, linkSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  linkSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -121,11 +129,112 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     expect(fixture.runner.status(fixture.groupId)).toMatchObject({
       state: "corrupt",
       exitCode: 3,
-      error: "plan-recovery-terminal-evidence-conflict",
+      error: "plan-recovery-command-corrupt",
     });
     expect(fixture.runner.list(true)).toContainEqual(
       expect.objectContaining({ command_id: fixture.groupId, state: "committed" }),
     );
+  });
+
+  it("破損した非terminal phase chainではassessmentもfilesystem mutationも行わない", () => {
+    const fixture = recoveryFixture();
+    const current = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    const db = openHarnessDb(fixture.dbPath);
+    const beforeAssessmentCount = Number(
+      db.prepare("SELECT COUNT(*) count FROM authoring_recovery_assessment_events").get()?.count,
+    );
+    const previous = db
+      .prepare(
+        "SELECT sequence, event_digest FROM authoring_command_group_phase_events WHERE group_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(fixture.groupId);
+    db.prepare(
+      `INSERT INTO authoring_command_group_phase_events
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      "phase:forged-nonterminal",
+      fixture.groupId,
+      Number(previous?.sequence) + 1,
+      digest,
+      "recovery_required",
+      null,
+      null,
+      "forged",
+      now,
+      previous?.event_digest,
+      "forged-event-digest",
+    );
+    db.close();
+    const target = join(fixture.root, "docs", "a.md");
+    const before = readFileSync(target, "utf8");
+
+    expect(() =>
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: "rollback",
+        expectedAssessmentDigest: String(current.assessment_digest),
+        execute: true,
+      }),
+    ).toThrow("plan-recovery-command-corrupt");
+    expect(readFileSync(target, "utf8")).toBe(before);
+    const verified = openHarnessDb(fixture.dbPath);
+    expect(
+      Number(
+        verified.prepare("SELECT COUNT(*) count FROM authoring_recovery_assessment_events").get()
+          ?.count,
+      ),
+    ).toBe(beforeAssessmentCount);
+    verified.close();
+  });
+
+  it("自己整合digestへ差し替えた非canonical artifactでもassessmentとmutationを拒否する", () => {
+    const fixture = recoveryFixture();
+    const current = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    const db = openHarnessDb(fixture.dbPath);
+    const beforeAssessmentCount = Number(
+      db.prepare("SELECT COUNT(*) count FROM authoring_recovery_assessment_events").get()?.count,
+    );
+    const artifact = db
+      .prepare("SELECT * FROM authoring_operation_artifacts WHERE group_id = ?")
+      .get(fixture.groupId) as Record<string, unknown>;
+    for (const trigger of db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'trigger' AND sql LIKE '%authoring_operation_artifacts%' AND sql LIKE '%UPDATE%'",
+      )
+      .all())
+      db.exec(`DROP TRIGGER ${String(trigger.name)}`);
+    const forged: Record<string, unknown> = { ...artifact, target_path: "docs/decoy.md" };
+    db.prepare(
+      "UPDATE authoring_operation_artifacts SET target_path = ?, artifact_digest = ? WHERE operation_id = ? AND member_id = ?",
+    ).run(
+      forged.target_path,
+      ledgerRowDigest(forged, "artifact_digest"),
+      forged.operation_id,
+      forged.member_id,
+    );
+    db.close();
+    const target = join(fixture.root, "docs", "a.md");
+    const decoy = join(fixture.root, "docs", "decoy.md");
+    writeFileSync(decoy, "decoy");
+
+    expect(() =>
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: "rollback",
+        expectedAssessmentDigest: String(current.assessment_digest),
+        execute: true,
+      }),
+    ).toThrow("plan-recovery-command-corrupt");
+    expect(readFileSync(target, "utf8")).toBe("postimage");
+    expect(readFileSync(decoy, "utf8")).toBe("decoy");
+    const verified = openHarnessDb(fixture.dbPath);
+    expect(
+      Number(
+        verified.prepare("SELECT COUNT(*) count FROM authoring_recovery_assessment_events").get()
+          ?.count,
+      ),
+    ).toBe(beforeAssessmentCount);
+    verified.close();
   });
 
   it("roll_forwardはauxiliaryを除去して1回のcommitted terminalへ収束する", () => {

@@ -2,7 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { groupIsSemanticallyTerminal } from "../plan-asset/ledger/authoring-recovery-gate.js";
-import { ledgerRowDigest } from "../plan-asset/ledger/schema.js";
+import {
+  authoringCommandGroupValid,
+  authoringOperationGroupValid,
+  ledgerRowDigest,
+} from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
 
@@ -18,6 +22,8 @@ export function ensureAuthoringRecoveryAssessment(
       db.exec("COMMIT");
       return;
     }
+    if (!authoringCommandGroupValid(db, commandId) || !authoringOperationGroupValid(db, commandId))
+      throw new Error("plan-recovery-command-corrupt");
     if (
       ["committed", "rolled_back"].includes(context.state) &&
       groupIsSemanticallyTerminal(db, repoRoot, commandId, context.state)

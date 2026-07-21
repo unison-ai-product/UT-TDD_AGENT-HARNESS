@@ -1529,6 +1529,68 @@ export function authoringCommandGroupValid(db: HarnessDb, groupId: string): bool
   return Boolean(header && authoringCommandGroupRowValid(db, header));
 }
 
+/** command groupとpublication descriptor/artifactのcanonical対応を再検証する。 */
+export function authoringOperationGroupValid(db: HarnessDb, groupId: string): boolean {
+  if (!authoringCommandGroupValid(db, groupId)) return false;
+  const header = db
+    .prepare("SELECT * FROM authoring_command_group_headers WHERE group_id = ?")
+    .get(groupId);
+  const descriptor = db
+    .prepare("SELECT * FROM authoring_operation_descriptors WHERE group_id = ?")
+    .get(groupId);
+  if (
+    !header ||
+    !descriptor ||
+    descriptor.descriptor_digest !== ledgerRowDigest(descriptor, "descriptor_digest") ||
+    descriptor.group_id !== header.group_id ||
+    descriptor.command_payload_digest !== header.command_payload_digest
+  )
+    return false;
+
+  const members = db
+    .prepare("SELECT * FROM authoring_command_group_members WHERE group_id = ? ORDER BY ordinal")
+    .all(groupId);
+  const artifacts = db
+    .prepare("SELECT * FROM authoring_operation_artifacts WHERE operation_id = ? ORDER BY ordinal")
+    .all(descriptor.operation_id);
+  if (artifacts.length !== members.length || artifacts.length !== Number(descriptor.artifact_count))
+    return false;
+
+  return artifacts.every((artifact, index) => {
+    const member = members[index];
+    return (
+      artifact.artifact_digest === ledgerRowDigest(artifact, "artifact_digest") &&
+      artifact.operation_id === descriptor.operation_id &&
+      artifact.group_id === groupId &&
+      artifact.member_id === member?.member_id &&
+      Number(artifact.ordinal) === Number(member?.ordinal) &&
+      artifact.artifact_role === member?.member_id &&
+      artifact.target_path === member?.artifact_path &&
+      expectedPreimageEqual(artifact.expected_preimage_json, member?.expected_preimage_json) &&
+      normalizedSha256Digest(artifact.postimage_digest) ===
+        normalizedSha256Digest(member?.content_digest)
+    );
+  });
+}
+
+function expectedPreimageEqual(left: unknown, right: unknown): boolean {
+  if (!validExpectedPreimageJson(left) || !validExpectedPreimageJson(right)) return false;
+  const canonical = (value: unknown): string => {
+    const parsed = JSON.parse(String(value)) as Record<string, unknown>;
+    return JSON.stringify(
+      Object.fromEntries(
+        Object.entries(parsed).sort(([a], [b]) => Buffer.from(a).compare(Buffer.from(b))),
+      ),
+    );
+  };
+  return canonical(left) === canonical(right);
+}
+
+function normalizedSha256Digest(value: unknown): string | undefined {
+  const raw = String(value).replace(/^sha256:/, "");
+  return /^[a-f0-9]{64}$/.test(raw) ? raw : undefined;
+}
+
 function authoringCommandGroupRowValid(db: HarnessDb, header: Record<string, unknown>): boolean {
   if (header.header_digest !== ledgerRowDigest(header, "header_digest")) return false;
   const members = db

@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
-import { ledgerRowDigest } from "../plan-asset/ledger/schema.js";
+import {
+  authoringCommandGroupValid,
+  authoringOperationGroupValid,
+  ledgerRowDigest,
+} from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
 import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
@@ -25,6 +29,11 @@ export class NodePlanAuthoringRecoveryExecutor {
   ): { state: "rolled_back" | "committed"; strategy: Strategy } {
     db.exec("BEGIN IMMEDIATE");
     try {
+      if (
+        !authoringCommandGroupValid(db, input.commandId) ||
+        !authoringOperationGroupValid(db, input.commandId)
+      )
+        throw new Error("plan-recovery-command-corrupt");
       const snapshot = loadSnapshot(db, input.commandId);
       if (
         snapshot.assessmentDigest !== input.expectedAssessmentDigest ||

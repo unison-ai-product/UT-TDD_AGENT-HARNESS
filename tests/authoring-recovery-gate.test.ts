@@ -12,6 +12,7 @@ import {
 import { derivePlanRevisionDigests } from "../src/plan-asset/ledger/plan-revision-ledger";
 import {
   authoringCommandGroupValid,
+  authoringOperationGroupValid,
   ledgerRowDigest,
   migratePlanLedger,
 } from "../src/plan-asset/ledger/schema";
@@ -146,6 +147,82 @@ describe("authoring recovery boundary gate", () => {
     }
   });
 
+  it("revision canonical payload digestだけを改ざんしても正本不一致として拒否する", () => {
+    const { db } = fixture();
+    try {
+      seedCommittedEvidence(db);
+      db.exec("DROP TRIGGER trg_plan_revisions_no_update");
+      db.prepare(
+        "UPDATE plan_revisions SET canonical_payload_digest = ? WHERE asset_id = ? AND revision = ?",
+      ).run(rawSha("forged-payload"), "asset:origin", 2);
+
+      expect(() => inspectAuthoringRecoveryDbEvidence(db, "redesign:1")).toThrow(
+        "plan-recovery-db-evidence-mismatch",
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  it("eventとadmissionのsource pathを共同改ざんし行digestを再計算してもrevision正本との差を拒否する", () => {
+    const { db } = fixture();
+    try {
+      seedCommittedEvidence(db);
+      const event = db
+        .prepare("SELECT * FROM plan_admission_events WHERE admission_event_id = ?")
+        .get("admission:origin") as Record<string, unknown>;
+      const forged: Record<string, unknown> = { ...event, source_path: "docs/forged.md" };
+      db.exec("DROP TRIGGER trg_plan_admission_events_no_update");
+      db.exec("DROP TRIGGER trg_plan_admission_receipts_no_update");
+      db.prepare(
+        "UPDATE plan_admission_events SET source_path = ?, event_digest = ? WHERE admission_event_id = ?",
+      ).run(forged.source_path, ledgerRowDigest(forged, "event_digest"), forged.admission_event_id);
+      db.prepare(
+        "UPDATE plan_admission_receipts SET source_path = ? WHERE admission_event_id = ?",
+      ).run(forged.source_path, forged.admission_event_id);
+
+      expect(() => inspectAuthoringRecoveryDbEvidence(db, "redesign:1")).toThrow(
+        "plan-recovery-db-evidence-mismatch",
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  it("event、admission、append receiptの時刻を共同改ざんしdigestを再計算してもrevision正本との差を拒否する", () => {
+    const { db } = fixture();
+    try {
+      seedCommittedEvidence(db);
+      const event = db
+        .prepare("SELECT * FROM plan_admission_events WHERE admission_event_id = ?")
+        .get("admission:origin") as Record<string, unknown>;
+      const receipt = db
+        .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
+        .get("redesign:1:origin") as Record<string, unknown>;
+      const forgedAt = "2099-01-01T00:00:00Z";
+      const forgedEvent: Record<string, unknown> = { ...event, occurred_at: forgedAt };
+      const forgedReceipt: Record<string, unknown> = { ...receipt, recorded_at: forgedAt };
+      db.exec("DROP TRIGGER trg_plan_admission_events_no_update");
+      db.exec("DROP TRIGGER trg_plan_admission_receipts_no_update");
+      db.exec("DROP TRIGGER trg_append_command_receipts_no_update");
+      db.prepare(
+        "UPDATE plan_admission_events SET occurred_at = ?, event_digest = ? WHERE admission_event_id = ?",
+      ).run(forgedAt, ledgerRowDigest(forgedEvent, "event_digest"), forgedEvent.admission_event_id);
+      db.prepare(
+        "UPDATE plan_admission_receipts SET recorded_at = ? WHERE admission_event_id = ?",
+      ).run(forgedAt, forgedEvent.admission_event_id);
+      db.prepare(
+        "UPDATE append_command_receipts SET recorded_at = ?, receipt_digest = ? WHERE command_id = ?",
+      ).run(forgedAt, ledgerRowDigest(forgedReceipt, "receipt_digest"), forgedReceipt.command_id);
+
+      expect(() => inspectAuthoringRecoveryDbEvidence(db, "redesign:1")).toThrow(
+        "plan-recovery-db-evidence-mismatch",
+      );
+    } finally {
+      db.close();
+    }
+  });
+
   it("偽rolled_backはDB evidence、preimage不一致、aux残存の各laneでblockする", () => {
     const { db, root } = fixture();
     try {
@@ -177,6 +254,51 @@ describe("authoring recovery boundary gate", () => {
         "UPDATE authoring_command_group_phase_events SET event_digest = 'forged' WHERE group_id = ? AND event_kind = 'rolled_back'",
       ).run("redesign:1");
       expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual(["redesign:1"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("descriptorとartifactを共同改ざんしrow digestを再計算してもcanonical member provenance不一致を拒否する", () => {
+    const { db, root } = fixture();
+    try {
+      seedGroup(db, "rolled_back", sha("post"), { kind: "absent" });
+      db.exec("DROP TRIGGER trg_authoring_operation_descriptors_no_update");
+      db.exec("DROP TRIGGER trg_authoring_operation_artifacts_no_update");
+      const descriptor = db
+        .prepare("SELECT * FROM authoring_operation_descriptors")
+        .get() as Record<string, unknown>;
+      const forgedDescriptor: Record<string, unknown> = {
+        ...descriptor,
+        command_payload_digest: "forged-payload",
+      };
+      db.prepare(
+        "UPDATE authoring_operation_descriptors SET command_payload_digest = ?, descriptor_digest = ? WHERE operation_id = ?",
+      ).run(
+        forgedDescriptor.command_payload_digest,
+        ledgerRowDigest(forgedDescriptor, "descriptor_digest"),
+        forgedDescriptor.operation_id,
+      );
+      const artifact = db.prepare("SELECT * FROM authoring_operation_artifacts").get() as Record<
+        string,
+        unknown
+      >;
+      const forgedArtifact: Record<string, unknown> = {
+        ...artifact,
+        target_path: "forged-target.txt",
+      };
+      db.prepare(
+        "UPDATE authoring_operation_artifacts SET target_path = ?, artifact_digest = ? WHERE operation_id = ? AND member_id = ?",
+      ).run(
+        forgedArtifact.target_path,
+        ledgerRowDigest(forgedArtifact, "artifact_digest"),
+        forgedArtifact.operation_id,
+        forgedArtifact.member_id,
+      );
+
+      expect(authoringCommandGroupValid(db, "redesign:1")).toBe(true);
+      expect(authoringOperationGroupValid(db, "redesign:1")).toBe(false);
+      expect(groupIsSemanticallyTerminal(db, root, "redesign:1", "rolled_back")).toBe(false);
     } finally {
       db.close();
     }

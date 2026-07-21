@@ -53,9 +53,7 @@ export function inspectAuthoringRecoveryDbEvidence(
       .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = ?")
       .get(binding.asset_id, binding.revision);
     const baseRevision = db
-      .prepare(
-        "SELECT canonical_payload_digest FROM plan_revisions WHERE asset_id = ? AND revision = ?",
-      )
+      .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = ?")
       .get(binding.asset_id, Number(binding.revision) - 1);
     const derived =
       admission && storedRevision && baseRevision
@@ -77,12 +75,13 @@ export function inspectAuthoringRecoveryDbEvidence(
             occurredAt: String(storedRevision.created_at),
           })
         : undefined;
+    if (!storedRevision || !baseRevision || !derived)
+      throw new Error("plan-recovery-db-evidence-mismatch");
     if (
       !receipt ||
       !admission ||
       !admissionEvent ||
       !revision ||
-      !derived ||
       receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest") ||
       admissionEvent.event_digest !== ledgerRowDigest(admissionEvent, "event_digest") ||
       receipt.command_type !== "plan.revise" ||
@@ -92,6 +91,7 @@ export function inspectAuthoringRecoveryDbEvidence(
       receipt.result_ref !== admission.certificate_id ||
       receipt.command_payload_digest !== admission.command_payload_digest ||
       receipt.command_payload_digest !== derived.commandPayloadDigest ||
+      storedRevision.canonical_payload_digest !== derived.canonicalPayloadDigest ||
       receipt.recorded_at !== admission.recorded_at ||
       receipt.plan_asset_id !== binding.asset_id ||
       Number(receipt.plan_revision) !== Number(binding.revision) ||
@@ -103,12 +103,14 @@ export function inspectAuthoringRecoveryDbEvidence(
       Number(admissionEvent.plan_revision) !== Number(admission.plan_revision) ||
       admissionEvent.plan_id !== admission.plan_id ||
       admissionEvent.source_path !== admission.source_path ||
+      admission.source_path !== storedRevision.source_path ||
       admissionEvent.content_digest !== admission.content_digest ||
       admissionEvent.route_tuple_digest !== admission.route_tuple_digest ||
       admissionEvent.certificate_id !== admission.certificate_id ||
       admissionEvent.certificate_digest !== admission.certificate_digest ||
       admission.certificate_digest !== derived.certificateDigest ||
-      admissionEvent.occurred_at !== admission.recorded_at
+      admissionEvent.occurred_at !== admission.recorded_at ||
+      admission.recorded_at !== storedRevision.created_at
     )
       throw new Error("plan-recovery-db-evidence-mismatch");
   }

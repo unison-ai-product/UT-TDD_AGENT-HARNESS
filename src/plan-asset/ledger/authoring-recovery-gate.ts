@@ -11,7 +11,7 @@ import {
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { inspectAuthoringRecoveryDbEvidence } from "../../plan-admission/authoring-recovery-db-evidence.js";
 import type { HarnessDb } from "../../state-db/index.js";
-import { authoringCommandGroupValid, ledgerRowDigest } from "./schema.js";
+import { authoringOperationGroupValid, ledgerRowDigest } from "./schema.js";
 
 export interface UnresolvedAuthoringRecovery {
   readonly draftCommands: readonly string[];
@@ -68,7 +68,7 @@ export function groupIsSemanticallyTerminal(
 ): boolean {
   if (phase !== "committed" && phase !== "rolled_back") return false;
   try {
-    if (!authoringCommandGroupValid(db, groupId)) return false;
+    if (!authoringOperationGroupValid(db, groupId)) return false;
     const descriptor = db
       .prepare("SELECT * FROM authoring_operation_descriptors WHERE group_id = ?")
       .get(groupId);
