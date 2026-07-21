@@ -284,7 +284,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       createV4Ledger(db);
       seedAsset(db, "plan:a");
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
-      expect(db.userVersion()).toBe(6);
+      expect(db.userVersion()).toBe(LEDGER_SCHEMA_VERSION);
       expect(
         db
           .prepare(
@@ -351,7 +351,6 @@ describe("PLAN Asset canonical ledger schema", () => {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
       db.setUserVersion(2);
       seedAsset(db, "plan:a");
-      expect(LEDGER_SCHEMA_VERSION).toBe(6);
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(
         db
@@ -368,14 +367,14 @@ describe("PLAN Asset canonical ledger schema", () => {
   it("U-PADM-065: v5 ledgerへappend-only artifact cleanup operation schemaを原子的に追加する", () => {
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
       db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
       db.exec("DROP TABLE plan_draft_artifact_operation_events");
       db.setUserVersion(5);
 
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(
         db
           .prepare(
@@ -389,6 +388,55 @@ describe("PLAN Asset canonical ledger schema", () => {
   });
 
   it.each([
+    2, 3, 4, 5, 6,
+  ] as const)("U-PA-CG-001: custody v%s ledgerを検証してauthoring command group v7へ原子的に拡張する", (version) => {
+    const db = openHarnessDb(":memory:");
+    try {
+      createLedgerAtVersion(db, version);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+      expect(db.userVersion()).toBe(LEDGER_SCHEMA_VERSION);
+      const objects = db
+        .prepare(
+          `SELECT type, name FROM sqlite_master
+             WHERE name LIKE '%authoring_command_group%' ORDER BY type, name`,
+        )
+        .all();
+      expect(objects).toEqual(
+        expect.arrayContaining([
+          { type: "table", name: "authoring_command_group_headers" },
+          { type: "table", name: "authoring_command_group_members" },
+          { type: "table", name: "authoring_command_group_phase_events" },
+          { type: "index", name: "idx_authoring_command_group_phase" },
+          { type: "trigger", name: "trg_authoring_command_group_headers_no_update" },
+          { type: "trigger", name: "trg_authoring_command_group_members_no_delete" },
+          { type: "trigger", name: "trg_authoring_command_group_phase_events_no_update" },
+        ]),
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PA-CG-002: v7 command groupのheader/member/event digestとmember-set束縛を検証する", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+      seedAuthoringCommandGroup(db);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+
+      replaceTrigger(db, "trg_authoring_command_group_members_no_update");
+      db.exec("UPDATE authoring_command_group_members SET content_digest = 'tampered'");
+      restoreTrigger(db, "trg_authoring_command_group_members_no_update");
+      expect(migratePlanLedger(db)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it.each([
     4, 5,
   ] as const)("U-PADM-067: committed journalを保持したv%s ledgerへlegacy_unknown証跡をbackfillする", (version) => {
     const db = openHarnessDb(":memory:");
@@ -396,7 +444,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       createLegacyCommittedLedger(db, version);
       const before = db.prepare("SELECT * FROM plan_draft_journal").get();
 
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(db.prepare("SELECT * FROM plan_draft_journal").get()).toEqual(before);
       const operations = db
         .prepare(
@@ -426,7 +474,7 @@ describe("PLAN Asset canonical ledger schema", () => {
           .get()?.event_digest,
         reason: "旧schemaにはartifact cleanup provenanceが存在せず完了状態を証明できない",
       });
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(
         db.prepare("SELECT COUNT(*) AS n FROM plan_draft_artifact_operation_events").get()?.n,
       ).toBe(1);
@@ -463,7 +511,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     const db = openHarnessDb(":memory:");
     try {
       createLegacyCommittedLedger(db, 5);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
       const current = db.prepare("SELECT * FROM plan_draft_artifact_operation_events").get();
       if (!current) throw new Error("legacy_unknown fixture missing");
@@ -681,7 +729,8 @@ function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("legacy_plan_bootstrap_provenance") &&
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
-      !sql.includes("idx_plan_draft_artifact_operations_command"),
+      !sql.includes("idx_plan_draft_artifact_operations_command") &&
+      !sql.includes("authoring_command_group"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -700,7 +749,8 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("legacy_plan_bootstrap_provenance") &&
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
-      !sql.includes("idx_plan_draft_artifact_operations_command"),
+      !sql.includes("idx_plan_draft_artifact_operations_command") &&
+      !sql.includes("authoring_command_group"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -714,7 +764,8 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
 }
 
 function createLegacyCommittedLedger(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+  removeV7Schema(db);
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
   db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
@@ -762,6 +813,97 @@ function createLegacyCommittedLedger(db: ReturnType<typeof openHarnessDb>, versi
     ledgerRowDigest(current, "journal_digest"),
   );
   db.setUserVersion(version);
+}
+
+function createLedgerAtVersion(
+  db: ReturnType<typeof openHarnessDb>,
+  version: 2 | 3 | 4 | 5 | 6,
+): void {
+  if (version === 2) {
+    for (const ddl of legacyV2Ddl()) db.exec(ddl);
+    db.setUserVersion(2);
+    return;
+  }
+  if (version === 3) {
+    createV3Ledger(db);
+    return;
+  }
+  if (version === 4) {
+    createV4Ledger(db);
+    return;
+  }
+
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+  removeV7Schema(db);
+  if (version === 5) {
+    db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
+    db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
+    db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
+    db.exec("DROP TABLE plan_draft_artifact_operation_events");
+  }
+  db.setUserVersion(version);
+}
+
+function removeV7Schema(db: ReturnType<typeof openHarnessDb>): void {
+  for (const table of [
+    "authoring_command_group_headers",
+    "authoring_command_group_members",
+    "authoring_command_group_phase_events",
+  ]) {
+    db.exec(`DROP TRIGGER trg_${table}_no_update`);
+    db.exec(`DROP TRIGGER trg_${table}_no_delete`);
+  }
+  db.exec("DROP INDEX idx_authoring_command_group_phase");
+  db.exec("DROP TABLE authoring_command_group_phase_events");
+  db.exec("DROP TABLE authoring_command_group_members");
+  db.exec("DROP TABLE authoring_command_group_headers");
+}
+
+function seedAuthoringCommandGroup(db: ReturnType<typeof openHarnessDb>): void {
+  const memberSet = [
+    {
+      memberId: "member:1",
+      artifactPath: "docs/plans/PLAN-L4-31-test-performance-redesign.md",
+      contentDigest: digest,
+    },
+  ];
+  const header = {
+    group_id: "group:1",
+    command_payload_digest: digest,
+    member_set_digest: createHash("sha256").update(JSON.stringify(memberSet)).digest("hex"),
+    member_count: 1,
+    created_at: now,
+  };
+  db.prepare("INSERT INTO authoring_command_group_headers VALUES (?, ?, ?, ?, ?, ?)").run(
+    ...Object.values(header),
+    ledgerRowDigest(header, "header_digest"),
+  );
+  const member = {
+    group_id: header.group_id,
+    member_id: memberSet[0].memberId,
+    ordinal: 1,
+    artifact_path: memberSet[0].artifactPath,
+    content_digest: memberSet[0].contentDigest,
+  };
+  db.prepare("INSERT INTO authoring_command_group_members VALUES (?, ?, ?, ?, ?, ?)").run(
+    ...Object.values(member),
+    ledgerRowDigest(member, "member_digest"),
+  );
+  const event = {
+    phase_event_id: "group:1:event:1",
+    group_id: header.group_id,
+    sequence: 1,
+    command_payload_digest: digest,
+    event_kind: "prepared",
+    member_id: null,
+    publish_receipt_digest: null,
+    failure_reason: null,
+    occurred_at: now,
+    previous_event_digest: null,
+  };
+  db.prepare(
+    "INSERT INTO authoring_command_group_phase_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(...Object.values(event), ledgerRowDigest(event, "event_digest"));
 }
 
 function insertMigrationEvent(
@@ -928,7 +1070,8 @@ function legacyV2Ddl(): readonly string[] {
         !sql.includes("legacy_plan_bootstrap_provenance") &&
         !sql.includes("idx_legacy_bootstrap_source_blob") &&
         !sql.includes("plan_draft_artifact_operation_events") &&
-        !sql.includes("idx_plan_draft_artifact_operations_command"),
+        !sql.includes("idx_plan_draft_artifact_operations_command") &&
+        !sql.includes("authoring_command_group"),
     )
     .map((sql) =>
       sql
