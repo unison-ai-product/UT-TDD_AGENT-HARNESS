@@ -4,7 +4,7 @@ title: "PLAN-L7-452 (add-impl): PLAN-L6-83 契約の U-EXISSUE Red→Green — f
 kind: add-impl
 layer: L7
 drive: be
-status: confirmed
+status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-17
@@ -55,6 +55,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/execution/forward-escape.ts
     artifact_type: source_module
+  - artifact_path: src/execution/sqlite-forward-escape-journal.ts
+    artifact_type: source_module
   - artifact_path: tests/forward-escape-issue-contract.test.ts
     artifact_type: test_code
 dependencies:
@@ -70,7 +72,8 @@ dependencies:
 
 ## Status
 
-confirmed (2026-07-17)。Reverse pairing は PLAN-REVERSE-452。
+draft (2026-07-21 cross-review FLAG修正後の再検証待ち)。2026-07-17時点の旧slice evidenceと
+Reverse pairingは保持するが、`U-EXISSUE-007..009` のrunner実測・再review前にconfirmedへ戻さない。
 
 ## 背景とスコープ
 
@@ -84,6 +87,9 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 - 11 駆動モデルを閉じた enum で固定 (技術 drive とは別 value object、混入 fail-close)。
 - 冪等 payload digest による command 再送/改変再利用の判別。
 - GitHub 障害時は `IssueProjectionDeferred` (event 非損失・throw なし)。
+- cross-review FLAG追補として、Ledger実在revision/state lookup、opaque E2 custody、SQLite durable projection
+  journal、digest-chain replay照合、remote-success crash window、GitHub成功binding全拘束、canonical drive
+  enum照合、空projection拒否、SQLite改変検出を `U-EXISSUE-007..014` で固定する。
 - reconcile は削除/改変/重複/別 repository を finding 化 (Ledger 書換なし)。
 
 ## 非スコープ
@@ -101,6 +107,8 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 | 3 | blind review → confirm → PR | 直列 |
 
 ## DoD
+
+- [ ] U-EXISSUE-007..014をsnapshot runnerで実測し、別runtimeのcross-reviewでFLAG解消を確認する。
 
 - [x] U-EXISSUE-001..006 が Red (module 不在 fail の snapshot 実測) から Green へ遷移した。
       根拠: commit 履歴 (test-only commit で snapshot FAIL 実測 / 実装 commit 後

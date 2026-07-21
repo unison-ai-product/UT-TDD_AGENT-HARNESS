@@ -42,6 +42,8 @@ export interface RequestForwardEscape {
   origin_state: string;
   escape_reason: string;
   drive_model: string;
+  reentry_target_asset_id: string;
+  reentry_target_revision_id: string;
   reentry_target_layer: string;
   reentry_target_state: string;
   issue_projection: {
@@ -53,6 +55,15 @@ export interface RequestForwardEscape {
   plan_id: string;
 }
 
+type ForwardEscapeCommandView = Omit<Readonly<RequestForwardEscape>, "issue_projection"> & {
+  readonly issue_projection: {
+    readonly owner: string;
+    readonly repository: string;
+    readonly title: string;
+    readonly labels: readonly string[];
+  };
+};
+
 export interface ContractViolation {
   code: string;
   message: string;
@@ -61,7 +72,25 @@ export interface ContractViolation {
 /** Ledger の読み取り view (validation に必要な最小面)。 */
 export interface ForwardEscapeLedgerView {
   currentRevisionOf(assetId: string): string | undefined;
+  lookupRevision(
+    assetId: string,
+    revisionId: string,
+  ): { layer: string; states: readonly string[] } | undefined;
   priorCommand(commandId: string): { payload_digest: string } | undefined;
+}
+
+export interface ForwardEscapeValidationCertificate {
+  readonly certificate_id: string;
+  readonly event_digest: string;
+}
+
+/** E2をLedgerへappendし、後段が照合できるopaque certificateを発行するport。 */
+export interface ForwardEscapeCustodyPort {
+  issue(input: {
+    readonly command_id: string;
+    readonly payload_digest: string;
+  }): ForwardEscapeValidationCertificate;
+  verify(event: ValidatedForwardEscape): boolean;
 }
 
 export function classifyForwardBoundary(transition: {
@@ -72,7 +101,7 @@ export function classifyForwardBoundary(transition: {
   return "invalid";
 }
 
-function payloadDigest(command: RequestForwardEscape): string {
+function payloadDigest(command: ForwardEscapeCommandView): string {
   // 冪等判定用の正準 digest。field 順を固定して同一 payload = 同一 digest を保証する。
   const canonical = JSON.stringify([
     command.origin_asset_id,
@@ -81,6 +110,8 @@ function payloadDigest(command: RequestForwardEscape): string {
     command.origin_state,
     command.escape_reason,
     command.drive_model,
+    command.reentry_target_asset_id,
+    command.reentry_target_revision_id,
     command.reentry_target_layer,
     command.reentry_target_state,
     command.issue_projection.owner,
@@ -96,11 +127,42 @@ export interface ForwardEscapeValidation {
   violations: ContractViolation[];
   replay: boolean;
   payload_digest: string;
+  validated?: ValidatedForwardEscape;
+}
+
+export interface ValidatedForwardEscape {
+  readonly type: "ForwardEscapeValidated";
+  readonly sequence: "E2";
+  readonly command: ForwardEscapeCommandView;
+  readonly payload_digest: string;
+  readonly certificate: ForwardEscapeValidationCertificate;
+}
+
+function validatedEvent(
+  command: RequestForwardEscape,
+  payloadDigestValue: string,
+  certificate: ForwardEscapeValidationCertificate,
+): ValidatedForwardEscape {
+  const event = Object.freeze({
+    type: "ForwardEscapeValidated" as const,
+    sequence: "E2" as const,
+    command: Object.freeze({
+      ...command,
+      issue_projection: Object.freeze({
+        ...command.issue_projection,
+        labels: Object.freeze([...command.issue_projection.labels]),
+      }),
+    }),
+    payload_digest: payloadDigestValue,
+    certificate: Object.freeze({ ...certificate }),
+  });
+  return event;
 }
 
 export function validateForwardEscape(
   command: RequestForwardEscape,
   ledger: ForwardEscapeLedgerView,
+  custody?: ForwardEscapeCustodyPort,
 ): ForwardEscapeValidation {
   const violations: ContractViolation[] = [];
   const requiredText: Array<[keyof RequestForwardEscape, string]> = [
@@ -109,12 +171,33 @@ export function validateForwardEscape(
     ["origin_revision_id", "missing-origin-revision"],
     ["origin_state", "missing-origin-state"],
     ["escape_reason", "missing-escape-reason"],
+    ["reentry_target_asset_id", "missing-reentry-asset"],
+    ["reentry_target_revision_id", "missing-reentry-revision"],
     ["plan_id", "missing-plan-id"],
   ];
   for (const [field, code] of requiredText) {
     if (!String(command[field] ?? "").trim()) {
       violations.push({ code, message: `${String(field)} が空` });
     }
+  }
+
+  for (const [field, value] of [
+    ["issue_projection.owner", command.issue_projection?.owner],
+    ["issue_projection.repository", command.issue_projection?.repository],
+    ["issue_projection.title", command.issue_projection?.title],
+  ] as const) {
+    if (!String(value ?? "").trim()) {
+      violations.push({ code: "invalid-issue-projection", message: `${field} が空` });
+    }
+  }
+  if (
+    !Array.isArray(command.issue_projection?.labels) ||
+    command.issue_projection.labels.length === 0
+  ) {
+    violations.push({
+      code: "invalid-issue-projection",
+      message: "issue_projection.labels は1件以上必要",
+    });
   }
 
   if (!command.drive_model) {
@@ -151,10 +234,46 @@ export function validateForwardEscape(
 
   if (command.origin_asset_id && command.origin_revision_id) {
     const current = ledger.currentRevisionOf(command.origin_asset_id);
-    if (current !== undefined && current !== command.origin_revision_id) {
+    const revision = ledger.lookupRevision(command.origin_asset_id, command.origin_revision_id);
+    if (!revision) {
+      violations.push({
+        code: "origin-revision-not-found",
+        message: `origin ${command.origin_asset_id}@${command.origin_revision_id} がLedgerに実在しない`,
+      });
+    } else if (
+      revision.layer !== command.origin_layer ||
+      !revision.states.includes(command.origin_state)
+    ) {
+      violations.push({
+        code: "origin-state-not-found",
+        message: `origin layer/state がrevision実体と不一致: ${command.origin_layer}/${command.origin_state}`,
+      });
+    }
+    if (current === undefined) {
+      violations.push({
+        code: "origin-asset-not-found",
+        message: `origin asset ${command.origin_asset_id} がLedgerに実在しない`,
+      });
+    } else if (current !== command.origin_revision_id) {
       violations.push({
         code: "stale-origin-revision",
         message: `origin_revision_id=${command.origin_revision_id} は current=${current} と不一致 (暗黙追従は禁止)`,
+      });
+    }
+  }
+  if (command.reentry_target_asset_id && command.reentry_target_revision_id) {
+    const reentryRevision = ledger.lookupRevision(
+      command.reentry_target_asset_id,
+      command.reentry_target_revision_id,
+    );
+    if (
+      !reentryRevision ||
+      reentryRevision.layer !== command.reentry_target_layer ||
+      !reentryRevision.states.includes(command.reentry_target_state)
+    ) {
+      violations.push({
+        code: "reentry-target-not-found",
+        message: `reentry target がLedger revision/stateに実在しない: ${command.reentry_target_asset_id}@${command.reentry_target_revision_id} ${command.reentry_target_layer}/${command.reentry_target_state}`,
       });
     }
   }
@@ -173,7 +292,27 @@ export function validateForwardEscape(
     }
   }
 
-  return { violations, replay, payload_digest: digest };
+  const certificate =
+    violations.length === 0 && custody
+      ? custody.issue({ command_id: command.command_id, payload_digest: digest })
+      : undefined;
+  if (
+    violations.length === 0 &&
+    (!certificate?.certificate_id.trim() || !certificate.event_digest.trim())
+  ) {
+    violations.push({
+      code: "e2-custody-unavailable",
+      message: "Ledger E2 certificateを取得できない",
+    });
+  }
+  return {
+    violations,
+    replay,
+    payload_digest: digest,
+    ...(violations.length === 0 && certificate
+      ? { validated: validatedEvent(command, digest, certificate) }
+      : {}),
+  };
 }
 
 /** Issue body / Ledger event / PLAN route_mode の三面一致 (どれか一つでも欠け・不一致は遷移不可)。 */
@@ -187,6 +326,15 @@ export function checkDriveModelAlignment(input: {
     input.issue_body_drive_model,
     input.plan_route_mode,
   ].map((value) => String(value ?? "").trim());
+  const canonical = new Set<string>(OFF_FORWARD_DRIVE_MODELS);
+  if (values.some((value) => !canonical.has(value))) {
+    return [
+      {
+        code: "unknown-drive-model",
+        message: `三面のいずれかが正規drive modelでない: ${values.join(" / ")}`,
+      },
+    ];
+  }
   if (values.some((value) => !value) || new Set(values).size !== 1) {
     return [
       {
@@ -199,7 +347,7 @@ export function checkDriveModelAlignment(input: {
 }
 
 /** Issue 本文 projection (origin 4-tuple / escape reason / drive model / reentry target / PLAN ID 必須)。 */
-export function renderForwardEscapeIssueBody(command: RequestForwardEscape): string {
+export function renderForwardEscapeIssueBody(command: ForwardEscapeCommandView): string {
   return [
     `## Forward escape (${command.drive_model})`,
     "",
@@ -208,7 +356,7 @@ export function renderForwardEscapeIssueBody(command: RequestForwardEscape): str
     `- Origin layer/state: ${command.origin_layer} / ${command.origin_state}`,
     `- Escape reason: ${command.escape_reason}`,
     `- Drive model: ${command.drive_model}`,
-    `- Reentry target: ${command.reentry_target_layer} / ${command.reentry_target_state}`,
+    `- Reentry target: ${command.reentry_target_asset_id}@${command.reentry_target_revision_id} / ${command.reentry_target_layer} / ${command.reentry_target_state}`,
     `- PLAN: ${command.plan_id}`,
     "",
     "<!-- ut-tdd:forward-escape/v1",
@@ -224,11 +372,13 @@ export interface IssueBinding {
   node_id: string;
   url: string;
   body_digest: string;
+  observed_revision: string;
 }
 
 /** GitHub Issue 作成 port (副作用面)。分類・validation から分離する (PLAN-L6-83 §4)。 */
 export interface ForwardEscapeIssuePort {
-  createIssue(request: {
+  /** 同じidempotency_keyはprocess再生成後も同じIssueを返すcreate-or-get契約。 */
+  createOrGetIssue(request: {
     idempotency_key: string;
     owner: string;
     repository: string;
@@ -240,41 +390,175 @@ export interface ForwardEscapeIssuePort {
 }
 
 export type IssueProjectionEvent =
-  | { type: "IssueProjected"; command_id: string; binding: IssueBinding }
-  | { type: "IssueProjectionDeferred"; command_id: string; reason: string };
+  | {
+      type: "IssueProjected";
+      command_id: string;
+      payload_digest: string;
+      binding: IssueBinding;
+    }
+  | {
+      type: "IssueProjectionDeferred";
+      command_id: string;
+      payload_digest: string;
+      reason: string;
+    };
+
+export type DurableIssueProjectionEvent =
+  | {
+      type: "IssueProjectionQueued";
+      command_id: string;
+      payload_digest: string;
+      repository: string;
+      body_digest: string;
+    }
+  | IssueProjectionEvent;
+
+export const DURABLE_PROJECTION_FAILURE_REASONS = [
+  "github-request-failed",
+  "github-request-threw",
+  "github-success-binding-invalid",
+] as const;
+
+function durableProjectionFailureReason(
+  kind: "failure" | "exception",
+): (typeof DURABLE_PROJECTION_FAILURE_REASONS)[number] {
+  // Provider message/headers/transcriptはsecret/PIIを含み得るため永続化しない。
+  return kind === "exception" ? "github-request-threw" : "github-request-failed";
+}
+
+/** Production adapterはappendをdurable transactionとして実装する。戻り値だけをreceiptにしない。 */
+export interface ForwardEscapeProjectionJournal {
+  append(event: DurableIssueProjectionEvent): {
+    readonly durable: true;
+    readonly event_digest: string;
+  };
+  eventsFor(commandId: string): readonly DurableIssueProjectionEvent[];
+}
+
+function appendDurably(
+  journal: ForwardEscapeProjectionJournal,
+  event: DurableIssueProjectionEvent,
+): void {
+  const receipt = journal.append(event);
+  if (receipt?.durable !== true || !receipt.event_digest?.trim()) {
+    throw new Error("projection-journal-not-durable");
+  }
+}
+
+function validBinding(
+  binding: IssueBinding,
+  expectedRepository: string,
+  expectedBodyDigest: string,
+): boolean {
+  if (
+    binding.repository !== expectedRepository ||
+    binding.body_digest !== expectedBodyDigest ||
+    !Number.isSafeInteger(binding.issue_number) ||
+    binding.issue_number <= 0 ||
+    !binding.node_id.trim() ||
+    !binding.observed_revision.trim()
+  ) {
+    return false;
+  }
+  try {
+    const url = new URL(binding.url);
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "github.com" &&
+      url.pathname === `/${expectedRepository}/issues/${binding.issue_number}`
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** E3→E4 projection。失敗は Deferred として返し、event を失わない (throw しない)。 */
 export function projectForwardEscapeIssue(
-  command: RequestForwardEscape,
+  validated: ValidatedForwardEscape,
   port: ForwardEscapeIssuePort,
+  journal: ForwardEscapeProjectionJournal,
+  custody: Pick<ForwardEscapeCustodyPort, "verify">,
 ): IssueProjectionEvent {
+  if (
+    validated.type !== "ForwardEscapeValidated" ||
+    validated.sequence !== "E2" ||
+    validated.payload_digest !== payloadDigest(validated.command) ||
+    !custody.verify(validated)
+  ) {
+    throw new Error("forward-escape-e2-required");
+  }
+  const command = validated.command;
   const body = renderForwardEscapeIssueBody(command);
   const bodyDigest = createHash("sha256").update(body).digest("hex");
+  const repository = `${command.issue_projection.owner}/${command.issue_projection.repository}`;
+  const prior = journal.eventsFor(command.command_id);
+  const queued = prior.find((event) => event.type === "IssueProjectionQueued");
+  if (
+    queued?.type === "IssueProjectionQueued" &&
+    (queued.payload_digest !== validated.payload_digest ||
+      queued.repository !== repository ||
+      queued.body_digest !== bodyDigest)
+  ) {
+    throw new Error("projection-journal-payload-mismatch");
+  }
+  const projected = prior.findLast((event) => event.type === "IssueProjected");
+  if (projected?.type === "IssueProjected") {
+    if (
+      projected.payload_digest !== validated.payload_digest ||
+      !validBinding(projected.binding, repository, bodyDigest)
+    ) {
+      throw new Error("projection-journal-binding-invalid");
+    }
+    return projected;
+  }
+  if (!prior.some((event) => event.type === "IssueProjectionQueued")) {
+    appendDurably(journal, {
+      type: "IssueProjectionQueued",
+      command_id: command.command_id,
+      payload_digest: validated.payload_digest,
+      repository,
+      body_digest: bodyDigest,
+    });
+  }
+  const defer = (reason: string): IssueProjectionEvent => {
+    const event = {
+      type: "IssueProjectionDeferred" as const,
+      command_id: command.command_id,
+      payload_digest: validated.payload_digest,
+      reason,
+    };
+    appendDurably(journal, event);
+    return event;
+  };
+  let result: ReturnType<ForwardEscapeIssuePort["createOrGetIssue"]>;
   try {
-    const result = port.createIssue({
+    result = port.createOrGetIssue({
       idempotency_key: command.command_id,
       owner: command.issue_projection.owner,
       repository: command.issue_projection.repository,
       title: command.issue_projection.title,
       body,
       body_digest: bodyDigest,
-      labels: command.issue_projection.labels,
+      labels: [...command.issue_projection.labels],
     });
-    if (result.ok) {
-      return { type: "IssueProjected", command_id: command.command_id, binding: result.binding };
-    }
-    return {
-      type: "IssueProjectionDeferred",
-      command_id: command.command_id,
-      reason: result.reason,
-    };
   } catch (error) {
-    return {
-      type: "IssueProjectionDeferred",
-      command_id: command.command_id,
-      reason: String(error),
-    };
+    void error;
+    return defer(durableProjectionFailureReason("exception"));
   }
+  if (!result.ok) return defer(durableProjectionFailureReason("failure"));
+  if (!validBinding(result.binding, repository, bodyDigest)) {
+    return defer("github-success-binding-invalid");
+  }
+  const event = {
+    type: "IssueProjected" as const,
+    command_id: command.command_id,
+    payload_digest: validated.payload_digest,
+    binding: result.binding,
+  };
+  // remote success後のjournal障害はGitHub失敗へ偽装しない。再開時はcreateOrGetの
+  // idempotency keyで同じremote Issueを回収し、E4 appendを再試行する。
+  appendDurably(journal, event);
+  return event;
 }
 
 export interface ReconcileFinding {

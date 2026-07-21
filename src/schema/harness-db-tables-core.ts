@@ -1,5 +1,5 @@
 import type { TableDef } from "./harness-db";
-import { col, pk } from "./harness-db-table-builders";
+import { col, foreignKey, pk, requiredCol } from "./harness-db-table-builders";
 
 export const HARNESS_DB_CORE_TABLES: TableDef[] = [
   // --- §2.7 基本 7 ---
@@ -379,6 +379,36 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       col("external_issue_id"),
       col("external_issue_url"),
       col("created_at"),
+    ],
+  },
+  {
+    name: "forward_escape_validation_certificates",
+    columns: [
+      pk("certificate_id"),
+      requiredCol("command_id"),
+      requiredCol("payload_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["command_id"], ["event_digest"]],
+  },
+  {
+    name: "forward_escape_projection_events",
+    columns: [
+      requiredCol("command_id"),
+      requiredCol("sequence", "INTEGER"),
+      requiredCol("event_json"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    primaryKey: ["command_id", "sequence"],
+    unique: [["event_digest"]],
+    foreignKeys: [
+      foreignKey(["command_id"], {
+        table: "forward_escape_validation_certificates",
+        columns: ["command_id"],
+        onDelete: "RESTRICT",
+        onUpdate: "RESTRICT",
+      }),
     ],
   },
   {

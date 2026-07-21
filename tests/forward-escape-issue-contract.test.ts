@@ -2,11 +2,16 @@
 // 実装 slice は PLAN-L7-436 系列 (本 oracle は契約の可換不変条件のみを固定する)。
 
 import { createHash } from "node:crypto";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   checkDriveModelAlignment,
   classifyForwardBoundary,
+  type ForwardEscapeCustodyPort,
   type ForwardEscapeIssuePort,
+  type ForwardEscapeProjectionJournal,
   OFF_FORWARD_DRIVE_MODELS,
   projectForwardEscapeIssue,
   type RequestForwardEscape,
@@ -14,6 +19,9 @@ import {
   renderForwardEscapeIssueBody,
   validateForwardEscape,
 } from "../src/execution/forward-escape";
+import { SqliteForwardEscapeJournal } from "../src/execution/sqlite-forward-escape-journal";
+import { openHarnessDb } from "../src/state-db/index";
+import { removeTestTree } from "./support/temp-tree";
 
 function validCommand(overrides: Partial<RequestForwardEscape> = {}): RequestForwardEscape {
   return {
@@ -24,6 +32,8 @@ function validCommand(overrides: Partial<RequestForwardEscape> = {}): RequestFor
     origin_state: "implement",
     escape_reason: "pre-push hook 対象見直しの実観測 drift",
     drive_model: "recovery",
+    reentry_target_asset_id: "PLAN-L7-260-sensitive-scan-boundary",
+    reentry_target_revision_id: "rev-12",
     reentry_target_layer: "L7",
     reentry_target_state: "trace-freeze",
     issue_projection: {
@@ -39,8 +49,63 @@ function validCommand(overrides: Partial<RequestForwardEscape> = {}): RequestFor
 
 const emptyLedger = {
   currentRevisionOf: () => "rev-12",
+  lookupRevision: (assetId: string, revisionId: string) =>
+    assetId === "PLAN-L7-260-sensitive-scan-boundary" && revisionId === "rev-12"
+      ? { layer: "L7", states: ["implement", "trace-freeze"] }
+      : undefined,
   priorCommand: () => undefined,
 };
+
+type JournalEvent = Parameters<ForwardEscapeProjectionJournal["append"]>[0];
+
+function memoryJournal(events: JournalEvent[] = []): ForwardEscapeProjectionJournal {
+  return {
+    append: (event) => {
+      events.push(event);
+      return {
+        durable: true,
+        event_digest: createHash("sha256").update(JSON.stringify(event)).digest("hex"),
+      };
+    },
+    eventsFor: (commandId) => events.filter((event) => event.command_id === commandId),
+  };
+}
+
+function memoryCustody(): ForwardEscapeCustodyPort {
+  const certificates = new Map<string, { payload: string; id: string; digest: string }>();
+  return {
+    issue: ({ command_id, payload_digest }) => {
+      const prior = certificates.get(command_id);
+      if (prior && prior.payload !== payload_digest) throw new Error("e2-command-payload-mismatch");
+      const value = prior ?? {
+        payload: payload_digest,
+        id: `certificate:${command_id}`,
+        digest: createHash("sha256").update(`${command_id}:${payload_digest}`).digest("hex"),
+      };
+      certificates.set(command_id, value);
+      return { certificate_id: value.id, event_digest: value.digest };
+    },
+    verify: (event) => {
+      const value = certificates.get(event.command.command_id);
+      return Boolean(
+        value &&
+          value.payload === event.payload_digest &&
+          value.id === event.certificate.certificate_id &&
+          value.digest === event.certificate.event_digest,
+      );
+    },
+  };
+}
+
+function validated(
+  command: RequestForwardEscape = validCommand(),
+  custody: ForwardEscapeCustodyPort = memoryCustody(),
+) {
+  const result = validateForwardEscape(command, emptyLedger, custody);
+  expect(result.violations).toHaveLength(0);
+  if (!result.validated) throw new Error("test fixture did not validate");
+  return result.validated;
+}
 
 describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   it("U-EXISSUE-001: 通常Forward辺はIssueなしで通り、off-Forward辺だけがIssueを要求する", () => {
@@ -95,25 +160,47 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       emptyLedger,
     );
     expect(badReentry.violations.map((v) => v.code)).toContain("invalid-reentry-target");
-    const good = validateForwardEscape(validCommand(), emptyLedger);
+    const good = validateForwardEscape(validCommand(), emptyLedger, memoryCustody());
     expect(good.violations).toHaveLength(0);
+    expect(good.validated?.type).toBe("ForwardEscapeValidated");
+
+    const absentOrigin = validateForwardEscape(
+      validCommand({ origin_asset_id: "PLAN-MISSING" }),
+      emptyLedger,
+    );
+    expect(absentOrigin.violations.map((v) => v.code)).toContain("origin-revision-not-found");
+    const absentReentry = validateForwardEscape(
+      validCommand({ reentry_target_state: "accept" }),
+      emptyLedger,
+    );
+    expect(absentReentry.violations.map((v) => v.code)).toContain("reentry-target-not-found");
+    const absentReentryRevision = validateForwardEscape(
+      validCommand({ reentry_target_revision_id: "rev-404" }),
+      emptyLedger,
+    );
+    expect(absentReentryRevision.violations.map((v) => v.code)).toContain(
+      "reentry-target-not-found",
+    );
   });
 
   it("U-EXISSUE-004: command 再送は重複作成せず、payload 差分のある同一IDを拒否する", () => {
     const command = validCommand();
+    const custody = memoryCustody();
     const replayLedger = {
+      ...emptyLedger,
       currentRevisionOf: () => "rev-12",
       priorCommand: (id: string) =>
         id === command.command_id
-          ? { payload_digest: validateForwardEscape(command, emptyLedger).payload_digest }
+          ? { payload_digest: validateForwardEscape(command, emptyLedger, custody).payload_digest }
           : undefined,
     };
-    const replay = validateForwardEscape(command, replayLedger);
+    const replay = validateForwardEscape(command, replayLedger, custody);
     expect(replay.violations).toHaveLength(0);
     expect(replay.replay).toBe(true);
     const mutated = validateForwardEscape(
       validCommand({ escape_reason: "different payload" }),
       replayLedger,
+      custody,
     );
     expect(mutated.violations.map((v) => v.code)).toContain("command-id-payload-mismatch");
   });
@@ -123,7 +210,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const created: Array<{ idempotency_key: string; title: string }> = [];
     let failures = 1;
     const flakyPort: ForwardEscapeIssuePort = {
-      createIssue: (request) => {
+      createOrGetIssue: (request) => {
         if (failures > 0) {
           failures -= 1;
           return { ok: false, reason: "timeout" };
@@ -137,19 +224,259 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
             repository: `${request.owner}/${request.repository}`,
             issue_number: 85,
             node_id: "I_node",
-            url: "https://github.com/x/issues/85",
+            url: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/85",
             body_digest: request.body_digest,
+            observed_revision: "etag-1",
           },
         };
       },
     };
-    const first = projectForwardEscapeIssue(command, flakyPort);
+    const custody = memoryCustody();
+    const validatedEvent = validated(command, custody);
+    const persisted: JournalEvent[] = [];
+    const journal = memoryJournal(persisted);
+    const first = projectForwardEscapeIssue(validatedEvent, flakyPort, journal, custody);
     expect(first.type).toBe("IssueProjectionDeferred");
-    const second = projectForwardEscapeIssue(command, flakyPort);
+    expect(journal.eventsFor(command.command_id).map((event) => event.type)).toEqual([
+      "IssueProjectionQueued",
+      "IssueProjectionDeferred",
+    ]);
+    // process restart: the durable journal is reused by a new projector invocation.
+    const restartedJournal = memoryJournal(persisted);
+    const second = projectForwardEscapeIssue(validatedEvent, flakyPort, restartedJournal, custody);
     expect(second.type).toBe("IssueProjected");
-    const third = projectForwardEscapeIssue(command, flakyPort);
+    const third = projectForwardEscapeIssue(validatedEvent, flakyPort, restartedJournal, custody);
     expect(third.type).toBe("IssueProjected");
     expect(created).toHaveLength(1);
+    expect(restartedJournal.eventsFor(command.command_id).at(-1)?.type).toBe("IssueProjected");
+  });
+
+  it("U-EXISSUE-007: E2 validated event を持たない生 command は projection 入口を通れない", () => {
+    const port: ForwardEscapeIssuePort = {
+      createOrGetIssue: () => {
+        throw new Error("must not call");
+      },
+    };
+    expect(() =>
+      projectForwardEscapeIssue(validCommand() as never, port, memoryJournal(), memoryCustody()),
+    ).toThrow("forward-escape-e2-required");
+  });
+
+  it("U-EXISSUE-008: GitHub success binding の全拘束を検証し malicious receipt をE4にしない", () => {
+    const command = validCommand();
+    const custody = memoryCustody();
+    const validatedEvent = validated(command, custody);
+    const bodyDigest = createHash("sha256")
+      .update(renderForwardEscapeIssueBody(command))
+      .digest("hex");
+    const validBinding = {
+      repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+      issue_number: 85,
+      node_id: "I_node",
+      url: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/85",
+      body_digest: bodyDigest,
+      observed_revision: "etag-1",
+    };
+    for (const binding of [
+      { ...validBinding, repository: "other/repo" },
+      { ...validBinding, issue_number: 0 },
+      { ...validBinding, node_id: "" },
+      { ...validBinding, url: "https://github.com/other/repo/issues/85" },
+      { ...validBinding, body_digest: "0".repeat(64) },
+      { ...validBinding, observed_revision: "" },
+    ]) {
+      const journal = memoryJournal();
+      const event = projectForwardEscapeIssue(
+        validatedEvent,
+        { createOrGetIssue: () => ({ ok: true, binding }) },
+        journal,
+        custody,
+      );
+      expect(event.type).toBe("IssueProjectionDeferred");
+      expect(journal.eventsFor(command.command_id).at(-1)?.type).toBe("IssueProjectionDeferred");
+    }
+  });
+
+  it("U-EXISSUE-009: 三面が同じ未知 drive でも fail-close する", () => {
+    expect(
+      checkDriveModelAlignment({
+        command_drive_model: "warp",
+        issue_body_drive_model: "warp",
+        plan_route_mode: "warp",
+      }).map((finding) => finding.code),
+    ).toContain("unknown-drive-model");
+  });
+
+  it("U-EXISSUE-010: SQLite close/reopen後もE2 custodyとoutbox chainを復元する", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-"));
+    const dbPath = join(repo, ".ut-tdd", "harness.db");
+    let db = openHarnessDb(dbPath, { repoRoot: repo });
+    try {
+      let journal = new SqliteForwardEscapeJournal(db);
+      const event = validated(validCommand(), journal);
+      let calls = 0;
+      const port: ForwardEscapeIssuePort = {
+        createOrGetIssue: (request) => {
+          calls += 1;
+          return {
+            ok: true,
+            binding: {
+              repository: `${request.owner}/${request.repository}`,
+              issue_number: 85,
+              node_id: "I_node",
+              url: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/85",
+              body_digest: request.body_digest,
+              observed_revision: "etag-1",
+            },
+          };
+        },
+      };
+      db.close();
+      db = openHarnessDb(dbPath, { repoRoot: repo });
+      journal = new SqliteForwardEscapeJournal(db);
+      expect(journal.verify(event)).toBe(true);
+      const first = projectForwardEscapeIssue(event, port, journal, journal);
+      expect(first.type).toBe("IssueProjected");
+      db.close();
+      db = openHarnessDb(dbPath, { repoRoot: repo });
+      journal = new SqliteForwardEscapeJournal(db);
+      const replay = projectForwardEscapeIssue(event, port, journal, journal);
+      expect(replay).toEqual(first);
+      expect(calls).toBe(1);
+    } finally {
+      db.close();
+      removeTestTree(repo);
+    }
+  });
+
+  it("U-EXISSUE-011: forged E2、stale journal、remote-success append failureをfail-closeする", () => {
+    const command = validCommand();
+    const custody = memoryCustody();
+    const event = validated(command, custody);
+    const port: ForwardEscapeIssuePort = {
+      createOrGetIssue: (request) => ({
+        ok: true,
+        binding: {
+          repository: `${request.owner}/${request.repository}`,
+          issue_number: 85,
+          node_id: "I_node",
+          url: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/85",
+          body_digest: request.body_digest,
+          observed_revision: "etag-1",
+        },
+      }),
+    };
+    expect(() =>
+      projectForwardEscapeIssue(
+        { ...event, certificate: { ...event.certificate, certificate_id: "forged" } },
+        port,
+        memoryJournal(),
+        custody,
+      ),
+    ).toThrow("forward-escape-e2-required");
+    const stale = memoryJournal([
+      {
+        type: "IssueProjectionQueued",
+        command_id: command.command_id,
+        payload_digest: "0".repeat(64),
+        repository: "other/repo",
+        body_digest: "0".repeat(64),
+      },
+    ]);
+    expect(() => projectForwardEscapeIssue(event, port, stale, custody)).toThrow(
+      "projection-journal-payload-mismatch",
+    );
+    let appends = 0;
+    const failingJournal: ForwardEscapeProjectionJournal = {
+      eventsFor: () => [],
+      append: () => {
+        appends += 1;
+        if (appends === 2) throw new Error("disk-full-after-remote-success");
+        return { durable: true, event_digest: "queued" };
+      },
+    };
+    expect(() => projectForwardEscapeIssue(event, port, failingJournal, custody)).toThrow(
+      "disk-full-after-remote-success",
+    );
+    expect(appends).toBe(2); // false Deferred appendを試みない
+  });
+
+  it.each([
+    [
+      "event digest",
+      "UPDATE forward_escape_projection_events SET event_digest = ? WHERE command_id = ? AND sequence = 1",
+      "f".repeat(64),
+      "projection-journal-digest-invalid",
+    ],
+    [
+      "malformed event",
+      "UPDATE forward_escape_projection_events SET event_json = ? WHERE command_id = ? AND sequence = 1",
+      '{"type":"IssueProjectionQueued"}',
+      "projection-journal-digest-invalid",
+    ],
+  ])("U-EXISSUE-013: SQLite %s 改変をclose/reopen後のchain検査で拒否する", (_label, sql, mutation, expected) => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-tamper-"));
+    const dbPath = join(repo, ".ut-tdd", "harness.db");
+    let db = openHarnessDb(dbPath, { repoRoot: repo });
+    try {
+      const journal = new SqliteForwardEscapeJournal(db);
+      const event = validated(validCommand(), journal);
+      journal.append({
+        type: "IssueProjectionQueued",
+        command_id: event.command.command_id,
+        payload_digest: event.payload_digest,
+        repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+        body_digest: createHash("sha256")
+          .update(renderForwardEscapeIssueBody(event.command))
+          .digest("hex"),
+      });
+      db.prepare(sql).run(mutation, event.command.command_id);
+      db.close();
+      db = openHarnessDb(dbPath, { repoRoot: repo });
+      expect(() => new SqliteForwardEscapeJournal(db).eventsFor(event.command.command_id)).toThrow(
+        expected,
+      );
+    } finally {
+      db.close();
+      removeTestTree(repo);
+    }
+  });
+
+  it("U-EXISSUE-014: SQLite E2 certificate改変をclose/reopen後のcustody照合で拒否する", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-cert-tamper-"));
+    const dbPath = join(repo, ".ut-tdd", "harness.db");
+    let db = openHarnessDb(dbPath, { repoRoot: repo });
+    try {
+      const event = validated(validCommand(), new SqliteForwardEscapeJournal(db));
+      db.prepare(
+        "UPDATE forward_escape_validation_certificates SET event_digest = ? WHERE command_id = ?",
+      ).run("f".repeat(64), event.command.command_id);
+      db.close();
+      db = openHarnessDb(dbPath, { repoRoot: repo });
+      expect(new SqliteForwardEscapeJournal(db).verify(event)).toBe(false);
+    } finally {
+      db.close();
+      removeTestTree(repo);
+    }
+  });
+
+  it("U-EXISSUE-012: 空のIssue projectionはE2 custody発行前に拒否する", () => {
+    for (const issue_projection of [
+      { owner: "", repository: "repo", title: "title", labels: ["x"] },
+      { owner: "owner", repository: "", title: "title", labels: ["x"] },
+      { owner: "owner", repository: "repo", title: "", labels: ["x"] },
+      { owner: "owner", repository: "repo", title: "title", labels: [] },
+    ]) {
+      const result = validateForwardEscape(
+        validCommand({ issue_projection }),
+        emptyLedger,
+        memoryCustody(),
+      );
+      expect(result.violations.map((finding) => finding.code)).toContain(
+        "invalid-issue-projection",
+      );
+      expect(result.validated).toBeUndefined();
+    }
   });
 
   it("U-EXISSUE-006: Issue 本文から origin/reentry/drive のいずれかを除く mutation を検出する", () => {
@@ -173,6 +500,8 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       command.escape_reason,
       command.drive_model,
       command.reentry_target_layer,
+      command.reentry_target_asset_id,
+      command.reentry_target_revision_id,
       command.reentry_target_state,
       command.plan_id,
     ]) {
