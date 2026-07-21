@@ -1,10 +1,12 @@
 // PLAN-L6-83 §5 U-EXISSUE oracle — Forward外遷移Issue・駆動モデル選択契約の Red 固定。
 // 実装 slice は PLAN-L7-436 系列 (本 oracle は契約の可換不変条件のみを固定する)。
 
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   checkDriveModelAlignment,
@@ -513,6 +515,132 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         "invalid-issue-projection",
       );
       expect(result.validated).toBeUndefined();
+    }
+  });
+
+  it("U-EXISSUE-015: custody storage障害と異payload replayをsecret-safe structured violationへ変換する", () => {
+    const unavailable = validateForwardEscape(validCommand(), emptyLedger, {
+      issue: () => {
+        throw new Error("SQLITE_IOERR path=C:/secret token=github_pat_secret");
+      },
+      verify: () => false,
+    });
+    expect(unavailable.violations.map((finding) => finding.code)).toContain(
+      "e2-custody-unavailable",
+    );
+    expect(JSON.stringify(unavailable)).not.toContain("github_pat_secret");
+    expect(unavailable.validated).toBeUndefined();
+
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-replay-"));
+    const dbPath = join(repo, ".ut-tdd", "harness.db");
+    const firstDb = openForwardEscapeDb(dbPath, repo);
+    const secondDb = openForwardEscapeDb(dbPath, repo);
+    try {
+      const first = validateForwardEscape(
+        validCommand(),
+        emptyLedger,
+        new SqliteForwardEscapeJournal(firstDb),
+      );
+      expect(first.violations).toHaveLength(0);
+      const conflict = validateForwardEscape(
+        validCommand({ escape_reason: "different-payload" }),
+        emptyLedger,
+        new SqliteForwardEscapeJournal(secondDb),
+      );
+      expect(conflict.violations.map((finding) => finding.code)).toContain(
+        "e2-command-payload-mismatch",
+      );
+      expect(conflict.validated).toBeUndefined();
+      firstDb
+        .prepare(
+          "UPDATE forward_escape_validation_certificates SET event_digest = ? WHERE command_id = ?",
+        )
+        .run("f".repeat(64), validCommand().command_id);
+      const corruptedReplay = validateForwardEscape(
+        validCommand(),
+        emptyLedger,
+        new SqliteForwardEscapeJournal(secondDb),
+      );
+      expect(corruptedReplay.violations.map((finding) => finding.code)).toContain(
+        "e2-custody-unavailable",
+      );
+      expect(corruptedReplay.validated).toBeUndefined();
+    } finally {
+      firstDb.close();
+      secondDb.close();
+      removeTestTree(repo);
+    }
+  });
+
+  it("U-EXISSUE-016: two SQLite workers converge concurrent certificate and queue append to one receipt", async () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-concurrent-"));
+    const dbPath = join(repo, ".ut-tdd", "harness.db");
+    const setup = openForwardEscapeDb(dbPath, repo);
+    setup.close();
+    const gate = join(repo, "gate");
+    const ready = join(repo, "ready");
+    mkdirSync(ready);
+    writeFileSync(gate, "wait", "utf8");
+    const stateDbUrl = pathToFileURL(join(process.cwd(), "src", "state-db", "index.ts")).href;
+    const journalUrl = pathToFileURL(
+      join(process.cwd(), "src", "execution", "sqlite-forward-escape-journal.ts"),
+    ).href;
+    const worker = join(repo, "worker.ts");
+    writeFileSync(
+      worker,
+      `import { existsSync, writeFileSync } from "node:fs";\n` +
+        `import { openHarnessDb } from ${JSON.stringify(stateDbUrl)};\n` +
+        `import { SqliteForwardEscapeJournal } from ${JSON.stringify(journalUrl)};\n` +
+        `writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready");\n` +
+        `while (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2));\n` +
+        `const db = openHarnessDb(${JSON.stringify(dbPath)}, { repoRoot: ${JSON.stringify(repo)} });\n` +
+        `try { const journal = new SqliteForwardEscapeJournal(db); const certificate = journal.issue({ command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}" }); const receipt = journal.append({ type: "IssueProjectionQueued", command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}", repository: "owner/repo", body_digest: "${"b".repeat(64)}" }); console.log(JSON.stringify({ certificate, receipt })); } finally { db.close(); }\n`,
+      "utf8",
+    );
+    const children = Array.from({ length: 2 }, () =>
+      spawn(process.execPath, [worker], {
+        cwd: process.cwd(),
+        stdio: ["ignore", "pipe", "pipe"],
+      }),
+    );
+    try {
+      const deadline = Date.now() + 10_000;
+      while (readdirSync(ready).length < children.length && Date.now() < deadline) {
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+      }
+      expect(readdirSync(ready)).toHaveLength(children.length);
+      rmSync(gate);
+      const outputs = await Promise.all(
+        children.map(
+          (child) =>
+            new Promise<string>((resolvePromise, reject) => {
+              let stdout = "";
+              let stderr = "";
+              child.stdout.on("data", (chunk) => (stdout += String(chunk)));
+              child.stderr.on("data", (chunk) => (stderr += String(chunk)));
+              child.on("error", reject);
+              child.on("exit", (code) =>
+                code === 0
+                  ? resolvePromise(stdout.trim())
+                  : reject(new Error(`worker exit ${code}: ${stderr}`)),
+              );
+            }),
+        ),
+      );
+      expect(outputs).toHaveLength(2);
+      expect(new Set(outputs).size).toBe(1);
+      const verifyDb = openForwardEscapeDb(dbPath, repo);
+      try {
+        expect(new SqliteForwardEscapeJournal(verifyDb).eventsFor("cmd-concurrent")).toHaveLength(
+          1,
+        );
+      } finally {
+        verifyDb.close();
+      }
+    } finally {
+      for (const child of children) child.kill();
+      if (existsSync(gate)) rmSync(gate);
+      removeTestTree(repo);
     }
   });
 

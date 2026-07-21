@@ -159,6 +159,20 @@ function validatedEvent(
   return event;
 }
 
+function custodyViolation(error: unknown): ContractViolation {
+  // Adapter error本文はSQLite pathやprovider情報を含み得るため、閉じたcodeだけへ変換する。
+  // payload conflictだけはdomain上の再利用違反として区別し、それ以外はavailabilityへ畳む。
+  return error instanceof Error && error.message === "e2-command-payload-mismatch"
+    ? {
+        code: "e2-command-payload-mismatch",
+        message: "同じcommand_idへ異なるpayloadのE2 certificateは発行できない",
+      }
+    : {
+        code: "e2-custody-unavailable",
+        message: "Ledger E2 custodyを安全に確定できない",
+      };
+}
+
 export function validateForwardEscape(
   command: RequestForwardEscape,
   ledger: ForwardEscapeLedgerView,
@@ -292,10 +306,14 @@ export function validateForwardEscape(
     }
   }
 
-  const certificate =
-    violations.length === 0 && custody
-      ? custody.issue({ command_id: command.command_id, payload_digest: digest })
-      : undefined;
+  let certificate: ForwardEscapeValidationCertificate | undefined;
+  if (violations.length === 0 && custody) {
+    try {
+      certificate = custody.issue({ command_id: command.command_id, payload_digest: digest });
+    } catch (error) {
+      violations.push(custodyViolation(error));
+    }
+  }
   if (
     violations.length === 0 &&
     (!certificate?.certificate_id.trim() || !certificate.event_digest.trim())

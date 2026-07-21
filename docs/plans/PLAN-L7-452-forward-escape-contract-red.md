@@ -57,7 +57,9 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 - GitHub 障害時は `IssueProjectionDeferred` (event 非損失・throw なし)。
 - cross-review FLAG追補として、Ledger実在revision/state lookup、opaque E2 custody、SQLite durable projection
   journal、digest-chain replay照合、remote-success crash window、GitHub成功binding全拘束、canonical drive
-  enum照合、空projection拒否、SQLite改変検出を `U-EXISSUE-007..014` で固定する。
+  enum照合、空projection拒否、SQLite改変検出を `U-EXISSUE-007..014` で固定する。再レビューで検出した
+  custody storage例外のstructured violation化と、同一commandを複数SQLite workerが同時処理しても
+  certificate / queued receiptを1件へ収束させる原子create-or-getを`U-EXISSUE-015..016`で固定する。
 - reconcile は削除/改変/重複/別 repository を finding 化 (Ledger 書換なし)。
 
 ## 非スコープ
@@ -76,7 +78,7 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 
 ## DoD
 
-- [ ] U-EXISSUE-007..014をsnapshot runnerで実測し、別runtimeのcross-reviewでFLAG解消を確認する。
+- [ ] U-EXISSUE-007..016をsnapshot runnerで実測し、別runtimeのcross-reviewでFLAG解消を確認する。
 
 - [x] U-EXISSUE-001..006 が Red (module 不在 fail の snapshot 実測) から Green へ遷移した。
       根拠: commit 履歴 (test-only commit で snapshot FAIL 実測 / 実装 commit 後

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { HarnessDb } from "../state-db/index.js";
+import { runSqliteTransaction } from "../state-db/sqlite-transaction.js";
 import type {
   DurableIssueProjectionEvent,
   ForwardEscapeCustodyPort,
@@ -140,42 +141,56 @@ export class SqliteForwardEscapeJournal
 {
   constructor(private readonly db: HarnessDb) {
     // DDLはHARNESS_DB_TABLES/SCHEMA_VERSION/migrateだけが所有する。
+    // 別runtime/workerの短いBEGIN IMMEDIATE競合はbounded wait後に同じrowを再読する。
+    this.db.exec("PRAGMA busy_timeout = 5000");
   }
 
   issue(input: {
     readonly command_id: string;
     readonly payload_digest: string;
   }): ForwardEscapeValidationCertificate {
-    const existing = this.db
-      .prepare(
-        `SELECT certificate_id, payload_digest, event_digest
-         FROM forward_escape_validation_certificates WHERE command_id = ?`,
-      )
-      .get(input.command_id);
-    if (existing) {
-      if (String(existing.payload_digest) !== input.payload_digest) {
-        throw new ForwardEscapeJournalIntegrityError("e2-command-payload-mismatch");
+    return runSqliteTransaction(this.db, () => {
+      const existing = this.db
+        .prepare(
+          `SELECT certificate_id, payload_digest, event_digest
+           FROM forward_escape_validation_certificates WHERE command_id = ?`,
+        )
+        .get(input.command_id);
+      if (existing) {
+        if (String(existing.payload_digest) !== input.payload_digest) {
+          throw new ForwardEscapeJournalIntegrityError("e2-command-payload-mismatch");
+        }
+        const expected = digest({
+          type: "ForwardEscapeValidated",
+          sequence: "E2",
+          command_id: input.command_id,
+          payload_digest: input.payload_digest,
+          certificate_id: String(existing.certificate_id),
+        });
+        if (!nonEmpty(existing.certificate_id) || String(existing.event_digest) !== expected) {
+          throw new ForwardEscapeJournalIntegrityError("e2-custody-integrity-invalid");
+        }
+        return {
+          certificate_id: String(existing.certificate_id),
+          event_digest: String(existing.event_digest),
+        };
       }
-      return {
-        certificate_id: String(existing.certificate_id),
-        event_digest: String(existing.event_digest),
-      };
-    }
-    const certificateId = randomUUID();
-    const eventDigest = digest({
-      type: "ForwardEscapeValidated",
-      sequence: "E2",
-      command_id: input.command_id,
-      payload_digest: input.payload_digest,
-      certificate_id: certificateId,
+      const certificateId = randomUUID();
+      const eventDigest = digest({
+        type: "ForwardEscapeValidated",
+        sequence: "E2",
+        command_id: input.command_id,
+        payload_digest: input.payload_digest,
+        certificate_id: certificateId,
+      });
+      this.db
+        .prepare(
+          `INSERT INTO forward_escape_validation_certificates
+           (certificate_id, command_id, payload_digest, event_digest) VALUES (?, ?, ?, ?)`,
+        )
+        .run(certificateId, input.command_id, input.payload_digest, eventDigest);
+      return { certificate_id: certificateId, event_digest: eventDigest };
     });
-    this.db
-      .prepare(
-        `INSERT INTO forward_escape_validation_certificates
-         (certificate_id, command_id, payload_digest, event_digest) VALUES (?, ?, ?, ?)`,
-      )
-      .run(certificateId, input.command_id, input.payload_digest, eventDigest);
-    return { certificate_id: certificateId, event_digest: eventDigest };
   }
 
   verify(event: ValidatedForwardEscape): boolean {
@@ -205,31 +220,53 @@ export class SqliteForwardEscapeJournal
     readonly durable: true;
     readonly event_digest: string;
   } {
-    // eventsFor performs the chain audit before extending it.
-    this.eventsFor(event.command_id);
-    const prior = this.db
-      .prepare(
-        `SELECT sequence, event_digest FROM forward_escape_projection_events
-         WHERE command_id = ? ORDER BY sequence DESC LIMIT 1`,
-      )
-      .get(event.command_id);
-    const sequence = Number(prior?.sequence ?? 0) + 1;
-    const previous = prior ? String(prior.event_digest) : null;
-    const eventJson = JSON.stringify(event);
-    const eventDigest = digest({
-      command_id: event.command_id,
-      sequence,
-      event_json: eventJson,
-      previous_event_digest: previous,
+    return runSqliteTransaction(this.db, () => {
+      // eventsFor performs chain/schema/FSM audit inside the same write lock.
+      const priorEvents = this.eventsFor(event.command_id);
+      const canonicalEvent = parseProjectionEvent(JSON.stringify(event), event.command_id);
+      const certificate = this.db
+        .prepare(
+          `SELECT payload_digest FROM forward_escape_validation_certificates
+           WHERE command_id = ?`,
+        )
+        .get(event.command_id);
+      if (!certificate || String(certificate.payload_digest) !== canonicalEvent.payload_digest) {
+        throw new ForwardEscapeJournalIntegrityError("projection-journal-custody-mismatch");
+      }
+      const eventJson = JSON.stringify(canonicalEvent);
+      const existing = this.db
+        .prepare(
+          `SELECT event_digest FROM forward_escape_projection_events
+           WHERE command_id = ? AND event_json = ? ORDER BY sequence LIMIT 1`,
+        )
+        .get(event.command_id, eventJson);
+      if (existing) {
+        return { durable: true as const, event_digest: String(existing.event_digest) };
+      }
+      assertProjectionFsm([...priorEvents, canonicalEvent]);
+      const prior = this.db
+        .prepare(
+          `SELECT sequence, event_digest FROM forward_escape_projection_events
+           WHERE command_id = ? ORDER BY sequence DESC LIMIT 1`,
+        )
+        .get(event.command_id);
+      const sequence = Number(prior?.sequence ?? 0) + 1;
+      const previous = prior ? String(prior.event_digest) : null;
+      const eventDigest = digest({
+        command_id: event.command_id,
+        sequence,
+        event_json: eventJson,
+        previous_event_digest: previous,
+      });
+      this.db
+        .prepare(
+          `INSERT INTO forward_escape_projection_events
+           (command_id, sequence, event_json, previous_event_digest, event_digest)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(event.command_id, sequence, eventJson, previous, eventDigest);
+      return { durable: true as const, event_digest: eventDigest };
     });
-    this.db
-      .prepare(
-        `INSERT INTO forward_escape_projection_events
-         (command_id, sequence, event_json, previous_event_digest, event_digest)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .run(event.command_id, sequence, eventJson, previous, eventDigest);
-    return { durable: true, event_digest: eventDigest };
   }
 
   eventsFor(commandId: string): readonly DurableIssueProjectionEvent[] {

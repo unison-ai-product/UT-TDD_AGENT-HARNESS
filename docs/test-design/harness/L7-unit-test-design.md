@@ -1589,6 +1589,8 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `U-EXISSUE-012` | projection必須値 | owner/repository/title/labelsを各空へmutation | E2 certificate発行前に`invalid-issue-projection` |
 | `U-EXISSUE-013` | SQLite journal tamper | `event_digest`または`event_json`を直接改変してclose/reopen | digest chain検査が改変を拒否しGitHub call 0 |
 | `U-EXISSUE-014` | SQLite certificate tamper | E2 `event_digest`を直接改変してclose/reopen | custody照合false、E3/E4入口を通さない |
+| `U-EXISSUE-015` | custody failure変換 | storage例外へsecret/pathを混入、同commandを異payloadで再利用 | raw本文を残さず閉じたstructured violation、E2未発行 |
+| `U-EXISSUE-016` | SQLite同時create-or-get | 2 workerをgateから同時解放し同command/payloadのcertificateとQueuedをappend | 両workerが同一certificate/receiptを取得しevent rowは1件 |
 | `CANDIDATE-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E9を1回だけappend |
 | `CANDIDATE-REENTRY-002` | 中間・合流後test | E8またはE11の片方だけGreen | draft PR生成不可 |
 | `CANDIDATE-REENTRY-003` | stale target | certificate後にtarget HEAD変更 | certificate失効、E10/E12拒否 |
