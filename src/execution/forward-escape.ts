@@ -114,13 +114,46 @@ function payloadDigest(command: ForwardEscapeCommandView): string {
     command.reentry_target_revision_id,
     command.reentry_target_layer,
     command.reentry_target_state,
-    command.issue_projection.owner,
-    command.issue_projection.repository,
-    command.issue_projection.title,
-    command.issue_projection.labels,
+    command.issue_projection?.owner,
+    command.issue_projection?.repository,
+    command.issue_projection?.title,
+    command.issue_projection?.labels,
     command.plan_id,
   ]);
   return createHash("sha256").update(canonical).digest("hex");
+}
+
+function isCanonicalRepositoryIdentity(owner: unknown, repository: unknown): boolean {
+  if (typeof owner !== "string" || typeof repository !== "string") return false;
+  const identity = `${owner}/${repository}`;
+  return (
+    identity === identity.trim() &&
+    identity === identity.normalize("NFC") &&
+    !identity.endsWith(".git") &&
+    /^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,38})\/[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,99})$/.test(identity)
+  );
+}
+
+function isCanonicalIssueTitle(value: unknown): boolean {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 256 &&
+    value === value.trim() &&
+    value === value.normalize("NFC") &&
+    !Array.from(value).some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint <= 31 || codePoint === 127;
+    })
+  );
+}
+
+function hasCanonicalLabels(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((label) => typeof label === "string" && label.length > 0 && label === label.trim())
+  );
 }
 
 export interface ForwardEscapeValidation {
@@ -195,22 +228,23 @@ export function validateForwardEscape(
     }
   }
 
-  for (const [field, value] of [
-    ["issue_projection.owner", command.issue_projection?.owner],
-    ["issue_projection.repository", command.issue_projection?.repository],
-    ["issue_projection.title", command.issue_projection?.title],
-  ] as const) {
-    if (!String(value ?? "").trim()) {
-      violations.push({ code: "invalid-issue-projection", message: `${field} が空` });
-    }
-  }
-  if (
-    !Array.isArray(command.issue_projection?.labels) ||
-    command.issue_projection.labels.length === 0
-  ) {
+  const projection = command.issue_projection;
+  if (!isCanonicalRepositoryIdentity(projection?.owner, projection?.repository)) {
     violations.push({
       code: "invalid-issue-projection",
-      message: "issue_projection.labels は1件以上必要",
+      message: "issue_projection owner/repository が正規identity形式でない",
+    });
+  }
+  if (!isCanonicalIssueTitle(projection?.title)) {
+    violations.push({
+      code: "invalid-issue-projection",
+      message: "issue_projection.title が正規形式でない",
+    });
+  }
+  if (!hasCanonicalLabels(projection?.labels)) {
+    violations.push({
+      code: "invalid-issue-projection",
+      message: "issue_projection.labels は非空trim済み文字列を1件以上必要とする",
     });
   }
 

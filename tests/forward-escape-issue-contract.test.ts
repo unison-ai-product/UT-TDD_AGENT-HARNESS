@@ -518,6 +518,43 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     }
   });
 
+  it("U-EXISSUE-016: projection欠落・非canonical値を例外化せずE2 custody前に拒否する", () => {
+    const issueProjections: unknown[] = [
+      undefined,
+      null,
+      { owner: " owner", repository: "repo", title: "title", labels: ["x"] },
+      { owner: "owner", repository: "repo.git", title: "title", labels: ["x"] },
+      { owner: "owner", repository: "repo/name", title: "title", labels: ["x"] },
+      { owner: "owner", repository: "repo", title: " title", labels: ["x"] },
+      { owner: "owner", repository: "repo", title: "title\nbody", labels: ["x"] },
+      { owner: "owner", repository: "repo", title: "title", labels: [""] },
+      { owner: "owner", repository: "repo", title: "title", labels: [" x"] },
+      { owner: "owner", repository: "repo", title: "title", labels: [1] },
+    ];
+
+    for (const issue_projection of issueProjections) {
+      let custodyCalls = 0;
+      const custody = memoryCustody();
+      const result = validateForwardEscape(
+        validCommand({ issue_projection } as Partial<RequestForwardEscape>),
+        emptyLedger,
+        {
+          issue: (input) => {
+            custodyCalls += 1;
+            return custody.issue(input);
+          },
+          verify: custody.verify,
+        },
+      );
+
+      expect(result.violations.map((finding) => finding.code)).toContain(
+        "invalid-issue-projection",
+      );
+      expect(result.validated).toBeUndefined();
+      expect(custodyCalls).toBe(0);
+    }
+  });
+
   it("U-EXISSUE-015: custody storage障害と異payload replayをsecret-safe structured violationへ変換する", () => {
     const unavailable = validateForwardEscape(validCommand(), emptyLedger, {
       issue: () => {
