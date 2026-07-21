@@ -367,12 +367,7 @@ describe("PLAN Asset canonical ledger schema", () => {
   it("U-PADM-065: v5 ledgerへappend-only artifact cleanup operation schemaを原子的に追加する", () => {
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
-      db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
-      db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
-      db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
-      db.exec("DROP TABLE plan_draft_artifact_operation_events");
-      db.setUserVersion(5);
+      createLedgerAtVersion(db, 5);
 
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(

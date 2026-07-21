@@ -129,9 +129,10 @@ function validateBundle(input: RedesignBundleInput): string | undefined {
 }
 
 export function redesignBundlePayloadDigest(
-  input: Omit<RedesignBundleInput, "commandPayloadDigest">,
+  input: Omit<RedesignBundleInput, "commandPayloadDigest"> | RedesignBundleInput,
 ): string {
-  return sha(stableJson(input));
+  const { commandPayloadDigest: _excluded, ...payload } = input as RedesignBundleInput;
+  return sha(stableJson(payload));
 }
 
 function validatePublicationGroup(
