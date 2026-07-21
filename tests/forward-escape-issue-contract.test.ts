@@ -603,7 +603,9 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       "utf8",
     );
     const children = Array.from({ length: 2 }, () => {
-      const child = spawn(process.execPath, [worker], {
+      // Vitest itselfはNodeで動き得る。実sourceのTypeScript/module解決をproduction runtimeと
+      // 同じBunへ固定し、process.execPath(Node)による偽のbootstrap failureを排除する。
+      const child = spawn("bun", [worker], {
         cwd: process.cwd(),
         stdio: ["ignore", "pipe", "pipe"],
       });
