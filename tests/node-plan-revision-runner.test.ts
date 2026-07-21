@@ -16,6 +16,7 @@ import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adap
 import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
 import { PlanRevisionLedgerTransaction } from "../src/plan-asset/ledger/plan-revision-ledger.js";
 import {
+  LEDGER_SCHEMA_VERSION,
   ledgerRowDigest,
   ledgerSchemaDdl,
   migratePlanLedger,
@@ -465,7 +466,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
     projection: { path: projectionPath },
   };
   const db = openHarnessDb(":memory:");
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   if (mode !== "legacy") seedAdopted(db, assetId, planId, basePayload, mode === "alias-mismatch");
   // close境界の呼出しを観測しつつ、write-set assertionまではin-memory DBを保持する。
   const close = vi.spyOn(db, "close").mockImplementation(() => undefined);

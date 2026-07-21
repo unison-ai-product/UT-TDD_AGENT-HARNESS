@@ -6,6 +6,7 @@ import {
   LegacyPlanRevisionBootstrapTransaction,
 } from "../../src/plan-asset/ledger/plan-revision-bootstrap.js";
 import {
+  LEDGER_SCHEMA_VERSION,
   ledgerRowDigest,
   ledgerSchemaDdl,
   migratePlanLedger,
@@ -204,7 +205,7 @@ describe("legacy PLAN revision bootstrap transaction", () => {
     const input = bootstrap();
 
     expect(ledger.bootstrap(input)).toMatchObject({ ok: true, replayed: false });
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     expect(ledger.bootstrap(input)).toMatchObject({
       ok: true,
       replayed: true,
@@ -217,7 +218,7 @@ describe("legacy PLAN revision bootstrap transaction", () => {
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   return { db, ledger: new LegacyPlanRevisionBootstrapTransaction(db) };
 }
 

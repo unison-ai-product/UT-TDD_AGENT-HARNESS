@@ -6,7 +6,11 @@ import {
   PlanRevisionLedgerTransaction,
   replayBindingFailures,
 } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
-import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import {
+  LEDGER_SCHEMA_VERSION,
+  ledgerRowDigest,
+  migratePlanLedger,
+} from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
@@ -143,7 +147,7 @@ describe("PLAN revision ledger transaction", () => {
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
     "plan:adopted",
     "2026-07-15T00:00:00.000Z",
@@ -187,7 +191,7 @@ function fixture() {
     null,
     aliasEventDigest,
   );
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   const ledger = new PlanRevisionLedgerTransaction(db);
   return { db, ledger };
 }
