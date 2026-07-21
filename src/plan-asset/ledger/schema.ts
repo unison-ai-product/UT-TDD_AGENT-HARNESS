@@ -18,7 +18,7 @@ import {
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
 
-export const LEDGER_SCHEMA_VERSION = 7;
+export const LEDGER_SCHEMA_VERSION = 8;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -615,12 +615,190 @@ const v7Tables: readonly TableDef[] = [
   },
 ];
 
+const v8Tables: readonly TableDef[] = [
+  {
+    name: "authoring_operation_descriptors",
+    columns: [
+      pk("operation_id"),
+      requiredCol("group_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("repository_identity"),
+      requiredCol("base_commit"),
+      requiredCol("artifact_count", "INTEGER"),
+      requiredCol("prepared_at"),
+      requiredCol("descriptor_digest"),
+    ],
+    unique: [["group_id"], ["operation_id", "group_id"]],
+    checks: [{ kind: "compare", column: "artifact_count", operator: ">", value: 0 }],
+    foreignKeys: [
+      foreignKey(["group_id"], {
+        table: "authoring_command_group_headers",
+        columns: ["group_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "authoring_operation_artifacts",
+    columns: [
+      requiredCol("operation_id"),
+      requiredCol("group_id"),
+      requiredCol("member_id"),
+      requiredCol("ordinal", "INTEGER"),
+      requiredCol("artifact_role"),
+      requiredCol("target_path"),
+      requiredCol("temporary_path"),
+      requiredCol("rollback_path"),
+      requiredCol("pin_path"),
+      requiredCol("expected_preimage_json"),
+      requiredCol("postimage_digest"),
+      requiredCol("artifact_digest"),
+    ],
+    primaryKey: ["operation_id", "member_id"],
+    unique: [
+      ["operation_id", "ordinal"],
+      ["operation_id", "target_path"],
+    ],
+    checks: [{ kind: "compare", column: "ordinal", operator: ">", value: 0 }],
+    foreignKeys: [
+      foreignKey(["operation_id"], {
+        table: "authoring_operation_descriptors",
+        columns: ["operation_id"],
+        onDelete: "RESTRICT",
+      }),
+      foreignKey(["operation_id", "group_id"], {
+        table: "authoring_operation_descriptors",
+        columns: ["operation_id", "group_id"],
+        onDelete: "RESTRICT",
+      }),
+      foreignKey(["group_id", "member_id"], {
+        table: "authoring_command_group_members",
+        columns: ["group_id", "member_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "authoring_command_revision_bindings",
+    columns: [
+      requiredCol("group_id"),
+      requiredCol("asset_id"),
+      requiredCol("revision", "INTEGER"),
+      requiredCol("artifact_role"),
+      requiredCol("bound_at"),
+      requiredCol("binding_digest"),
+    ],
+    primaryKey: ["group_id", "asset_id", "revision"],
+    foreignKeys: [
+      foreignKey(["group_id"], {
+        table: "authoring_command_group_headers",
+        columns: ["group_id"],
+        onDelete: "RESTRICT",
+      }),
+      foreignKey(["asset_id", "revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "authoring_recovery_assessment_events",
+    columns: [
+      pk("assessment_event_id"),
+      requiredCol("operation_id"),
+      requiredCol("sequence", "INTEGER"),
+      requiredCol("strategy"),
+      requiredCol("assessment_json"),
+      requiredCol("assessment_digest"),
+      requiredCol("fencing_token"),
+      requiredCol("occurred_at"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["operation_id", "sequence"]],
+    checks: [
+      enumCheck("strategy", ["rollback", "roll_forward", "finalize", "none"]),
+      { kind: "compare", column: "sequence", operator: ">", value: 0 },
+    ],
+    foreignKeys: [
+      foreignKey(["operation_id"], {
+        table: "authoring_operation_descriptors",
+        columns: ["operation_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "authoring_recovery_attempt_events",
+    columns: [
+      pk("attempt_event_id"),
+      requiredCol("operation_id"),
+      requiredCol("sequence", "INTEGER"),
+      requiredCol("assessment_digest"),
+      requiredCol("fencing_token"),
+      requiredCol("strategy"),
+      requiredCol("result"),
+      requiredCol("actor"),
+      requiredCol("occurred_at"),
+      col("failure_reason"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["operation_id", "sequence"]],
+    checks: [
+      enumCheck("strategy", ["rollback", "roll_forward", "finalize"]),
+      enumCheck("result", ["started", "succeeded", "failed", "refused"]),
+    ],
+    foreignKeys: [
+      foreignKey(["operation_id"], {
+        table: "authoring_operation_descriptors",
+        columns: ["operation_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "authoring_artifact_recovery_events",
+    columns: [
+      pk("recovery_event_id"),
+      requiredCol("operation_id"),
+      requiredCol("member_id"),
+      requiredCol("sequence", "INTEGER"),
+      requiredCol("action"),
+      requiredCol("result"),
+      requiredCol("before_state_json"),
+      requiredCol("after_state_json"),
+      requiredCol("assessment_digest"),
+      requiredCol("fencing_token"),
+      requiredCol("actor"),
+      requiredCol("occurred_at"),
+      col("failure_reason"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["operation_id", "member_id", "sequence"]],
+    checks: [
+      enumCheck("action", ["inspect", "restore", "roll_forward", "finalize"]),
+      enumCheck("result", ["succeeded", "failed", "refused"]),
+    ],
+    foreignKeys: [
+      foreignKey(["operation_id", "member_id"], {
+        table: "authoring_operation_artifacts",
+        columns: ["operation_id", "member_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+];
+
 const tables: readonly TableDef[] = [
   ...v3Tables,
   ...v4Tables,
   ...v5Tables,
   ...v6Tables,
   ...v7Tables,
+  ...v8Tables,
 ];
 
 const v3Indexes: readonly IndexDef[] = [
@@ -732,6 +910,28 @@ const v7Indexes: readonly IndexDef[] = [
     columns: ["group_id", "sequence"],
   },
 ];
+const v8Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_authoring_revision_binding_revision",
+    table: "authoring_command_revision_bindings",
+    columns: ["asset_id", "revision"],
+  },
+  {
+    name: "idx_authoring_recovery_assessment",
+    table: "authoring_recovery_assessment_events",
+    columns: ["operation_id", "sequence"],
+  },
+  {
+    name: "idx_authoring_recovery_attempt",
+    table: "authoring_recovery_attempt_events",
+    columns: ["operation_id", "sequence"],
+  },
+  {
+    name: "idx_authoring_artifact_recovery",
+    table: "authoring_artifact_recovery_events",
+    columns: ["operation_id", "member_id", "sequence"],
+  },
+];
 
 const indexes: readonly IndexDef[] = [
   ...v3Indexes,
@@ -739,6 +939,7 @@ const indexes: readonly IndexDef[] = [
   ...v5Indexes,
   ...v6Indexes,
   ...v7Indexes,
+  ...v8Indexes,
 ];
 
 const v3HistoryTables = [
@@ -761,6 +962,14 @@ const v7HistoryTables = [
   "authoring_command_group_members",
   "authoring_command_group_phase_events",
 ] as const;
+const v8HistoryTables = [
+  "authoring_operation_descriptors",
+  "authoring_operation_artifacts",
+  "authoring_command_revision_bindings",
+  "authoring_recovery_assessment_events",
+  "authoring_recovery_attempt_events",
+  "authoring_artifact_recovery_events",
+] as const;
 
 function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerDef[] {
   return historyTables.flatMap((table) =>
@@ -779,12 +988,14 @@ const v4Triggers = appendOnlyTriggers(v4HistoryTables);
 const v5Triggers = appendOnlyTriggers(v5HistoryTables);
 const v6Triggers = appendOnlyTriggers(v6HistoryTables);
 const v7Triggers = appendOnlyTriggers(v7HistoryTables);
+const v8Triggers = appendOnlyTriggers(v8HistoryTables);
 const triggers: readonly TriggerDef[] = [
   ...v3Triggers,
   ...v4Triggers,
   ...v5Triggers,
   ...v6Triggers,
   ...v7Triggers,
+  ...v8Triggers,
 ];
 
 export function ledgerSchemaDdl(): readonly string[] {
@@ -807,6 +1018,7 @@ export function migratePlanLedger(
     version !== 4 &&
     version !== 5 &&
     version !== 6 &&
+    version !== 7 &&
     version !== LEDGER_SCHEMA_VERSION
   )
     return { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -848,7 +1060,8 @@ export function migratePlanLedger(
       installV5(db);
       installV6(db, 3);
       installV7(db);
-      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v3-v7-verification-failed");
+      installV8(db, options.fault);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v3-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -866,7 +1079,8 @@ export function migratePlanLedger(
       installV5(db);
       installV6(db, 4);
       installV7(db);
-      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v4-v7-verification-failed");
+      installV8(db, options.fault);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v4-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -883,7 +1097,8 @@ export function migratePlanLedger(
       }
       installV6(db, 5);
       installV7(db);
-      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v5-v7-verification-failed");
+      installV8(db, options.fault);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v5-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -899,11 +1114,28 @@ export function migratePlanLedger(
         return { ok: false, ruleId: "plan-ledger-unavailable" };
       }
       installV7(db);
-      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v6-v7-verification-failed");
+      installV8(db, options.fault);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v6-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
+    }
+  }
+  if (db.userVersion() === 7) {
+    if (!v7LedgerValid(db)) return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      if (!v7LedgerValid(db)) {
+        db.exec("ROLLBACK");
+        return { ok: false, ruleId: "plan-ledger-unavailable" };
+      }
+      installV8(db, options.fault);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v7-v8-verification-failed");
+      db.exec("COMMIT");
+    } catch {
+      db.exec("ROLLBACK");
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
     }
   }
   return schemaMatches(db) && ledgerRowsValid(db)
@@ -937,6 +1169,16 @@ function v6LedgerValid(db: HarnessDb): boolean {
       tables: [...v3Tables, ...v4Tables, ...v5Tables, ...v6Tables],
       indexes: [...v3Indexes, ...v4Indexes, ...v5Indexes, ...v6Indexes],
       triggers: [...v3Triggers, ...v4Triggers, ...v5Triggers, ...v6Triggers],
+    }) && ledgerRowsValid(db)
+  );
+}
+
+function v7LedgerValid(db: HarnessDb): boolean {
+  return (
+    schemaMatchesVersion(db, {
+      tables: [...v3Tables, ...v4Tables, ...v5Tables, ...v6Tables, ...v7Tables],
+      indexes: [...v3Indexes, ...v4Indexes, ...v5Indexes, ...v6Indexes, ...v7Indexes],
+      triggers: [...v3Triggers, ...v4Triggers, ...v5Triggers, ...v6Triggers, ...v7Triggers],
     }) && ledgerRowsValid(db)
   );
 }
@@ -978,7 +1220,8 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     installV5(db);
     installV6(db, 2);
     installV7(db);
-    if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v7-verification-failed");
+    installV8(db, fault);
+    if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v8-verification-failed");
     db.exec("COMMIT");
     return true;
   } catch {
@@ -1006,6 +1249,15 @@ function installV7(db: HarnessDb): void {
   for (const table of v7Tables) db.exec(createTableSql(table));
   for (const index of v7Indexes) db.exec(createIndexSql(index));
   for (const trigger of v7Triggers) db.exec(createTriggerSql(trigger));
+  db.setUserVersion(7);
+}
+
+function installV8(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): void {
+  for (const table of v8Tables) db.exec(createTableSql(table));
+  fault?.after("v7-v8-tables-created");
+  for (const index of v8Indexes) db.exec(createIndexSql(index));
+  for (const trigger of v8Triggers) db.exec(createTriggerSql(trigger));
+  fault?.after("v7-v8-schema-created");
   db.setUserVersion(LEDGER_SCHEMA_VERSION);
 }
 
@@ -1187,6 +1439,7 @@ function ledgerRowsValid(db: HarnessDb): boolean {
   }
   if (db.userVersion() >= 6 && !artifactOperationEventsValid(db)) return false;
   if (db.userVersion() >= 7 && !authoringCommandGroupsValid(db)) return false;
+  if (db.userVersion() >= 8 && !authoringRecoveryRowsValid(db)) return false;
   const revisions = db
     .prepare("SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions")
     .all();
@@ -1205,6 +1458,56 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     reservationReceiptsValid(db) &&
     migrationReceiptsValid(db)
   );
+}
+
+function authoringRecoveryRowsValid(db: HarnessDb): boolean {
+  for (const [table, digestColumn] of [
+    ["authoring_operation_descriptors", "descriptor_digest"],
+    ["authoring_operation_artifacts", "artifact_digest"],
+    ["authoring_command_revision_bindings", "binding_digest"],
+  ] as const) {
+    const rows = db.prepare(`SELECT * FROM ${table}`).all();
+    if (rows.some((row) => row[digestColumn] !== ledgerRowDigest(row, digestColumn))) return false;
+  }
+  const descriptors = db.prepare("SELECT * FROM authoring_operation_descriptors").all();
+  for (const descriptor of descriptors) {
+    const artifacts = db
+      .prepare(
+        "SELECT * FROM authoring_operation_artifacts WHERE operation_id = ? ORDER BY ordinal",
+      )
+      .all(descriptor.operation_id);
+    if (
+      artifacts.length !== Number(descriptor.artifact_count) ||
+      artifacts.some(
+        (artifact, index) =>
+          Number(artifact.ordinal) !== index + 1 ||
+          !validExpectedPreimageJson(artifact.expected_preimage_json),
+      )
+    )
+      return false;
+  }
+  for (const [table, partition] of [
+    ["authoring_recovery_assessment_events", ["operation_id"]],
+    ["authoring_recovery_attempt_events", ["operation_id"]],
+    ["authoring_artifact_recovery_events", ["operation_id", "member_id"]],
+  ] as const) {
+    const rows = db
+      .prepare(`SELECT * FROM ${table} ORDER BY ${partition.join(", ")}, sequence`)
+      .all();
+    const state = new Map<string, { sequence: number; digest: string }>();
+    for (const row of rows) {
+      const key = partition.map((column) => String(row[column])).join("\u0000");
+      const previous = state.get(key);
+      if (
+        Number(row.sequence) !== (previous?.sequence ?? 0) + 1 ||
+        row.previous_event_digest !== (previous?.digest ?? null) ||
+        row.event_digest !== ledgerRowDigest(row, "event_digest")
+      )
+        return false;
+      state.set(key, { sequence: Number(row.sequence), digest: String(row.event_digest) });
+    }
+  }
+  return true;
 }
 
 function authoringCommandGroupsValid(db: HarnessDb): boolean {

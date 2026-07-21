@@ -11,6 +11,148 @@ import {
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 describe("PLAN Asset canonical ledger schema", () => {
+  it("U-PAREC-001: migrates a populated v7 ledger to v8 without inventing legacy bindings", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      seedAsset(db, "plan:legacy-visible");
+      seedAuthoringCommandGroup(db);
+      removeV8Schema(db);
+      db.setUserVersion(7);
+
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+      expect(db.prepare("SELECT COUNT(*) AS count FROM plan_revisions").get()?.count).toBe(1);
+      expect(
+        db.prepare("SELECT COUNT(*) AS count FROM authoring_command_group_headers").get()?.count,
+      ).toBe(1);
+      expect(
+        db.prepare("SELECT COUNT(*) AS count FROM authoring_command_revision_bindings").get()
+          ?.count,
+      ).toBe(0);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PAREC-002: rolls a v7-to-v8 migration fault back exactly", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      seedAsset(db, "plan:legacy-visible");
+      seedAuthoringCommandGroup(db);
+      removeV8Schema(db);
+      db.setUserVersion(7);
+      const before = migrationSnapshot(db);
+
+      expect(
+        migratePlanLedger(db, {
+          fault: {
+            after(boundary) {
+              if (boundary === "v7-v8-tables-created") throw new Error("migration-fault");
+            },
+          },
+        }),
+      ).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
+      expect(migrationSnapshot(db)).toBe(before);
+      expect(db.userVersion()).toBe(7);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PAREC-003: constrains v8 recovery rows by append-only and real custody FKs", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      expect(() =>
+        db
+          .prepare(
+            `INSERT INTO authoring_recovery_assessment_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            "assessment:1",
+            "missing",
+            1,
+            "rollback",
+            "{}",
+            digest,
+            "fence:1",
+            now,
+            null,
+            digest,
+          ),
+      ).toThrow();
+      expect(() =>
+        db
+          .prepare(
+            `INSERT INTO authoring_recovery_attempt_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            "attempt:1",
+            "missing",
+            1,
+            digest,
+            "fence:1",
+            "force",
+            "started",
+            "test",
+            now,
+            null,
+            null,
+            digest,
+          ),
+      ).toThrow();
+      expect(ledgerSchemaDdl().join("\n")).toContain(
+        "append-only:authoring_artifact_recovery_events",
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PAREC-004: derives revision visibility from immutable binding plus committed group", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      seedAsset(db, "plan:pending");
+      seedAuthoringCommandGroup(db);
+      const binding = {
+        group_id: "group:1",
+        asset_id: "plan:pending",
+        revision: 1,
+        artifact_role: "plan",
+        bound_at: now,
+      };
+      db.prepare("INSERT INTO authoring_command_revision_bindings VALUES (?, ?, ?, ?, ?, ?)").run(
+        ...Object.values(binding),
+        ledgerRowDigest(binding, "binding_digest"),
+      );
+      const visibleCount = () =>
+        Number(
+          db
+            .prepare(
+              `SELECT COUNT(*) AS count
+         FROM plan_revisions revision
+         LEFT JOIN authoring_command_revision_bindings binding
+           ON binding.asset_id = revision.asset_id AND binding.revision = revision.revision
+         WHERE revision.asset_id = ?
+           AND (binding.group_id IS NULL OR EXISTS (
+             SELECT 1 FROM authoring_command_group_phase_events phase
+             WHERE phase.group_id = binding.group_id AND phase.event_kind = 'committed'
+           ))`,
+            )
+            .get("plan:pending")?.count,
+        );
+      expect(visibleCount()).toBe(0);
+      commitAuthoringCommandGroup(db);
+      expect(visibleCount()).toBe(1);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-PA-009: enforces active alias and ordinal partial uniqueness", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -725,7 +867,7 @@ function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
       !sql.includes("idx_plan_draft_artifact_operations_command") &&
-      !sql.includes("authoring_command_group"),
+      !sql.includes("authoring_"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -745,7 +887,7 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
       !sql.includes("idx_plan_draft_artifact_operations_command") &&
-      !sql.includes("authoring_command_group"),
+      !sql.includes("authoring_"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -760,6 +902,7 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
 
 function createLegacyCommittedLedger(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
   expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+  removeV8Schema(db);
   removeV7Schema(db);
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
@@ -829,6 +972,7 @@ function createLedgerAtVersion(
   }
 
   expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+  removeV8Schema(db);
   removeV7Schema(db);
   if (version === 5) {
     db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
@@ -852,6 +996,33 @@ function removeV7Schema(db: ReturnType<typeof openHarnessDb>): void {
   db.exec("DROP TABLE authoring_command_group_phase_events");
   db.exec("DROP TABLE authoring_command_group_members");
   db.exec("DROP TABLE authoring_command_group_headers");
+}
+
+function removeV8Schema(db: ReturnType<typeof openHarnessDb>): void {
+  for (const table of [
+    "authoring_operation_descriptors",
+    "authoring_operation_artifacts",
+    "authoring_command_revision_bindings",
+    "authoring_recovery_assessment_events",
+    "authoring_recovery_attempt_events",
+    "authoring_artifact_recovery_events",
+  ]) {
+    db.exec(`DROP TRIGGER trg_${table}_no_update`);
+    db.exec(`DROP TRIGGER trg_${table}_no_delete`);
+  }
+  for (const index of [
+    "idx_authoring_revision_binding_revision",
+    "idx_authoring_recovery_assessment",
+    "idx_authoring_recovery_attempt",
+    "idx_authoring_artifact_recovery",
+  ])
+    db.exec(`DROP INDEX ${index}`);
+  db.exec("DROP TABLE authoring_artifact_recovery_events");
+  db.exec("DROP TABLE authoring_recovery_attempt_events");
+  db.exec("DROP TABLE authoring_recovery_assessment_events");
+  db.exec("DROP TABLE authoring_command_revision_bindings");
+  db.exec("DROP TABLE authoring_operation_artifacts");
+  db.exec("DROP TABLE authoring_operation_descriptors");
 }
 
 function seedAuthoringCommandGroup(db: ReturnType<typeof openHarnessDb>): void {
@@ -901,6 +1072,49 @@ function seedAuthoringCommandGroup(db: ReturnType<typeof openHarnessDb>): void {
   db.prepare(
     "INSERT INTO authoring_command_group_phase_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(...Object.values(event), ledgerRowDigest(event, "event_digest"));
+}
+
+function commitAuthoringCommandGroup(db: ReturnType<typeof openHarnessDb>): void {
+  let previous = String(
+    db
+      .prepare(
+        "SELECT event_digest FROM authoring_command_group_phase_events WHERE group_id = ? AND sequence = 1",
+      )
+      .get("group:1")?.event_digest,
+  );
+  for (const event of [
+    {
+      sequence: 2,
+      event_kind: "member_started",
+      member_id: "member:1",
+      publish_receipt_digest: null,
+    },
+    {
+      sequence: 3,
+      event_kind: "member_published",
+      member_id: "member:1",
+      publish_receipt_digest: digest,
+    },
+    { sequence: 4, event_kind: "committed", member_id: null, publish_receipt_digest: null },
+  ]) {
+    const row = {
+      phase_event_id: `group:1:event:${event.sequence}`,
+      group_id: "group:1",
+      sequence: event.sequence,
+      command_payload_digest: digest,
+      event_kind: event.event_kind,
+      member_id: event.member_id,
+      publish_receipt_digest: event.publish_receipt_digest,
+      failure_reason: null,
+      occurred_at: now,
+      previous_event_digest: previous,
+    };
+    const eventDigest = ledgerRowDigest(row, "event_digest");
+    db.prepare(
+      "INSERT INTO authoring_command_group_phase_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(row), eventDigest);
+    previous = eventDigest;
+  }
 }
 
 function insertMigrationEvent(
@@ -1068,7 +1282,7 @@ function legacyV2Ddl(): readonly string[] {
         !sql.includes("idx_legacy_bootstrap_source_blob") &&
         !sql.includes("plan_draft_artifact_operation_events") &&
         !sql.includes("idx_plan_draft_artifact_operations_command") &&
-        !sql.includes("authoring_command_group"),
+        !sql.includes("authoring_"),
     )
     .map((sql) =>
       sql
