@@ -25,9 +25,31 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     artifact_type: markdown_doc
+  - artifact_path: scripts/git-hooks/authoring-recovery-gate.ts
+    artifact_type: source_module
+  - artifact_path: scripts/git-hooks/pre-push
+    artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/plan-authoring-recovery.ts
+    artifact_type: source_module
   - artifact_path: src/cli/plan-revise.ts
     artifact_type: source_module
+  - artifact_path: src/plan-admission/node-atomic-draft-publisher.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-authoring-artifact-publisher.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-plan-authoring-recovery-assessor.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-plan-authoring-recovery-executor.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-plan-authoring-recovery-runner.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-plan-redesign-runner.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/node-plan-revision-runner.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-authoring-command-runner.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-content-binding.ts
     artifact_type: source_module
@@ -35,17 +57,43 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-revision-ledger-adapter.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/authoring-command-group.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/authoring-recovery-gate.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/plan-redesign-bundle.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-revision-bootstrap.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-revision-ledger.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/revision-visibility.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/schema.ts
+    artifact_type: source_module
+  - artifact_path: tests/authoring-recovery-gate.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/authoring-recovery-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/node-authoring-artifact-publisher.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/node-plan-authoring-recovery-runner.test.ts
+    artifact_type: test_code
   - artifact_path: tests/node-plan-revision-runner.test.ts
     artifact_type: test_code
-  - artifact_path: tests/plan-content-binding.test.ts
+  - artifact_path: tests/plan-asset/authoring-command-group.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/ledger-schema.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/plan-redesign-bundle.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/plan-revision-bootstrap.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/plan-revision-ledger.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-authoring-command-runner.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-content-binding.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-revise-cli.test.ts
     artifact_type: test_code
@@ -53,6 +101,11 @@ dependencies:
   parent: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
   requires: []
   references:
+    - docs/design/harness/L4-basic-design/data.md
+    - docs/design/harness/L5-detailed-design/physical-data.md
+    - docs/design/harness/L6-function-design/function-spec.md
+    - docs/test-design/harness/L7-unit-test-design.md
+    - docs/test-design/harness/L8-integration-test-design.md
     - docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     - docs/plans/PLAN-L7-441-plan-draft-recovery-convergence.md
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
@@ -62,11 +115,12 @@ review_evidence:
     review_kind: cross_agent
     reviewed_at: 2026-07-21T11:40:00+09:00
     tests_green_at: 2026-07-21T11:38:17+09:00
-    verdict: approve
-    scope: "PR #103 HEAD dfddefeb の独立cross-review PASS。stale base/replay
-      binding、artifact identity、通常例外rollback、Windows/Linux差異を攻撃し、未反駁attack 0。CI
-      run 29796108885でLinux全回帰、Windows scoped回帰、両OS doctor、aggregate
-      gateがGreen。"
+    verdict: superseded
+    scope: "HISTORY ONLY — rev4後に未解決のauthoring recovery/redesign
+      crash境界が判明したため承認効力を失った旧証跡。PR #103 HEAD dfddefeb の独立cross-review PASS。stale
+      base/replay binding、artifact
+      identity、通常例外rollback、Windows/Linux差異を攻撃し、未反駁attack 0。CI run
+      29796108885でLinux全回帰、Windows scoped回帰、両OS doctor、aggregate gateがGreen。"
     worker_model: gpt-5.6-sol
     reviewer_model: claude-opus-4-8
     green_commands:
@@ -94,22 +148,22 @@ review_evidence:
         completed_at: 2026-07-21T11:38:17+09:00
         evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/29796108885/job/88528379352
         output_digest: sha256:aab28f05dad284d803c0d101faa12e2acb34d226940e5441c6c3abb77dcf9859
-status: confirmed
+status: draft
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:93029b042ddb1305cc70c0b052c039b0
-  command_id: plan-recovery-16-20260721-06
-  admitted_at: 2026-07-21T12:05:00+09:00
-  source_digest: sha256:b340b78c60703d253810e8ebdd41dcc3531a00bc617b2b76565e3d09c0e0032e
-  decision_digest: sha256:97cbac8dcd8fb77fc587b2289f4ba38c3a51c54fdf342b26096119435fe1015c
-  receipt_digest: sha256:8d7dece601e51fed83ac467b8635e24d58d4261253ef7845bacac4ab23ec8b59
+  receipt_id: certificate:3a108064eb0826d1896ed7d15c74cb0f
+  command_id: plan-recovery-16-20260721-07
+  admitted_at: 2026-07-21T17:40:00+09:00
+  source_digest: sha256:68fd8a18645fff0e14d9afa66fa9e8b42da6ad5ce88ee6cc1e8ba2feef7f1001
+  decision_digest: sha256:c86be4b8d923ea831812912946f56e8f1858da84ecb10c014e5826d57ffdd98d
+  receipt_digest: sha256:76c2b4a4b1b946b6df57ed71628e6f5acc85a51e24b3531fbb937dea2eb49c5e
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:890b18d79d85d8d7cc2591c7146af5e2
-    revision: 4
-    content_digest: sha256:b340b78c60703d253810e8ebdd41dcc3531a00bc617b2b76565e3d09c0e0032e
+    revision: 5
+    content_digest: sha256:68fd8a18645fff0e14d9afa66fa9e8b42da6ad5ce88ee6cc1e8ba2feef7f1001
   route:
     signal: regression_dev
     mode: recovery
@@ -126,8 +180,9 @@ admission_receipt:
     target_plan_id: PLAN-L6-86-drive-plan-admission-contract
     target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #102 reproduced a missing revision authoring path; PR #103
-    restored it and this revision binds its acceptance evidence"
+  escape_reason: "Issue #102 rev4 approval is superseded by unresolved authoring
+    recovery and redesign crash boundaries; rev5 reopens the PLAN without an
+    implementation-complete claim"
 ---
 
 # PLAN-RECOVERY-16: legacy PLAN revision authoring recovery
