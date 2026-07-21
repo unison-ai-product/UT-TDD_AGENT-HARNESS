@@ -223,6 +223,33 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
     db.close();
   });
 
+  it("migrate は v26 DB の既存rowを保持してv27 Forward escape custody表を追加する", () => {
+    const db = openHarnessDb(":memory:");
+    db.exec("CREATE TABLE retained_fixture (id TEXT PRIMARY KEY, value TEXT NOT NULL)");
+    db.exec("INSERT INTO retained_fixture VALUES ('before-v27', 'preserved')");
+    db.setUserVersion(26);
+
+    const result = migrate(db);
+
+    expect(result).toMatchObject({ fromVersion: 26, toVersion: SCHEMA_VERSION, applied: true });
+    expect(db.prepare("SELECT value FROM retained_fixture WHERE id = 'before-v27'").get()).toEqual({
+      value: "preserved",
+    });
+    expect(tableNames(db)).toEqual(
+      expect.arrayContaining([
+        "forward_escape_validation_certificates",
+        "forward_escape_projection_events",
+      ]),
+    );
+    expect(
+      db
+        .prepare("PRAGMA foreign_key_list(forward_escape_projection_events)")
+        .all()
+        .map((row) => String(row.table)),
+    ).toContain("forward_escape_validation_certificates");
+    db.close();
+  });
+
   it("migrate repairs missing added columns even when user_version is current", () => {
     const db = openHarnessDb(":memory:");
     db.exec(`

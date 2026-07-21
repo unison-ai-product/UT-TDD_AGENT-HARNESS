@@ -36,7 +36,9 @@ export interface GithubCiPolicyViolation {
     | "missing_aggregate_result_guard"
     | "forbidden_full_doctor"
     | "forbidden_raw_vitest"
-    | "forbidden_source_full_tests";
+    | "forbidden_source_full_tests"
+    | "forbidden_job_level_lane_skip"
+    | "forbidden_lane_skip_step";
   detail: string;
 }
 
@@ -51,6 +53,7 @@ interface WorkflowStep {
   name?: string;
   uses?: string;
   run?: string;
+  if?: unknown;
 }
 
 interface WorkflowJob {
@@ -234,6 +237,86 @@ function pushViolation(input: {
 
 const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
 
+// PLAN-L7-455 (troubleshoot): doc-only lane 絞り込みが検証弱化にならないことを fail-close 検査する。
+// 正準の lane 条件式のみを許可し (非正準式は即 violation)、"full" 限定でしか skip してよい
+// step は保守的 allowlist に限定する。allowlist 外の step (github guard / lint / checkout 等)
+// が lane 条件を持つこと自体を drift として検出する。
+const LANE_REFERENCE_NEEDLE = "steps.classify.outputs.lane";
+const LANE_FULL_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
+const LANE_DOC_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
+// 注意: 素朴な部分文字列一致だと "bun run test" が doc lane 専用の
+// "bun run test:doc-lane" を誤って full-only allowlist に混入させる (substring collision)。
+// `\b...\b(?!:)` で script suffix (`:fast` 等) 付き script 名との衝突を避ける。
+const LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS: readonly ((text: string) => boolean)[] = [
+  (text) => text.includes("bun run typecheck"),
+  (text) => text.includes("db rebuild"),
+  (text) => /\bbun\s+run\s+test\b(?!:)/.test(text),
+  (text) => text.includes("bun run test:fast"),
+  (text) => text.includes("audit quality"),
+  (text) => text.includes("src/cli.ts doctor"),
+];
+
+function matchesLaneSkipAllowlist(text: string): boolean {
+  return LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS.some((matches) => matches(text));
+}
+
+function checkLaneSkipSafety(input: {
+  legs: readonly (WorkflowJob | null)[];
+  doc: GithubWorkflowDoc;
+  violations: GithubCiPolicyViolation[];
+}): void {
+  for (const [index, leg] of input.legs.entries()) {
+    if (!leg) continue;
+    const name = RUNTIME_LEGS[index];
+    if (leg.if !== undefined) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "forbidden_job_level_lane_skip",
+        detail: `jobs.${name} must not carry a job-level if (lane classification must stay step-scoped, never skip the whole job)`,
+      });
+    }
+    const steps =
+      Array.isArray(leg.steps) && leg.steps.every(workflowStep)
+        ? (leg.steps as WorkflowStep[])
+        : [];
+    for (const step of steps) {
+      const ifValue = step.if;
+      if (typeof ifValue !== "string" || !ifValue.includes(LANE_REFERENCE_NEEDLE)) continue;
+      const label = step.name ?? step.run ?? step.uses ?? "(unnamed step)";
+      const text = stepText(step);
+      if (ifValue === LANE_FULL_ONLY_IF) {
+        if (!matchesLaneSkipAllowlist(text)) {
+          pushViolation({
+            violations: input.violations,
+            doc: input.doc,
+            reason: "forbidden_lane_skip_step",
+            detail: `jobs.${name} step "${label}" is conditioned on lane=='full' but is not on the doc-lane skip allowlist`,
+          });
+        }
+        continue;
+      }
+      if (ifValue === LANE_DOC_ONLY_IF) {
+        if (matchesLaneSkipAllowlist(text)) {
+          pushViolation({
+            violations: input.violations,
+            doc: input.doc,
+            reason: "forbidden_lane_skip_step",
+            detail: `jobs.${name} step "${label}" is a required full-lane check but is conditioned on lane=='doc'`,
+          });
+        }
+        continue;
+      }
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "forbidden_lane_skip_step",
+        detail: `jobs.${name} step "${label}" uses a non-canonical lane condition: ${ifValue}`,
+      });
+    }
+  }
+}
+
 const aggregateResultExpression = (leg: (typeof RUNTIME_LEGS)[number]): string =>
   ["$", `{{ needs.${leg}.result }}`].join("");
 
@@ -282,6 +365,7 @@ function checkRuntimeAggregate(input: {
       detail: `jobs.${name} must run on ${expectedRunner} with non-empty fail-close steps`,
     });
   }
+  checkLaneSkipSafety({ legs, doc: input.doc, violations: input.violations });
   const aggregateValue = input.jobs["harness-check"];
   const aggregate = recordValue(aggregateValue) as WorkflowJob | null;
   if (aggregateValue === undefined) {

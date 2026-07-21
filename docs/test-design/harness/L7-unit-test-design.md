@@ -1581,6 +1581,16 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `CANDIDATE-GHISS-007` | worker競合 | 同じleaseを2 workerが取得試行 | remote create最大1回、loserはwrite 0 |
 | `CANDIDATE-GHISS-008` | stale remote | 古いremote version/webhookを後着 | 新しいprojection/domain stateを巻き戻さない |
 | `CANDIDATE-GHISS-009` | payload custody | secret/signature/raw transcriptをDTOへ注入 | event/outbox/Issue保存を拒否しwrite 0 |
+| `U-EXISSUE-007` | E2 typed projection入口 | 未検証の生commandを直接projectorへ渡す | GitHub call 0、`forward-escape-e2-required`でfail-close |
+| `U-EXISSUE-008` | GitHub成功binding検証 | repository/body digest/node ID/URL/issue number/observed revisionを各1箇所改変 | E4 0、durable Deferred receiptを記録 |
+| `U-EXISSUE-009` | canonical drive三面照合 | command/Issue/PLANを同じ未知値へ揃える | 一致だけではGreenにせず`unknown-drive-model` |
+| `U-EXISSUE-010` | durable restart | SQLiteをclose/reopenして同じE2/outboxを再開 | certificate/digest chainを復元しIssue 1件へ収束 |
+| `U-EXISSUE-011` | custody/replay/crash | forged E2、別payload journal、remote成功後append失敗 | call/returnをfail-closeしfalse Deferredをappendしない |
+| `U-EXISSUE-012` | projection必須値 | owner/repository/title/labelsを各空へmutation | E2 certificate発行前に`invalid-issue-projection` |
+| `U-EXISSUE-013` | SQLite journal tamper | `event_digest`または`event_json`を直接改変してclose/reopen | digest chain検査が改変を拒否しGitHub call 0 |
+| `U-EXISSUE-014` | SQLite certificate tamper | E2 `event_digest`を直接改変してclose/reopen | custody照合false、E3/E4入口を通さない |
+| `U-EXISSUE-015` | custody failure変換 | storage例外へsecret/pathを混入、同commandを異payloadで再利用 | raw本文を残さず閉じたstructured violation、E2未発行 |
+| `U-EXISSUE-016` | SQLite同時create-or-get | 2 workerをgateから同時解放し同command/payloadのcertificateとQueuedをappend | 両workerが同一certificate/receiptを取得しevent rowは1件 |
 | `CANDIDATE-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E9を1回だけappend |
 | `CANDIDATE-REENTRY-002` | 中間・合流後test | E8またはE11の片方だけGreen | draft PR生成不可 |
 | `CANDIDATE-REENTRY-003` | stale target | certificate後にtarget HEAD変更 | certificate失効、E10/E12拒否 |

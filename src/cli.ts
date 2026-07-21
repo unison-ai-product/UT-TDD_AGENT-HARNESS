@@ -35,6 +35,7 @@ import { registerFeedbackCommands } from "./cli/feedback";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { registerPlanDraftCommand } from "./cli/plan-draft";
+import { registerPlanRevisionCommand } from "./cli/plan-revise";
 import { contextSuggest } from "./context/doc-router";
 import { runDoctor } from "./doctor";
 import {
@@ -49,6 +50,7 @@ import { computeSkillMetrics } from "./feedback/engine";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
+import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
 import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace";
@@ -105,6 +107,7 @@ import {
 } from "./memory/index";
 import { lintPlanWithGate } from "./plan/lint";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
+import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner";
 import {
   type AdapterContextInjection,
   type AdapterProvider,
@@ -183,6 +186,7 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { buildScopeDryRunPreview } from "./state-db/scope-preview";
+import { runCoalescedStopRefresh, spawnDetachedStopRefresh } from "./state-db/stop-refresh";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -976,9 +980,41 @@ session
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
     const input = readHookInput("Stop", opts.session);
-    dispatch(input, nodeDeps(requireRuntimeRepoRoot(), gitBranch, gitHead), "Stop");
+    const repoRoot = requireRuntimeRepoRoot();
+    dispatch(input, nodeDeps(repoRoot, gitBranch, gitHead), "Stop");
     writeHandoverWarnings();
+    // PLAN-L7-365 Step 2 (issue #78): Stop 境界で on-disk harness.db を自動追従。
+    // Stop hook の timeout 予算 (5s) を消費しないよう detached で fire-and-forget 起動し、
+    // fail-open — 起動失敗は警告のみで session 終了 (exit 0) を妨げない。
+    const refresh = spawnDetachedStopRefresh({ repoRoot });
+    if (!refresh.launched && !refresh.coalesced) {
+      process.stderr.write(`session-log: db refresh not launched (${refresh.reason})\n`);
+    }
     process.stdout.write(`session-log: summary ${input.session_id ?? "ut-tdd-cli"}\n`);
+  });
+
+session
+  .command("db-refresh")
+  .description(
+    "Stop 境界の on-disk harness.db refresh (session summary から detached 起動される内部エントリ)",
+  )
+  .requiredOption("--generation <id>", "Stop refresh lease generation")
+  .action((opts: { generation: string }) => {
+    const result = runCoalescedStopRefresh({
+      repoRoot: requireRuntimeRepoRoot(),
+      generation: opts.generation,
+    });
+    const r = result.runs.at(-1);
+    if (!result.owned || !r) {
+      process.stderr.write("session-log: db refresh skipped (stale-generation)\n");
+      return;
+    }
+    if (!r.ok) {
+      process.stderr.write(`session-log: db refresh skipped (${r.skippedReason})\n`);
+    }
+    process.stdout.write(
+      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested})\n`,
+    );
   });
 
 const hook = program.command("hook").description("package-local hook entrypoints");
@@ -1172,6 +1208,7 @@ const plan = program.command("plan").description("PLAN 操作");
 registerPlanAssetCommands(plan);
 registerPlanAdmissionCommands(plan);
 registerPlanDraftCommand(plan, { runner: createNodePlanDraftRunner(process.cwd()) });
+registerPlanRevisionCommand(plan, { runner: createNodePlanRevisionRunner(process.cwd()) });
 plan
   .command("lint [path]")
   .description("PLAN lint")
@@ -3142,6 +3179,47 @@ github
       if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       else process.stdout.write(renderGithubOpsGuard(result));
       process.exitCode = result.ok ? 0 : 1;
+    },
+  );
+
+// PLAN-L7-455 (troubleshoot): 変更ファイル分類 (doc-only lane 判定、fail-close)。
+// harness-check.yml の重い step (full vitest / full doctor 等) を doc-only 変更で
+// skip するための判定を出す。判定不能・新種 path は必ず "full" にフォールバックする。
+github
+  .command("classify-changes")
+  .description("git diff ベースの変更分類 (doc-only lane 判定、fail-close)")
+  .requiredOption("--event-name <name>", "github.event_name")
+  .requiredOption("--head-sha <sha>", "diff 対象 head SHA")
+  .option("--base-sha <sha>", "pull_request の base SHA")
+  .option("--before-sha <sha>", "push event の before SHA")
+  .option("--github-output <path>", "GITHUB_OUTPUT へ lane=<value> を追記するファイルパス")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      eventName: string;
+      headSha: string;
+      baseSha?: string;
+      beforeSha?: string;
+      githubOutput?: string;
+      json?: boolean;
+    }) => {
+      const result = runChangeLaneClassification({
+        eventName: opts.eventName,
+        headSha: opts.headSha,
+        baseSha: opts.baseSha,
+        beforeSha: opts.beforeSha,
+        git: new SystemGitDiffNamesPort(process.cwd()),
+      });
+      if (opts.githubOutput) {
+        appendFileSync(opts.githubOutput, `lane=${result.lane}\n`);
+      }
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(
+          `change lane: ${result.lane} (${result.reason}; range=${result.range ?? "none"}; files=${result.fileCount})\n`,
+        );
+      }
     },
   );
 
