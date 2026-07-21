@@ -45,7 +45,7 @@ dependencies:
 review_evidence:
   - reviewer: claude-blind-reviewer
     review_kind: cross_agent
-    reviewed_at: "2026-07-21T18:22:40+09:00"
+    reviewed_at: "2026-07-21T18:24:00+09:00"
     tests_green_at: "2026-07-21T18:23:35+09:00"
     verdict: approve
     scope: "claim-blind / spec-blind 両レーン PASS。L9 pair oracle (ST-EPISODE/ST-CLOSURE) 実在、Ledger=authoritative/GitHub=projection 不変条件の L4→L5→L6 降下整合を確認。詳細は A-189。"

@@ -42,7 +42,7 @@ dependencies:
 review_evidence:
   - reviewer: claude-blind-reviewer
     review_kind: cross_agent
-    reviewed_at: "2026-07-21T18:22:40+09:00"
+    reviewed_at: "2026-07-21T18:24:00+09:00"
     tests_green_at: "2026-07-21T18:23:35+09:00"
     verdict: approve
     scope: "claim-blind / spec-blind 両レーン PASS。L8 pair oracle (IT-EXEP/IT-GHISS) 実在、冪等 key 階層と transaction 境界の内部整合を確認。詳細は A-189。"
