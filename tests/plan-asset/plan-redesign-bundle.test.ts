@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -17,10 +17,10 @@ import {
 import { TrackedReceiptRenderer } from "../../src/plan-admission/tracked-receipt-renderer.js";
 import { parseLegacyPlanSource } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
 import {
+  deriveRedesignPublication,
   PlanRedesignBundleCoordinator,
   type RedesignBundleInput,
   redesignBundlePayloadDigest,
-  redesignPublicationPayloadDigest,
 } from "../../src/plan-asset/ledger/plan-redesign-bundle.js";
 import type { AppendPlanRevisionInput } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
 import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
@@ -55,27 +55,28 @@ describe("Redesign bundle coordinator", () => {
   });
 
   it("U-PA-REDESIGN-002B: group intent不整合はrevisionとpreparedを同じBEGINでrollbackする", () => {
-    const { db, coordinator } = fixture();
+    const { db } = fixture();
     const input = bundle();
-    const invalidGroup = {
-      groupId: input.commandId,
-      commandPayloadDigest: sha("wrong"),
-      occurredAt: input.origin.occurredAt,
-      members: [
-        {
-          memberId: "origin",
-          artifactPath: input.origin.sourcePath,
-          contentDigest: input.origin.contentDigest,
-          expectedPreimage: { kind: "absent" as const },
+    expect(() =>
+      deriveRedesignPublication({
+        origin: {
+          path: input.origin.sourcePath,
+          content: input.origin.sourceContent,
+          expectedPreimage: { kind: "absent" },
         },
-      ],
-    };
-    expect(
-      coordinator.publishDurable(input, invalidGroup, {
-        publish: () => ({ receiptDigest: sha("unused") }),
-        acknowledge() {},
+        replacement: {
+          path: input.replacement.sourcePath,
+          content: input.replacement.sourceContent,
+          expectedPreimage: { kind: "absent" },
+        },
+        projection: {
+          path: input.projection.path,
+          content: "{}",
+          expectedPreimage: { kind: "absent" },
+        },
+        pairs: [],
       }),
-    ).toEqual({ ok: false, ruleId: "plan-redesign-publication-binding-invalid" });
+    ).toThrow("plan-redesign-publication-pair-required");
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
     expect(
       Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_group_headers").get()?.n),
@@ -174,6 +175,21 @@ describe("Redesign bundle coordinator", () => {
     mkdirSync(join(root, ".ut-tdd", "ledger"), { recursive: true });
     let db = openE2eDb(dbPath);
     const real = realTrackedBundle();
+    writeFileSync(join(root, real.input.origin.sourcePath), real.originBase, "utf8");
+    mkdirSync(join(root, "docs", "governance"), { recursive: true });
+    writeFileSync(join(root, real.input.projection.path), real.initialProjection, "utf8");
+    const pairMember = real.input.publication.members.find(
+      (member) => member.memberId === "pair:L9",
+    );
+    if (!pairMember) throw new Error("paired test-design member missing");
+    mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
+    writeFileSync(join(root, pairMember.artifactPath), real.pairBase, "utf8");
+    for (const artifact of real.supporting.filter((item) =>
+      item.memberId.startsWith("upstream:"),
+    )) {
+      mkdirSync(join(root, artifact.path, ".."), { recursive: true });
+      writeFileSync(join(root, artifact.path), artifact.content, "utf8");
+    }
     seed(db, "plan:origin", real.input.origin.planId);
     seed(db, "plan:replacement", real.input.replacement.planId);
     const input = real.input;
@@ -183,38 +199,27 @@ describe("Redesign bundle coordinator", () => {
         memberId: "origin",
         path: input.origin.sourcePath,
         content: input.origin.sourceContent,
-        expectedPreimage: { kind: "absent" as const },
+        expectedPreimage: publicationPreimage(real.input, "origin"),
       },
       {
         memberId: "replacement",
         path: input.replacement.sourcePath,
         content: input.replacement.sourceContent,
-        expectedPreimage: { kind: "absent" as const },
+        expectedPreimage: publicationPreimage(real.input, "replacement"),
       },
       {
         memberId: "projection",
         path: input.projection.path,
         content: projection,
-        expectedPreimage: { kind: "absent" as const },
+        expectedPreimage: publicationPreimage(real.input, "projection"),
       },
+      ...real.supporting,
     ];
-    const group = {
-      groupId: input.commandId,
-      commandPayloadDigest: "",
-      occurredAt: input.origin.occurredAt,
-      members: artifacts.map((artifact) => ({
-        memberId: artifact.memberId,
-        artifactPath: artifact.path,
-        contentDigest: sha(artifact.content),
-        expectedPreimage: artifact.expectedPreimage,
-      })),
-    };
-    group.commandPayloadDigest = redesignPublicationPayloadDigest(input, group.members);
     const atomicModule = pathToFileURL(
       join(process.cwd(), "src", "plan-admission", "node-atomic-draft-publisher.ts"),
     ).href;
     expect(() =>
-      new PlanRedesignBundleCoordinator(db).publishDurable(input, group, {
+      new PlanRedesignBundleCoordinator(db).publishDurable(input, {
         publish(member) {
           const artifact = artifacts.find((candidate) => candidate.memberId === member.memberId);
           if (!artifact) throw new Error("tracked artifact missing");
@@ -237,7 +242,6 @@ publisher.publish(token);`;
     db = openE2eDb(dbPath);
     const result = new PlanRedesignBundleCoordinator(db).publishDurable(
       input,
-      group,
       new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
     );
     expect(result).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });
@@ -323,7 +327,6 @@ publisher.publish(token);`;
     expect(
       new PlanRedesignBundleCoordinator(db).publishDurable(
         input,
-        group,
         new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
       ),
     ).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });
@@ -396,6 +399,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
     route_mode: "redesign",
     status: "draft",
     supersedes: ["PLAN-L4-31"],
+    pair_artifact: "docs/test-design/harness/L7-unit-test-design.md",
   };
   const replacementPayload = String(change.replacementPayload ?? stable(replacementFrontmatter));
   const replacementSource = String(
@@ -410,10 +414,16 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
     route_signal: "forward",
     route_mode: "forward",
     status: "confirmed",
+    pair_artifact: "docs/test-design/harness/L7-unit-test-design.md",
   };
   const originSource = String(
     change.originSource ?? source(originFrontmatter, "訂正: PLAN-L6-88 が後継として置換する。\n"),
   );
+  const projectionContent = JSON.stringify({
+    origin: "PLAN-L4-31@2",
+    replacement: "PLAN-L6-88@2",
+    drive_model: "redesign",
+  });
   const common = {
     baseRevision: 1,
     basePayloadDigest: sha('{"status":"draft"}'),
@@ -456,14 +466,33 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
     },
     projection: {
       path: "docs/projections/issue-98.json",
-      contentDigest: sha(
-        JSON.stringify({
-          origin: "PLAN-L4-31@2",
-          replacement: "PLAN-L6-88@2",
-          drive_model: "redesign",
-        }),
-      ),
+      contentDigest: sha(projectionContent),
     },
+    publication: deriveRedesignPublication({
+      origin: {
+        path: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
+        content: originSource,
+        expectedPreimage: { kind: "absent" },
+      },
+      replacement: {
+        path: "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md",
+        content: replacementSource,
+        expectedPreimage: { kind: "absent" },
+      },
+      projection: {
+        path: "docs/projections/issue-98.json",
+        content: projectionContent,
+        expectedPreimage: { kind: "absent" },
+      },
+      pairs: [
+        {
+          memberId: "pair:L7",
+          path: "docs/test-design/harness/L7-unit-test-design.md",
+          content: "paired verification update",
+          expectedPreimage: { kind: "absent" },
+        },
+      ],
+    }),
   };
   return {
     ...input,
@@ -471,11 +500,39 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
   };
 }
 
-function realTrackedBundle(): { input: RedesignBundleInput; projection: string } {
+function realTrackedBundle(): {
+  input: RedesignBundleInput;
+  projection: string;
+  originBase: string;
+  initialProjection: string;
+  pairBase: string;
+  supporting: readonly {
+    memberId: `pair:${string}` | `upstream:${string}`;
+    path: string;
+    content: string;
+    expectedPreimage: { kind: "sha256"; digest: `sha256:${string}` };
+  }[];
+} {
   const originPath = "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md";
   const replacementPath = "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md";
   const projectionPath = "docs/governance/plan-admission-receipts.json";
+  const pairPath = "docs/test-design/harness/L9-system-test-design.md";
   const originBase = readFileSync(originPath, "utf8");
+  const pairBase = readFileSync(pairPath, "utf8");
+  const pairContent = `${pairBase}\n\n<!-- PLAN-L6-88 redesign verification binding -->\n`;
+  const upstreamPaths = [
+    "docs/plans/PLAN-L3-03-nfr-grade.md",
+    "docs/plans/PLAN-L7-34-tool-adapter-probes.md",
+  ] as const;
+  const upstream = upstreamPaths.map((path, index) => {
+    const content = readFileSync(path, "utf8");
+    return {
+      memberId: `upstream:${index}` as const,
+      path,
+      content,
+      expectedPreimage: { kind: "sha256" as const, digest: `sha256:${sha(content)}` as const },
+    };
+  });
   const parsedOrigin = parseLegacyPlanSource(originBase);
   if (!parsedOrigin) throw new Error("tracked L4-31 fixture invalid");
   const originPlanId = parsedOrigin.planId;
@@ -604,10 +661,48 @@ function realTrackedBundle(): { input: RedesignBundleInput; projection: string }
     ),
     reentry: { targetPlanId: originPlanId, targetRevision: 2, phase: "forward_merge" as const },
     projection: { path: projectionPath, contentDigest: sha(projection) },
+    publication: deriveRedesignPublication({
+      origin: {
+        path: originPath,
+        content: originSource,
+        expectedPreimage: { kind: "sha256", digest: `sha256:${sha(originBase)}` },
+      },
+      replacement: {
+        path: replacementPath,
+        content: replacementSource,
+        expectedPreimage: { kind: "absent" },
+      },
+      projection: {
+        path: projectionPath,
+        content: projection,
+        expectedPreimage: { kind: "sha256", digest: `sha256:${sha(emptyProjection)}` },
+      },
+      pairs: [
+        {
+          memberId: "pair:L9",
+          path: pairPath,
+          content: pairContent,
+          expectedPreimage: { kind: "sha256", digest: `sha256:${sha(pairBase)}` },
+        },
+      ],
+      upstream,
+    }),
   };
   return {
     input: { ...withoutDigest, commandPayloadDigest: redesignBundlePayloadDigest(withoutDigest) },
     projection,
+    originBase,
+    initialProjection: emptyProjection,
+    pairBase,
+    supporting: [
+      {
+        memberId: "pair:L9",
+        path: pairPath,
+        content: pairContent,
+        expectedPreimage: { kind: "sha256", digest: `sha256:${sha(pairBase)}` },
+      },
+      ...upstream,
+    ],
   };
 }
 
@@ -628,6 +723,12 @@ function receiptCommand(input: {
     source: { path: input.sourcePath, content: input.sourceContent },
     projectionPath: input.projectionPath,
   };
+}
+
+function publicationPreimage(input: RedesignBundleInput, memberId: string) {
+  const member = input.publication.members.find((candidate) => candidate.memberId === memberId);
+  if (!member) throw new Error(`publication member missing: ${memberId}`);
+  return member.expectedPreimage;
 }
 
 function receipt(assetId: string, certificateId: string, commandPayloadDigest: `sha256:${string}`) {

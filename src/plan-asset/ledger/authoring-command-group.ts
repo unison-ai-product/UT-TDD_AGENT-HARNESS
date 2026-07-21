@@ -37,6 +37,10 @@ export type AuthoringCommandGroupResult =
     }
   | { readonly ok: false; readonly ruleId: string };
 
+export type AuthoringCommandGroupRollbackResult =
+  | { readonly ok: true; readonly replayed: boolean }
+  | { readonly ok: false; readonly ruleId: string };
+
 /**
  * N成果物publishをSQLite phase journalへ閉じる。外部publisherは同じgroup/member keyを
  * 再送されても同じ結果を返す責務を持ち、process crash後は記録済memberをskipして再開する。
@@ -65,18 +69,25 @@ export class AuthoringCommandGroupJournal {
           continue;
         }
         if (!started.has(member.memberId))
-          this.appendPhase(normalized, "member_started", member.memberId);
+          this.appendPhase(normalized, { kind: "member_started", memberId: member.memberId });
         const receipt = publisher.publish({ ...member, groupId: normalized.groupId });
         if (!validDigest(receipt.receiptDigest))
           throw new Error("publisher-receipt-digest-invalid");
-        this.appendPhase(normalized, "member_published", member.memberId, receipt.receiptDigest);
+        this.appendPhase(normalized, {
+          kind: "member_published",
+          memberId: member.memberId,
+          receiptDigest: receipt.receiptDigest,
+        });
         published.add(member.memberId);
         publisher.acknowledge({ ...member, groupId: normalized.groupId });
       }
-      this.appendPhase(normalized, "committed");
+      this.appendPhase(normalized, { kind: "committed" });
       return { ok: true, replayed: admitted.replayed, publishedMemberIds: [...published] };
     } catch (error) {
-      this.appendPhase(normalized, "recovery_required", undefined, undefined, safeFailure(error));
+      this.appendPhase(normalized, {
+        kind: "recovery_required",
+        failureReason: safeFailure(error),
+      });
       throw error;
     }
   }
@@ -98,6 +109,36 @@ export class AuthoringCommandGroupJournal {
     };
   }
 
+  /** 外部公開前だけcommand groupをterminal rolled_backへ移す。公開済memberはroll-forwardする。 */
+  rollback(input: AuthoringCommandGroupInput, reason: string): AuthoringCommandGroupRollbackResult {
+    const normalized = normalize(input);
+    if (!normalized || !reason.trim())
+      return { ok: false, ruleId: "authoring-command-group-input-invalid" };
+    return new ImmediateLedgerTransaction(this.db).run<AuthoringCommandGroupRollbackResult>(() => {
+      const admitted = this.admitWithinTransaction(normalized);
+      if (!admitted.ok) return { commit: false, value: admitted };
+      if (admitted.committed)
+        return {
+          commit: false,
+          value: { ok: false as const, ruleId: "authoring-command-group-committed" },
+        };
+      if (admitted.rolledBack)
+        return { commit: true, value: { ok: true as const, replayed: true } };
+      if (admitted.published.length > 0)
+        return {
+          commit: false,
+          value: { ok: false as const, ruleId: "authoring-command-group-roll-forward-required" },
+        };
+      const events = phaseEvents(this.db, normalized.groupId);
+      insertPhase(this.db, normalized, {
+        kind: "rolled_back",
+        sequence: events.length + 1,
+        failureReason: safeFailure(new Error(reason)),
+      });
+      return { commit: true, value: { ok: true as const, replayed: false } };
+    });
+  }
+
   private admit(input: NormalizedGroup): Admission {
     return new ImmediateLedgerTransaction(this.db).run<Admission>(() => ({
       commit: true,
@@ -111,7 +152,7 @@ export class AuthoringCommandGroupJournal {
       .get(input.groupId);
     if (!header) {
       insertHeaderAndMembers(this.db, input);
-      insertPhase(this.db, input, "prepared", 1);
+      insertPhase(this.db, input, { kind: "prepared", sequence: 1 });
       return {
         ok: true,
         replayed: false,
@@ -143,17 +184,11 @@ export class AuthoringCommandGroupJournal {
     };
   }
 
-  private appendPhase(
-    input: NormalizedGroup,
-    kind: PhaseKind,
-    memberId?: string,
-    receiptDigest?: string,
-    failureReason?: string,
-  ): void {
+  private appendPhase(input: NormalizedGroup, phase: Omit<PhaseAppend, "sequence">): void {
     new ImmediateLedgerTransaction(this.db).run(() => {
       const events = phaseEvents(this.db, input.groupId);
       if (!eventsValid(events, input)) throw new Error("authoring-command-group-journal-invalid");
-      insertPhase(this.db, input, kind, events.length + 1, memberId, receiptDigest, failureReason);
+      insertPhase(this.db, input, { ...phase, sequence: events.length + 1 });
       return { commit: true, value: undefined };
     });
   }
@@ -166,6 +201,13 @@ type PhaseKind =
   | "committed"
   | "recovery_required"
   | "rolled_back";
+interface PhaseAppend {
+  readonly kind: PhaseKind;
+  readonly sequence: number;
+  readonly memberId?: string;
+  readonly receiptDigest?: string;
+  readonly failureReason?: string;
+}
 type NormalizedGroup = Omit<AuthoringCommandGroupInput, "members"> & {
   readonly members: readonly AuthoringCommandGroupMember[];
   readonly memberSetDigest: string;
@@ -231,29 +273,21 @@ function insertHeaderAndMembers(db: HarnessDb, input: NormalizedGroup): void {
   });
 }
 
-function insertPhase(
-  db: HarnessDb,
-  input: NormalizedGroup,
-  eventKind: PhaseKind,
-  sequence: number,
-  memberId?: string,
-  receiptDigest?: string,
-  failureReason?: string,
-): void {
+function insertPhase(db: HarnessDb, input: NormalizedGroup, phase: PhaseAppend): void {
   const previous = db
     .prepare(
       "SELECT event_digest FROM authoring_command_group_phase_events WHERE group_id = ? ORDER BY sequence DESC LIMIT 1",
     )
     .get(input.groupId);
   const row = {
-    phase_event_id: `authoring-group:${input.groupId}:${sequence}`,
+    phase_event_id: `authoring-group:${input.groupId}:${phase.sequence}`,
     group_id: input.groupId,
-    sequence,
+    sequence: phase.sequence,
     command_payload_digest: input.commandPayloadDigest,
-    event_kind: eventKind,
-    member_id: memberId ?? null,
-    publish_receipt_digest: receiptDigest ?? null,
-    failure_reason: failureReason ?? null,
+    event_kind: phase.kind,
+    member_id: phase.memberId ?? null,
+    publish_receipt_digest: phase.receiptDigest ?? null,
+    failure_reason: phase.failureReason ?? null,
     occurred_at: input.occurredAt,
     previous_event_digest: previous?.event_digest ?? null,
   };

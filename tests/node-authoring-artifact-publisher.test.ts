@@ -37,7 +37,9 @@ describe("Node authoring artifact publisher", () => {
     try {
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       const journal = new AuthoringCommandGroupJournal(db);
-      expect(() => journal.execute(group(artifacts), publisher)).toThrow("fault-after-target-link");
+      expect(() => journal.execute(group(artifacts), publisher)).toThrow(
+        "authoring artifact publish failed",
+      );
       expect(journal.execute(group(artifacts), publisher)).toMatchObject({
         ok: true,
         replayed: true,

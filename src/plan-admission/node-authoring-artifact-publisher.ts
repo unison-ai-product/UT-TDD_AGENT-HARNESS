@@ -70,6 +70,15 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       injectFault: this.injectFault,
       createId: () => tokenId,
     });
+    if (
+      atomic.recoverSingleArtifactPublication({
+        tokenId,
+        path: artifact.path,
+        preimage: artifact.expectedPreimage,
+        postimage: `sha256:${input.contentDigest}`,
+      })
+    )
+      return { receiptDigest: receipt(input) };
     if (targetHasDigest(this.rootDir, artifact.path, input.contentDigest)) {
       atomic.verifySingleArtifactCustody({
         tokenId,
@@ -96,14 +105,15 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
         try {
           atomic.restore(token);
           atomic.dispose(token);
-        } catch (recoveryError) {
-          throw new AggregateError(
+        } catch (recoveryError: unknown) {
+          const recovery = new AggregateError(
             [error, recoveryError],
             "authoring artifact publish recovery failed",
           );
+          throw recovery;
         }
       }
-      throw error;
+      throw new AggregateError([error], "authoring artifact publish failed");
     }
   }
 

@@ -24,10 +24,12 @@ import type {
 
 export type DraftPublisherFaultPoint =
   | "stage:before-write"
+  | "stage:after-write-before-pin"
   | "stage:after-write"
   | "publish:after-backup-rename"
   | "publish:before-preimage-restore"
   | "publish:after-target-link"
+  | "publish:after-target-link-before-pin"
   | "publish:after-target-compensation-remove"
   | "publish:after-target-rename"
   | "restore:before-artifact"
@@ -140,6 +142,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         this.injectFault("stage:before-write", artifact.path);
         writeFileSync(item.temporaryPath, artifact.content, { encoding: "utf8", flag: "wx" });
         syncFile(item.temporaryPath);
+        this.injectFault("stage:after-write-before-pin", artifact.path);
         item.temporaryIdentity = FileIdentity.capture({
           path: item.temporaryPath,
           pinPath: this.identityPinPath(id, artifactIndex, "temporary"),
@@ -212,6 +215,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       item.parentIdentity.assertCurrent(item.logicalPath);
       linkSync(item.temporaryPath, item.targetPath);
       item.targetPublished = true;
+      this.injectFault("publish:after-target-link-before-pin", item.logicalPath);
       item.publishedIdentity = FileIdentity.capture({
         path: item.targetPath,
         pinPath: this.identityPinPath(token.id, item.artifactIndex, "published"),
@@ -441,6 +445,115 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       }
       syncDirectory(dirname(targetPath));
     }
+  }
+
+  /** command-groupの1 memberをprocess再起動後にfinalizeする限定recovery surface。 */
+  recoverSingleArtifactPublication(input: {
+    readonly tokenId: string;
+    readonly path: string;
+    readonly preimage: ArtifactPreimage;
+    readonly postimage: `sha256:${string}`;
+  }): boolean {
+    if (!/^[A-Za-z0-9_-]+$/.test(input.tokenId)) throw new Error("invalid authoring token id");
+    validatePreimage(input.preimage, input.path);
+    validateDigest(input.postimage, "authoring postimage");
+    const targetPath = this.resolveTarget(input.path);
+    const suffix = `.ut-tdd-draft-${input.tokenId}`;
+    const temporaryPath = `${targetPath}${suffix}.tmp`;
+    const rollbackPath = `${targetPath}${suffix}.rollback`;
+    const temporaryPin = this.identityPinPath(input.tokenId, 0, "temporary");
+    const rollbackPin = this.identityPinPath(input.tokenId, 0, "rollback");
+    const publishedPin = this.identityPinPath(input.tokenId, 0, "published");
+    const auxiliaries = [temporaryPath, rollbackPath, temporaryPin, rollbackPin, publishedPin];
+    if (!auxiliaries.some(existsSync)) return false;
+    const parent = DirectoryIdentity.capture(dirname(targetPath), input.path);
+    parent.assertCurrent(input.path);
+    if (existsSync(temporaryPath)) {
+      assertRegularDigest({
+        path: temporaryPath,
+        digest: input.postimage,
+        logicalPath: input.path,
+        role: "temporary",
+      });
+      ensureIdentityPin({
+        source: temporaryPath,
+        pin: temporaryPin,
+        digest: input.postimage,
+        logicalPath: input.path,
+        role: "temporary",
+      });
+    } else if (existsSync(temporaryPin)) {
+      assertRegularDigest({
+        path: temporaryPin,
+        digest: input.postimage,
+        logicalPath: input.path,
+        role: "temporary identity pin",
+      });
+    }
+    if (existsSync(rollbackPath)) {
+      if (input.preimage.kind !== "sha256")
+        throw new Error(`unexpected rollback artifact: ${input.path}`);
+      assertRegularDigest({
+        path: rollbackPath,
+        digest: input.preimage.digest,
+        logicalPath: input.path,
+        role: "rollback",
+      });
+      ensureIdentityPin({
+        source: rollbackPath,
+        pin: rollbackPin,
+        digest: input.preimage.digest,
+        logicalPath: input.path,
+        role: "rollback",
+      });
+    }
+    if (regularDigest(targetPath, input.postimage)) {
+      if (existsSync(temporaryPath) && !sameFile(targetPath, temporaryPath))
+        throw new Error(`artifact target custody mismatch: ${input.path}`);
+      ensureIdentityPin({
+        source: targetPath,
+        pin: publishedPin,
+        digest: input.postimage,
+        logicalPath: input.path,
+        role: "published",
+      });
+      return true;
+    }
+    if (!existsSync(temporaryPath))
+      throw new Error(`artifact recovery temporary missing: ${input.path}`);
+    if (input.preimage.kind === "sha256") {
+      if (existsSync(targetPath)) {
+        assertRegularDigest({
+          path: targetPath,
+          digest: input.preimage.digest,
+          logicalPath: input.path,
+          role: "preimage",
+        });
+        if (!existsSync(rollbackPath)) linkSync(targetPath, rollbackPath);
+        ensureIdentityPin({
+          source: rollbackPath,
+          pin: rollbackPin,
+          digest: input.preimage.digest,
+          logicalPath: input.path,
+          role: "rollback",
+        });
+        rmSync(targetPath);
+      } else if (!existsSync(rollbackPath)) {
+        throw new Error(`artifact recovery preimage custody missing: ${input.path}`);
+      }
+    } else if (existsSync(targetPath)) {
+      throw new Error(`artifact recovery unexpected target: ${input.path}`);
+    }
+    linkSync(temporaryPath, targetPath);
+    ensureIdentityPin({
+      source: targetPath,
+      pin: publishedPin,
+      digest: input.postimage,
+      logicalPath: input.path,
+      role: "published",
+    });
+    syncDirectory(dirname(targetPath));
+    return true;
   }
 
   /** command-groupの1 memberをprocess再起動後にfinalizeする限定recovery surface。 */
@@ -945,6 +1058,37 @@ function removeRecoveryArtifact(input: {
   input.parent.assertCurrent(input.logicalPath);
   if (existsSync(input.path))
     throw new Error(`artifact ${input.role} removal race: ${input.logicalPath}`);
+}
+
+function regularDigest(path: string, digest: `sha256:${string}`): boolean {
+  return existsSync(path) && regularFile(path) && digestEqual(sha256File(path), digest);
+}
+
+function ensureIdentityPin(input: {
+  readonly source: string;
+  readonly pin: string;
+  readonly digest: `sha256:${string}`;
+  readonly logicalPath: string;
+  readonly role: string;
+}): void {
+  if (existsSync(input.pin)) {
+    assertRegularDigest({
+      path: input.pin,
+      digest: input.digest,
+      logicalPath: input.logicalPath,
+      role: `${input.role} identity pin`,
+    });
+    if (!sameFile(input.source, input.pin))
+      throw new Error(`artifact ${input.role} identity pin mismatch: ${input.logicalPath}`);
+    return;
+  }
+  FileIdentity.capture({
+    path: input.source,
+    pinPath: input.pin,
+    digest: input.digest,
+    logicalPath: input.logicalPath,
+    role: input.role,
+  });
 }
 
 function safeSameFile(left: string, right: string): boolean {

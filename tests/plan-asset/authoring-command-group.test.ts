@@ -120,6 +120,31 @@ describe("authoring command group durable journal", () => {
     });
     expect(migratePlanLedger(db)).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
   });
+
+  it("U-PA-GROUP-004B: 外部公開前rollbackだけをterminal化しreplay publishを拒否する", () => {
+    const db = memoryDb();
+    const journal = new AuthoringCommandGroupJournal(db);
+    expect(() =>
+      journal.execute(group(), {
+        publish() {
+          throw new Error("stop-before-first-publish");
+        },
+        acknowledge() {},
+      }),
+    ).toThrow("stop-before-first-publish");
+    expect(journal.rollback(group(), "operator cancelled before publication")).toEqual({
+      ok: true,
+      replayed: false,
+    });
+    expect(journal.rollback(group(), "same cancellation replay")).toEqual({
+      ok: true,
+      replayed: true,
+    });
+    expect(journal.execute(group(), recordingPublisher([]))).toEqual({
+      ok: false,
+      ruleId: "authoring-command-group-rolled-back",
+    });
+  });
 });
 
 function group() {

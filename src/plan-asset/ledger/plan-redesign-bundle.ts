@@ -28,6 +28,95 @@ export interface RedesignBundleInput {
     readonly phase: "forward_merge";
   };
   readonly projection: { readonly path: string; readonly contentDigest: string };
+  readonly publication: DerivedRedesignPublication;
+}
+
+const publicationBrand: unique symbol = Symbol("DerivedRedesignPublication");
+export interface DerivedRedesignPublication {
+  readonly members: readonly AuthoringCommandGroupInput["members"][number][];
+  readonly memberSetDigest: string;
+  readonly [publicationBrand]: true;
+}
+
+type PublicationArtifact = {
+  readonly memberId: string;
+  readonly path: string;
+  readonly content: string;
+  readonly expectedPreimage: AuthoringCommandGroupInput["members"][number]["expectedPreimage"];
+};
+
+export function deriveRedesignPublication(input: {
+  readonly origin: Omit<PublicationArtifact, "memberId">;
+  readonly replacement: Omit<PublicationArtifact, "memberId">;
+  readonly projection: Omit<PublicationArtifact, "memberId">;
+  readonly pairs: readonly (PublicationArtifact & { readonly memberId: `pair:${string}` })[];
+  readonly upstream?: readonly (PublicationArtifact & {
+    readonly memberId: `upstream:${string}`;
+  })[];
+}): DerivedRedesignPublication {
+  const expectedPairs = tracePaths(input.origin.content, "pair_artifact");
+  if (expectedPairs.length === 0) throw new Error("plan-redesign-publication-pair-required");
+  const expectedUpstream = uniqueSorted([
+    ...tracePaths(input.origin.content, "dependencies.requires"),
+    ...tracePaths(input.replacement.content, "dependencies.requires"),
+  ]);
+  assertExactTraceMembers("pair", expectedPairs, input.pairs);
+  assertExactTraceMembers("upstream", expectedUpstream, input.upstream ?? []);
+  const artifacts: PublicationArtifact[] = [
+    { memberId: "origin", ...input.origin },
+    { memberId: "replacement", ...input.replacement },
+    { memberId: "projection", ...input.projection },
+    ...input.pairs,
+    ...(input.upstream ?? []),
+  ];
+  if (new Set(artifacts.map((artifact) => artifact.memberId)).size !== artifacts.length)
+    throw new Error("plan-redesign-publication-member-duplicate");
+  const members = canonicalMembers(
+    artifacts.map((artifact) => ({
+      memberId: artifact.memberId,
+      artifactPath: artifact.path,
+      contentDigest: sha(artifact.content),
+      expectedPreimage: artifact.expectedPreimage,
+    })),
+  );
+  return Object.freeze({
+    members: Object.freeze(members),
+    memberSetDigest: sha(stableJson(members)),
+    [publicationBrand]: true as const,
+  });
+}
+
+function tracePaths(content: string, field: "pair_artifact" | "dependencies.requires"): string[] {
+  const parsed = parseLegacyPlanSource(content);
+  if (!parsed) throw new Error("plan-redesign-publication-source-invalid");
+  if (field === "pair_artifact") {
+    const path = parsed.frontmatter.pair_artifact;
+    return typeof path === "string" && path.startsWith("docs/test-design/") ? [path] : [];
+  }
+  const dependencies = parsed.frontmatter.dependencies;
+  if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) return [];
+  const requires = (dependencies as Record<string, unknown>).requires;
+  if (!Array.isArray(requires)) return [];
+  return uniqueSorted(
+    requires.filter((path): path is string => typeof path === "string" && path.startsWith("docs/")),
+  );
+}
+
+function assertExactTraceMembers(
+  role: "pair" | "upstream",
+  expectedPaths: readonly string[],
+  actual: readonly PublicationArtifact[],
+): void {
+  const actualPaths = uniqueSorted(actual.map((artifact) => artifact.path));
+  if (
+    actualPaths.length !== actual.length ||
+    stableJson(actualPaths) !== stableJson(uniqueSorted(expectedPaths))
+  )
+    throw new Error(`plan-redesign-publication-${role}-closure-invalid`);
+}
+
+function uniqueSorted(values: readonly string[]): string[] {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
 }
 
 export type RedesignBundleResult =
@@ -96,9 +185,14 @@ export class PlanRedesignBundleCoordinator {
    */
   publishDurable(
     input: RedesignBundleInput,
-    group: AuthoringCommandGroupInput,
     publisher: AuthoringArtifactPublisher,
   ): RedesignBundlePublicationResult {
+    const group: AuthoringCommandGroupInput = {
+      groupId: input.commandId,
+      commandPayloadDigest: redesignPublicationPayloadDigest(input, input.publication.members),
+      occurredAt: input.origin.occurredAt,
+      members: input.publication.members,
+    };
     const groupInvalid = validatePublicationGroup(input, group);
     if (groupInvalid) return { ok: false, ruleId: groupInvalid };
     const prepared = this.transaction.run<RedesignBundleResult>(() => {
@@ -151,6 +245,7 @@ function validateBundle(input: RedesignBundleInput): string | undefined {
     !/^[a-f0-9]{64}$/.test(input.projection.contentDigest)
   )
     return "plan-redesign-bundle-reentry-binding-invalid";
+  if (!publicationManifestValid(input)) return "plan-redesign-publication-members-invalid";
   if (
     unprefix(canonicalPlanContentDigest(input.origin.sourceContent)) !==
       input.origin.contentDigest ||
@@ -178,22 +273,9 @@ function validatePublicationGroup(
     group.occurredAt !== input.origin.occurredAt
   )
     return "plan-redesign-publication-binding-invalid";
-  const required = [input.replacement, input.origin];
   if (
-    group.members.length < 3 ||
-    required.some(
-      (artifact) =>
-        !group.members.some(
-          (member) =>
-            member.artifactPath === artifact.sourcePath &&
-            member.contentDigest === sha(artifact.sourceContent),
-        ),
-    ) ||
-    !group.members.some(
-      (member) =>
-        member.artifactPath === input.projection.path &&
-        member.contentDigest === input.projection.contentDigest,
-    )
+    stableJson(canonicalMembers(group.members)) !==
+    stableJson(canonicalMembers(input.publication.members))
   )
     return "plan-redesign-publication-members-invalid";
   return undefined;
@@ -244,8 +326,37 @@ function containsPlanReference(
   planId: string,
 ): boolean {
   if (frontmatter.plan_id === planId) return false;
-  const core = planId.match(/^(PLAN-[A-Z0-9]+-\d+)/)?.[1] ?? planId;
-  return new RegExp(`\\b${core.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(source);
+  const escaped = planId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^A-Za-z0-9_-])${escaped}(?![A-Za-z0-9_-])`, "m").test(source);
+}
+
+function publicationManifestValid(input: RedesignBundleInput): boolean {
+  const expected = new Map([
+    ["origin", [input.origin.sourcePath, sha(input.origin.sourceContent)]],
+    ["replacement", [input.replacement.sourcePath, sha(input.replacement.sourceContent)]],
+    ["projection", [input.projection.path, input.projection.contentDigest]],
+  ] as const);
+  const ids = new Set(input.publication.members.map((member) => member.memberId));
+  return (
+    input.publication[publicationBrand] === true &&
+    input.publication.memberSetDigest ===
+      sha(stableJson(canonicalMembers(input.publication.members))) &&
+    ids.size === input.publication.members.length &&
+    ["origin", "replacement", "projection"].every((id) => ids.has(id)) &&
+    input.publication.members.some((member) => member.memberId.startsWith("pair:")) &&
+    input.publication.members.every((member) => {
+      const binding = expected.get(member.memberId as "origin" | "replacement" | "projection");
+      return member.memberId.startsWith("pair:")
+        ? member.artifactPath.startsWith("docs/test-design/")
+        : member.memberId.startsWith("upstream:")
+          ? member.artifactPath.startsWith("docs/")
+          : binding?.[0] === member.artifactPath && binding[1] === member.contentDigest;
+    })
+  );
+}
+
+function canonicalMembers(members: AuthoringCommandGroupInput["members"]) {
+  return [...members].sort((a, b) => a.memberId.localeCompare(b.memberId));
 }
 
 export function redesignPublicationPayloadDigest(
