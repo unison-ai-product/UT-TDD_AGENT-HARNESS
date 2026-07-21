@@ -63,9 +63,17 @@ export class LegacyPlanRevisionBootstrapTransaction {
     input: BootstrapLegacyPlanRevisionInput,
     onPrepared: (result: Extract<AppendPlanRevisionResult, { ok: true }>) => void,
   ): AppendPlanRevisionResult {
+    return this.transaction.run(() => this.prepare(input, onPrepared));
+  }
+
+  /** Redesign bundleの外側transactionへlossless bootstrap write setを合成する。 */
+  prepare(
+    input: BootstrapLegacyPlanRevisionInput,
+    onPrepared: (result: Extract<AppendPlanRevisionResult, { ok: true }>) => void,
+  ): { readonly commit: boolean; readonly value: AppendPlanRevisionResult } {
     const validated = validateBootstrap(input);
-    if (!validated.ok) return validated;
-    return this.transaction.run(() => {
+    if (!validated.ok) return rejected(validated.ruleId);
+    {
       const replay = this.replay(input, validated);
       if (replay) {
         if (replay.ok) onPrepared(replay);
@@ -93,7 +101,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
       };
       onPrepared(value);
       return { commit: true, value };
-    });
+    }
   }
 
   private hasActiveAlias(planId: string): boolean {

@@ -1,12 +1,18 @@
 import { createHash } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
+import {
+  type BootstrapLegacyPlanRevisionInput,
+  LegacyPlanRevisionBootstrapTransaction,
+} from "./plan-revision-bootstrap.js";
 import type { AppendPlanRevisionInput, AppendPlanRevisionResult } from "./plan-revision-ledger.js";
 import { PlanRevisionLedgerTransaction } from "./plan-revision-ledger.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
 export interface RedesignBundleInput {
   readonly commandId: string;
-  readonly replacement: AppendPlanRevisionInput & { readonly sourceContent: string };
+  readonly replacement:
+    | (AppendPlanRevisionInput & { readonly sourceContent: string })
+    | (BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string });
   readonly origin: AppendPlanRevisionInput & { readonly sourceContent: string };
 }
 
@@ -26,10 +32,12 @@ export type RedesignBundleResult =
 export class PlanRedesignBundleCoordinator {
   private readonly transaction: LedgerTransactionPort;
   private readonly revisions: PlanRevisionLedgerTransaction;
+  private readonly bootstrap: LegacyPlanRevisionBootstrapTransaction;
 
   constructor(db: HarnessDb, transaction?: LedgerTransactionPort) {
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
     this.revisions = new PlanRevisionLedgerTransaction(db, transaction);
+    this.bootstrap = new LegacyPlanRevisionBootstrapTransaction(db, transaction);
   }
 
   transact(
@@ -39,7 +47,9 @@ export class PlanRedesignBundleCoordinator {
     const invalid = validateBundle(input);
     if (invalid) return { ok: false, ruleId: invalid };
     return this.transaction.run<RedesignBundleResult>(() => {
-      const replacement = this.revisions.prepare(input.replacement, () => undefined);
+      const replacement = isBootstrap(input.replacement)
+        ? this.bootstrap.prepare(input.replacement, () => undefined)
+        : this.revisions.prepare(input.replacement, () => undefined);
       if (!replacement.value.ok) return { commit: false, value: replacement.value };
       const origin = this.revisions.prepare(input.origin, () => undefined);
       if (!origin.value.ok) return { commit: false, value: origin.value };
@@ -77,6 +87,12 @@ function validateBundle(input: RedesignBundleInput): string | undefined {
   )
     return "plan-redesign-bundle-source-binding-invalid";
   return undefined;
+}
+
+function isBootstrap(
+  input: RedesignBundleInput["replacement"],
+): input is BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string } {
+  return "identityAlgorithm" in input;
 }
 
 function parseFrontmatter(value: string): Record<string, unknown> | undefined {
