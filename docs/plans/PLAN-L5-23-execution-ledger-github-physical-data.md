@@ -51,7 +51,7 @@ review_evidence:
     green_commands:
       - kind: lint
         command: "bun src/cli.ts plan lint"
-        runner: local
+        runner: bun
         scope: full
         exit_code: 0
         completed_at: "2026-07-21T18:23:35+09:00"
