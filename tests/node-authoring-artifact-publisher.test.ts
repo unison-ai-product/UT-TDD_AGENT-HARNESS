@@ -131,6 +131,47 @@ describe("Node authoring artifact publisher", () => {
     expect(readdirSync(root).filter((name) => name.startsWith(".ut-tdd-draft-"))).toEqual([]);
   });
 
+  it.each([
+    ["stage:after-write-before-pin", false],
+    ["publish:after-target-link-before-pin", false],
+    ["publish:after-backup-rename", true],
+  ] as const)("U-PA-GROUP-007B: crash custody %s をdigest/inodeからroll-forwardする", (faultPoint, withPreimage) => {
+    const root = fixtureRoot();
+    const base = "origin revision 1";
+    const artifact: NodeAuthoringArtifact = {
+      memberId: "origin",
+      path: "docs/plans/PLAN-L4-31.md",
+      content: "origin revision 2",
+      expectedPreimage: withPreimage
+        ? { kind: "sha256", digest: `sha256:${sha(base)}` }
+        : { kind: "absent" },
+    };
+    if (withPreimage) writeFileSync(join(root, artifact.path), base, "utf8");
+    const member = group([artifact]).members[0];
+    if (!member) throw new Error("fixture member missing");
+    const tokenId = `authoring-${sha(`redesign:98\0${member.memberId}`).slice(0, 32)}`;
+    const crashed = new NodeAtomicDraftPublisher({
+      rootDir: root,
+      createId: () => tokenId,
+      injectFault(point) {
+        if (point === faultPoint) throw new Error(`crash:${faultPoint}`);
+      },
+    });
+    expect(() => {
+      const token = crashed.stage([artifact]);
+      crashed.publish(token);
+    }).toThrow(`crash:${faultPoint}`);
+
+    const replay = new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts: [artifact] });
+    expect(replay.publish({ ...member, groupId: "redesign:98" })).toEqual({
+      receiptDigest: sha(
+        `redesign:98\0${member.memberId}\0${member.artifactPath}\0${member.contentDigest}`,
+      ),
+    });
+    replay.acknowledge({ ...member, groupId: "redesign:98" });
+    expect(readFileSync(join(root, artifact.path), "utf8")).toBe(artifact.content);
+  });
+
   it("U-PA-GROUP-008: target postimage単独一致をcustodyのない成功へ昇格しない", () => {
     const root = fixtureRoot();
     const [artifact] = artifactsFor();
