@@ -4,7 +4,7 @@ title: "PLAN-L7-453 (troubleshoot): snapshot runner の root 実行 fail-fast �
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-21
@@ -33,7 +33,25 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
-review_evidence: []
+review_evidence:
+  - reviewer: blind-reviewer
+    review_kind: cross_provider
+    reviewed_at: "2026-07-21T12:20:00+09:00"
+    tests_green_at: "2026-07-21T11:55:00+09:00"
+    verdict: approve
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    scope: "HEAD bb61d9c1 (assertNotRoot guard + U-TESTHYGIENE-048〜051 + 本 PLAN) を `ut-tdd codex --role blind-reviewer` (gpt-5.6-sol) が再 blind review。前回 FLAG の解除条件 3 点 — (1) win32 記述が sealReference 実装 (attrib/icacls ACL 拒否) と整合、(2) runSnapshotTests entrypoint 経路の uid=0 fail-fast が副作用ゼロ (tmpdir に ut-tdd-vitest-* 新規生成なし) でテスト実測、(3) AC が実測根拠を引用 — を独立検証し全解消、対象テスト独立再実行 17 passed / 17 で判定 PASS (未反駁 attack なし)。"
+    green_commands:
+      - kind: unit_test
+        command: "UT_TDD_TEST_EXECUTION_ROOT/UT_TDD_TEST_FENCE_ROOT/UT_TDD_HEAD_SNAPSHOT_ROOT を worktree に固定した bun x vitest run tests/vitest-snapshot-runner.test.ts (17 tests: 既存 13 + U-TESTHYGIENE-048〜051)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-21T11:55:00+09:00"
+        evidence_path: tests/vitest-snapshot-runner.test.ts
+        output_digest: "sha256:28adf612970eb0f540e92883e7777ce22b6f9f3c82c947c7872f4b6aa0733c58"
+        anchor_commit: bb61d9c15449e0f6246764e0e609b16f573602f8
 ---
 
 # PLAN-L7-453 (troubleshoot): snapshot runner の root 実行 fail-fast
@@ -132,5 +150,5 @@ Docker CI / devcontainer で root 実行すると、suite 実行中の reference
       再実測し一致を確認 (詳細は最終報告)。**commit 後に正規経路
       (`bun scripts/run-vitest-snapshot.ts`) での再確認が必要** — orchestrator
       による commit 後、同コマンドを再実行して 17 tests green を確認すること。
-      review_evidence (cross-provider review) は本 slice では未実施につき
-      空のまま維持する。
+      review_evidence: gpt-5.6-sol blind review (初回 FLAG → 是正 → 再 review
+      PASS、2026-07-21) を frontmatter に記録済み。
