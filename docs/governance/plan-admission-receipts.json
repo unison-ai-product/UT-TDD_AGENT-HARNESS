@@ -48,6 +48,22 @@
         "revision": 3,
         "content_digest": "sha256:26bd013bec8ac2eafaa99eed4249e5563fd61fd61eab6d15294d6c2e9467132a"
       }
+    },
+    {
+      "sequence": 4,
+      "previous_record_digest": "sha256:cc1e6fe4d4af3e596af4cdf1fb37548264d58d7b0571e19f0086714d6a49997b",
+      "record_digest": "sha256:43011c7b95f5e379e1be02b0a60d23018834f479db3d8c178190ed4c053ba417",
+      "command_id": "plan-recovery-16-20260721-06",
+      "receipt_id": "certificate:93029b042ddb1305cc70c0b052c039b0",
+      "receipt_digest": "sha256:8d7dece601e51fed83ac467b8635e24d58d4261253ef7845bacac4ab23ec8b59",
+      "decision_digest": "sha256:97cbac8dcd8fb77fc587b2289f4ba38c3a51c54fdf342b26096119435fe1015c",
+      "binding": {
+        "path": "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
+        "plan_id": "PLAN-RECOVERY-16-plan-revision-authoring",
+        "asset_id": "plan:890b18d79d85d8d7cc2591c7146af5e2",
+        "revision": 4,
+        "content_digest": "sha256:b340b78c60703d253810e8ebdd41dcc3531a00bc617b2b76565e3d09c0e0032e"
+      }
     }
   ]
 }

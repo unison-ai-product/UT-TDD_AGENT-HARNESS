@@ -7,7 +7,7 @@ drive: agent
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-07-21
 owner: PO / TL
 backprop_decision: required
 backprop_decision_reason: Redesign supersessionとplan admissionを同時に満たすrevision
@@ -57,23 +57,59 @@ dependencies:
     - docs/plans/PLAN-L7-441-plan-draft-recovery-convergence.md
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
     - docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: claude-cross-reviewer
+    review_kind: cross_agent
+    reviewed_at: 2026-07-21T11:40:00+09:00
+    tests_green_at: 2026-07-21T11:38:17+09:00
+    verdict: approve
+    scope: "PR #103 HEAD dfddefeb の独立cross-review PASS。stale base/replay
+      binding、artifact identity、通常例外rollback、Windows/Linux差異を攻撃し、未反駁attack 0。CI
+      run 29796108885でLinux全回帰、Windows scoped回帰、両OS doctor、aggregate
+      gateがGreen。"
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: integration_test
+        command: "GitHub Actions harness-check-linux: bun run test"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: 2026-07-21T11:38:13+09:00
+        evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/29796108885/job/88527660556
+        output_digest: sha256:aab28f05dad284d803c0d101faa12e2acb34d226940e5441c6c3abb77dcf9859
+      - kind: integration_test
+        command: "GitHub Actions harness-check-windows: bun run test:windows"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-21T11:36:16+09:00
+        evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/29796108885/job/88527660496
+        output_digest: sha256:aab28f05dad284d803c0d101faa12e2acb34d226940e5441c6c3abb77dcf9859
+      - kind: integration_test
+        command: "GitHub Actions harness-check: require Linux and Windows success"
+        runner: ci
+        scope: gate
+        exit_code: 0
+        completed_at: 2026-07-21T11:38:17+09:00
+        evidence_path: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/29796108885/job/88528379352
+        output_digest: sha256:aab28f05dad284d803c0d101faa12e2acb34d226940e5441c6c3abb77dcf9859
+status: confirmed
 github_issue_id: 102
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:bd4aa388b26e66499896845b2ee8fc08
-  command_id: plan-recovery-16-20260721-05
-  admitted_at: 2026-07-21T11:30:00.000+09:00
-  source_digest: sha256:26bd013bec8ac2eafaa99eed4249e5563fd61fd61eab6d15294d6c2e9467132a
-  decision_digest: sha256:0efc93ef88ad7ea536d8e8583cadc60ea7c3fea1415ed2d4c817646e537223f9
-  receipt_digest: sha256:592e2bfb726878e5e7e5d77aee016cbcbf78c52e990a1bc0a74a0ea7dcbdf46a
+  receipt_id: certificate:93029b042ddb1305cc70c0b052c039b0
+  command_id: plan-recovery-16-20260721-06
+  admitted_at: 2026-07-21T12:05:00+09:00
+  source_digest: sha256:b340b78c60703d253810e8ebdd41dcc3531a00bc617b2b76565e3d09c0e0032e
+  decision_digest: sha256:97cbac8dcd8fb77fc587b2289f4ba38c3a51c54fdf342b26096119435fe1015c
+  receipt_digest: sha256:8d7dece601e51fed83ac467b8635e24d58d4261253ef7845bacac4ab23ec8b59
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:890b18d79d85d8d7cc2591c7146af5e2
-    revision: 3
-    content_digest: sha256:26bd013bec8ac2eafaa99eed4249e5563fd61fd61eab6d15294d6c2e9467132a
+    revision: 4
+    content_digest: sha256:b340b78c60703d253810e8ebdd41dcc3531a00bc617b2b76565e3d09c0e0032e
   route:
     signal: regression_dev
     mode: recovery
@@ -90,8 +126,8 @@ admission_receipt:
     target_plan_id: PLAN-L6-86-drive-plan-admission-contract
     target_revision: 2
     phase: forward_merge
-  escape_reason: "Issue #102 reproduces a missing revision authoring path that
-    makes redesign admission and supersession mutually unsatisfiable"
+  escape_reason: "Issue #102 reproduced a missing revision authoring path; PR #103
+    restored it and this revision binds its acceptance evidence"
 ---
 
 # PLAN-RECOVERY-16: legacy PLAN revision authoring recovery
