@@ -36,6 +36,16 @@ export type AppendPlanRevisionResult =
     }
   | { readonly ok: false; readonly ruleId: string };
 
+const redesignGroupCapabilityBrand: unique symbol = Symbol("RedesignRevisionGroupCapability");
+export interface RedesignRevisionGroupCapability {
+  readonly [redesignGroupCapabilityBrand]: true;
+}
+
+/** redesign revisionはexact-N command groupだけが発行できる。 */
+export function redesignRevisionGroupCapability(): RedesignRevisionGroupCapability {
+  return Object.freeze({ [redesignGroupCapabilityBrand]: true as const });
+}
+
 /** Adopt済みPLAN assetのrevisionを、command receiptと同じtransactionで追記する。 */
 export class PlanRevisionLedgerTransaction {
   private readonly transaction: LedgerTransactionPort;
@@ -49,6 +59,8 @@ export class PlanRevisionLedgerTransaction {
   }
 
   append(input: AppendPlanRevisionInput): AppendPlanRevisionResult {
+    if (isRedesignPayload(input.canonicalPayloadJson))
+      return { ok: false, ruleId: "plan-redesign-command-group-required" };
     return this.transact(input, () => undefined);
   }
 
@@ -56,6 +68,8 @@ export class PlanRevisionLedgerTransaction {
     input: AppendPlanRevisionInput,
     onPrepared: (result: Extract<AppendPlanRevisionResult, { ok: true }>) => void,
   ): AppendPlanRevisionResult {
+    if (isRedesignPayload(input.canonicalPayloadJson))
+      return { ok: false, ruleId: "plan-redesign-command-group-required" };
     const validated = validate(input);
     if (!validated.ok) return validated;
 
@@ -66,7 +80,13 @@ export class PlanRevisionLedgerTransaction {
   prepare(
     input: AppendPlanRevisionInput,
     onPrepared: (result: Extract<AppendPlanRevisionResult, { ok: true }>) => void,
+    groupCapability?: RedesignRevisionGroupCapability,
   ): { readonly commit: boolean; readonly value: AppendPlanRevisionResult } {
+    if (
+      isRedesignPayload(input.canonicalPayloadJson) &&
+      groupCapability?.[redesignGroupCapabilityBrand] !== true
+    )
+      return rejected("plan-redesign-command-group-required");
     const validated = validate(input);
     if (!validated.ok) return rejected(validated.ruleId);
     {
@@ -194,6 +214,15 @@ export class PlanRevisionLedgerTransaction {
       onPrepared(value);
       return { commit: true, value };
     }
+  }
+}
+
+function isRedesignPayload(canonicalPayloadJson: string): boolean {
+  try {
+    const payload = JSON.parse(canonicalPayloadJson) as Record<string, unknown>;
+    return payload.route_mode === "redesign" || payload.kind === "redesign";
+  } catch {
+    return false;
   }
 }
 

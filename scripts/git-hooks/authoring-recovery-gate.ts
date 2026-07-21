@@ -6,7 +6,7 @@ const db = openPlanLedger({ repoRoot });
 try {
   const migration = migratePlanLedger(db);
   if (!migration.ok) throw new Error(migration.ruleId);
-  assertNoUnresolvedAuthoringRecovery(db);
+  assertNoUnresolvedAuthoringRecovery(db, repoRoot);
 } catch (error) {
   const detail = error instanceof Error ? error.message : "unknown";
   process.stderr.write(`[ut-tdd authoring-recovery] fail-close: ${detail}\n`);

@@ -23,7 +23,10 @@ import {
   type RedesignBundleInput,
   redesignBundlePayloadDigest,
 } from "../../src/plan-asset/ledger/plan-redesign-bundle.js";
-import type { AppendPlanRevisionInput } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
+import {
+  type AppendPlanRevisionInput,
+  PlanRevisionLedgerTransaction,
+} from "../../src/plan-asset/ledger/plan-revision-ledger.js";
 import { committedRevisionPredicate } from "../../src/plan-asset/ledger/revision-visibility.js";
 import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
@@ -82,6 +85,45 @@ describe("Redesign bundle coordinator", () => {
       replayed: false,
     });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
+  });
+
+  it("U-PA-REDESIGN-002E: crash replayでDB write-setが0ならexact-Nをrollbackしてterminal化する", () => {
+    const { db } = fixture();
+    const input = bundle();
+    const crashed = new PlanRedesignBundleCoordinator(db, undefined, (point) => {
+      if (point === "F0:after-intent") throw new Error("crash-after-intent");
+    });
+    expect(() => crashed.publishDurable(input, memoryPublisher())).toThrow("crash-after-intent");
+    let restored = 0;
+    const result = new PlanRedesignBundleCoordinator(db).publishDurable(input, {
+      ...memoryPublisher(),
+      rollback(members) {
+        restored = members.length;
+      },
+    });
+    expect(result).toEqual({ ok: false, ruleId: "plan-redesign-publication-rolled-back" });
+    expect(restored).toBe(input.publication.members.length);
+    expect(Number(db.prepare("SELECT COUNT(*) n FROM append_command_receipts").get()?.n)).toBe(0);
+    expect(
+      Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_revision_bindings").get()?.n),
+    ).toBe(0);
+    expect(
+      db
+        .prepare(
+          "SELECT event_kind FROM authoring_command_group_phase_events ORDER BY sequence DESC LIMIT 1",
+        )
+        .get(),
+    ).toEqual({ event_kind: "rolled_back" });
+  });
+
+  it("U-PA-REDESIGN-002F: redesign revisionの低位API発行をgroup capabilityなしで拒否する", () => {
+    const { db } = fixture();
+    const input = bundle().replacement;
+    if ("identityAlgorithm" in input) throw new Error("expected adopted replacement fixture");
+    expect(new PlanRevisionLedgerTransaction(db).append(input)).toEqual({
+      ok: false,
+      ruleId: "plan-redesign-command-group-required",
+    });
   });
 
   it("U-PA-REDESIGN-002D: receiptありfaultはrollbackせず同bindingをroll-forwardする", () => {

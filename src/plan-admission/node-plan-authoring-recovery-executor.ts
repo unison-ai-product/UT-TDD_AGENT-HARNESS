@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { ledgerRowDigest } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
+import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
 import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
 
 type Strategy = "rollback" | "roll_forward" | "finalize";
@@ -34,15 +35,29 @@ export class NodePlanAuthoringRecoveryExecutor {
         throw new Error("plan-recovery-strategy-ineligible");
       const publisher = new NodeAtomicDraftPublisher({ rootDir: this.repoRoot });
       if (input.strategy === "rollback") {
-        if (snapshot.published.size !== 0) throw new Error("plan-recovery-roll-forward-required");
+        if (snapshot.evidenceLane !== "zero") throw new Error("plan-recovery-db-evidence-present");
         for (const artifact of snapshot.artifacts) {
-          restore(this.repoRoot, artifact);
+          publisher.restoreSingleArtifactPublication(artifactCapability(artifact));
           this.injectFault("after-artifact-mutation");
         }
-        for (const artifact of snapshot.artifacts) verifyRestored(this.repoRoot, artifact);
         appendRecoveryEvidence(db, snapshot, "restore");
         appendTerminal(db, snapshot, "rolled_back");
         const result = { state: "rolled_back" as const, strategy: input.strategy };
+        db.exec("COMMIT");
+        return result;
+      }
+      if (snapshot.evidenceLane !== "complete")
+        throw new Error("plan-recovery-db-evidence-incomplete");
+      const alreadyFinalized = snapshot.artifacts.every(
+        (artifact) =>
+          digestMatches(safe(this.repoRoot, artifact.targetPath), artifact.postimage) &&
+          auxiliaryPaths(artifact).every((path) => !existsSync(safe(this.repoRoot, path))),
+      );
+      if (alreadyFinalized) {
+        if (input.strategy !== "finalize") throw new Error("plan-recovery-strategy-ineligible");
+        appendRecoveryEvidence(db, snapshot, "finalize");
+        appendPublishedAndCommitted(db, snapshot);
+        const result = { state: "committed" as const, strategy: input.strategy };
         db.exec("COMMIT");
         return result;
       }
@@ -96,6 +111,7 @@ type Snapshot = {
   lastEventDigest: string;
   lastSequence: number;
   started: Set<string>;
+  evidenceLane: "zero" | "complete";
 };
 
 function loadSnapshot(db: HarnessDb, commandId: string): Snapshot {
@@ -141,6 +157,7 @@ function loadSnapshot(db: HarnessDb, commandId: string): Snapshot {
   if (artifacts.length === 0) throw new Error("plan-recovery-command-corrupt");
   const last = phase.at(-1);
   if (!last) throw new Error("plan-recovery-command-corrupt");
+  const evidenceLane = inspectAuthoringRecoveryDbEvidence(db, commandId);
   return {
     commandId,
     commandPayloadDigest: String(row.command_payload_digest),
@@ -158,6 +175,7 @@ function loadSnapshot(db: HarnessDb, commandId: string): Snapshot {
     ),
     lastEventDigest: String(last.event_digest),
     lastSequence: Number(last.sequence),
+    evidenceLane,
   };
 }
 
@@ -169,53 +187,15 @@ function artifactCapability(artifact: Artifact) {
     postimage: artifact.postimage,
   };
 }
+
 function tokenId(pinPath: string): string {
   const match = pinPath.match(/\.ut-tdd-draft-([A-Za-z0-9_-]+)-0-published\.identity$/);
   if (!match?.[1]) throw new Error("plan-recovery-pin-invalid");
   return match[1];
 }
-function restore(root: string, artifact: Artifact): void {
-  const target = safe(root, artifact.targetPath);
-  const rollback = safe(root, artifact.rollbackPath);
-  if (artifact.preimage.kind === "absent") {
-    if (existsSync(target)) {
-      assertDigest(target, artifact.postimage);
-      assertSameIdentity(target, safe(root, artifact.publishedPinPath));
-    }
-    rmSync(target, { force: true });
-  } else {
-    if (
-      existsSync(target) &&
-      digestMatches(target, artifact.preimage.digest) &&
-      !existsSync(rollback)
-    ) {
-      removeAux(root, artifact);
-      return;
-    }
-    assertDigest(rollback, artifact.preimage.digest);
-    assertSameIdentity(
-      rollback,
-      safe(root, artifact.publishedPinPath.replace("published.identity", "rollback.identity")),
-    );
-    if (existsSync(target)) assertDigest(target, artifact.postimage);
-    rmSync(target, { force: true });
-    renameSync(rollback, target);
-  }
-  removeAux(root, artifact);
-}
-function verifyRestored(root: string, artifact: Artifact): void {
-  const target = safe(root, artifact.targetPath);
-  if (artifact.preimage.kind === "absent") {
-    if (existsSync(target)) throw new Error("plan-recovery-restore-mismatch");
-  } else assertDigest(target, artifact.preimage.digest);
-  assertAuxZero(root, artifact);
-}
 function verifyFinalized(root: string, artifact: Artifact): void {
   assertDigest(safe(root, artifact.targetPath), artifact.postimage);
   assertAuxZero(root, artifact);
-}
-function removeAux(root: string, artifact: Artifact): void {
-  for (const path of auxiliaryPaths(artifact)) rmSync(safe(root, path), { force: true });
 }
 function assertAuxZero(root: string, artifact: Artifact): void {
   if (auxiliaryPaths(artifact).some((path) => existsSync(safe(root, path))))
@@ -248,13 +228,6 @@ function digestMatches(path: string, digest: string): boolean {
     `sha256:${sha(readFileSync(path))}` === digest
   );
 }
-function assertSameIdentity(left: string, right: string): void {
-  if (!existsSync(left) || !existsSync(right)) throw new Error("plan-recovery-identity-missing");
-  const a = lstatSync(left);
-  const b = lstatSync(right);
-  if (a.dev !== b.dev || a.ino !== b.ino) throw new Error("plan-recovery-identity-mismatch");
-}
-
 function appendRecoveryEvidence(
   db: HarnessDb,
   snapshot: Snapshot,

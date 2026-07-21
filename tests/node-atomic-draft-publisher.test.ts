@@ -493,6 +493,28 @@ describe("NodeAtomicDraftPublisher", () => {
     expect(() => f.publisher.dispose(token)).not.toThrow();
     expect(() => f.publisher.publish(token)).toThrow(/未知または別publisher/);
   });
+
+  it("U-PADM-070: process再起動後の単一artifact restoreをDirectoryIdentity CASで閉じる", () => {
+    const f = fixture();
+    const artifact = f.artifacts[0];
+    if (!artifact) throw new Error("fixture artifact missing");
+    const token = f.publisher.stage([artifact]);
+    f.publisher.publish(token);
+
+    new NodeAtomicDraftPublisher({ rootDir: f.root }).restoreSingleArtifactPublication({
+      tokenId: token.id,
+      path: artifact.path,
+      preimage: preimage("old-source"),
+      postimage: preimage("new-source").digest,
+    });
+
+    expect(readFileSync(join(f.root, artifact.path), "utf8")).toBe("old-source");
+    expect(
+      readdirSync(f.root, { recursive: true })
+        .map(String)
+        .filter((path) => path.includes(token.id)),
+    ).toEqual([]);
+  });
 });
 
 function preimage(content: string) {

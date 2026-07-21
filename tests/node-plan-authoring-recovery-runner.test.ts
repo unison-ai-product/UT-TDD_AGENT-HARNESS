@@ -5,9 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { inspectAuthoringRecoveryDbEvidence } from "../src/plan-admission/authoring-recovery-db-evidence.js";
 import { NodePlanAuthoringRecoveryRunner } from "../src/plan-admission/node-plan-authoring-recovery-runner.js";
 import { AuthoringCommandGroupJournal } from "../src/plan-asset/ledger/authoring-command-group.js";
 import { migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
+import type { HarnessDb } from "../src/state-db/index.js";
 import { openHarnessDb } from "../src/state-db/index.js";
 
 const roots: string[] = [];
@@ -16,6 +18,35 @@ afterEach(() => {
 });
 
 describe("NodePlanAuthoringRecoveryRunner", () => {
+  it("件数だけ揃った異物DB証拠をcompleteに昇格しない", () => {
+    const rows = {
+      append_command_receipts: [
+        { command_id: "group:origin", plan_asset_id: "asset:1", plan_revision: 1 },
+        { command_id: "group:replacement", plan_asset_id: "asset:2", plan_revision: 1 },
+      ],
+      plan_admission_receipts: [
+        { command_id: "group:origin", plan_asset_id: "asset:1", plan_revision: 1 },
+        { command_id: "group:replacement", plan_asset_id: "asset:2", plan_revision: 1 },
+      ],
+      authoring_command_revision_bindings: [
+        { asset_id: "asset:1", revision: 1, artifact_role: "origin" },
+        { asset_id: "asset:2", revision: 1, artifact_role: "origin" },
+      ],
+    };
+    const db = {
+      prepare(sql: string) {
+        const table = Object.keys(rows).find((name) => sql.includes(name));
+        return {
+          all: () => (table ? rows[table as keyof typeof rows] : []),
+          get: () => ({}),
+        };
+      },
+    } as unknown as HarnessDb;
+    expect(() => inspectAuthoringRecoveryDbEvidence(db, "group")).toThrow(
+      "plan-recovery-db-evidence-mismatch",
+    );
+  });
+
   it("statusをclean=0/unresolved=2/corrupt=3へ分類する", () => {
     const fixture = recoveryFixture();
     expect(fixture.runner.status("missing")).toMatchObject({ state: "corrupt", exitCode: 3 });
@@ -30,33 +61,33 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     ).toMatchObject({ state: "corrupt", exitCode: 3, error: "ledger-corrupt" });
   });
 
-  it("dry-runを既定にし、digest+fence再照合後にroll-forwardを実行する", () => {
+  it("DB evidence 0件はdry-run後に全N rollbackする", () => {
     const fixture = recoveryFixture();
     const status = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
     expect(
       fixture.runner.recover({
         commandId: fixture.groupId,
-        strategy: "roll_forward",
+        strategy: "rollback",
         execute: false,
       }),
     ).toMatchObject({ dry_run: true });
     expect(() =>
       fixture.runner.recover({
         commandId: fixture.groupId,
-        strategy: "roll_forward",
+        strategy: "rollback",
         execute: true,
       }),
     ).toThrow("plan-recovery-assessment-required");
     expect(
       fixture.runner.recover({
         commandId: fixture.groupId,
-        strategy: "roll_forward",
+        strategy: "rollback",
         expectedAssessmentDigest: String(status.assessment_digest),
         execute: true,
       }),
-    ).toEqual({ state: "committed", strategy: "roll_forward", dry_run: false });
+    ).toEqual({ state: "rolled_back", strategy: "rollback", dry_run: false });
     expect(fixture.runner.status(fixture.groupId)).toMatchObject({
-      state: "committed",
+      state: "rolled_back",
       exitCode: 0,
     });
   });
@@ -77,7 +108,7 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     const dbUrl = pathToFileURL(join(process.cwd(), "src/state-db/index.ts")).href;
     const command = {
       commandId: fixture.groupId,
-      strategy: "roll_forward",
+      strategy: "rollback",
       expectedAssessmentDigest: status.assessment_digest,
       expectedFencingToken: status.fencing_token,
     };
@@ -95,11 +126,11 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     expect(
       fixture.runner.recover({
         commandId: fixture.groupId,
-        strategy: "roll_forward",
+        strategy: "rollback",
         expectedAssessmentDigest: String(status.assessment_digest),
         execute: true,
       }),
-    ).toMatchObject({ state: "committed" });
+    ).toMatchObject({ state: "rolled_back" });
   });
 });
 

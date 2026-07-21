@@ -556,6 +556,76 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     return true;
   }
 
+  /** DirectoryIdentity CASを再利用し、単一memberをpreimageへ安全に復元する。 */
+  restoreSingleArtifactPublication(input: {
+    readonly tokenId: string;
+    readonly path: string;
+    readonly preimage: ArtifactPreimage;
+    readonly postimage: `sha256:${string}`;
+  }): void {
+    if (!/^[A-Za-z0-9_-]+$/.test(input.tokenId)) throw new Error("invalid authoring token id");
+    validatePreimage(input.preimage, input.path);
+    validateDigest(input.postimage, "authoring postimage");
+    const targetPath = this.resolveTarget(input.path);
+    const suffix = `.ut-tdd-draft-${input.tokenId}`;
+    const temporaryPath = `${targetPath}${suffix}.tmp`;
+    const rollbackPath = `${targetPath}${suffix}.rollback`;
+    const parent = DirectoryIdentity.capture(dirname(targetPath), input.path);
+    parent.assertCurrent(input.path);
+    if (regularDigest(targetPath, input.postimage)) {
+      rmSync(targetPath);
+      parent.assertCurrent(input.path);
+    }
+    if (input.preimage.kind === "sha256") {
+      if (existsSync(rollbackPath)) {
+        assertRegularDigest({
+          path: rollbackPath,
+          digest: input.preimage.digest,
+          logicalPath: input.path,
+          role: "rollback",
+        });
+        linkSync(rollbackPath, targetPath);
+      } else {
+        assertRegularDigest({
+          path: targetPath,
+          digest: input.preimage.digest,
+          logicalPath: input.path,
+          role: "preimage",
+        });
+      }
+    } else if (existsSync(targetPath)) {
+      throw new Error(`artifact rollback unexpected target: ${input.path}`);
+    }
+    removeRecoveryArtifact({
+      path: temporaryPath,
+      expected: input.postimage,
+      logicalPath: input.path,
+      role: "temporary",
+      parent,
+    });
+    if (existsSync(rollbackPath) && input.preimage.kind === "sha256")
+      removeRecoveryArtifact({
+        path: rollbackPath,
+        expected: input.preimage.digest,
+        logicalPath: input.path,
+        role: "rollback",
+        parent,
+      });
+    for (const [role, digest] of [
+      ["temporary", input.postimage],
+      ["published", input.postimage],
+      ...(input.preimage.kind === "sha256" ? [["rollback", input.preimage.digest] as const] : []),
+    ] as const)
+      removeRecoveryArtifact({
+        path: this.identityPinPath(input.tokenId, 0, role),
+        expected: digest,
+        logicalPath: input.path,
+        role: `${role} identity pin`,
+        parent,
+      });
+    syncDirectory(dirname(targetPath));
+  }
+
   /** command-groupの1 memberをprocess再起動後にfinalizeする限定recovery surface。 */
   verifySingleArtifactCustody(input: {
     readonly tokenId: string;

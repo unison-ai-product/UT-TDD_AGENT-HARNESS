@@ -15,7 +15,10 @@ import {
   LegacyPlanRevisionBootstrapTransaction,
 } from "./plan-revision-bootstrap.js";
 import type { AppendPlanRevisionInput, AppendPlanRevisionResult } from "./plan-revision-ledger.js";
-import { PlanRevisionLedgerTransaction } from "./plan-revision-ledger.js";
+import {
+  PlanRevisionLedgerTransaction,
+  redesignRevisionGroupCapability,
+} from "./plan-revision-ledger.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
 export interface RedesignBundleInput {
@@ -223,9 +226,17 @@ export class PlanRedesignBundleCoordinator {
   } {
     const replacement = isBootstrap(input.replacement)
       ? this.bootstrap.prepare(input.replacement, () => undefined)
-      : this.revisions.prepare(input.replacement, () => undefined);
+      : this.revisions.prepare(
+          input.replacement,
+          () => undefined,
+          redesignRevisionGroupCapability(),
+        );
     if (!replacement.value.ok) return { commit: false, value: replacement.value };
-    const origin = this.revisions.prepare(input.origin, () => undefined);
+    const origin = this.revisions.prepare(
+      input.origin,
+      () => undefined,
+      redesignRevisionGroupCapability(),
+    );
     if (!origin.value.ok) return { commit: false, value: origin.value };
     const value = {
       ok: true as const,
@@ -268,7 +279,7 @@ export class PlanRedesignBundleCoordinator {
       operation: {
         repositoryIdentity: input.repositoryIdentity,
         baseCommit: input.origin.sourceCommit,
-        revisionBindings: [],
+        revisionBindings,
       },
     };
     const groupInvalid = validatePublicationGroup(input, group);
@@ -279,8 +290,29 @@ export class PlanRedesignBundleCoordinator {
     });
     if (!intent.ok) return intent;
     this.injectFault("F0:after-intent");
+    if (intent.replayed && intent.publishedMemberIds.length < group.members.length) {
+      const evidence = redesignEvidenceState(this.db, input, revisionBindings);
+      if (evidence === "partial")
+        return { ok: false, ruleId: "plan-redesign-recovery-evidence-corrupt" };
+      if (evidence === "none") {
+        if (!publisher.rollback)
+          return { ok: false, ruleId: "plan-redesign-recovery-rollback-required" };
+        publisher.rollback(group.members.map((member) => ({ ...member, groupId: group.groupId })));
+        this.transaction.run(() => {
+          this.groups.appendTerminalWithinTransaction(group, "rolled_back", "db-uow-absent");
+          return { commit: true, value: undefined };
+        });
+        return { ok: false, ruleId: "plan-redesign-publication-rolled-back" };
+      }
+    }
     if (intent.publishedMemberIds.length === group.members.length) {
-      const replay = this.transaction.run<RedesignBundleResult>(() => this.prepareRevisions(input));
+      const replay = this.transaction.run<RedesignBundleResult>(() => {
+        const prepared = this.prepareRevisions(input);
+        if (!prepared.value.ok) return prepared;
+        this.groups.bindRevisionsWithinTransaction(group, revisionBindings);
+        this.groups.appendTerminalWithinTransaction(group, "committed");
+        return prepared;
+      });
       if (!replay.ok) return replay;
       for (const member of group.members)
         publisher.acknowledge({ ...member, groupId: group.groupId });
@@ -352,6 +384,41 @@ export class PlanRedesignBundleCoordinator {
       throw error;
     }
   }
+}
+
+function redesignEvidenceState(
+  db: HarnessDb,
+  input: RedesignBundleInput,
+  bindings: readonly {
+    readonly assetId: string;
+    readonly revision: number;
+    readonly artifactRole: string;
+  }[],
+): "none" | "complete" | "partial" {
+  const commands = [input.origin.commandId, input.replacement.commandId];
+  const counts = {
+    revisions: bindings.filter((binding) =>
+      db
+        .prepare("SELECT 1 FROM plan_revisions WHERE asset_id = ? AND revision = ?")
+        .get(binding.assetId, binding.revision),
+    ).length,
+    bindings: bindings.filter((binding) =>
+      db
+        .prepare(
+          "SELECT 1 FROM authoring_command_revision_bindings WHERE group_id = ? AND asset_id = ? AND revision = ? AND artifact_role = ?",
+        )
+        .get(input.commandId, binding.assetId, binding.revision, binding.artifactRole),
+    ).length,
+    appends: commands.filter((command) =>
+      db.prepare("SELECT 1 FROM append_command_receipts WHERE command_id = ?").get(command),
+    ).length,
+    admissions: commands.filter((command) =>
+      db.prepare("SELECT 1 FROM plan_admission_receipts WHERE command_id = ?").get(command),
+    ).length,
+  };
+  const total = counts.revisions + counts.bindings + counts.appends + counts.admissions;
+  if (total === 0) return "none";
+  return Object.values(counts).every((count) => count === bindings.length) ? "complete" : "partial";
 }
 
 function validateBundle(input: RedesignBundleInput): string | undefined {

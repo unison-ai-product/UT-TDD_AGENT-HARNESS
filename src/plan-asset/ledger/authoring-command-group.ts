@@ -213,6 +213,10 @@ export class AuthoringCommandGroupJournal {
     const events = phaseEvents(this.db, normalized.groupId);
     if (!eventsValid(events, normalized))
       throw new Error("authoring-command-group-journal-invalid");
+    const terminal = events.at(-1)?.event_kind;
+    if (terminal === kind) return;
+    if (terminal === "committed" || terminal === "rolled_back")
+      throw new Error("authoring-command-group-terminal-conflict");
     insertPhase(this.db, normalized, {
       kind,
       sequence: events.length + 1,
@@ -450,7 +454,7 @@ function operationMatches(db: HarnessDb, input: NormalizedGroup): boolean {
     descriptor.repository_identity === input.operation.repositoryIdentity &&
     descriptor.base_commit === input.operation.baseCommit &&
     Number(descriptor.artifact_count) === input.members.length &&
-    (expected.length === 0 ||
+    (bindings.length === 0 ||
       (bindings.length === expected.length &&
         bindings.every(
           (row, index) =>
@@ -498,9 +502,6 @@ function insertOperationDescriptor(db: HarnessDb, input: NormalizedGroup): void 
       "INSERT INTO authoring_operation_artifacts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).run(...Object.values(row), ledgerRowDigest(row, "artifact_digest"));
   });
-  for (const binding of operation.revisionBindings) {
-    insertRevisionBinding(db, input, binding);
-  }
 }
 
 function insertRevisionBinding(

@@ -147,6 +147,13 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
     for (const input of inputs) {
       const artifact = this.artifacts.get(input.memberId);
       if (!artifact) throw new Error("authoring rollback artifact missing");
+      const tokenId = `authoring-${sha(`${input.groupId}\0${input.memberId}`).slice(0, 32)}`;
+      new NodeAtomicDraftPublisher({ rootDir: this.rootDir }).restoreSingleArtifactPublication({
+        tokenId,
+        path: artifact.path,
+        preimage: artifact.expectedPreimage,
+        postimage: `sha256:${input.contentDigest}`,
+      });
       const target = resolve(this.rootDir, artifact.path);
       if (artifact.expectedPreimage.kind === "absent") {
         if (existsSync(target)) throw new Error("authoring rollback absent preimage mismatch");
@@ -155,7 +162,6 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       ) {
         throw new Error("authoring rollback preimage digest mismatch");
       }
-      const tokenId = `authoring-${sha(`${input.groupId}\0${input.memberId}`).slice(0, 32)}`;
       for (const custody of [
         `${target}.ut-tdd-draft-${tokenId}.tmp`,
         `${target}.ut-tdd-draft-${tokenId}.rollback`,

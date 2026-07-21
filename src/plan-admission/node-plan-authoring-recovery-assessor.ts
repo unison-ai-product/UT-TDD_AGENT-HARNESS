@@ -3,6 +3,7 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { ledgerRowDigest } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
+import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
 
 export function ensureAuthoringRecoveryAssessment(
   db: HarnessDb,
@@ -16,7 +17,8 @@ export function ensureAuthoringRecoveryAssessment(
       db.exec("COMMIT");
       return;
     }
-    const custody = inspectCustody(repoRoot, context.artifacts, context.published.length);
+    const evidence = { lane: inspectAuthoringRecoveryDbEvidence(db, commandId) };
+    const custody = inspectCustody(repoRoot, context.artifacts, context.published.length, evidence);
     const latest = db
       .prepare(
         "SELECT * FROM authoring_recovery_assessment_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
@@ -35,6 +37,7 @@ export function ensureAuthoringRecoveryAssessment(
     const sequence = Number(latest?.sequence ?? 0) + 1;
     const assessmentJson = stableJson({
       custodyDigest: custody.digest,
+      evidence: evidence.lane,
       phaseState: context.state,
       published: context.published,
       strategy: custody.strategy,
@@ -122,27 +125,30 @@ function loadContext(db: HarnessDb, commandId: string) {
   };
 }
 
-function inspectCustody(root: string, artifacts: Artifact[], publishedCount: number) {
+function inspectCustody(
+  root: string,
+  artifacts: Artifact[],
+  publishedCount: number,
+  evidence: { lane: "zero" | "complete" },
+) {
   const states = artifacts.map((artifact) => inspectArtifact(root, artifact));
   const allPost = states.every((state) => state.target === "postimage");
-  const allPre = states.every((state) => state.target === "preimage" && state.auxiliaryCount === 0);
-  const recoverable = states.every(
-    (state) =>
-      state.target === "postimage" ||
-      state.target === "preimage" ||
-      (state.target === "missing" && state.temporaryPostimage),
+  const rollbackCapable = states.every((state) => state.rollbackCapable);
+  const allNonPostStaged = states.every(
+    (state) => state.target === "postimage" || state.temporaryPostimage,
   );
-  const strategy = allPost
-    ? publishedCount === artifacts.length
-      ? "finalize"
-      : "roll_forward"
-    : allPre
-      ? "rollback"
-      : recoverable
-        ? "roll_forward"
-        : "none";
+  const strategy =
+    evidence.lane === "zero"
+      ? rollbackCapable
+        ? "rollback"
+        : "none"
+      : allPost
+        ? "finalize"
+        : allNonPostStaged
+          ? "roll_forward"
+          : "none";
   if (strategy === "none") throw new Error("plan-recovery-custody-ambiguous");
-  return { strategy, digest: sha(stableJson(states)) };
+  return { strategy, digest: sha(stableJson({ evidence: evidence.lane, publishedCount, states })) };
 }
 
 function inspectArtifact(root: string, artifact: Artifact) {
@@ -171,22 +177,39 @@ function inspectArtifact(root: string, artifact: Artifact) {
   validateOptional(temporaryPin, artifact.postimage);
   if (existsSync(temporary) && existsSync(temporaryPin))
     assertSameIdentity(temporary, temporaryPin);
+  if (existsSync(temporaryPin) && !existsSync(temporary))
+    throw new Error("plan-recovery-custody-ambiguous");
   if (artifact.preimage.kind === "sha256") {
     validateOptional(rollback, artifact.preimage.digest);
     validateOptional(rollbackPin, artifact.preimage.digest);
     if (existsSync(rollback) && existsSync(rollbackPin)) assertSameIdentity(rollback, rollbackPin);
+    if (existsSync(rollbackPin) !== existsSync(rollback))
+      throw new Error("plan-recovery-custody-ambiguous");
   } else if (existsSync(rollback) || existsSync(rollbackPin)) {
     throw new Error("plan-recovery-custody-ambiguous");
   }
   validateOptional(publishedPin, artifact.postimage);
   if (targetState === "postimage" && existsSync(publishedPin))
     assertSameIdentity(target, publishedPin);
+  if (existsSync(publishedPin) && targetState !== "postimage")
+    throw new Error("plan-recovery-custody-ambiguous");
+  const publishedIdentity =
+    targetState === "postimage" && existsSync(publishedPin) && sameIdentity(target, publishedPin);
+  const rollbackIdentity =
+    artifact.preimage.kind === "absent"
+      ? true
+      : existsSync(rollback) && existsSync(rollbackPin) && sameIdentity(rollback, rollbackPin);
+  const rollbackCapable =
+    targetState === "preimage" ||
+    (artifact.preimage.kind === "absent" && targetState === "missing") ||
+    (targetState === "postimage" && publishedIdentity && rollbackIdentity);
   return {
     target: targetState,
     temporaryPostimage: digestMatches(temporary, artifact.postimage),
     auxiliaryCount: [temporary, rollback, publishedPin, temporaryPin, rollbackPin].filter(
       existsSync,
     ).length,
+    rollbackCapable,
   };
 }
 
@@ -210,6 +233,11 @@ function assertSameIdentity(left: string, right: string): void {
   const a = lstatSync(left);
   const b = lstatSync(right);
   if (a.dev !== b.dev || a.ino !== b.ino) throw new Error("plan-recovery-identity-mismatch");
+}
+function sameIdentity(left: string, right: string): boolean {
+  const a = lstatSync(left);
+  const b = lstatSync(right);
+  return a.dev === b.dev && a.ino === b.ino;
 }
 function sha(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
