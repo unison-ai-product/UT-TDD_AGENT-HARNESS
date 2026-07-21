@@ -28,6 +28,14 @@ export function inspectAuthoringRecoveryDbEvidence(
        WHERE group_id = ? ORDER BY artifact_role`,
     )
     .all(groupId);
+  const artifacts = db
+    .prepare(
+      `SELECT artifact.* FROM authoring_operation_artifacts artifact
+       JOIN authoring_operation_descriptors descriptor
+         ON descriptor.operation_id = artifact.operation_id
+       WHERE descriptor.group_id = ? ORDER BY artifact.artifact_role`,
+    )
+    .all(groupId);
   if (receipts.length === 0 && admissions.length === 0 && bindings.length === 0) return "zero";
   if (receipts.length !== 2 || admissions.length !== 2 || bindings.length !== 2)
     throw new Error("plan-recovery-db-evidence-partial");
@@ -52,6 +60,7 @@ export function inspectAuthoringRecoveryDbEvidence(
     const storedRevision = db
       .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = ?")
       .get(binding.asset_id, binding.revision);
+    const artifact = artifacts.find((row) => row.artifact_role === role);
     const baseRevision = db
       .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = ?")
       .get(binding.asset_id, Number(binding.revision) - 1);
@@ -81,7 +90,12 @@ export function inspectAuthoringRecoveryDbEvidence(
       !receipt ||
       !admission ||
       !admissionEvent ||
+      !artifact ||
       !revision ||
+      artifact.artifact_digest !== ledgerRowDigest(artifact, "artifact_digest") ||
+      artifact.group_id !== groupId ||
+      artifact.member_id !== role ||
+      artifact.target_path !== storedRevision.source_path ||
       receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest") ||
       admissionEvent.event_digest !== ledgerRowDigest(admissionEvent, "event_digest") ||
       receipt.command_type !== "plan.revise" ||

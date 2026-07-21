@@ -187,6 +187,31 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
     verified.close();
   });
 
+  it("partial DB evidenceはpublic runnerでcorruptとなり全memberを変更しない", () => {
+    const fixture = recoveryFixture();
+    const db = openHarnessDb(fixture.dbPath);
+    seedCompleteEvidence(db, fixture.groupId);
+    db.exec("DROP TRIGGER trg_plan_admission_receipts_no_delete");
+    db.prepare("DELETE FROM plan_admission_receipts WHERE command_id = ?").run(
+      `${fixture.groupId}:replacement`,
+    );
+    db.close();
+    const origin = join(fixture.root, "docs", "a.md");
+    const replacement = join(fixture.root, "docs", "b.md");
+    const before = [readFileSync(origin, "utf8"), readFileSync(replacement, "utf8")];
+
+    expect(fixture.runner.status(fixture.groupId)).toMatchObject({ state: "corrupt", exitCode: 3 });
+    expect(() =>
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: "rollback",
+        expectedAssessmentDigest: "stale",
+        execute: true,
+      }),
+    ).toThrow();
+    expect([readFileSync(origin, "utf8"), readFileSync(replacement, "utf8")]).toEqual(before);
+  });
+
   it("自己整合digestへ差し替えた非canonical artifactでもassessmentとmutationを拒否する", () => {
     const fixture = recoveryFixture();
     const current = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
@@ -235,6 +260,52 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
       ),
     ).toBe(beforeAssessmentCount);
     verified.close();
+  });
+
+  it("operation custody pathを共同改ざんしrow digestを再計算してもmutation前に拒否する", () => {
+    const fixture = recoveryFixture();
+    const current = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    const db = openHarnessDb(fixture.dbPath);
+    const artifact = db
+      .prepare("SELECT * FROM authoring_operation_artifacts WHERE group_id = ?")
+      .get(fixture.groupId) as Record<string, unknown>;
+    for (const trigger of db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'trigger' AND sql LIKE '%authoring_operation_artifacts%' AND sql LIKE '%UPDATE%'",
+      )
+      .all())
+      db.exec(`DROP TRIGGER ${String(trigger.name)}`);
+    const token = "authoring-forged-custody";
+    const forged: Record<string, unknown> = {
+      ...artifact,
+      temporary_path: `docs/a.md.ut-tdd-draft-${token}.tmp`,
+      rollback_path: `docs/a.md.ut-tdd-draft-${token}.rollback`,
+      pin_path: `.ut-tdd-draft-${token}-0-published.identity`,
+    };
+    db.prepare(
+      `UPDATE authoring_operation_artifacts
+       SET temporary_path = ?, rollback_path = ?, pin_path = ?, artifact_digest = ?
+       WHERE operation_id = ? AND member_id = ?`,
+    ).run(
+      forged.temporary_path,
+      forged.rollback_path,
+      forged.pin_path,
+      ledgerRowDigest(forged, "artifact_digest"),
+      forged.operation_id,
+      forged.member_id,
+    );
+    db.close();
+
+    const target = join(fixture.root, "docs", "a.md");
+    expect(() =>
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: "rollback",
+        expectedAssessmentDigest: String(current.assessment_digest),
+        execute: true,
+      }),
+    ).toThrow("plan-recovery-command-corrupt");
+    expect(readFileSync(target, "utf8")).toBe("postimage");
   });
 
   it("roll_forwardはauxiliaryを除去して1回のcommitted terminalへ収束する", () => {
@@ -427,53 +498,6 @@ function recoveryFixture(withoutAssessment = false) {
     originRevision.input.reason,
     originRevision.input.occurredAt,
   );
-  const memberId = "origin";
-  const content = "postimage";
-  const input = {
-    groupId,
-    commandPayloadDigest: digest,
-    occurredAt: now,
-    members: [
-      {
-        memberId,
-        artifactPath: "docs/a.md",
-        contentDigest: sha(content),
-        expectedPreimage: { kind: "absent" as const },
-      },
-    ],
-    operation: {
-      repositoryIdentity: "owner/repo",
-      baseCommit: "b".repeat(40),
-      revisionBindings: [{ assetId: "asset:1", revision: 2, artifactRole: memberId }],
-    },
-  };
-  const journal = new AuthoringCommandGroupJournal(db);
-  if (withoutAssessment) {
-    expect(journal.prepareWithinTransaction(input)).toMatchObject({ ok: true });
-  } else {
-    expect(() =>
-      journal.execute(input, {
-        publish() {
-          throw new Error("crash");
-        },
-        acknowledge() {},
-      }),
-    ).toThrow("crash");
-  }
-  db.close();
-  const target = join(root, "docs", "a.md");
-  writeFileSync(target, content);
-  const tokenId = `authoring-${sha(`${groupId}\0${memberId}`).slice(0, 32)}`;
-  linkSync(target, join(root, `.ut-tdd-draft-${tokenId}-0-published.identity`));
-  return {
-    root,
-    dbPath,
-    groupId,
-    runner: new NodePlanAuthoringRecoveryRunner(root, () => openHarnessDb(dbPath)),
-  };
-}
-
-function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
     "asset:2",
     now,
@@ -505,6 +529,66 @@ function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
     replacementRevision.input.reason,
     replacementRevision.input.occurredAt,
   );
+  const content = "postimage";
+  const input = {
+    groupId,
+    commandPayloadDigest: digest,
+    occurredAt: now,
+    members: [
+      {
+        memberId: "origin",
+        artifactPath: "docs/a.md",
+        contentDigest: sha(content),
+        expectedPreimage: { kind: "absent" as const },
+      },
+      {
+        memberId: "replacement",
+        artifactPath: "docs/b.md",
+        contentDigest: sha(content),
+        expectedPreimage: { kind: "absent" as const },
+      },
+    ],
+    operation: {
+      repositoryIdentity: "owner/repo",
+      baseCommit: "b".repeat(40),
+      revisionBindings: [
+        { assetId: "asset:1", revision: 2, artifactRole: "origin" },
+        { assetId: "asset:2", revision: 2, artifactRole: "replacement" },
+      ],
+    },
+  };
+  const journal = new AuthoringCommandGroupJournal(db);
+  if (withoutAssessment) {
+    expect(journal.prepareWithinTransaction(input)).toMatchObject({ ok: true });
+  } else {
+    expect(() =>
+      journal.execute(input, {
+        publish() {
+          throw new Error("crash");
+        },
+        acknowledge() {},
+      }),
+    ).toThrow("crash");
+  }
+  db.close();
+  for (const [memberId, path] of [
+    ["origin", "docs/a.md"],
+    ["replacement", "docs/b.md"],
+  ] as const) {
+    const target = join(root, path);
+    writeFileSync(target, content);
+    const tokenId = `authoring-${sha(`${groupId}\0${memberId}`).slice(0, 32)}`;
+    linkSync(target, join(root, `.ut-tdd-draft-${tokenId}-0-published.identity`));
+  }
+  return {
+    root,
+    dbPath,
+    groupId,
+    runner: new NodePlanAuthoringRecoveryRunner(root, () => openHarnessDb(dbPath)),
+  };
+}
+
+function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
   for (const [role, asset, path] of [
     ["origin", "asset:1", "docs/a.md"],
     ["replacement", "asset:2", "docs/b.md"],
@@ -585,7 +669,7 @@ function revisionEvidence(groupId: string, role: string, assetId: string, source
     baseRevision: 1,
     basePayloadDigest: sha("{}"),
     canonicalPayloadJson: JSON.stringify({ plan_id: `PLAN-${role}` }),
-    contentDigest: digest,
+    contentDigest: sha("postimage"),
     bodyDigest: digest,
     sourcePath,
     sourceCommit: "b".repeat(40),

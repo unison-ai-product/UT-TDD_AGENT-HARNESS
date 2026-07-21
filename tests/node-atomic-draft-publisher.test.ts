@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -514,6 +515,37 @@ describe("NodeAtomicDraftPublisher", () => {
         .map(String)
         .filter((path) => path.includes(token.id)),
     ).toEqual([]);
+  });
+
+  it("U-PADM-071: assessment後にrollback custodyが消失してもtargetをmutationしない", () => {
+    const f = fixture();
+    const artifact = f.artifacts[0];
+    if (!artifact) throw new Error("fixture artifact missing");
+    const token = f.publisher.stage([artifact]);
+    f.publisher.publish(token);
+    const target = join(f.root, artifact.path);
+    const rollback = `${target}.ut-tdd-draft-${token.id}.rollback`;
+    rmSync(rollback);
+    const before = readFileSync(target, "utf8");
+    const beforeIdentity = lstatSync(target);
+    const beforeInventory = readdirSync(f.root, { recursive: true }).map(String).sort();
+
+    expect(() =>
+      new NodeAtomicDraftPublisher({ rootDir: f.root }).restoreSingleArtifactPublication({
+        tokenId: token.id,
+        path: artifact.path,
+        preimage: preimage("old-source"),
+        postimage: preimage("new-source").digest,
+      }),
+    ).toThrow(/rollback custody missing/);
+
+    expect(readFileSync(target, "utf8")).toBe(before);
+    const afterIdentity = lstatSync(target);
+    expect({ dev: afterIdentity.dev, ino: afterIdentity.ino }).toEqual({
+      dev: beforeIdentity.dev,
+      ino: beforeIdentity.ino,
+    });
+    expect(readdirSync(f.root, { recursive: true }).map(String).sort()).toEqual(beforeInventory);
   });
 });
 

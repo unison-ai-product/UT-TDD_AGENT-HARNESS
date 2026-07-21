@@ -72,6 +72,7 @@ export class NodePlanAuthoringRecoveryExecutor {
         return result;
       }
       for (const artifact of snapshot.artifacts) {
+        if (artifactFinalized(this.repoRoot, artifact)) continue;
         const capability = artifactCapability(artifact);
         publisher.recoverSingleArtifactPublication(capability);
         publisher.verifySingleArtifactCustody(capability);
@@ -92,6 +93,13 @@ export class NodePlanAuthoringRecoveryExecutor {
       throw error;
     }
   }
+}
+
+function artifactFinalized(root: string, artifact: Artifact): boolean {
+  return (
+    digestMatches(safe(root, artifact.targetPath), artifact.postimage) &&
+    auxiliaryPaths(artifact).every((path) => !existsSync(safe(root, path)))
+  );
 }
 
 type Artifact = {

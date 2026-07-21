@@ -17,6 +17,7 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
+import { deriveAuthoringOperationArtifact } from "./authoring-operation-provenance.js";
 import { committedRevisionPredicateForSchema } from "./revision-visibility.js";
 
 export const LEDGER_SCHEMA_VERSION = 8;
@@ -1556,16 +1557,53 @@ export function authoringOperationGroupValid(db: HarnessDb, groupId: string): bo
   if (artifacts.length !== members.length || artifacts.length !== Number(descriptor.artifact_count))
     return false;
 
+  const bindings = db
+    .prepare("SELECT * FROM authoring_command_revision_bindings WHERE group_id = ?")
+    .all(groupId);
+  if (
+    bindings.some((binding) => {
+      const revision = db
+        .prepare("SELECT source_commit FROM plan_revisions WHERE asset_id = ? AND revision = ?")
+        .get(binding.asset_id, binding.revision);
+      return !revision || revision.source_commit !== descriptor.base_commit;
+    })
+  )
+    return false;
+  const trustedRepositoryIdentities = db
+    .prepare(
+      `SELECT DISTINCT provenance.repository_identity
+       FROM legacy_plan_bootstrap_provenance provenance
+       JOIN authoring_command_revision_bindings binding ON binding.asset_id = provenance.asset_id
+       WHERE binding.group_id = ?`,
+    )
+    .all(groupId)
+    .map((row) => String(row.repository_identity));
+  if (
+    trustedRepositoryIdentities.length > 0 &&
+    (trustedRepositoryIdentities.length !== 1 ||
+      trustedRepositoryIdentities[0] !== descriptor.repository_identity)
+  )
+    return false;
+
   return artifacts.every((artifact, index) => {
     const member = members[index];
+    const canonical = deriveAuthoringOperationArtifact({
+      groupId,
+      memberId: String(member?.member_id),
+      artifactPath: String(member?.artifact_path),
+    });
     return (
       artifact.artifact_digest === ledgerRowDigest(artifact, "artifact_digest") &&
       artifact.operation_id === descriptor.operation_id &&
+      artifact.operation_id === canonical.operationId &&
       artifact.group_id === groupId &&
       artifact.member_id === member?.member_id &&
       Number(artifact.ordinal) === Number(member?.ordinal) &&
       artifact.artifact_role === member?.member_id &&
       artifact.target_path === member?.artifact_path &&
+      artifact.temporary_path === canonical.temporaryPath &&
+      artifact.rollback_path === canonical.rollbackPath &&
+      artifact.pin_path === canonical.pinPath &&
       expectedPreimageEqual(artifact.expected_preimage_json, member?.expected_preimage_json) &&
       normalizedSha256Digest(artifact.postimage_digest) ===
         normalizedSha256Digest(member?.content_digest)

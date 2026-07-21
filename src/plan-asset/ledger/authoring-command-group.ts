@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
 import { isSecretLike } from "../../state-db/index.js";
+import {
+  deriveAuthoringOperationArtifact,
+  deriveAuthoringOperationId,
+} from "./authoring-operation-provenance.js";
 import { ledgerRowDigest } from "./schema.js";
 import { ImmediateLedgerTransaction } from "./transaction.js";
 
@@ -363,7 +367,7 @@ function recordRecoveryAssessment(
   error: unknown,
 ): RecoveryAssessment {
   return new ImmediateLedgerTransaction(db).run(() => {
-    const operationId = `authoring:${sha(input.groupId).slice(0, 32)}`;
+    const operationId = deriveAuthoringOperationId(input.groupId);
     const previous = db
       .prepare(
         "SELECT sequence, event_digest FROM authoring_recovery_assessment_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
@@ -468,7 +472,7 @@ function operationMatches(db: HarnessDb, input: NormalizedGroup): boolean {
 function insertOperationDescriptor(db: HarnessDb, input: NormalizedGroup): void {
   const operation = input.operation;
   if (!operation) return;
-  const operationId = `authoring:${sha(input.groupId).slice(0, 32)}`;
+  const operationId = deriveAuthoringOperationId(input.groupId);
   const descriptor = {
     operation_id: operationId,
     group_id: input.groupId,
@@ -483,8 +487,11 @@ function insertOperationDescriptor(db: HarnessDb, input: NormalizedGroup): void 
     ledgerRowDigest(descriptor, "descriptor_digest"),
   );
   input.members.forEach((member, index) => {
-    const tokenId = `authoring-${sha(`${input.groupId}\0${member.memberId}`).slice(0, 32)}`;
-    const suffix = `.ut-tdd-draft-${tokenId}`;
+    const canonical = deriveAuthoringOperationArtifact({
+      groupId: input.groupId,
+      memberId: member.memberId,
+      artifactPath: member.artifactPath,
+    });
     const row = {
       operation_id: operationId,
       group_id: input.groupId,
@@ -492,9 +499,9 @@ function insertOperationDescriptor(db: HarnessDb, input: NormalizedGroup): void 
       ordinal: index + 1,
       artifact_role: member.memberId,
       target_path: member.artifactPath,
-      temporary_path: `${member.artifactPath}${suffix}.tmp`,
-      rollback_path: `${member.artifactPath}${suffix}.rollback`,
-      pin_path: `.ut-tdd-draft-${tokenId}-0-published.identity`,
+      temporary_path: canonical.temporaryPath,
+      rollback_path: canonical.rollbackPath,
+      pin_path: canonical.pinPath,
       expected_preimage_json: stableJson(member.expectedPreimage),
       postimage_digest: `sha256:${member.contentDigest}`,
     };

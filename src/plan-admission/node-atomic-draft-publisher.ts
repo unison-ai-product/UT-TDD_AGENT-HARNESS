@@ -574,18 +574,73 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     parent.assertCurrent(input.path);
     const unchangedPreimage =
       input.preimage.kind === "sha256" && input.preimage.digest === input.postimage;
-    if (regularDigest(targetPath, input.postimage) && !unchangedPreimage) {
+    const targetHasPostimage = regularDigest(targetPath, input.postimage);
+    const targetHasPreimage =
+      input.preimage.kind === "sha256" && regularDigest(targetPath, input.preimage.digest);
+    const rollbackExists = existsSync(rollbackPath);
+    if (rollbackExists) {
+      if (input.preimage.kind !== "sha256")
+        throw new Error(`artifact rollback custody unexpected: ${input.path}`);
+      assertRegularDigest({
+        path: rollbackPath,
+        digest: input.preimage.digest,
+        logicalPath: input.path,
+        role: "rollback",
+      });
+    }
+    if (
+      input.preimage.kind === "sha256" &&
+      targetHasPostimage &&
+      !unchangedPreimage &&
+      !rollbackExists
+    )
+      throw new Error(`artifact rollback custody missing: ${input.path}`);
+    if (
+      input.preimage.kind === "sha256" &&
+      !targetHasPostimage &&
+      !targetHasPreimage &&
+      !rollbackExists
+    )
+      throw new Error(`artifact preimage custody missing: ${input.path}`);
+    if (input.preimage.kind === "absent" && existsSync(targetPath) && !targetHasPostimage)
+      throw new Error(`artifact rollback unexpected target: ${input.path}`);
+    for (const [path, digest, role] of [
+      [temporaryPath, input.postimage, "temporary"],
+      [
+        this.identityPinPath(input.tokenId, 0, "temporary"),
+        input.postimage,
+        "temporary identity pin",
+      ],
+      [
+        this.identityPinPath(input.tokenId, 0, "published"),
+        input.postimage,
+        "published identity pin",
+      ],
+      ...(input.preimage.kind === "sha256"
+        ? [
+            [
+              this.identityPinPath(input.tokenId, 0, "rollback"),
+              input.preimage.digest,
+              "rollback identity pin",
+            ] as const,
+          ]
+        : []),
+    ] as const) {
+      if (existsSync(path)) assertRegularDigest({ path, digest, logicalPath: input.path, role });
+    }
+    const plan = Object.freeze({
+      targetHasPostimage,
+      targetHasPreimage,
+      rollbackExists,
+      removePublishedTarget: targetHasPostimage && !unchangedPreimage,
+    });
+    parent.assertCurrent(input.path);
+    if (plan.removePublishedTarget) {
       rmSync(targetPath);
       parent.assertCurrent(input.path);
     }
     if (input.preimage.kind === "sha256") {
-      if (existsSync(rollbackPath)) {
-        assertRegularDigest({
-          path: rollbackPath,
-          digest: input.preimage.digest,
-          logicalPath: input.path,
-          role: "rollback",
-        });
+      if (plan.rollbackExists) {
         if (regularDigest(targetPath, input.preimage.digest)) {
           // preimage == postimage のmemberはpublish後もtargetが正しいため、
           // 既存targetを上書きせずcustodyだけ検証してrollback auxiliaryを除去する。
