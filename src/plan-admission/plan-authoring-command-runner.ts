@@ -1,8 +1,8 @@
 import type {
   PlanRedesignBundleManifest,
-  PlanRevisionManifest,
   PlanAuthoringCommandRunner as RunnerPort,
-} from "../cli/plan-revise.js";
+} from "./plan-authoring-command-port.js";
+import type { PlanRevisionManifest } from "./plan-revision-command-assembler.js";
 import type { AdmissionDecision, PlanAdmissionRequest } from "./policy.js";
 
 type RevisionInput = {

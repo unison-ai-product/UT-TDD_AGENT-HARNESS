@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,10 +12,11 @@ import {
 import { AuthoringCommandGroupJournal } from "../src/plan-asset/ledger/authoring-command-group.js";
 import { migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../src/state-db/index.js";
+import { removeTestTree } from "./support/temp-tree";
 
 const roots: string[] = [];
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("Node authoring artifact publisher", () => {

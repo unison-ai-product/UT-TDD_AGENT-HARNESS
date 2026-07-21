@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -8,12 +8,13 @@ import {
 } from "../../src/plan-asset/ledger/authoring-command-group.js";
 import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
+import { removeTestTree } from "../support/temp-tree";
 
 const opened: HarnessDb[] = [];
 const paths: string[] = [];
 afterEach(() => {
   for (const db of opened.splice(0)) db.close();
-  for (const path of paths.splice(0)) rmSync(path, { force: true });
+  for (const path of paths.splice(0)) removeTestTree(path);
 });
 
 describe("authoring command group durable journal", () => {

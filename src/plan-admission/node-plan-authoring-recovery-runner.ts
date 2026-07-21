@@ -1,9 +1,9 @@
-import type { PlanAuthoringRecoveryRunner } from "../cli/plan-authoring-recovery.js";
 import { findUnresolvedAuthoringRecovery } from "../plan-asset/ledger/authoring-recovery-gate.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { ensureAuthoringRecoveryAssessment } from "./node-plan-authoring-recovery-assessor.js";
 import { NodePlanAuthoringRecoveryExecutor } from "./node-plan-authoring-recovery-executor.js";
+import type { PlanAuthoringRecoveryRunner } from "./plan-authoring-recovery-port.js";
 
 export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRunner {
   constructor(

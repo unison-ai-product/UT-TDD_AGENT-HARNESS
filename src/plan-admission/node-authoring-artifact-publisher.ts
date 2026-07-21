@@ -70,15 +70,18 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       injectFault: this.injectFault,
       createId: () => tokenId,
     });
-    if (
-      atomic.recoverSingleArtifactPublication({
-        tokenId,
-        path: artifact.path,
-        preimage: artifact.expectedPreimage,
-        postimage: `sha256:${input.contentDigest}`,
-      })
-    )
+    const recovery = {
+      tokenId,
+      path: artifact.path,
+      preimage: artifact.expectedPreimage,
+      postimage: `sha256:${input.contentDigest}` as const,
+    };
+    if (atomic.recoverSingleArtifactPublication(recovery)) {
+      // receipt 再構成時点で publish は完了しているため、同じ呼出し内で
+      // durable custody を解放する。後続 acknowledge は冪等に再検証する。
+      atomic.resumeSingleArtifactCleanup(recovery);
       return { receiptDigest: receipt(input) };
+    }
     const unchangedPreimage =
       artifact.expectedPreimage.kind === "sha256" &&
       artifact.expectedPreimage.digest === `sha256:${input.contentDigest}`;
@@ -92,19 +95,20 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       return { receiptDigest: receipt(input) };
     }
 
-    const token = atomic.stage([
-      {
-        path: artifact.path,
-        content: artifact.content,
-        expectedPreimage: artifact.expectedPreimage,
-      },
-    ]);
+    let token: DraftPublishToken | undefined;
     try {
+      token = atomic.stage([
+        {
+          path: artifact.path,
+          content: artifact.content,
+          expectedPreimage: artifact.expectedPreimage,
+        },
+      ]);
       atomic.publish(token);
       this.pending.set(key, { atomic, token });
       return { receiptDigest: receipt(input) };
     } catch (error) {
-      if (!this.pending.has(key)) {
+      if (token && !this.pending.has(key)) {
         try {
           atomic.restore(token);
           atomic.dispose(token);

@@ -9,8 +9,8 @@ import {
   realpathSync,
 } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { inspectAuthoringRecoveryDbEvidence } from "../../plan-admission/authoring-recovery-db-evidence.js";
 import type { HarnessDb } from "../../state-db/index.js";
+import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
 import { authoringOperationGroupValid, ledgerRowDigest } from "./schema.js";
 
 export interface UnresolvedAuthoringRecovery {
@@ -44,7 +44,12 @@ export function findUnresolvedAuthoringRecovery(
   const groups = candidates
     .filter(
       (row) =>
-        !groupIsSemanticallyTerminal(db, repoRoot, String(row.group_id), String(row.event_kind)),
+        !groupIsSemanticallyTerminal({
+          db,
+          repoRoot,
+          groupId: String(row.group_id),
+          phase: String(row.event_kind),
+        }),
     )
     .map((row) => String(row.group_id));
   return { draftCommands, groups };
@@ -58,14 +63,15 @@ export function assertNoUnresolvedAuthoringRecovery(db: HarnessDb, repoRoot = pr
   );
 }
 
-export function groupIsSemanticallyTerminal(
-  db: HarnessDb,
-  repoRoot: string,
-  groupId: string,
-  phase: string,
-  afterParentCapture: ((path: string) => void) | undefined = undefined,
-  beforeStableReturn: ((path: string) => void) | undefined = undefined,
-): boolean {
+export function groupIsSemanticallyTerminal(input: {
+  db: HarnessDb;
+  repoRoot: string;
+  groupId: string;
+  phase: string;
+  afterParentCapture?: (path: string) => void;
+  beforeStableReturn?: (path: string) => void;
+}): boolean {
+  const { db, repoRoot, groupId, phase, afterParentCapture, beforeStableReturn } = input;
   if (phase !== "committed" && phase !== "rolled_back") return false;
   try {
     if (!authoringOperationGroupValid(db, groupId)) return false;
@@ -94,35 +100,36 @@ export function groupIsSemanticallyTerminal(
     )
       return false;
     return phase === "committed"
-      ? committedEvidenceComplete(
+      ? committedEvidenceComplete({
           db,
           repoRoot,
           groupId,
           artifacts,
           afterParentCapture,
           beforeStableReturn,
-        )
-      : rolledBackEvidenceClean(
+        })
+      : rolledBackEvidenceClean({
           db,
           repoRoot,
           groupId,
           artifacts,
           afterParentCapture,
           beforeStableReturn,
-        );
+        });
   } catch {
     return false;
   }
 }
 
-function committedEvidenceComplete(
-  db: HarnessDb,
-  repoRoot: string,
-  groupId: string,
-  artifacts: readonly Record<string, unknown>[],
-  afterParentCapture?: (path: string) => void,
-  beforeStableReturn?: (path: string) => void,
-): boolean {
+function committedEvidenceComplete(input: {
+  db: HarnessDb;
+  repoRoot: string;
+  groupId: string;
+  artifacts: readonly Record<string, unknown>[];
+  afterParentCapture?: (path: string) => void;
+  beforeStableReturn?: (path: string) => void;
+}): boolean {
+  const { db, repoRoot, groupId, artifacts, afterParentCapture, beforeStableReturn } = input;
   if (inspectAuthoringRecoveryDbEvidence(db, groupId, repoRoot) !== "complete") return false;
   const bindings = db
     .prepare(
@@ -153,34 +160,35 @@ function committedEvidenceComplete(
   }
   return artifacts.every((artifact) => {
     return (
-      inspectStablePath(
+      inspectStablePath({
         repoRoot,
-        String(artifact.target_path),
-        (path) => digestMatchesRegular(path, String(artifact.postimage_digest)),
+        path: String(artifact.target_path),
+        inspect: (path) => digestMatchesRegular(path, String(artifact.postimage_digest)),
         afterParentCapture,
         beforeStableReturn,
-      ) &&
+      }) &&
       auxiliaryPaths(artifact).every((path) =>
-        inspectStablePath(
+        inspectStablePath({
           repoRoot,
           path,
-          (resolved) => !existsSync(resolved),
+          inspect: (resolved) => !existsSync(resolved),
           afterParentCapture,
           beforeStableReturn,
-        ),
+        }),
       )
     );
   });
 }
 
-function rolledBackEvidenceClean(
-  db: HarnessDb,
-  repoRoot: string,
-  groupId: string,
-  artifacts: readonly Record<string, unknown>[],
-  afterParentCapture?: (path: string) => void,
-  beforeStableReturn?: (path: string) => void,
-): boolean {
+function rolledBackEvidenceClean(input: {
+  db: HarnessDb;
+  repoRoot: string;
+  groupId: string;
+  artifacts: readonly Record<string, unknown>[];
+  afterParentCapture?: (path: string) => void;
+  beforeStableReturn?: (path: string) => void;
+}): boolean {
+  const { db, repoRoot, groupId, artifacts, afterParentCapture, beforeStableReturn } = input;
   if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "zero") return false;
   const evidence = Number(
     db
@@ -204,26 +212,26 @@ function rolledBackEvidenceClean(
       kind: "absent" | "sha256";
       digest?: string;
     };
-    const restored = inspectStablePath(
+    const restored = inspectStablePath({
       repoRoot,
-      String(artifact.target_path),
-      (target) =>
+      path: String(artifact.target_path),
+      inspect: (target) =>
         preimage.kind === "absent"
           ? !existsSync(target)
           : typeof preimage.digest === "string" && digestMatchesRegular(target, preimage.digest),
       afterParentCapture,
       beforeStableReturn,
-    );
+    });
     return (
       restored &&
       auxiliaryPaths(artifact).every((path) =>
-        inspectStablePath(
+        inspectStablePath({
           repoRoot,
           path,
-          (resolved) => !existsSync(resolved),
+          inspect: (resolved) => !existsSync(resolved),
           afterParentCapture,
           beforeStableReturn,
-        ),
+        }),
       )
     );
   });
@@ -240,13 +248,14 @@ function auxiliaryPaths(artifact: Record<string, unknown>): string[] {
   ];
 }
 
-function inspectStablePath<T>(
-  repoRoot: string,
-  path: string,
-  inspect: (resolved: string) => T,
-  afterParentCapture?: (path: string) => void,
-  beforeStableReturn?: (path: string) => void,
-): T {
+function inspectStablePath<T>(input: {
+  repoRoot: string;
+  path: string;
+  inspect: (resolved: string) => T;
+  afterParentCapture?: (path: string) => void;
+  beforeStableReturn?: (path: string) => void;
+}): T {
+  const { repoRoot, path, inspect, afterParentCapture, beforeStableReturn } = input;
   const resolved = safePath(repoRoot, path);
   const parent = DirectoryIdentity.capture(dirname(resolved));
   const leaf = PathIdentity.capture(resolved);
@@ -292,10 +301,7 @@ class PathIdentity {
 
 class DirectoryIdentity {
   private constructor(
-    private readonly path: string,
-    private readonly canonical: string,
-    private readonly device: number,
-    private readonly inode: number,
+    private readonly identity: { path: string; canonical: string; device: number; inode: number },
   ) {}
 
   static capture(path: string): DirectoryIdentity {
@@ -303,17 +309,17 @@ class DirectoryIdentity {
     const stat = lstatSync(path);
     if (!stat.isDirectory() || stat.isSymbolicLink())
       throw new Error("authoring-recovery-parent-invalid");
-    return new DirectoryIdentity(path, canonical, stat.dev, stat.ino);
+    return new DirectoryIdentity({ path, canonical, device: stat.dev, inode: stat.ino });
   }
 
   assertCurrent(): void {
-    const stat = lstatSync(this.path);
+    const stat = lstatSync(this.identity.path);
     if (
       !stat.isDirectory() ||
       stat.isSymbolicLink() ||
-      realpathSync(this.path) !== this.canonical ||
-      stat.dev !== this.device ||
-      stat.ino !== this.inode
+      realpathSync(this.identity.path) !== this.identity.canonical ||
+      stat.dev !== this.identity.device ||
+      stat.ino !== this.identity.inode
     )
       throw new Error("authoring-recovery-parent-drift");
   }

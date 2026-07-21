@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import type { PlanRedesignBundleManifest } from "../cli/plan-revise.js";
 import {
   deriveRedesignPublication,
   PlanRedesignBundleCoordinator,
@@ -10,6 +9,7 @@ import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { NodeAuthoringArtifactPublisher } from "./node-authoring-artifact-publisher.js";
+import type { PlanRedesignBundleManifest } from "./plan-authoring-command-port.js";
 
 export interface NodePlanRedesignRunnerDeps {
   readonly repoRoot: string;
@@ -29,39 +29,39 @@ export class NodePlanRedesignRunner {
       throw new Error("plan-redesign-command-binding-invalid");
     }
     const artifacts = {
-      origin: artifact(
-        "origin",
-        manifest.origin.source_path,
-        manifest.origin.source_content,
-        preimage(manifest.origin.expected_preimage),
-      ),
-      replacement: artifact(
-        "replacement",
-        manifest.replacement.source_path,
-        manifest.replacement.source_content,
-        preimage(manifest.replacement.expected_preimage),
-      ),
-      projection: artifact(
-        "projection",
-        manifest.projection.path,
-        manifest.projection.content,
-        preimage(manifest.projection.expected_preimage),
-      ),
+      origin: artifact({
+        memberId: "origin",
+        path: manifest.origin.source_path,
+        content: manifest.origin.source_content,
+        expectedPreimage: preimage(manifest.origin.expected_preimage),
+      }),
+      replacement: artifact({
+        memberId: "replacement",
+        path: manifest.replacement.source_path,
+        content: manifest.replacement.source_content,
+        expectedPreimage: preimage(manifest.replacement.expected_preimage),
+      }),
+      projection: artifact({
+        memberId: "projection",
+        path: manifest.projection.path,
+        content: manifest.projection.content,
+        expectedPreimage: preimage(manifest.projection.expected_preimage),
+      }),
       pairs: manifest.pairs.map((item) =>
-        artifact(
-          `pair:${sha(item.path)}` as const,
-          item.path,
-          item.content,
-          preimage(item.expected_preimage),
-        ),
+        artifact({
+          memberId: `pair:${sha(item.path)}` as const,
+          path: item.path,
+          content: item.content,
+          expectedPreimage: preimage(item.expected_preimage),
+        }),
       ),
       upstream: manifest.upstream.map((item) =>
-        artifact(
-          `upstream:${sha(item.path)}` as const,
-          item.path,
-          item.content,
-          preimage(item.expected_preimage),
-        ),
+        artifact({
+          memberId: `upstream:${sha(item.path)}` as const,
+          path: item.path,
+          content: item.content,
+          expectedPreimage: preimage(item.expected_preimage),
+        }),
       ),
     };
     const publication = deriveRedesignPublication({
@@ -138,13 +138,13 @@ function revision(value: PlanRedesignBundleManifest["origin"]): AppendPlanRevisi
   };
 }
 
-function artifact<T extends string>(
-  memberId: T,
-  path: string,
-  content: string,
-  expectedPreimage: { kind: "absent" } | { kind: "sha256"; digest: `sha256:${string}` },
-) {
-  return { memberId, path, content, expectedPreimage };
+function artifact<T extends string>(input: {
+  memberId: T;
+  path: string;
+  content: string;
+  expectedPreimage: { kind: "absent" } | { kind: "sha256"; digest: `sha256:${string}` };
+}) {
+  return input;
 }
 
 function preimage(value: { kind: "absent" } | { kind: "sha256"; digest: string }) {

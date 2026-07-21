@@ -960,7 +960,18 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
   private removeStageFiles(item: StagedArtifact): void {
     item.parentIdentity.assertCurrent(item.logicalPath);
     if (existsSync(item.temporaryPath)) {
-      assertTemporary(item);
+      if (item.temporaryIdentity) {
+        assertTemporary(item);
+      } else {
+        // stage:after-write-before-pin では process 内 identity がまだ存在しない。
+        // 排他的に作成した path の内容 CAS を再確認してから cleanup する。
+        assertRegularDigest({
+          path: item.temporaryPath,
+          digest: item.postimageDigest,
+          logicalPath: item.logicalPath,
+          role: "temporary",
+        });
+      }
       rmSync(item.temporaryPath);
       item.parentIdentity.assertCurrent(item.logicalPath);
       if (existsSync(item.temporaryPath))

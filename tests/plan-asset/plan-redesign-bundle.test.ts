@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -30,12 +30,13 @@ import {
 import { committedRevisionPredicate } from "../../src/plan-asset/ledger/revision-visibility.js";
 import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
+import { removeTestTree } from "../support/temp-tree";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
 const roots: string[] = [];
 afterEach(() => {
   for (const db of opened.splice(0)) db.close();
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("Redesign bundle coordinator", () => {

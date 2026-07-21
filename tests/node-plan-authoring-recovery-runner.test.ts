@@ -24,10 +24,11 @@ import { derivePlanRevisionDigests } from "../src/plan-asset/ledger/plan-revisio
 import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../src/state-db/index.js";
 import { openHarnessDb } from "../src/state-db/index.js";
+import { removeTestTree } from "./support/temp-tree";
 
 const roots: string[] = [];
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("NodePlanAuthoringRecoveryRunner", () => {

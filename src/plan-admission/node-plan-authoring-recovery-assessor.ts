@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
+import { inspectAuthoringRecoveryDbEvidence } from "../plan-asset/ledger/authoring-recovery-db-evidence.js";
 import { groupIsSemanticallyTerminal } from "../plan-asset/ledger/authoring-recovery-gate.js";
 import {
   authoringCommandGroupValid,
@@ -8,7 +9,6 @@ import {
   ledgerRowDigest,
 } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
-import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
 
 export function ensureAuthoringRecoveryAssessment(
   db: HarnessDb,
@@ -26,7 +26,7 @@ export function ensureAuthoringRecoveryAssessment(
       throw new Error("plan-recovery-command-corrupt");
     if (
       ["committed", "rolled_back"].includes(context.state) &&
-      groupIsSemanticallyTerminal(db, repoRoot, commandId, context.state)
+      groupIsSemanticallyTerminal({ db, repoRoot, groupId: commandId, phase: context.state })
     ) {
       db.exec("COMMIT");
       return;
@@ -37,7 +37,12 @@ export function ensureAuthoringRecoveryAssessment(
       (context.state === "rolled_back" && evidence.lane !== "zero")
     )
       throw new Error("plan-recovery-terminal-evidence-conflict");
-    const custody = inspectCustody(repoRoot, context.artifacts, context.published.length, evidence);
+    const custody = inspectCustody({
+      root: repoRoot,
+      artifacts: context.artifacts,
+      publishedCount: context.published.length,
+      evidence,
+    });
     const latest = db
       .prepare(
         "SELECT * FROM authoring_recovery_assessment_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
@@ -144,12 +149,13 @@ function loadContext(db: HarnessDb, commandId: string) {
   };
 }
 
-function inspectCustody(
-  root: string,
-  artifacts: Artifact[],
-  publishedCount: number,
-  evidence: { lane: "zero" | "complete" },
-) {
+function inspectCustody(input: {
+  root: string;
+  artifacts: Artifact[];
+  publishedCount: number;
+  evidence: { lane: "zero" | "complete" };
+}) {
+  const { root, artifacts, publishedCount, evidence } = input;
   const states = artifacts.map((artifact) => inspectArtifact(root, artifact));
   const allPost = states.every((state) => state.target === "postimage");
   const rollbackCapable = states.every((state) => state.rollbackCapable);

@@ -27,15 +27,13 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: scripts/git-hooks/authoring-recovery-gate.ts
     artifact_type: source_module
-  - artifact_path: scripts/git-hooks/pre-push
-    artifact_type: source_module
   - artifact_path: src/cli.ts
     artifact_type: source_module
   - artifact_path: src/cli/plan-authoring-recovery.ts
     artifact_type: source_module
   - artifact_path: src/cli/plan-revise.ts
     artifact_type: source_module
-  - artifact_path: src/plan-admission/node-atomic-draft-publisher.ts
+  - artifact_path: src/plan-admission/authoring-recovery-db-evidence.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-authoring-artifact-publisher.ts
     artifact_type: source_module
@@ -51,6 +49,10 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-authoring-command-runner.ts
     artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-authoring-command-port.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-authoring-recovery-port.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/plan-content-binding.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-revision-command-assembler.ts
@@ -58,6 +60,12 @@ generates:
   - artifact_path: src/plan-admission/plan-revision-ledger-adapter.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/authoring-command-group.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/plan-content-digest.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/authoring-recovery-db-evidence.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/authoring-operation-provenance.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/authoring-recovery-gate.ts
     artifact_type: source_module

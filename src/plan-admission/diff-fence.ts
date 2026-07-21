@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto";
-import { stringify } from "yaml";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory";
+import { canonicalPlanContentDigest } from "../plan-asset/domain/plan-content-digest.js";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
+
+export { canonicalPlanContentDigest } from "../plan-asset/domain/plan-content-digest.js";
 
 export interface PlanBlob {
   path: string;
@@ -42,16 +43,6 @@ export interface AdmissionDiffFinding {
     | "plan-admission-frontmatter-invalid"
     | "plan-admission-binding-mismatch"
     | "plan-admission-ledger-mismatch";
-}
-
-export function canonicalPlanContentDigest(content: string): string | undefined {
-  const parsed = parseLegacyPlanSource(content);
-  if (!parsed) return undefined;
-  const frontmatter = { ...parsed.frontmatter };
-  delete frontmatter.admission_receipt;
-  return `sha256:${createHash("sha256")
-    .update(`${stringify(frontmatter)}---\n${parsed.body}`)
-    .digest("hex")}`;
 }
 
 export function analyzePlanAdmissionDiff(input: {

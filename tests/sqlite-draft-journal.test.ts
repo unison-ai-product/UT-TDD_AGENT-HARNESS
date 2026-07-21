@@ -223,6 +223,17 @@ describe("SqliteDraftJournal", () => {
 });
 
 function downgradeCleanupSchema(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
+  // Reconstruct an actual historical schema, rather than only changing
+  // user_version while leaving later authoring tables behind.
+  db.exec("DROP TABLE authoring_artifact_recovery_events");
+  db.exec("DROP TABLE authoring_recovery_attempt_events");
+  db.exec("DROP TABLE authoring_recovery_assessment_events");
+  db.exec("DROP TABLE authoring_command_revision_bindings");
+  db.exec("DROP TABLE authoring_operation_artifacts");
+  db.exec("DROP TABLE authoring_operation_descriptors");
+  db.exec("DROP TABLE authoring_command_group_phase_events");
+  db.exec("DROP TABLE authoring_command_group_members");
+  db.exec("DROP TABLE authoring_command_group_headers");
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
   db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");

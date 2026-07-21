@@ -10,13 +10,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { inspectAuthoringRecoveryDbEvidence } from "../plan-asset/ledger/authoring-recovery-db-evidence.js";
 import {
   authoringCommandGroupValid,
   authoringOperationGroupValid,
   ledgerRowDigest,
 } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
-import { inspectAuthoringRecoveryDbEvidence } from "./authoring-recovery-db-evidence.js";
 import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
 
 type Strategy = "rollback" | "roll_forward" | "finalize";
@@ -427,40 +427,47 @@ function appendPublishedAndCommitted(db: HarnessDb, snapshot: Snapshot): void {
   let previous = snapshot.lastEventDigest;
   for (const artifact of snapshot.artifacts.filter((a) => !snapshot.published.has(a.memberId))) {
     if (!snapshot.started.has(artifact.memberId))
-      ({ sequence, previous } = appendPhase(
+      ({ sequence, previous } = appendPhase({
         db,
         snapshot,
         sequence,
         previous,
-        "member_started",
+        kind: "member_started",
         artifact,
-      ));
-    ({ sequence, previous } = appendPhase(
+      }));
+    ({ sequence, previous } = appendPhase({
       db,
       snapshot,
       sequence,
       previous,
-      "member_published",
+      kind: "member_published",
       artifact,
-    ));
+    }));
   }
-  appendPhase(db, snapshot, sequence, previous, "committed");
+  appendPhase({ db, snapshot, sequence, previous, kind: "committed" });
 }
 function appendTerminal(db: HarnessDb, snapshot: Snapshot, kind: "rolled_back"): void {
   if (isTerminalPhase(snapshot.lastEventKind)) return;
-  appendPhase(db, snapshot, snapshot.lastSequence, snapshot.lastEventDigest, kind);
+  appendPhase({
+    db,
+    snapshot,
+    sequence: snapshot.lastSequence,
+    previous: snapshot.lastEventDigest,
+    kind,
+  });
 }
 function isTerminalPhase(kind: string): boolean {
   return kind === "committed" || kind === "rolled_back";
 }
-function appendPhase(
-  db: HarnessDb,
-  snapshot: Snapshot,
-  sequence: number,
-  previous: string,
-  kind: "member_started" | "member_published" | "committed" | "rolled_back",
-  artifact?: Artifact,
-) {
+function appendPhase(input: {
+  db: HarnessDb;
+  snapshot: Snapshot;
+  sequence: number;
+  previous: string;
+  kind: "member_started" | "member_published" | "committed" | "rolled_back";
+  artifact?: Artifact;
+}) {
+  const { db, snapshot, sequence, previous, kind, artifact } = input;
   const next = sequence + 1;
   const row = {
     phase_event_id: `authoring-group:${snapshot.commandId}:${next}`,

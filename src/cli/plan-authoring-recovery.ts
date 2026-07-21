@@ -1,15 +1,7 @@
 import type { Command } from "commander";
+import type { PlanAuthoringRecoveryRunner } from "../plan-admission/plan-authoring-recovery-port.js";
 
-export interface PlanAuthoringRecoveryRunner {
-  status(commandId: string): unknown;
-  list(unresolvedOnly: boolean): unknown;
-  recover(input: {
-    commandId: string;
-    strategy: "rollback" | "roll_forward" | "finalize";
-    expectedAssessmentDigest?: string;
-    execute: boolean;
-  }): unknown;
-}
+export type { PlanAuthoringRecoveryRunner } from "../plan-admission/plan-authoring-recovery-port.js";
 
 export function registerPlanAuthoringRecoveryCommands(
   plan: Command,

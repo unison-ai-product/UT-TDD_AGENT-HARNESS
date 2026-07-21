@@ -98,16 +98,28 @@ export class AuthoringCommandGroupJournal {
         publisher.acknowledge({ ...member, groupId: normalized.groupId });
       }
       if (admitted.recoveryRequired && normalized.operation) {
-        const assessment = recordRecoveryAssessment(
-          this.db,
-          normalized,
-          "finalize",
+        const assessment = recordRecoveryAssessment({
+          db: this.db,
+          input: normalized,
+          strategy: "finalize",
           published,
-          new Error("recovery-replay"),
-        );
-        recordRecoveryAttempt(this.db, normalized, assessment, "finalize", "started");
-        recordArtifactRecovery(this.db, normalized, assessment, "finalize");
-        recordRecoveryAttempt(this.db, normalized, assessment, "finalize", "succeeded");
+          error: new Error("recovery-replay"),
+        });
+        recordRecoveryAttempt({
+          db: this.db,
+          input: normalized,
+          assessment,
+          strategy: "finalize",
+          result: "started",
+        });
+        recordArtifactRecovery({ db: this.db, input: normalized, assessment, action: "finalize" });
+        recordRecoveryAttempt({
+          db: this.db,
+          input: normalized,
+          assessment,
+          strategy: "finalize",
+          result: "succeeded",
+        });
       }
       this.appendPhase(normalized, { kind: "committed" });
       return { ok: true, replayed: admitted.replayed, publishedMemberIds: [...published] };
@@ -125,19 +137,31 @@ export class AuthoringCommandGroupJournal {
       }
       const strategy = restored ? "rollback" : "roll_forward";
       const assessment = normalized.operation
-        ? recordRecoveryAssessment(this.db, normalized, strategy, published, error)
+        ? recordRecoveryAssessment({ db: this.db, input: normalized, strategy, published, error })
         : undefined;
       if (restored) {
         const rolledBack = this.rollback(normalized, safeFailure(error));
         if (!rolledBack.ok) throw new Error(rolledBack.ruleId);
         if (assessment) {
-          recordArtifactRecovery(this.db, normalized, assessment, "restore");
-          recordRecoveryAttempt(this.db, normalized, assessment, "rollback", "succeeded");
+          recordArtifactRecovery({ db: this.db, input: normalized, assessment, action: "restore" });
+          recordRecoveryAttempt({
+            db: this.db,
+            input: normalized,
+            assessment,
+            strategy: "rollback",
+            result: "succeeded",
+          });
         }
         throw error;
       }
       if (assessment)
-        recordRecoveryAttempt(this.db, normalized, assessment, "roll_forward", "started");
+        recordRecoveryAttempt({
+          db: this.db,
+          input: normalized,
+          assessment,
+          strategy: "roll_forward",
+          result: "started",
+        });
       this.appendPhase(normalized, {
         kind: "recovery_required",
         failureReason: safeFailure(error),
@@ -321,12 +345,13 @@ export class AuthoringCommandGroupJournal {
   }
 }
 
-function recordArtifactRecovery(
-  db: HarnessDb,
-  input: NormalizedGroup,
-  assessment: RecoveryAssessment,
-  action: "restore" | "roll_forward" | "finalize",
-): void {
+function recordArtifactRecovery(args: {
+  db: HarnessDb;
+  input: NormalizedGroup;
+  assessment: RecoveryAssessment;
+  action: "restore" | "roll_forward" | "finalize";
+}): void {
+  const { db, input, assessment, action } = args;
   new ImmediateLedgerTransaction(db).run(() => {
     for (const member of input.members) {
       const row = {
@@ -360,13 +385,14 @@ interface RecoveryAssessment {
   readonly fencingToken: string;
 }
 
-function recordRecoveryAssessment(
-  db: HarnessDb,
-  input: NormalizedGroup,
-  strategy: RecoveryStrategy,
-  published: ReadonlySet<string>,
-  error: unknown,
-): RecoveryAssessment {
+function recordRecoveryAssessment(args: {
+  db: HarnessDb;
+  input: NormalizedGroup;
+  strategy: RecoveryStrategy;
+  published: ReadonlySet<string>;
+  error: unknown;
+}): RecoveryAssessment {
+  const { db, input, strategy, published, error } = args;
   return new ImmediateLedgerTransaction(db).run(() => {
     const operationId = deriveAuthoringOperationId(input.groupId);
     const previous = db
@@ -403,13 +429,14 @@ function recordRecoveryAssessment(
   });
 }
 
-function recordRecoveryAttempt(
-  db: HarnessDb,
-  input: NormalizedGroup,
-  assessment: RecoveryAssessment,
-  strategy: RecoveryStrategy,
-  result: "started" | "succeeded",
-): void {
+function recordRecoveryAttempt(args: {
+  db: HarnessDb;
+  input: NormalizedGroup;
+  assessment: RecoveryAssessment;
+  strategy: RecoveryStrategy;
+  result: "started" | "succeeded";
+}): void {
+  const { db, input, assessment, strategy, result } = args;
   new ImmediateLedgerTransaction(db).run(() => {
     const previous = db
       .prepare(

@@ -305,7 +305,14 @@ describe("authoring recovery boundary gate", () => {
 
       expect(authoringCommandGroupValid(db, "redesign:1")).toBe(true);
       expect(authoringOperationGroupValid(db, "redesign:1")).toBe(false);
-      expect(groupIsSemanticallyTerminal(db, root, "redesign:1", "rolled_back")).toBe(false);
+      expect(
+        groupIsSemanticallyTerminal({
+          db,
+          repoRoot: root,
+          groupId: "redesign:1",
+          phase: "rolled_back",
+        }),
+      ).toBe(false);
     } finally {
       db.close();
     }
@@ -339,11 +346,17 @@ describe("authoring recovery boundary gate", () => {
       seedCommittedEvidence(db, root);
       let swapped = false;
       expect(
-        groupIsSemanticallyTerminal(db, root, "redesign:1", "committed", (path) => {
-          if (swapped || path !== "nested/target.txt") return;
-          swapped = true;
-          renameSync(join(root, "nested"), join(root, "nested-original"));
-          symlinkSync(outside, join(root, "nested"), "junction");
+        groupIsSemanticallyTerminal({
+          db,
+          repoRoot: root,
+          groupId: "redesign:1",
+          phase: "committed",
+          afterParentCapture: (path) => {
+            if (swapped || path !== "nested/target.txt") return;
+            swapped = true;
+            renameSync(join(root, "nested"), join(root, "nested-original"));
+            symlinkSync(outside, join(root, "nested"), "junction");
+          },
         }),
       ).toBe(false);
     } finally {
@@ -360,10 +373,16 @@ describe("authoring recovery boundary gate", () => {
       seedGroup(db, "rolled_back", sha("post"), { kind: "absent" });
       let attacked = false;
       expect(
-        groupIsSemanticallyTerminal(db, root, "redesign:1", "rolled_back", undefined, (path) => {
-          if (attacked || path !== attackedPath) return;
-          attacked = true;
-          writeFileSync(join(root, attackedPath), "raced");
+        groupIsSemanticallyTerminal({
+          db,
+          repoRoot: root,
+          groupId: "redesign:1",
+          phase: "rolled_back",
+          beforeStableReturn: (path) => {
+            if (attacked || path !== attackedPath) return;
+            attacked = true;
+            writeFileSync(join(root, attackedPath), "raced");
+          },
         }),
       ).toBe(false);
     } finally {

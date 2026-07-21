@@ -43,6 +43,7 @@ function usesVitestEntrypoint(
 // に置き続けさせる下記の narrow 制約 (git-hook-entrypoint-not-thin / git-hook-scanner-not-reusing-core)
 // で維持する。
 const ALLOWED_GIT_HOOK_ENTRYPOINTS = new Set([
+  "scripts/git-hooks/authoring-recovery-gate.ts",
   "scripts/git-hooks/pre-push",
   "scripts/git-hooks/secret-scan-diff.ts",
 ]);

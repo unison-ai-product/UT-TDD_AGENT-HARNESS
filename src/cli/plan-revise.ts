@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import { z } from "zod";
-import {
-  type AdmissionDecision,
-  evaluatePlanAdmission,
-  type PlanAdmissionRequest,
-} from "../plan-admission/policy";
+import type {
+  PlanAuthoringCommandRunner,
+  PlanRedesignBundleManifest as PlanRedesignBundleManifestPort,
+} from "../plan-admission/plan-authoring-command-port.js";
+import type { PlanRevisionManifest as PlanRevisionManifestPort } from "../plan-admission/plan-revision-command-assembler.js";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../plan-admission/policy";
 import {
   driveSchema,
   kindSchema,
@@ -125,7 +126,8 @@ const revisionManifestSchema = z
     }
   });
 
-export type PlanRevisionManifest = z.infer<typeof revisionManifestSchema>;
+export type PlanRevisionManifest = z.infer<typeof revisionManifestSchema> &
+  PlanRevisionManifestPort;
 
 const expectedPreimageSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("absent") }).strict(),
@@ -174,20 +176,11 @@ const redesignManifestSchema = z
   })
   .strict();
 
-export type PlanRedesignBundleManifest = z.infer<typeof redesignManifestSchema>;
+export type PlanRedesignBundleManifest = z.infer<typeof redesignManifestSchema> &
+  PlanRedesignBundleManifestPort;
 export type PlanAuthoringManifest = PlanRevisionManifest | PlanRedesignBundleManifest;
 
-export interface PlanAuthoringCommandRunner<TResult> {
-  run(
-    input:
-      | {
-          manifest: PlanRevisionManifest;
-          admission: PlanAdmissionRequest;
-          decision: Extract<AdmissionDecision, { ok: true }>;
-        }
-      | { manifest: PlanRedesignBundleManifest },
-  ): TResult;
-}
+export type { PlanAuthoringCommandRunner } from "../plan-admission/plan-authoring-command-port.js";
 
 export type PlanRevisionCommandRunner<TResult> = PlanAuthoringCommandRunner<TResult>;
 

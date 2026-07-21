@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { parse } from "yaml";
-import { canonicalPlanContentDigest } from "../../plan-admission/diff-fence.js";
 import type { HarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
+import { canonicalPlanContentDigest } from "../domain/plan-content-digest.js";
 import {
   type AuthoringArtifactPublisher,
   type AuthoringCommandGroupInput,
