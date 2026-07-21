@@ -9,7 +9,20 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-15
-updated: 2026-07-15
+updated: 2026-07-21
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-21T18:22:40+09:00"
+    verdict: flag
+    scope: >-
+      claim-blind FLAG / spec-blind PASS-WEAK。生存 finding 2 件で draft 差し戻し:
+      (1) AC が要求する U-EXISSUE-* oracle が L7-unit-test-design.md に未執筆で
+      L6-L7 pair-freeze 未完。(2) §2 の三面 route_mode 照合の成立点 (escape PLAN の
+      materialization がどの E-state から可用か) が未定義。2 点を閉じて再レビュー後に
+      confirmed 化する。詳細は A-189。
+    worker_model: codex-gpt-5
+    reviewer_model: claude-opus-4-8
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
