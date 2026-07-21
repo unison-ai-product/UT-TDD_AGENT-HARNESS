@@ -8,8 +8,9 @@ route_signal: design_correction
 route_mode: redesign
 created: 2026-07-21
 updated: 2026-07-21
-revision_note: "rev2: PLAN-L6-86 (draft) を requires から references へ移動
-  (plan-governance requires_not_ready 解消。graph 束縛は §5 の記述で維持)"
+revision_note: "rev3: §1 の A-189 引用を同日訂正後の事実へ更新 (oracle 未執筆は部分)。rev2: PLAN-L6-86
+  (draft) を requires から references へ移動 (plan-governance requires_not_ready
+  解消。graph 束縛は §5 の記述で維持)"
 owner: PO / Claude (Fable orchestrator)
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -45,18 +46,18 @@ supersedes:
   - PLAN-L6-72-forward-fsm-evidence-policy-contracts
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:1b610f799a3031186b4aaa4c46d45b4c
-  command_id: plan-l6-89-20260721-02
-  admitted_at: 2026-07-21T19:55:00.000+09:00
-  source_digest: sha256:ae0f3d224c205f4321f9b24434778b33c2377d1b5c6d1c548bfcb402cfaa88eb
+  receipt_id: certificate:e9905338d0f4f386db6e7c76cff93d40
+  command_id: plan-l6-89-20260721-03
+  admitted_at: 2026-07-21T20:40:00.000+09:00
+  source_digest: sha256:9f52e38d7779a40b8aa4f008d8161f64347487896dc8b95e16281a780991676e
   decision_digest: sha256:83c0bfb106d870f8c88c24f0e0259dee8d55fdb648af0f909e1a95ab114572d4
-  receipt_digest: sha256:04d2935526d6357e8e7a25b376e36f43328d3f57279207fc6103c2cc3b868e34
+  receipt_digest: sha256:3bd588e3961c4ee849556a56848724135767b3e9102cf968577ab3f4628d5422
   binding:
     path: docs/plans/PLAN-L6-89-layer-verification-contract.md
     plan_id: PLAN-L6-89-layer-verification-contract
     asset_id: plan:ffcb68c5c115107bfeb9ad33557e897b
-    revision: 2
-    content_digest: sha256:ae0f3d224c205f4321f9b24434778b33c2377d1b5c6d1c548bfcb402cfaa88eb
+    revision: 3
+    content_digest: sha256:9f52e38d7779a40b8aa4f008d8161f64347487896dc8b95e16281a780991676e
   route:
     signal: design_correction
     mode: redesign
@@ -91,8 +92,10 @@ admission_receipt:
 ## 1. 目的と根因 (Issue #108)
 
 PR #103 / Issue #102 では、単体の revision authoring 実装が CI Green になったことを Redesign
-全体の完了と誤判定した。また 2026-07-21 の blind review (A-189) では、L6 設計 (PLAN-L6-83) の
-AC が要求する L7 oracle が test-design に未執筆のまま設計だけが先行する非対称を検出した。
+全体の完了と誤判定した。また 2026-07-21 の blind review (A-189、同日訂正込み) では、L6 設計
+(PLAN-L6-83) の §5 が要求する L7 oracle の一部 (1〜6 相当) が `U-EXISSUE-*` として未執筆で
+CANDIDATE-* 止まりという pair-freeze の部分未完を検出した (基準点を HEAD に固定しない grep が
+gap を過大報告した誤検出の訂正も含む — 検証基準点自体が契約を要する実例)。
 根因は共通で、設計成果物に「どの検証が何を証明するか」という **検証契約** と、未証明時の
 状態遷移禁止が機械化されていないことにある。本 PLAN は PLAN-L6-72 の evidence policy 契約を
 起点 (origin) とし、それを L 別検証契約へ拡張・差し替える redesign である。L6-72 の

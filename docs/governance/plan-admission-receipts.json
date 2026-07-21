@@ -80,6 +80,22 @@
         "revision": 2,
         "content_digest": "sha256:ae0f3d224c205f4321f9b24434778b33c2377d1b5c6d1c548bfcb402cfaa88eb"
       }
+    },
+    {
+      "sequence": 6,
+      "previous_record_digest": "sha256:cacf9f579f0d56c6247e78f253120e99f5276e69689944767f10963cbdbe80d3",
+      "record_digest": "sha256:dff9a7ee82e2704c0a895b140ef3629c0acd43665aa6c5071a6900be76250186",
+      "command_id": "plan-l6-89-20260721-03",
+      "receipt_id": "certificate:e9905338d0f4f386db6e7c76cff93d40",
+      "receipt_digest": "sha256:3bd588e3961c4ee849556a56848724135767b3e9102cf968577ab3f4628d5422",
+      "decision_digest": "sha256:83c0bfb106d870f8c88c24f0e0259dee8d55fdb648af0f909e1a95ab114572d4",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-89-layer-verification-contract.md",
+        "plan_id": "PLAN-L6-89-layer-verification-contract",
+        "asset_id": "plan:ffcb68c5c115107bfeb9ad33557e897b",
+        "revision": 3,
+        "content_digest": "sha256:9f52e38d7779a40b8aa4f008d8161f64347487896dc8b95e16281a780991676e"
+      }
     }
   ]
 }
