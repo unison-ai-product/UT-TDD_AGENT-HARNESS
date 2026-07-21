@@ -324,29 +324,40 @@ describe("Redesign bundle coordinator", () => {
       },
       ...real.supporting,
     ];
-    const atomicModule = pathToFileURL(
-      join(process.cwd(), "src", "plan-admission", "node-atomic-draft-publisher.ts"),
-    ).href;
-    expect(() =>
-      new PlanRedesignBundleCoordinator(db).publishDurable(input, {
-        publish(member) {
-          const artifact = artifacts.find((candidate) => candidate.memberId === member.memberId);
-          if (!artifact) throw new Error("tracked artifact missing");
-          const tokenId = `authoring-${sha(`${member.groupId}\0${member.memberId}`).slice(0, 32)}`;
-          const script = `import { NodeAtomicDraftPublisher } from ${JSON.stringify(atomicModule)};
-const publisher = new NodeAtomicDraftPublisher({ rootDir: ${JSON.stringify(root)}, createId: () => ${JSON.stringify(tokenId)}, injectFault(point) { if (point === "publish:after-target-link") process.exit(86); } });
-const token = publisher.stage(${JSON.stringify([artifact])});
-publisher.publish(token);`;
-          const child = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
-          if (child.status !== 86)
-            throw new Error(`child-fixture-invalid:${child.status}:${child.stderr}`);
-          throw new Error("tracked-redesign-child-stopped");
-        },
-        acknowledge() {},
-      }),
-    ).toThrow("tracked-redesign-child-stopped");
     db.close();
     opened.splice(opened.indexOf(db), 1);
+    const bundleModule = pathToFileURL(
+      join(process.cwd(), "src", "plan-asset", "ledger", "plan-redesign-bundle.ts"),
+    ).href;
+    const publisherModule = pathToFileURL(
+      join(process.cwd(), "src", "plan-admission", "node-authoring-artifact-publisher.ts"),
+    ).href;
+    const schemaModule = pathToFileURL(
+      join(process.cwd(), "src", "plan-asset", "ledger", "schema.ts"),
+    ).href;
+    const stateModule = pathToFileURL(join(process.cwd(), "src", "state-db", "index.ts")).href;
+    const { commandPayloadDigest: _digest, publication: _publication, ...base } = input;
+    const derivation = {
+      origin: withoutPublicationMember(artifacts[0]),
+      replacement: withoutPublicationMember(artifacts[1]),
+      projection: withoutPublicationMember(artifacts[2]),
+      pairs: artifacts.filter((artifact) => artifact.memberId.startsWith("pair:")),
+      upstream: artifacts.filter((artifact) => artifact.memberId.startsWith("upstream:")),
+    };
+    const script = `import { deriveRedesignPublication, PlanRedesignBundleCoordinator, redesignBundlePayloadDigest } from ${JSON.stringify(bundleModule)};
+import { NodeAuthoringArtifactPublisher } from ${JSON.stringify(publisherModule)};
+import { migratePlanLedger } from ${JSON.stringify(schemaModule)};
+import { openHarnessDb } from ${JSON.stringify(stateModule)};
+const publication = deriveRedesignPublication(${JSON.stringify(derivation)});
+const partial = { ...${JSON.stringify(base)}, publication };
+const input = { ...partial, commandPayloadDigest: redesignBundlePayloadDigest(partial) };
+const db = openHarnessDb(${JSON.stringify(dbPath)});
+if (!migratePlanLedger(db).ok) process.exit(87);
+const publisher = new NodeAuthoringArtifactPublisher({ rootDir: ${JSON.stringify(root)}, artifacts: ${JSON.stringify(artifacts)}, injectFault(point) { if (point === "publish:after-target-link") process.exit(86); } });
+new PlanRedesignBundleCoordinator(db).publishDurable(input, publisher);
+db.close();`;
+    const child = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+    expect(child.status, child.stderr).toBe(86);
 
     db = openE2eDb(dbPath);
     expect(db.prepare("SELECT artifact_count FROM authoring_operation_descriptors").get()).toEqual({
@@ -354,7 +365,7 @@ publisher.publish(token);`;
     });
     expect(
       Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_revision_bindings").get()?.n),
-    ).toBe(2);
+    ).toBe(0);
     expect(
       Number(
         db
@@ -365,9 +376,9 @@ publisher.publish(token);`;
           .get()?.n,
       ),
     ).toBe(0);
-    expect(db.prepare("SELECT strategy FROM authoring_recovery_assessment_events").get()).toEqual({
-      strategy: "roll_forward",
-    });
+    expect(
+      db.prepare("SELECT strategy FROM authoring_recovery_assessment_events").get(),
+    ).toBeUndefined();
     const result = new PlanRedesignBundleCoordinator(db).publishDurable(
       input,
       new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
@@ -387,7 +398,7 @@ publisher.publish(token);`;
       db
         .prepare("SELECT strategy FROM authoring_recovery_assessment_events ORDER BY sequence")
         .all(),
-    ).toEqual([{ strategy: "roll_forward" }, { strategy: "finalize" }]);
+    ).toEqual([]);
     expect(readFileSync(join(root, input.origin.sourcePath), "utf8")).toBe(
       input.origin.sourceContent,
     );
@@ -933,6 +944,21 @@ function memoryPublisher() {
     },
     acknowledge() {},
   };
+}
+
+function withoutPublicationMember(
+  artifact:
+    | {
+        readonly memberId: string;
+        readonly path: string;
+        readonly content: string;
+        readonly expectedPreimage: unknown;
+      }
+    | undefined,
+) {
+  if (!artifact) throw new Error("publication fixture member missing");
+  const { memberId: _memberId, ...value } = artifact;
+  return value;
 }
 
 function recommand(input: RedesignBundleInput, commandId: string): RedesignBundleInput {
