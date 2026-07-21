@@ -300,7 +300,10 @@ export function replayBindingFailures(binding: ReplayBindingInput): readonly str
   if (!admission) failures.push("admission.missing");
   else failures.push(...rowDifferences("admission", admission, expectedAdmissionReceipt));
   const stored = db
-    .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = ?")
+    .prepare(
+      `SELECT * FROM plan_revisions revision
+       WHERE asset_id = ? AND revision = ? AND ${committedRevisionPredicate("revision")}`,
+    )
     .get(input.assetId, revision);
   const expectedRevision = {
     asset_id: input.assetId,

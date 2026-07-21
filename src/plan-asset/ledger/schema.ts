@@ -17,6 +17,7 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
+import { committedRevisionPredicateForSchema } from "./revision-visibility.js";
 
 export const LEDGER_SCHEMA_VERSION = 8;
 
@@ -1256,9 +1257,11 @@ function installV8(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): void 
   for (const table of v8Tables) db.exec(createTableSql(table));
   fault?.after("v7-v8-tables-created");
   for (const index of v8Indexes) db.exec(createIndexSql(index));
+  fault?.after("v7-v8-indexes-created");
   for (const trigger of v8Triggers) db.exec(createTriggerSql(trigger));
-  fault?.after("v7-v8-schema-created");
+  fault?.after("v7-v8-triggers-created");
   db.setUserVersion(LEDGER_SCHEMA_VERSION);
+  fault?.after("v7-v8-user-version-set");
 }
 
 function backfillLegacyUnknownDraftCleanup(
@@ -1441,7 +1444,10 @@ function ledgerRowsValid(db: HarnessDb): boolean {
   if (db.userVersion() >= 7 && !authoringCommandGroupsValid(db)) return false;
   if (db.userVersion() >= 8 && !authoringRecoveryRowsValid(db)) return false;
   const revisions = db
-    .prepare("SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions")
+    .prepare(
+      `SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions revision
+       WHERE ${committedRevisionPredicateForSchema(db, "revision")}`,
+    )
     .all();
   if (
     revisions.some(
@@ -1719,6 +1725,7 @@ function bootstrapProvenanceValid(db: HarnessDb): boolean {
        FROM legacy_plan_bootstrap_provenance provenance
        JOIN plan_revisions revision
          ON revision.asset_id = provenance.asset_id AND revision.revision = provenance.revision
+         AND ${committedRevisionPredicateForSchema(db, "revision")}
        JOIN plan_assets asset ON asset.asset_id = provenance.asset_id
        LEFT JOIN plan_aliases alias
          ON alias.asset_id = provenance.asset_id AND alias.valid_from_revision = 1`,

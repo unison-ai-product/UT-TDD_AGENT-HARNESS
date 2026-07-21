@@ -8,6 +8,7 @@ import {
   type AppendPlanRevisionResult,
   replayBindingValid,
 } from "./plan-revision-ledger.js";
+import { committedRevisionPredicate } from "./revision-visibility.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
@@ -309,7 +310,10 @@ export class LegacyPlanRevisionBootstrapTransaction {
     )
       return false;
     const base = this.db
-      .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = 1")
+      .prepare(
+        `SELECT * FROM plan_revisions revision
+         WHERE asset_id = ? AND revision = 1 AND ${committedRevisionPredicate("revision")}`,
+      )
       .get(expected.assetId);
     if (
       !base ||

@@ -111,6 +111,8 @@ import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runn
 import { createNodePlanRedesignRunner } from "./plan-admission/node-plan-redesign-runner";
 import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner";
 import { PlanAuthoringCommandDispatcher } from "./plan-admission/plan-authoring-command-runner";
+import { assertNoUnresolvedAuthoringRecovery } from "./plan-asset/ledger/authoring-recovery-gate";
+import { migratePlanLedger, openPlanLedger } from "./plan-asset/ledger/schema";
 import {
   type AdapterContextInjection,
   type AdapterProvider,
@@ -971,6 +973,14 @@ session
   .action((opts: { session?: string }) => {
     const input = readHookInput(HOOK_EVENT_SESSION_START, opts.session);
     const repoRoot = requireRuntimeRepoRoot();
+    const recoveryDb = openPlanLedger({ repoRoot });
+    try {
+      const recoveryMigration = migratePlanLedger(recoveryDb);
+      if (!recoveryMigration.ok) throw new Error(recoveryMigration.ruleId);
+      assertNoUnresolvedAuthoringRecovery(recoveryDb);
+    } finally {
+      recoveryDb.close();
+    }
     const deps = nodeDeps(repoRoot, gitBranch, gitHead);
     runSessionStartSideEffects(repoRoot, input, deps);
     dispatch(input, deps, HOOK_EVENT_SESSION_START);

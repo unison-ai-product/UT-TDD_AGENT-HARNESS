@@ -15,3 +15,10 @@ export function committedRevisionPredicate(alias: string): string {
       )
   )`;
 }
+
+/** Legacy schema validation runs before v8 binding tables exist. */
+export function committedRevisionPredicateForSchema(db: HarnessDb, alias: string): string {
+  return db.userVersion() < 8 ? "1 = 1" : committedRevisionPredicate(alias);
+}
+
+import type { HarnessDb } from "../../state-db/index.js";

@@ -61,6 +61,37 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
+  it.each([
+    "v7-v8-tables-created",
+    "v7-v8-indexes-created",
+    "v7-v8-triggers-created",
+    "v7-v8-user-version-set",
+  ])("U-PAREC-002b: rolls back every v8 schema boundary (%s)", (faultBoundary) => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      seedAsset(db, "plan:migration-boundary");
+      seedAuthoringCommandGroup(db);
+      removeV8Schema(db);
+      db.setUserVersion(7);
+      const before = migrationSnapshot(db);
+
+      expect(
+        migratePlanLedger(db, {
+          fault: {
+            after(boundary) {
+              if (boundary === faultBoundary) throw new Error("migration-fault");
+            },
+          },
+        }),
+      ).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
+      expect(migrationSnapshot(db)).toBe(before);
+      expect(db.userVersion()).toBe(7);
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-PAREC-003: constrains v8 recovery rows by append-only and real custody FKs", () => {
     const db = openHarnessDb(":memory:");
     try {

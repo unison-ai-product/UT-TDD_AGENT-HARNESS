@@ -67,6 +67,11 @@ collect_pushed_entries() {
 }
 
 main() {
+  (
+    cd "$repo_root"
+    bun "${hook_dir}/authoring-recovery-gate.ts"
+  )
+
   local entries=""
   entries="$(collect_pushed_entries)"
 
