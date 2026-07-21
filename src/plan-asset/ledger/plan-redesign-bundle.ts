@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { parse } from "yaml";
 import { canonicalPlanContentDigest } from "../../plan-admission/diff-fence.js";
 import type { HarnessDb } from "../../state-db/index.js";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
@@ -54,13 +55,28 @@ export function deriveRedesignPublication(input: {
     readonly memberId: `upstream:${string}`;
   })[];
 }): DerivedRedesignPublication {
-  const expectedPairs = tracePaths(input.origin.content, "pair_artifact");
+  const pairOwners = [traceOwner(input.origin.content), traceOwner(input.replacement.content)];
+  const expectedPairs = uniqueSorted(pairOwners.map((owner) => owner.pairPath));
   if (expectedPairs.length === 0) throw new Error("plan-redesign-publication-pair-required");
   const expectedUpstream = uniqueSorted([
     ...tracePaths(input.origin.content, "dependencies.requires"),
     ...tracePaths(input.replacement.content, "dependencies.requires"),
   ]);
   assertExactTraceMembers("pair", expectedPairs, input.pairs);
+  for (const pair of input.pairs) {
+    const reverse = frontmatter(pair.content).pair_artifact;
+    const owners = pairOwners
+      .filter((owner) => owner.pairPath === pair.path)
+      .flatMap((owner) => owner.designPaths);
+    if (
+      typeof reverse !== "string" ||
+      owners.length === 0 ||
+      owners.some(
+        (owner) => !(reverse.endsWith("/") ? owner.startsWith(reverse) : owner === reverse),
+      )
+    )
+      throw new Error("plan-redesign-publication-pair-reverse-invalid");
+  }
   assertExactTraceMembers("upstream", expectedUpstream, input.upstream ?? []);
   const artifacts: PublicationArtifact[] = [
     { memberId: "origin", ...input.origin },
@@ -86,14 +102,42 @@ export function deriveRedesignPublication(input: {
   });
 }
 
+function traceOwner(content: string): { pairPath: string; designPaths: readonly string[] } {
+  const metadata = frontmatter(content);
+  const pairPath = metadata.pair_artifact;
+  const generates = metadata.generates;
+  const designPaths = Array.isArray(generates)
+    ? generates.flatMap((entry) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+        const path = (entry as Record<string, unknown>).artifact_path;
+        return typeof path === "string" && path.startsWith("docs/design/") ? [path] : [];
+      })
+    : [];
+  if (
+    typeof pairPath !== "string" ||
+    !pairPath.startsWith("docs/test-design/") ||
+    designPaths.length === 0
+  )
+    throw new Error("plan-redesign-publication-owner-trace-invalid");
+  return { pairPath, designPaths: uniqueSorted(designPaths) };
+}
+
+function frontmatter(content: string): Readonly<Record<string, unknown>> {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!match?.[1]) throw new Error("plan-redesign-publication-source-invalid");
+  const value = parse(match[1]);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("plan-redesign-publication-source-invalid");
+  return value as Record<string, unknown>;
+}
+
 function tracePaths(content: string, field: "pair_artifact" | "dependencies.requires"): string[] {
-  const parsed = parseLegacyPlanSource(content);
-  if (!parsed) throw new Error("plan-redesign-publication-source-invalid");
+  const metadata = frontmatter(content);
   if (field === "pair_artifact") {
-    const path = parsed.frontmatter.pair_artifact;
+    const path = metadata.pair_artifact;
     return typeof path === "string" && path.startsWith("docs/test-design/") ? [path] : [];
   }
-  const dependencies = parsed.frontmatter.dependencies;
+  const dependencies = metadata.dependencies;
   if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) return [];
   const requires = (dependencies as Record<string, unknown>).requires;
   if (!Array.isArray(requires)) return [];

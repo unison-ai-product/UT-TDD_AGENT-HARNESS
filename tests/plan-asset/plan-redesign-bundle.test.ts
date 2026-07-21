@@ -83,6 +83,66 @@ describe("Redesign bundle coordinator", () => {
     ).toBe(0);
   });
 
+  it("U-PA-REDESIGN-002C: 両designのpair closureとpair側owner逆参照をexact照合する", () => {
+    const design = (pair: string, owner: string) =>
+      source(
+        {
+          plan_id: `PLAN-${sha(owner).slice(0, 8)}`,
+          pair_artifact: pair,
+          generates: [{ artifact_path: owner, artifact_type: "design_doc" }],
+        },
+        "design",
+      );
+    const artifact = (path: string, owner: string, memberId: `pair:${string}`) => ({
+      memberId,
+      path,
+      content: source({ pair_artifact: owner }, "test design"),
+      expectedPreimage: { kind: "absent" as const },
+    });
+    const origin = {
+      path: "docs/plans/origin.md",
+      content: design("docs/test-design/L9.md", "docs/design/L4/origin.md"),
+      expectedPreimage: { kind: "absent" as const },
+    };
+    const replacement = {
+      path: "docs/plans/replacement.md",
+      content: design("docs/test-design/L7.md", "docs/design/L6/replacement.md"),
+      expectedPreimage: { kind: "absent" as const },
+    };
+    const projection = {
+      path: "docs/projection.json",
+      content: "{}",
+      expectedPreimage: { kind: "absent" as const },
+    };
+    const l9 = artifact("docs/test-design/L9.md", "docs/design/L4/origin.md", "pair:L9");
+    const l7 = artifact("docs/test-design/L7.md", "docs/design/L6/replacement.md", "pair:L7");
+    expect(() =>
+      deriveRedesignPublication({ origin, replacement, projection, pairs: [l9] }),
+    ).toThrow("plan-redesign-publication-pair-closure-invalid");
+    expect(() =>
+      deriveRedesignPublication({
+        origin,
+        replacement,
+        projection,
+        pairs: [
+          { ...l9, content: l7.content },
+          { ...l7, content: l9.content },
+        ],
+      }),
+    ).toThrow("plan-redesign-publication-pair-reverse-invalid");
+    expect(() =>
+      deriveRedesignPublication({
+        origin,
+        replacement,
+        projection,
+        pairs: [
+          l9,
+          { ...l7, content: source({ pair_artifact: "docs/design/L5/foreign.md" }, "foreign") },
+        ],
+      }),
+    ).toThrow("plan-redesign-publication-pair-reverse-invalid");
+  });
+
   it("U-PA-REDESIGN-003: replayは両bindingが揃う場合だけ成功し、片肺改ざんを拒否する", () => {
     const { db, coordinator } = fixture();
     expect(coordinator.transact(bundle())).toMatchObject({ ok: true });
@@ -178,17 +238,9 @@ describe("Redesign bundle coordinator", () => {
     writeFileSync(join(root, real.input.origin.sourcePath), real.originBase, "utf8");
     mkdirSync(join(root, "docs", "governance"), { recursive: true });
     writeFileSync(join(root, real.input.projection.path), real.initialProjection, "utf8");
-    const pairMember = real.input.publication.members.find(
-      (member) => member.memberId === "pair:L9",
-    );
-    if (!pairMember) throw new Error("paired test-design member missing");
-    mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
-    writeFileSync(join(root, pairMember.artifactPath), real.pairBase, "utf8");
-    for (const artifact of real.supporting.filter((item) =>
-      item.memberId.startsWith("upstream:"),
-    )) {
+    for (const artifact of real.supporting) {
       mkdirSync(join(root, artifact.path, ".."), { recursive: true });
-      writeFileSync(join(root, artifact.path), artifact.content, "utf8");
+      writeFileSync(join(root, artifact.path), artifact.baseContent, "utf8");
     }
     seed(db, "plan:origin", real.input.origin.planId);
     seed(db, "plan:replacement", real.input.replacement.planId);
@@ -400,6 +452,12 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
     status: "draft",
     supersedes: ["PLAN-L4-31"],
     pair_artifact: "docs/test-design/harness/L7-unit-test-design.md",
+    generates: [
+      {
+        artifact_path: "docs/design/harness/L6-function-design/function-spec.md",
+        artifact_type: "design_doc",
+      },
+    ],
   };
   const replacementPayload = String(change.replacementPayload ?? stable(replacementFrontmatter));
   const replacementSource = String(
@@ -414,7 +472,13 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
     route_signal: "forward",
     route_mode: "forward",
     status: "confirmed",
-    pair_artifact: "docs/test-design/harness/L7-unit-test-design.md",
+    pair_artifact: "docs/test-design/harness/L9-system-test-design.md",
+    generates: [
+      {
+        artifact_path: "docs/design/harness/L4-basic-design/architecture.md",
+        artifact_type: "design_doc",
+      },
+    ],
   };
   const originSource = String(
     change.originSource ?? source(originFrontmatter, "訂正: PLAN-L6-88 が後継として置換する。\n"),
@@ -488,7 +552,19 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
         {
           memberId: "pair:L7",
           path: "docs/test-design/harness/L7-unit-test-design.md",
-          content: "paired verification update",
+          content: source(
+            { pair_artifact: "docs/design/harness/L6-function-design/" },
+            "paired verification update",
+          ),
+          expectedPreimage: { kind: "absent" },
+        },
+        {
+          memberId: "pair:L9",
+          path: "docs/test-design/harness/L9-system-test-design.md",
+          content: source(
+            { pair_artifact: "docs/design/harness/L4-basic-design/" },
+            "paired verification update",
+          ),
           expectedPreimage: { kind: "absent" },
         },
       ],
@@ -510,6 +586,7 @@ function realTrackedBundle(): {
     memberId: `pair:${string}` | `upstream:${string}`;
     path: string;
     content: string;
+    baseContent: string;
     expectedPreimage: { kind: "sha256"; digest: `sha256:${string}` };
   }[];
 } {
@@ -517,9 +594,12 @@ function realTrackedBundle(): {
   const replacementPath = "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md";
   const projectionPath = "docs/governance/plan-admission-receipts.json";
   const pairPath = "docs/test-design/harness/L9-system-test-design.md";
+  const unitPairPath = "docs/test-design/harness/L7-unit-test-design.md";
   const originBase = readFileSync(originPath, "utf8");
   const pairBase = readFileSync(pairPath, "utf8");
   const pairContent = `${pairBase}\n\n<!-- PLAN-L6-88 redesign verification binding -->\n`;
+  const unitPairBase = readFileSync(unitPairPath, "utf8");
+  const unitPairContent = `${unitPairBase}\n\n<!-- PLAN-L6-88 redesign verification binding -->\n`;
   const upstreamPaths = [
     "docs/plans/PLAN-L3-03-nfr-grade.md",
     "docs/plans/PLAN-L7-34-tool-adapter-probes.md",
@@ -530,6 +610,7 @@ function realTrackedBundle(): {
       memberId: `upstream:${index}` as const,
       path,
       content,
+      baseContent: content,
       expectedPreimage: { kind: "sha256" as const, digest: `sha256:${sha(content)}` as const },
     };
   });
@@ -578,6 +659,13 @@ function realTrackedBundle(): {
     implementationTarget: { targetPlanId: replacementPlanId, targetRevision: 2 },
     escapeReason: "snapshot runner performance architecture requires redesign",
     supersedes: [originPlanId],
+    pair_artifact: unitPairPath,
+    generates: [
+      {
+        artifact_path: "docs/design/harness/L6-function-design/function-spec.md",
+        artifact_type: "design_doc",
+      },
+    ],
   };
   const originPreReceipt = `---\n${stringify(parsedOrigin.frontmatter)}---\n${parsedOrigin.body}\n\n訂正: ${replacementPlanId} が本設計を差し替える。\n`;
   const replacementFrontmatter = {
@@ -679,10 +767,16 @@ function realTrackedBundle(): {
       },
       pairs: [
         {
-          memberId: "pair:L9",
+          memberId: "pair:L9-origin",
           path: pairPath,
           content: pairContent,
           expectedPreimage: { kind: "sha256", digest: `sha256:${sha(pairBase)}` },
+        },
+        {
+          memberId: "pair:L7-replacement",
+          path: unitPairPath,
+          content: unitPairContent,
+          expectedPreimage: { kind: "sha256", digest: `sha256:${sha(unitPairBase)}` },
         },
       ],
       upstream,
@@ -696,10 +790,18 @@ function realTrackedBundle(): {
     pairBase,
     supporting: [
       {
-        memberId: "pair:L9",
+        memberId: "pair:L9-origin",
         path: pairPath,
         content: pairContent,
+        baseContent: pairBase,
         expectedPreimage: { kind: "sha256", digest: `sha256:${sha(pairBase)}` },
+      },
+      {
+        memberId: "pair:L7-replacement",
+        path: unitPairPath,
+        content: unitPairContent,
+        baseContent: unitPairBase,
+        expectedPreimage: { kind: "sha256", digest: `sha256:${sha(unitPairBase)}` },
       },
       ...upstream,
     ],
