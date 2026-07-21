@@ -37,7 +37,7 @@ afterEach(() => {
 describe("Redesign bundle coordinator", () => {
   it("U-PA-REDESIGN-001: replacementとorigin correctionを一つのtransactionで確定する", () => {
     const { db, coordinator } = fixture();
-    const result = coordinator.transact(bundle());
+    const result = coordinator.publishDurable(bundle(), memoryPublisher());
 
     expect(result).toMatchObject({ ok: true, replayed: false });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
@@ -47,12 +47,40 @@ describe("Redesign bundle coordinator", () => {
   it("U-PA-REDESIGN-002: 片肺publish faultは両revisionをrollbackする", () => {
     const { db, coordinator } = fixture();
 
-    expect(coordinator.transact(bundle({ origin: { baseRevision: 0 } }))).toEqual({
+    expect(
+      coordinator.publishDurable(bundle({ origin: { baseRevision: 0 } }), memoryPublisher()),
+    ).toEqual({
       ok: false,
       ruleId: "plan-revision-input-invalid",
     });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
     expect(Number(db.prepare("SELECT COUNT(*) n FROM append_command_receipts").get()?.n)).toBe(0);
+  });
+
+  it("U-PA-REDESIGN-002A: receipt 0件normal faultはrevision write-setをrollbackし別commandで同revを再発行できる", () => {
+    const { db, coordinator } = fixture();
+    expect(() =>
+      coordinator.publishDurable(bundle(), {
+        publish() {
+          throw new Error("first-member-normal-fault");
+        },
+        acknowledge() {},
+        rollback() {},
+      }),
+    ).toThrow("first-member-normal-fault");
+    expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
+    expect(Number(db.prepare("SELECT COUNT(*) n FROM append_command_receipts").get()?.n)).toBe(0);
+    expect(
+      Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_revision_bindings").get()?.n),
+    ).toBe(0);
+
+    expect(
+      coordinator.publishDurable(recommand(bundle(), "redesign:99"), memoryPublisher()),
+    ).toMatchObject({
+      ok: true,
+      replayed: false,
+    });
+    expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(4);
   });
 
   it("U-PA-REDESIGN-002B: group intent不整合はrevisionとpreparedを同じBEGINでrollbackする", () => {
@@ -146,8 +174,8 @@ describe("Redesign bundle coordinator", () => {
 
   it("U-PA-REDESIGN-003: replayは両bindingが揃う場合だけ成功し、片肺改ざんを拒否する", () => {
     const { db, coordinator } = fixture();
-    expect(coordinator.transact(bundle())).toMatchObject({ ok: true });
-    expect(coordinator.transact(bundle())).toMatchObject({
+    expect(coordinator.publishDurable(bundle(), memoryPublisher())).toMatchObject({ ok: true });
+    expect(coordinator.publishDurable(bundle(), memoryPublisher())).toMatchObject({
       ok: true,
       replayed: true,
     });
@@ -160,7 +188,7 @@ describe("Redesign bundle coordinator", () => {
       "tampered",
       "redesign:98:origin",
     );
-    expect(coordinator.transact(bundle())).toEqual({
+    expect(coordinator.publishDurable(bundle(), memoryPublisher())).toEqual({
       ok: false,
       ruleId: "plan-revision-receipt-binding-invalid",
     });
@@ -223,7 +251,10 @@ describe("Redesign bundle coordinator", () => {
     ],
   ])("U-PA-REDESIGN-004: %sをwrite前にfail-closeする", (_name, change, ruleId) => {
     const { db, coordinator } = fixture();
-    expect(coordinator.transact(bundle(change))).toEqual({ ok: false, ruleId });
+    expect(coordinator.publishDurable(bundle(change), memoryPublisher())).toEqual({
+      ok: false,
+      ruleId,
+    });
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
   });
 
@@ -868,6 +899,25 @@ function publicationPreimage(input: RedesignBundleInput, memberId: string) {
   const member = input.publication.members.find((candidate) => candidate.memberId === memberId);
   if (!member) throw new Error(`publication member missing: ${memberId}`);
   return member.expectedPreimage;
+}
+
+function memoryPublisher() {
+  return {
+    publish(member: { groupId: string; memberId: string }) {
+      return { receiptDigest: sha(`${member.groupId}\0${member.memberId}`) };
+    },
+    acknowledge() {},
+  };
+}
+
+function recommand(input: RedesignBundleInput, commandId: string): RedesignBundleInput {
+  const changed = {
+    ...input,
+    commandId,
+    replacement: { ...input.replacement, commandId: `${commandId}:replacement` },
+    origin: { ...input.origin, commandId: `${commandId}:origin` },
+  };
+  return { ...changed, commandPayloadDigest: redesignBundlePayloadDigest(changed) };
 }
 
 function receipt(assetId: string, certificateId: string, commandPayloadDigest: `sha256:${string}`) {

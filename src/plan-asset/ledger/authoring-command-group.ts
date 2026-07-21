@@ -158,6 +158,60 @@ export class AuthoringCommandGroupJournal {
     };
   }
 
+  bindRevisionsWithinTransaction(
+    input: AuthoringCommandGroupInput,
+    bindings: NonNullable<AuthoringCommandGroupInput["operation"]>["revisionBindings"],
+  ): void {
+    const normalized = normalize(input);
+    if (!normalized?.operation) throw new Error("authoring-command-group-operation-required");
+    for (const binding of bindings) insertRevisionBinding(this.db, normalized, binding);
+  }
+
+  appendPublishedWithinTransaction(
+    input: AuthoringCommandGroupInput,
+    memberId: string,
+    receiptDigest: string,
+  ): void {
+    const normalized = normalize(input);
+    if (!normalized || !validDigest(receiptDigest))
+      throw new Error("authoring-command-group-input-invalid");
+    const events = phaseEvents(this.db, normalized.groupId);
+    if (!eventsValid(events, normalized))
+      throw new Error("authoring-command-group-journal-invalid");
+    if (
+      !events.some((event) => event.member_id === memberId && event.event_kind === "member_started")
+    )
+      insertPhase(this.db, normalized, {
+        kind: "member_started",
+        memberId,
+        sequence: events.length + 1,
+      });
+    const current = phaseEvents(this.db, normalized.groupId);
+    insertPhase(this.db, normalized, {
+      kind: "member_published",
+      memberId,
+      receiptDigest,
+      sequence: current.length + 1,
+    });
+  }
+
+  appendTerminalWithinTransaction(
+    input: AuthoringCommandGroupInput,
+    kind: "committed" | "recovery_required" | "rolled_back",
+    failureReason?: string,
+  ): void {
+    const normalized = normalize(input);
+    if (!normalized) throw new Error("authoring-command-group-input-invalid");
+    const events = phaseEvents(this.db, normalized.groupId);
+    if (!eventsValid(events, normalized))
+      throw new Error("authoring-command-group-journal-invalid");
+    insertPhase(this.db, normalized, {
+      kind,
+      sequence: events.length + 1,
+      failureReason,
+    });
+  }
+
   /** 外部公開前だけcommand groupをterminal rolled_backへ移す。公開済memberはroll-forwardする。 */
   rollback(input: AuthoringCommandGroupInput, reason: string): AuthoringCommandGroupRollbackResult {
     const normalized = normalize(input);
@@ -388,13 +442,14 @@ function operationMatches(db: HarnessDb, input: NormalizedGroup): boolean {
     descriptor.repository_identity === input.operation.repositoryIdentity &&
     descriptor.base_commit === input.operation.baseCommit &&
     Number(descriptor.artifact_count) === input.members.length &&
-    bindings.length === expected.length &&
-    bindings.every(
-      (row, index) =>
-        row.asset_id === expected[index]?.assetId &&
-        Number(row.revision) === expected[index]?.revision &&
-        row.artifact_role === expected[index]?.artifactRole,
-    )
+    (expected.length === 0 ||
+      (bindings.length === expected.length &&
+        bindings.every(
+          (row, index) =>
+            row.asset_id === expected[index]?.assetId &&
+            Number(row.revision) === expected[index]?.revision &&
+            row.artifact_role === expected[index]?.artifactRole,
+        )))
   );
 }
 
@@ -436,18 +491,26 @@ function insertOperationDescriptor(db: HarnessDb, input: NormalizedGroup): void 
     ).run(...Object.values(row), ledgerRowDigest(row, "artifact_digest"));
   });
   for (const binding of operation.revisionBindings) {
-    const row = {
-      group_id: input.groupId,
-      asset_id: binding.assetId,
-      revision: binding.revision,
-      artifact_role: binding.artifactRole,
-      bound_at: input.occurredAt,
-    };
-    db.prepare("INSERT INTO authoring_command_revision_bindings VALUES (?, ?, ?, ?, ?, ?)").run(
-      ...Object.values(row),
-      ledgerRowDigest(row, "binding_digest"),
-    );
+    insertRevisionBinding(db, input, binding);
   }
+}
+
+function insertRevisionBinding(
+  db: HarnessDb,
+  input: NormalizedGroup,
+  binding: NonNullable<AuthoringCommandGroupInput["operation"]>["revisionBindings"][number],
+): void {
+  const row = {
+    group_id: input.groupId,
+    asset_id: binding.assetId,
+    revision: binding.revision,
+    artifact_role: binding.artifactRole,
+    bound_at: input.occurredAt,
+  };
+  db.prepare("INSERT INTO authoring_command_revision_bindings VALUES (?, ?, ?, ?, ?, ?)").run(
+    ...Object.values(row),
+    ledgerRowDigest(row, "binding_digest"),
+  );
 }
 
 type PhaseKind =
@@ -500,7 +563,6 @@ function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefin
     (input.operation !== undefined &&
       (!input.operation.repositoryIdentity ||
         !/^[a-f0-9]{40}$/.test(input.operation.baseCommit) ||
-        input.operation.revisionBindings.length === 0 ||
         input.operation.revisionBindings.some(
           (binding) => !binding.assetId || binding.revision < 1 || !binding.artifactRole,
         )))

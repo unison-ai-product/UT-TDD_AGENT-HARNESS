@@ -8,6 +8,7 @@ import {
   type AuthoringArtifactPublisher,
   type AuthoringCommandGroupInput,
   AuthoringCommandGroupJournal,
+  type AuthoringCommandGroupResult,
 } from "./authoring-command-group.js";
 import {
   type BootstrapLegacyPlanRevisionInput,
@@ -182,28 +183,21 @@ export type RedesignBundlePublicationResult =
   | { readonly ok: false; readonly ruleId: string };
 
 /**
- * replacementのsupersedesとoriginの訂正back-referenceを一つのSQLite transactionへ閉じる。
- * transact callbackはtransaction内adapter向け。実filesystem公開はpublishDurableのSagaを使う。
+ * replacementのsupersedesとoriginの訂正back-referenceをdurable publicationへ閉じる。
  */
 export class PlanRedesignBundleCoordinator {
   private readonly transaction: LedgerTransactionPort;
   private readonly revisions: PlanRevisionLedgerTransaction;
   private readonly bootstrap: LegacyPlanRevisionBootstrapTransaction;
   private readonly groups: AuthoringCommandGroupJournal;
+  private readonly db: HarnessDb;
 
   constructor(db: HarnessDb, transaction?: LedgerTransactionPort) {
+    this.db = db;
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
     this.revisions = new PlanRevisionLedgerTransaction(db, transaction);
     this.bootstrap = new LegacyPlanRevisionBootstrapTransaction(db, transaction);
     this.groups = new AuthoringCommandGroupJournal(db);
-  }
-
-  transact(input: RedesignBundleInput): RedesignBundleResult {
-    const invalid = validateBundle(input);
-    if (invalid) return { ok: false, ruleId: invalid };
-    return this.transaction.run<RedesignBundleResult>(() => {
-      return this.prepareRevisions(input);
-    });
   }
 
   private prepareRevisions(input: RedesignBundleInput): {
@@ -233,6 +227,22 @@ export class PlanRedesignBundleCoordinator {
     input: RedesignBundleInput,
     publisher: AuthoringArtifactPublisher,
   ): RedesignBundlePublicationResult {
+    const invalid = validateBundle(input);
+    if (invalid) return { ok: false, ruleId: invalid };
+    const revisionBindings = [
+      {
+        assetId: input.origin.assetId,
+        revision: input.origin.baseRevision + 1,
+        artifactRole: "origin",
+      },
+      {
+        assetId: isBootstrap(input.replacement)
+          ? deriveLegacyAssetId(input.repositoryIdentity, input.replacement.planId)
+          : input.replacement.assetId,
+        revision: input.replacement.baseRevision + 1,
+        artifactRole: "replacement",
+      },
+    ];
     const group: AuthoringCommandGroupInput = {
       groupId: input.commandId,
       commandPayloadDigest: redesignPublicationPayloadDigest(input, input.publication.members),
@@ -241,39 +251,74 @@ export class PlanRedesignBundleCoordinator {
       operation: {
         repositoryIdentity: input.repositoryIdentity,
         baseCommit: input.origin.sourceCommit,
-        revisionBindings: [
-          {
-            assetId: input.origin.assetId,
-            revision: input.origin.baseRevision + 1,
-            artifactRole: "origin",
-          },
-          {
-            assetId: isBootstrap(input.replacement)
-              ? deriveLegacyAssetId(input.repositoryIdentity, input.replacement.planId)
-              : input.replacement.assetId,
-            revision: input.replacement.baseRevision + 1,
-            artifactRole: "replacement",
-          },
-        ],
+        revisionBindings: [],
       },
     };
     const groupInvalid = validatePublicationGroup(input, group);
     if (groupInvalid) return { ok: false, ruleId: groupInvalid };
-    const prepared = this.transaction.run<RedesignBundleResult>(() => {
-      const revisions = this.prepareRevisions(input);
-      if (!revisions.value.ok) return revisions;
+    const intent = this.transaction.run<AuthoringCommandGroupResult>(() => {
       const intent = this.groups.prepareWithinTransaction(group);
-      if (!intent.ok) return { commit: false, value: intent };
-      return revisions;
+      return { commit: intent.ok, value: intent };
     });
-    if (!prepared.ok) return prepared;
-    const publication = this.groups.execute(group, publisher);
-    if (!publication.ok) return publication;
-    return {
-      ...prepared,
-      publicationReplayed: publication.replayed,
-      publishedMemberIds: publication.publishedMemberIds,
-    };
+    if (!intent.ok) return intent;
+    if (intent.publishedMemberIds.length === group.members.length) {
+      const replay = this.transaction.run<RedesignBundleResult>(() => this.prepareRevisions(input));
+      if (!replay.ok) return replay;
+      for (const member of group.members)
+        publisher.acknowledge({ ...member, groupId: group.groupId });
+      return {
+        ...replay,
+        publicationReplayed: true,
+        publishedMemberIds: intent.publishedMemberIds,
+      };
+    }
+
+    this.db.exec("BEGIN IMMEDIATE");
+    const published: Array<{
+      member: AuthoringCommandGroupInput["members"][number];
+      receipt: string;
+    }> = [];
+    try {
+      const revisions = this.prepareRevisions(input);
+      if (!revisions.value.ok) {
+        this.db.exec("ROLLBACK");
+        return revisions.value;
+      }
+      this.groups.bindRevisionsWithinTransaction(group, revisionBindings);
+      for (const member of group.members) {
+        const receipt = publisher.publish({ ...member, groupId: group.groupId }).receiptDigest;
+        this.groups.appendPublishedWithinTransaction(group, member.memberId, receipt);
+        published.push({ member, receipt });
+      }
+      this.groups.appendTerminalWithinTransaction(group, "committed");
+      this.db.exec("COMMIT");
+      for (const { member } of published)
+        publisher.acknowledge({ ...member, groupId: group.groupId });
+      return {
+        ...revisions.value,
+        publicationReplayed: intent.replayed,
+        publishedMemberIds: published.map(({ member }) => member.memberId),
+      };
+    } catch (error) {
+      if (published.length === 0 && publisher.rollback) {
+        try {
+          publisher.rollback(
+            group.members.map((member) => ({ ...member, groupId: group.groupId })),
+          );
+          this.db.exec("ROLLBACK");
+          this.transaction.run(() => {
+            this.groups.appendTerminalWithinTransaction(group, "rolled_back", "publisher-failure");
+            return { commit: true, value: undefined };
+          });
+          throw error;
+        } catch (rollbackError) {
+          if (rollbackError === error) throw error;
+        }
+      }
+      this.groups.appendTerminalWithinTransaction(group, "recovery_required", "publisher-failure");
+      this.db.exec("COMMIT");
+      throw error;
+    }
   }
 }
 
