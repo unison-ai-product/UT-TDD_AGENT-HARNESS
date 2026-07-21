@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-14 (recovery): harness.db orphan データ負債の収束 
 kind: recovery
 layer: cross
 drive: agent
-status: confirmed
+status: draft
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
@@ -290,6 +290,9 @@ projection の git 呼び出しであり、`projectGateRunEvidence` 経路を通
 未完了事項として記録する。
 
 ## 未完了事項
+
+本PRは orphan false-positive の投影ロジックを修正する部分sliceであり、以下が完了するまで
+本PLANおよび Issue #87 を完了扱いにしない。
 
 1. **Step 3 (誤配置 runtime state の清掃) は未実施。** 上記「設計判断依頼」の
    PO 回答を得てから実施する。
