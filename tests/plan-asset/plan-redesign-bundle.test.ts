@@ -2,15 +2,21 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { stringify } from "yaml";
 import { analyzePlanSupersession, parseSupersedePlan } from "../../src/lint/plan-supersession.js";
+import { canonicalPlanContentDigest } from "../../src/plan-admission/diff-fence.js";
 import { NodeAuthoringArtifactPublisher } from "../../src/plan-admission/node-authoring-artifact-publisher.js";
 import { evaluatePlanAdmission } from "../../src/plan-admission/policy.js";
+import { TRACKED_RECEIPT_SCHEMA } from "../../src/plan-admission/tracked-receipt-projection.js";
+import { TrackedReceiptRenderer } from "../../src/plan-admission/tracked-receipt-renderer.js";
+import { parseLegacyPlanSource } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
 import {
   PlanRedesignBundleCoordinator,
   type RedesignBundleInput,
   redesignBundlePayloadDigest,
   redesignPublicationPayloadDigest,
 } from "../../src/plan-asset/ledger/plan-redesign-bundle.js";
+import type { AppendPlanRevisionInput } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
 import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 
@@ -161,14 +167,11 @@ describe("Redesign bundle coordinator", () => {
     const dbPath = join(root, ".ut-tdd", "ledger", "harness.db");
     mkdirSync(join(root, ".ut-tdd", "ledger"), { recursive: true });
     let db = openE2eDb(dbPath);
-    seed(db, "plan:origin", "PLAN-L4-31");
-    seed(db, "plan:replacement", "PLAN-L6-88");
-    const input = bundle();
-    const projection = JSON.stringify({
-      origin: "PLAN-L4-31@2",
-      replacement: "PLAN-L6-88@2",
-      drive_model: "redesign",
-    });
+    const real = realTrackedBundle();
+    seed(db, "plan:origin", real.input.origin.planId);
+    seed(db, "plan:replacement", real.input.replacement.planId);
+    const input = real.input;
+    const projection = real.projection;
     const artifacts = [
       {
         memberId: "origin",
@@ -184,7 +187,7 @@ describe("Redesign bundle coordinator", () => {
       },
       {
         memberId: "projection",
-        path: "docs/projections/issue-98.json",
+        path: input.projection.path,
         content: projection,
         expectedPreimage: { kind: "absent" as const },
       },
@@ -213,7 +216,7 @@ describe("Redesign bundle coordinator", () => {
     expect(readFileSync(join(root, input.replacement.sourcePath), "utf8")).toBe(
       input.replacement.sourceContent,
     );
-    expect(readFileSync(join(root, "docs/projections/issue-98.json"), "utf8")).toBe(projection);
+    expect(readFileSync(join(root, input.projection.path), "utf8")).toBe(projection);
     expect(
       evaluatePlanAdmission({
         routeSignal: "design_correction",
@@ -228,13 +231,13 @@ describe("Redesign bundle coordinator", () => {
           episodeId: "E4-98",
           projectionDigest: `sha256:${sha(projection)}`,
         },
-        origin: { planId: "PLAN-L4-31", revision: 1, digest: `sha256:${sha("origin")}` },
+        origin: { planId: input.origin.planId, revision: 1, digest: `sha256:${sha("origin")}` },
         transitionDirection: "design_to_implementation",
         implementationDisposition: "discarded",
-        reentry: { targetPlanId: "PLAN-L4-31", targetRevision: 2, phase: "forward_merge" },
-        implementationTarget: { targetPlanId: "PLAN-L6-88", targetRevision: 2 },
+        reentry: { targetPlanId: input.origin.planId, targetRevision: 2, phase: "forward_merge" },
+        implementationTarget: { targetPlanId: input.replacement.planId, targetRevision: 2 },
         escapeReason: "snapshot runner architecture requires redesign",
-        supersedes: ["PLAN-L4-31"],
+        supersedes: [input.origin.planId],
       }),
     ).toMatchObject({ ok: true });
     expect(
@@ -365,7 +368,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
       assetId: "plan:replacement",
       planId: "PLAN-L6-88",
       canonicalPayloadJson: replacementPayload,
-      contentDigest: sha(replacementSource),
+      contentDigest: unprefix(canonicalPlanContentDigest(replacementSource)),
       sourceContent: replacementSource,
       sourcePath: "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md",
       certificateId: "certificate:replacement",
@@ -377,7 +380,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
       assetId: "plan:origin",
       planId: "PLAN-L4-31",
       canonicalPayloadJson: stable(originFrontmatter),
-      contentDigest: sha(originSource),
+      contentDigest: unprefix(canonicalPlanContentDigest(originSource)),
       sourceContent: originSource,
       sourcePath: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
       certificateId: "certificate:origin",
@@ -401,6 +404,209 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
   return {
     ...input,
     commandPayloadDigest: String(change.commandDigest ?? redesignBundlePayloadDigest(input)),
+  };
+}
+
+function realTrackedBundle(): { input: RedesignBundleInput; projection: string } {
+  const originPath = "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md";
+  const replacementPath = "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md";
+  const projectionPath = "docs/governance/plan-admission-receipts.json";
+  const originBase = readFileSync(originPath, "utf8");
+  const parsedOrigin = parseLegacyPlanSource(originBase);
+  if (!parsedOrigin) throw new Error("tracked L4-31 fixture invalid");
+  const originPlanId = parsedOrigin.planId;
+  const replacementPlanId = "PLAN-L6-88-snapshot-runner-performance-redesign";
+  const originAdmission = {
+    routeSignal: "feature_addition",
+    routeMode: "add-feature" as const,
+    kind: "add-design" as const,
+    layer: "L4" as const,
+    subDoc: "architecture" as const,
+    drive: "agent" as const,
+    branch: "work/add-feature-issue102-origin-correction",
+    status: "draft" as const,
+    issue: {
+      provider: "github" as const,
+      issueId: 102,
+      episodeId: "E4-102",
+      projectionDigest: `sha256:${sha("issue102")}`,
+    },
+    origin: { planId: originPlanId, revision: 1, digest: `sha256:${sha("origin-r1")}` },
+    reentry: { targetPlanId: originPlanId, targetRevision: 2, phase: "forward_merge" as const },
+    escapeReason: "redesign origin correction back-reference",
+  };
+  const replacementAdmission = {
+    routeSignal: "design_correction",
+    routeMode: "redesign" as const,
+    kind: "design" as const,
+    layer: "L6" as const,
+    subDoc: "function-spec" as const,
+    drive: "agent" as const,
+    branch: "work/redesign-test-performance",
+    status: "draft" as const,
+    issue: {
+      provider: "github" as const,
+      issueId: 98,
+      episodeId: "E4-98",
+      projectionDigest: `sha256:${sha("issue98")}`,
+    },
+    origin: { planId: originPlanId, revision: 1, digest: `sha256:${sha("origin-r1")}` },
+    transitionDirection: "design_to_implementation" as const,
+    implementationDisposition: "discarded" as const,
+    reentry: { targetPlanId: originPlanId, targetRevision: 2, phase: "forward_merge" as const },
+    implementationTarget: { targetPlanId: replacementPlanId, targetRevision: 2 },
+    escapeReason: "snapshot runner performance architecture requires redesign",
+    supersedes: [originPlanId],
+  };
+  const originPreReceipt = `---\n${stringify(parsedOrigin.frontmatter)}---\n${parsedOrigin.body}\n\n訂正: ${replacementPlanId} が本設計を差し替える。\n`;
+  const replacementFrontmatter = {
+    ...parsedOrigin.frontmatter,
+    plan_id: replacementPlanId,
+    title: "PLAN-L6-88 snapshot runner performance redesign",
+    kind: "design",
+    layer: "L6",
+    sub_doc: "function-spec",
+    drive: "agent",
+    status: "draft",
+    route_signal: "design_correction",
+    route_mode: "redesign",
+    github_issue_id: 98,
+    supersedes: [originPlanId],
+  };
+  const replacementPreReceipt = `---\n${stringify(replacementFrontmatter)}---\n# PLAN-L6-88\n\n${replacementPlanId} supersedes ${originPlanId}.\n`;
+  const emptyProjection = `${JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] }, null, 2)}\n`;
+  const originCommand = receiptCommand({
+    commandId: "redesign:98:origin",
+    planId: originPlanId,
+    sourcePath: originPath,
+    sourceContent: originPreReceipt,
+    projectionPath,
+    admission: originAdmission,
+  });
+  const originReceipt = receipt(
+    "plan:origin",
+    "certificate:origin",
+    originCommand.commandPayloadDigest,
+  );
+  const originRendered = new TrackedReceiptRenderer({ read: () => emptyProjection }).render(
+    originCommand,
+    originReceipt,
+  );
+  const replacementCommand = receiptCommand({
+    commandId: "redesign:98:replacement",
+    planId: replacementPlanId,
+    sourcePath: replacementPath,
+    sourceContent: replacementPreReceipt,
+    projectionPath,
+    admission: replacementAdmission,
+  });
+  const replacementReceipt = receipt(
+    "plan:replacement",
+    "certificate:replacement",
+    replacementCommand.commandPayloadDigest,
+  );
+  const replacementRendered = new TrackedReceiptRenderer({
+    read: () => originRendered[1].content,
+  }).render(replacementCommand, replacementReceipt);
+  const originSource = originRendered[0].content;
+  const replacementSource = replacementRendered[0].content;
+  const projection = replacementRendered[1].content;
+  const common = {
+    baseRevision: 1,
+    basePayloadDigest: sha('{"status":"draft"}'),
+    sourceCommit: "b".repeat(40),
+    actor: "codex",
+    reason: "redesign",
+    routeTupleDigest: sha("redesign|forward_merge"),
+    occurredAt: "2026-07-21T00:00:00.000Z",
+  };
+  const withoutDigest = {
+    commandId: "redesign:98",
+    replacement: revisionInput(
+      common,
+      replacementPlanId,
+      replacementPath,
+      replacementSource,
+      "plan:replacement",
+      "certificate:replacement",
+    ),
+    origin: revisionInput(
+      common,
+      originPlanId,
+      originPath,
+      originSource,
+      "plan:origin",
+      "certificate:origin",
+    ),
+    reentry: { targetPlanId: originPlanId, targetRevision: 2, phase: "forward_merge" as const },
+    projection: { path: projectionPath, contentDigest: sha(projection) },
+  };
+  return {
+    input: { ...withoutDigest, commandPayloadDigest: redesignBundlePayloadDigest(withoutDigest) },
+    projection,
+  };
+}
+
+function receiptCommand(input: {
+  commandId: string;
+  planId: string;
+  sourcePath: string;
+  sourceContent: string;
+  projectionPath: string;
+  admission: Parameters<typeof evaluatePlanAdmission>[0];
+}) {
+  return {
+    commandId: input.commandId,
+    commandPayloadDigest: `sha256:${sha(input.commandId)}` as `sha256:${string}`,
+    planId: input.planId,
+    recordedAt: "2026-07-21T00:00:00.000Z",
+    payload: { admission: input.admission },
+    source: { path: input.sourcePath, content: input.sourceContent },
+    projectionPath: input.projectionPath,
+  };
+}
+
+function receipt(assetId: string, certificateId: string, commandPayloadDigest: `sha256:${string}`) {
+  return {
+    assetId,
+    revision: 2,
+    certificateId,
+    certificateDigest: sha(certificateId),
+    commandPayloadDigest,
+  };
+}
+
+function revisionInput(
+  common: Pick<
+    AppendPlanRevisionInput,
+    | "baseRevision"
+    | "basePayloadDigest"
+    | "sourceCommit"
+    | "actor"
+    | "reason"
+    | "routeTupleDigest"
+    | "occurredAt"
+  >,
+  planId: string,
+  sourcePath: string,
+  sourceContent: string,
+  assetId: string,
+  certificateId: string,
+) {
+  const parsed = parseLegacyPlanSource(sourceContent);
+  if (!parsed) throw new Error("rendered PLAN invalid");
+  const { admission_receipt: _receipt, ...frontmatter } = parsed.frontmatter;
+  return {
+    ...common,
+    commandId: `redesign:98:${assetId === "plan:origin" ? "origin" : "replacement"}`,
+    assetId,
+    planId,
+    canonicalPayloadJson: stable(frontmatter),
+    contentDigest: unprefix(canonicalPlanContentDigest(sourceContent)),
+    bodyDigest: sha(parsed.body),
+    sourcePath,
+    sourceContent,
+    certificateId,
   };
 }
 
@@ -434,4 +640,8 @@ function openE2eDb(path: string): HarnessDb {
 
 function sha(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function unprefix(value: string | undefined): string {
+  return value?.startsWith("sha256:") ? value.slice(7) : (value ?? "");
 }

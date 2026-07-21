@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { canonicalPlanContentDigest } from "../../plan-admission/diff-fence.js";
 import type { HarnessDb } from "../../state-db/index.js";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
 import {
@@ -151,8 +152,10 @@ function validateBundle(input: RedesignBundleInput): string | undefined {
   )
     return "plan-redesign-bundle-reentry-binding-invalid";
   if (
-    sha(input.origin.sourceContent) !== input.origin.contentDigest ||
-    sha(input.replacement.sourceContent) !== input.replacement.contentDigest
+    unprefix(canonicalPlanContentDigest(input.origin.sourceContent)) !==
+      input.origin.contentDigest ||
+    unprefix(canonicalPlanContentDigest(input.replacement.sourceContent)) !==
+      input.replacement.contentDigest
   )
     return "plan-redesign-bundle-source-binding-invalid";
   return undefined;
@@ -183,7 +186,7 @@ function validatePublicationGroup(
         !group.members.some(
           (member) =>
             member.artifactPath === artifact.sourcePath &&
-            member.contentDigest === artifact.contentDigest,
+            member.contentDigest === sha(artifact.sourceContent),
         ),
     ) ||
     !group.members.some(
@@ -220,14 +223,19 @@ function parseCanonicalPlan(
 ): Record<string, unknown> | undefined {
   const parsed = parseLegacyPlanSource(input.sourceContent);
   const canonical = parseFrontmatter(input.canonicalPayloadJson);
+  const { admission_receipt: _receipt, ...sourceFrontmatter } = parsed?.frontmatter ?? {};
   if (
     !parsed ||
     !canonical ||
     parsed.planId !== input.planId ||
-    stableJson(parsed.frontmatter) !== stableJson(canonical)
+    stableJson(sourceFrontmatter) !== stableJson(canonical)
   )
     return undefined;
   return canonical;
+}
+
+function unprefix(value: string | undefined): string {
+  return value?.startsWith("sha256:") ? value.slice(7) : (value ?? "");
 }
 
 function containsPlanReference(

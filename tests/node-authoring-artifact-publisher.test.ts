@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.js";
 import {
@@ -140,6 +142,52 @@ describe("Node authoring artifact publisher", () => {
         groupId: "redesign:98",
       }),
     ).toThrow("published identity pin CAS mismatch");
+  });
+
+  it("U-PA-GROUP-009: child process停止後にdurable startedとcustodyからDB reopen収束する", () => {
+    const root = fixtureRoot();
+    const [artifact] = artifactsFor();
+    if (!artifact) throw new Error("fixture missing");
+    const dbPath = join(root, ".ut-tdd", "ledger", "harness.db");
+    mkdirSync(join(root, ".ut-tdd", "ledger"), { recursive: true });
+    let db = openHarnessDb(dbPath);
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+    const single = group([artifact]);
+    const moduleUrl = pathToFileURL(
+      join(process.cwd(), "src", "plan-admission", "node-atomic-draft-publisher.ts"),
+    ).href;
+    expect(() =>
+      new AuthoringCommandGroupJournal(db).execute(single, {
+        publish(member) {
+          const tokenId = `authoring-${sha(`${member.groupId}\0${member.memberId}`).slice(0, 32)}`;
+          const script = `import { NodeAtomicDraftPublisher } from ${JSON.stringify(moduleUrl)};
+const publisher = new NodeAtomicDraftPublisher({ rootDir: ${JSON.stringify(root)}, createId: () => ${JSON.stringify(tokenId)}, injectFault(point) { if (point === "publish:after-target-link") process.exit(86); } });
+const token = publisher.stage(${JSON.stringify([artifact])});
+publisher.publish(token);`;
+          const child = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+          if (child.status !== 86)
+            throw new Error(`child-fixture-invalid:${child.status}:${child.stderr}`);
+          throw new Error("child-process-stopped");
+        },
+        acknowledge() {},
+      }),
+    ).toThrow("child-process-stopped");
+    db.close();
+
+    db = openHarnessDb(dbPath);
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+    expect(
+      new AuthoringCommandGroupJournal(db).execute(
+        single,
+        new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts: [artifact] }),
+      ),
+    ).toMatchObject({ ok: true, replayed: true });
+    db.close();
+    expect(
+      readdirSync(root, { recursive: true })
+        .map(String)
+        .filter((name) => name.includes(".ut-tdd-draft-") || name.includes(".ut-tdd-identity-")),
+    ).toEqual([]);
   });
 });
 
