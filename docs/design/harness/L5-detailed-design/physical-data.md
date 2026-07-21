@@ -639,6 +639,9 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 | `workflow_event_evidence` | `event_id TEXT`, `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `requirement_id TEXT` | PK=`(event_id,evidence_id,subject_id,subject_revision,requirement_id)`、event/evidence subject-revision composite FK | event / evidence索引 |
 | `workflow_subject_states` | `subject_id TEXT`, `subject_revision INTEGER`, `current_state TEXT`, `resume_state TEXT?`, `last_sequence INTEGER`, `last_event_id TEXT?`, `state_digest TEXT` | workflow event reduction current projection。PK=`(subject_id,subject_revision)`、plan revision composite FK、`(last_event_id,subject_id,subject_revision)` composite FK（empty時だけNULL） | state / last event index |
 | `append_command_receipts` | `command_id TEXT`, `command_type TEXT`, `subject_kind TEXT`, `subject_key TEXT`, `plan_asset_id TEXT?`, `plan_revision INTEGER?`, `command_payload_digest TEXT`, `result_kind TEXT`, `result_ref TEXT`, `recorded_at TEXT`, `receipt_digest TEXT` | PK=`command_id`、全append context横断正本。subject kind=`plan_revision|reservation|legacy_migration`。plan_revision kindだけasset/revision必須+composite FK、他kindは両方NULL | subject/type/time index |
+| `authoring_command_group_headers` | `group_id TEXT`, `command_payload_digest TEXT`, `member_set_digest TEXT`, `member_count INTEGER`, `created_at TEXT`, `header_digest TEXT` | 複数authoring成果物を1 commandへ束縛するimmutable header。PK=`group_id`、`member_count > 0`、全列NOT NULL | group PK |
+| `authoring_command_group_members` | `group_id TEXT`, `member_id TEXT`, `ordinal INTEGER`, `artifact_path TEXT`, `content_digest TEXT`, `member_digest TEXT` | PK=`(group_id,member_id)`、header FK、`(group_id,ordinal)`と`(group_id,artifact_path)` UNIQUE。member集合はID昇順canonical frameの`member_set_digest`へ束縛 | group+ordinal / path unique |
+| `authoring_command_group_phase_events` | `phase_event_id TEXT`, `group_id TEXT`, `sequence INTEGER`, `command_payload_digest TEXT`, `event_kind TEXT`, `member_id TEXT?`, `publish_receipt_digest TEXT?`, `failure_reason TEXT?`, `occurred_at TEXT`, `previous_event_digest TEXT?`, `event_digest TEXT` | append-only phase journal。`prepared → member_published* → committed`を基本とし、途中失敗は`recovery_required`、明示補償だけ`rolled_back`。member publishはgroup/member composite FKとreceipt digest必須 | group+sequence unique/index |
 | `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `tree_oid TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `algorithm TEXT`, `captured_at TEXT` | PK=`snapshot_id`、commit/tree/hash UNIQUE、全列NOT NULL | commit/tree index |
 | `document_dispositions` | `baseline_id TEXT`, `path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `provenance_digest TEXT` | PK=`(baseline_id,path)`、snapshot FK、全baseline path exactly once、全列NOT NULL | zone/disposition/status index |
 | `document_disposition_targets` | `baseline_id TEXT`, `path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(baseline_id,path,target_ordinal)`、disposition FK、target実在CHECK | kind/ref index |
@@ -689,6 +692,13 @@ source-targetのreasonやcategory ordinalのようにauthoringにない意味fie
 event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、
 旧DBをin-place真実化せず、authoring sourceからtransactional rebuildする。migration前後でPK集合、FK orphan、
 UNIQUE違反、reduction digestを比較し、差があればcommitせずrollbackする。
+
+複数PLAN・設計・テスト設計を同時に差し替えるauthoring commandは、成果物ごとの独立callbackを完了判定に使わない。
+最初のSQLite transactionでheader、全member、`prepared` eventを確定し、外部publisherへは不変な
+`group_id + member_id`をidempotency keyとして渡す。各成功後に`member_published`をdurable appendし、全memberのreceiptが
+揃った場合だけ`committed`をappendする。process crash後はjournalを再読し、記録済memberをskipして未記録memberだけを
+再送する。外部publish成功とevent appendの間で停止した場合にも同じkeyを再送するため、publisher adapterはexactly-onceを
+自称せずidempotent overwrite/CASを実装する。DB projectionから成果物本文を復元・創作してはならない。
 
 PLAN Asset waveでは`IndexDef`へ任意SQL文字列でなくtyped predicate（`isNull(column)` / `equals(column,value)`のみ）を追加し、
 active aliasとactive ordinal leaseのpartial UNIQUEをDDL生成する。`plan_id_reservations`はauthoring/event正本ではなく

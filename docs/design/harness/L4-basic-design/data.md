@@ -238,6 +238,17 @@ AI が生成する TypeScript core は、後でリファクタする前提では
 
 投影再構築は既存集約に永続entityを足す操作ではなく、authoring sourceからread modelを再生成するapplication serviceである。source収集→pure projector→単一write sessionの順だけを許可し、row/findingのいずれか、またはsecret guardが失敗した場合は全rollbackする。projection eventとfinding payloadには共通guardを適用し、raw secretをDB/auditへ保存しない。projectorはDB/FS/clock/CLIを直接importせず、I/Oはsource adapter、transaction adapter、CLI/doctor composition rootへ隔離する。detector/doctorは結果を観測するだけで、PLAN・docs・state正本を創作またはsilent repairしない。具体的port signatureと移行完了条件はL5/L6で定義する。
 
+### §8.3 複数authoring成果物のcommand group集約
+
+設計差し替えはPLANだけを更新する単一artifact transactionではなく、少なくとも上流設計、PLAN、対となるテスト設計を
+一つの`AuthoringCommandGroup`として扱う。集約rootは`group_id`、command payload digest、全memberのID/path/content digest、
+member set digestを所有する。phase履歴はappend-onlyであり、個別成果物の公開成功だけでは集約を完了にしない。
+
+外部filesystem/Git公開はSQLiteと同一transactionへ偽装できないため、先にgroup intentをdurable化し、各memberの公開receiptを
+順次appendする。全member receiptが揃ったときだけ`committed`へ到達する。crash/retryは同一group/member identityで再開し、
+異なるpayloadまたはmember集合を同じgroupへ差し替える操作を拒否する。これにより検出器の都合で単一成果物へ縮小せず、
+Lごとの設計・検証ペアを一括差し替え単位として保持する。
+
 ## §9 carry → L5 詳細設計
 
 - 各集約の **物理 schema 詳細** (JSON フィールド型・必須/任意・default) は L5 physical-data (D-DB) で確定

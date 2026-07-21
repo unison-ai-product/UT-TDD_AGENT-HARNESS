@@ -1163,6 +1163,8 @@ subject/revisionを勝手に変更しない。最低10,000列または全state×
 | `SourceHasher.hash` | `(frames: Array<{ label; bytes }>, algorithm='sha256') -> Digest` | `labelLength+label+byteLength+bytes`でframe化し、文字列連結collisionを禁止。改行/encodingを勝手に正規化しない |
 | `ReceiptStore.append` | `(receipt, expectedPreviousDigest?) -> Result<AppendReceipt, ReceiptConflict>` | append-only、receipt ID/digest冪等。既存ID異payload、previous digest不一致をconflict |
 | `ReceiptStore.load` | `(ruleId, contractRevision) -> Receipt[]` | rule/revision/verifiedAt/receiptIdの決定論順。DB空集合をauthoring receiptの代替にしない |
+| `AuthoringCommandGroupJournal.execute` | `(input: { groupId; commandPayloadDigest; occurredAt; members[] }, publisher) -> AuthoringCommandGroupResult` | memberをID昇順でcanonical化し、header/member/`prepared`を先に原子確定する。各publish成功を`member_published`でappendし、全member receipt後だけ`committed`。同一groupの異payload/member集合は`authoring-command-group-replay-binding-invalid` |
+| `AuthoringArtifactPublisher.publish` | `({ groupId; memberId; artifactPath; contentDigest }) -> { receiptDigest }` | `groupId+memberId`をidempotency keyとして扱う。再送で二重副作用を作らず、receiptはSHA-256。journal/DBを正本として本文を創作しない |
 
 reservation event空集合は`unreserved`、最初の`reserved`はsequence 1とする。許可遷移は
 `unreserved→active(reserved)`、`active→released(released)`、`active→expired(expired)`だけで、released/expiredはterminal。
@@ -1170,6 +1172,11 @@ releaseとexpireの競合は`BEGIN IMMEDIATE`で先にreceiptを確定したcomm
 `plan-id-reservation-not-active`。同一command ID+同一payload再送は同じevent/lease result、異payloadは
 `plan-id-reservation-command-conflict`。reconstructはsequence、event/command identity、token hash、expiry条件を再検証し、
 event全削除→canonical ledger再読込後のstate/event/command payload digest集合差0を要求する。
+
+command groupの許可phaseは`prepared`をsequence 1とし、`member_published`は宣言済memberごとに最大1件、
+`committed`は全memberがpublishedの場合だけterminalとする。`recovery_required`は再開可能であり、完了済memberを再送せず、
+未完memberだけを同じidempotency keyでpublisherへ渡す。header/member/phase eventのdigest、previous chain、payload binding、
+member set digestのいずれかが不一致ならpublish前にfail-closeする。
 
 #### L7実装ownership DAG
 
