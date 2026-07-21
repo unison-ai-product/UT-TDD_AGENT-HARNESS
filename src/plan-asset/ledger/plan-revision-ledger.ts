@@ -58,7 +58,17 @@ export class PlanRevisionLedgerTransaction {
     const validated = validate(input);
     if (!validated.ok) return validated;
 
-    return this.transaction.run(() => {
+    return this.transaction.run(() => this.prepare(input, onPrepared));
+  }
+
+  /** 外側のcommand group transactionから同じwrite setを合成するための境界。 */
+  prepare(
+    input: AppendPlanRevisionInput,
+    onPrepared: (result: Extract<AppendPlanRevisionResult, { ok: true }>) => void,
+  ): { readonly commit: boolean; readonly value: AppendPlanRevisionResult } {
+    const validated = validate(input);
+    if (!validated.ok) return rejected(validated.ruleId);
+    {
       const replay = this.db
         .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
         .get(input.commandId);
@@ -180,7 +190,7 @@ export class PlanRevisionLedgerTransaction {
       };
       onPrepared(value);
       return { commit: true, value };
-    });
+    }
   }
 }
 
