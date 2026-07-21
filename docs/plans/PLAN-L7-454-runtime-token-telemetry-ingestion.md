@@ -4,7 +4,7 @@ title: "PLAN-L7-454 (troubleshoot): model_runs へ実測 token/cost telemetry �
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-21
@@ -37,7 +37,25 @@ dependencies:
     - docs/plans/PLAN-L7-57-token-cost-telemetry.md
     - docs/plans/PLAN-L7-192-db-telemetry-provenance-enforcement.md
     - docs/plans/PLAN-L7-420-ci-strict-evidence-gates.md
-review_evidence: []
+review_evidence:
+  - reviewer: blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-21T16:15:00+09:00"
+    tests_green_at: "2026-07-21T16:05:00+09:00"
+    verdict: approve
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    scope: "worktree wt-issue-82 変更一式 (token-tracker repo スコープ loader、rebuildHarnessDb token-telemetry 接続、CLI 統計出力、regression)。初回 blind review FLAG 2 点 (slug 非単射衝突 / POSIX case 誤同一視、reviewer が実反例を構築) → per-file cwd 帰属検証 + win32 限定 case-fold へ是正、負例 3 件追加 → focused 再レビューで PASS (reviewer が実装と負例 oracle を直接確認)。"
+    green_commands:
+      - kind: unit_test
+        command: "UT_TDD_TEST_EXECUTION_ROOT=$PWD UT_TDD_TEST_FENCE_ROOT=$PWD UT_TDD_HEAD_SNAPSHOT_ROOT=<mktemp -d detached copy> bunx vitest run tests/token-tracker.test.ts → 35/35 green (orchestrator 再実測含む)。tests/projection-writer.test.ts -t 'PLAN-L7-454' → 2/2 green。typecheck 0 / biome clean / plan lint OK (FLAG 是正記録参照)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-21T16:05:00+09:00"
+        evidence_path: tests/token-tracker.test.ts
+        output_digest: "sha256:759e37ece871eed4937b47bc284fd4a5a9f826803b3e53c5d3197bdd8ef8a935"
+        anchor_commit: 69f1088f9a96c2f07549e814de6fe968e5a23627
 ---
 
 # PLAN-L7-454 (troubleshoot): model_runs へ実測 token/cost telemetry を自動投入
@@ -154,8 +172,8 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/8
         (`Checked 544 files`, 0 errors)。
       - plan lint: `bun src/cli.ts plan lint` →
         `plan-schedule — OK (§工程表 checked=813, §G.4 minimal slice)`。
-      - review evidence: 未記録 (`review_evidence: []` のまま。確認ゲート前の
-        記録は PO/レビュー担当の工程で行う)。
+      - review evidence: 記録済み (frontmatter 参照。blind review FLAG→是正→
+        focused 再レビュー PASS、anchor 69f1088f)。
 
 ## FLAG 是正記録 (blind review, gpt-5.6-sol、2026-07-21)
 
