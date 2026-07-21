@@ -68,16 +68,12 @@ export class NodePlanAuthoringRecoveryExecutor {
         publisher.verifySingleArtifactCustody(capability);
         this.injectFault("after-artifact-mutation");
       }
-      if (input.strategy === "finalize") {
-        for (const artifact of snapshot.artifacts) {
-          const capability = artifactCapability(artifact);
-          publisher.resumeSingleArtifactCleanup(capability);
-          verifyFinalized(this.repoRoot, artifact);
-        }
-        appendRecoveryEvidence(db, snapshot, "finalize");
-      } else {
-        appendRecoveryEvidence(db, snapshot, "roll_forward");
+      for (const artifact of snapshot.artifacts) {
+        const capability = artifactCapability(artifact);
+        publisher.resumeSingleArtifactCleanup(capability);
+        verifyFinalized(this.repoRoot, artifact);
       }
+      appendRecoveryEvidence(db, snapshot, input.strategy);
       appendPublishedAndCommitted(db, snapshot);
       const result = { state: "committed" as const, strategy: input.strategy };
       db.exec("COMMIT");
@@ -268,7 +264,7 @@ function appendRecoveryEvidence(
       before_state_json: "{}",
       after_state_json: JSON.stringify({
         verified: true,
-        auxiliaryCount: action === "roll_forward" ? undefined : 0,
+        auxiliaryCount: 0,
       }),
       assessment_digest: snapshot.assessmentDigest,
       fencing_token: snapshot.fencingToken,

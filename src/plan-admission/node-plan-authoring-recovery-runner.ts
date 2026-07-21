@@ -30,8 +30,8 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
   }
 
   list(unresolvedOnly: boolean): unknown {
-    return this.withDb((db) =>
-      db
+    return this.withDb((db) => {
+      const rows = db
         .prepare(
           `SELECT header.group_id AS command_id, phase.event_kind AS state,
                   phase.occurred_at, assessment.strategy, assessment.assessment_digest
@@ -48,11 +48,13 @@ export class NodePlanAuthoringRecoveryRunner implements PlanAuthoringRecoveryRun
              SELECT MAX(latest.sequence) FROM authoring_command_group_phase_events latest
              WHERE latest.group_id = header.group_id
            )
-           ${unresolvedOnly ? "AND phase.event_kind NOT IN ('committed', 'rolled_back')" : ""}
            ORDER BY phase.occurred_at, header.group_id`,
         )
-        .all(),
-    );
+        .all();
+      if (!unresolvedOnly) return rows;
+      const unresolved = new Set(findUnresolvedAuthoringRecovery(db, this.repoRoot).groups);
+      return rows.filter((row) => unresolved.has(String(row.command_id)));
+    });
   }
 
   recover(input: {

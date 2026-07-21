@@ -70,6 +70,10 @@ export function inspectAuthoringRecoveryDbEvidence(
       admissionEvent.command_payload_digest !== admission.command_payload_digest ||
       admissionEvent.plan_asset_id !== admission.plan_asset_id ||
       Number(admissionEvent.plan_revision) !== Number(admission.plan_revision) ||
+      admissionEvent.plan_id !== admission.plan_id ||
+      admissionEvent.source_path !== admission.source_path ||
+      admissionEvent.content_digest !== admission.content_digest ||
+      admissionEvent.route_tuple_digest !== admission.route_tuple_digest ||
       admissionEvent.certificate_id !== admission.certificate_id ||
       admissionEvent.certificate_digest !== admission.certificate_digest ||
       admissionEvent.occurred_at !== admission.recorded_at

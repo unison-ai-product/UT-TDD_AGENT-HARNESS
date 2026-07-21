@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { linkSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -122,6 +122,62 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
       exitCode: 3,
       error: "plan-recovery-terminal-evidence-conflict",
     });
+    expect(fixture.runner.list(true)).toContainEqual(
+      expect.objectContaining({ command_id: fixture.groupId, state: "committed" }),
+    );
+  });
+
+  it("roll_forwardはauxiliaryを除去して1回のcommitted terminalへ収束する", () => {
+    const fixture = recoveryFixture();
+    const db = openHarnessDb(fixture.dbPath);
+    seedCompleteEvidence(db, fixture.groupId);
+    const artifact = db
+      .prepare("SELECT * FROM authoring_operation_artifacts WHERE group_id = ?")
+      .get(fixture.groupId);
+    db.close();
+    const target = join(fixture.root, String(artifact?.target_path));
+    const temporary = join(fixture.root, String(artifact?.temporary_path));
+    const publishedPin = join(fixture.root, String(artifact?.pin_path));
+    const temporaryPin = join(
+      fixture.root,
+      String(artifact?.pin_path).replace("published.identity", "temporary.identity"),
+    );
+    rmSync(target);
+    rmSync(publishedPin);
+    writeFileSync(temporary, "postimage");
+    linkSync(temporary, temporaryPin);
+
+    const status = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
+    expect(status).toMatchObject({ state: "recovery_required", strategy: "roll_forward" });
+    expect(
+      fixture.runner.recover({
+        commandId: fixture.groupId,
+        strategy: "roll_forward",
+        expectedAssessmentDigest: String(status.assessment_digest),
+        execute: true,
+      }),
+    ).toMatchObject({ state: "committed", strategy: "roll_forward" });
+    expect(fixture.runner.status(fixture.groupId)).toMatchObject({
+      state: "committed",
+      exitCode: 0,
+    });
+    expect(fixture.runner.list(true)).not.toContainEqual(
+      expect.objectContaining({ command_id: fixture.groupId }),
+    );
+    expect(existsSync(target)).toBe(true);
+    expect([temporary, publishedPin, temporaryPin].some(existsSync)).toBe(false);
+    const verified = openHarnessDb(fixture.dbPath);
+    expect(
+      Number(
+        verified
+          .prepare(
+            "SELECT COUNT(*) count FROM authoring_command_group_phase_events WHERE group_id = ? AND event_kind = 'committed'",
+          )
+          .get(fixture.groupId)?.count,
+      ),
+    ).toBe(1);
+    expect(migratePlanLedger(verified)).toMatchObject({ ok: true });
+    verified.close();
   });
 
   it("assessment 0件のkill状態をfresh statusが査定し、executor途中kill後も再開できる", () => {
@@ -241,6 +297,96 @@ function recoveryFixture(withoutAssessment = false) {
     groupId,
     runner: new NodePlanAuthoringRecoveryRunner(root, () => openHarnessDb(dbPath)),
   };
+}
+
+function seedCompleteEvidence(db: HarnessDb, groupId: string): void {
+  db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
+    "asset:2",
+    now,
+    "b".repeat(40),
+    "test",
+  );
+  db.prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    "asset:2",
+    1,
+    "{}",
+    sha("{}"),
+    digest,
+    "docs/b.md",
+    "b".repeat(40),
+    "test",
+    "test",
+    now,
+  );
+  for (const [role, asset, path] of [
+    ["origin", "asset:1", "docs/a.md"],
+    ["replacement", "asset:2", "docs/b.md"],
+  ] as const) {
+    const commandId = `${groupId}:${role}`;
+    const certificateId = `certificate:${role}`;
+    const admissionEventId = `admission:${role}`;
+    const binding = {
+      group_id: groupId,
+      asset_id: asset,
+      revision: 1,
+      artifact_role: role,
+      bound_at: now,
+    };
+    db.prepare("INSERT INTO authoring_command_revision_bindings VALUES (?, ?, ?, ?, ?, ?)").run(
+      ...Object.values(binding),
+      ledgerRowDigest(binding, "binding_digest"),
+    );
+    const admission = {
+      admission_event_id: admissionEventId,
+      command_id: commandId,
+      command_payload_digest: digest,
+      event_kind: "admitted",
+      plan_asset_id: asset,
+      plan_revision: 1,
+      plan_id: `PLAN-${role}`,
+      source_path: path,
+      content_digest: digest,
+      route_tuple_digest: digest,
+      certificate_id: certificateId,
+      certificate_digest: digest,
+      occurred_at: now,
+    };
+    db.prepare(
+      "INSERT INTO plan_admission_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(admission), ledgerRowDigest(admission, "event_digest"));
+    db.prepare(
+      "INSERT INTO plan_admission_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(
+      certificateId,
+      admissionEventId,
+      commandId,
+      digest,
+      asset,
+      1,
+      `PLAN-${role}`,
+      path,
+      digest,
+      digest,
+      digest,
+      now,
+    );
+    const receipt = {
+      command_id: commandId,
+      command_type: "plan.revise",
+      subject_kind: "plan_revision",
+      subject_key: `${asset}:1`,
+      plan_asset_id: asset,
+      plan_revision: 1,
+      command_payload_digest: digest,
+      result_kind: "admission_certificate",
+      result_ref: certificateId,
+      recorded_at: now,
+    };
+    db.prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      ...Object.values(receipt),
+      ledgerRowDigest(receipt, "receipt_digest"),
+    );
+  }
 }
 
 const digest = "a".repeat(64);

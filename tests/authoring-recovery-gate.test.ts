@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import { inspectAuthoringRecoveryDbEvidence } from "../src/plan-admission/author
 import {
   assertNoUnresolvedAuthoringRecovery,
   findUnresolvedAuthoringRecovery,
+  groupIsSemanticallyTerminal,
 } from "../src/plan-asset/ledger/authoring-recovery-gate";
 import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema";
 import { type HarnessDb, openHarnessDb } from "../src/state-db/index";
@@ -68,6 +69,35 @@ describe("authoring recovery boundary gate", () => {
     }
   });
 
+  it.each([
+    "plan_id",
+    "source_path",
+    "content_digest",
+    "route_tuple_digest",
+  ] as const)("admission eventの%sだけを改変し行digestを再計算してもreceiptとの不一致を拒否する", (field) => {
+    const { db } = fixture();
+    try {
+      seedCommittedEvidence(db);
+      const event = db
+        .prepare("SELECT * FROM plan_admission_events WHERE admission_event_id = ?")
+        .get("admission:origin") as Record<string, unknown>;
+      const forged = { ...event, [field]: `forged-${field}` };
+      // offline DB tamperはappend-only triggerごと回避し得る。行digestが自己整合しても
+      // receiptとのcross-row bindingが壊れた証拠をrecovery gateは信用しない。
+      db.exec("DROP TRIGGER trg_plan_admission_events_no_update");
+      db.prepare(
+        `UPDATE plan_admission_events SET ${field} = ?, event_digest = ?
+           WHERE admission_event_id = ?`,
+      ).run(forged[field], ledgerRowDigest(forged, "event_digest"), forged.admission_event_id);
+
+      expect(() => inspectAuthoringRecoveryDbEvidence(db, "redesign:1")).toThrow(
+        "plan-recovery-db-evidence-mismatch",
+      );
+    } finally {
+      db.close();
+    }
+  });
+
   it("偽rolled_backはDB evidence、preimage不一致、aux残存の各laneでblockする", () => {
     const { db, root } = fixture();
     try {
@@ -101,6 +131,30 @@ describe("authoring recovery boundary gate", () => {
       seedGroup(db, "committed", sha("post"), { kind: "absent" }, "linked/real.txt");
       seedCommittedEvidence(db);
       expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual(["redesign:1"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("親directoryを判定中にjunctionへ差し替えるTOCTOUをfail-closeする", () => {
+    const { db, root } = fixture();
+    const outside = mkdtempSync(join(tmpdir(), "authoring-gate-race-outside-"));
+    roots.push(outside);
+    try {
+      mkdirSync(join(root, "nested"));
+      writeFileSync(join(root, "nested", "target.txt"), "post");
+      writeFileSync(join(outside, "target.txt"), "post");
+      seedGroup(db, "committed", sha("post"), { kind: "absent" }, "nested/target.txt");
+      seedCommittedEvidence(db);
+      let swapped = false;
+      expect(
+        groupIsSemanticallyTerminal(db, root, "redesign:1", "committed", (path) => {
+          if (swapped || path !== "nested/target.txt") return;
+          swapped = true;
+          renameSync(join(root, "nested"), join(root, "nested-original"));
+          symlinkSync(outside, join(root, "nested"), "junction");
+        }),
+      ).toBe(false);
     } finally {
       db.close();
     }

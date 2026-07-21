@@ -62,6 +62,7 @@ export function groupIsSemanticallyTerminal(
   repoRoot: string,
   groupId: string,
   phase: string,
+  afterParentCapture: ((path: string) => void) | undefined = undefined,
 ): boolean {
   if (phase !== "committed" && phase !== "rolled_back") return false;
   try {
@@ -86,8 +87,8 @@ export function groupIsSemanticallyTerminal(
     )
       return false;
     return phase === "committed"
-      ? committedEvidenceComplete(db, repoRoot, groupId, artifacts)
-      : rolledBackEvidenceClean(db, repoRoot, groupId, artifacts);
+      ? committedEvidenceComplete(db, repoRoot, groupId, artifacts, afterParentCapture)
+      : rolledBackEvidenceClean(db, repoRoot, groupId, artifacts, afterParentCapture);
   } catch {
     return false;
   }
@@ -98,6 +99,7 @@ function committedEvidenceComplete(
   repoRoot: string,
   groupId: string,
   artifacts: readonly Record<string, unknown>[],
+  afterParentCapture?: (path: string) => void,
 ): boolean {
   if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "complete") return false;
   const bindings = db
@@ -128,10 +130,16 @@ function committedEvidenceComplete(
     if (!revision || !append || !admission) return false;
   }
   return artifacts.every((artifact) => {
-    const target = safePath(repoRoot, String(artifact.target_path));
     return (
-      digestMatchesRegular(target, String(artifact.postimage_digest)) &&
-      auxiliaryPaths(repoRoot, artifact).every((path) => !existsSync(path))
+      inspectStablePath(
+        repoRoot,
+        String(artifact.target_path),
+        (path) => digestMatchesRegular(path, String(artifact.postimage_digest)),
+        afterParentCapture,
+      ) &&
+      auxiliaryPaths(artifact).every((path) =>
+        inspectStablePath(repoRoot, path, (resolved) => !existsSync(resolved), afterParentCapture),
+      )
     );
   });
 }
@@ -141,6 +149,7 @@ function rolledBackEvidenceClean(
   repoRoot: string,
   groupId: string,
   artifacts: readonly Record<string, unknown>[],
+  afterParentCapture?: (path: string) => void,
 ): boolean {
   if (inspectAuthoringRecoveryDbEvidence(db, groupId) !== "zero") return false;
   const evidence = Number(
@@ -161,20 +170,29 @@ function rolledBackEvidenceClean(
   );
   if (evidence !== 0) return false;
   return artifacts.every((artifact) => {
-    const target = safePath(repoRoot, String(artifact.target_path));
     const preimage = JSON.parse(String(artifact.expected_preimage_json)) as {
       kind: "absent" | "sha256";
       digest?: string;
     };
-    const restored =
-      preimage.kind === "absent"
-        ? !existsSync(target)
-        : typeof preimage.digest === "string" && digestMatchesRegular(target, preimage.digest);
-    return restored && auxiliaryPaths(repoRoot, artifact).every((path) => !existsSync(path));
+    const restored = inspectStablePath(
+      repoRoot,
+      String(artifact.target_path),
+      (target) =>
+        preimage.kind === "absent"
+          ? !existsSync(target)
+          : typeof preimage.digest === "string" && digestMatchesRegular(target, preimage.digest),
+      afterParentCapture,
+    );
+    return (
+      restored &&
+      auxiliaryPaths(artifact).every((path) =>
+        inspectStablePath(repoRoot, path, (resolved) => !existsSync(resolved), afterParentCapture),
+      )
+    );
   });
 }
 
-function auxiliaryPaths(repoRoot: string, artifact: Record<string, unknown>): string[] {
+function auxiliaryPaths(artifact: Record<string, unknown>): string[] {
   const published = String(artifact.pin_path);
   return [
     String(artifact.temporary_path),
@@ -182,7 +200,51 @@ function auxiliaryPaths(repoRoot: string, artifact: Record<string, unknown>): st
     published,
     published.replace("published.identity", "temporary.identity"),
     published.replace("published.identity", "rollback.identity"),
-  ].map((path) => safePath(repoRoot, path));
+  ];
+}
+
+function inspectStablePath<T>(
+  repoRoot: string,
+  path: string,
+  inspect: (resolved: string) => T,
+  afterParentCapture?: (path: string) => void,
+): T {
+  const resolved = safePath(repoRoot, path);
+  const parent = DirectoryIdentity.capture(dirname(resolved));
+  afterParentCapture?.(path);
+  parent.assertCurrent();
+  const result = inspect(resolved);
+  parent.assertCurrent();
+  return result;
+}
+
+class DirectoryIdentity {
+  private constructor(
+    private readonly path: string,
+    private readonly canonical: string,
+    private readonly device: number,
+    private readonly inode: number,
+  ) {}
+
+  static capture(path: string): DirectoryIdentity {
+    const canonical = realpathSync(path);
+    const stat = lstatSync(path);
+    if (!stat.isDirectory() || stat.isSymbolicLink())
+      throw new Error("authoring-recovery-parent-invalid");
+    return new DirectoryIdentity(path, canonical, stat.dev, stat.ino);
+  }
+
+  assertCurrent(): void {
+    const stat = lstatSync(this.path);
+    if (
+      !stat.isDirectory() ||
+      stat.isSymbolicLink() ||
+      realpathSync(this.path) !== this.canonical ||
+      stat.dev !== this.device ||
+      stat.ino !== this.inode
+    )
+      throw new Error("authoring-recovery-parent-drift");
+  }
 }
 
 function safePath(repoRoot: string, path: string): string {
