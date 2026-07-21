@@ -1289,6 +1289,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-GROUP-004` | payload差替え、member path改竄、digest再計算攻撃 | replay / `migratePlanLedger` | binding不一致または`plan-ledger-unavailable`でpublish前fail-close |
 | `U-PA-GROUP-005` | L4-31 rev2、L6-88、projectionの実file、member途中fault | Node authoring adapter + group journal再送 | 部分targetをrestoreし、完了memberをskipして3成果物とcommitted phaseへ収束 |
 | `U-PA-GROUP-006` | publish完了後・finalize前fault | 同一process adapter再送、新adapter再送 | 保持tokenのcleanupを再開し、processを跨いでもtarget digestから同一receiptへ収束 |
+| `U-PA-GROUP-007` | target hardlink直後にprocess停止した実filesystem状態 | 決定論group/member tokenを持つ新adapterで再送 | postimage、temporary、identity pinをdigest/CAS検証し、残存補助file 0かつ同一receiptへ収束 |
 | `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
 | `U-PA-047` | v2 ledger（reservation 0件／hash-only reservationあり） | schema v3 migration | 空reservationはtransactionalにexact v3へ移行し、非空hash-onlyは明示manifestなしに変更せずfail-close。key version/event/current/reduction/reopen一致 |
 | `U-PA-048` | unsigned/正規署名/別鍵署名/producer変更/claims・digest変更/attestation replay、key rotation、runtime property列挙 | evidence attestation issuer/verifier + policy | trusted authorityの署名とproducer bindingを満たすrecordだけeligible。未署名・偽署名・改変・replayはfail-closeし、秘密鍵/current versionはruntime propertyへ露出しない |

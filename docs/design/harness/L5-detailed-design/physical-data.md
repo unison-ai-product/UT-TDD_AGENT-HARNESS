@@ -699,6 +699,9 @@ UNIQUE違反、reduction digestを比較し、差があればcommitせずrollbac
 揃った場合だけ`committed`をappendする。process crash後はjournalを再読し、記録済memberをskipして未記録memberだけを
 再送する。外部publish成功とevent appendの間で停止した場合にも同じkeyを再送するため、publisher adapterはexactly-onceを
 自称せずidempotent overwrite/CASを実装する。DB projectionから成果物本文を復元・創作してはならない。
+Node filesystem adapterは`group_id + NUL + member_id`のSHA-256から安全な決定論token IDを導出し、memberごとに
+`expectedPreimage`を必須化する。再起動時にtargetがpostimage digestと一致する場合、同じtokenから導出したtemporary、rollback、
+identity pinだけをdigest検証して削除し、決定論receiptを再構成する。補助pathまたはpreimageが一致しない場合はcleanupせずfail-closeする。
 
 PLAN Asset waveでは`IndexDef`へ任意SQL文字列でなくtyped predicate（`isNull(column)` / `equals(column,value)`のみ）を追加し、
 active aliasとactive ordinal leaseのpartial UNIQUEをDDL生成する。`plan_id_reservations`はauthoring/event正本ではなく

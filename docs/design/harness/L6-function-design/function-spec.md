@@ -1166,7 +1166,7 @@ subject/revisionを勝手に変更しない。最低10,000列または全state×
 | `AuthoringCommandGroupJournal.execute` | `(input: { groupId; commandPayloadDigest; occurredAt; members[] }, publisher) -> AuthoringCommandGroupResult` | memberをID昇順でcanonical化し、header/member/`prepared`を先に原子確定する。各publish成功を`member_published`でappendし、全member receipt後だけ`committed`。同一groupの異payload/member集合は`authoring-command-group-replay-binding-invalid` |
 | `AuthoringArtifactPublisher.publish` | `({ groupId; memberId; artifactPath; contentDigest }) -> { receiptDigest }` | `groupId+memberId`をidempotency keyとして扱う。再送で二重副作用を作らず、receiptはSHA-256。journal/DBを正本として本文を創作しない |
 | `PlanRedesignBundleCoordinator.publishDurable` | `(bundle, group, publisher) -> RedesignBundlePublicationResult` | bundle command ID/digest/timeとgroupを一致させ、replacement/origin sourceに加えて1件以上のprojection memberを必須化。revision確定後にdurable groupを実行し、外部faultは`recovery_required`から再開 |
-| `NodeAuthoringArtifactPublisher.publish` | `(group member) -> { receiptDigest }` | member ID/path/content digestを事前供給された本文へ再束縛し、`NodeAtomicDraftPublisher`の1-artifact tokenでstage/publish/finalize。target digest一致時だけprocess再送として決定論receiptを返す。publish faultはrestore、finalize faultは保持tokenから再開 |
+| `NodeAuthoringArtifactPublisher.publish` | `(group member) -> { receiptDigest }` | member ID/path/content digest/preimageを事前供給された本文へ再束縛し、group/memberから導出する決定論tokenで`NodeAtomicDraftPublisher`の1-artifact stage/publish/finalizeを実行。target digest一致時は残存temporary/rollback/identity pinをCAS検証してcleanup後、決定論receiptを返す。publish faultはrestore、finalize faultは保持tokenから再開 |
 
 reservation event空集合は`unreserved`、最初の`reserved`はsequence 1とする。許可遷移は
 `unreserved→active(reserved)`、`active→released(released)`、`active→expired(expired)`だけで、released/expiredはterminal。
