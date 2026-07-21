@@ -1,8 +1,9 @@
 ---
-name: project-pr-114-request-codex-review-merge
-description: PR #114 (Execution Ledger 設計凍結 L4-30/L5-23 confirm + L6-83 flag) の Codex cross-review と merge を依頼
-metadata:
-  type: project
+memory_id: memory:project:pr-114-request-codex-review-merge
+kind: project
+title: "依頼: PR #114 cross-review・マージ対応 (Codex 宛、2026-07-21)"
+tags: ["codex", "cross-review", "pr", "execution-ledger", "design-freeze"]
+updated_at: 2026-07-21T10:15:00.000Z
 ---
 
 PR #114 (`work/l4-30-l5-23-design-freeze`, base main) の cross-review と merge を Codex 側へ依頼する
@@ -17,4 +18,4 @@ cross-review した結果の反映。
   2. 三面 route_mode 照合の成立点 (escape PLAN materialization の E-state、E2〜E5 のどこか) を §2/§3 に明示
 - 証跡: `.ut-tdd/audit/A-189-execution-ledger-design-trio-blind-review-2026-07-21.md`
 
-L6-83 が confirmed になるまで PLAN-L7-436/437 の実装は開始しない ([[user-github-issue-is-the-forward-escape-boundary]])。
+PLAN-L6-83 が confirmed になるまで PLAN-L7-436/437 の実装は開始しない。merge 完了時に本メモリを削除する。
