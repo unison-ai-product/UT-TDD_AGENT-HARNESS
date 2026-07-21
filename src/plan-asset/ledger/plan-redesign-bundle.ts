@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { parse } from "yaml";
 import { canonicalPlanContentDigest } from "../../plan-admission/diff-fence.js";
 import type { HarnessDb } from "../../state-db/index.js";
+import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
 import {
   type AuthoringArtifactPublisher,
@@ -19,6 +20,7 @@ import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transa
 export interface RedesignBundleInput {
   readonly commandId: string;
   readonly commandPayloadDigest: string;
+  readonly repositoryIdentity: string;
   readonly replacement:
     | (AppendPlanRevisionInput & { readonly sourceContent: string })
     | (BootstrapLegacyPlanRevisionInput & { readonly sourceContent: string });
@@ -236,6 +238,24 @@ export class PlanRedesignBundleCoordinator {
       commandPayloadDigest: redesignPublicationPayloadDigest(input, input.publication.members),
       occurredAt: input.origin.occurredAt,
       members: input.publication.members,
+      operation: {
+        repositoryIdentity: input.repositoryIdentity,
+        baseCommit: input.origin.sourceCommit,
+        revisionBindings: [
+          {
+            assetId: input.origin.assetId,
+            revision: input.origin.baseRevision + 1,
+            artifactRole: "origin",
+          },
+          {
+            assetId: isBootstrap(input.replacement)
+              ? deriveLegacyAssetId(input.repositoryIdentity, input.replacement.planId)
+              : input.replacement.assetId,
+            revision: input.replacement.baseRevision + 1,
+            artifactRole: "replacement",
+          },
+        ],
+      },
     };
     const groupInvalid = validatePublicationGroup(input, group);
     if (groupInvalid) return { ok: false, ruleId: groupInvalid };
@@ -260,6 +280,7 @@ export class PlanRedesignBundleCoordinator {
 function validateBundle(input: RedesignBundleInput): string | undefined {
   if (
     !input.commandId ||
+    !input.repositoryIdentity ||
     !/^[a-f0-9]{64}$/.test(input.commandPayloadDigest) ||
     input.commandPayloadDigest !== redesignBundlePayloadDigest(input) ||
     input.replacement.commandId !== `${input.commandId}:replacement` ||

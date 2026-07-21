@@ -18,6 +18,15 @@ export interface AuthoringCommandGroupInput {
   readonly commandPayloadDigest: string;
   readonly occurredAt: string;
   readonly members: readonly AuthoringCommandGroupMember[];
+  readonly operation?: {
+    readonly repositoryIdentity: string;
+    readonly baseCommit: string;
+    readonly revisionBindings: readonly {
+      readonly assetId: string;
+      readonly revision: number;
+      readonly artifactRole: string;
+    }[];
+  };
 }
 
 export interface AuthoringArtifactPublisher {
@@ -27,6 +36,8 @@ export interface AuthoringArtifactPublisher {
   };
   /** member_publishedがdurableになった後だけ一時custodyを解放する。 */
   acknowledge(input: AuthoringCommandGroupMember & { readonly groupId: string }): void;
+  /** receipt 0件のnormal exception時だけ、全memberがpreimageへ戻ったことを証明する。 */
+  rollback?(input: readonly (AuthoringCommandGroupMember & { readonly groupId: string })[]): void;
 }
 
 export type AuthoringCommandGroupResult =
@@ -81,9 +92,47 @@ export class AuthoringCommandGroupJournal {
         published.add(member.memberId);
         publisher.acknowledge({ ...member, groupId: normalized.groupId });
       }
+      if (admitted.recoveryRequired && normalized.operation) {
+        const assessment = recordRecoveryAssessment(
+          this.db,
+          normalized,
+          "finalize",
+          published,
+          new Error("recovery-replay"),
+        );
+        recordRecoveryAttempt(this.db, normalized, assessment, "finalize", "started");
+        recordArtifactRecovery(this.db, normalized, assessment, "finalize");
+        recordRecoveryAttempt(this.db, normalized, assessment, "finalize", "succeeded");
+      }
       this.appendPhase(normalized, { kind: "committed" });
       return { ok: true, replayed: admitted.replayed, publishedMemberIds: [...published] };
     } catch (error) {
+      let restored = false;
+      if (published.size === 0 && publisher.rollback) {
+        try {
+          publisher.rollback(
+            normalized.members.map((member) => ({ ...member, groupId: normalized.groupId })),
+          );
+          restored = true;
+        } catch {
+          restored = false;
+        }
+      }
+      const strategy = restored ? "rollback" : "roll_forward";
+      const assessment = normalized.operation
+        ? recordRecoveryAssessment(this.db, normalized, strategy, published, error)
+        : undefined;
+      if (restored) {
+        const rolledBack = this.rollback(normalized, safeFailure(error));
+        if (!rolledBack.ok) throw new Error(rolledBack.ruleId);
+        if (assessment) {
+          recordArtifactRecovery(this.db, normalized, assessment, "restore");
+          recordRecoveryAttempt(this.db, normalized, assessment, "rollback", "succeeded");
+        }
+        throw error;
+      }
+      if (assessment)
+        recordRecoveryAttempt(this.db, normalized, assessment, "roll_forward", "started");
       this.appendPhase(normalized, {
         kind: "recovery_required",
         failureReason: safeFailure(error),
@@ -152,6 +201,7 @@ export class AuthoringCommandGroupJournal {
       .get(input.groupId);
     if (!header) {
       insertHeaderAndMembers(this.db, input);
+      if (input.operation) insertOperationDescriptor(this.db, input);
       insertPhase(this.db, input, { kind: "prepared", sequence: 1 });
       return {
         ok: true,
@@ -160,9 +210,14 @@ export class AuthoringCommandGroupJournal {
         rolledBack: false,
         published: [],
         started: [],
+        recoveryRequired: false,
       };
     }
-    if (!headerMatches(header, input) || !membersMatch(this.db, input))
+    if (
+      !headerMatches(header, input) ||
+      !membersMatch(this.db, input) ||
+      !operationMatches(this.db, input)
+    )
       return { ok: false, ruleId: "authoring-command-group-replay-binding-invalid" };
     const events = phaseEvents(this.db, input.groupId);
     if (!eventsValid(events, input))
@@ -181,6 +236,7 @@ export class AuthoringCommandGroupJournal {
       rolledBack: events.at(-1)?.event_kind === "rolled_back",
       published,
       started,
+      recoveryRequired: events.some((event) => event.event_kind === "recovery_required"),
     };
   }
 
@@ -191,6 +247,206 @@ export class AuthoringCommandGroupJournal {
       insertPhase(this.db, input, { ...phase, sequence: events.length + 1 });
       return { commit: true, value: undefined };
     });
+  }
+}
+
+function recordArtifactRecovery(
+  db: HarnessDb,
+  input: NormalizedGroup,
+  assessment: RecoveryAssessment,
+  action: "restore" | "roll_forward" | "finalize",
+): void {
+  new ImmediateLedgerTransaction(db).run(() => {
+    for (const member of input.members) {
+      const row = {
+        recovery_event_id: `artifact-recovery:${assessment.operationId}:${member.memberId}:1`,
+        operation_id: assessment.operationId,
+        member_id: member.memberId,
+        sequence: 1,
+        action,
+        result: "succeeded",
+        before_state_json: stableJson({ expectedPreimage: member.expectedPreimage }),
+        after_state_json: stableJson({ restored: true }),
+        assessment_digest: assessment.digest,
+        fencing_token: assessment.fencingToken,
+        actor: "authoring-command-group",
+        occurred_at: input.occurredAt,
+        failure_reason: null,
+        previous_event_digest: null,
+      };
+      db.prepare(
+        "INSERT INTO authoring_artifact_recovery_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ).run(...Object.values(row), ledgerRowDigest(row, "event_digest"));
+    }
+    return { commit: true, value: undefined };
+  });
+}
+
+type RecoveryStrategy = "rollback" | "roll_forward" | "finalize";
+interface RecoveryAssessment {
+  readonly operationId: string;
+  readonly digest: string;
+  readonly fencingToken: string;
+}
+
+function recordRecoveryAssessment(
+  db: HarnessDb,
+  input: NormalizedGroup,
+  strategy: RecoveryStrategy,
+  published: ReadonlySet<string>,
+  error: unknown,
+): RecoveryAssessment {
+  return new ImmediateLedgerTransaction(db).run(() => {
+    const operationId = `authoring:${sha(input.groupId).slice(0, 32)}`;
+    const previous = db
+      .prepare(
+        "SELECT sequence, event_digest FROM authoring_recovery_assessment_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(operationId);
+    const sequence = Number(previous?.sequence ?? 0) + 1;
+    const assessmentJson = stableJson({
+      failure: safeFailure(error),
+      published: [...published].sort(),
+      strategy,
+    });
+    const assessmentDigest = sha(assessmentJson);
+    const fencingToken = `fence:${sha(`${operationId}\0${sequence}\0${previous?.event_digest ?? ""}`).slice(0, 32)}`;
+    const row = {
+      assessment_event_id: `assessment:${operationId}:${sequence}`,
+      operation_id: operationId,
+      sequence,
+      strategy,
+      assessment_json: assessmentJson,
+      assessment_digest: assessmentDigest,
+      fencing_token: fencingToken,
+      occurred_at: input.occurredAt,
+      previous_event_digest: previous?.event_digest ?? null,
+    };
+    db.prepare(
+      "INSERT INTO authoring_recovery_assessment_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(row), ledgerRowDigest(row, "event_digest"));
+    return {
+      commit: true,
+      value: { operationId, digest: assessmentDigest, fencingToken },
+    };
+  });
+}
+
+function recordRecoveryAttempt(
+  db: HarnessDb,
+  input: NormalizedGroup,
+  assessment: RecoveryAssessment,
+  strategy: RecoveryStrategy,
+  result: "started" | "succeeded",
+): void {
+  new ImmediateLedgerTransaction(db).run(() => {
+    const previous = db
+      .prepare(
+        "SELECT sequence, event_digest FROM authoring_recovery_attempt_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(assessment.operationId);
+    const sequence = Number(previous?.sequence ?? 0) + 1;
+    const row = {
+      attempt_event_id: `attempt:${assessment.operationId}:${sequence}`,
+      operation_id: assessment.operationId,
+      sequence,
+      assessment_digest: assessment.digest,
+      fencing_token: assessment.fencingToken,
+      strategy,
+      result,
+      actor: "authoring-command-group",
+      occurred_at: input.occurredAt,
+      failure_reason: null,
+      previous_event_digest: previous?.event_digest ?? null,
+    };
+    db.prepare(
+      "INSERT INTO authoring_recovery_attempt_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(row), ledgerRowDigest(row, "event_digest"));
+    return { commit: true, value: undefined };
+  });
+}
+
+function operationMatches(db: HarnessDb, input: NormalizedGroup): boolean {
+  const descriptor = db
+    .prepare("SELECT * FROM authoring_operation_descriptors WHERE group_id = ?")
+    .get(input.groupId);
+  if (!input.operation) return !descriptor;
+  if (
+    !descriptor ||
+    descriptor.descriptor_digest !== ledgerRowDigest(descriptor, "descriptor_digest")
+  )
+    return false;
+  const bindings = db
+    .prepare(
+      "SELECT asset_id, revision, artifact_role FROM authoring_command_revision_bindings WHERE group_id = ? ORDER BY asset_id, revision",
+    )
+    .all(input.groupId);
+  const expected = [...input.operation.revisionBindings].sort((a, b) =>
+    `${a.assetId}\0${a.revision}`.localeCompare(`${b.assetId}\0${b.revision}`),
+  );
+  return (
+    descriptor.repository_identity === input.operation.repositoryIdentity &&
+    descriptor.base_commit === input.operation.baseCommit &&
+    Number(descriptor.artifact_count) === input.members.length &&
+    bindings.length === expected.length &&
+    bindings.every(
+      (row, index) =>
+        row.asset_id === expected[index]?.assetId &&
+        Number(row.revision) === expected[index]?.revision &&
+        row.artifact_role === expected[index]?.artifactRole,
+    )
+  );
+}
+
+function insertOperationDescriptor(db: HarnessDb, input: NormalizedGroup): void {
+  const operation = input.operation;
+  if (!operation) return;
+  const operationId = `authoring:${sha(input.groupId).slice(0, 32)}`;
+  const descriptor = {
+    operation_id: operationId,
+    group_id: input.groupId,
+    command_payload_digest: input.commandPayloadDigest,
+    repository_identity: operation.repositoryIdentity,
+    base_commit: operation.baseCommit,
+    artifact_count: input.members.length,
+    prepared_at: input.occurredAt,
+  };
+  db.prepare("INSERT INTO authoring_operation_descriptors VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+    ...Object.values(descriptor),
+    ledgerRowDigest(descriptor, "descriptor_digest"),
+  );
+  input.members.forEach((member, index) => {
+    const tokenId = `authoring-${sha(`${input.groupId}\0${member.memberId}`).slice(0, 32)}`;
+    const suffix = `.ut-tdd-draft-${tokenId}`;
+    const row = {
+      operation_id: operationId,
+      group_id: input.groupId,
+      member_id: member.memberId,
+      ordinal: index + 1,
+      artifact_role: member.memberId,
+      target_path: member.artifactPath,
+      temporary_path: `${member.artifactPath}${suffix}.tmp`,
+      rollback_path: `${member.artifactPath}${suffix}.rollback`,
+      pin_path: `.ut-tdd-draft-${tokenId}-0-published.identity`,
+      expected_preimage_json: stableJson(member.expectedPreimage),
+      postimage_digest: `sha256:${member.contentDigest}`,
+    };
+    db.prepare(
+      "INSERT INTO authoring_operation_artifacts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(row), ledgerRowDigest(row, "artifact_digest"));
+  });
+  for (const binding of operation.revisionBindings) {
+    const row = {
+      group_id: input.groupId,
+      asset_id: binding.assetId,
+      revision: binding.revision,
+      artifact_role: binding.artifactRole,
+      bound_at: input.occurredAt,
+    };
+    db.prepare("INSERT INTO authoring_command_revision_bindings VALUES (?, ?, ?, ?, ?, ?)").run(
+      ...Object.values(row),
+      ledgerRowDigest(row, "binding_digest"),
+    );
   }
 }
 
@@ -221,6 +477,7 @@ type Admission =
       readonly rolledBack: boolean;
       readonly published: readonly string[];
       readonly started: readonly string[];
+      readonly recoveryRequired: boolean;
     };
 
 function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefined {
@@ -239,7 +496,14 @@ function normalize(input: AuthoringCommandGroupInput): NormalizedGroup | undefin
         !validDigest(member.contentDigest) ||
         !validPreimage(member.expectedPreimage) ||
         isSecretLike(member.artifactPath),
-    )
+    ) ||
+    (input.operation !== undefined &&
+      (!input.operation.repositoryIdentity ||
+        !/^[a-f0-9]{40}$/.test(input.operation.baseCommit) ||
+        input.operation.revisionBindings.length === 0 ||
+        input.operation.revisionBindings.some(
+          (binding) => !binding.assetId || binding.revision < 1 || !binding.artifactRole,
+        )))
   )
     return undefined;
   return { ...input, members, memberSetDigest: sha(JSON.stringify(members)) };

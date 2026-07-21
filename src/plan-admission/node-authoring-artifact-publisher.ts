@@ -142,6 +142,30 @@ export class NodeAuthoringArtifactPublisher implements AuthoringArtifactPublishe
       postimage: `sha256:${input.contentDigest}`,
     });
   }
+
+  rollback(inputs: readonly (AuthoringCommandGroupMember & { readonly groupId: string })[]): void {
+    for (const input of inputs) {
+      const artifact = this.artifacts.get(input.memberId);
+      if (!artifact) throw new Error("authoring rollback artifact missing");
+      const target = resolve(this.rootDir, artifact.path);
+      if (artifact.expectedPreimage.kind === "absent") {
+        if (existsSync(target)) throw new Error("authoring rollback absent preimage mismatch");
+      } else if (
+        !targetHasDigest(this.rootDir, artifact.path, artifact.expectedPreimage.digest.slice(7))
+      ) {
+        throw new Error("authoring rollback preimage digest mismatch");
+      }
+      const tokenId = `authoring-${sha(`${input.groupId}\0${input.memberId}`).slice(0, 32)}`;
+      for (const custody of [
+        `${target}.ut-tdd-draft-${tokenId}.tmp`,
+        `${target}.ut-tdd-draft-${tokenId}.rollback`,
+        resolve(this.rootDir, `.ut-tdd-draft-${tokenId}-0-temporary.identity`),
+        resolve(this.rootDir, `.ut-tdd-draft-${tokenId}-0-rollback.identity`),
+        resolve(this.rootDir, `.ut-tdd-draft-${tokenId}-0-published.identity`),
+      ])
+        if (existsSync(custody)) throw new Error("authoring rollback custody remains");
+    }
+  }
 }
 
 function targetHasDigest(rootDir: string, logicalPath: string, digest: string): boolean {

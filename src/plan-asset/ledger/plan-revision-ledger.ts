@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
+import { committedRevisionPredicate } from "./revision-visibility.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
@@ -96,7 +97,9 @@ export class PlanRevisionLedgerTransaction {
 
       const latest = this.db
         .prepare(
-          "SELECT revision, canonical_payload_digest FROM plan_revisions WHERE asset_id = ? ORDER BY revision DESC LIMIT 1",
+          `SELECT revision, canonical_payload_digest FROM plan_revisions revision
+           WHERE asset_id = ? AND ${committedRevisionPredicate("revision")}
+           ORDER BY revision DESC LIMIT 1`,
         )
         .get(input.assetId);
       if (!latest) return rejected("plan-asset-not-found");

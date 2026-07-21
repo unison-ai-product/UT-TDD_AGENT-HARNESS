@@ -23,6 +23,7 @@ import {
   redesignBundlePayloadDigest,
 } from "../../src/plan-asset/ledger/plan-redesign-bundle.js";
 import type { AppendPlanRevisionInput } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
+import { committedRevisionPredicate } from "../../src/plan-asset/ledger/revision-visibility.js";
 import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 
@@ -292,11 +293,45 @@ publisher.publish(token);`;
     opened.splice(opened.indexOf(db), 1);
 
     db = openE2eDb(dbPath);
+    expect(db.prepare("SELECT artifact_count FROM authoring_operation_descriptors").get()).toEqual({
+      artifact_count: artifacts.length,
+    });
+    expect(
+      Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_revision_bindings").get()?.n),
+    ).toBe(2);
+    expect(
+      Number(
+        db
+          .prepare(
+            `SELECT COUNT(*) n FROM plan_revisions revision
+             WHERE revision.revision = 2 AND ${committedRevisionPredicate("revision")}`,
+          )
+          .get()?.n,
+      ),
+    ).toBe(0);
+    expect(db.prepare("SELECT strategy FROM authoring_recovery_assessment_events").get()).toEqual({
+      strategy: "roll_forward",
+    });
     const result = new PlanRedesignBundleCoordinator(db).publishDurable(
       input,
       new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
     );
     expect(result).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });
+    expect(
+      Number(
+        db
+          .prepare(
+            `SELECT COUNT(*) n FROM plan_revisions revision
+             WHERE revision.revision = 2 AND ${committedRevisionPredicate("revision")}`,
+          )
+          .get()?.n,
+      ),
+    ).toBe(2);
+    expect(
+      db
+        .prepare("SELECT strategy FROM authoring_recovery_assessment_events ORDER BY sequence")
+        .all(),
+    ).toEqual([{ strategy: "roll_forward" }, { strategy: "finalize" }]);
     expect(readFileSync(join(root, input.origin.sourcePath), "utf8")).toBe(
       input.origin.sourceContent,
     );
@@ -388,7 +423,7 @@ publisher.publish(token);`;
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
   seed(db, "plan:origin", "PLAN-L4-31");
   seed(db, "plan:replacement", "PLAN-L6-88");
   return { db, coordinator: new PlanRedesignBundleCoordinator(db) };
@@ -500,6 +535,7 @@ function bundle(change: Record<string, unknown> = {}): RedesignBundleInput {
   };
   const input = {
     commandId: "redesign:98",
+    repositoryIdentity: "repository:test",
     replacement: {
       ...common,
       commandId: "redesign:98:replacement",
@@ -731,6 +767,7 @@ function realTrackedBundle(): {
   };
   const withoutDigest = {
     commandId: "redesign:98",
+    repositoryIdentity: "repository:test",
     replacement: revisionInput(
       common,
       replacementPlanId,
@@ -901,7 +938,7 @@ function stable(value: unknown): string {
 function openE2eDb(path: string): HarnessDb {
   const db = openHarnessDb(path);
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
   return db;
 }
 

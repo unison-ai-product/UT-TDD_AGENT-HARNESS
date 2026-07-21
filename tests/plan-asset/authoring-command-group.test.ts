@@ -188,7 +188,7 @@ function recordingPublisher(calls: string[]): AuthoringArtifactPublisher {
 function memoryDb(): HarnessDb {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
   return db;
 }
 
@@ -203,7 +203,7 @@ function dbPath(): string {
 function diskDb(path: string): HarnessDb {
   const db = openHarnessDb(path);
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
   return db;
 }
 

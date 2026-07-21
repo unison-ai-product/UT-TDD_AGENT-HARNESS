@@ -9,6 +9,7 @@ import {
   PlanRevisionLedgerTransaction,
   replayBindingValid,
 } from "../plan-asset/ledger/plan-revision-ledger.js";
+import { committedRevisionPredicate } from "../plan-asset/ledger/revision-visibility.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
@@ -213,7 +214,8 @@ function assertCommittedReplayBinding(binding: {
     .prepare(
       `SELECT canonical_payload_json, canonical_payload_digest, body_digest, source_path,
               source_commit, actor, reason
-       FROM plan_revisions WHERE asset_id = ? AND revision = ?`,
+       FROM plan_revisions revision WHERE asset_id = ? AND revision = ?
+         AND ${committedRevisionPredicate("revision")}`,
     )
     .get(receipt.assetId, receipt.revision) as Record<string, unknown> | undefined;
   const bound = bindPlanSourceToAdmission({
@@ -232,8 +234,8 @@ function assertCommittedReplayBinding(binding: {
     throw new Error("plan-revision-replay-revision-conflict");
   const base = db
     .prepare(
-      `SELECT canonical_payload_digest FROM plan_revisions
-       WHERE asset_id = ? AND revision = ?`,
+      `SELECT canonical_payload_digest FROM plan_revisions revision
+       WHERE asset_id = ? AND revision = ? AND ${committedRevisionPredicate("revision")}`,
     )
     .get(receipt.assetId, manifest.base.revision);
   if (!base || !digestEqual(String(base.canonical_payload_digest), manifest.base.revision_digest))
@@ -463,8 +465,9 @@ function assertAdoptedBase(db: HarnessDb, manifest: PlanRevisionManifest): void 
     throw new Error("plan-revision-alias-binding-invalid");
   const latest = db
     .prepare(
-      `SELECT revision, canonical_payload_digest FROM plan_revisions
-       WHERE asset_id = ? ORDER BY revision DESC LIMIT 1`,
+      `SELECT revision, canonical_payload_digest FROM plan_revisions revision
+       WHERE asset_id = ? AND ${committedRevisionPredicate("revision")}
+       ORDER BY revision DESC LIMIT 1`,
     )
     .get(manifest.base.asset_id) as
     | { revision: number; canonical_payload_digest: string }

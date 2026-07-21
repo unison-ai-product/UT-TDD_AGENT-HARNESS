@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
@@ -19,6 +19,38 @@ afterEach(() => {
 });
 
 describe("Node authoring artifact publisher", () => {
+  it("U-PA-GROUP-004C: receipt前normal exceptionは全artifact preimage確認後にrolled_backへ閉じる", () => {
+    const root = fixtureRoot();
+    const artifacts = artifactsFor();
+    const publisher = new NodeAuthoringArtifactPublisher({
+      rootDir: root,
+      artifacts,
+      injectFault(point) {
+        if (point === "stage:before-write") throw new Error("normal-stage-failure");
+      },
+    });
+    const db = openHarnessDb(":memory:");
+    try {
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+      const journal = new AuthoringCommandGroupJournal(db);
+      expect(() => journal.execute(group(artifacts), publisher)).toThrow(
+        "authoring artifact publish failed",
+      );
+      expect(
+        db
+          .prepare("SELECT event_kind FROM authoring_command_group_phase_events ORDER BY sequence")
+          .all(),
+      ).toEqual([
+        { event_kind: "prepared" },
+        { event_kind: "member_started" },
+        { event_kind: "rolled_back" },
+      ]);
+      for (const artifact of artifacts) expect(existsSync(join(root, artifact.path))).toBe(false);
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-PA-GROUP-005: 実filesystemのmember faultをrestoreし、journal再送でN成果物を収束する", () => {
     const root = fixtureRoot();
     const artifacts = artifactsFor();
@@ -35,7 +67,7 @@ describe("Node authoring artifact publisher", () => {
     });
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
       const journal = new AuthoringCommandGroupJournal(db);
       expect(() => journal.execute(group(artifacts), publisher)).toThrow(
         "authoring artifact publish failed",
@@ -194,7 +226,7 @@ describe("Node authoring artifact publisher", () => {
     const dbPath = join(root, ".ut-tdd", "ledger", "harness.db");
     mkdirSync(join(root, ".ut-tdd", "ledger"), { recursive: true });
     let db = openHarnessDb(dbPath);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
     const single = group([artifact]);
     const moduleUrl = pathToFileURL(
       join(process.cwd(), "src", "plan-admission", "node-atomic-draft-publisher.ts"),
@@ -218,7 +250,7 @@ publisher.publish(token);`;
     db.close();
 
     db = openHarnessDb(dbPath);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
     expect(
       new AuthoringCommandGroupJournal(db).execute(
         single,
