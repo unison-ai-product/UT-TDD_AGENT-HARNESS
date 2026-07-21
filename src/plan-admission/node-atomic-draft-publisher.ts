@@ -2,13 +2,11 @@ import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   closeSync,
   existsSync,
-  fstatSync,
   fsyncSync,
   linkSync,
   lstatSync,
   openSync,
   readFileSync,
-  readSync,
   realpathSync,
   rmSync,
   statSync,
@@ -53,7 +51,7 @@ export interface NodePathMutationSafety {
   readonly strategy: "pre-post-identity-cas-with-verified-compensation";
   readonly detectedDrift: "fail-close";
   readonly syscallInstantRaceClosure: "not-provable-with-node-fs";
-  readonly contentCas: "held-descriptor-bytes-with-pre-post-name-binding";
+  readonly contentCas: "same-volume-generation-hardlink-pin-with-pre-post-name-binding";
 }
 
 export const NODE_PATH_MUTATION_SAFETY: NodePathMutationSafety = Object.freeze({
@@ -61,10 +59,11 @@ export const NODE_PATH_MUTATION_SAFETY: NodePathMutationSafety = Object.freeze({
   strategy: "pre-post-identity-cas-with-verified-compensation",
   detectedDrift: "fail-close",
   syscallInstantRaceClosure: "not-provable-with-node-fs",
-  contentCas: "held-descriptor-bytes-with-pre-post-name-binding",
+  contentCas: "same-volume-generation-hardlink-pin-with-pre-post-name-binding",
 });
 
 interface StagedArtifact {
+  artifactIndex: number;
   logicalPath: string;
   targetPath: string;
   temporaryPath: string;
@@ -114,10 +113,11 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       throw new Error("draft token idが安全なpath componentではありません");
     const staged: StagedArtifact[] = [];
     try {
-      for (const artifact of artifacts) {
+      for (const [artifactIndex, artifact] of artifacts.entries()) {
         const targetPath = this.resolveTarget(artifact.path);
         const suffix = `.ut-tdd-draft-${id}`;
         const item: StagedArtifact = {
+          artifactIndex,
           logicalPath: artifact.path,
           targetPath,
           temporaryPath: `${targetPath}${suffix}.tmp`,
@@ -139,6 +139,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         syncFile(item.temporaryPath);
         item.temporaryIdentity = FileIdentity.capture({
           path: item.temporaryPath,
+          pinPath: this.identityPinPath(id, artifactIndex, "temporary"),
           digest: item.postimageDigest,
           logicalPath: artifact.path,
           role: "temporary",
@@ -182,6 +183,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         item.backupMoved = true;
         item.rollbackIdentity = FileIdentity.capture({
           path: item.rollbackPath,
+          pinPath: this.identityPinPath(token.id, item.artifactIndex, "rollback"),
           digest: item.expectedPreimage.digest,
           logicalPath: item.logicalPath,
           role: "rollback",
@@ -209,6 +211,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       item.targetPublished = true;
       item.publishedIdentity = FileIdentity.capture({
         path: item.targetPath,
+        pinPath: this.identityPinPath(token.id, item.artifactIndex, "published"),
         digest: item.postimageDigest,
         logicalPath: item.logicalPath,
         role: "published target",
@@ -450,6 +453,10 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     return targetPath;
   }
 
+  private identityPinPath(tokenId: string, artifactIndex: number, role: string): string {
+    return resolve(this.rootDir, `.ut-tdd-draft-${tokenId}-${artifactIndex}-${role}.identity`);
+  }
+
   private currentPreimage(targetPath: string, logicalPath: string): ArtifactPreimage {
     if (!existsSync(targetPath)) return { kind: "absent" };
     if (!regularFile(targetPath))
@@ -587,20 +594,20 @@ class FileIdentity {
   private released = false;
 
   private readonly path: string;
-  private readonly descriptor: number;
+  private readonly pinPath: string;
   private readonly device: bigint;
   private readonly inode: bigint;
   private readonly digest: `sha256:${string}`;
 
   private constructor(input: {
     path: string;
-    descriptor: number;
+    pinPath: string;
     device: bigint;
     inode: bigint;
     digest: `sha256:${string}`;
   }) {
     this.path = input.path;
-    this.descriptor = input.descriptor;
+    this.pinPath = input.pinPath;
     this.device = input.device;
     this.inode = input.inode;
     this.digest = input.digest;
@@ -608,42 +615,51 @@ class FileIdentity {
 
   static capture(input: {
     path: string;
+    pinPath: string;
     digest: `sha256:${string}`;
     logicalPath: string;
     role: string;
   }): FileIdentity {
-    const { path, digest, logicalPath, role } = input;
-    let descriptor: number | undefined;
+    const { path, pinPath, digest, logicalPath, role } = input;
+    let pinned = false;
+    let sourceIdentity: { device: bigint; inode: bigint } | undefined;
     try {
-      descriptor = openSync(path, "r");
-      const opened = fstatSync(descriptor, { bigint: true });
+      const source = lstatSync(path, { bigint: true });
+      if (!source.isFile() || source.isSymbolicLink()) throw new Error("identity mismatch");
+      sourceIdentity = { device: source.dev, inode: source.ino };
+      linkSync(path, pinPath);
+      pinned = true;
       const named = lstatSync(path, { bigint: true });
-      const actualDigest = sha256Descriptor(descriptor);
-      const openedAfter = fstatSync(descriptor, { bigint: true });
+      const pin = lstatSync(pinPath, { bigint: true });
+      const actualDigest = sha256File(pinPath);
       const namedAfter = lstatSync(path, { bigint: true });
+      const pinAfter = lstatSync(pinPath, { bigint: true });
       if (
-        !opened.isFile() ||
         !named.isFile() ||
+        !pin.isFile() ||
         named.isSymbolicLink() ||
-        opened.dev !== named.dev ||
-        opened.ino !== named.ino ||
-        openedAfter.dev !== opened.dev ||
-        openedAfter.ino !== opened.ino ||
-        namedAfter.dev !== opened.dev ||
-        namedAfter.ino !== opened.ino ||
+        pin.isSymbolicLink() ||
+        pin.dev !== source.dev ||
+        pin.ino !== source.ino ||
+        named.dev !== pin.dev ||
+        named.ino !== pin.ino ||
+        namedAfter.dev !== pin.dev ||
+        namedAfter.ino !== pin.ino ||
+        pinAfter.dev !== pin.dev ||
+        pinAfter.ino !== pin.ino ||
         !digestEqual(actualDigest, digest)
       ) {
         throw new Error("identity mismatch");
       }
       return new FileIdentity({
         path,
-        descriptor,
-        device: opened.dev,
-        inode: opened.ino,
+        pinPath,
+        device: pin.dev,
+        inode: pin.ino,
         digest,
       });
     } catch (cause) {
-      if (descriptor !== undefined) closeSync(descriptor);
+      if (pinned && sourceIdentity && pinMatches(pinPath, sourceIdentity)) rmSync(pinPath);
       throw new Error(`artifact ${role} CAS mismatch: ${logicalPath}`, { cause });
     }
   }
@@ -651,23 +667,24 @@ class FileIdentity {
   assertCurrent(logicalPath: string, role: string): void {
     try {
       if (this.released) throw new Error("identity released");
-      const opened = fstatSync(this.descriptor, { bigint: true });
       const named = lstatSync(this.path, { bigint: true });
-      const actualDigest = sha256Descriptor(this.descriptor);
-      const openedAfter = fstatSync(this.descriptor, { bigint: true });
+      const pin = lstatSync(this.pinPath, { bigint: true });
+      const actualDigest = sha256File(this.pinPath);
       const namedAfter = lstatSync(this.path, { bigint: true });
+      const pinAfter = lstatSync(this.pinPath, { bigint: true });
       if (
-        !opened.isFile() ||
         !named.isFile() ||
+        !pin.isFile() ||
         named.isSymbolicLink() ||
-        opened.dev !== this.device ||
-        opened.ino !== this.inode ||
-        named.dev !== opened.dev ||
-        named.ino !== opened.ino ||
-        openedAfter.dev !== opened.dev ||
-        openedAfter.ino !== opened.ino ||
-        namedAfter.dev !== opened.dev ||
-        namedAfter.ino !== opened.ino ||
+        pin.isSymbolicLink() ||
+        pin.dev !== this.device ||
+        pin.ino !== this.inode ||
+        named.dev !== pin.dev ||
+        named.ino !== pin.ino ||
+        namedAfter.dev !== pin.dev ||
+        namedAfter.ino !== pin.ino ||
+        pinAfter.dev !== pin.dev ||
+        pinAfter.ino !== pin.ino ||
         !digestEqual(actualDigest, this.digest)
       ) {
         throw new Error("identity mismatch");
@@ -680,7 +697,17 @@ class FileIdentity {
 
   release(): void {
     if (this.released) return;
-    closeSync(this.descriptor);
+    const pin = lstatSync(this.pinPath, { bigint: true });
+    if (
+      !pin.isFile() ||
+      pin.isSymbolicLink() ||
+      pin.dev !== this.device ||
+      pin.ino !== this.inode
+    ) {
+      throw new Error("identity pin mismatch");
+    }
+    rmSync(this.pinPath);
+    if (existsSync(this.pinPath)) throw new Error("identity pin removal race");
     this.released = true;
   }
 }
@@ -715,19 +742,6 @@ function regularFile(path: string): boolean {
 
 function sha256File(path: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
-}
-
-function sha256Descriptor(descriptor: number): `sha256:${string}` {
-  const hash = createHash("sha256");
-  const buffer = Buffer.allocUnsafe(64 * 1024);
-  let position = 0;
-  for (;;) {
-    const bytesRead = readSync(descriptor, buffer, 0, buffer.length, position);
-    if (bytesRead === 0) break;
-    hash.update(buffer.subarray(0, bytesRead));
-    position += bytesRead;
-  }
-  return `sha256:${hash.digest("hex")}`;
 }
 
 function releaseArtifactIdentities(artifacts: readonly StagedArtifact[]): Error[] {
@@ -827,6 +841,20 @@ function assertRegularDigest(input: {
 function safeSameFile(left: string, right: string): boolean {
   try {
     return sameFile(left, right);
+  } catch {
+    return false;
+  }
+}
+
+function pinMatches(path: string, identity: { device: bigint; inode: bigint }): boolean {
+  try {
+    const stat = lstatSync(path, { bigint: true });
+    return (
+      stat.isFile() &&
+      !stat.isSymbolicLink() &&
+      stat.dev === identity.device &&
+      stat.ino === identity.inode
+    );
   } catch {
     return false;
   }

@@ -455,7 +455,7 @@ describe("NodeAtomicDraftPublisher", () => {
       strategy: "pre-post-identity-cas-with-verified-compensation",
       detectedDrift: "fail-close",
       syscallInstantRaceClosure: "not-provable-with-node-fs",
-      contentCas: "held-descriptor-bytes-with-pre-post-name-binding",
+      contentCas: "same-volume-generation-hardlink-pin-with-pre-post-name-binding",
     });
   });
 

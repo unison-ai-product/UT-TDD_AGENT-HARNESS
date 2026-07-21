@@ -14,6 +14,7 @@ import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-ad
 import { trackedReceiptRecordDigest } from "../src/plan-admission/tracked-receipt-projection.js";
 import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
+import { PlanRevisionLedgerTransaction } from "../src/plan-asset/ledger/plan-revision-ledger.js";
 import {
   ledgerRowDigest,
   ledgerSchemaDdl,
@@ -70,21 +71,29 @@ describe("NodePlanRevisionRunner", () => {
     expect(
       revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, "command:next-revision"),
     ).toBe(false);
-    const nextReceipt = {
-      command_id: "command:next-revision",
-      command_type: "plan.revise",
-      subject_kind: "plan_revision",
-      subject_key: `${f.manifest.base.asset_id}:3`,
-      plan_asset_id: f.manifest.base.asset_id,
-      plan_revision: 3,
-      command_payload_digest: sha("next-command"),
-      result_kind: "admission_certificate",
-      result_ref: "certificate:next",
-      recorded_at: "2026-07-17T01:00:00.000Z",
-    };
-    f.db
-      .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(...Object.values(nextReceipt), ledgerRowDigest(nextReceipt, "receipt_digest"));
+    const revisionTwo = f.db
+      .prepare(
+        "SELECT canonical_payload_digest FROM plan_revisions WHERE asset_id = ? AND revision = 2",
+      )
+      .get(f.manifest.base.asset_id) as { canonical_payload_digest: string };
+    const next = new PlanRevisionLedgerTransaction(f.db).append({
+      commandId: "command:next-revision",
+      assetId: f.manifest.base.asset_id,
+      planId: f.manifest.plan_id,
+      baseRevision: 2,
+      basePayloadDigest: revisionTwo.canonical_payload_digest,
+      canonicalPayloadJson: '{"title":"revision three"}',
+      contentDigest: sha("revision-three-content"),
+      bodyDigest: sha("revision-three-body"),
+      sourcePath: f.manifest.source.path,
+      sourceCommit: f.manifest.base.source_commit,
+      actor: f.manifest.actor,
+      reason: "forward continuation",
+      routeTupleDigest: sha("forward-continuation"),
+      certificateId: "certificate:next",
+      occurredAt: "2026-07-17T01:00:00.000Z",
+    });
+    expect(next).toMatchObject({ ok: true, revision: 3 });
     expect(
       revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, "command:next-revision"),
     ).toBe(false);
@@ -135,7 +144,7 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-031: committed replay前にrevision canonical digest改変をledger検証で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    tamperAppendOnly(f.db, "trg_plan_revisions_no_update", () => {
+    tamperAppendOnly(f.db, "plan_revisions", () => {
       f.db
         .prepare(
           "UPDATE plan_revisions SET canonical_payload_digest = ? WHERE asset_id = ? AND revision = 2",
@@ -149,7 +158,7 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-032: committed replay前にadmission content digest改変をledger検証で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    tamperAppendOnly(f.db, "trg_plan_admission_events_no_update", () => {
+    tamperAppendOnly(f.db, ["plan_admission_events", "plan_admission_receipts"], () => {
       f.db
         .prepare("UPDATE plan_admission_events SET content_digest = ? WHERE command_id = ?")
         .run("0".repeat(64), f.manifest.command_id);
@@ -161,7 +170,7 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-033: committed replayは再digest済みcertificate改変も全binding再証明で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    tamperAppendOnly(f.db, "trg_plan_admission_events_no_update", () => {
+    tamperAppendOnly(f.db, ["plan_admission_events", "plan_admission_receipts"], () => {
       const event = f.db
         .prepare("SELECT * FROM plan_admission_events WHERE command_id = ?")
         .get(f.manifest.command_id) as Record<string, unknown>;
@@ -186,7 +195,7 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-034: committed replayは再digest済みappend receipt改変も全binding再証明で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    tamperAppendOnly(f.db, "trg_append_command_receipts_no_update", () => {
+    tamperAppendOnly(f.db, "append_command_receipts", () => {
       const receipt = f.db
         .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
         .get(f.manifest.command_id) as Record<string, unknown>;
@@ -208,7 +217,7 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-035: committed replayは再digest済みadmission改変も全binding再証明で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    tamperAppendOnly(f.db, "trg_plan_admission_events_no_update", () => {
+    tamperAppendOnly(f.db, ["plan_admission_events", "plan_admission_receipts"], () => {
       const event = f.db
         .prepare("SELECT * FROM plan_admission_events WHERE command_id = ?")
         .get(f.manifest.command_id) as Record<string, unknown>;
@@ -233,9 +242,11 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-036: committed replayは保存済みactorを期待値に流用せずauthoring actor改変を拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    f.db
-      .prepare("UPDATE plan_revisions SET actor = ? WHERE asset_id = ? AND revision = ?")
-      .run("forged-actor", f.manifest.base.asset_id, 2);
+    tamperAppendOnly(f.db, "plan_revisions", () => {
+      f.db
+        .prepare("UPDATE plan_revisions SET actor = ? WHERE asset_id = ? AND revision = ?")
+        .run("forged-actor", f.manifest.base.asset_id, 2);
+    });
 
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-ledger-conflict");
   });
@@ -333,16 +344,21 @@ describe("NodePlanRevisionRunner", () => {
 
 function tamperAppendOnly(
   db: ReturnType<typeof openHarnessDb>,
-  triggerName: string,
+  tables: string | readonly string[],
   tamper: () => void,
 ): void {
-  const trigger = ledgerSchemaDdl().find((sql) => sql.includes(triggerName));
-  if (!trigger) throw new Error(`fixture trigger missing: ${triggerName}`);
-  db.exec(`DROP TRIGGER ${triggerName}`);
+  const targets = new Set(typeof tables === "string" ? [tables] : tables);
+  const triggers = ledgerSchemaDdl().flatMap((sql) => {
+    const name = /CREATE TRIGGER(?:\s+IF NOT EXISTS)?\s+(\w+)/i.exec(sql)?.[1];
+    const table = /BEFORE\s+(?:UPDATE|DELETE)\s+ON\s+(\w+)/i.exec(sql)?.[1];
+    return name && table && targets.has(table) ? [{ name, sql }] : [];
+  });
+  if (triggers.length === 0) throw new Error(`fixture triggers missing: ${[...targets].join(",")}`);
+  for (const trigger of triggers) db.exec(`DROP TRIGGER ${trigger.name}`);
   try {
     tamper();
   } finally {
-    db.exec(trigger);
+    for (const trigger of triggers) db.exec(trigger.sql);
   }
 }
 
@@ -457,9 +473,13 @@ function fixture(mode: Mode, drift: Drift = {}) {
   const runner = new NodePlanRevisionRunner({
     repoRoot: root,
     sourceCommit: () => drift.sourceCommit ?? sourceCommit,
-    sourceBlobOid: () => drift.sourceBlobOid ?? sourceBlobOid,
+    sourceBlobOid: (commit) =>
+      commit === (drift.sourceCommit ?? sourceCommit)
+        ? (drift.sourceBlobOid ?? sourceBlobOid)
+        : sourceBlobOid,
     readText: (path: string) => readFileSync(path, "utf8"),
-    headText: () => drift.headSource ?? oldSource,
+    headText: (commit) =>
+      commit === (drift.sourceCommit ?? sourceCommit) ? (drift.headSource ?? oldSource) : oldSource,
     ...(drift.omitRepositoryIdentity ? {} : { repositoryIdentity: () => "repo:test" }),
     openDb: () => db,
     publisher: () => publisher,
