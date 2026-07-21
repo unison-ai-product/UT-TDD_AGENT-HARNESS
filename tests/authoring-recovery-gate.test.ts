@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { inspectAuthoringRecoveryDbEvidence } from "../src/plan-admission/authoring-recovery-db-evidence";
+import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence";
 import { deriveAuthoringOperationArtifact } from "../src/plan-asset/ledger/authoring-operation-provenance";
 import {
   assertNoUnresolvedAuthoringRecovery,
@@ -59,7 +60,7 @@ describe("authoring recovery boundary gate", () => {
   it("F8/F9/FX: committed文字列だけでは通さずexact DB evidenceとcleanup完了を要求する", () => {
     const { db, root } = fixture();
     try {
-      seedGroup(db, "committed", sha("post"), { kind: "absent" });
+      seedGroup(db, "committed", sha(originPlanSource), { kind: "absent" });
       expect(
         authoringCommandGroupValid(db, "redesign:1"),
         JSON.stringify({
@@ -68,7 +69,7 @@ describe("authoring recovery boundary gate", () => {
           events: db.prepare("SELECT * FROM authoring_command_group_phase_events").all(),
         }),
       ).toBe(true);
-      writeFileSync(join(root, "target.txt"), "post");
+      writeFileSync(join(root, "target.txt"), originPlanSource);
       expect(findUnresolvedAuthoringRecovery(db, root).groups).toEqual(["redesign:1"]);
 
       seedCommittedEvidence(db, root);
@@ -401,7 +402,7 @@ function seedGroup(
       member_id: "replacement",
       ordinal: 2,
       artifact_path: "replacement.md",
-      content_digest: rawSha("replacement"),
+      content_digest: rawSha(replacementPlanSource),
       expected_preimage_json: JSON.stringify({ kind: "absent" }),
     },
   ];
@@ -504,7 +505,7 @@ function seedGroup(
 }
 
 function seedCommittedEvidence(db: HarnessDb, root?: string): void {
-  if (root) writeFileSync(join(root, "replacement.md"), "replacement");
+  if (root) writeFileSync(join(root, "replacement.md"), replacementPlanSource);
   for (const role of ["origin", "replacement"] as const) {
     const asset = `asset:${role}`;
     const commandId = `redesign:1:${role}`;
@@ -520,6 +521,9 @@ function seedCommittedEvidence(db: HarnessDb, root?: string): void {
     db.prepare(
       "INSERT INTO plan_revisions VALUES (?, 1, '{}', ?, 'base-body', ?, 'commit', 'actor', 'base', 'before')",
     ).run(asset, rawSha("{}"), sourcePath);
+    const contentDigest = canonicalDigest(
+      role === "origin" ? originPlanSource : replacementPlanSource,
+    );
     const revisionInput = {
       commandId,
       assetId: asset,
@@ -527,7 +531,7 @@ function seedCommittedEvidence(db: HarnessDb, root?: string): void {
       baseRevision: 1,
       basePayloadDigest: rawSha("{}"),
       canonicalPayloadJson,
-      contentDigest: "content",
+      contentDigest,
       bodyDigest: "body",
       sourcePath,
       sourceCommit: "commit",
@@ -561,7 +565,7 @@ function seedCommittedEvidence(db: HarnessDb, root?: string): void {
       plan_revision: 2,
       plan_id: `PLAN-${role}`,
       source_path: sourcePath,
-      content_digest: "content",
+      content_digest: contentDigest,
       route_tuple_digest: "route",
       certificate_id: certificateId,
       certificate_digest: derived.certificateDigest,
@@ -581,7 +585,7 @@ function seedCommittedEvidence(db: HarnessDb, root?: string): void {
       2,
       `PLAN-${role}`,
       sourcePath,
-      "content",
+      contentDigest,
       "route",
       derived.certificateDigest,
       "now",
@@ -607,6 +611,15 @@ function seedCommittedEvidence(db: HarnessDb, root?: string): void {
 
 function sha(value: string): string {
   return `sha256:${rawSha(value)}`;
+}
+
+const originPlanSource = "---\nplan_id: PLAN-origin\n---\n# Origin\n";
+const replacementPlanSource = "---\nplan_id: PLAN-replacement\n---\n# Replacement\n";
+
+function canonicalDigest(source: string): string {
+  const digest = canonicalPlanContentDigest(source);
+  if (!digest) throw new Error("fixture must be a canonical PLAN");
+  return digest.slice(7);
 }
 
 function rawSha(value: string): string {
