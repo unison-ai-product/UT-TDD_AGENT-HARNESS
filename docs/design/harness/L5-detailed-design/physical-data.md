@@ -124,10 +124,10 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 |---|---|---|---|
 | `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `route_mode`, `status`, `parent`, `updated_at`, `decision_outcome`, `source_hash` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |
 | `artifact_registry` | `artifact_id` | `artifact_type`, `path`, `pair_artifact`, `status`, `updated_at` | docs/test-design、source catalog、trace state を入力とする。 |
-| `model_runs` | `run_id` | `runtime`, `model`, `role`, `drive`, `plan_id`, `started_at`, `completed_at`, `evidence_path` | Codex / Claude / worker / reviewer の execution evidence を記録する。 |
+| `model_runs` | `run_id` (TEXT) | `runtime` (TEXT), `model` (TEXT), `role` (TEXT), `drive` (TEXT), `plan_id` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `evidence_path` (TEXT), `input_tokens` (INTEGER), `output_tokens` (INTEGER), `cached_input_tokens` (INTEGER), `reasoning_tokens` (INTEGER), `cost_usd` (REAL) | Codex / Claude / worker / reviewer の execution evidence を記録する。token telemetry 5 列 (FR-L1-38、PLAN-L7-57) は review-evidence 由来行で NULL、token-tracker がセッションログから投入した行のみ非 NULL。`cached_input_tokens`/`reasoning_tokens` は runtime により欠ける (Claude=cache_read、Codex=cached_input/reasoning)。`cost_usd` は Claude のみ算出可 (Codex は pricing source 未取得で NULL)。 |
 | `trace_edges` | `edge_id` | `from_artifact`, `to_artifact`, `edge_kind`, `plan_id`, `status` | artifact trace state |
 | `coverage` | `coverage_id` | `scope`, `subject_id`, `metric`, `value`, `threshold`, `status` | test coverage / trace coverage / plan coverage を保存する。 |
-| `findings` | `finding_id` | `kind`, `severity`, `subject_id`, `source`, `status`, `evidence_path` | doctor / vmodel lint / review findings を保存する。 |
+| `findings` | `finding_id` (TEXT) | `kind` (TEXT), `severity` (TEXT), `subject_id` (TEXT), `source` (TEXT), `status` (TEXT), `evidence_path` (TEXT), `next_action` (TEXT) | doctor / vmodel lint / review findings を保存する。 |
 | `gate_runs` | `gate_run_id` | `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | `.ut-tdd/gate_runs/*.json`, CI evidence |
 | spec IR tables | §9.9 | `spec_defs`, `spec_relations`, `schedule_entries`, `activation_entries`, `document_catalog_entries`, `spec_rag_closure_entries`, `detector_route_candidates` | Vモデル仕様 IR / 工程 / 活性化 / 文書カタログ / spec 閉包 RAG / 起票候補 projection。§2.7 基礎表を正本化せず、詳細は §9.9 で定義する。 |
 
@@ -225,20 +225,31 @@ PLAN-L5-08 は、SQLite を単なる storage ではなく reference-feedback mec
 
 ### §9.1 projection table 拡張
 
+**型表記の凡例 (PLAN-RECOVERY-12)**: 本節・§2.7・§9.4 の列名直後の `(TYPE)` は
+`src/schema/harness-db-tables-core.ts` (`col()`/`pk()`) の実装型を正本として転記した
+SQLite 型 (`TEXT`/`INTEGER`/`REAL`)。列名を `db-projection-coverage` gate
+(`src/lint/db-projection-coverage.ts`) が backtick 単位で厳密突合するため、型は
+backtick の**外側**に丸括弧で付記し、列名の backtick 内容は schema の列名と完全一致させる
+(型を同じ backtick 内に混在させると機械突合が壊れるため、意図的にこの表記にしている)。
+
 | table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
 | `drive_runs` | `drive_run_id` | `plan_id`, `session_id`, `drive`, `mode`, `layer`, `kind`, `started_at`, `completed_at`, `status` | V-model 以外の mode を含む drive/model 実行 lane を記録する。 |
 | `hook_events` | `event_id` | `session_id`, `plan_id`, `hook_name`, `event_type`, `occurred_at`, `digest`, `evidence_path` | SessionStart/PostToolUse/Stop、gate、PLAN event を state projection へ結合する。 |
 | `skill_invocations` | `skill_invocation_id` | `session_id`, `plan_id`, `skill_id`, `layer`, `drive`, `fired_at`, `source`, `accepted` | 実際に発火した skill event を永続化する。 |
 | `skill_recommendations` | `skill_recommendation_id` | `session_id`, `plan_id`, `skill_id`, `rank`, `score`, `reason`, `recommended_at` | skill firing rate と recommendation quality の denominator を永続化する。 |
-| `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `source_table`, `source_id`, `source_generation`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | 再構築可能なsource観測をreplanning inputへ変換する。`source_generation`は意味状態から決定論的に生成し、同一観測のrebuildでは変えない。 |
+| `feedback_events` | `feedback_event_id` (TEXT) | `finding_id` (TEXT), `plan_id` (TEXT), `source_table` (TEXT), `source_id` (TEXT), `source_generation` (TEXT), `source_color` (TEXT), `signal_type` (TEXT), `severity` (TEXT), `status` (TEXT), `next_action` (TEXT), `created_at` (TEXT) | 再構築可能なsource観測をreplanning inputへ変換する。`source_generation`は意味状態から決定論的に生成し、同一観測のrebuildでは変えない。`source_color`は`artifact_progress.color`(red/yellow/green)をfeedback入力へ運ぶ列で、§9.5の`feedback_events.source_table/source_id/source_color`prose記述と本表を一本化する。 |
 | `feedback_lifecycle` | `lifecycle_id` | `feedback_event_id`, `source_generation`, `state`, `occurred_at`, `reason` | `.ut-tdd/logs/feedback-lifecycle.jsonl` のappend-only消化履歴を投影する。同一generationのterminal stateをrebuildで再openしない。 |
 | `memory_entries` | `memory_id` | `kind`, `title`, `body`, `tags`, `source_path`, `updated_at`, `content_hash` | `.ut-tdd/memory/*.md` の authored memory を Claude/Codex 共有の read model として project する。SessionStart surface はこの table を read-only で読む。 |
 | `quality_signals` | `signal_id` | `source`, `subject_id`, `metric`, `value`, `threshold`, `status`, `computed_at` | orphan count、coverage、stale approval、gate-confirm coupling、schedule lint などの machine-check metrics を保存する。 |
 | `search_index` | `search_id` | `subject_type`, `subject_id`, `path`, `title`, `tokens`, `summary`, `updated_at` | PLAN/artifact/finding/skill/model/session query の lookup cost を下げる。 |
 | `workflow_runs` | `workflow_run_id` | `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | workflow automation readiness を query 可能かつ data-backed にする。 |
 | `guardrail_decisions` | `guardrail_decision_id` | `plan_id`, `session_id`, `guardrail`, `decision`, `mode`, `human_signoff_required`, `evidence_path`, `decided_at` | agent-guard、review evidence、escalation、same-model approval check の safety decision を永続化する。 |
-| `automation_assets` | `asset_id` | `asset_type`, `path`, `trigger`, `role`, `capability`, `drift_status`, `indexed_at` | skill/roster/command docs を automation input と search subject として catalog 化する。 |
+| `automation_assets` | `asset_id` (TEXT) | `asset_type` (TEXT), `path` (TEXT), `trigger` (TEXT), `role` (TEXT), `capability` (TEXT), `skill_type` (TEXT), `category` (TEXT), `applies_layers` (TEXT), `applies_drive_models` (TEXT), `drift_status` (TEXT), `indexed_at` (TEXT) | skill/roster/command docs を automation input と search subject として catalog 化する。`skill_type`/`category`/`applies_layers`/`applies_drive_models` は skill 資産の適用範囲 (層/drive_model) を machine-queryable にする。 |
+| `issue_queue` | `issue_queue_id` (TEXT) | `source_event_id` (TEXT), `plan_id` (TEXT), `target` (TEXT), `title` (TEXT), `body` (TEXT), `status` (TEXT), `human_approval_required` (INTEGER), `approved_by` (TEXT), `approved_at` (TEXT), `external_issue_id` (TEXT), `external_issue_url` (TEXT), `created_at` (TEXT) | trouble/retry/detector 由来の feedback signal を GitHub issue dry-run queue として保持し、human approval 前の外部 mutation を防ぐ (由来: PLAN-L3-05)。§9.15 engine-swap 世代からは互換 read model に降格し (`execution_episodes` 系が正本)、新規 episode の正本にはしない。 |
+| `trouble_events` | `trouble_event_id` (TEXT) | `source_event_id` (TEXT), `plan_id` (TEXT), `category` (TEXT), `severity` (TEXT), `summary` (TEXT), `status` (TEXT), `created_at` (TEXT) | `hook_events` の `forced_stop`/`error`/`failed` 系 event と `quality_signals.metric=trouble_event_rate` を trouble taxonomy row として永続化する (由来: PLAN-L3-05)。 |
+| `retry_events` | `retry_event_id` (TEXT) | `plan_id` (TEXT), `workflow` (TEXT), `phase` (TEXT), `attempt_count` (INTEGER), `status` (TEXT), `created_at` (TEXT) | 同一 `plan_id`/`workflow`/`phase` の `workflow_runs` 複数回 attempt を retry/bottleneck signal として集計する (由来: PLAN-L3-05)。 |
+| `improvement_log` | `improvement_log_id` (TEXT) | `source_event_id` (TEXT), `plan_id` (TEXT), `category` (TEXT), `summary` (TEXT), `next_action` (TEXT), `status` (TEXT), `created_at` (TEXT) | `issue_queue`/`retry_events` から self-improvement backlog row を派生させ、feedback loop の closure evidence にする (由来: PLAN-L3-05)。 |
 
 §2.7 の existing table は引き続き必須とする。source ID が存在する場合、new row は既存の `plan_registry`、`artifact_registry`、`model_runs`、`findings`、`gate_runs` を参照する。join key 欠落は silent skip ではなく `findings` row にする。
 
@@ -274,6 +285,10 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - `idx_feedback_source(source_table, source_id)`
 - `idx_feedback_lifecycle_event(feedback_event_id, source_generation, occurred_at)`
 - `idx_search_subject(subject_type, subject_id)`
+- `idx_issue_queue_plan_status(plan_id, status, created_at)`
+- `idx_trouble_events_plan_category(plan_id, category, created_at)`
+- `idx_retry_events_plan_phase(plan_id, workflow, phase)`
+- `idx_improvement_log_status(status, created_at)`
 
 不変条件:
 
@@ -282,6 +297,8 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - すべての non-green lint/doctor/vmodel/gate result は `findings` と optional `quality_signals` で表現できる。
 - `search_index` は docs/state/logs から rebuild 可能であり、authoritative state を変更せず delete/rebuild できる。
 - `feedback_events`は観測projection、`feedback_lifecycle`はdurableな消化履歴projectionである。current generationの最新transitionだけがsurface可否を決め、terminal eventのsourceをfinding/signal fallbackで再表示しない。
+- `issue_queue.human_approval_required=1` の row は `external_issue_id`/`external_issue_url` が確定するまで `status=queued_dry_run` を維持し、human approval なしに GitHub へ外部 mutation しない (`guardrail_decisions.guardrail=external-github-issue-approval` と 1:1、由来: PLAN-L3-05)。
+- `trouble_events`/`retry_events`/`improvement_log` は `hook_events`/`quality_signals`/`workflow_runs`/`issue_queue` から再構築可能な projection であり、authoring source ではない (由来: PLAN-L3-05)。
 
 ### 9.3.1 リファクタ候補 lifecycle 投影
 
@@ -319,10 +336,10 @@ Phase 2 close review では、DB design が workflow、guardrail、skill、quali
 
 | table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
-| `test_cases` | `test_case_id` | `test_file`, `test_name`, `oracle_id`, `plan_id`, `fr_id`, `artifact_id`, `kind`, `first_seen_at`, `last_seen_at` | 各 UT oracle を PLAN/FR/artifact で query 可能にする。 |
-| `test_runs` | `test_run_id` | `session_id`, `plan_id`, `command`, `runner`, `runtime`, `os`, `shell`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `output_digest`, `green_definition_id` | 実行済みの定量 test command を 1 run として記録する。主対象は Bun/vitest/doctor/lint run である。`review_evidence.green_commands[]` は PLAN-local green command projection の frontmatter source とする。 |
-| `test_results` | `test_result_id` | `test_run_id`, `test_case_id`, `status`, `duration_ms`, `failure_digest`, `started_at`, `completed_at` | case と run ごとの pass/fail/skip/todo を追跡する。 |
-| `test_artifact_edges` | `edge_id` | `test_case_id`, `artifact_id`, `edge_kind`, `plan_id`, `source_path` | `trace_edges` を過負荷にせず、test evidence を V-model trace へ戻す。 |
+| `test_cases` | `test_case_id` (TEXT) | `test_run_id` (TEXT), `test_file` (TEXT), `test_name` (TEXT), `plan_id` (TEXT), `fr_id` (TEXT), `artifact_id` (TEXT), `kind` (TEXT), `oracle_id` (TEXT), `name` (TEXT), `first_seen_at` (TEXT), `last_seen_at` (TEXT), `status` (TEXT), `duration_ms` (REAL), `evidence_path` (TEXT) | 各 UT oracle を PLAN/FR/artifact で query 可能にする。 |
+| `test_runs` | `test_run_id` (TEXT) | `session_id` (TEXT), `plan_id` (TEXT), `command` (TEXT), `runner` (TEXT), `runtime` (TEXT), `os` (TEXT), `shell` (TEXT), `scope` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `exit_code` (INTEGER), `evidence_path` (TEXT), `output_digest` (TEXT), `green_definition_id` (TEXT), `status` (TEXT) | 実行済みの定量 test command を 1 run として記録する。主対象は Bun/vitest/doctor/lint run である。`review_evidence.green_commands[]` は PLAN-local green command projection の frontmatter source とする。 |
+| `test_results` | `test_result_id` (TEXT) | `test_run_id` (TEXT), `test_case_id` (TEXT), `oracle_id` (TEXT), `status` (TEXT), `duration_ms` (REAL), `failure_digest` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `message` (TEXT), `evidence_path` (TEXT) | case と run ごとの pass/fail/skip/todo を追跡する。 |
+| `test_artifact_edges` | `edge_id` (TEXT) | `test_artifact_edge_id` (TEXT), `test_case_id` (TEXT), `test_run_id` (TEXT), `artifact_id` (TEXT), `plan_id` (TEXT), `source_path` (TEXT), `artifact_path` (TEXT), `edge_kind` (TEXT), `oracle_id` (TEXT), `evidence_path` (TEXT) | `trace_edges` を過負荷にせず、test evidence を V-model trace へ戻す。 |
 | `test_flake_events` | `flake_event_id` | `test_case_id`, `window`, `pass_count`, `fail_count`, `flake_score`, `computed_at`, `evidence_path` | 不安定 test と duration regression を quality signal として surface する。 |
 
 必須 UT-derived metrics:
