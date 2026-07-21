@@ -177,8 +177,14 @@ function readActiveOwner(repoRoot: string): StopRefreshOwner | undefined {
     const records = new Map<number, { kind: "claim" | "ack"; owner: StopRefreshOwner }>();
     for (const record of parsed) {
       const previous = records.get(record.owner.pid);
-      if (previous && previous.owner.digest !== record.owner.digest) return undefined;
-      // An acknowledged record is canonical when an idempotent, identical claim also remains.
+      if (previous && previous.owner.digest !== record.owner.digest) {
+        const claim = previous.kind === "claim" ? previous : record;
+        const ack = previous.kind === "ack" ? previous : record;
+        if (!isIdentityPromotion(claim, ack)) return undefined;
+        records.set(record.owner.pid, ack);
+        continue;
+      }
+      // An acknowledged record is canonical when an idempotent claim also remains.
       if (!previous || record.kind === "ack") records.set(record.owner.pid, record);
     }
     const canonical = [...records.values()].map((record) => record.owner);
@@ -192,6 +198,26 @@ function readActiveOwner(repoRoot: string): StopRefreshOwner | undefined {
   } catch {
     return undefined;
   }
+}
+
+function isIdentityPromotion(
+  claim: { kind: "claim" | "ack"; owner: StopRefreshOwner },
+  ack: { kind: "claim" | "ack"; owner: StopRefreshOwner },
+): boolean {
+  return (
+    claim.kind === "claim" &&
+    ack.kind === "ack" &&
+    claim.owner.generation === ack.owner.generation &&
+    claim.owner.pid === ack.owner.pid &&
+    claim.owner.host === ack.owner.host &&
+    claim.owner.started_at === ack.owner.started_at &&
+    isUnverifiedBirth(claim.owner.process_birth, claim.owner.generation) &&
+    !isUnverifiedBirth(ack.owner.process_birth, ack.owner.generation)
+  );
+}
+
+function isUnverifiedBirth(value: string, generation: string): boolean {
+  return value === `unverified-${generation}`;
 }
 
 function alive(pid: number): boolean {
@@ -296,19 +322,41 @@ export function transferStopRefreshLease(
   return true;
 }
 
+export interface JoinStopRefreshLeaseOptions {
+  repoRoot: string;
+  generation: string;
+  pid?: number;
+  processBirth?: (pid: number) => string | undefined;
+}
+
 export function joinStopRefreshLease(
-  repoRoot: string,
-  generation: string,
-  pid: number = process.pid,
+  ...args:
+    | [options: JoinStopRefreshLeaseOptions]
+    | [repoRoot: string, generation: string, pid?: number]
 ): boolean {
+  const options =
+    args.length === 1 ? args[0] : { repoRoot: args[0], generation: args[1], pid: args[2] };
+  const { repoRoot, generation } = options;
+  const pid = options.pid ?? process.pid;
   const owner = readActiveOwner(repoRoot);
   if (!owner || owner.generation !== generation || !owner.pids?.includes(pid)) return false;
   try {
     const claimedBirth = owner.process_births?.[String(pid)];
+    const observedBirth = (options.processBirth ?? probeProcessBirth)(pid);
+    if (
+      claimedBirth !== undefined &&
+      !isUnverifiedBirth(claimedBirth, generation) &&
+      observedBirth !== undefined &&
+      claimedBirth !== observedBirth
+    )
+      return false;
+    // The child self-observation is stronger than the parent's unverifiable handoff claim.
+    // Verified claims may only be repeated identically; identity never moves backwards to
+    // `unverified-*` after a real process birth has been observed.
     const joined = ownerForPid(
       owner,
       pid,
-      claimedBirth ?? probeProcessBirth(pid) ?? `unverified-${generation}`,
+      observedBirth ?? claimedBirth ?? `unverified-${generation}`,
     );
     if (!writeOwnerExclusiveOrVerify(ackPath(repoRoot, generation, pid), joined)) return false;
     if (
@@ -401,7 +449,6 @@ export function releaseStopRefreshLease(repoRoot: string, generation: string): v
 }
 
 function probeProcessBirth(pid: number): string | undefined {
-  if (pid === process.pid) return SELF_PROCESS_BIRTH;
   if (process.platform === "linux") {
     try {
       const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
@@ -415,6 +462,7 @@ function probeProcessBirth(pid: number): string | undefined {
       return undefined;
     }
   }
+  if (pid === process.pid) return SELF_PROCESS_BIRTH;
   return undefined;
 }
 
@@ -435,7 +483,7 @@ function ownerStillActive(
     const observed = birth(pid);
     const expected = owner.process_births?.[String(pid)];
     if (observed === undefined || expected === undefined) return true;
-    if (expected.startsWith("unverified-")) return true;
+    if (isUnverifiedBirth(expected, owner.generation)) return true;
     if (observed === expected) return true;
   }
   // Every live PID belongs to a different process incarnation: the recorded owner is dead.

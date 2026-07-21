@@ -8,7 +8,7 @@ status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-07
-updated: 2026-07-17
+updated: 2026-07-21
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -22,6 +22,10 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/state-db/stop-refresh.ts
     artifact_type: source_module
+  - artifact_path: src/state-db/stop-refresh-coordinator.ts
+    artifact_type: source_module
+  - artifact_path: tests/db-currency.test.ts
+    artifact_type: test
 dependencies:
   parent: docs/plans/PLAN-L5-01-physical-data.md
   requires: []
@@ -187,6 +191,15 @@ check-registry へ登録 → `tests/` に currency + fail-open regression を追
   process が落ちないこと) を real oracle として追加。残余 (受容): 親 kill 後の detached 子の
   完走 E2E (marker 生成 subprocess test) は未固定 — 実運用の db-currency gate green を
   REVERSE-365 R2 の照合点とする判断を維持。
+- 2026-07-21: **PR #100 concurrency redesign**。上記の「複数 Stop 競合を受容」は撤回し、
+  `src/state-db/stop-refresh-coordinator.ts` を正規生成物として singleton/coalescing を実装した。
+  generation 固有 anchor と `active` hardlink の排他的生成を ownership の原子点とし、実行中の
+  追加 Stop は dirty demand に畳み、完了後の rerun を最大1回に制限する。detached child handoff は
+  parent claim → child self-ack → parent claim retire の順序で行う。親が取得できない child birth は
+  `unverified-*` として保持し、child の自己観測時だけ verified birth へ一方向昇格する。verified claim
+  と自己観測が不一致なら fail-close とし、終了した owner と同じ PID の別 incarnation は即時 reclaim
+  できる。U-DBCURRENCY-010〜025が多重 Stop、需要保存、failure receipt、実process race、child
+  self-join、PID reuseを固定する。
 
 ## DoD / 受入基準
 

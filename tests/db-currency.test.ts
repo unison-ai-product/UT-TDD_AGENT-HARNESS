@@ -53,6 +53,10 @@ const currentStats: DriveDbRegistrationStats = {
   modes: ["Forward"],
 };
 
+const stopRefreshCoordinatorModuleUrl = pathToFileURL(
+  join(process.cwd(), "src", "state-db", "stop-refresh-coordinator.ts"),
+).href;
+
 describe("db-currency lint", () => {
   it("U-DBCURRENCY-001: accepts persisted harness.db when plan count and fingerprint match docs", () => {
     const result = analyzeDbCurrency(currentStats);
@@ -438,43 +442,56 @@ describe("db-currency lint", () => {
     const ready = join(root, "ready");
     mkdirSync(ready);
     writeFileSync(gate, "wait", "utf8");
-    const modulePath = pathToFileURL(
-      join(process.cwd(), "src", "state-db", "stop-refresh-coordinator.ts"),
-    ).href;
     const worker = join(root, "worker.ts");
     writeFileSync(
       worker,
-      `import { existsSync, writeFileSync } from "node:fs";\nimport { acquireStopRefreshLease } from ${JSON.stringify(modulePath)};\nwriteFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready");\nwhile (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2));\nconst lease = acquireStopRefreshLease(${JSON.stringify(root)});\nconsole.log(lease.acquired ? "won" : "lost");\nif (lease.acquired) await new Promise((resolve) => setTimeout(resolve, 500));\n`,
+      `import { existsSync, writeFileSync } from "node:fs";\nimport { acquireStopRefreshLease } from ${JSON.stringify(stopRefreshCoordinatorModuleUrl)};\nwriteFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready");\nwhile (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2));\nconst lease = acquireStopRefreshLease(${JSON.stringify(root)});\nconsole.log(lease.acquired ? "won" : "lost");\nif (lease.acquired) while (!existsSync(${JSON.stringify(join(root, "release-winner"))})) await new Promise((resolve) => setTimeout(resolve, 2));\n`,
       "utf8",
     );
+    let releaseFallback: ReturnType<typeof setTimeout> | undefined;
+    const children = Array.from({ length: 12 }, () =>
+      spawn(process.execPath, [worker], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }),
+    );
     try {
-      const children = Array.from({ length: 12 }, () =>
-        spawn(process.execPath, [worker], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }),
-      );
       const deadline = Date.now() + 10_000;
       while (readdirSync(ready).length < children.length && Date.now() < deadline) {
         await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
       }
       expect(readdirSync(ready)).toHaveLength(children.length);
       rmSync(gate);
-      const verdicts = await Promise.all(
-        children.map(
-          (child) =>
-            new Promise<string>((resolvePromise, reject) => {
-              let stdout = "";
-              child.stdout.on("data", (chunk) => (stdout += String(chunk)));
-              child.on("error", reject);
-              child.on("exit", (code) =>
-                code === 0
-                  ? resolvePromise(stdout.trim())
-                  : reject(new Error(`worker exit ${code}`)),
-              );
-            }),
-        ),
+      releaseFallback = setTimeout(
+        () => writeFileSync(join(root, "release-winner"), "release\n", "utf8"),
+        10_000,
       );
+      const verdictPromises = children.map(
+        (child) =>
+          new Promise<string>((resolvePromise, reject) => {
+            let stdout = "";
+            child.stdout.on("data", (chunk) => (stdout += String(chunk)));
+            child.on("error", reject);
+            child.on("exit", (code) =>
+              code === 0 ? resolvePromise(stdout.trim()) : reject(new Error(`worker exit ${code}`)),
+            );
+          }),
+      );
+      const loserVerdicts: string[] = [];
+      for (const verdict of verdictPromises) {
+        void verdict.then((value) => {
+          if (value === "lost") loserVerdicts.push(value);
+          if (loserVerdicts.length === children.length - 1)
+            writeFileSync(join(root, "release-winner"), "release\n", "utf8");
+        });
+      }
+      const verdicts = await Promise.all(verdictPromises);
+      clearTimeout(releaseFallback);
+      releaseFallback = undefined;
       expect(verdicts.filter((value) => value === "won")).toHaveLength(1);
       expect(verdicts.filter((value) => value === "lost")).toHaveLength(11);
+      const state = join(root, ".ut-tdd", "state", "stop-refresh");
+      expect(readdirSync(join(state, "generations"))).toHaveLength(1);
     } finally {
+      if (releaseFallback) clearTimeout(releaseFallback);
+      for (const child of children) child.kill();
       removeTestTree(root);
     }
   });
@@ -669,6 +686,103 @@ describe("db-currency lint", () => {
         "redacted",
       ]);
       expect(JSON.stringify(reasons)).not.toContain("secret-value");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-024: child self-join upgrades identity and a reused PID cannot inherit ownership", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-child-self-join-"));
+    const go = join(root, "join-go");
+    const joined = join(root, "joined");
+    const release = join(root, "release-child");
+    const worker = join(root, "worker.ts");
+    writeFileSync(
+      worker,
+      `import { existsSync, writeFileSync } from "node:fs";\nimport { joinStopRefreshLease } from ${JSON.stringify(stopRefreshCoordinatorModuleUrl)};\nwhile (!existsSync(${JSON.stringify(go)})) await new Promise((resolve) => setTimeout(resolve, 2));\nwriteFileSync(${JSON.stringify(joined)}, joinStopRefreshLease(${JSON.stringify(root)}, "self-join-generation") ? "joined" : "failed");\nwhile (!existsSync(${JSON.stringify(release)})) await new Promise((resolve) => setTimeout(resolve, 2));\n`,
+      "utf8",
+    );
+    const child = spawn(process.execPath, [worker], { cwd: root, stdio: "ignore" });
+    const childExit = new Promise<void>((resolvePromise) =>
+      child.once("exit", () => resolvePromise()),
+    );
+    try {
+      await new Promise<void>((resolvePromise, reject) => {
+        child.once("spawn", resolvePromise);
+        child.once("error", reject);
+      });
+      if (!child.pid) throw new Error("child pid unavailable");
+      expect(
+        acquireStopRefreshLease(root, { generation: () => "self-join-generation" }).acquired,
+      ).toBe(true);
+      expect(
+        transferStopRefreshLease({
+          repoRoot: root,
+          generation: "self-join-generation",
+          fromPid: process.pid,
+          toPid: child.pid,
+        }),
+      ).toBe(true);
+      writeFileSync(go, "go\n", "utf8");
+      const deadline = Date.now() + 10_000;
+      while (!existsSync(joined) && Date.now() < deadline)
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+      expect(readFileSync(joined, "utf8")).toBe("joined");
+      const generation = join(
+        root,
+        ".ut-tdd",
+        "state",
+        "stop-refresh",
+        "generations",
+        "self-join-generation",
+      );
+      const acknowledged = JSON.parse(
+        readFileSync(join(generation, `ack-${child.pid}.json`), "utf8"),
+      ) as { process_birth: string };
+      expect(acknowledged.process_birth.startsWith("unverified-")).toBe(false);
+      writeFileSync(release, "release\n", "utf8");
+      await childExit;
+
+      const replacement = acquireStopRefreshLease(root, {
+        pid: process.pid + 200_000,
+        generation: () => "replacement-generation",
+        isPidAlive: (pid) => pid === child.pid,
+        processBirth: () => "same-pid-new-process-birth",
+      });
+      expect(replacement.acquired).toBe(true);
+    } finally {
+      if (!existsSync(release)) writeFileSync(release, "release\n", "utf8");
+      child.kill();
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-025: join rejects a verified claim from another process incarnation", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-verified-join-mismatch-"));
+    try {
+      expect(
+        acquireStopRefreshLease(root, {
+          generation: () => "verified-join-generation",
+          processBirth: () => "verified-birth-a",
+        }).acquired,
+      ).toBe(true);
+      expect(
+        joinStopRefreshLease({
+          repoRoot: root,
+          generation: "verified-join-generation",
+          pid: process.pid,
+          processBirth: () => "verified-birth-b",
+        }),
+      ).toBe(false);
+      const generation = join(
+        root,
+        ".ut-tdd",
+        "state",
+        "stop-refresh",
+        "generations",
+        "verified-join-generation",
+      );
+      expect(existsSync(join(generation, `ack-${process.pid}.json`))).toBe(false);
     } finally {
       removeTestTree(root);
     }

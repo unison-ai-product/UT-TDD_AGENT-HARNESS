@@ -19,3 +19,11 @@ PRコメント: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/1
 FLAGに対し、generation固有のimmutable anchor/claim、active hardlink、dirty demand、最大1回のrerun、失敗receipt、detached childへのowner handoffを実装した。same-host PIDの生存・process birthを検査し、dead ownerは即時reclaim、foreign/unverifiable ownerだけTTLを適用する。state pathのreparse escapeとowner record改ざんはfail-closeする。
 
 追加自己レビューでは例外本文をfailure receiptへ永続化できる情報漏えい境界を検出し、既知の機械可読reason code以外を`redacted`へ正規化した。U-DBCURRENCY-010〜023で並行Stop上限、需要保存、spawn/rebuild失敗、process race、改ざん、child join/crash、receipt redactionを固定した。最終ゲート結果とmerge可否は同一commitの検証後に追記する。
+
+## 2026-07-21 CI / cross-review追加是正
+
+U-DBCURRENCY-016のWindows CIで3 processが`won`となった。原子linkの排他破りではなく、先行winnerを固定500msで終了させたため、遅延contenderが正規のdead-owner reclaimを順次行うoracleの時系列欠陥だった。winnerを全loser確定まで生存させる実process barrierへ置換し、同時競合中のowner generationが1件であることも検査する。
+
+追加cross-reviewでchild handoffのidentity降格をHighとして検出した。親がchild birthを取得できない場合の`unverified-*` claimは、child自身の実birth観測だけでverified ackへ一方向昇格する。既にverifiedなclaimと実観測が不一致ならfail-closeし、ack後に同じPIDの別process incarnationがliveでも旧ownerとはみなさず即reclaimする。U-DBCURRENCY-024/025で実child self-join、PID reuse、verified mismatchを固定した。
+
+正規traceはPLAN-L7-365の`generates`へ`src/state-db/stop-refresh-coordinator.ts`と`tests/db-currency.test.ts`を追加し、direct debt baselineは使用しない。static evidenceはtypecheck Green、Biome Green、coding-rules changed source 0 violation、test-repository-isolation Green。対象snapshotとCIは未実施のため、verdictは引き続きFLAG・merge禁止とする。
