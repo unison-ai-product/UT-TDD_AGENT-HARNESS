@@ -182,6 +182,19 @@ export type RedesignBundlePublicationResult =
     })
   | { readonly ok: false; readonly ruleId: string };
 
+export type RedesignBundleFaultPoint =
+  | "F0:after-intent"
+  | "F1:after-begin"
+  | "F2:after-revisions"
+  | "F3:after-bindings"
+  | "F4:before-publish"
+  | "F5:after-first-publish"
+  | "F6:before-group-commit"
+  | "F7:before-db-commit"
+  | "F8:after-db-commit"
+  | "F9:before-finalize"
+  | "FX:after-first-finalize";
+
 /**
  * replacementのsupersedesとoriginの訂正back-referenceをdurable publicationへ閉じる。
  */
@@ -192,7 +205,11 @@ export class PlanRedesignBundleCoordinator {
   private readonly groups: AuthoringCommandGroupJournal;
   private readonly db: HarnessDb;
 
-  constructor(db: HarnessDb, transaction?: LedgerTransactionPort) {
+  constructor(
+    db: HarnessDb,
+    transaction?: LedgerTransactionPort,
+    private readonly injectFault: (point: RedesignBundleFaultPoint) => void = () => undefined,
+  ) {
     this.db = db;
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
     this.revisions = new PlanRevisionLedgerTransaction(db, transaction);
@@ -261,6 +278,7 @@ export class PlanRedesignBundleCoordinator {
       return { commit: intent.ok, value: intent };
     });
     if (!intent.ok) return intent;
+    this.injectFault("F0:after-intent");
     if (intent.publishedMemberIds.length === group.members.length) {
       const replay = this.transaction.run<RedesignBundleResult>(() => this.prepareRevisions(input));
       if (!replay.ok) return replay;
@@ -274,32 +292,46 @@ export class PlanRedesignBundleCoordinator {
     }
 
     this.db.exec("BEGIN IMMEDIATE");
+    this.injectFault("F1:after-begin");
     const published: Array<{
       member: AuthoringCommandGroupInput["members"][number];
       receipt: string;
     }> = [];
+    let dbCommitted = false;
     try {
       const revisions = this.prepareRevisions(input);
       if (!revisions.value.ok) {
         this.db.exec("ROLLBACK");
         return revisions.value;
       }
+      this.injectFault("F2:after-revisions");
       this.groups.bindRevisionsWithinTransaction(group, revisionBindings);
+      this.injectFault("F3:after-bindings");
+      this.injectFault("F4:before-publish");
       for (const member of group.members) {
         const receipt = publisher.publish({ ...member, groupId: group.groupId }).receiptDigest;
         this.groups.appendPublishedWithinTransaction(group, member.memberId, receipt);
         published.push({ member, receipt });
+        if (published.length === 1) this.injectFault("F5:after-first-publish");
       }
+      this.injectFault("F6:before-group-commit");
       this.groups.appendTerminalWithinTransaction(group, "committed");
+      this.injectFault("F7:before-db-commit");
       this.db.exec("COMMIT");
-      for (const { member } of published)
+      dbCommitted = true;
+      this.injectFault("F8:after-db-commit");
+      this.injectFault("F9:before-finalize");
+      for (const [index, { member }] of published.entries()) {
         publisher.acknowledge({ ...member, groupId: group.groupId });
+        if (index === 0) this.injectFault("FX:after-first-finalize");
+      }
       return {
         ...revisions.value,
         publicationReplayed: intent.replayed,
         publishedMemberIds: published.map(({ member }) => member.memberId),
       };
     } catch (error) {
+      if (dbCommitted) throw error;
       if (published.length === 0 && publisher.rollback) {
         try {
           publisher.rollback(

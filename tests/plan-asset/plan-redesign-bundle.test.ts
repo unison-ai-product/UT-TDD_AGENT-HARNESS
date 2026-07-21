@@ -19,6 +19,7 @@ import { parseLegacyPlanSource } from "../../src/plan-asset/adapters/legacy-plan
 import {
   deriveRedesignPublication,
   PlanRedesignBundleCoordinator,
+  type RedesignBundleFaultPoint,
   type RedesignBundleInput,
   redesignBundlePayloadDigest,
 } from "../../src/plan-asset/ledger/plan-redesign-bundle.js";
@@ -283,7 +284,19 @@ describe("Redesign bundle coordinator", () => {
     expect(Number(db.prepare("SELECT COUNT(*) n FROM plan_revisions").get()?.n)).toBe(2);
   });
 
-  it("U-PA-REDESIGN-005: #98のL4-31 rev2・L6-88・projectionを実filesystemへ一群publishし再起動replayする", () => {
+  it.each([
+    "F0:after-intent",
+    "F1:after-begin",
+    "F2:after-revisions",
+    "F3:after-bindings",
+    "F4:before-publish",
+    "F5:after-first-publish",
+    "F6:before-group-commit",
+    "F7:before-db-commit",
+    "F8:after-db-commit",
+    "F9:before-finalize",
+    "FX:after-first-finalize",
+  ] as const)("U-PA-REDESIGN-005: production application %s kill後fresh processで収束する", (faultPoint: RedesignBundleFaultPoint) => {
     const root = join(process.cwd(), ".ut-tdd", `redesign-e2e-${randomUUID()}`);
     roots.push(root);
     mkdirSync(join(root, "docs", "plans"), { recursive: true });
@@ -353,8 +366,8 @@ const partial = { ...${JSON.stringify(base)}, publication };
 const input = { ...partial, commandPayloadDigest: redesignBundlePayloadDigest(partial) };
 const db = openHarnessDb(${JSON.stringify(dbPath)});
 if (!migratePlanLedger(db).ok) process.exit(87);
-const publisher = new NodeAuthoringArtifactPublisher({ rootDir: ${JSON.stringify(root)}, artifacts: ${JSON.stringify(artifacts)}, injectFault(point) { if (point === "publish:after-target-link") process.exit(86); } });
-new PlanRedesignBundleCoordinator(db).publishDurable(input, publisher);
+const publisher = new NodeAuthoringArtifactPublisher({ rootDir: ${JSON.stringify(root)}, artifacts: ${JSON.stringify(artifacts)} });
+new PlanRedesignBundleCoordinator(db, undefined, (point) => { if (point === ${JSON.stringify(faultPoint)}) process.exit(86); }).publishDurable(input, publisher);
 db.close();`;
     const child = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
     expect(child.status, child.stderr).toBe(86);
@@ -363,9 +376,11 @@ db.close();`;
     expect(db.prepare("SELECT artifact_count FROM authoring_operation_descriptors").get()).toEqual({
       artifact_count: artifacts.length,
     });
+    const committedBeforeCrash =
+      faultPoint.startsWith("F8:") || faultPoint.startsWith("F9:") || faultPoint.startsWith("FX:");
     expect(
       Number(db.prepare("SELECT COUNT(*) n FROM authoring_command_revision_bindings").get()?.n),
-    ).toBe(0);
+    ).toBe(committedBeforeCrash ? 2 : 0);
     expect(
       Number(
         db
@@ -375,7 +390,7 @@ db.close();`;
           )
           .get()?.n,
       ),
-    ).toBe(0);
+    ).toBe(committedBeforeCrash ? 2 : 0);
     expect(
       db.prepare("SELECT strategy FROM authoring_recovery_assessment_events").get(),
     ).toBeUndefined();
