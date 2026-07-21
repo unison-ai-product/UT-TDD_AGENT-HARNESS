@@ -1,13 +1,19 @@
+import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import { analyzePlanSupersession, parseSupersedePlan } from "../../src/lint/plan-supersession.js";
+import { checkPlanAdmission } from "../../src/plan-admission/admission-check.js";
 import { canonicalPlanContentDigest } from "../../src/plan-admission/diff-fence.js";
 import { NodeAuthoringArtifactPublisher } from "../../src/plan-admission/node-authoring-artifact-publisher.js";
 import { evaluatePlanAdmission } from "../../src/plan-admission/policy.js";
-import { TRACKED_RECEIPT_SCHEMA } from "../../src/plan-admission/tracked-receipt-projection.js";
+import {
+  parseTrackedReceiptProjection,
+  TRACKED_RECEIPT_SCHEMA,
+} from "../../src/plan-admission/tracked-receipt-projection.js";
 import { TrackedReceiptRenderer } from "../../src/plan-admission/tracked-receipt-renderer.js";
 import { parseLegacyPlanSource } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
 import {
@@ -204,12 +210,37 @@ describe("Redesign bundle coordinator", () => {
       })),
     };
     group.commandPayloadDigest = redesignPublicationPayloadDigest(input, group.members);
+    const atomicModule = pathToFileURL(
+      join(process.cwd(), "src", "plan-admission", "node-atomic-draft-publisher.ts"),
+    ).href;
+    expect(() =>
+      new PlanRedesignBundleCoordinator(db).publishDurable(input, group, {
+        publish(member) {
+          const artifact = artifacts.find((candidate) => candidate.memberId === member.memberId);
+          if (!artifact) throw new Error("tracked artifact missing");
+          const tokenId = `authoring-${sha(`${member.groupId}\0${member.memberId}`).slice(0, 32)}`;
+          const script = `import { NodeAtomicDraftPublisher } from ${JSON.stringify(atomicModule)};
+const publisher = new NodeAtomicDraftPublisher({ rootDir: ${JSON.stringify(root)}, createId: () => ${JSON.stringify(tokenId)}, injectFault(point) { if (point === "publish:after-target-link") process.exit(86); } });
+const token = publisher.stage(${JSON.stringify([artifact])});
+publisher.publish(token);`;
+          const child = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+          if (child.status !== 86)
+            throw new Error(`child-fixture-invalid:${child.status}:${child.stderr}`);
+          throw new Error("tracked-redesign-child-stopped");
+        },
+        acknowledge() {},
+      }),
+    ).toThrow("tracked-redesign-child-stopped");
+    db.close();
+    opened.splice(opened.indexOf(db), 1);
+
+    db = openE2eDb(dbPath);
     const result = new PlanRedesignBundleCoordinator(db).publishDurable(
       input,
       group,
       new NodeAuthoringArtifactPublisher({ rootDir: root, artifacts }),
     );
-    expect(result).toMatchObject({ ok: true, replayed: false, publicationReplayed: false });
+    expect(result).toMatchObject({ ok: true, replayed: true, publicationReplayed: true });
     expect(readFileSync(join(root, input.origin.sourcePath), "utf8")).toBe(
       input.origin.sourceContent,
     );
@@ -252,10 +283,43 @@ describe("Redesign bundle coordinator", () => {
         ),
       ]),
     ).toMatchObject({ ok: true });
-    db.close();
-    opened.splice(opened.indexOf(db), 1);
-
-    db = openE2eDb(dbPath);
+    const tracked = parseTrackedReceiptProjection(projection);
+    expect(tracked.ok).toBe(true);
+    if (!tracked.ok) throw new Error(tracked.errors.join(","));
+    const baseOrigin = readFileSync(
+      "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
+      "utf8",
+    );
+    expect(
+      checkPlanAdmission({
+        baseRef: "fixture-base",
+        headRef: "fixture-head",
+        changes: {
+          compare: () => ({
+            base: [{ path: input.origin.sourcePath, content: baseOrigin }],
+            head: [
+              { path: input.origin.sourcePath, content: input.origin.sourceContent },
+              { path: input.replacement.sourcePath, content: input.replacement.sourceContent },
+            ],
+            changes: [
+              { kind: "modified" as const, path: input.origin.sourcePath },
+              { kind: "added" as const, path: input.replacement.sourcePath },
+            ],
+            baseComplete: true,
+            headComplete: true,
+          }),
+        },
+        projection: {
+          lookup: (commandId) => tracked.value.lookup(commandId),
+          validate: () => ({ ok: true, findings: [] }),
+        },
+      }),
+    ).toEqual({ ok: true, findings: [] });
+    expect(
+      readdirSync(root, { recursive: true })
+        .map(String)
+        .filter((name) => name.includes(".ut-tdd-draft-") || name.includes(".ut-tdd-identity-")),
+    ).toEqual([]);
     expect(
       new PlanRedesignBundleCoordinator(db).publishDurable(
         input,
