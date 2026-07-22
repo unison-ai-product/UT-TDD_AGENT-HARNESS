@@ -532,28 +532,30 @@ describe("runDoctor", () => {
   });
 
   it("U-SETUP-014: supports a fresh-consumer setup smoke without requiring dogfood PLAN/design docs", () => {
+    const codexHook = (...args: string[]) => ({
+      type: "command",
+      command: "node",
+      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+    });
     const codexHookJson = JSON.stringify({
       hooks: {
         PreToolUse: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }],
+            hooks: [codexHook("hook", "agent-guard")],
           },
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard" }],
+            hooks: [codexHook("hook", "work-guard")],
           },
         ],
-        SessionStart: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] }],
+        SessionStart: [{ hooks: [codexHook("session", "start")] }],
         PostToolUse: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" }],
+            hooks: [codexHook("hook", "post-tool-use")],
           },
         ],
         Stop: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" }],
-          },
-          {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" }],
+            hooks: [codexHook("session", "summary")],
           },
         ],
       },
