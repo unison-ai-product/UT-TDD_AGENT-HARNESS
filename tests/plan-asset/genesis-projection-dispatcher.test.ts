@@ -81,20 +81,16 @@ describe("GenesisProjectionDispatcher", () => {
       recoveryRequired: 2,
     });
     expect(fixture.projection.dispatch).toHaveBeenCalledTimes(2);
-    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(
-      1,
-      "genesis:129:first",
-      "worker:test",
-      "issue-observe-failed",
-      "2026-07-22T07:01:00.000Z",
-    );
-    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(
-      2,
-      "genesis:129:second",
-      "worker:test",
-      "genesis-adoption-projection-recovery-required",
-      "2026-07-22T07:01:00.000Z",
-    );
+    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(1, "genesis:129:first", {
+      ownerToken: "worker:test",
+      reason: "issue-observe-failed",
+      occurredAt: "2026-07-22T07:01:00.000Z",
+    });
+    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(2, "genesis:129:second", {
+      ownerToken: "worker:test",
+      reason: "genesis-adoption-projection-recovery-required",
+      occurredAt: "2026-07-22T07:01:00.000Z",
+    });
   });
 
   it("U-GEN-019: durableでない応答を成功扱いせずfail-closeする", () => {
@@ -109,12 +105,11 @@ describe("GenesisProjectionDispatcher", () => {
       recoveryRequired: 1,
     });
     expect(fixture.store.markProjected).not.toHaveBeenCalled();
-    expect(fixture.store.markRecoveryRequired).toHaveBeenCalledWith(
-      "genesis:129:first",
-      "worker:test",
-      "genesis-adoption-projection-not-durable",
-      "2026-07-22T07:01:00.000Z",
-    );
+    expect(fixture.store.markRecoveryRequired).toHaveBeenCalledWith("genesis:129:first", {
+      ownerToken: "worker:test",
+      reason: "genesis-adoption-projection-not-durable",
+      occurredAt: "2026-07-22T07:01:00.000Z",
+    });
   });
 
   it("U-GEN-023: CLIは指定commandだけを投影し無関係なpendingを処理しない", () => {
@@ -182,7 +177,11 @@ describe("GenesisProjectionDispatcher", () => {
     });
     seedPending(root, body);
 
-    let resource = openNodeGenesisProjectionDispatcher(root, "owner/repository", port);
+    let resource = openNodeGenesisProjectionDispatcher({
+      repoRoot: root,
+      repository: "owner/repository",
+      port,
+    });
     expect(resource.dispatcher.dispatchCommand("genesis:129")).toEqual({
       scanned: 1,
       projected: 0,
@@ -192,7 +191,11 @@ describe("GenesisProjectionDispatcher", () => {
     expect(readPlanStatus(root)).toBe("recovery_required");
     expect(readHarnessEvents(root)).toEqual(["IssueAdoptionQueued"]);
 
-    resource = openNodeGenesisProjectionDispatcher(root, "owner/repository", port);
+    resource = openNodeGenesisProjectionDispatcher({
+      repoRoot: root,
+      repository: "owner/repository",
+      port,
+    });
     expect(resource.dispatcher.dispatchCommand("genesis:129")).toEqual({
       scanned: 1,
       projected: 1,
@@ -220,16 +223,16 @@ describe("GenesisProjectionDispatcher", () => {
     });
     const planDb = { ...rawPlanDb, close: planClose };
     const harnessDb = { ...rawHarnessDb, close: harnessClose };
-    const resource = openNodeGenesisProjectionDispatcher(
-      root,
-      "owner/repository",
-      projectionPort("# issue\n", () => ({ ok: false, reason: "unused" })),
-      {
+    const resource = openNodeGenesisProjectionDispatcher({
+      repoRoot: root,
+      repository: "owner/repository",
+      port: projectionPort("# issue\n", () => ({ ok: false, reason: "unused" })),
+      options: {
         openPlanDb: () => planDb,
         openHarnessDb: () => harnessDb,
         migrateHarnessDb: vi.fn(),
       },
-    );
+    });
 
     expect(() => resource.close()).toThrow("harness-close-failed");
     expect(harnessClose).toHaveBeenCalledOnce();
@@ -379,16 +382,15 @@ function setup(
     }),
     markProjected,
     markRecoveryRequired,
-    settleClaim: vi.fn((commandId, ownerToken, heartbeat, work) => {
+    settleClaim: vi.fn(({ commandId, ownerToken, heartbeat, work }) => {
       const result = work();
       if (result.state === "projected") markProjected(commandId, ownerToken, heartbeat.claimedAt);
       else
-        markRecoveryRequired(
-          commandId,
+        markRecoveryRequired(commandId, {
           ownerToken,
-          result.failureReason ?? "genesis-adoption-projection-recovery-required",
-          heartbeat.claimedAt,
-        );
+          reason: result.failureReason ?? "genesis-adoption-projection-recovery-required",
+          occurredAt: heartbeat.claimedAt,
+        });
       return result;
     }),
   };
@@ -396,11 +398,11 @@ function setup(
   return {
     store,
     projection,
-    dispatcher: new GenesisProjectionDispatcher(
-      store,
+    dispatcher: new GenesisProjectionDispatcher({
+      outbox: store,
       projection,
-      () => "2026-07-22T07:01:00.000Z",
-      () => "worker:test",
-    ),
+      now: () => "2026-07-22T07:01:00.000Z",
+      ownerToken: () => "worker:test",
+    }),
   };
 }

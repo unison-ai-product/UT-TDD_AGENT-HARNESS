@@ -8,7 +8,7 @@ import {
   NodeGitCommandPort,
   type TrustedGitBlob,
   TrustedGitBlobResolver,
-} from "../../plan-admission/trusted-git-blob-resolver.js";
+} from "../../git/trusted-git-blob-resolver.js";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
 import { loadProjectIdentityFromHead } from "../adapters/project-identity-loader.js";
 import {

@@ -83,12 +83,12 @@ export class SqliteGenesisAdoptionProjectionAdapter implements GenesisAdoptionPr
         repository: this.deps.repository,
         issue_number: input.issueNumber,
       });
-      assertIssuePreimage(
+      assertIssuePreimage({
         issue,
-        this.deps.repository,
-        input.issueNumber,
-        input.issuePreimageDigest,
-      );
+        repository: this.deps.repository,
+        issueNumber: input.issueNumber,
+        expectedDigest: input.issuePreimageDigest,
+      });
       if (!queued) this.appendQueued(input, payloadDigest, issue);
 
       const body = metadataBody(input, payloadDigest, this.deps.repository);
@@ -166,12 +166,13 @@ function projectionPayloadDigest(value: ProjectionBinding): string {
   );
 }
 
-function assertIssuePreimage(
-  issue: ReturnType<ForwardEscapeIssueAdoptionPort["observeIssue"]>,
-  repository: string,
-  issueNumber: number,
-  expectedDigest: string,
-): void {
+function assertIssuePreimage(input: {
+  readonly issue: ReturnType<ForwardEscapeIssueAdoptionPort["observeIssue"]>;
+  readonly repository: string;
+  readonly issueNumber: number;
+  readonly expectedDigest: string;
+}): void {
+  const { issue, repository, issueNumber, expectedDigest } = input;
   if (
     issue.repository !== repository ||
     issue.issue_number !== issueNumber ||

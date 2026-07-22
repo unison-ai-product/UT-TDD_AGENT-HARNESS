@@ -47,7 +47,10 @@ export function createProductionGenesisAdoptionCommandRunner(
   deps: GenesisAdoptionProductionDeps = {},
 ): GenesisAdoptionCommandRunner {
   const createRunner = deps.createRunner ?? createNodeGenesisAdoptionRunner;
-  const openDispatcher = deps.openDispatcher ?? openNodeGenesisProjectionDispatcher;
+  const openDispatcher =
+    deps.openDispatcher ??
+    ((dispatcherRoot: string, repository: string) =>
+      openNodeGenesisProjectionDispatcher({ repoRoot: dispatcherRoot, repository }));
   const issuePort = new NodeGhForwardEscapeIssuePort();
   const observeIssue = deps.observeIssue ?? ((input) => issuePort.observeIssue(input));
   return {
