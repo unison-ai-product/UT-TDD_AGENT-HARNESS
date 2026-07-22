@@ -4,7 +4,7 @@ title: "PLAN-L7-453: 2026-07-22 ドキュメント整合性監査 errata 一括�
 kind: troubleshoot
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-07-22
 updated: 2026-07-22
 owner: Claude
@@ -66,7 +66,24 @@ dependencies:
   parent: null
   requires:
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-blind-reviewer
+    review_kind: cross_provider
+    reviewed_at: "2026-07-22T20:10:00+09:00"
+    tests_green_at: "2026-07-22T20:10:00+09:00"
+    verdict: pass
+    scope: "PLAN-L7-453 errata batch (commit d7dcc320, 24 files)。blind review 判定 PASS: ground truth 整合 (VALID_SUB_DOCS/VALID_DRIVES/checkRosterConsistency fail-close)、correction note 規律、FR-L1-16 再マッピングの意味整合 (analyzeL6FrCoverage 51/51 green)、機械ゲート 5 種 green を reviewer 自走で実測。攻撃試行 (self-pair 残存/再誤配線/prose 逆転/無注記上書き) は全て反駁済。"
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-22T20:10:00+09:00"
+        evidence_path: docs/plans/PLAN-L7-453-doc-consistency-audit-errata.md
+        anchor_commit: d7dcc32017418e5ab465072bd249641c0f04c490
 ---
 
 # PLAN-L7-453: 2026-07-22 ドキュメント整合性監査 errata 一括是正
