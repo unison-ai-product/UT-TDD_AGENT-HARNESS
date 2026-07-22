@@ -40,6 +40,9 @@ sub_doc: edge-case
 
 # PLAN-L6-93: cross-review セッション実在照合 gate
 
+対応 issue: #131 (hybrid: Codex 側から ut-tdd claude 委譲が発火せずクロスレビュー
+原則が素通り)。
+
 ## 1. 目的と実測根拠 (2026-07-22 監査)
 
 hybrid の原則は「非著者 provider がレビューする」だが、これは現状 **prose ルール
