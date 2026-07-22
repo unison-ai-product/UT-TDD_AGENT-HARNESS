@@ -29,8 +29,23 @@ const commandSchema = z
   })
   .strict();
 
+const adoptionSchema = z
+  .object({
+    command: commandSchema,
+    issue_number: z.number().int().positive(),
+    expected: z
+      .object({
+        repository: z.string().min(1),
+        node_id: z.string().min(1),
+        observed_revision: z.string().min(1),
+        body_digest: z.string().regex(/^[a-f0-9]{64}$/),
+      })
+      .strict(),
+  })
+  .strict();
+
 export interface ForwardEscapeIssueCliDeps {
-  readonly runner: Pick<ForwardEscapeIssueProjectionRunner, "run">;
+  readonly runner: Pick<ForwardEscapeIssueProjectionRunner, "run" | "runAdoption">;
   readonly readText?: (path: string) => string;
   readonly writeOutput?: (text: string) => void;
 }
@@ -50,6 +65,25 @@ export function registerForwardEscapeIssueCommand(plan: Command, deps: ForwardEs
         const result = deps.runner.run(command);
         write(`${JSON.stringify(result, null, 2)}\n`);
         process.exitCode = result.event.type === "IssueProjected" ? 0 : 2;
+      } catch (error) {
+        write(`${JSON.stringify({ ok: false, error: errorText(error) })}\n`);
+        process.exitCode = 1;
+      }
+    });
+
+  plan
+    .command("adopt-forward-escape-issue")
+    .description("既存GitHub Issueを本文不変のまま検証し、metadata commentとdurable E4へ採用")
+    .requiredOption("--input <path>", "Forward escape Issue adoption JSON")
+    .action((options: { input: string }) => {
+      const write = deps.writeOutput ?? ((text: string) => process.stdout.write(text));
+      try {
+        const input = adoptionSchema.parse(
+          JSON.parse((deps.readText ?? ((path) => readFileSync(path, "utf8")))(options.input)),
+        );
+        const result = deps.runner.runAdoption(input);
+        write(`${JSON.stringify(result, null, 2)}\n`);
+        process.exitCode = result.event.type === "IssueAdopted" ? 0 : 2;
       } catch (error) {
         write(`${JSON.stringify({ ok: false, error: errorText(error) })}\n`);
         process.exitCode = 1;

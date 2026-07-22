@@ -27,6 +27,8 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/forward-escape-issue-contract.test.ts
     artifact_type: test_code
+  - artifact_path: tests/forward-escape-issue-adoption-contract.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-83-forward-escape-issue-contract.md
   requires: []
@@ -49,7 +51,7 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 「`U-EXISSUE-*` Red → 独立 review → L7-436 実装 → Reverse backfill」。本 PLAN は
 その最初の 2 段を担う最小 slice: §5 の 6 oracle を Red 固定し、§4 の判定関数
 (`classifyForwardBoundary` / `validateForwardEscape` / `checkDriveModelAlignment` /
-`renderForwardEscapeIssueBody` / `projectForwardEscapeIssue` /
+`renderForwardEscapeIssueBody` / `projectForwardEscapeIssue` / `adoptForwardEscapeIssue` /
 `reconcileIssueProjection`) を GitHub SDK 非依存の純粋関数 + port として Green 化する。
 
 - 11 駆動モデルを閉じた enum で固定 (技術 drive とは別 value object、混入 fail-close)。
@@ -61,11 +63,13 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
   custody storage例外のstructured violation化と、同一commandを複数SQLite workerが同時処理しても
   certificate / queued receiptを1件へ収束させる原子create-or-getを`U-EXISSUE-015..016`で固定する。
 - reconcile は削除/改変/重複/別 repository を finding 化 (Ledger 書換なし)。
+- 既存Issue採用は本文不変、番号GET preimage完全一致、canonical metadata comment、独立adoption FSM、
+  SQLite restart/replay、trusted repository identity、E4 evidence resolverまでを同じ縦sliceで固定する。
 
 ## 非スコープ
 
 - E0-E15 episode 集約・repository/outbox の永続化 (PLAN-L7-436)。
-- 実 GitHub port 実装・webhook/polling inbox (PLAN-L7-437)。
+- webhook/polling inbox (PLAN-L7-437)。GitHub CLI adapterのIssue GET/comment create-or-getは本sliceに含む。
 - L6-83 の confirm (L7-436 実装 + Reverse backfill 後、L6-83 自身の AC で閉じる)。
 
 ## Steps
@@ -79,6 +83,7 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 ## DoD
 
 - [ ] U-EXISSUE-007..016をsnapshot runnerで実測し、別runtimeのcross-reviewでFLAG解消を確認する。
+- [ ] U-EXISSUE-ADOPT-001..008をsnapshot runnerで実測し、別runtimeのcross-reviewでFLAG解消を確認する。
 
 - [x] U-EXISSUE-001..006 が Red (module 不在 fail の snapshot 実測) から Green へ遷移した。
       根拠: commit 履歴 (test-only commit で snapshot FAIL 実測 / 実装 commit 後

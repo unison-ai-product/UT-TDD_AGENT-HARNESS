@@ -61,6 +61,28 @@ function parseProjectionEvent(raw: string, commandId: string): DurableIssueProje
     ) {
       throw new ForwardEscapeJournalIntegrityError("projection-journal-event-invalid");
     }
+  } else if (event.type === "IssueAdoptionQueued") {
+    if (
+      !commonValid ||
+      !exactKeys(event, [
+        "type",
+        "command_id",
+        "payload_digest",
+        "repository",
+        "issue_number",
+        "expected_node_id",
+        "expected_observed_revision",
+        "expected_body_digest",
+      ]) ||
+      !nonEmpty(event.repository) ||
+      !Number.isSafeInteger(event.issue_number) ||
+      Number(event.issue_number) <= 0 ||
+      !nonEmpty(event.expected_node_id) ||
+      !nonEmpty(event.expected_observed_revision) ||
+      !nonEmpty(event.expected_body_digest) ||
+      !SHA256.test(event.expected_body_digest)
+    )
+      throw new ForwardEscapeJournalIntegrityError("projection-journal-event-invalid");
   } else if (event.type === "IssueProjectionDeferred") {
     if (
       !commonValid ||
@@ -95,6 +117,41 @@ function parseProjectionEvent(raw: string, commandId: string): DurableIssueProje
     ) {
       throw new ForwardEscapeJournalIntegrityError("projection-journal-event-invalid");
     }
+  } else if (event.type === "IssueAdopted") {
+    const binding = record(event.binding);
+    const artifact = record(binding?.contract_artifact);
+    if (
+      !commonValid ||
+      !exactKeys(event, ["type", "command_id", "payload_digest", "binding"]) ||
+      !binding ||
+      !exactKeys(binding, [
+        "repository",
+        "issue_number",
+        "node_id",
+        "url",
+        "body_digest",
+        "observed_revision",
+        "contract_artifact_kind",
+        "contract_artifact",
+      ]) ||
+      binding.contract_artifact_kind !== "issue_comment" ||
+      !artifact ||
+      !exactKeys(artifact, ["node_id", "url", "body_digest", "observed_revision"]) ||
+      !nonEmpty(binding.repository) ||
+      !Number.isSafeInteger(binding.issue_number) ||
+      Number(binding.issue_number) <= 0 ||
+      !nonEmpty(binding.node_id) ||
+      !nonEmpty(binding.url) ||
+      !nonEmpty(binding.body_digest) ||
+      !SHA256.test(binding.body_digest) ||
+      !nonEmpty(binding.observed_revision) ||
+      !nonEmpty(artifact.node_id) ||
+      !nonEmpty(artifact.url) ||
+      !nonEmpty(artifact.body_digest) ||
+      !SHA256.test(artifact.body_digest) ||
+      !nonEmpty(artifact.observed_revision)
+    )
+      throw new ForwardEscapeJournalIntegrityError("projection-journal-event-invalid");
   } else {
     throw new ForwardEscapeJournalIntegrityError("projection-journal-event-invalid");
   }
@@ -107,7 +164,7 @@ function parseProjectionEvent(raw: string, commandId: string): DurableIssueProje
 function assertProjectionFsm(events: readonly DurableIssueProjectionEvent[]): void {
   if (events.length === 0) return;
   const queued = events[0];
-  if (queued.type !== "IssueProjectionQueued") {
+  if (queued.type !== "IssueProjectionQueued" && queued.type !== "IssueAdoptionQueued") {
     throw new ForwardEscapeJournalIntegrityError("projection-journal-sequence-invalid");
   }
   let projected = false;
@@ -115,12 +172,15 @@ function assertProjectionFsm(events: readonly DurableIssueProjectionEvent[]): vo
     if (
       event.command_id !== queued.command_id ||
       event.payload_digest !== queued.payload_digest ||
-      (index > 0 && event.type === "IssueProjectionQueued") ||
+      (index > 0 &&
+        (event.type === "IssueProjectionQueued" || event.type === "IssueAdoptionQueued")) ||
       projected
     ) {
       throw new ForwardEscapeJournalIntegrityError("projection-journal-sequence-invalid");
     }
     if (event.type === "IssueProjected") {
+      if (queued.type !== "IssueProjectionQueued")
+        throw new ForwardEscapeJournalIntegrityError("projection-journal-sequence-invalid");
       if (
         event.binding.repository !== queued.repository ||
         event.binding.body_digest !== queued.body_digest
@@ -128,6 +188,20 @@ function assertProjectionFsm(events: readonly DurableIssueProjectionEvent[]): vo
         throw new ForwardEscapeJournalIntegrityError("projection-journal-binding-invalid");
       }
       projected = true;
+    } else if (event.type === "IssueAdopted") {
+      if (queued.type !== "IssueAdoptionQueued")
+        throw new ForwardEscapeJournalIntegrityError("projection-journal-sequence-invalid");
+      if (
+        event.binding.repository !== queued.repository ||
+        event.binding.issue_number !== queued.issue_number ||
+        event.binding.node_id !== queued.expected_node_id ||
+        event.binding.observed_revision !== queued.expected_observed_revision ||
+        event.binding.body_digest !== queued.expected_body_digest
+      )
+        throw new ForwardEscapeJournalIntegrityError("projection-journal-binding-invalid");
+      projected = true;
+    } else if (index > 0 && queued.type === "IssueAdoptionQueued") {
+      throw new ForwardEscapeJournalIntegrityError("projection-journal-sequence-invalid");
     }
   }
 }

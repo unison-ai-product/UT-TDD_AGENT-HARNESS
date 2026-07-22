@@ -441,6 +441,183 @@ export interface ForwardEscapeIssuePort {
   }): { ok: true; binding: IssueBinding } | { ok: false; reason: string };
 }
 
+export interface ObservedForwardEscapeIssue extends IssueBinding {
+  readonly body: string;
+}
+
+export interface ForwardEscapeIssueAdoptionPort {
+  observeIssue(input: { repository: string; issue_number: number }): ObservedForwardEscapeIssue;
+  createOrGetMetadataComment(input: {
+    repository: string;
+    issue_number: number;
+    idempotency_key: string;
+    body: string;
+    body_digest: string;
+  }):
+    | {
+        ok: true;
+        comment: {
+          node_id: string;
+          url: string;
+          body_digest: string;
+          observed_revision: string;
+        };
+      }
+    | { ok: false; reason: string };
+}
+
+export interface IssueAdoptedEvent {
+  readonly type: "IssueAdopted";
+  readonly command_id: string;
+  readonly payload_digest: string;
+  readonly binding: IssueBinding & {
+    readonly contract_artifact_kind: "issue_comment";
+    readonly contract_artifact: {
+      readonly node_id: string;
+      readonly url: string;
+      readonly body_digest: string;
+      readonly observed_revision: string;
+    };
+  };
+}
+
+export interface IssueAdoptionQueuedEvent {
+  readonly type: "IssueAdoptionQueued";
+  readonly command_id: string;
+  readonly payload_digest: string;
+  readonly repository: string;
+  readonly issue_number: number;
+  readonly expected_node_id: string;
+  readonly expected_observed_revision: string;
+  readonly expected_body_digest: string;
+}
+
+/** 既存Issue本文を変更せず、正規metadata commentを結合してE4 custodyへ採用する。 */
+export function adoptForwardEscapeIssue(input: {
+  readonly validated: ValidatedForwardEscape;
+  readonly issue_number: number;
+  readonly expected: {
+    readonly repository: string;
+    readonly node_id: string;
+    readonly observed_revision: string;
+    readonly body_digest: string;
+  };
+  readonly port: ForwardEscapeIssueAdoptionPort;
+  readonly journal: ForwardEscapeProjectionJournal;
+  readonly custody: Pick<ForwardEscapeCustodyPort, "verify">;
+}): IssueAdoptedEvent {
+  const { validated, issue_number: issueNumber, expected, port, journal, custody } = input;
+  if (
+    validated.type !== "ForwardEscapeValidated" ||
+    validated.sequence !== "E2" ||
+    validated.payload_digest !== payloadDigest(validated.command) ||
+    !custody.verify(validated)
+  )
+    throw new Error("forward-escape-e2-required");
+  const repository = `${validated.command.issue_projection.owner}/${validated.command.issue_projection.repository}`;
+  const prior = journal.eventsFor(validated.command.command_id);
+  const queued = prior.find((event) => event.type === "IssueAdoptionQueued");
+  if (
+    queued &&
+    (queued.type !== "IssueAdoptionQueued" ||
+      queued.payload_digest !== validated.payload_digest ||
+      queued.repository !== repository ||
+      queued.issue_number !== issueNumber ||
+      queued.expected_node_id !== expected.node_id ||
+      queued.expected_observed_revision !== expected.observed_revision ||
+      queued.expected_body_digest !== expected.body_digest)
+  )
+    throw new Error("issue-adoption-request-conflict");
+  const adopted = prior.findLast((event) => event.type === "IssueAdopted");
+  if (adopted?.type === "IssueAdopted") {
+    if (
+      adopted.binding.repository !== repository ||
+      adopted.binding.issue_number !== issueNumber ||
+      adopted.binding.node_id !== expected.node_id ||
+      adopted.binding.observed_revision !== expected.observed_revision ||
+      adopted.binding.body_digest !== expected.body_digest
+    )
+      throw new Error("issue-adoption-request-conflict");
+    return adopted;
+  }
+  const issue = port.observeIssue({ repository, issue_number: issueNumber });
+  const expectedIssueUrl = `https://github.com/${repository}/issues/${issueNumber}`;
+  if (
+    repository !== expected.repository ||
+    issue.repository !== expected.repository ||
+    issue.issue_number !== issueNumber ||
+    issue.node_id !== expected.node_id ||
+    issue.observed_revision !== expected.observed_revision ||
+    issue.body_digest !== expected.body_digest ||
+    issue.url !== expectedIssueUrl ||
+    createHash("sha256").update(issue.body).digest("hex") !== expected.body_digest
+  )
+    throw new Error("issue-adoption-preimage-mismatch");
+  // GET observationは外部writeではない。preimage検証後にだけintentをdurable化することで、
+  // callerの誤snapshotが同じcommandを回復不能にpoisonすることを防ぐ。
+  if (!prior.some((event) => event.type === "IssueAdoptionQueued"))
+    appendDurably(journal, {
+      type: "IssueAdoptionQueued",
+      command_id: validated.command.command_id,
+      payload_digest: validated.payload_digest,
+      repository,
+      issue_number: issueNumber,
+      expected_node_id: expected.node_id,
+      expected_observed_revision: expected.observed_revision,
+      expected_body_digest: expected.body_digest,
+    });
+  const body = [
+    "<!-- ut-tdd:forward-escape-adoption/v1 -->",
+    "## UT-TDD Forward escape adoption contract",
+    "",
+    `- command_id: \`${validated.command.command_id}\``,
+    `- payload_digest: \`${validated.payload_digest}\``,
+    `- repository: \`${repository}\``,
+    `- issue_number: \`${issueNumber}\``,
+    `- issue_node_id: \`${issue.node_id}\``,
+    `- issue_observed_revision: \`${issue.observed_revision}\``,
+    `- issue_body_digest: \`${issue.body_digest}\``,
+    "",
+    `<!-- ut-tdd:forward-escape-adoption/v1 ${validated.command.command_id} -->`,
+  ].join("\n");
+  const bodyDigest = createHash("sha256").update(body).digest("hex");
+  const result = port.createOrGetMetadataComment({
+    repository,
+    issue_number: issueNumber,
+    idempotency_key: validated.command.command_id,
+    body,
+    body_digest: bodyDigest,
+  });
+  if (
+    !result.ok ||
+    result.comment.body_digest !== bodyDigest ||
+    !result.comment.node_id ||
+    !result.comment.observed_revision ||
+    !/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/[1-9]\d*#issuecomment-[1-9]\d*$/.test(
+      result.comment.url,
+    ) ||
+    !result.comment.url.startsWith(`${expectedIssueUrl}#issuecomment-`)
+  )
+    throw new Error("issue-adoption-comment-invalid");
+  const event: IssueAdoptedEvent = {
+    type: "IssueAdopted",
+    command_id: validated.command.command_id,
+    payload_digest: validated.payload_digest,
+    binding: {
+      repository,
+      issue_number: issueNumber,
+      node_id: issue.node_id,
+      url: issue.url,
+      body_digest: issue.body_digest,
+      observed_revision: issue.observed_revision,
+      contract_artifact_kind: "issue_comment",
+      contract_artifact: result.comment,
+    },
+  };
+  appendDurably(journal, event);
+  return event;
+}
+
 export type IssueProjectionEvent =
   | {
       type: "IssueProjected";
@@ -463,7 +640,9 @@ export type DurableIssueProjectionEvent =
       repository: string;
       body_digest: string;
     }
-  | IssueProjectionEvent;
+  | IssueProjectionEvent
+  | IssueAdoptionQueuedEvent
+  | IssueAdoptedEvent;
 
 export const DURABLE_PROJECTION_FAILURE_REASONS = [
   "github-request-failed",

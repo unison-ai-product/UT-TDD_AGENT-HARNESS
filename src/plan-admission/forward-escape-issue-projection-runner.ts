@@ -1,4 +1,6 @@
 import {
+  adoptForwardEscapeIssue,
+  type ForwardEscapeIssueAdoptionPort,
   type ForwardEscapeIssuePort,
   type ForwardEscapeLedgerView,
   projectForwardEscapeIssue,
@@ -24,6 +26,7 @@ export interface ForwardEscapeIssueProjectionRunnerDeps {
     close?: () => void;
   };
   readonly issuePort: ForwardEscapeIssuePort;
+  readonly adoptionPort?: ForwardEscapeIssueAdoptionPort;
   readonly assertRepositoryIdentity: (identity: string) => string;
 }
 
@@ -53,6 +56,53 @@ export class ForwardEscapeIssueProjectionRunner {
     }
   }
 
+  runAdoption(input: {
+    readonly command: RequestForwardEscape;
+    readonly issue_number: number;
+    readonly expected: {
+      readonly repository: string;
+      readonly node_id: string;
+      readonly observed_revision: string;
+      readonly body_digest: string;
+    };
+  }) {
+    this.deps.assertRepositoryIdentity(input.expected.repository);
+    const expectedFromCommand = `${input.command.issue_projection.owner}/${input.command.issue_projection.repository}`;
+    if (input.expected.repository !== expectedFromCommand)
+      throw new Error("trusted-repository-identity-invalid");
+    const db = this.deps.openEvidenceDb();
+    try {
+      migrate(db);
+      const journal = new SqliteForwardEscapeJournal(db);
+      const ledger = this.deps.createLedger?.(db) ?? this.deps.ledger;
+      const port = this.deps.adoptionPort;
+      if (!ledger) throw new Error("forward-escape-ledger-unavailable");
+      if (!port) throw new Error("forward-escape-adoption-port-unavailable");
+      try {
+        return journal.runExclusive(() => {
+          const validation = validateForwardEscape(input.command, ledger, journal);
+          if (!validation.validated)
+            throw new Error(
+              `forward-escape-validation-failed:${validation.violations.map(({ code }) => code).join(",")}`,
+            );
+          const event = adoptForwardEscapeIssue({
+            validated: validation.validated,
+            issue_number: input.issue_number,
+            expected: input.expected,
+            port,
+            journal,
+            custody: journal,
+          });
+          return { event, evidence: this.resolveEvidence(db, event, input.command.command_id) };
+        });
+      } finally {
+        if ("close" in ledger && typeof ledger.close === "function") ledger.close();
+      }
+    } finally {
+      db.close();
+    }
+  }
+
   private project(input: {
     command: RequestForwardEscape;
     db: HarnessDb;
@@ -73,21 +123,26 @@ export class ForwardEscapeIssueProjectionRunner {
       custody: journal,
     });
     if (event.type !== "IssueProjected") return { event };
+    return { event, evidence: this.resolveEvidence(db, event, command.command_id) };
+  }
+
+  private resolveEvidence(
+    db: HarnessDb,
+    event: { readonly binding: { readonly issue_number: number } },
+    commandId: string,
+  ) {
     const row = db
       .prepare(
         `SELECT event_digest FROM forward_escape_projection_events
            WHERE command_id = ? ORDER BY sequence DESC LIMIT 1`,
       )
-      .get(command.command_id);
+      .get(commandId);
     const projectionDigest = `sha256:${String(row?.event_digest ?? "")}`;
-    return {
-      event,
-      evidence: new SqliteIssueProjectionEvidenceResolver(db).resolve({
-        issueId: event.binding.issue_number,
-        episodeId: command.command_id,
-        projectionDigest,
-      }),
-    };
+    return new SqliteIssueProjectionEvidenceResolver(db).resolve({
+      issueId: event.binding.issue_number,
+      episodeId: commandId,
+      projectionDigest,
+    });
   }
 }
 
@@ -103,6 +158,7 @@ export function createNodeForwardEscapeIssueProjectionRunner(repoRoot: string) {
       return Object.assign(view, { close: () => planDb.close() });
     },
     issuePort: new NodeGhForwardEscapeIssuePort(),
+    adoptionPort: new NodeGhForwardEscapeIssuePort(),
     assertRepositoryIdentity: (identity) => repositoryIdentity.assertClaim(identity),
   });
 }

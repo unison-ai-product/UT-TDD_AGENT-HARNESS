@@ -13,6 +13,13 @@ export interface TrustedIssueProjectionEvidence {
   readonly projectionDigest: `sha256:${string}`;
   readonly repository: string;
   readonly bodyDigest: `sha256:${string}`;
+  readonly contractArtifact?: {
+    readonly kind: "issue_comment";
+    readonly nodeId: string;
+    readonly url: string;
+    readonly bodyDigest: `sha256:${string}`;
+    readonly observedRevision: string;
+  };
 }
 
 const PREFIXED_SHA256 = /^sha256:([a-f0-9]{64})$/;
@@ -48,9 +55,15 @@ export class SqliteIssueProjectionEvidenceResolver {
     }
 
     const events = this.#journal.eventsFor(claim.episodeId);
-    const eventIndex = events.findIndex((event) => event.type === "IssueProjected");
+    const eventIndex = events.findIndex(
+      (event) => event.type === "IssueProjected" || event.type === "IssueAdopted",
+    );
     const projected = events[eventIndex];
-    if (eventIndex < 0 || projected?.type !== "IssueProjected") throw new Error("e4-not-found");
+    if (
+      eventIndex < 0 ||
+      (projected?.type !== "IssueProjected" && projected?.type !== "IssueAdopted")
+    )
+      throw new Error("e4-not-found");
     if (
       projected.command_id !== claim.episodeId ||
       projected.binding.issue_number !== claim.issueId
@@ -78,6 +91,17 @@ export class SqliteIssueProjectionEvidenceResolver {
       projectionDigest: `sha256:${claimedDigest}`,
       repository: projected.binding.repository,
       bodyDigest: `sha256:${projected.binding.body_digest}`,
+      ...(projected.type === "IssueAdopted"
+        ? {
+            contractArtifact: {
+              kind: projected.binding.contract_artifact_kind,
+              nodeId: projected.binding.contract_artifact.node_id,
+              url: projected.binding.contract_artifact.url,
+              bodyDigest: `sha256:${projected.binding.contract_artifact.body_digest}` as const,
+              observedRevision: projected.binding.contract_artifact.observed_revision,
+            },
+          }
+        : {}),
     };
   }
 }

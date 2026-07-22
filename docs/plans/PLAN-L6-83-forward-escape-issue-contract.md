@@ -82,6 +82,9 @@ Issue body、Execution Ledger event、PLAN `route_mode`の3面が同じ正規化
 - `ForwardEscapeRequested`の後、Issue作成成功で`IssueProjected`、失敗で`IssueProjectionDeferred`をappendする。
 - GitHub成功応答はrepository/node ID/issue number/URL/observed revision/digestを記録し、同一commandの重複Issueを防ぐ。
 - Issue本文はorigin 4-tuple、escape reason、drive model、reentry target、PLAN IDを含み、projection digestで改変を検出する。
+- 既存Issueを利用する場合は新規projectionとして偽装せず、`IssueAdoptionQueued → IssueAdopted`の独立eventを使う。
+  採用前に番号GETのrepository/number/node ID/observed revision/body digestをimmutable expected preimageと照合し、
+  一致後もIssue本文は変更しない。採用契約はcanonical metadata commentへ追記し、そのcomment bindingをE4へ保存する。
 - Issue作成前にoff-Forward実行を開始しない。GitHub障害時も、Ledger上のdeferred receiptと人間承認を持つ場合であっても、
   E4のremote bindingを確認するまでE5（off-Forward実行開始）以降へ遷移しない。
 - GitHub障害時もE3のdurable requestまでは記録できるが、E4のremote bindingを確認するまでE5以降へ進めない。
@@ -99,6 +102,10 @@ Issue body、Execution Ledger event、PLAN `route_mode`の3面が同じ正規化
 - GitHub成功bindingは期待repository/body digestと、正のissue number、node ID、HTTPS URL、observed revisionを
   全て照合する。不正成功応答はE4にせずDeferredへ落とす。
 - `reconcileIssueProjection(ledger, githubSnapshot)`は外部Issueの削除、改変、重複、別repository投影をfinding化する。
+- `adoptForwardEscapeIssue(validatedE2, issueNumber, expectedPreimage, githubPort, journal)`はtrusted repository
+  identity照合後、番号GETとcomment create-or-getだけを許可する。queued/terminal replayはissue numberとpreimageを
+  完全比較し、差替え、marker改変・重複、別Issue URLのcomment receiptをfail-closeする。
+  read-only GETのpreimage検証後にだけQueuedをappendし、誤snapshotによるpoisoned intentを残さない。
 
 ## 5. L6↔L7 pair / oracle
 
@@ -116,6 +123,10 @@ L7 test-designに`U-EXISSUE-*`を追加し、少なくとも次をmutationで固
 10. remote成功後のjournal append失敗をGitHub失敗へ誤変換せず、同じidempotency keyのcreate-or-getで再開する。
 11. 空のowner/repository/title/labelsはE2発行前に拒否する。
 12. SQLiteのjournal JSON/digestまたはE2 certificateを直接改変し、close/reopen後の読取でfail-closeする。
+13. 既存Issue採用で本文writeが0、canonical metadata commentが1、`IssueAdopted`が1へ収束する。
+14. 採用preimageのrepository/number/node/revision/bodyを各改変し、comment write前に拒否する。
+15. adoption replayの別Issue差替え、comment marker競合、create/adopt FSM混在をclose/reopen後も拒否する。
+16. 誤preimageはQueuedを残さず、同commandの正しいpreimage再実行で採用へ回復する。
 
 ## 6. AC
 
@@ -124,4 +135,5 @@ L7 test-designに`U-EXISSUE-*`を追加し、少なくとも次をmutationで固
 - [ ] off-Forward Issueの`drive_model`が必須かつ三面一致でfail-closeする。
 - [ ] origin asset/revision/L/stateとreentry targetがLedger/Issue双方へ保存される。
 - [ ] GitHub障害時のdeferred/retry/reconcileが冪等で、記録消失・重複Issueがない。
+- [ ] 既存Issue adoptionが本文不変・preimage完全一致・comment custody・独立FSMでE4へ収束する。
 - [ ] `U-EXISSUE-*` Red、独立review、L7-436実装、Reverse backfillを経てconfirmed化する。

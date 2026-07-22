@@ -1339,6 +1339,11 @@ interface GithubProjectionPort {
   projectDraftPullRequest(command: ProjectPullRequestCommand): Promise<ProjectionReceipt>;
   closeIssue(command: CloseIssueCommand): Promise<ProjectionReceipt>;
 }
+
+interface ExistingIssueAdoptionPort {
+  observeIssue(command: ObserveIssueByNumberCommand): ObservedIssuePreimage;
+  createOrGetMetadataComment(command: AdoptIssueCommentCommand): AdoptionCommentReceipt;
+}
 ```
 
 契約不変条件:
@@ -1346,6 +1351,16 @@ interface GithubProjectionPort {
 - `observe`は通常Forward入力をescape episodeへ昇格しない。escape typeがある時だけE0を生成する。
 - `selectDrive`はcanonical drive enumとorigin/escape/PLAN kind/branch kindを同時検証し、未知・不整合を拒否する。
 - Issue projectionはE2より前、drive plan freezeはE4より前に実行できない。同じidempotency keyは同じreceiptを返す。
+- 既存Issue採用は`IssueAdoptionQueued → IssueAdopted`の独立FSMを使う。新規作成の
+  `IssueProjectionQueued / Deferred / IssueProjected`と相互遷移させない。
+- 採用はtrusted repository identityをDB open前に照合し、その後E2 validationからE4 receiptまでを
+  SQLite single-writer区間で実行する。番号GETのrepository/number/node id/remote version/body digestが
+  callerのimmutable preimageと完全一致しなければcommentを作らない。
+- 番号GETはread-only observationとしてpreimage検証を先行し、一致後にだけ`IssueAdoptionQueued`をappendする。
+  誤snapshotをdurable intentへ残して同commandを回復不能にしない。Queued後のpreimage差替えは拒否する。
+- 採用時の既存Issue本文は不変とし、PATCH/PUTを禁止する。canonical metadata commentはcommand/payload、
+  repository/number/node id/remote version/body digestを含み、そのcomment node/URL/version/digestをE4へ束縛する。
+  replay時の別Issue・別preimage、marker競合・重複はfail-closeする。
 - `certifyReentry`はE6のdrive検証とE8のForward中間testをorigin revisionへ束縛してE9 certificateを発行し、片方欠落を拒否する。E9はE10で一度だけconsumeし、E11の合流後testはE12 draft PRの前提として別に検証する。
 - draft PRはE11後だけ生成する。merge authorizationは別provider cross-review PASS、required CI、exact head、
   re-entry certificate、accept evidenceをAND条件で要求する。

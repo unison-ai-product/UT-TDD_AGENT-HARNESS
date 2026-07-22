@@ -745,13 +745,17 @@ PLAN-L7-452の先行sliceでは、全episode schemaの完成を待たずE2 custo
 | テーブル | 主な列 | 制約 / 不変条件 |
 |---|---|---|
 | `forward_escape_validation_certificates` | `certificate_id`, `command_id`, `payload_digest`, `event_digest` | certificate PK、command/event digest UNIQUE。E2 commandとpayloadをopaque certificateへ固定し、改変時はcustody照合false |
-| `forward_escape_projection_events` | `command_id`, `sequence`, `event_json`, `previous_event_digest`, `event_digest` | `(command_id,sequence)` PK、certificate command FK、event digest UNIQUE。先頭はQueued、Deferred反復後にProjectedを最大1件、Projected後のeventは禁止 |
+| `forward_escape_projection_events` | `command_id`, `sequence`, `event_json`, `previous_event_digest`, `event_digest` | `(command_id,sequence)` PK、certificate command FK、event digest UNIQUE。新規系は`IssueProjectionQueued → Deferred* → IssueProjected`、採用系は`IssueAdoptionQueued → IssueAdopted`。二系統の混在、terminal後event、同commandの別preimageは禁止 |
 
 `event_json`は種類ごとのexact key集合と閉じたfailure reasonを持つcanonical JSONだけを許可する。
 読取時はsequence、previous digest、row digest、event schema、command/payload一貫性、repository/body bindingの
 FSMを全て再検証する。GitHubの生error、header、transcriptは永続化せず、閉じたsecret-safe reasonへ正規化する。
 version 26以前からの`migrate(db)`は既存rowを削除せずregistry DDLで2表を追加し、`PRAGMA user_version=27`へ進める。
 同じversionへの再適用はno-opであり、close/reopen後もcertificateとdigest chainを再検証できなければfail-closeする。
+
+`IssueAdoptionQueued.event_json`はrepository、issue number、expected node id、expected remote version、
+expected body digestを保持する。`IssueAdopted.binding`は既存Issue preimageに加え、canonical metadata commentの
+node id、URL、remote version、body digestを`contract_artifact`として保持する。Issue本文自体は更新しない。
 
 `issue_queue`は互換read modelに降格し、新規episodeの正本にしない。移行時は既存dry-run rowをorigin不明の
 episodeへ自動昇格せず、明示manifestがあるものだけimportし、残りは`legacy_unbound` findingとして保持する。

@@ -30,6 +30,98 @@ describe("NodeGhForwardEscapeIssuePort", () => {
     expect(result).toMatchObject({ ok: true, binding: { body_digest: bodyDigest } });
     expect(run.mock.calls[1]?.[0]).toContain("POST");
   });
+
+  it("既存Issueを番号GETし、canonical adoption commentだけを作成する", () => {
+    const commentBody = "contract\n<!-- ut-tdd:forward-escape-adoption/v1 episode-102 -->";
+    const comment = {
+      node_id: "IC_node",
+      html_url: `${issue.html_url}#issuecomment-1`,
+      body: commentBody,
+      updated_at: "2026-07-22T01:00:00Z",
+    };
+    const run = vi
+      .fn<(args: string[]) => string>()
+      .mockReturnValueOnce(JSON.stringify(issue))
+      .mockReturnValueOnce(JSON.stringify([[]]))
+      .mockReturnValueOnce(JSON.stringify(comment));
+    const port = new NodeGhForwardEscapeIssuePort(run);
+
+    expect(port.observeIssue({ repository: "owner/repository", issue_number: 102 })).toMatchObject({
+      issue_number: 102,
+      body,
+      body_digest: bodyDigest,
+    });
+    expect(
+      port.createOrGetMetadataComment({
+        repository: "owner/repository",
+        issue_number: 102,
+        idempotency_key: "episode-102",
+        body: commentBody,
+        body_digest: createHash("sha256").update(commentBody).digest("hex"),
+      }),
+    ).toMatchObject({ ok: true, comment: { node_id: "IC_node" } });
+    expect(run.mock.calls[0]?.[0]).toEqual(["api", "repos/owner/repository/issues/102"]);
+    expect(run.mock.calls[1]?.[0]).toContain(
+      "repos/owner/repository/issues/102/comments?per_page=100",
+    );
+    expect(run.mock.calls[2]?.[0]).toContain("POST");
+  });
+
+  it.each([1, 2])("同じadoption markerの改変・重複comment(%i件)はPOSTせずfail-closeする", (count) => {
+    const conflicting = {
+      node_id: "IC_bad",
+      html_url: `${issue.html_url}#issuecomment-1`,
+      body: "mutated\n<!-- ut-tdd:forward-escape-adoption/v1 episode-102 -->",
+      updated_at: "2026-07-22T01:00:00Z",
+    };
+    const run = vi.fn((_args: string[]) => JSON.stringify([[...Array(count).fill(conflicting)]]));
+    const result = new NodeGhForwardEscapeIssuePort(run).createOrGetMetadataComment({
+      repository: "owner/repository",
+      issue_number: 102,
+      idempotency_key: "episode-102",
+      body: "expected <!-- ut-tdd:forward-escape-adoption/v1 episode-102 -->",
+      body_digest: createHash("sha256")
+        .update("expected <!-- ut-tdd:forward-escape-adoption/v1 episode-102 -->")
+        .digest("hex"),
+    });
+    expect(result).toEqual({ ok: false, reason: "github-request-failed" });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("command markerはprefix一致させず別command commentを無視する", () => {
+    const other = {
+      node_id: "IC_other",
+      html_url: `${issue.html_url}#issuecomment-100`,
+      body: "<!-- ut-tdd:forward-escape-adoption/v1 episode-1020 -->",
+      updated_at: "2026-07-22T01:00:00Z",
+    };
+    const expected = "<!-- ut-tdd:forward-escape-adoption/v1 episode-102 -->";
+    const created = { ...other, node_id: "IC_new", body: expected };
+    const run = vi
+      .fn<(args: string[]) => string>()
+      .mockReturnValueOnce(JSON.stringify([[other]]))
+      .mockReturnValueOnce(JSON.stringify(created));
+    expect(
+      new NodeGhForwardEscapeIssuePort(run).createOrGetMetadataComment({
+        repository: "owner/repository",
+        issue_number: 102,
+        idempotency_key: "episode-102",
+        body: expected,
+        body_digest: createHash("sha256").update(expected).digest("hex"),
+      }),
+    ).toMatchObject({ ok: true, comment: { node_id: "IC_new" } });
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("GitHub issues endpointが返すPull Requestはadoption対象にしない", () => {
+    const run = vi.fn(() => JSON.stringify({ ...issue, pull_request: { url: "api/pr/102" } }));
+    expect(() =>
+      new NodeGhForwardEscapeIssuePort(run).observeIssue({
+        repository: "owner/repository",
+        issue_number: 102,
+      }),
+    ).toThrow("github-issue-observation-invalid");
+  });
 });
 
 function request() {

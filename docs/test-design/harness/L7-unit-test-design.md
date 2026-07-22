@@ -1598,6 +1598,14 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `U-EXISSUE-014` | SQLite certificate tamper | E2 `event_digest`を直接改変してclose/reopen | custody照合false、E3/E4入口を通さない |
 | `U-EXISSUE-015` | custody failure変換 | storage例外へsecret/pathを混入、同commandを異payloadで再利用 | raw本文を残さず閉じたstructured violation、E2未発行 |
 | `U-EXISSUE-016` | SQLite同時create-or-get | 2 workerをgateから同時解放し同command/payloadのcertificateとQueuedをappend | 両workerが同一certificate/receiptを取得しevent rowは1件 |
+| `U-EXISSUE-ADOPT-001` | 既存Issue採用 | 番号GETのpreimage完全一致、comment未作成 | Issue本文write 0、canonical comment 1、`IssueAdopted` 1 |
+| `U-EXISSUE-ADOPT-002` | adoption replay | 同command/preimageを再送後、別issue numberへ差替え | 同一receiptを再利用しcomment増分0。差替えは`issue-adoption-request-conflict` |
+| `U-EXISSUE-ADOPT-003` | immutable preimage | body/revision/node/repositoryを各1箇所改変 | comment write前に`issue-adoption-preimage-mismatch` |
+| `U-EXISSUE-ADOPT-004` | comment custody | 別repository/issue URL、空node/version、digest不一致を返す | E4 0、`issue-adoption-comment-invalid` |
+| `U-EXISSUE-ADOPT-005` | durable restart | SQLite close/reopen後に同adoptionを再送 | terminal receiptを再利用しremote call増分0 |
+| `U-EXISSUE-ADOPT-006` | adapter marker競合 | 同command markerの改変commentまたは重複comment | POST 0、fail-close。別markerとして新規作成しない |
+| `U-EXISSUE-ADOPT-007` | FSM混線 | adoption queued後へDeferred/Projected、新規queued後へAdoptedを注入 | close/reopen時にsequence invalid、GitHub call 0 |
+| `U-EXISSUE-ADOPT-008` | preimage誤入力からの回復 | 誤body digestで実行後、同commandを正しいsnapshotで再実行 | 初回はQueued/comment 0、再実行はAdopted 1。誤snapshotでintentをpoisonしない |
 | `CANDIDATE-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E9を1回だけappend |
 | `CANDIDATE-REENTRY-002` | 中間・合流後test | E8またはE11の片方だけGreen | draft PR生成不可 |
 | `CANDIDATE-REENTRY-003` | stale target | certificate後にtarget HEAD変更 | certificate失効、E10/E12拒否 |

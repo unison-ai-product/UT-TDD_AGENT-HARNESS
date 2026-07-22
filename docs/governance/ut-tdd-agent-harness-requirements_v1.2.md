@@ -1262,8 +1262,8 @@ Forward escapeは次のappend-only event系列を持つ。番号を飛ばす、�
 | E0 | 離脱を観測 | origin asset/revision/L/state、reason、recurrence identity |
 | E1 | 離脱を分類 | `escape_type`、検証対象のassumption/decision |
 | E2 | 駆動モデルを選択 | `drive_model`、選択根拠、human override evidence |
-| E3 | Issue投影を要求 | idempotency key、projection payload digest |
-| E4 | Issue投影を確認 | repository、issue number/node id、remote version |
+| E3 | Issue投影または既存Issue採用を要求 | idempotency key、projection payload digest。採用時は期待repository/issue number/node id/remote version/body digest |
+| E4 | Issue投影または採用を確認 | repository、issue number/node id、remote version/body digest。採用時は本文を変更せずcanonical metadata commentのnode id/URL/version/digestを併記 |
 | E5 | 駆動PLANを凍結 | PLAN revision、V-pair obligations、schedule branch |
 | E6 | 駆動検証がGreen | drive固有test profileとgreen evidence |
 | E7 | 再合流を提案 | target Forward state、re-entry policy |
@@ -1279,6 +1279,11 @@ Forward escapeは次のappend-only event系列を持つ。番号を飛ばす、�
 E3/E4とE12/E14はoutbox/inboxで冪等にする。remote webhookはinboxへ保存してから既存episodeへ照合し、
 未知episode・署名不正・sequence逆行・payload digest不一致をfindingとして隔離する。GitHubはExecution
 Ledgerを直接上書きせず、remote observation eventだけを追加できる。
+
+既存IssueをForward escapeへ採用する場合、新規Issue投影を偽装してはならない。`IssueAdoptionQueued`から
+`IssueAdopted`への独立遷移を使い、番号GETで得たrepository/node id/remote version/body digestの完全一致を
+外部write前に検証する。既存本文のPATCH/PUTは禁止し、採用契約はcanonical metadata commentとして追記する。
+同じcommandの別Issue・別preimageへの再利用、同一markerの改変・重複commentはfail-closeする。
 
 ### 6.8.4 右腕 (L8-L14) CI 失敗時の差し戻しスパイン (TL Critical fix)
 

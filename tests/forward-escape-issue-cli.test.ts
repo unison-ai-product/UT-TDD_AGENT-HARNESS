@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerForwardEscapeIssueCommand } from "../src/cli/forward-escape-issue.js";
@@ -84,7 +85,7 @@ describe("project-forward-escape-issue CLI", () => {
     ]);
 
     const result = JSON.parse(output.join(""));
-    expect(process.exitCode).toBe(0);
+    expect(process.exitCode, JSON.stringify(result)).toBe(0);
     expect(result.event.type).toBe("IssueProjected");
     expect(result.evidence).toMatchObject({
       issueId: 102,
@@ -109,5 +110,79 @@ describe("project-forward-escape-issue CLI", () => {
     expect(() => runner.run(command)).toThrow("trusted-repository-identity-invalid");
     expect(openEvidenceDb).not.toHaveBeenCalled();
     expect(createOrGetIssue).not.toHaveBeenCalled();
+  });
+
+  it("既存Issue adoptionを独立CLIでE4 evidenceへ接続し、Issue本文を書き換えない", async () => {
+    const db = openHarnessDb(":memory:");
+    const output: string[] = [];
+    const program = new Command().exitOverride();
+    const plan = program.command("plan");
+    const issueBody = "既存のrich issue body";
+    const issueBodyDigest = createHash("sha256").update(issueBody).digest("hex");
+    const writeIssue = vi.fn();
+    registerForwardEscapeIssueCommand(plan, {
+      readText: () =>
+        JSON.stringify({
+          command,
+          issue_number: 98,
+          expected: {
+            repository: "owner/repository",
+            node_id: "I_98",
+            observed_revision: "2026-07-17T07:52:26Z",
+            body_digest: issueBodyDigest,
+          },
+        }),
+      writeOutput: (text) => output.push(text),
+      runner: new ForwardEscapeIssueProjectionRunner({
+        openEvidenceDb: () => db,
+        ledger,
+        assertRepositoryIdentity: (identity) => identity,
+        issuePort: { createOrGetIssue: writeIssue },
+        adoptionPort: {
+          observeIssue: () => ({
+            repository: "owner/repository",
+            issue_number: 98,
+            node_id: "I_98",
+            url: "https://github.com/owner/repository/issues/98",
+            body: issueBody,
+            body_digest: issueBodyDigest,
+            observed_revision: "2026-07-17T07:52:26Z",
+          }),
+          createOrGetMetadataComment: (request) => ({
+            ok: true,
+            comment: {
+              node_id: "IC_98",
+              url: "https://github.com/owner/repository/issues/98#issuecomment-98",
+              body_digest: request.body_digest,
+              observed_revision: "2026-07-22T00:00:00Z",
+            },
+          }),
+        },
+      }),
+    });
+
+    await program.parseAsync([
+      "node",
+      "ut-tdd",
+      "plan",
+      "adopt-forward-escape-issue",
+      "--input",
+      "adoption.json",
+    ]);
+
+    const result = JSON.parse(output.join(""));
+    expect(process.exitCode, JSON.stringify(result)).toBe(0);
+    expect(result.event.type).toBe("IssueAdopted");
+    expect(result.evidence).toMatchObject({
+      issueId: 98,
+      episodeId: "episode-102",
+      repository: "owner/repository",
+      bodyDigest: `sha256:${issueBodyDigest}`,
+      contractArtifact: {
+        kind: "issue_comment",
+        nodeId: "IC_98",
+      },
+    });
+    expect(writeIssue).not.toHaveBeenCalled();
   });
 });
