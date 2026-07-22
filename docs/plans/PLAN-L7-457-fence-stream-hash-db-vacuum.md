@@ -4,7 +4,7 @@ title: "PLAN-L7-457 (troubleshoot): harness.db 肥大によるローカル検証
 kind: troubleshoot
 layer: L7
 drive: agent
-status: confirmed
+status: draft
 route_signal: incident
 route_mode: incident
 created: 2026-07-22
@@ -27,14 +27,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-457-fence-stream-hash-db-vacuum.md
     artifact_type: markdown_doc
-  - artifact_path: tests/support/git-workspace-fingerprint.ts
-    artifact_type: test_code
   - artifact_path: src/state-db/db-maintenance.ts
     artifact_type: source_module
-  - artifact_path: src/state-db/stop-refresh.ts
-    artifact_type: source_module
-  - artifact_path: tests/git-workspace-fingerprint.test.ts
-    artifact_type: test_code
   - artifact_path: tests/db-maintenance.test.ts
     artifact_type: test_code
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
