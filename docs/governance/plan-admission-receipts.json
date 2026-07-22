@@ -48,6 +48,22 @@
         "revision": 3,
         "content_digest": "sha256:26bd013bec8ac2eafaa99eed4249e5563fd61fd61eab6d15294d6c2e9467132a"
       }
+    },
+    {
+      "sequence": 4,
+      "previous_record_digest": "sha256:cc1e6fe4d4af3e596af4cdf1fb37548264d58d7b0571e19f0086714d6a49997b",
+      "record_digest": "sha256:ffc8b947c3ddcca05cdcecd80c24765a12215ba76835d36c5d722a2da375d42a",
+      "command_id": "plan-l6-91-20260722-01",
+      "receipt_id": "certificate:e8307634350a525ec32fb23bbe010e53",
+      "receipt_digest": "sha256:c156fa73be59bfaeadb892d4919689e7c7e1a317eb4df01b3f8ced00e92ed51e",
+      "decision_digest": "sha256:cdb381ec8038c2a54335b96a47d83492aecd48db922e9926340c99743e88cda7",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-91-disposition-claim-integrity-gate.md",
+        "plan_id": "PLAN-L6-91-disposition-claim-integrity-gate",
+        "asset_id": "plan:e8307634350a525ec32fb23bbe010e53",
+        "revision": 1,
+        "content_digest": "sha256:6a7293e5f38a1b9a5fae48b000596bbba7cc440e380fbb2934c9b61c9285ff85"
+      }
     }
   ]
 }
