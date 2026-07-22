@@ -10,7 +10,7 @@ plan: docs/plans/PLAN-L4-02-architecture.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-> **SSoT 参照**: 技術決定の根拠 = [ADR-001](../../../adr/ADR-001-ut-tdd-harness-redesign-and-language.md) / 方式記述様式 = arc42 §4/§5/§9 ([document-system-map](../../../governance/document-system-map.md) §2/§4) / 構造 (ドメインモデル) = [data.md](./data.md) / 実装 = `src/`。本 doc は「どう実現するか」(実行構造・制御フロー・依存方向) を担い、構造は data.md に委ねる。
+> **SSoT 参照**: 技術決定の根拠 = [ADR-001](../../../adr/ADR-001-ut-tdd-harness-redesign-and-language.md) / OS custody限定例外 = [ADR-009](../../../adr/ADR-009-resource-kernel-native-custody-companion.md) / 方式記述様式 = arc42 §4/§5/§9 ([document-system-map](../../../governance/document-system-map.md) §2/§4) / 構造 (ドメインモデル) = [data.md](./data.md) / 実装 = `src/`。本 doc は「どう実現するか」(実行構造・制御フロー・依存方向) を担い、構造は data.md に委ねる。
 >
 > **用語更新 (G.9) / 機能要求更新 (G.10) の所在**: per-工程 delta は生成元 [PLAN-L4-02](../../../plans/PLAN-L4-02-architecture.md) の §6 (用語更新) / §7 (機能要求更新) に記録する (data.md と同規約)。artifact 本体 (本 doc) は構造・方式記述に専念し、delta tracking を二重化しない。
 > **V-pair**: 本 doc の `pair_artifact = L9-system-test-design.md` は L4 sub-doc 群 (architecture/data/...) が **共通参照する集合 pair** (PLAN-L4-00-master 経由)。1 設計 doc:1 test doc ではなく、L4↔L9 を sub-doc 横断で束ねる。
@@ -25,12 +25,12 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 
 | 制約 (ADR-001) | 方式への影響 |
 |---|---|
-| 実装言語 = TypeScript (strict) / Bun | core は全 TS。bash を core に置かない (entrypoint のみ薄い OS shell) |
+| control plane = TypeScript (strict) / Node target | domain/rule/policy/journal正本はTypeScript。Bun新規依存は禁止し既存経路は期限付きmigration debt。privileged OS custodyだけをRust companionへ限定委譲 |
 | state = `.ut-tdd/` YAML/JSON + SQLite projection DB (`.ut-tdd/harness.db`) | 永続化層は fs + projection。集約は file schema (data.md §8)、V-model 製本・trace/coverage/findings は SQLite projection (data.md §8.1) |
 | 対象リポジトリ言語非依存 | harness は対象コードを実行せず、doc/PLAN/state を検証する静的 + orchestration ツール |
 | Windows ネイティブ第一級 | path = Node `path`、改行 = `.gitattributes` 正規化、Codex sandbox 不安定を runtime adapter に隔離 |
 | ルール同一性 (concept §2.1.0) | Claude (hook) / Codex (AGENTS.md) が**同一 core**を呼ぶ。判定ロジックを 2 重実装しない |
-| 配布 = 単一バイナリ (`bun build --compile`) | core は外部 service 起動を adapter に隔離し、本体は pure に保つ |
+| 配布 = 単一CLI入口の署名済platform bundle | compiled TS core + target別native custody companionをmanifest/SBOM/署名で固定し、本体domainはpureに保つ |
 
 ## §2 主要技術決定 (arc42 §4 Solution Strategy)
 
@@ -39,13 +39,13 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | 品質目標 (ISO 25010) | 技術決定 | 根拠 |
 |---|---|---|
 | 機能適合性 / 正確性 | **zod 単一正本** (`src/schema`) で enum・契約を型 + 実行時検証に展開 | drift 根絶 (ADR-001 Consequences、要件 §1.10 F) |
-| 移植性 (Windows/Linux 同一動作) | TS/Bun + Node `path` + bash 排除 + `bun build --compile` 単一バイナリ | ADR-001 §3 クロスプラットフォーム規約 |
+| 移植性 (Windows/Linux 同一動作) | TypeScript/Node + Node `path` + bash排除 + target別Rust companion | ADR-001 / ADR-009 クロスプラットフォーム規約 |
 | 信頼性 (fail-close) | guard / lint は exit≠0 で停止 (agent-guard / 5 lint / doctor) | 安全性を pass させない (.claude/CLAUDE.md) |
 | 保守性 / モジュール性 | 依存を `src/schema` へ一方向集約、循環禁止、lint は 1 関心 1 module | §3/§5 依存方向 |
 | テスト容易性 | 各 module が pure 関数 (`analyzeX(opt?)`) を export、副作用を entrypoint に隔離 | lint 5 種の共通様式、vitest |
 | 相互運用性 (Claude/Codex/MCP 圏) | commander CLI + 将来 MCP server 化を見据えた TS | ADR-001 Rationale (ecosystem fit) |
 
-技術スタック (ADR-001 §技術スタック より): TypeScript strict / Bun / commander / **zod** / vitest / YAML+JSON state + SQLite projection DB / 単一バイナリ配布。
+技術スタック (ADR-001/009): TypeScript strict / Node target runtime / Rust custody companion / commander / **zod** / vitest / YAML+JSON state + SQLite projection DB / 署名済platform bundle。Bunは移行中compatibility laneのみ。
 
 > **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
 
@@ -84,6 +84,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | **plan-admission** (`src/plan-admission/`) | PLAN起票の駆動モデル許可tuple、Reverse/Redesign遷移、receipt内容束縛、差分fenceを所有する。proposal routingのfallbackをauthoringへ持ち込まず、PLAN直接編集をfail-closeする | `evaluatePlanAdmission()` / `analyzePlanAdmissionDiff()` | schema / plan-asset adapter / Git read-only adapter |
 | **vmodel-contract** (`src/vmodel-contract/`) | L8-L14 verification obligation と L11/L13 pair 例外を宣言契約から検証済み registry へコンパイルする。domain/application と YAML/fs adapter を分離し、右腕・右肺 detector の手書き定数 drift を防ぐ | `compileRightArmContract()` / `loadCompiledRightArmRegistry()` | node:crypto / yaml / fs (adapterのみ) |
 | **runtime** (`src/runtime/`) | 実行モード検出 (detect) + runtime adapter dry-run plan + provider handover + agent-guard 判定本体 + agent-slots (並列 slot 記録、IMP-050) + forced-stop (強制停止推定、IMP-068) + session-log (session 観測、IMP-068) | `detectMode()` / `buildAdapterPlan()` / `runProviderHandover()` / `agent-guard` / `agent-slots` / `forced-stop` / `session-log` | schema (allowlist) / roster (将来、実装後に切替。現状ハードコード相当、§3.1 note + §4.1 移行段階) |
+| **resource-kernel** (`src/resource-kernel/`) | ExecutionSpec、resource/admission policy、journal/outbox、receipt封印のTS正本。versioned port越しにnative custody companionを選択し、bundle/capability不一致を開始前fail-closeする | `ExecutionKernel` / `CapabilityNegotiator` / `ExecutionJournal` | schema / state-db / native companion port。Rust domain ruleへ依存しない |
 | **gate** (`src/gate/`) | execution mode 別 review-tier 判定 (judgment gate の cross-agent / intra_runtime_subagent / human review 強制) | `evaluateGateReview()` | runtime / fs (checklist load) |
 | **team** (`src/team/`) | hybrid team run の事前検証 + Claude/Codex 共通 launch plan + 難易度別の決定論的 model/effort policy + 明示 `--execute` 時の provider adapter 実行 (worker/reviewer provider 分離、duplicate role/provider 検出、`team_runner` slot fire/release) | `validateTeamRun()` / `selectTeamModel()` / `buildTeamRunPlan()` / `executeTeamRunPlan()` | schema / runtime / workflow |
 | **task** (`src/task/`) | FR-L1-39 タスク分類の公開 CLI 面。既存契約 (`scoreTaskComplexity` = FR-L1-39 / `classifyDrive` = FR-L1-41) + `inferTaskDifficulty` を合成し kind/drive/size/complexity/difficulty/risk を構造化出力 (`ut-tdd task classify`)。escalation-sensitive 領域 (auth/payments/PII/migration/schema/production) を risk flag 化し plan lint/gate/skill suggest の入力にする | `classifyTask()` | workflow / team |
@@ -189,12 +190,13 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 | ADR | 状態 | 扱い |
 |---|---|---|
-| **ADR-001** | accepted | TS/Bun + YAML/JSON state + SQLite projection DB + bash 排除 (既存、本方式の基盤) |
+| **ADR-001** | accepted | TypeScript domain/control plane + Node target runtime + YAML/JSON/SQLite + bash排除。既存Bunは期限付きmigration debt |
 | **[ADR-002](../../../adr/ADR-002-dependency-direction-and-auto-map.md)** | **accepted** (2026-05-29) | 依存方向ルール (schema 安定核 + 循環禁止 + fs 隔離) + **依存マップ自動生成・構想 vs 実装 drift lint** (IMP-032)。§3 が設計根拠 |
 | **[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md)** | **accepted** (2026-05-29) | runtime adapter 境界 (Anti-Corruption Layer)、**契約プラン CLI/hook 前提・API key 非保持** (A-71 是正を反映)。§6 + external-if §6 が設計根拠 |
 | **[ADR-004](../../../adr/ADR-004-internal-asset-ts-control-boundary.md)** | **accepted** (2026-06-01) | 内部資産 (subagent/skill/command) の TS 統制境界 = **層1 資産の中身 markdown 正本 / 層2 管理機構 TS**。TS は生成でなく検証/注入/統制。FR-L1-46〜49 / BR-22 / Recovery PLAN-RECOVERY-01 の設計根拠。real Codex TL 確定 |
-| **[ADR-005](../../../adr/ADR-005-distribution-model-and-central-ui.md)** | **accepted** (2026-06-01) | 配布モデル = **GitHub-pull + team server 中央 Web UI**。core CLI は単一バイナリ (§1 制約 `bun build --compile`)、画面+DB は別 adapter (`src/web/`、Phase B)。local↔Web 通信境界は ADR-003 adapter 方針の延長 (§2 (e) external-if) |
+| **[ADR-005](../../../adr/ADR-005-distribution-model-and-central-ui.md)** | **accepted** (2026-06-01) | 配布モデル = **GitHub-pull + team server 中央 Web UI**。当初のBun単一バイナリ配布はADR-009のNode+Rust署名済platform bundleへ更新。画面+DBは別adapter (`src/web/`、Phase B) |
 | **[ADR-006](../../../adr/ADR-006-cli-framework-commander.md)** | **accepted** (2026-06-05) | CLI フレームワーク = **commander** (oclif 却下)。ADR-001 保留の確定 + `src/cli.ts` 実装追認 (§2 注記の floating 解消、IMP-070 resolved) |
+| **[ADR-009](../../../adr/ADR-009-resource-kernel-native-custody-companion.md)** | **accepted** (2026-07-22) | Rustをprivileged OS custody companionに限定。TypeScript domain/policy/journal正本、Node target、Bun永久BAN/段階撤去、署名済bundle、SBOM、fail-close、rollbackを固定 |
 
 > ADR-002/003 は PO 承認済 (2026-05-29)、ADR-004/005 は TL 確定 + PO 承認 (2026-06-01)。将来 local↔Web 通信境界 (画面+DB サーバ化、IMP-031) は **ADR-005 (配布+中央UI)** が方針正本、通信は ADR-003 adapter の延長で Phase B に扱う。
 

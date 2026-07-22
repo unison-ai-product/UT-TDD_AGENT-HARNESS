@@ -3,7 +3,7 @@
 - **Status**: accepted
 - **Date**: 2026-05-27
 - **正本**: 本書がリポジトリ配置の **canonical 正本**。`requirements_v1.2 §9.1`（Phase 0 存在チェック）と `CLAUDE.md` のディレクトリ節は本書を参照する。
-- **前提**: ADR-001（harness 実装 = TypeScript/Bun、source snapshot は概念のみ）/ ADR-005（配布 = GitHub-pull、Web UI = 中央・全 project 横断、plugin = 補助チャネル）/ V-model 4 artifact（concept v3.1 §2.3）。
+- **前提**: ADR-001（domain/rule/policy/journal正本 = TypeScript、target runtime = Node、既存Bun = migration debt）/ ADR-005（配布 = GitHub-pull、Web UI = 中央・全 project 横断、plugin = 補助チャネル）/ ADR-009（privileged OS custody限定Rust companion + 署名済platform bundle）/ V-model 4 artifact（concept v3.1 §2.3）。
 - **要件同期 (済)**: `docs/process/` (A) / `src/web/` は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに反映済**。canonical ツリーの全ディレクトリは実体 (`.gitkeep`) 作成済 (構成は要件定義で確定するため一括実体化)。各 `[予定]` ディレクトリは **ディレクトリ実体化済 / 中身 (機能・doc) は後続 PLAN で起こす** の意。`src/web/` も実体化済 (Phase 0-A 対象化は後続 PLAN)。
 - **本 repo の位置づけ (ADR-005)**: 本 repo は **harness engine repo（= 配布の単一真実）**。各 project は本 repo を **git dependency（tag-pin）で pull** し、`ut-tdd setup` が adapter を投影する。下記 canonical ツリーは **engine repo の構成**。consume 側 project への投影レイアウトは §9 を参照。
 
@@ -19,9 +19,9 @@ UT-TDD-agent-harness/
 ├── .vscode/                      # editor workspace recommendations/settings (tracked, non-runtime)
 ├── README.md                     # project overview / onboarding entrypoint
 ├── CHANGELOG.md                  # Pack release 履歴 (clean 配布に同梱、v0.1.4 で導入)
-├── package.json                  # Node/Bun 依存 + scripts
+├── package.json                  # Node依存 + scripts（既存Bun scriptはmigration debt）
 ├── tsconfig.json                 # TypeScript strict
-├── bun.lock                      # Bun lockfile (tracked)
+├── bun.lock                      # [移行負債] Node lockfile確立までの既存CI互換、期限後削除
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
 ├── ut-tdd.project.json           # PLAN asset用の追跡済みrepository identity正本
 ├── .gitattributes                # 改行正規化 (eol=lf、*.ps1 は crlf)
@@ -34,6 +34,7 @@ UT-TDD-agent-harness/
 │   ├── plan/                     #   plan lint / validator
 │   ├── vmodel/                   #   V-model 4 artifact trace
 │   ├── runtime/                  #   mode 検出 (standalone/claude-only/codex-only/hybrid) / orchestration
+│   ├── resource-kernel/          #   ExecutionSpec/policy/journal正本 + native custody port (TS)
 │   ├── doctor/                   #   統合検証 / 横断検出
 │   └── web/                      #   [予定] 中央 Web UI service (15 画面 / 全 project 横断 / GitHub backbone、ADR-005 D2。backend 詳細は L2 設計)
 ├── tests/                        # ★ ④ テストコード (vitest、*.test.ts、src を mirror)
@@ -41,6 +42,9 @@ UT-TDD-agent-harness/
 │   ├── ut-tdd                    #   POSIX / Git Bash
 │   ├── ut-tdd.ps1                #   Windows PowerShell
 │   └── install-hooks.{sh,ps1}    #   [予定] hook installer
+├── native/
+│   └── resource-kernel/          # ★ Rust privileged OS custody companion限定 (ADR-009、domain rule禁止)
+├── bundles/                      #   [生成・非正本] target別署名済platform bundle staging (Git追跡しない)
 │
 ├── docs/
 │   ├── governance/               # ★ 現行正本 (本書群)
@@ -90,6 +94,8 @@ UT-TDD-agent-harness/
 | 対象 | 置き場 | ルール |
 |------|--------|--------|
 | harness TS core (機能) | `src/<domain>/` | **機能の home**。domain 別 (cli/schema/plan/vmodel/runtime/doctor/web)。新機能はどの domain 配下かを要件 (L3) で確定してから追加。**bash / Python を core に置かない** (ADR-001) |
+| native custody companion | `native/resource-kernel/` | **privileged OS custodyだけ**をRustで実装する例外境界 (ADR-009)。TSのdomain/rule/policy/journal、GitHub判断、DB/CAS再利用判断を複製しない |
+| platform bundle staging | `bundles/` | generated/非正本。core+target別companion+manifest+SBOM+署名をrelease時に生成し、source repoへcommitしない |
 | 工程 / 駆動モデル定義 | `docs/process/` | **工程(L0-L14)定義 + 駆動モデル(Forward/Scrum/Reverse/Recovery/Add-feature/Retrofit/Refactor/Research)正本**。「どの工程/駆動を増やすか」は要件 (L3) で決め本 dir に置く (本 session の発端 gap を解消)。既存 `docs/governance/recovery-workflow.md` は **`docs/process/modes/recovery.md` へ統合完了 (2026-06-04、IMP-060)** = recovery 正本は `docs/process/modes/recovery.md`。recovery-workflow.md は superseded (historical、冒頭 banner) |
 | 中央 Web UI service | `src/web/` | [予定] 全 project 横断の管理 UI (15 画面、GitHub backbone、ADR-005 D2)。backend 配置・通信境界は L2 設計 (ADR-003 §IMP-031 参照) |
 | テストコード | `tests/` | vitest、`*.test.ts`、src を mirror |
@@ -123,8 +129,8 @@ UT-TDD-agent-harness/
 
 ## 5. tracked / gitignored の境界
 
-- **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
+- **gitignored**: `node_modules/` `dist/` `bundles/` `target/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
+- **tracked**: `src/` `native/resource-kernel/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
 
 ## 6. 境界
 
@@ -134,7 +140,7 @@ UT-TDD-agent-harness/
 
 ## 7. 禁止事項
 
-- `src/` core に bash / Python を持ち込まない（ADR-001。OS 差は `scripts/` の薄い wrapper に閉じる）。
+- `src/` core に bash / Python を持ち込まない（ADR-001）。Rustは`native/resource-kernel/`のprivileged OS custodyに限定し、domain/rule/policy/journalを実装しない（ADR-009）。
 - enum / 契約を `src/schema/` 以外で再定義しない。
 - `.ut-tdd/` **runtime state** (state/cache/logs/tmp/handover CURRENT/local*) を docs 目的で Git 追跡しない。**監査証跡** (`audit/*.md` / `audit/reports/*.md` / `evidence/` / `handover/provider/`) は例外として tracked (§5、A-128 F-1)。
 - source process reference を工程定義の正本として参照しない (正本 = `docs/process/`)。
@@ -151,20 +157,22 @@ JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜ま�
 - **lint + format = Biome 1 枚 (`biome.json`)**。**eslint + prettier を別々に足さない**（plugin/ignore で 4-6 枚に増えるのを防ぐ）。`bun run lint` / `bun run format`。
 - **test = vitest**。`vitest.config.ts` は G7 coverage-summary evidence (`json-summary`) を生成するための tracked exception とする。
 - commitlint 等 **config-in-package.json 対応**のツールは package.json のキーに入れ、新規 dotfile を作らない。
-- **新ツール導入時の判断順**: ① 既存ツール (Biome / Bun / tsc) で代替できるか → ② package.json に同居できるか → ③ どうしても単独 config が要るか。①②で済むなら root に新ファイルを増やさない。
+- **新ツール導入時の判断順**: ① 既存ツール (Biome / Node / tsc) で代替できるか → ② package.json に同居できるか → ③ どうしても単独 config が要るか。Bunの新規採用は禁止。①②で済むなら root に新ファイルを増やさない。
 
 → root config は **`package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts` の 6 枚で頭打ち**に保つ。
 
-## 9. 配布 3 層モデル (ADR-005)
+## 9. 配布 3 層モデルとplatform bundle (ADR-005 / ADR-009)
 
 harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **① engine repo** の構成。
 
 | 層 | 実体 | 配置 | 更新享受 |
 |----|------|------|---------|
-| **① engine repo (単一真実)** | harness engine + ルール + 工程/駆動モデル定義 (本 repo) | **GitHub repo**。consume 側は git dependency で **tag-pin** (`bun add github:<org>/ut-tdd-agent-harness#<tag>`、devDependencies にコミット) | tag を bump (`bun update`)。社内既定 = tag-pin + 定期 bump |
+| **① engine repo (単一真実)** | TS harness engine + ルール + 工程/駆動モデル定義 + Rust custody source (本 repo) | **GitHub repo**。releaseはtarget別companionを含む署名済platform bundleを生成。consume側は完全bundle tagへpin | tagをbump。core/companion片側更新は禁止 |
 | **② project 投影 (adapter)** | consume 側 project に展開される `CLAUDE.md` / `.claude/` / `AGENTS.md` 等 | `ut-tdd setup` が engine から **投影**。内容を複製せず engine を参照する adapter | engine の tag bump に追従 |
 | **③ 中央 UI service** | 全 project 横断の管理 Web UI (15 画面) | **中央 / team server**。各 project の GitHub repo を data backbone に読む (project-local でない) | UI service コード自体も engine と同 GitHub repo (`src/web/`) で管理 |
 
 - **public npm publish しない** (社内コード、GitHub-pull で足りる)。
+- platform bundle manifestはcore/protocol/companion/target/SBOM digestと署名identityを束縛する。署名・digest・capability probe不一致は開始前fail-closeし、PATH探索やruntime downloadを行わない。
+- rollbackは既知良好なbundle tag全体へ行い、旧direct-spawnまたは片側binaryへ戻さない。対象platformのL9 Green evidenceを再確認する。
 - **engine は tool 非依存 package**: CLI / CI (Layer B-remote `.github/workflows`) / Codex / 将来ツールが同一 engine を GitHub から取得 (ルール同一性、concept §2.1.0)。Claude plugin は **任意の補助配信チャネル**で主軸でない (ADR-005 D3)。
 - consume 側 project の投影レイアウト (CLAUDE.md/.claude/AGENTS.md + `.ut-tdd/` state) の詳細は `ut-tdd setup` 仕様 (L4 external-if / L5 if-detail) で確定。

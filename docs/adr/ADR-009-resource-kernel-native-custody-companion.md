@@ -1,0 +1,101 @@
+# ADR-009: Resource Kernel の native custody companion
+
+- **Status**: accepted
+- **Date**: 2026-07-22
+- **Deciders**: PO（ユーザー）+ Codex TL
+- **関連**: [ADR-001](./ADR-001-ut-tdd-harness-redesign-and-language.md) / [ADR-005](./ADR-005-distribution-model-and-central-ui.md) / `docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md` / Issue #124
+
+## 背景
+
+Resource-governed Execution Kernel は、親launcherが異常終了してもHARNESSが開始したprocess treeを
+OS custody内へ保持し、deadline・資源上限・停止・子孫0を証明する必要がある。TypeScript runtime単独の
+`child_process`だけでは、Windowsの`CREATE_SUSPENDED`、Job Objectへの開始前attach、非継承handle、
+launcherとは別failure domainのcustodian、Linuxの`clone3(CLONE_INTO_CGROUP)`、subreaper、cgroup v2
+brokerをhard contractとして実装できない。PID polling、`windowsHide`、process group、終了時killは表示抑止や
+best-effort cleanupには有効だが、crash-surviving custodyとorphan zeroの証明にはならない。
+
+一方、ADR-001が定めるTypeScript domain/policy/journalの単一正本を別言語へ分岐させると、
+ルール同一性と保守性を損なう。必要なのは全面的な言語置換ではなく、OS privilege境界だけを担う狭いnative componentである。
+
+## 決定
+
+### D1. Rust companionの責務をprivileged OS custodyに限定する
+
+`ut-tdd-custodian`（仮称）をRustで実装する。許可する責務は次に限定する。
+
+- Windows Job Object / SCM supervisor・custodian、suspended create→attach→resume、handle custody、tree terminate・empty proof。
+- Linux cgroup v2 / `clone3(CLONE_INTO_CGROUP)` / subreaper broker、budget適用、`cgroup.kill`、`populated=0`とreap証明。
+- OS capability probe、適用したlimitとnative観測値の構造化応答、journalへ渡すcustody eventの生成。
+
+companionはPLAN分類、resource policy、admission判断、domain test合否、GitHub状態、DB/CAS再利用判断、
+terminal receipt封印を所有しない。これらの正本は引き続きTypeScript control planeであり、SQLite journal/outboxも
+TS側が所有する。native側はversioned protocolでcommandを受け、OS事実を返すport adapterであって、
+独自policyや第二の状態機械を持たない。
+
+### D2. capabilityはbundle実体から検証し、fail-closeする
+
+TS側`CapabilityNegotiator`はOS名から能力を推測しない。companionの署名済manifest、protocol version、
+binary digest、build target、OS probe結果を照合し、要求capabilityを完全に満たすbundleだけを選択する。
+binary欠落、署名・digest不一致、protocol非互換、probe欠測、権限不足、unsupported platformではprocess生成前に
+`capability_failure`とする。Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
+
+### D3. platform bundleをrelease artifactとして配布する
+
+engine releaseはTypeScript/Node control planeと、support対象tripleごとのnative companionを一つのversioned platform bundleとして扱う。
+bundle manifestはcore revision、protocol schema digest、companion digest、target triple、required OS capability、
+SBOM digest、署名identityを結ぶ。Pack/tag-pinはmanifestで完全なbundle revisionへpinし、実行時downloadや
+未検証PATH探索を行わない。
+
+release gateは各binaryの再現可能build evidence、署名、SBOM、脆弱性/license scan、対象OS実機のL9 custody oracleを
+必須とする。署名鍵や秘密情報はrepo/manifest/SBOMへ格納しない。
+
+### D4. rollbackもfail-close capabilityとして扱う
+
+rollbackは旧coreだけ、または旧companionだけへの片側差し替えを禁止する。既知良好なbundle tagへmanifest単位で戻し、
+protocol互換、署名、SBOM、対象platformのGreen evidenceを再検証する。安全性を満たさないplatformは旧direct-spawnへ
+戻さず利用停止する。rollback revisionと理由はpolicy revisionおよびExecutionReceiptへ残す。
+
+## ADR-001との関係
+
+ADR-001の「harness coreはTypeScript」「domain/schema/ruleの単一正本」「bash/Python runtimeをcoreへ持ち込まない」は維持する。
+本ADRはOSが提供するprivileged custody APIを呼ぶための限定例外であり、Rustをproduct domain実装言語へ昇格させない。
+配布単位は単一ファイルからplatform bundleへ更新するが、利用者の入口は引き続き一つの`ut-tdd` CLIである。
+
+### Bun永久BANと移行契約
+
+2026-07-22以降、Bunへの新規依存、Bun専用API、Bunを前提とする新規production/runtime/test経路を禁止する。
+既存Bun経路は採択済みruntimeではなく**migration debt `DEBT-RGK-BUN-001`**であり、現CIを維持するためだけの期限付きcompatibility laneとする。
+即時削除でtest/gateを偽Greenにせず、Node互換実装と同じoracleを通した単位からproduction→runtime adapter→test runnerの順に撤去する。
+
+compatibility期限は**最初のproduction Resource Kernel platform bundle切替時**とする。
+この期限を越えるcompatibility延長は新ADRとPO採択なしに認めない。Bun撤去のexit criteriaは次のAND条件である。
+
+1. production/runtime/testのtracked command、lockfile、CI、hook、distribution manifestにBun実行依存が0。
+2. Node control planeがWindows/Linuxで同一のL7/L8/L9 oracle、aggregate gate、Pack acceptanceをGreenにする。
+3. SQLite、subprocess、compiled/package entrypointのBun専用APIがNode portへ置換され、direct spawnはResource Kernel portだけを通る。
+4. Bun binaryが不存在でもclean install、doctor、targeted/full test、distribution packageが成功する。
+5. migration debt台帳をclosedにし、Bun compatibility code・検出器例外・CI jobを同じchange setで削除する。
+
+## 検討した代替案
+
+| 案 | 判定 | 理由 |
+|---|---|---|
+| TypeScript runtimeのみ | 却下 | Job/cgroupの開始前attach、crash-surviving handle/broker、子孫0をhard contractとして証明できない |
+| C/C++ helper | 不採用 | OS API到達性は同等だが、メモリ安全性とcross-platform保守負担でRustに劣る |
+| process group / PID tree kill | 却下 | Windows custody、PID再利用、launcher crash、lineage離脱に対してfail-openになる |
+| RustでKernel全体を再実装 | 却下 | TypeScriptのdomain/policy/journal正本を二重化し、ADR-001とルール同一性を破る |
+
+## 結果
+
+- (+) OS custodyをnative APIで強制し、設計を現行Bun検出能力へ縮めずにIssue #124のsystem oracleへ到達できる。
+- (+) unsafe/privileged surfaceを小さいcompanionへ閉じ、TS domainと独立にadversarial testできる。
+- (+) 署名manifest、SBOM、実機evidenceをbundle identityへ固定できる。
+- (-) Rust toolchain、対象triple別build、署名、SBOM、release/rollback運用が追加される。
+- (-) 「単一バイナリ1ファイル」配布は「単一CLI入口の署名済platform bundle」へ更新される。
+
+## 検証対応
+
+L4設計のpairは`docs/test-design/harness/L9-system-test-design.md` §9である。L9はWindows/Linux実機について、
+bundle署名・protocol不一致・binary欠落・権限不足の開始前fail-closeと、custodian/broker crash、timeout、budget超過、
+rollback後を含むcustody empty / orphan zeroを証明する。L5/L8はprotocol・service/broker・packaging故障注入、
+L6/L7はmanifest/capability negotiation/state reductionのpure contractを受け持つ。

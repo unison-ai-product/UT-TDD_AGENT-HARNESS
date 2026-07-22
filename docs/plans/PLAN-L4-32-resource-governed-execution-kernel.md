@@ -40,6 +40,7 @@ dependencies:
     - docs/plans/PLAN-L7-365-harness-db-currency-hook.md
   blocks: []
   references:
+    - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/plans/PLAN-L4-26-engine-swap-object-method-design.md
     - docs/plans/PLAN-L6-77-detector-compiler-meta-verifier-contracts.md
     - docs/design/harness/L4-basic-design/architecture.md
@@ -177,6 +178,12 @@ adapterはdomainから分離する。public methodのpre/post/invariantはL6へ�
 
 ## 3. OS process-tree custody
 
+OS custody adapterは[ADR-009](../adr/ADR-009-resource-kernel-native-custody-companion.md)に従うRust native companionで実装する。
+TypeScript/Node control planeは`ExecutionSpec`、resource/admission policy、journal/outbox、receipt封印の正本を維持し、companionには
+versioned protocol越しにOS操作だけを委譲する。native側へdomain rule、GitHub判断、DB/CAS再利用判断を移さない。
+companion binary、protocol、target、capability probe、署名、SBOMを結ぶplatform bundleを検証できない場合、
+direct spawnへfallbackせずprocess生成前に`capability_failure`とする。
+
 ### 3.1 Windows
 
 Windows adapterはJob Objectを作成し、root processを`CREATE_SUSPENDED`で生成し、Jobへの`AssignProcessToJobObject`が
@@ -307,6 +314,10 @@ allowlistで覆い隠さない。
 
 ## 7. 段階導入
 
+既存Bun runtime/test/CIは`DEBT-RGK-BUN-001`として台帳化する。2026-07-22から新規Bun依存を禁止し、
+最初のproduction Resource Kernel bundle切替時をcompatibility期限とする。Node parity oracleが
+Greenになる前に既存jobを削除して通過を装わず、production→runtime adapter→test/CI→lockfile/toolingの順に撤去する。
+
 1. **観測段階**: read-only observer/sidecarが既存runnerのusage/process treeをshadow観測する。実行を所有せず、Kernel admission・
    custody・ExecutionReceiptを名乗らない。出力は`ObservationReport`として隔離し、Green/accepted execution証拠へ使わない。
 2. **custody段階**: `db-refresh`、snapshot runner、doctorをWindows Job/custodianまたはLinux cgroup v2/subreaper/brokerへ移し、macOS不足classをfail-closeしてdeadlineとorphan zeroを強制。
@@ -317,6 +328,10 @@ allowlistで覆い隠さない。
 
 各段階はfeature flagで旧経路へ黙ってfallbackしない。rollbackは明示policy revisionとreceiptを伴い、前段の安全性を
 維持する。段階4/5の性能改善は段階2/3の安全統制を迂回してはならない。
+
+native companionの導入はtarget triple別の署名済platform bundleとして行う。各bundleはTS core revision、protocol schema
+digest、companion digest、SBOM、実機L9 evidenceをmanifestで固定する。rollbackは既知良好なbundle tag全体へ行い、coreまたは
+companionだけを差し替えない。旧direct-spawn経路へのrollbackは禁止し、必要capabilityを満たせないplatformは利用停止する。
 
 ## 8. 受入条件（AC）
 
@@ -333,12 +348,14 @@ allowlistで覆い隠さない。
 - **AC-RGK-11**: lifecycle eventがappend-onlyかつsequence完全で、各attemptのterminal receiptがexactly-onceに封印され、retry/recovery間で`execution_id`と`attempt_id`を混同しない。
 - **AC-RGK-12**: required capabilityとplatform matrixの不一致をprocess生成前に拒否し、soft fallbackを成功として記録しない。
 - **AC-RGK-13**: DB canonical digestとCAS完全identityが順序・locale・EOL・file mode・symlink・toolchain/environment差を意図どおり区別し、identityの一部欠落時は再利用しない。
+- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をprocess生成前に拒否し、既知良好bundleへのrollback後も対象OSのcustody oracleを再通過する。TypeScript domain/policy/journalとRust custody companionの責務重複を0にする。
+- **AC-RGK-15**: Bun新規依存を0に保ち、既存Bun migration debtをNode parity oracleのGreen後に段階撤去する。互換期限までにBun不在のclean install、doctor、Windows/Linux L7-L9、aggregate CI、Pack acceptanceをGreenにし、tracked Bun実行依存・compatibility code・検出例外を0にする。
 
 ## 9. 完了条件と非完了条件
 
-本PLANのconfirmed条件は、L9側にAC-RGK-01..13の正負oracle、platform capability matrix、evidence schemaをRed freezeし、
+本PLANのconfirmed条件は、L9側にAC-RGK-01..15の正負oracle、platform capability matrix、evidence schemaをRed freezeし、
 L5/L6降下PLANを起票して依存edgeを機械検証できることである。Issue #124のclose gateはL9 §9.5を唯一の正本とし、
-AC-RGK-01..13、Windows/Linux実runner、macOS capability fail-close、DB/CAS全corpus、Issue固有performance envelopeを
+AC-RGK-01..15、Windows/Linux実runner、macOS capability fail-close、DB/CAS全corpus、Issue固有performance envelopeを
 すべてGreen証明するまでcloseしない。
 
 単一PIDの手動停止、`windowsHide`だけの追加、timeout値の延長、重い検証のGitHub CI移送、DB rebuild頻度の単純削減、

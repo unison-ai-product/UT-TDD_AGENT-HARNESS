@@ -7,7 +7,7 @@
 
 ## Context
 
-現行 HARNESS は TypeScript/Bun core、SQLite projection、豊富な lint/doctor、Git履歴を持つ一方、Forward の
+現行 HARNESS は TypeScript core（実行runtimeのBunはADR-009でmigration debt化）、SQLite projection、豊富な lint/doctor、Git履歴を持つ一方、Forward の
 実績状態を単一の状態機械として保持しない。PLAN status、工程表RAG、gate表、review evidence、trace検査が別々の
 parserと判定で動き、設計変更へ detector が手作業で追随する。checked ZIP 比較でも、109 source document、163
 semantic item、21 category、8 profile と、baseline `origin/main@71a023b2` のHARNESS target slot 20件が混同され、L8-L14 PLAN不在とnumeric core衝突18群を

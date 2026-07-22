@@ -170,7 +170,7 @@ GitHub可用性がLedgerの正本性を左右しないこと。検出器はこ�
 ## §9 Resource-governed Execution Kernel system test design (PLAN-L4-32)
 
 本節は `PLAN-L4-32-resource-governed-execution-kernel.md` の L4↔L9 pair であり、
-`AC-RGK-01..13` を実装前の **Red system oracle** として固定する。対象は単一processではなく、
+`AC-RGK-01..15` を実装前の **Red system oracle** として固定する。対象は単一processではなく、
 hook、doctor、DB projection、snapshot、local CIを横断する実行system全体である。root PIDの終了、
 一時directoryの削除、`windowsHide`、またはdomain commandのexit 0だけをGreen証拠にしてはならない。
 
@@ -194,6 +194,8 @@ hook、doctor、DB projection、snapshot、local CIを横断する実行system�
 | `ST-RGK-11` / `AC-RGK-11` | lifecycle各barrierでcrash/retryし、同一`execution_id`へ複数attemptを発行 | event sequenceはappend-onlyかつ欠番・上書きなし、各`attempt_id`のterminal receiptはexactly-once | mutable status rowをevent/receipt兼用、retryでattempt identityを再利用、terminal eventだけまたはreceiptだけ残存 |
 | `ST-RGK-12` / `AC-RGK-12` | required capabilityを一つずつ欠落させたadapter matrixでadmission | 全不足caseがprocess生成前の`capability_failure`となり、選択adapterと不足集合を記録 | warning、skip、PID polling、soft limitへ暗黙縮退してsuccess |
 | `ST-RGK-13` / `AC-RGK-13` | DB値型・row順・localeと、untracked/submodule/symlink/mode/EOL/toolchain/envを一要素ずつ変化 | semantic同値DBは同digest、意味差は別digest。CAS identityの意味差は別key、欠落fieldはhit 0 | row count比較、型消失、未追跡入力無視、unknown identityでcache hit |
+| `ST-RGK-14` / `AC-RGK-14` | target別bundleへbinary欠落、digest/署名/SBOM/protocol/target不一致、権限不足を一つずつ注入し、既知良好bundleへのrollbackを実行 | 全不一致はprocess生成前`capability_failure`。rollbackはcore+companion manifest単位で行い、署名/SBOM検証と対象OS custody oracleを再通過。TS/Rust責務重複0 | PATH上の未検証binary採用、runtime download、片側rollback、direct spawn fallback、Rust側domain/policy/journal実装 |
+| `ST-RGK-15` / `AC-RGK-15` | Bun binary/lockfile/APIを除いたclean checkoutでinstall、doctor、L7-L9、Windows/Linux aggregate CI、Pack acceptanceを実行し、新規Bun依存fixtureを投入 | 全surfaceがNode control plane + Rust companionでGreen、新規Bun依存はlintでRed、tracked Bun実行依存/compatibility code/例外0 | 現CIを消してGreen扱い、Bun不在caseをskip、testだけBun残存、互換期限後もdebt継続、Node parity前に旧経路削除 |
 
 Issue #124のparent-loss/timeout acceptanceは次の経路別AND matrixで量閉じする。各セルでworker exit、custody empty、
 lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt_id`で証明し、別caseの証拠を合成しない。
@@ -261,6 +263,8 @@ lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt
 | `schema_version`, `st_id`, `ac_id`, `execution_id`, `attempt_id` | non-empty、固定version | 論理要求、oracle、attemptのexactly-once対応 |
 | `subject_revision`, `working_delta_digest`, `input_revision` | immutable digest | 検証対象とDB/CAS identityの固定 |
 | `platform`, `runner_id`, `adapter`, `capabilities`, `capability_decision` | OS/version/adapter revision/要求・強制可否・不足集合 | capability matrixの実選択証明 |
+| `bundle_manifest_digest`, `core_digest`, `companion_digest`, `protocol_digest`, `target_triple`, `sbom_digest`, `signature_identity`, `rollback_from` | native companion利用時必須。rollback無しは理由付きN/A | AC-RGK-14の完全bundle identity、供給網検証、片側rollback禁止 |
+| `control_plane_runtime`, `bun_dependency_inventory`, `migration_debt_revision`, `compatibility_deadline` | runtime identityとtracked Bun依存件数。Bun撤去後も0件証拠を保存 | AC-RGK-15のNode parity、永久BAN、期限付き撤去証明 |
 | `spec_digest`, `policy_revision`, `requested_budget`, `applied_budget` | canonical specと単位付き上限 | 暗黙緩和・自己申告の検出 |
 | `journal_events`, `terminal_receipt_digest` | monotonic sequenceとevent digest、terminal封印回数 | lifecycle順序、exactly-once receipt、crash reconcile、flush証明 |
 | `custody_identity`, `custodian_or_broker_identity`, `root_pid`, `descendant_observations` | started時必須。created-not-startedはPID/reapと作成済みcustody、未作成は理由付きN/A | PID単独でない所有権・process tree証明 |
@@ -275,7 +279,7 @@ lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt
 
 ### §9.5 Exit criteria / defect routing
 
-`AC-RGK-01..13`が各1件以上のpositive Greenと、表で指定したnegative Redを持ち、Windows/Linuxのrequired行が
+`AC-RGK-01..15`が各1件以上のpositive Greenと、表で指定したnegative Redを持ち、Windows/Linuxのrequired行が
 実runner evidenceで満たされ、macOSの不足capabilityがfail-closeし、managed orphan 0がKernel receiptと独立probeの両方で一致した場合だけ
 L9をGreenにする。DBは全corpusでincremental/full digest一致、CASはidentity分離・single-flight・fault atomicityの
 全てを満たし、さらに§9.6 performance convergence oracleの全run/envelopeをGreenにすること。未実装・runner不足・測定不能はpassではなくRedまたは明示deferであり、PLAN-L4-32のconfirmed条件や

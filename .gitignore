@@ -62,6 +62,10 @@ dist/
 coverage/
 .vitest/
 
+# Native Resource Kernel build/release output (source under native/resource-kernel is tracked)
+/native/resource-kernel/target/
+/bundles/
+
 # OS / editor junk (Windows / macOS / Linux クロスプラットフォーム team)
 .DS_Store
 Thumbs.db
