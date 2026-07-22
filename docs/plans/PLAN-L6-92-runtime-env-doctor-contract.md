@@ -9,6 +9,8 @@ route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-22
 updated: 2026-07-22
+revision_note: "rev2: VSCode 拡張レイヤ所見 (§2.1) を台帳初期内容として追補。autoUpdate off
+  の版ずれベクトル、cliExecutable 禁止レシピ、危険側キー warn 候補"
 owner: PO / Claude (Fable orchestrator)
 parent_design: docs/plans/PLAN-L6-01-function-spec.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -82,6 +84,22 @@ UT-TDD は Claude Code / Codex CLI を委譲・hook 面の前提基盤とする�
    silent pass にしない (absence-blindness 対策)。
 4. ユーザーグローバル設定の内容 (秘密情報を含みうる) を violation メッセージや
    evidence へ原文転記しない。キー名と期待形のみ報告する。
+
+### 2.1 VSCode 拡張レイヤの監査所見 (2026-07-22 追補、台帳の初期内容)
+
+同日の read-only 監査で拡張レイヤも棚卸しした。結論: 拡張固有設定は薄く実体は
+CLI 側設定ファイルに集約されるが、以下を台帳へ初期登録する。
+
+1. **`extensions.autoUpdate: "off"` は版ずれの再発ベクトル**。拡張内蔵 CLI が固定
+   される一方 npm 側が更新される (逆も) ため、§2 cli-version-coherence が検査で
+   補完する前提の運用とする (設定自体の変更は要求しない。意図的 OFF を尊重)。
+2. **拡張経由の CLI 一本化は行わない (禁止レシピ)**。`chatgpt.cliExecutable` は
+   「DEVELOPMENT ONLY」と明記された開発者向けキーであり、版整合の修復レシピとして
+   これを設定させてはならない。整合は「npm 側を拡張内蔵版へ追随更新」で取る。
+3. **危険側キーの安全既定チェック (warn 級の台帳候補)**: `claudeCode.
+   allowDangerouslySkipPermissions` / `claudeCode.initialPermissionMode` /
+   `security.workspace.trust.untrustedFiles` が安全側既定から外れていたら warn。
+   2026-07-22 時点は全て安全側 (前 2 者未設定、後者は "open" で情報提供済み)。
 
 ## 3. 判断を要する不備は対象外 (スコープ境界)
 
