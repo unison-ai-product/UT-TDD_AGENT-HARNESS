@@ -818,6 +818,19 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 |---|---|---|
 | U-ADAPTER-009 | `checkCodexWrapperParity` / `runDoctor` | Claude Code project hooks and Codex wrapper parity are checked explicitly. Claude hook evidence must come from `.claude/settings.json`; Codex evidence must come from `ut-tdd codex --execute` / `--task-file` / `--plan ... --execute` lifecycle tests and stdin adapter oracles, not from assuming `.claude` hooks apply to Codex. `doctor` surfaces `codex-wrapper-parity - OK` and fail-closes when any side is missing. |
 
+## Provider Execution Seam Addendum
+
+> ペア = L4 `external-if.md` §3.1 / L6 `function-spec.md` provider execution seam。ここでは方式非依存 port と orchestration を検証する。Windows Job Object / POSIX process group・cgroup 等の native Resource Kernel 実装は `ST-RGK-*` の責務であり、fake process port による本表の Green を native custody / parent-loss 回収の証拠として扱わない。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ADAPTER-010 | `preflightProviderExecution` | `deadline`、stdin、terminal observation、process-tree custody/reap の全 capability が明示された方式だけ `ok=true`。1つでも false/unknown/欠落なら provider を起動せず fail-closeする。 |
+| U-ADAPTER-011 | `preflightProviderExecution` | CLI/hook/native の execution kind が異なっても同一 capability 入力は同一判定になる。能力不足を別 execution kind へ silent fallbackせず、finding に不足 capability と選択方式を残す。 |
+| U-ADAPTER-012 | `executeProviderWithReceipt` | success / provider non-zero / timeout / cancel / adapter error の各経路が、同じ `invocation_id` に対して schema-valid terminal receipt を exactly once 返す。 |
+| U-ADAPTER-013 | `executeProviderWithReceipt` | deadline/cancel が発火した場合、先に provider/process tree の停止・回収を要求し、その完了後にだけ terminal receipt を確定する。cleanup 中の中間状態を terminal として公開しない。 |
+| U-ADAPTER-014 | `finalizeProviderExecution` | parent exit 0 でも receipt 欠落、重複 receipt、cleanup unknown、`orphan_count>0` のいずれかなら fail-closeし、成功 outcome を返さない。 |
+| U-ADAPTER-015 | `finalizeProviderExecution` | 全 terminal kind で `cleanup.verified=true` かつ `orphan_count=0` を要求する。provider exit と cleanup verdict を別フィールドで保持し、provider成功によって回収失敗を上書きしない。 |
+
 > Scope note (PLAN-L7-139): U-ADAPTER-009 covers the **delegation** path — how the
 > harness drives Codex as a worker via `ut-tdd codex`. It deliberately does NOT
 > assume `.claude` hooks apply to Codex. The complementary **direct / interactive**
