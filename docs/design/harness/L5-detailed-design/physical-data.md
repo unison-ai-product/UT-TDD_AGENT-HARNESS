@@ -147,19 +147,23 @@ data.md §3 の 12 値オブジェクトは全て **enum string** で物理表�
 
 **SubDoc zod 化方針 (IMP-026 解消済み)** — 値域は **requirements §1.10.G.1 が SSoT** で、`src/schema/index.ts` / `src/schema/frontmatter.ts` に実装済み:
 ```
-// src/schema/index.ts:
+// src/schema/index.ts (実装値と同期、PLAN-L7-453 H7 で snapshot 更新):
 export const VALID_SUB_DOCS = {
-  L1: ["business", "functional", "screen", "technical", "nfr"],              // 5
-  L2: ["screen-list", "screen-flow", "wireframe", "ui-element"],             // 4
-  L3: ["business-requirement", "functional-requirement", "nfr-grade"],       // 3
-  L4: ["architecture", "function", "screen", "data", "external-if"],         // 5
-  L5: ["internal-processing", "module-decomposition", "physical-data", "if-detail"], // 4
-  L6: ["function-spec", "class-design", "edge-case"],                        // 3
+  L1: ["business", "functional", "nfr", "technical", "screen"],              // 5
+  L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],             // 4
+  L3: ["business", "functional", "nfr", "screen-functional"],                // 4
+  L4: ["data", "architecture", "function", "external-if", "security",
+       "ui-standard", "report", "batch", "notification", "code-value"],      // 10
+  L5: ["physical-data", "module-decomposition", "internal-processing",
+       "if-detail", "ui-detail"],                                            // 5
+  L6: ["function-spec", "class-design", "edge-case", "screen-spec"],         // 4
 } as const;
 // subDocSchema + frontmatter superRefine で layer×sub_doc 整合を fail-close
 ```
-> 値域の SSoT は requirements §1.10.G.1。本 doc は物理化 (zod 定数 + superRefine) を設計し、実装は L7 (`src/schema` 追加 + frontmatter.ts superRefine 拡張)。
-> **⚠ 既存 doc との不整合 (IMP-029)**: 実在の L3 sub-doc frontmatter は `sub_doc: functional` / `business-detail` 等で、G.1 spec の `functional-requirement` / `business-requirement` と食い違う。IMP-026 実装時に既存 doc の `sub_doc` 値を G.1 へ正規化するか G.1 を実態へ合わせるかの decision が必要 (本 doc は G.1 を SSoT として記述)。
+> 値域の実装 SSoT は `src/schema/index.ts` (`sub-doc-catalog-drift` doctor gate が requirements
+> §1.10.G.1 表との drift を fail-close 検証)。本 snapshot は説明用であり、正は常に schema 実装。
+> 旧 snapshot の不整合注記 (IMP-029) は IMP-026 実装で解消済 (L3 は実態値 `functional` 等へ
+> 正規化され `screen-functional` / L5 `ui-detail` / L6 `screen-spec` 等が追加された)。
 
 ## §4 ID 採番 / index / 参照整合
 

@@ -52,6 +52,16 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L14-operational-test-design.md
     artifact_type: test_design
+  - artifact_path: docs/governance/harness-v2-update-strategy.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/governance/reverse-fullback-backprop-audit-2026-06-22.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/governance/conditional-backfill-decision-audit-2026-06-22.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L3-functional/roadmap.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/secret.md
+    artifact_type: design_doc
 dependencies:
   parent: null
   requires:
@@ -77,29 +87,29 @@ silent overwrite せず、該当箇所に correction note (本 PLAN ID 引用) �
 
 ### High
 
-- [ ] **H1 読み順統一**: `repository-structure.md` §1 の governance 中核 5 点定義を裁定と
+- [x] **H1 読み順統一**: `repository-structure.md` §1 の governance 中核 5 点定義を裁定と
       し、root `CLAUDE.md` Read Order へ `repository-structure.md` を追加、
       `docs/governance/README.md` 「現行の正本」へ `extraction-plan_v0.1.md` を復元 +
       番号重複 (7 が 2 回) を修正。vmodel-* 4 doc は「V-model 機構正本 (中核 5 点への追加
       読み)」として区分を明示。
-- [ ] **H2 VMS-008/009 二重所有**: `vmodel-agent-contracts.md` VAGENT-002 と VAGENT-004 の
+- [x] **H2 VMS-008/009 二重所有**: `vmodel-agent-contracts.md` VAGENT-002 と VAGENT-004 の
       `defines` 重複を単一所有へ再割当 (typed-spec-definitions.md §4 不変条件準拠)。
-- [ ] **H3 stale skill パス**: `docs/process/modes/refactor.md:22` の `docs/skills/refactoring.md`
+- [x] **H3 stale skill パス**: `docs/process/modes/refactor.md:22` の `docs/skills/refactoring.md`
       を `skills/refactoring.md` へ訂正 (ADR-004 訂正注記へ追従)。confirmed 済 PLAN 21 件の
       同種残存は歴史記録として不変更 (errata 規律)。
-- [ ] **H4 L2 self-pair 残存**: L2-screen 4 doc (screen-list / screen-flow / ui-element /
+- [x] **H4 L2 self-pair 残存**: L2-screen 4 doc (screen-list / screen-flow / ui-element /
       wireframe) の本文中 self-pair 断定記述 (「本 mock 自体が③ペア」等) を
       PLAN-RECOVERY-09 後の frontmatter (`pair_artifact` = L10-ux-validation-test-design.md)
       準拠へ是正。
-- [ ] **H5 L3 README stale**: `L3-functional/README.md` の「L3 では screen sub-doc を起こさ
+- [x] **H5 L3 README stale**: `L3-functional/README.md` の「L3 では screen sub-doc を起こさ
       ない」宣言と 3 件表を、`screen-functional.md` (schema 登録済 sub_doc) を含む 4 件へ
       更新。`roadmap.md` §6 の「enum 3 種」記述も同時訂正。
-- [ ] **H6 roster nameMismatch**: `L5-detailed-design/module-decomposition.md` §5 の
+- [x] **H6 roster nameMismatch**: `L5-detailed-design/module-decomposition.md` §5 の
       「nameMismatch WARN」を実装実挙動 (fail-close / exit 1、`src/assets/catalog.ts`) に
       合わせ訂正。internal-processing.md の DbC が正。
-- [ ] **H7 L5 sub_doc 一覧**: `physical-data.md` §3 の VALID_SUB_DOCS L5 snippet へ
+- [x] **H7 L5 sub_doc 一覧**: `physical-data.md` §3 の VALID_SUB_DOCS L5 snippet へ
       `ui-detail` を追補 (schema 実体 5 件と一致させる)。
-- [ ] **H8 FR-L1-16 再マッピング**: `fr-unit-coverage.md:54` の FR-L1-16 行を
+- [x] **H8 FR-L1-16 再マッピング**: `fr-unit-coverage.md:54` の FR-L1-16 行を
       forced-stop-feedback.md から、既存の本番障害機構 (function-spec.md 失敗 routing 全順序
       Incident > Recovery > Reverse > Refactor / `docs/process/modes/incident.md`) へ付け替え。
       再マッピング後 `analyzeL6FrCoverage` を再実行し green を確認。なお欠落が残る場合のみ
@@ -107,31 +117,31 @@ silent overwrite せず、該当箇所に correction note (本 PLAN ID 引用) �
 
 ### Medium (mechanical)
 
-- [ ] **M1**: `gate-design.md` §1 G2 行の「FR-13 未定義 defer 中」を §2 台帳 (PO サインオフ
+- [x] **M1**: `gate-design.md` §1 G2 行の「FR-13 未定義 defer 中」を §2 台帳 (PO サインオフ
       2026-06-22 PASS) と同期。
-- [ ] **M4**: `harness-v2-update-strategy.md` Wave 2 の PLAN-L7-303 行へ
+- [x] **M4**: `harness-v2-update-strategy.md` Wave 2 の PLAN-L7-303 行へ
       `version-up-route-debt-2026-07-10.md` (landed / immutable legacy debt) への
       cross-reference note を追記 (双方向化)。
-- [ ] **M6**: `docs/process/README.md` へ「plan-asset-v2.md / design-detection-self-proof.md
+- [x] **M6**: `docs/process/README.md` へ「plan-asset-v2.md / design-detection-self-proof.md
       は ADR-008 (Proposed) 付随の draft であり正本化済宣言の対象外」を明記。
-- [ ] **M7**: `L1-requirements/screen-requirements.md` / `L2-screen/ui-element.md` の HM-01
+- [x] **M7**: `L1-requirements/screen-requirements.md` / `L2-screen/ui-element.md` の HM-01
       「FR-L1 47 件」を 51 件 (functional-requirements.md 確定値) へ更新 (`src/web` 未実装
       につき doc のみ)。
-- [ ] **M8**: `L1-requirements/technical-requirements.md` の「DB は L2/L4 で検討」を
+- [x] **M8**: `L1-requirements/technical-requirements.md` の「DB は L2/L4 で検討」を
       `.ut-tdd/harness.db` 採用済 (functional-requirements.md / L4 data.md 準拠) へ更新。
-- [ ] **M10**: `L4-basic-design/data.md` §10 の `drive: ...|normal` から `normal` を除去
+- [x] **M10**: `L4-basic-design/data.md` §10 の `drive: ...|normal` から `normal` を除去
       (schema VALID_DRIVES 5 種と一致、検証済)。
-- [ ] **M13 NFR-02 帰属**: `L14-operational-test-design.md:158` の「L4↔L9 pair で被覆」を
+- [x] **M13 NFR-02 帰属**: `L14-operational-test-design.md:158` の「L4↔L9 pair で被覆」を
       「L4 carry (L12 AT-NFR-02 として lift)」へ訂正 (L9 の scope 自己宣言 :78 と L12 carry
       台帳に整合、L14:156 の自記述とも一致)。
-- [ ] **Low ついで**: `module-decomposition.md` の Appendix B 見出し重複を解消 (B/C へ改番)。
+- [x] **Low ついで**: `module-decomposition.md` の Appendix B 見出し重複を解消 (B/C へ改番)。
 
 ### TL 判断で処理 (本 PLAN 内、軽微)
 
-- [ ] **M2**: `docs/governance/README.md` へ「『正本』の 2 用法 (repo 全体の必読 canonical 集合
+- [x] **M2**: `docs/governance/README.md` へ「『正本』の 2 用法 (repo 全体の必読 canonical 集合
       vs 各 doc の domain 内 SSoT 自己宣言) は両立し、後者は前者を上書きしない」旨の用語注記を
       1 文追加。
-- [ ] **M12**: `L6-function-design/secret.md` §1 へ「session-log.sanitize() は循環依存回避の
+- [x] **M12**: `L6-function-design/secret.md` §1 へ「session-log.sanitize() は循環依存回避の
       独立実装 (意図的非共有)」を明記、または統合を refactor 候補として登録。
 
 ### 対象外 (本 PLAN で扱わない、記録のみ)

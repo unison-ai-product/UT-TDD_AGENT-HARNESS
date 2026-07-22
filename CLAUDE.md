@@ -10,7 +10,12 @@ Claude Code treats the following as canonical in this repository:
 4. `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 5. `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`
 6. `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md`
-7. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+7. `docs/governance/repository-structure.md`
+8. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+
+The full canonical-set index (including V-model machinery docs) is
+`docs/governance/README.md`; this list is the startup minimum, not a competing
+definition (PLAN-L7-453 H1).
 
 Migration snapshots and migration docs are not normal startup reads. Read them
 only when migration, gap audit, or regression-source inspection requires it.

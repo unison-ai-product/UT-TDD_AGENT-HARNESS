@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: screen-list
-status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-01 (15 画面)。③ pair=wireframe self (L2↔L10)。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-01 (15 画面)。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-453 H4)。
 pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair (旧 hub 参照は RECOVERY-09 で撤去)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -75,6 +75,6 @@ updated: 2026-06-24
 ## §5 L1↔L2 trace + 次工程
 
 - 上流: L1 [screen-requirements.md](../L1-requirements/screen-requirements.md) §1 (15 画面) + §2 (遷移) + 4 横断原則 (CC1-CC4) + G1-trace R1-R4 通過済。
-- L2 内連携: 本 screen-list (ID/URL/認可/state) → [screen-flow.md](./screen-flow.md) (遷移) → [ui-element.md](./ui-element.md) (UI 部品) → [wireframe.md](./wireframe.md) (レイアウト = ③ pair)。
+- L2 内連携: 本 screen-list (ID/URL/認可/state) → [screen-flow.md](./screen-flow.md) (遷移) → [ui-element.md](./ui-element.md) (UI 部品) → [wireframe.md](./wireframe.md) (レイアウト。③ pair の正本は L10-ux-validation-test-design.md)。
 - 下流: L10 UX refinement (High-Fi 判断) → src/web 実装 (Phase B)。
 - pair: `wireframe.md` (mock = ③ test design、L2↔L10 右腕)。

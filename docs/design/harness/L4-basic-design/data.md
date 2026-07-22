@@ -255,7 +255,7 @@ escape type/reason/recurrence identity、選択drive、re-entry target、last se
 
 `DriveModel`はL4 function §3.1の駆動モデル11値
 `discovery | scrum | reverse | recovery | incident | refactor | retrofit | add-feature | research | design-bottomup | version-up`
-をcanonical enumとする。PLAN `route_mode`は同じ値を使い、`drive: be|fe|fullstack|db|agent|normal`は
+をcanonical enumとする。PLAN `route_mode`は同じ値を使い、`drive: be|fe|fullstack|db|agent` (5 種。旧記載の `normal` は schema `VALID_DRIVES` に存在せず PLAN-L7-453 M10 で除去、§3 と一致) は
 実装領域を表す別型として混入を拒否する。`blocked | rejected | reopened | superseded | preemptive | defer`は
 escape reason/typeであり、drive選択前に11値のいずれかへrouteする。GitHub labelやbranch prefixを第二enumにせず、
 Issue/PR projection DTOだけがcanonical drive valueを表示する。human overrideは元選択を更新せずoverride eventをappendする。

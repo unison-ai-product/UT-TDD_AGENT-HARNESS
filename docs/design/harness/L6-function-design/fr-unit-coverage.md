@@ -51,7 +51,7 @@ plan: docs/plans/PLAN-L6-21-fr-unit-coverage.md
 | FR-L1-13 | docs/design/harness/L6-function-design/function-spec.md | `enforceForwardOrder` は PLAN から accept までの Forward gate/order transition を検証する。 | U-FR-L1-13 |
 | FR-L1-14 | docs/design/harness/L6-function-design/function-spec.md | `routeReverseR4` は Forward merge 前に reverse type、forward_routing、promotion_strategy を検証する。 | U-FR-L1-14 |
 | FR-L1-15 | docs/design/harness/L6-function-design/function-spec.md | `decideDiscoveryS4` は hypothesis evidence、PoC verification、decide outcome を検証する。 | U-FR-L1-15 |
-| FR-L1-16 | docs/design/harness/L6-function-design/forced-stop-feedback.md | `classifyFeedback` と recovery proposal contract は incident/runaway feedback を通常 comment から区別する。 | U-FR-L1-16 |
+| FR-L1-16 | docs/design/harness/L6-function-design/function-spec.md | `routeFiling` と失敗 routing 全順序 (Incident > Recovery > Reverse > Refactor) は本番障害 signal を Incident mode (troubleshoot+recovery、docs/process/modes/incident.md) へ最優先で routing し、escalation 境界で requires_human_approval へ昇格する。旧マッピング (forced-stop-feedback.md = セッション強制停止 feedback 分類) は別概念への誤配線であり PLAN-L7-453 H8 で是正。 | U-FR-L1-16 |
 | FR-L1-17 | docs/design/harness/L6-function-design/governance-enforcement.md | `checkReviewEvidence` と CI evidence contract は CI/PR acceptance 前に local gate proof を要求する。 | U-FR-L1-17 |
 | FR-L1-18 | docs/design/harness/L6-function-design/module-drift.md | `analyzeModuleDrift` と doctor aggregation は dependency/contract/connection/regression gap を表面化する。 | U-FR-L1-18 |
 | FR-L1-19 | docs/design/harness/L6-function-design/function-spec.md | `emitFeedbackEvents` は repeated failure、successful recipe、prevention rule を learning input として集約する。 | U-FR-L1-19 |

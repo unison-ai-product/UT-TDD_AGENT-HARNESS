@@ -71,7 +71,7 @@
 | PLAN-L7-273-test-results-ingest | test_results 0 行解消 (Red/Green 一次証跡) | L7-272 と対 |
 | PLAN-L7-246-feedback-event-lifecycle | feedback close 経路 + actionable→routing 接続 | なし |
 | PLAN-L7-243-mode-first-class-db-projection | mode 投影損失是正 (critical、PO gate 含む) | なし |
-| PLAN-L7-303-digest-commit-anchor (v2 新規) | digest の commit anchor 化 → 199 件是正 → 段階 hard 化 | なし (L7-300 の増分化と独立) |
+| PLAN-L7-303-digest-commit-anchor (v2 新規) | digest の commit anchor 化 → 199 件是正 → 段階 hard 化 | なし (L7-300 の増分化と独立)。**状態注記 (PLAN-L7-453 M4)**: 本 PLAN は version-up 規約外で confirmed/landed 済 — 現況の正本は `version-up-route-debt-2026-07-10.md` (immutable legacy debt 固定)。Wave 2 未着手案件として扱わない |
 | PLAN-L7-311-probe-harness (v2 新規) | guard/gate/hook の実走検証常設化 (検証手段の一級化) | なし (L7-258 と両輪) |
 | PLAN-L7-317-write-encoding-guard (v2 新規) | 書き込み直後の UTF-8 即時検査 (readability gate の即時化補完) | なし (readability 実装の再利用) |
 | PLAN-L7-323-handover-active-plan-freshness (v2 新規) | active_plan の stale 表示是正 + heredoc commit からの自動更新 (実測: L7-26/31 の stale 値が信頼できる顔で表示) | なし |

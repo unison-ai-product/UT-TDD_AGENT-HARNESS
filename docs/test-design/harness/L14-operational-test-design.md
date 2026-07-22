@@ -155,7 +155,7 @@ L1 5 sub-doc 構造に再編 (v1.2、v2 HELIX-workflows 設計概念参照) に�
 ### nfr sub-doc (NFR-*) — `docs/design/harness/L1-requirements/nfr.md`
 - NFR-01→OT-09 / NFR-03→OT-10 / NFR-04→OT-10 / NFR-05→OT-11 / NFR-06→OT-03 / NFR-08→OT-12 / **NFR-02→L4 carry (下記、意図的 OT 不立て)**。NFR-07→§2 総合。
 - NFR §7 IPA × ISO 25010 二軸表 → **OT-17** (孤児 NFR 0 + 除外理由整合)。
-- **NFR-02 (更新性)** は L14 運用での直接観測が弱く、実現方式が L4 ADR 送りのため、ここでは OT を立てず **L4↔L9 pair で被覆** (L1 時点の意図的 carry)。
+- **NFR-02 (更新性)** は L14 運用での直接観測が弱く、実現方式が L4 ADR 送りのため、ここでは OT を立てず **L4 carry (L4 ADR 確定後に L12 AT-NFR-02 として lift、L12-acceptance-test-design.md §carry 台帳が正本)** (L1 時点の意図的 carry。旧記載「L4↔L9 pair で被覆」は L9 に実体が無く、L9 自身の scope 宣言 [個別 NFR 受入は L12 担当] とも不一致のため PLAN-L7-453 M13 で訂正)。
 - NFR-13 (gate 通過率 ≥90%) → **OT-30** (KPI D-07 計測タイミング確認)。
 - NFR-14 (agent guard bypass PO 承認 + audit) → **OT-31** (audit log 取得確認 / S-03・B6 連動)。
 - NFR-16 (onboarding 互換性、新規) → **OT-29** (段階導入 block 回避シナリオ確認)。**孤児 NFR = 0** (NFR-01〜17 計 15 件、全被覆)。

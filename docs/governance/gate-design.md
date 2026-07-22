@@ -18,7 +18,7 @@ G1〜G5 を運用してきたが、(a) **各 G_N が何を check するか**の�
 |---|---|---|---|---|
 | G0.5 | L0 企画 | 構想の妥当性 (企画目的 ⇔ 価値検証 の trace) | PO (提案) | L0↔価値検証 (L14→L0 feedback) |
 | **G1** | L1 要求定義 | 5 sub-doc + 件数閉じ + G1-trace | ★ **PO** | L1↔L14 |
-| **G2** | L2 画面 | モック凍結 + 画面 trace | — (FR-13 未定義、§2.1 defer 中) | L2↔L10 |
+| **G2** | L2 画面 | モック凍結 + 画面 trace | ★ **PO** (サインオフ 2026-06-22、§2 台帳 G2=PASS。旧「FR-13 未定義 defer 中」は §2.1 解消済、PLAN-L7-453 M1 で本表同期) | L2↔L10 |
 | **G3** | L3 要件定義 | FR/AC/AT + G3-trace | ★ **PO** | L3↔L12 |
 | **G4** | L4 基本設計 | 4 sub-doc + 上流 trace + 集約整合 | ★ TL | L4↔L9 |
 | **G5** | L5 詳細設計 | DbC freeze (pre/post/invariant + edge docstring) | ★ TL | L5↔L8 |

@@ -1,5 +1,11 @@
 # Reverse fullback backprop 監査 (2026-06-22)
 
+> **姉妹機構注記 (PLAN-L7-453 M5)**: 本監査の `backprop_scope` (fullback Reverse PLAN 用の
+> layer 別 backprop 判断 record) と、`conditional-backfill-decision-audit-2026-06-22.md` の
+> `backprop_decision: not_required` + `backprop_decision_reason` (refactor/retrofit/troubleshoot
+> 等 conditional-kind PLAN 用) は**意図的に別フィールドの姉妹機構**である。対象 PLAN 母集団が
+> 異なり、fullback PLAN に `backprop_decision: not_required` を書いても免除にはならない。
+
 この監査は、`kind=reverse` + `workflow_phase=R4` +
 `confirmed_reverse_type=fullback` の confirmed/completed PLAN のうち、frontmatter の
 `generates` が `docs/design/`、`docs/governance/`、`docs/test-design/` artifact を
