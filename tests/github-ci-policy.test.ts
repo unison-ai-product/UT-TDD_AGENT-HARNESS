@@ -87,7 +87,7 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
-      - run: if (-not (Test-Path Cargo.lock)) { throw "Cargo.lock is required" }
+      - run: if (-not (Test-Path -LiteralPath Cargo.lock)) { throw "Cargo.lock is required" }
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --all-targets --locked
@@ -287,6 +287,55 @@ describe("github-ci-policy lint", () => {
           "jobs.resource-kernel-rust-linux must run on ubuntu-latest with non-empty fail-close steps, reviewed Cargo.lock, and Bun-free cargo fmt/clippy/test",
       });
     }
+
+    const windowsLockCheck =
+      'if (-not (Test-Path -LiteralPath Cargo.lock)) { throw "Cargo.lock is required" }';
+    const windowsEcho = SOURCE_WORKFLOW.replace(
+      `- run: ${windowsLockCheck}`,
+      `- run: echo '${windowsLockCheck}'`,
+    );
+    expect(analyzeGithubCiPolicy(docs(windowsEcho)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_runtime_leg",
+      detail:
+        "jobs.resource-kernel-rust-windows must run on windows-latest with non-empty fail-close steps, reviewed Cargo.lock, and Bun-free cargo fmt/clippy/test",
+    });
+  });
+
+  it("U-CIPOL-022: rejects Cargo contracts hidden in names, echo output, or comments", () => {
+    const cargoTest = "cargo test --workspace --all-targets --locked";
+    const lockCheck = "test -f Cargo.lock";
+    for (const workflow of [
+      SOURCE_WORKFLOW.replace(
+        `- run: ${cargoTest}`,
+        `- name: ${cargoTest}\n        run: echo no-test`,
+      ),
+      SOURCE_WORKFLOW.replace(`- run: ${cargoTest}`, `- run: echo '${cargoTest}'`),
+      SOURCE_WORKFLOW.replace(`- run: ${cargoTest}`, `- run: echo no-test # ${cargoTest}`),
+      SOURCE_WORKFLOW.replace(
+        `- run: ${lockCheck}`,
+        `- name: ${lockCheck}\n        run: echo no-lock`,
+      ),
+      SOURCE_WORKFLOW.replace(`- run: ${lockCheck}`, `- run: echo '${lockCheck}'`),
+    ]) {
+      expect(analyzeGithubCiPolicy(docs(workflow)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.resource-kernel-rust-linux must run on ubuntu-latest with non-empty fail-close steps, reviewed Cargo.lock, and Bun-free cargo fmt/clippy/test",
+      });
+    }
+  });
+
+  it("U-CIPOL-023: accepts formatting-only whitespace around exact Cargo commands", () => {
+    const workflow = SOURCE_WORKFLOW.replace(
+      "- run: cargo test --workspace --all-targets --locked",
+      "- run: |\n          cargo   test --workspace --all-targets --locked",
+    );
+
+    expect(analyzeGithubCiPolicy(docs(workflow)).violations).toEqual([]);
   });
 
   it("U-CIPOL-001: accepts universal source and Pack harness-check workflows", () => {

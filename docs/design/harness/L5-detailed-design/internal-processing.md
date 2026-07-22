@@ -389,35 +389,42 @@ C.7 の設計 + lint 契約まで。
 C.7 相互参照を追加 (Important-3 対応)。結合テスト設計 = L8 (宣言×外部化なし→fail / opt-out→pass /
 config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 
-## Appendix D: Resource Kernel wire・custodian内部処理 (PLAN-L5-25)
+## 付録 D: Resource Kernelワイヤ・カストディ内部処理 (PLAN-L5-25)
 
 本節は`PLAN-L4-32`をL5へ降下し、`L8-integration-test-design.md`の
-`IT-RGK-PHYS-001..014`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
+`IT-RGK-PHYS-001..018`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
 Rust companionはstrict wireとprivileged OS custody factだけを所有する。両者に同じpolicy reducerや
 journalを置かない。新規Bun runtime/API/test pathは永久禁止する。
 
-### D.1 strict wire処理
+### D.1 厳格ワイヤ処理
 
 Node `CustodyClient`は署名済bundleから絶対pathのcompanionを選び、shellを介さないargv、bounded stdin/stdout、
 absolute deadlineで起動する。frameは4-byte big-endian length + UTF-8 JSON一件で、unknown/missing/duplicate field、
 unknown enum、oversize、partial frame、末尾byteを拒否する。stdoutはprotocol専用、diagnosticはbounded stderrへ分離する。
 request/responseは`protocol_version + request_id + expected_bundle_digest`を照合し、別requestの応答を合成しない。
+wire commandはlauncherを持たない`ProbeRequest`とsealed `AdmissionToken`必須の`ExecuteRequest`へ分離する。
+probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
+`managed_root_created`を別identity/phaseで返す。空required capabilityやhandshake成功をexecute許可にしない。
 
-### D.2 custody lifecycle
+### D.2 カストディ・ライフサイクル
 
 `absent → prepared → attached_suspended → running → terminating → empty_proven → released`だけを合法とする。
 Windowsはsuspended create後にJob assignが成功するまでresumeしない。Linuxはuser code開始時点からtarget cgroupに属し、
 事後attachをhard custodyとして受理しない。root exitはterminalではなく、Job emptyまたは`populated=0`とreap証拠が揃って
 初めて`empty_proven`となる。client/launcher crash後もcustodian/brokerがdeadlineとtree custodyを保持する。
+custody authorityはepoch/attempt/nonce/deadline/policy digestをdurable化し、OS custodyへのatomic handoff commit前は
+resume/execを禁止する。deadline ownerはauthorityであり、Node/companion切断後もterminate→empty/reapを遂行する。
+authority再起動はepoch/nonceを照合し、custodian+supervisorまたはbroker+service managerのdual crashで独立proofが
+欠けた場合はsuccessへ復元せず`custody_failure`とする。
 
-### D.3 port/failure境界
+### D.3 ポート/障害境界
 
 Rust portは`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`を提供し、OS factだけを返す。
-Nodeはfactをappend-only journalへ保存してterminal receiptを封印する。unsupported・権限不足・bundle/protocol不一致は
-process生成前にfail-closeし、Node直spawn、Bun経路、PID polling、soft limitへfallbackしない。
+Nodeはfactをappend-only journalへ保存してterminal receiptを封印する。bundle/protocolの静的不一致はcontrol process起動前、
+unsupported・権限不足・probe不一致はmanaged root生成前にfail-closeし、Node直spawn、Bun経路、PID polling、soft limitへfallbackしない。
 companion crash、client crash、SCM/broker crash、pipe切断、journal commit失敗を独立に注入できなければL5 freeze未達とする。
 
-### D.4 bundle/rollback
+### D.4 バンドル/ロールバック
 
 Node core、target別companion、protocol schema、manifest、SBOM、署名、実OS evidenceを一つのbundle revisionへ固定する。
 実行時download、PATH探索、片側rollbackを禁止する。rollback後も同じL8/L9 oracleを再実行し、capabilityが不足するplatformは

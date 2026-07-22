@@ -28,10 +28,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L4-basic-design/architecture.md
     artifact_type: design_doc
-  - artifact_path: docs/design/harness/L5-detailed-design/internal-processing.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
-    artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L9-system-test-design.md
     artifact_type: test_design
 dependencies:
@@ -119,26 +115,27 @@ Kernelは「何を、どの入力・予算・custodyで実行し、どう終了�
 ### 2.2 `ExecutionEvent` journalと`ExecutionReceipt`
 
 `ExecutionEvent`は`attempt_id + sequence`をidentityとするappend-onlyの事実である。`admission_requested`、
-`capability_negotiated`、`custody_created`、`process_attached`、`started`、`limit_observed`、
+`control_started`、`probe_recorded`、`capability_negotiated`、`admission_sealed`、`authority_prepared`、
+`custody_created`、`handoff_committed`、`process_attached`、`started`、`limit_observed`、
 `termination_requested`、`process_reaped`、`custody_empty`、`lease_released`、`finished`を、monotonic sequenceと
 durable timestampで記録する。event payloadは過去eventを上書きせず、retryは新しい`attempt_id`へ分岐する。
 
 `ExecutionReceipt`は一つのattemptがterminalへ到達した時だけevent列から導出・封印するimmutable証跡であり、
 `execution_id + attempt_id`をidentityとする。途中経過recordや可変status rowをreceiptと呼ばない。全outcome共通fieldは
-canonical spec digest、policy/input revision、accepted/finished時刻、exit kind、event range/digestである。native exitはprocess-created/
-started variantだけ必須で、process-not-createdは`not_applicable: process_not_created`とする。
-outcome-discriminated unionとして次を持つ。
+canonical spec digest、policy/input revision、accepted/finished時刻、exit kind、event range/digestである。control processと
+managed workloadは別discriminantを持ち、native workload exitは`RootCreatedNotStarted|RootStarted`だけ必須、
+`RootNotCreated`は`not_applicable: managed_root_not_created`とする。outcome-discriminated unionとして次を持つ。
 
-- process-not-created terminal (`validation_failure|capability_failure|launch_failure`): phase/reason、不足capability。started/root PID/custodyは
-  `not_applicable: process_not_created`であり、値を捏造しない。
-- process-created-but-user-code-not-started terminal (`launch_failure|custody_failure`): suspended root PID、create/attach error、
+- `RootNotCreated` terminal (`validation_failure|capability_failure|launch_failure`): phase/reason、不足capability。root PID/custodyは
+  `not_applicable: managed_root_not_created`であり、control process identity/cleanupは独立fieldに保存する。
+- `RootCreatedNotStarted` terminal (`launch_failure|custody_failure`): suspended root PID、create/attach error、
   termination/reap、custody identity（作成済み時）、independent process-absent proofを必須にし、`started_at`は存在させない。
-- started outcome: started/termination-requested/reaped/finishedのmonotonic timestamp、platform custody identity、root PID、
+- `RootStarted` outcome: started/termination-requested/reaped/finishedのmonotonic timestamp、platform custody identity、root PID、
   descendant観測（PID再利用に依存しないOS handle/cgroup identityを優先）。
 - exit kind (`success | process_failure | deadline | cpu_budget | memory_budget | process_budget |
   output_budget | cancelled | validation_failure | capability_failure | launch_failure | custody_failure | orphan_detected`) とnative exit情報。
 - wall/CPU/peak-memory/outputの観測値、stdout/stderrまたはartifactのbounded digest参照。
-- process-createdまたはstarted outcomeはmanaged orphan count/reap結果を必須とし、DB/CASを実行したphaseだけ対応receiptを必須にする。未実行phaseは
+- managed root created/started outcomeはmanaged orphan count/reap結果を必須とし、DB/CASを実行したphaseだけ対応receiptを必須にする。未実行phaseは
   `not_applicable`理由を列挙し、欠測と区別する。
 
 `ExecutionReceipt`がsuccessでもdomain testがpassとは限らない。呼出側はreceiptのexit kind、subject revision、
@@ -186,7 +183,19 @@ OS custody adapterは[ADR-009](../adr/ADR-009-resource-kernel-native-custody-com
 TypeScript/Node control planeは`ExecutionSpec`、resource/admission policy、journal/outbox、receipt封印の正本を維持し、companionには
 versioned protocol越しにOS操作だけを委譲する。native側へdomain rule、GitHub判断、DB/CAS再利用判断を移さない。
 companion binary、protocol、target、capability probe、署名、SBOMを結ぶplatform bundleを検証できない場合、
-direct spawnへfallbackせずprocess生成前に`capability_failure`とする。
+direct spawnへfallbackせずmanaged workload生成前に`capability_failure`とする。
+
+ここでprocess identityを二つに分離する。`control_process_created`は署名・digest検証済みcompanionまたは常駐
+custodian/broker control processの生成事実、`managed_root_created`は利用者commandのroot生成事実である。
+bundleの静的検証後に限りcontrol processを起動して`probe`できるが、probe factをjournalへdurable appendし、
+required capabilityとの完全一致をadmissionが確定するまでは`managed_root_created=false`を維持する。
+`process_created`という単一booleanで両者を兼用してはならない。control processの起動自体を「workload未生成」の
+証拠に数えず、各identityのPID/nonce/bundle digest/生成時刻を別々に記録する。
+
+binary protocolは`probe`と`execute`をcommand-discriminated unionとして分離する。`probe`はOS事実を返すだけで
+workload launcherへ到達できず、`execute`はcontrol planeが封印したadmission token（attempt、custody nonce、
+bundle/probe digest、required capability、absolute deadlineを結合）を必須とする。空のrequired capabilityや
+handshake成功だけではexecution admissionにならない。
 
 ### 3.1 Windows
 
@@ -339,7 +348,7 @@ companionだけを差し替えない。旧direct-spawn経路へのrollbackは禁
 
 ## 8. 受入条件（AC）
 
-- **AC-RGK-01**: 不正または無制限の`ExecutionSpec`を実行前に拒否し、processを一つも生成しない。
+- **AC-RGK-01**: 不正または無制限の`ExecutionSpec`を実行前に拒否し、`managed_root_created=false`を維持する。control processを起動した場合もidentityと終了証拠を別記する。
 - **AC-RGK-02**: Windowsで`CREATE_SUSPENDED→Assign→Resume`、non-inherit handle、常駐custodian、nested Job negotiationを通してroot/child/grandchildをJob Objectへ収容し、正常・timeout・cancel・launcher crashの全経路でmanaged orphan 0を証明する。
 - **AC-RGK-03**: Linuxでcgroup v2 + subreaper + 常駐brokerにより同じtreeを収容し、強制終了・`populated=0`・reapでmanaged orphan 0を証明する。macOSはcapability不足をLinux同等として受理せずfail-closeする。
 - **AC-RGK-04**: wall/CPU/memory/process/output各budget超過を固有exit kindで停止し、観測値と適用policy revisionをreceiptに残す。
@@ -350,9 +359,9 @@ companionだけを差し替えない。旧direct-spawn経路へのrollbackは禁
 - **AC-RGK-09**: snapshot CASのhitで準備固定費を再実行せず、miss/producer失敗/cancel/競合でも不完全object・lease・一時processを残さない。
 - **AC-RGK-10**: hook、doctor、snapshot、ローカルCIを横断するsystem testで、資源飢餓時はadmission拒否し、PC操作を妨げるvisible shellと管理外processを0にする。
 - **AC-RGK-11**: lifecycle eventがappend-onlyかつsequence完全で、各attemptのterminal receiptがexactly-onceに封印され、retry/recovery間で`execution_id`と`attempt_id`を混同しない。
-- **AC-RGK-12**: required capabilityとplatform matrixの不一致をprocess生成前に拒否し、soft fallbackを成功として記録しない。
+- **AC-RGK-12**: required capabilityとplatform matrixの不一致をmanaged workload生成前に拒否し、`control_process_created`と`managed_root_created`を混同せず、soft fallbackを成功として記録しない。
 - **AC-RGK-13**: DB canonical digestとCAS完全identityが順序・locale・EOL・file mode・symlink・toolchain/environment差を意図どおり区別し、identityの一部欠落時は再利用しない。
-- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をprocess生成前に拒否し、既知良好bundleへのrollback後も対象OSのcustody oracleを再通過する。TypeScript domain/policy/journalとRust custody companionの責務重複を0にする。
+- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をcontrol process起動前に拒否し、実probe不一致はmanaged workload生成前に拒否する。既知良好bundleへのrollback後も対象OSのcustody oracleを再通過し、TypeScript domain/policy/journalとRust custody companionの責務重複を0にする。
 - **AC-RGK-15**: Bun新規依存を0に保ち、既存Bun migration debtをNode parity oracleのGreen後に段階撤去する。互換期限までにBun不在のclean install、doctor、Windows/Linux L7-L9、aggregate CI、Pack acceptanceをGreenにし、tracked Bun実行依存・compatibility code・検出例外を0にする。
 
 ## 9. 完了条件と非完了条件

@@ -32,9 +32,9 @@ generates:
   - artifact_path: native/resource-kernel/resource-kernel-companion/src/main.rs
     artifact_type: source_module
   - artifact_path: rust-toolchain.toml
-    artifact_type: configuration
+    artifact_type: config
   - artifact_path: native/resource-kernel/Cargo.lock
-    artifact_type: configuration
+    artifact_type: config
   - artifact_path: src/runtime/resource-kernel-protocol.ts
     artifact_type: source_module
   - artifact_path: tests/resource-kernel-native-scaffold.test.ts
@@ -43,8 +43,7 @@ generates:
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
-  requires:
-    - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
+  requires: []
   blocks: []
   references:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
@@ -66,7 +65,9 @@ DB/CAS再利用判断を複製しない。
 
 本PLANは、既に置かれたRust workspace、versioned JSON handshake、unsupported adapter、静的scaffold testを
 正規に所有する。ただし、これらは**実native custodyのGreen証拠ではない**。現時点のadapterはcapabilityを一つも
-advertiseせず、process生成前に拒否するためのRed/契約土台に限る。`PLAN-L4-32`の
+advertiseしないが、binary `main`がhandshakeだけを呼ぶ経路は空required capabilityを拒否できず、execution admissionの
+安全性を証明しない。これはRed/契約土台であり、`ProbeRequest | ExecuteRequest`分離とminimum capability強制を
+最初のTDD修正とする。`PLAN-L4-32`の
 `rgk_section_status: red`およびL9 §9のRed system oracleをGreenへ読み替えない。
 
 先行scaffoldから判明した物理・機能設計gapは`PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill`がR4で
@@ -84,16 +85,21 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 ### 2.1 Rust companionが所有するもの
 
 - versioned wire DTOのstrict decode/encodeとprotocol mismatchの開始前拒否。
+- probe commandからworkload launcherへの到達不能性、execute commandのsealed admission token/minimum capability強制。
+- `control_process_created`と`managed_root_created`の別identity・別phase応答。
 - Windowsのsuspended create→Job attach→resume、非継承handle、custodian/supervisor、tree empty proof。
 - Linuxのcgroup v2 / clone3 attach、broker/subreaper、budget適用、`populated=0`とreap proof。
 - 実probeで観測したcapability、適用limit、custody identity、native observationの構造化応答。
 - unsupported platform、権限不足、capability不足でlauncherを一度も呼ばないfail-close。
+- custody authorityへのatomic handoff、authority deadline enforcement、epoch/nonce recovery、dual-crash時fail-close。
 
 ### 2.2 Node protocol clientが所有するもの
 
 予定artifact `src/runtime/resource-kernel-protocol.ts` は、署名済bundle manifestで固定されたcompanionだけを
 argv配列・bounded stdin/stdout・absolute deadline付きで起動する。protocol schema、binary digest、target triple、
 probe結果とrequired capabilityを照合し、不一致時はdirect spawnへfallbackせず`capability_failure`へ正規化する。
+静的bundle検証後のcontrol process起動と、probe journal→admission token→managed workload起動を別barrierにし、
+handshake成功や空required capabilityからexecuteへ進めない。
 domain policyやreceipt sealは既存TypeScript側portへ返し、このclient内部で第二の状態機械を作らない。
 
 ### 2.3 明示的に所有しないもの
@@ -106,11 +112,11 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 
 | Step | Red oracle / 実装 | 完了判定 |
 |---|---|---|
-| 1 | `U-RGK-NATIVE-001..`でworkspace、protocol version、strict decode、unsupported adapterのlaunch 0を固定 | Node test runnerとCargo testの双方で対象Red/Green履歴を保存 |
+| 1 | `U-RGK-NATIVE-001..004`でworkspace、protocol version、strict decode、binary command分離、unsupported adapterのmanaged launch 0を固定 | Node test runnerとCargo testの双方で対象Red/Green履歴を保存 |
 | 2 | `PLAN-L5-25` / `PLAN-L6-92`を起票し、wire schema、error union、platform port、custodian lifecycleをfreeze | L4→L5→L6→L7依存edgeとL5↔L8/L6↔L7 pairに孤児0 |
-| 3 | Windows adapterを短いobject/portへ分割して実装 | suspended PIDがattach失敗時にresume 0、全開始caseでJob empty/orphan 0 |
-| 4 | Linux adapterを同じprotocol portへ実装 | attach前user code 0、終了後`populated=0`とzombie 0 |
-| 5 | Node protocol clientとbundle verifierを実装 | mismatch/欠落/権限不足の全mutationでprocess生成前fail-close、direct spawn 0 |
+| 3 | Windows adapterとcustody authorityを短いobject/portへ分割して実装 | atomic handoff前resume 0、deadline owner固定、dual crash後Job empty/orphan 0 |
+| 4 | Linux adapterとbroker authorityを同じprotocol portへ実装 | handoff前user code 0、epoch/nonce recovery、dual crash後`populated=0`とzombie 0 |
+| 5 | Node protocol clientとbundle verifierを実装 | probe→journal→admission barrier、control/workload identity分離、mismatch/欠落/権限不足でmanaged root 0 |
 | 6 | signed bundle、SBOM、rollback、対象OS実runnerを接続 | ST-RGK-02/03/12/14およびaggregate gateが同一revisionでGreen |
 | 7 | Bun migration debtをNode parity後に撤去 | ST-RGK-15のAND条件を満たし`DEBT-RGK-BUN-001`を同change setでclose |
 | 8 | authorと別runtime/model familyのblind review、Reverse gap-only backfill | 未反駁attack 0、review receiptとtested commit一致 |
@@ -119,9 +125,11 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 
 - [ ] Rust workspaceはpinned toolchainと`Cargo.lock`を持ち、format、clippy、test、dependency/license auditがGreen。
 - [ ] versioned request/responseはunknown field、unknown enum、protocol drift、oversized/partial I/Oをfail-closeする。
+- [ ] probe/executeはclosed commandとして分離され、binary entryを含む全経路でprobeからlauncher call 0、token無しexecuteで`managed_root_created=false`となる。
 - [ ] Windows/Linux adapterは開始前attachとcrash-surviving custodyを実OS testで証明し、managed orphan 0を
       PID pollingではなくJob/cgroup identityで証明する。
 - [ ] Node clientは署名manifest、digest、target、protocol、probeを照合し、companion以外のdirect spawnを行わない。
+- [ ] custody authorityはatomic handoff、durable deadline、epoch/nonce recovery、authority+supervisor dual-crashのfail-close evidenceを持つ。
 - [ ] RustとTypeScriptの責務重複が0で、domain/policy/journal/receiptの正本がTypeScript側に一つだけある。
 - [ ] `U-RGK-NATIVE-*` / `U-RGK-PROTO-*`、対象L8、L9 `ST-RGK-*`がtested commitとevidence manifestを固定する。
 - [ ] Node/Cargoだけでclean install、targeted/full test、doctor、Windows/Linux aggregate CI、Pack acceptanceがGreen。
@@ -130,8 +138,9 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 
 ## 5. 現在の証拠と未完了
 
-現存scaffoldは、versioned JSON handshake、strict request decode、必須custody capabilityの強制追加、
-unsupported adapterで`process_created=false`かつlauncher call 0を表現する。`tests/resource-kernel-native-scaffold.test.ts`
+現存scaffoldは、versioned JSON handshake、strict request decode、library `launch()`での必須custody capability追加、
+unsupported adapterでlauncher call 0を表現する。一方binary `main`は`handshake()`だけを使用し、空required capabilityを
+execution admissionとして拒否する契約をまだ持たない。`tests/resource-kernel-native-scaffold.test.ts`
 はその構造を静的に検査するが、Rust toolchain不在環境のCargo実走、Node protocol client、実Job Object/cgroup、
 署名bundle、SBOM、rollback、L9 system evidenceを証明しない。したがって本PLANは`draft`のままとする。
 

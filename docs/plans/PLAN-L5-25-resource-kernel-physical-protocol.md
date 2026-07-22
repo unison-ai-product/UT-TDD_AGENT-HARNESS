@@ -53,8 +53,8 @@ PLAN IDを再利用せず、全branch採番監査で空いている`PLAN-L5-25`�
 | component | 所有する物理責務 | 所有禁止 |
 |---|---|---|
 | TypeScript/Node control plane | spec/policy/capability要求の正本、journal/outbox transaction、terminal receipt seal、bundle検証、deadline/admission | Job/cgroupの事実捏造、direct spawn fallback、Rustへdomain判断を委譲 |
-| Node `CustodyClient` | 検証済binaryをshell無しargvで起動、bounded framed I/O、request/response correlation、transport deadline、protocol error正規化 | resource policy決定、receipt seal、PATH探索、Bun API |
-| Rust companion | strict wire decode/encode、OS probe、開始前custody作成・attach・resume、limit適用、terminate・empty/reap proof | PLAN/GitHub/DB/CAS判断、admission policy、terminal success判定、SQLite journal |
+| Node `CustodyClient` | 検証済binaryをshell無しargvで起動、bounded framed I/O、request/response correlation、transport deadline、probe factのjournal化、admission token送信、protocol error正規化 | resource policy決定、receipt seal、PATH探索、Bun API、handshakeだけでworkload開始 |
+| Rust companion | strict wire decode/encode、OS probe、admission token照合、開始前custody作成・attach・resume、limit適用、terminate・empty/reap proof | PLAN/GitHub/DB/CAS判断、admission policy、terminal success判定、SQLite journal、空required capabilityでexecute受理 |
 | Windows custodian/supervisor | non-inherit Job handleをlauncherと別failure domainで保持し、SCM再concile、tree emptyをOS identityで証明 | PID pollingをcustody proofとすること、attach前resume |
 | Linux broker/subreaper | cgroup v2 identity、`clone3(CLONE_INTO_CGROUP)`、subreaper、`cgroup.kill`、`populated=0`+reap | 事後attachをhard custodyとして受理、process groupだけで成功 |
 
@@ -75,12 +75,19 @@ Bun test runnerを新しい経路へ一切導入しない。
 
 ## 3. commandとfactの物理系列
 
+protocol envelopeは`ProbeRequest | ExecuteRequest | CustodyCommand`のclosed unionとする。`ProbeRequest`はbundle/protocol
+identityだけを入力にOS factを返し、workload launcherへの参照を型として持たない。`ExecuteRequest`はcontrol planeが
+封印した`AdmissionToken(attempt_id, custody_nonce, bundle_digest, probe_digest, required_capabilities, deadline_unix_ms)`を
+必須とし、空集合、期限切れ、別probe、別attemptでは`managed_root_created=false`のまま拒否する。handshake成功を
+execute許可へ暗黙昇格しない。
+
 `probe`、`create_custody`、`spawn_attached`、`resume`、`observe`、`terminate_tree`、`prove_empty`、`shutdown`
-をversioned commandとする。`spawn_attached`はWindowsではsuspended rootをJobへassignした後だけresume可能、Linuxでは
+をversioned commandとする。各responseは`control_process_created`と`managed_root_created`を別fieldで返す。
+`spawn_attached`はWindowsではsuspended rootをJobへassignした後だけresume可能、Linuxでは
 最初のuser instructionより前にtarget cgroup所属を保証する。commandごとのnative factはcustody identity、root identity、
 適用limit、monotonic observation、OS error identityを返すが、`success`やdomain verdictを返さない。
 
-同じ`request_id`の再送はread-only commandだけ冪等に再応答できる。process生成を伴うcommandは
+同じ`request_id`の再送はread-only commandだけ冪等に再応答できる。managed root生成を伴うcommandは
 `attempt_id + custody_nonce`をidempotency identityとし、既存custodyを照会して二重生成を拒否する。
 
 ## 4. custodian lifecycleとdurability barrier
@@ -95,9 +102,27 @@ Bun test runnerを新しい経路へ一切導入しない。
 | `empty_proven` | empty + reap proof | Job emptyまたは`populated=0`、zombie/managed orphan 0 |
 | `released` | handle/lease release | empty proofが先行し、再利用PIDだけで所有判定しない |
 
+probeとexecutionの間にはdurability barrierを置く。verified bundleからcontrol processを起動した事実、probe digest、
+capability集合をjournalへappendし、そのdigestを含むadmission tokenをcontrol planeが封印した後だけ`prepared`へ遷移する。
+token検証前、probe欠測、control processだけ生成済みの状態では`managed_root_created=false`である。
+
 Node client切断またはlauncher crash後もcustodian/brokerはdeadlineとtermination policyを保持し、未管理processへ降格させない。
 reconnectはbundle identity、attempt、custody nonceを照合し、別attemptを誤killしない。Node側journalが
 `custody_empty`をdurable化してからlease release・finished・sealed receiptを一つのterminal transaction/outboxで閉じる。
+
+### 4.1 Custody authorityとatomic handoff
+
+custodyのdurable authorityは一時的なNode client/companionではなく、WindowsではSCM管理custodian、Linuxでは
+service manager管理brokerが所有する。`create_custody`はauthorityが`authority_epoch + attempt_id + custody_nonce +
+absolute_deadline + termination_policy_digest`をdurable化し、OS handle/cgroup identityをprimary ownershipへ結んだ
+`AuthorityLease`を返す。companionはこのleaseを照合してからsuspended root/cgroup childをatomic attachし、
+`handoff_committed` factをauthorityとjournalの双方が同じnonceで観測するまでresume/execしない。
+
+deadlineの実行責任はauthority側にあり、Node/companion/pipe喪失後もmonotonic timerでterminate→empty/reapを遂行する。
+再起動時はauthority epoch、attempt、nonce、bundle digest、last durable transitionを照合し、旧epochのcommandを拒否する。
+authorityとそのsupervisor/service managerが同時に失われた場合は、Windowsではlast-handle-close kill、Linuxでは
+service-manager recovery + persisted cgroup identity/`cgroup.kill`を安全側経路とする。いずれも独立probeの連続性が
+欠ければsuccessへ復元せず`custody_failure`とし、新規attempt admissionを遮断する。
 
 ## 5. platform portとfailure isolation
 
@@ -117,7 +142,7 @@ digest、target triple、probe capabilityを照合する。rollbackもmanifest�
 
 ## 7. L8 pair-freeze条件
 
-`IT-RGK-PHYS-001..014`は、framing mutation、request correlation、double-spawn拒否、Windows attach barrier、
+`IT-RGK-PHYS-001..018`は、framing mutation、request correlation、probe/admission分離、control/workload process identity、double-spawn拒否、Windows attach barrier、
 Linux start-in-cgroup、client/custodian/broker crash、reconnect、empty/reap、bundle mutation、rollback、Bun不在を境界故障として
 固定する。mockだけでOS custody Greenを宣言せず、mock/contract integrationと実OS integrationのlaneを明示分離する。
-L8で正負oracle、fixture、観測点、process-created countをfreezeするまで本PLANはconfirmedにしない。
+L8で正負oracle、fixture、観測点、control/workload別created countをfreezeするまで本PLANはconfirmedにしない。

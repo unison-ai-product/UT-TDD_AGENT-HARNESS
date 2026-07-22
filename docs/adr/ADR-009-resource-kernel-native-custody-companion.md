@@ -36,8 +36,11 @@ TS側が所有する。native側はversioned protocolでcommandを受け、OS事
 
 TS側`CapabilityNegotiator`はOS名から能力を推測しない。companionの署名済manifest、protocol version、
 binary digest、build target、OS probe結果を照合し、要求capabilityを完全に満たすbundleだけを選択する。
-binary欠落、署名・digest不一致、protocol非互換、probe欠測、権限不足、unsupported platformではprocess生成前に
-`capability_failure`とする。Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
+binary欠落、署名・digest不一致、protocol非互換はcontrol process起動前に拒否する。静的検証済みcompanionを
+`probe`目的で起動した後のprobe欠測、権限不足、unsupported platformはmanaged workload root生成前に
+`capability_failure`とする。`control_process_created`と`managed_root_created`を別identity/phaseで記録し、
+単一`process_created`へ縮退しない。`probe` commandはworkload launcherへ到達不能、`execute` commandはsealed
+admission tokenと空でないrequired capabilityを必須とする。Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
 
 ### D3. platform bundleをrelease artifactとして配布する
 

@@ -30,12 +30,12 @@ generates:
     artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
-  requires:
-    - docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
+  requires: []
   blocks:
     - docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
   references:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
+    - docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     - docs/test-design/harness/L9-system-test-design.md
 review_evidence: []
 ---
@@ -51,29 +51,34 @@ pure function/port contractへ降下し、L7実装がwire、error、lifecycle、
 ## 1. closed wire algebra
 
 ```text
-NativeCommand = Probe | CreateCustody | SpawnAttached | Resume | Observe
-              | TerminateTree | ProveEmpty | Shutdown
+NativeCommand = Probe(ProbeRequest) | Execute(ExecuteRequest) | Custody(CustodyCommand)
+CustodyCommand = CreateCustody | SpawnAttached | Resume | Observe
+               | TerminateTree | ProveEmpty | Shutdown
 NativeResponse<T> = Ok<NativeFact<T>> | Err<NativeError>
-ProcessPhase = NotCreated | CreatedNotStarted | Started | EmptyProven | Released
+ControlPhase = ControlNotCreated | ControlStarted | ProbeRecorded | ControlStopped
+WorkloadPhase = RootNotCreated | RootCreatedNotStarted | RootStarted | EmptyProven | Released
 ```
 
 全requestは`protocolVersion, requestId, command, payload, deadlineUnixMs, expectedBundleDigest`を必須とする。
 decoderはexact objectを要求し、unknown/missing/duplicate field、unknown enum、oversize、partial frame、invalid UTF-8、
 trailing bytesをfail-closeする。encoderはcanonical UTF-8 JSONと4-byte length prefixを決定論的に生成する。
+全responseは`control_process_created`と`managed_root_created`を別々のbooleanとして持ち、各identity/phaseと矛盾する
+組合せをconstructorで拒否する。`ProbeRequest`はlauncher/admission tokenを型として持たず、`ExecuteRequest`は
+空でないrequired capabilityとsealed `AdmissionToken`を必須とする。
 
 ## 2. closed error union
 
-| error kind | phase制約 | process生成 | 必須detail |
+| error kind | workload phase制約 | managed root生成 | 必須detail |
 |---|---|---:|---|
-| `protocol_failure` | `NotCreated` | 0 | version/schema/framing reason、bounded diagnostic |
-| `bundle_failure` | `NotCreated` | 0 | expected/observed digest、target/signature/SBOM failure kind |
-| `capability_failure` | `NotCreated` | 0 | required/observed/missing capability、probe identity |
-| `validation_failure` | `NotCreated` | 0 | field path、closed reason code |
-| `launch_failure` | `NotCreated | CreatedNotStarted` | 0または1 | OS error、root identity N/A区別、cleanup proof |
-| `custody_failure` | `CreatedNotStarted | Started` | 0または1 | custody identity、last durable state、termination/reap proof |
-| `deadline` / resource budget kinds | `Started` | 1 | requested/applied/observed value、termination/reap proof |
-| `cancelled` / `process_failure` | `Started` | 1 | native exit、termination source、reap proof |
-| `orphan_detected` | `Started` | 1 | custody identity、unknown descendant fact、success禁止 |
+| `protocol_failure` | `RootNotCreated` | 0 | version/schema/framing reason、control process identityまたはN/A、bounded diagnostic |
+| `bundle_failure` | `RootNotCreated` | 0 | expected/observed digest、target/signature/SBOM failure kind |
+| `capability_failure` | `RootNotCreated` | 0 | required/observed/missing capability、probe identity |
+| `validation_failure` | `RootNotCreated` | 0 | field path、closed reason code |
+| `launch_failure` | `RootNotCreated | RootCreatedNotStarted` | 0または1 | OS error、root identity N/A区別、cleanup proof |
+| `custody_failure` | `RootCreatedNotStarted | RootStarted` | 0または1 | custody identity、authority epoch/nonce、last durable state、termination/reap proof |
+| `deadline` / resource budget kinds | `RootStarted` | 1 | requested/applied/observed value、termination/reap proof |
+| `cancelled` / `process_failure` | `RootStarted` | 1 | native exit、termination source、reap proof |
+| `orphan_detected` | `RootStarted` | 1 | custody identity、unknown descendant fact、success禁止 |
 
 unknown native codeを`process_failure`へ丸めない。未知値は`protocol_failure`としてprocess開始前、開始後なら
 `custody_failure`としてfail-closeし、raw secret/pathをdetailへ漏らさない。`started_at`、PID、custody identity、native exitは
@@ -87,6 +92,9 @@ phaseに応じたdiscriminated unionでN/Aと欠測を区別する。
 | `encodeFrame(message, limits)` | schema-valid DTO | canonical bytes;同一valueは同一digest | `U-RGK-WIRE-007..009` |
 | `verifyBundle(manifest, files, trust)` | trusted key identityとtarget明示 | 全digest/signature/schema/target一致時だけverified handle | `U-RGK-BUNDLE-001..006` |
 | `negotiateCapabilities(required, probe)` | verified bundle probe | subsetでなく完全包含時だけselection; missingを保存 | `U-RGK-CAP-001..004` |
+| `recordProbe(control, probe)` | verified control identity、strict probe | journalへprobe digestをappendし`ProbeRecorded`を返す。workload side effect 0 | `U-RGK-CAP-005..006` |
+| `sealAdmission(spec, recordedProbe)` | required capability完全包含、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required禁止 | `U-RGK-CAP-007..009` |
+| `dispatchCommand(command)` | closed command union | Probeからlauncher到達0、Executeはvalid token無しでmanaged root 0 | `U-RGK-PORT-011..013` |
 | `reduceCustody(state, fact)` | 同一attempt/custody nonce、連続sequence | legal transitionだけ新state; illegal/duplicate/conflict拒否 | `U-RGK-LIFE-001..008` |
 | `launchAttached(spec, port)` | verified bundle、prepared custody、deadline未超過 | attach-before-user-code;失敗時resume 0・cleanup proof | `U-RGK-PORT-001..005` |
 | `terminateAndProveEmpty(id, reason, port)` | created custody | terminate→empty→reap順; proof不能ならsuccess 0 | `U-RGK-PORT-006..010` |
@@ -113,6 +121,11 @@ assign成功前のresumeを型とstateで禁止する。Linux portはstart-in-cg
 Node `CustodyClient`はtransportとdeadlineを所有するがdomain policy/journalを所有しない。Rust portはOS custodyを所有するが
 admission/receipt sealを所有しない。同名policy enumやjournal reducerをRust側に追加した場合はresponsibility-overlap findingでRedとする。
 
+`CustodyAuthorityPort = prepareAuthority + commitHandoff + recoverAuthority + enforceDeadline + revokeAuthority`を別portとする。
+`commitHandoff`はauthority epoch/attempt/nonce/deadline/policy digestとOS custody identityをatomicに結び、commit前のresumeを
+拒否する。recoveryはepoch/nonce一致時だけ継続し、stale commandと別attemptを拒否する。authorityとsupervisorのdual crashで
+独立proofが欠けた場合は`custody_failure`へ収束し、success reducerへ入力しない。
+
 ## 6. timeout・cancel・I/O contract
 
 absolute deadlineはNode送信前、Rust decode後、各blocking OS call前後に再評価する。期限超過後のlaunchは0。
@@ -124,4 +137,5 @@ cancelとdeadlineが競合した場合も、最初のdurable termination request
 `U-RGK-WIRE-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、
 `U-RGK-BUNDLE-*`の正負caseをL7へfreezeする。property testはcanonical round-trip、closed union exhaustiveness、
 illegal transition全辺、error/phase整合を生成する。mutation gateはunknown field受理、deadline check削除、attach前resume、
-empty proof省略、direct spawn fallback、Rust domain policy追加をkillする。本pairがfreezeするまでPLAN-L7-454の実adapter実装を開始しない。
+probeからlauncher到達、control/workload process identity統合、authority handoff省略、dual-crash success補完、empty proof省略、
+direct spawn fallback、Rust domain policy追加をkillする。本pairがfreezeするまでPLAN-L7-454の実adapter実装を開始しない。

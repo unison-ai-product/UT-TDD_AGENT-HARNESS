@@ -309,7 +309,7 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 ## Resource Kernel physical integration (PLAN-L5-25、2026-07-22)
 
 mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を検証する。mock GreenをJob/cgroup Greenへ
-読み替えず、各caseはprocess-created count、custody identity、event sequence、empty/reap proofを保存する。
+読み替えず、各caseはcontrol/workload別created count、custody identity、event sequence、empty/reap proofを保存する。
 
 | ID | boundary / fault injection | expected |
 |---|---|---|
@@ -323,10 +323,14 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-008` | Linux broker/subreaper crashとdouble-fork | reconcile後`populated=0`、zombie/managed orphan 0 |
 | `IT-RGK-PHYS-009` | root先行exit、terminate/cancel競合 | root exitではreturnせず、empty→reap後だけterminal |
 | `IT-RGK-PHYS-010` | pipe切断、companion crash、Node journal commit crash | custodyを失わず再接続、片肺terminal receipt 0 |
-| `IT-RGK-PHYS-011` | unsupported OS・権限不足・capability欠落 | probe後process生成前拒否、soft fallback 0 |
+| `IT-RGK-PHYS-011` | unsupported OS・権限不足・capability欠落 | probe後managed workload生成前拒否、control/workload identityを別保存、soft fallback 0 |
 | `IT-RGK-PHYS-012` | binary/schema/target/signature/SBOMを各一箇所変異 | admission前`bundle_failure`、PATH探索/download 0 |
 | `IT-RGK-PHYS-013` | coreだけ/companionだけrollback後、manifest全体rollback | 片側は拒否、既知良好bundleも実OS oracle再通過後だけ利用 |
 | `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
+| `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
+| `IT-RGK-PHYS-016` | binaryへ空required、probe、token無しexecute、別attempt tokenを投入 | probe launcher 0、全不正executeでmanaged root 0、control process cleanup証拠あり |
+| `IT-RGK-PHYS-017` | authority handoffのhandle/cgroup bind前後でcompanion/Nodeをcrash | commit前resume/exec 0、commit後はauthorityがdeadlineまでcustodyを維持 |
+| `IT-RGK-PHYS-018` | authority単独、supervisor/service manager単独、両者同時crashとold epoch/nonce replay |単独crashは正規recovery、dual crashはkill/reap独立proofまたはfail-close。証拠欠測success 0 |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。

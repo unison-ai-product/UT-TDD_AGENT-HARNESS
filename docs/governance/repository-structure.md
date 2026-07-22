@@ -21,6 +21,7 @@ UT-TDD-agent-harness/
 ├── CHANGELOG.md                  # Pack release 履歴 (clean 配布に同梱、v0.1.4 で導入)
 ├── package.json                  # Node依存 + scripts（既存Bun scriptはmigration debt）
 ├── tsconfig.json                 # TypeScript strict
+├── rust-toolchain.toml           # Resource Kernel用Rust toolchainのexact pin
 ├── bun.lock                      # [移行負債] Node lockfile確立までの既存CI互換、期限後削除
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
 ├── ut-tdd.project.json           # PLAN asset用の追跡済みrepository identity正本
@@ -130,7 +131,7 @@ UT-TDD-agent-harness/
 ## 5. tracked / gitignored の境界
 
 - **gitignored**: `node_modules/` `dist/` `bundles/` `target/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `native/resource-kernel/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
+- **tracked**: `src/` `native/resource-kernel/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `rust-toolchain.toml` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
 
 ## 6. 境界
 
@@ -153,13 +154,13 @@ UT-TDD-agent-harness/
 
 JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜まりやすい。**フォルダに隠す**のはツールが root を探すため不可（壊れる）。代わりに **ツールを減らす + package.json に集約** で抑える。
 
-- **root config の下限**（避けられない）: `package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` (cross-editor newline/whitespace contract)。
+- **root config の下限**（避けられない）: `package.json` / `tsconfig.json` / `rust-toolchain.toml` / `bun.lock` / `.editorconfig` (cross-editor newline/whitespace contract)。
 - **lint + format = Biome 1 枚 (`biome.json`)**。**eslint + prettier を別々に足さない**（plugin/ignore で 4-6 枚に増えるのを防ぐ）。`bun run lint` / `bun run format`。
 - **test = vitest**。`vitest.config.ts` は G7 coverage-summary evidence (`json-summary`) を生成するための tracked exception とする。
 - commitlint 等 **config-in-package.json 対応**のツールは package.json のキーに入れ、新規 dotfile を作らない。
 - **新ツール導入時の判断順**: ① 既存ツール (Biome / Node / tsc) で代替できるか → ② package.json に同居できるか → ③ どうしても単独 config が要るか。Bunの新規採用は禁止。①②で済むなら root に新ファイルを増やさない。
 
-→ root config は **`package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts` の 6 枚で頭打ち**に保つ。
+→ root config は **`package.json` / `tsconfig.json` / `rust-toolchain.toml` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts` の 7 枚で頭打ち**に保つ。`rust-toolchain.toml`はResource Kernelの再現可能ビルドに必要な例外であり、浮動`stable`や個人環境のtoolchainを正本にしない。
 
 ## 9. 配布 3 層モデルとplatform bundle (ADR-005 / ADR-009)
 

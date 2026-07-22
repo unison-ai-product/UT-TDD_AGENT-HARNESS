@@ -248,6 +248,22 @@ const requiredCargoCommands = [
   "cargo test --workspace --all-targets --locked",
 ] as const;
 
+const requiredCargoLockCommands: Record<"linux" | "windows", string> = {
+  linux: "test -f Cargo.lock",
+  windows: 'if (-not (Test-Path -LiteralPath Cargo.lock)) { throw "Cargo.lock is required" }',
+};
+
+function normalizeRunCommand(command: string): string {
+  return command.trim().replace(/\s+/g, " ");
+}
+
+function hasExactRunCommand(steps: WorkflowStep[], command: string): boolean {
+  const expected = normalizeRunCommand(command);
+  return steps.some(
+    (step) => typeof step.run === "string" && normalizeRunCommand(step.run) === expected,
+  );
+}
+
 const aggregateResultExpression = (leg: (typeof RUNTIME_LEGS)[number]): string =>
   ["$", `{{ needs.${leg}.result }}`].join("");
 
@@ -288,12 +304,17 @@ function checkRuntimeAggregate(input: {
               recordValue(step)?.["continue-on-error"] as undefined | false,
             ),
         ));
-    const stepTextValue = Array.isArray(leg.steps) ? leg.steps.map(stepText).join("\n") : "";
+    const steps = validSteps ? (leg.steps as WorkflowStep[]) : [];
+    const runText = steps
+      .map((step) => step.run ?? "")
+      .filter(Boolean)
+      .join("\n");
+    const cargoPlatform = name.endsWith("windows") ? "windows" : "linux";
     const cargoGateValid =
       !name.startsWith("resource-kernel-rust-") ||
-      (requiredCargoCommands.every((command) => stepTextValue.includes(command)) &&
-        stepTextValue.includes("Cargo.lock") &&
-        !/\bbun\b/i.test(stepTextValue));
+      (requiredCargoCommands.every((command) => hasExactRunCommand(steps, command)) &&
+        hasExactRunCommand(steps, requiredCargoLockCommands[cargoPlatform]) &&
+        !/\bbun\b/i.test(runText));
     if (leg["runs-on"] === runner && validSteps && !continuesOnError && cargoGateValid) continue;
     pushViolation({
       violations: input.violations,

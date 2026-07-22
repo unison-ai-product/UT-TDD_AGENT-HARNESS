@@ -1371,33 +1371,40 @@ HEAD SHA、run attempt、workflow revision、required check set、protection rev
 branch protectionのrequired contextも `harness-check` 一件へ固定し、実GitHub設定が未適用・乖離・
 取得不能なら「設定済み」と推測せずclosureをblockする。
 
-## PLAN-L6-92 Resource Kernel protocol・error・platform port契約
+## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
 
 本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-ERROR-*`、
 `U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
 
-### wire / error algebra
+### ワイヤ/エラー代数
 
 `decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたは
-`protocol_failure`を返すpure functionとする。`encodeFrame`はcanonical bytesを決定論的に返す。
-error unionは`protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure |
+`protocol_failure`を返す純粋関数とする。`encodeFrame`はcanonical bytesを決定論的に返す。
+コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
+`Custody(CustodyCommand)`で閉じる。phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
+エラー直和は`protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure |
 custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled |
 process_failure | orphan_detected`で閉じる。未知native codeを成功や一般process failureへ丸めない。
 
-### method契約
+### メソッド契約
 
 | method | precondition | postcondition / invariant |
 |---|---|---|
 | `verifyBundle` | trust identityとtarget明示 | signature/core/companion/schema/SBOM/targetの全一致時だけverified handle |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
+| `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
+| `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
+| `dispatchCommand` | closed command union | Probeからlauncher 0、token無しExecuteでmanaged root 0 |
 | `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
 | `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
 | `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
 
-### platform port / 責務非重複
+### プラットフォームポート/責務非重複
 
 `PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`で構成する。
+`CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/enforceDeadline/revokeAuthority`で構成し、
+handoff commit前resume、stale epoch/nonce、dual-crash証拠欠測からのsuccessを拒否する。
 Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
 `populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
 それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。

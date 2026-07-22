@@ -1618,8 +1618,9 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
 | `U-RGK-NATIVE-001` | protocol scaffold | workspace/manifest/libを読取 | version 1のrequest/response DTOとJSON依存が存在 |
-| `U-RGK-NATIVE-002` | unsupported fail-close | native API未実装adapter | capabilityを広告せず、process生成前に拒否 |
+| `U-RGK-NATIVE-002` | unsupported fail-close | native API未実装adapter | capabilityを広告せず、managed workload生成前に拒否 |
 | `U-RGK-NATIVE-003` | native CI custody | pin、Linux/Windows Cargo job、aggregate needs/resultを各欠落・Bunへ置換 | Rust `1.97.1`、両OSのfmt/clippy/test、review済みlockfile、4脚AND以外を拒否 |
+| `U-RGK-NATIVE-004` | binary command admission | binaryへ空required capability、probe、token無しexecuteを投入 | probeはlauncher call 0、executeは`managed_root_created=false`で拒否。handshake成功をexecution successにしない |
 
 `U-RGK-NATIVE-003`がGreenでもCargo compile/testの成功を意味しない。`Cargo.lock`正規生成後に
 同一commitの実Linux/Windows jobをGreenにし、そのURLをL9 evidenceへ固定して初めてnative CI成立とする。
@@ -1644,10 +1645,15 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-ERROR-005` | Started budget errorでapplied/observed欠落 | 欠測を要求値で補完せず拒否 |
 | `U-RGK-ERROR-006` | orphan factをprocess failureへ変換するmutation | `orphan_detected`を保持しsuccess 0 |
 | `U-RGK-ERROR-007` | native error union exhaustive switchのvariant追加 | compile/runtime exhaustive guardがRed |
-| `U-RGK-CAP-001` | required capabilityを一つずつ欠落 | 各case process生成前`capability_failure` |
+| `U-RGK-CAP-001` | required capabilityを一つずつ欠落 | 各case managed workload生成前`capability_failure` |
 | `U-RGK-CAP-002` | OS名一致だがprobe不足 | OS名推測せず拒否 |
 | `U-RGK-CAP-003` | stale/別bundle probe | expected bundle digest不一致で拒否 |
 | `U-RGK-CAP-004` | soft capabilityをhard requiredへ代用 | selection 0、missing集合をlossless保存 |
+| `U-RGK-CAP-005` | verified control processからprobeをrecord | `control_process_created=true`とidentity、probe digestをappendしmanaged root 0 |
+| `U-RGK-CAP-006` | unverified/stale control identityのprobe | journal delta 0、admission token生成0 |
+| `U-RGK-CAP-007` | recorded probeとrequired集合完全一致 | attempt/nonce/bundle/probe/deadlineを結ぶsealed tokenを一つ生成 |
+| `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
+| `U-RGK-CAP-009` | tokenのattempt/nonce/bundle/probe/deadlineを各変異 | execute拒否、launcher call 0、別attemptへのside effect 0 |
 | `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
 | `U-RGK-LIFE-002` | resume-before-attach/release-before-empty/root-exit terminal | 全不正遷移を拒否 |
 | `U-RGK-LIFE-003` | sequence gap/重複別payload/attempt・nonce不一致 | state delta 0、closed finding |
@@ -1656,6 +1662,9 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-LIFE-006` | terminal後fact | state/receipt delta 0、closed violation |
 | `U-RGK-LIFE-007` | client再接続時の同一/別nonce | 同一だけreconcile、別attemptを操作しない |
 | `U-RGK-LIFE-008` | lifecycle reducerへOS/journal side effect spy | pure reduction以外のcall 0 |
+| `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
+| `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
+| `U-RGK-LIFE-011` | authority+supervisor dual crashで独立proof欠測 | success補完0、`custody_failure`を保持し新規admission遮断 |
 | `U-RGK-PORT-001` | Windows assign failure | resume 0、created-not-started cleanup proof必須 |
 | `U-RGK-PORT-002` | Linux事後attach adapter | hard custody capabilityをadvertiseせずlaunch 0 |
 | `U-RGK-PORT-003` | empty proof欠落mutation | success/receipt sealへ進まない |
@@ -1666,6 +1675,9 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-PORT-008` | Windows PID再利用fixture | Job identityで別processを誤killしない |
 | `U-RGK-PORT-009` | Linux cgroup identity再作成fixture | nonce/cgroup identity不一致を拒否 |
 | `U-RGK-PORT-010` | unsupported port | capability空、全launch/terminate call 0 |
+| `U-RGK-PORT-011` | Probe commandへlauncher spyを注入 | launcher参照不能またはcall 0、probe factだけ返す |
+| `U-RGK-PORT-012` | Execute commandへtoken無し/空required | `managed_root_created=false`、custody作成・launcher call 0 |
+| `U-RGK-PORT-013` | control processだけ起動済みのphase/error全積 | control/workload identityを別保存し、単一`process_created`へ縮退しない |
 | `U-RGK-BUNDLE-001` | digest/signature/schema/target/SBOMを各変異 | verified handleを生成しない |
 | `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |
 | `U-RGK-BUNDLE-003` | Rustへpolicy/journal/DB/CAS判断を追加 | responsibility-overlap findingでRed |

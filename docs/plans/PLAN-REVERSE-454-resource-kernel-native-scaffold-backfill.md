@@ -10,7 +10,7 @@ status: draft
 route_signal: design_gap
 route_mode: reverse
 forward_routing: gap-only
-promotion_strategy: reuse-as-is
+promotion_strategy: reuse-with-hardening
 created: 2026-07-22
 updated: 2026-07-22
 owner: Codex TL / PO
@@ -24,26 +24,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
-    artifact_type: test_design
-  - artifact_path: docs/test-design/harness/L8-integration-test-design.md
-    artifact_type: test_design
-  - artifact_path: docs/test-design/harness/L9-system-test-design.md
-    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
-  requires:
-    - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
-    - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
+  requires: []
   blocks: []
   references:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
+    - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
+    - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     - native/resource-kernel/resource-kernel-companion/src/lib.rs
     - tests/resource-kernel-native-scaffold.test.ts
     - docs/test-design/harness/L9-system-test-design.md
@@ -71,7 +59,7 @@ custodian lifecycle、bundle検証を実装していない。
 | request/responseのunknown field拒否 | reuse | duplicate key、oversize、partial/trailing byte全拒否 |
 | closed `Capability` enumとrequired集合差分 | reuse | OS probe、bundle capability証明 |
 | launch時のhard custody capability強制追加 | reuse after L6 trace | 実際のattach-before-user-code |
-| `UnsupportedAdapter` + `process_created=false` + launcher call 0 | reuse | Windows/Linux custody実装 |
+| `UnsupportedAdapter` + launcher call 0 | reuse-with-hardening | binary command分離、control/workload process identity、Windows/Linux custody実装 |
 | `OsAdapter` / `ProcessLauncher`分離 | reuse then refine | lifecycle、terminate、empty/reap port |
 
 R0証拠はsource revisionとCargo/Node test receiptへ固定する。静的substring testだけ、Cargo未実走、unsupported adapterだけでは
@@ -87,9 +75,9 @@ domain verdict、policy、journal、terminal receiptを返さない。この抽�
 
 | layer | gap-only back-fill / 維持条件 |
 |---|---|
-| L4 `PLAN-L4-32` | process生成前capability拒否、OS custody、bundle、Bun永久BANを維持。unsupported Greenをsystem Greenへ昇格しない |
-| L5 `PLAN-L5-25` | strict frame、Node/Rust配置、custodian lifecycle、crash/reconnect、bundle rollbackを追加 |
-| L6 `PLAN-L6-92` | wire algebra、closed error union、lifecycle reducer、platform port、responsibility-overlap findingを追加 |
+| L4 `PLAN-L4-32` | control/workload process identity分離、managed workload生成前capability拒否、OS custody、bundle、Bun永久BANを維持。unsupported Greenをsystem Greenへ昇格しない |
+| L5 `PLAN-L5-25` | strict frame、Node/Rust配置、probe→admission barrier、custody authority/atomic handoff、crash/reconnect、bundle rollbackを追加 |
+| L6 `PLAN-L6-92` | command分離、control/workload process identity、closed error union、lifecycle reducer、platform port、responsibility-overlap findingを追加 |
 | L7 test design | scaffoldの`U-RGK-NATIVE-*`と、wire/error/cap/lifecycle/port/bundleのpure Red oracleを分離 |
 | L8 test design | mock boundaryと実Windows/Linux custody laneを分離し、14件のfault-injection oracleを固定 |
 | L9 test design | `ST-RGK-01..15`のsystem証拠を唯一のacceptanceとし、scaffold evidenceを代用しない |
@@ -113,8 +101,8 @@ L5-25/L6-92へ降下した。
 6. Bun runtime/test/CI/lockfile/compatibility dependency 0。Node直spawnやsoft fallback 0。
 7. Forward側のtrace-freeze、cross-runtime blind review、tested commitとreview/evidence revision一致。
 
-R4再合流はscaffoldをそのまま完成扱いするpromotionではない。再利用対象はR0表のfactだけで、未実装契約は
-Forward `PLAN-L7-454`のTDD工程として残す。
+R4再合流はscaffoldをそのまま完成扱いするpromotionではない。`reuse-with-hardening`として再利用するのはR0表の
+反証済みfactだけで、未実装契約と既存entrypointのadmission迂回はForward `PLAN-L7-454`のTDD工程で修正する。
 
 ## 6. 完了状態
 

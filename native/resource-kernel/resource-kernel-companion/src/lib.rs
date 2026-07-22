@@ -2,13 +2,55 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 pub const PROTOCOL_VERSION: u16 = 1;
+pub const MAX_COMMAND_BYTES: usize = 64 * 1024;
 
-fn execution_custody_capabilities() -> BTreeSet<Capability> {
+pub fn execution_custody_capabilities() -> BTreeSet<Capability> {
     BTreeSet::from([
         Capability::AtomicAttachBeforeUserCode,
         Capability::TreeKill,
         Capability::TreeEmptyProof,
     ])
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
+pub enum CompanionCommand {
+    Probe { protocol_version: u16 },
+    AdmitExecution { admission: ExecutionAdmission },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExecutionAdmission {
+    pub protocol_version: u16,
+    #[serde(default)]
+    pub required_capabilities: BTreeSet<Capability>,
+    pub token: AdmissionToken,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AdmissionToken {
+    pub attempt_id: String,
+    pub nonce: String,
+    pub probe_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "response", rename_all = "snake_case")]
+pub enum CompanionResponse {
+    Probe {
+        protocol_version: u16,
+        adapter: String,
+        available_capabilities: BTreeSet<Capability>,
+    },
+    ExecutionAdmission {
+        protocol_version: u16,
+        adapter: String,
+        available_capabilities: BTreeSet<Capability>,
+        accepted: bool,
+        failure: Option<PreLaunchFailure>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
@@ -112,6 +154,34 @@ impl<A: OsAdapter> ResourceKernel<A> {
             available_capabilities: available,
             accepted: failure.is_none(),
             failure,
+        }
+    }
+
+    pub fn execute_command(&self, command: CompanionCommand) -> CompanionResponse {
+        match command {
+            CompanionCommand::Probe {
+                protocol_version: _,
+            } => CompanionResponse::Probe {
+                protocol_version: PROTOCOL_VERSION,
+                adapter: self.adapter.name().to_owned(),
+                available_capabilities: self.adapter.capabilities(),
+            },
+            CompanionCommand::AdmitExecution { mut admission } => {
+                admission
+                    .required_capabilities
+                    .extend(execution_custody_capabilities());
+                let admission = self.handshake(&HandshakeRequest {
+                    protocol_version: admission.protocol_version,
+                    required_capabilities: admission.required_capabilities,
+                });
+                CompanionResponse::ExecutionAdmission {
+                    protocol_version: admission.protocol_version,
+                    adapter: admission.adapter,
+                    available_capabilities: admission.available_capabilities,
+                    accepted: admission.accepted,
+                    failure: admission.failure,
+                }
+            }
         }
     }
 
@@ -224,5 +294,34 @@ mod tests {
             execution_custody_capabilities()
         );
         assert_eq!(launcher.calls, 0);
+    }
+
+    #[test]
+    fn execution_command_cannot_turn_empty_capabilities_into_acceptance() {
+        let response = ResourceKernel::new(UnsupportedAdapter).execute_command(
+            CompanionCommand::AdmitExecution {
+                admission: ExecutionAdmission {
+                    protocol_version: PROTOCOL_VERSION,
+                    required_capabilities: BTreeSet::new(),
+                    token: AdmissionToken {
+                        attempt_id: "attempt-1".to_owned(),
+                        nonce: "nonce-1".to_owned(),
+                        probe_digest: "sha256:probe".to_owned(),
+                    },
+                },
+            },
+        );
+
+        let CompanionResponse::ExecutionAdmission {
+            accepted, failure, ..
+        } = response
+        else {
+            panic!("execution command must return an admission response");
+        };
+        assert!(!accepted);
+        assert_eq!(
+            failure.unwrap().missing_capabilities,
+            execution_custody_capabilities()
+        );
     }
 }
