@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import {
   type GenesisAdoptionManifest,
+  type GenesisAdoptionRunResult,
   parseGenesisAdoptionManifest,
 } from "../plan-asset/application/node-genesis-adoption-runner.js";
-import type { GenesisAdoptionResult } from "../plan-asset/ledger/genesis-adoption-transaction.js";
 
 export interface GenesisAdoptionCommandRunner {
-  run(manifest: GenesisAdoptionManifest): GenesisAdoptionResult;
+  run(manifest: GenesisAdoptionManifest): GenesisAdoptionRunResult;
 }
 
 export interface PlanAdoptGenesisChainCliDeps {

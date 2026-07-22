@@ -33,7 +33,9 @@ import {
 import { registerDistributionCommands } from "./cli/distribution";
 import { registerFeedbackCommands } from "./cli/feedback";
 import { registerForwardEscapeIssueCommand } from "./cli/forward-escape-issue";
+import { createProductionGenesisAdoptionCommandRunner } from "./cli/genesis-adoption-production";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission";
+import { registerPlanAdoptGenesisChainCommand } from "./cli/plan-adopt-genesis-chain";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { registerPlanAuthoringRecoveryCommands } from "./cli/plan-authoring-recovery";
 import { registerPlanDraftCommand } from "./cli/plan-draft";
@@ -1240,6 +1242,9 @@ registerPlanRevisionCommand(plan, {
   ),
 });
 registerPlanAuthoringRecoveryCommands(plan, new NodePlanAuthoringRecoveryRunner(process.cwd()));
+registerPlanAdoptGenesisChainCommand(plan, {
+  runner: createProductionGenesisAdoptionCommandRunner(process.cwd()),
+});
 plan
   .command("lint [path]")
   .description("PLAN lint")

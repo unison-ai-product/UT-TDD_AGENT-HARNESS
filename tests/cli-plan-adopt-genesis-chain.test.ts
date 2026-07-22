@@ -25,6 +25,7 @@ describe("plan adopt-genesis-chain CLI registrar", () => {
         assetId: "plan:legacy:test",
         revision: 1,
         issueNumber: 129,
+        projection: "projected",
       },
     });
   });
@@ -85,6 +86,7 @@ async function run(
         readonly assetId: string;
         readonly revision: 1;
         readonly issueNumber: number;
+        readonly projection: "projected";
       }
     | { readonly ok: false; readonly ruleId: string } = () => ({
     ok: true,
@@ -92,6 +94,7 @@ async function run(
     assetId: "plan:legacy:test",
     revision: 1,
     issueNumber: 129,
+    projection: "projected",
   }),
 ) {
   const output: string[] = [];
