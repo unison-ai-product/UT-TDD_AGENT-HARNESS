@@ -31,11 +31,16 @@ import {
 } from "../setup/index";
 
 function gitHead(): string | null {
-  try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
-  } catch {
-    return null;
-  }
+  // Distribution commands are intentionally valid in an unpacked clean artifact,
+  // where no `.git` directory exists.  `execFileSync` writes rev-parse's fatal
+  // diagnostic to the parent stderr before the exception can be caught (and Bun's
+  // Linux subprocess implementation can retain the failed child status).  Probe
+  // without inheriting stderr so command registration remains side-effect free.
+  const result = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  return result.status === 0 ? result.stdout.trim() : null;
 }
 
 function collectDistributionCandidatePaths(repoRoot: string): string[] {
