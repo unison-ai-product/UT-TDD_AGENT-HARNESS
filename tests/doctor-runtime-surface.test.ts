@@ -62,6 +62,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
           ],
           PostToolUse: [
             {
+              matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
               hooks: [
                 {
                   type: "command",

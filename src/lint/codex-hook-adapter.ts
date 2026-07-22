@@ -23,8 +23,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CODEX_REQUIRED } from "./codex-hook-adapter-policy";
-import { parseHookInvocation } from "./hook-invocation";
-import { REQUIRED as CLAUDE_REQUIRED, FORBIDDEN_PATH_RE } from "./project-hook";
+import { invocationEquals, parseHookInvocation } from "./hook-invocation";
+import {
+  REQUIRED as CLAUDE_REQUIRED,
+  FORBIDDEN_PATH_RE,
+  SOURCE_HOOK_LAUNCHER,
+  WRAPPER_HOOK_LAUNCHER,
+} from "./project-hook";
 
 export { CODEX_REQUIRED };
 
@@ -112,15 +117,6 @@ function matcherEq(actual: string | undefined, expected: string | undefined): bo
  * review Important)。そこで script path 部 (空白を含まない part) は **token 完全一致**、複数語の
  * subcommand 部 (`session start` 等) は部分一致で照合する。
  */
-function commandHas(hook: HookCommand, parts: readonly string[]): boolean {
-  const invocation = parseHookInvocation(hook);
-  if (!invocation) return false;
-  const { display, tokens } = invocation;
-  return parts.every((part) =>
-    part.includes(" ") ? display.includes(part) : tokens.includes(part),
-  );
-}
-
 export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }): CodexHookResult {
   if (input.codexHooksJson === null) {
     return {
@@ -182,14 +178,26 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
     const matchingCommands = entries
       .flatMap((entry) => entry.hooks ?? [])
       // type==="command" の hook のみが guard を充足しうる (非 command エントリで偽充足させない)。
-      // source 配線 (commandParts) と setup 生成 wrapper 配線 (wrapperCommand、PLAN-RECOVERY-06)
-      // の両形式を受理する。
-      .filter(
-        (hook) =>
-          hook.type === "command" &&
-          (commandHas(hook, required.commandParts) ||
-            parseHookInvocation(hook)?.display.includes(required.wrapperCommand) === true),
-      );
+      // source 配線と setup 生成 wrapper 配線を受理する。wrapper は shell 文字列ではなく
+      // node + run-bun + argv の完全一致に限定し、Windows shell host を再導入させない。
+      .filter((hook) => {
+        if (hook.type !== "command") return false;
+        const invocation = parseHookInvocation(hook);
+        return (
+          invocation !== null &&
+          (invocationEquals(invocation, {
+            executable: "node",
+            args: [
+              SOURCE_HOOK_LAUNCHER.slice(SOURCE_HOOK_LAUNCHER.indexOf(".claude/")),
+              ...required.sourceArgs,
+            ],
+          }) ||
+            invocationEquals(invocation, {
+              executable: "node",
+              args: [WRAPPER_HOOK_LAUNCHER, ...required.wrapperArgs],
+            }))
+        );
+      });
     if (matchingCommands.length === 0) {
       violations.push({ hook: required.id, reason: "missing_hook" });
       continue;

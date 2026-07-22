@@ -545,12 +545,20 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(wrapper).not.toContain("shell:");
     expect(wrapper).not.toContain("{{UT_TDD_SOURCE_CLI_JSON}}");
 
-    const codexHooks = deps.files.get(join("/repo", ".codex", "hooks.json"));
-    const claudeSettings = deps.files.get(join("/repo", ".claude", "settings.json"));
-    expect(codexHooks).toContain("hook agent-guard");
-    expect(claudeSettings).toContain('"agent-guard"');
-    expect(() => JSON.parse(codexHooks ?? "")).not.toThrow();
-    expect(() => JSON.parse(claudeSettings ?? "")).not.toThrow();
+    const codexHooks = JSON.parse(deps.files.get(join("/repo", ".codex", "hooks.json")) ?? "") as {
+      hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
+    };
+    const claudeSettings = JSON.parse(
+      deps.files.get(join("/repo", ".claude", "settings.json")) ?? "",
+    ) as {
+      hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
+    };
+    const agentGuardInvocation = {
+      command: "node",
+      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+    };
+    expect(codexHooks.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
+    expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
   });
 
   it("U-SETUP-009b2: generated wrapper prefers consumer local bin when local and setup fallback both exist", () => {
