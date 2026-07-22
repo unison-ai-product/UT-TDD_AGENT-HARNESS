@@ -141,6 +141,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/node-gh-forward-escape-issue-port.test.ts
     artifact_type: test_code
+  - artifact_path: tests/trusted-git-blob-resolver.test.ts
+    artifact_type: test_code
   - artifact_path: tests/node-issue-projection-evidence-resolver.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/authoring-command-group.test.ts

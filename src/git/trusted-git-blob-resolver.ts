@@ -11,6 +11,17 @@ export interface TrustedGitBlob {
   readonly bytes: Buffer;
 }
 
+export type GitExecFile = (
+  command: string,
+  args: readonly string[],
+  options: {
+    cwd: string;
+    encoding: "buffer";
+    windowsHide: true;
+    stdio: ["ignore", "pipe", "pipe"];
+  },
+) => Buffer;
+
 /** commit:path を shell 展開なしで実 Git object へ解決する共有port。 */
 export class TrustedGitBlobResolver {
   constructor(private readonly git: GitCommandPort) {}
@@ -19,6 +30,7 @@ export class TrustedGitBlobResolver {
     const commitOid = this.call(["rev-parse", "--verify", `${commit}^{commit}`], "commit-not-found")
       .toString("ascii")
       .trim();
+    if (!/^[0-9a-f]{40}$/.test(commitOid)) throw new Error("trusted-git-commit-oid-invalid");
     const entry = parseTreeEntry(
       this.call(["ls-tree", "-z", commitOid, "--", sourcePath], "source-not-found"),
     );
@@ -37,10 +49,13 @@ export class TrustedGitBlobResolver {
 }
 
 export class NodeGitCommandPort implements GitCommandPort {
-  constructor(private readonly repoRoot: string) {}
+  constructor(
+    private readonly repoRoot: string,
+    private readonly exec: GitExecFile = execFileSync,
+  ) {}
 
   run(args: readonly string[]): Buffer {
-    return execFileSync("git", [...args], {
+    return this.exec("git", [...args], {
       cwd: this.repoRoot,
       encoding: "buffer",
       windowsHide: true,
@@ -50,12 +65,11 @@ export class NodeGitCommandPort implements GitCommandPort {
 }
 
 function parseTreeEntry(output: Buffer): { sourcePath: string; blobOid: string } {
-  const records = output
-    .subarray(0, output.at(-1) === 0 ? -1 : undefined)
-    .toString("utf8")
-    .split("\0");
+  if (output.length === 0) throw new Error("trusted-git-source-not-found");
+  if (output.at(-1) !== 0) throw new Error("trusted-git-source-record-invalid");
+  const records = output.subarray(0, -1).toString("utf8").split("\0");
   if (records.length !== 1 || records[0] === "") throw new Error("trusted-git-source-not-found");
-  const match = /^(\d+) blob ([0-9a-f]+)\t(.+)$/s.exec(records[0]);
+  const match = /^100(?:644|755) blob ([0-9a-f]{40})\t(.+)$/s.exec(records[0]);
   if (!match) throw new Error("trusted-git-source-not-blob");
-  return { blobOid: match[2], sourcePath: match[3] };
+  return { blobOid: match[1], sourcePath: match[2] };
 }
