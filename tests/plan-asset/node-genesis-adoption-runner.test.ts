@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import { renderForwardEscapeIssueBody } from "../../src/execution/forward-escape.js";
 import {
   type GenesisAdoptionManifest,
   NodeGenesisAdoptionRunner,
@@ -71,6 +72,58 @@ describe("NodeGenesisAdoptionRunner", () => {
     const f = fixture();
     const tampered = { ...f.manifest, ...patch };
     expect(() => f.runner.run(tampered)).toThrow("genesis-adoption-route-tuple-digest-mismatch");
+    expect(f.adopt).not.toHaveBeenCalled();
+  });
+
+  it("U-GEN-016: originはtrusted blobのPLAN ID/revision/content digestへ意味束縛する", () => {
+    const f = fixture();
+    const fakeOrigin = {
+      plan_id: f.manifest.origin.plan_id,
+      revision: 1,
+      digest: `sha256:${sha("forged trusted content")}`,
+    };
+    const route_tuple_digest = routeDigest(fakeOrigin, f.manifest.reentry);
+    expect(() => f.runner.run({ ...f.manifest, origin: fakeOrigin, route_tuple_digest })).toThrow(
+      "genesis-adoption-origin-source-mismatch",
+    );
+    expect(f.adopt).not.toHaveBeenCalled();
+  });
+
+  it("U-GEN-017: reentryはIssue preimageの正規Forward escape contractへ意味束縛する", () => {
+    const f = fixture();
+    const fakeReentry = {
+      target_plan_id: "PLAN-L4-31",
+      target_revision: 3,
+      phase: "forward_merge" as const,
+    };
+    expect(() =>
+      f.runner.run({
+        ...f.manifest,
+        reentry: fakeReentry,
+        route_tuple_digest: routeDigest(f.manifest.origin, fakeReentry),
+      }),
+    ).toThrow("genesis-adoption-issue-route-mismatch");
+    expect(f.adopt).not.toHaveBeenCalled();
+  });
+
+  it("U-GEN-018: origin/reentry/digestを同時差替えしてもIssue preimage不一致でwrite前fail-closeする", () => {
+    const f = fixture();
+    const fakeOrigin = { ...f.manifest.origin, plan_id: "PLAN-L4-99" };
+    const fakeReentry = { ...f.manifest.reentry, target_plan_id: "PLAN-L4-99" };
+    const contract = {
+      ...f.manifest.issue.contract,
+      origin_asset_id: "PLAN-L4-99",
+      reentry_target_asset_id: "PLAN-L4-99",
+    };
+    expect(() =>
+      f.runner.run({
+        ...f.manifest,
+        origin: fakeOrigin,
+        reentry: fakeReentry,
+        route_tuple_digest: routeDigest(fakeOrigin, fakeReentry),
+        issue: { ...f.manifest.issue, contract },
+      }),
+    ).toThrow("genesis-adoption-issue-preimage-mismatch");
     expect(f.adopt).not.toHaveBeenCalled();
   });
 
@@ -204,6 +257,14 @@ function fixture(
 }
 
 function manifest(): GenesisAdoptionManifest {
+  const sourceDigest = sha(source());
+  const contract = issueContract();
+  const origin = { plan_id: "PLAN-L4-31", revision: 1, digest: `sha256:${sourceDigest}` };
+  const reentry = {
+    target_plan_id: "PLAN-L4-31",
+    target_revision: 2,
+    phase: "forward_merge" as const,
+  };
   return {
     version: 1,
     command_id: "genesis:issue-129:l4-31",
@@ -211,28 +272,66 @@ function manifest(): GenesisAdoptionManifest {
     plan_id: "PLAN-L4-31",
     actor: "genesis:test",
     reason: "trusted HEAD genesis adoption",
-    route_tuple_digest: sha(
-      '{"origin":{"digest":"sha256:' +
-        sha("origin") +
-        '","planId":"PLAN-L4-31","revision":1},"reentry":{"phase":"forward_merge","targetPlanId":"PLAN-L4-31","targetRevision":2},"routeMode":"redesign","routeSignal":"redesign"}',
-    ),
-    origin: { plan_id: "PLAN-L4-31", revision: 1, digest: `sha256:${sha("origin")}` },
-    reentry: { target_plan_id: "PLAN-L4-31", target_revision: 2, phase: "forward_merge" },
+    route_tuple_digest: routeDigest(origin, reentry),
+    origin,
+    reentry,
     recorded_at: "2026-07-22T00:00:00.000Z",
     source: {
       path: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
       commit: "a".repeat(40),
       blob_oid: "b".repeat(40),
-      content_digest: sha(source()),
+      content_digest: sourceDigest,
     },
     issue: {
       number: 129,
       episode_id: "E4-129",
       drive_model: "redesign",
       branch: "work/redesign-planasset-genesis-adoption",
-      preimage_digest: sha("issue-129-preimage"),
+      preimage_digest: sha(renderForwardEscapeIssueBody(contract)),
+      contract,
     },
   };
+}
+
+function issueContract() {
+  return {
+    command_id: "redesign:issue-129:l4-31",
+    origin_asset_id: "PLAN-L4-31",
+    origin_revision_id: "1",
+    origin_layer: "L4",
+    origin_state: "confirmed",
+    escape_reason: "legacy PlanAsset genesis adoption",
+    drive_model: "redesign",
+    reentry_target_asset_id: "PLAN-L4-31",
+    reentry_target_revision_id: "2",
+    reentry_target_layer: "L4",
+    reentry_target_state: "forward_merge",
+    issue_projection: {
+      owner: "unison-ai-product",
+      repository: "UT-TDD_AGENT-HARNESS",
+      title: "Redesign: genesis adoption",
+      labels: ["redesign"],
+    },
+    plan_id: "PLAN-L4-31",
+  };
+}
+
+function routeDigest(
+  origin: GenesisAdoptionManifest["origin"],
+  reentry: GenesisAdoptionManifest["reentry"],
+): string {
+  return sha(
+    JSON.stringify({
+      origin: { digest: origin.digest, planId: origin.plan_id, revision: origin.revision },
+      reentry: {
+        phase: reentry.phase,
+        targetPlanId: reentry.target_plan_id,
+        targetRevision: reentry.target_revision,
+      },
+      routeMode: "redesign",
+      routeSignal: "redesign",
+    }),
+  );
 }
 
 function source(): string {

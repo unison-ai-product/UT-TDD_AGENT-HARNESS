@@ -136,9 +136,33 @@ function manifest(overrides: Record<string, unknown> = {}): string {
       drive_model: "redesign",
       branch: "work/redesign-planasset-genesis-adoption",
       preimage_digest: "d".repeat(64),
+      contract: issueContract(),
     },
     ...overrides,
   });
+}
+
+function issueContract() {
+  return {
+    command_id: "redesign:issue-129:l4-31",
+    origin_asset_id: "PLAN-L4-31",
+    origin_revision_id: "1",
+    origin_layer: "L4",
+    origin_state: "confirmed",
+    escape_reason: "legacy PlanAsset genesis adoption",
+    drive_model: "redesign",
+    reentry_target_asset_id: "PLAN-L4-31",
+    reentry_target_revision_id: "2",
+    reentry_target_layer: "L4",
+    reentry_target_state: "forward_merge",
+    issue_projection: {
+      owner: "unison-ai-product",
+      repository: "UT-TDD_AGENT-HARNESS",
+      title: "Redesign: genesis adoption",
+      labels: ["redesign"],
+    },
+    plan_id: "PLAN-L4-31",
+  };
 }
 
 function sourceBinding() {

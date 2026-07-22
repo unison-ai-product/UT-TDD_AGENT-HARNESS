@@ -1,6 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  type RequestForwardEscape,
+  renderForwardEscapeIssueBody,
+} from "../../execution/forward-escape.js";
+import {
   NodeGitCommandPort,
   type TrustedGitBlob,
   TrustedGitBlobResolver,
@@ -42,6 +46,7 @@ export interface GenesisAdoptionManifest {
     readonly drive_model: "redesign";
     readonly branch: string;
     readonly preimage_digest: string;
+    readonly contract: RequestForwardEscape;
   };
 }
 
@@ -107,6 +112,7 @@ export class NodeGenesisAdoptionRunner {
     };
     if (deriveGenesisRouteTupleDigest({ origin, reentry }) !== manifest.route_tuple_digest)
       throw new Error("genesis-adoption-route-tuple-digest-mismatch");
+    assertIssueRouteBinding(manifest, origin, reentry);
 
     const blob = this.deps.resolveBlob(head, manifest.source.path);
     if (blob.commitOid !== head) throw new Error("genesis-adoption-head-drift");
@@ -121,6 +127,12 @@ export class NodeGenesisAdoptionRunner {
     const source = parseLegacyPlanSource(text);
     if (!source || source.planId !== manifest.plan_id)
       throw new Error("genesis-adoption-source-invalid");
+    if (
+      origin.planId !== source.planId ||
+      origin.revision !== 1 ||
+      origin.digest !== `sha256:${manifest.source.content_digest}`
+    )
+      throw new Error("genesis-adoption-origin-source-mismatch");
     const canonicalPayloadJson = canonical(source.frontmatter);
     const local = this.deps.transaction.adopt({
       commandId: manifest.command_id,
@@ -212,7 +224,9 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
       "drive_model",
       "branch",
       "preimage_digest",
+      "contract",
     ]);
+    const contract = parseForwardEscapeContract(issue.contract);
     const manifest: GenesisAdoptionManifest = {
       version: literal(root.version, 1),
       command_id: nonempty(root.command_id),
@@ -247,6 +261,7 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
         drive_model: literal(issue.drive_model, "redesign"),
         branch: matching(issue.branch, /^work\/redesign-[A-Za-z0-9._/-]+$/),
         preimage_digest: digest(issue.preimage_digest),
+        contract,
       },
     };
     if (manifest.issue.episode_id !== `E4-${manifest.issue.number}`) throw new Error();
@@ -254,6 +269,80 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
   } catch {
     throw new Error("genesis-adoption-manifest-invalid");
   }
+}
+
+function parseForwardEscapeContract(value: unknown): RequestForwardEscape {
+  const contract = exactRecord(value, [
+    "command_id",
+    "origin_asset_id",
+    "origin_revision_id",
+    "origin_layer",
+    "origin_state",
+    "escape_reason",
+    "drive_model",
+    "reentry_target_asset_id",
+    "reentry_target_revision_id",
+    "reentry_target_layer",
+    "reentry_target_state",
+    "issue_projection",
+    "plan_id",
+  ]);
+  const projection = exactRecord(contract.issue_projection, [
+    "owner",
+    "repository",
+    "title",
+    "labels",
+  ]);
+  if (
+    !Array.isArray(projection.labels) ||
+    projection.labels.some((label) => typeof label !== "string")
+  )
+    throw new Error();
+  return {
+    command_id: nonempty(contract.command_id),
+    origin_asset_id: nonempty(contract.origin_asset_id),
+    origin_revision_id: nonempty(contract.origin_revision_id),
+    origin_layer: matching(contract.origin_layer, /^L(?:[0-9]|1[0-4])$/),
+    origin_state: nonempty(contract.origin_state),
+    escape_reason: nonempty(contract.escape_reason),
+    drive_model: literal(contract.drive_model, "redesign"),
+    reentry_target_asset_id: nonempty(contract.reentry_target_asset_id),
+    reentry_target_revision_id: nonempty(contract.reentry_target_revision_id),
+    reentry_target_layer: matching(contract.reentry_target_layer, /^L(?:[0-9]|1[0-4])$/),
+    reentry_target_state: nonempty(contract.reentry_target_state),
+    issue_projection: {
+      owner: nonempty(projection.owner),
+      repository: nonempty(projection.repository),
+      title: nonempty(projection.title),
+      labels: projection.labels.map(nonempty),
+    },
+    plan_id: matching(contract.plan_id, /^PLAN-L(?:[0-9]|1[0-4])-[A-Za-z0-9][A-Za-z0-9-]*$/),
+  };
+}
+
+function assertIssueRouteBinding(
+  manifest: GenesisAdoptionManifest,
+  origin: { readonly planId: string; readonly revision: number; readonly digest: string },
+  reentry: {
+    readonly targetPlanId: string;
+    readonly targetRevision: number;
+    readonly phase: "forward_merge";
+  },
+): void {
+  const contract = manifest.issue.contract;
+  if (sha(renderForwardEscapeIssueBody(contract)) !== manifest.issue.preimage_digest)
+    throw new Error("genesis-adoption-issue-preimage-mismatch");
+  if (
+    `${contract.issue_projection.owner}/${contract.issue_projection.repository}` !==
+      manifest.repository_identity ||
+    contract.drive_model !== manifest.issue.drive_model ||
+    contract.origin_asset_id !== origin.planId ||
+    contract.origin_revision_id !== String(origin.revision) ||
+    contract.reentry_target_asset_id !== reentry.targetPlanId ||
+    contract.reentry_target_revision_id !== String(reentry.targetRevision) ||
+    contract.reentry_target_state !== reentry.phase
+  )
+    throw new Error("genesis-adoption-issue-route-mismatch");
 }
 
 const repositoryPattern =
