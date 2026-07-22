@@ -12,6 +12,10 @@ import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "../state-db
 import { migrate } from "../state-db/migration.js";
 import { SqliteIssueProjectionEvidenceResolver } from "./issue-projection-evidence-resolver.js";
 import { NodeForwardEscapeLedgerView } from "./node-forward-escape-ledger-view.js";
+import {
+  NodeRepositoryIdentityGitPort,
+  TrustedRepositoryIdentityResolver,
+} from "./trusted-repository-identity-resolver.js";
 
 export interface ForwardEscapeIssueProjectionRunnerDeps {
   readonly openEvidenceDb: () => HarnessDb;
@@ -20,6 +24,7 @@ export interface ForwardEscapeIssueProjectionRunnerDeps {
     close?: () => void;
   };
   readonly issuePort: ForwardEscapeIssuePort;
+  readonly assertRepositoryIdentity: (identity: string) => string;
 }
 
 /** commandをE2 custodyへ固定し、E3 outbox、E4 IssueProjectedを同じHARNESS DBへ永続化する。 */
@@ -27,6 +32,9 @@ export class ForwardEscapeIssueProjectionRunner {
   constructor(private readonly deps: ForwardEscapeIssueProjectionRunnerDeps) {}
 
   run(command: RequestForwardEscape) {
+    this.deps.assertRepositoryIdentity(
+      `${command.issue_projection.owner}/${command.issue_projection.repository}`,
+    );
     const db = this.deps.openEvidenceDb();
     try {
       migrate(db);
@@ -34,7 +42,9 @@ export class ForwardEscapeIssueProjectionRunner {
       const ledger = this.deps.createLedger?.(db) ?? this.deps.ledger;
       if (!ledger) throw new Error("forward-escape-ledger-unavailable");
       try {
-        return this.project(command, db, journal, ledger);
+        // journal eventの個別atomicityだけでは、2 workerが同時にGitHubへ到達できる。
+        // 外部同期portを含むE2→E4全体を1 writerへ直列化し、再読側は既存E4を返す。
+        return journal.runExclusive(() => this.project({ command, db, journal, ledger }));
       } finally {
         if ("close" in ledger && typeof ledger.close === "function") ledger.close();
       }
@@ -43,12 +53,13 @@ export class ForwardEscapeIssueProjectionRunner {
     }
   }
 
-  private project(
-    command: RequestForwardEscape,
-    db: HarnessDb,
-    journal: SqliteForwardEscapeJournal,
-    ledger: ForwardEscapeLedgerView,
-  ) {
+  private project(input: {
+    command: RequestForwardEscape;
+    db: HarnessDb;
+    journal: SqliteForwardEscapeJournal;
+    ledger: ForwardEscapeLedgerView;
+  }) {
+    const { command, db, journal, ledger } = input;
     const validation = validateForwardEscape(command, ledger, journal);
     if (!validation.validated) {
       throw new Error(
@@ -81,6 +92,9 @@ export class ForwardEscapeIssueProjectionRunner {
 }
 
 export function createNodeForwardEscapeIssueProjectionRunner(repoRoot: string) {
+  const repositoryIdentity = new TrustedRepositoryIdentityResolver(
+    new NodeRepositoryIdentityGitPort(repoRoot),
+  );
   return new ForwardEscapeIssueProjectionRunner({
     openEvidenceDb: () => openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot }),
     createLedger: (evidenceDb) => {
@@ -89,5 +103,6 @@ export function createNodeForwardEscapeIssueProjectionRunner(repoRoot: string) {
       return Object.assign(view, { close: () => planDb.close() });
     },
     issuePort: new NodeGhForwardEscapeIssuePort(),
+    assertRepositoryIdentity: (identity) => repositoryIdentity.assertClaim(identity),
   });
 }

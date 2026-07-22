@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerForwardEscapeIssueCommand } from "../src/cli/forward-escape-issue.js";
 import type {
   ForwardEscapeLedgerView,
@@ -57,6 +57,7 @@ describe("project-forward-escape-issue CLI", () => {
       runner: new ForwardEscapeIssueProjectionRunner({
         openEvidenceDb: () => db,
         ledger,
+        assertRepositoryIdentity: (identity) => identity,
         issuePort: {
           createOrGetIssue: (request) => ({
             ok: true,
@@ -91,5 +92,22 @@ describe("project-forward-escape-issue CLI", () => {
       repository: "owner/repository",
     });
     expect(result.evidence.projectionDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
+  it("trusted Git originと異なるrepositoryはDBとGitHubを変更する前に拒否する", () => {
+    const openEvidenceDb = vi.fn(() => openHarnessDb(":memory:"));
+    const createOrGetIssue = vi.fn();
+    const runner = new ForwardEscapeIssueProjectionRunner({
+      openEvidenceDb,
+      ledger,
+      issuePort: { createOrGetIssue },
+      assertRepositoryIdentity: () => {
+        throw new Error("trusted-repository-identity-invalid");
+      },
+    });
+
+    expect(() => runner.run(command)).toThrow("trusted-repository-identity-invalid");
+    expect(openEvidenceDb).not.toHaveBeenCalled();
+    expect(createOrGetIssue).not.toHaveBeenCalled();
   });
 });

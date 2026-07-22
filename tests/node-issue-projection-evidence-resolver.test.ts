@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,10 +6,11 @@ import { SqliteForwardEscapeJournal } from "../src/execution/sqlite-forward-esca
 import { NodeIssueProjectionEvidenceResolver } from "../src/plan-admission/node-issue-projection-evidence-resolver.js";
 import { defaultHarnessDbPath, openHarnessDb } from "../src/state-db/index.js";
 import { migrate } from "../src/state-db/migration.js";
+import { removeTestTree } from "./support/temp-tree";
 
 const roots: string[] = [];
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("NodeIssueProjectionEvidenceResolver", () => {

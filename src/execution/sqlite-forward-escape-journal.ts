@@ -145,6 +145,14 @@ export class SqliteForwardEscapeJournal
     this.db.exec("PRAGMA busy_timeout = 5000");
   }
 
+  /**
+   * 外部Issue投影の read→create-or-get→E4 append 全体をSQLiteの単一writer境界へ置く。
+   * OSがprocess crash時にlockを解放するため、期限切れleaseの誤takeoverを作らない。
+   */
+  runExclusive<T>(work: () => T): T {
+    return runSqliteTransaction(this.db, work);
+  }
+
   issue(input: {
     readonly command_id: string;
     readonly payload_digest: string;

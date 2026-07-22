@@ -3,7 +3,15 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -718,6 +726,66 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       }
     } finally {
       for (const observed of children) observed.child.kill();
+      if (existsSync(gate)) rmSync(gate);
+      removeTestTree(repo);
+    }
+  });
+
+  it("U-EXISSUE-017: two processes serialize provider→E4 and call GitHub once", async () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-e4-race-"));
+    const dbPath = join(repo, ".ut-tdd", "harness.db");
+    openForwardEscapeDb(dbPath, repo).close();
+    const gate = join(repo, "gate");
+    const ready = join(repo, "ready");
+    const calls = join(repo, "provider-calls");
+    mkdirSync(ready);
+    writeFileSync(gate, "wait", "utf8");
+    const stateDbUrl = pathToFileURL(join(process.cwd(), "src", "state-db", "index.ts")).href;
+    const journalUrl = pathToFileURL(
+      join(process.cwd(), "src", "execution", "sqlite-forward-escape-journal.ts"),
+    ).href;
+    const domainUrl = pathToFileURL(
+      join(process.cwd(), "src", "execution", "forward-escape.ts"),
+    ).href;
+    const worker = join(repo, "worker-e4.mjs");
+    const concurrentCommand = validCommand({ command_id: "cmd-e4-concurrent" });
+    writeFileSync(
+      worker,
+      `import { appendFileSync, existsSync, writeFileSync } from "node:fs";\n` +
+        `const { openHarnessDb } = await import(${JSON.stringify(stateDbUrl)});\n` +
+        `const { SqliteForwardEscapeJournal } = await import(${JSON.stringify(journalUrl)});\n` +
+        `const { validateForwardEscape, projectForwardEscapeIssue } = await import(${JSON.stringify(domainUrl)});\n` +
+        `const command = ${JSON.stringify(concurrentCommand)};\n` +
+        `const ledger = { currentRevisionOf: () => command.origin_revision_id, lookupRevision: () => ({ layer: command.origin_layer, states: [command.origin_state, command.reentry_target_state] }), priorCommand: () => undefined };\n` +
+        `const db = openHarnessDb(${JSON.stringify(dbPath)}, { repoRoot: ${JSON.stringify(repo)} });\n` +
+        `try { const journal = new SqliteForwardEscapeJournal(db); writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready"); while (existsSync(${JSON.stringify(gate)})) await Bun.sleep(2); const event = journal.runExclusive(() => { const result = validateForwardEscape(command, ledger, journal); if (!result.validated) throw new Error(JSON.stringify(result.violations)); return projectForwardEscapeIssue({ validated: result.validated, journal, custody: journal, port: { createOrGetIssue: (request) => { appendFileSync(${JSON.stringify(calls)}, "call\\n"); return { ok: true, binding: { repository: request.owner + "/" + request.repository, issue_number: 117, node_id: "I_e4", url: "https://github.com/" + request.owner + "/" + request.repository + "/issues/117", body_digest: request.body_digest, observed_revision: "etag-e4" } }; } } }); }); console.log(event.type); } finally { db.close(); }\n`,
+      "utf8",
+    );
+    const children = Array.from({ length: 2 }, () =>
+      spawn("bun", [worker], { cwd: process.cwd() }),
+    );
+    try {
+      const deadline = Date.now() + 30_000;
+      while (readdirSync(ready).length < 2 && Date.now() < deadline)
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(readdirSync(ready)).toHaveLength(2);
+      rmSync(gate);
+      const exits = await Promise.all(
+        children.map((child) => new Promise<number | null>((resolve) => child.on("exit", resolve))),
+      );
+      expect(exits).toEqual([0, 0]);
+      expect(readFileSync(calls, "utf8").trim().split("\n")).toHaveLength(1);
+      const verifyDb = openForwardEscapeDb(dbPath, repo);
+      try {
+        expect(
+          new SqliteForwardEscapeJournal(verifyDb).eventsFor(concurrentCommand.command_id).at(-1)
+            ?.type,
+        ).toBe("IssueProjected");
+      } finally {
+        verifyDb.close();
+      }
+    } finally {
+      for (const child of children) child.kill();
       if (existsSync(gate)) rmSync(gate);
       removeTestTree(repo);
     }
