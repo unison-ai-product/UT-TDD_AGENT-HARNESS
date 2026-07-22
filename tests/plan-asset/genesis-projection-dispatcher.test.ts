@@ -46,6 +46,21 @@ const entries: readonly GenesisProjectionOutboxEntry[] = [
 ];
 
 describe("GenesisProjectionDispatcher", () => {
+  it("U-GEN-032: leaseはremote deadlineとfinalize予算を超えない構成を拒否する", () => {
+    const fixture = setup(entries.slice(0, 1), () => ({ durable: true, state: "projected" }));
+    expect(
+      () =>
+        new GenesisProjectionDispatcher({
+          outbox: fixture.store,
+          projection: fixture.projection,
+          now: () => "2026-07-22T07:01:00.000Z",
+          leaseMs: 20_000,
+          remoteDeadlineMs: 15_000,
+          finalizeBudgetMs: 5_000,
+        }),
+    ).toThrow("genesis-projection-lease-deadline-invalid");
+  });
+
   it("U-GEN-017: restart後にpending/recovery_requiredを走査しprojected終端へ収束する", () => {
     const fixture = setup(entries, () => ({ durable: true, state: "projected" }));
 
@@ -55,18 +70,18 @@ describe("GenesisProjectionDispatcher", () => {
       recoveryRequired: 0,
     });
     expect(fixture.projection.dispatch).toHaveBeenCalledTimes(2);
-    expect(fixture.store.markProjected).toHaveBeenNthCalledWith(
-      1,
-      "genesis:129:first",
-      "worker:test",
-      "2026-07-22T07:01:00.000Z",
-    );
-    expect(fixture.store.markProjected).toHaveBeenNthCalledWith(
-      2,
-      "genesis:129:second",
-      "worker:test",
-      "2026-07-22T07:01:00.000Z",
-    );
+    expect(fixture.store.markProjected).toHaveBeenNthCalledWith(1, {
+      commandId: "genesis:129:first",
+      ownerToken: "worker:test",
+      claimGeneration: 2,
+      occurredAt: "2026-07-22T07:01:00.000Z",
+    });
+    expect(fixture.store.markProjected).toHaveBeenNthCalledWith(2, {
+      commandId: "genesis:129:second",
+      ownerToken: "worker:test",
+      claimGeneration: 2,
+      occurredAt: "2026-07-22T07:01:00.000Z",
+    });
   });
 
   it("U-GEN-018: observe/remote失敗をrecovery_requiredへ残して後続entryを継続する", () => {
@@ -81,13 +96,17 @@ describe("GenesisProjectionDispatcher", () => {
       recoveryRequired: 2,
     });
     expect(fixture.projection.dispatch).toHaveBeenCalledTimes(2);
-    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(1, "genesis:129:first", {
+    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(1, {
+      commandId: "genesis:129:first",
       ownerToken: "worker:test",
+      claimGeneration: 2,
       reason: "issue-observe-failed",
       occurredAt: "2026-07-22T07:01:00.000Z",
     });
-    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(2, "genesis:129:second", {
+    expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(2, {
+      commandId: "genesis:129:second",
       ownerToken: "worker:test",
+      claimGeneration: 2,
       reason: "genesis-adoption-projection-recovery-required",
       occurredAt: "2026-07-22T07:01:00.000Z",
     });
@@ -105,8 +124,10 @@ describe("GenesisProjectionDispatcher", () => {
       recoveryRequired: 1,
     });
     expect(fixture.store.markProjected).not.toHaveBeenCalled();
-    expect(fixture.store.markRecoveryRequired).toHaveBeenCalledWith("genesis:129:first", {
+    expect(fixture.store.markRecoveryRequired).toHaveBeenCalledWith({
+      commandId: "genesis:129:first",
       ownerToken: "worker:test",
+      claimGeneration: 2,
       reason: "genesis-adoption-projection-not-durable",
       occurredAt: "2026-07-22T07:01:00.000Z",
     });
@@ -181,6 +202,7 @@ describe("GenesisProjectionDispatcher", () => {
       repoRoot: root,
       repository: "owner/repository",
       port,
+      options: { remoteDeadlineMs: 15_000 },
     });
     expect(resource.dispatcher.dispatchCommand("genesis:129")).toEqual({
       scanned: 1,
@@ -195,6 +217,7 @@ describe("GenesisProjectionDispatcher", () => {
       repoRoot: root,
       repository: "owner/repository",
       port,
+      options: { remoteDeadlineMs: 15_000 },
     });
     expect(resource.dispatcher.dispatchCommand("genesis:129")).toEqual({
       scanned: 1,
@@ -228,6 +251,7 @@ describe("GenesisProjectionDispatcher", () => {
       repository: "owner/repository",
       port: projectionPort("# issue\n", () => ({ ok: false, reason: "unused" })),
       options: {
+        remoteDeadlineMs: 15_000,
         openPlanDb: () => planDb,
         openHarnessDb: () => harnessDb,
         migrateHarnessDb: vi.fn(),
@@ -368,6 +392,7 @@ function setup(
         ...entry,
         ownerToken: "worker:test",
         claimExpiresAt: "2026-07-22T07:01:30.000Z",
+        claimGeneration: 1,
       })),
     ),
     claimCommand: vi.fn((commandId) => {
@@ -377,22 +402,13 @@ function setup(
             ...entry,
             ownerToken: "worker:test",
             claimExpiresAt: "2026-07-22T07:01:30.000Z",
+            claimGeneration: 1,
           }
         : undefined;
     }),
     markProjected,
     markRecoveryRequired,
-    settleClaim: vi.fn(({ commandId, ownerToken, heartbeat, work }) => {
-      const result = work();
-      if (result.state === "projected") markProjected(commandId, ownerToken, heartbeat.claimedAt);
-      else
-        markRecoveryRequired(commandId, {
-          ownerToken,
-          reason: result.failureReason ?? "genesis-adoption-projection-recovery-required",
-          occurredAt: heartbeat.claimedAt,
-        });
-      return result;
-    }),
+    renewClaim: vi.fn(() => 2),
   };
   const projection: GenesisProjectionDispatchPort = { dispatch: vi.fn(dispatch) };
   return {
@@ -403,6 +419,7 @@ function setup(
       projection,
       now: () => "2026-07-22T07:01:00.000Z",
       ownerToken: () => "worker:test",
+      remoteDeadlineMs: 15_000,
     }),
   };
 }

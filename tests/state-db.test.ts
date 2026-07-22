@@ -35,6 +35,15 @@ const cleanupRepo = removeTestTree;
  * 設計 pair: docs/test-design/harness/L8-integration-test-design.md IT-DB-01。
  */
 describe("IT-DB-01: harness.db state-db foundation", () => {
+  it("concurrent short transactions use a bounded SQLite busy wait", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      expect(Object.values(db.prepare("PRAGMA busy_timeout").get() ?? {})).toEqual([5000]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("uses node:sqlite fallback when the test worker is running under Node", () => {
     const db = openHarnessDb(":memory:");
     try {

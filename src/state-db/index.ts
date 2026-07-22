@@ -116,6 +116,8 @@ export function openHarnessDb(path: string, options: { repoRoot?: string } = {})
   const native = openNative(path, driver);
   // 参照整合・外部キー強制 (projection の未解消 join を finding 化する前提の健全性)。
   native.exec("PRAGMA foreign_keys = ON");
+  // 複数workerの短transaction競合は即時失敗ではなく、bounded waitで直列化する。
+  native.exec("PRAGMA busy_timeout = 5000");
   return {
     path,
     driver,

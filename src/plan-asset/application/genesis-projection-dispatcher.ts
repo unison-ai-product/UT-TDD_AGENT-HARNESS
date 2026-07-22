@@ -46,6 +46,8 @@ export class GenesisProjectionDispatcher {
   private readonly now: () => string;
   private readonly ownerToken: () => string;
   private readonly leaseMs: number;
+  private readonly remoteDeadlineMs: number;
+  private readonly finalizeBudgetMs: number;
 
   constructor(input: {
     readonly outbox: GenesisProjectionOutboxStore;
@@ -53,12 +55,24 @@ export class GenesisProjectionDispatcher {
     readonly now: () => string;
     readonly ownerToken?: () => string;
     readonly leaseMs?: number;
+    readonly remoteDeadlineMs: number;
+    readonly finalizeBudgetMs?: number;
   }) {
     this.outbox = input.outbox;
     this.projection = input.projection;
     this.now = input.now;
     this.ownerToken = input.ownerToken ?? randomUUID;
     this.leaseMs = input.leaseMs ?? 30_000;
+    this.remoteDeadlineMs = input.remoteDeadlineMs;
+    this.finalizeBudgetMs = input.finalizeBudgetMs ?? 5_000;
+    if (
+      !Number.isSafeInteger(this.remoteDeadlineMs) ||
+      this.remoteDeadlineMs < 1 ||
+      !Number.isSafeInteger(this.finalizeBudgetMs) ||
+      this.finalizeBudgetMs < 1 ||
+      this.leaseMs <= this.remoteDeadlineMs + this.finalizeBudgetMs
+    )
+      throw new Error("genesis-projection-lease-deadline-invalid");
   }
 
   dispatchPending(limit?: number): GenesisProjectionDispatchSummary {
@@ -79,27 +93,35 @@ export class GenesisProjectionDispatcher {
     let recoveryRequired = 0;
     for (const entry of entries) {
       const heartbeat = this.heartbeat();
-      const result = this.outbox.settleClaim({
+      const claimGeneration = this.outbox.renewClaim({
         commandId: entry.commandId,
         ownerToken: entry.ownerToken,
-        heartbeat,
-        work: () => {
-          try {
-            const remote = this.projection.dispatch(toProjectionInput(entry));
-            if (!remote.durable) throw new Error("genesis-adoption-projection-not-durable");
-            return remote.state === "projected"
-              ? { state: "projected" as const }
-              : {
-                  state: "recovery_required" as const,
-                  failureReason: "genesis-adoption-projection-recovery-required",
-                };
-          } catch (error) {
-            return { state: "recovery_required" as const, failureReason: failureReason(error) };
-          }
-        },
+        claimGeneration: entry.claimGeneration,
+        ...heartbeat,
       });
-      if (result.state === "projected") projected += 1;
-      else recoveryRequired += 1;
+      const fence = {
+        commandId: entry.commandId,
+        ownerToken: entry.ownerToken,
+        claimGeneration,
+        occurredAt: heartbeat.claimedAt,
+      };
+      try {
+        const remote = this.projection.dispatch(toProjectionInput(entry));
+        if (!remote.durable) throw new Error("genesis-adoption-projection-not-durable");
+        if (remote.state === "projected") {
+          this.outbox.markProjected(fence);
+          projected += 1;
+        } else {
+          this.outbox.markRecoveryRequired({
+            ...fence,
+            reason: "genesis-adoption-projection-recovery-required",
+          });
+          recoveryRequired += 1;
+        }
+      } catch (error) {
+        this.outbox.markRecoveryRequired({ ...fence, reason: failureReason(error) });
+        recoveryRequired += 1;
+      }
     }
     return { scanned: entries.length, projected, recoveryRequired };
   }
@@ -134,6 +156,11 @@ export interface NodeGenesisProjectionDispatcherOptions {
   readonly openPlanDb?: (input: { repoRoot: string; path?: string }) => HarnessDb;
   readonly openHarnessDb?: (path: string, options: { repoRoot: string }) => HarnessDb;
   readonly migrateHarnessDb?: (db: HarnessDb) => unknown;
+  readonly now?: () => string;
+  readonly ownerToken?: () => string;
+  readonly leaseMs?: number;
+  readonly remoteDeadlineMs?: number;
+  readonly finalizeBudgetMs?: number;
 }
 
 /** production composition: Plan Ledger outbox + HARNESS journal + gh create-or-get。 */
@@ -146,6 +173,10 @@ export function openNodeGenesisProjectionDispatcher(input: {
   const { repoRoot, repository } = input;
   const port = input.port ?? new NodeGhForwardEscapeIssuePort();
   const options = input.options ?? {};
+  const remoteDeadlineMs =
+    options.remoteDeadlineMs ??
+    (port instanceof NodeGhForwardEscapeIssuePort ? port.executionEvidence.timeout_ms : undefined);
+  if (!remoteDeadlineMs) throw new Error("genesis-projection-unbounded-remote-port");
   const planDb = (options.openPlanDb ?? openPlanLedger)({
     repoRoot,
     path: options.planLedgerPath,
@@ -166,7 +197,11 @@ export function openNodeGenesisProjectionDispatcher(input: {
       dispatcher: new GenesisProjectionDispatcher({
         outbox,
         projection,
-        now: () => new Date().toISOString(),
+        now: options.now ?? (() => new Date().toISOString()),
+        ownerToken: options.ownerToken,
+        leaseMs: options.leaseMs,
+        remoteDeadlineMs,
+        finalizeBudgetMs: options.finalizeBudgetMs,
       }),
       close: () => closeDatabases(journalDb as HarnessDb, planDb),
     };

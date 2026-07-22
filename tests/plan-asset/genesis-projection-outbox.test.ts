@@ -388,9 +388,9 @@ const resource = openNodeGenesisProjectionDispatcher({
   options: {
     planLedgerPath: planDbPath,
     harnessDbPath,
-    now: () => mode === "crash" ? "2026-07-22T00:00:00.000Z" : "2026-07-22T00:00:01.000Z",
+    now: () => mode === "crash" ? "2026-07-22T00:00:00.000Z" : "2026-07-22T00:00:31.000Z",
     ownerToken: () => "worker:" + process.pid,
-    leaseMs: 1,
+    leaseMs: 30_000,
   },
 });
 try {

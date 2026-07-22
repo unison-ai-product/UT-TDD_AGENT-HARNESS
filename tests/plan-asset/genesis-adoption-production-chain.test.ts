@@ -55,7 +55,12 @@ describe("Issue #129 production genesis chain", () => {
     const runner = createProductionGenesisAdoptionCommandRunner(root, {
       observeIssue: (input) => port.observeIssue(input),
       openDispatcher: (repoRoot, identity) =>
-        openNodeGenesisProjectionDispatcher({ repoRoot, repository: identity, port }),
+        openNodeGenesisProjectionDispatcher({
+          repoRoot,
+          repository: identity,
+          port,
+          options: { remoteDeadlineMs: 15_000 },
+        }),
     });
     expect(runner.run(manifest)).toMatchObject({
       ok: true,

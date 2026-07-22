@@ -117,6 +117,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/schema.ts
     artifact_type: source_module
+  - artifact_path: src/state-db/index.ts
+    artifact_type: source_module
   - artifact_path: tests/authoring-recovery-gate.test.ts
     artifact_type: test_code
   - artifact_path: tests/authoring-recovery-surface.test.ts
@@ -158,6 +160,8 @@ generates:
   - artifact_path: tests/plan-asset/genesis-projection-outbox.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/sqlite-genesis-adoption-projection-adapter.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/state-db.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/support/genesis-adoption-fixture.ts
     artifact_type: test_code
