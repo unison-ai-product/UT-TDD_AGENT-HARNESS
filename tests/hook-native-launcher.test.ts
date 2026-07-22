@@ -152,9 +152,14 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     const codexCommands = Object.values(codexHooks.hooks).flatMap((entries) =>
       entries.flatMap((entry) => entry.hooks),
     );
-    expect(codexCommands.every((hook) => typeof hook.command === "string" && !hook.args)).toBe(
-      true,
-    );
+    expect(
+      codexCommands.every(
+        (hook) =>
+          hook.command === "node" &&
+          hook.args?.[0] === ".ut-tdd/bin/run-bun.ts" &&
+          hook.args?.[1] === ".ut-tdd/bin/ut-tdd.mjs",
+      ),
+    ).toBe(true);
     expect(wrapper).toContain("spawnSync(process.execPath");
     expect(wrapper).toContain("windowsHide: true");
     expect(wrapper).not.toContain("shell:");
