@@ -58,6 +58,23 @@ describe("NodeGenesisAdoptionRunner", () => {
   });
 
   it.each([
+    ["digest", { route_tuple_digest: "f".repeat(64) }],
+    [
+      "origin",
+      { origin: { plan_id: "PLAN-L4-forged", revision: 1, digest: `sha256:${sha("origin")}` } },
+    ],
+    [
+      "reentry",
+      { reentry: { target_plan_id: "PLAN-L4-forged", target_revision: 2, phase: "forward_merge" } },
+    ],
+  ] as const)("U-GEN-015: %s自己申告のroute binding改ざんをtransaction前に拒否する", (_name, patch) => {
+    const f = fixture();
+    const tampered = { ...f.manifest, ...patch };
+    expect(() => f.runner.run(tampered)).toThrow("genesis-adoption-route-tuple-digest-mismatch");
+    expect(f.adopt).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ["blob", { blobOid: "f".repeat(40) }, "genesis-adoption-source-blob-drift"],
     [
       "content",
@@ -194,7 +211,13 @@ function manifest(): GenesisAdoptionManifest {
     plan_id: "PLAN-L4-31",
     actor: "genesis:test",
     reason: "trusted HEAD genesis adoption",
-    route_tuple_digest: sha("redesign|forward_merge|PLAN-L4-31"),
+    route_tuple_digest: sha(
+      '{"origin":{"digest":"sha256:' +
+        sha("origin") +
+        '","planId":"PLAN-L4-31","revision":1},"reentry":{"phase":"forward_merge","targetPlanId":"PLAN-L4-31","targetRevision":2},"routeMode":"redesign","routeSignal":"redesign"}',
+    ),
+    origin: { plan_id: "PLAN-L4-31", revision: 1, digest: `sha256:${sha("origin")}` },
+    reentry: { target_plan_id: "PLAN-L4-31", target_revision: 2, phase: "forward_merge" },
     recorded_at: "2026-07-22T00:00:00.000Z",
     source: {
       path: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",

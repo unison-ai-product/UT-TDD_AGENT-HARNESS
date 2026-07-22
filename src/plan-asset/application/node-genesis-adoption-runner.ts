@@ -13,6 +13,7 @@ import {
   GenesisAdoptionTransaction,
   type GenesisCustodyPort,
 } from "../ledger/genesis-adoption-transaction.js";
+import { deriveGenesisRouteTupleDigest } from "../ledger/genesis-route-binding.js";
 import { openPlanLedger } from "../ledger/schema.js";
 
 export interface GenesisAdoptionManifest {
@@ -23,6 +24,12 @@ export interface GenesisAdoptionManifest {
   readonly actor: string;
   readonly reason: string;
   readonly route_tuple_digest: string;
+  readonly origin: { readonly plan_id: string; readonly revision: number; readonly digest: string };
+  readonly reentry: {
+    readonly target_plan_id: string;
+    readonly target_revision: number;
+    readonly phase: "forward_merge";
+  };
   readonly recorded_at: string;
   readonly source: {
     readonly path: string;
@@ -89,6 +96,18 @@ export class NodeGenesisAdoptionRunner {
       throw new Error("genesis-adoption-repository-mismatch");
     if (this.deps.branch().trim() !== manifest.issue.branch)
       throw new Error("genesis-adoption-branch-mismatch");
+    const origin = {
+      planId: manifest.origin.plan_id,
+      revision: manifest.origin.revision,
+      digest: manifest.origin.digest,
+    };
+    const reentry = {
+      targetPlanId: manifest.reentry.target_plan_id,
+      targetRevision: manifest.reentry.target_revision,
+      phase: manifest.reentry.phase,
+    };
+    if (deriveGenesisRouteTupleDigest({ origin, reentry }) !== manifest.route_tuple_digest)
+      throw new Error("genesis-adoption-route-tuple-digest-mismatch");
 
     const blob = this.deps.resolveBlob(head, manifest.source.path);
     if (blob.commitOid !== head) throw new Error("genesis-adoption-head-drift");
@@ -118,6 +137,8 @@ export class NodeGenesisAdoptionRunner {
       actor: manifest.actor,
       reason: manifest.reason,
       routeTupleDigest: manifest.route_tuple_digest,
+      origin,
+      reentry,
       occurredAt: manifest.recorded_at,
       issue: {
         number: manifest.issue.number,
@@ -178,11 +199,15 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
       "actor",
       "reason",
       "route_tuple_digest",
+      "origin",
+      "reentry",
       "recorded_at",
       "source",
       "issue",
     ]);
     const source = exactRecord(root.source, ["path", "commit", "blob_oid", "content_digest"]);
+    const origin = exactRecord(root.origin, ["plan_id", "revision", "digest"]);
+    const reentry = exactRecord(root.reentry, ["target_plan_id", "target_revision", "phase"]);
     const issue = exactRecord(root.issue, [
       "number",
       "episode_id",
@@ -198,6 +223,19 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
       actor: nonempty(root.actor),
       reason: nonempty(root.reason),
       route_tuple_digest: digest(root.route_tuple_digest),
+      origin: {
+        plan_id: matching(origin.plan_id, /^PLAN-L(?:[0-9]|1[0-4])-[A-Za-z0-9][A-Za-z0-9-]*$/),
+        revision: positiveInteger(origin.revision),
+        digest: prefixedDigest(origin.digest),
+      },
+      reentry: {
+        target_plan_id: matching(
+          reentry.target_plan_id,
+          /^PLAN-L(?:[0-9]|1[0-4])-[A-Za-z0-9][A-Za-z0-9-]*$/,
+        ),
+        target_revision: positiveInteger(reentry.target_revision),
+        phase: literal(reentry.phase, "forward_merge"),
+      },
       recorded_at: timestamp(root.recorded_at),
       source: {
         path: matching(source.path, /^docs\/plans\/[^/]+\.md$/),
@@ -241,6 +279,9 @@ function matching(value: unknown, pattern: RegExp): string {
 }
 function digest(value: unknown): string {
   return matching(value, /^[0-9a-f]{64}$/);
+}
+function prefixedDigest(value: unknown): string {
+  return matching(value, /^sha256:[0-9a-f]{64}$/);
 }
 function oid(value: unknown): string {
   return matching(value, /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/);

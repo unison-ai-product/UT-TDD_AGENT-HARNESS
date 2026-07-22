@@ -90,6 +90,30 @@ describe("genesis adoption transaction", () => {
     expect(counts(db)).toEqual(baseline);
     expect(custody.committed()).toHaveLength(1);
   });
+
+  it.each([
+    ["digest", (value: GenesisAdoptionInput) => ({ ...value, routeTupleDigest: "f".repeat(64) })],
+    [
+      "origin",
+      (value: GenesisAdoptionInput) => ({
+        ...value,
+        origin: { ...value.origin, planId: "PLAN-L4-forged" },
+      }),
+    ],
+    [
+      "reentry",
+      (value: GenesisAdoptionInput) => ({
+        ...value,
+        reentry: { ...value.reentry, targetRevision: 99 },
+      }),
+    ],
+  ] as const)("U-GEN-015: transaction境界でも%s route改ざんをfail-closeする", async (_name, mutate) => {
+    const { transaction } = await fixture();
+    expect(transaction.adopt(mutate(input()))).toEqual({
+      ok: false,
+      ruleId: "genesis-adoption-route-tuple-digest-mismatch",
+    });
+  });
 });
 
 type GenesisBoundary =
@@ -117,6 +141,12 @@ interface GenesisAdoptionInput {
   readonly actor: string;
   readonly reason: string;
   readonly routeTupleDigest: string;
+  readonly origin: { readonly planId: string; readonly revision: number; readonly digest: string };
+  readonly reentry: {
+    readonly targetPlanId: string;
+    readonly targetRevision: number;
+    readonly phase: "forward_merge";
+  };
   readonly occurredAt: string;
   readonly issue: {
     readonly number: number;
@@ -217,6 +247,12 @@ async function fixture() {
 
 function input(): GenesisAdoptionInput {
   const canonicalPayloadJson = '{"layer":"L4","plan_id":"PLAN-L4-31","status":"draft"}';
+  const origin = { planId: "PLAN-L4-31", revision: 1, digest: `sha256:${sha("origin")}` };
+  const reentry = {
+    targetPlanId: "PLAN-L4-31",
+    targetRevision: 2,
+    phase: "forward_merge" as const,
+  };
   return {
     commandId: "genesis:issue-129:l4-31",
     repositoryIdentity: "unison-ai-product/UT-TDD_AGENT-HARNESS",
@@ -230,7 +266,11 @@ function input(): GenesisAdoptionInput {
     bodyDigest: sha("legacy body"),
     actor: "genesis:test",
     reason: "lossless trusted-HEAD genesis adoption",
-    routeTupleDigest: sha("redesign|forward_merge|PLAN-L4-31"),
+    routeTupleDigest: sha(
+      stable({ routeSignal: "redesign", routeMode: "redesign", origin, reentry }),
+    ),
+    origin,
+    reentry,
     occurredAt: "2026-07-22T00:00:00.000Z",
     issue: {
       number: 129,
@@ -240,6 +280,16 @@ function input(): GenesisAdoptionInput {
       preimageDigest: sha("issue-129-preimage"),
     },
   };
+}
+
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stable(child)}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
 }
 
 function counts(db: HarnessDb): number[] {

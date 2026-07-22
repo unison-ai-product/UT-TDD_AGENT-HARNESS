@@ -123,6 +123,8 @@ function manifest(overrides: Record<string, unknown> = {}): string {
     actor: "genesis:test",
     reason: "trusted HEAD genesis adoption",
     route_tuple_digest: "a".repeat(64),
+    origin: { plan_id: "PLAN-L4-31", revision: 1, digest: `sha256:${"f".repeat(64)}` },
+    reentry: { target_plan_id: "PLAN-L4-31", target_revision: 2, phase: "forward_merge" },
     recorded_at: "2026-07-22T00:00:00.000Z",
     source: sourceBinding(),
     issue: {

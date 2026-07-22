@@ -1,6 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
+import {
+  deriveGenesisRouteTupleDigest,
+  type GenesisRouteBinding,
+} from "./genesis-route-binding.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction } from "./transaction.js";
 
@@ -29,6 +33,8 @@ export interface GenesisAdoptionInput {
   readonly actor: string;
   readonly reason: string;
   readonly routeTupleDigest: string;
+  readonly origin: GenesisRouteBinding["origin"];
+  readonly reentry: GenesisRouteBinding["reentry"];
   readonly occurredAt: string;
   readonly issue: {
     readonly number: number;
@@ -281,6 +287,11 @@ interface DerivedGenesis {
 function derive(
   input: GenesisAdoptionInput,
 ): DerivedGenesis | { readonly ok: false; readonly ruleId: string } {
+  if (
+    validSha(input.routeTupleDigest) &&
+    !secureEqual(input.routeTupleDigest, deriveGenesisRouteTupleDigest(input))
+  )
+    return rejected("genesis-adoption-route-tuple-digest-mismatch");
   if (
     !input.commandId ||
     !/^[^/]+\/[^/]+$/.test(input.repositoryIdentity) ||
