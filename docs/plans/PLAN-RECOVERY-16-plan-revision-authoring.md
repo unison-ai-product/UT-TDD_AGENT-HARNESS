@@ -81,6 +81,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/trusted-git-blob-resolver.ts
     artifact_type: source_module
+  - artifact_path: src/git/trusted-git-blob-resolver.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/trusted-repository-identity-resolver.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/authoring-command-group.ts
