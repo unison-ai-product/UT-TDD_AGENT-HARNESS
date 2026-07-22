@@ -195,7 +195,7 @@ const MUTATION_TARGET_ARGS: Readonly<Record<string, readonly number[]>> = {
   writeFileSync: [0],
 };
 const REPOSITORY_PATH =
-  /^(?:\.?(?:\/|\\))?(?:\.claude|\.codex|\.github|\.ut-tdd|docs|scripts|skills|src|tests)(?:\/|\\)|^(?:AGENTS\.md|CLAUDE\.md|package\.json|tsconfig\.json|vitest\.config\.ts)$/;
+  /^(?:\.?(?:\/|\\))?(?:\.claude|\.codex|\.github|\.ut-tdd|docs|native|scripts|skills|src|tests)(?:\/|\\)|^(?:AGENTS\.md|CLAUDE\.md|package\.json|tsconfig\.json|vitest\.config\.ts)$/;
 
 function staticPath(
   node: ts.Expression,

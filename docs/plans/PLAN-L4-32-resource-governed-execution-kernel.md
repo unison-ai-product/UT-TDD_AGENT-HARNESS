@@ -375,5 +375,5 @@ snapshot一時directoryの掃除だけでは本負債の完了証拠にならな
 | `RGK-EV-CI-03` | Actions run `29892125300` / Windows job `88834471971` | `72604cd13798a29828c84fbe927cb5cce166551b` | 04:50:44Z–04:55:04Z、DB 19秒、tests 200秒 | failure。PID/peak/orphan未計測 |
 | `RGK-EV-CI-04` | 同run / Linux job `88834471970` | 同commit | 04:50:44Z–04:55:23Z、DB 14秒、tests 249秒 | failure。PID/peak/orphan未計測 |
 
-planned downstreamは `PLAN-L5-24`、`PLAN-L6-89`、`PLAN-L7-453` とするが、未起票の間は依存graphの
+planned downstreamは `PLAN-L5-24`、`PLAN-L6-89`、`PLAN-L7-454` とするが、未起票の間は依存graphの
 `blocks` edgeにしない。各draftを実在させ、layer-monotonicityと参照実在性を検出器で確認した時点でedgeへ昇格する。

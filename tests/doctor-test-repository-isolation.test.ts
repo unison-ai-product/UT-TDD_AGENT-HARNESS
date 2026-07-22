@@ -40,6 +40,45 @@ describe("doctor test repository isolation", () => {
     );
   });
 
+  it("U-TESTHYGIENE-048: rejects an unclassified native source read", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        {
+          path: "tests/native-source.test.ts",
+          source: "readFileSync(resolve('native/resource-kernel/Cargo.toml'), 'utf8');",
+        },
+      ],
+      contracts: {},
+    });
+
+    expect(result.messages).toContain(
+      "test-repository-isolation - violation: unclassified:tests/native-source.test.ts:repository-read=1",
+    );
+  });
+
+  it("U-TESTHYGIENE-049: accepts a classified native source read", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        {
+          path: "tests/native-source.test.ts",
+          source: "readFileSync(resolve('native/resource-kernel/Cargo.toml'), 'utf8');",
+        },
+      ],
+      contracts: {
+        "tests/native-source.test.ts": {
+          mode: "isolated_fixture",
+          calls: 1,
+          reason: "native source is read from the writable execution snapshot",
+        },
+      },
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      messages: ["test-repository-isolation - OK (contracts=1, live_runtime=0)"],
+    });
+  });
+
   it("U-TESTHYGIENE-025: rejects composed paths and alternate process references", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
