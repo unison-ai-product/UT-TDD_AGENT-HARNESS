@@ -9,15 +9,16 @@ import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction } from "./transaction.js";
 
 export type GenesisAdoptionBoundary =
-  | "issue-custody-prepare"
   | "asset"
   | "revision"
   | "alias-event"
   | "alias-current"
   | "admission-event"
   | "admission-receipt"
-  | "command-receipt"
-  | "issue-custody-commit";
+  | "issue-custody"
+  | "projection-outbox-event"
+  | "projection-outbox"
+  | "command-receipt";
 
 export interface GenesisAdoptionInput {
   readonly commandId: string;
@@ -45,22 +46,6 @@ export interface GenesisAdoptionInput {
   };
 }
 
-export interface GenesisCustodyRecord {
-  readonly commandId: string;
-  readonly issueNumber: number;
-  readonly episodeId: string;
-  readonly driveModel: "redesign";
-  readonly issuePreimageDigest: string;
-  readonly assetId: string;
-  readonly revision: 1;
-}
-
-export interface GenesisCustodyPort {
-  prepare(record: GenesisCustodyRecord): void;
-  commit(commandId: string): void;
-  rollback(commandId: string): void;
-}
-
 export type GenesisAdoptionResult =
   | {
       readonly ok: true;
@@ -78,7 +63,6 @@ export type GenesisAdoptionResult =
 export class GenesisAdoptionTransaction {
   constructor(
     private readonly db: HarnessDb,
-    private readonly custody: GenesisCustodyPort,
     private readonly fault?: { after(boundary: GenesisAdoptionBoundary): void },
   ) {
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
@@ -99,24 +83,70 @@ export class GenesisAdoptionTransaction {
       return rejected("genesis-adoption-alias-conflict");
 
     const transaction = new ImmediateLedgerTransaction(this.db);
-    try {
-      return transaction.run(() => {
-        const custody = custodyRecord(input, derived.assetId);
-        this.custody.prepare(custody);
-        this.fault?.after("issue-custody-prepare");
-        this.appendPlanAsset(input, derived);
-        this.appendAdmission(input, derived);
-        this.custody.commit(input.commandId);
-        this.fault?.after("issue-custody-commit");
-        return {
-          commit: true,
-          value: success(false, derived.assetId, input.issue.number),
-        };
-      });
-    } catch (error) {
-      this.custody.rollback(input.commandId);
-      throw error;
-    }
+    return transaction.run(() => {
+      this.appendPlanAsset(input, derived);
+      this.appendAdmission(input, derived);
+      this.appendCustodyAndOutbox(input, derived);
+      return {
+        commit: true,
+        value: success(false, derived.assetId, input.issue.number),
+      };
+    });
+  }
+
+  private appendCustodyAndOutbox(input: GenesisAdoptionInput, value: DerivedGenesis): void {
+    const custody = {
+      command_id: input.commandId,
+      issue_number: input.issue.number,
+      episode_id: input.issue.episodeId,
+      drive_model: input.issue.driveModel,
+      issue_preimage_digest: input.issue.preimageDigest,
+      plan_asset_id: value.assetId,
+      plan_revision: 1,
+      custody_state: "committed",
+      recorded_at: input.occurredAt,
+    };
+    this.db
+      .prepare("INSERT INTO genesis_issue_custody VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(...Object.values(custody), ledgerRowDigest(custody, "custody_digest"));
+    this.fault?.after("issue-custody");
+
+    const payloadJson = canonical({
+      assetId: value.assetId,
+      issueNumber: input.issue.number,
+      issuePreimageDigest: input.issue.preimageDigest,
+      revision: 1,
+    });
+    const payloadDigest = sha(payloadJson);
+    const event = {
+      outbox_event_id: `genesis-outbox:${input.commandId}:1`,
+      command_id: input.commandId,
+      sequence: 1,
+      event_kind: "pending",
+      payload_digest: payloadDigest,
+      occurred_at: input.occurredAt,
+      failure_reason: null,
+      previous_event_digest: null,
+    };
+    const eventDigest = ledgerRowDigest(event, "event_digest");
+    this.db
+      .prepare("INSERT INTO genesis_projection_outbox_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(...Object.values(event), eventDigest);
+    this.fault?.after("projection-outbox-event");
+    this.db
+      .prepare("INSERT INTO genesis_projection_outbox VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(
+        input.commandId,
+        "pending",
+        payloadJson,
+        payloadDigest,
+        0,
+        input.occurredAt,
+        null,
+        null,
+        eventDigest,
+      );
+    this.fault?.after("projection-outbox");
   }
 
   private appendPlanAsset(input: GenesisAdoptionInput, value: DerivedGenesis): void {
@@ -263,14 +293,34 @@ export class GenesisAdoptionTransaction {
     const admission = this.db
       .prepare("SELECT * FROM plan_admission_receipts WHERE command_id = ?")
       .get(input.commandId);
+    const custody = this.db
+      .prepare("SELECT * FROM genesis_issue_custody WHERE command_id = ?")
+      .get(input.commandId);
+    const outbox = this.db
+      .prepare("SELECT * FROM genesis_projection_outbox WHERE command_id = ?")
+      .get(input.commandId);
+    const outboxEvent = this.db
+      .prepare(
+        "SELECT * FROM genesis_projection_outbox_events WHERE command_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(input.commandId);
     if (
       !revision ||
       !admission ||
+      !custody ||
+      !outbox ||
+      !outboxEvent ||
       revision.canonical_payload_digest !== input.canonicalPayloadDigest ||
       revision.body_digest !== input.bodyDigest ||
       revision.source_commit !== input.sourceCommit ||
       admission.plan_asset_id !== value.assetId ||
       Number(admission.plan_revision) !== 1 ||
+      custody.issue_preimage_digest !== input.issue.preimageDigest ||
+      custody.plan_asset_id !== value.assetId ||
+      custody.custody_digest !== ledgerRowDigest(custody, "custody_digest") ||
+      outbox.payload_digest !== sha(String(outbox.payload_json)) ||
+      outbox.last_event_digest !== outboxEvent.event_digest ||
+      outboxEvent.event_digest !== ledgerRowDigest(outboxEvent, "event_digest") ||
       receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest")
     )
       return rejected("genesis-adoption-receipt-binding-invalid");
@@ -320,18 +370,6 @@ function derive(
     ok: true,
     assetId: deriveLegacyAssetId(input.repositoryIdentity, input.planId),
     commandDigest: sha(canonical(input)),
-  };
-}
-
-function custodyRecord(input: GenesisAdoptionInput, assetId: string): GenesisCustodyRecord {
-  return {
-    commandId: input.commandId,
-    issueNumber: input.issue.number,
-    episodeId: input.issue.episodeId,
-    driveModel: input.issue.driveModel,
-    issuePreimageDigest: input.issue.preimageDigest,
-    assetId,
-    revision: 1,
   };
 }
 

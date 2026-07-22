@@ -11,7 +11,6 @@ import {
   type GenesisAdoptionInput,
   type GenesisAdoptionResult,
   GenesisAdoptionTransaction,
-  type GenesisCustodyPort,
 } from "../ledger/genesis-adoption-transaction.js";
 import { deriveGenesisRouteTupleDigest } from "../ledger/genesis-route-binding.js";
 import { openPlanLedger } from "../ledger/schema.js";
@@ -162,7 +161,6 @@ export class NodeGenesisAdoptionRunner {
 
 export function createNodeGenesisAdoptionRunner(
   repoRoot: string,
-  custody: GenesisCustodyPort,
   projectionOutbox: GenesisAdoptionProjectionOutboxPort,
 ): NodeGenesisAdoptionRunner {
   const resolver = new TrustedGitBlobResolver(new NodeGitCommandPort(repoRoot));
@@ -179,7 +177,7 @@ export function createNodeGenesisAdoptionRunner(
       adopt(input) {
         const db = openPlanLedger({ repoRoot });
         try {
-          return new GenesisAdoptionTransaction(db, custody).adopt(input);
+          return new GenesisAdoptionTransaction(db).adopt(input);
         } finally {
           db.close();
         }

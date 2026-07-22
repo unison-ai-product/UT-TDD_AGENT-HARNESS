@@ -6,8 +6,6 @@ import { parseLegacyPlanSource } from "../../src/plan-asset/adapters/legacy-plan
 import {
   type GenesisAdoptionInput,
   GenesisAdoptionTransaction,
-  type GenesisCustodyPort,
-  type GenesisCustodyRecord,
 } from "../../src/plan-asset/ledger/genesis-adoption-transaction.js";
 import { deriveGenesisRouteTupleDigest } from "../../src/plan-asset/ledger/genesis-route-binding.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
@@ -23,7 +21,6 @@ afterEach(() => {
 describe("Issue #129 real legacy genesis chains", () => {
   it("U-GEN-015: L4-31を採用してL6-88へのRedesign Forward reentryを同じroute digestへ束縛する", () => {
     const db = database();
-    const custody = new MemoryCustody();
     const command = trackedInput({
       commandId: "genesis:issue-129:l4-31",
       sourcePath: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
@@ -33,7 +30,7 @@ describe("Issue #129 real legacy genesis chains", () => {
       reentryRevision: 1,
     });
 
-    const adopted = new GenesisAdoptionTransaction(db, custody).adopt(command);
+    const adopted = new GenesisAdoptionTransaction(db).adopt(command);
 
     expect(adopted).toMatchObject({ ok: true, replayed: false, revision: 1 });
     expect(adopted.ok && adopted.assetId).toBe(
@@ -55,7 +52,6 @@ describe("Issue #129 real legacy genesis chains", () => {
       "PLAN-L7-452-forward-escape-contract-red",
     );
     const db = database();
-    const custody = new MemoryCustody();
     const command = trackedInput({
       commandId: "genesis:issue-129:l6-83",
       sourcePath: "docs/plans/PLAN-L6-83-forward-escape-issue-contract.md",
@@ -65,7 +61,7 @@ describe("Issue #129 real legacy genesis chains", () => {
       reentryRevision: 1,
     });
     let failed = false;
-    const interrupted = new GenesisAdoptionTransaction(db, custody, {
+    const interrupted = new GenesisAdoptionTransaction(db, {
       after(boundary) {
         if (!failed && boundary === "admission-receipt") {
           failed = true;
@@ -77,14 +73,14 @@ describe("Issue #129 real legacy genesis chains", () => {
     expect(() => interrupted.adopt(command)).toThrow("simulated-crash-after-admission-receipt");
     expect(count(db, "plan_assets")).toBe(0);
     expect(count(db, "plan_admission_receipts")).toBe(0);
-    expect(custody.committed).toHaveLength(0);
+    expect(count(db, "genesis_issue_custody")).toBe(0);
 
-    const retry = new GenesisAdoptionTransaction(db, custody);
+    const retry = new GenesisAdoptionTransaction(db);
     expect(retry.adopt(command)).toMatchObject({ ok: true, replayed: false });
     expect(retry.adopt(command)).toMatchObject({ ok: true, replayed: true });
     expect(count(db, "plan_assets")).toBe(1);
     expect(count(db, "plan_admission_receipts")).toBe(1);
-    expect(custody.committed).toHaveLength(1);
+    expect(count(db, "genesis_issue_custody")).toBe(1);
     expect(admission(db, command.commandId)).toMatchObject({
       plan_asset_id: deriveLegacyAssetId(repositoryIdentity, command.planId),
       plan_id: command.planId,
@@ -101,28 +97,6 @@ describe("Issue #129 real legacy genesis chains", () => {
     });
   });
 });
-
-class MemoryCustody implements GenesisCustodyPort {
-  private readonly prepared = new Map<string, GenesisCustodyRecord>();
-  readonly committed: GenesisCustodyRecord[] = [];
-
-  prepare(record: GenesisCustodyRecord): void {
-    this.prepared.set(record.commandId, record);
-  }
-
-  commit(commandId: string): void {
-    const record = this.prepared.get(commandId);
-    if (!record) throw new Error("custody-prepare-missing");
-    this.committed.push(record);
-    this.prepared.delete(commandId);
-  }
-
-  rollback(commandId: string): void {
-    this.prepared.delete(commandId);
-    const index = this.committed.findIndex((record) => record.commandId === commandId);
-    if (index >= 0) this.committed.splice(index, 1);
-  }
-}
 
 function database(): HarnessDb {
   const db = openHarnessDb(":memory:");

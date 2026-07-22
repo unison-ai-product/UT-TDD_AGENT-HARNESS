@@ -17,10 +17,11 @@ describe("PLAN Asset canonical ledger schema", () => {
       migratePlanLedger(db);
       seedAsset(db, "plan:legacy-visible");
       seedAuthoringCommandGroup(db);
+      removeV9Schema(db);
       removeV8Schema(db);
       db.setUserVersion(7);
 
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(db.prepare("SELECT COUNT(*) AS count FROM plan_revisions").get()?.count).toBe(1);
       expect(
         db.prepare("SELECT COUNT(*) AS count FROM authoring_command_group_headers").get()?.count,
@@ -29,7 +30,7 @@ describe("PLAN Asset canonical ledger schema", () => {
         db.prepare("SELECT COUNT(*) AS count FROM authoring_command_revision_bindings").get()
           ?.count,
       ).toBe(0);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     } finally {
       db.close();
     }
@@ -41,6 +42,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       migratePlanLedger(db);
       seedAsset(db, "plan:legacy-visible");
       seedAuthoringCommandGroup(db);
+      removeV9Schema(db);
       removeV8Schema(db);
       db.setUserVersion(7);
       const before = migrationSnapshot(db);
@@ -72,6 +74,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       migratePlanLedger(db);
       seedAsset(db, "plan:migration-boundary");
       seedAuthoringCommandGroup(db);
+      removeV9Schema(db);
       removeV8Schema(db);
       db.setUserVersion(7);
       const before = migrationSnapshot(db);
@@ -178,7 +181,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       expect(visibleCount()).toBe(0);
       commitAuthoringCommandGroup(db);
       expect(visibleCount()).toBe(1);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     } finally {
       db.close();
     }
@@ -898,7 +901,8 @@ function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
       !sql.includes("idx_plan_draft_artifact_operations_command") &&
-      !sql.includes("authoring_"),
+      !sql.includes("authoring_") &&
+      !sql.includes("genesis_"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -918,7 +922,8 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
       !sql.includes("idx_plan_draft_artifact_operations_command") &&
-      !sql.includes("authoring_"),
+      !sql.includes("authoring_") &&
+      !sql.includes("genesis_"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -933,6 +938,7 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
 
 function createLegacyCommittedLedger(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
   expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+  removeV9Schema(db);
   removeV8Schema(db);
   removeV7Schema(db);
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
@@ -1003,6 +1009,7 @@ function createLedgerAtVersion(
   }
 
   expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+  removeV9Schema(db);
   removeV8Schema(db);
   removeV7Schema(db);
   if (version === 5) {
@@ -1027,6 +1034,18 @@ function removeV7Schema(db: ReturnType<typeof openHarnessDb>): void {
   db.exec("DROP TABLE authoring_command_group_phase_events");
   db.exec("DROP TABLE authoring_command_group_members");
   db.exec("DROP TABLE authoring_command_group_headers");
+}
+
+function removeV9Schema(db: ReturnType<typeof openHarnessDb>): void {
+  for (const table of ["genesis_issue_custody", "genesis_projection_outbox_events"]) {
+    db.exec(`DROP TRIGGER trg_${table}_no_update`);
+    db.exec(`DROP TRIGGER trg_${table}_no_delete`);
+  }
+  db.exec("DROP INDEX idx_genesis_projection_outbox_events_command");
+  db.exec("DROP INDEX idx_genesis_projection_outbox_status");
+  db.exec("DROP TABLE genesis_projection_outbox_events");
+  db.exec("DROP TABLE genesis_projection_outbox");
+  db.exec("DROP TABLE genesis_issue_custody");
 }
 
 function removeV8Schema(db: ReturnType<typeof openHarnessDb>): void {
@@ -1313,7 +1332,8 @@ function legacyV2Ddl(): readonly string[] {
         !sql.includes("idx_legacy_bootstrap_source_blob") &&
         !sql.includes("plan_draft_artifact_operation_events") &&
         !sql.includes("idx_plan_draft_artifact_operations_command") &&
-        !sql.includes("authoring_"),
+        !sql.includes("authoring_") &&
+        !sql.includes("genesis_"),
     )
     .map((sql) =>
       sql

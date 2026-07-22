@@ -12,7 +12,7 @@ afterEach(() => {
 
 describe("genesis adoption transaction", () => {
   it("U-GEN-003: legacy PlanAssetとIssue E4 custodyを一つのatomic commitで確定する", async () => {
-    const { db, custody, transaction } = await fixture();
+    const { db, transaction } = await fixture();
 
     expect(transaction.adopt(input())).toMatchObject({
       ok: true,
@@ -21,18 +21,10 @@ describe("genesis adoption transaction", () => {
       revision: 1,
       issueNumber: 129,
     });
-    expect(counts(db)).toEqual([1, 1, 1, 1, 1, 1, 1]);
-    expect(custody.committed()).toEqual([
-      {
-        commandId: "genesis:issue-129:l4-31",
-        issueNumber: 129,
-        episodeId: "E4-129",
-        driveModel: "redesign",
-        issuePreimageDigest: sha("issue-129-preimage"),
-        assetId: derivedAssetId(),
-        revision: 1,
-      },
-    ]);
+    expect(counts(db)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+    expect(db.prepare("SELECT status FROM genesis_projection_outbox").get()).toEqual({
+      status: "pending",
+    });
   });
 
   it.each([
@@ -43,24 +35,23 @@ describe("genesis adoption transaction", () => {
     "admission-event",
     "admission-receipt",
     "command-receipt",
-    "issue-custody-prepare",
-    "issue-custody-commit",
+    "issue-custody",
+    "projection-outbox-event",
+    "projection-outbox",
   ] as const)("U-GEN-004: %s faultでledgerとIssue custodyの全write setをrollbackする", async (boundary) => {
-    const { db, custody, Transaction } = await baseFixture();
-    const transaction = new Transaction(db, custody, {
+    const { db, Transaction } = await baseFixture();
+    const transaction = new Transaction(db, {
       after(actual) {
         if (actual === boundary) throw new Error(`fault:${boundary}`);
       },
     });
 
     expect(() => transaction.adopt(input())).toThrow(`fault:${boundary}`);
-    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
-    expect(custody.committed()).toEqual([]);
-    expect(custody.prepared()).toEqual([]);
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it("U-GEN-005: same-command replayは重複を作らず、異なるIssue preimageをconflictとして拒否する", async () => {
-    const { db, custody, transaction } = await fixture();
+    const { db, transaction } = await fixture();
     const command = input();
 
     expect(transaction.adopt(command)).toMatchObject({
@@ -76,7 +67,6 @@ describe("genesis adoption transaction", () => {
       issueNumber: 129,
     });
     expect(counts(db)).toEqual(baseline);
-    expect(custody.committed()).toHaveLength(1);
 
     expect(
       transaction.adopt({
@@ -88,7 +78,6 @@ describe("genesis adoption transaction", () => {
       }),
     ).toEqual({ ok: false, ruleId: "genesis-adoption-command-conflict" });
     expect(counts(db)).toEqual(baseline);
-    expect(custody.committed()).toHaveLength(1);
   });
 
   it.each([
@@ -123,9 +112,10 @@ type GenesisBoundary =
   | "alias-current"
   | "admission-event"
   | "admission-receipt"
-  | "command-receipt"
-  | "issue-custody-prepare"
-  | "issue-custody-commit";
+  | "issue-custody"
+  | "projection-outbox-event"
+  | "projection-outbox"
+  | "command-receipt";
 
 interface GenesisAdoptionInput {
   readonly commandId: string;
@@ -174,48 +164,8 @@ interface GenesisAdoptionTransactionContract {
 interface GenesisAdoptionTransactionConstructor {
   new (
     db: HarnessDb,
-    custody: MemoryGenesisCustody,
     fault?: { after(boundary: GenesisBoundary): void },
   ): GenesisAdoptionTransactionContract;
-}
-
-interface CustodyRecord {
-  readonly commandId: string;
-  readonly issueNumber: number;
-  readonly episodeId: string;
-  readonly driveModel: "redesign";
-  readonly issuePreimageDigest: string;
-  readonly assetId: string;
-  readonly revision: 1;
-}
-
-class MemoryGenesisCustody {
-  private readonly staged = new Map<string, CustodyRecord>();
-  private readonly durable = new Map<string, CustodyRecord>();
-
-  prepare(record: CustodyRecord): void {
-    this.staged.set(record.commandId, record);
-  }
-
-  commit(commandId: string): void {
-    const record = this.staged.get(commandId);
-    if (!record) throw new Error("genesis-custody-prepare-missing");
-    this.durable.set(commandId, record);
-    this.staged.delete(commandId);
-  }
-
-  rollback(commandId: string): void {
-    this.staged.delete(commandId);
-    this.durable.delete(commandId);
-  }
-
-  prepared(): CustodyRecord[] {
-    return [...this.staged.values()];
-  }
-
-  committed(): CustodyRecord[] {
-    return [...this.durable.values()];
-  }
 }
 
 async function loadTransaction(): Promise<GenesisAdoptionTransactionConstructor> {
@@ -235,14 +185,13 @@ async function baseFixture() {
   });
   return {
     db,
-    custody: new MemoryGenesisCustody(),
     Transaction: await loadTransaction(),
   };
 }
 
 async function fixture() {
   const base = await baseFixture();
-  return { ...base, transaction: new base.Transaction(base.db, base.custody) };
+  return { ...base, transaction: new base.Transaction(base.db) };
 }
 
 function input(): GenesisAdoptionInput {
@@ -301,6 +250,9 @@ function counts(db: HarnessDb): number[] {
     "plan_admission_events",
     "plan_admission_receipts",
     "append_command_receipts",
+    "genesis_issue_custody",
+    "genesis_projection_outbox_events",
+    "genesis_projection_outbox",
   ].map((table) => Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n));
 }
 

@@ -23,7 +23,7 @@ import {
 } from "./authoring-operation-provenance.js";
 import { committedRevisionPredicateForSchema } from "./revision-visibility.js";
 
-export const LEDGER_SCHEMA_VERSION = 8;
+export const LEDGER_SCHEMA_VERSION = 9;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -797,6 +797,77 @@ const v8Tables: readonly TableDef[] = [
   },
 ];
 
+const v9Tables: readonly TableDef[] = [
+  {
+    name: "genesis_issue_custody",
+    columns: [
+      pk("command_id"),
+      requiredCol("issue_number", "INTEGER"),
+      requiredCol("episode_id"),
+      requiredCol("drive_model"),
+      requiredCol("issue_preimage_digest"),
+      requiredCol("plan_asset_id"),
+      requiredCol("plan_revision", "INTEGER"),
+      requiredCol("custody_state"),
+      requiredCol("recorded_at"),
+      requiredCol("custody_digest"),
+    ],
+    checks: [enumCheck("drive_model", ["redesign"]), enumCheck("custody_state", ["committed"])],
+    foreignKeys: [
+      foreignKey(["plan_asset_id", "plan_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "genesis_projection_outbox",
+    columns: [
+      pk("command_id"),
+      requiredCol("status"),
+      requiredCol("payload_json"),
+      requiredCol("payload_digest"),
+      requiredCol("attempt_count", "INTEGER"),
+      requiredCol("next_attempt_at"),
+      col("completed_at"),
+      col("failure_reason"),
+      requiredCol("last_event_digest"),
+    ],
+    checks: [enumCheck("status", ["pending", "projected", "recovery_required"])],
+    foreignKeys: [
+      foreignKey(["command_id"], {
+        table: "genesis_issue_custody",
+        columns: ["command_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "genesis_projection_outbox_events",
+    columns: [
+      pk("outbox_event_id"),
+      requiredCol("command_id"),
+      requiredCol("sequence", "INTEGER"),
+      requiredCol("event_kind"),
+      requiredCol("payload_digest"),
+      requiredCol("occurred_at"),
+      col("failure_reason"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["command_id", "sequence"]],
+    checks: [enumCheck("event_kind", ["pending", "projected", "recovery_required"])],
+    foreignKeys: [
+      foreignKey(["command_id"], {
+        table: "genesis_issue_custody",
+        columns: ["command_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+];
+
 const tables: readonly TableDef[] = [
   ...v3Tables,
   ...v4Tables,
@@ -804,6 +875,7 @@ const tables: readonly TableDef[] = [
   ...v6Tables,
   ...v7Tables,
   ...v8Tables,
+  ...v9Tables,
 ];
 
 const v3Indexes: readonly IndexDef[] = [
@@ -937,6 +1009,18 @@ const v8Indexes: readonly IndexDef[] = [
     columns: ["operation_id", "member_id", "sequence"],
   },
 ];
+const v9Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_genesis_projection_outbox_status",
+    table: "genesis_projection_outbox",
+    columns: ["status", "next_attempt_at"],
+  },
+  {
+    name: "idx_genesis_projection_outbox_events_command",
+    table: "genesis_projection_outbox_events",
+    columns: ["command_id", "sequence"],
+  },
+];
 
 const indexes: readonly IndexDef[] = [
   ...v3Indexes,
@@ -945,6 +1029,7 @@ const indexes: readonly IndexDef[] = [
   ...v6Indexes,
   ...v7Indexes,
   ...v8Indexes,
+  ...v9Indexes,
 ];
 
 const v3HistoryTables = [
@@ -975,6 +1060,7 @@ const v8HistoryTables = [
   "authoring_recovery_attempt_events",
   "authoring_artifact_recovery_events",
 ] as const;
+const v9HistoryTables = ["genesis_issue_custody", "genesis_projection_outbox_events"] as const;
 
 function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerDef[] {
   return historyTables.flatMap((table) =>
@@ -994,6 +1080,7 @@ const v5Triggers = appendOnlyTriggers(v5HistoryTables);
 const v6Triggers = appendOnlyTriggers(v6HistoryTables);
 const v7Triggers = appendOnlyTriggers(v7HistoryTables);
 const v8Triggers = appendOnlyTriggers(v8HistoryTables);
+const v9Triggers = appendOnlyTriggers(v9HistoryTables);
 const triggers: readonly TriggerDef[] = [
   ...v3Triggers,
   ...v4Triggers,
@@ -1001,6 +1088,7 @@ const triggers: readonly TriggerDef[] = [
   ...v6Triggers,
   ...v7Triggers,
   ...v8Triggers,
+  ...v9Triggers,
 ];
 
 export function ledgerSchemaDdl(): readonly string[] {
@@ -1024,6 +1112,7 @@ export function migratePlanLedger(
     version !== 5 &&
     version !== 6 &&
     version !== 7 &&
+    version !== 8 &&
     version !== LEDGER_SCHEMA_VERSION
   )
     return { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -1066,6 +1155,7 @@ export function migratePlanLedger(
       installV6(db, 3);
       installV7(db);
       installV8(db, options.fault);
+      installV9(db, options.fault);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v3-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
@@ -1085,6 +1175,7 @@ export function migratePlanLedger(
       installV6(db, 4);
       installV7(db);
       installV8(db, options.fault);
+      installV9(db, options.fault);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v4-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
@@ -1103,6 +1194,7 @@ export function migratePlanLedger(
       installV6(db, 5);
       installV7(db);
       installV8(db, options.fault);
+      installV9(db, options.fault);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v5-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
@@ -1120,6 +1212,7 @@ export function migratePlanLedger(
       }
       installV7(db);
       installV8(db, options.fault);
+      installV9(db, options.fault);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v6-v8-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
@@ -1136,7 +1229,24 @@ export function migratePlanLedger(
         return { ok: false, ruleId: "plan-ledger-unavailable" };
       }
       installV8(db, options.fault);
+      installV9(db, options.fault);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v7-v8-verification-failed");
+      db.exec("COMMIT");
+    } catch {
+      db.exec("ROLLBACK");
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    }
+  }
+  if (db.userVersion() === 8) {
+    if (!v8LedgerValid(db)) return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      if (!v8LedgerValid(db)) {
+        db.exec("ROLLBACK");
+        return { ok: false, ruleId: "plan-ledger-unavailable" };
+      }
+      installV9(db, options.fault);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v8-v9-verification-failed");
       db.exec("COMMIT");
     } catch {
       db.exec("ROLLBACK");
@@ -1188,6 +1298,23 @@ function v7LedgerValid(db: HarnessDb): boolean {
   );
 }
 
+function v8LedgerValid(db: HarnessDb): boolean {
+  return (
+    schemaMatchesVersion(db, {
+      tables: [...v3Tables, ...v4Tables, ...v5Tables, ...v6Tables, ...v7Tables, ...v8Tables],
+      indexes: [...v3Indexes, ...v4Indexes, ...v5Indexes, ...v6Indexes, ...v7Indexes, ...v8Indexes],
+      triggers: [
+        ...v3Triggers,
+        ...v4Triggers,
+        ...v5Triggers,
+        ...v6Triggers,
+        ...v7Triggers,
+        ...v8Triggers,
+      ],
+    }) && ledgerRowsValid(db)
+  );
+}
+
 function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
   if (!legacyV2ReservationSchemaValid(db) || reservationRowCount(db) !== 0) return false;
   const reservationTables = new Set(["plan_id_reservation_events", "plan_id_reservations"]);
@@ -1226,6 +1353,7 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     installV6(db, 2);
     installV7(db);
     installV8(db, fault);
+    installV9(db, fault);
     if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v8-verification-failed");
     db.exec("COMMIT");
     return true;
@@ -1264,8 +1392,19 @@ function installV8(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): void 
   fault?.after("v7-v8-indexes-created");
   for (const trigger of v8Triggers) db.exec(createTriggerSql(trigger));
   fault?.after("v7-v8-triggers-created");
-  db.setUserVersion(LEDGER_SCHEMA_VERSION);
+  db.setUserVersion(8);
   fault?.after("v7-v8-user-version-set");
+}
+
+function installV9(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): void {
+  for (const table of v9Tables) db.exec(createTableSql(table));
+  fault?.after("v8-v9-tables-created");
+  for (const index of v9Indexes) db.exec(createIndexSql(index));
+  fault?.after("v8-v9-indexes-created");
+  for (const trigger of v9Triggers) db.exec(createTriggerSql(trigger));
+  fault?.after("v8-v9-triggers-created");
+  db.setUserVersion(LEDGER_SCHEMA_VERSION);
+  fault?.after("v8-v9-user-version-set");
 }
 
 function backfillLegacyUnknownDraftCleanup(
