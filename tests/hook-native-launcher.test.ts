@@ -127,5 +127,10 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
         ["node", ".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
       ],
     });
+    const wrapper = BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"];
+    expect(wrapper).toContain("spawnSync(process.execPath");
+    expect(wrapper).toContain("windowsHide: true");
+    expect(wrapper).not.toContain("shell:");
+    expect(wrapper).not.toContain("ut-tdd.cmd");
   });
 });

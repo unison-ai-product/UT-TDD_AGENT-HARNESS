@@ -146,7 +146,7 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 
 ## §6 project-local wrapper 契約
 
-1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/run-bun.mjs` と `.ut-tdd/bin/ut-tdd.mjs` を投影する。Claude hook は `node` の exec-form から前者を経由して native Bun を shell-free で起動し、後者へ argv を渡す。Codex hook は文字列 serializer の能力境界により従来形式を維持する。wrapper は project root の `node_modules/.bin/ut-tdd` を最優先し、次に setup を実行した harness checkout の `src/cli.ts`、最後に bare `ut-tdd` へ fallback する。
+1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/run-bun.mjs` と `.ut-tdd/bin/ut-tdd.mjs` を投影する。Claude hook は `node` の exec-form から前者を経由して native Bun を shell-free で起動し、後者へ argv を渡す。Codex hook は文字列 serializer の能力境界により従来形式を維持する。wrapper は native Bunで実行中の`process.execPath`を維持し、project rootの`node_modules/ut-tdd/src/cli.ts`、次にsetupを実行したharness checkoutの`src/cli.ts`を直接起動する。`.cmd`・shell・bare global fallbackは使用せず、両entrypointがなければexit 127でfail-closeする。
 
 不変条件:
 
