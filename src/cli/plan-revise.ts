@@ -231,6 +231,11 @@ export function registerPlanRevisionCommand<TResult>(
         );
         if (manifest.version === 2) {
           const result = deps.runner.run({ manifest });
+          if (domainResultFailed(result)) {
+            write(`${JSON.stringify({ ok: false, result })}\n`);
+            process.exitCode = 1;
+            return;
+          }
           write(`${JSON.stringify({ ok: true, result })}\n`);
           process.exitCode = 0;
           return;
@@ -324,4 +329,12 @@ function toAdmissionRequest(input: PlanRevisionManifest["admission"]): PlanAdmis
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function domainResultFailed(value: unknown): boolean {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      Reflect.get(value, "ok") === false,
+  );
 }

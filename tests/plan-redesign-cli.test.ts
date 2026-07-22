@@ -74,9 +74,10 @@ describe("plan redesign CLI", () => {
     const resolveIssueProjection = vi.fn((_claim: unknown) => ({}));
     const consumer = new Command().exitOverride();
     const consumerPlan = consumer.command("plan");
+    const consumerOutput: string[] = [];
     registerPlanRevisionCommand(consumerPlan, {
       readText: () => assembled.join(""),
-      writeOutput: () => undefined,
+      writeOutput: (text) => consumerOutput.push(text),
       runner: new PlanAuthoringCommandDispatcher(
         createNodePlanRevisionRunner(root),
         new NodePlanRedesignRunner({
@@ -94,7 +95,7 @@ describe("plan redesign CLI", () => {
     });
     await consumer.parseAsync(["node", "ut-tdd", "plan", "revise", "--manifest", "manifest.json"]);
 
-    expect(process.exitCode).toBe(0);
+    expect(process.exitCode, consumerOutput.join("")).toBe(0);
     expect(resolveIssueProjection).toHaveBeenCalledWith({
       issueId: 102,
       episodeId: "E4-102",
@@ -105,17 +106,19 @@ describe("plan redesign CLI", () => {
     );
     expect(projection.ok).toBe(true);
     if (!projection.ok) throw new Error("projection should parse");
-    expect(projection.value.records.map((record) => record.commandId)).toEqual([
-      "redesign:cli-e2e:origin",
-      "redesign:cli-e2e:replacement",
-    ]);
-    expect(readFileSync(join(root, pairPath), "utf8")).toBe("# new pair\n");
+    expect(
+      projection.value.records.map((record) => record.commandId),
+      consumerOutput.join(""),
+    ).toEqual(["redesign:cli-e2e:origin", "redesign:cli-e2e:replacement"]);
+    expect(readFileSync(join(root, pairPath), "utf8")).toBe(pairContent());
     const db = openPlanLedger({ repoRoot: root });
     try {
       const rows = db
-        .prepare("SELECT group_id, status FROM authoring_command_groups")
-        .all() as Array<{ group_id: string; status: string }>;
-      expect(rows).toContainEqual({ group_id: "redesign:cli-e2e", status: "committed" });
+        .prepare(
+          "SELECT group_id, event_kind FROM authoring_command_group_phase_events WHERE event_kind = 'committed'",
+        )
+        .all() as Array<{ group_id: string; event_kind: string }>;
+      expect(rows).toContainEqual({ group_id: "redesign:cli-e2e", event_kind: "committed" });
     } finally {
       db.close();
     }
@@ -146,7 +149,10 @@ function assemblyInput(input: {
       planId: "PLAN-L6-01-origin",
       path: input.originPath,
       base: input.originBase,
-      next: source("PLAN-L6-01-origin", "origin revision 2"),
+      next: source(
+        "PLAN-L6-01-origin",
+        "origin revision 2 redirects to PLAN-L6-02-replacement",
+      ),
       blobOid: "1".repeat(40),
       admission: originAdmission(),
     }),
@@ -166,7 +172,7 @@ function assemblyInput(input: {
       phase: "forward_merge",
     },
     projection: artifact(input.projectionPath, '[{"redesign":true}]\n', input.initialProjection),
-    pairs: [artifact(input.pairPath, "# new pair\n", input.initialPair)],
+    pairs: [artifact(input.pairPath, pairContent(), input.initialPair)],
     upstream: [],
   };
 }
@@ -233,7 +239,7 @@ function replacementAdmission() {
       provider: "github",
       issueId: 102,
       episodeId: "E4-102",
-      projectionDigest: hash("recomputed"),
+      projectionDigest: `sha256:${hash("recomputed")}`,
     },
     origin: { planId: "PLAN-L6-01-origin", revision: 1, digest: hash("origin") },
     reentry: { targetPlanId: "PLAN-L6-01-origin", targetRevision: 2, phase: "forward_merge" },
@@ -254,7 +260,11 @@ function trusted(path: string, content: string, blobOid: string): TrustedGitBlob
 }
 
 function source(planId: string, body: string): string {
-  return `---\nplan_id: ${planId}\ntitle: ${planId}\nkind: design\nlayer: L6\nsub_doc: function-spec\ndrive: agent\nstatus: draft\nagent_slots:\n  - role: se\n    slot_label: primary\ngenerates: []\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n  references: []\nroute_signal: forward\nroute_mode: forward\n---\n${body}\n`;
+  return `---\nplan_id: ${planId}\ntitle: ${planId}\nkind: design\nlayer: L6\nsub_doc: function-spec\ndrive: agent\nstatus: draft\npair_artifact: docs/test-design/pair.md\nagent_slots:\n  - role: se\n    slot_label: primary\ngenerates:\n  - artifact_path: docs/design/shared.md\n    artifact_type: design_doc\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n  references: []\nroute_signal: forward\nroute_mode: forward\n---\n${body}\n`;
+}
+
+function pairContent(): string {
+  return "---\npair_artifact: docs/design/\n---\n# new pair\n";
 }
 
 function hash(value: string): string {

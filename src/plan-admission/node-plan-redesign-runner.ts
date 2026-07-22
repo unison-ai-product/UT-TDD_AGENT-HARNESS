@@ -93,6 +93,10 @@ export class NodePlanRedesignRunner {
               resolveTrackedPath(this.deps.repoRoot, manifest.projection.path),
             ),
     }).assemble({ manifest, revisions });
+    const publishedRevisions = {
+      origin: { ...revisions.origin, sourceContent: artifacts.origin.content },
+      replacement: { ...revisions.replacement, sourceContent: artifacts.replacement.content },
+    };
     const otherArtifacts = {
       pairs: manifest.pairs.map((item) =>
         artifact({
@@ -121,8 +125,8 @@ export class NodePlanRedesignRunner {
     const partial = {
       commandId: manifest.command_id,
       repositoryIdentity: manifest.repository_identity,
-      replacement: revisions.replacement,
-      origin: revisions.origin,
+      replacement: publishedRevisions.replacement,
+      origin: publishedRevisions.origin,
       reentry: {
         targetPlanId: manifest.reentry.target_plan_id,
         targetRevision: manifest.reentry.target_revision,
