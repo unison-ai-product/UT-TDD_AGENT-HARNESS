@@ -39,6 +39,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/cli/plan-adopt-genesis-chain.ts
     artifact_type: source_module
+  - artifact_path: src/cli/genesis-adoption-production.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/authoring-recovery-db-evidence.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-authoring-artifact-publisher.ts
@@ -130,6 +132,8 @@ generates:
   - artifact_path: tests/forward-escape-issue-cli.test.ts
     artifact_type: test_code
   - artifact_path: tests/cli-plan-adopt-genesis-chain.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/genesis-adoption-production.test.ts
     artifact_type: test_code
   - artifact_path: tests/node-gh-forward-escape-issue-port.test.ts
     artifact_type: test_code
