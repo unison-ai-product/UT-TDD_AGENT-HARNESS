@@ -1,10 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { deriveLegacyAssetId } from "../../src/plan-asset/adapters/legacy-plan-adapter.js";
-import {
-  LEDGER_SCHEMA_VERSION,
-  migratePlanLedger,
-} from "../../src/plan-asset/ledger/schema.js";
+import { LEDGER_SCHEMA_VERSION, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: HarnessDb[] = [];
@@ -48,22 +45,19 @@ describe("genesis adoption transaction", () => {
     "command-receipt",
     "issue-custody-prepare",
     "issue-custody-commit",
-  ] as const)(
-    "U-GEN-004: %s faultでledgerとIssue custodyの全write setをrollbackする",
-    async (boundary) => {
-      const { db, custody, Transaction } = await baseFixture();
-      const transaction = new Transaction(db, custody, {
-        after(actual) {
-          if (actual === boundary) throw new Error(`fault:${boundary}`);
-        },
-      });
+  ] as const)("U-GEN-004: %s faultでledgerとIssue custodyの全write setをrollbackする", async (boundary) => {
+    const { db, custody, Transaction } = await baseFixture();
+    const transaction = new Transaction(db, custody, {
+      after(actual) {
+        if (actual === boundary) throw new Error(`fault:${boundary}`);
+      },
+    });
 
-      expect(() => transaction.adopt(input())).toThrow(`fault:${boundary}`);
-      expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
-      expect(custody.committed()).toEqual([]);
-      expect(custody.prepared()).toEqual([]);
-    },
-  );
+    expect(() => transaction.adopt(input())).toThrow(`fault:${boundary}`);
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(custody.committed()).toEqual([]);
+    expect(custody.prepared()).toEqual([]);
+  });
 
   it("U-GEN-005: same-command replayは重複を作らず、異なるIssue preimageをconflictとして拒否する", async () => {
     const { db, custody, transaction } = await fixture();
@@ -195,16 +189,10 @@ class MemoryGenesisCustody {
 }
 
 async function loadTransaction(): Promise<GenesisAdoptionTransactionConstructor> {
-  const modulePath =
-    "../../src/plan-asset/ledger/genesis-adoption-transaction.js";
-  const implementation = (await import(
-    /* @vite-ignore */ modulePath
-  )) as Record<string, unknown>;
+  const modulePath = "../../src/plan-asset/ledger/genesis-adoption-transaction.js";
+  const implementation = (await import(/* @vite-ignore */ modulePath)) as Record<string, unknown>;
   const candidate = implementation.GenesisAdoptionTransaction;
-  expect(
-    candidate,
-    "genesis adoption transaction must be implemented",
-  ).toBeTypeOf("function");
+  expect(candidate, "genesis adoption transaction must be implemented").toBeTypeOf("function");
   return candidate as GenesisAdoptionTransactionConstructor;
 }
 
@@ -228,14 +216,12 @@ async function fixture() {
 }
 
 function input(): GenesisAdoptionInput {
-  const canonicalPayloadJson =
-    '{"layer":"L4","plan_id":"PLAN-L4-31","status":"draft"}';
+  const canonicalPayloadJson = '{"layer":"L4","plan_id":"PLAN-L4-31","status":"draft"}';
   return {
     commandId: "genesis:issue-129:l4-31",
     repositoryIdentity: "unison-ai-product/UT-TDD_AGENT-HARNESS",
     planId: "PLAN-L4-31",
-    sourcePath:
-      "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
+    sourcePath: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
     sourceCommit: "a".repeat(40),
     sourceBlobOid: "b".repeat(40),
     sourceContentDigest: sha("trusted HEAD source"),
@@ -265,16 +251,11 @@ function counts(db: HarnessDb): number[] {
     "plan_admission_events",
     "plan_admission_receipts",
     "append_command_receipts",
-  ].map((table) =>
-    Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n),
-  );
+  ].map((table) => Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n));
 }
 
 function derivedAssetId(): string {
-  return deriveLegacyAssetId(
-    "unison-ai-product/UT-TDD_AGENT-HARNESS",
-    "PLAN-L4-31",
-  );
+  return deriveLegacyAssetId("unison-ai-product/UT-TDD_AGENT-HARNESS", "PLAN-L4-31");
 }
 
 function sha(value: string): string {
