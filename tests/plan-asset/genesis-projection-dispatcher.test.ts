@@ -58,11 +58,13 @@ describe("GenesisProjectionDispatcher", () => {
     expect(fixture.store.markProjected).toHaveBeenNthCalledWith(
       1,
       "genesis:129:first",
+      "worker:test",
       "2026-07-22T07:01:00.000Z",
     );
     expect(fixture.store.markProjected).toHaveBeenNthCalledWith(
       2,
       "genesis:129:second",
+      "worker:test",
       "2026-07-22T07:01:00.000Z",
     );
   });
@@ -82,12 +84,14 @@ describe("GenesisProjectionDispatcher", () => {
     expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(
       1,
       "genesis:129:first",
+      "worker:test",
       "issue-observe-failed",
       "2026-07-22T07:01:00.000Z",
     );
     expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(
       2,
       "genesis:129:second",
+      "worker:test",
       "genesis-adoption-projection-recovery-required",
       "2026-07-22T07:01:00.000Z",
     );
@@ -107,6 +111,7 @@ describe("GenesisProjectionDispatcher", () => {
     expect(fixture.store.markProjected).not.toHaveBeenCalled();
     expect(fixture.store.markRecoveryRequired).toHaveBeenCalledWith(
       "genesis:129:first",
+      "worker:test",
       "genesis-adoption-projection-not-durable",
       "2026-07-22T07:01:00.000Z",
     );
@@ -120,7 +125,10 @@ describe("GenesisProjectionDispatcher", () => {
       projected: 1,
       recoveryRequired: 0,
     });
-    expect(fixture.store.findPending).toHaveBeenCalledWith("genesis:129:second");
+    expect(fixture.store.claimCommand).toHaveBeenCalledWith(
+      "genesis:129:second",
+      expect.objectContaining({ ownerToken: "worker:test" }),
+    );
     expect(fixture.projection.dispatch).toHaveBeenCalledOnce();
     expect(fixture.projection.dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ commandId: "genesis:129:second" }),
@@ -350,6 +358,23 @@ function setup(
   const store: GenesisProjectionOutboxStore = {
     pending: vi.fn(() => pending),
     findPending: vi.fn((commandId) => pending.find((entry) => entry.commandId === commandId)),
+    claimPending: vi.fn(() =>
+      pending.map((entry) => ({
+        ...entry,
+        ownerToken: "worker:test",
+        claimExpiresAt: "2026-07-22T07:01:30.000Z",
+      })),
+    ),
+    claimCommand: vi.fn((commandId) => {
+      const entry = pending.find((candidate) => candidate.commandId === commandId);
+      return entry
+        ? {
+            ...entry,
+            ownerToken: "worker:test",
+            claimExpiresAt: "2026-07-22T07:01:30.000Z",
+          }
+        : undefined;
+    }),
     markProjected: vi.fn(),
     markRecoveryRequired: vi.fn(),
   };
@@ -361,6 +386,7 @@ function setup(
       store,
       projection,
       () => "2026-07-22T07:01:00.000Z",
+      () => "worker:test",
     ),
   };
 }

@@ -1037,6 +1037,12 @@ function removeV7Schema(db: ReturnType<typeof openHarnessDb>): void {
 }
 
 function removeV9Schema(db: ReturnType<typeof openHarnessDb>): void {
+  db.exec("DROP TRIGGER trg_genesis_projection_claim_events_no_update");
+  db.exec("DROP TRIGGER trg_genesis_projection_claim_events_no_delete");
+  db.exec("DROP INDEX idx_genesis_projection_claim_events_command");
+  db.exec("DROP INDEX idx_genesis_projection_claim_expiry");
+  db.exec("DROP TABLE genesis_projection_claim_events");
+  db.exec("DROP TABLE genesis_projection_claims");
   for (const table of ["genesis_issue_custody", "genesis_projection_outbox_events"]) {
     db.exec(`DROP TRIGGER trg_${table}_no_update`);
     db.exec(`DROP TRIGGER trg_${table}_no_delete`);

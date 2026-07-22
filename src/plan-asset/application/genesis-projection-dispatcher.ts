@@ -4,6 +4,7 @@ import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "../../state
 import { migrate } from "../../state-db/migration.js";
 import { SqliteGenesisAdoptionProjectionAdapter } from "../adapters/sqlite-genesis-adoption-projection-adapter.js";
 import type {
+  GenesisProjectionClaim,
   GenesisProjectionOutboxEntry,
   GenesisProjectionOutboxStore,
 } from "../ledger/genesis-projection-outbox.js";
@@ -43,20 +44,23 @@ export class GenesisProjectionDispatcher {
     private readonly outbox: GenesisProjectionOutboxStore,
     private readonly projection: GenesisProjectionDispatchPort,
     private readonly now: () => string,
+    private readonly ownerToken: () => string = randomUUID,
+    private readonly leaseMs = 30_000,
   ) {}
 
   dispatchPending(limit?: number): GenesisProjectionDispatchSummary {
-    return this.dispatchEntries(this.outbox.pending(limit));
+    const request = this.claimRequest(limit);
+    return this.dispatchEntries(this.outbox.claimPending(request));
   }
 
   /** CLI adoption直後の1 commandだけを投影し、無関係なpendingを処理しない。 */
   dispatchCommand(commandId: string): GenesisProjectionDispatchSummary {
-    const entry = this.outbox.findPending(commandId);
+    const entry = this.outbox.claimCommand(commandId, this.claimRequest());
     return this.dispatchEntries(entry ? [entry] : []);
   }
 
   private dispatchEntries(
-    entries: readonly GenesisProjectionOutboxEntry[],
+    entries: readonly GenesisProjectionClaim[],
   ): GenesisProjectionDispatchSummary {
     let projected = 0;
     let recoveryRequired = 0;
@@ -66,21 +70,37 @@ export class GenesisProjectionDispatcher {
         const result = this.projection.dispatch(toProjectionInput(entry));
         if (!result.durable) throw new Error("genesis-adoption-projection-not-durable");
         if (result.state === "projected") {
-          this.outbox.markProjected(entry.commandId, occurredAt);
+          this.outbox.markProjected(entry.commandId, entry.ownerToken, occurredAt);
           projected += 1;
           continue;
         }
         this.outbox.markRecoveryRequired(
           entry.commandId,
+          entry.ownerToken,
           "genesis-adoption-projection-recovery-required",
           occurredAt,
         );
       } catch (error) {
-        this.outbox.markRecoveryRequired(entry.commandId, failureReason(error), occurredAt);
+        this.outbox.markRecoveryRequired(
+          entry.commandId,
+          entry.ownerToken,
+          failureReason(error),
+          occurredAt,
+        );
       }
       recoveryRequired += 1;
     }
     return { scanned: entries.length, projected, recoveryRequired };
+  }
+
+  private claimRequest(limit?: number) {
+    const claimedAt = this.now();
+    return {
+      ownerToken: this.ownerToken(),
+      claimedAt,
+      expiresAt: new Date(Date.parse(claimedAt) + this.leaseMs).toISOString(),
+      limit,
+    };
   }
 }
 
@@ -174,3 +194,5 @@ function closeDatabases(journalDb: HarnessDb, planDb: HarnessDb): void {
     planDb.close();
   }
 }
+
+import { randomUUID } from "node:crypto";
