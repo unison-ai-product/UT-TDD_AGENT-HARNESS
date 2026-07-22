@@ -87,9 +87,19 @@ export class NodeGhForwardEscapeIssuePort
     try {
       const repository = `${request.owner}/${request.repository}`;
       const marker = `command_id: ${request.idempotency_key}`;
-      const existing = selectMarked(this.list(repository), marker, request.body_digest, true);
+      const existing = selectMarked({
+        values: this.list(repository),
+        marker,
+        expectedDigest: request.body_digest,
+        exactLine: true,
+      });
       if (!existing) this.create(repository, request);
-      const issue = selectMarked(this.list(repository), marker, request.body_digest, true);
+      const issue = selectMarked({
+        values: this.list(repository),
+        marker,
+        expectedDigest: request.body_digest,
+        exactLine: true,
+      });
       if (!issue) throw new Error("github-issue-marker-not-observed");
       return { ok: true as const, binding: binding(repository, issue) };
     } catch {
@@ -121,19 +131,19 @@ export class NodeGhForwardEscapeIssuePort
     try {
       const marker = `ut-tdd:forward-escape-adoption/v1 ${request.idempotency_key}`;
       const exactMarker = `<!-- ${marker} -->`;
-      const prior = selectMarked(
-        this.listComments(request.repository, request.issue_number),
-        exactMarker,
-        request.body_digest,
-        true,
-      );
+      const prior = selectMarked({
+        values: this.listComments(request.repository, request.issue_number),
+        marker: exactMarker,
+        expectedDigest: request.body_digest,
+        exactLine: true,
+      });
       if (!prior) this.createComment(request.repository, request.issue_number, request.body);
-      const comment = selectMarked(
-        this.listComments(request.repository, request.issue_number),
-        exactMarker,
-        request.body_digest,
-        true,
-      );
+      const comment = selectMarked({
+        values: this.listComments(request.repository, request.issue_number),
+        marker: exactMarker,
+        expectedDigest: request.body_digest,
+        exactLine: true,
+      });
       if (!comment) throw new Error("github-adoption-comment-not-observed");
       return {
         ok: true as const,
@@ -209,12 +219,13 @@ function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function selectMarked<T extends { readonly body: string }>(
-  values: readonly T[],
-  marker: string,
-  expectedDigest: string,
-  exactLine = false,
-): T | undefined {
+function selectMarked<T extends { readonly body: string }>(input: {
+  readonly values: readonly T[];
+  readonly marker: string;
+  readonly expectedDigest: string;
+  readonly exactLine?: boolean;
+}): T | undefined {
+  const { values, marker, expectedDigest, exactLine = false } = input;
   const marked = values.filter((value) =>
     exactLine
       ? value.body.split(/\r?\n/).some((line) => line.trim() === marker)

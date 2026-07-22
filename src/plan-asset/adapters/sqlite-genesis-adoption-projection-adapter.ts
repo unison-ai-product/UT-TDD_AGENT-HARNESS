@@ -60,7 +60,7 @@ export class SqliteGenesisAdoptionProjectionAdapter implements GenesisAdoptionPr
     if (terminal) return { durable: true, state: "projected" };
 
     const queued = prior.find((event) => event.type === "IssueAdoptionQueued");
-    assertQueuedRequest(queued, input, payloadDigest, this.deps.repository);
+    assertQueuedRequest({ queued, input, payloadDigest, repository: this.deps.repository });
 
     // GitHub read/writeはSQLite transactionの外で行う。queued/adoptedだけを別々の短いtxで確定する。
     const issue = this.deps.port.observeIssue({
@@ -156,12 +156,13 @@ export class SqliteGenesisAdoptionProjectionAdapter implements GenesisAdoptionPr
   }
 }
 
-function assertQueuedRequest(
-  queued: DurableQueued | undefined,
-  input: Parameters<GenesisAdoptionProjectionOutboxPort["dispatch"]>[0],
-  payloadDigest: string,
-  repository: string,
-): void {
+function assertQueuedRequest(request: {
+  readonly queued: DurableQueued | undefined;
+  readonly input: Parameters<GenesisAdoptionProjectionOutboxPort["dispatch"]>[0];
+  readonly payloadDigest: string;
+  readonly repository: string;
+}): void {
+  const { queued, input, payloadDigest, repository } = request;
   if (
     queued &&
     (queued.payload_digest !== payloadDigest ||
