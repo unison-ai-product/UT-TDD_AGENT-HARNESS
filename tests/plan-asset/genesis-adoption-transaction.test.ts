@@ -1,18 +1,19 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { deriveLegacyAssetId } from "../../src/plan-asset/adapters/legacy-plan-adapter.js";
 import { LEDGER_SCHEMA_VERSION, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
+import { removeTestTree } from "../support/temp-tree.js";
 
 const opened: HarnessDb[] = [];
 const temporaryRoots: string[] = [];
 
 afterEach(() => {
   for (const db of opened.splice(0)) db.close();
-  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of temporaryRoots.splice(0)) removeTestTree(root);
 });
 
 describe("genesis adoption transaction", () => {
