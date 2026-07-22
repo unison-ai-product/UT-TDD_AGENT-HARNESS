@@ -429,3 +429,11 @@ companion crash、client crash、SCM/broker crash、pipe切断、journal commit�
 Node core、target別companion、protocol schema、manifest、SBOM、署名、実OS evidenceを一つのbundle revisionへ固定する。
 実行時download、PATH探索、片側rollbackを禁止する。rollback後も同じL8/L9 oracleを再実行し、capabilityが不足するplatformは
 旧direct-spawnへ戻さず利用停止する。
+
+### D.5 Node package / Bun ban物理境界
+
+Node配布単位は`manifest + compiled ESM + production dependencies + Rust companion + SBOM + signature`であり、片側更新を禁止する。`RuntimeBundleVerifier`は署名、target、Node policy、全file digest、Rust protocolを照合し、verified handleだけを`NodeEntrypointResolver`へ渡す。resolverはabsolute Node executableとESM argvを返し、PATH探索、runtime download、Bun/tsx/TS直実行fallbackを持たない。
+
+`BanInventoryPort`はtracked tree、generated release tree、current docs、runtime image receiptを別sourceとして列挙する。archive/referenceはcatalog classificationで分離し、current Core Readsだけをproduction-doc surfaceとする。symlink/submodule/executable binaryは解決元identityを保持し、untracked release treeもmanifest selection内ならscan対象にする。coverage欠測はfinding 0に変換しない。
+
+`RuntimeImageObserverPort`はexecutable image、argv、parent/custody identity、heartbeat、sequence、drop count、対象session coverageを返す。Bun imageが0でもobserver gapがあれば`Indeterminate`でRedとする。SQLite、hook、CLI、test runner、Packは同じverified Node handleとbootstrap receiptを使用する。

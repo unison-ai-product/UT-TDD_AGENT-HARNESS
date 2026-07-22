@@ -1700,10 +1700,18 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `U-BUNBAN-006` | current docsへBun正規経路を追加 | negative fixtureと混同せずfinding |
 | `U-BUNBAN-007` | parse failure/unknown executable extension | coverage gapでRed |
 | `U-BUNBAN-008` | debt行のpath/detector/digest/owner/replacement/deadline欠落・余剰 | manifest driftでRed |
-| `U-BUNBAN-009` | 既存debtあり | `no-new`はcount保持、`zero`は非zero終了 |
+| `U-BUNBAN-009` | 既存debtあり・delta無し | deltaは`Unchanged`でもoverallは`NonCompliant`かつ非zero終了 |
 | `U-BUNBAN-010` | 各scannerへ新規finding mutation | survivor 0 |
 | `U-BUNBAN-011` | scanner/build自身へBun依存注入 | self-host Red |
 | `U-BUNBAN-012` | 列挙順/cwd/path separator変更 | sorted receipt/digest不変 |
+| `U-BUNBAN-013` | `Bun.*` / `process.versions.bun` / `import.meta.main` | runtime global reasonでfinding |
+| `U-BUNBAN-014` | `UT_TDD_BUN_*`・Bun binary環境名 | environment surface finding |
+| `U-BUNBAN-015` | `bun.lock*`、`setup-bun`、download URL、package-manager invocation | dependency/setup reasonでfinding |
+| `U-BUNBAN-016` | shell/PowerShell変数展開・escaped token・分割command | canonical command finding |
+| `U-BUNBAN-017` | case/Unicode/path alias・symlink | 解決元identity付きfinding |
+| `U-BUNBAN-018` | submodule/executable binary・untracked release tree | manifest selection内をscan |
+| `U-BUNBAN-019` | archive/reference/current Core Readsの同語彙 | currentだけproduction finding、分類欠測Red |
+| `U-BUNBAN-020` | runtime observer heartbeat gap/drop/session欠測 | image 0でも`Indeterminate` Red |
 | `U-NODEBOOT-001` | Node/version/lock drift | bootstrap拒否 |
 | `U-NODEBOOT-002` | clean dependency graph | review済みlock digest一致 |
 | `U-NODEBOOT-003` | production TS直実行 | compiled ESM以外を拒否 |

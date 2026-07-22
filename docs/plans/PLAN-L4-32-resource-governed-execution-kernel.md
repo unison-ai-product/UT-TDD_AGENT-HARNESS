@@ -6,8 +6,8 @@ layer: L4
 sub_doc: architecture
 drive: fullstack
 status: draft
-route_signal: feature_addition
-route_mode: add-feature
+route_signal: redesign
+route_mode: redesign
 created: 2026-07-22
 updated: 2026-07-22
 owner: PO / Codex

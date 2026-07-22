@@ -6,8 +6,8 @@ layer: L6
 sub_doc: function-spec
 drive: fullstack
 status: draft
-route_signal: feature_addition
-route_mode: add-feature
+route_signal: redesign
+route_mode: redesign
 created: 2026-07-22
 updated: 2026-07-22
 owner: PO / Codex
@@ -147,12 +147,12 @@ Node control-plane cutoverはResource Kernelの`AC-RGK-15`を満たす機能と�
 ```text
 BanFinding = detectorId + canonicalPath + surface + evidenceDigest + replacementPlan + owner + deadline
 BanCoverage = scannerId + selectedCount + parsedCount + unknownCount + observerHealth
-BanMode = NoNew(frozenInventoryDigest) | Zero
-BanDecision = Pass(receipt) | Fail(findings, coverageGaps)
+DeltaGuard = Unchanged(frozenInventoryDigest) | Changed(deltaFindings)
+ComplianceVerdict = Compliant(receipt) | NonCompliant(findings) | Indeterminate(coverageGaps)
 ```
 
-`NoNew`は既存debtを消さず、新規・変更・期限切れだけをgateする。`Zero`はproduction finding 1件以上で必ずfailする。既存Bunをallowlistやfixtureへ分類替えしてGreenにしない。全scannerはpure objectとしてfindingを返し、filesystem、YAML/TS parse、process observationはportへ隔離する。
+`DeltaGuard`はfrozen inventoryに対する新規・変更・期限切れを判定するが、overall complianceをGreenにする権限を持たない。`ComplianceVerdict = Compliant | NonCompliant(findings) | Indeterminate(coverageGaps)`とし、後二者は常にaggregate Redである。`Zero`はproduction finding 1件以上で必ず`NonCompliant`を返す。既存Bunをallowlistやfixtureへ分類替えしてGreenにしない。全scannerはpure objectとしてfindingを返し、filesystem、YAML/TS parse、process observationはportへ隔離する。
 
 `NodeBootstrapReceipt`はNode executable identity、version policy、package-lock digest、compiled core digest、entrypoint、build policy、subject revisionを結ぶ。compiled ESM以外のproduction TS直実行、runtime download、ambient PATH解決、Bun/tsx fallbackを拒否する。Node CLI、ban detector、SQLite canonical corpus、targeted testが同一receiptから起動できない場合はself-host未成立とする。
 
-本節はL7 `U-BUNBAN-001..012` / `U-NODEBOOT-001..012`と対にし、`PLAN-L7-458-node-self-hosted-bun-ban-foundation`へatomicに降下する。
+本節はL7 `U-BUNBAN-001..020` / `U-NODEBOOT-001..012`と対にし、`PLAN-L7-458-node-self-hosted-bun-ban-foundation`へatomicに降下する。Redesign設計freeze後にForwardへ再合流した実装sliceであるため、L7-458のrouteは`add-feature`とし、本PLAN/Issue #134をredesign originとして保持する。
