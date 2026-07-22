@@ -9,8 +9,8 @@ route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-22
 updated: 2026-07-22
-revision_note: "rev2: VSCode 拡張レイヤ所見 (§2.1) を台帳初期内容として追補。autoUpdate off
-  の版ずれベクトル、cliExecutable 禁止レシピ、危険側キー warn 候補"
+revision_note: "rev3: Codex hook matcher 発火実効性 (§2.2) を契約へ追補。open PR 群
+  (#125 含む) が疑義を閉じていないことを確認し、U-RTENV-7 oracle を追加"
 owner: PO / Claude (Fable orchestrator)
 parent_design: docs/plans/PLAN-L6-01-function-spec.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -70,7 +70,7 @@ UT-TDD は Claude Code / Codex CLI を委譲・hook 面の前提基盤とする�
 | cli-version-coherence | `codex --version` (実行可能なら) と `~/.codex/models_cache.json` の `client_version` の major.minor 整合 | violation + 修復レシピ (npm 更新 or cache 削除) |
 | codex-config-schema | `~/.codex/config.toml` に既知の廃止キー (`approval_mode` 等、台帳管理) が残存しないか | violation + rename レシピ |
 | claude-mcp-placement | `~/.claude/settings.json` / `.claude/settings.json` に `mcpServers` が定義されていないか (サイレント無視の誤配置検知) | violation + 正位置への移設レシピ |
-| hook-adapter-parity | `.claude/settings.json` と `.codex/hooks.json` の hook 対応面が rule-drift の対と整合するか (既存 rule-drift の runtime-env 面への拡張) | violation |
+| hook-adapter-parity | `.claude/settings.json` と `.codex/hooks.json` の hook 対応面が rule-drift の対と整合するか (既存 rule-drift の runtime-env 面への拡張)。加えて Codex 側 matcher の**発火実効性**を台帳照合する (§2.2) | violation |
 | hook-timeout-sanity | hook `timeout` が正の秒数で、公式仕様の単位 (秒) を前提とした妥当域か | warn |
 
 不変条件:
@@ -101,6 +101,25 @@ CLI 側設定ファイルに集約されるが、以下を台帳へ初期登録�
    `security.workspace.trust.untrustedFiles` が安全側既定から外れていたら warn。
    2026-07-22 時点は全て安全側 (前 2 者未設定、後者は "open" で情報提供済み)。
 
+### 2.2 Codex hook matcher 発火実効性 (2026-07-22 追補、未検証の疑義を契約へ固定)
+
+2026-07-22 の CLI 設定監査で、Codex CLI の PreToolUse hooks は **Bash 系ツールにしか
+発火しない可能性** (コミュニティ報告ベース、未実証) が判明した。事実であれば
+`.codex/hooks.json` の `apply_patch|write_file` matcher (work-guard の Codex ミラー、
+PLAN-L7-139) は形だけ整合し実際には一度も走らない = hybrid の foreign-edit 防御が
+Codex 側で片肺になる。open PR (#125 含む) は起動形の shell-free 化のみでこの疑義を
+閉じていない (2026-07-22 確認)。
+
+hook-adapter-parity 検査は「設定ファイルの形の一致」だけでなく、次を契約に含める:
+
+1. **発火実効性台帳**: matcher ごとに「当該 Codex CLI 版で発火が実証済みか」を台帳で
+   持つ (実証 = hook 実行痕跡ログ or upstream 仕様の明記。prose 主張は不可)。
+2. 未実証 matcher に guard 責務 (blockOnFailure=true) が載っている場合は **warn では
+   なく violation** とする (防御が置物である状態を green にしない。fail-close)。
+3. L7 実装時に `apply_patch` 発火の実機検証 (Codex 実版でのスモーク) を Red oracle
+   `U-RTENV-7` として先行実施し、結果 (発火する/しない) を台帳の初期値にする。
+   発火しない場合の是正 (upstream issue 起票 / 代替防御) は別 PLAN で扱う。
+
 ## 3. 判断を要する不備は対象外 (スコープ境界)
 
 WIP の陳腐判定・PR 帰属のような判断依存の不備は本検査の対象外とする (2026-07-22 監査
@@ -118,6 +137,8 @@ L7 test-design に `U-RTENV-*` を追加し、少なくとも次を固定する�
 4. 環境ファイル不在 fixture が skip として明示 report される (silent pass の負例)。
 5. doctor が対象ファイルを書き換えない (実行前後の digest 不変)。
 6. 秘密情報を含む fixture 設定の原文が violation メッセージへ漏れない。
+7. `U-RTENV-7`: 発火未実証 matcher に blockOnFailure guard が載った fixture が
+   violation として検出される (§2.2。実機スモークの結果を台帳初期値へ反映)。
 
 ## 5. AC
 
