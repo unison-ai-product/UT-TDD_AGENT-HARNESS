@@ -268,14 +268,13 @@ revision write-setと全member（`expectedPreimage`を含む）の`prepared` int
 
 ## §10 実行台帳集約
 
-`ExecutionEpisode`はForward escape一件の集約ルートであり、`episode_id`、origin PLAN Asset/revision/L/state、
-escape type/reason/recurrence identity、選択drive、re-entry target、last sequence/event digestを持つ。
-履歴正本はE0-E15 event、current stateはそのreduction projectionである。
+`ExecutionEpisode` は Forward escape 一件の集約ルートであり、`episode_id`、起点 PLAN Asset の
+revision/L/state、escape の種別・理由・再発 identity、選択 drive、合流先、最終 sequence/event digest を持つ。
+履歴正本は E0-E15 event、現在状態はその縮約 projection である。
 
-`DriveModel`はL4 function §3.1の駆動モデル12値 (Discovery / Scrum / Reverse / Redesign /
-Recovery / Incident / Refactor / Retrofit / Add-feature / Research / design-bottomup / version-up)
-`discovery | scrum | reverse | redesign | recovery | incident | refactor | retrofit | add-feature | research | design-bottomup | version-up`
-をcanonical enumとする。PLAN `route_mode`は同じ値を使い、`drive: be|fe|fullstack|db|agent|normal`は
+`DriveModel` は L4 function §3.1で定義した12種の駆動モデルを表す。
+正規 enum は `discovery | scrum | reverse | redesign | recovery | incident | refactor | retrofit | add-feature | research | design-bottomup | version-up`
+とする。PLAN `route_mode` は同じ値を使い、`drive: be|fe|fullstack|db|agent|normal` は
 実装領域を表す別型として混入を拒否する。`blocked | rejected | reopened | superseded | preemptive | defer`は
 escape reason/typeであり、drive選択前に11値のいずれかへrouteする。GitHub labelやbranch prefixを第二enumにせず、
 Issue/PR projection DTOだけがcanonical drive valueを表示する。human overrideは元選択を更新せずoverride eventをappendする。

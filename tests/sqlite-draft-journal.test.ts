@@ -225,6 +225,21 @@ describe("SqliteDraftJournal", () => {
 function downgradeCleanupSchema(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
   // Reconstruct an actual historical schema, rather than only changing
   // user_version while leaving later authoring tables behind.
+  db.exec("DROP TRIGGER trg_genesis_projection_claim_events_no_update");
+  db.exec("DROP TRIGGER trg_genesis_projection_claim_events_no_delete");
+  db.exec("DROP INDEX idx_genesis_projection_claim_events_command");
+  db.exec("DROP INDEX idx_genesis_projection_claim_expiry");
+  db.exec("DROP TABLE genesis_projection_claim_events");
+  db.exec("DROP TABLE genesis_projection_claims");
+  db.exec("DROP TRIGGER trg_genesis_projection_outbox_events_no_update");
+  db.exec("DROP TRIGGER trg_genesis_projection_outbox_events_no_delete");
+  db.exec("DROP TRIGGER trg_genesis_issue_custody_no_update");
+  db.exec("DROP TRIGGER trg_genesis_issue_custody_no_delete");
+  db.exec("DROP INDEX idx_genesis_projection_outbox_events_command");
+  db.exec("DROP INDEX idx_genesis_projection_outbox_status");
+  db.exec("DROP TABLE genesis_projection_outbox_events");
+  db.exec("DROP TABLE genesis_projection_outbox");
+  db.exec("DROP TABLE genesis_issue_custody");
   db.exec("DROP TABLE authoring_artifact_recovery_events");
   db.exec("DROP TABLE authoring_recovery_attempt_events");
   db.exec("DROP TABLE authoring_recovery_assessment_events");

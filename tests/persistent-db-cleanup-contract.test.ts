@@ -197,7 +197,7 @@ function hasLiveCleanupCall(path: string, source: string): boolean {
     if (
       !ts.isImportDeclaration(statement) ||
       !ts.isStringLiteralLike(statement.moduleSpecifier) ||
-      !/(?:^|\/)support\/temp-tree$/.test(statement.moduleSpecifier.text) ||
+      !/(?:^|\/)support\/temp-tree(?:\.js)?$/.test(statement.moduleSpecifier.text) ||
       !statement.importClause?.namedBindings ||
       !ts.isNamedImports(statement.importClause.namedBindings)
     )
@@ -283,6 +283,12 @@ describe("persistent harness DB cleanup contract", () => {
   });
 
   it("U-TESTHYGIENE-030: resolves aliases, element access, async rm, and options variables", () => {
+    expect(
+      hasLiveCleanupCall(
+        "tests/plan-asset/owner.test.ts",
+        "import { removeTestTree } from '../support/temp-tree.js'; removeTestTree(root);",
+      ),
+    ).toBe(true);
     expect(
       createsPersistedHarnessDb(
         "tests/nested/owner.test.ts",

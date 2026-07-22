@@ -34,6 +34,9 @@ disposition/git-authoring-provenance:3 disposition/projection:6 disposition/trac
 forward-escape-issue-contract:7
 authoring-recovery-surface:2 node-authoring-artifact-publisher:2 node-plan-authoring-recovery-runner:2
 plan-asset/authoring-command-group:1 plan-asset/plan-redesign-bundle:9
+genesis-adoption-production:1
+plan-asset/genesis-adoption-production-chain:1 plan-asset/genesis-adoption-tracked-contract:2
+plan-asset/genesis-projection-outbox:4
 `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
