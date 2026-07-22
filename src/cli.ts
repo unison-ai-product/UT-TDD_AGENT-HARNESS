@@ -32,6 +32,7 @@ import {
 } from "./cli/delegation";
 import { registerDistributionCommands } from "./cli/distribution";
 import { registerFeedbackCommands } from "./cli/feedback";
+import { registerForwardEscapeIssueCommand } from "./cli/forward-escape-issue";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { registerPlanAuthoringRecoveryCommands } from "./cli/plan-authoring-recovery";
@@ -107,6 +108,7 @@ import {
   writeMemoryEntry,
 } from "./memory/index";
 import { lintPlanWithGate } from "./plan/lint";
+import { createNodeForwardEscapeIssueProjectionRunner } from "./plan-admission/forward-escape-issue-projection-runner";
 import { NodePlanAuthoringRecoveryRunner } from "./plan-admission/node-plan-authoring-recovery-runner";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
 import { createNodePlanRedesignRunner } from "./plan-admission/node-plan-redesign-runner";
@@ -1223,6 +1225,9 @@ registerPlanAssetCommands(plan);
 registerPlanAdmissionCommands(plan);
 registerPlanDraftCommand(plan, { runner: createNodePlanDraftRunner(process.cwd()) });
 registerPlanRedesignCommand(plan);
+registerForwardEscapeIssueCommand(plan, {
+  runner: createNodeForwardEscapeIssueProjectionRunner(process.cwd()),
+});
 registerPlanRevisionCommand(plan, {
   runner: new PlanAuthoringCommandDispatcher(
     createNodePlanRevisionRunner(process.cwd()),

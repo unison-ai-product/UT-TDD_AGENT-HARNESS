@@ -4,6 +4,7 @@ import {
   bindRenderedProjection,
   NodePlanRedesignRunner,
   RedesignReceiptArtifactAssembler,
+  verifyAppendLedgerBases,
 } from "../src/plan-admission/node-plan-redesign-runner.js";
 import {
   assemblePlanRedesignBundleManifest,
@@ -17,6 +18,7 @@ import {
   TrustedGitBlobResolver,
 } from "../src/plan-admission/trusted-git-blob-resolver.js";
 import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
+import type { HarnessDb } from "../src/state-db/index.js";
 
 const commit = "a".repeat(40);
 const blobOid = "c".repeat(40);
@@ -65,6 +67,93 @@ describe("NodePlanRedesignRunner legacy bootstrap git binding", () => {
     });
     expect(() => runner.run({ manifest: manifest() })).toThrow(message);
     expect(openDb).not.toHaveBeenCalled();
+  });
+});
+
+describe("NodePlanRedesignRunner append provenance", () => {
+  it.each([
+    [
+      "forged source_commit",
+      { commitOid: "e".repeat(40) },
+      "plan-redesign-append-source-commit-drift",
+    ],
+    ["forged blob", { blobOid: "not-an-oid" }, "plan-redesign-append-source-blob-invalid"],
+    [
+      "forged content",
+      { bytes: Buffer.from("forged") },
+      "plan-redesign-append-source-content-drift",
+    ],
+  ])("%sをDB open前に拒否する", (_label, override, message) => {
+    const assembled = appendManifest();
+    const openDb = vi.fn();
+    const runner = new NodePlanRedesignRunner({
+      repoRoot: ".",
+      openDb,
+      gitResolver: {
+        resolve: (_commit, path) => ({
+          commitOid: commit,
+          sourcePath: path,
+          blobOid,
+          bytes: Buffer.from(
+            appendSource(
+              path.includes("origin") ? assembled.origin.plan_id : assembled.replacement.plan_id,
+            ),
+          ),
+          ...override,
+        }),
+      },
+    });
+
+    expect(() => runner.run({ manifest: assembled })).toThrow(message);
+    expect(openDb).not.toHaveBeenCalled();
+  });
+
+  it("stale ledger baseをissue/publish mutation前に拒否する", () => {
+    const assembled = appendManifest();
+    const db = appendBaseDb(assembled, { revision: 0 });
+    expect(() => verifyAppendLedgerBases(db, assembled)).toThrow(
+      "plan-redesign-append-ledger-base-drift",
+    );
+  });
+});
+
+describe("NodePlanRedesignRunner repository binding", () => {
+  it("別repositoryのE4 evidenceをDB mutation前に拒否する", () => {
+    const assembled = allBootstrapManifest();
+    const db = appendBaseDb(appendManifest());
+    const runner = new NodePlanRedesignRunner({
+      repoRoot: ".",
+      openDb: () => db,
+      repositoryIdentityResolver: { assertClaim: () => assembled.repository_identity },
+      issueProjectionResolver: {
+        resolve: (claim) => ({
+          issueId: claim.issueId,
+          episodeId: claim.episodeId,
+          projectionDigest: claim.projectionDigest,
+          repository: "owner/other",
+          bodyDigest: `sha256:${digest}`,
+        }),
+      },
+      gitResolver: {
+        resolve: (_commit, path) => {
+          const revision = [assembled.origin, assembled.replacement].find(
+            (candidate) => candidate.bootstrap?.base_source_path === path,
+          );
+          if (!revision?.bootstrap) throw new Error("unexpected path");
+          return {
+            commitOid: revision.bootstrap.base_source_commit,
+            sourcePath: path,
+            blobOid: revision.bootstrap.base_source_blob_oid,
+            bytes: Buffer.from(revision.bootstrap.base_source_content),
+          };
+        },
+      },
+    });
+
+    expect(() => runner.run({ manifest: assembled })).toThrow(
+      "trusted-repository-identity-invalid",
+    );
+    expect(db.exec).not.toHaveBeenCalled();
   });
 });
 
@@ -180,6 +269,96 @@ function manifest() {
   });
 }
 
+function allBootstrapManifest() {
+  const input = fixture();
+  const bootstrap = (planId: string, sourceContent: string) => {
+    const identityInput = JSON.stringify([input.repositoryIdentity, planId]);
+    return {
+      repositoryIdentity: input.repositoryIdentity,
+      identityAlgorithm: "ut-tdd-plan-legacy-v1" as const,
+      identityDigest: hash(identityInput),
+      sourceBlobOid: blobOid,
+      sourceContent,
+      sourceContentDigest: hash(sourceContent),
+      sourceCommit: commit,
+    };
+  };
+  return assemblePlanRedesignBundleManifest({
+    ...input,
+    origin: {
+      ...input.origin,
+      revisionMode: "legacy_bootstrap",
+      bootstrap: bootstrap(input.origin.planId, source(input.origin.planId)),
+    },
+    replacement: {
+      ...input.replacement,
+      revisionMode: "legacy_bootstrap",
+      bootstrap: bootstrap(input.replacement.planId, source(input.replacement.planId)),
+    },
+  });
+}
+
+function appendManifest() {
+  const input = fixture();
+  return assemblePlanRedesignBundleManifest({
+    ...input,
+    sourceCommit: commit,
+    origin: {
+      ...input.origin,
+      sourceContent: appendSource(input.origin.planId),
+      expectedPreimage: { kind: "sha256", digest: hash(appendSource(input.origin.planId)) },
+    },
+    replacement: {
+      ...input.replacement,
+      sourceContent: appendSource(input.replacement.planId),
+      expectedPreimage: { kind: "sha256", digest: hash(appendSource(input.replacement.planId)) },
+    },
+    pairs: [
+      {
+        path: "docs/test-design/shared.md",
+        content: "---\npair_artifact: docs/design/\n---\npair\n",
+        expected_preimage: { kind: "absent" },
+      },
+    ],
+  });
+}
+
+function appendBaseDb(
+  assembled: ReturnType<typeof appendManifest>,
+  override: { readonly revision?: number } = {},
+): HarnessDb {
+  return {
+    path: ":memory:",
+    driver: "node",
+    exec: vi.fn(),
+    prepare: vi.fn((sql: string) => ({
+      run: vi.fn(),
+      all: vi.fn((planId: unknown) => {
+        const revision = [assembled.origin, assembled.replacement].find(
+          (candidate) => candidate.plan_id === planId,
+        );
+        return revision ? [{ asset_id: revision.asset_id }] : [];
+      }),
+      get: vi.fn((assetId: unknown) => {
+        if (!sql.includes("FROM plan_revisions")) return undefined;
+        const revision = [assembled.origin, assembled.replacement].find(
+          (candidate) => candidate.asset_id === assetId,
+        );
+        return revision
+          ? {
+              revision: override.revision ?? revision.base_revision,
+              canonical_payload_digest: revision.base_payload_digest,
+              source_path: revision.source_path,
+            }
+          : undefined;
+      }),
+    })),
+    userVersion: () => 8,
+    setUserVersion: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
 function fixture(): PlanRedesignAssemblyInput {
   return {
     commandId: "redesign:git-binding",
@@ -258,6 +437,14 @@ const replacementAdmission: PlanAdmissionRequest = {
 
 function source(planId: string): string {
   return `---\nplan_id: ${planId}\ntitle: ${planId}\nkind: design\nlayer: L6\nsub_doc: function-spec\ndrive: agent\nstatus: draft\nagent_slots:\n  - role: se\n    slot_label: primary\ngenerates: []\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n  references: []\nroute_signal: forward\nroute_mode: forward\n---\nbody\n`;
+}
+function appendSource(planId: string): string {
+  return source(planId)
+    .replace("generates: []", "generates:\n  - artifact_path: docs/design/shared.md")
+    .replace(
+      "sub_doc: function-spec",
+      "sub_doc: function-spec\npair_artifact: docs/test-design/shared.md",
+    );
 }
 function hash(value: string): string {
   return createHash("sha256").update(value).digest("hex");

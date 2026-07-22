@@ -35,6 +35,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/cli/plan-redesign.ts
     artifact_type: source_module
+  - artifact_path: src/cli/forward-escape-issue.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/authoring-recovery-db-evidence.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-authoring-artifact-publisher.ts
@@ -50,6 +52,14 @@ generates:
   - artifact_path: src/plan-admission/node-plan-revision-runner.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/issue-projection-evidence-resolver.ts
+    artifact_type: source_module
+  - artifact_path: src/github/node-gh-forward-escape-issue-port.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/forward-escape-issue-projection-runner.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-forward-escape-ledger-view.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-issue-projection-evidence-resolver.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-authoring-command-runner.ts
     artifact_type: source_module
@@ -67,7 +77,7 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/trusted-git-blob-resolver.ts
     artifact_type: source_module
-  - artifact_path: src/plan-admission/tracked-receipt-renderer.ts
+  - artifact_path: src/plan-admission/trusted-repository-identity-resolver.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/authoring-command-group.ts
     artifact_type: source_module
@@ -103,6 +113,12 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/issue-projection-evidence-resolver.test.ts
     artifact_type: test_code
+  - artifact_path: tests/forward-escape-issue-cli.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/node-gh-forward-escape-issue-port.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/node-issue-projection-evidence-resolver.test.ts
+    artifact_type: test_code
   - artifact_path: tests/plan-asset/authoring-command-group.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/ledger-schema.test.ts
@@ -120,6 +136,8 @@ generates:
   - artifact_path: tests/plan-redesign-cli.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-redesign-command-assembler.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/trusted-repository-identity-resolver.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-revise-cli.test.ts
     artifact_type: test_code

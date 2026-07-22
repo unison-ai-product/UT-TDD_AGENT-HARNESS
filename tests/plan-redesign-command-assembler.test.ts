@@ -119,7 +119,7 @@ describe("redesign bundle manifest assembler", () => {
       digest: `sha256:${digest}`,
     });
     expect(manifest.replacement.admission.reentry).toEqual(input.reentry);
-    expect(manifest.replacement.admission.issue?.projectionDigest).toBe(digest);
+    expect(manifest.replacement.admission.issue?.projectionDigest).toBe(`sha256:${"e".repeat(64)}`);
   });
 
   it.each([

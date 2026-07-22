@@ -1,5 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import { registerPlanRevisionCommand } from "../src/cli/plan-revise.js";
 import { NodePlanRedesignRunner } from "../src/plan-admission/node-plan-redesign-runner.js";
 import { createNodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.js";
 import { PlanAuthoringCommandDispatcher } from "../src/plan-admission/plan-authoring-command-runner.js";
+import { parseTrackedReceiptProjection } from "../src/plan-admission/tracked-receipt-projection.js";
 import type { TrustedGitBlob } from "../src/plan-admission/trusted-git-blob-resolver.js";
 import { openPlanLedger } from "../src/plan-asset/ledger/schema.js";
 
@@ -20,15 +22,19 @@ afterEach(() => {
 
 describe("plan redesign CLI", () => {
   it("assembly inputを公開CLIでv2化しreviseから実coordinator/DB/publisherへ通す", async () => {
-    const root = join(process.cwd(), ".ut-tdd", `redesign-cli-${randomUUID()}`);
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-redesign-cli-"));
     roots.push(root);
-    const originPath = "docs/plans/PLAN-L6-1.md";
-    const replacementPath = "docs/plans/PLAN-L6-2.md";
+    const originPath = "docs/plans/PLAN-L6-01-origin.md";
+    const replacementPath = "docs/plans/PLAN-L6-02-replacement.md";
     const projectionPath = "docs/governance/plan-admission-receipts.json";
     const pairPath = "docs/test-design/pair.md";
-    const originBase = source("PLAN-L6-1", "origin base");
-    const replacementBase = source("PLAN-L6-2", "replacement base");
-    const initialProjection = "[]\n";
+    const originBase = source("PLAN-L6-01-origin", "origin base");
+    const replacementBase = source("PLAN-L6-02-replacement", "replacement base");
+    const initialProjection = `${JSON.stringify(
+      { schema_version: "ut-tdd.plan-admission-receipts/v1", records: [] },
+      null,
+      2,
+    )}\n`;
     const initialPair = "# old pair\n";
     for (const path of [originPath, replacementPath, projectionPath, pairPath])
       mkdirSync(join(root, path, ".."), { recursive: true });
@@ -65,7 +71,7 @@ describe("plan redesign CLI", () => {
       [originPath, trusted(originPath, originBase, "1".repeat(40))],
       [replacementPath, trusted(replacementPath, replacementBase, "2".repeat(40))],
     ]);
-    const resolveIssueProjection = vi.fn(() => ({}));
+    const resolveIssueProjection = vi.fn((_claim: unknown) => ({}));
     const consumer = new Command().exitOverride();
     const consumerPlan = consumer.command("plan");
     registerPlanRevisionCommand(consumerPlan, {
@@ -76,7 +82,13 @@ describe("plan redesign CLI", () => {
         new NodePlanRedesignRunner({
           repoRoot: root,
           gitResolver: { resolve: (_commit, path) => blobs.get(path) as TrustedGitBlob },
-          issueProjectionResolver: { resolve: resolveIssueProjection },
+          issueProjectionResolver: {
+            resolve: (claim) => {
+              resolveIssueProjection(claim);
+              return { repository: "owner/repository" };
+            },
+          },
+          repositoryIdentityResolver: { assertClaim: () => "owner/repository" },
         }),
       ),
     });
@@ -88,7 +100,15 @@ describe("plan redesign CLI", () => {
       episodeId: "E4-102",
       projectionDigest: `sha256:${hash("recomputed")}`,
     });
-    expect(readFileSync(join(root, projectionPath), "utf8")).toBe('[{"redesign":true}]\n');
+    const projection = parseTrackedReceiptProjection(
+      readFileSync(join(root, projectionPath), "utf8"),
+    );
+    expect(projection.ok).toBe(true);
+    if (!projection.ok) throw new Error("projection should parse");
+    expect(projection.value.records.map((record) => record.commandId)).toEqual([
+      "redesign:cli-e2e:origin",
+      "redesign:cli-e2e:replacement",
+    ]);
     expect(readFileSync(join(root, pairPath), "utf8")).toBe("# new pair\n");
     const db = openPlanLedger({ repoRoot: root });
     try {
@@ -123,24 +143,28 @@ function assemblyInput(input: {
     origin: revisionSeed({
       repository,
       commit,
-      planId: "PLAN-L6-1",
+      planId: "PLAN-L6-01-origin",
       path: input.originPath,
       base: input.originBase,
-      next: source("PLAN-L6-1", "origin revision 2"),
+      next: source("PLAN-L6-01-origin", "origin revision 2"),
       blobOid: "1".repeat(40),
       admission: originAdmission(),
     }),
     replacement: revisionSeed({
       repository,
       commit,
-      planId: "PLAN-L6-2",
+      planId: "PLAN-L6-02-replacement",
       path: input.replacementPath,
       base: input.replacementBase,
-      next: source("PLAN-L6-2", "replacement revision 2"),
+      next: source("PLAN-L6-02-replacement", "replacement revision 2"),
       blobOid: "2".repeat(40),
       admission: replacementAdmission(),
     }),
-    reentry: { target_plan_id: "PLAN-L6-1", target_revision: 2, phase: "forward_merge" },
+    reentry: {
+      target_plan_id: "PLAN-L6-01-origin",
+      target_revision: 2,
+      phase: "forward_merge",
+    },
     projection: artifact(input.projectionPath, '[{"redesign":true}]\n', input.initialProjection),
     pairs: [artifact(input.pairPath, "# new pair\n", input.initialPair)],
     upstream: [],
@@ -186,6 +210,7 @@ function originAdmission() {
     routeMode: "forward",
     kind: "design",
     layer: "L6",
+    subDoc: "function-spec",
     drive: "agent",
     branch: "work/forward-origin",
   };
@@ -197,20 +222,21 @@ function replacementAdmission() {
     routeMode: "redesign",
     kind: "design",
     layer: "L6",
+    subDoc: "function-spec",
     drive: "agent",
     branch: "work/redesign-replacement",
     transitionDirection: "design_to_implementation",
     implementationDisposition: "discarded",
-    implementationTarget: { targetPlanId: "PLAN-L7-2", targetRevision: 1 },
-    supersedes: ["PLAN-L6-1"],
+    implementationTarget: { targetPlanId: "PLAN-L7-02-target", targetRevision: 1 },
+    supersedes: ["PLAN-L6-01-origin"],
     issue: {
       provider: "github",
       issueId: 102,
       episodeId: "E4-102",
       projectionDigest: hash("recomputed"),
     },
-    origin: { planId: "PLAN-L6-1", revision: 1, digest: hash("origin") },
-    reentry: { targetPlanId: "PLAN-L6-1", targetRevision: 2, phase: "forward_merge" },
+    origin: { planId: "PLAN-L6-01-origin", revision: 1, digest: hash("origin") },
+    reentry: { targetPlanId: "PLAN-L6-01-origin", targetRevision: 2, phase: "forward_merge" },
     escapeReason: "redesign",
   };
 }
@@ -228,7 +254,7 @@ function trusted(path: string, content: string, blobOid: string): TrustedGitBlob
 }
 
 function source(planId: string, body: string): string {
-  return `---\nplan_id: ${planId}\nkind: design\nlayer: L6\ndrive: agent\nroute_signal: recovery\nroute_mode: recovery\n---\n${body}\n`;
+  return `---\nplan_id: ${planId}\ntitle: ${planId}\nkind: design\nlayer: L6\nsub_doc: function-spec\ndrive: agent\nstatus: draft\nagent_slots:\n  - role: se\n    slot_label: primary\ngenerates: []\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n  references: []\nroute_signal: forward\nroute_mode: forward\n---\n${body}\n`;
 }
 
 function hash(value: string): string {

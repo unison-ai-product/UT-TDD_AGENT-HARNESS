@@ -15,13 +15,12 @@ import {
   type AppendPlanRevisionInput,
   derivePlanRevisionDigests,
 } from "../plan-asset/ledger/plan-revision-ledger.js";
+import { committedRevisionPredicate } from "../plan-asset/ledger/revision-visibility.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
-import {
-  type IssueProjectionEvidenceClaim,
-  SqliteIssueProjectionEvidenceResolver,
-} from "./issue-projection-evidence-resolver.js";
+import type { IssueProjectionEvidenceClaim } from "./issue-projection-evidence-resolver.js";
 import { NodeAuthoringArtifactPublisher } from "./node-authoring-artifact-publisher.js";
+import { NodeIssueProjectionEvidenceResolver } from "./node-issue-projection-evidence-resolver.js";
 import type { PlanRedesignBundleManifest } from "./plan-authoring-command-port.js";
 import { validatePlanRedesignBundleManifest } from "./plan-redesign-command-assembler.js";
 import { TRACKED_RECEIPT_SCHEMA } from "./tracked-receipt-projection.js";
@@ -31,6 +30,11 @@ import {
   type TrustedGitBlob,
   TrustedGitBlobResolver,
 } from "./trusted-git-blob-resolver.js";
+import {
+  assertTrustedRepositoryIdentity,
+  NodeRepositoryIdentityGitPort,
+  TrustedRepositoryIdentityResolver,
+} from "./trusted-repository-identity-resolver.js";
 
 export interface NodePlanRedesignRunnerDeps {
   readonly repoRoot: string;
@@ -40,6 +44,7 @@ export interface NodePlanRedesignRunnerDeps {
   readonly issueProjectionResolver?: {
     readonly resolve: (claim: IssueProjectionEvidenceClaim) => unknown;
   };
+  readonly repositoryIdentityResolver?: Pick<TrustedRepositoryIdentityResolver, "assertClaim">;
 }
 
 /** v2 manifestをexact publication factoryへ通し、bundle coordinatorへ到達させる兄弟runner。 */
@@ -54,10 +59,27 @@ export class NodePlanRedesignRunner {
     ) {
       throw new Error("plan-redesign-command-binding-invalid");
     }
-    verifyLegacyBootstrapGitBinding(
-      manifest,
+    const resolver =
       this.deps.gitResolver ??
-        new TrustedGitBlobResolver(new NodeGitCommandPort(this.deps.repoRoot)),
+      new TrustedGitBlobResolver(new NodeGitCommandPort(this.deps.repoRoot));
+    verifyRevisionGitBinding(manifest, resolver);
+    const trustedRepositoryIdentity = (
+      this.deps.repositoryIdentityResolver ??
+      new TrustedRepositoryIdentityResolver(new NodeRepositoryIdentityGitPort(this.deps.repoRoot))
+    ).assertClaim(manifest.repository_identity);
+    const issue = manifest.replacement.admission.issue;
+    if (!issue) throw new Error("plan-redesign-issue-projection-evidence-missing");
+    const issueEvidence = (
+      this.deps.issueProjectionResolver ??
+      new NodeIssueProjectionEvidenceResolver(this.deps.repoRoot)
+    ).resolve({
+      issueId: issue.issueId,
+      episodeId: issue.episodeId,
+      projectionDigest: issue.projectionDigest,
+    });
+    assertTrustedRepositoryIdentity(
+      issueEvidenceRepository(issueEvidence),
+      trustedRepositoryIdentity,
     );
     const revisions = {
       origin: revision(manifest.origin),
@@ -115,13 +137,7 @@ export class NodePlanRedesignRunner {
     };
     const db = this.deps.openDb?.() ?? openPlanLedger({ repoRoot: this.deps.repoRoot });
     try {
-      const issue = manifest.replacement.admission.issue;
-      if (!issue) throw new Error("plan-redesign-issue-projection-evidence-missing");
-      (this.deps.issueProjectionResolver ?? new SqliteIssueProjectionEvidenceResolver(db)).resolve({
-        issueId: issue.issueId,
-        episodeId: issue.episodeId,
-        projectionDigest: issue.projectionDigest,
-      });
+      verifyAppendLedgerBases(db, manifest);
       const coordinator = new PlanRedesignBundleCoordinator(db);
       const publisher = new NodeAuthoringArtifactPublisher({
         rootDir: this.deps.repoRoot,
@@ -222,16 +238,66 @@ function resolveTrackedPath(repoRoot: string, path: string): string {
   return target;
 }
 
-function verifyLegacyBootstrapGitBinding(
+function verifyRevisionGitBinding(
   manifest: PlanRedesignBundleManifest,
   resolver: Pick<TrustedGitBlobResolver, "resolve">,
 ): void {
   for (const revision of [manifest.origin, manifest.replacement]) {
-    if (revision.revision_mode !== "legacy_bootstrap") continue;
-    if (!revision.bootstrap) throw new Error("plan-redesign-bootstrap-fields-missing");
-    const base = revision.bootstrap;
-    const actual = resolver.resolve(base.base_source_commit, base.base_source_path);
-    assertBootstrapBinding(base, actual);
+    if (revision.revision_mode === "legacy_bootstrap") {
+      if (!revision.bootstrap) throw new Error("plan-redesign-bootstrap-fields-missing");
+      const base = revision.bootstrap;
+      assertBootstrapBinding(
+        base,
+        resolver.resolve(base.base_source_commit, base.base_source_path),
+      );
+      continue;
+    }
+    assertAppendHeadBinding(revision, resolver.resolve("HEAD", revision.source_path));
+  }
+}
+
+function assertAppendHeadBinding(
+  revision: PlanRedesignBundleManifest["origin"],
+  actual: TrustedGitBlob,
+): void {
+  if (actual.commitOid !== revision.source_commit)
+    throw new Error("plan-redesign-append-source-commit-drift");
+  if (actual.sourcePath !== revision.source_path)
+    throw new Error("plan-redesign-append-source-path-mismatch");
+  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(actual.blobOid))
+    throw new Error("plan-redesign-append-source-blob-invalid");
+  if (
+    revision.expected_preimage.kind !== "sha256" ||
+    sha(actual.bytes) !== unprefix(revision.expected_preimage.digest)
+  )
+    throw new Error("plan-redesign-append-source-content-drift");
+}
+
+export function verifyAppendLedgerBases(db: HarnessDb, manifest: PlanRedesignBundleManifest): void {
+  for (const revision of [manifest.origin, manifest.replacement]) {
+    if (revision.revision_mode !== "append") continue;
+    const aliases = db
+      .prepare("SELECT asset_id FROM plan_aliases WHERE alias = ? AND valid_to_revision IS NULL")
+      .all(revision.plan_id) as Array<{ asset_id: string }>;
+    if (aliases.length !== 1 || aliases[0]?.asset_id !== revision.asset_id)
+      throw new Error("plan-redesign-append-alias-binding-invalid");
+    const latest = db
+      .prepare(
+        `SELECT revision, canonical_payload_digest, source_path FROM plan_revisions revision
+         WHERE asset_id = ? AND ${committedRevisionPredicate("revision")}
+         ORDER BY revision DESC LIMIT 1`,
+      )
+      .get(revision.asset_id) as
+      | { revision: number; canonical_payload_digest: string; source_path: string }
+      | undefined;
+    if (
+      !latest ||
+      Number(latest.revision) !== revision.base_revision ||
+      unprefix(String(latest.canonical_payload_digest)) !==
+        unprefix(revision.base_payload_digest) ||
+      latest.source_path !== revision.source_path
+    )
+      throw new Error("plan-redesign-append-ledger-base-drift");
   }
 }
 
@@ -324,4 +390,14 @@ function sha(value: string | Buffer): string {
 }
 function unprefix(value: string): string {
   return value.startsWith("sha256:") ? value.slice(7) : value;
+}
+
+function issueEvidenceRepository(evidence: unknown): string {
+  if (
+    !evidence ||
+    typeof evidence !== "object" ||
+    typeof Reflect.get(evidence, "repository") !== "string"
+  )
+    throw new Error("trusted-repository-identity-invalid");
+  return Reflect.get(evidence, "repository") as string;
 }
