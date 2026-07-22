@@ -139,3 +139,20 @@ cancelとdeadlineが競合した場合も、最初のdurable termination request
 illegal transition全辺、error/phase整合を生成する。mutation gateはunknown field受理、deadline check削除、attach前resume、
 probeからlauncher到達、control/workload process identity統合、authority handoff省略、dual-crash success補完、empty proof省略、
 direct spawn fallback、Rust domain policy追加をkillする。本pairがfreezeするまでPLAN-L7-454の実adapter実装を開始しない。
+
+## 8. Bun ban scanner / Node self-host機能契約
+
+Node control-plane cutoverはResource Kernelの`AC-RGK-15`を満たす機能として本PLANが所有する。L6に同じ`function-spec` ownerを追加せず、次の代数を既存契約へ統合する。
+
+```text
+BanFinding = detectorId + canonicalPath + surface + evidenceDigest + replacementPlan + owner + deadline
+BanCoverage = scannerId + selectedCount + parsedCount + unknownCount + observerHealth
+BanMode = NoNew(frozenInventoryDigest) | Zero
+BanDecision = Pass(receipt) | Fail(findings, coverageGaps)
+```
+
+`NoNew`は既存debtを消さず、新規・変更・期限切れだけをgateする。`Zero`はproduction finding 1件以上で必ずfailする。既存Bunをallowlistやfixtureへ分類替えしてGreenにしない。全scannerはpure objectとしてfindingを返し、filesystem、YAML/TS parse、process observationはportへ隔離する。
+
+`NodeBootstrapReceipt`はNode executable identity、version policy、package-lock digest、compiled core digest、entrypoint、build policy、subject revisionを結ぶ。compiled ESM以外のproduction TS直実行、runtime download、ambient PATH解決、Bun/tsx fallbackを拒否する。Node CLI、ban detector、SQLite canonical corpus、targeted testが同一receiptから起動できない場合はself-host未成立とする。
+
+本節はL7 `U-BUNBAN-001..012` / `U-NODEBOOT-001..012`と対にし、`PLAN-L7-458-node-self-hosted-bun-ban-foundation`へatomicに降下する。
