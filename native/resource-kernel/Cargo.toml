@@ -1,4 +1,3 @@
 [workspace]
 members = ["resource-kernel-companion"]
 resolver = "2"
-
