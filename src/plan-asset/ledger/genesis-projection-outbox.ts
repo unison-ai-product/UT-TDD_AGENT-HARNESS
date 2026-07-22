@@ -16,6 +16,7 @@ export interface GenesisProjectionOutboxEntry {
 export interface GenesisProjectionClaim extends GenesisProjectionOutboxEntry {
   readonly ownerToken: string;
   readonly claimExpiresAt: string;
+  readonly claimGeneration: number;
 }
 
 export interface GenesisProjectionClaimRequest {
@@ -25,21 +26,18 @@ export interface GenesisProjectionClaimRequest {
   readonly limit?: number;
 }
 
-export interface GenesisProjectionSettlement {
-  readonly state: "projected" | "recovery_required";
-  readonly failureReason?: string;
-}
-
-export interface GenesisProjectionSettlementRequest {
+export interface GenesisProjectionClaimFence {
   readonly commandId: string;
   readonly ownerToken: string;
-  readonly heartbeat: Omit<GenesisProjectionClaimRequest, "ownerToken" | "limit">;
-  readonly work: () => GenesisProjectionSettlement;
+  readonly claimGeneration: number;
 }
 
-interface ProjectionTransition {
-  readonly commandId: string;
-  readonly ownerToken: string;
+export interface GenesisProjectionRenewalRequest extends GenesisProjectionClaimFence {
+  readonly claimedAt: string;
+  readonly expiresAt: string;
+}
+
+interface ProjectionTransition extends GenesisProjectionClaimFence {
   readonly eventKind: "projected" | "recovery_required";
   readonly failureReason: string | null;
   readonly occurredAt: string;
@@ -61,12 +59,14 @@ export interface GenesisProjectionOutboxStore {
     commandId: string,
     request: GenesisProjectionClaimRequest,
   ): GenesisProjectionClaim | undefined;
-  markProjected(commandId: string, ownerToken: string, occurredAt: string): void;
+  renewClaim(request: GenesisProjectionRenewalRequest): number;
+  markProjected(input: GenesisProjectionClaimFence & { readonly occurredAt: string }): void;
   markRecoveryRequired(
-    commandId: string,
-    input: { readonly ownerToken: string; readonly reason: string; readonly occurredAt: string },
+    input: GenesisProjectionClaimFence & {
+      readonly reason: string;
+      readonly occurredAt: string;
+    },
   ): void;
-  settleClaim(request: GenesisProjectionSettlementRequest): GenesisProjectionSettlement;
 }
 
 /** Plan Ledgerと同じSQLite authority内でoutbox transition chainを管理する。 */
@@ -139,60 +139,42 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
     });
   }
 
-  markProjected(commandId: string, ownerToken: string, occurredAt: string): void {
+  renewClaim(request: GenesisProjectionRenewalRequest): number {
+    validateClaimRequest({
+      ownerToken: request.ownerToken,
+      claimedAt: request.claimedAt,
+      expiresAt: request.expiresAt,
+    });
+    return new ImmediateLedgerTransaction(this.db).run(() => {
+      this.auditClaims();
+      this.assertClaimOwner(request, request.claimedAt);
+      const generation = this.appendClaimEvent({
+        commandId: request.commandId,
+        ownerToken: request.ownerToken,
+        expiresAt: request.expiresAt,
+        occurredAt: request.claimedAt,
+        eventKind: "claimed",
+      });
+      return { commit: true, value: generation };
+    });
+  }
+
+  markProjected(input: GenesisProjectionClaimFence & { readonly occurredAt: string }): void {
     this.transition({
-      commandId,
-      ownerToken,
+      ...input,
       eventKind: "projected",
       failureReason: null,
-      occurredAt,
     });
   }
 
   markRecoveryRequired(
-    commandId: string,
-    input: { readonly ownerToken: string; readonly reason: string; readonly occurredAt: string },
+    input: GenesisProjectionClaimFence & { readonly reason: string; readonly occurredAt: string },
   ): void {
     if (!input.reason) throw new Error("genesis-outbox-failure-reason-invalid");
     this.transition({
-      commandId,
       ...input,
       eventKind: "recovery_required",
       failureReason: input.reason,
-    });
-  }
-
-  settleClaim(request: GenesisProjectionSettlementRequest): GenesisProjectionSettlement {
-    const { commandId, ownerToken, heartbeat, work } = request;
-    validateClaimRequest({ ownerToken, ...heartbeat });
-    return new ImmediateLedgerTransaction(this.db).run(() => {
-      this.auditClaims();
-      this.assertClaimOwner(commandId, ownerToken, heartbeat.claimedAt);
-      this.appendClaimEvent({
-        commandId,
-        ownerToken,
-        expiresAt: heartbeat.expiresAt,
-        occurredAt: heartbeat.claimedAt,
-        eventKind: "claimed",
-      });
-      let result: GenesisProjectionSettlement;
-      try {
-        result = work();
-      } catch (error) {
-        result = { state: "recovery_required", failureReason: failureReason(error) };
-      }
-      this.assertClaimOwner(commandId, ownerToken, heartbeat.claimedAt);
-      this.transitionInTransaction({
-        commandId,
-        ownerToken,
-        eventKind: result.state,
-        failureReason:
-          result.state === "projected"
-            ? null
-            : (result.failureReason ?? "genesis-adoption-projection-recovery-required"),
-        occurredAt: heartbeat.claimedAt,
-      });
-      return { commit: true, value: result };
     });
   }
 
@@ -206,7 +188,7 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
   private transitionInTransaction(input: ProjectionTransition): void {
     const { commandId, ownerToken, eventKind, failureReason, occurredAt } = input;
     this.auditClaims();
-    this.assertClaimOwner(commandId, ownerToken, occurredAt);
+    this.assertClaimOwner(input, occurredAt);
     const current = this.db
       .prepare("SELECT * FROM genesis_projection_outbox WHERE command_id = ?")
       .get(commandId);
@@ -271,30 +253,42 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
   ): GenesisProjectionClaim {
     this.assertClaimSnapshot(row.command_id);
     const entry = this.readEntry(row);
-    this.appendClaimEvent({
+    const claimGeneration = this.appendClaimEvent({
       commandId: entry.commandId,
       ownerToken: request.ownerToken,
       expiresAt: request.expiresAt,
       occurredAt: request.claimedAt,
       eventKind: "claimed",
     });
-    return { ...entry, ownerToken: request.ownerToken, claimExpiresAt: request.expiresAt };
+    return {
+      ...entry,
+      ownerToken: request.ownerToken,
+      claimExpiresAt: request.expiresAt,
+      claimGeneration,
+    };
   }
 
-  private assertClaimOwner(commandId: string, ownerToken: string, occurredAt: string): void {
+  private assertClaimOwner(fence: GenesisProjectionClaimFence, occurredAt: string): void {
     const claim = this.db
       .prepare("SELECT * FROM genesis_projection_claims WHERE command_id = ?")
-      .get(commandId);
+      .get(fence.commandId);
+    const latest = this.db
+      .prepare(
+        "SELECT sequence FROM genesis_projection_claim_events WHERE command_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(fence.commandId);
     if (
       !claim ||
+      !latest ||
       claim.claim_state !== "active" ||
-      claim.owner_token !== ownerToken ||
+      claim.owner_token !== fence.ownerToken ||
+      Number(latest.sequence) !== fence.claimGeneration ||
       String(claim.claim_expires_at) < occurredAt
     )
       throw new Error("genesis-outbox-stale-claim-owner");
   }
 
-  private appendClaimEvent(input: ClaimEventInput): void {
+  private appendClaimEvent(input: ClaimEventInput): number {
     const { commandId, ownerToken, expiresAt, occurredAt, eventKind } = input;
     const prior = this.db
       .prepare(
@@ -330,6 +324,7 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
         expiresAt,
         eventDigest,
       );
+    return sequence;
   }
 
   private auditClaims(): void {
@@ -411,10 +406,4 @@ function validateClaimRequest(request: GenesisProjectionClaimRequest): void {
     (request.limit !== undefined && (!Number.isSafeInteger(request.limit) || request.limit < 1))
   )
     throw new Error("genesis-outbox-claim-invalid");
-}
-
-function failureReason(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : "genesis-adoption-projection-failed";
 }

@@ -1,15 +1,18 @@
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { GenesisAdoptionTransaction } from "../../src/plan-asset/ledger/genesis-adoption-transaction.js";
 import { SqliteGenesisProjectionOutboxStore } from "../../src/plan-asset/ledger/genesis-projection-outbox.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
+import { migrate } from "../../src/state-db/migration.js";
+import { removeTestTree } from "../support/temp-tree.js";
 import { input } from "./support/genesis-adoption-fixture.js";
 
 const roots: string[] = [];
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) removeTestTree(root);
 });
 
 describe("genesis projection outbox", () => {
@@ -30,12 +33,13 @@ describe("genesis projection outbox", () => {
       }),
     ]);
     const firstClaim = store.claimPending(claim("worker:first", "2026-07-22T00:00:00.000Z"))[0];
-    store.markRecoveryRequired(
-      "genesis:issue-129:l4-31",
-      firstClaim.ownerToken,
-      "remote-timeout",
-      "2026-07-22T00:01:00.000Z",
-    );
+    store.markRecoveryRequired({
+      commandId: firstClaim.commandId,
+      ownerToken: firstClaim.ownerToken,
+      claimGeneration: firstClaim.claimGeneration,
+      reason: "remote-timeout",
+      occurredAt: "2026-07-22T00:01:00.000Z",
+    });
     reopened.close();
 
     const retried = openHarnessDb(path);
@@ -46,18 +50,20 @@ describe("genesis projection outbox", () => {
     const retryClaim = retryStore.claimPending(
       claim("worker:retry", "2026-07-22T00:01:30.000Z"),
     )[0];
-    retryStore.markProjected(
-      "genesis:issue-129:l4-31",
-      retryClaim.ownerToken,
-      "2026-07-22T00:02:00.000Z",
-    );
+    retryStore.markProjected({
+      commandId: retryClaim.commandId,
+      ownerToken: retryClaim.ownerToken,
+      claimGeneration: retryClaim.claimGeneration,
+      occurredAt: "2026-07-22T00:02:00.000Z",
+    });
     expect(retryStore.pending()).toEqual([]);
     expect(() =>
-      retryStore.markProjected(
-        "genesis:issue-129:l4-31",
-        retryClaim.ownerToken,
-        "2026-07-22T00:03:00.000Z",
-      ),
+      retryStore.markProjected({
+        commandId: retryClaim.commandId,
+        ownerToken: retryClaim.ownerToken,
+        claimGeneration: retryClaim.claimGeneration,
+        occurredAt: "2026-07-22T00:03:00.000Z",
+      }),
     ).toThrow("genesis-outbox-stale-claim-owner");
     expect(
       retried
@@ -76,14 +82,20 @@ describe("genesis projection outbox", () => {
     expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
     const store = new SqliteGenesisProjectionOutboxStore(db);
     const winner = store.claimPending(claim("worker:winner", "2026-07-22T00:01:00.000Z"))[0];
-    store.markProjected("genesis:issue-129:l4-31", winner.ownerToken, "2026-07-22T00:02:00.000Z");
+    store.markProjected({
+      commandId: winner.commandId,
+      ownerToken: winner.ownerToken,
+      claimGeneration: winner.claimGeneration,
+      occurredAt: "2026-07-22T00:02:00.000Z",
+    });
     expect(() =>
-      store.markRecoveryRequired(
-        "genesis:issue-129:l4-31",
-        winner.ownerToken,
-        "late-failure",
-        "2026-07-22T00:03:00.000Z",
-      ),
+      store.markRecoveryRequired({
+        commandId: winner.commandId,
+        ownerToken: winner.ownerToken,
+        claimGeneration: winner.claimGeneration,
+        reason: "late-failure",
+        occurredAt: "2026-07-22T00:03:00.000Z",
+      }),
     ).toThrow("genesis-outbox-stale-claim-owner");
 
     db.prepare(
@@ -107,9 +119,19 @@ describe("genesis projection outbox", () => {
     const recovered = store.claimPending(claim("worker:b", "2026-07-22T00:00:31.000Z", 30_000))[0];
     expect(recovered.ownerToken).toBe("worker:b");
     expect(() =>
-      store.markProjected("genesis:issue-129:l4-31", "worker:a", "2026-07-22T00:00:32.000Z"),
+      store.markProjected({
+        commandId: "genesis:issue-129:l4-31",
+        ownerToken: "worker:a",
+        claimGeneration: 1,
+        occurredAt: "2026-07-22T00:00:32.000Z",
+      }),
     ).toThrow("genesis-outbox-stale-claim-owner");
-    store.markProjected("genesis:issue-129:l4-31", "worker:b", "2026-07-22T00:00:32.000Z");
+    store.markProjected({
+      commandId: recovered.commandId,
+      ownerToken: recovered.ownerToken,
+      claimGeneration: recovered.claimGeneration,
+      occurredAt: "2026-07-22T00:00:32.000Z",
+    });
     expect(
       db
         .prepare(
@@ -124,25 +146,55 @@ describe("genesis projection outbox", () => {
     db.close();
   });
 
-  it("U-GEN-025: file-backed 2 process CASでremote到達は一度だけになる", async () => {
+  it("U-GEN-025: 有効lease内のproduction 2 workerは単一live workerだけがremoteへ到達する", async () => {
     const path = databasePath();
     const db = openHarnessDb(path);
     expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
     db.close();
-    const worker = join(roots.at(-1) as string, "claim-worker.mjs");
-    const remoteLog = join(roots.at(-1) as string, "remote.log");
-    writeFileSync(worker, claimWorkerSource(), "utf8");
+    const root = roots.at(-1) as string;
+    const worker = productionWorker(root);
+    const harnessPath = join(root, "harness.sqlite");
+    const remote = join(root, "remote.json");
+    prepareHarnessDb(harnessPath);
 
     const results = await Promise.all([
-      runClaimWorker(worker, path, remoteLog, "worker:a"),
-      runClaimWorker(worker, path, remoteLog, "worker:b"),
+      runProductionWorker(worker, path, harnessPath, remote, "normal"),
+      runProductionWorker(worker, path, harnessPath, remote, "normal"),
     ]);
     expect(results.sort()).toEqual([0, 0]);
-    expect(readFileSync(remoteLog, "utf8").trim().split(/\r?\n/)).toHaveLength(1);
+    expect(JSON.parse(readFileSync(remote, "utf8"))).toMatchObject({ create_count: 1 });
     const reopened = openHarnessDb(path);
+    expect(reopened.prepare("SELECT status FROM genesis_projection_outbox").get()).toEqual({
+      status: "projected",
+    });
+    reopened.close();
+  });
+
+  it("U-GEN-029: remote成功が再観測可能ならprocess crash後のcreate-or-getで収束する", async () => {
+    const path = databasePath();
+    const db = openHarnessDb(path);
+    expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
+    db.close();
+    const root = roots.at(-1) as string;
+    const worker = productionWorker(root);
+    const harnessPath = join(root, "harness.sqlite");
+    const remote = join(root, "remote.json");
+    prepareHarnessDb(harnessPath);
+
+    expect(await runProductionWorker(worker, path, harnessPath, remote, "crash")).toBe(71);
+    expect(JSON.parse(readFileSync(remote, "utf8"))).toMatchObject({ create_count: 1 });
+    expect(await runProductionWorker(worker, path, harnessPath, remote, "normal")).toBe(0);
+    expect(JSON.parse(readFileSync(remote, "utf8"))).toMatchObject({ create_count: 1 });
+
+    const reopened = openHarnessDb(path);
+    expect(reopened.prepare("SELECT status FROM genesis_projection_outbox").get()).toEqual({
+      status: "projected",
+    });
     expect(
-      reopened.prepare("SELECT owner_token FROM genesis_projection_claims").all(),
-    ).toHaveLength(1);
+      reopened
+        .prepare("SELECT event_kind FROM genesis_projection_outbox_events ORDER BY sequence")
+        .all(),
+    ).toEqual([{ event_kind: "pending" }, { event_kind: "projected" }]);
     reopened.close();
   });
 
@@ -159,28 +211,61 @@ describe("genesis projection outbox", () => {
     db.close();
   });
 
-  it("U-GEN-027: stale workerはremote side-effect callback前のowner fenceで拒否される", () => {
+  it("U-GEN-027: stale generationはrenew/finalizeの短いtransactionで拒否される", () => {
     const db = openHarnessDb(":memory:");
     expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
     const store = new SqliteGenesisProjectionOutboxStore(db);
     store.claimPending(claim("worker:a", "2026-07-22T00:00:00.000Z", 30_000));
     store.claimPending(claim("worker:b", "2026-07-22T00:00:31.000Z", 30_000));
-    let remoteCalls = 0;
     expect(() =>
-      store.settleClaim(
-        "genesis:issue-129:l4-31",
-        "worker:a",
-        {
-          claimedAt: "2026-07-22T00:00:32.000Z",
-          expiresAt: "2026-07-22T00:01:02.000Z",
-        },
-        () => {
-          remoteCalls += 1;
-          return { state: "projected" };
-        },
-      ),
+      store.renewClaim({
+        commandId: "genesis:issue-129:l4-31",
+        ownerToken: "worker:a",
+        claimGeneration: 1,
+        claimedAt: "2026-07-22T00:00:32.000Z",
+        expiresAt: "2026-07-22T00:01:02.000Z",
+      }),
     ).toThrow("genesis-outbox-stale-claim-owner");
-    expect(remoteCalls).toBe(0);
+    expect(() =>
+      store.markProjected({
+        commandId: "genesis:issue-129:l4-31",
+        ownerToken: "worker:a",
+        claimGeneration: 1,
+        occurredAt: "2026-07-22T00:00:32.000Z",
+      }),
+    ).toThrow("genesis-outbox-stale-claim-owner");
+    db.close();
+  });
+
+  it("U-GEN-030: renewはgenerationを単調増加し旧generationのfinalizeを拒否する", () => {
+    const db = openHarnessDb(":memory:");
+    expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
+    const store = new SqliteGenesisProjectionOutboxStore(db);
+    const claimed = store.claimPending(claim("worker:a", "2026-07-22T00:00:00.000Z", 30_000))[0];
+
+    const renewedGeneration = store.renewClaim({
+      commandId: claimed.commandId,
+      ownerToken: claimed.ownerToken,
+      claimGeneration: claimed.claimGeneration,
+      claimedAt: "2026-07-22T00:00:10.000Z",
+      expiresAt: "2026-07-22T00:00:40.000Z",
+    });
+    expect(renewedGeneration).toBeGreaterThan(claimed.claimGeneration);
+    expect(() =>
+      store.markProjected({
+        commandId: claimed.commandId,
+        ownerToken: claimed.ownerToken,
+        claimGeneration: claimed.claimGeneration,
+        occurredAt: "2026-07-22T00:00:11.000Z",
+      }),
+    ).toThrow("genesis-outbox-stale-claim-owner");
+    store.markProjected({
+      commandId: claimed.commandId,
+      ownerToken: claimed.ownerToken,
+      claimGeneration: renewedGeneration,
+      occurredAt: "2026-07-22T00:00:11.000Z",
+    });
+    expect(store.pending()).toEqual([]);
     db.close();
   });
 
@@ -211,9 +296,15 @@ function claim(ownerToken: string, claimedAt: string, leaseMs = 300_000) {
   };
 }
 
-function runClaimWorker(worker: string, dbPath: string, logPath: string, owner: string) {
+function runProductionWorker(
+  worker: string,
+  planDbPath: string,
+  harnessDbPath: string,
+  remotePath: string,
+  mode: "normal" | "crash",
+) {
   return new Promise<number>((resolve, reject) => {
-    const child = spawn(process.execPath, [worker, dbPath, logPath, owner], {
+    const child = spawn(bunBinary(), [worker, planDbPath, harnessDbPath, remotePath, mode], {
       cwd: process.cwd(),
       windowsHide: true,
       stdio: "ignore",
@@ -223,28 +314,89 @@ function runClaimWorker(worker: string, dbPath: string, logPath: string, owner: 
   });
 }
 
-function claimWorkerSource(): string {
+function bunBinary(): string {
+  const configured = process.env.UT_TDD_BUN_BINARY;
+  if (configured && existsSync(configured)) return configured;
+  const appData = process.env.APPDATA;
+  const bundled = appData ? join(appData, "npm", "node_modules", "bun", "bin", "bun.exe") : "";
+  if (bundled && existsSync(bundled)) return bundled;
+  throw new Error("native-bun-binary-missing");
+}
+
+function prepareHarnessDb(path: string): void {
+  const db = openHarnessDb(path);
+  try {
+    migrate(db);
+  } finally {
+    db.close();
+  }
+}
+
+function productionWorker(root: string): string {
+  const worker = join(root, "production-projection-worker.ts");
+  writeFileSync(worker, productionWorkerSource(), "utf8");
+  return worker;
+}
+
+function productionWorkerSource(): string {
+  const dispatcher = pathToFileURL(
+    join(process.cwd(), "src", "plan-asset", "application", "genesis-projection-dispatcher.ts"),
+  ).href;
+  const ghPort = pathToFileURL(
+    join(process.cwd(), "src", "github", "node-gh-forward-escape-issue-port.ts"),
+  ).href;
   return `
-import { appendFileSync } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
-const [path, log, owner] = process.argv.slice(2);
-const db = new DatabaseSync(path);
-db.exec("PRAGMA busy_timeout=5000; BEGIN IMMEDIATE");
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { openNodeGenesisProjectionDispatcher } from ${JSON.stringify(dispatcher)};
+import { NodeGhForwardEscapeIssuePort } from ${JSON.stringify(ghPort)};
+
+const [planDbPath, harnessDbPath, remotePath, mode] = process.argv.slice(2);
+const repository = "unison-ai-product/UT-TDD_AGENT-HARNESS";
+const issueBody = "issue-129-preimage";
+const issueUrl = "https://github.com/" + repository + "/issues/129";
+const runGh = (args) => {
+  const endpoint = args.find((arg) => arg.startsWith("repos/"));
+  if (endpoint?.includes("/comments?")) {
+    const comments = existsSync(remotePath) ? [JSON.parse(readFileSync(remotePath, "utf8")).comment] : [];
+    return JSON.stringify([comments]);
+  }
+  if (args.includes("POST") && endpoint?.endsWith("/comments")) {
+    const body = args.find((arg) => arg.startsWith("body="))?.slice(5) ?? "";
+    const comment = {
+      node_id: "IC_GENESIS_129",
+      html_url: issueUrl + "#issuecomment-1",
+      body,
+      updated_at: "2026-07-22T00:00:01.000Z",
+    };
+    writeFileSync(remotePath, JSON.stringify({ create_count: 1, comment }), { encoding: "utf8", flag: "wx" });
+    if (mode === "crash") process.exit(71);
+    return JSON.stringify(comment);
+  }
+  return JSON.stringify({
+    number: 129,
+    node_id: "I_GENESIS_129",
+    html_url: issueUrl,
+    body: issueBody,
+    updated_at: "2026-07-22T00:00:00.000Z",
+  });
+};
+
+const resource = openNodeGenesisProjectionDispatcher({
+  repoRoot: process.cwd(),
+  repository,
+  port: new NodeGhForwardEscapeIssuePort(runGh),
+  options: {
+    planLedgerPath: planDbPath,
+    harnessDbPath,
+    now: () => mode === "crash" ? "2026-07-22T00:00:00.000Z" : "2026-07-22T00:00:01.000Z",
+    ownerToken: () => "worker:" + process.pid,
+    leaseMs: 1,
+  },
+});
 try {
-  const existing = db.prepare("SELECT claim_state, claim_expires_at FROM genesis_projection_claims WHERE command_id = ?").get("genesis:issue-129:l4-31");
-  let won = false;
-  if (!existing) {
-    db.prepare("INSERT INTO genesis_projection_claims VALUES (?, ?, ?, ?, ?)").run("genesis:issue-129:l4-31", "active", owner, "2026-07-22T00:01:00.000Z", owner.padEnd(64, "0").slice(0, 64));
-    won = true;
-  }
-  if (won) {
-    appendFileSync(log, owner + "\\n", "utf8");
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
-  }
-  db.exec("COMMIT");
-} catch (error) {
-  db.exec("ROLLBACK");
-  throw error;
-} finally { db.close(); }
+  resource.dispatcher.dispatchPending();
+} finally {
+  resource.close();
+}
 `;
 }
