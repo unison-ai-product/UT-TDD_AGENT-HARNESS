@@ -4,7 +4,7 @@ title: "PLAN-L7-457 (troubleshoot): harness.db 肥大によるローカル検証
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-22
@@ -45,7 +45,34 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-365-harness-db-currency-hook.md
     - docs/plans/PLAN-RECOVERY-11-snapshot-fence-foreign-activity.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-22T04:20:00+00:00"
+    tests_green_at: "2026-07-22T04:27:50+00:00"
+    verdict: approve
+    scope: "PLAN-L7-457 全差分 (chunked-hash 新設 / fence・snapshot fingerprint 置換 / db-maintenance 新設 / stop-refresh・cli 接続)。Sol (gpt-5.6-sol) blind review: claim-blind = AC U-FSTREAM-1..3 / U-DBVAC-1..3 / U-DBCURRENCY-026..027 全件をテスト実走で独立裏取り、spec-blind = PASS (部分 read 欠落 / 毎 Stop VACUUM / lock 波及 / CLI warning 隠蔽の 4 攻撃を全反駁)。tests_green_at は評価後の evidence 採取実走 (61/61, exit 0) の時刻。実装は Sonnet (claude-sonnet-5) be-logic、統括レビュー Claude Fable 5 (merge-base diff 精読済み)。"
+    worker_model: claude-sonnet-5
+    reviewer_model: codex
+    green_commands:
+      - kind: test
+        command: "bunx vitest run tests/git-workspace-fingerprint.test.ts tests/db-maintenance.test.ts tests/db-currency.test.ts tests/vitest-snapshot-runner.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-22T04:27:50+00:00"
+        evidence_path: .ut-tdd/audit/A-L7-457-vitest.log
+        output_digest: "sha256:bb0dabcd4a9dd2ffd503e89a57348a4b49061ffc50000ad40831fc85c6abfde0"
+        anchor_commit: fb6d1127
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-22T04:27:50+00:00"
+        evidence_path: .ut-tdd/audit/A-L7-457-typecheck.log
+        output_digest: "sha256:8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+        anchor_commit: fb6d1127
 ---
 
 # PLAN-L7-457: harness.db 肥大によるローカル検証全停止の恒久対策 (issue #118)
