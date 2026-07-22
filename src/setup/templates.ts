@@ -251,6 +251,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "const result = spawnSync(command, args, {",
     '  stdio: "inherit",',
     '  shell: process.platform === "win32",',
+    "  windowsHide: true,",
     "});",
     "",
     "if (result.error) {",

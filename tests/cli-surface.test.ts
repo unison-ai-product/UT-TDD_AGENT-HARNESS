@@ -33,12 +33,14 @@ function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.
       cwd,
       encoding: "utf8",
       env,
+      windowsHide: true,
     });
   }
   return spawnSync("bun", [cliPath, ...args], {
     cwd,
     encoding: "utf8",
     env,
+    windowsHide: true,
   });
 }
 
@@ -400,7 +402,11 @@ describe("L7 CLI surface closure", () => {
     (_id, mode) => {
       const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-review-lock-"));
       try {
-        const gitInit = spawnSync("git", ["init"], { cwd: root, encoding: "utf8" });
+        const gitInit = spawnSync("git", ["init"], {
+          cwd: root,
+          encoding: "utf8",
+          windowsHide: true,
+        });
         expect(gitInit.status).toBe(0);
         const claimsDir = join(root, ".ut-tdd", "state", "doctor-lock", "claims");
         mkdirSync(claimsDir, { recursive: true });

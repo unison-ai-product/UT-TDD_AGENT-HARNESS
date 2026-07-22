@@ -754,7 +754,10 @@ describe("NodePlanAuthoringRecoveryRunner", () => {
       const db = openHarnessDb(${JSON.stringify(fixture.dbPath)});
       new NodePlanAuthoringRecoveryExecutor(${JSON.stringify(fixture.root)}, () => process.exit(86)).execute(db, ${JSON.stringify(command)});
     `;
-    const interrupted = spawnSync(testBunBinary(), ["-e", script], { encoding: "utf8" });
+    const interrupted = spawnSync(testBunBinary(), ["-e", script], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
     expect(interrupted.status, interrupted.error?.message ?? interrupted.stderr).toBe(86);
     const resumedStatus = fixture.runner.status(fixture.groupId) as Record<string, unknown>;
     expect(resumedStatus).toMatchObject({

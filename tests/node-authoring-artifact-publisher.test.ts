@@ -240,7 +240,10 @@ describe("Node authoring artifact publisher", () => {
 const publisher = new NodeAtomicDraftPublisher({ rootDir: ${JSON.stringify(root)}, createId: () => ${JSON.stringify(tokenId)}, injectFault(point) { if (point === "publish:after-target-link") process.exit(86); } });
 const token = publisher.stage(${JSON.stringify([artifact])});
 publisher.publish(token);`;
-          const child = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+          const child = spawnSync(process.execPath, ["-e", script], {
+            encoding: "utf8",
+            windowsHide: true,
+          });
           if (child.status !== 86)
             throw new Error(`child-fixture-invalid:${child.status}:${child.stderr}`);
           throw new Error("child-process-stopped");

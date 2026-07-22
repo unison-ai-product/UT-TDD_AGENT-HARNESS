@@ -21,6 +21,7 @@ function runCli(cwd: string, args: string[], input?: unknown) {
       encoding: "utf8",
       env: process.env,
       input: stdin,
+      windowsHide: true,
     });
   }
   return spawnSync("bun", [cliPath, ...args], {
@@ -28,6 +29,7 @@ function runCli(cwd: string, args: string[], input?: unknown) {
     encoding: "utf8",
     env: process.env,
     input: stdin,
+    windowsHide: true,
   });
 }
 

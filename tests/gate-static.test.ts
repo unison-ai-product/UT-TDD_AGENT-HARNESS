@@ -14,9 +14,10 @@ function runCli(args: string[], cwd = process.cwd()) {
     return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
       cwd,
       encoding: "utf8",
+      windowsHide: true,
     });
   }
-  return spawnSync("bun", [cliPath, ...args], { cwd, encoding: "utf8" });
+  return spawnSync("bun", [cliPath, ...args], { cwd, encoding: "utf8", windowsHide: true });
 }
 
 const doc = (

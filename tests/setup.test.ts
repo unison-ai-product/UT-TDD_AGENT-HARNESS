@@ -578,6 +578,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       const result = spawnSync(process.execPath, [wrapperPath, "status", "--json"], {
         cwd: repo,
         encoding: "utf8",
+        windowsHide: true,
       });
 
       expect(result.status).toBe(0);
@@ -603,6 +604,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       const result = spawnSync(process.execPath, [wrapperPath, "status"], {
         cwd: repo,
         encoding: "utf8",
+        windowsHide: true,
       });
 
       expect(result.status).toBe(0);

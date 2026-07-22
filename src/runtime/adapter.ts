@@ -320,6 +320,7 @@ export function isProviderCommandSpawnable(
         stdio: "ignore",
         shell: invocation.shell ?? false,
         windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+        windowsHide: true,
       }));
   try {
     return runProbe(invocation.command, invocation.args, env).status === 0;

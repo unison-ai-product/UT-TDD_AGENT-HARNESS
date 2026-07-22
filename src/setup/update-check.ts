@@ -293,6 +293,7 @@ export function nodeUpdateCheckDeps(
         encoding: "utf8",
         timeout: LS_REMOTE_TIMEOUT_MS,
         stdio: ["ignore", "pipe", "ignore"],
+        windowsHide: true,
       });
       if (res.error || res.status !== 0 || typeof res.stdout !== "string") return null;
       const tags: string[] = [];

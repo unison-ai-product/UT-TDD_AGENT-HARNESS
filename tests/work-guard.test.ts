@@ -24,6 +24,7 @@ function runWorkGuardHook(cwd: string, input: unknown) {
       encoding: "utf8",
       env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
       input: stdin,
+      windowsHide: true,
     });
   }
   return spawnSync("bun", [workGuardHook], {
@@ -31,6 +32,7 @@ function runWorkGuardHook(cwd: string, input: unknown) {
     encoding: "utf8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
     input: stdin,
+    windowsHide: true,
   });
 }
 

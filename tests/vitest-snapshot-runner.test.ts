@@ -74,7 +74,7 @@ describe("vitest snapshot runner", () => {
     const pack = join(parent, "pack");
     const snapshot = `${parent}-snapshot`;
     try {
-      expect(spawnSync("git", ["init"], { cwd: parent }).status).toBe(0);
+      expect(spawnSync("git", ["init"], { cwd: parent, windowsHide: true }).status).toBe(0);
       mkdirSync(pack);
       writeFileSync(join(pack, "package.json"), "{}\n");
       mkdirSync(join(pack, "node_modules"));
@@ -157,9 +157,11 @@ describe("vitest snapshot runner", () => {
     const execution = `${source}-execution`;
     const reference = `${source}-reference`;
     try {
-      expect(spawnSync("git", ["init"], { cwd: source }).status).toBe(0);
+      expect(spawnSync("git", ["init"], { cwd: source, windowsHide: true }).status).toBe(0);
       writeFileSync(join(source, "package.json"), '{"version":1}\n');
-      expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync("git", ["add", "package.json"], { cwd: source, windowsHide: true }).status,
+      ).toBe(0);
       expect(
         spawnSync(
           "git",
@@ -172,19 +174,21 @@ describe("vitest snapshot runner", () => {
             "-m",
             "initial",
           ],
-          { cwd: source },
+          { cwd: source, windowsHide: true },
         ).status,
       ).toBe(0);
       const captured = resolveSnapshotSource(source);
       expect(captured.kind).toBe("git");
       createSnapshot(source, execution, captured);
       writeFileSync(join(source, "package.json"), '{"version":2}\n');
-      expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync("git", ["add", "package.json"], { cwd: source, windowsHide: true }).status,
+      ).toBe(0);
       expect(
         spawnSync(
           "git",
           ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-m", "next"],
-          { cwd: source },
+          { cwd: source, windowsHide: true },
         ).status,
       ).toBe(0);
       createSnapshot(source, reference, captured);

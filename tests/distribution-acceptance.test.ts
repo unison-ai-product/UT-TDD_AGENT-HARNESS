@@ -50,9 +50,16 @@ function runBun(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.en
       encoding: "utf8",
       env,
       timeout: 300_000,
+      windowsHide: true,
     });
   }
-  return spawnSync("bun", args, { cwd, encoding: "utf8", env, timeout: 300_000 });
+  return spawnSync("bun", args, {
+    cwd,
+    encoding: "utf8",
+    env,
+    timeout: 300_000,
+    windowsHide: true,
+  });
 }
 
 function runBareUtTdd(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
@@ -63,9 +70,16 @@ function runBareUtTdd(cwd: string, args: string[], env: NodeJS.ProcessEnv = proc
       encoding: "utf8",
       env,
       timeout: 120_000,
+      windowsHide: true,
     });
   }
-  return spawnSync("ut-tdd", args, { cwd, encoding: "utf8", env, timeout: 120_000 });
+  return spawnSync("ut-tdd", args, {
+    cwd,
+    encoding: "utf8",
+    env,
+    timeout: 120_000,
+    windowsHide: true,
+  });
 }
 
 function writeFakeCodex(root: string): string {

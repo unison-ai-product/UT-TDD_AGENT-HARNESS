@@ -134,7 +134,11 @@ export function nodeVerificationProbeDeps(repoRoot: string = process.cwd()): Ver
     env: process.env,
     now: () => new Date().toISOString(),
     commandOk: (command, args) => {
-      const r = spawnSync(command, args, { stdio: "ignore", timeout: PROBE_TIMEOUT_MS });
+      const r = spawnSync(command, args, {
+        stdio: "ignore",
+        timeout: PROBE_TIMEOUT_MS,
+        windowsHide: true,
+      });
       return r.status === 0;
     },
     runCommand: (command, args) => {
@@ -143,6 +147,7 @@ export function nodeVerificationProbeDeps(repoRoot: string = process.cwd()): Ver
         cwd: repoRoot,
         env: envWithoutAuthSecrets(process.env),
         timeout: RUN_TIMEOUT_MS,
+        windowsHide: true,
       });
       return { status: r.status };
     },

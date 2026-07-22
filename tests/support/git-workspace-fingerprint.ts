@@ -38,7 +38,11 @@ export function captureWorkspaceInventory(root: string): { digest: string; entri
 }
 
 function git(repoRoot: string, args: string[]): Buffer {
-  const result = spawnSync("git", args, { cwd: repoRoot, encoding: "buffer" });
+  const result = spawnSync("git", args, {
+    cwd: repoRoot,
+    encoding: "buffer",
+    windowsHide: true,
+  });
   if (result.status !== 0 || result.error) {
     throw new Error(
       `git workspace fence failed: git ${args.join(" ")}: ${result.error?.message ?? result.stderr.toString("utf8")}`,
@@ -49,8 +53,11 @@ function git(repoRoot: string, args: string[]): Buffer {
 
 function isGitRepository(repoRoot: string): boolean {
   return (
-    spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd: repoRoot, stdio: "ignore" })
-      .status === 0
+    spawnSync("git", ["rev-parse", "--is-inside-work-tree"], {
+      cwd: repoRoot,
+      stdio: "ignore",
+      windowsHide: true,
+    }).status === 0
   );
 }
 

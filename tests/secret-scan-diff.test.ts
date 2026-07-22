@@ -40,7 +40,7 @@ function fakeBlobReader(store: Record<string, string>): BlobReader {
 }
 
 function gitQ(cwd: string, args: string[], input?: string) {
-  return spawnSync("git", args, { cwd, encoding: "utf8", input });
+  return spawnSync("git", args, { cwd, encoding: "utf8", input, windowsHide: true });
 }
 
 function initGitRepo(root: string): void {
@@ -68,6 +68,7 @@ function runHookCli(cwd: string, stdin: string, env?: NodeJS.ProcessEnv) {
     input: stdin,
     env: { ...process.env, ...env },
     shell: process.platform === "win32",
+    windowsHide: true,
   });
 }
 
@@ -283,6 +284,7 @@ describe("scripts/git-hooks/pre-push (shell 経路 e2e、bare remote + hooksPath
         cwd: cloneDir,
         encoding: "utf8",
         env: { ...process.env, ...env },
+        windowsHide: true,
       },
     );
   }

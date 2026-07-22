@@ -105,12 +105,17 @@ export function registerDistributionCommands(program: Command): void {
       const detection = detectMode();
       let bunVersion: string | null = null;
       try {
-        bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
+        bunVersion = execFileSync("bun", ["--version"], {
+          encoding: "utf8",
+          windowsHide: true,
+        }).trim();
       } catch {
         bunVersion = null;
       }
-      const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
-      const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
+      const hasGit =
+        spawnSync("git", ["--version"], { stdio: "ignore", windowsHide: true }).status === 0;
+      const hasGh =
+        spawnSync("gh", ["--version"], { stdio: "ignore", windowsHide: true }).status === 0;
       const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
       const hookWrapperPath = join(packageRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
       const packageBinPath = join(
@@ -125,6 +130,7 @@ export function registerDistributionCommands(program: Command): void {
       const utTddCli = spawnSync("ut-tdd", ["--help"], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       });
       const hasUtTddCli = hasProjectLocalUtTdd || hasSourceSetupEntrypoint || utTddCli.status === 0;
       const utTddCliObserved =
@@ -583,6 +589,7 @@ export function registerDistributionCommands(program: Command): void {
             cwd: outDir,
             encoding: "utf8",
             stdio: ["ignore", "pipe", "pipe"],
+            windowsHide: true,
           });
           if (tarResult.status === 0) {
             const digest = createHash("sha256").update(readFileSync(tarball)).digest("hex");

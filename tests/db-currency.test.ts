@@ -450,7 +450,11 @@ describe("db-currency lint", () => {
     );
     let releaseFallback: ReturnType<typeof setTimeout> | undefined;
     const children = Array.from({ length: 12 }, () =>
-      spawn(process.execPath, [worker], { cwd: root, stdio: ["ignore", "pipe", "pipe"] }),
+      spawn(process.execPath, [worker], {
+        cwd: root,
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      }),
     );
     try {
       const deadline = Date.now() + 10_000;
@@ -600,6 +604,7 @@ describe("db-currency lint", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-live-child-"));
     const child = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], {
       stdio: "ignore",
+      windowsHide: true,
     });
     try {
       await new Promise<void>((resolvePromise, reject) => {
@@ -637,7 +642,10 @@ describe("db-currency lint", () => {
 
   it("U-DBCURRENCY-022: a same-host worker crash before join is reclaimed without TTL delay", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-prejoin-crash-"));
-    const child = spawn(process.execPath, ["-e", "process.exit(0)"], { stdio: "ignore" });
+    const child = spawn(process.execPath, ["-e", "process.exit(0)"], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
     try {
       await new Promise<void>((resolvePromise, reject) => {
         child.once("spawn", resolvePromise);
@@ -702,7 +710,11 @@ describe("db-currency lint", () => {
       `import { existsSync, writeFileSync } from "node:fs";\nimport { joinStopRefreshLease } from ${JSON.stringify(stopRefreshCoordinatorModuleUrl)};\nwhile (!existsSync(${JSON.stringify(go)})) await new Promise((resolve) => setTimeout(resolve, 2));\nwriteFileSync(${JSON.stringify(joined)}, joinStopRefreshLease(${JSON.stringify(root)}, "self-join-generation") ? "joined" : "failed");\nwhile (!existsSync(${JSON.stringify(release)})) await new Promise((resolve) => setTimeout(resolve, 2));\n`,
       "utf8",
     );
-    const child = spawn(process.execPath, [worker], { cwd: root, stdio: "ignore" });
+    const child = spawn(process.execPath, [worker], {
+      cwd: root,
+      stdio: "ignore",
+      windowsHide: true,
+    });
     const childExit = new Promise<void>((resolvePromise) =>
       child.once("exit", () => resolvePromise()),
     );

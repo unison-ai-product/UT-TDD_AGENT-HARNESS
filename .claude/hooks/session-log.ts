@@ -43,6 +43,7 @@ try {
     cwd: repoRoot,
     encoding: "utf8",
     input: raw,
+    windowsHide: true,
   });
   if (child.stdout) process.stdout.write(child.stdout);
   if (child.stderr) process.stderr.write(child.stderr);

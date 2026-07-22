@@ -3063,6 +3063,7 @@ team
                 stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
                 shell: invocation.shell ?? false,
                 windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+                windowsHide: true,
               });
               if (stdin !== undefined) {
                 child.stdin?.write(stdin);

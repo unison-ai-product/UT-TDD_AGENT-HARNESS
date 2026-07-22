@@ -108,6 +108,7 @@ export function executeAdapterPlanForCli(
     env: adapterExecutionEnv(plan.provider, plan.env),
     shell: invocation.shell ?? false,
     windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+    windowsHide: true,
   });
   if (child.error) {
     process.stderr.write(`${plan.provider}: failed to launch (${String(child.error)})\n`);

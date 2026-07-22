@@ -76,6 +76,7 @@ export function defaultBlobReader(repoRoot: string, sha: string, path: string): 
   const result = spawnSync("git", ["show", `${sha}:${path}`], {
     cwd: repoRoot,
     encoding: "utf8",
+    windowsHide: true,
     maxBuffer: 20 * 1024 * 1024,
   });
   if (result.error || result.status !== 0 || typeof result.stdout !== "string") return null;

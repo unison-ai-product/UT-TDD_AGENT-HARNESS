@@ -504,6 +504,7 @@ new PlanRedesignBundleCoordinator(db, undefined, (point) => { if (point === ${JS
 db.close();`;
     const child = spawnSync(process.env.UT_TDD_BUN_BINARY ?? "bun", ["-"], {
       input: script,
+      windowsHide: true,
       encoding: "utf8",
     });
     expect(child.status, child.stderr).toBe(86);
