@@ -16,13 +16,21 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 
+/** GUI host上でも非対話CI子processへconsole windowを作らせない共通option。 */
+export function snapshotChildProcessOptions(cwd: string, env = process.env) {
+  return { cwd, env, windowsHide: true as const };
+}
+
 function run(
   command: string,
   args: string[],
   cwd: string,
   env = process.env,
 ): void {
-  const result = spawnSync(command, args, { cwd, env, stdio: "inherit" });
+  const result = spawnSync(command, args, {
+    ...snapshotChildProcessOptions(cwd, env),
+    stdio: "inherit",
+  });
   if (result.status !== 0 || result.error) {
     throw new Error(
       `${command} ${args.join(" ")} failed: ${result.error?.message ?? result.status}`,
@@ -31,7 +39,10 @@ function run(
 }
 
 function output(command: string, args: string[], cwd: string): string | null {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8" });
+  const result = spawnSync(command, args, {
+    ...snapshotChildProcessOptions(cwd),
+    encoding: "utf8",
+  });
   return result.status === 0 ? result.stdout.trim() : null;
 }
 

@@ -22,10 +22,17 @@ import {
   resolveBunBinary,
   resolveSnapshotSource,
   sealReference,
+  snapshotChildProcessOptions,
   snapshotContentFingerprint,
   unsealReference,
 } from "../scripts/run-vitest-snapshot";
 import { removeTestTree } from "./support/temp-tree";
+
+describe("snapshot child-process UX", () => {
+  it("U-TESTHYGIENE-048: non-interactive local CI children never open Windows consoles", () => {
+    expect(snapshotChildProcessOptions("C:/repo")).toMatchObject({ windowsHide: true });
+  });
+});
 
 describe("vitest snapshot runner", () => {
   it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {

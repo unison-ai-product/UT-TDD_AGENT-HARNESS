@@ -653,6 +653,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       const child = spawn("bun", [worker], {
         cwd: process.cwd(),
         stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       });
       let stdout = "";
       let stderr = "";
@@ -762,7 +763,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       "utf8",
     );
     const children = Array.from({ length: 2 }, () =>
-      spawn("bun", [worker], { cwd: process.cwd() }),
+      spawn("bun", [worker], { cwd: process.cwd(), windowsHide: true }),
     );
     try {
       const deadline = Date.now() + 30_000;

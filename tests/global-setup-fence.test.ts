@@ -11,6 +11,7 @@ describe("global setup fence", () => {
         cwd: process.cwd(),
         encoding: "utf8",
         shell: process.platform === "win32",
+        windowsHide: true,
         env: { ...process.env, UT_TDD_FENCE_TRIP: "1" },
       },
     );
