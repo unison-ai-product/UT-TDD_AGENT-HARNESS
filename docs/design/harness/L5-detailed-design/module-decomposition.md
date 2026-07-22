@@ -28,6 +28,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | **lint** | `src/lint/*.ts` (実数は `src/lint/` が正本、拡張継続中) | 実装済 | doc/PLAN/trace 静的検証 |
 | **plan** | `src/plan/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | PLAN lint |
 | **plan-admission** | `src/plan-admission/policy.ts` + `diff-fence.ts` | 実装中 (PLAN-L7-435) | 駆動モデル許可tuple、Reverse/Redesign遷移、receipt束縛、Git差分fenceをpure coreとして所有する。CLI・Git・SQLite・tracked projectionはport/adapterから接続し、coreへ副作用を持ち込まない |
+| **git** | `src/git/trusted-git-blob-resolver.ts` | 実装済 | commit/pathからregular blobを解決する共有Git provenance adapter。pureな利用側へ`TrustedGitBlob`を返し、plan-admission↔plan-assetの逆依存を作らない |
 | **vmodel** | `src/vmodel/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | V-model 4 artifact trace lint |
 | **runtime** | `src/runtime/detect.ts` + `agent-guard.ts` | 実装済 | mode 検出 + agent-guard 判定 |
 | **shared** | `src/shared/*.ts` | 実装済 | module 横断の純粋ヘルパー。lint/runtime の逆依存回避 |
@@ -52,6 +53,12 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 
 ### §2.1a stable-id (横断 ID helper、依存末端)
 - `stable-id.ts`: `stableId(prefix: string, value: string): string`。projection row ID、feedback ID、skill recommendation/invocation ID、workflow evidence ID の共通生成器。値がそのまま ASCII safe な場合は既存 ID を維持し、正規化で情報が落ちる場合だけ `--<sha256 12hex>` を付与する。依存は `node:crypto` のみで、state-db / feedback / workflow への逆依存を持たない。
+
+### §2.1b git (共有 provenance port / Node adapter)
+
+- `GitCommandPort.run(args)`: shell文字列を受けず、tokenized argvに対するGit標準出力だけを`Buffer`で返す。
+- `TrustedGitBlobResolver.resolve(commit, sourcePath)`: `rev-parse --verify <commit>^{commit}`、`ls-tree -z`、`cat-file blob`の順で、確定commit OID・exact path・blob OID・raw bytesを束縛する。0件、複数件、非blob、path不一致、read失敗は例外でfail-closeする。
+- `NodeGitCommandPort`: `execFileSync("git", args)`を`cwd=repoRoot`、stdin無効、`windowsHide=true`で実行する副作用adapter。domain側へchild processを漏らさない。
 
 ### §2.2 lint (共通様式 = `loadX`/`analyzeX(docs?)`/extractor)
 | lint module | 公開 IF (export) |
@@ -92,6 +99,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 - **fs 隔離**: lint の `loadX()` が fs 読込端点、`analyzeX(docs?)` は pure (テスト注入可)。fs は依存方向ルール対象外 (architecture §3 注記)
 - **副作用端点**: cli (stdout/exitCode) と hook のみが副作用を持つ。core ロジックは純粋関数
 - **Admission依存方向**: cli/hook/CI adapter → plan-admission application → plan-admission pure core → schema。Git blob、SQLite journal、tracked receipt projection、原子的file publishはport越しに接続し、policy/diff-fenceから直接I/Oしない
+- **共有Git境界**: plan-admission / plan-asset → git port。`git`は両domainをimportせず、Git object解決だけを担う。利用側同士のimportとworking tree/index/remote補完を禁止する
 
 ## §5 L7 closure module boundary（閉包境界）
 

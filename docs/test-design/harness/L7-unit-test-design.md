@@ -1568,6 +1568,13 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
+| `U-GITBLOB-001` | 同一tree束縛 | commit aliasとexact tracked path、NUL終端`ls-tree`、blob bytes | 確定40hex commit OID・入力と同じpath・blob OID・raw bytesを返す。command順は`rev-parse`→`ls-tree -z`→`cat-file blob` |
+| `U-GITBLOB-002` | fail-close | commit不存在、path 0/複数、非blob、path差替え、blob read失敗 | 部分valueやworking tree補完を返さず専用`trusted-git-*` error |
+| `U-GITBLOB-003` | shell/Windows境界 | 空白・metacharacterを含むpathとfake exec port / Node adapter source | pathを単一argvのまま渡しshell 0。Node adapterはstdin無効かつ`windowsHide=true` |
+| `U-GITBLOB-004` | dependency boundary | `src/git` import graphとplan-admission/plan-asset consumers | `src/git`から両domainへのimport 0、consumer間の共有resolver複製0、module cycle 0 |
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
 | `CANDIDATE-EXEP-001` | 通常Forward | L0→L1の合法遷移 | Episode/eventは記録するがIssue/outbox 0 |
 | `CANDIDATE-EXEP-002` | Forward外Issue必須 | escape理由あり、`drive_model`欠落 | E2以降へ進めず`drive-model-required` |
 | `CANDIDATE-EXEP-003` | E0〜E15順序 | E7をE6前にappend | `episode-transition-invalid`、既存event列不変 |

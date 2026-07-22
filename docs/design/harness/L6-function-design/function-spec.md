@@ -1325,6 +1325,22 @@ Admission receiptとPLAN本文のdigest、asset/revision、route tupleを`verify
 
 ## PLAN-L6-83..85 Forward離脱 / GitHub関数契約
 
+### 共有trusted Git blob解決契約
+
+`TrustedGitBlobResolver.resolve(commit, sourcePath)`は、注入された`GitCommandPort`を通じてcommitを
+40hexのcommit objectへ確定し、そのtreeのexact `sourcePath`が指す単一regular blobのOIDとraw bytesを返す。
+返却値は`{ commitOid, sourcePath, blobOid, bytes }`であり、呼出側は同じGit object oracleを
+route、PLAN revision、Issue preimageのauthority確認へ再利用する。
+
+- pre: `commit`とrepo相対`sourcePath`はcallerが選択済みであり、resolverはworking tree、index、remoteから補完しない。
+- post: commit/path/blob/bytesは同一tree observationに由来し、pathは入力とexact一致する。
+- fail-close: commit不存在、path 0件/複数件、tree/submodule等の非blob、path不一致、blob read失敗を
+  `trusted-git-*` errorへ正規化し、部分的なvalueを返さない。
+- adapter: `NodeGitCommandPort`はshellを介さないargv実行、stdin無効、stdout/stderr分離、
+  `windowsHide=true`を必須とし、Windowsで可視consoleを生成しない。
+- dependency: resolverはplan-admission/plan-assetをimportしない。両domainはこの共有portへ依存し、
+  相互importやGit解決ロジックの複製を行わない。
+
 ```ts
 class ExecutionEpisode {
   static observe(input: ObserveEscapeInput): ExecutionEpisode;

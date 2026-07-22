@@ -187,11 +187,14 @@ dependencies:
   parent: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
   requires: []
   references:
+    - docs/design/harness/L4-basic-design/architecture.md
     - docs/design/harness/L4-basic-design/data.md
+    - docs/design/harness/L5-detailed-design/module-decomposition.md
     - docs/design/harness/L5-detailed-design/physical-data.md
     - docs/design/harness/L6-function-design/function-spec.md
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L8-integration-test-design.md
+    - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     - docs/plans/PLAN-L7-441-plan-draft-recovery-convergence.md
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md

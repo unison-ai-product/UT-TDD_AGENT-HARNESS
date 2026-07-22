@@ -292,6 +292,8 @@ Minimum G8 close profile for the first L8 ascent:
 | `IT-EXEP-02` | 固定authored source bundle | DB削除後にrebuild | episode/event digestと順序が完全一致し、GitHub由来値でsourceを補完しない | pre/post table diff 0 |
 | `IT-GHISS-01` | retry可能outboxとfake GitHub port | success/timeout/5xxを順に注入 | successはE4、timeoutはreconcile、5xxはpending維持、Issue重複0 | call log、outbox state、remote marker |
 | `IT-GHISS-02` | signed webhook fixture | duplicate/out-of-order deliveryを受信 | delivery IDでdedupeし、許可遷移だけをappend。署名不正はdomain row 0 | inbox/event diff |
+| `IT-GITBLOB-01` | 同じcommit/pathを参照するplan-admissionとplan-assetの実consumer、隔離Git repo | 共有`TrustedGitBlobResolver`経由でroute/PLAN revision authorityを解決 | 両consumerのcommit/path/blob OID/content digestが一致し、working tree/indexだけの変更は結果へ混入しない | consumer receipt比較、Git object oracle、import cycle 0 |
+| `IT-GITBLOB-02` | 空白・metacharacterを含むtracked path、Windows/Linux | native Git adapterで解決 | shell展開0、両OSで同一bytes/OID、Windows可視console 0。異常Git exitはconsumer write前にfail-close | argv capture、platform result、ledger/outbox diff 0 |
 | `IT-REENTRY-01` | drive検証Greenとtarget revision | 中間test→certificate→合流→合流後test | E8〜E11が順序通り、revision変更時はcertificate stale | event digest、test receipts |
 | `IT-PR-01` | E11到達episode | draft PR projectionを再送 | exact head SHAを持つdraft PR 1件へ収束 | remote PR ID、mapping、outbox receipt |
 | `IT-MERGE-01` | cross-provider reviewとrequired checks | head SHA変化を各境界で注入 | 同一SHA時だけE14、変化時はcertificate/review失効 | merge authorization receipt |
