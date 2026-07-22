@@ -34,6 +34,7 @@ export interface GenesisProjectionDispatchSummary {
   readonly scanned: number;
   readonly projected: number;
   readonly recoveryRequired: number;
+  readonly claimRejected: number;
 }
 
 /**
@@ -82,8 +83,13 @@ export class GenesisProjectionDispatcher {
 
   /** CLI adoption直後の1 commandだけを投影し、無関係なpendingを処理しない。 */
   dispatchCommand(commandId: string): GenesisProjectionDispatchSummary {
-    const entry = this.outbox.claimCommand(commandId, this.claimRequest());
-    return this.dispatchEntries(entry ? [entry] : []);
+    const request = this.claimRequest();
+    const entry = this.outbox.claimCommand(commandId, request);
+    if (entry) return this.dispatchEntries([entry]);
+    const state = this.outbox.commandState(commandId, request.claimedAt);
+    if (state === "projected")
+      return { scanned: 0, projected: 1, recoveryRequired: 0, claimRejected: 0 };
+    throw new Error(`genesis-adoption-projection-command-${state}`);
   }
 
   private dispatchEntries(
@@ -91,14 +97,21 @@ export class GenesisProjectionDispatcher {
   ): GenesisProjectionDispatchSummary {
     let projected = 0;
     let recoveryRequired = 0;
+    let claimRejected = 0;
     for (const entry of entries) {
       const heartbeat = this.heartbeat();
-      const claimGeneration = this.outbox.renewClaim({
-        commandId: entry.commandId,
-        ownerToken: entry.ownerToken,
-        claimGeneration: entry.claimGeneration,
-        ...heartbeat,
-      });
+      let claimGeneration: number;
+      try {
+        claimGeneration = this.outbox.renewClaim({
+          commandId: entry.commandId,
+          ownerToken: entry.ownerToken,
+          claimGeneration: entry.claimGeneration,
+          ...heartbeat,
+        });
+      } catch {
+        claimRejected += 1;
+        continue;
+      }
       const fence = {
         commandId: entry.commandId,
         ownerToken: entry.ownerToken,
@@ -123,7 +136,7 @@ export class GenesisProjectionDispatcher {
         recoveryRequired += 1;
       }
     }
-    return { scanned: entries.length, projected, recoveryRequired };
+    return { scanned: entries.length, projected, recoveryRequired, claimRejected };
   }
 
   private claimRequest(limit?: number) {

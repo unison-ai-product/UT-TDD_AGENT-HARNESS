@@ -1,13 +1,18 @@
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { deriveLegacyAssetId } from "../../src/plan-asset/adapters/legacy-plan-adapter.js";
 import { LEDGER_SCHEMA_VERSION, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: HarnessDb[] = [];
+const temporaryRoots: string[] = [];
 
 afterEach(() => {
   for (const db of opened.splice(0)) db.close();
+  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe("genesis adoption transaction", () => {
@@ -81,6 +86,48 @@ describe("genesis adoption transaction", () => {
   });
 
   it.each([
+    ["same command", (command: GenesisAdoptionInput) => command, true, undefined],
+    [
+      "different command for the same asset",
+      (command: GenesisAdoptionInput) => ({ ...command, commandId: `${command.commandId}:rival` }),
+      false,
+      "genesis-adoption-asset-conflict",
+    ],
+  ] as const)("U-GEN-037: 2接続が%sを競合してもBEGIN内判定でtyped resultへ収束する", async (_case, competingInput, replayed, ruleId) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-genesis-adoption-race-"));
+    temporaryRoots.push(root);
+    const path = join(root, ".ut-tdd", "harness.db");
+    const first = openHarnessDb(path, { repoRoot: root });
+    const second = openHarnessDb(path, { repoRoot: root });
+    opened.push(first, second);
+    const Transaction = await loadTransaction();
+    const command = input();
+    const transaction = new Transaction(first, {
+      after(boundary) {
+        if (boundary !== "derived") return;
+        expect(new Transaction(second).adopt(competingInput(command))).toMatchObject({
+          ok: true,
+          replayed: false,
+        });
+      },
+    });
+
+    const result = transaction.adopt(command);
+    expect(result).toEqual(
+      ruleId
+        ? { ok: false, ruleId }
+        : {
+            ok: true,
+            replayed,
+            assetId: derivedAssetId(),
+            revision: 1,
+            issueNumber: 129,
+          },
+    );
+    expect(counts(first)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+  });
+
+  it.each([
     ["digest", (value: GenesisAdoptionInput) => ({ ...value, routeTupleDigest: "f".repeat(64) })],
     [
       "origin",
@@ -106,6 +153,7 @@ describe("genesis adoption transaction", () => {
 });
 
 type GenesisBoundary =
+  | "derived"
   | "asset"
   | "revision"
   | "alias-event"

@@ -9,6 +9,7 @@ import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction } from "./transaction.js";
 
 export type GenesisAdoptionBoundary =
+  | "derived"
   | "asset"
   | "revision"
   | "alias-event"
@@ -71,19 +72,20 @@ export class GenesisAdoptionTransaction {
   adopt(input: GenesisAdoptionInput): GenesisAdoptionResult {
     const derived = derive(input);
     if (!derived.ok) return derived;
-    const prior = this.replay(input, derived);
-    if (prior) return prior;
-    if (this.db.prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?").get(derived.assetId))
-      return rejected("genesis-adoption-asset-conflict");
-    if (
-      this.db
-        .prepare("SELECT 1 FROM plan_aliases WHERE alias = ? AND valid_to_revision IS NULL")
-        .get(input.planId)
-    )
-      return rejected("genesis-adoption-alias-conflict");
+    this.fault?.after("derived");
 
     const transaction = new ImmediateLedgerTransaction(this.db);
     return transaction.run(() => {
+      const prior = this.replay(input, derived);
+      if (prior) return { commit: false, value: prior };
+      if (this.db.prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?").get(derived.assetId))
+        return { commit: false, value: rejected("genesis-adoption-asset-conflict") };
+      if (
+        this.db
+          .prepare("SELECT 1 FROM plan_aliases WHERE alias = ? AND valid_to_revision IS NULL")
+          .get(input.planId)
+      )
+        return { commit: false, value: rejected("genesis-adoption-alias-conflict") };
       this.appendPlanAsset(input, derived);
       this.appendAdmission(input, derived);
       this.appendCustodyAndOutbox(input, derived);

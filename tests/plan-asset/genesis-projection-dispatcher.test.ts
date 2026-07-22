@@ -68,6 +68,7 @@ describe("GenesisProjectionDispatcher", () => {
       scanned: 2,
       projected: 2,
       recoveryRequired: 0,
+      claimRejected: 0,
     });
     expect(fixture.projection.dispatch).toHaveBeenCalledTimes(2);
     expect(fixture.store.markProjected).toHaveBeenNthCalledWith(1, {
@@ -94,6 +95,7 @@ describe("GenesisProjectionDispatcher", () => {
       scanned: 2,
       projected: 0,
       recoveryRequired: 2,
+      claimRejected: 0,
     });
     expect(fixture.projection.dispatch).toHaveBeenCalledTimes(2);
     expect(fixture.store.markRecoveryRequired).toHaveBeenNthCalledWith(1, {
@@ -122,6 +124,7 @@ describe("GenesisProjectionDispatcher", () => {
       scanned: 1,
       projected: 0,
       recoveryRequired: 1,
+      claimRejected: 0,
     });
     expect(fixture.store.markProjected).not.toHaveBeenCalled();
     expect(fixture.store.markRecoveryRequired).toHaveBeenCalledWith({
@@ -140,6 +143,7 @@ describe("GenesisProjectionDispatcher", () => {
       scanned: 1,
       projected: 1,
       recoveryRequired: 0,
+      claimRejected: 0,
     });
     expect(fixture.store.claimCommand).toHaveBeenCalledWith(
       "genesis:129:second",
@@ -154,13 +158,24 @@ describe("GenesisProjectionDispatcher", () => {
   it("U-GEN-020: Node resourceを成功・失敗の両方でcloseする", () => {
     const close = vi.fn();
     const dispatcher = {
-      dispatchPending: vi.fn(() => ({ scanned: 0, projected: 0, recoveryRequired: 0 })),
-      dispatchCommand: vi.fn(() => ({ scanned: 0, projected: 0, recoveryRequired: 0 })),
+      dispatchPending: vi.fn(() => ({
+        scanned: 0,
+        projected: 0,
+        recoveryRequired: 0,
+        claimRejected: 0,
+      })),
+      dispatchCommand: vi.fn(() => ({
+        scanned: 0,
+        projected: 0,
+        recoveryRequired: 0,
+        claimRejected: 0,
+      })),
     };
     expect(runNodeGenesisProjectionDispatcher(() => ({ dispatcher, close }))).toEqual({
       scanned: 0,
       projected: 0,
       recoveryRequired: 0,
+      claimRejected: 0,
     });
     expect(close).toHaveBeenCalledOnce();
 
@@ -171,7 +186,12 @@ describe("GenesisProjectionDispatcher", () => {
           dispatchPending: () => {
             throw new Error("scan-failed");
           },
-          dispatchCommand: () => ({ scanned: 0, projected: 0, recoveryRequired: 0 }),
+          dispatchCommand: () => ({
+            scanned: 0,
+            projected: 0,
+            recoveryRequired: 0,
+            claimRejected: 0,
+          }),
         },
         close: failedClose,
       })),
@@ -208,6 +228,7 @@ describe("GenesisProjectionDispatcher", () => {
       scanned: 1,
       projected: 0,
       recoveryRequired: 1,
+      claimRejected: 0,
     });
     resource.close();
     expect(readPlanStatus(root)).toBe("recovery_required");
@@ -223,6 +244,7 @@ describe("GenesisProjectionDispatcher", () => {
       scanned: 1,
       projected: 1,
       recoveryRequired: 0,
+      claimRejected: 0,
     });
     resource.close();
     expect(readPlanStatus(root)).toBe("projected");
@@ -231,6 +253,37 @@ describe("GenesisProjectionDispatcher", () => {
       join(root, ".ut-tdd", "ledger", "harness-ledger.db"),
     );
     removeTestTree(root);
+  });
+
+  it("U-GEN-034: renew失敗をentry単位で集約し後続claimの投影を継続する", () => {
+    const fixture = setup(entries, () => ({ durable: true, state: "projected" }));
+    vi.mocked(fixture.store.renewClaim)
+      .mockImplementationOnce(() => {
+        throw new Error("genesis-outbox-stale-claim-owner");
+      })
+      .mockReturnValueOnce(2);
+
+    expect(fixture.dispatcher.dispatchPending()).toEqual({
+      scanned: 2,
+      projected: 1,
+      recoveryRequired: 0,
+      claimRejected: 1,
+    });
+    expect(fixture.projection.dispatch).toHaveBeenCalledOnce();
+    expect(fixture.projection.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ commandId: "genesis:129:second" }),
+    );
+  });
+
+  it("U-GEN-035: active leaseはreplayed projectedへ誤分類せずbusyでfail-closeする", () => {
+    const fixture = setup(entries.slice(0, 1), () => ({ durable: true, state: "projected" }));
+    vi.mocked(fixture.store.claimCommand).mockReturnValue(undefined);
+    vi.mocked(fixture.store.commandState).mockReturnValue("busy");
+
+    expect(() => fixture.dispatcher.dispatchCommand("genesis:129:first")).toThrow(
+      "genesis-adoption-projection-command-busy",
+    );
+    expect(fixture.projection.dispatch).not.toHaveBeenCalled();
   });
 
   it("U-GEN-022: HARNESS DB close失敗時もPlan Ledgerをnested finallyでcloseする", () => {
@@ -406,6 +459,7 @@ function setup(
           }
         : undefined;
     }),
+    commandState: vi.fn(() => "missing" as const),
     markProjected,
     markRecoveryRequired,
     renewClaim: vi.fn(() => 2),

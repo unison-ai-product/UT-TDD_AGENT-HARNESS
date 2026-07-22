@@ -26,10 +26,16 @@ describe("genesis adoption production composition", () => {
 
   it("U-GEN-020: repository identityをdispatcherへ渡し当該commandのprojection状態を返してcloseする", () => {
     const close = vi.fn();
-    const dispatchCommand = vi.fn(() => ({ scanned: 1, projected: 1, recoveryRequired: 0 }));
+    const dispatchCommand = vi.fn(() => ({
+      scanned: 1,
+      projected: 1,
+      recoveryRequired: 0,
+      claimRejected: 0,
+    }));
     const openDispatcher = vi.fn(() => ({ dispatcher: { dispatchCommand }, close }));
     const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
       observeIssue,
+      verifyLocalAuthority: vi.fn(),
       openDispatcher,
       createRunner: (_root, projection) => successfulRunner(projection),
     });
@@ -47,6 +53,9 @@ describe("genesis adoption production composition", () => {
     const openDispatcher = vi.fn();
     const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
       observeIssue,
+      verifyLocalAuthority: vi.fn(() => {
+        throw new Error("genesis-adoption-repository-mismatch");
+      }),
       openDispatcher,
       createRunner: () => ({
         run: () => {
@@ -63,6 +72,7 @@ describe("genesis adoption production composition", () => {
     const close = vi.fn();
     const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
       observeIssue,
+      verifyLocalAuthority: vi.fn(),
       openDispatcher: () => ({
         dispatcher: {
           dispatchCommand: () => {
@@ -89,11 +99,32 @@ describe("genesis adoption production composition", () => {
       createRunner,
       openDispatcher,
       observeIssue: (input) => ({ ...observeIssue(input), body: "forged issue body" }),
+      verifyLocalAuthority: vi.fn(),
     });
 
     expect(() => runner.run(manifest())).toThrow("genesis-adoption-actual-issue-mismatch");
     expect(createRunner).not.toHaveBeenCalled();
     expect(openDispatcher).not.toHaveBeenCalled();
+  });
+
+  it("U-GEN-033: local authority不一致はGitHub readとlocal writeの前に拒否する", () => {
+    const observe = vi.fn(observeIssue);
+    const createRunner = vi.fn(() =>
+      successfulRunner({
+        dispatch: () => ({ durable: true, state: "projected" }),
+      }),
+    );
+    const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
+      createRunner,
+      observeIssue: observe,
+      verifyLocalAuthority: () => {
+        throw new Error("genesis-adoption-head-drift");
+      },
+    });
+
+    expect(() => runner.run(manifest())).toThrow("genesis-adoption-head-drift");
+    expect(observe).not.toHaveBeenCalled();
+    expect(createRunner).not.toHaveBeenCalled();
   });
 });
 

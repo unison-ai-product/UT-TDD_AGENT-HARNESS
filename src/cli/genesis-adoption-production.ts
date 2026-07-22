@@ -1,9 +1,11 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   type ObservedForwardEscapeIssue,
   renderForwardEscapeIssueBody,
 } from "../execution/forward-escape.js";
 import { NodeGhForwardEscapeIssuePort } from "../github/node-gh-forward-escape-issue-port.js";
+import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.js";
 import {
   type GenesisProjectionDispatchSummary,
   openNodeGenesisProjectionDispatcher,
@@ -34,6 +36,7 @@ export interface GenesisAdoptionProductionDeps {
     readonly repository: string;
     readonly issue_number: number;
   }) => ObservedForwardEscapeIssue;
+  readonly verifyLocalAuthority?: (repoRoot: string, manifest: GenesisAdoptionManifest) => void;
 }
 
 /**
@@ -53,8 +56,10 @@ export function createProductionGenesisAdoptionCommandRunner(
       openNodeGenesisProjectionDispatcher({ repoRoot: dispatcherRoot, repository }));
   const issuePort = new NodeGhForwardEscapeIssuePort();
   const observeIssue = deps.observeIssue ?? ((input) => issuePort.observeIssue(input));
+  const verifyLocalAuthority = deps.verifyLocalAuthority ?? verifyTrustedLocalAuthority;
   return {
     run(manifest: GenesisAdoptionManifest): GenesisAdoptionRunResult {
+      verifyLocalAuthority(repoRoot, manifest);
       verifyActualIssue(
         manifest,
         observeIssue({
@@ -66,7 +71,7 @@ export function createProductionGenesisAdoptionCommandRunner(
         dispatch(input) {
           const resource = openDispatcher(repoRoot, manifest.repository_identity);
           try {
-            return projectionState(resource.dispatcher.dispatchCommand(input.commandId), input);
+            return projectionState(resource.dispatcher.dispatchCommand(input.commandId));
           } finally {
             resource.close();
           }
@@ -102,13 +107,25 @@ function digest(value: string): string {
 
 function projectionState(
   summary: GenesisProjectionDispatchSummary,
-  input: Parameters<GenesisAdoptionProjectionOutboxPort["dispatch"]>[0],
 ): ReturnType<GenesisAdoptionProjectionOutboxPort["dispatch"]> {
-  if (summary.projected === 1 && summary.recoveryRequired === 0)
+  if (summary.projected === 1 && summary.recoveryRequired === 0 && summary.claimRejected === 0)
     return { durable: true, state: "projected" };
-  if (summary.recoveryRequired === 1 && summary.projected === 0)
+  if (summary.recoveryRequired === 1 && summary.projected === 0 && summary.claimRejected === 0)
     return { durable: true, state: "recovery_required" };
-  if (summary.scanned === 0 && input.localReceipt.replayed)
-    return { durable: true, state: "projected" };
   throw new Error("genesis-adoption-projection-command-state-invalid");
+}
+
+function verifyTrustedLocalAuthority(repoRoot: string, manifest: GenesisAdoptionManifest): void {
+  const git = (...args: string[]) =>
+    execFileSync("git", ["-C", repoRoot, ...args], {
+      encoding: "utf8",
+      windowsHide: true,
+    }).trim();
+  if (git("rev-parse", "HEAD") !== manifest.source.commit)
+    throw new Error("genesis-adoption-head-drift");
+  if (git("rev-parse", "--abbrev-ref", "HEAD") !== manifest.issue.branch)
+    throw new Error("genesis-adoption-branch-mismatch");
+  const identity = loadProjectIdentityFromHead({ repoRoot });
+  if (!identity.ok || identity.value.repositoryIdentity !== manifest.repository_identity)
+    throw new Error("genesis-adoption-repository-mismatch");
 }

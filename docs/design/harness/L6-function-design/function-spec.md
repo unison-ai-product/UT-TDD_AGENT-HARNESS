@@ -1341,6 +1341,13 @@ route、PLAN revision、Issue preimageのauthority確認へ再利用する。
 - dependency: resolverはplan-admission/plan-assetをimportしない。両domainはこの共有portへ依存し、
   相互importやGit解決ロジックの複製を行わない。
 
+### Genesis adoption並行性・外部投影契約
+
+- `GenesisAdoptionTransaction.adopt()`はpureなmanifest導出後、`BEGIN IMMEDIATE`内でreplay、asset/alias conflict、appendを同じsnapshotから判定する。同一command競合は一方を`replayed=true`へ、異command・同一assetはtyped conflictへ収束させ、一意制約例外を公開境界へ漏らさない。
+- `GenesisProjectionDispatcher.dispatchCommand()`はclaim不能を成功と推測せず、Plan Ledger正本のcommand stateを再観測する。`projected`だけを再生成功とし、active leaseは`busy`、不存在・非終端不整合はfail-closeする。
+- `dispatchPending()`はentry単位でclaim renewal、remote、finalizeを隔離する。renewal拒否をsummaryへ明示して後続entryを継続し、`scanned = projected + recoveryRequired + claimRejected`を保つ。
+- production compositionはlocal HEAD、branch、repository identityをread-only preflightした後にのみGitHub Issueを観測し、その後local adoption/outboxへ進む。local authority不一致時のGitHub read、Plan/HARNESS DB writeは0とする。
+
 ```ts
 class ExecutionEpisode {
   static observe(input: ObserveEscapeInput): ExecutionEpisode;

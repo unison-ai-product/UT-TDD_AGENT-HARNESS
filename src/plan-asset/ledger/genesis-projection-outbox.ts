@@ -59,6 +59,7 @@ export interface GenesisProjectionOutboxStore {
     commandId: string,
     request: GenesisProjectionClaimRequest,
   ): GenesisProjectionClaim | undefined;
+  commandState(commandId: string, observedAt: string): "busy" | "missing" | "projected";
   renewClaim(request: GenesisProjectionRenewalRequest): number;
   markProjected(input: GenesisProjectionClaimFence & { readonly occurredAt: string }): void;
   markRecoveryRequired(
@@ -137,6 +138,25 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
       const claimed = row ? this.claimRow(row, request) : undefined;
       return { commit: Boolean(claimed), value: claimed };
     });
+  }
+
+  commandState(commandId: string, observedAt: string): "busy" | "missing" | "projected" {
+    if (!commandId || !Number.isFinite(Date.parse(observedAt)))
+      throw new Error("genesis-outbox-command-state-invalid");
+    this.auditClaims();
+    const outbox = this.db
+      .prepare("SELECT status FROM genesis_projection_outbox WHERE command_id = ?")
+      .get(commandId);
+    if (!outbox) return "missing";
+    if (outbox.status === "projected") return "projected";
+    const claim = this.db
+      .prepare(
+        "SELECT claim_state, claim_expires_at FROM genesis_projection_claims WHERE command_id = ?",
+      )
+      .get(commandId);
+    if (claim?.claim_state === "active" && String(claim.claim_expires_at) > observedAt)
+      return "busy";
+    return "missing";
   }
 
   renewClaim(request: GenesisProjectionRenewalRequest): number {

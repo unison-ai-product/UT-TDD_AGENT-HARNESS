@@ -146,6 +146,26 @@ describe("genesis projection outbox", () => {
     db.close();
   });
 
+  it("U-GEN-036: command stateはactive leaseをbusy、terminal rowをprojectedとして正本から返す", () => {
+    const db = openHarnessDb(":memory:");
+    expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
+    const store = new SqliteGenesisProjectionOutboxStore(db);
+    const claimed = store.claimPending(
+      claim("worker:authority", "2026-07-22T00:00:00.000Z", 30_000),
+    )[0];
+
+    expect(store.commandState(claimed.commandId, "2026-07-22T00:00:10.000Z")).toBe("busy");
+    store.markProjected({
+      commandId: claimed.commandId,
+      ownerToken: claimed.ownerToken,
+      claimGeneration: claimed.claimGeneration,
+      occurredAt: "2026-07-22T00:00:11.000Z",
+    });
+    expect(store.commandState(claimed.commandId, "2026-07-22T00:00:12.000Z")).toBe("projected");
+    expect(store.commandState("genesis:missing", "2026-07-22T00:00:12.000Z")).toBe("missing");
+    db.close();
+  });
+
   it("U-GEN-025: 有効lease内のproduction 2 workerは単一live workerだけがremoteへ到達する", async () => {
     const path = databasePath();
     const db = openHarnessDb(path);

@@ -1575,6 +1575,14 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
+| `U-GEN-033` | authority順序 | local HEAD/branch/repository mismatchとGitHub spy | GitHub read、runner生成、local write 0でfail-close |
+| `U-GEN-034` | entry隔離 | 2 claimの先頭renewalだけ拒否 | 後続をproject/finalizeし、`claimRejected=1`をsummaryへ計上 |
+| `U-GEN-035` | active lease | replay commandを別workerが保持 | `projected`へ推測せず`busy`でfail-close、remote 0 |
+| `U-GEN-036` | command state | active lease、projected terminal、不存在 | Plan Ledger正本から`busy`/`projected`/`missing`を区別 |
+| `U-GEN-037` | adoption TOCTOU | 2 DB connectionでderive後に同commandまたは同assetを競合 | 同commandはdeterministic replay、異commandはtyped asset conflict、全表各1行 |
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
 | `CANDIDATE-EXEP-001` | 通常Forward | L0→L1の合法遷移 | Episode/eventは記録するがIssue/outbox 0 |
 | `CANDIDATE-EXEP-002` | Forward外Issue必須 | escape理由あり、`drive_model`欠落 | E2以降へ進めず`drive-model-required` |
 | `CANDIDATE-EXEP-003` | E0〜E15順序 | E7をE6前にappend | `episode-transition-invalid`、既存event列不変 |
