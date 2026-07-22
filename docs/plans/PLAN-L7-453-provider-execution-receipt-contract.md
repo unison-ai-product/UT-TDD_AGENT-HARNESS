@@ -5,6 +5,8 @@ kind: add-impl
 layer: L7
 drive: agent
 status: draft
+route_signal: feature_addition
+route_mode: add-feature
 created: 2026-07-22
 updated: 2026-07-22
 owner: Codex TL / PO
@@ -35,8 +37,9 @@ generates:
     artifact_type: test_code
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 dependencies:
-  parent: docs/design/harness/L6-function-design/function-spec.md
+  parent: docs/plans/PLAN-L6-20-runtime-adapter-session-lifecycle.md
   requires:
+    - docs/plans/PLAN-L6-20-runtime-adapter-session-lifecycle.md
     - docs/design/harness/L4-basic-design/external-if.md
     - docs/plans/PLAN-L7-68-provider-dispatch-portability.md
     - docs/plans/PLAN-L7-203-windows-provider-spawn-verbatim.md
@@ -54,6 +57,11 @@ dependencies:
 本PLANは `PLAN-L7-68` / `PLAN-L7-203` の確定済み実装を後から拡張扱いにせず、L4 external boundary と
 L6 function contract に追加された意味を独立した L7 資産として所有する。検出器の allowlist や本文への
 偶発的なパス記載で孤児判定だけを回避しない。
+
+既存実装から判明した capability / terminal receipt の設計欠落は
+`PLAN-REVERSE-453-provider-execution-receipt-backfill` がR4で上流へ引き戻す。本PLANは
+`PLAN-L6-20-runtime-adapter-session-lifecycle` を設計祖先としてForwardへ再合流し、
+`route_signal: feature_addition` / `route_mode: add-feature` の証明書を持つ。
 
 ## §1 契約範囲
 
