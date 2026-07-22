@@ -6,9 +6,10 @@
 
 import { createHash } from "node:crypto";
 
-/** L4 function §3.1 の 11 駆動モデル (off-Forward 実行方式)。技術 drive とは別 value object。 */
+/** L4 function §3.1 の駆動モデル (off-Forward 実行方式)。技術 drive とは別 value object。 */
 export const OFF_FORWARD_DRIVE_MODELS = [
   "reverse",
+  "redesign",
   "recovery",
   "incident",
   "discovery",

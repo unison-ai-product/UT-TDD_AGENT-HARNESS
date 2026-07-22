@@ -30,6 +30,7 @@ import {
   validateForwardEscape,
 } from "../src/execution/forward-escape";
 import { SqliteForwardEscapeJournal } from "../src/execution/sqlite-forward-escape-journal";
+import { MODE_CATALOG_DOC_FILES } from "../src/schema/mode-catalog";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { removeTestTree } from "./support/temp-tree";
@@ -125,6 +126,82 @@ function openForwardEscapeDb(path: string, repoRoot: string) {
 }
 
 describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
+  it("U-GEN-001: redesignを正規off-Forward駆動モデルとして受理する", () => {
+    expect(OFF_FORWARD_DRIVE_MODELS).toContain("redesign");
+    expect(new Set(OFF_FORWARD_DRIVE_MODELS).size).toBe(OFF_FORWARD_DRIVE_MODELS.length);
+    const documentedOffForwardModes = Object.keys(MODE_CATALOG_DOC_FILES)
+      .filter((file) => file !== "verify.md")
+      .map((file) => file.replace(/\.md$/, ""))
+      .sort();
+    expect([...OFF_FORWARD_DRIVE_MODELS].sort()).toEqual(documentedOffForwardModes);
+
+    const redesign = validateForwardEscape(
+      validCommand({ drive_model: "redesign" }),
+      emptyLedger,
+      memoryCustody(),
+    );
+    expect(redesign.violations).toHaveLength(0);
+    expect(redesign.validated?.command.drive_model).toBe("redesign");
+    if (!redesign.validated) throw new Error("redesign fixture did not validate");
+    expect(renderForwardEscapeIssueBody(redesign.validated.command)).toContain(
+      "- Drive model: redesign",
+    );
+  });
+
+  it("U-GEN-002: redesignの設計→Forward→実装とreverseの実装→設計→Forwardを混同せず三面一致を要求する", () => {
+    const redesign = validCommand({
+      command_id: "cmd-redesign",
+      origin_asset_id: "PLAN-L4-31-nfr-verification-foundation-architecture",
+      origin_revision_id: "rev-design",
+      origin_layer: "L4",
+      origin_state: "rejected",
+      drive_model: "redesign",
+      reentry_target_asset_id: "PLAN-L6-88-snapshot-runner-performance-redesign",
+      reentry_target_revision_id: "rev-forward",
+      reentry_target_layer: "L6",
+      reentry_target_state: "forward_merge",
+      plan_id: "PLAN-L6-88-snapshot-runner-performance-redesign",
+    });
+    const reverse = validCommand({
+      command_id: "cmd-reverse",
+      origin_asset_id: "PLAN-L7-452-forward-escape-contract-red",
+      origin_revision_id: "rev-impl",
+      origin_layer: "L7",
+      origin_state: "implement",
+      drive_model: "reverse",
+      reentry_target_asset_id: "PLAN-L6-83-forward-escape-issue-contract",
+      reentry_target_revision_id: "rev-design",
+      reentry_target_layer: "L6",
+      reentry_target_state: "pair-freeze",
+      plan_id: "PLAN-REVERSE-452-forward-escape-contract-backfill",
+    });
+
+    expect(redesign.drive_model).not.toBe(reverse.drive_model);
+    expect(`${redesign.origin_layer}->${redesign.reentry_target_layer}`).toBe("L4->L6");
+    expect(`${reverse.origin_layer}->${reverse.reentry_target_layer}`).toBe("L7->L6");
+    expect(
+      checkDriveModelAlignment({
+        command_drive_model: "redesign",
+        issue_body_drive_model: "redesign",
+        plan_route_mode: "redesign",
+      }),
+    ).toHaveLength(0);
+    expect(
+      checkDriveModelAlignment({
+        command_drive_model: "redesign",
+        issue_body_drive_model: "redesign",
+        plan_route_mode: "reverse",
+      }).map((finding) => finding.code),
+    ).toContain("drive-model-misalignment");
+    expect(
+      checkDriveModelAlignment({
+        command_drive_model: "reverse",
+        issue_body_drive_model: "redesign",
+        plan_route_mode: "redesign",
+      }).map((finding) => finding.code),
+    ).toContain("drive-model-misalignment");
+  });
+
   it("U-EXISSUE-001: 通常Forward辺はIssueなしで通り、off-Forward辺だけがIssueを要求する", () => {
     expect(classifyForwardBoundary({ signal: "descend" })).toBe("inside_forward");
     expect(classifyForwardBoundary({ signal: "freeze" })).toBe("inside_forward");
@@ -136,7 +213,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   });
 
   it("U-EXISSUE-002: drive_model 空・未知・技術drive混入・三面不一致は全て fail-close する", () => {
-    expect(OFF_FORWARD_DRIVE_MODELS).toHaveLength(11);
+    expect(OFF_FORWARD_DRIVE_MODELS).toHaveLength(12);
     const empty = validateForwardEscape(validCommand({ drive_model: "" }), emptyLedger);
     expect(empty.violations.map((v) => v.code)).toContain("missing-drive-model");
     const unknown = validateForwardEscape(validCommand({ drive_model: "warp" }), emptyLedger);
