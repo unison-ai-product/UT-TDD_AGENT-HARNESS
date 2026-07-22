@@ -146,13 +146,13 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 
 ## §6 project-local wrapper 契約
 
-1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/run-bun.mjs` と `.ut-tdd/bin/ut-tdd.mjs` を投影する。Claude hook は `node` の exec-form から前者を経由して native Bun を shell-free で起動し、後者へ argv を渡す。Codex hook は文字列 serializer の能力境界により従来形式を維持する。wrapper は native Bunで実行中の`process.execPath`を維持し、project rootの`node_modules/ut-tdd/src/cli.ts`、次にsetupを実行したharness checkoutの`src/cli.ts`を直接起動する。`.cmd`・shell・bare global fallbackは使用せず、両entrypointがなければexit 127でfail-closeする。
+1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/run-bun.ts` と `.ut-tdd/bin/ut-tdd.mjs` を投影する。Claude hook は Node.js 22.6 以上の native TypeScript execution を使う `node` exec-form から前者を経由して native Bun を shell-free で起動し、後者へ argv を渡す。Codex hook は文字列 serializer の能力境界により従来形式を維持する。wrapper は native Bunで実行中の`process.execPath`を維持し、project rootの`node_modules/ut-tdd/src/cli.ts`、次にsetupを実行したharness checkoutの`src/cli.ts`を直接起動する。`.cmd`・shell・bare global fallbackは使用せず、両entrypointがなければexit 127でfail-closeする。
 
 不変条件:
 
 - project ごとの tag pin / devDependency を優先し、同一PC上の他 project の harness version と衝突しない。
 - hook command は repo-local `.ut-tdd/bin/ut-tdd.mjs` を経由し、consumer の PATH に bare `ut-tdd` が無くても project-local binary または setup 元 harness checkout で動く。
-- Bun >=1.3 は core runtime、Node.js >=20 は Claude adapter の shell-free native Bun launcherに必要である。UT-TDD harness binary は project dependency として解決する。
+- Bun >=1.3 は core runtime、Node.js >=22.6 は Claude adapter の TypeScript-only shell-free native Bun launcherに必要である。UT-TDD harness binary は project dependency として解決する。
 - rollback 対象には `.ut-tdd/bin/ut-tdd.mjs` を含め、managed adapter と同じく再 setup で復元できる。
 
 ## §7 fresh-consumer setup-smoke 契約
@@ -179,7 +179,7 @@ L6 contract marker: `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult`
 
 setup が生成する Claude hook は、意味論正本 `HookInvocation { executable, args }` (`args` は argv) から
 `{ type: "command", command: executable, args: argv }` へ serialize する。project-local wrapper を
-Claudeで使う hook の意味論は `executable="node"`、`argv[0]=".ut-tdd/bin/run-bun.mjs"`、`argv[1]=".ut-tdd/bin/ut-tdd.mjs"`、残りを hook 固有
+Claudeで使う hook の意味論は `executable="node"`、`argv[0]=".ut-tdd/bin/run-bun.ts"`、`argv[1]=".ut-tdd/bin/ut-tdd.mjs"`、残りを hook 固有
 subcommand とする。`command` に argv、quote、redirect、pipe、`&&` 等を埋め込んではならず、
 consumer template と built-in template は同じ materializer を使う。
 

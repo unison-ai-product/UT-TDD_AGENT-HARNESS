@@ -22,8 +22,8 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseHookInvocation } from "../runtime/hook-invocation";
 import { CODEX_REQUIRED } from "./codex-hook-adapter-policy";
+import { parseHookInvocation } from "./hook-invocation";
 import { REQUIRED as CLAUDE_REQUIRED, FORBIDDEN_PATH_RE } from "./project-hook";
 
 export { CODEX_REQUIRED };

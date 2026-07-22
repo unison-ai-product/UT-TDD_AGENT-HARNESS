@@ -15,12 +15,12 @@ const codexCommands = [
 ] as const;
 
 const claudeCommands = [
-  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
-  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook work-guard",
-  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session start",
-  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
-  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session summary",
-  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs session start",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs session summary",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
 ] as const;
 
 function hooksJson(commands: readonly string[]) {
@@ -50,7 +50,7 @@ function setupSmokeDeps(overrides: Record<string, string | null> = {}): SetupSmo
   const root = "/repo";
   const files = new Map<string, string>(
     Object.entries({
-      ".ut-tdd/bin/run-bun.mjs": "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
+      ".ut-tdd/bin/run-bun.ts": "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
       ".ut-tdd/bin/ut-tdd.mjs": "#!/usr/bin/env bun\nconsole.log('ut-tdd');\n",
       "AGENTS.md": "# Agents\n",
       "CLAUDE.md": "# Claude\n",
@@ -101,11 +101,11 @@ describe("doctor setup-smoke direct checks", () => {
 
   it("preserves Claude native-launcher and Codex serializer semantics separately", () => {
     const claude = collectHookCommands(
-      claudeHooksJson(["node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session start"]),
+      claudeHooksJson(["node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs session start"]),
     );
     const codex = collectHookCommands(hooksJson(["bun .ut-tdd/bin/ut-tdd.mjs session start"]));
 
-    expect(claude).toEqual(["node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session start"]);
+    expect(claude).toEqual(["node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs session start"]);
     expect(codex).toEqual(["bun .ut-tdd/bin/ut-tdd.mjs session start"]);
   });
 

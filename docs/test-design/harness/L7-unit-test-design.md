@@ -1623,5 +1623,12 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
 | `U-HOOKEXEC-008` | Windows native smoke | hook host→Bun entrypoint の dispatch ancestry に `sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe` が無く、hook outcome は既存契約どおりである。 |
 
+実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
+`tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる
+`tests/hook-native-launcher.test.ts` は `process.cwd()` を 1 回だけ使用し、snapshot runner が
+準備した writable execution snapshot で source / Pack template の parity を検証する
+`isolated_fixture` 分類とする。live checkout の検証に切り替えたり、root 参照を
+追加した場合は `test-repository-isolation` の `callsite-drift` で fail-close する。
+
 Windows smoke は単なる exit code green では代替できない。process ancestry の捕捉結果を test artifact
 として残し、「Bun が起動した」ことと「shell/conhost を介さず Bun を起動した」ことを別 assertion にする。

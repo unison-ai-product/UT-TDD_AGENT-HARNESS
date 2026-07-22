@@ -37,10 +37,14 @@ function output(command: string, args: string[], cwd: string): string | null {
 
 export function resolveBunBinary(
   runtime = (globalThis as { Bun?: { which?: (command: string) => string | undefined } }).Bun,
+  current: { isBun: boolean; executable: string } = {
+    isBun: Boolean(process.versions.bun),
+    executable: process.execPath,
+  },
 ): string {
   // Bun上では現在のnative executableが最も強い証拠。Bun.which("bun")はWindowsで
   // bun.cmdを返し、cmd.exe/conhost.exeを再導入するためfallbackに限定する。
-  return process.versions.bun ? process.execPath : (runtime?.which?.("bun") ?? "bun");
+  return current.isBun ? current.executable : (runtime?.which?.("bun") ?? "bun");
 }
 
 export function canonicalPath(path: string): string {

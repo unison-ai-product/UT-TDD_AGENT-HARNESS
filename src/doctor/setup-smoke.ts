@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { parseHookInvocation } from "../runtime/hook-invocation";
+import { parseHookInvocation } from "../lint/hook-invocation";
 
 export interface SetupSmokeDeps {
   repoRoot: string;
@@ -13,7 +13,7 @@ interface SetupSmokeCheck {
 }
 
 const SETUP_SMOKE_REQUIRED_FILES = [
-  ".ut-tdd/bin/run-bun.mjs",
+  ".ut-tdd/bin/run-bun.ts",
   ".ut-tdd/bin/ut-tdd.mjs",
   "AGENTS.md",
   "CLAUDE.md",
@@ -32,7 +32,7 @@ const SETUP_SMOKE_CODEX_COMMANDS = [
 ] as const;
 
 const claudeCommand = (suffix: string): string =>
-  `node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs ${suffix}`;
+  `node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs ${suffix}`;
 const SETUP_SMOKE_CLAUDE_COMMANDS = [
   claudeCommand("hook agent-guard"),
   claudeCommand("hook work-guard"),
@@ -69,7 +69,7 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
   }
 
   const wrapper = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/ut-tdd.mjs"));
-  const launcher = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/run-bun.mjs"));
+  const launcher = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/run-bun.ts"));
   checks.push({
     name: "wrapper-placeholder-free",
     ok: wrapper !== null && !/UT_TDD_SOURCE_CLI_JSON|__UT_TDD|placeholder/i.test(wrapper),

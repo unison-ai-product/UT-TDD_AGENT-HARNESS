@@ -20,7 +20,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.mjs",
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
                     "${CLAUDE_PROJECT_DIR}/src/cli.ts",
                     "session",
                     "start",
@@ -35,7 +35,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.mjs",
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
                     "${CLAUDE_PROJECT_DIR}/src/cli.ts",
                     "hook",
                     "post-tool-use",
@@ -50,7 +50,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.mjs",
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
                     "${CLAUDE_PROJECT_DIR}/src/cli.ts",
                     "session",
                     "summary",

@@ -267,12 +267,12 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "process.exit(result.status ?? 0);",
     "",
   ].join("\n"),
-  "common/run-bun.mjs": [
+  "common/run-bun.ts": [
     'import { accessSync, constants, realpathSync, statSync } from "node:fs";',
     'import { delimiter, isAbsolute, join } from "node:path";',
     'import { spawn } from "node:child_process";',
     "",
-    "function findBun() {",
+    "function findBun(): string {",
     '  const names = process.platform === "win32" ? ["bun.exe"] : ["bun"];',
     '  const directories = (process.env.PATH ?? "").split(delimiter).filter(isAbsolute);',
     '  if (process.platform === "win32" && process.env.APPDATA) {',
@@ -302,13 +302,13 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "    if (signal) process.kill(process.pid, signal);",
     "    else process.exit(code ?? 1);",
     "  });",
-    '  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {',
+    '  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {',
     "    process.once(signal, () => child.kill(signal));",
     "  }",
     "} catch (error) {",
     "  fail(error);",
     "}",
-    "function fail(error) {",
+    "function fail(error: unknown): void {",
     "  process.stderr.write(`UT-TDD hook launcher: ${error instanceof Error ? error.message : String(error)}\\n`);",
     "  process.exitCode = 1;",
     "}",
@@ -678,9 +678,9 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
 
 export const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
   {
-    template: "common/run-bun.mjs",
+    template: "common/run-bun.ts",
     file: {
-      path: join(".ut-tdd", "bin", "run-bun.mjs"),
+      path: join(".ut-tdd", "bin", "run-bun.ts"),
       category: "A",
       purpose: "Shell-free native Bun hook launcher",
     },

@@ -24,11 +24,17 @@ generates:
     artifact_type: json_config
   - artifact_path: src/lint/codex-hook-adapter.ts
     artifact_type: source_module
+  - artifact_path: src/lint/hook-invocation.ts
+    artifact_type: source_module
+  - artifact_path: .claude/hooks/run-bun.ts
+    artifact_type: runtime_adapter
   - artifact_path: src/cli.ts
     artifact_type: source_module
   - artifact_path: tests/codex-hook-adapter.test.ts
     artifact_type: test_code
   - artifact_path: tests/work-guard.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/hook-native-launcher.test.ts
     artifact_type: test_code
 dependencies:
   parent: null
@@ -240,3 +246,10 @@ shared contract は `HookInvocation { executable, args }` (`args` は argv) ま�
 `codex-hook-adapter` の parity は raw command 文字列の同一性ではなく、runtime 固有 config を正規化した
 executable+argv の意味論、matcher、fail-close policy の一致を検証する。Claude exec form を Codex に
 要求すること、または Codex の shell form を Claude に許容することはどちらも禁止する。
+
+Issue #123 で新設した semantic invocation SSoT、source native launcher、対応 regression は
+本 PLAN の add-impl 成果物とする。`tests/hook-native-launcher.test.ts` は repository root を
+live tree として直接検証せず、snapshot runner が用意した writable execution snapshot を
+`process.cwd()` から 1 回参照する `isolated_fixture` 契約とする。この呼出し数は
+`test-repository-isolation` が fail-close し、実装側の例外 allowlist ではなく本 PLAN と
+L7 test design による設計 trace を正本とする。

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { invocationEquals, parseHookInvocation } from "../runtime/hook-invocation";
+import { invocationEquals, parseHookInvocation } from "./hook-invocation";
 import { PERSONAL_ABSOLUTE_PATH_PATTERN } from "./personal-path";
 
 export interface ProjectHookDoc {
@@ -63,8 +63,8 @@ interface RequiredProjectHook {
  * PLAN-RECOVERY-06: gate 要求と setup 生成物の黙った再乖離を防ぐ)。
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
-export const SOURCE_HOOK_LAUNCHER = "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.mjs";
-export const WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.mjs";
+export const SOURCE_HOOK_LAUNCHER = "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts";
+export const WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.ts";
 
 const wrapperCommand = (subcommand: string): string => `bun ${WRAPPER_CLI} ${subcommand}`;
 

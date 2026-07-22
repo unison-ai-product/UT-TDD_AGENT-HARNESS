@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
 
 const repoRoot = process.cwd();
-const launcher = join(repoRoot, ".claude", "hooks", "run-bun.mjs");
+const launcher = join(repoRoot, ".claude", "hooks", "run-bun.ts");
 const temporaryDirectories: string[] = [];
 
 function temporaryDirectory(): string {
@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 describe("Claude native Bun hook launcher (issue #123)", () => {
-  it("forwards stdin and every argv token unchanged to a native Bun executable", () => {
+  it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged to a native Bun executable", () => {
     const directory = temporaryDirectory();
     const nativeBun = join(directory, process.platform === "win32" ? "bun.exe" : "bun");
     copyFileSync(process.execPath, nativeBun);
@@ -52,7 +52,7 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(JSON.parse(readFileSync(output, "utf8"))).toEqual({ forwarded, stdin });
   });
 
-  it("fails closed when no native Bun executable can be resolved", () => {
+  it("U-HOOKEXEC-008: fails closed when no native Bun executable can be resolved", () => {
     const directory = temporaryDirectory();
     const result = spawnSync(process.execPath, [launcher, "should-not-run.ts"], {
       cwd: repoRoot,
@@ -65,9 +65,9 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(result.stderr).toContain("native Bun executable not found");
   });
 
-  it("uses direct executable spawning and never delegates to a shell host", () => {
+  it("U-HOOKEXEC-008: uses direct executable spawning and never delegates to a shell host", () => {
     const source = readFileSync(launcher, "utf8");
-    const consumerTemplate = BUILTIN_GITHUB_TEMPLATES["common/run-bun.mjs"];
+    const consumerTemplate = BUILTIN_GITHUB_TEMPLATES["common/run-bun.ts"];
 
     expect(source).toContain("spawn(findBun(), process.argv.slice(2)");
     expect(source).toContain("windowsHide: true");
@@ -79,11 +79,14 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(consumerTemplate.replace(/\s+/g, "")).toBe(source.replace(/\s+/g, ""));
   });
 
-  it("routes every tracked Claude hook through node plus the launcher as exact argv", () => {
+  it("U-HOOKEXEC-002/U-HOOKEXEC-003/U-HOOKEXEC-004/U-HOOKEXEC-007: routes all Claude hooks as exact argv and preserves policy", () => {
     const settings = JSON.parse(
       readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"),
     ) as {
-      hooks: Record<string, { hooks: { command: string; args?: string[] }[] }[]>;
+      hooks: Record<
+        string,
+        { hooks: { command: string; args?: string[]; blockOnFailure?: boolean }[] }[]
+      >;
     };
     const hooks = Object.values(settings.hooks).flatMap((entries) =>
       entries.flatMap((entry) => entry.hooks),
@@ -92,15 +95,28 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(hooks).toHaveLength(6);
     for (const hook of hooks) {
       expect(hook.command).toBe("node");
-      expect(hook.args?.[0]).toBe("$" + "{CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.mjs");
+      expect(hook.args?.[0]).toBe("$" + "{CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts");
       expect(hook.args?.slice(1).every((token) => token.length > 0)).toBe(true);
       expect(
         hook.args?.some((token) => /(?:cmd|powershell|pwsh|sh)(?:\.exe)?/i.test(basename(token))),
       ).toBe(false);
     }
+    const preToolHooks = (
+      settings.hooks.PreToolUse as {
+        hooks: { command: string; args?: string[]; blockOnFailure?: boolean }[];
+      }[]
+    ).flatMap((entry) => entry.hooks);
+    expect(preToolHooks.every((hook) => hook.blockOnFailure === true)).toBe(true);
+    for (const event of ["SessionStart", "PostToolUse", "Stop", "SubagentStop"]) {
+      expect(
+        settings.hooks[event]
+          .flatMap((entry) => entry.hooks)
+          .every((hook) => hook.blockOnFailure !== true),
+      ).toBe(true);
+    }
   });
 
-  it("generates exact node-launcher-native-Bun argv for every Pack hook", () => {
+  it("U-HOOKEXEC-005/U-HOOKEXEC-006: keeps Codex separation and exact Pack launcher argv", () => {
     const settings = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]) as {
       hooks: Record<string, { hooks: { command: string; args?: string[] }[] }[]>;
     };
@@ -113,21 +129,30 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
 
     expect(actual).toEqual({
       PreToolUse: [
-        ["node", ".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-        ["node", ".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
       ],
       SessionStart: [
-        ["node", ".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "session", "start"],
+        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "start"],
       ],
       PostToolUse: [
-        ["node", ".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"],
+        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"],
       ],
-      Stop: [["node", ".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"]],
+      Stop: [["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"]],
       SubagentStop: [
-        ["node", ".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
+        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
       ],
     });
     const wrapper = BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"];
+    const codexHooks = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]) as {
+      hooks: Record<string, { hooks: { command: string; args?: string[] }[] }[]>;
+    };
+    const codexCommands = Object.values(codexHooks.hooks).flatMap((entries) =>
+      entries.flatMap((entry) => entry.hooks),
+    );
+    expect(codexCommands.every((hook) => typeof hook.command === "string" && !hook.args)).toBe(
+      true,
+    );
     expect(wrapper).toContain("spawnSync(process.execPath");
     expect(wrapper).toContain("windowsHide: true");
     expect(wrapper).not.toContain("shell:");

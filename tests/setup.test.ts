@@ -90,6 +90,7 @@ const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
 };
 
 const baseTemplates: TemplateSet = {
+  "common/run-bun.ts": "// shell-free native Bun launcher\n",
   "common/ut-tdd.mjs": "#!/usr/bin/env bun\n",
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
@@ -400,7 +401,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -410,7 +411,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -419,7 +420,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       );
       expect(claude.hooks.SubagentStop[0].hooks[0]).toMatchObject({
         command: "node",
-        args: [".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
+        args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
       });
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
