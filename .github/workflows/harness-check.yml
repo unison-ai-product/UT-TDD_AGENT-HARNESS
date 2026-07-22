@@ -114,12 +114,63 @@ jobs:
       - name: doctor (toolchain scope)
         run: bun src/cli.ts doctor --scope toolchain
 
+  # ADR-009 / PLAN-L7-454: Bun compatibility jobsとは独立したnative custodyの
+  # target gate。Cargo.lockが生成・reviewされるまでは意図的にfail-closeする。
+  resource-kernel-rust-linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: native/resource-kernel
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: require reviewed Cargo.lock
+        run: test -f Cargo.lock
+
+      - name: select pinned Rust toolchain
+        run: rustup show active-toolchain
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace --all-targets --locked
+
+  resource-kernel-rust-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: native/resource-kernel
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: require reviewed Cargo.lock
+        shell: pwsh
+        run: if (-not (Test-Path -LiteralPath Cargo.lock)) { throw "Cargo.lock is required" }
+
+      - name: select pinned Rust toolchain
+        run: rustup show active-toolchain
+
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace --all-targets --locked
+
   # PLAN-RECOVERY-15 / issue #97: Branch Protection が参照する唯一の Required
   # Status Check。片脚が failure / cancelled / skipped の場合も必ず起動して Red にする。
   harness-check:
-    needs: [harness-check-linux, harness-check-windows]
+    needs: [harness-check-linux, harness-check-windows, resource-kernel-rust-linux, resource-kernel-rust-windows]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: require Linux and Windows success
-        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success"
+      - name: require control-plane and Resource Kernel success on Linux and Windows
+        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success" && test "${{ needs.resource-kernel-rust-linux.result }}" = "success" && test "${{ needs.resource-kernel-rust-windows.result }}" = "success"

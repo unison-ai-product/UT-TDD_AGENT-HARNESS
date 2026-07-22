@@ -201,7 +201,8 @@ mod tests {
 
     #[test]
     fn request_rejects_unknown_protocol_fields() {
-        let input = r#"{"protocol_version":1,"required_capabilities":[],"program":"must-not-launch"}"#;
+        let input =
+            r#"{"protocol_version":1,"required_capabilities":[],"program":"must-not-launch"}"#;
 
         assert!(serde_json::from_str::<HandshakeRequest>(input).is_err());
     }
@@ -218,7 +219,10 @@ mod tests {
         let failure = kernel.launch(&request, &mut launcher).unwrap_err();
 
         assert_eq!(failure.kind, PreLaunchFailureKind::CapabilityUnavailable);
-        assert_eq!(failure.missing_capabilities, execution_custody_capabilities());
+        assert_eq!(
+            failure.missing_capabilities,
+            execution_custody_capabilities()
+        );
         assert_eq!(launcher.calls, 0);
     }
 }

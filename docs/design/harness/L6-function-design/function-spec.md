@@ -1370,3 +1370,35 @@ HEAD SHA、run attempt、workflow revision、required check set、protection rev
 個別legや片OSのreceiptを参照せず、E13に束縛されたaggregate receipt digestだけを参照する。
 branch protectionのrequired contextも `harness-check` 一件へ固定し、実GitHub設定が未適用・乖離・
 取得不能なら「設定済み」と推測せずclosureをblockする。
+
+## PLAN-L6-92 Resource Kernel protocol・error・platform port契約
+
+本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-ERROR-*`、
+`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
+
+### wire / error algebra
+
+`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたは
+`protocol_failure`を返すpure functionとする。`encodeFrame`はcanonical bytesを決定論的に返す。
+error unionは`protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure |
+custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled |
+process_failure | orphan_detected`で閉じる。未知native codeを成功や一般process failureへ丸めない。
+
+### method契約
+
+| method | precondition | postcondition / invariant |
+|---|---|---|
+| `verifyBundle` | trust identityとtarget明示 | signature/core/companion/schema/SBOM/targetの全一致時だけverified handle |
+| `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
+| `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
+| `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
+| `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
+| `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
+
+### platform port / 責務非重複
+
+`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`で構成する。
+Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
+`populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
+それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
+Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。

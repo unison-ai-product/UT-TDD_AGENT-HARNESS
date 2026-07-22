@@ -305,3 +305,28 @@ GitHub remote stateだけをGreen証拠にしない。`IT-CIAGG-01..05` は
 L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証するL8 ascentであり、構造検査、結果値の
 全負例、receipt鮮度、runtime/template profile分離、branch protection/E14消費境界の全てがGreenに
 なるまで「両OS CI済み」またはmerge可能を主張しない。
+
+## Resource Kernel physical integration (PLAN-L5-25、2026-07-22)
+
+mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を検証する。mock GreenをJob/cgroup Greenへ
+読み替えず、各caseはprocess-created count、custody identity、event sequence、empty/reap proofを保存する。
+
+| ID | boundary / fault injection | expected |
+|---|---|---|
+| `IT-RGK-PHYS-001` | valid requestを分割read/writeしresponseをcorrelate | 一件だけdecodeし同一request IDへ応答、余剰byte 0 |
+| `IT-RGK-PHYS-002` | oversize、partial、invalid UTF-8、duplicate/unknown field、trailing byte | `protocol_failure`、launcher call 0 |
+| `IT-RGK-PHYS-003` | response ID/version/bundle digestを一要素ずつ変異 | Node clientが拒否しdirect spawn 0 |
+| `IT-RGK-PHYS-004` | 同一attempt/nonceのspawnをtimeout後再送 | processは最大1、既存custodyへreconcile |
+| `IT-RGK-PHYS-005` | Windows create→assign間でclient crash | suspended root resume 0、custodianがterminate/reap |
+| `IT-RGK-PHYS-006` | Windows assign成功後launcher/client crash | Job handle custodyを維持しdeadline後Job empty/orphan 0 |
+| `IT-RGK-PHYS-007` | Linux clone/start barrierと事後attach fallbackを競合 | user code開始時からcgroup所属、事後attachはcapability failure |
+| `IT-RGK-PHYS-008` | Linux broker/subreaper crashとdouble-fork | reconcile後`populated=0`、zombie/managed orphan 0 |
+| `IT-RGK-PHYS-009` | root先行exit、terminate/cancel競合 | root exitではreturnせず、empty→reap後だけterminal |
+| `IT-RGK-PHYS-010` | pipe切断、companion crash、Node journal commit crash | custodyを失わず再接続、片肺terminal receipt 0 |
+| `IT-RGK-PHYS-011` | unsupported OS・権限不足・capability欠落 | probe後process生成前拒否、soft fallback 0 |
+| `IT-RGK-PHYS-012` | binary/schema/target/signature/SBOMを各一箇所変異 | admission前`bundle_failure`、PATH探索/download 0 |
+| `IT-RGK-PHYS-013` | coreだけ/companionだけrollback後、manifest全体rollback | 片側は拒否、既知良好bundleも実OS oracle再通過後だけ利用 |
+| `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
+
+freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
+deferのままconfirmedへ昇格しない。

@@ -38,7 +38,8 @@ dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
   requires:
     - docs/plans/PLAN-L7-365-harness-db-currency-hook.md
-  blocks: []
+  blocks:
+    - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
   references:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/plans/PLAN-L4-26-engine-swap-object-method-design.md
@@ -46,6 +47,9 @@ dependencies:
     - docs/design/harness/L4-basic-design/architecture.md
     - docs/design/harness/L5-detailed-design/internal-processing.md
     - docs/test-design/harness/L9-system-test-design.md
+    - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
+    - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
+    - docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
 review_evidence: []
 ---
 
@@ -375,5 +379,6 @@ snapshot一時directoryの掃除だけでは本負債の完了証拠にならな
 | `RGK-EV-CI-03` | Actions run `29892125300` / Windows job `88834471971` | `72604cd13798a29828c84fbe927cb5cce166551b` | 04:50:44Z–04:55:04Z、DB 19秒、tests 200秒 | failure。PID/peak/orphan未計測 |
 | `RGK-EV-CI-04` | 同run / Linux job `88834471970` | 同commit | 04:50:44Z–04:55:23Z、DB 14秒、tests 249秒 | failure。PID/peak/orphan未計測 |
 
-planned downstreamは `PLAN-L5-24`、`PLAN-L6-89`、`PLAN-L7-454` とするが、未起票の間は依存graphの
-`blocks` edgeにしない。各draftを実在させ、layer-monotonicityと参照実在性を検出器で確認した時点でedgeへ昇格する。
+downstreamは `PLAN-L5-25`、`PLAN-L6-92`、`PLAN-L7-454` とする。当初予定した`PLAN-L5-24`と`PLAN-L6-89`は
+別branchの正規PLANと衝突したため再利用しない。各draftの実在後も、layer-monotonicity、参照実在性、L5↔L8・L6↔L7の
+pair freezeを検出器で確認してからconfirmedへ昇格する。

@@ -232,7 +232,21 @@ function pushViolation(input: {
   });
 }
 
-const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
+const RUNTIME_LEGS = [
+  "harness-check-linux",
+  "harness-check-windows",
+  "resource-kernel-rust-linux",
+  "resource-kernel-rust-windows",
+] as const;
+
+const expectedRunner = (leg: (typeof RUNTIME_LEGS)[number]): string =>
+  leg.endsWith("windows") ? "windows-latest" : "ubuntu-latest";
+
+const requiredCargoCommands = [
+  "cargo fmt --all --check",
+  "cargo clippy --workspace --all-targets --locked -- -D warnings",
+  "cargo test --workspace --all-targets --locked",
+] as const;
 
 const aggregateResultExpression = (leg: (typeof RUNTIME_LEGS)[number]): string =>
   ["$", `{{ needs.${leg}.result }}`].join("");
@@ -262,7 +276,7 @@ function checkRuntimeAggregate(input: {
       });
       continue;
     }
-    const expectedRunner = name === "harness-check-linux" ? "ubuntu-latest" : "windows-latest";
+    const runner = expectedRunner(name);
     const validSteps =
       Array.isArray(leg.steps) && leg.steps.length > 0 && leg.steps.every(workflowStep);
     const continuesOnError =
@@ -274,12 +288,18 @@ function checkRuntimeAggregate(input: {
               recordValue(step)?.["continue-on-error"] as undefined | false,
             ),
         ));
-    if (leg["runs-on"] === expectedRunner && validSteps && !continuesOnError) continue;
+    const stepTextValue = Array.isArray(leg.steps) ? leg.steps.map(stepText).join("\n") : "";
+    const cargoGateValid =
+      !name.startsWith("resource-kernel-rust-") ||
+      (requiredCargoCommands.every((command) => stepTextValue.includes(command)) &&
+        stepTextValue.includes("Cargo.lock") &&
+        !/\bbun\b/i.test(stepTextValue));
+    if (leg["runs-on"] === runner && validSteps && !continuesOnError && cargoGateValid) continue;
     pushViolation({
       violations: input.violations,
       doc: input.doc,
       reason: "missing_runtime_leg",
-      detail: `jobs.${name} must run on ${expectedRunner} with non-empty fail-close steps`,
+      detail: `jobs.${name} must run on ${runner} with non-empty fail-close steps${name.startsWith("resource-kernel-rust-") ? ", reviewed Cargo.lock, and Bun-free cargo fmt/clippy/test" : ""}`,
     });
   }
   const aggregateValue = input.jobs["harness-check"];

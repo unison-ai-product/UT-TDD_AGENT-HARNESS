@@ -75,14 +75,37 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
+  resource-kernel-rust-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: test -f Cargo.lock
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --all-targets --locked
+  resource-kernel-rust-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: if (-not (Test-Path Cargo.lock)) { throw "Cargo.lock is required" }
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --all-targets --locked
   harness-check:
-    needs: [harness-check-linux, harness-check-windows]
+    needs: [harness-check-linux, harness-check-windows, resource-kernel-rust-linux, resource-kernel-rust-windows]
     if: \${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: Require Linux and Windows success
+      - name: Require all runtime legs success
         run: ${REQUIRED_AGGREGATE_COMMAND}
 `;
+
+const RUNTIME_LEGS = [
+  "harness-check-linux",
+  "harness-check-windows",
+  "resource-kernel-rust-linux",
+  "resource-kernel-rust-windows",
+] as const;
 
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
@@ -114,7 +137,7 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
 }
 
 describe("github-ci-policy lint", () => {
-  it("U-CIPOL-013: accepts Linux and Windows runtime legs behind one final aggregate gate", () => {
+  it("U-CIPOL-013: accepts control-plane and Rust Linux/Windows legs behind one final aggregate gate", () => {
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW));
 
     expect(result.ok).toBe(true);
@@ -138,13 +161,12 @@ describe("github-ci-policy lint", () => {
     });
   });
 
-  it("U-CIPOL-015: requires the aggregate gate to depend on both runtime legs", () => {
-    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
-      const remaining =
-        missing === "harness-check-linux" ? "harness-check-windows" : "harness-check-linux";
+  it("U-CIPOL-015: requires the aggregate gate to depend on every runtime leg", () => {
+    for (const missing of RUNTIME_LEGS) {
+      const remaining = RUNTIME_LEGS.filter((leg) => leg !== missing);
       const workflow = SOURCE_WORKFLOW.replace(
-        "needs: [harness-check-linux, harness-check-windows]",
-        `needs: [${remaining}]`,
+        `needs: [${RUNTIME_LEGS.join(", ")}]`,
+        `needs: [${remaining.join(", ")}]`,
       );
       const result = analyzeGithubCiPolicy(docs(workflow));
 
@@ -152,7 +174,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "invalid_aggregate_needs",
-        detail: `harness-check.needs must equal harness-check-linux,harness-check-windows (missing=${missing})`,
+        detail: `harness-check.needs must equal ${RUNTIME_LEGS.join(",")} (missing=${missing})`,
       });
     }
   });
@@ -169,8 +191,8 @@ describe("github-ci-policy lint", () => {
     });
   });
 
-  it("U-CIPOL-017: requires explicit success guards for both runtime results", () => {
-    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
+  it("U-CIPOL-017: requires explicit success guards for every runtime result", () => {
+    for (const missing of RUNTIME_LEGS) {
       const workflow = SOURCE_WORKFLOW.replace(`\${{ needs.${missing}.result }}`, "success");
       const result = analyzeGithubCiPolicy(docs(workflow));
 
@@ -183,13 +205,9 @@ describe("github-ci-policy lint", () => {
     }
   });
 
-  it("U-CIPOL-018: accepts only the two-leg success result matrix", () => {
-    expect(
-      aggregateHarnessResultsPass({
-        "harness-check-linux": "success",
-        "harness-check-windows": "success",
-      }),
-    ).toBe(true);
+  it("U-CIPOL-018: accepts only the four-leg success result matrix", () => {
+    const allSuccess = Object.fromEntries(RUNTIME_LEGS.map((leg) => [leg, "success"]));
+    expect(aggregateHarnessResultsPass(allSuccess)).toBe(true);
     for (const state of [
       "failure",
       "cancelled",
@@ -200,18 +218,9 @@ describe("github-ci-policy lint", () => {
       "unknown",
       "",
     ]) {
-      expect(
-        aggregateHarnessResultsPass({
-          "harness-check-linux": state,
-          "harness-check-windows": "success",
-        }),
-      ).toBe(false);
-      expect(
-        aggregateHarnessResultsPass({
-          "harness-check-linux": "success",
-          "harness-check-windows": state,
-        }),
-      ).toBe(false);
+      for (const leg of RUNTIME_LEGS) {
+        expect(aggregateHarnessResultsPass({ ...allSuccess, [leg]: state })).toBe(false);
+      }
     }
   });
 
@@ -228,16 +237,16 @@ describe("github-ci-policy lint", () => {
     });
 
     const continueOnError = SOURCE_WORKFLOW.replace(
-      "      - name: Require Linux and Windows success",
-      "      - name: Require Linux and Windows success\n        continue-on-error: true",
+      "      - name: Require all runtime legs success",
+      "      - name: Require all runtime legs success\n        continue-on-error: true",
     );
     expect(
       analyzeGithubCiPolicy(docs(continueOnError)).violations.map((violation) => violation.reason),
     ).toContain("missing_aggregate_result_guard");
 
     const expressionContinueOnError = SOURCE_WORKFLOW.replace(
-      "    needs: [harness-check-linux, harness-check-windows]",
-      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows]`,
+      `    needs: [${RUNTIME_LEGS.join(", ")}]`,
+      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [${RUNTIME_LEGS.join(", ")}]`,
     );
     expect(
       analyzeGithubCiPolicy(docs(expressionContinueOnError)).violations.map(
@@ -260,6 +269,22 @@ describe("github-ci-policy lint", () => {
         reason: "missing_runtime_leg",
         detail:
           "jobs.harness-check-windows must run on windows-latest with non-empty fail-close steps",
+      });
+    }
+  });
+
+  it("U-CIPOL-021: rejects incomplete or Bun-dependent Resource Kernel gates", () => {
+    for (const workflow of [
+      SOURCE_WORKFLOW.replace("cargo fmt --all --check", "cargo check"),
+      SOURCE_WORKFLOW.replace("cargo test --workspace --all-targets --locked", "bun test"),
+      SOURCE_WORKFLOW.replace("test -f Cargo.lock", "echo no-lock-check"),
+    ]) {
+      expect(analyzeGithubCiPolicy(docs(workflow)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.resource-kernel-rust-linux must run on ubuntu-latest with non-empty fail-close steps, reviewed Cargo.lock, and Bun-free cargo fmt/clippy/test",
       });
     }
   });

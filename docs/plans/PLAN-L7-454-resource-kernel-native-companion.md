@@ -31,6 +31,10 @@ generates:
     artifact_type: source_module
   - artifact_path: native/resource-kernel/resource-kernel-companion/src/main.rs
     artifact_type: source_module
+  - artifact_path: rust-toolchain.toml
+    artifact_type: configuration
+  - artifact_path: native/resource-kernel/Cargo.lock
+    artifact_type: configuration
   - artifact_path: src/runtime/resource-kernel-protocol.ts
     artifact_type: source_module
   - artifact_path: tests/resource-kernel-native-scaffold.test.ts
@@ -39,12 +43,15 @@ generates:
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
   blocks: []
   references:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/design/harness/L4-basic-design/architecture.md
     - docs/test-design/harness/L9-system-test-design.md
+    - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
+    - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
 review_evidence: []
 ---
 
@@ -62,15 +69,17 @@ DB/CAS再利用判断を複製しない。
 advertiseせず、process生成前に拒否するためのRed/契約土台に限る。`PLAN-L4-32`の
 `rgk_section_status: red`およびL9 §9のRed system oracleをGreenへ読み替えない。
 
+先行scaffoldから判明した物理・機能設計gapは`PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill`がR4で
+L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けてForwardへ再合流する。
+
 ## 2. 設計正本と実装境界
 
 - 上流architectureとACの正本: `PLAN-L4-32` のAC-RGK-01..15。
 - native採用・配布・rollback・Bun永久BANの正本: ADR-009。
 - system受入oracle: `L9-system-test-design.md` §9の`ST-RGK-01..15`。
 - L7 unit pair: `L7-unit-test-design.md`へ本PLAN固有の`U-RGK-NATIVE-*` / `U-RGK-PROTO-*`をRed freezeする。
-- L5 physical / L6 function契約: `PLAN-L5-24` / `PLAN-L6-89`を起票・freezeしてから、platform APIと
-  Node clientの実装契約を確定する。未起票の参照を依存edgeとして偽装しないため、現時点では
-  `references`だけに置き、実在・confirmed後に`requires`へ昇格する。
+- L5 physical / L6 function契約: 採番衝突を避けた`PLAN-L5-25` / `PLAN-L6-92`を起票し、wire schema、
+  error union、platform port、custodian lifecycleをfreezeしてからplatform APIとNode clientを実装する。
 
 ### 2.1 Rust companionが所有するもの
 
@@ -98,7 +107,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 | Step | Red oracle / 実装 | 完了判定 |
 |---|---|---|
 | 1 | `U-RGK-NATIVE-001..`でworkspace、protocol version、strict decode、unsupported adapterのlaunch 0を固定 | Node test runnerとCargo testの双方で対象Red/Green履歴を保存 |
-| 2 | `PLAN-L5-24` / `PLAN-L6-89`を起票し、wire schema、error union、platform port、custodian lifecycleをfreeze | L4→L5→L6→L7依存edgeとL7 pairに孤児0 |
+| 2 | `PLAN-L5-25` / `PLAN-L6-92`を起票し、wire schema、error union、platform port、custodian lifecycleをfreeze | L4→L5→L6→L7依存edgeとL5↔L8/L6↔L7 pairに孤児0 |
 | 3 | Windows adapterを短いobject/portへ分割して実装 | suspended PIDがattach失敗時にresume 0、全開始caseでJob empty/orphan 0 |
 | 4 | Linux adapterを同じprotocol portへ実装 | attach前user code 0、終了後`populated=0`とzombie 0 |
 | 5 | Node protocol clientとbundle verifierを実装 | mismatch/欠落/権限不足の全mutationでprocess生成前fail-close、direct spawn 0 |
@@ -125,6 +134,20 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 unsupported adapterで`process_created=false`かつlauncher call 0を表現する。`tests/resource-kernel-native-scaffold.test.ts`
 はその構造を静的に検査するが、Rust toolchain不在環境のCargo実走、Node protocol client、実Job Object/cgroup、
 署名bundle、SBOM、rollback、L9 system evidenceを証明しない。したがって本PLANは`draft`のままとする。
+
+`rust-toolchain.toml`はRust `1.97.1`と`rustfmt`/`clippy`を固定し、source workflowはLinux/Windowsの
+独立Cargo jobを最終`harness-check`へ束縛する。両jobはreview済み`Cargo.lock`を開始条件とするため、
+toolchain不在のauthor環境でlockfileを捏造せず、正規生成・reviewされるまでは意図的にRedとなる。
+このRedはnative target gateの未成立証拠であり、既存Bun compatibility jobで代替しない。
+Cargo jobの`working-directory`は`native/resource-kernel`だが、rustupは現在ディレクトリから親方向へ
+toolchain overrideを探索するため、repository rootの`rust-toolchain.toml`を選択する。CIは
+`rustup show active-toolchain`でその選択を先に可視化する。lockfileはRust導入済み環境で
+`rustup run 1.97.1 cargo generate-lockfile --manifest-path native/resource-kernel/Cargo.toml`を実行し、
+依存差分をreviewして本変更と同じcommitへ含める。CI内の都度生成や未review lockfileは認めない。
+
+`.github/workflows/harness-check.yml`と`src/lint/github-ci-policy.ts`は既存GitHub CI PLAN群が所有する
+共有資産であり、本PLANの`generates`へ重複登録しない。本PLANはnative gate要求を追加し、既存所有PLANの
+detectorを設計に追従させる変更としてtraceする。
 
 ## 6. 用語と上流への戻し方
 

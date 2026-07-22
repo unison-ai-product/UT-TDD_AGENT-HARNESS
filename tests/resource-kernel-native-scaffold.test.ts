@@ -36,4 +36,22 @@ describe("resource-kernel native companion scaffold", () => {
     expect(source).not.toContain("CreateJobObject");
     expect(source).not.toContain("clone3(");
   });
+
+  it("U-RGK-NATIVE-003: pins Rust and binds both native OS gates into the aggregate", () => {
+    const toolchain = readFileSync(resolve("rust-toolchain.toml"), "utf8");
+    const workflow = readFileSync(resolve(".github/workflows/harness-check.yml"), "utf8");
+
+    expect(toolchain).toContain('channel = "1.97.1"');
+    expect(toolchain).toContain('components = ["clippy", "rustfmt"]');
+    for (const leg of ["resource-kernel-rust-linux", "resource-kernel-rust-windows"]) {
+      expect(workflow).toContain(`${leg}:`);
+      expect(workflow).toContain(`needs.${leg}.result`);
+    }
+    expect(workflow.match(/cargo fmt --all --check/g)).toHaveLength(2);
+    expect(
+      workflow.match(/cargo clippy --workspace --all-targets --locked -- -D warnings/g),
+    ).toHaveLength(2);
+    expect(workflow.match(/cargo test --workspace --all-targets --locked/g)).toHaveLength(2);
+    expect(workflow.match(/Cargo\.lock/g)?.length).toBeGreaterThanOrEqual(2);
+  });
 });
