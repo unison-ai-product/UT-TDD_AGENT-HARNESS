@@ -1349,6 +1349,7 @@ route、PLAN revision、Issue preimageのauthority確認へ再利用する。
 - `GenesisProjectionDispatcher.dispatchCommand()`はclaim不能を成功と推測せず、Plan Ledger正本のcommand stateを再観測する。`projected`だけを再生成功とし、active leaseは`busy`、不存在・非終端不整合はfail-closeする。
 - `dispatchPending()`はentry単位でclaim renewal、remote、finalizeを隔離する。renewal拒否をsummaryへ明示して後続entryを継続し、`scanned = projected + recoveryRequired + claimRejected`を保つ。
 - leaseは単一`gh` call期限ではなく、1回のprojectionに含まれる全remote callのworst-case合計予算とfinalize予算の和を必ず上回る。Node GitHub adapterはoperation deadlineを一度だけ確定し、各callへ残予算を渡して全体期限を超過させない。
+- production workerはこのlease既定を数値複製せずdispatcher契約から利用する。同時起動した別ownerは有効lease中にremoteへ到達せず、remote成功後にprocessが停止した場合だけlease満了後の別ownerが同じmarkerを再観測して重複作成なしで終端へ収束する。
 - production compositionはlocal HEAD、branch、repository identityをread-only preflightした後にのみGitHub Issueを観測し、その後local adoption/outboxへ進む。local authority不一致時のGitHub read、Plan/HARNESS DB writeは0とする。
 
 ```ts

@@ -166,7 +166,7 @@ describe("genesis projection outbox", () => {
     db.close();
   });
 
-  it("U-GEN-025: 有効lease内のproduction 2 workerは単一live workerだけがremoteへ到達する", async () => {
+  it("U-GEN-040: 有効lease内のproduction 2 workerは単一live workerだけがremoteへ到達する", async () => {
     const path = databasePath();
     const db = openHarnessDb(path);
     expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
@@ -178,8 +178,8 @@ describe("genesis projection outbox", () => {
     prepareHarnessDb(harnessPath);
 
     const results = await Promise.all([
-      runProductionWorker(worker, path, harnessPath, remote, "normal"),
-      runProductionWorker(worker, path, harnessPath, remote, "normal"),
+      runProductionWorker(worker, path, harnessPath, remote, "concurrent"),
+      runProductionWorker(worker, path, harnessPath, remote, "concurrent"),
     ]);
     expect(results.sort()).toEqual([0, 0]);
     expect(JSON.parse(readFileSync(remote, "utf8"))).toMatchObject({ create_count: 1 });
@@ -190,7 +190,7 @@ describe("genesis projection outbox", () => {
     reopened.close();
   });
 
-  it("U-GEN-029: remote成功が再観測可能ならprocess crash後のcreate-or-getで収束する", async () => {
+  it("U-GEN-041: remote成功が再観測可能ならprocess crash後のcreate-or-getで収束する", async () => {
     const path = databasePath();
     const db = openHarnessDb(path);
     expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
@@ -321,7 +321,7 @@ function runProductionWorker(
   planDbPath: string,
   harnessDbPath: string,
   remotePath: string,
-  mode: "normal" | "crash",
+  mode: "normal" | "concurrent" | "crash",
 ) {
   return new Promise<number>((resolve, reject) => {
     const child = spawn(bunBinary(), [worker, planDbPath, harnessDbPath, remotePath, mode], {
@@ -375,6 +375,15 @@ const repository = "unison-ai-product/UT-TDD_AGENT-HARNESS";
 const issueBody = "issue-129-preimage";
 const issueUrl = "https://github.com/" + repository + "/issues/129";
 const runGh = (args) => {
+  if (mode === "concurrent") {
+    const ownerPath = remotePath + ".live-worker";
+    const owner = String(process.pid);
+    try {
+      writeFileSync(ownerPath, owner, { encoding: "utf8", flag: "wx" });
+    } catch {
+      if (readFileSync(ownerPath, "utf8") !== owner) process.exit(72);
+    }
+  }
   const endpoint = args.find((arg) => arg.startsWith("repos/"));
   if (endpoint?.includes("/comments?")) {
     const comments = existsSync(remotePath) ? [JSON.parse(readFileSync(remotePath, "utf8")).comment] : [];
@@ -408,9 +417,8 @@ const resource = openNodeGenesisProjectionDispatcher({
   options: {
     planLedgerPath: planDbPath,
     harnessDbPath,
-    now: () => mode === "crash" ? "2026-07-22T00:00:00.000Z" : "2026-07-22T00:00:31.000Z",
+    now: () => mode === "crash" ? "2026-07-22T00:00:00.000Z" : "2026-07-22T00:01:16.000Z",
     ownerToken: () => "worker:" + process.pid,
-    leaseMs: 30_000,
   },
 });
 try {

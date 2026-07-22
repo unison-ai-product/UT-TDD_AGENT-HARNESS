@@ -158,7 +158,13 @@ export class NodeGhForwardEscapeIssuePort
         expectedDigest: request.body_digest,
         exactLine: true,
       });
-      if (!prior) this.createComment(request.repository, request.issue_number, request.body, run);
+      if (!prior)
+        this.createComment({
+          repository: request.repository,
+          issueNumber: request.issue_number,
+          body: request.body,
+          run,
+        });
       const comment = selectMarked({
         values: this.listComments(request.repository, request.issue_number, run),
         marker: exactMarker,
@@ -231,12 +237,13 @@ export class NodeGhForwardEscapeIssuePort
     return pages.flat();
   }
 
-  private createComment(
-    repository: string,
-    issueNumber: number,
-    body: string,
-    run: (args: string[]) => string,
-  ): GhCommentView {
+  private createComment(input: {
+    readonly repository: string;
+    readonly issueNumber: number;
+    readonly body: string;
+    readonly run: (args: string[]) => string;
+  }): GhCommentView {
+    const { repository, issueNumber, body, run } = input;
     return JSON.parse(
       run([
         "api",

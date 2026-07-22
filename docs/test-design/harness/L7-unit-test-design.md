@@ -1584,6 +1584,8 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `U-GEN-036` | command state | active lease、projected terminal、不存在 | Plan Ledger正本から`busy`/`projected`/`missing`を区別 |
 | `U-GEN-037` | adoption TOCTOU | 2 DB connectionでderive後に同commandまたは同assetを競合 | 同commandはdeterministic replay、異commandはtyped asset conflict、全表各1行 |
 | `U-GEN-039` | operation-wide deadline | 15秒×4 remote call、30秒lease、2 worker | remote開始前に短いleaseを拒否。75秒leaseでは各callを残予算へ制限し、途中再claim・duplicate marker 0 |
+| `U-GEN-040` | production lease排他 | 本番既定leaseを使う2 process worker、remote到達owner記録 | 両workerは正常終了するが、lease有効中にremoteへ到達するownerは1つ、metadata comment作成も1回 |
+| `U-GEN-041` | crash後の再観測収束 | remote成功直後にprocess終了、lease満了後に別workerを起動 | 先行workerは意図したcrash code、後続workerは既存markerを再観測して作成を重複せず`projected`へ収束 |
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
