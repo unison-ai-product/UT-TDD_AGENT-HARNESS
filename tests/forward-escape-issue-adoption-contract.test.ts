@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import * as forwardEscape from "../src/execution/forward-escape";
 import { SqliteForwardEscapeJournal } from "../src/execution/sqlite-forward-escape-journal";
 import { openHarnessDb } from "../src/state-db";
 import { migrate } from "../src/state-db/migration";
+import { removeTestTree } from "./support/temp-tree";
 
 type AdoptionRequest = {
   validated: unknown;
@@ -391,7 +392,7 @@ describe("Forward escape existing-Issue adoption contract", () => {
       expect(commentCalls).toBe(1);
       db.close();
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -480,7 +481,7 @@ describe("Forward escape existing-Issue adoption contract", () => {
       expect(sqlite.eventsFor("projection-fsm")).toHaveLength(1);
     } finally {
       db.close();
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 

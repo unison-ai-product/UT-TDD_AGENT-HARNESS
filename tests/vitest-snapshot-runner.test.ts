@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   statSync,
   symlinkSync,
@@ -10,6 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
   assertBatchVitestArgs,
@@ -28,11 +30,63 @@ import {
 } from "../scripts/run-vitest-snapshot";
 import { removeTestTree } from "./support/temp-tree";
 
+const CHILD_CALLS = new Set(["spawn", "spawnSync", "execFileSync", "execSync"]);
+
 describe("snapshot child-process UX", () => {
   it("U-TESTHYGIENE-048: non-interactive local CI children never open Windows consoles", () => {
     expect(snapshotChildProcessOptions("C:/repo")).toMatchObject({ windowsHide: true });
   });
+
+  it("U-TESTHYGIENE-049: production/hooks/scriptsの直接child起動はwindowsHideを明示する", () => {
+    const violations: string[] = [];
+    for (const file of [".claude/hooks", "scripts", "src"].flatMap(typescriptFiles)) {
+      const source = ts.createSourceFile(
+        file,
+        readFileSync(file, "utf8"),
+        ts.ScriptTarget.Latest,
+        true,
+      );
+      const visit = (node: ts.Node): void => {
+        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+          const name = node.expression.text;
+          if (CHILD_CALLS.has(name)) {
+            const options = node.arguments[name === "execSync" ? 1 : 2];
+            const explicitlyHidden =
+              options &&
+              ts.isObjectLiteralExpression(options) &&
+              options.properties.some(
+                (property) =>
+                  (ts.isPropertyAssignment(property) &&
+                    property.name.getText(source) === "windowsHide" &&
+                    property.initializer.kind === ts.SyntaxKind.TrueKeyword) ||
+                  (ts.isSpreadAssignment(property) &&
+                    property.expression.getText(source).includes("snapshotChildProcessOptions")),
+              );
+            const forwardedHiddenOptions =
+              file.replaceAll("\\", "/") === "src/state-db/stop-refresh.ts" &&
+              name === "spawn" &&
+              options?.getText(source) === "opts";
+            if (!explicitlyHidden && !forwardedHiddenOptions) {
+              const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+              violations.push(`${file}:${position.line + 1}:${name}`);
+            }
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+    }
+    expect(violations).toEqual([]);
+  });
 });
+
+function typescriptFiles(root: string): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) return typescriptFiles(path);
+    return entry.isFile() && entry.name.endsWith(".ts") ? [path] : [];
+  });
+}
 
 describe("vitest snapshot runner", () => {
   it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {
