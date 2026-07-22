@@ -337,7 +337,61 @@ Issue projection portを通過し、採用asset、Issue custody、Forward reentr
 `PLAN-L4-31 -> PLAN-L6-88` の完了判定は未発行L6-88を捏造せず、#102のrevision authoringと
 Redesign bundleを経てL4-31 revision 2 / L6-88 admissionが揃った後続実行に限定する。
 
+### 4.1.1 stacked closure手順
+
+PR #130はmechanism PR、PR #117はmain負債を閉じるclosure PRとして責務を分ける。
+PR #130のbaseは`work/recovery-16-pr103-evidence`（PR #117 head）なので、PR #130をmainへ
+直接retarget、squash、cherry-pickしない。PR #130 exact HEADでLinux/Windows/aggregate、PLAN ownership、
+claim-blind/spec-blind reviewがGreenになった後、通常mergeでPR #117 branchへ合流する。合流commitを
+新しいtrusted HEADとして、古いHEADのmanifest、blob OID、Issue preimageを再利用しない。
+
+closureは次の順序で実行する。
+
+1. **L6-83 genesis**: 合流後HEADのL6-83 blobからmanifestを生成し、genesis custody専用のcanonical
+   `redesign` Issue preimageへ束縛して`plan adopt-genesis-chain`を実行する。Issue #129はmechanismの
+   tracking Issueであり、本文をL6-83 route contractへ差し替えてcustody Issueとして流用しない。
+   Plan Ledgerのasset/revision/admission/custody/outboxとHARNESS DBのE2/E4、remote metadata commentを
+   command ID単位で照合する。
+2. **L7-452 Forward authoring**: L6-83 revision 1をoriginとして、L7-452用の通常`add-feature` Issueを
+   Forward escape経路でE4へ採用する。L7-452はgenesis transactionの第二assetとして捏造せず、
+   plan revision authoring経路で発行・review・confirmする。L6-83のgenesis receipt、L7-452 Issue E4、
+   L7-452 authoring receiptの三段をtraceで結ぶ。
+3. **L4-31 genesis**: 合流後HEADのL4-31 blobを別command/custody Issueでrevision 1へ採用する。
+   L6-83と同じIssue番号、command ID、route receiptを共有しない。
+4. **L4-31 revision 2 + L6-88**: Issue #102のrevision authoringを通し、既存Redesign bundleの同一
+   command groupでL4-31 revision 2のback-referenceとL6-88 revision 1/admissionを発行する。
+   Issue #98のE4、supersession receipt、両artifact projectionが揃ってから#98をGreenとする。
+5. PR #117のPLAN-L7-452 / PLAN-RECOVERY-16をexact combined HEADでreview・confirmし、main負債2件、
+   Linux/Windows/aggregateを再計測する。Green後だけPR #117をmainへ通常mergeする。
+
+### 4.1.2 multi-asset判定
+
+genesis transactionのmulti-asset化は不要である。genesisの責務はlegacy origin 1 assetのrevision 1
+採用とcustody/outboxのatomic appendであり、Forward targetの発行まで同じSQLite transactionへ入れると、
+Issue E4・review・設計freezeを迂回する。L6-83→L7-452はgenesis receiptから通常Forward authoringへ
+接続するSagaで閉じる。L4-31→L6-88は既存Redesign bundleがL4 revision 2とreplacement revision 1の
+multi-member atomicityを既に担当する。必要なのはcross-command traceとrecovery convergenceであり、
+genesis transactionの責務拡張ではない。
+
+### 4.1.3 GitHub comment案（未送信）
+
+- **Issue #129**: 「PR #130の完了条件をmechanism Greenに限定する。tracked route oracleを実chainと
+  呼ばず、PR #117 combined HEADでL6-83 production adoption、L7-452通常Forward authoring、L4-31
+  adoptionを実行する。Issue #129本文はcustody preimageへ流用しない。」
+- **Issue #102**: 「L4-31 revision 1 genesis後、revision authoring + Redesign bundleでL4-31 revision 2と
+  L6-88を同一command group発行する。genesisだけでは#102 ACを満たさない。」
+- **Issue #98**: 「性能Redesignの完了証拠はIssue E4、L4-31 revision 2、L6-88 admission、supersession、
+  performance/safety oracle。PR #130のmechanism Greenを#98完了と数えない。」
+
 ## 5. DoD
+
+PR #130単体は次のmechanism ACまでを判定し、実repository/remote closureを完了したと主張しない。
+
+- [ ] trusted HEAD、repository identity、Issue contract/preimage、origin/reentryをmanifestへ束縛し、driftをremote起動前に拒否する。
+- [ ] local genesis appendとpending outboxがatomicで、command-specific dispatcherが別Plan/HARNESS DBをcloseしながらprojected/recovery_requiredへ収束する。
+- [ ] tracked route transaction oracleとproduction composition oracleを名称・証拠種別で区別する。
+
+次はPR #130をPR #117へ合流したcombined HEAD上の後続closure ACであり、PR #130単体のGreenへ算入しない。
 
 - [ ] legacy PLANをbase blob/digest/revisionへ束縛してrevision N+1として発行できる。
 - [ ] stale base、digest drift、alias ambiguity、revision gap、receipt不整合をwrite前にfail-closeする。
@@ -348,7 +402,5 @@ Redesign bundleを経てL4-31 revision 2 / L6-88 admissionが揃った後続実�
 - [ ] Redesign supersessionのorigin correctionとreplacementを片肺にしない。
 - [ ] #98のPLAN-L4-31 revision 2 / PLAN-L6-88でadmissionとsupersessionが両方Greenになる。
 - [ ] PLAN-L7-441未完のprocess-kill境界を明示し、通常例外のatomicityをcrash convergenceと混同しない。
-- [ ] Issue #129 genesis adoptionがtrusted HEAD、Issue preimage、origin/reentryからrouteを導出し、自己申告digest改ざんを拒否する。
-- [ ] `plan adopt-genesis-chain`がproduction custody/outbox adapterへ接続され、restart後も`recovery_required`から一度だけ収束する。
-- [ ] `PLAN-L6-83 -> PLAN-L7-452`がproduction compositionでasset adoption、Forward reentry、Issue projectionまでGreenになる。
+- [ ] L6-83 genesis receipt→L7-452用add-feature Issue E4→L7-452 authoring receiptがcombined HEADでtrace Greenになる。
 - [ ] `PLAN-L4-31 -> PLAN-L6-88`は#102のrevision authoring完了後、L4-31 revision 2とL6-88 admissionを実artifactでGreenにする（tracked route transactionだけで代替しない）。
