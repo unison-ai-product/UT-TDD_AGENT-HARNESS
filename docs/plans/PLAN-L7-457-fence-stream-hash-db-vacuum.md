@@ -49,7 +49,7 @@ review_evidence:
     worker_model: claude-sonnet-5
     reviewer_model: codex
     green_commands:
-      - kind: test
+      - kind: unit_test
         command: "bunx vitest run tests/git-workspace-fingerprint.test.ts tests/db-maintenance.test.ts tests/db-currency.test.ts tests/vitest-snapshot-runner.test.ts"
         runner: bun
         scope: targeted
