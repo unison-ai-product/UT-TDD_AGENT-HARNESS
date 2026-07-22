@@ -4,7 +4,10 @@ import {
   type AppendPlanDraftInput,
   PlanDraftLedgerTransaction,
 } from "../../src/plan-asset/ledger/plan-draft-ledger.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import {
+  LEDGER_SCHEMA_VERSION,
+  migratePlanLedger,
+} from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
@@ -19,7 +22,7 @@ describe("PLAN draft ledger transaction", () => {
 
     expect(result).toMatchObject({ ok: true, replayed: false, revision: 1 });
     expect(counts(db)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 2]);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     expect(db.prepare("SELECT * FROM plan_id_reservations").get()).toMatchObject({
       lease_key_version: "plan-draft-v1",
       lease_token_hash: sha("lease"),

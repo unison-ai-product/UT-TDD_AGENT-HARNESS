@@ -29,7 +29,11 @@ import {
   PlanRevisionLedgerTransaction,
 } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
 import { committedRevisionPredicate } from "../../src/plan-asset/ledger/revision-visibility.js";
-import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import {
+  ledgerRowDigest,
+  LEDGER_SCHEMA_VERSION,
+  migratePlanLedger,
+} from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 import { removeTestTree } from "../support/temp-tree";
 
@@ -53,7 +57,7 @@ describe("Redesign bundle coordinator", () => {
   it("U-PA-REDESIGN-001A: legacy originはrev1 bootstrapとrev2 correctionを同一bundleで確定する", () => {
     const db = openHarnessDb(":memory:");
     opened.push(db);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     seed(db, "plan:replacement", "PLAN-L6-88");
     const current = bundle();
     const baseFrontmatter = {
@@ -677,7 +681,7 @@ db.close();`;
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   seed(db, "plan:origin", "PLAN-L4-31");
   seed(db, "plan:replacement", "PLAN-L6-88");
   return { db, coordinator: new PlanRedesignBundleCoordinator(db) };
@@ -1228,7 +1232,7 @@ function stable(value: unknown): string {
 function openE2eDb(path: string): HarnessDb {
   const db = openHarnessDb(path);
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   return db;
 }
 

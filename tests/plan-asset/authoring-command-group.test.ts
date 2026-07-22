@@ -6,7 +6,10 @@ import {
   type AuthoringArtifactPublisher,
   AuthoringCommandGroupJournal,
 } from "../../src/plan-asset/ledger/authoring-command-group.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import {
+  LEDGER_SCHEMA_VERSION,
+  migratePlanLedger,
+} from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 import { removeTestTree } from "../support/temp-tree";
 
@@ -216,7 +219,7 @@ function recordingPublisher(calls: string[]): AuthoringArtifactPublisher {
 function memoryDb(): HarnessDb {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   return db;
 }
 
@@ -231,7 +234,7 @@ function dbPath(): string {
 function diskDb(path: string): HarnessDb {
   const db = openHarnessDb(path);
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
   return db;
 }
 

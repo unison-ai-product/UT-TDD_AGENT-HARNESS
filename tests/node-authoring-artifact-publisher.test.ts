@@ -10,7 +10,10 @@ import {
   NodeAuthoringArtifactPublisher,
 } from "../src/plan-admission/node-authoring-artifact-publisher.js";
 import { AuthoringCommandGroupJournal } from "../src/plan-asset/ledger/authoring-command-group.js";
-import { migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
+import {
+  LEDGER_SCHEMA_VERSION,
+  migratePlanLedger,
+} from "../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../src/state-db/index.js";
 import { removeTestTree } from "./support/temp-tree";
 
@@ -32,7 +35,7 @@ describe("Node authoring artifact publisher", () => {
     });
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       const journal = new AuthoringCommandGroupJournal(db);
       expect(() => journal.execute(group(artifacts), publisher)).toThrow(
         "authoring artifact publish failed",
@@ -68,7 +71,7 @@ describe("Node authoring artifact publisher", () => {
     });
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       const journal = new AuthoringCommandGroupJournal(db);
       expect(() => journal.execute(group(artifacts), publisher)).toThrow(
         "authoring artifact publish failed",
@@ -227,7 +230,7 @@ describe("Node authoring artifact publisher", () => {
     const dbPath = join(root, ".ut-tdd", "ledger", "harness.db");
     mkdirSync(join(root, ".ut-tdd", "ledger"), { recursive: true });
     let db = openHarnessDb(dbPath);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     const single = group([artifact]);
     const moduleUrl = pathToFileURL(
       join(process.cwd(), "src", "plan-admission", "node-atomic-draft-publisher.ts"),
@@ -254,7 +257,7 @@ publisher.publish(token);`;
     db.close();
 
     db = openHarnessDb(dbPath);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 8 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     expect(
       new AuthoringCommandGroupJournal(db).execute(
         single,
