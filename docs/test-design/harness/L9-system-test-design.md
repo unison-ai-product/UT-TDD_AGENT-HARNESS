@@ -3,6 +3,7 @@ layer: L4
 executed_at_layer: L9
 artifact_type: test_design
 status: confirmed
+rgk_section_status: red
 pair_artifact: docs/design/harness/L4-basic-design/
 parent_doc: docs/plans/PLAN-L4-00-master.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -22,7 +23,7 @@ updated: 2026-05-29
 
 > **layer (作成層 = V-pair key)**: L4 (基本設計) / **executed_at_layer (実施層)**: L9 (総合テスト) / **artifact**: ④ テスト設計 (V-model 右、② L4 基本設計 全 sub-doc と対)
 > **pair (V-model L4↔L9)**: `docs/design/harness/L4-basic-design/{data,architecture,function,external-if}.md` 4 sub-doc 全体 ↔ 本書 1 doc
-> **status**: confirmed (G4/A-101 freeze — ST カテゴリ ⇔ L4 設計要素の被覆を凍結、孤児 0)。個別 ST ケース (Given-When-Then) は検証 band (L8-L14) / L9 本起票で展開する。L7 implemented evidence now covers the former ST-ASSET roster/skill carry rows.
+> **status**: confirmed (既存G4/A-101範囲のみ)。`PLAN-L4-32`の§9は`rgk_section_status: red`であり、global confirmedや既存orphan 0をRGKのGreen証拠へ流用してはならない。
 > **PLAN**: `docs/plans/PLAN-L4-{01..04}-*.md` の pair_artifact / DoD で本書参照
 
 ## §0 量閉じ原則 (L4 ↔ L9)
@@ -165,3 +166,137 @@ G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順�
 
 L4↔L9の量閉じ条件は、通常Forward 1系統とForward外の全列挙経路が上表のどれかへexactly once対応し、
 GitHub可用性がLedgerの正本性を左右しないこと。検出器はこの設計列挙から生成・検査し、未設計経路を自動創作しない。
+
+## §9 Resource-governed Execution Kernel system test design (PLAN-L4-32)
+
+本節は `PLAN-L4-32-resource-governed-execution-kernel.md` の L4↔L9 pair であり、
+`AC-RGK-01..13` を実装前の **Red system oracle** として固定する。対象は単一processではなく、
+hook、doctor、DB projection、snapshot、local CIを横断する実行system全体である。root PIDの終了、
+一時directoryの削除、`windowsHide`、またはdomain commandのexit 0だけをGreen証拠にしてはならない。
+
+### §9.1 AC-RGK Red system oracle
+
+全ケースは、最初に未実装または契約違反fixtureで期待どおりRedになることを保存してから実装へ降下する。
+正oracleは要求されたsystem outcome、負oracleは一見成功に見える不完全実装を拒否する条件である。
+
+| ST-ID / AC | system fixture / fault | 正oracle (Green条件) | 負oracle (必ずRed) |
+|---|---|---|---|
+| `ST-RGK-01` / `AC-RGK-01` | budget欠落、負値、無制限値、不正cwd、shell文字列、強制不能policy、CreateProcess失敗を各1件投入 | validation/capability拒否とprocess未作成launch failureは`started_at`/root/custodyなし、OS差分0で固有terminal | process生成後validation、暗黙無制限化、validationをlaunch failureへ丸める、欠測PIDを0で補完 |
+| `ST-RGK-02` / `AC-RGK-02` | Windowsでnormal/deadline/cancel、Assign失敗、worker/custodian/supervisor crash、二者同時喪失、nested/breakaway競合を個別注入 | Assign失敗はsuspended PIDを一度もresumeせずreapし、created-not-started receiptへ保存。開始caseはSCM reconcile/last-handle kill後active 0 | Assign失敗をprocess-not-created扱い、user code先行、handle継承、supervisor欠測success、rootだけkill、child残存 |
+| `ST-RGK-03` / `AC-RGK-03` | Linuxでclone3経路を実行し、非対応kernel、事後attach fallback、cgroup移動/子cgroup作成、特権uid/capability、double-fork、broker crashを注入。macOSへ同じhard要求を投入 | 最初からcgroup所属し、clone3非対応/事後attach/特権payload/macOSは開始前拒否。開始caseは`populated=0`、zombie 0 | handshake事後attachをhard custody受理、attach前user code、privileged payload受理、process groupだけでhard custody成功 |
+| `ST-RGK-04` / `AC-RGK-04` | wall、CPU、memory、process count、stdout、stderrの各上限を独立に超過 | 超過資源に対応する固有exit kind、要求値、適用値、観測peak、policy revision、termination/reap順序をreceiptに保存し、managed orphan 0 | 全超過を`timeout`へ丸める、観測不能値を要求値で埋める、出力打切り後もprocessが生存 |
+| `ST-RGK-05` / `AC-RGK-05` | root先行exit、journal flush失敗、lease解放遅延、terminal transaction/outbox crashを個別注入 | custody空/reap後、`lease_released + finished + sealed receipt`が同一commit position/digestでdurable exactly-once | root exit時finished、terminal片肺、flush前success、lease残存、orphan未確認を0扱い |
+| `ST-RGK-06` / `AC-RGK-06` | intent/started/termination-requested各時点でlauncherまたはKernelをcrashし、PID再利用fixtureを混在 | 再起動reconcilerがcustody identityとjournalから未完了attemptを一度だけ収束し、無関係な再利用PIDをkillせず、二重producer・未記録childとも0 | PIDだけで所有判定、同一executionの再実行、未完了attemptのsuccess化、未知childの放置 |
+| `ST-RGK-07` / `AC-RGK-07` | source種別ごとの変更、削除、rename、schema/projector version更新、manifest破損からなる選択corpus | dirty sourceとtransitive dependentだけ更新し、各caseの全canonical table digestがclean full rebuildと一致。transaction失敗時は旧revisionを保持 | row countだけ比較、非対象tableの全再構築、stale tableをGreen、partial commit、full rebuildを増分と称する |
+| `ST-RGK-08` / `AC-RGK-08` | 同一work key要求とrevision/deadline/memory/termination/capabilityを変えた非互換要求を混在 | 保証互換keyはProducerReceipt exactly one、callerごとのRequestReceipt exactly oneと`coalesced_to`を持つ。waiter cancel/deadlineはproducerと独立terminal | producer receiptをcallerへ複製、request receipt欠落、input revisionだけでcoalesce、非互換合流、waiter cancelでproducer誤停止 |
+| `ST-RGK-09` / `AC-RGK-09` | CAS hit、miss、producer failure、cancel、publish競合、consumer mutation、GC競合を注入 | hit時producer/preparation起動0。missは検証済objectだけatomic publishし、全失敗経路でpartial object、lease、temp process 0。object digestは不変 | hitでも準備script実行、未検証object公開、失敗lease残存、consumerがCAS本体を変更、実行中objectをGC |
+| `ST-RGK-10` / `AC-RGK-10` | hook、doctor、snapshot、local CIを同時要求し、memory headroom不足とqueue deadline超過を注入 | admissionが開始前に拒否またはpolicy順で待機させ、managed外process 0、visible shell 0、orphan 0。各要求に拒否/実行receiptが残る | とりあえず起動後kill、`cmd.exe`/PowerShell/conhostの一瞬表示、直接spawn、拒否要求の証跡欠落 |
+| `ST-RGK-11` / `AC-RGK-11` | lifecycle各barrierでcrash/retryし、同一`execution_id`へ複数attemptを発行 | event sequenceはappend-onlyかつ欠番・上書きなし、各`attempt_id`のterminal receiptはexactly-once | mutable status rowをevent/receipt兼用、retryでattempt identityを再利用、terminal eventだけまたはreceiptだけ残存 |
+| `ST-RGK-12` / `AC-RGK-12` | required capabilityを一つずつ欠落させたadapter matrixでadmission | 全不足caseがprocess生成前の`capability_failure`となり、選択adapterと不足集合を記録 | warning、skip、PID polling、soft limitへ暗黙縮退してsuccess |
+| `ST-RGK-13` / `AC-RGK-13` | DB値型・row順・localeと、untracked/submodule/symlink/mode/EOL/toolchain/envを一要素ずつ変化 | semantic同値DBは同digest、意味差は別digest。CAS identityの意味差は別key、欠落fieldはhit 0 | row count比較、型消失、未追跡入力無視、unknown identityでcache hit |
+
+Issue #124のparent-loss/timeout acceptanceは次の経路別AND matrixで量閉じする。各セルでworker exit、custody empty、
+lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt_id`で証明し、別caseの証拠を合成しない。
+
+| route | fault barrier | 必須終端 |
+|---|---|---|
+| parent loss before worker start | admission後・spawn前 | process生成0、lease release、terminal receipt |
+| parent loss after worker start | custody attach・lease取得後 | worker/descendant exit、custody empty、lease release、terminal receipt |
+| timeout during preparation | snapshot/DB producer barrier内 | producer tree exit、partial publish 0、lease release、terminal receipt |
+| timeout during test execution | `test_start` barrier後 | test tree exit、custody empty、lease release、terminal receipt |
+
+### §9.2 Platform capability matrix
+
+`required`を強制できないrunnerはskipやbest effortへ縮退せず、当該platformのsystem acceptanceをRedとする。
+任意capabilityは代替の最低保証を満たした場合だけ条件付きGreenとし、実際に選択したadapter/capabilityをreceiptへ記録する。
+
+| capability / oracle | Windows | Linux | macOS |
+|---|---|---|---|
+| process-tree custody (required) | `CREATE_SUSPENDED`、Job attach後resume、非継承handle、nested Job negotiation | cgroup v2へ開始前attach + subreaper + 常駐broker | hard custody要求はunsupportedとして開始前fail-close |
+| crash時のcustody維持 (required) | Job handleを所有する常駐custodianと別監督境界を実機fault injection | 常駐broker/journal reconcile、`cgroup.kill` | hard crash-surviving custody要求は開始前fail-close |
+| graceful/forced termination | policy指定のgraceful request後にJob全体強制終了 | cgroup配下へgraceful signal後に`cgroup.kill` | root session範囲だけのconditional capability。descendant custody要求では開始前fail-close |
+| descendant reap / orphan zero (required) | Job active process 0と独立OS process snapshotの両方 | `cgroup.events populated=0`、subreaperによるzombie 0、独立probe | 同等証明不能のclassificationは開始前fail-close |
+| CPU/memory/process budget | Job CPU rate/time、job memory、active process limit。強制不能値はadmission拒否 | cgroup v2ならcpu/memory/pids、無ければ強制可能な組合せのみ受理 | OSで強制可能な上限のみ受理。強制不能なhard要求はadmission拒否 |
+| wall/output budget | Kernel monotonic deadline、bounded pipe、Job tree termination | Kernel monotonic deadline、bounded pipe、cgroup tree termination | managed descendantを生成不能とadmissionで証明できるroot-only classificationだけconditional。tree/外部spawn可能性があれば開始前fail-close |
+| hidden native launch (required) | native executable+argv、`CREATE_NO_WINDOW`相当、`windowsHide`。暗黙shell 0 | native executable+argv。暗黙shell 0 | native executable+argv。暗黙shell 0 |
+| hermetic cache execution (cache利用時required) | filesystem/env/tool allowlist、network deny、完全access traceをsandboxで強制 | namespace/seccomp等で同等強制 | 全capabilityを強制できないcache利用classificationは開始前fail-close |
+| platform evidence source | Job identity/accounting、ETWまたはOS process snapshot、journal | cgroup/procfs/process-group snapshot、journal | process-group/kqueueまたはOS process snapshot、journal |
+
+### §9.3 Fault-injection corpusと同値性
+
+- **process tree**: normal、root early-exit、SIGTERM/terminate無視、child/grandchild増殖、launcher crash、
+  Kernel crash、PID再利用、custody attach失敗、journal flush失敗を決定的barrierで注入する。Windowsではさらに
+  workerのみ死亡、custodianのみ死亡、Job handle継承試行、nested Job limit競合、breakaway試行を別fixtureで注入し、
+  user code開始前拒否または別監督境界からの回収を個別に証明する。
+- **budget**: wall/CPU/memory/process/outputを一度に一種類だけ超過させ、複合超過では最初に観測した
+  termination causeと全観測値を残す。test自身のhost OOMをoracleにせず、隔離runner内の小さい上限で再現する。
+- **DB equivalence**: create/update/delete/rename、依存edge変更、schema/projector version変更、corrupt manifestを含む
+  corpusについて、incremental DBとfresh full rebuildをschema/table/column/index/trigger/view identity、primary-key順、
+  PK無しtableの全column canonical sort、SQLiteのNULL/signed integer/IEEE-754 real（NaN/Infinity/-0を含む）/UTF-8 text/blobの
+  型tagとbyte表現をlength framingしたdigestで比較する。reader transaction中にwriterをcommitさせるfixtureでも一つの
+  snapshot revisionだけを読むことを証明し、異なるrevisionのrowを混在させない。timestamp、temporary path、row order等の非意味値は
+  schema宣言済normalizerだけで除外し、列自体を暗黙に比較から落とさない。
+- **CAS identity**: source-selection manifest、tracked tree、staged/unstaged/untracked fixture、submodule/LFS、lockfile、
+  runtime/preparation executable、OS/architecture/filesystem capability、env allowlist、mode/symlink/EOL、snapshot schema、
+  preparation policyの各要素を一つずつ変え、意味差は必ず別keyになることを検証する。manifest外の巨大生成物は走査せず、
+  manifest外に必要fixtureが現れたcaseはhitでなくfindingとする。同一semantic inputは列挙順に依存せず同じkeyとなる。
+- **CAS fault**: producer crash、disk full、atomic rename失敗、lease timeout、publish競合、consumer cancel、GC競合を
+  注入し、公開済みobject集合が「fault前の完全object」または「検証済み新object」のどちらかだけになることを確認する。
+- **CAS overlay/hermeticity**: staged/unstaged/untrackedの同一path差、delete/rename/type-change、case-fold collisionを順序付きreducerへ
+  入れ、canonical final-tree manifestと実materialize treeをbyte比較する。sandbox内producerにroot外file、未宣言env、network、ambient
+  PATH toolを読ませ、全てdeny + hit取消 + findingになることを確認する。宣言access policy/tool digestの変更は別key、同じ宣言下の
+  観測traceはkeyでなくreceiptへ結び、宣言外accessを含むtraceではartifact無効化になることを確認する。
+- **detached HEAD / test fence**: snapshot準備中にsource working treeとbranch tipを更新しても、materialize対象はreceiptの
+  `subject_revision`と一致するdetached HEADから動かないことを確認する。test processへ渡すfence tokenはsubject SHA、CAS key、
+  snapshot sealを結び、欠落・不一致・準備後のmutationではtest開始前に拒否する。cache hitや増分DBが別revisionのfenceを
+  再利用したcase、detached HEAD外pathを参照したcaseを負oracleとしてRedにする。
+
+### §9.4 Evidence schema
+
+各 `ST-RGK-*` attemptは`process_not_created | process_created_not_started | started`のoutcome-discriminated schemaを満たす機械可読manifestを保存する。各variantの必須field欠落、subject revision不一致、
+後付け集計だけのorphan 0はGreenにしない。secret値とstdout/stderr本文は保存せず、bounded artifact digestを用いる。
+
+| field | 型 / 必須条件 | oracle用途 |
+|---|---|---|
+| `schema_version`, `st_id`, `ac_id`, `execution_id`, `attempt_id` | non-empty、固定version | 論理要求、oracle、attemptのexactly-once対応 |
+| `subject_revision`, `working_delta_digest`, `input_revision` | immutable digest | 検証対象とDB/CAS identityの固定 |
+| `platform`, `runner_id`, `adapter`, `capabilities`, `capability_decision` | OS/version/adapter revision/要求・強制可否・不足集合 | capability matrixの実選択証明 |
+| `spec_digest`, `policy_revision`, `requested_budget`, `applied_budget` | canonical specと単位付き上限 | 暗黙緩和・自己申告の検出 |
+| `journal_events`, `terminal_receipt_digest` | monotonic sequenceとevent digest、terminal封印回数 | lifecycle順序、exactly-once receipt、crash reconcile、flush証明 |
+| `custody_identity`, `custodian_or_broker_identity`, `root_pid`, `descendant_observations` | started時必須。created-not-startedはPID/reapと作成済みcustody、未作成は理由付きN/A | PID単独でない所有権・process tree証明 |
+| `phase_timing`, `resource_observations` | 各phase start/end/duration、wall/CPU/peak memory/process/outputと測定source | 固定準備費、budget cause、実測値の照合 |
+| `exit_kind`, `native_exit`, `managed_orphan_count`, `reap_result` | native_exit/orphan/reapはprocess-created/started時必須。未作成は理由付きN/A | termination outcomeとorphan zero |
+| `journal_flush_receipt`, `released_leases` | durable position/digest、lease ID一覧 | root exit後の完了barrier証明 |
+| `db_receipt` | DB phase実行時必須。未実行は理由付き`not_applicable` | AC-RGK-07/08同値性とrollback |
+| `cas_receipt` | CAS phase実行時必須。未実行は理由付き`not_applicable` | AC-RGK-08/09 identityとsingle-flight |
+| `admission_receipt` | concurrency key、headroom、decision、queue/deadline | AC-RGK-01/10の開始前判定 |
+| `independent_probe` | probe tool/revision、PID+start key+sentinel/custody event、連続process create/exit stream、Windows WinEvent/ETW CREATE/SHOW stream、collector heartbeat/sequence/drop count/interactive-session coverage、artifact snapshot | 瞬間window・lineage離脱・観測欠測を含む独立反証。gap/drop/対象session未観測ならGreen禁止 |
+| `fault_id`, `fault_barrier`, `oracle_result` | 注入位置、期待/実測、Red/Green | faultが実際に発火したことの証明 |
+
+### §9.5 Exit criteria / defect routing
+
+`AC-RGK-01..13`が各1件以上のpositive Greenと、表で指定したnegative Redを持ち、Windows/Linuxのrequired行が
+実runner evidenceで満たされ、macOSの不足capabilityがfail-closeし、managed orphan 0がKernel receiptと独立probeの両方で一致した場合だけ
+L9をGreenにする。DBは全corpusでincremental/full digest一致、CASはidentity分離・single-flight・fault atomicityの
+全てを満たし、さらに§9.6 performance convergence oracleの全run/envelopeをGreenにすること。未実装・runner不足・測定不能はpassではなくRedまたは明示deferであり、PLAN-L4-32のconfirmed条件や
+Issue #124 close条件を満たさない。
+
+失敗がL4 contract/capability選択に由来する場合はRedesign、L5/L6境界・method契約ならForward設計差替え、実装不良ならL7、
+fault fixtureまたは測定方法の不備ならL9へrouteする。検出器の例外追加やplatform skipで設計要求を縮めてはならない。
+
+### §9.6 Issue #124 performance convergence oracle
+
+Windows/Linuxの各runnerで、同一subject revisionに対するhook/Stop、DB refresh、targeted testのcold/warm attemptを
+最低3回ずつ採取し、全attemptが閾値内でなければRedとする。60秒間に20回のStop eventを投入し、producer同時数1以下、各event受付から10秒以内のlease収束、
+managed orphan 0、visible shell 0、request帰属processに加えてcustodian/broker/shared DB producerを含むservice全体の
+測定開始前30秒間、対象serviceがidleかつqueue/lease 0の時に同じPID/start-key集合を1秒間隔で採取した中央値をbaselineとする。
+observer自身は別custodyに置き会計から分離し、そのCPU/memoryも欠測判定用に保存する。会計windowは最初のStop投入`t0`から
+最後のlease解放`t_last`まで（最大70秒）とし、tailを切らない。全windowで新規processと既存custodian/broker/shared producerのbaseline超過分を合算し、peak working set 512MiB以下、
+20 event合計CPU 30秒以下をversion 1 envelopeとする。各単発attemptも
+peak 512MiBとCPU 5秒を超えない。共有serviceへ処理を移してrequest会計から
+外すことを禁止し、execution/attempt/work key別帰属値とservice総量の両方をreceiptへ残す。
+warm hook/Stopは1回5秒以内かつfull DB rebuildを起動しない。targeted testはcold/warmともWindows 30秒、Linux 20秒以内に
+`test_start` barrierへ到達しなければRedとする。runner classのCPU/RAM下限はpolicyに固定し、満たさないrunnerは測定不能を
+passにせずadmission拒否する。observer heartbeat、sequence gap、drop count、対象interactive session coverageのいずれかが欠測なら
+visible shell 0を主張しない。各runはphase timing、cache decision、producer count、orphan countを保存し、
+中央値だけでtail、失敗、欠測を隠さない。runner classまたはpolicy revisionが変わった結果を同一baselineへ混ぜない。
