@@ -7,7 +7,7 @@ drive: agent
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
-updated: 2026-07-21
+updated: 2026-07-22
 owner: PO / TL
 backprop_decision: required
 backprop_decision_reason: Redesign supersessionとplan admissionを同時に満たすrevision
@@ -36,6 +36,8 @@ generates:
   - artifact_path: src/cli/plan-redesign.ts
     artifact_type: source_module
   - artifact_path: src/cli/forward-escape-issue.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/plan-adopt-genesis-chain.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/authoring-recovery-db-evidence.ts
     artifact_type: source_module
@@ -89,6 +91,10 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/authoring-recovery-gate.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/application/node-genesis-adoption-runner.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/genesis-adoption-transaction.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-redesign-bundle.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-revision-bootstrap.ts
@@ -115,6 +121,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/forward-escape-issue-cli.test.ts
     artifact_type: test_code
+  - artifact_path: tests/cli-plan-adopt-genesis-chain.test.ts
+    artifact_type: test_code
   - artifact_path: tests/node-gh-forward-escape-issue-port.test.ts
     artifact_type: test_code
   - artifact_path: tests/node-issue-projection-evidence-resolver.test.ts
@@ -122,6 +130,10 @@ generates:
   - artifact_path: tests/plan-asset/authoring-command-group.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/ledger-schema.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/genesis-adoption-transaction.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/node-genesis-adoption-runner.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/plan-redesign-bundle.test.ts
     artifact_type: test_code
@@ -279,6 +291,25 @@ groupへ束縛し、片肺publishを許さない。#98ではPLAN-L4-31 revision 
 | 4 | source+projection publish/restore、receipt revision exact binding | generic authoring Saga / renderer |
 | 5 | Redesign origin+replacement bundle、片肺fault、admission/supersession両Green | bundle coordinator / #98 reentry |
 
+## 4.1 Issue #129 legacy genesis adoption
+
+既存のlegacy PLANがPlanAsset台帳に存在しないために、Issue E4 projectionとPLAN admissionが
+互いを前提として起票不能になる循環を、`plan adopt-genesis-chain`で一度だけ解消する。
+対象はtrusted HEADに存在するlegacy PLAN revision 1に限定し、repository identity、source
+commit/blob/content digest、Issue preimage、origin/reentry、drive model、branchを同じcommandへ
+束縛する。`route_tuple_digest`はorigin/reentryを含むcanonical routeから導出し、callerの任意値を
+採用しない。
+
+local ledger appendとIssue custodyを原子的に確定した後、remote projectionはdurable outboxへ
+pendingを記録してから実行する。remote失敗は`recovery_required`として残し、同一commandの
+再実行だけが一度だけ`projected`へ収束できる。process再起動後にもpendingを再開できなければ
+完了とはしない。CLIはproduction custody/outbox adapterを構成できた場合だけ公開し、fake runner
+だけのsurfaceを完成扱いしない。
+
+実chain oracleは少なくとも `PLAN-L4-31 -> PLAN-L6-88` と
+`PLAN-L6-83 -> PLAN-L7-452` を対象とし、各legacy assetの採用、Issue custody、Forward reentry、
+途中失敗、replay、重複remote write禁止を検証する。
+
 ## 5. DoD
 
 - [ ] legacy PLANをbase blob/digest/revisionへ束縛してrevision N+1として発行できる。
@@ -290,3 +321,6 @@ groupへ束縛し、片肺publishを許さない。#98ではPLAN-L4-31 revision 
 - [ ] Redesign supersessionのorigin correctionとreplacementを片肺にしない。
 - [ ] #98のPLAN-L4-31 revision 2 / PLAN-L6-88でadmissionとsupersessionが両方Greenになる。
 - [ ] PLAN-L7-441未完のprocess-kill境界を明示し、通常例外のatomicityをcrash convergenceと混同しない。
+- [ ] Issue #129 genesis adoptionがtrusted HEAD、Issue preimage、origin/reentryからrouteを導出し、自己申告digest改ざんを拒否する。
+- [ ] `plan adopt-genesis-chain`がproduction custody/outbox adapterへ接続され、restart後も`recovery_required`から一度だけ収束する。
+- [ ] `PLAN-L4-31 -> PLAN-L6-88`と`PLAN-L6-83 -> PLAN-L7-452`のmulti-asset chain oracleがGreenになる。
