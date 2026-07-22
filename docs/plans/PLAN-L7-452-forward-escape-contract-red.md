@@ -25,13 +25,9 @@ generates:
     artifact_type: source_module
   - artifact_path: src/execution/sqlite-forward-escape-journal.ts
     artifact_type: source_module
-  - artifact_path: src/github/node-gh-forward-escape-issue-port.ts
-    artifact_type: source_module
   - artifact_path: tests/forward-escape-issue-contract.test.ts
     artifact_type: test_code
   - artifact_path: tests/forward-escape-issue-adoption-contract.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/node-gh-forward-escape-issue-port.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-83-forward-escape-issue-contract.md
@@ -40,6 +36,8 @@ dependencies:
     - docs/plans/PLAN-REVERSE-452-forward-escape-contract-backfill.md
     - docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md
     - docs/plans/PLAN-L7-436-execution-ledger-episode-domain.md
+    - src/github/node-gh-forward-escape-issue-port.ts
+    - tests/node-gh-forward-escape-issue-port.test.ts
 ---
 
 # PLAN-L7-452 (add-impl): PLAN-L6-83 契約の U-EXISSUE Red→Green
@@ -58,6 +56,8 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 (`classifyForwardBoundary` / `validateForwardEscape` / `checkDriveModelAlignment` /
 `renderForwardEscapeIssueBody` / `projectForwardEscapeIssue` / `adoptForwardEscapeIssue` /
 `reconcileIssueProjection`) を GitHub SDK 非依存の純粋関数 + port として Green 化する。
+`src/github/node-gh-forward-escape-issue-port.ts` と対応testの生成所有者は
+PLAN-RECOVERY-16であり、本PLANはその既存資産を参照して契約oracleと変更traceを保持する。
 
 - 11 駆動モデルを閉じた enum で固定 (技術 drive とは別 value object、混入 fail-close)。
 - 冪等 payload digest による command 再送/改変再利用の判別。
@@ -83,7 +83,7 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 | Step | 内容 | mode |
 |---|---|---|
 | 1 | U-EXISSUE-001..018 / ADOPT-001..008を重複なしでL7 test designへRed固定 | 直列 |
-| 2 | 純粋契約、SQLite custody、GitHub create/adopt/reconcile portをGreen化 | 並列後合流 |
+| 2 | 本PLAN所有の純粋契約・SQLite custodyをGreen化し、PLAN-RECOVERY-16所有のGitHub create/adopt/reconcile portを参照して契約oracleをGreen化 | 並列後合流 |
 | 3 | snapshot runner実測、typecheck/lint、exact-head blind review | 直列 |
 | 4 | review evidenceとDoDを実証範囲だけ閉じ、confirmed判定 | 直列 |
 
