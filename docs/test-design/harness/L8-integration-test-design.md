@@ -334,3 +334,22 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。
+
+## Node platform packaging / deployment integration pair
+
+`PLAN-L5-26-node-platform-packaging-deployment`と対になるfixtureを次でfreezeする。
+
+| ID | Fixture | Green条件 |
+|---|---|---|
+| `IT-NODE-CUTOVER-001` | 正規manifest/signature/target | verified bundle handleとabsolute Node entrypointを一度だけ返す |
+| `IT-NODE-CUTOVER-002` | manifest/file digest改竄 | control process生成0 |
+| `IT-NODE-CUTOVER-003` | wrong OS/archまたはNode version drift | PATH探索/download/Bun fallback 0で拒否 |
+| `IT-NODE-CUTOVER-004` | SQLite canonical corpus | transaction/WAL/type/busy/Windows lockの期待receipt一致 |
+| `IT-NODE-CUTOVER-005` | hook timeout/oversize/partial frame | bounded termination、exit meaning保持、visible shell 0 |
+| `IT-NODE-CUTOVER-006` | import/spawn/workflowへBun注入 |対応scannerがfindingを返しcoverage欠測0 |
+| `IT-NODE-CUTOVER-007` | generated PackへBun binary/command注入 | bundle scanがactivation前Red |
+| `IT-NODE-CUTOVER-008` | Bun未導入clean hostへPack install | Node+Rustだけでstatus/doctor/targeted test成功 |
+| `IT-NODE-CUTOVER-009` | Node coreだけactivate | atomic activatorが拒否しcurrent bundle不変 |
+| `IT-NODE-CUTOVER-010` | Rust companionだけactivate | atomic activatorが拒否しcurrent bundle不変 |
+| `IT-NODE-CUTOVER-011` | verified旧Node+Rust bundleへrollback |署名・protocol・target再検証後にbundle単位で成功 |
+| `IT-NODE-CUTOVER-012` | runtime process observer欠測/未知image | Bun 0を主張せずaggregate Red |

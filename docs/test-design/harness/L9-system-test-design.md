@@ -310,3 +310,22 @@ warm hook/Stopは1回5秒以内かつfull DB rebuildを起動しない。targete
 passにせずadmission拒否する。observer heartbeat、sequence gap、drop count、対象interactive session coverageのいずれかが欠測なら
 visible shell 0を主張しない。各runはphase timing、cache decision、producer count、orphan countを保存し、
 中央値だけでtail、失敗、欠測を隠さない。runner classまたはpolicy revisionが変わった結果を同一baselineへ混ぜない。
+
+## §10 Node control plane cutover system oracle
+
+| ID | System oracle | Green条件 |
+|---|---|---|
+| `ST-NODE-CUTOVER-01` | clean host bootstrap | Bun未導入Windows/Linuxでverified Node+Rust bundleから`status/doctor/targeted test`完走 |
+| `ST-NODE-CUTOVER-02` | production path zero inventory | source/test/config/lockfile/hook/CI/Pack/current docsの全scanner coverageが完全でBun finding 0 |
+| `ST-NODE-CUTOVER-03` | runtime process zero | CLI、hook、doctor、test、Pack中のBun executable/descendant 0、visible shell 0、欠測0 |
+| `ST-NODE-CUTOVER-04` | detector self-host | Nodeだけでban detector自身と全governance detectorが完走し、Bunを削除してもcoverage不変 |
+| `ST-NODE-CUTOVER-05` | no fallback | Node/Rust欠落・破損・version drift時にprocess生成0またはmanaged root 0でfail-closeしBun起動0 |
+| `ST-NODE-CUTOVER-06` | SQLite parity | canonical corpusでtransaction、WAL、型、busy、Windows lock、DB digestが期待値一致 |
+| `ST-NODE-CUTOVER-07` | hook parity | block/fail-open、exit code、bounded frame、deadline、session receiptが契約一致 |
+| `ST-NODE-CUTOVER-08` | CI aggregate | Node Windows/Linux + Rust Windows/Linux + zero gate + Packが同一HEAD/bundleで全Green |
+| `ST-NODE-CUTOVER-09` | atomic upgrade/rollback | Node core/Rust companionの片側切替0、署名済みbundle単位で旧Node版へrollback |
+| `ST-NODE-CUTOVER-10` | forbidden mutation | import、dynamic import、spawn、workflow setup、download、generated PackへのBun注入を各scannerがRed化 |
+| `ST-NODE-CUTOVER-11` | cutover ordering | parity receipt無しの旧経路削除、node_primary後fallback、期限なしallowlistを全て拒否 |
+| `ST-NODE-CUTOVER-12` | final deletion | Bun lockfile/cache/bootstrap/compatibility codeとproduction allowlistが物理的に0 |
+
+`ST-NODE-CUTOVER-01..12`は`PLAN-L4-33`のpairである。文字列検索だけ、BunがたまたまPATHに無いこと、片OSだけの成功、旧Bun CIによる代替、異なるattempt/HEAD/bundleの結果集約は証拠にならない。system receiptはsubject revision、bundle digest、inventory digest、scanner coverage、process observer heartbeat/drop count、Node/Rust job identity、Pack digestを必須とする。
