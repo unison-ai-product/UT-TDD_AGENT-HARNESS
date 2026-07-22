@@ -93,11 +93,15 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/application/node-genesis-adoption-runner.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/application/genesis-projection-dispatcher.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/adapters/sqlite-genesis-adoption-projection-adapter.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/genesis-adoption-transaction.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/genesis-route-binding.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/genesis-projection-outbox.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-redesign-bundle.ts
     artifact_type: source_module
@@ -141,7 +145,13 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/plan-asset/genesis-adoption-real-chain.test.ts
     artifact_type: test_code
+  - artifact_path: tests/plan-asset/genesis-projection-dispatcher.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/genesis-projection-outbox.test.ts
+    artifact_type: test_code
   - artifact_path: tests/plan-asset/sqlite-genesis-adoption-projection-adapter.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/support/genesis-adoption-fixture.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/plan-redesign-bundle.test.ts
     artifact_type: test_code
