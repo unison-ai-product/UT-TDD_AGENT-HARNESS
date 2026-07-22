@@ -8,13 +8,13 @@ import {
   lstatSync,
   mkdirSync,
   readdirSync,
-  readFileSync,
   readlinkSync,
   realpathSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
+import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash";
 
 function run(
   command: string,
@@ -122,7 +122,9 @@ export function snapshotContentFingerprint(root: string): string {
       for (const entry of readdirSync(path).sort()) visit(join(path, entry));
       return;
     }
-    entries.push(`file:${rel}:${createHash("sha256").update(readFileSync(path)).digest("hex")}`);
+    entries.push(
+      `file:${rel}:${hashFileChunkedWithDiagnostics("snapshot fingerprint", path, rel, stat.size)}`,
+    );
   };
   visit(root);
   return createHash("sha256").update(entries.join("\n")).digest("hex");
