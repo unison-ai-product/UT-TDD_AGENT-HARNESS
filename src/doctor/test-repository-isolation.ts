@@ -64,7 +64,7 @@ for (const [path, calls] of Object.entries({
   };
 
 repositoryReadContracts["tests/doctor.test.ts"] = {
-  mode_calls: { head_snapshot: 18, isolated_fixture: 7 },
+  mode_calls: { head_snapshot: 18, isolated_fixture: 8 },
   reason: "doctor aggregate test exercises both detached HEAD and execution fixture",
 };
 

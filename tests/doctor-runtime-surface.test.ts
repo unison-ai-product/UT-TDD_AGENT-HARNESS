@@ -14,6 +14,36 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
     Object.entries({
       ".claude/settings.json": JSON.stringify({
         hooks: {
+          PreToolUse: [
+            {
+              matcher: "Agent|Task",
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts",
+                  ],
+                  blockOnFailure: true,
+                },
+              ],
+            },
+            {
+              matcher: "Edit|Write|MultiEdit",
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts",
+                  ],
+                  blockOnFailure: true,
+                },
+              ],
+            },
+          ],
           SessionStart: [
             {
               hooks: [
@@ -57,6 +87,22 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                     "${CLAUDE_PROJECT_DIR}/src/cli.ts",
                     "session",
                     "summary",
+                  ],
+                },
+              ],
+            },
+          ],
+          SubagentStop: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "hook",
+                    "subagent-stop",
                   ],
                 },
               ],

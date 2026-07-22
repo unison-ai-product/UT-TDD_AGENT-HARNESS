@@ -428,7 +428,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "spawn_agent|spawn_agents_on_csv",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -437,7 +438,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "apply_patch|write_file",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -1030,13 +1032,13 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`",
+      "Generated Claude/Codex hooks call the shell-free native Bun launcher",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "Do not rely on a global `bun link`",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Bun itself must still resolve",
+      "Native Bun itself must still resolve",
     );
   });
 

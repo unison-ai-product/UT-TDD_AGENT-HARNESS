@@ -330,10 +330,10 @@ export function buildConsumerReadinessPlan(input: {
           ? "project-local UT-TDD wrapper, package bin, or source setup entrypoint is available for projected hooks"
           : (input.utTddCliMessage ??
             [
-              "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
+              "Generated Claude/Codex hooks call the shell-free native Bun launcher so each project can use its own pinned UT-TDD package.",
               "Add UT-TDD as a project dependency before setup and verify `node_modules/.bin/ut-tdd --help` or `bun .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
               "Do not rely on a global `bun link` when multiple projects on one PC may pin different harness versions.",
-              "Bun itself must still resolve on the hook shell PATH.",
+              "Native Bun itself must still resolve without a PowerShell or cmd shim.",
             ].join(" ")),
     },
     {

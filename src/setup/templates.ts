@@ -1,7 +1,7 @@
 import { join } from "node:path";
 // Hook 配線の単一定義源: 生成 settings.json / hooks.json の command は project-hook lint の
 // wrapper 正規形から構築する (gate 要求と setup 生成物の再乖離防止、PLAN-RECOVERY-06)。
-import { WRAPPER_HOOK_LAUNCHER, wrapperHookArgs, wrapperHookCommand } from "../lint/project-hook";
+import { WRAPPER_HOOK_LAUNCHER, wrapperHookArgs } from "../lint/project-hook";
 // model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
 // 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
 import { MODEL_IDS } from "../team/model-policy";
@@ -506,7 +506,8 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    `            "command": "${wrapperHookCommand("agent-guard")}",`,
+    '            "command": "node",',
+    `            "args": ${JSON.stringify([WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("agent-guard")])},`,
     '            "timeout": 5,',
     '            "blockOnFailure": true,',
     '            "statusMessage": "agent-guard: Codex subagent allowlist/model enforcement"',
@@ -518,7 +519,8 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    `            "command": "${wrapperHookCommand("work-guard")}",`,
+    '            "command": "node",',
+    `            "args": ${JSON.stringify([WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("work-guard")])},`,
     '            "timeout": 5,',
     '            "blockOnFailure": true,',
     '            "statusMessage": "work-guard: foreign edit protection"',
@@ -531,7 +533,8 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    `            "command": "${wrapperHookCommand("session-start")}",`,
+    '            "command": "node",',
+    `            "args": ${JSON.stringify([WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("session-start")])},`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: session start (fail-open)"',
     "          }",
@@ -544,7 +547,8 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    `            "command": "${wrapperHookCommand("post-tool-use")}",`,
+    '            "command": "node",',
+    `            "args": ${JSON.stringify([WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("post-tool-use")])},`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: post tool use (fail-open)"',
     "          }",
@@ -556,7 +560,8 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    `            "command": "${wrapperHookCommand("session-summary")}",`,
+    '            "command": "node",',
+    `            "args": ${JSON.stringify([WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("session-summary")])},`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: PLAN digest summary (fail-open)"',
     "          }",
