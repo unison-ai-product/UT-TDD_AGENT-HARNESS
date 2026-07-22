@@ -62,7 +62,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-22T04:27:50+00:00"
         evidence_path: .ut-tdd/audit/A-L7-457-vitest.log
-        output_digest: "sha256:bb0dabcd4a9dd2ffd503e89a57348a4b49061ffc50000ad40831fc85c6abfde0"
+        output_digest: "sha256:864e3db42ba29c05aadd6f42c2f96d6b93ed54da93a608c654e823cf4aa36047"
         anchor_commit: fb6d1127
       - kind: typecheck
         command: "bun run typecheck"
