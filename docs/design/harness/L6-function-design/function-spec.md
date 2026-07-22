@@ -1382,13 +1382,11 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 `protocol_failure`を返す純粋関数とする。`encodeFrame`はcanonical bytesを決定論的に返す。
 コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
 `Custody(CustodyCommand)`で閉じる。phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
-エラー直和は`protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure |
-custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled |
-process_failure | orphan_detected`で閉じる。未知native codeを成功や一般process failureへ丸めない。
+エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
 
 ### メソッド契約
 
-| method | precondition | postcondition / invariant |
+| メソッド | 事前条件 | 事後条件 / 不変条件 |
 |---|---|---|
 | `verifyBundle` | trust identityとtarget明示 | signature/core/companion/schema/SBOM/targetの全一致時だけverified handle |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
