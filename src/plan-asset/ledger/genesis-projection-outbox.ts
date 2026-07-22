@@ -15,6 +15,7 @@ export interface GenesisProjectionOutboxEntry {
 
 export interface GenesisProjectionOutboxStore {
   pending(limit?: number): readonly GenesisProjectionOutboxEntry[];
+  findPending(commandId: string): GenesisProjectionOutboxEntry | undefined;
   markProjected(commandId: string, occurredAt: string): void;
   markRecoveryRequired(commandId: string, reason: string, occurredAt: string): void;
 }
@@ -35,6 +36,17 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
       )
       .all(limit)
       .map((row) => this.readEntry(row));
+  }
+
+  findPending(commandId: string): GenesisProjectionOutboxEntry | undefined {
+    if (!commandId) throw new Error("genesis-outbox-command-id-invalid");
+    const row = this.db
+      .prepare(
+        `SELECT * FROM genesis_projection_outbox
+         WHERE command_id = ? AND status IN ('pending', 'recovery_required')`,
+      )
+      .get(commandId);
+    return row ? this.readEntry(row) : undefined;
   }
 
   markProjected(commandId: string, occurredAt: string): void {
