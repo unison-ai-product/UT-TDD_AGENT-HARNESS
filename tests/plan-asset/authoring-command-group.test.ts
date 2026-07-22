@@ -6,10 +6,7 @@ import {
   type AuthoringArtifactPublisher,
   AuthoringCommandGroupJournal,
 } from "../../src/plan-asset/ledger/authoring-command-group.js";
-import {
-  LEDGER_SCHEMA_VERSION,
-  migratePlanLedger,
-} from "../../src/plan-asset/ledger/schema.js";
+import { LEDGER_SCHEMA_VERSION, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
 import { removeTestTree } from "../support/temp-tree";
 

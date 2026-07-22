@@ -30,8 +30,8 @@ import {
 } from "../../src/plan-asset/ledger/plan-revision-ledger.js";
 import { committedRevisionPredicate } from "../../src/plan-asset/ledger/revision-visibility.js";
 import {
-  ledgerRowDigest,
   LEDGER_SCHEMA_VERSION,
+  ledgerRowDigest,
   migratePlanLedger,
 } from "../../src/plan-asset/ledger/schema.js";
 import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";

@@ -10,10 +10,7 @@ import {
   NodeAuthoringArtifactPublisher,
 } from "../src/plan-admission/node-authoring-artifact-publisher.js";
 import { AuthoringCommandGroupJournal } from "../src/plan-asset/ledger/authoring-command-group.js";
-import {
-  LEDGER_SCHEMA_VERSION,
-  migratePlanLedger,
-} from "../src/plan-asset/ledger/schema.js";
+import { LEDGER_SCHEMA_VERSION, migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../src/state-db/index.js";
 import { removeTestTree } from "./support/temp-tree";
 

@@ -4,10 +4,7 @@ import {
   type AppendPlanDraftInput,
   PlanDraftLedgerTransaction,
 } from "../../src/plan-asset/ledger/plan-draft-ledger.js";
-import {
-  LEDGER_SCHEMA_VERSION,
-  migratePlanLedger,
-} from "../../src/plan-asset/ledger/schema.js";
+import { LEDGER_SCHEMA_VERSION, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
