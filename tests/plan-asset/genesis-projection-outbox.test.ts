@@ -146,6 +146,44 @@ describe("genesis projection outbox", () => {
     reopened.close();
   });
 
+  it("U-GEN-026: claim snapshot tamperをlatest immutable event chain照合で拒否する", () => {
+    const db = openHarnessDb(":memory:");
+    expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
+    const store = new SqliteGenesisProjectionOutboxStore(db);
+    store.claimPending(claim("worker:a", "2026-07-22T00:00:00.000Z", 30_000));
+    db.prepare("UPDATE genesis_projection_claims SET owner_token = ?").run("worker:forged");
+    expect(() => store.pending()).toThrow("genesis-outbox-claim-chain-invalid");
+    expect(() => store.claimPending(claim("worker:b", "2026-07-22T00:00:31.000Z"))).toThrow(
+      "genesis-outbox-claim-chain-invalid",
+    );
+    db.close();
+  });
+
+  it("U-GEN-027: stale workerはremote side-effect callback前のowner fenceで拒否される", () => {
+    const db = openHarnessDb(":memory:");
+    expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
+    const store = new SqliteGenesisProjectionOutboxStore(db);
+    store.claimPending(claim("worker:a", "2026-07-22T00:00:00.000Z", 30_000));
+    store.claimPending(claim("worker:b", "2026-07-22T00:00:31.000Z", 30_000));
+    let remoteCalls = 0;
+    expect(() =>
+      store.settleClaim(
+        "genesis:issue-129:l4-31",
+        "worker:a",
+        {
+          claimedAt: "2026-07-22T00:00:32.000Z",
+          expiresAt: "2026-07-22T00:01:02.000Z",
+        },
+        () => {
+          remoteCalls += 1;
+          return { state: "projected" };
+        },
+      ),
+    ).toThrow("genesis-outbox-stale-claim-owner");
+    expect(remoteCalls).toBe(0);
+    db.close();
+  });
+
   it("U-GEN-018: append-only custody/eventはUPDATE/DELETE tamperをschema authorityで拒否する", () => {
     const db = openHarnessDb(":memory:");
     expect(new GenesisAdoptionTransaction(db).adopt(input())).toMatchObject({ ok: true });
@@ -199,8 +237,11 @@ try {
     db.prepare("INSERT INTO genesis_projection_claims VALUES (?, ?, ?, ?, ?)").run("genesis:issue-129:l4-31", "active", owner, "2026-07-22T00:01:00.000Z", owner.padEnd(64, "0").slice(0, 64));
     won = true;
   }
+  if (won) {
+    appendFileSync(log, owner + "\\n", "utf8");
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+  }
   db.exec("COMMIT");
-  if (won) appendFileSync(log, owner + "\\n", "utf8");
 } catch (error) {
   db.exec("ROLLBACK");
   throw error;

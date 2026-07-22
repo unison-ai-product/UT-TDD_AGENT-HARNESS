@@ -355,6 +355,8 @@ function setup(
   pending: readonly GenesisProjectionOutboxEntry[],
   dispatch: GenesisProjectionDispatchPort["dispatch"],
 ) {
+  const markProjected = vi.fn();
+  const markRecoveryRequired = vi.fn();
   const store: GenesisProjectionOutboxStore = {
     pending: vi.fn(() => pending),
     findPending: vi.fn((commandId) => pending.find((entry) => entry.commandId === commandId)),
@@ -375,8 +377,20 @@ function setup(
           }
         : undefined;
     }),
-    markProjected: vi.fn(),
-    markRecoveryRequired: vi.fn(),
+    markProjected,
+    markRecoveryRequired,
+    settleClaim: vi.fn((commandId, ownerToken, heartbeat, work) => {
+      const result = work();
+      if (result.state === "projected") markProjected(commandId, ownerToken, heartbeat.claimedAt);
+      else
+        markRecoveryRequired(
+          commandId,
+          ownerToken,
+          result.failureReason ?? "genesis-adoption-projection-recovery-required",
+          heartbeat.claimedAt,
+        );
+      return result;
+    }),
   };
   const projection: GenesisProjectionDispatchPort = { dispatch: vi.fn(dispatch) };
   return {

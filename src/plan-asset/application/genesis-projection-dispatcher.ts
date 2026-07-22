@@ -65,30 +65,23 @@ export class GenesisProjectionDispatcher {
     let projected = 0;
     let recoveryRequired = 0;
     for (const entry of entries) {
-      const occurredAt = this.now();
-      try {
-        const result = this.projection.dispatch(toProjectionInput(entry));
-        if (!result.durable) throw new Error("genesis-adoption-projection-not-durable");
-        if (result.state === "projected") {
-          this.outbox.markProjected(entry.commandId, entry.ownerToken, occurredAt);
-          projected += 1;
-          continue;
+      const heartbeat = this.heartbeat();
+      const result = this.outbox.settleClaim(entry.commandId, entry.ownerToken, heartbeat, () => {
+        try {
+          const remote = this.projection.dispatch(toProjectionInput(entry));
+          if (!remote.durable) throw new Error("genesis-adoption-projection-not-durable");
+          return remote.state === "projected"
+            ? { state: "projected" as const }
+            : {
+                state: "recovery_required" as const,
+                failureReason: "genesis-adoption-projection-recovery-required",
+              };
+        } catch (error) {
+          return { state: "recovery_required" as const, failureReason: failureReason(error) };
         }
-        this.outbox.markRecoveryRequired(
-          entry.commandId,
-          entry.ownerToken,
-          "genesis-adoption-projection-recovery-required",
-          occurredAt,
-        );
-      } catch (error) {
-        this.outbox.markRecoveryRequired(
-          entry.commandId,
-          entry.ownerToken,
-          failureReason(error),
-          occurredAt,
-        );
-      }
-      recoveryRequired += 1;
+      });
+      if (result.state === "projected") projected += 1;
+      else recoveryRequired += 1;
     }
     return { scanned: entries.length, projected, recoveryRequired };
   }
@@ -100,6 +93,14 @@ export class GenesisProjectionDispatcher {
       claimedAt,
       expiresAt: new Date(Date.parse(claimedAt) + this.leaseMs).toISOString(),
       limit,
+    };
+  }
+
+  private heartbeat() {
+    const claimedAt = this.now();
+    return {
+      claimedAt,
+      expiresAt: new Date(Date.parse(claimedAt) + this.leaseMs).toISOString(),
     };
   }
 }

@@ -25,6 +25,11 @@ export interface GenesisProjectionClaimRequest {
   readonly limit?: number;
 }
 
+export interface GenesisProjectionSettlement {
+  readonly state: "projected" | "recovery_required";
+  readonly failureReason?: string;
+}
+
 export interface GenesisProjectionOutboxStore {
   pending(limit?: number): readonly GenesisProjectionOutboxEntry[];
   findPending(commandId: string): GenesisProjectionOutboxEntry | undefined;
@@ -40,6 +45,12 @@ export interface GenesisProjectionOutboxStore {
     reason: string,
     occurredAt: string,
   ): void;
+  settleClaim(
+    commandId: string,
+    ownerToken: string,
+    heartbeat: Omit<GenesisProjectionClaimRequest, "ownerToken" | "limit">,
+    work: () => GenesisProjectionSettlement,
+  ): GenesisProjectionSettlement;
 }
 
 /** Plan Ledgerと同じSQLite authority内でoutbox transition chainを管理する。 */
@@ -50,6 +61,7 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
 
   pending(limit = 100): readonly GenesisProjectionOutboxEntry[] {
     if (!Number.isSafeInteger(limit) || limit < 1) throw new Error("genesis-outbox-limit-invalid");
+    this.auditClaims();
     return this.db
       .prepare(
         `SELECT * FROM genesis_projection_outbox
@@ -62,6 +74,7 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
 
   findPending(commandId: string): GenesisProjectionOutboxEntry | undefined {
     if (!commandId) throw new Error("genesis-outbox-command-id-invalid");
+    this.auditClaims();
     const row = this.db
       .prepare(
         `SELECT * FROM genesis_projection_outbox
@@ -74,6 +87,7 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
   claimPending(request: GenesisProjectionClaimRequest): readonly GenesisProjectionClaim[] {
     validateClaimRequest(request);
     return new ImmediateLedgerTransaction(this.db).run(() => {
+      this.auditClaims();
       const rows = this.db
         .prepare(
           `SELECT outbox.* FROM genesis_projection_outbox outbox
@@ -95,6 +109,7 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
     if (!commandId) throw new Error("genesis-outbox-command-id-invalid");
     validateClaimRequest(request);
     return new ImmediateLedgerTransaction(this.db).run(() => {
+      this.auditClaims();
       const row = this.db
         .prepare(
           `SELECT outbox.* FROM genesis_projection_outbox outbox
@@ -122,6 +137,43 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
     this.transition(commandId, ownerToken, "recovery_required", reason, occurredAt);
   }
 
+  settleClaim(
+    commandId: string,
+    ownerToken: string,
+    heartbeat: Omit<GenesisProjectionClaimRequest, "ownerToken" | "limit">,
+    work: () => GenesisProjectionSettlement,
+  ): GenesisProjectionSettlement {
+    validateClaimRequest({ ownerToken, ...heartbeat });
+    return new ImmediateLedgerTransaction(this.db).run(() => {
+      this.auditClaims();
+      this.assertClaimOwner(commandId, ownerToken, heartbeat.claimedAt);
+      this.appendClaimEvent(
+        commandId,
+        ownerToken,
+        heartbeat.expiresAt,
+        heartbeat.claimedAt,
+        "claimed",
+      );
+      let result: GenesisProjectionSettlement;
+      try {
+        result = work();
+      } catch (error) {
+        result = { state: "recovery_required", failureReason: failureReason(error) };
+      }
+      this.assertClaimOwner(commandId, ownerToken, heartbeat.claimedAt);
+      this.transitionInTransaction(
+        commandId,
+        ownerToken,
+        result.state,
+        result.state === "projected"
+          ? null
+          : (result.failureReason ?? "genesis-adoption-projection-recovery-required"),
+        heartbeat.claimedAt,
+      );
+      return { commit: true, value: result };
+    });
+  }
+
   private transition(
     commandId: string,
     ownerToken: string,
@@ -129,66 +181,84 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
     failureReason: string | null,
     occurredAt: string,
   ): void {
-    new ImmediateLedgerTransaction(this.db).run(() => {
-      this.assertClaimOwner(commandId, ownerToken, occurredAt);
-      const current = this.db
-        .prepare("SELECT * FROM genesis_projection_outbox WHERE command_id = ?")
-        .get(commandId);
-      if (!current) throw new Error("genesis-outbox-command-missing");
-      const latest = this.db
-        .prepare(
-          "SELECT * FROM genesis_projection_outbox_events WHERE command_id = ? ORDER BY sequence DESC LIMIT 1",
-        )
-        .get(commandId);
-      if (
-        !latest ||
-        current.last_event_digest !== latest.event_digest ||
-        latest.event_digest !== ledgerRowDigest(latest, "event_digest") ||
-        current.payload_digest !== latest.payload_digest
+    new ImmediateLedgerTransaction(this.db).run(() => ({
+      commit: true,
+      value: this.transitionInTransaction(
+        commandId,
+        ownerToken,
+        eventKind,
+        failureReason,
+        occurredAt,
+      ),
+    }));
+  }
+
+  private transitionInTransaction(
+    commandId: string,
+    ownerToken: string,
+    eventKind: "projected" | "recovery_required",
+    failureReason: string | null,
+    occurredAt: string,
+  ): void {
+    this.auditClaims();
+    this.assertClaimOwner(commandId, ownerToken, occurredAt);
+    const current = this.db
+      .prepare("SELECT * FROM genesis_projection_outbox WHERE command_id = ?")
+      .get(commandId);
+    if (!current) throw new Error("genesis-outbox-command-missing");
+    const latest = this.db
+      .prepare(
+        "SELECT * FROM genesis_projection_outbox_events WHERE command_id = ? ORDER BY sequence DESC LIMIT 1",
       )
-        throw new Error("genesis-outbox-chain-invalid");
-      if (current.status === "projected") {
-        if (eventKind === "projected") return { commit: false, value: undefined };
-        throw new Error("genesis-outbox-terminal-conflict");
-      }
-      const sequence = Number(latest.sequence) + 1;
-      const event = {
-        outbox_event_id: `genesis-outbox:${commandId}:${sequence}`,
-        command_id: commandId,
-        sequence,
-        event_kind: eventKind,
-        payload_digest: String(current.payload_digest),
-        occurred_at: occurredAt,
-        failure_reason: failureReason,
-        previous_event_digest: String(latest.event_digest),
-      };
-      const eventDigest = ledgerRowDigest(event, "event_digest");
-      this.db
-        .prepare("INSERT INTO genesis_projection_outbox_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .run(...Object.values(event), eventDigest);
-      this.db
-        .prepare(
-          `UPDATE genesis_projection_outbox SET status = ?, attempt_count = attempt_count + 1,
+      .get(commandId);
+    if (
+      !latest ||
+      current.last_event_digest !== latest.event_digest ||
+      latest.event_digest !== ledgerRowDigest(latest, "event_digest") ||
+      current.payload_digest !== latest.payload_digest
+    )
+      throw new Error("genesis-outbox-chain-invalid");
+    if (current.status === "projected") {
+      if (eventKind === "projected") return;
+      throw new Error("genesis-outbox-terminal-conflict");
+    }
+    const sequence = Number(latest.sequence) + 1;
+    const event = {
+      outbox_event_id: `genesis-outbox:${commandId}:${sequence}`,
+      command_id: commandId,
+      sequence,
+      event_kind: eventKind,
+      payload_digest: String(current.payload_digest),
+      occurred_at: occurredAt,
+      failure_reason: failureReason,
+      previous_event_digest: String(latest.event_digest),
+    };
+    const eventDigest = ledgerRowDigest(event, "event_digest");
+    this.db
+      .prepare("INSERT INTO genesis_projection_outbox_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(...Object.values(event), eventDigest);
+    this.db
+      .prepare(
+        `UPDATE genesis_projection_outbox SET status = ?, attempt_count = attempt_count + 1,
            next_attempt_at = ?, completed_at = ?, failure_reason = ?, last_event_digest = ?
            WHERE command_id = ?`,
-        )
-        .run(
-          eventKind,
-          occurredAt,
-          eventKind === "projected" ? occurredAt : null,
-          failureReason,
-          eventDigest,
-          commandId,
-        );
-      this.appendClaimEvent(commandId, ownerToken, occurredAt, occurredAt, "released");
-      return { commit: true, value: undefined };
-    });
+      )
+      .run(
+        eventKind,
+        occurredAt,
+        eventKind === "projected" ? occurredAt : null,
+        failureReason,
+        eventDigest,
+        commandId,
+      );
+    this.appendClaimEvent(commandId, ownerToken, occurredAt, occurredAt, "released");
   }
 
   private claimRow(
     row: Record<string, unknown>,
     request: GenesisProjectionClaimRequest,
   ): GenesisProjectionClaim {
+    this.assertClaimSnapshot(row.command_id);
     const entry = this.readEntry(row);
     this.appendClaimEvent(
       entry.commandId,
@@ -256,6 +326,32 @@ export class SqliteGenesisProjectionOutboxStore implements GenesisProjectionOutb
       );
   }
 
+  private auditClaims(): void {
+    for (const row of this.db.prepare("SELECT command_id FROM genesis_projection_claims").all())
+      this.assertClaimSnapshot(row.command_id);
+  }
+
+  private assertClaimSnapshot(commandId: unknown): void {
+    const snapshot = this.db
+      .prepare("SELECT * FROM genesis_projection_claims WHERE command_id = ?")
+      .get(commandId);
+    if (!snapshot) return;
+    const latest = this.db
+      .prepare(
+        "SELECT * FROM genesis_projection_claim_events WHERE command_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(commandId);
+    if (
+      !latest ||
+      latest.event_digest !== ledgerRowDigest(latest, "event_digest") ||
+      snapshot.last_event_digest !== latest.event_digest ||
+      snapshot.owner_token !== latest.owner_token ||
+      snapshot.claim_expires_at !== latest.claim_expires_at ||
+      snapshot.claim_state !== (latest.event_kind === "released" ? "released" : "active")
+    )
+      throw new Error("genesis-outbox-claim-chain-invalid");
+  }
+
   private readEntry(row: Record<string, unknown>): GenesisProjectionOutboxEntry {
     const latest = this.db
       .prepare(
@@ -309,4 +405,10 @@ function validateClaimRequest(request: GenesisProjectionClaimRequest): void {
     (request.limit !== undefined && (!Number.isSafeInteger(request.limit) || request.limit < 1))
   )
     throw new Error("genesis-outbox-claim-invalid");
+}
+
+function failureReason(error: unknown): string {
+  return error instanceof Error && error.message
+    ? error.message
+    : "genesis-adoption-projection-failed";
 }
