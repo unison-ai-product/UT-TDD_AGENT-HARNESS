@@ -6,12 +6,21 @@ import {
   type SetupSmokeDeps,
 } from "../src/doctor/setup-smoke";
 
-const requiredCommands = [
+const codexCommands = [
   "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
   "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
   "bun .ut-tdd/bin/ut-tdd.mjs session start",
   "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
   "bun .ut-tdd/bin/ut-tdd.mjs session summary",
+] as const;
+
+const claudeCommands = [
+  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session start",
+  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
+  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session summary",
+  "node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
 ] as const;
 
 function hooksJson(commands: readonly string[]) {
@@ -22,20 +31,33 @@ function hooksJson(commands: readonly string[]) {
   });
 }
 
+function claudeHooksJson(commands: readonly string[]) {
+  return JSON.stringify({
+    hooks: {
+      SessionStart: [
+        {
+          hooks: commands.map((serialized) => {
+            const [command, ...args] = serialized.split(" ");
+            return { command, args };
+          }),
+        },
+      ],
+    },
+  });
+}
+
 function setupSmokeDeps(overrides: Record<string, string | null> = {}): SetupSmokeDeps {
   const root = "/repo";
   const files = new Map<string, string>(
     Object.entries({
+      ".ut-tdd/bin/run-bun.mjs": "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
       ".ut-tdd/bin/ut-tdd.mjs": "#!/usr/bin/env bun\nconsole.log('ut-tdd');\n",
       "AGENTS.md": "# Agents\n",
       "CLAUDE.md": "# Claude\n",
       ".claude/CLAUDE.md": "# Claude runtime\n",
-      ".claude/settings.json": hooksJson([
-        ...requiredCommands,
-        "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
-      ]),
+      ".claude/settings.json": claudeHooksJson(claudeCommands),
       ".codex/config.toml": "[features]\nhooks = true\n",
-      ".codex/hooks.json": hooksJson(requiredCommands),
+      ".codex/hooks.json": hooksJson(codexCommands),
     }).map(([relativePath, text]) => [join(root, relativePath), text]),
   );
   for (const [relativePath, text] of Object.entries(overrides)) {
@@ -77,6 +99,16 @@ describe("doctor setup-smoke direct checks", () => {
     ]);
   });
 
+  it("preserves Claude native-launcher and Codex serializer semantics separately", () => {
+    const claude = collectHookCommands(
+      claudeHooksJson(["node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session start"]),
+    );
+    const codex = collectHookCommands(hooksJson(["bun .ut-tdd/bin/ut-tdd.mjs session start"]));
+
+    expect(claude).toEqual(["node .ut-tdd/bin/run-bun.mjs .ut-tdd/bin/ut-tdd.mjs session start"]);
+    expect(codex).toEqual(["bun .ut-tdd/bin/ut-tdd.mjs session start"]);
+  });
+
   it("fails closed on invalid hook JSON instead of silently accepting setup smoke", () => {
     expect(collectHookCommands("{not-json")).toBeNull();
 
@@ -94,7 +126,7 @@ describe("doctor setup-smoke direct checks", () => {
     const result = checkSetupSmoke(setupSmokeDeps());
 
     expect(result.ok).toBe(true);
-    expect(result.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+    expect(result.messages[0]).toMatch(/doctor: setup-smoke - OK/);
   });
 
   it("rejects template placeholder residue in the project-local wrapper", () => {

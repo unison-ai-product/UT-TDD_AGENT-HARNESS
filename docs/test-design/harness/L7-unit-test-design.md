@@ -1609,3 +1609,19 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 property testは任意の合法event列でreplay同一性・単調append・terminal後遷移禁止を確認する。
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
 cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする。
+
+## Issue #123 shell-free hook invocation oracle (2026-07-22)
+
+| U-ID | 対象 | oracle |
+|---|---|---|
+| `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 |
+| `U-HOOKEXEC-002` | Claude serializer | `command` は `node`、`args` は shell-free native Bun launcher、entrypoint、subcommand の token 配列になる。 |
+| `U-HOOKEXEC-003` | source Claude hooks | agent/work guards、session start/post-tool-use/summary、subagent-stop の全 6 hook が exec form である。 |
+| `U-HOOKEXEC-004` | policy preservation | guard は `blockOnFailure:true`、観測/session hook は既存 fail-open policy を保持する。 |
+| `U-HOOKEXEC-005` | Codex separation | Claude exec serializer の変更が Codex JSON shape を暗黙変更せず、両者は semantic invocation で等価比較される。 |
+| `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
+| `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
+| `U-HOOKEXEC-008` | Windows native smoke | hook host→Bun entrypoint の dispatch ancestry に `sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe` が無く、hook outcome は既存契約どおりである。 |
+
+Windows smoke は単なる exit code green では代替できない。process ancestry の捕捉結果を test artifact
+として残し、「Bun が起動した」ことと「shell/conhost を介さず Bun を起動した」ことを別 assertion にする。

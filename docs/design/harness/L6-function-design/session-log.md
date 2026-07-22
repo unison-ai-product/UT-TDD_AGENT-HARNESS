@@ -129,3 +129,17 @@ compressPlanDigest(events, planId, prev):
 - ③ pair: `docs/test-design/harness/L7-unit-test-design.md §1.5 U-SLOG` (G6 pair freeze 対象)
 - ② 実装: `src/runtime/session-log.ts` + `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (PLAN-L7-01)
 - 上位整合: 本機能の **要件 (L3) 表現は後段 Reverse (R0-R4) で back-fill / 修正** (PO 方針、bottom-up build → 上位整合)。
+
+## 2026-07-22 shell-free hook invocation 追加設計 (Issue #123)
+
+session lifecycle hook の意味論は command line 文字列ではなく、`HookInvocation { executable, args }`
+で表す。Claude serializer は `executable: "node"` と、native Bun launcher・entrypoint・subcommandを
+token 化した `argv` を公式 exec form の `command` / `args` へ別々に写像し、`session start`、`hook post-tool-use`、`session summary` の
+event 意味論と fail-open 方針を温存する。空白結合、quote 再構築、shell operator、shell executable
+による再解釈は禁止する。
+
+Windows の oracle は hook host から Bun entrypoint までの dispatch ancestry を観測し、その区間に
+`sh.exe`、`bash.exe`、`cmd.exe`、`powershell.exe`、`pwsh.exe` または hook dispatch 用
+`conhost.exe` が存在しないことを要求する。Bun entrypoint より後で session handler が明示的に起動する
+子プロセスは別責務であり、この oracle の通過根拠に混同しない。対応する L7 oracle は
+`U-HOOKEXEC-001..008` とする。

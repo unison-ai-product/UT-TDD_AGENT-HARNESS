@@ -111,6 +111,27 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
     }
   });
 
+  it("U-CXHOOK-002f: Claude exec argv と Codex string は同じ invocation semantics を持つ", () => {
+    const claude = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]) as {
+      hooks: Record<string, { hooks: { command: string; args: string[] }[] }[]>;
+    };
+    const codex = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]) as {
+      hooks: Record<string, { hooks: { command: string }[] }[]>;
+    };
+
+    const claudeInvocations = Object.values(claude.hooks)
+      .flatMap((entries) => entries.flatMap((entry) => entry.hooks))
+      .map((hook) => ["bun", ...hook.args.slice(1)].join(" "))
+      .filter((command) => command !== "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop")
+      .sort();
+    const codexInvocations = Object.values(codex.hooks)
+      .flatMap((entries) => entries.flatMap((entry) => entry.hooks))
+      .map((hook) => hook.command)
+      .sort();
+
+    expect(claudeInvocations).toEqual(codexInvocations);
+  });
+
   it("U-CXHOOK-002b: policy prose is mojibake-free", () => {
     const policyText = [
       ...CODEX_NOT_APPLICABLE_POLICY.map((item) => item.reason),

@@ -22,6 +22,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseHookInvocation } from "../runtime/hook-invocation";
 import { CODEX_REQUIRED } from "./codex-hook-adapter-policy";
 import { REQUIRED as CLAUDE_REQUIRED, FORBIDDEN_PATH_RE } from "./project-hook";
 
@@ -86,7 +87,8 @@ export interface CodexHookResult {
 
 interface HookCommand {
   type?: string;
-  command?: string;
+  command?: unknown;
+  args?: unknown;
   blockOnFailure?: boolean;
 }
 
@@ -110,10 +112,12 @@ function matcherEq(actual: string | undefined, expected: string | undefined): bo
  * review Important)。そこで script path 部 (空白を含まない part) は **token 完全一致**、複数語の
  * subcommand 部 (`session start` 等) は部分一致で照合する。
  */
-function commandHas(command: string, parts: readonly string[]): boolean {
-  const tokens = command.trim().split(/\s+/);
+function commandHas(hook: HookCommand, parts: readonly string[]): boolean {
+  const invocation = parseHookInvocation(hook);
+  if (!invocation) return false;
+  const { display, tokens } = invocation;
   return parts.every((part) =>
-    part.includes(" ") ? command.includes(part) : tokens.includes(part),
+    part.includes(" ") ? display.includes(part) : tokens.includes(part),
   );
 }
 
@@ -154,7 +158,9 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
   for (const [event, entries] of Object.entries(hooks)) {
     for (const entry of entries ?? []) {
       for (const hook of entry.hooks ?? []) {
-        const command = hook.command ?? "";
+        const invocation = parseHookInvocation(hook);
+        if (!invocation) continue;
+        const command = invocation.display;
         if (command.includes("$CLAUDE_PROJECT_DIR")) {
           violations.push({ hook: event, reason: "claude_project_dir_in_codex" });
         }
@@ -181,8 +187,8 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
       .filter(
         (hook) =>
           hook.type === "command" &&
-          (commandHas(hook.command ?? "", required.commandParts) ||
-            (hook.command ?? "").includes(required.wrapperCommand)),
+          (commandHas(hook, required.commandParts) ||
+            parseHookInvocation(hook)?.display.includes(required.wrapperCommand) === true),
       );
     if (matchingCommands.length === 0) {
       violations.push({ hook: required.id, reason: "missing_hook" });

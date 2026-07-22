@@ -229,3 +229,14 @@ The deferred `spawn_agent` guard surface is now locally wired:
 - **SSoT materializer**: emit `.claude/settings.json` and `.codex/hooks.json` from one
   source (`ut-tdd setup`) instead of two hand-maintained adapters; currently the
   `codex-hook-adapter` drift gate keeps them in sync.
+
+## 2026-07-22 Issue #123 add-impl 追補
+
+Claude hook の shell-free exec form 導入では、Codex hook serialization を同時に推測変更しない。
+shared contract は `HookInvocation { executable, args }` (`args` は argv) までとし、Claude / Codex の JSON projection は
+別 serializer が所有する。Codex の structured `args` capability が runtime 実機または公式 schema で
+証明されるまでは、Codex serializer は既存の実証済み形式を保持する。
+
+`codex-hook-adapter` の parity は raw command 文字列の同一性ではなく、runtime 固有 config を正規化した
+executable+argv の意味論、matcher、fail-close policy の一致を検証する。Claude exec form を Codex に
+要求すること、または Codex の shell form を Claude に許容することはどちらも禁止する。

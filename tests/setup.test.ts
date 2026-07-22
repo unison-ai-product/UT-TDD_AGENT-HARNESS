@@ -388,7 +388,10 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       const claude = JSON.parse(templates["adapter/.claude/settings.json"]) as {
         hooks: Record<
           string,
-          { matcher?: string; hooks: { command: string; blockOnFailure?: boolean }[] }[]
+          {
+            matcher?: string;
+            hooks: { command: string; args: string[]; blockOnFailure?: boolean }[];
+          }[]
         >;
       };
       const codex = JSON.parse(templates["adapter/.codex/hooks.json"]) as {
@@ -404,7 +407,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "Agent|Task",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -413,16 +417,18 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "Edit|Write|MultiEdit",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
           }),
         ]),
       );
-      expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe(
-        "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
-      );
+      expect(claude.hooks.SubagentStop[0].hooks[0]).toMatchObject({
+        command: "node",
+        args: [".ut-tdd/bin/run-bun.mjs", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
+      });
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
