@@ -298,6 +298,30 @@ export class SqliteForwardEscapeJournal
     );
   }
 
+  /** commandのE2 custodyをremote I/O前の短いread transactionで検証する。 */
+  assertCustody(commandId: string, payloadDigest: string): void {
+    runSqliteTransaction(this.db, () => {
+      const row = this.db
+        .prepare(
+          `SELECT certificate_id, payload_digest, event_digest
+           FROM forward_escape_validation_certificates WHERE command_id = ?`,
+        )
+        .get(commandId);
+      if (!row) throw new ForwardEscapeJournalIntegrityError("e2-custody-missing");
+      if (String(row.payload_digest) !== payloadDigest)
+        throw new ForwardEscapeJournalIntegrityError("e2-command-payload-mismatch");
+      const expected = digest({
+        type: "ForwardEscapeValidated",
+        sequence: "E2",
+        command_id: commandId,
+        payload_digest: payloadDigest,
+        certificate_id: String(row.certificate_id),
+      });
+      if (!nonEmpty(row.certificate_id) || String(row.event_digest) !== expected)
+        throw new ForwardEscapeJournalIntegrityError("e2-custody-integrity-invalid");
+    });
+  }
+
   append(event: DurableIssueProjectionEvent): {
     readonly durable: true;
     readonly event_digest: string;

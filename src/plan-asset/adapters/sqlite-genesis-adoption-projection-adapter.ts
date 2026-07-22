@@ -27,7 +27,7 @@ export class SqliteGenesisAdoptionProjectionAdapter implements GenesisAdoptionPr
   readonly #journal: SqliteForwardEscapeJournal;
 
   constructor(
-    private readonly db: HarnessDb,
+    db: HarnessDb,
     private readonly deps: SqliteGenesisAdoptionProjectionAdapterDeps,
   ) {
     this.#journal = new SqliteForwardEscapeJournal(db);
@@ -54,77 +54,81 @@ export class SqliteGenesisAdoptionProjectionAdapter implements GenesisAdoptionPr
         throw new Error("genesis-adoption-command-payload-mismatch");
       throw error;
     }
-    return this.#journal.runExclusive(() => {
-      const certificate = this.db
-        .prepare(
-          "SELECT payload_digest FROM forward_escape_validation_certificates WHERE command_id = ?",
-        )
-        .get(input.commandId);
-      if (!certificate) throw new Error("genesis-adoption-custody-missing");
-      if (String(certificate.payload_digest) !== payloadDigest)
-        throw new Error("genesis-adoption-command-payload-mismatch");
+    this.assertCustody(input.commandId, payloadDigest);
+    const prior = this.#journal.eventsFor(input.commandId);
+    const terminal = prior.findLast((event) => event.type === "IssueAdopted");
+    if (terminal) return { durable: true, state: "projected" };
 
-      const prior = this.#journal.eventsFor(input.commandId);
-      const terminal = prior.findLast((event) => event.type === "IssueAdopted");
-      if (terminal) return { durable: true, state: "projected" };
+    const queued = prior.find((event) => event.type === "IssueAdoptionQueued");
+    assertQueuedRequest(queued, input, payloadDigest, this.deps.repository);
 
-      const queued = prior.find((event) => event.type === "IssueAdoptionQueued");
-      if (
-        queued &&
-        (queued.type !== "IssueAdoptionQueued" ||
-          queued.payload_digest !== payloadDigest ||
-          queued.repository !== this.deps.repository ||
-          queued.issue_number !== input.issueNumber ||
-          queued.expected_body_digest !== input.issuePreimageDigest)
-      )
-        throw new Error("genesis-adoption-projection-request-conflict");
+    // GitHub read/writeはSQLite transactionの外で行う。queued/adoptedだけを別々の短いtxで確定する。
+    const issue = this.deps.port.observeIssue({
+      repository: this.deps.repository,
+      issue_number: input.issueNumber,
+    });
+    assertIssuePreimage({
+      issue,
+      repository: this.deps.repository,
+      issueNumber: input.issueNumber,
+      expectedDigest: input.issuePreimageDigest,
+    });
+    if (queued) assertQueuedObservation(queued, issue);
+    else this.appendQueued(input, payloadDigest, issue);
 
-      const issue = this.deps.port.observeIssue({
+    const body = metadataBody(input, payloadDigest, this.deps.repository);
+    const bodyDigest = sha(body);
+    let result: ReturnType<ForwardEscapeIssueAdoptionPort["createOrGetMetadataComment"]>;
+    try {
+      result = this.deps.port.createOrGetMetadataComment({
         repository: this.deps.repository,
         issue_number: input.issueNumber,
+        idempotency_key: input.commandId,
+        body,
+        body_digest: bodyDigest,
       });
-      assertIssuePreimage({
-        issue,
+    } catch {
+      return { durable: true, state: "recovery_required" };
+    }
+    if (!result.ok) return { durable: true, state: "recovery_required" };
+    assertComment(result.comment, issue.url, bodyDigest);
+    const adopted: IssueAdoptedEvent = {
+      type: "IssueAdopted",
+      command_id: input.commandId,
+      payload_digest: payloadDigest,
+      binding: {
         repository: this.deps.repository,
-        issueNumber: input.issueNumber,
-        expectedDigest: input.issuePreimageDigest,
-      });
-      if (!queued) this.appendQueued(input, payloadDigest, issue);
-
-      const body = metadataBody(input, payloadDigest, this.deps.repository);
-      const bodyDigest = sha(body);
-      let result: ReturnType<ForwardEscapeIssueAdoptionPort["createOrGetMetadataComment"]>;
-      try {
-        result = this.deps.port.createOrGetMetadataComment({
-          repository: this.deps.repository,
-          issue_number: input.issueNumber,
-          idempotency_key: input.commandId,
-          body,
-          body_digest: bodyDigest,
-        });
-      } catch {
-        return { durable: true, state: "recovery_required" };
-      }
-      if (!result.ok) return { durable: true, state: "recovery_required" };
-      assertComment(result.comment, issue.url, bodyDigest);
-      const adopted: IssueAdoptedEvent = {
-        type: "IssueAdopted",
-        command_id: input.commandId,
-        payload_digest: payloadDigest,
-        binding: {
-          repository: this.deps.repository,
-          issue_number: input.issueNumber,
-          node_id: issue.node_id,
-          url: issue.url,
-          body_digest: issue.body_digest,
-          observed_revision: issue.observed_revision,
-          contract_artifact_kind: "issue_comment",
-          contract_artifact: result.comment,
-        },
-      };
+        issue_number: input.issueNumber,
+        node_id: issue.node_id,
+        url: issue.url,
+        body_digest: issue.body_digest,
+        observed_revision: issue.observed_revision,
+        contract_artifact_kind: "issue_comment",
+        contract_artifact: result.comment,
+      },
+    };
+    try {
       this.#journal.append(adopted);
-      return { durable: true, state: "projected" };
-    });
+    } catch (error) {
+      if (error instanceof ForwardEscapeJournalIntegrityError)
+        throw new Error("genesis-adoption-projection-request-conflict");
+      throw error;
+    }
+    return { durable: true, state: "projected" };
+  }
+
+  private assertCustody(commandId: string, payloadDigest: string): void {
+    try {
+      this.#journal.assertCustody(commandId, payloadDigest);
+    } catch (error) {
+      if (error instanceof ForwardEscapeJournalIntegrityError) {
+        if (error.message === "e2-custody-missing")
+          throw new Error("genesis-adoption-custody-missing");
+        if (error.message === "e2-command-payload-mismatch")
+          throw new Error("genesis-adoption-command-payload-mismatch");
+      }
+      throw error;
+    }
   }
 
   private appendQueued(
@@ -142,8 +146,46 @@ export class SqliteGenesisAdoptionProjectionAdapter implements GenesisAdoptionPr
       expected_observed_revision: issue.observed_revision,
       expected_body_digest: input.issuePreimageDigest,
     };
-    this.#journal.append(queued);
+    try {
+      this.#journal.append(queued);
+    } catch (error) {
+      if (error instanceof ForwardEscapeJournalIntegrityError)
+        throw new Error("genesis-adoption-projection-request-conflict");
+      throw error;
+    }
   }
+}
+
+function assertQueuedRequest(
+  queued: DurableQueued | undefined,
+  input: Parameters<GenesisAdoptionProjectionOutboxPort["dispatch"]>[0],
+  payloadDigest: string,
+  repository: string,
+): void {
+  if (
+    queued &&
+    (queued.payload_digest !== payloadDigest ||
+      queued.repository !== repository ||
+      queued.issue_number !== input.issueNumber ||
+      queued.expected_body_digest !== input.issuePreimageDigest)
+  )
+    throw new Error("genesis-adoption-projection-request-conflict");
+}
+
+type DurableQueued = Extract<
+  ReturnType<SqliteForwardEscapeJournal["eventsFor"]>[number],
+  { type: "IssueAdoptionQueued" }
+>;
+
+function assertQueuedObservation(
+  queued: DurableQueued,
+  issue: ReturnType<ForwardEscapeIssueAdoptionPort["observeIssue"]>,
+): void {
+  if (
+    queued.expected_node_id !== issue.node_id ||
+    queued.expected_observed_revision !== issue.observed_revision
+  )
+    throw new Error("genesis-adoption-projection-request-conflict");
 }
 
 interface ProjectionBinding {
