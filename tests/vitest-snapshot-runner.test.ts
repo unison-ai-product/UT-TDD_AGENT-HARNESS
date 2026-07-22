@@ -29,7 +29,10 @@ import { removeTestTree } from "./support/temp-tree";
 
 describe("vitest snapshot runner", () => {
   it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {
-    expect(resolveBunBinary({ which: () => "/runtime/bun" })).toBe("/runtime/bun");
+    expect(resolveBunBinary({ which: () => "/runtime/bun.cmd" })).toBe(process.execPath);
+    expect(readFileSync(join(process.cwd(), "scripts/run-vitest-snapshot.ts"), "utf8")).toContain(
+      "windowsHide: true",
+    );
   });
 
   it("U-TESTHYGIENE-045: rejects watch arguments because an execution snapshot cannot observe live edits", () => {
