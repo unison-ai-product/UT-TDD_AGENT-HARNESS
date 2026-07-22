@@ -27,7 +27,7 @@ generates:
   - artifact_path: src/lint/hook-invocation.ts
     artifact_type: source_module
   - artifact_path: .claude/hooks/run-bun.ts
-    artifact_type: runtime_adapter
+    artifact_type: hook
   - artifact_path: src/cli.ts
     artifact_type: source_module
   - artifact_path: tests/codex-hook-adapter.test.ts

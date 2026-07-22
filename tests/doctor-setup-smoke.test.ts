@@ -7,11 +7,11 @@ import {
 } from "../src/doctor/setup-smoke";
 
 const codexCommands = [
-  "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs session start",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
-  "bun .ut-tdd/bin/ut-tdd.mjs session summary",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs session start",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
+  "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs session summary",
 ] as const;
 
 const claudeCommands = [
@@ -57,7 +57,7 @@ function setupSmokeDeps(overrides: Record<string, string | null> = {}): SetupSmo
       ".claude/CLAUDE.md": "# Claude runtime\n",
       ".claude/settings.json": claudeHooksJson(claudeCommands),
       ".codex/config.toml": "[features]\nhooks = true\n",
-      ".codex/hooks.json": hooksJson(codexCommands),
+      ".codex/hooks.json": claudeHooksJson(codexCommands),
     }).map(([relativePath, text]) => [join(root, relativePath), text]),
   );
   for (const [relativePath, text] of Object.entries(overrides)) {
@@ -138,5 +138,16 @@ describe("doctor setup-smoke direct checks", () => {
 
     expect(result.ok).toBe(false);
     expect(result.messages.join("\n")).toContain("missing wrapper-placeholder-free");
+  });
+
+  it("rejects shell-serialized hooks even when their token text matches the native contract", () => {
+    const result = checkSetupSmoke(
+      setupSmokeDeps({
+        ".codex/hooks.json": hooksJson(codexCommands),
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing codex-hook:node");
   });
 });
