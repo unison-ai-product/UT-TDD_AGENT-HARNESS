@@ -114,6 +114,7 @@ function git(repoRoot: string, args: string[]): string {
   return execFileSync("git", ["-C", repoRoot, ...args], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
+    windowsHide: true,
   });
 }
 

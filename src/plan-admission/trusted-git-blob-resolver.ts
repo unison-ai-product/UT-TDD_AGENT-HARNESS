@@ -43,6 +43,7 @@ export class NodeGitCommandPort implements GitCommandPort {
     return execFileSync("git", [...args], {
       cwd: this.repoRoot,
       encoding: "buffer",
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
   }

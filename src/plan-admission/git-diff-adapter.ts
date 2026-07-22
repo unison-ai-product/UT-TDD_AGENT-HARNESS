@@ -45,6 +45,7 @@ export class SystemGitCommandPort implements GitCommandPort {
       return execFileSync("git", ["-C", this.repoRoot, ...args], {
         encoding: "buffer",
         maxBuffer: 64 * 1024 * 1024,
+        windowsHide: true,
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (error) {

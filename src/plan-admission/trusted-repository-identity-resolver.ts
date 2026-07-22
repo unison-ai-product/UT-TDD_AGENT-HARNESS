@@ -51,6 +51,7 @@ export class NodeRepositoryIdentityGitPort implements RepositoryIdentityGitPort 
     return execFileSync("git", [...args], {
       cwd: this.repoRoot,
       encoding: "buffer",
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
   }

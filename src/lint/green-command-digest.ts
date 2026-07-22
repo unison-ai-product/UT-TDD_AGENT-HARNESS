@@ -146,6 +146,7 @@ function commitExists(repoRoot: string, sha: string): boolean {
   try {
     execFileSync("git", ["-C", repoRoot, "cat-file", "-e", `${sha}^{commit}`], {
       stdio: ["ignore", "ignore", "ignore"],
+      windowsHide: true,
     });
     return true;
   } catch {
@@ -167,6 +168,7 @@ export function nodeDigestAuditDeps(repoRoot: string): DigestAuditDeps {
         const bytes = execFileSync("git", ["-C", repoRoot, "show", `${sha}:${toGitPath(rel)}`], {
           stdio: ["ignore", "pipe", "ignore"],
           maxBuffer: 64 * 1024 * 1024,
+          windowsHide: true,
         });
         return { kind: "bytes", bytes };
       } catch {
@@ -368,6 +370,7 @@ export function nodeHistoryScanDeps(repoRoot: string): HistoryScanDeps {
         const out = execFileSync("git", ["-C", repoRoot, "log", "--format=%H", "--", gitPath], {
           encoding: "utf8",
           stdio: ["ignore", "pipe", "ignore"],
+          windowsHide: true,
           maxBuffer: 16 * 1024 * 1024,
         });
         const commits = out.split(/\r?\n/).filter(Boolean);

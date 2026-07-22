@@ -32,7 +32,10 @@ import {
 
 function gitHead(): string | null {
   try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      encoding: "utf8",
+      windowsHide: true,
+    }).trim();
   } catch {
     return null;
   }

@@ -176,6 +176,7 @@ export function loadBranchKindInput(repoRoot: string = process.cwd()): BranchKin
     branch = execFileSync("git", ["-C", repoRoot, "rev-parse", "--abbrev-ref", "HEAD"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      windowsHide: true,
     }).trim();
   } catch {
     branch = null;

@@ -219,6 +219,7 @@ export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
   const output = execFileSync("git", ["-C", repoRoot, "status", "--porcelain"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
+    windowsHide: true,
   });
   return parseGitPorcelain(output);
 }
@@ -237,6 +238,7 @@ export function loadStagedFiles(repoRoot: string = process.cwd()): string[] {
   const output = execFileSync("git", ["-C", repoRoot, "diff", "--cached", "--name-only"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
+    windowsHide: true,
   });
   return parseStagedNames(output);
 }
@@ -252,6 +254,7 @@ export function isGitRepository(repoRoot: string = process.cwd()): boolean {
     const out = execFileSync("git", ["-C", repoRoot, "rev-parse", "--is-inside-work-tree"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      windowsHide: true,
     });
     return out.trim() === "true";
   } catch {

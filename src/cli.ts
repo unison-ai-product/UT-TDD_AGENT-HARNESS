@@ -237,6 +237,7 @@ function gitBranch(): string | null {
   try {
     return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
       encoding: "utf8",
+      windowsHide: true,
     }).trim();
   } catch {
     return null;
@@ -245,7 +246,10 @@ function gitBranch(): string | null {
 
 function gitHead(): string | null {
   try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      encoding: "utf8",
+      windowsHide: true,
+    }).trim();
   } catch {
     return null;
   }
@@ -461,6 +465,7 @@ function recentHeadCommits(repoRoot: string, limit = 5): string[] {
     const output = execFileSync("git", ["log", `-${limit}`, "--format=%h %s"], {
       cwd: repoRoot,
       encoding: "utf8",
+      windowsHide: true,
     }).trim();
     return output ? output.split(/\r?\n/).filter(Boolean) : [];
   } catch {
@@ -3256,7 +3261,10 @@ githubPr
     }) => {
       try {
         const resolve = (ref: string): string =>
-          execFileSync("git", ["rev-parse", ref], { encoding: "utf8" }).trim();
+          execFileSync("git", ["rev-parse", ref], {
+            encoding: "utf8",
+            windowsHide: true,
+          }).trim();
         const block = renderPrTraceBlock({
           plan_id: opts.plan,
           route_mode: opts.routeMode,
@@ -3310,12 +3318,14 @@ function fetchRulesetsViaGh(repository: string): unknown[] {
   const list = JSON.parse(
     execFileSync("gh", ["api", `repos/${repository}/rulesets?includes_parents=true`], {
       encoding: "utf8",
+      windowsHide: true,
     }),
   ) as Array<Record<string, unknown>>;
   return list.map((entry) =>
     JSON.parse(
       execFileSync("gh", ["api", `repos/${repository}/rulesets/${String(entry.id)}`], {
         encoding: "utf8",
+        windowsHide: true,
       }),
     ),
   );

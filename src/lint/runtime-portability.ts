@@ -427,6 +427,7 @@ export function loadRuntimePortabilityDocs(
     files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
       cwd: repoRoot,
       encoding: "utf8",
+      windowsHide: true,
     })
       .split(/\r?\n/)
       .filter(Boolean);

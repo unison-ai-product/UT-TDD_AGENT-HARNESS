@@ -73,7 +73,9 @@ export function loadProjectIdentityFromHead(input: {
       `^100644 blob ([a-f0-9]{${objectFormat === "sha1" ? 40 : 64}})\\t${projectPath}$`,
     ).exec(entry);
     if (!match) return failed("plan-repository-identity-missing", "tracked HEAD config missing");
-    const bytes = execFileSync("git", ["-C", input.repoRoot, "show", `HEAD:${projectPath}`]);
+    const bytes = execFileSync("git", ["-C", input.repoRoot, "show", `HEAD:${projectPath}`], {
+      windowsHide: true,
+    });
     return loadTrackedProjectIdentity({
       bytes,
       receipt: {
@@ -160,7 +162,10 @@ function sha256(bytes: Uint8Array): string {
 }
 
 function gitText(repoRoot: string, args: readonly string[]): string {
-  return execFileSync("git", ["-C", repoRoot, ...args], { encoding: "utf8" });
+  return execFileSync("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
 }
 
 function failed(ruleId: RuleId, message: string): Result<never> {

@@ -393,6 +393,7 @@ export function nodeGh(args: string[]): { ok: boolean; stdout: string } {
     const stdout = execFileSync("gh", args, {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      windowsHide: true,
     });
     return { ok: true, stdout };
   } catch (e) {

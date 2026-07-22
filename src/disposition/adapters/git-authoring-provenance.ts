@@ -25,6 +25,9 @@ export class GitAuthoringProvenance implements AuthoringProvenancePort {
   }
 
   private git(args: readonly string[]): string {
-    return execFileSync("git", ["-C", this.repoRoot, ...args], { encoding: "utf8" });
+    return execFileSync("git", ["-C", this.repoRoot, ...args], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
   }
 }

@@ -175,7 +175,7 @@ function firstOnPath(command: string, opts: ProviderCommandResolutionOptions = {
       ? win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "where.exe")
       : "which";
   try {
-    const found = execFileSync(finder, [command], { encoding: "utf8", env })
+    const found = execFileSync(finder, [command], { encoding: "utf8", env, windowsHide: true })
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);

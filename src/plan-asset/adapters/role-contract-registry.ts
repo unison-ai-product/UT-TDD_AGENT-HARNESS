@@ -12,6 +12,7 @@ export interface RoleContractRegistry {
 export function loadRoleContractRegistry(repoRoot: string): RoleContractRegistry {
   const content = execFileSync("git", ["-C", repoRoot, "show", `HEAD:${SOURCE}`], {
     encoding: "utf8",
+    windowsHide: true,
   });
   const block = /```yaml\r?\n([\s\S]*?)\r?\n```/.exec(content)?.[1];
   const raw = block ? (parseYaml(block) as { role_contracts?: unknown }) : null;
