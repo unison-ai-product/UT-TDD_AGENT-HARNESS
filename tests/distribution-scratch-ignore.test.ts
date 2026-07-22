@@ -19,4 +19,23 @@ describe("distribution scratch gitignore", () => {
       ]),
     );
   });
+
+  it("U-RGUARD-013: ignores only the canonical Plan ledger SQLite family", () => {
+    const gitignore = readFileSync(join(process.cwd(), ".gitignore"), "utf8");
+    const patterns = gitignore
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+
+    expect(patterns).toEqual(
+      expect.arrayContaining([
+        "/.ut-tdd/ledger/harness-ledger.db",
+        "/.ut-tdd/ledger/harness-ledger.db-journal",
+        "/.ut-tdd/ledger/harness-ledger.db-wal",
+        "/.ut-tdd/ledger/harness-ledger.db-shm",
+      ]),
+    );
+    expect(patterns).not.toContain(".ut-tdd/ledger/");
+    expect(patterns).not.toContain(".ut-tdd/ledger/*");
+  });
 });

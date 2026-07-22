@@ -39,6 +39,12 @@ docs/handover/session-handover-*.md
 .ut-tdd/harness.db
 .ut-tdd/harness.db-wal
 .ut-tdd/harness.db-shm
+# canonical Plan ledger SQLite runtime state. Keep this exact: other ledger
+# artifacts remain visible to review/source-mutation guards.
+/.ut-tdd/ledger/harness-ledger.db
+/.ut-tdd/ledger/harness-ledger.db-journal
+/.ut-tdd/ledger/harness-ledger.db-wal
+/.ut-tdd/ledger/harness-ledger.db-shm
 # Codex 委譲タスク入力 (transient、PM が貼る目標プロンプト)
 .ut-tdd/codex-tasks/
 .tools/
