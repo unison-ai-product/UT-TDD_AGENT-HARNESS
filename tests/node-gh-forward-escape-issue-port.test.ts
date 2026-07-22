@@ -203,10 +203,31 @@ describe("NodeGhForwardEscapeIssuePort", () => {
     );
     expect(boundedGhExecutionEvidence()).toEqual({
       timeout_ms: 15_000,
+      projection_operation_budget_ms: 60_000,
       kill_signal: "SIGKILL",
       windows_hidden: true,
       max_buffer_bytes: 8 * 1024 * 1024,
     });
+  });
+
+  it("U-EXISSUE-ADOPT-010: projection全体は4 call分の予算を公開し各callは残予算を超えない", () => {
+    const now = vi
+      .fn<() => number>()
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(30_000)
+      .mockReturnValueOnce(44_500);
+    const run = vi
+      .fn<(args: string[], timeoutMs?: number) => string>()
+      .mockReturnValueOnce(JSON.stringify([[]]))
+      .mockReturnValueOnce(JSON.stringify(issue))
+      .mockReturnValueOnce(JSON.stringify([[issue]]));
+    const port = new NodeGhForwardEscapeIssuePort(run, now);
+
+    port.createOrGetIssue(request());
+
+    expect(port.projectionBudgetEvidence.operation_timeout_ms).toBe(60_000);
+    expect(run.mock.calls.map((call) => call[1])).toEqual([15_000, 15_000, 500]);
   });
 
   it("U-EXISSUE-ADOPT-009: deadline到達は成功へ読み替えない", () => {

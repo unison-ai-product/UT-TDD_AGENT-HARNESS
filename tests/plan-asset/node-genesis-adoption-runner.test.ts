@@ -20,6 +20,22 @@ describe("genesis adoption strict manifest", () => {
       }),
     ).toThrow("genesis-adoption-manifest-invalid");
   });
+
+  it("U-GEN-038: manifest内のGit object format混在をfail-closeする", () => {
+    const value = manifest();
+    expect(() =>
+      parseGenesisAdoptionManifest({
+        ...value,
+        source: { ...value.source, blob_oid: "b".repeat(64) },
+      }),
+    ).toThrow("genesis-adoption-manifest-invalid");
+    expect(() =>
+      parseGenesisAdoptionManifest({
+        ...value,
+        reentry_target: { ...value.reentry_target, blob_oid: "c".repeat(64) },
+      }),
+    ).toThrow("genesis-adoption-manifest-invalid");
+  });
 });
 
 describe("NodeGenesisAdoptionRunner", () => {

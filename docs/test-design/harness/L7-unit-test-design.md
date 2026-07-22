@@ -1568,18 +1568,22 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
-| `U-GITBLOB-001` | 同一tree束縛 | commit aliasとexact tracked path、NUL終端`ls-tree`、blob bytes | 確定40hex commit OID・入力と同じpath・blob OID・raw bytesを返す。command順は`rev-parse`→`ls-tree -z`→`cat-file blob` |
-| `U-GITBLOB-002` | fail-close | commit不存在/非40hex OID、path 0/複数、NUL終端欠落、非regular blob/blob OID不正、path差替え、blob read失敗 | 部分valueやworking tree補完を返さず専用`trusted-git-*` error |
+| `U-GITBLOB-001` | 同一tree束縛 | commit aliasとexact tracked path、NUL終端`ls-tree`、blob bytes | 確定40hex/64hex commit OID・入力と同じpath・同一object formatのblob OID・raw bytesを返す。command順は`rev-parse`→`ls-tree -z`→`cat-file blob` |
+| `U-GITBLOB-002` | fail-close | commit不存在/非Git OID、path 0/複数、NUL終端欠落、非regular blob/blob OID不正、path差替え、blob read失敗 | 部分valueやworking tree補完を返さず専用`trusted-git-*` error |
 | `U-GITBLOB-003` | shell/Windows境界 | 空白・metacharacterを含むpathとfake exec port / Node adapter source | pathを単一argvのまま渡しshell 0。Node adapterはstdin無効かつ`windowsHide=true` |
 | `U-GITBLOB-004` | dependency boundary | `src/git` import graphとplan-admission/plan-asset consumers | `src/git`から両domainへのimport 0、consumer間の共有resolver複製0、module cycle 0 |
+| `U-GITBLOB-005` | object format互換 | SHA-1/SHA-256別のcommit/tree fixture | 40桁同士又は64桁同士だけを同一tree observationとして受理 |
+| `U-GITBLOB-006` | object format混在 | 40桁commit+64桁blob、64桁commit+40桁blob、不正OID | repository観測内のformat混在をfail-close |
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
 | `U-GEN-033` | authority順序 | local HEAD/branch/repository mismatchとGitHub spy | GitHub read、runner生成、local write 0でfail-close |
 | `U-GEN-034` | entry隔離 | 2 claimの先頭renewalだけ拒否 | 後続をproject/finalizeし、`claimRejected=1`をsummaryへ計上 |
 | `U-GEN-035` | active lease | replay commandを別workerが保持 | `projected`へ推測せず`busy`でfail-close、remote 0 |
+| `U-GEN-038` | Git object format束縛 | manifest/transactionのsource commit・source blob・existing reentry blobを40/64桁で混在 | 同一repository observationの全Git OIDが同じformatの場合だけ受理し、混在はwrite前fail-close |
 | `U-GEN-036` | command state | active lease、projected terminal、不存在 | Plan Ledger正本から`busy`/`projected`/`missing`を区別 |
 | `U-GEN-037` | adoption TOCTOU | 2 DB connectionでderive後に同commandまたは同assetを競合 | 同commandはdeterministic replay、異commandはtyped asset conflict、全表各1行 |
+| `U-GEN-039` | operation-wide deadline | 15秒×4 remote call、30秒lease、2 worker | remote開始前に短いleaseを拒否。75秒leaseでは各callを残予算へ制限し、途中再claim・duplicate marker 0 |
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |

@@ -24,6 +24,7 @@ interface GhCommentView {
 
 export const GH_EXECUTION_CONTRACT = Object.freeze({
   timeoutMs: 15_000,
+  projectionCallLimit: 4,
   killSignal: "SIGKILL" as const,
   windowsHide: true as const,
   maxBuffer: 8 * 1024 * 1024,
@@ -31,6 +32,7 @@ export const GH_EXECUTION_CONTRACT = Object.freeze({
 
 export interface GhExecutionEvidence {
   readonly timeout_ms: number;
+  readonly projection_operation_budget_ms: number;
   readonly kill_signal: "SIGKILL";
   readonly windows_hidden: true;
   readonly max_buffer_bytes: number;
@@ -51,17 +53,24 @@ export type GhSpawn = (
 export function boundedGhExecutionEvidence(): GhExecutionEvidence {
   return {
     timeout_ms: GH_EXECUTION_CONTRACT.timeoutMs,
+    projection_operation_budget_ms:
+      GH_EXECUTION_CONTRACT.timeoutMs * GH_EXECUTION_CONTRACT.projectionCallLimit,
     kill_signal: GH_EXECUTION_CONTRACT.killSignal,
     windows_hidden: GH_EXECUTION_CONTRACT.windowsHide,
     max_buffer_bytes: GH_EXECUTION_CONTRACT.maxBuffer,
   };
 }
 
-export function runBoundedGh(args: string[], spawn: GhSpawn = spawnSync): string {
+export function runBoundedGh(
+  args: string[],
+  spawn: GhSpawn = spawnSync,
+  timeoutMs: number = GH_EXECUTION_CONTRACT.timeoutMs,
+): string {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new Error("gh-command-timeout");
   const result = spawn("gh", args, {
     encoding: "utf8",
     windowsHide: GH_EXECUTION_CONTRACT.windowsHide,
-    timeout: GH_EXECUTION_CONTRACT.timeoutMs,
+    timeout: Math.min(timeoutMs, GH_EXECUTION_CONTRACT.timeoutMs),
     killSignal: GH_EXECUTION_CONTRACT.killSignal,
     maxBuffer: GH_EXECUTION_CONTRACT.maxBuffer,
   });
@@ -80,22 +89,30 @@ export class NodeGhForwardEscapeIssuePort
   implements ForwardEscapeIssuePort, ForwardEscapeIssueAdoptionPort
 {
   readonly executionEvidence = boundedGhExecutionEvidence();
+  readonly projectionBudgetEvidence = Object.freeze({
+    operation_timeout_ms: this.executionEvidence.projection_operation_budget_ms,
+  });
 
-  constructor(private readonly run: (args: string[]) => string = runBoundedGh) {}
+  constructor(
+    private readonly run: (args: string[], timeoutMs?: number) => string = (args, timeoutMs) =>
+      runBoundedGh(args, spawnSync, timeoutMs),
+    private readonly now: () => number = Date.now,
+  ) {}
 
   createOrGetIssue(request: Parameters<ForwardEscapeIssuePort["createOrGetIssue"]>[0]) {
+    const run = this.operationRunner(3);
     try {
       const repository = `${request.owner}/${request.repository}`;
       const marker = `command_id: ${request.idempotency_key}`;
       const existing = selectMarked({
-        values: this.list(repository),
+        values: this.list(repository, run),
         marker,
         expectedDigest: request.body_digest,
         exactLine: true,
       });
-      if (!existing) this.create(repository, request);
+      if (!existing) this.create(repository, request, run);
       const issue = selectMarked({
-        values: this.list(repository),
+        values: this.list(repository, run),
         marker,
         expectedDigest: request.body_digest,
         exactLine: true,
@@ -111,7 +128,10 @@ export class NodeGhForwardEscapeIssuePort
     request: Parameters<ForwardEscapeIssueAdoptionPort["observeIssue"]>[0],
   ): ObservedForwardEscapeIssue {
     const issue = JSON.parse(
-      this.run(["api", `repos/${request.repository}/issues/${request.issue_number}`]),
+      this.operationRunner(1)([
+        "api",
+        `repos/${request.repository}/issues/${request.issue_number}`,
+      ]),
     ) as GhIssueView;
     if (
       issue.number !== request.issue_number ||
@@ -128,18 +148,19 @@ export class NodeGhForwardEscapeIssuePort
   createOrGetMetadataComment(
     request: Parameters<ForwardEscapeIssueAdoptionPort["createOrGetMetadataComment"]>[0],
   ) {
+    const run = this.operationRunner(3);
     try {
       const marker = `ut-tdd:forward-escape-adoption/v1 ${request.idempotency_key}`;
       const exactMarker = `<!-- ${marker} -->`;
       const prior = selectMarked({
-        values: this.listComments(request.repository, request.issue_number),
+        values: this.listComments(request.repository, request.issue_number, run),
         marker: exactMarker,
         expectedDigest: request.body_digest,
         exactLine: true,
       });
-      if (!prior) this.createComment(request.repository, request.issue_number, request.body);
+      if (!prior) this.createComment(request.repository, request.issue_number, request.body, run);
       const comment = selectMarked({
-        values: this.listComments(request.repository, request.issue_number),
+        values: this.listComments(request.repository, request.issue_number, run),
         marker: exactMarker,
         expectedDigest: request.body_digest,
         exactLine: true,
@@ -159,14 +180,18 @@ export class NodeGhForwardEscapeIssuePort
     }
   }
 
-  private list(repository: string): GhIssueView[] {
+  private operationRunner(callLimit: number): (args: string[]) => string {
+    const deadline = this.now() + GH_EXECUTION_CONTRACT.timeoutMs * callLimit;
+    return (args) => {
+      const remaining = deadline - this.now();
+      if (remaining < 1) throw new Error("gh-operation-timeout");
+      return this.run(args, Math.min(GH_EXECUTION_CONTRACT.timeoutMs, remaining));
+    };
+  }
+
+  private list(repository: string, run: (args: string[]) => string): GhIssueView[] {
     const pages = JSON.parse(
-      this.run([
-        "api",
-        "--paginate",
-        "--slurp",
-        `repos/${repository}/issues?state=all&per_page=100`,
-      ]),
+      run(["api", "--paginate", "--slurp", `repos/${repository}/issues?state=all&per_page=100`]),
     ) as GhIssueView[][];
     return pages.flat().filter((issue) => !Reflect.has(issue, "pull_request"));
   }
@@ -174,6 +199,7 @@ export class NodeGhForwardEscapeIssuePort
   private create(
     repository: string,
     request: Parameters<ForwardEscapeIssuePort["createOrGetIssue"]>[0],
+    run: (args: string[]) => string,
   ): GhIssueView {
     const args = [
       "api",
@@ -186,12 +212,16 @@ export class NodeGhForwardEscapeIssuePort
       `body=${request.body}`,
     ];
     for (const label of request.labels) args.push("--field", `labels[]=${label}`);
-    return JSON.parse(this.run(args)) as GhIssueView;
+    return JSON.parse(run(args)) as GhIssueView;
   }
 
-  private listComments(repository: string, issueNumber: number): GhCommentView[] {
+  private listComments(
+    repository: string,
+    issueNumber: number,
+    run: (args: string[]) => string,
+  ): GhCommentView[] {
     const pages = JSON.parse(
-      this.run([
+      run([
         "api",
         "--paginate",
         "--slurp",
@@ -201,9 +231,14 @@ export class NodeGhForwardEscapeIssuePort
     return pages.flat();
   }
 
-  private createComment(repository: string, issueNumber: number, body: string): GhCommentView {
+  private createComment(
+    repository: string,
+    issueNumber: number,
+    body: string,
+    run: (args: string[]) => string,
+  ): GhCommentView {
     return JSON.parse(
-      this.run([
+      run([
         "api",
         "--method",
         "POST",

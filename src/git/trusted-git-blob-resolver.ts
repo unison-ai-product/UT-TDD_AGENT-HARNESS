@@ -11,6 +11,19 @@ export interface TrustedGitBlob {
   readonly bytes: Buffer;
 }
 
+export type GitObjectFormat = "sha1" | "sha256";
+
+export function gitObjectFormat(oid: string): GitObjectFormat | undefined {
+  if (/^[0-9a-f]{40}$/.test(oid)) return "sha1";
+  if (/^[0-9a-f]{64}$/.test(oid)) return "sha256";
+  return undefined;
+}
+
+export function hasOneGitObjectFormat(oids: readonly string[]): boolean {
+  const formats = oids.map(gitObjectFormat);
+  return formats[0] !== undefined && formats.every((format) => format === formats[0]);
+}
+
 export type GitExecFile = (
   command: string,
   args: readonly string[],
@@ -30,9 +43,11 @@ export class TrustedGitBlobResolver {
     const commitOid = this.call(["rev-parse", "--verify", `${commit}^{commit}`], "commit-not-found")
       .toString("ascii")
       .trim();
-    if (!/^[0-9a-f]{40}$/.test(commitOid)) throw new Error("trusted-git-commit-oid-invalid");
+    const objectFormat = gitObjectFormat(commitOid);
+    if (!objectFormat) throw new Error("trusted-git-commit-oid-invalid");
     const entry = parseTreeEntry(
       this.call(["ls-tree", "-z", commitOid, "--", sourcePath], "source-not-found"),
+      objectFormat,
     );
     if (entry.sourcePath !== sourcePath) throw new Error("trusted-git-source-path-mismatch");
     const bytes = this.call(["cat-file", "blob", entry.blobOid], "blob-unreadable");
@@ -64,12 +79,18 @@ export class NodeGitCommandPort implements GitCommandPort {
   }
 }
 
-function parseTreeEntry(output: Buffer): { sourcePath: string; blobOid: string } {
+function parseTreeEntry(
+  output: Buffer,
+  objectFormat: GitObjectFormat,
+): { sourcePath: string; blobOid: string } {
   if (output.length === 0) throw new Error("trusted-git-source-not-found");
   if (output.at(-1) !== 0) throw new Error("trusted-git-source-record-invalid");
   const records = output.subarray(0, -1).toString("utf8").split("\0");
   if (records.length !== 1 || records[0] === "") throw new Error("trusted-git-source-not-found");
-  const match = /^100(?:644|755) blob ([0-9a-f]{40})\t(.+)$/s.exec(records[0]);
+  const width = objectFormat === "sha1" ? 40 : 64;
+  const match = new RegExp(`^100(?:644|755) blob ([0-9a-f]{${width}})\\t(.+)$`, "s").exec(
+    records[0],
+  );
   if (!match) throw new Error("trusted-git-source-not-blob");
   return { blobOid: match[1], sourcePath: match[2] };
 }

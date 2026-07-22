@@ -47,7 +47,7 @@ export class GenesisProjectionDispatcher {
   private readonly now: () => string;
   private readonly ownerToken: () => string;
   private readonly leaseMs: number;
-  private readonly remoteDeadlineMs: number;
+  private readonly remoteOperationBudgetMs: number;
   private readonly finalizeBudgetMs: number;
 
   constructor(input: {
@@ -56,22 +56,22 @@ export class GenesisProjectionDispatcher {
     readonly now: () => string;
     readonly ownerToken?: () => string;
     readonly leaseMs?: number;
-    readonly remoteDeadlineMs: number;
+    readonly remoteOperationBudgetMs: number;
     readonly finalizeBudgetMs?: number;
   }) {
     this.outbox = input.outbox;
     this.projection = input.projection;
     this.now = input.now;
     this.ownerToken = input.ownerToken ?? randomUUID;
-    this.leaseMs = input.leaseMs ?? 30_000;
-    this.remoteDeadlineMs = input.remoteDeadlineMs;
+    this.leaseMs = input.leaseMs ?? 75_000;
+    this.remoteOperationBudgetMs = input.remoteOperationBudgetMs;
     this.finalizeBudgetMs = input.finalizeBudgetMs ?? 5_000;
     if (
-      !Number.isSafeInteger(this.remoteDeadlineMs) ||
-      this.remoteDeadlineMs < 1 ||
+      !Number.isSafeInteger(this.remoteOperationBudgetMs) ||
+      this.remoteOperationBudgetMs < 1 ||
       !Number.isSafeInteger(this.finalizeBudgetMs) ||
       this.finalizeBudgetMs < 1 ||
-      this.leaseMs <= this.remoteDeadlineMs + this.finalizeBudgetMs
+      this.leaseMs <= this.remoteOperationBudgetMs + this.finalizeBudgetMs
     )
       throw new Error("genesis-projection-lease-deadline-invalid");
   }
@@ -172,7 +172,8 @@ export interface NodeGenesisProjectionDispatcherOptions {
   readonly now?: () => string;
   readonly ownerToken?: () => string;
   readonly leaseMs?: number;
-  readonly remoteDeadlineMs?: number;
+  /** projection.dispatch 1回に含まれる全remote callのworst-case合計予算。 */
+  readonly remoteOperationBudgetMs?: number;
   readonly finalizeBudgetMs?: number;
 }
 
@@ -186,10 +187,12 @@ export function openNodeGenesisProjectionDispatcher(input: {
   const { repoRoot, repository } = input;
   const port = input.port ?? new NodeGhForwardEscapeIssuePort();
   const options = input.options ?? {};
-  const remoteDeadlineMs =
-    options.remoteDeadlineMs ??
-    (port instanceof NodeGhForwardEscapeIssuePort ? port.executionEvidence.timeout_ms : undefined);
-  if (!remoteDeadlineMs) throw new Error("genesis-projection-unbounded-remote-port");
+  const remoteOperationBudgetMs =
+    options.remoteOperationBudgetMs ??
+    (port instanceof NodeGhForwardEscapeIssuePort
+      ? port.projectionBudgetEvidence.operation_timeout_ms
+      : undefined);
+  if (!remoteOperationBudgetMs) throw new Error("genesis-projection-unbounded-remote-port");
   const planDb = (options.openPlanDb ?? openPlanLedger)({
     repoRoot,
     path: options.planLedgerPath,
@@ -213,7 +216,7 @@ export function openNodeGenesisProjectionDispatcher(input: {
         now: options.now ?? (() => new Date().toISOString()),
         ownerToken: options.ownerToken,
         leaseMs: options.leaseMs,
-        remoteDeadlineMs,
+        remoteOperationBudgetMs,
         finalizeBudgetMs: options.finalizeBudgetMs,
       }),
       close: () => closeDatabases(journalDb as HarnessDb, planDb),

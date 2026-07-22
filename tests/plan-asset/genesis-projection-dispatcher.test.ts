@@ -46,7 +46,7 @@ const entries: readonly GenesisProjectionOutboxEntry[] = [
 ];
 
 describe("GenesisProjectionDispatcher", () => {
-  it("U-GEN-032: leaseはremote deadlineとfinalize予算を超えない構成を拒否する", () => {
+  it("U-GEN-032: leaseはprojection全remote operation予算とfinalize予算を超えない構成を拒否する", () => {
     const fixture = setup(entries.slice(0, 1), () => ({ durable: true, state: "projected" }));
     expect(
       () =>
@@ -55,10 +55,28 @@ describe("GenesisProjectionDispatcher", () => {
           projection: fixture.projection,
           now: () => "2026-07-22T07:01:00.000Z",
           leaseMs: 20_000,
-          remoteDeadlineMs: 15_000,
+          remoteOperationBudgetMs: 60_000,
           finalizeBudgetMs: 5_000,
         }),
     ).toThrow("genesis-projection-lease-deadline-invalid");
+  });
+
+  it("U-GEN-039: 4 call途中でlease切れする2 worker構成をremote開始前に拒否する", () => {
+    const fixture = setup(entries.slice(0, 1), () => ({ durable: true, state: "projected" }));
+    for (const worker of ["worker:a", "worker:b"]) {
+      expect(
+        () =>
+          new GenesisProjectionDispatcher({
+            outbox: fixture.store,
+            projection: fixture.projection,
+            now: () => "2026-07-22T07:01:00.000Z",
+            ownerToken: () => worker,
+            leaseMs: 30_000,
+            remoteOperationBudgetMs: 60_000,
+          }),
+      ).toThrow("genesis-projection-lease-deadline-invalid");
+    }
+    expect(fixture.projection.dispatch).not.toHaveBeenCalled();
   });
 
   it("U-GEN-017: restart後にpending/recovery_requiredを走査しprojected終端へ収束する", () => {
@@ -222,7 +240,7 @@ describe("GenesisProjectionDispatcher", () => {
       repoRoot: root,
       repository: "owner/repository",
       port,
-      options: { remoteDeadlineMs: 15_000 },
+      options: { remoteOperationBudgetMs: 15_000 },
     });
     expect(resource.dispatcher.dispatchCommand("genesis:129")).toEqual({
       scanned: 1,
@@ -238,7 +256,7 @@ describe("GenesisProjectionDispatcher", () => {
       repoRoot: root,
       repository: "owner/repository",
       port,
-      options: { remoteDeadlineMs: 15_000 },
+      options: { remoteOperationBudgetMs: 15_000 },
     });
     expect(resource.dispatcher.dispatchCommand("genesis:129")).toEqual({
       scanned: 1,
@@ -304,7 +322,7 @@ describe("GenesisProjectionDispatcher", () => {
       repository: "owner/repository",
       port: projectionPort("# issue\n", () => ({ ok: false, reason: "unused" })),
       options: {
-        remoteDeadlineMs: 15_000,
+        remoteOperationBudgetMs: 15_000,
         openPlanDb: () => planDb,
         openHarnessDb: () => harnessDb,
         migrateHarnessDb: vi.fn(),
@@ -473,7 +491,7 @@ function setup(
       projection,
       now: () => "2026-07-22T07:01:00.000Z",
       ownerToken: () => "worker:test",
-      remoteDeadlineMs: 15_000,
+      remoteOperationBudgetMs: 15_000,
     }),
   };
 }

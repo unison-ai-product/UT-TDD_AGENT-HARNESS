@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { hasOneGitObjectFormat } from "../../git/trusted-git-blob-resolver.js";
 import type { HarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
 import {
@@ -349,8 +350,7 @@ function derive(
     !/^[^/]+\/[^/]+$/.test(input.repositoryIdentity) ||
     !/^PLAN-L(?:[0-9]|1[0-4])-/.test(input.planId) ||
     !/^docs\/plans\/[^/]+\.md$/.test(input.sourcePath.replaceAll("\\", "/")) ||
-    !/^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(input.sourceCommit) ||
-    !/^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(input.sourceBlobOid) ||
+    !hasOneGitObjectFormat([input.sourceCommit, input.sourceBlobOid]) ||
     input.issue.driveModel !== "redesign" ||
     !input.issue.branch.startsWith("work/redesign-") ||
     input.issue.number < 1 ||

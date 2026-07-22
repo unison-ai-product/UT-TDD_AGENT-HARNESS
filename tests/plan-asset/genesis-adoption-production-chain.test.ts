@@ -59,7 +59,7 @@ describe("Issue #129 production genesis chain", () => {
           repoRoot,
           repository: identity,
           port,
-          options: { remoteDeadlineMs: 15_000 },
+          options: { remoteOperationBudgetMs: 15_000 },
         }),
     });
     expect(runner.run(manifest)).toMatchObject({

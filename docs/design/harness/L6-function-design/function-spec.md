@@ -1328,14 +1328,16 @@ Admission receiptとPLAN本文のdigest、asset/revision、route tupleを`verify
 ### 共有trusted Git blob解決契約
 
 `TrustedGitBlobResolver.resolve(commit, sourcePath)`は、注入された`GitCommandPort`を通じてcommitを
-40hexのcommit objectへ確定し、そのtreeのexact `sourcePath`が指す単一regular blobのOIDとraw bytesを返す。
+repositoryのobject formatに対応する40hex (SHA-1) 又は64hex (SHA-256) のcommit objectへ確定し、
+そのtreeのexact `sourcePath`が指す単一regular blobのOIDとraw bytesを返す。
 返却値は`{ commitOid, sourcePath, blobOid, bytes }`であり、呼出側は同じGit object oracleを
 route、PLAN revision、Issue preimageのauthority確認へ再利用する。
 
 - pre: `commit`とrepo相対`sourcePath`はcallerが選択済みであり、resolverはworking tree、index、remoteから補完しない。
-- post: commit/path/blob/bytesは同一tree observationに由来し、pathは入力とexact一致する。
+- post: commit/path/blob/bytesは同一tree observationに由来し、pathは入力とexact一致する。commit OIDから
+  object formatを確定し、blob OIDおよび同一manifest内のGit OIDを同じ40桁又は64桁へ束縛する。
 - fail-close: commit不存在、path 0件/複数件、tree/submodule等の非blob、path不一致、blob read失敗を
-  `trusted-git-*` errorへ正規化し、部分的なvalueを返さない。
+  `trusted-git-*` errorへ正規化し、SHA-1/SHA-256混在を含む部分的なvalueを返さない。
 - adapter: `NodeGitCommandPort`はshellを介さないargv実行、stdin無効、stdout/stderr分離、
   `windowsHide=true`を必須とし、Windowsで可視consoleを生成しない。
 - dependency: resolverはplan-admission/plan-assetをimportしない。両domainはこの共有portへ依存し、
@@ -1346,6 +1348,7 @@ route、PLAN revision、Issue preimageのauthority確認へ再利用する。
 - `GenesisAdoptionTransaction.adopt()`はpureなmanifest導出後、`BEGIN IMMEDIATE`内でreplay、asset/alias conflict、appendを同じsnapshotから判定する。同一command競合は一方を`replayed=true`へ、異command・同一assetはtyped conflictへ収束させ、一意制約例外を公開境界へ漏らさない。
 - `GenesisProjectionDispatcher.dispatchCommand()`はclaim不能を成功と推測せず、Plan Ledger正本のcommand stateを再観測する。`projected`だけを再生成功とし、active leaseは`busy`、不存在・非終端不整合はfail-closeする。
 - `dispatchPending()`はentry単位でclaim renewal、remote、finalizeを隔離する。renewal拒否をsummaryへ明示して後続entryを継続し、`scanned = projected + recoveryRequired + claimRejected`を保つ。
+- leaseは単一`gh` call期限ではなく、1回のprojectionに含まれる全remote callのworst-case合計予算とfinalize予算の和を必ず上回る。Node GitHub adapterはoperation deadlineを一度だけ確定し、各callへ残予算を渡して全体期限を超過させない。
 - production compositionはlocal HEAD、branch、repository identityをread-only preflightした後にのみGitHub Issueを観測し、その後local adoption/outboxへ進む。local authority不一致時のGitHub read、Plan/HARNESS DB writeは0とする。
 
 ```ts

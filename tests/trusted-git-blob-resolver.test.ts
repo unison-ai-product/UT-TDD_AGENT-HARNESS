@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type GitCommandPort,
   type GitExecFile,
+  hasOneGitObjectFormat,
   NodeGitCommandPort,
   TrustedGitBlobResolver,
 } from "../src/git/trusted-git-blob-resolver.js";
@@ -34,6 +35,42 @@ describe("TrustedGitBlobResolver", () => {
     expect(git.run).toHaveBeenNthCalledWith(1, ["rev-parse", "--verify", "HEAD^{commit}"]);
     expect(git.run).toHaveBeenNthCalledWith(2, ["ls-tree", "-z", commitOid, "--", sourcePath]);
     expect(git.run).toHaveBeenNthCalledWith(3, ["cat-file", "blob", blobOid]);
+  });
+
+  it.each([
+    40, 64,
+  ])("U-GITBLOB-005: %d桁object formatでcommitとblobを同一観測へ束縛する", (width) => {
+    const commit = "a".repeat(width);
+    const blob = "b".repeat(width);
+    const outputs = [
+      Buffer.from(`${commit}\n`),
+      Buffer.from(`100644 blob ${blob}\t${sourcePath}\0`),
+      Buffer.from("body"),
+    ];
+    expect(
+      new TrustedGitBlobResolver({ run: () => outputs.shift() as Buffer }).resolve(
+        "HEAD",
+        sourcePath,
+      ),
+    ).toMatchObject({ commitOid: commit, blobOid: blob });
+  });
+
+  it("U-GITBLOB-006: SHA-1/SHA-256混在と不正OIDをfail-closeする", () => {
+    expect(hasOneGitObjectFormat(["a".repeat(40), "b".repeat(40)])).toBe(true);
+    expect(hasOneGitObjectFormat(["a".repeat(64), "b".repeat(64)])).toBe(true);
+    expect(hasOneGitObjectFormat(["a".repeat(40), "b".repeat(64)])).toBe(false);
+    expect(hasOneGitObjectFormat(["invalid", "b".repeat(40)])).toBe(false);
+
+    const outputs = [
+      Buffer.from(`${"a".repeat(64)}\n`),
+      Buffer.from(`100644 blob ${blobOid}\t${sourcePath}\0`),
+    ];
+    expect(() =>
+      new TrustedGitBlobResolver({ run: () => outputs.shift() as Buffer }).resolve(
+        "HEAD",
+        sourcePath,
+      ),
+    ).toThrow("trusted-git-source-not-blob");
   });
 
   it.each([

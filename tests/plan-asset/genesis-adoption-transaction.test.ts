@@ -86,6 +86,15 @@ describe("genesis adoption transaction", () => {
     expect(counts(db)).toEqual(baseline);
   });
 
+  it("U-GEN-038: transaction境界でもGit object format混在をwrite前fail-closeする", async () => {
+    const { db, transaction } = await fixture();
+    expect(transaction.adopt({ ...input(), sourceBlobOid: "b".repeat(64) })).toEqual({
+      ok: false,
+      ruleId: "genesis-adoption-input-invalid",
+    });
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
   it.each([
     ["same command", (command: GenesisAdoptionInput) => command, true, undefined],
     [

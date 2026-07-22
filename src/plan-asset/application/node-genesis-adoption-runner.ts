@@ -5,6 +5,7 @@ import {
   renderForwardEscapeIssueBody,
 } from "../../execution/forward-escape.js";
 import {
+  hasOneGitObjectFormat,
   NodeGitCommandPort,
   type TrustedGitBlob,
   TrustedGitBlobResolver,
@@ -322,6 +323,9 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
         contract,
       },
     };
+    const gitOids = [manifest.source.commit, manifest.source.blob_oid];
+    if (manifest.reentry_target.kind === "existing") gitOids.push(manifest.reentry_target.blob_oid);
+    if (!hasOneGitObjectFormat(gitOids)) throw new Error();
     if (manifest.issue.episode_id !== `E4-${manifest.issue.number}`) throw new Error();
     return manifest;
   } catch {
