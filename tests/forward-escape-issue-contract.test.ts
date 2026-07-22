@@ -526,7 +526,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     }
   });
 
-  it("U-EXISSUE-016: projection欠落・非canonical値を例外化せずE2 custody前に拒否する", () => {
+  it("U-EXISSUE-017: projection欠落・非canonical値を例外化せずE2 custody前に拒否する", () => {
     const issueProjections: unknown[] = [
       undefined,
       null,
@@ -732,7 +732,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     }
   });
 
-  it("U-EXISSUE-017: two processes serialize provider→E4 and call GitHub once", async () => {
+  it("U-EXISSUE-018: two processes serialize provider→E4 and call GitHub once", async () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-e4-race-"));
     const dbPath = join(repo, ".ut-tdd", "harness.db");
     openForwardEscapeDb(dbPath, repo).close();

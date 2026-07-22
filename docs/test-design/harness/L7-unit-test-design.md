@@ -1588,6 +1588,12 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `CANDIDATE-GHISS-007` | worker競合 | 同じleaseを2 workerが取得試行 | remote create最大1回、loserはwrite 0 |
 | `CANDIDATE-GHISS-008` | stale remote | 古いremote version/webhookを後着 | 新しいprojection/domain stateを巻き戻さない |
 | `CANDIDATE-GHISS-009` | payload custody | secret/signature/raw transcriptをDTOへ注入 | event/outbox/Issue保存を拒否しwrite 0 |
+| `U-EXISSUE-001` | Forward境界分類 | 通常Forward辺とForward外辺を入力 | 通常辺はIssue不要、Forward外だけIssue必須 |
+| `U-EXISSUE-002` | 駆動モデルfail-close | 空・未知・技術drive混入・三面不一致 | 推測補完せずstructured violation |
+| `U-EXISSUE-003` | origin revision/layer/state | stale revisionと不正なlayer/state組合せ | Ledger実在値と不一致を拒否 |
+| `U-EXISSUE-004` | command冪等性 | 同一command再送と同一ID別payload | 同一receipt再利用、改変再利用は拒否 |
+| `U-EXISSUE-005` | GitHub障害と再開 | provider失敗後に同一commandを再実行 | eventを失わずDeferredから同一projectionへ収束 |
+| `U-EXISSUE-006` | Issue本文完全性 | origin/reentry/driveを一要素ずつ削除 | body digest/必須節不一致を検出 |
 | `U-EXISSUE-007` | E2 typed projection入口 | 未検証の生commandを直接projectorへ渡す | GitHub call 0、`forward-escape-e2-required`でfail-close |
 | `U-EXISSUE-008` | GitHub成功binding検証 | repository/body digest/node ID/URL/issue number/observed revisionを各1箇所改変 | E4 0、durable Deferred receiptを記録 |
 | `U-EXISSUE-009` | canonical drive三面照合 | command/Issue/PLANを同じ未知値へ揃える | 一致だけではGreenにせず`unknown-drive-model` |
@@ -1598,6 +1604,8 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `U-EXISSUE-014` | SQLite certificate tamper | E2 `event_digest`を直接改変してclose/reopen | custody照合false、E3/E4入口を通さない |
 | `U-EXISSUE-015` | custody failure変換 | storage例外へsecret/pathを混入、同commandを異payloadで再利用 | raw本文を残さず閉じたstructured violation、E2未発行 |
 | `U-EXISSUE-016` | SQLite同時create-or-get | 2 workerをgateから同時解放し同command/payloadのcertificateとQueuedをappend | 両workerが同一certificate/receiptを取得しevent rowは1件 |
+| `U-EXISSUE-017` | projection canonical境界 | projection欠落、前後空白、改行、非canonical repository/labelを入力 | 例外化せずE2 custody前に`invalid-issue-projection`で拒否 |
+| `U-EXISSUE-018` | provider→E4プロセス競合 | 2 processを同時解放して同一commandをprojection | GitHub call 1、両process成功、terminal `IssueProjected` 1件へ収束 |
 | `U-EXISSUE-ADOPT-001` | 既存Issue採用 | 番号GETのpreimage完全一致、comment未作成 | Issue本文write 0、canonical comment 1、`IssueAdopted` 1 |
 | `U-EXISSUE-ADOPT-002` | adoption replay | 同command/preimageを再送後、別issue numberへ差替え | 同一receiptを再利用しcomment増分0。差替えは`issue-adoption-request-conflict` |
 | `U-EXISSUE-ADOPT-003` | immutable preimage | body/revision/node/repositoryを各1箇所改変 | comment write前に`issue-adoption-preimage-mismatch` |
