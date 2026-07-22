@@ -43,15 +43,30 @@ export interface GenesisAdoptionTransactionPort {
   adopt(input: GenesisAdoptionInput): GenesisAdoptionResult;
 }
 
-/** local commit後のreceiptをremote GitHub projection sagaへ渡す境界。実装は別slice。 */
+export type GenesisAdoptionProjectionState = "recovery_required" | "projected";
+
+/**
+ * local commit後のreceiptを既存のdurable GitHub projection sagaへ渡す境界。
+ * 実装はremote writeより先にpendingをschema正本へ永続化し、同じcommandIdのdispatchを
+ * idempotentに扱う。戻り値のdurableは単なるAPI成功ではなくjournal receiptを表す。
+ */
 export interface GenesisAdoptionProjectionOutboxPort {
-  enqueue(input: {
+  dispatch(input: {
     readonly commandId: string;
     readonly issueNumber: number;
     readonly issuePreimageDigest: string;
     readonly localReceipt: Extract<GenesisAdoptionResult, { ok: true }>;
-  }): void;
+  }): {
+    readonly durable: boolean;
+    readonly state: GenesisAdoptionProjectionState;
+  };
 }
+
+export type GenesisAdoptionRunResult =
+  | (Extract<GenesisAdoptionResult, { ok: true }> & {
+      readonly projection: GenesisAdoptionProjectionState;
+    })
+  | Extract<GenesisAdoptionResult, { ok: false }>;
 
 export interface NodeGenesisAdoptionRunnerDeps {
   readonly head: () => string;
@@ -59,13 +74,14 @@ export interface NodeGenesisAdoptionRunnerDeps {
   readonly repositoryIdentity: () => string;
   readonly resolveBlob: (commit: string, sourcePath: string) => TrustedGitBlob;
   readonly transaction: GenesisAdoptionTransactionPort;
+  readonly projectionOutbox: GenesisAdoptionProjectionOutboxPort;
 }
 
 /** strict manifestをtrusted HEADへ束縛してからlocal genesis transactionを呼ぶ。 */
 export class NodeGenesisAdoptionRunner {
   constructor(private readonly deps: NodeGenesisAdoptionRunnerDeps) {}
 
-  run(rawManifest: unknown): GenesisAdoptionResult {
+  run(rawManifest: unknown): GenesisAdoptionRunResult {
     const manifest = parseGenesisAdoptionManifest(rawManifest);
     const head = this.deps.head().trim();
     if (head !== manifest.source.commit) throw new Error("genesis-adoption-head-drift");
@@ -88,7 +104,7 @@ export class NodeGenesisAdoptionRunner {
     if (!source || source.planId !== manifest.plan_id)
       throw new Error("genesis-adoption-source-invalid");
     const canonicalPayloadJson = canonical(source.frontmatter);
-    return this.deps.transaction.adopt({
+    const local = this.deps.transaction.adopt({
       commandId: manifest.command_id,
       repositoryIdentity: manifest.repository_identity,
       planId: manifest.plan_id,
@@ -111,12 +127,22 @@ export class NodeGenesisAdoptionRunner {
         preimageDigest: manifest.issue.preimage_digest,
       },
     });
+    if (!local.ok) return local;
+    const projection = this.deps.projectionOutbox.dispatch({
+      commandId: manifest.command_id,
+      issueNumber: manifest.issue.number,
+      issuePreimageDigest: manifest.issue.preimage_digest,
+      localReceipt: local,
+    });
+    if (projection.durable !== true) throw new Error("genesis-adoption-projection-not-durable");
+    return { ...local, projection: projection.state };
   }
 }
 
 export function createNodeGenesisAdoptionRunner(
   repoRoot: string,
   custody: GenesisCustodyPort,
+  projectionOutbox: GenesisAdoptionProjectionOutboxPort,
 ): NodeGenesisAdoptionRunner {
   const resolver = new TrustedGitBlobResolver(new NodeGitCommandPort(repoRoot));
   return new NodeGenesisAdoptionRunner({
@@ -138,6 +164,7 @@ export function createNodeGenesisAdoptionRunner(
         }
       },
     },
+    projectionOutbox,
   });
 }
 

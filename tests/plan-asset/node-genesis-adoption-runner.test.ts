@@ -70,7 +70,48 @@ describe("NodeGenesisAdoptionRunner", () => {
     expect(f.adopt).not.toHaveBeenCalled();
   });
 
-  it("U-GEN-014: remote GitHub投影をrunner内で実行せずlocal receiptをoutbox境界へ返す", () => {
+  it("U-GEN-013: local成功後のremote失敗をdurable recovery_requiredとして返す", () => {
+    const f = fixture({ projectionStates: ["recovery_required"] });
+    expect(f.runner.run(f.manifest)).toMatchObject({
+      ok: true,
+      replayed: false,
+      projection: "recovery_required",
+    });
+    expect(f.dispatch).toHaveBeenCalledOnce();
+  });
+
+  it("U-GEN-014: same-command replayはpendingを再開し一度だけprojectedへ収束する", () => {
+    const f = fixture({
+      adoptResults: [
+        { ok: true, replayed: false, assetId: "plan:legacy:test", revision: 1, issueNumber: 129 },
+        { ok: true, replayed: true, assetId: "plan:legacy:test", revision: 1, issueNumber: 129 },
+      ],
+      projectionStates: ["recovery_required", "projected"],
+    });
+    expect(f.runner.run(f.manifest)).toMatchObject({ projection: "recovery_required" });
+    expect(f.runner.run(f.manifest)).toMatchObject({ replayed: true, projection: "projected" });
+    expect(f.dispatch).toHaveBeenCalledTimes(2);
+    expect(f.remoteCommentCount()).toBe(1);
+  });
+
+  it("U-GEN-014: local command conflictではdispatchせず二重commentを作らない", () => {
+    const f = fixture({
+      adoptResults: [{ ok: false, ruleId: "genesis-adoption-command-conflict" }],
+    });
+    expect(f.runner.run(f.manifest)).toEqual({
+      ok: false,
+      ruleId: "genesis-adoption-command-conflict",
+    });
+    expect(f.dispatch).not.toHaveBeenCalled();
+    expect(f.remoteCommentCount()).toBe(0);
+  });
+
+  it("U-GEN-014: durability receipt欠落を回復済みと偽装しない", () => {
+    const f = fixture({ durable: false });
+    expect(() => f.runner.run(f.manifest)).toThrow("genesis-adoption-projection-not-durable");
+  });
+
+  it("U-GEN-014: local receiptをremote直書きせずdurable outbox境界へ渡す", () => {
     const f = fixture();
     expect(f.runner.run(f.manifest)).toEqual({
       ok: true,
@@ -78,8 +119,10 @@ describe("NodeGenesisAdoptionRunner", () => {
       assetId: "plan:legacy:test",
       revision: 1,
       issueNumber: 129,
+      projection: "projected",
     });
-    expect(f.remote).not.toHaveBeenCalled();
+    expect(f.dispatch).toHaveBeenCalledOnce();
+    expect(f.remoteCommentCount()).toBe(1);
   });
 });
 
@@ -90,21 +133,43 @@ function fixture(
     branch?: string;
     blobOid?: string;
     source?: string;
+    durable?: boolean;
+    projectionStates?: Array<"recovery_required" | "projected">;
+    adoptResults?: Array<
+      | { ok: true; replayed: boolean; assetId: string; revision: 1; issueNumber: number }
+      | { ok: false; ruleId: string }
+    >;
   } = {},
 ) {
   const value = manifest();
-  const adopt = vi.fn(() => ({
-    ok: true as const,
-    replayed: false,
-    assetId: "plan:legacy:test",
-    revision: 1 as const,
-    issueNumber: 129,
-  }));
-  const remote = vi.fn();
+  const adoptResults = drift.adoptResults ?? [
+    {
+      ok: true as const,
+      replayed: false,
+      assetId: "plan:legacy:test",
+      revision: 1 as const,
+      issueNumber: 129,
+    },
+  ];
+  const fallbackAdoption = adoptResults.at(-1);
+  if (!fallbackAdoption) throw new Error("fixture-adoption-result-required");
+  const adopt = vi.fn(() => adoptResults.shift() ?? fallbackAdoption);
+  const projectionStates = drift.projectionStates ?? ["projected"];
+  const projected = new Set<string>();
+  let remoteComments = 0;
+  const dispatch = vi.fn((input: { commandId: string }) => {
+    const state = projectionStates.shift() ?? "projected";
+    if (state === "projected" && !projected.has(input.commandId)) {
+      projected.add(input.commandId);
+      remoteComments += 1;
+    }
+    return { durable: drift.durable ?? true, state };
+  });
   return {
     manifest: value,
     adopt,
-    remote,
+    dispatch,
+    remoteCommentCount: () => remoteComments,
     runner: new NodeGenesisAdoptionRunner({
       head: () => drift.head ?? value.source.commit,
       branch: () => drift.branch ?? value.issue.branch,
@@ -116,6 +181,7 @@ function fixture(
         bytes: Buffer.from(drift.source ?? source()),
       }),
       transaction: { adopt },
+      projectionOutbox: { dispatch },
     }),
   };
 }
