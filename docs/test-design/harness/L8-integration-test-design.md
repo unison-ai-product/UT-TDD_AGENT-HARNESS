@@ -337,7 +337,7 @@ deferのままconfirmedへ昇格しない。
 
 ## Node platform packaging / deployment integration pair
 
-`PLAN-L5-26-node-platform-packaging-deployment`と対になるfixtureを次でfreezeする。
+`PLAN-L5-25-resource-kernel-physical-protocol`と対になるNode cutover fixtureを次でfreezeする。
 
 | ID | Fixture | Green条件 |
 |---|---|---|

@@ -328,4 +328,4 @@ visible shell 0を主張しない。各runはphase timing、cache decision、pro
 | `ST-NODE-CUTOVER-11` | cutover ordering | parity receipt無しの旧経路削除、node_primary後fallback、期限なしallowlistを全て拒否 |
 | `ST-NODE-CUTOVER-12` | final deletion | Bun lockfile/cache/bootstrap/compatibility codeとproduction allowlistが物理的に0 |
 
-`ST-NODE-CUTOVER-01..12`は`PLAN-L4-33`のpairである。文字列検索だけ、BunがたまたまPATHに無いこと、片OSだけの成功、旧Bun CIによる代替、異なるattempt/HEAD/bundleの結果集約は証拠にならない。system receiptはsubject revision、bundle digest、inventory digest、scanner coverage、process observer heartbeat/drop count、Node/Rust job identity、Pack digestを必須とする。
+`ST-NODE-CUTOVER-01..12`は`PLAN-L4-32`のNode cutover pairである。文字列検索だけ、BunがたまたまPATHに無いこと、片OSだけの成功、旧Bun CIによる代替、異なるattempt/HEAD/bundleの結果集約は証拠にならない。system receiptはsubject revision、bundle digest、inventory digest、scanner coverage、process observer heartbeat/drop count、Node/Rust job identity、Pack digestを必須とする。

@@ -211,9 +211,9 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 ## §9 Node control plane cutover / Bun永久禁止
 
-`PLAN-L4-33-node-control-plane-cutover`を正本として、TypeScript domainをNode control planeで実行し、privileged OS custodyだけをRust Resource Kernelへ委譲する。Bunは移行先・fallback・検出器runtimeとして禁止する。移行は`inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向state machineとし、各遷移を同一revision/bundleへ結びつく`RuntimeCutoverReceipt`で証明する。
+`PLAN-L4-32-resource-governed-execution-kernel`を正本として、TypeScript domainをNode control planeで実行し、privileged OS custodyだけをRust Resource Kernelへ委譲する。Bunは移行先・fallback・検出器runtimeとして禁止する。移行は`inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向state machineとし、各遷移を同一revision/bundleへ結びつく`RuntimeCutoverReceipt`で証明する。
 
-設計上のbarrierは「Node代替のGreen前に旧検出経路を削除しない」「Node primary後にBunへfallbackしない」の二つである。最終aggregateはNode Linux/Windows、Rust Linux/Windows、Bun zero/process audit、Pack acceptanceをAND集約し、欠測・skip・別HEAD・別bundleをGreenにしない。物理配置は`PLAN-L5-26-node-platform-packaging-deployment`へ降下する。
+設計上のbarrierは「Node代替のGreen前に旧検出経路を削除しない」「Node primary後にBunへfallbackしない」の二つである。最終aggregateはNode Linux/Windows、Rust Linux/Windows、Bun zero/process audit、Pack acceptanceをAND集約し、欠測・skip・別HEAD・別bundleをGreenにしない。物理配置は`PLAN-L5-25-resource-kernel-physical-protocol`へ降下する。
 ## 2026-06-29 Task-Classify Route 追補
 
 `classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。

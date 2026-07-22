@@ -146,3 +146,18 @@ digest、target triple、probe capabilityを照合する。rollbackもmanifest�
 Linux start-in-cgroup、client/custodian/broker crash、reconnect、empty/reap、bundle mutation、rollback、Bun不在を境界故障として
 固定する。mockだけでOS custody Greenを宣言せず、mock/contract integrationと実OS integrationのlaneを明示分離する。
 L8で正負oracle、fixture、観測点、control/workload別created countをfreezeするまで本PLANはconfirmedにしない。
+
+## 8. Node package / deployment物理契約
+
+配布bundleは`manifest + compiled Node ESM + production dependencies + Rust companion + SBOM + signature`を不可分とする。manifestはNode version policy、target OS/arch、entrypoint、全file digest、Rust protocol、schema/policy revisionを固定する。system Nodeを使う場合もversion/capability照合後だけ起動し、download、PATH fallback、Bun fallbackを行わない。
+
+| port | 入力 | 出力 / fail-close |
+|---|---|---|
+| `RuntimeBundleVerifier` | manifest、signature trust、target、file tree | verified bundle handle。不一致ならprocess生成0 |
+| `NodeEntrypointResolver` | verified handle、command | absolute Node executableとESM argv。PATH文字列を返さない |
+| `SqliteRuntimePort` | canonical DB operation、transaction policy | typed result/receipt。driver固有値をdomainへ漏らさない |
+| `HookProcessPort` | bounded event frame、deadline、classification | bounded response/exit meaning。visible shellを生成しない |
+| `BanInventoryPort` | tracked tree、bundle tree、runtime receipt | detector別findingとcoverage receipt。parse不能を欠測としてRed |
+| `AtomicBundleActivator` | verified new/old bundle、lease state | all-or-nothing activation/rollback。Node/Rust片側更新を禁止 |
+
+本節はL8 `IT-NODE-CUTOVER-001..012`と対にする。各testは対象revision、bundle digest、inventory digestを保存し、別attemptのRust/Node結果を寄せ集めてGreenにしない。

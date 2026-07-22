@@ -391,3 +391,21 @@ snapshot一時directoryの掃除だけでは本負債の完了証拠にならな
 downstreamは `PLAN-L5-25`、`PLAN-L6-92`、`PLAN-L7-454` とする。当初予定した`PLAN-L5-24`と`PLAN-L6-89`は
 別branchの正規PLANと衝突したため再利用しない。各draftの実在後も、layer-monotonicity、参照実在性、L5↔L8・L6↔L7の
 pair freezeを検出器で確認してからconfirmedへ昇格する。
+
+## 10. Node control-plane cutover / Bun永久禁止
+
+PO判断（2026-07-22）によりBunは恒久禁止とする。TypeScript domainはNode control planeで実行し、Rustはprivileged OS custodyだけを所有する。移行は次の一方向state machineで行う。
+
+| state | exit条件 | 禁止事項 |
+|---|---|---|
+| `inventory_frozen` | source/test/config/hook/CI/Pack/runtimeのBun inventoryとNode代替ownerを固定 | 未登録Bun参照、新規Bun追加 |
+| `node_shadow` | 同一fixtureのcanonical receipt parity | Bun結果を正本化、差分黙殺 |
+| `node_primary` | NodeだけでCLI/hook/detector/SQLite/test/Packを実行 | Node失敗時のBun fallback |
+| `bun_removed` | lockfile、imports、commands、setup、compatibility codeを物理削除 | 期限なしallowlist、parked shim |
+| `sealed` | 同一HEAD/bundleでNode/Rust/zero/Pack aggregate Green | 欠測、skip、別attempt集約 |
+
+各surfaceは`Node replacement Green → entrypoint切替 → 旧経路negative化 → 削除`の順で処理する。Node代替前に検出器を削除して検出能力を落とすこと、Node primary後にBunを検出器runtimeとして残すことを禁止する。
+
+Bun ban detectorはmanifest/lockfile、静的import、dynamic import、spawn argv、workflow/hook/setup、generated Pack、runtime process imageを別scannerとして検査し、coverage receiptとOR集約する。コメント・negative fixtureの例外はdetector ID、owner、理由、expiryを必須とし、production pathのallowlistを認めない。parse不能、scanner欠測、observer gapはfinding 0ではなくRedである。
+
+受入はL9 `ST-NODE-CUTOVER-01..12`とAC-RGK-15の積集合とする。Bun未導入clean Windows/Linux、Node detector self-host、SQLite/hook parity、atomic Node+Rust bundle rollback、runtime Bun process 0、tracked Bun production reference 0が同一revisionで揃うまで本PLANをconfirmしない。
