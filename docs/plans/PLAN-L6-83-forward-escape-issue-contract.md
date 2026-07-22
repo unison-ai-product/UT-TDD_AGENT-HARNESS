@@ -49,9 +49,9 @@ Execution LedgerのeventとPLAN revisionが追跡スパインであり、追加I
 
 一方、Forwardの正規辺を外れて先行調査、PoC、障害復旧、逆引き、設計戻し、負債返済などへ遷移する場合は、
 その理由と戻り先を失わないため **off-Forward Issueを遷移前に必須化**する。対象modeは少なくとも
-Reverse / Recovery / Incident / Discovery / Scrum / Refactor / Retrofit / Add-feature / Research /
+Reverse / Redesign / Recovery / Incident / Discovery / Scrum / Refactor / Retrofit / Add-feature / Research /
 Design-bottomup / Version-upである。`blocked` / `rejected` / `reopened` / `superseded` / `preemptive` /
-`defer`はescape typeであり、signalとoriginからこの11駆動モデルの一つを明示選択する。未知mode・未選択はfail-closeする。
+`defer`はescape typeであり、signalとoriginからこの12駆動モデルの一つを明示選択する。未知mode・未選択はfail-closeする。
 
 ## 2. Command / value object契約
 
@@ -71,7 +71,9 @@ Design-bottomup / Version-upである。`blocked` / `rejected` / `reopened` / `s
 | `reentry_target_state` | 合流を試行するForward FSM state |
 | `issue_projection` | GitHub owner/repository、title/body/labelsのprojection指示 |
 
-`drive_model`はL4 function §3.1の11値を正本とし、`drive: be|fe|fullstack|db|agent|normal`とは別value objectとする。
+`drive_model`はL4 function §3.1の12値を正本とし、`drive: be|fe|fullstack|db|agent|normal`とは別value objectとする。
+Redesign は `design_to_implementation`、先行実装 `discarded|none`、`supersedes` 一件、Forward 合流後の
+実装 PLAN target を必須とする。Reverse の `implementation_to_design` / 実装保持と取り違えた入力はfail-closeする。
 Issue body、Execution Ledger event、PLAN `route_mode`の3面が同じ正規化値を持つまで遷移を許可しない。
 テンプレートのcheckboxや自由記述が存在するだけでは選択済みと判定しない。
 

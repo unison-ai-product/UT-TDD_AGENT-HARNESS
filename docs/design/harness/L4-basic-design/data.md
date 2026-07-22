@@ -272,8 +272,9 @@ revision write-setと全member（`expectedPreimage`を含む）の`prepared` int
 escape type/reason/recurrence identity、選択drive、re-entry target、last sequence/event digestを持つ。
 履歴正本はE0-E15 event、current stateはそのreduction projectionである。
 
-`DriveModel`はL4 function §3.1の駆動モデル11値
-`discovery | scrum | reverse | recovery | incident | refactor | retrofit | add-feature | research | design-bottomup | version-up`
+`DriveModel`はL4 function §3.1の駆動モデル12値 (Discovery / Scrum / Reverse / Redesign /
+Recovery / Incident / Refactor / Retrofit / Add-feature / Research / design-bottomup / version-up)
+`discovery | scrum | reverse | redesign | recovery | incident | refactor | retrofit | add-feature | research | design-bottomup | version-up`
 をcanonical enumとする。PLAN `route_mode`は同じ値を使い、`drive: be|fe|fullstack|db|agent|normal`は
 実装領域を表す別型として混入を拒否する。`blocked | rejected | reopened | superseded | preemptive | defer`は
 escape reason/typeであり、drive選択前に11値のいずれかへrouteする。GitHub labelやbranch prefixを第二enumにせず、

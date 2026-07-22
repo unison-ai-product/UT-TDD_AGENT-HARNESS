@@ -195,7 +195,7 @@ cross-agent review は **別 runtime / 別モデルのレビュアー**を前提
 3. ② のレビュー観点は曖昧にせず **明文化された checklist を逐条評価** し、各項目に pass/fail/n-a + 根拠を記録する (checklist 正本は要件定義書 §7.8.7)。
 4. `orchestration_mode` (§2.6.4) が要求する agent が execution mode で不在なら、silent fallback せず **縮退規則**で別 mode に落とすか人間に委ねる (不在を明示記録)。例: `claude_judge_codex_impl` は hybrid のみ完全実体化。claude-only では実装も Claude が担い review は ② に縮退、codex-only では Codex 主導 + ②。
 5. **escalation 境界 (本番影響 / 認証 / 認可 / 決済 / PII / ライセンス / destructive) は execution mode を問わず人間サインオフ必須** (② でも代替不可。hard-block。§8 エスカレーションと整合)。
-6. **定量テスト → 定性レビュー順序 (全駆動モデル普遍、IMP-077)**: 品質保証は定量テスト (vitest/doctor/lint) × 定性レビュー (review tier) の二軸 (柱6)。**定量検証が green になってから定性レビューを行う** (未検証成果物をレビューしない)。9 駆動モデルすべての workflow に普遍 (各 mode の verify step が review/サインオフ step の前。Discovery=S3 verify→S4 / Refactor=テスト緑→commit / Incident=収束確認→postmortem 等)。機械着地 = review_evidence の `tests_green_at ≤ reviewed_at` を doctor `checkReviewEvidence` が fail-close 検出。PLAN-L6-14/L7-15/REVERSE-14。
+6. **定量テスト → 定性レビュー順序 (全駆動モデル普遍、IMP-077)**: 品質保証は定量テスト (vitest/doctor/lint) × 定性レビュー (review tier) の二軸 (柱6)。**定量検証が green になってから定性レビューを行う** (未検証成果物をレビューしない)。12 駆動モデルすべての workflow に普遍 (各 mode の verify step が review/サインオフ step の前。Discovery=S3 verify→S4 / Redesign=pair-freeze→Forward 合流判定 / Refactor=テスト緑→commit / Incident=収束確認→postmortem 等)。機械着地 = review_evidence の `tests_green_at ≤ reviewed_at` を doctor `checkReviewEvidence` が fail-close 検出。PLAN-L6-14/L7-15/REVERSE-14。
 
 機械検証要件と checklist 正本は要件定義書 §7.8.7。
 
@@ -382,7 +382,7 @@ v2.1 では「4 artifact pair freeze」が実装前後を跨いで曖昧だっ�
 
 入口の状況に応じて **9 mode + 2 工程専門 workflow** を使い分け、**出口は必ず Forward L0-L14 (§3) に合流** させる。mode は「入口条件」と「文脈遷移 (昇華)」を明示するだけで、完了先 (設計・実装・検証・運用の同一接続) を分断しない。これにより入口を散らさず工程を一本化する。
 
-> **IMP-069 reconcile (PO 2026-06-05「Forward=spine」確定、operational 正本 = L4 function §3)**: 本表は legacy framing として **Forward を 9 mode の 1 行に算入**しているが、出口が必ず Forward へ合流する以上 **Forward は駆動モデルと並ぶ入口 mode でなく合流先 (spine)** である。operational には **Forward spine + 9 駆動モデル (entry mode、= `docs/process/modes/` の 9 = 上表 8 + Research) + 2 工程専門** で数える。Research は本表に未掲載だが `kind=research` / `research/*` branch として駆動モデルの 1 つ (modes/README §3 が両 framing の橋渡し正本)。L5 以降の mode カウントは operational 正本に従う。
+> **IMP-069 reconcile (PO 2026-06-05「Forward=spine」確定、operational 正本 = L4 function §3)**: 本表は legacy framing として **Forward を 9 mode の 1 行に算入**しているが、出口が必ず Forward へ合流する以上 **Forward は駆動モデルと並ぶ入口 mode でなく合流先 (spine)** である。operational には **Forward spine + 12 駆動モデル (entry mode、legacy 表の 8 に Research / design-bottomup / version-up / Redesign を追加) + 2 工程専門** で数える。Research と追加 3 mode は本表に未掲載だが `docs/process/modes/README.md` の正本台帳へ登録する。Redesign は設計を先に差し替えて Forward へ合流し、その設計から実装へ降下する。実装事実を設計へ戻す Reverse とは遷移方向が逆である。L5 以降の mode カウントは operational 正本に従う。
 
 | mode | 入口条件 (要約) | 対応する旧 v3.0 経路 | チーム owner | Forward 合流点 |
 |------|----------------|---------------------|--------------|----------------|
@@ -1145,8 +1145,8 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **進め方手順書 (= PLAN)** | 工程をきれいに前へ進める段取り / 軌跡 / TODO。機能内容そのものは記述しない (それは L3 要件定義書 / 機能一覧の領域) | L0 | L1 |
 | **工程進捗プラン** | Forward V-model の背骨を L0→L14 へ進める PLAN (メタモデル ① 必須スケルトン) | L0 | — |
 | **駆動モデルプラン (駆動プラン)** | 工程進捗の途中で介在する内部ドライブ PLAN (メタモデル ② ケースバイケース)。「検証へ行く (kind=poc)」か「ドキュメントへ戻す (kind=reverse, fullback)」かで分離 | L0 | — |
-| **駆動モデル (entry mode、11 種)** | 状況 signal で発動する入口 mode の現在集合 = Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit / Add-feature / Research / design-bottomup / version-up (= `docs/process/modes/`、Forward 除く)。出口は必ず Forward spine へ合流。kind と非1:1 (Discovery/Scrum/design-bottomup=poc / Incident=troubleshoot+recovery / Add-feature=add-design+add-impl / version-up=既存 kind + `version_target`)。**legacy「9-mode ecosystem」(下記、Forward+8・Research 除く) とは同一 universe の別グルーピング、橋渡し = modes/README §3**。L4 function §3.1 が外部設計 (入口/状態遷移/出口/担当 block/gate) を確定 | L0 | L4 |
-| **Forward spine (主線)** | L0-L14 V-model 本線。駆動モデルが出口で合流する終着であり、駆動モデルと並ぶ「mode の 1 つ」ではない (IMP-069 reconcile、PO 2026-06-05「Forward=spine」確定)。operational 正本 mode 構成 = Forward spine(1) + 駆動モデル(11、Research / design-bottomup / version-up 含む) + 工程専門(screen/frontend、2) | L0 | L4 |
+| **駆動モデル (entry mode、12 種)** | 状況 signal で発動する入口 mode の現在集合 = Discovery / Scrum / Reverse / **Redesign** / Recovery / Incident / Refactor / Retrofit / Add-feature / Research / design-bottomup / version-up (= `docs/process/modes/`、Forward と Verify を除く)。出口は必ず Forward spine へ合流。Reverse は実装から設計へ事実を追従して合流し、Redesign は設計を先に差し替えて合流後に実装へ降下する。kind と非1:1 (Discovery/Scrum/design-bottomup=poc / Redesign=design|add-design / Incident=troubleshoot+recovery / Add-feature=add-design+add-impl / version-up=既存 kind + `version_target`)。**legacy「9-mode ecosystem」(下記、Forward+8・Research 除く) とは同一 universe の別グルーピング、橋渡し = modes/README §3**。L4 function §3.1 が外部設計 (入口/状態遷移/出口/担当 block/gate) を確定 | L0 | L4 |
+| **Forward spine (主線)** | L0-L14 V-model 本線。駆動モデルが出口で合流する終着であり、駆動モデルと並ぶ「mode の 1 つ」ではない (IMP-069 reconcile、PO 2026-06-05「Forward=spine」確定)。operational 正本 mode 構成 = Forward spine(1) + 駆動モデル(12、Redesign / Research / design-bottomup / version-up 含む) + Verify 右肺入口(1) + 工程専門(screen/frontend、2) | L0 | L4 |
 | **triage (maturity 判定)** | item の成熟度を判定し「どの検証が要るか」を決める PLAN の役割。検証は opt-in (必須でない) | L0 | — |
 | **確証なき設計 (Discovery 適用拡張)** | 紙上で実現性・妥当性が確定できない設計。確証を装って Forward 凍結せず Discovery (kind=poc) として起票し「設計→仮実装→検証→設計確定」で確定する (§2.5、PLAN-DISCOVERY-01 S4 confirmed 2026-06-04) | L0 | L3 |
 | **検証ツールボックス** | opt-in の検証種別: Web 検証 (L0) / 概念検証 (L1) / 技術検証 (L3)。triage で必要時のみ発動、default cascade だが rigid でない | L0 | — |

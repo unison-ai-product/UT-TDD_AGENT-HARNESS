@@ -34,7 +34,9 @@ dependencies:
 R0 で U-EXISSUE-001..006 の Red→Green 実装 (src/execution/forward-escape.ts) を観測する。
 R1-R3 で実装事実と L6-83 §2-§5 の差分だけを記録する (gap-only):
 
-- 11 駆動モデル enum / escape signal 分類表が L6-83 §1 の閉じた分類と一致するか。
+- Redesign を含む12駆動モデル enum / escape signal 分類表が L6-83 §1 の閉じた分類と一致するか。
+- Reverse（実装→設計→Forward、実装保持）とRedesign（設計→Forward→実装、先行実装破棄/不存在）の
+  direction / implementation disposition / supersedes / implementation target が設計・test-design双方で対になるか。
 - payload digest の正準化範囲が §2 冪等 key 契約を過不足なく写像するか。
 - `U-EXISSUE-*` を docs/test-design/harness/L7-unit-test-design.md へ登録する。
 - L7-436 (episode 集約) 実装時に本契約関数へ委譲する接続点を確定する。

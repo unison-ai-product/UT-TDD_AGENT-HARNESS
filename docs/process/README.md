@@ -48,7 +48,7 @@ drive は「**その PLAN にどの専門職 (specialist) / 専門エージェ�
 
 1. **[forward/overview.md](forward/overview.md)** — Forward (本体経路) の V-model L0-L14 と V-pair の全体像。まずここ。
 2. **forward/** 各工程詳細 — [L00-L06 設計フェーズ](forward/L00-L06-design-phase.md) (左腕) / [L07 実装](forward/L07-implementation.md) (谷) / [L08-L14 検証フェーズ](forward/L08-L14-verification-phase.md) (右腕)。
-3. **[modes/README.md](modes/README.md)** — 駆動モデル (mode) 正本台帳。Forward 以外の入口 (Discovery / Reverse / Recovery / Incident / Refactor / Retrofit / Add-feature / Scrum / Research)。**どの mode も出口は Forward に合流**する。
+3. **[modes/README.md](modes/README.md)** — 駆動モデル (mode) 正本台帳。Forward 以外の 12 入口 (Discovery / Scrum / Reverse / Redesign / Recovery / Incident / Refactor / Retrofit / Add-feature / Research / Design-bottomup / version-up)。Verify は同じ routing surface を使う右肺専用入口として別記する。**どの mode も出口は Forward に合流**する。
 4. **[gates.md](gates.md)** — ゲート体系 G0.5-G14 + 人間サインオフ必須ゲート + 横断検出。
 
 ---

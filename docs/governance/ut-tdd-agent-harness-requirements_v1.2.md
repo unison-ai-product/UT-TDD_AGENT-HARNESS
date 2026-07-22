@@ -1186,12 +1186,14 @@ GitHub Issue を必須化してはならない。発注元 Issue が既にある
 Forward の状態遷移条件にしない。
 
 作業が通常 Forward を離れる時だけ、**GitHub Issue を typed Forward escape の外部境界として必須化**する。
-対象は11駆動モデル (Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit /
+対象は12駆動モデル (Discovery / Scrum / Reverse / Redesign / Recovery / Incident / Refactor / Retrofit /
 Add-feature / Research / design-bottomup / version-up) への退出と、block / reject / reopen / supersede /
-preemptive work / time-bounded defer である。後者はescape typeとして11駆動モデルの一つへ明示routeする。
+preemptive work / time-bounded defer である。後者はescape typeとして12駆動モデルの一つへ明示routeする。
 Execution Ledger が正本であり、GitHub はその冪等 projection とする。
 旧仕様「全作業を Issue 起点とする」は本節で supersede する。
 escape では drive model、origin、再合流先、Issue 投影証跡を束縛し、通常 Forward のために空 Issue を捏造しない。
+Redesign は `design_to_implementation`、先行実装 `discarded|none`、差替え対象 `supersedes` 一件、
+Forward 合流後の実装 PLAN を必須にする。Reverse の `implementation_to_design` / 実装保持とは相互に代替しない。
 
 通常 Forward:
 
@@ -2179,7 +2181,7 @@ cross-agent review は別 runtime / 別モデルが前提のため、単一エ�
 >
 > **cross-review semantic 強制 (IMP-076、2026-06-05)**: 上記は review 前置の **presence + review_kind** までを機械強制した。下表「`same_model_approval` を実行時強制」(worker と reviewer の (provider,model) 一致時に承認無効化) の機械着地として、review_evidence entry に **`worker_model` / `reviewer_model`** を追加し、`checkReviewEvidence` が `review_kind=cross_agent` の entry で両 model の同一/欠落を `crossReviewViolations` として fail-close 検出する。単体 runtime (claude-only/codex-only) は相異 model を供給できないため `cross_agent` を僭称できない (self-review が cross-agent に化けるのを静的に防ぐ)。サブエージェント配置 (orchestration_mode cell / worker roster) + checklist 逐条記録は別 scope (defer)。導入 = PLAN-L6-13 / L7-14 / REVERSE-13。
 >
-> **定量テスト → 定性レビュー順序 (IMP-077、2026-06-05、全駆動モデル普遍)**: 品質保証二軸 (定量テスト × 定性レビュー、§6) の**順序**を機械強制。**定量検証 (vitest/doctor/lint) green 後に定性レビュー**を行う (未検証成果物をレビューしない)。review_evidence entry に **`tests_green_at`** を追加し、`checkReviewEvidence` が confirmed PLAN の review_evidence について `tests_green_at` 欠落 or `> reviewed_at` を `testBeforeReviewViolations` として fail-close 検出。**9 駆動モデルすべての workflow に適用** (各 mode の verify step が review step の前、concept §2.1.2.1 核心ルール 6)。導入 = PLAN-L6-14 / L7-15 / REVERSE-14。
+> **定量テスト → 定性レビュー順序 (IMP-077、2026-06-05、全駆動モデル普遍)**: 品質保証二軸 (定量テスト × 定性レビュー、§6) の**順序**を機械強制。**定量検証 (vitest/doctor/lint) green 後に定性レビュー**を行う (未検証成果物をレビューしない)。review_evidence entry に **`tests_green_at`** を追加し、`checkReviewEvidence` が confirmed PLAN の review_evidence について `tests_green_at` 欠落 or `> reviewed_at` を `testBeforeReviewViolations` として fail-close 検出。**12 駆動モデルすべての workflow に適用** (各 mode の verify step が review step の前、Redesign は pair-freeze 後に Forward 合流判定、concept §2.1.2.1 核心ルール 6)。導入 = PLAN-L6-14 / L7-15 / REVERSE-14。
 
 > **定量 green profile 証跡 (IMP-108、2026-06-23)**: `tests_green_at` は「いつ green だったか」だけを示し、どの command / runner / scope / exit code / evidence が green だったかを機械再現できない。2026-06-23 以降に更新された confirmed/completed の `review_evidence` は **`green_commands[]`** を必須とし、`kind` / `command` / `runner` / `scope` / `exit_code=0` / `evidence_path` / `output_digest=sha256:*` を `checkReviewEvidence` が hard violation (`greenCommandViolations`) として検査する。これにより「green はテスト済みで証跡 ID/パスが紐づいている」状態だけを green と扱い、DB projection の `GreenDefinition` / `test_runs` / `quality_signals` へ接続する。導入 = PLAN-L7-108 / REVERSE-108。
 

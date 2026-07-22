@@ -27,6 +27,7 @@ Forward (本体) は `../forward/` に定義する。本 dir は **Forward 以�
 | **Discovery** | [discovery.md](discovery.md) | `poc` | 専門職継承 (be/fe/fullstack/db/agent) | `cross` | **S0-S4** | po + tl | — | confirmed → L1 (要求) / L3-L6 設計 (終点で Reverse 昇華) |
 | **Scrum** | [scrum.md](scrum.md) | `poc` | 専門職継承 | `cross` | **S0-S4** | po + aim | — | S4 decide → L1 (increment は Reverse fullback で昇華) |
 | **Reverse** | [reverse.md](reverse.md) | `reverse` | 専門職継承 (逆引き対象) | `cross` | **R0-R4** | tl | po (R3 Intent 検証、§1.8 fail-close) | R4 `forward_routing` → L1/L3/L4/L5/gap-only (schema enum) |
+| **Redesign** | [redesign.md](redesign.md) | `design` / `add-design` | 専門職継承 (再設計対象) | `L1-L6` | 禁止 | aim + tl | pair-freeze / 設計 owner | `design_to_implementation` で設計差替え → Forward 合流 → 指定実装 PLAN |
 | **Design-bottomup** | [design-bottomup.md](design-bottomup.md) | `poc` | 専門職継承 (多くは `fe` / `fullstack`) | `cross` | **S0-S4** (Discovery 合成) | aim + uiux | — | backend-derived FE 要件 → L1 screen / L2 画面設計 |
 | **Recovery** | [recovery.md](recovery.md) | `recovery` | 専門職継承 (復旧対象、例 fullstack) | `cross` | **禁止** (phase なし) | tl + po | tl (再開点) + po (スコープ) | 収束後 → 中断工程 / 再発防止 → L14 |
 | **Incident** | [incident.md](incident.md) | `troubleshoot` + `recovery` (内包) | 専門職継承 (障害対象) | `L7` (troubleshoot) / `cross` (recovery) | 禁止 | オンコール + tl + pm | オンコール + tl + pm の三者 | 収束後 → L12/L13 / 恒久対策 → L1-L6 / postmortem → L14 |
@@ -53,7 +54,7 @@ concept §2.5 の **9-mode** は legacy framing として **Forward + 上表 8 m
 | 補助 1 系 | Recovery / Incident |
 | v3.1 新規 | Refactor / Retrofit |
 | 前段調査 | Research (§2.5 9-mode 外。kind/branch として正本) |
-| 9-mode 後の追加 | Design-bottomup / version-up / Verify |
+| 9-mode 後の追加 | Design-bottomup / version-up / Redesign / Verify |
 | **工程専門** (mode でない) | screen-design (Forward L2 内) / frontend-design (Forward L10 内) — concept §2.5、独立経路にせず Forward 設計文脈の工程専門として運用 |
 
 ---
@@ -63,6 +64,7 @@ concept §2.5 の **9-mode** は legacy framing として **Forward + 上表 8 m
 | signal | mode |
 |--------|------|
 | `drift` (schema/contract) | Reverse (normalization) |
+| `redesign` / `design_correction` / `design_replacement` / `design_revision` | Redesign |
 | `debt_degradation` / `code_smell` / `structural` | Refactor |
 | `dependency_outdated` / `upgrade` / `config_drift` | Retrofit |
 | `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` | Recovery (承認必須) |
@@ -87,6 +89,7 @@ concept §2.5 の **9-mode** は legacy framing として **Forward + 上表 8 m
   subcommand は CLI に実在しなければならない (`tests/cited-command-existence.test.ts` が CI fail-close)。
   未実装コマンドを意図的に引用する行は「実装予定」または「未実装」を同一行に明記する。
 - **mode 連鎖**: Discovery 終点 → Reverse 昇華 / Scrum increment → Reverse fullback / Incident・Add-feature の前段に Discovery (要件未確定時) or Reverse (既存逆引き時) / Retrofit の影響評価前段に Reverse (`upgrade`) / Research で「作れるか不明」→ Discovery 切替 / **Add-feature (最頻) の bottom-up build (L6/L7) → 後段 Reverse fullback で L3 要件 back-fill (常態、add-feature.md §1.1 経路 B)**。
+- **Reverse / Redesign の方向分離**: 実装を保持し事実を設計へ戻す経路は Reverse (`implementation_to_design`)。設計を先に差し替え、先行実装を破棄済みまたは未存在として Forward 合流後に実装する経路は Redesign (`design_to_implementation`)。Redesign は `supersedes` 一件と後続実装 PLAN を必須にする。
 
 ---
 
@@ -103,6 +106,7 @@ concept §2.5 の **9-mode** は legacy framing として **Forward + 上表 8 m
 | Forward (impl) | 同上 | `feature/*` | **G7 trace freeze で全量 CI (本命アンカー)** | G7 merge |
 | Discovery / Scrum | requirement_undefined / user_feedback | `poc/*` | **CI 回さない** (使い捨て)。confirmed→Reverse→`feature/*` | Reverse 合流時 |
 | Reverse | drift / fullback | `reverse/*` | R4 routing 先 `feature/*` の G7 | Forward 合流時 |
+| Redesign | audit / PoC throwaway / design replacement | `work/redesign-*` | 設計差替え pair-freeze + Forward 合流後の実装 G7 | 後続実装・右腕検証完了時 |
 | Incident / Recovery | regression_prod / regression_dev | `hotfix/*` | 緊急 harness-check サブセット | hotfix merge + 恒久対策は別 Issue |
 | Add-feature | feature_addition | `add/*` | 親 PLAN と同 PR | merge → **最頻は後段 `reverse/*` で L3 要件 back-fill** (§1.1 経路 B) |
 | Refactor / Retrofit | debt_degradation / dependency_outdated **or improvement-backlog** | `refactor/*` | L7 内 G7 | merge |
@@ -188,6 +192,7 @@ managed as TDD-style loops. The common rule is:
 | Add-feature | strong | `feature_addition`, `scope_extension`, `acceptance_gap` |
 | Refactor | strong | `code_smell`, `structural`, `debt_degradation`, `artifact_progress_red` |
 | Reverse | strong | `drift`, `schema_contract_gap`, `as_is_test_design_missing` |
+| Redesign | strong | `design_correction`, `design_replacement`, `design_revision`, throwaway PoC / audit finding |
 | Retrofit | strong | `dependency_outdated`, `upgrade`, `config_drift`, stale `dependency_edges` |
 | Recovery / Incident | strong | `regression_dev`, `regression_prod`, `forced_stop`, failing `quality_signals` |
 | screen-design | strong | `screen_requirement_gap`, `wireframe_missing`, `screen_impl_pair_gap` |

@@ -59,7 +59,9 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 `src/github/node-gh-forward-escape-issue-port.ts` と対応testの生成所有者は
 PLAN-RECOVERY-16であり、本PLANはその既存資産を参照して契約oracleと変更traceを保持する。
 
-- 11 駆動モデルを閉じた enum で固定 (技術 drive とは別 value object、混入 fail-close)。
+- Redesign を含む12駆動モデルを閉じた enum で固定 (技術 drive とは別 value object、混入 fail-close)。
+- Redesign は `design_to_implementation` + `discarded|none` + `supersedes` 一件 + 後続実装 target、
+  Reverse は `implementation_to_design` + 実装保持として交差変異をfail-closeする。
 - 冪等 payload digest による command 再送/改変再利用の判別。
 - GitHub 障害時は `IssueProjectionDeferred` (event 非損失・throw なし)。
 - cross-review FLAG追補として、Ledger実在revision/state lookup、opaque E2 custody、SQLite durable projection
