@@ -1,6 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   type GitCommandPort,
@@ -10,7 +9,7 @@ import {
 } from "../src/git/trusted-git-blob-resolver.js";
 import { analyzeDependencyDrift, loadDependencyDriftInput } from "../src/lint/dependency-drift.js";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = process.cwd();
 const commitOid = "a".repeat(40);
 const blobOid = "b".repeat(40);
 const sourcePath = "docs/plans/PLAN $(literal);[x].md";

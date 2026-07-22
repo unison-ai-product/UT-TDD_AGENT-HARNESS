@@ -37,6 +37,7 @@ plan-asset/authoring-command-group:1 plan-asset/plan-redesign-bundle:9
 genesis-adoption-production:1
 plan-asset/genesis-adoption-production-chain:1 plan-asset/genesis-adoption-tracked-contract:2
 plan-asset/genesis-projection-outbox:4
+trusted-git-blob-resolver:1
 `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(

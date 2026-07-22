@@ -199,6 +199,7 @@ dependencies:
     - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     - docs/plans/PLAN-L7-441-plan-draft-recovery-convergence.md
+    - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
     - docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md
 review_evidence:
