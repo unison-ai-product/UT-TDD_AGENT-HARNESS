@@ -128,6 +128,72 @@ describe("NodeGenesisAdoptionRunner", () => {
   });
 
   it.each([
+    ["deleted", { targetAbsent: true }, "genesis-adoption-reentry-target-missing"],
+    [
+      "stale",
+      { targetSource: targetSource().replace("target body", "stale body") },
+      "genesis-adoption-reentry-target-content-drift",
+    ],
+  ] as const)("U-GEN-025: existing reentry targetの%sをtransaction前に拒否する", (_name, drift, rule) => {
+    const f = fixture(drift);
+    expect(() => f.runner.run(f.manifest)).toThrow(rule);
+    expect(f.adopt).not.toHaveBeenCalled();
+  });
+
+  it("U-GEN-026: planned targetがtrusted HEADに既存なら種別偽装として拒否する", () => {
+    const f = fixture();
+    expect(() =>
+      f.runner.run({
+        ...f.manifest,
+        reentry_target: {
+          kind: "planned",
+          path: f.manifest.reentry_target.path,
+          plan_id: f.manifest.reentry.target_plan_id,
+          revision: f.manifest.reentry.target_revision,
+        },
+      }),
+    ).toThrow("genesis-adoption-planned-target-exists");
+    expect(f.adopt).not.toHaveBeenCalled();
+  });
+
+  it("U-GEN-026: planned targetはtrusted HEADで不存在の場合だけ受理する", () => {
+    const f = fixture({ targetAbsent: true });
+    expect(
+      f.runner.run({
+        ...f.manifest,
+        reentry_target: {
+          kind: "planned",
+          path: f.manifest.reentry_target.path,
+          plan_id: f.manifest.reentry.target_plan_id,
+          revision: f.manifest.reentry.target_revision,
+        },
+      }),
+    ).toMatchObject({ ok: true });
+    expect(f.adopt).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["plan ID", { plan_id: "PLAN-L6-99-forged" }],
+    ["revision", { revision: 2 }],
+    ["path", { path: "docs/plans/PLAN-L6-99-forged.md" }],
+  ] as const)("U-GEN-028: planned targetの%s自己申告をroute identity不一致で拒否する", (_name, patch) => {
+    const f = fixture({ targetAbsent: true });
+    expect(() =>
+      f.runner.run({
+        ...f.manifest,
+        reentry_target: {
+          kind: "planned",
+          path: "docs/plans/PLAN-L7-452-forward-escape-contract-red.md",
+          plan_id: f.manifest.reentry.target_plan_id,
+          revision: f.manifest.reentry.target_revision,
+          ...patch,
+        },
+      }),
+    ).toThrow("genesis-adoption-planned-target-identity-mismatch");
+    expect(f.adopt).not.toHaveBeenCalled();
+  });
+
+  it.each([
     ["blob", { blobOid: "f".repeat(40) }, "genesis-adoption-source-blob-drift"],
     [
       "content",
@@ -203,6 +269,8 @@ function fixture(
     branch?: string;
     blobOid?: string;
     source?: string;
+    targetAbsent?: boolean;
+    targetSource?: string;
     durable?: boolean;
     projectionStates?: Array<"recovery_required" | "projected">;
     adoptResults?: Array<
@@ -244,12 +312,26 @@ function fixture(
       head: () => drift.head ?? value.source.commit,
       branch: () => drift.branch ?? value.issue.branch,
       repositoryIdentity: () => drift.repositoryIdentity ?? value.repository_identity,
-      resolveBlob: () => ({
-        commitOid: value.source.commit,
-        sourcePath: value.source.path,
-        blobOid: drift.blobOid ?? value.source.blob_oid,
-        bytes: Buffer.from(drift.source ?? source()),
-      }),
+      resolveBlob: (_commit, path) => {
+        if (path === value.reentry_target.path) {
+          if (drift.targetAbsent) throw new Error("trusted-git-source-not-found");
+          return {
+            commitOid: value.source.commit,
+            sourcePath: path,
+            blobOid:
+              value.reentry_target.kind === "existing"
+                ? value.reentry_target.blob_oid
+                : "c".repeat(40),
+            bytes: Buffer.from(drift.targetSource ?? targetSource()),
+          };
+        }
+        return {
+          commitOid: value.source.commit,
+          sourcePath: value.source.path,
+          blobOid: drift.blobOid ?? value.source.blob_oid,
+          bytes: Buffer.from(drift.source ?? source()),
+        };
+      },
       transaction: { adopt },
       projectionOutbox: { dispatch },
     }),
@@ -261,8 +343,8 @@ function manifest(): GenesisAdoptionManifest {
   const contract = issueContract();
   const origin = { plan_id: "PLAN-L4-31", revision: 1, digest: `sha256:${sourceDigest}` };
   const reentry = {
-    target_plan_id: "PLAN-L4-31",
-    target_revision: 2,
+    target_plan_id: "PLAN-L7-452-forward-escape-contract-red",
+    target_revision: 1,
     phase: "forward_merge" as const,
   };
   return {
@@ -281,6 +363,12 @@ function manifest(): GenesisAdoptionManifest {
       commit: "a".repeat(40),
       blob_oid: "b".repeat(40),
       content_digest: sourceDigest,
+    },
+    reentry_target: {
+      kind: "existing",
+      path: "docs/plans/PLAN-L7-452-forward-escape-contract-red.md",
+      blob_oid: "c".repeat(40),
+      content_digest: sha(targetSource()),
     },
     issue: {
       number: 129,
@@ -302,9 +390,9 @@ function issueContract() {
     origin_state: "confirmed",
     escape_reason: "legacy PlanAsset genesis adoption",
     drive_model: "redesign",
-    reentry_target_asset_id: "PLAN-L4-31",
-    reentry_target_revision_id: "2",
-    reentry_target_layer: "L4",
+    reentry_target_asset_id: "PLAN-L7-452-forward-escape-contract-red",
+    reentry_target_revision_id: "1",
+    reentry_target_layer: "L7",
     reentry_target_state: "forward_merge",
     issue_projection: {
       owner: "unison-ai-product",
@@ -314,6 +402,10 @@ function issueContract() {
     },
     plan_id: "PLAN-L4-31",
   };
+}
+
+function targetSource(): string {
+  return "---\nplan_id: PLAN-L7-452-forward-escape-contract-red\nlayer: L7\nstatus: draft\n---\n\ntarget body\n";
 }
 
 function routeDigest(

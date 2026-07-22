@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { createProductionGenesisAdoptionCommandRunner } from "../src/cli/genesis-adoption-production.js";
+import { renderForwardEscapeIssueBody } from "../src/execution/forward-escape.js";
 import type {
   GenesisAdoptionManifest,
   GenesisAdoptionProjectionOutboxPort,
@@ -27,6 +29,7 @@ describe("genesis adoption production composition", () => {
     const dispatchCommand = vi.fn(() => ({ scanned: 1, projected: 1, recoveryRequired: 0 }));
     const openDispatcher = vi.fn(() => ({ dispatcher: { dispatchCommand }, close }));
     const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
+      observeIssue,
       openDispatcher,
       createRunner: (_root, projection) => successfulRunner(projection),
     });
@@ -43,6 +46,7 @@ describe("genesis adoption production composition", () => {
   it("U-GEN-021: trusted binding mismatch時はremote/DB dispatcherを起動しない", () => {
     const openDispatcher = vi.fn();
     const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
+      observeIssue,
       openDispatcher,
       createRunner: () => ({
         run: () => {
@@ -58,6 +62,7 @@ describe("genesis adoption production composition", () => {
   it("U-GEN-022: command-specific dispatch失敗時も全resourceをcloseする", () => {
     const close = vi.fn();
     const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
+      observeIssue,
       openDispatcher: () => ({
         dispatcher: {
           dispatchCommand: () => {
@@ -71,6 +76,24 @@ describe("genesis adoption production composition", () => {
 
     expect(() => runner.run(manifest())).toThrow("remote-down");
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("U-GEN-027: actual GitHub Issue偽装をlocal runner/Plan DB open前に拒否する", () => {
+    const createRunner = vi.fn(() =>
+      successfulRunner({
+        dispatch: () => ({ durable: true, state: "projected" }),
+      }),
+    );
+    const openDispatcher = vi.fn();
+    const runner = createProductionGenesisAdoptionCommandRunner("C:/repo", {
+      createRunner,
+      openDispatcher,
+      observeIssue: (input) => ({ ...observeIssue(input), body: "forged issue body" }),
+    });
+
+    expect(() => runner.run(manifest())).toThrow("genesis-adoption-actual-issue-mismatch");
+    expect(createRunner).not.toHaveBeenCalled();
+    expect(openDispatcher).not.toHaveBeenCalled();
   });
 });
 
@@ -117,15 +140,37 @@ function manifest(): GenesisAdoptionManifest {
       blob_oid: "c".repeat(40),
       content_digest: "e".repeat(64),
     },
+    reentry_target: {
+      kind: "existing",
+      path: "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
+      blob_oid: "c".repeat(40),
+      content_digest: sha("trusted target"),
+    },
     issue: {
       number: 129,
       episode_id: "E4-129",
       drive_model: "redesign",
       branch: "work/redesign-planasset-genesis-adoption",
-      preimage_digest: "d".repeat(64),
+      preimage_digest: sha(renderForwardEscapeIssueBody(issueContract())),
       contract: issueContract(),
     },
   };
+}
+
+function observeIssue(input: { repository: string; issue_number: number }) {
+  const body = renderForwardEscapeIssueBody(issueContract());
+  return {
+    ...input,
+    node_id: "I_GENESIS_129",
+    url: `https://github.com/${input.repository}/issues/${input.issue_number}`,
+    body,
+    body_digest: sha(body),
+    observed_revision: "issue-etag-1",
+  };
+}
+
+function sha(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function issueContract() {

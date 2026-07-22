@@ -40,6 +40,19 @@ export interface GenesisAdoptionManifest {
     readonly blob_oid: string;
     readonly content_digest: string;
   };
+  readonly reentry_target:
+    | {
+        readonly kind: "existing";
+        readonly path: string;
+        readonly blob_oid: string;
+        readonly content_digest: string;
+      }
+    | {
+        readonly kind: "planned";
+        readonly path: string;
+        readonly plan_id: string;
+        readonly revision: number;
+      };
   readonly issue: {
     readonly number: number;
     readonly episode_id: string;
@@ -114,6 +127,8 @@ export class NodeGenesisAdoptionRunner {
       throw new Error("genesis-adoption-route-tuple-digest-mismatch");
     assertIssueRouteBinding(manifest, origin, reentry);
 
+    this.verifyReentryTarget(head, manifest);
+
     const blob = this.deps.resolveBlob(head, manifest.source.path);
     if (blob.commitOid !== head) throw new Error("genesis-adoption-head-drift");
     if (blob.sourcePath !== manifest.source.path)
@@ -169,6 +184,46 @@ export class NodeGenesisAdoptionRunner {
     if (projection.durable !== true) throw new Error("genesis-adoption-projection-not-durable");
     return { ...local, projection: projection.state };
   }
+
+  private verifyReentryTarget(head: string, manifest: GenesisAdoptionManifest): void {
+    const target = manifest.reentry_target;
+    if (target.kind === "planned") {
+      if (
+        target.plan_id !== manifest.reentry.target_plan_id ||
+        target.revision !== manifest.reentry.target_revision ||
+        target.path !== `docs/plans/${target.plan_id}.md`
+      )
+        throw new Error("genesis-adoption-planned-target-identity-mismatch");
+      try {
+        this.deps.resolveBlob(head, target.path);
+      } catch (error) {
+        if (errorMessage(error) === "trusted-git-source-not-found") return;
+        throw error;
+      }
+      throw new Error("genesis-adoption-planned-target-exists");
+    }
+    let blob: TrustedGitBlob;
+    try {
+      blob = this.deps.resolveBlob(head, target.path);
+    } catch (error) {
+      if (errorMessage(error) === "trusted-git-source-not-found")
+        throw new Error("genesis-adoption-reentry-target-missing");
+      throw error;
+    }
+    if (blob.commitOid !== head || blob.sourcePath !== target.path)
+      throw new Error("genesis-adoption-reentry-target-path-drift");
+    if (blob.blobOid !== target.blob_oid)
+      throw new Error("genesis-adoption-reentry-target-blob-drift");
+    if (sha(blob.bytes) !== target.content_digest)
+      throw new Error("genesis-adoption-reentry-target-content-drift");
+    const parsed = parseLegacyPlanSource(decodeUtf8(blob.bytes));
+    if (
+      !parsed ||
+      parsed.planId !== manifest.reentry.target_plan_id ||
+      manifest.reentry.target_revision !== 1
+    )
+      throw new Error("genesis-adoption-reentry-target-invalid");
+  }
 }
 
 export function createNodeGenesisAdoptionRunner(
@@ -213,9 +268,11 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
       "reentry",
       "recorded_at",
       "source",
+      "reentry_target",
       "issue",
     ]);
     const source = exactRecord(root.source, ["path", "commit", "blob_oid", "content_digest"]);
+    const reentryTarget = parseReentryTarget(root.reentry_target);
     const origin = exactRecord(root.origin, ["plan_id", "revision", "digest"]);
     const reentry = exactRecord(root.reentry, ["target_plan_id", "target_revision", "phase"]);
     const issue = exactRecord(root.issue, [
@@ -255,6 +312,7 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
         blob_oid: oid(source.blob_oid),
         content_digest: digest(source.content_digest),
       },
+      reentry_target: reentryTarget,
       issue: {
         number: positiveInteger(issue.number),
         episode_id: matching(issue.episode_id, /^E4-[1-9]\d*$/),
@@ -269,6 +327,27 @@ export function parseGenesisAdoptionManifest(value: unknown): GenesisAdoptionMan
   } catch {
     throw new Error("genesis-adoption-manifest-invalid");
   }
+}
+
+function parseReentryTarget(value: unknown): GenesisAdoptionManifest["reentry_target"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
+  const kind = (value as Record<string, unknown>).kind;
+  if (kind === "planned") {
+    const target = exactRecord(value, ["kind", "path", "plan_id", "revision"]);
+    return {
+      kind: literal(target.kind, "planned"),
+      path: matching(target.path, /^docs\/plans\/[^/]+\.md$/),
+      plan_id: matching(target.plan_id, /^PLAN-L(?:[0-9]|1[0-4])-[A-Za-z0-9-]+$/),
+      revision: positiveInteger(target.revision),
+    };
+  }
+  const target = exactRecord(value, ["kind", "path", "blob_oid", "content_digest"]);
+  return {
+    kind: literal(target.kind, "existing"),
+    path: matching(target.path, /^docs\/plans\/[^/]+\.md$/),
+    blob_oid: oid(target.blob_oid),
+    content_digest: digest(target.content_digest),
+  };
 }
 
 function parseForwardEscapeContract(value: unknown): RequestForwardEscape {
@@ -411,4 +490,8 @@ function git(root: string, args: readonly string[]): string {
     encoding: "utf8",
     windowsHide: true,
   }).trim();
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

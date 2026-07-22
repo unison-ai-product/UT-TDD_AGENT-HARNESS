@@ -127,9 +127,19 @@ function manifest(overrides: Record<string, unknown> = {}): string {
     reason: "trusted HEAD genesis adoption",
     route_tuple_digest: "a".repeat(64),
     origin: { plan_id: "PLAN-L4-31", revision: 1, digest: `sha256:${"f".repeat(64)}` },
-    reentry: { target_plan_id: "PLAN-L4-31", target_revision: 2, phase: "forward_merge" },
+    reentry: {
+      target_plan_id: "PLAN-L6-88-snapshot-runner-performance-redesign",
+      target_revision: 1,
+      phase: "forward_merge",
+    },
     recorded_at: "2026-07-22T00:00:00.000Z",
     source: sourceBinding(),
+    reentry_target: {
+      kind: "planned",
+      path: "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md",
+      plan_id: "PLAN-L6-88-snapshot-runner-performance-redesign",
+      revision: 1,
+    },
     issue: {
       number: 129,
       episode_id: "E4-129",
@@ -151,9 +161,9 @@ function issueContract() {
     origin_state: "confirmed",
     escape_reason: "legacy PlanAsset genesis adoption",
     drive_model: "redesign",
-    reentry_target_asset_id: "PLAN-L4-31",
-    reentry_target_revision_id: "2",
-    reentry_target_layer: "L4",
+    reentry_target_asset_id: "PLAN-L6-88-snapshot-runner-performance-redesign",
+    reentry_target_revision_id: "1",
+    reentry_target_layer: "L6",
     reentry_target_state: "forward_merge",
     issue_projection: {
       owner: "unison-ai-product",

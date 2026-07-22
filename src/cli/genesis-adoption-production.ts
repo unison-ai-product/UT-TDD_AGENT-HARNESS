@@ -1,3 +1,9 @@
+import { createHash } from "node:crypto";
+import {
+  type ObservedForwardEscapeIssue,
+  renderForwardEscapeIssueBody,
+} from "../execution/forward-escape.js";
+import { NodeGhForwardEscapeIssuePort } from "../github/node-gh-forward-escape-issue-port.js";
 import {
   type GenesisProjectionDispatchSummary,
   openNodeGenesisProjectionDispatcher,
@@ -24,6 +30,10 @@ export interface GenesisAdoptionProductionDeps {
     projection: GenesisAdoptionProjectionOutboxPort,
   ) => Pick<NodeGenesisAdoptionRunner, "run">;
   readonly openDispatcher?: (repoRoot: string, repository: string) => CommandDispatcherResource;
+  readonly observeIssue?: (input: {
+    readonly repository: string;
+    readonly issue_number: number;
+  }) => ObservedForwardEscapeIssue;
 }
 
 /**
@@ -38,8 +48,17 @@ export function createProductionGenesisAdoptionCommandRunner(
 ): GenesisAdoptionCommandRunner {
   const createRunner = deps.createRunner ?? createNodeGenesisAdoptionRunner;
   const openDispatcher = deps.openDispatcher ?? openNodeGenesisProjectionDispatcher;
+  const issuePort = new NodeGhForwardEscapeIssuePort();
+  const observeIssue = deps.observeIssue ?? ((input) => issuePort.observeIssue(input));
   return {
     run(manifest: GenesisAdoptionManifest): GenesisAdoptionRunResult {
+      verifyActualIssue(
+        manifest,
+        observeIssue({
+          repository: manifest.repository_identity,
+          issue_number: manifest.issue.number,
+        }),
+      );
       const projection: GenesisAdoptionProjectionOutboxPort = {
         dispatch(input) {
           const resource = openDispatcher(repoRoot, manifest.repository_identity);
@@ -53,6 +72,29 @@ export function createProductionGenesisAdoptionCommandRunner(
       return createRunner(repoRoot, projection).run(manifest);
     },
   };
+}
+
+function verifyActualIssue(
+  manifest: GenesisAdoptionManifest,
+  observed: ObservedForwardEscapeIssue,
+): void {
+  const expectedBody = renderForwardEscapeIssueBody(manifest.issue.contract);
+  const expectedDigest = digest(expectedBody);
+  if (
+    observed.repository !== manifest.repository_identity ||
+    observed.issue_number !== manifest.issue.number ||
+    observed.url !==
+      `https://github.com/${manifest.repository_identity}/issues/${manifest.issue.number}` ||
+    observed.body !== expectedBody ||
+    observed.body_digest !== expectedDigest ||
+    digest(observed.body) !== expectedDigest ||
+    manifest.issue.preimage_digest !== expectedDigest
+  )
+    throw new Error("genesis-adoption-actual-issue-mismatch");
+}
+
+function digest(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function projectionState(

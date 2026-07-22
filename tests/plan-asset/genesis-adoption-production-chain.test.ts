@@ -53,6 +53,7 @@ describe("Issue #129 production genesis chain", () => {
       createOrGetMetadataComment: createComment,
     };
     const runner = createProductionGenesisAdoptionCommandRunner(root, {
+      observeIssue: (input) => port.observeIssue(input),
       openDispatcher: (repoRoot, identity) =>
         openNodeGenesisProjectionDispatcher(repoRoot, identity, port),
     });
@@ -185,6 +186,18 @@ function l683Manifest(root: string): GenesisAdoptionManifest {
       commit: git(root, "rev-parse", "HEAD"),
       blob_oid: git(root, "rev-parse", `HEAD:${sourcePath}`),
       content_digest: sha(source),
+    },
+    reentry_target: {
+      kind: "existing",
+      path: "docs/plans/PLAN-L7-452-forward-escape-contract-red.md",
+      blob_oid: git(
+        root,
+        "rev-parse",
+        "HEAD:docs/plans/PLAN-L7-452-forward-escape-contract-red.md",
+      ),
+      content_digest: sha(
+        gitBytes(root, "show", "HEAD:docs/plans/PLAN-L7-452-forward-escape-contract-red.md"),
+      ),
     },
     issue: {
       number: 129,
