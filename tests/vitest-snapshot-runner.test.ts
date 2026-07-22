@@ -32,51 +32,150 @@ import { removeTestTree } from "./support/temp-tree";
 
 const CHILD_CALLS = new Set(["spawn", "spawnSync", "execFileSync", "execSync"]);
 
+function childProcessViolations(file: string, text: string): string[] {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const bindings = new Map<string, string>();
+  const namespaces = new Set<string>();
+  const frozenObjects = new Map<string, ts.ObjectLiteralExpression>();
+
+  for (const statement of source.statements) {
+    if (
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === "node:child_process"
+    ) {
+      const namedBindings = statement.importClause?.namedBindings;
+      if (namedBindings && ts.isNamespaceImport(namedBindings))
+        namespaces.add(namedBindings.name.text);
+      for (const specifier of namedBindings && ts.isNamedImports(namedBindings)
+        ? namedBindings.elements
+        : []) {
+        const imported = specifier.propertyName?.text ?? specifier.name.text;
+        if (CHILD_CALLS.has(imported)) bindings.set(specifier.name.text, imported);
+      }
+    }
+    if (ts.isVariableStatement(statement) && statement.declarationList.flags & ts.NodeFlags.Const) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+        const initializer = unwrapExpression(declaration.initializer);
+        if (
+          ts.isCallExpression(initializer) &&
+          initializer.expression.getText(source) === "Object.freeze" &&
+          initializer.arguments[0] &&
+          ts.isObjectLiteralExpression(initializer.arguments[0])
+        ) {
+          frozenObjects.set(declaration.name.text, initializer.arguments[0]);
+        }
+      }
+    }
+  }
+
+  const isTrue = (expression: ts.Expression): boolean => {
+    const value = unwrapExpression(expression);
+    if (value.kind === ts.SyntaxKind.TrueKeyword) return true;
+    if (!ts.isPropertyAccessExpression(value) || !ts.isIdentifier(value.expression)) return false;
+    const object = frozenObjects.get(value.expression.text);
+    const property = object?.properties.find(
+      (candidate): candidate is ts.PropertyAssignment =>
+        ts.isPropertyAssignment(candidate) && candidate.name.getText(source) === value.name.text,
+    );
+    return property ? isTrue(property.initializer) : false;
+  };
+
+  const violations: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const name = ts.isIdentifier(node.expression)
+        ? bindings.get(node.expression.text)
+        : ts.isPropertyAccessExpression(node.expression) &&
+            ts.isIdentifier(node.expression.expression) &&
+            namespaces.has(node.expression.expression.text) &&
+            CHILD_CALLS.has(node.expression.name.text)
+          ? node.expression.name.text
+          : undefined;
+      if (name) {
+        const options = node.arguments[name === "execSync" ? 1 : 2];
+        const explicitlyHidden =
+          options &&
+          ts.isObjectLiteralExpression(options) &&
+          options.properties.some(
+            (property) =>
+              (ts.isPropertyAssignment(property) &&
+                property.name.getText(source) === "windowsHide" &&
+                isTrue(property.initializer)) ||
+              (ts.isSpreadAssignment(property) &&
+                property.expression.getText(source).includes("snapshotChildProcessOptions")),
+          );
+        const forwardedHiddenOptions =
+          file.replaceAll("\\", "/") === "src/state-db/stop-refresh.ts" &&
+          name === "spawn" &&
+          options?.getText(source) === "opts";
+        if (!explicitlyHidden && !forwardedHiddenOptions) {
+          const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+          violations.push(`${file}:${position.line + 1}:${name}`);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return violations;
+}
+
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  if (
+    ts.isAsExpression(expression) ||
+    ts.isTypeAssertionExpression(expression) ||
+    ts.isParenthesizedExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return unwrapExpression(expression.expression);
+  }
+  return expression;
+}
+
 describe("snapshot child-process UX", () => {
   it("U-TESTHYGIENE-048: non-interactive local CI children never open Windows consoles", () => {
     expect(snapshotChildProcessOptions("C:/repo")).toMatchObject({ windowsHide: true });
   });
 
   it("U-TESTHYGIENE-049: production/hooks/scriptsの直接child起動はwindowsHideを明示する", () => {
-    const violations: string[] = [];
-    for (const file of [".claude/hooks", "scripts", "src"].flatMap(typescriptFiles)) {
-      const source = ts.createSourceFile(
-        file,
-        readFileSync(file, "utf8"),
-        ts.ScriptTarget.Latest,
-        true,
-      );
-      const visit = (node: ts.Node): void => {
-        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
-          const name = node.expression.text;
-          if (CHILD_CALLS.has(name)) {
-            const options = node.arguments[name === "execSync" ? 1 : 2];
-            const explicitlyHidden =
-              options &&
-              ts.isObjectLiteralExpression(options) &&
-              options.properties.some(
-                (property) =>
-                  (ts.isPropertyAssignment(property) &&
-                    property.name.getText(source) === "windowsHide" &&
-                    property.initializer.kind === ts.SyntaxKind.TrueKeyword) ||
-                  (ts.isSpreadAssignment(property) &&
-                    property.expression.getText(source).includes("snapshotChildProcessOptions")),
-              );
-            const forwardedHiddenOptions =
-              file.replaceAll("\\", "/") === "src/state-db/stop-refresh.ts" &&
-              name === "spawn" &&
-              options?.getText(source) === "opts";
-            if (!explicitlyHidden && !forwardedHiddenOptions) {
-              const position = source.getLineAndCharacterOfPosition(node.getStart(source));
-              violations.push(`${file}:${position.line + 1}:${name}`);
-            }
-          }
-        }
-        ts.forEachChild(node, visit);
-      };
-      visit(source);
-    }
+    const violations = [".claude/hooks", "scripts", "src"]
+      .flatMap(typescriptFiles)
+      .flatMap((file) => childProcessViolations(file, readFileSync(file, "utf8")));
     expect(violations).toEqual([]);
+  });
+
+  it("U-TESTHYGIENE-050: immutable trueだけを許可し注入spawnをchild起動と誤認しない", () => {
+    const inspect = (body: string) => childProcessViolations("src/fixture.ts", body);
+    expect(
+      inspect(`
+        import { spawnSync } from "node:child_process";
+        const CONTRACT = Object.freeze({ windowsHide: true as const });
+        spawnSync("git", [], { windowsHide: CONTRACT.windowsHide });
+        function run(spawn: Function) { spawn("gh", [], {}); }
+      `),
+    ).toEqual([]);
+    expect(
+      inspect(`
+        import * as childProcess from "node:child_process";
+        childProcess.spawnSync("git", [], {});
+      `),
+    ).toEqual(["src/fixture.ts:3:spawnSync"]);
+    expect(
+      inspect(`
+        import { spawnSync } from "node:child_process";
+        const CONTRACT = Object.freeze({ windowsHide: false as const });
+        spawnSync("git", [], { windowsHide: CONTRACT.windowsHide });
+      `),
+    ).toEqual(["src/fixture.ts:4:spawnSync"]);
+    expect(
+      inspect(`
+        import { spawnSync } from "node:child_process";
+        const hidden = true;
+        spawnSync("git", [], { windowsHide: hidden });
+      `),
+    ).toEqual(["src/fixture.ts:4:spawnSync"]);
   });
 });
 
