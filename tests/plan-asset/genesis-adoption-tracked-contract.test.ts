@@ -18,7 +18,7 @@ afterEach(() => {
   for (const db of opened.splice(0)) db.close();
 });
 
-describe("Issue #129 real legacy genesis chains", () => {
+describe("Issue #129 tracked legacy route transaction contracts", () => {
   it("U-GEN-015: L4-31を採用してL6-88へのRedesign Forward reentryを同じroute digestへ束縛する", () => {
     const db = database();
     const command = trackedInput({

@@ -147,7 +147,9 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/plan-asset/node-genesis-adoption-runner.test.ts
     artifact_type: test_code
-  - artifact_path: tests/plan-asset/genesis-adoption-real-chain.test.ts
+  - artifact_path: tests/plan-asset/genesis-adoption-tracked-contract.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/genesis-adoption-production-chain.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/genesis-projection-dispatcher.test.ts
     artifact_type: test_code
@@ -328,9 +330,12 @@ pendingを記録してから実行する。remote失敗は`recovery_required`と
 完了とはしない。CLIはproduction custody/outbox adapterを構成できた場合だけ公開し、fake runner
 だけのsurfaceを完成扱いしない。
 
-実chain oracleは少なくとも `PLAN-L4-31 -> PLAN-L6-88` と
-`PLAN-L6-83 -> PLAN-L7-452` を対象とし、各legacy assetの採用、Issue custody、Forward reentry、
-途中失敗、replay、重複remote write禁止を検証する。
+tracked route transaction oracleは `PLAN-L4-31 -> PLAN-L6-88` と
+`PLAN-L6-83 -> PLAN-L7-452` のHEAD blobを使い、local atomicity、route binding、replayを検証する。
+これをproduction実chainとは呼ばない。production chain oracleはNode runner、Plan Ledger、HARNESS DB、
+Issue projection portを通過し、採用asset、Issue custody、Forward reentry、重複remote write禁止を検証する。
+`PLAN-L4-31 -> PLAN-L6-88` の完了判定は未発行L6-88を捏造せず、#102のrevision authoringと
+Redesign bundleを経てL4-31 revision 2 / L6-88 admissionが揃った後続実行に限定する。
 
 ## 5. DoD
 
@@ -345,4 +350,5 @@ pendingを記録してから実行する。remote失敗は`recovery_required`と
 - [ ] PLAN-L7-441未完のprocess-kill境界を明示し、通常例外のatomicityをcrash convergenceと混同しない。
 - [ ] Issue #129 genesis adoptionがtrusted HEAD、Issue preimage、origin/reentryからrouteを導出し、自己申告digest改ざんを拒否する。
 - [ ] `plan adopt-genesis-chain`がproduction custody/outbox adapterへ接続され、restart後も`recovery_required`から一度だけ収束する。
-- [ ] `PLAN-L4-31 -> PLAN-L6-88`と`PLAN-L6-83 -> PLAN-L7-452`のmulti-asset chain oracleがGreenになる。
+- [ ] `PLAN-L6-83 -> PLAN-L7-452`がproduction compositionでasset adoption、Forward reentry、Issue projectionまでGreenになる。
+- [ ] `PLAN-L4-31 -> PLAN-L6-88`は#102のrevision authoring完了後、L4-31 revision 2とL6-88 admissionを実artifactでGreenにする（tracked route transactionだけで代替しない）。
