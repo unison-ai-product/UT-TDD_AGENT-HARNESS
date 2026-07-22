@@ -546,7 +546,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     const codexHooks = deps.files.get(join("/repo", ".codex", "hooks.json"));
     const claudeSettings = deps.files.get(join("/repo", ".claude", "settings.json"));
     expect(codexHooks).toContain("hook agent-guard");
-    expect(claudeSettings).toContain("hook agent-guard");
+    expect(claudeSettings).toContain('"agent-guard"');
     expect(() => JSON.parse(codexHooks ?? "")).not.toThrow();
     expect(() => JSON.parse(claudeSettings ?? "")).not.toThrow();
   });
@@ -567,7 +567,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       writeFileSync(wrapperPath, wrapper ?? "");
       writeFileSync(localPackageCli, 'console.log("local-package", ...process.argv.slice(2));\n');
 
-      const result = spawnSync(process.execPath, [wrapperPath, "status", "--json"], {
+      const bunBinary =
+        process.env.UT_TDD_BUN_BINARY ?? (process.versions.bun ? process.execPath : "bun");
+      const result = spawnSync(bunBinary, [wrapperPath, "status", "--json"], {
         cwd: repo,
         encoding: "utf8",
       });
@@ -592,7 +594,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
       writeFileSync(wrapperPath, wrapper ?? "");
 
-      const result = spawnSync(process.execPath, [wrapperPath, "status"], {
+      const bunBinary =
+        process.env.UT_TDD_BUN_BINARY ?? (process.versions.bun ? process.execPath : "bun");
+      const result = spawnSync(bunBinary, [wrapperPath, "status"], {
         cwd: repo,
         encoding: "utf8",
       });

@@ -234,15 +234,58 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
   const file = (relativePath: string) => join(root, ...relativePath.split("/"));
   return new Map<string, string>(
     Object.entries({
-      ".claude/settings.json": [
-        "{",
-        '  "hooks": {',
-        '    "SessionStart": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session start" }] }],',
-        '    "PostToolUse": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" hook post-tool-use" }] }],',
-        '    "Stop": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session summary" }] }]',
-        "  }",
-        "}",
-      ].join("\n"),
+      ".claude/settings.json": JSON.stringify({
+        hooks: {
+          SessionStart: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "session",
+                    "start",
+                  ],
+                },
+              ],
+            },
+          ],
+          PostToolUse: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "hook",
+                    "post-tool-use",
+                  ],
+                },
+              ],
+            },
+          ],
+          Stop: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "session",
+                    "summary",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
       "src/runtime/adapter.ts": [
         'const args = isCodex ? ["exec", "-"] : ["--print", "--input-format", "text"];',
         "return { stdin: intent.task, plan_id: intent.planId };",
@@ -442,7 +485,7 @@ describe("runDoctor", () => {
   });
 
   it("U-SETUP-014: supports a fresh-consumer setup smoke without requiring dogfood PLAN/design docs", () => {
-    const hookJson = JSON.stringify({
+    const codexHookJson = JSON.stringify({
       hooks: {
         PreToolUse: [
           {
@@ -468,15 +511,36 @@ describe("runDoctor", () => {
         ],
       },
     });
+    const claudeHook = (...args: string[]) => ({
+      type: "command",
+      command: "node",
+      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+    });
+    const claudeHookJson = JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          { hooks: [claudeHook("hook", "agent-guard")] },
+          { hooks: [claudeHook("hook", "work-guard")] },
+        ],
+        SessionStart: [{ hooks: [claudeHook("session", "start")] }],
+        PostToolUse: [{ hooks: [claudeHook("hook", "post-tool-use")] }],
+        Stop: [{ hooks: [claudeHook("session", "summary")] }],
+        SubagentStop: [{ hooks: [claudeHook("hook", "subagent-stop")] }],
+      },
+    });
     const file = (path: string) => join("/repo", ...path.split("/"));
     const files = new Map<string, string>([
+      [
+        file(".ut-tdd/bin/run-bun.ts"),
+        "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
+      ],
       [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
       [file("AGENTS.md"), "UT-TDD adapter"],
       [file("CLAUDE.md"), "UT-TDD adapter"],
       [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
-      [file(".claude/settings.json"), hookJson],
+      [file(".claude/settings.json"), claudeHookJson],
       [file(".codex/config.toml"), "hooks = true"],
-      [file(".codex/hooks.json"), hookJson],
+      [file(".codex/hooks.json"), codexHookJson],
     ]);
 
     const r = runDoctor(deps({ files }), { setupSmoke: true });
@@ -535,7 +599,7 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=24, failed=0)"]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {

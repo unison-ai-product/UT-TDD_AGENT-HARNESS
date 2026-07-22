@@ -3,6 +3,7 @@ import { analyzeProjectHooks, REQUIRED } from "../src/lint/project-hook";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
 
 const execHook = (script: string, ...args: string[]) => ({
+  type: "command",
   command: "node",
   args: ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", script, ...args],
 });

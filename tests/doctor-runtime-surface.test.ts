@@ -18,6 +18,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
             {
               hooks: [
                 {
+                  type: "command",
                   command: "node",
                   args: [
                     "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
@@ -33,6 +34,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
             {
               hooks: [
                 {
+                  type: "command",
                   command: "node",
                   args: [
                     "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
@@ -48,6 +50,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
             {
               hooks: [
                 {
+                  type: "command",
                   command: "node",
                   args: [
                     "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",

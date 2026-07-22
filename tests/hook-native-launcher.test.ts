@@ -72,7 +72,9 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(source).toContain("spawn(findBun(), process.argv.slice(2)");
     expect(source).toContain("windowsHide: true");
     expect(source).toContain("process.stdin.pipe(child.stdin)");
-    expect(source).toContain('for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])');
+    expect(source).toMatch(
+      /for \(const signal of \["SIGINT", "SIGTERM", "SIGHUP"\](?: as const)?\)/,
+    );
     expect(source).toContain("child.kill(signal)");
     expect(source).not.toMatch(/\b(?:cmd(?:\.exe)?|powershell(?:\.exe)?|pwsh|sh(?:\.exe)?)\b/i);
     expect(source).not.toContain("shell: true");
