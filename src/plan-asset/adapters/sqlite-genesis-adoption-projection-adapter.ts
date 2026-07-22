@@ -13,10 +13,6 @@ import type {
   GenesisAdoptionProjectionOutboxPort,
   GenesisAdoptionProjectionState,
 } from "../application/node-genesis-adoption-runner.js";
-import type {
-  GenesisCustodyPort,
-  GenesisCustodyRecord,
-} from "../ledger/genesis-adoption-transaction.js";
 
 export interface SqliteGenesisAdoptionProjectionAdapterDeps {
   readonly repository: string;
@@ -27,9 +23,7 @@ export interface SqliteGenesisAdoptionProjectionAdapterDeps {
  * Genesis adoptionを既存HARNESS DBのE2/E3/E4 journalへ写像するproduction adapter。
  * 独自tableを持たず、queued rowをrecovery_required、IssueAdoptedをprojectedとして読む。
  */
-export class SqliteGenesisAdoptionProjectionAdapter
-  implements GenesisCustodyPort, GenesisAdoptionProjectionOutboxPort
-{
+export class SqliteGenesisAdoptionProjectionAdapter implements GenesisAdoptionProjectionOutboxPort {
   readonly #journal: SqliteForwardEscapeJournal;
 
   constructor(
@@ -37,34 +31,6 @@ export class SqliteGenesisAdoptionProjectionAdapter
     private readonly deps: SqliteGenesisAdoptionProjectionAdapterDeps,
   ) {
     this.#journal = new SqliteForwardEscapeJournal(db);
-  }
-
-  prepare(record: GenesisCustodyRecord): void {
-    try {
-      this.#journal.issue({
-        command_id: record.commandId,
-        payload_digest: projectionPayloadDigest(record),
-      });
-    } catch (error) {
-      if (
-        error instanceof ForwardEscapeJournalIntegrityError &&
-        error.message === "e2-command-payload-mismatch"
-      )
-        throw new Error("genesis-adoption-command-payload-mismatch");
-      throw error;
-    }
-  }
-
-  commit(commandId: string): void {
-    const certificate = this.db
-      .prepare("SELECT 1 FROM forward_escape_validation_certificates WHERE command_id = ?")
-      .get(commandId);
-    if (!certificate) throw new Error("genesis-adoption-custody-missing");
-  }
-
-  rollback(_commandId: string): void {
-    // GenesisAdoptionTransactionと同じHarnessDb transaction内ならprepare rowもrollbackされる。
-    // append-only custodyをtransaction外から削除して証跡を破壊してはならない。
   }
 
   dispatch(input: Parameters<GenesisAdoptionProjectionOutboxPort["dispatch"]>[0]): {
@@ -78,6 +44,16 @@ export class SqliteGenesisAdoptionProjectionAdapter
       assetId: input.localReceipt.assetId,
       revision: input.localReceipt.revision,
     });
+    try {
+      this.#journal.issue({ command_id: input.commandId, payload_digest: payloadDigest });
+    } catch (error) {
+      if (
+        error instanceof ForwardEscapeJournalIntegrityError &&
+        error.message === "e2-command-payload-mismatch"
+      )
+        throw new Error("genesis-adoption-command-payload-mismatch");
+      throw error;
+    }
     return this.#journal.runExclusive(() => {
       const certificate = this.db
         .prepare(
@@ -170,10 +146,13 @@ export class SqliteGenesisAdoptionProjectionAdapter
   }
 }
 
-type ProjectionBinding = Pick<
-  GenesisCustodyRecord,
-  "commandId" | "issueNumber" | "issuePreimageDigest" | "assetId" | "revision"
->;
+interface ProjectionBinding {
+  readonly commandId: string;
+  readonly issueNumber: number;
+  readonly issuePreimageDigest: string;
+  readonly assetId: string;
+  readonly revision: 1;
+}
 
 function projectionPayloadDigest(value: ProjectionBinding): string {
   return sha(
@@ -236,7 +215,8 @@ function metadataBody(
     `- plan_revision: \`${input.localReceipt.revision}\``,
     `- issue_preimage_digest: \`${input.issuePreimageDigest}\``,
     "",
-    `<!-- ut-tdd:genesis-adoption/v1 ${input.commandId} -->`,
+    // NodeGhForwardEscapeIssuePortのcreate-or-get検索markerと完全一致させる。
+    `<!-- ut-tdd:forward-escape-adoption/v1 ${input.commandId} -->`,
   ].join("\n");
 }
 

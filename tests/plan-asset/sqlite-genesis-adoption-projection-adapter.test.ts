@@ -21,6 +21,9 @@ describe("SQLite genesis adoption projection adapter", () => {
     let commentPosts = 0;
     const comments = new Map<string, ReturnType<typeof comment>>();
     const port = adoptionPort(issueBody, (request) => {
+      expect(request.body).toContain(
+        `<!-- ut-tdd:forward-escape-adoption/v1 ${request.idempotency_key} -->`,
+      );
       if (failures-- > 0) return { ok: false as const, reason: "offline" };
       const prior = comments.get(request.idempotency_key);
       if (prior) return { ok: true as const, comment: prior };
@@ -37,8 +40,6 @@ describe("SQLite genesis adoption projection adapter", () => {
       repository: "owner/repository",
       port,
     });
-    adapter.prepare(custodyRecord(issueBody));
-    adapter.commit("genesis:129");
     expect(adapter.dispatch(input)).toEqual({ durable: true, state: "recovery_required" });
     db.close();
 
@@ -65,32 +66,20 @@ describe("SQLite genesis adoption projection adapter", () => {
     migrate(db);
     const adapter = new SqliteGenesisAdoptionProjectionAdapter(db, {
       repository: "owner/repository",
-      port: adoptionPort(body, () => {
+      port: adoptionPort(body, (request) => {
         remoteCalls += 1;
-        return { ok: true, comment: comment(sha("comment")) };
+        return { ok: true, comment: comment(request.body_digest) };
       }),
     });
-    adapter.prepare(custodyRecord(body));
-    expect(() => adapter.prepare(custodyRecord("# Substituted\n"))).toThrow(
+    expect(adapter.dispatch(dispatchInput(body))).toEqual({ durable: true, state: "projected" });
+    expect(() => adapter.dispatch(dispatchInput("# Substituted\n"))).toThrow(
       "genesis-adoption-command-payload-mismatch",
     );
-    expect(remoteCalls).toBe(0);
+    expect(remoteCalls).toBe(1);
     db.close();
     removeTestTree(root);
   });
 });
-
-function custodyRecord(body: string) {
-  return {
-    commandId: "genesis:129",
-    issueNumber: 129,
-    episodeId: "E4-129",
-    driveModel: "redesign" as const,
-    issuePreimageDigest: sha(body),
-    assetId: "asset-129",
-    revision: 1 as const,
-  };
-}
 
 function dispatchInput(body: string) {
   return {
