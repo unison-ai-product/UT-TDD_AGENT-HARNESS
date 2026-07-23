@@ -603,7 +603,7 @@ workflow transition、evidence、doc監査判断を補完してはならない�
 `selection_revision=repository-documents-v1`、selector digest、commit、リポジトリroot tree OID、
 zone別tree evidence、追跡件数、raw NUL stream SHA-256、shard digest、delta chain digestを持つ。
 snapshot IDはrepository identity、commit、root tree、selection revision/digest、count、path hash、
-member集合digestのcanonical frameだけから作り、時刻・working tree・OSを含めない。
+zone集合digest、member集合digestのcanonical frameだけから作り、時刻・working tree・OSを含めない。
 
 `repository-documents-v1`のzoneは次に固定する。
 
@@ -625,7 +625,10 @@ length-prefixed frame `(path, blob_oid, content_sha256, file_mode, zone)`を連�
 `canonical-frame-v1`の各fieldは`uint32be(name_utf8_length) + name_utf8 +
 uint64be(value_byte_length) + value_bytes`とし、数値も10進ASCII bytesで表す。snapshot field順は
 識別子列は`repository_identity, commit_oid, repository_tree_oid, selection_revision, selection_digest,
-tracked_count, path_stream_hash, member_set_digest`、member field順は前段の定義順へ固定する。
+tracked_count, path_stream_hash, zone_set_digest, member_set_digest`、member field順は前段の定義順へ固定する。
+zone field順は`zone, selector_digest, tree_oid, member_count, member_set_digest`とし、
+全5 zoneをzone IDのunsigned UTF-8 byte順に連結して`zone_set_digest`を作る。treeを持たないzoneも
+空bytes fieldをframeへ含め、欠落と空を混同しない。
 集合はpathのunsigned UTF-8 byte順で並べ、SHA-256 hexは小文字64桁、snapshot IDは
 `document-snapshot:sha256:<snapshot_digest>`とする。JSON stringify、locale sort、native endianを禁止する。
 
@@ -677,10 +680,10 @@ digestへ含めない。Markdown ledgerは生成view、DBはprojectionである�
 | `workflow_event_evidence` | `event_id TEXT`, `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `requirement_id TEXT` | PK=`(event_id,evidence_id,subject_id,subject_revision,requirement_id)`、event/evidence subject-revision composite FK | event / evidence索引 |
 | `workflow_subject_states` | `subject_id TEXT`, `subject_revision INTEGER`, `current_state TEXT`, `resume_state TEXT?`, `last_sequence INTEGER`, `last_event_id TEXT?`, `state_digest TEXT` | workflow event reduction current projection。PK=`(subject_id,subject_revision)`、plan revision composite FK、`(last_event_id,subject_id,subject_revision)` composite FK（empty時だけNULL） | state / last event index |
 | `append_command_receipts` | `command_id TEXT`, `command_type TEXT`, `subject_kind TEXT`, `subject_key TEXT`, `plan_asset_id TEXT?`, `plan_revision INTEGER?`, `command_payload_digest TEXT`, `result_kind TEXT`, `result_ref TEXT`, `recorded_at TEXT`, `receipt_digest TEXT` | PK=`command_id`、全append context横断正本。subject kind=`plan_revision|reservation|legacy_migration`。plan_revision kindだけasset/revision必須+composite FK、他kindは両方NULL | subject/type/time index |
-| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `repository_tree_oid TEXT`, `selection_revision TEXT`, `selection_digest TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `member_set_digest TEXT`, `algorithm TEXT`, `snapshot_digest TEXT`, `captured_at TEXT` | PK=`snapshot_id`、`(commit_oid,repository_tree_oid,selection_digest,path_stream_hash)` UNIQUE、identity列NOT NULL。`captured_at`は非identity | commit/tree/selection index |
+| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `repository_tree_oid TEXT`, `selection_revision TEXT`, `selection_digest TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `zone_set_digest TEXT`, `member_set_digest TEXT`, `algorithm TEXT`, `snapshot_digest TEXT`, `captured_at TEXT` | PK=`snapshot_id`、`(commit_oid,repository_tree_oid,selection_digest,path_stream_hash)` UNIQUE、identity列NOT NULL。`captured_at`は非identity | commit/tree/selection index |
 | `document_snapshot_zones` | `snapshot_id TEXT`, `zone TEXT`, `selector_digest TEXT`, `zone_tree_oid TEXT?`, `member_count INTEGER`, `member_set_digest TEXT` | PK=`(snapshot_id,zone)`、snapshot FK。`docs_tree`だけsubtree OID必須、他zoneはroot treeに束縛 | zone/tree index |
 | `document_snapshot_members` | `snapshot_id TEXT`, `path TEXT`, `casefold_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `file_mode TEXT`, `member_digest TEXT` | PK=`(snapshot_id,path)`、snapshot FK、`(snapshot_id,casefold_path)` UNIQUE、全列NOT NULL | snapshot/path/blob index |
-| `document_dispositions` | `ledger_id TEXT`, `baseline_snapshot_id TEXT`, `baseline_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `provenance_digest TEXT`, `row_digest TEXT` | PK=`(ledger_id,baseline_path)`、`(baseline_snapshot_id,baseline_path)`→member複合FK、全列NOT NULL。baseline 921 path exactly once | zone/disposition/status index |
+| `document_dispositions` | `ledger_id TEXT`, `baseline_snapshot_id TEXT`, `baseline_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `applicability_kind TEXT`, `applicability_reason TEXT`, `observed_condition TEXT?`, `reevaluation_trigger TEXT?`, `applicability_plan_id TEXT?`, `applicability_decider TEXT`, `provenance_digest TEXT`, `row_digest TEXT` | PK=`(ledger_id,baseline_path)`、`(baseline_snapshot_id,baseline_path)`→member複合FK、全列NOT NULL（`?`列を除く）。applicability kind別CHECK、baseline docs_tree 921 path exactly once | zone/disposition/applicability/status index |
 | `document_disposition_targets` | `ledger_id TEXT`, `baseline_path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(ledger_id,baseline_path,target_ordinal)`、disposition複合FK。kind=`artifact|family|plan|slot|archive`、typed target実在CHECK | kind/ref index |
 | `document_disposition_plan_edges` | `ledger_id TEXT`, `baseline_path TEXT`, `plan_id TEXT`, `edge_kind TEXT`, `edge_digest TEXT` | PK=`(ledger_id,baseline_path,plan_id,edge_kind)`、disposition/PLAN複合FK | plan/path index |
 | `document_disposition_tags` | `ledger_id TEXT`, `baseline_path TEXT`, `impact_tag TEXT`, `tag_digest TEXT` | PK=`(ledger_id,baseline_path,impact_tag)`、disposition複合FK | tag/path index |

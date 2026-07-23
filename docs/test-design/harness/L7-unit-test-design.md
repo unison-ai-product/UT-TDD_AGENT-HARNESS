@@ -1338,10 +1338,10 @@ CHECK、複合PKを各1違反fixtureでDDL自身が拒否することを確認�
 上表のintegration oracleは`tests/disposition/projection.test.ts`へ昇格済みで、全projectionのPK、source/canonical digestを
 delete→rebuild前後で完全比較する。invalid authoringはtransaction rollbackし既存projectionを保持する。row countだけの比較、
 DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証拠に含めることは禁止する。
-| `U-DOCLEDGER-001` | full commit/root tree、`repository-documents-v1`全zone、raw NUL path/blob OID集合 | `captureRepositoryDocsSnapshot` | zone/count/root tree/selection/path hash/member集合/snapshot digestがfixture一致し、stable byte順。921は`docs_tree`だけ |
+| `U-DOCLEDGER-001` | full commit/root tree、`repository-documents-v1`全zone、raw NUL path/blob OID集合 | `captureRepositoryDocsSnapshot` | zone/count/root tree/selection/path hash/zone集合/member集合/snapshot digestがfixture一致し、stable byte順。921は`docs_tree`だけ |
 | `U-DOCLEDGER-002` | short SHA、symbolic HEADだけ、root tree/selector mismatch、必須zone欠落、未分類文書、malformed NUL/UTF-8 | snapshot capture | `docs-snapshot-revision-missing`、`docs-snapshot-stream-malformed`又は`doc-selection-unclassified`、exit 1 |
 | `U-DOCLEDGER-003` | missing/duplicate/phantom/case-fold path | closure analyzer | 対応するstable findingを全件返し、exit 1 |
-| `U-DOCLEDGER-004` | conditional/defer/skipのreason・target・PLAN欠落 | closure analyzer | `doc-disposition-incomplete`、exit 1 |
+| `U-DOCLEDGER-004` | conditional/deferred/not_applicable（入力skip/deferは正規化）のreason・condition・trigger・decider・PLAN欠落、又はdisposition後条件欠落 | closure analyzer | `doc-disposition-incomplete`、exit 1。applicabilityとdispositionを第二enumで混同しない |
 | `U-DOCLEDGER-005` | add/delete/rename未台帳 | final closure | `doc-delta-unregistered`を差分identity別に返し、exit 1 |
 | `U-DOCLEDGER-006` | frontmatter/Markdown/wiki/anchor/PLAN/spec/test IDの正常fixture | reference reader | typed edgeとparse receiptがstable identity順、入力digest不変 |
 | `U-DOCLEDGER-007` | parse error、unknown scheme、broken/archived/superseded endpoint | reference analyzer | 空集合へ変換せず`doc-reference-parse-error`又は`doc-reference-orphan`、exit 1 |

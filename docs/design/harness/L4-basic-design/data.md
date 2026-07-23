@@ -286,12 +286,17 @@ renameはdelete+addの推測ではなく、旧新pathを一つのdeltaとしてa
 | `DispositionDecision` | update/merge/retain/supersede/archive/not_applicable、reason、target/PLAN、適用状態 |
 | `DocumentTarget` | repository-relative pathまたはtyped external authority。merge/supersede/updateの必須後条件を表す |
 | `DocumentReference` | source/target、edge kind、anchor/ID、伝達するsemantic responsibility、applicability condition |
-| `SnapshotIdentity` | commit、repository root tree OID、selector revision/digest、zone別tree evidence、raw NUL path digest、count。working tree identityを拒否 |
+| `SnapshotIdentity` | commit、repository root tree OID、selector revision/digest、zone別tree/member集合digest、raw NUL path digest、count。working tree identityを拒否 |
 | `ClosureReceipt` | baseline/delta/final/reference集合digest、finding counts、run time、tool version |
 
 集約のapplication stateは`pending | ready | applied | verified | rejected`とする。disposition決定だけでは
 `verified`にならず、target適用後blobとreference closure receiptが必要である。`retain`も比較根拠を欠けばpending、
 `not_applicable`も観測値と再評価triggerを欠けばpendingである。
+
+`ApplicabilityDecision.kind`は`applicable | conditional | deferred | not_applicable`を正本とする。
+入力語`skip`は`not_applicable`、`defer`は`deferred`へauthoring時に正規化し、第二enumとして保存しない。
+`conditional`はreason・観測条件・再評価trigger、`deferred`はreason・再評価trigger・PLAN、
+`not_applicable`はreason・deciderを欠く場合にincompleteとする。
 
 追加不変条件:
 
