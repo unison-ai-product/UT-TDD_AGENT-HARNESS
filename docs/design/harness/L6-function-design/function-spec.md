@@ -1414,7 +1414,7 @@ Bun依存またはdirect spawn fallbackを追加する実装は入力条件に�
 
 `DeltaGuard`はbaselineとの差分だけを返し、merge可否を決定しない。`CompliancePolicy`は`Compliant | NonCompliant(findings) | Indeterminate(coverageGaps)`を返し、後二者をaggregate Redにする。`Bun.*`、`process.versions.bun`、`import.meta.main`、`UT_TDD_BUN_*`、`bun.lock*`、`setup-bun`、download URL、package-manager invocation、shell/PowerShell変数展開、escaped command、case/Unicode/path alias、symlink/submodule/binary imageを各scannerのclosed reason codeで扱う。
 
-### Node self-host bootstrap
+### Node自己ホストbootstrap
 
 seedはNode `24.13.0` / npm `11.6.2`へexact pinし、最小compiled test host生成だけに使う。`NodeBootstrapReceipt`はseed identity、package-lock digest、`tsc` policy、compiled core digest、entrypoint、subject revisionを封印する。TDD順は`bootstrap Red → minimal compiled host Green → scanner Red/Green → compiled CLI self-host`であり、scannerを旧Bun runner上でGreenにしない。Node failure時はBun、tsx、TS直実行へfallbackせず構造化failureを返す。
 

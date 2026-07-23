@@ -1692,37 +1692,37 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 
 | ID | Red fixture | Green oracle |
 |---|---|---|
-| `U-BUNBAN-001` | manifest/engine/script/bin/shebangへBun追加 | canonical finding |
-| `U-BUNBAN-002` | static/dynamic importへBun specifier追加 | import種別を保持してfinding |
-| `U-BUNBAN-003` | spawn/exec argv・分割文字列でBun command生成 | 実行token正規化後にfinding |
-| `U-BUNBAN-004` | YAML/JSON/TOML/PowerShell/shellのworkflow/hook/setupへ追加 | surface別finding |
-| `U-BUNBAN-005` | Pack/template/generated bundleへbinary/command追加 | activation前finding |
-| `U-BUNBAN-006` | current docsへBun正規経路を追加 | negative fixtureと混同せずfinding |
-| `U-BUNBAN-007` | parse failure/unknown executable extension | coverage gapでRed |
-| `U-BUNBAN-008` | debt行のpath/detector/digest/owner/replacement/deadline欠落・余剰 | manifest driftでRed |
-| `U-BUNBAN-009` | 既存debtあり・delta無し | deltaは`Unchanged`でもoverallは`NonCompliant`かつ非zero終了 |
-| `U-BUNBAN-010` | 各scannerへ新規finding mutation | survivor 0 |
-| `U-BUNBAN-011` | scanner/build自身へBun依存注入 | self-host Red |
-| `U-BUNBAN-012` | 列挙順/cwd/path separator変更 | sorted receipt/digest不変 |
-| `U-BUNBAN-013` | `Bun.*` / `process.versions.bun` / `import.meta.main` | runtime global reasonでfinding |
-| `U-BUNBAN-014` | `UT_TDD_BUN_*`・Bun binary環境名 | environment surface finding |
-| `U-BUNBAN-015` | `bun.lock*`、`setup-bun`、download URL、package-manager invocation | dependency/setup reasonでfinding |
-| `U-BUNBAN-016` | shell/PowerShell変数展開・escaped token・分割command | canonical command finding |
-| `U-BUNBAN-017` | case/Unicode/path alias・symlink | 解決元identity付きfinding |
-| `U-BUNBAN-018` | submodule/executable binary・untracked release tree | manifest selection内をscan |
-| `U-BUNBAN-019` | archive/reference/current Core Readsの同語彙 | currentだけproduction finding、分類欠測Red |
-| `U-BUNBAN-020` | runtime observer heartbeat gap/drop/session欠測 | image 0でも`Indeterminate` Red |
-| `U-NODEBOOT-001` | Node/version/lock drift | bootstrap拒否 |
-| `U-NODEBOOT-002` | clean dependency graph | review済みlock digest一致 |
-| `U-NODEBOOT-003` | production TS直実行 | compiled ESM以外を拒否 |
-| `U-NODEBOOT-004` | compiled CLI help/status JSON | stdout framingとexit 0 |
-| `U-NODEBOOT-005` | compiled CLIからban audit |同一bootstrap receiptで実行 |
-| `U-NODEBOOT-006` | SQLite transaction/WAL/type/busy/close corpus | canonical result一致 |
-| `U-NODEBOOT-007` | cwd/space path/module resolution変異 | absolute entrypointで決定的に動作 |
-| `U-NODEBOOT-008` | stdin/stdout/stderr/exit変異 | bounded channel意味論保持 |
-| `U-NODEBOOT-009` | Bun binary/PATH/cache/env無し | Node経路だけで成功 |
-| `U-NODEBOOT-010` | Node failure | Bun/tsx/TS直実行fallback call 0 |
-| `U-NODEBOOT-011` | repeated clean build | file set/digest決定的 |
-| `U-NODEBOOT-012` | targeted test実行 | Node worker imageだけを観測 |
+| `CAND-BUNBAN-001` | manifest/engine/script/bin/shebangへBun追加 | canonical finding |
+| `CAND-BUNBAN-002` | static/dynamic importへBun specifier追加 | import種別を保持してfinding |
+| `CAND-BUNBAN-003` | spawn/exec argv・分割文字列でBun command生成 | 実行token正規化後にfinding |
+| `CAND-BUNBAN-004` | YAML/JSON/TOML/PowerShell/shellのworkflow/hook/setupへ追加 | surface別finding |
+| `CAND-BUNBAN-005` | Pack/template/generated bundleへbinary/command追加 | activation前finding |
+| `CAND-BUNBAN-006` | current docsへBun正規経路を追加 | negative fixtureと混同せずfinding |
+| `CAND-BUNBAN-007` | parse failure/unknown executable extension | coverage gapでRed |
+| `CAND-BUNBAN-008` | debt行のpath/detector/digest/owner/replacement/deadline欠落・余剰 | manifest driftでRed |
+| `CAND-BUNBAN-009` | 既存debtあり・delta無し | deltaは`Unchanged`でもoverallは`NonCompliant`かつ非zero終了 |
+| `CAND-BUNBAN-010` | 各scannerへ新規finding mutation | survivor 0 |
+| `CAND-BUNBAN-011` | scanner/build自身へBun依存注入 | self-host Red |
+| `CAND-BUNBAN-012` | 列挙順/cwd/path separator変更 | sorted receipt/digest不変 |
+| `CAND-BUNBAN-013` | `Bun.*` / `process.versions.bun` / `import.meta.main` | runtime global reasonでfinding |
+| `CAND-BUNBAN-014` | `UT_TDD_BUN_*`・Bun binary環境名 | environment surface finding |
+| `CAND-BUNBAN-015` | `bun.lock*`、`setup-bun`、download URL、package-manager invocation | dependency/setup reasonでfinding |
+| `CAND-BUNBAN-016` | shell/PowerShell変数展開・escaped token・分割command | canonical command finding |
+| `CAND-BUNBAN-017` | case/Unicode/path alias・symlink | 解決元identity付きfinding |
+| `CAND-BUNBAN-018` | submodule/executable binary・untracked release tree | manifest selection内をscan |
+| `CAND-BUNBAN-019` | archive/reference/current Core Readsの同語彙 | currentだけproduction finding、分類欠測Red |
+| `CAND-BUNBAN-020` | runtime observer heartbeat gap/drop/session欠測 | image 0でも`Indeterminate` Red |
+| `CAND-NODEBOOT-001` | Node/version/lock drift | bootstrap拒否 |
+| `CAND-NODEBOOT-002` | clean dependency graph | review済みlock digest一致 |
+| `CAND-NODEBOOT-003` | production TS直実行 | compiled ESM以外を拒否 |
+| `CAND-NODEBOOT-004` | compiled CLI help/status JSON | stdout framingとexit 0 |
+| `CAND-NODEBOOT-005` | compiled CLIからban audit |同一bootstrap receiptで実行 |
+| `CAND-NODEBOOT-006` | SQLite transaction/WAL/type/busy/close corpus | canonical result一致 |
+| `CAND-NODEBOOT-007` | cwd/space path/module resolution変異 | absolute entrypointで決定的に動作 |
+| `CAND-NODEBOOT-008` | stdin/stdout/stderr/exit変異 | bounded channel意味論保持 |
+| `CAND-NODEBOOT-009` | Bun binary/PATH/cache/env無し | Node経路だけで成功 |
+| `CAND-NODEBOOT-010` | Node failure | Bun/tsx/TS直実行fallback call 0 |
+| `CAND-NODEBOOT-011` | repeated clean build | file set/digest決定的 |
+| `CAND-NODEBOOT-012` | targeted test実行 | Node worker imageだけを観測 |
 
-このpairはdetectorとNode bootstrapを同じsliceでRed/Green化する。旧Bun test Green、単純grep、observer欠測、既存debtのallowlist化を証拠に数えない。
+このpairは候補oracleであり、実装sliceで対応test codeを追加する同じcommitに限って正式`U-*`へpromoteする。旧Bun test Green、単純grep、observer欠測、既存debtのallowlist化を証拠に数えない。

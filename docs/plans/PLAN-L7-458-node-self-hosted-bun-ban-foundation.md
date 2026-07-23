@@ -1,12 +1,12 @@
 ---
 plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
 title: "PLAN-L7-458 (add-impl): Node self-hosted Bun permanent-ban foundation"
-kind: add-impl
+kind: impl
 layer: L7
 drive: fullstack
 status: draft
-route_signal: feature_addition
-route_mode: add-feature
+route_signal: forward_reentry
+route_mode: forward
 created: 2026-07-22
 updated: 2026-07-22
 owner: PO / Codex
@@ -31,16 +31,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/runtime/runtime-image-observer.ts
     artifact_type: source_module
-  - artifact_path: src/cli.ts
-    artifact_type: cli_extension
-  - artifact_path: src/state-db/index.ts
-    artifact_type: source_module
   - artifact_path: scripts/build-node.mjs
     artifact_type: script
-  - artifact_path: scripts/run-vitest-snapshot.ts
-    artifact_type: script
-  - artifact_path: package.json
-    artifact_type: json_config
   - artifact_path: package-lock.json
     artifact_type: config
   - artifact_path: tsconfig.node.json
@@ -60,6 +52,10 @@ dependencies:
     - docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     - docs/test-design/harness/L7-unit-test-design.md
+    - package.json
+    - src/cli.ts
+    - src/state-db/index.ts
+    - scripts/run-vitest-snapshot.ts
 review_evidence: []
 ---
 
@@ -85,7 +81,7 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 
 ## 4. TDD order
 
-1. `U-BUNBAN-001..020`と`U-NODEBOOT-001..012`をRed freezeする。
+1. `CAND-BUNBAN-001..020`と`CAND-NODEBOOT-001..012`を候補oracleとしてfreezeし、実装sliceのtest codeと同じcommitで正式`U-*`へpromoteする。
 2. CIのreview済みseed Node `24.13.0` / npm `11.6.2`で最小compiled test hostをbuildし、`NodeBootstrapReceipt`をRed→Green化する。seedはbootstrapのためだけに使い、production entrypointと証拠対象は`tsc`生成のcompiled ESMに限定する。
 3. そのcompiled Node test hostでscanner pure objectsとdeterministic inventoryをRed→Green化する。
 4. 現存Bun debt manifestを実scan結果から固定し、delta guard結果とoverall `NonCompliant`を同時に保存する。既存debtがある状態をPass/Greenと呼ばない。
