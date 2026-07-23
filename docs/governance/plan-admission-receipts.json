@@ -80,6 +80,38 @@
         "revision": 5,
         "content_digest": "sha256:68fd8a18645fff0e14d9afa66fa9e8b42da6ad5ce88ee6cc1e8ba2feef7f1001"
       }
+    },
+    {
+      "sequence": 6,
+      "previous_record_digest": "sha256:5978e6b14ff66a70603d88562c0b0b68a119546cd82817d474eb5464d4de9af3",
+      "record_digest": "sha256:922cfe68df5ec7168e3fd8cd59244e9eee4bb654b67325693c0a034c153c048c",
+      "command_id": "redesign:issue-98:l4-31-l6-88:revision-2:origin",
+      "receipt_id": "certificate:4c427549f3d2481dccb480287758190a",
+      "receipt_digest": "sha256:42f8071009eecd41e2cbd39d94a93a917f50267c0328424e7c89a5dbe0f74a9b",
+      "decision_digest": "sha256:2ba69748f1d1ab701cbc9577d2bc009edbbd85d598e46bcf848a43a15cc4bac9",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md",
+        "plan_id": "PLAN-L4-31-nfr-verification-foundation-architecture",
+        "asset_id": "plan:legacy:850550bc4124bc51426c3458d90cee22d56a80e0e0a08073829429d0a0889ff7",
+        "revision": 2,
+        "content_digest": "sha256:e7c45da54a6a6cc1d31e7c32fb218a2e3e98b52dda17662581175684d28cce78"
+      }
+    },
+    {
+      "sequence": 7,
+      "previous_record_digest": "sha256:922cfe68df5ec7168e3fd8cd59244e9eee4bb654b67325693c0a034c153c048c",
+      "record_digest": "sha256:1087583481d847d57c42ea4817dd1be36cc450a26e32f4b2d413cd9ab19ff115",
+      "command_id": "redesign:issue-98:l4-31-l6-88:revision-2:replacement",
+      "receipt_id": "certificate:e50999e6a1f6b27678560111d5ccfe3a",
+      "receipt_digest": "sha256:e8e9d47b01baea6b99016f4a7860b17e4ed658135133e26ae6108040e64319d7",
+      "decision_digest": "sha256:58cfc85bb7f419f744cd3bf7b918dfb88fdfe7bd4aea08b874508c4771c5832a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md",
+        "plan_id": "PLAN-L6-88-snapshot-runner-performance-redesign",
+        "asset_id": "plan:legacy:48d2e91e9b04be86041dc414fb64e026f3672a21dc6e41c2982f7505f111965c",
+        "revision": 2,
+        "content_digest": "sha256:42ea26f3a2888682fe33bd6caf9ecbfda2cff52fb392a718f0658565685ac88e"
+      }
     }
   ]
 }

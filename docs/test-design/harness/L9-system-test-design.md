@@ -166,3 +166,6 @@ G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順�
 
 L4↔L9の量閉じ条件は、通常Forward 1系統とForward外の全列挙経路が上表のどれかへexactly once対応し、
 GitHub可用性がLedgerの正本性を左右しないこと。検出器はこの設計列挙から生成・検査し、未設計経路を自動創作しない。
+
+
+<!-- PLAN-L6-88 redesign verification binding -->

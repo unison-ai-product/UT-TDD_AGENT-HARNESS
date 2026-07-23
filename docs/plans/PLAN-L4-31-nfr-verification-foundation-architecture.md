@@ -1,11 +1,10 @@
 ---
 plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
-title: "PLAN-L4-31 (add-design): 非機能検証基盤の方式設計 — NFR Contract → Profile → Adapter → Evidence → Gate 5 層と実行環境分離"
+title: "PLAN-L4-31 (add-design): 非機能検証基盤の方式設計 — NFR Contract → Profile → Adapter
+  → Evidence → Gate 5 層と実行環境分離"
 kind: add-design
 layer: L4
-sub_doc: architecture
 drive: be
-status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-16
@@ -17,11 +16,11 @@ pair_artifact: docs/test-design/harness/L9-system-test-design.md
 next_pair_freeze: L9
 agent_slots:
   - role: tl
-    slot_label: "TL - 5 層構造の責務境界と既存 verify/doctor/gate/harness.db への統合方式判断"
+    slot_label: TL - 5 層構造の責務境界と既存 verify/doctor/gate/harness.db への統合方式判断
   - role: se
-    slot_label: "SE - 実行環境 4 面 (local / GHA / VPS staging / AWS) の割当と evidence 流用禁止境界の設計"
+    slot_label: SE - 実行環境 4 面 (local / GHA / VPS staging / AWS) の割当と evidence 流用禁止境界の設計
   - role: qa
-    slot_label: "QA - stage 割当 (L7-L14) と G-VERIFY gate の NFR evidence 要求の oracle 設計"
+    slot_label: QA - stage 割当 (L7-L14) と G-VERIFY gate の NFR evidence 要求の oracle 設計
 generates:
   - artifact_path: docs/design/harness/L4-basic-design/architecture.md
     artifact_type: design_doc
@@ -40,6 +39,41 @@ dependencies:
     - src/lint/verification-profile-catalog.ts
     - docs/improvement-backlog.md
 review_evidence: []
+status: draft
+sub_doc: architecture
+github_issue_id: 129
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:4c427549f3d2481dccb480287758190a
+  command_id: redesign:issue-98:l4-31-l6-88:revision-2:origin
+  admitted_at: 2026-07-23T05:00:00.000Z
+  source_digest: sha256:e7c45da54a6a6cc1d31e7c32fb218a2e3e98b52dda17662581175684d28cce78
+  decision_digest: sha256:2ba69748f1d1ab701cbc9577d2bc009edbbd85d598e46bcf848a43a15cc4bac9
+  receipt_digest: sha256:42f8071009eecd41e2cbd39d94a93a917f50267c0328424e7c89a5dbe0f74a9b
+  binding:
+    path: docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md
+    plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
+    asset_id: plan:legacy:850550bc4124bc51426c3458d90cee22d56a80e0e0a08073829429d0a0889ff7
+    revision: 2
+    content_digest: sha256:e7c45da54a6a6cc1d31e7c32fb218a2e3e98b52dda17662581175684d28cce78
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 129
+    episode_id: genesis:issue-129:l4-31
+    projection_digest: sha256:338bd795bb17ee6ea5f5ef67bc52495e3102e1a3402c1a8646d539ad1076d9fb
+  origin:
+    plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
+    revision: 1
+    digest: sha256:31338ff31c925b41f6482ed4c9823f922f77ba662086d184fe8a1eca31cbd621
+  reentry:
+    target_plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "Issue #98 redesign origin correction and explicit replacement
+    back-reference"
 ---
 
 # PLAN-L4-31 (add-design): 非機能検証基盤の方式設計

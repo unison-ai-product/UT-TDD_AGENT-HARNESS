@@ -1748,3 +1748,6 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 property testは任意の合法event列でreplay同一性・単調append・terminal後遷移禁止を確認する。
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
 cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする。
+
+
+<!-- PLAN-L6-88 redesign verification binding -->
