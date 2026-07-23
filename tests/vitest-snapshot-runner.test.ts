@@ -20,6 +20,7 @@ import {
   finishSnapshotCleanup,
   removeSnapshot,
   resolveNodeBinary,
+  resolveNpmCli,
   resolveSnapshotSource,
   sealReference,
   snapshotContentFingerprint,
@@ -30,6 +31,7 @@ import { removeTestTree } from "./support/temp-tree";
 describe("vitest snapshot runner", () => {
   it("U-TESTHYGIENE-047: resolves the absolute Node executable used by the compiled runner", () => {
     expect(resolveNodeBinary()).toBe(process.execPath);
+    expect(existsSync(resolveNpmCli())).toBe(true);
   });
 
   it("U-TESTHYGIENE-045: rejects watch arguments because an execution snapshot cannot observe live edits", () => {

@@ -14,7 +14,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 function run(
   command: string,
@@ -48,8 +48,15 @@ export function resolveNodeBinary(): string {
   return process.execPath;
 }
 
-export function resolveNpmBinary(): string {
-  return process.platform === "win32" ? "npm.cmd" : "npm";
+export function resolveNpmCli(nodePath = resolveNodeBinary()): string {
+  const candidates = [
+    process.env.npm_execpath,
+    join(dirname(nodePath), "node_modules", "npm", "bin", "npm-cli.js"),
+    resolve(dirname(nodePath), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+  ];
+  const found = candidates.find((candidate): candidate is string => Boolean(candidate && existsSync(candidate)));
+  if (!found) throw new Error("reviewed npm CLI cannot be resolved from the Node installation");
+  return realpathSync(found);
 }
 
 export function canonicalPath(path: string): string {
@@ -261,13 +268,13 @@ export function runSnapshotTests(
   let sealedReferenceFingerprint: string | undefined;
   try {
     const node = resolveNodeBinary();
-    const npm = resolveNpmBinary();
+    const npmCli = resolveNpmCli(node);
     const source = resolveSnapshotSource(repoRoot);
     createSnapshot(repoRoot, snapshotRoot, source);
     createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot));
     if (source.kind === "copy") assertSnapshotContentMatch(snapshotRoot, referenceRoot);
-    run(npm, ["ci", "--ignore-scripts"], snapshotRoot);
-    run(npm, ["run", "build"], snapshotRoot);
+    run(node, [npmCli, "ci", "--ignore-scripts"], snapshotRoot);
+    run(node, [npmCli, "run", "build"], snapshotRoot);
     run(node, ["dist/ut-tdd.mjs", "db", "rebuild"], snapshotRoot);
     copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);
     if (source.kind === "git")
