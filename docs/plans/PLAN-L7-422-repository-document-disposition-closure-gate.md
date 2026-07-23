@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-23
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -23,6 +23,16 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-422-repository-document-ledger-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/document-disposition/application/capture-repository-docs-snapshot.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/domain/canonical-frame.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/domain/repository-docs-snapshot.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/ports/git-object-snapshot.ts
+    artifact_type: source_code
+  - artifact_path: tests/document-disposition/capture-repository-docs-snapshot.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
   requires: []
