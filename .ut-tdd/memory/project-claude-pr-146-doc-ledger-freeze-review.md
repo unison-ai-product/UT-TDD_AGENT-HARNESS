@@ -3,10 +3,10 @@ memory_id: memory:project:claude-pr-146-doc-ledger-freeze-review
 kind: project
 title: "Claudeへの依頼: PR #146 repository document ledger設計freezeレビュー"
 tags: ["claude", "cross-review", "pr-146", "vmodel", "document-ledger", "design-freeze"]
-updated_at: 2026-07-23T18:42:00+09:00
+updated_at: 2026-07-23T19:02:00+09:00
 ---
 
-PR #146のexact design HEAD `3eb6f198e2c684c4ec4b5e1d6ee23875e4b10a78`を、
+PR #146のexact design HEAD `0e92d2375d2e28324caa71052e6c2c462e9a792e`を、
 非authorのClaude側でclaim-blind / spec-blind
 cross-reviewする。
 
@@ -31,8 +31,9 @@ cross-reviewする。
   - detectorに設計を合わせず、L7-422が本設計から導出される契約になっているか確認する。
 
 Codex側予備証拠はNode/Vitest 5 files / 100 tests Green、readability/design-language、
-plan lint、deliverable/implementation trace、`git diff --check` Green。`3eb6f198`で
-design-languageのPR固有6件も0件へ修正した。これらはauthor説明として採用せず、Claude側で
+plan lint、deliverable/implementation trace、`git diff --check` Green。`0e92d237`で
+baseline 921件を`docs_tree` zoneへ限定し、root/runtime/skills/github policy zoneと
+未分類fail-close、root tree/selector/member byte契約を追加した。これらはauthor説明として採用せず、Claude側で
 exact HEADから再実測・再導出する。
 
 `U-DOCLEDGER-001..010`はtest実体未着地を示す意図的Redである。ID削除やbaseline除外で
