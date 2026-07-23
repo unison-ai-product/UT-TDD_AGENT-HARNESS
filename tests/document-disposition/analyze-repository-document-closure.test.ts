@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { analyzeRepositoryDocumentClosure } from "../../src/document-disposition/domain/analyze-repository-document-closure";
+import type { DocumentDispositionInput } from "../../src/document-disposition/domain/document-disposition";
+import {
+  createDocumentDeltaDecision,
+  createDocumentDeltaEvent,
+  type DocumentDelta,
+  documentDeltaChainDigest,
+} from "../../src/document-disposition/domain/replay-document-deltas";
 
 function snapshot(snapshotDigest: string, paths: readonly string[]) {
   return {
     snapshotDigest,
-    members: paths.map((path) => ({ path })),
+    members: paths.map((path) => ({
+      path,
+      blobOid: `oid:${path}`,
+      contentDigest: `sha:${path}`,
+    })),
   };
 }
 
@@ -20,17 +31,50 @@ function record(baselinePath: string) {
   };
 }
 
+function ledger(records: DocumentDispositionInput[], deltas: DocumentDelta[] = []) {
+  const ledgerId = "ledger";
+  const decisions = deltas.map((delta) => {
+    const path = delta.kind === "delete" ? delta.before.path : delta.after.path;
+    return createDocumentDeltaDecision({
+      deltaId: delta.deltaId,
+      ledgerId,
+      fromSnapshotDigest: delta.fromSnapshotDigest,
+      toSnapshotDigest: delta.toSnapshotDigest,
+      operationKind: delta.kind,
+      before: delta.kind === "add" ? undefined : delta.before,
+      after: delta.kind === "delete" ? undefined : delta.after,
+      affectedPath: path,
+      record: record(path),
+    });
+  });
+  return {
+    ledgerId,
+    records,
+    deltas,
+    decisions,
+    deltaChainDigest: documentDeltaChainDigest({
+      ledgerId,
+      baselineSnapshotDigest: "baseline",
+      policyRevision: "document-closure-v1",
+      deltas,
+    }),
+  };
+}
+
 describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
   it("exactly-once ledgerはclosed/exit 0を返す", () => {
     const result = analyzeRepositoryDocumentClosure({
       baselineSnapshot: snapshot("baseline", ["docs/a.md", "docs/b.md"]),
       finalSnapshot: snapshot("final", ["docs/a.md", "docs/b.md"]),
-      ledger: { records: [record("docs/a.md"), record("docs/b.md")] },
+      ledger: ledger([record("docs/a.md"), record("docs/b.md")]),
       policyRevision: "document-closure-v1",
     });
 
     expect(result).toEqual({
       finalSnapshotDigest: "final",
+      deltaChainDigest: expect.any(String),
+      effective: snapshot("final", ["docs/a.md", "docs/b.md"]).members,
+      reductionDigest: expect.any(String),
       findings: [],
       routeRequirements: [],
       closure: "closed",
@@ -42,7 +86,7 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
     const input = {
       baselineSnapshot: snapshot("baseline", ["docs/a.md", "docs/b.md"]),
       finalSnapshot: snapshot("final", ["docs/a.md", "docs/b.md"]),
-      ledger: { records: [record("docs/a.md")] },
+      ledger: ledger([record("docs/a.md")]),
       policyRevision: "document-closure-v1",
     } as const;
     const before = structuredClone(input);
@@ -52,6 +96,7 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
 
     expect(first).toEqual({
       finalSnapshotDigest: "final",
+      deltaChainDigest: expect.any(String),
       findings: [
         expect.objectContaining({
           ruleId: "doc-disposition-missing",
@@ -73,7 +118,7 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
     const result = analyzeRepositoryDocumentClosure({
       baselineSnapshot: snapshot("baseline", ["docs/a.md"]),
       finalSnapshot: snapshot("final", ["docs/a.md"]),
-      ledger: { records: [record("docs/a.md"), record("docs/z.md")] },
+      ledger: ledger([record("docs/a.md"), record("docs/z.md")]),
       policyRevision: "document-closure-v1",
     });
 
@@ -89,7 +134,7 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
     const result = analyzeRepositoryDocumentClosure({
       baselineSnapshot: snapshot("baseline", ["docs/a.md"]),
       finalSnapshot: snapshot("final", ["docs/a.md"]),
-      ledger: { records: [record("docs/a.md"), record("docs/a.md")] },
+      ledger: ledger([record("docs/a.md"), record("docs/a.md")]),
       policyRevision: "document-closure-v1",
     });
 
@@ -105,25 +150,29 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
     const result = analyzeRepositoryDocumentClosure({
       baselineSnapshot: snapshot("baseline", ["docs/A.md", "docs/a.md"]),
       finalSnapshot: snapshot("final", ["docs/A.md", "docs/a.md"]),
-      ledger: { records: [record("docs/A.md"), record("docs/a.md")] },
+      ledger: ledger([record("docs/A.md"), record("docs/a.md")]),
       policyRevision: "document-closure-v1",
     });
 
-    expect(result.findings).toEqual([
-      expect.objectContaining({
-        ruleId: "doc-disposition-duplicate",
-        subjectIdentity: "docs/A.md|docs/a.md",
-      }),
-    ]);
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ruleId: "doc-disposition-duplicate",
+          subjectIdentity: "docs/A.md|docs/a.md",
+        }),
+        expect.objectContaining({
+          reasonCode: "final-casefold-collision",
+          subjectIdentity: "docs/A.md|docs/a.md",
+        }),
+      ]),
+    );
   });
 
   it("missing/phantom/duplicateを同時に隠さずstable順で返す", () => {
     const input = {
       baselineSnapshot: snapshot("baseline", ["docs/a.md", "docs/b.md"]),
       finalSnapshot: snapshot("final", ["docs/a.md", "docs/b.md", "docs/c.md"]),
-      ledger: {
-        records: [record("docs/a.md"), record("docs/a.md"), record("docs/z.md")],
-      },
+      ledger: ledger([record("docs/a.md"), record("docs/a.md"), record("docs/z.md")]),
       policyRevision: "document-closure-v1",
     } as const;
 
@@ -131,6 +180,7 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
 
     expect(result.findings.map(({ ruleId, subjectIdentity }) => [ruleId, subjectIdentity])).toEqual(
       [
+        ["doc-delta-unregistered", "docs/c.md"],
         ["doc-disposition-duplicate", "docs/a.md"],
         ["doc-disposition-missing", "docs/b.md"],
         ["doc-disposition-phantom", "docs/z.md"],
@@ -143,11 +193,51 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
     const result = analyzeRepositoryDocumentClosure({
       baselineSnapshot: snapshot("baseline", ["docs/a.md"]),
       finalSnapshot: snapshot("final", ["docs/a.md", "docs/new.md"]),
-      ledger: { records: [record("docs/a.md")] },
+      ledger: ledger([record("docs/a.md")]),
+      policyRevision: "document-closure-v1",
+    });
+
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        ruleId: "doc-delta-unregistered",
+        subjectIdentity: "docs/new.md",
+      }),
+    ]);
+    expect(result.findings.some(({ ruleId }) => ruleId === "doc-disposition-missing")).toBe(false);
+  });
+
+  it("登録済みaddをreplayしてclosure Greenにする", () => {
+    const after = snapshot("final", ["docs/a.md", "docs/new.md"]).members[1];
+    const decision = createDocumentDeltaDecision({
+      deltaId: "d1",
+      ledgerId: "ledger",
+      fromSnapshotDigest: "baseline",
+      toSnapshotDigest: "final",
+      operationKind: "add",
+      after,
+      affectedPath: after.path,
+      record: record(after.path),
+    });
+    const delta = createDocumentDeltaEvent({
+      deltaId: "d1",
+      ledgerId: "ledger",
+      fromSnapshotDigest: "baseline",
+      toSnapshotDigest: "final",
+      sequence: 1,
+      kind: "add",
+      after,
+      decisionDigest: decision.decisionDigest,
+      previousEventDigest: null,
+    });
+    const result = analyzeRepositoryDocumentClosure({
+      baselineSnapshot: snapshot("baseline", ["docs/a.md"]),
+      finalSnapshot: snapshot("final", ["docs/a.md", "docs/new.md"]),
+      ledger: ledger([record("docs/a.md")], [delta]),
       policyRevision: "document-closure-v1",
     });
 
     expect(result.findings).toEqual([]);
+    expect(result.closure).toBe("closed");
   });
 
   it("不完全なdispositionをstable findingとしてclosureで拒否する", () => {
@@ -166,7 +256,7 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
     const input = {
       baselineSnapshot: snapshot("baseline", ["docs/a.md"]),
       finalSnapshot: snapshot("final", ["docs/a.md"]),
-      ledger: { records: [incomplete] },
+      ledger: ledger([incomplete]),
       policyRevision: "document-closure-v1",
     } as const;
 
@@ -174,6 +264,7 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
 
     expect(result).toEqual({
       finalSnapshotDigest: "final",
+      deltaChainDigest: expect.any(String),
       findings: [
         expect.objectContaining({
           ruleId: "doc-disposition-incomplete",

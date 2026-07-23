@@ -41,6 +41,16 @@ generates:
     artifact_type: source_code
   - artifact_path: tests/document-disposition/document-disposition.test.ts
     artifact_type: test_code
+  - artifact_path: src/document-disposition/domain/replay-document-deltas.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/domain/document-delta.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/domain/document-delta-reducer.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/domain/document-delta-finding.ts
+    artifact_type: source_code
+  - artifact_path: tests/document-disposition/replay-document-deltas.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
   requires: []

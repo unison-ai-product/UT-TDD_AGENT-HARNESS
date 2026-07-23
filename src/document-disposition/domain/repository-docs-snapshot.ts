@@ -124,16 +124,18 @@ function matchesZone(path: string, zone: RepositoryDocumentZone): boolean {
 }
 
 export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
-  private constructor(
-    readonly snapshotId: string,
-    readonly snapshotDigest: string,
-    readonly pathStreamSha256: string,
-    readonly zoneSetDigest: string,
-    readonly memberSetDigest: string,
-    readonly trackedCount: number,
-    readonly members: readonly RepositoryDocsSnapshotMember[],
-    readonly zones: readonly RepositoryDocsSnapshotZoneEvidence[],
-  ) {}
+  private constructor(snapshot: RepositoryDocsSnapshot) {
+    Object.assign(this, snapshot);
+  }
+
+  declare readonly snapshotId: string;
+  declare readonly snapshotDigest: string;
+  declare readonly pathStreamSha256: string;
+  declare readonly zoneSetDigest: string;
+  declare readonly memberSetDigest: string;
+  declare readonly trackedCount: number;
+  declare readonly members: readonly RepositoryDocsSnapshotMember[];
+  declare readonly zones: readonly RepositoryDocsSnapshotZoneEvidence[];
 
   static create(
     request: GitObjectSnapshotRequest,
@@ -312,16 +314,16 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
 
     return {
       ok: true,
-      value: new RepositoryDocsSnapshotValue(
-        `document-snapshot:sha256:${snapshotDigest}`,
+      value: new RepositoryDocsSnapshotValue({
+        snapshotId: `document-snapshot:sha256:${snapshotDigest}`,
         snapshotDigest,
         pathStreamSha256,
         zoneSetDigest,
         memberSetDigest,
-        members.length,
+        trackedCount: members.length,
         members,
         zones,
-      ),
+      }),
     };
   }
 }

@@ -108,6 +108,13 @@ export function validateDocumentDisposition(
   input: DocumentDispositionInput,
 ): DocumentDispositionValidation {
   const missing = validateApplicability(input.applicability);
+  if (
+    !["retain", "update", "merge", "supersede", "archive", "not_applicable"].includes(
+      input.disposition,
+    )
+  ) {
+    missing.push("disposition");
+  }
   if (!nonEmpty(input.reason)) missing.push("reason");
   if (!["pending", "applied", "verified"].includes(input.applicationStatus)) {
     missing.push("application_status");

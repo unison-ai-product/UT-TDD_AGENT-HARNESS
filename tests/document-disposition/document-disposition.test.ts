@@ -94,6 +94,13 @@ describe("document disposition U-DOCLEDGER-004", () => {
     });
   });
 
+  it("unknown dispositionをfail-closeする", () => {
+    expect(validateDocumentDisposition({ ...base, disposition: "reference" })).toEqual({
+      ok: false,
+      missingFields: ["disposition"],
+    });
+  });
+
   it("canonicalな全applicabilityを受理する", () => {
     const variants = [
       { kind: "applicable" },
