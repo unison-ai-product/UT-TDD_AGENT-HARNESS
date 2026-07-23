@@ -19,6 +19,7 @@ const TREE_SNAPSHOT: GitObjectTreeSnapshot = {
   commitOid: FULL_COMMIT,
   repositoryTreeOid: ROOT_TREE,
   rawPathStream: RAW_PATH_STREAM,
+  unclassifiedPathStream: new Uint8Array(),
   members: [
     {
       pathBytes: Uint8Array.from(Buffer.from(".ut-tdd/memory/policy.md", "utf8")),
@@ -43,11 +44,16 @@ const TREE_SNAPSHOT: GitObjectTreeSnapshot = {
     },
   ],
   zones: [
-    { zone: "docs_tree", memberCount: 1, treeOid: "6".repeat(40) },
-    { zone: "root_policy", memberCount: 1 },
-    { zone: "runtime_policy", memberCount: 1 },
-    { zone: "skills", memberCount: 0 },
-    { zone: "github_policy", memberCount: 0 },
+    {
+      zone: "docs_tree",
+      selectorDigest: "7".repeat(64),
+      memberCount: 1,
+      treeOid: "6".repeat(40),
+    },
+    { zone: "root_policy", selectorDigest: "8".repeat(64), memberCount: 1 },
+    { zone: "runtime_policy", selectorDigest: "9".repeat(64), memberCount: 1 },
+    { zone: "skills", selectorDigest: "e".repeat(64), memberCount: 0 },
+    { zone: "github_policy", selectorDigest: "f".repeat(64), memberCount: 0 },
   ],
 };
 
@@ -73,9 +79,10 @@ describe("captureRepositoryDocsSnapshot", () => {
       ok: true,
       value: expect.objectContaining({
         snapshotId:
-          "document-snapshot:sha256:a65024541d119c33211fef4549360319bee489ed2e2b8e07f9e21b5998745b52",
-        snapshotDigest: "a65024541d119c33211fef4549360319bee489ed2e2b8e07f9e21b5998745b52",
+          "document-snapshot:sha256:9c3165a95c7768e86e04fb370692f3ad0f9a86bf00cd4ee5422ca40a321fb07d",
+        snapshotDigest: "9c3165a95c7768e86e04fb370692f3ad0f9a86bf00cd4ee5422ca40a321fb07d",
         pathStreamSha256: "cbbb3a2a0a6248e0697e6a12b8b1d293d482d0c6d7ddf902c2a9fbbf1e77d579",
+        zoneSetDigest: "509734b259de58626cfad5fd640cacb6edc79bc6918de74e2ba40427f60bf807",
         memberSetDigest: "6f75de8715fcf9334ba259daadfff55b5bb5e32f172132a4a8da2e0610912ddf",
         trackedCount: 3,
         members: [
@@ -128,11 +135,29 @@ describe("captureRepositoryDocsSnapshot", () => {
       "doc-selection-unclassified",
     ],
     [
+      "unclassified tracked document",
+      {
+        ...TREE_SNAPSHOT,
+        unclassifiedPathStream: Uint8Array.from(Buffer.from("notes/decision.md\0", "utf8")),
+      },
+      "doc-selection-unclassified",
+    ],
+    [
       "zone count mismatch",
       {
         ...TREE_SNAPSHOT,
         zones: TREE_SNAPSHOT.zones.map((zone) =>
           zone.zone === "docs_tree" ? { ...zone, memberCount: 2 } : zone,
+        ),
+      },
+      "doc-selection-unclassified",
+    ],
+    [
+      "malformed docs tree OID",
+      {
+        ...TREE_SNAPSHOT,
+        zones: TREE_SNAPSHOT.zones.map((zone) =>
+          zone.zone === "docs_tree" ? { ...zone, treeOid: "not-an-oid" } : zone,
         ),
       },
       "doc-selection-unclassified",
@@ -148,12 +173,44 @@ describe("captureRepositoryDocsSnapshot", () => {
       "docs-snapshot-stream-malformed",
     ],
     [
+      "path assigned to wrong zone",
+      {
+        ...TREE_SNAPSHOT,
+        members: TREE_SNAPSHOT.members.map((member, index) =>
+          index === 0 ? { ...member, zone: "docs_tree" as const } : member,
+        ),
+        zones: TREE_SNAPSHOT.zones.map((zone) =>
+          zone.zone === "docs_tree"
+            ? { ...zone, memberCount: 2 }
+            : zone.zone === "runtime_policy"
+              ? { ...zone, memberCount: 0 }
+              : zone,
+        ),
+      },
+      "doc-selection-unclassified",
+    ],
+    [
       "invalid UTF-8 path",
       {
         ...TREE_SNAPSHOT,
         rawPathStream: Uint8Array.from([0xff, 0, ...Buffer.from("AGENTS.md\0docs/a.md\0", "utf8")]),
         members: TREE_SNAPSHOT.members.map((member, index) =>
           index === 0 ? { ...member, pathBytes: Uint8Array.from([0xff]) } : member,
+        ),
+      },
+      "docs-snapshot-stream-malformed",
+    ],
+    [
+      "non-NFC path",
+      {
+        ...TREE_SNAPSHOT,
+        rawPathStream: Uint8Array.from(
+          Buffer.from(".ut-tdd/memory/policy.md\0AGENTS.md\0docs/e\u0301.md\0", "utf8"),
+        ),
+        members: TREE_SNAPSHOT.members.map((member, index) =>
+          index === 2
+            ? { ...member, pathBytes: Uint8Array.from(Buffer.from("docs/e\u0301.md", "utf8")) }
+            : member,
         ),
       },
       "docs-snapshot-stream-malformed",

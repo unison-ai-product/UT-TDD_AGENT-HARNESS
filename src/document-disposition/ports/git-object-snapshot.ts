@@ -18,6 +18,7 @@ export interface GitObjectSnapshotMember {
 
 export interface GitObjectSnapshotZone {
   readonly zone: RepositoryDocumentZone;
+  readonly selectorDigest: string;
   readonly memberCount: number;
   readonly treeOid?: string;
 }
@@ -26,6 +27,7 @@ export interface GitObjectTreeSnapshot {
   readonly commitOid: string;
   readonly repositoryTreeOid: string;
   readonly rawPathStream: Uint8Array;
+  readonly unclassifiedPathStream: Uint8Array;
   readonly members: readonly GitObjectSnapshotMember[];
   readonly zones: readonly GitObjectSnapshotZone[];
 }

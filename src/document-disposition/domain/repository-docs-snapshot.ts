@@ -30,6 +30,7 @@ export interface RepositoryDocsSnapshot {
   readonly snapshotId: string;
   readonly snapshotDigest: string;
   readonly pathStreamSha256: string;
+  readonly zoneSetDigest: string;
   readonly memberSetDigest: string;
   readonly trackedCount: number;
   readonly members: readonly RepositoryDocsSnapshotMember[];
@@ -83,6 +84,7 @@ function decodeRepositoryPath(bytes: Uint8Array): string | undefined {
   if (
     path.length === 0 ||
     path.includes("\\") ||
+    path !== path.normalize("NFC") ||
     path.startsWith("/") ||
     /^[A-Za-z]:/.test(path) ||
     path.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
@@ -92,11 +94,32 @@ function decodeRepositoryPath(bytes: Uint8Array): string | undefined {
   return path;
 }
 
+function matchesZone(path: string, zone: RepositoryDocumentZone): boolean {
+  if (zone === "docs_tree") return path.startsWith("docs/");
+  if (zone === "root_policy") {
+    return (
+      !path.includes("/") &&
+      /^(?:AGENTS|CLAUDE|README|CHANGELOG|CONTRIBUTING|SECURITY|CODE_OF_CONDUCT)\.md$|^LICENSE/.test(
+        path,
+      )
+    );
+  }
+  if (zone === "runtime_policy") {
+    return (
+      (path.startsWith(".claude/") || path.startsWith(".codex/") || path.startsWith(".ut-tdd/")) &&
+      path.endsWith(".md")
+    );
+  }
+  if (zone === "skills") return path.startsWith("skills/") && path.endsWith(".md");
+  return path.startsWith(".github/") && path.endsWith(".md");
+}
+
 export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
   private constructor(
     readonly snapshotId: string,
     readonly snapshotDigest: string,
     readonly pathStreamSha256: string,
+    readonly zoneSetDigest: string,
     readonly memberSetDigest: string,
     readonly trackedCount: number,
     readonly members: readonly RepositoryDocsSnapshotMember[],
@@ -128,6 +151,13 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
         "repository-documents-v1 requires every declared document zone",
       );
     }
+    if (source.unclassifiedPathStream.byteLength > 0) {
+      return failed(
+        "doc-selection-unclassified",
+        request.selectionRevision,
+        "tracked document candidates outside repository-documents-v1 must be classified",
+      );
+    }
 
     const pathBytes = parsePathStream(source.rawPathStream);
     if (!pathBytes || pathBytes.length !== source.members.length) {
@@ -145,6 +175,7 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
         compareBytes(member.pathBytes, pathBytes[index]) !== 0 ||
         (index > 0 && compareBytes(source.members[index - 1].pathBytes, member.pathBytes) >= 0) ||
         !oidPattern.test(member.blobOid) ||
+        member.blobOid.length !== request.commitOid.length ||
         !sha256Pattern.test(member.contentSha256) ||
         !zoneMap.has(member.zone)
       ) {
@@ -162,6 +193,13 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
           "member path is not canonical UTF-8 repository-relative form",
         );
       }
+      if (!matchesZone(path, member.zone)) {
+        return failed(
+          "doc-selection-unclassified",
+          path,
+          "member path does not satisfy its declared document zone",
+        );
+      }
       members.push({
         path,
         blobOid: member.blobOid,
@@ -176,8 +214,12 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
       const actual = members.filter((member) => member.zone === zone).length;
       if (
         !declared ||
+        !sha256Pattern.test(declared.selectorDigest) ||
         declared.memberCount !== actual ||
-        (zone === "docs_tree") !== Boolean(declared.treeOid)
+        (zone === "docs_tree") !== Boolean(declared.treeOid) ||
+        (declared.treeOid !== undefined &&
+          (!oidPattern.test(declared.treeOid) ||
+            declared.treeOid.length !== request.commitOid.length))
       ) {
         return failed(
           "doc-selection-unclassified",
@@ -204,6 +246,38 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
         ),
       ),
     );
+    const zoneSetDigest = sha256(
+      [...source.zones]
+        .sort((left, right) =>
+          compareBytes(new TextEncoder().encode(left.zone), new TextEncoder().encode(right.zone)),
+        )
+        .flatMap((zone) => {
+          const zoneMembers = members.filter((member) => member.zone === zone.zone);
+          const zoneMemberSetDigest = sha256(
+            zoneMembers.flatMap((member) =>
+              (["path", "blobOid", "contentSha256", "fileMode", "zone"] as const).map((field) =>
+                canonicalField(
+                  {
+                    path: "path",
+                    blobOid: "blob_oid",
+                    contentSha256: "content_sha256",
+                    fileMode: "file_mode",
+                    zone: "zone",
+                  }[field],
+                  member[field],
+                ),
+              ),
+            ),
+          );
+          return [
+            canonicalField("zone", zone.zone),
+            canonicalField("selector_digest", zone.selectorDigest),
+            canonicalField("tree_oid", zone.treeOid ?? ""),
+            canonicalField("member_count", String(zone.memberCount)),
+            canonicalField("member_set_digest", zoneMemberSetDigest),
+          ];
+        }),
+    );
     const snapshotFields = [
       ["repository_identity", request.repositoryIdentity],
       ["commit_oid", request.commitOid],
@@ -212,6 +286,7 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
       ["selection_digest", request.selectionDigest],
       ["tracked_count", String(members.length)],
       ["path_stream_hash", pathStreamSha256],
+      ["zone_set_digest", zoneSetDigest],
       ["member_set_digest", memberSetDigest],
     ] as const;
     const snapshotDigest = sha256(
@@ -224,6 +299,7 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
         `document-snapshot:sha256:${snapshotDigest}`,
         snapshotDigest,
         pathStreamSha256,
+        zoneSetDigest,
         memberSetDigest,
         members.length,
         members,
@@ -237,8 +313,10 @@ export function validateSnapshotRequest(
 ): RepositoryDocsSnapshotResult | undefined {
   if (
     request.repositoryIdentity.trim().length === 0 ||
+    request.repositoryIdentity !== request.repositoryIdentity.trim() ||
     !oidPattern.test(request.commitOid) ||
     !oidPattern.test(request.repositoryTreeOid) ||
+    request.commitOid.length !== request.repositoryTreeOid.length ||
     request.selectionRevision !== "repository-documents-v1" ||
     !sha256Pattern.test(request.selectionDigest)
   ) {
