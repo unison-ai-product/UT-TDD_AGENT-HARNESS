@@ -971,13 +971,18 @@ DbC:
   edgeをstable identity順で返し、parse不能・未知schemeを空edgeへ変換しない。
 - `analyzeRepositoryDocumentClosure` 事前条件: snapshot、ledger、reference graph、canonical assertion、
   debt routeは同じsnapshot digestへ束縛される。post:全snapshot pathをexactly once判定し、
-  ledger phantomとbaseline後のadd/delete/renameを双方向比較し、全reference endpointとanchor、
+  ledger phantomとbaseline後のadd/modify/delete/renameを双方向比較し、全reference endpointとanchor、
   canonical assertionのblob digestを再検証する。
 - invariant: queryはledger、authoring docs、DB、Git indexを更新しない。selector再評価、source edgeからの
   disposition継承、DB rowによる欠落record補完、archive/superseded文書への暗黙fallbackを禁止する。
-- applicability invariant: `conditional`はreason/observed condition/reevaluation trigger、
+- applicability invariant: canonical値域は`applicable|conditional|deferred|not_applicable`、
+  application status値域は`pending|applied|verified`とする。`conditional`はreason/observed condition/reevaluation trigger、
   `deferred`はreason/reevaluation trigger/PLAN、`not_applicable`はreason/deciderを必須とする。
-  入力語`skip|defer`はauthoring境界で正規化し、disposition enumへ混入させない。
+  入力語`skip|defer`はauthoring境界でそれぞれ`not_applicable|deferred`へ正規化し、closure queryは
+  canonical値だけを受け取る。kind固有でないfieldはNULLとし、disposition enumへ混入させない。
+- delta invariant: snapshot memberはpath/blob OID/content digestを保持し、deltaをsequence順にreplayして
+  final snapshotと完全比較する。raw Git差分はrenameを推測せずadd/modify/deleteとして観測する。
+  明示rename deltaだけが対応するdelete+addを消費し、未登録renameはdelete/addの別findingとして返す。
 
 typed finding/error:
 
@@ -985,12 +990,12 @@ typed finding/error:
 |---|---|---|
 | `docs-snapshot-revision-missing` | full commit/tree/repository identity欠落 | blocked、上流capture defect |
 | `docs-snapshot-stream-malformed` | NUL stream、UTF-8、count、tree/hash不整合 | blocked、Recovery |
-| `doc-disposition-missing` | snapshot pathにrecordなし | blocked、L4-25/L7-422 route必須 |
-| `doc-disposition-phantom` | ledger pathがsnapshotにない | blocked、削除/rename判断route必須 |
+| `doc-disposition-missing` | baseline snapshot pathにbaseline recordなし | blocked、L4-25/L7-422 route必須 |
+| `doc-disposition-phantom` | baseline ledger pathがbaseline snapshotにない | blocked、削除/rename判断route必須 |
 | `doc-disposition-duplicate` | pathまたはcase-fold identity重複 | blocked、ledger correction |
-| `doc-disposition-incomplete` | conditional/defer/skipのreason、target、PLAN不足 | blocked、設計判断route必須 |
+| `doc-disposition-incomplete` | canonical applicabilityのkind別field、application status、disposition後条件不足 | blocked、設計判断route必須 |
 | `doc-selection-unclassified` | selector zone外のtracked document、又は必須zone欠落 | blocked、上流selection設計route必須 |
-| `doc-delta-unregistered` | baseline後のadd/delete/renameが未判断 | blocked、差分identity別route必須 |
+| `doc-delta-unregistered` | baseline後のadd/modify/delete、又は明示rename deltaが未判断 | blocked、差分identity別route必須 |
 | `doc-reference-parse-error` | reader例外、未知scheme、構文不正 | blocked、reader defect |
 | `doc-reference-orphan` | source/target path、typed ID、anchor不在 | blocked、source owner route必須 |
 | `doc-canonical-assertion-stale` | assertionのtarget blob/digestがsnapshotと不一致 | blocked、assertion owner route必須 |
