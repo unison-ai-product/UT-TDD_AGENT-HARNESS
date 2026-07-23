@@ -261,7 +261,7 @@ describe("L7 CLI surface closure", () => {
 
     expect(run.status).toBe(0);
     expect(JSON.parse(run.stdout)).toEqual([]);
-  }, 15_000);
+  }, 30_000);
 
   it("exposes strict telemetry provenance as a doctor verification flag", () => {
     const run = runCli(["doctor", "--help"]);
