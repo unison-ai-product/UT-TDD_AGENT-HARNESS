@@ -938,17 +938,19 @@ type DocumentDeltaEvent =
 
 type DocumentDeltaDecision = {
   deltaId: string;
+  ledgerId: string;
+  fromSnapshotDigest: string;
+  toSnapshotDigest: string;
+  operationKind: "add" | "modify" | "delete" | "rename";
+  before?: DocumentMemberIdentity;
+  after?: DocumentMemberIdentity;
   affectedPath: string;
-  disposition: DocumentDisposition;
-  applicationStatus: "pending" | "applied" | "verified";
-  applicability: CanonicalDocumentApplicability;
-  targets: readonly DocumentTarget[];
-  planIds: readonly string[];
+  record: DocumentDispositionInput;
   decisionDigest: string;
 };
 
 type DocumentDeltaReplayResult =
-  | { ok: true; effective: readonly DocumentMemberIdentity[]; deltaChainDigest: string }
+  | { ok: true; effective: readonly DocumentMemberIdentity[]; reductionDigest: string; deltaChainDigest: string }
   | { ok: false; findings: readonly DocumentDeltaFinding[]; deltaChainDigest: string };
 
 captureRepositoryDocsSnapshot(
@@ -968,7 +970,6 @@ analyzeDocumentReferences(
 
 replayDocumentDeltas(
   input: ReplayDocumentDeltasInput,
-  decisions: readonly DocumentDeltaDecision[],
 ): DocumentDeltaReplayResult;
 
 analyzeRepositoryDocumentClosure(
@@ -981,6 +982,10 @@ verifyDocumentDebtRoutes(
   routes: readonly DocumentDebtRoute[],
 ): DocumentDebtRouteVerification;
 ```
+
+`ReplayDocumentDeltasInput`はbaseline/final snapshot、event列、`decisions`列、ledger/policy identity、
+expected delta chain digestを不可分に持つ。domainのdecisionはvalidated `record`を合成し、
+physical adapterだけがL5の正規化columnへlossless展開する。
 
 DbC:
 
@@ -1016,7 +1021,8 @@ DbC:
   final snapshotと完全比較する。raw Git差分はrenameを推測せずadd/modify/deleteとして観測する。
   明示rename deltaだけが対応するdelete+addを消費し、未登録renameはdelete/addの別findingとして返す。
   各eventは同じ`deltaId`の`DocumentDeltaDecision`とexactly onceで結合し、eventの`decisionDigest`、
-  affected path、disposition/applicability後条件を再検証する。自己申告digest、decision欠落・余剰・重複、
+  ledger、snapshot pair、operation、before/after member、affected path、disposition/applicability後条件を
+  再検証する。自己申告digest、decision欠落・余剰・重複、
   add文書の判断欠落をGreenにしない。
 
 delta reducerの遷移表:
@@ -1041,6 +1047,12 @@ replay結果はfinal snapshotのpath/blob/content集合と完全一致させ、�
 sequence/chain/event/decision/snapshot検証が一件でも失敗した時点でreducer stateをpoisonし、以後のeventを
 stateへ適用しない。duplicate sequenceは全該当eventをcanonical tie-break順でfinding化し、入力順でwinnerを選ばない。
 baseline/final member path重複もMap last-winsせず、replay前にblocked findingとする。
+exact pathだけでなくUnicode NFC後のcase-fold path衝突をbaseline/final双方でblockedにする。
+`createDocumentDeltaEvent`と`createDocumentDeltaDecision`は正のsafe integer sequence、非空ID/digest、
+repo-relative NFC `/` path、非空blob/content identityを検査するfactoryとし、absolute/backslash/NUL/
+`.`/`..`/空segmentを持つinvalid stateを生成しない。
+物理`from_snapshot_id/to_snapshot_id`はsnapshot digestから一意に導出する
+`document-snapshot:sha256:<digest>`とし、APIのdigestとprojection IDの対応を再計算して検証する。
 
 `DocumentDeltaFinding`のoperation kindは`add|modify|delete|rename|chain`とする。evidence frameは
 `baseline_snapshot_digest, final_snapshot_digest, delta_chain_digest, reason_code, sequence,
@@ -1050,6 +1062,8 @@ modify=`from_path`、invalid event=`delta_id`であり、finding IDはrule/subje
 出力順は`operation_kind, subject_identity, sequence, finding_id`のunsigned UTF-8 byte順とする。
 成功結果はeffective member集合とそのreduction digest、delta chain digestを返す。blocked結果もfindingと
 delta chain digestを返すが、poison後のpartial effective集合をprojection authorityとして公開しない。
+outer `DocumentClosureResult`も成功時のeffective集合/reduction digestと全結果のdelta chain digestを保持し、
+application/DB adapterがreducer内部stateを再推測しない。
 
 typed finding/error:
 
