@@ -1423,6 +1423,22 @@ interface ExistingIssueAdoptionPort {
 - GitHub inboundはremote observationをappendするだけで、domain eventのsequence/payloadを更新しない。
 - E15はescapeをL/type/cause/drive/recurrence identity別learning factへ投影し、上流actionまたは理由付きno-changeを必須にする。
 
+### Historical seal + genesis rebase trusted-authority契約
+
+| 関数 | 契約 |
+|---|---|
+| `validateGenesisRebaseMigration` | Issue #102 seal、terminal recovery custody、連続receipt chain、projection、successor identity、cross-agent PASS、canonical certificateをI/Oなしで検証する |
+| `TrustedGitBlobResolver.resolve` | exact commit/pathからblob OID/bytesを解決し、working tree/indexをauthorityにしない |
+| default `resolveHistoricalProjection` | tracked projection全体のrecord digest/previous chainを検証後、historical assetのrevision 1..5だけをcommand/receipt/content/record/pathへ抽出する |
+| `GenesisRebaseMigrationRunner.run` | exact command → pure validation → trusted source再導出 → tracked projection検証 → proposal/input全binding → Issue #143観測 → transactionの順を固定する |
+| `GenesisRebaseMigrationTransaction.migrate` | unrehydratable historical seal、successor revision 1、authoritative certificateを単一local commitする。certificateを別生成しない |
+| `GenesisRebaseCommentProjectionRunner.run` | 102/143の2-member groupをdurable prepare後、`pending`/`recovery_required` memberだけowner token・expiry・generation claimをremote前にCAS取得して個別projectする。POST直前にowner+generation+unexpired leaseを再検証してdurable create intentをCAS記録する。intent記録済みmemberはtakeover後もGET reconciliation専用で、POST前後とも同じmarker全集合分類を使い、exact 1件かつmarker一致全体も1件の場合だけprojected、0件・複数・本文不一致は自動再POSTせず`recovery_required`。active lease中の別ownerはremoteへ到達しない。既projected memberはread-only GETでexactならclaim/generation/eventを一切増やさず、drift時だけ専用CAS/event経路でdurable `recovery_required`へ遷移する。2/2 projectedの場合だけgroup projectedにし、同一terminal state replayはDB不変とする |
+
+source commit/path/blob/content、PLAN ID、canonical frontmatter、body digest、projection
+path/blob/content/tail、revision command/receipt/record chainの一軸差異をcaller値から補完しない。
+Issue本文は変更せずcommentだけを追加する。marker重複、同marker異body、create後の再観測不能は
+projectedにしない。domain child ruleはCLI JSON `rule_id`へ透過し、generic errorへ潰さない。
+
 ### `harness-check` aggregate gate / E13 receipt契約
 
 runtime source workflowは、Linux実行leg `harness-check-linux` とWindows実行leg

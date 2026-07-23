@@ -34,6 +34,8 @@ import { registerDistributionCommands } from "./cli/distribution";
 import { registerFeedbackCommands } from "./cli/feedback";
 import { registerForwardEscapeIssueCommand } from "./cli/forward-escape-issue";
 import { createProductionGenesisAdoptionCommandRunner } from "./cli/genesis-adoption-production";
+import { registerGenesisRebaseCommentProductionCommand } from "./cli/genesis-rebase-comment-production";
+import { registerGenesisRebaseMigrationProductionCommand } from "./cli/genesis-rebase-migration-production";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAdoptGenesisChainCommand } from "./cli/plan-adopt-genesis-chain";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
@@ -1245,6 +1247,8 @@ registerPlanAuthoringRecoveryCommands(plan, new NodePlanAuthoringRecoveryRunner(
 registerPlanAdoptGenesisChainCommand(plan, {
   runner: createProductionGenesisAdoptionCommandRunner(process.cwd()),
 });
+registerGenesisRebaseCommentProductionCommand(plan, process.cwd());
+registerGenesisRebaseMigrationProductionCommand(plan, process.cwd());
 plan
   .command("lint [path]")
   .description("PLAN lint")

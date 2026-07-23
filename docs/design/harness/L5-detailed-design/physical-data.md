@@ -726,6 +726,27 @@ ledger DB不在・schema不一致・digest破損は空ledgerとして補完せ�
 `(event_id,subject_id,subject_revision)`→workflow event、`(evidence_id,subject_id,subject_revision)`→evidenceのcomposite FKで
 cross-subject/revision linkをSQLite実制約として拒否する。
 
+### Historical seal + genesis rebase v11/v12/v13 physical contract
+
+| table | 必須columnと型 | key / FK / nullability |
+|---|---|---|
+| `genesis_rebase_migrations` | `command_id`, `command_payload_digest`, `historical_asset_id`, `historical_authority_kind`, `historical_projection_path`, `historical_projection_blob_oid`, `historical_projection_content_digest`, `historical_projection_tail_record_digest`, `historical_first_revision INTEGER`, `historical_last_revision INTEGER`, `historical_seal_json`, `historical_seal_digest`, `authoritative_certificate_digest`, `new_asset_id`, `new_revision INTEGER`, `migration_certificate_id`, `migration_certificate_digest`, `occurred_at`, `migration_digest` | PK=`command_id`、全列NOT NULL。authority kind=`tracked_projection`、first revision=1、last revision>0、new revision=1。successorだけ`plan_revisions(asset_id,revision)`へcomposite FK |
+| `genesis_rebase_migration_certificates` | `certificate_id`, `command_id`, `command_payload_digest`, `certificate_json`, `certificate_digest`, `recorded_at` | PK=`certificate_id`、command UNIQUE、migrationへRESTRICT FK。domain certificateをexact保存しledgerで再生成しない |
+| `genesis_rebase_comment_groups` | `group_id`, `command_id`, `command_payload_digest`, `migration_certificate_id`, `migration_certificate_digest`, `group_digest`, `state`, `generation INTEGER`, `created_at`, `updated_at` | PK=`group_id`、command UNIQUE。`command_id`→`genesis_rebase_migrations(command_id)`、`migration_certificate_id`→`genesis_rebase_migration_certificates(certificate_id)`はいずれもRESTRICT FK。state=`pending\|projected\|recovery_required` |
+| `genesis_rebase_comment_members` | `group_id`, `member_kind`, `ordinal INTEGER`, `target_json`, `target_digest`, `state`, `claim_generation INTEGER`, `claim_owner_token?`, `claim_expires_at?`, `remote_comment_node_id?`, `remote_comment_url?`, `updated_at`, `create_intent_owner_token?`, `create_intent_generation INTEGER?`, `create_intent_at?` | PK=`(group_id,member_kind)`、ordinal UNIQUE。kind=`issue102_seal\|issue143_metadata`。v13でdurable create intent 3列を追加し、3列は全NULLまたは全non-NULL |
+| `genesis_rebase_comment_events` | `event_id`, `group_id`, `sequence INTEGER`, `member_kind?`, `event_kind`, `occurred_at`, `previous_event_digest?`, `event_digest` | PK=`event_id`、`(group_id,sequence)` UNIQUE、append-only。event=`group_prepared\|member_projected\|member_recovery_required\|group_projected\|group_recovery_required\|group_resumed` |
+
+旧revision 1..5は現行Plan Ledgerへ架空復元しない。trusted HEADのtracked admission receipt
+projection blobをstrict parseし、command/receipt/content/record/previous chainと全file tailをauthorityにする。
+`historical_sealed_unrehydratable`はこの非再水和境界を表し、historical側へ架空FKを作らない。
+
+v12 comment outboxはmigration transactionとは別のdurable Sagaであり、v13はremote POST前の
+durable create intentを追加する。Issue #102 seal commentと
+Issue #143 canonical metadata commentを先にgroup/member/eventへ永続化し、片方失敗時は
+`recovery_required`から未収束memberだけを再開する。migrationとremote 2 commentが原子的とは主張しない。
+create intent記録後はlease takeoverしても自動POSTを禁止し、全page GETでexact 1件ならprojected、
+0件・複数・本文不一致はambiguous outcomeとしてmanual resolution待ちの`recovery_required`にする。
+
 ### 実行台帳 / GitHub投影テーブル
 
 | テーブル | 主な列 | 制約 / 索引 |

@@ -11,6 +11,103 @@ import {
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 describe("PLAN Asset canonical ledger schema", () => {
+  it("v12 comment member schemaをv13 durable create intentへ明示移行する", () => {
+    const db = openHarnessDb(":memory:");
+    migratePlanLedger(db);
+    db.exec("DROP INDEX idx_genesis_rebase_comment_members_state");
+    db.exec("DROP TABLE genesis_rebase_comment_members");
+    db.exec(`CREATE TABLE genesis_rebase_comment_members (
+      group_id TEXT NOT NULL, member_kind TEXT NOT NULL, ordinal INTEGER NOT NULL,
+      target_json TEXT NOT NULL, target_digest TEXT NOT NULL, state TEXT NOT NULL,
+      claim_generation INTEGER NOT NULL, claim_owner_token TEXT, claim_expires_at TEXT,
+      remote_comment_node_id TEXT, remote_comment_url TEXT, updated_at TEXT NOT NULL,
+      PRIMARY KEY (group_id, member_kind), UNIQUE (group_id, ordinal),
+      CHECK (member_kind IN ('issue102_seal','issue143_metadata')),
+      CHECK (state IN ('pending','projected','recovery_required')),
+      FOREIGN KEY (group_id) REFERENCES genesis_rebase_comment_groups(group_id) ON DELETE RESTRICT
+    )`);
+    db.exec(
+      "CREATE INDEX idx_genesis_rebase_comment_members_state ON genesis_rebase_comment_members(state)",
+    );
+    db.setUserVersion(12);
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 13 });
+    const columns = db
+      .prepare("PRAGMA table_info(genesis_rebase_comment_members)")
+      .all()
+      .map((column) => column.name);
+    expect(columns).toEqual(
+      expect.arrayContaining([
+        "create_intent_owner_token",
+        "create_intent_generation",
+        "create_intent_at",
+      ]),
+    );
+    db.close();
+  });
+
+  it("v10 redesign custody rowを保持してrecovery対応v11へtable rebuildする", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      seedAsset(db, "plan:v10-custody");
+      const redesign = {
+        command_id: "genesis:v10:redesign",
+        issue_number: 129,
+        episode_id: "E4-129",
+        drive_model: "redesign",
+        issue_preimage_digest: digest,
+        plan_asset_id: "plan:v10-custody",
+        plan_revision: 1,
+        custody_state: "committed",
+        recorded_at: now,
+      };
+      db.prepare("INSERT INTO genesis_issue_custody VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+        ...Object.values(redesign),
+        ledgerRowDigest(redesign, "custody_digest"),
+      );
+      convertCurrentLedgerToLegacyV10(db);
+
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+      expect(
+        db
+          .prepare("SELECT command_id, drive_model FROM genesis_issue_custody ORDER BY command_id")
+          .all(),
+      ).toEqual([{ command_id: "genesis:v10:redesign", drive_model: "redesign" }]);
+
+      const recovery = {
+        ...redesign,
+        command_id: "genesis:v11:recovery",
+        issue_number: 143,
+        episode_id: "E4-143",
+        drive_model: "recovery",
+      };
+      expect(() =>
+        db
+          .prepare("INSERT INTO genesis_issue_custody VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+          .run(...Object.values(recovery), ledgerRowDigest(recovery, "custody_digest")),
+      ).not.toThrow();
+      expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("partialなv10 custody schemaはrebuildせずfail-closeする", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      convertCurrentLedgerToLegacyV10(db);
+      db.exec("DROP TRIGGER trg_genesis_issue_custody_no_update");
+      expect(migratePlanLedger(db)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+      expect(db.userVersion()).toBe(10);
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-PAREC-001: migrates a populated v7 ledger to v8 without inventing legacy bindings", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -885,6 +982,42 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 });
+
+function convertCurrentLedgerToLegacyV10(db: ReturnType<typeof openHarnessDb>): void {
+  for (const table of ["genesis_rebase_migrations", "genesis_rebase_migration_certificates"]) {
+    db.exec(`DROP TRIGGER trg_${table}_no_update`);
+    db.exec(`DROP TRIGGER trg_${table}_no_delete`);
+  }
+  db.exec("DROP INDEX idx_genesis_rebase_historical_asset");
+  db.exec("DROP INDEX idx_genesis_rebase_new_asset");
+  db.exec("DROP TABLE genesis_rebase_migration_certificates");
+  db.exec("DROP TABLE genesis_rebase_migrations");
+  db.exec("PRAGMA legacy_alter_table = ON");
+  db.exec("PRAGMA foreign_keys = OFF");
+  db.exec("DROP TRIGGER trg_genesis_issue_custody_no_update");
+  db.exec("DROP TRIGGER trg_genesis_issue_custody_no_delete");
+  db.exec("ALTER TABLE genesis_issue_custody RENAME TO genesis_issue_custody_v11");
+  const currentDdl = ledgerSchemaDdl().find(
+    (ddl) => ddl.startsWith("CREATE TABLE") && ddl.includes("genesis_issue_custody"),
+  );
+  if (!currentDdl) throw new Error("custody ddl missing");
+  db.exec(currentDdl.replace(/'redesign'\s*,\s*'recovery'/, "'redesign'"));
+  db.exec("INSERT INTO genesis_issue_custody SELECT * FROM genesis_issue_custody_v11");
+  db.exec("DROP TABLE genesis_issue_custody_v11");
+  for (const name of [
+    "trg_genesis_issue_custody_no_update",
+    "trg_genesis_issue_custody_no_delete",
+  ]) {
+    const ddl = ledgerSchemaDdl().find(
+      (candidate) => candidate.startsWith("CREATE TRIGGER") && candidate.includes(name),
+    );
+    if (!ddl) throw new Error(`trigger ddl missing:${name}`);
+    db.exec(ddl);
+  }
+  db.exec("PRAGMA legacy_alter_table = OFF");
+  db.exec("PRAGMA foreign_keys = ON");
+  db.setUserVersion(10);
+}
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);

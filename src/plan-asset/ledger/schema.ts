@@ -17,13 +17,14 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
+import { migrationCertificateValid } from "../domain/plan-asset-migration-certificate.js";
 import {
   canonicalPortableArtifactPath,
   deriveAuthoringOperationArtifact,
 } from "./authoring-operation-provenance.js";
 import { committedRevisionPredicateForSchema } from "./revision-visibility.js";
 
-export const LEDGER_SCHEMA_VERSION = 10;
+export const LEDGER_SCHEMA_VERSION = 13;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -812,7 +813,10 @@ const v9Tables: readonly TableDef[] = [
       requiredCol("recorded_at"),
       requiredCol("custody_digest"),
     ],
-    checks: [enumCheck("drive_model", ["redesign"]), enumCheck("custody_state", ["committed"])],
+    checks: [
+      enumCheck("drive_model", ["redesign", "recovery"]),
+      enumCheck("custody_state", ["committed"]),
+    ],
     foreignKeys: [
       foreignKey(["plan_asset_id", "plan_revision"], {
         table: "plan_revisions",
@@ -868,6 +872,11 @@ const v9Tables: readonly TableDef[] = [
   },
 ];
 
+const legacyV10GenesisCustodyTable: TableDef = {
+  ...v9Tables[0],
+  checks: [enumCheck("drive_model", ["redesign"]), enumCheck("custody_state", ["committed"])],
+};
+
 const v10Tables: readonly TableDef[] = [
   {
     name: "genesis_projection_claims",
@@ -912,6 +921,166 @@ const v10Tables: readonly TableDef[] = [
   },
 ];
 
+const v11Tables: readonly TableDef[] = [
+  {
+    name: "genesis_rebase_migrations",
+    columns: [
+      pk("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("historical_asset_id"),
+      requiredCol("historical_authority_kind"),
+      requiredCol("historical_projection_path"),
+      requiredCol("historical_projection_blob_oid"),
+      requiredCol("historical_projection_content_digest"),
+      requiredCol("historical_projection_tail_record_digest"),
+      requiredCol("historical_first_revision", "INTEGER"),
+      requiredCol("historical_last_revision", "INTEGER"),
+      requiredCol("historical_seal_json"),
+      requiredCol("historical_seal_digest"),
+      requiredCol("authoritative_certificate_digest"),
+      requiredCol("new_asset_id"),
+      requiredCol("new_revision", "INTEGER"),
+      requiredCol("migration_certificate_id"),
+      requiredCol("migration_certificate_digest"),
+      requiredCol("occurred_at"),
+      requiredCol("migration_digest"),
+    ],
+    checks: [
+      {
+        kind: "compare",
+        column: "historical_authority_kind",
+        operator: "=",
+        value: "tracked_projection",
+      },
+      { kind: "compare", column: "historical_first_revision", operator: "=", value: 1 },
+      { kind: "compare", column: "historical_last_revision", operator: ">", value: 0 },
+      { kind: "compare", column: "new_revision", operator: "=", value: 1 },
+    ],
+    foreignKeys: [
+      foreignKey(["new_asset_id", "new_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "genesis_rebase_migration_certificates",
+    columns: [
+      pk("certificate_id"),
+      requiredCol("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("certificate_json"),
+      requiredCol("certificate_digest"),
+      requiredCol("recorded_at"),
+    ],
+    unique: [["command_id"]],
+    foreignKeys: [
+      foreignKey(["command_id"], {
+        table: "genesis_rebase_migrations",
+        columns: ["command_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+];
+
+const v12Tables: readonly TableDef[] = [
+  {
+    name: "genesis_rebase_comment_groups",
+    columns: [
+      pk("group_id"),
+      requiredCol("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("migration_certificate_id"),
+      requiredCol("migration_certificate_digest"),
+      requiredCol("group_digest"),
+      requiredCol("state"),
+      requiredCol("generation", "INTEGER"),
+      requiredCol("created_at"),
+      requiredCol("updated_at"),
+    ],
+    unique: [["command_id"]],
+    checks: [enumCheck("state", ["pending", "projected", "recovery_required"])],
+    foreignKeys: [
+      foreignKey(["command_id"], {
+        table: "genesis_rebase_migrations",
+        columns: ["command_id"],
+        onDelete: "RESTRICT",
+      }),
+      foreignKey(["migration_certificate_id"], {
+        table: "genesis_rebase_migration_certificates",
+        columns: ["certificate_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "genesis_rebase_comment_members",
+    columns: [
+      requiredCol("group_id"),
+      requiredCol("member_kind"),
+      requiredCol("ordinal", "INTEGER"),
+      requiredCol("target_json"),
+      requiredCol("target_digest"),
+      requiredCol("state"),
+      requiredCol("claim_generation", "INTEGER"),
+      col("claim_owner_token"),
+      col("claim_expires_at"),
+      col("remote_comment_node_id"),
+      col("remote_comment_url"),
+      requiredCol("updated_at"),
+      col("create_intent_owner_token"),
+      col("create_intent_generation", "INTEGER"),
+      col("create_intent_at"),
+    ],
+    primaryKey: ["group_id", "member_kind"],
+    unique: [["group_id", "ordinal"]],
+    checks: [
+      enumCheck("member_kind", ["issue102_seal", "issue143_metadata"]),
+      enumCheck("state", ["pending", "projected", "recovery_required"]),
+    ],
+    foreignKeys: [
+      foreignKey(["group_id"], {
+        table: "genesis_rebase_comment_groups",
+        columns: ["group_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "genesis_rebase_comment_events",
+    columns: [
+      pk("event_id"),
+      requiredCol("group_id"),
+      requiredCol("sequence", "INTEGER"),
+      col("member_kind"),
+      requiredCol("event_kind"),
+      requiredCol("occurred_at"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["group_id", "sequence"]],
+    checks: [
+      enumCheck("event_kind", [
+        "group_prepared",
+        "member_projected",
+        "member_recovery_required",
+        "group_projected",
+        "group_recovery_required",
+        "group_resumed",
+      ]),
+    ],
+    foreignKeys: [
+      foreignKey(["group_id"], {
+        table: "genesis_rebase_comment_groups",
+        columns: ["group_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+];
+
 const tables: readonly TableDef[] = [
   ...v3Tables,
   ...v4Tables,
@@ -921,6 +1090,8 @@ const tables: readonly TableDef[] = [
   ...v8Tables,
   ...v9Tables,
   ...v10Tables,
+  ...v11Tables,
+  ...v12Tables,
 ];
 
 const v3Indexes: readonly IndexDef[] = [
@@ -1078,6 +1249,31 @@ const v10Indexes: readonly IndexDef[] = [
     columns: ["command_id", "sequence"],
   },
 ];
+const v11Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_genesis_rebase_historical_asset",
+    table: "genesis_rebase_migrations",
+    columns: ["historical_asset_id", "historical_last_revision"],
+  },
+  {
+    name: "idx_genesis_rebase_new_asset",
+    table: "genesis_rebase_migrations",
+    columns: ["new_asset_id", "new_revision"],
+  },
+];
+
+const v12Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_genesis_rebase_comment_groups_state",
+    table: "genesis_rebase_comment_groups",
+    columns: ["state", "updated_at"],
+  },
+  {
+    name: "idx_genesis_rebase_comment_members_state",
+    table: "genesis_rebase_comment_members",
+    columns: ["state", "group_id", "ordinal"],
+  },
+];
 
 const indexes: readonly IndexDef[] = [
   ...v3Indexes,
@@ -1088,6 +1284,8 @@ const indexes: readonly IndexDef[] = [
   ...v8Indexes,
   ...v9Indexes,
   ...v10Indexes,
+  ...v11Indexes,
+  ...v12Indexes,
 ];
 
 const v3HistoryTables = [
@@ -1120,6 +1318,11 @@ const v8HistoryTables = [
 ] as const;
 const v9HistoryTables = ["genesis_issue_custody", "genesis_projection_outbox_events"] as const;
 const v10HistoryTables = ["genesis_projection_claim_events"] as const;
+const v11HistoryTables = [
+  "genesis_rebase_migrations",
+  "genesis_rebase_migration_certificates",
+] as const;
+const v12HistoryTables = ["genesis_rebase_comment_events"] as const;
 
 function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerDef[] {
   return historyTables.flatMap((table) =>
@@ -1141,6 +1344,8 @@ const v7Triggers = appendOnlyTriggers(v7HistoryTables);
 const v8Triggers = appendOnlyTriggers(v8HistoryTables);
 const v9Triggers = appendOnlyTriggers(v9HistoryTables);
 const v10Triggers = appendOnlyTriggers(v10HistoryTables);
+const v11Triggers = appendOnlyTriggers(v11HistoryTables);
+const v12Triggers = appendOnlyTriggers(v12HistoryTables);
 const triggers: readonly TriggerDef[] = [
   ...v3Triggers,
   ...v4Triggers,
@@ -1150,6 +1355,8 @@ const triggers: readonly TriggerDef[] = [
   ...v8Triggers,
   ...v9Triggers,
   ...v10Triggers,
+  ...v11Triggers,
+  ...v12Triggers,
 ];
 
 export function ledgerSchemaDdl(): readonly string[] {
@@ -1175,6 +1382,9 @@ export function migratePlanLedger(
     version !== 7 &&
     version !== 8 &&
     version !== 9 &&
+    version !== 10 &&
+    version !== 11 &&
+    version !== 12 &&
     version !== LEDGER_SCHEMA_VERSION
   )
     return { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -1331,6 +1541,89 @@ export function migratePlanLedger(
       return { ok: false, ruleId: "plan-ledger-unavailable" };
     }
   }
+  if (db.userVersion() === 10) {
+    const alreadyExpanded = schemaMatches(db) && ledgerRowsValid(db);
+    if (!alreadyExpanded && !legacyV10LedgerValid(db))
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("PRAGMA legacy_alter_table = ON");
+    db.exec("PRAGMA foreign_keys = OFF");
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      if (!alreadyExpanded) rebuildLegacyV10GenesisCustody(db);
+      installV11(db);
+      installV12(db);
+      db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      if (!schemaMatches(db) || !ledgerRowsValid(db))
+        throw new Error("v10-v11-verification-failed");
+      db.exec("COMMIT");
+    } catch {
+      db.exec("ROLLBACK");
+      db.exec("PRAGMA legacy_alter_table = OFF");
+      db.exec("PRAGMA foreign_keys = ON");
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    }
+    db.exec("PRAGMA legacy_alter_table = OFF");
+    db.exec("PRAGMA foreign_keys = ON");
+  }
+  if (db.userVersion() === 11) {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      rebuildLegacyV11RebaseTables(db);
+      installV12(db);
+      db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      if (!schemaMatches(db) || !ledgerRowsValid(db))
+        throw new Error("v11-v12-verification-failed");
+      db.exec("COMMIT");
+    } catch {
+      db.exec("ROLLBACK");
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    }
+  }
+  if (db.userVersion() === 12) {
+    const columns = db
+      .prepare("PRAGMA table_info(genesis_rebase_comment_members)")
+      .all()
+      .map((column) => String(column.name));
+    if (
+      columns.join(",") !==
+      "group_id,member_kind,ordinal,target_json,target_digest,state,claim_generation,claim_owner_token,claim_expires_at,remote_comment_node_id,remote_comment_url,updated_at"
+    )
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("PRAGMA foreign_keys = OFF");
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const index of v12Indexes.filter(
+        (candidate) => candidate.table === "genesis_rebase_comment_members",
+      ))
+        db.exec(`DROP INDEX ${index.name}`);
+      db.exec(
+        "ALTER TABLE genesis_rebase_comment_members RENAME TO genesis_rebase_comment_members_v12",
+      );
+      db.exec(createTableSql(v12Tables[1]));
+      db.exec(
+        `INSERT INTO genesis_rebase_comment_members
+         (group_id, member_kind, ordinal, target_json, target_digest, state,
+          claim_generation, claim_owner_token, claim_expires_at,
+          remote_comment_node_id, remote_comment_url, updated_at)
+         SELECT group_id, member_kind, ordinal, target_json, target_digest, state,
+          claim_generation, claim_owner_token, claim_expires_at,
+          remote_comment_node_id, remote_comment_url, updated_at
+         FROM genesis_rebase_comment_members_v12`,
+      );
+      db.exec("DROP TABLE genesis_rebase_comment_members_v12");
+      for (const index of v12Indexes.filter(
+        (candidate) => candidate.table === "genesis_rebase_comment_members",
+      ))
+        db.exec(createIndexSql(index));
+      db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      db.exec("COMMIT");
+    } catch {
+      db.exec("ROLLBACK");
+      db.exec("PRAGMA foreign_keys = ON");
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    }
+    db.exec("PRAGMA foreign_keys = ON");
+  }
   return schemaMatches(db) && ledgerRowsValid(db)
     ? { ok: true, version: LEDGER_SCHEMA_VERSION }
     : { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -1423,6 +1716,21 @@ function v9LedgerValid(db: HarnessDb): boolean {
         ...v8Triggers,
         ...v9Triggers,
       ],
+    }) && ledgerRowsValid(db)
+  );
+}
+
+function legacyV10LedgerValid(db: HarnessDb): boolean {
+  const legacyTables = tables
+    .filter((table) => !v11Tables.includes(table))
+    .map((table) =>
+      table.name === legacyV10GenesisCustodyTable.name ? legacyV10GenesisCustodyTable : table,
+    );
+  return (
+    schemaMatchesVersion(db, {
+      tables: legacyTables,
+      indexes: indexes.filter((index) => !v11Indexes.includes(index)),
+      triggers: triggers.filter((trigger) => !v11Triggers.includes(trigger)),
     }) && ledgerRowsValid(db)
   );
 }
@@ -1524,7 +1832,75 @@ function installV10(db: HarnessDb): void {
   for (const table of v10Tables) db.exec(createTableSql(table));
   for (const index of v10Indexes) db.exec(createIndexSql(index));
   for (const trigger of v10Triggers) db.exec(createTriggerSql(trigger));
+  db.setUserVersion(10);
+  installV11(db);
+  installV12(db);
   db.setUserVersion(LEDGER_SCHEMA_VERSION);
+}
+
+function installV11(db: HarnessDb): void {
+  if (v11SchemaPresentAndEmpty(db, schemaObjects(db))) return;
+  for (const table of v11Tables) db.exec(createTableSql(table));
+  for (const index of v11Indexes) db.exec(createIndexSql(index));
+  for (const trigger of v11Triggers) db.exec(createTriggerSql(trigger));
+}
+
+function installV12(db: HarnessDb): void {
+  const actual = new Map(
+    schemaObjects(db).map((row) => [`${row.type}:${row.name}`, normalizeDdl(row.sql)]),
+  );
+  const expected = [
+    ...v12Tables.map(
+      (table) => [`table:${table.name}`, normalizeDdl(createTableSql(table))] as const,
+    ),
+    ...v12Indexes.map(
+      (index) => [`index:${index.name}`, normalizeDdl(createIndexSql(index))] as const,
+    ),
+    ...v12Triggers.map(
+      (trigger) => [`trigger:${trigger.name}`, normalizeDdl(createTriggerSql(trigger))] as const,
+    ),
+  ];
+  if (expected.every(([key, sql]) => actual.get(key) === sql)) return;
+  for (const table of v12Tables) db.exec(createTableSql(table));
+  for (const index of v12Indexes) db.exec(createIndexSql(index));
+  for (const trigger of v12Triggers) db.exec(createTriggerSql(trigger));
+}
+
+function rebuildLegacyV11RebaseTables(db: HarnessDb): void {
+  const migrationCount = Number(thisCount(db, "genesis_rebase_migrations"));
+  const certificateCount = Number(thisCount(db, "genesis_rebase_migration_certificates"));
+  if (migrationCount !== 0 || certificateCount !== 0)
+    throw new Error("v11-rebase-nonempty-requires-explicit-migration");
+  for (const trigger of v11Triggers) db.exec(`DROP TRIGGER ${trigger.name}`);
+  db.exec("DROP TABLE genesis_rebase_migration_certificates");
+  db.exec("DROP TABLE genesis_rebase_migrations");
+  for (const table of v11Tables) db.exec(createTableSql(table));
+  for (const index of v11Indexes) db.exec(createIndexSql(index));
+  for (const trigger of v11Triggers) db.exec(createTriggerSql(trigger));
+}
+
+function thisCount(db: HarnessDb, table: string): number {
+  return Number(db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()?.count ?? 0);
+}
+
+function rebuildLegacyV10GenesisCustody(db: HarnessDb): void {
+  for (const trigger of v9Triggers.filter(
+    (candidate) => candidate.table === "genesis_issue_custody",
+  ))
+    db.exec(`DROP TRIGGER ${trigger.name}`);
+  db.exec("ALTER TABLE genesis_issue_custody RENAME TO genesis_issue_custody_v10");
+  db.exec(createTableSql(v9Tables[0]));
+  db.exec(
+    `INSERT INTO genesis_issue_custody
+       SELECT command_id, issue_number, episode_id, drive_model, issue_preimage_digest,
+              plan_asset_id, plan_revision, custody_state, recorded_at, custody_digest
+       FROM genesis_issue_custody_v10`,
+  );
+  db.exec("DROP TABLE genesis_issue_custody_v10");
+  for (const trigger of v9Triggers.filter(
+    (candidate) => candidate.table === "genesis_issue_custody",
+  ))
+    db.exec(createTriggerSql(trigger));
 }
 
 function backfillLegacyUnknownDraftCleanup(
@@ -1664,7 +2040,27 @@ function schemaMatchesVersion(
       (trigger) => [`trigger:${trigger.name}`, normalizeDdl(createTriggerSql(trigger))] as const,
     ),
   ]);
-  const actual = schemaObjects(db);
+  const actualAll = schemaObjects(db);
+  const expectedNames = new Set(expectedObjects.keys());
+  const v11Names = new Set([
+    ...v11Tables.map((table) => `table:${table.name}`),
+    ...v11Indexes.map((index) => `index:${index.name}`),
+    ...v11Triggers.map((trigger) => `trigger:${trigger.name}`),
+  ]);
+  const v12Names = new Set([
+    ...v12Tables.map((table) => `table:${table.name}`),
+    ...v12Indexes.map((index) => `index:${index.name}`),
+    ...v12Triggers.map((trigger) => `trigger:${trigger.name}`),
+  ]);
+  const carriesEmptyV11 =
+    !expectedNames.has(`table:${v11Tables[0].name}`) && v11SchemaPresentAndEmpty(db, actualAll);
+  const carriesEmptyV12 =
+    !expectedNames.has(`table:${v12Tables[0].name}`) && v12SchemaPresentAndEmpty(db, actualAll);
+  const actual = actualAll.filter(
+    (row) =>
+      !(carriesEmptyV11 && v11Names.has(`${row.type}:${row.name}`)) &&
+      !(carriesEmptyV12 && v12Names.has(`${row.type}:${row.name}`)),
+  );
   if (
     actual.length !== expectedObjects.size ||
     actual.some((row) => expectedObjects.get(`${row.type}:${row.name}`) !== normalizeDdl(row.sql))
@@ -1673,6 +2069,54 @@ function schemaMatchesVersion(
   const integrity = db.prepare("PRAGMA integrity_check").get();
   const foreignKeys = db.prepare("PRAGMA foreign_key_check").all();
   return String(integrity?.integrity_check ?? "") === "ok" && foreignKeys.length === 0;
+}
+
+function v11SchemaPresentAndEmpty(
+  db: HarnessDb,
+  actual: readonly { type: string; name: string; sql: string }[],
+): boolean {
+  const expected = new Map<string, string>([
+    ...v11Tables.map(
+      (table) => [`table:${table.name}`, normalizeDdl(createTableSql(table))] as const,
+    ),
+    ...v11Indexes.map(
+      (index) => [`index:${index.name}`, normalizeDdl(createIndexSql(index))] as const,
+    ),
+    ...v11Triggers.map(
+      (trigger) => [`trigger:${trigger.name}`, normalizeDdl(createTriggerSql(trigger))] as const,
+    ),
+  ]);
+  const actualMap = new Map(
+    actual.map((row) => [`${row.type}:${row.name}`, normalizeDdl(row.sql)]),
+  );
+  if ([...expected].some(([key, sql]) => actualMap.get(key) !== sql)) return false;
+  return v11Tables.every(
+    (table) => Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table.name}`).get()?.n ?? -1) === 0,
+  );
+}
+
+function v12SchemaPresentAndEmpty(
+  db: HarnessDb,
+  actual: readonly { type: string; name: string; sql: string }[],
+): boolean {
+  const expected = new Map<string, string>([
+    ...v12Tables.map(
+      (table) => [`table:${table.name}`, normalizeDdl(createTableSql(table))] as const,
+    ),
+    ...v12Indexes.map(
+      (index) => [`index:${index.name}`, normalizeDdl(createIndexSql(index))] as const,
+    ),
+    ...v12Triggers.map(
+      (trigger) => [`trigger:${trigger.name}`, normalizeDdl(createTriggerSql(trigger))] as const,
+    ),
+  ]);
+  const actualMap = new Map(
+    actual.map((row) => [`${row.type}:${row.name}`, normalizeDdl(row.sql)]),
+  );
+  if ([...expected].some(([key, sql]) => actualMap.get(key) !== sql)) return false;
+  return v12Tables.every(
+    (table) => Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table.name}`).get()?.n ?? -1) === 0,
+  );
 }
 
 function ledgerRowsValid(db: HarnessDb): boolean {
@@ -1684,6 +2128,117 @@ function ledgerRowsValid(db: HarnessDb): boolean {
   ] as const) {
     const rows = db.prepare(`SELECT * FROM ${table}`).all();
     if (rows.some((row) => row[digestColumn] !== ledgerRowDigest(row, digestColumn))) return false;
+  }
+  const hasCommentOutbox = schemaObjects(db).some(
+    (object) => object.type === "table" && object.name === "genesis_rebase_comment_groups",
+  );
+  const commentGroups = hasCommentOutbox
+    ? db.prepare("SELECT * FROM genesis_rebase_comment_groups").all()
+    : [];
+  if (
+    hasCommentOutbox &&
+    schemaObjects(db).some(
+      (object) => object.type === "table" && object.name === "genesis_rebase_migrations",
+    )
+  ) {
+    const migrationCount = Number(
+      db.prepare("SELECT COUNT(*) AS count FROM genesis_rebase_migrations").get()?.count,
+    );
+    if (commentGroups.length !== migrationCount) return false;
+  }
+  for (const group of commentGroups) {
+    const members = db
+      .prepare("SELECT * FROM genesis_rebase_comment_members WHERE group_id = ? ORDER BY ordinal")
+      .all(group.group_id);
+    let targets: unknown[];
+    try {
+      targets = members.map((member) => JSON.parse(String(member.target_json)));
+    } catch {
+      return false;
+    }
+    const groupProjection = {
+      groupId: String(group.group_id),
+      commandId: String(group.command_id),
+      commandPayloadDigest: String(group.command_payload_digest),
+      migrationCertificateId: String(group.migration_certificate_id),
+      migrationCertificateDigest: String(group.migration_certificate_digest),
+      members: targets,
+    };
+    if (
+      members.length !== 2 ||
+      String(members[0]?.member_kind) !== "issue102_seal" ||
+      String(members[1]?.member_kind) !== "issue143_metadata" ||
+      members.some(
+        (member) =>
+          createHash("sha256").update(String(member.target_json)).digest("hex") !==
+            member.target_digest ||
+          (member.claim_owner_token === null) !== (member.claim_expires_at === null) ||
+          (member.create_intent_at === null) !==
+            (member.create_intent_owner_token === null &&
+              member.create_intent_generation === null) ||
+          (member.create_intent_at !== null &&
+            (!member.create_intent_owner_token ||
+              !Number.isInteger(Number(member.create_intent_generation)) ||
+              Number(member.create_intent_generation) < 1 ||
+              !Number.isFinite(Date.parse(String(member.create_intent_at))))) ||
+          (member.claim_expires_at !== null &&
+            !Number.isFinite(Date.parse(String(member.claim_expires_at)))),
+      ) ||
+      createHash("sha256").update(stableLedgerJson(groupProjection)).digest("hex") !==
+        group.group_digest
+    )
+      return false;
+    const prepared = db
+      .prepare(
+        "SELECT * FROM genesis_rebase_comment_events WHERE group_id = ? AND event_kind = 'group_prepared'",
+      )
+      .all(group.group_id);
+    if (
+      prepared.length !== 1 ||
+      Number(prepared[0]?.sequence) !== 1 ||
+      prepared[0]?.member_kind !== null ||
+      prepared[0]?.previous_event_digest !== null
+    )
+      return false;
+    const migration = db
+      .prepare(
+        `SELECT command_payload_digest, migration_certificate_id, migration_certificate_digest
+         FROM genesis_rebase_migrations WHERE command_id = ?`,
+      )
+      .get(group.command_id);
+    const certificate = db
+      .prepare(
+        `SELECT certificate_digest FROM genesis_rebase_migration_certificates
+         WHERE certificate_id = ? AND command_id = ?`,
+      )
+      .get(group.migration_certificate_id, group.command_id);
+    if (
+      !migration ||
+      migration.command_payload_digest !== group.command_payload_digest ||
+      migration.migration_certificate_id !== group.migration_certificate_id ||
+      migration.migration_certificate_digest !== group.migration_certificate_digest ||
+      !certificate ||
+      certificate.certificate_digest !== group.migration_certificate_digest
+    )
+      return false;
+  }
+  const commentEvents = hasCommentOutbox
+    ? db.prepare("SELECT * FROM genesis_rebase_comment_events ORDER BY group_id, sequence").all()
+    : [];
+  const commentEventTail = new Map<string, { sequence: number; digest: string }>();
+  for (const event of commentEvents) {
+    if (event.event_digest !== ledgerRowDigest(event, "event_digest")) return false;
+    const groupId = String(event.group_id);
+    const prior = commentEventTail.get(groupId);
+    if (
+      Number(event.sequence) !== (prior?.sequence ?? 0) + 1 ||
+      event.previous_event_digest !== (prior?.digest ?? null)
+    )
+      return false;
+    commentEventTail.set(groupId, {
+      sequence: Number(event.sequence),
+      digest: String(event.event_digest),
+    });
   }
   if (db.userVersion() >= 4) {
     for (const [table, digestColumn] of [
@@ -1706,6 +2261,7 @@ function ledgerRowsValid(db: HarnessDb): boolean {
   if (db.userVersion() >= 6 && !artifactOperationEventsValid(db)) return false;
   if (db.userVersion() >= 7 && !authoringCommandGroupsValid(db)) return false;
   if (db.userVersion() >= 8 && !authoringRecoveryRowsValid(db)) return false;
+  if (!genesisRebaseRowsValid(db)) return false;
   const revisions = db
     .prepare(
       `SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions revision
@@ -1727,6 +2283,83 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     reservationReceiptsValid(db) &&
     migrationReceiptsValid(db)
   );
+}
+
+function stableLedgerJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableLedgerJson).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableLedgerJson(child)}`)
+      .join(",")}}`;
+  return JSON.stringify(value);
+}
+
+function genesisRebaseRowsValid(db: HarnessDb): boolean {
+  const names = new Set(
+    schemaObjects(db)
+      .filter((object) => object.type === "table")
+      .map((object) => object.name),
+  );
+  if (!names.has("genesis_issue_custody")) return true;
+  const custodyRows = db.prepare("SELECT * FROM genesis_issue_custody").all();
+  if (custodyRows.some((row) => row.custody_digest !== ledgerRowDigest(row, "custody_digest")))
+    return false;
+  if (
+    !names.has("genesis_rebase_migrations") ||
+    !names.has("genesis_rebase_migration_certificates")
+  )
+    return true;
+  const migrations = db.prepare("SELECT * FROM genesis_rebase_migrations").all();
+  const certificates = db.prepare("SELECT * FROM genesis_rebase_migration_certificates").all();
+  if (
+    migrations.some(
+      (row) =>
+        row.migration_digest !== ledgerRowDigest(row, "migration_digest") ||
+        createHash("sha256").update(String(row.historical_seal_json)).digest("hex") !==
+          row.historical_seal_digest,
+    )
+  )
+    return false;
+  if (certificates.length !== migrations.length) return false;
+  for (const row of certificates) {
+    let certificate: ReturnType<typeof JSON.parse>;
+    try {
+      certificate = JSON.parse(String(row.certificate_json));
+    } catch {
+      return false;
+    }
+    const migration = migrations.find((candidate) => candidate.command_id === row.command_id);
+    const custody = custodyRows.find((candidate) => candidate.command_id === row.command_id);
+    if (
+      !migration ||
+      !custody ||
+      stableLedgerJson(certificate) !== row.certificate_json ||
+      !migrationCertificateValid(certificate) ||
+      certificate.certificateId !== row.certificate_id ||
+      certificate.commandId !== row.command_id ||
+      certificate.certificateDigest !== row.certificate_digest ||
+      row.command_payload_digest !== migration.command_payload_digest ||
+      row.certificate_id !== migration.migration_certificate_id ||
+      row.certificate_digest !== migration.migration_certificate_digest ||
+      row.certificate_digest !== migration.authoritative_certificate_digest ||
+      certificate.identity.historicalAssetId !== migration.historical_asset_id ||
+      certificate.identity.historicalTerminalRevision !== migration.historical_last_revision ||
+      certificate.predecessorRevisionRange[0] !== migration.historical_first_revision ||
+      certificate.predecessorRevisionRange[1] !== migration.historical_last_revision ||
+      certificate.successorAssetId !== migration.new_asset_id ||
+      certificate.successorRevision !== migration.new_revision ||
+      certificate.projectionPreimageDigest !==
+        `sha256:${String(migration.historical_projection_tail_record_digest)}` ||
+      certificate.custodyIssueNumber !== custody.issue_number ||
+      certificate.custodyIssueBodyDigest !== `sha256:${String(custody.issue_preimage_digest)}` ||
+      custody.plan_asset_id !== migration.new_asset_id ||
+      custody.plan_revision !== migration.new_revision ||
+      custody.drive_model !== "recovery"
+    )
+      return false;
+  }
+  return true;
 }
 
 function authoringRecoveryRowsValid(db: HarnessDb): boolean {

@@ -395,6 +395,22 @@ genesis transactionの責務拡張ではない。
 - **Issue #98**: 「性能Redesignの完了証拠はIssue E4、L4-31 revision 2、L6-88 admission、supersession、
   performance/safety oracle。PR #130のmechanism Greenを#98完了と数えない。」
 
+## 4.2 Issue #143 historical seal + trusted genesis rebase
+
+Issue #143をimmutable custody preimageとして、旧RECOVERY-16 revision 1..5を
+`historical_sealed_unrehydratable`へ封印し、derived successor identityのrevision 1へrebaseする。
+旧revisionを現行Plan Ledgerへ架空復元せず、trusted HEADのtracked admission receipt projectionを
+historical authorityとする。
+
+trusted Git sourceからcommit/path/blob/content/canonical/bodyを再導出し、tracked projectionから
+command/receipt/content/record/previous chainと全file tailを抽出する。pure validationと
+proposal/input/source/projectionの全binding一致後だけtransactionへ渡す。domain certificate
+ID/JSON/digestをauthoritative inputとしてexact保存し、ledgerで別certificateを生成しない。
+
+local migration後、Issue #102 seal commentとIssue #143 canonical metadata commentをv12 durable
+outboxの2-member groupとして投影する。これはlocal migrationとは別Sagaであり、片方成功をremote原子性や
+operational closureと呼ばない。
+
 ## 5. DoD
 
 PR #130単体は次のmechanism ACまでを判定し、実repository/remote closureを完了したと主張しない。
@@ -402,6 +418,11 @@ PR #130単体は次のmechanism ACまでを判定し、実repository/remote clos
 - [ ] trusted HEAD、repository identity、Issue contract/preimage、origin/reentryをmanifestへ束縛し、driftをremote起動前に拒否する。
 - [ ] local genesis appendとpending outboxがatomicで、command-specific dispatcherが別Plan/HARNESS DBをcloseしながらprojected/recovery_requiredへ収束する。
 - [ ] tracked route transaction oracleとproduction composition oracleを名称・証拠種別で区別する。
+- [ ] default production compositionがtrusted Git sourceとtracked projection authorityを解決できる。
+- [ ] revision 1..5のcommand/receipt/content/record/previous/tailを推測補完せず抽出する。
+- [ ] historical lineageをunrehydratable sealとして保持し、架空旧revision FKを生成しない。
+- [ ] authoritative certificate ID/JSON/digestをexact保存し、ledger再生成0にする。
+- [ ] Issue #102/#143の2-comment group/member/eventをdurable化し、片肺時はrecovery_requiredにする。
 
 次はPR #130をPR #117へ合流したcombined HEAD上の後続closure ACであり、PR #130単体のGreenへ算入しない。
 
@@ -416,3 +437,8 @@ PR #130単体は次のmechanism ACまでを判定し、実repository/remote clos
 - [ ] PLAN-L7-441未完のprocess-kill境界を明示し、通常例外のatomicityをcrash convergenceと混同しない。
 - [ ] L6-83 genesis receipt→L7-452用add-feature Issue E4→L7-452 authoring receiptがcombined HEADでtrace Greenになる。
 - [ ] `PLAN-L4-31 -> PLAN-L6-88`は#102のrevision authoring完了後、L4-31 revision 2とL6-88 admissionを実artifactでGreenにする（tracked route transactionだけで代替しない）。
+- [ ] exact combined HEADの実Git object、実tracked projection、実SQLite close/reopenでauthority/seal/certificate一致を確認する。
+- [ ] Issue #102 seal commentとIssue #143 metadata commentをremoteでexact再観測し、group/member 2件/event chainをprojectedへ収束する。
+
+v12 schema Green、group prepared、member 1件成功、fake port Green、local migration commitのいずれも
+単独ではremote operational closure、Issue close、main merge、学習投影完了を意味しない。

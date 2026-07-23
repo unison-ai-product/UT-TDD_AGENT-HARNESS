@@ -1323,6 +1323,20 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PROFILE-004` | 同優先度で異なる値 | resolver | `profile-overlay-conflict`, exit 1 |
 | `U-PROFILE-005` | authored decision欠落 | resolver | default創作せず`profile-decision-missing`, exit 1 |
 
+### Historical seal / trusted authority / comment outbox oracle
+
+| Test ID | Oracle |
+|---|---|
+| `U-PA-REBASE-001..003` | exact historical chain/custody、pure validator mutation、identity/certificate決定性 |
+| `U-PA-REBASE-010..013` | local migrationとpending outboxのatomic commit、replay/conflict、fault rollback、unrehydratable seal |
+| `U-PA-REBASE-020..028` | Issue #143 exact preimage、HEAD/custody drift、production factory、CLI receipt、domain bypass、proposal/input drift、stable child rule、trusted source/projection drift、default trusted resolver配線 |
+| `U-PA-REBASE-030..037` | exact comment再利用、missing comment作成後の再観測、片肺/remote drift、marker/body・repository fail-close、active owner排他、expired lease takeover、projected後driftのdurable recovery |
+| `U-PA-REBASE-040..046` | close/reopen replay、v12 comment/custody/migration/certificate digest tamper、member/group generation CAS、actual `gh` argv・`windowsHide`・comment body固定、migrationに対するoutbox欠落のfail-close |
+| `U-PA-REBASE-047..048` | owner A停止→lease expiry→owner B takeover→A再開でもPOST最大1、POST途中crash/restartはdurable create intentをGET再調停してduplicate 0 |
+| `U-PA-REBASE-049..050` | POST後再GETでexact 1件と同marker改変1件が競合すればprojectedへ確定しない。既projected exact replayはclaim/generation/event不変、projected後driftはPOST 0かつ専用recovery event 1件、populated v12 memberは全旧列を保持してv13 intent列NULLへ移行 |
+
+stable ID未付与caseは文書対応だけでGreenにしない。group preparedやmember 1件成功もclosureに数えない。
+
 #### PLAN-L7-417 Red freeze詳細
 
 上表のDISP 5件は実テスト`tests/disposition/catalog.test.ts`へ昇格済みで、valid small fixture、tracked checked fixture、

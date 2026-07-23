@@ -271,6 +271,15 @@ Minimum G8 close profile for the first L8 ascent:
 | `IT-VMSOURCE-01` | manifest宣言値109/163/21/8のauthored records | projection全削除後にrebuildする | identity集合・edge・finding digestが一致する | rebuild前後manifest、row identity diff 0 |
 | `IT-VMSOURCE-02` | 欠番/重複/orphan/理由なしdisposition/unknown profile/overlay競合fixture | loader+projectorを実行する | 各安定findingでfail-closeする | negative fixture、expected finding/exit |
 | `IT-PLANASSET-01` | v1 PLAN全件とnumeric core collision | canonical adapter+ledgerへmigrationする | 損失0、曖昧自動選択0、collision全件をmaterializeする | migration ledger、loss report |
+| `IT-PLANASSET-02` | trusted HEAD source/projection、strict proposal/input、実SQLite | production runnerからrebase migrationを実行 | authority検証後だけunrehydratable seal、successor revision 1、certificateをcommit | Git object receipt、projection blob/tail、DB diff |
+| `IT-PLANASSET-03` | source/projection/review/certificate/Issue #102/#143/input mutation | production compositionを実行 | 全負例でtransaction callまたはDB delta 0 | mutation matrix、survivor 0 |
+| `IT-PLANASSET-04` | write fault、close/reopen、same command replay | migrationを再実行 | partial row 0、reopen後authority/certificate一致、重複0 | rollback/reopen receipt |
+| `IT-PLANASSET-05` | valid migration receiptとIssue 102/143 exact preimage | 2-comment groupをprepare/project | exact remote再観測後だけ2 member/group projected | group/member/event chain、remote digest |
+| `IT-PLANASSET-06` | 片comment失敗とprocess restart | comment Sagaを再開 | 成功memberを再送せず未収束だけ再試行 | attempt log、comment count |
+
+`IT-PLANASSET-02..06`は受入契約として設計済みだが、現時点では単体テストによる部分実装の検証段階であり、
+実Git object・実SQLite・Issue #102/#143のremote再観測を束ねたintegration evidenceは未完である。
+したがって、各行のThenは完了実績ではなく、integration実装と証拠採取で満たすべきoracleを表す。
 | `IT-WORKFLOW-01` | append-only transition/evidence列 | rebuild+reduceする | state/evidence usabilityが同一でstale/別revision evidenceを拒否する | event digest、reduction result |
 | `IT-VMCONTRACT-01` | L0-L14/G0.5-G14 authored contract | compileする | registry/doctor/roadmapのrule identityとdigestが一致する | compiled manifests 3面diff 0 |
 | `IT-DOCLEDGER-01` | baseline `3d232e9c`のdocs path集合921件 | init+materializeする | 全path exactly once、phantom/duplicate/case-fold collision 0になる | raw NUL hash、921件基準receipt |
