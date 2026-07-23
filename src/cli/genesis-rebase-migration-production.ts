@@ -44,7 +44,12 @@ export function createProductionGenesisRebaseMigrationRunner(
     resolveHistoricalProjection:
       deps.resolveHistoricalProjection ??
       ((commit, path, historicalAssetId) =>
-        resolveTrackedHistoricalProjection(gitResolver, commit, path, historicalAssetId)),
+        resolveTrackedHistoricalProjection({
+          resolver: gitResolver,
+          commit,
+          path,
+          historicalAssetId,
+        })),
     transaction,
   });
   return {
@@ -58,19 +63,19 @@ export function createProductionGenesisRebaseMigrationRunner(
   };
 }
 
-function resolveTrackedHistoricalProjection(
-  resolver: TrustedGitBlobResolver,
-  commit: string,
-  path: string,
-  historicalAssetId: string,
-): ReturnType<GenesisRebaseMigrationRunnerDeps["resolveHistoricalProjection"]> {
-  const blob = resolver.resolve(commit, path);
+function resolveTrackedHistoricalProjection(input: {
+  readonly resolver: TrustedGitBlobResolver;
+  readonly commit: string;
+  readonly path: string;
+  readonly historicalAssetId: string;
+}): ReturnType<GenesisRebaseMigrationRunnerDeps["resolveHistoricalProjection"]> {
+  const blob = input.resolver.resolve(input.commit, input.path);
   const parsed = parseTrackedReceiptProjection(
     new TextDecoder("utf-8", { fatal: true }).decode(blob.bytes),
   );
   if (!parsed.ok) throw new Error(`genesis-rebase-projection-invalid:${parsed.errors.join(",")}`);
   const records = parsed.value.records.filter(
-    (record) => record.binding.assetId === historicalAssetId,
+    (record) => record.binding.assetId === input.historicalAssetId,
   );
   if (
     records.length !== 5 ||

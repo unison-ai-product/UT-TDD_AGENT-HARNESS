@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
 import type {
+  GenesisRebaseCommentCreateAuthorization,
   GenesisRebaseCommentGroup,
   GenesisRebaseCommentMemberKind,
+  GenesisRebaseCommentMemberTransition,
   GenesisRebaseCommentOutboxPort,
   GenesisRebaseCommentProjectionState,
 } from "../application/genesis-rebase-comment-projection.js";
@@ -70,17 +72,17 @@ export class SqliteGenesisRebaseCommentOutbox implements GenesisRebaseCommentOut
           )
           .run(group.groupId, member.kind, index + 1, targetJson, sha(targetJson), now);
       });
-      this.appendEvent(group.groupId, null, "group_prepared", now);
+      this.appendEvent({
+        groupId: group.groupId,
+        memberKind: null,
+        eventKind: "group_prepared",
+        occurredAt: now,
+      });
     });
   }
 
-  authorizeCreate(
-    groupId: string,
-    kind: GenesisRebaseCommentMemberKind,
-    claim: { readonly ownerToken: string; readonly generation: number },
-    checkedAt: string,
-  ): "create" | "reconcile" | null {
-    if (!Number.isFinite(Date.parse(checkedAt)))
+  authorizeCreate(input: GenesisRebaseCommentCreateAuthorization): "create" | "reconcile" | null {
+    if (!Number.isFinite(Date.parse(input.checkedAt)))
       throw new Error("genesis-rebase-comment-create-intent-invalid");
     return this.transaction(() => {
       const row = this.db
@@ -88,12 +90,12 @@ export class SqliteGenesisRebaseCommentOutbox implements GenesisRebaseCommentOut
           `SELECT claim_owner_token, claim_generation, claim_expires_at, create_intent_at
            FROM genesis_rebase_comment_members WHERE group_id = ? AND member_kind = ?`,
         )
-        .get(groupId, kind);
+        .get(input.groupId, input.kind);
       if (
         !row ||
-        row.claim_owner_token !== claim.ownerToken ||
-        Number(row.claim_generation) !== claim.generation ||
-        Date.parse(String(row.claim_expires_at)) <= Date.parse(checkedAt)
+        row.claim_owner_token !== input.claim.ownerToken ||
+        Number(row.claim_generation) !== input.claim.generation ||
+        Date.parse(String(row.claim_expires_at)) <= Date.parse(input.checkedAt)
       )
         return null;
       if (row.create_intent_at !== null) return "reconcile";
@@ -107,15 +109,15 @@ export class SqliteGenesisRebaseCommentOutbox implements GenesisRebaseCommentOut
              AND claim_expires_at > ? AND create_intent_at IS NULL`,
         )
         .run(
-          claim.ownerToken,
-          claim.generation,
-          checkedAt,
-          checkedAt,
-          groupId,
-          kind,
-          claim.ownerToken,
-          claim.generation,
-          checkedAt,
+          input.claim.ownerToken,
+          input.claim.generation,
+          input.checkedAt,
+          input.checkedAt,
+          input.groupId,
+          input.kind,
+          input.claim.ownerToken,
+          input.claim.generation,
+          input.checkedAt,
         );
       return Number(this.db.prepare("SELECT changes() AS count").get()?.count) === 1
         ? "create"
@@ -204,25 +206,21 @@ export class SqliteGenesisRebaseCommentOutbox implements GenesisRebaseCommentOut
     });
   }
 
-  markMember(
-    groupId: string,
-    kind: GenesisRebaseCommentMemberKind,
-    state: GenesisRebaseCommentProjectionState,
-    remote?: { readonly commentNodeId?: string; readonly commentUrl?: string },
-    claim?: { readonly ownerToken: string; readonly generation: number } | number,
-  ): void {
-    if (state === "pending") return;
+  markMember(input: GenesisRebaseCommentMemberTransition): void {
+    if (input.state === "pending") return;
     const now = new Date().toISOString();
     this.transaction(() => {
       const before = this.db
         .prepare(
           "SELECT claim_generation FROM genesis_rebase_comment_members WHERE group_id = ? AND member_kind = ?",
         )
-        .get(groupId, kind);
+        .get(input.groupId, input.kind);
       if (!before) throw new Error("genesis-rebase-comment-member-missing");
       const generation =
-        typeof claim === "number" ? claim : (claim?.generation ?? Number(before.claim_generation));
-      const ownerToken = typeof claim === "object" ? claim.ownerToken : null;
+        typeof input.claim === "number"
+          ? input.claim
+          : (input.claim?.generation ?? Number(before.claim_generation));
+      const ownerToken = typeof input.claim === "object" ? input.claim.ownerToken : null;
       this.db
         .prepare(
           `UPDATE genesis_rebase_comment_members
@@ -233,24 +231,24 @@ export class SqliteGenesisRebaseCommentOutbox implements GenesisRebaseCommentOut
              AND (? IS NULL OR claim_owner_token = ?)`,
         )
         .run(
-          state,
-          remote?.commentNodeId ?? null,
-          remote?.commentUrl ?? null,
+          input.state,
+          input.remote?.commentNodeId ?? null,
+          input.remote?.commentUrl ?? null,
           now,
-          groupId,
-          kind,
+          input.groupId,
+          input.kind,
           generation,
           ownerToken,
           ownerToken,
         );
       if (Number(this.db.prepare("SELECT changes() AS count").get()?.count) !== 1)
         throw new Error("genesis-rebase-comment-member-cas-rejected");
-      this.appendEvent(
-        groupId,
-        kind,
-        state === "projected" ? "member_projected" : "member_recovery_required",
-        now,
-      );
+      this.appendEvent({
+        groupId: input.groupId,
+        memberKind: input.kind,
+        eventKind: input.state === "projected" ? "member_projected" : "member_recovery_required",
+        occurredAt: now,
+      });
     });
   }
 
@@ -287,12 +285,12 @@ export class SqliteGenesisRebaseCommentOutbox implements GenesisRebaseCommentOut
         .run(state, now, groupId, generation);
       if (Number(this.db.prepare("SELECT changes() AS count").get()?.count) !== 1)
         throw new Error("genesis-rebase-comment-group-cas-rejected");
-      this.appendEvent(
+      this.appendEvent({
         groupId,
-        null,
-        state === "projected" ? "group_projected" : "group_recovery_required",
-        now,
-      );
+        memberKind: null,
+        eventKind: state === "projected" ? "group_projected" : "group_recovery_required",
+        occurredAt: now,
+      });
     });
   }
 
@@ -326,37 +324,52 @@ export class SqliteGenesisRebaseCommentOutbox implements GenesisRebaseCommentOut
         .run(now, groupId, kind);
       if (Number(this.db.prepare("SELECT changes() AS count").get()?.count) !== 1)
         throw new Error("genesis-rebase-comment-projected-drift-cas-rejected");
-      this.appendEvent(groupId, kind, "member_recovery_required", now);
+      this.appendEvent({
+        groupId,
+        memberKind: kind,
+        eventKind: "member_recovery_required",
+        occurredAt: now,
+      });
     });
   }
 
-  private appendEvent(
-    groupId: string,
-    memberKind: GenesisRebaseCommentMemberKind | null,
-    eventKind: string,
-    occurredAt = new Date().toISOString(),
-  ): void {
+  private appendEvent(input: {
+    readonly groupId: string;
+    readonly memberKind: GenesisRebaseCommentMemberKind | null;
+    readonly eventKind: string;
+    readonly occurredAt?: string;
+  }): void {
+    const occurredAt = input.occurredAt ?? new Date().toISOString();
     const prior = this.db
       .prepare(
         "SELECT sequence, event_digest FROM genesis_rebase_comment_events WHERE group_id = ? ORDER BY sequence DESC LIMIT 1",
       )
-      .get(groupId);
+      .get(input.groupId);
     const sequence = prior ? Number(prior.sequence) + 1 : 1;
     const previous = prior ? String(prior.event_digest) : null;
-    const eventId = `${groupId}:${sequence}`;
+    const eventId = `${input.groupId}:${sequence}`;
     const row = {
       event_id: eventId,
-      group_id: groupId,
+      group_id: input.groupId,
       sequence,
-      member_kind: memberKind,
-      event_kind: eventKind,
+      member_kind: input.memberKind,
+      event_kind: input.eventKind,
       occurred_at: occurredAt,
       previous_event_digest: previous,
     };
     const digest = ledgerRowDigest(row, "event_digest");
     this.db
       .prepare("INSERT INTO genesis_rebase_comment_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(eventId, groupId, sequence, memberKind, eventKind, occurredAt, previous, digest);
+      .run(
+        eventId,
+        input.groupId,
+        sequence,
+        input.memberKind,
+        input.eventKind,
+        occurredAt,
+        previous,
+        digest,
+      );
   }
 
   private transaction<T>(action: () => T): T {

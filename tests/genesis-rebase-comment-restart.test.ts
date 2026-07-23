@@ -140,7 +140,12 @@ describe("durable genesis rebase comment outbox", () => {
   it("U-PA-REBASE-042: stale member generationは更新0件でstable conflictし全変更をrollbackする", () => {
     const { db, group, store } = preparedStore();
     expect(() =>
-      store.markMember(group.groupId, "issue102_seal", "projected", undefined, 1),
+      store.markMember({
+        groupId: group.groupId,
+        kind: "issue102_seal",
+        state: "projected",
+        claim: 1,
+      }),
     ).toThrow("genesis-rebase-comment-member-cas-rejected");
     expect(
       db
@@ -155,8 +160,16 @@ describe("durable genesis rebase comment outbox", () => {
 
   it("U-PA-REBASE-043: stale group generationは更新0件でstable conflictしterminal eventを残さない", () => {
     const { db, group, store } = preparedStore();
-    store.markMember(group.groupId, "issue102_seal", "projected");
-    store.markMember(group.groupId, "issue143_metadata", "projected");
+    store.markMember({
+      groupId: group.groupId,
+      kind: "issue102_seal",
+      state: "projected",
+    });
+    store.markMember({
+      groupId: group.groupId,
+      kind: "issue143_metadata",
+      state: "projected",
+    });
     expect(() => store.markGroup(group.groupId, "projected", 1)).toThrow(
       "genesis-rebase-comment-group-cas-rejected",
     );
@@ -329,24 +342,24 @@ describe("durable genesis rebase comment outbox", () => {
       adapter.project(
         group.members[0],
         () =>
-          store.authorizeCreate(
-            group.groupId,
-            "issue102_seal",
-            ownerA,
-            "2026-07-23T07:01:15.002Z",
-          ) === "create",
+          store.authorizeCreate({
+            groupId: group.groupId,
+            kind: "issue102_seal",
+            claim: ownerA,
+            checkedAt: "2026-07-23T07:01:15.002Z",
+          }) === "create",
       ),
     ).toEqual({ state: "recovery_required" });
     expect(
       adapter.project(
         group.members[0],
         () =>
-          store.authorizeCreate(
-            group.groupId,
-            "issue102_seal",
-            ownerB,
-            "2026-07-23T07:01:15.003Z",
-          ) === "create",
+          store.authorizeCreate({
+            groupId: group.groupId,
+            kind: "issue102_seal",
+            claim: ownerB,
+            checkedAt: "2026-07-23T07:01:15.003Z",
+          }) === "create",
       ),
     ).toMatchObject({ state: "projected" });
     expect(github.createComment).toHaveBeenCalledTimes(1);

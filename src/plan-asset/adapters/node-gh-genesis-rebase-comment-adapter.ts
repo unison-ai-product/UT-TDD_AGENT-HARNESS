@@ -31,6 +31,13 @@ export type GenesisRebaseGhExec = (
   options: { readonly encoding: "utf8"; readonly windowsHide: true; readonly timeout: 30_000 },
 ) => string;
 
+const directGhExec: GenesisRebaseGhExec = (command, args) =>
+  execFileSync(command, [...args], {
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 30_000,
+  });
+
 /** GitHub commentのGET/create exact-once adapter。 */
 export class NodeGhGenesisRebaseCommentAdapter implements GenesisRebaseCommentProjectionPort {
   constructor(private readonly github: GenesisRebaseGithubCommentPort) {}
@@ -46,12 +53,12 @@ export class NodeGhGenesisRebaseCommentAdapter implements GenesisRebaseCommentPr
       return { state: "recovery_required" as const };
 
     const marker = target.commentBody.split("\n", 1)[0];
-    const observed = classifyMarkerComments(
-      this.github.listComments({ issueNumber: target.issueNumber }),
+    const observed = classifyMarkerComments({
+      comments: this.github.listComments({ issueNumber: target.issueNumber }),
       marker,
-      target.commentBody,
-      target.commentBodyDigest,
-    );
+      expectedBody: target.commentBody,
+      expectedDigest: target.commentBodyDigest,
+    });
     if (observed.kind === "exact") return projected(observed.comment);
     if (observed.kind === "conflict") return { state: "recovery_required" as const };
 
@@ -60,30 +67,30 @@ export class NodeGhGenesisRebaseCommentAdapter implements GenesisRebaseCommentPr
     // outcome, so it is never safe to POST automatically.
     if (!authorizeCreate()) return { state: "recovery_required" as const };
     this.github.createComment({ issueNumber: target.issueNumber, body: target.commentBody });
-    const postimage = classifyMarkerComments(
-      this.github.listComments({ issueNumber: target.issueNumber }),
+    const postimage = classifyMarkerComments({
+      comments: this.github.listComments({ issueNumber: target.issueNumber }),
       marker,
-      target.commentBody,
-      target.commentBodyDigest,
-    );
+      expectedBody: target.commentBody,
+      expectedDigest: target.commentBodyDigest,
+    });
     return postimage.kind === "exact"
       ? projected(postimage.comment)
       : { state: "recovery_required" as const };
   }
 }
 
-export function classifyMarkerComments(
-  comments: readonly ObservedGithubComment[],
-  marker: string,
-  expectedBody: string,
-  expectedDigest: string,
-):
+export function classifyMarkerComments(input: {
+  readonly comments: readonly ObservedGithubComment[];
+  readonly marker: string;
+  readonly expectedBody: string;
+  readonly expectedDigest: string;
+}):
   | { readonly kind: "absent" }
   | { readonly kind: "conflict" }
   | { readonly kind: "exact"; readonly comment: ObservedGithubComment } {
-  const matching = comments.filter((comment) => comment.body.startsWith(marker));
+  const matching = input.comments.filter((comment) => comment.body.startsWith(input.marker));
   const exact = matching.filter(
-    (comment) => comment.body === expectedBody && sha(comment.body) === expectedDigest,
+    (comment) => comment.body === input.expectedBody && sha(comment.body) === input.expectedDigest,
   );
   return exact.length === 1 && matching.length === 1 && exact[0]
     ? { kind: "exact", comment: exact[0] }
@@ -97,8 +104,7 @@ export class NodeGhCliGenesisRebaseCommentPort implements GenesisRebaseGithubCom
 
   constructor(
     repository: string,
-    private readonly exec: GenesisRebaseGhExec = (command, args, options) =>
-      execFileSync(command, [...args], options),
+    private readonly exec: GenesisRebaseGhExec = directGhExec,
   ) {
     if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository))
       throw new Error("GENESIS_REBASE_GITHUB_REPOSITORY_INVALID");

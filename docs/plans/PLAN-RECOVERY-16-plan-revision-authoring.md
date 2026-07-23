@@ -7,7 +7,7 @@ drive: agent
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
-updated: 2026-07-22
+updated: 2026-07-23
 owner: PO / TL
 backprop_decision: required
 backprop_decision_reason: Redesign supersessionとplan admissionを同時に満たすrevision
@@ -40,6 +40,10 @@ generates:
   - artifact_path: src/cli/plan-adopt-genesis-chain.ts
     artifact_type: source_module
   - artifact_path: src/cli/genesis-adoption-production.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/genesis-rebase-comment-production.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/genesis-rebase-migration-production.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/authoring-recovery-db-evidence.ts
     artifact_type: source_module
@@ -99,9 +103,25 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/application/genesis-projection-dispatcher.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/application/genesis-rebase-comment-projection.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/application/genesis-rebase-migrate.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/application/genesis-rebase-migration-runner.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/adapters/node-gh-genesis-rebase-comment-adapter.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/adapters/sqlite-genesis-rebase-comment-outbox.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/plan-asset-lineage-migration.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/plan-asset-migration-certificate.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/adapters/sqlite-genesis-adoption-projection-adapter.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/genesis-adoption-transaction.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/genesis-rebase-migration-transaction.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/genesis-route-binding.ts
     artifact_type: source_module

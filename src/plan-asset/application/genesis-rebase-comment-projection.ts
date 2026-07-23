@@ -56,24 +56,28 @@ export interface GenesisRebaseCommentOutboxPort {
     readonly generation: number;
     readonly expiresAt: string;
   } | null;
-  authorizeCreate(
-    groupId: string,
-    kind: GenesisRebaseCommentMemberKind,
-    claim: { readonly ownerToken: string; readonly generation: number },
-    checkedAt: string,
-  ): "create" | "reconcile" | null;
-  markMember(
-    groupId: string,
-    kind: GenesisRebaseCommentMemberKind,
-    state: GenesisRebaseCommentProjectionState,
-    remote?: { readonly commentNodeId?: string; readonly commentUrl?: string },
-    claim?: { readonly ownerToken: string; readonly generation: number },
-  ): void;
+  authorizeCreate(input: GenesisRebaseCommentCreateAuthorization): "create" | "reconcile" | null;
+  markMember(input: GenesisRebaseCommentMemberTransition): void;
   markGroup(groupId: string, state: GenesisRebaseCommentProjectionState): void;
   read(
     groupId: string,
   ): { readonly state: string; readonly memberStates: readonly string[] } | undefined;
   markProjectedDrift(groupId: string, kind: GenesisRebaseCommentMemberKind): void;
+}
+
+export interface GenesisRebaseCommentCreateAuthorization {
+  readonly groupId: string;
+  readonly kind: GenesisRebaseCommentMemberKind;
+  readonly claim: { readonly ownerToken: string; readonly generation: number };
+  readonly checkedAt: string;
+}
+
+export interface GenesisRebaseCommentMemberTransition {
+  readonly groupId: string;
+  readonly kind: GenesisRebaseCommentMemberKind;
+  readonly state: GenesisRebaseCommentProjectionState;
+  readonly remote?: { readonly commentNodeId?: string; readonly commentUrl?: string };
+  readonly claim?: { readonly ownerToken: string; readonly generation: number } | number;
 }
 
 export interface GenesisRebaseCommentProjectionPort {
@@ -138,14 +142,29 @@ export class GenesisRebaseCommentProjectionRunner {
         const result = this.projection.project(
           member,
           () =>
-            this.outbox.authorizeCreate(group.groupId, member.kind, claim, this.runtime.now()) ===
-            "create",
+            this.outbox.authorizeCreate({
+              groupId: group.groupId,
+              kind: member.kind,
+              claim,
+              checkedAt: this.runtime.now(),
+            }) === "create",
         );
-        this.outbox.markMember(group.groupId, member.kind, result.state, result, claim);
+        this.outbox.markMember({
+          groupId: group.groupId,
+          kind: member.kind,
+          state: result.state,
+          remote: result,
+          claim,
+        });
         if (result.state === "projected") projected++;
         else recoveryRequired++;
       } catch {
-        this.outbox.markMember(group.groupId, member.kind, "recovery_required", undefined, claim);
+        this.outbox.markMember({
+          groupId: group.groupId,
+          kind: member.kind,
+          state: "recovery_required",
+          claim,
+        });
         recoveryRequired++;
       }
     }
