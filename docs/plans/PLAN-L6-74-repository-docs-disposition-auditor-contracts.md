@@ -40,6 +40,13 @@ dependencies:
 - baseline/delta/final closure、conditional field、target/PLAN、canonical stale assertionを独立finding IDで検証する。
 - CLIは`init|materialize|set`をwrite command、`diff|references check|check|report`をqueryに分離し、usage=2、contract violation=1、green=0を固定する。
 - reference readerはfrontmatter path、Markdown inline/reference、wiki link、anchor、PLAN/spec/test IDをtyped edge化し、parse error/unknown scheme/anchor欠落を空集合へ変換しない。
+- reference reader入力はfinal snapshot digestとsource path/blob OID/content digest/raw bytesを不可分に持ち、
+  blob digest不一致をparse前に拒否する。syntax/parser/anchor、URI構文registry、
+  frontmatter schema、reader registry revisionをreceiptへ束縛する。
+- path/fragmentはPOSIX relative解決、single percent decode、Unicode NFCを順に適用し、root escape、
+  encoded separator/dot segment、短縮・多義typed IDをfail-closeする。
+- readerはsyntax抽出と正規化、analyzerはsnapshot/anchor/ID registry解決と明示revisionの
+  authority/applicability判定を担当し、責務を相互に推測補完しない。
 
 ## 設計freeze
 
@@ -62,6 +69,9 @@ materializeした`DocumentDispositionLedger`、同snapshotのblobから抽出し
   application statusは`pending|applied|verified`、kind固有field以外はNULLとする。
 - delta closureはpath/blob identityの`add|modify|delete|rename`をsequence replayする。
   Git rename heuristicをauthorityにせず、明示renameがなければdeleteとaddを別findingにする。
+- reference edge/parse receiptはsource member、byte range、raw/normalized target、
+  parser/syntax/anchor/scheme revisionを`canonical-frame-v1`へ束縛する。同一入力のedge/error集合と
+  receipt digestは入力順・OS・localeに依存せず、parse errorをedge 0件の正常結果へ変換しない。
 - blocking findingはsnapshot digest、subject path/edge、filing target、PLAN IDへ束縛したdebt routeを
   必須とする。route記録はfindingの解消やclosure Greenを意味しない。
 - `U-DOCLEDGER-001..010`、`IT-DOCLEDGER-01..07`、`ST-DOCLEDGER-01..05`を実装前Redとして固定する。

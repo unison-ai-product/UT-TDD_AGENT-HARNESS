@@ -238,6 +238,12 @@ reference parserはpath linkだけでなくanchor、PLAN full ID、spec/test ID�
 typed edge化する。GitHub URLや外部標準はexternal referenceとしてscheme/authorityを保持し、到達不能を
 内部missing pathと混同しない。parse不能をedge 0に変換するfail-openは禁止する。
 
+reference処理は、Git object blob取得、pure readerによる構文edge/receipt生成、analyzerによる
+endpoint/authority/meaning/applicability検証の3段に分離する。readerはsnapshot-bound byte列以外の
+filesystem、DB、network、relation graphを読まず、analyzerは構文を再parseしない。source memberごとの
+required reader receiptをexactly once要求し、reader登録順や既存edgeを欠落receiptの補完に使わない。
+現行relation graphは検証済みedgeのconsumerに限定する。
+
 system境界はL9 `ST-DOCSEM-01..08`で検証する。L9は件数一致だけでなく、意味不一致、適用条件未評価、
 reference target slot不在、stale inbound、archiveの正本化を負例として持つ。
 

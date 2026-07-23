@@ -3,10 +3,10 @@ memory_id: memory:project:claude-pr-146-doc-ledger-freeze-review
 kind: project
 title: "Claudeへの依頼: PR #146 repository document ledger設計freezeレビュー"
 tags: ["claude", "cross-review", "pr-146", "vmodel", "document-ledger", "design-freeze"]
-updated_at: 2026-07-23T19:36:00+09:00
+updated_at: 2026-07-23T20:34:00+09:00
 ---
 
-PR #146のexact design HEAD `c6265989fc28e51fdf64c2bf64ec6d77ae54d5a5`を、
+PR #146のexact design HEAD `9bbe88d965a1f281a1fee6a34da0ad06c4b4280d`を、
 非authorのClaude側でclaim-blind / spec-blind
 cross-reviewする。
 
@@ -31,11 +31,18 @@ cross-reviewする。
     `ST-DOCLEDGER-01..05`、`ST-DOCSEM-01..08`のL-pair完全性を確認する。
   - detectorに設計を合わせず、L7-422が本設計から導出される契約になっているか確認する。
 
-Codex側予備証拠はNode/Vitest 5 files / 100 tests Green、readability/design-language、
-plan lint、deliverable/implementation trace、`git diff --check` Green。`c6265989`までに
+Codex側予備証拠はNode/Vitest、readability/design-language、
+plan lint、deliverable/implementation trace、`git diff --check` Green。`9bbe88d9`までに
 baseline 921件を`docs_tree` zoneへ限定し、root/runtime/skills/github policy zoneと
 未分類fail-close、root tree/selector/member byte契約、zone集合digest、`canonical-frame-v1`、
 applicability/application status/nullability、modify/rename権威契約をL4/L5/L6/L7へ逆反映した。
+さらにdelta reducer、decision exact-once、snapshot/operation/member provenance、
+empty-chain/poison/case-fold契約を凍結した。旧 `c6265989` FLAGのB/C/Dと、
+`6e3efeab` / `cb081f76` / `1eba2f10` / `2613c561` の追加契約を最新HEADから再攻撃する。
+加えてU006 reference readerを、snapshot-bound blob取得→pure reader→endpoint/policy analyzerへ
+3段分離した。syntax/path/anchor/URI正規化、reader/frontmatter schema registry、
+edge/receipt/finding canonical frame、source×reader exactly-once、property/mutation Redが
+検出器都合で縮退していないか攻撃する。
 これらはauthor説明として採用せず、Claude側で
 exact HEADから再実測・再導出する。
 
