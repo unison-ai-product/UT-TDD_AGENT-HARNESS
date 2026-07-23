@@ -35,6 +35,11 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
+import {
+  classifyTargetArtifacts,
+  type MergedPlanTargetEvidence,
+  resolveMergedPlanTargetEvidence,
+} from "./merged-plan-target-evidence";
 import { loadReviewPlans } from "./review-evidence";
 import { normalizePath } from "./shared";
 
@@ -65,6 +70,7 @@ export interface MergedPlanRow {
 
 export interface MergedPlanStatusInput {
   plans: MergedPlanRow[];
+  targetEvidence?: MergedPlanTargetEvidence;
 }
 
 export interface MergedPlanStatusViolation {
@@ -118,9 +124,20 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
     return { plans: [] }; // docs/plans 不在は空 (fail-open、他 lint と同方針)
   }
   const plansDir = join(repoRoot, "docs", "plans");
-  const baseRef = resolveBaseRef(repoRoot);
-  const basePaths = baseRef
-    ? new Set(gitText(repoRoot, ["ls-tree", "-r", "--name-only", baseRef]).split(/\r?\n/))
+  const isGitRepo = gitObjectExists(repoRoot, "HEAD");
+  const targetEvidence = isGitRepo ? resolveMergedPlanTargetEvidence(repoRoot) : undefined;
+  if (
+    targetEvidence?.decision === "no_verified_target" ||
+    (isGitRepo && !targetEvidence?.targetSha)
+  ) {
+    throw new Error("merged-plan canonical target could not be verified");
+  }
+  const targetPaths = targetEvidence?.targetSha
+    ? new Set(
+        gitText(repoRoot, ["ls-tree", "-r", "--name-only", targetEvidence.targetSha]).split(
+          /\r?\n/,
+        ),
+      )
     : null;
   for (const rp of reviewPlans) {
     if (rp.status === "archived") continue;
@@ -135,9 +152,12 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
     } catch {
       continue;
     }
-    const mergedArtifacts = generatesMergedDeliverablePaths(content).filter((p) =>
-      basePaths ? basePaths.has(p) : existsSync(join(repoRoot, p)),
-    );
+    const declaredArtifacts = generatesMergedDeliverablePaths(content);
+    const mergedArtifacts = targetPaths
+      ? classifyTargetArtifacts(declaredArtifacts, targetPaths)
+          .filter((decision) => decision.decision === "landed_on_target")
+          .map((decision) => decision.path)
+      : declaredArtifacts.filter((path) => existsSync(join(repoRoot, path)));
     const baseStatus = frontmatterStatus(content) ?? rp.status;
     plans.push({
       planId: rp.plan_id,
@@ -146,32 +166,7 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
       mergedArtifacts,
     });
   }
-  return { plans };
-}
-
-function resolveBaseRef(repoRoot: string): string | null {
-  const candidates = [
-    githubPullRequestBaseSha(),
-    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null,
-    "origin/main",
-    "main",
-  ].filter((value): value is string => Boolean(value));
-  return candidates.find((ref) => gitObjectExists(repoRoot, ref)) ?? null;
-}
-
-/** GitHub pull_request checkoutのmerge commitやshallow refをbaseと誤認しない。 */
-function githubPullRequestBaseSha(): string | null {
-  const eventPath = process.env.GITHUB_EVENT_PATH;
-  if (!eventPath || !existsSync(eventPath)) return null;
-  try {
-    const event = JSON.parse(readFileSync(eventPath, "utf8")) as {
-      pull_request?: { base?: { sha?: unknown } };
-    };
-    const sha = event.pull_request?.base?.sha;
-    return typeof sha === "string" && /^[0-9a-f]{40}$/i.test(sha) ? sha : null;
-  } catch {
-    return null;
-  }
+  return { plans, ...(targetEvidence ? { targetEvidence } : {}) };
 }
 
 function frontmatterStatus(content: string): string | null {
