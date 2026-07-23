@@ -31,9 +31,9 @@ global-setup-fence:1 vitest-snapshot-runner:1
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
-forward-escape-issue-contract:7
+forward-escape-issue-contract:3
 authoring-recovery-surface:2 node-authoring-artifact-publisher:2 node-plan-authoring-recovery-runner:2
-plan-asset/authoring-command-group:1 plan-asset/plan-redesign-bundle:9
+plan-asset/authoring-command-group:1 plan-asset/plan-redesign-bundle:10
 genesis-adoption-production:1
 plan-asset/genesis-adoption-production-chain:1 plan-asset/genesis-adoption-tracked-contract:2
 plan-asset/genesis-projection-outbox:4

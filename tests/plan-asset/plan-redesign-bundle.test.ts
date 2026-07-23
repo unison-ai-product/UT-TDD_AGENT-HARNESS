@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { buildSync } from "esbuild";
 import { afterEach, describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import { analyzePlanSupersession, parseSupersedePlan } from "../../src/lint/plan-supersession.js";
@@ -476,16 +477,21 @@ describe("Redesign bundle coordinator", () => {
     ];
     db.close();
     opened.splice(opened.indexOf(db), 1);
-    const bundleModule = pathToFileURL(
-      join(process.cwd(), "src", "plan-asset", "ledger", "plan-redesign-bundle.ts"),
-    ).href;
-    const publisherModule = pathToFileURL(
-      join(process.cwd(), "src", "plan-admission", "node-authoring-artifact-publisher.ts"),
-    ).href;
-    const schemaModule = pathToFileURL(
-      join(process.cwd(), "src", "plan-asset", "ledger", "schema.ts"),
-    ).href;
-    const stateModule = pathToFileURL(join(process.cwd(), "src", "state-db", "index.ts")).href;
+    const bundleModule = join(
+      process.cwd(),
+      "src",
+      "plan-asset",
+      "ledger",
+      "plan-redesign-bundle.ts",
+    );
+    const publisherModule = join(
+      process.cwd(),
+      "src",
+      "plan-admission",
+      "node-authoring-artifact-publisher.ts",
+    );
+    const schemaModule = join(process.cwd(), "src", "plan-asset", "ledger", "schema.ts");
+    const stateModule = join(process.cwd(), "src", "state-db", "index.ts");
     const { commandPayloadDigest: _digest, publication: _publication, ...base } = input;
     const derivation = {
       origin: withoutPublicationMember(artifacts[0]),
@@ -506,8 +512,9 @@ if (!migratePlanLedger(db).ok) process.exit(87);
 const publisher = new NodeAuthoringArtifactPublisher({ rootDir: ${JSON.stringify(root)}, artifacts: ${JSON.stringify(artifacts)} });
 new PlanRedesignBundleCoordinator(db, undefined, (point) => { if (point === ${JSON.stringify(faultPoint)}) process.exit(86); }).publishDurable(input, publisher);
 db.close();`;
-    const child = spawnSync(process.env.UT_TDD_BUN_BINARY ?? "bun", ["-"], {
-      input: script,
+    const worker = join(root, `redesign-fault-${faultPoint.replace(/[:]/g, "-")}.cjs`);
+    buildNodeWorker(worker, script);
+    const child = spawnSync(process.execPath, [worker], {
       windowsHide: true,
       encoding: "utf8",
     });
@@ -1108,6 +1115,24 @@ function realTrackedBundle(): {
       ...upstream,
     ],
   };
+}
+
+function buildNodeWorker(outfile: string, source: string): void {
+  buildSync({
+    stdin: {
+      contents: source,
+      loader: "ts",
+      resolveDir: process.cwd(),
+      sourcefile: "plan-redesign-fault-worker.ts",
+    },
+    bundle: true,
+    define: { "import.meta.url": JSON.stringify(pathToFileURL(outfile).href) },
+    format: "cjs",
+    logLevel: "silent",
+    outfile,
+    platform: "node",
+    target: "node24",
+  });
 }
 
 function receiptCommand(input: {

@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { buildSync } from "esbuild";
 import { describe, expect, it } from "vitest";
 import {
   checkDriveModelAlignment,
@@ -703,16 +703,12 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const ready = join(repo, "ready");
     mkdirSync(ready);
     writeFileSync(gate, "wait", "utf8");
-    const stateDbUrl = pathToFileURL(join(process.cwd(), "src", "state-db", "index.ts")).href;
-    const journalUrl = pathToFileURL(
-      join(process.cwd(), "src", "execution", "sqlite-forward-escape-journal.ts"),
-    ).href;
     const worker = join(repo, "worker.mjs");
-    writeFileSync(
+    buildNodeWorker(
       worker,
       `import { existsSync, writeFileSync } from "node:fs";\n` +
-        `const { openHarnessDb } = await import(${JSON.stringify(stateDbUrl)});\n` +
-        `const { SqliteForwardEscapeJournal } = await import(${JSON.stringify(journalUrl)});\n` +
+        `import { openHarnessDb } from "./src/state-db/index.ts";\n` +
+        `import { SqliteForwardEscapeJournal } from "./src/execution/sqlite-forward-escape-journal.ts";\n` +
         `const db = openHarnessDb(${JSON.stringify(dbPath)}, { repoRoot: ${JSON.stringify(repo)} });\n` +
         `try {\n` +
         `  const journal = new SqliteForwardEscapeJournal(db);\n` +
@@ -722,12 +718,11 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         `  const receipt = journal.append({ type: "IssueProjectionQueued", command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}", repository: "owner/repo", body_digest: "${"b".repeat(64)}" });\n` +
         `  console.log(JSON.stringify({ certificate, receipt }));\n` +
         `} finally { db.close(); }\n`,
-      "utf8",
     );
     const children = Array.from({ length: 2 }, () => {
-      // Vitest itselfはNodeで動き得る。実sourceのTypeScript/module解決をproduction runtimeと
-      // 同じBunへ固定し、process.execPath(Node)による偽のbootstrap failureを排除する。
-      const child = spawn("bun", [worker], {
+      // control planeのNode移行契約に合わせ、workerも現在検証中のNode executableへ固定する。
+      // Bun fallbackを許すとBun永久BAN後の並行oracleが実行不能になる。
+      const child = spawn(process.execPath, [worker], {
         cwd: process.cwd(),
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -818,29 +813,21 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const calls = join(repo, "provider-calls");
     mkdirSync(ready);
     writeFileSync(gate, "wait", "utf8");
-    const stateDbUrl = pathToFileURL(join(process.cwd(), "src", "state-db", "index.ts")).href;
-    const journalUrl = pathToFileURL(
-      join(process.cwd(), "src", "execution", "sqlite-forward-escape-journal.ts"),
-    ).href;
-    const domainUrl = pathToFileURL(
-      join(process.cwd(), "src", "execution", "forward-escape.ts"),
-    ).href;
     const worker = join(repo, "worker-e4.mjs");
     const concurrentCommand = validCommand({ command_id: "cmd-e4-concurrent" });
-    writeFileSync(
+    buildNodeWorker(
       worker,
       `import { appendFileSync, existsSync, writeFileSync } from "node:fs";\n` +
-        `const { openHarnessDb } = await import(${JSON.stringify(stateDbUrl)});\n` +
-        `const { SqliteForwardEscapeJournal } = await import(${JSON.stringify(journalUrl)});\n` +
-        `const { validateForwardEscape, projectForwardEscapeIssue } = await import(${JSON.stringify(domainUrl)});\n` +
+        `import { openHarnessDb } from "./src/state-db/index.ts";\n` +
+        `import { SqliteForwardEscapeJournal } from "./src/execution/sqlite-forward-escape-journal.ts";\n` +
+        `import { validateForwardEscape, projectForwardEscapeIssue } from "./src/execution/forward-escape.ts";\n` +
         `const command = ${JSON.stringify(concurrentCommand)};\n` +
         `const ledger = { currentRevisionOf: () => command.origin_revision_id, lookupRevision: () => ({ layer: command.origin_layer, states: [command.origin_state, command.reentry_target_state] }), priorCommand: () => undefined };\n` +
         `const db = openHarnessDb(${JSON.stringify(dbPath)}, { repoRoot: ${JSON.stringify(repo)} });\n` +
-        `try { const journal = new SqliteForwardEscapeJournal(db); writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready"); while (existsSync(${JSON.stringify(gate)})) await Bun.sleep(2); const event = journal.runExclusive(() => { const result = validateForwardEscape(command, ledger, journal); if (!result.validated) throw new Error(JSON.stringify(result.violations)); return projectForwardEscapeIssue({ validated: result.validated, journal, custody: journal, port: { createOrGetIssue: (request) => { appendFileSync(${JSON.stringify(calls)}, "call\\n"); return { ok: true, binding: { repository: request.owner + "/" + request.repository, issue_number: 117, node_id: "I_e4", url: "https://github.com/" + request.owner + "/" + request.repository + "/issues/117", body_digest: request.body_digest, observed_revision: "etag-e4" } }; } } }); }); console.log(event.type); } finally { db.close(); }\n`,
-      "utf8",
+        `try { const journal = new SqliteForwardEscapeJournal(db); writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready"); while (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2)); const event = journal.runExclusive(() => { const result = validateForwardEscape(command, ledger, journal); if (!result.validated) throw new Error(JSON.stringify(result.violations)); return projectForwardEscapeIssue({ validated: result.validated, journal, custody: journal, port: { createOrGetIssue: (request) => { appendFileSync(${JSON.stringify(calls)}, "call\\n"); return { ok: true, binding: { repository: request.owner + "/" + request.repository, issue_number: 117, node_id: "I_e4", url: "https://github.com/" + request.owner + "/" + request.repository + "/issues/117", body_digest: request.body_digest, observed_revision: "etag-e4" } }; } } }); }); console.log(event.type); } finally { db.close(); }\n`,
     );
     const children = Array.from({ length: 2 }, () =>
-      spawn("bun", [worker], { cwd: process.cwd(), windowsHide: true }),
+      spawn(process.execPath, [worker], { cwd: process.cwd(), windowsHide: true }),
     );
     try {
       const deadline = Date.now() + 30_000;
@@ -967,3 +954,20 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     expect(duplicated.map((f) => f.code)).toContain("issue-duplicated");
   });
 });
+
+function buildNodeWorker(outfile: string, source: string): void {
+  buildSync({
+    stdin: {
+      contents: source,
+      loader: "ts",
+      resolveDir: process.cwd(),
+      sourcefile: "forward-escape-worker.ts",
+    },
+    bundle: true,
+    format: "esm",
+    logLevel: "silent",
+    outfile,
+    platform: "node",
+    target: "node24",
+  });
+}
