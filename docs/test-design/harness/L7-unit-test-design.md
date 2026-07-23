@@ -1338,11 +1338,16 @@ CHECK、複合PKを各1違反fixtureでDDL自身が拒否することを確認�
 上表のintegration oracleは`tests/disposition/projection.test.ts`へ昇格済みで、全projectionのPK、source/canonical digestを
 delete→rebuild前後で完全比較する。invalid authoringはtransaction rollbackし既存projectionを保持する。row countだけの比較、
 DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証拠に含めることは禁止する。
-| `CANDIDATE-DOCLEDGER-001` | baseline raw NUL path集合 | snapshot capture | count/tree OID/hashがfixture一致 |
-| `CANDIDATE-DOCLEDGER-002` | missing/duplicate/phantom/case-fold path | ledger validate | 各stable finding、exit 1 |
-| `CANDIDATE-DOCLEDGER-003` | conditional field欠落 | ledger validate | `doc-disposition-incomplete`, exit 1 |
-| `CANDIDATE-DOCLEDGER-004` | add/delete/rename未台帳 | final closure | `doc-delta-unregistered`, exit 1 |
-| `CANDIDATE-DOCLEDGER-005` | broken/superseded/archive依存edge | reference analyze | typed orphan finding、exit 1 |
+| `U-DOCLEDGER-001` | full commit/treeのraw NUL path/blob OID集合 | `captureRepositoryDocsSnapshot` | count/tree/path hash/snapshot digestがfixture一致し、stable byte順 |
+| `U-DOCLEDGER-002` | short SHA、symbolic HEADだけ、tree mismatch、malformed NUL/UTF-8 | snapshot capture | `docs-snapshot-revision-missing`又は`docs-snapshot-stream-malformed`、exit 1 |
+| `U-DOCLEDGER-003` | missing/duplicate/phantom/case-fold path | closure analyzer | 対応するstable findingを全件返し、exit 1 |
+| `U-DOCLEDGER-004` | conditional/defer/skipのreason・target・PLAN欠落 | closure analyzer | `doc-disposition-incomplete`、exit 1 |
+| `U-DOCLEDGER-005` | add/delete/rename未台帳 | final closure | `doc-delta-unregistered`を差分identity別に返し、exit 1 |
+| `U-DOCLEDGER-006` | frontmatter/Markdown/wiki/anchor/PLAN/spec/test IDの正常fixture | reference reader | typed edgeとparse receiptがstable identity順、入力digest不変 |
+| `U-DOCLEDGER-007` | parse error、unknown scheme、broken/archived/superseded endpoint | reference analyzer | 空集合へ変換せず`doc-reference-parse-error`又は`doc-reference-orphan`、exit 1 |
+| `U-DOCLEDGER-008` | target blob変更後のcanonical assertion | closure analyzer | `doc-canonical-assertion-stale`、exit 1 |
+| `U-DOCLEDGER-009` | blocking findingとroute欠落・別snapshot・別finding digest | debt route verifier | `doc-debt-route-missing`又は`doc-debt-route-stale`、exit 1 |
+| `U-DOCLEDGER-010` | active debt route付きblocking finding | closure analyzer | routeを可視化するがfindingを消さず`closure=blocked`、exit 1 |
 | `CANDIDATE-DOMAIN-001` | domain import graph | dependency audit | domain→kernel以外の逆依存0 |
 | `CANDIDATE-DOMAIN-002` | barrel相互import fixture | dependency audit | `module-cycle`, exit 1 |
 | `CANDIDATE-DOMAIN-003` | command/query同時mutation fixture | CQS audit | `command-query-mixed`, exit 1 |
@@ -1376,7 +1381,9 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-M-SP-006` | DB-only補完mutation | mutation runner | mutation killed、exit 1 |
 | `CANDIDATE-M-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
 
-実装前にnegative fixtureが期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。
+`U-DOCLEDGER-001..010`はPLAN-L6-74の実装前Red freezeである。test実体とGreen証拠が揃うまで
+`CANDIDATE`への後戻り、既存detectorのpass/fail関数を期待値へ再利用すること、件数だけのGreenを禁止する。
+その他のnegative fixtureも期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。
 
 ## PLAN-L7-428 ステージ紐付きエリシテーション oracle (PLAN-REVERSE-428 backfill、2026-07-13)
 

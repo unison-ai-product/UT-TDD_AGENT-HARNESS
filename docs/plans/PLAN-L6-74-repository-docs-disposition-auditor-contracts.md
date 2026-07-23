@@ -40,3 +40,21 @@ dependencies:
 - baseline/delta/final closure、conditional field、target/PLAN、canonical stale assertionを独立finding IDで検証する。
 - CLIは`init|materialize|set`をwrite command、`diff|references check|check|report`をqueryに分離し、usage=2、contract violation=1、green=0を固定する。
 - reference readerはfrontmatter path、Markdown inline/reference、wiki link、anchor、PLAN/spec/test IDをtyped edge化し、parse error/unknown scheme/anchor欠落を空集合へ変換しない。
+
+## 設計freeze
+
+repository文書の完了判定は、同一Git treeから取得した`RepositoryDocsSnapshot`、全pathをexactly once
+materializeした`DocumentDispositionLedger`、同snapshotのblobから抽出した`DocumentReferenceGraph`、
+およびfindingごとの`DocumentDebtRoute`を一度だけjoinして行う。working tree、既存DB projection、
+過去reportの件数、selectorの再評価を不足入力の補完へ使わない。
+
+- queryは`captureRepositoryDocsSnapshot`、`analyzeRepositoryDocumentClosure`、
+  `verifyDocumentDebtRoutes`に分離し、authoring sourceやDBを更新しない。
+- commandは`materializeDispositionBatch`と明示的な`setDisposition`だけとし、query結果から判断を
+  自動記入しない。
+- missing、phantom、duplicate、case-fold collision、未登録delta、broken reference、
+  anchor欠落、canonical assertion staleを別finding IDで返す。
+- blocking findingはsnapshot digest、subject path/edge、filing target、PLAN IDへ束縛したdebt routeを
+  必須とする。route記録はfindingの解消やclosure Greenを意味しない。
+- `U-DOCLEDGER-001..010`、`IT-DOCLEDGER-01..07`、`ST-DOCLEDGER-01..05`を実装前Redとして固定する。
+  現時点ではoracle実装・Green証拠がないため、本PLANの設計freezeを実装完了と読み替えない。

@@ -152,6 +152,36 @@ verification_design: system environment, data reality, measurement method, evalu
 G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順に降下する。system greenだけで
 設計判断やsemantic verdictを補完せず、失敗原因が上流contractならReverse、実装ならL7、verification設計ならL9へrouteする。
 
+### §7.1 Repository Document Ledger system oracle (PLAN-L4-25)
+
+| ST-ID | Given / When | system oracle | 負例・exit |
+|---|---|---|---|
+| `ST-DOCSEM-01` | 固定Git commitのtracked docsをbaseline captureする | commit/tree OID、raw NUL path digest、countが再現し、OS/working tree差で変化しない | working tree採取、改行join、baseline上書きはfail |
+| `ST-DOCSEM-02` | baseline recordとexplicit add/delete/rename deltaからfinalを構築する | baseline exactly once、delta exactly once、final tracked path exactly once、missing/duplicate/phantom/case-fold collision 0 | renameを無関係なdelete+addへ推測、未台帳delta、存在しないfinal pathはfail |
+| `ST-DOCSEM-03` | 各recordのmeaningを評価する | responsibility/audience/input/consumer/canonical assertionが揃い、keyword hitでなくtarget実体と比較できる | 意味欠落、archive文を現行assertion化、存在だけのsubstance greenはfail |
+| `ST-DOCSEM-04` | profile/capability/reference文書のapplicabilityを判定する | 条件、観測値、理由、decider、再評価triggerが揃い、未評価とNAを区別する | target slot不在、条件未評価、理由なしNAをclosedにしない |
+| `ST-DOCSEM-05` | authorityとdispositionを適用する | 責務ごとのcanonical 1件、全referenceにも処置あり、update/merge/supersede/archive/retain/NAの後条件を満たす | referenceを処置として使用、generated view手編集、重複canonical、target/PLAN欠落はfail |
+| `ST-DOCSEM-06` | 全final docのtyped referencesを解析する | path/anchor/PLAN full ID/spec/test/supersessionとsemantic responsibilityが一意に解決する | parse error→edge 0、anchor欠落、短縮PLAN多義、supersession cycle、archiveへのcanonical inboundはfail |
+| `ST-DOCSEM-07` | merge/supersede/rename/delete後にclosureを実行する | stale inbound 0、semantic mismatch 0、applicability conflict 0、orphan 0。集合digestを同一receiptへ束縛する | path存在だけ、旧path inbound残存、source/target意味不一致はfail |
+| `ST-DOCSEM-08` | A-187 findingをledgerへ移し再判定する | claim-only/slot不在/partialはopenを維持し、security等は適用後blob+L9 pairでのみ解消。catalog doneとpending_review競合はpending | catalog status、keyword、テスト件数だけでfindingをclosedにしない |
+
+`ST-DOCSEM-01..08`の全mandatory caseが同一final snapshotに対してpassし、closure receiptの
+`pending/missing/duplicate/phantom/semantic_mismatch/orphan/stale_inbound`が全て0の場合だけ
+`ST-ENGINE-05`をpassとする。検証器がL4 record field、disposition、targetを生成した場合は検証不能でありfailとする。
+
+### Repository docs closure system oracle (PLAN-L6-74)
+
+| ST-ID | whole-system scenario | acceptance / defect routing |
+|---|---|---|
+| `ST-DOCLEDGER-01` | commit済みbaselineからsnapshotを取得し、全tracked repository docsをmaterializeしてCLI/DB/doctor/reportを通す | 同一commit/tree/snapshot digestでpath exactly once、pending/orphan/phantom/delta 0。数量だけ一致する別treeは拒否 |
+| `ST-DOCLEDGER-02` | baseline後に文書add/delete/rename、broken link、anchor削除、canonical本文差替えを同時に行う | 全変異をtyped findingとして検出し、未台帳delta又はstale assertionが一件でもあればprogram accept禁止 |
+| `ST-DOCLEDGER-03` | blocking findingをdebt PLANへrouteし、続いてsnapshot又はfinding payloadを変更する | 初回routeはfindingを隠さずblockedを維持し、変更後はroute staleとして再審査を要求。route済みを完了へ読み替えない |
+| `ST-DOCLEDGER-04` | DB projectionと過去reportを削除して同一Git treeからrebuildし、全surfaceのclosure結果を比較する | identity/finding/route requirement/exitが再現し、working tree又はDBから不足判断を補完しない。差はL6 contract、L7 wiring、L9 oracleへ分離route |
+| `ST-DOCLEDGER-05` | Green projectionがある状態でparse/FK/write/swap faultを順次注入し、archive/history/fixtureを含む全zoneを再評価する | 任意faultで旧Green projectionとauthoring sourceを保持し、部分commit 0。旧語の単純存在を許容しつつ、canonical authorityのlegacy逆流だけをfail-closeする |
+
+`ST-DOCLEDGER-01..05`は実装前TDD Redである。`ST-ENGINE-05`の集約文だけ、既存baseline receipt、
+又はreference件数0を本oracleのGreen証拠にしない。
+
 ## §8 Execution Ledger / GitHub system acceptance (PLAN-L4-30、2026-07-15)
 
 | ST-ID | whole-system scenario | acceptance / defect routing |

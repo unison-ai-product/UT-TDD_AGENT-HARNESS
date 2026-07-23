@@ -206,6 +206,34 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 - **ADR-002/003 候補**の起票判断 = G4 前の PO/TL レビュー
 - **CI lint 配線** (doctor + lint + test の自動発火) = local gate 実装済み。外部 CI service 配備は infrastructure / ops 配備範囲
 - **plan-id-schema lint** (Plan 集約 ID 検証) = 第2弾 lint (IMP-004)
+
+## §9 Repository Document Ledger方式境界 (PLAN-L4-25)
+
+全tracked docsの見直しは`src/lint`による都度scanではなく、Git objectで固定したbaseline、明示delta、
+final snapshotを持つDocument Ledger集約として実行する。authoring sourceは
+`docs/governance/repository-document-disposition/`配下のmanifest/entryであり、Markdown一覧と
+`harness.db`は生成view/read modelである。
+
+方式上の依存方向は次に固定する。
+
+`Git snapshot adapter → strict authoring loader → Document Ledger domain → closure application service
+→ Markdown/SQLite projection adapter`
+
+- Git adapterはcommit/tree/blob/raw NUL path streamを読むだけで、dispositionを推測しない。
+- domainはmeaning、applicability、authority、disposition、target、typed reference、不変条件を所有する。
+- closure serviceはbaseline/delta/finalとreference graphを同一runで評価し、途中greenを完了へ昇格しない。
+- detector/doctor/CLIはdomain verdictを表示するconsumerであり、欠落recordの自動補完、keywordによるsubstance判定、
+  targetの推測、silent repairを行わない。
+- write commandとqueryを分離し、materializeはselectorを恒久recordへ展開する明示commandとする。
+- generated viewの手編集、working treeからのbaseline再採取、既存baselineの上書きを禁止する。
+
+reference parserはpath linkだけでなくanchor、PLAN full ID、spec/test ID、supersession、semantic responsibilityを
+typed edge化する。GitHub URLや外部標準はexternal referenceとしてscheme/authorityを保持し、到達不能を
+内部missing pathと混同しない。parse不能をedge 0に変換するfail-openは禁止する。
+
+system境界はL9 `ST-DOCSEM-01..08`で検証する。L9は件数一致だけでなく、意味不一致、適用条件未評価、
+reference target slot不在、stale inbound、archiveの正本化を負例として持つ。
+
 ## 2026-06-29 Task-Classify Route 追補
 
 `classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。

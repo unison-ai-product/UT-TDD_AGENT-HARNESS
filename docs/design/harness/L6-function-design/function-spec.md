@@ -910,6 +910,91 @@ snapshot queryはGit objectからraw NUL path集合を読む。batch commandはs
 selectorを再評価しない。semantic evaluatorはauthored evidenceを照合するだけでverdictを創作しない。meta-verifierは
 ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdict関数をoracleとしてimportしない。
 
+#### repository docs snapshot / disposition / reference closure freeze (PLAN-L6-74)
+
+```ts
+type RepositoryDocsSnapshotResult =
+  | { ok: true; value: RepositoryDocsSnapshot }
+  | { ok: false; errors: readonly DocumentSnapshotError[] };
+
+type DocumentClosureResult = {
+  snapshotIdentity: RepositoryDocsSnapshotIdentity;
+  findings: readonly DocumentClosureFinding[];
+  routeRequirements: readonly DocumentDebtRouteRequirement[];
+  closure: "closed" | "blocked";
+};
+
+captureRepositoryDocsSnapshot(
+  input: CaptureRepositoryDocsSnapshotInput,
+  git: GitObjectSnapshotPort,
+): Promise<RepositoryDocsSnapshotResult>;
+
+materializeDispositionBatch(
+  command: MaterializeDispositionBatchCommand,
+  current: DocumentDispositionLedger,
+): Result<DocumentDispositionLedger, readonly DocumentDispositionError[]>;
+
+analyzeDocumentReferences(
+  snapshot: RepositoryDocsSnapshot,
+  readers: readonly DocumentReferenceReader[],
+): Result<DocumentReferenceGraph, readonly DocumentReferenceError[]>;
+
+analyzeRepositoryDocumentClosure(
+  input: AnalyzeRepositoryDocumentClosureInput,
+  targets: DocumentTargetResolver,
+): DocumentClosureResult;
+
+verifyDocumentDebtRoutes(
+  findings: readonly DocumentClosureFinding[],
+  routes: readonly DocumentDebtRoute[],
+): DocumentDebtRouteVerification;
+```
+
+DbC:
+
+- `captureRepositoryDocsSnapshot` pre: repository identity、full commit OID、tree OIDをcallerが明示し、
+  `GitObjectSnapshotPort`はそのtreeの`docs/`、root canonical docs、tracked `.ut-tdd`文書帯を
+  raw NUL path streamとblob OIDで返す。short SHA、symbolic HEADだけ、working tree scanは拒否する。
+- post: pathはUTF-8 repo-relative canonical formでstable byte順、各pathは一回だけ、`trackedCount`は
+  entry数と一致し、`pathSetSha256`はNUL stream、`snapshotDigest`はrepository identity、commit、
+  tree、path hash、各blob OIDのlength-prefixed frameから生成する。
+- `materializeDispositionBatch` pre: commandはsnapshot identity、selector、decision、actor、reason、
+  command IDを持つ。post: selectorをその時点のsnapshot pathへ一度だけ展開し、各pathの個別recordと
+  selector receiptを返す。同じcommand ID+digestは冪等、異なるpayloadは
+  `doc-ledger-command-conflict`とする。
+- `analyzeDocumentReferences` pre: readerはfrontmatter path、Markdown inline/reference、wiki link、
+  anchor、PLAN/spec/test IDごとのtyped readerとして登録する。post: source blobごとのparse receiptと
+  edgeをstable identity順で返し、parse不能・未知schemeを空edgeへ変換しない。
+- `analyzeRepositoryDocumentClosure` pre: snapshot、ledger、reference graph、canonical assertion、
+  debt routeは同じsnapshot digestへ束縛される。post:全snapshot pathをexactly once判定し、
+  ledger phantomとbaseline後のadd/delete/renameを双方向比較し、全reference endpointとanchor、
+  canonical assertionのblob digestを再検証する。
+- invariant: queryはledger、authoring docs、DB、Git indexを更新しない。selector再評価、source edgeからの
+  disposition継承、DB rowによる欠落record補完、archive/superseded文書への暗黙fallbackを禁止する。
+
+typed finding/error:
+
+| ID | 発火条件 | closure / debt route |
+|---|---|---|
+| `docs-snapshot-revision-missing` | full commit/tree/repository identity欠落 | blocked、上流capture defect |
+| `docs-snapshot-stream-malformed` | NUL stream、UTF-8、count、tree/hash不整合 | blocked、Recovery |
+| `doc-disposition-missing` | snapshot pathにrecordなし | blocked、L4-25/L7-422 route必須 |
+| `doc-disposition-phantom` | ledger pathがsnapshotにない | blocked、削除/rename判断route必須 |
+| `doc-disposition-duplicate` | pathまたはcase-fold identity重複 | blocked、ledger correction |
+| `doc-disposition-incomplete` | conditional/defer/skipのreason、target、PLAN不足 | blocked、設計判断route必須 |
+| `doc-delta-unregistered` | baseline後のadd/delete/renameが未判断 | blocked、差分identity別route必須 |
+| `doc-reference-parse-error` | reader例外、未知scheme、構文不正 | blocked、reader defect |
+| `doc-reference-orphan` | source/target path、typed ID、anchor不在 | blocked、source owner route必須 |
+| `doc-canonical-assertion-stale` | assertionのtarget blob/digestがsnapshotと不一致 | blocked、assertion owner route必須 |
+| `doc-debt-route-missing` | blocking findingにactive routeなし | blocked、route filing |
+| `doc-debt-route-stale` | finding/snapshot/PLAN digestがrouteと不一致 | blocked、route再審査 |
+
+`DocumentDebtRoute`は`routeId`、`findingId`、`findingDigest`、`snapshotDigest`、`subjectIdentity`、
+`filingTargetId`、`planId`、`status`、`reason`、`reviewedBy`、`reviewedAt`を必須とする。active routeは
+findingを消さず、`closure="closed"`はfinding 0の場合だけ返す。既知gapをroute済みとして可視化する
+ことと、完了判定をGreenにすることを分離する。CLIはGreen=0、contract/closure violation=1、
+usage=2を維持する。
+
 ### Projection rebuild application契約 (PLAN-L6-75 / L7-423残DoD)
 
 - `HarnessProjectionSourcePort.load(): HarnessProjectionSourceBundle` はrepository I/Oをadapterへ閉じ込め、bundleにcaptured revision、capturedAt、source digestを必ず含める。application/domainはrepo root、filesystem、YAML、SQLiteを知らない。

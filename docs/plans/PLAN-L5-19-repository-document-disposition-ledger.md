@@ -52,14 +52,65 @@ dependencies:
 
 ## 設計範囲
 
-- `manifest.yaml`にschema version、baseline/final snapshot、raw NUL hash algorithm、delta一覧を持つ。
-- zone別shardに全pathをmaterialized recordとしてexactly once記載し、selectorやdetector推測を正本にしない。
-- recordはblob/digest、zone、disposition、reason、targets、plan IDs、impact tags、provenance、application statusを持つ。
-- projectionはsnapshot/disposition/target/PLAN/tag/delta/reference/run/findingを正規化し、JSON 1列や既存relation node数で921件を代用しない。
-- Markdown ledgerは生成view。DBは検索用projectionで、authoring sourceではない。
+- `manifest.yaml`にschema version、ledger ID、baseline/final snapshot、raw NUL hash algorithm、shard一覧、
+  delta列のcanonical digestを持つ。snapshot identityは
+  `commit_oid + docs_tree_oid + tracked_count + path_stream_hash`のcanonical frameから作り、時刻や
+  working treeをidentityへ含めない。
+- zone別shardにbaselineの全pathをmaterialized recordとしてexactly once記載する。selectorは
+  authoring commandの入力に限り、展開結果の921 recordとselector digestを同一transactionで固定する。
+  detectorがselectorから判断を補完したり、既存relation graphのnode数で921件を代用したりしない。
+- baseline recordは`path`、Git blob OID、content SHA-256、zone、disposition、reason、target、PLAN、
+  impact tag、authoring provenance、application statusを持つ。`update|merge|supersede|archive`は1件以上の
+  typed targetまたはPLAN、`retain|not_applicable`は空でない理由を必須とする。
+- baseline後の`add|modify|delete|rename`は順序付きappend-only deltaとする。renameはbefore/after pathと
+  blobを同時に持ち、delete後のmodify、存在pathへのadd、同一path rename、case-fold衝突を拒否する。
+  addされた文書にもbaseline recordと同じ判断fieldを持たせ、最終集合に「台帳外の新規文書」を残さない。
+- projectionはsnapshot/member/disposition/target/PLAN/tag/delta/effective-path/reference/run/findingを
+  正規化する。authoring rowのcanonical digestは、field名を含むlength-prefixed UTF-8 frameを
+  pathのUnicode NFC・`/`区切り正規形でSHA-256化する。配列は意味上の順序を定義するもの以外を
+  stable identity順へsortし、YAML表記順・改行・OS・取得時刻でdigestを変えない。
+- Markdown ledgerは生成view、DBは削除可能な検索projectionである。authoring manifest/shard/delta以外へ
+  書き戻さず、DB行やfindingからdisposition、target、legacy判断を逆生成しない。
+
+## 物理不変条件
+
+1. `document_snapshots`と`document_snapshot_members`でbaseline/finalのGit objectを全件封印し、
+   memberは`(snapshot_id,path)`を主キー、`(snapshot_id,casefold_path)`を一意とする。
+2. `document_dispositions`は`(ledger_id,baseline_path)`を主キーとし、baseline memberへ複合FKを持つ。
+   target/PLAN/tagはこの複合主キーへ従属し、親のない子、別ledgerへの横断edgeを許さない。
+3. `document_delta_events`は`(ledger_id,sequence)`と`delta_id`を一意とし、previous event digestで鎖を作る。
+   before/after memberはkind別CHECKと複合FKで拘束する。
+4. `document_effective_paths`はbaseline+deltaのreduction projectionであり、
+   `(ledger_id,final_snapshot_id,path)`を主キーとする。final snapshot memberと集合が完全一致し、
+   origin baseline pathまたはadd deltaのどちらか一方へ必ず辿れる。
+5. `document_reference_edges`はfinal snapshotとfrom pathを複合FKで拘束し、targetを
+   `document|anchor|plan|spec|test|adr|external`の閉じた型で保持する。repo内targetは実在member/anchor/IDへ
+   解決し、parse error、曖昧anchor、unknown schemeをedge 0件へ変換しない。
+6. closure runはbaseline/final snapshot、ledger digest、delta chain digest、reference digest、
+   parser/policy revisionを固定する。同一入力は同じrun identity/finding ID集合を返し、findingの時刻や
+   message文面をidentityへ含めない。
+
+## rebuild / rollback / legacy
+
+- rebuildは固定Git objectとauthoring bundleを全てpreflightした後、temporary table群へ1 transactionで
+  materializeする。countだけでなくPK集合、row digest、FK orphan、delta reduction、final member集合、
+  reference edge/finding集合を照合してからswapする。parse、FK、digest、write、swapの任意faultでは
+  temporary tableを破棄し、直前のGreen projectionとauthoring sourceを不変に保つ。
+- projection schema変更はversionを上げ、旧tableの値から欠落dispositionやreferenceを推測backfillしない。
+  現行authoring bundleから再構築できない旧行は`legacy_unbound` findingとして隔離し、close条件へ算入しない。
+- `docs/archive/**`、historical migration資料、否定文、引用、negative fixtureは監査対象から除外しない。
+  zone=`archive|history|fixture`としてexactly once台帳化する一方、旧語の存在だけでcanonical violationにしない。
+  canonical文書からarchive/historyへの規範参照、archiveからcanonicalへのauthority主張、legacy commandの
+  現行実行例だけをtyped policyでfail-closeする。path prefixだけで意味を推測せず、authored zoneと
+  reference edge policyを照合する。
 
 ## 受入条件
 
 - missing/duplicate/phantom/case-fold collision、理由/target/PLAN欠落、未台帳add/delete/renameを拒否する。
-- final path集合をbaselineとexplicit deltaから再構築でき、pending 0かつtyped cross-reference orphan 0のみ完了とする。
+- final path集合をbaselineとexplicit deltaから再構築でき、final Git snapshotとの差分0、
+  pending 0かつtyped cross-reference orphan 0のみ完了とする。
+- projection全削除後のrebuildでsnapshot/member/effective path/reference/findingのPK集合とdigestが一致する。
+  fault injection後は旧Green projectionのdigestが不変で、部分行とauthoring source更新が0件である。
+- rename chain、delete/addによる同名再生成、case-only rename、broken/ambiguous anchor、unknown typed IDを
+  stable findingとして検出する。
 - 旧前提検出はcanonical assertionに限定し、archive/history/否定文/negative fixtureを誤検知しない。

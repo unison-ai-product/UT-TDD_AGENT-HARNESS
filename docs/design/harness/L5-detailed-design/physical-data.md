@@ -600,10 +600,20 @@ workflow transition、evidence、doc監査判断を補完してはならない�
 ### §9.15.2 repository文書snapshot / shard schema
 
 `docs/governance/repository-document-disposition/manifest.yaml`は`schema_version`、baseline/final snapshot、
-`path_stream_algorithm=git-ls-tree-z-v1`、commit、tree OID、tracked count、raw NUL stream SHA-256、deltaを持つ。
-zone shardの全recordは`path`、baseline blob/digest、zone、disposition、reason、targets、plan IDs、impact tags、
-authoring provenance、application statusを必須とする。selectorはauthoring CLIの入力に使えるが、最終recordへ
-materializeされないselector自体を正本にしない。Markdown ledgerは生成view、DBはprojectionである。
+`path_stream_algorithm=git-ls-tree-z-v1`、commit、docs tree OID、tracked count、raw NUL stream SHA-256、
+shard digest、delta chain digestを持つ。snapshot IDはcommit/tree/count/hashのcanonical frameだけから作り、
+時刻・working tree・OSを含めない。
+
+zone shardの全recordは`path`、baseline blob OID/content SHA-256、zone、disposition、reason、targets、plan IDs、
+impact tags、authoring provenance、application statusを必須とする。selectorはauthoring CLIの入力に使えるが、
+同一transactionで921 recordへ展開し、selector自体やrelation graphのnode数を正本にしない。baseline後の
+`add|modify|delete|rename`はsequenceとprevious digestを持つappend-only deltaであり、add recordにも同じ
+disposition fieldを要求する。
+
+pathはrepo-relative、`/`区切り、Unicode NFCでcanonical化し、`.`/`..`、absolute path、NUL、空segmentを拒否する。
+casefold pathは衝突検出専用でidentityに使わない。row digestはfield名を含むlength-prefixed UTF-8 frameを
+SHA-256化し、意味上unorderedなtarget/PLAN/tagをstable identity順へsortする。YAML表記順、改行、取得時刻を
+digestへ含めない。Markdown ledgerは生成view、DBはprojectionである。
 
 ### §9.15.3 索引 / rebuild / 保持
 
@@ -611,6 +621,9 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 - docs ledgerはpath/zone/disposition/impact tag、semantic assessmentはverdict/debt PLAN、self-proofはrule/surface/mutationへindexを張る。
 - append-only event/receipt/reviewを更新・削除で上書きせず、supersessionを新eventとして記録する。
 - projection全削除/rebuild後にrow countだけでなくidentity集合、digest、reduction verdict、finding IDが一致しなければfail-closeする。
+- docs ledger rebuildは固定Git objectとauthoring bundleをpreflightし、temporary table群への1 transaction
+  materialize、PK/FK/digest/delta reduction/final member/reference照合、transactional swapの順に行う。
+  parse/write/swap faultでは旧Green projectionを保持し、部分commitとauthoring source書戻しを0件にする。
 - raw ZIP本文、provider transcript、secret、credential、PIIをDB/receiptへ保存しない。
 
 ### §9.15.4 column / FK / 並び順 / migration契約
@@ -639,15 +652,17 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 | `workflow_event_evidence` | `event_id TEXT`, `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `requirement_id TEXT` | PK=`(event_id,evidence_id,subject_id,subject_revision,requirement_id)`、event/evidence subject-revision composite FK | event / evidence索引 |
 | `workflow_subject_states` | `subject_id TEXT`, `subject_revision INTEGER`, `current_state TEXT`, `resume_state TEXT?`, `last_sequence INTEGER`, `last_event_id TEXT?`, `state_digest TEXT` | workflow event reduction current projection。PK=`(subject_id,subject_revision)`、plan revision composite FK、`(last_event_id,subject_id,subject_revision)` composite FK（empty時だけNULL） | state / last event index |
 | `append_command_receipts` | `command_id TEXT`, `command_type TEXT`, `subject_kind TEXT`, `subject_key TEXT`, `plan_asset_id TEXT?`, `plan_revision INTEGER?`, `command_payload_digest TEXT`, `result_kind TEXT`, `result_ref TEXT`, `recorded_at TEXT`, `receipt_digest TEXT` | PK=`command_id`、全append context横断正本。subject kind=`plan_revision|reservation|legacy_migration`。plan_revision kindだけasset/revision必須+composite FK、他kindは両方NULL | subject/type/time index |
-| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `tree_oid TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `algorithm TEXT`, `captured_at TEXT` | PK=`snapshot_id`、commit/tree/hash UNIQUE、全列NOT NULL | commit/tree index |
-| `document_dispositions` | `baseline_id TEXT`, `path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `provenance_digest TEXT` | PK=`(baseline_id,path)`、snapshot FK、全baseline path exactly once、全列NOT NULL | zone/disposition/status index |
-| `document_disposition_targets` | `baseline_id TEXT`, `path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(baseline_id,path,target_ordinal)`、disposition FK、target実在CHECK | kind/ref index |
-| `document_disposition_plan_edges` | `baseline_id TEXT`, `path TEXT`, `plan_id TEXT`, `edge_kind TEXT` | PK=`(baseline_id,path,plan_id,edge_kind)`、disposition/PLAN FK | plan/path索引 |
-| `document_disposition_tags` | `baseline_id TEXT`, `path TEXT`, `impact_tag TEXT` | PK=`(baseline_id,path,impact_tag)`、disposition FK | tag/path索引 |
-| `document_delta_events` | `delta_id TEXT`, `baseline_id TEXT`, `kind TEXT`, `from_path TEXT?`, `to_path TEXT?`, `before_blob_oid TEXT?`, `after_blob_oid TEXT?`, `source_commit TEXT`, `event_digest TEXT` | PK=`delta_id`、add/delete/rename/modify別CHECK、snapshot FK | baseline/kind/path index |
-| `document_reference_edges` | `reference_id TEXT`, `from_path TEXT`, `to_kind TEXT`, `to_ref TEXT`, `anchor TEXT?`, `source_line INTEGER`, `edge_digest TEXT` | PK=`reference_id`、from disposition FK、typed target/anchor existence CHECK | from/to索引 |
-| `document_closure_runs` | `run_id TEXT`, `baseline_id TEXT`, `final_commit_oid TEXT`, `ledger_digest TEXT`, `reference_digest TEXT`, `verdict TEXT`, `executed_at TEXT` | PK=`run_id`、snapshot FK、全列NOT NULL | baseline/time index |
-| `document_closure_findings` | `finding_id TEXT`, `run_id TEXT`, `kind TEXT`, `severity TEXT`, `subject_path TEXT`, `target_ref TEXT?`, `message TEXT` | PK=`finding_id`、run FK、targetのみnullable | run/kind/path index |
+| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `docs_tree_oid TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `algorithm TEXT`, `snapshot_digest TEXT`, `captured_at TEXT` | PK=`snapshot_id`、`(commit_oid,docs_tree_oid,path_stream_hash)` UNIQUE、identity列NOT NULL。`captured_at`は非identity | commit/tree index |
+| `document_snapshot_members` | `snapshot_id TEXT`, `path TEXT`, `casefold_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `file_mode TEXT`, `member_digest TEXT` | PK=`(snapshot_id,path)`、snapshot FK、`(snapshot_id,casefold_path)` UNIQUE、全列NOT NULL | snapshot/path/blob index |
+| `document_dispositions` | `ledger_id TEXT`, `baseline_snapshot_id TEXT`, `baseline_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `provenance_digest TEXT`, `row_digest TEXT` | PK=`(ledger_id,baseline_path)`、`(baseline_snapshot_id,baseline_path)`→member複合FK、全列NOT NULL。baseline 921 path exactly once | zone/disposition/status index |
+| `document_disposition_targets` | `ledger_id TEXT`, `baseline_path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(ledger_id,baseline_path,target_ordinal)`、disposition複合FK。kind=`artifact|family|plan|slot|archive`、typed target実在CHECK | kind/ref index |
+| `document_disposition_plan_edges` | `ledger_id TEXT`, `baseline_path TEXT`, `plan_id TEXT`, `edge_kind TEXT`, `edge_digest TEXT` | PK=`(ledger_id,baseline_path,plan_id,edge_kind)`、disposition/PLAN複合FK | plan/path index |
+| `document_disposition_tags` | `ledger_id TEXT`, `baseline_path TEXT`, `impact_tag TEXT`, `tag_digest TEXT` | PK=`(ledger_id,baseline_path,impact_tag)`、disposition複合FK | tag/path index |
+| `document_delta_events` | `delta_id TEXT`, `ledger_id TEXT`, `sequence INTEGER`, `kind TEXT`, `from_snapshot_id TEXT?`, `from_path TEXT?`, `to_snapshot_id TEXT?`, `to_path TEXT?`, `before_blob_oid TEXT?`, `after_blob_oid TEXT?`, `decision_digest TEXT`, `previous_event_digest TEXT?`, `event_digest TEXT` | PK=`delta_id`、`(ledger_id,sequence)` UNIQUE。kind=`add|modify|delete|rename`別nullability/CHECK、before/after member複合FK、先頭以外previous必須 | ledger/sequence/kind/path index |
+| `document_effective_paths` | `ledger_id TEXT`, `final_snapshot_id TEXT`, `path TEXT`, `origin_kind TEXT`, `origin_baseline_path TEXT?`, `origin_delta_id TEXT?`, `disposition TEXT`, `decision_digest TEXT`, `reduction_digest TEXT` | PK=`(ledger_id,final_snapshot_id,path)`、final member複合FK。origin=`baseline|add`で参照先を排他的に必須化 | ledger/final/path/disposition index |
+| `document_reference_edges` | `reference_id TEXT`, `final_snapshot_id TEXT`, `from_path TEXT`, `to_kind TEXT`, `to_ref TEXT`, `anchor TEXT?`, `source_line INTEGER`, `parser_revision TEXT`, `edge_digest TEXT` | PK=`reference_id`、`(final_snapshot_id,from_path)`→member複合FK。kind=`document|anchor|plan|spec|test|adr|external`、repo内target/anchor/typed ID実在CHECK | snapshot/from/to index |
+| `document_closure_runs` | `run_id TEXT`, `ledger_id TEXT`, `baseline_snapshot_id TEXT`, `final_snapshot_id TEXT`, `ledger_digest TEXT`, `delta_chain_digest TEXT`, `reference_digest TEXT`, `parser_revision TEXT`, `policy_revision TEXT`, `verdict TEXT`, `executed_at TEXT`, `run_digest TEXT` | PK=`run_id`、baseline/final snapshot FK、identity列NOT NULL。`executed_at`は非identity | ledger/snapshot/verdict index |
+| `document_closure_findings` | `finding_id TEXT`, `run_id TEXT`, `finding_kind TEXT`, `severity TEXT`, `subject_path TEXT`, `target_ref TEXT?`, `policy_revision TEXT`, `evidence_digest TEXT`, `message TEXT` | PK=`finding_id`、run FK。finding identityはkind/subject/target/policy/evidenceから導出しmessage/timeを除外 | run/kind/path index |
 | `semantic_assessments` | `item_id TEXT`, `assessment_revision INTEGER`, `verdict TEXT`, `applicability TEXT`, `profile_id TEXT?`, `applicability_reason TEXT`, `approval_ref TEXT?`, `source_digest TEXT`, `severity TEXT`, `owner TEXT`, `next_transition TEXT`, `created_at TEXT` | PK=`(item_id,assessment_revision)`、item/profile FK、conditional/NA時reason+profile+approval CHECK | verdict/applicability/owner index |
 | `semantic_assessment_evidence` | `item_id TEXT`, `assessment_revision INTEGER`, `evidence_plane TEXT`, `evidence_ref TEXT`, `evidence_digest TEXT` | PK=`(item_id,assessment_revision,evidence_plane,evidence_ref)`、assessment FK、plane=`design|runtime|test` | plane/ref索引 |
 | `semantic_assessment_reviews` | `review_event_id TEXT`, `item_id TEXT`, `assessment_revision INTEGER`, `decision TEXT`, `reviewer TEXT`, `reason TEXT`, `occurred_at TEXT`, `supersedes_event_id TEXT?` | PK=`review_event_id`、assessment FK、append-only | item/revision/time索引 |
@@ -689,6 +704,12 @@ source-targetのreasonやcategory ordinalのようにauthoringにない意味fie
 event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、
 旧DBをin-place真実化せず、authoring sourceからtransactional rebuildする。migration前後でPK集合、FK orphan、
 UNIQUE違反、reduction digestを比較し、差があればcommitせずrollbackする。
+
+docs ledgerの旧projectionやrelation graphにしか存在しない判断を新schemaへ推測backfillしない。現行authoring
+manifest/shard/deltaへ結び付かない旧行は`legacy_unbound` findingとして隔離し、Green countへ含めない。
+`docs/archive/**`、history、否定文、引用、negative fixtureもsnapshot/member/dispositionから除外せず、
+authored zoneとして保持する。ただし旧語の単純存在をcanonical violationにせず、canonical→archive/historyの
+規範参照、archive→canonicalのauthority主張、legacy commandの現行実行例をtyped reference policyで判定する。
 
 PLAN Asset waveでは`IndexDef`へ任意SQL文字列でなくtyped predicate（`isNull(column)` / `equals(column,value)`のみ）を追加し、
 active aliasとactive ordinal leaseのpartial UNIQUEをDDL生成する。`plan_id_reservations`はauthoring/event正本ではなく

@@ -231,6 +231,9 @@ AI が生成する TypeScript core は、後でリファクタする前提では
 | `document_scale_profile_reviews` | `DocumentScaleProfileReview` projection。文書 catalog と規模 profile を join し、product-select 文書の採用理由・skip理由・必要PLANを検索可能にする |
 | `detector_route_candidates` | `DetectorFinding` projection。検出結果を FilingTarget SSoT に渡す候補として保持し、起票先を DB 独自に決定しない |
 | `gate_runs` | gate 判定証跡と doctor/vmodel lint 結果 |
+| `document_disposition_entries` | tracked doc identity、meaning、applicability、authority、disposition、target、impact tag、適用状態の検索投影 |
+| `document_reference_edges` | path/anchor/PLAN/spec/test/supersessionのtyped edgeとsemantic responsibility比較結果 |
+| `document_disposition_runs` | baseline/delta/final closure run、各集合digest、finding counts、完了判定の証跡 |
 
 不変条件: projection DB は生成 state だが、検出器の機械 SSoT として扱う。入力となる docs/YAML/JSON と projection の齟齬は doctor が finding として出し、silent repair しない。
 
@@ -266,3 +269,36 @@ certificateの流用を拒否する。
 
 `GithubRemoteRef`はprovider/repository/node id/number/remote versionを保持するprojection identityであり、
 domain identityではない。episodeとの対応はidempotency keyで一意にする。
+
+## §11 Repository Document Ledger集約
+
+`DocumentLedger`はbaseline snapshotと明示deltaを境界に、全tracked docsの判断をexactly once所有する集約ルートである。
+recordをpath文字列だけで同一視せず、baseline/final path、blob OID、content digest、delta identityを保持する。
+renameはdelete+addの推測ではなく、旧新pathを一つのdeltaとしてauthoringする。
+
+主要な値オブジェクトは次の通りとする。
+
+| 値オブジェクト | 不変条件 |
+|---|---|
+| `DocumentMeaning` | responsibility、audience、inputs、consumers、canonical assertionsが全て非空 |
+| `ApplicabilityDecision` | kind、条件/観測値、理由、decider、再評価triggerを保持。未評価とNAを区別 |
+| `DocumentAuthority` | canonical/reference/generated_view/archiveの1値。責務ごとのcanonicalは1件 |
+| `DispositionDecision` | update/merge/retain/supersede/archive/not_applicable、reason、target/PLAN、application state |
+| `DocumentTarget` | repository-relative pathまたはtyped external authority。merge/supersede/updateの必須後条件を表す |
+| `DocumentReference` | source/target、edge kind、anchor/ID、伝達するsemantic responsibility、applicability condition |
+| `SnapshotIdentity` | commit、tree OID、raw NUL path digest、count。working tree identityを拒否 |
+| `ClosureReceipt` | baseline/delta/final/reference集合digest、finding counts、run time、tool version |
+
+集約のapplication stateは`pending | ready | applied | verified | rejected`とする。disposition決定だけでは
+`verified`にならず、target適用後blobとreference closure receiptが必要である。`retain`も比較根拠を欠けばpending、
+`not_applicable`も観測値と再評価triggerを欠けばpendingである。
+
+追加不変条件:
+
+- baseline pathはちょうど1 recordに現れ、deltaを経てfinal集合を再構築できる。
+- final tracked pathはちょうど1 active recordに対応し、phantom recordを許さない。
+- `merge|supersede`は別canonical targetとstale inbound 0、`update`は自己targetと適用後blobを必須にする。
+- reference authorityはdispositionを代替しない。全reference recordにも処置とapplicability判断がある。
+- canonical responsibilityの重複、supersession cycle、case-fold collision、短縮PLAN ID多義を拒否する。
+- archive/historical/negative fixtureの文をcanonical assertionとしてprojectionしない。
+- DB rowはprojectionでありauthoring sourceを逆生成しない。再build失敗時は旧projectionを保持し全rollbackする。
