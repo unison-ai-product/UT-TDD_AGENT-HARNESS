@@ -37,6 +37,10 @@ generates:
     artifact_type: source_code
   - artifact_path: tests/document-disposition/analyze-repository-document-closure.test.ts
     artifact_type: test_code
+  - artifact_path: src/document-disposition/domain/document-disposition.ts
+    artifact_type: source_code
+  - artifact_path: tests/document-disposition/document-disposition.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
   requires: []

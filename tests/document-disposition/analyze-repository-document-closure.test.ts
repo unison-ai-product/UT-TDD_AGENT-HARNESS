@@ -9,7 +9,15 @@ function snapshot(snapshotDigest: string, paths: readonly string[]) {
 }
 
 function record(baselinePath: string) {
-  return { baselinePath };
+  return {
+    baselinePath,
+    disposition: "retain" as const,
+    reason: "現行設計と一致",
+    targets: [],
+    planIds: [],
+    applicationStatus: "verified" as const,
+    applicability: { kind: "applicable" as const },
+  };
 }
 
 describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
@@ -140,5 +148,43 @@ describe("analyzeRepositoryDocumentClosure U-DOCLEDGER-003", () => {
     });
 
     expect(result.findings).toEqual([]);
+  });
+
+  it("不完全なdispositionをstable findingとしてclosureで拒否する", () => {
+    const incomplete = {
+      ...record("docs/a.md"),
+      disposition: "update",
+      targets: [],
+      planIds: [],
+      applicability: {
+        kind: "conditional",
+        reason: "",
+        observedCondition: "flag=on",
+        reevaluationTrigger: "",
+      },
+    } as const;
+    const input = {
+      baselineSnapshot: snapshot("baseline", ["docs/a.md"]),
+      finalSnapshot: snapshot("final", ["docs/a.md"]),
+      ledger: { records: [incomplete] },
+      policyRevision: "document-closure-v1",
+    } as const;
+
+    const result = analyzeRepositoryDocumentClosure(input);
+
+    expect(result).toEqual({
+      finalSnapshotDigest: "final",
+      findings: [
+        expect.objectContaining({
+          ruleId: "doc-disposition-incomplete",
+          subjectIdentity: "docs/a.md",
+          exitCode: 1,
+        }),
+      ],
+      routeRequirements: [],
+      closure: "blocked",
+      exitCode: 1,
+    });
+    expect(analyzeRepositoryDocumentClosure(input)).toEqual(result);
   });
 });

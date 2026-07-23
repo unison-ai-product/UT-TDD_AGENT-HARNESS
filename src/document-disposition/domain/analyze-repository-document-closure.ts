@@ -1,9 +1,11 @@
 import { canonicalField, sha256 } from "./canonical-frame";
+import { type DocumentDispositionInput, validateDocumentDisposition } from "./document-disposition";
 
 export type DocumentMembershipRuleId =
   | "doc-disposition-missing"
   | "doc-disposition-phantom"
-  | "doc-disposition-duplicate";
+  | "doc-disposition-duplicate"
+  | "doc-disposition-incomplete";
 
 export interface DocumentClosureFinding {
   readonly findingId: string;
@@ -19,7 +21,7 @@ export interface DocumentSnapshotView {
 }
 
 export interface DocumentDispositionLedgerView {
-  readonly records: readonly { readonly baselinePath: string }[];
+  readonly records: readonly DocumentDispositionInput[];
 }
 
 export interface AnalyzeRepositoryDocumentClosureInput {
@@ -54,12 +56,14 @@ function finding(
   ruleId: DocumentMembershipRuleId,
   subjectIdentity: string,
   input: AnalyzeRepositoryDocumentClosureInput,
+  evidenceFields: readonly Uint8Array[] = [],
 ): DocumentClosureFinding {
   const evidenceDigest = sha256([
     canonicalField("baseline_snapshot_digest", input.baselineSnapshot.snapshotDigest),
     canonicalField("final_snapshot_digest", input.finalSnapshot.snapshotDigest),
     canonicalField("policy_revision", input.policyRevision),
     canonicalField("subject_identity", subjectIdentity),
+    ...evidenceFields,
   ]);
   const findingId = `document-closure-finding:sha256:${sha256([
     canonicalField("rule_id", ruleId),
@@ -103,6 +107,19 @@ export function analyzeRepositoryDocumentClosure(
     if (occurrences < 2) continue;
     invalidPaths.add(path);
     findings.push(finding("doc-disposition-duplicate", path, input));
+  }
+
+  for (const record of input.ledger.records) {
+    const validation = validateDocumentDisposition(record);
+    if (validation.ok || invalidPaths.has(record.baselinePath)) continue;
+    findings.push(
+      finding("doc-disposition-incomplete", record.baselinePath, input, [
+        canonicalField("missing_fields", validation.missingFields.join("\0")),
+        canonicalField("disposition", record.disposition),
+        canonicalField("application_status", record.applicationStatus),
+        canonicalField("applicability_kind", record.applicability.kind),
+      ]),
+    );
   }
 
   for (const collision of caseFoldCollisions([...baselinePaths, ...recordPaths])) {
