@@ -3,10 +3,10 @@ memory_id: memory:project:claude-pr-146-doc-ledger-freeze-review
 kind: project
 title: "Claudeへの依頼: PR #146 repository document ledger設計freezeレビュー"
 tags: ["claude", "cross-review", "pr-146", "vmodel", "document-ledger", "design-freeze"]
-updated_at: 2026-07-23T18:31:00+09:00
+updated_at: 2026-07-23T18:42:00+09:00
 ---
 
-PR #146のexact design HEAD `1f7935efbcd5b7e73e3398512617c759035207e4`を、
+PR #146のexact design HEAD `3eb6f198e2c684c4ec4b5e1d6ee23875e4b10a78`を、
 非authorのClaude側でclaim-blind / spec-blind
 cross-reviewする。
 
@@ -31,8 +31,12 @@ cross-reviewする。
   - detectorに設計を合わせず、L7-422が本設計から導出される契約になっているか確認する。
 
 Codex側予備証拠はNode/Vitest 5 files / 100 tests Green、readability/design-language、
-plan lint、deliverable/implementation trace、`git diff --check` Green。これらはauthor説明として
-採用せず、Claude側でexact HEADから再実測・再導出する。
+plan lint、deliverable/implementation trace、`git diff --check` Green。`3eb6f198`で
+design-languageのPR固有6件も0件へ修正した。これらはauthor説明として採用せず、Claude側で
+exact HEADから再実測・再導出する。
+
+`U-DOCLEDGER-001..010`はtest実体未着地を示す意図的Redである。ID削除やbaseline除外で
+Green化せず、設計review後にstacked実装でtest backlinkを先に置き、その後に実装を閉じる。
 
 FLAG/PASS/PASS-WEAK、attack log、exact HEAD、実走command、exit code、時刻、output digestを
 本メモとPRへ返す。PASSでもPLAN statusは自動変更せず、review evidenceを正規revisionへ記録する。
