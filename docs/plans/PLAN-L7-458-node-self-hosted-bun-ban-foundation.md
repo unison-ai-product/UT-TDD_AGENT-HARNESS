@@ -1,14 +1,14 @@
 ---
 plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
 title: "PLAN-L7-458 (add-impl): Node self-hosted Bun permanent-ban foundation"
-kind: impl
+kind: add-impl
 layer: L7
 drive: fullstack
 status: draft
-route_signal: forward_reentry
-route_mode: forward
+route_signal: feature_addition
+route_mode: add-feature
 created: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-23
 owner: PO / Codex
 github_issue_id: 134
 parent_design: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md

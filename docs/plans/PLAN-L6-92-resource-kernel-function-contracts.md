@@ -155,4 +155,4 @@ ComplianceVerdict = Compliant(receipt) | NonCompliant(findings) | Indeterminate(
 
 `NodeBootstrapReceipt`はNode executable identity、version policy、package-lock digest、compiled core digest、entrypoint、build policy、subject revisionを結ぶ。compiled ESM以外のproduction TS直実行、runtime download、ambient PATH解決、Bun/tsx fallbackを拒否する。Node CLI、ban detector、SQLite canonical corpus、targeted testが同一receiptから起動できない場合はself-host未成立とする。
 
-本節はL7候補oracle `CAND-BUNBAN-001..020` / `CAND-NODEBOOT-001..012`と対にし、`PLAN-L7-458-node-self-hosted-bun-ban-foundation`へatomicに降下する。Redesign設計freeze後にForwardへ再合流した実装sliceであるため、L7-458は`kind: impl` / `route_mode: forward`とし、本PLAN/Issue #134をredesign originとして保持する。実test code追加と同じcommitで候補を正式`U-*`へpromoteし、test無し正式IDを作らない。
+本節はL7候補oracle `CAND-BUNBAN-001..020` / `CAND-NODEBOOT-001..012`と対にし、`PLAN-L7-458-node-self-hosted-bun-ban-foundation`へatomicに降下する。Redesign設計freezeをForwardへ合流させた後の実装sliceだが、閉域済みspineへplain `kind: impl`を再起票してはならないため、L7-458は`kind: add-impl` / `route_mode: add-feature`として入口を証明し、本PLAN/Issue #134をredesign originとして保持する。実test code追加と同じcommitで候補を正式`U-*`へpromoteし、test無し正式IDを作らない。
