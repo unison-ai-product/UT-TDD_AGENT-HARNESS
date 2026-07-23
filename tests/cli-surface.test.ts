@@ -19,7 +19,7 @@ import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.js";
 import { removeTestTree } from "./support/temp-tree";
 
 const repoRoot = process.cwd();
-const cliPath = join(repoRoot, "src", "cli.ts");
+const cliPath = join(repoRoot, "dist", "ut-tdd.mjs");
 const legacyEnvPrefix = ["HE", "LIX"].join("");
 
 function runCli(args: string[]) {
@@ -27,15 +27,7 @@ function runCli(args: string[]) {
 }
 
 function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd,
-      encoding: "utf8",
-      env,
-    });
-  }
-  return spawnSync("bun", [cliPath, ...args], {
+  return spawnSync(process.execPath, [cliPath, ...args], {
     cwd,
     encoding: "utf8",
     env,

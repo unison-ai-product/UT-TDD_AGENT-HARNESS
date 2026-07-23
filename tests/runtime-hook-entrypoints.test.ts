@@ -13,23 +13,12 @@ import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = process.cwd();
-const cliPath = join(repoRoot, "src", "cli.ts");
+const cliPath = join(repoRoot, "dist", "ut-tdd.mjs");
 const legacyEnvPrefix = ["HE", "LIX"].join("");
 
 function runCli(cwd: string, args: string[], input?: unknown, env?: NodeJS.ProcessEnv) {
   const stdin = input === undefined ? undefined : JSON.stringify(input);
-  if (process.platform === "win32") {
-    // cmd.exe は PATH 探索でなく %SystemRoot% から canonical に解決する。
-    // PATH 注入事故 (System32 欠落) でテストが環境誘発 fail しないため (A-128 F-7)。
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd,
-      encoding: "utf8",
-      env: { ...process.env, ...env },
-      input: stdin,
-    });
-  }
-  return spawnSync("bun", [cliPath, ...args], {
+  return spawnSync(process.execPath, [cliPath, ...args], {
     cwd,
     encoding: "utf8",
     env: { ...process.env, ...env },
@@ -85,13 +74,13 @@ describe("runtime hook entrypoints", () => {
     const hooks = settings.hooks;
 
     expect(hooks.SessionStart[0].hooks[0].command).toBe(
-      'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start',
+      'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session start',
     );
     expect(hooks.PostToolUse[0].hooks[0].command).toBe(
-      'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use',
+      'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" hook post-tool-use',
     );
     expect(hooks.Stop[0].hooks[0].command).toBe(
-      'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary',
+      'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session summary',
     );
   });
 

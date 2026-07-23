@@ -10,7 +10,7 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           matcher: "Agent|Task",
           hooks: [
             {
-              command: 'bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"',
+              command: 'node "$CLAUDE_PROJECT_DIR/dist/hooks/agent-guard.mjs"',
               blockOnFailure: true,
             },
           ],
@@ -19,24 +19,26 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           matcher: "Edit|Write|MultiEdit",
           hooks: [
             {
-              command: 'bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"',
+              command: 'node "$CLAUDE_PROJECT_DIR/dist/hooks/work-guard.mjs"',
               blockOnFailure: true,
             },
           ],
         },
       ],
       SessionStart: [
-        { hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start' }] },
+        { hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session start' }] },
       ],
       PostToolUse: [
         {
           matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
-          hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use' }],
+          hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" hook post-tool-use' }],
         },
       ],
-      Stop: [{ hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary' }] }],
+      Stop: [
+        { hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session summary' }] },
+      ],
       SubagentStop: [
-        { hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook subagent-stop' }] },
+        { hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" hook subagent-stop' }] },
       ],
     },
   };
@@ -104,6 +106,25 @@ describe("project-hook lint", () => {
     });
   });
 
+  it("rejects Bun and direct TypeScript production hook entrypoints", () => {
+    for (const command of [
+      'bun "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session start',
+      'node "$CLAUDE_PROJECT_DIR/src/cli.ts" session start',
+    ]) {
+      const settings = teamStandardSettings();
+      settings.hooks.SessionStart = [{ hooks: [{ command }] }];
+      const result = analyzeProjectHooks([
+        { file: ".claude/settings.json", content: JSON.stringify(settings) },
+      ]);
+      expect(result.ok).toBe(false);
+      expect(result.violations).toContainEqual({
+        file: ".claude/settings.json",
+        hook: "SessionStart",
+        reason: "forbidden_runtime",
+      });
+    }
+  });
+
   // isWrapperForm は includes 部分一致のため、wrapperCommand 同士が prefix 関係になると
   // クロス判定 (別 hook での偽充足) が起きうる。エントリ追加時の回帰を構造で防ぐ。
   it("keeps required wrapper commands mutually non-substring", () => {
@@ -138,7 +159,7 @@ describe("project-hook lint", () => {
         hooks: [
           {
             command:
-              'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start --legacy C:\\Users\\alice\\legacy',
+              'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session start --legacy C:\\Users\\alice\\legacy',
           },
         ],
       },

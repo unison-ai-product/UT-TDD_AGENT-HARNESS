@@ -10,26 +10,18 @@ function packageJson(spec: string): string {
   });
 }
 
-function bunLock(spec: string): string {
-  return [
-    "{",
-    '  "workspaces": {',
-    '    "": {',
-    '      "devDependencies": {',
-    `        "@biomejs/biome": "${spec}",`,
-    "      },",
-    "    },",
-    "  },",
-    '  "packages": {}',
-    "}",
-  ].join("\n");
+function packageLock(spec: string): string {
+  return JSON.stringify({
+    lockfileVersion: 3,
+    packages: { "": { devDependencies: { "@biomejs/biome": spec } } },
+  });
 }
 
 describe("toolchain pin lint", () => {
   it("rejects non-exact biome package and lock specs", () => {
     const result = analyzeToolchainPin({
       packageJson: packageJson("^2.4.15"),
-      bunLock: bunLock("^2.4.15"),
+      packageLock: packageLock("^2.4.15"),
     });
 
     expect(result.ok).toBe(false);
@@ -42,7 +34,7 @@ describe("toolchain pin lint", () => {
   it("accepts exact package and lock specs", () => {
     const result = analyzeToolchainPin({
       packageJson: packageJson("2.4.15"),
-      bunLock: bunLock("2.4.15"),
+      packageLock: packageLock("2.4.15"),
     });
 
     expect(result.ok).toBe(true);
@@ -52,7 +44,7 @@ describe("toolchain pin lint", () => {
   it("rejects package and lock spec mismatches", () => {
     const result = analyzeToolchainPin({
       packageJson: packageJson("2.4.15"),
-      bunLock: bunLock("2.4.16"),
+      packageLock: packageLock("2.4.16"),
     });
 
     expect(result.ok).toBe(false);

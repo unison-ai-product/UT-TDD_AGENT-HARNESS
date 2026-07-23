@@ -10,7 +10,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { Command } from "commander";
 import { buildReleasePublicationPlan } from "../github/ops-guard";
@@ -103,12 +103,7 @@ export function registerDistributionCommands(program: Command): void {
     .action((opts: { tag?: string; cleanRepo?: string; packageRoot?: string; json?: boolean }) => {
       const repoRoot = process.cwd();
       const detection = detectMode();
-      let bunVersion: string | null = null;
-      try {
-        bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
-      } catch {
-        bunVersion = null;
-      }
+      const nodeVersion = process.versions.node ?? null;
       const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
       const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
       const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
@@ -119,7 +114,7 @@ export function registerDistributionCommands(program: Command): void {
         ".bin",
         process.platform === "win32" ? "ut-tdd.cmd" : "ut-tdd",
       );
-      const sourceSetupEntrypoint = join(packageRoot, "src", "cli.ts");
+      const sourceSetupEntrypoint = join(packageRoot, "dist", "ut-tdd.mjs");
       const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
       const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
       const utTddCli = spawnSync("ut-tdd", ["--help"], {
@@ -130,21 +125,19 @@ export function registerDistributionCommands(program: Command): void {
       const utTddCliObserved =
         utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
       const utTddCliHints = [
-        join(homedir(), ".bun", "bin", "ut-tdd.exe"),
-        join(homedir(), ".bun", "bin", "ut-tdd"),
-        process.env.APPDATA ? join(process.env.APPDATA, "npm", "node_modules", "bun", "bin") : "",
+        process.env.APPDATA ? join(process.env.APPDATA, "npm", "ut-tdd.cmd") : "",
       ].filter((p) => p && existsSync(p));
       const utTddCliMessage = hasUtTddCli
         ? undefined
         : [
-            "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
+            "Generated Claude/Codex hooks call `node .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
             `Expected wrapper: ${hookWrapperPath}`,
             `Expected package bin: ${packageBinPath}`,
             `Expected source setup entrypoint: ${sourceSetupEntrypoint}`,
             `Observed: ${utTddCliObserved}`,
             utTddCliHints.length > 0
               ? `Detected global candidate path(s): ${utTddCliHints.join(", ")}. Prefer the project-local wrapper when multiple projects on one PC pin different harness versions.`
-              : "Add UT-TDD as a project dependency, run setup to emit the wrapper, and ensure Bun resolves on the hook shell PATH.",
+              : "Add UT-TDD as a project dependency, build the compiled ESM CLI, and run setup to emit the wrapper. Bun/direct-TypeScript fallback is forbidden.",
           ].join(" ");
       const exportPlan = buildCleanDistributionPlan({
         paths: collectDistributionCandidatePaths(repoRoot),
@@ -152,7 +145,7 @@ export function registerDistributionCommands(program: Command): void {
         cleanRepo: opts.cleanRepo,
       });
       const readiness = buildConsumerReadinessPlan({
-        bunVersion,
+        nodeVersion,
         hasGit,
         hasGh,
         hasUtTddCli,

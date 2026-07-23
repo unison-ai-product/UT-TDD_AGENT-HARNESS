@@ -1,16 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { resolveBunBinary } from "../scripts/run-vitest-snapshot";
+import { resolveNodeBinary } from "../scripts/run-vitest-snapshot";
 
 describe("global setup fence", () => {
   it("U-TESTHYGIENE-043: turns a sealed detached-reference teardown violation into a nonzero runner process", () => {
     const result = spawnSync(
-      process.env.UT_TDD_BUN_BINARY ?? resolveBunBinary(),
+      process.env.UT_TDD_NODE_BINARY ?? resolveNodeBinary(),
       ["scripts/run-vitest-snapshot.ts", "tests/fixtures/reference-fence-trip.test.ts"],
       {
         cwd: process.cwd(),
         encoding: "utf8",
-        shell: process.platform === "win32",
+        windowsHide: true,
         env: { ...process.env, UT_TDD_FENCE_TRIP: "1" },
       },
     );

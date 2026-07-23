@@ -21,12 +21,7 @@ import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenanc
 import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration";
 import { removeTestTree } from "./support/temp-tree";
 
-/**
- * bun:sqlite releases the OS file handle on GC finalization rather than synchronously on
- * close(), so on Windows a plain rmSync of the temp repo right after close() can hit EBUSY
- * (the harness.db file is still mapped). Force GC where the runtime exposes it, then remove
- * with retries. node:sqlite releases on close(), so the GC hook is a Bun-only no-op there.
- */
+/** node:sqlite close後もWindows scanner競合を許容するため、共通retry cleanupを使う。 */
 const cleanupRepo = removeTestTree;
 
 /**
@@ -35,12 +30,10 @@ const cleanupRepo = removeTestTree;
  * 設計 pair: docs/test-design/harness/L8-integration-test-design.md IT-DB-01。
  */
 describe("IT-DB-01: harness.db state-db foundation", () => {
-  it("uses node:sqlite fallback when the test worker is running under Node", () => {
+  it("uses node:sqlite as the only runtime driver", () => {
     const db = openHarnessDb(":memory:");
     try {
-      const expectedDriver =
-        typeof (globalThis as { Bun?: unknown }).Bun === "undefined" ? "node" : "bun";
-      expect(db.driver).toBe(expectedDriver);
+      expect(db.driver).toBe("node");
       db.exec("CREATE TABLE fallback_smoke (id TEXT PRIMARY KEY)");
       db.prepare("INSERT INTO fallback_smoke (id) VALUES (?)").run("ok");
       expect(db.prepare("SELECT id FROM fallback_smoke").get()?.id).toBe("ok");

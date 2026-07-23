@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * UT-TDD Agent Harness CLI (TypeScript core, ADR-001).
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
@@ -1974,7 +1974,7 @@ program
       mode: opts.dryRun ? "dry-run" : "requires-human-approval",
       from,
       to: opts.to,
-      checks: ["bun run src\\cli.ts doctor", "bun run src\\cli.ts db status --json"],
+      checks: ["node dist\\ut-tdd.mjs doctor", "node dist\\ut-tdd.mjs db status --json"],
       rollback:
         from === "unknown" ? "record source ref before applying cutover" : `git switch ${from}`,
       humanApprovalRequired: true,

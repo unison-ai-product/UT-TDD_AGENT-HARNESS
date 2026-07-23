@@ -121,7 +121,10 @@ const STATE_PATH = join(".ut-tdd", "state", "setup.json");
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
 const MANAGED_START = "<!-- UT-TDD:managed:start -->";
 const MANAGED_END = "<!-- UT-TDD:managed:end -->";
-const SETUP_SOURCE_CLI = join(dirname(fileURLToPath(import.meta.url)), "..", "cli.ts");
+const SETUP_MODULE_PATH = fileURLToPath(import.meta.url);
+const SETUP_SOURCE_CLI = SETUP_MODULE_PATH.endsWith(".mjs")
+  ? SETUP_MODULE_PATH
+  : join(dirname(SETUP_MODULE_PATH), "..", "..", "dist", "ut-tdd.mjs");
 const MERGEABLE_ADAPTER_DOCS = new Set(["AGENTS.md", "CLAUDE.md", join(".claude", "CLAUDE.md")]);
 
 /**

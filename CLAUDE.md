@@ -25,7 +25,7 @@ source material is historical reference only; current UT-TDD runtime commands
 use `ut-tdd`, not legacy commands.
 
 ADR-001 is binding: source concepts may be used as design source material, but
-UT-TDD implementation is TypeScript/Bun. old W1-W3a Python is not
+UT-TDD implementation is TypeScript/Node with a Rust native companion. old W1-W3a Python is not
 current product runtime.
 
 ## Purpose
@@ -81,7 +81,7 @@ PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-el
 ## Architecture Boundary
 
 - `docs/`: governance, requirements, ADRs, plans, design, test design, migration, archive
-- `src/`: TypeScript/Bun harness core
+- `src/`: TypeScript/Node harness core
 - `tests/`: Vitest tests
 - `scripts/`: thin OS entrypoints only
 - `.ut-tdd/`: UT-TDD runtime state and audit/handover evidence

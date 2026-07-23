@@ -116,7 +116,7 @@ const PROBE_TIMEOUT_MS = 10_000;
 const RUN_TIMEOUT_MS = 600_000;
 
 // 全 profile の authEnv 名の和集合。runner 実行時は既定で子プロセスへ渡さない。
-// 現行 runner (bun-unit/doctor/vitest-browser) はいずれも requiresAuth=false で auth env 不要。
+// 現行 runner (node-unit/doctor/vitest-browser) はいずれも requiresAuth=false で auth env 不要。
 // requiresAuth profile の runner を配線する際に profile 単位の pass-through を追加する (A-128 F-4 / IMP-130(a))。
 const AUTH_ENV_NAMES = new Set(Object.values(PROFILES).flatMap((p) => p.authEnv));
 

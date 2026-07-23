@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * Claude Code PreToolUse(Edit|Write|MultiEdit) hook entry — UT-TDD 作業衝突ガードレール (PLAN-L7-114)。
  *
@@ -8,7 +8,8 @@
  *
  * settings.json:
  *   "matcher": "Edit|Write|MultiEdit",
- *   "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts\""
+ *   "command": "node \"$CLAUDE_PROJECT_DIR/dist/hooks/work-guard.mjs\""
+ * この TypeScript は build input であり、production で直接実行しない。
  *
  * stdin: { tool_name, tool_input: { file_path }, session_id }。
  * exit:  0 = pass / 2 = block。

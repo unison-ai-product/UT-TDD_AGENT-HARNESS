@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/hooks/agent-guard.mjs\"",
             "timeout": 5,
             "statusMessage": "subagent allowlist + explicit-model + opus-override guard (env-independent TS)",
             "blockOnFailure": true
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts\"",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/hooks/work-guard.mjs\"",
             "timeout": 5,
             "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed",
             "blockOnFailure": true
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" session start",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs\" session start",
             "timeout": 5,
             "statusMessage": "session-log: session start (fail-open)"
           }
@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" hook post-tool-use",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs\" hook post-tool-use",
             "timeout": 5,
             "statusMessage": "session-log: post tool use (fail-open)"
           }
@@ -56,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" session summary",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs\" session summary",
             "timeout": 5,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }
@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" hook subagent-stop",
+            "command": "node \"$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs\" hook subagent-stop",
             "timeout": 5,
             "statusMessage": "agent-slots: release subagent slot (fail-open)"
           }

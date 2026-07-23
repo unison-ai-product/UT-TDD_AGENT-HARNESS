@@ -1,11 +1,11 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * Backward-compatible Claude Code session-log shim.
  *
  * The canonical implementation is the package-local UT-TDD CLI:
- *   - SessionStart -> src/cli.ts session start
- *   - PostToolUse  -> src/cli.ts hook post-tool-use
- *   - Stop         -> src/cli.ts session summary
+ *   - SessionStart -> dist/ut-tdd.mjs session start
+ *   - PostToolUse  -> dist/ut-tdd.mjs hook post-tool-use
+ *   - Stop         -> dist/ut-tdd.mjs session summary
  *
  * This file remains only for older settings or manual invocations.
  * It is fail-open: hook failures must not block Claude Code work.
@@ -13,6 +13,7 @@
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadNodeBootstrapReceipt } from "../../src/runtime/node-bootstrap";
 import type { SessionHookInput } from "../../src/runtime/session-log";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -39,7 +40,8 @@ function commandFor(raw: string): string[] {
 
 try {
   const raw = await readStdin();
-  const child = spawnSync("bun", [join(repoRoot, "src", "cli.ts"), ...commandFor(raw)], {
+  const bootstrap = loadNodeBootstrapReceipt(repoRoot);
+  const child = spawnSync(bootstrap.nodePath, [bootstrap.compiledCliPath, ...commandFor(raw)], {
     cwd: repoRoot,
     encoding: "utf8",
     input: raw,

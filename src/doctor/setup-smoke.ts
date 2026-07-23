@@ -22,14 +22,16 @@ const SETUP_SMOKE_REQUIRED_FILES = [
 ] as const;
 
 const SETUP_SMOKE_REQUIRED_COMMANDS = [
-  "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs session start",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
-  "bun .ut-tdd/bin/ut-tdd.mjs session summary",
+  "node .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+  "node .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+  "node .ut-tdd/bin/ut-tdd.mjs session start",
+  "node .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
+  "node .ut-tdd/bin/ut-tdd.mjs session summary",
 ] as const;
 
-const SETUP_SMOKE_CLAUDE_ONLY_COMMANDS = ["bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop"] as const;
+const SETUP_SMOKE_CLAUDE_ONLY_COMMANDS = [
+  "node .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
+] as const;
 
 export function collectHookCommands(raw: string | null): string[] | null {
   if (raw === null) return null;
@@ -62,6 +64,15 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
     name: "wrapper-placeholder-free",
     ok: wrapper !== null && !/UT_TDD_SOURCE_CLI_JSON|__UT_TDD|placeholder/i.test(wrapper),
     message: "project-local wrapper has no template placeholder residue",
+  });
+  checks.push({
+    name: "wrapper-node-compiled-only",
+    ok: Boolean(
+      wrapper?.startsWith("#!/usr/bin/env node") &&
+        !/\bbun(?:x)?\b|src[\\/]cli\.ts|\btsx\b/i.test(wrapper),
+    ),
+    message:
+      "project-local wrapper uses Node with compiled ESM and has no Bun/direct-TypeScript fallback",
   });
 
   const claudeCommands = collectHookCommands(

@@ -12,21 +12,12 @@ import {
 } from "../src/runtime/work-guard";
 
 const hookRepoRoot = process.cwd();
-const workGuardHook = join(hookRepoRoot, ".claude", "hooks", "work-guard.ts");
+const workGuardHook = join(hookRepoRoot, "dist", "hooks", "work-guard.mjs");
 
-/** work-guard hook を temp repo の cwd で spawn する (win32 は System32 canonical な cmd 経由)。 */
+/** compiled work-guard hook を Node で temp repo の cwd から spawn する。 */
 function runWorkGuardHook(cwd: string, input: unknown) {
   const stdin = JSON.stringify(input);
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", workGuardHook], {
-      cwd,
-      encoding: "utf8",
-      env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
-      input: stdin,
-    });
-  }
-  return spawnSync("bun", [workGuardHook], {
+  return spawnSync(process.execPath, [workGuardHook], {
     cwd,
     encoding: "utf8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },

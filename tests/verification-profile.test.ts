@@ -48,7 +48,7 @@ function mustProfile(id: string) {
 describe("verification profile recommendation", () => {
   it("loads profile definitions from the externalized catalog module", () => {
     expect(Object.keys(PROFILES)).toEqual(
-      expect.arrayContaining(["bun-unit", "doctor", "mcp-inspector-smoke"]),
+      expect.arrayContaining(["node-unit", "doctor", "mcp-inspector-smoke"]),
     );
   });
 
@@ -59,8 +59,8 @@ describe("verification profile recommendation", () => {
     ]);
 
     expect(result.recommendations.map((r) => r.profile.id)).toEqual([
-      "bun-unit",
       "doctor",
+      "node-unit",
       "playwright-mcp",
       "testcontainers",
       "vitest-browser-playwright",
@@ -99,7 +99,7 @@ describe("verification profile recommendation", () => {
     const gate = analyzeVerificationProfileGate(recommendVerificationProfiles(["src/web/app.tsx"]));
 
     expect(gate.ok).toBe(true);
-    expect(gate.defaultRunnableProfiles).toEqual(["bun-unit", "doctor"]);
+    expect(gate.defaultRunnableProfiles).toEqual(["doctor", "node-unit"]);
     expect(gate.externalProfiles).toEqual(["playwright-mcp", "vitest-browser-playwright"]);
     expect(gate.activationPlan.steps.map((step) => step.action)).toContain("human-approval");
     expect(gate.activationPlan.steps.map((step) => step.action)).toContain("refuse-run");
@@ -127,7 +127,9 @@ describe("verification profile recommendation", () => {
     expect(result?.checks.map((check) => check.name)).toContain("package");
     expect(result?.checks.map((check) => check.name)).toContain("executable");
     expect(
-      result?.checks.some((check) => check.message.includes("bun add -D testcontainers")),
+      result?.checks.some((check) =>
+        check.message.includes("npm install --save-dev testcontainers"),
+      ),
     ).toBe(true);
   });
 
@@ -174,7 +176,7 @@ describe("verification profile recommendation", () => {
 
   it("propagates non-zero runner exit codes as failed", () => {
     const result = runVerificationProfile(
-      "bun-unit",
+      "node-unit",
       {},
       deps({ runCommand: () => ({ status: 7 }) }),
     );
@@ -184,21 +186,21 @@ describe("verification profile recommendation", () => {
   });
 
   it("supports dry-run for builtin profile runners", () => {
-    const result = runVerificationProfile("bun-unit", { dryRun: true }, deps());
+    const result = runVerificationProfile("node-unit", { dryRun: true }, deps());
 
     expect(result?.status).toBe("dry-run");
-    expect(result?.command).toBe("bun run test");
+    expect(result?.command).toBe("node scripts/run-vitest-snapshot.ts");
   });
 
   it("saves normalized evidence records for later DB collection", () => {
     const writes: Array<{ path: string; content: string }> = [];
     const written = saveVerificationEvidence(
-      { kind: "verify-run", id: "bun-unit", payload: { status: "dry-run" } },
+      { kind: "verify-run", id: "node-unit", payload: { status: "dry-run" } },
       deps({ writeText: (path, content) => writes.push({ path, content }) }),
     );
 
     expect(written.path).toBe(
-      ".ut-tdd/evidence/verification-profiles/20260609123456-verify-run-bun-unit.json",
+      ".ut-tdd/evidence/verification-profiles/20260609123456-verify-run-node-unit.json",
     );
     expect(writes).toHaveLength(1);
     // 文字列リテラル重複でなく src 側定数を oracle にする (単一正本化、A-128 F-6)。
@@ -225,7 +227,7 @@ describe("verification profile recommendation", () => {
     expect(result?.ready).toBe(false);
     expect(result?.checks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "executable", ok: true, message: "bun --version" }),
+        expect.objectContaining({ name: "executable", ok: true, message: "node --version" }),
         expect.objectContaining({ name: "launcher", ok: false, message: "ut-tdd --help" }),
       ]),
     );
@@ -238,12 +240,12 @@ describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
     const ids = catalog.profiles.map((profile) => profile.id);
 
     expect(ids).toEqual([
-      "bun-unit",
       "docker-mcp-toolkit",
       "doctor",
       "github-mcp-readonly",
       "mcp-inspector-smoke",
       "msw",
+      "node-unit",
       "playwright-mcp",
       "testcontainers",
       "vitest-browser-playwright",
@@ -270,8 +272,8 @@ describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
 
     expect(external.every((profile) => profile.defaultEnabled === false)).toBe(true);
     expect(builtins.map((profile) => [profile.id, profile.defaultEnabled])).toEqual([
-      ["bun-unit", true],
       ["doctor", true],
+      ["node-unit", true],
     ]);
   });
 
@@ -340,7 +342,7 @@ describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
   it("U-MCPPROFILE-013: generated server command/args is a tokenized argv, not a single display string", () => {
     const result = renderGeneratedMcpConfig({
       repoRoot: "/repo",
-      selectedProfileIds: ["bun-unit", "mcp-inspector-smoke"],
+      selectedProfileIds: ["node-unit", "mcp-inspector-smoke"],
     });
     const config = JSON.parse(result.content) as {
       mcpServers: Record<string, { command: string; args: string[] }>;
@@ -348,17 +350,17 @@ describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
 
     // command is the head token; args carry the remaining argv (no re-inclusion
     // of the executable, no whole-command-string-as-one-arg).
-    expect(config.mcpServers["bun-unit"].command).toBe("bun");
-    expect(config.mcpServers["bun-unit"].args).toEqual(["run", "test"]);
+    expect(config.mcpServers["node-unit"].command).toBe("node");
+    expect(config.mcpServers["node-unit"].args).toEqual(["scripts/run-vitest-snapshot.ts"]);
 
     // Wrapper command whose first token ("ut-tdd") differs from the probe-hint
-    // executable ("bun"): the launch command is the command head, not the hint.
+    // executable ("node"): the launch command is the command head, not the hint.
     expect(config.mcpServers["mcp-inspector-smoke"].command).toBe("ut-tdd");
     expect(config.mcpServers["mcp-inspector-smoke"].args[0]).toBe("mcp");
 
     // Regression for the pre-fix bug: args must never be the whole command line.
     for (const server of Object.values(config.mcpServers)) {
-      expect(server.args).not.toContain("bun run test");
+      expect(server.args).not.toContain("node scripts/run-vitest-snapshot.ts");
       expect(server.args[0]).not.toBe(server.command);
     }
   });

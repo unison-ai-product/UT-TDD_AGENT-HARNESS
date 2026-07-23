@@ -17,6 +17,7 @@ export interface ProjectHookViolation {
     | "missing_project_dir"
     | "missing_block_on_failure"
     | "tracked_permissions"
+    | "forbidden_runtime"
     | "forbidden_path";
 }
 
@@ -52,21 +53,21 @@ interface RequiredProjectHook {
 }
 
 /**
- * setup が consumer へ生成する wrapper 配線の正規 entrypoint。source 配線
- * (`src/cli.ts` / `.claude/hooks/*.ts` + `$CLAUDE_PROJECT_DIR`) と並ぶ第 2 の受理形式
+ * setup が consumer へ生成する wrapper 配線の正規 entrypoint。repository の compiled 配線
+ * (`dist/*.mjs`) と並ぶ第 2 の受理形式
  * であり、setup templates は必ずこの定数から command を生成する (単一定義源、
  * PLAN-RECOVERY-06: gate 要求と setup 生成物の黙った再乖離を防ぐ)。
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
 
-const wrapperCommand = (subcommand: string): string => `bun ${WRAPPER_CLI} ${subcommand}`;
+const wrapperCommand = (subcommand: string): string => `node ${WRAPPER_CLI} ${subcommand}`;
 
 export const REQUIRED = [
   {
     id: "agent-guard",
     event: "PreToolUse",
     matcher: "Agent|Task",
-    commandParts: [".claude/hooks/agent-guard.ts"],
+    commandParts: ["node", "dist/hooks/agent-guard.mjs"],
     wrapperCommand: wrapperCommand("hook agent-guard"),
     blockOnFailure: true,
   },
@@ -74,33 +75,33 @@ export const REQUIRED = [
     id: "work-guard",
     event: "PreToolUse",
     matcher: "Edit|Write|MultiEdit",
-    commandParts: [".claude/hooks/work-guard.ts"],
+    commandParts: ["node", "dist/hooks/work-guard.mjs"],
     wrapperCommand: wrapperCommand("hook work-guard"),
     blockOnFailure: true,
   },
   {
     id: "session-start",
     event: "SessionStart",
-    commandParts: ["src/cli.ts", "session start"],
+    commandParts: ["node", "dist/ut-tdd.mjs", "session start"],
     wrapperCommand: wrapperCommand("session start"),
   },
   {
     id: "post-tool-use",
     event: "PostToolUse",
     matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
-    commandParts: ["src/cli.ts", "hook post-tool-use"],
+    commandParts: ["node", "dist/ut-tdd.mjs", "hook post-tool-use"],
     wrapperCommand: wrapperCommand("hook post-tool-use"),
   },
   {
     id: "session-summary",
     event: "Stop",
-    commandParts: ["src/cli.ts", "session summary"],
+    commandParts: ["node", "dist/ut-tdd.mjs", "session summary"],
     wrapperCommand: wrapperCommand("session summary"),
   },
   {
     id: "subagent-stop",
     event: "SubagentStop",
-    commandParts: ["src/cli.ts", "hook subagent-stop"],
+    commandParts: ["node", "dist/ut-tdd.mjs", "hook subagent-stop"],
     wrapperCommand: wrapperCommand("hook subagent-stop"),
   },
 ] satisfies readonly RequiredProjectHook[];
@@ -144,11 +145,17 @@ function matcherOk(actual: string | undefined, expected: string | undefined): bo
 }
 
 function commandOk(command: string, parts: readonly string[]): boolean {
-  return parts.every((part) => command.includes(part));
+  return isNodeCommand(command) && parts.every((part) => command.includes(part));
 }
 
 function isWrapperForm(command: string, required: RequiredProjectHook): boolean {
-  return command.includes(required.wrapperCommand);
+  return isNodeCommand(command) && command.includes(required.wrapperCommand);
+}
+
+const FORBIDDEN_PRODUCTION_RUNTIME_RE = /(?:^|\s)bun(?:\.exe)?\s|\.ts(?:["']?\s|$)/i;
+
+function isNodeCommand(command: string): boolean {
+  return /^\s*(?:node|node\.exe)\s/i.test(command);
 }
 
 export function analyzeProjectHooks(docs: ProjectHookDoc[]): ProjectHookResult {
@@ -168,6 +175,9 @@ export function analyzeProjectHooks(docs: ProjectHookDoc[]): ProjectHookResult {
         for (const hook of entry.hooks ?? []) {
           if (FORBIDDEN_PATH_RE.test(hook.command ?? "")) {
             violations.push({ file: doc.file, hook: event, reason: "forbidden_path" });
+          }
+          if (FORBIDDEN_PRODUCTION_RUNTIME_RE.test(hook.command ?? "")) {
+            violations.push({ file: doc.file, hook: event, reason: "forbidden_runtime" });
           }
         }
       }

@@ -30,15 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun src/cli.ts github guard
-      - run: bun run typecheck
-      - run: bun src/cli.ts db rebuild --json
-      - run: bun run test
-      - run: bun run lint
-      - run: bun src/cli.ts audit quality --include-tests
-      - run: bun src/cli.ts doctor
+      - uses: actions/setup-node@v4
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: node dist/ut-tdd.mjs github guard
+      - run: npm run typecheck
+      - run: node dist/ut-tdd.mjs db rebuild --json
+      - run: npm run test
+      - run: npm run lint
+      - run: node dist/ut-tdd.mjs audit quality --include-tests
+      - run: node dist/ut-tdd.mjs doctor
 `;
 
 const PACK_WORKFLOW = `
@@ -56,13 +57,14 @@ jobs:
   harness-check:
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
-      - run: bun run test:pack
-      - run: bun run lint
-      - run: bun src/cli.ts setup --solo
-      - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
+      - uses: actions/setup-node@v4
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run test:pack
+      - run: npm run lint
+      - run: node dist/ut-tdd.mjs setup --solo
+      - run: node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
 const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
@@ -70,11 +72,12 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
-      - run: bun run test
-      - run: bun run lint
+      - uses: actions/setup-node@v4
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run lint
   resource-kernel-rust-linux:
     runs-on: ubuntu-latest
     steps:
@@ -824,7 +827,7 @@ describe("github-ci-policy lint", () => {
 
   it("requires source CI to keep full doctor in the required status check", () => {
     const result = analyzeGithubCiPolicy(
-      docs(SOURCE_WORKFLOW.replace("bun src/cli.ts doctor", "echo doctor omitted")),
+      docs(SOURCE_WORKFLOW.replace("node dist/ut-tdd.mjs doctor", "echo doctor omitted")),
     );
 
     expect(result.ok).toBe(false);
@@ -838,8 +841,8 @@ describe("github-ci-policy lint", () => {
 
   it("requires Pack CI to use setup-smoke instead of source full doctor", () => {
     const pack = PACK_WORKFLOW.replace(
-      "bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke",
-      "bun .ut-tdd/bin/ut-tdd.mjs doctor",
+      "node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke",
+      "node .ut-tdd/bin/ut-tdd.mjs doctor",
     );
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
@@ -860,7 +863,7 @@ describe("github-ci-policy lint", () => {
   });
 
   it("rejects raw vitest run in Pack CI because source-only tests need governance docs", () => {
-    const pack = PACK_WORKFLOW.replace("bun run test:pack", "bun run vitest run");
+    const pack = PACK_WORKFLOW.replace("npm run test:pack", "npx vitest run");
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
     expect(result.ok).toBe(false);
@@ -874,12 +877,12 @@ describe("github-ci-policy lint", () => {
       file: "docs/templates/github/common/pack-harness-check.yml",
       profile: "pack",
       reason: "forbidden_raw_vitest",
-      detail: "Pack CI must use bun run test:pack instead of raw vitest run",
+      detail: "Pack CI must use npm run test:pack instead of raw vitest run",
     });
   });
 
-  it("rejects source full bun run test in Pack CI because Pack uses the safe smoke suite", () => {
-    const pack = PACK_WORKFLOW.replace("bun run test:pack", "bun run test");
+  it("rejects source full npm run test in Pack CI because Pack uses the safe smoke suite", () => {
+    const pack = PACK_WORKFLOW.replace("npm run test:pack", "npm run test");
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
     expect(result.ok).toBe(false);
@@ -893,7 +896,7 @@ describe("github-ci-policy lint", () => {
       file: "docs/templates/github/common/pack-harness-check.yml",
       profile: "pack",
       reason: "forbidden_source_full_tests",
-      detail: "Pack CI must use bun run test:pack instead of source full bun run test",
+      detail: "Pack CI must use npm run test:pack instead of source full npm run test",
     });
   });
 });

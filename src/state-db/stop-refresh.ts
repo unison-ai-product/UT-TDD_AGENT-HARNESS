@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { loadNodeBootstrapReceipt } from "../runtime/node-bootstrap";
 import { defaultHarnessDbPath, openHarnessDb } from "./index";
 import { migrate } from "./migration";
 import { projectModelEvaluations, projectTokenUsage, rebuildHarnessDb } from "./projection-writer";
@@ -108,14 +109,15 @@ export interface DetachedSpawnHandle {
 export type DetachedSpawnImpl = (
   command: string,
   args: string[],
-  options: { cwd: string; detached: boolean; stdio: "ignore" },
+  options: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: boolean },
 ) => DetachedSpawnHandle;
 
 export interface SpawnStopRefreshOptions {
   repoRoot: string;
-  /** 再入用エントリ (通常 process.execPath = bun と process.argv[1] = CLI script)。 */
+  /** Test-only override。productionはsealed NodeBootstrap receiptを使う。 */
   execPath?: string;
   scriptPath?: string;
+  resolveRuntime?: (repoRoot: string) => { nodePath: string; compiledCliPath: string };
   /** test 注入用。未指定は node:child_process.spawn。 */
   spawnImpl?: DetachedSpawnImpl;
 }
@@ -144,8 +146,12 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
   }
   const generation = lease.owner.generation;
   try {
-    const execPath = options.execPath ?? process.execPath;
-    const scriptPath = options.scriptPath ?? process.argv[1];
+    const runtime =
+      options.execPath && options.scriptPath
+        ? { nodePath: options.execPath, compiledCliPath: options.scriptPath }
+        : (options.resolveRuntime ?? loadNodeBootstrapReceipt)(options.repoRoot);
+    const execPath = runtime.nodePath;
+    const scriptPath = runtime.compiledCliPath;
     if (!execPath || !scriptPath) {
       releaseStopRefreshLease(options.repoRoot, generation);
       return { launched: false, reason: "missing-entrypoint" };
@@ -160,6 +166,7 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
         cwd: options.repoRoot,
         detached: true,
         stdio: "ignore",
+        windowsHide: true,
       },
     );
     // 非同期起動失敗 (ENOENT 等) は error event で届く。未処理のままだと親 process が

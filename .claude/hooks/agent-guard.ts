@@ -1,10 +1,11 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * Claude Code PreToolUse(Agent) hook entry — UT-TDD subagent guard。
  *
- * 環境非依存 (bun 実行、bash / python3 不要)。判定本体は src/runtime/agent-guard.ts。
+ * このファイルは build input であり、production は Node で compiled ESM を実行する。
+ * 判定本体は src/runtime/agent-guard.ts。
  * settings.json:
- *   "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts\""
+ *   "command": "node \"$CLAUDE_PROJECT_DIR/dist/hooks/agent-guard.mjs\""
  *
  * stdin: Claude Code が渡す tool 呼び出し JSON ({ tool_name, tool_input: { subagent_type, model } })。
  * exit:  0 = pass / 2 = block (Claude Code が Agent 呼び出しを抑止)。

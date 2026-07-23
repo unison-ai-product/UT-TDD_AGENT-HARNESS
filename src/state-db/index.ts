@@ -1,10 +1,7 @@
 /**
- * harness.db state-db adapter — bun:sqlite first / node:sqlite fallback (PLAN-L7-45, span ①)。
+ * harness.db state-db adapter — node:sqlite port (PLAN-L7-45, PLAN-L7-458)。
  *
- * ADR-001/ADR-007: harness 本体は Bun、ただし vitest は Node worker で test を走らせるため、
- * SQLite ドライバを runtime で出し分ける必要がある。`bun:sqlite` (Bun) と `node:sqlite`
- * (Node 22.5+ の DatabaseSync) はどちらも `exec` / `prepare().run|get|all` を持つため、薄い
- * wrapper で `HarnessDb` インターフェースに正規化する。両ドライバとも同期 API。
+ * Node 22.5+ の DatabaseSync を薄いportで HarnessDbへ正規化する。
  *
  * 不変条件 (PLAN-L7-45 §2): DB path は `.ut-tdd/` 配下に限定 (`:memory:` は test 用に許可)。
  */
@@ -24,10 +21,10 @@ export interface HarnessStatement {
   all(...params: unknown[]): Record<string, unknown>[];
 }
 
-/** 正規化済み DB ハンドル (bun:sqlite / node:sqlite を吸収)。 */
+/** 正規化済み Node SQLite DB ハンドル。 */
 export interface HarnessDb {
   readonly path: string;
-  readonly driver: "bun" | "node";
+  readonly driver: "node";
   exec(sql: string): void;
   prepare(sql: string): HarnessStatement;
   userVersion(): number;
@@ -45,7 +42,7 @@ export interface HarnessDb {
  * 各 prefix は語境界 (\b) にアンカーし、"task-..."/"risk-..." のような語中の "sk" や
  * hyphenated slug/path 内の部分一致を誤検知しない (実 secret は token 境界で出現する)。
  */
-// bun:sqlite / node:sqlite の最小構造 (型は提供されないため局所定義)。
+// node:sqlite の最小構造 (型は局所定義)。
 interface NativeStatement {
   run(...params: unknown[]): unknown;
   get(...params: unknown[]): unknown;
@@ -57,17 +54,7 @@ interface NativeDatabase {
   close(): void;
 }
 
-function currentDriver(): "bun" | "node" {
-  return typeof (globalThis as { Bun?: unknown }).Bun !== "undefined" ? "bun" : "node";
-}
-
-function openNative(path: string, driver: "bun" | "node"): NativeDatabase {
-  if (driver === "bun") {
-    const { Database } = nodeRequire("bun:sqlite") as {
-      Database: new (p: string) => NativeDatabase;
-    };
-    return new Database(path);
-  }
+function openNative(path: string): NativeDatabase {
   const { DatabaseSync } = nodeRequire("node:sqlite") as {
     DatabaseSync: new (p: string) => NativeDatabase;
   };
@@ -112,8 +99,8 @@ export function openHarnessDb(path: string, options: { repoRoot?: string } = {})
   const repoRoot = options.repoRoot ?? process.cwd();
   assertWithinUtTdd(path, repoRoot);
   if (path !== ":memory:") mkdirSync(dirname(resolve(repoRoot, path)), { recursive: true });
-  const driver = currentDriver();
-  const native = openNative(path, driver);
+  const driver = "node" as const;
+  const native = openNative(path);
   // 参照整合・外部キー強制 (projection の未解消 join を finding 化する前提の健全性)。
   native.exec("PRAGMA foreign_keys = ON");
   return {

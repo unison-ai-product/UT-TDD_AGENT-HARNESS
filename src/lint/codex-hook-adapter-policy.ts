@@ -23,7 +23,7 @@ export const CODEX_REQUIRED = [
     id: "agent-guard",
     event: "PreToolUse",
     matcher: "spawn_agent|spawn_agents_on_csv",
-    commandParts: [".claude/hooks/agent-guard.ts"],
+    commandParts: ["node", "dist/hooks/agent-guard.mjs"],
     wrapperCommand: wrapperHookCommand("agent-guard"),
     blockOnFailure: true,
   },
@@ -31,34 +31,34 @@ export const CODEX_REQUIRED = [
     id: "work-guard",
     event: "PreToolUse",
     matcher: "apply_patch|write_file",
-    commandParts: [".claude/hooks/work-guard.ts"],
+    commandParts: ["node", "dist/hooks/work-guard.mjs"],
     wrapperCommand: wrapperHookCommand("work-guard"),
     blockOnFailure: true,
   },
   {
     id: "session-start",
     event: "SessionStart",
-    commandParts: ["src/cli.ts", "session start"],
+    commandParts: ["node", "dist/ut-tdd.mjs", "session start"],
     wrapperCommand: wrapperHookCommand("session-start"),
   },
   {
     id: "post-tool-use",
     event: "PostToolUse",
     matcher: "apply_patch|write_file|exec_command|local_shell",
-    commandParts: ["src/cli.ts", "hook post-tool-use"],
+    commandParts: ["node", "dist/ut-tdd.mjs", "hook post-tool-use"],
     wrapperCommand: wrapperHookCommand("post-tool-use"),
   },
   {
     id: "session-summary",
     event: "Stop",
-    commandParts: ["src/cli.ts", "session summary"],
+    commandParts: ["node", "dist/ut-tdd.mjs", "session summary"],
     wrapperCommand: wrapperHookCommand("session-summary"),
   },
 ] satisfies readonly CodexRequiredHook[];
 
 export const CODEX_NOT_APPLICABLE = [
   {
-    entrypoint: "src/cli.ts hook subagent-stop",
+    entrypoint: "dist/ut-tdd.mjs hook subagent-stop",
     reason:
       "Codex に SubagentStop event が無い (codex.exe 0.128.0 の hook event は PreToolUse/PostToolUse/SessionStart/Stop/UserPromptSubmit のみ)",
   },

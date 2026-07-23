@@ -114,8 +114,8 @@ export function renderGeneratedMcpConfig(input: GeneratedMcpConfigInput): Genera
     // PLAN-L7-79: the generated MCP config feeds an external launcher whose
     // contract is `{command, args}` where args is a tokenized argv array, not a
     // single display string. Tokenize `profile.command` so the executable is not
-    // re-included in args (e.g. command="bun", args=["run","test"] instead of
-    // command="bun", args=["bun run test"]). `executable` is only a PATH-probe
+    // re-included in args (e.g. command="node", args=["dist/ut-tdd.mjs","doctor"] instead of
+    // command="node", args=["node dist/ut-tdd.mjs doctor"]). `executable` is only a PATH-probe
     // hint (it can differ from the command head, e.g. wrapper commands) so it is
     // a defensive fallback for the command word, never the args.
     const [launchCommand, ...launchArgs] = tokenizeCommand(profile.command);

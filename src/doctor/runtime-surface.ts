@@ -134,9 +134,9 @@ export function checkCodexWrapperParity(deps: RuntimeSurfaceDeps): {
   }
 
   const claudeHookCommands = [
-    'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start',
-    'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use',
-    'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary',
+    'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session start',
+    'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" hook post-tool-use',
+    'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session summary',
   ];
   for (const command of claudeHookCommands) {
     if (!settingStrings.includes(command)) {

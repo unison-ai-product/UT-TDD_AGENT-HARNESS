@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * pre-push 対象拡大スキャン本体 (PLAN-L7-260 §4、PO 採択案 A、2026-07-13、
  * blind review 指摘反映 2026-07-13)。
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
   process.exit(outcome.exitCode);
 }
 
-// bun で直接実行された場合のみ CLI として動く。vitest からの import では発火しない
+// compiled Node entrypointで直接実行された場合のみCLIとして動く。vitest importでは発火しない。
 // (Bun の import.meta.main はプロセスの entry module でのみ true)。
 if (import.meta.main) {
   await main();

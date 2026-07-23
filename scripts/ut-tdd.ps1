@@ -1,11 +1,10 @@
 # UT-TDD thin Windows PowerShell entrypoint (ADR-001).
-# Prefer the compiled binary when present; otherwise run the TypeScript CLI through Bun.
+# Node compiled ESM is the only supported runtime. No TypeScript/Bun fallback.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$bin = Join-Path $root "dist\ut-tdd.exe"
-if (Test-Path $bin) {
-    & $bin @args
-    exit $LASTEXITCODE
+$cli = Join-Path $root "dist\ut-tdd.mjs"
+if (-not (Test-Path $cli)) {
+    throw "UT-TDD Node bootstrap is missing. Run npm ci and npm run build."
 }
-& bun run (Join-Path $root "src\cli.ts") @args
+& node $cli @args
 exit $LASTEXITCODE

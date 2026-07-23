@@ -65,6 +65,7 @@ const CLEAN_REQUIRED_PATHS = [
   "README.md",
   "LICENSE",
   "package.json",
+  "package-lock.json",
   "src/cli.ts",
   "src/setup/index.ts",
   ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
@@ -115,7 +116,7 @@ const CLEAN_ALLOW_FILES = new Set([
   "LICENSE",
   "README.md",
   "biome.json",
-  "bun.lock",
+  "package-lock.json",
   "docs/governance/README.md",
   "docs/governance/audit-framework.md",
   "docs/governance/coding-rules.md",
@@ -176,7 +177,7 @@ export function cleanDistributionSourcePath(
 // Clean Pack excludes source-only governance docs, so its default `test` script
 // must stay on this distributable smoke suite instead of raw `vitest run`.
 export const PACK_SAFE_TEST_SCRIPT =
-  "bun scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/distribution-acceptance.test.ts tests/skill-recommend.test.ts tests/skill-scaffold.test.ts tests/dependency-drift.test.ts tests/readability.test.ts tests/toolchain-pin.test.ts --reporter=dot";
+  "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/distribution-acceptance.test.ts tests/skill-recommend.test.ts tests/skill-scaffold.test.ts tests/dependency-drift.test.ts tests/readability.test.ts tests/toolchain-pin.test.ts --reporter=dot";
 
 // Source repo's package.json points at the source development repo (issue #83);
 // the clean Pack artifact must keep pointing at the public Pack repo instead.
@@ -193,7 +194,7 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   const scripts = { ...(parsed.scripts ?? {}) };
   scripts["test:source"] ??= scripts.test ?? "vitest run";
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
-  scripts.test = "bun run test:pack";
+  scripts.test = "npm run test:pack";
   const utTdd = {
     ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
     artifactProfile: "pack",
@@ -227,7 +228,7 @@ export function gitAddPathspecCommands(
   return commands;
 }
 
-function hasMinimumBun(version: string, minimum = "1.3.0"): boolean {
+function hasMinimumNode(version: string, minimum = "22.13.0"): boolean {
   const parse = (v: string): number[] => {
     const match = v.match(/\d+(?:\.\d+){0,2}/)?.[0] ?? "0";
     return match.split(".").map((n) => Number.parseInt(n, 10));
@@ -283,7 +284,7 @@ export function buildCleanDistributionPlan(input: {
 }
 
 export function buildConsumerReadinessPlan(input: {
-  bunVersion: string | null;
+  nodeVersion: string | null;
   hasGit: boolean;
   hasGh: boolean;
   hasUtTddCli?: boolean;
@@ -295,7 +296,7 @@ export function buildConsumerReadinessPlan(input: {
   tag?: string;
   cleanRepo?: string;
 }): ConsumerReadinessPlan {
-  const bunOk = Boolean(input.bunVersion && hasMinimumBun(input.bunVersion));
+  const nodeOk = Boolean(input.nodeVersion && hasMinimumNode(input.nodeVersion));
   const mode =
     input.hasClaude && input.hasCodex
       ? "hybrid"
@@ -306,9 +307,9 @@ export function buildConsumerReadinessPlan(input: {
           : "standalone";
   const checks = [
     {
-      name: "bun>=1.3",
-      ok: bunOk,
-      message: bunOk ? `Bun ${input.bunVersion}` : "Install Bun 1.3 or newer before setup",
+      name: "node>=22.13",
+      ok: nodeOk,
+      message: nodeOk ? `Node ${input.nodeVersion}` : "Install Node 22.13 or newer before setup",
     },
     {
       name: "git",
@@ -330,10 +331,10 @@ export function buildConsumerReadinessPlan(input: {
           ? "project-local UT-TDD wrapper, package bin, or source setup entrypoint is available for projected hooks"
           : (input.utTddCliMessage ??
             [
-              "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
-              "Add UT-TDD as a project dependency before setup and verify `node_modules/.bin/ut-tdd --help` or `bun .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
-              "Do not rely on a global `bun link` when multiple projects on one PC may pin different harness versions.",
-              "Bun itself must still resolve on the hook shell PATH.",
+              "Generated Claude/Codex hooks call `node .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
+              "Add UT-TDD as a project dependency before setup and verify `node_modules/.bin/ut-tdd --help` or `node .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
+              "Do not rely on a global package link when multiple projects on one PC may pin different harness versions.",
+              "The wrapper accepts compiled ESM only; Bun, bunx, tsx, and direct TypeScript fallbacks are forbidden.",
             ].join(" ")),
     },
     {
@@ -349,7 +350,7 @@ export function buildConsumerReadinessPlan(input: {
   const tag = input.tag ?? "v0.1.0";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
   return {
-    ok: bunOk && input.hasGit && (input.hasUtTddCli ?? true),
+    ok: nodeOk && input.hasGit && (input.hasUtTddCli ?? true),
     checks,
     mode,
     workspace: {
@@ -362,10 +363,10 @@ export function buildConsumerReadinessPlan(input: {
       workflow: ".github/workflows/harness-check.yml",
       requires: [
         "actions/checkout@v4",
-        "oven-sh/setup-bun@v2",
-        "bun install --frozen-lockfile",
-        "bun run typecheck",
-        "bun run test",
+        "actions/setup-node@v4",
+        "npm ci",
+        "npm run typecheck",
+        "npm test",
       ],
       forkPullRequestSecrets: "not-required",
     },
@@ -377,8 +378,8 @@ export function buildConsumerReadinessPlan(input: {
       backupRequired: true,
       commands: [
         `git switch ${tag}`,
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --solo",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --solo",
       ],
     },
     contracts: {

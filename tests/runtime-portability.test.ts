@@ -15,15 +15,15 @@ const validDocs: RuntimePortabilityDoc[] = [
     path: "package.json",
     text: JSON.stringify({
       type: "module",
-      bin: { "ut-tdd": "./src/cli.ts" },
-      engines: { bun: ">=1.3" },
+      bin: { "ut-tdd": "./dist/ut-tdd.mjs" },
+      engines: { node: ">=22.13", npm: ">=10" },
       scripts: {
-        build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
+        build: "node scripts/build-node.mjs",
         test: "vitest run",
         "test:fast":
           "vitest run --exclude tests/cli-surface.test.ts --exclude tests/drive-db-registration.test.ts --exclude tests/projection-writer.test.ts",
         "test:db":
-          "bun run src/cli.ts db rebuild && vitest run tests/db-projection-ingestion.test.ts tests/drive-db-registration.test.ts tests/projection-writer.test.ts",
+          "node dist/ut-tdd.mjs db rebuild && vitest run tests/db-projection-ingestion.test.ts tests/drive-db-registration.test.ts tests/projection-writer.test.ts",
         "test:cli": "vitest run tests/cli-surface.test.ts tests/runtime-hook-entrypoints.test.ts",
         "test:node-fallback": "vitest run tests/state-db.test.ts tests/runtime-portability.test.ts",
         typecheck: "tsc --noEmit",
@@ -36,22 +36,22 @@ const validDocs: RuntimePortabilityDoc[] = [
   },
   {
     path: "src/state-db/index.ts",
-    text: 'nodeRequire("bun:sqlite"); nodeRequire("node:sqlite");',
+    text: 'nodeRequire("node:sqlite");',
   },
   { path: "src/runtime/adapter.ts", text: "export const adapter = true;" },
   { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
   {
     path: "scripts/ut-tdd",
-    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec bun run "$ROOT/src/cli.ts" "$@"\n',
+    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec node "$ROOT/dist/ut-tdd.mjs" "$@"\n',
   },
   {
     path: "scripts/ut-tdd.ps1",
-    text: '$root = "."\n& "$root\\dist\\ut-tdd.exe" @args\n& bun run (Join-Path $root "src\\cli.ts") @args\n',
+    text: '$root = "."\n$cli = Join-Path $root "dist\\ut-tdd.mjs"\n& node $cli @args\n',
   },
 ];
 
 describe("runtime-portability lint", () => {
-  it("U-RPORT-001: accepts TS/Bun core with Node types and thin wrappers", () => {
+  it("U-RPORT-001: accepts a compiled Node ESM core with Node types and thin wrappers", () => {
     const result = analyzeRuntimePortability(validDocs);
 
     expect(result.ok).toBe(true);
@@ -119,14 +119,14 @@ describe("runtime-portability lint", () => {
     expect(result.violations.map((v) => v.rule)).toEqual(
       expect.arrayContaining([
         "package-missing-esm",
-        "package-missing-bun-engine",
-        "package-bin-not-source-cli",
+        "package-node-engine-invalid",
+        "package-bin-not-compiled-cli",
         "package-missing-compiled-build",
-        "package-missing-node-fallback-smoke",
+        "package-missing-node-runtime-smoke",
         "package-missing-typecheck",
         "tsconfig-not-strict",
         "tsconfig-missing-node-types",
-        "sqlite-driver-fallback-missing",
+        "sqlite-node-runtime-invalid",
       ]),
     );
   });
@@ -137,12 +137,12 @@ describe("runtime-portability lint", () => {
     expect(result.violations).toEqual([]);
   });
 
-  it("U-RPORT-009: rejects bin contracts that require dist before bun link", () => {
+  it("U-RPORT-009: rejects bin contracts that bypass the compiled Node entrypoint", () => {
     const packageDoc = validDocs.find((doc) => doc.path === "package.json");
     const pkg = JSON.parse(packageDoc?.text ?? "{}") as {
       bin?: Record<string, string>;
     };
-    pkg.bin = { "ut-tdd": "./dist/ut-tdd" };
+    pkg.bin = { "ut-tdd": "./src/cli.ts" };
 
     const result = analyzeRuntimePortability([
       ...validDocs.filter((doc) => doc.path !== "package.json"),
@@ -150,7 +150,7 @@ describe("runtime-portability lint", () => {
     ]);
 
     expect(result.ok).toBe(false);
-    expect(result.violations.map((v) => v.rule)).toContain("package-bin-not-source-cli");
+    expect(result.violations.map((v) => v.rule)).toContain("package-bin-not-compiled-cli");
   });
 
   it("U-RPORT-004A: POSIX entrypoint remains a thin sh wrapper for Linux", () => {
@@ -163,8 +163,8 @@ describe("runtime-portability lint", () => {
       expect.stringContaining("POSIX entrypoint"),
       "set -e",
     ]);
-    expect(wrapper).toContain('exec "$ROOT/dist/ut-tdd" "$@"');
-    expect(wrapper).toContain('exec bun run "$ROOT/src/cli.ts" "$@"');
+    expect(wrapper).toContain('exec node "$ROOT/dist/ut-tdd.mjs" "$@"');
+    expect(wrapper).not.toMatch(/\bbun\b/i);
   });
 
   it("U-RPORT-005: scans untracked runtime files during active Windows setup work", () => {
@@ -223,7 +223,7 @@ describe("runtime-portability lint", () => {
       ...validDocs,
       {
         path: "scripts/git-hooks/pre-push",
-        text: '#!/usr/bin/env bash\nset -euo pipefail\nbun "$hook_dir/secret-scan-diff.ts"\n',
+        text: '#!/usr/bin/env bash\nset -euo pipefail\nnode "$repo_root/dist/hooks/secret-scan-diff.mjs"\n',
       },
       {
         path: "scripts/git-hooks/secret-scan-diff.ts",
@@ -263,7 +263,7 @@ describe("runtime-portability lint", () => {
     );
   });
 
-  it("U-RPORT-013: rejects a git-hooks pre-push that stops dispatching to the bun scanner", () => {
+  it("U-RPORT-013: rejects a git-hooks pre-push that stops dispatching to the compiled Node scanner", () => {
     const result = analyzeRuntimePortability([
       ...validDocs,
       { path: "scripts/git-hooks/pre-push", text: "#!/usr/bin/env bash\necho no-op\n" },
@@ -282,7 +282,7 @@ describe("runtime-portability lint", () => {
       ...validDocs,
       {
         path: "scripts/git-hooks/pre-push",
-        text: '#!/usr/bin/env bash\nbun "$hook_dir/secret-scan-diff.ts"\n',
+        text: '#!/usr/bin/env bash\nnode "$repo_root/dist/hooks/secret-scan-diff.mjs"\n',
       },
       {
         path: "scripts/git-hooks/secret-scan-diff.ts",

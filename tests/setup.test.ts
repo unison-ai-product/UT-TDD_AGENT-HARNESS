@@ -98,7 +98,7 @@ const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
 };
 
 const baseTemplates: TemplateSet = {
-  "common/ut-tdd.mjs": "#!/usr/bin/env bun\n",
+  "common/ut-tdd.mjs": "#!/usr/bin/env node\n",
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
     "# UT-TDD Agent Harness Adapter",
@@ -373,8 +373,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     const templates = loadTemplates(process.cwd());
     const workflow = templates["common/harness-check.yml"];
     expect(workflow).toContain("github guard");
-    expect(workflow).toContain("bun run typecheck");
-    expect(workflow).toContain("bun run test");
+    expect(workflow).toContain("npm run typecheck");
+    expect(workflow).toContain("npm test");
     expect(workflow).toContain("audit quality --include-tests");
     expect(workflow).toContain("ut-tdd.mjs doctor --setup-smoke");
     expect(workflow).toMatch(/\n {2}pull_request:\n/);
@@ -404,7 +404,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "Agent|Task",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                command: "node .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
                 blockOnFailure: true,
               }),
             ],
@@ -413,7 +413,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "Edit|Write|MultiEdit",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                command: "node .ut-tdd/bin/ut-tdd.mjs hook work-guard",
                 blockOnFailure: true,
               }),
             ],
@@ -421,7 +421,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         ]),
       );
       expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe(
-        "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
+        "node .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
       );
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
@@ -429,7 +429,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "spawn_agent|spawn_agents_on_csv",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                command: "node .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
                 blockOnFailure: true,
               }),
             ],
@@ -438,7 +438,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "apply_patch|write_file",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                command: "node .ut-tdd/bin/ut-tdd.mjs hook work-guard",
                 blockOnFailure: true,
               }),
             ],
@@ -528,14 +528,12 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
     const wrapper = deps.files.get(join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs"));
     expect(wrapper).toContain('const setupSourceCli = "');
-    expect(wrapper).toContain(
-      'const repoLocalHarness = existsSync(repoLocalCli) && existsSync(join(repoRoot, "src", "setup", "index.ts"));',
-    );
+    expect(wrapper).toContain("const repoLocalHarness = existsSync(repoLocalCli);");
     expect(wrapper).toContain(
       "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
     );
     expect(wrapper).toContain(
-      'existsSync(localBin) ? localBin : existsSync(sourceCli) ? "bun" : "ut-tdd"',
+      'existsSync(localBin) ? localBin : existsSync(sourceCli) ? process.execPath : "ut-tdd"',
     );
     expect(wrapper).toContain("[sourceCli, ...process.argv.slice(2)]");
     expect(wrapper).not.toContain("{{UT_TDD_SOURCE_CLI_JSON}}");
@@ -587,7 +585,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     }
   });
 
-  it("U-SETUP-009b3: generated wrapper falls back to setup Pack CLI through bun when local bin is absent", () => {
+  it("U-SETUP-009b3: generated wrapper falls back to the compiled setup Pack CLI through Node", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-source-"));
     try {
       const deps = mockDeps({ repoRoot: repo });
@@ -642,6 +640,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "README.md",
         "LICENSE",
         "package.json",
+        "package-lock.json",
         "src/cli.ts",
         "src/setup/index.ts",
         ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
@@ -738,6 +737,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "README.md",
       "LICENSE",
       "package.json",
+      "package-lock.json",
       "src/cli.ts",
       "src/setup/index.ts",
       ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
@@ -869,7 +869,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
     expect(transformed.scripts["test:pack"]).toContain("tests/distribution-acceptance.test.ts");
     expect(transformed.scripts["test:pack"]).toContain("tests/readability.test.ts");
-    expect(transformed.scripts.test).toBe("bun run test:pack");
+    expect(transformed.scripts.test).toBe("npm run test:pack");
     expect(transformed.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
     expect(transformed.scripts["test:source"]).toBe("vitest run");
     expect(transformed.scripts.typecheck).toBe("tsc --noEmit");
@@ -899,7 +899,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ),
     );
 
-    expect(transformed).toContain("run: bun run test:pack");
+    expect(transformed).toContain("run: npm run test:pack");
     expect(transformed).not.toContain("tests/distribution-acceptance.test.ts");
   });
 
@@ -952,7 +952,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {
     const ready = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "22.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -968,7 +968,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.workspace.monorepo).toBe(true);
     expect(ready.checks.find((c) => c.name === "gh")).toMatchObject({ ok: false });
     expect(ready.checks.find((c) => c.name === "ut-tdd-cli")).toMatchObject({ ok: true });
-    expect(ready.ci.requires).toContain("bun run test");
+    expect(ready.ci.requires).toContain("npm test");
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
     expect(ready.rollback.managedPaths).toContain(".ut-tdd/bin/ut-tdd.mjs");
@@ -988,7 +988,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const standaloneReady = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "22.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -1006,7 +1006,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const customRepo = buildConsumerReadinessPlan({
-      bunVersion: "1.3.0",
+      nodeVersion: "24.0.0",
       hasGit: true,
       hasGh: true,
       hasClaude: false,
@@ -1018,7 +1018,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(customRepo.contracts.tagPin).toBe("github:example/custom-pack#v9.9.9");
 
     const blocked = buildConsumerReadinessPlan({
-      bunVersion: "1.2.9",
+      nodeVersion: "22.12.0",
       hasGit: false,
       hasGh: false,
       hasUtTddCli: false,
@@ -1028,19 +1028,19 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     });
     expect(blocked.ok).toBe(false);
     expect(blocked.checks.filter((c) => !c.ok).map((c) => c.name)).toEqual([
-      "bun>=1.3",
+      "node>=22.13",
       "git",
       "gh",
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`",
+      "Generated Claude/Codex hooks call `node .ut-tdd/bin/ut-tdd.mjs ...`",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Do not rely on a global `bun link`",
+      "Do not rely on a global package link",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Bun itself must still resolve",
+      "Bun, bunx, tsx, and direct TypeScript fallbacks are forbidden",
     );
   });
 

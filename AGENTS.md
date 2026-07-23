@@ -40,7 +40,7 @@ their workflow.
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` - concept for internal rollout
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` - requirements and acceptance criteria
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` - extraction / cutover plan from the source snapshot
-- `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` - redesign policy and TypeScript/Bun implementation language
+- `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` - redesign policy and TypeScript/Node + Rust implementation language
 - `docs/governance/README.md` - canonical / reference / archive boundary under governance
 
 Migration snapshots and inventories are not Core Reads. Read `docs/migration/`
@@ -53,8 +53,8 @@ boundaries when a verification cycle is being run. Normal work follows the
 Forward descent path from L0 to L14.
 
 ADR-001 is binding: The previous framework is a design source only. UT-TDD core implementation is
-TypeScript/Bun. old W1-W3a Python is not ported as product runtime.
-Thin `.ps1` / `.sh` entrypoints may call the compiled or Bun-based TypeScript
+TypeScript/Node with a Rust native companion. old W1-W3a Python is not ported as product runtime.
+Thin `.ps1` / `.sh` entrypoints call the compiled Node ESM
 core. The language of repositories governed by UT-TDD is independent of the
 harness implementation language.
 
@@ -259,7 +259,7 @@ calls.
 
 - Read target files before editing them.
 - When reading tracked prose or source through PowerShell, specify UTF-8 explicitly
-  (for example `Get-Content -Encoding utf8`) or use Node/Bun filesystem reads.
+  (for example `Get-Content -Encoding utf8`) or use Node filesystem reads.
   Do not trust bare `Get-Content` / ANSI-default output for Japanese text; display
   mojibake can become real file corruption if copied back into docs. Repository
   gates enforce UTF-8 no-BOM and mojibake fail-close through `readability`.
@@ -298,7 +298,7 @@ calls.
 (保持者 pid 付き) で fail-fast する。規律:
 
 - exit 2 (already running) は **実行中 doctor の完了を待つ**。再試行しない。
-  起動形を変えた再実行 (`bun -e` / `--json` / `runDoctor` 直呼び) もしない。
+  起動形を変えた再実行 (`node -e` / `--json` / `runDoctor` 直呼び) もしない。
   再試行嵐はマシンを飢餓させる (2026-07-16 incident: doctor 16 本並列、
   物理メモリ残 31MB)。
 - 一部だけ要るなら scoped 実行 (`--scope toolchain`、テスト内の check 関数直呼び)

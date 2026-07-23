@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/hooks/agent-guard.ts",
+            "command": "node dist/hooks/agent-guard.mjs",
             "timeout": 5,
             "statusMessage": "agent guard: block non-allowlisted Codex subagent spawns unless explicitly bypassed (Codex parity)",
             "blockOnFailure": true
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun .claude/hooks/work-guard.ts",
+            "command": "node dist/hooks/work-guard.mjs",
             "timeout": 5,
             "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed (Codex parity, PLAN-L7-139)",
             "blockOnFailure": true
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun src/cli.ts session start",
+            "command": "node dist/ut-tdd.mjs session start",
             "timeout": 5,
             "statusMessage": "session-log: session start (fail-open)"
           }
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun src/cli.ts hook post-tool-use",
+            "command": "node dist/ut-tdd.mjs hook post-tool-use",
             "timeout": 5,
             "statusMessage": "session-log: post tool use (fail-open)"
           }
@@ -57,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun src/cli.ts session summary",
+            "command": "node dist/ut-tdd.mjs session summary",
             "timeout": 5,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }

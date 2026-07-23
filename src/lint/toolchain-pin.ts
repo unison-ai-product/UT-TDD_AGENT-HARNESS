@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 export interface ToolchainPinDocs {
   packageJson: string | null;
-  bunLock: string | null;
+  packageLock: string | null;
 }
 
 export interface ToolchainPinViolation {
@@ -46,14 +46,20 @@ function packageBiomeSpec(packageJson: string | null): string | null {
 
 function lockWorkspaceBiomeSpec(lockText: string | null): string | null {
   if (!lockText) return null;
-  const workspace = lockText.match(/"workspaces"\s*:\s*\{[\s\S]*?\n\s*\},\n\s*"packages"/)?.[0];
-  const match = (workspace ?? lockText).match(/"@biomejs\/biome"\s*:\s*"([^"]+)"/);
-  return match?.[1] ?? null;
+  try {
+    const parsed = JSON.parse(lockText) as {
+      packages?: Record<string, { devDependencies?: Record<string, unknown> }>;
+    };
+    const value = parsed.packages?.[""]?.devDependencies?.[BIOME_PACKAGE];
+    return typeof value === "string" ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 export function analyzeToolchainPin(docs: ToolchainPinDocs): ToolchainPinResult {
   const packageSpec = packageBiomeSpec(docs.packageJson);
-  const lockSpec = lockWorkspaceBiomeSpec(docs.bunLock);
+  const lockSpec = lockWorkspaceBiomeSpec(docs.packageLock);
   const violations: ToolchainPinViolation[] = [];
 
   if (!packageSpec) {
@@ -90,9 +96,9 @@ export function toolchainPinMessages(result: ToolchainPinResult): string[] {
 
 export function loadToolchainPinDocs(repoRoot: string): ToolchainPinDocs {
   const packagePath = join(repoRoot, "package.json");
-  const lockPath = join(repoRoot, "bun.lock");
+  const lockPath = join(repoRoot, "package-lock.json");
   return {
     packageJson: existsSync(packagePath) ? readFileSync(packagePath, "utf8") : null,
-    bunLock: existsSync(lockPath) ? readFileSync(lockPath, "utf8") : null,
+    packageLock: existsSync(lockPath) ? readFileSync(lockPath, "utf8") : null,
   };
 }

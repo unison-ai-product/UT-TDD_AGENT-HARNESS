@@ -1712,11 +1712,11 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `CAND-BUNBAN-018` | submodule/executable binary・untracked release tree | manifest selection内をscan |
 | `CAND-BUNBAN-019` | archive/reference/current Core Readsの同語彙 | currentだけproduction finding、分類欠測Red |
 | `CAND-BUNBAN-020` | runtime observer heartbeat gap/drop/session欠測 | image 0でも`Indeterminate` Red |
-| `CAND-NODEBOOT-001` | Node/version/lock drift | bootstrap拒否 |
-| `CAND-NODEBOOT-002` | clean dependency graph | review済みlock digest一致 |
-| `CAND-NODEBOOT-003` | production TS直実行 | compiled ESM以外を拒否 |
-| `CAND-NODEBOOT-004` | compiled CLI help/status JSON | stdout framingとexit 0 |
-| `CAND-NODEBOOT-005` | compiled CLIからban audit |同一bootstrap receiptで実行 |
+| `U-NODEBOOT-001` | 正常なsealed receipt | Node executable、compiled ESM CLI、lock graph、build policyを単一receiptとして受理 |
+| `U-NODEBOOT-002` | receipt欠落 | ambient processからentrypointを推測せずfail-close |
+| `U-NODEBOOT-003` | compiled CLI／Node executable／package lockのsealed byte drift（3 case） | 対応するdigest mismatchで全変異を拒否 |
+| `U-NODEBOOT-004` | Stop `db-refresh`起動 | sealed Node executable + compiled CLIだけをhidden detached processとしてspawn |
+| `U-NODEBOOT-005` | receipt欠落／stale | process生成0、別runtime／tsx／TS直実行fallback 0 |
 | `CAND-NODEBOOT-006` | SQLite transaction/WAL/type/busy/close corpus | canonical result一致 |
 | `CAND-NODEBOOT-007` | cwd/space path/module resolution変異 | absolute entrypointで決定的に動作 |
 | `CAND-NODEBOOT-008` | stdin/stdout/stderr/exit変異 | bounded channel意味論保持 |
@@ -1725,4 +1725,7 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `CAND-NODEBOOT-011` | repeated clean build | file set/digest決定的 |
 | `CAND-NODEBOOT-012` | targeted test実行 | Node worker imageだけを観測 |
 
-このpairは候補oracleであり、実装sliceで対応test codeを追加する同じcommitに限って正式`U-*`へpromoteする。旧Bun test Green、単純grep、observer欠測、既存debtのallowlist化を証拠に数えない。
+`U-NODEBOOT-001..005`は`tests/node-self-host-bootstrap.test.ts`と対応実装を同じsliceへ追加したため正式昇格済みである。
+正式IDは5件、`U-NODEBOOT-003`の3変異を展開したテスト実数は7件である。残る`CAND-BUNBAN-001..020`と
+`CAND-NODEBOOT-006..012`は候補oracleのままであり、対応test codeを追加する同じcommitに限って正式`U-*`へpromoteする。
+旧Bun test Green、単純grep、observer欠測、既存debtのallowlist化を証拠に数えない。

@@ -77,7 +77,7 @@ main() {
   local status=0
   (
     cd "$repo_root"
-    printf '%s\n' "$entries" | bun "${hook_dir}/secret-scan-diff.ts"
+    printf '%s\n' "$entries" | node "${repo_root}/dist/hooks/secret-scan-diff.mjs"
   ) || status=$?
 
   exit "$status"

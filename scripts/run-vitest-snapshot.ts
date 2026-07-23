@@ -22,7 +22,13 @@ function run(
   cwd: string,
   env = process.env,
 ): void {
-  const result = spawnSync(command, args, { cwd, env, stdio: "inherit" });
+  const result = spawnSync(command, args, {
+    cwd,
+    env,
+    stdio: "inherit",
+    windowsHide: true,
+    shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(command),
+  });
   if (result.status !== 0 || result.error) {
     throw new Error(
       `${command} ${args.join(" ")} failed: ${result.error?.message ?? result.status}`,
@@ -31,14 +37,19 @@ function run(
 }
 
 function output(command: string, args: string[], cwd: string): string | null {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8" });
+  const result = spawnSync(command, args, { cwd, encoding: "utf8", windowsHide: true });
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-export function resolveBunBinary(
-  runtime = (globalThis as { Bun?: { which?: (command: string) => string | undefined } }).Bun,
-): string {
-  return runtime?.which?.("bun") ?? (process.versions.bun ? process.execPath : "bun");
+export function resolveNodeBinary(): string {
+  if (!/^(node|node\.exe)$/i.test(process.execPath.split(/[\\/]/).at(-1) ?? "")) {
+    throw new Error("snapshot runner requires the Node executable");
+  }
+  return process.execPath;
+}
+
+export function resolveNpmBinary(): string {
+  return process.platform === "win32" ? "npm.cmd" : "npm";
 }
 
 export function canonicalPath(path: string): string {
@@ -61,9 +72,6 @@ export function resolveSnapshotSource(repoRoot: string): SnapshotSource {
 export function removeSnapshot(snapshotRoot: string, remove = rmSync): void {
   const failures: unknown[] = [];
   try {
-    (globalThis as { Bun?: { gc?: (force?: boolean) => void } }).Bun?.gc?.(
-      true,
-    );
     remove(snapshotRoot, {
       recursive: true,
       force: true,
@@ -252,13 +260,15 @@ export function runSnapshotTests(
   let primaryError: unknown;
   let sealedReferenceFingerprint: string | undefined;
   try {
-    const bun = resolveBunBinary();
+    const node = resolveNodeBinary();
+    const npm = resolveNpmBinary();
     const source = resolveSnapshotSource(repoRoot);
     createSnapshot(repoRoot, snapshotRoot, source);
     createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot));
     if (source.kind === "copy") assertSnapshotContentMatch(snapshotRoot, referenceRoot);
-    run(bun, ["install", "--frozen-lockfile"], snapshotRoot);
-    run(bun, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
+    run(npm, ["ci", "--ignore-scripts"], snapshotRoot);
+    run(npm, ["run", "build"], snapshotRoot);
+    run(node, ["dist/ut-tdd.mjs", "db", "rebuild"], snapshotRoot);
     copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);
     if (source.kind === "git")
       run(
@@ -268,13 +278,13 @@ export function runSnapshotTests(
     );
     sealReference(referenceRoot);
     sealedReferenceFingerprint = snapshotContentFingerprint(referenceRoot);
-    run(bun, ["x", "vitest", "run", ...args], snapshotRoot, {
+    run(node, ["node_modules/vitest/vitest.mjs", "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
       UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
       UT_TDD_TEST_FENCE_ROOT: repoRoot,
       UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
-      UT_TDD_BUN_BINARY: bun,
+      UT_TDD_NODE_BINARY: node,
       UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
       UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
     });

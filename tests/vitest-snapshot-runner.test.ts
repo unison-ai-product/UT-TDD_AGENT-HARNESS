@@ -19,7 +19,7 @@ import {
   createSnapshot,
   finishSnapshotCleanup,
   removeSnapshot,
-  resolveBunBinary,
+  resolveNodeBinary,
   resolveSnapshotSource,
   sealReference,
   snapshotContentFingerprint,
@@ -28,8 +28,8 @@ import {
 import { removeTestTree } from "./support/temp-tree";
 
 describe("vitest snapshot runner", () => {
-  it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {
-    expect(resolveBunBinary({ which: () => "/runtime/bun" })).toBe("/runtime/bun");
+  it("U-TESTHYGIENE-047: resolves the absolute Node executable used by the compiled runner", () => {
+    expect(resolveNodeBinary()).toBe(process.execPath);
   });
 
   it("U-TESTHYGIENE-045: rejects watch arguments because an execution snapshot cannot observe live edits", () => {

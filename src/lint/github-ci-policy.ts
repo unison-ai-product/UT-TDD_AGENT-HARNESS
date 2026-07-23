@@ -126,25 +126,27 @@ const PULL_REQUEST_ACTIVITY_TYPES = new Set([
 
 const SOURCE_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
-  { label: "setup-bun@v2", any: ["oven-sh/setup-bun@v2"] },
-  { label: "frozen install", any: ["bun install --frozen-lockfile"] },
+  { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
+  { label: "frozen install", any: ["npm ci"] },
+  { label: "compiled Node build", any: ["npm run build"] },
   { label: "github guard", any: ["github guard"] },
-  { label: "typecheck", any: ["bun run typecheck"] },
+  { label: "typecheck", any: ["npm run typecheck"] },
   { label: "db rebuild", any: ["db rebuild"] },
-  { label: "full tests", any: ["bun run test"] },
-  { label: "lint", any: ["bun run lint"] },
+  { label: "full tests", any: ["npm run test"] },
+  { label: "lint", any: ["npm run lint"] },
   { label: "audit quality", any: ["audit quality"] },
-  { label: "full doctor", any: ["src/cli.ts doctor"] },
+  { label: "full doctor", any: ["dist/ut-tdd.mjs doctor"] },
 ] as const;
 
 const PACK_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
-  { label: "setup-bun@v2", any: ["oven-sh/setup-bun@v2"] },
-  { label: "frozen install", any: ["bun install --frozen-lockfile"] },
-  { label: "typecheck", any: ["bun run typecheck"] },
-  { label: "pack tests", any: ["bun run test:pack"] },
-  { label: "lint", any: ["bun run lint"] },
-  { label: "setup projection", any: ["src/cli.ts setup --solo"] },
+  { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
+  { label: "frozen install", any: ["npm ci"] },
+  { label: "compiled Node build", any: ["npm run build"] },
+  { label: "typecheck", any: ["npm run typecheck"] },
+  { label: "pack tests", any: ["npm run test:pack"] },
+  { label: "lint", any: ["npm run lint"] },
+  { label: "setup projection", any: ["dist/ut-tdd.mjs setup --solo"] },
   { label: "setup smoke doctor", any: ["doctor --setup-smoke"] },
 ] as const;
 
@@ -167,13 +169,13 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
       },
       {
         reason: "forbidden_raw_vitest",
-        detail: "Pack CI must use bun run test:pack instead of raw vitest run",
+        detail: "Pack CI must use npm run test:pack instead of raw vitest run",
         matches: (step) => /\bvitest\s+run\b/.test(step.run ?? ""),
       },
       {
         reason: "forbidden_source_full_tests",
-        detail: "Pack CI must use bun run test:pack instead of source full bun run test",
-        matches: (step) => /\bbun\s+run\s+test\b(?!:)/.test(step.run ?? ""),
+        detail: "Pack CI must use npm run test:pack instead of source full npm run test",
+        matches: (step) => /\bnpm\s+run\s+test\b(?!:)/.test(step.run ?? ""),
       },
     ],
   },

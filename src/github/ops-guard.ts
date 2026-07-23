@@ -131,7 +131,7 @@ export function buildReleasePublicationPlan(input: {
     dryRun,
     commands: [
       `git tag -a ${tag} -m "release ${tag}"`,
-      `bun src/cli.ts distribution package --tag ${tag}`,
+      `node dist/ut-tdd.mjs distribution package --tag ${tag}`,
       `gh release create ${tag} ${tarball} ${tarball}.sha256 ${tarball}.sig --repo ${repo} --verify-tag --notes-file .ut-tdd/release/${tag}.manifest.json`,
     ],
     externalPublishRequiresApproval: true,

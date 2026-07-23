@@ -22,12 +22,12 @@ Claude Code read priority is `../CLAUDE.md` -> this file ->
 Active hooks in `.claude/settings.json` must call package-local UT-TDD commands
 only. Do not enable hooks that depend on personal legacy runtime paths.
 
-- `PreToolUse(Agent|Task)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`
-- `PreToolUse(Edit|Write|MultiEdit)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"`
-- `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`
-- `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`
-- `Stop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary`
-- `SubagentStop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook subagent-stop`
+- `PreToolUse(Agent|Task)`: `node "$CLAUDE_PROJECT_DIR/dist/hooks/agent-guard.mjs"`
+- `PreToolUse(Edit|Write|MultiEdit)`: `node "$CLAUDE_PROJECT_DIR/dist/hooks/work-guard.mjs"`
+- `SessionStart`: `node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session start`
+- `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)`: `node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" hook post-tool-use`
+- `Stop`: `node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session summary`
+- `SubagentStop`: `node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" hook subagent-stop`
 
 Historical behavior may be referenced for migration, but implementation must
 live in UT-TDD-owned paths.
@@ -38,7 +38,7 @@ live in UT-TDD-owned paths.
 concurrent run fail-fasts with exit 2 and the holder's pid. Rules:
 
 - exit 2 (already running) means **wait for the running doctor**; do not retry,
-  do not re-launch with a different invocation form (`bun -e`, `--json`, direct
+  do not re-launch with a different invocation form (`node -e`, `--json`, direct
   `runDoctor`). Retry storms starve the machine (2026-07-16 incident: 16
   concurrent doctors, 31MB free RAM).
 - Prefer scoped/targeted checks (`--scope toolchain`, direct check functions in
@@ -112,7 +112,7 @@ plain fenced command for a human to run if the native tool is unavailable.
 `PreToolUse(Agent|Task)` uses:
 
 ```bash
-bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"
+node "$CLAUDE_PROJECT_DIR/dist/hooks/agent-guard.mjs"
 ```
 
 Rules:
@@ -196,7 +196,7 @@ as read-only material.
 ## Cutover Boundary
 
 UT-TDD imports design concepts from previous framework but current product code is
-TypeScript/Bun. Do not describe legacy Python modules or legacy commands as the
+TypeScript/Node with a Rust native companion. Do not describe legacy Python modules or legacy commands as the
 current operating path.
 
 Current cutover evidence:
@@ -209,7 +209,7 @@ Current cutover evidence:
 
 ## Local Preconditions
 
-- `bun` is available on PATH.
+- Node and npm are available on PATH; compiled ESM has been built from `package-lock.json`.
 - `CLAUDE_PROJECT_DIR` points to the repository root during hook execution.
 - `.ut-tdd/` is writable generated runtime state.
 - `.claude/settings.json` uses package-local commands only.

@@ -7,11 +7,11 @@ import {
 } from "../src/doctor/setup-smoke";
 
 const requiredCommands = [
-  "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs session start",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
-  "bun .ut-tdd/bin/ut-tdd.mjs session summary",
+  "node .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+  "node .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+  "node .ut-tdd/bin/ut-tdd.mjs session start",
+  "node .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
+  "node .ut-tdd/bin/ut-tdd.mjs session summary",
 ] as const;
 
 function hooksJson(commands: readonly string[]) {
@@ -26,13 +26,13 @@ function setupSmokeDeps(overrides: Record<string, string | null> = {}): SetupSmo
   const root = "/repo";
   const files = new Map<string, string>(
     Object.entries({
-      ".ut-tdd/bin/ut-tdd.mjs": "#!/usr/bin/env bun\nconsole.log('ut-tdd');\n",
+      ".ut-tdd/bin/ut-tdd.mjs": "#!/usr/bin/env node\nconsole.log('compiled cli');\n",
       "AGENTS.md": "# Agents\n",
       "CLAUDE.md": "# Claude\n",
       ".claude/CLAUDE.md": "# Claude runtime\n",
       ".claude/settings.json": hooksJson([
         ...requiredCommands,
-        "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
+        "node .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
       ]),
       ".codex/config.toml": "[features]\nhooks = true\n",
       ".codex/hooks.json": hooksJson(requiredCommands),
@@ -57,13 +57,13 @@ describe("doctor setup-smoke direct checks", () => {
     const commands = collectHookCommands(
       JSON.stringify({
         hooks: {
-          SessionStart: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] }],
+          SessionStart: [{ hooks: [{ command: "node .ut-tdd/bin/ut-tdd.mjs session start" }] }],
           Stop: [
             {
               hooks: [
                 { command: "" },
                 {},
-                { command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" },
+                { command: "node .ut-tdd/bin/ut-tdd.mjs session summary" },
               ],
             },
           ],
@@ -72,8 +72,8 @@ describe("doctor setup-smoke direct checks", () => {
     );
 
     expect(commands).toEqual([
-      "bun .ut-tdd/bin/ut-tdd.mjs session start",
-      "bun .ut-tdd/bin/ut-tdd.mjs session summary",
+      "node .ut-tdd/bin/ut-tdd.mjs session start",
+      "node .ut-tdd/bin/ut-tdd.mjs session summary",
     ]);
   });
 
@@ -94,7 +94,7 @@ describe("doctor setup-smoke direct checks", () => {
     const result = checkSetupSmoke(setupSmokeDeps());
 
     expect(result.ok).toBe(true);
-    expect(result.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+    expect(result.messages).toEqual(["doctor: setup-smoke - OK (checked=23, failed=0)"]);
   });
 
   it("rejects template placeholder residue in the project-local wrapper", () => {
@@ -106,5 +106,16 @@ describe("doctor setup-smoke direct checks", () => {
 
     expect(result.ok).toBe(false);
     expect(result.messages.join("\n")).toContain("missing wrapper-placeholder-free");
+  });
+
+  it("rejects Bun and direct-TypeScript fallback in the project-local wrapper", () => {
+    const result = checkSetupSmoke(
+      setupSmokeDeps({
+        ".ut-tdd/bin/ut-tdd.mjs": "#!/usr/bin/env node\nspawnSync('bun', ['src/cli.ts']);\n",
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.messages.join("\n")).toContain("missing wrapper-node-compiled-only");
   });
 });

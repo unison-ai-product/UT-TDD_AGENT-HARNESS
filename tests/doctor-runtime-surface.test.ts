@@ -16,17 +16,17 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
         hooks: {
           SessionStart: [
             {
-              hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start' }],
+              hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session start' }],
             },
           ],
           PostToolUse: [
             {
-              hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use' }],
+              hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" hook post-tool-use' }],
             },
           ],
           Stop: [
             {
-              hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary' }],
+              hooks: [{ command: 'node "$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs" session summary' }],
             },
           ],
         },

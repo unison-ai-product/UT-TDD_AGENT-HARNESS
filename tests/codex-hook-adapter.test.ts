@@ -26,24 +26,26 @@ function validCodexHooks(): Record<string, unknown> {
         {
           matcher: "apply_patch|write_file",
           hooks: [
-            { type: "command", command: "bun .claude/hooks/work-guard.ts", blockOnFailure: true },
+            { type: "command", command: "node dist/hooks/work-guard.mjs", blockOnFailure: true },
           ],
         },
         {
           matcher: "spawn_agent|spawn_agents_on_csv",
           hooks: [
-            { type: "command", command: "bun .claude/hooks/agent-guard.ts", blockOnFailure: true },
+            { type: "command", command: "node dist/hooks/agent-guard.mjs", blockOnFailure: true },
           ],
         },
       ],
-      SessionStart: [{ hooks: [{ type: "command", command: "bun src/cli.ts session start" }] }],
+      SessionStart: [
+        { hooks: [{ type: "command", command: "node dist/ut-tdd.mjs session start" }] },
+      ],
       PostToolUse: [
         {
           matcher: "apply_patch|write_file|exec_command|local_shell",
-          hooks: [{ type: "command", command: "bun src/cli.ts hook post-tool-use" }],
+          hooks: [{ type: "command", command: "node dist/ut-tdd.mjs hook post-tool-use" }],
         },
       ],
-      Stop: [{ hooks: [{ type: "command", command: "bun src/cli.ts session summary" }] }],
+      Stop: [{ hooks: [{ type: "command", command: "node dist/ut-tdd.mjs session summary" }] }],
     },
   };
 }
@@ -242,12 +244,27 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
     const broken = validCodexHooks() as {
       hooks: { Stop: { hooks: { command: string }[] }[] };
     };
-    // 'src/cli.tsx' は 'src/cli.ts' を部分文字列に含むが別ファイル。token 完全一致なら弾ける。
-    broken.hooks.Stop[0].hooks[0].command = "bun src/cli.tsx session summary";
+    // 'dist/ut-tdd.mjsx' は正規 compiled path を部分文字列に含むが別ファイル。
+    broken.hooks.Stop[0].hooks[0].command = "node dist/ut-tdd.mjsx session summary";
     const r = analyzeCodexHookAdapter({ codexHooksJson: json(broken) });
     expect(r.ok).toBe(false);
     expect(
       r.violations.some((v) => v.hook === "session-summary" && v.reason === "missing_hook"),
     ).toBe(true);
+  });
+
+  it("U-CXHOOK-015: Bun / TypeScript 直実行は compiled Node entrypoint を満たさない", () => {
+    for (const command of [
+      "bun dist/ut-tdd.mjs session summary",
+      "node src/cli.ts session summary",
+    ]) {
+      const broken = validCodexHooks() as {
+        hooks: { Stop: { hooks: { command: string }[] }[] };
+      };
+      broken.hooks.Stop[0].hooks[0].command = command;
+      const r = analyzeCodexHookAdapter({ codexHooksJson: json(broken) });
+      expect(r.ok).toBe(false);
+      expect(r.violations).toContainEqual({ hook: "session-summary", reason: "missing_hook" });
+    }
   });
 });

@@ -1,5 +1,5 @@
 type VerificationProfileId =
-  | "bun-unit"
+  | "node-unit"
   | "doctor"
   | "mcp-inspector-smoke"
   | "playwright-mcp"

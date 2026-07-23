@@ -25,6 +25,7 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
   "scripts/ut-tdd",
   "scripts/ut-tdd.ps1",
   "scripts/run-vitest-snapshot.ts",
+  "scripts/build-node.mjs",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
 
@@ -34,7 +35,7 @@ function usesVitestEntrypoint(
 ): boolean {
   return (
     VITEST_ENTRYPOINT.test(script ?? "") ||
-    (script === "bun run test:vitest-snapshot" &&
+    (script === "npm run test:vitest-snapshot" &&
       VITEST_ENTRYPOINT.test(scripts?.["test:vitest-snapshot"] ?? ""))
   );
 }
@@ -88,7 +89,7 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
   const pkg = jsonDoc<{
     bin?: string | Record<string, string>;
     type?: string;
-    engines?: { bun?: string; node?: string };
+    engines?: { bun?: string; node?: string; npm?: string };
     scripts?: Record<string, string>;
   }>(doc);
   const path = doc?.path ?? "package.json";
@@ -111,15 +112,15 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "TypeScript runtime package must use ESM module semantics.",
     });
   }
-  if (!pkg.engines?.bun) {
+  if (!pkg.engines?.node || pkg.engines?.bun) {
     violations.push({
       path,
       line: 1,
-      rule: "package-missing-bun-engine",
-      message: "ADR-001 runtime contract must declare the Bun engine.",
+      rule: "package-node-engine-invalid",
+      message: "The runtime contract must declare Node and must not declare Bun.",
     });
   }
-  if (!/\bbun\s+build\b.*--compile\b/.test(pkg.scripts?.build ?? "")) {
+  if (pkg.scripts?.build !== "node scripts/build-node.mjs") {
     violations.push({
       path,
       line: 1,
@@ -128,13 +129,12 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
     });
   }
   const binPath = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.["ut-tdd"];
-  if (binPath !== "./src/cli.ts") {
+  if (binPath !== "./dist/ut-tdd.mjs") {
     violations.push({
       path,
       line: 1,
-      rule: "package-bin-not-source-cli",
-      message:
-        "Package bin.ut-tdd must point at ./src/cli.ts so bun link exposes the CLI before a local dist build.",
+      rule: "package-bin-not-compiled-cli",
+      message: "Package bin.ut-tdd must point at the reviewed compiled Node ESM entrypoint.",
     });
   }
   if (!/\btsc\s+--noEmit\b/.test(pkg.scripts?.typecheck ?? "")) {
@@ -199,8 +199,8 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
     violations.push({
       path,
       line: 1,
-      rule: "package-missing-node-fallback-smoke",
-      message: "Node fallback behavior must have a named smoke test script.",
+      rule: "package-missing-node-runtime-smoke",
+      message: "Node runtime behavior must have a named smoke test script.",
     });
   }
   return violations;
@@ -298,12 +298,12 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
         message: "git-hooks entrypoints must not reintroduce Python runtime dispatch.",
       });
     }
-    if (!/\bbun\b/.test(doc.text) || !doc.text.includes("secret-scan-diff.ts")) {
+    if (!/\bnode\b/.test(doc.text) || !doc.text.includes("secret-scan-diff.mjs")) {
       violations.push({
         path,
         line: 1,
         rule: "git-hook-entrypoint-not-thin",
-        message: `${GIT_HOOK_DISPATCHER_PATH} must stay a thin bun dispatcher to ${GIT_HOOK_SCANNER_PATH}, not reimplement scan logic.`,
+        message: `${GIT_HOOK_DISPATCHER_PATH} must stay a thin Node dispatcher to the compiled secret scanner, not reimplement scan logic.`,
       });
     }
   }
@@ -315,18 +315,21 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       message: `${GIT_HOOK_SCANNER_PATH} must reuse src/lint/secret-scan.ts detection logic, not reimplement it.`,
     });
   }
-  if (ALLOWED_SCRIPT_WRAPPERS.has(path) && path !== "scripts/run-vitest-snapshot.ts") {
+  if (
+    ALLOWED_SCRIPT_WRAPPERS.has(path) &&
+    !["scripts/run-vitest-snapshot.ts", "scripts/build-node.mjs"].includes(path)
+  ) {
     const lines = scriptNonCommentLines(doc.text);
     if (
       lines.length > 12 ||
-      !/src[\\/]cli\.ts/.test(doc.text) ||
-      !/dist[\\/]+ut-tdd/.test(doc.text)
+      !/\bnode\b/.test(doc.text) ||
+      !/dist[\\/]+ut-tdd\.mjs/.test(doc.text)
     ) {
       violations.push({
         path,
         line: 1,
         rule: "script-wrapper-not-thin",
-        message: "Script wrappers must only dispatch to dist/ut-tdd or src/cli.ts.",
+        message: "Script wrappers must only dispatch Node to dist/ut-tdd.mjs without fallback.",
       });
     }
     if (/\bpython(?:3)?\b/.test(doc.text)) {
@@ -373,16 +376,16 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
   return violations;
 }
 
-function sqliteFallbackViolations(docs: RuntimePortabilityDoc[]): RuntimePortabilityViolation[] {
+function sqliteRuntimeViolations(docs: RuntimePortabilityDoc[]): RuntimePortabilityViolation[] {
   const stateDb = docs.find((doc) => normalizePath(doc.path) === "src/state-db/index.ts");
   if (!stateDb) return [];
-  if (stateDb.text.includes("bun:sqlite") && stateDb.text.includes("node:sqlite")) return [];
+  if (!stateDb.text.includes("bun:sqlite") && stateDb.text.includes("node:sqlite")) return [];
   return [
     {
       path: stateDb.path,
       line: 1,
-      rule: "sqlite-driver-fallback-missing",
-      message: "SQLite adapter must keep both bun:sqlite and node:sqlite drivers visible.",
+      rule: "sqlite-node-runtime-invalid",
+      message: "SQLite adapter must use node:sqlite and must not retain a Bun driver path.",
     },
   ];
 }
@@ -393,7 +396,7 @@ export function analyzeRuntimePortability(docs: RuntimePortabilityDoc[]): Runtim
     ...packageViolations(byPath.get("package.json")),
     ...tsconfigViolations(byPath.get("tsconfig.json")),
     ...docs.flatMap(analyzeRuntimeDoc),
-    ...sqliteFallbackViolations(docs),
+    ...sqliteRuntimeViolations(docs),
   ];
   return { checked: docs.length, violations, ok: violations.length === 0 };
 }
@@ -404,7 +407,7 @@ export function analyzeRuntimePortability(docs: RuntimePortabilityDoc[]): Runtim
  * 既知 prefix のみ降下するので node_modules / dist / .git を走査しない。
  */
 function walkRuntimeFiles(repoRoot: string): string[] {
-  const acc: string[] = ["package.json", "tsconfig.json", "bun.lock"];
+  const acc: string[] = ["package.json", "package-lock.json", "tsconfig.json"];
   const descend = (rel: string): void => {
     const abs = join(repoRoot, rel);
     if (!existsSync(abs)) return;
