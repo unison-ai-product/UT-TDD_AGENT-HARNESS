@@ -4,7 +4,7 @@ title: "PLAN-L6-88 (redesign): snapshot runner 性能基盤 — immutable prepar
   run-local COW / heavy-I/O scheduler"
 kind: add-design
 layer: L6
-drive: agent
+drive: be
 route_signal: design_correction
 route_mode: redesign
 created: 2026-07-17
@@ -45,18 +45,18 @@ supersedes:
   - PLAN-L4-31-nfr-verification-foundation-architecture
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e50999e6a1f6b27678560111d5ccfe3a
-  command_id: redesign:issue-98:l4-31-l6-88:revision-2:replacement
-  admitted_at: 2026-07-23T05:00:00.000Z
-  source_digest: sha256:42ea26f3a2888682fe33bd6caf9ecbfda2cff52fb392a718f0658565685ac88e
-  decision_digest: sha256:58cfc85bb7f419f744cd3bf7b918dfb88fdfe7bd4aea08b874508c4771c5832a
-  receipt_digest: sha256:e8e9d47b01baea6b99016f4a7860b17e4ed658135133e26ae6108040e64319d7
+  receipt_id: certificate:71f0a3a8b484c1ada1fd6bf7ee97c88f
+  command_id: redesign:issue-98:l4-31-l6-88:revision-3-drive-be:replacement
+  admitted_at: 2026-07-23T06:00:00.000Z
+  source_digest: sha256:06b440bc2ef83a549ec09fd075998659baa3d488f3c1025ea613eb220834a81e
+  decision_digest: sha256:e105e879a824a16e4c50a35b418e145f6d684e8accaf0d657a9927f1561facfb
+  receipt_digest: sha256:5e83df663887f932823d0b2f24b7962d6462d85bc78fe704d14f29c51b9b9ea1
   binding:
     path: docs/plans/PLAN-L6-88-snapshot-runner-performance-redesign.md
     plan_id: PLAN-L6-88-snapshot-runner-performance-redesign
     asset_id: plan:legacy:48d2e91e9b04be86041dc414fb64e026f3672a21dc6e41c2982f7505f111965c
-    revision: 2
-    content_digest: sha256:42ea26f3a2888682fe33bd6caf9ecbfda2cff52fb392a718f0658565685ac88e
+    revision: 3
+    content_digest: sha256:06b440bc2ef83a549ec09fd075998659baa3d488f3c1025ea613eb220834a81e
   route:
     signal: design_correction
     mode: redesign
@@ -67,8 +67,8 @@ admission_receipt:
     projection_digest: sha256:4ed591f7090abcbe2b67a9ba21d9f7f08e2f0351b33012d1b839fcfcbc72456b
   origin:
     plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
-    revision: 1
-    digest: sha256:31338ff31c925b41f6482ed4c9823f922f77ba662086d184fe8a1eca31cbd621
+    revision: 2
+    digest: sha256:1da0d5ed46fcdaf987da9c3ed29191e85b98323cf12b3a45e07353ae145ec20d
   transition:
     direction: design_to_implementation
     implementation_disposition: discarded
@@ -77,10 +77,9 @@ admission_receipt:
       target_revision: 1
   reentry:
     target_plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #98 snapshot runner performance architecture requires
-    redesign before implementation"
+  escape_reason: "Issue #98 parent drive alignment: L6-88 inherits be from L4-31"
   supersedes:
     - PLAN-L4-31-nfr-verification-foundation-architecture
 ---

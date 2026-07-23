@@ -44,17 +44,17 @@ sub_doc: architecture
 github_issue_id: 129
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4c427549f3d2481dccb480287758190a
-  command_id: redesign:issue-98:l4-31-l6-88:revision-2:origin
-  admitted_at: 2026-07-23T05:00:00.000Z
+  receipt_id: certificate:69027766a728d115d9969efac0ff4d37
+  command_id: redesign:issue-98:l4-31-l6-88:revision-3-drive-be:origin
+  admitted_at: 2026-07-23T06:00:00.000Z
   source_digest: sha256:e7c45da54a6a6cc1d31e7c32fb218a2e3e98b52dda17662581175684d28cce78
-  decision_digest: sha256:2ba69748f1d1ab701cbc9577d2bc009edbbd85d598e46bcf848a43a15cc4bac9
-  receipt_digest: sha256:42f8071009eecd41e2cbd39d94a93a917f50267c0328424e7c89a5dbe0f74a9b
+  decision_digest: sha256:3624645fbcee08e14ed2fcf117969aa62de8449c024297ad0998b54619565013
+  receipt_digest: sha256:008aecd4bb297b132a69263bd54a351a788bc6046716bc4e6f19c6439fb6aa2c
   binding:
     path: docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md
     plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
     asset_id: plan:legacy:850550bc4124bc51426c3458d90cee22d56a80e0e0a08073829429d0a0889ff7
-    revision: 2
+    revision: 3
     content_digest: sha256:e7c45da54a6a6cc1d31e7c32fb218a2e3e98b52dda17662581175684d28cce78
   route:
     signal: feature_addition
@@ -66,14 +66,13 @@ admission_receipt:
     projection_digest: sha256:338bd795bb17ee6ea5f5ef67bc52495e3102e1a3402c1a8646d539ad1076d9fb
   origin:
     plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
-    revision: 1
-    digest: sha256:31338ff31c925b41f6482ed4c9823f922f77ba662086d184fe8a1eca31cbd621
+    revision: 2
+    digest: sha256:1da0d5ed46fcdaf987da9c3ed29191e85b98323cf12b3a45e07353ae145ec20d
   reentry:
     target_plan_id: PLAN-L4-31-nfr-verification-foundation-architecture
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: "Issue #98 redesign origin correction and explicit replacement
-    back-reference"
+  escape_reason: "Issue #98 revision 3 origin receipt refresh for drive correction"
 ---
 
 # PLAN-L4-31 (add-design): 非機能検証基盤の方式設計
