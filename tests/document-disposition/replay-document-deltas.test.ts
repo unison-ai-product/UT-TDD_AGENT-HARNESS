@@ -3,6 +3,7 @@ import {
   createDocumentDeltaDecision,
   createDocumentDeltaEvent,
   type DocumentDelta,
+  type DocumentDeltaDecisionDraft,
   type DocumentDeltaPayload,
   documentDeltaChainDigest,
   type ReplayDocumentDeltasInput,
@@ -327,7 +328,17 @@ describe("replayDocumentDeltas U-DOCLEDGER-005", () => {
       event({ deltaId: "d1", sequence: 0, kind: "add", after: member("docs/a.md") }, null),
     ).toThrow("document-delta-identity-invalid");
     expect(() =>
-      event({ deltaId: "d1", sequence: 1, kind: "add", after: member("../a.md") }, null),
+      createDocumentDeltaEvent({
+        deltaId: "d1",
+        ledgerId: "ledger",
+        fromSnapshotDigest: "baseline",
+        toSnapshotDigest: "final",
+        sequence: 1,
+        kind: "add",
+        after: member("../a.md"),
+        decisionDigest: "decision",
+        previousEventDigest: null,
+      }),
     ).toThrow("document-delta-member-invalid");
     expect(() =>
       createDocumentDeltaEvent({
@@ -363,5 +374,64 @@ describe("replayDocumentDeltas U-DOCLEDGER-005", () => {
     });
     const result = replayDocumentDeltas({ ...input, decisions: [foreign] });
     expect(result.findings[0]).toMatchObject({ reasonCode: "decision-mismatch" });
+  });
+
+  it.each([
+    {
+      name: "addにbeforeがある",
+      mutate: (draft: DocumentDeltaDecisionDraft) => ({
+        ...draft,
+        before: member("docs/old.md"),
+      }),
+    },
+    {
+      name: "deleteにafterがある",
+      mutate: (draft: DocumentDeltaDecisionDraft) => ({
+        ...draft,
+        operationKind: "delete",
+        before: member("docs/a.md"),
+        after: member("docs/a.md"),
+      }),
+    },
+    {
+      name: "modifyにbeforeがない",
+      mutate: (draft: DocumentDeltaDecisionDraft) => ({
+        ...draft,
+        operationKind: "modify",
+        before: undefined,
+      }),
+    },
+    {
+      name: "未知のoperation kind",
+      mutate: (draft: DocumentDeltaDecisionDraft) => ({
+        ...draft,
+        operationKind: "copy",
+      }),
+    },
+    {
+      name: "member pathがrepo-relativeでない",
+      mutate: (draft: DocumentDeltaDecisionDraft) => ({
+        ...draft,
+        after: member("../a.md"),
+        affectedPath: "../a.md",
+        record: { ...draft.record, baselinePath: "../a.md" },
+      }),
+    },
+    {
+      name: "member identityが空",
+      mutate: (draft: DocumentDeltaDecisionDraft) => ({
+        ...draft,
+        after: { ...member("docs/a.md"), blobOid: "" },
+      }),
+    },
+  ])("decision factoryはinvalid stateを拒否する: $name", ({ mutate }) => {
+    const delta = event(
+      { deltaId: "d1", sequence: 1, kind: "add", after: member("docs/a.md") },
+      null,
+    );
+    const decision = buildInput([], [member("docs/a.md")], [delta]).decisions[0];
+    expect(() =>
+      createDocumentDeltaDecision(mutate(decision) as unknown as DocumentDeltaDecisionDraft),
+    ).toThrow("document-delta-decision-invalid");
   });
 });

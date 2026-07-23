@@ -50,7 +50,7 @@ export const beforeOf = (delta: DocumentDelta): DocumentMemberIdentity | undefin
 export const afterOf = (delta: DocumentDelta): DocumentMemberIdentity | undefined =>
   delta.kind === "delete" ? undefined : delta.after;
 
-function validPath(path: string): boolean {
+export function validDocumentMemberPath(path: string): boolean {
   if (
     path.length === 0 ||
     path !== path.normalize("NFC") ||
@@ -64,13 +64,19 @@ function validPath(path: string): boolean {
   return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
 }
 
+export function validDocumentMemberIdentity(
+  member: DocumentMemberIdentity | undefined,
+): member is DocumentMemberIdentity {
+  return Boolean(
+    member &&
+      validDocumentMemberPath(member.path) &&
+      member.blobOid.trim().length > 0 &&
+      member.contentDigest.trim().length > 0,
+  );
+}
+
 function assertMember(member: DocumentMemberIdentity | undefined): void {
-  if (
-    !member ||
-    !validPath(member.path) ||
-    member.blobOid.trim().length === 0 ||
-    member.contentDigest.trim().length === 0
-  ) {
+  if (!validDocumentMemberIdentity(member)) {
     throw new TypeError("document-delta-member-invalid");
   }
 }

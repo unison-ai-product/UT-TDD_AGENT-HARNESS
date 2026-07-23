@@ -6,6 +6,7 @@ import {
   type DocumentMemberIdentity,
   documentDeltaChainDigest,
   documentDeltaEventDigest,
+  validDocumentMemberIdentity,
 } from "./document-delta";
 import {
   createDocumentDeltaFinding,
@@ -83,10 +84,21 @@ export function createDocumentDeltaDecision(
   decision: DocumentDeltaDecisionDraft,
 ): DocumentDeltaDecision {
   const validation = validateDocumentDisposition(decision.record);
+  const operationShapeIsValid =
+    (decision.operationKind === "add" &&
+      decision.before === undefined &&
+      validDocumentMemberIdentity(decision.after)) ||
+    (decision.operationKind === "delete" &&
+      validDocumentMemberIdentity(decision.before) &&
+      decision.after === undefined) ||
+    ((decision.operationKind === "modify" || decision.operationKind === "rename") &&
+      validDocumentMemberIdentity(decision.before) &&
+      validDocumentMemberIdentity(decision.after));
   const expectedPath =
     decision.operationKind === "delete" ? decision.before?.path : decision.after?.path;
   if (
     !validation.ok ||
+    !operationShapeIsValid ||
     decision.deltaId.trim().length === 0 ||
     decision.ledgerId.trim().length === 0 ||
     decision.fromSnapshotDigest.trim().length === 0 ||
