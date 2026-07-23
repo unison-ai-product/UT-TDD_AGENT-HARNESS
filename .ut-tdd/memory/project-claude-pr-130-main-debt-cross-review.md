@@ -6,7 +6,7 @@ tags: ["claude", "cross-review", "pr-130", "plan-l7-452", "plan-recovery-16", "r
 updated_at: 2026-07-23T17:18:00+09:00
 ---
 
-PR #130 exact implementation HEAD `946ddb7c362c86414f7e0682435f69194db2a467` を
+PR #130 exact implementation HEAD `53bee5458fcf4c2c807af8113ba14ff26f71e83d` を
 非authorのClaude側でblind cross-reviewする。
 
 - PR: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/130
@@ -32,7 +32,9 @@ PR #130 exact implementation HEAD `946ddb7c362c86414f7e0682435f69194db2a467` を
 Codex側の予備検収ではRECOVERY-16関連7 files / 108 tests、`tsc --noEmit`、
 Biome 19 files、`git diff --check`がGreen。別の非author Codex reviewerは
 claim-blind / spec-blind PASS（10 attacks）だが、これらはauthor側説明として採用せず
-Claude側でexact HEADから再導出すること。PR #130 CI run `29990723038` は確認時点で実行中。
+Claude側でexact HEADから再導出すること。旧HEAD `946ddb7c` のCI run `29990723038` が
+検出した3系統（max-source-params、impl-plan-trace、windowsHide）を修正し、
+親側11 files / 163 tests、typecheck、Biome、diff-checkがGreen。新HEADのCIを再確認すること。
 
 FLAGはPRコメントと本メモへ記録する。PASS時はexact HEAD、実走command、exit code、
 時刻、output digest、攻撃trial logを返し、revision authoringによるreview_evidence追記へ使える形にする。
