@@ -6,17 +6,14 @@ import { describe, expect, it } from "vitest";
 import { analyzeLayerPairGate, evaluateStaticGate, readCoverageSummary } from "../src/gate/static";
 import type { PairDoc } from "../src/vmodel/lint";
 
-const cliPath = join(process.cwd(), "src", "cli.ts");
+const cliPath = join(process.cwd(), "dist", "ut-tdd.mjs");
 
 function runCli(args: string[], cwd = process.cwd()) {
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd,
-      encoding: "utf8",
-    });
-  }
-  return spawnSync("bun", [cliPath, ...args], { cwd, encoding: "utf8" });
+  return spawnSync(process.execPath, [cliPath, ...args], {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  });
 }
 
 const doc = (

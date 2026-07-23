@@ -10,24 +10,16 @@ import {
 import { extractEditTargets } from "../src/shared/edit-targets";
 
 const repoRoot = process.cwd();
-const cliPath = join(repoRoot, "src", "cli.ts");
+const cliPath = join(repoRoot, "dist", "ut-tdd.mjs");
 
 function runCli(cwd: string, args: string[], input?: unknown) {
   const stdin = input === undefined ? undefined : JSON.stringify(input);
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd,
-      encoding: "utf8",
-      env: process.env,
-      input: stdin,
-    });
-  }
-  return spawnSync("bun", [cliPath, ...args], {
+  return spawnSync(process.execPath, [cliPath, ...args], {
     cwd,
     encoding: "utf8",
     env: process.env,
     input: stdin,
+    windowsHide: true,
   });
 }
 

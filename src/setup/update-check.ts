@@ -236,7 +236,11 @@ export function renderUpdateLine(r: UpdateCheckResult): string {
 /** Resolve the harness checkout root from this module location. */
 export function defaultHarnessRoot(): string | null {
   try {
-    return join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    const moduleDir = dirname(fileURLToPath(import.meta.url));
+    for (const candidate of [join(moduleDir, ".."), join(moduleDir, "..", "..")]) {
+      if (existsSync(join(candidate, "package.json"))) return candidate;
+    }
+    return null;
   } catch {
     return null;
   }

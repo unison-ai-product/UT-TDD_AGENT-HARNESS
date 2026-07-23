@@ -237,9 +237,9 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
       ".claude/settings.json": [
         "{",
         '  "hooks": {',
-        '    "SessionStart": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session start" }] }],',
-        '    "PostToolUse": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" hook post-tool-use" }] }],',
-        '    "Stop": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session summary" }] }]',
+        '    "SessionStart": [{ "hooks": [{ "command": "node \\"$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs\\" session start" }] }],',
+        '    "PostToolUse": [{ "hooks": [{ "command": "node \\"$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs\\" hook post-tool-use" }] }],',
+        '    "Stop": [{ "hooks": [{ "command": "node \\"$CLAUDE_PROJECT_DIR/dist/ut-tdd.mjs\\" session summary" }] }]',
         "  }",
         "}",
       ].join("\n"),
@@ -446,31 +446,31 @@ describe("runDoctor", () => {
       hooks: {
         PreToolUse: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }],
+            hooks: [{ command: "node .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }],
           },
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard" }],
+            hooks: [{ command: "node .ut-tdd/bin/ut-tdd.mjs hook work-guard" }],
           },
         ],
-        SessionStart: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] }],
+        SessionStart: [{ hooks: [{ command: "node .ut-tdd/bin/ut-tdd.mjs session start" }] }],
         PostToolUse: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" }],
+            hooks: [{ command: "node .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" }],
           },
         ],
         Stop: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" }],
+            hooks: [{ command: "node .ut-tdd/bin/ut-tdd.mjs session summary" }],
           },
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" }],
+            hooks: [{ command: "node .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" }],
           },
         ],
       },
     });
     const file = (path: string) => join("/repo", ...path.split("/"));
     const files = new Map<string, string>([
-      [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
+      [file(".ut-tdd/bin/ut-tdd.mjs"), "#!/usr/bin/env node\nimport '../../dist/ut-tdd.mjs';\n"],
       [file("AGENTS.md"), "UT-TDD adapter"],
       [file("CLAUDE.md"), "UT-TDD adapter"],
       [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
@@ -535,7 +535,7 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=23, failed=0)"]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {

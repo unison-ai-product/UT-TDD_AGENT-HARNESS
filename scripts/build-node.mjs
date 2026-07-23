@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { build } from "esbuild";
 
@@ -12,6 +12,7 @@ const outputs = [
 ];
 
 for (const [entry, outfile] of outputs) {
+  if (!existsSync(resolve(root, entry))) continue;
   const target = resolve(root, outfile);
   mkdirSync(dirname(target), { recursive: true });
   await build({

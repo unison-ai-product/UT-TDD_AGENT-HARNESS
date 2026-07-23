@@ -29,24 +29,10 @@ generates:
     artifact_type: source_module
   - artifact_path: src/runtime/node-bootstrap.ts
     artifact_type: source_module
-  - artifact_path: src/state-db/stop-refresh.ts
-    artifact_type: source_module
   - artifact_path: src/runtime/runtime-image-observer.ts
     artifact_type: source_module
   - artifact_path: scripts/build-node.mjs
     artifact_type: script
-  - artifact_path: scripts/run-vitest-snapshot.ts
-    artifact_type: script
-  - artifact_path: scripts/ut-tdd
-    artifact_type: script
-  - artifact_path: scripts/ut-tdd.ps1
-    artifact_type: script
-  - artifact_path: .claude/settings.json
-    artifact_type: config
-  - artifact_path: .codex/hooks.json
-    artifact_type: config
-  - artifact_path: package.json
-    artifact_type: config
   - artifact_path: package-lock.json
     artifact_type: config
   - artifact_path: tsconfig.node.json

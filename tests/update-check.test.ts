@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   checkForUpdate,
@@ -21,15 +21,11 @@ import {
 const ROOT = "/harness";
 const EXECUTION_ROOT = process.env.UT_TDD_TEST_EXECUTION_ROOT;
 if (!EXECUTION_ROOT) throw new Error("update-check CLI tests require an execution snapshot");
-const CLI_PATH = join(EXECUTION_ROOT, "src", "cli.ts");
+const CLI_PATH = join(EXECUTION_ROOT, "dist", "ut-tdd.mjs");
 
 function runCli(args: string[], env: NodeJS.ProcessEnv, cwd = EXECUTION_ROOT) {
   const base = { cwd, encoding: "utf8" as const, env, timeout: 120_000 };
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", CLI_PATH, ...args], base);
-  }
-  return spawnSync("bun", [CLI_PATH, ...args], base);
+  return spawnSync(process.execPath, [CLI_PATH, ...args], { ...base, windowsHide: true });
 }
 
 function mockDeps(
@@ -65,44 +61,6 @@ function mockDeps(
     },
     ...rest,
   };
-}
-
-function makeFakeGit(root: string) {
-  const fakeBin = join(root, "bin");
-  mkdirSync(fakeBin, { recursive: true });
-  if (process.platform === "win32") {
-    const script = join(fakeBin, "git.cmd");
-    writeFileSync(
-      script,
-      [
-        "@echo off",
-        'echo %*>> "%UT_TDD_FAKE_GIT_LOG%"',
-        'if "%1"=="ls-remote" (',
-        "  echo abc\trefs/tags/v0.1.99",
-        "  exit /b 0",
-        ")",
-        "exit /b 1",
-        "",
-      ].join("\r\n"),
-    );
-    return fakeBin;
-  }
-  const script = join(fakeBin, "git");
-  writeFileSync(
-    script,
-    [
-      "#!/bin/sh",
-      'printf "%s\\n" "$*" >> "$UT_TDD_FAKE_GIT_LOG"',
-      'if [ "$1" = "ls-remote" ]; then',
-      '  printf "abc\\trefs/tags/v0.1.99\\n"',
-      "  exit 0",
-      "fi",
-      "exit 1",
-      "",
-    ].join("\n"),
-  );
-  chmodSync(script, 0o755);
-  return fakeBin;
 }
 
 describe("update-check semver primitives", () => {
@@ -354,21 +312,31 @@ describe("status CLI wiring", () => {
   it("U-UPDCHK-020: status from a consumer cwd uses configured Pack remote, never consumer origin", () => {
     const tmp = mkdtempSync(join(tmpdir(), "ut-tdd-update-check-"));
     try {
-      const fakeBin = makeFakeGit(tmp);
       const consumerRoot = join(tmp, "consumer");
-      mkdirSync(join(consumerRoot, ".git"), { recursive: true });
-      const logPath = join(tmp, "git.log");
-      const remote = `https://example.com/pack-${process.pid}-${Date.now()}.git`;
+      const packRoot = join(tmp, "pack");
+      mkdirSync(consumerRoot, { recursive: true });
+      mkdirSync(packRoot, { recursive: true });
+      const git = (cwd: string, args: string[]) => {
+        const run = spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+        expect(run.status, run.stderr || run.stdout).toBe(0);
+      };
+      git(packRoot, ["init"]);
+      git(packRoot, ["config", "user.email", "update-check@example.invalid"]);
+      git(packRoot, ["config", "user.name", "update-check"]);
+      writeFileSync(join(packRoot, "README.md"), "pack\n", "utf8");
+      git(packRoot, ["add", "README.md"]);
+      git(packRoot, ["commit", "-m", "test: seed pack remote"]);
+      git(packRoot, ["tag", "v0.1.99"]);
+      git(consumerRoot, ["init"]);
+      git(consumerRoot, ["remote", "add", "origin", "https://invalid.example/consumer.git"]);
 
       const res = runCli(
         ["status", "--json"],
         {
           ...process.env,
-          PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ""}`,
           CI: "",
           [UPDATE_CHECK_DISABLE_ENV]: "",
-          [UPDATE_CHECK_REMOTE_ENV]: remote,
-          UT_TDD_FAKE_GIT_LOG: logPath,
+          [UPDATE_CHECK_REMOTE_ENV]: packRoot,
         },
         consumerRoot,
       );
@@ -380,9 +348,6 @@ describe("status CLI wiring", () => {
         latestVersion: "v0.1.99",
         source: "remote",
       });
-      const logText = readFileSync(logPath, "utf8");
-      expect(logText).toContain(remote);
-      expect(logText).not.toContain("origin");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

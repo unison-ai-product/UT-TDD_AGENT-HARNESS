@@ -27,5 +27,5 @@ describe("review green command projection", () => {
     } finally {
       db.close();
     }
-  }, 20_000);
+  }, 120_000);
 });

@@ -1029,7 +1029,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rows[0]).toMatchObject({
         session_id: "session-runtime-1",
         command: "Bash (vitest)",
-        runner: "bun",
+        runner: "node",
         runtime: "hook-session-log",
         scope: "runtime-hook",
         exit_code: 0,
@@ -1039,7 +1039,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rows[1]).toMatchObject({
         session_id: "session-runtime-1",
         command: "PowerShell (tsc)",
-        runner: "bun",
+        runner: "node",
         runtime: "hook-session-log",
         scope: "runtime-hook",
         exit_code: 0,

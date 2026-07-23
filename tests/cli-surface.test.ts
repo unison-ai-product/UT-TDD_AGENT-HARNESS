@@ -806,7 +806,7 @@ describe("L7 CLI surface closure", () => {
       to: "staging",
       humanApprovalRequired: true,
     });
-    expect(payload.checks).toContain("bun run src\\cli.ts doctor");
+    expect(payload.checks).toContain("node dist\\ut-tdd.mjs doctor");
   });
 
   it("refuses cutover apply without a human-approved runbook", () => {
