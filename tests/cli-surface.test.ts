@@ -322,7 +322,7 @@ describe("L7 CLI surface closure", () => {
       expect.arrayContaining([expect.stringContaining("doctor: toolchain-pin - OK")]),
     );
     expect(payload.messages.join("\n")).not.toContain("plan-governance");
-  }, 45_000);
+  }, 20_000);
 
   it("fail-closes unsupported doctor profile as machine-readable JSON", () => {
     const run = runCli(["doctor", "--profile", "bogus", "--json"]);
@@ -533,7 +533,7 @@ describe("L7 CLI surface closure", () => {
     expect(payload.entries.length).toBeGreaterThan(0);
     expect(payload.entries.every((entry: { skill_path: string }) => entry.skill_path)).toBe(true);
     expect(payload.required_paths.length).toBeGreaterThan(0);
-  }, 20_000);
+  }, 45_000);
 
   it("injects per-call model/effort overrides into adapter plans (PLAN-L7-255)", () => {
     const fake = withFakeProviderEnv("codex");
