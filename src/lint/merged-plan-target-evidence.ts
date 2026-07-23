@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
-export type TargetRefSource = "explicit" | "remote_default" | "origin_main" | "local_main";
+export type TargetRefSource = "remote_default" | "local_default" | "origin_main" | "local_main";
 
 export interface TargetRefCandidate {
   ref: string;
@@ -67,15 +67,19 @@ export function resolveMergedPlanTargetEvidence(repoRoot: string): MergedPlanTar
     "--short",
     "refs/remotes/origin/HEAD",
   ]);
-  const defaultBranch = event.defaultBranch ?? symbolicDefault?.replace(/^origin\//, "") ?? "main";
-  const rawCandidates: Array<{ ref: string; source: TargetRefSource }> = [
-    ...(process.env.UT_TDD_MERGED_TARGET_REF
-      ? [{ ref: process.env.UT_TDD_MERGED_TARGET_REF, source: "explicit" as const }]
-      : []),
-    { ref: `origin/${defaultBranch}`, source: "remote_default" },
-    { ref: "origin/main", source: "origin_main" },
-    { ref: "main", source: "local_main" },
-  ];
+  const knownDefaultBranch =
+    event.defaultBranch ?? symbolicDefault?.replace(/^origin\//, "") ?? null;
+  // default branch identity が分かる場合は、そのrefが欠けてもmainへ横滑りしない。
+  // 別branchをlanded targetとして採るより no_verified_target でfail-closeする。
+  const rawCandidates: Array<{ ref: string; source: TargetRefSource }> = knownDefaultBranch
+    ? [
+        { ref: `origin/${knownDefaultBranch}`, source: "remote_default" },
+        { ref: knownDefaultBranch, source: "local_default" },
+      ]
+    : [
+        { ref: "origin/main", source: "origin_main" },
+        { ref: "main", source: "local_main" },
+      ];
   const seen = new Set<string>();
   const candidates = rawCandidates
     .filter((candidate) => !seen.has(candidate.ref) && seen.add(candidate.ref))

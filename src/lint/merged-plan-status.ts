@@ -36,6 +36,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
+  type ArtifactTargetDecision,
   classifyTargetArtifacts,
   type MergedPlanTargetEvidence,
   resolveMergedPlanTargetEvidence,
@@ -66,6 +67,8 @@ export interface MergedPlanRow {
   kind: string;
   /** generates の deliverable (src/ tests/ scripts/ .claude/) のうち repo に実在する (= merged) パス集合。 */
   mergedArtifacts: string[];
+  /** canonical targetに対する全declared deliverableの判定証拠。absentも捨てない。 */
+  artifactDecisions?: ArtifactTargetDecision[];
 }
 
 export interface MergedPlanStatusInput {
@@ -153,17 +156,24 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
       continue;
     }
     const declaredArtifacts = generatesMergedDeliverablePaths(content);
-    const mergedArtifacts = targetPaths
+    const artifactDecisions = targetPaths
       ? classifyTargetArtifacts(declaredArtifacts, targetPaths)
-          .filter((decision) => decision.decision === "landed_on_target")
-          .map((decision) => decision.path)
-      : declaredArtifacts.filter((path) => existsSync(join(repoRoot, path)));
+      : declaredArtifacts.map(
+          (path): ArtifactTargetDecision => ({
+            path,
+            decision: existsSync(join(repoRoot, path)) ? "landed_on_target" : "absent_from_target",
+          }),
+        );
+    const mergedArtifacts = artifactDecisions
+      .filter((decision) => decision.decision === "landed_on_target")
+      .map((decision) => decision.path);
     const baseStatus = frontmatterStatus(content) ?? rp.status;
     plans.push({
       planId: rp.plan_id,
       status: baseStatus,
       kind: rp.kind,
       mergedArtifacts,
+      artifactDecisions,
     });
   }
   return { plans, ...(targetEvidence ? { targetEvidence } : {}) };
