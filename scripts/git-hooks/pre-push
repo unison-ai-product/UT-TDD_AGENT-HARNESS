@@ -23,6 +23,7 @@ set -euo pipefail
 
 hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(git rev-parse --show-toplevel)"
+harness_root="$(cd "${hook_dir}/../.." && pwd)"
 
 is_all_zero_sha() {
   local sha="$1"
@@ -77,7 +78,7 @@ main() {
   local status=0
   (
     cd "$repo_root"
-    printf '%s\n' "$entries" | node "${repo_root}/dist/hooks/secret-scan-diff.mjs"
+    printf '%s\n' "$entries" | node "${harness_root}/dist/hooks/secret-scan-diff.mjs"
   ) || status=$?
 
   exit "$status"

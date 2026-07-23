@@ -29,6 +29,7 @@
  * fail-close へ昇格できる (PLAN-L7-260 §4 DoD)。
  */
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { analyzeSecretScan, secretScanMessages, type SecretScanArtifact } from "../../src/lint/secret-scan";
 
 /** pre-push が検査する変更ファイルの対象 prefix (PO 採択案 A、3 パターン限定を撤廃)。 */
@@ -241,7 +242,8 @@ async function main(): Promise<void> {
 }
 
 // compiled Node entrypointで直接実行された場合のみCLIとして動く。vitest importでは発火しない。
-// (Bun の import.meta.main はプロセスの entry module でのみ true)。
-if (import.meta.main) {
+const isNodeMain =
+  typeof process.argv[1] === "string" && pathToFileURL(process.argv[1]).href === import.meta.url;
+if (isNodeMain) {
   await main();
 }

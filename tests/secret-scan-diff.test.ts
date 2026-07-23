@@ -14,6 +14,7 @@ import {
 
 const repoRoot = process.cwd();
 const hooksDir = join(repoRoot, "scripts", "git-hooks");
+const compiledHook = join(repoRoot, "dist", "hooks", "secret-scan-diff.mjs");
 
 /** dummy token は self-trigger 回避のため runtime 連結で生成する (PLAN-L7-260 §2 と同一規律)。 */
 function dummyGithubToken(): string {
@@ -60,14 +61,14 @@ function commitFile(root: string, relPath: string, content: string): string {
   return rev.stdout.trim();
 }
 
-/** `scripts/git-hooks/secret-scan-diff.ts` を stdin 経由で直接叩く (CLI entrypoint、実 git blob 使用)。 */
+/** compiled Node hookをstdin経由で直接叩く (CLI entrypoint、実 git blob 使用)。 */
 function runHookCli(cwd: string, stdin: string, env?: NodeJS.ProcessEnv) {
-  return spawnSync("bun", [join(hooksDir, "secret-scan-diff.ts")], {
+  return spawnSync(process.execPath, [compiledHook], {
     cwd,
     encoding: "utf8",
     input: stdin,
     env: { ...process.env, ...env },
-    shell: process.platform === "win32",
+    windowsHide: true,
   });
 }
 
@@ -206,7 +207,7 @@ describe("runSecretScanDiff (secret-scan.ts 再利用 + widened surface filter�
   });
 });
 
-describe("secret-scan-diff.ts CLI entrypoint (bun subprocess, stdin 経由, 実 git blob)", () => {
+describe("secret-scan-diff compiled Node CLI entrypoint (stdin 経由, 実 git blob)", () => {
   it("U-DOCSECRET-007: exits 0 and prints a warn-only message for a violation under default mode", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-prepush-cli-warn-"));
     try {
