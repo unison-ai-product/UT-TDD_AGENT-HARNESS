@@ -959,7 +959,8 @@ DbC:
 - post: pathはUTF-8 repo-relative canonical formでstable byte順、各pathは一回だけ、`trackedCount`は
   entry数と一致し、`pathSetSha256`はGitが返した終端NUL付きbyte streamそのもの、
   `snapshotDigest`はrepository identity、commit、root tree、selection revision/digest、path hash、
-  member集合digestのfield-name付きlength-prefixed frameから生成する。baseline 921件は`docs_tree`
+  zone集合digest、member集合digestのfield-name付きlength-prefixed frameから生成する。zone集合は
+  selector digest、tree OID、member count、zone member digestを全5 zone分保持する。baseline 921件は`docs_tree`
   zoneだけのfixtureであり、全zoneの`trackedCount`へ固定しない。
 - `materializeDispositionBatch` pre: commandはsnapshot identity、selector、decision、actor、reason、
   command IDを持つ。post: selectorをその時点のsnapshot pathへ一度だけ展開し、各pathの個別recordと
@@ -974,6 +975,9 @@ DbC:
   canonical assertionのblob digestを再検証する。
 - invariant: queryはledger、authoring docs、DB、Git indexを更新しない。selector再評価、source edgeからの
   disposition継承、DB rowによる欠落record補完、archive/superseded文書への暗黙fallbackを禁止する。
+- applicability invariant: `conditional`はreason/observed condition/reevaluation trigger、
+  `deferred`はreason/reevaluation trigger/PLAN、`not_applicable`はreason/deciderを必須とする。
+  入力語`skip|defer`はauthoring境界で正規化し、disposition enumへ混入させない。
 
 typed finding/error:
 
