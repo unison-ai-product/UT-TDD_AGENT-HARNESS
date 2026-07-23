@@ -4,11 +4,11 @@ title: "PLAN-L7-452 (add-impl): PLAN-L6-83 契約の U-EXISSUE Red→Green — f
 kind: add-impl
 layer: L7
 drive: be
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-17
-updated: 2026-07-22
+updated: 2026-07-23
 owner: PO / Claude (起票・実装)
 parent_design: docs/plans/PLAN-L6-83-forward-escape-issue-contract.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -38,14 +38,57 @@ dependencies:
     - docs/plans/PLAN-L7-436-execution-ledger-episode-domain.md
     - src/github/node-gh-forward-escape-issue-port.ts
     - tests/node-gh-forward-escape-issue-port.test.ts
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: 2026-07-23T10:58:00+09:00
+    tests_green_at: 2026-07-23T10:58:00+09:00
+    verdict: technical_pass_gate_followup
+    scope: "PR #117 HEAD f6bb0660のclaim-blind/spec-blind review。Node worker、SQLite排他、
+      single provider call、37 testsをClaudeが独立再現し技術面PASS。総合FLAGは本PLANと
+      PLAN-RECOVERY-16がdraftのためmerged-plan-statusがRedというconfirm bootstrap条件、
+      および当時未達だったRECOVERY-16 DoD #8であり、本PLAN実装の未反駁attackではない。"
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: unit_test
+        command: "Claude independent Node rerun: forward escape/adoption/GitHub port"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-23T10:58:00+09:00
+        evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/117#issuecomment-5053669909"
+        output_digest: sha256:cc736b37f31e65f8
+        anchor_commit: f6bb0660e38ad5c5b60a78c97fdc615f80fef18d
+  - reviewer: codex-intra-runtime-subagent-exact-delta
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-07-23T14:47:10+09:00
+    tests_green_at: 2026-07-23T14:46:56+09:00
+    verdict: approve
+    scope: "implementation HEAD 015659193539668592546d2d5674c8e235cd564aの差分review。
+      U-EXISSUE-007..018とU-EXISSUE-ADOPT-001..008を全ID実走し、stale replay、
+      SQLite同時実行、POST後remote再観測、drive交差変異を攻撃。44 tests Green、
+      unrefuted attack 0。CI Green後のClaudeCode最終PR再reviewをmerge条件として残す。"
+    green_commands:
+      - kind: unit_test
+        command: "npx vitest run tests/forward-escape-issue-contract.test.ts tests/forward-escape-issue-adoption-contract.test.ts tests/node-gh-forward-escape-issue-port.test.ts --reporter=dot"
+        runner: powershell
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-23T14:46:56+09:00
+        evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/130#issuecomment-5054924515"
+        output_digest: sha256:cc736b37f31e65f852fcb3772440619b063362824d49e7c447390cb15b34cfa4
+        anchor_commit: 015659193539668592546d2d5674c8e235cd564a
 ---
 
 # PLAN-L7-452 (add-impl): PLAN-L6-83 契約の U-EXISSUE Red→Green
 
 ## Status
 
-draft (2026-07-22 cross-review FLAG修正後の再検証待ち)。旧slice evidenceとReverse pairingは保持するが、
-`U-EXISSUE-007..018` / `U-EXISSUE-ADOPT-001..008` のsnapshot実測・再review前にconfirmedへ戻さない。
+confirmed (2026-07-23)。Claudeの先行cross-provider reviewで実装中核を技術PASS、
+exact implementation HEAD `015659193539668592546d2d5674c8e235cd564a` の独立delta reviewで
+`U-EXISSUE-007..018` / `U-EXISSUE-ADOPT-001..008`を44 tests Greenとして再実測した。
+CI Green後のClaudeCode最終PR再reviewはmerge条件として残す。
 
 ## 背景とスコープ
 
@@ -91,13 +134,12 @@ PLAN-RECOVERY-16であり、本PLANはその既存資産を参照して契約ora
 
 ## DoD
 
-- [ ] U-EXISSUE-007..018をsnapshot runnerで実測し、別runtimeのcross-reviewでFLAG解消を確認する。
-- [ ] U-EXISSUE-ADOPT-001..008をsnapshot runnerで実測し、別runtimeのcross-reviewでFLAG解消を確認する。
+- [x] U-EXISSUE-007..018をsnapshot runnerで実測し、別runtimeのcross-reviewとexact-head delta reviewでFLAG根拠を解消する。
+- [x] U-EXISSUE-ADOPT-001..008をsnapshot runnerで実測し、別runtimeのcross-reviewとexact-head delta reviewでFLAG根拠を解消する。
 
-2026-07-22 targeted evidence: `U-EXISSUE-ADOPT-006` は改変markerとcanonical comment重複を
-別caseとして固定し、`bun test tests/node-gh-forward-escape-issue-port.test.ts
-tests/forward-escape-issue-adoption-contract.test.ts` で18 tests Greenを確認した。これはtargeted
-unit evidenceであり、未実施のsnapshot runner実測またはcross-review完了を代替しない。
+2026-07-23 exact-head evidence: `U-EXISSUE-ADOPT-006` は改変markerとcanonical comment重複を
+別caseとして固定し、Node/Vitestでforward escape、adoption、GitHub portの3 files / 44 tests
+Greenを確認した。Bunは起動せず、実装anchorとcommand/output digestをreview_evidenceへ固定した。
 
 - [x] U-EXISSUE-001..006 が Red (module 不在 fail の snapshot 実測) から Green へ遷移した。
       根拠: commit 履歴 (test-only commit で snapshot FAIL 実測 / 実装 commit 後
