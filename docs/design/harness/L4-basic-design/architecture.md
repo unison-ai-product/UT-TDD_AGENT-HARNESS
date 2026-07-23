@@ -209,10 +209,14 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 ## §9 Repository Document Ledger方式境界 (PLAN-L4-25)
 
-全tracked docsの見直しは`src/lint`による都度scanではなく、Git objectで固定したbaseline、明示delta、
-final snapshotを持つDocument Ledger集約として実行する。authoring sourceは
+全tracked repository documentsの見直しは`src/lint`による都度scanではなく、Git objectで固定した
+zone別baseline、明示delta、final snapshotを持つDocument Ledger集約として実行する。authoring sourceは
 `docs/governance/repository-document-disposition/`配下のmanifest/entryであり、Markdown一覧と
 `harness.db`は生成view/read modelである。
+
+baseline `3d232e9c`の921件は`docs/**` zoneだけのGit subtree証拠であり、repository全体の文書件数ではない。
+`root_policy`、`runtime_policy`、`skills`、`github_policy`を同じsnapshotへ別zoneとして加え、
+未分類のtracked documentを検出した場合は自動除外せずclosureをblockedにする。
 
 方式上の依存方向は次に固定する。
 

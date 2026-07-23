@@ -286,7 +286,7 @@ renameはdelete+addの推測ではなく、旧新pathを一つのdeltaとしてa
 | `DispositionDecision` | update/merge/retain/supersede/archive/not_applicable、reason、target/PLAN、適用状態 |
 | `DocumentTarget` | repository-relative pathまたはtyped external authority。merge/supersede/updateの必須後条件を表す |
 | `DocumentReference` | source/target、edge kind、anchor/ID、伝達するsemantic responsibility、applicability condition |
-| `SnapshotIdentity` | commit、tree OID、raw NUL path digest、count。working tree identityを拒否 |
+| `SnapshotIdentity` | commit、repository root tree OID、selector revision/digest、zone別tree evidence、raw NUL path digest、count。working tree identityを拒否 |
 | `ClosureReceipt` | baseline/delta/final/reference集合digest、finding counts、run time、tool version |
 
 集約のapplication stateは`pending | ready | applied | verified | rejected`とする。disposition決定だけでは

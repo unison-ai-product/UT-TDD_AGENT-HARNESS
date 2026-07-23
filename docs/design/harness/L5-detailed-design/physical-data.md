@@ -600,9 +600,27 @@ workflow transition、evidence、doc監査判断を補完してはならない�
 ### §9.15.2 repository文書snapshot / shard schema
 
 `docs/governance/repository-document-disposition/manifest.yaml`は`schema_version`、baseline/final snapshot、
-`path_stream_algorithm=git-ls-tree-z-v1`、commit、文書tree OID、追跡件数、raw NUL stream SHA-256、
-shard digest、delta chain digestを持つ。snapshot IDはcommit/tree/count/hashのcanonical frameだけから作り、
-時刻・working tree・OSを含めない。
+`selection_revision=repository-documents-v1`、selector digest、commit、リポジトリroot tree OID、
+zone別tree evidence、追跡件数、raw NUL stream SHA-256、shard digest、delta chain digestを持つ。
+snapshot IDはrepository identity、commit、root tree、selection revision/digest、count、path hash、
+member集合digestのcanonical frameだけから作り、時刻・working tree・OSを含めない。
+
+`repository-documents-v1`のzoneは次に固定する。
+
+| zone | Git object selector | baseline規則 |
+|---|---|---|
+| `docs_tree` | `docs/**`の全tracked blob | `3d232e9c`で921件、docs subtree OID=`310ec6de57cf8313096ea4c0fd95e1cff3db5a48`、raw NUL path hash=`02b618ce268ca68a7b6636b9aa9216d157c21da45a633b0fbab73126e0f47382` |
+| `root_policy` | rootの`AGENTS.md`、`CLAUDE.md`、`README.md`、`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`LICENSE*`のうちtracked blob | 921件へ混ぜずcoverage expansion deltaとして全実在pathを登録 |
+| `runtime_policy` | `.claude/**/*.md`、`.codex/**/*.md`、`.ut-tdd/**/*.md`のtracked blob | 同上 |
+| `skills` | `skills/**/*.md`のtracked blob | 同上 |
+| `github_policy` | `.github/**/*.md`のtracked blob | 同上 |
+
+上記zone外のtracked `*.md|*.mdc|*.rst|*.adoc`は`doc-selection-unclassified` findingとし、
+暗黙除外しない。`docs_tree`以外を欠いたsnapshotを「全repository documents」と表示してはならない。
+`path_stream_algorithm=git-ls-tree-name-only-z-v1`は、full commitと上記selectorから
+`git ls-tree -r -z --name-only`が返すGit byte順の`path\0...`そのものとする。終端NULを必須とし、
+改行join、文字列再encode、OS sortを禁止する。member集合digestはstable path順でfield名を含む
+length-prefixed frame `(path, blob_oid, content_sha256, file_mode, zone)`を連結して計算する。
 
 zone shardの全recordは`path`、baseline blob OID/content SHA-256、zone、disposition、reason、targets、plan IDs、
 impact tags、authoring provenance、application statusを必須とする。selectorはauthoring CLIの入力に使えるが、
@@ -652,7 +670,8 @@ digestへ含めない。Markdown ledgerは生成view、DBはprojectionである�
 | `workflow_event_evidence` | `event_id TEXT`, `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `requirement_id TEXT` | PK=`(event_id,evidence_id,subject_id,subject_revision,requirement_id)`、event/evidence subject-revision composite FK | event / evidence索引 |
 | `workflow_subject_states` | `subject_id TEXT`, `subject_revision INTEGER`, `current_state TEXT`, `resume_state TEXT?`, `last_sequence INTEGER`, `last_event_id TEXT?`, `state_digest TEXT` | workflow event reduction current projection。PK=`(subject_id,subject_revision)`、plan revision composite FK、`(last_event_id,subject_id,subject_revision)` composite FK（empty時だけNULL） | state / last event index |
 | `append_command_receipts` | `command_id TEXT`, `command_type TEXT`, `subject_kind TEXT`, `subject_key TEXT`, `plan_asset_id TEXT?`, `plan_revision INTEGER?`, `command_payload_digest TEXT`, `result_kind TEXT`, `result_ref TEXT`, `recorded_at TEXT`, `receipt_digest TEXT` | PK=`command_id`、全append context横断正本。subject kind=`plan_revision|reservation|legacy_migration`。plan_revision kindだけasset/revision必須+composite FK、他kindは両方NULL | subject/type/time index |
-| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `docs_tree_oid TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `algorithm TEXT`, `snapshot_digest TEXT`, `captured_at TEXT` | PK=`snapshot_id`、`(commit_oid,docs_tree_oid,path_stream_hash)` UNIQUE、identity列NOT NULL。`captured_at`は非identity | commit/tree index |
+| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `repository_tree_oid TEXT`, `selection_revision TEXT`, `selection_digest TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `member_set_digest TEXT`, `algorithm TEXT`, `snapshot_digest TEXT`, `captured_at TEXT` | PK=`snapshot_id`、`(commit_oid,repository_tree_oid,selection_digest,path_stream_hash)` UNIQUE、identity列NOT NULL。`captured_at`は非identity | commit/tree/selection index |
+| `document_snapshot_zones` | `snapshot_id TEXT`, `zone TEXT`, `selector_digest TEXT`, `zone_tree_oid TEXT?`, `member_count INTEGER`, `member_set_digest TEXT` | PK=`(snapshot_id,zone)`、snapshot FK。`docs_tree`だけsubtree OID必須、他zoneはroot treeに束縛 | zone/tree index |
 | `document_snapshot_members` | `snapshot_id TEXT`, `path TEXT`, `casefold_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `file_mode TEXT`, `member_digest TEXT` | PK=`(snapshot_id,path)`、snapshot FK、`(snapshot_id,casefold_path)` UNIQUE、全列NOT NULL | snapshot/path/blob index |
 | `document_dispositions` | `ledger_id TEXT`, `baseline_snapshot_id TEXT`, `baseline_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `provenance_digest TEXT`, `row_digest TEXT` | PK=`(ledger_id,baseline_path)`、`(baseline_snapshot_id,baseline_path)`→member複合FK、全列NOT NULL。baseline 921 path exactly once | zone/disposition/status index |
 | `document_disposition_targets` | `ledger_id TEXT`, `baseline_path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(ledger_id,baseline_path,target_ordinal)`、disposition複合FK。kind=`artifact|family|plan|slot|archive`、typed target実在CHECK | kind/ref index |

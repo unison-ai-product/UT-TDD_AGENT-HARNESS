@@ -952,12 +952,15 @@ verifyDocumentDebtRoutes(
 
 DbC:
 
-- `captureRepositoryDocsSnapshot` pre: repository identity、full commit OID、tree OIDをcallerが明示し、
-  `GitObjectSnapshotPort`はそのtreeの`docs/`、root canonical docs、tracked `.ut-tdd`文書帯を
-  raw NUL path streamとblob OIDで返す。short SHA、symbolic HEADだけ、working tree scanは拒否する。
+- `captureRepositoryDocsSnapshot` 事前条件: repository identity、full commit OID、リポジトリroot tree OID、
+  `selection_revision=repository-documents-v1`とselector digestをcallerが明示する。
+  `GitObjectSnapshotPort`はL5 §9.15.2の全zoneをGit objectからraw NUL path streamとblob OIDで返す。
+  short SHA、symbolic HEADだけ、working tree scan、zone欠落、未分類文書の暗黙除外を拒否する。
 - post: pathはUTF-8 repo-relative canonical formでstable byte順、各pathは一回だけ、`trackedCount`は
-  entry数と一致し、`pathSetSha256`はNUL stream、`snapshotDigest`はrepository identity、commit、
-  tree、path hash、各blob OIDのlength-prefixed frameから生成する。
+  entry数と一致し、`pathSetSha256`はGitが返した終端NUL付きbyte streamそのもの、
+  `snapshotDigest`はrepository identity、commit、root tree、selection revision/digest、path hash、
+  member集合digestのfield-name付きlength-prefixed frameから生成する。baseline 921件は`docs_tree`
+  zoneだけのfixtureであり、全zoneの`trackedCount`へ固定しない。
 - `materializeDispositionBatch` pre: commandはsnapshot identity、selector、decision、actor、reason、
   command IDを持つ。post: selectorをその時点のsnapshot pathへ一度だけ展開し、各pathの個別recordと
   selector receiptを返す。同じcommand ID+digestは冪等、異なるpayloadは
@@ -982,6 +985,7 @@ typed finding/error:
 | `doc-disposition-phantom` | ledger pathがsnapshotにない | blocked、削除/rename判断route必須 |
 | `doc-disposition-duplicate` | pathまたはcase-fold identity重複 | blocked、ledger correction |
 | `doc-disposition-incomplete` | conditional/defer/skipのreason、target、PLAN不足 | blocked、設計判断route必須 |
+| `doc-selection-unclassified` | selector zone外のtracked document、又は必須zone欠落 | blocked、上流selection設計route必須 |
 | `doc-delta-unregistered` | baseline後のadd/delete/renameが未判断 | blocked、差分identity別route必須 |
 | `doc-reference-parse-error` | reader例外、未知scheme、構文不正 | blocked、reader defect |
 | `doc-reference-orphan` | source/target path、typed ID、anchor不在 | blocked、source owner route必須 |
