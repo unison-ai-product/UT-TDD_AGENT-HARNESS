@@ -50,7 +50,7 @@ dependencies:
 
 ## 1. 目的
 
-`docs/**` の全tracked artifactをsnapshot単位でinventoryし、今回のengine-swapに対する
+repository内の全tracked documentをsnapshot単位でinventoryし、今回のengine-swapに対する
 `update|merge|retain|supersede|archive|not_applicable`をexactly once記録する。ZIP 109件の監査だけで
 既存HARNESS正本の全面見直しを代替しない。
 
@@ -67,15 +67,19 @@ dependencies:
 
 ## 3. 受入条件
 
-- 監査開始commitと`git ls-files docs`件数/hashをledger headerへ固定する。
-- path集合hashは`git ls-tree -r -z --name-only <baseline_commit> -- docs`のraw NUL streamを`sha256`で算出し、working treeやOS依存の改行joinを使わない。
+- 監査開始commit、repository root tree、`repository-documents-v1` selection/zone証拠をledger headerへ固定する。
+- `docs_tree|root_policy|runtime_policy|skills|github_policy`を必須zoneとし、921件は`docs_tree`だけの
+  baseline fixtureとして保持する。zone外tracked文書を暗黙除外しない。
+- path集合hashは各zoneについて`git ls-tree -r -z --name-only <baseline_commit> -- <selector>`の
+  raw NUL streamを`sha256`で算出し、working treeやOS依存の改行joinを使わない。
 - baselineの全tracked docsがexactly once現れ、未判断・重複・存在しないpathが0件である。
 - `update|merge|supersede|archive`はtarget artifact/PLAN、`retain|not_applicable`は判断理由を持つ。
 - DDD/OOP波及対象のL4-L6正本、FSM/PLAN v2対象、右腕対象をtagで検索できる。
 - classを使わない判断も理由とpure function/VO/port境界を持ち、設計欠落を「非OOP」で正当化しない。
 - 旧前提 `572|107文書|~150 items|3 profiles|最小影響|L8-L14恒久park` のcanonical残存が0件である。
 - 更新完了後の全docsを再snapshotし、未処理deltaとcross-reference orphanを0にする。
-- baseline後のadd/delete/renameは明示deltaとして保持し、baseline exactly-onceと最終path集合の双方を閉包する。
+- baseline後のadd/modify/delete/renameは明示deltaとして保持し、baseline exactly-onceと最終path/blob集合の双方を閉包する。
+  renameはGit heuristicから推測せず、明示renameがなければdelete/addとして扱う。
 - detectorはledgerを読み、監査対象/判断/targetを推測生成しない。
 
 ## 4. 降下先
@@ -88,7 +92,7 @@ dependencies:
 ### 5.1 台帳が表すもの
 
 repository document disposition ledgerはファイル一覧でも、検出器が走査時に推測する分類結果でもない。
-`baseline_commit`に存在した全tracked `docs/**`と、その後の明示deltaを対象に、各文書の意味、適用条件、
+`baseline_commit`に存在した全tracked repository documentsと、その後の明示deltaを対象に、各文書の意味、適用条件、
 正本上の位置付け、今回のengine-swapでの処置、参照閉包を人間がauthoringした判断台帳である。
 
 台帳の1 recordは少なくとも次の事実を不可分に保持する。
@@ -97,7 +101,7 @@ repository document disposition ledgerはファイル一覧でも、検出器が
 |---|---|
 | identity | baseline/finalのpath、Git blob OID、content digest。renameは旧pathと新pathを同じdelta identityへ束縛する |
 | meaning | 文書が所有する責務、対象読者、上流入力、下流consumer、canonical assertionの要約 |
-| applicability | `always | profile | capability | historical_only | not_applicable`、判定条件、判断主体、理由 |
+| applicability | canonical `applicable | conditional | deferred | not_applicable`、判定条件、判断主体、理由、再評価trigger。authoring語`skip|defer`は境界で正規化 |
 | authority | `canonical | reference | generated_view | archive`。同じ責務のcanonical ownerは1件だけ |
 | disposition | §5.2の処置、理由、target、実行PLAN、適用状態 |
 | impact | DDD/OOP、FSM/PLAN Asset、right-arm、source/item、駆動モデル、runtime、distributionへの影響tag |
@@ -125,11 +129,12 @@ repository document disposition ledgerはファイル一覧でも、検出器が
 
 ### 5.3 applicabilityの閉じ方
 
-- `always`は全profileで適用し、skip不可。
-- `profile|capability`は正本profile/capability ID、採否、理由、再評価triggerを持つ。条件未評価はpendingであり
+- `applicable`は現在の条件で適用され、application status=`pending|applied|verified`を別fieldで持つ。
+- `conditional`は正本profile/capability ID、観測条件、理由、再評価triggerを持つ。条件未評価はpendingであり
   `not_applicable`ではない。
-- `historical_only`は現行assertionを所有せず、canonicalから要求されたhistorical evidenceだけを提供する。
-- `not_applicable`は処置結果であり、適用性の既定値にしない。将来条件が変わるtriggerを必須にする。
+- `deferred`は理由、再評価trigger、解消PLANを必須とする。
+- `not_applicable`は理由と判断主体を必須とし、適用性の既定値にしない。
+- authoring入力の`skip`は`not_applicable`、`defer`は`deferred`へloaderで正規化し、queryへraw語を渡さない。
 - target slotが存在しないreferenceはclosedではない。slot追加、別targetへの再判断、または理由付き
   `not_applicable`のいずれかを設計者が選ぶまでpendingとする。
 

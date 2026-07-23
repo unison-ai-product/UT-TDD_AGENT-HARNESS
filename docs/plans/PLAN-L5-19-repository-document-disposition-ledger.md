@@ -53,18 +53,32 @@ dependencies:
 ## 設計範囲
 
 - `manifest.yaml`にschema version、ledger ID、baseline/final snapshot、raw NUL hash algorithm、shard一覧、
-  delta列のcanonical digestを持つ。snapshot identityは
-  `commit_oid + docs_tree_oid + tracked_count + path_stream_hash`のcanonical frameから作り、時刻や
-  working treeをidentityへ含めない。
+  delta列のcanonical digestを持つ。snapshot identityは`canonical-frame-v1`で
+  `repository_identity, commit_oid, repository_tree_oid, selection_revision, selection_digest,
+  tracked_count, path_stream_hash, zone_set_digest, member_set_digest`をこの順に束縛する。
+  各fieldは`uint32be(name UTF-8長) + name UTF-8 + uint64be(value byte長) + value bytes`でframe化し、
+  時刻、working tree、OSをidentityへ含めない。
+- `repository-documents-v1`は`docs_tree|root_policy|runtime_policy|skills|github_policy`の5 zoneを必須とする。
+  baseline 921件は`docs_tree`だけの件数であり、repository全体件数にしない。各zoneの
+  selector digest、tree OID又は空bytes、member count、member set digestをzone IDのUTF-8 byte順で
+  `zone_set_digest`へ束縛し、zone外のtracked文書は`doc-selection-unclassified`で拒否する。
 - zone別shardにbaselineの全pathをmaterialized recordとしてexactly once記載する。selectorは
   authoring commandの入力に限り、展開結果の921 recordとselector digestを同一transactionで固定する。
   detectorがselectorから判断を補完したり、既存relation graphのnode数で921件を代用したりしない。
 - baseline recordは`path`、Git blob OID、content SHA-256、zone、disposition、reason、target、PLAN、
   impact tag、authoring provenance、application statusを持つ。`update|merge|supersede|archive`は1件以上の
   typed targetまたはPLAN、`retain|not_applicable`は空でない理由を必須とする。
+- application statusは`pending|applied|verified`、canonical applicabilityは
+  `applicable|conditional|deferred|not_applicable`だけとする。authoring入力の`defer`は`deferred`、
+  `skip`は`not_applicable`へauthoring loaderで正規化し、closure queryへraw語を渡さない。
+  `conditional`はreason/observed condition/reevaluation trigger、`deferred`はreason/trigger/PLAN、
+  `not_applicable`はreason/deciderを必須とし、他kindではkind固有fieldをNULLに固定する。
 - baseline後の`add|modify|delete|rename`は順序付きappend-only deltaとする。renameはbefore/after pathと
   blobを同時に持ち、delete後のmodify、存在pathへのadd、同一path rename、case-fold衝突を拒否する。
   addされた文書にもbaseline recordと同じ判断fieldを持たせ、最終集合に「台帳外の新規文書」を残さない。
+  Git差分からrenameを推測しない。raw差分はpath/blob identityによるadd/modify/deleteとして観測し、
+  明示rename deltaだけが対応するdelete+addを一つの判断として消費する。明示renameがなければ
+  `doc-delta-unregistered`をdeleteとaddの2件として返す。
 - projectionはsnapshot/member/disposition/target/PLAN/tag/delta/effective-path/reference/run/findingを
   正規化する。authoring rowのcanonical digestは、field名を含むlength-prefixed UTF-8 frameを
   pathのUnicode NFC・`/`区切り正規形でSHA-256化する。配列は意味上の順序を定義するもの以外を
@@ -106,7 +120,7 @@ dependencies:
 
 ## 受入条件
 
-- missing/duplicate/phantom/case-fold collision、理由/target/PLAN欠落、未台帳add/delete/renameを拒否する。
+- missing/duplicate/phantom/case-fold collision、理由/target/PLAN欠落、未台帳add/modify/delete/renameを拒否する。
 - final path集合をbaselineとexplicit deltaから再構築でき、final Git snapshotとの差分0、
   pending 0かつtyped cross-reference orphan 0のみ完了とする。
 - projection全削除後のrebuildでsnapshot/member/effective path/reference/findingのPK集合とdigestが一致する。

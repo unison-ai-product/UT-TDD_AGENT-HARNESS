@@ -54,6 +54,14 @@ materializeした`DocumentDispositionLedger`、同snapshotのblobから抽出し
   自動記入しない。
 - missing、phantom、duplicate、case-fold collision、未登録delta、broken reference、
   anchor欠落、canonical assertion staleを別finding IDで返す。
+- snapshot queryは`canonical-frame-v1`でrepository/commit/root tree/selection/path/memberと
+  5 zoneのselector/tree/member証拠を束縛する。921は`docs_tree`だけのbaseline fixtureとし、
+  zone外tracked文書と必須zone欠落をfail-closeする。
+- applicabilityはauthoring境界で`skip→not_applicable`、`defer→deferred`へ正規化し、
+  closure queryは`applicable|conditional|deferred|not_applicable`だけを受理する。
+  application statusは`pending|applied|verified`、kind固有field以外はNULLとする。
+- delta closureはpath/blob identityの`add|modify|delete|rename`をsequence replayする。
+  Git rename heuristicをauthorityにせず、明示renameがなければdeleteとaddを別findingにする。
 - blocking findingはsnapshot digest、subject path/edge、filing target、PLAN IDへ束縛したdebt routeを
   必須とする。route記録はfindingの解消やclosure Greenを意味しない。
 - `U-DOCLEDGER-001..010`、`IT-DOCLEDGER-01..07`、`ST-DOCLEDGER-01..05`を実装前Redとして固定する。

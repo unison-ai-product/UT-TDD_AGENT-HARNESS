@@ -1341,8 +1341,8 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-DOCLEDGER-001` | full commit/root tree、`repository-documents-v1`全zone、raw NUL path/blob OID集合 | `captureRepositoryDocsSnapshot` | zone/count/root tree/selection/path hash/zone集合/member集合/snapshot digestがfixture一致し、stable byte順。921は`docs_tree`だけ |
 | `U-DOCLEDGER-002` | short SHA、symbolic HEADだけ、root tree/selector mismatch、必須zone欠落、未分類文書、malformed NUL/UTF-8 | snapshot capture | `docs-snapshot-revision-missing`、`docs-snapshot-stream-malformed`又は`doc-selection-unclassified`、exit 1 |
 | `U-DOCLEDGER-003` | missing/duplicate/phantom/case-fold path | closure analyzer | 対応するstable findingを全件返し、exit 1 |
-| `U-DOCLEDGER-004` | conditional/deferred/not_applicable（入力skip/deferは正規化）のreason・condition・trigger・decider・PLAN欠落、又はdisposition後条件欠落 | closure analyzer | `doc-disposition-incomplete`、exit 1。applicabilityとdispositionを第二enumで混同しない |
-| `U-DOCLEDGER-005` | add/delete/rename未台帳 | final closure | `doc-delta-unregistered`を差分identity別に返し、exit 1 |
+| `U-DOCLEDGER-004` | authoring loaderのskip→not_applicable/defer→deferred、canonical applicabilityのreason・condition・trigger・decider・PLAN欠落、unknown application status、又はdisposition後条件欠落 | authoring normalizer + closure analyzer | raw語はauthoring境界でcanonical化し、queryはcanonical値だけを受理。不足は`doc-disposition-incomplete`、exit 1。applicabilityとdispositionを第二enumで混同しない |
+| `U-DOCLEDGER-005` | add/modify/delete未台帳、明示rename delta欠落、stale before blob、不正delta sequence | final closure | path/blob identity別の`doc-delta-unregistered`を全件返し、exit 1。renameをGit heuristicで推測せず、明示renameなしはdelete+addとして報告 |
 | `U-DOCLEDGER-006` | frontmatter/Markdown/wiki/anchor/PLAN/spec/test IDの正常fixture | reference reader | typed edgeとparse receiptがstable identity順、入力digest不変 |
 | `U-DOCLEDGER-007` | parse error、unknown scheme、broken/archived/superseded endpoint | reference analyzer | 空集合へ変換せず`doc-reference-parse-error`又は`doc-reference-orphan`、exit 1 |
 | `U-DOCLEDGER-008` | target blob変更後のcanonical assertion | closure analyzer | `doc-canonical-assertion-stale`、exit 1 |
