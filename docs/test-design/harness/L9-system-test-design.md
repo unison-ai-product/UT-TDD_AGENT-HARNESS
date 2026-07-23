@@ -157,7 +157,7 @@ G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順�
 | ST-ID | Given / When | system oracle | 負例・exit |
 |---|---|---|---|
 | `ST-DOCSEM-01` | 固定Git commitの全tracked repository documentsをzone別baseline captureする | commit/root tree/selection digest、zone別tree/member/path digest/countが再現し、OS/working tree差で変化しない。921は`docs_tree`だけ | 必須zone欠落、未分類文書、working tree採取、改行join、baseline上書きはfail |
-| `ST-DOCSEM-02` | baseline recordとexplicit add/delete/rename deltaからfinalを構築する | baseline exactly once、delta exactly once、final tracked path exactly once、missing/duplicate/phantom/case-fold collision 0 | renameを無関係なdelete+addへ推測、未台帳delta、存在しないfinal pathはfail |
+| `ST-DOCSEM-02` | baseline recordとexplicit add/modify/delete/rename deltaからfinalを構築する | baseline exactly once、delta chain/replay exactly once、final tracked path/blob exactly once、missing/duplicate/phantom/case-fold collision 0 | renameをGit heuristicで推測、未台帳/illegal/chain改竄delta、final path/blob不一致はfail |
 | `ST-DOCSEM-03` | 各recordのmeaningを評価する | responsibility/audience/input/consumer/canonical assertionが揃い、keyword hitでなくtarget実体と比較できる | 意味欠落、archive文を現行assertion化、存在だけのsubstance greenはfail |
 | `ST-DOCSEM-04` | profile/capability/reference文書のapplicabilityを判定する | 条件、観測値、理由、decider、再評価triggerが揃い、未評価とNAを区別する | target slot不在、条件未評価、理由なしNAをclosedにしない |
 | `ST-DOCSEM-05` | authorityとdispositionを適用する | 責務ごとのcanonical 1件、全referenceにも処置あり、update/merge/supersede/archive/retain/NAの後条件を満たす | referenceを処置として使用、generated view手編集、重複canonical、target/PLAN欠落はfail |
@@ -174,7 +174,7 @@ G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順�
 | ST-ID | whole-system scenario | acceptance / defect routing |
 |---|---|---|
 | `ST-DOCLEDGER-01` | commit済みbaselineからsnapshotを取得し、全tracked repository docsをmaterializeしてCLI/DB/doctor/reportを通す | 同一commit/tree/snapshot digestでpath exactly once、pending/orphan/phantom/delta 0。数量だけ一致する別treeは拒否 |
-| `ST-DOCLEDGER-02` | baseline後に文書add/delete/rename、broken link、anchor削除、canonical本文差替えを同時に行う | 全変異をtyped findingとして検出し、未台帳delta又はstale assertionが一件でもあればprogram accept禁止 |
+| `ST-DOCLEDGER-02` | baseline後に文書add/modify/delete/rename、broken link、anchor削除、canonical本文差替えを同時に行う | 全変異をtyped findingとして検出し、未台帳/illegal/chain改竄delta又はstale assertionが一件でもあればprogram accept禁止 |
 | `ST-DOCLEDGER-03` | blocking findingをdebt PLANへrouteし、続いてsnapshot又はfinding payloadを変更する | 初回routeはfindingを隠さずblockedを維持し、変更後はroute staleとして再審査を要求。route済みを完了へ読み替えない |
 | `ST-DOCLEDGER-04` | DB projectionと過去reportを削除して同一Git treeからrebuildし、全surfaceのclosure結果を比較する | identity/finding/route requirement/exitが再現し、working tree又はDBから不足判断を補完しない。差はL6 contract、L7 wiring、L9 oracleへ分離route |
 | `ST-DOCLEDGER-05` | Green projectionがある状態でparse/FK/write/swap faultを順次注入し、archive/history/fixtureを含む全zoneを再評価する | 任意faultで旧Green projectionとauthoring sourceを保持し、部分commit 0。旧語の単純存在を許容しつつ、canonical authorityのlegacy逆流だけをfail-closeする |

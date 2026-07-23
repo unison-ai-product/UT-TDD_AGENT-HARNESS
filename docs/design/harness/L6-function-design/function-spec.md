@@ -924,6 +924,22 @@ type DocumentClosureResult = {
   closure: "closed" | "blocked";
 };
 
+type DocumentMemberIdentity = {
+  path: string;
+  blobOid: string;
+  contentDigest: string;
+};
+
+type DocumentDeltaEvent =
+  | { kind: "add"; sequence: number; after: DocumentMemberIdentity }
+  | { kind: "modify"; sequence: number; before: DocumentMemberIdentity; after: DocumentMemberIdentity }
+  | { kind: "delete"; sequence: number; before: DocumentMemberIdentity }
+  | { kind: "rename"; sequence: number; before: DocumentMemberIdentity; after: DocumentMemberIdentity };
+
+type DocumentDeltaReplayResult =
+  | { ok: true; effective: readonly DocumentMemberIdentity[]; deltaChainDigest: string }
+  | { ok: false; findings: readonly DocumentDeltaFinding[]; deltaChainDigest: string };
+
 captureRepositoryDocsSnapshot(
   input: CaptureRepositoryDocsSnapshotInput,
   git: GitObjectSnapshotPort,
@@ -938,6 +954,10 @@ analyzeDocumentReferences(
   snapshot: RepositoryDocsSnapshot,
   readers: readonly DocumentReferenceReader[],
 ): Result<DocumentReferenceGraph, readonly DocumentReferenceError[]>;
+
+replayDocumentDeltas(
+  input: ReplayDocumentDeltasInput,
+): DocumentDeltaReplayResult;
 
 analyzeRepositoryDocumentClosure(
   input: AnalyzeRepositoryDocumentClosureInput,
@@ -984,6 +1004,30 @@ DbC:
   final snapshotと完全比較する。raw Git差分はrenameを推測せずadd/modify/deleteとして観測する。
   明示rename deltaだけが対応するdelete+addを消費し、未登録renameはdelete/addの別findingとして返す。
 
+delta reducerの遷移表:
+
+| kind | 事前条件 | state更新 | 拒否reason |
+|---|---|---|---|
+| `add` | after path不在 | after memberを追加 | `path-already-exists` |
+| `modify` | before pathが存在しblob/content一致、before/after path同一 | after memberへ置換 | `source-missing|stale-before|path-changed` |
+| `delete` | before pathが存在しblob/content一致 | before pathを削除 | `source-missing|stale-before` |
+| `rename` | before pathが存在しblob/content一致、after path不在、旧新pathが異なる | oldを削除しafterを追加 | `source-missing|stale-before|target-exists|same-path` |
+
+入力順を権威にせず`sequence`昇順でreplayするが、sequenceは1始まり・gap/duplicateなし、
+`previousEventDigest`は直前event digestと一致しなければならない。event frameは
+`ledger_id, sequence, kind, from_path, to_path, before_blob_oid, before_content_digest,
+after_blob_oid, after_content_digest, decision_digest, previous_event_digest`順の
+`canonical-frame-v1`とする。先頭chain seedは`ledger_id, baseline_snapshot_digest, policy_revision`、
+各stepは`previous_chain_digest, event_digest`をframe化してSHA-256とし、最終値を`deltaChainDigest`とする。
+replay結果はfinal snapshotのpath/blob/content集合と完全一致させ、余剰deltaも成功扱いしない。
+
+`DocumentDeltaFinding`のevidence frameは
+`baseline_snapshot_digest, final_snapshot_digest, delta_chain_digest, reason_code, sequence,
+operation_kind, from_path, to_path, before_blob_oid, before_content_digest, after_blob_oid,
+after_content_digest, policy_revision`順とする。subjectはadd=`to_path`、delete=`from_path`、
+modify=`from_path`、invalid event=`delta_id`であり、finding IDはrule/subject/evidence digestから導出する。
+出力順は`operation_kind, subject_identity, sequence, finding_id`のunsigned UTF-8 byte順とする。
+
 typed finding/error:
 
 | ID | 発火条件 | closure / debt route |
@@ -995,7 +1039,7 @@ typed finding/error:
 | `doc-disposition-duplicate` | pathまたはcase-fold identity重複 | blocked、ledger correction |
 | `doc-disposition-incomplete` | canonical applicabilityのkind別field、application status、disposition後条件不足 | blocked、設計判断route必須 |
 | `doc-selection-unclassified` | selector zone外のtracked document、又は必須zone欠落 | blocked、上流selection設計route必須 |
-| `doc-delta-unregistered` | baseline後のadd/modify/delete、又は明示rename deltaが未判断 | blocked、差分identity別route必須 |
+| `doc-delta-unregistered` | baseline後の未登録差分、illegal delta遷移、sequence/chain/final集合不一致 | blocked、reason codeと差分identity別route必須 |
 | `doc-reference-parse-error` | reader例外、未知scheme、構文不正 | blocked、reader defect |
 | `doc-reference-orphan` | source/target path、typed ID、anchor不在 | blocked、source owner route必須 |
 | `doc-canonical-assertion-stale` | assertionのtarget blob/digestがsnapshotと不一致 | blocked、assertion owner route必須 |
