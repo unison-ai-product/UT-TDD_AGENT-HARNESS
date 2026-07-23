@@ -622,6 +622,13 @@ member集合digestのcanonical frameだけから作り、時刻・working tree�
 改行join、文字列再encode、OS sortを禁止する。member集合digestはstable path順でfield名を含む
 length-prefixed frame `(path, blob_oid, content_sha256, file_mode, zone)`を連結して計算する。
 
+`canonical-frame-v1`の各fieldは`uint32be(name_utf8_length) + name_utf8 +
+uint64be(value_byte_length) + value_bytes`とし、数値も10進ASCII bytesで表す。snapshot field順は
+`repository_identity, commit_oid, repository_tree_oid, selection_revision, selection_digest,
+tracked_count, path_stream_hash, member_set_digest`、member field順は前段の定義順へ固定する。
+集合はpathのunsigned UTF-8 byte順で並べ、SHA-256 hexは小文字64桁、snapshot IDは
+`document-snapshot:sha256:<snapshot_digest>`とする。JSON stringify、locale sort、native endianを禁止する。
+
 zone shardの全recordは`path`、baseline blob OID/content SHA-256、zone、disposition、reason、targets、plan IDs、
 impact tags、authoring provenance、application statusを必須とする。selectorはauthoring CLIの入力に使えるが、
 同一transactionで921 recordへ展開し、selector自体やrelation graphのnode数を正本にしない。baseline後の
