@@ -726,15 +726,36 @@ ledger DB不在・schema不一致・digest破損は空ledgerとして補完せ�
 `(event_id,subject_id,subject_revision)`→workflow event、`(evidence_id,subject_id,subject_revision)`→evidenceのcomposite FKで
 cross-subject/revision linkをSQLite実制約として拒否する。
 
-### Historical seal + genesis rebase v11/v12/v13 physical contract
+### 履歴封印 + genesis rebase v11/v12/v13 物理契約
 
-| table | 必須columnと型 | key / FK / nullability |
+| テーブル | 必須columnと型 | key / FK / nullability |
 |---|---|---|
 | `genesis_rebase_migrations` | `command_id`, `command_payload_digest`, `historical_asset_id`, `historical_authority_kind`, `historical_projection_path`, `historical_projection_blob_oid`, `historical_projection_content_digest`, `historical_projection_tail_record_digest`, `historical_first_revision INTEGER`, `historical_last_revision INTEGER`, `historical_seal_json`, `historical_seal_digest`, `authoritative_certificate_digest`, `new_asset_id`, `new_revision INTEGER`, `migration_certificate_id`, `migration_certificate_digest`, `occurred_at`, `migration_digest` | PK=`command_id`、全列NOT NULL。authority kind=`tracked_projection`、first revision=1、last revision>0、new revision=1。successorだけ`plan_revisions(asset_id,revision)`へcomposite FK |
 | `genesis_rebase_migration_certificates` | `certificate_id`, `command_id`, `command_payload_digest`, `certificate_json`, `certificate_digest`, `recorded_at` | PK=`certificate_id`、command UNIQUE、migrationへRESTRICT FK。domain certificateをexact保存しledgerで再生成しない |
 | `genesis_rebase_comment_groups` | `group_id`, `command_id`, `command_payload_digest`, `migration_certificate_id`, `migration_certificate_digest`, `group_digest`, `state`, `generation INTEGER`, `created_at`, `updated_at` | PK=`group_id`、command UNIQUE。`command_id`→`genesis_rebase_migrations(command_id)`、`migration_certificate_id`→`genesis_rebase_migration_certificates(certificate_id)`はいずれもRESTRICT FK。state=`pending\|projected\|recovery_required` |
 | `genesis_rebase_comment_members` | `group_id`, `member_kind`, `ordinal INTEGER`, `target_json`, `target_digest`, `state`, `claim_generation INTEGER`, `claim_owner_token?`, `claim_expires_at?`, `remote_comment_node_id?`, `remote_comment_url?`, `updated_at`, `create_intent_owner_token?`, `create_intent_generation INTEGER?`, `create_intent_at?` | PK=`(group_id,member_kind)`、ordinal UNIQUE。kind=`issue102_seal\|issue143_metadata`。v13でdurable create intent 3列を追加し、3列は全NULLまたは全non-NULL |
-| `genesis_rebase_comment_events` | `event_id`, `group_id`, `sequence INTEGER`, `member_kind?`, `event_kind`, `occurred_at`, `previous_event_digest?`, `event_digest` | PK=`event_id`、`(group_id,sequence)` UNIQUE、append-only。event=`group_prepared\|member_projected\|member_recovery_required\|group_projected\|group_recovery_required\|group_resumed` |
+| `genesis_rebase_comment_events` | `event_id`, `group_id`, `sequence INTEGER`, `member_kind?`, `event_kind`, `occurred_at`, `previous_event_digest?`, `event_digest` | PK=`event_id`、`(group_id,sequence)` UNIQUE、append-only。許可するevent種別は`group_prepared\|member_projected\|member_recovery_required\|group_projected\|group_recovery_required\|group_resumed` |
+
+authorityはcertificate JSON内でも次の二領域へ分離し、外側のdigest列から個別に照合できる形で
+canonical保存する。
+
+| authority領域 | 必須field | 物理不変条件 |
+|---|---|---|
+| `source_blob_authority` | `repository_identity`, `commit_oid`, `source_path`, `blob_oid`, `content_digest`, `canonical_frontmatter_digest`, `body_digest`, `trusted_status` | Git objectのbytesから全fieldを再導出する。working tree/index、review HEAD、caller申告値から補完しない |
+| `reviewed_implementation_authority` | `repository_identity`, `implementation_head`, `review_kind`, `verdict`, `tests_green_at`, `reviewed_at`, `green_command_digest`, `worker_model`, `reviewer_model` | verdict=`pass`、cross-agent、異model family、`tests_green_at<=reviewed_at`。implementation HEADはsource commitとは独立に保持する |
+
+`genesis_rebase_migrations`は`source_authority_digest`,
+`reviewed_implementation_authority_digest`, `trusted_status`をNOT NULLで保持する。
+certificate JSONの各authority領域をcanonical化したdigestと外側の二digest列が一致し、
+`trusted_status`はsource blob frontmatter、successor revision row、certificateの三か所で一致しなければ
+insertを拒否する。review PASSはstatus遷移ではないため、source blobが`draft`ならsuccessor rowを
+`confirmed`として挿入してはならない。`confirmed`化にはreview/confirm遷移receiptを含む新しい
+source blob authorityが必要である。
+
+source authorityとimplementation authorityは同一commitを要求しない。ただし双方の
+`repository_identity`はcommandのrepositoryと一致し、いずれかのHEAD/digest/statusが変わった
+replayは同一commandの再生ではなくpreimage conflictとする。旧schemaで両authorityを区別できないrowを
+推測backfillせず、移行前のuntrusted rowとして隔離する。
 
 旧revision 1..5は現行Plan Ledgerへ架空復元しない。trusted HEADのtracked admission receipt
 projection blobをstrict parseし、command/receipt/content/record/previous chainと全file tailをauthorityにする。

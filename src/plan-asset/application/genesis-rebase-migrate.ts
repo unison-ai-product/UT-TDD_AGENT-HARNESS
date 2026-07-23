@@ -63,9 +63,9 @@ export function validateGenesisRebaseMigration(
   )
     return failed("projection-tail-drift");
   const identity = proposal.certificate.identity;
+  if (proposal.successor.revision !== 1 || proposal.successor.status !== "draft")
+    return failed("successor-migration-status-invalid");
   if (
-    proposal.successor.revision !== 1 ||
-    proposal.successor.status !== "confirmed" ||
     proposal.successor.assetId === proposal.historical.assetId ||
     proposal.successor.assetId !== deriveRebaseAssetId(identity) ||
     identity.repositoryIdentity !== proposal.repositoryIdentity ||
@@ -82,7 +82,8 @@ export function validateGenesisRebaseMigration(
   if (
     review.reviewKind !== "cross_agent" ||
     review.verdict !== "pass" ||
-    review.exactHead !== proposal.sourceCommit ||
+    !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(proposal.reviewedImplementationCommit) ||
+    review.exactHead !== proposal.reviewedImplementationCommit ||
     !review.workerModel.trim() ||
     !review.reviewerModel.trim() ||
     review.workerModel === review.reviewerModel ||
@@ -93,6 +94,27 @@ export function validateGenesisRebaseMigration(
     Date.parse(review.testsGreenAt) > Date.parse(review.reviewedAt)
   )
     return failed("confirmation-review-invalid");
+  const sourceAuthority = proposal.certificate.sourceBlobAuthority;
+  const reviewedAuthority = proposal.certificate.reviewedImplementationAuthority;
+  if (
+    sourceAuthority.repositoryIdentity !== proposal.repositoryIdentity ||
+    sourceAuthority.commitOid !== proposal.sourceCommit ||
+    sourceAuthority.sourcePath !== proposal.successor.sourcePath ||
+    sourceAuthority.blobOid !== proposal.successor.sourceBlobOid ||
+    sourceAuthority.contentDigest !== proposal.successor.contentDigest ||
+    sourceAuthority.canonicalFrontmatterDigest !== proposal.successor.canonicalPayloadDigest ||
+    sourceAuthority.bodyDigest !== proposal.successor.bodyDigest ||
+    sourceAuthority.trustedStatus !== proposal.successor.status ||
+    reviewedAuthority.repositoryIdentity !== proposal.repositoryIdentity ||
+    reviewedAuthority.implementationHead !== proposal.reviewedImplementationCommit ||
+    reviewedAuthority.reviewKind !== review.reviewKind ||
+    reviewedAuthority.verdict !== review.verdict ||
+    reviewedAuthority.testsGreenAt !== review.testsGreenAt ||
+    reviewedAuthority.reviewedAt !== review.reviewedAt ||
+    reviewedAuthority.workerModel !== review.workerModel ||
+    reviewedAuthority.reviewerModel !== review.reviewerModel
+  )
+    return failed("migration-authority-binding-invalid");
   if (
     !migrationCertificateValid(proposal.certificate) ||
     proposal.certificate.certificateDigest !==
@@ -129,6 +151,8 @@ function certificateInput(
     custodyProjectionDigest: custody.projectionDigest,
     projectionPreimageDigest: proposal.projection.expectedTailDigest,
     decision: "PO_A_seal_history_and_rebase",
+    sourceBlobAuthority: proposal.certificate.sourceBlobAuthority,
+    reviewedImplementationAuthority: proposal.certificate.reviewedImplementationAuthority,
   };
 }
 

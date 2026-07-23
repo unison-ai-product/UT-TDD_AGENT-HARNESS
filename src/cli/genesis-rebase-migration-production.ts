@@ -10,6 +10,9 @@ import {
 import { parseTrackedReceiptProjection } from "../plan-admission/tracked-receipt-projection.js";
 import {
   GENESIS_REBASE_CUSTODY_ISSUE,
+  GENESIS_REBASE_MIGRATION_MARKER,
+  GENESIS_REBASE_MIGRATION_OPERATION,
+  GENESIS_REBASE_PLAN_ID,
   GENESIS_REBASE_REPOSITORY,
   type GenesisRebaseMigrationCommand,
   GenesisRebaseMigrationRunner,
@@ -34,12 +37,14 @@ export function createProductionGenesisRebaseMigrationRunner(
   const transaction =
     deps.transaction ?? (db ? new GenesisRebaseMigrationTransaction(db) : undefined);
   if (!transaction) throw new Error("genesis-rebase-migration-transaction-unavailable");
-  const gitResolver = new TrustedGitBlobResolver(
-    deps.gitCommand ?? new NodeGitCommandPort(repoRoot),
-  );
+  const gitCommand = deps.gitCommand ?? new NodeGitCommandPort(repoRoot);
+  const gitResolver = new TrustedGitBlobResolver(gitCommand);
   const runner = new GenesisRebaseMigrationRunner({
     observeIssue102: deps.observeIssue102 ?? (() => observeIssue(102)),
     observeCustodyIssue: deps.observeCustodyIssue ?? observeCustodyIssue,
+    resolveCommit: deps.resolveCommit ?? ((commit) => resolveCommit(gitCommand, commit)),
+    isAncestor:
+      deps.isAncestor ?? ((ancestor, descendant) => isAncestor(gitCommand, ancestor, descendant)),
     resolveBlob: deps.resolveBlob ?? ((commit, path) => gitResolver.resolve(commit, path)),
     resolveHistoricalProjection:
       deps.resolveHistoricalProjection ??
@@ -128,9 +133,216 @@ export function registerGenesisRebaseMigrationProductionCommand(
 
 export function parseCommandText(text: string): GenesisRebaseMigrationCommand {
   try {
-    return parseGenesisRebaseMigrationCommand(JSON.parse(text));
+    const value: unknown = JSON.parse(text);
+    assertManifestShape(value);
+    return parseGenesisRebaseMigrationCommand(value);
   } catch {
     throw new Error("genesis-rebase-migration-command-invalid");
+  }
+}
+
+function assertManifestShape(value: unknown): asserts value is GenesisRebaseMigrationCommand {
+  const root = object(value);
+  const proposal = object(root.proposal);
+  const input = object(root.input);
+  const review = proposal.confirmationReview === null ? null : object(proposal.confirmationReview);
+  const successor = object(proposal.successor);
+  const historical = object(proposal.historical);
+  const projection = object(proposal.projection);
+  const issue102 = object(proposal.issue102);
+  const custody = object(proposal.custodyIssue);
+  const certificate = object(proposal.certificate);
+  const identity = object(certificate.identity);
+  const sourceAuthority = object(certificate.sourceBlobAuthority);
+  const reviewedAuthority = object(certificate.reviewedImplementationAuthority);
+  const inputIssue = object(input.issue);
+  const authority = object(input.authoritativeCertificate);
+  const revisions = array(historical.revisions);
+  const inputRevisions = array(input.historicalRevisions);
+  if (
+    root.marker !== GENESIS_REBASE_MIGRATION_MARKER ||
+    root.operation !== GENESIS_REBASE_MIGRATION_OPERATION ||
+    root.repository !== GENESIS_REBASE_REPOSITORY ||
+    root.plan_id !== GENESIS_REBASE_PLAN_ID ||
+    root.inference_forbidden !== true ||
+    root.drive !== "recovery" ||
+    !strings(
+      root.issue102_body_digest,
+      proposal.commandId,
+      proposal.repositoryIdentity,
+      proposal.sourceCommit,
+      proposal.reviewedImplementationCommit,
+      successor.assetId,
+      successor.planId,
+      successor.sourceBlobOid,
+      successor.contentDigest,
+      successor.status,
+      successor.canonicalPayloadDigest,
+      successor.bodyDigest,
+      successor.sourcePath,
+      historical.assetId,
+      historical.disposition,
+      projection.sourcePath,
+      projection.blobOid,
+      projection.contentDigest,
+      projection.expectedTailDigest,
+      projection.currentTailDigest,
+      issue102.state,
+      issue102.bodyDigest,
+      custody.state,
+      custody.bodyDigest,
+      custody.projectionDigest,
+      custody.driveModel,
+      certificate.schemaVersion,
+      certificate.certificateId,
+      certificate.certificateDigest,
+      identity.algorithm,
+      identity.repositoryIdentity,
+      identity.planId,
+      identity.historicalAssetId,
+      identity.historicalTerminalRecordDigest,
+      identity.sourceCommit,
+      identity.sourceBlobOid,
+      sourceAuthority.repositoryIdentity,
+      sourceAuthority.commitOid,
+      sourceAuthority.sourcePath,
+      sourceAuthority.blobOid,
+      sourceAuthority.contentDigest,
+      sourceAuthority.canonicalFrontmatterDigest,
+      sourceAuthority.bodyDigest,
+      sourceAuthority.trustedStatus,
+      reviewedAuthority.repositoryIdentity,
+      reviewedAuthority.implementationHead,
+      reviewedAuthority.reviewKind,
+      reviewedAuthority.verdict,
+      reviewedAuthority.testsGreenAt,
+      reviewedAuthority.reviewedAt,
+      reviewedAuthority.greenCommandDigest,
+      reviewedAuthority.workerModel,
+      reviewedAuthority.reviewerModel,
+      input.commandId,
+      input.historicalAssetId,
+      input.newAssetId,
+      input.newPlanId,
+      input.canonicalPayloadJson,
+      input.canonicalPayloadDigest,
+      input.bodyDigest,
+      input.sourcePath,
+      input.sourceCommit,
+      authority.certificateId,
+      authority.certificateJson,
+      authority.certificateDigest,
+      inputIssue.nodeId,
+      inputIssue.bodyDigest,
+      inputIssue.observedRevision,
+      inputIssue.episodeId,
+      inputIssue.branch,
+      ...(review
+        ? [
+            review.reviewKind,
+            review.verdict,
+            review.exactHead,
+            review.workerModel,
+            review.reviewerModel,
+            review.reviewedAt,
+            review.testsGreenAt,
+          ]
+        : []),
+    ) ||
+    sourceAuthority.trustedStatus !== "draft" ||
+    (review !== null && typeof review.greenCommandCount !== "number") ||
+    typeof successor.revision !== "number" ||
+    typeof historical.appendForbidden !== "boolean" ||
+    typeof historical.inferredRowsForbidden !== "boolean" ||
+    typeof projection.preserveThroughSequence !== "number" ||
+    typeof projection.appendOnly !== "boolean" ||
+    typeof issue102.number !== "number" ||
+    typeof issue102.mutationForbidden !== "boolean" ||
+    typeof custody.number !== "number" ||
+    typeof custody.terminal !== "boolean" ||
+    typeof identity.historicalTerminalRevision !== "number" ||
+    typeof inputIssue.number !== "number" ||
+    revisions.length === 0 ||
+    inputRevisions.length === 0 ||
+    !revisions.every(revisionShape) ||
+    !inputRevisions.every(inputRevisionShape)
+  )
+    throw new Error("manifest-shape-invalid");
+}
+
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("manifest-object-invalid");
+  return value as Record<string, unknown>;
+}
+
+function array(value: unknown): unknown[] {
+  if (!Array.isArray(value)) throw new Error("manifest-array-invalid");
+  return value;
+}
+
+function strings(...values: unknown[]): boolean {
+  return values.every((value) => typeof value === "string" && value.length > 0);
+}
+
+function revisionShape(value: unknown): boolean {
+  try {
+    const revision = object(value);
+    return (
+      typeof revision.revision === "number" &&
+      strings(
+        revision.commandId,
+        revision.receiptId,
+        revision.receiptDigest,
+        revision.contentDigest,
+        revision.recordDigest,
+        revision.bodyDigest,
+        revision.sourcePath,
+        revision.sourceCommit,
+      ) &&
+      (revision.previousRecordDigest === null || typeof revision.previousRecordDigest === "string")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function inputRevisionShape(value: unknown): boolean {
+  try {
+    const revision = object(value);
+    return (
+      typeof revision.revision === "number" &&
+      strings(
+        revision.canonicalPayloadDigest,
+        revision.bodyDigest,
+        revision.sourcePath,
+        revision.sourceCommit,
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+function resolveCommit(git: GitCommandPort, commit: string): string {
+  try {
+    const oid = git
+      .run(["rev-parse", "--verify", `${commit}^{commit}`])
+      .toString("ascii")
+      .trim();
+    if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(oid)) throw new Error("review-commit-oid-invalid");
+    return oid;
+  } catch {
+    throw new Error("genesis-rebase-review-commit-unavailable");
+  }
+}
+
+function isAncestor(git: GitCommandPort, ancestor: string, descendant: string): boolean {
+  try {
+    git.run(["merge-base", "--is-ancestor", ancestor, descendant]);
+    return true;
+  } catch {
+    return false;
   }
 }
 

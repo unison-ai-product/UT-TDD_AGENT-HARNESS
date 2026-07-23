@@ -48,6 +48,10 @@ export interface GenesisRebaseMigrationTransactionPort {
 export interface GenesisRebaseMigrationRunnerDeps {
   readonly observeIssue102: () => ObservedGenesisRebaseCustodyIssue;
   readonly observeCustodyIssue: () => ObservedGenesisRebaseCustodyIssue;
+  /** Resolve a commit through the same repository authority used for source blobs. */
+  readonly resolveCommit: (commit: string) => string;
+  /** True only when both commits belong to that repository and ancestor relation is proven. */
+  readonly isAncestor: (ancestor: string, descendant: string) => boolean;
   readonly resolveBlob: (commit: string, sourcePath: string) => TrustedGitBlob;
   readonly resolveHistoricalProjection: (
     commit: string,
@@ -80,6 +84,7 @@ export class GenesisRebaseMigrationRunner {
     const validation = validateGenesisRebaseMigration(command.proposal);
     if (!validation.ok)
       throw new Error(`genesis-rebase-domain-validation-failed:${validation.ruleId}`);
+    assertReviewAuthority(command, this.deps);
     assertTrustedSource(
       command,
       this.deps.resolveBlob(command.proposal.sourceCommit, command.proposal.successor.sourcePath),
@@ -114,6 +119,21 @@ export class GenesisRebaseMigrationRunner {
   }
 }
 
+function assertReviewAuthority(
+  command: GenesisRebaseMigrationCommand,
+  deps: Pick<GenesisRebaseMigrationRunnerDeps, "resolveCommit" | "isAncestor">,
+): void {
+  const source = deps.resolveCommit(command.proposal.sourceCommit);
+  const reviewed = deps.resolveCommit(command.proposal.reviewedImplementationCommit);
+  if (
+    source !== command.proposal.sourceCommit ||
+    reviewed !== command.proposal.reviewedImplementationCommit
+  )
+    throw new Error("genesis-rebase-review-commit-mismatch");
+  if (!deps.isAncestor(source, reviewed))
+    throw new Error("genesis-rebase-review-authority-not-descendant");
+}
+
 function canonicalCommentGroup(
   command: GenesisRebaseMigrationCommand,
   issue102: ObservedGenesisRebaseCustodyIssue,
@@ -141,6 +161,7 @@ function canonicalCommentGroup(
     metadata: {
       repository: GENESIS_REBASE_REPOSITORY,
       source_commit: proposal.sourceCommit,
+      reviewed_implementation_commit: proposal.reviewedImplementationCommit,
       predecessor_asset: proposal.historical.assetId,
       predecessor_revision_first: 1,
       predecessor_revision_last: 5,
@@ -258,6 +279,8 @@ function assertTrustedSource(command: GenesisRebaseMigrationCommand, blob: Trust
   );
   if (!parsed) throw new Error("genesis-rebase-trusted-source-invalid");
   const canonicalPayloadJson = stable(parsed.frontmatter);
+  if (parsed.frontmatter.status !== proposal.successor.status)
+    throw new Error("genesis-rebase-trusted-source-status-mismatch");
   if (
     blob.commitOid !== proposal.sourceCommit ||
     blob.sourcePath !== proposal.successor.sourcePath ||

@@ -50,6 +50,13 @@ describe("durable genesis rebase comment outbox", () => {
     const secondDb = openPlanLedger({ repoRoot: root });
     const secondStore = new SqliteGenesisRebaseCommentOutbox(secondDb);
     expect(secondStore.loadGroup(group.groupId)).toEqual(group);
+    const loaded = secondStore.loadGroup(group.groupId);
+    expect(loaded?.members[0].commentBody).toContain(
+      `"reviewed_implementation_commit":"${"b".repeat(40)}"`,
+    );
+    expect(loaded?.members.map((member) => member.commentBodyDigest)).toEqual(
+      group.members.map((member) => member.commentBodyDigest),
+    );
     const result = new GenesisRebaseCommentProjectionRunner(
       secondStore,
       new NodeGhGenesisRebaseCommentAdapter(github),
@@ -265,7 +272,7 @@ describe("durable genesis rebase comment outbox", () => {
     db.close();
   });
 
-  it("U-PA-REBASE-050: populated v12 member rowをv13へ値不変で移行する", () => {
+  it("U-PA-REBASE-050: populated v12 member rowを現行v14へ値不変で移行する", () => {
     const { db, group } = preparedStore();
     const before = db
       .prepare(
@@ -298,7 +305,7 @@ describe("durable genesis rebase comment outbox", () => {
       "CREATE INDEX idx_genesis_rebase_comment_members_state ON genesis_rebase_comment_members(state)",
     );
     db.setUserVersion(12);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 13 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 14 });
     expect(
       db
         .prepare(
@@ -464,6 +471,7 @@ function fixture() {
     metadata: {
       repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
       source_commit: "a".repeat(40),
+      reviewed_implementation_commit: "b".repeat(40),
       predecessor_asset: "plan:historical",
       predecessor_revision_first: 1,
       predecessor_revision_last: 5,
@@ -540,9 +548,14 @@ function seedMigration(
     migration_certificate_id: group.migrationCertificateId,
     migration_certificate_digest: group.migrationCertificateDigest,
     occurred_at: now,
+    source_authority_digest: authoritativeCertificate.sourceAuthorityDigest,
+    reviewed_implementation_authority_digest:
+      authoritativeCertificate.reviewedImplementationAuthorityDigest,
+    trusted_status: authoritativeCertificate.trustedStatus,
   };
+  const migrationColumns = Object.keys(migration);
   db.prepare(
-    `INSERT INTO genesis_rebase_migrations VALUES (${Object.keys(migration)
+    `INSERT INTO genesis_rebase_migrations (${migrationColumns.join(", ")}, migration_digest) VALUES (${migrationColumns
       .map(() => "?")
       .join(", ")}, ?)`,
   ).run(...Object.values(migration), ledgerRowDigest(migration, "migration_digest"));
@@ -570,6 +583,27 @@ function certificate() {
     custodyProjectionDigest: `sha256:${"5".repeat(64)}`,
     projectionPreimageDigest: `sha256:${"d".repeat(64)}`,
     decision: "PO_A_seal_history_and_rebase",
+    sourceBlobAuthority: {
+      repositoryIdentity: identity.repositoryIdentity,
+      commitOid: identity.sourceCommit,
+      sourcePath: "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
+      blobOid: identity.sourceBlobOid,
+      contentDigest: `sha256:${"6".repeat(64)}`,
+      canonicalFrontmatterDigest: `sha256:${"7".repeat(64)}`,
+      bodyDigest: `sha256:${"8".repeat(64)}`,
+      trustedStatus: "draft",
+    },
+    reviewedImplementationAuthority: {
+      repositoryIdentity: identity.repositoryIdentity,
+      implementationHead: "b".repeat(40),
+      reviewKind: "cross_agent",
+      verdict: "pass",
+      testsGreenAt: "2026-07-23T06:00:00.000Z",
+      reviewedAt: "2026-07-23T06:01:00.000Z",
+      greenCommandDigest: `sha256:${"9".repeat(64)}`,
+      workerModel: "gpt-5.6-sol",
+      reviewerModel: "claude-opus-4-8",
+    },
   });
 }
 

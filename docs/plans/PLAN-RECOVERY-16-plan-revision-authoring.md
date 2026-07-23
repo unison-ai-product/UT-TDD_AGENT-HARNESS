@@ -159,6 +159,14 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/genesis-adoption-production.test.ts
     artifact_type: test_code
+  - artifact_path: tests/genesis-rebase-comment-projection.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/genesis-rebase-comment-restart.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/genesis-rebase-migration-production.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/node-gh-genesis-rebase-comment-adapter.test.ts
+    artifact_type: test_code
   - artifact_path: tests/node-gh-forward-escape-issue-port.test.ts
     artifact_type: test_code
   - artifact_path: tests/trusted-git-blob-resolver.test.ts
@@ -170,6 +178,10 @@ generates:
   - artifact_path: tests/plan-asset/ledger-schema.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/genesis-adoption-transaction.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/genesis-rebase-migration-transaction.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/plan-asset-lineage-migration.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/node-genesis-adoption-runner.test.ts
     artifact_type: test_code
@@ -427,6 +439,37 @@ command/receipt/content/record/previous chainと全file tailを抽出する。pu
 proposal/input/source/projectionの全binding一致後だけtransactionへ渡す。domain certificate
 ID/JSON/digestをauthoritative inputとしてexact保存し、ledgerで別certificateを生成しない。
 
+source blob authorityとreviewed implementation authorityは別の信頼根である。
+
+- **source blob authority**は、封印・移行するPLAN本文を含むGit objectの
+  `repository/commit/path/blob_oid/content_digest`である。PLAN ID、canonical frontmatter、
+  body digest、およびsource上の`status`は、このblobのbytesから再導出する。working tree、
+  manifestの自己申告値、review対象HEADから本文を補完しない。
+- **reviewed implementation authority**は、移行runner、validator、transaction、projection
+  adapterとそのテストをcross-agentが検査したexact implementation HEADである。
+  `review_kind/verdict/tests_green_at/reviewed_at/green_commands/worker/reviewer`と一緒に束縛し、
+  source blobのcommitをreview済み実装HEADとして使い回さない。
+- **trusted status join**は、source blobから再導出したstatus、successor proposal/inputのstatus、
+  certificateに固定したstatusの三者が同値であることを要求する。cross-review PASSはコードの
+  実装権威であってPLAN statusの上書き権限ではない。sourceが`draft`のままならmigration入力も
+  `draft`でなければならず、`confirmed`へ進める場合は通常のreview/confirm遷移が生成した別revision
+  またはstatus遷移receiptをtrusted sourceとして採り直す。validatorが`confirmed`を定数注入して
+  status不一致を隠すことを禁止する。
+
+両authorityは同じrepositoryに属してよいが、同じcommitである必要はない。逆に異なる役割を
+一つの`sourceCommit`へ縮退させてはならない。migration certificateは
+`source_authority_digest`、`reviewed_implementation_authority_digest`、`trusted_status`を別fieldで
+保持し、replay時にそれぞれを再検証する。一方だけの更新、review後のimplementation HEAD変更、
+source blobのstatus/content変更はすべて新commandを要求し、既存certificateへ追記しない。
+
+現行固定source commit `79ffe9b373cbf0bd03b5610395fd618c26acba26`の対象blobは
+`status: draft`である。したがって、このblobをsource authorityに保ったままsuccessorへ
+`confirmed`を注入する現行preimageはtrusted status joinを満たさず、migration実行不可である。
+また同commitをreview evidenceのexact implementation HEADに要求しても、後続実装差分のreview権威には
+ならない。実装は二authority fieldとstatus joinを備えたうえで、新しいcross-agent review HEADを
+implementation authorityとして取得し、source側は`draft`のまま移行して通常confirmへ進むか、
+正規confirm receiptを伴う新source blobへ差し替える必要がある。
+
 local migration後、Issue #102 seal commentとIssue #143 canonical metadata commentをv12 durable
 outboxの2-member groupとして投影する。これはlocal migrationとは別Sagaであり、片方成功をremote原子性や
 operational closureと呼ばない。
@@ -442,6 +485,9 @@ PR #130単体は次のmechanism ACまでを判定し、実repository/remote clos
 - [ ] revision 1..5のcommand/receipt/content/record/previous/tailを推測補完せず抽出する。
 - [ ] historical lineageをunrehydratable sealとして保持し、架空旧revision FKを生成しない。
 - [ ] authoritative certificate ID/JSON/digestをexact保存し、ledger再生成0にする。
+- [ ] source blob authorityとreviewed implementation authorityを別SHA・別digestで束縛し、片方を他方から推測しない。
+- [ ] source blobから再導出したstatus、proposal/input status、certificate statusの完全一致を検証し、review PASSによるstatus上書きを禁止する。
+- [ ] reviewed implementation HEAD変更、source content/status変更、どちらか一方だけのauthority更新をstaleとして拒否する。
 - [ ] Issue #102/#143の2-comment group/member/eventをdurable化し、片肺時はrecovery_requiredにする。
 
 次はPR #130をPR #117へ合流したcombined HEAD上の後続closure ACであり、PR #130単体のGreenへ算入しない。

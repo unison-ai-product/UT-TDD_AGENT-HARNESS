@@ -8,6 +8,30 @@ import {
 } from "../src/plan-asset/application/genesis-rebase-comment-projection.js";
 
 describe("genesis rebase two-member GitHub comment projection", () => {
+  it("U-PA-REBASE-050: canonical commentはsourceとreviewed implementation authorityを別fieldで束縛する", () => {
+    const group = fixture();
+    for (const member of group.members) {
+      expect(member.commentBody).toContain(`"source_commit":"${"a".repeat(40)}"`);
+      expect(member.commentBody).toContain(`"reviewed_implementation_commit":"${"b".repeat(40)}"`);
+    }
+    const changed = createGenesisRebaseCommentGroup({
+      ...fixtureInput(),
+      metadata: { ...metadata(), reviewed_implementation_commit: "c".repeat(40) },
+    });
+    expect(changed.members[0].commentBodyDigest).not.toBe(group.members[0].commentBodyDigest);
+    expect(changed.members[1].commentBodyDigest).not.toBe(group.members[1].commentBodyDigest);
+  });
+
+  it("U-PA-REBASE-051: reviewed implementation authority欠落・不正SHAをfail-closeする", () => {
+    const input = fixtureInput();
+    expect(() =>
+      createGenesisRebaseCommentGroup({
+        ...input,
+        metadata: { ...metadata(), reviewed_implementation_commit: "not-a-git-object" },
+      }),
+    ).toThrow("genesis-rebase-comment-metadata-invalid");
+  });
+
   it("U-PA-REBASE-030: GETでexact commentがあればcreateせず2-member groupをprojectする", () => {
     const group = fixture();
     const github = fakeGithub(group, true);
@@ -107,7 +131,11 @@ describe("genesis rebase two-member GitHub comment projection", () => {
 });
 
 function fixture() {
-  return createGenesisRebaseCommentGroup({
+  return createGenesisRebaseCommentGroup(fixtureInput());
+}
+
+function fixtureInput() {
+  return {
     commandId: "genesis-rebase:recovery-16",
     commandPayloadDigest: "6".repeat(64),
     groupId: "projection-group:recovery-16",
@@ -124,13 +152,14 @@ function fixture() {
       issueVersion: "2026-07-23T06:04:27Z",
     },
     metadata: metadata(),
-  });
+  };
 }
 
 function metadata() {
   return {
     repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
     source_commit: "a".repeat(40),
+    reviewed_implementation_commit: "b".repeat(40),
     predecessor_asset: "plan:historical",
     predecessor_revision_first: 1 as const,
     predecessor_revision_last: 5 as const,

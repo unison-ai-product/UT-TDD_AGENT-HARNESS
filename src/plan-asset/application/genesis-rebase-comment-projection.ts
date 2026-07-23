@@ -26,6 +26,7 @@ export interface GenesisRebaseCommentGroup {
 export interface GenesisRebaseCanonicalMetadata {
   readonly repository: string;
   readonly source_commit: string;
+  readonly reviewed_implementation_commit: string;
   readonly predecessor_asset: string;
   readonly predecessor_revision_first: 1;
   readonly predecessor_revision_last: 5;
@@ -224,6 +225,7 @@ function assertMetadata(metadata: GenesisRebaseCanonicalMetadata): void {
   if (
     metadata.repository !== "unison-ai-product/UT-TDD_AGENT-HARNESS" ||
     !/^[a-f0-9]{40}$/.test(metadata.source_commit) ||
+    !/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(metadata.reviewed_implementation_commit) ||
     !metadata.predecessor_asset.startsWith("plan:") ||
     metadata.predecessor_revision_first !== 1 ||
     metadata.predecessor_revision_last !== 5 ||

@@ -115,6 +115,41 @@ describe("plan asset historical seal + rebase genesis", () => {
     expect(deriveMigrationCertificate(input)).toEqual(proposal.certificate);
     expect(deriveMigrationCertificate(input)).toEqual(deriveMigrationCertificate(input));
   });
+
+  it("U-PA-REBASE-004: trusted source blob commitとreview済implementation exactHeadを別authorityとして検証する", () => {
+    const proposal = fixture();
+    const reviewedImplementationHead = "d".repeat(40);
+    Object.assign(proposal.successor, { status: "draft" });
+    Object.assign(proposal, { reviewedImplementationCommit: reviewedImplementationHead });
+    const review = requireReview(proposal);
+    review.exactHead = reviewedImplementationHead;
+    proposal.certificate = deriveMigrationCertificate(certificateInput(proposal));
+
+    expect(validateGenesisRebaseMigration(proposal)).toMatchObject({ ok: true });
+    expect(proposal.sourceCommit).not.toBe(review.exactHead);
+  });
+
+  it("U-PA-REBASE-005: migration rev1でconfirmedを自己申告するproposalを拒否する", () => {
+    const proposal = fixture();
+    Object.assign(proposal.successor, { status: "confirmed" });
+    Object.assign(proposal, { reviewedImplementationCommit: proposal.sourceCommit });
+
+    expect(validateGenesisRebaseMigration(proposal)).toEqual({
+      ok: false,
+      ruleId: "successor-migration-status-invalid",
+    });
+  });
+
+  it("U-PA-REBASE-006: review exactHeadはsourceCommitでなくreviewedImplementationCommitへ束縛する", () => {
+    const proposal = fixture();
+    Object.assign(proposal.successor, { status: "draft" });
+    Object.assign(proposal, { reviewedImplementationCommit: "d".repeat(40) });
+
+    expect(validateGenesisRebaseMigration(proposal)).toEqual({
+      ok: false,
+      ruleId: "confirmation-review-invalid",
+    });
+  });
 });
 
 function fixture(): GenesisRebaseMigrationProposal {
@@ -133,6 +168,7 @@ function fixture(): GenesisRebaseMigrationProposal {
     commandId: "genesis-rebase:recovery-16",
     repositoryIdentity: identity.repositoryIdentity,
     sourceCommit: identity.sourceCommit,
+    reviewedImplementationCommit: identity.sourceCommit,
     issue102: {
       number: 102,
       state: "OPEN",
@@ -159,7 +195,7 @@ function fixture(): GenesisRebaseMigrationProposal {
       revision: 1,
       planId: identity.planId,
       sourceBlobOid: identity.sourceBlobOid,
-      status: "confirmed",
+      status: "draft",
       canonicalPayloadDigest: digest("successor-canonical"),
       bodyDigest: digest("successor-body"),
       sourcePath: "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
@@ -214,6 +250,27 @@ function certificateInput(
     custodyProjectionDigest: requireCustody(proposal).projectionDigest,
     projectionPreimageDigest: proposal.projection.expectedTailDigest,
     decision: "PO_A_seal_history_and_rebase",
+    sourceBlobAuthority: {
+      repositoryIdentity: proposal.repositoryIdentity,
+      commitOid: proposal.sourceCommit,
+      sourcePath: proposal.successor.sourcePath,
+      blobOid: proposal.successor.sourceBlobOid,
+      contentDigest: proposal.successor.contentDigest,
+      canonicalFrontmatterDigest: proposal.successor.canonicalPayloadDigest,
+      bodyDigest: proposal.successor.bodyDigest,
+      trustedStatus: "draft",
+    },
+    reviewedImplementationAuthority: {
+      repositoryIdentity: proposal.repositoryIdentity,
+      implementationHead: proposal.reviewedImplementationCommit,
+      reviewKind: "cross_agent",
+      verdict: "pass",
+      testsGreenAt: requireReview(proposal).testsGreenAt,
+      reviewedAt: requireReview(proposal).reviewedAt,
+      greenCommandDigest: digest("green-commands"),
+      workerModel: requireReview(proposal).workerModel,
+      reviewerModel: requireReview(proposal).reviewerModel,
+    },
   };
 }
 

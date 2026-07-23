@@ -1423,19 +1423,40 @@ interface ExistingIssueAdoptionPort {
 - GitHub inboundはremote observationをappendするだけで、domain eventのsequence/payloadを更新しない。
 - E15はescapeをL/type/cause/drive/recurrence identity別learning factへ投影し、上流actionまたは理由付きno-changeを必須にする。
 
-### Historical seal + genesis rebase trusted-authority契約
+### 履歴封印 + genesis rebase trusted-authority契約
 
 | 関数 | 契約 |
 |---|---|
 | `validateGenesisRebaseMigration` | Issue #102 seal、terminal recovery custody、連続receipt chain、projection、successor identity、cross-agent PASS、canonical certificateをI/Oなしで検証する |
 | `TrustedGitBlobResolver.resolve` | exact commit/pathからblob OID/bytesを解決し、working tree/indexをauthorityにしない |
 | default `resolveHistoricalProjection` | tracked projection全体のrecord digest/previous chainを検証後、historical assetのrevision 1..5だけをcommand/receipt/content/record/pathへ抽出する |
-| `GenesisRebaseMigrationRunner.run` | exact command → pure validation → trusted source再導出 → tracked projection検証 → proposal/input全binding → Issue #143観測 → transactionの順を固定する |
+| `resolveReviewedImplementationAuthority` | cross-agent review evidenceからexact implementation HEAD、review kind/verdict、test時刻、review時刻、green command digest、worker/reviewerを解決する。source blob commitを既定値にしない |
+| `GenesisRebaseMigrationRunner.run` | exact command → source blob authority再導出 → reviewed implementation authority検証 → trusted status join → pure domain validation → tracked projection検証 → proposal/input全binding → Issue #143観測 → transactionの順を固定する |
 | `GenesisRebaseMigrationTransaction.migrate` | unrehydratable historical seal、successor revision 1、authoritative certificateを単一local commitする。certificateを別生成しない |
 | `GenesisRebaseCommentProjectionRunner.run` | 102/143の2-member groupをdurable prepare後、`pending`/`recovery_required` memberだけowner token・expiry・generation claimをremote前にCAS取得して個別projectする。POST直前にowner+generation+unexpired leaseを再検証してdurable create intentをCAS記録する。intent記録済みmemberはtakeover後もGET reconciliation専用で、POST前後とも同じmarker全集合分類を使い、exact 1件かつmarker一致全体も1件の場合だけprojected、0件・複数・本文不一致は自動再POSTせず`recovery_required`。active lease中の別ownerはremoteへ到達しない。既projected memberはread-only GETでexactならclaim/generation/eventを一切増やさず、drift時だけ専用CAS/event経路でdurable `recovery_required`へ遷移する。2/2 projectedの場合だけgroup projectedにし、同一terminal state replayはDB不変とする |
 
-source commit/path/blob/content、PLAN ID、canonical frontmatter、body digest、projection
-path/blob/content/tail、revision command/receipt/record chainの一軸差異をcaller値から補完しない。
+`sourceBlobAuthority.commitOid`はPLAN本文の同一性を証明し、
+`reviewedImplementationAuthority.implementationHead`はmigration実装とtestのreview対象を証明する。
+両者を同じ`sourceCommit` fieldへ格納しない。review evidenceの`exactHead`は後者だけと比較し、
+blob OID/content/frontmatter/bodyは前者だけから再導出する。repository identityは双方とcommandの
+三者で一致させるが、commit SHAの一致は要求しない。
+
+trusted status joinは次の全条件を満たす場合だけGreenである。
+
+1. source blob bytesをstrict parseして得たfrontmatter `status`が許可値である。
+2. proposal successor、transaction input、certificateの`trusted_status`がその値と完全一致する。
+3. statusが`confirmed`なら、そのsource blob自体がreview/confirm遷移後のGit objectであり、
+   対応するreview evidenceとstatus遷移receiptが同じPLAN revisionを参照する。
+4. cross-agent PASSだけを根拠に`draft` sourceを`confirmed`へ昇格しない。
+
+不一致は`source-status-mismatch`、review対象HEADの差異は
+`reviewed-implementation-authority-stale`、source authorityの差異は
+`source-blob-authority-stale`としてwrite前にfail-closeする。runner定数、manifest、caller値で
+欠損authorityやstatusを補完しない。transactionは二authority digestとtrusted statusを
+certificate/migration rowへexact保存し、replayでも三つを再照合する。
+
+sourceのcommit/path/blob/content、PLAN ID、canonical frontmatter、body digest、projectionの
+path/blob/content/tail、revision command/receipt/record chainに一軸でも差異があれば、caller値から補完しない。
 Issue本文は変更せずcommentだけを追加する。marker重複、同marker異body、create後の再観測不能は
 projectedにしない。domain child ruleはCLI JSON `rule_id`へ透過し、generic errorへ潰さない。
 

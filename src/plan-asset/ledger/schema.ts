@@ -24,7 +24,7 @@ import {
 } from "./authoring-operation-provenance.js";
 import { committedRevisionPredicateForSchema } from "./revision-visibility.js";
 
-export const LEDGER_SCHEMA_VERSION = 13;
+export const LEDGER_SCHEMA_VERSION = 14;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -944,6 +944,9 @@ const v11Tables: readonly TableDef[] = [
       requiredCol("migration_certificate_digest"),
       requiredCol("occurred_at"),
       requiredCol("migration_digest"),
+      col("source_authority_digest"),
+      col("reviewed_implementation_authority_digest"),
+      col("trusted_status"),
     ],
     checks: [
       {
@@ -1615,6 +1618,7 @@ export function migratePlanLedger(
         (candidate) => candidate.table === "genesis_rebase_comment_members",
       ))
         db.exec(createIndexSql(index));
+      installV14AuthorityColumns(db);
       db.setUserVersion(LEDGER_SCHEMA_VERSION);
       db.exec("COMMIT");
     } catch {
@@ -1624,9 +1628,36 @@ export function migratePlanLedger(
     }
     db.exec("PRAGMA foreign_keys = ON");
   }
+  if (db.userVersion() === 13) {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      installV14AuthorityColumns(db);
+      db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      db.exec("COMMIT");
+    } catch {
+      db.exec("ROLLBACK");
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    }
+  }
   return schemaMatches(db) && ledgerRowsValid(db)
     ? { ok: true, version: LEDGER_SCHEMA_VERSION }
     : { ok: false, ruleId: "plan-ledger-unavailable" };
+}
+
+function installV14AuthorityColumns(db: HarnessDb): void {
+  const columns = new Set(
+    db
+      .prepare("PRAGMA table_info(genesis_rebase_migrations)")
+      .all()
+      .map((column) => String(column.name)),
+  );
+  for (const name of [
+    "source_authority_digest",
+    "reviewed_implementation_authority_digest",
+    "trusted_status",
+  ]) {
+    if (!columns.has(name)) db.exec(`ALTER TABLE genesis_rebase_migrations ADD COLUMN ${name}`);
+  }
 }
 
 function v4LedgerValid(db: HarnessDb): boolean {
@@ -2313,12 +2344,29 @@ function genesisRebaseRowsValid(db: HarnessDb): boolean {
   const migrations = db.prepare("SELECT * FROM genesis_rebase_migrations").all();
   const certificates = db.prepare("SELECT * FROM genesis_rebase_migration_certificates").all();
   if (
-    migrations.some(
-      (row) =>
-        row.migration_digest !== ledgerRowDigest(row, "migration_digest") ||
+    migrations.some((row) => {
+      const legacyAuthority =
+        row.source_authority_digest == null &&
+        row.reviewed_implementation_authority_digest == null &&
+        row.trusted_status == null;
+      const digestRow = legacyAuthority
+        ? Object.fromEntries(
+            Object.entries(row).filter(
+              ([key]) =>
+                ![
+                  "source_authority_digest",
+                  "reviewed_implementation_authority_digest",
+                  "trusted_status",
+                ].includes(key),
+            ),
+          )
+        : row;
+      return (
+        row.migration_digest !== ledgerRowDigest(digestRow, "migration_digest") ||
         createHash("sha256").update(String(row.historical_seal_json)).digest("hex") !==
-          row.historical_seal_digest,
-    )
+          row.historical_seal_digest
+      );
+    })
   )
     return false;
   if (certificates.length !== migrations.length) return false;
@@ -2331,11 +2379,15 @@ function genesisRebaseRowsValid(db: HarnessDb): boolean {
     }
     const migration = migrations.find((candidate) => candidate.command_id === row.command_id);
     const custody = custodyRows.find((candidate) => candidate.command_id === row.command_id);
+    const legacyAuthority =
+      migration?.source_authority_digest == null &&
+      migration?.reviewed_implementation_authority_digest == null &&
+      migration?.trusted_status == null;
     if (
       !migration ||
       !custody ||
       stableLedgerJson(certificate) !== row.certificate_json ||
-      !migrationCertificateValid(certificate) ||
+      (!legacyAuthority && !migrationCertificateValid(certificate)) ||
       certificate.certificateId !== row.certificate_id ||
       certificate.commandId !== row.command_id ||
       certificate.certificateDigest !== row.certificate_digest ||
@@ -2343,6 +2395,11 @@ function genesisRebaseRowsValid(db: HarnessDb): boolean {
       row.certificate_id !== migration.migration_certificate_id ||
       row.certificate_digest !== migration.migration_certificate_digest ||
       row.certificate_digest !== migration.authoritative_certificate_digest ||
+      (!legacyAuthority &&
+        (certificate.sourceAuthorityDigest !== migration.source_authority_digest ||
+          certificate.reviewedImplementationAuthorityDigest !==
+            migration.reviewed_implementation_authority_digest ||
+          certificate.trustedStatus !== migration.trusted_status)) ||
       certificate.identity.historicalAssetId !== migration.historical_asset_id ||
       certificate.identity.historicalTerminalRevision !== migration.historical_last_revision ||
       certificate.predecessorRevisionRange[0] !== migration.historical_first_revision ||

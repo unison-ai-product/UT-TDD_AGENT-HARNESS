@@ -50,6 +50,9 @@ export interface GenesisRebaseMigrationInput {
     readonly certificateId: string;
     readonly certificateJson: string;
     readonly certificateDigest: string;
+    readonly sourceAuthorityDigest: string;
+    readonly reviewedImplementationAuthorityDigest: string;
+    readonly trustedStatus: "draft";
   };
   readonly commentGroup: GenesisRebaseCommentGroup;
   readonly issue: {
@@ -241,6 +244,10 @@ export class GenesisRebaseMigrationTransaction {
         historical_seal_json: derived.historicalSealJson,
         historical_seal_digest: derived.historicalSealDigest,
         authoritative_certificate_digest: input.authoritativeCertificate.certificateDigest,
+        source_authority_digest: input.authoritativeCertificate.sourceAuthorityDigest,
+        reviewed_implementation_authority_digest:
+          input.authoritativeCertificate.reviewedImplementationAuthorityDigest,
+        trusted_status: input.authoritativeCertificate.trustedStatus,
         new_asset_id: input.newAssetId,
         new_revision: 1,
         migration_certificate_id: derived.certificateId,
@@ -249,7 +256,17 @@ export class GenesisRebaseMigrationTransaction {
       };
       this.db
         .prepare(
-          "INSERT INTO genesis_rebase_migrations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          `INSERT INTO genesis_rebase_migrations
+           (command_id, command_payload_digest, historical_asset_id,
+            historical_authority_kind, historical_projection_path,
+            historical_projection_blob_oid, historical_projection_content_digest,
+            historical_projection_tail_record_digest, historical_first_revision,
+            historical_last_revision, historical_seal_json, historical_seal_digest,
+            authoritative_certificate_digest, source_authority_digest,
+            reviewed_implementation_authority_digest, trusted_status, new_asset_id,
+            new_revision, migration_certificate_id, migration_certificate_digest,
+            occurred_at, migration_digest)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(...Object.values(migration), ledgerRowDigest(migration, "migration_digest"));
       this.fault?.after("migration");
@@ -458,6 +475,11 @@ export class GenesisRebaseMigrationTransaction {
           input.historicalProjectionTailDigest &&
         migration.authoritative_certificate_digest ===
           input.authoritativeCertificate.certificateDigest &&
+        migration.source_authority_digest ===
+          input.authoritativeCertificate.sourceAuthorityDigest &&
+        migration.reviewed_implementation_authority_digest ===
+          input.authoritativeCertificate.reviewedImplementationAuthorityDigest &&
+        migration.trusted_status === input.authoritativeCertificate.trustedStatus &&
         migration.migration_digest === ledgerRowDigest(migration, "migration_digest") &&
         certificate &&
         certificate.certificate_id === derived.certificateId &&
@@ -517,6 +539,11 @@ function derive(input: GenesisRebaseMigrationInput) {
     !input.authoritativeCertificate.certificateId ||
     !input.authoritativeCertificate.certificateJson ||
     !/^sha256:[a-f0-9]{64}$/.test(input.authoritativeCertificate.certificateDigest) ||
+    !/^sha256:[a-f0-9]{64}$/.test(input.authoritativeCertificate.sourceAuthorityDigest) ||
+    !/^sha256:[a-f0-9]{64}$/.test(
+      input.authoritativeCertificate.reviewedImplementationAuthorityDigest,
+    ) ||
+    input.authoritativeCertificate.trustedStatus !== "draft" ||
     input.commentGroup.commandId !== input.commandId ||
     !input.commentGroup.groupId ||
     input.commentGroup.members.length !== 2 ||
@@ -559,6 +586,10 @@ function derive(input: GenesisRebaseMigrationInput) {
     reason: input.reason,
     occurred_at: input.occurredAt,
     authoritative_certificate_digest: input.authoritativeCertificate.certificateDigest,
+    source_authority_digest: input.authoritativeCertificate.sourceAuthorityDigest,
+    reviewed_implementation_authority_digest:
+      input.authoritativeCertificate.reviewedImplementationAuthorityDigest,
+    trusted_status: input.authoritativeCertificate.trustedStatus,
   };
   const commandPayloadDigest = sha(stable(payload));
   const routeTupleDigest = sha(

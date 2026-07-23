@@ -59,7 +59,9 @@ describe("genesis rebase migration transaction", () => {
         .prepare(
           `SELECT historical_authority_kind, historical_projection_path,
                   historical_projection_blob_oid, historical_projection_content_digest,
-                  historical_projection_tail_record_digest, authoritative_certificate_digest
+                  historical_projection_tail_record_digest, authoritative_certificate_digest,
+                  source_authority_digest, reviewed_implementation_authority_digest,
+                  trusted_status
            FROM genesis_rebase_migrations`,
         )
         .get(),
@@ -70,6 +72,32 @@ describe("genesis rebase migration transaction", () => {
       historical_projection_content_digest: input().historicalProjectionContentDigest,
       historical_projection_tail_record_digest: input().historicalProjectionTailDigest,
       authoritative_certificate_digest: input().authoritativeCertificate.certificateDigest,
+      source_authority_digest: input().authoritativeCertificate.sourceAuthorityDigest,
+      reviewed_implementation_authority_digest:
+        input().authoritativeCertificate.reviewedImplementationAuthorityDigest,
+      trusted_status: "draft",
+    });
+  });
+
+  it.each([
+    ["source_authority_digest", `sha256:${"0".repeat(64)}`],
+    ["reviewed_implementation_authority_digest", `sha256:${"0".repeat(64)}`],
+    ["trusted_status", "confirmed"],
+  ] as const)("authority rowの%s driftをreplayでfail-closeする", (column, value) => {
+    const db = fixture();
+    const transaction = new GenesisRebaseMigrationTransaction(db);
+    expect(transaction.migrate(input())).toMatchObject({ ok: true, replayed: false });
+    const guards = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'genesis_rebase_migrations'",
+      )
+      .all();
+    for (const guard of guards) db.exec(`DROP TRIGGER ${String(guard.name)}`);
+    db.prepare(`UPDATE genesis_rebase_migrations SET ${column} = ?`).run(value);
+
+    expect(transaction.migrate(input())).toEqual({
+      ok: false,
+      ruleId: "genesis-rebase-replay-binding-invalid",
     });
   });
 
@@ -323,6 +351,9 @@ function input(): GenesisRebaseMigrationInput {
       certificateId: "migration:authoritative-recovery-16",
       certificateJson: '{"certificate":"authoritative"}',
       certificateDigest: `sha256:${sha("authoritative-certificate")}`,
+      sourceAuthorityDigest: `sha256:${sha("source-authority")}`,
+      reviewedImplementationAuthorityDigest: `sha256:${sha("reviewed-authority")}`,
+      trustedStatus: "draft",
     },
     commentGroup: createGenesisRebaseCommentGroup({
       commandId: "genesis-rebase:issue-143:recovery-16",
@@ -343,6 +374,7 @@ function input(): GenesisRebaseMigrationInput {
       metadata: {
         repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
         source_commit: "f".repeat(40),
+        reviewed_implementation_commit: "d".repeat(40),
         predecessor_asset: "plan:historical-recovery-16",
         predecessor_revision_first: 1,
         predecessor_revision_last: 5,

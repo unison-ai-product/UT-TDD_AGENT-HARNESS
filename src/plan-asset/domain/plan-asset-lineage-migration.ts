@@ -49,7 +49,10 @@ export interface ConfirmationReviewEvidence {
 export interface GenesisRebaseMigrationProposal {
   commandId: string;
   repositoryIdentity: string;
+  /** Commit that owns the trusted successor source blob. */
   sourceCommit: string;
+  /** Exact mechanism commit judged by the cross-runtime confirmation review. */
+  reviewedImplementationCommit: string;
   issue102: {
     number: 102;
     state: "OPEN";
@@ -64,7 +67,7 @@ export interface GenesisRebaseMigrationProposal {
     planId: string;
     sourceBlobOid: string;
     contentDigest: Sha256Digest;
-    status: "confirmed";
+    status: "draft";
     canonicalPayloadDigest: Sha256Digest;
     bodyDigest: Sha256Digest;
     sourcePath: string;

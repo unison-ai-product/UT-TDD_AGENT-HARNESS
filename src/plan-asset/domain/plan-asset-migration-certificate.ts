@@ -13,6 +13,29 @@ export interface PlanAssetRebaseIdentity {
   readonly sourceBlobOid: string;
 }
 
+export interface SourceBlobAuthority {
+  readonly repositoryIdentity: string;
+  readonly commitOid: string;
+  readonly sourcePath: string;
+  readonly blobOid: string;
+  readonly contentDigest: Sha256Digest;
+  readonly canonicalFrontmatterDigest: Sha256Digest;
+  readonly bodyDigest: Sha256Digest;
+  readonly trustedStatus: "draft";
+}
+
+export interface ReviewedImplementationAuthority {
+  readonly repositoryIdentity: string;
+  readonly implementationHead: string;
+  readonly reviewKind: "cross_agent";
+  readonly verdict: "pass";
+  readonly testsGreenAt: string;
+  readonly reviewedAt: string;
+  readonly greenCommandDigest: Sha256Digest;
+  readonly workerModel: string;
+  readonly reviewerModel: string;
+}
+
 export interface PlanAssetMigrationCertificateInput {
   readonly commandId: string;
   readonly identity: PlanAssetRebaseIdentity;
@@ -25,6 +48,8 @@ export interface PlanAssetMigrationCertificateInput {
   readonly custodyProjectionDigest: Sha256Digest;
   readonly projectionPreimageDigest: Sha256Digest;
   readonly decision: "PO_A_seal_history_and_rebase";
+  readonly sourceBlobAuthority: SourceBlobAuthority;
+  readonly reviewedImplementationAuthority: ReviewedImplementationAuthority;
 }
 
 export interface PlanAssetMigrationCertificate extends PlanAssetMigrationCertificateInput {
@@ -33,6 +58,9 @@ export interface PlanAssetMigrationCertificate extends PlanAssetMigrationCertifi
   readonly certificateDigest: Sha256Digest;
   readonly migrationKind: "historical_seal_rebase";
   readonly inferenceForbidden: true;
+  readonly sourceAuthorityDigest: Sha256Digest;
+  readonly reviewedImplementationAuthorityDigest: Sha256Digest;
+  readonly trustedStatus: "draft";
 }
 
 export function deriveRebaseAssetId(identity: PlanAssetRebaseIdentity): `plan:rebase:${string}` {
@@ -49,6 +77,9 @@ export function deriveMigrationCertificate(
       `migration:${sha(`rebase:${input.identity.historicalAssetId}:${input.successorAssetId}`).slice(0, 32)}` as const,
     migrationKind: "historical_seal_rebase" as const,
     inferenceForbidden: true as const,
+    sourceAuthorityDigest: authorityDigest(input.sourceBlobAuthority),
+    reviewedImplementationAuthorityDigest: authorityDigest(input.reviewedImplementationAuthority),
+    trustedStatus: input.sourceBlobAuthority.trustedStatus,
   };
   return Object.freeze({
     ...body,
@@ -63,7 +94,16 @@ export function migrationCertificateValid(certificate: PlanAssetMigrationCertifi
     certificate.predecessorRevisionRange[0] !== 1 ||
     certificate.predecessorRevisionRange[1] !== certificate.identity.historicalTerminalRevision ||
     certificate.successorRevision !== 1 ||
-    certificate.inferenceForbidden !== true
+    certificate.inferenceForbidden !== true ||
+    !sourceAuthorityValid(certificate.sourceBlobAuthority, certificate.identity) ||
+    !reviewedAuthorityValid(
+      certificate.reviewedImplementationAuthority,
+      certificate.identity.repositoryIdentity,
+    ) ||
+    certificate.sourceAuthorityDigest !== authorityDigest(certificate.sourceBlobAuthority) ||
+    certificate.reviewedImplementationAuthorityDigest !==
+      authorityDigest(certificate.reviewedImplementationAuthority) ||
+    certificate.trustedStatus !== certificate.sourceBlobAuthority.trustedStatus
   )
     return false;
   const { certificateDigest: _digest, ...input } = certificate;
@@ -72,9 +112,53 @@ export function migrationCertificateValid(certificate: PlanAssetMigrationCertifi
     certificateId: _id,
     migrationKind: _kind,
     inferenceForbidden: _inference,
+    sourceAuthorityDigest: _sourceAuthorityDigest,
+    reviewedImplementationAuthorityDigest: _reviewedAuthorityDigest,
+    trustedStatus: _trustedStatus,
     ...source
   } = input;
   return deriveMigrationCertificate(source).certificateDigest === certificate.certificateDigest;
+}
+
+export function authorityDigest(authority: SourceBlobAuthority | ReviewedImplementationAuthority) {
+  return `sha256:${sha(stableJson(authority))}` as Sha256Digest;
+}
+
+function sourceAuthorityValid(
+  authority: SourceBlobAuthority,
+  identity: PlanAssetRebaseIdentity,
+): boolean {
+  return (
+    Boolean(authority) &&
+    authority.repositoryIdentity === identity.repositoryIdentity &&
+    authority.commitOid === identity.sourceCommit &&
+    authority.blobOid === identity.sourceBlobOid &&
+    authority.sourcePath.startsWith("docs/plans/") &&
+    digestValid(authority.contentDigest) &&
+    digestValid(authority.canonicalFrontmatterDigest) &&
+    digestValid(authority.bodyDigest) &&
+    authority.trustedStatus === "draft"
+  );
+}
+
+function reviewedAuthorityValid(
+  authority: ReviewedImplementationAuthority,
+  repositoryIdentity: string,
+): boolean {
+  return (
+    Boolean(authority) &&
+    authority.repositoryIdentity === repositoryIdentity &&
+    /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(authority.implementationHead) &&
+    authority.reviewKind === "cross_agent" &&
+    authority.verdict === "pass" &&
+    digestValid(authority.greenCommandDigest) &&
+    Boolean(authority.workerModel.trim()) &&
+    Boolean(authority.reviewerModel.trim()) &&
+    authority.workerModel !== authority.reviewerModel &&
+    Number.isFinite(Date.parse(authority.testsGreenAt)) &&
+    Number.isFinite(Date.parse(authority.reviewedAt)) &&
+    Date.parse(authority.testsGreenAt) <= Date.parse(authority.reviewedAt)
+  );
 }
 
 function validIdentity(identity: PlanAssetRebaseIdentity): boolean {

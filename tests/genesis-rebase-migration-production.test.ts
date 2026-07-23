@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { describe, expect, it, vi } from "vitest";
 import {
   createProductionGenesisRebaseMigrationRunner,
+  parseCommandText,
   registerGenesisRebaseMigrationProductionCommand,
 } from "../src/cli/genesis-rebase-migration-production.js";
 import { trackedReceiptRecordDigest } from "../src/plan-admission/tracked-receipt-projection.js";
@@ -118,6 +119,82 @@ describe("genesis rebase migration production composition", () => {
     });
 
     expect(() => runner.run(candidate)).toThrow("genesis-rebase-trusted-source-mismatch");
+    expect(migrate).not.toHaveBeenCalled();
+  });
+
+  it("U-PA-REBASE-030: manifest parserはnested fieldの型欠落をunknown castで通さない", () => {
+    const candidate = command() as unknown as Record<string, unknown>;
+    const proposal = candidate.proposal as Record<string, unknown>;
+    const review = proposal.confirmationReview as Record<string, unknown>;
+    review.greenCommandCount = "2";
+
+    expect(() => parseCommandText(JSON.stringify(candidate))).toThrow(
+      "genesis-rebase-migration-command-invalid",
+    );
+  });
+
+  it("U-PA-REBASE-031: reviewed implementation commitは同repoでsourceの子孫だけを許可する", () => {
+    const candidate = command();
+    candidate.proposal.reviewedImplementationCommit = "d".repeat(40);
+    if (!candidate.proposal.confirmationReview) throw new Error("review fixture missing");
+    candidate.proposal.confirmationReview.exactHead =
+      candidate.proposal.reviewedImplementationCommit;
+    refreshCertificate(candidate);
+    const migrate = vi.fn();
+    const authority = authorityDeps(candidate);
+    const unavailable = new GenesisRebaseMigrationRunner({
+      ...authority,
+      observeCustodyIssue: observedIssue,
+      resolveCommit: (commit) => {
+        if (commit === candidate.proposal.reviewedImplementationCommit)
+          throw new Error("commit unavailable");
+        return commit;
+      },
+      transaction: { migrate },
+    });
+    expect(() => unavailable.run(candidate)).toThrow("commit unavailable");
+    expect(migrate).not.toHaveBeenCalled();
+
+    const unrelated = new GenesisRebaseMigrationRunner({
+      ...authority,
+      observeCustodyIssue: observedIssue,
+      isAncestor: () => false,
+      transaction: { migrate },
+    });
+    expect(() => unrelated.run(candidate)).toThrow(
+      "genesis-rebase-review-authority-not-descendant",
+    );
+    expect(migrate).not.toHaveBeenCalled();
+  });
+
+  it("U-PA-REBASE-029: trusted PLAN statusとproposal successor.status不一致を専用ruleでfail-closeする", () => {
+    const candidate = command();
+    const migrate = vi.fn();
+    Object.assign(candidate.proposal.successor, { status: "draft" });
+    const confirmedSource = sourceText("confirmed");
+    const parsed = parseLegacyPlanSource(confirmedSource);
+    if (!parsed) throw new Error("confirmed fixture source invalid");
+    candidate.proposal.successor.contentDigest = digest(confirmedSource);
+    candidate.proposal.successor.canonicalPayloadDigest = digest(stable(parsed.frontmatter));
+    candidate.proposal.successor.bodyDigest = digest(parsed.body);
+    candidate.input.canonicalPayloadJson = stable(parsed.frontmatter);
+    candidate.input.canonicalPayloadDigest =
+      candidate.proposal.successor.canonicalPayloadDigest.slice(7);
+    candidate.input.bodyDigest = candidate.proposal.successor.bodyDigest.slice(7);
+    refreshCertificate(candidate);
+    const runner = new GenesisRebaseMigrationRunner({
+      ...authorityDeps(candidate),
+      resolveBlob: () => ({
+        commitOid: candidate.proposal.sourceCommit,
+        sourcePath: candidate.proposal.successor.sourcePath,
+        blobOid: candidate.proposal.successor.sourceBlobOid,
+        bytes: Buffer.from(confirmedSource, "utf8"),
+      }),
+      observeCustodyIssue: observedIssue,
+      transaction: { migrate },
+    });
+
+    expect(() => runner.run(candidate)).toThrow("genesis-rebase-trusted-source-status-mismatch");
     expect(migrate).not.toHaveBeenCalled();
   });
 
@@ -325,6 +402,7 @@ function commentGroupFixture(proposal: ReturnType<typeof proposalFixture>) {
     metadata: {
       repository: GENESIS_REBASE_REPOSITORY,
       source_commit: proposal.sourceCommit,
+      reviewed_implementation_commit: proposal.reviewedImplementationCommit,
       predecessor_asset: proposal.historical.assetId,
       predecessor_revision_first: 1,
       predecessor_revision_last: 5,
@@ -363,6 +441,7 @@ function proposalFixture() {
     commandId: "genesis-rebase:recovery-16",
     repositoryIdentity: GENESIS_REBASE_REPOSITORY,
     sourceCommit: GENESIS_REBASE_SOURCE_COMMIT,
+    reviewedImplementationCommit: GENESIS_REBASE_SOURCE_COMMIT,
     issue102: {
       number: 102 as const,
       state: "OPEN" as const,
@@ -391,7 +470,7 @@ function proposalFixture() {
       revision: 1 as const,
       planId: GENESIS_REBASE_PLAN_ID,
       sourceBlobOid: identity.sourceBlobOid,
-      status: "confirmed" as const,
+      status: "draft" as const,
       canonicalPayloadDigest: digest(stable(source.frontmatter)),
       bodyDigest: digest(source.body),
       sourcePath: "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
@@ -430,6 +509,27 @@ function proposalFixture() {
     custodyProjectionDigest: proposal.custodyIssue.projectionDigest,
     projectionPreimageDigest: proposal.projection.expectedTailDigest,
     decision: "PO_A_seal_history_and_rebase",
+    sourceBlobAuthority: {
+      repositoryIdentity: GENESIS_REBASE_REPOSITORY,
+      commitOid: GENESIS_REBASE_SOURCE_COMMIT,
+      sourcePath: proposal.successor.sourcePath,
+      blobOid: proposal.successor.sourceBlobOid,
+      contentDigest: proposal.successor.contentDigest,
+      canonicalFrontmatterDigest: proposal.successor.canonicalPayloadDigest,
+      bodyDigest: proposal.successor.bodyDigest,
+      trustedStatus: "draft",
+    },
+    reviewedImplementationAuthority: {
+      repositoryIdentity: GENESIS_REBASE_REPOSITORY,
+      implementationHead: proposal.reviewedImplementationCommit,
+      reviewKind: "cross_agent",
+      verdict: "pass",
+      testsGreenAt: proposal.confirmationReview.testsGreenAt,
+      reviewedAt: proposal.confirmationReview.reviewedAt,
+      greenCommandDigest: digest("green-commands"),
+      workerModel: proposal.confirmationReview.workerModel,
+      reviewerModel: proposal.confirmationReview.reviewerModel,
+    },
   };
   proposal.certificate = deriveMigrationCertificate(certificateInput);
   return proposal;
@@ -493,13 +593,64 @@ function requireLastRevision<T>(revisions: readonly T[]): T {
   return revision;
 }
 
+function refreshCertificate(candidate: Mutable<GenesisRebaseMigrationCommand>): void {
+  const proposal = candidate.proposal;
+  const custody = proposal.custodyIssue;
+  const review = proposal.confirmationReview;
+  if (!custody || !review || review.verdict !== "pass")
+    throw new Error("certificate refresh authority missing");
+  proposal.certificate = deriveMigrationCertificate({
+    commandId: proposal.commandId,
+    identity: proposal.certificate.identity,
+    predecessorRevisionRange: [1, proposal.historical.revisions.length],
+    successorAssetId: proposal.successor.assetId,
+    successorRevision: 1,
+    issue102BodyDigest: proposal.issue102.bodyDigest,
+    custodyIssueNumber: custody.number,
+    custodyIssueBodyDigest: custody.bodyDigest,
+    custodyProjectionDigest: custody.projectionDigest,
+    projectionPreimageDigest: proposal.projection.expectedTailDigest,
+    decision: "PO_A_seal_history_and_rebase",
+    sourceBlobAuthority: {
+      repositoryIdentity: proposal.repositoryIdentity,
+      commitOid: proposal.sourceCommit,
+      sourcePath: proposal.successor.sourcePath,
+      blobOid: proposal.successor.sourceBlobOid,
+      contentDigest: proposal.successor.contentDigest,
+      canonicalFrontmatterDigest: proposal.successor.canonicalPayloadDigest,
+      bodyDigest: proposal.successor.bodyDigest,
+      trustedStatus: "draft",
+    },
+    reviewedImplementationAuthority: {
+      repositoryIdentity: proposal.repositoryIdentity,
+      implementationHead: proposal.reviewedImplementationCommit,
+      reviewKind: review.reviewKind,
+      verdict: review.verdict,
+      testsGreenAt: review.testsGreenAt,
+      reviewedAt: review.reviewedAt,
+      greenCommandDigest: digest("green-commands"),
+      workerModel: review.workerModel,
+      reviewerModel: review.reviewerModel,
+    },
+  }) as Mutable<typeof proposal.certificate>;
+  candidate.input.authoritativeCertificate = {
+    certificateId: proposal.certificate.certificateId,
+    certificateJson: stable(proposal.certificate),
+    certificateDigest: proposal.certificate.certificateDigest,
+    sourceAuthorityDigest: proposal.certificate.sourceAuthorityDigest,
+    reviewedImplementationAuthorityDigest:
+      proposal.certificate.reviewedImplementationAuthorityDigest,
+    trustedStatus: proposal.certificate.trustedStatus,
+  };
+}
+
 function digest(value: string): `sha256:${string}` {
   const { createHash } = require("node:crypto") as typeof import("node:crypto");
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
-function sourceText(): string {
-  return `---\nplan_id: ${GENESIS_REBASE_PLAN_ID}\n---\n\nsuccessor body\n`;
+function sourceText(status: "draft" | "confirmed" = "draft"): string {
+  return `---\nplan_id: ${GENESIS_REBASE_PLAN_ID}\nstatus: ${status}\n---\n\nsuccessor body\n`;
 }
 
 function authorityDeps(candidate: Mutable<GenesisRebaseMigrationCommand>) {
@@ -510,6 +661,8 @@ function authorityDeps(candidate: Mutable<GenesisRebaseMigrationCommand>) {
       bodyDigest: candidate.proposal.issue102.bodyDigest.slice(7),
       updatedAt: "2026-07-23T05:00:00Z",
     }),
+    resolveCommit: (commit: string) => commit,
+    isAncestor: () => true,
     resolveBlob: () => ({
       commitOid: candidate.proposal.sourceCommit,
       sourcePath: candidate.proposal.successor.sourcePath,
@@ -537,7 +690,9 @@ function authorityDeps(candidate: Mutable<GenesisRebaseMigrationCommand>) {
 function fakeGit(candidate: Mutable<GenesisRebaseMigrationCommand>) {
   return {
     run(args: readonly string[]): Buffer {
-      if (args[0] === "rev-parse") return Buffer.from(`${candidate.proposal.sourceCommit}\n`);
+      if (args[0] === "rev-parse")
+        return Buffer.from(`${String(args[2]).replace(/\^\{commit\}$/, "")}\n`);
+      if (args[0] === "merge-base") return Buffer.alloc(0);
       if (args[0] === "ls-tree") {
         const path = args.at(-1);
         const oid =

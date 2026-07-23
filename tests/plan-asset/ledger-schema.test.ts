@@ -30,7 +30,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       "CREATE INDEX idx_genesis_rebase_comment_members_state ON genesis_rebase_comment_members(state)",
     );
     db.setUserVersion(12);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 13 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     const columns = db
       .prepare("PRAGMA table_info(genesis_rebase_comment_members)")
       .all()
