@@ -211,7 +211,7 @@ boundary rule: lint modules は first-class detector のままにする。DB lay
 | vmodel-contract | 検証済contract、layer/gate VO、compiler | 検証済aggregateとapplication compiler | YAML loader、生成registry |
 | disposition | source/item/target/disposition edge catalog | 検証済aggregateとimmutable edge | Markdown/YAML loader、projection writer |
 | profile | profile catalog/selection/resolved profile | VOとstateless resolver | profile authoring loader |
-| docs-governance | snapshot、materialized disposition、typed reference graph | pure validatorとapplication command | Git object、YAML shard、report writer |
+| document-disposition | snapshot、materialized disposition、typed reference graph/receipt | pure reader/validatorとapplication command | Git object blob、YAML shard、report writer |
 | semantic-assessment | assessment/evidence/debt route | pure evaluatorとrouteFiling port | catalog loader、projection writer |
 | self-proof | receipt/report/mutation corpus | classを使わずpure functionとports | process runner、hasher、receipt store |
 | projection-rebuild | immutable `ProjectionWrite` / `ProjectionFinding` とpure projector policy、rebuild application command、source/store/transaction port | aggregateではないapplication service。状態を持たず、write sessionへ順序付きwrite列を渡す | repository source bundle、SQLite projection store、CLI/doctor composition root |
@@ -228,7 +228,7 @@ boundary rule: lint modules は first-class detector のままにする。DB lay
 | W2 | `src/vmodel-contract/{domain,application,ports,adapters}/*` | `VModelContract`, `compileVModelContract` | 手書きgate定数をgenerated registryへ置換し、drift gate後に旧定数を除去 |
 | W2 | `src/disposition/{domain,adapters}/*` | `DocumentDispositionCatalog` | Markdown catalog loaderとDB projectorを分離 |
 | W2 | `src/profile/{domain,adapters}/*` | `resolveProfile` | doctor run profileとの名称衝突を避け`DocumentProfile`を使用 |
-| W3 | `src/document-governance/*` | snapshot/materialize/validate/reference closure | 現行relation graphをoracleにせず、必要edgeだけ互換export |
+| W3 | `src/document-disposition/{domain,application,ports,adapters}/*` | snapshot/materialize/validate、`loadRepositoryDocumentBlobs`、`readDocumentReferences`、`analyzeDocumentReferences` | 現行relation graphをoracleにせず、検証済みedgeだけ互換export |
 | W3 | `src/semantic-assessment/*` | `evaluateSemanticItem`, `routeAssessmentDebt` | routeFiling portへ委譲しlocal heuristicを禁止 |
 | W4 | `src/self-proof/*` | `runSelfProof`, receipt/report DTO | process runnerでCLI/hook/doctor/CIを外部観測 |
 | W5 | `src/projection/{domain,application,contracts,adapters}/*` | `ProjectionRebuildCommand`, `HarnessProjectionSourcePort`, `ProjectionTransactionPort` | 全consumerをcomposition rootへ移行後、`src/state-db/projection-writer.ts`を削除する。互換facadeの恒久残置は不可 |

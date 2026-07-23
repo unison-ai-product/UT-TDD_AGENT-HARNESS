@@ -285,7 +285,10 @@ renameはdelete+addの推測ではなく、旧新pathを一つのdeltaとしてa
 | `DocumentAuthority` | canonical/reference/generated_view/archiveの1値。責務ごとのcanonicalは1件 |
 | `DispositionDecision` | update/merge/retain/supersede/archive/not_applicable、reason、target/PLAN、適用状態 |
 | `DocumentTarget` | repository-relative pathまたはtyped external authority。merge/supersede/updateの必須後条件を表す |
-| `DocumentReference` | source/target、edge kind、anchor/ID、伝達するsemantic responsibility、applicability condition |
+| `RepositoryDocumentBlob` | final snapshot、source path/blob OID/content digest、Git object raw bytesを不可分に保持 |
+| `DocumentReferenceTarget` | document/anchor/PLAN/ADR/spec/test/externalのdiscriminated union。raw値とcanonical値を混同しない |
+| `DocumentReferenceEdge` | source member、syntax/byte span、raw/canonical target、parser revision、semantic responsibility/applicability condition |
+| `DocumentReferenceParseReceipt` | snapshot/source blob/input bytes、reader registry、edge/error集合digestを束縛。source×required readerでexactly once |
 | `SnapshotIdentity` | commit、repository root tree OID、selector revision/digest、zone別tree/member集合digest、raw NUL path digest、count。working tree identityを拒否 |
 | `ClosureReceipt` | baseline/delta/final/reference集合digest、finding counts、run time、tool version |
 

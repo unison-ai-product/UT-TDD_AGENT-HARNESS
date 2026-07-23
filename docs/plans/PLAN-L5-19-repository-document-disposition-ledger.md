@@ -100,6 +100,10 @@ dependencies:
 5. `document_reference_edges`はfinal snapshotとfrom pathを複合FKで拘束し、targetを
    `document|anchor|plan|spec|test|adr|external`の閉じた型で保持する。repo内targetは実在member/anchor/IDへ
    解決し、parse error、曖昧anchor、unknown schemeをedge 0件へ変換しない。
+   edgeはsource blob/content、syntax、byte range、raw/normalized target、parser/syntax/anchor/scheme
+   revisionへ束縛する。`document_reference_parse_receipts`はrequired readerごとにexactly one、
+   すなわちsource member×readerで一意とする。source bytes、edge集合、error集合のdigestを保持し、
+   receipt欠落・別snapshot・別blobを許さない。
 6. closure runはbaseline/final snapshot、ledger digest、delta chain digest、reference digest、
    parser/policy revisionを固定する。同一入力は同じrun identity/finding ID集合を返し、findingの時刻や
    message文面をidentityへ含めない。

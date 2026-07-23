@@ -23,6 +23,16 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-422-repository-document-ledger-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/document-disposition/domain/document-reference.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/domain/read-document-references.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/application/load-repository-document-blobs.ts
+    artifact_type: source_code
+  - artifact_path: src/document-disposition/ports/repository-document-blob.ts
+    artifact_type: source_code
+  - artifact_path: tests/document-disposition/read-document-references.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
   requires: []
