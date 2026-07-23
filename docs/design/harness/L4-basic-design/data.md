@@ -283,7 +283,7 @@ renameはdelete+addの推測ではなく、旧新pathを一つのdeltaとしてa
 | `DocumentMeaning` | responsibility、audience、inputs、consumers、canonical assertionsが全て非空 |
 | `ApplicabilityDecision` | kind、条件/観測値、理由、decider、再評価triggerを保持。未評価とNAを区別 |
 | `DocumentAuthority` | canonical/reference/generated_view/archiveの1値。責務ごとのcanonicalは1件 |
-| `DispositionDecision` | update/merge/retain/supersede/archive/not_applicable、reason、target/PLAN、application state |
+| `DispositionDecision` | update/merge/retain/supersede/archive/not_applicable、reason、target/PLAN、適用状態 |
 | `DocumentTarget` | repository-relative pathまたはtyped external authority。merge/supersede/updateの必須後条件を表す |
 | `DocumentReference` | source/target、edge kind、anchor/ID、伝達するsemantic responsibility、applicability condition |
 | `SnapshotIdentity` | commit、tree OID、raw NUL path digest、count。working tree identityを拒否 |

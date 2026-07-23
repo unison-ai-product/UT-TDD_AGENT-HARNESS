@@ -216,8 +216,10 @@ final snapshotを持つDocument Ledger集約として実行する。authoring so
 
 方式上の依存方向は次に固定する。
 
-`Git snapshot adapter → strict authoring loader → Document Ledger domain → closure application service
-→ Markdown/SQLite projection adapter`
+```text
+Git snapshot adapter → strict authoring loader → Document Ledger domain → closure application service
+→ Markdown/SQLite projection adapter
+```
 
 - Git adapterはcommit/tree/blob/raw NUL path streamを読むだけで、dispositionを推測しない。
 - domainはmeaning、applicability、authority、disposition、target、typed reference、不変条件を所有する。

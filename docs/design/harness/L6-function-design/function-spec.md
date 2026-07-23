@@ -910,7 +910,7 @@ snapshot queryはGit objectからraw NUL path集合を読む。batch commandはs
 selectorを再評価しない。semantic evaluatorはauthored evidenceを照合するだけでverdictを創作しない。meta-verifierは
 ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdict関数をoracleとしてimportしない。
 
-#### repository docs snapshot / disposition / reference closure freeze (PLAN-L6-74)
+#### リポジトリ文書snapshot／disposition／reference closureのfreeze (PLAN-L6-74)
 
 ```ts
 type RepositoryDocsSnapshotResult =
@@ -965,7 +965,7 @@ DbC:
 - `analyzeDocumentReferences` pre: readerはfrontmatter path、Markdown inline/reference、wiki link、
   anchor、PLAN/spec/test IDごとのtyped readerとして登録する。post: source blobごとのparse receiptと
   edgeをstable identity順で返し、parse不能・未知schemeを空edgeへ変換しない。
-- `analyzeRepositoryDocumentClosure` pre: snapshot、ledger、reference graph、canonical assertion、
+- `analyzeRepositoryDocumentClosure` 事前条件: snapshot、ledger、reference graph、canonical assertion、
   debt routeは同じsnapshot digestへ束縛される。post:全snapshot pathをexactly once判定し、
   ledger phantomとbaseline後のadd/delete/renameを双方向比較し、全reference endpointとanchor、
   canonical assertionのblob digestを再検証する。

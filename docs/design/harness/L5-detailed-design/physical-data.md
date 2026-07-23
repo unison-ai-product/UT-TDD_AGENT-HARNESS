@@ -600,7 +600,7 @@ workflow transition、evidence、doc監査判断を補完してはならない�
 ### §9.15.2 repository文書snapshot / shard schema
 
 `docs/governance/repository-document-disposition/manifest.yaml`は`schema_version`、baseline/final snapshot、
-`path_stream_algorithm=git-ls-tree-z-v1`、commit、docs tree OID、tracked count、raw NUL stream SHA-256、
+`path_stream_algorithm=git-ls-tree-z-v1`、commit、文書tree OID、追跡件数、raw NUL stream SHA-256、
 shard digest、delta chain digestを持つ。snapshot IDはcommit/tree/count/hashのcanonical frameだけから作り、
 時刻・working tree・OSを含めない。
 
