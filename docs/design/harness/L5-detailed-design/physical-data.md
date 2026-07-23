@@ -624,7 +624,7 @@ length-prefixed frame `(path, blob_oid, content_sha256, file_mode, zone)`を連�
 
 `canonical-frame-v1`の各fieldは`uint32be(name_utf8_length) + name_utf8 +
 uint64be(value_byte_length) + value_bytes`とし、数値も10進ASCII bytesで表す。snapshot field順は
-`repository_identity, commit_oid, repository_tree_oid, selection_revision, selection_digest,
+識別子列は`repository_identity, commit_oid, repository_tree_oid, selection_revision, selection_digest,
 tracked_count, path_stream_hash, member_set_digest`、member field順は前段の定義順へ固定する。
 集合はpathのunsigned UTF-8 byte順で並べ、SHA-256 hexは小文字64桁、snapshot IDは
 `document-snapshot:sha256:<snapshot_digest>`とする。JSON stringify、locale sort、native endianを禁止する。
