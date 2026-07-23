@@ -44,6 +44,13 @@ review_evidence: []
 
 # PLAN-L4-31 (add-design): 非機能検証基盤の方式設計
 
+> **Revision 2 Redesign reentry（Issue #98 / PLAN-L6-88）**: §2.8 の test runner
+> resource budget は、毎run cold全準備を前提にせず、immutable prepared cache、run-local
+> COW、machine-wide heavy-I/O scheduler、phase receiptを組み合わせる方式へ差し替える。
+> PLAN-L7-421のcaptured OID、execution/reference分離、seal/fingerprint、全cleanupという
+> 安全契約は維持する。L6正本と採択ACは
+> `PLAN-L6-88-snapshot-runner-performance-redesign.md`を参照する。
+
 ## 1. 問題 (非機能検証基盤 改善指示書 2026-07-16 / IMP-169〜172)
 
 現行の verify 基盤は `src/lint/verification-profile-catalog.ts` の 8 profile (bun-unit / doctor / MCP 系 /

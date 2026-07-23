@@ -1254,6 +1254,34 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
 
 ## PLAN-L7-421 テスト実行snapshot／検出provenance契約 (backprop、2026-07-13)
 
+### PLAN-L6-88 snapshot runner 性能基盤 Redesign 追補（2026-07-17）
+
+本追補は Issue #98 の性能 Redesign 正本である。PLAN-L7-421 の safety/provenance 契約を維持しつつ、
+run ごとの全準備・全削除という性能方式だけを immutable prepared cache、run-local COW、全 runtime 共通
+heavy-I/O scheduler へ差し替える。Slice A の receipt/token だけでは本契約を充足しない。
+
+| 関数/port | signature | pre | post | invariant / fail-close | L7 oracle family |
+|---|---|---|---|---|---|
+| `measureSnapshotRun` | `(input: SnapshotRunMeasureInput, deps: PhaseClockDeps) => SnapshotRunReceipt` | captured OID、lane/test list、OS/filesystem/OneDrive、resource、Node/npm/lock、DB policy、runner/Vitest/global setup digest が既知 | source resolve から token/cleanup までの phase wall/CPU/RSS/disk bytes/files/cache outcome と availability reason を返す | 測定不能は `null`。receipt failure は性能証拠を invalid にするが test/cleanup failure を隠さない | `CAND-SNAPSHOT-PERF-001..006` |
+| `buildPreparedSnapshotKey` | `(input: PreparedSnapshotKeyInput) => PreparedSnapshotKeyResult` | key schema、tree/OID、platform/arch、Node/npm、lock/package、runner/Vitest/global setup、DB schema/migration/rebuild policy が入力済み | canonical component list と digest を返す | 欠落/unknown component は hit-capable key を返さない。各一軸変異で key が変わる | `CAND-SNAPSHOT-PERF-007..012` |
+| `prepareSnapshotCache` | `(key, builder, store) => PreparedSnapshotLease` | cache generation は未publishまたは既存ready、builder は isolated staging root を使う | staging構築→manifest/fingerprint検証→atomic ready publish、または検証済 ready generation の lease | partial/改ざん/wrong-platform/stale DB/reparse escape は利用せずquarantine/miss。active leaseをevictしない。secret/session env/source stateを保存しない | `CAND-SNAPSHOT-PERF-013..022` |
+| `materializeRunTrees` | `(lease, capability, runRoot) => RunTreePair` | cache lease と同一volume/filesystem capability probe evidence が存在 | 独立 execution/reference を run-local COW、または cold independent copy で生成 | cache本体の実行/変更、hardlinkは禁止。probe失敗、OneDrive placeholder、ACL/cross-volume不整合はcold fallbackし方式をreceipt化 | `CAND-SNAPSHOT-PERF-023..031` |
+| `acquireHeavyIoToken` | `(request, scheduler) => HeavyIoLease | ContentionResult` | machine-wide namespace、owner PID/start identity、generation、phase budget が存在 | FIFO/飢餓防止queueからlease、またはowner/queue付きexit 2相当を返す | 全runtime/全worktree共通、初期capacity=1。live ownerをTTLだけで回収しない。dead PID+identity+generation一致時だけ回収。nested bypass禁止 | `CAND-SNAPSHOT-PERF-032..041` |
+| `compareNormalizedRunDigest` | `(legacy: RunResult, candidate: RunResult) => DigestComparison` | 同一OID、test list、lane、runtime inputで両runnerを実行済み | exit、pass/fail/skip、failure IDs、DB/reference digest、安全oracle outcomeの差分を返す | 完全一致以外は採択不可。test countだけの一致を同値としない | `CAND-SNAPSHOT-PERF-042..049` |
+| `benchmarkSnapshotRunner` | `(matrix, repetitions, policy) => BenchmarkDecision` | lane×Linux/Windows/Windows-OneDrive×cold/warm、paired反復、warm-up/除外規則が固定 | p50/p95、phase比率、disk bytes、cleanup retry/timeout、ACごとの判定とevidence bindingを返す | 単発最良値、異HEAD/異test list、OS/filesystem代理、測定不能値0化を拒否 | `CAND-SNAPSHOT-PERF-050..058` |
+| `planVitestShardPool` | `(baseline, cacheEvidence, isolationEvidence) => ShardPlan` | cache/COW/digest同値が先にGreen | single invocation内の候補pool/shard、またはblocked reasonを返す | 複数snapshot processは禁止。disk bytes≤1.3倍かつwall改善、DB/failure identity独立を証明するまでdisabled | `CAND-SNAPSHOT-PERF-059..063` |
+
+`CAND-SNAPSHOT-PERF-*` は設計候補であり、trace coverage、review evidence、受入判定には算入しない。
+`PLAN-L7-459` で実行可能な Red test と test path を同一 commit で追加した候補だけを、対応する正式な
+`U-SNAPSHOT-PERF-*` へ昇格できる。未実装候補の U ID 化は禁止する。
+
+性能 gate は lane/OS/filesystem ごとの freeze 済 baseline に対して、warm targeted ≤ min(B×50%, cold×35%)、
+cold targeted 25%以上短縮、warm full 20%以上短縮、targeted準備固定費≤50%、miss退行≤10%、
+p95≤median×1.5、cleanup retry/timeout 0 を全て要求する。性能 Green でも captured OID、execution/reference
+分離、seal/fingerprint、non-Git Pack境界、runtime input限定、secret/session env遮断のいずれかが不一致なら
+採択は Red とする。PLAN-L4-31 は resource budget上位方式、PLAN-L7-186 はlane、PLAN-L7-421 は安全契約、
+PLAN-RECOVERY-11 はforeign activity帰責を所有し、本追補はそれらを代理closeしない。
+
 ### `runSnapshotTests(args, repoRoot)`
 
 - pre: Git sourceはtop-level canonical pathが`repoRoot`とexact一致する場合だけGit扱いし、開始時のcommit OIDを
@@ -1267,7 +1295,8 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
   `node_modules`を全階層で除外する（Git cloneの`.git`はrevision検証に必要でありこのcopy除外規則の対象外）。
   referenceはtest process起動前にsealし、終了時cleanupの直前だけunsealする。seal、source/reference fingerprint
   差分、revision mismatch、cleanup失敗はResult error・exit 1でfail-closeする。正常終了はexit 0、CLI usageはexit 2とする。
-  snapshot内のinstall、DB rebuild、VitestはBun executableを解決して起動し、Vitest workerのNode executableを継承しない。
+  snapshot内のinstallは `npm ci`、DB rebuild と Vitest は事前compile済み ESM entrypointを同一のabsolute Node executableで
+  起動する。Vitest workerから偶然継承したruntimeやPATH解決へ依存せず、Bun executableへのfallbackはfail-closeする。
   CLIを実行するtestは依存を持つexecution snapshotをcwd/sourceに使い、reference snapshotはread-only入力だけに使う。
 
 ### `analyzeTestRepositoryIsolation(input)`
@@ -1277,7 +1306,7 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
 - 各sinkは`head_snapshot`又は`isolated_fixture`のprovenance modeを持つ。契約台帳はmode別call countをexactに要求し、
   `process.cwd()`と相対path readはwritable execution fixture、`headSnapshotRoot()`起点のreadはread-only HEAD snapshotとして計上する。
 - root取得の裸式、`void`、未使用binding、assertion-only使用は契約callへ算入しない。repository read sinkへ到達したrootだけを
-  台帳へ計上する。HEAD root又はそのalias／静的derived pathをNode/Bunの直接mutation sinkへ渡すことは契約件数と無関係にhard violationとする。
+  台帳へ計上する。HEAD root又はそのalias／静的derived pathをruntimeの直接mutation sinkへ渡すことは契約件数と無関係にhard violationとする。
   `open`／`openSync`はwrite-capable flagをfail-closeし、FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象とする。
 - 新規read、mode別件数差、stale契約、live root由来、HEAD write、scan errorは全てhard violationとし、コメントや文字列は数えない。
   件数のSSoTは`REPOSITORY_READ_CONTRACTS`であり、L7表はoracle IDと意味論だけを持つ。test sourceの追加・削除・

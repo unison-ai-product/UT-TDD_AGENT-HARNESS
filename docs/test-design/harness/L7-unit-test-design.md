@@ -1447,10 +1447,105 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-TESTHYGIENE-043` | `global-setup-fence.test.ts` | teardown fence process | fixtureがOS別の物理sealを確認後に明示bypassでdetached HEAD snapshotを改変し、global teardownはsnapshot runner子processを非0で終了して`test workspace fence violation`を出す |
 | `U-TESTHYGIENE-045` | `vitest-snapshot-runner.test.ts` | batch-only runner | `--watch`／`-w`／`--watch=...`はstale snapshotを監視するためfail-close、通常引数は許可 |
 | `U-TESTHYGIENE-046` | `vitest-snapshot-runner.test.ts` | watch script contract | live sourceを観測できない`test:watch` scriptはmanifestに存在しない |
-| `U-TESTHYGIENE-047` | `vitest-snapshot-runner.test.ts` | Bun runtime resolution | Vitest workerのNode binaryを継承せず、Bun runtimeのabsolute executableをsnapshot install/rebuild/Vitestに使う |
+| `U-TESTHYGIENE-047` | `vitest-snapshot-runner.test.ts` | Node compiled ESM runtime resolution | snapshot installは`npm ci`、rebuild/Vitestは事前compile済み ESM entrypointを同一のabsolute Node executableで起動する。worker継承runtime、PATH依存、Bun fallbackを拒否する |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
+
+## Issue #98 snapshot runner性能Redesign oracle (2026-07-17)
+
+`PLAN-L7-421` の安全契約を性能のために弱めず、計測可能な実行ライフサイクル、
+immutable prepared cache、run-local COW、heavy-I/O schedulerへ再設計する。
+oracle ID は `CAND-SNAPSHOT-PERF-001`〜`063` とする。L6 §3.1〜§5 を下記8契約群へ分解し、
+各行を独立した将来の Red/Green 判定候補とする。複数の期待結果を1テストの成功で代用してはならない。
+cache/shard未実装を理由に後半を削除せず、実装降下時にRed化してForward合流まで追跡する。
+ただし `CAND-SNAPSHOT-PERF-*` は設計候補であり、trace coverage、review evidence、受入判定へ算入しない。
+`PLAN-L7-459` で実行可能な Red test と test path を同一 commit に追加した候補だけを、対応する正式な
+`U-SNAPSHOT-PERF-*` へ昇格する。未実装 candidate の U ID 化は禁止する。
+
+| L6契約群 | 対応節 | L7 oracle（完全かつ重複なし） |
+| --- | --- | --- |
+| A. phase receipt / failure | §3.1 | `001`〜`010` |
+| B. lifecycle token | §3.4 | `011`〜`019` |
+| C. immutable cache | §3.2 | `020`〜`031` |
+| D. run-local COW / fallback | §3.3 | `032`〜`040` |
+| E. heavy-I/O scheduler | §3.4 | `041`〜`048` |
+| F. NormalizedRunDigest / safety | §5 | `049`〜`055` |
+| G. benchmark / cross-OS matrix | §4 | `056`〜`060` |
+| H. shard/pool admission | §3.5 | `061`〜`063` |
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `CAND-SNAPSHOT-PERF-001` | phase順序 | 全14 phaseを1回通過 | receiptがL6 §3.1の順序で全phaseを保持する |
+| `CAND-SNAPSHOT-PERF-002` | wall量閉じ | phase clockを既知値で注入 | phase wall合計とtotalの関係を定義どおり表し二重計上しない |
+| `CAND-SNAPSHOT-PERF-003` | resource計測 | CPU/RSS/read/write/filesを既知値で注入 | 単位付き値をphase別に保持する |
+| `CAND-SNAPSHOT-PERF-004` | 計測不能 | counter unavailable | `null`と非空reasonを返し0を捏造しない |
+| `CAND-SNAPSHOT-PERF-005` | identity binding | OID/OS/fs/OneDrive/CPU/RAM/diskを各一軸変異 | 各変異でreceipt digestが変わる |
+| `CAND-SNAPSHOT-PERF-006` | tool binding | Node/npm/lock/compiled ESM runner/Vitest/global setupを各一軸変異 | 各変異でreceipt digestが変わる。Bun fallbackはfail-closeする |
+| `CAND-SNAPSHOT-PERF-007` | workload binding | lane/test list/DB policyを各一軸変異 | 異なる実行を同一baselineへ結合しない |
+| `CAND-SNAPSHOT-PERF-008` | receipt finalize failure | test成功後finalize失敗 | evidenceをinvalidにし成功証拠として採択しない |
+| `CAND-SNAPSHOT-PERF-009` | primary failure保存 | test失敗とfinalize失敗 | test exit/failure IDを上書きしない |
+| `CAND-SNAPSHOT-PERF-010` | 複合failure | primary/cleanup/receiptが全て失敗 | 安定順の`AggregateError`で全件保持する |
+| `CAND-SNAPSHOT-PERF-011` | machine共通namespace | runtime/worktree違いで同時取得 | 勝者は1本だけになる |
+| `CAND-SNAPSHOT-PERF-012` | 副作用前競合 | holder中に第二runner | 第二runnerはcapture前にexit 2となる |
+| `CAND-SNAPSHOT-PERF-013` | retry storm禁止 | exit 2を返す競合 | 内部自動再試行回数が0になる |
+| `CAND-SNAPSHOT-PERF-014` | owner release | owner identity一致 | leaseを正確に1回解除する |
+| `CAND-SNAPSHOT-PERF-015` | forged release | PID/generation/machine/namespaceを各変異 | releaseを拒否し正規leaseを残す |
+| `CAND-SNAPSHOT-PERF-016` | partial token | token書込みを各境界で中断 | 不完全tokenを取得済みと誤認せずfail-closeする |
+| `CAND-SNAPSHOT-PERF-017` | dead owner | dead PIDかつstart identity一致 | 原子的に回収して次ownerへ移る |
+| `CAND-SNAPSHOT-PERF-018` | PID再利用/live TTL | generation不一致またはlive PID | TTL超過でもleaseを奪取しない |
+| `CAND-SNAPSHOT-PERF-019` | 全fault release | setupからcleanupまで各phase fault | releaseを各経路1回試行しfailureも保持する |
+| `CAND-SNAPSHOT-PERF-020` | key完全性 | key v1全component同一 | 同一canonical keyを返す |
+| `CAND-SNAPSHOT-PERF-021` | key一軸変異 | schema/OID/platform/arch/Node/npm/lockを各変異 | 必ずmissとなる |
+| `CAND-SNAPSHOT-PERF-022` | code/DB key変異 | runner/Vitest/setup/DB policyを各変異 | 必ずmissとなる |
+| `CAND-SNAPSHOT-PERF-023` | unknown key | component欠落/unknown | hitを禁止する |
+| `CAND-SNAPSHOT-PERF-024` | key決定性 | object入力順だけを変更 | 同一keyを返す |
+| `CAND-SNAPSHOT-PERF-025` | staging不可視 | building各phaseでreader起動 | readerはbuildingを利用できない |
+| `CAND-SNAPSHOT-PERF-026` | atomic ready publish | publish直前/直後のreader | 完成generationだけを観測する |
+| `CAND-SNAPSHOT-PERF-027` | manifest検証 | manifest改ざん/wrong platform/stale DB | hitせず理由付きquarantine/missとなる |
+| `CAND-SNAPSHOT-PERF-028` | fingerprint検証 | ready内容を1 byte改変 | silent hitせずquarantineする |
+| `CAND-SNAPSHOT-PERF-029` | secret境界 | secret/session/provider/Git credentialを混入 | publishを拒否する |
+| `CAND-SNAPSHOT-PERF-030` | path境界 | symlink/junction/reparse escape | publishをfail-closeする |
+| `CAND-SNAPSHOT-PERF-031` | lifecycle/eviction | live reader、容量超過、並行build、crash残骸 | liveを残しLRU決定、同一key ready 1個へ収束する |
+| `CAND-SNAPSHOT-PERF-032` | execution分離 | executionだけを改変 | reference/cache digestは不変となる |
+| `CAND-SNAPSHOT-PERF-033` | reference分離 | referenceだけを改変 | execution/cache digestは不変となる |
+| `CAND-SNAPSHOT-PERF-034` | cache不変 | clone後cache改変を試行 | cache本体へのwrite/seal/executeを拒否する |
+| `CAND-SNAPSHOT-PERF-035` | hardlink禁止 | hardlink cloneを要求 | inode共有を検出して拒否する |
+| `CAND-SNAPSHOT-PERF-036` | capability Green | clone probeと破壊隔離probe成功 | 証明済み方式だけCOWとして採択する |
+| `CAND-SNAPSHOT-PERF-037` | capability fallback | unsupported/probe例外/cross-volume | cold independent copyへ戻る |
+| `CAND-SNAPSHOT-PERF-038` | OneDrive fallback | placeholderまたは分離不明 | cache hitと偽らずfallback reasonを残す |
+| `CAND-SNAPSHOT-PERF-039` | ACL境界 | clone後ACLが拡大 | cloneを拒否し安全fallbackする |
+| `CAND-SNAPSHOT-PERF-040` | 禁止入力境界 | `.git`/source `.ut-tdd`/`node_modules`混入 | 従来Pack/runtime input境界どおり拒否する |
+| `CAND-SNAPSHOT-PERF-041` | global FIFO | runtime/worktree別に同時enqueue | machine-global到着順で処理する |
+| `CAND-SNAPSHOT-PERF-042` | capacity | 全heavy phaseを並行要求 | active heavy-I/Oが常に1以下となる |
+| `CAND-SNAPSHOT-PERF-043` | cancel | queue先頭をcancel | 後続が停止せず順送りされる |
+| `CAND-SNAPSHOT-PERF-044` | dead queued owner | owner crashを注入 | identity検証後に回収し後続を進める |
+| `CAND-SNAPSHOT-PERF-045` | starvation | 長短ticketを混在 | FIFOを迂回せず有限時間で全live ticketを処理する |
+| `CAND-SNAPSHOT-PERF-046` | budget | disk/memory/time上限超過 | phase開始前または安全境界でfail-closeする |
+| `CAND-SNAPSHOT-PERF-047` | namespace分断 | runtime別namespaceを要求 | 別queue生成を拒否する |
+| `CAND-SNAPSHOT-PERF-048` | nested runner | teardown harnessと再帰runner | token bypass/再取得なしで注入orchestratorが検証する |
+| `CAND-SNAPSHOT-PERF-049` | digest canonical | 同一結果の順序だけ変更 | 同一`NormalizedRunDigest`となる |
+| `CAND-SNAPSHOT-PERF-050` | outcome完全性 | exit/pass/fail/skipを各一軸変異 | 各変異でdigestが変わる |
+| `CAND-SNAPSHOT-PERF-051` | failure identity | failure IDを削除/変更 | digest不一致となる |
+| `CAND-SNAPSHOT-PERF-052` | provenance | OID/selected testsを各変異 | digest不一致となる |
+| `CAND-SNAPSHOT-PERF-053` | state digest | DB/reference digestを各変異 | digest不一致となる |
+| `CAND-SNAPSHOT-PERF-054` | safety outcomes | seal/fingerprint/runtime input等を各変異 | digest不一致となる |
+| `CAND-SNAPSHOT-PERF-055` | differential | legacy coldとcandidate cold/warm/fallback | 全field exact一致時だけcandidateを採択する |
+| `CAND-SNAPSHOT-PERF-056` | baseline固定 | 異OID/test list/machine conditionを混在 | 比較母集団への結合を拒否する |
+| `CAND-SNAPSHOT-PERF-057` | 統計 | warm-up後paired反復 | sample数/除外/p50/p95を保存し単発最良値を拒否する |
+| `CAND-SNAPSHOT-PERF-058` | targeted AC | warm/cold/固定費を閾値境界で変異 | 50%/35%/75%/固定費50%を個別判定する |
+| `CAND-SNAPSHOT-PERF-059` | full/miss AC | warm full、cache miss、p95を境界変異 | 80%/退行10%/median×1.5を個別判定する |
+| `CAND-SNAPSHOT-PERF-060` | cross-OS matrix | Linux/Windows NTFS/OneDrive×cold/warm/miss/fallback | 全cell、digest一致、cleanup retry/timeout 0が揃わなければ採択しない |
+| `CAND-SNAPSHOT-PERF-061` | shard前提 | cache/COWまたはdigest evidence欠落 | single invocationを維持する |
+| `CAND-SNAPSHOT-PERF-062` | shard性能gate | disk bytes 1.3倍超またはwall改善25%未満 | shard/poolを禁止する |
+| `CAND-SNAPSHOT-PERF-063` | shard安全境界 | DB namespace/failure identity/safety oracle非独立または複数runner | 内部poolだけを候補とし不安全構成をfail-closeする |
+
+property testはcache keyの各componentとphase faultの全経路を生成し、同一入力のみhit、
+完成readyのみpublish、token所有者のみreleaseを確認する。mutation testはkey component削除、
+live PIDのTTL回収、reentrant token bypass、hardlink許可、fingerprint比較除去、failure IDの
+digest除外、性能閾値の単発値判定、shard gateバイパスを全てkillする。正式昇格後の実装テストは対応する
+`U-SNAPSHOT-PERF-*` をテスト名またはtrace manifestへ必ず記録し、8契約群のうち未実装candidateが1件でも
+あればL7 pair全体をGreenにしない。candidate自体はtrace/evidence件数に加算しない。
 
 ## PLAN-L7-434 全PR共通harness-check trigger oracle (PLAN-REVERSE-434 backfill、2026-07-14)
 
