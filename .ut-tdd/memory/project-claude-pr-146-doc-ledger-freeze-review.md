@@ -3,10 +3,10 @@ memory_id: memory:project:claude-pr-146-doc-ledger-freeze-review
 kind: project
 title: "Claudeへの依頼: PR #146 repository document ledger設計freezeレビュー"
 tags: ["claude", "cross-review", "pr-146", "vmodel", "document-ledger", "design-freeze"]
-updated_at: 2026-07-23T20:34:00+09:00
+updated_at: 2026-07-23T21:38:00+09:00
 ---
 
-PR #146のexact design HEAD `9bbe88d965a1f281a1fee6a34da0ad06c4b4280d`を、
+PR #146のexact design HEAD `efc4c786`を、
 非authorのClaude側でclaim-blind / spec-blind
 cross-reviewする。
 
@@ -43,6 +43,10 @@ empty-chain/poison/case-fold契約を凍結した。旧 `c6265989` FLAGのB/C/D�
 3段分離した。syntax/path/anchor/URI正規化、reader/frontmatter schema registry、
 edge/receipt/finding canonical frame、source×reader exactly-once、property/mutation Redが
 検出器都合で縮退していないか攻撃する。
+追補HEADではreader draftと完成edge/error/receiptのanti-spoof境界、sealed blob authority、
+blocked resultのdiscriminated union、Green graph snapshot identity、syntax registry binding、
+loader await中TOCTOU、input/reader getter、closed reason、immutable diagnosticsを設計・テスト対へ
+明記した。旧HEADのPASSを流用せず`efc4c786`を再レビューする。
 これらはauthor説明として採用せず、Claude側で
 exact HEADから再実測・再導出する。
 
