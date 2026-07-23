@@ -15,6 +15,8 @@ parent_design: docs/plans/PLAN-L7-87-merged-plan-status-kind-independent.md
 backprop_decision: not_required
 backprop_decision_reason: "merged-plan-status の deliverable-driven 契約は維持し、GitHub stacked PRで immediate base を landed target と誤認する証拠解決だけを是正する。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM - canonical landed targetの証拠境界とstacked base非採用の判断"
   - role: se
     slot_label: "SE - canonical target evidence resolver と loader 統合"
   - role: qa

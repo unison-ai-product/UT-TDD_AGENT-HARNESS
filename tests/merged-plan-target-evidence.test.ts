@@ -157,6 +157,45 @@ describe("merged-plan canonical target evidence", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("uses event base SHA only when the PR base is the repository default branch", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-target-default-base-"));
+    const eventPath = join(root, "event.json");
+    const previousEvent = process.env.GITHUB_EVENT_PATH;
+    try {
+      git(root, ["init", "-b", "main"]);
+      git(root, ["config", "user.email", "test@example.invalid"]);
+      git(root, ["config", "user.name", "UT-TDD test"]);
+      writeFileSync(join(root, "base.txt"), "base\n", "utf8");
+      git(root, ["add", "."]);
+      git(root, ["commit", "-m", "main"]);
+      const mainSha = gitText(root, ["rev-parse", "HEAD"]);
+      git(root, ["checkout", "-b", "work/child"]);
+      writeFileSync(join(root, "child.txt"), "child\n", "utf8");
+      git(root, ["add", "."]);
+      git(root, ["commit", "-m", "child"]);
+      writeFileSync(
+        eventPath,
+        JSON.stringify({
+          repository: { default_branch: "main" },
+          pull_request: { base: { ref: "main", sha: mainSha } },
+        }),
+        "utf8",
+      );
+      process.env.GITHUB_EVENT_PATH = eventPath;
+
+      expect(resolveMergedPlanTargetEvidence(root)).toMatchObject({
+        decision: "canonical_target",
+        targetRef: mainSha,
+        targetSha: mainSha,
+        source: "event_default_base",
+      });
+    } finally {
+      if (previousEvent === undefined) delete process.env.GITHUB_EVENT_PATH;
+      else process.env.GITHUB_EVENT_PATH = previousEvent;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 function git(root: string, args: string[]): void {

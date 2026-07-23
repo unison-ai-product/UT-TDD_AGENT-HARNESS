@@ -1,7 +1,12 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
-export type TargetRefSource = "remote_default" | "local_default" | "origin_main" | "local_main";
+export type TargetRefSource =
+  | "event_default_base"
+  | "remote_default"
+  | "local_default"
+  | "origin_main"
+  | "local_main";
 
 export interface TargetRefCandidate {
   ref: string;
@@ -73,6 +78,9 @@ export function resolveMergedPlanTargetEvidence(repoRoot: string): MergedPlanTar
   // 別branchをlanded targetとして採るより no_verified_target でfail-closeする。
   const rawCandidates: Array<{ ref: string; source: TargetRefSource }> = knownDefaultBranch
     ? [
+        ...(event.immediateBaseRef === knownDefaultBranch && event.immediateBaseSha
+          ? [{ ref: event.immediateBaseSha, source: "event_default_base" as const }]
+          : []),
         { ref: `origin/${knownDefaultBranch}`, source: "remote_default" },
         { ref: knownDefaultBranch, source: "local_default" },
       ]
