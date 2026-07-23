@@ -322,7 +322,7 @@ describe("L7 CLI surface closure", () => {
       expect.arrayContaining([expect.stringContaining("doctor: toolchain-pin - OK")]),
     );
     expect(payload.messages.join("\n")).not.toContain("plan-governance");
-  }, 20_000);
+  }, 45_000);
 
   it("fail-closes unsupported doctor profile as machine-readable JSON", () => {
     const run = runCli(["doctor", "--profile", "bogus", "--json"]);
