@@ -931,10 +931,21 @@ type DocumentMemberIdentity = {
 };
 
 type DocumentDeltaEvent =
-  | { kind: "add"; sequence: number; after: DocumentMemberIdentity }
-  | { kind: "modify"; sequence: number; before: DocumentMemberIdentity; after: DocumentMemberIdentity }
-  | { kind: "delete"; sequence: number; before: DocumentMemberIdentity }
-  | { kind: "rename"; sequence: number; before: DocumentMemberIdentity; after: DocumentMemberIdentity };
+  | { deltaId: string; kind: "add"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; after: DocumentMemberIdentity; decisionDigest: string }
+  | { deltaId: string; kind: "modify"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; before: DocumentMemberIdentity; after: DocumentMemberIdentity; decisionDigest: string }
+  | { deltaId: string; kind: "delete"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; before: DocumentMemberIdentity; decisionDigest: string }
+  | { deltaId: string; kind: "rename"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; before: DocumentMemberIdentity; after: DocumentMemberIdentity; decisionDigest: string };
+
+type DocumentDeltaDecision = {
+  deltaId: string;
+  affectedPath: string;
+  disposition: DocumentDisposition;
+  applicationStatus: "pending" | "applied" | "verified";
+  applicability: CanonicalDocumentApplicability;
+  targets: readonly DocumentTarget[];
+  planIds: readonly string[];
+  decisionDigest: string;
+};
 
 type DocumentDeltaReplayResult =
   | { ok: true; effective: readonly DocumentMemberIdentity[]; deltaChainDigest: string }
@@ -957,6 +968,7 @@ analyzeDocumentReferences(
 
 replayDocumentDeltas(
   input: ReplayDocumentDeltasInput,
+  decisions: readonly DocumentDeltaDecision[],
 ): DocumentDeltaReplayResult;
 
 analyzeRepositoryDocumentClosure(
@@ -1003,6 +1015,9 @@ DbC:
 - delta invariant: snapshot memberはpath/blob OID/content digestを保持し、deltaをsequence順にreplayして
   final snapshotと完全比較する。raw Git差分はrenameを推測せずadd/modify/deleteとして観測する。
   明示rename deltaだけが対応するdelete+addを消費し、未登録renameはdelete/addの別findingとして返す。
+  各eventは同じ`deltaId`の`DocumentDeltaDecision`とexactly onceで結合し、eventの`decisionDigest`、
+  affected path、disposition/applicability後条件を再検証する。自己申告digest、decision欠落・余剰・重複、
+  add文書の判断欠落をGreenにしない。
 
 delta reducerの遷移表:
 
@@ -1013,20 +1028,28 @@ delta reducerの遷移表:
 | `delete` | before pathが存在しblob/content一致 | before pathを削除 | `source-missing|stale-before` |
 | `rename` | before pathが存在しblob/content一致、after path不在、旧新pathが異なる | oldを削除しafterを追加 | `source-missing|stale-before|target-exists|same-path` |
 
-入力順を権威にせず`sequence`昇順でreplayするが、sequenceは1始まり・gap/duplicateなし、
+入力順を権威にせず`sequence,event_digest`昇順でreplayするが、sequenceは1始まり・gap/duplicateなし、
 `previousEventDigest`は直前event digestと一致しなければならない。event frameは
-`ledger_id, sequence, kind, from_path, to_path, before_blob_oid, before_content_digest,
-after_blob_oid, after_content_digest, decision_digest, previous_event_digest`順の
+`delta_id, ledger_id, sequence, kind, from_snapshot_digest, to_snapshot_digest, from_path,
+to_path, before_blob_oid, before_content_digest, after_blob_oid, after_content_digest,
+decision_digest, previous_event_digest`順の
 `canonical-frame-v1`とする。先頭chain seedは`ledger_id, baseline_snapshot_digest, policy_revision`、
 各stepは`previous_chain_digest, event_digest`をframe化してSHA-256とし、最終値を`deltaChainDigest`とする。
 replay結果はfinal snapshotのpath/blob/content集合と完全一致させ、余剰deltaも成功扱いしない。
+空event列でもchain seedとexpected chain digestを必ず比較する。chain全体の不一致は
+`operation_kind=chain`、subject=`ledger_id`、sequence=0のfindingとし、架空のadd/deleteへ分類しない。
+sequence/chain/event/decision/snapshot検証が一件でも失敗した時点でreducer stateをpoisonし、以後のeventを
+stateへ適用しない。duplicate sequenceは全該当eventをcanonical tie-break順でfinding化し、入力順でwinnerを選ばない。
+baseline/final member path重複もMap last-winsせず、replay前にblocked findingとする。
 
-`DocumentDeltaFinding`のevidence frameは
+`DocumentDeltaFinding`のoperation kindは`add|modify|delete|rename|chain`とする。evidence frameは
 `baseline_snapshot_digest, final_snapshot_digest, delta_chain_digest, reason_code, sequence,
 operation_kind, from_path, to_path, before_blob_oid, before_content_digest, after_blob_oid,
 after_content_digest, policy_revision`順とする。subjectはadd=`to_path`、delete=`from_path`、
 modify=`from_path`、invalid event=`delta_id`であり、finding IDはrule/subject/evidence digestから導出する。
 出力順は`operation_kind, subject_identity, sequence, finding_id`のunsigned UTF-8 byte順とする。
+成功結果はeffective member集合とそのreduction digest、delta chain digestを返す。blocked結果もfindingと
+delta chain digestを返すが、poison後のpartial effective集合をprojection authorityとして公開しない。
 
 typed finding/error:
 
