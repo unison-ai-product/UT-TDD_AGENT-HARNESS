@@ -1635,6 +1635,8 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
 | `U-HOOKEXEC-008` | Windows native smoke | hook host→Bun entrypoint の dispatch ancestry に `sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe` が無く、hook outcome は既存契約どおりである。 |
+| `U-HOOKEXEC-009` | Node TypeScript launcher floor | `package.json#engines.node` は無フラグ TypeScript execution が有効な `>=22.18` を要求し、22.6〜22.17を対応済みと宣言しない。 |
+| `U-HOOKEXEC-010` | Windows custody debt boundary | hook PLAN は `windowsHide` / shell-free Greenをprocess-tree custody証拠へ流用せず、Issue #134 / Windows Job Object / 未解消境界を明記する。 |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
 `tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる

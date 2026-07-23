@@ -81,6 +81,23 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(consumerTemplate.replace(/\s+/g, "")).toBe(source.replace(/\s+/g, ""));
   });
 
+  it("U-HOOKEXEC-009: requires the first Node release line with unflagged TypeScript execution", () => {
+    const manifest = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
+      engines?: { node?: string };
+    };
+    expect(manifest.engines?.node).toBe(">=22.18");
+  });
+
+  it("U-HOOKEXEC-010: keeps Windows process-tree custody open until the Rust kernel owns it", () => {
+    const plan = readFileSync(
+      join(repoRoot, "docs", "plans", "PLAN-L7-139-codex-hook-adapter.md"),
+      "utf8",
+    );
+    expect(plan).toContain("Issue #134");
+    expect(plan).toContain("Windows Job Object");
+    expect(plan).toContain("未解消");
+  });
+
   it("U-HOOKEXEC-002/U-HOOKEXEC-003/U-HOOKEXEC-004/U-HOOKEXEC-007: routes all Claude hooks as exact argv and preserves policy", () => {
     const settings = JSON.parse(
       readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"),
