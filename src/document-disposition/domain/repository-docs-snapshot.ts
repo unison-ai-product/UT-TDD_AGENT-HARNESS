@@ -26,6 +26,14 @@ export interface RepositoryDocsSnapshotMember {
   readonly zone: RepositoryDocumentZone;
 }
 
+export interface RepositoryDocsSnapshotZoneEvidence {
+  readonly zone: RepositoryDocumentZone;
+  readonly selectorDigest: string;
+  readonly treeOid?: string;
+  readonly memberCount: number;
+  readonly memberSetDigest: string;
+}
+
 export interface RepositoryDocsSnapshot {
   readonly snapshotId: string;
   readonly snapshotDigest: string;
@@ -34,6 +42,7 @@ export interface RepositoryDocsSnapshot {
   readonly memberSetDigest: string;
   readonly trackedCount: number;
   readonly members: readonly RepositoryDocsSnapshotMember[];
+  readonly zones: readonly RepositoryDocsSnapshotZoneEvidence[];
 }
 
 export type RepositoryDocsSnapshotResult =
@@ -123,6 +132,7 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
     readonly memberSetDigest: string,
     readonly trackedCount: number,
     readonly members: readonly RepositoryDocsSnapshotMember[],
+    readonly zones: readonly RepositoryDocsSnapshotZoneEvidence[],
   ) {}
 
   static create(
@@ -246,37 +256,44 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
         ),
       ),
     );
-    const zoneSetDigest = sha256(
-      [...source.zones]
-        .sort((left, right) =>
-          compareBytes(new TextEncoder().encode(left.zone), new TextEncoder().encode(right.zone)),
-        )
-        .flatMap((zone) => {
-          const zoneMembers = members.filter((member) => member.zone === zone.zone);
-          const zoneMemberSetDigest = sha256(
-            zoneMembers.flatMap((member) =>
-              (["path", "blobOid", "contentSha256", "fileMode", "zone"] as const).map((field) =>
-                canonicalField(
-                  {
-                    path: "path",
-                    blobOid: "blob_oid",
-                    contentSha256: "content_sha256",
-                    fileMode: "file_mode",
-                    zone: "zone",
-                  }[field],
-                  member[field],
-                ),
+    const zones = [...source.zones]
+      .sort((left, right) =>
+        compareBytes(new TextEncoder().encode(left.zone), new TextEncoder().encode(right.zone)),
+      )
+      .map((zone) => {
+        const zoneMembers = members.filter((member) => member.zone === zone.zone);
+        const zoneMemberSetDigest = sha256(
+          zoneMembers.flatMap((member) =>
+            (["path", "blobOid", "contentSha256", "fileMode", "zone"] as const).map((field) =>
+              canonicalField(
+                {
+                  path: "path",
+                  blobOid: "blob_oid",
+                  contentSha256: "content_sha256",
+                  fileMode: "file_mode",
+                  zone: "zone",
+                }[field],
+                member[field],
               ),
             ),
-          );
-          return [
-            canonicalField("zone", zone.zone),
-            canonicalField("selector_digest", zone.selectorDigest),
-            canonicalField("tree_oid", zone.treeOid ?? ""),
-            canonicalField("member_count", String(zone.memberCount)),
-            canonicalField("member_set_digest", zoneMemberSetDigest),
-          ];
-        }),
+          ),
+        );
+        return {
+          zone: zone.zone,
+          selectorDigest: zone.selectorDigest,
+          treeOid: zone.treeOid,
+          memberCount: zone.memberCount,
+          memberSetDigest: zoneMemberSetDigest,
+        };
+      });
+    const zoneSetDigest = sha256(
+      zones.flatMap((zone) => [
+        canonicalField("zone", zone.zone),
+        canonicalField("selector_digest", zone.selectorDigest),
+        canonicalField("tree_oid", zone.treeOid ?? ""),
+        canonicalField("member_count", String(zone.memberCount)),
+        canonicalField("member_set_digest", zone.memberSetDigest),
+      ]),
     );
     const snapshotFields = [
       ["repository_identity", request.repositoryIdentity],
@@ -303,6 +320,7 @@ export class RepositoryDocsSnapshotValue implements RepositoryDocsSnapshot {
         memberSetDigest,
         members.length,
         members,
+        zones,
       ),
     };
   }

@@ -85,6 +85,14 @@ describe("captureRepositoryDocsSnapshot", () => {
         zoneSetDigest: "509734b259de58626cfad5fd640cacb6edc79bc6918de74e2ba40427f60bf807",
         memberSetDigest: "6f75de8715fcf9334ba259daadfff55b5bb5e32f172132a4a8da2e0610912ddf",
         trackedCount: 3,
+        zones: expect.arrayContaining([
+          expect.objectContaining({
+            zone: "docs_tree",
+            treeOid: "6".repeat(40),
+            memberCount: 1,
+            memberSetDigest: "046c3e32e9a8ac3de0e54a8f9973f769a0999d5bfb47c2a2a58f1b5503cc5f9f",
+          }),
+        ]),
         members: [
           expect.objectContaining({ path: ".ut-tdd/memory/policy.md", zone: "runtime_policy" }),
           expect.objectContaining({ path: "AGENTS.md", zone: "root_policy" }),
@@ -93,6 +101,26 @@ describe("captureRepositoryDocsSnapshot", () => {
       }),
     });
     expect(git.readTree).toHaveBeenCalledWith(INPUT);
+  });
+
+  it("U-DOCLEDGER-001: validなzone tree差替えはsnapshot identityを変更する", async () => {
+    const changed = {
+      ...TREE_SNAPSHOT,
+      zones: TREE_SNAPSHOT.zones.map((zone) =>
+        zone.zone === "docs_tree" ? { ...zone, treeOid: "0".repeat(40) } : zone,
+      ),
+    };
+
+    const result = await captureRepositoryDocsSnapshot(INPUT, port(changed));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.zoneSetDigest).not.toBe(
+      "509734b259de58626cfad5fd640cacb6edc79bc6918de74e2ba40427f60bf807",
+    );
+    expect(result.value.snapshotDigest).not.toBe(
+      "9c3165a95c7768e86e04fb370692f3ad0f9a86bf00cd4ee5422ca40a321fb07d",
+    );
   });
 
   it.each([
