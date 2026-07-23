@@ -1064,6 +1064,11 @@ type DocumentReferenceReaderRegistration = {
 
 type DocumentReferenceReaderRegistry = {
   registryDigest: string;
+  syntaxBinding: {
+    uriSchemeRegistryRevision: string;
+    frontmatterSchemaRevision: string;
+    frontmatterSchemaDigest: string;
+  };
   readers: readonly DocumentReferenceReaderRegistration[];
 };
 
@@ -1216,6 +1221,8 @@ working tree、DB、既存relation graph、別snapshotのblobを
 reader registryは`readerId,readerRevision,claimedSyntaxKinds`を持つimmutable factoryで生成し、
 全syntax kindをexactly once所有する。missing/duplicate claim、空revisionを生成時に拒否する。
 registry digestを各receiptへ束縛し、配列順又はplugin登録順をwinner選択へ使わない。
+scheme/frontmatter registryのrevision/digestはregistry側のimmutable `syntaxBinding`を正本とし、
+request自己申告との不一致をparse前にfail-closeする。
 readerが返せるのはoccurrence/error draftだけであり、`referenceId`、`source`、revision、
 evidence digestを自己申告できない。coreがsealed blobとrevision setから完成edge/error/receiptを生成する。
 reader出力のgetter/iterator例外、同一draft重複、閉じたreason code外の値は全てtyped errorへfail-closeする。
