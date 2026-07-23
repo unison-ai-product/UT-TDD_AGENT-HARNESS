@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-23
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -23,14 +23,46 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-422-repository-document-ledger-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/document-disposition/application/capture-repository-docs-snapshot.ts
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/domain/canonical-frame.ts
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/domain/repository-docs-snapshot.ts
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/ports/git-object-snapshot.ts
+    artifact_type: source_module
+  - artifact_path: tests/document-disposition/capture-repository-docs-snapshot.test.ts
+    artifact_type: test_code
+  - artifact_path: src/document-disposition/domain/analyze-repository-document-closure.ts
+    artifact_type: source_module
+  - artifact_path: tests/document-disposition/analyze-repository-document-closure.test.ts
+    artifact_type: test_code
+  - artifact_path: src/document-disposition/domain/document-disposition.ts
+    artifact_type: source_module
+  - artifact_path: tests/document-disposition/document-disposition.test.ts
+    artifact_type: test_code
+  - artifact_path: src/document-disposition/domain/replay-document-deltas.ts
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/domain/document-delta.ts
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/domain/document-delta-reducer.ts
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/domain/document-delta-finding.ts
+    artifact_type: source_module
+  - artifact_path: tests/document-disposition/replay-document-deltas.test.ts
+    artifact_type: test_code
   - artifact_path: src/document-disposition/domain/document-reference.ts
-    artifact_type: source_code
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/domain/document-reference-reader-registry.ts
+    artifact_type: source_module
+  - artifact_path: src/document-disposition/domain/document-reference-parse-finding.ts
+    artifact_type: source_module
   - artifact_path: src/document-disposition/domain/read-document-references.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/document-disposition/application/load-repository-document-blobs.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/document-disposition/ports/repository-document-blob.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: tests/document-disposition/read-document-references.test.ts
     artifact_type: test_code
 dependencies:

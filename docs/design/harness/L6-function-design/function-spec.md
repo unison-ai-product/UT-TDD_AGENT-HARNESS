@@ -1011,6 +1011,16 @@ type DocumentReferenceEdge = {
   edgeDigest: string;
 };
 
+type DocumentReferenceOccurrenceDraft = {
+  syntax: DocumentReferenceSyntax;
+  sourceStartByte: number;
+  sourceEndByte: number;
+  rawTarget: string;
+  target: DocumentReferenceTarget;
+  semanticResponsibility?: string;
+  applicabilityCondition?: string;
+};
+
 type DocumentReferenceParseReason =
   | "source-member-missing"
   | "source-member-extra"
@@ -1028,10 +1038,18 @@ type DocumentReferenceParseReason =
 type DocumentReferenceParseError = {
   reasonCode: DocumentReferenceParseReason;
   source: DocumentMemberIdentity;
+  sourcePath: string;
+  readerId: string;
   sourceStartByte: number;
   sourceEndByte: number;
   evidenceDigest: string;
   findingId: string;
+};
+
+type DocumentReferenceParseErrorDraft = {
+  reasonCode: DocumentReferenceParseReason;
+  sourceStartByte: number;
+  sourceEndByte: number;
 };
 
 type DocumentReferenceReaderRegistration = {
@@ -1039,8 +1057,8 @@ type DocumentReferenceReaderRegistration = {
   readerRevision: string;
   claimedSyntaxKinds: readonly DocumentReferenceSyntax[];
   read(blob: RepositoryDocumentBlob): {
-    edges: readonly DocumentReferenceEdge[];
-    errors: readonly DocumentReferenceParseError[];
+    edges: readonly DocumentReferenceOccurrenceDraft[];
+    errors: readonly DocumentReferenceParseErrorDraft[];
   };
 };
 
@@ -1099,16 +1117,19 @@ interface RepositoryDocumentBlobPort {
 }
 
 type DocumentReferenceParseReceipt = {
+  receiptId: string;
   snapshotDigest: string;
   source: DocumentMemberIdentity;
   sourceBytesDigest: string;
-  parserRevision: string;
-  syntaxRevision: string;
-  anchorRevision: string;
-  uriSchemeRegistryRevision: string;
-  frontmatterSchemaRevision: string;
-  frontmatterSchemaDigest: string;
-  readerRegistryDigest: string;
+  revisions: {
+    parserRevision: string;
+    syntaxRevision: string;
+    anchorRevision: string;
+    uriSchemeRegistryRevision: string;
+    frontmatterSchemaRevision: string;
+    frontmatterSchemaDigest: string;
+    readerRegistryDigest: string;
+  };
   readerId: string;
   readerRevision: string;
   edgeSetDigest: string;
@@ -1116,11 +1137,16 @@ type DocumentReferenceParseReceipt = {
   receiptDigest: string;
 };
 
-type ReadDocumentReferencesResult = {
-  edges: readonly DocumentReferenceEdge[];
-  errors: readonly DocumentReferenceParseError[];
-  receipts: readonly DocumentReferenceParseReceipt[];
-};
+type ReadDocumentReferencesResult =
+  | { ok: true; graph: DocumentReferenceGraph; errors: readonly [] }
+  | {
+      ok: false;
+      errors: readonly DocumentReferenceParseError[];
+      diagnostics: {
+        edges: readonly DocumentReferenceEdge[];
+        receipts: readonly DocumentReferenceParseReceipt[];
+      };
+    };
 
 captureRepositoryDocsSnapshot(
   input: CaptureRepositoryDocsSnapshotInput,
@@ -1190,6 +1216,10 @@ working tree、DB、既存relation graph、別snapshotのblobを
 reader registryは`readerId,readerRevision,claimedSyntaxKinds`を持つimmutable factoryで生成し、
 全syntax kindをexactly once所有する。missing/duplicate claim、空revisionを生成時に拒否する。
 registry digestを各receiptへ束縛し、配列順又はplugin登録順をwinner選択へ使わない。
+readerが返せるのはoccurrence/error draftだけであり、`referenceId`、`source`、revision、
+evidence digestを自己申告できない。coreがsealed blobとrevision setから完成edge/error/receiptを生成する。
+reader出力のgetter/iterator例外、同一draft重複、閉じたreason code外の値は全てtyped errorへfail-closeする。
+成功結果だけが`snapshotDigest`付きgraphを公開し、blocked結果はgraphを持たずdiagnosticsだけを返す。
 
 `document-reference-syntax-v1`が受理するsurface:
 
@@ -1232,44 +1262,62 @@ external scheme/authorityはanalyzerへ明示された`authorityPolicyRevision`�
 `authority-forbidden`を判定し、readerのURI構文registryと混同しない。
 
 edge identity frameは
-`snapshot_digest, source_path, source_blob_oid, source_content_digest, syntax_kind,
+```text
+snapshot_digest, source_path, source_blob_oid, source_content_digest, syntax_kind,
 source_start_byte, source_end_byte, target_kind, raw_target, normalized_target,
 normalized_fragment, semantic_responsibility, applicability_condition,
 parser_revision, syntax_revision, anchor_revision, uri_scheme_registry_revision,
 frontmatter_schema_revision, frontmatter_schema_digest, reader_registry_digest,
-reader_id, reader_revision`順の`canonical-frame-v1`とする。edgeはこのdigestのunsigned
+reader_id, reader_revision
+```
+の順の`canonical-frame-v1`とする。edgeはこのdigestのunsigned
 UTF-8 byte順で返す。同一identityの重複surfaceは勝手にdedupeせず、byte rangeを含む別edgeとして残す。
 
 parse receipt frameは
-`snapshot_digest, source_path, source_blob_oid, source_content_digest, source_bytes_digest,
+```text
+snapshot_digest, source_path, source_blob_oid, source_content_digest, source_bytes_digest,
 parser_revision, syntax_revision, anchor_revision, uri_scheme_registry_revision,
 frontmatter_schema_revision, frontmatter_schema_digest, reader_registry_digest, reader_id, reader_revision,
-edge_set_digest, error_set_digest`順とする。edge/error集合は各identity digestのstable sortを
+edge_set_digest, error_set_digest
+```
+の順とする。edge/error集合は各identity digestのstable sortを
 length-prefixed frame化する。edge 0件の正常blobもreceiptを返し、errorが一件でもあれば
 receiptと全errorを返すがGreen graphへ昇格しない。reader例外も
 `reader-exception`へ型付けし、握り潰さない。
 
 U006の閉じたreason codeは
-`source-member-missing|source-member-extra|source-blob-mismatch|source-content-digest-mismatch|
+```text
+source-member-missing|source-member-extra|source-blob-mismatch|source-content-digest-mismatch|
 reader-missing|reader-duplicate|reader-ambiguous|syntax-invalid|encoding-invalid|scheme-unknown|
-target-noncanonical|reader-exception`とする。U007のresolver/policy reasonは
-`target-missing|anchor-missing|anchor-ambiguous|typed-id-missing|typed-id-ambiguous|
-authority-forbidden|stale-inbound|semantic-mismatch|applicability-mismatch|supersession-cycle`
+target-noncanonical|reader-exception
+```
+とする。U007のresolver/policy reasonは
+```text
+target-missing|anchor-missing|anchor-ambiguous|typed-id-missing|typed-id-ambiguous|
+authority-forbidden|stale-inbound|semantic-mismatch|applicability-mismatch|supersession-cycle
+```
 とし、readerが先回りして生成しない。
 
 U006 parse findingのevidence frameは
-`snapshot_digest, source_path, source_blob_oid, source_content_digest, reader_id,
+```text
+snapshot_digest, source_path, source_blob_oid, source_content_digest, reader_id,
 reader_revision, reason_code, source_start_byte, source_end_byte, parser_revision,
 syntax_revision, anchor_revision, uri_scheme_registry_revision, reader_registry_digest,
-frontmatter_schema_revision, frontmatter_schema_digest`順とする。
+frontmatter_schema_revision, frontmatter_schema_digest
+```
+の順とする。
 finding IDは`doc-reference-parse-error,source_path,evidence_digest`から導出し、
 出力順は`source_path,source_start_byte,reader_id,reason_code,finding_id`のunsigned UTF-8 byte順とする。
 一blob内の正常edgeとerrorを両方収集するが、error一件以上のgraphはblockedであり、
 正常edgeだけをclosure authorityへ昇格しない。
 
-U007 analyzerは`graph_digest, snapshot_digest, anchor_registry_digest, plan_registry_digest,
+U007 analyzerは次のseedを使用する。
+```text
+graph_digest, snapshot_digest, anchor_registry_digest, plan_registry_digest,
 adr_registry_digest, spec_registry_digest, test_registry_digest, anchor_registry_revision,
-authority_policy_revision, applicability_policy_revision`をanalysis seedへ束縛する。
+authority_policy_revision, applicability_policy_revision
+```
+この値をanalysis seedへ束縛する。
 各finding evidenceはseed、`reference_id,reason_code,target_identity`から導出し、analysis digestは
 seedとstable finding ID集合から生成する。registry又はpolicy revision欠落、graphと別snapshotの
 registry、receipt欠落・重複・staleをblockedにし、既存relation graphから補完しない。
@@ -1326,11 +1374,16 @@ delta reducerの遷移表:
 | `rename` | before pathが存在しblob/content一致、after path不在、旧新pathが異なる | oldを削除しafterを追加 | `source-missing|stale-before|target-exists|same-path` |
 
 入力順を権威にせず`sequence,event_digest`昇順でreplayするが、sequenceは1始まり・gap/duplicateなし、
-`previousEventDigest`は直前event digestと一致しなければならない。event frameは
-`delta_id, ledger_id, sequence, kind, from_snapshot_digest, to_snapshot_digest, from_path,
+`previousEventDigest`は直前event digestと一致しなければならない。event frameは次の順序の
+`canonical-frame-v1`とする。
+
+```text
+delta_id, ledger_id, sequence, kind, from_snapshot_digest, to_snapshot_digest, from_path,
 to_path, before_blob_oid, before_content_digest, after_blob_oid, after_content_digest,
-decision_digest, previous_event_digest`順の
-`canonical-frame-v1`とする。先頭chain seedは`ledger_id, baseline_snapshot_digest, policy_revision`、
+decision_digest, previous_event_digest
+```
+
+先頭chain seedは`ledger_id, baseline_snapshot_digest, policy_revision`、
 各stepは`previous_chain_digest, event_digest`をframe化してSHA-256とし、最終値を`deltaChainDigest`とする。
 replay結果はfinal snapshotのpath/blob/content集合と完全一致させ、余剰deltaも成功扱いしない。
 空event列でもchain seedとexpected chain digestを必ず比較する。chain全体の不一致は
@@ -1346,9 +1399,15 @@ repo-relative NFC `/` path、非空blob/content identityを検査するfactory�
 `document-snapshot:sha256:<digest>`とし、APIのdigestとprojection IDの対応を再計算して検証する。
 
 `DocumentDeltaFinding`のoperation kindは`add|modify|delete|rename|chain`とする。evidence frameは
-`baseline_snapshot_digest, final_snapshot_digest, delta_chain_digest, reason_code, sequence,
+次の順序とする。
+
+```text
+baseline_snapshot_digest, final_snapshot_digest, delta_chain_digest, reason_code, sequence,
 operation_kind, from_path, to_path, before_blob_oid, before_content_digest, after_blob_oid,
-after_content_digest, policy_revision`順とする。subjectはadd=`to_path`、delete=`from_path`、
+after_content_digest, policy_revision
+```
+
+subjectはadd=`to_path`、delete=`from_path`、
 modify=`from_path`、invalid event=`delta_id`であり、finding IDはrule/subject/evidence digestから導出する。
 出力順は`operation_kind, subject_identity, sequence, finding_id`のunsigned UTF-8 byte順とする。
 成功結果はeffective member集合とそのreduction digest、delta chain digestを返す。blocked結果もfindingと
