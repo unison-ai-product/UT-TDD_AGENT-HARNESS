@@ -34,8 +34,6 @@ generates:
     artifact_type: test_code
   - artifact_path: package.json
     artifact_type: config
-  - artifact_path: package-lock.json
-    artifact_type: config
 dependencies:
   parent: docs/plans/PLAN-L7-345-toolchain-pin-gate.md
   requires: []

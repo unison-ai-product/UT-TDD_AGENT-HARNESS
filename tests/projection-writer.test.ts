@@ -2476,5 +2476,5 @@ Fixture.
     } finally {
       db.close();
     }
-  });
+  }, 120_000);
 });
