@@ -1467,6 +1467,9 @@ SessionIdentityDigestへraw sessionを置換し、first-parent各commit diffのn
 照合する。head CASはexpected sequenceを含み、同transactionのMAX receipt sequenceと一致させる。
 SessionIdentityReceipt outer envelopeをWorkEvent/ReviewLaneがtyped edge exact 1で参照しchain-only再導出する。
 tracked changed pathsは除外0でexact照合し、head digestもMAX sequence row receipt digestと一致させる。
+session coreはManagedSessionAttestationとouter EvidenceAttestationを二段検証する。managed verifierのclosed
+trust registryがUT-TDD managed session authorityを検証し、外部provider API署名を仮定しない。
+WorkEvent/laneとsession receiptのprovider/runtimeをexact一致させる。
 projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 8-field core/self除外7-field ordered preimageとexact 7-field

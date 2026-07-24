@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:712c3003c6c939c16097ab26d93d1bb1
-  command_id: pr154-session-receipt-l6-20260724
-  admitted_at: 2026-07-24T16:20:00.000Z
-  source_digest: sha256:b2a43f342c238f4787fc91ebda860f8ca3e2bada2f52ece3ca851d77f1e404cf
-  decision_digest: sha256:274e636564a4e90b13da2edef804be199774030ec34bb2eb1aaa5cb9b0883e5f
-  receipt_digest: sha256:1886b56b1ec511b1ac2253c8b0656a70db5309e5f98b4011638952f20475cf43
+  receipt_id: certificate:3eaef53282dff4339df7b9e042c63ceb
+  command_id: pr154-managed-session-l6-20260724
+  admitted_at: 2026-07-24T16:30:00.000Z
+  source_digest: sha256:f1647064fbe6e224ae06e0b8a0d70a7458486baa49d10db734b42686ed18ce31
+  decision_digest: sha256:74bbb0616712b65006470fc6b7d324e80c608c832fb59f153e265a46ae4e7a9a
+  receipt_digest: sha256:a65422867f5cd185a9ace3a1e1a1f7bb8e07b736986e7d033cad5124e687dd41
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 22
-    content_digest: sha256:b2a43f342c238f4787fc91ebda860f8ca3e2bada2f52ece3ca851d77f1e404cf
+    revision: 23
+    content_digest: sha256:f1647064fbe6e224ae06e0b8a0d70a7458486baa49d10db734b42686ed18ce31
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 22
+      target_revision: 23
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 22
+    target_revision: 23
     phase: forward_merge
-  escape_reason: PR 154 session receipt closure
+  escape_reason: PR 154 managed session closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -169,6 +169,8 @@ WorkEventはnormalized touched_paths arrayとSessionIdentityDigestを持ち、fi
 merge commitを拒否し、head CAS expected sequenceとMAX receipt sequenceを同一transactionで照合する。
 SessionIdentityReceipt outer envelopeをWorkEvent/ReviewLaneがexact 1参照し、全tracked changed pathsを除外0で
 照合する。head digestもMAX sequence row receipt digestと一致させる。
+ManagedSessionAttestation verifierをcomposition rootのclosed trust registryへ接続し、UT-TDD managed session
+authorityだけを検証する。外部provider署名を仮定せず、WorkEvent/laneとsession provider/runtimeを一致させる。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。

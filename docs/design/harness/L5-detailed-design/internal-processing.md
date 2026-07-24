@@ -628,12 +628,20 @@ UTF-8→`"sha256:"+lowerhex`で算出する。
 `SessionIdentityDigest`もContentDigest subtypeで、canonical object
 `{session_schema:"ut-tdd-session.v1",provider,runtime_family,provider_issued_session_id}`を同じ式で算出する。
 provider-issued attestationを必須とし、raw session stringやaliasを受理しない。
+`ManagedSessionAttestation`は既存形
+`{schemaVersion:"managed-session-attestation.v1",algorithm:"ed25519"|"ecdsa-p256-sha256",authorityId,keyVersion,signature}`
+のexact schemaである。署名payloadはcanonical session identity objectのRFC 8785 UTF-8 bytesとする。
+`ManagedSessionAttestationVerifierPort.verify({provider,runtimeFamily,payloadBytes},attestation)`を使い、
+composition rootのclosed trust registryでprovider/runtime→allowed authorityId/algorithm/keyVersionを固定する。
+codex/claude/human/standaloneのUT-TDD managed delegation/session gateが発行し、外部provider API署名を仮定しない。
+unknown/wrong/expired key、forgery、algorithm drift、cross-provider replayを拒否する。
+
 `SessionIdentityReceipt` coreは
 `{schema_version:"session-identity.v1",provider,runtime_family,provider_issued_session_id,`（前半）
-`session_identity_digest:SessionIdentityDigest,provider_attestation,producer_owner_id:"session-identity-gate",`
-`receipt_digest:ReceiptDigest}`（後半）のexact 8/self除外7-field preimageを持つ。
-provider attestationはcanonical session objectを署名する。Attested envelopeへ格納しcore/outer ownerを一致、
-closed mapでEvidenceProducer `ci`へ写像する。
+`session_identity_digest:SessionIdentityDigest,managed_session_attestation:ManagedSessionAttestation,producer_owner_id:"session-identity-gate",`
+`receipt_digest:ReceiptDigest}`（後半）のexact 8/self除外7-field preimageを持つ。self除外7 fieldsのcanonical
+objectをRFC 8785→UTF-8→SHA-256 raw ReceiptDigest化する。managed attestationとouter EvidenceAttestationを
+二段検証する。Attested envelopeへ格納しcore/outer ownerを一致、closed mapでEvidenceProducer `ci`へ写像する。
 
 producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
 `{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_artifact_id:"NODE-Q0-CASE-MANIFEST-v1",`（前半）
@@ -712,11 +720,13 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
 
 `WorkProvenanceEventReceipt` coreは
 `{schema_version:"candidate-work-provenance.v1",base_revision:GitObjectId,subject_revision:GitObjectId,`
-`product_commit:GitObjectId,author_identity_digest:IdentityDigest,author_session_identity_envelope_digest:ReceiptDigest,runtime_family:string,`
+`product_commit:GitObjectId,author_provider:string,author_identity_digest:IdentityDigest,author_session_identity_envelope_digest:ReceiptDigest,runtime_family:string,`
 `touched_paths:string[] sorted unique nonempty,touched_paths_digest:ContentDigest,producer_owner_id:"candidate-work-provenance-gate",receipt_digest:ReceiptDigest}`
-のexact 11 fields/self除外10-field RFC 8785/UTF-8/SHA-256 raw ReceiptDigest preimageを持ち、自身のdigestを
+のexact 12 fields/self除外11-field RFC 8785/UTF-8/SHA-256 raw ReceiptDigest preimageを持ち、自身のdigestを
 preimageへ入れない。Attested envelopeへ格納しcore/outer ownerを一致、closed mapで`ci`へ写像し、
 provider/session attestationを検証する。
+参照SessionIdentityReceiptのprovider/runtime_familyはWorkEventのauthor_provider/runtime_familyとexact一致し、
+session canonical objectからSessionIdentityDigestを再導出する。
 pathはGit tree由来repo-relative UTF-8 NFC、separator `/`、case-sensitiveとし、absolute、`.`、`..`、
 backslash、NUL、invalid UTF-8を拒否する。`touched_paths_digest`はexact arrayのRFC 8785→UTF-8→ContentDigestである。
 
@@ -772,6 +782,8 @@ GitObjectIdと一致させる。base drift/range truncation/cross-candidateを�
 author/reviewer session envelopeをchain-only検証してSessionIdentityDigestを再導出し、envelope digestと
 SessionIdentityDigestの双方をdisjoint比較する。WorkEvent→sessionとReviewLane→sessionは各
 `edge_kind='identity.session'`, `ordinal=0` exact 1とする。
+ReviewLane参照SessionIdentityReceiptのprovider/runtime_familyはlane provider/runtime_familyとexact一致する。
+raw aliasは比較入力にしない。
 
 | `producer_owner_id` | `attestation_producer` |
 |---|---|

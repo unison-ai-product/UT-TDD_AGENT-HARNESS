@@ -369,3 +369,10 @@ Candidate field order/serializationを固定し、provider-attested SessionIdent
 WorkEvent/ReviewLaneはsession envelopeをexact 1参照しchain-only再導出する。coverageは全Git tracked changed
 paths除外0へ固定し、head digest/sequenceをMAX receipt rowと同一transactionで照合する。
 PLAN-L6-93 revision 22 / PLAN-L7-458 revision 25を正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD b18c9918 managed session attestation局所FLAG
+
+外部provider署名仮定を廃止し、UT-TDD managed delegation/session gate発行のManagedSessionAttestationと
+closed trust registry verifierへ置換した。SessionIdentity core preimage、outer EvidenceAttestationとの二段検証、
+WorkEvent/laneのprovider/runtime exact bindingとcross-provider replay拒否を固定した。
+PLAN-L6-93 revision 23 / PLAN-L7-458 revision 26を正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。
