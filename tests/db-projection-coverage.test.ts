@@ -98,6 +98,52 @@ describe("db-projection-coverage detector", () => {
     expect(requirements).toEqual([]);
   });
 
+  it("does not leak a nested non-projection registry into the parent projection section", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §2.7 SQLite projection DB の定義 (`harness.db`)",
+        "",
+        "#### §2.7.2 provider ownership registry",
+        "",
+        "| registry | owner | purpose |",
+        "|---|---|---|",
+        "| `MANAGED-PROVIDER-REGISTRY-v1` | security | provider trust boundary |",
+      ].join("\n"),
+    );
+
+    expect(requirements).toEqual([]);
+  });
+
+  it("keeps path-like identifiers declared by a projection table schema", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §2.7 SQLite projection DB の定義 (`harness.db`)",
+        "",
+        "| table | primary key | 主な列 | 入力 |",
+        "|---|---|---|---|",
+        "| `projection/path_like.db` | `projection_id` | `status` | fixture |",
+      ].join("\n"),
+    );
+
+    expect(requirements.map((requirement) => requirement.table)).toEqual([
+      "projection/path_like.db",
+    ]);
+  });
+
+  it("does not broadly exclude an additional db identifier outside the 3DB ownership schema", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `fourth-ledger.db` | `record_id` | `digest` | detector sentinel |",
+      ].join("\n"),
+    );
+
+    expect(requirements.map((requirement) => requirement.table)).toEqual(["fourth-ledger.db"]);
+  });
+
   it("matches typed registry constraints against SQLite metadata", () => {
     const db = openHarnessDb(":memory:");
     try {

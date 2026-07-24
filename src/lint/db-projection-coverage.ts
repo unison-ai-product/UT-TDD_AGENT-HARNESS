@@ -98,10 +98,12 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   const indexes: DbProjectionIndexRequirement[] = [];
   let section = "";
   let inTarget = false;
+  let inProjectionTable = false;
   for (const line of content.split(/\r?\n/)) {
     if (SECTION_RE.test(line)) {
       section = line.replace(/^#+\s*/, "").trim();
       inTarget = TARGET_SECTION_RE.test(line);
+      inProjectionTable = false;
       continue;
     }
     if (!inTarget) continue;
@@ -118,16 +120,26 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
       continue;
     }
     if (!line.trim().startsWith("|")) continue;
-    if (/^\|\s*-+\s*\|/.test(line) || /\|\s*table\s*\|/i.test(line)) continue;
     const cells = splitTableRow(line);
+    if (/^\|\s*-+\s*\|/.test(line)) continue;
+    const firstCell = cells[0].toLowerCase();
+    const secondCell = cells[1]?.toLowerCase() ?? "";
+    if (firstCell === "table" && (secondCell === "primary key" || secondCell === "主キー")) {
+      inProjectionTable = true;
+      continue;
+    }
+    // backtick値を持たない先頭cellは別schemaのtable headerである。
+    // 見出し深度や値のpath形状ではなく、projection table header契約で境界を切る。
+    if (backtickValues(cells[0]).length === 0) {
+      inProjectionTable = false;
+      continue;
+    }
+    if (!inProjectionTable) continue;
     if (cells.length < 3) continue;
     const table = backtickValues(cells[0])[0];
     const primaryKey = backtickValues(cells[1])[0] ?? "";
     const columns = backtickValues(cells[2]);
     if (!table) continue;
-    // §2.7.1の3DB ownership registryはSQLite table registryではない。
-    // canonical DBファイルpathをharness.db projection tableとして照合しない。
-    if (table.endsWith(".db") && (table.includes("/") || table.includes("\\"))) continue;
     requirements.push({ section, table, primaryKey, columns });
   }
   return { tables: requirements, indexes };
