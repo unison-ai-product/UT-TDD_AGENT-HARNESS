@@ -16,3 +16,7 @@ PR #156 claim reviewのFLAGは2件。
 algorithm allowlist、durable bundle sequence floorをL4 security、L4-L9 pairへ追加する。
 global Bun cutoverはPR #154 D0-Nをprerequisite正本とし、D0-Rはnative companion/bundle/Cargo差分が
 Bun依存を増やさない局所不変条件だけを所有する。これは要件縮小ではなく責任境界の一意化である。
+
+第二レビューでは識別子整合3件をFLAG。L8 trust oracleの重複`015..018`を`019..022`へ再採番し、
+L5 freeze rangeを`001..022`へ更新する。L6 `authorizeBundle`が要求する`U-RGK-TRUST-011..014`を
+L7へ具体化し、PLAN-L7-454の存在しない`U-RGK-PROTO-*`参照を実在する`U-RGK-WIRE-*`へ統一する。

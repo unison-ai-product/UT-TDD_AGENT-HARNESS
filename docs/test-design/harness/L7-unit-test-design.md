@@ -1718,6 +1718,10 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-TRUST-008` | activation後floor永続化失敗 | activation rollback、旧floor維持 |
 | `U-RGK-TRUST-009` | trust registryをbundle署名で更新 | signature domain不一致で拒否 |
 | `U-RGK-TRUST-010` | receipt replayでfloorを低下 | monotonic invariantで拒否 |
+| `U-RGK-TRUST-011` | verified signatureだがregistry revision不一致 | authorizeを拒否しactivation/floor delta 0 |
+| `U-RGK-TRUST-012` | allowlist algorithmから弱いalgorithmへ置換 | downgradeを拒否しfallback 0 |
+| `U-RGK-TRUST-013` | revoked/expired keyで新sequenceを署名 | sequenceが新しくても拒否 |
+| `U-RGK-TRUST-014` | activation commitとfloor updateの片側だけ成功 | atomicity violationとして旧状態へ収束し部分Green 0 |
 
 mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
 このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。

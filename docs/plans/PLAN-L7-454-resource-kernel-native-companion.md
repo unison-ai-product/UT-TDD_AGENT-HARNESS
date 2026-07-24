@@ -79,7 +79,7 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 - 上流architectureとACの正本: `PLAN-L4-32` のAC-RGK-01..15。
 - native採用・配布・rollbackの正本: ADR-009。global Bun cutoverはPR #154 D0-Nをprerequisite参照する。
 - system受入oracle: `L9-system-test-design.md` §9の`ST-RGK-01..15`。
-- L7 unit pair: `L7-unit-test-design.md`へ本PLAN固有の`U-RGK-NATIVE-*` / `U-RGK-PROTO-*`をRed freezeする。
+- L7 unit pair: `L7-unit-test-design.md`へ本PLAN固有の`U-RGK-NATIVE-*`とL6契約の`U-RGK-WIRE-*`をRed freezeする。
 - L5 physical / L6 function契約: 採番衝突を避けた`PLAN-L5-25` / `PLAN-L6-92`を起票し、wire schema、
   error union、platform port、custodian lifecycleをfreezeしてからplatform APIとNode clientを実装する。
 
@@ -132,7 +132,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 - [ ] Node clientは署名manifest、digest、target、protocol、probeを照合し、companion以外のdirect spawnを行わない。
 - [ ] custody authorityはatomic handoff、durable deadline、epoch/nonce recovery、authority+supervisor dual-crashのfail-close evidenceを持つ。
 - [ ] RustとTypeScriptの責務重複が0で、domain/policy/journal/receiptの正本がTypeScript側に一つだけある。
-- [ ] `U-RGK-NATIVE-*` / `U-RGK-PROTO-*`、対象L8、L9 `ST-RGK-*`がtested commitとevidence manifestを固定する。
+- [ ] `U-RGK-NATIVE-*` / `U-RGK-WIRE-*`、対象L8、L9 `ST-RGK-*`がtested commitとevidence manifestを固定する。
 - [ ] Node/Cargoだけでclean install、targeted/full test、doctor、Windows/Linux aggregate CI、Pack acceptanceがGreen。
 - [ ] PR #154 D0-Nのcutover receiptを参照し、native companion/bundle差分のBun依存増分が0。
 - [ ] Reverse backfillと独立blind reviewを完了するまで`status: confirmed`へ昇格しない。

@@ -145,7 +145,7 @@ overlapとsigned statementを必要とし、activationとmonotonic floor更新�
 
 ## 7. L8 pair-freeze条件
 
-`IT-RGK-PHYS-001..018`は、framing mutation、request correlation、probe/admission分離、control/workload process identity、double-spawn拒否、Windows attach barrier、
+`IT-RGK-PHYS-001..022`は、framing mutation、request correlation、probe/admission分離、control/workload process identity、double-spawn拒否、Windows attach barrier、
 Linux start-in-cgroup、client/custodian/broker crash、reconnect、empty/reap、bundle mutation、rollback、Bun不在を境界故障として
 固定する。mockだけでOS custody Greenを宣言せず、mock/contract integrationと実OS integrationのlaneを明示分離する。
 L8で正負oracle、fixture、観測点、control/workload別created countをfreezeするまで本PLANはconfirmedにしない。
