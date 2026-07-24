@@ -1430,11 +1430,14 @@ inventory→shadowだけは各producer receiptのslice commit subjectとcandidat
 decimal byte-length framing、SHA-256 lowercase hexで算出し、duplicateとcross-OS差を拒否する。
 sealed edgeは`PLAN-RECOVERY-16` / `PLAN-L7-452`のtyped rowを両方要求する。
 `SliceEvidenceReceipt`もschema version+固定tuple+同じdigest規則を使う。`ReviewBundleReceipt`は
-claim-blind/spec-blindのexact 2 lane PASS、unique lane/reviewer/session/runtime family、artifact/revision一致、
-author independenceを要求する。hybridはcross-providerを優先し、単一provider modeだけは異modelかつ独立sessionの
-intra-runtime 2 laneを許可する。同一model/session/authorは拒否し、Issue #153でも2 laneを維持する。
+claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
+reviewer model、execution mode、runtime familyをdigest/attestationへ封印する。hybridはprovider/session/identity/
+authorを分離し、単一provider modeはruntime family一致を許す代わりに異model+独立session/identityを必須とする。
+同一model/session/identity/authorは拒否し、異model2 lane不能ならfail-closeする。Issue #153でも2 laneを維持する。
 chain entryだけでbundle/admission/evidenceを再検証可能にする。outer objectのlookup keyはtyped
-`receipt_digest`だけとし、payload `evidence_digest`又はaliasで取得しない。
+`receipt_digest`だけとし、payload `evidence_digest`又はaliasで取得しない。`SliceEvidenceReceipt`はkindで
+discriminateし、review/admission kindは各ReviewBundle/CutoverAdmission receipt digestへのtyped ref、
+generic kindだけはpayload digestを持つ。
 append commandはlatest sequence+1とexpected previous digestを要求し、exclusive lock内CASでreceipt+evidenceを
 atomic appendする。double genesis、fork、CAS loser、crash partialをtyped failureにする。
 
@@ -1445,21 +1448,24 @@ authority ID+key version+signature+producer+record digest/receipt digestで、ge
 正規producer registryで発行し、skip/replay/別edge/slice receipt流用を拒否する。
 ReviewLane/Bundleと両admission receiptは既存`EvidenceRecord` /
 `EvidenceAttestationVerifierPort`へ委譲し、authority ID/key version/signature、producer/subject/edge bindingを
-trusted verifierで検証する。unsigned/forged/untrusted、author reviewer、same session/runtime familyを拒否する。
-production append portは`.ut-tdd/harness.db` SQLiteだけを使い、`BEGIN IMMEDIATE`、WAL、
+trusted verifierで検証する。unsigned/forged/untrusted、author reviewer、mode別independence違反を拒否する。
+production append portは`.ut-tdd/ledger/cutover-ledger.db` SQLiteだけを使い、`BEGIN IMMEDIATE`、WAL、
 `synchronous=FULL`、head digest/version条件付きUPDATE、chain+sequence/receipt digest UNIQUEを単一transactionで
 実行する。affected row 0のCAS loserは全insert rollback+retry 0。commit/fsync barrier後だけ成功を返す。
-canonical ledger保守portはSQLite online backupで同一時点snapshotを作り、restore後のhead・全refs・object digestを
+cutover DBは独自migration registry/`user_version`を所有する。canonical ledger保守portはSQLite online backupで同一時点snapshotを作り、restore後のhead・全refs・object digestを
 元とexact照合する。migrationはbackup後の単一transactionで実行し、途中失敗を全rollbackする。未知newer schema、
-downgrade、projectionからのcanonical復元はfail-closeし、projection rebuildはcanonical tableを変更しない。
+downgrade、projectionからのcanonical復元はfail-closeする。`.ut-tdd/harness.db`はrebuildable projectionだけ、
+`.ut-tdd/ledger/harness-ledger.db`はPLAN ledgerだけを所有し、projection writerはcutover DBをread-only投影する。
 
 `admitNodeSlice`はversion/slice/predecessor/subject/required inputs/decision/producer/receipt digestを持つ
 zod receiptでD0→F0a→F0b→F0c→Q0を実装する。F0b/F0c/Q0へそれぞれ直前のF0a custody/F0b sealed build/
 F0c aggregate receiptを要求する。`CAND-NODEBOOT-017..020`はedit-start hookでなくcandidate commitのmerge admissionで、
 gate test/schema/runtimeをproduct changeより先にTDD実装し同一commitを評価する。receipt欠落、別revision、owner違反、
 skip/replayはrejected receiptを残しmergeを拒否する。保存時は各sliceの
-`predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refsへ展開し、D0のreview bundle、
-admission、bootstrap envelopeもtyped root refsとして保存する。Q0からD0 rootsまでchain-only closureが切れた場合は拒否する。
+`predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refsへ展開し、D0 SliceAdmissionから
+既存ReviewBundleReceiptと正式BootstrapEnvelopeReceiptをtyped root refsとして保存する。bootstrap schemaは
+issue 153、episode/projection/artifact digest、subject revision、captured_at、EvidenceAttestation、
+canonical receipt digestを必須とする。Q0からD0 rootsまでchain-only closureが切れた場合は拒否する。
 
 cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
 `src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。

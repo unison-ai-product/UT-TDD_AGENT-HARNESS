@@ -179,13 +179,13 @@ GitHub可用性がLedgerの正本性を左右しないこと。検出器はこ�
 | `CAND-NODEBOOT-204` | no fallback | Node image欠落・破損・version/revision drift時にBun/tsx/shell起動0 |
 | `CAND-NODEBOOT-205` | generation atomicity | crash/same-revision rollback/並行readerでpartial generation観測0。cross-revision rollbackはunsupported |
 | `CAND-NODEBOOT-206` | CI aggregate | Node Linux/Windows + harness Linux/Windowsが同一HEAD/run attemptで全Green |
-| `CAND-NODEBOOT-207` | slice admission + genesis付き5-state cutover receipt chain | D0→F0a→F0b→F0c→Q0 acceptance、validated Q0 SliceAdmission direct ref→genesis reachability、12-field receipt、atomic CAS、revision-rule subject、fresh review+CutoverAdmission、負債2件を要求する。`receipt_digest` keyed typed evidenceをchain-only再検証し、wrapper/alias/独自issuer key ID、fork、片lane、片方負債、stale/replay、crash partialを拒否 |
+| `CAND-NODEBOOT-207` | slice admission + genesis付き5-state cutover receipt chain | D0 ReviewBundle+BootstrapEnvelope→F0a→F0b→F0c→Q0 SliceAdmission direct ref→genesis reachability、mode別2 lane、kind別typed evidence、fresh CutoverAdmission、負債2件を要求する。wrapper/alias/未定義root/独自issuer key ID、fork、片lane、stale/replay、crash partialを拒否 |
 | `CAND-NODEBOOT-208` | final deletion | Bun lock/cache/bootstrap/compatibility codeとproduction allowlistが物理的に0 |
-| `CAND-NODEBOOT-209` | live canonical ledger backup | 書込並行時もonline backupが単一headと全refsの一貫snapshotになる |
+| `CAND-NODEBOOT-209` | live canonical cutover ledger backup | `.ut-tdd/ledger/cutover-ledger.db`書込並行時もonline backupが単一headと全refsの一貫snapshotになる |
 | `CAND-NODEBOOT-210` | disaster restore rehearsal | trusted backup復元後のhead、refs、typed objectsが元ledgerとexact一致しchain-only検証Green |
 | `CAND-NODEBOOT-211` | migration interruption | 全barrierの失敗注入でschema/data/versionが旧状態へtransaction rollback |
-| `CAND-NODEBOOT-212` | version incompatibility | 未知newer schemaとdowngradeを起動前に拒否しcanonical bytes不変 |
-| `CAND-NODEBOOT-213` | projection rebuild independence | projection全再構築後もcanonical ledger head/refs/object digestが不変 |
+| `CAND-NODEBOOT-212` | cutover DB version incompatibility | cutover DB独自registryが未知newer schemaとdowngradeを起動前に拒否しcanonical bytes不変 |
+| `CAND-NODEBOOT-213` | 3 DB boundary / projection rebuild independence | harness projection DB再構築後もcutover DBとPLAN ledger DBのhead/refs/object digestが不変 |
 
 Resource Kernel / Rust companionのsystem oracleは別D0-R/L9 pairが所有する。本節はその未着地を理由に
 Node build image、authoring qualification、main正常化をblockしない。

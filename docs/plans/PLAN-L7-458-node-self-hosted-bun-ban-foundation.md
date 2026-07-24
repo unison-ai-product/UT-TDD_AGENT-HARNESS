@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f2150e32d70b5c66bb3cfe71a517768b
-  command_id: pr154-final-flag-l7-458-ledger-retry-20260724
-  admitted_at: 2026-07-24T07:30:00.000Z
-  source_digest: sha256:512b59cac67cf5887aeab259977ff75217d24752a3d0da200b22ac0834c8770e
-  decision_digest: sha256:7d06fe14846494b1195217c5908bdac7d2c89cd4be231b33ac117b0c6bc71566
-  receipt_digest: sha256:0fb83aad2c3d2b71e561f6591bb9b74566bb5d736cf71f6a3cdb19e5da7f7edf
+  receipt_id: certificate:3e433c03169d54c084e1b9285e9e7f18
+  command_id: pr154-final-flag-l7-458-v4-20260724
+  admitted_at: 2026-07-24T08:00:00.000Z
+  source_digest: sha256:d15b5a8ccd90f020dd4d110fe616db74e32ca2d11a77345e45d3ad378fed2dde
+  decision_digest: sha256:1e64341c118c9803018a3f0d0c7062f123da59c6fb7ae9247226e16622b84a70
+  receipt_digest: sha256:4365bd893cd6af0170c6969b06ec051274709e17d6c400c084af364aa25e05ee
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 3
-    content_digest: sha256:512b59cac67cf5887aeab259977ff75217d24752a3d0da200b22ac0834c8770e
+    revision: 4
+    content_digest: sha256:d15b5a8ccd90f020dd4d110fe616db74e32ca2d11a77345e45d3ad378fed2dde
   route:
     signal: feature_addition
     mode: add-feature
@@ -103,9 +103,9 @@ admission_receipt:
     digest: sha256:604a59f1b5a0008c6574cb5433336fe4185d2a3b7dc2cb5d1b07b0aa83a451d9
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: PR 154 final cutover evidence contract correction
+  escape_reason: PR 154 final review and physical ledger boundary correction
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -224,13 +224,16 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 acceptance chain | 正規owner/subject/required inputのapproved receiptだけ連結 |
-| `CAND-CUTOVER-107` | review片lane/same reviewer/session/runtime/author、unsigned/forged/untrusted authority/key、artifact drift | 全production edge append 0 |
-| `CAND-CUTOVER-108` | genesisからsealedまで各edge fresh review+CutoverAdmission+`receipt_digest` keyed evidence nested chain | validated Q0 SliceAdmission direct refからD0 rootsまで外部再照会なしchain-only再検証Green。wrapper/alias/独自issuer key ID拒否 |
-| `CAND-CUTOVER-109` | canonical ledger並行online backup | 単一時点のhead、refs、objectsで一貫 |
+| `CAND-CUTOVER-107` | mode別review片lane/same provider/model/session/identity/author、unsigned/forged/untrusted authority/key、artifact drift | hybridはprovider差、単一provider modeはmodel差、全modeでsession/identity/author差を要求 |
+| `CAND-CUTOVER-108` | genesisからsealedまで各edge fresh review+CutoverAdmission+kind-discriminated evidence nested chain | validated Q0から既存ReviewBundle+正式BootstrapEnvelopeまで`receipt_digest`でchain-only再検証。未定義root/wrapper/alias拒否 |
+| `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db`並行online backup | 単一時点のhead、refs、objectsで一貫 |
 | `CAND-CUTOVER-110` | trusted backup restore | head、refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | migration barrier失敗 | schema/data/versionを単一transactionでrollback |
-| `CAND-CUTOVER-112` | unknown newer schema又はdowngrade | open/migration 0、canonical bytes不変 |
-| `CAND-CUTOVER-113` | projection rebuild | canonical ledger head/refs/objects不変 |
+| `CAND-CUTOVER-112` | cutover DB unknown newer schema又はdowngrade | open/migration 0、canonical bytes不変 |
+| `CAND-CUTOVER-113` | harness projection rebuild | cutover DBをread-only投影しcanonical head/refs/objects不変 |
+
+canonical cutover DBは`.ut-tdd/ledger/cutover-ledger.db`、PLAN ledgerは
+`.ut-tdd/ledger/harness-ledger.db`、rebuildable projectionは`.ut-tdd/harness.db`へ分離する。
 
 pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。
 

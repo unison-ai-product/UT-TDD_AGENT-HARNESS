@@ -337,13 +337,13 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 admission chain | 正規owner/subject/required inputだけapproved、skip/replay拒否 |
-| `CAND-CUTOVER-107` | claim/spec片lane、mode別same model/session又はauthor reviewer、unsigned/forged/unknown authority/key version、artifact/revision drift | hybridはcross-provider優先、単一provider modeは異model+独立sessionだけで全production edgeを許可。それ以外append 0 |
-| `CAND-CUTOVER-108` | validated Q0 SliceAdmission→genesis→sealedへfresh review bundle+CutoverAdmission+typed evidenceを`receipt_digest` keyed nested保存 | Q0→F0c→F0b→F0a→D0 typed rootsをchain-only再検証Green。Q0Predecessor wrapper、digest alias lookup、独自issuer key IDは拒否 |
-| `CAND-CUTOVER-109` | canonical ledger書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
+| `CAND-CUTOVER-107` | claim/spec片lane、mode別same provider/model/session/identity、author reviewer、unsigned/forged/unknown authority/key version、artifact/revision drift | hybridはprovider差、単一provider modeはmodel差を必須化し、session/identity/authorも分離。runtime family一致だけでは拒否しない |
+| `CAND-CUTOVER-108` | validated Q0 SliceAdmission→genesis→sealedへfresh review bundle+CutoverAdmission+kind-discriminated evidenceを`receipt_digest` keyed nested保存 | review/admission typed ref、generic payload digest、D0 ReviewBundle+BootstrapEnvelopeからQ0までchain-only再検証Green。未定義root/wrapper/alias拒否 |
+| `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | schema migration各barrierで失敗注入 | DDL、data、`user_version`を単一transactionで全rollback |
-| `CAND-CUTOVER-112` | runtimeより新しい未知schema又はdowngrade要求 | open/migration 0、canonical bytes不変でfail-close |
-| `CAND-CUTOVER-113` | projection全削除・rebuildとcanonical ledger同時監視 | projectionだけ再生成しcanonical head/refs/object rows不変 |
+| `CAND-CUTOVER-112` | cutover DB runtimeより新しい未知schema又はdowngrade要求 | cutover DB open/migration 0、canonical bytes不変でfail-close。PLAN ledger/harness projection DBへ波及0 |
+| `CAND-CUTOVER-113` | `.ut-tdd/harness.db` projection全削除・read-only再投影とcutover DB同時監視 | projectionだけ再生成しcutover canonical head/refs/object rows不変 |
 
 zod schema `src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`からruntime
 `src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、test

@@ -504,15 +504,18 @@ edge evidence registryはtransition discriminatorごとにrequired kind/count/pr
 | `cutover.bun-removed.sealed` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
 
 全rowでEdge ID、kind ID、producer ID、count、revision rule、digest、successをexact照合する。receipt schemaは
-種別で分離する。`SliceEvidenceReceipt { schema_version, edge_id, kind_id, producer_id,
-subject_revision, evidence_digest, success, receipt_digest }`の`schema_version`は
+種別で分離する。`SliceEvidenceReceipt`は`kind_id`でdiscriminateし、共通field
+`{ schema_version, edge_id, kind_id, producer_id, subject_revision, success, receipt_digest }`に加え、
+`review.bundle`は`referenced_receipt_digest=ReviewBundleReceipt.receipt_digest`、
+`admission.approved`は`referenced_receipt_digest=CutoverAdmissionReceipt.receipt_digest`を必須とする。
+その他generic payload kindだけが`payload_digest`を持つ。`schema_version`は
 `cutover-evidence.v1`とする。`subject_revision`はregistryのrevision規則でdiscriminateし、
 `producer-ancestor` rowではproducer commit、`candidate-head` rowではcandidate HEADをexact保持する。
 先行7 fieldを固定順JSON arrayへ
 射影し、UTF-8 canonical JSON、decimal byte-length framing、SHA-256 lowercase hexで
 `receipt_digest`を算出する。未知field、別version、duplicate、locale/改行/path separator差を拒否する。
 outer content-addressed objectの唯一のidentityとlookup keyは`receipt_digest`である。
-`evidence_digest`はpayload contentのdigestに限定し、object lookup、参照edge、deduplication keyへ流用しない。
+generic kindの`payload_digest`はpayload contentのdigestに限定し、object lookup、参照edge、deduplication keyへ流用しない。
 `object_digest` / `evidence_digest`を`receipt_digest`のaliasとして受理せず、nested payloadも各typed
 receipt自身の`receipt_digest`だけで取得する。
 `CutoverTransitionReceipt`の唯一のschemaは
@@ -533,7 +536,7 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
 1. registryに記載したrow順を`row_ordinal`として固定し、各receiptを
    配列`[schema_version, registry_id, transition_id, row_ordinal, edge_id, kind_id, producer_id,
    subject_revision, receipt_digest, success]`のJSON tupleへ射影する。`receipt_digest`が
-   payload `evidence_digest`を含むevidence receipt全体を封印するため、payload mutationも集合digestへ伝播する。
+   kind別`referenced_receipt_digest`又は`payload_digest`を含むevidence receipt全体を封印するため、payload mutationも集合digestへ伝播する。
 2. 同一`(edge_id, kind_id, producer_id, subject_revision, receipt_digest)`又は同一expected rowの
    duplicateをhash前に拒否し、registry row orderへstable sortする。
 3. 各tupleをUTF-8・無空白・固定array順のcanonical JSONへencodeし、
@@ -550,16 +553,18 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
 
 `ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, author_identity,
 lanes, receipt_digest }`で、`schema_version="review-bundle.v1"`、lanesはexactly twoである。
-各`ReviewLaneReceipt`は`{ lane_id, verdict, artifact_digest, subject_revision, reviewer_identity,
-reviewer_runtime_family, review_session_id, receipt_digest }`とし、lane IDは
+各`ReviewLaneReceipt`は`{ lane_id, verdict, artifact_digest, subject_revision, provider,
+reviewer_model, execution_mode, runtime_family, reviewer_identity, review_session_id, receipt_digest }`とし、lane IDは
 `claim-blind` / `spec-blind`を各1、verdictは両方`PASS`だけを許す。両laneのartifact/revisionはbundleと一致し、
-reviewer identity、session ID、runtime familyはlane間で相互に異なり、reviewerはauthorとも異なる。
-各laneは`receipt_digest`以外の7 fieldを上記固定tuple/length-frame/SHA-256規則で封印する。
+`execution_mode=hybrid`ではprovider、session、identityがlane間で異なり、reviewerはauthorとも異なる。
+`codex-only|claude-only|standalone`ではprovider/runtime familyの一致を許す一方、reviewer model、session、
+identityがlane間で異なり、reviewerはauthorとも異なる。異model2 laneを用意できなければfail-closeする。
+各laneは`receipt_digest`以外の10 fieldを上記固定tuple/length-frame/SHA-256規則とattestationへ封印する。
 bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外の5 field
 （lanesは両lane receipt digest）を同じ規則で封印する。そのbundle receipt digestを
 `review.bundle` evidence receiptが参照し、
 transitionの`review_digest`はそのevidence receipt `receipt_digest`と一致する。片lane、PASS以外、
-重複lane、artifact/revision drift、independence違反は拒否する。
+重複lane、artifact/revision drift、mode別independence違反は拒否する。
 `hybrid`ではcross-providerの2 laneを優先する。`standalone` / `codex-only` / `claude-only`でprovider差を
 構成できない場合に限り、異なるmodelかつ独立sessionのintra-runtime 2 laneを許可する。同一model、
 同一session、author自身のlaneは全modeで禁止し、Issue #153でもclaim-blind/spec-blind exact 2 laneを減免しない。
@@ -587,16 +592,19 @@ writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt
 CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | ReviewLaneReceipt | ReviewBundleReceipt |
-SliceAdmissionReceipt | CutoverAdmissionReceipt | D0ReviewRootReceipt | D0AdmissionRootReceipt |
-D0BootstrapEnvelopeReceipt`である。各payloadとattestationを
+SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt`である。
+`BootstrapEnvelopeReceipt`は`{ schema_version, issue_id, episode_id, projection_digest,
+artifact_digest, subject_revision, captured_at, attestation, receipt_digest }`を持ち、
+`schema_version="bootstrap-envelope.v1"`、`issue_id=153`へ固定する。`receipt_digest`以外を固定順tuple+
+length frame+SHA-256で封印し、attestationは既存`EvidenceAttestation`で検証する。各payloadとattestationを
 content-addressed objectとして保存し、transition→evidence、bundle→2 lane、CutoverAdmission→validated Q0
 `SliceAdmissionReceipt`又はprior cutoverのdirect参照edgeを持つ。各`SliceAdmissionReceipt`は
-`predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refとして保存する。D0 receiptは
-review bundle、admission、bootstrap envelopeのtyped root refsを必須とするため、
+`predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refとして保存する。D0
+`SliceAdmissionReceipt`は既存`ReviewBundleReceipt`と`BootstrapEnvelopeReceipt`へのtyped root refsを必須とするため、
 Q0→F0c→F0b→F0a→D0 rootsを外部再照会なしで辿れる。reducerはroot transitionから全参照を
 digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、attestation不一致を拒否する。
 
-物理backendはrepo既定`<repo>/.ut-tdd/harness.db`のSQLiteだけとする。
+物理backendは専用`<repo>/.ut-tdd/ledger/cutover-ledger.db`のSQLiteだけとする。
 head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
 receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
 evidence object tableは`cutover_evidence_objects(receipt_digest PRIMARY KEY, object_digest, evidence_type, payload_json, attestation_json, CHECK(object_digest=receipt_digest))`、
@@ -611,8 +619,9 @@ head null/version 0 rowへのCASであり、double genesisを同じ規則で拒�
 commit成功をWAL/fsync barrier完了とし、その後だけreceiptを返す。process crash又はcommit errorはrollbackし、
 head/receipt/evidenceが部分可視にならない。抽象in-memory lockや別DBをproduction証拠にしない。
 
-これらcutover ledger tableはcanonical sourceであり、`rebuildHarnessDb`がtruncate/replayする
-rebuildable projection table集合から明示除外する。projection rebuildはledgerをreadして派生viewを再生成できるが、
+cutover DBは独自migration registryと`user_version`を所有するcanonical sourceである。
+`.ut-tdd/harness.db`はrebuildable projectionだけ、`.ut-tdd/ledger/harness-ledger.db`はPLAN ledgerだけを所有する。
+projection writerはcutover DBをread-onlyで読み派生viewを再生成できるが、
 docs/git/logからledger receiptを再発行又は上書きしない。backupはSQLite online backup APIで一貫snapshotを作り、
 head digest/versionとbackup digestを別receiptへ封印する。recoveryはtrusted backupのintegrity check、
 schema version、head chain全検証後のatomic file replaceだけを許し、projection sourceからの復元を拒否する。

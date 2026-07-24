@@ -1658,14 +1658,17 @@ tuple mutation、順序mutation、duplicateを拒否する。`CAND-CUTOVER-009`�
 fresh review bundle欠落、fresh CutoverAdmission欠落を個別fixture化し、merge/production/cutover 0を確認する。
 `CAND-CUTOVER-003/005`はrevision ruleをdiscriminatorとしてproducer-ancestor/candidate-headのsubjectを
 入れ替えたfixture、CutoverAdmissionのartifact digest mutation、genesisのQ0 predecessor欠落を拒否する。
-全edgeでclaim-blind/spec-blind exact 2 lane PASS、unique lane/reviewer/session/runtime family、artifact/revision一致を要求し、
-片lane又はindependence違反を拒否する。hybridはcross-providerを優先し、単一provider modeのfallbackは
-異model+独立sessionだけを許可する。同一model/session/author及びIssue #153のlane減免を拒否する。
+全edgeでclaim-blind/spec-blind exact 2 lane PASSとartifact/revision一致を要求する。laneのprovider/model/
+execution mode/runtime familyをdigestとattestationへ封印する。hybridはprovider/session/identity/author分離、
+単一provider modeは異model+session/identity/author分離を要求しruntime family一致を許す。異model2 lane不能、
+同一model/session/identity/author及びIssue #153のlane減免を拒否する。
 SliceEvidenceReceipt自体のversion/fixed tuple/digest mutationに加え、outer lookupを`receipt_digest`へ固定し、
+review/admission kindのtyped `referenced_receipt_digest`、generic kindのpayload digestをdiscriminateする。
 `evidence_digest` / `object_digest` alias lookup、nested別digest取得を拒否する。CutoverAdmissionはvalidated Q0
 SliceAdmissionをdirect参照し、独自`issuer_key_id`を拒否する。既存verifierのauthority ID+key version+signature+
 producer+record digestを検証し、forged/unknown authority又はversionを拒否する。SliceAdmission保存graphは
-predecessor/required input refs、D0 typed rootsを必須とし、Q0→F0c→F0b→F0a→D0 closureの欠落を拒否する。
+predecessor/required input refs、D0から既存ReviewBundleと正式BootstrapEnvelopeへのrefsを必須とし、
+bootstrapのissue 153/full schema/digest/attestation mutationとQ0→F0c→F0b→F0a→D0 closure欠落を拒否する。
 
 slice admission candidate `CAND-NODEBOOT-017..020`はD0→F0a→F0b→F0c→Q0をpairとし、各target sliceを
 直前receiptなし/失敗/別revisionでmerge admissionしてapproved 0を確認する。edit-start自己gateではなく、

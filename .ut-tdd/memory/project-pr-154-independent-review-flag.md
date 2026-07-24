@@ -180,6 +180,18 @@ reviewはhybridのcross-providerを優先し、単一provider modeだけ異model
 同一model/session/authorは禁止し、Issue #153でもexact 2 laneを維持する。canonical ledgerのonline backup、
 restore、transaction migration rollback、unknown newer/downgrade拒否、projection rebuild independenceを
 L7/L8/L9候補へ降下した。
+
+## Exact HEAD 4e1add6e final spec-blind FLAG
+
+review laneのindependenceをruntime family一律分離からexecution mode別へ修正した。hybridはprovider差、
+単一provider modeはmodel差を要求し、全modeでsession/identity/authorを分離する。laneのprovider/model/mode/
+runtime familyはdigestとattestationへ封印する。SliceEvidenceReceiptはkind-discriminated typed refsとし、
+review/admission receiptを`receipt_digest`で参照し、generic payloadだけがpayload digestを持つ。
+
+未定義D0 root型を廃止し、D0 SliceAdmissionから既存ReviewBundleReceiptとfull schemaを持つ
+BootstrapEnvelopeReceiptへ直接参照する。canonical cutover ledgerは
+`.ut-tdd/ledger/cutover-ledger.db`へ分離し、PLAN ledger DBとrebuildable harness projection DBの
+物理責務を混在させない。
 Issue #153の許容Redは継承2件だけで、D0 admissionはmerge前必須とした。独立再reviewまではFLAGを維持する。
 
 ## Exact HEAD 121afc17 final FLAG
