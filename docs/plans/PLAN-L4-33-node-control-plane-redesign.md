@@ -40,18 +40,18 @@ sub_doc: architecture
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9872f6cb924b98c14cd57db59bc64f37
-  command_id: pr154-final-scope-l4-20260724
-  admitted_at: 2026-07-24T09:00:00.000Z
-  source_digest: sha256:19ecee3ce9c5e8157380aeba2656bbd19ff43c63767739c974c0b020bf26f569
-  decision_digest: sha256:2f0fd718383c570fa9233357a9c9962b21c4176bf01a8abf731fdec29ff6cf4e
-  receipt_digest: sha256:cdb7d1db91d9679cff449eb131222780f0a8411cb133429994b5a908695d3360
+  receipt_id: certificate:f445ac9d4c96432cf17c37e743bdf3a2
+  command_id: pr154-trust-confirm-l4-20260724
+  admitted_at: 2026-07-24T09:30:00.000Z
+  source_digest: sha256:a8e4d70f4b3df7b8c5ad3e351cc81ed5c7473dc829654160961a38484159b784
+  decision_digest: sha256:62e6ce75f2cd849b5f14d48a35ca71dfb96d3748dc8f9f6cb89d7af791f09a12
+  receipt_digest: sha256:b8d4d2d155d5484c99c0d04dbe93049a0543e5e5440656d0ae29f58a447b94ac
   binding:
     path: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
     plan_id: PLAN-L4-33-node-control-plane-redesign
     asset_id: plan:legacy:ba9f2efe68bd7373538eb65009dc992ad9d06677095453f0abbff9967f53d6cd
-    revision: 3
-    content_digest: sha256:19ecee3ce9c5e8157380aeba2656bbd19ff43c63767739c974c0b020bf26f569
+    revision: 4
+    content_digest: sha256:a8e4d70f4b3df7b8c5ad3e351cc81ed5c7473dc829654160961a38484159b784
   route:
     signal: feature_addition
     mode: add-feature
@@ -66,9 +66,9 @@ admission_receipt:
     digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
   reentry:
     target_plan_id: PLAN-L4-33-node-control-plane-redesign
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: PR 154 additive Node refinement and D0 trust correction
+  escape_reason: PR 154 final trust and L6 confirmation closure
 ---
 
 # PLAN-L4-33: Node control-plane architecture redesign
@@ -120,5 +120,5 @@ Bun final deletion、cutoverはL6 confirmed+D0 admissionまで禁止する。
 
 ## 3. PairとForward再合流
 
-L9の`CAND-NODEBOOT-201..208`とpair-freezeし、L5-26→L6-93→L7-458へ降下する。
+L9の`CAND-NODEBOOT-201..213`とpair-freezeし、L5-26→L6-93→L7-458へ降下する。
 候補oracleは対応testと実装の同一commit Red実測まで正式`ST-*`へ昇格しない。

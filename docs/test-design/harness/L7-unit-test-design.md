@@ -1666,8 +1666,9 @@ positiveにする。人間1名、AI混入、同一identity/session/evidence及�
 SliceEvidenceReceipt自体のversion/fixed tuple/digest mutationに加え、outer lookupを`receipt_digest`へ固定し、
 review/admission kindのtyped `referenced_receipt_digest`、generic kindのpayload digestをdiscriminateする。
 `evidence_digest` / `object_digest` alias lookup、nested別digest取得を拒否する。CutoverAdmissionはvalidated Q0
-SliceAdmissionをdirect参照し、独自`issuer_key_id`を拒否する。既存verifierのauthority ID+key version+signature+
-producer+record digestを検証し、forged/unknown authority又はversionを拒否する。SliceAdmission保存graphは
+SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
+schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
+inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。SliceAdmission保存graphは
 predecessor/required input refs、D0から既存ReviewBundleと正式BootstrapEnvelopeへのrefsを必須とし、
 bootstrapのissue 153/full schema/digest/attestation mutationとQ0→F0c→F0b→F0a→D0 closure欠落を拒否する。
 
@@ -1679,6 +1680,8 @@ L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4、BootstrapEnvelope #1
 tracked record全fieldとrecordDigest/attestation bindingを照合し、integrity-only、unsigned/self-hash、forged/untrusted、
 欠落、重複、wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
 predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
+`CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
+L6ConfirmationReceiptをpositiveとし、draft/unconfirmed/wrong-plan/stale-head/unsigned/forgedを個別negativeにする。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
 `src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`へ固定する。

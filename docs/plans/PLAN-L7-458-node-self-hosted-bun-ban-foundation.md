@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:1c2d8c0aa2ab424c81151f5a29089566
-  command_id: pr154-final-scope-l7-20260724
-  admitted_at: 2026-07-24T09:00:00.000Z
-  source_digest: sha256:3a697b6e1379db998245767fc1bf12a845b0354bb2bddc83e43cf32b62c30b73
-  decision_digest: sha256:9a46cb97c1fed6b718f76e59ff3fffb00721afa68a019a39b629273b8e78cb19
-  receipt_digest: sha256:554ae1ee3e32792c733a137fd03253633aae8efecef8c5416f526d8f2fd39aee
+  receipt_id: certificate:0bd9ea6cc3a884bba827743b75e20e50
+  command_id: pr154-trust-confirm-l7-20260724
+  admitted_at: 2026-07-24T09:30:00.000Z
+  source_digest: sha256:22086f080730ef725fc0ecffe2b083d88dd9a0ca2a5555aecb2906c61764fb9c
+  decision_digest: sha256:1fc5c77769df08276a9fc24c68df4f14f1ac50b8f45f8b98c8ab01696b53e0fa
+  receipt_digest: sha256:b094b8593a70dca2d3d7eedf936e31b690bf2d03d14b5e25b85db5f2cf848a5f
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 6
-    content_digest: sha256:3a697b6e1379db998245767fc1bf12a845b0354bb2bddc83e43cf32b62c30b73
+    revision: 7
+    content_digest: sha256:22086f080730ef725fc0ecffe2b083d88dd9a0ca2a5555aecb2906c61764fb9c
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,13 +99,13 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 3
-    digest: sha256:ec2f104bf8e62c4cd8cefcf73146460e636bd70e153776aeab8ba7be12631f94
+    revision: 4
+    digest: sha256:e3dc0a0356fb2e78e860cc98e3139317be7845833dc69e060d86aaf7e955ca55
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: PR 154 additive Node refinement and D0 trust correction
+  escape_reason: PR 154 final trust and L6 confirmation closure
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -206,7 +206,7 @@ repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisio
 | `CAND-CUTOVER-006` | 非隣接skip/reverse | transition 0 |
 | `CAND-CUTOVER-007` | evidence tuple/receipt digest mutation、duplicate、Windows/POSIX相当fixture | canonical UTF-8 JSON+length frameのcross-OS同値、mutation/duplicateはprojection前に拒否 |
 | `CAND-CUTOVER-008` | DB/UI state直接更新 | validated chain由来projectionだけを返す |
-| `CAND-CUTOVER-009` | D0 review欠落、D0 admission欠落、fresh review bundle欠落、fresh CutoverAdmission欠落、`PLAN-RECOVERY-16`のみ、`PLAN-L7-452`のみの各fixture | 各fixtureで#154 merge/production dispatch/cutover 0。missing admission bypass 0 |
+| `CAND-CUTOVER-009` | D0 review/admission又はPLAN-L6-93 attested confirmed receipt欠落、draft/wrong-plan/stale/unsigned、fresh bundle/CutoverAdmission欠落、継承負債片方 | 各fixtureで#154 merge/production dispatch/cutover 0。chain-only L6 confirmation bypass 0 |
 
 function実装先は`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`、
 正式IDは同番号の`U-CUTOVER-001..009`へ固定する。このPRは両artifactの将来生成契約をfreezeするだけで、

@@ -40,18 +40,18 @@ sub_doc: internal-processing
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:21f5b3ba619c3f50f5996f1b4ae8c673
-  command_id: pr154-final-scope-l5-20260724
-  admitted_at: 2026-07-24T09:00:00.000Z
-  source_digest: sha256:c9226d1a28230f5a5116dd63b4f7ae171675f27e5e2e8f3709d006c52aca79a5
-  decision_digest: sha256:4d41c4f6718d597db4ae3407e5089cf7d84f6debde3001dc81421c4834c0e966
-  receipt_digest: sha256:3f9983b8676004521c45635ae8b0f6e43386c52fcbaf3ef150d99f77d7a5311f
+  receipt_id: certificate:32609bf5993fe24c17679e378e4ad67a
+  command_id: pr154-trust-confirm-l5-20260724
+  admitted_at: 2026-07-24T09:30:00.000Z
+  source_digest: sha256:630f9d3e550c9b06c435e8076f72c94015df052579d617a5fdb2225aa5cf4222
+  decision_digest: sha256:3f19c930119437bd3cfd46aac862973c5750bd1a43f8b029f7446ccb11bc8f75
+  receipt_digest: sha256:05e82d85c3814d52e32c162fa702d2ec6bbf13404488498ef46b1ca62d43d70e
   binding:
     path: docs/plans/PLAN-L5-26-node-generation-activation.md
     plan_id: PLAN-L5-26-node-generation-activation
     asset_id: plan:legacy:899f8a663115a111568393119bad90941df8d487e1f69e16a914b1bbb1cb90f5
-    revision: 3
-    content_digest: sha256:c9226d1a28230f5a5116dd63b4f7ae171675f27e5e2e8f3709d006c52aca79a5
+    revision: 4
+    content_digest: sha256:630f9d3e550c9b06c435e8076f72c94015df052579d617a5fdb2225aa5cf4222
   route:
     signal: feature_addition
     mode: add-feature
@@ -66,9 +66,9 @@ admission_receipt:
     digest: sha256:7bad46547eb3ecf1422dcdaa851d7192c42f6a34b78ea14530ba31f800d97e48
   reentry:
     target_plan_id: PLAN-L5-26-node-generation-activation
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: PR 154 additive Node refinement and D0 trust correction
+  escape_reason: PR 154 final trust and L6 confirmation closure
 ---
 
 # PLAN-L5-26: append-only Node generation activation redesign
@@ -120,6 +120,6 @@ sequence、expected previous head、exclusive lock内atomic CASを使い、fork/
 
 L8 `CAND-NODEBOOT-101..106`はtoolchain/build/CI結合だけとpairし、cutover競合へ流用しない。
 cutoverのCAS、fork、crash、rollback、GC、slice FSM、trusted review/admissionはL8
-`CAND-CUTOVER-101..108`とpair-freezeする。
+`CAND-CUTOVER-101..113`とpair-freezeする。
 各候補はL7-458 ownership表のowner revisionでtestとimplementationを同一commitへ追加し、
 Red実測するまで正式`IT-*`へ昇格しない。

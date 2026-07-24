@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0e85d614092a7b9d60d675ed85905748
-  command_id: pr154-final-scope-l6-20260724
-  admitted_at: 2026-07-24T09:00:00.000Z
-  source_digest: sha256:ec2f104bf8e62c4cd8cefcf73146460e636bd70e153776aeab8ba7be12631f94
-  decision_digest: sha256:324a62abc87270c5dcef149347d51fd33bfbecd77df8aec49cbaa2f8dff0847a
-  receipt_digest: sha256:f7229883f9fd354231ae6e90e29c07a030f6934fe581fb127e709565ac9901eb
+  receipt_id: certificate:63b5eef65f0f93d53fcb52d990072254
+  command_id: pr154-trust-confirm-l6-20260724
+  admitted_at: 2026-07-24T09:30:00.000Z
+  source_digest: sha256:e3dc0a0356fb2e78e860cc98e3139317be7845833dc69e060d86aaf7e955ca55
+  decision_digest: sha256:a56fc2a32bdaa2b090035b394395faf7cadbcfe38ceab8f65ce00819c4364012
+  receipt_digest: sha256:0912fb40e122503b512cc6eb29197c3b2e030e9af52ebf1f658c5b0ac9008ce2
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 3
-    content_digest: sha256:ec2f104bf8e62c4cd8cefcf73146460e636bd70e153776aeab8ba7be12631f94
+    revision: 4
+    content_digest: sha256:e3dc0a0356fb2e78e860cc98e3139317be7845833dc69e060d86aaf7e955ca55
   route:
     signal: feature_addition
     mode: add-feature
@@ -66,9 +66,9 @@ admission_receipt:
     digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: PR 154 additive Node refinement and D0 trust correction
+  escape_reason: PR 154 final trust and L6 confirmation closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -137,7 +137,7 @@ appendし、CAS loser、fork、double genesis、crash partialを拒否する。
 slice admissionとは別の`CutoverAdmissionReceipt`を全edgeでfresh発行し、genesisはvalidated Q0、
 以後は直前cutover receiptをpriorに要求する。review/admission/evidenceは既存`EvidenceRecord` /
 `EvidenceAttestationVerifierPort`のtrusted authority/key/signature bindingを必須とする。
-physical writerは`.ut-tdd/harness.db` SQLiteの`BEGIN IMMEDIATE`、WAL、`synchronous=FULL`、
+physical writerは`.ut-tdd/ledger/cutover-ledger.db` SQLiteの`BEGIN IMMEDIATE`、WAL、`synchronous=FULL`、
 head/version CAS、UNIQUE制約、commit/fsync barrierを使い、loser/crashはrollback+retry 0とする。
 
 `initializeCutoverChain`、`appendCutoverTransition`、`projectCutoverState`の将来実装先は

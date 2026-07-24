@@ -1449,7 +1449,9 @@ authority ID+key version+signature+producer+record digest/receipt digestで、ge
 `SliceAdmissionReceipt`をdirect参照し、以後は直前cutover receiptをpriorに要求する。独自`issuer_key_id`は持たない。全edgeのfresh admissionを
 正規producer registryで発行し、skip/replay/別edge/slice receipt流用を拒否する。
 ReviewLane/Bundleと両admission receiptは既存`EvidenceRecord` /
-`EvidenceAttestationVerifierPort`へ委譲し、authority ID/key version/signature、producer/subject/edge bindingを
+`EvidenceAttestationVerifierPort`へ委譲する。attestationはnested
+`{schemaVersion:"evidence-attestation/v1",algorithm:"hmac-sha256",authorityId,keyVersion,signature}`だけを持ち、
+producer/recordDigestは`verify({producer,recordDigest},attestation)` inputとしてsubject/edge bindingと共に
 trusted verifierで検証する。unsigned/forged/untrusted、author reviewer、mode別independence違反を拒否する。
 production append portは`.ut-tdd/ledger/cutover-ledger.db` SQLiteだけを使い、`BEGIN IMMEDIATE`、WAL、
 `synchronous=FULL`、head digest/version条件付きUPDATE、chain+sequence/receipt digest UNIQUEを単一transactionで
@@ -1473,6 +1475,10 @@ AttestedTrackedReceiptRecord exact 4、Issue #153 BootstrapEnvelope 1を要求�
 integrity-only recordをformal plan admission-checkには使えてもD0 genesis trustには使わず、既存EvidenceAttestationへ
 record digestとfull bindingを束縛したwrapperだけをeligibleにする。unsigned/self-hash/forged/untrusted/
 wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c/Q0もregistryをexact照合する。
+
+production cutover genesisは`L6ConfirmationReceipt` exact 1を要求する。PLAN-L6-93のexact plan/revision、
+status confirmed、content digest、candidate HEADとtrusted nested attestationをchain-onlyで再検証し、
+CutoverAdmissionの`l6_confirmation_receipt_digest` direct refと一致させる。
 
 cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
 `src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。

@@ -215,6 +215,14 @@ EvidenceAttestationへ束縛するAttestedTrackedReceiptRecord exact 4だけをD
 formal plan admission-checkとfuture D0 genesis trustを分離した。L4-33/L5-26/L6-93はgeneral PLAN全体を
 supersedeせず、Node-specific additive refinementとしてcanonical predecessor/referenceを維持する。
 
+## Exact HEAD f20a1bc4 final trust/confirmation FLAG
+
+EvidenceAttestationを実コード正本のnested schemaVersion/algorithm/authorityId/keyVersion/signatureへ統一し、
+producer/recordDigestはverifier inputとして分離した。review independenceの無条件runtime拒否を除去し、
+mode別規則だけを正本にした。PLAN-L6-93 confirmedをtrusted L6ConfirmationReceiptとしてcutover chainへ
+直接格納し、draft/wrong/stale/unsignedではgenesisを開始しない。L6 writer pathとL4/L5 V-pair rangeも
+専用cutover DB及び実test正本へ同期した。
+
 ## Exact HEAD 121afc17 final FLAG
 
 freshnessがSliceAdmissionを誤参照し、CutoverAdmission artifact binding、revision-rule subject、

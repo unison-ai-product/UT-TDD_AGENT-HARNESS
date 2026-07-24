@@ -448,8 +448,10 @@ negative transitionは欠落、rejected input、owner不一致、revision drift�
 `sequence, previousRecordDigest, recordDigest, commandId, receiptId, receiptDigest, decisionDigest,
 binding{path,planId,assetId,revision,contentDigest}`を正本とする。このhash chainの
 `issuerAuthenticity=not_verified`だけではD0 eligibilityを満たさない。`AttestedTrackedReceiptRecord`は
-canonical tracked record全体とその`recordDigest`を既存`EvidenceAttestation`
-`{ authorityId, keyVersion, signature, producer, recordDigest }`へ束縛する正式wrapperである。
+canonical tracked record全体とその`recordDigest`を既存nested `EvidenceAttestation`
+`{ schemaVersion:"evidence-attestation/v1", algorithm:"hmac-sha256", authorityId, keyVersion, signature }`
+へ束縛する正式wrapperである。producerとrecordDigestはattestation内fieldではなく、
+`EvidenceAttestationVerifierPort.verify({ producer, recordDigest }, attestation)`のinputとして渡す。
 D0 graphへ4 wrapperをtyped object/refとして格納し、unsigned/self-hash-only/forged/untrusted、欠落、重複、wrong plan、非latest revision、
 candidate artifactとのcontent/path binding driftをadmission前に拒否する。
 
@@ -468,11 +470,11 @@ Bun final deletion、cutover transitionは、L6 confirmedかつD0 review/admissi
 
 `SliceAdmissionReceipt`は上記implementation slice専用で、cutover又はfinal revisionの許可には流用しない。
 cutover用zod正本`src/schema/cutover-transition.ts`は、別schemaとして
-field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, artifact_digest, prior_validated_receipt_digest, decision, authority_id, key_version, signature, producer, record_digest, receipt_digest }`
+field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, artifact_digest, prior_validated_receipt_digest, l6_confirmation_receipt_digest, decision, producer, record_digest, attestation, receipt_digest }`
 を持つ。`schema_version="cutover-admission.v1"`、
 decisionは`approved|rejected`、candidate headとedgeをexact bindingする。genesis admissionはvalidated
 Q0 `SliceAdmissionReceipt`をpriorに要求し、以後は直前validated cutover receiptをpriorに要求する。
-`receipt_digest`はartifact digestを含む先行11 fieldを固定順canonical tuple+length frame+SHA-256で封印する。
+`receipt_digest`はartifact digestとnested attestationを含む先行10 fieldを固定順canonical tuple+length frame+SHA-256で封印する。
 許可FSMは`q0_validated → genesis_approved → inventory_to_shadow_approved → shadow_to_primary_approved → primary_to_bun_removed_approved → bun_removed_to_sealed_approved`だけとする。
 
 | edge_id | 正規producer / authority |
@@ -506,6 +508,7 @@ edge evidence registryはtransition discriminatorごとにrequired kind/count/pr
 | `cutover.genesis` | `inventory.freeze` | 1 | `inventory-freezer` | `candidate-head` |
 | `cutover.genesis` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
 | `cutover.genesis` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.genesis` | `design.l6-confirmed` | 1 | `l6-confirmation-gate` | `candidate-head` |
 | `cutover.inventory-frozen.node-shadow` | `f0a.static-custody` | 1 | `f0a-gate` | `producer-ancestor` |
 | `cutover.inventory-frozen.node-shadow` | `f0b.sealed-generation` | 1 | `f0b-gate` | `producer-ancestor` |
 | `cutover.inventory-frozen.node-shadow` | `f0c.os-jobs` | 1 | `f0c-gate` | `producer-ancestor` |
@@ -598,12 +601,12 @@ standaloneは上記human 2 lane以外を許可しない。
 
 `ReviewLaneReceipt`、`ReviewBundleReceipt`、`SliceAdmissionReceipt`、`CutoverAdmissionReceipt`は
 既存`EvidenceRecord` / `EvidenceAttestation`契約を必須利用し、独自の署名booleanや自己申告を持たない。
-各recordは既存契約のauthority ID、key version、producer、subject revision、source commit、edge/slice binding、
-canonical record digest、signature/attestationを持ち、composition root固定
+各recordはproducer、subject revision、source commit、edge/slice binding、canonical record digestと、
+nested attestation `{ schemaVersion, algorithm, authorityId, keyVersion, signature }`を持ち、composition root固定
 `EvidenceAttestationVerifierPort`のtrusted verifierがeligibleと判定したものだけを数える。
 独自`issuer_key_id`は導入しない。unsigned、forged signature、unknown/untrusted authority又はkey version、
 producer/subject/edge binding不一致は監査保存しても
-gate件数には数えない。review laneは加えてauthor、同一session、同一runtime familyのnegativeを拒否する。
+gate件数には数えない。review lane independenceは上記execution mode別条件だけを正本とする。
 
 freshとは、bundle/admissionがtransition candidate HEADとそのartifact digestへexact拘束され、
 まだどのtransitionにも消費されていないことをいう。review後にproduct commitが追加されればrevision/
@@ -619,13 +622,17 @@ writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt
 CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | ReviewLaneReceipt | ReviewBundleReceipt |
-SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt | AttestedTrackedReceiptRecord`である。
+SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt | AttestedTrackedReceiptRecord |
+L6ConfirmationReceipt`である。`L6ConfirmationReceipt`はPLAN-L6-93 exact plan/revision、`status=confirmed`、
+content digest、candidate HEAD、producer、recordDigest、nested EvidenceAttestation、receipt digestを封印する。
+verifier inputは`{producer,recordDigest}`とし、draft/unconfirmed/wrong plan/stale head/unsigned、
+schemaVersion/algorithm欠落、forged/untrustedを拒否する。
 `BootstrapEnvelopeReceipt`は`{ schema_version, issue_id, episode_id, projection_digest,
 artifact_digest, subject_revision, captured_at, attestation, receipt_digest }`を持ち、
 `schema_version="bootstrap-envelope.v1"`、`issue_id=153`へ固定する。`receipt_digest`以外を固定順tuple+
 length frame+SHA-256で封印し、attestationは既存`EvidenceAttestation`で検証する。各payloadとattestationを
 content-addressed objectとして保存し、transition→evidence、bundle→2 lane、CutoverAdmission→validated Q0
-`SliceAdmissionReceipt`又はprior cutoverのdirect参照edgeを持つ。各`SliceAdmissionReceipt`は
+`SliceAdmissionReceipt`又はprior cutoverと`L6ConfirmationReceipt`のdirect参照edgeを持つ。各`SliceAdmissionReceipt`は
 `predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refとして保存する。D0
 `SliceAdmissionReceipt`は既存`ReviewBundleReceipt`と`BootstrapEnvelopeReceipt`へのtyped root refsを必須とするため、
 Q0→F0c→F0b→F0a→D0 rootsを外部再照会なしで辿れる。reducerはroot transitionから全参照を
