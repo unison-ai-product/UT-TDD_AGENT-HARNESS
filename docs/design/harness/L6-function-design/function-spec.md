@@ -1032,20 +1032,28 @@ type DocumentReferenceParseReason =
   | "target-noncanonical"
   | "reader-exception";
 
-type DocumentReferenceReaderRegistryReason =
-  | "reader-missing"
-  | "reader-duplicate"
-  | "reader-ambiguous"
-  | "reader-revision-missing"
-  | "syntax-binding-mismatch";
-
-type DocumentReferenceReaderRegistryError = {
-  reasonCode: DocumentReferenceReaderRegistryReason;
-  syntaxKind: DocumentReferenceSyntax;
-  registryDigest: string;
-  evidenceDigest: string;
-  findingId: string;
-};
+type DocumentReferenceReaderRegistryError =
+  | {
+      reasonCode: "reader-missing" | "reader-duplicate" | "reader-ambiguous";
+      syntaxKind: DocumentReferenceSyntax;
+      registryDigest: string;
+      evidenceDigest: string;
+      findingId: string;
+    }
+  | {
+      reasonCode: "reader-revision-missing";
+      readerId: string;
+      registryDigest: string;
+      evidenceDigest: string;
+      findingId: string;
+    }
+  | {
+      reasonCode: "syntax-binding-mismatch";
+      bindingKind: "uri-scheme-registry" | "frontmatter-schema";
+      registryDigest: string;
+      evidenceDigest: string;
+      findingId: string;
+    };
 
 type DocumentReferenceParseError = {
   reasonCode: DocumentReferenceParseReason;
@@ -1362,14 +1370,17 @@ finding IDは`doc-reference-parse-error,source_path,evidence_digest`から導出
 一blob内の正常edgeとerrorを両方収集するが、error一件以上のgraphはblockedであり、
 正常edgeだけをclosure authorityへ昇格しない。
 
-reader registry errorのevidence frameは
+reader registry errorのevidence frameはreason別に
 ```text
-registry_digest, syntax_kind, reason_code, reader_identity_set_digest,
-reader_revision_set_digest, syntax_binding_digest
+ownership: registry_digest, syntax_kind, reason_code, reader_identity_set_digest
+revision:  registry_digest, reader_id, reason_code, reader_revision_set_digest
+binding:   registry_digest, binding_kind, reason_code, request_binding_digest, syntax_binding_digest
 ```
-の順とし、finding IDは`doc-reference-reader-registry-error,syntax_kind,evidence_digest`から導出する。
-source path、byte span、架空reader IDのsentinelを合成せず、
-`syntax_kind,reason_code,finding_id`のunsigned UTF-8 byte順で返す。
+の順とする。finding IDのsubjectはownership errorでは`syntax_kind`、revision errorでは`reader_id`、
+binding errorでは`binding_kind`とし、
+`doc-reference-reader-registry-error,subject,evidence_digest`から導出する。
+source path、byte span、架空reader ID又はsyntax kindのsentinelを合成せず、
+`reason_code,subject,finding_id`のunsigned UTF-8 byte順で返す。
 
 U007 analyzerは次のseedを使用する。
 ```text
@@ -1386,8 +1397,10 @@ registry、receipt欠落・重複・staleをblockedにし、既存relation graph
 graph-snapshot-mismatch|registry-snapshot-mismatch|registry-revision-missing|
 policy-revision-missing|receipt-missing|receipt-duplicate|receipt-stale
 ```
-とする。evidence frameは`graph_digest,snapshot_digest,registry_set_digest,policy_revision_set_digest,
-subject_identity,reason_code`の順、finding IDは
+とする。evidence frameは
+`graph_digest,snapshot_digest,anchor_registry_digest,plan_registry_digest,adr_registry_digest,
+spec_registry_digest,test_registry_digest,anchor_registry_revision,authority_policy_revision,
+applicability_policy_revision,subject_identity,reason_code`の順、finding IDは
 `doc-reference-analysis-input-error,subject_identity,evidence_digest`から導出し、
 全入力契約違反をstable順の`ok:false` resultで返す。domain findingを合成せず、未型付け例外へ変換しない。
 
