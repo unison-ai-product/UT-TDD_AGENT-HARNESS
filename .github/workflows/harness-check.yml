@@ -25,6 +25,43 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # F0: 現行 Bun runtime を切り替えず、後続 slice が消費する sealed Node build
+  # image だけを Linux / Windows の clean lock graph から検証する。
+  node-bootstrap:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: setup reviewed Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: require reviewed npm
+        shell: bash
+        run: test "$(npm --version)" = "11.6.2"
+
+      - name: install Node bootstrap graph
+        run: npm ci --ignore-scripts
+
+      - name: build sealed compiled CLI
+        run: npm run build:node
+
+      - name: prepare detached HEAD test fence
+        run: node scripts/prepare-node-bootstrap-test-fence.mjs
+
+      - name: verify build image contract
+        run: node node_modules/vitest/vitest.mjs run tests/node-bootstrap-build-image.test.ts --reporter=dot
+
+      - name: compiled CLI smoke
+        run: node dist/ut-tdd.mjs status --json
+
   harness-check-linux:
     runs-on: ubuntu-latest
     steps:
@@ -117,9 +154,9 @@ jobs:
   # PLAN-RECOVERY-15 / issue #97: Branch Protection が参照する唯一の Required
   # Status Check。片脚が failure / cancelled / skipped の場合も必ず起動して Red にする。
   harness-check:
-    needs: [harness-check-linux, harness-check-windows]
+    needs: [node-bootstrap, harness-check-linux, harness-check-windows]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: require Linux and Windows success
-        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success"
+      - name: require Node bootstrap, Linux, and Windows success
+        run: test "${{ needs.node-bootstrap.result }}" = "success" && test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success"
