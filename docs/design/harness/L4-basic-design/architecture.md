@@ -265,13 +265,25 @@ Rust companionはWindows Job ObjectまたはLinux cgroup v2へのprivileged cust
 責務を両言語へ重複実装せず、capability probe、durable journal append、sealed admission token、
 managed workload生成の順序をbarrierとして固定する。
 
+D0-R merge scopeはresource budget、process-tree custody、capability、terminal receipt、signed companion bundleに
+限定する。DB incremental rebuild、single-flight、snapshot CAS、hook/doctor/local CI横断のqueue/headroom admissionと
+performance convergenceは要件を維持したままIssue #152 later performance/control-plane waveへdeferし、D0-Rの
+merge gateへ含めない。後続waveは本custody境界を利用するが、D0-RがDB/CAS/local CI policyやNode generation/activationを
+再所有したとは扱わない。
+
 配布単位はcontrol planeとtarget別companionを同一revisionへ束縛した署名済bundleとする。
 manifest、binary digest、protocol、target、SBOM、署名のいずれかが不一致ならcontrol processまたは
 managed root生成前にfail-closeする。L4受入は同一attemptのL9 `ST-RGK-*` receiptだけで判定し、
 検出器のskip・警告化・soft limitへの縮退によって設計契約を下げない。
-trust rootはbundle外のinstaller組込authority registryを正本とし、authority-key binding、rotation、
-revocation、expiry、algorithm allowlistをL4 security §12とL9 §9.7で対にする。署名対象はsequence/authority/key/
-algorithm/registry revision/issued/expiryを含むcanonical `BundleManifestSignedPayload`全体である。
-activation正本はTS-owned SQLiteの単一append-only `BundleActivationLog`で、current bundleとanti-rollback floorは
-同じcommitted recordからだけ投影する。期限判定は`TrustedClockPort`と永続`ClockAnchor`に限定し、ambient clockを禁止する。
+trust判定はbundle外のversioned installer/release policyを読む`TrustDecisionPort`へ集約し、署名対象は
+companion digest、protocol descriptor、SBOM、target、sequence、D0-N generation receipt digestを含むcanonical manifest全体とする。
+TS側は`bundle_sequence + manifest_digest + trust_decision_digest + d0n_generation_receipt_digest`の
+accepted factをdurableにcompare-and-advanceする。PKI rotation、secure clock、re-anchor、物理storeはD0-Rで固定せず、
+port欠測、floor未満、同sequence別payloadはfail-closeする。
 global Bun cutoverはPR #154 D0-Nのprerequisiteであり、D0-Rはnative差分のBun依存増分0だけを所有する。
+
+Linuxのmanaged rootは、broker自身ではなくbroker外のdurable deadline ownerへ
+`attempt_id + custody_nonce + cgroup identity + absolute deadline`を開始前commitする。system manager transient
+scope/timerまたは同等のkernel-backed supervisorが、brokerと通常のuser-space recovery supervisorのdual-crash後も期限内に`cgroup.kill`を発行し、
+bounded recovery内に再起動broker/subreaperが`populated=0`、zombie 0、managed orphan 0まで閉じる。
+このowner・kill・reapを強制不能なら開始前に拒否し、証拠欠測をfail-close findingへ変換するだけでは代替しない。

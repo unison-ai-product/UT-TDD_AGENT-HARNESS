@@ -193,9 +193,12 @@ Node build image、authoring qualification、main正常化をblockしない。
 ## §9 資源統制Execution Kernelシステムテスト設計（PLAN-L4-32）
 
 本節は `PLAN-L4-32-resource-governed-execution-kernel.md` の L4↔L9 pair であり、
-`AC-RGK-01..15` を実装前の **Red system oracle** として固定する。対象は単一processではなく、
-hook、doctor、DB projection、snapshot、local CIを横断する実行system全体である。root PIDの終了、
-一時directoryの削除、`windowsHide`、またはdomain commandのexit 0だけをGreen証拠にしてはならない。
+`AC-RGK-01..15` のIDを維持する。D0-R merge gateでactiveなのは
+`AC-RGK-01..06/11/12/14/15`であり、resource budget、process-tree custody、capability、terminal receipt、
+signed companion bundleだけを実装前の **Red system oracle** として固定する。
+`AC-RGK-07..10/13`は要件を削除せずIssue #152 later performance/control-plane waveへ明示deferし、
+D0-R merge gateへ含めない。root PIDの終了、`windowsHide`、またはdomain commandのexit 0だけを
+active IDのGreen証拠にしてはならない。
 
 ### §9.1 AC-RGK Redシステムoracle
 
@@ -206,17 +209,17 @@ hook、doctor、DB projection、snapshot、local CIを横断する実行system�
 |---|---|---|---|
 | `ST-RGK-01` / `AC-RGK-01` | budget欠落、負値、無制限値、不正cwd、shell文字列、強制不能policy、managed root生成失敗を各1件投入 | validation/capability拒否は`managed_root_created=false`。control process起動時は別identity/cleanupを保存し、root/custodyなしで固有terminal | managed root生成後validation、control processをroot未生成証拠へ混同、暗黙無制限化、欠測PIDを0で補完 |
 | `ST-RGK-02` / `AC-RGK-02` | Windowsでnormal/deadline/cancel、Assign/handoff失敗、worker/companion/custodian/supervisor crash、custodian+supervisor同時喪失、old epoch/nonce replay、nested/breakaway競合を個別注入 | handoff失敗はsuspended PIDを一度もresumeせずreap。単独crashはnonce照合recovery、二者喪失はlast-handle killと独立active 0、欠測は`custody_failure` | commit前user code、stale nonce操作、deadline owner消失、dual crash証拠欠測success、rootだけkill、child残存 |
-| `ST-RGK-03` / `AC-RGK-03` | Linuxでclone3経路を実行し、非対応kernel、事後attach fallback、handoff barrier、特権uid/capability、double-fork、broker/service-manager単独・同時crash、old epoch/nonceを注入。macOSへ同じhard要求を投入 | 最初からcgroup所属し、handoff前user code 0。単独crashはrecovery、同時crashはpersisted identityからkill/reapまたは欠測fail-close。開始caseは`populated=0`、zombie 0 | 事後attachをhard custody受理、stale nonce操作、deadline owner消失、dual crashを無証拠success、process groupだけでhard custody成功 |
+| `ST-RGK-03` / `AC-RGK-03` | Linuxでclone3経路を実行し、非対応kernel、事後attach fallback、handoff barrier、特権uid/capability、double-fork、broker+通常recovery supervisor dual-crash、old epoch/nonceを注入。macOSへ同じhard要求を投入 | managed root開始前にbroker外durable deadline ownerへattempt/cgroup/deadlineをcommit。dual-crash後も期限内`cgroup.kill`、bounded recovery、`populated=0`、zombie 0、managed orphan 0まで実行する。ownerをarm不能ならroot生成前拒否 | 事後attachをhard custody受理、stale nonce操作、brokerだけがdeadline所有、dual-crash後に欠測findingだけ残してprocess生存、process groupだけでhard custody成功 |
 | `ST-RGK-04` / `AC-RGK-04` | wall、CPU、memory、process count、stdout、stderrの各上限を独立に超過 | 超過資源に対応する固有exit kind、要求値、適用値、観測peak、policy revision、termination/reap順序をreceiptに保存し、managed orphan 0 | 全超過を`timeout`へ丸める、観測不能値を要求値で埋める、出力打切り後もprocessが生存 |
 | `ST-RGK-05` / `AC-RGK-05` | root先行exit、journal flush失敗、lease解放遅延、terminal transaction/outbox crashを個別注入 | custody空/reap後、`lease_released + finished + sealed receipt`が同一commit position/digestでdurable exactly-once | root exit時finished、terminal片肺、flush前success、lease残存、orphan未確認を0扱い |
 | `ST-RGK-06` / `AC-RGK-06` | intent/started/termination-requested各時点でlauncherまたはKernelをcrashし、PID再利用fixtureを混在 | 再起動reconcilerがcustody identityとjournalから未完了attemptを一度だけ収束し、無関係な再利用PIDをkillせず、二重producer・未記録childとも0 | PIDだけで所有判定、同一executionの再実行、未完了attemptのsuccess化、未知childの放置 |
-| `ST-RGK-07` / `AC-RGK-07` | source種別ごとの変更、削除、rename、schema/projector version更新、manifest破損からなる選択corpus | dirty sourceとtransitive dependentだけ更新し、各caseの全canonical table digestがclean full rebuildと一致。transaction失敗時は旧revisionを保持 | row countだけ比較、非対象tableの全再構築、stale tableをGreen、partial commit、full rebuildを増分と称する |
-| `ST-RGK-08` / `AC-RGK-08` | 同一work key要求とrevision/deadline/memory/termination/capabilityを変えた非互換要求を混在 | 保証互換keyはProducerReceipt exactly one、callerごとのRequestReceipt exactly oneと`coalesced_to`を持つ。waiter cancel/deadlineはproducerと独立terminal | producer receiptをcallerへ複製、request receipt欠落、input revisionだけでcoalesce、非互換合流、waiter cancelでproducer誤停止 |
-| `ST-RGK-09` / `AC-RGK-09` | CAS hit、miss、producer failure、cancel、publish競合、consumer mutation、GC競合を注入 | hit時producer/preparation起動0。missは検証済objectだけatomic publishし、全失敗経路でpartial object、lease、temp process 0。object digestは不変 | hitでも準備script実行、未検証object公開、失敗lease残存、consumerがCAS本体を変更、実行中objectをGC |
-| `ST-RGK-10` / `AC-RGK-10` | hook、doctor、snapshot、local CIを同時要求し、memory headroom不足とqueue deadline超過を注入 | admissionが開始前に拒否またはpolicy順で待機させ、managed外process 0、visible shell 0、orphan 0。各要求に拒否/実行receiptが残る | とりあえず起動後kill、`cmd.exe`/PowerShell/conhostの一瞬表示、直接spawn、拒否要求の証跡欠落 |
+| `ST-RGK-07` / `AC-RGK-07` **DEFERRED** | DB incremental/full rebuild同値性corpus | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
+| `ST-RGK-08` / `AC-RGK-08` **DEFERRED** | single-flight互換性、Request/Producer receipt、waiter独立terminal | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
+| `ST-RGK-09` / `AC-RGK-09` **DEFERRED** | snapshot CAS identity、hermetic materialize、publish/lease/GC fault | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
+| `ST-RGK-10` / `AC-RGK-10` **DEFERRED** | hook/doctor/snapshot/local CI横断のqueue/headroom admission、visible shell 0 | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
 | `ST-RGK-11` / `AC-RGK-11` | lifecycle各barrierでcrash/retryし、同一`execution_id`へ複数attemptを発行 | event sequenceはappend-onlyかつ欠番・上書きなし、各`attempt_id`のterminal receiptはexactly-once | mutable status rowをevent/receipt兼用、retryでattempt identityを再利用、terminal eventだけまたはreceiptだけ残存 |
 | `ST-RGK-12` / `AC-RGK-12` | required capabilityを一つずつ欠落、空集合、probe/journal/token barrierを各一箇所除去したadapter matrixでadmission | control process/probe事実を別記し、全不足・token不正caseが`managed_root_created=false`の`capability_failure`。probe commandのlauncher call 0 | handshakeだけでexecute、control/rootを単一boolean化、warning、skip、PID polling、soft limitへ暗黙縮退 |
-| `ST-RGK-13` / `AC-RGK-13` | DB値型・row順・localeと、untracked/submodule/symlink/mode/EOL/toolchain/envを一要素ずつ変化 | semantic同値DBは同digest、意味差は別digest。CAS identityの意味差は別key、欠落fieldはhit 0 | row count比較、型消失、未追跡入力無視、unknown identityでcache hit |
+| `ST-RGK-13` / `AC-RGK-13` **DEFERRED** | DB canonical digestとCAS完全identityの一要素mutation | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
 | `ST-RGK-14` / `AC-RGK-14` | target別bundleへbinary欠落、digest/署名/SBOM/protocol/target不一致、probe差替え、権限不足を一つずつ注入し、既知良好bundleへのrollbackを実行 | 静的不一致はcontrol process起動0、probe不一致はmanaged root 0。rollbackはmanifest単位で対象OS custody oracleを再通過。TS/Rust責務重複0 | 未検証control起動、probe差替え後execute、PATH探索、runtime download、片側rollback、direct spawn fallback、Rust側domain/policy/journal実装 |
 | `ST-RGK-15` / `AC-RGK-15` | PR #154 D0-Nのcutover receiptを入力し、native companion/bundle/Cargo差分へBun binary/API/lock/runtime dependencyを一要素ずつ注入 | D0-N prerequisite一致かつnative差分のBun依存増分0 | D0-Rがglobal cutover完了を再判定、またはnative経路へBun依存を追加 |
 
@@ -227,7 +230,7 @@ lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt
 |---|---|---|
 | parent loss before worker start | admission後・spawn前 | process生成0、lease release、terminal receipt |
 | parent loss after worker start | custody attach・lease取得後 | worker/descendant exit、custody empty、lease release、terminal receipt |
-| timeout during preparation | snapshot/DB producer barrier内 | producer tree exit、partial publish 0、lease release、terminal receipt |
+| timeout during preparation | companion-managed preparation fixture内 | producer tree exit、custody empty、lease release、terminal receipt |
 | timeout during test execution | `test_start` barrier後 | test tree exit、custody empty、lease release、terminal receipt |
 
 ### §9.2 プラットフォーム能力matrix
@@ -238,13 +241,13 @@ lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt
 | capability / oracle | Windows | Linux | macOS |
 |---|---|---|---|
 | process-tree custody (required) | `CREATE_SUSPENDED`、Job attach後resume、非継承handle、nested Job negotiation | cgroup v2へ開始前attach + subreaper + 常駐broker | hard custody要求はunsupportedとして開始前fail-close |
-| crash時のcustody維持 (required) | Job handleを所有する常駐custodianと別監督境界を実機fault injection | 常駐broker/journal reconcile、`cgroup.kill` | hard crash-surviving custody要求は開始前fail-close |
+| crash時のcustody維持 (required) | Job handleを所有する常駐custodianと別監督境界を実機fault injection | broker外durable deadline ownerを開始前armし、dual-crash後も期限内`cgroup.kill`→bounded recovery | hard crash-surviving custody要求は開始前fail-close |
 | graceful/forced termination | policy指定のgraceful request後にJob全体強制終了 | cgroup配下へgraceful signal後に`cgroup.kill` | root session範囲だけのconditional capability。descendant custody要求では開始前fail-close |
 | descendant reap / orphan zero (required) | Job active process 0と独立OS process snapshotの両方 | `cgroup.events populated=0`、subreaperによるzombie 0、独立probe | 同等証明不能のclassificationは開始前fail-close |
 | CPU/memory/process budget | Job CPU rate/time、job memory、active process limit。強制不能値はadmission拒否 | cgroup v2ならcpu/memory/pids、無ければ強制可能な組合せのみ受理 | OSで強制可能な上限のみ受理。強制不能なhard要求はadmission拒否 |
 | wall/output budget | Kernel monotonic deadline、bounded pipe、Job tree termination | Kernel monotonic deadline、bounded pipe、cgroup tree termination | managed descendantを生成不能とadmissionで証明できるroot-only classificationだけconditional。tree/外部spawn可能性があれば開始前fail-close |
 | hidden native launch (required) | native executable+argv、`CREATE_NO_WINDOW`相当、`windowsHide`。暗黙shell 0 | native executable+argv。暗黙shell 0 | native executable+argv。暗黙shell 0 |
-| hermetic cache execution (cache利用時required) | filesystem/env/tool allowlist、network deny、完全access traceをsandboxで強制 | namespace/seccomp等で同等強制 | 全capabilityを強制できないcache利用classificationは開始前fail-close |
+| hermetic cache execution **(DEFERRED: AC-RGK-09/13)** | later waveでfilesystem/env/tool allowlist、network deny、access traceを検証 | later waveでnamespace/seccomp等を検証 | later waveでcache利用classificationを検証 |
 | platform evidence source | Job identity/accounting、ETWまたはOS process snapshot、journal | cgroup/procfs/process-group snapshot、journal | process-group/kqueueまたはOS process snapshot、journal |
 
 ### §9.3 故障注入corpusと同値性
@@ -255,71 +258,87 @@ lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt
   user code開始前拒否または別監督境界からの回収を個別に証明する。
 - **budget**: wall/CPU/memory/process/outputを一度に一種類だけ超過させ、複合超過では最初に観測した
   termination causeと全観測値を残す。test自身のhost OOMをoracleにせず、隔離runner内の小さい上限で再現する。
-- **DB equivalence**: create/update/delete/rename、依存edge変更、schema/projector version変更、corrupt manifestを含む
-  corpusについて、incremental DBとfresh full rebuildをschema/table/column/index/trigger/view identity、primary-key順、
-  PK無しtableの全column canonical sort、SQLiteのNULL/signed integer/IEEE-754 real（NaN/Infinity/-0を含む）/UTF-8 text/blobの
-  型tagとbyte表現をlength framingしたdigestで比較する。reader transaction中にwriterをcommitさせるfixtureでも一つの
-  snapshot revisionだけを読むことを証明し、異なるrevisionのrowを混在させない。timestamp、temporary path、row order等の非意味値は
-  schema宣言済normalizerだけで除外し、列自体を暗黙に比較から落とさない。
-- **CAS identity**: source-selection manifest、tracked tree、staged/unstaged/untracked fixture、submodule/LFS、lockfile、
-  runtime/preparation executable、OS/architecture/filesystem capability、env allowlist、mode/symlink/EOL、snapshot schema、
-  preparation policyの各要素を一つずつ変え、意味差は必ず別keyになることを検証する。manifest外の巨大生成物は走査せず、
-  manifest外に必要fixtureが現れたcaseはhitでなくfindingとする。同一semantic inputは列挙順に依存せず同じkeyとなる。
-- **CAS fault**: producer crash、disk full、atomic rename失敗、lease timeout、publish競合、consumer cancel、GC競合を
-  注入し、公開済みobject集合が「fault前の完全object」または「検証済み新object」のどちらかだけになることを確認する。
-- **CAS overlay/hermeticity**: staged/unstaged/untrackedの同一path差、delete/rename/type-change、case-fold collisionを順序付きreducerへ
-  入れ、canonical final-tree manifestと実materialize treeをbyte比較する。sandbox内producerにroot外file、未宣言env、network、ambient
-  PATH toolを読ませ、全てdeny + hit取消 + findingになることを確認する。宣言access policy/tool digestの変更は別key、同じ宣言下の
-  観測traceはkeyでなくreceiptへ結び、宣言外accessを含むtraceではartifact無効化になることを確認する。
-- **detached HEAD / test fence**: snapshot準備中にsource working treeとbranch tipを更新しても、materialize対象はreceiptの
-  `subject_revision`と一致するdetached HEADから動かないことを確認する。test processへ渡すfence tokenはsubject SHA、CAS key、
-  snapshot sealを結び、欠落・不一致・準備後のmutationではtest開始前に拒否する。cache hitや増分DBが別revisionのfenceを
-  再利用したcase、detached HEAD外pathを参照したcaseを負oracleとしてRedにする。
+- **DEFERRED — DB equivalence (`ST/AC-RGK-07`)**: create/update/delete/rename、dependency、schema/projector、
+  reader/writer競合、canonical typed digest、failure rollbackを含むcorpusはIssue #152 later
+  performance/control-plane waveで実行する。
+- **DEFERRED — single-flight (`ST/AC-RGK-08`)**: 保証互換key、Request/Producer receipt、waiter cancel/deadline、
+  producer crashのcorpusは同later waveで実行する。
+- **DEFERRED — CAS identity/fault/hermeticity (`ST/AC-RGK-09/13`)**: tracked/staged/unstaged/untracked overlay、
+  submodule/LFS、mode/symlink/EOL、toolchain/env、publish/lease/GC、undeclared access、detached HEAD/test fenceの
+  全要件を同later waveで実行する。
+- **DEFERRED — control-plane admission (`ST/AC-RGK-10`)**: hook/doctor/snapshot/local CI同時負荷、
+  memory headroom、queue deadline、visible shell 0、managed外process 0を同later waveで実行する。
+
+deferred corpusはD0-R merge結果へ算入しないが、後続waveで削除・緩和してよい要件ではない。
+後続waveは次の詳細契約をそのまま引き継ぐ。
+
+- `ST-RGK-07`: create/update/delete/rename、dependency edge、schema/projector version、corrupt manifestを含む。
+  incrementalとfresh full rebuildをschema/table/column/index/trigger/view identity、PK順、PK無しtableの全column
+  canonical sort、NULL/signed integer/IEEE-754 real/UTF-8 text/blobの型tag付きlength framingで比較する。
+  reader/writer競合でも単一snapshot revisionを読み、failure時は旧revisionへtransaction rollbackする。
+- `ST-RGK-08`: 同一`work_key`でもrevision/deadline/budget/termination/capabilityが保証互換でなければcoalesceしない。
+  producerはexactly once、各callerは独立`RequestReceipt`と`coalesced_to`を持ち、waiter cancel/deadlineでproducerを
+  誤停止しない。
+- `ST-RGK-09/13`: source-selection manifest、tracked/staged/unstaged/untracked overlay、submodule/LFS、lockfile、
+  runtime/preparation executable、OS/architecture/filesystem capability、env allowlist、mode/symlink/EOL、
+  snapshot schema/policyをidentityへ含める。producer crash、disk full、rename、lease、publish、consumer cancel、
+  GC faultでも完全objectだけを公開し、root外file・未宣言env/network/PATH accessを拒否する。
+  detached HEAD/test fenceは`subject_revision + CAS key + snapshot seal`を結び、別revision再利用を拒否する。
+- `ST-RGK-10`: hook/doctor/snapshot/local CIを同時要求し、memory headroom不足とqueue deadline超過を独立注入する。
+  開始前rejectまたはpolicy順queue、managed外process 0、visible shell 0、orphan 0、要求単位receiptを必須にする。
 
 ### §9.4 証拠schema
 
-各 `ST-RGK-*` attemptはcontrol側`control_not_created | control_started | probe_recorded | control_stopped`と、workload側
-`root_not_created | root_created_not_started | root_started | empty_proven | released`の直積でoutcomeを保存する。
-単一`process_created`への縮退、各variantの必須field欠落、subject revision不一致、
-後付け集計だけのorphan 0はGreenにしない。secret値とstdout/stderr本文は保存せず、bounded artifact digestを用いる。
+固定70-field相当のflat receiptは採用しない。各attemptは次の最小`RgkEvidenceCoreV1`だけを必須top-levelとし、
+詳細はschema-version付きtyped extension artifactへ分離してdigest参照する。coreまたは対象ACが要求するextensionの
+欠落・schema不一致・digest不一致はGreenにしない。
 
-| field | 型 / 必須条件 | oracle用途 |
+| core field | 型 / 必須条件 | oracle用途 |
 |---|---|---|
-| `schema_version`, `st_id`, `ac_id`, `execution_id`, `attempt_id` | non-empty、固定version | 論理要求、oracle、attemptのexactly-once対応 |
-| `subject_revision`, `working_delta_digest`, `input_revision` | immutable digest | 検証対象とDB/CAS identityの固定 |
-| `platform`, `runner_id`, `adapter`, `capabilities`, `capability_decision` | OS/version/adapter revision/要求・強制可否・不足集合 | capability matrixの実選択証明 |
-| `control_process_created`, `control_process_identity`, `control_phase`, `control_cleanup` | verified companion/custodian/brokerの生成事実。未生成は理由付きN/A | probe実行主体とmanaged root未生成を混同しない |
-| `managed_root_created`, `managed_root_identity`, `workload_phase` | 利用者command rootの生成事実。control processとは独立必須 | admission前workload 0、created-not-started、startedの区別 |
-| `probe_digest`, `probe_journal_position`, `admission_token_digest` | probe実行時必須。tokenはattempt/nonce/bundle/probe/deadline結合 | probe→durable append→admission barrierの順序証明 |
-| `authority_identity`, `authority_epoch`, `custody_nonce`, `handoff_commit`, `deadline_owner` | custody生成時必須。dual crash時もlast durable valueを保存 | atomic handoff、stale replay拒否、deadline継続の証明 |
-| `bundle_manifest_digest`, `core_digest`, `companion_digest`, `protocol_digest`, `target_triple`, `sbom_digest`, `signature_identity`, `rollback_from` | native companion利用時必須。rollback無しは理由付きN/A | AC-RGK-14の完全bundle identity、供給網検証、片側rollback禁止 |
-| `trust_registry_revision`, `authority_id`, `key_id`, `public_key_digest`, `algorithm`, `key_validity`, `revocation_epoch`, `bundle_sequence`, `prior_bundle_sequence`, `minimum_sequence`, `authorization_digest` | signed bundle admission時必須 | canonical署名payload、trust root provenance、key binding、rotation/revocation/expiry、downgrade、anti-rollback証明 |
-| `activation_record_id`, `activation_record_digest`, `clock_evidence_digest`, `clock_authority_id`, `clock_issued_at`, `clock_expires_at`, `clock_boot_id`, `clock_monotonic`, `clock_anchor_digest`, `reanchor_digest` | activation時必須。re-anchor無しは理由付きN/A | 単一activation log commit、trusted clock continuity、signed recoveryの証明 |
-| `d0n_cutover_receipt`, `native_bun_dependency_delta` | PR #154のsubject revision/receipt digestとnative差分のBun依存増減 | AC-RGK-15のprerequisite・局所不増証明 |
-| `spec_digest`, `policy_revision`, `requested_budget`, `applied_budget` | canonical specと単位付き上限 | 暗黙緩和・自己申告の検出 |
-| `journal_events`, `terminal_receipt_digest` | monotonic sequenceとevent digest、terminal封印回数 | lifecycle順序、exactly-once receipt、crash reconcile、flush証明 |
-| `custody_identity`, `custodian_or_broker_identity`, `root_pid`, `descendant_observations` | started時必須。created-not-startedはPID/reapと作成済みcustody、未作成は理由付きN/A | PID単独でない所有権・process tree証明 |
-| `phase_timing`, `resource_observations` | 各phase start/end/duration、wall/CPU/peak memory/process/outputと測定source | 固定準備費、budget cause、実測値の照合 |
-| `exit_kind`, `native_exit`, `managed_orphan_count`, `reap_result` | native_exit/orphan/reapはmanaged root created/started時必須。root未作成は理由付きN/A | termination outcomeとorphan zero |
-| `journal_flush_receipt`, `released_leases` | durable position/digest、lease ID一覧 | root exit後の完了barrier証明 |
-| `db_receipt` | DB phase実行時必須。未実行は理由付き`not_applicable` | AC-RGK-07/08同値性とrollback |
-| `cas_receipt` | CAS phase実行時必須。未実行は理由付き`not_applicable` | AC-RGK-08/09 identityとsingle-flight |
-| `admission_receipt` | concurrency key、headroom、decision、queue/deadline | AC-RGK-01/10の開始前判定 |
-| `independent_probe` | probe tool/revision、PID+start key+sentinel/custody event、連続process create/exit stream、Windows WinEvent/ETW CREATE/SHOW stream、collector heartbeat/sequence/drop count/interactive-session coverage、artifact snapshot | 瞬間window・lineage離脱・観測欠測を含む独立反証。gap/drop/対象session未観測ならGreen禁止 |
-| `fault_id`, `fault_barrier`, `oracle_result` | 注入位置、期待/実測、Red/Green | faultが実際に発火したことの証明 |
+| `schema_version` | `rgk-evidence-core/v1` | parser・migration境界 |
+| `oracle_id` | `{st_id, ac_id, fault_id?}` | ST/AC/faultのexact対応 |
+| `subject_revision` | immutable revision digest | 検証対象固定 |
+| `execution_identity` | `{execution_id, attempt_id}` | retry/recovery分離 |
+| `platform_identity` | `{platform, runner_id, adapter_revision}` | 実adapter固定 |
+| `spec_digest` | canonical ExecutionSpec + policy revision digest | budget/capability要求固定 |
+| `capability_evidence_digest` | `CapabilityEvidenceV1` digest | required/observed/missing、probe、token barrier |
+| `process_outcome` | control/workload phaseを分離したclosed union | control processとmanaged rootの非混同 |
+| `event_chain_digest` | append-only event range digest | lifecycle順序・crash reconcile |
+| `custody_evidence_digest` | `CustodyEvidenceV1` digest | custody identity、handoff、broker外deadline owner、kill/reap/orphan 0 |
+| `resource_evidence_digest` | `ResourceEvidenceV1` digest | requested/applied/observed budgetとexit cause |
+| `bundle_evidence_digest` | `BundleEvidenceV1` digest | manifest/trust/clock/activation、D0-N prerequisite、Bun差分0 |
+| `independent_probe_digest` | `IndependentProbeV1` digest | PID単独でないorphan 0反証 |
+| `terminal_receipt_digest` | sealed ExecutionReceipt digest | exactly-once terminal |
+| `oracle_result` | expected/observed/resultのdigest付きclosed result | fault発火とRed/Green判定 |
+
+`process_outcome`はcontrol側`not_created | started | probe_recorded | stopped`とworkload側
+`not_created | created_not_started | started | empty_proven | released`を別discriminantで持つ。
+`CustodyEvidenceV1`はLinux dual-crash時にdeadline ownerのarmed fact、deadline、`cgroup.kill`時刻、
+bounded recovery完了、`populated=0`、zombie 0、managed orphan 0を必須にする。欠測findingだけではGreenにしない。
+`BundleEvidenceV1`は詳細fieldを維持するが、Node cutover/activationの状態機械を複製せずPR #154 receiptを参照するだけとする。
+deferred AC-RGK-07..10/13のDB/CAS/single-flight/control-plane extensionはlater waveで別schema versionとして追加し、
+D0-R coreへ空fieldやN/A列を固定しない。secret値とstdout/stderr本文は保存せずbounded artifact digestを用いる。
+later waveは少なくとも`DbEquivalenceEvidenceV1`（source/dirty-set/full・incremental digest、transaction outcome）、
+`SingleFlightEvidenceV1`（work key、producer/request receipt、compatibility decision、waiter terminal）、
+`CasEvidenceV1`（input/key/materialized digest、hit/miss、producer、lease/publish/GC、access trace、test fence）、
+`ControlPlaneAdmissionEvidenceV1`（surface、headroom、queue/deadline decision、process/window/orphan observation）を定義し、
+それぞれのdigestを後続schemaのcoreから参照する。これらのfieldをD0-RでN/A埋めして検証済みに見せない。
 
 ### §9.5 終了条件 / defect routing
 
-`AC-RGK-01..15`が各1件以上のpositive Greenと、表で指定したnegative Redを持ち、Windows/Linuxのrequired行が
-実runner evidenceで満たされ、macOSの不足capabilityがfail-closeし、managed orphan 0がKernel receiptと独立probeの両方で一致した場合だけ
-L9をGreenにする。DBは全corpusでincremental/full digest一致、CASはidentity分離・single-flight・fault atomicityの
-全てを満たし、さらに§9.6 performance convergence oracleの全run/envelopeをGreenにすること。未実装・runner不足・測定不能はpassではなくRedまたは明示deferであり、PLAN-L4-32のconfirmed条件や
-Issue #124 close条件を満たさない。
+D0-R merge gateはactive ID `AC-RGK-01..06/11/12/14/15`が各1件以上のpositive Greenと指定negative Redを持ち、
+Windows/Linux required行が実runner evidenceで満たされ、macOS不足capabilityが開始前fail-closeし、managed orphan 0が
+Kernel receiptと独立probeの両方で一致した場合だけGreenにする。Linux dual-crashはbroker外deadline ownerが
+期限内kill→bounded recovery→reap/orphan 0を完遂することを必須とし、測定不能・証拠欠測だけのfail-closeを代替にしない。
+
+deferred ID `AC-RGK-07..10/13`と§9.6はD0-R merge gateへ算入しない。これらはIssue #152 later
+performance/control-plane waveのGreen条件であり、Issue #124全体closeまでには解消する。deferをpassへ読み替えたり、
+D0-RがDB/CAS/local CI admissionやNode activationを所有した証拠に使ったりしない。
 
 失敗がL4 contract/capability選択に由来する場合はRedesign、L5/L6境界・method契約ならForward設計差替え、実装不良ならL7、
 fault fixtureまたは測定方法の不備ならL9へrouteする。検出器の例外追加やplatform skipで設計要求を縮めてはならない。
 
-### §9.6 Issue #124 性能収束oracle
+### §9.6 Issue #124 性能収束oracle（DEFERRED — #152 later performance/control-plane wave）
 
 Windows/Linuxの各runnerで、同一subject revisionに対するhook/Stop、DB refresh、targeted testのcold/warm attemptを
 最低3回ずつ採取し、全attemptが閾値内でなければRedとする。60秒間に20回のStop eventを投入し、producer同時数1以下、各event受付から10秒以内のlease収束、
@@ -338,12 +357,11 @@ visible shell 0を主張しない。各runはphase timing、cache decision、pro
 
 ### §9.7 signed bundle trust / anti-rollback system oracle
 
-Windows/Linuxのclean runnerで、installer組込trust registryからだけauthorityを取得する。authority/key substitution、
-rotation overlap境界、revocation、expiry、algorithm downgrade、sequence floor未満の正規署名bundleに加え、signed manifestの
-sequence/authority/key/algorithm/registry revision/issued/expiryを一要素ずつ差し替え、全caseでcontrol process 0かつcurrent
-bundle不変を要求する。`Date.now()`等ambient clock、clock evidence/anchor欠測・破損、boot/monotonic/lastAccepted rollbackも
-同じくfail-closeする。復旧はinstaller registry許可authorityのsigned re-anchorだけをGreenとする。
+Windows/Linuxのclean runnerで、bundle外のversioned `TrustDecisionPort`とTS側`BundleActivationPort`をfault injectionする。
+companion digest、protocol descriptor、SBOM、target、sequence、D0-N generation receipt digest、manifest署名の一要素差替え、
+port欠測、floor未満、同sequence別payloadを全てcontrol process 0かつaccepted fact不変で拒否する。
 
-`BundleActivationLog`のtransaction全barrierでpower-lossを注入し、再起動後は最後のcommitted recordだけからcurrent bundleと
-minimum sequenceを投影する。未commit intent/temp rowは無視されること、bundle digest/sequence/prior sequence/authorization
-digest/registry revision/clock evidence digestの一部だけが進む状態を表現不能であること、corrupt tailをGreenにしないことを要求する。
+rollback fixtureは旧manifestを直接再利用しない。旧componentを現在floorより大きい新sequence manifestへ再review・再署名し、
+現在D0-N generation receiptとの互換性を含む通常oracleを再通過した場合だけ受理する。trust/activation portの各公開barrierで
+faultを注入し、partial accepted factを作らず、旧accepted fact又は利用停止のどちらかへ閉じる。
+PKI rotation、secure clock、re-anchor、SQLite等の物理方式はD0-RのGreen条件に含めず、後続installer/release revisionが所有する。

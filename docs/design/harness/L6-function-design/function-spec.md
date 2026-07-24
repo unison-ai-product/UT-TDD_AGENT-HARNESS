@@ -1571,13 +1571,10 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 
 | メソッド | 事前条件 | 事後条件 / 不変条件 |
 |---|---|---|
-| `canonicalizeBundleManifest` | schema/bundle/sequence/prior sequence/authority/key/algorithm/registry revision/issued/expiry/component digestが全て型付き | 固定順length-framed bytesとdigestを返し、欠落・duplicate・unknown fieldを拒否 |
+| `canonicalizeBundleManifest` | schema/bundle revision/floor/component digestが全て型付き | 固定順length-framed bytesとdigestを返し、欠落・duplicate・unknown fieldを拒否 |
 | `verifyBundle` | trust identityとtarget明示 | canonical payload全体のsignatureとcore/companion/schema/SBOM/targetの全一致時だけverified handle |
-| `TrustStorePort.loadRegistry` | installer組込authority registry revision | authority-key binding、rotation chain、revocation epoch、algorithm allowlistを返し、bundle自己申告鍵をrootにしない |
-| `TrustedClockPort.readEvidence` | platform secure timeまたはregistry許可authorityのsigned time evidence | authority/digest/issued/expiry/boot/monotonicを返し、ambient `Date.now()`へfallbackしない |
-| `reduceClockAnchor` | durable lastAccepted anchor + evidence | missing/corrupt/rollbackを拒否。signed re-anchorだけがboot/monotonic continuityを再確立 |
-| `authorizeBundle` | signature verified manifest + registry + clock anchor + activation head | downgrade・期限外・失効・prior sequence不一致・floor未満を拒否し、manifest/trust/clockを束縛したauthorization digestを返す |
-| `BundleActivationLogPort.append` | authorization済record、prior sequence=head.sequence | bundle digest/sequence/prior sequence/authorization digest/registry revision/clock evidence digestを一transactionでappend。current/floorは同log投影、未commit intent無視 |
+| `BundleTrustPort.verify` | review済みtrust policy revisionとmanifest | untrusted signer、署名不一致、floor未満を拒否し、検証済みbundle handleを返す。key rotation等の具体方式はD0外 |
+| `BundleActivationPort.activate` | verified handle、expected floor | floor以上の新しい再署名manifestだけを原子的にactivateする。storage・clock・recovery方式はD0外 |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
 | `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
@@ -1591,8 +1588,14 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 
 `PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`で構成する。
 `CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/enforceDeadline/revokeAuthority`で構成し、
-handoff commit前resume、stale epoch/nonce、dual-crash証拠欠測からのsuccessを拒否する。
+handoff commit前resumeとstale epoch/nonceを拒否する。Linuxはbroker外deadline ownerをmanaged root開始前にarmし、
+dual-crash後も期限内kill→bounded recovery→reap/orphan 0を完遂する。ownerをarm不能なら開始前拒否し、
+証拠欠測を`custody_failure`へ変換するだけでは既存workloadの生存を許さない。
 Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
 `populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
 それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
 Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。
+
+bundle rollbackは過去artifactを直接再activationせず、floor以上の新revisionとしてmanifestを再署名し、
+通常のtrust・component・target検証を再通過させる。D0はtrust/activationを抽象portに留め、
+rotation、revocation transport、secure clock、re-anchor、物理log schemaを後続implementation revisionへ送る。

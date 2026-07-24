@@ -17,7 +17,8 @@ agent_slots:
   - role: tl
     slot_label: TL - resource budget、停止意味論、段階導入とfail-close境界
   - role: se
-    slot_label: SE - ExecutionSpec/Receipt、process tree custody、DB増分/CAS port設計
+    slot_label: SE - ExecutionSpec/Receipt、process tree custody、capability・signed
+      companion境界
   - role: qa
     slot_label: QA - deadline、budget超過、親異常終了、孤児ゼロ、再利用のsystem oracle
 generates:
@@ -59,41 +60,41 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5c26509ec4bcd205c4d10abdad6c0dc1
-  command_id: pr156-formal-admission-l4-20260724
-  admitted_at: 2026-07-24T12:40:00.000Z
-  source_digest: sha256:f5405ecc739d8d9aaaeab35d49c3f87f41e6461d4e0a94d1bb9306dab1c00570
-  decision_digest: sha256:8a01d498f503ad4a4d63259b3cf840eb4c8cda88b0663c54da05f62fbe6829a7
-  receipt_digest: sha256:3c5fe84f387326f6944b317b064f8c3f7909162941f450c11fb4a040c8336e3a
+  receipt_id: certificate:0017c55f763d19dc70aafe4baf05a075
+  command_id: pr156-redesign-convergence-l4-rev3-20260724
+  admitted_at: 2026-07-24T13:20:00.000Z
+  source_digest: sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2
+  decision_digest: sha256:3814b4dba0eee0e45bfeb31ae630455a0f34426f316813d80fad6a588c06e42f
+  receipt_digest: sha256:d1673be2e98eec7eff87a74270005d227d315fccbb4bf40a8d3e24c743f5a71a
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 2
-    content_digest: sha256:f5405ecc739d8d9aaaeab35d49c3f87f41e6461d4e0a94d1bb9306dab1c00570
+    revision: 3
+    content_digest: sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2
   route:
     signal: redesign
     mode: redesign
   issue:
     provider: github
     issue_id: 152
-    episode_id: E4-152-node-control-plane-d0n
-    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+    episode_id: E4-152-resource-kernel-d0r
+    projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 1
-    digest: sha256:9e0587c8227f435935fc22aa9ff38d53dcdd6c5458741618c349ae696d98b5df
+    revision: 2
+    digest: sha256:f5405ecc739d8d9aaaeab35d49c3f87f41e6461d4e0a94d1bb9306dab1c00570
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 2
+      target_revision: 3
   reentry:
     target_plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: Resource Kernel設計をForward実装へ再降下する
+  escape_reason: 縮約済みResource Kernel設計をForward実装rev3へ再降下する
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -107,10 +108,11 @@ Issue #124で観測した `session db-refresh` の孤児化、複数GiB級のメ
 アーキテクチャ負債である。起動元が終了しても子孫が残り、別hook・doctor・snapshotが同じ重い準備を重複し、
 PC操作を妨げても統一された停止receiptが残らない。個別の`kill`、timeout追加、再試行抑止だけでは閉じない。
 
-本PLANは、HARNESSから開始する外部実行をすべて `Resource-governed Execution Kernel`（以下Kernel）へ集約する。
-Kernelは実行前に宣言された資源予算と期限を受理し、OS単位のプロセス木custody、増分DB更新、content-addressed
-snapshot再利用、終了証跡を一つの契約として提供する。設計を先に固定し、既存runner、hook、doctor、CI、検出器を
-この契約へ合わせる。Bun固有の回避策にはせず、Bun/Node/Git/PowerShellその他の子プロセスを同じ境界で扱う。
+本PLANのD0-R merge scopeは、HARNESSが起動する外部実行のうち、実行前resource budget、OS単位の
+process-tree custody、capability negotiation、immutable terminal receipt、署名済native companion bundle境界に限定する。
+設計を先に固定し、対象runnerをこの契約へ合わせる。Bun固有の回避策にはせず、Node/Git/PowerShellその他の
+子プロセスを同じ境界で扱う。DB incremental rebuild、single-flight、snapshot CAS、hook/doctor/local CI横断の
+全体admission・performance convergenceは要件を破棄せず、Issue #152のlater performance/control-plane waveへ明示deferする。
 
 ## 1. 境界と不変条件
 
@@ -119,11 +121,11 @@ snapshot再利用、終了証跡を一つの契約として提供する。設計
 - HARNESSが直接・間接に起動する全process treeの開始、監視、cancel、reap。
 - wall-clock deadline、CPU、memory、process count、stdout/stderr bytes、任意のI/O予算。
 - 実行identity、入力revision、予算、終了理由、出力digestを結ぶimmutable receipt。
-- 同じ入力から導出できるDB projectionの増分更新と、snapshot artifactのCAS lookup/publish。
-- hook、CLI、doctor、snapshot runner、CIが共有するadmission controlと同時実行policy。
+- 署名済companion bundleの検証、probe、sealed admission token、managed root生成前のcapability fail-close。
 
 Kernelは業務commandの意味、testの合否、GitHub workflowの状態を所有しない。それらは呼出側domainが判定し、
 Kernelは「何を、どの入力・予算・custodyで実行し、どう終了したか」を改変不能な事実として返す。
+DB/CAS再利用、single-flight、local CI全体のqueue/headroom policyは本D0-R merge scopeでは所有しない。
 
 ### 1.2 fail-close不変条件
 
@@ -132,9 +134,8 @@ Kernelは「何を、どの入力・予算・custodyで実行し、どう終了�
 3. success、failure、timeout、budget exceeded、cancel、launcher crashの全経路で子孫processをreapする。
 4. Kernelが終了を返した時点のmanaged orphan数は0である。0を証明できなければsuccessを返さない。
 5. receiptは実際に適用した制約と観測値を記録し、要求値を適用済みと自己申告しない。
-6. DB/CASの再利用はinput identity完全一致時だけ許可し、current working treeへの暗黙追従を禁止する。
-7. 実行開始前にplatform capabilityをnegotiationし、要求したcustody/budgetを完全強制できない組合せは開始しない。
-8. lifecycleの観測事実はappend-only event、終端判定はそれらから導出したimmutable receiptとし、同じrecordを更新して兼用しない。
+6. 実行開始前にplatform capabilityをnegotiationし、要求したcustody/budgetを完全強制できない組合せは開始しない。
+7. lifecycleの観測事実はappend-only event、終端判定はそれらから導出したimmutable receiptとし、同じrecordを更新して兼用しない。
 
 ## 2. Object / port設計
 
@@ -146,16 +147,14 @@ Kernelは「何を、どの入力・予算・custodyで実行し、どう終了�
 |---|---|
 | `execution_id` | 一つの論理実行要求を表す安定ID。異なるcanonical spec digestでの再利用を拒否 |
 | `attempt_id` | admissionごとに新規発行する一意ID。同じ`execution_id`のretry/coalesce/recoveryを混同しない |
-| `work_key` | operation/classification、input revision、policy revision、program/argv/cwd/env、resource budget、deadline class、termination policy、required capabilities、cache/output policyから導出するcanonical digest。single-flightはcaller IDでなく本keyを使う |
+| `work_key` | operation/classification、input revision、policy revision、program/argv/cwd/env、resource budget、deadline、termination policy、required capabilitiesから導出するcanonical spec digest。本D0-Rではcoalescing identityに使用しない |
 | `program` / `argv` | shell文字列でなく実行可能ファイルとargv。shell利用時は明示adapter種別を要求 |
 | `cwd` / `environment` | canonical cwdとallowlisted env delta。secret値をreceiptへ保存しない |
-| `input_revision` | commit SHA、working delta digest、fixture/CAS digest等のimmutable入力identity |
+| `input_revision` | commit SHA、working delta digest、fixture digest等のimmutable入力identity |
 | `resource_budget` | wall time、CPU time、peak memory、process count、output bytes、必要時I/O上限 |
 | `deadline` | absolute deadline。各child timeoutの寄せ集めではなくtree全体に適用 |
-| `concurrency_key` | doctor、db-refresh、snapshot等のsingleton/coalescing/admission policy key |
-| `cache_policy` | `deny | read | read_write` とCAS namespace/version |
 | `termination_policy` | graceful猶予、強制終了、descendant reap、lease release、journal flush、terminal receipt sealの順序 |
-| `classification` | hook/doctor/test/snapshot/CI等。分類ごとの既定budgetはpolicy revisionで固定 |
+| `classification` | 実行種別。分類ごとの既定budgetはpolicy revisionで固定し、全体queue/headroom policyとは分離 |
 | `required_capabilities` | tree custody、hard memory/CPU/process limit、crash recovery等、実行に必須なcapability集合 |
 
 任意fieldの暗黙既定はpolicy catalogでversion管理する。呼出側が無制限を指定することは禁止し、上限緩和は
@@ -184,31 +183,25 @@ managed workloadは別discriminantを持ち、native workload exitは`RootCreate
 - exit kind (`success | process_failure | deadline | cpu_budget | memory_budget | process_budget |
   output_budget | cancelled | validation_failure | capability_failure | launch_failure | custody_failure | orphan_detected`) とnative exit情報。
 - wall/CPU/peak-memory/outputの観測値、stdout/stderrまたはartifactのbounded digest参照。
-- managed root created/started outcomeはmanaged orphan count/reap結果を必須とし、DB/CASを実行したphaseだけ対応receiptを必須にする。未実行phaseは
-  `not_applicable`理由を列挙し、欠測と区別する。
+- managed root created/started outcomeはmanaged orphan count/reap結果を必須とする。
 
 `ExecutionReceipt`がsuccessでもdomain testがpassとは限らない。呼出側はreceiptのexit kind、subject revision、
 domain outputを併せて判定する。custody empty/reapまでのeventを先にdurable化し、`lease_released`、`finished` terminal event、sealed receiptを
 一つのatomic terminal transactionまたは同じcommit positionのrecoverable outboxでdurably commitする。
 terminal eventだけ／receiptだけの片肺を許さない。
 
-single-flightではcaller要求ごとに`RequestReceipt(execution_id, request_attempt_id)`をexactly-once封印し、一つの
-`ProducerReceipt(producer_execution_id, producer_attempt_id, work_key)`へ`coalesced_to`で結ぶ。producer receiptをcaller identityへ
-複製しない。waiterのcancel/deadline/admission rejectionは各RequestReceiptのterminal outcomeとして記録し、producer継続可否とは
-分離する。producer完了を利用したwaiterだけがproducer digestを参照し、各requestの受付・待機・離脱証跡を失わない。
+single-flightの`RequestReceipt` / `ProducerReceipt`分離はAC-RGK-08として保持するが、Issue #152 later
+performance/control-plane waveへdeferし、本D0-Rのterminal receipt merge gateへ混在させない。
 
 ### 2.3 capability negotiation
 
 `PlatformCapabilities`はOS名ではなく、実際に強制可能なcapabilityと制約を表す。少なくとも
 `atomic_attach_before_user_code`、`tree_kill`、`tree_empty_proof`、`hard_memory_limit`、`hard_cpu_limit`、
-`hard_process_limit`、`crash_surviving_custodian`、`non_inheritable_custody_handle`、`hermetic_filesystem`、
-`network_deny`、`environment_allowlist`、`tool_identity`、`access_trace_complete`をversion付きで公開する。
+`hard_process_limit`、`crash_surviving_custodian`、`broker_external_deadline_owner`、
+`non_inheritable_custody_handle`をversion付きで公開する。
 `CapabilityNegotiator`は`ExecutionSpec.required_capabilities`とadapterのcapabilityを照合し、完全一致したadapterと
 適用policyをjournalへ記録する。不足をwarning、PID polling、soft limitへ暗黙縮退させない。platform matrixはL9の
 正負oracleの入力正本とする。
-
-`cache_policy=read|read_write`はhermetic/access capabilityをvalidation時に自動でrequiredへ追加する。callerが省略しても
-要求を弱めず、platform adapterが一つでも強制不能ならcache hit前に`capability_failure`とする。
 
 ### 2.4 portと短いobject責務
 
@@ -219,19 +212,16 @@ single-flightではcaller要求ごとに`RequestReceipt(execution_id, request_at
 | `ProcessCustody` | process treeのattach、usage観測、tree-wide signal、reap証明 |
 | `ExecutionJournal` | event append、terminal receipt封印、冪等attempt、crash後reconcile |
 | `CapabilityNegotiator` | required capabilityとplatform adapterの適合を開始前にfail-close判定 |
-| `IncrementalDbProjector` | source fingerprint差分から影響projectionだけをtransaction更新 |
-| `SnapshotCas` | canonical input keyでlookup、原子的publish、lease、GC対象列挙 |
-| `AdmissionController` | concurrency key、全体memory headroom、queue deadlineによる開始可否判定 |
 
-各objectはinterface越しに依存し、`ExecutionKernel`を巨大runnerへしない。OS adapter、SQLite adapter、CAS filesystem
-adapterはdomainから分離する。public methodのpre/post/invariantはL6へ降ろし、1method 1責務で実装する。
+各objectはinterface越しに依存し、`ExecutionKernel`を巨大runnerへしない。OS adapterとjournal adapterはdomainから
+分離する。public methodのpre/post/invariantはL6へ降ろし、1method 1責務で実装する。
 
 ## 3. OS process-tree custody
 
 OS custody adapterは[ADR-009](../adr/ADR-009-resource-kernel-native-custody-companion.md)に従うRust native companionで実装する。
 TypeScript/Node control planeは`ExecutionSpec`、resource/admission policy、journal/outbox、receipt封印の正本を維持し、companionには
 versioned protocol越しにOS操作だけを委譲する。native側へdomain rule、GitHub判断、DB/CAS再利用判断を移さない。
-companion binary、protocol、target、capability probe、署名、SBOMを結ぶplatform bundleを検証できない場合、
+companion binary、protocol、target、capability probe、署名、SBOM、D0-N generation receiptを結ぶcompanion bundleを検証できない場合、
 direct spawnへfallbackせずmanaged workload生成前に`capability_failure`とする。
 
 ここでprocess identityを二つに分離する。`control_process_created`は署名・digest検証済みcompanionまたは常駐
@@ -289,6 +279,14 @@ memory/CPU/process limitと`cgroup.kill`、`cgroup.events`の`populated=0`をcus
 `orphan zero`を要求するproduction classificationは開始しない。process group/sessionだけのadapterはcapabilityが明示的に
 低い開発用classに限定し、hard custody要求へ選択しない。
 
+Linuxのwall deadlineはbroker process自身に所有させない。managed rootをresume/execする前に、broker外のdurable
+deadline owner（system managerのtransient scope/timerまたは同等のkernel-backed supervisor）へ
+`attempt_id + custody_nonce + cgroup identity + absolute deadline`をcommitし、ownerがarmedであることをjournalへ記録する。
+brokerと通常のuser-space recovery supervisorが同時に失われても、この独立ownerが期限内に`cgroup.kill`を発行し、bounded recovery window内に
+再起動broker/subreaperが`populated=0`、zombie 0、managed orphan 0まで収束させる。deadline owner、kill、reapの
+いずれかを強制・検証できないplatformはmanaged root生成前に拒否する。証拠欠測を`custody_failure`へ分類するだけで
+生存processを放置してよい契約にはしない。
+
 macOSはcgroup/subreaper同等のhard custodyを標準提供しないため、専用常駐brokerによるsession/process-group監視で
 証明できるcapabilityだけを公開する。`tree_kill`や`tree_empty_proof`を要求する分類で完全証明できない場合は
 `capability_failure`でfail-closeし、「POSIX」としてLinux同等を自己申告しない。daemonize/double-forkを許す外部serviceは
@@ -302,72 +300,34 @@ Kernelは開始前にjournalへintentをdurable appendし、常駐custodian/brok
 `custody_failure`へ収束する。PIDだけで所有権を推定して無関係processを終了しない。正常終了の定義は、root終了ではなく
 custody container空、lease解放、journal flush、terminal event + receipt seal/publishまでである。
 
-## 4. DB incremental rebuild
+## 4. Issue #152 later performance/control-plane waveへのdefer
 
-現行のhook/doctor/snapshotごとの全DB rebuildを廃止し、authoring sourceのfingerprint graphからdirty setを導出する。
+次の要件は削除・免除せずIDを予約したまま後続waveへ移す。本D0-Rはその設計・実装・Green evidenceを
+merge条件にせず、native custodyを既存Node D0-Nのactivation/cutover正本へ逆流させない。
 
-1. source path、length-framed content digest、file mode/symlink target、schema/projector version、dependency edgeをmanifest化する。
-2. 前回receiptと比較し、変更sourceとtransitive dependent projectionだけをdirtyにする。
-3. 一つのtransactionでdirty projectionを置換し、成功後だけmanifest revisionを進める。
-4. 同じ`work_key`の同時要求だけをsingle-flightでcoalesceする。waiterごとに残deadline、budget、termination、required capabilityの
-   互換性を再判定し、producerが同等以上の保証を満たさない場合は合流させない。callerの`execution_id`差だけでは分裂させない。
-5. schema/projector version変更、manifest欠落、integrity failure時だけfull rebuildへ昇格する。
-6. full rebuildもKernel budget/custody内で実行し、旧DBはtransaction成功までreadableに保つ。
+| deferred AC | 保存する全体要件 | 後続waveの閉鎖条件 |
+|---|---|---|
+| `AC-RGK-07` | source fingerprint dirty-setによるDB incremental rebuildとfull rebuild canonical digest同値性 | schema/projector変更、reader/writer競合、failure rollbackを含む選択corpus Green |
+| `AC-RGK-08` | 保証互換`work_key`だけのsingle-flight、Request/Producer receipt分離、waiter独立terminal | 非互換budget/deadline/capability混入、cancel、producer crashの負oracle Green |
+| `AC-RGK-09` | 完全input identityのsnapshot CAS、hermetic materialize、atomic publish/lease/GC | hit/miss、overlay、undeclared access、disk/rename/GC fault corpus Green |
+| `AC-RGK-10` | hook/doctor/snapshot/local CI横断のqueue/headroom admission、visible shell 0、managed外process 0 | 全surface同時負荷とqueue deadlineのsystem evidence Green |
+| `AC-RGK-13` | DB canonical digestとCAS identityの型・順序・locale・EOL・mode・symlink・toolchain/env識別 | identity一要素mutationとsemantic equivalence corpus Green |
 
-DBのcanonical digestは、schema version、table/column/index/trigger/viewの正規化DDL identity、primary-key順のrow、型tag、
-NULL、signed 64-bit integer、IEEE-754 real bit pattern、UTF-8 text、blobのbyte表現をlength-framed encodingへ正規化して算出する。
-PKを持たないtableは全columnの型付きcanonical bytesで安定sortし、重複rowもcountを失わない。NaN/Infinity/-0、text encoding、
-collationはschema policyで許否と表現を固定する。SQLiteのrow返却順、locale、JSON key順、timestamp生成時刻をdigestへ混入させない。
-digest readは一つの明示read transaction/snapshot revision内で完結し、同時writerの前後revisionを混在させない。projectionに
-非決定値が必要なら比較対象外fieldをschemaで明示し、暗黙除外しない。
-
-増分結果はfull rebuildと同値でなければならない。L8/L9で選択的変更corpusに対し両結果のcanonical table digestを比較し、
-差異があればincrementalを無効化してfindingを出す。高速化を理由にstale projectionをGreenとして返さない。
-
-## 5. Snapshot CAS
-
-snapshot準備の固定費を、入力単位のcontent-addressed artifactへ変換する。CAS identityは少なくとも
-`repository tree digest + explicit staged/unstaged/untracked delta digest + submodule/LFS identity + dependency lock digest +
-runtime executable digest/version + OS/architecture/filesystem capability + relevant env allowlist digest + preparation executable digest +
-snapshot schema version + preparation policy revision`をfield名・型・長さ付きcanonical bytesから算出する。秘密値そのものは
-含めず、結果に影響するsecret-backed inputはnon-cacheableまたは安全なversion tokenを要求する。欠落field、未知version、
-case-fold/EOL/file-mode/symlink semanticsを正規化できない入力はhitさせない。
-
-`explicit staged/unstaged/untracked delta`はrepository全量探索を意味しない。version管理されたsource-selection manifestが
-authoritative tracked path、必要なuntracked fixture root、除外する生成物/cacheを宣言し、そのmanifest自体のdigestをidentityへ
-含める。manifest外のuntracked fileを黙って入力扱いせず、必要入力がmanifest外に現れた場合はcache miss + findingとして設計へ戻す。
-
-component digestの単純連結をkey正本にしない。tracked treeへindex、worktree、authoritative untracked fixtureを順序付きoverlay reducerで
-適用し、delete/rename/type-change、untracked→tracked衝突、case-fold衝突を解決またはfail-closeしたcanonical final-tree manifest
-（normalized path、entry type、mode、content/symlink digest）を生成する。同じfinal treeは同じkey、異なるfinal treeは別keyになる。
-
-CAS利用executionはmaterialize rootと宣言input以外を閉じるhermetic sandboxで実行する。filesystem root外、未宣言env、network、
-ambient PATH/tool lookupはdeny-by-defaultとする。hit前に得られる宣言access policy（filesystem/env/network/tool allowlist）と
-許可tool executable digestをCAS keyへ含め、実行後の観測access trace digestはreceiptへ別に結ぶ。観測traceが宣言集合のsubsetで
-なければartifactを無効化し、宣言policy変更は別keyにする。実行後traceそのものを事前keyへ循環依存させない。sandbox/traceを
-強制できないclassificationはcache hitを許可しない。undeclared accessはhit取消 + findingであり、既存artifactをGreen利用しない。
-cache hitでもconsumer/test executionは同じhermetic sandboxとaccess collector内で動かし、宣言外accessをdenyする。hit artifactを
-process実行なしで返すpure materialization classificationは、外部入力を読まない型/adapter契約とartifact digest検証を必須にする。
-
-- hit時はimmutable snapshotをread-only materializeし、準備scriptを再実行しない。
-- miss時はleaseを取得し、一つのproducerだけが一時領域へ生成・検証後にatomic publishする。
-- producer失敗、deadline、cancel時は不完全objectを公開せず、leaseと一時領域をKernelが回収する。
-- consumer mutationはcopy-on-write作業域に限定し、CAS objectを変更しない。
-- receiptはCAS key、hit/miss、producer execution、materialized digestを結ぶ。
-- GCは参照lease、保存期間、容量budgetに従い、実行中objectを削除しない。
+後続waveでも全producer processは本D0-Rのbudget/custody/capability/terminal receipt境界を利用する。ただし、
+本D0-RがDB/CAS/local CI policyを所有した、またはそのperformanceをGreen証明したとは扱わない。
 
 ## 6. L-pairと依存降下
 
 本L4は「どの安全性・identity・OS capabilityをsystemとして保証するか」とadapter/port境界を所有する。L5はjournal schema、
-custodian/broker/Job/cgroup/SQLite/CASの配置・transaction・通信・失敗隔離を所有する。L6は各public operationの型、pre/post、
-state reduction、canonical encoding、error taxonomyを所有する。L4に関数アルゴリズムを先取りせず、L5/L6はL4の保証を
-縮退・再定義しない。
+custodian/broker/Job/cgroupの配置・transaction・通信・失敗隔離を所有する。L6は各public operationの型、pre/post、
+state reduction、canonical encoding、error taxonomyを所有する。DB/CAS/control-plane性能の詳細は§4のdefer台帳を正本とする。
+L4に関数アルゴリズムを先取りせず、L5/L6はL4の保証を縮退・再定義しない。
 
 | 左側設計 | 右側検証 | freeze条件 |
 |---|---|---|
 | L4 本architecture | L9 system test design | Windows/Linux custodyとmacOS fail-close、deadline、budget、crash、orphan zeroをsystem surfaceで証明 |
-| L5 physical/internal design | L8 integration test design | Windows Job/custodian、Linux cgroup/subreaper/broker、macOS fail-close、journal、SQLite/CASの境界故障を注入可能 |
-| L6 function contracts | L7 unit test design | spec validation、policy、state reduction、CAS key、dirty-set計算をpure oracleで固定 |
+| L5 physical/internal design | L8 integration test design | Windows Job/custodian、Linux cgroup/subreaper/broker/deadline owner、macOS fail-close、journal、signed bundleの境界故障を注入可能 |
+| L6 function contracts | L7 unit test design | spec validation、resource policy、state reduction、capability、receipt、bundle trustをpure oracleで固定 |
 | L7 implementation | L6 contract trace-freeze | public method、test ID、receipt field、failure kindがexactly-onceで対応 |
 
 降下順序は `L4/L9 pair-freeze → L5/L8 pair-freeze → L6/L7 pair-freeze → L7実装 → L8統合 → L9 system` とする。
@@ -381,46 +341,46 @@ bundle、Cargo/build/test経路へ新規Bun依存を追加しない局所不変�
 
 1. **観測段階**: read-only observer/sidecarが既存runnerのusage/process treeをshadow観測する。実行を所有せず、Kernel admission・
    custody・ExecutionReceiptを名乗らない。出力は`ObservationReport`として隔離し、Green/accepted execution証拠へ使わない。
-2. **custody段階**: `db-refresh`、snapshot runner、doctorをWindows Job/custodianまたはLinux cgroup v2/subreaper/brokerへ移し、macOS不足classをfail-closeしてdeadlineとorphan zeroを強制。
-3. **資源段階**: classification別memory/CPU/process/output budgetと全体admission controlをfail-close化。
-4. **増分段階**: DB single-flight/incrementalを導入し、full rebuild equivalence oracle通過後に既定化。
-5. **CAS段階**: snapshot CASをread-onlyから開始し、atomic publish/lease/GC検証後にread-write化。
-6. **native activation**: D0-Nのverified Node入口からのみKernel portを呼び、companion経路のdirect spawnを禁止する。
+2. **custody段階**: 代表fixtureをWindows Job/custodianまたはLinux cgroup v2/subreaper/broker外deadline ownerへ移し、macOS不足classをfail-closeしてdeadlineとorphan zeroを強制。
+3. **資源段階**: classification別memory/CPU/process/output budgetをfail-close化し、適用値と観測値をreceiptへ保存する。
+4. **native activation**: D0-Nのverified Node入口からのみKernel portを呼び、companion経路のdirect spawnを禁止する。Node generation/activationは再所有しない。
 
 各段階はfeature flagで旧経路へ黙ってfallbackしない。rollbackは明示policy revisionとreceiptを伴い、前段の安全性を
-維持する。段階4/5の性能改善は段階2/3の安全統制を迂回してはならない。
+維持する。§4のlater performance/control-plane waveは本段階列とは別PLANで降下し、custody/budgetを迂回してはならない。
 
-native companionの導入はtarget triple別の署名済platform bundleとして行う。各bundleはTS core revision、protocol schema
-digest、companion digest、SBOM、実機L9 evidenceに加え、bundle/prior sequence、authority/key/algorithm、registry revision、
-issued/expiryをcanonical signed payloadへ固定する。rollbackは既知良好なbundle tag全体へ行い、coreまたはcompanionだけを
-差し替えない。activationとanti-rollback floorはTS-owned単一append-only log recordへcommitし、別store間の擬似atomicityを
-禁止する。期限判定はregistryに束縛した`TrustedClockPort`とdurable `ClockAnchor`を用いる。旧direct-spawn経路へのrollbackは禁止し、
-必要capabilityを満たせないplatformは利用停止する。
+native companionの導入はtarget triple別の署名済companion bundleとして行う。bundleはcompanion digest、
+versioned protocol descriptor、SBOM、target、sequence、D0-N generation receipt digestをcanonical manifestへ固定し、
+Node runtime/core/generation/activationを再所有しない。trust判定はbundle外のversioned `TrustDecisionPort`、
+anti-rollbackはTS側のmonotonic accepted factへ集約する。旧componentへ戻す場合も旧manifestを再利用せず、
+現在floorより大きい新sequenceで再review・再署名し、通常のtrust/target/capability oracleを再通過させる。
+PKI rotation、secure clock、re-anchor、物理storeは後続installer/release revisionの所有とし、D0-Rは抽象port欠測、
+floor未満、同sequence別payloadをfail-closeする。旧direct-spawn経路へのrollbackは禁止し、必要capabilityを満たせないplatformは利用停止する。
 
 ## 8. 受入条件（AC）
 
 - **AC-RGK-01**: 不正または無制限の`ExecutionSpec`を実行前に拒否し、`managed_root_created=false`を維持する。control processを起動した場合もidentityと終了証拠を別記する。
 - **AC-RGK-02**: Windowsで`CREATE_SUSPENDED→Assign→Resume`、non-inherit handle、常駐custodian、nested Job negotiationを通してroot/child/grandchildをJob Objectへ収容し、正常・timeout・cancel・launcher crashの全経路でmanaged orphan 0を証明する。
-- **AC-RGK-03**: Linuxでcgroup v2 + subreaper + 常駐brokerにより同じtreeを収容し、強制終了・`populated=0`・reapでmanaged orphan 0を証明する。macOSはcapability不足をLinux同等として受理せずfail-closeする。
+- **AC-RGK-03**: Linuxでcgroup v2 + subreaper + 常駐brokerにより同じtreeを収容する。managed root開始前にbroker外のdurable deadline ownerへattempt/cgroup/deadlineをcommitし、broker+通常recovery supervisorのdual-crashでも期限内`cgroup.kill`、bounded recovery、`populated=0`、zombie 0、managed orphan 0まで実行する。これを強制不能なら開始前拒否し、欠測fail-closeだけを代替にしない。macOSはcapability不足をLinux同等として受理しない。
 - **AC-RGK-04**: wall/CPU/memory/process/output各budget超過を固有exit kindで停止し、観測値と適用policy revisionをreceiptに残す。
 - **AC-RGK-05**: root PID終了だけでは完了せず、custody container空・reap後に`lease_released + finished + sealed receipt`のatomic terminal commitがdurableになった後だけ完了を返す。
 - **AC-RGK-06**: launcher/Kernel再起動後、未完了attemptを誤PID killせずreconcileし、二重実行または未記録の生存子を残さない。
-- **AC-RGK-07**: DB増分更新が変更影響範囲だけを処理し、選択corpusの全ケースでfull rebuildのtable digestと一致する。
-- **AC-RGK-08**: 同一canonical `work_key`かつ保証互換なDB/snapshot同時要求だけをsingle-flight化し、一つのproducer receiptへ収束する。input revisionだけが同じ非互換要求は合流させない。
-- **AC-RGK-09**: snapshot CASのhitで準備固定費を再実行せず、miss/producer失敗/cancel/競合でも不完全object・lease・一時processを残さない。
-- **AC-RGK-10**: hook、doctor、snapshot、ローカルCIを横断するsystem testで、資源飢餓時はadmission拒否し、PC操作を妨げるvisible shellと管理外processを0にする。
+- **AC-RGK-07 [DEFERRED — #152 later performance/control-plane wave]**: DB増分更新が変更影響範囲だけを処理し、選択corpusの全ケースでfull rebuildのtable digestと一致する。本D0-R merge gateには含めない。
+- **AC-RGK-08 [DEFERRED — #152 later performance/control-plane wave]**: 同一canonical `work_key`かつ保証互換なDB/snapshot同時要求だけをsingle-flight化し、一つのproducer receiptへ収束する。本D0-R merge gateには含めない。
+- **AC-RGK-09 [DEFERRED — #152 later performance/control-plane wave]**: snapshot CASのhitで準備固定費を再実行せず、失敗時も不完全object・lease・一時processを残さない。本D0-R merge gateには含めない。
+- **AC-RGK-10 [DEFERRED — #152 later performance/control-plane wave]**: hook、doctor、snapshot、local CI横断のqueue/headroom admissionでvisible shellと管理外processを0にする。本D0-R merge gateには含めない。
 - **AC-RGK-11**: lifecycle eventがappend-onlyかつsequence完全で、各attemptのterminal receiptがexactly-onceに封印され、retry/recovery間で`execution_id`と`attempt_id`を混同しない。
 - **AC-RGK-12**: required capabilityとplatform matrixの不一致をmanaged workload生成前に拒否し、`control_process_created`と`managed_root_created`を混同せず、soft fallbackを成功として記録しない。
-- **AC-RGK-13**: DB canonical digestとCAS完全identityが順序・locale・EOL・file mode・symlink・toolchain/environment差を意図どおり区別し、identityの一部欠落時は再利用しない。
-- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をcontrol process起動前に拒否する。trust rootは製品authority registryから取得し、canonical manifestのsequence/authority/key/algorithm/registry revision/issued/expiry、authority-key binding、rotation、revocation、expiry、algorithm allowlistを検証する。current/floorは単一`BundleActivationLog` committed recordから投影し、downgrade、prior sequence不一致、anti-rollback floor未満、clock/anchor欠測・破損・rollbackを正規署名でも拒否する。clock recoveryは許可authorityのsigned re-anchorだけを受理する。
+- **AC-RGK-13 [DEFERRED — #152 later performance/control-plane wave]**: DB canonical digestとCAS完全identityが順序・locale・EOL・file mode・symlink・toolchain/environment差を意図どおり区別する。本D0-R merge gateには含めない。
+- **AC-RGK-14**: companion bundleのbinary/protocol/target/署名/SBOM/D0-N generation receipt不一致をcontrol process起動前に拒否する。bundle外のversioned trust decisionとTS側monotonic accepted factを照合し、floor未満、同sequence別payload、port欠測を拒否する。rollbackは旧componentを現在floorより大きい新sequence manifestへ再review・再署名し、通常oracleを再通過させる一形式だけを許可する。
 - **AC-RGK-15**: PR #154 D0-Nのcutover gateをprerequisiteとして参照し、native companion/bundle/Cargo/build/test差分が新規Bun binary・API・lock・runtime dependencyを増加させない。
 
 ## 9. 完了条件と非完了条件
 
-本PLANのconfirmed条件は、L9側にAC-RGK-01..15の正負oracle、platform capability matrix、evidence schemaをRed freezeし、
-L5/L6降下PLANを起票して依存edgeを機械検証できることである。Issue #124のclose gateはL9 §9.5を唯一の正本とし、
-AC-RGK-01..15、Windows/Linux実runner、macOS capability fail-close、DB/CAS全corpus、Issue固有performance envelopeを
-すべてGreen証明するまでcloseしない。
+本D0-R merge gateは、L9側にactive ID `AC-RGK-01..06/11/12/14/15`の正負oracle、platform capability matrix、
+最小versioned evidence coreをRed freezeし、L5/L6降下PLANの依存edgeを検証できることとする。
+deferred ID `AC-RGK-07..10/13`は明示deferのままID/要件を保持し、D0-Rをblockしない。
+Issue #124全体のclose gateはL9 §9.5を正本とし、後続#152 later performance/control-plane waveでdeferred IDと
+performance envelopeをGreen証明するまでcloseしない。
 
 単一PIDの手動停止、`windowsHide`だけの追加、timeout値の延長、重い検証のGitHub CI移送、DB rebuild頻度の単純削減、
 snapshot一時directoryの掃除だけでは本負債の完了証拠にならない。

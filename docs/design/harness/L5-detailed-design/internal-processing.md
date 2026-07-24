@@ -965,9 +965,10 @@ Windowsはsuspended create後にJob assignが成功するまでresumeしない�
 事後attachをhard custodyとして受理しない。root exitはterminalではなく、Job emptyまたは`populated=0`とreap証拠が揃って
 初めて`empty_proven`となる。client/launcher crash後もcustodian/brokerがdeadlineとtree custodyを保持する。
 custody authorityはepoch/attempt/nonce/deadline/policy digestをdurable化し、OS custodyへのatomic handoff commit前は
-resume/execを禁止する。deadline ownerはauthorityであり、Node/companion切断後もterminate→empty/reapを遂行する。
-authority再起動はepoch/nonceを照合し、custodian+supervisorまたはbroker+service managerのdual crashで独立proofが
-欠けた場合はsuccessへ復元せず`custody_failure`とする。
+resume/execを禁止する。WindowsはJob handle境界、Linuxはbroker外durable deadline ownerがNode/companion切断後も
+terminate→empty/reapを遂行する。Linux ownerはmanaged root開始前にarmし、broker+通常recovery supervisorのdual crash後も
+期限内`cgroup.kill`→bounded recovery→`populated=0`・zombie 0・managed orphan 0まで閉じる。
+ownerを強制不能なら開始前拒否し、欠測findingや`custody_failure`だけで既存workloadの生存を代替しない。
 
 ### D.3 ポート/障害境界
 
@@ -978,8 +979,15 @@ companion crash、client crash、SCM/broker crash、pipe切断、journal commit�
 
 ### D.4 バンドル/ロールバック
 
-target別Node runtime image、Node core、target別companion、protocol schema、manifest、SBOM、署名、実OS evidenceを一つのbundle revisionへ固定する。
-実行時download、PATH探索、片側rollbackを禁止する。rollback後も同じL8/L9 oracleを再実行し、capabilityが不足するplatformは
-利用停止する。trust rootはbundle外のinstaller組込registryから取得し、key binding、rotation/revocation/expiry、
-algorithm allowlist、durable sequence floorを検証する。activationとfloor更新はatomic commitとする。
-旧direct-spawnへ戻さず利用停止する。
+target別companion binary、versioned protocol descriptor、SBOM、manifest署名、D0-N generation receipt digestだけを
+companion bundleへ固定する。Node runtime、Node core、generation artifact、activation markerはD0-Nの所有であり、
+D0-R bundleへ複製しない。実行時download、PATH探索、未検証companionへの差替えを禁止する。
+
+`TrustDecisionPort`はbundle外のversioned installer/release policyでcanonical manifestを判定し、
+decision digestを返す。TS側は`bundle_sequence + manifest_digest + trust_decision_digest +
+d0n_generation_receipt_digest`のaccepted factをdurableにcompare-and-advanceし、floor未満、同sequence別payload、
+port欠測をfail-closeする。SQLite、PKI、rotation/revocation、secure clock、re-anchorの物理方式はD0では固定しない。
+
+旧componentへ戻す場合も旧manifestは再利用しない。現在floorより大きい新sequenceで、旧componentと現在互換な
+D0-N receiptを再review・再署名し、通常のL8/L9 oracleを再通過したmanifestだけを受理する。
+受理不能なら旧direct-spawnへ戻さず利用停止する。

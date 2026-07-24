@@ -1792,7 +1792,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-LIFE-008` | lifecycle reducerへOS/journal side effect spy | pure reduction以外のcall 0 |
 | `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
 | `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
-| `U-RGK-LIFE-011` | authority+supervisor dual crashで独立proof欠測 | success補完0、`custody_failure`を保持し新規admission遮断 |
+| `U-RGK-LIFE-011` | Linux authority+supervisor dual crash | broker外deadline ownerが期限内killを発行し、bounded recovery後にreap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |
 | `U-RGK-PORT-001` | Windows assign failure | resume 0、created-not-started cleanup proof必須 |
 | `U-RGK-PORT-002` | Linux事後attach adapter | hard custody capabilityをadvertiseせずlaunch 0 |
 | `U-RGK-PORT-003` | empty proof欠落mutation | success/receipt sealへ進まない |
@@ -1808,36 +1808,16 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-PORT-013` | control processだけ起動済みのphase/error全積 | control/workload identityを別保存し、単一`process_created`へ縮退しない |
 | `U-RGK-BUNDLE-001` | digest/signature/schema/target/SBOMを各変異 | verified handleを生成しない |
 | `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |
-| `U-RGK-BUNDLE-003` | Rustへpolicy/journal/DB/CAS判断を追加 | responsibility-overlap findingでRed |
+| `U-RGK-BUNDLE-003` | Rustへpolicy/journal/admission/receipt判断を追加 | responsibility-overlap findingでRed |
 | `U-RGK-BUNDLE-004` | manifest core/companion revision片側更新 | bundle identity不一致で拒否 |
-| `U-RGK-BUNDLE-005` |既知良好rollback manifest | 全componentを同時pinし再検証要求を出す |
+| `U-RGK-BUNDLE-005` | floor以上の新revisionとして再署名したrollback manifest | 全componentを同時pinし通常のtrust/target検証要求を出す |
 | `U-RGK-BUNDLE-006` | Bun binary/API/lockfileを新bundleへ追加 | permanent-ban findingでRed |
-| `U-RGK-TRUST-001` | bundle同梱keyをtrust rootとして提示 | `TrustStorePort`が拒否しverified handle 0 |
-| `U-RGK-TRUST-002` | authority ID/key ID/public-key digestを各置換 | binding不一致で拒否 |
-| `U-RGK-TRUST-003` | rotation statement欠落、overlap外key | 新旧どちらも暗黙採択しない |
-| `U-RGK-TRUST-004` | revoked key、revocation epoch巻戻し | 署名が正しくても拒否 |
-| `U-RGK-TRUST-005` | not-before前、expiry後、clock欠測/巻戻し | fail-closeしactivation 0 |
-| `U-RGK-TRUST-006` | allowlist外algorithm、弱いalgorithmへdowngrade | fallbackせず拒否 |
-| `U-RGK-TRUST-007` | sequence floor未満の正規署名bundle | anti-rollback拒否 |
-| `U-RGK-TRUST-008` | activation record insert/commit失敗 | committed record 0、current/floorとも旧head投影 |
-| `U-RGK-TRUST-009` | trust registryをbundle署名で更新 | signature domain不一致で拒否 |
-| `U-RGK-TRUST-010` | receipt replayでfloorを低下 | monotonic invariantで拒否 |
-| `U-RGK-TRUST-011` | verified signatureだがregistry revision不一致 | authorizeを拒否しactivation/floor delta 0 |
-| `U-RGK-TRUST-012` | allowlist algorithmから弱いalgorithmへ置換 | downgradeを拒否しfallback 0 |
-| `U-RGK-TRUST-013` | revoked/expired keyで新sequenceを署名 | sequenceが新しくても拒否 |
-| `U-RGK-TRUST-014` | current/floorを別writeへ分割するmutation | 単一activation record契約違反でRed |
-| `U-RGK-TRUST-015` | signed payloadのbundle sequence/prior sequenceを各差替え | canonical digest/署名不一致で拒否 |
-| `U-RGK-TRUST-016` | authority/key/algorithm/registry revision/issued/expiryを各差替え | canonical digest/署名不一致で拒否 |
-| `U-RGK-TRUST-017` | `Date.now()`/filesystem timestamp/未署名NTPをclock入力にする | adapter契約違反、activation 0 |
-| `U-RGK-TRUST-018` | clock evidenceまたは永続anchorの欠落・破損・時刻巻戻し | fail-closeしcurrent不変 |
-| `U-RGK-TRUST-019` | boot identity変更またはmonotonic counter巻戻し | continuity不成立として拒否 |
-| `U-RGK-TRUST-020` | signed re-anchorと未署名re-anchorを投入 | registry許可authorityの正規署名だけ受理 |
-| `U-RGK-TRUST-021` | activation log transaction各barrierでcrash | 最後のcommitted recordだけをheadとして復旧 |
-| `U-RGK-TRUST-022` | intent/temp rowだけ残して再起動 | intentを無視・破棄しcurrent/floor不変 |
-| `U-RGK-TRUST-023` | record digestまたはauthorization digest破損 | corrupt tailをGreenにせず利用停止 |
-| `U-RGK-TRUST-024` | currentまたはfloorをlog外stateから読むmutation | 単一正本違反でRed |
-| `U-RGK-TRUST-025` | record prior sequenceとcommitted headが不一致 | append拒否、head不変 |
-| `U-RGK-TRUST-026` | authorization digest内のregistry/clock evidenceを差替え | digest不一致でappend拒否 |
+| `U-RGK-TRUST-001` | bundle同梱key、未review signer、署名差替え | `BundleTrustPort`が拒否しverified handle 0 |
+| `U-RGK-TRUST-002` | manifestのbundle revision/component digest/schema/targetを各置換 | binding不一致で拒否 |
+| `U-RGK-TRUST-003` | floor未満の旧manifestを再activation | 署名が正しくても拒否しcurrent不変 |
+| `U-RGK-TRUST-004` | floor以上の新manifestへrollback対象を再署名 | 通常のtrust/component/target検証を再通過した場合だけactivate候補 |
+| `U-RGK-TRUST-005` | trust/activation portがmissing、unknown、failure | PATH探索、download、旧direct spawnへfallbackせず利用停止 |
+| `U-RGK-TRUST-006` | D0実装へrotation、signed clock、re-anchor、物理activation logを直書き | deferred ownership違反としてRed |
 
 mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
 このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。

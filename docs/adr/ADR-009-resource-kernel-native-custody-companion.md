@@ -42,56 +42,51 @@ binary欠落、署名・digest不一致、protocol非互換はcontrol process起
 単一`process_created`へ縮退しない。`probe` commandはworkload launcherへ到達不能、`execute` commandはsealed
 admission tokenと空でないrequired capabilityを必須とする。Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
 
-### D3. platform bundleをrelease artifactとして配布する
+### D3. companion bundleをrelease artifactとして配布する
 
-engine releaseはTypeScript/Node control planeと、support対象tripleごとのnative companionを一つのversioned platform bundleとして扱う。
-署名対象`BundleManifestSignedPayload`は`schema_version`、`bundle_digest`、`bundle_sequence`、
-`prior_bundle_sequence`、`authority_id`、`key_id`、`algorithm`、`registry_revision`、`issued_at`、`expires_at`、
-core revision、protocol schema digest、companion digest、target triple、required OS capability、SBOM digestを必須fieldとする。
-field名、順序、型、length framingを固定したcanonical encoding全体のdigestへ署名し、sequence、authority、key、
-algorithm、registry revision、issued/expiryを含む一fieldの差替えでも署名不一致として拒否する。署名identityを
-payload外の自己申告metadataで補完しない。Pack/tag-pinはmanifestで完全なbundle revisionへpinし、実行時downloadや
-未検証PATH探索を行わない。
+D0-Rの配布単位はsupport対象tripleごとの**companion bundle**であり、Node runtime、Node core、Node generation、
+またはそのactivation stateを再所有しない。bundleはcompanion binary、versioned protocol descriptor、SBOM、
+manifest署名、および互換性を確認したD0-N generation receiptへのdigest参照だけを結ぶ。
+署名対象manifestは少なくとも`schema_version`、`bundle_sequence`、`companion_digest`、
+`protocol_descriptor_digest`、`sbom_digest`、`target_triple`、`required_os_capabilities`、
+`d0n_generation_receipt_digest`をfield名・型・長さ付きcanonical encodingへ固定する。一fieldでも欠落・差替えがあれば拒否し、
+署名identityやD0-N receiptをpayload外の自己申告metadataで補完しない。実行時downloadと未検証PATH探索は禁止する。
 
-release gateは各binaryの再現可能build evidence、署名、SBOM、脆弱性/license scan、対象OS実機のL9 custody oracleを
-必須とする。署名鍵や秘密情報はrepo/manifest/SBOMへ格納しない。
+release gateはcompanion binaryの再現可能build evidence、manifest署名、SBOM、脆弱性/license scan、
+参照したD0-N generationとのprotocol互換性、および対象OS実機のL9 custody oracleを必須とする。
+署名鍵や秘密情報はrepo/manifest/SBOMへ格納しない。
 
-trust rootはbundle同梱物やambient filesystemから取得せず、installer組込の製品authority registryを
-`TrustStorePort`から読む。registryはauthority ID、key ID、public-key digest、許可algorithm、
-`not_before`/`not_after`、revocation epoch、最小bundle sequenceを結ぶ。unknown/失効/期限外key、
-authority-key binding不一致、algorithm downgradeをfail-closeする。
+D0では具体PKI、鍵rotation/revocation方式、期限判定、secure clock、re-anchor、installer registryの物理schemaを固定しない。
+versioned `TrustDecisionPort`がbundle外のinstaller/release trust policyを使ってmanifestと署名を検証し、
+`accepted | rejected`、decision digest、policy versionを返すことだけを固定する。port欠測、unknown policy version、
+署名不一致、D0-N receipt不一致はfail-closeする。具体方式はinstaller/releaseの後続設計で定める。
 
-期限判定はambient `Date.now()`を直接使わず、`TrustedClockPort`が返すplatform secure timeまたはinstaller-configured
-authority registryに束縛されたsigned time evidenceだけを受理する。evidenceは`authority_id`、`evidence_digest`、
-`issued_at`、`expires_at`、boot identity、monotonic counterを含む。`ClockAnchor`はlast accepted evidence/time/counterを
-TS-owned durable stateへ保存し、missing、corrupt、wall-clock/boot-counter rollbackをfail-closeする。復旧はregistryが
-許可したauthorityによる明示signed re-anchorだけで行い、ambient clockへのfallbackやanchorの暗黙初期化を禁止する。
+### D4. rollbackは新sequenceでの再発行に限定する
 
-### D4. rollbackもfail-close capabilityとして扱う
+過去のcompanion componentを再利用する場合も、旧manifestまたは旧sequenceへ直接戻してはならない。
+対象binary、protocol descriptor、SBOM、現在互換なD0-N generation receiptを再reviewし、現在のaccepted sequenceより
+大きい新sequenceのmanifestとして再署名・再発行する。この形式だけをrollbackと呼ぶ。
+新manifestは通常の署名、互換性、対象OS custody oracleを全て再通過し、理由と旧component digestをExecutionReceiptへ残す。
 
-rollbackは旧coreだけ、または旧companionだけへの片側差し替えを禁止する。既知良好なbundle tagへmanifest単位で戻し、
-protocol互換、署名、SBOM、対象platformのGreen evidenceを再検証する。安全性を満たさないplatformは旧direct-spawnへ
-戻さず利用停止する。rollback revisionと理由はpolicy revisionおよびExecutionReceiptへ残す。
-monotonic floorより小さいbundle sequenceへのrollbackは署名が正しくても拒否する。activationとfloorを別storeへ
-擬似atomicに書かない。TS-owned SQLiteの単一append-only `BundleActivationLog`へ、bundle digest、sequence、
-prior sequence、authorization digest、registry revision、clock evidence digestを一つのtransaction recordとしてcommitする。
-current bundleとfloorは最後のcommitted recordだけから投影し、crash recoveryは未commit intentを無視する。
-`authorization_digest`はmanifest digest、trust decision、registry revision、clock evidence digestをcanonicalに束縛する。
-key rotationは
-旧新keyの重複有効期間とauthority署名済みrotation statementを必須とし、revocation後の旧key復活、clock rollback、
-receipt replayによるsequence floor低下を認めない。
+TS control planeは`bundle_sequence`、manifest digest、trust decision digest、D0-N generation receipt digestを結ぶ
+monotonic accepted-sequence factをdurableにcompare-and-advanceする。floor未満・同sequence別payload・旧manifest replayは、
+署名が正しくても拒否する。D0はこの単調性とcrash後のfail-closeだけを契約とし、SQLite table、clock anchor、
+registry revisionなどの物理実装を先取りしない。安全性を満たせなければ旧direct-spawnへ戻さず利用停止する。
 
 ## ADR-001との関係
 
 ADR-001の「harness coreはTypeScript」「domain/schema/ruleの単一正本」「bash/Python runtimeをcoreへ持ち込まない」は維持する。
 本ADRはOSが提供するprivileged custody APIを呼ぶための限定例外であり、Rustをproduct domain実装言語へ昇格させない。
-配布単位は単一ファイルからplatform bundleへ更新するが、利用者の入口は引き続き一つの`ut-tdd` CLIである。
+配布単位は単一ファイルからcompanion bundleへ更新するが、Node generationの正本と利用者の入口である
+単一`ut-tdd` CLIはD0-N側に維持する。
 
 ### Node cutoverとの責任境界
 
 global Bun ban、既存Bun migration debt、Node parity、cutover完了条件はPR #154のD0-Nをprerequisite正本とする。
 D0-Rはその完了を代行せず、native companion、bundle、Cargo/build/test経路が新しいBun binary・API・lock・
 runtime dependencyを追加しない局所不変条件だけを所有する。相互の未達を他方の要件免除に使わない。
+L4で構想したDB incremental、snapshot CAS、performance convergenceの実装責務もD0-Rへ同梱せず、
+Issue #152の後続sliceへ残す。D0-Rはnative custodyとそのcompanion bundle境界だけを閉じる。
 
 ## 検討した代替案
 
@@ -106,9 +101,9 @@ runtime dependencyを追加しない局所不変条件だけを所有する。�
 
 - (+) OS custodyをnative APIで強制し、設計を現行Bun検出能力へ縮めずにIssue #124のsystem oracleへ到達できる。
 - (+) unsafe/privileged surfaceを小さいcompanionへ閉じ、TS domainと独立にadversarial testできる。
-- (+) 署名manifest、SBOM、実機evidenceをbundle identityへ固定できる。
+- (+) 署名manifest、SBOM、D0-N generation receipt、実機evidenceをcompanion bundle identityへ固定できる。
 - (-) Rust toolchain、対象triple別build、署名、SBOM、release/rollback運用が追加される。
-- (-) 「単一バイナリ1ファイル」配布は「単一CLI入口の署名済platform bundle」へ更新される。
+- (-) companionは対象triple別bundleになるが、Node runtime/core/activationはD0-Nの単一正本を維持する。
 
 ## 検証対応
 

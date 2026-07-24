@@ -43,147 +43,72 @@ supersedes:
   - PLAN-L6-92-resource-kernel-function-contracts
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:84fa2f12040896224e626384290e1011
-  command_id: pr156-formal-admission-l6-20260724
-  admitted_at: 2026-07-24T12:42:00.000Z
-  source_digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
-  decision_digest: sha256:9e572b1a328d161c89bd067ef7125a70dfcba11802d36a5e2843f340280c637b
-  receipt_digest: sha256:18ac8e4988b47837ce1fb7e636b88fd897ed572c8d31b5c67a9db8a59d101da7
+  receipt_id: certificate:41bd2f6bd58081263f2911eef3e45dbf
+  command_id: pr156-redesign-convergence-l6-rev3-20260724
+  admitted_at: 2026-07-24T13:22:00.000Z
+  source_digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
+  decision_digest: sha256:bf8b9a37e6517e39aa76153fbace08c45243141d646891eadb11dcf52b9d1fea
+  receipt_digest: sha256:fb73e430a0bcb0098cf30d10be7df4421c93c49ae3f2cbbd0e10f5bf72d97648
   binding:
     path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
     asset_id: plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a
-    revision: 2
-    content_digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
+    revision: 3
+    content_digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
   route:
     signal: redesign
     mode: redesign
   issue:
     provider: github
     issue_id: 152
-    episode_id: E4-152-node-control-plane-d0n
-    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+    episode_id: E4-152-resource-kernel-d0r
+    projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    revision: 1
-    digest: sha256:8dfbba80eaa2bd52d6dd57f6393d5c9aaf7eb454c0e6bf7d7faf0c4ecf33e387
+    revision: 2
+    digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 2
+      target_revision: 3
   reentry:
     target_plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: Resource Kernel設計をForward実装へ再降下する
+  escape_reason: 縮約済みResource Kernel設計をForward実装rev3へ再降下する
   supersedes:
     - PLAN-L6-92-resource-kernel-function-contracts
 ---
 
-# PLAN-L6-92: Resource Kernel protocol・error・platform port機能契約
+# PLAN-L6-92: Resource Kernel function contract route
 
-## 0. 起票理由と採番
+## 1. 所有境界
 
-PLAN-L4-32が予定した`PLAN-L6-89`は、別ブランチでL別設計検証契約として既に確保済みである。
-衝突を避け、L6-90/L6-91も別作業が使用しているため`PLAN-L6-92`へ正規採番する。本PLANはL5-25の物理境界を
-pure function/port contractへ降下し、L7実装がwire、error、lifecycle、Node/Rust責務を勝手に変更できないようにする。
+本PLANはL5-25からL7-454へのroute、責務、pair、受入条件だけを所有する。wire algebra、closed error、
+capability、custody lifecycle、platform port、bundle verificationの詳細契約は
+`docs/design/harness/L6-function-design/function-spec.md`の
+「PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約」を唯一の正本とする。
+本PLANへ同じfunction表・状態遷移・field schemaを複製しない。
 
-## 1. closed wire algebra
+TypeScript/Nodeはpolicy、journal、admission、receiptを所有し、Rustはstrict wireとOS custody factだけを所有する。
+DB/CAS、snapshot性能、local CI schedulerはIssue #152のlater waveであり、D0-RのL6/L7 gateに含めない。
 
-```text
-NativeCommand = Probe(ProbeRequest) | Execute(ExecuteRequest) | Custody(CustodyCommand)
-CustodyCommand = CreateCustody | SpawnAttached | Resume | Observe
-               | TerminateTree | ProveEmpty | Shutdown
-NativeResponse<T> = Ok<NativeFact<T>> | Err<NativeError>
-ControlPhase = ControlNotCreated | ControlStarted | ProbeRecorded | ControlStopped
-WorkloadPhase = RootNotCreated | RootCreatedNotStarted | RootStarted | EmptyProven | Released
-```
+## 2. L7 pairと受入条件
 
-全requestは`protocolVersion, requestId, command, payload, deadlineUnixMs, expectedBundleDigest`を必須とする。
-decoderはexact objectを要求し、unknown/missing/duplicate field、unknown enum、oversize、partial frame、invalid UTF-8、
-trailing bytesをfail-closeする。encoderはcanonical UTF-8 JSONと4-byte length prefixを決定論的に生成する。
-全responseは`control_process_created`と`managed_root_created`を別々のbooleanとして持ち、各identity/phaseと矛盾する
-組合せをconstructorで拒否する。`ProbeRequest`はlauncher/admission tokenを型として持たず、`ExecuteRequest`は
-空でないrequired capabilityとsealed `AdmissionToken`を必須とする。
+L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`U-RGK-LIFE-*`、
+`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`を用い、L8は`IT-RGK-PHYS-001..026`を用いる。
+各IDのfixtureとoracleは対応するtest-designだけを正本とし、PLAN本文へ再掲しない。
 
-## 2. closed error union
+- probeからlauncherへ到達せず、valid admission前のmanaged root生成は0。
+- Windowsはattach-before-resume、Linuxはstart-in-cgroupを満たし、root exitをterminalとしない。
+- terminate後のempty/reap proofが欠ける場合はsuccessを返さない。
+- bundleはreview済みmanifestのdigest、schema、target、component集合を検証し、PATH探索、download、片側rollbackを拒否する。
+- rollbackはfloor以上の新しいmanifestを再署名・再検証して行い、過去manifestの暗黙再activationを許可しない。
+- D0ではtrust、clock、storageを抽象portに留め、rotation、re-anchor、物理log schemaは後続implementation revisionで設計する。
 
-| error kind | workload phase制約 | managed root生成 | 必須detail |
-|---|---|---:|---|
-| `protocol_failure` | `RootNotCreated` | 0 | version/schema/framing reason、control process identityまたはN/A、bounded diagnostic |
-| `bundle_failure` | `RootNotCreated` | 0 | expected/observed digest、target/signature/SBOM failure kind |
-| `capability_failure` | `RootNotCreated` | 0 | required/observed/missing capability、probe identity |
-| `validation_failure` | `RootNotCreated` | 0 | field path、closed reason code |
-| `launch_failure` | `RootNotCreated | RootCreatedNotStarted` | 0または1 | OS error、root identity N/A区別、cleanup proof |
-| `custody_failure` | `RootCreatedNotStarted | RootStarted` | 0または1 | custody identity、authority epoch/nonce、last durable state、termination/reap proof |
-| `deadline` / resource budget kinds | `RootStarted` | 1 | requested/applied/observed value、termination/reap proof |
-| `cancelled` / `process_failure` | `RootStarted` | 1 | native exit、termination source、reap proof |
-| `orphan_detected` | `RootStarted` | 1 | custody identity、unknown descendant fact、success禁止 |
+## 3. 実装開始境界
 
-unknown native codeを`process_failure`へ丸めない。未知値は`protocol_failure`としてprocess開始前、開始後なら
-`custody_failure`としてfail-closeし、raw secret/pathをdetailへ漏らさない。`started_at`、PID、custody identity、native exitは
-phaseに応じたdiscriminated unionでN/Aと欠測を区別する。
-
-## 3. public function contracts
-
-| function / port | precondition | postcondition / failure invariant | L7 oracle |
-|---|---|---|---|
-| `decodeFrame(bytes, limits)` | bounded byte sequence | exactly one strict requestまたは`protocol_failure`; side effect 0 | `U-RGK-WIRE-001..006` |
-| `encodeFrame(message, limits)` | schema-valid DTO | canonical bytes;同一valueは同一digest | `U-RGK-WIRE-007..009` |
-| `canonicalizeBundleManifest(payload)` | 必須fieldが型付きで全て存在 | 固定順・length-framed bytesとdigest。unknown/duplicate/欠落fieldを拒否 | `U-RGK-TRUST-015..016` |
-| `verifyBundle(manifest, files, trust)` | trusted key identityとtarget明示 | canonical payload全体の署名と全digest/schema/target一致時だけverified handle | `U-RGK-BUNDLE-001..006`, `U-RGK-TRUST-015..016` |
-| `TrustStorePort.loadRegistry(authorityId, registryRevision)` | installer組込registry | key binding・rotation・revocation・algorithm allowlistを返し、bundle入力からtrust rootを作らない | `U-RGK-TRUST-001..004`, `U-RGK-TRUST-006`, `U-RGK-TRUST-009` |
-| `TrustedClockPort.readEvidence()` | platform secure timeまたはregistry許可authorityのsigned evidence | authority/digest/issued/expiry/boot/monotonicを返す。ambient `Date.now()`禁止 | `U-RGK-TRUST-005`, `U-RGK-TRUST-017..020` |
-| `reduceClockAnchor(anchor, evidence)` | durable lastAccepted、連続boot/monotonicまたはsigned re-anchor | missing/corrupt/rollbackを拒否し、新anchorとclock evidence digestを返す | `U-RGK-TRUST-017..020` |
-| `authorizeBundle(manifest, registry, clockAnchor, activationHead)` | verified signature、registry revision、trusted clock evidence | downgrade/revoked/expired/prior sequence不一致/rollbackを拒否し、manifest/trust/clockを束縛したauthorization digestを返す | `U-RGK-TRUST-007`, `U-RGK-TRUST-010..013`, `U-RGK-TRUST-025..026` |
-| `BundleActivationLogPort.append(record)` | authorization digest検証済み、record.prior sequence=head.sequence | 一つのSQLite transaction recordだけをcommit。current/floorは同log投影、未commit intentは無視 | `U-RGK-TRUST-008`, `U-RGK-TRUST-014`, `U-RGK-TRUST-021..024` |
-| `negotiateCapabilities(required, probe)` | verified bundle probe | subsetでなく完全包含時だけselection; missingを保存 | `U-RGK-CAP-001..004` |
-| `recordProbe(control, probe)` | verified control identity、strict probe | journalへprobe digestをappendし`ProbeRecorded`を返す。workload side effect 0 | `U-RGK-CAP-005..006` |
-| `sealAdmission(spec, recordedProbe)` | required capability完全包含、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required禁止 | `U-RGK-CAP-007..009` |
-| `dispatchCommand(command)` | closed command union | Probeからlauncher到達0、Executeはvalid token無しでmanaged root 0 | `U-RGK-PORT-011..013` |
-| `reduceCustody(state, fact)` | 同一attempt/custody nonce、連続sequence | legal transitionだけ新state; illegal/duplicate/conflict拒否 | `U-RGK-LIFE-001..008` |
-| `launchAttached(spec, port)` | verified bundle、prepared custody、deadline未超過 | attach-before-user-code;失敗時resume 0・cleanup proof | `U-RGK-PORT-001..005` |
-| `terminateAndProveEmpty(id, reason, port)` | created custody | terminate→empty→reap順; proof不能ならsuccess 0 | `U-RGK-PORT-006..010` |
-| `normalizeNativeError(error, phase)` | strict native error | closed domain errorへ全単射的変換; phase contradiction拒否 | `U-RGK-ERROR-001..007` |
-
-## 4. lifecycle reducer contract
-
-合法遷移は`Absent→Prepared→AttachedSuspended→Running→Terminating→EmptyProven→Released`だけとする。
-abortは`Prepared|AttachedSuspended`から`Terminating`へ入る。`Running`は`started` factを一度だけ受理し、root exitだけでは
-`EmptyProven`へ進まない。sequence gap、attempt/custody nonce不一致、terminal後event、resume-before-attach、release-before-empty、
-同sequence別payloadを拒否する。reducerはpureで、OS操作・journal write・policy判断を行わない。
-
-## 5. platform port contract
-
-```text
-PlatformPort = probe + createCustody + spawnAttached + resume + observe
-             + terminateTree + proveEmpty + release
-```
-
-portはOS factのみを返す。Windows portは`CREATE_SUSPENDED`、Job assign、non-inherit handle、custodian identityを必須にし、
-assign成功前のresumeを型とstateで禁止する。Linux portはstart-in-cgroup、broker/subreaper identity、`populated=0`、reapを必須にし、
-事後attachをhard capabilityとしてadvertiseしない。unsupported portはcapability空集合とlaunch call count 0を保証する。
-
-Node `CustodyClient`はtransportとdeadlineを所有するがdomain policy/journalを所有しない。Rust portはOS custodyを所有するが
-admission/receipt sealを所有しない。同名policy enumやjournal reducerをRust側に追加した場合はresponsibility-overlap findingでRedとする。
-
-`CustodyAuthorityPort = prepareAuthority + commitHandoff + recoverAuthority + enforceDeadline + revokeAuthority`を別portとする。
-`commitHandoff`はauthority epoch/attempt/nonce/deadline/policy digestとOS custody identityをatomicに結び、commit前のresumeを
-拒否する。recoveryはepoch/nonce一致時だけ継続し、stale commandと別attemptを拒否する。authorityとsupervisorのdual crashで
-独立proofが欠けた場合は`custody_failure`へ収束し、success reducerへ入力しない。
-
-## 6. timeout・cancel・I/O contract
-
-absolute deadlineはNode送信前、Rust decode後、各blocking OS call前後に再評価する。期限超過後のlaunchは0。
-stdin/stdout/stderrはbyte budgetを持ち、protocol stdoutへの任意log混入、unbounded read、EOF待ちを禁止する。
-cancelとdeadlineが競合した場合も、最初のdurable termination requestをcauseとし、empty/reap proof完了までreturnしない。
-
-## 7. L7 pair-freezeと実装開始条件
-
-`U-RGK-WIRE-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、
-`U-RGK-BUNDLE-*`の正負caseをL7へfreezeする。property testはcanonical round-trip、closed union exhaustiveness、
-illegal transition全辺、error/phase整合を生成する。mutation gateはunknown field受理、deadline check削除、attach前resume、
-probeからlauncher到達、control/workload process identity統合、authority handoff省略、dual-crash success補完、empty proof省略、
-direct spawn fallback、Rust domain policy追加をkillする。本pairがfreezeするまでPLAN-L7-454の実adapter実装を開始しない。
+本PLANとL7-454は`status: draft`である。L7 pair、L8 26件、対象OS capability、独立reviewがfreezeされるまで、
+実Job/cgroup adapterの実装完了、native custody Green、R4再合流を主張しない。

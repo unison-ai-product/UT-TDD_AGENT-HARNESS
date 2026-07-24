@@ -212,15 +212,12 @@ trace) として `L9-system-test-design.md` §1.4 に追加し、§2 量閉じ�
 
 | 脅威 | fail-close境界 |
 |---|---|
-| bundle同梱鍵・ambient鍵によるtrust root差替え | installer組込authority registryだけを`TrustStorePort`が返す |
-| authority/key substitution | authority ID、key ID、public-key digestのbindingを照合 |
-| rotation/revocation/expiry回避 | signed rotation statement、overlap window、revocation epoch、trusted clockで検証 |
-| algorithm downgrade | version付きallowlist外、unknown parameter、弱いalgorithmへのfallbackを拒否 |
-| 古い正規署名bundleのreplay | durable monotonic bundle sequence floor未満のactivation/rollbackを拒否 |
-| manifest sequence/authority/key/algorithm/registry revision/時刻の差替え | 必須fieldを含むcanonical payload全体のdigestへ署名し、一field mutationも拒否 |
-| activationとfloorの片側commit・crash split-brain | 単一append-only `BundleActivationLog` recordをSQLite transactionでcommitし、current/floorを同recordから投影 |
-| ambient clock spoof・boot rollback・anchor破損 | `TrustedClockPort`と永続`ClockAnchor`だけを受理し、missing/corrupt/rollbackをfail-close |
-| 不正なclock recovery | installer registry許可authorityのsigned re-anchor以外はanchorを変更しない |
+| bundle内自己申告鍵・ambient鍵によるtrust差替え | bundle外のversioned `TrustDecisionPort`だけが署名可否を決定する。port欠測・unknown versionは拒否 |
+| companion/protocol/SBOM/D0-N receipt差替え | 全digest、target、required capability、D0-N generation receipt digestをcanonical manifest署名へ含める |
+| 古い正規署名manifestのreplay | durableなmonotonic accepted-sequence factのfloor未満、および同sequence別payloadを拒否 |
+| rollback名目の旧manifest直接復帰 | 旧componentも再reviewし、現在floorより大きい新sequence manifestとして再署名した場合だけ受理 |
+| Node runtime/core/activationの二重所有 | companion bundleはD0-N generation receiptを参照するだけで、Node artifactやactivation stateを含めない |
 
-trust registry更新とbundle activationは別署名domainとし、bundle署名だけでtrust rootやsequence floorを
-更新できない。clock欠測、registry破損、revocation取得不能、activation log/anchor durability不明は利用停止とする。
+D0は署名検証のport境界、canonical manifest、単調sequence、fail-closeを固定する。鍵rotation/revocation epoch、
+secure clock、re-anchor、installer registry、durable storeの具体方式はinstaller/release後続設計へ委譲し、
+未確定の物理方式をD0-Rの受入条件にしない。後続方式が未成立でも、旧direct-spawnや旧manifest replayへfallbackしない。

@@ -1216,6 +1216,86 @@
         "revision": 2,
         "content_digest": "sha256:ef2cb65b4c794e9ced9e70ec7c041487737f43e78bb9ad4c75ffcc88837d1a7c"
       }
+    },
+    {
+      "sequence": 77,
+      "previous_record_digest": "sha256:3e883cc4c5505fd9e614b91412edca75a7be9dbcd8fd2d327ae10c90f113ba96",
+      "record_digest": "sha256:5b421ece64066c419eaa58313e7fb4ae1af597073164c072461e213a919f5237",
+      "command_id": "pr156-redesign-convergence-l4-rev3-20260724",
+      "receipt_id": "certificate:0017c55f763d19dc70aafe4baf05a075",
+      "receipt_digest": "sha256:d1673be2e98eec7eff87a74270005d227d315fccbb4bf40a8d3e24c743f5a71a",
+      "decision_digest": "sha256:3814b4dba0eee0e45bfeb31ae630455a0f34426f316813d80fad6a588c06e42f",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 3,
+        "content_digest": "sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2"
+      }
+    },
+    {
+      "sequence": 78,
+      "previous_record_digest": "sha256:5b421ece64066c419eaa58313e7fb4ae1af597073164c072461e213a919f5237",
+      "record_digest": "sha256:344c078d183d2ffc0ad6ea908d4be9ffcd691a99b7f607ede7d3aae49c054ac3",
+      "command_id": "pr156-redesign-convergence-l5-rev3-20260724",
+      "receipt_id": "certificate:3c7a65ea0d060bde1a53b0f269199d0d",
+      "receipt_digest": "sha256:a183b26b9023cc6370c15a7b50e3fc63d5f2d1566dd85733db95594912b8cfdb",
+      "decision_digest": "sha256:ef4346a32e84db8c1b5169c6552dd9f7b5b20fb4fb134e8d357871695609054a",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 3,
+        "content_digest": "sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e"
+      }
+    },
+    {
+      "sequence": 79,
+      "previous_record_digest": "sha256:344c078d183d2ffc0ad6ea908d4be9ffcd691a99b7f607ede7d3aae49c054ac3",
+      "record_digest": "sha256:685eed33052382c81fb2b28e1eeda48e872ba2c00c8b4f1e9e23bf66ed082fc2",
+      "command_id": "pr156-redesign-convergence-l6-rev3-20260724",
+      "receipt_id": "certificate:41bd2f6bd58081263f2911eef3e45dbf",
+      "receipt_digest": "sha256:fb73e430a0bcb0098cf30d10be7df4421c93c49ae3f2cbbd0e10f5bf72d97648",
+      "decision_digest": "sha256:bf8b9a37e6517e39aa76153fbace08c45243141d646891eadb11dcf52b9d1fea",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 3,
+        "content_digest": "sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247"
+      }
+    },
+    {
+      "sequence": 80,
+      "previous_record_digest": "sha256:685eed33052382c81fb2b28e1eeda48e872ba2c00c8b4f1e9e23bf66ed082fc2",
+      "record_digest": "sha256:909ea06ed66933a2d6cd0a04a6fc489bc0f292e68fe78c1ba5ab0de6401c62a0",
+      "command_id": "pr156-redesign-convergence-l7-rev3-20260724",
+      "receipt_id": "certificate:372bd30c6e5204d33ebf937444229e52",
+      "receipt_digest": "sha256:890762220c44b5bf101266a65d68ce5be83c206005252cbc7dcc015b406ae83d",
+      "decision_digest": "sha256:9e785085af441cf090146f6ebd6152f30a111f97b1144708fef7c8532f7b9c10",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 3,
+        "content_digest": "sha256:9cd2f45bce025a7200d86dca11d1d02dccd08cdc8796d4465c7adf713ef15db6"
+      }
+    },
+    {
+      "sequence": 81,
+      "previous_record_digest": "sha256:909ea06ed66933a2d6cd0a04a6fc489bc0f292e68fe78c1ba5ab0de6401c62a0",
+      "record_digest": "sha256:38d16287b67398cf029833b536a94aad9bedc5f224ea1d811bbc25fe176412a2",
+      "command_id": "pr156-redesign-convergence-reverse-rev3-20260724",
+      "receipt_id": "certificate:5a9c363f35df7476c561a1f1a5893ecf",
+      "receipt_digest": "sha256:7a01e0d4fb9745ac7681a704a188ca236c22ddab739cf1105b5e9d6386951a77",
+      "decision_digest": "sha256:cc42c3857c4940477d067e7be1ce9cf21b4adcd7b6aedfdf32d54e7d166086c8",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md",
+        "plan_id": "PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill",
+        "asset_id": "plan:legacy:d66396b73c7db2b8d007824dcb6cada0ec811ff802f42189d5687d3d9b6853af",
+        "revision": 3,
+        "content_digest": "sha256:6c0afe546db55bf985500bae9c4209f2fb36c2a9d03d5a6949a79c12d6397eeb"
+      }
     }
   ]
 }

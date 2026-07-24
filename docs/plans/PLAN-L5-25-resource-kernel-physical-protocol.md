@@ -43,41 +43,41 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ccd15e5634631054a4ab97f130a31620
-  command_id: pr156-formal-admission-l5-20260724
-  admitted_at: 2026-07-24T12:41:00.000Z
-  source_digest: sha256:3466c5fc588adbcfd0e8d61ecf53a75eebcda0b65d90393c8442c92cb9390d23
-  decision_digest: sha256:a31a3abf8b5e91de7f66bc03846903381348e50df6f02ec8a9a7939817608271
-  receipt_digest: sha256:6e16862f748249c8ce67d80a67df2828db79c636c4d48d39ba7c19c82e665f56
+  receipt_id: certificate:3c7a65ea0d060bde1a53b0f269199d0d
+  command_id: pr156-redesign-convergence-l5-rev3-20260724
+  admitted_at: 2026-07-24T13:21:00.000Z
+  source_digest: sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e
+  decision_digest: sha256:ef4346a32e84db8c1b5169c6552dd9f7b5b20fb4fb134e8d357871695609054a
+  receipt_digest: sha256:a183b26b9023cc6370c15a7b50e3fc63d5f2d1566dd85733db95594912b8cfdb
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 2
-    content_digest: sha256:3466c5fc588adbcfd0e8d61ecf53a75eebcda0b65d90393c8442c92cb9390d23
+    revision: 3
+    content_digest: sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e
   route:
     signal: redesign
     mode: redesign
   issue:
     provider: github
     issue_id: 152
-    episode_id: E4-152-node-control-plane-d0n
-    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+    episode_id: E4-152-resource-kernel-d0r
+    projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 1
-    digest: sha256:bf49528680f8b549395323c8c6bfbcee3be39be7d03e7754c9de350d73a787d5
+    revision: 2
+    digest: sha256:3466c5fc588adbcfd0e8d61ecf53a75eebcda0b65d90393c8442c92cb9390d23
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 2
+      target_revision: 3
   reentry:
     target_plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: Resource Kernel設計をForward実装へ再降下する
+  escape_reason: 縮約済みResource Kernel設計をForward実装rev3へ再降下する
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -176,25 +176,27 @@ companion crash、Node crash、SCM/broker crash、pipe切断、journal commit失
 native componentはjournalへ直接書かず、再接続可能なcustody identityとOS factを返す。事実を確定できない場合は
 `orphan_detected`または`custody_failure`へ収束させ、successへ補完しない。
 
-## 6. bundle配置と供給網境界
+## 6. companion bundle配置と供給網境界
 
-platform bundleはtarget別Node runtime image、Node core、target別companion、protocol schema、manifest、SBOM、署名、対象OS evidenceを同一revisionで結ぶ。
-実行時download、PATH探索、片側差替えを禁止する。install時と各execution admission時にmanifest署名、core/companion/schema
-digest、target triple、probe capabilityを照合する。rollbackもmanifest単位で既知良好bundleへ行い、同じL8/L9 oracleを再通過する。
-trust rootはbundle外のinstaller組込authority registryから`TrustStorePort`で取得する。bundleによるregistry・revocation
-stateの自己更新は禁止する。`BundleManifestSignedPayload`はbundle/sequence/prior sequence/authority/key/algorithm/
-registry revision/issued/expiryと全component digestをcanonical encodingへ束縛し、一field mutationも署名検証で拒否する。
+D0-R bundleはtarget別companion binary、versioned protocol descriptor、SBOM、canonical manifest署名、
+互換性を確認したD0-N generation receipt digestだけを同一revisionへ結ぶ。Node runtime、Node core、
+generation artifact、activation markerは含めず、D0-N正本を参照する。実行時download、PATH探索、
+未検証companionへの差替えを禁止する。
 
-activationとanti-rollback floorを別物理storeへ分けない。TS-owned SQLiteのappend-only
-`bundle_activation_log(record_id, bundle_digest, bundle_sequence, prior_bundle_sequence, authorization_digest,
-registry_revision, clock_evidence_digest, record_digest)`を正本とし、`BEGIN IMMEDIATE`から単一row insert/commitまでを一つの
-transactionとする。current bundleとminimum sequenceは同logの最後のvalid committed recordからだけ投影する。
-intent/temp row、commit前journal、途中生成fileは正本でなく、crash recoveryはそれらを破棄して直前committed recordへ戻る。
+`TrustDecisionPort`はbundle外のversioned installer/release policyを入力に、manifestと署名を検証して
+`accepted | rejected`、decision digest、policy versionを返す。port欠測、unknown version、署名不一致、
+companion/protocol/SBOM/target/D0-N receipt digest不一致はcontrol process起動前にfail-closeする。
+D0は鍵rotation/revocation epoch、secure clock、re-anchor、installer registry、SQLite schemaを固定せず、
+具体PKI/time/storageを後続installer/release PLANへ委譲する。
 
-`TrustedClockPort`はplatform secure timeまたはinstaller-configured authority registryに束縛されたsigned time evidenceを返す。
-`clock_anchor_log`はauthority/evidence digest/issued/expiry/boot identity/monotonic counter/last accepted timeをappend-onlyで
-永続化する。missing/corrupt/rollbackはactivation 0、復旧は許可authorityのsigned re-anchor recordだけを受理する。
-ambient `Date.now()`、filesystem timestamp、未署名NTPを期限判定へ使わない。rotationは旧新keyのoverlapとsigned statementを必要とする。
+TS側は`bundle_sequence + manifest_digest + trust_decision_digest + d0n_generation_receipt_digest`を結ぶ
+monotonic accepted-sequence factをdurableにcompare-and-advanceする。floor未満、同sequence別payload、
+partial/corrupt factは拒否する。過去componentを使うrollbackは、現在floorより大きい新sequenceのmanifestへ
+再review・再署名し、現在のD0-N receiptとの互換性とL8/L9 oracleを再検証する形式だけを許す。
+旧manifest/旧sequenceへの直接復帰は拒否し、受理不能時は旧direct-spawnへfallbackせず利用停止する。
+
+DB incremental、snapshot CAS、performance convergenceの実装は本L5 companion protocolの責務に含めず、
+Issue #152の後続sliceへdeferする。D0-Rはcustody protocolとcompanion bundle境界だけをfreezeする。
 
 ## 7. L8 pair-freeze条件
 

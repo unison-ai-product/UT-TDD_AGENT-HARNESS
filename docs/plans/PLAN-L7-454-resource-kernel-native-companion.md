@@ -56,41 +56,41 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f091788daf534b04775b395487ea1a6f
-  command_id: pr156-formal-admission-l7-20260724
-  admitted_at: 2026-07-24T12:43:00.000Z
-  source_digest: sha256:886ee033e089f9b46f5ad68cd8d3efdd45b0b0204cd05844597ea272787d06d5
-  decision_digest: sha256:cb777d205fa97be2ac90e945142add13eef4073802b40b98b93644bcc80f639b
-  receipt_digest: sha256:e14e88266d46044ae7881b84cd337480fb187121127c6b2de38919dfbb0733ea
+  receipt_id: certificate:372bd30c6e5204d33ebf937444229e52
+  command_id: pr156-redesign-convergence-l7-rev3-20260724
+  admitted_at: 2026-07-24T13:23:00.000Z
+  source_digest: sha256:9cd2f45bce025a7200d86dca11d1d02dccd08cdc8796d4465c7adf713ef15db6
+  decision_digest: sha256:9e785085af441cf090146f6ebd6152f30a111f97b1144708fef7c8532f7b9c10
+  receipt_digest: sha256:890762220c44b5bf101266a65d68ce5be83c206005252cbc7dcc015b406ae83d
   binding:
     path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     plan_id: PLAN-L7-454-resource-kernel-native-companion
     asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 2
-    content_digest: sha256:886ee033e089f9b46f5ad68cd8d3efdd45b0b0204cd05844597ea272787d06d5
+    revision: 3
+    content_digest: sha256:9cd2f45bce025a7200d86dca11d1d02dccd08cdc8796d4465c7adf713ef15db6
   route:
     signal: feature_addition
     mode: add-feature
   issue:
     provider: github
     issue_id: 152
-    episode_id: E4-152-node-control-plane-d0n
-    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+    episode_id: E4-152-resource-kernel-d0r
+    projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    revision: 2
-    digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
+    revision: 3
+    digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 2
+      target_revision: 3
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: Resource Kernel設計freezeからnative companion実装へ降下する
+  escape_reason: 縮約済みResource Kernel設計からdraft実装rev3へ降下する
 ---
 
 # PLAN-L7-454: Resource Kernel native custody companion / Node protocol client
@@ -114,9 +114,10 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 
 ## 2. 設計正本と実装境界
 
-- 上流architectureとACの正本: `PLAN-L4-32` のAC-RGK-01..15。
+- 上流architectureとACの正本: `PLAN-L4-32`。D0-R active gateはAC-RGK-01..06/11/12/14/15、
+  AC-RGK-07..10/13はIssue #152 later performance/control-plane waveへdeferする。
 - native採用・配布・rollbackの正本: ADR-009。global Bun cutoverはPR #154 D0-Nをprerequisite参照する。
-- system受入oracle: `L9-system-test-design.md` §9の`ST-RGK-01..15`。
+- system受入oracle: `L9-system-test-design.md` §9。active/deferred区分は対応するACとexact一致させる。
 - L7 unit pair: `L7-unit-test-design.md`へ本PLAN固有の`U-RGK-NATIVE-*`とL6契約の`U-RGK-WIRE-*`をRed freezeする。
 - L5 physical / L6 function契約: 採番衝突を避けた`PLAN-L5-25` / `PLAN-L6-92`を起票し、wire schema、
   error union、platform port、custodian lifecycleをfreezeしてからplatform APIとNode clientを実装する。
@@ -130,11 +131,12 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 - Linuxのcgroup v2 / clone3 attach、broker/subreaper、budget適用、`populated=0`とreap proof。
 - 実probeで観測したcapability、適用limit、custody identity、native observationの構造化応答。
 - unsupported platform、権限不足、capability不足でlauncherを一度も呼ばないfail-close。
-- custody authorityへのatomic handoff、authority deadline enforcement、epoch/nonce recovery、dual-crash時fail-close。
+- custody authorityへのatomic handoff、broker外durable deadline enforcement、epoch/nonce recovery、
+  dual-crash後の期限内kill→bounded recovery→reap/orphan 0。
 
 ### 2.2 Node protocol clientが所有するもの
 
-予定artifact `src/runtime/resource-kernel-protocol.ts` は、署名済bundle manifestで固定されたcompanionだけを
+予定artifact `src/runtime/resource-kernel-protocol.ts` は、review済みbundle manifestで固定されたcompanionだけを
 argv配列・bounded stdin/stdout・absolute deadline付きで起動する。protocol schema、binary digest、target triple、
 probe結果とrequired capabilityを照合し、不一致時はdirect spawnへfallbackせず`capability_failure`へ正規化する。
 静的bundle検証後のcontrol process起動と、probe journal→admission token→managed workload起動を別barrierにし、
@@ -156,7 +158,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 | 3 | Windows adapterとcustody authorityを短いobject/portへ分割して実装 | atomic handoff前resume 0、deadline owner固定、dual crash後Job empty/orphan 0 |
 | 4 | Linux adapterとbroker authorityを同じprotocol portへ実装 | handoff前user code 0、epoch/nonce recovery、dual crash後`populated=0`とzombie 0 |
 | 5 | Node protocol clientとbundle verifierを実装 | probe→journal→admission barrier、control/workload identity分離、mismatch/欠落/権限不足でmanaged root 0 |
-| 6 | signed bundle、SBOM、rollback、対象OS実runnerを接続 | ST-RGK-02/03/12/14およびaggregate gateが同一revisionでGreen |
+| 6 | bundle署名検証port、SBOM、floor以上の新manifest再署名rollback、対象OS実runnerを接続 | `U-RGK-TRUST-*` / `U-RGK-BUNDLE-*`と`IT-RGK-PHYS-012..014,019..026`が同一revisionでGreen |
 | 7 | D0-N prerequisiteと局所Bun不増を検証 | PR #154のcutover receiptを参照し、native差分のBun dependency増分0 |
 | 8 | authorと別runtime/model familyのblind review、Reverse gap-only backfill | 未反駁attack 0、review receiptとtested commit一致 |
 
@@ -167,13 +169,19 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 - [ ] probe/executeはclosed commandとして分離され、binary entryを含む全経路でprobeからlauncher call 0、token無しexecuteで`managed_root_created=false`となる。
 - [ ] Windows/Linux adapterは開始前attachとcrash-surviving custodyを実OS testで証明し、managed orphan 0を
       PID pollingではなくJob/cgroup identityで証明する。
-- [ ] Node clientは署名manifest、digest、target、protocol、probeを照合し、companion以外のdirect spawnを行わない。
-- [ ] custody authorityはatomic handoff、durable deadline、epoch/nonce recovery、authority+supervisor dual-crashのfail-close evidenceを持つ。
+- [ ] Node clientは`function-spec.md`正本に従いmanifest、digest、target、protocol、probeを照合し、companion以外のdirect spawnを行わない。
+- [ ] custody authorityはatomic handoff、durable deadline、epoch/nonce recoveryを持つ。Linuxではbroker外ownerが
+      authority+supervisor dual-crash後も期限内kill→bounded recovery→reap/orphan 0を完遂し、欠測findingだけで代替しない。
 - [ ] RustとTypeScriptの責務重複が0で、domain/policy/journal/receiptの正本がTypeScript側に一つだけある。
-- [ ] `U-RGK-NATIVE-*` / `U-RGK-WIRE-*`、対象L8、L9 `ST-RGK-*`がtested commitとevidence manifestを固定する。
+- [ ] `U-RGK-NATIVE-*`、`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、
+      `U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と`IT-RGK-PHYS-001..026`が
+      tested commitとevidence manifestを固定する。
 - [ ] Node/Cargoだけでclean install、targeted/full test、doctor、Windows/Linux aggregate CI、Pack acceptanceがGreen。
 - [ ] PR #154 D0-Nのcutover receiptを参照し、native companion/bundle差分のBun依存増分が0。
 - [ ] Reverse backfillと独立blind reviewを完了するまで`status: confirmed`へ昇格しない。
+
+本PLANは設計・test pairをfreezeする`draft`であり、native adapter、trust/activation port、対象OS実装は未着地である。
+DB/CAS、snapshot性能、local CI schedulerはIssue #152 later waveへdeferし、本D0-Rの実装完了条件に含めない。
 
 ## 5. 現在の証拠と未完了
 
@@ -199,6 +207,6 @@ detectorを設計に追従させる変更としてtraceする。
 
 ## 6. 用語と上流への戻し方
 
-`native custody companion`、`platform bundle`はADR-009、Node/Bun cutoverはPR #154 D0-Nと
+`native custody companion`、`companion bundle`はADR-009、Node/Bun cutoverはPR #154 D0-Nと
 PLAN-L4-32の用語を実体化するもので、新しい上流意味を追加しない。実装中にplatform制約やprotocol語彙のgapを
 発見した場合だけReverseでL5/L6/L7 test-designへ戻し、実装都合に合わせてL4/L9を縮小しない。
