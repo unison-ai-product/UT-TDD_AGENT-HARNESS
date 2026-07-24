@@ -80,10 +80,10 @@ evidence setとreceipt digestのcanonicalization、review/admission rowとのdig
 evidence receiptsも保持し外部再照会なしで検証する。genesis/appendはsequenceとexpected headの
 exclusive-lock CASでatomic化し、fork/double genesis/crash partialを拒否する。
 
-slice admissionは`d0_reviewed → f0a_complete → f0b_complete → f0c_complete → q0_complete`だけを許し、
+slice admissionは`d0_admitted → f0a_complete → f0b_complete → f0c_complete → q0_complete`だけを許し、
 各candidate commitのmerge admissionでF0b/F0c/Q0はそれぞれF0a custody/F0b sealed build/F0c aggregate
 receiptをtyped dependencyとして要求する。edit-start gateにはしない。
-review済みD0 draftが許可するのは順序内の非activation workだけで、production activation、hook/runtime switch、
+review+admission済みD0 draftが許可するのは順序内の非activation workだけで、production activation、hook/runtime switch、
 Bun final deletion、cutoverはL6 confirmed+D0 admissionまで禁止する。
 
 ## 3. PairとForward再合流

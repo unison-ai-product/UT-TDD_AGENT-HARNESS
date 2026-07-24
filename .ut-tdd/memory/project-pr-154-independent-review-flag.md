@@ -157,3 +157,13 @@ evidence receipt digest未固定、L5↔L8 candidate誤参照、chain append競�
 schema→runtime→test artifact closureを追加した。全edge fresh claim/spec PASS bundle+approved admission、
 sequence+expected headのexclusive-lock atomic CAS、chain-only再検証、専用`CAND-CUTOVER-101..107`を
 L4-L9へ降下した。PLAN ownershipをIssue #152 projectionの正本とし、独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 343f981b claim/spec FLAG
+
+design-language 6件、slice admissionのcutover流用、evidence真正性未接続、抽象CAS、review/admission負例不足、
+D0 missing admission waiverを検出した。design-languageはtargeted実測で6→0。
+`CutoverAdmissionReceipt`をslice FSMから分離し、全review/admissionを既存
+`EvidenceRecord` / trusted `EvidenceAttestationVerifierPort`へ接続した。production backendを
+`.ut-tdd/harness.db` SQLite `BEGIN IMMEDIATE`+WAL+FULL sync+head/version CASへ固定し、
+`CAND-CUTOVER-101..108`で競合、forgery、全edge positive、chain-only再検証をpair化した。
+Issue #153の許容Redは継承2件だけで、D0 admissionはmerge前必須とした。独立再reviewまではFLAGを維持する。

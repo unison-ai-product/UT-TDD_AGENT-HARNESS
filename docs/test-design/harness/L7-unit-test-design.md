@@ -1633,14 +1633,14 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `CAND-NODEBOOT-014` | generation delete/GC APIを実装へ注入 | F0 deletion surface 0、全immutable generation保持 |
 | `CAND-NODEBOOT-015` | cross-revisionを通常rollbackへ注入 | cross-revision API 0/fail-close、git revert新revision buildへroute |
 | `CAND-NODEBOOT-016` | Windows receiptへpower-loss durable=trueを注入 | claim拒否、process-crash atomicityだけを記録 |
-| `CAND-NODEBOOT-017` | candidate F0a commitにreviewed D0 receiptなし | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-017` | candidate F0a commitにreview+admission済みD0 receiptなし | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-018` | candidate F0b commitにF0a custody receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-019` | candidate F0c commitにF0b sealed build receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitにF0c aggregate receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
-正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。reviewed D0 draft下の非activation
+正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。review+admission済みD0 draft下の非activation
 F0a/F0b/F0c build/verifyとQ0 fixture/detector workはslice FSM順序内で許可し、production activation、
 hook/runtime switch、Bun final deletion、cutoverだけをL6 confirmed+D0 admissionまで禁止する。
 `CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
@@ -1654,7 +1654,8 @@ evidence receipt `receipt_digest`を同値検証し、別名fieldを拒否する
 registry row順の固定tuple、UTF-8 canonical JSON、
 decimal byte-length framing、SHA-256 lowercase hexについてWindows/POSIX相当入力の同値を確認し、
 tuple mutation、順序mutation、duplicateを拒否する。`CAND-CUTOVER-009`はsealed edgeで
-`PLAN-RECOVERY-16` / `PLAN-L7-452`の片方だけをfixture化し遷移0を確認する。
+`PLAN-RECOVERY-16` / `PLAN-L7-452`の片方だけに加え、D0 review欠落、D0 admission欠落、
+fresh review bundle欠落、fresh CutoverAdmission欠落を個別fixture化し、merge/production/cutover 0を確認する。
 全edgeでclaim-blind/spec-blind exact 2 lane PASS、unique lane/reviewer/session/runtime family、artifact/revision一致を要求し、
 片lane又はindependence違反を拒否する。SliceEvidenceReceipt自体のversion/fixed tuple/digest mutationも検証する。
 

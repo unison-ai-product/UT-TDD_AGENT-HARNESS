@@ -80,7 +80,7 @@ review_evidence: []
 本PLANはIssue #152のD0-N設計を正本とし、Issue #153の一時bootstrap envelopeを恒久的なwaiverへ転用しない。Resource Kernel / Rust companionの設計・実装は別sliceであり、本PLANの開始条件でもF0のblockerでもない。
 
 本PLANと直接上流L6-93は`status=draft`で同時authoring中のため、`parent`とL6側`blocks` edgeを保持しつつ
-`dependencies.requires=[]`とする。Issue #153 envelopeでreview済みD0 subjectに対し、slice FSM順序内の
+`dependencies.requires=[]`とする。Issue #153 envelopeでreview+admission済みD0 subjectに対し、slice FSM順序内の
 非activation F0a/F0b/F0c build/verifyとQ0 fixture/detector workは許可する。production activation、
 hook/runtime switch、Bun final deletion、cutoverは、L6が`confirmed`となり
 D0 review/admission receiptが当該subject revisionへ一致するまで
@@ -118,7 +118,7 @@ slice admissionはzod `src/schema/node-slice-admission.ts`→kernel
 
 ## 4. TDD order
 
-1. unit `CAND-NODEBOOT-001..020`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`、cutover unit `CAND-CUTOVER-001..009`、cutover integration `CAND-CUTOVER-101..107`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をowner revisionの同一commitへ追加し、Red実測を記録した場合だけ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
+1. unit `CAND-NODEBOOT-001..020`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`、cutover unit `CAND-CUTOVER-001..009`、cutover integration `CAND-CUTOVER-101..108`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をowner revisionの同一commitへ追加し、Red実測を記録した場合だけ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
 2. F0aはexact pin、clean `npm ci`、lock graph再現性だけをRed→Green化する。
 3. F0bはcompiled generation、receipt、executable custody、activation admissionをRed→Green化する。
 4. F0cはLinux/Windows jobとaggregateをRed→Green化する。
@@ -156,7 +156,7 @@ repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisio
 | `CAND-NODEBOOT-014` | automatic GC、generation deletion API、cleanup経由deleteを注入する | F0 scanner/ASTで削除surface 0、全immutable generation保持 |
 | `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
-| `CAND-NODEBOOT-017` | candidate F0a commitへreviewed D0 receiptなし | merge admission拒否、rejected receipt。gate test/kernelをproduct changeより先にTDDし同一commitを検証 |
+| `CAND-NODEBOOT-017` | candidate F0a commitへreview+admission済みD0 receiptなし | merge admission拒否、rejected receipt。gate test/kernelをproduct changeより先にTDDし同一commitを検証 |
 | `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 | `CAND-NODEBOOT-019` | candidate F0c commitへF0b sealed build receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitへF0c aggregate receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
@@ -173,7 +173,7 @@ repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisio
 | `CAND-CUTOVER-006` | 非隣接skip/reverse | transition 0 |
 | `CAND-CUTOVER-007` | evidence tuple/receipt digest mutation、duplicate、Windows/POSIX相当fixture | canonical UTF-8 JSON+length frameのcross-OS同値、mutation/duplicateはprojection前に拒否 |
 | `CAND-CUTOVER-008` | DB/UI state直接更新 | validated chain由来projectionだけを返す |
-| `CAND-CUTOVER-009` | L6 draft、D0 admission/review欠落、又はsealed edge負債片方だけでproduction activation/cutoverを要求 | activation、hook/runtime switch、Bun final deletion/cutover dispatch 0。reviewed D0 draft下のFSM順序内non-activation F0/Q0 workは許可 |
+| `CAND-CUTOVER-009` | D0 review欠落、D0 admission欠落、fresh review bundle欠落、fresh CutoverAdmission欠落、`PLAN-RECOVERY-16`のみ、`PLAN-L7-452`のみの各fixture | 各fixtureで#154 merge/production dispatch/cutover 0。missing admission bypass 0 |
 
 function実装先は`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`、
 正式IDは同番号の`U-CUTOVER-001..009`へ固定する。このPRは両artifactの将来生成契約をfreezeするだけで、
@@ -191,7 +191,8 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 acceptance chain | 正規owner/subject/required inputのapproved receiptだけ連結 |
-| `CAND-CUTOVER-107` | review bundle片lane/同一reviewer/artifact drift | 全production edge append 0 |
+| `CAND-CUTOVER-107` | review片lane/same reviewer/session/runtime/author、unsigned/forged/untrusted authority/key、artifact drift | 全production edge append 0 |
+| `CAND-CUTOVER-108` | genesisからsealedまで各edge fresh review+CutoverAdmission+evidence nested chain | 外部再照会なしchain-onlyで全attestation/digest/prior reachability再検証Green |
 
 pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。
 
@@ -220,10 +221,12 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 - **F0c (CI)**: Node Linux/Windowsと既存harness Linux/Windowsを同一HEAD/run attemptでaggregateし、failure/cancel/skipを非successにする。
 - **Q0**: compiled Node CLIでNode-only Bun detector/ban audit、fixture authoring、receipt verifyを実装・実行し、
   Bun/bunx/tsx/TS/shell process 0とcoverage欠測0を独立観測する。
-- **slice admission**: F0aはreview済みD0、F0bはF0a custody、F0cはF0b sealed build、Q0はF0c aggregateを
+- **slice admission**: F0aはreview+admission済みD0、F0bはF0a custody、F0cはF0b sealed build、Q0はF0c aggregateを
   typed prerequisiteとして要求する。CAND-017..020はedit-start gateではなくcandidate commit acceptanceであり、
   早期slice、別revision、失敗receiptをmerge admissionで拒否する。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
+- 現D0-N candidate自身もreview+admission receiptをmerge前に修復する。missing admission bypassは存在せず、
+  candidate固有Red又はadmission欠落をIssue #153の継承負債扱いにしない。
 
 ### CAND ownership
 
@@ -233,7 +236,7 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 | F0b sealed build | `CAND-NODEBOOT-001..016`, `018`, `102`, `205` |
 | F0c CI | `CAND-NODEBOOT-019`, `103..106`, `206` |
 | Q0 | `CAND-NODEBOOT-020`, `201..204` |
-| cutover revision | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..107`, `CAND-NODEBOOT-207` |
+| cutover revision | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..108`, `CAND-NODEBOOT-207` |
 | final deletion | `CAND-NODEBOOT-208` |
 
 候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。

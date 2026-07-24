@@ -1379,9 +1379,9 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
 入力には`package-lock.json`とbuilder/source graphも含め、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
-receipt項目は`subject_revision`、Node/npm absolute executable path・version・digest、lock digest、
-external dependency closure digest、builder policy/digest、source graph digest、
-compiled entrypoint relative path/digest、toolchain provenance digest、generation IDを持つ。
+receipt項目は`subject_revision`、Node/npm実行ファイルの絶対path・version・digest、lock digest、
+外部dependency closure digest、builder policy/digest、source graph digest、
+compiled entrypointの相対path/digest、toolchain provenance digest、generation IDを持つ。
 
 関数`loadNodeGeneration(expectedRevision)`はappend-only activation marker集合を読み、
 全digest、exact version、review済みprovenance、dependency closure、subject revisionを照合する。同じ
@@ -1434,6 +1434,17 @@ claim-blind/spec-blindのexact 2 lane PASS、unique lane/reviewer/session/runtim
 author independenceを要求する。chain entryだけでbundle/admission/evidenceを再検証可能にする。
 append commandはlatest sequence+1とexpected previous digestを要求し、exclusive lock内CASでreceipt+evidenceを
 atomic appendする。double genesis、fork、CAS loser、crash partialをtyped failureにする。
+
+cutover/final revisionの許可はslice receiptと分離した`CutoverAdmissionReceipt`を使う。fieldは
+edge/candidate head/prior validated Q0又はcutover receipt/decision/issuer authority+key version/
+attestation/digestで、genesisはQ0、以後は直前cutover receiptをpriorに要求する。全edgeのfresh admissionを
+正規producer registryで発行し、skip/replay/別edge/slice receipt流用を拒否する。
+ReviewLane/Bundleと両admission receiptは既存`EvidenceRecord` /
+`EvidenceAttestationVerifierPort`へ委譲し、authority/key/signature、producer/subject/edge bindingを
+trusted verifierで検証する。unsigned/forged/untrusted、author reviewer、same session/runtime familyを拒否する。
+production append portは`.ut-tdd/harness.db` SQLiteだけを使い、`BEGIN IMMEDIATE`、WAL、
+`synchronous=FULL`、head digest/version条件付きUPDATE、chain+sequence/receipt digest UNIQUEを単一transactionで
+実行する。affected row 0のCAS loserは全insert rollback+retry 0。commit/fsync barrier後だけ成功を返す。
 
 `admitNodeSlice`はversion/slice/predecessor/subject/required inputs/decision/producer/receipt digestを持つ
 zod receiptでD0→F0a→F0b→F0c→Q0を実装する。F0b/F0c/Q0へそれぞれ直前のF0a custody/F0b sealed build/

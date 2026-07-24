@@ -232,7 +232,7 @@ genesisはsequence 0/head null、通常appendはlatest+1とexpected head一致�
 receipt+evidenceをatomic appendする。fork、double genesis、CAS loser、partial appendを拒否する。
 slice admissionはD0→F0a→F0b→F0c→Q0のtyped一方向FSMとし、各candidate commitのmerge admissionが
 直前sliceの成功receiptを要求する。edit-start自己gateにはしない。
-review済みD0 draft下で許可するのは順序内の非activation build/verifyとQ0 fixture/detector workだけであり、
+review+admission済みD0 draft下で許可するのは順序内の非activation build/verifyとQ0 fixture/detector workだけであり、
 production activation、hook/runtime switch、Bun final deletion、cutoverはconfirmed L6+D0 admissionまで禁止する。
 zod SSoTは`src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`、runtimeは
 `src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、pair testは
@@ -245,6 +245,7 @@ build imageはexact Node/npm pin、review済みlock graph、external dependency 
 harness legを最終aggregateがAND集約し、skip、欠測、別HEAD、別generationをGreenにしない。
 Issue #153は継承main負債2件だけを限定する一時envelopeであり、candidate固有のreceipt、review、
 Node matrix、aggregate failureを免除しない。Resource Kernel / Rust companionは別D0-R sliceで扱う。
+D0-N candidateのreview/admission欠落も免除対象外で、merge前修復を要求する。
 
 F0bのatomicityはprocess-crash境界で、`dist/node-publish.lock/`のglobal exclusive publish lease下のappend-only markerにより
 旧completeまたは新complete generationだけを選ぶことを意味する。power-loss durabilityとは区別し、

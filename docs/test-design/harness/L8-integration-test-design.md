@@ -326,7 +326,7 @@ toolchain、build/receipt、CI YAMLを同じ原子PRへ再結合しない。
 ## Node cutover候補integration pair（Issue #152 D0-N）
 
 cutoverの競合・永続化・slice admissionはbuild-image用`CAND-NODEBOOT-101..106`へ混在させず、
-PLAN-L7-458 `CAND-CUTOVER-101..107`とexact pairにする。D0では候補であり、source/testとRed実測を
+PLAN-L7-458 `CAND-CUTOVER-101..108`とexact pairにする。D0では候補であり、source/testとRed実測を
 owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ昇格する。
 
 | 候補ID | 結合条件 | Green oracle |
@@ -337,7 +337,8 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 admission chain | 正規owner/subject/required inputだけapproved、skip/replay拒否 |
-| `CAND-CUTOVER-107` | claim/spec lane片欠け、同一reviewer、artifact/revision drift | 全production edge append 0 |
+| `CAND-CUTOVER-107` | claim/spec片lane、same reviewer/session/runtime、author reviewer、unsigned/forged/untrusted authority/key、artifact/revision drift | 全production edge append 0 |
+| `CAND-CUTOVER-108` | genesis→sealedの全edgeへfresh review bundle+CutoverAdmission+evidenceをnested保存 | chain-onlyでauthority/key/signature、prior reachability、全digest再検証Green |
 
 zod schema `src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`からruntime
 `src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、test

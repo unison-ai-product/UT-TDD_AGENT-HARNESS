@@ -64,8 +64,8 @@ immutable generationとreceiptを生成する。`publishActivation`はglobal exc
 L7-458は本PLAN、L7 unit候補`CAND-NODEBOOT-001..020`、L8/L9 pairのtraceを参照する。
 D0文書だけでは正式test IDまたはGreenを主張しない。
 
-slice admissionは`admitNodeSlice(input)`で`d0_reviewed → f0a_complete → f0b_complete →
-f0c_complete → q0_complete`だけを進める。F0aはreview済みD0 draft receipt、F0bはF0a custody receipt、
+slice admissionは`admitNodeSlice(input)`で`d0_admitted → f0a_complete → f0b_complete →
+f0c_complete → q0_complete`だけを進める。F0aはreview+admission済みD0 draft receipt、F0bはF0a custody receipt、
 F0cはF0b sealed build receipt、Q0はF0c aggregate receiptをexactly one要求する。typed dependencyの
 欠落、失敗、別revision、skip/replayはcandidate commitのmerge admissionで拒否する。gate test/schema/runtimeは
 product changeより先にTDDし同一commitへ含める。Issue #153 envelopeが許可するのは
@@ -103,6 +103,11 @@ registry row order、固定tuple、UTF-8 canonical JSON、decimal byte-length fr
 claim-blind/spec-blind各1 PASS、lane/reviewer/session/runtime family一意、artifact/revision一致、author独立を要求する。
 chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic
 appendし、CAS loser、fork、double genesis、crash partialを拒否する。
+slice admissionとは別の`CutoverAdmissionReceipt`を全edgeでfresh発行し、genesisはvalidated Q0、
+以後は直前cutover receiptをpriorに要求する。review/admission/evidenceは既存`EvidenceRecord` /
+`EvidenceAttestationVerifierPort`のtrusted authority/key/signature bindingを必須とする。
+physical writerは`.ut-tdd/harness.db` SQLiteの`BEGIN IMMEDIATE`、WAL、`synchronous=FULL`、
+head/version CAS、UNIQUE制約、commit/fsync barrierを使い、loser/crashはrollback+retry 0とする。
 
 `initializeCutoverChain`、`appendCutoverTransition`、`projectCutoverState`の将来実装先は
 `src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。現在のD0 PRは

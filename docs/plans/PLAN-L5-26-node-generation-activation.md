@@ -87,6 +87,7 @@ sequence、expected previous head、exclusive lock内atomic CASを使い、fork/
 ## 4. Pair
 
 L8 `CAND-NODEBOOT-101..106`はtoolchain/build/CI結合だけとpairし、cutover競合へ流用しない。
-cutoverのCAS、fork、crash、rollback、GC、slice FSMはL8 `CAND-CUTOVER-101..107`とpair-freezeする。
+cutoverのCAS、fork、crash、rollback、GC、slice FSM、trusted review/admissionはL8
+`CAND-CUTOVER-101..108`とpair-freezeする。
 各候補はL7-458 ownership表のowner revisionでtestとimplementationを同一commitへ追加し、
 Red実測するまで正式`IT-*`へ昇格しない。

@@ -409,10 +409,10 @@ fail-closeする。失敗時のBun/bunx/tsx/TS直実行/shell fallbackは存在�
 
 F0b rollbackは同一`subject_revision`の検証済み旧generationを指す、より大きいsequenceのmarker appendだけを許す。cross-revision rollbackはunsupportedでfail-closeする。通常のcross-revision復帰はgit revertで新revisionを作りF0a/F0bを再実行する。Resource Kernelまたは別PLANが設計されるまでtarget revision変更APIを持たない。
 
-### Node slice admission FSM
+### Node slice admission状態機械
 
-slice admissionは`d0_reviewed → f0a_complete → f0b_complete → f0c_complete → q0_complete`の
-一方向typed FSMとする。D0 genesisはreview済みD0 draft+bootstrap envelopeを入力として
+slice admissionは`d0_admitted → f0a_complete → f0b_complete → f0c_complete → q0_complete`の
+一方向typed FSMとする。D0 genesisはreview済みかつadmission済みD0 draft+bootstrap envelopeを入力として
 `slice_id=d0`、`predecessor_receipt_digest=null`で作る。各後続commandは直前stateのreceipt digestを入力し、
 target sliceとsubject revisionへ拘束した`SliceAdmissionReceipt`をappendする。F0aはD0 genesis、F0bはF0a
 `f0a.static-custody`、F0cはF0b `f0b.sealed-generation`、Q0はF0c `f0c.os-jobs` aggregateを
@@ -420,7 +420,7 @@ exactly one要求する。receipt欠落、別slice、別revision、失敗、repl
 admissionでfail-closeする。
 
 `SliceAdmissionReceipt`のzod正本は`src/schema/node-slice-admission.ts`であり、唯一のschemaは
-`{ schema_version, slice_id, predecessor_receipt_digest, subject_revision,
+fieldは`{ schema_version, slice_id, predecessor_receipt_digest, subject_revision,
 required_input_receipt_digests, decision, producer, receipt_digest }`である。
 `schema_version="node-slice-admission.v1"`、`slice_id=d0|f0a|f0b|f0c|q0`、
 `decision=approved|rejected`、producerはPLAN-L7-458 ownership表の正規owner IDとする。
@@ -443,6 +443,26 @@ Bun final deletion、cutover transitionは、L6 confirmedかつD0 review/admissi
 一致するまで別のproduction gateが拒否する。Issue #153の外部本文はbootstrap envelopeの運用projectionであり、
 本節の恒久FSM又はcutover契約を上書きしない。
 
+`SliceAdmissionReceipt`は上記implementation slice専用で、cutover又はfinal revisionの許可には流用しない。
+cutover用zod正本`src/schema/cutover-transition.ts`は、別schemaとして
+field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, prior_validated_receipt_digest, decision, issuer_authority_id, issuer_key_id, issuer_key_version, attestation, receipt_digest }`
+を持つ。`schema_version="cutover-admission.v1"`、
+decisionは`approved|rejected`、candidate headとedgeをexact bindingする。genesis admissionはvalidated
+Q0 `SliceAdmissionReceipt`をpriorに要求し、以後は直前validated cutover receiptをpriorに要求する。
+許可FSMは`q0_validated → genesis_approved → inventory_to_shadow_approved → shadow_to_primary_approved → primary_to_bun_removed_approved → bun_removed_to_sealed_approved`だけとする。
+
+| edge_id | 正規producer / authority |
+|---|---|
+| `cutover.genesis` | `cutover-genesis-authority` |
+| `cutover.inventory-frozen.node-shadow` | `cutover-shadow-authority` |
+| `cutover.node-shadow.node-primary` | `cutover-primary-authority` |
+| `cutover.node-primary.bun-removed` | `cutover-removal-authority` |
+| `cutover.bun-removed.sealed` | `cutover-seal-authority` |
+
+各cutover/final revisionはexact candidate HEADに対してfresh admissionを発行できるが、authority/key
+version、prior receipt、edgeが上表と一致しなければrejectedとする。別revisionのadmission replay、
+slice admission流用、skip、同一edge二重approvedを拒否する。
+
 ### Node切替receipt chain
 
 cutover writerはvalidated latest receiptを読み、5状態の隣接一方向遷移だけを受理する。各guardはinventory freeze、
@@ -457,7 +477,7 @@ edge evidence registryはtransition discriminatorごとにrequired kind/count/pr
 
 #### `CUTOVER-EVIDENCE-REGISTRY-v1`
 
-| Edge ID | kind ID | count | producer ID | revision rule |
+| 遷移ID | kind ID | 件数 | producer ID | revision規則 |
 |---|---|---:|---|---|
 | `cutover.genesis` | `inventory.freeze` | 1 | `inventory-freezer` | `candidate-head` |
 | `cutover.genesis` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
@@ -489,12 +509,12 @@ subject_revision, evidence_digest, success, receipt_digest }`の`schema_version`
 射影し、UTF-8 canonical JSON、decimal byte-length framing、SHA-256 lowercase hexで
 `receipt_digest`を算出する。未知field、別version、duplicate、locale/改行/path separator差を拒否する。
 `CutoverTransitionReceipt`の唯一のschemaは
-`{ schema_version, registry_id, transition_id, sequence, subject_revision, previous_state, current_state,
-evidence_set_digest, review_digest, admission_digest, previous_receipt_digest, receipt_digest }`である。
+fieldは`{ schema_version, registry_id, transition_id, sequence, subject_revision, previous_state, current_state, evidence_set_digest, review_digest, admission_digest, previous_receipt_digest, receipt_digest }`である。
 `schema_version="cutover-transition.v1"`、`registry_id="CUTOVER-EVIDENCE-REGISTRY-v1"`、
 `transition_id`は該当Edge ID、`subject_revision`はtransition candidate HEADとする。
 全production edgeで`review.bundle` / `admission.approved` rowをexactly one要求するため、
 `review_digest` / `admission_digest`は非nullかつ各evidence receiptの`receipt_digest`とexact一致する。
+`admission.approved`は`CutoverAdmissionReceipt`だけを指し、`SliceAdmissionReceipt`を受理しない。
 別名`evidence_digest`又は`chain_digest`をtransition receipt fieldとして受理しない。
 `candidate-head` evidenceはcandidate HEADとexact一致する。
 `producer-ancestor` evidenceは各producer commitをexact保持し、candidate HEADが全producer commitの
@@ -504,8 +524,8 @@ non-ancestor、stale/replay、chain mismatchとしてappend前に拒否する。
 receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candidate HEADへの流用を拒否する。
 
 1. registryに記載したrow順を`row_ordinal`として固定し、各receiptを
-   `[schema_version, registry_id, transition_id, row_ordinal, edge_id, kind_id, producer_id,
-   subject_revision, receipt_digest, success]`のJSON array tupleへ射影する。`receipt_digest`が
+   配列`[schema_version, registry_id, transition_id, row_ordinal, edge_id, kind_id, producer_id,
+   subject_revision, receipt_digest, success]`のJSON tupleへ射影する。`receipt_digest`が
    payload `evidence_digest`を含むevidence receipt全体を封印するため、payload mutationも集合digestへ伝播する。
 2. 同一`(edge_id, kind_id, producer_id, subject_revision, receipt_digest)`又は同一expected rowの
    duplicateをhash前に拒否し、registry row orderへstable sortする。
@@ -534,6 +554,14 @@ bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以�
 transitionの`review_digest`はそのevidence receipt `receipt_digest`と一致する。片lane、PASS以外、
 重複lane、artifact/revision drift、independence違反は拒否する。
 
+`ReviewLaneReceipt`、`ReviewBundleReceipt`、`SliceAdmissionReceipt`、`CutoverAdmissionReceipt`は
+既存`EvidenceRecord` / `EvidenceAttestation`契約を必須利用し、独自の署名booleanや自己申告を持たない。
+各recordはauthority ID、key ID/version、producer、subject revision、source commit、edge/slice binding、
+canonical record digest、signature/attestationを持ち、composition root固定
+`EvidenceAttestationVerifierPort`のtrusted verifierがeligibleと判定したものだけを数える。
+unsigned、forged signature、unknown/untrusted authority/key、producer/subject/edge binding不一致は監査保存しても
+gate件数には数えない。review laneは加えてauthor、同一session、同一runtime familyのnegativeを拒否する。
+
 freshとは、bundle/admissionがtransition candidate HEADとそのartifact digestへexact拘束され、
 まだどのtransitionにも消費されていないことをいう。review後にproduct commitが追加されればrevision/
 artifact mismatchで失効する。`admission.approved`は同じcandidate HEADに対する正規ownerのapproved
@@ -546,3 +574,16 @@ receipt digestを再検証できる。`initializeCutoverChain`は`sequence=0`か
 `sequence=latest.sequence+1`、`expected_previous_receipt_digest=latest.receipt_digest`を要求する。
 writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt/evidenceを単一atomic transactionでappendする。
 CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。
+
+物理backendはrepo既定`<repo>/.ut-tdd/harness.db`のSQLiteだけとする。
+head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
+receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
+evidence tableは`cutover_transition_evidence(chain_id, sequence, evidence_receipt_digest, evidence_json, UNIQUE(chain_id,sequence,evidence_receipt_digest))`を正本とする。writerは
+`PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
+evidence/receipt insert後の更新SQLは
+文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND version=?`
+を実行する。affected rowがexactly 1でなければ
+全insertをrollbackして`cutover-write-conflict`、retry 0とする。genesisは事前作成した
+head null/version 0 rowへのCASであり、double genesisを同じ規則で拒否する。
+commit成功をWAL/fsync barrier完了とし、その後だけreceiptを返す。process crash又はcommit errorはrollbackし、
+head/receipt/evidenceが部分可視にならない。抽象in-memory lockや別DBをproduction証拠にしない。
