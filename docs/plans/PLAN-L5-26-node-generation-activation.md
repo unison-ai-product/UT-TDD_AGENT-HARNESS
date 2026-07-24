@@ -68,10 +68,9 @@ power-loss durable activationはResource Kernel bundle側trust floorへ委譲す
 
 ## 3. Cutover transition processing
 
-1. 最新`CutoverTransitionReceipt`をdigest chain込みで検証し、projection値を入力正本にしない。
+1. 最新`CutoverTransitionReceipt`を`previous_receipt_digest`→`receipt_digest` chain込みで検証し、projection値を入力正本にしない。
 2. edge別の必要evidenceは直後の厳密registryだけをSSoTとし、各transitionは対応rowを完全一致で満たす。
-3. 次receiptはprevious/current、subject revision、evidence/review/admission/evidence set digest、
-   previous receipt digestをcanonical encodingしてchain digestを生成しappendする。
+3. 次receiptはL5正本の11 field schemaだけを持ち、canonical encodingして`receipt_digest`を生成しappendする。
 4. invalid state、非隣接遷移、reverse、skip、別revision replay、digest欠落/不一致は書込み前にfail-closeする。
 5. state projectionはvalidated receipt chainをfoldして再構築し、receiptなしの直接更新を拒否する。
 
@@ -79,6 +78,9 @@ edge evidenceの唯一のcanonical registryは
 `docs/design/harness/L5-detailed-design/internal-processing.md`の`CUTOVER-EVIDENCE-REGISTRY-v1`である。
 本PLANは表を複製せず、同registryのlexical kind/producer ID、count、revision/ancestry、digest、success条件を
 規範参照する。wrong-edge、stale/replay、non-ancestor、skipはfail-closeする。
+`review_digest` / `admission_digest`と対応evidence rowの等価条件、deterministic `evidence_set_digest`、
+sealed edgeの`PLAN-RECOVERY-16` + `PLAN-L7-452`両方必須条件も同registryを規範参照する。
+functionsは`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`へ固定する。
 
 ## 4. Pair
 

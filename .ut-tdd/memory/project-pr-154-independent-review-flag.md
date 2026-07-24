@@ -139,3 +139,12 @@ closureを検証する。stale/replay/non-ancestorはfail-closeする。独立�
 build、slice evidence、transitionのreceipt schemaを分離し、candidate HEAD規則の適用先を明示した。
 Q0がNode-only detector/ban auditのtest+implementation+実行+qualificationを所有し、repo-wide final deletionだけを
 Q0後の別revisionへ残す。
+
+## Exact HEAD 3a565f5a claim/spec FLAG
+
+`CutoverTransitionReceipt`に旧`evidence_digest` / `chain_digest`別名が残り、source/test生成closure、
+slice admission順序、sealed edgeの負債2件必須性、evidence set canonicalizationが未閉鎖だった。
+L5を正本として11-field schema、review/admission row等価、D0→F0a→F0b→F0c→Q0 typed FSM、
+`PLAN-RECOVERY-16` + `PLAN-L7-452` typed evidence、registry row順UTF-8 JSON length-frame SHA-256を固定した。
+functions→`src/runtime/cutover-transition.ts`→`tests/cutover-transition.test.ts`とnegative/cross-OS候補を
+L4-L9へ降下した。独立再reviewまではFLAGを維持する。

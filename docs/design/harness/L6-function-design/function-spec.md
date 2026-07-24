@@ -1411,8 +1411,10 @@ shell/native helper fallbackは契約違反である。
 `initializeCutoverChain`は空chainだけでinventory/review/admission evidence setを検証してgenesisを作る。
 `appendCutoverTransition`は空chainを拒否し、validated receipt chain、previous/current state、subject revision、evidence receipt、
 review/admission receiptを受け、許可された隣接一方向遷移だけをappendする。返す
-`CutoverTransitionReceipt`はprevious/current、subject revision、evidence/review/admission/evidence set/previous receipt/chain digestを
-持つ。precondition不成立、skip/reverse/replay、revision又はchain不一致はtyped errorでfail-closeし、
+`CutoverTransitionReceipt`の唯一のfield順は`schema_version`、`registry_id`、`transition_id`、
+`subject_revision`、`previous_state`、`current_state`、`evidence_set_digest`、`review_digest`、
+`admission_digest`、`previous_receipt_digest`、`receipt_digest`である。別名`evidence_digest` /
+`chain_digest`は受理しない。precondition不成立、skip/reverse/replay、revision又はchain不一致はtyped errorでfail-closeし、
 `projectCutoverState`はvalidated chainだけをfoldしてcurrent stateを返す。
 
 空chainは`uninitialized`で開始不可。genesisは`previous_state=null`、`previous_receipt_digest=null`、
@@ -1423,3 +1425,16 @@ edge registryはL5のgenesis、inventory→shadow、shadow→primary、primary�
 5 Edge IDを`CUTOVER-EVIDENCE-REGISTRY-v1`から識別unionとして実装し、別edgeのevidence型を受理しない。
 inventory→shadowだけは各producer receiptのslice commit subjectとcandidate HEADのdescendant closureを検証し、
 同一subjectを要求しない。transition receiptはcandidate HEADをsubjectとし、stale/replay/non-ancestorを拒否する。
+`review_digest` / `admission_digest`は対応registry rowのevidence receipt `receipt_digest`とexact一致し、row不存在時は
+`null`を要求する。`evidence_set_digest`はregistry row順の固定tupleをUTF-8 canonical JSON、
+decimal byte-length framing、SHA-256 lowercase hexで算出し、duplicateとcross-OS差を拒否する。
+sealed edgeは`PLAN-RECOVERY-16` / `PLAN-L7-452`のtyped rowを両方要求する。
+
+`admitNodeSlice`はD0→F0a→F0b→F0c→Q0の一方向FSMを実装し、F0b/F0c/Q0へそれぞれ直前の
+F0a custody/F0b sealed build/F0c aggregate receiptを要求する。早期slice、receipt欠落、別revision、
+skip/replayはtyped failureとする。順序内の非activation F0 build/verify及びQ0 fixture/detectorだけを
+bootstrap envelopeで許可し、production actionはL6 confirmed+D0 admissionまで拒否する。
+
+これら4関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState` /
+`admitNodeSlice`の実装先は`src/runtime/cutover-transition.ts`、pair testは
+`tests/cutover-transition.test.ts`であり、D0では将来生成契約としてfreezeする。
