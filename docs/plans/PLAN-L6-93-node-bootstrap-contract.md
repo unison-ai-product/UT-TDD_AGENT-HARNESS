@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:69a444b2e9a4bf0ec06fda867a490f56
-  command_id: pr154-envelope-l6-20260724
-  admitted_at: 2026-07-24T11:30:00.000Z
-  source_digest: sha256:335c8a43932298c84314f3ed73285bbd278f48b034f9265b42fe96675174f2a7
-  decision_digest: sha256:05ba87c8b8802a09a61005c922e4d6d476ce3276d41b15c10b5c0fae739959be
-  receipt_digest: sha256:faca927154c4146b66c5736a48a650201adb1b809c33080209b00b7fa6e77b31
+  receipt_id: certificate:096023d30ed3006a1252f0bc630432df
+  command_id: pr154-payload-l6-20260724
+  admitted_at: 2026-07-24T12:00:00.000Z
+  source_digest: sha256:f3a8e3c31ea40f85fd79b6556c489b7254ff0d550d865a7e394ce3413c0a6b6f
+  decision_digest: sha256:2a7824743bb77c36d8c891f82f1d5b10d3481fe6ce4fe9dfb7a7fab959fa048a
+  receipt_digest: sha256:99ee1780275c5cb2ecdfae096807901a05ad8ed537ab84384c87d87d3ee8154e
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 7
-    content_digest: sha256:335c8a43932298c84314f3ed73285bbd278f48b034f9265b42fe96675174f2a7
+    revision: 8
+    content_digest: sha256:f3a8e3c31ea40f85fd79b6556c489b7254ff0d550d865a7e394ce3413c0a6b6f
   route:
     signal: feature_addition
     mode: add-feature
@@ -69,12 +69,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 7
+      target_revision: 8
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: PR 154 envelope chain closure
+  escape_reason: PR 154 payload and authority closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -139,7 +139,9 @@ registry row order、固定tuple、UTF-8 canonical JSON、decimal byte-length fr
 `SliceEvidenceReceipt`は11-field pre-attestation tuple、record digest、nested attestation、wrapper receipt digestを封印する。
 generic kindはtyped `EvidencePayloadObject`をobject receipt digestで取得してpayload bytesを再hashする。review bundleは
 SliceEvidenceとpayload objectのkind/producer owner/attestation producer/payload schemaを
-L5 closed registryへexact照合し、cross-kind/cross-owner replayを拒否する。
+L5 closed discriminated unionへexact照合する。payloadはRFC 8785 canonical JSON→UTF-8→RFC 4648
+base64url paddingなしに固定してdecoded bytesを再hashし、arbitrary bytes/schema spoof/
+cross-kind/cross-owner/cross-semantic replayを拒否する。
 claim-blind/spec-blind各1 PASSとartifact/revision一致を要求する。bundle/lane execution modeはactual admissionと
 一致させ、hybridはprovider/runtimeを分離、codex/claude-onlyは異model/session/identity、standaloneはhuman 2名を要求する。
 chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic
@@ -153,6 +155,8 @@ slice admissionとは別の`CutoverAdmissionReceipt`を全edgeでfresh発行し�
 以後は直前cutover receiptをpriorに要求する。review/admission/evidenceは既存`EvidenceRecord` /
 `EvidenceAttestationVerifierPort`のtrusted authority/key/signature bindingを必須とする。
 CutoverAdmissionにexecution modeを封印し、bundle/lane/actual admission modeとexact一致させる。
+CutoverAdmissionのproducer owner、EvidenceProducer、authority IDを分離し、5 edge closed map及び
+`authority_id == attestation.authorityId`を要求する。SliceAdmission core/outer ownerもexact一致させる。
 physical writerは`.ut-tdd/ledger/cutover-ledger.db` SQLiteの`BEGIN IMMEDIATE`、WAL、`synchronous=FULL`、
 head/version CAS、UNIQUE制約、commit/fsync barrierを使い、loser/crashはrollback+retry 0とする。
 

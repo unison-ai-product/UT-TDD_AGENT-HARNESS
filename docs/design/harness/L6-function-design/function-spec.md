@@ -1432,7 +1432,9 @@ sealed edgeは`PLAN-RECOVERY-16` / `PLAN-L7-452`のtyped rowを両方要求す�
 `SliceEvidenceReceipt`は11-field pre-attestation tuple、record digest、nested attestation、wrapper receipt digestを使う。
 generic kindはtyped `EvidencePayloadObject`をobject receipt digestで取得してpayload bytesを再hashする。
 SliceEvidenceとpayload objectのkind/owner/attestation producer/payload schemaを
-L5 `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`へexact照合し、cross-kind/cross-owner replayを拒否する。
+L5 `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`のclosed discriminated unionへexact照合する。payloadはRFC 8785
+canonical JSON→UTF-8→RFC 4648 base64url paddingなしへ一意化し、decode bytesをSHA-256で再hashする。
+arbitrary bytes、schema spoof、cross-kind/cross-owner/cross-semantic replayを拒否する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、
 claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
@@ -1456,7 +1458,9 @@ edge/candidate head/prior validated Q0又はcutover receipt/execution mode/decis
 authority ID+key version+signature+producer+record digest/receipt digestで、genesisはvalidated Q0
 `SliceAdmissionReceipt`をdirect参照し、以後は直前cutover receiptをpriorに要求する。独自`issuer_key_id`は持たない。全edgeのfresh admissionを
 正規producer registryで発行し、skip/replay/別edge/slice receipt流用を拒否する。
-CutoverAdmission execution modeはReviewLane/Bundle及びactual admission modeとexact一致させる。
+CutoverAdmissionはowner、EvidenceProducer、nested authorityを分離し、L5
+`CUTOVER-ADMISSION-PRODUCER-MAP-v1`の5 edgeと`authority_id == attestation.authorityId`をexact照合する。
+execution modeはReviewLane/Bundle及びactual admission modeとexact一致させる。
 ReviewLane/Bundle coreとBootstrapEnvelope coreはproducer/record digest/nested attestationを持つ
 exact `AttestedReceiptEnvelope`に格納し、両admission receiptは既存`EvidenceRecord` /
 `EvidenceAttestationVerifierPort`へ委譲する。attestationはnested
@@ -1474,6 +1478,7 @@ downgrade、projectionからのcanonical復元はfail-closeする。`.ut-tdd/har
 `admitNodeSlice`はversion/slice/predecessor/subject/required inputs/decision/producer/receipt digestを持つ
 coreをexact `AttestedReceiptEnvelope<SliceAdmissionReceipt>`へ格納し、producer/record digest/nested attestationを
 既存verifierで検証してD0→F0a→F0b→F0c→Q0を実装する。typed unionへraw SliceAdmission coreを保存しない。
+core producer ownerとouter envelope producer ownerをexact一致させ、wrong outer owner/mappingを拒否する。
 F0b/F0c/Q0へそれぞれ直前のF0a custody/F0b sealed build/
 F0c aggregate receiptを要求する。`CAND-NODEBOOT-017..020`はedit-start hookでなくcandidate commitのmerge admissionで、
 gate test/schema/runtimeをproduct changeより先にTDD実装し同一commitを評価する。receipt欠落、別revision、owner違反、

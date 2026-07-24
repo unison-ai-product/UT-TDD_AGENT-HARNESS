@@ -479,25 +479,28 @@ Bun final deletion、cutover transitionは、L6 confirmedかつD0 review/admissi
 
 `SliceAdmissionReceipt`は上記implementation slice専用で、cutover又はfinal revisionの許可には流用しない。
 cutover用zod正本`src/schema/cutover-transition.ts`は、別schemaとして
-field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, artifact_digest, prior_validated_receipt_digest, l6_confirmation_receipt_digest, execution_mode, decision, producer, record_digest, attestation, receipt_digest }`
+field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, artifact_digest, prior_validated_receipt_digest, l6_confirmation_receipt_digest, execution_mode, decision, producer_owner_id, attestation_producer, authority_id, record_digest, attestation, receipt_digest }`
 を持つ。`schema_version="cutover-admission.v1"`、
 decisionは`approved|rejected`、candidate headとedgeをexact bindingする。genesis admissionはvalidated
 Q0 `SliceAdmissionReceipt`をpriorに要求し、以後は直前validated cutover receiptをpriorに要求する。
-`record_digest`はnested attestationと自身を除く先行9 field、`receipt_digest`はnested attestationを含み自身を除く
-先行11 fieldを固定順canonical tuple+length frame+SHA-256で封印する。`execution_mode`は同candidateの
+`record_digest`はnested attestationと自身以降を除く先行11 field、`receipt_digest`はnested attestationを含み自身を除く
+先行13 fieldを固定順canonical tuple+length frame+SHA-256で封印する。`authority_id`はnested
+`EvidenceAttestation.authorityId`とexact一致させる。`execution_mode`は同candidateの
 ReviewBundleReceipt、両ReviewLaneReceipt及びadmission実行時にcomposition rootが観測したmodeとexact一致させる。
 許可FSMは`q0_validated → genesis_approved → inventory_to_shadow_approved → shadow_to_primary_approved → primary_to_bun_removed_approved → bun_removed_to_sealed_approved`だけとする。
 
-| edge_id | 正規producer / authority |
-|---|---|
-| `cutover.genesis` | `cutover-genesis-authority` |
-| `cutover.inventory-frozen.node-shadow` | `cutover-shadow-authority` |
-| `cutover.node-shadow.node-primary` | `cutover-primary-authority` |
-| `cutover.node-primary.bun-removed` | `cutover-removal-authority` |
-| `cutover.bun-removed.sealed` | `cutover-seal-authority` |
+| edge_id | `producer_owner_id` | `attestation_producer` |
+|---|---|---|
+| `cutover.genesis` | `cutover-genesis-authority` | `ci` |
+| `cutover.inventory-frozen.node-shadow` | `cutover-shadow-authority` | `ci` |
+| `cutover.node-shadow.node-primary` | `cutover-primary-authority` | `ci` |
+| `cutover.node-primary.bun-removed` | `cutover-removal-authority` | `ci` |
+| `cutover.bun-removed.sealed` | `cutover-seal-authority` | `ci` |
 
 各cutover/final revisionはexact candidate HEADに対してfresh admissionを発行できるが、authority/key
-version、prior receipt、edgeが上表と一致しなければrejectedとする。別revisionのadmission replay、
+version、prior receipt、edge、owner→EvidenceProducer写像又は`authority_id == attestation.authorityId`が
+上表と一致しなければrejectedとする。この5 rowを`CUTOVER-ADMISSION-PRODUCER-MAP-v1`のclosed setとし、
+unknown owner、wrong producer、authority ID driftをfail-closeする。別revisionのadmission replay、
 slice admission流用、skip、同一edge二重approvedを拒否する。
 
 ### Node切替receipt chain
@@ -562,27 +565,36 @@ generic payloadの実体は
 `producer_owner_id, attestation_producer, record_digest, attestation, receipt_digest }`（後半）
 のexact schemaで保存する。`record_digest`はnested attestationと自身以降を除く先行7 field、
 `receipt_digest`は先行9 fieldを固定順で封印する。`SliceEvidenceReceipt.payload_object_receipt_digest`だけで
-このobjectを取得し、取得後に`payload_bytes`から`payload_digest`を再計算してreceipt側とexact一致させる。
+`payload_bytes`はdecoded payloadのRFC 8785 canonical JSONをUTF-8 encodeしたbyte列をRFC 4648
+base64url（`-`/`_` alphabet、paddingなし）で表す。標準base64、padding付き、非canonical JSON、invalid UTF-8、
+duplicate key又はdecode→再encode不一致を拒否する。このobjectを取得し、base64url decodeしたbytesから
+SHA-256 lowercase hex `payload_digest`を再計算してreceipt側とexact一致させる。
 さらに両receipt間で`kind_id`、`producer_owner_id`、`attestation_producer`及びregistryで定めた
 `payload_schema`をexact照合する。cross-kind、cross-owner、wrong producer又は別schema payloadのreceipt replayを拒否する。
 
 #### `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`
 
-| kind ID | payload_schema |
-|---|---|
-| `inventory.freeze` | `inventory-freeze.v1` |
-| `design.l6-confirmed` | `l6-confirmation-evidence.v1` |
-| `f0a.static-custody` | `f0a-static-custody.v1` |
-| `f0b.sealed-generation` | `f0b-sealed-generation.v1` |
-| `f0c.os-jobs` | `f0c-os-jobs.v1` |
-| `q0.authoring` | `q0-authoring.v1` |
-| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` |
-| `inventory.zero` | `inventory-zero.v1` |
-| `pack.acceptance` | `pack-acceptance.v1` |
-| `debt.plan-recovery-16.repaired` | `plan-recovery-16-repair.v1` |
-| `debt.plan-l7-452.repaired` | `plan-l7-452-repair.v1` |
-| `issue.153-closed` | `github-issue-closure.v1` |
-| `aggregate.success` | `aggregate-success.v1` |
+decoded payloadの共通exact base fieldsは
+`{ schema_version:string literal, kind_id:string literal, subject_revision:sha256 lowerhex,`（共通前半）
+observed_at:RFC3339 UTC, result:"success" }`である。追加fieldを許可せず、下表のkind別required fieldsを加えた
+closed discriminated unionをRFC 8785 canonicalizeする。`uint`はJSON整数かつ`0..2^53-1`、digestは
+`sha256:` prefix付き64 lowercase hexである。
+
+| kind ID | payload_schema | kind別required fields（型 / domain / semantic predicate） |
+|---|---|---|
+| `inventory.freeze` | `inventory-freeze.v1` | `inventory_digest:digest`, `entry_count:uint` / freeze対象全件を数える |
+| `design.l6-confirmed` | `l6-confirmation-evidence.v1` | `plan_id:"PLAN-L6-93-node-bootstrap-contract"`, `plan_revision:uint`, `status:"confirmed"`, `content_digest:digest` / subjectとformal revision一致 |
+| `f0a.static-custody` | `f0a-static-custody.v1` | `node_version:string`, `npm_version:string`, `lock_digest:digest` / exact pinとclean lock graph一致 |
+| `f0b.sealed-generation` | `f0b-sealed-generation.v1` | `image_digest:digest`, `generation:uint`, `fallback_count:0` / sealed generation成功 |
+| `f0c.os-jobs` | `f0c-os-jobs.v1` | `linux_run_digest:digest`, `windows_run_digest:digest`, `aggregate:"success"` / 同一HEAD・attempt |
+| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:digest`, `case_count:uint` / authoring coverage欠測0 |
+| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:digest`, `bun_process_count:0`, `fallback_count:0` / Node-only |
+| `inventory.zero` | `inventory-zero.v1` | `scan_digest:digest`, `bun_reference_count:0` / inventory全対象0 |
+| `pack.acceptance` | `pack-acceptance.v1` | `pack_digest:digest`, `accepted:true` / clean Pack acceptance |
+| `debt.plan-recovery-16.repaired` | `plan-recovery-16-repair.v1` | `plan_id:"PLAN-RECOVERY-16-plan-revision-authoring"`, `repair_receipt_digest:digest` / formal repair済み |
+| `debt.plan-l7-452.repaired` | `plan-l7-452-repair.v1` | `plan_id:"PLAN-L7-452-forward-escape-contract-red"`, `repair_receipt_digest:digest` / formal repair済み |
+| `issue.153-closed` | `github-issue-closure.v1` | `issue_id:153`, `state:"closed"`, `event_digest:digest` / trusted closure event |
+| `aggregate.success` | `aggregate-success.v1` | `linux_digest:digest`, `windows_digest:digest`, `aggregate:"success"` / failure/cancel/skip 0 |
 
 generic kindはこのclosed registryのexact 1 rowを要求する。`review.bundle`と`admission.approved`はtyped refであり
 payload schema registryへ入れない。未知kind/schema、row追加を伴わないschema文字列又はcross-row再利用はfail-closeする。
@@ -661,8 +673,10 @@ bundleと両laneの`execution_mode`はactual admission modeとexact一致し、m
 | `plan-l7-452-gate` | `ci` |
 | `github-evidence` | `ci` |
 | `aggregate-gate` | `ci` |
+| `plan-admission-attestation-gate` | `ci` |
+| `issue-153-bootstrap-gate` | `ci` |
 
-この15 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
+この17 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
 PLAN-L7-458 `SliceAdmission producer registry`のclosed setとして全て`ci`へ写像する。review lane ownerは
 lane providerと同じ`human|codex|claude`、PO approval ownerは`po`へ写像する。
 
@@ -681,6 +695,9 @@ wrapper `receipt_digest`は自身を除くexact 6-field tupleを封印する。c
 `EvidenceAttestationVerifierPort.verify({producer: attestation_producer, recordDigest: record_digest},`（検証入力）
 attestation)`を構成する。core schemaを曖昧に拡張せずproducer、record digest、nested attestationを
 chainだけから復元する。
+SliceAdmission coreの`producer`はcanonical `producer_owner_id`として解釈し、outer envelopeの
+`producer_owner_id`とexact一致させる。core/outer owner差、outer `attestation_producer`のwrong mapping又は
+同じ署名を別ownerへ移したreplayを拒否する。
 
 `SliceAdmissionReceipt`、`CutoverAdmissionReceipt`は
 既存`EvidenceRecord` / `EvidenceAttestation`契約を必須利用し、独自の署名booleanや自己申告を持たない。

@@ -253,3 +253,11 @@ raw coreを除外した。ReviewBundle→lane、SliceEvidence→bundle、D0 root
 envelope receipt digestへ固定した。evidence setのowner fieldをcanonical化し、15 owner mappingとpayload schemaを
 closed registryにした。cross-kind/cross-owner replayを拒否する。PLAN-L6-93 revision 7 /
 PLAN-L7-458 revision 10を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD eaace387 payload/authority FLAG
+
+D0 input owner 2種をclosed producer mapへ追加し、CutoverAdmissionの5 authorityでdomain owner、
+EvidenceProducer、nested authority IDを分離した。SliceAdmission core/outer owner equalityを固定した。
+payload bytesをRFC 8785 canonical JSON→UTF-8→unpadded base64urlへ一意化し、13 kindをrequired
+field/type/domain/semantic predicate付きclosed discriminated unionにした。PLAN-L6-93 revision 8 /
+PLAN-L7-458 revision 11を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
