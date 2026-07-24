@@ -74,7 +74,8 @@ export interface DbConstraintCoverageResult {
 }
 
 const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[1345679] .*)/;
-const SECTION_RE = /^###?\s+/;
+const HEADING_RE = /^(#{1,6})\s+/;
+const TABLE_SEPARATOR_CELL_RE = /^:?-{3,}:?$/;
 
 function backtickValues(value: string): string[] {
   return [...value.matchAll(/`([^`]+)`/g)].map((match) => match[1]).filter(Boolean);
@@ -89,6 +90,20 @@ function splitTableRow(line: string): string[] {
     .map((cell) => cell.trim());
 }
 
+function normalizedHeaderCell(value: string): string {
+  return value.replace(/[`*_]/g, "").trim().toLowerCase();
+}
+
+function isTableSeparator(cells: readonly string[]): boolean {
+  return cells.length > 0 && cells.every((cell) => TABLE_SEPARATOR_CELL_RE.test(cell));
+}
+
+function isProjectionTableHeader(cells: readonly string[]): boolean {
+  const first = normalizedHeaderCell(cells[0] ?? "");
+  const second = normalizedHeaderCell(cells[1] ?? "");
+  return first === "table" && (second === "primary key" || second === "主キー");
+}
+
 export function extractDbProjectionRequirements(content: string): DbProjectionRequirement[] {
   return extractDbProjectionCoverageRequirements(content).tables;
 }
@@ -97,18 +112,35 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   const requirements: DbProjectionRequirement[] = [];
   const indexes: DbProjectionIndexRequirement[] = [];
   let section = "";
-  let inTarget = false;
-  let inProjectionTable = false;
+  let targetDepth = 0;
+  let acceptsIndexBullets = false;
+  let pendingHeader: string[] | undefined;
+  let tableKind: "none" | "projection" | "other" = "none";
   for (const line of content.split(/\r?\n/)) {
-    if (SECTION_RE.test(line)) {
+    const heading = HEADING_RE.exec(line);
+    if (heading) {
+      const depth = heading[1].length;
+      if (targetDepth > 0 && depth <= targetDepth) targetDepth = 0;
       section = line.replace(/^#+\s*/, "").trim();
-      inTarget = TARGET_SECTION_RE.test(line);
-      inProjectionTable = false;
+      if (TARGET_SECTION_RE.test(line)) {
+        targetDepth = depth;
+        acceptsIndexBullets = true;
+      } else {
+        acceptsIndexBullets = false;
+      }
+      pendingHeader = undefined;
+      tableKind = "none";
       continue;
     }
-    if (!inTarget) continue;
-    const indexMatch = line.match(/-\s+`([^`(]+)\(([^`)]+)\)`/);
-    if (indexMatch) {
+    if (targetDepth === 0) continue;
+
+    if (!line.trim().startsWith("|")) {
+      pendingHeader = undefined;
+      tableKind = "none";
+      const indexMatch = acceptsIndexBullets
+        ? line.match(/^\s*-\s+`([^`(]+)\(([^`)]+)\)`/)
+        : undefined;
+      if (!indexMatch) continue;
       indexes.push({
         section,
         name: indexMatch[1],
@@ -119,22 +151,23 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
       });
       continue;
     }
-    if (!line.trim().startsWith("|")) continue;
+
     const cells = splitTableRow(line);
-    if (/^\|\s*-+\s*\|/.test(line)) continue;
-    const firstCell = cells[0].toLowerCase();
-    const secondCell = cells[1]?.toLowerCase() ?? "";
-    if (firstCell === "table" && (secondCell === "primary key" || secondCell === "主キー")) {
-      inProjectionTable = true;
+    if (isTableSeparator(cells)) {
+      tableKind = pendingHeader
+        ? isProjectionTableHeader(pendingHeader)
+          ? "projection"
+          : "other"
+        : "none";
+      pendingHeader = undefined;
       continue;
     }
-    // backtick値を持たない先頭cellは別schemaのtable headerである。
-    // 見出し深度や値のpath形状ではなく、projection table header契約で境界を切る。
-    if (backtickValues(cells[0]).length === 0) {
-      inProjectionTable = false;
+
+    if (tableKind === "none") {
+      pendingHeader = cells;
       continue;
     }
-    if (!inProjectionTable) continue;
+    if (tableKind === "other") continue;
     if (cells.length < 3) continue;
     const table = backtickValues(cells[0])[0];
     const primaryKey = backtickValues(cells[1])[0] ?? "";

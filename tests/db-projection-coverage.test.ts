@@ -3,6 +3,7 @@ import {
   analyzeDbConstraintCoverage,
   analyzeDbProjectionCoverage,
   dbProjectionCoverageMessages,
+  extractDbProjectionCoverageRequirements,
   extractDbProjectionRequirements,
   loadDbProjectionRequirements,
 } from "../src/lint/db-projection-coverage";
@@ -142,6 +143,59 @@ describe("db-projection-coverage detector", () => {
     );
 
     expect(requirements.map((requirement) => requirement.table)).toEqual(["fourth-ledger.db"]);
+  });
+
+  it("accepts GFM alignment separators without losing projection table state", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|:---|:---:|---:|---|",
+        "| `aligned_projection` | `projection_id` | `status` | fixture |",
+      ].join("\n"),
+    );
+
+    expect(requirements.map((requirement) => requirement.table)).toEqual(["aligned_projection"]);
+  });
+
+  it("does not collect index-like bullets from a nested non-projection registry", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §9.3 index と invariant",
+        "",
+        "- `idx_valid_projection(plan_id, status)`",
+        "",
+        "#### §9.3.2 foreign registry",
+        "",
+        "- `foreign_registry(key)`",
+      ].join("\n"),
+    );
+
+    expect(requirements.indexes.map((requirement) => requirement.name)).toEqual([
+      "idx_valid_projection",
+    ]);
+  });
+
+  it("ends projection data at a backtick-labelled non-projection table header", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `valid_projection` | `projection_id` | `status` | fixture |",
+        "",
+        "| `registry` | `owner` | `purpose` |",
+        "|---|---|---|",
+        "| `FOREIGN-REGISTRY-v1` | `security` | `trust boundary` |",
+      ].join("\n"),
+    );
+
+    expect(requirements.tables.map((requirement) => requirement.table)).toEqual([
+      "valid_projection",
+    ]);
+    expect(requirements.indexes).toEqual([]);
   });
 
   it("matches typed registry constraints against SQLite metadata", () => {
