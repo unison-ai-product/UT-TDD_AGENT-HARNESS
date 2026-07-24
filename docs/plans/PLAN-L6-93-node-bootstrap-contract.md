@@ -20,8 +20,6 @@ agent_slots:
 parent_design: docs/plans/PLAN-L5-26-node-generation-activation.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
-supersedes:
-  - PLAN-L6-01-function-spec
 transition_direction: design_to_implementation
 implementation_disposition: none
 implementation_target: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md

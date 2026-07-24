@@ -126,5 +126,6 @@ self / pmo-sonnet / TL reviewer のいずれかで、G5 再 freeze 前に DbC �
 
 > 現時点: **機能要求更新なし** (internal-processing は既存機能の処理仕様化。新規 FR-L1 は生まない見込み)。
 
-> **Node generation activation節の後継**: Issue #152のRedesign
-> `PLAN-L5-26-node-generation-activation`が当該節をsupersedeする。その他の内部処理は本PLANに残る。
+> **Node generation activation差分**: Issue #152のRedesign
+> `PLAN-L5-26-node-generation-activation`が当該差分を所有する。本PLANはそのpredecessor/referenceであり、
+> 一般内部処理の正本性を維持する。

@@ -20,8 +20,6 @@ agent_slots:
 parent_design: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
-supersedes:
-  - PLAN-L5-03-internal-processing
 transition_direction: design_to_implementation
 implementation_disposition: none
 implementation_target: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
@@ -47,7 +45,8 @@ review_evidence: []
 ## 1. 差替え境界
 
 Issue #152のL4-33を、Node標準filesystem APIだけでWindows/POSIXへ実装可能な物理protocolへ降ろす。
-`PLAN-L5-03`の一般内部処理を維持し、Node generation activation節だけを後継所有する。
+`PLAN-L5-03`を一般内部処理のpredecessor/referenceとして維持し、Node generation activationの差分だけを
+本PLANが所有する。
 
 ## 2. Activation protocol
 
@@ -70,4 +69,5 @@ power-loss durable activationはResource Kernel bundle側trust floorへ委譲す
 ## 3. Pair
 
 L8の`CAND-NODEBOOT-101..106`とpair-freezeし、競合writer、全crash barrier、rollback、GC禁止を
-F0b/F0c test同commitでRed実測するまで正式`IT-*`へ昇格しない。
+検証する。各候補はL7-458のcandidate ownership表に定めるowner sliceでtestとimplementationを同一commitへ
+追加し、Red実測するまで正式`IT-*`へ昇格しない。

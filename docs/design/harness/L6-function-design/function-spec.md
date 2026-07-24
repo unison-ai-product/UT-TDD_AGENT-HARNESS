@@ -8,7 +8,7 @@ related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 replacement_issue: 152
-superseded_plan: docs/plans/PLAN-L6-01-function-spec.md
+predecessor_plan: docs/plans/PLAN-L6-01-function-spec.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -1375,7 +1375,7 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 
 ## Node self-host bootstrap機能契約（Issue #152 D0-N）
 
-`buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
+関数`buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
 検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
 `package-lock.json`、builder/source graphを入力とし、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
@@ -1383,7 +1383,7 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 external dependency closure digest、builder policy/digest、source graph digest、
 compiled entrypoint relative path/digest、toolchain provenance digest、generation IDを持つ。
 
-`loadNodeGeneration(expectedRevision)`はappend-only activation marker集合を読み、
+関数`loadNodeGeneration(expectedRevision)`はappend-only activation marker集合を読み、
 全digest、exact version、review済みprovenance、dependency closure、subject revisionを照合する。同じ
 versionを返す別npm CLIもexpected digestが異なれば拒否する。不一致・欠落・未知schema・
 symlink escape・partial publishではtyped failureを返し、spawnを呼ばない。成功時だけ

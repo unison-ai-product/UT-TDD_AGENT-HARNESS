@@ -68,3 +68,23 @@ Fourth修正の直接plan-governanceでは、初回に新PLANの`agent_slots`欠
 `duplicate_layer_sub_doc`を検出した。3 PLANをsection追加に適合する`add-design`へ修正し、
 required agent slotsを追加した後、candidate-owned plan-governance、design-language、
 oracle-test-traceはGreenとなった。FLAG verdict自体は再reviewまで維持する。
+
+## Final review FLAG correction
+
+最終reviewで、L7 PLANの候補ID意味論、candidate ownership、旧general PLANとの所有関係に
+不整合が残っていることを検出した。
+
+- `CAND-NODEBOOT-004..008`をL7 test-designのpath escape、marker crash、npm env spoof、
+  Node missing/no fallback、Windows invocationへ一致させた。
+- D0-Nから未定義の`CAND-BUNBAN-001..020` freezeを除去し、Node self-host動作後の別PLAN revisionで
+  定義する境界を明記した。
+- L4/L5/L6 Node PLANの`supersedes`とdesign frontmatterの`superseded_plan`を除去し、
+  旧general PLANをpredecessor/reference、本PLANをNode差分ownerとした。
+- candidate ownerをF0a=`101`、F0b=`001..016,102..103,205`、
+  F0c=`104..106,206`、Q0=`201..204,207..208`へ固定した。
+- 各候補のtestとimplementationは、そのowner sliceの同一commitに置く契約へ統一した。
+
+単発検証ではsemantic marker 9件とoracle-test-traceがGreen、plan-governanceはdraft上流を
+`requires`に置いた1件、design-languageは英語prose 1件を検出したため、それぞれ
+`requires: []`と日本語主語へ修正した。規律どおり再試行はしていない。この追記後も独立再reviewが
+完了するまでverdictはFLAGであり、PASSを主張しない。

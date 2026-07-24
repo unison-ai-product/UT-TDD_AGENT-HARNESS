@@ -19,8 +19,6 @@ agent_slots:
     slot_label: "QA - L4/L9候補oracleと縮退防止"
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
 next_pair_freeze: L9
-supersedes:
-  - PLAN-L4-02-architecture
 transition_direction: design_to_implementation
 implementation_disposition: none
 implementation_target: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
@@ -47,8 +45,9 @@ review_evidence: []
 ## 1. 起点と差替え
 
 Issue #152は、現行Bun control planeをNode化済みと誤認せず、設計を先にNode targetへ差し替えてから
-実装へ再降下するRedesignである。`PLAN-L4-02`が所有したarchitecture全体を削除せず、Node runtime/
-build image/cutoverに関する節だけを本PLANが後継所有する。先行F0実装は採択根拠にせず`none`として扱う。
+実装へ再降下するRedesignである。`PLAN-L4-02`を一般architectureのpredecessor/referenceとして維持し、
+Node runtime/build image/cutoverに関する差分だけを本PLANが所有する。先行F0実装は採択根拠にせず
+`none`として扱う。
 
 ## 2. L4不変条件
 

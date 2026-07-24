@@ -8,7 +8,7 @@ related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L9
 plan: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
 replacement_issue: 152
-superseded_plan: docs/plans/PLAN-L4-02-architecture.md
+predecessor_plan: docs/plans/PLAN-L4-02-architecture.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 

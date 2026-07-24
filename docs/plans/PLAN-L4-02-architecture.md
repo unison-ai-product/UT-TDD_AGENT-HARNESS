@@ -114,5 +114,6 @@ ADR テンプレート (Context/Decision/Status/Consequences) を L4 方式設�
 
 > 現時点: **機能要求更新なし** (architecture は既存 FR の実現方式の明文化。新規 FR-L1 を生まない見込み。発見時は §1 registry へ back-merge)。
 
-> **Node control-plane節の後継**: Issue #152のRedesign `PLAN-L4-33-node-control-plane-redesign`が
-> Node runtime/build image/cutover節をsupersedeする。一般architectureの正本性は本PLANに残る。
+> **Node control-plane差分**: Issue #152のRedesign `PLAN-L4-33-node-control-plane-redesign`が
+> Node runtime/build image/cutoverの差分を所有する。本PLANはそのpredecessor/referenceであり、
+> 一般architectureの正本性を維持する。

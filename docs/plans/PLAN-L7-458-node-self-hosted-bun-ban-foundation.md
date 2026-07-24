@@ -47,8 +47,7 @@ generates:
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
-  requires:
-    - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
+  requires: []
   blocks: []
   references:
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
@@ -88,7 +87,7 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 
 ## 4. TDD order
 
-1. `CAND-BUNBAN-001..020`、unit `CAND-NODEBOOT-001..016`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をF0/Q0の同一commitへ追加し、Red実測を記録した場合だけ対応する`U-*` / `IT-*` / `ST-*`へ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
+1. unit `CAND-NODEBOOT-001..016`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をF0/Q0の同一commitへ追加し、Red実測を記録した場合だけ対応する`U-*` / `IT-*` / `ST-*`へ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
 2. CIのreview済みseed Node `24.13.0` / npm `11.6.2`で最小compiled test hostをbuildし、`NodeBootstrapReceipt`をRed→Green化する。seedはbootstrapのためだけに使い、production entrypointと証拠対象は`tsc`生成のcompiled ESMに限定する。
 3. そのcompiled Node test hostでscanner pure objectsとdeterministic inventoryをRed→Green化する。
 4. 現存Bun debt manifestを実scan結果から固定し、delta guard結果とoverall `NonCompliant`を同時に保存する。既存debtがある状態をPass/Greenと呼ばない。
@@ -107,11 +106,11 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 | `CAND-NODEBOOT-001` | `NodeBootstrapReceipt`が実Node/npm identity、compiled ESM CLI、external dependency closure、`package-lock.json`、build policy、subject revisionを単一receiptで封印する | 正常receiptをloadし、各digest、`compiled-esm-only`、candidate revisionを照合 |
 | `CAND-NODEBOOT-002` | ambient processからentrypointを推測せず、receipt欠落をfail-closeする | `node-bootstrap-receipt-missing`を検証 |
 | `CAND-NODEBOOT-003` | compiled CLI／Node executable／lock graphのsealed byte driftを個別に拒否する | 3 mutation caseが各digest mismatchを検証 |
-| `CAND-NODEBOOT-004` | Stop `db-refresh`はsealed Node executableとcompiled CLIだけを起動し、Windows processをhiddenにする | spawn argv、`detached`、`stdio=ignore`、`windowsHide=true`を検証 |
-| `CAND-NODEBOOT-005` | receipt欠落・stale時はprocess生成前に停止し、別runtimeやTS直実行へfallbackしない | missing/staleの両caseでspawn call 0を検証 |
-| `CAND-NODEBOOT-006` | generation publish途中のcrash・競合でもCLI/receiptの異世代を観測させない | 各fault barrierと並行readerで旧完全generationまたは新完全generationだけを観測 |
-| `CAND-NODEBOOT-007` | env自己申告でnpm identityを偽装できない | 実npm executable/version/digestとenv不一致をprocess生成前に拒否 |
-| `CAND-NODEBOOT-008` | 別commitのreceiptをreplayできない | `subject_revision` mutationとcandidate HEAD不一致を拒否 |
+| `CAND-NODEBOOT-004` | `../`、absolute path、symlinkでrepository/generation外へescapeする | repository/generation外のpathをprocess生成前に拒否 |
+| `CAND-NODEBOOT-005` | marker publish各barrierでcrashさせ、二readerを競合させる | validated最高complete markerが指す旧または新generationだけを観測 |
+| `CAND-NODEBOOT-006` | npm env identityだけを正規値へspoofする | 実npm executable/version/digest不一致をprocess生成前に拒否 |
+| `CAND-NODEBOOT-007` | Node欠落・破損・version driftを注入する | Bun/bunx/tsx/TS直実行/shell fallbackのspawn call 0 |
+| `CAND-NODEBOOT-008` | Windowsでsealed invocationを実行する | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
 | `CAND-NODEBOOT-009` | version文字列が同じ別npm CLI、または改竄npm CLIへ差替える | reviewed distribution provenanceのexpected CLI digest不一致で拒否 |
 | `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename前後でprocess crashする | parent sync可能時に実施し、最高complete markerが旧または新generationだけを返す |
 | `CAND-NODEBOOT-011` | Windows marker各barrierでprocess crashし、power-loss simulationを別case化する | process crashは旧/新completeのみ。power loss後はcomplete 1件以上なら最大、0件ならfail-close |
@@ -151,9 +150,12 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 
 | Slice | Candidate ownership |
 |---|---|
-| F0a toolchain | `CAND-NODEBOOT-007`, `009` |
-| F0b sealed build | `CAND-NODEBOOT-001..006`, `008`, `010..016`, `101..102`, `205` |
-| F0c CI | `CAND-NODEBOOT-103..106`, `206` |
+| F0a toolchain | `CAND-NODEBOOT-101` |
+| F0b sealed build | `CAND-NODEBOOT-001..016`, `102..103`, `205` |
+| F0c CI | `CAND-NODEBOOT-104..106`, `206` |
 | Q0 / later cutover | `CAND-NODEBOOT-201..204`, `207..208` |
 
 候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。
+
+`CAND-BUNBAN-*`はD0-Nでは定義もfreezeもしない。Node self-hostが動作した後、既存のBun禁止PLANを
+別revisionで更新して候補IDとoracleを定義する。それ以前に未定義IDのGreenまたは予約済みを主張しない。
