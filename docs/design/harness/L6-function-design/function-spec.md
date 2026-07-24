@@ -1372,11 +1372,21 @@ finding IDは`doc-reference-parse-error,source_path,evidence_digest`から導出
 
 reader registry errorのevidence frameはreason別に
 ```text
-ownership: registry_digest, syntax_kind, reason_code, reader_identity_set_digest
-revision:  registry_digest, reader_id, reason_code, reader_revision_set_digest
-binding:   registry_digest, binding_kind, reason_code, request_binding_digest, syntax_binding_digest
+ownership: registry_digest, syntax_kind, reason_code, matching_registration_multiset_frame
+revision:  registry_digest, reader_id, reason_code, claimed_syntax_set_frame
+binding(uri): registry_digest, binding_kind, reason_code,
+              request_uri_scheme_registry_revision, registry_uri_scheme_registry_revision
+binding(frontmatter): registry_digest, binding_kind, reason_code,
+              request_frontmatter_schema_revision, request_frontmatter_schema_digest,
+              registry_frontmatter_schema_revision, registry_frontmatter_schema_digest
 ```
-の順とする。finding IDのsubjectはownership errorでは`syntax_kind`、revision errorでは`reader_id`、
+の順とする。`matching_registration_multiset_frame`は対象syntaxをclaimする全registrationを
+`reader_id,reader_revision,claimed_syntax_set_frame`のlength-prefixed
+`canonical-frame-v1`にし、そのframe byte列のunsigned UTF-8順でsortする。完全重複もdedupeせず
+出現回数分保持する。`claimed_syntax_set_frame`はsyntax kindをunsigned UTF-8順でsortし、
+重複を拒否したlength-prefixed frameとする。空値は空文字のlength 0としてframeへ残し、
+missing revision errorをdigest生成前に消さない。
+finding IDのsubjectはownership errorでは`syntax_kind`、revision errorでは`reader_id`、
 binding errorでは`binding_kind`とし、
 `doc-reference-reader-registry-error,subject,evidence_digest`から導出する。
 source path、byte span、架空reader ID又はsyntax kindのsentinelを合成せず、
@@ -1400,9 +1410,23 @@ policy-revision-missing|receipt-missing|receipt-duplicate|receipt-stale
 とする。evidence frameは
 `graph_digest,snapshot_digest,anchor_registry_digest,plan_registry_digest,adr_registry_digest,
 spec_registry_digest,test_registry_digest,anchor_registry_revision,authority_policy_revision,
-applicability_policy_revision,subject_identity,reason_code`の順、finding IDは
+applicability_policy_revision,subject_identity,subject_detail,reason_code`の順とする。
+`subject_detail`は`receipt-duplicate`だけdecimal duplicate count、その他は空文字とする。finding IDは
 `doc-reference-analysis-input-error,subject_identity,evidence_digest`から導出し、
 全入力契約違反をstable順の`ok:false` resultで返す。domain findingを合成せず、未型付け例外へ変換しない。
+`subject_identity`はreason別に次へ固定する。
+
+| reason | subject identity |
+|---|---|
+| `graph-snapshot-mismatch` | `graph:<graph.graphDigest>` |
+| `registry-snapshot-mismatch` | `registries:<registries.snapshotDigest>` |
+| `registry-revision-missing` | `field:anchorRegistryRevision` |
+| `policy-revision-missing` | 欠落fieldごとに`field:authorityPolicyRevision`又は`field:applicabilityPolicyRevision` |
+| `receipt-missing` | `member:<DocumentMemberIdentity identityDigest>` |
+| `receipt-duplicate` | `receipt:<receiptDigest>`（同一digestの重複群を1 findingとし件数をevidenceへ含める） |
+| `receipt-stale` | `receipt:<receiptDigest>` |
+
+複数field又はmemberの違反はsubjectごとに1 errorを生成し、表外のsubject選択やsentinelを許さない。
 
 property testはblob順・reader順・error入力順の全permutationでedge/receipt/finding digest一致と
 入力deep-equal不変を検査する。mutation testはsnapshot/blob比較、unknown scheme拒否、
