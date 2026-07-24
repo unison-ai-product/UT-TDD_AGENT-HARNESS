@@ -176,6 +176,22 @@
         "revision": 2,
         "content_digest": "sha256:42302186a0033ae6bb2f8515daa483422222be98bcd3a269d66fbfbdd7527e2e"
       }
+    },
+    {
+      "sequence": 12,
+      "previous_record_digest": "sha256:2cb6f1609a127566cadf6e277b5fb1541fa02ee0f212173f1f54c42b81f99c7d",
+      "record_digest": "sha256:71c8968fec3ab13cf5188151dc2614b48aa77d6843f94835965fddc83aa65b37",
+      "command_id": "pr154-final-flag-l7-458-ledger-retry-20260724",
+      "receipt_id": "certificate:f2150e32d70b5c66bb3cfe71a517768b",
+      "receipt_digest": "sha256:0fb83aad2c3d2b71e561f6591bb9b74566bb5d736cf71f6a3cdb19e5da7f7edf",
+      "decision_digest": "sha256:7d06fe14846494b1195217c5908bdac7d2c89cd4be231b33ac117b0c6bc71566",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 3,
+        "content_digest": "sha256:512b59cac67cf5887aeab259977ff75217d24752a3d0da200b22ac0834c8770e"
+      }
     }
   ]
 }

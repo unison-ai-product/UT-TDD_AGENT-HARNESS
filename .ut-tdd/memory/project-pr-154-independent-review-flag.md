@@ -166,6 +166,20 @@ D0 missing admission waiverを検出した。design-languageはtargeted実測で
 `EvidenceRecord` / trusted `EvidenceAttestationVerifierPort`へ接続した。production backendを
 `.ut-tdd/harness.db` SQLite `BEGIN IMMEDIATE`+WAL+FULL sync+head/version CASへ固定し、
 `CAND-CUTOVER-101..108`で競合、forgery、全edge positive、chain-only再検証をpair化した。
+
+## Exact HEAD 601bd8ae final spec-blind FLAG
+
+Q0 wrapperがvalidated slice chainを間接化し、typed evidence objectのidentityがpayload digestとreceipt digestで
+二重化していた。CutoverAdmissionはvalidated Q0 `SliceAdmissionReceipt`をdirect参照し、各sliceの
+predecessor/required input refsとD0 typed rootsを保存してQ0→D0をchain-onlyで閉じる。
+outer object identity、PK、refs、nested lookupは`receipt_digest`へ一本化し、payload `evidence_digest`とaliasを
+lookupに使わない。独自`issuer_key_id`は削除し、既存`EvidenceAttestationVerifierPort`のauthority ID、
+key version、signature、producer、record digestだけをtrust bindingとする。
+
+reviewはhybridのcross-providerを優先し、単一provider modeだけ異model+独立sessionの2 laneを許可する。
+同一model/session/authorは禁止し、Issue #153でもexact 2 laneを維持する。canonical ledgerのonline backup、
+restore、transaction migration rollback、unknown newer/downgrade拒否、projection rebuild independenceを
+L7/L8/L9候補へ降下した。
 Issue #153の許容Redは継承2件だけで、D0 admissionはmerge前必須とした。独立再reviewまではFLAGを維持する。
 
 ## Exact HEAD 121afc17 final FLAG

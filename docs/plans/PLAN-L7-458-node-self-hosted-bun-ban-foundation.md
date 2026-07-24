@@ -66,6 +66,8 @@ dependencies:
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     - docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
+    - docs/test-design/harness/L8-integration-test-design.md
+    - docs/test-design/harness/L9-system-test-design.md
     - package.json
     - src/cli.ts
     - src/state-db/index.ts
@@ -75,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:949664d4d46e01e1498114d5ef1d6494
-  command_id: pr154-d0-admission-l7-20260724
-  admitted_at: 2026-07-24T06:30:00.000Z
-  source_digest: sha256:b65cffec21905c2373ee52ab60a5fd3be61adcab5fbcb84ffef7f82b05318755
-  decision_digest: sha256:cdfdfe16d065d579f30b8c07c9a587b79e1101ee45c7ddd3fddd874077290c8e
-  receipt_digest: sha256:5a8372860e09159eb3ee4d71c9b44ccf0a85156118456a9bb0fb7cfa1997586f
+  receipt_id: certificate:f2150e32d70b5c66bb3cfe71a517768b
+  command_id: pr154-final-flag-l7-458-ledger-retry-20260724
+  admitted_at: 2026-07-24T07:30:00.000Z
+  source_digest: sha256:512b59cac67cf5887aeab259977ff75217d24752a3d0da200b22ac0834c8770e
+  decision_digest: sha256:7d06fe14846494b1195217c5908bdac7d2c89cd4be231b33ac117b0c6bc71566
+  receipt_digest: sha256:0fb83aad2c3d2b71e561f6591bb9b74566bb5d736cf71f6a3cdb19e5da7f7edf
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 2
-    content_digest: sha256:b65cffec21905c2373ee52ab60a5fd3be61adcab5fbcb84ffef7f82b05318755
+    revision: 3
+    content_digest: sha256:512b59cac67cf5887aeab259977ff75217d24752a3d0da200b22ac0834c8770e
   route:
     signal: feature_addition
     mode: add-feature
@@ -94,19 +96,16 @@ admission_receipt:
     provider: github
     issue_id: 152
     episode_id: E4-152-node-control-plane-d0n
-    projection_digest: sha256:e440f122e517c5d0ddbaaa2ad5fbc6b18cad57aa7db2865cbda6ab0a6c70e48f
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 1
-    digest: sha256:2be2a1a5884958bd8e72c5c732a7cd6e413735fd238be855ff0f50dbfcc5796c
-  transition:
-    direction: design_to_implementation
-    implementation_disposition: none
+    revision: 2
+    digest: sha256:604a59f1b5a0008c6574cb5433336fe4185d2a3b7dc2cb5d1b07b0aa83a451d9
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: Node control-plane D0-N design replacement and Forward reentry
+  escape_reason: PR 154 final cutover evidence contract correction
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -152,7 +151,7 @@ slice admissionはzod `src/schema/node-slice-admission.ts`→kernel
 
 ## 4. TDD order
 
-1. unit `CAND-NODEBOOT-001..020`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`、cutover unit `CAND-CUTOVER-001..009`、cutover integration `CAND-CUTOVER-101..108`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をowner revisionの同一commitへ追加し、Red実測を記録した場合だけ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
+1. unit `CAND-NODEBOOT-001..020`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..213`、cutover unit `CAND-CUTOVER-001..009`、cutover integration `CAND-CUTOVER-101..113`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をowner revisionの同一commitへ追加し、Red実測を記録した場合だけ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
 2. F0aはexact pin、clean `npm ci`、lock graph再現性だけをRed→Green化する。
 3. F0bはcompiled generation、receipt、executable custody、activation admissionをRed→Green化する。
 4. F0cはLinux/Windows jobとaggregateをRed→Green化する。
@@ -226,7 +225,12 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 acceptance chain | 正規owner/subject/required inputのapproved receiptだけ連結 |
 | `CAND-CUTOVER-107` | review片lane/same reviewer/session/runtime/author、unsigned/forged/untrusted authority/key、artifact drift | 全production edge append 0 |
-| `CAND-CUTOVER-108` | genesisからsealedまで各edge fresh review+CutoverAdmission+evidence nested chain | 外部再照会なしchain-onlyで全attestation/digest/prior reachability再検証Green |
+| `CAND-CUTOVER-108` | genesisからsealedまで各edge fresh review+CutoverAdmission+`receipt_digest` keyed evidence nested chain | validated Q0 SliceAdmission direct refからD0 rootsまで外部再照会なしchain-only再検証Green。wrapper/alias/独自issuer key ID拒否 |
+| `CAND-CUTOVER-109` | canonical ledger並行online backup | 単一時点のhead、refs、objectsで一貫 |
+| `CAND-CUTOVER-110` | trusted backup restore | head、refs、typed object digestが元ledgerとexact一致 |
+| `CAND-CUTOVER-111` | migration barrier失敗 | schema/data/versionを単一transactionでrollback |
+| `CAND-CUTOVER-112` | unknown newer schema又はdowngrade | open/migration 0、canonical bytes不変 |
+| `CAND-CUTOVER-113` | projection rebuild | canonical ledger head/refs/objects不変 |
 
 pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。
 
@@ -270,7 +274,7 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 | F0b sealed build | `CAND-NODEBOOT-001..016`, `018`, `102`, `205` |
 | F0c CI | `CAND-NODEBOOT-019`, `103..106`, `206` |
 | Q0 | `CAND-NODEBOOT-020`, `201..204` |
-| cutover revision | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..108`, `CAND-NODEBOOT-207` |
+| cutover revision | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..113`, `CAND-NODEBOOT-207`, `CAND-NODEBOOT-209..213` |
 | final deletion | `CAND-NODEBOOT-208` |
 
 候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。
