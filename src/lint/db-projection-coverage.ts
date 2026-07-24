@@ -129,6 +129,12 @@ function isLogicalDescendant(section: string | undefined, parent: string | undef
   return Boolean(section && parent && section.startsWith(`${parent}.`));
 }
 
+function fenceParts(line: string): { marker: "`" | "~"; length: number; rest: string } | undefined {
+  const match = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line);
+  if (!match) return undefined;
+  return { marker: match[2][0] as "`" | "~", length: match[2].length, rest: match[3] };
+}
+
 export function extractDbProjectionRequirements(content: string): DbProjectionRequirement[] {
   return extractDbProjectionCoverageRequirements(content).tables;
 }
@@ -137,32 +143,48 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   const requirements: DbProjectionRequirement[] = [];
   const indexes: DbProjectionIndexRequirement[] = [];
   let section = "";
+  let currentSectionNumber: string | undefined;
   let targetDepth = 0;
   let targetSectionNumber: string | undefined;
+  let currentSectionHasProjectionTable = false;
   let indexBlock: "none" | "armed" | "collecting" = "none";
   let fence: { marker: "`" | "~"; length: number } | undefined;
   let pendingHeader: string[] | undefined;
   let tableKind: "none" | "projection" | "other" = "none";
   for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim();
-    const fenceMatch = /^(?<run>`{3,}|~{3,})/.exec(trimmed);
+    const fenceMatch = fenceParts(line);
     if (fence) {
       if (
-        fenceMatch?.groups?.run?.[0] === fence.marker &&
-        fenceMatch.groups.run.length >= fence.length
-      )
+        fenceMatch?.marker === fence.marker &&
+        fenceMatch.length >= fence.length &&
+        fenceMatch.rest.trim() === ""
+      ) {
         fence = undefined;
+        pendingHeader = undefined;
+        tableKind = "none";
+        indexBlock = "none";
+        currentSectionHasProjectionTable = false;
+      }
       continue;
     }
-    if (fenceMatch?.groups?.run) {
+    if (fenceMatch && !(fenceMatch.marker === "`" && fenceMatch.rest.includes("`"))) {
       fence = {
-        marker: fenceMatch.groups.run[0] as "`" | "~",
-        length: fenceMatch.groups.run.length,
+        marker: fenceMatch.marker,
+        length: fenceMatch.length,
       };
+      pendingHeader = undefined;
+      tableKind = "none";
+      indexBlock = "none";
+      currentSectionHasProjectionTable = false;
       continue;
     }
 
-    if (targetDepth > 0 && INDEX_MARKER_RE.test(trimmed)) {
+    if (
+      targetDepth > 0 &&
+      (currentSectionHasProjectionTable || currentSectionNumber === "9.3") &&
+      INDEX_MARKER_RE.test(trimmed)
+    ) {
       indexBlock = "armed";
       continue;
     }
@@ -188,15 +210,19 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
     if (heading) {
       const depth = heading[1].length;
       const sectionNumber = headingSectionNumber(line);
-      if (
+      const leavesNumberedTarget =
         targetDepth > 0 &&
-        depth <= targetDepth &&
-        !isLogicalDescendant(sectionNumber, targetSectionNumber)
-      ) {
+        Boolean(sectionNumber) &&
+        sectionNumber !== targetSectionNumber &&
+        !isLogicalDescendant(sectionNumber, targetSectionNumber);
+      const leavesUnnumberedTarget = targetDepth > 0 && !sectionNumber && depth <= targetDepth;
+      if (leavesNumberedTarget || leavesUnnumberedTarget) {
         targetDepth = 0;
         targetSectionNumber = undefined;
       }
       section = line.replace(/^#+\s*/, "").trim();
+      currentSectionNumber = sectionNumber;
+      currentSectionHasProjectionTable = false;
       if (TARGET_SECTION_RE.test(line)) {
         targetDepth = depth;
         targetSectionNumber = sectionNumber;
@@ -222,6 +248,7 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
             ? "projection"
             : "other"
           : "none";
+      if (tableKind === "projection") currentSectionHasProjectionTable = true;
       pendingHeader = undefined;
       continue;
     }

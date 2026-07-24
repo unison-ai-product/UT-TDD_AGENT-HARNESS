@@ -378,6 +378,98 @@ describe("db-projection-coverage detector", () => {
     expect(requirements.indexes).toEqual([]);
   });
 
+  it("ends an active target at a deeper numbered non-descendant heading", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "#### §8.9 unrelated deeper section",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `deeper_non_descendant` | `projection_id` | `status` | fixture |",
+        "必須 index:",
+        "- `idx_deeper_non_descendant(status)`",
+      ].join("\n"),
+    );
+
+    expect(requirements).toEqual({ tables: [], indexes: [] });
+  });
+
+  it("does not close a fence when the closing run has trailing content", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "```markdown",
+        "``` not-a-close",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `still_fenced` | `projection_id` | `status` | fixture |",
+        "```",
+      ].join("\n"),
+    );
+
+    expect(requirements).toEqual([]);
+  });
+
+  it("resets pending table and index states at both fence boundaries", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "```",
+        "```",
+        "|---|---|---|---|",
+        "| `cross_fence_table` | `projection_id` | `status` | fixture |",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `valid_projection` | `projection_id` | `status` | fixture |",
+        "必須 index:",
+        "```",
+        "```",
+        "- `idx_cross_fence(status)`",
+      ].join("\n"),
+    );
+
+    expect(requirements.tables.map((requirement) => requirement.table)).toEqual([
+      "valid_projection",
+    ]);
+    expect(requirements.indexes).toEqual([]);
+  });
+
+  it("does not treat a four-space indented backtick run as a fence", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "    ```not-a-fence",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `after_indented_run` | `projection_id` | `status` | fixture |",
+      ].join("\n"),
+    );
+
+    expect(requirements.map((requirement) => requirement.table)).toEqual(["after_indented_run"]);
+  });
+
+  it("rejects an index marker in the ownership subsection without a projection table", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §2.7 SQLite projection DB の定義 (`harness.db`)",
+        "",
+        "#### §2.7.1 canonical ledgerファイル正本registry",
+        "",
+        "必要 index:",
+        "- `idx_ownership_file(path)`",
+      ].join("\n"),
+    );
+
+    expect(requirements.indexes).toEqual([]);
+  });
+
   it("keeps the real §9.3.1 projection table and its two indexes", () => {
     const requirements = extractDbProjectionCoverageRequirements(
       [

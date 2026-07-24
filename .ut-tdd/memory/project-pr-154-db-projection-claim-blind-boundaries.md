@@ -28,3 +28,11 @@ index抽出はsection番号及びprojection table stateから分離し、正本m
 全件・順序exact assertionにした。index markerはactive target又はlogical descendant scope内だけで発火する。
 backtick/tilde fenced codeはinfo string付き開始から同marker・同長以上の終了までtable/markerを完全無視する。
 outer pipe省略対応を維持しつつ、pipe直前の連続backslash数の奇偶でescaped pipeかdelimiterかを判定する。
+
+追加reviewでは、番号付きheadingがactive targetのlogical descendantでなければ深度に関係なくscopeを終了する。
+番号なしheadingだけ従来のdepth ruleを使う。GFM fenceはindent 0-3、backtick info内backtick禁止、close残部
+whitespace-onlyへ限定した。open/close両境界でpending table、table kind、index block、current-section
+projection flagを破棄する。各headingでもprojection flagをresetし、markerはactive targetかつ同sectionで
+projection table成立後だけ許可する。§9.3は既存table群の専用canonical index節としてmarkerを許可する。
+deeper non-descendant、trailing-content擬似close、fence跨ぎstate、4-space indent、ownership markerをRedで拘束し、
+対象Node testは28/28 Greenとなった。
