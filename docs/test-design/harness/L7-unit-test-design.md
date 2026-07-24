@@ -1610,18 +1610,26 @@ property testは任意の合法event列でreplay同一性・単調append・termi
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
 cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする。
 
-## Node self-host bootstrap unit pair（Issue #152 D0-N）
+## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 
-| ID | Red入力 | Green oracle |
+以下はD0時点では全て設計候補である。対応test codeと実装をF0の同一commitへ追加し、Red実測を記録した
+候補だけを同番号の`U-NODEBOOT-*`へ昇格する。
+
+| 候補ID | Red入力 | Green oracle |
 |---|---|---|
-| `U-NODEBOOT-001` | 正規Node/npm/lock/source/compiled generation | 全identity・digest・subject revision一致でsealed handleを返す |
-| `U-NODEBOOT-002` | receipt欠落、unknown schema、別revision replay | process生成0でtyped failure |
-| `U-NODEBOOT-003` | Node/npm/lock/dependency/source/compiledを一要素ずつmutation | 対応digest mismatchでfail-close |
-| `U-NODEBOOT-004` | `../`、absolute path、symlink escape | repository/generation外を拒否 |
-| `U-NODEBOOT-005` | publish各barrierでcrash、二reader競合 | 旧完全generationまたは新完全generationだけを観測 |
-| `U-NODEBOOT-006` | npm env identityだけを正規値へspoof | 実npm executable/version/digest不一致で拒否 |
-| `U-NODEBOOT-007` | Node欠落・破損・version drift | Bun/bunx/tsx/TS/shell spawn 0 |
-| `U-NODEBOOT-008` | Windows sealed invocation | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
+| `CAND-NODEBOOT-001` | 正規Node/npm/lock/source/compiled generation | 全identity・digest・subject revision一致でsealed handleを返す |
+| `CAND-NODEBOOT-002` | receipt欠落、unknown schema、別revision replay | process生成0でtyped failure |
+| `CAND-NODEBOOT-003` | Node/npm/lock/dependency/source/compiledを一要素ずつmutation | 対応digest mismatchでfail-close |
+| `CAND-NODEBOOT-004` | `../`、absolute path、symlink escape | repository/generation外を拒否 |
+| `CAND-NODEBOOT-005` | publish各barrierでcrash、二reader競合 | 旧完全generationまたは新完全generationだけを観測 |
+| `CAND-NODEBOOT-006` | npm env identityだけを正規値へspoof | 実npm executable/version/digest不一致で拒否 |
+| `CAND-NODEBOOT-007` | Node欠落・破損・version drift | Bun/bunx/tsx/TS/shell spawn 0 |
+| `CAND-NODEBOOT-008` | Windows sealed invocation | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
+| `CAND-NODEBOOT-009` | version文字列が同じ別npm CLIへ差替え | reviewed provenanceのexpected npm CLI digest不一致で拒否 |
+| `CAND-NODEBOOT-010` | POSIX fsync/rename各barrierでcrash | durableな旧または新generationだけを観測 |
+| `CAND-NODEBOOT-011` | Windows flush/replace各barrierとsharing violation | current不変または新commit、partial pointer 0 |
+| `CAND-NODEBOOT-012` | cleanup失敗、rollback、live generation GC競合 | cleanup ownerがdebtを残し、検証済みrollbackのみ成功、live generation削除0 |
 
-test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts` / `U-NODEBOOT-*`へ固定し、
-別名・別IDで実装済みを主張しない。Resource Kernel / Rust companionのunit oracleは本節に含めない。
+test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
+満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust
+companionのunit oracleは本節に含めない。

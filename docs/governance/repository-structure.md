@@ -23,7 +23,7 @@ UT-TDD-agent-harness/
 ├── package-lock.json             # reviewed npm dependency graph (tracked)
 ├── .node-version                 # reviewed Node runtime exact pin
 ├── tsconfig.json                 # TypeScript strict
-├── bun.lock                      # cutover中の既存Bun graph parity確認用 (tracked)
+├── bun.lock                      # 現行Bun migration debtのparity確認用（target sealed時に削除）
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
 ├── ut-tdd.project.json           # PLAN asset用の追跡済みrepository identity正本
 ├── .gitattributes                # 改行正規化 (eol=lf、*.ps1 は crlf)
@@ -126,7 +126,7 @@ UT-TDD-agent-harness/
 ## 5. tracked / gitignored の境界
 
 - **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `package-lock.json` `.node-version` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
+- **tracked（F0a移行時点）**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `package-lock.json` `.node-version` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/`。`package-lock.json`と`.node-version`はNode candidate custody正本、`bun.lock`は現在の実体を示すmigration debtである。Node parity前に削除せず、target sealed時に撤去する。
 
 ## 6. 境界
 
@@ -149,13 +149,13 @@ UT-TDD-agent-harness/
 
 JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜まりやすい。**フォルダに隠す**のはツールが root を探すため不可（壊れる）。代わりに **ツールを減らす + package.json に集約** で抑える。
 
-- **root config の下限**（避けられない）: `package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `bun.lock` / `.editorconfig` (cross-editor newline/whitespace contract)。`package-lock.json` と `.node-version` は Node control-plane cutover 中の reviewed runtime / dependency custody 正本であり、任意のツール設定ではない。
+- **root config の下限（F0a移行時点）**: `package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `bun.lock` / `.editorconfig`。`package-lock.json`と`.node-version`はNode candidate custody正本であり、任意のツール設定ではない。`bun.lock`はtarget Node generationがsealedになるまでのmigration debtとして残す。
 - **lint + format = Biome 1 枚 (`biome.json`)**。**eslint + prettier を別々に足さない**（plugin/ignore で 4-6 枚に増えるのを防ぐ）。`bun run lint` / `bun run format`。
 - **test = vitest**。`vitest.config.ts` は G7 coverage-summary evidence (`json-summary`) を生成するための tracked exception とする。
 - commitlint 等 **config-in-package.json 対応**のツールは package.json のキーに入れ、新規 dotfile を作らない。
 - **新ツール導入時の判断順**: ① 既存ツール (Biome / Bun / tsc) で代替できるか → ② package.json に同居できるか → ③ どうしても単独 config が要るか。①②で済むなら root に新ファイルを増やさない。
 
-→ root config は **`package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts` の 8 枚で頭打ち**に保つ。Node cutover完了後の`bun.lock`除去は別PRで行い、同一PRでcustody正本を同時に失わない。
+→ F0a移行時点のroot configは **`package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts`**。二重lockをmigration debtとして可視化し、Node cutover完了後の`bun.lock`除去は別PRで行う。同一PRでcandidate custody正本まで失わない。
 
 ## 9. 配布 3 層モデル (ADR-005)
 
@@ -173,8 +173,8 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 
 ## 10. Node control-plane build image（Issue #152 D0-N）
 
-- rootの`.node-version`、`package.json`、`package-lock.json`をNode/npm/dependency closureの正本とする。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
-- F0aは上記3正本、npm lock root graph、`bun.lock` direct parity、`node_candidate` authority policyの静的整合までを所有する。実npm executableのabsolute path・version・digestを封印するreceiptはF0bの責務であり、F0aのGreenを実行時custody完了と読み替えない。
+- F0aではrootの`.node-version`、`package.json`のexact `packageManager` / authority policy、`package-lock.json`をNode/npm/dependency graphの静的正本とする。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
+- F0aは上記正本、npm lock root graph、`bun.lock` direct parity、`node_candidate` authority policyの静的整合までを所有する。F0bはreview済みNode distribution/npm CLIのexpected digest provenanceを追加し、実npm executableのabsolute path・version・digestをreceiptへ封印する。F0aのGreenを実行時custody完了と読み替えない。
 - `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、current pointerの一回のatomic swapで公開する。CLIとreceiptを別々に最終pathへrenameしない。
 - receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
 - `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
