@@ -172,7 +172,7 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 ## 10. Node control-plane build image（Issue #152 D0-N）
 
 - targetではrootの`.node-version`、`package.json`、`package-lock.json`、review済み`docs/governance/node-toolchain-provenance.json`をNode/npm/dependency closureの正本とする。これらはF0-Aで同一commitに導入されるまで設計Redであり、現行mainに存在すると主張しない。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
-- `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、current pointerの一回のatomic swapで公開する。CLIとreceiptを別々に最終pathへrenameしない。
+- `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、global publish lease下でappend-only immutable activation markerを追加して公開する。current pointerの上書きやCLI/receiptの別々の最終renameを行わない。
 - receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
 - `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
 - Resource Kernel / Rust companionの配置は別設計sliceとし、D0-Nのbuild、review、F0開始条件へ混入させない。

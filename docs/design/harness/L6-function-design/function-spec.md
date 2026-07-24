@@ -1390,8 +1390,17 @@ symlink escape・partial publishではtyped failureを返し、spawnを呼ばな
 `shell=false`、Windowsでは`windowsHide=true`でsealed Node executable + compiled ESMを起動する。
 Bun、bunx、tsx、TS直実行、ambient PATH、runtime downloadへのfallbackは禁止する。
 
-原子性oracleはpublish各barrierのfault injectionと並行readerで、旧完全generationまたは新完全generation
+`publishActivation`はglobal exclusive leaseをatomic mkdir/open-wxで取得できた場合だけ、取得後のmax sequence
+`N`から`N+1`を割り当てる。同時writerは`publish-lease-busy`でfail-closeしretryしない。crash残留leaseは
+`recoverPublishLease(approvedRecovery)`が旧complete stateを検証してrecovery receiptを発行するまでsteal・削除しない。
+
+process-crash atomicity oracleは各barrierのfault injectionと並行readerで、旧完全generationまたは新完全generation
 以外を観測しないことを要求する。markerはtemporary write + file sync + close後、存在しない一意final名へ
-same-filesystem renameする。readerはvalidated monotonic markerの最高complete sequenceだけを採用し、
-temp/torn/invalid/reservation-only markerを無視する。rollbackも旧generationを指す新しいmarkerのappendであり、
-履歴を上書きしない。CLI先行・receipt後行の二段rename、既存pointer上書き、shell/native helper/Rust依存は契約違反である。
+same-filesystem renameする。POSIXは可能な場合parent directoryをsyncする。Windows Node-only F0はpower-loss後の
+最新marker persistenceを保証せず、invalid/latest欠落時に旧complete markerへfail-safe recoveryする。power-loss
+durable activationはResource Kernel bundle trust floorの後続責務であり、F0 receiptへ虚偽のdurable claimを入れない。
+
+通常rollbackは同一subject revision限定。cross-revisionはapproved target revision/certificateで
+`expectedRevision`をtargetへ変更する別operationとし、旧receiptを改竄しない。F0はautomatic GC、
+generation deletion API、lease stealを実装しない。CLI先行・receipt後行の二段rename、既存pointer上書き、
+shell/native helper fallbackは契約違反である。

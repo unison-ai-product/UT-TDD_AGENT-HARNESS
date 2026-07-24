@@ -396,11 +396,14 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 1. candidate HEADを`subject_revision`として固定する。review済みtoolchain provenanceはNode公式distribution archive SHA-256（OS/arch別）、同梱npm `11.6.2`のCLI relative path・expected SHA-256、`packageManager`/`engines`/lockfile identityを結ぶ。実Node/npm executableを絶対pathで解決し、version文字列だけでなくexpected digest/provenanceへ照合する。
 2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。
 3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
-4. generation内fileをflushしdirectory handleを可能なOSでは同期した後、immutable generation名へrenameする。activationはappend-only markerとし、temporary markerをwrite→file sync→closeしてから、存在しない一意な`activations/<sequence>-<generation>-<nonce>.json`へ同一filesystem renameする。既存markerを上書きしないためNode標準`fs` APIの両OS共通境界で成立する。
-5. writerはexclusive reservation fileの`open(..., "wx")`でsequenceを予約する。readerはtemporary、予約だけ、parse不能、digest不一致、generation未完成markerを無視し、validated markerの最大単調sequenceが指す同一generation内CLI/receiptだけを返す。競合writerが同sequenceをpublishせず、crash時は直前のcomplete markerがcurrentであり続ける。
+4. generation内fileをflushし、POSIXでは可能な場合parent directoryも同期した後、immutable generation名へrenameする。activation markerはtemporary write→file sync→close後、存在しない一意final名へ同一filesystem renameする。Windows Node-onlyではprocess-crash atomicityを保証するが、power-loss後の最新marker persistenceを保証済みと主張しない。
+5. writerはまずglobal exclusive publish leaseをNode標準のatomic `mkdir`または`open("wx")`で取得する。取得後にvalidated markerのmax sequenceを読み、`N+1`を割り当ててpublishし、最後にleaseをreleaseする。同時writerはretryせずfail-closeする。leaseを取らずにsequenceを読まないため、distinct sequenceの逆順publishは成立しない。
+6. crash残留leaseを時刻・PIDだけで自動stealしない。別recovery operationが旧complete marker、lease owner、temp/generationを検証しrecovery receiptを発行するまで全publishをfail-closeする。readerはtemp、parse不能、digest不一致、generation未完成markerを無視し、validated markerの最大単調sequenceだけを返す。
 
 envの`npm_config_user_agent`は証拠に使用せず、実npm executable/version/digestを測定する。receipt欠落、
 cross-revision replay、dependency/path/symlink drift、unknown field、partial generationはprocess生成前に
 fail-closeする。失敗時のBun/bunx/tsx/TS直実行/shell fallbackは存在しない。
 
-`GenerationPublisher`がtemp generation、reservation、activation marker、旧generationのcleanupを所有する。publish前失敗はtemp/reservationだけをreconcileし、最後のcomplete markerを不変に保つ。publish後は新markerを成功として返し、後処理失敗で履歴を削除しない。明示rollbackは検証済み旧generationを指す、より大きいsequenceの新markerをappendする。実行中generation、最新complete marker、rollback retention windowが参照するgenerationはGC対象外とし、cleanup failureはreceiptへ残して次回reconcileする。
+`GenerationPublisher`はtemp generation、global publish lease、activation markerだけを所有する。F0ではautomatic GCとgeneration削除APIを禁止し、全immutable generationを保持する。reader leaseと安全なreclamationを設計する後続PLANまでGCをdeferし、cleanupはtempと正常release可能な自分のleaseに限定する。
+
+通常rollbackは同一`subject_revision`の検証済み旧generationを指す、より大きいsequenceのmarker appendだけを許す。cross-revision rollbackは、明示承認されたtarget revision/certificateを入力にreaderの`expectedRevision`自体をtargetへ変更する別operationであり、旧receiptのrevisionやdigestを書き換えない。

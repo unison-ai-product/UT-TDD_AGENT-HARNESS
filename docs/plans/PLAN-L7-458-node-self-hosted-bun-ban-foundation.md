@@ -88,7 +88,7 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 
 ## 4. TDD order
 
-1. `CAND-BUNBAN-001..020`、unit `CAND-NODEBOOT-001..012`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をF0/Q0の同一commitへ追加し、Red実測を記録した場合だけ対応する`U-*` / `IT-*` / `ST-*`へ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
+1. `CAND-BUNBAN-001..020`、unit `CAND-NODEBOOT-001..016`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をF0/Q0の同一commitへ追加し、Red実測を記録した場合だけ対応する`U-*` / `IT-*` / `ST-*`へ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
 2. CIのreview済みseed Node `24.13.0` / npm `11.6.2`で最小compiled test hostをbuildし、`NodeBootstrapReceipt`をRed→Green化する。seedはbootstrapのためだけに使い、production entrypointと証拠対象は`tsc`生成のcompiled ESMに限定する。
 3. そのcompiled Node test hostでscanner pure objectsとdeterministic inventoryをRed→Green化する。
 4. 現存Bun debt manifestを実scan結果から固定し、delta guard結果とoverall `NonCompliant`を同時に保存する。既存debtがある状態をPass/Greenと呼ばない。
@@ -113,9 +113,13 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 | `CAND-NODEBOOT-007` | env自己申告でnpm identityを偽装できない | 実npm executable/version/digestとenv不一致をprocess生成前に拒否 |
 | `CAND-NODEBOOT-008` | 別commitのreceiptをreplayできない | `subject_revision` mutationとcandidate HEAD不一致を拒否 |
 | `CAND-NODEBOOT-009` | version文字列が同じ別npm CLI、または改竄npm CLIへ差替える | reviewed distribution provenanceのexpected CLI digest不一致で拒否 |
-| `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename前後でcrashする | 最高complete markerが旧または新generationだけを返しtemp/reservationをreconcile |
-| `CAND-NODEBOOT-011` | Windows marker write/sync/close/unique rename前後でcrash・writer競合を注入する | 既存marker不変または新marker append、partial activation 0、Bun/shell/native helper fallback 0 |
-| `CAND-NODEBOOT-012` | publish成功後cleanup失敗、append rollback、実行中generationへのGCを競合させる | 履歴を巻き戻さずcleanup debtを記録し、検証済み旧generationへの新markerだけを許可、live generationを保持 |
+| `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename前後でprocess crashする | parent sync可能時に実施し、最高complete markerが旧または新generationだけを返す |
+| `CAND-NODEBOOT-011` | Windows marker各barrierでprocess crashし、power-loss simulationを別case化する | process crashは旧/新completeのみ。power lossでは最新永続化を主張せず旧completeへfail-safe |
+| `CAND-NODEBOOT-012` | 同時writerをbarrierで逆順完了させようとする | global lease winnerだけがN+1をpublishし、loserはretry無しfail-close、distinct sequence逆順0 |
+| `CAND-NODEBOOT-013` | crash残留publish leaseをPID/time経過でstealするmutation | recovery receipt無しのpublish/stealを拒否 |
+| `CAND-NODEBOOT-014` | automatic GC、generation deletion API、cleanup経由deleteを注入する | F0 scanner/ASTで削除surface 0、全immutable generation保持 |
+| `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionは新marker、cross-revisionはapproved certificateでexpectedRevision変更、旧receipt byte不変 |
+| `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
 
 予定実装トレースは`src/runtime/node-bootstrap.ts`、`scripts/build-node.mjs`、
 `src/state-db/stop-refresh.ts`、compiled Nodeを呼ぶhook設定、CLI wrapper、snapshot runnerへ接続する。

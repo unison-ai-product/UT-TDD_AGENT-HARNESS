@@ -227,3 +227,9 @@ build imageはexact Node/npm pin、review済みlock graph、external dependency 
 harness legを最終aggregateがAND集約し、skip、欠測、別HEAD、別generationをGreenにしない。
 Issue #153は継承main負債2件だけを限定する一時envelopeであり、candidate固有のreceipt、review、
 Node matrix、aggregate failureを免除しない。Resource Kernel / Rust companionは別D0-R sliceで扱う。
+
+F0のatomicityはprocess-crash境界で、global exclusive publish lease下のappend-only markerにより
+旧completeまたは新complete generationだけを選ぶことを意味する。power-loss durabilityとは区別し、
+Windows Node-only F0では最新markerの永続化完了を主張せず旧completeへのfail-safe recoveryを保証する。
+power-loss durable activationはResource Kernel bundle側trust floorへ委譲するが、D0-R未着地をF0の
+process-crash atomicity blockerにはしない。F0ではgeneration自動GCを禁止する。

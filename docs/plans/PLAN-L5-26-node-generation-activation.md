@@ -47,16 +47,21 @@ Issue #152のL4-33を、Node標準filesystem APIだけでWindows/POSIXへ実装�
 ## 2. Activation protocol
 
 1. immutable generationをprivate tempへ構築し、全fileをsync/closeしてcomplete receiptを封印する。
-2. writerは`open("wx")`の一意reservationで単調sequenceを予約する。
-3. activation markerをtempへwrite、file sync、closeし、存在しない一意final名へ同一filesystem renameする。
-4. readerは全final markerを検証し、sequence・generation・receiptが完全な最大markerだけを採用する。
-5. temp、torn、invalid、reservation-only markerは無視し、crash時は直前complete markerを維持する。
-6. rollbackは旧generationを指す新しいmarkerをappendする。履歴の上書き・削除ではない。
+2. writerはglobal exclusive publish leaseをatomic `mkdir`または`open("wx")`で取得する。
+3. lease取得後にmax sequence `N`を読み、`N+1`を割り当てる。同時writerはretryせずfail-closeする。
+4. activation markerをtempへwrite、file sync、closeし、存在しない一意final名へ同一filesystem renameする。
+5. readerは全final markerを検証し、sequence・generation・receiptが完全な最大markerだけを採用する。
+6. temp、torn、invalid markerは無視する。crash残留leaseはrecovery receiptまで自動stealせずpublishをblockする。
+7. 同一revision rollbackは旧generationを指す新markerをappendする。cross-revisionはapproved target certificateでreader expected revisionを変更する。
 
-既存file置換、shell、native helper、Rust companionへ依存しない。GCはpublisherが所有し、実行中、
-最新complete、rollback retention windowのgenerationを削除しない。
+既存file置換、shell、native helperへ依存しない。F0ではautomatic GCとgeneration deletion APIを禁止し、
+全immutable generationを保持する。reader lease/reclamationは後続PLANへdeferする。
+
+process crashとpower lossを別oracleにする。POSIXは可能な場合parent directoryをsyncする。Windows Node-only
+F0は最新markerのpower-loss persistenceを保証せず、旧complete markerへのfail-safe recoveryを保証する。
+power-loss durable activationはResource Kernel bundle側trust floorへ委譲する。
 
 ## 3. Pair
 
-L8の`CAND-NODEBOOT-101..106`とpair-freezeし、競合writer、全crash barrier、rollback、GC競合を
+L8の`CAND-NODEBOOT-101..106`とpair-freezeし、競合writer、全crash barrier、rollback、GC禁止を
 F0 test同commitでRed実測するまで正式`IT-*`へ昇格しない。

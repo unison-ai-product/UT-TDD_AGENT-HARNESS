@@ -28,3 +28,26 @@ PR #154の独立claim reviewはFLAG。PASS証拠として扱わない。
 
 再修正ではappend-only immutable activation markerと、PLAN-L4-33→L5-26→L6-93→L7-458の
 依存鎖を導入した。これも再review PASSを意味しない。
+
+## Third review FLAG
+
+second修正後もA7–A11が未閉鎖だったためFLAGを維持する。
+
+- repository structureに旧current pointer記述が残存。
+- writerごとのsequence reservationでは逆順publishを防げず、global publish leaseとstale lease recoveryが未設計。
+- F0で安全なreader lease無しにGC ownershipを主張。
+- rollbackのsame/cross subject revision境界が未定義。
+- process-crash atomicityとpower-loss durabilityを同一保証として扱っていた。
+
+third修正はglobal exclusive lease、automatic GC禁止、approved cross-revision rollback、OS別durability
+claimを設計したもので、独立再review PASSを代替しない。
+
+### A7–A11 correction record
+
+- repository §10をappend-only activation markerへ統一。
+- lease取得後のN+1採番、loser retry 0、stale lease recovery receiptを固定。
+- F0はgeneration deletion/automatic GC 0とし、reader lease設計まで全generation保持。
+- same-revision rollbackとapproved cross-revision target変更を分離。
+- process-crash atomicityとpower-loss durabilityを分離し、Windows F0の保証を旧complete fail-safeまでに限定。
+
+この追記後もverdictはFLAGであり、再review結果を待つ。

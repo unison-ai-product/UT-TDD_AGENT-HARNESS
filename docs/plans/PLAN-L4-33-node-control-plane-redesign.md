@@ -49,6 +49,10 @@ build image/cutoverに関する節だけを本PLANが後継所有する。先行
 - current Bunはmigration debt、target Nodeは未実装の設計状態として別field・別receiptで表す。
 - Node/npm/toolchain/dependency/subject revisionをsealed generationへ結合する。
 - activationはappend-only immutable markerであり、既存current pointerを上書きしない。
+- publishはglobal exclusive leaseで直列化し、crash残留leaseはrecovery receipt無しにstealしない。
+- F0では全immutable generationを保持してautomatic GCを禁止する。
+- process-crash atomicityとpower-loss durabilityを分離し、Windows Node-only F0は旧completeへのfail-safe recoveryまでを保証する。
+- rollbackは同一revision内を通常経路とし、cross-revisionはapproved target certificateでreader期待revisionを変更する。
 - Node parity前に旧Bun gateを削除せず、Node primary後にBunへfallbackしない。
 - Resource Kernel/Rust companionをNode build imageの開始条件にしない。
 

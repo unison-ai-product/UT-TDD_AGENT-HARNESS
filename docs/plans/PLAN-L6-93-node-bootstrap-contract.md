@@ -42,14 +42,17 @@ review_evidence: []
 ## 1. Function boundary
 
 `buildNodeGeneration`はreview済みtoolchain provenance、lock/dependency/source graph、subject revisionから
-immutable generationとreceiptを生成する。`publishActivation`はreservationとappend-only markerだけを
-追加する。`loadNodeGeneration`はvalidated markerの最大complete sequenceを選び、同一generationを返す。
+immutable generationとreceiptを生成する。`publishActivation`はglobal exclusive lease取得後にmax sequence
+`N+1`のappend-only markerを追加する。`loadNodeGeneration`はvalidated markerの最大complete sequenceを選ぶ。
 
 ## 2. Fail-close
 
 - 同version別npm CLI、digest/revision/path/symlink driftをprocess生成前に拒否する。
 - marker sequence重複、generation欠落、receipt不一致、temp/torn/invalid markerをcurrentにしない。
-- rollbackは検証済み旧generationを指す新markerだけを許可する。
+- distinct sequenceの逆順publish、publish lease busy、recovery receipt無しのstale lease stealを拒否する。
+- 通常rollbackは同一revisionの旧generationを指す新markerだけを許可する。
+- cross-revision rollbackはapproved target certificateでexpected revisionを変更し、旧receiptを改竄しない。
+- F0でautomatic GC、generation delete API、power-loss durable claimを拒否する。
 - Node失敗時のBun/bunx/tsx/TS直実行/shell/native helper fallbackを禁止する。
 
 ## 3. L7開始条件

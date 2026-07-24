@@ -1626,9 +1626,13 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `CAND-NODEBOOT-007` | Node欠落・破損・version drift | Bun/bunx/tsx/TS/shell spawn 0 |
 | `CAND-NODEBOOT-008` | Windows sealed invocation | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
 | `CAND-NODEBOOT-009` | version文字列が同じ別npm CLIへ差替え | reviewed provenanceのexpected npm CLI digest不一致で拒否 |
-| `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename各barrierでcrash | 最高complete markerが指すdurableな旧または新generationだけを観測 |
-| `CAND-NODEBOOT-011` | Windows marker write/sync/close/unique rename各barrierとwriter競合 | append前の最高markerまたは新complete marker、partial activation 0 |
-| `CAND-NODEBOOT-012` | cleanup失敗、append rollback、live generation GC競合 | cleanup ownerがdebtを残し、旧generationへの新markerだけでrollback、live generation削除0 |
+| `CAND-NODEBOOT-010` | POSIX marker各barrierのprocess crash | parent sync可能時に実施し、旧または新completeだけを観測 |
+| `CAND-NODEBOOT-011` | Windows process crash / power lossを分離注入 | crashは旧/新complete、power lossは旧complete fail-safeで最新永続化を主張しない |
+| `CAND-NODEBOOT-012` | 二writerを逆順完了させるbarrier | global lease winnerだけN+1、loser retry 0、distinct sequence逆順0 |
+| `CAND-NODEBOOT-013` | stale leaseをPID/timeで自動steal | recovery receipt無しのsteal/publish 0 |
+| `CAND-NODEBOOT-014` | generation delete/GC APIを実装へ注入 | F0 deletion surface 0、全immutable generation保持 |
+| `CAND-NODEBOOT-015` | cross-revisionを通常rollbackへ注入 | approved target certificate無しは拒否、expectedRevision変更、旧receipt byte不変 |
+| `CAND-NODEBOOT-016` | Windows receiptへpower-loss durable=trueを注入 | claim拒否、process-crash atomicityだけを記録 |
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust
