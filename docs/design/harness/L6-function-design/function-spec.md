@@ -1440,6 +1440,10 @@ payload object/decoded payload/envelopeのschema version literal及び`payload_s
 同じ共通GitObjectId型をCutover candidate/transition、Review lane/bundle、L6 confirmation、Slice admission/evidenceへ
 適用しraw hexを拒否する。tracked/L6/reviewを含む全receipt schema versionをliteral v1へ閉じる。
 Q0 expected caseは同subjectのimmutable attested CaseManifestObjectから取得し、executed setを照合する。
+正本は`docs/test-design/harness/L8-integration-test-design.md`内の
+`NODE-Q0-CASE-MANIFEST-v1-BEGIN/END` exact 1組に挟まれたexact 1 JSON objectとする。
+artifact ID/path、marker数、duplicate/unknown fieldを検証し、RFC 8785 canonical object UTF-8 bytesから
+artifact digestを再計算する。manifest arrayはparsed arrayと順序込みexact一致させる。
 Case IDはUTF-8 code-point昇順unique arrayとし、set digestは
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`で再計算する。test-design artifact digestも
 subject GitObjectId時点のcanonical bytesから再計算する。core/outer owner一致とclosed mapの`ci`を検証し、

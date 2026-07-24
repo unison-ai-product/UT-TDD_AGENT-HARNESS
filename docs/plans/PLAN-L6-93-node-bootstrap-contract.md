@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:85ad2501703a4408f3f208b7918b36e8
-  command_id: pr154-manifest-l6-20260724
-  admitted_at: 2026-07-24T15:00:00.000Z
-  source_digest: sha256:33b45e5da1fecd31c69974663466fb20e6ebe121456b7b494b9c634be4afe8d2
-  decision_digest: sha256:2a4f53a6ceecb6cb0873d7267e469fbdf20841e7521860f9a462ed72f7cbecdb
-  receipt_digest: sha256:87bf33598f0ce23f76075e5c67215139163edab0ac47f604eac57670e79cad90
+  receipt_id: certificate:0547ba713e545bd37c83c1e734f677c6
+  command_id: pr154-manifest-artifact-l6-20260724
+  admitted_at: 2026-07-24T15:10:00.000Z
+  source_digest: sha256:df609519c2e803940e28ff55e5998bb6c9a42cffab38ca8e941731c507bb1dc9
+  decision_digest: sha256:680c219caa307622cc66969e2c33545252b488489d6367da0c6c8dd23e869e65
+  receipt_digest: sha256:9997c4527d6c76a2fa203da1d81d39fb72d1f6675f219147bcd3b6772354b312
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 14
-    content_digest: sha256:33b45e5da1fecd31c69974663466fb20e6ebe121456b7b494b9c634be4afe8d2
+    revision: 15
+    content_digest: sha256:df609519c2e803940e28ff55e5998bb6c9a42cffab38ca8e941731c507bb1dc9
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 14
+      target_revision: 15
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 14
+    target_revision: 15
     phase: forward_merge
-  escape_reason: PR 154 case manifest closure
+  escape_reason: PR 154 case manifest artifact closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -146,6 +146,9 @@ decoded payload、attested envelopeのschema literalと`payload_schema == schema
 F0c/Q0/aggregateはOS lane subject/run/attempt/outcome、expected/executed case set、全lane outcomeから
 successとcoverage欠測0を再導出し、content digestをlookup keyに使わない。
 Q0 expected setはproducer payloadでなく同subjectのimmutable attested CaseManifestObjectを正本とする。
+正本pathは`docs/test-design/harness/L8-integration-test-design.md`、artifact IDは
+`NODE-Q0-CASE-MANIFEST-v1`とし、exact 1 marker pair間のexact 1 JSON objectだけを抽出する。
+duplicate/unknown fieldを拒否し、RFC 8785 canonical object UTF-8 bytesからartifact digestを再計算する。
 Case IDはUTF-8 code-point昇順unique array、set digestは
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`とし、source artifact digestをsubject時点の
 canonical test-design bytesから再計算する。core/outer owner一致、closed mapの`ci`、subject単位の同digest冪等・

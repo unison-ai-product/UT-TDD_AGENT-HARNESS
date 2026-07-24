@@ -619,15 +619,20 @@ payload schema registryへ入れない。未知kind/schema、row追加を伴わ�
 #### `CASE-MANIFEST-v1`
 
 producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
-`{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_test_design_artifact_digest:digest,`（前半）
+`{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_artifact_id:"NODE-Q0-CASE-MANIFEST-v1",`（前半）
+`source_artifact_path:"docs/test-design/harness/L8-integration-test-design.md",source_test_design_artifact_digest:digest,`
 `expected_case_ids:string[] unique sorted nonempty,required_set_digest:digest,producer_owner_id:"q0-case-manifest-gate",`（後半）
-receipt_digest}`である。selfを除くexact 6-field tupleをcore preimageとし、
+receipt_digest}`である。selfを除くexact 8-field tupleをcore preimageとし、`receipt_digest`はこのtupleの
+RFC 8785 canonical JSONをUTF-8化してSHA-256 lowerhexを取ったexact値とする。
 `AttestedReceiptEnvelope<CaseManifestObject>`へ格納する。ownerはEvidenceProducer `ci`へ写像し、
 lookup/refはouter envelope digestだけを使う。Q0 payloadは`case_manifest_envelope_digest`を参照し、
 manifest subjectとpayload subjectを一致させ、executed IDsとexpected IDsのexact set equalityを要求する。
 `expected_case_ids`はUTF-8 code-point昇順のunique arrayとし、`required_set_digest`は
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(expected_case_ids)))`のexact値を要求する。
 `source_test_design_artifact_digest`はsubject GitObjectId時点のcanonical test-design artifact bytesから再計算する。
+artifact extractionは上記pathのBEGIN/END marker exact 1組、その間のJSON object exact 1個だけを許可し、
+duplicate/unknown fieldを拒否する。RFC 8785 canonicalizeしたobjectのUTF-8 bytesからartifact digestを計算する。
+manifestの`expected_case_ids`はparsed JSON arrayと順序を含めexact一致させ、subset/extra/order drift/duplicateを拒否する。
 core `producer_owner_id`はouter `producer_owner_id`と一致させ、closed owner mapによりouter
 `attestation_producer == "ci"`を要求する。typed object storeは
 `UNIQUE(subject_revision, object_kind='q0-case-manifest')`を保証し、同一outer digestの再登録だけを冪等成功、
@@ -798,9 +803,13 @@ digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、
 [physical-data.md](physical-data.md) §2.7.1を参照する。
 head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
 receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
-evidence object tableは`cutover_evidence_objects(receipt_digest PRIMARY KEY, object_digest, evidence_type, payload_json, attestation_json, CHECK(object_digest=receipt_digest))`、
+evidence object tableは`cutover_evidence_objects(receipt_digest PRIMARY KEY, object_digest, evidence_type, object_kind, subject_revision, payload_json, attestation_json, CHECK(object_digest=receipt_digest), CHECK(object_kind IN ('slice-evidence','evidence-payload','review-lane','review-bundle','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(object_kind!='q0-case-manifest' OR subject_revision IS NOT NULL))`、
 参照tableは`cutover_evidence_refs(from_receipt_digest, to_receipt_digest, edge_kind, ordinal, UNIQUE(from_receipt_digest,edge_kind,ordinal))`
 を正本とする。writerは
+`CREATE UNIQUE INDEX uq_cutover_q0_manifest_subject ON cutover_evidence_objects(subject_revision) WHERE object_kind='q0-case-manifest'`
+も正本DDLとして作成する。`subject_revision`はnullable GitObjectId canonical textだがCaseManifestではNOT NULL相当CHECKとする。
+同digest insertだけを冪等成功とし、同subject別digestのUNIQUE violationをfail-closeする。migration/backfillは
+CaseManifestなし既存DBへnullable列、closed kind、partial indexをadditiveに追加し既存rowを捏造しない。
 `PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
 evidence/receipt insert後の更新SQLは
 文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND version=?`

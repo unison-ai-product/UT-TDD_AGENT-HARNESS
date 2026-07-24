@@ -308,3 +308,12 @@ core/outer owner一致と`ci` mapping、subject単位の同digest冪等・異dig
 同一outer digest参照、`cutover_evidence_refs` typed edge traversalを要求し、missing/orphan/split manifestを
 fail-closeする。CAND-CUTOVER-108をL7/L8へ同期し、PLAN-L6-93 revision 14 /
 PLAN-L7-458 revision 17を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 9d5ace1a CaseManifest artifact/DDL局所FLAG
+
+L8内のexact 1 marker pairと単一canonical JSON objectをQ0 case正本へ固定した。CaseManifestへartifact ID/pathを
+封印し、8-field core preimage、RFC 8785/UTF-8/SHA-256 receipt digestを明示した。物理object tableへclosed
+`object_kind`とnullable canonical GitObjectId `subject_revision`、CaseManifest NOT NULL相当CHECK、subject partial
+UNIQUE indexを追加した。同digestだけ冪等、同subject別digestをfail-closeし、既存DB migrationはadditiveとする。
+PLAN-L6-93 revision 15 / PLAN-L7-458 revision 18を正規`plan revise`経路で発行した。
+独立再reviewまではFLAGを維持する。

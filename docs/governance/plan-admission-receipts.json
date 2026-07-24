@@ -672,6 +672,38 @@
         "revision": 17,
         "content_digest": "sha256:dccb77134d047db32db8aa7dcd7646a2bcb4d5504c4ec4f60c69fc267d135a5c"
       }
+    },
+    {
+      "sequence": 43,
+      "previous_record_digest": "sha256:083c630447a9428b729362e25196cff76b8487d351d04afc743aa3a4a024b02a",
+      "record_digest": "sha256:4bd2b45373264adcda9b1badea247bc72b9a8535c815e286ed4d6b3ad896fc07",
+      "command_id": "pr154-manifest-artifact-l6-20260724",
+      "receipt_id": "certificate:0547ba713e545bd37c83c1e734f677c6",
+      "receipt_digest": "sha256:9997c4527d6c76a2fa203da1d81d39fb72d1f6675f219147bcd3b6772354b312",
+      "decision_digest": "sha256:680c219caa307622cc66969e2c33545252b488489d6367da0c6c8dd23e869e65",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 15,
+        "content_digest": "sha256:df609519c2e803940e28ff55e5998bb6c9a42cffab38ca8e941731c507bb1dc9"
+      }
+    },
+    {
+      "sequence": 44,
+      "previous_record_digest": "sha256:4bd2b45373264adcda9b1badea247bc72b9a8535c815e286ed4d6b3ad896fc07",
+      "record_digest": "sha256:1f1cf14c7011ec145f837d5a37fff0db3c206f096b3f28a32ec131cbf45ff51b",
+      "command_id": "pr154-manifest-artifact-l7-20260724",
+      "receipt_id": "certificate:39cd09cd7fb0d2a50322fde4c2e75f2d",
+      "receipt_digest": "sha256:e752117dabb20556037cfcef05b59e8a8a16721733a9bba0a7d7b608f6f7ab48",
+      "decision_digest": "sha256:f3573be012be3eb8378e80af3e816f9f1a6ffa96148c38d7a928d407cbcc6725",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 18,
+        "content_digest": "sha256:c88c34a60ac7f7c815be11ed0150423598406367924ac9a1e732fa8da756976a"
+      }
     }
   ]
 }

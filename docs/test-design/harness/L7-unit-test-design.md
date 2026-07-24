@@ -1708,6 +1708,8 @@ unknown schema versionを棚卸しnegativeにする。Q0 CaseManifest subject/se
 missing/extra/duplicate/set digest driftを個別negativeにする。
 CaseManifestのUTF-8 code-point順違反、RFC8785 digest drift、source artifact digest drift、core/outer owner不一致、
 non-ci mapping、同一subject異digest conflict、q0.authoring/runtime split manifest、typed ref missing/orphanを個別negativeにする。
+wrong artifact path/ID、marker 0/2組、間のJSON 0/2個、duplicate/unknown field、subset omission/extra/order drift、
+partial UNIQUE index conflict、updated 8-field core preimage mutationも個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
