@@ -355,3 +355,10 @@ genesis first receipt/head sequenceを0へ統一した。WorkProvenanceEvent exa
 CandidateAuthorshipへevent outer digest arrayとordinal typed edge exact Nを追加した。commit/path exact coverage、
 event set digest再導出、owner map/typed union/DDLを同期した。PLAN-L6-93 revision 20 /
 PLAN-L7-458 revision 23を正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD d549dcec session/path/CAS局所FLAG
+
+ReviewBundle exact 8/self除外7を同期した。WorkEventへnormalized touched_paths実体を追加しfirst-parent diff exact
+setを要求、merge commitを拒否した。SessionIdentityDigestへraw sessionを置換し、head CASへexpected sequenceと
+MAX receipt sequence整合を追加した。PLAN-L6-93 revision 21 / PLAN-L7-458 revision 24を正規`plan revise`で
+発行した。独立再reviewまではFLAGを維持する。

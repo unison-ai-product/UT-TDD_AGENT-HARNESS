@@ -625,6 +625,9 @@ ContentDigestの全算出式は必ず文字列`"sha256:" + SHA-256-lowerhex(prei
 `IdentityDigest`はContentDigest subtypeである。canonical identity object
 `{identity_schema:"ut-tdd-identity.v1",provider,runtime_family,stable_subject_id}`をRFC 8785 canonicalize→
 UTF-8→`"sha256:"+lowerhex`で算出する。
+`SessionIdentityDigest`もContentDigest subtypeで、canonical object
+`{session_schema:"ut-tdd-session.v1",provider,runtime_family,provider_issued_session_id}`を同じ式で算出する。
+provider-issued attestationを必須とし、raw session stringやaliasを受理しない。
 
 producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
 `{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_artifact_id:"NODE-Q0-CASE-MANIFEST-v1",`（前半）
@@ -703,16 +706,18 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
 
 `WorkProvenanceEventReceipt` coreは
 `{schema_version:"candidate-work-provenance.v1",base_revision:GitObjectId,subject_revision:GitObjectId,`
-`product_commit:GitObjectId,author_identity_digest:IdentityDigest,author_session_id:string,runtime_family:string,`
-`touched_paths_digest:ContentDigest,producer_owner_id:"candidate-work-provenance-gate",receipt_digest:ReceiptDigest}`
-のexact 10 fields/self除外9-field RFC 8785/UTF-8/SHA-256 raw ReceiptDigest preimageを持ち、自身のdigestを
+`product_commit:GitObjectId,author_identity_digest:IdentityDigest,author_session_digest:SessionIdentityDigest,runtime_family:string,`
+`touched_paths:string[] sorted unique nonempty,touched_paths_digest:ContentDigest,producer_owner_id:"candidate-work-provenance-gate",receipt_digest:ReceiptDigest}`
+のexact 11 fields/self除外10-field RFC 8785/UTF-8/SHA-256 raw ReceiptDigest preimageを持ち、自身のdigestを
 preimageへ入れない。Attested envelopeへ格納しcore/outer ownerを一致、closed mapで`ci`へ写像し、
 provider/session attestationを検証する。
+pathはGit tree由来repo-relative UTF-8 NFC、separator `/`、case-sensitiveとし、absolute、`.`、`..`、
+backslash、NUL、invalid UTF-8を拒否する。`touched_paths_digest`はexact arrayのRFC 8785→UTF-8→ContentDigestである。
 
 `CandidateAuthorshipReceipt` coreは
 `{schema_version:"candidate-authorship.v1",subject_revision:GitObjectId,`（前半）
 `artifact_digest:ContentDigest,base_revision:GitObjectId,author_identity_digest_set:IdentityDigest[] sorted unique nonempty,`
-`runtime_family_set:string[] sorted unique nonempty,author_session_id_set:string[] sorted unique nonempty,`
+`runtime_family_set:string[] sorted unique nonempty,author_session_digest_set:SessionIdentityDigest[] sorted unique nonempty,`
 `work_provenance_event_envelope_digests:ReceiptDigest[] sorted unique nonempty,work_provenance_set_digest:ContentDigest,`
 `producer_owner_id:"candidate-custody-gate",receipt_digest:ReceiptDigest}`（後半）の
 exact 11 fields/self除外10-field preimageを持ちAttested envelopeへ格納する。trusted custody gate→`ci`とし、
@@ -721,14 +726,15 @@ forged/omitted writerを拒否し、自由な`author_identity`自己申告field�
 work event outer ReceiptDigest arrayをRFC 8785→UTF-8→`sha256:`+lowerhex化して
 `work_provenance_set_digest`を再導出する。authorship→event edgeは
 `edge_kind='authorship.work-event'`, `ordinal=array index`のexact Nとし、missing/orphan/extra/order/digest mismatchを拒否する。
-base..subject diffの全product commitとchanged product pathをevent `product_commit`とtouched-path digest unionが
-exact coverしなければならない。commit/path omission、foreign subject/base/session/identityを拒否する。
+base..subjectはfirst-parent linearだけを許しmerge commitを拒否する。各commitとfirst parentのdiffから得る
+changed product path exact setを対応event `touched_paths`と一致させる。candidate coverageはevent arraysの
+path unionを直接比較しdigestから復元しない。commit/path omission、foreign subject/base/session/identityを拒否する。
 
 `ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, base_revision,
 authorship_envelope_digest, execution_mode, lanes, receipt_digest }`のexact 8 fields/self除外7-field preimageで、
 `schema_version="review-bundle.v1"`、lanesはexactly twoである。
 各`ReviewLaneReceipt`は`{ schema_version, lane_id, verdict, artifact_digest, subject_revision, provider,
-reviewer_model, execution_mode, runtime_family, reviewer_identity_digest:IdentityDigest, review_session_id, receipt_digest }`とし、lane IDは
+reviewer_model, execution_mode, runtime_family, reviewer_identity_digest:IdentityDigest, review_session_digest:SessionIdentityDigest, receipt_digest }`とし、lane IDは
 `schema_version="review-lane.v1"`だけを許し、unknown versionを拒否する。
 `claim-blind` / `spec-blind`を各1、verdictは両方`PASS`だけを許す。両laneのartifact/revisionはbundleと一致し、
 `execution_mode=hybrid`ではprovider、session、identityがlane間で異なり、reviewer identity/session/runtimeは
@@ -740,9 +746,9 @@ identityがlane間で異なり、reviewerはauthorとも異なる。異model2 la
 authorとも異ならなければならない。人間2名を用意できなければfail-closeする。
 各laneは`receipt_digest`以外のexact 11 fieldを
 `[schema_version,lane_id,verdict,artifact_digest,subject_revision,provider,reviewer_model,`（前半）
-execution_mode,runtime_family,reviewer_identity_digest,review_session_id]`の順で固定tuple/length-frame/SHA-256規則へ
+execution_mode,runtime_family,reviewer_identity_digest,review_session_digest]`の順で固定tuple/length-frame/SHA-256規則へ
 封印する。field欠落、順序変更、version除外又は旧10-field preimageを拒否する。
-bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外のexact 6 field
+bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外のexact 7 field
 `[schema_version, artifact_digest, subject_revision, base_revision, authorship_envelope_digest, execution_mode,`（前半）
 `lanes=[claim-blind.receipt_digest,spec-blind.receipt_digest]]`（後半）
 を同じ規則で封印する。`lanes`に格納する2 digestは各lane coreではなく
@@ -755,7 +761,7 @@ bundle→authorship outer digestのtyped refは`edge_kind='review.authorship'`, 
 D0 top-level 5 inputsは維持する。
 bundle/authorshipのsubject、artifact、baseをexact一致させ、baseはPR admission requestのreview base/merge-base
 GitObjectIdと一致させる。base drift/range truncation/cross-candidateを拒否する。reviewer IdentityDigest setと
-author IdentityDigest setはdisjoint、session IDも別literalとしてdisjoint比較する。
+author IdentityDigest setはdisjoint、SessionIdentityDigest setもdisjoint比較する。
 
 | `producer_owner_id` | `attestation_producer` |
 |---|---|
@@ -790,7 +796,7 @@ unknown/wrong mappingを拒否し、producerを`ci`へ丸めても署名対象re
 同一session、author自身のlaneは全modeで禁止し、Issue #153でもclaim-blind/spec-blind exact 2 laneを減免しない。
 standaloneは上記human 2 lane以外を許可しない。
 
-`ReviewLaneReceipt`、`ReviewBundleReceipt`、`CandidateAuthorshipReceipt`、`SliceAdmissionReceipt`、`CaseManifestObject`の各core receiptは
+`ReviewLaneReceipt`、`ReviewBundleReceipt`、`CandidateAuthorshipReceipt`、`WorkProvenanceEventReceipt`、`SliceAdmissionReceipt`、`CaseManifestObject`の各core receiptは
 `AttestedReceiptEnvelope { schema_version, producer_owner_id, attestation_producer, record,`（前半）
 record_digest, attestation, receipt_digest }`のexact 7-field wrapperへ格納する。`record_digest`は
 `schema_version="attested-receipt-envelope.v1"`だけを許し、unknown versionを拒否する。
@@ -866,11 +872,13 @@ complete marker後だけprojection側でatomic publishする。並行appendは�
 canonical DBは不変とする。
 `PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
 evidence/receipt insert後の更新SQLは
-文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND version=?`
+文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND head_sequence=? AND version=?`
 を実行する。affected rowがexactly 1でなければ
 全insertをrollbackして`cutover-write-conflict`、retry 0とする。genesisは事前作成した
 seedは`{head_digest:null,head_sequence:0,version:0}`、first transition receiptはsequence 0、CAS後headは
 `{digest,head_sequence:0,version:1}`とする。以後next receipt/head sequenceはN+1で、NULL復帰とdouble genesisを拒否する。
+append前に同一transactionで`head_sequence == MAX(cutover_transition_receipts.sequence)`を検証する。
+receipt 0件かつnull headのgenesisだけを例外とし、gap/driftは全rollbackする。
 commit成功をWAL/fsync barrier完了とし、その後だけreceiptを返す。process crash又はcommit errorはrollbackし、
 head/receipt/evidenceが部分可視にならない。抽象in-memory lockや別DBをproduction証拠にしない。
 

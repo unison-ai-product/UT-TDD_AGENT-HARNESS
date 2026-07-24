@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:59af88b57e296b51df3c07756922deaa
-  command_id: pr154-work-event-l6-20260724
-  admitted_at: 2026-07-24T16:00:00.000Z
-  source_digest: sha256:81627a7831267bd89c5394281efc87ea4e56e4fb386e60178943e20a646ec5bb
-  decision_digest: sha256:76b566d67cd93a9fba50be36df308269903aa4339fb5d745e24e543e9da4816a
-  receipt_digest: sha256:28249d81009745dccbf47c9e0b4dfecb28d6834410c97ca8b84c06360397a607
+  receipt_id: certificate:87d89e0fa229bf81a90c885ebf60f3db
+  command_id: pr154-session-path-l6-20260724
+  admitted_at: 2026-07-24T16:10:00.000Z
+  source_digest: sha256:0f1fa79f86a0a3062359ceea8daf0077b80eea72df9ff284f7eaa7001e641665
+  decision_digest: sha256:35a405717784aac533deafe829995c8eeff6f95a43a0995b412ee8ee0ed44578
+  receipt_digest: sha256:917afdd66dd1b9b2fe5f0e1796549ee10963cd6efefe0125185631164c79429f
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 20
-    content_digest: sha256:81627a7831267bd89c5394281efc87ea4e56e4fb386e60178943e20a646ec5bb
+    revision: 21
+    content_digest: sha256:0f1fa79f86a0a3062359ceea8daf0077b80eea72df9ff284f7eaa7001e641665
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 20
+      target_revision: 21
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 20
+    target_revision: 21
     phase: forward_merge
-  escape_reason: PR 154 work event closure
+  escape_reason: PR 154 session path closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -165,6 +165,8 @@ ReviewBundleはprovider-attested CandidateAuthorshipReceiptをnested参照し、
 IdentityDigest、bundle/authorship/PR base exact equality、trusted work eventによるbase..subject全product
 path/commit coverageを要求する。WorkProvenanceEvent exact core/outer、event digest array、ordinal typed edge exact Nを要求する。
 genesisはfirst receipt sequence 0、CAS後head sequence 0/version 1へ遷移しNULLへ戻さない。
+WorkEventはnormalized touched_paths arrayとSessionIdentityDigestを持ち、first-parent diff exact setを照合する。
+merge commitを拒否し、head CAS expected sequenceとMAX receipt sequenceを同一transactionで照合する。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。

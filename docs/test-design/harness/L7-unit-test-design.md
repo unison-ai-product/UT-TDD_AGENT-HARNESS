@@ -1719,6 +1719,8 @@ digest NULL/nonhex/prefix、empty chain ID、negative sequence、migration snaps
 forged author、omitted writer/session、authorship ref欠測/複数を個別negativeにする。
 authorship core preimage mutation、stale/cross candidate、base drift/range truncation、raw reviewer identity、
 IdentityDigest collision attempt、session self-review、genesis NULL→NULL/seq0維持/seq2/非NULL→NULLを個別negativeにする。
+path absolute/dot/dotdot/backslash/NUL/non-NFC/order/omission/digest mismatch、merge commit、session alias/provider
+spoof、work-event wrapper owner mismatch、head/receipt sequence driftを個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
