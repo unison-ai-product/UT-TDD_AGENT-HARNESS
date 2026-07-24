@@ -18,7 +18,8 @@ index bulletはexact §9.3直下、又は論理descendant内でprojection table 
 Red fixturesは§2.7/§9.1 index漏れ、§9.3 positive、実`9.3.1`のtable+2 indexes、outerless table、
 escaped pipeを拘束した。対象Node testは19/19 Green。設計、PLAN、Issue #153許容負債は変更していない。
 
-index受付は§9.3又はlogical descendant 9.3.xだけに限定する。9.3.xではprojection table schema成立後だけ
-同subsectionのbullet indexを受理するため、§9.3.2のnonprojection registryは漏れない。§9.1でprojection tableが
-先に成立しても後続bulletをindex扱いしない。旧`checkedIndexes >= 41`はtarget全節の任意bulletを誤収集した件数で
-あり撤回し、正本§9.3/9.3.1の11 identifier全件・順序exact assertionへ置換した。
+index抽出はsection番号及びprojection table stateから分離し、正本marker `必須 index:` / `必要 index:`直後の
+連続index bullet blockだけを読む。marker直後のblankは許可し、bullet開始後のblank、非index行、headingで終了する。
+これにより§2.7/§9.1の任意bulletを除外しつつ、§9.3.1、§9.5/9.6/9.7/9.9を含む正本54 indexを回収する。
+旧`checkedIndexes >= 41`の下限oracleは撤回し、正本から独立に転記した54 identifierの全件・順序exact assertionへ
+置換した。table headerとseparatorのcell count不一致も非tableとして拒否する。

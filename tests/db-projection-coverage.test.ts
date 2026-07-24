@@ -63,6 +63,49 @@ describe("db-projection-coverage detector", () => {
       "idx_search_subject",
       "idx_refactor_candidates_state",
       "idx_refactor_candidates_plan",
+      "idx_graph_node_type_subject",
+      "idx_graph_path",
+      "idx_dependency_from_kind",
+      "idx_dependency_to_kind",
+      "idx_impact_change_status",
+      "idx_artifact_progress_color",
+      "idx_artifact_progress_tests",
+      "idx_artifact_progress_events_path",
+      "idx_feedback_source",
+      "idx_tool_name_scope",
+      "idx_diagram_scope_format",
+      "idx_mcp_profile_name",
+      "idx_mcp_triggers_signal",
+      "idx_mcp_runs_profile_plan",
+      "idx_verification_profile_type",
+      "idx_verification_recommendations_change",
+      "idx_external_tool_findings_subject",
+      "idx_document_export_profile_family",
+      "idx_document_export_run_family",
+      "idx_document_export_run_snapshot",
+      "idx_document_export_artifact_format",
+      "idx_document_export_triggers_signal",
+      "idx_screens_category",
+      "idx_screen_trace_screen",
+      "idx_spec_defs_owner",
+      "idx_spec_defs_kind_layer_status",
+      "idx_spec_defs_plan",
+      "idx_spec_relations_from_kind",
+      "idx_spec_relations_to_kind",
+      "idx_schedule_plan_status",
+      "idx_schedule_layer_subdoc_status",
+      "idx_activation_profile_status",
+      "idx_activation_version_status",
+      "idx_activation_schedule_plan_profile",
+      "idx_activation_schedule_scope_rag",
+      "idx_document_catalog_layer_subdoc",
+      "idx_document_catalog_doc_type",
+      "idx_spec_rag_closure_rag_status",
+      "idx_spec_rag_closure_spec",
+      "idx_detector_candidates_source",
+      "idx_detector_candidates_filing",
+      "idx_detector_candidates_subject",
+      "idx_agent_contracts_target",
     ]);
     expect(result.missingTables.map((item) => item.table)).not.toContain("spec_defs");
     expect(result.missingIndexes.map((item) => item.name)).not.toContain("idx_spec_defs_owner");
@@ -184,6 +227,20 @@ describe("db-projection-coverage detector", () => {
     expect(requirements.map((requirement) => requirement.table)).toEqual(["aligned_projection"]);
   });
 
+  it("rejects a table when header and separator cell counts differ", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|",
+        "| `mismatched_separator` | `projection_id` | `status` | fixture |",
+      ].join("\n"),
+    );
+
+    expect(requirements).toEqual([]);
+  });
+
   it("accepts a GFM table without outer pipes", () => {
     const requirements = extractDbProjectionRequirements(
       [
@@ -223,6 +280,8 @@ describe("db-projection-coverage detector", () => {
         "|---|---|---|---|",
         "| `refactor_candidates` | `candidate_key` | `state` | fixture |",
         "",
+        "必要 index:",
+        "",
         "- `idx_refactor_candidates_state(state, confidence, last_seen_at)`.",
         "- `idx_refactor_candidates_plan(linked_plan_id, state)`.",
       ].join("\n"),
@@ -241,6 +300,8 @@ describe("db-projection-coverage detector", () => {
     const requirements = extractDbProjectionCoverageRequirements(
       [
         "### §9.3 index と invariant",
+        "",
+        "必須 index:",
         "",
         "- `idx_valid_projection(plan_id, status)`",
         "",
@@ -271,6 +332,8 @@ describe("db-projection-coverage detector", () => {
         "- `not_an_index_from_9_1(plan_id)`",
         "",
         "### §9.3 index と invariant",
+        "",
+        "必須 index:",
         "",
         "- `idx_valid_projection(plan_id, status)`",
       ].join("\n"),

@@ -76,6 +76,8 @@ export interface DbConstraintCoverageResult {
 const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[1345679] .*)/;
 const HEADING_RE = /^(#{1,6})\s+/;
 const TABLE_SEPARATOR_CELL_RE = /^:?-{3,}:?$/;
+const INDEX_MARKER_RE = /^(?:必須|必要) index:$/;
+const INDEX_BULLET_RE = /^\s*-\s+`([^`(]+)\(([^`)]+)\)`/;
 
 function backtickValues(value: string): string[] {
   return [...value.matchAll(/`([^`]+)`/g)].map((match) => match[1]).filter(Boolean);
@@ -134,12 +136,33 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   let section = "";
   let targetDepth = 0;
   let targetSectionNumber: string | undefined;
-  let acceptsIndexBullets = false;
-  let inIndexLogicalDescendant = false;
-  let subsectionHasProjectionTable = false;
+  let indexBlock: "none" | "armed" | "collecting" = "none";
   let pendingHeader: string[] | undefined;
   let tableKind: "none" | "projection" | "other" = "none";
   for (const line of content.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (INDEX_MARKER_RE.test(trimmed)) {
+      indexBlock = "armed";
+      continue;
+    }
+    if (indexBlock !== "none") {
+      if (indexBlock === "armed" && trimmed === "") continue;
+      const indexMatch = INDEX_BULLET_RE.exec(line);
+      if (indexMatch) {
+        indexBlock = "collecting";
+        indexes.push({
+          section,
+          name: indexMatch[1],
+          columns: indexMatch[2]
+            .split(",")
+            .map((column) => column.trim())
+            .filter(Boolean),
+        });
+        continue;
+      }
+      indexBlock = "none";
+    }
+
     const heading = HEADING_RE.exec(line);
     if (heading) {
       const depth = heading[1].length;
@@ -156,12 +179,7 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
       if (TARGET_SECTION_RE.test(line)) {
         targetDepth = depth;
         targetSectionNumber = sectionNumber;
-        acceptsIndexBullets = sectionNumber === "9.3";
-      } else {
-        acceptsIndexBullets = false;
       }
-      inIndexLogicalDescendant = isLogicalDescendant(sectionNumber, "9.3");
-      subsectionHasProjectionTable = false;
       pendingHeader = undefined;
       tableKind = "none";
       continue;
@@ -172,30 +190,17 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
     if (!tableLike) {
       pendingHeader = undefined;
       tableKind = "none";
-      const indexMatch =
-        acceptsIndexBullets || (inIndexLogicalDescendant && subsectionHasProjectionTable)
-          ? line.match(/^\s*-\s+`([^`(]+)\(([^`)]+)\)`/)
-          : undefined;
-      if (!indexMatch) continue;
-      indexes.push({
-        section,
-        name: indexMatch[1],
-        columns: indexMatch[2]
-          .split(",")
-          .map((column) => column.trim())
-          .filter(Boolean),
-      });
       continue;
     }
 
     const cells = splitTableRow(line);
     if (isTableSeparator(cells)) {
-      tableKind = pendingHeader
-        ? isProjectionTableHeader(pendingHeader)
-          ? "projection"
-          : "other"
-        : "none";
-      if (tableKind === "projection") subsectionHasProjectionTable = true;
+      tableKind =
+        pendingHeader && cells.length === pendingHeader.length
+          ? isProjectionTableHeader(pendingHeader)
+            ? "projection"
+            : "other"
+          : "none";
       pendingHeader = undefined;
       continue;
     }
