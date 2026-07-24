@@ -589,7 +589,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const vitest = join(process.cwd(), "node_modules", "vitest", "vitest.mjs");
     const workerConfig = join(process.cwd(), "tests", "workers", "vitest.config.ts");
     const nodeBinary = process.env.UT_TDD_NODE_BIN?.trim() || "node";
-    const children = Array.from({ length: 2 }, () => {
+    const children = Array.from({ length: 2 }, (_, workerIndex) => {
       // workerはNode binaryを明示し、親test runtimeがBunでもBunを再起動しない。
       const child = spawn(
         nodeBinary,
@@ -602,6 +602,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
             UT_TDD_FORWARD_ESCAPE_REPO: repo,
             UT_TDD_FORWARD_ESCAPE_GATE: gate,
             UT_TDD_FORWARD_ESCAPE_READY: ready,
+            UT_TDD_VITEST_CACHE_DIR: join(repo, `.vite-worker-${workerIndex}`),
           },
           stdio: ["ignore", "pipe", "pipe"],
           windowsHide: true,

@@ -7,5 +7,11 @@ export default defineConfig({
     exclude: ["node_modules/**", "dist/**", "coverage/**", ".git/**", "**/.ut-tdd/**"],
     testTimeout: 30_000,
     globalSetup: ["tests/global-setup.ts"],
+    pool: "threads",
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 });
