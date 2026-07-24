@@ -148,3 +148,12 @@ L5を正本として11-field schema、review/admission row等価、D0→F0a→F0
 `PLAN-RECOVERY-16` + `PLAN-L7-452` typed evidence、registry row順UTF-8 JSON length-frame SHA-256を固定した。
 functions→`src/runtime/cutover-transition.ts`→`tests/cutover-transition.test.ts`とnegative/cross-OS候補を
 L4-L9へ降下した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 3f0d0ee9 claim/spec FLAG
+
+slice admissionがreceipt schema/commit acceptanceとして未完、production edgeのreview/admissionが部分的、
+evidence receipt digest未固定、L5↔L8 candidate誤参照、chain append競合、zod SSoT、2-lane review bundleが
+未閉鎖だった。D0→F0a→F0b→F0c→Q0をedit-start gateではなくcandidate commit merge admissionへ固定し、
+schema→runtime→test artifact closureを追加した。全edge fresh claim/spec PASS bundle+approved admission、
+sequence+expected headのexclusive-lock atomic CAS、chain-only再検証、専用`CAND-CUTOVER-101..107`を
+L4-L9へ降下した。PLAN ownershipをIssue #152 projectionの正本とし、独立再reviewまではFLAGを維持する。

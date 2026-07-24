@@ -29,9 +29,15 @@ generates:
     artifact_type: json_config
   - artifact_path: src/lint/bun-permanent-ban.ts
     artifact_type: source_module
+  - artifact_path: src/schema/cutover-transition.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/node-slice-admission.ts
+    artifact_type: source_module
   - artifact_path: src/runtime/node-bootstrap.ts
     artifact_type: source_module
   - artifact_path: src/runtime/cutover-transition.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/node-slice-admission.ts
     artifact_type: source_module
   - artifact_path: src/runtime/runtime-image-observer.ts
     artifact_type: source_module
@@ -46,6 +52,8 @@ generates:
   - artifact_path: tests/node-self-host-bootstrap.test.ts
     artifact_type: test_code
   - artifact_path: tests/cutover-transition.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/node-slice-admission.test.ts
     artifact_type: test_code
   - artifact_path: tests/runtime-image-observer.test.ts
     artifact_type: test_code
@@ -100,14 +108,17 @@ repo-wide final deletionは別revisionであり、F0/Q0完了をBun-ban final完
 `NodeBootstrap`はreview済みlock graphからcompiled ESM entrypointを生成・照合し、実際に起動したNode/npm executable identity、external dependency closure、core digest、package-lock digest、build policy、subject revisionを`NodeBootstrapReceipt`へ封印する。CLIとreceiptは同一immutable generationへ置き、append-only activation markerで公開する。readerはvalidated markerの最高complete sequenceだけを採用し、途中失敗や並行readerへpartial generationを見せない。Node失敗時にBun、tsx、bunx、TS直実行へfallbackしない。
 
 `src/runtime/cutover-transition.ts`が将来生成する`CutoverTransitionReceipt`は
-`schema_version, registry_id, transition_id, subject_revision, previous_state, current_state,
+`schema_version, registry_id, transition_id, sequence, subject_revision, previous_state, current_state,
 evidence_set_digest, review_digest, admission_digest, previous_receipt_digest, receipt_digest`の
-11 fieldだけを持つ。L5 `CUTOVER-EVIDENCE-REGISTRY-v1`のcanonicalizationとrow等価条件を実装し、
+12 fieldだけを持つ。zod正本`src/schema/cutover-transition.ts`からL5
+`CUTOVER-EVIDENCE-REGISTRY-v1`のcanonicalization、2-lane review bundle、row等価条件、CASを実装し、
 `tests/cutover-transition.test.ts`が同じfunction boundaryをpair検証する。
+slice admissionはzod `src/schema/node-slice-admission.ts`→kernel
+`src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`のclosureとする。
 
 ## 4. TDD order
 
-1. unit `CAND-NODEBOOT-001..020`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`、cutover unit `CAND-CUTOVER-001..009`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をowner revisionの同一commitへ追加し、Red実測を記録した場合だけ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
+1. unit `CAND-NODEBOOT-001..020`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`、cutover unit `CAND-CUTOVER-001..009`、cutover integration `CAND-CUTOVER-101..107`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をowner revisionの同一commitへ追加し、Red実測を記録した場合だけ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
 2. F0aはexact pin、clean `npm ci`、lock graph再現性だけをRed→Green化する。
 3. F0bはcompiled generation、receipt、executable custody、activation admissionをRed→Green化する。
 4. F0cはLinux/Windows jobとaggregateをRed→Green化する。
@@ -145,10 +156,10 @@ repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisio
 | `CAND-NODEBOOT-014` | automatic GC、generation deletion API、cleanup経由deleteを注入する | F0 scanner/ASTで削除surface 0、全immutable generation保持 |
 | `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
-| `CAND-NODEBOOT-017` | reviewed D0 receiptなしでF0aを開始 | work dispatch 0、`node-slice-prerequisite-missing` |
-| `CAND-NODEBOOT-018` | F0a custody receiptなし/失敗/別revisionでF0bを開始 | build dispatch 0、typed dependency拒否 |
-| `CAND-NODEBOOT-019` | F0b sealed build receiptなし/失敗/別revisionでF0cを開始 | CI dispatch 0、typed dependency拒否 |
-| `CAND-NODEBOOT-020` | F0c aggregate receiptなし/失敗/別revisionでQ0を開始 | fixture/detector dispatch 0、typed dependency拒否 |
+| `CAND-NODEBOOT-017` | candidate F0a commitへreviewed D0 receiptなし | merge admission拒否、rejected receipt。gate test/kernelをproduct changeより先にTDDし同一commitを検証 |
+| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
+| `CAND-NODEBOOT-019` | candidate F0c commitへF0b sealed build receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
+| `CAND-NODEBOOT-020` | candidate Q0 commitへF0c aggregate receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 
 ### 4.2 Cutover候補unit trace
 
@@ -169,6 +180,20 @@ function実装先は`src/runtime/cutover-transition.ts`、pair testは`tests/cut
 artifactを実装済みとは主張しない。
 inventory_frozen→node_shadowでは各F0 receiptのsubjectはproducer slice commit digestであり、transition
 candidate HEADが全commitのdescendantであることを検証する。同一subject強制はせず、stale/replay/non-ancestorを拒否する。
+
+### 4.3 Cutover候補integration trace
+
+| 候補ID | 結合入力 | Green oracle |
+|---|---|---|
+| `CAND-CUTOVER-101` | empty headへ2 writer genesis CAS | sequence 0が1件、loser conflict、double genesis 0 |
+| `CAND-CUTOVER-102` | 同一expected headへ2 append | latest+1が1件、fork 0、loser retry/write 0 |
+| `CAND-CUTOVER-103` | evidence/receipt append各barrierでcrash | atomic transactionにより両方存在又は両方0、partial chain 0 |
+| `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
+| `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
+| `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 acceptance chain | 正規owner/subject/required inputのapproved receiptだけ連結 |
+| `CAND-CUTOVER-107` | review bundle片lane/同一reviewer/artifact drift | 全production edge append 0 |
+
+pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。
 
 予定実装トレースは`src/runtime/node-bootstrap.ts`、`scripts/build-node.mjs`、
 `src/state-db/stop-refresh.ts`、compiled Nodeを呼ぶhook設定、CLI wrapper、snapshot runnerへ接続する。
@@ -196,7 +221,8 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 - **Q0**: compiled Node CLIでNode-only Bun detector/ban audit、fixture authoring、receipt verifyを実装・実行し、
   Bun/bunx/tsx/TS/shell process 0とcoverage欠測0を独立観測する。
 - **slice admission**: F0aはreview済みD0、F0bはF0a custody、F0cはF0b sealed build、Q0はF0c aggregateを
-  typed prerequisiteとして要求し、早期開始、別revision、失敗receiptをwork dispatch前に拒否する。
+  typed prerequisiteとして要求する。CAND-017..020はedit-start gateではなくcandidate commit acceptanceであり、
+  早期slice、別revision、失敗receiptをmerge admissionで拒否する。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
 
 ### CAND ownership
@@ -207,12 +233,27 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 | F0b sealed build | `CAND-NODEBOOT-001..016`, `018`, `102`, `205` |
 | F0c CI | `CAND-NODEBOOT-019`, `103..106`, `206` |
 | Q0 | `CAND-NODEBOOT-020`, `201..204` |
-| cutover revision | `CAND-CUTOVER-001..009`, `CAND-NODEBOOT-207` |
+| cutover revision | `CAND-CUTOVER-001..009`, `CAND-CUTOVER-101..107`, `CAND-NODEBOOT-207` |
 | final deletion | `CAND-NODEBOOT-208` |
 
 候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。
 `src/runtime/cutover-transition.ts` / `tests/cutover-transition.test.ts`のartifact boundary ownerは
 cutover revisionであり、slice admission候補の個別Red→Greenは上表のtarget slice ownerが同じpairへ追加する。
+schema/admission kernel/test artifact boundaryも本PLAN ownership表を正本とし、Issue #152のowner projectionは
+この表へ同期する。外部Issue本文はownership正本を上書きしない。
+
+### SliceAdmission producer registry
+
+| slice_id | canonical producer ID |
+|---|---|
+| `d0` | `d0-design-owner` |
+| `f0a` | `f0a-toolchain-owner` |
+| `f0b` | `f0b-sealed-build-owner` |
+| `f0c` | `f0c-ci-owner` |
+| `q0` | `q0-qualification-owner` |
+
+`SliceAdmissionReceipt.producer`はこの表だけを受理する。D0 genesisを含む各positive/negative transitionは
+target `slice_id`のproducerと一致しなければならず、owner代行又は曖昧な共有ownerを拒否する。
 
 `CAND-BUNBAN-*`はD0-Nでは定義もfreezeもしない。Node self-hostが動作した後、既存のBun禁止PLANを
 別revisionで更新して候補IDとoracleを定義する。それ以前に未定義IDのGreenまたは予約済みを主張しない。

@@ -1408,10 +1408,10 @@ fail-closeし、通常はgit revertから新revisionをbuildする。F0bはautom
 lease recovery/steal/clearを実装しない。CLI先行・receipt後行の二段rename、既存pointer上書き、
 shell/native helper fallbackは契約違反である。
 
-`initializeCutoverChain`は空chainだけでinventory/review/admission evidence setを検証してgenesisを作る。
+`initializeCutoverChain`は空chain、sequence 0、expected head nullだけでinventory/review/admission evidence setを検証してgenesisを作る。
 `appendCutoverTransition`は空chainを拒否し、validated receipt chain、previous/current state、subject revision、evidence receipt、
 review/admission receiptを受け、許可された隣接一方向遷移だけをappendする。返す
-`CutoverTransitionReceipt`の唯一のfield順は`schema_version`、`registry_id`、`transition_id`、
+`CutoverTransitionReceipt`の唯一のfield順は`schema_version`、`registry_id`、`transition_id`、`sequence`、
 `subject_revision`、`previous_state`、`current_state`、`evidence_set_digest`、`review_digest`、
 `admission_digest`、`previous_receipt_digest`、`receipt_digest`である。別名`evidence_digest` /
 `chain_digest`は受理しない。precondition不成立、skip/reverse/replay、revision又はchain不一致はtyped errorでfail-closeし、
@@ -1425,16 +1425,24 @@ edge registryはL5のgenesis、inventory→shadow、shadow→primary、primary�
 5 Edge IDを`CUTOVER-EVIDENCE-REGISTRY-v1`から識別unionとして実装し、別edgeのevidence型を受理しない。
 inventory→shadowだけは各producer receiptのslice commit subjectとcandidate HEADのdescendant closureを検証し、
 同一subjectを要求しない。transition receiptはcandidate HEADをsubjectとし、stale/replay/non-ancestorを拒否する。
-`review_digest` / `admission_digest`は対応registry rowのevidence receipt `receipt_digest`とexact一致し、row不存在時は
-`null`を要求する。`evidence_set_digest`はregistry row順の固定tupleをUTF-8 canonical JSON、
+`review_digest` / `admission_digest`は全edgeで非nullかつ対応registry rowのevidence receipt
+`receipt_digest`とexact一致する。`evidence_set_digest`はregistry row順の固定tupleをUTF-8 canonical JSON、
 decimal byte-length framing、SHA-256 lowercase hexで算出し、duplicateとcross-OS差を拒否する。
 sealed edgeは`PLAN-RECOVERY-16` / `PLAN-L7-452`のtyped rowを両方要求する。
+`SliceEvidenceReceipt`もschema version+固定tuple+同じdigest規則を使う。`ReviewBundleReceipt`は
+claim-blind/spec-blindのexact 2 lane PASS、unique lane/reviewer/session/runtime family、artifact/revision一致、
+author independenceを要求する。chain entryだけでbundle/admission/evidenceを再検証可能にする。
+append commandはlatest sequence+1とexpected previous digestを要求し、exclusive lock内CASでreceipt+evidenceを
+atomic appendする。double genesis、fork、CAS loser、crash partialをtyped failureにする。
 
-`admitNodeSlice`はD0→F0a→F0b→F0c→Q0の一方向FSMを実装し、F0b/F0c/Q0へそれぞれ直前の
-F0a custody/F0b sealed build/F0c aggregate receiptを要求する。早期slice、receipt欠落、別revision、
-skip/replayはtyped failureとする。順序内の非activation F0 build/verify及びQ0 fixture/detectorだけを
-bootstrap envelopeで許可し、production actionはL6 confirmed+D0 admissionまで拒否する。
+`admitNodeSlice`はversion/slice/predecessor/subject/required inputs/decision/producer/receipt digestを持つ
+zod receiptでD0→F0a→F0b→F0c→Q0を実装する。F0b/F0c/Q0へそれぞれ直前のF0a custody/F0b sealed build/
+F0c aggregate receiptを要求する。`CAND-NODEBOOT-017..020`はedit-start hookでなくcandidate commitのmerge admissionで、
+gate test/schema/runtimeをproduct changeより先にTDD実装し同一commitを評価する。receipt欠落、別revision、owner違反、
+skip/replayはrejected receiptを残しmergeを拒否する。
 
-これら4関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState` /
-`admitNodeSlice`の実装先は`src/runtime/cutover-transition.ts`、pair testは
-`tests/cutover-transition.test.ts`であり、D0では将来生成契約としてfreezeする。
+cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
+`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。
+`admitNodeSlice`のkernel/testは`src/runtime/node-slice-admission.ts` /
+`tests/node-slice-admission.test.ts`、zod正本は`src/schema/cutover-transition.ts` /
+`src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。

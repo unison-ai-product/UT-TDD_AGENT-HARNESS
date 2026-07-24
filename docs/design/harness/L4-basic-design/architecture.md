@@ -220,17 +220,23 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 TypeScriptのdomain/control planeはcompiled ESMとしてNode上で自己ホストする。移行状態は
 `inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向であり、
 各遷移をsubject revisionへ拘束したTypeScript-owned append-only `CutoverTransitionReceipt` chainで証明する。
-receiptの唯一のschemaは`schema_version`、`registry_id`、`transition_id`、`subject_revision`、
+receiptの唯一のschemaは`schema_version`、`registry_id`、`transition_id`、`sequence`、`subject_revision`、
 `previous_state`、`current_state`、`evidence_set_digest`、`review_digest`、`admission_digest`、
-`previous_receipt_digest`、`receipt_digest`である。review/admission digestは対応registry rowの
-evidence receipt `receipt_digest`とexact一致し、row不存在時は`null`とする。
+`previous_receipt_digest`、`receipt_digest`である。全edgeのfresh review/admission digestは非nullで、
+対応registry rowのevidence receipt `receipt_digest`とexact一致する。
 非隣接、skip、reverse、replay、chain不一致をfail-closeする。状態projectionはvalidated chainから再構築する。
 genesisはnull previous fieldsとinventory evidence+review/admissionを持ち、空chainは`uninitialized`で開始不可とする。
 F0a/F0b/F0c receiptは各producer commitをsubjectとし、node_shadow candidate HEADが全commitのdescendantである
 closureを検証する。transition receipt自体はcandidate HEADをsubjectにする。
-slice admissionはD0→F0a→F0b→F0c→Q0のtyped一方向FSMとし、各sliceは直前sliceの成功receiptを要求する。
+genesisはsequence 0/head null、通常appendはlatest+1とexpected head一致を要求し、exclusive lock内CASで
+receipt+evidenceをatomic appendする。fork、double genesis、CAS loser、partial appendを拒否する。
+slice admissionはD0→F0a→F0b→F0c→Q0のtyped一方向FSMとし、各candidate commitのmerge admissionが
+直前sliceの成功receiptを要求する。edit-start自己gateにはしない。
 review済みD0 draft下で許可するのは順序内の非activation build/verifyとQ0 fixture/detector workだけであり、
 production activation、hook/runtime switch、Bun final deletion、cutoverはconfirmed L6+D0 admissionまで禁止する。
+zod SSoTは`src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`、runtimeは
+`src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、pair testは
+`tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ固定する。
 Node parity前に旧Bun経路を削除せず、
 `node_primary`後にBun、bunx、tsx、TS直実行、shellへfallbackしない。
 

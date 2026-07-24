@@ -70,7 +70,7 @@ power-loss durable activationはResource Kernel bundle側trust floorへ委譲す
 
 1. 最新`CutoverTransitionReceipt`を`previous_receipt_digest`→`receipt_digest` chain込みで検証し、projection値を入力正本にしない。
 2. edge別の必要evidenceは直後の厳密registryだけをSSoTとし、各transitionは対応rowを完全一致で満たす。
-3. 次receiptはL5正本の11 field schemaだけを持ち、canonical encodingして`receipt_digest`を生成しappendする。
+3. 次receiptはL5正本の12 field schemaだけを持ち、canonical encodingして`receipt_digest`を生成しappendする。
 4. invalid state、非隣接遷移、reverse、skip、別revision replay、digest欠落/不一致は書込み前にfail-closeする。
 5. state projectionはvalidated receipt chainをfoldして再構築し、receiptなしの直接更新を拒否する。
 
@@ -81,9 +81,12 @@ edge evidenceの唯一のcanonical registryは
 `review_digest` / `admission_digest`と対応evidence rowの等価条件、deterministic `evidence_set_digest`、
 sealed edgeの`PLAN-RECOVERY-16` + `PLAN-L7-452`両方必須条件も同registryを規範参照する。
 functionsは`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`へ固定する。
+全edgeでfresh 2-lane `ReviewBundleReceipt`とapproved admissionを要求する。initialize/appendは
+sequence、expected previous head、exclusive lock内atomic CASを使い、fork/double genesis/CAS loser/crash partialを拒否する。
 
 ## 4. Pair
 
-L8の`CAND-NODEBOOT-101..106`とpair-freezeし、競合writer、全crash barrier、rollback、GC禁止を
-検証する。各候補はL7-458のcandidate ownership表に定めるowner sliceでtestとimplementationを同一commitへ
-追加し、Red実測するまで正式`IT-*`へ昇格しない。
+L8 `CAND-NODEBOOT-101..106`はtoolchain/build/CI結合だけとpairし、cutover競合へ流用しない。
+cutoverのCAS、fork、crash、rollback、GC、slice FSMはL8 `CAND-CUTOVER-101..107`とpair-freezeする。
+各候補はL7-458 ownership表のowner revisionでtestとimplementationを同一commitへ追加し、
+Red実測するまで正式`IT-*`へ昇格しない。

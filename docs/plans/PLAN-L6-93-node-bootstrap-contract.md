@@ -67,22 +67,23 @@ D0文書だけでは正式test IDまたはGreenを主張しない。
 slice admissionは`admitNodeSlice(input)`で`d0_reviewed → f0a_complete → f0b_complete →
 f0c_complete → q0_complete`だけを進める。F0aはreview済みD0 draft receipt、F0bはF0a custody receipt、
 F0cはF0b sealed build receipt、Q0はF0c aggregate receiptをexactly one要求する。typed dependencyの
-欠落、失敗、別revision、skip/replayはslice work開始前に拒否する。Issue #153 envelopeが許可するのは
+欠落、失敗、別revision、skip/replayはcandidate commitのmerge admissionで拒否する。gate test/schema/runtimeは
+product changeより先にTDDし同一commitへ含める。Issue #153 envelopeが許可するのは
 順序内の非activation build/verifyとQ0 fixture/detector workだけであり、production activation、
 hook/runtime switch、Bun final deletion、cutoverはL6 confirmed+D0 admissionまで禁止する。
 
 ## 4. Cutover function contract
 
-`initializeCutoverChain(input)`は空chainでのみ許可し、inventory/review/admission evidence setをexact検証して
+`initializeCutoverChain(input)`は空chain、`sequence=0`、`expected_previous_receipt_digest=null`でのみ許可し、inventory/review/admission evidence setをexact検証して
 genesisを作る。非空chainは`cutover-genesis-already-initialized`。`appendCutoverTransition(input)`は空chainを
 `cutover-chain-uninitialized`で拒否し、validated chain、expected previous/current state、subject revision、
 evidence receipt、review/admission receiptを受ける。preconditionはL6 confirmed、両receiptのrevision一致、
-許可された隣接一方向遷移、`previous_receipt_digest`一致である。postconditionは
-`CutoverTransitionReceipt { schema_version, registry_id, transition_id, subject_revision,
+許可された隣接一方向遷移、`sequence=latest+1`、`expected_previous_receipt_digest=latest.receipt_digest`である。postconditionは
+`CutoverTransitionReceipt { schema_version, registry_id, transition_id, sequence, subject_revision,
 previous_state, current_state, evidence_set_digest, review_digest, admission_digest,
 previous_receipt_digest, receipt_digest }`をappendし、projectionが同じcurrent stateを返すこと。
-別名`evidence_digest` / `chain_digest`は拒否する。review/admission top-level digestは対応registry rowの
-evidence receipt `receipt_digest`とexact一致し、row不存在時は`null`とする。
+別名`evidence_digest` / `chain_digest`は拒否する。全edgeでfresh review bundle/admissionを要求し、
+top-level digestは非nullかつ対応evidence receipt `receipt_digest`とexact一致する。
 invalid/skip/reverse/replayは`cutover-transition-invalid`、revision不一致は`cutover-revision-mismatch`、
 review/admission不足は`cutover-admission-not-ready`、chain不一致は`cutover-chain-invalid`でfail-closeする。
 `projectCutoverState(receipts)`はvalidated chainだけから状態を導出し、DB current値を入力正本にしない。
@@ -98,7 +99,14 @@ descendant closureを検証する。transition receiptのsubjectはcandidate HEA
 registry row order、固定tuple、UTF-8 canonical JSON、decimal byte-length framing、SHA-256 lowercase hexによる
 `evidence_set_digest`を要求し、duplicate、cross-OS drift、tuple mutationを拒否する。sealed edgeは
 `PLAN-RECOVERY-16`と`PLAN-L7-452`のtyped evidenceを両方要求し、片方だけでは遷移しない。
+`SliceEvidenceReceipt`自体もversion付き固定tupleを同じencodingで封印する。review bundleは
+claim-blind/spec-blind各1 PASS、lane/reviewer/session/runtime family一意、artifact/revision一致、author独立を要求する。
+chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic
+appendし、CAS loser、fork、double genesis、crash partialを拒否する。
 
-`initializeCutoverChain`、`appendCutoverTransition`、`projectCutoverState`、`admitNodeSlice`の将来実装先は
+`initializeCutoverChain`、`appendCutoverTransition`、`projectCutoverState`の将来実装先は
 `src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。現在のD0 PRは
 このfunctions→source→test生成契約だけをfreezeし、source/test artifactを実装済みとは主張しない。
+zod schema正本は`src/schema/cutover-transition.ts`と`src/schema/node-slice-admission.ts`、
+`admitNodeSlice` runtime/testは`src/runtime/node-slice-admission.ts` /
+`tests/node-slice-admission.test.ts`である。

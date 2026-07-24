@@ -322,3 +322,23 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 
 F0aはtoolchain、F0bはsealed generation、F0cはworkflow配線とaggregateを所有する。
 toolchain、build/receipt、CI YAMLを同じ原子PRへ再結合しない。
+
+## Node cutover候補integration pair（Issue #152 D0-N）
+
+cutoverの競合・永続化・slice admissionはbuild-image用`CAND-NODEBOOT-101..106`へ混在させず、
+PLAN-L7-458 `CAND-CUTOVER-101..107`とexact pairにする。D0では候補であり、source/testとRed実測を
+owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ昇格する。
+
+| 候補ID | 結合条件 | Green oracle |
+|---|---|---|
+| `CAND-CUTOVER-101` | empty headへ2 writer genesis CAS | sequence 0が1件、loser conflict、double genesis 0 |
+| `CAND-CUTOVER-102` | 同一expected previous receiptへ2 append | latest+1が1件、fork 0、loser retry/write 0 |
+| `CAND-CUTOVER-103` | evidence/receipt append各barrierでprocess crash | atomic transactionで両方存在又は両方0、partial chain 0 |
+| `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
+| `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
+| `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 admission chain | 正規owner/subject/required inputだけapproved、skip/replay拒否 |
+| `CAND-CUTOVER-107` | claim/spec lane片欠け、同一reviewer、artifact/revision drift | 全production edge append 0 |
+
+zod schema `src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`からruntime
+`src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、test
+`tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ同一candidateをtraceする。

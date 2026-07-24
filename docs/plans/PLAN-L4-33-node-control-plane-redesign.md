@@ -63,7 +63,7 @@ Node runtime/build image/cutoverに関する差分だけを本PLANが所有す�
 
 cutoverは`inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の5状態だけを許す。
 状態変更の正本はTypeScriptが発行するappend-only `CutoverTransitionReceipt` chainであり、各receiptは
-`schema_version`、`registry_id`、`transition_id`、`subject_revision`、`previous_state`、`current_state`、
+`schema_version`、`registry_id`、`transition_id`、`sequence`、`subject_revision`、`previous_state`、`current_state`、
 `evidence_set_digest`、`review_digest`、`admission_digest`、`previous_receipt_digest`、`receipt_digest`を持つ。
 別名`evidence_digest` / `chain_digest`は持たない。隣接する一方向遷移以外、状態skip、reverse、別revision replay、
 evidence/review欠落、chain不一致はfail-closeする。DB/UIのcurrent stateはreceipt chainから再構築するprojectionであり、
@@ -76,9 +76,13 @@ validated genesis digestだけがchain headになる。
 各producer slice commitをsubjectとし、candidate HEADが全commitのdescendantであるancestry closureを要求する。
 evidence setとreceipt digestのcanonicalization、review/admission rowとのdigest等価条件、sealed edgeの
 必須負債2件はL5 `CUTOVER-EVIDENCE-REGISTRY-v1`を規範参照する。
+全production edgeはfresh claim-blind+spec-blind PASS bundleとapproved admissionを要求する。chain entryは
+evidence receiptsも保持し外部再照会なしで検証する。genesis/appendはsequenceとexpected headの
+exclusive-lock CASでatomic化し、fork/double genesis/crash partialを拒否する。
 
 slice admissionは`d0_reviewed → f0a_complete → f0b_complete → f0c_complete → q0_complete`だけを許し、
-F0b/F0c/Q0はそれぞれF0a custody/F0b sealed build/F0c aggregate receiptをtyped dependencyとして要求する。
+各candidate commitのmerge admissionでF0b/F0c/Q0はそれぞれF0a custody/F0b sealed build/F0c aggregate
+receiptをtyped dependencyとして要求する。edit-start gateにはしない。
 review済みD0 draftが許可するのは順序内の非activation workだけで、production activation、hook/runtime switch、
 Bun final deletion、cutoverはL6 confirmed+D0 admissionまで禁止する。
 

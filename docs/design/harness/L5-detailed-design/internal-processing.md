@@ -412,10 +412,30 @@ F0b rollbackは同一`subject_revision`の検証済み旧generationを指す、�
 ### Node slice admission FSM
 
 slice admissionは`d0_reviewed → f0a_complete → f0b_complete → f0c_complete → q0_complete`の
-一方向typed FSMとする。各commandは直前stateのreceipt digestを入力し、target sliceとsubject revisionへ
-拘束した`SliceAdmissionReceipt`をappendする。F0aはreview済みD0 draft receipt、F0bはF0a
+一方向typed FSMとする。D0 genesisはreview済みD0 draft+bootstrap envelopeを入力として
+`slice_id=d0`、`predecessor_receipt_digest=null`で作る。各後続commandは直前stateのreceipt digestを入力し、
+target sliceとsubject revisionへ拘束した`SliceAdmissionReceipt`をappendする。F0aはD0 genesis、F0bはF0a
 `f0a.static-custody`、F0cはF0b `f0b.sealed-generation`、Q0はF0c `f0c.os-jobs` aggregateを
-exactly one要求する。receipt欠落、別slice、別revision、失敗、replay、skipはwork開始前にfail-closeする。
+exactly one要求する。receipt欠落、別slice、別revision、失敗、replay、skipはcandidate commitのmerge
+admissionでfail-closeする。
+
+`SliceAdmissionReceipt`のzod正本は`src/schema/node-slice-admission.ts`であり、唯一のschemaは
+`{ schema_version, slice_id, predecessor_receipt_digest, subject_revision,
+required_input_receipt_digests, decision, producer, receipt_digest }`である。
+`schema_version="node-slice-admission.v1"`、`slice_id=d0|f0a|f0b|f0c|q0`、
+`decision=approved|rejected`、producerはPLAN-L7-458 ownership表の正規owner IDとする。
+required input digestsはslice別registry順の重複なしarrayであり、UTF-8固定順JSON arrayを
+`<decimal byte length>:<JSON bytes>`でframeし、`receipt_digest`以外の7 fieldをSHA-256 lowercase hex化する。
+positive transitionは直前approved receipt、同一subject lineage、全required input成功時だけapprovedをappendする。
+negative transitionは欠落、rejected input、owner不一致、revision drift、skip/replayをtyped rejected receiptとして
+残し、次stateへ進めない。
+
+`CAND-NODEBOOT-017..020`は編集開始前の自己gateではない。各sliceのcandidate testとadmission
+schema/runtimeをTDD順で当該slice product changeより先に作り、同じcandidate commitへ含める。
+merge admissionがその完成commitに対してgateを実行し、approved receiptが無ければmergeを拒否する。
+admission kernelは`src/runtime/node-slice-admission.ts`、pair testは
+`tests/node-slice-admission.test.ts`であり、D0→F0a→F0b→F0c→Q0の正規ownerは
+PLAN-L7-458 ownership表を正本とする。
 
 このFSMが許可するのは、Issue #153の期限付きbootstrap envelope内で行う非activation F0a/F0b/F0c
 build/verifyとQ0 fixture/detector workだけである。production activation、hook/runtime switch、
@@ -440,33 +460,41 @@ edge evidence registryはtransition discriminatorごとにrequired kind/count/pr
 | Edge ID | kind ID | count | producer ID | revision rule |
 |---|---|---:|---|---|
 | `cutover.genesis` | `inventory.freeze` | 1 | `inventory-freezer` | `candidate-head` |
-| `cutover.genesis` | `review.approved` | 1 | `reviewer` | `candidate-head` |
-| `cutover.genesis` | `admission.d0` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.genesis` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.genesis` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
 | `cutover.inventory-frozen.node-shadow` | `f0a.static-custody` | 1 | `f0a-gate` | `producer-ancestor` |
 | `cutover.inventory-frozen.node-shadow` | `f0b.sealed-generation` | 1 | `f0b-gate` | `producer-ancestor` |
 | `cutover.inventory-frozen.node-shadow` | `f0c.os-jobs` | 1 | `f0c-gate` | `producer-ancestor` |
+| `cutover.inventory-frozen.node-shadow` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.inventory-frozen.node-shadow` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
 | `cutover.node-shadow.node-primary` | `q0.authoring` | 1 | `q0-authoring` | `candidate-head` |
 | `cutover.node-shadow.node-primary` | `q0.runtime-no-fallback` | 1 | `q0-runtime` | `candidate-head` |
+| `cutover.node-shadow.node-primary` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.node-shadow.node-primary` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
 | `cutover.node-primary.bun-removed` | `inventory.zero` | 1 | `ban-audit` | `candidate-head` |
 | `cutover.node-primary.bun-removed` | `pack.acceptance` | 1 | `pack-gate` | `candidate-head` |
-| `cutover.node-primary.bun-removed` | `review.approved` | 1 | `reviewer` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
 | `cutover.bun-removed.sealed` | `debt.plan-recovery-16.repaired` | 1 | `plan-recovery-16-gate` | `candidate-head` |
 | `cutover.bun-removed.sealed` | `debt.plan-l7-452.repaired` | 1 | `plan-l7-452-gate` | `candidate-head` |
-| `cutover.bun-removed.sealed` | `admission.d0` | 1 | `admission-gate` | `candidate-head` |
 | `cutover.bun-removed.sealed` | `issue.153-closed` | 1 | `github-evidence` | `candidate-head` |
 | `cutover.bun-removed.sealed` | `aggregate.success` | 1 | `aggregate-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
 
 全rowでEdge ID、kind ID、producer ID、count、revision rule、digest、successをexact照合する。receipt schemaは
-種別で分離する。`SliceEvidenceReceipt { edge_id, kind_id, producer_id, subject_revision,
-evidence_digest, success, receipt_digest }`の`subject_revision`はproducer slice commitであり、
-`receipt_digest`は先行fieldを固定順canonical encodingして封印する。
+種別で分離する。`SliceEvidenceReceipt { schema_version, edge_id, kind_id, producer_id,
+subject_revision, evidence_digest, success, receipt_digest }`の`schema_version`は
+`cutover-evidence.v1`、`subject_revision`はproducer slice commitである。先行7 fieldを固定順JSON arrayへ
+射影し、UTF-8 canonical JSON、decimal byte-length framing、SHA-256 lowercase hexで
+`receipt_digest`を算出する。未知field、別version、duplicate、locale/改行/path separator差を拒否する。
 `CutoverTransitionReceipt`の唯一のschemaは
-`{ schema_version, registry_id, transition_id, subject_revision, previous_state, current_state,
+`{ schema_version, registry_id, transition_id, sequence, subject_revision, previous_state, current_state,
 evidence_set_digest, review_digest, admission_digest, previous_receipt_digest, receipt_digest }`である。
 `schema_version="cutover-transition.v1"`、`registry_id="CUTOVER-EVIDENCE-REGISTRY-v1"`、
 `transition_id`は該当Edge ID、`subject_revision`はtransition candidate HEADとする。
-`review_digest` / `admission_digest`は、該当edgeに`review.approved` / `admission.d0` rowがあれば
-そのevidence receiptの`receipt_digest`とexact一致し、rowがなければ`null`でなければならない。
+全production edgeで`review.bundle` / `admission.approved` rowをexactly one要求するため、
+`review_digest` / `admission_digest`は非nullかつ各evidence receiptの`receipt_digest`とexact一致する。
 別名`evidence_digest`又は`chain_digest`をtransition receipt fieldとして受理しない。
 `candidate-head` evidenceはcandidate HEADとexact一致する。
 `producer-ancestor` evidenceは各producer commitをexact保持し、candidate HEADが全producer commitの
@@ -485,10 +513,36 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
    `<UTF-8 byte length in decimal>:<JSON bytes>`でlength-frameして連結する。
 4. 連結byte列のSHA-256 lowercase hexを`evidence_set_digest`とする。OS path separator、改行、
    locale、object key iterationは入力に含めない。
-5. `receipt_digest`は上記11 fieldのうち自身だけを除いた固定順JSON arrayを同じlength-frame規則で
+5. `receipt_digest`は上記12 fieldのうち自身だけを除いた固定順JSON arrayを同じlength-frame規則で
    encodeし、SHA-256 lowercase hexで算出する。`previous_receipt_digest`は直前の`receipt_digest`又は
    genesisの`null`だけを許す。
 
 `cutover.bun-removed.sealed`は`debt.plan-recovery-16.repaired`と
 `debt.plan-l7-452.repaired`の両typed rowを必須とし、片方だけ、旧generic `debt.repair`、
 未知PLAN IDは拒否する。
+
+`ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, author_identity,
+lanes, receipt_digest }`で、`schema_version="review-bundle.v1"`、lanesはexactly twoである。
+各`ReviewLaneReceipt`は`{ lane_id, verdict, artifact_digest, subject_revision, reviewer_identity,
+reviewer_runtime_family, review_session_id, receipt_digest }`とし、lane IDは
+`claim-blind` / `spec-blind`を各1、verdictは両方`PASS`だけを許す。両laneのartifact/revisionはbundleと一致し、
+reviewer identity、session ID、runtime familyはlane間で相互に異なり、reviewerはauthorとも異なる。
+各laneは`receipt_digest`以外の7 fieldを上記固定tuple/length-frame/SHA-256規則で封印する。
+bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外の5 field
+（lanesは両lane receipt digest）を同じ規則で封印する。そのbundle receipt digestを
+`review.bundle` evidence receiptが参照し、
+transitionの`review_digest`はそのevidence receipt `receipt_digest`と一致する。片lane、PASS以外、
+重複lane、artifact/revision drift、independence違反は拒否する。
+
+freshとは、bundle/admissionがtransition candidate HEADとそのartifact digestへexact拘束され、
+まだどのtransitionにも消費されていないことをいう。review後にproduct commitが追加されればrevision/
+artifact mismatchで失効する。`admission.approved`は同じcandidate HEADに対する正規ownerのapproved
+`SliceAdmissionReceipt`を封印し、transitionの`admission_digest`はそのevidence receipt digestと一致する。
+
+chain entryはtransition receiptとその全immutable evidence receiptsを同じappend recordへ保存する。
+したがって外部review service又はIssueを再照会せず、chainだけでreview bundle、admission、evidence set、
+receipt digestを再検証できる。`initializeCutoverChain`は`sequence=0`かつ
+`expected_previous_receipt_digest=null`のCASだけを許す。`appendCutoverTransition`は
+`sequence=latest.sequence+1`、`expected_previous_receipt_digest=latest.receipt_digest`を要求する。
+writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt/evidenceを単一atomic transactionでappendする。
+CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。

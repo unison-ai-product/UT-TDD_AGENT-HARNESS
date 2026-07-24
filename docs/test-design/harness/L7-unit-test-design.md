@@ -1633,10 +1633,10 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `CAND-NODEBOOT-014` | generation delete/GC APIを実装へ注入 | F0 deletion surface 0、全immutable generation保持 |
 | `CAND-NODEBOOT-015` | cross-revisionを通常rollbackへ注入 | cross-revision API 0/fail-close、git revert新revision buildへroute |
 | `CAND-NODEBOOT-016` | Windows receiptへpower-loss durable=trueを注入 | claim拒否、process-crash atomicityだけを記録 |
-| `CAND-NODEBOOT-017` | reviewed D0 receiptなしでF0a開始 | work dispatch 0、typed prerequisite拒否 |
-| `CAND-NODEBOOT-018` | F0a custody receiptなし/失敗/別revisionでF0b開始 | build dispatch 0、typed prerequisite拒否 |
-| `CAND-NODEBOOT-019` | F0b sealed build receiptなし/失敗/別revisionでF0c開始 | CI dispatch 0、typed prerequisite拒否 |
-| `CAND-NODEBOOT-020` | F0c aggregate receiptなし/失敗/別revisionでQ0開始 | fixture/detector dispatch 0、typed prerequisite拒否 |
+| `CAND-NODEBOOT-017` | candidate F0a commitにreviewed D0 receiptなし | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-018` | candidate F0b commitにF0a custody receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-019` | candidate F0c commitにF0b sealed build receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-020` | candidate Q0 commitにF0c aggregate receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
@@ -1647,20 +1647,23 @@ hook/runtime switch、Bun final deletion、cutoverだけをL6 confirmed+D0 admis
 各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
 non-ancestorなら拒否する。同一subject fixtureを要求しない。transition receiptのsubjectはcandidate HEADと
 exact一致し、producer receiptのcanonical set digestを封印する。
-transition receiptの期待schemaは`schema_version, registry_id, transition_id, subject_revision,
+transition receiptの期待schemaは`schema_version, registry_id, transition_id, sequence, subject_revision,
 previous_state, current_state, evidence_set_digest, review_digest, admission_digest,
-previous_receipt_digest, receipt_digest`の11 fieldだけである。review/admission top-level digestと対応rowの
+previous_receipt_digest, receipt_digest`の12 fieldだけである。全edgeのreview/admission top-level digestと対応rowの
 evidence receipt `receipt_digest`を同値検証し、別名fieldを拒否する。`CAND-CUTOVER-007`は
 registry row順の固定tuple、UTF-8 canonical JSON、
 decimal byte-length framing、SHA-256 lowercase hexについてWindows/POSIX相当入力の同値を確認し、
 tuple mutation、順序mutation、duplicateを拒否する。`CAND-CUTOVER-009`はsealed edgeで
 `PLAN-RECOVERY-16` / `PLAN-L7-452`の片方だけをfixture化し遷移0を確認する。
+全edgeでclaim-blind/spec-blind exact 2 lane PASS、unique lane/reviewer/session/runtime family、artifact/revision一致を要求し、
+片lane又はindependence違反を拒否する。SliceEvidenceReceipt自体のversion/fixed tuple/digest mutationも検証する。
 
 slice admission candidate `CAND-NODEBOOT-017..020`はD0→F0a→F0b→F0c→Q0をpairとし、各target sliceを
-直前receiptなし/失敗/別revisionで開始してwork dispatch 0を確認する。functions
-`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState` / `admitNodeSlice`は
-`src/runtime/cutover-transition.ts`、全pairは`tests/cutover-transition.test.ts`へ固定し、D0では
-将来生成契約のみを宣言する。
+直前receiptなし/失敗/別revisionでmerge admissionしてapproved 0を確認する。edit-start自己gateではなく、
+gate test/schema/kernelをproduct changeより先にTDDし、同じcandidate commitのacceptanceを検証する。
+cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
+`tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
+`src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`へ固定する。
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust

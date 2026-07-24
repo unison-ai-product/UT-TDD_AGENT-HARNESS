@@ -179,7 +179,7 @@ GitHub可用性がLedgerの正本性を左右しないこと。検出器はこ�
 | `CAND-NODEBOOT-204` | no fallback | Node image欠落・破損・version/revision drift時にBun/tsx/shell起動0 |
 | `CAND-NODEBOOT-205` | generation atomicity | crash/same-revision rollback/並行readerでpartial generation観測0。cross-revision rollbackはunsupported |
 | `CAND-NODEBOOT-206` | CI aggregate | Node Linux/Windows + harness Linux/Windowsが同一HEAD/run attemptで全Green |
-| `CAND-NODEBOOT-207` | slice admission + genesis付き5-state cutover receipt chain | D0→F0a→F0b→F0c→Q0 typed prerequisiteと`CUTOVER-EVIDENCE-REGISTRY-v1`をoracleとする。11-field receipt、F0 ancestry closure、cross-OS canonical digest同値、review/admission row等価、負債2件両方を要求し、早期slice、空chain、wrong-edge、片方負債、duplicate、stale/replay/non-ancestor、skip/reverse、digest mutationを拒否する。projectionはvalidated chainと一致 |
+| `CAND-NODEBOOT-207` | slice admission + genesis付き5-state cutover receipt chain | D0→F0a→F0b→F0c→Q0 commit acceptanceと`CUTOVER-EVIDENCE-REGISTRY-v1`をoracleとする。12-field sequence receipt、atomic head CAS、F0 ancestry、cross-OS digest、fresh 2-lane review+admission、負債2件を要求し、早期slice、fork/double genesis、片lane、片方負債、duplicate、stale/replay/non-ancestor、skip/reverse、crash partialを拒否する。chain-only projection/再検証が一致 |
 | `CAND-NODEBOOT-208` | final deletion | Bun lock/cache/bootstrap/compatibility codeとproduction allowlistが物理的に0 |
 
 Resource Kernel / Rust companionのsystem oracleは別D0-R/L9 pairが所有する。本節はその未着地を理由に
