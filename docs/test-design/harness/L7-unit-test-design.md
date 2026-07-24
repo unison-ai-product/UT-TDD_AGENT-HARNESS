@@ -1440,7 +1440,7 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-TESTHYGIENE-043` | `global-setup-fence.test.ts` | teardown fence process | fixtureがOS別の物理sealを確認後に明示bypassでdetached HEAD snapshotを改変し、global teardownはsnapshot runner子processを非0で終了して`test workspace fence violation`を出す |
 | `U-TESTHYGIENE-045` | `vitest-snapshot-runner.test.ts` | batch-only runner | `--watch`／`-w`／`--watch=...`はstale snapshotを監視するためfail-close、通常引数は許可 |
 | `U-TESTHYGIENE-046` | `vitest-snapshot-runner.test.ts` | watch script contract | live sourceを観測できない`test:watch` scriptはmanifestに存在しない |
-| `U-TESTHYGIENE-047` | `vitest-snapshot-runner.test.ts` | Bun runtime resolution | Vitest workerのNode binaryを継承せず、Bun runtimeのabsolute executableをsnapshot install/rebuild/Vitestに使う |
+| `U-TESTHYGIENE-047` | `vitest-snapshot-runner.test.ts` | sealed Node / compiled runner resolution | bootstrap receiptが封印したabsolute Node、review済みnpm CLI、compiled snapshot runner/CLIだけをinstall→DB rebuild→Vitestの固定順で使う。Bun/bunx/tsx/TS直実行、ambient `npm_execpath`、shell起動はcall 0 |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
@@ -1609,3 +1609,123 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 property testは任意の合法event列でreplay同一性・単調append・terminal後遷移禁止を確認する。
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
 cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする。
+
+## PLAN-L7-454 Resource Kernel native companion oracle (2026-07-22)
+
+設計正本は`PLAN-L4-32`、ADR-009、実装PLANは`PLAN-L7-454`とする。ここでの静的oracleは
+native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS job・aggregateの縮退を検出する。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-RGK-NATIVE-001` | protocol scaffold | workspace/manifest/libを読取 | version 1のrequest/response DTOとJSON依存が存在 |
+| `U-RGK-NATIVE-002` | unsupported fail-close | native API未実装adapter | capabilityを広告せず、managed workload生成前に拒否 |
+| `U-RGK-NATIVE-003` | native CI custody | pin、Linux/Windows Cargo job、aggregate needs/resultを各欠落・Bunへ置換 | Rust `1.97.1`、両OSのfmt/clippy/test、review済みlockfile、4脚AND以外を拒否 |
+| `U-RGK-NATIVE-004` | binary command admission | binaryへ空required capability、probe、token無しexecuteを投入 | probeはlauncher call 0、executeは`managed_root_created=false`で拒否。handshake成功をexecution successにしない |
+
+`U-RGK-NATIVE-003`がGreenでもCargo compile/testの成功を意味しない。`Cargo.lock`正規生成後に
+同一commitの実Linux/Windows jobをGreenにし、そのURLをL9 evidenceへ固定して初めてnative CI成立とする。
+
+## PLAN-L6-92 Resource Kernel function contract oracle (2026-07-22)
+
+| ID | fixture / mutation | expected |
+|---|---|---|
+| `U-RGK-WIRE-001` | valid frame round-trip property | decode(encode(x))がcanonical x、同一xは同一digest |
+| `U-RGK-WIRE-002` | length 0/上限+1/partial/trailing | closed `protocol_failure`、side effect 0 |
+| `U-RGK-WIRE-003` | invalid UTF-8/JSON、duplicate/unknown/missing field | 全変異を拒否、launcher call 0 |
+| `U-RGK-WIRE-004` | unknown command/enum/version | fail-closeし既知値へ丸めない |
+| `U-RGK-WIRE-005` | request ID/version/bundle digest mismatch | responseを別requestへ合成しない |
+| `U-RGK-WIRE-006` | protocol stdoutへlog混入 | trailing byteとして拒否、stderrだけdiagnostic許可 |
+| `U-RGK-WIRE-007` | object key/order/number表現のproperty corpus | canonical encodeがlocale/order非依存 |
+| `U-RGK-WIRE-008` | frame上限ちょうどと多byte UTF-8境界 | byte lengthを正しくprefixし切断しない |
+| `U-RGK-WIRE-009` |同一DTOを反復encode | byte列・schema digestが決定論的一致 |
+| `U-RGK-ERROR-001` | error kind×process phase全積 | 合法組合せだけconstruct可能、N/Aと欠測を区別 |
+| `U-RGK-ERROR-002` | unknown native code/raw secret/path | closed failureへfail-closeし機密をredact |
+| `U-RGK-ERROR-003` | NotCreatedへPID/started_atを注入 | phase contradictionを拒否 |
+| `U-RGK-ERROR-004` | CreatedNotStartedでcleanup proof欠落 | terminal errorを構築しない |
+| `U-RGK-ERROR-005` | Started budget errorでapplied/observed欠落 | 欠測を要求値で補完せず拒否 |
+| `U-RGK-ERROR-006` | orphan factをprocess failureへ変換するmutation | `orphan_detected`を保持しsuccess 0 |
+| `U-RGK-ERROR-007` | native error union exhaustive switchのvariant追加 | compile/runtime exhaustive guardがRed |
+| `U-RGK-CAP-001` | required capabilityを一つずつ欠落 | 各case managed workload生成前`capability_failure` |
+| `U-RGK-CAP-002` | OS名一致だがprobe不足 | OS名推測せず拒否 |
+| `U-RGK-CAP-003` | stale/別bundle probe | expected bundle digest不一致で拒否 |
+| `U-RGK-CAP-004` | soft capabilityをhard requiredへ代用 | selection 0、missing集合をlossless保存 |
+| `U-RGK-CAP-005` | verified control processからprobeをrecord | `control_process_created=true`とidentity、probe digestをappendしmanaged root 0 |
+| `U-RGK-CAP-006` | unverified/stale control identityのprobe | journal delta 0、admission token生成0 |
+| `U-RGK-CAP-007` | recorded probeとrequired集合完全一致 | attempt/nonce/bundle/probe/deadlineを結ぶsealed tokenを一つ生成 |
+| `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
+| `U-RGK-CAP-009` | tokenのattempt/nonce/bundle/probe/deadlineを各変異 | execute拒否、launcher call 0、別attemptへのside effect 0 |
+| `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
+| `U-RGK-LIFE-002` | resume-before-attach/release-before-empty/root-exit terminal | 全不正遷移を拒否 |
+| `U-RGK-LIFE-003` | sequence gap/重複別payload/attempt・nonce不一致 | state delta 0、closed finding |
+| `U-RGK-LIFE-004` | 同sequence同payload replay | 冪等に同state、event増殖0 |
+| `U-RGK-LIFE-005` | terminate/cancel/deadline同時入力 | 最初のdurable causeを維持しemptyへ収束 |
+| `U-RGK-LIFE-006` | terminal後fact | state/receipt delta 0、closed violation |
+| `U-RGK-LIFE-007` | client再接続時の同一/別nonce | 同一だけreconcile、別attemptを操作しない |
+| `U-RGK-LIFE-008` | lifecycle reducerへOS/journal side effect spy | pure reduction以外のcall 0 |
+| `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
+| `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
+| `U-RGK-LIFE-011` | authority+supervisor dual crashで独立proof欠測 | success補完0、`custody_failure`を保持し新規admission遮断 |
+| `U-RGK-PORT-001` | Windows assign failure | resume 0、created-not-started cleanup proof必須 |
+| `U-RGK-PORT-002` | Linux事後attach adapter | hard custody capabilityをadvertiseせずlaunch 0 |
+| `U-RGK-PORT-003` | empty proof欠落mutation | success/receipt sealへ進まない |
+| `U-RGK-PORT-004` | direct spawn/PID polling/soft fallback mutation | 全mutation survivor 0 |
+| `U-RGK-PORT-005` | deadline超過を各OS call前後へ注入 | 超過後のlaunch/resume 0、既存custodyをcleanup |
+| `U-RGK-PORT-006` | terminate→proveEmptyの呼出順を反転 | illegal transitionで拒否 |
+| `U-RGK-PORT-007` | root exit後にdescendant残存 | empty proof false、return success 0 |
+| `U-RGK-PORT-008` | Windows PID再利用fixture | Job identityで別processを誤killしない |
+| `U-RGK-PORT-009` | Linux cgroup identity再作成fixture | nonce/cgroup identity不一致を拒否 |
+| `U-RGK-PORT-010` | unsupported port | capability空、全launch/terminate call 0 |
+| `U-RGK-PORT-011` | Probe commandへlauncher spyを注入 | launcher参照不能またはcall 0、probe factだけ返す |
+| `U-RGK-PORT-012` | Execute commandへtoken無し/空required | `managed_root_created=false`、custody作成・launcher call 0 |
+| `U-RGK-PORT-013` | control processだけ起動済みのphase/error全積 | control/workload identityを別保存し、単一`process_created`へ縮退しない |
+| `U-RGK-BUNDLE-001` | digest/signature/schema/target/SBOMを各変異 | verified handleを生成しない |
+| `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |
+| `U-RGK-BUNDLE-003` | Rustへpolicy/journal/DB/CAS判断を追加 | responsibility-overlap findingでRed |
+| `U-RGK-BUNDLE-004` | manifest core/companion revision片側更新 | bundle identity不一致で拒否 |
+| `U-RGK-BUNDLE-005` |既知良好rollback manifest | 全componentを同時pinし再検証要求を出す |
+| `U-RGK-BUNDLE-006` | Bun binary/API/lockfileを新bundleへ追加 | permanent-ban findingでRed |
+
+mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
+このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。
+
+## Node self-hosted Bun ban unit pair
+
+| ID | Red fixture | Green oracle |
+|---|---|---|
+| `CAND-BUNBAN-001` | manifest/engine/script/bin/shebangへBun追加 | canonical finding |
+| `CAND-BUNBAN-002` | static/dynamic importへBun specifier追加 | import種別を保持してfinding |
+| `CAND-BUNBAN-003` | spawn/exec argv・分割文字列でBun command生成 | 実行token正規化後にfinding |
+| `CAND-BUNBAN-004` | YAML/JSON/TOML/PowerShell/shellのworkflow/hook/setupへ追加 | surface別finding |
+| `CAND-BUNBAN-005` | Pack/template/generated bundleへbinary/command追加 | activation前finding |
+| `CAND-BUNBAN-006` | current docsへBun正規経路を追加 | negative fixtureと混同せずfinding |
+| `CAND-BUNBAN-007` | parse failure/unknown executable extension | coverage gapでRed |
+| `CAND-BUNBAN-008` | debt行のpath/detector/digest/owner/replacement/deadline欠落・余剰 | manifest driftでRed |
+| `CAND-BUNBAN-009` | 既存debtあり・delta無し | deltaは`Unchanged`でもoverallは`NonCompliant`かつ非zero終了 |
+| `CAND-BUNBAN-010` | 各scannerへ新規finding mutation | survivor 0 |
+| `CAND-BUNBAN-011` | scanner/build自身へBun依存注入 | self-host Red |
+| `CAND-BUNBAN-012` | 列挙順/cwd/path separator変更 | sorted receipt/digest不変 |
+| `CAND-BUNBAN-013` | `Bun.*` / `process.versions.bun` / `import.meta.main` | runtime global reasonでfinding |
+| `CAND-BUNBAN-014` | `UT_TDD_BUN_*`・Bun binary環境名 | environment surface finding |
+| `CAND-BUNBAN-015` | `bun.lock*`、`setup-bun`、download URL、package-manager invocation | dependency/setup reasonでfinding |
+| `CAND-BUNBAN-016` | shell/PowerShell変数展開・escaped token・分割command | canonical command finding |
+| `CAND-BUNBAN-017` | case/Unicode/path alias・symlink | 解決元identity付きfinding |
+| `CAND-BUNBAN-018` | submodule/executable binary・untracked release tree | manifest selection内をscan |
+| `CAND-BUNBAN-019` | archive/reference/current Core Readsの同語彙 | currentだけproduction finding、分類欠測Red |
+| `CAND-BUNBAN-020` | runtime observer heartbeat gap/drop/session欠測 | image 0でも`Indeterminate` Red |
+| `CAND-NODEBOOT-001` | 正常なsealed receipt | Node executable、compiled ESM CLI、lock graph、build policyを単一receiptとして受理 |
+| `CAND-NODEBOOT-002` | receipt欠落 | ambient processからentrypointを推測せずfail-close |
+| `CAND-NODEBOOT-003` | compiled CLI／Node executable／package lockのsealed byte drift（3 case） | 対応するdigest mismatchで全変異を拒否 |
+| `CAND-NODEBOOT-004` | Stop `db-refresh`起動 | sealed Node executable + compiled CLIだけをhidden detached processとしてspawn |
+| `CAND-NODEBOOT-005` | receipt欠落／stale | process生成0、別runtime／tsx／TS直実行fallback 0 |
+| `CAND-NODEBOOT-006` | SQLite transaction/WAL/type/busy/close corpus | canonical result一致 |
+| `CAND-NODEBOOT-007` | cwd/space path/module resolution変異 | absolute entrypointで決定的に動作 |
+| `CAND-NODEBOOT-008` | stdin/stdout/stderr/exit変異 | bounded channel意味論保持 |
+| `CAND-NODEBOOT-009` | Bun binary/PATH/cache/env無し | Node経路だけで成功 |
+| `CAND-NODEBOOT-010` | Node failure | Bun/tsx/TS直実行fallback call 0 |
+| `CAND-NODEBOOT-011` | repeated clean build | file set/digest決定的 |
+| `CAND-NODEBOOT-012` | targeted test実行 | Node worker imageだけを観測 |
+
+`CAND-NODEBOOT-001..005`を含む全Node bootstrap候補は、現mainに対応test codeと実装がない設計Redである。
+`U-TESTHYGIENE-047`も設計はNode targetへ更新したが、現test実体はBun executableを期待するためRedである。
+`CAND-BUNBAN-001..020`と`CAND-NODEBOOT-001..012`は、対応test codeを追加する同じcommitに限って正式`U-*`へpromoteする。
+旧Bun test Green、単純grep、observer欠測、既存debtのallowlist化を証拠に数えない。
