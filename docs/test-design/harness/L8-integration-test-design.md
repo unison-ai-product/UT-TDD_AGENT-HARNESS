@@ -331,13 +331,13 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 
 | 候補ID | 結合条件 | Green oracle |
 |---|---|---|
-| `CAND-CUTOVER-101` | empty headへ2 writer genesis CAS | sequence 0が1件、loser conflict、double genesis 0 |
+| `CAND-CUTOVER-101` | seed/genesis/next sequence mutation | seed null/seq0/ver0、first receipt seq0、CAS後head seq0/ver1、以後N+1だけを許可 |
 | `CAND-CUTOVER-102` | 同一expected previous receiptへ2 append | latest+1が1件、fork 0、loser retry/write 0 |
 | `CAND-CUTOVER-103` | evidence/receipt append各barrierでprocess crash | atomic transactionで両方存在又は両方0、partial chain 0 |
 | `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
-| `CAND-CUTOVER-107` | authorship preimage、stale/cross candidate、base drift/range truncation、omitted writer、raw identity、session self-review、genesis NULL transition、receipt owner/attestation mutation | IdentityDigest、trusted work event coverage、bundle/authorship/base exact equality、nested ref exact 1、genesis null→seq1 one-way、outer trust graphを検証 |
+| `CAND-CUTOVER-107` | event self-digest、missing/orphan/forged/order/set digest、commit/path omission、ReviewBundle preimage、genesis seq、authorship/base/identity mutation | event exact 10/self除外9、authorship exact 11/self除外10、bundle exact 8/self除外7、typed edge exact N、full coverage、genesis seq0を検証 |
 | `CAND-CUTOVER-108` | NULL PK/check、DB subject spoof、migration rebuild failure、Receipt/Content prefix混同、q0 kind typo、source preimage曖昧、marker/field/digest/partial-index/edge/core mutation | strict generated subject DB、transactional rebuild、digest型exact、q0.runtime-no-fallback literal、single JSON preimage、partial UNIQUE、edge exact 1を要求 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |

@@ -348,3 +348,10 @@ genesis headをNULL/seq0/ver0からfirst digest/seq1への一方向CASへ固定�
 対象へ追加し、ReviewBundleへbase revisionを封印した。IdentityDigest canonical object、trusted work event
 ReceiptDigest set、base..subject全product path/commit coverageとreviewer disjointを固定した。
 PLAN-L6-93 revision 19 / PLAN-L7-458 revision 22を正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD b0741ab3 work-event/sequence局所FLAG
+
+genesis first receipt/head sequenceを0へ統一した。WorkProvenanceEvent exact core+outerを定義し、
+CandidateAuthorshipへevent outer digest arrayとordinal typed edge exact Nを追加した。commit/path exact coverage、
+event set digest再導出、owner map/typed union/DDLを同期した。PLAN-L6-93 revision 20 /
+PLAN-L7-458 revision 23を正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。

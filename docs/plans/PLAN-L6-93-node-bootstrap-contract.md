@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5ea25a7a4b246339d5925c34161c12f4
-  command_id: pr154-identity-l6-20260724
-  admitted_at: 2026-07-24T15:50:00.000Z
-  source_digest: sha256:93accab9c02fe16ebc516b58b4c096fcea761b5dace36def2fa72c0427250cdf
-  decision_digest: sha256:98e21339c869b063055d05d0876281bd01737ef1028b678530b22edf90d763f0
-  receipt_digest: sha256:6e4b749d81b78c712d9fa99fa585451eba6cb5127c78c375d6e092aef0006edf
+  receipt_id: certificate:59af88b57e296b51df3c07756922deaa
+  command_id: pr154-work-event-l6-20260724
+  admitted_at: 2026-07-24T16:00:00.000Z
+  source_digest: sha256:81627a7831267bd89c5394281efc87ea4e56e4fb386e60178943e20a646ec5bb
+  decision_digest: sha256:76b566d67cd93a9fba50be36df308269903aa4339fb5d745e24e543e9da4816a
+  receipt_digest: sha256:28249d81009745dccbf47c9e0b4dfecb28d6834410c97ca8b84c06360397a607
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 19
-    content_digest: sha256:93accab9c02fe16ebc516b58b4c096fcea761b5dace36def2fa72c0427250cdf
+    revision: 20
+    content_digest: sha256:81627a7831267bd89c5394281efc87ea4e56e4fb386e60178943e20a646ec5bb
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 19
+      target_revision: 20
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 19
+    target_revision: 20
     phase: forward_merge
-  escape_reason: PR 154 identity custody closure
+  escape_reason: PR 154 work event closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -163,7 +163,8 @@ strict NOT NULL tableへの移行はdecode/copy/count/digest/swap/indexを単一
 ReviewBundleはprovider-attested CandidateAuthorshipReceiptをnested参照し、全writer setsとreviewerのdisjointを
 再導出する。D0 top-level 5 inputsは維持する。projectionはsingle read snapshotからstagingへ全投影後atomic publishする。
 IdentityDigest、bundle/authorship/PR base exact equality、trusted work eventによるbase..subject全product
-path/commit coverageを要求する。genesis headはNULL/seq0/version0からdigest/seq1へだけ遷移しNULLへ戻さない。
+path/commit coverageを要求する。WorkProvenanceEvent exact core/outer、event digest array、ordinal typed edge exact Nを要求する。
+genesisはfirst receipt sequence 0、CAS後head sequence 0/version 1へ遷移しNULLへ戻さない。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。

@@ -701,19 +701,28 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
 `debt.plan-l7-452.repaired`の両typed rowを必須とし、片方だけ、旧generic `debt.repair`、
 未知PLAN IDは拒否する。
 
+`WorkProvenanceEventReceipt` coreは
+`{schema_version:"candidate-work-provenance.v1",base_revision:GitObjectId,subject_revision:GitObjectId,`
+`product_commit:GitObjectId,author_identity_digest:IdentityDigest,author_session_id:string,runtime_family:string,`
+`touched_paths_digest:ContentDigest,producer_owner_id:"candidate-work-provenance-gate",receipt_digest:ReceiptDigest}`
+のexact 10 fields/self除外9-field RFC 8785/UTF-8/SHA-256 raw ReceiptDigest preimageを持ち、自身のdigestを
+preimageへ入れない。Attested envelopeへ格納しcore/outer ownerを一致、closed mapで`ci`へ写像し、
+provider/session attestationを検証する。
+
 `CandidateAuthorshipReceipt` coreは
 `{schema_version:"candidate-authorship.v1",subject_revision:GitObjectId,`（前半）
 `artifact_digest:ContentDigest,base_revision:GitObjectId,author_identity_digest_set:IdentityDigest[] sorted unique nonempty,`
 `runtime_family_set:string[] sorted unique nonempty,author_session_id_set:string[] sorted unique nonempty,`
-`work_provenance_set_digest:ContentDigest,producer_owner_id:"candidate-custody-gate",receipt_digest:ReceiptDigest}`（後半）の
-exact 10 fields/self除外9-field preimageを持ちAttested envelopeへ格納する。trusted custody gate→`ci`とし、
+`work_provenance_event_envelope_digests:ReceiptDigest[] sorted unique nonempty,work_provenance_set_digest:ContentDigest,`
+`producer_owner_id:"candidate-custody-gate",receipt_digest:ReceiptDigest}`（後半）の
+exact 11 fields/self除外10-field preimageを持ちAttested envelopeへ格納する。trusted custody gate→`ci`とし、
 provider/session verifierがbase..subjectの全product-writing eventからsetsを再導出する。missing/unattested/
 forged/omitted writerを拒否し、自由な`author_identity`自己申告fieldを廃止する。
-work provenanceはtrusted Attested eventのReceiptDigest refsをUTF-8 code-point順sorted unique nonemptyで保持する。
-各event coreは`{subject_revision,base_revision,author_identity_digest:IdentityDigest,author_session_id,
-runtime_family,touched_paths_digest:ContentDigest,event_receipt_digest:ReceiptDigest}`である。
-event ReceiptDigest arrayをRFC 8785→UTF-8→ContentDigest化して`work_provenance_set_digest`を再導出する。
-base..subject diffの全product path/commitを少なくとも1 trusted eventがcoverしなければならない。
+work event outer ReceiptDigest arrayをRFC 8785→UTF-8→`sha256:`+lowerhex化して
+`work_provenance_set_digest`を再導出する。authorship→event edgeは
+`edge_kind='authorship.work-event'`, `ordinal=array index`のexact Nとし、missing/orphan/extra/order/digest mismatchを拒否する。
+base..subject diffの全product commitとchanged product pathをevent `product_commit`とtouched-path digest unionが
+exact coverしなければならない。commit/path omission、foreign subject/base/session/identityを拒否する。
 
 `ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, base_revision,
 authorship_envelope_digest, execution_mode, lanes, receipt_digest }`のexact 8 fields/self除外7-field preimageで、
@@ -767,8 +776,10 @@ author IdentityDigest setはdisjoint、session IDも別literalとしてdisjoint�
 | `aggregate-gate` | `ci` |
 | `plan-admission-attestation-gate` | `ci` |
 | `q0-case-manifest-gate` | `ci` |
+| `candidate-custody-gate` | `ci` |
+| `candidate-work-provenance-gate` | `ci` |
 
-この17 rowに`candidate-custody-gate`→`ci`を加えた18 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
+この19 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
 PLAN-L7-458 `SliceAdmission producer registry`のclosed setとして全て`ci`へ写像する。review lane ownerは
 lane providerと同じ`human|codex|claude`、PO approval ownerは`po`へ写像する。
 
@@ -817,7 +828,7 @@ CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一head
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | EvidencePayloadObject |`（先頭）、
 `AttestedReceiptEnvelope<ReviewLaneReceipt> | AttestedReceiptEnvelope<ReviewBundleReceipt> |`（レビュー）、
-`AttestedReceiptEnvelope<CandidateAuthorshipReceipt> | AttestedReceiptEnvelope<SliceAdmissionReceipt> | AttestedReceiptEnvelope<CaseManifestObject> |`（残り）、
+`AttestedReceiptEnvelope<CandidateAuthorshipReceipt> | AttestedReceiptEnvelope<WorkProvenanceEventReceipt> | AttestedReceiptEnvelope<SliceAdmissionReceipt> | AttestedReceiptEnvelope<CaseManifestObject> |`（残り）、
 CutoverAdmissionReceipt | AttestedTrackedReceiptRecord | L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
 `{schema_version,plan_id,plan_revision,status,content_digest,subject_head,tracked_record_digest,`（前半）
 producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}`のexact schemaである。
@@ -837,9 +848,9 @@ digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、
 
 物理backendは専用`<repo>/.ut-tdd/ledger/cutover-ledger.db`のSQLiteだけとし、file ownership正本は
 [physical-data.md](physical-data.md) §2.7.1を参照する。
-全canonical tableはSQLite `STRICT`とする。head tableは`cutover_chain_heads(chain_id TEXT PRIMARY KEY NOT NULL CHECK(length(chain_id)>0), head_digest TEXT, head_sequence INTEGER NOT NULL CHECK(head_sequence>=0), version INTEGER NOT NULL, CHECK((head_digest IS NULL AND head_sequence=0 AND version=0) OR (head_digest IS NOT NULL AND head_sequence>=1 AND length(head_digest)=64 AND head_digest NOT GLOB '*[^0-9a-f]*'))) STRICT`、
+全canonical tableはSQLite `STRICT`とする。head tableは`cutover_chain_heads(chain_id TEXT PRIMARY KEY NOT NULL CHECK(length(chain_id)>0), head_digest TEXT, head_sequence INTEGER NOT NULL CHECK(head_sequence>=0), version INTEGER NOT NULL, CHECK((head_digest IS NULL AND head_sequence=0 AND version=0) OR (head_digest IS NOT NULL AND head_sequence>=0 AND version>=1 AND length(head_digest)=64 AND head_digest NOT GLOB '*[^0-9a-f]*'))) STRICT`、
 receipt tableは`cutover_transition_receipts(chain_id TEXT NOT NULL CHECK(length(chain_id)>0), sequence INTEGER NOT NULL CHECK(sequence>=0), receipt_digest TEXT NOT NULL CHECK(length(receipt_digest)=64 AND receipt_digest NOT GLOB '*[^0-9a-f]*'), receipt_json TEXT NOT NULL, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest)) STRICT`、
-evidence object tableは`cutover_evidence_objects(receipt_digest TEXT PRIMARY KEY NOT NULL CHECK(length(receipt_digest)=64 AND receipt_digest NOT GLOB '*[^0-9a-f]*'), object_digest TEXT NOT NULL CHECK(length(object_digest)=64 AND object_digest NOT GLOB '*[^0-9a-f]*'), evidence_type TEXT NOT NULL, subject_revision TEXT GENERATED ALWAYS AS (CASE WHEN evidence_type='q0-case-manifest' THEN json_extract(payload_json,'$.record.subject_revision') END) STORED, payload_json TEXT NOT NULL, attestation_json TEXT NOT NULL, CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','candidate-authorship','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL)) STRICT`、
+evidence object tableは`cutover_evidence_objects(receipt_digest TEXT PRIMARY KEY NOT NULL CHECK(length(receipt_digest)=64 AND receipt_digest NOT GLOB '*[^0-9a-f]*'), object_digest TEXT NOT NULL CHECK(length(object_digest)=64 AND object_digest NOT GLOB '*[^0-9a-f]*'), evidence_type TEXT NOT NULL, subject_revision TEXT GENERATED ALWAYS AS (CASE WHEN evidence_type='q0-case-manifest' THEN json_extract(payload_json,'$.record.subject_revision') END) STORED, payload_json TEXT NOT NULL, attestation_json TEXT NOT NULL, CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','candidate-authorship','candidate-work-provenance','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL)) STRICT`、
 参照tableは`cutover_evidence_refs(from_receipt_digest TEXT NOT NULL CHECK(length(from_receipt_digest)=64 AND from_receipt_digest NOT GLOB '*[^0-9a-f]*'), to_receipt_digest TEXT NOT NULL CHECK(length(to_receipt_digest)=64 AND to_receipt_digest NOT GLOB '*[^0-9a-f]*'), edge_kind TEXT NOT NULL CHECK(length(edge_kind)>0), ordinal INTEGER NOT NULL CHECK(ordinal>=0), UNIQUE(from_receipt_digest,edge_kind,ordinal)) STRICT`
 を正本とする。writerは
 `CREATE UNIQUE INDEX uq_cutover_q0_manifest_subject ON cutover_evidence_objects(subject_revision) WHERE evidence_type='q0-case-manifest'`
@@ -858,7 +869,8 @@ evidence/receipt insert後の更新SQLは
 文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND version=?`
 を実行する。affected rowがexactly 1でなければ
 全insertをrollbackして`cutover-write-conflict`、retry 0とする。genesisは事前作成した
-head null/sequence 0/version 0 rowからfirst digest/sequence 1へのCASであり、以後のNULL復帰とdouble genesisを拒否する。
+seedは`{head_digest:null,head_sequence:0,version:0}`、first transition receiptはsequence 0、CAS後headは
+`{digest,head_sequence:0,version:1}`とする。以後next receipt/head sequenceはN+1で、NULL復帰とdouble genesisを拒否する。
 commit成功をWAL/fsync barrier完了とし、その後だけreceiptを返す。process crash又はcommit errorはrollbackし、
 head/receipt/evidenceが部分可視にならない。抽象in-memory lockや別DBをproduction証拠にしない。
 

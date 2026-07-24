@@ -1460,6 +1460,9 @@ ReviewBundleはattested CandidateAuthorshipReceipt outer digestをnested ref exa
 IdentityDigestはcanonical identity objectのRFC 8785/UTF-8 ContentDigestとする。bundleへbase revisionを追加し、
 authorshipのsubject/artifact/base及びPR review base/merge-baseとexact一致させる。trusted work event ReceiptDigest
 集合がbase..subject全product path/commitをcoverし、そのsorted arrayからprovenance ContentDigestを再導出する。
+WorkProvenanceEventはexact 10/self除外9-field core+outer envelopeとし、authorshipへevent digest arrayと
+ordinal順typed edge exact Nを持たせる。ReviewBundleはexact 8/self除外7とする。genesis receipt sequenceは0、
+CAS後head sequence 0/version 1とする。
 projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
