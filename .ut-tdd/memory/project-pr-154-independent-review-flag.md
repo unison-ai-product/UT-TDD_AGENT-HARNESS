@@ -390,3 +390,11 @@ managed署名payloadをstable subject+session+registry bindingのcombined object
 append-only snapshot chainとしrotationで旧snapshotを不変化、later authoritative compromiseはissued_atに関係なく
 全receiptをfail-closeする。PLAN-L6-93 revision 25 / PLAN-L7-458 revision 28を正規`plan revise`で発行した。
 独立再reviewまではFLAGを維持する。
+
+## Exact HEAD d411d137 managed trust overengineering撤回
+
+未完成のtrust snapshot chain/rotation/later authoritative registry機構をcanonical設計から撤回した。
+D0はimmutable `MANAGED-SESSION-TRUST-REGISTRY-v1` revision 1の固定3 rowsだけを正本とする。
+expiryは新receipt発行0/全admission fail-close、compromiseはcomposition-root emergency denylistという
+security incident/manual fail-close inputで全v1 receiptを拒否する。denylist製品化は本PRへ追加しない。
+PLAN-L6-93 revision 26 / PLAN-L7-458 revision 29を正規`plan revise`で発行した。

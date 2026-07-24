@@ -1472,7 +1472,7 @@ trust registryがUT-TDD managed session authorityを検証し、外部provider A
 WorkEvent/laneとsession receiptのprovider/runtimeをexact一致させる。
 managed trust registry 3 row、revision、issued_at validity/compromise cutoff、stable subject+session同時証明を検証する。
 SessionIdentityはexact10/self9 core+outer二段検証、combined payloadだけを使い、`identity.session` edge exact1を
-要求する。registryはappend-only snapshot chainで、later compromiseはissued_atに関係なくfail-closeする。
+要求する。immutable v1/revision 1だけを使い、expiry又はemergency denyでadmissionをfail-closeする。
 projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 8-field core/self除外7-field ordered preimageとexact 7-field
