@@ -1706,6 +1706,8 @@ edge別allowed authority ID/keyVersion外と、別trusted CI authorityによる�
 共通GitObjectIdを全subject/HEAD fieldへ適用しraw hash/algorithm mismatchを拒否する。tracked/L6/reviewの
 unknown schema versionを棚卸しnegativeにする。Q0 CaseManifest subject/set/executed mismatchとaggregate profile required laneの
 missing/extra/duplicate/set digest driftを個別negativeにする。
+CaseManifestのUTF-8 code-point順違反、RFC8785 digest drift、source artifact digest drift、core/outer owner不一致、
+non-ci mapping、同一subject異digest conflict、q0.authoring/runtime split manifest、typed ref missing/orphanを個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→

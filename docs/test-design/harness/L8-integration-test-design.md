@@ -338,7 +338,7 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
 | `CAND-CUTOVER-107` | receipt schema/version/preimage/order/owner/attestation mutation | ReviewLane 12/self除外11、SliceAdmission 8/self除外7、outer digest trust graphをexact検証 |
-| `CAND-CUTOVER-108` | aggregate required lane欠測又はCaseManifest subject/set/executed IDs不一致 | aggregate profile exact setとimmutable attested manifestのexpected/executed equalityを要求 |
+| `CAND-CUTOVER-108` | aggregate required lane欠測、CaseManifest digest drift/wrong owner/same-subject conflict、q0 split manifest、missing/orphan ref、subject/set/executed IDs不一致 | RFC8785/UTF-8/SHA-256 exact再計算、subject単位一意、closed owner map、q0両payloadの同一outer digest、typed ref traversal、aggregate profile exact setとexpected/executed equalityを要求 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | schema migration各barrierで失敗注入 | DDL、data、`user_version`を単一transactionで全rollback |

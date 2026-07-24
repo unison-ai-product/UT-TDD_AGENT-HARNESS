@@ -625,6 +625,16 @@ receipt_digest}`である。selfを除くexact 6-field tupleをcore preimageと�
 `AttestedReceiptEnvelope<CaseManifestObject>`へ格納する。ownerはEvidenceProducer `ci`へ写像し、
 lookup/refはouter envelope digestだけを使う。Q0 payloadは`case_manifest_envelope_digest`を参照し、
 manifest subjectとpayload subjectを一致させ、executed IDsとexpected IDsのexact set equalityを要求する。
+`expected_case_ids`はUTF-8 code-point昇順のunique arrayとし、`required_set_digest`は
+`SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(expected_case_ids)))`のexact値を要求する。
+`source_test_design_artifact_digest`はsubject GitObjectId時点のcanonical test-design artifact bytesから再計算する。
+core `producer_owner_id`はouter `producer_owner_id`と一致させ、closed owner mapによりouter
+`attestation_producer == "ci"`を要求する。typed object storeは
+`UNIQUE(subject_revision, object_kind='q0-case-manifest')`を保証し、同一outer digestの再登録だけを冪等成功、
+同一subjectで異なるdigestを競合拒否する。これはhead/CAS/version registryではない。
+`q0.authoring`と`q0.runtime`は同じCaseManifest outer digestを参照する。EvidencePayloadObjectから
+CaseManifest outer digestへのtyped edgeを`cutover_evidence_refs`へ保存し、reducerはそのedgeだけを辿る。
+missing/orphan/different-manifest参照はfail-closeする。
 manifest変更は新subject revisionと通常のreview/admissionを必要とし、runtime mutable registry/head/removal APIは0とする。
 
 #### `AGGREGATE-PROFILE-REGISTRY-v1`
@@ -718,7 +728,7 @@ bundleと両laneの`execution_mode`はactual admission modeとexact一致し、m
 | `plan-admission-attestation-gate` | `ci` |
 | `q0-case-manifest-gate` | `ci` |
 
-この18 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
+この17 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
 PLAN-L7-458 `SliceAdmission producer registry`のclosed setとして全て`ci`へ写像する。review lane ownerは
 lane providerと同じ`human|codex|claude`、PO approval ownerは`po`へ写像する。
 

@@ -640,6 +640,38 @@
         "revision": 16,
         "content_digest": "sha256:056e51d3f5cacf9b8eb95024475dd79cee8836172c1ada9b1e59926c65335d7c"
       }
+    },
+    {
+      "sequence": 41,
+      "previous_record_digest": "sha256:8a60128881699a02bf28590cc6e9c1ccbcda339a37d06cf30507a9e96834c52f",
+      "record_digest": "sha256:aca0ac5ee644ade6d403e803a69f13a1dd1d2b4b6595f760520099750d70e4c5",
+      "command_id": "pr154-manifest-l6-20260724",
+      "receipt_id": "certificate:85ad2501703a4408f3f208b7918b36e8",
+      "receipt_digest": "sha256:87bf33598f0ce23f76075e5c67215139163edab0ac47f604eac57670e79cad90",
+      "decision_digest": "sha256:2a4f53a6ceecb6cb0873d7267e469fbdf20841e7521860f9a462ed72f7cbecdb",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 14,
+        "content_digest": "sha256:33b45e5da1fecd31c69974663466fb20e6ebe121456b7b494b9c634be4afe8d2"
+      }
+    },
+    {
+      "sequence": 42,
+      "previous_record_digest": "sha256:aca0ac5ee644ade6d403e803a69f13a1dd1d2b4b6595f760520099750d70e4c5",
+      "record_digest": "sha256:083c630447a9428b729362e25196cff76b8487d351d04afc743aa3a4a024b02a",
+      "command_id": "pr154-manifest-l7-20260724",
+      "receipt_id": "certificate:7422044713d658ca8f91608cdb0c4586",
+      "receipt_digest": "sha256:8fac657546deec6f4b9b837907344ffe9c2f33c01269a8d5872f08717ea32238",
+      "decision_digest": "sha256:df5c646a91956019384eb01861c4d05558afa055bf47b8aa66e0f212d0be9de2",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 17,
+        "content_digest": "sha256:dccb77134d047db32db8aa7dcd7646a2bcb4d5504c4ec4f60c69fc267d135a5c"
+      }
     }
   ]
 }

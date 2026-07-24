@@ -1440,6 +1440,11 @@ payload object/decoded payload/envelopeのschema version literal及び`payload_s
 同じ共通GitObjectId型をCutover candidate/transition、Review lane/bundle、L6 confirmation、Slice admission/evidenceへ
 適用しraw hexを拒否する。tracked/L6/reviewを含む全receipt schema versionをliteral v1へ閉じる。
 Q0 expected caseは同subjectのimmutable attested CaseManifestObjectから取得し、executed setを照合する。
+Case IDはUTF-8 code-point昇順unique arrayとし、set digestは
+`SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`で再計算する。test-design artifact digestも
+subject GitObjectId時点のcanonical bytesから再計算する。core/outer owner一致とclosed mapの`ci`を検証し、
+同一subjectは同一outer digestだけ冪等、異digestは競合拒否する。q0.authoring/runtimeは同じouter digestを
+typed `cutover_evidence_refs` edgeで参照し、missing/orphan/split manifestを拒否する。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、

@@ -299,3 +299,12 @@ aggregate required lane profileとQ0 frozen case registryをtyped正本へ分離
 Bootstrapへpolicy/expiry/revocationを封印しhistorical validityと新規再利用を分離した。
 PLAN-L6-93 revision 10 / PLAN-L7-458 revision 13を正規`plan revise`経路で発行した。
 独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 42ffde8b CaseManifest局所FLAG
+
+CaseManifestの局所契約を閉じた。owner map実数を17へ修正し、case IDのUTF-8 code-point昇順unique配列、
+RFC 8785 canonical JSON→UTF-8→SHA-256 lowerhex、subject時点test-design artifact digest再計算を固定した。
+core/outer owner一致と`ci` mapping、subject単位の同digest冪等・異digest競合、q0.authoring/runtimeの
+同一outer digest参照、`cutover_evidence_refs` typed edge traversalを要求し、missing/orphan/split manifestを
+fail-closeする。CAND-CUTOVER-108をL7/L8へ同期し、PLAN-L6-93 revision 14 /
+PLAN-L7-458 revision 17を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
