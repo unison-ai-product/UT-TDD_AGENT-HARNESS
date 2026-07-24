@@ -3,26 +3,23 @@ plan_id: PLAN-L4-32-resource-governed-execution-kernel
 title: "PLAN-L4-32 (add-design/architecture): Resource-governed Execution Kernel"
 kind: add-design
 layer: L4
-sub_doc: architecture
 drive: fullstack
-status: draft
 route_signal: redesign
 route_mode: redesign
 created: 2026-07-22
 updated: 2026-07-22
 owner: PO / Codex
-github_issue_id: 152
 parent_design: docs/design/harness/L4-basic-design/architecture.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
 next_pair_freeze: L9
 agent_slots:
   - role: tl
-    slot_label: "TL - resource budget、停止意味論、段階導入とfail-close境界"
+    slot_label: TL - resource budget、停止意味論、段階導入とfail-close境界
   - role: se
-    slot_label: "SE - ExecutionSpec/Receipt、process tree custody、DB増分/CAS port設計"
+    slot_label: SE - ExecutionSpec/Receipt、process tree custody、DB増分/CAS port設計
   - role: qa
-    slot_label: "QA - deadline、budget超過、親異常終了、孤児ゼロ、再利用のsystem oracle"
+    slot_label: QA - deadline、budget超過、親異常終了、孤児ゼロ、再利用のsystem oracle
 generates:
   - artifact_path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     artifact_type: markdown_doc
@@ -55,6 +52,50 @@ dependencies:
     - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     - docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
 review_evidence: []
+status: draft
+sub_doc: architecture
+github_issue_id: 152
+supersedes:
+  - PLAN-L4-32-resource-governed-execution-kernel
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:5c26509ec4bcd205c4d10abdad6c0dc1
+  command_id: pr156-formal-admission-l4-20260724
+  admitted_at: 2026-07-24T12:40:00.000Z
+  source_digest: sha256:f5405ecc739d8d9aaaeab35d49c3f87f41e6461d4e0a94d1bb9306dab1c00570
+  decision_digest: sha256:8a01d498f503ad4a4d63259b3cf840eb4c8cda88b0663c54da05f62fbe6829a7
+  receipt_digest: sha256:3c5fe84f387326f6944b317b064f8c3f7909162941f450c11fb4a040c8336e3a
+  binding:
+    path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
+    plan_id: PLAN-L4-32-resource-governed-execution-kernel
+    asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
+    revision: 2
+    content_digest: sha256:f5405ecc739d8d9aaaeab35d49c3f87f41e6461d4e0a94d1bb9306dab1c00570
+  route:
+    signal: redesign
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L4-32-resource-governed-execution-kernel
+    revision: 1
+    digest: sha256:9e0587c8227f435935fc22aa9ff38d53dcdd6c5458741618c349ae696d98b5df
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+      target_revision: 2
+  reentry:
+    target_plan_id: PLAN-L4-32-resource-governed-execution-kernel
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Resource Kernel設計をForward実装へ再降下する
+  supersedes:
+    - PLAN-L4-32-resource-governed-execution-kernel
 ---
 
 # PLAN-L4-32: Resource-governed Execution Kernel

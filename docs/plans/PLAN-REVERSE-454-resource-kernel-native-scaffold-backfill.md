@@ -3,10 +3,8 @@ plan_id: PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill
 title: "PLAN-REVERSE-454: Resource Kernel native scaffold起点の設計・検証back-fill"
 kind: reverse
 layer: cross
-workflow_phase: R0
 confirmed_reverse_type: design
 drive: fullstack
-status: draft
 route_signal: design_gap
 route_mode: reverse
 forward_routing: gap-only
@@ -14,14 +12,13 @@ promotion_strategy: reuse-with-hardening
 created: 2026-07-22
 updated: 2026-07-22
 owner: Codex TL / PO
-github_issue_id: 152
 parent_design: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: tl
-    slot_label: "TL - scaffold事実と上流契約の差分判定、Forward再合流gate"
+    slot_label: TL - scaffold事実と上流契約の差分判定、Forward再合流gate
   - role: qa
-    slot_label: "QA - L7/L8/L9のRed oracleと実OS証拠の分離"
+    slot_label: QA - L7/L8/L9のRed oracleと実OS証拠の分離
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
     artifact_type: markdown_doc
@@ -37,6 +34,43 @@ dependencies:
     - tests/resource-kernel-native-scaffold.test.ts
     - docs/test-design/harness/L9-system-test-design.md
 review_evidence: []
+workflow_phase: R0
+status: draft
+github_issue_id: 152
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:6af9e07741a6eb96938f69faa7f0755e
+  command_id: pr156-formal-admission-reverse-20260724
+  admitted_at: 2026-07-24T12:44:00.000Z
+  source_digest: sha256:ef2cb65b4c794e9ced9e70ec7c041487737f43e78bb9ad4c75ffcc88837d1a7c
+  decision_digest: sha256:8f99eae2ad154f775b87e5d02046d125fefaaf73c93a9e6f34297ee8700c611e
+  receipt_digest: sha256:90740039911b8498a52066b3fdc8f5318ea6d6bc50ee3c6e927b455cadaf7257
+  binding:
+    path: docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
+    plan_id: PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill
+    asset_id: plan:legacy:d66396b73c7db2b8d007824dcb6cada0ec811ff802f42189d5687d3d9b6853af
+    revision: 2
+    content_digest: sha256:ef2cb65b4c794e9ced9e70ec7c041487737f43e78bb9ad4c75ffcc88837d1a7c
+  route:
+    signal: design_gap
+    mode: reverse
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L7-454-resource-kernel-native-companion
+    revision: 2
+    digest: sha256:886ee033e089f9b46f5ad68cd8d3efdd45b0b0204cd05844597ea272787d06d5
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: 先行Rust scaffoldの実装事実を設計へ戻し、Resource Kernel Forward実装へ再合流する
 ---
 
 # PLAN-REVERSE-454: Resource Kernel native scaffold起点の設計・検証back-fill

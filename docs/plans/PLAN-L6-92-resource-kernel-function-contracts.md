@@ -1,26 +1,24 @@
 ---
 plan_id: PLAN-L6-92-resource-kernel-function-contracts
-title: "PLAN-L6-92 (add-design/function-spec): Resource Kernel protocol・error・platform port機能契約"
+title: "PLAN-L6-92 (add-design/function-spec): Resource Kernel
+  protocol・error・platform port機能契約"
 kind: add-design
 layer: L6
-sub_doc: function-spec
 drive: fullstack
-status: draft
 route_signal: redesign
 route_mode: redesign
 created: 2026-07-22
 updated: 2026-07-22
 owner: PO / Codex
-github_issue_id: 152
 parent_design: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
   - role: se
-    slot_label: "SE - strict wire DTO、closed error union、platform port、lifecycle reducer"
+    slot_label: SE - strict wire DTO、closed error union、platform port、lifecycle reducer
   - role: qa
-    slot_label: "QA - property/mutation oracle、illegal transition、launch 0、責務重複0"
+    slot_label: QA - property/mutation oracle、illegal transition、launch 0、責務重複0
 generates:
   - artifact_path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     artifact_type: markdown_doc
@@ -38,6 +36,50 @@ dependencies:
     - docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     - docs/test-design/harness/L9-system-test-design.md
 review_evidence: []
+status: draft
+sub_doc: function-spec
+github_issue_id: 152
+supersedes:
+  - PLAN-L6-92-resource-kernel-function-contracts
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:84fa2f12040896224e626384290e1011
+  command_id: pr156-formal-admission-l6-20260724
+  admitted_at: 2026-07-24T12:42:00.000Z
+  source_digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
+  decision_digest: sha256:9e572b1a328d161c89bd067ef7125a70dfcba11802d36a5e2843f340280c637b
+  receipt_digest: sha256:18ac8e4988b47837ce1fb7e636b88fd897ed572c8d31b5c67a9db8a59d101da7
+  binding:
+    path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
+    plan_id: PLAN-L6-92-resource-kernel-function-contracts
+    asset_id: plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a
+    revision: 2
+    content_digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
+  route:
+    signal: redesign
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L6-92-resource-kernel-function-contracts
+    revision: 1
+    digest: sha256:8dfbba80eaa2bd52d6dd57f6393d5c9aaf7eb454c0e6bf7d7faf0c4ecf33e387
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+      target_revision: 2
+  reentry:
+    target_plan_id: PLAN-L6-92-resource-kernel-function-contracts
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Resource Kernel設計をForward実装へ再降下する
+  supersedes:
+    - PLAN-L6-92-resource-kernel-function-contracts
 ---
 
 # PLAN-L6-92: Resource Kernel protocol・error・platform port機能契約

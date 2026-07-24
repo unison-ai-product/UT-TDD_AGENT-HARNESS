@@ -1,10 +1,10 @@
 ---
 plan_id: PLAN-L7-454-resource-kernel-native-companion
-title: "PLAN-L7-454 (add-impl): Resource Kernel native custody companion / Node protocol client"
+title: "PLAN-L7-454 (add-impl): Resource Kernel native custody companion / Node
+  protocol client"
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-22
@@ -14,12 +14,11 @@ parent_design: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
-github_issue_id: 152
 agent_slots:
   - role: se
-    slot_label: "SE - Rust custody companion、versioned protocol、Node client実装"
+    slot_label: SE - Rust custody companion、versioned protocol、Node client実装
   - role: qa
-    slot_label: "QA - 開始前fail-close、protocol mutation、実OS custodyのRed oracle"
+    slot_label: QA - 開始前fail-close、protocol mutation、実OS custodyのRed oracle
 generates:
   - artifact_path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     artifact_type: markdown_doc
@@ -53,6 +52,45 @@ dependencies:
     - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     - docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
 review_evidence: []
+status: draft
+github_issue_id: 152
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:f091788daf534b04775b395487ea1a6f
+  command_id: pr156-formal-admission-l7-20260724
+  admitted_at: 2026-07-24T12:43:00.000Z
+  source_digest: sha256:886ee033e089f9b46f5ad68cd8d3efdd45b0b0204cd05844597ea272787d06d5
+  decision_digest: sha256:cb777d205fa97be2ac90e945142add13eef4073802b40b98b93644bcc80f639b
+  receipt_digest: sha256:e14e88266d46044ae7881b84cd337480fb187121127c6b2de38919dfbb0733ea
+  binding:
+    path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
+    plan_id: PLAN-L7-454-resource-kernel-native-companion
+    asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
+    revision: 2
+    content_digest: sha256:886ee033e089f9b46f5ad68cd8d3efdd45b0b0204cd05844597ea272787d06d5
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L6-92-resource-kernel-function-contracts
+    revision: 2
+    digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+      target_revision: 2
+  reentry:
+    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Resource Kernel設計freezeからnative companion実装へ降下する
 ---
 
 # PLAN-L7-454: Resource Kernel native custody companion / Node protocol client

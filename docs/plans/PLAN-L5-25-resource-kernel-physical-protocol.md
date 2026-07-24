@@ -1,26 +1,24 @@
 ---
 plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-title: "PLAN-L5-25 (add-design/internal-processing): Resource Kernel wire・custodian・bundle物理設計"
+title: "PLAN-L5-25 (add-design/internal-processing): Resource Kernel
+  wire・custodian・bundle物理設計"
 kind: add-design
 layer: L5
-sub_doc: internal-processing
 drive: fullstack
-status: draft
 route_signal: redesign
 route_mode: redesign
 created: 2026-07-22
 updated: 2026-07-22
 owner: PO / Codex
-github_issue_id: 152
 parent_design: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 agent_slots:
   - role: se
-    slot_label: "SE - Node/Rust wire境界、platform port、custodian lifecycle、bundle配置"
+    slot_label: SE - Node/Rust wire境界、platform port、custodian lifecycle、bundle配置
   - role: qa
-    slot_label: "QA - framing故障、custodian crash、開始前attach、bundle mutationのL8 oracle"
+    slot_label: QA - framing故障、custodian crash、開始前attach、bundle mutationのL8 oracle
 generates:
   - artifact_path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     artifact_type: markdown_doc
@@ -38,6 +36,50 @@ dependencies:
     - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
 review_evidence: []
+status: draft
+sub_doc: internal-processing
+github_issue_id: 152
+supersedes:
+  - PLAN-L5-25-resource-kernel-physical-protocol
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:ccd15e5634631054a4ab97f130a31620
+  command_id: pr156-formal-admission-l5-20260724
+  admitted_at: 2026-07-24T12:41:00.000Z
+  source_digest: sha256:3466c5fc588adbcfd0e8d61ecf53a75eebcda0b65d90393c8442c92cb9390d23
+  decision_digest: sha256:a31a3abf8b5e91de7f66bc03846903381348e50df6f02ec8a9a7939817608271
+  receipt_digest: sha256:6e16862f748249c8ce67d80a67df2828db79c636c4d48d39ba7c19c82e665f56
+  binding:
+    path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
+    plan_id: PLAN-L5-25-resource-kernel-physical-protocol
+    asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
+    revision: 2
+    content_digest: sha256:3466c5fc588adbcfd0e8d61ecf53a75eebcda0b65d90393c8442c92cb9390d23
+  route:
+    signal: redesign
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L5-25-resource-kernel-physical-protocol
+    revision: 1
+    digest: sha256:bf49528680f8b549395323c8c6bfbcee3be39be7d03e7754c9de350d73a787d5
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+      target_revision: 2
+  reentry:
+    target_plan_id: PLAN-L5-25-resource-kernel-physical-protocol
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Resource Kernel設計をForward実装へ再降下する
+  supersedes:
+    - PLAN-L5-25-resource-kernel-physical-protocol
 ---
 
 # PLAN-L5-25: Resource Kernel wire・custodian・bundle物理設計
