@@ -1431,6 +1431,8 @@ decimal byte-length framing、SHA-256 lowercase hexで算出し、duplicateとcr
 sealed edgeは`PLAN-RECOVERY-16` / `PLAN-L7-452`のtyped rowを両方要求する。
 `SliceEvidenceReceipt`は11-field pre-attestation tuple、record digest、nested attestation、wrapper receipt digestを使う。
 generic kindはtyped `EvidencePayloadObject`をobject receipt digestで取得してpayload bytesを再hashする。
+SliceEvidenceとpayload objectのkind/owner/attestation producer/payload schemaを
+L5 `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`へexact照合し、cross-kind/cross-owner replayを拒否する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、
 claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
@@ -1439,8 +1441,10 @@ runtime family/authorを分離する。codex-only/claude-onlyはruntime family�
 異model+独立session/identityを必須とする。standaloneはAI laneを禁止し、provider=human/model=none/
 runtime=humanのdistinct reviewer 2名と独立session/evidenceを要求する。条件を満たせなければfail-closeする。
 Issue #153でも2 laneを維持する。
-chain entryだけでbundle/admission/evidenceを再検証可能にする。outer objectのlookup keyはtyped
-`receipt_digest`だけとし、payload `evidence_digest`又はaliasで取得しない。`SliceEvidenceReceipt`はkindで
+chain entryだけでbundle/admission/evidenceを再検証可能にする。attested coreの参照はすべてouter envelope
+`receipt_digest`だけとし、core receipt digest、payload `evidence_digest`又はaliasで取得しない。
+ReviewBundle→lane、SliceEvidence→ReviewBundle、D0→ReviewBundle/Bootstrap及びQ0 predecessorまで同じ規則を使う。
+`SliceEvidenceReceipt`はkindで
 discriminateし、review/admission kindは各ReviewBundle/CutoverAdmission receipt digestへのtyped ref、
 generic kindだけはpayload object receipt digestとcontent専用payload digestを持つ。owner IDと既存EvidenceProducer enumを分離し、ownerをpreimageへ、
 `human|po|codex|claude|ci`だけをverifier inputへ渡す。wrong mappingとreceipt digest自己参照を拒否する。
@@ -1468,12 +1472,14 @@ downgrade、projectionからのcanonical復元はfail-closeする。`.ut-tdd/har
 `.ut-tdd/ledger/harness-ledger.db`はPLAN ledgerだけを所有し、projection writerはcutover DBをread-only投影する。
 
 `admitNodeSlice`はversion/slice/predecessor/subject/required inputs/decision/producer/receipt digestを持つ
-zod receiptでD0→F0a→F0b→F0c→Q0を実装する。F0b/F0c/Q0へそれぞれ直前のF0a custody/F0b sealed build/
+coreをexact `AttestedReceiptEnvelope<SliceAdmissionReceipt>`へ格納し、producer/record digest/nested attestationを
+既存verifierで検証してD0→F0a→F0b→F0c→Q0を実装する。typed unionへraw SliceAdmission coreを保存しない。
+F0b/F0c/Q0へそれぞれ直前のF0a custody/F0b sealed build/
 F0c aggregate receiptを要求する。`CAND-NODEBOOT-017..020`はedit-start hookでなくcandidate commitのmerge admissionで、
 gate test/schema/runtimeをproduct changeより先にTDD実装し同一commitを評価する。receipt欠落、別revision、owner違反、
 skip/replayはrejected receiptを残しmergeを拒否する。保存時は各sliceの
 `predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refsへ展開し、D0 SliceAdmissionから
-既存ReviewBundleReceiptと正式BootstrapEnvelopeReceiptをtyped root refsとして保存する。bootstrap schemaは
+既存ReviewBundleReceiptと正式BootstrapEnvelopeReceiptのouter envelope digestをtyped root refsとして保存する。bootstrap schemaは
 issue 153、episode/projection/artifact digest、subject revision、captured_at、canonical core receipt digestと、
 wrapperのproducer/record digest/nested EvidenceAttestation/wrapper receipt digestを必須とする。
 Q0からD0 rootsまでchain-only closureが切れた場合は拒否する。

@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:704cb4e3834d46320c5eadcfd7c5b93a
-  command_id: pr154-final-contract-l6-20260724
-  admitted_at: 2026-07-24T11:00:00.000Z
-  source_digest: sha256:0f6da4335c3226b87a358ded1f6dfc61c1c9726f7d325d03be501cdc8e4b10d7
-  decision_digest: sha256:46b213a2fabc6d319875c64f44c681f8f9bcd3ed5fc7c1c80cec24631e0158b6
-  receipt_digest: sha256:1bbadf3396549751f0a99275f52df69a2f373e7e5731d8b4beadb9dbf65c24c1
+  receipt_id: certificate:69a444b2e9a4bf0ec06fda867a490f56
+  command_id: pr154-envelope-l6-20260724
+  admitted_at: 2026-07-24T11:30:00.000Z
+  source_digest: sha256:335c8a43932298c84314f3ed73285bbd278f48b034f9265b42fe96675174f2a7
+  decision_digest: sha256:05ba87c8b8802a09a61005c922e4d6d476ce3276d41b15c10b5c0fae739959be
+  receipt_digest: sha256:faca927154c4146b66c5736a48a650201adb1b809c33080209b00b7fa6e77b31
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 6
-    content_digest: sha256:0f6da4335c3226b87a358ded1f6dfc61c1c9726f7d325d03be501cdc8e4b10d7
+    revision: 7
+    content_digest: sha256:335c8a43932298c84314f3ed73285bbd278f48b034f9265b42fe96675174f2a7
   route:
     signal: feature_addition
     mode: add-feature
@@ -69,12 +69,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 6
+      target_revision: 7
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: PR 154 final contract closure
+  escape_reason: PR 154 envelope chain closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -138,12 +138,17 @@ registry row order、固定tuple、UTF-8 canonical JSON、decimal byte-length fr
 `PLAN-RECOVERY-16`と`PLAN-L7-452`のtyped evidenceを両方要求し、片方だけでは遷移しない。
 `SliceEvidenceReceipt`は11-field pre-attestation tuple、record digest、nested attestation、wrapper receipt digestを封印する。
 generic kindはtyped `EvidencePayloadObject`をobject receipt digestで取得してpayload bytesを再hashする。review bundleは
+SliceEvidenceとpayload objectのkind/producer owner/attestation producer/payload schemaを
+L5 closed registryへexact照合し、cross-kind/cross-owner replayを拒否する。
 claim-blind/spec-blind各1 PASSとartifact/revision一致を要求する。bundle/lane execution modeはactual admissionと
 一致させ、hybridはprovider/runtimeを分離、codex/claude-onlyは異model/session/identity、standaloneはhuman 2名を要求する。
 chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic
 appendし、CAS loser、fork、double genesis、crash partialを拒否する。
 ReviewBundle coreはexact 7 fields/self除外6-field ordered preimageを持ち、ReviewLane/Bundle/Bootstrap coreは
 producer/record digest/nested attestationを持つexact `AttestedReceiptEnvelope`で保存する。
+SliceAdmission coreも同じenvelopeへ格納してraw coreをtyped unionへ保存しない。ReviewBundle→lane、
+SliceEvidence→ReviewBundle、D0→ReviewBundle/Bootstrap、Q0 predecessorの全参照はouter envelope
+`receipt_digest`へ統一し、core digestはenvelope内部検証だけに使う。
 slice admissionとは別の`CutoverAdmissionReceipt`を全edgeでfresh発行し、genesisはvalidated Q0、
 以後は直前cutover receiptをpriorに要求する。review/admission/evidenceは既存`EvidenceRecord` /
 `EvidenceAttestationVerifierPort`のtrusted authority/key/signature bindingを必須とする。

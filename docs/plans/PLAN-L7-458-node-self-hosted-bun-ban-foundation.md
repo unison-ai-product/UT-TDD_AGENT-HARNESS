@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9f3438cd70055519b2e2aee2e17b0fe7
-  command_id: pr154-final-contract-l7-20260724
-  admitted_at: 2026-07-24T11:01:00.000Z
-  source_digest: sha256:b7c768f00b87a2e5e6e3df8902da33b5870f383a3d8f2778ab9238ebddc5a0a9
-  decision_digest: sha256:76982830812c5a072f144b54d9293999c0ac3ba4764bc65e17876dae221d7c7d
-  receipt_digest: sha256:209f9d2b21f4cf77d9a53f7ba2f24fc575713e69833d00146007a0b804ea3ba3
+  receipt_id: certificate:3f3dad73d88174e072e8bf6b3302e6d8
+  command_id: pr154-envelope-l7-20260724
+  admitted_at: 2026-07-24T11:31:00.000Z
+  source_digest: sha256:45fae226d905143a2aa77e3ed7db52ed9856f978bd6cca38632525598fa5b7f7
+  decision_digest: sha256:3e15642555d691dfbd02585438689f755c8a7bf37a1c3853d6e6e09c928c829d
+  receipt_digest: sha256:0ab8e5400347ebeb1031dd4a7fe6ff83ae057789679458e30db7614bab55db5e
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 9
-    content_digest: sha256:b7c768f00b87a2e5e6e3df8902da33b5870f383a3d8f2778ab9238ebddc5a0a9
+    revision: 10
+    content_digest: sha256:45fae226d905143a2aa77e3ed7db52ed9856f978bd6cca38632525598fa5b7f7
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,19 +99,19 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 6
-    digest: sha256:0f6da4335c3226b87a358ded1f6dfc61c1c9726f7d325d03be501cdc8e4b10d7
+    revision: 7
+    digest: sha256:335c8a43932298c84314f3ed73285bbd278f48b034f9265b42fe96675174f2a7
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-      target_revision: 9
+      target_revision: 10
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: PR 154 final contract closure
+  escape_reason: PR 154 envelope chain closure
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -230,8 +230,8 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chain | D0 ReviewBundle 1+AttestedTrackedReceiptRecord exact 4+BootstrapEnvelope #153、後続predecessor+owned evidenceだけ連結 |
-| `CAND-CUTOVER-107` | mode別review片lane/same provider/model/session/identity/author、unsigned/forged/untrusted authority/key、artifact drift | hybridはprovider差、単一provider modeはmodel差、全modeでsession/identity/author差を要求 |
-| `CAND-CUTOVER-108` | genesisからsealedまで各edge fresh review+CutoverAdmission+kind-discriminated evidence nested chain | validated Q0から既存ReviewBundle+正式BootstrapEnvelopeまで`receipt_digest`でchain-only再検証。未定義root/wrapper/alias拒否 |
+| `CAND-CUTOVER-107` | claim/spec片lane、bundle/lane/CutoverAdmission/actual mode混在、15 owner mapping誤り、attestation shape mutation | mode別independence、`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`、既存producer enum、nested shapeだけを許可。mixed mode、unknown/wrong mapping、self-reference、schemaVersion/algorithm欠落を拒否 |
+| `CAND-CUTOVER-108` | validated Q0+full L6Confirmation→genesis→sealedへSliceAdmissionを含むtwo-stage envelope、typed EvidencePayloadObject、kind evidenceをnested保存 | 全参照をouter envelope receipt digestでchain-only再検証。11-field SliceEvidence preimage、payload bytes再hash、kind/owner/producer/schema exact equalityを要求し、core digest lookup、alias、cross-kind/cross-owner replayを拒否 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db`並行online backup | 単一時点のhead、refs、objectsで一貫 |
 | `CAND-CUTOVER-110` | trusted backup restore | head、refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | migration barrier失敗 | schema/data/versionを単一transactionでrollback |

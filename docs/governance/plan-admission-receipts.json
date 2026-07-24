@@ -416,6 +416,38 @@
         "revision": 9,
         "content_digest": "sha256:b7c768f00b87a2e5e6e3df8902da33b5870f383a3d8f2778ab9238ebddc5a0a9"
       }
+    },
+    {
+      "sequence": 27,
+      "previous_record_digest": "sha256:40188db81abfd25b1c246488b6fa09fb42fbaa185955746a1c9496a4d3f25a17",
+      "record_digest": "sha256:ba1a565fea5533f45d58ed323d4ddc32e67f0ca888fe0498369dcbcd5d242707",
+      "command_id": "pr154-envelope-l6-20260724",
+      "receipt_id": "certificate:69a444b2e9a4bf0ec06fda867a490f56",
+      "receipt_digest": "sha256:faca927154c4146b66c5736a48a650201adb1b809c33080209b00b7fa6e77b31",
+      "decision_digest": "sha256:05ba87c8b8802a09a61005c922e4d6d476ce3276d41b15c10b5c0fae739959be",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 7,
+        "content_digest": "sha256:335c8a43932298c84314f3ed73285bbd278f48b034f9265b42fe96675174f2a7"
+      }
+    },
+    {
+      "sequence": 28,
+      "previous_record_digest": "sha256:ba1a565fea5533f45d58ed323d4ddc32e67f0ca888fe0498369dcbcd5d242707",
+      "record_digest": "sha256:7287fca9a277fd9211ec10af53d45010b87f45691323eea105c07c717f9e7acc",
+      "command_id": "pr154-envelope-l7-20260724",
+      "receipt_id": "certificate:3f3dad73d88174e072e8bf6b3302e6d8",
+      "receipt_digest": "sha256:0ab8e5400347ebeb1031dd4a7fe6ff83ae057789679458e30db7614bab55db5e",
+      "decision_digest": "sha256:3e15642555d691dfbd02585438689f755c8a7bf37a1c3853d6e6e09c928c829d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 10,
+        "content_digest": "sha256:45fae226d905143a2aa77e3ed7db52ed9856f978bd6cca38632525598fa5b7f7"
+      }
     }
   ]
 }

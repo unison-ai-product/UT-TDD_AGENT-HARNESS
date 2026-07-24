@@ -245,3 +245,11 @@ D0設計merge admissionと将来のproduction cutover activationを分離し、L
 canonical slice owner mapping、generic EvidencePayloadObject、各receiptの既存EvidenceAttestation verifierへ
 接続可能な二段digest wrapperを同期した。AttestedTrackedのembedded record digest equalityもfail-closeする。
 PLAN-L6-93 revision 6 / PLAN-L7-458 revision 9を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD c8ce1651 envelope graph FLAG
+
+SliceAdmission coreも既存`EvidenceAttestationVerifierPort`へ接続できるouter envelopeへ統一し、typed unionから
+raw coreを除外した。ReviewBundle→lane、SliceEvidence→bundle、D0 roots、Q0 predecessorのlookup keyをouter
+envelope receipt digestへ固定した。evidence setのowner fieldをcanonical化し、15 owner mappingとpayload schemaを
+closed registryにした。cross-kind/cross-owner replayを拒否する。PLAN-L6-93 revision 7 /
+PLAN-L7-458 revision 10を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
