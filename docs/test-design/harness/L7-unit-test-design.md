@@ -1621,14 +1621,14 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `CAND-NODEBOOT-002` | receipt欠落、unknown schema、別revision replay | process生成0でtyped failure |
 | `CAND-NODEBOOT-003` | Node/npm/lock/dependency/source/compiledを一要素ずつmutation | 対応digest mismatchでfail-close |
 | `CAND-NODEBOOT-004` | `../`、absolute path、symlink escape | repository/generation外を拒否 |
-| `CAND-NODEBOOT-005` | publish各barrierでcrash、二reader競合 | 旧完全generationまたは新完全generationだけを観測 |
+| `CAND-NODEBOOT-005` | marker publish各barrierでcrash、二reader競合 | validated最高complete markerが指す旧または新generationだけを観測 |
 | `CAND-NODEBOOT-006` | npm env identityだけを正規値へspoof | 実npm executable/version/digest不一致で拒否 |
 | `CAND-NODEBOOT-007` | Node欠落・破損・version drift | Bun/bunx/tsx/TS/shell spawn 0 |
 | `CAND-NODEBOOT-008` | Windows sealed invocation | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
 | `CAND-NODEBOOT-009` | version文字列が同じ別npm CLIへ差替え | reviewed provenanceのexpected npm CLI digest不一致で拒否 |
-| `CAND-NODEBOOT-010` | POSIX fsync/rename各barrierでcrash | durableな旧または新generationだけを観測 |
-| `CAND-NODEBOOT-011` | Windows flush/replace各barrierとsharing violation | current不変または新commit、partial pointer 0 |
-| `CAND-NODEBOOT-012` | cleanup失敗、rollback、live generation GC競合 | cleanup ownerがdebtを残し、検証済みrollbackのみ成功、live generation削除0 |
+| `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename各barrierでcrash | 最高complete markerが指すdurableな旧または新generationだけを観測 |
+| `CAND-NODEBOOT-011` | Windows marker write/sync/close/unique rename各barrierとwriter競合 | append前の最高markerまたは新complete marker、partial activation 0 |
+| `CAND-NODEBOOT-012` | cleanup失敗、append rollback、live generation GC競合 | cleanup ownerがdebtを残し、旧generationへの新markerだけでrollback、live generation削除0 |
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust

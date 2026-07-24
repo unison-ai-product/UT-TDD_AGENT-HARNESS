@@ -82,3 +82,6 @@ L6 機能設計の ① 必須 sub-doc = **function-spec**。internal-processing 
 - [ ] WBS (関数 → Sprint) を記載 (G6 WBS 要件)
 - [ ] artifact = `docs/design/harness/L6-function-design/function-spec.md` を pair=L7 で生成
 - [ ] self-review 通過
+
+> **Node bootstrap機能契約の後継**: Issue #152のRedesign
+> `PLAN-L6-93-node-bootstrap-contract`が当該契約をsupersedeし、L7-458の直接上流となる。
