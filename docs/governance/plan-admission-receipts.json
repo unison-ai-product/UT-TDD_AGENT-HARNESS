@@ -1056,6 +1056,38 @@
         "revision": 29,
         "content_digest": "sha256:5fa3cf19e1242f4a43b67074242e9977961f06ff4323aeddb91871ec35307a8c"
       }
+    },
+    {
+      "sequence": 67,
+      "previous_record_digest": "sha256:d5fd7de2fba78076234b0c8bf7bb4e82996f886b7d0dad36dbd65031526591d4",
+      "record_digest": "sha256:3fa46f4b74da27df70549b5ad2cca613e57fdff5bbb4cb68f8f31ef1ebc72b89",
+      "command_id": "pr154-trust-boundary-l6-20260724",
+      "receipt_id": "certificate:f7efb74757a4f49afa8b883d930cedd5",
+      "receipt_digest": "sha256:65b25f470553027bc796b38e89be60439b00f8de9518afc7eeeea336df23579a",
+      "decision_digest": "sha256:0319964350e137078c4526993df2313d608b02ba677372227484793269a5de32",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 27,
+        "content_digest": "sha256:3c8030fa3d772ca8b7dd6f45d0c5076a6d04443a82a5c4230560490d3a09f1b7"
+      }
+    },
+    {
+      "sequence": 68,
+      "previous_record_digest": "sha256:3fa46f4b74da27df70549b5ad2cca613e57fdff5bbb4cb68f8f31ef1ebc72b89",
+      "record_digest": "sha256:10f7e322f869109dfbf8ed2565fba8062528cec2441cd1897c302e8f82ae8523",
+      "command_id": "pr154-trust-boundary-l7-20260724",
+      "receipt_id": "certificate:993c1842febd5f3ab1992ff9cb74d314",
+      "receipt_digest": "sha256:bf649102002d481a1b844b0fd3ec18e6e1de0c9aea48d0b22418ecacc9b0dcb7",
+      "decision_digest": "sha256:bf79a7255a3b454396165b520a7c8340109a70f571cdfec8e0a4ec99e87438ca",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 30,
+        "content_digest": "sha256:e09246c801c266de2784d6a900661e51a80d7281007be986691e983a535791e1"
+      }
     }
   ]
 }

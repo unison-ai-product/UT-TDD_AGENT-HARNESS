@@ -36,21 +36,22 @@ dependencies:
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
 review_evidence: []
 status: draft
+sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:aaf83ebbe866c0cf48dc2fdb0001ff5d
-  command_id: pr154-trust-v1-l6-20260724
-  admitted_at: 2026-07-24T17:00:00.000Z
-  source_digest: sha256:47c49cad085dc1902ab797acd396288f43d1e000991f786788b0001ee1709996
-  decision_digest: sha256:ce53793cff23528de35402956b085df9cb972abb1fc97105756cdc862c2530e3
-  receipt_digest: sha256:d2c778f90653b34f28b1d658672cb88d387545f1289c1512bbfe817fbb71fbf0
+  receipt_id: certificate:f7efb74757a4f49afa8b883d930cedd5
+  command_id: pr154-trust-boundary-l6-20260724
+  admitted_at: 2026-07-24T17:10:00.000Z
+  source_digest: sha256:3c8030fa3d772ca8b7dd6f45d0c5076a6d04443a82a5c4230560490d3a09f1b7
+  decision_digest: sha256:0319964350e137078c4526993df2313d608b02ba677372227484793269a5de32
+  receipt_digest: sha256:65b25f470553027bc796b38e89be60439b00f8de9518afc7eeeea336df23579a
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 26
-    content_digest: sha256:47c49cad085dc1902ab797acd396288f43d1e000991f786788b0001ee1709996
+    revision: 27
+    content_digest: sha256:3c8030fa3d772ca8b7dd6f45d0c5076a6d04443a82a5c4230560490d3a09f1b7
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +69,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 26
+      target_revision: 27
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 26
+    target_revision: 27
     phase: forward_merge
-  escape_reason: PR 154 trust v1 closure
+  escape_reason: PR 154 trust boundary closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -171,9 +172,14 @@ SessionIdentityReceipt outer envelopeをWorkEvent/ReviewLaneがexact 1参照し�
 照合する。head digestもMAX sequence row receipt digestと一致させる。
 ManagedSessionAttestation verifierをcomposition rootのclosed trust registryへ接続し、UT-TDD managed session
 authorityだけを検証する。外部provider署名を仮定せず、WorkEvent/laneとsession provider/runtimeを一致させる。
-managed trust registry 3 row/revision/issued_at window/compromise cutoffとstable subject identity bindingを要求する。
+managed trust registry 3 row/revision/issued_at window、wrong authority/key、forgery、provider bindingとstable subject
+identity bindingを要求する。
 SessionIdentity exact10/self9、combined payload、outer二段検証、identity.session edge exact1を要求する。
-immutable v1/revision 1のみを使い、expiry又はcomposition-root emergency denyで全admissionをfail-closeする。
+immutable v1/revision 1のみを使い、expiryで全admissionをfail-closeする。active signing-key compromiseの自動検出、
+rotation、revocationはD0実行経路に含めない。侵害の外部security incident報告時は該当authorityを運用停止し、
+managed-session verification/admission/cutoverを全面fail-closeして既存receiptをmerge/activation根拠に使わない。
+再開にはsecurity/PO承認の別ADR/PLAN、新registry ID v2、再review/reissueを要求し、immutable v1を書き換えない。
+これはmachine Green oracle又はhistorical determinism claimではなく高影響運用境界である。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。

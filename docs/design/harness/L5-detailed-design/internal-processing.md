@@ -630,11 +630,11 @@ UTF-8→`"sha256:"+lowerhex`で算出する。
 provider-issued attestationを必須とし、raw session stringやaliasを受理しない。
 #### `MANAGED-SESSION-TRUST-REGISTRY-v1`
 
-| revision | provider | runtime_family | authorityId | algorithm | keyVersion | valid_from | valid_until | compromised_at |
-|---:|---|---|---|---|---|---|---|---|
-| 1 | `openai` | `codex` | `ut-tdd-managed-codex-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` | `null` |
-| 1 | `anthropic` | `claude` | `ut-tdd-managed-claude-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` | `null` |
-| 1 | `human` | `human` | `ut-tdd-managed-human-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` | `null` |
+| revision | provider | runtime_family | authorityId | algorithm | keyVersion | valid_from | valid_until |
+|---:|---|---|---|---|---|---|---|
+| 1 | `openai` | `codex` | `ut-tdd-managed-codex-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` |
+| 1 | `anthropic` | `claude` | `ut-tdd-managed-claude-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` |
+| 1 | `human` | `human` | `ut-tdd-managed-human-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` |
 
 この3 rowをclosed setとし、standalone humanもhuman rowだけを使う。実key値は文書へ保存せずcomposition-root
 key handleへ解決する。D0正本はimmutable v1/revision 1だけで、unknown provider/runtime/authority/key/revisionを拒否する。
@@ -650,8 +650,11 @@ composition rootのclosed trust registryでprovider/runtime→allowed authorityI
 codex/claude/human/standaloneのUT-TDD managed delegation/session gateが発行し、外部provider API署名を仮定しない。
 unknown/wrong/expired key、forgery、algorithm drift、cross-provider replayを拒否する。
 `issued_at`がv1 rowの`[valid_from,valid_until)`内だけ発行/検証を許し、expiry後は新receipt発行0かつ全admission
-fail-closeとする。composition-root emergency denylistにauthorityId/keyVersionが載ればhistoricalを含むv1 receiptを
-全拒否しmain/cutoverを停止する。denylist製品化は本PRへ追加せずsecurity incident/manual fail-close inputとする。
+fail-closeとする。active signing-key compromiseの自動検出、rotation、revocationはD0実行経路に存在しない。
+侵害が外部security incidentとして報告された時点で該当authorityを運用停止し、managed-session verification、
+admission、cutoverを全面fail-closeする。既存receiptはmerge又はactivationの根拠に使わない。再開にはsecurity/PO承認の
+別ADR/PLAN、新registry ID v2、再review、再issueが必要であり、immutable v1自体は書き換えない。この境界はmachine
+Green oracle又はhistorical determinism claimではなく、明示的な高影響運用境界である。
 
 `SessionIdentityReceipt` coreは
 `{schema_version:"session-identity.v1",provider,runtime_family,provider_issued_session_id,stable_subject_id,`（前半）
@@ -661,7 +664,7 @@ objectをRFC 8785→UTF-8→SHA-256 raw ReceiptDigest化する。managed attesta
 二段検証する。Attested envelopeへ格納しcore/outer ownerを一致、closed mapでEvidenceProducer `ci`へ写像する。
 producer/verifier共通の唯一の署名payloadはcanonical combined object
 `{identity_schema:"ut-tdd-identity.v1",stable_subject_id,session_schema:"ut-tdd-session.v1",provider,`
-`runtime_family,provider_issued_session_id,trust_registry_id:"MANAGED-SESSION-TRUST-REGISTRY",`
+`runtime_family,provider_issued_session_id,trust_registry_id:"MANAGED-SESSION-TRUST-REGISTRY-v1",`
 `trust_registry_revision:1,issued_at}`のRFC 8785 UTF-8 bytesである。
 同じmanaged authorityがstable subjectとsessionを同時証明し、IdentityDigest/SessionIdentityDigestを再導出する。
 

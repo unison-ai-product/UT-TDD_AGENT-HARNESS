@@ -1470,9 +1470,15 @@ tracked changed pathsは除外0でexact照合し、head digestもMAX sequence ro
 session coreはManagedSessionAttestationとouter EvidenceAttestationを二段検証する。managed verifierのclosed
 trust registryがUT-TDD managed session authorityを検証し、外部provider API署名を仮定しない。
 WorkEvent/laneとsession receiptのprovider/runtimeをexact一致させる。
-managed trust registry 3 row、revision、issued_at validity/compromise cutoff、stable subject+session同時証明を検証する。
+管理対象trust registry 3 rowについてrevision、issued_at validity、wrong authority/key、forgery、provider binding、
+stable subject+session同時証明を検証する。
 SessionIdentityはexact10/self9 core+outer二段検証、combined payloadだけを使い、`identity.session` edge exact1を
-要求する。immutable v1/revision 1だけを使い、expiry又はemergency denyでadmissionをfail-closeする。
+要求する。immutable v1/revision 1だけを使い、expiryでadmissionをfail-closeする。
+active signing-key compromiseの自動検出、rotation、revocationはD0実行経路に存在しない。侵害が外部security
+incidentとして報告された時点で該当authorityを運用停止し、managed-session verification、admission、cutoverを
+全面fail-closeして既存receiptをmerge/activation根拠に使わない。再開はsecurity/PO承認の別ADR/PLAN、新registry
+ID v2、再review/reissueを必須とし、immutable v1を書き換えない。これはmachine Green oracle又はhistorical
+determinism claimではなく、明示的な高影響運用境界である。
 projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 8-field core/self除外7-field ordered preimageとexact 7-field
