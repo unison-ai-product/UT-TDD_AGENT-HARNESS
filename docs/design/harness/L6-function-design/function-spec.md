@@ -901,7 +901,7 @@ doctor definition、roadmap obligationを生成し、source/generated digest dri
 - `captureDocsSnapshot(gitPort): DocsSnapshot`
 - `materializeDispositionBatch(command, current): CommandResult`
 - `validateDispositionLedger(snapshot, ledger, targetResolver): ContractResult`
-- `analyzeDocumentReferences(snapshot, readers): ReferenceClosureResult`
+- `analyzeDocumentReferences(input): DocumentReferenceAnalysisResult`
 - `evaluateSemanticItem(input, policy): SemanticAssessmentVerdict`
 - `routeAssessmentDebt(verdict, routeFilingPort): DebtRouteResult`
 - `runSelfProof(request, deps): Promise<SelfProofReport>`
@@ -1349,9 +1349,35 @@ DbC:
   command IDを持つ。post: selectorをその時点のsnapshot pathへ一度だけ展開し、各pathの個別recordと
   selector receiptを返す。同じcommand ID+digestは冪等、異なるpayloadは
   `doc-ledger-command-conflict`とする。
-- `analyzeDocumentReferences` pre: readerはfrontmatter path、Markdown inline/reference、wiki link、
-  anchor、PLAN/spec/test IDごとのtyped readerとして登録する。post: source blobごとのparse receiptと
-  edgeをstable identity順で返し、parse不能・未知schemeを空edgeへ変換しない。
+- `readDocumentReferences(input: ReadDocumentReferencesInput, registry: DocumentReferenceReaderRegistry): ReadDocumentReferencesResult`
+  pre: `input.snapshot`は`captureRepositoryDocsSnapshot`が発行したauthoritative final snapshot、
+  `input.blobs`は`loadRepositoryDocumentBlobs`が同snapshotから発行したsealed blobのexact集合とする。
+  parser/syntax/anchor revisionを全て明示し、URI scheme/frontmatter schemaのrevision/digestはimmutable
+  `registry.syntaxBinding`と一致する。registryは全`DocumentReferenceSyntax`をnon-empty revision付き
+  typed readerへexactly once割り当て、missing/duplicate/ambiguous ownershipを許さない。
+  post: 各snapshot memberの不変byte列だけを読み、source blob×readerのparse receipt、canonical edge、
+  閉じたU006 parse errorをstable unsigned UTF-8 byte順で返す。errorが0件のときだけ`ok:true`の
+  `snapshotDigest`付きgraphを公開し、1件以上なら`ok:false`として全errorとdiagnosticsを返しgraphへ
+  昇格させない。reader/getter/iterator例外は`reader-exception`、未知schemeは`scheme-unknown`へ型付けし、
+  空edge又は正常結果へ変換しない。
+  invariant: `input`、blob byte列、registryを変更せず、working tree、DB、既存relation graph、
+  別snapshotのblobから補完しない。callerが組み立てた同形DTOをsnapshot/blob authorityへ昇格させず、
+  reader draftに`referenceId`、source/revision/evidence identityの自己申告を許さない。authoring docs、
+  ledger、Git indexへの書込みその他の外部副作用を持たない。
+- `analyzeDocumentReferences(input: { snapshot: RepositoryDocsSnapshot; graph: DocumentReferenceGraph;
+  registries: DocumentReferenceRegistrySet; anchorRegistryRevision: string; authorityPolicyRevision: string;
+  applicabilityPolicyRevision: string }): DocumentReferenceAnalysisResult`
+  pre: `graph`は成功した`readDocumentReferences`が生成した同一`input.snapshot.snapshotDigest`のGreen graphであり、
+  全snapshot memberのparse receiptをexactly once含む。`registries`も同snapshotへ束縛され、
+  anchor/PLAN/ADR/spec/test registry digestとanchor/authority/applicability policy revisionを全て明示する。
+  post: final snapshotとexact registry/policy revisionだけでdocument/anchor/typed-ID/authority/semantic/
+  applicability/supersessionを解決し、閉じたU007 reason codeのfinding、stable `analysisDigest`、
+  `closed|blocked`を返す。未知・複数hitは任意候補を選ばず`*-missing|*-ambiguous`、
+  registry/policy revision欠落、別snapshot registry、receipt欠落・重複・staleはblockedとする。
+  domain不適合を未型付け例外又はsilent successへ変換しない。
+  invariant: readerの構文抽出責務を再実行せず、既存relation graph、archive/superseded fallback、
+  DB rowで欠落を補完しない。snapshot、graph、registriesを変更せず、authoring docs、ledger、DB、
+  working tree、Git indexへの書込みその他の外部副作用を持たない。
 - `analyzeRepositoryDocumentClosure` 事前条件: snapshot、ledger、reference graph、canonical assertion、
   debt routeは同じsnapshot digestへ束縛される。post:全snapshot pathをexactly once判定し、
   ledger phantomとbaseline後のadd/modify/delete/renameを双方向比較し、全reference endpointとanchor、

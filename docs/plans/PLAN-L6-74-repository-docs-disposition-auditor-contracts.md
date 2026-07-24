@@ -36,7 +36,7 @@ dependencies:
 
 - `captureDocsSnapshot`はGit objectからraw NUL path stream/count/tree OID/hashを返し、working treeの一時状態を正本にしない。
 - `materializeDispositionBatch`はselectorを最終recordへ展開するcommand、`validateDispositionLedger`はread-only queryとする。
-- `analyzeDocumentReferences`は全tracked docsのfrontmatter path、Markdown/wiki link、PLAN/spec/test IDをtyped edge化し、現行relation graphのfail-openを再利用しない。
+- `analyzeDocumentReferences`はreaderが生成した同一snapshotのtyped edgeをanchor/ID registryとauthority/applicability policyで解決し、現行relation graphのfail-openを再利用しない。
 - baseline/delta/final closure、conditional field、target/PLAN、canonical stale assertionを独立finding IDで検証する。
 - CLIは`init|materialize|set`をwrite command、`diff|references check|check|report`をqueryに分離し、usage=2、contract violation=1、green=0を固定する。
 - reference readerはfrontmatter path、Markdown inline/reference、wiki link、anchor、PLAN/spec/test IDをtyped edge化し、parse error/unknown scheme/anchor欠落を空集合へ変換しない。
