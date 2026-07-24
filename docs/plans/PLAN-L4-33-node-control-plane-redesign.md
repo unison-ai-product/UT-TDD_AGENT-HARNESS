@@ -61,6 +61,13 @@ Node runtime/build image/cutoverに関する差分だけを本PLANが所有す�
 - Node parity前に旧Bun gateを削除せず、Node primary後にBunへfallbackしない。
 - Resource Kernel/Rust companionをNode build imageの開始条件にしない。
 
+cutoverは`inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の5状態だけを許す。
+状態変更の正本はTypeScriptが発行するappend-only `CutoverTransitionReceipt` chainであり、各receiptは
+`previous_state`、`current_state`、`subject_revision`、`evidence_digest`、`review_digest`、
+`previous_receipt_digest`、`chain_digest`を持つ。隣接する一方向遷移以外、状態skip、reverse、別revision replay、
+evidence/review欠落、chain不一致はfail-closeする。DB/UIのcurrent stateはreceipt chainから再構築するprojectionであり、
+直接更新できない。
+
 ## 3. PairとForward再合流
 
 L9の`CAND-NODEBOOT-201..208`とpair-freezeし、L5-26→L6-93→L7-458へ降下する。

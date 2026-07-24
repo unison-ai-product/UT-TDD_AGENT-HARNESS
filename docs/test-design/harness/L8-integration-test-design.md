@@ -313,9 +313,9 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 
 | 候補ID | 結合条件 | Green oracle |
 |---|---|---|
-| `CAND-NODEBOOT-101` | clean checkout + exact Node/npm + `npm ci` | lock graphからcompiled ESM generationを再現 |
+| `CAND-NODEBOOT-101` | clean checkout + static exact Node/npm pin + `npm ci` | lock graphが再現され、compiled generationやruntime custodyを検証対象に含めない |
 | `CAND-NODEBOOT-102` | generated CLI + receipt loader | 同一subject revision/dependency closureだけを起動 |
-| `CAND-NODEBOOT-103` | Linux/Windows matrix | 両OSで同じreceipt schema・test IDを実行 |
+| `CAND-NODEBOOT-103` | Linux/Windows Node bootstrap job | 両OSで同じreceipt schema・test IDを実行しF0c evidenceを生成 |
 | `CAND-NODEBOOT-104` | 一方のbootstrap legがfailure/cancel/skip | 最終aggregateは必ずnon-success |
 | `CAND-NODEBOOT-105` | Node bootstrapと既存harness legが別HEAD/run attempt | evidence合成を拒否 |
 | `CAND-NODEBOOT-106` | Issue #153 envelope下のcandidate固有failure | envelopeでwaiveせずmergeをblock |

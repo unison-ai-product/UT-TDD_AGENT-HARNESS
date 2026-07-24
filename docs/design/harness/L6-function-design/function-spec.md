@@ -1377,7 +1377,7 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 
 関数`buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
 検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
-`package-lock.json`、builder/source graphを入力とし、compiled ESMと`NodeBootstrapReceipt`を
+入力には`package-lock.json`とbuilder/source graphも含め、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
 `subject_revision`、Node/npm absolute executable path・version・digest、lock digest、
 external dependency closure digest、builder policy/digest、source graph digest、
@@ -1407,3 +1407,9 @@ F0b rollbackは同一subject revision限定。cross-revision rollbackとtarget r
 fail-closeし、通常はgit revertから新revisionをbuildする。F0bはautomatic GC、generation deletion API、
 lease recovery/steal/clearを実装しない。CLI先行・receipt後行の二段rename、既存pointer上書き、
 shell/native helper fallbackは契約違反である。
+
+`appendCutoverTransition`はvalidated receipt chain、previous/current state、subject revision、evidence receipt、
+review/admission receiptを受け、許可された隣接一方向遷移だけをappendする。返す
+`CutoverTransitionReceipt`はprevious/current、subject revision、evidence/review/previous receipt/chain digestを
+持つ。precondition不成立、skip/reverse/replay、revision又はchain不一致はtyped errorでfail-closeし、
+`projectCutoverState`はvalidated chainだけをfoldしてcurrent stateを返す。

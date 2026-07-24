@@ -408,3 +408,11 @@ fail-closeする。失敗時のBun/bunx/tsx/TS直実行/shell fallbackは存在�
 `GenerationPublisher`はtemp generation、exact publish lock、activation markerだけを所有する。F0bではautomatic GCとgeneration削除APIを禁止し、全immutable generationを保持する。reader leaseと安全なreclamationを設計する後続PLANまでGCをdeferし、cleanupはtempと正常完了した同一processが保有するlockに限定する。
 
 F0b rollbackは同一`subject_revision`の検証済み旧generationを指す、より大きいsequenceのmarker appendだけを許す。cross-revision rollbackはunsupportedでfail-closeする。通常のcross-revision復帰はgit revertで新revisionを作りF0a/F0bを再実行する。Resource Kernelまたは別PLANが設計されるまでtarget revision変更APIを持たない。
+
+### Node切替receipt chain
+
+cutover writerはvalidated latest receiptを読み、5状態の隣接一方向遷移だけを受理する。各guardはinventory freeze、
+Node parity aggregate、fallback/process 0、final deletion+独立reviewの順に対応する。canonical receiptへ
+previous/current state、subject revision、evidence/review digest、previous receipt digestを封印しchain digestを
+計算してappendする。invalid/skip/reverse/replay/digest不一致はappend前にfail-closeする。read modelはreceipt chainを
+foldして再構築し、DB/UIから状態を直接書き換えない。

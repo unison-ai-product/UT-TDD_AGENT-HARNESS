@@ -219,7 +219,10 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 TypeScriptのdomain/control planeはcompiled ESMとしてNode上で自己ホストする。移行状態は
 `inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向であり、
-各遷移をsubject revisionへ拘束したreceiptで証明する。Node parity前に旧Bun経路を削除せず、
+各遷移をsubject revisionへ拘束したTypeScript-owned append-only `CutoverTransitionReceipt` chainで証明する。
+receiptはprevious/current state、subject revision、evidence/review/previous receipt/chain digestを保持し、
+非隣接、skip、reverse、replay、chain不一致をfail-closeする。状態projectionはvalidated chainから再構築する。
+Node parity前に旧Bun経路を削除せず、
 `node_primary`後にBun、bunx、tsx、TS直実行、shellへfallbackしない。
 
 build imageはexact Node/npm pin、review済みlock graph、external dependency closure、compiled digestを

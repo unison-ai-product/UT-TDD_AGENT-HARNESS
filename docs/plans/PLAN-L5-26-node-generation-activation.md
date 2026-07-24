@@ -66,7 +66,18 @@ F0bは最新markerのpower-loss persistenceも旧marker存在も保証しない�
 最大sequenceを選び、0件ならfail-closeする。
 power-loss durable activationはResource Kernel bundle側trust floorへ委譲する。
 
-## 3. Pair
+## 3. Cutover transition processing
+
+1. 最新`CutoverTransitionReceipt`をdigest chain込みで検証し、projection値を入力正本にしない。
+2. `inventory_frozen→node_shadow`はinventory freeze evidence、`node_shadow→node_primary`はNode parityと
+   aggregate evidence、`node_primary→bun_removed`はfallback/process 0 evidence、
+   `bun_removed→sealed`はfinal deletionと独立review evidenceを要求する。
+3. 次receiptはprevious/current、subject revision、evidence/review digest、previous receipt digestを
+   canonical encodingしてchain digestを生成しappendする。
+4. invalid state、非隣接遷移、reverse、skip、別revision replay、digest欠落/不一致は書込み前にfail-closeする。
+5. state projectionはvalidated receipt chainをfoldして再構築し、receiptなしの直接更新を拒否する。
+
+## 4. Pair
 
 L8の`CAND-NODEBOOT-101..106`とpair-freezeし、競合writer、全crash barrier、rollback、GC禁止を
 検証する。各候補はL7-458のcandidate ownership表に定めるowner sliceでtestとimplementationを同一commitへ

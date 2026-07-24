@@ -88,3 +88,23 @@ oracle-test-traceはGreenとなった。FLAG verdict自体は再reviewまで維�
 `requires`に置いた1件、design-languageは英語prose 1件を検出したため、それぞれ
 `requires: []`と日本語主語へ修正した。規律どおり再試行はしていない。この追記後も独立再reviewが
 完了するまでverdictはFLAGであり、PASSを主張しない。
+
+## Consolidated product FLAG correction
+
+最終product reviewで、Node self-hostとBun-ban finalの完了境界、F0a/F0b責務、draft activation、
+5-state cutoverの実行契約が不足していることを検出した。
+
+- PLAN-L7をsame-slice前提から段階programへ変更し、PR #154/F0完了とBun-ban finalを分離した。
+- F0aをstatic pin/clean npm ci/lock再現性に限定し、runtime custodyはF0bへ移した。
+- L8 101/102/103とownershipをF0a=`101`、F0b=`001..016,102,205`、
+  F0c=`103..106,206`へ一致させた。
+- draft同時authoringでは`requires=[]`を維持しつつ、L6 confirmedとreview/admission receiptまで
+  実装・activationをfail-closeする契約を追加した。
+- TypeScript-owned append-only `CutoverTransitionReceipt` chainをL4からL6へ降下し、
+  invalid/skip/reverse/replayを拒否するL9 oracleへ接続した。
+
+この追記も独立再review PASSを意味せず、verdictはFLAGを維持する。
+
+単発Node検証はsemantic marker 5件、plan-governance、oracle-test-traceをGreenとし、
+design-languageが日本語見出し/prose不足2件を検出した。該当見出しと入力説明を日本語化したが、
+single-run規律に従い再試行していない。

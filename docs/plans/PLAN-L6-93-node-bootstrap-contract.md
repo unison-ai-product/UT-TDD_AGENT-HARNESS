@@ -63,3 +63,14 @@ immutable generationとreceiptを生成する。`publishActivation`はglobal exc
 
 L7-458は本PLAN、L7 unit候補`CAND-NODEBOOT-001..016`、L8/L9 pairのtraceを参照する。
 D0文書だけでは正式test IDまたはGreenを主張しない。
+
+## 4. Cutover function contract
+
+`appendCutoverTransition(input)`はvalidated chain、expected previous/current state、subject revision、
+evidence receipt、review/admission receiptを受ける。preconditionはL6 confirmed、両receiptのrevision一致、
+許可された隣接一方向遷移、previous chain digest一致である。postconditionは
+`CutoverTransitionReceipt { previous_state, current_state, subject_revision, evidence_digest,
+review_digest, previous_receipt_digest, chain_digest }`をappendし、projectionが同じcurrent stateを返すこと。
+invalid/skip/reverse/replayは`cutover-transition-invalid`、revision不一致は`cutover-revision-mismatch`、
+review/admission不足は`cutover-admission-not-ready`、chain不一致は`cutover-chain-invalid`でfail-closeする。
+`projectCutoverState(receipts)`はvalidated chainだけから状態を導出し、DB current値を入力正本にしない。
