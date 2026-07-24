@@ -82,12 +82,24 @@ function backtickValues(value: string): string[] {
 }
 
 function splitTableRow(line: string): string[] {
-  return line
-    .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
+  let source = line.trim();
+  if (source.startsWith("|")) source = source.slice(1);
+  if (source.endsWith("|") && !source.endsWith("\\|")) source = source.slice(0, -1);
+  const cells: string[] = [];
+  let cell = "";
+  for (let index = 0; index < source.length; index++) {
+    if (source[index] === "\\" && source[index + 1] === "|") {
+      cell += "|";
+      index++;
+    } else if (source[index] === "|") {
+      cells.push(cell.trim());
+      cell = "";
+    } else {
+      cell += source[index];
+    }
+  }
+  cells.push(cell.trim());
+  return cells;
 }
 
 function normalizedHeaderCell(value: string): string {
@@ -104,6 +116,14 @@ function isProjectionTableHeader(cells: readonly string[]): boolean {
   return first === "table" && (second === "primary key" || second === "主キー");
 }
 
+function headingSectionNumber(line: string): string | undefined {
+  return /^#{1,6}\s+§?(\d+(?:\.\d+)*)/.exec(line)?.[1];
+}
+
+function isLogicalDescendant(section: string | undefined, parent: string | undefined): boolean {
+  return Boolean(section && parent && section.startsWith(`${parent}.`));
+}
+
 export function extractDbProjectionRequirements(content: string): DbProjectionRequirement[] {
   return extractDbProjectionCoverageRequirements(content).tables;
 }
@@ -113,33 +133,49 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   const indexes: DbProjectionIndexRequirement[] = [];
   let section = "";
   let targetDepth = 0;
+  let targetSectionNumber: string | undefined;
   let acceptsIndexBullets = false;
+  let inIndexLogicalDescendant = false;
+  let subsectionHasProjectionTable = false;
   let pendingHeader: string[] | undefined;
   let tableKind: "none" | "projection" | "other" = "none";
   for (const line of content.split(/\r?\n/)) {
     const heading = HEADING_RE.exec(line);
     if (heading) {
       const depth = heading[1].length;
-      if (targetDepth > 0 && depth <= targetDepth) targetDepth = 0;
+      const sectionNumber = headingSectionNumber(line);
+      if (
+        targetDepth > 0 &&
+        depth <= targetDepth &&
+        !isLogicalDescendant(sectionNumber, targetSectionNumber)
+      ) {
+        targetDepth = 0;
+        targetSectionNumber = undefined;
+      }
       section = line.replace(/^#+\s*/, "").trim();
       if (TARGET_SECTION_RE.test(line)) {
         targetDepth = depth;
-        acceptsIndexBullets = true;
+        targetSectionNumber = sectionNumber;
+        acceptsIndexBullets = sectionNumber === "9.3";
       } else {
         acceptsIndexBullets = false;
       }
+      inIndexLogicalDescendant = isLogicalDescendant(sectionNumber, "9.3");
+      subsectionHasProjectionTable = false;
       pendingHeader = undefined;
       tableKind = "none";
       continue;
     }
     if (targetDepth === 0) continue;
 
-    if (!line.trim().startsWith("|")) {
+    const tableLike = /(^|[^\\])\|/.test(line) && !/^\s*-\s+/.test(line);
+    if (!tableLike) {
       pendingHeader = undefined;
       tableKind = "none";
-      const indexMatch = acceptsIndexBullets
-        ? line.match(/^\s*-\s+`([^`(]+)\(([^`)]+)\)`/)
-        : undefined;
+      const indexMatch =
+        acceptsIndexBullets || (inIndexLogicalDescendant && subsectionHasProjectionTable)
+          ? line.match(/^\s*-\s+`([^`(]+)\(([^`)]+)\)`/)
+          : undefined;
       if (!indexMatch) continue;
       indexes.push({
         section,
@@ -159,6 +195,7 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
           ? "projection"
           : "other"
         : "none";
+      if (tableKind === "projection") subsectionHasProjectionTable = true;
       pendingHeader = undefined;
       continue;
     }

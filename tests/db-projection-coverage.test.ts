@@ -45,14 +45,39 @@ const child: TableDef = {
 
 describe("db-projection-coverage detector", () => {
   it("covers physical-data projection tables and required columns with the schema registry", () => {
-    const result = analyzeDbProjectionCoverage(loadDbProjectionRequirements(process.cwd()));
+    const requirements = loadDbProjectionRequirements(process.cwd());
+    const result = analyzeDbProjectionCoverage(requirements);
 
     expect(result.ok).toBe(true);
     expect(result.checked).toBeGreaterThan(30);
     expect(result.checked).toBeGreaterThanOrEqual(48);
-    expect(result.checkedIndexes).toBeGreaterThanOrEqual(41);
+    expect(requirements.indexes.map((item) => item.name)).toEqual([
+      "idx_plan_layer_drive_status",
+      "idx_trace_from_to",
+      "idx_findings_subject_status",
+      "idx_hook_session_plan",
+      "idx_skill_plan_skill",
+      "idx_memory_kind_updated",
+      "idx_feedback_source",
+      "idx_feedback_lifecycle_event",
+      "idx_search_subject",
+      "idx_refactor_candidates_state",
+      "idx_refactor_candidates_plan",
+    ]);
     expect(result.missingTables.map((item) => item.table)).not.toContain("spec_defs");
     expect(result.missingIndexes.map((item) => item.name)).not.toContain("idx_spec_defs_owner");
+    expect(result.missingTables.map((item) => item.table)).not.toContain("refactor_candidates");
+    expect(result.missingIndexes.map((item) => item.name)).not.toContain(
+      "idx_refactor_candidates_state",
+    );
+    expect(result.missingIndexes.map((item) => item.name)).not.toContain(
+      "idx_refactor_candidates_plan",
+    );
+    expect(requirements.tables.map((item) => item.table)).toContain("refactor_candidates");
+    expect(requirements.indexes.map((item) => item.name)).toContain(
+      "idx_refactor_candidates_state",
+    );
+    expect(requirements.indexes.map((item) => item.name)).toContain("idx_refactor_candidates_plan");
     expect(result.missingTables).toEqual([]);
     expect(result.missingColumns).toEqual([]);
     expect(result.primaryKeyMismatches).toEqual([]);
@@ -159,6 +184,59 @@ describe("db-projection-coverage detector", () => {
     expect(requirements.map((requirement) => requirement.table)).toEqual(["aligned_projection"]);
   });
 
+  it("accepts a GFM table without outer pipes", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "table | 主キー | 必須 columns | 目的",
+        "---|---|---|---",
+        "`outerless_projection` | `projection_id` | `status` | fixture",
+      ].join("\n"),
+    );
+
+    expect(requirements.map((requirement) => requirement.table)).toEqual(["outerless_projection"]);
+  });
+
+  it("keeps an escaped pipe inside a table cell", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `projection\\|escaped` | `projection_id` | `status` | fixture |",
+      ].join("\n"),
+    );
+
+    expect(requirements.map((requirement) => requirement.table)).toEqual(["projection|escaped"]);
+  });
+
+  it("keeps the real §9.3.1 projection table and its two indexes", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §9.3 index と invariant",
+        "",
+        "### 9.3.1 リファクタ候補 lifecycle 投影",
+        "",
+        "| table | 主キー | columns | 目的 |",
+        "|---|---|---|---|",
+        "| `refactor_candidates` | `candidate_key` | `state` | fixture |",
+        "",
+        "- `idx_refactor_candidates_state(state, confidence, last_seen_at)`.",
+        "- `idx_refactor_candidates_plan(linked_plan_id, state)`.",
+      ].join("\n"),
+    );
+
+    expect(requirements.tables.map((requirement) => requirement.table)).toEqual([
+      "refactor_candidates",
+    ]);
+    expect(requirements.indexes.map((requirement) => requirement.name)).toEqual([
+      "idx_refactor_candidates_state",
+      "idx_refactor_candidates_plan",
+    ]);
+  });
+
   it("does not collect index-like bullets from a nested non-projection registry", () => {
     const requirements = extractDbProjectionCoverageRequirements(
       [
@@ -169,6 +247,32 @@ describe("db-projection-coverage detector", () => {
         "#### §9.3.2 foreign registry",
         "",
         "- `foreign_registry(key)`",
+      ].join("\n"),
+    );
+
+    expect(requirements.indexes.map((requirement) => requirement.name)).toEqual([
+      "idx_valid_projection",
+    ]);
+  });
+
+  it("collects index bullets only directly under the exact §9.3 index section", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §2.7 SQLite projection DB の定義 (`harness.db`)",
+        "",
+        "- `not_an_index_from_2_7(plan_id)`",
+        "",
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `valid_9_1_projection` | `projection_id` | `status` | fixture |",
+        "",
+        "- `not_an_index_from_9_1(plan_id)`",
+        "",
+        "### §9.3 index と invariant",
+        "",
+        "- `idx_valid_projection(plan_id, status)`",
       ].join("\n"),
     );
 
