@@ -1411,7 +1411,8 @@ policy-revision-missing|receipt-missing|receipt-duplicate|receipt-stale
 `graph_digest,snapshot_digest,anchor_registry_digest,plan_registry_digest,adr_registry_digest,
 spec_registry_digest,test_registry_digest,anchor_registry_revision,authority_policy_revision,
 applicability_policy_revision,subject_identity,subject_detail,reason_code`の順とする。
-`subject_detail`は`receipt-duplicate`だけdecimal duplicate count、その他は空文字とする。finding IDは
+`subject_detail`は`receipt-duplicate`だけ、同一receipt owner配下の全`receiptDigest`を
+unsigned UTF-8順でsortし完全重複も保持したlength-prefixed multiset frame、その他は空文字とする。finding IDは
 `doc-reference-analysis-input-error,subject_identity,evidence_digest`から導出し、
 全入力契約違反をstable順の`ok:false` resultで返す。domain findingを合成せず、未型付け例外へ変換しない。
 `subject_identity`はreason別に次へ固定する。
@@ -1423,10 +1424,12 @@ applicability_policy_revision,subject_identity,subject_detail,reason_code`の順
 | `registry-revision-missing` | `field:anchorRegistryRevision` |
 | `policy-revision-missing` | 欠落fieldごとに`field:authorityPolicyRevision`又は`field:applicabilityPolicyRevision` |
 | `receipt-missing` | `member:<DocumentMemberIdentity identityDigest>` |
-| `receipt-duplicate` | `receipt:<receiptDigest>`（同一digestの重複群を1 findingとし件数をevidenceへ含める） |
+| `receipt-duplicate` | `receipt-owner:<DocumentMemberIdentity identityDigest>:<readerId>:<readerRevision>`（同一owner配下を1 findingとする） |
 | `receipt-stale` | `receipt:<receiptDigest>` |
 
-複数field又はmemberの違反はsubjectごとに1 errorを生成し、表外のsubject選択やsentinelを許さない。
+receipt ownerはsource member×reader identity/revisionであり、同一ownerにreceiptが2件以上あれば
+receipt digestが同一か相違するかを問わず`receipt-duplicate`とする。複数field又はmemberの違反は
+subjectごとに1 errorを生成し、表外のsubject選択やsentinelを許さない。
 
 property testはblob順・reader順・error入力順の全permutationでedge/receipt/finding digest一致と
 入力deep-equal不変を検査する。mutation testはsnapshot/blob比較、unknown scheme拒否、
