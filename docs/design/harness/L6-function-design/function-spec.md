@@ -1258,7 +1258,14 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
   `node_modules`を全階層で除外する（Git cloneの`.git`はrevision検証に必要でありこのcopy除外規則の対象外）。
   referenceはtest process起動前にsealし、終了時cleanupの直前だけunsealする。seal、source/reference fingerprint
   差分、revision mismatch、cleanup失敗はResult error・exit 1でfail-closeする。正常終了はexit 0、CLI usageはexit 2とする。
-  snapshot内のinstall、DB rebuild、VitestはBun executableを解決して起動し、Vitest workerのNode executableを継承しない。
+  snapshot runner自身はbuild済み`dist/run-vitest-snapshot.mjs`だけをsealed Nodeで起動し、
+  source `.ts`直実行、`import.meta.main`、Bun/bunx/tsx fallbackを使用しない。snapshot内はreview済み
+  npm CLIを`node <npm-cli> ci --ignore-scripts`で実行し、compiled CLIによるDB rebuild、
+  `node node_modules/vitest/vitest.mjs run`の固定順とする。全childは`shell:false`、
+  `windowsHide:true`で、非0・signal・spawn error・timeout時は後続を起動せずfail-closeする。
+  ambient `npm_execpath`をauthorityへ昇格せず、Node/bootstrap receiptとpackage-lockへ束縛された
+  npm CLIだけを使う。episode/session環境変数を子へ継承せず、execution/fence/reference/cacheに必要な
+  allowlistだけを注入する。BunがPATHに存在してもcall 0、Bun不在でも同じGreen結果とする。
   CLIを実行するtestは依存を持つexecution snapshotをcwd/sourceに使い、reference snapshotはread-only入力だけに使う。
 
 ### `analyzeTestRepositoryIsolation(input)`
@@ -1370,3 +1377,52 @@ HEAD SHA、run attempt、workflow revision、required check set、protection rev
 個別legや片OSのreceiptを参照せず、E13に束縛されたaggregate receipt digestだけを参照する。
 branch protectionのrequired contextも `harness-check` 一件へ固定し、実GitHub設定が未適用・乖離・
 取得不能なら「設定済み」と推測せずclosureをblockする。
+
+## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
+
+本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-ERROR-*`、
+`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
+
+### ワイヤ/エラー代数
+
+`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたは
+`protocol_failure`を返す純粋関数とする。`encodeFrame`はcanonical bytesを決定論的に返す。
+コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
+`Custody(CustodyCommand)`で閉じる。phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
+エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
+
+### メソッド契約
+
+| メソッド | 事前条件 | 事後条件 / 不変条件 |
+|---|---|---|
+| `verifyBundle` | trust identityとtarget明示 | signature/core/companion/schema/SBOM/targetの全一致時だけverified handle |
+| `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
+| `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
+| `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
+| `dispatchCommand` | closed command union | Probeからlauncher 0、token無しExecuteでmanaged root 0 |
+| `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
+| `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
+| `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
+| `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
+
+### プラットフォームポート/責務非重複
+
+`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`で構成する。
+`CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/enforceDeadline/revokeAuthority`で構成し、
+handoff commit前resume、stale epoch/nonce、dual-crash証拠欠測からのsuccessを拒否する。
+Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
+`populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
+それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
+Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。
+
+### Bun永久禁止scanner代数
+
+`ManifestScanner`、`ModuleSpecifierScanner`、`RuntimeGlobalScanner`、`ProcessArgvScanner`、`WorkflowHookScanner`、`PackScanner`、`CurrentDocScanner`、`RuntimeImageScanner`はpure objectとして`BanFinding`を返す。`BanInventory`はcanonical path、detector ID、evidence digestでsort/dedupeし、`DeltaGuard`と`CompliancePolicy`を別objectにする。
+
+`DeltaGuard`はbaselineとの差分だけを返し、merge可否を決定しない。`CompliancePolicy`は`Compliant | NonCompliant(findings) | Indeterminate(coverageGaps)`を返し、後二者をaggregate Redにする。`Bun.*`、`process.versions.bun`、`import.meta.main`、`UT_TDD_BUN_*`、`bun.lock*`、`setup-bun`、download URL、package-manager invocation、shell/PowerShell変数展開、escaped command、case/Unicode/path alias、symlink/submodule/binary imageを各scannerのclosed reason codeで扱う。
+
+### Node自己ホストbootstrap
+
+seedはNode `24.13.0` / npm `11.6.2`へexact pinし、最小compiled test host生成だけに使う。`NodeBootstrapReceipt`はseed identity、package-lock digest、`tsc` policy、compiled core digest、entrypoint、subject revisionを封印する。TDD順は`bootstrap Red → minimal compiled host Green → scanner Red/Green → compiled CLI self-host`であり、scannerを旧Bun runner上でGreenにしない。Node failure時はBun、tsx、TS直実行へfallbackせず構造化failureを返す。
+
+`RuntimeImageObserver`はobserver portからBun executable/descendant、heartbeat、sequence gap、drop count、session coverageを集約する。image 0かつcoverage完全の場合だけruntime zero evidenceを返す。

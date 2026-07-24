@@ -305,3 +305,51 @@ GitHub remote stateだけをGreen証拠にしない。`IT-CIAGG-01..05` は
 L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証するL8 ascentであり、構造検査、結果値の
 全負例、receipt鮮度、runtime/template profile分離、branch protection/E14消費境界の全てがGreenに
 なるまで「両OS CI済み」またはmerge可能を主張しない。
+
+## Resource Kernel物理統合（PLAN-L5-25、2026-07-22）
+
+mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を検証する。mock GreenをJob/cgroup Greenへ
+読み替えず、各caseはcontrol/workload別created count、custody identity、event sequence、empty/reap proofを保存する。
+
+| ID | boundary / fault injection | expected |
+|---|---|---|
+| `IT-RGK-PHYS-001` | valid requestを分割read/writeしresponseをcorrelate | 一件だけdecodeし同一request IDへ応答、余剰byte 0 |
+| `IT-RGK-PHYS-002` | oversize、partial、invalid UTF-8、duplicate/unknown field、trailing byte | `protocol_failure`、launcher call 0 |
+| `IT-RGK-PHYS-003` | response ID/version/bundle digestを一要素ずつ変異 | Node clientが拒否しdirect spawn 0 |
+| `IT-RGK-PHYS-004` | 同一attempt/nonceのspawnをtimeout後再送 | processは最大1、既存custodyへreconcile |
+| `IT-RGK-PHYS-005` | Windows create→assign間でclient crash | suspended root resume 0、custodianがterminate/reap |
+| `IT-RGK-PHYS-006` | Windows assign成功後launcher/client crash | Job handle custodyを維持しdeadline後Job empty/orphan 0 |
+| `IT-RGK-PHYS-007` | Linux clone/start barrierと事後attach fallbackを競合 | user code開始時からcgroup所属、事後attachはcapability failure |
+| `IT-RGK-PHYS-008` | Linux broker/subreaper crashとdouble-fork | reconcile後`populated=0`、zombie/managed orphan 0 |
+| `IT-RGK-PHYS-009` | root先行exit、terminate/cancel競合 | root exitではreturnせず、empty→reap後だけterminal |
+| `IT-RGK-PHYS-010` | pipe切断、companion crash、Node journal commit crash | custodyを失わず再接続、片肺terminal receipt 0 |
+| `IT-RGK-PHYS-011` | unsupported OS・権限不足・capability欠落 | probe後managed workload生成前拒否、control/workload identityを別保存、soft fallback 0 |
+| `IT-RGK-PHYS-012` | binary/schema/target/signature/SBOMを各一箇所変異 | admission前`bundle_failure`、PATH探索/download 0 |
+| `IT-RGK-PHYS-013` | coreだけ/companionだけrollback後、manifest全体rollback | 片側は拒否、既知良好bundleも実OS oracle再通過後だけ利用 |
+| `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
+| `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
+| `IT-RGK-PHYS-016` | binaryへ空required、probe、token無しexecute、別attempt tokenを投入 | probe launcher 0、全不正executeでmanaged root 0、control process cleanup証拠あり |
+| `IT-RGK-PHYS-017` | authority handoffのhandle/cgroup bind前後でcompanion/Nodeをcrash | commit前resume/exec 0、commit後はauthorityがdeadlineまでcustodyを維持 |
+| `IT-RGK-PHYS-018` | authority単独、supervisor/service manager単独、両者同時crashとold epoch/nonce replay |単独crashは正規recovery、dual crashはkill/reap独立proofまたはfail-close。証拠欠測success 0 |
+
+freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
+deferのままconfirmedへ昇格しない。
+
+## Nodeプラットフォーム配置・配布の統合テスト対
+
+`PLAN-L5-25-resource-kernel-physical-protocol`と対になるNode cutover fixtureを次でfreezeする。
+
+| ID | Fixture | Green条件 |
+|---|---|---|
+| `IT-NODE-CUTOVER-001` | 正規manifest/signature/target | verified bundle handleとabsolute Node entrypointを一度だけ返す |
+| `IT-NODE-CUTOVER-002` | manifest/file digest改竄 | control process生成0 |
+| `IT-NODE-CUTOVER-003` | wrong OS/archまたはNode version drift | PATH探索/download/Bun fallback 0で拒否 |
+| `IT-NODE-CUTOVER-004` | SQLite canonical corpus | transaction/WAL/type/busy/Windows lockの期待receipt一致 |
+| `IT-NODE-CUTOVER-005` | hook timeout/oversize/partial frame | bounded termination、exit meaning保持、visible shell 0 |
+| `IT-NODE-CUTOVER-006` | import/spawn/workflowへBun注入 |対応scannerがfindingを返しcoverage欠測0 |
+| `IT-NODE-CUTOVER-007` | generated PackへBun binary/command注入 | bundle scanがactivation前Red |
+| `IT-NODE-CUTOVER-008` | Bun未導入clean hostへPack install | Node+Rustだけでstatus/doctor/targeted test成功 |
+| `IT-NODE-CUTOVER-009` | Node coreだけactivate | atomic activatorが拒否しcurrent bundle不変 |
+| `IT-NODE-CUTOVER-010` | Rust companionだけactivate | atomic activatorが拒否しcurrent bundle不変 |
+| `IT-NODE-CUTOVER-011` | verified旧Node+Rust bundleへrollback |署名・protocol・target再検証後にbundle単位で成功 |
+| `IT-NODE-CUTOVER-012` | runtime process observer欠測/未知image | Bun 0を主張せずaggregate Red |
