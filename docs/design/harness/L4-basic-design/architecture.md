@@ -84,6 +84,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | **plan-admission** (`src/plan-admission/`) | PLAN起票の駆動モデル許可tuple、Reverse/Redesign遷移、receipt内容束縛、差分fenceを所有する。proposal routingのfallbackをauthoringへ持ち込まず、PLAN直接編集をfail-closeする | `evaluatePlanAdmission()` / `analyzePlanAdmissionDiff()` | schema / plan-asset adapter / Git read-only adapter |
 | **vmodel-contract** (`src/vmodel-contract/`) | L8-L14 verification obligation と L11/L13 pair 例外を宣言契約から検証済み registry へコンパイルする。domain/application と YAML/fs adapter を分離し、右腕・右肺 detector の手書き定数 drift を防ぐ | `compileRightArmContract()` / `loadCompiledRightArmRegistry()` | node:crypto / yaml / fs (adapterのみ) |
 | **runtime** (`src/runtime/`) | 実行モード検出 (detect) + runtime adapter dry-run plan + provider handover + agent-guard 判定本体 + agent-slots (並列 slot 記録、IMP-050) + forced-stop (強制停止推定、IMP-068) + session-log (session 観測、IMP-068) | `detectMode()` / `buildAdapterPlan()` / `runProviderHandover()` / `agent-guard` / `agent-slots` / `forced-stop` / `session-log` | schema (allowlist) / roster (将来、実装後に切替。現状ハードコード相当、§3.1 note + §4.1 移行段階) |
+| **resource-kernel** (`src/resource-kernel/`) | ExecutionSpec、resource/admission policy、journal/outbox、receipt封印のTypeScript正本。verified control processのprobeをdurable化してsealed admission tokenを発行し、managed workload生成を別barrierで許可する | `ExecutionKernel` / `CapabilityNegotiator` / `ExecutionJournal` | schema / state-db / native companion・custody authority port。Rust側へdomain ruleを複製しない |
 | **gate** (`src/gate/`) | execution mode 別 review-tier 判定 (judgment gate の cross-agent / intra_runtime_subagent / human review 強制) | `evaluateGateReview()` | runtime / fs (checklist load) |
 | **team** (`src/team/`) | hybrid team run の事前検証 + Claude/Codex 共通 launch plan + 難易度別の決定論的 model/effort policy + 明示 `--execute` 時の provider adapter 実行 (worker/reviewer provider 分離、duplicate role/provider 検出、`team_runner` slot fire/release) | `validateTeamRun()` / `selectTeamModel()` / `buildTeamRunPlan()` / `executeTeamRunPlan()` | schema / runtime / workflow |
 | **task** (`src/task/`) | FR-L1-39 タスク分類の公開 CLI 面。既存契約 (`scoreTaskComplexity` = FR-L1-39 / `classifyDrive` = FR-L1-41) + `inferTaskDifficulty` を合成し kind/drive/size/complexity/difficulty/risk を構造化出力 (`ut-tdd task classify`)。escalation-sensitive 領域 (auth/payments/PII/migration/schema/production) を risk flag 化し plan lint/gate/skill suggest の入力にする | `classifyTask()` | workflow / team |
@@ -195,6 +196,7 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 | **[ADR-004](../../../adr/ADR-004-internal-asset-ts-control-boundary.md)** | **accepted** (2026-06-01) | 内部資産 (subagent/skill/command) の TS 統制境界 = **層1 資産の中身 markdown 正本 / 層2 管理機構 TS**。TS は生成でなく検証/注入/統制。FR-L1-46〜49 / BR-22 / Recovery PLAN-RECOVERY-01 の設計根拠。real Codex TL 確定 |
 | **[ADR-005](../../../adr/ADR-005-distribution-model-and-central-ui.md)** | **accepted** (2026-06-01) | 配布モデル = **GitHub-pull + team server 中央 Web UI**。core CLI は単一バイナリ (§1 制約 `bun build --compile`)、画面+DB は別 adapter (`src/web/`、Phase B)。local↔Web 通信境界は ADR-003 adapter 方針の延長 (§2 (e) external-if) |
 | **[ADR-006](../../../adr/ADR-006-cli-framework-commander.md)** | **accepted** (2026-06-05) | CLI フレームワーク = **commander** (oclif 却下)。ADR-001 保留の確定 + `src/cli.ts` 実装追認 (§2 注記の floating 解消、IMP-070 resolved) |
+| **[ADR-009](../../../adr/ADR-009-resource-kernel-native-custody-companion.md)** | **accepted** (2026-07-22) | Rustをprivileged OS custody companionに限定し、TypeScript domain/policy/journal正本、署名済bundle、SBOM、fail-close、rollbackを固定 |
 
 > ADR-002/003 は PO 承認済 (2026-05-29)、ADR-004/005 は TL 確定 + PO 承認 (2026-06-01)。将来 local↔Web 通信境界 (画面+DB サーバ化、IMP-031) は **ADR-005 (配布+中央UI)** が方針正本、通信は ADR-003 adapter の延長で Phase B に扱う。
 
@@ -222,3 +224,16 @@ build imageはexact Node/npm pin、review済みlock graph、external dependency 
 harness legを最終aggregateがAND集約し、skip、欠測、別HEAD、別generationをGreenにしない。
 Issue #153は継承main負債2件だけを限定する一時envelopeであり、candidate固有のreceipt、review、
 Node matrix、aggregate failureを免除しない。Resource Kernel / Rust companionは別D0-R sliceで扱う。
+
+## §10 Resource Kernel native custody（Issue #152 D0-R）
+
+Resource Kernelは、process tree、CPU・memory・process・output budget、deadline、orphan zeroを
+OS強制境界で保証する。TypeScript control planeは`ExecutionSpec`、policy、journal、receiptを所有し、
+Rust companionはWindows Job ObjectまたはLinux cgroup v2へのprivileged custody操作だけを実行する。
+責務を両言語へ重複実装せず、capability probe、durable journal append、sealed admission token、
+managed workload生成の順序をbarrierとして固定する。
+
+配布単位はcontrol planeとtarget別companionを同一revisionへ束縛した署名済bundleとする。
+manifest、binary digest、protocol、target、SBOM、署名のいずれかが不一致ならcontrol processまたは
+managed root生成前にfail-closeする。L4受入は同一attemptのL9 `ST-RGK-*` receiptだけで判定し、
+検出器のskip・警告化・soft limitへの縮退によって設計契約を下げない。

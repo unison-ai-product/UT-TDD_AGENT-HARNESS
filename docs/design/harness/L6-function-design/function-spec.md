@@ -1388,3 +1388,40 @@ Bun、bunx、tsx、TS直実行、ambient PATH、runtime downloadへのfallback�
 
 原子性oracleはpublish各barrierのfault injectionと並行readerで、旧完全generationまたは新完全generation
 以外を観測しないことを要求する。CLI先行・receipt後行の二段renameは契約違反である。
+
+## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
+
+本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-ERROR-*`、
+`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
+
+### ワイヤ/エラー代数
+
+`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたは
+`protocol_failure`を返す純粋関数とする。`encodeFrame`はcanonical bytesを決定論的に返す。
+コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
+`Custody(CustodyCommand)`で閉じる。phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
+エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
+
+### メソッド契約
+
+| メソッド | 事前条件 | 事後条件 / 不変条件 |
+|---|---|---|
+| `verifyBundle` | trust identityとtarget明示 | signature/core/companion/schema/SBOM/targetの全一致時だけverified handle |
+| `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
+| `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
+| `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
+| `dispatchCommand` | closed command union | Probeからlauncher 0、token無しExecuteでmanaged root 0 |
+| `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
+| `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
+| `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
+| `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
+
+### プラットフォームポート/責務非重複
+
+`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`で構成する。
+`CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/enforceDeadline/revokeAuthority`で構成し、
+handoff commit前resume、stale epoch/nonce、dual-crash証拠欠測からのsuccessを拒否する。
+Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
+`populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
+それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
+Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。
