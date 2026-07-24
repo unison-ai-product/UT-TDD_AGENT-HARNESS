@@ -25,6 +25,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/governance/bun-migration-debt.yaml
     artifact_type: config
+  - artifact_path: docs/governance/node-toolchain-provenance.json
+    artifact_type: json_config
   - artifact_path: src/lint/bun-permanent-ban.ts
     artifact_type: source_module
   - artifact_path: src/runtime/node-bootstrap.ts
@@ -82,7 +84,7 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 
 ## 4. TDD order
 
-1. `CAND-BUNBAN-001..020`と`CAND-NODEBOOT-001..012`を候補oracleとしてfreezeする。実装sliceのtest codeと同じcommitにあるNode bootstrap境界だけを`U-NODEBOOT-001..005`へ正式昇格し、未実装のban scannerと`CAND-NODEBOOT-006..012`は候補のまま維持する。
+1. `CAND-BUNBAN-001..020`、unit `CAND-NODEBOOT-001..012`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をF0/Q0の同一commitへ追加し、Red実測を記録した場合だけ対応する`U-*` / `IT-*` / `ST-*`へ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
 2. CIのreview済みseed Node `24.13.0` / npm `11.6.2`で最小compiled test hostをbuildし、`NodeBootstrapReceipt`をRed→Green化する。seedはbootstrapのためだけに使い、production entrypointと証拠対象は`tsc`生成のcompiled ESMに限定する。
 3. そのcompiled Node test hostでscanner pure objectsとdeterministic inventoryをRed→Green化する。
 4. 現存Bun debt manifestを実scan結果から固定し、delta guard結果とoverall `NonCompliant`を同時に保存する。既存debtがある状態をPass/Greenと呼ばない。
@@ -106,6 +108,10 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 | `CAND-NODEBOOT-006` | generation publish途中のcrash・競合でもCLI/receiptの異世代を観測させない | 各fault barrierと並行readerで旧完全generationまたは新完全generationだけを観測 |
 | `CAND-NODEBOOT-007` | env自己申告でnpm identityを偽装できない | 実npm executable/version/digestとenv不一致をprocess生成前に拒否 |
 | `CAND-NODEBOOT-008` | 別commitのreceiptをreplayできない | `subject_revision` mutationとcandidate HEAD不一致を拒否 |
+| `CAND-NODEBOOT-009` | version文字列が同じ別npm CLI、または改竄npm CLIへ差替える | reviewed distribution provenanceのexpected CLI digest不一致で拒否 |
+| `CAND-NODEBOOT-010` | POSIX pointer rename前後でcrashする | fsync済み旧generationまたは新generationだけを返しtempをreconcile |
+| `CAND-NODEBOOT-011` | Windows ReplaceFileW/MoveFileExW前後でcrash・sharing競合を注入する | current不変または新generation commit、partial pointer 0、Bun/shell fallback 0 |
+| `CAND-NODEBOOT-012` | publish成功後cleanup失敗、明示rollback、実行中generationへのGCを競合させる | commitを巻き戻さずcleanup debtを記録し、検証済みrollbackだけを許可、live generationを保持 |
 
 予定実装トレースは`src/runtime/node-bootstrap.ts`、`scripts/build-node.mjs`、
 `src/state-db/stop-refresh.ts`、compiled Nodeを呼ぶhook設定、CLI wrapper、snapshot runnerへ接続する。
@@ -121,3 +127,13 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 - [ ] 独立reviewとtested commitが一致する。
 
 本PLANはfoundationであり、hook/wrapper/CI/Packの全切替とBun物理削除を完了扱いにしない。
+
+## 6. Issue #153 bootstrap envelopeのslice別gate
+
+同じgate案をIssue #153の[review FLAG follow-up](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/153#issuecomment-5065921409)へ記録した。GitHubコメント単独を正本にせず、本節と差異が出た場合は設計修正を先に行う。
+
+- **D0-N**: candidate IDだけを持ち、plan/frontmatter/readability/traceがGreen。current Bunとtarget Nodeを区別し、実装Greenを主張しない。
+- **F0-A**: toolchain provenance、same-version npm substitute、dependency closure、subject revision、両OS pointer faultを実testと同一commitでRed→Green化し、claim-blind/spec-blindがPASS。
+- **F0-B**: Node Linux/Windowsと既存harness Linux/Windowsを同一HEAD/run attemptでaggregateし、failure/cancel/skipを非successにする。
+- **Q0**: compiled Node CLIでfixture authoringとreceipt verifyを行い、Bun/bunx/tsx/TS/shell process 0を独立観測する。
+- 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
