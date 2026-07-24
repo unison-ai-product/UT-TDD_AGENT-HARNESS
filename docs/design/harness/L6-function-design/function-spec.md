@@ -1424,10 +1424,12 @@ unsigned UTF-8順でsortし完全重複も保持したlength-prefixed multiset f
 | `registry-revision-missing` | `field:anchorRegistryRevision` |
 | `policy-revision-missing` | 欠落fieldごとに`field:authorityPolicyRevision`又は`field:applicabilityPolicyRevision` |
 | `receipt-missing` | `member:<member_identity_digest>` |
-| `receipt-duplicate` | `receipt-owner:<member_identity_digest>:<readerId>:<readerRevision>`（同一owner配下を1 findingとする） |
+| `receipt-duplicate` | `receipt-owner:<receipt_owner_digest>`（同一owner配下を1 findingとする） |
 | `receipt-stale` | `receipt:<receiptDigest>` |
 
 `member_identity_digest`は`path,blob_oid,content_digest`の順のlength-prefixed
+`canonical-frame-v1`のSHA-256とする。`receipt_owner_digest`は
+`member_identity_digest,reader_id,reader_revision`の順のlength-prefixed
 `canonical-frame-v1`のSHA-256とする。receipt ownerはsource member×reader identity/revisionであり、
 同一ownerにreceiptが2件以上あれば
 receipt digestが同一か相違するかを問わず`receipt-duplicate`とする。複数field又はmemberの違反は
