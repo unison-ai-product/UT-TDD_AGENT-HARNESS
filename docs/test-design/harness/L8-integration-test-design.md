@@ -306,16 +306,19 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 全負例、receipt鮮度、runtime/template profile分離、branch protection/E14消費境界の全てがGreenに
 なるまで「両OS CI済み」またはmerge可能を主張しない。
 
-## Node build image integration pair（Issue #152 D0-N）
+## Node build image候補integration pair（Issue #152 D0-N）
 
-| ID | 結合条件 | Green oracle |
+以下はD0時点では設計候補であり、F0の対応integration testと実装を同一commitへ追加した場合だけ
+`IT-NODEBOOT-*`へ昇格する。
+
+| 候補ID | 結合条件 | Green oracle |
 |---|---|---|
-| `IT-NODEBOOT-001` | clean checkout + exact Node/npm + `npm ci` | lock graphからcompiled ESM generationを再現 |
-| `IT-NODEBOOT-002` | generated CLI + receipt loader | 同一subject revision/dependency closureだけを起動 |
-| `IT-NODEBOOT-003` | Linux/Windows matrix | 両OSで同じreceipt schema・test IDを実行 |
-| `IT-NODEBOOT-004` | 一方のbootstrap legがfailure/cancel/skip | 最終aggregateは必ずnon-success |
-| `IT-NODEBOOT-005` | Node bootstrapと既存harness legが別HEAD/run attempt | evidence合成を拒否 |
-| `IT-NODEBOOT-006` | Issue #153 envelope下のcandidate固有failure | envelopeでwaiveせずmergeをblock |
+| `CAND-NODEBOOT-101` | clean checkout + exact Node/npm + `npm ci` | lock graphからcompiled ESM generationを再現 |
+| `CAND-NODEBOOT-102` | generated CLI + receipt loader | 同一subject revision/dependency closureだけを起動 |
+| `CAND-NODEBOOT-103` | Linux/Windows matrix | 両OSで同じreceipt schema・test IDを実行 |
+| `CAND-NODEBOOT-104` | 一方のbootstrap legがfailure/cancel/skip | 最終aggregateは必ずnon-success |
+| `CAND-NODEBOOT-105` | Node bootstrapと既存harness legが別HEAD/run attempt | evidence合成を拒否 |
+| `CAND-NODEBOOT-106` | Issue #153 envelope下のcandidate固有failure | envelopeでwaiveせずmergeをblock |
 
 F0-Aはbuild generationまで、F0-Bはworkflow配線とaggregateまでを所有する。lock/build/receiptの実装と
 CI YAMLを同じ原子PRへ再結合しない。

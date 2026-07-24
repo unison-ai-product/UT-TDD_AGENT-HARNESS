@@ -1374,20 +1374,24 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 ## Node self-host bootstrap機能契約（Issue #152 D0-N）
 
 `buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
+toolchain provenance（Node distribution archive digest、同梱npm CLI expected digest、package/lock identity）、
 `package-lock.json`、builder/source graphを入力とし、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
 `subject_revision`、Node/npm absolute executable path・version・digest、lock digest、
 external dependency closure digest、builder policy/digest、source graph digest、
-compiled entrypoint relative path/digest、generation IDを持つ。
+compiled entrypoint relative path/digest、toolchain provenance digest、generation IDを持つ。
 
 `loadNodeGeneration(expectedRevision)`はcurrent pointerを一度だけ読み、path containmentとrealpath、
-全digest、exact version、dependency closure、subject revisionを照合する。不一致・欠落・未知schema・
+全digest、exact version、review済みprovenance、dependency closure、subject revisionを照合する。同じ
+versionを返す別npm CLIもexpected digestが異なれば拒否する。不一致・欠落・未知schema・
 symlink escape・partial publishではtyped failureを返し、spawnを呼ばない。成功時だけ
 `shell=false`、Windowsでは`windowsHide=true`でsealed Node executable + compiled ESMを起動する。
 Bun、bunx、tsx、TS直実行、ambient PATH、runtime downloadへのfallbackは禁止する。
 
 原子性oracleはpublish各barrierのfault injectionと並行readerで、旧完全generationまたは新完全generation
-以外を観測しないことを要求する。CLI先行・receipt後行の二段renameは契約違反である。
+以外を観測しないことを要求する。POSIXのfile/directory fsync + same-filesystem rename + parent fsync、
+WindowsのFlushFileBuffers + ReplaceFileW/MoveFileExW write-throughをplatform port契約とする。
+CLI先行・receipt後行の二段rename、Windowsでの上書きrename成功仮定は契約違反である。
 
 ## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
 

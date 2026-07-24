@@ -21,7 +21,7 @@ UT-TDD-agent-harness/
 ├── CHANGELOG.md                  # Pack release 履歴 (clean 配布に同梱、v0.1.4 で導入)
 ├── package.json                  # Node/Bun 依存 + scripts
 ├── tsconfig.json                 # TypeScript strict
-├── bun.lock                      # Bun lockfile (tracked)
+├── bun.lock                      # 現行Bun migration debtのlockfile（target sealed時に削除）
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
 ├── ut-tdd.project.json           # PLAN asset用の追跡済みrepository identity正本
 ├── .gitattributes                # 改行正規化 (eol=lf、*.ps1 は crlf)
@@ -124,7 +124,7 @@ UT-TDD-agent-harness/
 ## 5. tracked / gitignored の境界
 
 - **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
+- **tracked（現行）**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/`。`bun.lock`は現在の実体を示すmigration debtであり、Node parity前に削除せず、target sealed時には`package-lock.json`へ置換する。
 
 ## 6. 境界
 
@@ -147,13 +147,13 @@ UT-TDD-agent-harness/
 
 JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜まりやすい。**フォルダに隠す**のはツールが root を探すため不可（壊れる）。代わりに **ツールを減らす + package.json に集約** で抑える。
 
-- **root config の下限**（避けられない）: `package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` (cross-editor newline/whitespace contract)。
+- **root config の下限（現行）**: `package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig`。target Node generationでは`bun.lock`を`package-lock.json`とreview済みtoolchain provenanceへ置換する。
 - **lint + format = Biome 1 枚 (`biome.json`)**。**eslint + prettier を別々に足さない**（plugin/ignore で 4-6 枚に増えるのを防ぐ）。`bun run lint` / `bun run format`。
 - **test = vitest**。`vitest.config.ts` は G7 coverage-summary evidence (`json-summary`) を生成するための tracked exception とする。
 - commitlint 等 **config-in-package.json 対応**のツールは package.json のキーに入れ、新規 dotfile を作らない。
 - **新ツール導入時の判断順**: ① 既存ツール (Biome / Bun / tsc) で代替できるか → ② package.json に同居できるか → ③ どうしても単独 config が要るか。①②で済むなら root に新ファイルを増やさない。
 
-→ root config は **`package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts` の 6 枚で頭打ち**に保つ。
+→ 現行root configは **`package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts`**。Node cutover中は二重lockをmigration debtとして可視化し、sealed後はBun lockを残さない。
 
 ## 9. 配布 3 層モデル (ADR-005)
 
@@ -171,7 +171,7 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 
 ## 10. Node control-plane build image（Issue #152 D0-N）
 
-- rootの`.node-version`、`package.json`、`package-lock.json`をNode/npm/dependency closureの正本とする。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
+- targetではrootの`.node-version`、`package.json`、`package-lock.json`、review済み`docs/governance/node-toolchain-provenance.json`をNode/npm/dependency closureの正本とする。これらはF0-Aで同一commitに導入されるまで設計Redであり、現行mainに存在すると主張しない。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
 - `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、current pointerの一回のatomic swapで公開する。CLIとreceiptを別々に最終pathへrenameしない。
 - receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
 - `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
