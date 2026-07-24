@@ -1659,9 +1659,10 @@ fresh review bundle欠落、fresh CutoverAdmission欠落を個別fixture化し�
 `CAND-CUTOVER-003/005`はrevision ruleをdiscriminatorとしてproducer-ancestor/candidate-headのsubjectを
 入れ替えたfixture、CutoverAdmissionのartifact digest mutation、genesisのQ0 predecessor欠落を拒否する。
 全edgeでclaim-blind/spec-blind exact 2 lane PASSとartifact/revision一致を要求する。laneのprovider/model/
-execution mode/runtime familyをdigestとattestationへ封印する。hybridはprovider/session/identity/author分離、
-単一provider modeは異model+session/identity/author分離を要求しruntime family一致を許す。異model2 lane不能、
-同一model/session/identity/author及びIssue #153のlane減免を拒否する。
+execution mode/runtime familyをdigestとattestationへ封印する。hybridはprovider/runtime/session/identity/author分離、
+codex-only/claude-onlyは異model+session/identity/author分離を要求しruntime family一致を許す。
+standaloneはAI/subagentを拒否し、distinct human 2名、provider human/model none/runtime human、独立session/evidenceを
+positiveにする。人間1名、AI混入、同一identity/session/evidence及びIssue #153のlane減免を拒否する。
 SliceEvidenceReceipt自体のversion/fixed tuple/digest mutationに加え、outer lookupを`receipt_digest`へ固定し、
 review/admission kindのtyped `referenced_receipt_digest`、generic kindのpayload digestをdiscriminateする。
 `evidence_digest` / `object_digest` alias lookup、nested別digest取得を拒否する。CutoverAdmissionはvalidated Q0
@@ -1674,8 +1675,9 @@ slice admission candidate `CAND-NODEBOOT-017..020`はD0→F0a→F0b→F0c→Q0�
 直前receiptなし/失敗/別revisionでmerge admissionしてapproved 0を確認する。edit-start自己gateではなく、
 gate test/schema/kernelをproduct changeより先にTDDし、同じcandidate commitのacceptanceを検証する。
 positiveはL5 registry順の全inputでdigestとapproved receiptを再現する。D0は2 lane ReviewBundle、PLAN-L4-33/
-L5-26/L6-93/L7-458のTrackedReceiptRecord exact 4、BootstrapEnvelope #153を要求し、欠落、重複、
-wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
+L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4、BootstrapEnvelope #153を要求する。canonical
+tracked record全fieldとrecordDigest/attestation bindingを照合し、integrity-only、unsigned/self-hash、forged/untrusted、
+欠落、重複、wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
 predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→

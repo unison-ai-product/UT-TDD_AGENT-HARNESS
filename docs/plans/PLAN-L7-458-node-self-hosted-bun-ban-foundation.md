@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:be32303e49fbb7482fdc656eae1f6ac9
-  command_id: pr154-claude-final-l7-458-v5-20260724
-  admitted_at: 2026-07-24T08:30:00.000Z
-  source_digest: sha256:7ae8f9f8b0048611745987ad1d3b1f9aa47199982b4642d579c572a478fed02d
-  decision_digest: sha256:f3f38121211594c19cf5b7928c8fe49aa8c1baa1557832d93764a44957f3af90
-  receipt_digest: sha256:df02982422a682338c2deb343e98adf5c2be760e03a9999db6071200e38081cb
+  receipt_id: certificate:1c2d8c0aa2ab424c81151f5a29089566
+  command_id: pr154-final-scope-l7-20260724
+  admitted_at: 2026-07-24T09:00:00.000Z
+  source_digest: sha256:3a697b6e1379db998245767fc1bf12a845b0354bb2bddc83e43cf32b62c30b73
+  decision_digest: sha256:9a46cb97c1fed6b718f76e59ff3fffb00721afa68a019a39b629273b8e78cb19
+  receipt_digest: sha256:554ae1ee3e32792c733a137fd03253633aae8efecef8c5416f526d8f2fd39aee
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 5
-    content_digest: sha256:7ae8f9f8b0048611745987ad1d3b1f9aa47199982b4642d579c572a478fed02d
+    revision: 6
+    content_digest: sha256:3a697b6e1379db998245767fc1bf12a845b0354bb2bddc83e43cf32b62c30b73
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,13 +99,13 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 2
-    digest: sha256:604a59f1b5a0008c6574cb5433336fe4185d2a3b7dc2cb5d1b07b0aa83a451d9
+    revision: 3
+    digest: sha256:ec2f104bf8e62c4cd8cefcf73146460e636bd70e153776aeab8ba7be12631f94
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: PR 154 Claude final slice registry and physical ledger closure
+  escape_reason: PR 154 additive Node refinement and D0 trust correction
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -223,7 +223,7 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-103` | evidence/receipt append各barrierでcrash | atomic transactionにより両方存在又は両方0、partial chain 0 |
 | `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
-| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chain | D0 ReviewBundle 1+TrackedReceiptRecord exact 4+BootstrapEnvelope #153、後続predecessor+owned evidenceだけ連結 |
+| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chain | D0 ReviewBundle 1+AttestedTrackedReceiptRecord exact 4+BootstrapEnvelope #153、後続predecessor+owned evidenceだけ連結 |
 | `CAND-CUTOVER-107` | mode別review片lane/same provider/model/session/identity/author、unsigned/forged/untrusted authority/key、artifact drift | hybridはprovider差、単一provider modeはmodel差、全modeでsession/identity/author差を要求 |
 | `CAND-CUTOVER-108` | genesisからsealedまで各edge fresh review+CutoverAdmission+kind-discriminated evidence nested chain | validated Q0から既存ReviewBundle+正式BootstrapEnvelopeまで`receipt_digest`でchain-only再検証。未定義root/wrapper/alias拒否 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db`並行online backup | 単一時点のhead、refs、objectsで一貫 |
@@ -236,7 +236,7 @@ canonical cutover DBは`.ut-tdd/ledger/cutover-ledger.db`、PLAN ledgerは
 `.ut-tdd/ledger/harness-ledger.db`、rebuildable projectionは`.ut-tdd/harness.db`へ分離する。
 physical ownership正本は`docs/design/harness/L5-detailed-design/physical-data.md` §2.7.1とする。
 `CAND-CUTOVER-106`はL5 `NODE-SLICE-INPUT-REGISTRY-v1`を用い、D0のReviewBundle 1、
-TrackedReceiptRecord exact 4、BootstrapEnvelope #153と、後続sliceのpredecessor/owned evidenceを
+AttestedTrackedReceiptRecord exact 4、BootstrapEnvelope #153と、後続sliceのpredecessor/owned evidenceを
 registry順で検証する。missing/duplicate/wrong plan/stale content bindingはapproved 0とする。
 
 pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。

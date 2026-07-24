@@ -4,8 +4,8 @@ title: "PLAN-L4-33: Node control-plane architecture redesign"
 kind: add-design
 layer: L4
 drive: fullstack
-route_signal: design_correction
-route_mode: redesign
+route_signal: feature_addition
+route_mode: add-feature
 created: 2026-07-24
 updated: 2026-07-24
 owner: PO / TL
@@ -38,47 +38,37 @@ review_evidence: []
 status: draft
 sub_doc: architecture
 github_issue_id: 152
-supersedes:
-  - PLAN-L4-02-architecture
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:329aa11b865c23f5fa1de8ba11d86063
-  command_id: pr154-d0-admission-l4-20260724
-  admitted_at: 2026-07-24T06:30:00.000Z
-  source_digest: sha256:a59bd52fce71ff3ae2258f7ee35ac106277d1df17bb87bdd96de4ef90b59c05e
-  decision_digest: sha256:8a51ab2b3e48b0a1a8885daee34993e1002f615f7dcd7cc0c70ea7aa924a37f6
-  receipt_digest: sha256:7f2ff2d39e7afa9d8ff9a9b75e96f1b92e599915f990d0016e84e7dcb0fc32fb
+  receipt_id: certificate:9872f6cb924b98c14cd57db59bc64f37
+  command_id: pr154-final-scope-l4-20260724
+  admitted_at: 2026-07-24T09:00:00.000Z
+  source_digest: sha256:19ecee3ce9c5e8157380aeba2656bbd19ff43c63767739c974c0b020bf26f569
+  decision_digest: sha256:2f0fd718383c570fa9233357a9c9962b21c4176bf01a8abf731fdec29ff6cf4e
+  receipt_digest: sha256:cdb7d1db91d9679cff449eb131222780f0a8411cb133429994b5a908695d3360
   binding:
     path: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
     plan_id: PLAN-L4-33-node-control-plane-redesign
     asset_id: plan:legacy:ba9f2efe68bd7373538eb65009dc992ad9d06677095453f0abbff9967f53d6cd
-    revision: 2
-    content_digest: sha256:a59bd52fce71ff3ae2258f7ee35ac106277d1df17bb87bdd96de4ef90b59c05e
+    revision: 3
+    content_digest: sha256:19ecee3ce9c5e8157380aeba2656bbd19ff43c63767739c974c0b020bf26f569
   route:
-    signal: design_correction
-    mode: redesign
+    signal: feature_addition
+    mode: add-feature
   issue:
     provider: github
     issue_id: 152
     episode_id: E4-152-node-control-plane-d0n
-    projection_digest: sha256:e440f122e517c5d0ddbaaa2ad5fbc6b18cad57aa7db2865cbda6ab0a6c70e48f
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L4-02-architecture
-    revision: 1
-    digest: sha256:68e8be3650c0267300299f70713e416fc9b12965ac8fb0d4ad0edd9d15e03c7b
-  transition:
-    direction: design_to_implementation
-    implementation_disposition: none
-    implementation_target:
-      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-      target_revision: 2
+    revision: 2
+    digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
   reentry:
     target_plan_id: PLAN-L4-33-node-control-plane-redesign
-    target_revision: 2
+    target_revision: 3
     phase: forward_merge
-  escape_reason: Node control-plane D0-N design replacement and Forward reentry
-  supersedes:
-    - PLAN-L4-02-architecture
+  escape_reason: PR 154 additive Node refinement and D0 trust correction
 ---
 
 # PLAN-L4-33: Node control-plane architecture redesign
@@ -87,7 +77,8 @@ admission_receipt:
 
 Issue #152は、現行Bun control planeをNode化済みと誤認せず、設計を先にNode targetへ差し替えてから
 実装へ再降下するRedesignである。`PLAN-L4-02`を一般architectureのpredecessor/referenceとして維持し、
-Node runtime/build image/cutoverに関する差分だけを本PLANが所有する。先行F0実装は採択根拠にせず
+Node runtime/build image/cutoverに関するadditive refinementだけを本PLANが所有し、general canonicalを
+supersedeしない。先行F0実装は採択根拠にせず
 `none`として扱う。
 
 ## 2. L4不変条件

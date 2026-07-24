@@ -204,6 +204,17 @@ cutover ledgerのrebuild/delete/migration/backup ownershipを分離した。arch
 双方向参照し、projectionからcanonical DBへ書き戻す経路をfail-closeした。
 Issue #153の許容Redは継承2件だけで、D0 admissionはmerge前必須とした。独立再reviewまではFLAGを維持する。
 
+## Exact HEAD 8659effb final trust/scope FLAG
+
+review independenceをmode別に再固定した。hybridはprovider/runtimeを分離し、codex-only/claude-onlyは
+same runtimeを許す代わりに異model/session/identity/authorを要求する。standaloneはAI laneを禁止し、
+distinct human reviewer 2名が揃わなければfail-closeする。
+
+tracked projectionはintegrity-onlyであるため、canonical TrackedReceiptRecord全fieldを既存
+EvidenceAttestationへ束縛するAttestedTrackedReceiptRecord exact 4だけをD0 eligibilityへ数える。
+formal plan admission-checkとfuture D0 genesis trustを分離した。L4-33/L5-26/L6-93はgeneral PLAN全体を
+supersedeせず、Node-specific additive refinementとしてcanonical predecessor/referenceを維持する。
+
 ## Exact HEAD 121afc17 final FLAG
 
 freshnessがSliceAdmissionを誤参照し、CutoverAdmission artifact binding、revision-rule subject、

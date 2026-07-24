@@ -1432,8 +1432,10 @@ sealed edgeは`PLAN-RECOVERY-16` / `PLAN-L7-452`のtyped rowを両方要求す�
 `SliceEvidenceReceipt`もschema version+固定tuple+同じdigest規則を使う。`ReviewBundleReceipt`は
 claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
 reviewer model、execution mode、runtime familyをdigest/attestationへ封印する。hybridはprovider/session/identity/
-authorを分離し、単一provider modeはruntime family一致を許す代わりに異model+独立session/identityを必須とする。
-同一model/session/identity/authorは拒否し、異model2 lane不能ならfail-closeする。Issue #153でも2 laneを維持する。
+runtime family/authorを分離する。codex-only/claude-onlyはruntime family一致を許す代わりに
+異model+独立session/identityを必須とする。standaloneはAI laneを禁止し、provider=human/model=none/
+runtime=humanのdistinct reviewer 2名と独立session/evidenceを要求する。条件を満たせなければfail-closeする。
+Issue #153でも2 laneを維持する。
 chain entryだけでbundle/admission/evidenceを再検証可能にする。outer objectのlookup keyはtyped
 `receipt_digest`だけとし、payload `evidence_digest`又はaliasで取得しない。`SliceEvidenceReceipt`はkindで
 discriminateし、review/admission kindは各ReviewBundle/CutoverAdmission receipt digestへのtyped ref、
@@ -1467,8 +1469,10 @@ skip/replayはrejected receiptを残しmergeを拒否する。保存時は各sli
 issue 153、episode/projection/artifact digest、subject revision、captured_at、EvidenceAttestation、
 canonical receipt digestを必須とする。Q0からD0 rootsまでchain-only closureが切れた場合は拒否する。
 required inputはL5 `NODE-SLICE-INPUT-REGISTRY-v1`順でdigest化する。D0はReviewBundle 1、canonical
-TrackedReceiptRecord exact 4、Issue #153 BootstrapEnvelope 1を要求し、wrong/missing/duplicate/stale/content
-binding driftを拒否する。F0a/F0b/F0c/Q0もregistryのpredecessor、kind/count/producer/revision ruleをexact照合する。
+AttestedTrackedReceiptRecord exact 4、Issue #153 BootstrapEnvelope 1を要求する。tracked projectionの
+integrity-only recordをformal plan admission-checkには使えてもD0 genesis trustには使わず、既存EvidenceAttestationへ
+record digestとfull bindingを束縛したwrapperだけをeligibleにする。unsigned/self-hash/forged/untrusted/
+wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c/Q0もregistryをexact照合する。
 
 cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
 `src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。

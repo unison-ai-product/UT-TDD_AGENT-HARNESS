@@ -437,16 +437,20 @@ negative transitionは欠落、rejected input、owner不一致、revision drift�
 | slice | predecessor | required kind / count | producer | revision規則 |
 |---|---|---|---|---|
 | `d0` | `null` | `ReviewBundleReceipt` / 1（exact 2 lane） | `review-bundle-gate` | candidate HEAD |
-| `d0` | `null` | `TrackedReceiptRecord` / exact 4（PLAN-L4-33、L5-26、L6-93、L7-458各1） | `plan-admission-projection` | 各latest formal revisionかつcontent binding一致 |
+| `d0` | `null` | `AttestedTrackedReceiptRecord` / exact 4（PLAN-L4-33、L5-26、L6-93、L7-458各1） | `plan-admission-attestation-gate` | 各latest formal revisionかつcontent binding一致 |
 | `d0` | `null` | `BootstrapEnvelopeReceipt` / 1 | `issue-153-bootstrap-gate` | candidate HEAD |
 | `f0a` | approved `d0` / 1 | `f0a.static-custody` / 1 | `f0a-gate` | producer ancestor |
 | `f0b` | approved `f0a` / 1 | `f0b.sealed-generation` / 1 | `f0b-gate` | producer ancestor |
 | `f0c` | approved `f0b` / 1 | `f0c.os-jobs` / 1 | `f0c-gate` | producer ancestor |
 | `q0` | approved `f0c` / 1 | `q0.authoring` / 1、`q0.runtime-no-fallback` / 1 | `q0-authoring`、`q0-runtime` | candidate HEAD |
 
-`TrackedReceiptRecord`は既存tracked receipt projectionのcanonical
-`{ record_digest, plan_id, revision, content_digest, path, asset_id }` bindingを正本とする。
-D0 graphへ4 recordをtyped object/refとして格納し、欠落、重複、wrong plan、非latest revision、
+`TrackedReceiptRecord`は`tracked-receipt-projection.ts` / `diff-fence.ts`のcanonical実型、すなわち
+`sequence, previousRecordDigest, recordDigest, commandId, receiptId, receiptDigest, decisionDigest,
+binding{path,planId,assetId,revision,contentDigest}`を正本とする。このhash chainの
+`issuerAuthenticity=not_verified`だけではD0 eligibilityを満たさない。`AttestedTrackedReceiptRecord`は
+canonical tracked record全体とその`recordDigest`を既存`EvidenceAttestation`
+`{ authorityId, keyVersion, signature, producer, recordDigest }`へ束縛する正式wrapperである。
+D0 graphへ4 wrapperをtyped object/refとして格納し、unsigned/self-hash-only/forged/untrusted、欠落、重複、wrong plan、非latest revision、
 candidate artifactとのcontent/path binding driftをadmission前に拒否する。
 
 `CAND-NODEBOOT-017..020`は編集開始前の自己gateではない。各sliceのcandidate testとadmission
@@ -576,17 +580,21 @@ lanes, receipt_digest }`で、`schema_version="review-bundle.v1"`、lanesはexac
 reviewer_model, execution_mode, runtime_family, reviewer_identity, review_session_id, receipt_digest }`とし、lane IDは
 `claim-blind` / `spec-blind`を各1、verdictは両方`PASS`だけを許す。両laneのartifact/revisionはbundleと一致し、
 `execution_mode=hybrid`ではprovider、session、identityがlane間で異なり、reviewerはauthorとも異なる。
-`codex-only|claude-only|standalone`ではprovider/runtime familyの一致を許す一方、reviewer model、session、
+`codex-only|claude-only`ではprovider/runtime familyの一致を許す一方、reviewer model、session、
 identityがlane間で異なり、reviewerはauthorとも異なる。異model2 laneを用意できなければfail-closeする。
+`standalone`はAI/subagent laneを禁止し、distinct human reviewer 2名を要求する。両laneは
+`provider=human, reviewer_model=none, runtime_family=human`、異なるidentity/session/evidenceで、
+authorとも異ならなければならない。人間2名を用意できなければfail-closeする。
 各laneは`receipt_digest`以外の10 fieldを上記固定tuple/length-frame/SHA-256規則とattestationへ封印する。
 bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外の5 field
 （lanesは両lane receipt digest）を同じ規則で封印する。そのbundle receipt digestを
 `review.bundle` evidence receiptが参照し、
 transitionの`review_digest`はそのevidence receipt `receipt_digest`と一致する。片lane、PASS以外、
 重複lane、artifact/revision drift、mode別independence違反は拒否する。
-`hybrid`ではcross-providerの2 laneを優先する。`standalone` / `codex-only` / `claude-only`でprovider差を
+`hybrid`ではprovider/runtime familyを分離する。`codex-only` / `claude-only`でprovider差を
 構成できない場合に限り、異なるmodelかつ独立sessionのintra-runtime 2 laneを許可する。同一model、
 同一session、author自身のlaneは全modeで禁止し、Issue #153でもclaim-blind/spec-blind exact 2 laneを減免しない。
+standaloneは上記human 2 lane以外を許可しない。
 
 `ReviewLaneReceipt`、`ReviewBundleReceipt`、`SliceAdmissionReceipt`、`CutoverAdmissionReceipt`は
 既存`EvidenceRecord` / `EvidenceAttestation`契約を必須利用し、独自の署名booleanや自己申告を持たない。
@@ -611,7 +619,7 @@ writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt
 CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | ReviewLaneReceipt | ReviewBundleReceipt |
-SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt | TrackedReceiptRecord`である。
+SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt | AttestedTrackedReceiptRecord`である。
 `BootstrapEnvelopeReceipt`は`{ schema_version, issue_id, episode_id, projection_digest,
 artifact_digest, subject_revision, captured_at, attestation, receipt_digest }`を持ち、
 `schema_version="bootstrap-envelope.v1"`、`issue_id=153`へ固定する。`receipt_digest`以外を固定順tuple+
