@@ -604,8 +604,8 @@ closed discriminated unionをRFC 8785 canonicalizeする。`uint`はJSON整数�
 | `f0a.static-custody` | `f0a-static-custody.v1` | `node_version:string`, `npm_version:string`, `lock_digest:digest` / exact pinとclean lock graph一致 |
 | `f0b.sealed-generation` | `f0b-sealed-generation.v1` | `image_digest:digest`, `generation:uint`, `fallback_count:0` / sealed generation成功 |
 | `f0c.os-jobs` | `f0c-os-jobs.v1` | `workflow_revision:GitObjectId`, `run_id:string`, `run_attempt:uint>0`, `linux:{subject_revision:GitObjectId,run_id:string,run_attempt:uint,conclusion:"success",digest:digest}`, `windows:{同型}` / `workflow_revision == subject_revision == linux.subject_revision == windows.subject_revision && run_id/run_attemptが両OSと一致 && 両conclusion=="success"` |
-| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:digest`, `case_manifest_envelope_digest:digest`, `executed_case_ids:string[] unique` / immutable manifest期待set equality |
-| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:digest`, `case_manifest_envelope_digest:digest`, `executed_case_ids:string[] unique`, `bun_process_count:0`, `fallback_count:0` / immutable manifest expected set equalityかつNode-only |
+| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:ContentDigest`, `case_manifest_envelope_digest:ReceiptDigest`, `executed_case_ids:string[] unique` / immutable manifest期待set equality |
+| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:ContentDigest`, `case_manifest_envelope_digest:ReceiptDigest`, `executed_case_ids:string[] unique`, `bun_process_count:0`, `fallback_count:0` / immutable manifest expected set equalityかつNode-only |
 | `inventory.zero` | `inventory-zero.v1` | `scan_digest:digest`, `bun_reference_count:0` / inventory全対象0 |
 | `pack.acceptance` | `pack-acceptance.v1` | `pack_digest:digest`, `accepted:true` / clean Pack acceptance |
 | `debt.plan-recovery-16.repaired` | `plan-recovery-16-repair.v1` | `plan_id:"PLAN-RECOVERY-16-plan-revision-authoring"`, `repair_receipt_digest:digest` / formal repair済み |
@@ -618,10 +618,14 @@ payload schema registryへ入れない。未知kind/schema、row追加を伴わ�
 
 #### `CASE-MANIFEST-v1`
 
+`ReceiptDigest`はprefixなし64 lowercase hexで、core/outer `receipt_digest`、refs、DB PKにだけ使う。
+`ContentDigest`は`sha256:`+64 lowercase hexでartifact/content/required setにだけ使う。相互変換やprefix省略/
+付加を許さず、算出時と検証時にprefix有無をexact照合する。
+
 producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
 `{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_artifact_id:"NODE-Q0-CASE-MANIFEST-v1",`（前半）
-`source_artifact_path:"docs/test-design/harness/L8-integration-test-design.md",source_test_design_artifact_digest:digest,`
-`expected_case_ids:string[] unique sorted nonempty,required_set_digest:digest,producer_owner_id:"q0-case-manifest-gate",`（後半）
+`source_artifact_path:"docs/test-design/harness/L8-integration-test-design.md",source_test_design_artifact_digest:ContentDigest,`
+`expected_case_ids:string[] unique sorted nonempty,required_set_digest:ContentDigest,producer_owner_id:"q0-case-manifest-gate",`（後半）
 receipt_digest}`である。selfを除くexact 8-field tupleをcore preimageとし、`receipt_digest`はこのtupleの
 RFC 8785 canonical JSONをUTF-8化してSHA-256 lowerhexを取ったexact値とする。
 `AttestedReceiptEnvelope<CaseManifestObject>`へ格納する。ownerはEvidenceProducer `ci`へ写像し、
@@ -629,7 +633,8 @@ lookup/refはouter envelope digestだけを使う。Q0 payloadは`case_manifest_
 manifest subjectとpayload subjectを一致させ、executed IDsとexpected IDsのexact set equalityを要求する。
 `expected_case_ids`はUTF-8 code-point昇順のunique arrayとし、`required_set_digest`は
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(expected_case_ids)))`のexact値を要求する。
-`source_test_design_artifact_digest`はsubject GitObjectId時点のcanonical test-design artifact bytesから再計算する。
+`source_test_design_artifact_digest`の唯一のpreimageはmarker間のsingle parsed JSON objectをRFC 8785
+canonicalizeしてUTF-8化したbytesであり、doc全体、marker行、改行を含めない。
 artifact extractionは上記pathのraw Markdown bytesをUTF-8 LFとして読む。開始行exact
 `` `NODE-Q0-CASE-MANIFEST-v1-BEGIN` ``と終了行exact
 `` `NODE-Q0-CASE-MANIFEST-v1-END` ``を各1行、開始→終了順で要求し、前後空白0とする。
@@ -641,9 +646,9 @@ core `producer_owner_id`はouter `producer_owner_id`と一致させ、closed own
 `attestation_producer == "ci"`を要求する。typed object storeは
 `UNIQUE(subject_revision, evidence_type='q0-case-manifest')`を保証し、同一outer digestの再登録だけを冪等成功、
 同一subjectで異なるdigestを競合拒否する。これはhead/CAS/version registryではない。
-`q0.authoring`と`q0.runtime`は同じCaseManifest outer digestを参照する。EvidencePayloadObjectから
+`q0.authoring`とclosed literal `q0.runtime-no-fallback`は同じCaseManifest outer digestを参照する。EvidencePayloadObjectから
 CaseManifest outer digestへのtyped edgeを`cutover_evidence_refs`へ保存する。各`q0.authoring`/
-`q0.runtime` EvidencePayloadObjectは`edge_kind='q0.case-manifest'`, `ordinal=0`のedge exact 1を持ち、
+`q0.runtime-no-fallback` EvidencePayloadObjectは`edge_kind='q0.case-manifest'`, `ordinal=0`のedge exact 1を持ち、
 reducerはそのedgeだけを辿る。別edge kind/ordinal、複数、missing/orphan/different-manifest参照はfail-closeする。
 manifest変更は新subject revisionと通常のreview/admissionを必要とし、runtime mutable registry/head/removal APIは0とする。
 
@@ -808,14 +813,16 @@ digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、
 [physical-data.md](physical-data.md) §2.7.1を参照する。
 head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
 receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
-evidence object tableは`cutover_evidence_objects(receipt_digest PRIMARY KEY, object_digest, evidence_type TEXT NOT NULL, subject_revision, payload_json, attestation_json, CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL))`、
-参照tableは`cutover_evidence_refs(from_receipt_digest, to_receipt_digest, edge_kind, ordinal, UNIQUE(from_receipt_digest,edge_kind,ordinal))`
+evidence object tableは`cutover_evidence_objects(receipt_digest TEXT PRIMARY KEY NOT NULL, object_digest TEXT NOT NULL, evidence_type TEXT NOT NULL, subject_revision TEXT GENERATED ALWAYS AS (CASE WHEN evidence_type='q0-case-manifest' THEN json_extract(payload_json,'$.record.subject_revision') END) STORED, payload_json TEXT NOT NULL, attestation_json TEXT NOT NULL, CHECK(receipt_digest GLOB '[0-9a-f]*' AND length(receipt_digest)=64), CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL))`、
+参照tableは`cutover_evidence_refs(from_receipt_digest TEXT NOT NULL CHECK(length(from_receipt_digest)=64), to_receipt_digest TEXT NOT NULL CHECK(length(to_receipt_digest)=64), edge_kind TEXT NOT NULL, ordinal INTEGER NOT NULL CHECK(ordinal>=0), UNIQUE(from_receipt_digest,edge_kind,ordinal))`
 を正本とする。writerは
 `CREATE UNIQUE INDEX uq_cutover_q0_manifest_subject ON cutover_evidence_objects(subject_revision) WHERE evidence_type='q0-case-manifest'`
 も正本DDLとして作成する。`subject_revision`はnullable GitObjectId canonical textだがCaseManifestではNOT NULL相当CHECKとする。
 同digest insertだけを冪等成功とし、同subject別digestのUNIQUE violationをfail-closeする。migration/backfillは
-既存`evidence_type`全rowをclosed setでvalidateし、unknown/nullならrollbackしてfail-closeする。その後だけ
-nullable `subject_revision`とpartial indexをadditiveに追加し、既存rowを捏造しない。
+JSON validity、typed decode、schema literal、GitObjectIdはinsert前とread後の双方で検証する。
+移行はtransaction内でcanonical new tableを作り、既存`evidence_type`全rowをdecode/validateしてcopyし、
+row countと全receipt/object digest一致を照合後にrename swapしてpartial indexを作る。unknown/null、decode、
+copy、count/digest、rename/indexのどこかが失敗すれば全rollbackする。fresh/migrated schemaは同一とする。
 decoded typed union kindとDB `evidence_type`のexact equalityをinsert/read双方で要求する。
 `PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
 evidence/receipt insert後の更新SQLは

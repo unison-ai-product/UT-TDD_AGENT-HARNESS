@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:1789a2fdd25f05f3dff2f1cb98e50db1
-  command_id: pr154-manifest-parser-l6-20260724
-  admitted_at: 2026-07-24T15:20:00.000Z
-  source_digest: sha256:2b974c45511802db561ee144cc3b6637eaa40752eed15dfbb6be182d6aa0e3cb
-  decision_digest: sha256:781bd72b053891322111ac5e03b9517e72d109a3fd70d1720cf6184f37a4505a
-  receipt_digest: sha256:b04f180701a62c3ae0e5a47c7fb3c199bc9c6b288229512bfc8591c4ae9e1b41
+  receipt_id: certificate:849da9361606a34823bba44078b72f8e
+  command_id: pr154-manifest-digest-l6-20260724
+  admitted_at: 2026-07-24T15:30:00.000Z
+  source_digest: sha256:e4f15e6d5d90b9e1c1dc1e069a5587c616fe7fbbc5dc414c40599a548f149bc3
+  decision_digest: sha256:149f3cdf0fc324baa7062c157683eef5b2b072caa3961ea1db490e2c72c9c07b
+  receipt_digest: sha256:5545f9faa745a46c80ba05d677588ea3cbfe950e72ec391db1f6b0c5533ffc7e
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 16
-    content_digest: sha256:2b974c45511802db561ee144cc3b6637eaa40752eed15dfbb6be182d6aa0e3cb
+    revision: 17
+    content_digest: sha256:e4f15e6d5d90b9e1c1dc1e069a5587c616fe7fbbc5dc414c40599a548f149bc3
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 16
+      target_revision: 17
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 16
+    target_revision: 17
     phase: forward_merge
-  escape_reason: PR 154 case manifest parser closure
+  escape_reason: PR 154 case manifest digest closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -155,8 +155,11 @@ required/allowed 3 fields exactを要求する。DBは`evidence_type`単一discr
 Case IDはUTF-8 code-point昇順unique array、set digestは
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`とし、source artifact digestをsubject時点の
 canonical test-design bytesから再計算する。core/outer owner一致、closed mapの`ci`、subject単位の同digest冪等・
-異digest競合を要求する。q0.authoring/runtimeは同一outer digestをtyped evidence refで参照し、
+異digest競合を要求する。q0.authoring/q0.runtime-no-fallbackは同一outer digestをtyped evidence refで参照し、
 missing/orphan/split manifestを拒否する。
+ReceiptDigest raw 64 lowerhexとContentDigest `sha256:`付き64 lowerhexを分離する。artifact digest preimageは
+marker間single parsed JSONのRFC 8785 UTF-8 bytesだけとし、DB subjectはsigned payloadからgenerated導出する。
+strict NOT NULL tableへの移行はdecode/copy/count/digest/swap/indexを単一transactionで完遂する。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。

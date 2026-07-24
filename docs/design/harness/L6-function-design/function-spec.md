@@ -1450,8 +1450,11 @@ required/allowed 3 fields exactを要求する。Q0 payload refは`edge_kind='q0
 Case IDはUTF-8 code-point昇順unique arrayとし、set digestは
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`で再計算する。test-design artifact digestも
 subject GitObjectId時点のcanonical bytesから再計算する。core/outer owner一致とclosed mapの`ci`を検証し、
-同一subjectは同一outer digestだけ冪等、異digestは競合拒否する。q0.authoring/runtimeは同じouter digestを
+同一subjectは同一outer digestだけ冪等、異digestは競合拒否する。q0.authoring/q0.runtime-no-fallbackは同じouter digestを
 typed `cutover_evidence_refs` edgeで参照し、missing/orphan/split manifestを拒否する。
+ReceiptDigestはraw lowerhex 64、ContentDigestは`sha256:`付きlowerhex 64へ分離しprefix混同を拒否する。
+artifact digest preimageはmarker間single parsed JSONのRFC 8785 UTF-8 bytesだけとする。DB subjectはsigned
+payload JSONからgenerated columnで導出し、strict NOT NULL tableのtransactional rebuild migrationを要求する。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、

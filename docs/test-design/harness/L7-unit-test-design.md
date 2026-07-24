@@ -1712,6 +1712,9 @@ wrong artifact path/ID、marker 0/2組、間のJSON 0/2個、duplicate/unknown f
 partial UNIQUE index conflict、updated 8-field core preimage mutationも個別negativeにする。
 `evidence_type` NULL/unknown/typed union mismatch、CRLF、marker backtick欠落、前後空白、marker逆順、
 JSON missing field、`edge_kind!='q0.case-manifest'`、`ordinal!=0`、edge 0/2件も個別negativeにする。
+NULL receipt/ref digest、ReceiptDigestへの`sha256:`付加、ContentDigestのprefix欠落、手入力subject spoof、
+generated subject不一致、migration copy/count/digest/swap/index失敗、`q0.runtime` typo、doc全体をartifact
+preimageに使うmutationも個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→

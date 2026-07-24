@@ -325,3 +325,11 @@ additive migrationを固定した。marker parserはraw Markdown UTF-8 LF、back
 nonblank JSON exact 1行、required/allowed 3 fields exactへ閉じた。Q0 payload refは
 `edge_kind='q0.case-manifest'`, `ordinal=0` exact 1とした。PLAN-L6-93 revision 16 /
 PLAN-L7-458 revision 19を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 2180b9d7 CaseManifest digest/physical binding局所FLAG
+
+ReceiptDigest raw lowerhex 64とContentDigest `sha256:`付きlowerhex 64を分離し、Q0 runtime literalを
+`q0.runtime-no-fallback`へ統一した。artifact preimageをmarker間single JSONのRFC 8785 UTF-8 bytesだけへ固定した。
+SQLite object tableをstrict NOT NULL、signed payload由来generated subjectへ変更し、refsのNULL identityも拒否する。
+migrationはdecode/copy/count/digest/swap/indexを単一transactionでrebuildする。PLAN-L6-93 revision 17 /
+PLAN-L7-458 revision 20を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
