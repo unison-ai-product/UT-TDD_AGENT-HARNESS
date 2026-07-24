@@ -1,8 +1,9 @@
 ---
 plan_id: PLAN-L4-33-node-control-plane-redesign
 title: "PLAN-L4-33: Node control-plane architecture redesign"
-kind: design
+kind: add-design
 layer: L4
+sub_doc: architecture
 drive: fullstack
 status: draft
 route_signal: design_correction
@@ -11,6 +12,11 @@ created: 2026-07-24
 updated: 2026-07-24
 owner: PO / TL
 github_issue_id: 152
+agent_slots:
+  - role: tl
+    slot_label: "TL - Node制御面RedesignとForward再合流判定"
+  - role: qa
+    slot_label: "QA - L4/L9候補oracleと縮退防止"
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
 next_pair_freeze: L9
 supersedes:
@@ -49,10 +55,10 @@ build image/cutoverに関する節だけを本PLANが後継所有する。先行
 - current Bunはmigration debt、target Nodeは未実装の設計状態として別field・別receiptで表す。
 - Node/npm/toolchain/dependency/subject revisionをsealed generationへ結合する。
 - activationはappend-only immutable markerであり、既存current pointerを上書きしない。
-- publishはglobal exclusive leaseで直列化し、crash残留leaseはrecovery receipt無しにstealしない。
+- publishはexact `dist/node-publish.lock/` atomic mkdir leaseで直列化し、crash残留leaseはF0で永久fail-closeする。recovery/steal/clearを持たない。
 - F0では全immutable generationを保持してautomatic GCを禁止する。
-- process-crash atomicityとpower-loss durabilityを分離し、Windows Node-only F0は旧completeへのfail-safe recoveryまでを保証する。
-- rollbackは同一revision内を通常経路とし、cross-revisionはapproved target certificateでreader期待revisionを変更する。
+- process-crash atomicityとpower-loss durabilityを分離し、power loss後はcomplete marker 1件以上なら最大を選び、0件ならfail-closeする。
+- F0 rollbackは同一revision内だけ。cross-revisionはunsupportedで、git revertから新revisionをbuildする。
 - Node parity前に旧Bun gateを削除せず、Node primary後にBunへfallbackしない。
 - Resource Kernel/Rust companionをNode build imageの開始条件にしない。
 

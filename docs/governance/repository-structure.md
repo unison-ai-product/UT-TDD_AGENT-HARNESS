@@ -169,10 +169,11 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 - **engine は tool 非依存 package**: CLI / CI (Layer B-remote `.github/workflows`) / Codex / 将来ツールが同一 engine を GitHub から取得 (ルール同一性、concept §2.1.0)。Claude plugin は **任意の補助配信チャネル**で主軸でない (ADR-005 D3)。
 - consume 側 project の投影レイアウト (CLAUDE.md/.claude/AGENTS.md + `.ut-tdd/` state) の詳細は `ut-tdd setup` 仕様 (L4 external-if / L5 if-detail) で確定。
 
-## 10. Node control-plane build image（Issue #152 D0-N）
+## 10. Node制御面のビルドイメージ（Issue #152 D0-N）
 
-- targetではrootの`.node-version`、`package.json`、`package-lock.json`、review済み`docs/governance/node-toolchain-provenance.json`をNode/npm/dependency closureの正本とする。これらはF0-Aで同一commitに導入されるまで設計Redであり、現行mainに存在すると主張しない。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
-- `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、global publish lease下でappend-only immutable activation markerを追加して公開する。current pointerの上書きやCLI/receiptの別々の最終renameを行わない。
+- targetではrootの`.node-version`、`package.json`、`package-lock.json`、review済み`docs/governance/node-toolchain-provenance.json`をNode/npm/dependency closureの正本とする。これらはF0a（toolchain）で同一commitに導入されるまで設計Redであり、現行mainに存在すると主張しない。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
+- F0b（sealed build）は`dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、exact lease path `dist/node-publish.lock/`のatomic `mkdir`取得後にappend-only immutable activation markerを追加する。current pointer上書き、別lease backend、CLI/receiptの別々の最終renameを禁止する。
+- F0c（CI）はF0bのsealed generationだけをLinux/Windows matrixと最終aggregateへ配線する。
 - receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
 - `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
 - Resource Kernel / Rust companionの配置は別設計sliceとし、D0-Nのbuild、review、F0開始条件へ混入させない。

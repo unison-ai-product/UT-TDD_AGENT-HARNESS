@@ -51,3 +51,20 @@ claimを設計したもので、独立再review PASSを代替しない。
 - process-crash atomicityとpower-loss durabilityを分離し、Windows F0の保証を旧complete fail-safeまでに限定。
 
 この追記後もverdictはFLAGであり、再review結果を待つ。
+
+## Fourth review FLAG
+
+third修正後のN1–N5を安全側へ再設計した。
+
+- F0をF0a toolchain / F0b sealed build / F0c CIへ統一し、CAND ownerを一意化。
+- F0bからlease recovery/steal/clearとcross-revision rollbackを削除。
+- power loss後はcomplete marker 1件以上なら最大を選び、0件ならfail-close。
+- lease backendをexact `dist/node-publish.lock/` atomic mkdirだけに限定。
+- stale lock後はreader継続・publisher永久fail-close。後続PLANまで手動削除も禁止。
+
+この記録も再review PASSを意味しない。
+
+Fourth修正の直接plan-governanceでは、初回に新PLANの`agent_slots`欠落と既存base designとの
+`duplicate_layer_sub_doc`を検出した。3 PLANをsection追加に適合する`add-design`へ修正し、
+required agent slotsを追加した後、candidate-owned plan-governance、design-language、
+oracle-test-traceはGreenとなった。FLAG verdict自体は再reviewまで維持する。

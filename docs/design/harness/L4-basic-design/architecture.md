@@ -215,7 +215,7 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 `classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。
 
-## §9 Node control-plane cutover（Issue #152 / #153）
+## §9 Node制御面の切替（Issue #152 / #153）
 
 TypeScriptのdomain/control planeはcompiled ESMとしてNode上で自己ホストする。移行状態は
 `inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向であり、
@@ -228,8 +228,9 @@ harness legを最終aggregateがAND集約し、skip、欠測、別HEAD、別gene
 Issue #153は継承main負債2件だけを限定する一時envelopeであり、candidate固有のreceipt、review、
 Node matrix、aggregate failureを免除しない。Resource Kernel / Rust companionは別D0-R sliceで扱う。
 
-F0のatomicityはprocess-crash境界で、global exclusive publish lease下のappend-only markerにより
+F0bのatomicityはprocess-crash境界で、`dist/node-publish.lock/`のglobal exclusive publish lease下のappend-only markerにより
 旧completeまたは新complete generationだけを選ぶことを意味する。power-loss durabilityとは区別し、
-Windows Node-only F0では最新markerの永続化完了を主張せず旧completeへのfail-safe recoveryを保証する。
+Windows Node-only F0bでは最新markerの永続化完了も旧markerの存在も保証しない。power loss後に検証可能な
+complete markerが1件以上あれば最大sequenceを選び、0件ならfail-closeする。
 power-loss durable activationはResource Kernel bundle側trust floorへ委譲するが、D0-R未着地をF0の
-process-crash atomicity blockerにはしない。F0ではgeneration自動GCを禁止する。
+process-crash atomicity blockerにはしない。F0bではgeneration自動GCを禁止する。

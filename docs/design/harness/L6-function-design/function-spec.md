@@ -1376,7 +1376,7 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 ## Node self-host bootstrap機能契約（Issue #152 D0-N）
 
 `buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
-toolchain provenance（Node distribution archive digest、同梱npm CLI expected digest、package/lock identity）、
+検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
 `package-lock.json`、builder/source graphを入力とし、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
 `subject_revision`、Node/npm absolute executable path・version・digest、lock digest、
@@ -1390,17 +1390,20 @@ symlink escape・partial publishではtyped failureを返し、spawnを呼ばな
 `shell=false`、Windowsでは`windowsHide=true`でsealed Node executable + compiled ESMを起動する。
 Bun、bunx、tsx、TS直実行、ambient PATH、runtime downloadへのfallbackは禁止する。
 
-`publishActivation`はglobal exclusive leaseをatomic mkdir/open-wxで取得できた場合だけ、取得後のmax sequence
-`N`から`N+1`を割り当てる。同時writerは`publish-lease-busy`でfail-closeしretryしない。crash残留leaseは
-`recoverPublishLease(approvedRecovery)`が旧complete stateを検証してrecovery receiptを発行するまでsteal・削除しない。
+`publishActivation`はexact path `dist/node-publish.lock/`をatomic `mkdir`で取得できた場合だけ、取得後の
+max sequence `N`から`N+1`を割り当てる。同時writerは`publish-lease-busy`でfail-closeしretryしない。
+`owner.json`欠落・破損をunlock根拠にせず、別path、open-wx、steal、clear、recovery APIを禁止する。
+crash残留lockは後続recovery PLANまで永久にpublishをblockする。marker rename後crashではreaderだけが
+complete markerを利用できる。
 
 process-crash atomicity oracleは各barrierのfault injectionと並行readerで、旧完全generationまたは新完全generation
 以外を観測しないことを要求する。markerはtemporary write + file sync + close後、存在しない一意final名へ
-same-filesystem renameする。POSIXは可能な場合parent directoryをsyncする。Windows Node-only F0はpower-loss後の
-最新marker persistenceを保証せず、invalid/latest欠落時に旧complete markerへfail-safe recoveryする。power-loss
+same-filesystem renameする。POSIXは可能な場合parent directoryをsyncする。Windows Node-only F0bはpower-loss後の
+最新marker persistenceも旧marker存在も保証しない。検証可能complete markerが1件以上なら最大sequenceを選択し、
+0件なら`node-activation-marker-missing`でfail-closeする。power-loss
 durable activationはResource Kernel bundle trust floorの後続責務であり、F0 receiptへ虚偽のdurable claimを入れない。
 
-通常rollbackは同一subject revision限定。cross-revisionはapproved target revision/certificateで
-`expectedRevision`をtargetへ変更する別operationとし、旧receiptを改竄しない。F0はautomatic GC、
-generation deletion API、lease stealを実装しない。CLI先行・receipt後行の二段rename、既存pointer上書き、
+F0b rollbackは同一subject revision限定。cross-revision rollbackとtarget revision変更APIはunsupportedで
+fail-closeし、通常はgit revertから新revisionをbuildする。F0bはautomatic GC、generation deletion API、
+lease recovery/steal/clearを実装しない。CLI先行・receipt後行の二段rename、既存pointer上書き、
 shell/native helper fallbackは契約違反である。

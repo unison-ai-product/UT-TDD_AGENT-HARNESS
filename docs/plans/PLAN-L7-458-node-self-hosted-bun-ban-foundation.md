@@ -114,11 +114,11 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 | `CAND-NODEBOOT-008` | 別commitのreceiptをreplayできない | `subject_revision` mutationとcandidate HEAD不一致を拒否 |
 | `CAND-NODEBOOT-009` | version文字列が同じ別npm CLI、または改竄npm CLIへ差替える | reviewed distribution provenanceのexpected CLI digest不一致で拒否 |
 | `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename前後でprocess crashする | parent sync可能時に実施し、最高complete markerが旧または新generationだけを返す |
-| `CAND-NODEBOOT-011` | Windows marker各barrierでprocess crashし、power-loss simulationを別case化する | process crashは旧/新completeのみ。power lossでは最新永続化を主張せず旧completeへfail-safe |
+| `CAND-NODEBOOT-011` | Windows marker各barrierでprocess crashし、power-loss simulationを別case化する | process crashは旧/新completeのみ。power loss後はcomplete 1件以上なら最大、0件ならfail-close |
 | `CAND-NODEBOOT-012` | 同時writerをbarrierで逆順完了させようとする | global lease winnerだけがN+1をpublishし、loserはretry無しfail-close、distinct sequence逆順0 |
-| `CAND-NODEBOOT-013` | crash残留publish leaseをPID/time経過でstealするmutation | recovery receipt無しのpublish/stealを拒否 |
+| `CAND-NODEBOOT-013` | crash残留`dist/node-publish.lock/`をowner欠落/PID終了/time経過で回復・steal・clearするmutation | readerはcomplete marker利用可、publisherは永久fail-close、回復/手動削除API 0 |
 | `CAND-NODEBOOT-014` | automatic GC、generation deletion API、cleanup経由deleteを注入する | F0 scanner/ASTで削除surface 0、全immutable generation保持 |
-| `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionは新marker、cross-revisionはapproved certificateでexpectedRevision変更、旧receipt byte不変 |
+| `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
 
 予定実装トレースは`src/runtime/node-bootstrap.ts`、`scripts/build-node.mjs`、
@@ -141,7 +141,19 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 同じgate案をIssue #153の[review FLAG follow-up](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/153#issuecomment-5065921409)へ記録した。GitHubコメント単独を正本にせず、本節と差異が出た場合は設計修正を先に行う。
 
 - **D0-N**: candidate IDだけを持ち、plan/frontmatter/readability/traceがGreen。current Bunとtarget Nodeを区別し、実装Greenを主張しない。
-- **F0-A**: toolchain provenance、same-version npm substitute、dependency closure、subject revision、両OS pointer faultを実testと同一commitでRed→Green化し、claim-blind/spec-blindがPASS。
-- **F0-B**: Node Linux/Windowsと既存harness Linux/Windowsを同一HEAD/run attemptでaggregateし、failure/cancel/skipを非successにする。
+- **F0a (toolchain)**: exact Node/npm、review済みprovenance、same-version npm substitute、lock/dependency closureを実testと同一commitでRed→Green化する。
+- **F0b (sealed build)**: subject revision、immutable generation、exact mkdir lease、append marker、crash/power-loss境界、same-revision rollback、GC/delete/recovery API 0をRed→Green化する。
+- **F0c (CI)**: Node Linux/Windowsと既存harness Linux/Windowsを同一HEAD/run attemptでaggregateし、failure/cancel/skipを非successにする。
 - **Q0**: compiled Node CLIでfixture authoringとreceipt verifyを行い、Bun/bunx/tsx/TS/shell process 0を独立観測する。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
+
+### CAND ownership
+
+| Slice | Candidate ownership |
+|---|---|
+| F0a toolchain | `CAND-NODEBOOT-007`, `009` |
+| F0b sealed build | `CAND-NODEBOOT-001..006`, `008`, `010..016`, `101..102`, `205` |
+| F0c CI | `CAND-NODEBOOT-103..106`, `206` |
+| Q0 / later cutover | `CAND-NODEBOOT-201..204`, `207..208` |
+
+候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。

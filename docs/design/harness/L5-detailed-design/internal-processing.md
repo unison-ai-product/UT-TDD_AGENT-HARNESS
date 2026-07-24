@@ -397,13 +397,14 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。
 3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
 4. generation内fileをflushし、POSIXでは可能な場合parent directoryも同期した後、immutable generation名へrenameする。activation markerはtemporary write→file sync→close後、存在しない一意final名へ同一filesystem renameする。Windows Node-onlyではprocess-crash atomicityを保証するが、power-loss後の最新marker persistenceを保証済みと主張しない。
-5. writerはまずglobal exclusive publish leaseをNode標準のatomic `mkdir`または`open("wx")`で取得する。取得後にvalidated markerのmax sequenceを読み、`N+1`を割り当ててpublishし、最後にleaseをreleaseする。同時writerはretryせずfail-closeする。leaseを取らずにsequenceを読まないため、distinct sequenceの逆順publishは成立しない。
-6. crash残留leaseを時刻・PIDだけで自動stealしない。別recovery operationが旧complete marker、lease owner、temp/generationを検証しrecovery receiptを発行するまで全publishをfail-closeする。readerはtemp、parse不能、digest不一致、generation未完成markerを無視し、validated markerの最大単調sequenceだけを返す。
+5. writerはexact path `dist/node-publish.lock/`をNode標準のatomic `mkdir`だけで取得する。`open("wx")`、別path、OS helper等の代替backendは禁止する。取得後にvalidated markerのmax sequenceを読み、`N+1`を割り当ててpublishし、最後に自分が正常完了した同一process内だけでleaseをreleaseする。同時writerはretryせずfail-closeする。
+6. lock directory内の`owner.json`は診断情報であり、欠落・破損してもlockを保持する。crash残留lockは永久fail-closeで、F0bにrecovery/steal/clear APIを作らず、手動削除もしない。marker rename後にcrashした場合もreaderはcomplete markerを利用できるがpublisher livenessは停止する。後続recovery PLANまでpublishを再開しない。
+7. readerはtemp、parse不能、digest不一致、generation未完成markerを無視し、検証可能complete markerが1件以上なら最大sequenceを返す。0件ならfail-closeする。power loss後に旧markerが必ず残るとは主張しない。
 
 envの`npm_config_user_agent`は証拠に使用せず、実npm executable/version/digestを測定する。receipt欠落、
 cross-revision replay、dependency/path/symlink drift、unknown field、partial generationはprocess生成前に
 fail-closeする。失敗時のBun/bunx/tsx/TS直実行/shell fallbackは存在しない。
 
-`GenerationPublisher`はtemp generation、global publish lease、activation markerだけを所有する。F0ではautomatic GCとgeneration削除APIを禁止し、全immutable generationを保持する。reader leaseと安全なreclamationを設計する後続PLANまでGCをdeferし、cleanupはtempと正常release可能な自分のleaseに限定する。
+`GenerationPublisher`はtemp generation、exact publish lock、activation markerだけを所有する。F0bではautomatic GCとgeneration削除APIを禁止し、全immutable generationを保持する。reader leaseと安全なreclamationを設計する後続PLANまでGCをdeferし、cleanupはtempと正常完了した同一processが保有するlockに限定する。
 
-通常rollbackは同一`subject_revision`の検証済み旧generationを指す、より大きいsequenceのmarker appendだけを許す。cross-revision rollbackは、明示承認されたtarget revision/certificateを入力にreaderの`expectedRevision`自体をtargetへ変更する別operationであり、旧receiptのrevisionやdigestを書き換えない。
+F0b rollbackは同一`subject_revision`の検証済み旧generationを指す、より大きいsequenceのmarker appendだけを許す。cross-revision rollbackはunsupportedでfail-closeする。通常のcross-revision復帰はgit revertで新revisionを作りF0a/F0bを再実行する。Resource Kernelまたは別PLANが設計されるまでtarget revision変更APIを持たない。

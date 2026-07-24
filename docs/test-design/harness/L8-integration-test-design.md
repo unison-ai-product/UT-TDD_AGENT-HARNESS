@@ -320,5 +320,5 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 | `CAND-NODEBOOT-105` | Node bootstrapと既存harness legが別HEAD/run attempt | evidence合成を拒否 |
 | `CAND-NODEBOOT-106` | Issue #153 envelope下のcandidate固有failure | envelopeでwaiveせずmergeをblock |
 
-F0-Aはbuild generationまで、F0-Bはworkflow配線とaggregateまでを所有する。lock/build/receiptの実装と
-CI YAMLを同じ原子PRへ再結合しない。
+F0aはtoolchain、F0bはsealed generation、F0cはworkflow配線とaggregateを所有する。
+toolchain、build/receipt、CI YAMLを同じ原子PRへ再結合しない。

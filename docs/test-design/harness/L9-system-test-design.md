@@ -177,7 +177,7 @@ GitHub可用性がLedgerの正本性を左右しないこと。検出器はこ�
 | `CAND-NODEBOOT-202` | detector self-host | NodeだけでBun ban detectorとgovernance detectorが完走しcoverage欠測0 |
 | `CAND-NODEBOOT-203` | runtime process zero | CLI/hook/doctor/test中のBun executable/descendant 0、observer欠測0 |
 | `CAND-NODEBOOT-204` | no fallback | Node image欠落・破損・version/revision drift時にBun/tsx/shell起動0 |
-| `CAND-NODEBOOT-205` | generation atomicity | crash/rollback/並行readerでpartial generation観測0 |
+| `CAND-NODEBOOT-205` | generation atomicity | crash/same-revision rollback/並行readerでpartial generation観測0。cross-revision rollbackはunsupported |
 | `CAND-NODEBOOT-206` | CI aggregate | Node Linux/Windows + harness Linux/Windowsが同一HEAD/run attemptで全Green |
 | `CAND-NODEBOOT-207` | cutover ordering | parity receipt無しの旧経路削除、node_primary後fallback、期限なしallowlistを拒否 |
 | `CAND-NODEBOOT-208` | final deletion | Bun lock/cache/bootstrap/compatibility codeとproduction allowlistが物理的に0 |

@@ -1,8 +1,9 @@
 ---
 plan_id: PLAN-L6-93-node-bootstrap-contract
 title: "PLAN-L6-93: sealed Node bootstrap function redesign"
-kind: design
+kind: add-design
 layer: L6
+sub_doc: function-spec
 drive: fullstack
 status: draft
 route_signal: design_correction
@@ -11,6 +12,11 @@ created: 2026-07-24
 updated: 2026-07-24
 owner: PO / TL
 github_issue_id: 152
+agent_slots:
+  - role: se
+    slot_label: "SE - sealed bootstrap関数契約"
+  - role: qa
+    slot_label: "QA - CAND-NODEBOOT Red/Green昇格境界"
 parent_design: docs/plans/PLAN-L5-26-node-generation-activation.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
@@ -26,8 +32,7 @@ generates:
     artifact_type: design_doc
 dependencies:
   parent: docs/plans/PLAN-L5-26-node-generation-activation.md
-  requires:
-    - docs/plans/PLAN-L5-26-node-generation-activation.md
+  requires: []
   references:
     - docs/plans/PLAN-L6-01-function-spec.md
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
@@ -49,13 +54,14 @@ immutable generationとreceiptを生成する。`publishActivation`はglobal exc
 
 - 同version別npm CLI、digest/revision/path/symlink driftをprocess生成前に拒否する。
 - marker sequence重複、generation欠落、receipt不一致、temp/torn/invalid markerをcurrentにしない。
-- distinct sequenceの逆順publish、publish lease busy、recovery receipt無しのstale lease stealを拒否する。
+- exact `dist/node-publish.lock/`以外のlease backend、distinct sequence逆順publish、lease busyを拒否する。
+- stale lockはowner.json欠落時も永久fail-closeし、F0 recovery/steal/clear APIを持たない。
 - 通常rollbackは同一revisionの旧generationを指す新markerだけを許可する。
-- cross-revision rollbackはapproved target certificateでexpected revisionを変更し、旧receiptを改竄しない。
+- cross-revision rollback/target revision変更はunsupported。git revert後の新revision buildへrouteする。
 - F0でautomatic GC、generation delete API、power-loss durable claimを拒否する。
 - Node失敗時のBun/bunx/tsx/TS直実行/shell/native helper fallbackを禁止する。
 
 ## 3. L7開始条件
 
-L7-458は本PLAN、L7 unit候補`CAND-NODEBOOT-001..012`、L8/L9 pairのtraceを参照する。
+L7-458は本PLAN、L7 unit候補`CAND-NODEBOOT-001..016`、L8/L9 pairのtraceを参照する。
 D0文書だけでは正式test IDまたはGreenを主張しない。

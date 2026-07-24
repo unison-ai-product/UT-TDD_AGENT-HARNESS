@@ -1,8 +1,9 @@
 ---
 plan_id: PLAN-L5-26-node-generation-activation
 title: "PLAN-L5-26: append-only Node generation activation redesign"
-kind: design
+kind: add-design
 layer: L5
+sub_doc: internal-processing
 drive: fullstack
 status: draft
 route_signal: design_correction
@@ -11,6 +12,11 @@ created: 2026-07-24
 updated: 2026-07-24
 owner: PO / TL
 github_issue_id: 152
+agent_slots:
+  - role: se
+    slot_label: "SE - append-only activation物理protocol"
+  - role: qa
+    slot_label: "QA - crash/競合/lock永久停止oracle"
 parent_design: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
@@ -26,8 +32,7 @@ generates:
     artifact_type: design_doc
 dependencies:
   parent: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
-  requires:
-    - docs/plans/PLAN-L4-33-node-control-plane-redesign.md
+  requires: []
   references:
     - docs/plans/PLAN-L5-03-internal-processing.md
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
@@ -47,21 +52,22 @@ Issue #152のL4-33を、Node標準filesystem APIだけでWindows/POSIXへ実装�
 ## 2. Activation protocol
 
 1. immutable generationをprivate tempへ構築し、全fileをsync/closeしてcomplete receiptを封印する。
-2. writerはglobal exclusive publish leaseをatomic `mkdir`または`open("wx")`で取得する。
+2. writerはexact `dist/node-publish.lock/`をatomic `mkdir`だけで取得する。`open("wx")`等の代替backendは禁止する。
 3. lease取得後にmax sequence `N`を読み、`N+1`を割り当てる。同時writerはretryせずfail-closeする。
 4. activation markerをtempへwrite、file sync、closeし、存在しない一意final名へ同一filesystem renameする。
 5. readerは全final markerを検証し、sequence・generation・receiptが完全な最大markerだけを採用する。
-6. temp、torn、invalid markerは無視する。crash残留leaseはrecovery receiptまで自動stealせずpublishをblockする。
-7. 同一revision rollbackは旧generationを指す新markerをappendする。cross-revisionはapproved target certificateでreader expected revisionを変更する。
+6. temp、torn、invalid markerは無視する。crash残留lockはowner.json欠落時も保持し、F0にrecovery/steal/clear APIを作らずpublishを永久blockする。readerはcomplete markerを引き続き利用できる。
+7. F0 rollbackは同一revisionの旧generationを指す新markerだけ。cross-revisionはunsupportedで、git revert後の新revision buildを使う。
 
 既存file置換、shell、native helperへ依存しない。F0ではautomatic GCとgeneration deletion APIを禁止し、
 全immutable generationを保持する。reader lease/reclamationは後続PLANへdeferする。
 
 process crashとpower lossを別oracleにする。POSIXは可能な場合parent directoryをsyncする。Windows Node-only
-F0は最新markerのpower-loss persistenceを保証せず、旧complete markerへのfail-safe recoveryを保証する。
+F0bは最新markerのpower-loss persistenceも旧marker存在も保証しない。検証可能complete markerが1件以上なら
+最大sequenceを選び、0件ならfail-closeする。
 power-loss durable activationはResource Kernel bundle側trust floorへ委譲する。
 
 ## 3. Pair
 
 L8の`CAND-NODEBOOT-101..106`とpair-freezeし、競合writer、全crash barrier、rollback、GC禁止を
-F0 test同commitでRed実測するまで正式`IT-*`へ昇格しない。
+F0b/F0c test同commitでRed実測するまで正式`IT-*`へ昇格しない。
