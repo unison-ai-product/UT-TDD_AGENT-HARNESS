@@ -129,3 +129,13 @@ activationを分離し、owner一意性を回復した。独立再reviewまで�
 単発Node検証はsemantic markerとdesign-languageがGreen。oracle traceはcandidate test未実装なのにrange表記を
 正式宣言として解釈し`U-CUTOVER-001` orphanを検出したため、test-designをcandidate段階のID family表記へ修正し、
 実test+Red同一commitで個別正式IDへ昇格する境界を明記した。再試行はしていない。
+
+## Exact HEAD 26953949 spec-blind FLAG
+
+cutover evidence registryをL5 design `CUTOVER-EVIDENCE-REGISTRY-v1`へ一本化し、lexical kind/producer IDを固定した。
+F0c後のQ0をNode-only Bun detector/ban auditの実装・qualification revisionとし、final deletionを別revisionに維持した。
+inventory→shadowはF0 receiptの同一subject強制を撤回し、各producer commitからcandidate HEADへのdescendant
+closureを検証する。stale/replay/non-ancestorはfail-closeする。独立再reviewまではFLAGを維持する。
+build、slice evidence、transitionのreceipt schemaを分離し、candidate HEAD規則の適用先を明示した。
+Q0がNode-only detector/ban auditのtest+implementation+実行+qualificationを所有し、repo-wide final deletionだけを
+Q0後の別revisionへ残す。

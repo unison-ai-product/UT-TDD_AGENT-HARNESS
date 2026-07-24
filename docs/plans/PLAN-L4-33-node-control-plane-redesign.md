@@ -71,6 +71,8 @@ evidence/review欠落、chain不一致はfail-closeする。DB/UIのcurrent stat
 genesis receiptは`previous_state=null`、`previous_receipt_digest=null`、`current_state=inventory_frozen`で、
 inventory evidenceとreview/admission receiptを要求する。空chainのprojectionは`uninitialized`であり開始不能、
 validated genesis digestだけがchain headになる。
+通常transition receiptはcandidate HEADをsubjectにする。inventory_frozen→node_shadowのF0a/F0b/F0c証跡は
+各producer slice commitをsubjectとし、candidate HEADが全commitのdescendantであるancestry closureを要求する。
 
 ## 3. PairとForward再合流
 

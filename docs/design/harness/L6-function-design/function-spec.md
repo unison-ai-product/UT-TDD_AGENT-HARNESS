@@ -1420,4 +1420,6 @@ review/admission receiptを受け、許可された隣接一方向遷移だけ�
 kind/count/producer/subject revision/digest/exit successをexact照合し、wrong edge/replay/skipを拒否する。
 
 edge registryはL5のgenesis、inventory→shadow、shadow→primary、primary→bun_removed、bun_removed→sealedの
-5 rowを識別unionとして実装し、別edgeのevidence型を受理しない。
+5 Edge IDを`CUTOVER-EVIDENCE-REGISTRY-v1`から識別unionとして実装し、別edgeのevidence型を受理しない。
+inventory→shadowだけは各producer receiptのslice commit subjectとcandidate HEADのdescendant closureを検証し、
+同一subjectを要求しない。transition receiptはcandidate HEADをsubjectとし、stale/replay/non-ancestorを拒否する。

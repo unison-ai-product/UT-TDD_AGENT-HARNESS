@@ -1638,6 +1638,10 @@ wrong evidence、replay、skip/reverse、digest mutation、projection直接更�
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
 正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。reviewed D0 draft下の非activation
 F0a/F0b bootstrapは許可し、production activation/hook switch/Bun deletionだけをL6 confirmed+D0 admissionまで禁止する。
+`CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
+各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
+non-ancestorなら拒否する。同一subject fixtureを要求しない。transition receiptのsubjectはcandidate HEADと
+exact一致し、producer receiptのcanonical set digestを封印する。
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust

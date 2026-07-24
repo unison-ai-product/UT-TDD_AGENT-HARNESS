@@ -224,6 +224,8 @@ receiptはprevious/current state、subject revision、evidence/review/previous r
 receipt outputは`review_digest`、`admission_digest`、`evidence_set_digest`を個別に保持し、
 非隣接、skip、reverse、replay、chain不一致をfail-closeする。状態projectionはvalidated chainから再構築する。
 genesisはnull previous fieldsとinventory evidence+review/admissionを持ち、空chainは`uninitialized`で開始不可とする。
+F0a/F0b/F0c receiptは各producer commitをsubjectとし、node_shadow candidate HEADが全commitのdescendantである
+closureを検証する。transition receipt自体はcandidate HEADをsubjectにする。
 Node parity前に旧Bun経路を削除せず、
 `node_primary`後にBun、bunx、tsx、TS直実行、shellへfallbackしない。
 

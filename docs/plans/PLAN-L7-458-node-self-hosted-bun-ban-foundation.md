@@ -76,8 +76,9 @@ D0 review/admission receiptが当該subject revisionへ一致するまで
 ## 1. Program boundary
 
 本PLANは段階programである。現在のPR #154はD0-N設計だけを扱い、実装はF0a→F0b→F0c→Q0の順に
-独立sliceで進める。Node self-host成立後、Bun scanner/ban auditの候補ID、test、実装を本PLANの後続revisionで
-定義する。Node基盤とBun禁止をsame PR/sliceへ束ねず、F0完了をBun-ban final完了と呼ばない。
+独立sliceで進める。F0c完了でNode self-host runtimeを利用可能にし、その後のQ0 revisionでNode-only
+Bun scanner/ban auditの候補ID、test、実装、qualificationを定義・実行する。Q0自身の完了を開始条件にしない。
+repo-wide final deletionは別revisionであり、F0/Q0完了をBun-ban final完了と呼ばない。
 
 ## 2. Gate semantics
 
@@ -99,12 +100,14 @@ D0 review/admission receiptが当該subject revisionへ一致するまで
 2. F0aはexact pin、clean `npm ci`、lock graph再現性だけをRed→Green化する。
 3. F0bはcompiled generation、receipt、executable custody、activation admissionをRed→Green化する。
 4. F0cはLinux/Windows jobとaggregateをRed→Green化する。
-5. Q0はNode self-hostを独立検証する。
-6. Node self-host成立後の後続revisionでBun scanner/ban auditのTDD順序とfinal DoDを定義する。
+5. F0c後のQ0 revisionは利用可能なNode self-host runtime上でNode-only Bun detector/ban auditを実装・実行し、
+   authoring/runtime no-fallbackをqualificationする。
+6. repo-wide final deletionのTDD順序とDoDはQ0後の別revisionで定義する。
 
 frontmatterの`generates`はprogram全体の予定artifact一覧であり、現在のPR #154が全てを生成済みという意味ではない。
-F0aはtoolchain/lock、F0bはbootstrap/generation、F0cはworkflow、Q0はqualification evidenceだけを生成する。
-Bun scanner、debt manifest、ban audit成果物は後続revisionまで未生成である。
+F0aはtoolchain/lock、F0bはbootstrap/generation、F0cはworkflowを生成する。F0c後の後続Q0 revisionが
+Node-only Bun detector/ban auditのtest、implementation、実行結果とqualification evidenceを所有する。
+repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisionまで未生成である。
 
 ### 4.1 Node bootstrap候補トレース（設計Red）
 
@@ -147,6 +150,8 @@ Bun scanner、debt manifest、ban audit成果物は後続revisionまで未生成
 | `CAND-CUTOVER-009` | L6 draft、D0 admission/review欠落でproduction activation/cutoverを要求 | activation、hook switch、Bun deletion dispatch 0。reviewed D0 draft下の非activation F0a/F0b bootstrapは許可 |
 
 実装先は`tests/cutover-transition.test.ts`、正式IDは同番号の`U-CUTOVER-001..009`へ固定する。
+inventory_frozen→node_shadowでは各F0 receiptのsubjectはproducer slice commit digestであり、transition
+candidate HEADが全commitのdescendantであることを検証する。同一subject強制はせず、stale/replay/non-ancestorを拒否する。
 
 予定実装トレースは`src/runtime/node-bootstrap.ts`、`scripts/build-node.mjs`、
 `src/state-db/stop-refresh.ts`、compiled Nodeを呼ぶhook設定、CLI wrapper、snapshot runnerへ接続する。
@@ -158,8 +163,8 @@ Bun scanner、debt manifest、ban audit成果物は後続revisionまで未生成
 - [ ] F0a: exact pin、clean `npm ci`、lock graph再現性がGreenである。
 - [ ] F0b: sealed generation、loader、executable custody、activation receiptがGreenである。
 - [ ] F0c: Linux/Windows jobとaggregateがGreenである。
-- [ ] Q0: Node self-host qualificationと独立reviewがtested commitへ一致する。
-- [ ] Bun-ban final: Node self-host後のPLAN revisionがscanner/ban audit候補と物理削除DoDを定義し、別途完了する。
+- [ ] Q0: Node-only Bun detector/ban auditのtest、implementation、実行結果、Node self-host qualificationと独立reviewがtested commitへ一致する。
+- [ ] Bun-ban final: Q0後の別PLAN revisionがrepo-wide物理削除DoDを定義し、別途完了する。
 
 PR #154/F0の完了はBun-ban final完了を意味しない。
 
@@ -171,7 +176,8 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 - **F0a (toolchain)**: static exact Node/npm pin、clean `npm ci`、lock graph reproducibilityだけをRed→Green化する。
 - **F0b (sealed build)**: runtime npm substitute、Node missing、receipt closure（unit 006/007/009）、subject revision、immutable generation、exact mkdir lease、append marker、crash/power-loss境界、same-revision rollback、GC/delete/recovery API 0をRed→Green化する。
 - **F0c (CI)**: Node Linux/Windowsと既存harness Linux/Windowsを同一HEAD/run attemptでaggregateし、failure/cancel/skipを非successにする。
-- **Q0**: compiled Node CLIでfixture authoringとreceipt verifyを行い、Bun/bunx/tsx/TS/shell process 0を独立観測する。
+- **Q0**: compiled Node CLIでNode-only Bun detector/ban audit、fixture authoring、receipt verifyを実装・実行し、
+  Bun/bunx/tsx/TS/shell process 0とcoverage欠測0を独立観測する。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
 
 ### CAND ownership

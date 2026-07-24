@@ -81,4 +81,7 @@ review/admission不足は`cutover-admission-not-ready`、chain不一致は`cutov
 review/admission、genesis digestを検証してchain headを作る。`CutoverEdgeEvidence`はedgeをdiscriminatorとし、
 edge別required evidenceのkind/count/producer/subject revision/digest/exit successをexact検証する。
 wrong edge evidence、replay、skipはtyped failureとなる。pair oracleはL7
-`CAND-CUTOVER-001..009`とL9 `CAND-NODEBOOT-207`である。evidence registryはL5 §3の5行をexactに使う。
+`CAND-CUTOVER-001..009`とL9 `CAND-NODEBOOT-207`である。evidence registryの唯一の正本はL5 design
+`CUTOVER-EVIDENCE-REGISTRY-v1`であり、PLAN/L6はkind/producer IDを再定義しない。
+inventory_frozen→node_shadowはproducer receiptごとのslice commitをsubjectとし、candidate HEADの
+descendant closureを検証する。transition receiptのsubjectはcandidate HEADで、stale/replay/non-ancestorを拒否する。

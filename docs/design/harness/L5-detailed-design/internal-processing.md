@@ -393,7 +393,7 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 
 ## Node build generation内部処理（Issue #152 D0-N）
 
-1. candidate HEADを`subject_revision`として固定する。review済みtoolchain provenanceはNode公式distribution archive SHA-256（OS/arch別）、同梱npm `11.6.2`のCLI relative path・expected SHA-256、`packageManager`/`engines`/lockfile identityを結ぶ。実Node/npm executableを絶対pathで解決し、version文字列だけでなくexpected digest/provenanceへ照合する。
+1. Node build generation receiptの`subject_revision`は当該sliceのcandidate HEADへ固定する。review済みtoolchain provenanceはNode公式distribution archive SHA-256（OS/arch別）、同梱npm `11.6.2`のCLI relative path・expected SHA-256、`packageManager`/`engines`/lockfile identityを結ぶ。実Node/npm executableを絶対pathで解決し、version文字列だけでなくexpected digest/provenanceへ照合する。
 2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。
 3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
 4. generation内fileをflushし、POSIXでは可能な場合parent directoryも同期した後、immutable generation名へrenameする。activation markerはtemporary write→file sync→close後、存在しない一意final名へ同一filesystem renameする。Windows Node-onlyではprocess-crash atomicityを保証するが、power-loss後の最新marker persistenceを保証済みと主張しない。
@@ -417,16 +417,38 @@ previous/current state、subject revision、evidence/review digest、previous re
 計算してappendする。invalid/skip/reverse/replay/digest不一致はappend前にfail-closeする。read modelはreceipt chainを
 foldして再構築し、DB/UIから状態を直接書き換えない。
 
-edge evidence tableはtransition discriminatorごとにrequired kind/count/producer/subject revision/digest/exit successを
-固定する。genesis、F0a+F0b+F0c、Q0 no-fallback、zero inventory+Pack+review、
-debt repair+D0 admission+Issue #153 closed+aggregateの順であり、wrong edge/replay/skipを拒否する。
+edge evidence registryはtransition discriminatorごとにrequired kind/count/producer/revision rule/digest/exit successを
+固定する。以下のregistryだけをcutover evidence契約の正本とし、PLAN、L6、test-designはRegistry IDを
+規範参照してkind/producer IDを再定義しない。
 
-| Edge | kind/count | producer |
-|---|---|---|
-| genesis | inventory/review/admission各1 | inventory-freezer/reviewer/admission-gate |
-| inventory_frozen→node_shadow | F0a custody/F0b generation/F0c OS jobs各1 | F0a/F0b/F0c |
-| node_shadow→node_primary | Q0 authoring/no-fallback各1 | Q0-authoring/Q0-runtime |
-| node_primary→bun_removed | zero inventory/Pack/review各1 | ban-audit/Pack-gate/reviewer |
-| bun_removed→sealed | debt repair/D0 admission/#153 closed/aggregate各1 | debt/admission/GitHub/aggregate gate |
+#### `CUTOVER-EVIDENCE-REGISTRY-v1`
 
-全rowでsubject revision、digest、successをexact照合する。
+| Edge ID | kind ID | count | producer ID | revision rule |
+|---|---|---:|---|---|
+| `cutover.genesis` | `inventory.freeze` | 1 | `inventory-freezer` | `candidate-head` |
+| `cutover.genesis` | `review.approved` | 1 | `reviewer` | `candidate-head` |
+| `cutover.genesis` | `admission.d0` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.inventory-frozen.node-shadow` | `f0a.static-custody` | 1 | `f0a-gate` | `producer-ancestor` |
+| `cutover.inventory-frozen.node-shadow` | `f0b.sealed-generation` | 1 | `f0b-gate` | `producer-ancestor` |
+| `cutover.inventory-frozen.node-shadow` | `f0c.os-jobs` | 1 | `f0c-gate` | `producer-ancestor` |
+| `cutover.node-shadow.node-primary` | `q0.authoring` | 1 | `q0-authoring` | `candidate-head` |
+| `cutover.node-shadow.node-primary` | `q0.runtime-no-fallback` | 1 | `q0-runtime` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `inventory.zero` | 1 | `ban-audit` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `pack.acceptance` | 1 | `pack-gate` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `review.approved` | 1 | `reviewer` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `debt.repair` | 1 | `debt-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `admission.d0` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `issue.153-closed` | 1 | `github-evidence` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `aggregate.success` | 1 | `aggregate-gate` | `candidate-head` |
+
+全rowでEdge ID、kind ID、producer ID、count、revision rule、digest、successをexact照合する。receipt schemaは
+種別で分離する。`SliceEvidenceReceipt { edge_id, kind_id, producer_id, subject_revision,
+evidence_digest, success }`の`subject_revision`はproducer slice commitである。
+`CutoverTransitionReceipt { previous_state, current_state, subject_revision, evidence_set_digest,
+review_digest, admission_digest, previous_receipt_digest, receipt_digest }`の`subject_revision`は
+transition candidate HEADである。`candidate-head` evidenceはcandidate HEADとexact一致する。
+`producer-ancestor` evidenceは各producer commitをexact保持し、candidate HEADが全producer commitの
+descendantであるancestry closureを要求する。producer commitがcandidate HEAD自身又はそのancestorでない場合、
+同一evidence digest/commitの再利用、既に消費したreceipt、previous chain head不一致をそれぞれ
+non-ancestor、stale/replay、chain mismatchとしてappend前に拒否する。transition receiptは全producer
+receiptをcanonical sortして作る`evidence_set_digest`へ封印し、別candidate HEADへの流用を拒否する。
