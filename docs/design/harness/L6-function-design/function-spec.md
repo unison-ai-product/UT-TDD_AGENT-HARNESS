@@ -1465,6 +1465,8 @@ ordinal順typed edge exact Nを持たせる。ReviewBundleはexact 8/self除外7
 CAS後head sequence 0/version 1とする。
 SessionIdentityDigestへraw sessionを置換し、first-parent各commit diffのnormalized path exact setをevent arrayと
 照合する。head CASはexpected sequenceを含み、同transactionのMAX receipt sequenceと一致させる。
+SessionIdentityReceipt outer envelopeをWorkEvent/ReviewLaneがtyped edge exact 1で参照しchain-only再導出する。
+tracked changed pathsは除外0でexact照合し、head digestもMAX sequence row receipt digestと一致させる。
 projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 8-field core/self除外7-field ordered preimageとexact 7-field

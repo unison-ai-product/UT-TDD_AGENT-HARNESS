@@ -337,7 +337,7 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
-| `CAND-CUTOVER-107` | path normalization/order/omission/digest mismatch、merge commit、session alias/provider spoof、wrapper owner、sequence drift、event/bundle preimage mutation | event exact 11/self除外10、SessionIdentityDigest、first-parent diff exact paths、bundle exact8/self7、head/MAX sequence一致を検証 |
+| `CAND-CUTOVER-107` | Candidate field/order/serialization、session alias/provider spoof/missing edge、tracked path omission、wrapper owner、head digest/sequence drift | Candidate exact11/self10、SessionIdentityReceipt+edge exact1、全tracked paths除外0、bundle exact8/self7、head/MAX row一致を検証 |
 | `CAND-CUTOVER-108` | NULL PK/check、DB subject spoof、migration rebuild failure、Receipt/Content prefix混同、q0 kind typo、source preimage曖昧、marker/field/digest/partial-index/edge/core mutation | strict generated subject DB、transactional rebuild、digest型exact、q0.runtime-no-fallback literal、single JSON preimage、partial UNIQUE、edge exact 1を要求 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |

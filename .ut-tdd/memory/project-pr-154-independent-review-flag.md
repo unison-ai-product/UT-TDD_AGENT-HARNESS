@@ -362,3 +362,10 @@ ReviewBundle exact 8/self除外7を同期した。WorkEventへnormalized touched
 setを要求、merge commitを拒否した。SessionIdentityDigestへraw sessionを置換し、head CASへexpected sequenceと
 MAX receipt sequence整合を追加した。PLAN-L6-93 revision 21 / PLAN-L7-458 revision 24を正規`plan revise`で
 発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 50204fc4 session receipt/head digest局所FLAG
+
+Candidate field order/serializationを固定し、provider-attested SessionIdentityReceipt outer envelopeを追加した。
+WorkEvent/ReviewLaneはsession envelopeをexact 1参照しchain-only再導出する。coverageは全Git tracked changed
+paths除外0へ固定し、head digest/sequenceをMAX receipt rowと同一transactionで照合する。
+PLAN-L6-93 revision 22 / PLAN-L7-458 revision 25を正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。

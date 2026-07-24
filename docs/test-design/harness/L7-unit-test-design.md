@@ -1696,7 +1696,7 @@ predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否�
 `CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
 L6ConfirmationReceiptをpositiveとし、draft/unconfirmed/wrong-plan/stale-head/unsigned/forgedを個別negativeにする。
 AttestedTracked wrapperとL6Confirmationの全field順、record/receipt二段digest、nested attestation mutationを検証する。
-ReviewBundle coreのexact 7 fields/self除外6-field ordered preimage、各coreを包むexact 7-field
+ReviewBundle coreのexact 8 fields/self除外7-field ordered preimage、各coreを包むexact 7-field
 `AttestedReceiptEnvelope`、ReviewBundle/lane/CutoverAdmission/actual admission execution modeのmixed/mismatchを拒否する。
 SliceAdmission coreも同じenvelopeで検証しraw core保存を拒否する。ReviewBundle→lane、SliceEvidence→bundle、
 D0→ReviewBundle、Q0 predecessorはouter envelope digestだけでlookupし、core digest/alias参照を拒否する。
@@ -1721,6 +1721,8 @@ authorship core preimage mutation、stale/cross candidate、base drift/range tru
 IdentityDigest collision attempt、session self-review、genesis NULL→NULL/seq0維持/seq2/非NULL→NULLを個別negativeにする。
 path absolute/dot/dotdot/backslash/NUL/non-NFC/order/omission/digest mismatch、merge commit、session alias/provider
 spoof、work-event wrapper owner mismatch、head/receipt sequence driftを個別negativeにする。
+Candidate field/order/serialization、session receipt missing/orphan/owner、session envelope digest/identity alias、
+tracked path除外、head digest/MAX row mismatchを個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
