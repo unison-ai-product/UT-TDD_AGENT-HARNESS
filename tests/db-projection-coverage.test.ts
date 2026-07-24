@@ -49,8 +49,64 @@ describe("db-projection-coverage detector", () => {
     const result = analyzeDbProjectionCoverage(requirements);
 
     expect(result.ok).toBe(true);
-    expect(result.checked).toBeGreaterThan(30);
-    expect(result.checked).toBeGreaterThanOrEqual(48);
+    expect(requirements.tables.map((item) => item.table)).toEqual([
+      "plan_registry",
+      "artifact_registry",
+      "model_runs",
+      "trace_edges",
+      "coverage",
+      "findings",
+      "gate_runs",
+      "drive_runs",
+      "hook_events",
+      "skill_invocations",
+      "skill_recommendations",
+      "feedback_events",
+      "feedback_lifecycle",
+      "memory_entries",
+      "quality_signals",
+      "search_index",
+      "workflow_runs",
+      "guardrail_decisions",
+      "automation_assets",
+      "refactor_candidates",
+      "test_cases",
+      "test_runs",
+      "test_results",
+      "test_artifact_edges",
+      "test_flake_events",
+      "graph_nodes",
+      "dependency_edges",
+      "impact_rules",
+      "impact_results",
+      "artifact_progress",
+      "artifact_progress_events",
+      "tool_runs",
+      "diagram_artifacts",
+      "graph_snapshots",
+      "mcp_server_profiles",
+      "mcp_profile_triggers",
+      "mcp_server_runs",
+      "verification_profiles",
+      "verification_recommendations",
+      "external_tool_findings",
+      "document_export_profiles",
+      "document_export_runs",
+      "document_export_datasets",
+      "document_export_artifacts",
+      "document_export_triggers",
+      "screens",
+      "screen_trace",
+      "spec_defs",
+      "spec_relations",
+      "schedule_entries",
+      "activation_entries",
+      "activation_schedule_reviews",
+      "document_catalog_entries",
+      "spec_rag_closure_entries",
+      "detector_route_candidates",
+      "agent_contracts",
+    ]);
     expect(requirements.indexes.map((item) => item.name)).toEqual([
       "idx_plan_layer_drive_status",
       "idx_trace_from_to",
@@ -110,6 +166,8 @@ describe("db-projection-coverage detector", () => {
     expect(result.missingTables.map((item) => item.table)).not.toContain("spec_defs");
     expect(result.missingIndexes.map((item) => item.name)).not.toContain("idx_spec_defs_owner");
     expect(result.missingTables.map((item) => item.table)).not.toContain("refactor_candidates");
+    expect(result.missingTables.map((item) => item.table)).not.toContain("screens");
+    expect(result.missingTables.map((item) => item.table)).not.toContain("screen_trace");
     expect(result.missingIndexes.map((item) => item.name)).not.toContain(
       "idx_refactor_candidates_state",
     );
@@ -267,6 +325,57 @@ describe("db-projection-coverage detector", () => {
     );
 
     expect(requirements.map((requirement) => requirement.table)).toEqual(["projection|escaped"]);
+  });
+
+  it("uses backslash-run parity when deciding whether a pipe is escaped", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `odd\\|pipe` | `projection_id` | `status` | fixture |",
+        "| `even\\\\|pipe` | `projection_id` | `status` | fixture |",
+      ].join("\n"),
+    );
+
+    expect(requirements.map((requirement) => requirement.table)).toEqual(["odd|pipe"]);
+  });
+
+  it("ignores tables and index markers inside backtick and tilde fenced code", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### §9.1 projection table 拡張",
+        "",
+        "```markdown",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `fenced_backtick_table` | `projection_id` | `status` | fixture |",
+        "必須 index:",
+        "- `idx_fenced_backtick(status)`",
+        "```",
+        "",
+        "~~~text",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `fenced_tilde_table` | `projection_id` | `status` | fixture |",
+        "必要 index:",
+        "- `idx_fenced_tilde(status)`",
+        "~~~~",
+      ].join("\n"),
+    );
+
+    expect(requirements).toEqual({ tables: [], indexes: [] });
+  });
+
+  it("does not activate an index marker outside a target projection scope", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      ["### §8.1 unrelated registry", "", "必須 index:", "", "- `idx_outside_target(status)`"].join(
+        "\n",
+      ),
+    );
+
+    expect(requirements.indexes).toEqual([]);
   });
 
   it("keeps the real §9.3.1 projection table and its two indexes", () => {

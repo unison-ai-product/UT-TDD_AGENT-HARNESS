@@ -23,3 +23,8 @@ index抽出はsection番号及びprojection table stateから分離し、正本m
 これにより§2.7/§9.1の任意bulletを除外しつつ、§9.3.1、§9.5/9.6/9.7/9.9を含む正本54 indexを回収する。
 旧`checkedIndexes >= 41`の下限oracleは撤回し、正本から独立に転記した54 identifierの全件・順序exact assertionへ
 置換した。table headerとseparatorのcell count不一致も非tableとして拒否する。
+
+追加spec-blind境界として§9.8をtargetへ含め、`screens` / `screen_trace`を含む正本56 table IDも独立明示配列で
+全件・順序exact assertionにした。index markerはactive target又はlogical descendant scope内だけで発火する。
+backtick/tilde fenced codeはinfo string付き開始から同marker・同長以上の終了までtable/markerを完全無視する。
+outer pipe省略対応を維持しつつ、pipe直前の連続backslash数の奇偶でescaped pipeかdelimiterかを判定する。

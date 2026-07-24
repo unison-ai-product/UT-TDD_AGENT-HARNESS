@@ -73,7 +73,7 @@ export interface DbConstraintCoverageResult {
   ok: boolean;
 }
 
-const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[1345679] .*)/;
+const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[13456789] .*)/;
 const HEADING_RE = /^(#{1,6})\s+/;
 const TABLE_SEPARATOR_CELL_RE = /^:?-{3,}:?$/;
 const INDEX_MARKER_RE = /^(?:必須|必要) index:$/;
@@ -84,23 +84,26 @@ function backtickValues(value: string): string[] {
 }
 
 function splitTableRow(line: string): string[] {
-  let source = line.trim();
-  if (source.startsWith("|")) source = source.slice(1);
-  if (source.endsWith("|") && !source.endsWith("\\|")) source = source.slice(0, -1);
+  const source = line.trim();
   const cells: string[] = [];
   let cell = "";
   for (let index = 0; index < source.length; index++) {
-    if (source[index] === "\\" && source[index + 1] === "|") {
-      cell += "|";
-      index++;
-    } else if (source[index] === "|") {
-      cells.push(cell.trim());
-      cell = "";
-    } else {
+    if (source[index] !== "|") {
       cell += source[index];
+      continue;
     }
+    let backslashCount = 0;
+    for (let cursor = index - 1; cursor >= 0 && source[cursor] === "\\"; cursor--) backslashCount++;
+    if (backslashCount % 2 === 1) {
+      cell = `${cell.slice(0, -1)}|`;
+      continue;
+    }
+    cells.push(cell.trim());
+    cell = "";
   }
   cells.push(cell.trim());
+  if (cells[0] === "") cells.shift();
+  if (cells.at(-1) === "") cells.pop();
   return cells;
 }
 
@@ -137,11 +140,29 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   let targetDepth = 0;
   let targetSectionNumber: string | undefined;
   let indexBlock: "none" | "armed" | "collecting" = "none";
+  let fence: { marker: "`" | "~"; length: number } | undefined;
   let pendingHeader: string[] | undefined;
   let tableKind: "none" | "projection" | "other" = "none";
   for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim();
-    if (INDEX_MARKER_RE.test(trimmed)) {
+    const fenceMatch = /^(?<run>`{3,}|~{3,})/.exec(trimmed);
+    if (fence) {
+      if (
+        fenceMatch?.groups?.run?.[0] === fence.marker &&
+        fenceMatch.groups.run.length >= fence.length
+      )
+        fence = undefined;
+      continue;
+    }
+    if (fenceMatch?.groups?.run) {
+      fence = {
+        marker: fenceMatch.groups.run[0] as "`" | "~",
+        length: fenceMatch.groups.run.length,
+      };
+      continue;
+    }
+
+    if (targetDepth > 0 && INDEX_MARKER_RE.test(trimmed)) {
       indexBlock = "armed";
       continue;
     }
