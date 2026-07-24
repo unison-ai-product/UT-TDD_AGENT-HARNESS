@@ -6,7 +6,9 @@ pair_artifact: docs/test-design/harness/L9-system-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L9
-plan: docs/plans/PLAN-L4-02-architecture.md
+plan: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
+replacement_issue: 152
+superseded_plan: docs/plans/PLAN-L4-02-architecture.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -45,7 +47,10 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | テスト容易性 | 各 module が pure 関数 (`analyzeX(opt?)`) を export、副作用を entrypoint に隔離 | lint 5 種の共通様式、vitest |
 | 相互運用性 (Claude/Codex/MCP 圏) | commander CLI + 将来 MCP server 化を見据えた TS | ADR-001 Rationale (ecosystem fit) |
 
-技術スタック (ADR-001 §技術スタック より): TypeScript strict / Bun / commander / **zod** / vitest / YAML+JSON state + SQLite projection DB / 単一バイナリ配布。
+技術スタックは二状態を区別する。**current**はTypeScript strict / Bun / commander / zod / vitest /
+YAML+JSON+SQLite / Bun単一バイナリでありmigration debtである。**target**はTypeScript strict /
+Node / compiled ESM / sealed generationである。Node parity receipt前にcurrentを削除せず、target成立後に
+current Bun経路を残さない。
 
 > **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
 
@@ -167,7 +172,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | **commit-msg hook** | git `commit-msg` hook が Conventional Commits を fail-close 強制 (`feat\|fix\|docs\|...`、.claude/CLAUDE.md / [[project_commit_msg_hook]]) | **有効** |
 | **orchestrator-rule parity (Codex)** | Claude Code の hook 強制面 (agent-guard / work-guard / session-lifecycle) を **Codex 側 repo-local `.codex/hooks.json`** へ materialize し、両 orchestrator が同一 guard を機械強制する (PLAN-DISCOVERY-06 spike が ADOPT 判定 → PLAN-L7-139 で実装)。判定本体 = `src/lint/codex-hook-adapter.ts` + work-guard の `src/runtime/work-guard.ts#extractEditTargets` + agent-guard の `src/runtime/agent-guard.ts` (runtime 非依存 pure fn)。**偽パリティ caveat** (literal copy では発火しない): ① Codex `apply_patch` は freeform で `tool_input.file_path` 不在 (パスは patch 本文 → `extractEditTargets` で抽出)、② matcher tool 名差 (`spawn_agent\|spawn_agents_on_csv` / `apply_patch\|write_file` / `exec_command\|local_shell`)、③ `subagent-stop` のみ真の N/A。scope = direct Codex CLI/IDE の repo-local hook (hosted/API runtime の apply_patch は intercept 対象外) | **有効** (repo-local、global `~/.codex/` 書込みなし) |
 | その他 hook | PreToolUse(Write/Bash/WebSearch) 等 → package-local `ut-tdd` command | **未有効** (CLI 整備後、目標形は .claude/CLAUDE.md「Target UT-TDD Hooks」) |
-| **CI lint** | g1/g3-trace、pair-freeze、plan/vmodel、doctor hard gates を fail-close 実行 | local gate は `bun run src/cli.ts doctor` + `bun run lint` + `bun run test` で担保。外部 CI service 配備は infrastructure 配備範囲であり、L7 完遂の隠れ carry にしない |
+| **CI lint** | g1/g3-trace、pair-freeze、plan/vmodel、doctor hard gates を fail-close 実行 | current local gateは既存Bun commandで稼働するmigration debt。targetはsealed Node CLIへ同じ判定を移し、Node parity前に旧gateを削除せず、移行後にBun fallbackを残さない |
 | entrypoint | `scripts/ut-tdd` (POSIX) / `ut-tdd.ps1` (Windows) は薄く compiled core を呼ぶだけ (bash ロジック禁止) | ADR-001 §3 |
 | 依存隔離 | 外部 service (Claude/Codex/GitHub/Sentry) 起動は **runtime adapter** に隔離、core は正規化 intent のみ発行 | external-if (PLAN-L4-04) で境界契約化 |
 
