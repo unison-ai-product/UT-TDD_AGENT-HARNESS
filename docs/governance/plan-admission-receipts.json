@@ -544,6 +544,38 @@
         "revision": 13,
         "content_digest": "sha256:6cb30c66f4e5160cd4505f46866320f57ee23500097702e232ec0322b016ca71"
       }
+    },
+    {
+      "sequence": 35,
+      "previous_record_digest": "sha256:ea40bcef24ef2f3593312a66713199608fa390ea704a96f8ef73cb3f91b37867",
+      "record_digest": "sha256:973672369a8f4ef6daa31fc743b38aa3a393e2d62dfe6f1f56655525541b61ce",
+      "command_id": "pr154-policy-l6-20260724",
+      "receipt_id": "certificate:9518f6875e59edbff399e5308bc115ce",
+      "receipt_digest": "sha256:80c59a883ac101903efe4f44112665a05885119c0df2bc0df2f25ded98efd5e0",
+      "decision_digest": "sha256:b012eafcc2802419154c2d8b1bfe03c94d11d45f9d3756ad35d79571dda839ad",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 11,
+        "content_digest": "sha256:e0b0785510a027270c7382143be6b89b121358854bd7f4d95d67e44c04f18d58"
+      }
+    },
+    {
+      "sequence": 36,
+      "previous_record_digest": "sha256:973672369a8f4ef6daa31fc743b38aa3a393e2d62dfe6f1f56655525541b61ce",
+      "record_digest": "sha256:22b61a54883fa55f487d0ac20e1143ed0ae299feda6751979ec9a5f5dd7a9843",
+      "command_id": "pr154-policy-l7-20260724",
+      "receipt_id": "certificate:81f693d72d853b7cf8705a75d6ce23f4",
+      "receipt_digest": "sha256:9878746d28f33bc78cc1e45091d8e0ae055c9c05712aa2be76ace9b882f8d49a",
+      "decision_digest": "sha256:e9ae1198f3324f263f934d9946972909c6ef4b6725c0b9904c8fa811517d9dd7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 14,
+        "content_digest": "sha256:3aee3f8a6df1a1187842d8876352e5f3eaeb6797607056be03446e6a077ad0fb"
+      }
     }
   ]
 }

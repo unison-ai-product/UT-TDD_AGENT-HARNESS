@@ -429,7 +429,7 @@ admissionでfail-closeする。
 
 `SliceAdmissionReceipt` coreのzod正本は`src/schema/node-slice-admission.ts`であり、唯一のschemaは
 fieldは`{ schema_version, slice_id, predecessor_receipt_digest, subject_revision,
-required_input_receipt_digests, decision, producer, receipt_digest }`である。
+required_input_receipt_digests, admission_time_envelope_digest, decision, producer, receipt_digest }`である。
 `schema_version="node-slice-admission.v1"`、`slice_id=d0|f0a|f0b|f0c|q0`、
 `decision=approved|rejected`、producerはPLAN-L7-458 ownership表の正規owner IDとする。
 required input digestsはslice別registry順の重複なしarrayであり、UTF-8固定順JSON arrayを
@@ -451,6 +451,10 @@ content-addressed lookup、FSM edge又はdeduplication keyには使わない。
 | `d0` | `null` | `ReviewBundleReceipt` / 1（exact 2 lane） | `review-bundle-gate` | candidate HEAD（候補） |
 | `d0` | `null` | `AttestedTrackedReceiptRecord` / exact 4（PLAN-L4-33、L5-26、L6-93、L7-458各1） | `plan-admission-attestation-gate` | 各latest formal revisionかつcontent binding一致 |
 | `d0` | `null` | `BootstrapEnvelopeReceipt` / 1 | `issue-153-bootstrap-gate` | candidate HEAD |
+| `d0` | `null` | `BootstrapPolicyReceipt` / 1 | `bootstrap-policy-gate` | exact policy revision |
+| `d0` | `null` | `AdmissionTimeReceipt` / 1 | `admission-time-gate` | D0 admission timestamp |
+| `d0` | `null` | `BootstrapPolicyEventReceipt` / 1 | `bootstrap-policy-event-gate` | admission時点latest active |
+| `d0` | `null` | `FrozenCaseRegistryObject` / 1 | `q0-case-registry-gate` | frozen baseline revision 1 |
 | `f0a` | approved `d0` / 1 | `f0a.static-custody` / 1 | `f0a-gate` | producer ancestor |
 | `f0b` | approved `f0a` / 1 | `f0b.sealed-generation` / 1 | `f0b-gate` | producer ancestor |
 | `f0c` | approved `f0b` / 1 | `f0c.os-jobs` / 1 | `f0c-gate` | producer ancestor |
@@ -617,14 +621,20 @@ payload schema registryへ入れない。未知kind/schema、row追加を伴わ�
 
 #### `Q0-CASE-REGISTRY-v1`
 
-producer自己申告から分離した`FrozenCaseRegistryObject`をtyped objectとして保存する。exact schemaは
+producer自己申告から分離した`FrozenCaseRegistryObject` coreをtyped objectとして保存する。exact schemaは
 `{schema_version:"frozen-case-registry.v1",registry_id:"q0-node-ban-cases",revision:uint>0,`（前半）
 `expected_case_ids:string[] unique sorted nonempty,required_set_digest:digest,source_artifact_digest:digest,`（中盤）
-fixture_digest:digest,producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}`である。
+`fixture_digest:digest,previous_registry_envelope_digest:digest|null,approved_removal_receipt_digest:digest|null,`（後半）
+receipt_digest:digest}`である。coreは`AttestedReceiptEnvelope<FrozenCaseRegistryObject>`へ格納し、
+owner `q0-case-registry-gate`→EvidenceProducer `ci`を要求する。lookup/refはouter envelope digestだけを使う。
 `required_set_digest`はexpected IDsのcanonical JSON UTF-8 bytes、`fixture_digest`は
 `[registry_id,revision,required_set_digest,source_artifact_digest]`の固定tupleから再計算する。
 Q0 payloadはregistry outer receipt digestを参照し、executed IDsとのset equalityを要求する。
 registry shrink、missing/extra/duplicate、fixture/preimage drift及びcontent digest lookupを拒否する。
+closed bootstrap baselineは`registry_id=q0-node-ban-cases, revision=1`、expected set
+`q0-bun-reference-zero,q0-bun-process-zero,q0-coverage-complete,q0-fallback-zero`に固定する。
+revision更新はprevious outer digest付きappend-onlyとし、case shrink/removeは別trusted
+`CaseRegistryRemovalReceipt`がremoved IDsと前後set digestを承認しない限りfail-closeする。
 
 #### `AGGREGATE-PROFILE-REGISTRY-v1`
 
@@ -683,7 +693,10 @@ identityがlane間で異なり、reviewerはauthorとも異なる。異model2 la
 `standalone`はAI/subagent laneを禁止し、distinct human reviewer 2名を要求する。両laneは
 `provider=human, reviewer_model=none, runtime_family=human`、異なるidentity/session/evidenceで、
 authorとも異ならなければならない。人間2名を用意できなければfail-closeする。
-各laneは`receipt_digest`以外の10 fieldを上記固定tuple/length-frame/SHA-256規則とattestationへ封印する。
+各laneは`receipt_digest`以外のexact 11 fieldを
+`[schema_version,lane_id,verdict,artifact_digest,subject_revision,provider,reviewer_model,`（前半）
+execution_mode,runtime_family,reviewer_identity,review_session_id]`の順で固定tuple/length-frame/SHA-256規則へ
+封印する。field欠落、順序変更、version除外又は旧10-field preimageを拒否する。
 bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外のexact 6 field
 `[schema_version, artifact_digest, subject_revision, author_identity, execution_mode,`（前半）
 `lanes=[claim-blind.receipt_digest,spec-blind.receipt_digest]]`（後半）
@@ -713,8 +726,12 @@ bundleと両laneの`execution_mode`はactual admission modeとexact一致し、m
 | `aggregate-gate` | `ci` |
 | `plan-admission-attestation-gate` | `ci` |
 | `issue-153-bootstrap-gate` | `ci` |
+| `bootstrap-policy-gate` | `ci` |
+| `admission-time-gate` | `ci` |
+| `bootstrap-policy-event-gate` | `ci` |
+| `q0-case-registry-gate` | `ci` |
 
-この17 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
+この21 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
 PLAN-L7-458 `SliceAdmission producer registry`のclosed setとして全て`ci`へ写像する。review lane ownerは
 lane providerと同じ`human|codex|claude`、PO approval ownerは`po`へ写像する。
 
@@ -763,7 +780,9 @@ CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一head
 保存するtyped evidence unionは`SliceEvidenceReceipt | EvidencePayloadObject |`（先頭）、
 `AttestedReceiptEnvelope<ReviewLaneReceipt> | AttestedReceiptEnvelope<ReviewBundleReceipt> |`（レビュー）、
 `AttestedReceiptEnvelope<SliceAdmissionReceipt> | CutoverAdmissionReceipt | AttestedReceiptEnvelope<BootstrapEnvelopeReceipt> | AttestedTrackedReceiptRecord |`（残り）、
-L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
+`AttestedReceiptEnvelope<FrozenCaseRegistryObject> | AttestedReceiptEnvelope<BootstrapPolicyReceipt> |`（追加1）、
+`AttestedReceiptEnvelope<AdmissionTimeReceipt> | AttestedReceiptEnvelope<BootstrapPolicyEventReceipt> |`（追加2）、
+CaseRegistryRemovalReceipt | L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
 `{schema_version,plan_id,plan_revision,status,content_digest,subject_head,tracked_record_digest,`（前半）
 producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}`のexact schemaである。
 `schema_version="l6-confirmation.v1"`だけを許し、unknown versionを拒否する。
@@ -771,17 +790,29 @@ producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}
 固定tuple/length-frame/SHA-256 lowerhexで封印する。
 verifier inputは`{producer,recordDigest}`とし、draft/unconfirmed/wrong plan/stale head/unsigned、
 schemaVersion/algorithm欠落、forged/untrustedを拒否する。
-`BootstrapEnvelopeReceipt` coreは`{ schema_version, issue_id, episode_id, policy_revision,
-projection_digest, artifact_digest, subject_revision, issued_at, expires_at, revocation_status,（有効性）
-revocation_receipt_digest, receipt_digest }`を持ち、
+`BootstrapPolicyReceipt` coreは
+`{schema_version:"bootstrap-policy.v1",policy_id:"issue-153-d0-bootstrap",policy_revision:uint>0,`（policy前半）
+`subject_revision:GitObjectId,valid_from:RFC3339 UTC,valid_until:RFC3339 UTC,authority_id,receipt_digest}`（policy後半）、
+`AdmissionTimeReceipt` coreは
+`{schema_version:"admission-time.v1",timestamp:RFC3339 UTC,source:"github-pr-gate",authority_id,receipt_digest}`、
+`BootstrapPolicyEventReceipt` coreは
+`{schema_version:"bootstrap-policy-event.v1",target_policy_envelope_digest:digest,sequence:uint,`（event前半）
+previous_event_envelope_digest:digest|null,status:"active"|"revoked",effective_at:RFC3339 UTC,receipt_digest}`である。
+3 coreを各`AttestedReceiptEnvelope<T>`へ格納し、policyはenvelopeを参照しない、eventだけがpolicy outer digestを
+参照する一方向graphとしてcycleを禁止する。
+
+`BootstrapEnvelopeReceipt` coreは`{ schema_version, issue_id, episode_id,
+policy_envelope_digest,admission_time_envelope_digest,policy_event_envelope_digest,（参照）
+projection_digest, artifact_digest, subject_revision, receipt_digest }`を持ち、
 `schema_version="bootstrap-envelope.v1"`、`issue_id=153`へ固定する。`receipt_digest`以外を固定順tuple+
 length frame+SHA-256で封印する。coreを上記`AttestedReceiptEnvelope<BootstrapEnvelopeReceipt>`へ格納し、
 pre-attestation `record_digest`、producer、nested attestation、wrapper `receipt_digest`をexact schemaで固定して
 既存verifierへ渡す。各payloadとattestationを
-`policy_revision`はD0 admission policyとexact一致し、`issued_at <= admission_time <= expires_at`、
-`revocation_status="nonrevoked"`かつtyped revocation receiptの対象envelope/policy一致を要求する。
-chainには発行時のhistorical validityを保存するが、期限後又はrevoked envelopeの新規D0再利用を拒否する。
-Issue #153本文、historical PASS又は期限切れenvelopeを恒久waiverに転用しない。
+historical validationはtrusted admission timestampがpolicy window内で、timestamp時点latest eventがactiveであることを
+chain-onlyに検証する。current再利用はcanonical current policy-event headがenvelope参照eventと同一かつactiveの場合だけ許す。
+外部wall clock/configを判定入力にせず、stale head、expired time、revoked event、untrusted time、digest cycleを拒否する。
+SliceAdmissionの`admission_time_envelope_digest`はBootstrap参照とexact一致させる。Issue #153本文又はhistorical PASSを
+恒久waiverに転用しない。
 content-addressed objectとして保存し、transition→evidence、bundle→2 lane、CutoverAdmission→validated Q0
 `AttestedReceiptEnvelope<SliceAdmissionReceipt>`又はprior cutoverと`L6ConfirmationReceipt`のdirect参照edgeを持つ。
 各参照はouter envelope `receipt_digest`だけでlookupする。core `receipt_digest`又はaliasからのlookupは拒否する。

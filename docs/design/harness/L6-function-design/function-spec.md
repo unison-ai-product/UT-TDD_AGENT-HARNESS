@@ -1441,6 +1441,8 @@ payload object/decoded payload/envelopeのschema version literal及び`payload_s
 Bootstrapへ適用しraw hexを拒否する。tracked/L6/review/bootstrapを含む全receipt schema versionをliteral v1へ閉じる。
 Q0 expected caseはattested frozen registry objectから取得し、fixture preimageとexecuted setを照合する。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
+Frozen case registryもcore+attested envelopeとし、baseline revision 1をD0 inputへ固定する。更新はprevious
+outer digest付きappend-only、shrinkはapproved removal receiptを要求する。Q0はouter registry digestだけを参照する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、
 claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
@@ -1467,7 +1469,10 @@ authority ID+key version+signature+producer+record digest/receipt digestで、ge
 CutoverAdmissionはowner、EvidenceProducer、nested authorityを分離し、L5
 `CUTOVER-ADMISSION-PRODUCER-MAP-v1`の5 edgeと`authority_id == attestation.authorityId`をexact照合する。
 edge別allowed authority ID/keyVersionもclosed照合し、別trusted CI authority replayを拒否する。
-Bootstrapはpolicy revision、issued/expires、revocation proofを封印し、D0 admission時点の有効性と現在の再利用可否を分離する。
+Bootstrap policy/time/eventを別signed envelopeへ分離し、event→policyだけの非循環graphにする。
+historical validityはtrusted time時点active、current再利用はcanonical event head同一かつactiveを要求する。
+SliceAdmissionにもadmission time outer digestを封印し、外部wall clock/configを使わない。
+ReviewLane preimageはversionを含むexact 11 fields/self除外として固定する。
 execution modeはReviewLane/Bundle及びactual admission modeとexact一致させる。
 ReviewLane/Bundle coreとBootstrapEnvelope coreはproducer/record digest/nested attestationを持つ
 exact `AttestedReceiptEnvelope`に格納し、両admission receiptは既存`EvidenceRecord` /

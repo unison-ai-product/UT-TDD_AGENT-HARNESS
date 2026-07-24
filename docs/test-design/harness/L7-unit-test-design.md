@@ -1707,6 +1707,9 @@ edge別allowed authority ID/keyVersion外と、別trusted CI authorityによる�
 unknown schema versionを棚卸しnegativeにする。Bootstrapはwrong policy、admission time期限外、revoked、historical
 envelope新規再利用を拒否する。Q0 frozen registry shrink/fixture drift、aggregate profile required laneの
 missing/extra/duplicate/set digest driftを個別negativeにする。
+ReviewLane exact 12/self除外11-field orderとversion inclusionをmutation pairにする。Frozen registryの
+untrusted envelope、previous digest欠落、無承認shrinkを拒否する。Bootstrap policy/time/eventのexpired time、
+revoked event、stale current head、untrusted time、digest cycle、SliceAdmission time ref不一致を個別negativeにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→

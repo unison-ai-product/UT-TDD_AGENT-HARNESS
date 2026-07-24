@@ -337,8 +337,8 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0 ReviewBundle 1+AttestedTrackedReceiptRecord exact 4+BootstrapEnvelope #153を要求。integrity-only/self-hash/unsigned/forged/untrusted/wrong-plan/stale binding、後続kind/count/producer/revision driftを拒否 |
-| `CAND-CUTOVER-107` | owner/authority/version mutation、raw hash又はGit algorithm mismatch、expired/revoked/wrong-policy Bootstrap、historical envelope再利用 | 全receipt schema literal、共通GitObjectId、closed authority policyを要求。D0 admission time内かつnonrevokedを必須とし、historical validityは保存するが現在の再利用を拒否 |
-| `CAND-CUTOVER-108` | aggregate required lane missing/extra/duplicate/profile drift、Q0 frozen registry shrink/fixture drift/case欠測、F0c run差、aggregate failure/cancel/skipped | aggregate profile exact set、frozen case registry receiptとexecuted set equality、fixture preimage、outer digest chainを再検証。producer自己申告expected set、content digest lookup、cross-semantic replayを拒否 |
+| `CAND-CUTOVER-107` | ReviewLane旧10-field/version除外preimage、expired/untrusted admission time、revoked event、stale policy head、policy-event-envelope cycle | lane exact 12/self除外11 fields、signed policy/time/event非循環graphを要求。historical時点activeとcurrent head activeを分離し、外部clock/config判定を拒否 |
+| `CAND-CUTOVER-108` | aggregate lane欠落、Q0 untrusted/shrunk registry、previous digest欠落、無承認case removal、fixture drift、executed case欠測 | D0 frozen baseline outer envelope、append-only registry、approved removal、aggregate profile exact set、Q0 executed set equalityをchain-only検証 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | schema migration各barrierで失敗注入 | DDL、data、`user_version`を単一transactionで全rollback |

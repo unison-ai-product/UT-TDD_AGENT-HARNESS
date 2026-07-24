@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5b76f5ce46b163c0b753bc26777b27c7
-  command_id: pr154-registry-l6-20260724
-  admitted_at: 2026-07-24T13:00:00.000Z
-  source_digest: sha256:aeab42e93a8e37b6ddd7792a119e8455786a712669988ee4f3dbef8ea09ba0bd
-  decision_digest: sha256:f87b6296f6ee5b87195377f6e040b6de2a7ced655169346b68a3604342d6043e
-  receipt_digest: sha256:b0f30560bcbc8753628428c1bf0f463574fdab7a4dda7823a0ac2a42f3938a2b
+  receipt_id: certificate:9518f6875e59edbff399e5308bc115ce
+  command_id: pr154-policy-l6-20260724
+  admitted_at: 2026-07-24T13:30:00.000Z
+  source_digest: sha256:e0b0785510a027270c7382143be6b89b121358854bd7f4d95d67e44c04f18d58
+  decision_digest: sha256:b012eafcc2802419154c2d8b1bfe03c94d11d45f9d3756ad35d79571dda839ad
+  receipt_digest: sha256:80c59a883ac101903efe4f44112665a05885119c0df2bc0df2f25ded98efd5e0
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 10
-    content_digest: sha256:aeab42e93a8e37b6ddd7792a119e8455786a712669988ee4f3dbef8ea09ba0bd
+    revision: 11
+    content_digest: sha256:e0b0785510a027270c7382143be6b89b121358854bd7f4d95d67e44c04f18d58
   route:
     signal: feature_addition
     mode: add-feature
@@ -69,12 +69,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 10
+      target_revision: 11
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: PR 154 registry and bootstrap closure
+  escape_reason: PR 154 policy and frozen registry closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -150,6 +150,10 @@ Q0 expected setはproducer payloadでなくattested frozen registry objectを正
 封印する。aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/review/bootstrapを含む全schema versionを
 literal v1へ閉じる。Bootstrapはpolicy revision、issued/expires、revocation proofを持ち、期限切れ/revokedの新規D0利用を拒否する。
+ReviewLane coreは12 fields/self除外11-field ordered preimageへ固定する。Frozen Q0 registryはattested
+envelope、D0 baseline、append-only previous digest、approved removal receiptを要求する。Bootstrapはsigned
+policy/time/event envelopeへ分離し、historical activeとcurrent head activeを別検証する。SliceAdmission time refを
+Bootstrapと一致させ、外部wall clock/configを判定に使わない。
 claim-blind/spec-blind各1 PASSとartifact/revision一致を要求する。bundle/lane execution modeはactual admissionと
 一致させ、hybridはprovider/runtimeを分離、codex/claude-onlyは異model/session/identity、standaloneはhuman 2名を要求する。
 chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic

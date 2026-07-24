@@ -270,6 +270,13 @@ semantic successを再導出する。Cutover edge別authority ID/keyVersionもcl
 PLAN-L6-93 revision 9 / PLAN-L7-458 revision 12を正規`plan revise`経路で発行した。
 独立再reviewまではFLAGを維持する。
 
+## Exact HEAD c94a6f9b policy/frozen-registry FLAG
+
+ReviewLane exact preimageを12/self除外11 fieldsへ修正した。Frozen case registryをattested envelope、
+append-only chain、approved removalへ固定しD0 baseline化した。Bootstrap policy/time/eventを非循環signed
+graphへ分離し、historical validity/current reuseを別検証にした。PLAN-L6-93 revision 11 /
+PLAN-L7-458 revision 14を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
+
 ## Exact HEAD 842833dd registry/bootstrap FLAG
 
 aggregate required lane profileとQ0 frozen case registryをtyped正本へ分離し、set equalityを固定した。
