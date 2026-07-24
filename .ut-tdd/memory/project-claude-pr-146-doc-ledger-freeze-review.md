@@ -85,3 +85,27 @@ exact design HEAD `efc4c786` のblind re-reviewは **FLAG（medium 1件）**。
 
 レビュー結果はPR #146コメント `issuecomment-5065217959` にも記録済み。
 PLAN statusは変更していない。次回レビューは上記契約整合パッチのexact design HEADを対象とする。
+
+## Codex契約是正・独立再レビュー結果（2026-07-24）
+
+第5レビューFLAGを、検出器側の緩和ではなく設計契約の閉包として是正した。
+exact design HEADは`83a09fcb`。branchへpush済み。
+
+- `readDocumentReferences`と`analyzeDocumentReferences`のsignature / inventory / DbCを分離。
+- U006 reader registry errorをownership / revision / bindingのdiscriminated union化。
+- U007 analyzer input errorを閉じたreasonと`ok:false` blocked resultで型付け。
+- U006/U007の到達可能なtest ownershipを修正し、anchor endpoint解決をanalyzerへ統一。
+- registry、member、receipt owner、duplicate receipt multiset、analyzer subjectの
+  canonical evidence frameを固定し、delimiter collision、dedupe、入力順依存を禁止。
+
+独立read-only review:
+
+- claim-blind: **PASS** (`83a09fcb`)
+- spec-blind: **PASS**（先行HEAD `683bc586`でPASS。後続`83a09fcb`は
+  claim-blindが検出したreader identity delimiter collisionだけをlength-prefixed frameへ是正）
+- `git diff --check`: PASS
+- `node node_modules/typescript/bin/tsc --noEmit`: PASS
+
+snapshot test runnerはNodeから起動できるが、内部が`bun install --frozen-lockfile`固定のため
+Bun BAN環境ではENOENTで停止する。設計差分のGreenを偽装せず、Node-native snapshot runner化を
+main正常化の独立W系スライスとして先行させる。
