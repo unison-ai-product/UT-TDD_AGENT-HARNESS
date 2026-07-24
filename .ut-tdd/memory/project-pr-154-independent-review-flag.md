@@ -376,3 +376,10 @@ PLAN-L6-93 revision 22 / PLAN-L7-458 revision 25を正規`plan revise`で発行�
 closed trust registry verifierへ置換した。SessionIdentity core preimage、outer EvidenceAttestationとの二段検証、
 WorkEvent/laneのprovider/runtime exact bindingとcross-provider replay拒否を固定した。
 PLAN-L6-93 revision 23 / PLAN-L7-458 revision 26を正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 9b74c9da managed trust history局所FLAG
+
+MANAGED-SESSION-TRUST-REGISTRY-v1の実3 rowとversioned historical verifyを固定した。
+ManagedSessionAttestationへregistry binding/issued_atを封印し、stable subjectとsessionを同じmanaged authorityが
+同時証明するauthoritative payloadへ統一した。PLAN-L6-93 revision 24 / PLAN-L7-458 revision 27を
+正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。

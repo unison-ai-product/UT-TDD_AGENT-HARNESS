@@ -1460,7 +1460,7 @@ ReviewBundleはattested CandidateAuthorshipReceipt outer digestをnested ref exa
 IdentityDigestはcanonical identity objectのRFC 8785/UTF-8 ContentDigestとする。bundleへbase revisionを追加し、
 authorshipのsubject/artifact/base及びPR review base/merge-baseとexact一致させる。trusted work event ReceiptDigest
 集合がbase..subject全product path/commitをcoverし、そのsorted arrayからprovenance ContentDigestを再導出する。
-WorkProvenanceEventはtouched_pathsを含むexact 11/self除外10-field core+outer envelopeとし、authorshipへevent digest arrayと
+WorkProvenanceEventはtouched_pathsを含むexact 12/self除外11-field core+outer envelopeとし、authorshipへevent digest arrayと
 ordinal順typed edge exact Nを持たせる。ReviewBundleはexact 8/self除外7とする。genesis receipt sequenceは0、
 CAS後head sequence 0/version 1とする。
 SessionIdentityDigestへraw sessionを置換し、first-parent各commit diffのnormalized path exact setをevent arrayと
@@ -1470,6 +1470,7 @@ tracked changed pathsは除外0でexact照合し、head digestもMAX sequence ro
 session coreはManagedSessionAttestationとouter EvidenceAttestationを二段検証する。managed verifierのclosed
 trust registryがUT-TDD managed session authorityを検証し、外部provider API署名を仮定しない。
 WorkEvent/laneとsession receiptのprovider/runtimeをexact一致させる。
+managed trust registry 3 row、revision、issued_at validity/compromise cutoff、stable subject+session同時証明を検証する。
 projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 8-field core/self除外7-field ordered preimageとexact 7-field

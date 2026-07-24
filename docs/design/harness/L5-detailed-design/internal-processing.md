@@ -628,20 +628,38 @@ UTF-8→`"sha256:"+lowerhex`で算出する。
 `SessionIdentityDigest`もContentDigest subtypeで、canonical object
 `{session_schema:"ut-tdd-session.v1",provider,runtime_family,provider_issued_session_id}`を同じ式で算出する。
 provider-issued attestationを必須とし、raw session stringやaliasを受理しない。
-`ManagedSessionAttestation`は既存形
-`{schemaVersion:"managed-session-attestation.v1",algorithm:"ed25519"|"ecdsa-p256-sha256",authorityId,keyVersion,signature}`
+#### `MANAGED-SESSION-TRUST-REGISTRY-v1`
+
+| revision | provider | runtime_family | authorityId | algorithm | keyVersion | valid_from | valid_until | compromised_at |
+|---:|---|---|---|---|---|---|---|---|
+| 1 | `openai` | `codex` | `ut-tdd-managed-codex-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` | `null` |
+| 1 | `anthropic` | `claude` | `ut-tdd-managed-claude-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` | `null` |
+| 1 | `human` | `human` | `ut-tdd-managed-human-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` | `null` |
+
+この3 rowをclosed setとし、standalone humanもhuman rowだけを使う。実key値は文書へ保存せずcomposition-root
+key handleへ解決する。rotationはnew registry revision/rowで行いunknown provider/runtime/authority/key/revisionを拒否する。
+
+`ManagedSessionAttestation`は
+`{schemaVersion:"managed-session-attestation.v1",trust_registry_id:"MANAGED-SESSION-TRUST-REGISTRY-v1",`
+`trust_registry_revision:1,algorithm:"ed25519",authorityId,keyVersion,issued_at:RFC3339,signature}`
 のexact schemaである。署名payloadはcanonical session identity objectのRFC 8785 UTF-8 bytesとする。
 `ManagedSessionAttestationVerifierPort.verify({provider,runtimeFamily,payloadBytes},attestation)`を使い、
 composition rootのclosed trust registryでprovider/runtime→allowed authorityId/algorithm/keyVersionを固定する。
 codex/claude/human/standaloneのUT-TDD managed delegation/session gateが発行し、外部provider API署名を仮定しない。
 unknown/wrong/expired key、forgery、algorithm drift、cross-provider replayを拒否する。
+historical verifyは封印`issued_at`がrowの`[valid_from,valid_until)`内で、`compromised_at==null`又は
+`issued_at < compromised_at`の場合だけ許す。current wall clockで過去receiptを再判定せずretirement後も決定論的にする。
 
 `SessionIdentityReceipt` coreは
-`{schema_version:"session-identity.v1",provider,runtime_family,provider_issued_session_id,`（前半）
-`session_identity_digest:SessionIdentityDigest,managed_session_attestation:ManagedSessionAttestation,producer_owner_id:"session-identity-gate",`
-`receipt_digest:ReceiptDigest}`（後半）のexact 8/self除外7-field preimageを持つ。self除外7 fieldsのcanonical
+`{schema_version:"session-identity.v1",provider,runtime_family,provider_issued_session_id,stable_subject_id,`（前半）
+`identity_digest:IdentityDigest,session_identity_digest:SessionIdentityDigest,managed_session_attestation:ManagedSessionAttestation,producer_owner_id:"session-identity-gate",`
+`receipt_digest:ReceiptDigest}`（後半）のexact 10/self除外9-field preimageを持つ。self除外9 fieldsのcanonical
 objectをRFC 8785→UTF-8→SHA-256 raw ReceiptDigest化する。managed attestationとouter EvidenceAttestationを
 二段検証する。Attested envelopeへ格納しcore/outer ownerを一致、closed mapでEvidenceProducer `ci`へ写像する。
+authoritative署名payloadは
+`{identity_schema:"ut-tdd-identity.v1",stable_subject_id,session_schema:"ut-tdd-session.v1",provider,`
+`runtime_family,provider_issued_session_id,trust_registry_id,trust_registry_revision,issued_at}`である。
+同じmanaged authorityがstable subjectとsessionを同時証明し、IdentityDigest/SessionIdentityDigestを再導出する。
 
 producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
 `{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_artifact_id:"NODE-Q0-CASE-MANIFEST-v1",`（前半）
@@ -727,6 +745,7 @@ preimageへ入れない。Attested envelopeへ格納しcore/outer ownerを一致
 provider/session attestationを検証する。
 参照SessionIdentityReceiptのprovider/runtime_familyはWorkEventのauthor_provider/runtime_familyとexact一致し、
 session canonical objectからSessionIdentityDigestを再導出する。
+WorkEvent `author_identity_digest`はSessionIdentityReceipt `identity_digest`とexact一致する。
 pathはGit tree由来repo-relative UTF-8 NFC、separator `/`、case-sensitiveとし、absolute、`.`、`..`、
 backslash、NUL、invalid UTF-8を拒否する。`touched_paths_digest`はexact arrayのRFC 8785→UTF-8→ContentDigestである。
 
@@ -783,7 +802,7 @@ author/reviewer session envelopeをchain-only検証してSessionIdentityDigest�
 SessionIdentityDigestの双方をdisjoint比較する。WorkEvent→sessionとReviewLane→sessionは各
 `edge_kind='identity.session'`, `ordinal=0` exact 1とする。
 ReviewLane参照SessionIdentityReceiptのprovider/runtime_familyはlane provider/runtime_familyとexact一致する。
-raw aliasは比較入力にしない。
+ReviewLane `reviewer_identity_digest`もSessionIdentityReceipt `identity_digest`とexact一致し、raw aliasは比較入力にしない。
 
 | `producer_owner_id` | `attestation_producer` |
 |---|---|

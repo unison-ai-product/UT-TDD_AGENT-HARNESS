@@ -1725,6 +1725,7 @@ Candidate field/order/serialization、session receipt missing/orphan/owner、ses
 tracked path除外、head digest/MAX row mismatchを個別negativeにする。
 session core preimage、wrong provider/runtime/authority/key/algorithm、expired key、forgery、cross-provider replayを
 個別negativeにし、managed verifier Greenとouter EvidenceAttestation Greenを別々に要求する。
+wrong registry row/revision、issued_at期限外、compromised cutoff以後、stable subject aliasを個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→

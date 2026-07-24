@@ -960,6 +960,38 @@
         "revision": 26,
         "content_digest": "sha256:2687c8ffff8d6140bd37f50b808d2b613b136e697d67148cd790dae7e42b90b2"
       }
+    },
+    {
+      "sequence": 61,
+      "previous_record_digest": "sha256:886289c4fbeb01c340362b04b4a28043f102d6fed1fcbfc06b0181d61385bbb9",
+      "record_digest": "sha256:344fb54d78a013068d53a966c4fbb491fc38d773ac69380ba391b0f40fb430ac",
+      "command_id": "pr154-managed-trust-l6-20260724",
+      "receipt_id": "certificate:192a0830dd855cd2bb96e10186ca373e",
+      "receipt_digest": "sha256:551cbea11f3418dd754d69da18cc33835b674a0596edc10a9342f65f73a1c244",
+      "decision_digest": "sha256:c78fa3bf1856eaa4c9544e66db657792daeb03872b9984791874c0a12ddd2a31",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 24,
+        "content_digest": "sha256:e50ecc874d8050e005cbb0df32e27a9e61718ee37736f875b60d943f823557d4"
+      }
+    },
+    {
+      "sequence": 62,
+      "previous_record_digest": "sha256:344fb54d78a013068d53a966c4fbb491fc38d773ac69380ba391b0f40fb430ac",
+      "record_digest": "sha256:0e097fc7a5942007e35571dfdd13162db25ce4b0c5332d0a6a98e8429e8c8ce3",
+      "command_id": "pr154-managed-trust-l7-20260724",
+      "receipt_id": "certificate:94ca75faf2c4199dfe7da4884b579627",
+      "receipt_digest": "sha256:42a9bb454ae9044eaa6ac10927f573ee613183724a3ba6d0d52cc9fb191a14e5",
+      "decision_digest": "sha256:2ef160b0d93aed2ac52f19922e2dd18ac346d8888a8f0182f470edd25fedb815",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 27,
+        "content_digest": "sha256:a5805bf36e6f314cb9c23e3455b78f0ac6cf99ced3fae011e517c2313f22699f"
+      }
     }
   ]
 }
