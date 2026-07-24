@@ -489,18 +489,19 @@ Q0 `SliceAdmissionReceipt`をpriorに要求し、以後は直前validated cutove
 ReviewBundleReceipt、両ReviewLaneReceipt及びadmission実行時にcomposition rootが観測したmodeとexact一致させる。
 許可FSMは`q0_validated → genesis_approved → inventory_to_shadow_approved → shadow_to_primary_approved → primary_to_bun_removed_approved → bun_removed_to_sealed_approved`だけとする。
 
-| edge_id | `producer_owner_id` | `attestation_producer` |
-|---|---|---|
-| `cutover.genesis` | `cutover-genesis-authority` | `ci` |
-| `cutover.inventory-frozen.node-shadow` | `cutover-shadow-authority` | `ci` |
-| `cutover.node-shadow.node-primary` | `cutover-primary-authority` | `ci` |
-| `cutover.node-primary.bun-removed` | `cutover-removal-authority` | `ci` |
-| `cutover.bun-removed.sealed` | `cutover-seal-authority` | `ci` |
+| edge_id | `producer_owner_id` | `attestation_producer` | allowed `authority_id` | allowed `keyVersion` |
+|---|---|---|---|---|
+| `cutover.genesis` | `cutover-genesis-authority` | `ci` | `ut-tdd-cutover-genesis` | `v1` |
+| `cutover.inventory-frozen.node-shadow` | `cutover-shadow-authority` | `ci` | `ut-tdd-cutover-shadow` | `v1` |
+| `cutover.node-shadow.node-primary` | `cutover-primary-authority` | `ci` | `ut-tdd-cutover-primary` | `v1` |
+| `cutover.node-primary.bun-removed` | `cutover-removal-authority` | `ci` | `ut-tdd-cutover-removal` | `v1` |
+| `cutover.bun-removed.sealed` | `cutover-seal-authority` | `ci` | `ut-tdd-cutover-seal` | `v1` |
 
 各cutover/final revisionはexact candidate HEADに対してfresh admissionを発行できるが、authority/key
 version、prior receipt、edge、owner→EvidenceProducer写像又は`authority_id == attestation.authorityId`が
 上表と一致しなければrejectedとする。この5 rowを`CUTOVER-ADMISSION-PRODUCER-MAP-v1`のclosed setとし、
 unknown owner、wrong producer、authority ID driftをfail-closeする。別revisionのadmission replay、
+上表以外のtrusted CI authority/keyによる署名もedge authority replayとして拒否する。
 slice admission流用、skip、同一edge二重approvedを拒否する。
 
 ### Node切替receipt chain
@@ -553,6 +554,9 @@ record_digest, attestation, receipt_digest }`を持つ。
 その他generic payload kindだけが`payload_object_receipt_digest`と`payload_digest`を持つ。`schema_version`は
 `cutover-evidence.v1`とする。`subject_revision`はregistryのrevision規則でdiscriminateし、
 `producer-ancestor` rowではproducer commit、`candidate-head` rowではcandidate HEADをexact保持する。
+正規型`GitObjectId = "git-sha1:" + 40 lowercase hex | "git-sha256:" + 64 lowercase hex`だけを許す。
+現repositoryのSHA-1 object IDは`git-sha1:<40hex>`として保持する。algorithm prefixなし、長さ混同、
+uppercase又は同じhexを別algorithmへ付け替えたrevision replayを拒否する。
 `record_digest`はnested attestation、自身及び`receipt_digest`を除いた
 `schema_version,edge_id,kind_id,producer_owner_id,attestation_producer,subject_revision,success`（前半）と
 `reference_kind,referenced_receipt_digest|null,payload_object_receipt_digest|null,payload_digest|null`（後半）
@@ -565,6 +569,7 @@ generic payloadの実体は
 `producer_owner_id, attestation_producer, record_digest, attestation, receipt_digest }`（後半）
 のexact schemaで保存する。`record_digest`はnested attestationと自身以降を除く先行7 field、
 `receipt_digest`は先行9 fieldを固定順で封印する。`SliceEvidenceReceipt.payload_object_receipt_digest`だけで
+`schema_version`はliteral `evidence-payload-object.v1`だけを許す。
 `payload_bytes`はdecoded payloadのRFC 8785 canonical JSONをUTF-8 encodeしたbyte列をRFC 4648
 base64url（`-`/`_` alphabet、paddingなし）で表す。標準base64、padding付き、非canonical JSON、invalid UTF-8、
 duplicate key又はdecode→再encode不一致を拒否する。このobjectを取得し、base64url decodeしたbytesから
@@ -575,8 +580,10 @@ SHA-256 lowercase hex `payload_digest`を再計算してreceipt側とexact一致
 #### `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`
 
 decoded payloadの共通exact base fieldsは
-`{ schema_version:string literal, kind_id:string literal, subject_revision:sha256 lowerhex,`（共通前半）
-observed_at:RFC3339 UTC, result:"success" }`である。追加fieldを許可せず、下表のkind別required fieldsを加えた
+`{ schema_version:"evidence-payload.v1", schema_id:payload_schema literal, kind_id:string literal,`（共通前半）
+`subject_revision:GitObjectId, observed_at:RFC3339 UTC, result:"success" }`である。外側
+`SliceEvidenceReceipt.subject_revision`とexact equality、`EvidencePayloadObject.payload_schema == decoded.schema_id`
+を要求する。追加fieldを許可せず、下表のkind別required fieldsを加えた
 closed discriminated unionをRFC 8785 canonicalizeする。`uint`はJSON整数かつ`0..2^53-1`、digestは
 `sha256:` prefix付き64 lowercase hexである。
 
@@ -586,15 +593,15 @@ closed discriminated unionをRFC 8785 canonicalizeする。`uint`はJSON整数�
 | `design.l6-confirmed` | `l6-confirmation-evidence.v1` | `plan_id:"PLAN-L6-93-node-bootstrap-contract"`, `plan_revision:uint`, `status:"confirmed"`, `content_digest:digest` / subjectとformal revision一致 |
 | `f0a.static-custody` | `f0a-static-custody.v1` | `node_version:string`, `npm_version:string`, `lock_digest:digest` / exact pinとclean lock graph一致 |
 | `f0b.sealed-generation` | `f0b-sealed-generation.v1` | `image_digest:digest`, `generation:uint`, `fallback_count:0` / sealed generation成功 |
-| `f0c.os-jobs` | `f0c-os-jobs.v1` | `linux_run_digest:digest`, `windows_run_digest:digest`, `aggregate:"success"` / 同一HEAD・attempt |
-| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:digest`, `case_count:uint` / authoring coverage欠測0 |
-| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:digest`, `bun_process_count:0`, `fallback_count:0` / Node-only |
+| `f0c.os-jobs` | `f0c-os-jobs.v1` | `workflow_revision:GitObjectId`, `run_id:string`, `run_attempt:uint>0`, `linux:{subject_revision:GitObjectId,run_id:string,run_attempt:uint,conclusion:"success",digest:digest}`, `windows:{同型}` / `workflow_revision == subject_revision == linux.subject_revision == windows.subject_revision && run_id/run_attemptが両OSと一致 && 両conclusion=="success"` |
+| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:digest`, `expected_case_ids:string[] unique nonempty`, `executed_case_ids:string[] unique` / sorted set equalityによりmissing/extra/duplicate 0 |
+| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:digest`, `expected_case_ids:string[] unique nonempty`, `executed_case_ids:string[] unique`, `bun_process_count:0`, `fallback_count:0` / case set equalityかつNode-only |
 | `inventory.zero` | `inventory-zero.v1` | `scan_digest:digest`, `bun_reference_count:0` / inventory全対象0 |
 | `pack.acceptance` | `pack-acceptance.v1` | `pack_digest:digest`, `accepted:true` / clean Pack acceptance |
 | `debt.plan-recovery-16.repaired` | `plan-recovery-16-repair.v1` | `plan_id:"PLAN-RECOVERY-16-plan-revision-authoring"`, `repair_receipt_digest:digest` / formal repair済み |
 | `debt.plan-l7-452.repaired` | `plan-l7-452-repair.v1` | `plan_id:"PLAN-L7-452-forward-escape-contract-red"`, `repair_receipt_digest:digest` / formal repair済み |
 | `issue.153-closed` | `github-issue-closure.v1` | `issue_id:153`, `state:"closed"`, `event_digest:digest` / trusted closure event |
-| `aggregate.success` | `aggregate-success.v1` | `linux_digest:digest`, `windows_digest:digest`, `aggregate:"success"` / failure/cancel/skip 0 |
+| `aggregate.success` | `aggregate-success.v1` | `workflow_revision:GitObjectId`, `run_id:string`, `run_attempt:uint>0`, `lanes:[{lane_id:string unique,subject_revision:GitObjectId,run_id:string,run_attempt:uint,outcome:"success"}] nonempty`, `aggregate:"success"` / 全lane subject/run/attempt一致かつoutcome success、failure/cancelled/skipped数0 |
 
 generic kindはこのclosed registryのexact 1 rowを要求する。`review.bundle`と`admission.approved`はtyped refであり
 payload schema registryへ入れない。未知kind/schema、row追加を伴わないschema文字列又はcross-row再利用はfail-closeする。
@@ -690,6 +697,7 @@ standaloneは上記human 2 lane以外を許可しない。
 `ReviewLaneReceipt`、`ReviewBundleReceipt`、`BootstrapEnvelopeReceipt`、`SliceAdmissionReceipt`の各core receiptは
 `AttestedReceiptEnvelope { schema_version, producer_owner_id, attestation_producer, record,`（前半）
 record_digest, attestation, receipt_digest }`のexact 7-field wrapperへ格納する。`record_digest`は
+`schema_version="attested-receipt-envelope.v1"`だけを許し、unknown versionを拒否する。
 `[schema_version,producer_owner_id,attestation_producer,record]`のexact 4-field tuple、
 wrapper `receipt_digest`は自身を除くexact 6-field tupleを封印する。core `receipt_digest`も再計算し、
 `EvidenceAttestationVerifierPort.verify({producer: attestation_producer, recordDigest: record_digest},`（検証入力）

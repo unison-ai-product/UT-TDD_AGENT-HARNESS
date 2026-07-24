@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:951b8ec232933dcd0050b20829521f11
-  command_id: pr154-payload-l7-20260724
-  admitted_at: 2026-07-24T12:01:00.000Z
-  source_digest: sha256:479f653345cb76f6ed9f0f2c7a63dfe7074d52694706bfa8dfa589c6c9a185d8
-  decision_digest: sha256:3856560c7ed38d9820f1befbd43b2ba3d4621fd3a49d2289b3c0806c7f93ea0d
-  receipt_digest: sha256:822048f4eeb72a52881ef2e7da42a0eac249bbb0bd942f3906a328bc4903ed9d
+  receipt_id: certificate:566d94a36abe39c581d5939d4c527f7c
+  command_id: pr154-semantic-l7-20260724
+  admitted_at: 2026-07-24T12:31:00.000Z
+  source_digest: sha256:4136b96aca426b7a975a6ed9a1075ee7d086f9b8f8fb4050af97b5fda83873e4
+  decision_digest: sha256:38b4999e468a29741af361a02c057d0058139299bfacade68619af769fd5ecb0
+  receipt_digest: sha256:164fc82e2c176c483d11418855e5730a273b5ab0ff07a7e36275302f520f67cf
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 11
-    content_digest: sha256:479f653345cb76f6ed9f0f2c7a63dfe7074d52694706bfa8dfa589c6c9a185d8
+    revision: 12
+    content_digest: sha256:4136b96aca426b7a975a6ed9a1075ee7d086f9b8f8fb4050af97b5fda83873e4
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,19 +99,19 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 8
-    digest: sha256:f3a8e3c31ea40f85fd79b6556c489b7254ff0d550d865a7e394ce3413c0a6b6f
+    revision: 9
+    digest: sha256:a195ae17a28cc7d15980c111c1d346713990b13477a571e5e8647913e8a8d910
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-      target_revision: 11
+      target_revision: 12
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 11
+    target_revision: 12
     phase: forward_merge
-  escape_reason: PR 154 payload and authority closure
+  escape_reason: PR 154 semantic evidence closure
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -230,8 +230,8 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chain | D0 ReviewBundle 1+AttestedTrackedReceiptRecord exact 4+BootstrapEnvelope #153、後続predecessor+owned evidenceだけ連結 |
-| `CAND-CUTOVER-107` | claim/spec片lane、bundle/lane/CutoverAdmission/actual mode混在、17 evidence owner又は5 cutover authority mapping誤り、D0 input owner欠落、SliceAdmission core/outer owner差、authority ID drift、attestation shape mutation | mode別independence、両closed producer map、既存producer enum、nested shape、core/outer owner equalityだけを許可。mixed mode、unknown/wrong mapping、self-reference、schemaVersion/algorithm欠落を拒否 |
-| `CAND-CUTOVER-108` | validated Q0+full L6Confirmation→genesis→sealedへSliceAdmission envelope、closed-union EvidencePayloadObject、kind evidenceをnested保存 | outer digest chainを再検証。RFC 8785 JSON→UTF-8→unpadded base64url decode bytes再hash、kind/owner/producer/schema/required fields/semantic predicateを要求し、arbitrary bytes、schema spoof、core lookup、alias、cross-kind/cross-owner/cross-semantic replayを拒否 |
+| `CAND-CUTOVER-107` | mode混在、17 evidence owner/5 cutover authority mapping誤り、D0 owner欠落、SliceAdmission core/outer owner差、authority/keyVersion drift、別trusted CI authority replay、attestation shape/version mutation | mode別independence、両closed producer map、edge別authority/keyVersion、nested shape、`attested-receipt-envelope.v1`だけを許可。unknown/wrong mapping/version、authority equality違反を拒否 |
+| `CAND-CUTOVER-108` | Git algorithm/length混同又はrevision replay、payload object/decoded schema version drift、schema ID不一致、F0c OS run差、Q0 case欠測/重複、aggregate failure/cancel/skipped、arbitrary payload bytes | outer/payload GitObjectId exact equality、schema literal、RFC 8785→UTF-8→unpadded base64url再hashを要求。typed fieldsからsame revision/run attempt、case set equality、全lane successを再導出し、schema spoof/cross-semantic replayを拒否 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db`並行online backup | 単一時点のhead、refs、objectsで一貫 |
 | `CAND-CUTOVER-110` | trusted backup restore | head、refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | migration barrier失敗 | schema/data/versionを単一transactionでrollback |

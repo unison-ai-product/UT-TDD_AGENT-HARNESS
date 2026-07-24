@@ -1435,6 +1435,8 @@ SliceEvidenceとpayload objectのkind/owner/attestation producer/payload schema�
 L5 `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`のclosed discriminated unionへexact照合する。payloadはRFC 8785
 canonical JSON→UTF-8→RFC 4648 base64url paddingなしへ一意化し、decode bytesをSHA-256で再hashする。
 arbitrary bytes、schema spoof、cross-kind/cross-owner/cross-semantic replayを拒否する。
+subject revisionは`git-sha1:<40 lowerhex>|git-sha256:<64 lowerhex>`だけを許し、outer/payloadをexact一致させる。
+payload object/decoded payload/envelopeのschema version literal及び`payload_schema == schema_id`もexact照合する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、
 claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
@@ -1460,6 +1462,7 @@ authority ID+key version+signature+producer+record digest/receipt digestで、ge
 正規producer registryで発行し、skip/replay/別edge/slice receipt流用を拒否する。
 CutoverAdmissionはowner、EvidenceProducer、nested authorityを分離し、L5
 `CUTOVER-ADMISSION-PRODUCER-MAP-v1`の5 edgeと`authority_id == attestation.authorityId`をexact照合する。
+edge別allowed authority ID/keyVersionもclosed照合し、別trusted CI authority replayを拒否する。
 execution modeはReviewLane/Bundle及びactual admission modeとexact一致させる。
 ReviewLane/Bundle coreとBootstrapEnvelope coreはproducer/record digest/nested attestationを持つ
 exact `AttestedReceiptEnvelope`に格納し、両admission receiptは既存`EvidenceRecord` /

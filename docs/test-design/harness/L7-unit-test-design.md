@@ -1674,6 +1674,10 @@ generic payloadはtyped `EvidencePayloadObject`をreceipt digestで取得し、b
 kind/producer owner/attestation producer/payload schemaをclosed registryへexact照合し、cross-kind/cross-owner replayを拒否する。
 decoded payloadはRFC 8785 canonical JSON→UTF-8→unpadded base64urlだけを許し、13 discriminatorのrequired
 field/type/domain/semantic predicateを検証する。arbitrary bytes、padding、schema spoof、cross-semantic replayを拒否する。
+outer/payload subject revisionはalgorithm prefix付きGitObjectIdでexact一致させ、SHA-1 40hexをpositive、
+prefix/length/algorithm混同とrevision replayをnegativeにする。payload object/decoded/envelope schema version、
+`payload_schema == schema_id`を検証する。F0c OS lane run差、Q0 expected/executed set差、aggregateの
+failure/cancelled/skippedをtyped fieldsから再導出して拒否する。
 `evidence_digest` / `object_digest` alias lookup、payload content digestによる取得を拒否する。CutoverAdmissionはvalidated Q0
 SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
 schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
@@ -1698,6 +1702,7 @@ SliceAdmission coreも同じenvelopeで検証しraw core保存を拒否する。
 D0→ReviewBundle/Bootstrap、Q0 predecessorはouter envelope digestだけでlookupし、core digest/alias参照を拒否する。
 SliceAdmission core/outer producer owner差、D0 input 2 owner mapping欠落、CutoverAdmission 5 authorityのwrong
 EvidenceProducer又は`authority_id != attestation.authorityId`を各negative pairにする。
+edge別allowed authority ID/keyVersion外と、別trusted CI authorityによる署名replayもnegative pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→

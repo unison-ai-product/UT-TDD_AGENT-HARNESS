@@ -261,3 +261,11 @@ EvidenceProducer、nested authority IDを分離した。SliceAdmission core/oute
 payload bytesをRFC 8785 canonical JSON→UTF-8→unpadded base64urlへ一意化し、13 kindをrequired
 field/type/domain/semantic predicate付きclosed discriminated unionにした。PLAN-L6-93 revision 8 /
 PLAN-L7-458 revision 11を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 27c522fd semantic evidence FLAG
+
+subject revisionをalgorithm prefix付きGitObjectIdへ固定し、outer/payload exact equalityを要求した。
+payload object/decoded/envelopeのschema literalを閉じ、F0c OS run、Q0 case set、aggregate lane outcomesから
+semantic successを再導出する。Cutover edge別authority ID/keyVersionもclosed set化した。
+PLAN-L6-93 revision 9 / PLAN-L7-458 revision 12を正規`plan revise`経路で発行した。
+独立再reviewまではFLAGを維持する。

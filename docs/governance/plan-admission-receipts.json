@@ -480,6 +480,38 @@
         "revision": 11,
         "content_digest": "sha256:479f653345cb76f6ed9f0f2c7a63dfe7074d52694706bfa8dfa589c6c9a185d8"
       }
+    },
+    {
+      "sequence": 31,
+      "previous_record_digest": "sha256:fc3be9ad45d7b94fe8af5359c56dd02527336efbe5857557483afee1d7e4df4a",
+      "record_digest": "sha256:e99ef5f2305871ee7ccf39459ee4b94d99783f3289532ed3eb56c5e9363d1b6e",
+      "command_id": "pr154-semantic-l6-20260724",
+      "receipt_id": "certificate:d380a8f6e33eb74452782e40df8a798e",
+      "receipt_digest": "sha256:3c2fe7b1d9b7e7346301845fc18bed37d41b03b5c02e060d55294c26ecc31aa1",
+      "decision_digest": "sha256:2d9d8ba9ee76a291b2fceb54a4bfd1cfd4f64d95093bc41b3d3f13b94695bf0a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 9,
+        "content_digest": "sha256:a195ae17a28cc7d15980c111c1d346713990b13477a571e5e8647913e8a8d910"
+      }
+    },
+    {
+      "sequence": 32,
+      "previous_record_digest": "sha256:e99ef5f2305871ee7ccf39459ee4b94d99783f3289532ed3eb56c5e9363d1b6e",
+      "record_digest": "sha256:4746e42a8d32f1da6b9c7e17f8bf40ab2a608cd21797b20264502365e0baa611",
+      "command_id": "pr154-semantic-l7-20260724",
+      "receipt_id": "certificate:566d94a36abe39c581d5939d4c527f7c",
+      "receipt_digest": "sha256:164fc82e2c176c483d11418855e5730a273b5ab0ff07a7e36275302f520f67cf",
+      "decision_digest": "sha256:38b4999e468a29741af361a02c057d0058139299bfacade68619af769fd5ecb0",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 12,
+        "content_digest": "sha256:4136b96aca426b7a975a6ed9a1075ee7d086f9b8f8fb4050af97b5fda83873e4"
+      }
     }
   ]
 }
