@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:39cd09cd7fb0d2a50322fde4c2e75f2d
-  command_id: pr154-manifest-artifact-l7-20260724
-  admitted_at: 2026-07-24T15:11:00.000Z
-  source_digest: sha256:c88c34a60ac7f7c815be11ed0150423598406367924ac9a1e732fa8da756976a
-  decision_digest: sha256:f3573be012be3eb8378e80af3e816f9f1a6ffa96148c38d7a928d407cbcc6725
-  receipt_digest: sha256:e752117dabb20556037cfcef05b59e8a8a16721733a9bba0a7d7b608f6f7ab48
+  receipt_id: certificate:963a83a6412bce968b3141d798349eeb
+  command_id: pr154-manifest-parser-l7-20260724
+  admitted_at: 2026-07-24T15:21:00.000Z
+  source_digest: sha256:58bdbb32b1a286a6752ed04c45c9f0eb8ca667a599478cc2282526660bfc446a
+  decision_digest: sha256:6fc3f649593778eeead10706556a5954576d056f4b546efe2422d7695ea11e3b
+  receipt_digest: sha256:3d74d8288034f235c6c3376cfa996b7e36546ca0b0e4a2d1eaf94e29781c0006
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 18
-    content_digest: sha256:c88c34a60ac7f7c815be11ed0150423598406367924ac9a1e732fa8da756976a
+    revision: 19
+    content_digest: sha256:58bdbb32b1a286a6752ed04c45c9f0eb8ca667a599478cc2282526660bfc446a
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,19 +99,19 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 15
-    digest: sha256:df609519c2e803940e28ff55e5998bb6c9a42cffab38ca8e941731c507bb1dc9
+    revision: 16
+    digest: sha256:2b974c45511802db561ee144cc3b6637eaa40752eed15dfbb6be182d6aa0e3cb
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-      target_revision: 18
+      target_revision: 19
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 18
+    target_revision: 19
     phase: forward_merge
-  escape_reason: PR 154 case manifest artifact closure
+  escape_reason: PR 154 case manifest parser closure
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -231,7 +231,7 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
 | `CAND-CUTOVER-107` | receipt schema/version/preimage/order/owner/attestation mutation | ReviewLane 12/self除外11、SliceAdmission 8/self除外7、outer digest trust graphをexact検証 |
-| `CAND-CUTOVER-108` | aggregate lane欠測、CaseManifest wrong path/id、marker count、digest drift/wrong owner/same-subject partial-index conflict、subset omission/order/duplicate、q0 split、missing/orphan ref、core preimage mutation | exact marker JSON extraction、RFC8785/UTF-8/SHA-256再計算、subject partial UNIQUE、8-field core preimage、q0同一outer digest、typed ref traversal、expected/executed exact equalityを要求 |
+| `CAND-CUTOVER-108` | lane欠測、CaseManifest NULL/type mismatch、wrong path/id、raw marker/backtick/空白/field違反、digest/owner/partial-index conflict、subset/order/duplicate、q0 split、missing ref、wrong edge kind/ordinal、core mutation | evidence_type単一判別、exact raw marker JSON、RFC8785 digest、subject partial UNIQUE、8-field preimage、q0 edge kind/ordinal exact 1、expected/executed exact equalityを要求 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db`並行online backup | 単一時点のhead、refs、objectsで一貫 |
 | `CAND-CUTOVER-110` | trusted backup restore | head、refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | migration barrier失敗 | schema/data/versionを単一transactionでrollback |

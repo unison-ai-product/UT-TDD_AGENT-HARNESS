@@ -630,16 +630,21 @@ manifest subjectとpayload subjectを一致させ、executed IDsとexpected IDs�
 `expected_case_ids`はUTF-8 code-point昇順のunique arrayとし、`required_set_digest`は
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(expected_case_ids)))`のexact値を要求する。
 `source_test_design_artifact_digest`はsubject GitObjectId時点のcanonical test-design artifact bytesから再計算する。
-artifact extractionは上記pathのBEGIN/END marker exact 1組、その間のJSON object exact 1個だけを許可し、
-duplicate/unknown fieldを拒否する。RFC 8785 canonicalizeしたobjectのUTF-8 bytesからartifact digestを計算する。
+artifact extractionは上記pathのraw Markdown bytesをUTF-8 LFとして読む。開始行exact
+`` `NODE-Q0-CASE-MANIFEST-v1-BEGIN` ``と終了行exact
+`` `NODE-Q0-CASE-MANIFEST-v1-END` ``を各1行、開始→終了順で要求し、前後空白0とする。
+両行間はnonblank JSON line exact 1行だけを許す。JSONのrequired/allowed fieldsはexact
+`{artifact_id,schema_version,expected_case_ids}`で、artifact/schema literalを照合し、
+unknown/missing/duplicate keyを拒否する。RFC 8785 canonicalizeしたobjectのUTF-8 bytesからartifact digestを計算する。
 manifestの`expected_case_ids`はparsed JSON arrayと順序を含めexact一致させ、subset/extra/order drift/duplicateを拒否する。
 core `producer_owner_id`はouter `producer_owner_id`と一致させ、closed owner mapによりouter
 `attestation_producer == "ci"`を要求する。typed object storeは
-`UNIQUE(subject_revision, object_kind='q0-case-manifest')`を保証し、同一outer digestの再登録だけを冪等成功、
+`UNIQUE(subject_revision, evidence_type='q0-case-manifest')`を保証し、同一outer digestの再登録だけを冪等成功、
 同一subjectで異なるdigestを競合拒否する。これはhead/CAS/version registryではない。
 `q0.authoring`と`q0.runtime`は同じCaseManifest outer digestを参照する。EvidencePayloadObjectから
-CaseManifest outer digestへのtyped edgeを`cutover_evidence_refs`へ保存し、reducerはそのedgeだけを辿る。
-missing/orphan/different-manifest参照はfail-closeする。
+CaseManifest outer digestへのtyped edgeを`cutover_evidence_refs`へ保存する。各`q0.authoring`/
+`q0.runtime` EvidencePayloadObjectは`edge_kind='q0.case-manifest'`, `ordinal=0`のedge exact 1を持ち、
+reducerはそのedgeだけを辿る。別edge kind/ordinal、複数、missing/orphan/different-manifest参照はfail-closeする。
 manifest変更は新subject revisionと通常のreview/admissionを必要とし、runtime mutable registry/head/removal APIは0とする。
 
 #### `AGGREGATE-PROFILE-REGISTRY-v1`
@@ -803,13 +808,15 @@ digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、
 [physical-data.md](physical-data.md) §2.7.1を参照する。
 head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
 receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
-evidence object tableは`cutover_evidence_objects(receipt_digest PRIMARY KEY, object_digest, evidence_type, object_kind, subject_revision, payload_json, attestation_json, CHECK(object_digest=receipt_digest), CHECK(object_kind IN ('slice-evidence','evidence-payload','review-lane','review-bundle','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(object_kind!='q0-case-manifest' OR subject_revision IS NOT NULL))`、
+evidence object tableは`cutover_evidence_objects(receipt_digest PRIMARY KEY, object_digest, evidence_type TEXT NOT NULL, subject_revision, payload_json, attestation_json, CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL))`、
 参照tableは`cutover_evidence_refs(from_receipt_digest, to_receipt_digest, edge_kind, ordinal, UNIQUE(from_receipt_digest,edge_kind,ordinal))`
 を正本とする。writerは
-`CREATE UNIQUE INDEX uq_cutover_q0_manifest_subject ON cutover_evidence_objects(subject_revision) WHERE object_kind='q0-case-manifest'`
+`CREATE UNIQUE INDEX uq_cutover_q0_manifest_subject ON cutover_evidence_objects(subject_revision) WHERE evidence_type='q0-case-manifest'`
 も正本DDLとして作成する。`subject_revision`はnullable GitObjectId canonical textだがCaseManifestではNOT NULL相当CHECKとする。
 同digest insertだけを冪等成功とし、同subject別digestのUNIQUE violationをfail-closeする。migration/backfillは
-CaseManifestなし既存DBへnullable列、closed kind、partial indexをadditiveに追加し既存rowを捏造しない。
+既存`evidence_type`全rowをclosed setでvalidateし、unknown/nullならrollbackしてfail-closeする。その後だけ
+nullable `subject_revision`とpartial indexをadditiveに追加し、既存rowを捏造しない。
+decoded typed union kindとDB `evidence_type`のexact equalityをinsert/read双方で要求する。
 `PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
 evidence/receipt insert後の更新SQLは
 文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND version=?`

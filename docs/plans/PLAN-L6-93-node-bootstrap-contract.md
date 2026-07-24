@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0547ba713e545bd37c83c1e734f677c6
-  command_id: pr154-manifest-artifact-l6-20260724
-  admitted_at: 2026-07-24T15:10:00.000Z
-  source_digest: sha256:df609519c2e803940e28ff55e5998bb6c9a42cffab38ca8e941731c507bb1dc9
-  decision_digest: sha256:680c219caa307622cc66969e2c33545252b488489d6367da0c6c8dd23e869e65
-  receipt_digest: sha256:9997c4527d6c76a2fa203da1d81d39fb72d1f6675f219147bcd3b6772354b312
+  receipt_id: certificate:1789a2fdd25f05f3dff2f1cb98e50db1
+  command_id: pr154-manifest-parser-l6-20260724
+  admitted_at: 2026-07-24T15:20:00.000Z
+  source_digest: sha256:2b974c45511802db561ee144cc3b6637eaa40752eed15dfbb6be182d6aa0e3cb
+  decision_digest: sha256:781bd72b053891322111ac5e03b9517e72d109a3fd70d1720cf6184f37a4505a
+  receipt_digest: sha256:b04f180701a62c3ae0e5a47c7fb3c199bc9c6b288229512bfc8591c4ae9e1b41
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 15
-    content_digest: sha256:df609519c2e803940e28ff55e5998bb6c9a42cffab38ca8e941731c507bb1dc9
+    revision: 16
+    content_digest: sha256:2b974c45511802db561ee144cc3b6637eaa40752eed15dfbb6be182d6aa0e3cb
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 15
+      target_revision: 16
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 15
+    target_revision: 16
     phase: forward_merge
-  escape_reason: PR 154 case manifest artifact closure
+  escape_reason: PR 154 case manifest parser closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -149,6 +149,9 @@ Q0 expected setはproducer payloadでなく同subjectのimmutable attested CaseM
 正本pathは`docs/test-design/harness/L8-integration-test-design.md`、artifact IDは
 `NODE-Q0-CASE-MANIFEST-v1`とし、exact 1 marker pair間のexact 1 JSON objectだけを抽出する。
 duplicate/unknown fieldを拒否し、RFC 8785 canonical object UTF-8 bytesからartifact digestを再計算する。
+raw Markdown UTF-8 LF、backtick込みmarker exact行、前後空白0、間のnonblank JSON exact 1行、
+required/allowed 3 fields exactを要求する。DBは`evidence_type`単一discriminatorとし、Q0 refは
+`edge_kind='q0.case-manifest'`, `ordinal=0` exact 1を要求する。
 Case IDはUTF-8 code-point昇順unique array、set digestは
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`とし、source artifact digestをsubject時点の
 canonical test-design bytesから再計算する。core/outer owner一致、closed mapの`ci`、subject単位の同digest冪等・

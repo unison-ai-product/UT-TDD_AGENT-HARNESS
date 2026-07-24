@@ -317,3 +317,11 @@ L8内のexact 1 marker pairと単一canonical JSON objectをQ0 case正本へ固�
 UNIQUE indexを追加した。同digestだけ冪等、同subject別digestをfail-closeし、既存DB migrationはadditiveとする。
 PLAN-L6-93 revision 15 / PLAN-L7-458 revision 18を正規`plan revise`経路で発行した。
 独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 4e58a683 CaseManifest parser/discriminator局所FLAG
+
+DB discriminatorを`evidence_type`単一正本へ統一し、typed unionとのinsert/read双方向一致、既存type検証後だけの
+additive migrationを固定した。marker parserはraw Markdown UTF-8 LF、backtick込みexact行、空白0、間の
+nonblank JSON exact 1行、required/allowed 3 fields exactへ閉じた。Q0 payload refは
+`edge_kind='q0.case-manifest'`, `ordinal=0` exact 1とした。PLAN-L6-93 revision 16 /
+PLAN-L7-458 revision 19を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。

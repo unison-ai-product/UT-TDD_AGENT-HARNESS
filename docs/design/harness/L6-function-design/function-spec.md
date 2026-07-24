@@ -1444,6 +1444,9 @@ Q0 expected caseは同subjectのimmutable attested CaseManifestObjectから取�
 `NODE-Q0-CASE-MANIFEST-v1-BEGIN/END` exact 1組に挟まれたexact 1 JSON objectとする。
 artifact ID/path、marker数、duplicate/unknown fieldを検証し、RFC 8785 canonical object UTF-8 bytesから
 artifact digestを再計算する。manifest arrayはparsed arrayと順序込みexact一致させる。
+parserはraw MarkdownのUTF-8 LF、backtick込みmarker exact行、前後空白0、間のnonblank JSON exact 1行、
+required/allowed 3 fields exactを要求する。Q0 payload refは`edge_kind='q0.case-manifest'`,
+`ordinal=0` exact 1とする。DB discriminatorは`evidence_type`だけとしtyped union kindと双方向一致させる。
 Case IDはUTF-8 code-point昇順unique arrayとし、set digestは
 `SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`で再計算する。test-design artifact digestも
 subject GitObjectId時点のcanonical bytesから再計算する。core/outer owner一致とclosed mapの`ci`を検証し、

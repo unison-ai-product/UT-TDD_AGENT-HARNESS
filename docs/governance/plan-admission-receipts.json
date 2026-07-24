@@ -704,6 +704,38 @@
         "revision": 18,
         "content_digest": "sha256:c88c34a60ac7f7c815be11ed0150423598406367924ac9a1e732fa8da756976a"
       }
+    },
+    {
+      "sequence": 45,
+      "previous_record_digest": "sha256:1f1cf14c7011ec145f837d5a37fff0db3c206f096b3f28a32ec131cbf45ff51b",
+      "record_digest": "sha256:d5f5aa2ea6cdc75429cdd7d039c05d9c151c31d6c26c453914608e2f2f86471d",
+      "command_id": "pr154-manifest-parser-l6-20260724",
+      "receipt_id": "certificate:1789a2fdd25f05f3dff2f1cb98e50db1",
+      "receipt_digest": "sha256:b04f180701a62c3ae0e5a47c7fb3c199bc9c6b288229512bfc8591c4ae9e1b41",
+      "decision_digest": "sha256:781bd72b053891322111ac5e03b9517e72d109a3fd70d1720cf6184f37a4505a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 16,
+        "content_digest": "sha256:2b974c45511802db561ee144cc3b6637eaa40752eed15dfbb6be182d6aa0e3cb"
+      }
+    },
+    {
+      "sequence": 46,
+      "previous_record_digest": "sha256:d5f5aa2ea6cdc75429cdd7d039c05d9c151c31d6c26c453914608e2f2f86471d",
+      "record_digest": "sha256:73244bc83ad4a8f697eb995687f0fb75f75c24b1fe483624ccf2dd8a08f7b8db",
+      "command_id": "pr154-manifest-parser-l7-20260724",
+      "receipt_id": "certificate:963a83a6412bce968b3141d798349eeb",
+      "receipt_digest": "sha256:3d74d8288034f235c6c3376cfa996b7e36546ca0b0e4a2d1eaf94e29781c0006",
+      "decision_digest": "sha256:6fc3f649593778eeead10706556a5954576d056f4b546efe2422d7695ea11e3b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 19,
+        "content_digest": "sha256:58bdbb32b1a286a6752ed04c45c9f0eb8ca667a599478cc2282526660bfc446a"
+      }
     }
   ]
 }
