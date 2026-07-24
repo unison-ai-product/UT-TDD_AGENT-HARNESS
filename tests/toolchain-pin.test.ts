@@ -90,6 +90,14 @@ describe("toolchain pin lint", () => {
     ).toContain("npm-package-manager-integrity-missing");
   });
 
+  it("rejects same-version packageManager with a non-reviewed integrity digest", () => {
+    expect(
+      analyzeToolchainPin(fixture({ packageManager: "npm@11.6.2+sha512-AAAA" })).violations.map(
+        (v) => v.rule,
+      ),
+    ).toContain("npm-package-manager-integrity-mismatch");
+  });
+
   it("rejects npm lock version and root graph mutation", () => {
     expect(
       analyzeToolchainPin(fixture({ lockVersion: 2, lockEsbuild: "0.21.4" })).violations.map(

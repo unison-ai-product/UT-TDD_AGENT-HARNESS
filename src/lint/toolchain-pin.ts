@@ -8,6 +8,8 @@ export const NODE_TOOLCHAIN_POLICY = {
   executableReceipt: "deferred_to_f0b",
   nodeVersion: "24.13.0",
   npmVersion: "11.6.2",
+  npmIntegrity:
+    "sha512-7iKzNfy8lWYs3zq4oFPa8EXZz5xt9gQNKJZau3B1ErLBb6bF7sBJ00x09485DOvRT2l5Gerbl3VlZNT57MxJVA==",
   esbuildVersion: "0.21.5",
   lockfileVersion: 3,
 } as const;
@@ -30,6 +32,7 @@ export interface ToolchainPinViolation {
     | "npm-version-mismatch"
     | "npm-package-manager-not-exact"
     | "npm-package-manager-integrity-missing"
+    | "npm-package-manager-integrity-mismatch"
     | "npm-lock-invalid"
     | "npm-lock-version-mismatch"
     | "npm-lock-root-drift"
@@ -141,6 +144,11 @@ export function analyzeToolchainPin(docs: ToolchainPinDocs): ToolchainPinResult 
     violations.push({
       rule: "npm-package-manager-integrity-missing",
       detail: packageManager || "missing",
+    });
+  else if (managerMatch[2] !== NODE_TOOLCHAIN_POLICY.npmIntegrity)
+    violations.push({
+      rule: "npm-package-manager-integrity-mismatch",
+      detail: managerMatch[2],
     });
   if (
     manifest?.engines?.npm !== NODE_TOOLCHAIN_POLICY.npmVersion ||
