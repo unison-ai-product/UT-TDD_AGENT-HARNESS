@@ -584,24 +584,29 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       process.cwd(),
       "tests",
       "workers",
-      "forward-escape-sqlite-worker.test.ts",
+      "forward-escape-sqlite.worker.ts",
     );
     const vitest = join(process.cwd(), "node_modules", "vitest", "vitest.mjs");
+    const workerConfig = join(process.cwd(), "tests", "workers", "vitest.config.ts");
     const nodeBinary = process.env.UT_TDD_NODE_BIN?.trim() || "node";
     const children = Array.from({ length: 2 }, () => {
       // workerはNode binaryを明示し、親test runtimeがBunでもBunを再起動しない。
-      const child = spawn(nodeBinary, [vitest, "run", worker, "--reporter=dot"], {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          UT_TDD_FORWARD_ESCAPE_DB: dbPath,
-          UT_TDD_FORWARD_ESCAPE_REPO: repo,
-          UT_TDD_FORWARD_ESCAPE_GATE: gate,
-          UT_TDD_FORWARD_ESCAPE_READY: ready,
+      const child = spawn(
+        nodeBinary,
+        [vitest, "run", "--config", workerConfig, worker, "--reporter=dot"],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...process.env,
+            UT_TDD_FORWARD_ESCAPE_DB: dbPath,
+            UT_TDD_FORWARD_ESCAPE_REPO: repo,
+            UT_TDD_FORWARD_ESCAPE_GATE: gate,
+            UT_TDD_FORWARD_ESCAPE_READY: ready,
+          },
+          stdio: ["ignore", "pipe", "pipe"],
+          windowsHide: true,
         },
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-      });
+      );
       let stdout = "";
       let stderr = "";
       let launchError = "";

@@ -1,5 +1,5 @@
 import { existsSync, writeFileSync } from "node:fs";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { SqliteForwardEscapeJournal } from "../../src/execution/sqlite-forward-escape-journal";
 import { openHarnessDb } from "../../src/state-db/index";
 import { migrate } from "../../src/state-db/migration";
@@ -33,6 +33,8 @@ describe.runIf(enabled)("forward escape SQLite concurrency worker", () => {
         repository: "owner/repo",
         body_digest: "b".repeat(64),
       });
+      expect(certificate.certificate_id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(receipt.durable).toBe(true);
       console.log(`UT_TDD_WORKER_RESULT=${JSON.stringify({ certificate, receipt })}`);
     } finally {
       db.close();
