@@ -174,6 +174,7 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 ## 10. Node control-plane build image（Issue #152 D0-N）
 
 - rootの`.node-version`、`package.json`、`package-lock.json`をNode/npm/dependency closureの正本とする。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
+- F0aは上記3正本、npm lock root graph、`bun.lock` direct parity、`node_candidate` authority policyの静的整合までを所有する。実npm executableのabsolute path・version・digestを封印するreceiptはF0bの責務であり、F0aのGreenを実行時custody完了と読み替えない。
 - `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、current pointerの一回のatomic swapで公開する。CLIとreceiptを別々に最終pathへrenameしない。
 - receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
 - `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
