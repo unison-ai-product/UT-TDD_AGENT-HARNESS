@@ -280,19 +280,37 @@ function hasDelegatedCleanupBinding(
   rootEnv: string,
 ): boolean {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
-  const workerName = workerPath.split("/").at(-1);
-  if (!workerName) return false;
   const workerVariables = new Set<string>();
   const cleanupRoots = new Set<string>();
+  const resolvesWorkerPath = (call: ts.CallExpression): boolean => {
+    if (!ts.isIdentifier(call.expression) || !["join", "resolve"].includes(call.expression.text))
+      return false;
+    const parts: string[] = [];
+    for (const argument of call.arguments) {
+      if (ts.isStringLiteralLike(argument)) {
+        parts.push(argument.text);
+        continue;
+      }
+      if (
+        ts.isCallExpression(argument) &&
+        ts.isPropertyAccessExpression(argument.expression) &&
+        ts.isIdentifier(argument.expression.expression) &&
+        argument.expression.expression.text === "process" &&
+        argument.expression.name.text === "cwd" &&
+        argument.arguments.length === 0
+      )
+        continue;
+      return false;
+    }
+    return parts.join("/").replaceAll("\\", "/") === workerPath;
+  };
   const visit = (node: ts.Node): void => {
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
       node.initializer &&
       ts.isCallExpression(node.initializer) &&
-      node.initializer.arguments.some(
-        (argument) => ts.isStringLiteralLike(argument) && argument.text === workerName,
-      )
+      resolvesWorkerPath(node.initializer)
     )
       workerVariables.add(node.name.text);
     if (
@@ -326,13 +344,42 @@ function hasDelegatedCleanupBinding(
   };
   visit(file);
   let bound = false;
+  const isStaticallyDead = (node: ts.Node): boolean => {
+    for (let current = node.parent; current; current = current.parent) {
+      if (
+        ts.isIfStatement(current) &&
+        current.thenStatement.pos <= node.pos &&
+        node.end <= current.thenStatement.end &&
+        current.expression.kind === ts.SyntaxKind.FalseKeyword
+      )
+        return true;
+      if (
+        ts.isIfStatement(current) &&
+        current.elseStatement &&
+        current.elseStatement.pos <= node.pos &&
+        node.end <= current.elseStatement.end &&
+        current.expression.kind === ts.SyntaxKind.TrueKeyword
+      )
+        return true;
+      if (
+        ts.isBinaryExpression(current) &&
+        current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+        current.right.pos <= node.pos &&
+        node.end <= current.right.end &&
+        current.left.kind === ts.SyntaxKind.FalseKeyword
+      )
+        return true;
+    }
+    return false;
+  };
   const findCleanup = (node: ts.Node): void => {
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
       node.expression.text === "removeTestTree" &&
       ts.isIdentifier(node.arguments[0]) &&
-      cleanupRoots.has(node.arguments[0].text)
+      cleanupRoots.has(node.arguments[0].text) &&
+      !isStaticallyDead(node)
     )
       bound = true;
     ts.forEachChild(node, findCleanup);
@@ -434,8 +481,8 @@ describe("persistent harness DB cleanup contract", () => {
     expect(
       hasDelegatedCleanupBinding(
         "tests/owner.test.ts",
-        `${owner} // other-worker.ts`,
-        "tests/other-worker.ts",
+        owner.replace("join('tests', 'db-worker.ts')", "join('tests', 'evil', 'db-worker.ts')"),
+        "tests/db-worker.ts",
         "UT_TDD_REPO",
       ),
     ).toBe(false);
@@ -443,6 +490,14 @@ describe("persistent harness DB cleanup contract", () => {
       hasDelegatedCleanupBinding(
         "tests/owner.test.ts",
         owner.replace("removeTestTree(repo)", "removeTestTree(otherRoot)"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner.replace("removeTestTree(repo)", "if (false) removeTestTree(repo)"),
         "tests/db-worker.ts",
         "UT_TDD_REPO",
       ),
