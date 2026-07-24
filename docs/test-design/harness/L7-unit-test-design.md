@@ -1653,9 +1653,11 @@ previous_receipt_digest, receipt_digest`の12 fieldだけである。全edgeのr
 evidence receipt `receipt_digest`を同値検証し、別名fieldを拒否する。`CAND-CUTOVER-007`は
 registry row順の固定tuple、UTF-8 canonical JSON、
 decimal byte-length framing、SHA-256 lowercase hexについてWindows/POSIX相当入力の同値を確認し、
-tuple mutation、順序mutation、duplicateを拒否する。`CAND-CUTOVER-009`はsealed edgeで
-`PLAN-RECOVERY-16` / `PLAN-L7-452`の片方だけに加え、D0 review欠落、D0 admission欠落、
-fresh review bundle欠落、fresh CutoverAdmission欠落を個別fixture化し、merge/production/cutover 0を確認する。
+tuple mutation、順序mutation、duplicateを拒否する。`CAND-CUTOVER-009`はD0設計mergeとproduction cutoverを
+別fixtureにする。前者はD0 review/admission欠落だけをmerge 0とし、PLAN-L6-93がdraftでもD0
+review/admissionが揃えばmerge eligibilityを阻害しない。後者はsealed edgeの`PLAN-RECOVERY-16` /
+`PLAN-L7-452`片方だけ、L6 confirmed欠落、fresh review bundle欠落、fresh CutoverAdmission欠落を
+個別fixture化し、production/cutover 0を確認する。
 `CAND-CUTOVER-003/005`はrevision ruleをdiscriminatorとしてproducer-ancestor/candidate-headのsubjectを
 入れ替えたfixture、CutoverAdmissionのartifact digest mutation、genesisのQ0 predecessor欠落を拒否する。
 全edgeでclaim-blind/spec-blind exact 2 lane PASSとartifact/revision一致を要求する。laneのprovider/model/
@@ -1663,11 +1665,13 @@ execution mode/runtime familyをdigestとattestationへ封印する。hybridはp
 codex-only/claude-onlyは異model+session/identity/author分離を要求しruntime family一致を許す。
 standaloneはAI/subagentを拒否し、distinct human 2名、provider human/model none/runtime human、独立session/evidenceを
 positiveにする。人間1名、AI混入、同一identity/session/evidence及びIssue #153のlane減免を拒否する。
-SliceEvidenceReceipt自体のversion/fixed tuple/digest mutationに加え、outer lookupを`receipt_digest`へ固定し、
+SliceEvidenceReceipt自体のversion/fixed tuple/two-stage digest/nested attestation mutationに加え、
+outer lookupを`receipt_digest`へ固定し、
 review/admission kindのtyped `referenced_receipt_digest`、generic kindのpayload digestをdiscriminateする。
-receipt digestを除外した10-field tupleへkind別ref/payload、owner ID、既存attestation producer enumを封印し、
+pre-attestation 11-field tupleへkind別ref/payload object receipt、owner ID、既存attestation producer enumを封印し、
 self-reference、wrong owner→producer mapping、kind別null/non-null反転を拒否する。
-`evidence_digest` / `object_digest` alias lookup、nested別digest取得を拒否する。CutoverAdmissionはvalidated Q0
+generic payloadはtyped `EvidencePayloadObject`をreceipt digestで取得し、bytes再hashと両payload digest一致を要求する。
+`evidence_digest` / `object_digest` alias lookup、payload content digestによる取得を拒否する。CutoverAdmissionはvalidated Q0
 SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
 schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
 inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。SliceAdmission保存graphは
@@ -1685,7 +1689,8 @@ predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否�
 `CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
 L6ConfirmationReceiptをpositiveとし、draft/unconfirmed/wrong-plan/stale-head/unsigned/forgedを個別negativeにする。
 AttestedTracked wrapperとL6Confirmationの全field順、record/receipt二段digest、nested attestation mutationを検証する。
-ReviewBundle/lane/actual admission execution modeのmixed/mismatchを拒否する。
+ReviewBundle coreのexact 7 fields/self除外6-field ordered preimage、各coreを包むexact 7-field
+`AttestedReceiptEnvelope`、ReviewBundle/lane/CutoverAdmission/actual admission execution modeのmixed/mismatchを拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
 `src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`へ固定する。

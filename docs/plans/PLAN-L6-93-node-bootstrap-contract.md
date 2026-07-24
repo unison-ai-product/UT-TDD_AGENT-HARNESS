@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:a7b672013fdb3bfc1f7ad7838163c2ef
-  command_id: pr154-preimage-l6-20260724
-  admitted_at: 2026-07-24T10:00:00.000Z
-  source_digest: sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8
-  decision_digest: sha256:1be9de7e0728817c779b76a41ec720b44f14cca48492d704b7e47f7f1b2e4fc8
-  receipt_digest: sha256:461b5a642bff84c92e313e384ac90eeeb1e3203e352d8733523c9f62926c7432
+  receipt_id: certificate:704cb4e3834d46320c5eadcfd7c5b93a
+  command_id: pr154-final-contract-l6-20260724
+  admitted_at: 2026-07-24T11:00:00.000Z
+  source_digest: sha256:0f6da4335c3226b87a358ded1f6dfc61c1c9726f7d325d03be501cdc8e4b10d7
+  decision_digest: sha256:46b213a2fabc6d319875c64f44c681f8f9bcd3ed5fc7c1c80cec24631e0158b6
+  receipt_digest: sha256:1bbadf3396549751f0a99275f52df69a2f373e7e5731d8b4beadb9dbf65c24c1
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 5
-    content_digest: sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8
+    revision: 6
+    content_digest: sha256:0f6da4335c3226b87a358ded1f6dfc61c1c9726f7d325d03be501cdc8e4b10d7
   route:
     signal: feature_addition
     mode: add-feature
@@ -64,11 +64,17 @@ admission_receipt:
     plan_id: PLAN-L6-01-function-spec
     revision: 2
     digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L6-93-node-bootstrap-contract
+      target_revision: 6
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: PR 154 exact receipt preimage closure
+  escape_reason: PR 154 final contract closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -130,14 +136,18 @@ descendant closureを検証する。transition receiptのsubjectはcandidate HEA
 registry row order、固定tuple、UTF-8 canonical JSON、decimal byte-length framing、SHA-256 lowercase hexによる
 `evidence_set_digest`を要求し、duplicate、cross-OS drift、tuple mutationを拒否する。sealed edgeは
 `PLAN-RECOVERY-16`と`PLAN-L7-452`のtyped evidenceを両方要求し、片方だけでは遷移しない。
-`SliceEvidenceReceipt`自体もversion付き固定tupleを同じencodingで封印する。review bundleは
+`SliceEvidenceReceipt`は11-field pre-attestation tuple、record digest、nested attestation、wrapper receipt digestを封印する。
+generic kindはtyped `EvidencePayloadObject`をobject receipt digestで取得してpayload bytesを再hashする。review bundleは
 claim-blind/spec-blind各1 PASSとartifact/revision一致を要求する。bundle/lane execution modeはactual admissionと
 一致させ、hybridはprovider/runtimeを分離、codex/claude-onlyは異model/session/identity、standaloneはhuman 2名を要求する。
 chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic
 appendし、CAS loser、fork、double genesis、crash partialを拒否する。
+ReviewBundle coreはexact 7 fields/self除外6-field ordered preimageを持ち、ReviewLane/Bundle/Bootstrap coreは
+producer/record digest/nested attestationを持つexact `AttestedReceiptEnvelope`で保存する。
 slice admissionとは別の`CutoverAdmissionReceipt`を全edgeでfresh発行し、genesisはvalidated Q0、
 以後は直前cutover receiptをpriorに要求する。review/admission/evidenceは既存`EvidenceRecord` /
 `EvidenceAttestationVerifierPort`のtrusted authority/key/signature bindingを必須とする。
+CutoverAdmissionにexecution modeを封印し、bundle/lane/actual admission modeとexact一致させる。
 physical writerは`.ut-tdd/ledger/cutover-ledger.db` SQLiteの`BEGIN IMMEDIATE`、WAL、`synchronous=FULL`、
 head/version CAS、UNIQUE制約、commit/fsync barrierを使い、loser/crashはrollback+retry 0とする。
 

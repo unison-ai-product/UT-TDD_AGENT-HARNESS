@@ -237,3 +237,11 @@ canonical ledgerとprojectionの分離、nested evidence/Q0 reachabilityが不�
 CutoverAdmissionへartifact digestを追加し、typed content-addressed evidence graphをchain-only reducerへ固定した。
 cutover ledger tableを`.ut-tdd/harness.db`内canonical sourceとしてprojection rebuild対象から除外し、
 online backup/recovery/additive migration契約を追加した。正規D0 admission発行と独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 2d228fc4 contract closure FLAG
+
+D0設計merge admissionと将来のproduction cutover activationを分離し、L6 confirmedは後者だけの必須条件へ
+固定した。ReviewBundle coreのself除外6-field preimage、CutoverAdmission execution mode、
+canonical slice owner mapping、generic EvidencePayloadObject、各receiptの既存EvidenceAttestation verifierへ
+接続可能な二段digest wrapperを同期した。AttestedTrackedのembedded record digest equalityもfail-closeする。
+PLAN-L6-93 revision 6 / PLAN-L7-458 revision 9を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。

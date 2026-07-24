@@ -120,9 +120,9 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 `harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
-#### §2.7.1 canonical ledger file registry
+#### §2.7.1 canonical ledgerファイル正本registry
 
-| file | physical ownership | rebuild / migration / backup |
+| ファイル | physical ownership | rebuild / migration / backup |
 |---|---|---|
 | `.ut-tdd/harness.db` | rebuildable projection only | docs/stateとcanonical ledgerのread-only入力からrebuild可能。truncate/deleteはprojection ownerだけが実行し、canonical receiptを保持しない |
 | `.ut-tdd/ledger/harness-ledger.db` | PLAN asset/revision/admission canonical ledger | PLAN ledger migration registryだけがschemaを変更する。projection rebuild/deleteから隔離し、欠落・未知version・digest不整合はfail-close |

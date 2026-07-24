@@ -338,7 +338,7 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0 ReviewBundle 1+AttestedTrackedReceiptRecord exact 4+BootstrapEnvelope #153を要求。integrity-only/self-hash/unsigned/forged/untrusted/wrong-plan/stale binding、後続kind/count/producer/revision driftを拒否 |
 | `CAND-CUTOVER-107` | claim/spec片lane、bundle/lane/actual mode混在、owner→attestation producer誤mapping、attestation shape mutation | mode別independence、既存producer enum、nested shapeだけを許可。mixed mode、self-reference、wrong mapping、schemaVersion/algorithm欠落を拒否 |
-| `CAND-CUTOVER-108` | validated Q0+full L6Confirmation→genesis→sealedへtwo-stage digest wrappersとkind evidenceをnested保存 | wrapper record/receipt digest、10-field SliceEvidence tuple、owner binding、bundle execution modeをchain-only再検証。field/order/ref/payload mutation拒否 |
+| `CAND-CUTOVER-108` | validated Q0+full L6Confirmation→genesis→sealedへtwo-stage digest wrappers、typed EvidencePayloadObject、kind evidenceをnested保存 | wrapper record/receipt digest、11-field SliceEvidence preimage、payload object receipt取得+bytes再hash、canonical owner binding、bundle/admission execution modeをchain-only再検証。field/order/ref/payload mutation拒否 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | schema migration各barrierで失敗注入 | DDL、data、`user_version`を単一transactionで全rollback |

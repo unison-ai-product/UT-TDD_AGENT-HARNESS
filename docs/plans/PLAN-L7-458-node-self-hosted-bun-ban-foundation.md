@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:62e991b40a13183be4aa649370159a78
-  command_id: pr154-preimage-l7-20260724
-  admitted_at: 2026-07-24T10:00:00.000Z
-  source_digest: sha256:3424d8b44faaa0a39f69a1a0993d473a8307ba24bf0bf366d234585cbe31b825
-  decision_digest: sha256:0aed2cae24588a7a0d080b13d9c5ea62c8bbdde7b107b090569026fa02ed5af7
-  receipt_digest: sha256:15b9dc327cad7ea94cb395f22d2babe611ff3c1ab7aea9a0f69eb221f23ad920
+  receipt_id: certificate:9f3438cd70055519b2e2aee2e17b0fe7
+  command_id: pr154-final-contract-l7-20260724
+  admitted_at: 2026-07-24T11:01:00.000Z
+  source_digest: sha256:b7c768f00b87a2e5e6e3df8902da33b5870f383a3d8f2778ab9238ebddc5a0a9
+  decision_digest: sha256:76982830812c5a072f144b54d9293999c0ac3ba4764bc65e17876dae221d7c7d
+  receipt_digest: sha256:209f9d2b21f4cf77d9a53f7ba2f24fc575713e69833d00146007a0b804ea3ba3
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 8
-    content_digest: sha256:3424d8b44faaa0a39f69a1a0993d473a8307ba24bf0bf366d234585cbe31b825
+    revision: 9
+    content_digest: sha256:b7c768f00b87a2e5e6e3df8902da33b5870f383a3d8f2778ab9238ebddc5a0a9
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,13 +99,19 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 5
-    digest: sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8
+    revision: 6
+    digest: sha256:0f6da4335c3226b87a358ded1f6dfc61c1c9726f7d325d03be501cdc8e4b10d7
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+      target_revision: 9
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: PR 154 exact receipt preimage closure
+  escape_reason: PR 154 final contract closure
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -206,7 +212,7 @@ repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisio
 | `CAND-CUTOVER-006` | 非隣接skip/reverse | transition 0 |
 | `CAND-CUTOVER-007` | evidence tuple/receipt digest mutation、duplicate、Windows/POSIX相当fixture | canonical UTF-8 JSON+length frameのcross-OS同値、mutation/duplicateはprojection前に拒否 |
 | `CAND-CUTOVER-008` | DB/UI state直接更新 | validated chain由来projectionだけを返す |
-| `CAND-CUTOVER-009` | D0 review/admission又はPLAN-L6-93 attested confirmed receipt欠落、draft/wrong-plan/stale/unsigned、fresh bundle/CutoverAdmission欠落、継承負債片方 | 各fixtureで#154 merge/production dispatch/cutover 0。chain-only L6 confirmation bypass 0 |
+| `CAND-CUTOVER-009` | D0 review/admission欠落、又はproduction cutoverでPLAN-L6-93 attested confirmed receipt欠落、draft/wrong-plan/stale/unsigned、fresh bundle/CutoverAdmission欠落、継承負債片方 | D0設計mergeはD0 review/admissionだけで判定しL6 confirmedを要求しない。production dispatch/cutoverは各fixture 0、chain-only L6 confirmation bypass 0 |
 
 function実装先は`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`、
 正式IDは同番号の`U-CUTOVER-001..009`へ固定する。このPRは両artifactの将来生成契約をfreezeするだけで、
@@ -270,8 +276,9 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
   typed prerequisiteとして要求する。CAND-017..020はedit-start gateではなくcandidate commit acceptanceであり、
   早期slice、別revision、失敗receiptをmerge admissionで拒否する。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
-- 現D0-N candidate自身もreview+admission receiptをmerge前に修復する。missing admission bypassは存在せず、
-  candidate固有Red又はadmission欠落をIssue #153の継承負債扱いにしない。
+- 現D0-N candidate自身もreview+admission receiptをmerge前に修復する。PLAN-L6-93 confirmedは将来の
+  production activation/cutover gateであり、draft設計を着地させる#154 D0設計merge gateには要求しない。
+  missing D0 admission bypassは存在せず、candidate固有Red又はadmission欠落をIssue #153の継承負債扱いにしない。
 
 ### CAND ownership
 
