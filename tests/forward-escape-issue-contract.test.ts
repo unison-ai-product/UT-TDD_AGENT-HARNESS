@@ -572,12 +572,12 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   });
 
   it("U-EXISSUE-016: two SQLite workers converge concurrent certificate and queue append to one receipt", async () => {
-    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-concurrent-"));
-    const dbPath = join(repo, ".ut-tdd", "harness.db");
-    const setup = openForwardEscapeDb(dbPath, repo);
+    const concurrentRepo = mkdtempSync(join(tmpdir(), "ut-tdd-forward-escape-concurrent-"));
+    const dbPath = join(concurrentRepo, ".ut-tdd", "harness.db");
+    const setup = openForwardEscapeDb(dbPath, concurrentRepo);
     setup.close();
-    const gate = join(repo, "gate");
-    const ready = join(repo, "ready");
+    const gate = join(concurrentRepo, "gate");
+    const ready = join(concurrentRepo, "ready");
     mkdirSync(ready);
     writeFileSync(gate, "wait", "utf8");
     const worker = join(process.cwd(), "tests", "workers", "forward-escape-sqlite-worker.ts");
@@ -594,10 +594,10 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
           env: {
             ...process.env,
             UT_TDD_FORWARD_ESCAPE_DB: dbPath,
-            UT_TDD_FORWARD_ESCAPE_REPO: repo,
+            UT_TDD_FORWARD_ESCAPE_REPO: concurrentRepo,
             UT_TDD_FORWARD_ESCAPE_GATE: gate,
             UT_TDD_FORWARD_ESCAPE_READY: ready,
-            UT_TDD_VITEST_CACHE_DIR: join(repo, `.vite-worker-${workerIndex}`),
+            UT_TDD_VITEST_CACHE_DIR: join(concurrentRepo, `.vite-worker-${workerIndex}`),
           },
           stdio: ["ignore", "pipe", "pipe"],
           windowsHide: true,
@@ -690,7 +690,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       );
       expect(workerResults.every((result) => result !== undefined)).toBe(true);
       expect(new Set(workerResults).size).toBe(1);
-      const verifyDb = openForwardEscapeDb(dbPath, repo);
+      const verifyDb = openForwardEscapeDb(dbPath, concurrentRepo);
       try {
         expect(new SqliteForwardEscapeJournal(verifyDb).eventsFor("cmd-concurrent")).toHaveLength(
           1,
@@ -719,7 +719,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
           "forward escape workers did not terminate",
         );
       }
-      removeTestTree(repo);
+      removeTestTree(concurrentRepo);
     }
     if (primaryFailure !== undefined && cleanupFailure) {
       throw new AggregateError(

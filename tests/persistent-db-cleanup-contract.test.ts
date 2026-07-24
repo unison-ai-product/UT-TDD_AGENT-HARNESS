@@ -284,7 +284,11 @@ function hasDelegatedCleanupBinding(
   const cleanupRoots = new Set<string>();
   const constIdentifiers = new Set<string>();
   const mutatedIdentifiers = new Set<string>();
+  const declarationCounts = new Map<string, number>();
   const collectBindings = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      declarationCounts.set(node.name.text, (declarationCounts.get(node.name.text) ?? 0) + 1);
+    }
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
@@ -338,7 +342,8 @@ function hasDelegatedCleanupBinding(
       ts.isCallExpression(node.initializer) &&
       resolvesWorkerPath(node.initializer) &&
       constIdentifiers.has(node.name.text) &&
-      !mutatedIdentifiers.has(node.name.text)
+      !mutatedIdentifiers.has(node.name.text) &&
+      declarationCounts.get(node.name.text) === 1
     )
       workerVariables.add(node.name.text);
     if (
@@ -367,7 +372,8 @@ function hasDelegatedCleanupBinding(
             rootProperty &&
             ts.isIdentifier(rootProperty.initializer) &&
             constIdentifiers.has(rootProperty.initializer.text) &&
-            !mutatedIdentifiers.has(rootProperty.initializer.text)
+            !mutatedIdentifiers.has(rootProperty.initializer.text) &&
+            declarationCounts.get(rootProperty.initializer.text) === 1
           )
             cleanupRoots.add(rootProperty.initializer.text);
         }
@@ -515,6 +521,22 @@ describe("persistent harness DB cleanup contract", () => {
       hasDelegatedCleanupBinding(
         "tests/owner.test.ts",
         owner.replace("join('tests', 'db-worker.ts')", "join('tests', 'evil', 'db-worker.ts')"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        "const repo = 'tmp'; { const worker = join('tests', 'db-worker.ts'); } { const worker = join('tests', 'evil.ts'); spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); } removeTestTree(repo);",
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        "const repo = 'tmp'; const worker = join('tests', 'db-worker.ts'); { const repo = 'other'; spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); } removeTestTree(repo);",
         "tests/db-worker.ts",
         "UT_TDD_REPO",
       ),
