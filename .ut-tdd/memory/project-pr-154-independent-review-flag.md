@@ -269,3 +269,11 @@ payload object/decoded/envelopeのschema literalを閉じ、F0c OS run、Q0 case
 semantic successを再導出する。Cutover edge別authority ID/keyVersionもclosed set化した。
 PLAN-L6-93 revision 9 / PLAN-L7-458 revision 12を正規`plan revise`経路で発行した。
 独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 842833dd registry/bootstrap FLAG
+
+aggregate required lane profileとQ0 frozen case registryをtyped正本へ分離し、set equalityを固定した。
+共通GitObjectIdを全receipt subject/HEADへ展開し、tracked/L6/review/bootstrap schema versionを閉じた。
+Bootstrapへpolicy/expiry/revocationを封印しhistorical validityと新規再利用を分離した。
+PLAN-L6-93 revision 10 / PLAN-L7-458 revision 13を正規`plan revise`経路で発行した。
+独立再reviewまではFLAGを維持する。

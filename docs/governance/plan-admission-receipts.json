@@ -512,6 +512,38 @@
         "revision": 12,
         "content_digest": "sha256:4136b96aca426b7a975a6ed9a1075ee7d086f9b8f8fb4050af97b5fda83873e4"
       }
+    },
+    {
+      "sequence": 33,
+      "previous_record_digest": "sha256:4746e42a8d32f1da6b9c7e17f8bf40ab2a608cd21797b20264502365e0baa611",
+      "record_digest": "sha256:42091fe1278bc3776ffc5e69fb147673133fa3c8f90da3aa9b87be947829e535",
+      "command_id": "pr154-registry-l6-20260724",
+      "receipt_id": "certificate:5b76f5ce46b163c0b753bc26777b27c7",
+      "receipt_digest": "sha256:b0f30560bcbc8753628428c1bf0f463574fdab7a4dda7823a0ac2a42f3938a2b",
+      "decision_digest": "sha256:f87b6296f6ee5b87195377f6e040b6de2a7ced655169346b68a3604342d6043e",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 10,
+        "content_digest": "sha256:aeab42e93a8e37b6ddd7792a119e8455786a712669988ee4f3dbef8ea09ba0bd"
+      }
+    },
+    {
+      "sequence": 34,
+      "previous_record_digest": "sha256:42091fe1278bc3776ffc5e69fb147673133fa3c8f90da3aa9b87be947829e535",
+      "record_digest": "sha256:ea40bcef24ef2f3593312a66713199608fa390ea704a96f8ef73cb3f91b37867",
+      "command_id": "pr154-registry-l7-20260724",
+      "receipt_id": "certificate:cc16e0173602f19a4cc26a3eeca07546",
+      "receipt_digest": "sha256:a97b55ddd6c31091865a24612533f356cc6a65ca8d53c651a68f1affb045faf1",
+      "decision_digest": "sha256:e35405cd66f69ea3a1efd9b2821d6214fd2b629c301399afb48f2b8ba9c2bc4f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 13,
+        "content_digest": "sha256:6cb30c66f4e5160cd4505f46866320f57ee23500097702e232ec0322b016ca71"
+      }
     }
   ]
 }

@@ -1437,6 +1437,10 @@ canonical JSON→UTF-8→RFC 4648 base64url paddingなしへ一意化し、decod
 arbitrary bytes、schema spoof、cross-kind/cross-owner/cross-semantic replayを拒否する。
 subject revisionは`git-sha1:<40 lowerhex>|git-sha256:<64 lowerhex>`だけを許し、outer/payloadをexact一致させる。
 payload object/decoded payload/envelopeのschema version literal及び`payload_schema == schema_id`もexact照合する。
+同じ共通GitObjectId型をCutover candidate/transition、Review lane/bundle、L6 confirmation、Slice admission/evidence、
+Bootstrapへ適用しraw hexを拒否する。tracked/L6/review/bootstrapを含む全receipt schema versionをliteral v1へ閉じる。
+Q0 expected caseはattested frozen registry objectから取得し、fixture preimageとexecuted setを照合する。
+aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、
 claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
@@ -1463,6 +1467,7 @@ authority ID+key version+signature+producer+record digest/receipt digestで、ge
 CutoverAdmissionはowner、EvidenceProducer、nested authorityを分離し、L5
 `CUTOVER-ADMISSION-PRODUCER-MAP-v1`の5 edgeと`authority_id == attestation.authorityId`をexact照合する。
 edge別allowed authority ID/keyVersionもclosed照合し、別trusted CI authority replayを拒否する。
+Bootstrapはpolicy revision、issued/expires、revocation proofを封印し、D0 admission時点の有効性と現在の再利用可否を分離する。
 execution modeはReviewLane/Bundle及びactual admission modeとexact一致させる。
 ReviewLane/Bundle coreとBootstrapEnvelope coreはproducer/record digest/nested attestationを持つ
 exact `AttestedReceiptEnvelope`に格納し、両admission receiptは既存`EvidenceRecord` /

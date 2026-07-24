@@ -1703,6 +1703,10 @@ D0→ReviewBundle/Bootstrap、Q0 predecessorはouter envelope digestだけでloo
 SliceAdmission core/outer producer owner差、D0 input 2 owner mapping欠落、CutoverAdmission 5 authorityのwrong
 EvidenceProducer又は`authority_id != attestation.authorityId`を各negative pairにする。
 edge別allowed authority ID/keyVersion外と、別trusted CI authorityによる署名replayもnegative pairにする。
+共通GitObjectIdを全subject/HEAD fieldへ適用しraw hash/algorithm mismatchを拒否する。tracked/L6/review/bootstrap等の
+unknown schema versionを棚卸しnegativeにする。Bootstrapはwrong policy、admission time期限外、revoked、historical
+envelope新規再利用を拒否する。Q0 frozen registry shrink/fixture drift、aggregate profile required laneの
+missing/extra/duplicate/set digest driftを個別negativeにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
