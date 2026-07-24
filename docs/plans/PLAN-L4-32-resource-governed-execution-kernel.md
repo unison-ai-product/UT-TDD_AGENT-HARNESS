@@ -60,18 +60,18 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0017c55f763d19dc70aafe4baf05a075
-  command_id: pr156-redesign-convergence-l4-rev3-20260724
-  admitted_at: 2026-07-24T13:20:00.000Z
-  source_digest: sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2
-  decision_digest: sha256:3814b4dba0eee0e45bfeb31ae630455a0f34426f316813d80fad6a588c06e42f
-  receipt_digest: sha256:d1673be2e98eec7eff87a74270005d227d315fccbb4bf40a8d3e24c743f5a71a
+  receipt_id: certificate:5cd204e306581e9a984bd9ce3f0de086
+  command_id: pr156-final-readmission-l4-rev4b-20260724
+  admitted_at: 2026-07-24T14:45:00.000Z
+  source_digest: sha256:df68713973cc6785418206157a480bc6c4acdd7e4108a4820cc8a7e4b85645eb
+  decision_digest: sha256:0d7986339d40c106a9d2e7b33dbf118fae9c43b896b36d8ed9e9dcd905d938b5
+  receipt_digest: sha256:ca9bae59ebca9ab4f6d522c2e5fef5a46a3b2792530c4cfdafbcb517e5bbd361
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 3
-    content_digest: sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2
+    revision: 4
+    content_digest: sha256:df68713973cc6785418206157a480bc6c4acdd7e4108a4820cc8a7e4b85645eb
   route:
     signal: redesign
     mode: redesign
@@ -82,19 +82,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 2
-    digest: sha256:f5405ecc739d8d9aaaeab35d49c3f87f41e6461d4e0a94d1bb9306dab1c00570
+    revision: 3
+    digest: sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 3
+      target_revision: 4
   reentry:
-    target_plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    target_revision: 3
+    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_revision: 4
     phase: forward_merge
-  escape_reason: 縮約済みResource Kernel設計をForward実装rev3へ再降下する
+  escape_reason: Resource Kernel設計rev4をForward実装rev4へ再降下する
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -153,7 +153,7 @@ DB/CAS再利用、single-flight、local CI全体のqueue/headroom policyは本D0
 | `input_revision` | commit SHA、working delta digest、fixture digest等のimmutable入力identity |
 | `resource_budget` | wall time、CPU time、peak memory、process count、output bytes、必要時I/O上限 |
 | `deadline` | absolute deadline。各child timeoutの寄せ集めではなくtree全体に適用 |
-| `termination_policy` | graceful猶予、強制終了、descendant reap、lease release、journal flush、terminal receipt sealの順序 |
+| `termination_policy` | graceful猶予、強制終了、descendant reap、lease release、journal flush、terminal receipt sealの順序。`recovery_grace_ms`は正整数でpolicy revisionの`max_recovery_grace_ms`以下とし、`recovery_deadline = absolute_deadline + recovery_grace_ms`を型付きで導出する |
 | `classification` | 実行種別。分類ごとの既定budgetはpolicy revisionで固定し、全体queue/headroom policyとは分離 |
 | `required_capabilities` | tree custody、hard memory/CPU/process limit、crash recovery等、実行に必須なcapability集合 |
 
@@ -282,7 +282,8 @@ memory/CPU/process limitと`cgroup.kill`、`cgroup.events`の`populated=0`をcus
 Linuxのwall deadlineはbroker process自身に所有させない。managed rootをresume/execする前に、broker外のdurable
 deadline owner（system managerのtransient scope/timerまたは同等のkernel-backed supervisor）へ
 `attempt_id + custody_nonce + cgroup identity + absolute deadline`をcommitし、ownerがarmedであることをjournalへ記録する。
-brokerと通常のuser-space recovery supervisorが同時に失われても、この独立ownerが期限内に`cgroup.kill`を発行し、bounded recovery window内に
+brokerと通常のuser-space recovery supervisorが同時に失われても、この独立ownerが期限内に`cgroup.kill`を発行し、型付き
+`termination_policy.recovery_grace_ms`から導出した`recovery_deadline`までに
 再起動broker/subreaperが`populated=0`、zombie 0、managed orphan 0まで収束させる。deadline owner、kill、reapの
 いずれかを強制・検証できないplatformはmanaged root生成前に拒否する。証拠欠測を`custody_failure`へ分類するだけで
 生存processを放置してよい契約にはしない。

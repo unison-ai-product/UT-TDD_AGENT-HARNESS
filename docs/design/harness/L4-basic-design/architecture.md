@@ -257,7 +257,7 @@ complete markerが1件以上あれば最大sequenceを選び、0件ならfail-cl
 power-loss durable activationはResource Kernel bundle側trust floorへ委譲するが、D0-R未着地をF0の
 process-crash atomicity blockerにはしない。F0bではgeneration自動GCを禁止する。
 
-## §10 Resource Kernel native custody（Issue #152 D0-R）
+## §10 リソースカーネルのネイティブカストディ（Issue #152 D0-R）
 
 Resource Kernelは、process tree、CPU・memory・process・output budget、deadline、orphan zeroを
 OS強制境界で保証する。TypeScript control planeは`ExecutionSpec`、policy、journal、receiptを所有し、
@@ -271,7 +271,9 @@ performance convergenceは要件を維持したままIssue #152 later performanc
 merge gateへ含めない。後続waveは本custody境界を利用するが、D0-RがDB/CAS/local CI policyやNode generation/activationを
 再所有したとは扱わない。
 
-配布単位はcontrol planeとtarget別companionを同一revisionへ束縛した署名済bundleとする。
+配布単位はtarget別companion、versioned protocol descriptor、SBOM、署名、D0-N generation receipt参照を
+同一revisionへ束縛した署名済companion bundleとする。Node control plane/runtime/core/generation/activationは
+D0-N正本を参照し、D0-R bundleへ含めない。
 manifest、binary digest、protocol、target、SBOM、署名のいずれかが不一致ならcontrol processまたは
 managed root生成前にfail-closeする。L4受入は同一attemptのL9 `ST-RGK-*` receiptだけで判定し、
 検出器のskip・警告化・soft limitへの縮退によって設計契約を下げない。

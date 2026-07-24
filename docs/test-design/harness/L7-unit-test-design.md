@@ -1809,8 +1809,8 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-BUNDLE-001` | digest/signature/schema/target/SBOMを各変異 | verified handleを生成しない |
 | `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |
 | `U-RGK-BUNDLE-003` | Rustへpolicy/journal/admission/receipt判断を追加 | responsibility-overlap findingでRed |
-| `U-RGK-BUNDLE-004` | manifest core/companion revision片側更新 | bundle identity不一致で拒否 |
-| `U-RGK-BUNDLE-005` | floor以上の新revisionとして再署名したrollback manifest | 全componentを同時pinし通常のtrust/target検証要求を出す |
+| `U-RGK-BUNDLE-004` | manifestのcompanion/protocol/D0-N generation receiptを一要素だけ旧値へ更新 | bundle identity不一致で拒否 |
+| `U-RGK-BUNDLE-005` | floor以上の新revisionとして再署名したrollback manifest | companion/protocol/D0-N receiptを同時pinし通常のtrust/target検証要求を出す |
 | `U-RGK-BUNDLE-006` | Bun binary/API/lockfileを新bundleへ追加 | permanent-ban findingでRed |
 | `U-RGK-TRUST-001` | bundle同梱key、未review signer、署名差替え | `BundleTrustPort`が拒否しverified handle 0 |
 | `U-RGK-TRUST-002` | manifestのbundle revision/component digest/schema/targetを各置換 | binding不一致で拒否 |

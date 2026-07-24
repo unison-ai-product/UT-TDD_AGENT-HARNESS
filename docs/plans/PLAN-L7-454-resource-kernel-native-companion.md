@@ -56,18 +56,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:372bd30c6e5204d33ebf937444229e52
-  command_id: pr156-redesign-convergence-l7-rev3-20260724
-  admitted_at: 2026-07-24T13:23:00.000Z
-  source_digest: sha256:9cd2f45bce025a7200d86dca11d1d02dccd08cdc8796d4465c7adf713ef15db6
-  decision_digest: sha256:9e785085af441cf090146f6ebd6152f30a111f97b1144708fef7c8532f7b9c10
-  receipt_digest: sha256:890762220c44b5bf101266a65d68ce5be83c206005252cbc7dcc015b406ae83d
+  receipt_id: certificate:5bf974957384ef602f6fbc1dbfb485a9
+  command_id: pr156-final-readmission-l7-rev4-20260724
+  admitted_at: 2026-07-24T14:48:00.000Z
+  source_digest: sha256:5dff5906aa83aa7282a39c7d99d81d091f0d7e288b26d71973a055bd687f9eb8
+  decision_digest: sha256:2ad38217474979f774b1d7708fe39f4b455874a5d11996856886a98d447cc32f
+  receipt_digest: sha256:23c9eb8284f8bc53593a5e0f3eabe6a9b430c75a1cff3a5bdcf6c1cfb6bc3a20
   binding:
     path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     plan_id: PLAN-L7-454-resource-kernel-native-companion
     asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 3
-    content_digest: sha256:9cd2f45bce025a7200d86dca11d1d02dccd08cdc8796d4465c7adf713ef15db6
+    revision: 4
+    content_digest: sha256:5dff5906aa83aa7282a39c7d99d81d091f0d7e288b26d71973a055bd687f9eb8
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,19 +78,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    revision: 3
+    revision: 4
     digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 3
+      target_revision: 4
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: 縮約済みResource Kernel設計からdraft実装rev3へ降下する
+  escape_reason: Resource Kernel L6 rev4からdraft実装rev4へ降下する
 ---
 
 # PLAN-L7-454: Resource Kernel native custody companion / Node protocol client
@@ -118,7 +118,8 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
   AC-RGK-07..10/13はIssue #152 later performance/control-plane waveへdeferする。
 - native採用・配布・rollbackの正本: ADR-009。global Bun cutoverはPR #154 D0-Nをprerequisite参照する。
 - system受入oracle: `L9-system-test-design.md` §9。active/deferred区分は対応するACとexact一致させる。
-- L7 unit pair: `L7-unit-test-design.md`へ本PLAN固有の`U-RGK-NATIVE-*`とL6契約の`U-RGK-WIRE-*`をRed freezeする。
+- L7 unit pair: `L7-unit-test-design.md`へ`U-RGK-NATIVE/WIRE/TRUST/ERROR/CAP/LIFE/PORT/BUNDLE-*`を
+  exact Red freezeし、いずれか未実行をGreenに数えない。`BundleTrustPort`はADR/L5の`TrustDecisionPort` adapter名である。
 - L5 physical / L6 function契約: 採番衝突を避けた`PLAN-L5-25` / `PLAN-L6-92`を起票し、wire schema、
   error union、platform port、custodian lifecycleをfreezeしてからplatform APIとNode clientを実装する。
 

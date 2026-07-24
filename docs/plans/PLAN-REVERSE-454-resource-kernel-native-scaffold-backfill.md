@@ -39,17 +39,17 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5a9c363f35df7476c561a1f1a5893ecf
-  command_id: pr156-redesign-convergence-reverse-rev3-20260724
-  admitted_at: 2026-07-24T13:24:00.000Z
+  receipt_id: certificate:269e889bdf62a50c264919c338d93d19
+  command_id: pr156-final-readmission-reverse-rev4-20260724
+  admitted_at: 2026-07-24T14:49:00.000Z
   source_digest: sha256:6c0afe546db55bf985500bae9c4209f2fb36c2a9d03d5a6949a79c12d6397eeb
-  decision_digest: sha256:cc42c3857c4940477d067e7be1ce9cf21b4adcd7b6aedfdf32d54e7d166086c8
-  receipt_digest: sha256:7a01e0d4fb9745ac7681a704a188ca236c22ddab739cf1105b5e9d6386951a77
+  decision_digest: sha256:2214f2c3e841786ea3af1a33d868a9209d11a94de62ea03464b9d1a281ee5f1b
+  receipt_digest: sha256:02a976c248d82fc82a6d2b7d130241e325497fb8769afbdf1174cad99c3cdc5f
   binding:
     path: docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
     plan_id: PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill
     asset_id: plan:legacy:d66396b73c7db2b8d007824dcb6cada0ec811ff802f42189d5687d3d9b6853af
-    revision: 3
+    revision: 4
     content_digest: sha256:6c0afe546db55bf985500bae9c4209f2fb36c2a9d03d5a6949a79c12d6397eeb
   route:
     signal: design_gap
@@ -61,16 +61,16 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L7-454-resource-kernel-native-companion
-    revision: 3
-    digest: sha256:9cd2f45bce025a7200d86dca11d1d02dccd08cdc8796d4465c7adf713ef15db6
+    revision: 4
+    digest: sha256:5dff5906aa83aa7282a39c7d99d81d091f0d7e288b26d71973a055bd687f9eb8
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: Resource Kernel scaffoldのR0事実を設計へ戻しForward rev3へ再合流する
+  escape_reason: Resource Kernel scaffoldのR0事実を設計へ戻しForward rev4へ再合流する
 ---
 
 # PLAN-REVERSE-454: Resource Kernel native scaffold起点の設計・検証back-fill

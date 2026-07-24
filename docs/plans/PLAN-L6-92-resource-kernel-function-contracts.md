@@ -43,17 +43,17 @@ supersedes:
   - PLAN-L6-92-resource-kernel-function-contracts
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:41bd2f6bd58081263f2911eef3e45dbf
-  command_id: pr156-redesign-convergence-l6-rev3-20260724
-  admitted_at: 2026-07-24T13:22:00.000Z
+  receipt_id: certificate:12ade6d6b1f1f4d1e3f8cb716966bfcc
+  command_id: pr156-final-readmission-l6-rev4-20260724
+  admitted_at: 2026-07-24T14:47:00.000Z
   source_digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
-  decision_digest: sha256:bf8b9a37e6517e39aa76153fbace08c45243141d646891eadb11dcf52b9d1fea
-  receipt_digest: sha256:fb73e430a0bcb0098cf30d10be7df4421c93c49ae3f2cbbd0e10f5bf72d97648
+  decision_digest: sha256:f5a8868c18b1be05cbb7b75703c46dbaced76c7974e016badec863d9919a3204
+  receipt_digest: sha256:8799083bf65e6bb6542f7c3b87fe96d3ee3fa82827381b3d30daa4d21eccebae
   binding:
     path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
     asset_id: plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a
-    revision: 3
+    revision: 4
     content_digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
   route:
     signal: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    revision: 2
-    digest: sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372
+    revision: 3
+    digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 3
+      target_revision: 4
   reentry:
-    target_plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    target_revision: 3
+    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_revision: 4
     phase: forward_merge
-  escape_reason: 縮約済みResource Kernel設計をForward実装rev3へ再降下する
+  escape_reason: Resource Kernel設計rev4をForward実装rev4へ再降下する
   supersedes:
     - PLAN-L6-92-resource-kernel-function-contracts
 ---

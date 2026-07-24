@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3c7a65ea0d060bde1a53b0f269199d0d
-  command_id: pr156-redesign-convergence-l5-rev3-20260724
-  admitted_at: 2026-07-24T13:21:00.000Z
-  source_digest: sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e
-  decision_digest: sha256:ef4346a32e84db8c1b5169c6552dd9f7b5b20fb4fb134e8d357871695609054a
-  receipt_digest: sha256:a183b26b9023cc6370c15a7b50e3fc63d5f2d1566dd85733db95594912b8cfdb
+  receipt_id: certificate:12b7643bea2791b3f86641430412594b
+  command_id: pr156-final-readmission-l5-rev4-20260724
+  admitted_at: 2026-07-24T14:46:00.000Z
+  source_digest: sha256:9f3186536236971293564736715ae69ceab0fbc869a615c309e476c758864da7
+  decision_digest: sha256:24222dddda82144d99e5b3feca4f1125ba47fc08d240326c527189dc03af2df5
+  receipt_digest: sha256:59dbef90ec645ffd0a0838eeec8adc30ccd2f88bde91175f90a6a1322dbe15d5
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 3
-    content_digest: sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e
+    revision: 4
+    content_digest: sha256:9f3186536236971293564736715ae69ceab0fbc869a615c309e476c758864da7
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 2
-    digest: sha256:3466c5fc588adbcfd0e8d61ecf53a75eebcda0b65d90393c8442c92cb9390d23
+    revision: 3
+    digest: sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 3
+      target_revision: 4
   reentry:
-    target_plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    target_revision: 3
+    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_revision: 4
     phase: forward_merge
-  escape_reason: 縮約済みResource Kernel設計をForward実装rev3へ再降下する
+  escape_reason: Resource Kernel設計rev4をForward実装rev4へ再降下する
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -154,17 +154,21 @@ reconnectはbundle identity、attempt、custody nonceを照合し、別attempt�
 
 ### 4.1 Custody authorityとatomic handoff
 
-custodyのdurable authorityは一時的なNode client/companionではなく、WindowsではSCM管理custodian、Linuxでは
-service manager管理brokerが所有する。`create_custody`はauthorityが`authority_epoch + attempt_id + custody_nonce +
-absolute_deadline + termination_policy_digest`をdurable化し、OS handle/cgroup identityをprimary ownershipへ結んだ
+custodyのdurable authorityは一時的なNode client/companionではない。WindowsではSCM管理custodian、Linuxでは
+broker外のsystem-manager transient scope/timer又は同等のkernel-backed deadline ownerが所有する。
+`create_custody`はauthorityが`authority_epoch + attempt_id + custody_nonce + absolute_deadline +
+termination_policy_digest + recovery_grace_ms + recovery_deadline`をdurable化し、OS handle/cgroup identityをprimary ownershipへ結んだ
 `AuthorityLease`を返す。companionはこのleaseを照合してからsuspended root/cgroup childをatomic attachし、
 `handoff_committed` factをauthorityとjournalの双方が同じnonceで観測するまでresume/execしない。
 
-deadlineの実行責任はauthority側にあり、Node/companion/pipe喪失後もmonotonic timerでterminate→empty/reapを遂行する。
+`recovery_grace_ms`は正整数かつpolicy revisionの`max_recovery_grace_ms`以下、`recovery_deadline`は
+`absolute_deadline + recovery_grace_ms`として検証する。deadlineの実行責任はauthority側にあり、
+Node/companion/pipe喪失後も期限内kill→recovery deadline内empty/reapを遂行する。
 再起動時はauthority epoch、attempt、nonce、bundle digest、last durable transitionを照合し、旧epochのcommandを拒否する。
-authorityとそのsupervisor/service managerが同時に失われた場合は、Windowsではlast-handle-close kill、Linuxでは
-service-manager recovery + persisted cgroup identity/`cgroup.kill`を安全側経路とする。いずれも独立probeの連続性が
-欠ければsuccessへ復元せず`custody_failure`とし、新規attempt admissionを遮断する。
+authorityと通常のrecovery supervisorが同時に失われた場合は、Windowsではlast-handle-close kill、Linuxでは
+broker外ownerがabsolute deadlineまでに`cgroup.kill`を発行し、再起動broker/subreaperがrecovery deadlineまでに
+`populated=0`、zombie 0、managed orphan 0を証明する。owner又はboundを開始前に強制不能ならmanaged rootを作らず拒否する。
+独立proof欠測時の`custody_failure`と新規admission遮断は追加措置であり、既存payloadのkill/reapを代替しない。
 
 ## 5. platform portとfailure isolation
 

@@ -372,7 +372,7 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-010` | pipe切断、companion crash、Node journal commit crash | custodyを失わず再接続、片肺terminal receipt 0 |
 | `IT-RGK-PHYS-011` | unsupported OS・権限不足・capability欠落 | probe後managed workload生成前拒否、control/workload identityを別保存、soft fallback 0 |
 | `IT-RGK-PHYS-012` | binary/schema/target/signature/SBOMを各一箇所変異 | admission前`bundle_failure`、PATH探索/download 0 |
-| `IT-RGK-PHYS-013` | coreだけ/companionだけrollback後、manifest全体rollback | 片側は拒否、既知良好bundleも実OS oracle再通過後だけ利用 |
+| `IT-RGK-PHYS-013` | 旧componentを旧manifestで直接復帰後、floor超の新sequence manifestへ再review・再署名 | 旧manifest復帰は拒否。新manifestがcompanion/protocol/D0-N receiptと実OS oracleを再通過した場合だけ利用 |
 | `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
 | `IT-RGK-PHYS-019` | bundle内key、未review signer、signature substitution | `BundleTrustPort`のbinding不一致でcontrol process 0 |
 | `IT-RGK-PHYS-020` | manifestのbundle revision/component digest/schema/targetを各変異 | 一要素でも不一致ならverified handle 0 |

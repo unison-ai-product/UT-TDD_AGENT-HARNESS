@@ -1556,8 +1556,8 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 
 ## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
 
-本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-ERROR-*`、
-`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
+本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、
+`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
 
 ### ワイヤ/エラー代数
 
@@ -1572,8 +1572,8 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 | メソッド | 事前条件 | 事後条件 / 不変条件 |
 |---|---|---|
 | `canonicalizeBundleManifest` | schema/bundle revision/floor/component digestが全て型付き | 固定順length-framed bytesとdigestを返し、欠落・duplicate・unknown fieldを拒否 |
-| `verifyBundle` | trust identityとtarget明示 | canonical payload全体のsignatureとcore/companion/schema/SBOM/targetの全一致時だけverified handle |
-| `BundleTrustPort.verify` | review済みtrust policy revisionとmanifest | untrusted signer、署名不一致、floor未満を拒否し、検証済みbundle handleを返す。key rotation等の具体方式はD0外 |
+| `verifyBundle` | trust identityとtarget明示 | canonical payload全体のsignatureとcompanion/protocol/SBOM/target/D0-N generation receiptの全一致時だけverified handle |
+| `BundleTrustPort.verify` | review済みtrust policy revisionとmanifest | ADR/L5の`TrustDecisionPort`をL6へ適応する唯一のadapter。`accepted` decisionとdecision digest/policy versionをverified handleへ束縛し、rejected、署名不一致、floor未満を拒否する。key rotation等の具体方式はD0外 |
 | `BundleActivationPort.activate` | verified handle、expected floor | floor以上の新しい再署名manifestだけを原子的にactivateする。storage・clock・recovery方式はD0外 |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |

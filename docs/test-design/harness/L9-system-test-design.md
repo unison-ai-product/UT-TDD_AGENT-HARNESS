@@ -220,7 +220,7 @@ active IDのGreen証拠にしてはならない。
 | `ST-RGK-11` / `AC-RGK-11` | lifecycle各barrierでcrash/retryし、同一`execution_id`へ複数attemptを発行 | event sequenceはappend-onlyかつ欠番・上書きなし、各`attempt_id`のterminal receiptはexactly-once | mutable status rowをevent/receipt兼用、retryでattempt identityを再利用、terminal eventだけまたはreceiptだけ残存 |
 | `ST-RGK-12` / `AC-RGK-12` | required capabilityを一つずつ欠落、空集合、probe/journal/token barrierを各一箇所除去したadapter matrixでadmission | control process/probe事実を別記し、全不足・token不正caseが`managed_root_created=false`の`capability_failure`。probe commandのlauncher call 0 | handshakeだけでexecute、control/rootを単一boolean化、warning、skip、PID polling、soft limitへ暗黙縮退 |
 | `ST-RGK-13` / `AC-RGK-13` **DEFERRED** | DB canonical digestとCAS完全identityの一要素mutation | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
-| `ST-RGK-14` / `AC-RGK-14` | target別bundleへbinary欠落、digest/署名/SBOM/protocol/target不一致、probe差替え、権限不足を一つずつ注入し、既知良好bundleへのrollbackを実行 | 静的不一致はcontrol process起動0、probe不一致はmanaged root 0。rollbackはmanifest単位で対象OS custody oracleを再通過。TS/Rust責務重複0 | 未検証control起動、probe差替え後execute、PATH探索、runtime download、片側rollback、direct spawn fallback、Rust側domain/policy/journal実装 |
+| `ST-RGK-14` / `AC-RGK-14` | target別bundleへbinary欠落、digest/署名/SBOM/protocol/target/D0-N receipt不一致を一つずつ注入し、旧componentをfloor超の新sequence manifestへ再review・再署名 | 静的不一致はcontrol process起動0。旧manifest復帰は拒否し、新manifestだけがtrust/target/実OS custody oracleを再通過。TS/Rust責務重複0 | 未検証control起動、旧sequence復帰、PATH探索、runtime download、片側rollback、direct spawn fallback、Rust側domain/policy/journal実装 |
 | `ST-RGK-15` / `AC-RGK-15` | PR #154 D0-Nのcutover receiptを入力し、native companion/bundle/Cargo差分へBun binary/API/lock/runtime dependencyを一要素ずつ注入 | D0-N prerequisite一致かつnative差分のBun依存増分0 | D0-Rがglobal cutover完了を再判定、またはnative経路へBun依存を追加 |
 
 Issue #124のparent-loss/timeout acceptanceは次の経路別AND matrixで量閉じする。各セルでworker exit、custody empty、
@@ -306,15 +306,16 @@ deferred corpusはD0-R merge結果へ算入しないが、後続waveで削除・
 | `event_chain_digest` | append-only event range digest | lifecycle順序・crash reconcile |
 | `custody_evidence_digest` | `CustodyEvidenceV1` digest | custody identity、handoff、broker外deadline owner、kill/reap/orphan 0 |
 | `resource_evidence_digest` | `ResourceEvidenceV1` digest | requested/applied/observed budgetとexit cause |
-| `bundle_evidence_digest` | `BundleEvidenceV1` digest | manifest/trust/clock/activation、D0-N prerequisite、Bun差分0 |
+| `bundle_evidence_digest` | `BundleEvidenceV1` digest | manifest、trust-policy revision、activation floor、D0-N prerequisite、Bun差分0 |
 | `independent_probe_digest` | `IndependentProbeV1` digest | PID単独でないorphan 0反証 |
 | `terminal_receipt_digest` | sealed ExecutionReceipt digest | exactly-once terminal |
 | `oracle_result` | expected/observed/resultのdigest付きclosed result | fault発火とRed/Green判定 |
 
 `process_outcome`はcontrol側`not_created | started | probe_recorded | stopped`とworkload側
 `not_created | created_not_started | started | empty_proven | released`を別discriminantで持つ。
-`CustodyEvidenceV1`はLinux dual-crash時にdeadline ownerのarmed fact、deadline、`cgroup.kill`時刻、
-bounded recovery完了、`populated=0`、zombie 0、managed orphan 0を必須にする。欠測findingだけではGreenにしない。
+`CustodyEvidenceV1`はLinux dual-crash時にdeadline ownerのarmed fact、absolute deadline、
+`termination_policy.recovery_grace_ms`、導出したrecovery deadline、`cgroup.kill`時刻、
+recovery deadline内の`populated=0`、zombie 0、managed orphan 0を必須にする。欠測findingだけではGreenにしない。
 `BundleEvidenceV1`は詳細fieldを維持するが、Node cutover/activationの状態機械を複製せずPR #154 receiptを参照するだけとする。
 deferred AC-RGK-07..10/13のDB/CAS/single-flight/control-plane extensionはlater waveで別schema versionとして追加し、
 D0-R coreへ空fieldやN/A列を固定しない。secret値とstdout/stderr本文は保存せずbounded artifact digestを用いる。
