@@ -1681,15 +1681,15 @@ failure/cancelled/skippedをtyped fieldsから再導出して拒否する。
 `evidence_digest` / `object_digest` alias lookup、payload content digestによる取得を拒否する。CutoverAdmissionはvalidated Q0
 SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
 schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
-inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。SliceAdmission保存graphは
-predecessor/required input refs、D0から既存ReviewBundleと正式BootstrapEnvelopeへのrefsを必須とし、
-bootstrapのissue 153/full schema/digest/attestation mutationとQ0→F0c→F0b→F0a→D0 closure欠落を拒否する。
+inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。
+SliceAdmission保存graphはpredecessor/required input refsとD0から既存ReviewBundleへのrefを必須とし、
+Q0→F0c→F0b→F0a→D0 closure欠落を拒否する。
 
 slice admission candidate `CAND-NODEBOOT-017..020`はD0→F0a→F0b→F0c→Q0をpairとし、各target sliceを
 直前receiptなし/失敗/別revisionでmerge admissionしてapproved 0を確認する。edit-start自己gateではなく、
 gate test/schema/kernelをproduct changeより先にTDDし、同じcandidate commitのacceptanceを検証する。
 positiveはL5 registry順の全inputでdigestとapproved receiptを再現する。D0は2 lane ReviewBundle、PLAN-L4-33/
-L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4、BootstrapEnvelope #153を要求する。canonical
+L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4だけを要求する。canonical
 tracked record全fieldとrecordDigest/attestation bindingを照合し、integrity-only、unsigned/self-hash、forged/untrusted、
 欠落、重複、wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
 predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
@@ -1699,17 +1699,14 @@ AttestedTracked wrapperとL6Confirmationの全field順、record/receipt二段dig
 ReviewBundle coreのexact 7 fields/self除外6-field ordered preimage、各coreを包むexact 7-field
 `AttestedReceiptEnvelope`、ReviewBundle/lane/CutoverAdmission/actual admission execution modeのmixed/mismatchを拒否する。
 SliceAdmission coreも同じenvelopeで検証しraw core保存を拒否する。ReviewBundle→lane、SliceEvidence→bundle、
-D0→ReviewBundle/Bootstrap、Q0 predecessorはouter envelope digestだけでlookupし、core digest/alias参照を拒否する。
-SliceAdmission core/outer producer owner差、D0 input 2 owner mapping欠落、CutoverAdmission 5 authorityのwrong
+D0→ReviewBundle、Q0 predecessorはouter envelope digestだけでlookupし、core digest/alias参照を拒否する。
+SliceAdmission core/outer producer owner差、CutoverAdmission 5 authorityのwrong
 EvidenceProducer又は`authority_id != attestation.authorityId`を各negative pairにする。
 edge別allowed authority ID/keyVersion外と、別trusted CI authorityによる署名replayもnegative pairにする。
-共通GitObjectIdを全subject/HEAD fieldへ適用しraw hash/algorithm mismatchを拒否する。tracked/L6/review/bootstrap等の
-unknown schema versionを棚卸しnegativeにする。Bootstrapはwrong policy、admission time期限外、revoked、historical
-envelope新規再利用を拒否する。Q0 frozen registry shrink/fixture drift、aggregate profile required laneの
+共通GitObjectIdを全subject/HEAD fieldへ適用しraw hash/algorithm mismatchを拒否する。tracked/L6/reviewの
+unknown schema versionを棚卸しnegativeにする。Q0 CaseManifest subject/set/executed mismatchとaggregate profile required laneの
 missing/extra/duplicate/set digest driftを個別negativeにする。
-ReviewLane exact 12/self除外11-field orderとversion inclusionをmutation pairにする。Frozen registryの
-untrusted envelope、previous digest欠落、無承認shrinkを拒否する。Bootstrap policy/time/eventのexpired time、
-revoked event、stale current head、untrusted time、digest cycle、SliceAdmission time ref不一致を個別negativeにする。
+ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→

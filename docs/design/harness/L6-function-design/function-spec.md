@@ -1437,12 +1437,10 @@ canonical JSON→UTF-8→RFC 4648 base64url paddingなしへ一意化し、decod
 arbitrary bytes、schema spoof、cross-kind/cross-owner/cross-semantic replayを拒否する。
 subject revisionは`git-sha1:<40 lowerhex>|git-sha256:<64 lowerhex>`だけを許し、outer/payloadをexact一致させる。
 payload object/decoded payload/envelopeのschema version literal及び`payload_schema == schema_id`もexact照合する。
-同じ共通GitObjectId型をCutover candidate/transition、Review lane/bundle、L6 confirmation、Slice admission/evidence、
-Bootstrapへ適用しraw hexを拒否する。tracked/L6/review/bootstrapを含む全receipt schema versionをliteral v1へ閉じる。
-Q0 expected caseはattested frozen registry objectから取得し、fixture preimageとexecuted setを照合する。
+同じ共通GitObjectId型をCutover candidate/transition、Review lane/bundle、L6 confirmation、Slice admission/evidenceへ
+適用しraw hexを拒否する。tracked/L6/reviewを含む全receipt schema versionをliteral v1へ閉じる。
+Q0 expected caseは同subjectのimmutable attested CaseManifestObjectから取得し、executed setを照合する。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
-Frozen case registryもcore+attested envelopeとし、baseline revision 1をD0 inputへ固定する。更新はprevious
-outer digest付きappend-only、shrinkはapproved removal receiptを要求する。Q0はouter registry digestだけを参照する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、
 claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
@@ -1453,7 +1451,7 @@ runtime=humanのdistinct reviewer 2名と独立session/evidenceを要求する�
 Issue #153でも2 laneを維持する。
 chain entryだけでbundle/admission/evidenceを再検証可能にする。attested coreの参照はすべてouter envelope
 `receipt_digest`だけとし、core receipt digest、payload `evidence_digest`又はaliasで取得しない。
-ReviewBundle→lane、SliceEvidence→ReviewBundle、D0→ReviewBundle/Bootstrap及びQ0 predecessorまで同じ規則を使う。
+ReviewBundle→lane、SliceEvidence→ReviewBundle及びQ0 predecessorまで同じ規則を使う。
 `SliceEvidenceReceipt`はkindで
 discriminateし、review/admission kindは各ReviewBundle/CutoverAdmission receipt digestへのtyped ref、
 generic kindだけはpayload object receipt digestとcontent専用payload digestを持つ。owner IDと既存EvidenceProducer enumを分離し、ownerをpreimageへ、
@@ -1469,12 +1467,10 @@ authority ID+key version+signature+producer+record digest/receipt digestで、ge
 CutoverAdmissionはowner、EvidenceProducer、nested authorityを分離し、L5
 `CUTOVER-ADMISSION-PRODUCER-MAP-v1`の5 edgeと`authority_id == attestation.authorityId`をexact照合する。
 edge別allowed authority ID/keyVersionもclosed照合し、別trusted CI authority replayを拒否する。
-Bootstrap policy/time/eventを別signed envelopeへ分離し、event→policyだけの非循環graphにする。
-historical validityはtrusted time時点active、current再利用はcanonical event head同一かつactiveを要求する。
-SliceAdmissionにもadmission time outer digestを封印し、外部wall clock/configを使わない。
 ReviewLane preimageはversionを含むexact 11 fields/self除外として固定する。
+SliceAdmission coreは8 fields/self除外7-field ordered preimageへ固定する。
 execution modeはReviewLane/Bundle及びactual admission modeとexact一致させる。
-ReviewLane/Bundle coreとBootstrapEnvelope coreはproducer/record digest/nested attestationを持つ
+ReviewLane/Bundle coreはproducer/record digest/nested attestationを持つ
 exact `AttestedReceiptEnvelope`に格納し、両admission receiptは既存`EvidenceRecord` /
 `EvidenceAttestationVerifierPort`へ委譲する。attestationはnested
 `{schemaVersion:"evidence-attestation/v1",algorithm:"hmac-sha256",authorityId,keyVersion,signature}`だけを持ち、
@@ -1497,12 +1493,10 @@ F0c aggregate receiptを要求する。`CAND-NODEBOOT-017..020`はedit-start hoo
 gate test/schema/runtimeをproduct changeより先にTDD実装し同一commitを評価する。receipt欠落、別revision、owner違反、
 skip/replayはrejected receiptを残しmergeを拒否する。保存時は各sliceの
 `predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refsへ展開し、D0 SliceAdmissionから
-既存ReviewBundleReceiptと正式BootstrapEnvelopeReceiptのouter envelope digestをtyped root refsとして保存する。bootstrap schemaは
-issue 153、episode/projection/artifact digest、subject revision、captured_at、canonical core receipt digestと、
-wrapperのproducer/record digest/nested EvidenceAttestation/wrapper receipt digestを必須とする。
+既存ReviewBundleReceiptのouter envelope digestをtyped root refとして保存する。
 Q0からD0 rootsまでchain-only closureが切れた場合は拒否する。
 required inputはL5 `NODE-SLICE-INPUT-REGISTRY-v1`順でdigest化する。D0はReviewBundle 1、canonical
-AttestedTrackedReceiptRecord exact 4、Issue #153 BootstrapEnvelope 1を要求する。tracked projectionの
+AttestedTrackedReceiptRecord exact 4だけを要求する。tracked projectionの
 integrity-only recordをformal plan admission-checkには使えてもD0 genesis trustには使わず、既存EvidenceAttestationへ
 record digestとfull bindingを束縛したwrapperだけをeligibleにする。unsigned/self-hash/forged/untrusted/
 wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c/Q0もregistryをexact照合する。

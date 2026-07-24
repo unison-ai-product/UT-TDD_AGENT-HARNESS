@@ -270,6 +270,21 @@ semantic successを再導出する。Cutover edge別authority ID/keyVersionもcl
 PLAN-L6-93 revision 9 / PLAN-L7-458 revision 12を正規`plan revise`経路で発行した。
 独立再reviewまではFLAGを維持する。
 
+## Exact HEAD c0b96c0d CAS/attempt FLAG
+
+SliceAdmission preimageを9/self除外8 fieldsへ固定した。Frozen registry canonical head、attested removal、
+single-use admission time attempt、policy event canonical headを専用cutover ledger CASへ閉じた。
+PLAN-L6-93 revision 12 / PLAN-L7-458 revision 15を正規`plan revise`経路で発行した。
+独立再reviewまではFLAGを維持する。
+
+## Temporary bootstrap productization撤回
+
+Issue #153のtemporary bootstrapをproduct trust rootへ拡張したpolicy/time/event、expiry/revocation、
+mutable case registry/head/CAS/removal設計は過剰だったため撤回した。D0 design mergeは通常5 inputs
+（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）だけへ戻す。production cutoverは別gateで
+L6 confirmed、validated Q0、required inherited debt evidenceを要求する。Q0 case setはruntime registryではなく
+subject revision拘束のimmutable attested CaseManifestObjectを使う。
+
 ## Exact HEAD c94a6f9b policy/frozen-registry FLAG
 
 ReviewLane exact preimageを12/self除外11 fieldsへ修正した。Frozen case registryをattested envelope、

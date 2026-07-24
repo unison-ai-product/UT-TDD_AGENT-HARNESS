@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:9518f6875e59edbff399e5308bc115ce
-  command_id: pr154-policy-l6-20260724
-  admitted_at: 2026-07-24T13:30:00.000Z
-  source_digest: sha256:e0b0785510a027270c7382143be6b89b121358854bd7f4d95d67e44c04f18d58
-  decision_digest: sha256:b012eafcc2802419154c2d8b1bfe03c94d11d45f9d3756ad35d79571dda839ad
-  receipt_digest: sha256:80c59a883ac101903efe4f44112665a05885119c0df2bc0df2f25ded98efd5e0
+  receipt_id: certificate:f76978724ba049eb76065c6c765e293b
+  command_id: pr154-scope-l6-20260724
+  admitted_at: 2026-07-24T14:30:00.000Z
+  source_digest: sha256:d0696c605baa499122c4cabbb81b2d93f99b9cf3e36f480975ed8050017c30d6
+  decision_digest: sha256:8619238257506cd476a4c7f97c42698b4e6bff1f39eb280395052972f0b7e529
+  receipt_digest: sha256:0a9fba746a4f1b6e776485cc388d0917b512937c3bd1667d5ab9695fefb5b3eb
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 11
-    content_digest: sha256:e0b0785510a027270c7382143be6b89b121358854bd7f4d95d67e44c04f18d58
+    revision: 13
+    content_digest: sha256:d0696c605baa499122c4cabbb81b2d93f99b9cf3e36f480975ed8050017c30d6
   route:
     signal: feature_addition
     mode: add-feature
@@ -69,12 +69,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 11
+      target_revision: 13
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 11
+    target_revision: 13
     phase: forward_merge
-  escape_reason: PR 154 policy and frozen registry closure
+  escape_reason: PR 154 temporary bootstrap productization withdrawal
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -146,22 +146,18 @@ subject revisionはalgorithm prefix付きGitObjectIdへ固定してouter/payload
 decoded payload、attested envelopeのschema literalと`payload_schema == schema_id`を要求する。
 F0c/Q0/aggregateはOS lane subject/run/attempt/outcome、expected/executed case set、全lane outcomeから
 successとcoverage欠測0を再導出し、content digestをlookup keyに使わない。
-Q0 expected setはproducer payloadでなくattested frozen registry objectを正本とし、registry/fixture preimageを
-封印する。aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
-共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/review/bootstrapを含む全schema versionを
-literal v1へ閉じる。Bootstrapはpolicy revision、issued/expires、revocation proofを持ち、期限切れ/revokedの新規D0利用を拒否する。
-ReviewLane coreは12 fields/self除外11-field ordered preimageへ固定する。Frozen Q0 registryはattested
-envelope、D0 baseline、append-only previous digest、approved removal receiptを要求する。Bootstrapはsigned
-policy/time/event envelopeへ分離し、historical activeとcurrent head activeを別検証する。SliceAdmission time refを
-Bootstrapと一致させ、外部wall clock/configを判定に使わない。
+Q0 expected setはproducer payloadでなく同subjectのimmutable attested CaseManifestObjectを正本とする。
+aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
+共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
+ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。
 claim-blind/spec-blind各1 PASSとartifact/revision一致を要求する。bundle/lane execution modeはactual admissionと
 一致させ、hybridはprovider/runtimeを分離、codex/claude-onlyは異model/session/identity、standaloneはhuman 2名を要求する。
 chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic
 appendし、CAS loser、fork、double genesis、crash partialを拒否する。
-ReviewBundle coreはexact 7 fields/self除外6-field ordered preimageを持ち、ReviewLane/Bundle/Bootstrap coreは
+ReviewBundle coreはexact 7 fields/self除外6-field ordered preimageを持ち、ReviewLane/Bundle coreは
 producer/record digest/nested attestationを持つexact `AttestedReceiptEnvelope`で保存する。
 SliceAdmission coreも同じenvelopeへ格納してraw coreをtyped unionへ保存しない。ReviewBundle→lane、
-SliceEvidence→ReviewBundle、D0→ReviewBundle/Bootstrap、Q0 predecessorの全参照はouter envelope
+SliceEvidence→ReviewBundle、D0→ReviewBundle、Q0 predecessorの全参照はouter envelope
 `receipt_digest`へ統一し、core digestはenvelope内部検証だけに使う。
 slice admissionとは別の`CutoverAdmissionReceipt`を全edgeでfresh発行し、genesisはvalidated Q0、
 以後は直前cutover receiptをpriorに要求する。review/admission/evidenceは既存`EvidenceRecord` /

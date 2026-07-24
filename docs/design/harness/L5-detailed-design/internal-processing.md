@@ -416,11 +416,11 @@ F0b rollbackは同一`subject_revision`の検証済み旧generationを指す、�
 全receipt graphのrevision/HEAD fieldは
 `GitObjectId = "git-sha1:" + 40 lowercase hex | "git-sha256:" + 64 lowercase hex`だけを使う。
 対象はSliceAdmission/SliceEvidenceのsubject、CutoverAdmission candidate、CutoverTransition subject、
-ReviewLane/ReviewBundle subject、L6Confirmation subject、Bootstrap subject及びpayload内revisionである。
+ReviewLane/ReviewBundle subject、L6Confirmation subject及びpayload内revisionである。
 raw hex、uppercase、prefix/length不一致、algorithm変換、field間の別表現を拒否する。
 
 slice admissionは`d0_admitted → f0a_complete → f0b_complete → f0c_complete → q0_complete`の
-一方向typed FSMとする。D0 genesisはreview済みかつadmission済みD0 draft+bootstrap envelopeを入力として
+一方向typed FSMとする。D0 genesisはreview済みかつadmission済みD0 draftを入力として
 `slice_id=d0`、`predecessor_receipt_digest=null`で作る。各後続commandは直前stateのreceipt digestを入力し、
 target sliceとsubject revisionへ拘束した`SliceAdmissionReceipt`をappendする。F0aはD0 genesis、F0bはF0a
 `f0a.static-custody`、F0cはF0b `f0b.sealed-generation`、Q0はF0c `f0c.os-jobs` aggregateを
@@ -429,11 +429,14 @@ admissionでfail-closeする。
 
 `SliceAdmissionReceipt` coreのzod正本は`src/schema/node-slice-admission.ts`であり、唯一のschemaは
 fieldは`{ schema_version, slice_id, predecessor_receipt_digest, subject_revision,
-required_input_receipt_digests, admission_time_envelope_digest, decision, producer, receipt_digest }`である。
+required_input_receipt_digests, decision, producer, receipt_digest }`である。
 `schema_version="node-slice-admission.v1"`、`slice_id=d0|f0a|f0b|f0c|q0`、
 `decision=approved|rejected`、producerはPLAN-L7-458 ownership表の正規owner IDとする。
-required input digestsはslice別registry順の重複なしarrayであり、UTF-8固定順JSON arrayを
-`<decimal byte length>:<JSON bytes>`でframeし、`receipt_digest`以外の7 fieldをSHA-256 lowercase hex化する。
+required input digestsはslice別registry順の重複なしarrayである。coreはexact 8 fieldsで、
+`receipt_digest`を除く
+`[schema_version,slice_id,predecessor_receipt_digest,subject_revision,required_input_receipt_digests,`（前半）
+decision,producer]`のexact 7-field orderをUTF-8固定順JSON array、decimal byte-length frame、
+SHA-256 lowercase hexで封印する。field欠落又は順序変更を拒否する。
 positive transitionは直前approved receipt、同一subject lineage、全required input成功時だけapprovedをappendする。
 negative transitionは欠落、rejected input、owner不一致、revision drift、skip/replayをtyped rejected receiptとして
 残し、次stateへ進めない。
@@ -450,11 +453,6 @@ content-addressed lookup、FSM edge又はdeduplication keyには使わない。
 |---|---|---|---|---|
 | `d0` | `null` | `ReviewBundleReceipt` / 1（exact 2 lane） | `review-bundle-gate` | candidate HEAD（候補） |
 | `d0` | `null` | `AttestedTrackedReceiptRecord` / exact 4（PLAN-L4-33、L5-26、L6-93、L7-458各1） | `plan-admission-attestation-gate` | 各latest formal revisionかつcontent binding一致 |
-| `d0` | `null` | `BootstrapEnvelopeReceipt` / 1 | `issue-153-bootstrap-gate` | candidate HEAD |
-| `d0` | `null` | `BootstrapPolicyReceipt` / 1 | `bootstrap-policy-gate` | exact policy revision |
-| `d0` | `null` | `AdmissionTimeReceipt` / 1 | `admission-time-gate` | D0 admission timestamp |
-| `d0` | `null` | `BootstrapPolicyEventReceipt` / 1 | `bootstrap-policy-event-gate` | admission時点latest active |
-| `d0` | `null` | `FrozenCaseRegistryObject` / 1 | `q0-case-registry-gate` | frozen baseline revision 1 |
 | `f0a` | approved `d0` / 1 | `f0a.static-custody` / 1 | `f0a-gate` | producer ancestor |
 | `f0b` | approved `f0a` / 1 | `f0b.sealed-generation` / 1 | `f0b-gate` | producer ancestor |
 | `f0c` | approved `f0b` / 1 | `f0c.os-jobs` / 1 | `f0c-gate` | producer ancestor |
@@ -484,11 +482,10 @@ admission kernelは`src/runtime/node-slice-admission.ts`、pair testは
 `tests/node-slice-admission.test.ts`であり、D0→F0a→F0b→F0c→Q0の正規ownerは
 PLAN-L7-458 ownership表を正本とする。
 
-このFSMが許可するのは、Issue #153の期限付きbootstrap envelope内で行う非activation F0a/F0b/F0c
-build/verifyとQ0 fixture/detector workだけである。production activation、hook/runtime switch、
+このFSMはD0設計mergeと後続slice acceptanceだけを扱う。production activation、hook/runtime switch、
 Bun final deletion、cutover transitionは、L6 confirmedかつD0 review/admissionがcandidate HEADへ
-一致するまで別のproduction gateが拒否する。Issue #153の外部本文はbootstrap envelopeの運用projectionであり、
-本節の恒久FSM又はcutover契約を上書きしない。
+一致し、validated Q0及びrequired inherited debt evidenceが揃うまで別のproduction gateが拒否する。
+Issue #153は継承負債2件の記録でありwaiver、receipt又はtrust rootではない。
 
 `SliceAdmissionReceipt`は上記implementation slice専用で、cutover又はfinal revisionの許可には流用しない。
 cutover用zod正本`src/schema/cutover-transition.ts`は、別schemaとして
@@ -607,8 +604,8 @@ closed discriminated unionをRFC 8785 canonicalizeする。`uint`はJSON整数�
 | `f0a.static-custody` | `f0a-static-custody.v1` | `node_version:string`, `npm_version:string`, `lock_digest:digest` / exact pinとclean lock graph一致 |
 | `f0b.sealed-generation` | `f0b-sealed-generation.v1` | `image_digest:digest`, `generation:uint`, `fallback_count:0` / sealed generation成功 |
 | `f0c.os-jobs` | `f0c-os-jobs.v1` | `workflow_revision:GitObjectId`, `run_id:string`, `run_attempt:uint>0`, `linux:{subject_revision:GitObjectId,run_id:string,run_attempt:uint,conclusion:"success",digest:digest}`, `windows:{同型}` / `workflow_revision == subject_revision == linux.subject_revision == windows.subject_revision && run_id/run_attemptが両OSと一致 && 両conclusion=="success"` |
-| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:digest`, `case_registry_receipt_digest:digest`, `executed_case_ids:string[] unique` / frozen registry期待set equality |
-| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:digest`, `case_registry_receipt_digest:digest`, `executed_case_ids:string[] unique`, `bun_process_count:0`, `fallback_count:0` / frozen registry expected set equalityかつNode-only |
+| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:digest`, `case_manifest_envelope_digest:digest`, `executed_case_ids:string[] unique` / immutable manifest期待set equality |
+| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:digest`, `case_manifest_envelope_digest:digest`, `executed_case_ids:string[] unique`, `bun_process_count:0`, `fallback_count:0` / immutable manifest expected set equalityかつNode-only |
 | `inventory.zero` | `inventory-zero.v1` | `scan_digest:digest`, `bun_reference_count:0` / inventory全対象0 |
 | `pack.acceptance` | `pack-acceptance.v1` | `pack_digest:digest`, `accepted:true` / clean Pack acceptance |
 | `debt.plan-recovery-16.repaired` | `plan-recovery-16-repair.v1` | `plan_id:"PLAN-RECOVERY-16-plan-revision-authoring"`, `repair_receipt_digest:digest` / formal repair済み |
@@ -619,22 +616,16 @@ closed discriminated unionをRFC 8785 canonicalizeする。`uint`はJSON整数�
 generic kindはこのclosed registryのexact 1 rowを要求する。`review.bundle`と`admission.approved`はtyped refであり
 payload schema registryへ入れない。未知kind/schema、row追加を伴わないschema文字列又はcross-row再利用はfail-closeする。
 
-#### `Q0-CASE-REGISTRY-v1`
+#### `CASE-MANIFEST-v1`
 
-producer自己申告から分離した`FrozenCaseRegistryObject` coreをtyped objectとして保存する。exact schemaは
-`{schema_version:"frozen-case-registry.v1",registry_id:"q0-node-ban-cases",revision:uint>0,`（前半）
-`expected_case_ids:string[] unique sorted nonempty,required_set_digest:digest,source_artifact_digest:digest,`（中盤）
-`fixture_digest:digest,previous_registry_envelope_digest:digest|null,approved_removal_receipt_digest:digest|null,`（後半）
-receipt_digest:digest}`である。coreは`AttestedReceiptEnvelope<FrozenCaseRegistryObject>`へ格納し、
-owner `q0-case-registry-gate`→EvidenceProducer `ci`を要求する。lookup/refはouter envelope digestだけを使う。
-`required_set_digest`はexpected IDsのcanonical JSON UTF-8 bytes、`fixture_digest`は
-`[registry_id,revision,required_set_digest,source_artifact_digest]`の固定tupleから再計算する。
-Q0 payloadはregistry outer receipt digestを参照し、executed IDsとのset equalityを要求する。
-registry shrink、missing/extra/duplicate、fixture/preimage drift及びcontent digest lookupを拒否する。
-closed bootstrap baselineは`registry_id=q0-node-ban-cases, revision=1`、expected set
-`q0-bun-reference-zero,q0-bun-process-zero,q0-coverage-complete,q0-fallback-zero`に固定する。
-revision更新はprevious outer digest付きappend-onlyとし、case shrink/removeは別trusted
-`CaseRegistryRemovalReceipt`がremoved IDsと前後set digestを承認しない限りfail-closeする。
+producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
+`{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_test_design_artifact_digest:digest,`（前半）
+`expected_case_ids:string[] unique sorted nonempty,required_set_digest:digest,producer_owner_id:"q0-case-manifest-gate",`（後半）
+receipt_digest}`である。selfを除くexact 6-field tupleをcore preimageとし、
+`AttestedReceiptEnvelope<CaseManifestObject>`へ格納する。ownerはEvidenceProducer `ci`へ写像し、
+lookup/refはouter envelope digestだけを使う。Q0 payloadは`case_manifest_envelope_digest`を参照し、
+manifest subjectとpayload subjectを一致させ、executed IDsとexpected IDsのexact set equalityを要求する。
+manifest変更は新subject revisionと通常のreview/admissionを必要とし、runtime mutable registry/head/removal APIは0とする。
 
 #### `AGGREGATE-PROFILE-REGISTRY-v1`
 
@@ -725,13 +716,9 @@ bundleと両laneの`execution_mode`はactual admission modeとexact一致し、m
 | `github-evidence` | `ci` |
 | `aggregate-gate` | `ci` |
 | `plan-admission-attestation-gate` | `ci` |
-| `issue-153-bootstrap-gate` | `ci` |
-| `bootstrap-policy-gate` | `ci` |
-| `admission-time-gate` | `ci` |
-| `bootstrap-policy-event-gate` | `ci` |
-| `q0-case-registry-gate` | `ci` |
+| `q0-case-manifest-gate` | `ci` |
 
-この21 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
+この18 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
 PLAN-L7-458 `SliceAdmission producer registry`のclosed setとして全て`ci`へ写像する。review lane ownerは
 lane providerと同じ`human|codex|claude`、PO approval ownerは`po`へ写像する。
 
@@ -742,7 +729,7 @@ unknown/wrong mappingを拒否し、producerを`ci`へ丸めても署名対象re
 同一session、author自身のlaneは全modeで禁止し、Issue #153でもclaim-blind/spec-blind exact 2 laneを減免しない。
 standaloneは上記human 2 lane以外を許可しない。
 
-`ReviewLaneReceipt`、`ReviewBundleReceipt`、`BootstrapEnvelopeReceipt`、`SliceAdmissionReceipt`の各core receiptは
+`ReviewLaneReceipt`、`ReviewBundleReceipt`、`SliceAdmissionReceipt`、`CaseManifestObject`の各core receiptは
 `AttestedReceiptEnvelope { schema_version, producer_owner_id, attestation_producer, record,`（前半）
 record_digest, attestation, receipt_digest }`のexact 7-field wrapperへ格納する。`record_digest`は
 `schema_version="attested-receipt-envelope.v1"`だけを許し、unknown versionを拒否する。
@@ -779,10 +766,8 @@ CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一head
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | EvidencePayloadObject |`（先頭）、
 `AttestedReceiptEnvelope<ReviewLaneReceipt> | AttestedReceiptEnvelope<ReviewBundleReceipt> |`（レビュー）、
-`AttestedReceiptEnvelope<SliceAdmissionReceipt> | CutoverAdmissionReceipt | AttestedReceiptEnvelope<BootstrapEnvelopeReceipt> | AttestedTrackedReceiptRecord |`（残り）、
-`AttestedReceiptEnvelope<FrozenCaseRegistryObject> | AttestedReceiptEnvelope<BootstrapPolicyReceipt> |`（追加1）、
-`AttestedReceiptEnvelope<AdmissionTimeReceipt> | AttestedReceiptEnvelope<BootstrapPolicyEventReceipt> |`（追加2）、
-CaseRegistryRemovalReceipt | L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
+`AttestedReceiptEnvelope<SliceAdmissionReceipt> | AttestedReceiptEnvelope<CaseManifestObject> |`（残り）、
+CutoverAdmissionReceipt | AttestedTrackedReceiptRecord | L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
 `{schema_version,plan_id,plan_revision,status,content_digest,subject_head,tracked_record_digest,`（前半）
 producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}`のexact schemaである。
 `schema_version="l6-confirmation.v1"`だけを許し、unknown versionを拒否する。
@@ -790,36 +775,12 @@ producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}
 固定tuple/length-frame/SHA-256 lowerhexで封印する。
 verifier inputは`{producer,recordDigest}`とし、draft/unconfirmed/wrong plan/stale head/unsigned、
 schemaVersion/algorithm欠落、forged/untrustedを拒否する。
-`BootstrapPolicyReceipt` coreは
-`{schema_version:"bootstrap-policy.v1",policy_id:"issue-153-d0-bootstrap",policy_revision:uint>0,`（policy前半）
-`subject_revision:GitObjectId,valid_from:RFC3339 UTC,valid_until:RFC3339 UTC,authority_id,receipt_digest}`（policy後半）、
-`AdmissionTimeReceipt` coreは
-`{schema_version:"admission-time.v1",timestamp:RFC3339 UTC,source:"github-pr-gate",authority_id,receipt_digest}`、
-`BootstrapPolicyEventReceipt` coreは
-`{schema_version:"bootstrap-policy-event.v1",target_policy_envelope_digest:digest,sequence:uint,`（event前半）
-previous_event_envelope_digest:digest|null,status:"active"|"revoked",effective_at:RFC3339 UTC,receipt_digest}`である。
-3 coreを各`AttestedReceiptEnvelope<T>`へ格納し、policyはenvelopeを参照しない、eventだけがpolicy outer digestを
-参照する一方向graphとしてcycleを禁止する。
-
-`BootstrapEnvelopeReceipt` coreは`{ schema_version, issue_id, episode_id,
-policy_envelope_digest,admission_time_envelope_digest,policy_event_envelope_digest,（参照）
-projection_digest, artifact_digest, subject_revision, receipt_digest }`を持ち、
-`schema_version="bootstrap-envelope.v1"`、`issue_id=153`へ固定する。`receipt_digest`以外を固定順tuple+
-length frame+SHA-256で封印する。coreを上記`AttestedReceiptEnvelope<BootstrapEnvelopeReceipt>`へ格納し、
-pre-attestation `record_digest`、producer、nested attestation、wrapper `receipt_digest`をexact schemaで固定して
-既存verifierへ渡す。各payloadとattestationを
-historical validationはtrusted admission timestampがpolicy window内で、timestamp時点latest eventがactiveであることを
-chain-onlyに検証する。current再利用はcanonical current policy-event headがenvelope参照eventと同一かつactiveの場合だけ許す。
-外部wall clock/configを判定入力にせず、stale head、expired time、revoked event、untrusted time、digest cycleを拒否する。
-SliceAdmissionの`admission_time_envelope_digest`はBootstrap参照とexact一致させる。Issue #153本文又はhistorical PASSを
-恒久waiverに転用しない。
 content-addressed objectとして保存し、transition→evidence、bundle→2 lane、CutoverAdmission→validated Q0
 `AttestedReceiptEnvelope<SliceAdmissionReceipt>`又はprior cutoverと`L6ConfirmationReceipt`のdirect参照edgeを持つ。
 各参照はouter envelope `receipt_digest`だけでlookupする。core `receipt_digest`又はaliasからのlookupは拒否する。
 各`SliceAdmissionReceipt`は
 `predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refとして保存する。D0
-`SliceAdmissionReceipt`は既存`AttestedReceiptEnvelope<ReviewBundleReceipt>`と
-`AttestedReceiptEnvelope<BootstrapEnvelopeReceipt>`のouter receipt digestへのtyped root refsを必須とするため、
+`SliceAdmissionReceipt`は既存`AttestedReceiptEnvelope<ReviewBundleReceipt>`のouter receipt digestへのtyped root refを必須とするため、
 Q0→F0c→F0b→F0a→D0 rootsを外部再照会なしで辿れる。reducerはroot transitionから全参照を
 digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、attestation不一致を拒否する。
 

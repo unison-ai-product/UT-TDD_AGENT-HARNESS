@@ -336,9 +336,9 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-103` | evidence/receipt append各barrierでprocess crash | atomic transactionで両方存在又は両方0、partial chain 0 |
 | `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
-| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0 ReviewBundle 1+AttestedTrackedReceiptRecord exact 4+BootstrapEnvelope #153を要求。integrity-only/self-hash/unsigned/forged/untrusted/wrong-plan/stale binding、後続kind/count/producer/revision driftを拒否 |
-| `CAND-CUTOVER-107` | ReviewLane旧10-field/version除外preimage、expired/untrusted admission time、revoked event、stale policy head、policy-event-envelope cycle | lane exact 12/self除外11 fields、signed policy/time/event非循環graphを要求。historical時点activeとcurrent head activeを分離し、外部clock/config判定を拒否 |
-| `CAND-CUTOVER-108` | aggregate lane欠落、Q0 untrusted/shrunk registry、previous digest欠落、無承認case removal、fixture drift、executed case欠測 | D0 frozen baseline outer envelope、append-only registry、approved removal、aggregate profile exact set、Q0 executed set equalityをchain-only検証 |
+| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
+| `CAND-CUTOVER-107` | receipt schema/version/preimage/order/owner/attestation mutation | ReviewLane 12/self除外11、SliceAdmission 8/self除外7、outer digest trust graphをexact検証 |
+| `CAND-CUTOVER-108` | aggregate required lane欠測又はCaseManifest subject/set/executed IDs不一致 | aggregate profile exact setとimmutable attested manifestのexpected/executed equalityを要求 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | schema migration各barrierで失敗注入 | DDL、data、`user_version`を単一transactionで全rollback |
