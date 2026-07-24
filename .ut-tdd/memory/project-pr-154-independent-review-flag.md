@@ -118,3 +118,14 @@ ownerを分離した。独立再reviewまではFLAGを維持する。
 
 単発Node検証はsemantic marker、plan-governance、oracle traceがGreen。design-languageが既存段落の
 英語開始1行を検出したため日本語主語を追加した。single-run規律により再試行していない。
+
+## Exact HEAD 33f1d3ee final FLAG
+
+genesis専用`initializeCutoverChain`、5-edge evidence registry、receiptのreview/admission/evidence-set digestを
+追加した。017 bootstrap blockerを廃止してproduction gateを`CAND-CUTOVER-009`へ移し、
+`tests/cutover-transition.test.ts` / `U-CUTOVER-001..009`を固定した。非activation F0 bootstrapとproduction
+activationを分離し、owner一意性を回復した。独立再reviewまではFLAGを維持する。
+
+単発Node検証はsemantic markerとdesign-languageがGreen。oracle traceはcandidate test未実装なのにrange表記を
+正式宣言として解釈し`U-CUTOVER-001` orphanを検出したため、test-designをcandidate段階のID family表記へ修正し、
+実test+Red同一commitで個別正式IDへ昇格する境界を明記した。再試行はしていない。

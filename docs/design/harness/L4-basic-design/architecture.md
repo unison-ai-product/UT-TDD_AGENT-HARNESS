@@ -221,6 +221,7 @@ TypeScriptのdomain/control planeはcompiled ESMとしてNode上で自己ホス�
 `inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向であり、
 各遷移をsubject revisionへ拘束したTypeScript-owned append-only `CutoverTransitionReceipt` chainで証明する。
 receiptはprevious/current state、subject revision、evidence/review/previous receipt/chain digestを保持し、
+receipt outputは`review_digest`、`admission_digest`、`evidence_set_digest`を個別に保持し、
 非隣接、skip、reverse、replay、chain不一致をfail-closeする。状態projectionはvalidated chainから再構築する。
 genesisはnull previous fieldsとinventory evidence+review/admissionを持ち、空chainは`uninitialized`で開始不可とする。
 Node parity前に旧Bun経路を削除せず、

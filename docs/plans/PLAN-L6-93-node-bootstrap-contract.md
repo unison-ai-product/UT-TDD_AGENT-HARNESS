@@ -66,11 +66,13 @@ D0文書だけでは正式test IDまたはGreenを主張しない。
 
 ## 4. Cutover function contract
 
-`appendCutoverTransition(input)`はvalidated chain、expected previous/current state、subject revision、
+`initializeCutoverChain(input)`は空chainでのみ許可し、inventory/review/admission evidence setをexact検証して
+genesisを作る。非空chainは`cutover-genesis-already-initialized`。`appendCutoverTransition(input)`は空chainを
+`cutover-chain-uninitialized`で拒否し、validated chain、expected previous/current state、subject revision、
 evidence receipt、review/admission receiptを受ける。preconditionはL6 confirmed、両receiptのrevision一致、
 許可された隣接一方向遷移、previous chain digest一致である。postconditionは
 `CutoverTransitionReceipt { previous_state, current_state, subject_revision, evidence_digest,
-review_digest, previous_receipt_digest, chain_digest }`をappendし、projectionが同じcurrent stateを返すこと。
+review_digest, admission_digest, evidence_set_digest, previous_receipt_digest, chain_digest }`をappendし、projectionが同じcurrent stateを返すこと。
 invalid/skip/reverse/replayは`cutover-transition-invalid`、revision不一致は`cutover-revision-mismatch`、
 review/admission不足は`cutover-admission-not-ready`、chain不一致は`cutover-chain-invalid`でfail-closeする。
 `projectCutoverState(receipts)`はvalidated chainだけから状態を導出し、DB current値を入力正本にしない。
@@ -79,4 +81,4 @@ review/admission不足は`cutover-admission-not-ready`、chain不一致は`cutov
 review/admission、genesis digestを検証してchain headを作る。`CutoverEdgeEvidence`はedgeをdiscriminatorとし、
 edge別required evidenceのkind/count/producer/subject revision/digest/exit successをexact検証する。
 wrong edge evidence、replay、skipはtyped failureとなる。pair oracleはL7
-`CAND-CUTOVER-001..008`とL9 `CAND-NODEBOOT-207`である。
+`CAND-CUTOVER-001..009`とL9 `CAND-NODEBOOT-207`である。evidence registryはL5 §3の5行をexactに使う。

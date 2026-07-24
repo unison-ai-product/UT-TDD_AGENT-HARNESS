@@ -420,3 +420,13 @@ foldして再構築し、DB/UIから状態を直接書き換えない。
 edge evidence tableはtransition discriminatorごとにrequired kind/count/producer/subject revision/digest/exit successを
 固定する。genesis、F0a+F0b+F0c、Q0 no-fallback、zero inventory+Pack+review、
 debt repair+D0 admission+Issue #153 closed+aggregateの順であり、wrong edge/replay/skipを拒否する。
+
+| Edge | kind/count | producer |
+|---|---|---|
+| genesis | inventory/review/admission各1 | inventory-freezer/reviewer/admission-gate |
+| inventory_frozen→node_shadow | F0a custody/F0b generation/F0c OS jobs各1 | F0a/F0b/F0c |
+| node_shadow→node_primary | Q0 authoring/no-fallback各1 | Q0-authoring/Q0-runtime |
+| node_primary→bun_removed | zero inventory/Pack/review各1 | ban-audit/Pack-gate/reviewer |
+| bun_removed→sealed | debt repair/D0 admission/#153 closed/aggregate各1 | debt/admission/GitHub/aggregate gate |
+
+全rowでsubject revision、digest、successをexact照合する。

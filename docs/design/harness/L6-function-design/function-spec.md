@@ -1408,12 +1408,16 @@ fail-closeし、通常はgit revertから新revisionをbuildする。F0bはautom
 lease recovery/steal/clearを実装しない。CLI先行・receipt後行の二段rename、既存pointer上書き、
 shell/native helper fallbackは契約違反である。
 
-`appendCutoverTransition`はvalidated receipt chain、previous/current state、subject revision、evidence receipt、
+`initializeCutoverChain`は空chainだけでinventory/review/admission evidence setを検証してgenesisを作る。
+`appendCutoverTransition`は空chainを拒否し、validated receipt chain、previous/current state、subject revision、evidence receipt、
 review/admission receiptを受け、許可された隣接一方向遷移だけをappendする。返す
-`CutoverTransitionReceipt`はprevious/current、subject revision、evidence/review/previous receipt/chain digestを
+`CutoverTransitionReceipt`はprevious/current、subject revision、evidence/review/admission/evidence set/previous receipt/chain digestを
 持つ。precondition不成立、skip/reverse/replay、revision又はchain不一致はtyped errorでfail-closeし、
 `projectCutoverState`はvalidated chainだけをfoldしてcurrent stateを返す。
 
 空chainは`uninitialized`で開始不可。genesisは`previous_state=null`、`previous_receipt_digest=null`、
 `current_state=inventory_frozen`とinventory evidence+review/admissionを要求する。edge-discriminated evidenceは
 kind/count/producer/subject revision/digest/exit successをexact照合し、wrong edge/replay/skipを拒否する。
+
+edge registryはL5のgenesis、inventory→shadow、shadow→primary、primary→bun_removed、bun_removed→sealedの
+5 rowを識別unionとして実装し、別edgeのevidence型を受理しない。

@@ -77,11 +77,17 @@ power-loss durable activationはResource Kernel bundle側trust floorへ委譲す
 4. invalid state、非隣接遷移、reverse、skip、別revision replay、digest欠落/不一致は書込み前にfail-closeする。
 5. state projectionはvalidated receipt chainをfoldして再構築し、receiptなしの直接更新を拒否する。
 
-edge evidenceはdiscriminated schema/tableとし、kind、count、producer、subject revision、digest、成功exitをexact照合する。
-genesisはinventory evidence+review/admission、inventory→shadowはF0a static custody+F0b sealed generation+F0c OS jobs、
-shadow→primaryはQ0 authoring/runtime no-fallback、primary→bun_removedはzero inventory+Pack acceptance+review、
-bun_removed→sealedはdebt repair+D0 admission+Issue #153 closed+aggregateを要求する。別edge用evidence、replay、
-skipはfail-closeする。
+edge evidenceは次の厳密registryでkind、count、producer、subject revision、digest、成功exitをexact照合する。
+
+| Edge | required kind / count | producer | exact条件 |
+|---|---|---|---|
+| genesis | inventory, review, admission / 各1 | inventory-freezer, reviewer, admission-gate | 同一subject、digest/evidence_set_digest一致、success |
+| inventory_frozen→node_shadow | f0a-static-custody, f0b-sealed-generation, f0c-os-jobs / 各1 | F0a, F0b, F0c | 同一subject、各digest一致、success |
+| node_shadow→node_primary | q0-authoring, q0-runtime-no-fallback / 各1 | Q0-authoring, Q0-runtime | 同一subject、各digest一致、success |
+| node_primary→bun_removed | zero-inventory, pack-acceptance, review / 各1 | ban-audit, Pack-gate, reviewer | 同一subject、各digest一致、success |
+| bun_removed→sealed | debt-repair, d0-admission, issue-153-closed, aggregate / 各1 | debt-gate, admission-gate, GitHub-evidence, aggregate-gate | 同一subject、各digest一致、success |
+
+別edge用evidence、count/producer/revision/digest/success不一致、replay、skipはfail-closeする。
 
 ## 4. Pair
 
