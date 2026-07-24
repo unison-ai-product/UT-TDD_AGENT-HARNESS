@@ -1717,6 +1717,8 @@ generated subject不一致、migration copy/count/digest/swap/index失敗、`q0.
 preimageに使うmutationも個別negativeにする。
 digest NULL/nonhex/prefix、empty chain ID、negative sequence、migration snapshot混在、自己review、
 forged author、omitted writer/session、authorship ref欠測/複数を個別negativeにする。
+authorship core preimage mutation、stale/cross candidate、base drift/range truncation、raw reviewer identity、
+IdentityDigest collision attempt、session self-review、genesis NULL→NULL/seq0維持/seq2/非NULL→NULLを個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→

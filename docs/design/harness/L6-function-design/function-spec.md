@@ -1457,6 +1457,9 @@ artifact digest preimageはmarker間single parsed JSONのRFC 8785 UTF-8 bytesだ
 payload JSONからgenerated columnで導出し、strict NOT NULL tableのtransactional rebuild migrationを要求する。
 ReviewBundleはattested CandidateAuthorshipReceipt outer digestをnested ref exact 1で参照し、provider由来の
 全writer identity/session/runtime setとreviewerをdisjoint検証する。自己申告author fieldを受理しない。
+IdentityDigestはcanonical identity objectのRFC 8785/UTF-8 ContentDigestとする。bundleへbase revisionを追加し、
+authorshipのsubject/artifact/base及びPR review base/merge-baseとexact一致させる。trusted work event ReceiptDigest
+集合がbase..subject全product path/commitをcoverし、そのsorted arrayからprovenance ContentDigestを再導出する。
 projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field

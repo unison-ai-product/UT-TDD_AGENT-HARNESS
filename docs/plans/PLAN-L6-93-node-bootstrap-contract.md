@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:52ddac71ee94bc72d51c079b8383b81b
-  command_id: pr154-authorship-l6-20260724
-  admitted_at: 2026-07-24T15:40:00.000Z
-  source_digest: sha256:fa3bf09dfd7bed7eb8b119017dcfbd8359e8b175caf7789b4b3bbdb0dbeee7e3
-  decision_digest: sha256:2bbeda2b622e8daca32aa7334841e037b2cb8c3dbe227ecb1d8541aa341fb26b
-  receipt_digest: sha256:eec1457293b0029f9bc3e6bc266fce86a35c8775b51776aa8cfcf792d62d5ff3
+  receipt_id: certificate:5ea25a7a4b246339d5925c34161c12f4
+  command_id: pr154-identity-l6-20260724
+  admitted_at: 2026-07-24T15:50:00.000Z
+  source_digest: sha256:93accab9c02fe16ebc516b58b4c096fcea761b5dace36def2fa72c0427250cdf
+  decision_digest: sha256:98e21339c869b063055d05d0876281bd01737ef1028b678530b22edf90d763f0
+  receipt_digest: sha256:6e4b749d81b78c712d9fa99fa585451eba6cb5127c78c375d6e092aef0006edf
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 18
-    content_digest: sha256:fa3bf09dfd7bed7eb8b119017dcfbd8359e8b175caf7789b4b3bbdb0dbeee7e3
+    revision: 19
+    content_digest: sha256:93accab9c02fe16ebc516b58b4c096fcea761b5dace36def2fa72c0427250cdf
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 18
+      target_revision: 19
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 18
+    target_revision: 19
     phase: forward_merge
-  escape_reason: PR 154 authorship closure
+  escape_reason: PR 154 identity custody closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -162,6 +162,8 @@ marker間single parsed JSONのRFC 8785 UTF-8 bytesだけとし、DB subjectはsi
 strict NOT NULL tableへの移行はdecode/copy/count/digest/swap/indexを単一transactionで完遂する。
 ReviewBundleはprovider-attested CandidateAuthorshipReceiptをnested参照し、全writer setsとreviewerのdisjointを
 再導出する。D0 top-level 5 inputsは維持する。projectionはsingle read snapshotからstagingへ全投影後atomic publishする。
+IdentityDigest、bundle/authorship/PR base exact equality、trusted work eventによるbase..subject全product
+path/commit coverageを要求する。genesis headはNULL/seq0/version0からdigest/seq1へだけ遷移しNULLへ戻さない。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。
