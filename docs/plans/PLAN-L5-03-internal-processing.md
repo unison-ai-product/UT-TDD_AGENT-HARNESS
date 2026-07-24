@@ -36,27 +36,52 @@ dependencies:
     - docs/governance/document-system-map.md
 related_adr: docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
 v2_import: docs/migration/v2-import-ledger.md
-route_signal: forward
-route_mode: forward
+route_signal: design_revision
+route_mode: redesign
 status: confirmed
 sub_doc: internal-processing
+github_issue_id: 152
+supersedes:
+  - PLAN-L5-03-internal-processing
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:419d264c23af4810dfc9ba219b4567d1
-  command_id: pr154-formal-admission-l5-20260724
-  admitted_at: 2026-07-24T07:00:00.000Z
-  source_digest: sha256:7bad46547eb3ecf1422dcdaa851d7192c42f6a34b78ea14530ba31f800d97e48
-  decision_digest: sha256:89e6fa5f5b083bc446ea4b106b2b79c3ade41c83841132b11713279b2d9b9761
-  receipt_digest: sha256:a97b62a2b1f67829f5d66aa151cff3bd8b2d49c2fb5f0f084a1c452c19c43f3b
+  receipt_id: certificate:e6658e2f2ea752eaf6cf241a931debfa
+  command_id: pr154-route-metadata-l5-20260724
+  admitted_at: 2026-07-24T17:21:00.000Z
+  source_digest: sha256:c4b9759a7ea90bd9497497c4e684ed5e51de01cd7d11f7eb41e7c2795a65a26a
+  decision_digest: sha256:c34e410bf141fd5ff4113452e35eda3dcb07413341e789cef38278c51ec553e6
+  receipt_digest: sha256:87f9dcd0ec70febc22503d9e7a543146b23a0887dbb971542a1d80b1870413bb
   binding:
     path: docs/plans/PLAN-L5-03-internal-processing.md
     plan_id: PLAN-L5-03-internal-processing
     asset_id: plan:legacy:d0a0a54f059baf13e8b5ef5448f0c27ed671ff4377b96373ce0844b2dabf1793
-    revision: 2
-    content_digest: sha256:7bad46547eb3ecf1422dcdaa851d7192c42f6a34b78ea14530ba31f800d97e48
+    revision: 3
+    content_digest: sha256:c4b9759a7ea90bd9497497c4e684ed5e51de01cd7d11f7eb41e7c2795a65a26a
   route:
-    signal: forward
-    mode: forward
+    signal: design_revision
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L5-03-internal-processing
+    revision: 2
+    digest: sha256:7bad46547eb3ecf1422dcdaa851d7192c42f6a34b78ea14530ba31f800d97e48
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+      target_revision: 30
+  reentry:
+    target_plan_id: PLAN-L5-03-internal-processing
+    target_revision: 3
+    phase: forward_merge
+  escape_reason: PR 154 formal Forward metadata correction
+  supersedes:
+    - PLAN-L5-03-internal-processing
 ---
 
 # PLAN-L5-03 (design/internal-processing): L5 内部処理 / D-API

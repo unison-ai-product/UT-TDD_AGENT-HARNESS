@@ -1088,6 +1088,54 @@
         "revision": 30,
         "content_digest": "sha256:e09246c801c266de2784d6a900661e51a80d7281007be986691e983a535791e1"
       }
+    },
+    {
+      "sequence": 69,
+      "previous_record_digest": "sha256:10f7e322f869109dfbf8ed2565fba8062528cec2441cd1897c302e8f82ae8523",
+      "record_digest": "sha256:db96d24162016bee7196fbf57cf34dc370cce09c15d94dc05b16ed24136ba188",
+      "command_id": "pr154-route-metadata-l4-20260724",
+      "receipt_id": "certificate:c82407cb4d0de1c8db9a26638106b11f",
+      "receipt_digest": "sha256:217b8a8cd30e2c5c4c999feab193e10f40c9cb11359c0e73ab510d13fc640525",
+      "decision_digest": "sha256:735a9bb663445aa9c5888dbd9f5e61fd8fa6e7f9d6968ce6bcbca624240a37ad",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-02-architecture.md",
+        "plan_id": "PLAN-L4-02-architecture",
+        "asset_id": "plan:legacy:229babf84a28728be6088a0c783f5a3990f9a784ee7a791d3c30efa112a77fa5",
+        "revision": 3,
+        "content_digest": "sha256:75b828dc31458a685b1beb69a79237ac170c6210225a3bb14bcbcf493a258db0"
+      }
+    },
+    {
+      "sequence": 70,
+      "previous_record_digest": "sha256:db96d24162016bee7196fbf57cf34dc370cce09c15d94dc05b16ed24136ba188",
+      "record_digest": "sha256:8d688c906b511d7552bd0f4912f275df274f79eabcce127ca299520ba5623f5c",
+      "command_id": "pr154-route-metadata-l5-20260724",
+      "receipt_id": "certificate:e6658e2f2ea752eaf6cf241a931debfa",
+      "receipt_digest": "sha256:87f9dcd0ec70febc22503d9e7a543146b23a0887dbb971542a1d80b1870413bb",
+      "decision_digest": "sha256:c34e410bf141fd5ff4113452e35eda3dcb07413341e789cef38278c51ec553e6",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-03-internal-processing.md",
+        "plan_id": "PLAN-L5-03-internal-processing",
+        "asset_id": "plan:legacy:d0a0a54f059baf13e8b5ef5448f0c27ed671ff4377b96373ce0844b2dabf1793",
+        "revision": 3,
+        "content_digest": "sha256:c4b9759a7ea90bd9497497c4e684ed5e51de01cd7d11f7eb41e7c2795a65a26a"
+      }
+    },
+    {
+      "sequence": 71,
+      "previous_record_digest": "sha256:8d688c906b511d7552bd0f4912f275df274f79eabcce127ca299520ba5623f5c",
+      "record_digest": "sha256:5fc817ce04e2031ff2693e9f5dd37525e3cbdb60832b44beccc0010d4ce70daa",
+      "command_id": "pr154-route-metadata-l6-20260724",
+      "receipt_id": "certificate:8ce1ef41fd5d80e6762e9eeacbac4679",
+      "receipt_digest": "sha256:54a00e30c869b8856e5aab6ffd252e022814f2ff54a42d5a8fef88903bef30b7",
+      "decision_digest": "sha256:bae4bd9d664969546155aa9c6fb20cfbbd6ee0a6af3dc58d277d894ed995afa3",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-01-function-spec.md",
+        "plan_id": "PLAN-L6-01-function-spec",
+        "asset_id": "plan:legacy:f25f2045ea277f2984da3ab15a4259f0879fd3abd5b02e4b88cd3332f774c58c",
+        "revision": 3,
+        "content_digest": "sha256:5fe765b966ef316728549d73c69c99569c54c8aedfeebaa68dba83f1f32ed479"
+      }
     }
   ]
 }

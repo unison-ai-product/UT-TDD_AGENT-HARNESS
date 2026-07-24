@@ -37,27 +37,52 @@ review_evidence:
     tests_green_at: 2026-06-05
     verdict: approve
     scope: A-101 G4 L4 audit 4 軸 PASS (pmo-sonnet TL 代替、claude-only)
-route_signal: forward
-route_mode: forward
+route_signal: design_revision
+route_mode: redesign
 status: confirmed
 sub_doc: architecture
+github_issue_id: 152
+supersedes:
+  - PLAN-L4-02-architecture
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d0bb0d7ef730224ee4a0f4158cf278e7
-  command_id: pr154-formal-admission-l4-20260724
-  admitted_at: 2026-07-24T07:00:00.000Z
-  source_digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
-  decision_digest: sha256:6ac490f0b504c39830076de7dc410990f09298b36118738ceda2519b577e68e8
-  receipt_digest: sha256:9ee40e762bff1364181f5a836046f0ff4d7574f539cee4b4887a571c30035447
+  receipt_id: certificate:c82407cb4d0de1c8db9a26638106b11f
+  command_id: pr154-route-metadata-l4-20260724
+  admitted_at: 2026-07-24T17:20:00.000Z
+  source_digest: sha256:75b828dc31458a685b1beb69a79237ac170c6210225a3bb14bcbcf493a258db0
+  decision_digest: sha256:735a9bb663445aa9c5888dbd9f5e61fd8fa6e7f9d6968ce6bcbca624240a37ad
+  receipt_digest: sha256:217b8a8cd30e2c5c4c999feab193e10f40c9cb11359c0e73ab510d13fc640525
   binding:
     path: docs/plans/PLAN-L4-02-architecture.md
     plan_id: PLAN-L4-02-architecture
     asset_id: plan:legacy:229babf84a28728be6088a0c783f5a3990f9a784ee7a791d3c30efa112a77fa5
-    revision: 2
-    content_digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
+    revision: 3
+    content_digest: sha256:75b828dc31458a685b1beb69a79237ac170c6210225a3bb14bcbcf493a258db0
   route:
-    signal: forward
-    mode: forward
+    signal: design_revision
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L4-02-architecture
+    revision: 2
+    digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+      target_revision: 30
+  reentry:
+    target_plan_id: PLAN-L4-02-architecture
+    target_revision: 3
+    phase: forward_merge
+  escape_reason: PR 154 formal Forward metadata correction
+  supersedes:
+    - PLAN-L4-02-architecture
 ---
 
 # PLAN-L4-02 (design/architecture): L4 方式設計
