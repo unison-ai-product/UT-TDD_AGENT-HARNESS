@@ -209,3 +209,16 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 ## 2026-06-29 Task-Classify Route 追補
 
 `classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。
+
+## §9 Node control-plane cutover（Issue #152 / #153）
+
+TypeScriptのdomain/control planeはcompiled ESMとしてNode上で自己ホストする。移行状態は
+`inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向であり、
+各遷移をsubject revisionへ拘束したreceiptで証明する。Node parity前に旧Bun経路を削除せず、
+`node_primary`後にBun、bunx、tsx、TS直実行、shellへfallbackしない。
+
+build imageはexact Node/npm pin、review済みlock graph、external dependency closure、compiled digestを
+封印し、generation単位で原子的に公開する。Linux/WindowsのNode bootstrap legと既存Linux/Windows
+harness legを最終aggregateがAND集約し、skip、欠測、別HEAD、別generationをGreenにしない。
+Issue #153は継承main負債2件だけを限定する一時envelopeであり、candidate固有のreceipt、review、
+Node matrix、aggregate failureを免除しない。Resource Kernel / Rust companionは別D0-R sliceで扱う。

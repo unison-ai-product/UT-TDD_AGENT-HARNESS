@@ -1609,3 +1609,19 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 property testは任意の合法event列でreplay同一性・単調append・terminal後遷移禁止を確認する。
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
 cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする。
+
+## Node self-host bootstrap unit pair（Issue #152 D0-N）
+
+| ID | Red入力 | Green oracle |
+|---|---|---|
+| `U-NODEBOOT-001` | 正規Node/npm/lock/source/compiled generation | 全identity・digest・subject revision一致でsealed handleを返す |
+| `U-NODEBOOT-002` | receipt欠落、unknown schema、別revision replay | process生成0でtyped failure |
+| `U-NODEBOOT-003` | Node/npm/lock/dependency/source/compiledを一要素ずつmutation | 対応digest mismatchでfail-close |
+| `U-NODEBOOT-004` | `../`、absolute path、symlink escape | repository/generation外を拒否 |
+| `U-NODEBOOT-005` | publish各barrierでcrash、二reader競合 | 旧完全generationまたは新完全generationだけを観測 |
+| `U-NODEBOOT-006` | npm env identityだけを正規値へspoof | 実npm executable/version/digest不一致で拒否 |
+| `U-NODEBOOT-007` | Node欠落・破損・version drift | Bun/bunx/tsx/TS/shell spawn 0 |
+| `U-NODEBOOT-008` | Windows sealed invocation | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
+
+test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts` / `U-NODEBOOT-*`へ固定し、
+別名・別IDで実装済みを主張しない。Resource Kernel / Rust companionのunit oracleは本節に含めない。

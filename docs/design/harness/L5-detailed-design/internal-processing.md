@@ -388,3 +388,15 @@ C.7 の設計 + lint 契約まで。
 (adapter/config/registry の grey zone を作らない)。他 layer 設計 author への周知 = coding-rules.md へ
 C.7 相互参照を追加 (Important-3 対応)。結合テスト設計 = L8 (宣言×外部化なし→fail / opt-out→pass /
 config・registry 不在→既定 fail-close / 未知キー→fail-close)。
+
+## Node build generation内部処理（Issue #152 D0-N）
+
+1. candidate HEADを`subject_revision`として固定し、exact Node/npm executableを絶対pathで解決・実測する。
+2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。
+3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
+4. directoryを耐久化してからimmutable generation名へrenameし、最後にcurrent pointerだけをatomic swapする。
+5. readerはpointerを一度だけ解決し、同一generation内のCLI/receiptを照合する。途中faultでは旧完全generationか新完全generationだけを返す。
+
+envの`npm_config_user_agent`は証拠に使用せず、実npm executable/version/digestを測定する。receipt欠落、
+cross-revision replay、dependency/path/symlink drift、unknown field、partial generationはprocess生成前に
+fail-closeする。失敗時のBun/bunx/tsx/TS直実行/shell fallbackは存在しない。

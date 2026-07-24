@@ -168,3 +168,11 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 - **public npm publish しない** (社内コード、GitHub-pull で足りる)。
 - **engine は tool 非依存 package**: CLI / CI (Layer B-remote `.github/workflows`) / Codex / 将来ツールが同一 engine を GitHub から取得 (ルール同一性、concept §2.1.0)。Claude plugin は **任意の補助配信チャネル**で主軸でない (ADR-005 D3)。
 - consume 側 project の投影レイアウト (CLAUDE.md/.claude/AGENTS.md + `.ut-tdd/` state) の詳細は `ut-tdd setup` 仕様 (L4 external-if / L5 if-detail) で確定。
+
+## 10. Node control-plane build image（Issue #152 D0-N）
+
+- rootの`.node-version`、`package.json`、`package-lock.json`をNode/npm/dependency closureの正本とする。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
+- `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、current pointerの一回のatomic swapで公開する。CLIとreceiptを別々に最終pathへrenameしない。
+- receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
+- `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
+- Resource Kernel / Rust companionの配置は別設計sliceとし、D0-Nのbuild、review、F0開始条件へ混入させない。

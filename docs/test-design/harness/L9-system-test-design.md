@@ -165,3 +165,19 @@ G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順�
 
 L4↔L9の量閉じ条件は、通常Forward 1系統とForward外の全列挙経路が上表のどれかへexactly once対応し、
 GitHub可用性がLedgerの正本性を左右しないこと。検出器はこの設計列挙から生成・検査し、未設計経路を自動創作しない。
+
+## Node control-plane system oracle（Issue #152 D0-N）
+
+| ID | System oracle | Green条件 |
+|---|---|---|
+| `ST-NODE-CUTOVER-01` | Bun未導入clean host bootstrap | Windows/Linuxでverified Node imageから`status/doctor/targeted test`完走 |
+| `ST-NODE-CUTOVER-02` | detector self-host | NodeだけでBun ban detectorとgovernance detectorが完走しcoverage欠測0 |
+| `ST-NODE-CUTOVER-03` | runtime process zero | CLI/hook/doctor/test中のBun executable/descendant 0、observer欠測0 |
+| `ST-NODE-CUTOVER-04` | no fallback | Node image欠落・破損・version/revision drift時にBun/tsx/shell起動0 |
+| `ST-NODE-CUTOVER-05` | generation atomicity | crash/rollback/並行readerでpartial generation観測0 |
+| `ST-NODE-CUTOVER-06` | CI aggregate | Node Linux/Windows + harness Linux/Windowsが同一HEAD/run attemptで全Green |
+| `ST-NODE-CUTOVER-07` | cutover ordering | parity receipt無しの旧経路削除、node_primary後fallback、期限なしallowlistを拒否 |
+| `ST-NODE-CUTOVER-08` | final deletion | Bun lock/cache/bootstrap/compatibility codeとproduction allowlistが物理的に0 |
+
+Resource Kernel / Rust companionのsystem oracleは別D0-R/L9 pairが所有する。本節はその未着地を理由に
+Node build image、authoring qualification、main正常化をblockしない。
