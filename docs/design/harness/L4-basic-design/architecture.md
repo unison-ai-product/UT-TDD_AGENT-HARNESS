@@ -8,7 +8,7 @@ related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L9
 plan: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
 replacement_issue: 152
-superseded_plan: docs/plans/PLAN-L4-02-architecture.md
+predecessor_plan: docs/plans/PLAN-L4-02-architecture.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -68,6 +68,7 @@ current Bun経路を残さない。
 | **export** (`src/export/`) | canonical doc から派生 export dataset / render artifact projection を作る pure 変換層。CSV/Markdown は内蔵 renderer、XLSX/PPTX は renderer readiness finding に閉じる (PLAN-L7-35) | `parseCanonicalDocumentStructure()` / `buildDocumentExportDataset()` / `renderDocumentExport()` / `recordDocumentExportArtifact()` | schema (path normalization) |
 | **projection** (`src/projection/`) | DB非依存のprojection domain、application command、意味的read/store portを所有する。SQLやfilesystemをdomain/applicationへ漏らさず、具象SQLite adapterは`state-db`側で実装する | `ProjectionStore` / `PocEvaluationReadPort` / `ModelEvaluationReadPort` / `OperationalMetricsReadPort` / 各project command | applicationは`stable-id`、repository config adapterだけがnode:fs/path + yamlへ依存する。state-dbへ逆依存しない |
 | **state-db** (`src/state-db/`) | `.ut-tdd/harness.db` projection の SQLite adapter (bun:sqlite first / node:sqlite fallback、runtime 出し分け) + registry-driven migration (PRAGMA user_version) + idempotent upsert。projection 充填は span ② で配線 (PLAN-L7-44/45) | `openHarnessDb()` / `migrate()` / `upsertRow()` / `harnessDbStatus()` | schema (harness-db registry) / kernel alias resolver / fs |
+| **cutover-ledger** (`src/runtime/cutover-transition.ts`) | canonical cutover receipt/object/refを専用`.ut-tdd/ledger/cutover-ledger.db`へappendする。独自migration registry、`user_version`、online backup/restoreを所有し、`.ut-tdd/harness.db`のprojection writerはread-only投影だけを行う。`.ut-tdd/ledger/harness-ledger.db`はPLAN ledger専用。物理正本はL5 [physical-data.md](../L5-detailed-design/physical-data.md) §2.7.1 | `initializeCutoverChain()` / `appendCutoverTransition()` / `backupCutoverLedger()` / `restoreCutoverLedger()` | schema / Node SQLite / fs |
 | **search** (`src/search/`) | `.ut-tdd/harness.db` の `search_index` を読み、PLAN/artifact/finding/skill/model/session の参照検索を提供する read-only query layer (PLAN-L7-47) | `findReference()` / `upsertSearchReference()` | state-db |
 | **feedback** (`src/feedback/`) | finding / quality_signal / skill recommendation/invocation を集約し、replanning input として `feedback_events` と skill metrics を projection する (PLAN-L7-47) | `computeSkillMetrics()` / `emitFeedbackEvents()` | state-db |
 | **elicitation** (`src/elicitation/`) | 設計判断エリシテーション文脈 (PLAN-L7-428)。工程表 live state + skill decision_points + typed-spec カバレッジを 1 packet に結合して `## 設計判断依頼` 雛形を描画し、採択結果を `.ut-tdd/logs/design-decisions.jsonl` へ append-only 記録する (正本 = PLAN 設計判断節 / ADR、governance = `docs/governance/design-decision-elicitation.md`) | `selectElicitationContext()` / `renderElicitationContext()` / `appendDesignDecision()` | handover (schedule live state) / skill-engine / state-db / fs |
@@ -217,11 +218,29 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 `classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。
 
-## §9 Node control-plane cutover（Issue #152 / #153）
+## §9 Node制御面の切替（Issue #152 / #153）
 
 TypeScriptのdomain/control planeはcompiled ESMとしてNode上で自己ホストする。移行状態は
 `inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向であり、
-各遷移をsubject revisionへ拘束したreceiptで証明する。Node parity前に旧Bun経路を削除せず、
+各遷移をsubject revisionへ拘束したTypeScript-owned append-only `CutoverTransitionReceipt` chainで証明する。
+receiptの唯一のschemaは`schema_version`、`registry_id`、`transition_id`、`sequence`、`subject_revision`、
+`previous_state`、`current_state`、`evidence_set_digest`、`review_digest`、`admission_digest`、
+`previous_receipt_digest`、`receipt_digest`である。全edgeのfresh review/admission digestは非nullで、
+対応registry rowのevidence receipt `receipt_digest`とexact一致する。
+非隣接、skip、reverse、replay、chain不一致をfail-closeする。状態projectionはvalidated chainから再構築する。
+genesisはnull previous fieldsとinventory evidence+review/admissionを持ち、空chainは`uninitialized`で開始不可とする。
+F0a/F0b/F0c receiptは各producer commitをsubjectとし、node_shadow candidate HEADが全commitのdescendantである
+closureを検証する。transition receipt自体はcandidate HEADをsubjectにする。
+genesisはsequence 0/head null、通常appendはlatest+1とexpected head一致を要求し、exclusive lock内CASで
+receipt+evidenceをatomic appendする。fork、double genesis、CAS loser、partial appendを拒否する。
+slice admissionはD0→F0a→F0b→F0c→Q0のtyped一方向FSMとし、各candidate commitのmerge admissionが
+直前sliceの成功receiptを要求する。edit-start自己gateにはしない。
+review+admission済みD0 draft下で許可するのは順序内の非activation build/verifyとQ0 fixture/detector workだけであり、
+production activation、hook/runtime switch、Bun final deletion、cutoverはconfirmed L6+D0 admissionまで禁止する。
+zod SSoTは`src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`、runtimeは
+`src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、pair testは
+`tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ固定する。
+Node parity前に旧Bun経路を削除せず、
 `node_primary`後にBun、bunx、tsx、TS直実行、shellへfallbackしない。
 
 build imageはexact Node/npm pin、review済みlock graph、external dependency closure、compiled digestを
@@ -229,6 +248,14 @@ build imageはexact Node/npm pin、review済みlock graph、external dependency 
 harness legを最終aggregateがAND集約し、skip、欠測、別HEAD、別generationをGreenにしない。
 Issue #153は継承main負債2件だけを限定する一時envelopeであり、candidate固有のreceipt、review、
 Node matrix、aggregate failureを免除しない。Resource Kernel / Rust companionは別D0-R sliceで扱う。
+D0-N candidateのreview/admission欠落も免除対象外で、merge前修復を要求する。
+
+F0bのatomicityはprocess-crash境界で、`dist/node-publish.lock/`のglobal exclusive publish lease下のappend-only markerにより
+旧completeまたは新complete generationだけを選ぶことを意味する。power-loss durabilityとは区別し、
+Windows Node-only F0bでは最新markerの永続化完了も旧markerの存在も保証しない。power loss後に検証可能な
+complete markerが1件以上あれば最大sequenceを選び、0件ならfail-closeする。
+power-loss durable activationはResource Kernel bundle側trust floorへ委譲するが、D0-R未着地をF0の
+process-crash atomicity blockerにはしない。F0bではgeneration自動GCを禁止する。
 
 ## §10 Resource Kernel native custody（Issue #152 D0-R）
 

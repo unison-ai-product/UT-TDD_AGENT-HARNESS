@@ -264,6 +264,7 @@ calls.
   mojibake can become real file corruption if copied back into docs. Repository
   gates enforce UTF-8 no-BOM and mojibake fail-close through `readability`.
 - Match existing code structure, naming, and test placement.
+- 最小実装を優先する: 要件を満たす最短の解を選び、投機的な型・契約・層・機能の積み増し (over-engineering) をしない。object-oriented DDD はドメインを小さく凝集させ code 量を減らすための手段であって ceremony を増やすためではない。DDD が code を膨張させているなら設計を疑う。正本は `docs/governance/coding-rules.md` の「最小実装原則」。
 - Treat existing uncommitted changes and **commits made by the other runtime
   (Claude)** as legitimate work; do not revert/reset/checkout them without
   explicit instruction.

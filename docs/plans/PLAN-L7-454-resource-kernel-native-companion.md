@@ -69,7 +69,7 @@ DB/CAS再利用判断を複製しない。
 advertiseしないが、binary `main`がhandshakeだけを呼ぶ経路は空required capabilityを拒否できず、execution admissionの
 安全性を証明しない。これはRed/契約土台であり、`ProbeRequest | ExecuteRequest`分離とminimum capability強制を
 最初のTDD修正とする。`PLAN-L4-32`の
-`rgk_section_status: red`およびL9 §9のRed system oracleをGreenへ読み替えない。
+`status: draft`およびL9 §9のRed system oracleをGreenへ読み替えない。
 
 先行scaffoldから判明した物理・機能設計gapは`PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill`がR4で
 L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けてForwardへ再合流する。

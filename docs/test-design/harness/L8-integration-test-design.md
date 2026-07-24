@@ -313,15 +313,45 @@ L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証す
 
 | 候補ID | 結合条件 | Green oracle |
 |---|---|---|
-| `CAND-NODEBOOT-101` | clean checkout + exact Node/npm + `npm ci` | lock graphからcompiled ESM generationを再現 |
+| `CAND-NODEBOOT-101` | clean checkout + static exact Node/npm pin + `npm ci` | lock graphが再現され、compiled generationやruntime custodyを検証対象に含めない |
 | `CAND-NODEBOOT-102` | generated CLI + receipt loader | 同一subject revision/dependency closureだけを起動 |
-| `CAND-NODEBOOT-103` | Linux/Windows matrix | 両OSで同じreceipt schema・test IDを実行 |
+| `CAND-NODEBOOT-103` | Linux/Windows Node bootstrap job | 両OSで同じreceipt schema・test IDを実行しF0c evidenceを生成 |
 | `CAND-NODEBOOT-104` | 一方のbootstrap legがfailure/cancel/skip | 最終aggregateは必ずnon-success |
 | `CAND-NODEBOOT-105` | Node bootstrapと既存harness legが別HEAD/run attempt | evidence合成を拒否 |
 | `CAND-NODEBOOT-106` | Issue #153 envelope下のcandidate固有failure | envelopeでwaiveせずmergeをblock |
 
-F0-Aはbuild generationまで、F0-Bはworkflow配線とaggregateまでを所有する。lock/build/receiptの実装と
-CI YAMLを同じ原子PRへ再結合しない。
+F0aはtoolchain、F0bはsealed generation、F0cはworkflow配線とaggregateを所有する。
+toolchain、build/receipt、CI YAMLを同じ原子PRへ再結合しない。
+
+## Node cutover候補integration pair（Issue #152 D0-N）
+
+cutoverの競合・永続化・slice admissionはbuild-image用`CAND-NODEBOOT-101..106`へ混在させず、
+PLAN-L7-458 `CAND-CUTOVER-101..113`とexact pairにする。D0では候補であり、source/testとRed実測を
+owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ昇格する。
+
+| 候補ID | 結合条件 | Green oracle |
+|---|---|---|
+| `CAND-CUTOVER-101` | seed/genesis/next sequence mutation | seed null/seq0/ver0、first receipt seq0、CAS後head seq0/ver1、以後N+1だけを許可 |
+| `CAND-CUTOVER-102` | 同一expected previous receiptへ2 append | latest+1が1件、fork 0、loser retry/write 0 |
+| `CAND-CUTOVER-103` | evidence/receipt append各barrierでprocess crash | atomic transactionで両方存在又は両方0、partial chain 0 |
+| `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
+| `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
+| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
+| `CAND-CUTOVER-107` | payload mutation、session count/outer/edge、v1 ID/revision/window mismatch、wrong authority/key、forgery、provider binding、Candidate/path/head/WorkEvent mutation | Session exact10/self9+combined payload+outer二段+edge exact1、immutable v1/rev1、Candidate11/self10、WorkEvent12/self11、paths/head契約を要求 |
+| `CAND-CUTOVER-108` | NULL PK/check、DB subject spoof、migration rebuild failure、Receipt/Content prefix混同、q0 kind typo、source preimage曖昧、marker/field/digest/partial-index/edge/core mutation | strict generated subject DB、transactional rebuild、digest型exact、q0.runtime-no-fallback literal、single JSON preimage、partial UNIQUE、edge exact 1を要求 |
+| `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |
+| `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |
+| `CAND-CUTOVER-111` | schema migration各barrierで失敗注入 | DDL、data、`user_version`を単一transactionで全rollback |
+| `CAND-CUTOVER-112` | cutover DB runtimeより新しい未知schema又はdowngrade要求 | cutover DB open/migration 0、canonical bytes不変でfail-close。PLAN ledger/harness projection DBへ波及0 |
+| `CAND-CUTOVER-113` | projection rebuild中にcutover append | single read snapshotをstaging generationへ全投影しcomplete後atomic publish。appendは次世代、世代混在0、canonical DB不変 |
+
+`NODE-Q0-CASE-MANIFEST-v1-BEGIN`
+{"artifact_id":"NODE-Q0-CASE-MANIFEST-v1","expected_case_ids":["CAND-CUTOVER-101","CAND-CUTOVER-102","CAND-CUTOVER-103","CAND-CUTOVER-104","CAND-CUTOVER-105","CAND-CUTOVER-106","CAND-CUTOVER-107","CAND-CUTOVER-108","CAND-CUTOVER-109","CAND-CUTOVER-110","CAND-CUTOVER-111","CAND-CUTOVER-112","CAND-CUTOVER-113","CAND-NODEBOOT-101","CAND-NODEBOOT-102","CAND-NODEBOOT-103","CAND-NODEBOOT-104","CAND-NODEBOOT-105","CAND-NODEBOOT-106"],"schema_version":"node-q0-case-manifest.v1"}
+`NODE-Q0-CASE-MANIFEST-v1-END`
+
+zod schema `src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`からruntime
+`src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、test
+`tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ同一candidateをtraceする。
 
 ## Resource Kernel物理統合（PLAN-L5-25、2026-07-22）
 
@@ -355,7 +385,7 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
 | `IT-RGK-PHYS-016` | binaryへ空required、probe、token無しexecute、別attempt tokenを投入 | probe launcher 0、全不正executeでmanaged root 0、control process cleanup証拠あり |
 | `IT-RGK-PHYS-017` | authority handoffのhandle/cgroup bind前後でcompanion/Nodeをcrash | commit前resume/exec 0、commit後はauthorityがdeadlineまでcustodyを維持 |
-| `IT-RGK-PHYS-018` | authority単独、supervisor/service manager単独、両者同時crashとold epoch/nonce replay |単独crashは正規recovery、dual crashはkill/reap独立proofまたはfail-close。証拠欠測success 0 |
+| `IT-RGK-PHYS-018` | authority単独、supervisor/service manager単独、両者同時crashとold epoch/nonce replay | 単独crashは正規recovery、dual crashはkill/reap独立proofまたはfail-close。証拠欠測success 0 |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。

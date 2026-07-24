@@ -1626,9 +1626,113 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `CAND-NODEBOOT-007` | Node欠落・破損・version drift | Bun/bunx/tsx/TS/shell spawn 0 |
 | `CAND-NODEBOOT-008` | Windows sealed invocation | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
 | `CAND-NODEBOOT-009` | version文字列が同じ別npm CLIへ差替え | reviewed provenanceのexpected npm CLI digest不一致で拒否 |
-| `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename各barrierでcrash | 最高complete markerが指すdurableな旧または新generationだけを観測 |
-| `CAND-NODEBOOT-011` | Windows marker write/sync/close/unique rename各barrierとwriter競合 | append前の最高markerまたは新complete marker、partial activation 0 |
-| `CAND-NODEBOOT-012` | cleanup失敗、append rollback、live generation GC競合 | cleanup ownerがdebtを残し、旧generationへの新markerだけでrollback、live generation削除0 |
+| `CAND-NODEBOOT-010` | POSIX marker各barrierのprocess crash | parent sync可能時に実施し、旧または新completeだけを観測 |
+| `CAND-NODEBOOT-011` | Windows process crash / power lossを分離注入 | crashは旧/新complete、power loss後はcomplete 1件以上なら最大、0件ならfail-close |
+| `CAND-NODEBOOT-012` | 二writerを逆順完了させるbarrier | global lease winnerだけN+1、loser retry 0、distinct sequence逆順0 |
+| `CAND-NODEBOOT-013` | exact lockのowner欠落、PID終了、time経過後にrecovery/steal/clear/手動削除 | reader継続、publisher永久fail-close、F0回復API 0 |
+| `CAND-NODEBOOT-014` | generation delete/GC APIを実装へ注入 | F0 deletion surface 0、全immutable generation保持 |
+| `CAND-NODEBOOT-015` | cross-revisionを通常rollbackへ注入 | cross-revision API 0/fail-close、git revert新revision buildへroute |
+| `CAND-NODEBOOT-016` | Windows receiptへpower-loss durable=trueを注入 | claim拒否、process-crash atomicityだけを記録 |
+| `CAND-NODEBOOT-017` | candidate F0a commitにreview+admission済みD0 receiptなし | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-018` | candidate F0b commitにF0a custody receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-019` | candidate F0c commitにF0b sealed build receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-020` | candidate Q0 commitにF0c aggregate receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
+cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
+wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
+`tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
+正式oracleを宣言せず、各test実装とRed実測の同一commitで個別IDへ昇格する。review+admission済みD0 draft下の非activation
+F0a/F0b/F0c build/verifyとQ0 fixture/detector workはslice FSM順序内で許可し、production activation、
+hook/runtime switch、Bun final deletion、cutoverだけをL6 confirmed+D0 admissionまで禁止する。
+`CAND-CUTOVER-003/005`は`CUTOVER-EVIDENCE-REGISTRY-v1`を唯一のoracleとし、F0a/F0b/F0c receiptの
+各slice commit subjectをfixture化する。candidate HEADが全commitのdescendantなら受理し、stale/replay/
+non-ancestorなら拒否する。同一subject fixtureを要求しない。transition receiptのsubjectはcandidate HEADと
+exact一致し、producer receiptのcanonical set digestを封印する。
+transition receiptの期待schemaは`schema_version, registry_id, transition_id, sequence, subject_revision,
+previous_state, current_state, evidence_set_digest, review_digest, admission_digest,
+previous_receipt_digest, receipt_digest`の12 fieldだけである。全edgeのreview/admission top-level digestと対応rowの
+evidence receipt `receipt_digest`を同値検証し、別名fieldを拒否する。`CAND-CUTOVER-007`は
+registry row順の固定tuple、UTF-8 canonical JSON、
+decimal byte-length framing、SHA-256 lowercase hexについてWindows/POSIX相当入力の同値を確認し、
+tuple mutation、順序mutation、duplicateを拒否する。`CAND-CUTOVER-009`はD0設計mergeとproduction cutoverを
+別fixtureにする。前者はD0 review/admission欠落だけをmerge 0とし、PLAN-L6-93がdraftでもD0
+review/admissionが揃えばmerge eligibilityを阻害しない。後者はsealed edgeの`PLAN-RECOVERY-16` /
+`PLAN-L7-452`片方だけ、L6 confirmed欠落、fresh review bundle欠落、fresh CutoverAdmission欠落を
+個別fixture化し、production/cutover 0を確認する。
+`CAND-CUTOVER-003/005`はrevision ruleをdiscriminatorとしてproducer-ancestor/candidate-headのsubjectを
+入れ替えたfixture、CutoverAdmissionのartifact digest mutation、genesisのQ0 predecessor欠落を拒否する。
+全edgeでclaim-blind/spec-blind exact 2 lane PASSとartifact/revision一致を要求する。laneのprovider/model/
+execution mode/runtime familyをdigestとattestationへ封印する。hybridはprovider/runtime/session/identity/author分離、
+codex-only/claude-onlyは異model+session/identity/author分離を要求しruntime family一致を許す。
+standaloneはAI/subagentを拒否し、distinct human 2名、provider human/model none/runtime human、独立session/evidenceを
+positiveにする。人間1名、AI混入、同一identity/session/evidence及びIssue #153のlane減免を拒否する。
+SliceEvidenceReceipt自体のversion/fixed tuple/two-stage digest/nested attestation mutationに加え、
+outer lookupを`receipt_digest`へ固定し、
+review/admission kindのtyped `referenced_receipt_digest`、generic kindのpayload digestをdiscriminateする。
+pre-attestation 11-field tupleへkind別ref/payload object receipt、owner ID、既存attestation producer enumを封印し、
+self-reference、wrong owner→producer mapping、kind別null/non-null反転を拒否する。
+generic payloadはtyped `EvidencePayloadObject`をreceipt digestで取得し、bytes再hashと両payload digest一致を要求する。
+kind/producer owner/attestation producer/payload schemaをclosed registryへexact照合し、cross-kind/cross-owner replayを拒否する。
+decoded payloadはRFC 8785 canonical JSON→UTF-8→unpadded base64urlだけを許し、13 discriminatorのrequired
+field/type/domain/semantic predicateを検証する。arbitrary bytes、padding、schema spoof、cross-semantic replayを拒否する。
+outer/payload subject revisionはalgorithm prefix付きGitObjectIdでexact一致させ、SHA-1 40hexをpositive、
+prefix/length/algorithm混同とrevision replayをnegativeにする。payload object/decoded/envelope schema version、
+`payload_schema == schema_id`を検証する。F0c OS lane run差、Q0 expected/executed set差、aggregateの
+failure/cancelled/skippedをtyped fieldsから再導出して拒否する。
+`evidence_digest` / `object_digest` alias lookup、payload content digestによる取得を拒否する。CutoverAdmissionはvalidated Q0
+SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
+schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
+inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。
+SliceAdmission保存graphはpredecessor/required input refsとD0から既存ReviewBundleへのrefを必須とし、
+Q0→F0c→F0b→F0a→D0 closure欠落を拒否する。
+
+slice admission candidate `CAND-NODEBOOT-017..020`はD0→F0a→F0b→F0c→Q0をpairとし、各target sliceを
+直前receiptなし/失敗/別revisionでmerge admissionしてapproved 0を確認する。edit-start自己gateではなく、
+gate test/schema/kernelをproduct changeより先にTDDし、同じcandidate commitのacceptanceを検証する。
+positiveはL5 registry順の全inputでdigestとapproved receiptを再現する。D0は2 lane ReviewBundle、PLAN-L4-33/
+L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4だけを要求する。canonical
+tracked record全fieldとrecordDigest/attestation bindingを照合し、integrity-only、unsigned/self-hash、forged/untrusted、
+欠落、重複、wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
+predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
+`CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
+L6ConfirmationReceiptをpositiveとし、draft/unconfirmed/wrong-plan/stale-head/unsigned/forgedを個別negativeにする。
+AttestedTracked wrapperとL6Confirmationの全field順、record/receipt二段digest、nested attestation mutationを検証する。
+ReviewBundle coreのexact 8 fields/self除外7-field ordered preimage、各coreを包むexact 7-field
+`AttestedReceiptEnvelope`、ReviewBundle/lane/CutoverAdmission/actual admission execution modeのmixed/mismatchを拒否する。
+SliceAdmission coreも同じenvelopeで検証しraw core保存を拒否する。ReviewBundle→lane、SliceEvidence→bundle、
+D0→ReviewBundle、Q0 predecessorはouter envelope digestだけでlookupし、core digest/alias参照を拒否する。
+SliceAdmission core/outer producer owner差、CutoverAdmission 5 authorityのwrong
+EvidenceProducer又は`authority_id != attestation.authorityId`を各negative pairにする。
+edge別allowed authority ID/keyVersion外と、別trusted CI authorityによる署名replayもnegative pairにする。
+共通GitObjectIdを全subject/HEAD fieldへ適用しraw hash/algorithm mismatchを拒否する。tracked/L6/reviewの
+unknown schema versionを棚卸しnegativeにする。Q0 CaseManifest subject/set/executed mismatchとaggregate profile required laneの
+missing/extra/duplicate/set digest driftを個別negativeにする。
+CaseManifestのUTF-8 code-point順違反、RFC8785 digest drift、source artifact digest drift、core/outer owner不一致、
+non-ci mapping、同一subject異digest conflict、q0.authoring/runtime split manifest、typed ref missing/orphanを個別negativeにする。
+wrong artifact path/ID、marker 0/2組、間のJSON 0/2個、duplicate/unknown field、subset omission/extra/order drift、
+partial UNIQUE index conflict、updated 8-field core preimage mutationも個別negativeにする。
+`evidence_type` NULL/unknown/typed union mismatch、CRLF、marker backtick欠落、前後空白、marker逆順、
+JSON missing field、`edge_kind!='q0.case-manifest'`、`ordinal!=0`、edge 0/2件も個別negativeにする。
+NULL receipt/ref digest、ReceiptDigestへの`sha256:`付加、ContentDigestのprefix欠落、手入力subject spoof、
+generated subject不一致、migration copy/count/digest/swap/index失敗、`q0.runtime` typo、doc全体をartifact
+preimageに使うmutationも個別negativeにする。
+digest NULL/nonhex/prefix、empty chain ID、negative sequence、migration snapshot混在、自己review、
+forged author、omitted writer/session、authorship ref欠測/複数を個別negativeにする。
+authorship core preimage mutation、stale/cross candidate、base drift/range truncation、raw reviewer identity、
+IdentityDigest collision attempt、session self-review、genesis NULL→NULL/seq0維持/seq2/非NULL→NULLを個別negativeにする。
+path absolute/dot/dotdot/backslash/NUL/non-NFC/order/omission/digest mismatch、merge commit、session alias/provider
+spoof、work-event wrapper owner mismatch、head/receipt sequence driftを個別negativeにする。
+Candidate field/order/serialization、session receipt missing/orphan/owner、session envelope digest/identity alias、
+tracked path除外、head digest/MAX row mismatchを個別negativeにする。
+session core preimage、wrong provider/runtime/authority/key/algorithm、expired key、forgery、cross-provider replayを
+個別negativeにし、managed verifier Greenとouter EvidenceAttestation Greenを別々に要求する。
+wrong registry row/revision、issued_at期限外、wrong authority/key、forgery、provider binding、stable subject aliasを
+個別negativeにする。combined payload field mutation、session exact count、outer/edge欠測、v1 ID/revision/window
+mismatchを個別negativeにする。
+ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
+evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
+cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
+`tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
+`src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`へ固定する。
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust
