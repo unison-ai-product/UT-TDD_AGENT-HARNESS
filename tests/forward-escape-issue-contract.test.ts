@@ -6,7 +6,6 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   checkDriveModelAlignment,
@@ -581,33 +580,27 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const ready = join(repo, "ready");
     mkdirSync(ready);
     writeFileSync(gate, "wait", "utf8");
-    const stateDbUrl = pathToFileURL(join(process.cwd(), "src", "state-db", "index.ts")).href;
-    const journalUrl = pathToFileURL(
-      join(process.cwd(), "src", "execution", "sqlite-forward-escape-journal.ts"),
-    ).href;
-    const worker = join(repo, "worker.mjs");
-    writeFileSync(
-      worker,
-      `import { existsSync, writeFileSync } from "node:fs";\n` +
-        `const { openHarnessDb } = await import(${JSON.stringify(stateDbUrl)});\n` +
-        `const { SqliteForwardEscapeJournal } = await import(${JSON.stringify(journalUrl)});\n` +
-        `const db = openHarnessDb(${JSON.stringify(dbPath)}, { repoRoot: ${JSON.stringify(repo)} });\n` +
-        `try {\n` +
-        `  const journal = new SqliteForwardEscapeJournal(db);\n` +
-        `  writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready");\n` +
-        `  while (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2));\n` +
-        `  const certificate = journal.issue({ command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}" });\n` +
-        `  const receipt = journal.append({ type: "IssueProjectionQueued", command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}", repository: "owner/repo", body_digest: "${"b".repeat(64)}" });\n` +
-        `  console.log(JSON.stringify({ certificate, receipt }));\n` +
-        `} finally { db.close(); }\n`,
-      "utf8",
+    const worker = join(
+      process.cwd(),
+      "tests",
+      "workers",
+      "forward-escape-sqlite-worker.test.ts",
     );
+    const vitest = join(process.cwd(), "node_modules", "vitest", "vitest.mjs");
+    const nodeBinary = process.env.UT_TDD_NODE_BIN?.trim() || "node";
     const children = Array.from({ length: 2 }, () => {
-      // Vitest itselfはNodeで動き得る。実sourceのTypeScript/module解決をproduction runtimeと
-      // 同じBunへ固定し、process.execPath(Node)による偽のbootstrap failureを排除する。
-      const child = spawn("bun", [worker], {
+      // workerはNode binaryを明示し、親test runtimeがBunでもBunを再起動しない。
+      const child = spawn(nodeBinary, [vitest, "run", worker, "--reporter=dot"], {
         cwd: process.cwd(),
+        env: {
+          ...process.env,
+          UT_TDD_FORWARD_ESCAPE_DB: dbPath,
+          UT_TDD_FORWARD_ESCAPE_REPO: repo,
+          UT_TDD_FORWARD_ESCAPE_GATE: gate,
+          UT_TDD_FORWARD_ESCAPE_READY: ready,
+        },
         stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       });
       let stdout = "";
       let stderr = "";
@@ -633,6 +626,25 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         }),
       };
     });
+    const waitForExit = async (
+      observed: (typeof children)[number],
+      timeoutMs: number,
+    ): Promise<{ code: number | null; signal: NodeJS.Signals | null }> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          observed.exit,
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(
+              () => reject(new Error(`worker exit timeout after ${timeoutMs}ms`)),
+              timeoutMs,
+            );
+          }),
+        ]);
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+    };
     try {
       const deadline = Date.now() + 30_000;
       while (readdirSync(ready).length < children.length && Date.now() < deadline) {
@@ -659,7 +671,7 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       rmSync(gate);
       const outputs = await Promise.all(
         children.map(async (observed) => {
-          const result = await observed.exit;
+          const result = await waitForExit(observed, 30_000);
           const output = observed.output();
           if (result.code !== 0 || output.launchError) {
             throw new Error(
@@ -670,7 +682,11 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         }),
       );
       expect(outputs).toHaveLength(2);
-      expect(new Set(outputs).size).toBe(1);
+      const workerResults = outputs.map((output) =>
+        output.match(/UT_TDD_WORKER_RESULT=(\{.*\})/)?.[1],
+      );
+      expect(workerResults.every((result) => result !== undefined)).toBe(true);
+      expect(new Set(workerResults).size).toBe(1);
       const verifyDb = openForwardEscapeDb(dbPath, repo);
       try {
         expect(new SqliteForwardEscapeJournal(verifyDb).eventsFor("cmd-concurrent")).toHaveLength(
@@ -680,8 +696,24 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         verifyDb.close();
       }
     } finally {
-      for (const observed of children) observed.child.kill();
+      for (const observed of children) {
+        if (observed.child.exitCode === null && observed.child.signalCode === null) {
+          observed.child.kill();
+        }
+      }
+      const cleanup = await Promise.allSettled(
+        children.map((observed) => waitForExit(observed, 5_000)),
+      );
+      const cleanupFailures = cleanup.filter(
+        (result): result is PromiseRejectedResult => result.status === "rejected",
+      );
       if (existsSync(gate)) rmSync(gate);
+      if (cleanupFailures.length > 0) {
+        throw new AggregateError(
+          cleanupFailures.map(({ reason }) => reason),
+          "forward escape workers did not terminate",
+        );
+      }
       removeTestTree(repo);
     }
   });
