@@ -1,17 +1,16 @@
 ---
 plan_id: PLAN-L4-02-architecture
-title: "PLAN-L4-02 (design/architecture): L4 基本設計 — 方式設計 (arc42 §4 Solution Strategy + §5 Building Block + §9 ADR + TS module 構成 + hook/CI 配線)"
+title: "PLAN-L4-02 (design/architecture): L4 基本設計 — 方式設計 (arc42 §4 Solution
+  Strategy + §5 Building Block + §9 ADR + TS module 構成 + hook/CI 配線)"
 kind: design
 layer: L4
-sub_doc: architecture
 drive: fullstack
-status: confirmed
 created: 2026-05-29
 updated: 2026-05-29
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL — 方式設計 / モジュール境界 / ADR の技術レビュー (別 runtime)"
+    slot_label: TL — 方式設計 / モジュール境界 / ADR の技術レビュー (別 runtime)
 generates:
   - artifact_path: docs/design/harness/L4-basic-design/architecture.md
     artifact_type: design_doc
@@ -34,10 +33,31 @@ v2_import: docs/migration/v2-import-ledger.md
 review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-05"
-    tests_green_at: "2026-06-05"
+    reviewed_at: 2026-06-05
+    tests_green_at: 2026-06-05
     verdict: approve
-    scope: "A-101 G4 L4 audit 4 軸 PASS (pmo-sonnet TL 代替、claude-only)"
+    scope: A-101 G4 L4 audit 4 軸 PASS (pmo-sonnet TL 代替、claude-only)
+route_signal: forward
+route_mode: forward
+status: confirmed
+sub_doc: architecture
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:d0bb0d7ef730224ee4a0f4158cf278e7
+  command_id: pr154-formal-admission-l4-20260724
+  admitted_at: 2026-07-24T07:00:00.000Z
+  source_digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
+  decision_digest: sha256:6ac490f0b504c39830076de7dc410990f09298b36118738ceda2519b577e68e8
+  receipt_digest: sha256:9ee40e762bff1364181f5a836046f0ff4d7574f539cee4b4887a571c30035447
+  binding:
+    path: docs/plans/PLAN-L4-02-architecture.md
+    plan_id: PLAN-L4-02-architecture
+    asset_id: plan:legacy:229babf84a28728be6088a0c783f5a3990f9a784ee7a791d3c30efa112a77fa5
+    revision: 2
+    content_digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L4-02 (design/architecture): L4 方式設計

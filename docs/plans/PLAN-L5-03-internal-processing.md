@@ -1,24 +1,24 @@
 ---
 plan_id: PLAN-L5-03-internal-processing
-title: "PLAN-L5-03 (design/internal-processing): L5 詳細設計 — 内部処理 / D-API (処理ロジック + DbC pre/post/invariant docstring、edge 5-8)"
+title: "PLAN-L5-03 (design/internal-processing): L5 詳細設計 — 内部処理 / D-API (処理ロジック
+  + DbC pre/post/invariant docstring、edge 5-8)"
 kind: design
 layer: L5
-sub_doc: internal-processing
 drive: be
-status: confirmed
 review_evidence:
   - reviewer: codex-tl
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-08"
-    tests_green_at: "2026-06-08"
+    reviewed_at: 2026-06-08
+    tests_green_at: 2026-06-08
     verdict: pass
-    scope: "L5 internal-processing freeze. DbC, fail-close, and edge docstring contracts are paired to L8 IT-CONTRACT with GWT-level coverage."
+    scope: L5 internal-processing freeze. DbC, fail-close, and edge docstring
+      contracts are paired to L8 IT-CONTRACT with GWT-level coverage.
 created: 2026-05-29
 updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL — D-API 処理ロジック / DbC 契約のレビュー (別 runtime)"
+    slot_label: TL — D-API 処理ロジック / DbC 契約のレビュー (別 runtime)
 generates:
   - artifact_path: docs/design/harness/L5-detailed-design/internal-processing.md
     artifact_type: design_doc
@@ -36,6 +36,27 @@ dependencies:
     - docs/governance/document-system-map.md
 related_adr: docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
 v2_import: docs/migration/v2-import-ledger.md
+route_signal: forward
+route_mode: forward
+status: confirmed
+sub_doc: internal-processing
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:419d264c23af4810dfc9ba219b4567d1
+  command_id: pr154-formal-admission-l5-20260724
+  admitted_at: 2026-07-24T07:00:00.000Z
+  source_digest: sha256:7bad46547eb3ecf1422dcdaa851d7192c42f6a34b78ea14530ba31f800d97e48
+  decision_digest: sha256:89e6fa5f5b083bc446ea4b106b2b79c3ade41c83841132b11713279b2d9b9761
+  receipt_digest: sha256:a97b62a2b1f67829f5d66aa151cff3bd8b2d49c2fb5f0f084a1c452c19c43f3b
+  binding:
+    path: docs/plans/PLAN-L5-03-internal-processing.md
+    plan_id: PLAN-L5-03-internal-processing
+    asset_id: plan:legacy:d0a0a54f059baf13e8b5ef5448f0c27ed671ff4377b96373ce0844b2dabf1793
+    revision: 2
+    content_digest: sha256:7bad46547eb3ecf1422dcdaa851d7192c42f6a34b78ea14530ba31f800d97e48
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L5-03 (design/internal-processing): L5 内部処理 / D-API

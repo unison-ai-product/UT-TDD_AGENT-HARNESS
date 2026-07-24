@@ -3,15 +3,13 @@ plan_id: PLAN-L6-01-function-spec
 title: "PLAN-L6-01: L6 機能設計 — 関数 schema / signature + DbC + pseudocode + WBS"
 kind: design
 layer: L6
-sub_doc: function-spec
 drive: fullstack
-status: confirmed
 created: 2026-05-29
 updated: 2026-05-29
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL — 関数 signature + DbC + pseudocode のレビュー (別 runtime)"
+    slot_label: TL — 関数 signature + DbC + pseudocode のレビュー (別 runtime)
 generates:
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
@@ -34,10 +32,32 @@ review_evidence:
     review_kind: cross_agent
     worker_model: codex:gpt-5.4
     reviewer_model: claude:pmo-sonnet
-    tests_green_at: "2026-06-09T13:00:00+09:00"
-    reviewed_at: "2026-06-09T13:10:23+09:00"
+    tests_green_at: 2026-06-09T13:00:00+09:00
+    reviewed_at: 2026-06-09T13:10:23+09:00
     verdict: approve
-    scope: "G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR coverage and guardrail coverage reviewed"
+    scope: G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR
+      coverage and guardrail coverage reviewed
+route_signal: forward
+route_mode: forward
+status: confirmed
+sub_doc: function-spec
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:9bc92a7a80d232333175305d08b11326
+  command_id: pr154-formal-admission-l6-20260724
+  admitted_at: 2026-07-24T07:00:00.000Z
+  source_digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95
+  decision_digest: sha256:70a9aa7b8987ebf84c055d06c001c5089b2a9ddad01774906fe77eadc97da6fa
+  receipt_digest: sha256:6207cd86393e34e2618161dc1cd4cba21e88680473d69d1c24b78b7476e06d64
+  binding:
+    path: docs/plans/PLAN-L6-01-function-spec.md
+    plan_id: PLAN-L6-01-function-spec
+    asset_id: plan:legacy:f25f2045ea277f2984da3ab15a4259f0879fd3abd5b02e4b88cd3332f774c58c
+    revision: 2
+    content_digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95
+  route:
+    signal: forward
+    mode: forward
 ---
 
 # PLAN-L6-01: L6 機能設計 — 関数 schema / signature + DbC + pseudocode + WBS
