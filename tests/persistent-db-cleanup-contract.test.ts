@@ -266,11 +266,79 @@ function hasLiveCleanupCall(path: string, source: string): boolean {
   return found;
 }
 
-function delegatedCleanupOwner(source: string): string | null {
-  return (
-    source.match(/^\s*\/\/\s*ut-tdd:cleanup-owner=(tests\/[a-z0-9./-]+\.test\.ts)\s*$/m)?.[1] ??
-    null
+function delegatedCleanupContract(source: string): { ownerPath: string; rootEnv: string } | null {
+  const match = source.match(
+    /^\s*\/\/\s*ut-tdd:cleanup-owner=(tests\/[a-z0-9./-]+\.test\.ts);root-env=([A-Z][A-Z0-9_]*)\s*$/m,
   );
+  return match ? { ownerPath: match[1], rootEnv: match[2] } : null;
+}
+
+function hasDelegatedCleanupBinding(
+  path: string,
+  source: string,
+  workerPath: string,
+  rootEnv: string,
+): boolean {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const workerName = workerPath.split("/").at(-1);
+  if (!workerName) return false;
+  const workerVariables = new Set<string>();
+  const cleanupRoots = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isCallExpression(node.initializer) &&
+      node.initializer.arguments.some(
+        (argument) => ts.isStringLiteralLike(argument) && argument.text === workerName,
+      )
+    )
+      workerVariables.add(node.name.text);
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "spawn" &&
+      ts.isArrayLiteralExpression(node.arguments[1])
+    ) {
+      const launchesWorker = node.arguments[1].elements.some(
+        (element) => ts.isIdentifier(element) && workerVariables.has(element.text),
+      );
+      const options = node.arguments[2];
+      if (launchesWorker && options && ts.isObjectLiteralExpression(options)) {
+        const envProperty = options.properties.find(
+          (property): property is ts.PropertyAssignment =>
+            ts.isPropertyAssignment(property) &&
+            property.name.getText(file) === "env" &&
+            ts.isObjectLiteralExpression(property.initializer),
+        );
+        if (envProperty && ts.isObjectLiteralExpression(envProperty.initializer)) {
+          const rootProperty = envProperty.initializer.properties.find(
+            (property): property is ts.PropertyAssignment =>
+              ts.isPropertyAssignment(property) && property.name.getText(file) === rootEnv,
+          );
+          if (rootProperty && ts.isIdentifier(rootProperty.initializer))
+            cleanupRoots.add(rootProperty.initializer.text);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  let bound = false;
+  const findCleanup = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "removeTestTree" &&
+      ts.isIdentifier(node.arguments[0]) &&
+      cleanupRoots.has(node.arguments[0].text)
+    )
+      bound = true;
+    ts.forEachChild(node, findCleanup);
+  };
+  findCleanup(file);
+  return bound;
 }
 
 describe("persistent harness DB cleanup contract", () => {
@@ -345,14 +413,40 @@ describe("persistent harness DB cleanup contract", () => {
 
   it("U-TESTHYGIENE-034: worker DB ownership requires an explicit parent cleanup contract", () => {
     expect(
-      delegatedCleanupOwner(
-        "// ut-tdd:cleanup-owner=tests/forward-escape-issue-contract.test.ts\nopenHarnessDb(path);",
+      delegatedCleanupContract(
+        "// ut-tdd:cleanup-owner=tests/forward-escape-issue-contract.test.ts;root-env=UT_TDD_REPO\nopenHarnessDb(path);",
       ),
-    ).toBe("tests/forward-escape-issue-contract.test.ts");
-    expect(delegatedCleanupOwner("openHarnessDb(path);")).toBeNull();
+    ).toEqual({
+      ownerPath: "tests/forward-escape-issue-contract.test.ts",
+      rootEnv: "UT_TDD_REPO",
+    });
+    expect(delegatedCleanupContract("openHarnessDb(path);")).toBeNull();
     expect(
-      delegatedCleanupOwner("// ut-tdd:cleanup-owner=../outside.test.ts\nopenHarnessDb(path);"),
+      delegatedCleanupContract(
+        "// ut-tdd:cleanup-owner=../outside.test.ts;root-env=UT_TDD_REPO\nopenHarnessDb(path);",
+      ),
     ).toBeNull();
+    const owner =
+      "const worker = join('tests', 'db-worker.ts'); spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); removeTestTree(repo);";
+    expect(
+      hasDelegatedCleanupBinding("tests/owner.test.ts", owner, "tests/db-worker.ts", "UT_TDD_REPO"),
+    ).toBe(true);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        `${owner} // other-worker.ts`,
+        "tests/other-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner.replace("removeTestTree(repo)", "removeTestTree(otherRoot)"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
   });
 
   it("U-TESTHYGIENE-019: auto-discovers every persisted DB owner and requires retrying cleanup", () => {
@@ -365,10 +459,7 @@ describe("persistent harness DB cleanup contract", () => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const path = join(directory, entry.name);
         if (entry.isDirectory()) pending.push(path);
-        else if (
-          entry.isFile() &&
-          (entry.name.endsWith(".test.ts") || entry.name.endsWith("-worker.ts"))
-        )
+        else if (entry.isFile() && entry.name.endsWith(".ts"))
           files.push({
             path: relative(root, path).replaceAll("\\", "/"),
             source: readFileSync(path, "utf8"),
@@ -380,15 +471,20 @@ describe("persistent harness DB cleanup contract", () => {
 
     expect(owners.length).toBeGreaterThan(0);
     for (const owner of owners) {
-      const delegatedOwnerPath = delegatedCleanupOwner(owner.source);
-      const cleanupOwner = delegatedOwnerPath ? filesByPath.get(delegatedOwnerPath) : owner;
+      const delegated = delegatedCleanupContract(owner.source);
+      const cleanupOwner = delegated ? filesByPath.get(delegated.ownerPath) : owner;
       if (!cleanupOwner) {
-        throw new Error(`${owner.path}: missing cleanup owner ${delegatedOwnerPath}`);
+        throw new Error(`${owner.path}: missing cleanup owner ${delegated?.ownerPath}`);
       }
       expect(
-        delegatedOwnerPath === null ||
-          cleanupOwner.source.includes(owner.path.split("/").at(-1) ?? owner.path),
-        `${owner.path}: cleanup owner does not launch delegated worker`,
+        delegated === null ||
+          hasDelegatedCleanupBinding(
+            cleanupOwner.path,
+            cleanupOwner.source,
+            owner.path,
+            delegated.rootEnv,
+          ),
+        `${owner.path}: cleanup owner does not bind worker spawn root to cleanup root`,
       ).toBe(true);
       expect(hasLiveCleanupCall(cleanupOwner.path, cleanupOwner.source), owner.path).toBe(true);
       expect(usesRawRecursiveTreeRemoval(cleanupOwner.path, cleanupOwner.source), owner.path).toBe(

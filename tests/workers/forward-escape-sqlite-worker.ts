@@ -4,7 +4,7 @@ import { SqliteForwardEscapeJournal } from "../../src/execution/sqlite-forward-e
 import { openHarnessDb } from "../../src/state-db/index";
 import { migrate } from "../../src/state-db/migration";
 
-// ut-tdd:cleanup-owner=tests/forward-escape-issue-contract.test.ts
+// ut-tdd:cleanup-owner=tests/forward-escape-issue-contract.test.ts;root-env=UT_TDD_FORWARD_ESCAPE_REPO
 const dbPath = process.env.UT_TDD_FORWARD_ESCAPE_DB;
 const repoRoot = process.env.UT_TDD_FORWARD_ESCAPE_REPO;
 const gate = process.env.UT_TDD_FORWARD_ESCAPE_GATE;
