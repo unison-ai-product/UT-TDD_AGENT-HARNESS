@@ -125,6 +125,9 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
     const primaryKey = backtickValues(cells[1])[0] ?? "";
     const columns = backtickValues(cells[2]);
     if (!table) continue;
+    // §2.7.1の3DB ownership registryはSQLite table registryではない。
+    // canonical DBファイルpathをharness.db projection tableとして照合しない。
+    if (table.endsWith(".db") && (table.includes("/") || table.includes("\\"))) continue;
     requirements.push({ section, table, primaryKey, columns });
   }
   return { tables: requirements, indexes };

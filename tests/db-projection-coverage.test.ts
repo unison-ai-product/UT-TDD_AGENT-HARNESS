@@ -78,6 +78,26 @@ describe("db-projection-coverage detector", () => {
     expect(dbProjectionCoverageMessages(result).join("\n")).toContain("missing table");
   });
 
+  it("does not treat nested canonical-ledger file registries as harness projection tables", () => {
+    const requirements = extractDbProjectionRequirements(
+      [
+        "### §2.7 SQLite projection DB の定義 (`harness.db`)",
+        "",
+        "#### §2.7.1 canonical ledgerファイル正本registry",
+        "",
+        "| ファイル | physical ownership | rebuild / migration / backup |",
+        "|---|---|---|",
+        "| `.ut-tdd/harness.db` | rebuildable projection only | projection owner |",
+        "| `.ut-tdd/ledger/harness-ledger.db` | PLAN canonical ledger | PLAN owner |",
+        "| `.ut-tdd/ledger/cutover-ledger.db` | cutover canonical ledger | cutover owner |",
+        "",
+        "### §2.8 後続節",
+      ].join("\n"),
+    );
+
+    expect(requirements).toEqual([]);
+  });
+
   it("matches typed registry constraints against SQLite metadata", () => {
     const db = openHarnessDb(":memory:");
     try {
