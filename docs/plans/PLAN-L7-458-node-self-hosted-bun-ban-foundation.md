@@ -68,8 +68,10 @@ review_evidence: []
 本PLANはIssue #152のD0-N設計を正本とし、Issue #153の一時bootstrap envelopeを恒久的なwaiverへ転用しない。Resource Kernel / Rust companionの設計・実装は別sliceであり、本PLANの開始条件でもF0のblockerでもない。
 
 本PLANと直接上流L6-93は`status=draft`で同時authoring中のため、`parent`とL6側`blocks` edgeを保持しつつ
-`dependencies.requires=[]`とする。draft中は実装開始を禁止する。L6が`confirmed`となり、review/admission
-receiptが当該subject revisionへ一致するまでactivationは`node-activation-admission-not-ready`でfail-closeする。
+`dependencies.requires=[]`とする。Issue #153 envelopeでreview済みD0 subjectに対する非activation F0a/F0b
+build/verifyは許可する。production activation、hook switch、Bun deletion、cutoverは、L6が`confirmed`となり
+D0 review/admission receiptが当該subject revisionへ一致するまで
+`node-activation-admission-not-ready`でfail-closeする。
 
 ## 1. Program boundary
 

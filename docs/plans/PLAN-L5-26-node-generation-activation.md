@@ -69,11 +69,9 @@ power-loss durable activationはResource Kernel bundle側trust floorへ委譲す
 ## 3. Cutover transition processing
 
 1. 最新`CutoverTransitionReceipt`をdigest chain込みで検証し、projection値を入力正本にしない。
-2. `inventory_frozen→node_shadow`はinventory freeze evidence、`node_shadow→node_primary`はNode parityと
-   aggregate evidence、`node_primary→bun_removed`はfallback/process 0 evidence、
-   `bun_removed→sealed`はfinal deletionと独立review evidenceを要求する。
-3. 次receiptはprevious/current、subject revision、evidence/review digest、previous receipt digestを
-   canonical encodingしてchain digestを生成しappendする。
+2. edge別の必要evidenceは直後の厳密registryだけをSSoTとし、各transitionは対応rowを完全一致で満たす。
+3. 次receiptはprevious/current、subject revision、evidence/review/admission/evidence set digest、
+   previous receipt digestをcanonical encodingしてchain digestを生成しappendする。
 4. invalid state、非隣接遷移、reverse、skip、別revision replay、digest欠落/不一致は書込み前にfail-closeする。
 5. state projectionはvalidated receipt chainをfoldして再構築し、receiptなしの直接更新を拒否する。
 
