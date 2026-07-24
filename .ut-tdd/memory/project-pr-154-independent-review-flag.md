@@ -108,3 +108,13 @@ oracle-test-traceはGreenとなった。FLAG verdict自体は再reviewまで維�
 単発Node検証はsemantic marker 5件、plan-governance、oracle-test-traceをGreenとし、
 design-languageが日本語見出し/prose不足2件を検出した。該当見出しと入力説明を日本語化したが、
 single-run規律に従い再試行していない。
+
+## Cutover specification final FLAG
+
+genesis不在、edge evidenceの型不足、activation candidateとownership混線を修正した。
+null previous fieldsのgenesis、空chain=`uninitialized`、edge-discriminated evidence exact照合、
+`CAND-NODEBOOT-017`、`CAND-CUTOVER-001..008`をL6/L7/L9 pairへ固定し、F0/Q0/cutover/final deletionの
+ownerを分離した。独立再reviewまではFLAGを維持する。
+
+単発Node検証はsemantic marker、plan-governance、oracle traceがGreen。design-languageが既存段落の
+英語開始1行を検出したため日本語主語を追加した。single-run規律により再試行していない。

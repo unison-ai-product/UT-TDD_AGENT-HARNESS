@@ -93,7 +93,7 @@ receiptが当該subject revisionへ一致するまでactivationは`node-activati
 
 ## 4. TDD order
 
-1. unit `CAND-NODEBOOT-001..016`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をF0/Q0の同一commitへ追加し、Red実測を記録した場合だけ対応する`U-*` / `IT-*` / `ST-*`へ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
+1. unit `CAND-NODEBOOT-001..017`、integration `CAND-NODEBOOT-101..106`、system `CAND-NODEBOOT-201..208`、cutover unit `CAND-CUTOVER-001..008`を候補oracleとしてfreezeする。各候補は対応するtest codeと実装をowner revisionの同一commitへ追加し、Red実測を記録した場合だけ正式昇格する。D0文書だけでは一件も正式test IDを名乗らない。
 2. F0aはexact pin、clean `npm ci`、lock graph再現性だけをRed→Green化する。
 3. F0bはcompiled generation、receipt、executable custody、activation admissionをRed→Green化する。
 4. F0cはLinux/Windows jobとaggregateをRed→Green化する。
@@ -129,9 +129,20 @@ Bun scanner、debt manifest、ban audit成果物は後続revisionまで未生成
 | `CAND-NODEBOOT-014` | automatic GC、generation deletion API、cleanup経由deleteを注入する | F0 scanner/ASTで削除surface 0、全immutable generation保持 |
 | `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
+| `CAND-NODEBOOT-017` | L6 draft、admission欠落、review欠落でF0 commandを要求する | F0a/F0b command dispatch 0、`node-activation-admission-not-ready` |
 
-activation admission oracleは`CAND-NODEBOOT-002`に含める。L6がdraft、review receipt欠落、admission receiptの
-subject revision不一致の各caseでgeneration publishとprocess spawnを0にする。
+### 4.2 Cutover候補unit trace
+
+| 候補ID | Red入力 | Green oracle |
+|---|---|---|
+| `CAND-CUTOVER-001` | 空chain又は不正genesis | uninitialized、開始不可。null previous fieldsと正規evidenceだけでgenesis |
+| `CAND-CUTOVER-002` | valid chain reducer | chain headとprojection stateが一致 |
+| `CAND-CUTOVER-003` | 各edgeのrequired evidence | edge別kind/count/producer/revision/digest/exitをexact照合 |
+| `CAND-CUTOVER-004` | 別edge用又は不足evidence | append前にfail-close |
+| `CAND-CUTOVER-005` | receipt/evidence replay | subject revision又はchain head不一致で拒否 |
+| `CAND-CUTOVER-006` | 非隣接skip/reverse | transition 0 |
+| `CAND-CUTOVER-007` | receipt/chain digest mutation | projection前に拒否 |
+| `CAND-CUTOVER-008` | DB/UI state直接更新 | validated chain由来projectionだけを返す |
 
 予定実装トレースは`src/runtime/node-bootstrap.ts`、`scripts/build-node.mjs`、
 `src/state-db/stop-refresh.ts`、compiled Nodeを呼ぶhook設定、CLI wrapper、snapshot runnerへ接続する。
@@ -163,10 +174,12 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 
 | Slice | Candidate ownership |
 |---|---|
-| F0a toolchain | `CAND-NODEBOOT-101` |
+| F0a toolchain | `CAND-NODEBOOT-017`, `101` |
 | F0b sealed build | `CAND-NODEBOOT-001..016`, `102`, `205` |
 | F0c CI | `CAND-NODEBOOT-103..106`, `206` |
-| Q0 / later cutover | `CAND-NODEBOOT-201..204`, `207..208` |
+| Q0 | `CAND-NODEBOOT-201..204` |
+| cutover revision | `CAND-CUTOVER-001..008`, `CAND-NODEBOOT-207` |
+| final deletion | `CAND-NODEBOOT-208` |
 
 候補は一つのownerだけを持つ。F0a/F0b/F0cを再結合せず、各sliceのtest+implementation同一commitでのみ正式IDへ昇格する。
 

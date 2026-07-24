@@ -1379,7 +1379,7 @@ branch protectionのrequired contextも `harness-check` 一件へ固定し、実
 検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
 入力には`package-lock.json`とbuilder/source graphも含め、compiled ESMと`NodeBootstrapReceipt`を
 同一generationへ原子的に公開する。receiptは少なくとも
-`subject_revision`、Node/npm absolute executable path・version・digest、lock digest、
+receipt項目は`subject_revision`、Node/npm absolute executable path・version・digest、lock digest、
 external dependency closure digest、builder policy/digest、source graph digest、
 compiled entrypoint relative path/digest、toolchain provenance digest、generation IDを持つ。
 
@@ -1413,3 +1413,7 @@ review/admission receiptを受け、許可された隣接一方向遷移だけ�
 `CutoverTransitionReceipt`はprevious/current、subject revision、evidence/review/previous receipt/chain digestを
 持つ。precondition不成立、skip/reverse/replay、revision又はchain不一致はtyped errorでfail-closeし、
 `projectCutoverState`はvalidated chainだけをfoldしてcurrent stateを返す。
+
+空chainは`uninitialized`で開始不可。genesisは`previous_state=null`、`previous_receipt_digest=null`、
+`current_state=inventory_frozen`とinventory evidence+review/admissionを要求する。edge-discriminated evidenceは
+kind/count/producer/subject revision/digest/exit successをexact照合し、wrong edge/replay/skipを拒否する。

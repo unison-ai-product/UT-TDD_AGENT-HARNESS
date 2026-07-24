@@ -68,6 +68,10 @@ cutoverは`inventory_frozen → node_shadow → node_primary → bun_removed →
 evidence/review欠落、chain不一致はfail-closeする。DB/UIのcurrent stateはreceipt chainから再構築するprojectionであり、
 直接更新できない。
 
+genesis receiptは`previous_state=null`、`previous_receipt_digest=null`、`current_state=inventory_frozen`で、
+inventory evidenceとreview/admission receiptを要求する。空chainのprojectionは`uninitialized`であり開始不能、
+validated genesis digestだけがchain headになる。
+
 ## 3. PairとForward再合流
 
 L9の`CAND-NODEBOOT-201..208`とpair-freezeし、L5-26→L6-93→L7-458へ降下する。

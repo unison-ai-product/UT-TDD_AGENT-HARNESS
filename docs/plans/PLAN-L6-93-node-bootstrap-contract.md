@@ -74,3 +74,9 @@ review_digest, previous_receipt_digest, chain_digest }`をappendし、projection
 invalid/skip/reverse/replayは`cutover-transition-invalid`、revision不一致は`cutover-revision-mismatch`、
 review/admission不足は`cutover-admission-not-ready`、chain不一致は`cutover-chain-invalid`でfail-closeする。
 `projectCutoverState(receipts)`はvalidated chainだけから状態を導出し、DB current値を入力正本にしない。
+
+空chainは`uninitialized`を返しcommand開始を拒否する。genesisはnull previous fields、inventory evidence、
+review/admission、genesis digestを検証してchain headを作る。`CutoverEdgeEvidence`はedgeをdiscriminatorとし、
+edge別required evidenceのkind/count/producer/subject revision/digest/exit successをexact検証する。
+wrong edge evidence、replay、skipはtyped failureとなる。pair oracleはL7
+`CAND-CUTOVER-001..008`とL9 `CAND-NODEBOOT-207`である。

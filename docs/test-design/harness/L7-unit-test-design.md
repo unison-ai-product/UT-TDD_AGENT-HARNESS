@@ -1633,6 +1633,10 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `CAND-NODEBOOT-014` | generation delete/GC APIを実装へ注入 | F0 deletion surface 0、全immutable generation保持 |
 | `CAND-NODEBOOT-015` | cross-revisionを通常rollbackへ注入 | cross-revision API 0/fail-close、git revert新revision buildへroute |
 | `CAND-NODEBOOT-016` | Windows receiptへpower-loss durable=trueを注入 | claim拒否、process-crash atomicityだけを記録 |
+| `CAND-NODEBOOT-017` | L6 draft、admission/review欠落でF0a/F0b command要求 | command dispatch 0、activation admission fail-close |
+
+cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..008`を正本とし、genesis、reducer、edge guard、
+wrong evidence、replay、skip/reverse、digest mutation、projection直接更新を個別testへ固定する。
 
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust

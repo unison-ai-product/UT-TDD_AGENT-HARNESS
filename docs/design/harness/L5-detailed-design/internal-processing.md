@@ -416,3 +416,7 @@ Node parity aggregate、fallback/process 0、final deletion+独立reviewの順�
 previous/current state、subject revision、evidence/review digest、previous receipt digestを封印しchain digestを
 計算してappendする。invalid/skip/reverse/replay/digest不一致はappend前にfail-closeする。read modelはreceipt chainを
 foldして再構築し、DB/UIから状態を直接書き換えない。
+
+edge evidence tableはtransition discriminatorごとにrequired kind/count/producer/subject revision/digest/exit successを
+固定する。genesis、F0a+F0b+F0c、Q0 no-fallback、zero inventory+Pack+review、
+debt repair+D0 admission+Issue #153 closed+aggregateの順であり、wrong edge/replay/skipを拒否する。
