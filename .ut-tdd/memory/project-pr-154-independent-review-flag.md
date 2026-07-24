@@ -192,6 +192,16 @@ review/admission receiptを`receipt_digest`で参照し、generic payloadだけ�
 BootstrapEnvelopeReceiptへ直接参照する。canonical cutover ledgerは
 `.ut-tdd/ledger/cutover-ledger.db`へ分離し、PLAN ledger DBとrebuildable harness projection DBの
 物理責務を混在させない。
+
+## Claude共有メモリ指摘の受領と解消（exact HEAD 773b36c4）
+
+共有main HARNESSメモリのmedium 2件を受領した。`NODE-SLICE-INPUT-REGISTRY-v1`をL5へ固定し、
+D0のReviewBundle exact 1、PLAN-L4-33/L5-26/L6-93/L7-458のcanonical TrackedReceiptRecord exact 4、
+BootstrapEnvelope #153 exact 1と、F0a/F0b/F0c/Q0のpredecessor/owned evidenceを決定可能にした。
+
+`physical-data.md` §2.7.1へcanonical ledger file registryを追加し、harness projection、PLAN ledger、
+cutover ledgerのrebuild/delete/migration/backup ownershipを分離した。architecture/internal-processingと
+双方向参照し、projectionからcanonical DBへ書き戻す経路をfail-closeした。
 Issue #153の許容Redは継承2件だけで、D0 admissionはmerge前必須とした。独立再reviewまではFLAGを維持する。
 
 ## Exact HEAD 121afc17 final FLAG

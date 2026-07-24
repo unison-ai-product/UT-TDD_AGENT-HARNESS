@@ -208,6 +208,22 @@
         "revision": 4,
         "content_digest": "sha256:d15b5a8ccd90f020dd4d110fe616db74e32ca2d11a77345e45d3ad378fed2dde"
       }
+    },
+    {
+      "sequence": 14,
+      "previous_record_digest": "sha256:81e38f59d1f04bc1d8de6b8220c92c0d5cd3792a55bf4b6d71c06cea417e0872",
+      "record_digest": "sha256:3e1eb3c5b70ff6091925d9c167e545e334d3300dbc8a2ff4f7e7af57ad75c4f9",
+      "command_id": "pr154-claude-final-l7-458-v5-20260724",
+      "receipt_id": "certificate:be32303e49fbb7482fdc656eae1f6ac9",
+      "receipt_digest": "sha256:df02982422a682338c2deb343e98adf5c2be760e03a9999db6071200e38081cb",
+      "decision_digest": "sha256:f3f38121211594c19cf5b7928c8fe49aa8c1baa1557832d93764a44957f3af90",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 5,
+        "content_digest": "sha256:7ae8f9f8b0048611745987ad1d3b1f9aa47199982b4642d579c572a478fed02d"
+      }
     }
   ]
 }

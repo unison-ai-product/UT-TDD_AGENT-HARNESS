@@ -430,6 +430,25 @@ positive transitionは直前approved receipt、同一subject lineage、全requir
 negative transitionは欠落、rejected input、owner不一致、revision drift、skip/replayをtyped rejected receiptとして
 残し、次stateへ進めない。
 
+#### `NODE-SLICE-INPUT-REGISTRY-v1`
+
+`required_input_receipt_digests`は下表のrow順に固定し、同一row内は`plan_id`順とする。
+
+| slice | predecessor | required kind / count | producer | revision規則 |
+|---|---|---|---|---|
+| `d0` | `null` | `ReviewBundleReceipt` / 1（exact 2 lane） | `review-bundle-gate` | candidate HEAD |
+| `d0` | `null` | `TrackedReceiptRecord` / exact 4（PLAN-L4-33、L5-26、L6-93、L7-458各1） | `plan-admission-projection` | 各latest formal revisionかつcontent binding一致 |
+| `d0` | `null` | `BootstrapEnvelopeReceipt` / 1 | `issue-153-bootstrap-gate` | candidate HEAD |
+| `f0a` | approved `d0` / 1 | `f0a.static-custody` / 1 | `f0a-gate` | producer ancestor |
+| `f0b` | approved `f0a` / 1 | `f0b.sealed-generation` / 1 | `f0b-gate` | producer ancestor |
+| `f0c` | approved `f0b` / 1 | `f0c.os-jobs` / 1 | `f0c-gate` | producer ancestor |
+| `q0` | approved `f0c` / 1 | `q0.authoring` / 1、`q0.runtime-no-fallback` / 1 | `q0-authoring`、`q0-runtime` | candidate HEAD |
+
+`TrackedReceiptRecord`は既存tracked receipt projectionのcanonical
+`{ record_digest, plan_id, revision, content_digest, path, asset_id }` bindingを正本とする。
+D0 graphへ4 recordをtyped object/refとして格納し、欠落、重複、wrong plan、非latest revision、
+candidate artifactとのcontent/path binding driftをadmission前に拒否する。
+
 `CAND-NODEBOOT-017..020`は編集開始前の自己gateではない。各sliceのcandidate testとadmission
 schema/runtimeをTDD順で当該slice product changeより先に作り、同じcandidate commitへ含める。
 merge admissionがその完成commitに対してgateを実行し、approved receiptが無ければmergeを拒否する。
@@ -592,7 +611,7 @@ writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt
 CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | ReviewLaneReceipt | ReviewBundleReceipt |
-SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt`である。
+SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt | TrackedReceiptRecord`である。
 `BootstrapEnvelopeReceipt`は`{ schema_version, issue_id, episode_id, projection_digest,
 artifact_digest, subject_revision, captured_at, attestation, receipt_digest }`を持ち、
 `schema_version="bootstrap-envelope.v1"`、`issue_id=153`へ固定する。`receipt_digest`以外を固定順tuple+
@@ -604,7 +623,8 @@ content-addressed objectとして保存し、transition→evidence、bundle→2 
 Q0→F0c→F0b→F0a→D0 rootsを外部再照会なしで辿れる。reducerはroot transitionから全参照を
 digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、attestation不一致を拒否する。
 
-物理backendは専用`<repo>/.ut-tdd/ledger/cutover-ledger.db`のSQLiteだけとする。
+物理backendは専用`<repo>/.ut-tdd/ledger/cutover-ledger.db`のSQLiteだけとし、file ownership正本は
+[physical-data.md](physical-data.md) §2.7.1を参照する。
 head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
 receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
 evidence object tableは`cutover_evidence_objects(receipt_digest PRIMARY KEY, object_digest, evidence_type, payload_json, attestation_json, CHECK(object_digest=receipt_digest))`、

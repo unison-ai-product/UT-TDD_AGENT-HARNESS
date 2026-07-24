@@ -120,6 +120,20 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 `harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
+#### §2.7.1 canonical ledger file registry
+
+| file | physical ownership | rebuild / migration / backup |
+|---|---|---|
+| `.ut-tdd/harness.db` | rebuildable projection only | docs/stateとcanonical ledgerのread-only入力からrebuild可能。truncate/deleteはprojection ownerだけが実行し、canonical receiptを保持しない |
+| `.ut-tdd/ledger/harness-ledger.db` | PLAN asset/revision/admission canonical ledger | PLAN ledger migration registryだけがschemaを変更する。projection rebuild/deleteから隔離し、欠落・未知version・digest不整合はfail-close |
+| `.ut-tdd/ledger/cutover-ledger.db` | cutover head/transition/typed object/ref canonical ledger | cutover固有`user_version`・migration registry・online backup/restoreだけが変更する。unknown newer、downgrade、migration failureはcanonical bytes不変でfail-close |
+
+cutover tablesを`.ut-tdd/harness.db`又はPLAN ledgerへ作成してはならない。projection writerは
+`cutover-ledger.db`をread-only transactionで投影し、rebuild/truncate/delete/migrationを伝播しない。
+backup/restoreはcutover DB全体とhead/refs/object digestを同一snapshotとして扱い、projection backupで代替しない。
+本registryは[architecture.md](../L4-basic-design/architecture.md)の3 DB boundaryと
+[internal-processing.md](internal-processing.md)のcutover writer/CAS契約を物理正本として双方向に拘束する。
+
 | table | primary key | 主な列 | 入力 |
 |---|---|---|---|
 | `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `route_mode`, `status`, `parent`, `updated_at`, `decision_outcome`, `source_hash` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |

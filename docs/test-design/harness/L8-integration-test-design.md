@@ -336,7 +336,7 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-103` | evidence/receipt append各barrierでprocess crash | atomic transactionで両方存在又は両方0、partial chain 0 |
 | `CAND-CUTOVER-104` | reverse/rollback command | append 0、既存receipt_digest chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
-| `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 admission chain | 正規owner/subject/required inputだけapproved、skip/replay拒否 |
+| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 admission chain | D0 ReviewBundle 1+TrackedReceiptRecord exact 4+BootstrapEnvelope #153、各後続predecessor+owned evidenceをexact照合。missing/duplicate/wrong-plan/stale binding、kind/count/producer/revision rule drift、skip/replay拒否 |
 | `CAND-CUTOVER-107` | claim/spec片lane、mode別same provider/model/session/identity、author reviewer、unsigned/forged/unknown authority/key version、artifact/revision drift | hybridはprovider差、単一provider modeはmodel差を必須化し、session/identity/authorも分離。runtime family一致だけでは拒否しない |
 | `CAND-CUTOVER-108` | validated Q0 SliceAdmission→genesis→sealedへfresh review bundle+CutoverAdmission+kind-discriminated evidenceを`receipt_digest` keyed nested保存 | review/admission typed ref、generic payload digest、D0 ReviewBundle+BootstrapEnvelopeからQ0までchain-only再検証Green。未定義root/wrapper/alias拒否 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db` canonical書込と並行してSQLite online backup | backup snapshotのhead、全receipt refs、object digestが単一時点で整合 |

@@ -1673,6 +1673,10 @@ bootstrapのissue 153/full schema/digest/attestation mutationとQ0→F0c→F0b�
 slice admission candidate `CAND-NODEBOOT-017..020`はD0→F0a→F0b→F0c→Q0をpairとし、各target sliceを
 直前receiptなし/失敗/別revisionでmerge admissionしてapproved 0を確認する。edit-start自己gateではなく、
 gate test/schema/kernelをproduct changeより先にTDDし、同じcandidate commitのacceptanceを検証する。
+positiveはL5 registry順の全inputでdigestとapproved receiptを再現する。D0は2 lane ReviewBundle、PLAN-L4-33/
+L5-26/L6-93/L7-458のTrackedReceiptRecord exact 4、BootstrapEnvelope #153を要求し、欠落、重複、
+wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
+predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→
 `tests/cutover-transition.test.ts`、`admitNodeSlice`は`src/schema/node-slice-admission.ts`→
 `src/runtime/node-slice-admission.ts`→`tests/node-slice-admission.test.ts`へ固定する。

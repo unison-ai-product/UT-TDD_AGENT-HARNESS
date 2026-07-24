@@ -1466,6 +1466,9 @@ skip/replayはrejected receiptを残しmergeを拒否する。保存時は各sli
 既存ReviewBundleReceiptと正式BootstrapEnvelopeReceiptをtyped root refsとして保存する。bootstrap schemaは
 issue 153、episode/projection/artifact digest、subject revision、captured_at、EvidenceAttestation、
 canonical receipt digestを必須とする。Q0からD0 rootsまでchain-only closureが切れた場合は拒否する。
+required inputはL5 `NODE-SLICE-INPUT-REGISTRY-v1`順でdigest化する。D0はReviewBundle 1、canonical
+TrackedReceiptRecord exact 4、Issue #153 BootstrapEnvelope 1を要求し、wrong/missing/duplicate/stale/content
+binding driftを拒否する。F0a/F0b/F0c/Q0もregistryのpredecessor、kind/count/producer/revision ruleをexact照合する。
 
 cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
 `src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。
