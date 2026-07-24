@@ -1439,7 +1439,8 @@ Issue #153でも2 laneを維持する。
 chain entryだけでbundle/admission/evidenceを再検証可能にする。outer objectのlookup keyはtyped
 `receipt_digest`だけとし、payload `evidence_digest`又はaliasで取得しない。`SliceEvidenceReceipt`はkindで
 discriminateし、review/admission kindは各ReviewBundle/CutoverAdmission receipt digestへのtyped ref、
-generic kindだけはpayload digestを持つ。
+generic kindだけはpayload digestを持つ。owner IDと既存EvidenceProducer enumを分離し、ownerをpreimageへ、
+`human|po|codex|claude|ci`だけをverifier inputへ渡す。wrong mappingとreceipt digest自己参照を拒否する。
 append commandはlatest sequence+1とexpected previous digestを要求し、exclusive lock内CASでreceipt+evidenceを
 atomic appendする。double genesis、fork、CAS loser、crash partialをtyped failureにする。
 
@@ -1479,6 +1480,9 @@ wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c
 production cutover genesisは`L6ConfirmationReceipt` exact 1を要求する。PLAN-L6-93のexact plan/revision、
 status confirmed、content digest、candidate HEADとtrusted nested attestationをchain-onlyで再検証し、
 CutoverAdmissionの`l6_confirmation_receipt_digest` direct refと一致させる。
+L6 confirmationはplan/revision/status/content/head/tracked digest/owner/attestation producerをrecord digestへ、
+nested attestationをwrapper receipt digestへ固定順で封印する。ReviewBundleはbundle execution modeを持ち、
+両lane及びactual admission modeとexact一致させる。
 
 cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
 `src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。

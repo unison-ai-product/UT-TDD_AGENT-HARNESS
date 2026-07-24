@@ -448,7 +448,10 @@ negative transitionは欠落、rejected input、owner不一致、revision drift�
 `sequence, previousRecordDigest, recordDigest, commandId, receiptId, receiptDigest, decisionDigest,
 binding{path,planId,assetId,revision,contentDigest}`を正本とする。このhash chainの
 `issuerAuthenticity=not_verified`だけではD0 eligibilityを満たさない。`AttestedTrackedReceiptRecord`は
-canonical tracked record全体とその`recordDigest`を既存nested `EvidenceAttestation`
+`{schema_version,tracked_record,tracked_record_digest,producer_owner_id,attestation_producer,
+record_digest,attestation,receipt_digest}`のexact wrapperである。`tracked_record`はcanonical全fieldを保持し、
+`record_digest`はattestation前の先行5 field、`receipt_digest`はnested attestationを含む先行7 fieldを
+固定tuple/length-frame/SHA-256 lowerhexで封印する。canonical tracked record全体とそのdigestを既存nested `EvidenceAttestation`
 `{ schemaVersion:"evidence-attestation/v1", algorithm:"hmac-sha256", authorityId, keyVersion, signature }`
 へ束縛する正式wrapperである。producerとrecordDigestはattestation内fieldではなく、
 `EvidenceAttestationVerifierPort.verify({ producer, recordDigest }, attestation)`のinputとして渡す。
@@ -531,15 +534,17 @@ edge evidence registryはtransition discriminatorごとにrequired kind/count/pr
 
 全rowでEdge ID、kind ID、producer ID、count、revision rule、digest、successをexact照合する。receipt schemaは
 種別で分離する。`SliceEvidenceReceipt`は`kind_id`でdiscriminateし、共通field
-`{ schema_version, edge_id, kind_id, producer_id, subject_revision, success, receipt_digest }`に加え、
+`{ schema_version, edge_id, kind_id, producer_owner_id, attestation_producer, subject_revision,
+success, reference_kind, referenced_receipt_digest, payload_digest, receipt_digest }`を持つ。
 `review.bundle`は`referenced_receipt_digest=ReviewBundleReceipt.receipt_digest`、
 `admission.approved`は`referenced_receipt_digest=CutoverAdmissionReceipt.receipt_digest`を必須とする。
 その他generic payload kindだけが`payload_digest`を持つ。`schema_version`は
 `cutover-evidence.v1`とする。`subject_revision`はregistryのrevision規則でdiscriminateし、
 `producer-ancestor` rowではproducer commit、`candidate-head` rowではcandidate HEADをexact保持する。
-先行7 fieldを固定順JSON arrayへ
-射影し、UTF-8 canonical JSON、decimal byte-length framing、SHA-256 lowercase hexで
-`receipt_digest`を算出する。未知field、別version、duplicate、locale/改行/path separator差を拒否する。
+`receipt_digest`以外を
+`[schema_version,edge_id,kind_id,producer_owner_id,attestation_producer,subject_revision,success,
+reference_kind,referenced_receipt_digest|null,payload_digest|null]`の固定tupleへ射影し、UTF-8 canonical JSON、
+decimal byte-length framing、SHA-256 lowercase hexで`receipt_digest`を算出する。
 outer content-addressed objectの唯一のidentityとlookup keyは`receipt_digest`である。
 generic kindの`payload_digest`はpayload contentのdigestに限定し、object lookup、参照edge、deduplication keyへ流用しない。
 `object_digest` / `evidence_digest`を`receipt_digest`のaliasとして受理せず、nested payloadも各typed
@@ -578,7 +583,7 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
 未知PLAN IDは拒否する。
 
 `ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, author_identity,
-lanes, receipt_digest }`で、`schema_version="review-bundle.v1"`、lanesはexactly twoである。
+execution_mode, lanes, receipt_digest }`で、`schema_version="review-bundle.v1"`、lanesはexactly twoである。
 各`ReviewLaneReceipt`は`{ lane_id, verdict, artifact_digest, subject_revision, provider,
 reviewer_model, execution_mode, runtime_family, reviewer_identity, review_session_id, receipt_digest }`とし、lane IDは
 `claim-blind` / `spec-blind`を各1、verdictは両方`PASS`だけを許す。両laneのartifact/revisionはbundleと一致し、
@@ -594,6 +599,16 @@ bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以�
 `review.bundle` evidence receiptが参照し、
 transitionの`review_digest`はそのevidence receipt `receipt_digest`と一致する。片lane、PASS以外、
 重複lane、artifact/revision drift、mode別independence違反は拒否する。
+bundleと両laneの`execution_mode`はactual admission modeとexact一致し、mixed/stale modeを拒否する。
+
+| domain `producer_owner_id` | `attestation_producer` |
+|---|---|
+| `d0-design-owner` / `f0a-static-owner` / `f0b-generation-owner` / `f0c-os-owner` / `q0-runtime-owner` / automated gates | `ci` |
+| review lane owner | lane `provider`に対応する`human|codex|claude` |
+| PO approval owner | `po` |
+
+owner IDはrecord preimageへ封印し、verifierには既存enumの`attestation_producer`だけを渡す。
+unknown/wrong mappingを拒否し、producerを`ci`へ丸めても署名対象recordDigest内のowner bindingを維持する。
 `hybrid`ではprovider/runtime familyを分離する。`codex-only` / `claude-only`でprovider差を
 構成できない場合に限り、異なるmodelかつ独立sessionのintra-runtime 2 laneを許可する。同一model、
 同一session、author自身のlaneは全modeで禁止し、Issue #153でもclaim-blind/spec-blind exact 2 laneを減免しない。
@@ -623,8 +638,11 @@ CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一head
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | ReviewLaneReceipt | ReviewBundleReceipt |
 SliceAdmissionReceipt | CutoverAdmissionReceipt | BootstrapEnvelopeReceipt | AttestedTrackedReceiptRecord |
-L6ConfirmationReceipt`である。`L6ConfirmationReceipt`はPLAN-L6-93 exact plan/revision、`status=confirmed`、
-content digest、candidate HEAD、producer、recordDigest、nested EvidenceAttestation、receipt digestを封印する。
+L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
+`{schema_version,plan_id,plan_revision,status,content_digest,subject_head,tracked_record_digest,
+producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}`のexact schemaである。
+`record_digest`は先行9 field、`receipt_digest`はrecord digest+nested attestationを含む先行11 fieldを
+固定tuple/length-frame/SHA-256 lowerhexで封印する。
 verifier inputは`{producer,recordDigest}`とし、draft/unconfirmed/wrong plan/stale head/unsigned、
 schemaVersion/algorithm欠落、forged/untrustedを拒否する。
 `BootstrapEnvelopeReceipt`は`{ schema_version, issue_id, episode_id, projection_digest,

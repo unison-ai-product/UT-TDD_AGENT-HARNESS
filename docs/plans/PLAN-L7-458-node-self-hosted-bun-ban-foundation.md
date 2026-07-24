@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:0bd9ea6cc3a884bba827743b75e20e50
-  command_id: pr154-trust-confirm-l7-20260724
-  admitted_at: 2026-07-24T09:30:00.000Z
-  source_digest: sha256:22086f080730ef725fc0ecffe2b083d88dd9a0ca2a5555aecb2906c61764fb9c
-  decision_digest: sha256:1fc5c77769df08276a9fc24c68df4f14f1ac50b8f45f8b98c8ab01696b53e0fa
-  receipt_digest: sha256:b094b8593a70dca2d3d7eedf936e31b690bf2d03d14b5e25b85db5f2cf848a5f
+  receipt_id: certificate:62e991b40a13183be4aa649370159a78
+  command_id: pr154-preimage-l7-20260724
+  admitted_at: 2026-07-24T10:00:00.000Z
+  source_digest: sha256:3424d8b44faaa0a39f69a1a0993d473a8307ba24bf0bf366d234585cbe31b825
+  decision_digest: sha256:0aed2cae24588a7a0d080b13d9c5ea62c8bbdde7b107b090569026fa02ed5af7
+  receipt_digest: sha256:15b9dc327cad7ea94cb395f22d2babe611ff3c1ab7aea9a0f69eb221f23ad920
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 7
-    content_digest: sha256:22086f080730ef725fc0ecffe2b083d88dd9a0ca2a5555aecb2906c61764fb9c
+    revision: 8
+    content_digest: sha256:3424d8b44faaa0a39f69a1a0993d473a8307ba24bf0bf366d234585cbe31b825
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,13 +99,13 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 4
-    digest: sha256:e3dc0a0356fb2e78e860cc98e3139317be7845833dc69e060d86aaf7e955ca55
+    revision: 5
+    digest: sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: PR 154 final trust and L6 confirmation closure
+  escape_reason: PR 154 exact receipt preimage closure
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -302,6 +302,8 @@ schema/admission kernel/test artifact boundaryも本PLAN ownership表を正本�
 
 `SliceAdmissionReceipt.producer`はこの表だけを受理する。D0 genesisを含む各positive/negative transitionは
 target `slice_id`のproducerと一致しなければならず、owner代行又は曖昧な共有ownerを拒否する。
+実装ではdomain owner IDをrecord preimageへ残し、canonical mapping後の既存EvidenceProducer enumだけを
+`verify({producer,recordDigest},attestation)`へ渡す。ReviewBundle execution modeは両laneとactual admissionへ一致させる。
 
 `CAND-BUNBAN-*`はD0-Nでは定義もfreezeもしない。Node self-hostが動作した後、既存のBun禁止PLANを
 別revisionで更新して候補IDとoracleを定義する。それ以前に未定義IDのGreenまたは予約済みを主張しない。

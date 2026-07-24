@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:63b5eef65f0f93d53fcb52d990072254
-  command_id: pr154-trust-confirm-l6-20260724
-  admitted_at: 2026-07-24T09:30:00.000Z
-  source_digest: sha256:e3dc0a0356fb2e78e860cc98e3139317be7845833dc69e060d86aaf7e955ca55
-  decision_digest: sha256:a56fc2a32bdaa2b090035b394395faf7cadbcfe38ceab8f65ce00819c4364012
-  receipt_digest: sha256:0912fb40e122503b512cc6eb29197c3b2e030e9af52ebf1f658c5b0ac9008ce2
+  receipt_id: certificate:a7b672013fdb3bfc1f7ad7838163c2ef
+  command_id: pr154-preimage-l6-20260724
+  admitted_at: 2026-07-24T10:00:00.000Z
+  source_digest: sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8
+  decision_digest: sha256:1be9de7e0728817c779b76a41ec720b44f14cca48492d704b7e47f7f1b2e4fc8
+  receipt_digest: sha256:461b5a642bff84c92e313e384ac90eeeb1e3203e352d8733523c9f62926c7432
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 4
-    content_digest: sha256:e3dc0a0356fb2e78e860cc98e3139317be7845833dc69e060d86aaf7e955ca55
+    revision: 5
+    content_digest: sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8
   route:
     signal: feature_addition
     mode: add-feature
@@ -66,9 +66,9 @@ admission_receipt:
     digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: PR 154 final trust and L6 confirmation closure
+  escape_reason: PR 154 exact receipt preimage closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -131,7 +131,8 @@ registry row order、固定tuple、UTF-8 canonical JSON、decimal byte-length fr
 `evidence_set_digest`を要求し、duplicate、cross-OS drift、tuple mutationを拒否する。sealed edgeは
 `PLAN-RECOVERY-16`と`PLAN-L7-452`のtyped evidenceを両方要求し、片方だけでは遷移しない。
 `SliceEvidenceReceipt`自体もversion付き固定tupleを同じencodingで封印する。review bundleは
-claim-blind/spec-blind各1 PASS、lane/reviewer/session/runtime family一意、artifact/revision一致、author独立を要求する。
+claim-blind/spec-blind各1 PASSとartifact/revision一致を要求する。bundle/lane execution modeはactual admissionと
+一致させ、hybridはprovider/runtimeを分離、codex/claude-onlyは異model/session/identity、standaloneはhuman 2名を要求する。
 chain entryは全evidence receiptを保持しchain-onlyで再検証できる。writerはexclusive lock内CASで単一atomic
 appendし、CAS loser、fork、double genesis、crash partialを拒否する。
 slice admissionとは別の`CutoverAdmissionReceipt`を全edgeでfresh発行し、genesisはvalidated Q0、

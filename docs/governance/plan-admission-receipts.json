@@ -352,6 +352,38 @@
         "revision": 7,
         "content_digest": "sha256:22086f080730ef725fc0ecffe2b083d88dd9a0ca2a5555aecb2906c61764fb9c"
       }
+    },
+    {
+      "sequence": 23,
+      "previous_record_digest": "sha256:b8c078ff28bc790df0c344a6b2850ab26a90f7e573463d4f8de70846d59bec9d",
+      "record_digest": "sha256:9405aa566e53653c0639abe7f8bf2b5264d08a12cbda79b9cf55f9a2fe67a443",
+      "command_id": "pr154-preimage-l6-20260724",
+      "receipt_id": "certificate:a7b672013fdb3bfc1f7ad7838163c2ef",
+      "receipt_digest": "sha256:461b5a642bff84c92e313e384ac90eeeb1e3203e352d8733523c9f62926c7432",
+      "decision_digest": "sha256:1be9de7e0728817c779b76a41ec720b44f14cca48492d704b7e47f7f1b2e4fc8",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 5,
+        "content_digest": "sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8"
+      }
+    },
+    {
+      "sequence": 24,
+      "previous_record_digest": "sha256:9405aa566e53653c0639abe7f8bf2b5264d08a12cbda79b9cf55f9a2fe67a443",
+      "record_digest": "sha256:c53039518fc830b3be0a079ed63d8a7c0f9f2794034ea1b31e3966a146f71c3b",
+      "command_id": "pr154-preimage-l7-20260724",
+      "receipt_id": "certificate:62e991b40a13183be4aa649370159a78",
+      "receipt_digest": "sha256:15b9dc327cad7ea94cb395f22d2babe611ff3c1ab7aea9a0f69eb221f23ad920",
+      "decision_digest": "sha256:0aed2cae24588a7a0d080b13d9c5ea62c8bbdde7b107b090569026fa02ed5af7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 8,
+        "content_digest": "sha256:3424d8b44faaa0a39f69a1a0993d473a8307ba24bf0bf366d234585cbe31b825"
+      }
     }
   ]
 }

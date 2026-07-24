@@ -223,6 +223,13 @@ mode別規則だけを正本にした。PLAN-L6-93 confirmedをtrusted L6Confirm
 直接格納し、draft/wrong/stale/unsignedではgenesisを開始しない。L6 writer pathとL4/L5 V-pair rangeも
 専用cutover DB及び実test正本へ同期した。
 
+## Exact HEAD ec81bea9 receipt preimage FLAG
+
+domain producer ownerと既存EvidenceProducer enumを分離し、owner bindingを署名対象record digestへ保持した。
+SliceEvidence、AttestedTracked wrapper、L6Confirmationのexact field順と二段digestを固定し、
+self-reference/field omission/wrong mappingを拒否する。ReviewBundleへexecution modeを追加し、lane及びactual
+admission modeと一致させた。PLAN-L6-93の旧runtime-family一律条件もmode別正本へ同期した。
+
 ## Exact HEAD 121afc17 final FLAG
 
 freshnessがSliceAdmissionを誤参照し、CutoverAdmission artifact binding、revision-rule subject、
