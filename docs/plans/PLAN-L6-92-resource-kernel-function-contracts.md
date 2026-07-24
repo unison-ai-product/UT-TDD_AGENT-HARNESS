@@ -90,9 +90,13 @@ phaseに応じたdiscriminated unionでN/Aと欠測を区別する。
 |---|---|---|---|
 | `decodeFrame(bytes, limits)` | bounded byte sequence | exactly one strict requestまたは`protocol_failure`; side effect 0 | `U-RGK-WIRE-001..006` |
 | `encodeFrame(message, limits)` | schema-valid DTO | canonical bytes;同一valueは同一digest | `U-RGK-WIRE-007..009` |
-| `verifyBundle(manifest, files, trust)` | trusted key identityとtarget明示 | 全digest/signature/schema/target一致時だけverified handle | `U-RGK-BUNDLE-001..006` |
-| `TrustStorePort.load(authorityId)` | installer組込registry、trusted clock、durable floor | key binding・rotation・revocation・expiry・algorithm allowlist・minimum sequenceを返す。bundle入力からtrust rootを作らない | `U-RGK-TRUST-001..008` |
-| `authorizeBundle(manifest, trustState)` | verified signature、registry revision、monotonic floor | downgrade/revoked/expired/rollbackを拒否し、floor更新はactivation commitとatomic | `U-RGK-TRUST-009..014` |
+| `canonicalizeBundleManifest(payload)` | 必須fieldが型付きで全て存在 | 固定順・length-framed bytesとdigest。unknown/duplicate/欠落fieldを拒否 | `U-RGK-TRUST-015..016` |
+| `verifyBundle(manifest, files, trust)` | trusted key identityとtarget明示 | canonical payload全体の署名と全digest/schema/target一致時だけverified handle | `U-RGK-BUNDLE-001..006`, `U-RGK-TRUST-015..016` |
+| `TrustStorePort.loadRegistry(authorityId, registryRevision)` | installer組込registry | key binding・rotation・revocation・algorithm allowlistを返し、bundle入力からtrust rootを作らない | `U-RGK-TRUST-001..004`, `U-RGK-TRUST-006`, `U-RGK-TRUST-009` |
+| `TrustedClockPort.readEvidence()` | platform secure timeまたはregistry許可authorityのsigned evidence | authority/digest/issued/expiry/boot/monotonicを返す。ambient `Date.now()`禁止 | `U-RGK-TRUST-005`, `U-RGK-TRUST-017..020` |
+| `reduceClockAnchor(anchor, evidence)` | durable lastAccepted、連続boot/monotonicまたはsigned re-anchor | missing/corrupt/rollbackを拒否し、新anchorとclock evidence digestを返す | `U-RGK-TRUST-017..020` |
+| `authorizeBundle(manifest, registry, clockAnchor, activationHead)` | verified signature、registry revision、trusted clock evidence | downgrade/revoked/expired/prior sequence不一致/rollbackを拒否し、manifest/trust/clockを束縛したauthorization digestを返す | `U-RGK-TRUST-007`, `U-RGK-TRUST-010..013`, `U-RGK-TRUST-025..026` |
+| `BundleActivationLogPort.append(record)` | authorization digest検証済み、record.prior sequence=head.sequence | 一つのSQLite transaction recordだけをcommit。current/floorは同log投影、未commit intentは無視 | `U-RGK-TRUST-008`, `U-RGK-TRUST-014`, `U-RGK-TRUST-021..024` |
 | `negotiateCapabilities(required, probe)` | verified bundle probe | subsetでなく完全包含時だけselection; missingを保存 | `U-RGK-CAP-001..004` |
 | `recordProbe(control, probe)` | verified control identity、strict probe | journalへprobe digestをappendし`ProbeRecorded`を返す。workload side effect 0 | `U-RGK-CAP-005..006` |
 | `sealAdmission(spec, recordedProbe)` | required capability完全包含、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required禁止 | `U-RGK-CAP-007..009` |

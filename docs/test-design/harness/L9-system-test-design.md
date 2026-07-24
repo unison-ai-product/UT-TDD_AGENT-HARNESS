@@ -288,7 +288,8 @@ lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt
 | `probe_digest`, `probe_journal_position`, `admission_token_digest` | probe実行時必須。tokenはattempt/nonce/bundle/probe/deadline結合 | probe→durable append→admission barrierの順序証明 |
 | `authority_identity`, `authority_epoch`, `custody_nonce`, `handoff_commit`, `deadline_owner` | custody生成時必須。dual crash時もlast durable valueを保存 | atomic handoff、stale replay拒否、deadline継続の証明 |
 | `bundle_manifest_digest`, `core_digest`, `companion_digest`, `protocol_digest`, `target_triple`, `sbom_digest`, `signature_identity`, `rollback_from` | native companion利用時必須。rollback無しは理由付きN/A | AC-RGK-14の完全bundle identity、供給網検証、片側rollback禁止 |
-| `trust_registry_revision`, `authority_id`, `key_id`, `public_key_digest`, `algorithm`, `key_validity`, `revocation_epoch`, `bundle_sequence`, `minimum_sequence` | signed bundle admission時必須 | trust root provenance、key binding、rotation/revocation/expiry、downgrade、anti-rollback証明 |
+| `trust_registry_revision`, `authority_id`, `key_id`, `public_key_digest`, `algorithm`, `key_validity`, `revocation_epoch`, `bundle_sequence`, `prior_bundle_sequence`, `minimum_sequence`, `authorization_digest` | signed bundle admission時必須 | canonical署名payload、trust root provenance、key binding、rotation/revocation/expiry、downgrade、anti-rollback証明 |
+| `activation_record_id`, `activation_record_digest`, `clock_evidence_digest`, `clock_authority_id`, `clock_issued_at`, `clock_expires_at`, `clock_boot_id`, `clock_monotonic`, `clock_anchor_digest`, `reanchor_digest` | activation時必須。re-anchor無しは理由付きN/A | 単一activation log commit、trusted clock continuity、signed recoveryの証明 |
 | `d0n_cutover_receipt`, `native_bun_dependency_delta` | PR #154のsubject revision/receipt digestとnative差分のBun依存増減 | AC-RGK-15のprerequisite・局所不増証明 |
 | `spec_digest`, `policy_revision`, `requested_budget`, `applied_budget` | canonical specと単位付き上限 | 暗黙緩和・自己申告の検出 |
 | `journal_events`, `terminal_receipt_digest` | monotonic sequenceとevent digest、terminal封印回数 | lifecycle順序、exactly-once receipt、crash reconcile、flush証明 |
@@ -333,6 +334,11 @@ visible shell 0を主張しない。各runはphase timing、cache decision、pro
 ### §9.7 signed bundle trust / anti-rollback system oracle
 
 Windows/Linuxのclean runnerで、installer組込trust registryからだけauthorityを取得する。authority/key substitution、
-rotation overlap境界、revocation、expiry、clock fault、algorithm downgrade、sequence floor未満の正規署名bundleを
-一要素ずつ注入し、全caseでcontrol process 0かつcurrent bundle不変を要求する。activation/floor commitの全barrierで
-power-lossを注入し、旧bundle+旧floorまたは新bundle+新floor以外を観測した場合はRedとする。
+rotation overlap境界、revocation、expiry、algorithm downgrade、sequence floor未満の正規署名bundleに加え、signed manifestの
+sequence/authority/key/algorithm/registry revision/issued/expiryを一要素ずつ差し替え、全caseでcontrol process 0かつcurrent
+bundle不変を要求する。`Date.now()`等ambient clock、clock evidence/anchor欠測・破損、boot/monotonic/lastAccepted rollbackも
+同じくfail-closeする。復旧はinstaller registry許可authorityのsigned re-anchorだけをGreenとする。
+
+`BundleActivationLog`のtransaction全barrierでpower-lossを注入し、再起動後は最後のcommitted recordだけからcurrent bundleと
+minimum sequenceを投影する。未commit intent/temp rowは無視されること、bundle digest/sequence/prior sequence/authorization
+digest/registry revision/clock evidence digestの一部だけが進む状態を表現不能であること、corrupt tailをGreenにしないことを要求する。

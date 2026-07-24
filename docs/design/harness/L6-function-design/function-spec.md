@@ -1413,9 +1413,13 @@ temp/torn/invalid/reservation-only markerを無視する。rollbackも旧generat
 
 | メソッド | 事前条件 | 事後条件 / 不変条件 |
 |---|---|---|
-| `verifyBundle` | trust identityとtarget明示 | signature/core/companion/schema/SBOM/targetの全一致時だけverified handle |
-| `TrustStorePort.load` | installer組込authority registryとtrusted clock | authority-key binding、rotation chain、revocation epoch、expiry、algorithm allowlist、durable minimum sequenceを返し、bundle自己申告鍵をrootにしない |
-| `authorizeBundle` | signature verified manifest + trust state | downgrade・期限外・失効・sequence floor未満を拒否し、activationとanti-rollback floor更新をatomic化 |
+| `canonicalizeBundleManifest` | schema/bundle/sequence/prior sequence/authority/key/algorithm/registry revision/issued/expiry/component digestが全て型付き | 固定順length-framed bytesとdigestを返し、欠落・duplicate・unknown fieldを拒否 |
+| `verifyBundle` | trust identityとtarget明示 | canonical payload全体のsignatureとcore/companion/schema/SBOM/targetの全一致時だけverified handle |
+| `TrustStorePort.loadRegistry` | installer組込authority registry revision | authority-key binding、rotation chain、revocation epoch、algorithm allowlistを返し、bundle自己申告鍵をrootにしない |
+| `TrustedClockPort.readEvidence` | platform secure timeまたはregistry許可authorityのsigned time evidence | authority/digest/issued/expiry/boot/monotonicを返し、ambient `Date.now()`へfallbackしない |
+| `reduceClockAnchor` | durable lastAccepted anchor + evidence | missing/corrupt/rollbackを拒否。signed re-anchorだけがboot/monotonic continuityを再確立 |
+| `authorizeBundle` | signature verified manifest + registry + clock anchor + activation head | downgrade・期限外・失効・prior sequence不一致・floor未満を拒否し、manifest/trust/clockを束縛したauthorization digestを返す |
+| `BundleActivationLogPort.append` | authorization済record、prior sequence=head.sequence | bundle digest/sequence/prior sequence/authorization digest/registry revision/clock evidence digestを一transactionでappend。current/floorは同log投影、未commit intent無視 |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
 | `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |

@@ -350,8 +350,11 @@ bundle、Cargo/build/test経路へ新規Bun依存を追加しない局所不変�
 維持する。段階4/5の性能改善は段階2/3の安全統制を迂回してはならない。
 
 native companionの導入はtarget triple別の署名済platform bundleとして行う。各bundleはTS core revision、protocol schema
-digest、companion digest、SBOM、実機L9 evidenceをmanifestで固定する。rollbackは既知良好なbundle tag全体へ行い、coreまたは
-companionだけを差し替えない。旧direct-spawn経路へのrollbackは禁止し、必要capabilityを満たせないplatformは利用停止する。
+digest、companion digest、SBOM、実機L9 evidenceに加え、bundle/prior sequence、authority/key/algorithm、registry revision、
+issued/expiryをcanonical signed payloadへ固定する。rollbackは既知良好なbundle tag全体へ行い、coreまたはcompanionだけを
+差し替えない。activationとanti-rollback floorはTS-owned単一append-only log recordへcommitし、別store間の擬似atomicityを
+禁止する。期限判定はregistryに束縛した`TrustedClockPort`とdurable `ClockAnchor`を用いる。旧direct-spawn経路へのrollbackは禁止し、
+必要capabilityを満たせないplatformは利用停止する。
 
 ## 8. 受入条件（AC）
 
@@ -368,7 +371,7 @@ companionだけを差し替えない。旧direct-spawn経路へのrollbackは禁
 - **AC-RGK-11**: lifecycle eventがappend-onlyかつsequence完全で、各attemptのterminal receiptがexactly-onceに封印され、retry/recovery間で`execution_id`と`attempt_id`を混同しない。
 - **AC-RGK-12**: required capabilityとplatform matrixの不一致をmanaged workload生成前に拒否し、`control_process_created`と`managed_root_created`を混同せず、soft fallbackを成功として記録しない。
 - **AC-RGK-13**: DB canonical digestとCAS完全identityが順序・locale・EOL・file mode・symlink・toolchain/environment差を意図どおり区別し、identityの一部欠落時は再利用しない。
-- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をcontrol process起動前に拒否する。trust rootは製品authority registryから取得し、authority-key binding、rotation、revocation、expiry、algorithm allowlist、monotonic bundle sequenceを検証する。downgradeまたはanti-rollback floor未満は正規署名でも拒否する。
+- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をcontrol process起動前に拒否する。trust rootは製品authority registryから取得し、canonical manifestのsequence/authority/key/algorithm/registry revision/issued/expiry、authority-key binding、rotation、revocation、expiry、algorithm allowlistを検証する。current/floorは単一`BundleActivationLog` committed recordから投影し、downgrade、prior sequence不一致、anti-rollback floor未満、clock/anchor欠測・破損・rollbackを正規署名でも拒否する。clock recoveryは許可authorityのsigned re-anchorだけを受理する。
 - **AC-RGK-15**: PR #154 D0-Nのcutover gateをprerequisiteとして参照し、native companion/bundle/Cargo/build/test差分が新規Bun binary・API・lock・runtime dependencyを増加させない。
 
 ## 9. 完了条件と非完了条件

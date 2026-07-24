@@ -1715,13 +1715,25 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-TRUST-005` | not-before前、expiry後、clock欠測/巻戻し | fail-closeしactivation 0 |
 | `U-RGK-TRUST-006` | allowlist外algorithm、弱いalgorithmへdowngrade | fallbackせず拒否 |
 | `U-RGK-TRUST-007` | sequence floor未満の正規署名bundle | anti-rollback拒否 |
-| `U-RGK-TRUST-008` | activation後floor永続化失敗 | activation rollback、旧floor維持 |
+| `U-RGK-TRUST-008` | activation record insert/commit失敗 | committed record 0、current/floorとも旧head投影 |
 | `U-RGK-TRUST-009` | trust registryをbundle署名で更新 | signature domain不一致で拒否 |
 | `U-RGK-TRUST-010` | receipt replayでfloorを低下 | monotonic invariantで拒否 |
 | `U-RGK-TRUST-011` | verified signatureだがregistry revision不一致 | authorizeを拒否しactivation/floor delta 0 |
 | `U-RGK-TRUST-012` | allowlist algorithmから弱いalgorithmへ置換 | downgradeを拒否しfallback 0 |
 | `U-RGK-TRUST-013` | revoked/expired keyで新sequenceを署名 | sequenceが新しくても拒否 |
-| `U-RGK-TRUST-014` | activation commitとfloor updateの片側だけ成功 | atomicity violationとして旧状態へ収束し部分Green 0 |
+| `U-RGK-TRUST-014` | current/floorを別writeへ分割するmutation | 単一activation record契約違反でRed |
+| `U-RGK-TRUST-015` | signed payloadのbundle sequence/prior sequenceを各差替え | canonical digest/署名不一致で拒否 |
+| `U-RGK-TRUST-016` | authority/key/algorithm/registry revision/issued/expiryを各差替え | canonical digest/署名不一致で拒否 |
+| `U-RGK-TRUST-017` | `Date.now()`/filesystem timestamp/未署名NTPをclock入力にする | adapter契約違反、activation 0 |
+| `U-RGK-TRUST-018` | clock evidenceまたは永続anchorの欠落・破損・時刻巻戻し | fail-closeしcurrent不変 |
+| `U-RGK-TRUST-019` | boot identity変更またはmonotonic counter巻戻し | continuity不成立として拒否 |
+| `U-RGK-TRUST-020` | signed re-anchorと未署名re-anchorを投入 | registry許可authorityの正規署名だけ受理 |
+| `U-RGK-TRUST-021` | activation log transaction各barrierでcrash | 最後のcommitted recordだけをheadとして復旧 |
+| `U-RGK-TRUST-022` | intent/temp rowだけ残して再起動 | intentを無視・破棄しcurrent/floor不変 |
+| `U-RGK-TRUST-023` | record digestまたはauthorization digest破損 | corrupt tailをGreenにせず利用停止 |
+| `U-RGK-TRUST-024` | currentまたはfloorをlog外stateから読むmutation | 単一正本違反でRed |
+| `U-RGK-TRUST-025` | record prior sequenceとcommitted headが不一致 | append拒否、head不変 |
+| `U-RGK-TRUST-026` | authorization digest内のregistry/clock evidenceを差替え | digest不一致でappend拒否 |
 
 mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
 このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。

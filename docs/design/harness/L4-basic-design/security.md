@@ -217,6 +217,10 @@ trace) として `L9-system-test-design.md` §1.4 に追加し、§2 量閉じ�
 | rotation/revocation/expiry回避 | signed rotation statement、overlap window、revocation epoch、trusted clockで検証 |
 | algorithm downgrade | version付きallowlist外、unknown parameter、弱いalgorithmへのfallbackを拒否 |
 | 古い正規署名bundleのreplay | durable monotonic bundle sequence floor未満のactivation/rollbackを拒否 |
+| manifest sequence/authority/key/algorithm/registry revision/時刻の差替え | 必須fieldを含むcanonical payload全体のdigestへ署名し、一field mutationも拒否 |
+| activationとfloorの片側commit・crash split-brain | 単一append-only `BundleActivationLog` recordをSQLite transactionでcommitし、current/floorを同recordから投影 |
+| ambient clock spoof・boot rollback・anchor破損 | `TrustedClockPort`と永続`ClockAnchor`だけを受理し、missing/corrupt/rollbackをfail-close |
+| 不正なclock recovery | installer registry許可authorityのsigned re-anchor以外はanchorを変更しない |
 
 trust registry更新とbundle activationは別署名domainとし、bundle署名だけでtrust rootやsequence floorを
-更新できない。clock欠測、registry破損、revocation取得不能、floor durability不明は利用停止とする。
+更新できない。clock欠測、registry破損、revocation取得不能、activation log/anchor durability不明は利用停止とする。

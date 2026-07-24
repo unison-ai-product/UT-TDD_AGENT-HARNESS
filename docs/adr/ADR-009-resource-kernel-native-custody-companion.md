@@ -45,8 +45,12 @@ admission tokenと空でないrequired capabilityを必須とする。Node直spa
 ### D3. platform bundleをrelease artifactとして配布する
 
 engine releaseはTypeScript/Node control planeと、support対象tripleごとのnative companionを一つのversioned platform bundleとして扱う。
-bundle manifestはcore revision、protocol schema digest、companion digest、target triple、required OS capability、
-SBOM digest、署名identityを結ぶ。Pack/tag-pinはmanifestで完全なbundle revisionへpinし、実行時downloadや
+署名対象`BundleManifestSignedPayload`は`schema_version`、`bundle_digest`、`bundle_sequence`、
+`prior_bundle_sequence`、`authority_id`、`key_id`、`algorithm`、`registry_revision`、`issued_at`、`expires_at`、
+core revision、protocol schema digest、companion digest、target triple、required OS capability、SBOM digestを必須fieldとする。
+field名、順序、型、length framingを固定したcanonical encoding全体のdigestへ署名し、sequence、authority、key、
+algorithm、registry revision、issued/expiryを含む一fieldの差替えでも署名不一致として拒否する。署名identityを
+payload外の自己申告metadataで補完しない。Pack/tag-pinはmanifestで完全なbundle revisionへpinし、実行時downloadや
 未検証PATH探索を行わない。
 
 release gateは各binaryの再現可能build evidence、署名、SBOM、脆弱性/license scan、対象OS実機のL9 custody oracleを
@@ -57,12 +61,23 @@ trust rootはbundle同梱物やambient filesystemから取得せず、installer�
 `not_before`/`not_after`、revocation epoch、最小bundle sequenceを結ぶ。unknown/失効/期限外key、
 authority-key binding不一致、algorithm downgradeをfail-closeする。
 
+期限判定はambient `Date.now()`を直接使わず、`TrustedClockPort`が返すplatform secure timeまたはinstaller-configured
+authority registryに束縛されたsigned time evidenceだけを受理する。evidenceは`authority_id`、`evidence_digest`、
+`issued_at`、`expires_at`、boot identity、monotonic counterを含む。`ClockAnchor`はlast accepted evidence/time/counterを
+TS-owned durable stateへ保存し、missing、corrupt、wall-clock/boot-counter rollbackをfail-closeする。復旧はregistryが
+許可したauthorityによる明示signed re-anchorだけで行い、ambient clockへのfallbackやanchorの暗黙初期化を禁止する。
+
 ### D4. rollbackもfail-close capabilityとして扱う
 
 rollbackは旧coreだけ、または旧companionだけへの片側差し替えを禁止する。既知良好なbundle tagへmanifest単位で戻し、
 protocol互換、署名、SBOM、対象platformのGreen evidenceを再検証する。安全性を満たさないplatformは旧direct-spawnへ
 戻さず利用停止する。rollback revisionと理由はpolicy revisionおよびExecutionReceiptへ残す。
-TrustStoreのmonotonic floorより小さいbundle sequenceへのrollbackは署名が正しくても拒否する。key rotationは
+monotonic floorより小さいbundle sequenceへのrollbackは署名が正しくても拒否する。activationとfloorを別storeへ
+擬似atomicに書かない。TS-owned SQLiteの単一append-only `BundleActivationLog`へ、bundle digest、sequence、
+prior sequence、authorization digest、registry revision、clock evidence digestを一つのtransaction recordとしてcommitする。
+current bundleとfloorは最後のcommitted recordだけから投影し、crash recoveryは未commit intentを無視する。
+`authorization_digest`はmanifest digest、trust decision、registry revision、clock evidence digestをcanonicalに束縛する。
+key rotationは
 旧新keyの重複有効期間とauthority署名済みrotation statementを必須とし、revocation後の旧key復活、clock rollback、
 receipt replayによるsequence floor低下を認めない。
 

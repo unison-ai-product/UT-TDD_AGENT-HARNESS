@@ -1,12 +1,12 @@
 ---
 memory_id: memory:project:pr-156-claim-review-flag-remediation
 kind: project
-title: "PR #156 claim review FLAG 2件とD0-R是正"
+title: "PR #156 claim review FLAGとD0-R是正"
 tags: ["pr-156", "claim-review", "flag", "resource-kernel", "bundle-trust"]
-updated_at: 2026-07-24T12:52:00.000+09:00
+updated_at: 2026-07-24T15:40:00.000+09:00
 ---
 
-PR #156 claim reviewのFLAGは2件。
+PR #156 claim reviewの初回FLAGは2件。
 
 1. signed bundleが署名照合だけで、trust root取得元、authority-key binding、rotation/revocation/expiry、
    algorithm downgrade拒否、monotonic anti-rollbackを閉じていなかった。
@@ -20,3 +20,11 @@ Bun依存を増やさない局所不変条件だけを所有する。これは�
 第二レビューでは識別子整合3件をFLAG。L8 trust oracleの重複`015..018`を`019..022`へ再採番し、
 L5 freeze rangeを`001..022`へ更新する。L6 `authorizeBundle`が要求する`U-RGK-TRUST-011..014`を
 L7へ具体化し、PLAN-L7-454の存在しない`U-RGK-PROTO-*`参照を実在する`U-RGK-WIRE-*`へ統一する。
+
+第三レビューでは、署名payload、activation/floor durability、trusted clock recoveryの実装可能性をFLAG。
+`BundleManifestSignedPayload`はbundle/prior sequence、authority/key/algorithm、registry revision、issued/expiryを
+必須fieldとしてcanonical digestへ署名する。activationとfloorは別storeへ書かず、TS-owned SQLiteの単一append-only
+`BundleActivationLog` recordを正本にする。current/floorは同じcommitted recordから投影し、未commit intentは無視する。
+時計はambient `Date.now()`を禁止し、installer registryに束縛した`TrustedClockPort`、boot/monotonic continuity、
+永続`ClockAnchor`を用いる。欠測・破損・rollbackはfail-closeし、復旧は許可authorityのsigned re-anchorだけとする。
+これらをL4-L9と`U-RGK-TRUST-015..026`、`IT-RGK-PHYS-023..026`へ降下した。

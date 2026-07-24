@@ -139,13 +139,24 @@ native componentはjournalへ直接書かず、再接続可能なcustody identit
 platform bundleはtarget別Node runtime image、Node core、target別companion、protocol schema、manifest、SBOM、署名、対象OS evidenceを同一revisionで結ぶ。
 実行時download、PATH探索、片側差替えを禁止する。install時と各execution admission時にmanifest署名、core/companion/schema
 digest、target triple、probe capabilityを照合する。rollbackもmanifest単位で既知良好bundleへ行い、同じL8/L9 oracleを再通過する。
-trust rootはbundle外のinstaller組込authority registryから`TrustStorePort`で取得する。registry、revocation state、
-trusted clock、durable sequence floorを別物理storeとして扱い、bundleによる自己更新を禁止する。rotationは旧新keyの
-overlapとsigned statementを必要とし、activationとmonotonic floor更新を同一durability barrierでcommitする。
+trust rootはbundle外のinstaller組込authority registryから`TrustStorePort`で取得する。bundleによるregistry・revocation
+stateの自己更新は禁止する。`BundleManifestSignedPayload`はbundle/sequence/prior sequence/authority/key/algorithm/
+registry revision/issued/expiryと全component digestをcanonical encodingへ束縛し、一field mutationも署名検証で拒否する。
+
+activationとanti-rollback floorを別物理storeへ分けない。TS-owned SQLiteのappend-only
+`bundle_activation_log(record_id, bundle_digest, bundle_sequence, prior_bundle_sequence, authorization_digest,
+registry_revision, clock_evidence_digest, record_digest)`を正本とし、`BEGIN IMMEDIATE`から単一row insert/commitまでを一つの
+transactionとする。current bundleとminimum sequenceは同logの最後のvalid committed recordからだけ投影する。
+intent/temp row、commit前journal、途中生成fileは正本でなく、crash recoveryはそれらを破棄して直前committed recordへ戻る。
+
+`TrustedClockPort`はplatform secure timeまたはinstaller-configured authority registryに束縛されたsigned time evidenceを返す。
+`clock_anchor_log`はauthority/evidence digest/issued/expiry/boot identity/monotonic counter/last accepted timeをappend-onlyで
+永続化する。missing/corrupt/rollbackはactivation 0、復旧は許可authorityのsigned re-anchor recordだけを受理する。
+ambient `Date.now()`、filesystem timestamp、未署名NTPを期限判定へ使わない。rotationは旧新keyのoverlapとsigned statementを必要とする。
 
 ## 7. L8 pair-freeze条件
 
-`IT-RGK-PHYS-001..022`は、framing mutation、request correlation、probe/admission分離、control/workload process identity、double-spawn拒否、Windows attach barrier、
+`IT-RGK-PHYS-001..026`は、framing mutation、request correlation、probe/admission分離、control/workload process identity、double-spawn拒否、Windows attach barrier、
 Linux start-in-cgroup、client/custodian/broker crash、reconnect、empty/reap、bundle mutation、rollback、Bun不在を境界故障として
 固定する。mockだけでOS custody Greenを宣言せず、mock/contract integrationと実OS integrationのlaneを明示分離する。
 L8で正負oracle、fixture、観測点、control/workload別created countをfreezeするまで本PLANはconfirmedにしない。

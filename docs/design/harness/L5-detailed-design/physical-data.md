@@ -742,3 +742,18 @@ version 26以前からの`migrate(db)`は既存rowを削除せずregistry DDLで
 
 `issue_queue`は互換read modelに降格し、新規episodeの正本にしない。移行時は既存dry-run rowをorigin不明の
 episodeへ自動昇格せず、明示manifestがあるものだけimportし、残りは`legacy_unbound` findingとして保持する。
+
+## §12 Resource Kernel bundle trust永続化（Issue #152）
+
+bundle activationとanti-rollback floorは別table/storeの二相更新にしない。TS-owned SQLiteの
+`bundle_activation_log`を単一append-only正本とする。
+
+| table | 主な列 | 制約 / 不変条件 |
+|---|---|---|
+| `bundle_activation_log` | `record_id`, `bundle_digest`, `bundle_sequence`, `prior_bundle_sequence`, `authorization_digest`, `registry_revision`, `clock_evidence_digest`, `record_digest` | `bundle_sequence` UNIQUE、`prior_bundle_sequence`は直前committed head、UPDATE/DELETE禁止、全fieldを一つの`BEGIN IMMEDIATE` transactionでinsert |
+| `clock_anchor_log` | `anchor_id`, `authority_id`, `evidence_digest`, `issued_at`, `expires_at`, `boot_id`, `monotonic_counter`, `last_accepted_time`, `reanchor_digest`, `record_digest` | append-only、lastAccepted非減少、boot/monotonic continuity必須。continuityを外すのはregistry許可authorityのsigned re-anchorだけ |
+
+current bundleとminimum sequenceは`bundle_activation_log`の最後のvalid committed recordから同時に投影し、独立mutable
+current/floor rowを持たない。intent/temp row、commit前journal、途中生成fileは正本でなく、再起動時に無視または破棄する。
+tailのrecord/authorization/clock evidence digestが破損した場合は一つ前を黙ってGreenにせずactivationを利用停止し、監査findingを返す。
+`ClockAnchor`も欠落・破損・rollback時にambient `Date.now()`へfallbackしない。

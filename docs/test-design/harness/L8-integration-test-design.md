@@ -345,9 +345,13 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-013` | coreだけ/companionだけrollback後、manifest全体rollback | 片側は拒否、既知良好bundleも実OS oracle再通過後だけ利用 |
 | `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
 | `IT-RGK-PHYS-019` | bundle内key、unknown authority、key substitution | 外部trust registryとのbinding不一致でcontrol process 0 |
-| `IT-RGK-PHYS-020` | key rotation/revocation/expiry境界とclock fault | overlap内だけ受理し、失効・期限外・欠測はfail-close |
+| `IT-RGK-PHYS-020` | key rotation/revocation/expiry境界とtrusted clock evidence fault | overlap内だけ受理し、失効・期限外・欠測/破損/rollbackはfail-close |
 | `IT-RGK-PHYS-021` | algorithm downgradeと古い正規署名bundle | allowlist/floorで拒否しcurrent bundle不変 |
-| `IT-RGK-PHYS-022` | activation commitとfloor writeの各barrier crash | 旧bundle+旧floorまたは新bundle+新floorだけを観測 |
+| `IT-RGK-PHYS-022` | `BundleActivationLog` transaction各barrier crash | 未commit intentを無視し最後のcommitted recordからcurrent/floorを同時投影 |
+| `IT-RGK-PHYS-023` | signed manifestのsequence/authority/key/algorithm/registry/時刻を各一field変異 | canonical payload署名不一致、control process 0 |
+| `IT-RGK-PHYS-024` | activation record/authorization digest/clock evidence digestを各破損 | corrupt tailを利用せずfail-close、部分Green 0 |
+| `IT-RGK-PHYS-025` | secure time欠測、boot変更、monotonic/lastAccepted巻戻し | activation 0、current bundle不変 |
+| `IT-RGK-PHYS-026` | 正規signed re-anchorと未署名/unknown authority re-anchor | 前者だけcontinuity再確立、後者はfail-close |
 | `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
 | `IT-RGK-PHYS-016` | binaryへ空required、probe、token無しexecute、別attempt tokenを投入 | probe launcher 0、全不正executeでmanaged root 0、control process cleanup証拠あり |
 | `IT-RGK-PHYS-017` | authority handoffのhandle/cgroup bind前後でcompanion/Nodeをcrash | commit前resume/exec 0、commit後はauthorityがdeadlineまでcustodyを維持 |
