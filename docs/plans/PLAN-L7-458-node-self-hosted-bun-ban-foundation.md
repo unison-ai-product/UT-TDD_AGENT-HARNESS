@@ -11,7 +11,7 @@ created: 2026-07-22
 updated: 2026-07-23
 owner: PO / Codex
 github_issue_id: 152
-parent_design: docs/design/harness/L6-function-design/function-spec.md
+parent_design: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
@@ -46,11 +46,15 @@ generates:
   - artifact_path: tests/runtime-image-observer.test.ts
     artifact_type: test_code
 dependencies:
-  parent: docs/design/harness/L6-function-design/function-spec.md
-  requires: []
+  parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
+  requires:
+    - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
   blocks: []
   references:
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
+    - docs/plans/PLAN-L4-33-node-control-plane-redesign.md
+    - docs/plans/PLAN-L5-26-node-generation-activation.md
+    - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     - docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - package.json
@@ -80,7 +84,7 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 
 `ManifestScanner`、`ModuleSpecifierScanner`、`RuntimeGlobalScanner`、`ProcessArgvScanner`、`WorkflowHookScanner`、`PackScanner`、`CurrentDocScanner`、`RuntimeImageScanner`は短いpure objectとして`BanFinding`を返す。`BanInventory`がcanonical path、detector ID、evidence digestでsort/dedupeし、`DeltaGuard`と`CompliancePolicy`を別objectとして判定する。filesystem/process収集はportに隔離し、scannerへambient cwd/PATHを渡さない。
 
-`NodeBootstrap`はreview済みlock graphからcompiled ESM entrypointを生成・照合し、実際に起動したNode/npm executable identity、external dependency closure、core digest、package-lock digest、build policy、subject revisionを`NodeBootstrapReceipt`へ封印する。CLIとreceiptは同一generationを一回のatomic pointer swapで公開し、途中失敗や並行readerへpartial generationを見せない。Node失敗時にBun、tsx、bunx、TS直実行へfallbackしない。SQLite driverはport化し、transaction/WAL/type/busy/close semanticsを既存canonical corpusへ合わせる。
+`NodeBootstrap`はreview済みlock graphからcompiled ESM entrypointを生成・照合し、実際に起動したNode/npm executable identity、external dependency closure、core digest、package-lock digest、build policy、subject revisionを`NodeBootstrapReceipt`へ封印する。CLIとreceiptは同一immutable generationへ置き、append-only activation markerで公開する。readerはvalidated markerの最高complete sequenceだけを採用し、途中失敗や並行readerへpartial generationを見せない。Node失敗時にBun、tsx、bunx、TS直実行へfallbackしない。
 
 ## 4. TDD order
 
@@ -109,9 +113,9 @@ Bun ban detectorと、そのdetectorを実行するNode build/bootstrapを同じ
 | `CAND-NODEBOOT-007` | env自己申告でnpm identityを偽装できない | 実npm executable/version/digestとenv不一致をprocess生成前に拒否 |
 | `CAND-NODEBOOT-008` | 別commitのreceiptをreplayできない | `subject_revision` mutationとcandidate HEAD不一致を拒否 |
 | `CAND-NODEBOOT-009` | version文字列が同じ別npm CLI、または改竄npm CLIへ差替える | reviewed distribution provenanceのexpected CLI digest不一致で拒否 |
-| `CAND-NODEBOOT-010` | POSIX pointer rename前後でcrashする | fsync済み旧generationまたは新generationだけを返しtempをreconcile |
-| `CAND-NODEBOOT-011` | Windows ReplaceFileW/MoveFileExW前後でcrash・sharing競合を注入する | current不変または新generation commit、partial pointer 0、Bun/shell fallback 0 |
-| `CAND-NODEBOOT-012` | publish成功後cleanup失敗、明示rollback、実行中generationへのGCを競合させる | commitを巻き戻さずcleanup debtを記録し、検証済みrollbackだけを許可、live generationを保持 |
+| `CAND-NODEBOOT-010` | POSIX marker write/sync/close/unique rename前後でcrashする | 最高complete markerが旧または新generationだけを返しtemp/reservationをreconcile |
+| `CAND-NODEBOOT-011` | Windows marker write/sync/close/unique rename前後でcrash・writer競合を注入する | 既存marker不変または新marker append、partial activation 0、Bun/shell/native helper fallback 0 |
+| `CAND-NODEBOOT-012` | publish成功後cleanup失敗、append rollback、実行中generationへのGCを競合させる | 履歴を巻き戻さずcleanup debtを記録し、検証済み旧generationへの新markerだけを許可、live generationを保持 |
 
 予定実装トレースは`src/runtime/node-bootstrap.ts`、`scripts/build-node.mjs`、
 `src/state-db/stop-refresh.ts`、compiled Nodeを呼ぶhook設定、CLI wrapper、snapshot runnerへ接続する。

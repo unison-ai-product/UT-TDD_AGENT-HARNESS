@@ -6,7 +6,9 @@ pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L8
-plan: docs/plans/PLAN-L5-03-internal-processing.md
+plan: docs/plans/PLAN-L5-26-node-generation-activation.md
+replacement_issue: 152
+superseded_plan: docs/plans/PLAN-L5-03-internal-processing.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -394,11 +396,11 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 1. candidate HEADを`subject_revision`として固定する。review済みtoolchain provenanceはNode公式distribution archive SHA-256（OS/arch別）、同梱npm `11.6.2`のCLI relative path・expected SHA-256、`packageManager`/`engines`/lockfile identityを結ぶ。実Node/npm executableを絶対pathで解決し、version文字列だけでなくexpected digest/provenanceへ照合する。
 2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。
 3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
-4. directoryを耐久化してからimmutable generation名へrenameする。POSIXはgeneration内fileとdirectoryを`fsync`し、同一filesystem上のtemporary pointerを`rename`後にparent directoryを`fsync`する。Windowsはtemporary pointerを`FlushFileBuffers`後、`ReplaceFileW`（既存pointer）または`MoveFileExW(MOVEFILE_WRITE_THROUGH)`（初回）で切替える。Nodeの単純な上書き`rename`をportable atomicと仮定しない。
-5. readerはpointerを一度だけ解決し、同一generation内のCLI/receiptを照合する。途中faultでは旧完全generationか新完全generationだけを返す。
+4. generation内fileをflushしdirectory handleを可能なOSでは同期した後、immutable generation名へrenameする。activationはappend-only markerとし、temporary markerをwrite→file sync→closeしてから、存在しない一意な`activations/<sequence>-<generation>-<nonce>.json`へ同一filesystem renameする。既存markerを上書きしないためNode標準`fs` APIの両OS共通境界で成立する。
+5. writerはexclusive reservation fileの`open(..., "wx")`でsequenceを予約する。readerはtemporary、予約だけ、parse不能、digest不一致、generation未完成markerを無視し、validated markerの最大単調sequenceが指す同一generation内CLI/receiptだけを返す。競合writerが同sequenceをpublishせず、crash時は直前のcomplete markerがcurrentであり続ける。
 
 envの`npm_config_user_agent`は証拠に使用せず、実npm executable/version/digestを測定する。receipt欠落、
 cross-revision replay、dependency/path/symlink drift、unknown field、partial generationはprocess生成前に
 fail-closeする。失敗時のBun/bunx/tsx/TS直実行/shell fallbackは存在しない。
 
-`GenerationPublisher`がtemp generation、pointer backup、旧generationのcleanupを所有する。publish前失敗はtempだけを削除しcurrentを不変に保つ。pointer commit後は新generationを成功として返し、後処理失敗で旧pointerへ暗黙rollbackしない。明示rollbackは検証済み旧generationへ同じOS別pointer protocolを再実行する。起動中generationとcurrent/backupが指すgenerationはGC対象外とし、cleanup failureはreceiptへ残して次回reconcileする。
+`GenerationPublisher`がtemp generation、reservation、activation marker、旧generationのcleanupを所有する。publish前失敗はtemp/reservationだけをreconcileし、最後のcomplete markerを不変に保つ。publish後は新markerを成功として返し、後処理失敗で履歴を削除しない。明示rollbackは検証済み旧generationを指す、より大きいsequenceの新markerをappendする。実行中generation、最新complete marker、rollback retention windowが参照するgenerationはGC対象外とし、cleanup failureはreceiptへ残して次回reconcileする。

@@ -6,7 +6,9 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-01-function-spec.md
+plan: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
+replacement_issue: 152
+superseded_plan: docs/plans/PLAN-L6-01-function-spec.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -1381,7 +1383,7 @@ toolchain provenance（Node distribution archive digest、同梱npm CLI expected
 external dependency closure digest、builder policy/digest、source graph digest、
 compiled entrypoint relative path/digest、toolchain provenance digest、generation IDを持つ。
 
-`loadNodeGeneration(expectedRevision)`はcurrent pointerを一度だけ読み、path containmentとrealpath、
+`loadNodeGeneration(expectedRevision)`はappend-only activation marker集合を読み、
 全digest、exact version、review済みprovenance、dependency closure、subject revisionを照合する。同じ
 versionを返す別npm CLIもexpected digestが異なれば拒否する。不一致・欠落・未知schema・
 symlink escape・partial publishではtyped failureを返し、spawnを呼ばない。成功時だけ
@@ -1389,6 +1391,7 @@ symlink escape・partial publishではtyped failureを返し、spawnを呼ばな
 Bun、bunx、tsx、TS直実行、ambient PATH、runtime downloadへのfallbackは禁止する。
 
 原子性oracleはpublish各barrierのfault injectionと並行readerで、旧完全generationまたは新完全generation
-以外を観測しないことを要求する。POSIXのfile/directory fsync + same-filesystem rename + parent fsync、
-WindowsのFlushFileBuffers + ReplaceFileW/MoveFileExW write-throughをplatform port契約とする。
-CLI先行・receipt後行の二段rename、Windowsでの上書きrename成功仮定は契約違反である。
+以外を観測しないことを要求する。markerはtemporary write + file sync + close後、存在しない一意final名へ
+same-filesystem renameする。readerはvalidated monotonic markerの最高complete sequenceだけを採用し、
+temp/torn/invalid/reservation-only markerを無視する。rollbackも旧generationを指す新しいmarkerのappendであり、
+履歴を上書きしない。CLI先行・receipt後行の二段rename、既存pointer上書き、shell/native helper/Rust依存は契約違反である。

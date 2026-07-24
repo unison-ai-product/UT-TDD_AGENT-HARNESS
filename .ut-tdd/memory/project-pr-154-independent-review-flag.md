@@ -17,3 +17,14 @@ PR #154の独立claim reviewはFLAG。PASS証拠として扱わない。
 5. Issue #153に原子slice別gate条件が記録されていなかった。
 
 このmemoryはreview verdictの履歴であり、修正commit、再review、PASSを代替しない。
+
+## Second review FLAG
+
+初回修正後も次の3件が残存したため、verdictはFLAGのまま維持する。
+
+1. architecture/repository-structureに無条件Bun規範が残り、current debtとtarget Nodeが一意でなかった。
+2. Windows activationがReplaceFileW等のNode標準API外へ依存し、F0をnative helper/Rustでblockした。
+3. Issue #152所有のL4→L5→L6 Redesign PLAN chainとconfirmed設計artifactの差替えprovenanceが無かった。
+
+再修正ではappend-only immutable activation markerと、PLAN-L4-33→L5-26→L6-93→L7-458の
+依存鎖を導入した。これも再review PASSを意味しない。
