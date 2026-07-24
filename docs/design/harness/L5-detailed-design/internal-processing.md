@@ -638,17 +638,21 @@ provider-issued attestationを必須とし、raw session stringやaliasを受理
 
 この3 rowをclosed setとし、standalone humanもhuman rowだけを使う。実key値は文書へ保存せずcomposition-root
 key handleへ解決する。rotationはnew registry revision/rowで行いunknown provider/runtime/authority/key/revisionを拒否する。
+registryはappend-only versioned snapshotで、各receiptはexact snapshot ID/revisionを封印する。rotationはrevision
+N+1 snapshotへnew rowを追加し旧snapshotを書き換えない。snapshot chainはprevious snapshot digest、revision+1、
+trusted PO/security approval attestationを持つ。unknown/missing revisionを拒否する。
 
 `ManagedSessionAttestation`は
 `{schemaVersion:"managed-session-attestation.v1",trust_registry_id:"MANAGED-SESSION-TRUST-REGISTRY-v1",`
-`trust_registry_revision:1,algorithm:"ed25519",authorityId,keyVersion,issued_at:RFC3339,signature}`
-のexact schemaである。署名payloadはcanonical session identity objectのRFC 8785 UTF-8 bytesとする。
+`trust_registry_revision:uint>0,algorithm:"ed25519",authorityId,keyVersion,issued_at:RFC3339,signature}`
+のexact schemaである。
 `ManagedSessionAttestationVerifierPort.verify({provider,runtimeFamily,payloadBytes},attestation)`を使い、
 composition rootのclosed trust registryでprovider/runtime→allowed authorityId/algorithm/keyVersionを固定する。
 codex/claude/human/standaloneのUT-TDD managed delegation/session gateが発行し、外部provider API署名を仮定しない。
 unknown/wrong/expired key、forgery、algorithm drift、cross-provider replayを拒否する。
-historical verifyは封印`issued_at`がrowの`[valid_from,valid_until)`内で、`compromised_at==null`又は
-`issued_at < compromised_at`の場合だけ許す。current wall clockで過去receiptを再判定せずretirement後も決定論的にする。
+historical verifyは封印`issued_at`がrowの`[valid_from,valid_until)`内の場合だけ通常retired/expired後も決定論的に許す。
+ただし参照snapshot又はlater authoritative snapshotでauthorityId/keyVersionがcompromisedならissued_atに関係なく
+全receiptをfail-closeし、再発行/re-reviewを要求する。backdateによる回避を許さない。
 
 `SessionIdentityReceipt` coreは
 `{schema_version:"session-identity.v1",provider,runtime_family,provider_issued_session_id,stable_subject_id,`（前半）
@@ -656,9 +660,10 @@ historical verifyは封印`issued_at`がrowの`[valid_from,valid_until)`内で�
 `receipt_digest:ReceiptDigest}`（後半）のexact 10/self除外9-field preimageを持つ。self除外9 fieldsのcanonical
 objectをRFC 8785→UTF-8→SHA-256 raw ReceiptDigest化する。managed attestationとouter EvidenceAttestationを
 二段検証する。Attested envelopeへ格納しcore/outer ownerを一致、closed mapでEvidenceProducer `ci`へ写像する。
-authoritative署名payloadは
+producer/verifier共通の唯一の署名payloadはcanonical combined object
 `{identity_schema:"ut-tdd-identity.v1",stable_subject_id,session_schema:"ut-tdd-session.v1",provider,`
-`runtime_family,provider_issued_session_id,trust_registry_id,trust_registry_revision,issued_at}`である。
+`runtime_family,provider_issued_session_id,trust_registry_id:"MANAGED-SESSION-TRUST-REGISTRY",`
+`trust_registry_revision:uint>0,issued_at}`のRFC 8785 UTF-8 bytesである。
 同じmanaged authorityがstable subjectとsessionを同時証明し、IdentityDigest/SessionIdentityDigestを再導出する。
 
 producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは

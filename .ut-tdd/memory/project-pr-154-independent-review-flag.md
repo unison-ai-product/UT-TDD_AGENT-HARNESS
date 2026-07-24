@@ -383,3 +383,10 @@ MANAGED-SESSION-TRUST-REGISTRY-v1の実3 rowとversioned historical verifyを固
 ManagedSessionAttestationへregistry binding/issued_atを封印し、stable subjectとsessionを同じmanaged authorityが
 同時証明するauthoritative payloadへ統一した。PLAN-L6-93 revision 24 / PLAN-L7-458 revision 27を
 正規`plan revise`で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 5f4d6def trust snapshot/compromise局所FLAG
+
+managed署名payloadをstable subject+session+registry bindingのcombined object一つへ統一した。trust registryを
+append-only snapshot chainとしrotationで旧snapshotを不変化、later authoritative compromiseはissued_atに関係なく
+全receiptをfail-closeする。PLAN-L6-93 revision 25 / PLAN-L7-458 revision 28を正規`plan revise`で発行した。
+独立再reviewまではFLAGを維持する。

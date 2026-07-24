@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:192a0830dd855cd2bb96e10186ca373e
-  command_id: pr154-managed-trust-l6-20260724
-  admitted_at: 2026-07-24T16:40:00.000Z
-  source_digest: sha256:e50ecc874d8050e005cbb0df32e27a9e61718ee37736f875b60d943f823557d4
-  decision_digest: sha256:c78fa3bf1856eaa4c9544e66db657792daeb03872b9984791874c0a12ddd2a31
-  receipt_digest: sha256:551cbea11f3418dd754d69da18cc33835b674a0596edc10a9342f65f73a1c244
+  receipt_id: certificate:44525ac41995c6eefdc9b7be698aebc5
+  command_id: pr154-trust-snapshot-l6-20260724
+  admitted_at: 2026-07-24T16:50:00.000Z
+  source_digest: sha256:7d9818268bf77e05a74fc8077bddb31d2c4de2db593705d11d0b8ce7cd6d010b
+  decision_digest: sha256:c16e488cb9c227755c5f4258888b874e12c52f53e773d07d223a8fb7c138b494
+  receipt_digest: sha256:1808f4fd79c1d8924256dacf31eb78e8e2e430fea2880300866b8e9233f1811e
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 24
-    content_digest: sha256:e50ecc874d8050e005cbb0df32e27a9e61718ee37736f875b60d943f823557d4
+    revision: 25
+    content_digest: sha256:7d9818268bf77e05a74fc8077bddb31d2c4de2db593705d11d0b8ce7cd6d010b
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 24
+      target_revision: 25
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 24
+    target_revision: 25
     phase: forward_merge
-  escape_reason: PR 154 managed trust closure
+  escape_reason: PR 154 trust snapshot closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -172,6 +172,8 @@ SessionIdentityReceipt outer envelopeをWorkEvent/ReviewLaneがexact 1参照し�
 ManagedSessionAttestation verifierをcomposition rootのclosed trust registryへ接続し、UT-TDD managed session
 authorityだけを検証する。外部provider署名を仮定せず、WorkEvent/laneとsession provider/runtimeを一致させる。
 managed trust registry 3 row/revision/issued_at window/compromise cutoffとstable subject identity bindingを要求する。
+SessionIdentity exact10/self9、combined payload、outer二段検証、identity.session edge exact1を要求する。
+registryはappend-only snapshot chainとしlater compromiseは全historical receiptをfail-closeする。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。
