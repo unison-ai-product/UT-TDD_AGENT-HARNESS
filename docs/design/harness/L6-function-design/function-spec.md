@@ -1407,6 +1407,8 @@ Bun、bunx、tsx、TS直実行、ambient PATH、runtime downloadへのfallback�
 | メソッド | 事前条件 | 事後条件 / 不変条件 |
 |---|---|---|
 | `verifyBundle` | trust identityとtarget明示 | signature/core/companion/schema/SBOM/targetの全一致時だけverified handle |
+| `TrustStorePort.load` | installer組込authority registryとtrusted clock | authority-key binding、rotation chain、revocation epoch、expiry、algorithm allowlist、durable minimum sequenceを返し、bundle自己申告鍵をrootにしない |
+| `authorizeBundle` | signature verified manifest + trust state | downgrade・期限外・失効・sequence floor未満を拒否し、activationとanti-rollback floor更新をatomic化 |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
 | `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |

@@ -440,4 +440,6 @@ companion crash、client crash、SCM/broker crash、pipe切断、journal commit�
 
 target別Node runtime image、Node core、target別companion、protocol schema、manifest、SBOM、署名、実OS evidenceを一つのbundle revisionへ固定する。
 実行時download、PATH探索、片側rollbackを禁止する。rollback後も同じL8/L9 oracleを再実行し、capabilityが不足するplatformは
+利用停止する。trust rootはbundle外のinstaller組込registryから取得し、key binding、rotation/revocation/expiry、
+algorithm allowlist、durable sequence floorを検証する。activationとfloor更新はatomic commitとする。
 旧direct-spawnへ戻さず利用停止する。

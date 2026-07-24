@@ -210,7 +210,7 @@ hook、doctor、DB projection、snapshot、local CIを横断する実行system�
 | `ST-RGK-12` / `AC-RGK-12` | required capabilityを一つずつ欠落、空集合、probe/journal/token barrierを各一箇所除去したadapter matrixでadmission | control process/probe事実を別記し、全不足・token不正caseが`managed_root_created=false`の`capability_failure`。probe commandのlauncher call 0 | handshakeだけでexecute、control/rootを単一boolean化、warning、skip、PID polling、soft limitへ暗黙縮退 |
 | `ST-RGK-13` / `AC-RGK-13` | DB値型・row順・localeと、untracked/submodule/symlink/mode/EOL/toolchain/envを一要素ずつ変化 | semantic同値DBは同digest、意味差は別digest。CAS identityの意味差は別key、欠落fieldはhit 0 | row count比較、型消失、未追跡入力無視、unknown identityでcache hit |
 | `ST-RGK-14` / `AC-RGK-14` | target別bundleへbinary欠落、digest/署名/SBOM/protocol/target不一致、probe差替え、権限不足を一つずつ注入し、既知良好bundleへのrollbackを実行 | 静的不一致はcontrol process起動0、probe不一致はmanaged root 0。rollbackはmanifest単位で対象OS custody oracleを再通過。TS/Rust責務重複0 | 未検証control起動、probe差替え後execute、PATH探索、runtime download、片側rollback、direct spawn fallback、Rust側domain/policy/journal実装 |
-| `ST-RGK-15` / `AC-RGK-15` | Bun binary/lockfile/APIを除いたclean checkoutでinstall、doctor、L7-L9、Windows/Linux aggregate CI、Pack acceptanceを実行し、新規Bun依存fixtureを投入 | 全surfaceがNode control plane + Rust companionでGreen、新規Bun依存はlintでRed、tracked Bun実行依存/compatibility code/例外0 | 現CIを消してGreen扱い、Bun不在caseをskip、testだけBun残存、互換期限後もdebt継続、Node parity前に旧経路削除 |
+| `ST-RGK-15` / `AC-RGK-15` | PR #154 D0-Nのcutover receiptを入力し、native companion/bundle/Cargo差分へBun binary/API/lock/runtime dependencyを一要素ずつ注入 | D0-N prerequisite一致かつnative差分のBun依存増分0 | D0-Rがglobal cutover完了を再判定、またはnative経路へBun依存を追加 |
 
 Issue #124のparent-loss/timeout acceptanceは次の経路別AND matrixで量閉じする。各セルでworker exit、custody empty、
 lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt_id`で証明し、別caseの証拠を合成しない。
@@ -285,7 +285,8 @@ lease release、terminal receipt、managed orphan 0の五条件を同じ`attempt
 | `probe_digest`, `probe_journal_position`, `admission_token_digest` | probe実行時必須。tokenはattempt/nonce/bundle/probe/deadline結合 | probe→durable append→admission barrierの順序証明 |
 | `authority_identity`, `authority_epoch`, `custody_nonce`, `handoff_commit`, `deadline_owner` | custody生成時必須。dual crash時もlast durable valueを保存 | atomic handoff、stale replay拒否、deadline継続の証明 |
 | `bundle_manifest_digest`, `core_digest`, `companion_digest`, `protocol_digest`, `target_triple`, `sbom_digest`, `signature_identity`, `rollback_from` | native companion利用時必須。rollback無しは理由付きN/A | AC-RGK-14の完全bundle identity、供給網検証、片側rollback禁止 |
-| `control_plane_runtime`, `bun_dependency_inventory`, `migration_debt_revision`, `compatibility_deadline` | runtime identityとtracked Bun依存件数。Bun撤去後も0件証拠を保存 | AC-RGK-15のNode parity、永久BAN、期限付き撤去証明 |
+| `trust_registry_revision`, `authority_id`, `key_id`, `public_key_digest`, `algorithm`, `key_validity`, `revocation_epoch`, `bundle_sequence`, `minimum_sequence` | signed bundle admission時必須 | trust root provenance、key binding、rotation/revocation/expiry、downgrade、anti-rollback証明 |
+| `d0n_cutover_receipt`, `native_bun_dependency_delta` | PR #154のsubject revision/receipt digestとnative差分のBun依存増減 | AC-RGK-15のprerequisite・局所不増証明 |
 | `spec_digest`, `policy_revision`, `requested_budget`, `applied_budget` | canonical specと単位付き上限 | 暗黙緩和・自己申告の検出 |
 | `journal_events`, `terminal_receipt_digest` | monotonic sequenceとevent digest、terminal封印回数 | lifecycle順序、exactly-once receipt、crash reconcile、flush証明 |
 | `custody_identity`, `custodian_or_broker_identity`, `root_pid`, `descendant_observations` | started時必須。created-not-startedはPID/reapと作成済みcustody、未作成は理由付きN/A | PID単独でない所有権・process tree証明 |
@@ -325,3 +326,10 @@ warm hook/Stopは1回5秒以内かつfull DB rebuildを起動しない。targete
 passにせずadmission拒否する。observer heartbeat、sequence gap、drop count、対象interactive session coverageのいずれかが欠測なら
 visible shell 0を主張しない。各runはphase timing、cache decision、producer count、orphan countを保存し、
 中央値だけでtail、失敗、欠測を隠さない。runner classまたはpolicy revisionが変わった結果を同一baselineへ混ぜない。
+
+### §9.7 signed bundle trust / anti-rollback system oracle
+
+Windows/Linuxのclean runnerで、installer組込trust registryからだけauthorityを取得する。authority/key substitution、
+rotation overlap境界、revocation、expiry、clock fault、algorithm downgrade、sequence floor未満の正規署名bundleを
+一要素ずつ注入し、全caseでcontrol process 0かつcurrent bundle不変を要求する。activation/floor commitの全barrierで
+power-lossを注入し、旧bundle+旧floorまたは新bundle+新floor以外を観測した場合はRedとする。

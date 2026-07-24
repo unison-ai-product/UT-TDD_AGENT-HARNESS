@@ -139,6 +139,9 @@ native componentはjournalへ直接書かず、再接続可能なcustody identit
 platform bundleはtarget別Node runtime image、Node core、target別companion、protocol schema、manifest、SBOM、署名、対象OS evidenceを同一revisionで結ぶ。
 実行時download、PATH探索、片側差替えを禁止する。install時と各execution admission時にmanifest署名、core/companion/schema
 digest、target triple、probe capabilityを照合する。rollbackもmanifest単位で既知良好bundleへ行い、同じL8/L9 oracleを再通過する。
+trust rootはbundle外のinstaller組込authority registryから`TrustStorePort`で取得する。registry、revocation state、
+trusted clock、durable sequence floorを別物理storeとして扱い、bundleによる自己更新を禁止する。rotationは旧新keyの
+overlapとsigned statementを必要とし、activationとmonotonic floor更新を同一durability barrierでcommitする。
 
 ## 7. L8 pair-freeze条件
 

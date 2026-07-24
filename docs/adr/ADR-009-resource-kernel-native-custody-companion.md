@@ -52,11 +52,19 @@ SBOM digest、署名identityを結ぶ。Pack/tag-pinはmanifestで完全なbundl
 release gateは各binaryの再現可能build evidence、署名、SBOM、脆弱性/license scan、対象OS実機のL9 custody oracleを
 必須とする。署名鍵や秘密情報はrepo/manifest/SBOMへ格納しない。
 
+trust rootはbundle同梱物やambient filesystemから取得せず、installer組込の製品authority registryを
+`TrustStorePort`から読む。registryはauthority ID、key ID、public-key digest、許可algorithm、
+`not_before`/`not_after`、revocation epoch、最小bundle sequenceを結ぶ。unknown/失効/期限外key、
+authority-key binding不一致、algorithm downgradeをfail-closeする。
+
 ### D4. rollbackもfail-close capabilityとして扱う
 
 rollbackは旧coreだけ、または旧companionだけへの片側差し替えを禁止する。既知良好なbundle tagへmanifest単位で戻し、
 protocol互換、署名、SBOM、対象platformのGreen evidenceを再検証する。安全性を満たさないplatformは旧direct-spawnへ
 戻さず利用停止する。rollback revisionと理由はpolicy revisionおよびExecutionReceiptへ残す。
+TrustStoreのmonotonic floorより小さいbundle sequenceへのrollbackは署名が正しくても拒否する。key rotationは
+旧新keyの重複有効期間とauthority署名済みrotation statementを必須とし、revocation後の旧key復活、clock rollback、
+receipt replayによるsequence floor低下を認めない。
 
 ## ADR-001との関係
 
@@ -64,20 +72,11 @@ ADR-001の「harness coreはTypeScript」「domain/schema/ruleの単一正本」
 本ADRはOSが提供するprivileged custody APIを呼ぶための限定例外であり、Rustをproduct domain実装言語へ昇格させない。
 配布単位は単一ファイルからplatform bundleへ更新するが、利用者の入口は引き続き一つの`ut-tdd` CLIである。
 
-### Bun永久BANと移行契約
+### Node cutoverとの責任境界
 
-2026-07-22以降、Bunへの新規依存、Bun専用API、Bunを前提とする新規production/runtime/test経路を禁止する。
-既存Bun経路は採択済みruntimeではなく**migration debt `DEBT-RGK-BUN-001`**であり、現CIを維持するためだけの期限付きcompatibility laneとする。
-即時削除でtest/gateを偽Greenにせず、Node互換実装と同じoracleを通した単位からproduction→runtime adapter→test runnerの順に撤去する。
-
-compatibility期限は**最初のproduction Resource Kernel platform bundle切替時**とする。
-この期限を越えるcompatibility延長は新ADRとPO採択なしに認めない。Bun撤去のexit criteriaは次のAND条件である。
-
-1. production/runtime/testのtracked command、lockfile、CI、hook、distribution manifestにBun実行依存が0。
-2. Node control planeがWindows/Linuxで同一のL7/L8/L9 oracle、aggregate gate、Pack acceptanceをGreenにする。
-3. SQLite、subprocess、compiled/package entrypointのBun専用APIがNode portへ置換され、direct spawnはResource Kernel portだけを通る。
-4. Bun binaryが不存在でもclean install、doctor、targeted/full test、distribution packageが成功する。
-5. migration debt台帳をclosedにし、Bun compatibility code・検出器例外・CI jobを同じchange setで削除する。
+global Bun ban、既存Bun migration debt、Node parity、cutover完了条件はPR #154のD0-Nをprerequisite正本とする。
+D0-Rはその完了を代行せず、native companion、bundle、Cargo/build/test経路が新しいBun binary・API・lock・
+runtime dependencyを追加しない局所不変条件だけを所有する。相互の未達を他方の要件免除に使わない。
 
 ## 検討した代替案
 

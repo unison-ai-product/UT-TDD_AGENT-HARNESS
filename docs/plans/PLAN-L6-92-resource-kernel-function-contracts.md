@@ -91,6 +91,8 @@ phaseに応じたdiscriminated unionでN/Aと欠測を区別する。
 | `decodeFrame(bytes, limits)` | bounded byte sequence | exactly one strict requestまたは`protocol_failure`; side effect 0 | `U-RGK-WIRE-001..006` |
 | `encodeFrame(message, limits)` | schema-valid DTO | canonical bytes;同一valueは同一digest | `U-RGK-WIRE-007..009` |
 | `verifyBundle(manifest, files, trust)` | trusted key identityとtarget明示 | 全digest/signature/schema/target一致時だけverified handle | `U-RGK-BUNDLE-001..006` |
+| `TrustStorePort.load(authorityId)` | installer組込registry、trusted clock、durable floor | key binding・rotation・revocation・expiry・algorithm allowlist・minimum sequenceを返す。bundle入力からtrust rootを作らない | `U-RGK-TRUST-001..008` |
+| `authorizeBundle(manifest, trustState)` | verified signature、registry revision、monotonic floor | downgrade/revoked/expired/rollbackを拒否し、floor更新はactivation commitとatomic | `U-RGK-TRUST-009..014` |
 | `negotiateCapabilities(required, probe)` | verified bundle probe | subsetでなく完全包含時だけselection; missingを保存 | `U-RGK-CAP-001..004` |
 | `recordProbe(control, probe)` | verified control identity、strict probe | journalへprobe digestをappendし`ProbeRecorded`を返す。workload side effect 0 | `U-RGK-CAP-005..006` |
 | `sealAdmission(spec, recordedProbe)` | required capability完全包含、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required禁止 | `U-RGK-CAP-007..009` |

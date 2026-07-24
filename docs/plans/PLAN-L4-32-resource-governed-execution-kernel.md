@@ -32,6 +32,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L4-basic-design/architecture.md
     artifact_type: design_doc
+  - artifact_path: docs/design/harness/L4-basic-design/security.md
+    artifact_type: design_doc
   - artifact_path: docs/governance/repository-structure.md
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L9-system-test-design.md
@@ -333,9 +335,8 @@ allowlistで覆い隠さない。
 
 ## 7. 段階導入
 
-既存Bun runtime/test/CIは`DEBT-RGK-BUN-001`として台帳化する。2026-07-22から新規Bun依存を禁止し、
-最初のproduction Resource Kernel bundle切替時をcompatibility期限とする。Node parity oracleが
-Greenになる前に既存jobを削除して通過を装わず、production→runtime adapter→test/CI→lockfile/toolingの順に撤去する。
+global Bun banとcutover完了はPR #154 D0-Nをprerequisite正本とする。本PLANはnative companion、
+bundle、Cargo/build/test経路へ新規Bun依存を追加しない局所不変条件だけを所有する。
 
 1. **観測段階**: read-only observer/sidecarが既存runnerのusage/process treeをshadow観測する。実行を所有せず、Kernel admission・
    custody・ExecutionReceiptを名乗らない。出力は`ObservationReport`として隔離し、Green/accepted execution証拠へ使わない。
@@ -343,7 +344,7 @@ Greenになる前に既存jobを削除して通過を装わず、production→ru
 3. **資源段階**: classification別memory/CPU/process/output budgetと全体admission controlをfail-close化。
 4. **増分段階**: DB single-flight/incrementalを導入し、full rebuild equivalence oracle通過後に既定化。
 5. **CAS段階**: snapshot CASをread-onlyから開始し、atomic publish/lease/GC検証後にread-write化。
-6. **全面移行**: hook/CLI/test/CIの直接spawnを禁止するlintを有効化し、legacy runnerを削除する。
+6. **native activation**: D0-Nのverified Node入口からのみKernel portを呼び、companion経路のdirect spawnを禁止する。
 
 各段階はfeature flagで旧経路へ黙ってfallbackしない。rollbackは明示policy revisionとreceiptを伴い、前段の安全性を
 維持する。段階4/5の性能改善は段階2/3の安全統制を迂回してはならない。
@@ -367,8 +368,8 @@ companionだけを差し替えない。旧direct-spawn経路へのrollbackは禁
 - **AC-RGK-11**: lifecycle eventがappend-onlyかつsequence完全で、各attemptのterminal receiptがexactly-onceに封印され、retry/recovery間で`execution_id`と`attempt_id`を混同しない。
 - **AC-RGK-12**: required capabilityとplatform matrixの不一致をmanaged workload生成前に拒否し、`control_process_created`と`managed_root_created`を混同せず、soft fallbackを成功として記録しない。
 - **AC-RGK-13**: DB canonical digestとCAS完全identityが順序・locale・EOL・file mode・symlink・toolchain/environment差を意図どおり区別し、identityの一部欠落時は再利用しない。
-- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をcontrol process起動前に拒否し、実probe不一致はmanaged workload生成前に拒否する。既知良好bundleへのrollback後も対象OSのcustody oracleを再通過し、TypeScript domain/policy/journalとRust custody companionの責務重複を0にする。
-- **AC-RGK-15**: Bun新規依存を0に保ち、既存Bun migration debtをNode parity oracleのGreen後に段階撤去する。互換期限までにBun不在のclean install、doctor、Windows/Linux L7-L9、aggregate CI、Pack acceptanceをGreenにし、tracked Bun実行依存・compatibility code・検出例外を0にする。
+- **AC-RGK-14**: platform bundleのbinary/protocol/target/署名/SBOM/evidence不一致をcontrol process起動前に拒否する。trust rootは製品authority registryから取得し、authority-key binding、rotation、revocation、expiry、algorithm allowlist、monotonic bundle sequenceを検証する。downgradeまたはanti-rollback floor未満は正規署名でも拒否する。
+- **AC-RGK-15**: PR #154 D0-Nのcutover gateをprerequisiteとして参照し、native companion/bundle/Cargo/build/test差分が新規Bun binary・API・lock・runtime dependencyを増加させない。
 
 ## 9. 完了条件と非完了条件
 

@@ -237,3 +237,6 @@ managed workload生成の順序をbarrierとして固定する。
 manifest、binary digest、protocol、target、SBOM、署名のいずれかが不一致ならcontrol processまたは
 managed root生成前にfail-closeする。L4受入は同一attemptのL9 `ST-RGK-*` receiptだけで判定し、
 検出器のskip・警告化・soft limitへの縮退によって設計契約を下げない。
+trust rootはbundle外のinstaller組込authority registryを正本とし、authority-key binding、rotation、
+revocation、expiry、algorithm allowlist、monotonic anti-rollback floorをL4 security §12とL9 §9.7で対にする。
+global Bun cutoverはPR #154 D0-Nのprerequisiteであり、D0-Rはnative差分のBun依存増分0だけを所有する。

@@ -76,7 +76,7 @@ domain verdict、policy、journal、terminal receiptを返さない。この抽�
 
 | layer | gap-only back-fill / 維持条件 |
 |---|---|
-| L4 `PLAN-L4-32` | control/workload process identity分離、managed workload生成前capability拒否、OS custody、bundle、Bun永久BANを維持。unsupported Greenをsystem Greenへ昇格しない |
+| L4 `PLAN-L4-32` | control/workload process identity分離、managed workload生成前capability拒否、OS custody、signed bundle trustを維持。global Bun cutoverはD0-Nを参照 |
 | L5 `PLAN-L5-25` | strict frame、Node/Rust配置、probe→admission barrier、custody authority/atomic handoff、crash/reconnect、bundle rollbackを追加 |
 | L6 `PLAN-L6-92` | command分離、control/workload process identity、closed error union、lifecycle reducer、platform port、responsibility-overlap findingを追加 |
 | L7 test design | scaffoldの`U-RGK-NATIVE-*`と、wire/error/cap/lifecycle/port/bundleのpure Red oracleを分離 |
@@ -99,7 +99,7 @@ L5-25/L6-92へ降下した。
 3. pinned Rust toolchain、review済み`Cargo.lock`、Node/Cargo testが同一commitでGreen。
 4. Windows/Linux実adapterをRed→Greenで実装し、L8の開始前attach、crash、empty/reap oracleを通過。
 5. L9 `ST-RGK-01..15`とaggregate gateが実runner evidenceでGreen。
-6. Bun runtime/test/CI/lockfile/compatibility dependency 0。Node直spawnやsoft fallback 0。
+6. native companion/bundle/Cargo差分のBun dependency増分0。Node直spawnやsoft fallback 0。
 7. Forward側のtrace-freeze、cross-runtime blind review、tested commitとreview/evidence revision一致。
 
 R4再合流はscaffoldをそのまま完成扱いするpromotionではない。`reuse-with-hardening`として再利用するのはR0表の

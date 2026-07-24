@@ -1700,6 +1700,16 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-BUNDLE-004` | manifest core/companion revision片側更新 | bundle identity不一致で拒否 |
 | `U-RGK-BUNDLE-005` |既知良好rollback manifest | 全componentを同時pinし再検証要求を出す |
 | `U-RGK-BUNDLE-006` | Bun binary/API/lockfileを新bundleへ追加 | permanent-ban findingでRed |
+| `U-RGK-TRUST-001` | bundle同梱keyをtrust rootとして提示 | `TrustStorePort`が拒否しverified handle 0 |
+| `U-RGK-TRUST-002` | authority ID/key ID/public-key digestを各置換 | binding不一致で拒否 |
+| `U-RGK-TRUST-003` | rotation statement欠落、overlap外key | 新旧どちらも暗黙採択しない |
+| `U-RGK-TRUST-004` | revoked key、revocation epoch巻戻し | 署名が正しくても拒否 |
+| `U-RGK-TRUST-005` | not-before前、expiry後、clock欠測/巻戻し | fail-closeしactivation 0 |
+| `U-RGK-TRUST-006` | allowlist外algorithm、弱いalgorithmへdowngrade | fallbackせず拒否 |
+| `U-RGK-TRUST-007` | sequence floor未満の正規署名bundle | anti-rollback拒否 |
+| `U-RGK-TRUST-008` | activation後floor永続化失敗 | activation rollback、旧floor維持 |
+| `U-RGK-TRUST-009` | trust registryをbundle署名で更新 | signature domain不一致で拒否 |
+| `U-RGK-TRUST-010` | receipt replayでfloorを低下 | monotonic invariantで拒否 |
 
 mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
 このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。

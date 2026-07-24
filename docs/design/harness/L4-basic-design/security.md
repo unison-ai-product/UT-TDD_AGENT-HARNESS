@@ -207,3 +207,16 @@ L9 では security boundary が external-if / CI / CLI 境界検証に混ざる�
 
 security verification (ZIP-DOC-102 相当) は L9 `ST-EXT-06` (§5-§9 の脅威モデル/供給網/鍵・秘密/監査ログ
 trace) として `L9-system-test-design.md` §1.4 に追加し、§2 量閉じ一覧の孤児 0 に含める。
+
+## 12. Resource Kernel bundle trust脅威モデル（Issue #152）
+
+| 脅威 | fail-close境界 |
+|---|---|
+| bundle同梱鍵・ambient鍵によるtrust root差替え | installer組込authority registryだけを`TrustStorePort`が返す |
+| authority/key substitution | authority ID、key ID、public-key digestのbindingを照合 |
+| rotation/revocation/expiry回避 | signed rotation statement、overlap window、revocation epoch、trusted clockで検証 |
+| algorithm downgrade | version付きallowlist外、unknown parameter、弱いalgorithmへのfallbackを拒否 |
+| 古い正規署名bundleのreplay | durable monotonic bundle sequence floor未満のactivation/rollbackを拒否 |
+
+trust registry更新とbundle activationは別署名domainとし、bundle署名だけでtrust rootやsequence floorを
+更新できない。clock欠測、registry破損、revocation取得不能、floor durability不明は利用停止とする。

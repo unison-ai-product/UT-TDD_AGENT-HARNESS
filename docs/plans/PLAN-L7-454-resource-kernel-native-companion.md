@@ -77,7 +77,7 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 ## 2. 設計正本と実装境界
 
 - 上流architectureとACの正本: `PLAN-L4-32` のAC-RGK-01..15。
-- native採用・配布・rollback・Bun永久BANの正本: ADR-009。
+- native採用・配布・rollbackの正本: ADR-009。global Bun cutoverはPR #154 D0-Nをprerequisite参照する。
 - system受入oracle: `L9-system-test-design.md` §9の`ST-RGK-01..15`。
 - L7 unit pair: `L7-unit-test-design.md`へ本PLAN固有の`U-RGK-NATIVE-*` / `U-RGK-PROTO-*`をRed freezeする。
 - L5 physical / L6 function契約: 採番衝突を避けた`PLAN-L5-25` / `PLAN-L6-92`を起票し、wire schema、
@@ -105,7 +105,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 
 ### 2.3 明示的に所有しないもの
 
-- Bun runtime・Bun専用API・Bun test pathの新設。新規Bun依存は永久BANであり、本PLANのrunnerはNode/Cargoのみ。
+- native companion/bundle/Cargo/build/test経路へのBun runtime・API・lock・依存追加。本PLANのrunnerはNode/Cargoのみ。
 - 未検証PATH探索、runtime download、片側rollback、soft limitまたはPID pollingへのsilent fallback。
 - GitHub、PLAN workflow、resource policy、journal transaction、DB/CAS canonical identityの再実装。
 
@@ -119,7 +119,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 | 4 | Linux adapterとbroker authorityを同じprotocol portへ実装 | handoff前user code 0、epoch/nonce recovery、dual crash後`populated=0`とzombie 0 |
 | 5 | Node protocol clientとbundle verifierを実装 | probe→journal→admission barrier、control/workload identity分離、mismatch/欠落/権限不足でmanaged root 0 |
 | 6 | signed bundle、SBOM、rollback、対象OS実runnerを接続 | ST-RGK-02/03/12/14およびaggregate gateが同一revisionでGreen |
-| 7 | Bun migration debtをNode parity後に撤去 | ST-RGK-15のAND条件を満たし`DEBT-RGK-BUN-001`を同change setでclose |
+| 7 | D0-N prerequisiteと局所Bun不増を検証 | PR #154のcutover receiptを参照し、native差分のBun dependency増分0 |
 | 8 | authorと別runtime/model familyのblind review、Reverse gap-only backfill | 未反駁attack 0、review receiptとtested commit一致 |
 
 ## 4. 受入条件
@@ -134,7 +134,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 - [ ] RustとTypeScriptの責務重複が0で、domain/policy/journal/receiptの正本がTypeScript側に一つだけある。
 - [ ] `U-RGK-NATIVE-*` / `U-RGK-PROTO-*`、対象L8、L9 `ST-RGK-*`がtested commitとevidence manifestを固定する。
 - [ ] Node/Cargoだけでclean install、targeted/full test、doctor、Windows/Linux aggregate CI、Pack acceptanceがGreen。
-- [ ] Bun tracked runtime/test/CI/lockfile/compatibility codeと検出器例外が0で、Issue #134のexit criteriaを満たす。
+- [ ] PR #154 D0-Nのcutover receiptを参照し、native companion/bundle差分のBun依存増分が0。
 - [ ] Reverse backfillと独立blind reviewを完了するまで`status: confirmed`へ昇格しない。
 
 ## 5. 現在の証拠と未完了
@@ -161,6 +161,6 @@ detectorを設計に追従させる変更としてtraceする。
 
 ## 6. 用語と上流への戻し方
 
-`native custody companion`、`platform bundle`、`Node control plane`、`Bun migration debt`はADR-009と
+`native custody companion`、`platform bundle`はADR-009、Node/Bun cutoverはPR #154 D0-Nと
 PLAN-L4-32の用語を実体化するもので、新しい上流意味を追加しない。実装中にplatform制約やprotocol語彙のgapを
 発見した場合だけReverseでL5/L6/L7 test-designへ戻し、実装都合に合わせてL4/L9を縮小しない。
