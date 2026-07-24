@@ -3,7 +3,7 @@ memory_id: memory:project:pr-154-db-projection-claim-blind-boundaries
 kind: project
 title: "PR #154 db projection claim-blind boundary closure"
 tags: ["pr-154", "claim-blind", "db-projection-coverage", "tdd"]
-updated_at: 2026-07-24T20:49:00.000+09:00
+updated_at: 2026-07-24T21:16:00.000+09:00
 ---
 
 HEAD `616d4fed`のclaim/spec-blind reviewで、Markdown semantic state machineに追加境界を検出した。
@@ -36,3 +36,17 @@ projection flagを破棄する。各headingでもprojection flagをresetし、ma
 projection table成立後だけ許可する。§9.3は既存table群の専用canonical index節としてmarkerを許可する。
 deeper non-descendant、trailing-content擬似close、fence跨ぎstate、4-space indent、ownership markerをRedで拘束し、
 対象Node testは28/28 Greenとなった。
+
+## Canonical physical-data grammarへの縮約
+
+後続監査で、outer pipe省略、escaped pipe parity、GFM alignment separator、section内projection成立後だけの
+marker admissionは、現行`physical-data.md`正本に存在しない入力を扱う過剰設計と判定して撤回した。
+
+検出器が扱うgrammarは、target headingとその論理descendant、top-level backtick/tilde fenceの除外、
+outer-pipe table、plain hyphen separator、balanced outer backtick/strong/em wrapper付き
+`table` + `primary key` / `主キー` header、及びliteral `必須 index:` / `必要 index:`直後の
+連続bullet blockに限定する。header内部の`_` / `*`は保持し、foreign schemaをprojectionへ正規化しない。
+
+汎用GFM用4 fixtureとownership marker admission fixtureを削除した。正本から独立転記した56 table / 54 indexの
+全件・順序exact assertionをfail-close oracleとして維持し、対象Node testは25/25 Green。コードとtestの差分は
+40 insertions / 92 deletions（net 52行削減）。設計docs、PLAN、Issue #153許容負債は変更していない。

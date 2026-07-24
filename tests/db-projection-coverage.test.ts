@@ -271,20 +271,6 @@ describe("db-projection-coverage detector", () => {
     expect(requirements.map((requirement) => requirement.table)).toEqual(["fourth-ledger.db"]);
   });
 
-  it("accepts GFM alignment separators without losing projection table state", () => {
-    const requirements = extractDbProjectionRequirements(
-      [
-        "### §9.1 projection table 拡張",
-        "",
-        "| table | 主キー | 必須 columns | 目的 |",
-        "|:---|:---:|---:|---|",
-        "| `aligned_projection` | `projection_id` | `status` | fixture |",
-      ].join("\n"),
-    );
-
-    expect(requirements.map((requirement) => requirement.table)).toEqual(["aligned_projection"]);
-  });
-
   it("rejects a table when header and separator cell counts differ", () => {
     const requirements = extractDbProjectionRequirements(
       [
@@ -299,47 +285,34 @@ describe("db-projection-coverage detector", () => {
     expect(requirements).toEqual([]);
   });
 
-  it("accepts a GFM table without outer pipes", () => {
+  it("strips only balanced outer wrappers from projection headers", () => {
     const requirements = extractDbProjectionRequirements(
       [
         "### §9.1 projection table 拡張",
         "",
-        "table | 主キー | 必須 columns | 目的",
-        "---|---|---|---",
-        "`outerless_projection` | `projection_id` | `status` | fixture",
+        "| **table** | _主キー_ | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `wrapped_header_projection` | `projection_id` | `status` | fixture |",
       ].join("\n"),
     );
 
-    expect(requirements.map((requirement) => requirement.table)).toEqual(["outerless_projection"]);
+    expect(requirements.map((requirement) => requirement.table)).toEqual([
+      "wrapped_header_projection",
+    ]);
   });
 
-  it("keeps an escaped pipe inside a table cell", () => {
+  it("preserves internal header punctuation instead of normalizing it into a schema match", () => {
     const requirements = extractDbProjectionRequirements(
       [
         "### §9.1 projection table 拡張",
         "",
-        "| table | 主キー | 必須 columns | 目的 |",
+        "| ta_ble | primary*key | 必須 columns | 目的 |",
         "|---|---|---|---|",
-        "| `projection\\|escaped` | `projection_id` | `status` | fixture |",
+        "| `foreign_schema` | `projection_id` | `status` | fixture |",
       ].join("\n"),
     );
 
-    expect(requirements.map((requirement) => requirement.table)).toEqual(["projection|escaped"]);
-  });
-
-  it("uses backslash-run parity when deciding whether a pipe is escaped", () => {
-    const requirements = extractDbProjectionRequirements(
-      [
-        "### §9.1 projection table 拡張",
-        "",
-        "| table | 主キー | 必須 columns | 目的 |",
-        "|---|---|---|---|",
-        "| `odd\\|pipe` | `projection_id` | `status` | fixture |",
-        "| `even\\\\|pipe` | `projection_id` | `status` | fixture |",
-      ].join("\n"),
-    );
-
-    expect(requirements.map((requirement) => requirement.table)).toEqual(["odd|pipe"]);
+    expect(requirements).toEqual([]);
   });
 
   it("ignores tables and index markers inside backtick and tilde fenced code", () => {
@@ -453,21 +426,6 @@ describe("db-projection-coverage detector", () => {
     );
 
     expect(requirements.map((requirement) => requirement.table)).toEqual(["after_indented_run"]);
-  });
-
-  it("rejects an index marker in the ownership subsection without a projection table", () => {
-    const requirements = extractDbProjectionCoverageRequirements(
-      [
-        "### §2.7 SQLite projection DB の定義 (`harness.db`)",
-        "",
-        "#### §2.7.1 canonical ledgerファイル正本registry",
-        "",
-        "必要 index:",
-        "- `idx_ownership_file(path)`",
-      ].join("\n"),
-    );
-
-    expect(requirements.indexes).toEqual([]);
   });
 
   it("keeps the real §9.3.1 projection table and its two indexes", () => {

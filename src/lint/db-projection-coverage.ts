@@ -75,7 +75,7 @@ export interface DbConstraintCoverageResult {
 
 const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[13456789] .*)/;
 const HEADING_RE = /^(#{1,6})\s+/;
-const TABLE_SEPARATOR_CELL_RE = /^:?-{3,}:?$/;
+const TABLE_SEPARATOR_CELL_RE = /^-{3,}$/;
 const INDEX_MARKER_RE = /^(?:必須|必要) index:$/;
 const INDEX_BULLET_RE = /^\s*-\s+`([^`(]+)\(([^`)]+)\)`/;
 
@@ -84,31 +84,32 @@ function backtickValues(value: string): string[] {
 }
 
 function splitTableRow(line: string): string[] {
-  const source = line.trim();
-  const cells: string[] = [];
-  let cell = "";
-  for (let index = 0; index < source.length; index++) {
-    if (source[index] !== "|") {
-      cell += source[index];
-      continue;
-    }
-    let backslashCount = 0;
-    for (let cursor = index - 1; cursor >= 0 && source[cursor] === "\\"; cursor--) backslashCount++;
-    if (backslashCount % 2 === 1) {
-      cell = `${cell.slice(0, -1)}|`;
-      continue;
-    }
-    cells.push(cell.trim());
-    cell = "";
-  }
-  cells.push(cell.trim());
-  if (cells[0] === "") cells.shift();
-  if (cells.at(-1) === "") cells.pop();
-  return cells;
+  return line
+    .trim()
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
 }
 
 function normalizedHeaderCell(value: string): string {
-  return value.replace(/[`*_]/g, "").trim().toLowerCase();
+  let normalized = value.trim();
+  const wrappers = ["**", "__", "`", "*", "_"] as const;
+  let stripped = true;
+  while (stripped) {
+    stripped = false;
+    for (const wrapper of wrappers) {
+      if (
+        normalized.length >= wrapper.length * 2 &&
+        normalized.startsWith(wrapper) &&
+        normalized.endsWith(wrapper)
+      ) {
+        normalized = normalized.slice(wrapper.length, -wrapper.length).trim();
+        stripped = true;
+        break;
+      }
+    }
+  }
+  return normalized.toLowerCase();
 }
 
 function isTableSeparator(cells: readonly string[]): boolean {
@@ -130,9 +131,9 @@ function isLogicalDescendant(section: string | undefined, parent: string | undef
 }
 
 function fenceParts(line: string): { marker: "`" | "~"; length: number; rest: string } | undefined {
-  const match = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line);
+  const match = /^(`{3,}|~{3,})(.*)$/.exec(line);
   if (!match) return undefined;
-  return { marker: match[2][0] as "`" | "~", length: match[2].length, rest: match[3] };
+  return { marker: match[1][0] as "`" | "~", length: match[1].length, rest: match[2] };
 }
 
 export function extractDbProjectionRequirements(content: string): DbProjectionRequirement[] {
@@ -143,10 +144,8 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   const requirements: DbProjectionRequirement[] = [];
   const indexes: DbProjectionIndexRequirement[] = [];
   let section = "";
-  let currentSectionNumber: string | undefined;
   let targetDepth = 0;
   let targetSectionNumber: string | undefined;
-  let currentSectionHasProjectionTable = false;
   let indexBlock: "none" | "armed" | "collecting" = "none";
   let fence: { marker: "`" | "~"; length: number } | undefined;
   let pendingHeader: string[] | undefined;
@@ -164,11 +163,10 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
         pendingHeader = undefined;
         tableKind = "none";
         indexBlock = "none";
-        currentSectionHasProjectionTable = false;
       }
       continue;
     }
-    if (fenceMatch && !(fenceMatch.marker === "`" && fenceMatch.rest.includes("`"))) {
+    if (fenceMatch) {
       fence = {
         marker: fenceMatch.marker,
         length: fenceMatch.length,
@@ -176,15 +174,10 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
       pendingHeader = undefined;
       tableKind = "none";
       indexBlock = "none";
-      currentSectionHasProjectionTable = false;
       continue;
     }
 
-    if (
-      targetDepth > 0 &&
-      (currentSectionHasProjectionTable || currentSectionNumber === "9.3") &&
-      INDEX_MARKER_RE.test(trimmed)
-    ) {
+    if (targetDepth > 0 && INDEX_MARKER_RE.test(trimmed)) {
       indexBlock = "armed";
       continue;
     }
@@ -221,20 +214,18 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
         targetSectionNumber = undefined;
       }
       section = line.replace(/^#+\s*/, "").trim();
-      currentSectionNumber = sectionNumber;
-      currentSectionHasProjectionTable = false;
       if (TARGET_SECTION_RE.test(line)) {
         targetDepth = depth;
         targetSectionNumber = sectionNumber;
       }
       pendingHeader = undefined;
       tableKind = "none";
+      indexBlock = "none";
       continue;
     }
     if (targetDepth === 0) continue;
 
-    const tableLike = /(^|[^\\])\|/.test(line) && !/^\s*-\s+/.test(line);
-    if (!tableLike) {
+    if (!(trimmed.startsWith("|") && trimmed.endsWith("|"))) {
       pendingHeader = undefined;
       tableKind = "none";
       continue;
@@ -248,7 +239,6 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
             ? "projection"
             : "other"
           : "none";
-      if (tableKind === "projection") currentSectionHasProjectionTable = true;
       pendingHeader = undefined;
       continue;
     }
