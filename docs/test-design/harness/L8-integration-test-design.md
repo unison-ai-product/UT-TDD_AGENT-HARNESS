@@ -343,7 +343,7 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-110` | trusted backupからrestore | restore後のhead、全refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | schema migration各barrierで失敗注入 | DDL、data、`user_version`を単一transactionで全rollback |
 | `CAND-CUTOVER-112` | cutover DB runtimeより新しい未知schema又はdowngrade要求 | cutover DB open/migration 0、canonical bytes不変でfail-close。PLAN ledger/harness projection DBへ波及0 |
-| `CAND-CUTOVER-113` | `.ut-tdd/harness.db` projection全削除・read-only再投影とcutover DB同時監視 | projectionだけ再生成しcutover canonical head/refs/object rows不変 |
+| `CAND-CUTOVER-113` | projection rebuild中にcutover append | single read snapshotをstaging generationへ全投影しcomplete後atomic publish。appendは次世代、世代混在0、canonical DB不変 |
 
 `NODE-Q0-CASE-MANIFEST-v1-BEGIN`
 {"artifact_id":"NODE-Q0-CASE-MANIFEST-v1","expected_case_ids":["CAND-CUTOVER-101","CAND-CUTOVER-102","CAND-CUTOVER-103","CAND-CUTOVER-104","CAND-CUTOVER-105","CAND-CUTOVER-106","CAND-CUTOVER-107","CAND-CUTOVER-108","CAND-CUTOVER-109","CAND-CUTOVER-110","CAND-CUTOVER-111","CAND-CUTOVER-112","CAND-CUTOVER-113","CAND-NODEBOOT-101","CAND-NODEBOOT-102","CAND-NODEBOOT-103","CAND-NODEBOOT-104","CAND-NODEBOOT-105","CAND-NODEBOOT-106"],"schema_version":"node-q0-case-manifest.v1"}

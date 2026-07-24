@@ -621,6 +621,7 @@ payload schema registryへ入れない。未知kind/schema、row追加を伴わ�
 `ReceiptDigest`はprefixなし64 lowercase hexで、core/outer `receipt_digest`、refs、DB PKにだけ使う。
 `ContentDigest`は`sha256:`+64 lowercase hexでartifact/content/required setにだけ使う。相互変換やprefix省略/
 付加を許さず、算出時と検証時にprefix有無をexact照合する。
+ContentDigestの全算出式は必ず文字列`"sha256:" + SHA-256-lowerhex(preimage)`を返す。
 
 producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
 `{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_artifact_id:"NODE-Q0-CASE-MANIFEST-v1",`（前半）
@@ -697,13 +698,23 @@ receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candida
 `debt.plan-l7-452.repaired`の両typed rowを必須とし、片方だけ、旧generic `debt.repair`、
 未知PLAN IDは拒否する。
 
-`ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, author_identity,
+`CandidateAuthorshipReceipt` coreは
+`{schema_version:"candidate-authorship.v1",subject_revision:GitObjectId,`（前半）
+`artifact_digest:ContentDigest,base_revision:GitObjectId,author_identity_digest_set:ContentDigest[] sorted unique nonempty,`
+`runtime_family_set:string[] sorted unique nonempty,author_session_id_set:string[] sorted unique nonempty,`
+`work_provenance_set_digest:ContentDigest,producer_owner_id:"candidate-custody-gate",receipt_digest:ReceiptDigest}`（後半）の
+exact 10 fields/self除外9-field preimageを持ちAttested envelopeへ格納する。trusted custody gate→`ci`とし、
+provider/session verifierがbase..subjectの全product-writing eventからsetsを再導出する。missing/unattested/
+forged/omitted writerを拒否し、自由な`author_identity`自己申告fieldを廃止する。
+
+`ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, authorship_envelope_digest,
 execution_mode, lanes, receipt_digest }`で、`schema_version="review-bundle.v1"`、lanesはexactly twoである。
 各`ReviewLaneReceipt`は`{ schema_version, lane_id, verdict, artifact_digest, subject_revision, provider,
 reviewer_model, execution_mode, runtime_family, reviewer_identity, review_session_id, receipt_digest }`とし、lane IDは
 `schema_version="review-lane.v1"`だけを許し、unknown versionを拒否する。
 `claim-blind` / `spec-blind`を各1、verdictは両方`PASS`だけを許す。両laneのartifact/revisionはbundleと一致し、
-`execution_mode=hybrid`ではprovider、session、identityがlane間で異なり、reviewerはauthorとも異なる。
+`execution_mode=hybrid`ではprovider、session、identityがlane間で異なり、reviewer identity/session/runtimeは
+authorship receiptのauthor setsともdisjointである。
 `codex-only|claude-only`ではprovider/runtime familyの一致を許す一方、reviewer model、session、
 identityがlane間で異なり、reviewerはauthorとも異なる。異model2 laneを用意できなければfail-closeする。
 `standalone`はAI/subagent laneを禁止し、distinct human reviewer 2名を要求する。両laneは
@@ -714,7 +725,7 @@ authorとも異ならなければならない。人間2名を用意できなけ�
 execution_mode,runtime_family,reviewer_identity,review_session_id]`の順で固定tuple/length-frame/SHA-256規則へ
 封印する。field欠落、順序変更、version除外又は旧10-field preimageを拒否する。
 bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外のexact 6 field
-`[schema_version, artifact_digest, subject_revision, author_identity, execution_mode,`（前半）
+`[schema_version, artifact_digest, subject_revision, authorship_envelope_digest, execution_mode,`（前半）
 `lanes=[claim-blind.receipt_digest,spec-blind.receipt_digest]]`（後半）
 を同じ規則で封印する。`lanes`に格納する2 digestは各lane coreではなく
 `AttestedReceiptEnvelope<ReviewLaneReceipt>.receipt_digest`である。そのbundle coreを包むouter envelope receipt digestを
@@ -722,6 +733,8 @@ bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以�
 transitionの`review_digest`はそのevidence receipt `receipt_digest`と一致する。片lane、PASS以外、
 重複lane、artifact/revision drift、mode別independence違反は拒否する。
 bundleと両laneの`execution_mode`はactual admission modeとexact一致し、mixed/stale modeを拒否する。
+bundle→authorship outer digestのtyped refは`edge_kind='review.authorship'`, `ordinal=0` exact 1とし、
+D0 top-level 5 inputsは維持する。
 
 | `producer_owner_id` | `attestation_producer` |
 |---|---|
@@ -743,7 +756,7 @@ bundleと両laneの`execution_mode`はactual admission modeとexact一致し、m
 | `plan-admission-attestation-gate` | `ci` |
 | `q0-case-manifest-gate` | `ci` |
 
-この17 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
+この17 rowに`candidate-custody-gate`→`ci`を加えた18 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
 PLAN-L7-458 `SliceAdmission producer registry`のclosed setとして全て`ci`へ写像する。review lane ownerは
 lane providerと同じ`human|codex|claude`、PO approval ownerは`po`へ写像する。
 
@@ -791,7 +804,7 @@ CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一head
 
 保存するtyped evidence unionは`SliceEvidenceReceipt | EvidencePayloadObject |`（先頭）、
 `AttestedReceiptEnvelope<ReviewLaneReceipt> | AttestedReceiptEnvelope<ReviewBundleReceipt> |`（レビュー）、
-`AttestedReceiptEnvelope<SliceAdmissionReceipt> | AttestedReceiptEnvelope<CaseManifestObject> |`（残り）、
+`AttestedReceiptEnvelope<CandidateAuthorshipReceipt> | AttestedReceiptEnvelope<SliceAdmissionReceipt> | AttestedReceiptEnvelope<CaseManifestObject> |`（残り）、
 CutoverAdmissionReceipt | AttestedTrackedReceiptRecord | L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
 `{schema_version,plan_id,plan_revision,status,content_digest,subject_head,tracked_record_digest,`（前半）
 producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}`のexact schemaである。
@@ -811,19 +824,22 @@ digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、
 
 物理backendは専用`<repo>/.ut-tdd/ledger/cutover-ledger.db`のSQLiteだけとし、file ownership正本は
 [physical-data.md](physical-data.md) §2.7.1を参照する。
-head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
-receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
-evidence object tableは`cutover_evidence_objects(receipt_digest TEXT PRIMARY KEY NOT NULL, object_digest TEXT NOT NULL, evidence_type TEXT NOT NULL, subject_revision TEXT GENERATED ALWAYS AS (CASE WHEN evidence_type='q0-case-manifest' THEN json_extract(payload_json,'$.record.subject_revision') END) STORED, payload_json TEXT NOT NULL, attestation_json TEXT NOT NULL, CHECK(receipt_digest GLOB '[0-9a-f]*' AND length(receipt_digest)=64), CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL))`、
-参照tableは`cutover_evidence_refs(from_receipt_digest TEXT NOT NULL CHECK(length(from_receipt_digest)=64), to_receipt_digest TEXT NOT NULL CHECK(length(to_receipt_digest)=64), edge_kind TEXT NOT NULL, ordinal INTEGER NOT NULL CHECK(ordinal>=0), UNIQUE(from_receipt_digest,edge_kind,ordinal))`
+全canonical tableはSQLite `STRICT`とする。head tableは`cutover_chain_heads(chain_id TEXT PRIMARY KEY NOT NULL CHECK(length(chain_id)>0), head_digest TEXT NOT NULL CHECK(length(head_digest)=64 AND head_digest NOT GLOB '*[^0-9a-f]*'), head_sequence INTEGER NOT NULL CHECK(head_sequence>=0), version INTEGER NOT NULL) STRICT`、
+receipt tableは`cutover_transition_receipts(chain_id TEXT NOT NULL CHECK(length(chain_id)>0), sequence INTEGER NOT NULL CHECK(sequence>=0), receipt_digest TEXT NOT NULL CHECK(length(receipt_digest)=64 AND receipt_digest NOT GLOB '*[^0-9a-f]*'), receipt_json TEXT NOT NULL, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest)) STRICT`、
+evidence object tableは`cutover_evidence_objects(receipt_digest TEXT PRIMARY KEY NOT NULL CHECK(length(receipt_digest)=64 AND receipt_digest NOT GLOB '*[^0-9a-f]*'), object_digest TEXT NOT NULL CHECK(length(object_digest)=64 AND object_digest NOT GLOB '*[^0-9a-f]*'), evidence_type TEXT NOT NULL, subject_revision TEXT GENERATED ALWAYS AS (CASE WHEN evidence_type='q0-case-manifest' THEN json_extract(payload_json,'$.record.subject_revision') END) STORED, payload_json TEXT NOT NULL, attestation_json TEXT NOT NULL, CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','candidate-authorship','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL)) STRICT`、
+参照tableは`cutover_evidence_refs(from_receipt_digest TEXT NOT NULL CHECK(length(from_receipt_digest)=64 AND from_receipt_digest NOT GLOB '*[^0-9a-f]*'), to_receipt_digest TEXT NOT NULL CHECK(length(to_receipt_digest)=64 AND to_receipt_digest NOT GLOB '*[^0-9a-f]*'), edge_kind TEXT NOT NULL CHECK(length(edge_kind)>0), ordinal INTEGER NOT NULL CHECK(ordinal>=0), UNIQUE(from_receipt_digest,edge_kind,ordinal)) STRICT`
 を正本とする。writerは
 `CREATE UNIQUE INDEX uq_cutover_q0_manifest_subject ON cutover_evidence_objects(subject_revision) WHERE evidence_type='q0-case-manifest'`
 も正本DDLとして作成する。`subject_revision`はnullable GitObjectId canonical textだがCaseManifestではNOT NULL相当CHECKとする。
-同digest insertだけを冪等成功とし、同subject別digestのUNIQUE violationをfail-closeする。migration/backfillは
+同digest insertだけを冪等成功とし、同subject別digestのUNIQUE violationをfail-closeする。
 JSON validity、typed decode、schema literal、GitObjectIdはinsert前とread後の双方で検証する。
-移行はtransaction内でcanonical new tableを作り、既存`evidence_type`全rowをdecode/validateしてcopyし、
+versioned migrationはadditive可能な変更だけ`ALTER`し、constraint変更はtransaction内でcanonical new tableを作り、既存`evidence_type`全rowをdecode/validateしてcopyし、
 row countと全receipt/object digest一致を照合後にrename swapしてpartial indexを作る。unknown/null、decode、
 copy、count/digest、rename/indexのどこかが失敗すれば全rollbackする。fresh/migrated schemaは同一とする。
 decoded typed union kindとDB `evidence_type`のexact equalityをinsert/read双方で要求する。
+projection rebuildはcutover DBのsingle read transaction snapshotからstaging generationへ全投影し、
+complete marker後だけprojection側でatomic publishする。並行appendは次generationへ送り世代混在を0とし、
+canonical DBは不変とする。
 `PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
 evidence/receipt insert後の更新SQLは
 文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND version=?`

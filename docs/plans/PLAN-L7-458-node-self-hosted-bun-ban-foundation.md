@@ -77,18 +77,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:d2b0ff809633499570e839c1e6af111a
-  command_id: pr154-manifest-digest-l7-20260724
-  admitted_at: 2026-07-24T15:31:00.000Z
-  source_digest: sha256:e09a193047f961fdf0da75085e042e1df4fd40fe0fe8b56fb2456454945f1781
-  decision_digest: sha256:02361dcf3737e5dec625528dd000438c322893c43391dc228d3bdbc2bf48812a
-  receipt_digest: sha256:8f920d6cb040d63ba52cf3f908634b09f8e1bb8e05f690cb1af7374efb1a761c
+  receipt_id: certificate:c67803ef1eafa07e1c59b9a07d1c75d5
+  command_id: pr154-authorship-l7-20260724
+  admitted_at: 2026-07-24T15:41:00.000Z
+  source_digest: sha256:e79d589572fd421f5a1ec555dc291630c5a53c3dc8953afcd2ffc985dfcceb96
+  decision_digest: sha256:ab576a473231a5b4372196abef71d0302da9f49ff94cef3134f8a962eb8d8d9a
+  receipt_digest: sha256:3b0c947b0b02b172c34bb73f35cec6a295e0d285ec502d9f5c88f292a564107c
   binding:
     path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
     asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
-    revision: 20
-    content_digest: sha256:e09a193047f961fdf0da75085e042e1df4fd40fe0fe8b56fb2456454945f1781
+    revision: 21
+    content_digest: sha256:e79d589572fd421f5a1ec555dc291630c5a53c3dc8953afcd2ffc985dfcceb96
   route:
     signal: feature_addition
     mode: add-feature
@@ -99,19 +99,19 @@ admission_receipt:
     projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
   origin:
     plan_id: PLAN-L6-93-node-bootstrap-contract
-    revision: 17
-    digest: sha256:e4f15e6d5d90b9e1c1dc1e069a5587c616fe7fbbc5dc414c40599a548f149bc3
+    revision: 18
+    digest: sha256:fa3bf09dfd7bed7eb8b119017dcfbd8359e8b175caf7789b4b3bbdb0dbeee7e3
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-      target_revision: 20
+      target_revision: 21
   reentry:
     target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
-    target_revision: 20
+    target_revision: 21
     phase: forward_merge
-  escape_reason: PR 154 case manifest digest closure
+  escape_reason: PR 154 authorship closure
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation
@@ -236,7 +236,7 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-110` | trusted backup restore | head、refs、typed object digestが元ledgerとexact一致 |
 | `CAND-CUTOVER-111` | migration barrier失敗 | schema/data/versionを単一transactionでrollback |
 | `CAND-CUTOVER-112` | cutover DB unknown newer schema又はdowngrade | open/migration 0、canonical bytes不変 |
-| `CAND-CUTOVER-113` | harness projection rebuild | cutover DBをread-only投影しcanonical head/refs/objects不変 |
+| `CAND-CUTOVER-113` | harness projection rebuildと並行append | single read snapshotをstaging generationへ全投影しcomplete後atomic publish、並行appendは次世代、世代混在0、canonical DB不変 |
 
 canonical cutover DBは`.ut-tdd/ledger/cutover-ledger.db`、PLAN ledgerは
 `.ut-tdd/ledger/harness-ledger.db`、rebuildable projectionは`.ut-tdd/harness.db`へ分離する。

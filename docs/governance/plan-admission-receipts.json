@@ -768,6 +768,38 @@
         "revision": 20,
         "content_digest": "sha256:e09a193047f961fdf0da75085e042e1df4fd40fe0fe8b56fb2456454945f1781"
       }
+    },
+    {
+      "sequence": 49,
+      "previous_record_digest": "sha256:2eb6815bdd0d37a217de5c0a43799dc05ed0fbc4b1dd653827492d30eccb4ae3",
+      "record_digest": "sha256:ea284717ba59425a7d46087c660814e9a166e170ac30210f28f58e1f16cc3cef",
+      "command_id": "pr154-authorship-l6-20260724",
+      "receipt_id": "certificate:52ddac71ee94bc72d51c079b8383b81b",
+      "receipt_digest": "sha256:eec1457293b0029f9bc3e6bc266fce86a35c8775b51776aa8cfcf792d62d5ff3",
+      "decision_digest": "sha256:2bbeda2b622e8daca32aa7334841e037b2cb8c3dbe227ecb1d8541aa341fb26b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 18,
+        "content_digest": "sha256:fa3bf09dfd7bed7eb8b119017dcfbd8359e8b175caf7789b4b3bbdb0dbeee7e3"
+      }
+    },
+    {
+      "sequence": 50,
+      "previous_record_digest": "sha256:ea284717ba59425a7d46087c660814e9a166e170ac30210f28f58e1f16cc3cef",
+      "record_digest": "sha256:caa7152e40e400f8a0058b39a7df6103cce001c091e7f16c7b38bc954a6feb85",
+      "command_id": "pr154-authorship-l7-20260724",
+      "receipt_id": "certificate:c67803ef1eafa07e1c59b9a07d1c75d5",
+      "receipt_digest": "sha256:3b0c947b0b02b172c34bb73f35cec6a295e0d285ec502d9f5c88f292a564107c",
+      "decision_digest": "sha256:ab576a473231a5b4372196abef71d0302da9f49ff94cef3134f8a962eb8d8d9a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 21,
+        "content_digest": "sha256:e79d589572fd421f5a1ec555dc291630c5a53c3dc8953afcd2ffc985dfcceb96"
+      }
     }
   ]
 }

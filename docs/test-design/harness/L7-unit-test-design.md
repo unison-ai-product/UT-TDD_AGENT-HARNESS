@@ -1715,6 +1715,8 @@ JSON missing field、`edge_kind!='q0.case-manifest'`、`ordinal!=0`、edge 0/2�
 NULL receipt/ref digest、ReceiptDigestへの`sha256:`付加、ContentDigestのprefix欠落、手入力subject spoof、
 generated subject不一致、migration copy/count/digest/swap/index失敗、`q0.runtime` typo、doc全体をartifact
 preimageに使うmutationも個別negativeにする。
+digest NULL/nonhex/prefix、empty chain ID、negative sequence、migration snapshot混在、自己review、
+forged author、omitted writer/session、authorship ref欠測/複数を個別negativeにする。
 ReviewLane exact 12/self除外11-field、SliceAdmission exact 8/self除外7-field orderをmutation pairにする。
 evidence set tupleとduplicate keyは`producer_owner_id,attestation_producer`を使い、未定義`producer_id`を拒否する。
 cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-transition.ts`→

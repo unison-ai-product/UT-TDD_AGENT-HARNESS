@@ -333,3 +333,11 @@ ReceiptDigest raw lowerhex 64とContentDigest `sha256:`付きlowerhex 64を分�
 SQLite object tableをstrict NOT NULL、signed payload由来generated subjectへ変更し、refsのNULL identityも拒否する。
 migrationはdecode/copy/count/digest/swap/indexを単一transactionでrebuildする。PLAN-L6-93 revision 17 /
 PLAN-L7-458 revision 20を正規`plan revise`経路で発行した。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 85ada35f strict DB/authorship局所FLAG
+
+全digest SQL CHECKをlength 64+nonhex拒否へ統一し、canonical tablesをSTRICT/NOT NULLへ閉じた。
+versioned migrationとprojection single-snapshot staging publishを固定した。自己申告authorを廃止し、
+provider-attested CandidateAuthorshipReceiptをReviewBundle nested refに追加、全writer setsとのdisjointを要求した。
+D0 top-level 5 inputsは維持する。PLAN-L6-93 revision 18 / PLAN-L7-458 revision 21を正規`plan revise`で発行した。
+独立再reviewまではFLAGを維持する。

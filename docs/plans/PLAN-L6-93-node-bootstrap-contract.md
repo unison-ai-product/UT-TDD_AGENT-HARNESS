@@ -39,18 +39,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:849da9361606a34823bba44078b72f8e
-  command_id: pr154-manifest-digest-l6-20260724
-  admitted_at: 2026-07-24T15:30:00.000Z
-  source_digest: sha256:e4f15e6d5d90b9e1c1dc1e069a5587c616fe7fbbc5dc414c40599a548f149bc3
-  decision_digest: sha256:149f3cdf0fc324baa7062c157683eef5b2b072caa3961ea1db490e2c72c9c07b
-  receipt_digest: sha256:5545f9faa745a46c80ba05d677588ea3cbfe950e72ec391db1f6b0c5533ffc7e
+  receipt_id: certificate:52ddac71ee94bc72d51c079b8383b81b
+  command_id: pr154-authorship-l6-20260724
+  admitted_at: 2026-07-24T15:40:00.000Z
+  source_digest: sha256:fa3bf09dfd7bed7eb8b119017dcfbd8359e8b175caf7789b4b3bbdb0dbeee7e3
+  decision_digest: sha256:2bbeda2b622e8daca32aa7334841e037b2cb8c3dbe227ecb1d8541aa341fb26b
+  receipt_digest: sha256:eec1457293b0029f9bc3e6bc266fce86a35c8775b51776aa8cfcf792d62d5ff3
   binding:
     path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     plan_id: PLAN-L6-93-node-bootstrap-contract
     asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
-    revision: 17
-    content_digest: sha256:e4f15e6d5d90b9e1c1dc1e069a5587c616fe7fbbc5dc414c40599a548f149bc3
+    revision: 18
+    content_digest: sha256:fa3bf09dfd7bed7eb8b119017dcfbd8359e8b175caf7789b4b3bbdb0dbeee7e3
   route:
     signal: feature_addition
     mode: add-feature
@@ -68,12 +68,12 @@ admission_receipt:
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L6-93-node-bootstrap-contract
-      target_revision: 17
+      target_revision: 18
   reentry:
     target_plan_id: PLAN-L6-93-node-bootstrap-contract
-    target_revision: 17
+    target_revision: 18
     phase: forward_merge
-  escape_reason: PR 154 case manifest digest closure
+  escape_reason: PR 154 authorship closure
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign
@@ -160,6 +160,8 @@ missing/orphan/split manifestを拒否する。
 ReceiptDigest raw 64 lowerhexとContentDigest `sha256:`付き64 lowerhexを分離する。artifact digest preimageは
 marker間single parsed JSONのRFC 8785 UTF-8 bytesだけとし、DB subjectはsigned payloadからgenerated導出する。
 strict NOT NULL tableへの移行はdecode/copy/count/digest/swap/indexを単一transactionで完遂する。
+ReviewBundleはprovider-attested CandidateAuthorshipReceiptをnested参照し、全writer setsとreviewerのdisjointを
+再導出する。D0 top-level 5 inputsは維持する。projectionはsingle read snapshotからstagingへ全投影後atomic publishする。
 aggregateはclosed profileのprofile revision、required lane IDs/set digestとobserved setをexact照合する。
 共通GitObjectIdを全receipt subject/HEADへ適用しraw hexを拒否する。tracked/L6/reviewを含む全schema versionをliteral v1へ閉じる。
 ReviewLane coreは12 fields/self除外11-field、SliceAdmissionは8/self除外7-field ordered preimageへ固定する。

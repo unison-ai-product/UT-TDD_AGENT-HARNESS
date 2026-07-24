@@ -1455,6 +1455,9 @@ typed `cutover_evidence_refs` edgeで参照し、missing/orphan/split manifest�
 ReceiptDigestはraw lowerhex 64、ContentDigestは`sha256:`付きlowerhex 64へ分離しprefix混同を拒否する。
 artifact digest preimageはmarker間single parsed JSONのRFC 8785 UTF-8 bytesだけとする。DB subjectはsigned
 payload JSONからgenerated columnで導出し、strict NOT NULL tableのtransactional rebuild migrationを要求する。
+ReviewBundleはattested CandidateAuthorshipReceipt outer digestをnested ref exact 1で参照し、provider由来の
+全writer identity/session/runtime setとreviewerをdisjoint検証する。自己申告author fieldを受理しない。
+projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
 aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
 `ReviewBundleReceipt`はexact 7-field core/self除外6-field ordered preimageとexact 7-field
 `AttestedReceiptEnvelope`を使い、
