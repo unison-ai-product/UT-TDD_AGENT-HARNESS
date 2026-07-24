@@ -580,14 +580,9 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const ready = join(repo, "ready");
     mkdirSync(ready);
     writeFileSync(gate, "wait", "utf8");
-    const worker = join(
-      process.cwd(),
-      "tests",
-      "workers",
-      "forward-escape-sqlite.worker.ts",
-    );
+    const worker = join(process.cwd(), "tests", "workers", "forward-escape-sqlite-worker.ts");
     const vitest = join(process.cwd(), "node_modules", "vitest", "vitest.mjs");
-    const workerConfig = join(process.cwd(), "tests", "workers", "vitest.config.ts");
+    const workerConfig = join(process.cwd(), "tests", "workers", "vitest-worker-config.ts");
     const nodeBinary = process.env.UT_TDD_NODE_BIN?.trim() || "node";
     const children = Array.from({ length: 2 }, (_, workerIndex) => {
       // workerはNode binaryを明示し、親test runtimeがBunでもBunを再起動しない。
@@ -651,6 +646,8 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         if (timer !== undefined) clearTimeout(timer);
       }
     };
+    let primaryFailure: unknown;
+    let cleanupFailure: AggregateError | undefined;
     try {
       const deadline = Date.now() + 30_000;
       while (readdirSync(ready).length < children.length && Date.now() < deadline) {
@@ -688,8 +685,8 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
         }),
       );
       expect(outputs).toHaveLength(2);
-      const workerResults = outputs.map((output) =>
-        output.match(/UT_TDD_WORKER_RESULT=(\{.*\})/)?.[1],
+      const workerResults = outputs.map(
+        (output) => output.match(/UT_TDD_WORKER_RESULT=(\{.*\})/)?.[1],
       );
       expect(workerResults.every((result) => result !== undefined)).toBe(true);
       expect(new Set(workerResults).size).toBe(1);
@@ -701,6 +698,8 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       } finally {
         verifyDb.close();
       }
+    } catch (error) {
+      primaryFailure = error;
     } finally {
       for (const observed of children) {
         if (observed.child.exitCode === null && observed.child.signalCode === null) {
@@ -715,13 +714,21 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       );
       if (existsSync(gate)) rmSync(gate);
       if (cleanupFailures.length > 0) {
-        throw new AggregateError(
+        cleanupFailure = new AggregateError(
           cleanupFailures.map(({ reason }) => reason),
           "forward escape workers did not terminate",
         );
       }
       removeTestTree(repo);
     }
+    if (primaryFailure !== undefined && cleanupFailure) {
+      throw new AggregateError(
+        [primaryFailure, cleanupFailure],
+        "forward escape assertion and worker cleanup both failed",
+      );
+    }
+    if (primaryFailure !== undefined) throw primaryFailure;
+    if (cleanupFailure) throw cleanupFailure;
   });
 
   it("U-EXISSUE-006: Issue 本文から origin/reentry/drive のいずれかを除く mutation を検出する", () => {

@@ -4,6 +4,7 @@ import { SqliteForwardEscapeJournal } from "../../src/execution/sqlite-forward-e
 import { openHarnessDb } from "../../src/state-db/index";
 import { migrate } from "../../src/state-db/migration";
 
+// ut-tdd:cleanup-owner=tests/forward-escape-issue-contract.test.ts
 const dbPath = process.env.UT_TDD_FORWARD_ESCAPE_DB;
 const repoRoot = process.env.UT_TDD_FORWARD_ESCAPE_REPO;
 const gate = process.env.UT_TDD_FORWARD_ESCAPE_GATE;
@@ -14,12 +15,15 @@ const enabled = [dbPath, repoRoot, gate, ready].every(
 
 describe.runIf(enabled)("forward escape SQLite concurrency worker", () => {
   it("issues one convergent certificate and queue receipt", async () => {
-    const db = openHarnessDb(dbPath!, { repoRoot: repoRoot! });
+    if (!dbPath || !repoRoot || !gate || !ready) {
+      throw new Error("forward escape worker environment is incomplete");
+    }
+    const db = openHarnessDb(dbPath, { repoRoot });
     migrate(db);
     try {
       const journal = new SqliteForwardEscapeJournal(db);
-      writeFileSync(`${ready!}/${process.pid}`, "ready");
-      while (existsSync(gate!)) {
+      writeFileSync(`${ready}/${process.pid}`, "ready");
+      while (existsSync(gate)) {
         await new Promise((resolve) => setTimeout(resolve, 2));
       }
       const certificate = journal.issue({

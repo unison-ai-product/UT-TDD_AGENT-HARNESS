@@ -266,6 +266,13 @@ function hasLiveCleanupCall(path: string, source: string): boolean {
   return found;
 }
 
+function delegatedCleanupOwner(source: string): string | null {
+  return (
+    source.match(/^\s*\/\/\s*ut-tdd:cleanup-owner=(tests\/[a-z0-9./-]+\.test\.ts)\s*$/m)?.[1] ??
+    null
+  );
+}
+
 describe("persistent harness DB cleanup contract", () => {
   it("U-TESTHYGIENE-026: resolves namespace DB owners and namespace recursive removal", () => {
     expect(
@@ -336,6 +343,18 @@ describe("persistent harness DB cleanup contract", () => {
     ).toBe(true);
   });
 
+  it("U-TESTHYGIENE-034: worker DB ownership requires an explicit parent cleanup contract", () => {
+    expect(
+      delegatedCleanupOwner(
+        "// ut-tdd:cleanup-owner=tests/forward-escape-issue-contract.test.ts\nopenHarnessDb(path);",
+      ),
+    ).toBe("tests/forward-escape-issue-contract.test.ts");
+    expect(delegatedCleanupOwner("openHarnessDb(path);")).toBeNull();
+    expect(
+      delegatedCleanupOwner("// ut-tdd:cleanup-owner=../outside.test.ts\nopenHarnessDb(path);"),
+    ).toBeNull();
+  });
+
   it("U-TESTHYGIENE-019: auto-discovers every persisted DB owner and requires retrying cleanup", () => {
     const root = process.cwd();
     const pending = [join(root, "tests")];
@@ -346,7 +365,10 @@ describe("persistent harness DB cleanup contract", () => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const path = join(directory, entry.name);
         if (entry.isDirectory()) pending.push(path);
-        else if (entry.isFile() && entry.name.endsWith(".test.ts"))
+        else if (
+          entry.isFile() &&
+          (entry.name.endsWith(".test.ts") || entry.name.endsWith("-worker.ts"))
+        )
           files.push({
             path: relative(root, path).replaceAll("\\", "/"),
             source: readFileSync(path, "utf8"),
@@ -354,11 +376,24 @@ describe("persistent harness DB cleanup contract", () => {
       }
     }
     const owners = files.filter((file) => createsPersistedHarnessDb(file.path, file.source));
+    const filesByPath = new Map(files.map((file) => [file.path, file]));
 
     expect(owners.length).toBeGreaterThan(0);
     for (const owner of owners) {
-      expect(hasLiveCleanupCall(owner.path, owner.source), owner.path).toBe(true);
-      expect(usesRawRecursiveTreeRemoval(owner.path, owner.source), owner.path).toBe(false);
+      const delegatedOwnerPath = delegatedCleanupOwner(owner.source);
+      const cleanupOwner = delegatedOwnerPath ? filesByPath.get(delegatedOwnerPath) : owner;
+      if (!cleanupOwner) {
+        throw new Error(`${owner.path}: missing cleanup owner ${delegatedOwnerPath}`);
+      }
+      expect(
+        delegatedOwnerPath === null ||
+          cleanupOwner.source.includes(owner.path.split("/").at(-1) ?? owner.path),
+        `${owner.path}: cleanup owner does not launch delegated worker`,
+      ).toBe(true);
+      expect(hasLiveCleanupCall(cleanupOwner.path, cleanupOwner.source), owner.path).toBe(true);
+      expect(usesRawRecursiveTreeRemoval(cleanupOwner.path, cleanupOwner.source), owner.path).toBe(
+        false,
+      );
     }
   });
 });
