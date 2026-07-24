@@ -282,6 +282,32 @@ function hasDelegatedCleanupBinding(
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const workerVariables = new Set<string>();
   const cleanupRoots = new Set<string>();
+  const constIdentifiers = new Set<string>();
+  const mutatedIdentifiers = new Set<string>();
+  const collectBindings = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      ts.isVariableDeclarationList(node.parent) &&
+      (node.parent.flags & ts.NodeFlags.Const) !== 0
+    )
+      constIdentifiers.add(node.name.text);
+    if (
+      ts.isBinaryExpression(node) &&
+      ts.isIdentifier(node.left) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    )
+      mutatedIdentifiers.add(node.left.text);
+    if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      ts.isIdentifier(node.operand) &&
+      [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)
+    )
+      mutatedIdentifiers.add(node.operand.text);
+    ts.forEachChild(node, collectBindings);
+  };
+  collectBindings(file);
   const resolvesWorkerPath = (call: ts.CallExpression): boolean => {
     if (!ts.isIdentifier(call.expression) || !["join", "resolve"].includes(call.expression.text))
       return false;
@@ -310,7 +336,9 @@ function hasDelegatedCleanupBinding(
       ts.isIdentifier(node.name) &&
       node.initializer &&
       ts.isCallExpression(node.initializer) &&
-      resolvesWorkerPath(node.initializer)
+      resolvesWorkerPath(node.initializer) &&
+      constIdentifiers.has(node.name.text) &&
+      !mutatedIdentifiers.has(node.name.text)
     )
       workerVariables.add(node.name.text);
     if (
@@ -335,7 +363,12 @@ function hasDelegatedCleanupBinding(
             (property): property is ts.PropertyAssignment =>
               ts.isPropertyAssignment(property) && property.name.getText(file) === rootEnv,
           );
-          if (rootProperty && ts.isIdentifier(rootProperty.initializer))
+          if (
+            rootProperty &&
+            ts.isIdentifier(rootProperty.initializer) &&
+            constIdentifiers.has(rootProperty.initializer.text) &&
+            !mutatedIdentifiers.has(rootProperty.initializer.text)
+          )
             cleanupRoots.add(rootProperty.initializer.text);
         }
       }
@@ -474,7 +507,7 @@ describe("persistent harness DB cleanup contract", () => {
       ),
     ).toBeNull();
     const owner =
-      "const worker = join('tests', 'db-worker.ts'); spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); removeTestTree(repo);";
+      "const repo = 'tmp'; const worker = join('tests', 'db-worker.ts'); spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); removeTestTree(repo);";
     expect(
       hasDelegatedCleanupBinding("tests/owner.test.ts", owner, "tests/db-worker.ts", "UT_TDD_REPO"),
     ).toBe(true);
@@ -482,6 +515,28 @@ describe("persistent harness DB cleanup contract", () => {
       hasDelegatedCleanupBinding(
         "tests/owner.test.ts",
         owner.replace("join('tests', 'db-worker.ts')", "join('tests', 'evil', 'db-worker.ts')"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner.replace(
+          "const worker = join('tests', 'db-worker.ts');",
+          "let worker = join('tests', 'db-worker.ts'); worker = join('tests', 'evil.ts');",
+        ),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner
+          .replace("UT_TDD_REPO: repo", "UT_TDD_REPO: root")
+          .replace("const worker =", "let root = repo; const worker =")
+          .replace("removeTestTree(repo)", "root = otherRoot; removeTestTree(root)"),
         "tests/db-worker.ts",
         "UT_TDD_REPO",
       ),
