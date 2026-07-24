@@ -39,7 +39,7 @@ dependencies:
 - `analyzeDocumentReferences`はreaderが生成した同一snapshotのtyped edgeをanchor/ID registryとauthority/applicability policyで解決し、現行relation graphのfail-openを再利用しない。
 - baseline/delta/final closure、conditional field、target/PLAN、canonical stale assertionを独立finding IDで検証する。
 - CLIは`init|materialize|set`をwrite command、`diff|references check|check|report`をqueryに分離し、usage=2、contract violation=1、green=0を固定する。
-- reference readerはfrontmatter path、Markdown inline/reference、wiki link、anchor、PLAN/spec/test IDをtyped edge化し、parse error/unknown scheme/anchor欠落を空集合へ変換しない。
+- reference readerはfrontmatter path、Markdown inline/reference、wiki link、anchor定義、PLAN/spec/test IDをtyped edge化し、parse error/unknown scheme/anchor構文不正を空集合へ変換しない。anchor endpointの欠落・多義はanalyzerが判定する。
 - reference reader入力はfinal snapshot digestとsource path/blob OID/content digest/raw bytesを不可分に持ち、
   blob digest不一致をparse前に拒否する。syntax/parser/anchor、URI構文registry、
   frontmatter schema、reader registry revisionをreceiptへ束縛する。

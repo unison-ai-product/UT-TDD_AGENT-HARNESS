@@ -1026,14 +1026,26 @@ type DocumentReferenceParseReason =
   | "source-member-extra"
   | "source-blob-mismatch"
   | "source-content-digest-mismatch"
-  | "reader-missing"
-  | "reader-duplicate"
-  | "reader-ambiguous"
   | "syntax-invalid"
   | "encoding-invalid"
   | "scheme-unknown"
   | "target-noncanonical"
   | "reader-exception";
+
+type DocumentReferenceReaderRegistryReason =
+  | "reader-missing"
+  | "reader-duplicate"
+  | "reader-ambiguous"
+  | "reader-revision-missing"
+  | "syntax-binding-mismatch";
+
+type DocumentReferenceReaderRegistryError = {
+  reasonCode: DocumentReferenceReaderRegistryReason;
+  syntaxKind: DocumentReferenceSyntax;
+  registryDigest: string;
+  evidenceDigest: string;
+  findingId: string;
+};
 
 type DocumentReferenceParseError = {
   reasonCode: DocumentReferenceParseReason;
@@ -1105,12 +1117,36 @@ type DocumentReferenceAnalysisFinding = {
   findingId: string;
 };
 
-type DocumentReferenceAnalysisResult = {
-  graph: DocumentReferenceGraph;
-  findings: readonly DocumentReferenceAnalysisFinding[];
-  analysisDigest: string;
-  closure: "closed" | "blocked";
+type DocumentReferenceAnalysisInputReason =
+  | "graph-snapshot-mismatch"
+  | "registry-snapshot-mismatch"
+  | "registry-revision-missing"
+  | "policy-revision-missing"
+  | "receipt-missing"
+  | "receipt-duplicate"
+  | "receipt-stale";
+
+type DocumentReferenceAnalysisInputError = {
+  reasonCode: DocumentReferenceAnalysisInputReason;
+  subjectIdentity: string;
+  evidenceDigest: string;
+  findingId: string;
 };
+
+type DocumentReferenceAnalysisResult =
+  | {
+      ok: true;
+      graph: DocumentReferenceGraph;
+      findings: readonly DocumentReferenceAnalysisFinding[];
+      analysisDigest: string;
+      closure: "closed" | "blocked";
+    }
+  | {
+      ok: false;
+      errors: readonly DocumentReferenceAnalysisInputError[];
+      analysisDigest: string;
+      closure: "blocked";
+    };
 
 interface RepositoryDocumentBlobPort {
   load(input: {
@@ -1146,7 +1182,10 @@ type ReadDocumentReferencesResult =
   | { ok: true; graph: DocumentReferenceGraph; errors: readonly [] }
   | {
       ok: false;
-      errors: readonly DocumentReferenceParseError[];
+      errors: readonly (
+        | DocumentReferenceParseError
+        | DocumentReferenceReaderRegistryError
+      )[];
       diagnostics: {
         edges: readonly DocumentReferenceEdge[];
         receipts: readonly DocumentReferenceParseReceipt[];
@@ -1219,7 +1258,9 @@ working tree、DB、既存relation graph、別snapshotのblobを
 不足入力の補完へ使わない。入力byte列とinput DTOは変更しない。
 
 reader registryは`readerId,readerRevision,claimedSyntaxKinds`を持つimmutable factoryで生成し、
-全syntax kindをexactly once所有する。missing/duplicate claim、空revisionを生成時に拒否する。
+全syntax kindをexactly once所有する。missing/duplicate/ambiguous claim、空revision、
+requestとimmutable `syntaxBinding`の不一致はsource非依存の
+`DocumentReferenceReaderRegistryError`として生成時又はparse前に拒否する。
 registry digestを各receiptへ束縛し、配列順又はplugin登録順をwinner選択へ使わない。
 scheme/frontmatter registryのrevision/digestはregistry側のimmutable `syntaxBinding`を正本とし、
 request自己申告との不一致をparse前にfail-closeする。
@@ -1292,11 +1333,14 @@ length-prefixed frame化する。edge 0件の正常blobもreceiptを返し、err
 receiptと全errorを返すがGreen graphへ昇格しない。reader例外も
 `reader-exception`へ型付けし、握り潰さない。
 
-U006の閉じたreason codeは
+U006のsource parseに対する閉じたreason codeは
 ```text
 source-member-missing|source-member-extra|source-blob-mismatch|source-content-digest-mismatch|
-reader-missing|reader-duplicate|reader-ambiguous|syntax-invalid|encoding-invalid|scheme-unknown|
-target-noncanonical|reader-exception
+syntax-invalid|encoding-invalid|scheme-unknown|target-noncanonical|reader-exception
+```
+とする。source非依存のreader registry reasonは
+```text
+reader-missing|reader-duplicate|reader-ambiguous|reader-revision-missing|syntax-binding-mismatch
 ```
 とする。U007のresolver/policy reasonは
 ```text
@@ -1318,6 +1362,15 @@ finding IDは`doc-reference-parse-error,source_path,evidence_digest`から導出
 一blob内の正常edgeとerrorを両方収集するが、error一件以上のgraphはblockedであり、
 正常edgeだけをclosure authorityへ昇格しない。
 
+reader registry errorのevidence frameは
+```text
+registry_digest, syntax_kind, reason_code, reader_identity_set_digest,
+reader_revision_set_digest, syntax_binding_digest
+```
+の順とし、finding IDは`doc-reference-reader-registry-error,syntax_kind,evidence_digest`から導出する。
+source path、byte span、架空reader IDのsentinelを合成せず、
+`syntax_kind,reason_code,finding_id`のunsigned UTF-8 byte順で返す。
+
 U007 analyzerは次のseedを使用する。
 ```text
 graph_digest, snapshot_digest, anchor_registry_digest, plan_registry_digest,
@@ -1328,6 +1381,15 @@ authority_policy_revision, applicability_policy_revision
 各finding evidenceはseed、`reference_id,reason_code,target_identity`から導出し、analysis digestは
 seedとstable finding ID集合から生成する。registry又はpolicy revision欠落、graphと別snapshotの
 registry、receipt欠落・重複・staleをblockedにし、既存relation graphから補完しない。
+入力契約違反の閉じたreason codeは
+```text
+graph-snapshot-mismatch|registry-snapshot-mismatch|registry-revision-missing|
+policy-revision-missing|receipt-missing|receipt-duplicate|receipt-stale
+```
+とする。evidence frameは`graph_digest,snapshot_digest,registry_set_digest,policy_revision_set_digest,
+subject_identity,reason_code`の順、finding IDは
+`doc-reference-analysis-input-error,subject_identity,evidence_digest`から導出し、
+全入力契約違反をstable順の`ok:false` resultで返す。domain findingを合成せず、未型付け例外へ変換しない。
 
 property testはblob順・reader順・error入力順の全permutationでedge/receipt/finding digest一致と
 入力deep-equal不変を検査する。mutation testはsnapshot/blob比較、unknown scheme拒否、
@@ -1367,13 +1429,15 @@ DbC:
 - `analyzeDocumentReferences(input: { snapshot: RepositoryDocsSnapshot; graph: DocumentReferenceGraph;
   registries: DocumentReferenceRegistrySet; anchorRegistryRevision: string; authorityPolicyRevision: string;
   applicabilityPolicyRevision: string }): DocumentReferenceAnalysisResult`
-  pre: `graph`は成功した`readDocumentReferences`が生成した同一`input.snapshot.snapshotDigest`のGreen graphであり、
-  全snapshot memberのparse receiptをexactly once含む。`registries`も同snapshotへ束縛され、
+  pre: `graph`は成功した`readDocumentReferences`が生成したGreen graphを名乗る候補であり、
+  analyzerは同一`input.snapshot.snapshotDigest`への束縛と全snapshot memberのparse receipt exactly onceを
+  authorityへ昇格する前に再検証する。`registries`も同snapshotへ束縛され、
   anchor/PLAN/ADR/spec/test registry digestとanchor/authority/applicability policy revisionを全て明示する。
   post: final snapshotとexact registry/policy revisionだけでdocument/anchor/typed-ID/authority/semantic/
   applicability/supersessionを解決し、閉じたU007 reason codeのfinding、stable `analysisDigest`、
   `closed|blocked`を返す。未知・複数hitは任意候補を選ばず`*-missing|*-ambiguous`、
-  registry/policy revision欠落、別snapshot registry、receipt欠落・重複・staleはblockedとする。
+  registry/policy revision欠落、別snapshot graph/registry、receipt欠落・重複・staleは
+  閉じた`DocumentReferenceAnalysisInputError`を全件返す`ok:false` blocked resultとする。
   domain不適合を未型付け例外又はsilent successへ変換しない。
   invariant: readerの構文抽出責務を再実行せず、既存relation graph、archive/superseded fallback、
   DB rowで欠落を補完しない。snapshot、graph、registriesを変更せず、authoring docs、ledger、DB、
