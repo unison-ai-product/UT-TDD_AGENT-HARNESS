@@ -1656,6 +1656,8 @@ decimal byte-length framing、SHA-256 lowercase hexについてWindows/POSIX相�
 tuple mutation、順序mutation、duplicateを拒否する。`CAND-CUTOVER-009`はsealed edgeで
 `PLAN-RECOVERY-16` / `PLAN-L7-452`の片方だけに加え、D0 review欠落、D0 admission欠落、
 fresh review bundle欠落、fresh CutoverAdmission欠落を個別fixture化し、merge/production/cutover 0を確認する。
+`CAND-CUTOVER-003/005`はrevision ruleをdiscriminatorとしてproducer-ancestor/candidate-headのsubjectを
+入れ替えたfixture、CutoverAdmissionのartifact digest mutation、genesisのQ0 predecessor欠落を拒否する。
 全edgeでclaim-blind/spec-blind exact 2 lane PASS、unique lane/reviewer/session/runtime family、artifact/revision一致を要求し、
 片lane又はindependence違反を拒否する。SliceEvidenceReceipt自体のversion/fixed tuple/digest mutationも検証する。
 

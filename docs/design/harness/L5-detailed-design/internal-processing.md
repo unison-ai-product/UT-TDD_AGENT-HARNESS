@@ -445,10 +445,11 @@ Bun final deletion、cutover transitionは、L6 confirmedかつD0 review/admissi
 
 `SliceAdmissionReceipt`は上記implementation slice専用で、cutover又はfinal revisionの許可には流用しない。
 cutover用zod正本`src/schema/cutover-transition.ts`は、別schemaとして
-field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, prior_validated_receipt_digest, decision, issuer_authority_id, issuer_key_id, issuer_key_version, attestation, receipt_digest }`
+field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, artifact_digest, prior_validated_receipt_digest, decision, issuer_authority_id, issuer_key_id, issuer_key_version, attestation, receipt_digest }`
 を持つ。`schema_version="cutover-admission.v1"`、
 decisionは`approved|rejected`、candidate headとedgeをexact bindingする。genesis admissionはvalidated
 Q0 `SliceAdmissionReceipt`をpriorに要求し、以後は直前validated cutover receiptをpriorに要求する。
+`receipt_digest`はartifact digestを含む先行10 fieldを固定順canonical tuple+length frame+SHA-256で封印する。
 許可FSMは`q0_validated → genesis_approved → inventory_to_shadow_approved → shadow_to_primary_approved → primary_to_bun_removed_approved → bun_removed_to_sealed_approved`だけとする。
 
 | edge_id | 正規producer / authority |
@@ -505,7 +506,9 @@ edge evidence registryはtransition discriminatorごとにrequired kind/count/pr
 全rowでEdge ID、kind ID、producer ID、count、revision rule、digest、successをexact照合する。receipt schemaは
 種別で分離する。`SliceEvidenceReceipt { schema_version, edge_id, kind_id, producer_id,
 subject_revision, evidence_digest, success, receipt_digest }`の`schema_version`は
-`cutover-evidence.v1`、`subject_revision`はproducer slice commitである。先行7 fieldを固定順JSON arrayへ
+`cutover-evidence.v1`とする。`subject_revision`はregistryのrevision規則でdiscriminateし、
+`producer-ancestor` rowではproducer commit、`candidate-head` rowではcandidate HEADをexact保持する。
+先行7 fieldを固定順JSON arrayへ
 射影し、UTF-8 canonical JSON、decimal byte-length framing、SHA-256 lowercase hexで
 `receipt_digest`を算出する。未知field、別version、duplicate、locale/改行/path separator差を拒否する。
 `CutoverTransitionReceipt`の唯一のschemaは
@@ -565,7 +568,7 @@ gate件数には数えない。review laneは加えてauthor、同一session、�
 freshとは、bundle/admissionがtransition candidate HEADとそのartifact digestへexact拘束され、
 まだどのtransitionにも消費されていないことをいう。review後にproduct commitが追加されればrevision/
 artifact mismatchで失効する。`admission.approved`は同じcandidate HEADに対する正規ownerのapproved
-`SliceAdmissionReceipt`を封印し、transitionの`admission_digest`はそのevidence receipt digestと一致する。
+`CutoverAdmissionReceipt`を封印し、transitionの`admission_digest`はそのevidence receipt digestと一致する。
 
 chain entryはtransition receiptとその全immutable evidence receiptsを同じappend recordへ保存する。
 したがって外部review service又はIssueを再照会せず、chainだけでreview bundle、admission、evidence set、
@@ -575,10 +578,18 @@ receipt digestを再検証できる。`initializeCutoverChain`は`sequence=0`か
 writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt/evidenceを単一atomic transactionでappendする。
 CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。
 
+保存するtyped evidence unionは`SliceEvidenceReceipt | ReviewLaneReceipt | ReviewBundleReceipt |
+SliceAdmissionReceipt | CutoverAdmissionReceipt | Q0PredecessorReceipt`である。各payloadとattestationを
+content-addressed objectとして保存し、transition→evidence、bundle→2 lane、CutoverAdmission→Q0 predecessor
+又はprior cutover、Q0 predecessor→SliceAdmissionの参照edgeを持つ。reducerはroot transitionから全参照を
+digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、attestation不一致を拒否する。
+
 物理backendはrepo既定`<repo>/.ut-tdd/harness.db`のSQLiteだけとする。
 head tableは`cutover_chain_heads(chain_id PRIMARY KEY, head_digest, head_sequence, version)`、
 receipt tableは`cutover_transition_receipts(chain_id, sequence, receipt_digest, receipt_json, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest))`、
-evidence tableは`cutover_transition_evidence(chain_id, sequence, evidence_receipt_digest, evidence_json, UNIQUE(chain_id,sequence,evidence_receipt_digest))`を正本とする。writerは
+evidence object tableは`cutover_evidence_objects(evidence_digest PRIMARY KEY, evidence_type, payload_json, attestation_json)`、
+参照tableは`cutover_evidence_refs(parent_digest, child_digest, edge_kind, ordinal, UNIQUE(parent_digest,edge_kind,ordinal))`
+を正本とする。writerは
 `PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
 evidence/receipt insert後の更新SQLは
 文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND version=?`
@@ -587,3 +598,11 @@ evidence/receipt insert後の更新SQLは
 head null/version 0 rowへのCASであり、double genesisを同じ規則で拒否する。
 commit成功をWAL/fsync barrier完了とし、その後だけreceiptを返す。process crash又はcommit errorはrollbackし、
 head/receipt/evidenceが部分可視にならない。抽象in-memory lockや別DBをproduction証拠にしない。
+
+これらcutover ledger tableはcanonical sourceであり、`rebuildHarnessDb`がtruncate/replayする
+rebuildable projection table集合から明示除外する。projection rebuildはledgerをreadして派生viewを再生成できるが、
+docs/git/logからledger receiptを再発行又は上書きしない。backupはSQLite online backup APIで一貫snapshotを作り、
+head digest/versionとbackup digestを別receiptへ封印する。recoveryはtrusted backupのintegrity check、
+schema version、head chain全検証後のatomic file replaceだけを許し、projection sourceからの復元を拒否する。
+migrationはbackup完了後の`BEGIN IMMEDIATE`内でadditive DDL+全chain検証+`user_version`更新をatomic実行し、
+失敗時rollback、未知newer version/downgradeをfail-closeする。

@@ -4,22 +4,20 @@ title: "PLAN-L7-458 (add-impl): Node self-hosted Bun permanent-ban foundation"
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-22
 updated: 2026-07-23
 owner: PO / Codex
-github_issue_id: 152
 parent_design: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
   - role: se
-    slot_label: "SE - scanner object、debt baseline、Node build/bootstrap、SQLite adapter"
+    slot_label: SE - scanner object、debt baseline、Node build/bootstrap、SQLite adapter
   - role: qa
-    slot_label: "QA - detector self-host、delta/compliance分離、Bun process 0、mutation oracle"
+    slot_label: QA - detector self-host、delta/compliance分離、Bun process 0、mutation oracle
 generates:
   - artifact_path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     artifact_type: markdown_doc
@@ -73,6 +71,42 @@ dependencies:
     - src/state-db/index.ts
     - scripts/run-vitest-snapshot.ts
 review_evidence: []
+status: draft
+github_issue_id: 152
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:949664d4d46e01e1498114d5ef1d6494
+  command_id: pr154-d0-admission-l7-20260724
+  admitted_at: 2026-07-24T06:30:00.000Z
+  source_digest: sha256:b65cffec21905c2373ee52ab60a5fd3be61adcab5fbcb84ffef7f82b05318755
+  decision_digest: sha256:cdfdfe16d065d579f30b8c07c9a587b79e1101ee45c7ddd3fddd874077290c8e
+  receipt_digest: sha256:5a8372860e09159eb3ee4d71c9b44ccf0a85156118456a9bb0fb7cfa1997586f
+  binding:
+    path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
+    plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+    asset_id: plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5
+    revision: 2
+    content_digest: sha256:b65cffec21905c2373ee52ab60a5fd3be61adcab5fbcb84ffef7f82b05318755
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:e440f122e517c5d0ddbaaa2ad5fbc6b18cad57aa7db2865cbda6ab0a6c70e48f
+  origin:
+    plan_id: PLAN-L6-93-node-bootstrap-contract
+    revision: 1
+    digest: sha256:2be2a1a5884958bd8e72c5c732a7cd6e413735fd238be855ff0f50dbfcc5796c
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+  reentry:
+    target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Node control-plane D0-N design replacement and Forward reentry
 ---
 
 # PLAN-L7-458: Node self-hosted Bun permanent-ban foundation

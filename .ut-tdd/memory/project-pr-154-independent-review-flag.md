@@ -167,3 +167,11 @@ D0 missing admission waiverを検出した。design-languageはtargeted実測で
 `.ut-tdd/harness.db` SQLite `BEGIN IMMEDIATE`+WAL+FULL sync+head/version CASへ固定し、
 `CAND-CUTOVER-101..108`で競合、forgery、全edge positive、chain-only再検証をpair化した。
 Issue #153の許容Redは継承2件だけで、D0 admissionはmerge前必須とした。独立再reviewまではFLAGを維持する。
+
+## Exact HEAD 121afc17 final FLAG
+
+freshnessがSliceAdmissionを誤参照し、CutoverAdmission artifact binding、revision-rule subject、
+canonical ledgerとprojectionの分離、nested evidence/Q0 reachabilityが不足していた。
+CutoverAdmissionへartifact digestを追加し、typed content-addressed evidence graphをchain-only reducerへ固定した。
+cutover ledger tableを`.ut-tdd/harness.db`内canonical sourceとしてprojection rebuild対象から除外し、
+online backup/recovery/additive migration契約を追加した。正規D0 admission発行と独立再reviewまではFLAGを維持する。

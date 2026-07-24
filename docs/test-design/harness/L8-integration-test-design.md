@@ -338,7 +338,7 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | deletion API 0又はchain-only verification Red |
 | `CAND-CUTOVER-106` | D0→F0a→F0b→F0c→Q0 admission chain | 正規owner/subject/required inputだけapproved、skip/replay拒否 |
 | `CAND-CUTOVER-107` | claim/spec片lane、same reviewer/session/runtime、author reviewer、unsigned/forged/untrusted authority/key、artifact/revision drift | 全production edge append 0 |
-| `CAND-CUTOVER-108` | genesis→sealedの全edgeへfresh review bundle+CutoverAdmission+evidenceをnested保存 | chain-onlyでauthority/key/signature、prior reachability、全digest再検証Green |
+| `CAND-CUTOVER-108` | validated Q0 payload/attestation→genesis→sealedへfresh review bundle+CutoverAdmission+typed evidenceをcontent-addressed nested保存 | chain-onlyでQ0 predecessor、authority/key/signature、prior reachability、全digest再検証Green。projection rebuild後もcanonical ledger不変 |
 
 zod schema `src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`からruntime
 `src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、test

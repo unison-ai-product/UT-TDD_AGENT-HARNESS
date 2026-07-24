@@ -3,20 +3,17 @@ plan_id: PLAN-L6-93-node-bootstrap-contract
 title: "PLAN-L6-93: sealed Node bootstrap function redesign"
 kind: add-design
 layer: L6
-sub_doc: function-spec
 drive: fullstack
-status: draft
 route_signal: design_correction
 route_mode: redesign
 created: 2026-07-24
 updated: 2026-07-24
 owner: PO / TL
-github_issue_id: 152
 agent_slots:
   - role: se
-    slot_label: "SE - sealed bootstrap関数契約"
+    slot_label: SE - sealed bootstrap関数契約
   - role: qa
-    slot_label: "QA - CAND-NODEBOOT Red/Green昇格境界"
+    slot_label: QA - CAND-NODEBOOT Red/Green昇格境界
 parent_design: docs/plans/PLAN-L5-26-node-generation-activation.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
@@ -38,6 +35,50 @@ dependencies:
   blocks:
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
 review_evidence: []
+status: draft
+sub_doc: function-spec
+github_issue_id: 152
+supersedes:
+  - PLAN-L6-01-function-spec
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:5079084d5efb89d622c80040abeb5abb
+  command_id: pr154-d0-admission-l6-20260724
+  admitted_at: 2026-07-24T06:30:00.000Z
+  source_digest: sha256:604a59f1b5a0008c6574cb5433336fe4185d2a3b7dc2cb5d1b07b0aa83a451d9
+  decision_digest: sha256:cae5a1d30431c153b9fb30398d87f3ea6410fbe93c138d19da2c073a617d083d
+  receipt_digest: sha256:dd36f6d5e70d47b19cff18ec6b1123f91508207e8adf8c11ff65f5ddc80bb340
+  binding:
+    path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
+    plan_id: PLAN-L6-93-node-bootstrap-contract
+    asset_id: plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881
+    revision: 2
+    content_digest: sha256:604a59f1b5a0008c6574cb5433336fe4185d2a3b7dc2cb5d1b07b0aa83a451d9
+  route:
+    signal: design_correction
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:e440f122e517c5d0ddbaaa2ad5fbc6b18cad57aa7db2865cbda6ab0a6c70e48f
+  origin:
+    plan_id: PLAN-L6-01-function-spec
+    revision: 1
+    digest: sha256:b80688fc75208a36aa1eaf6557bb596b2262f1c565bd3276716f7d2556095022
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+      target_revision: 2
+  reentry:
+    target_plan_id: PLAN-L6-93-node-bootstrap-contract
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Node control-plane D0-N design replacement and Forward reentry
+  supersedes:
+    - PLAN-L6-01-function-spec
 ---
 
 # PLAN-L6-93: sealed Node bootstrap function redesign

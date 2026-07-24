@@ -3,20 +3,17 @@ plan_id: PLAN-L5-26-node-generation-activation
 title: "PLAN-L5-26: append-only Node generation activation redesign"
 kind: add-design
 layer: L5
-sub_doc: internal-processing
 drive: fullstack
-status: draft
 route_signal: design_correction
 route_mode: redesign
 created: 2026-07-24
 updated: 2026-07-24
 owner: PO / TL
-github_issue_id: 152
 agent_slots:
   - role: se
-    slot_label: "SE - append-only activation物理protocol"
+    slot_label: SE - append-only activation物理protocol
   - role: qa
-    slot_label: "QA - crash/競合/lock永久停止oracle"
+    slot_label: QA - crash/競合/lock永久停止oracle
 parent_design: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
@@ -38,6 +35,50 @@ dependencies:
   blocks:
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 review_evidence: []
+status: draft
+sub_doc: internal-processing
+github_issue_id: 152
+supersedes:
+  - PLAN-L5-03-internal-processing
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:8962e415155a779fbcea5c1fc297e504
+  command_id: pr154-d0-admission-l5-20260724
+  admitted_at: 2026-07-24T06:30:00.000Z
+  source_digest: sha256:ecc631bed18919241ec468a53b08970bbf7b8308aaf1f7b9b26f7d293ccf296f
+  decision_digest: sha256:1024ce4c2e25bb2dac7c6ba552c46a0661cf9d60c26669e1e149594586e62dc2
+  receipt_digest: sha256:e6a55a866baddcf4911c36eaa2537fc83957d5d1b85a4d6fa3d61ddd5bf03f06
+  binding:
+    path: docs/plans/PLAN-L5-26-node-generation-activation.md
+    plan_id: PLAN-L5-26-node-generation-activation
+    asset_id: plan:legacy:899f8a663115a111568393119bad90941df8d487e1f69e16a914b1bbb1cb90f5
+    revision: 2
+    content_digest: sha256:ecc631bed18919241ec468a53b08970bbf7b8308aaf1f7b9b26f7d293ccf296f
+  route:
+    signal: design_correction
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:e440f122e517c5d0ddbaaa2ad5fbc6b18cad57aa7db2865cbda6ab0a6c70e48f
+  origin:
+    plan_id: PLAN-L5-03-internal-processing
+    revision: 1
+    digest: sha256:cc1efdefacc0ea53eb96e37e2a3591ac7e6e5e3563575aba472a3c72a1a9ffed
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+      target_revision: 2
+  reentry:
+    target_plan_id: PLAN-L5-26-node-generation-activation
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Node control-plane D0-N design replacement and Forward reentry
+  supersedes:
+    - PLAN-L5-03-internal-processing
 ---
 
 # PLAN-L5-26: append-only Node generation activation redesign
