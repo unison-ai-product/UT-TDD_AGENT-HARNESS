@@ -30,6 +30,8 @@ generates:
     artifact_type: config
   - artifact_path: src/lint/github-ci-policy.ts
     artifact_type: source_module
+  - artifact_path: tests/change-lane.test.ts
+    artifact_type: test_module
 dependencies:
   parent: null
   requires: []
