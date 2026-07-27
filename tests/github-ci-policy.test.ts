@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -129,7 +129,7 @@ jobs:
       - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
-const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
+const LEGACY_SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
   harness-check-windows:
     runs-on: windows-latest
     steps:
@@ -161,7 +161,7 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
         run: ${REQUIRED_AGGREGATE_COMMAND}
 `;
 
-const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  harness-check:", "  harness-check-linux:")}
+const LEGACY_SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  harness-check:", "  harness-check-linux:")}
   harness-check-windows:
     runs-on: windows-latest
     steps:
@@ -192,6 +192,14 @@ const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  ha
       - name: Require Linux and Windows success
         run: ${REQUIRED_AGGREGATE_COMMAND}
 `;
+
+const SOURCE_WORKFLOW = readFileSync(
+  join(process.cwd(), ".github", "workflows", "harness-check.yml"),
+  "utf8",
+);
+const SOURCE_WORKFLOW_WITH_LANE = SOURCE_WORKFLOW;
+void LEGACY_SOURCE_WORKFLOW;
+void LEGACY_SOURCE_WORKFLOW_WITH_LANE;
 
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
@@ -935,6 +943,30 @@ describe("github-ci-policy lint", () => {
   // PLAN-L7-455 (troubleshoot, issue #109): doc-only lane 絞り込みが検証弱化にならないことの
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
+    it.each([
+      ["pre-producer action swap", "actions/cache@v4", "actions/cache@v3"],
+      ["post-producer run mutation", "run: bun run lint", "run: bun run lint && true"],
+      [
+        "install append",
+        "run: bun install --frozen-lockfile",
+        "run: bun install --frozen-lockfile && echo extra",
+      ],
+      ["doc-check mutation", "bun run test:doc-lane", "bun run test:doc-lane --changed"],
+      ["with value mutation", 'bun-version: "1.3"', 'bun-version: "latest"'],
+    ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
+    it("U-CIPOL-019b: rejects runtime step reorder", () => {
+      const checkout = `      - name: checkout\n        uses: actions/checkout@v5\n        with:\n          fetch-depth: 0\n\n`;
+      const setup = `      - name: setup bun\n        uses: oven-sh/setup-bun@v2\n        with:\n          bun-version: "1.3"\n\n`;
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replace(`${checkout}${setup}`, `${setup}${checkout}`)),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
     it.each([
       ["defaults.run.shell", "defaults:\n  run:\n    shell: bash\n"],
       ["env.BASH_ENV", "env:\n  BASH_ENV: attack\n"],

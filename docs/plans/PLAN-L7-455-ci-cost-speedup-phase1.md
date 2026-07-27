@@ -219,6 +219,9 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 - source runtime workflow rootも現実体の`name,on,permissions,concurrency,jobs`だけにsealし、
   top-level `defaults.run.shell` / `env.BASH_ENV` / `env.GITHUB_OUTPUT`や未知root keyによる
   runtime step hijackをfail-closeする。
+- source runtime legsのsteps配列はOS別のordered canonical semantic manifestとして固定し、
+  step件数・順序・全property/valueを完全一致検査する。YAML block whitespaceだけ正規化し、
+  action/with/run/if/env/shellの差替え、command追記、step追加・削除・並替えをfail-closeする。
 - doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。

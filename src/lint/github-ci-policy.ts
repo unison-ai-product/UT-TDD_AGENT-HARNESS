@@ -316,6 +316,103 @@ function hasExactKeys(value: object, expected: readonly string[]): boolean {
   );
 }
 
+const step = (name: string, fields: Record<string, unknown>): Record<string, unknown> => ({
+  name,
+  ...fields,
+});
+const run = (name: string, command: string, condition?: string): Record<string, unknown> =>
+  step(name, { ...(condition ? { if: condition } : {}), run: command });
+const cacheWith = {
+  path: "~/.bun/install/cache",
+  key: `${githubExpression("runner.os")}-bun-${githubExpression("hashFiles('bun.lock')")}`,
+  "restore-keys": `${githubExpression("runner.os")}-bun-\n`,
+};
+const commonRuntimeSteps = [
+  step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
+  step("setup bun", { uses: "oven-sh/setup-bun@v2", with: { "bun-version": "1.3" } }),
+  step("cache bun install cache", { uses: "actions/cache@v4", with: cacheWith }),
+  run("install deps (frozen)", "bun install --frozen-lockfile"),
+] as const;
+const classifyFields = { id: "classify", run: CLASSIFY_COMMAND };
+const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly object[]> = {
+  "harness-check-linux": [
+    ...commonRuntimeSteps,
+    step("classify changed files (doc lane vs full, fail-close)", classifyFields),
+    step("branch-type guard (commitlint / poc / hotfix)", {
+      env: {
+        HEAD_REF: githubExpression("github.head_ref || github.ref_name"),
+        BASE_REF: githubExpression("github.base_ref || 'main'"),
+        PR_TITLE: githubExpression(
+          "github.event.pull_request.title || github.event.head_commit.message || ''",
+        ),
+        PR_BODY: githubExpression("github.event.pull_request.body || ''"),
+      },
+      run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
+    }),
+    run("typecheck (tsc --noEmit)", "bun run typecheck", LANE_FULL_ONLY_IF),
+    run(
+      "db rebuild (deterministic projection)",
+      "bun src/cli.ts db rebuild --json",
+      LANE_FULL_ONLY_IF,
+    ),
+    run("test — 全回帰 (vitest run)", "bun run test", LANE_FULL_ONLY_IF),
+    run(
+      "doc lane checks (plan lint / readability / rule-drift)",
+      "bun src/cli.ts plan lint bun run test:doc-lane",
+      LANE_DOC_ONLY_IF,
+    ),
+    run(
+      "doc lane source doctor",
+      "bun src/cli.ts doctor --profile source-doc-lane",
+      LANE_DOC_ONLY_IF,
+    ),
+    run("lint (biome)", "bun run lint"),
+    run(
+      "audit quality (gate findings)",
+      "bun src/cli.ts audit quality --include-tests --limit 20",
+      LANE_FULL_ONLY_IF,
+    ),
+    run("doctor (governance hard gates)", "bun src/cli.ts doctor", LANE_FULL_ONLY_IF),
+    run(
+      "job summary (UT-TDD projection)",
+      'bun src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"',
+      REQUIRED_AGGREGATE_IF,
+    ),
+  ],
+  "harness-check-windows": [
+    ...commonRuntimeSteps,
+    step("classify changed files (doc lane vs full, fail-close)", {
+      ...classifyFields,
+      shell: "bash",
+    }),
+    run("typecheck (tsc --noEmit)", "bun run typecheck", LANE_FULL_ONLY_IF),
+    run(
+      "db rebuild (deterministic projection on Windows SQLite)",
+      "bun src/cli.ts db rebuild --json",
+      LANE_FULL_ONLY_IF,
+    ),
+    run("test — scoped 回帰 (vitest run, windows leg)", "bun run test:fast", LANE_FULL_ONLY_IF),
+    run(
+      "doc lane source checks",
+      "bun src/cli.ts doctor --profile source-doc-lane",
+      LANE_DOC_ONLY_IF,
+    ),
+    run("doctor (toolchain scope)", "bun src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
+  ],
+};
+
+function canonicalSemantic(value: unknown, key = ""): unknown {
+  if (typeof value === "string") return key === "run" ? normalizedRun(value) : value;
+  if (Array.isArray(value)) return value.map((item) => canonicalSemantic(item));
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([childKey, child]) => [childKey, canonicalSemantic(child, childKey)]),
+    );
+  return value;
+}
+
 function checkLaneSkipSafety(input: {
   legs: readonly (WorkflowJob | null)[];
   doc: GithubWorkflowDoc;
@@ -344,6 +441,17 @@ function checkLaneSkipSafety(input: {
       Array.isArray(leg.steps) && leg.steps.every(workflowStep)
         ? (leg.steps as WorkflowStep[])
         : [];
+    if (
+      JSON.stringify(canonicalSemantic(steps)) !==
+      JSON.stringify(canonicalSemantic(RUNTIME_STEP_MANIFESTS[name]))
+    ) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${name}.steps must exactly match the ordered canonical semantic manifest`,
+      });
+    }
     const producers = steps.filter((step) => step.id === "classify");
     const producer = producers[0];
     const producerKeys =
