@@ -680,14 +680,14 @@ import edge を一方向 (acyclic) に保つ (cycle 回避は dependency-drift g
 
 3 archetype (役割の根本種別): **相談 (consult)** = tl/uiux (上位帯エスカレーション・プランナー、read-only)、
 **ワーカー (worker)** = se/docs (実装・文書、下位帯)、**検証 (verify)** = qa (テスト通過後カバレッジ相談、上位帯)。
-ティア表 `TIER_TABLE`: T0 = `{claude: claude-opus-5, codex: gpt-5.5}` (フロンティア/明示許可)、
-T1 = `{claude: claude-sonnet-4-6, codex: gpt-5.4}` (ワーカー専門)、T2 = `{claude: claude-haiku-4-5,
-codex: gpt-5.3-codex-spark}` (ワーカー軽量)。
+ティア表 `TIER_TABLE`: T0 = `{claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier}` (フロンティア/明示許可)、
+T1 = `{claude: MODEL_IDS.claude.sonnet, codex: MODEL_IDS.codex.luna}` (ワーカー専門)、T2 = `{claude: MODEL_IDS.claude.haiku,
+codex: MODEL_IDS.codex.spark}` (ワーカー軽量)。
 
 **モデル id 単一正本 (`MODEL_IDS`、PLAN-L7-58 carry 解消)**: model id 文字列の正本は `src/team/model-policy.ts`
 の `MODEL_IDS` カタログ 1 箇所であり、`TIER_TABLE` (tier-router) と `modelForProvider` (model-policy) は
 両方ともこの catalog を参照して合成する。従来は両者が同じ id literal を二重に持ち typo/drift の温床だった。
-`MODEL_IDS.codex.frontier` = `gpt-5.5` (= `TIER_TABLE.T0.codex` = `modelForProvider` "frontier" family) のように
+`MODEL_IDS.codex.frontier` (= `TIER_TABLE.T0.codex` = `modelForProvider` "frontier" family) のように
 1 値 1 定義へ収束させた。oracle U-MODELID-001..004 が「合成一致」と「生 literal 不在」を fail-close で検査する
 (価格表 `src/state-db/token-tracker.ts` は外部 pricing 由来の superset で別正本、統合対象外)。
 
@@ -725,7 +725,7 @@ role・engine・task text から推定する。これは provider 配置その�
 - research 系: Claude Haiku 系を優先する。
 - implementation 系: GPT/Codex 系を優先する。
 - lightweight 系: GPT/Codex の spark / mini lane を使い、並列 shard で閉鎖権限を持たせない。
-- design / implementation review: T0 reviewer として GPT frontier (`gpt-5.5`) または Claude Opus (`claude-opus-5`) 以上を明示許可ゲート付きで使う。
+- design / implementation review: T0 reviewer として GPT frontier (`MODEL_IDS.codex.frontier`) または Claude Opus (`MODEL_IDS.claude.opus`) 以上を明示許可ゲート付きで使う。
 - UI/UX 系: Claude Sonnet 系を優先し、effort は `xhigh` とする。
 
 effort 既定:
@@ -791,7 +791,7 @@ provider CLI を起動する。
 
 | 関数 / CLI | signature / command | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | 技術判断は Sol (`gpt-5.6-sol`) + `low`、UI/UX 判断は Fable (`claude-fable-5`) + `low` を一次とし、他方を fallback にする。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
+| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | 技術判断は Sol (`MODEL_IDS.codex.frontier`) + `low`、UI/UX 判断は Fable (`MODEL_IDS.claude.fable`) + `low` を一次とし、他方を fallback にする。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
 | `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。 | `tests/cli-surface.test.ts` |
 
 ## 2026-06-23 artifact progress workflow trigger 追補

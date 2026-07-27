@@ -1548,6 +1548,7 @@ describe("runDoctor", () => {
       "db-projection-ingestion",
       "design-detection",
       "rule-drift",
+      "model-id-doc-drift",
       "gate-confirm",
       "gate-id-format",
       "plan-schedule",
