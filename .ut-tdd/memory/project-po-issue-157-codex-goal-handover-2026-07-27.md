@@ -43,7 +43,11 @@
   (判断が要る場合は修正先走り禁止)。PLAN-L6-91 status 要確認。
 - **#113** (work/l7-420-strict-evidence-gates): 診断 subagent 結果未着。CI ログから根因診断が必要。
 - **#117 / #125 / #130**: Codex レーン (部分 Red)。同様に stale 診断 → main merge → 修正。
-- **#146 / #147 / #156**: 構造判断案件。機械修正で closable でないため PO へ選択肢提示してから着手。
+- **#146 / #147 / #156**: 構造判断案件 → **PO 採択済み (2026-07-27): いずれも案A=救済**。
+  実行手順は各 PR のコメント (2026-07-27 付「処置方針確定」) が正本。着手は機械 Red drain 完了後。
+  - #156: main 側 PLAN-L6-92 改番 → rebase + receipts 49 records 再チェーン → 整形 → 6 doc re-freeze (blind review 2 lane 前提) → merge。
+  - #146+#147: oracle 宣言を U-DOCLEDGER-001..005 に絞り (006..010 は後続 slice へ)、PLAN-L7-422 改番後に束ねて design+impl 同時 merge。
+  - 関連起票: #162 (post-merge罠) / #163 (PLAN番号衝突 lint、実例 L6-92・L7-422 追記済み) / #164 (genesis rev1) / #165 (oracle 2桁ID すり抜け)。
 
 ## 注意 (2026-07-27 に起きた失敗)
 
