@@ -1450,6 +1450,25 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
 
+## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
+
+対象 = `tests/support/chunked-hash.ts`（fence/snapshot共通のstreaming hashヘルパー）、
+`src/state-db/db-maintenance.ts`。実テスト = `tests/git-workspace-fingerprint.test.ts`、
+`tests/db-maintenance.test.ts`。
+
+| ID | 観点 | fixture / 実行 | expected |
+| --- | --- | --- | --- |
+| `U-FSTREAM-1` | チャンクhashの同値性 | 0／10バイト／チャンク長±1／2チャンク超のfileを注入チャンク長(64KiB)で`hashFileChunked` | `readFileSync`丸読み(`createHash("sha256").update(readFileSync(path))`)と完全一致するsha256 hex |
+| `U-FSTREAM-2` | 部分readの継続 | `readSync`が要求長より小さい値のみ返す`ChunkedFileIo`を注入 | EOFまで取りこぼさずchunk丸読みと同一digest。呼び出し回数はsub-chunk単位を上回る |
+| `U-FSTREAM-3` | 読取失敗の診断性 | 存在しないpathを`hashFileChunkedWithDiagnostics`へ注入 | throwするErrorに相対path・サイズ(bytes)・原因messageを含む |
+| `U-DBVAC-1` | 閾値超過でVACUUM発火 | 実SQLite dbへinsert→delete churnを生成し、`minFreelistBytes`/`freelistRatio`を低く注入 | `ran=true`、`afterBytes<beforeBytes`、on-disk file sizeが縮小 |
+| `U-DBVAC-2` | 閾値未満はno-op | 同churnを既定閾値(64MiB/25%)で評価 | `ran=false`、file sizeは不変、warningなし |
+| `U-DBVAC-3` | 排他lockでfail-open | 別接続で`BEGIN IMMEDIATE`保持中に`maybeVacuumHarnessDb`を実行 | throwせず`ran=false`、`warning`に失敗理由 |
+
+実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/db-maintenance.test.ts`、
+`tests/db-currency.test.ts`(`U-DBCURRENCY-026`/`027`、stop-refresh経路がrebuild完走後のみ
+`maybeVacuumHarnessDb`を呼ぶことの検証)。
+
 ## PLAN-L7-434 全PR共通harness-check trigger oracle (PLAN-REVERSE-434 backfill、2026-07-14)
 
 対象 = `.github/workflows/harness-check.yml` / `docs/templates/github/common/{harness-check,pack-harness-check}.yml` /
