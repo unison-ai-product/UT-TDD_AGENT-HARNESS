@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L5-detailed-design/physical-data.md
 backprop_decision: not_required
 backprop_decision_reason: "既存 gate_runs / workflow_runs projection 契約の実装不整合修正であり、新規上流要件を追加しない。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — recovery scope と false orphan 是正境界の整合確認"
   - role: se
     slot_label: "SE — gate-run projection join と legacy alias 解決の修正"
   - role: qa
