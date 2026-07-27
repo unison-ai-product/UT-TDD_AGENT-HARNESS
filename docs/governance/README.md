@@ -45,6 +45,7 @@ V-model 機構の正本 (中核 5 点への追加読み。repository-structure.m
 - `ddd-tdd-rules.md`
 - `document-system-map.md`
 - `gate-design.md`
+- `github-issue-hierarchy.md` (GitHub Issue 階層運用のドメイン内 SSoT)
 - `recovery-workflow.md`
 
 ## アーカイブまたは vendor 資料
