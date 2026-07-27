@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L5-detailed-design/physical-data.md
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-57 (token-tracker) / FR-L1-38 で設計済みの実測 telemetry 取得層が、on-disk harness.db の正規再構築経路 (rebuildHarnessDb) に接続されていない運用欠落の是正。新規 L0/L1 要件ではない。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — incident route と telemetry ownership 境界の承認"
   - role: se
     slot_label: "SE — rebuildHarnessDb への repo スコープ token ingest 接続"
   - role: qa
