@@ -944,7 +944,7 @@ migrationはbackup完了後の`BEGIN IMMEDIATE`内でadditive DDL+全chain検証
 ## 付録 D: Resource Kernelワイヤ・カストディ内部処理 (PLAN-L5-25)
 
 本節は`PLAN-L4-32`をL5へ降下し、`L8-integration-test-design.md`の
-`IT-RGK-PHYS-001..026`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
+`IT-RGK-PHYS-001..036`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
 Rust companionはstrict wireとprivileged OS custody factだけを所有する。両者に同じpolicy reducerや
 journalを置かない。新規Bun runtime/API/test pathは永久禁止する。
 
@@ -954,12 +954,16 @@ Node `CustodyClient`は署名済bundleから絶対pathのcompanionを選び、sh
 absolute deadlineで起動する。frameは4-byte big-endian length + UTF-8 JSON一件で、unknown/missing/duplicate field、
 unknown enum、oversize、partial frame、末尾byteを拒否する。stdoutはprotocol専用、diagnosticはbounded stderrへ分離する。
 request/responseは`protocol_version + request_id + expected_bundle_digest`を照合し、別requestの応答を合成しない。
-wire commandはlauncherを持たない`ProbeRequest`、sealed `AdmissionToken`必須で
-`create_custody | spawn_attached | resume`だけを所有する`ExecuteRequest`、および
-`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する`RecoveryCustodyCommand`へ分離する。
-`recover_authority`はexecutor認証済みproof、後4操作は`AuthorityLease`を必須とする。`create_custody`が返すleaseは
-`spawn_attached | resume`でもtokenと同時に検証する。Recovery variantはlauncher、
-managed-root生成、resumeの型参照を持たず、`shutdown`はempty/reap proof後だけ許可する。tokenはversioned canonical payloadを
+wire commandはlauncherを持たない`ProbeRequest`、sealed stage token必須で
+`create_custody | spawn_attached | resume`だけを所有する`ExecuteRequest`、
+`recover_authority | observe | terminate_tree | prove_empty | release_custody`だけを所有する`RecoveryCustodyCommand`、
+control processだけを終了する`ControlCommand.shutdown_companion`へ分離する。
+`recover_authority`はsame-boot executor proof又はcross-boot fence proof、後4操作はcleanup leaseを必須とする。
+`create_custody`が返すexecution leaseは`spawn_attached | resume`でもstage tokenと同時に検証する。
+Recovery variantはlauncher、managed-root生成、attach、resumeの型参照を持たず、`release_custody`は
+empty/reap proof後だけ許可する。tokenはcreate/spawn/resume別のclosed stage unionとし、
+admission chain、operation、直前durable fact digestを束縛する。各stageを一回消費し、流用、skip/reorder/replayを拒否する。
+tokenはversioned canonical payloadを
 `AdmissionTokenAuthenticatorPort`で認証する。leaseもcustody/executor identity、boot ID、effective monotonic deadline、
 lease nonce、execution/spec identity、termination/recovery policyを`AuthorityLeaseAuthenticatorPort`で認証する。
 token/lease/recovery proofへbundle digestも束縛する。authority再起動はexecutor認証済みproofとjournalを照合してepochをCAS更新し、
@@ -973,6 +977,11 @@ probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず�
 正常辺は`absent → prepared → attached_suspended → running → terminating → empty_proven → released`とする。
 cleanup辺として`prepared → terminating`と`attached_suspended → terminating`も合法にし、root未生成failure、
 handoff失敗、pre-start deadline/cancelを必ずempty/reap/releaseへ収束させる。これ以外のskip/backward辺は拒否する。
+authority modeは`live → cleanup_only → revoked`、boot変更時は`live | cleanup_only → boot_fenced → revoked`で閉じ、
+deadline/cancel/abortのCASと同じtransactionで新nonce/authenticatorのcleanup leaseを発行し、
+execution capabilityを除去した後にliveへ戻さない。cross-boot fenceは旧boot workloadの実行不能だけを証明し、
+boot-fenced cleanup lease発行後にempty/reapを証明する。`empty_proven → released`はplatform release、release fact commit、
+authority revoke、deadline executor disarmを順に行う再開可能transactionとする。
 Windowsはsuspended create後にJob assignが成功するまでresumeしない。Linuxはuser code開始時点からtarget cgroupに属し、
 事後attachをhard custodyとして受理しない。root exitはterminalではなく、Job emptyまたは`populated=0`とreap証拠が揃って
 初めて`empty_proven`となる。client/launcher crash後もcustodian/brokerがdeadlineとtree custodyを保持する。
@@ -984,7 +993,11 @@ ownerを強制不能なら開始前拒否し、欠測findingや`custody_failure`
 
 ### D.3 ポート/障害境界
 
-Rust portは`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`を提供し、OS factだけを返す。
+Rust portは`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/releaseCustody/
+proveBootFence/shutdownCompanion`を提供し、OS factだけを返す。effective deadlineは生成/attach/resumeだけを閉じ、
+cleanup authorityは失効させない。recovery deadline超過はoverdue/escalationと新規admission遮断を発火するが、
+terminate/prove/releaseを拒否しない。host boot変更時は旧monotonic値を比較せず、元のwall recovery deadlineと
+新bootのwall/monotonic同時観測から非延長cleanup上限を導出し、boot-fenced cleanup leaseへCAS移管する。
 Nodeはfactをappend-only journalへ保存してterminal receiptを封印する。bundle/protocolの静的不一致はcontrol process起動前、
 unsupported・権限不足・probe不一致はmanaged root生成前にfail-closeし、Node直spawn、Bun経路、PID polling、soft limitへfallbackしない。
 companion crash、client crash、SCM/broker crash、pipe切断、journal commit失敗を独立に注入できなければL5 freeze未達とする。

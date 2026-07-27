@@ -374,6 +374,10 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-012` | binary/schema/target/signature/SBOMを各一箇所変異 | admission前`bundle_failure`、PATH探索/download 0 |
 | `IT-RGK-PHYS-013` | 旧componentを旧manifestで直接復帰後、floor超の新sequence manifestへ再review・再署名 | 旧manifest復帰は拒否。新manifestがcompanion/protocol/D0-N receiptと実OS oracleを再通過した場合だけ利用 |
 | `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
+| `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
+| `IT-RGK-PHYS-016` | stage token/leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/authenticatorを各変異し、同nonce別payload、旧variant、各state release_custodyを投入 | 不正を各境界で拒否しcustody/managed root 0。別execution/bundle fact再利用0、releaseはempty/reap fact commit後だけ |
+| `IT-RGK-PHYS-017` | custody nonce予約/再利用/別execution移送、executor arm/lease/attach/commit前後crash、prepared又はsuspendedでdeadline/cancel | 不正nonceはcreate 0。prepared/attached_suspendedからterminating→empty/reap/release、resume 0、実phase receipt。commit後はexecutorがcustody維持 |
+| `IT-RGK-PHYS-018` | authority crash後、proof/journalのexecution/spec/bundle/attempt/custody nonce/identity/epoch/boot/deadline/policy/transition/recovery nonce/issuer/authenticatorを各変異しvalid proofをCAS競合 | 変異・stale・nonce replay・偽造はreissue 0。winnerだけ同bundle/deadline/policyのepoch+1 leaseとtrace events、loser delta 0。executorは期限内kill/reap/orphan 0 |
 | `IT-RGK-PHYS-019` | bundle内key、未review signer、signature substitution | `BundleTrustPort`のbinding不一致でcontrol process 0 |
 | `IT-RGK-PHYS-020` | manifestのbundle revision/component digest/schema/targetを各変異 | 一要素でも不一致ならverified handle 0 |
 | `IT-RGK-PHYS-021` | `F-1`、`F+同digest`、`F+別digest`のmanifestを再activation | 正規署名でも順にstale/replay/equivocationとして拒否し、current bundle/accepted fact/control launch不変 |
@@ -382,10 +386,16 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-024` | activation port failureを各公開barrierで注入 | partial publish 0、旧verified bundle又は利用停止だけを観測 |
 | `IT-RGK-PHYS-025` | companion、protocol、D0-N generation receiptの一要素だけを旧値へ戻す | bundle identity不一致で拒否しcontrol process 0。rollbackはfloor超の新manifest再署名だけを許可 |
 | `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
-| `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
-| `IT-RGK-PHYS-016` | token/leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/authenticatorを各変異し、同nonce別payload、旧variant、各state shutdownを投入 | 不正を各境界で拒否しcustody/managed root 0。別execution/bundle fact再利用0、shutdownはempty/reap後だけ |
-| `IT-RGK-PHYS-017` | custody nonce予約/再利用/別execution移送、executor arm/lease/attach/commit前後crash、prepared又はsuspendedでdeadline/cancel | 不正nonceはcreate 0。prepared/attached_suspendedからterminating→empty/reap/release、resume 0、実phase receipt。commit後はexecutorがcustody維持 |
-| `IT-RGK-PHYS-018` | authority crash後、proof/journalのexecution/spec/bundle/attempt/custody nonce/identity/epoch/boot/deadline/policy/transition/recovery nonce/issuer/authenticatorを各変異しvalid proofをCAS競合 | 変異・stale・nonce replay・偽造はreissue 0。winnerだけ同bundle/deadline/policyのepoch+1 leaseとtrace events、loser delta 0。executorは期限内kill/reap/orphan 0 |
+| `IT-RGK-PHYS-027` | create→spawn→resume完全positive chain | stage token 3枚とpredecessor factが連鎖しcustody/root各最大1 |
+| `IT-RGK-PHYS-028` | 各stage response lossと同一/別payload retry | 同一payloadは実phaseへreconcile、別payload拒否、custody/root増殖0 |
+| `IT-RGK-PHYS-029` | effective deadline直前/同時/直後のspawn/resumeとcleanup CAS競合 | deadline後execution 0、winnerがcleanup leaseを同時発行してcleanup_onlyへ一方向遷移しempty/releaseへ収束 |
+| `IT-RGK-PHYS-030` | recovery deadline超過後のexecutor/supervisor | overdue/admission blockを記録し、kill/reap/releaseは停止しない |
+| `IT-RGK-PHYS-031` | Node/authority same-boot再起動とCAS競合 | winnerだけcleanup lease、旧epoch拒否、生成/attach/resume 0 |
+| `IT-RGK-PHYS-032` | host rebootでcross-boot proofをCAS競合/replay | winnerだけepoch+1 boot-fenced lease→empty proof→release→admission unblock。敗者/replay delta 0、旧boot lease/旧PID操作0 |
+| `IT-RGK-PHYS-033` | cross-boot proof欠損、boot chain不一致、旧custody identity再利用 | quarantine/admission block維持、新lease/root 0 |
+| `IT-RGK-PHYS-034` | empty fact commitからcontrol shutdownまで各barrier crash | release→fact→revoke→disarm→terminal seal→shutdown順を再開し、二重release・早期seal・survivor 0 |
+| `IT-RGK-PHYS-035` | active custody、pending response、未flush terminal outboxを一つずつ残してshutdown_companion | 各caseでcontrol shutdown 0、custody/authority delta 0。全条件解消後だけshutdown |
+| `IT-RGK-PHYS-036` | deadline/cancel、host reboot、empty/releaseを組み合わせauthority mode全from/toを駆動 | 合法5辺だけjournal+lease/factと同時commit。不正backward/self/skipはauthority/OS delta 0、revokedから再開0 |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。

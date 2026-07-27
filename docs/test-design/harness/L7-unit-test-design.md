@@ -1782,12 +1782,18 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-CAP-004` | soft capabilityをhard requiredへ代用 | selection 0、missing集合をlossless保存 |
 | `U-RGK-CAP-005` | verified control processからprobeをrecord | `control_process_created=true`とidentity、probe digestをappendしmanaged root 0 |
 | `U-RGK-CAP-006` | unverified/stale control identityのprobe | journal delta 0、admission token生成0 |
-| `U-RGK-CAP-007` | recorded probeとrequired集合完全一致、custody nonce未予約/予約済み | 未予約はtoken 0。予約済みはexecution/spec/attempt/nonce/bundle/probe/deadlineを結ぶtokenを一つ生成 |
+| `U-RGK-CAP-007` | recorded probeとrequired集合完全一致、custody nonce未予約/予約済み | 未予約はtoken 0。予約済みはadmission chainへ束縛したcreate stage tokenを一つ生成 |
 | `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
 | `U-RGK-CAP-009` | token無し、またはtokenのattempt/nonce/bundle/probe/deadlineを各変異したExecuteの`create_custody | spawn_attached | resume` | 全variantを拒否しcustody/launcher call 0、別attemptへのside effect 0 |
 | `U-RGK-CAP-010` | leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/issuer/authenticatorを各変異 | 全不正leaseでattach/resume 0。valid leaseのterminate/prove-emptyはtoken期限後も可能 |
 | `U-RGK-CAP-011` | canonical token field、issuer key/version、authenticator、operation、token nonceを各変異し、同nonce別payload/replayを投入 | verify前side effect 0。same operation/same payload retryだけ既存factへ冪等reconcileし、別operation replay 0 |
 | `U-RGK-CAP-012` | issued/deadline/budget不一致、許容skew超過、wall前進/後退、process restart/boot ID変更 | effective monotonic deadlineは初回値から延長0。曖昧/boot変更はexpireしkill要求、managed root生成0 |
+| `U-RGK-CAP-013` | create→spawn→resume正系列 | 3種類のtoken nonceとpredecessor fact digestが同じadmission chainで連鎖し、各一回消費 |
+| `U-RGK-CAP-014` | create tokenをspawn/resumeへ流用、stage skip/reorder | decode又はdispatch前拒否、custody/root delta 0 |
+| `U-RGK-CAP-015` | create fact未commitでspawn token発行 | token 0、launcher call 0 |
+| `U-RGK-CAP-016` | attached/handoff fact未commitでresume token発行 | token 0、user instruction 0 |
+| `U-RGK-CAP-017` | 各stage同payload retry / 別payload replay | 同payloadは既存factへreconcileし増殖0、別payloadはside effect 0 |
+| `U-RGK-CAP-018` | cancel/abort後又は別chainでcustody nonce再利用 | token/create 0、予約はtombstoneのまま |
 | `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
 | `U-RGK-LIFE-002` | resume-before-attach/release-before-empty/root-exit terminal | 全不正遷移を拒否 |
 | `U-RGK-LIFE-014` | prepared/attached_suspendedでfailure/deadline/cancel | terminating→empty_proven→releasedへ収束し、root未生成又はpre-start proofを保持 |
@@ -1796,12 +1802,19 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-LIFE-005` | terminate/cancel/deadline同時入力 | 最初のdurable causeを維持しemptyへ収束 |
 | `U-RGK-LIFE-006` | terminal後fact | state/receipt delta 0、closed violation |
 | `U-RGK-LIFE-007` | client再接続時の同一/別nonce | 同一だけreconcile、別attemptを操作しない |
-| `U-RGK-LIFE-008` | running/terminating/empty_proven各stateでRecovery shutdown | running/terminatingは拒否しexecutor/authority維持。empty/reap proof後だけshutdown→released |
+| `U-RGK-LIFE-008` | running/terminating/empty_proven各stateでrelease_custody | running/terminatingは拒否しexecutor/authority維持。empty/reap fact commit後だけreleased |
 | `U-RGK-LIFE-012` | lifecycle reducerへOS/journal side effect spy | pure reduction以外のcall 0 |
 | `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
 | `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
 | `U-RGK-LIFE-011` | Linux authority+supervisor dual crash | broker外deadline ownerが期限内killを発行し、bounded recovery後にreap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |
 | `U-RGK-LIFE-013` | recovery proofのexecution/spec/bundle/attempt/custody nonce/identity/epoch/boot/deadline/policy/transition/recovery nonce/issuer/authenticatorを各変異し、valid proofをCAS競合 | 変異・stale・nonce replay・偽造はreissue 0。valid一件だけepoch+1の同bundle/deadline/policy leaseと3 recovery event、敗者delta 0、生成/resume 0 |
+| `U-RGK-LIFE-015` | effective deadline/cancel/abortとauthority modeのCAS競合 | winnerだけlive→cleanup_onlyと新nonce/authenticatorのcleanup leaseを同時commit。execution capabilityを不可逆除去し、敗者lease/live復帰0 |
+| `U-RGK-LIFE-016` | effective deadline後の各operation | spawn/resume 0、observe/terminate/prove/releaseはauthentic cleanup leaseで有効 |
+| `U-RGK-LIFE-017` | recovery deadline超過 | overdue findingとadmission遮断を出しつつterminate/prove/releaseを継続 |
+| `U-RGK-LIFE-018` | same-boot proofのCAS競合 | winnerだけepoch+1 cleanup lease、生成/attach/resume能力0 |
+| `U-RGK-LIFE-019` | cross-boot fence proofのCAS競合/replay→cross-boot empty proof | winnerだけepoch+1 boot-fenced cleanup lease、敗者/replay delta 0。emptyを先取りせずleaseでempty/reap後だけrelease、旧boot command/旧PID操作0 |
+| `U-RGK-LIFE-020` | cross-boot proof欠測/不整合 | quarantine/admission block維持、lease 0 |
+| `U-RGK-LIFE-021` | authority mode reducerへ全from/to直積 | 合法辺`live→cleanup_only`、`live→boot_fenced`、`cleanup_only→boot_fenced`、`cleanup_only→revoked`、`boot_fenced→revoked`だけを受理。`revoked→*`、`boot_fenced→live/cleanup_only`、`cleanup_only→live`、self/skipをstate delta 0で拒否 |
 | `U-RGK-PORT-001` | Windows assign failure | resume 0、created-not-started cleanup proof必須 |
 | `U-RGK-PORT-002` | Linux事後attach adapter | hard custody capabilityをadvertiseせずlaunch 0 |
 | `U-RGK-PORT-003` | empty proof欠落mutation | success/receipt sealへ進まない |
@@ -1815,6 +1828,12 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-PORT-011` | Probe commandへlauncher spyを注入 | launcher参照不能またはcall 0、probe factだけ返す |
 | `U-RGK-PORT-012` | Execute commandへtoken無し/空required | `managed_root_created=false`、custody作成・launcher call 0 |
 | `U-RGK-PORT-013` | control processだけ起動済みのphase/error全積 | control/workload identityを別保存し、単一`process_created`へ縮退しない |
+| `U-RGK-PORT-014` | empty/reap fact commit前のrelease_custody | platform release call 0 |
+| `U-RGK-PORT-015` | release→fact commit→revoke→disarm→terminal sealの各barrierでcrash/reorder | journal済み段から再開し二重release・早期seal 0。順序反転mutationはRed |
+| `U-RGK-PORT-016` | active custody/pending response/未flush outboxありでshutdown_companion | control shutdown 0、custody delta 0 |
+| `U-RGK-PORT-017` | 全custody released後のshutdown_companion | control processだけ終了、custody/authority delta 0 |
+| `U-RGK-WIRE-011` | same-boot/cross-boot recovery proof discriminant混同 | decode拒否、epoch delta 0 |
+| `U-RGK-WIRE-012` | boot-fenced leaseへspawn/resume/old-PID操作field注入 | strict decode拒否、native call 0 |
 | `U-RGK-BUNDLE-001` | digest/signature/schema/target/SBOMを各変異 | verified handleを生成しない |
 | `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |
 | `U-RGK-BUNDLE-003` | Rustへpolicy/journal/admission/receipt判断を追加 | responsibility-overlap findingでRed |

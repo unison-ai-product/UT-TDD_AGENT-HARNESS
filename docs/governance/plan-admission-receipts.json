@@ -1824,6 +1824,54 @@
         "revision": 11,
         "content_digest": "sha256:9ce38b296b3623bfcfbee040e0f7a36ec24d41f0df8bf024e8a827f1247bdab5"
       }
+    },
+    {
+      "sequence": 115,
+      "previous_record_digest": "sha256:64740233bce9ae05c180f1fdbcb72cf182c8aa3ce4f7409dfce401ebb89407aa",
+      "record_digest": "sha256:5c22d0e8ab702fa128a146ebcbde1062a32c65ad903db25b37072b3f7e02b4b7",
+      "command_id": "pr156-authority-mode-l5-rev12-20260727",
+      "receipt_id": "certificate:b35c3c4f4fa262dc7fb9fef5b1b41ff0",
+      "receipt_digest": "sha256:6c8621eda839da22ca4c8a0030b3074ff1eed6d7b419c2ec0408a8be785703c1",
+      "decision_digest": "sha256:9a2a6164b12724a19559fb1fba28d27d4797dec6433141ededf9d1050848aff8",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 12,
+        "content_digest": "sha256:1b19a16fb74ec89a3b48e98e081dcc332ee20aa176043cb9ae0a64a56823ac9e"
+      }
+    },
+    {
+      "sequence": 116,
+      "previous_record_digest": "sha256:5c22d0e8ab702fa128a146ebcbde1062a32c65ad903db25b37072b3f7e02b4b7",
+      "record_digest": "sha256:0e6c60a3f8e21e9810e619477a74c7508506e3e5a32ac722f4426f02aeffcfc1",
+      "command_id": "pr156-authority-mode-l6-rev12-20260727",
+      "receipt_id": "certificate:79b3877d82d3a77a949bc2e2606ab473",
+      "receipt_digest": "sha256:64c383a2a3add8ec475d9b6d54e398f62d46511ca5d1840c93d98bad05269952",
+      "decision_digest": "sha256:bbce6ccd6353ab1fd3bccddc327f4b130bcc81fb8feac5c0afc8d45a5f425ebc",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 12,
+        "content_digest": "sha256:1b23caa2dbd441f7f392cdd5b9a0f9363f12f12ff59937a1014b1292c052a4d5"
+      }
+    },
+    {
+      "sequence": 117,
+      "previous_record_digest": "sha256:0e6c60a3f8e21e9810e619477a74c7508506e3e5a32ac722f4426f02aeffcfc1",
+      "record_digest": "sha256:ed1fb7ac62c7135cb93cfe829e02daa2001f607e8d8688b5d2cc1c09e71979c0",
+      "command_id": "pr156-authority-mode-l7-rev12-20260727",
+      "receipt_id": "certificate:3c9479cfef84643af21f915fe97622aa",
+      "receipt_digest": "sha256:e799fa472770dea4ba269d08f895e3f9a35d3c822439d8da1b28ebd77433aaa4",
+      "decision_digest": "sha256:37b905b9b0c8287b707985289c506f44dd95bf77cfe00211b0096742450e8899",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 12,
+        "content_digest": "sha256:b684e4ecc2f2a09555d0711ed76352c7cc0f6da20f543c6416180b4741694698"
+      }
     }
   ]
 }

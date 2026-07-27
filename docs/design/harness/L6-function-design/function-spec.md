@@ -1568,15 +1568,18 @@ Execution Kernel境界でexactly once closed `protocol_failure`へ正規化す�
 コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
 `RecoveryCustody(RecoveryCustodyCommand)`で閉じる。`Execute.operation`だけが
 `create_custody | spawn_attached | resume`を所有し、`AdmissionToken`とattempt/custody/bundle/probe bindingを必須とする。
-`RecoveryCustody.operation`は`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する。
-`recover_authority`は`ExecutorRecoveryProofV1`だけを入力とし、後4操作は`AuthorityLeaseV1`を必須とする。
+`RecoveryCustody.operation`は`recover_authority | observe | terminate_tree | prove_empty | release_custody`だけを所有し、
+`ControlCommand.shutdown_companion`を別unionとする。`recover_authority`は
+`SameBootExecutorRecoveryProofV1 | CrossBootFenceProofV1`だけを入力とし、
+後4操作は`CleanupAuthorityLeaseV1 | BootFencedCleanupLeaseV1`を必須とする。
 leaseの実行束縛は`authority_epoch`、`execution_id`、`execution_spec_digest`、`attempt_id`、`custody_nonce`である。
 custody束縛は`custody_identity`、`executor_id`、`effective_deadline_monotonic_ms`、`boot_id`である。
 policy束縛は`termination_policy_digest`、`recovery_grace_ms`、`recovery_deadline_monotonic_ms`である。
 真正性束縛は`lease_nonce`、`issuer_key_id`、`authenticator`である。
 launcher、managed-root生成、resumeの型参照を持たない。
-`create_custody`はexecutor binding付きleaseを返し、`spawn_attached | resume`はtokenと同じleaseを必須入力として照合する。
-`shutdown`は`empty_proven`かつreap proof後だけ許可する。
+`create_custody`はexecutor binding付きexecution leaseを返す。create/spawn/resumeはadmission chain上の
+別stage tokenを直前durable factの確認後に一回ずつ発行・消費し、`spawn_attached | resume`はtokenと同じleaseを照合する。
+`release_custody`は`empty_proven`かつreap proof後だけ許可し、`shutdown_companion`はcustody stateを変更しない。
 phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
 エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
 
@@ -1591,26 +1594,37 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
 | `reserveCustodyNonce` | execution/spec/attempt確定、token未seal | OS identityとは別の一意creation nonceを予約。同nonce再利用・別execution移送を拒否 |
-| `sealAdmission` | recorded probe、完全capability、予約済みcustody nonce、deadline内 | execution/spec/attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
+| `issueCreateCustodyToken` | recorded probe、完全capability、予約済みcustody nonce、deadline内 | admission chainとsequence 1を束縛し一度だけ発行。空required拒否 |
+| `issueSpawnAttachedToken` | create fact commit済み、current execution lease | sequence 2、custody/executor/epoch/lease nonce、create fact digestを束縛。未commit・別chain・replay拒否 |
+| `issueResumeToken` | attached factとhandoff commit済み、current execution lease | sequence 3、attached fact/handoff digestを束縛。skip/reorder/replay拒否 |
+| `consumeAdmissionStageToken` | expected phase/operation、未消費token | 同payload retryは既存factへreconcileし、別payload/別operationはside effect 0。消費factをdurable化 |
 | `AdmissionTokenAuthenticatorPort.seal/verify` | canonical V1 payload、issuer key ID/policy revision | authenticatorとoperation/token nonceを束縛し、unknown key/version、偽造、同nonce別payload/別operation replayをside effect前拒否。具体key storage/rotationはD0外 |
 | `AuthorityLeaseAuthenticatorPort.issue/verify` | canonical lease V1 payload、execution/spec、executor/custody、boot、deadline/policy | authenticatorとlease nonceを束縛し、unknown key/version、偽造、同nonce別payloadをattach/recovery前拒否。具体key storage/rotationはD0外 |
-| `ExecutorRecoveryProofPort.verifyAndReissue` | executor認証proof、durable journal、current epoch | execution/spec/custody/deadline/policy/transition全一致時だけepochをCAS+1し同契約の新leaseを発行。生成/resume/deadline延長0 |
+| `verifySameBootRecovery` | executor認証proof、durable journal、current epoch | same bootの全binding一致時だけepochをCAS+1しcleanup leaseを発行。生成/attach/resume/deadline延長0 |
+| `verifyCrossBootFence` | old/new boot chain、native platform boot fence fact、durable journal、current epoch | emptyを先取りせずCAS+1でboot-fenced cleanup leaseだけを発行。そのleaseでcross-boot emptyを証明後release。旧boot command、新規workload、旧PID操作0。proof不能はquarantine/admission遮断 |
+| `transitionAuthorityToCleanup` | live execution authority、deadline/cancel/abort、current epoch | epoch CASと同じtransactionで新lease nonce/authenticatorのcleanup leaseを発行しexecution capabilityを不可逆除去。敗者lease 0 |
 | `sealMonotonicDeadline` | verified token、同時観測wall/monotonic、boot ID | remainingをbudgetとwall残時間の小さい方へ固定し、開始後wall jumpで延長0。skew/boot不整合は期限切れfail-close |
-| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token又はspawn/resume lease不正のExecuteでside effect 0。Recoveryは`recover_authority(proof)`又は後4操作の`lease`をdiscriminantで分離し、生成・resume能力0。shutdown-before-emptyは拒否 |
+| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody | ControlCommand` union | Probeからlauncher 0。stage token又はlease不正のExecuteでside effect 0。Recovery proof/cleanup leaseをdiscriminantで分離し生成・resume能力0。release-before-empty拒否。control shutdownはcustody delta 0 |
 | `normalizeWireFault` | typed `WireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
 | `reconcileDispatchIndeterminate` | authenticated idempotency identity、authority/journal/native facts | response lossをside effect 0へ推測せずactual phase/fact digestを一意に確定。未確定中terminal seal 0、確定後は実phase receiptへprotocol failure原因を保存 |
 | `reduceCustody` | attempt、nonce、sequence連続 | 正常辺とprepared/attached-suspendedからterminatingへのcleanup辺だけを受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
 | `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
+| `releaseCustody` | empty/reap factがjournal commit済み、current cleanup authority | platform release→release fact commit→authority revoke→executor disarm→releasedを再開可能に遂行。途中crash/retryで二重release・早期seal 0 |
+| `shutdownCompanion` | active custody 0、pending response 0、terminal outbox flush済み | control processだけを終了しcustody/authority state delta 0 |
 | `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
 
 ### プラットフォームポート/責務非重複
 
-`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/release`で構成する。
+`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/releaseCustody/proveBootFence`で構成し、
+control process終了は`ControlShutdownPort`へ分離する。
 `CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/enforceDeadline/revokeAuthority`で構成し、
 handoff commit前resumeとstale epoch/nonceを拒否する。Linuxはbroker外deadline ownerをmanaged root開始前にarmし、
 dual-crash後も期限内kill→bounded recovery→reap/orphan 0を完遂する。ownerをarm不能なら開始前拒否し、
 証拠欠測を`custody_failure`へ変換するだけでは既存workloadの生存を許さない。
+lease verifierはcreate/spawn/resumeだけをeffective deadlineで拒否する。cleanup leaseはeffective deadline後も
+observe/terminate/prove/releaseに有効で、recovery deadline超過はoverdue findingと新規admission遮断を追加するが
+cleanup拒否理由にはしない。cross-bootでは元wall recovery deadlineから新bootのmonotonic上限を非延長で再導出する。
 Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
 `populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
 それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
