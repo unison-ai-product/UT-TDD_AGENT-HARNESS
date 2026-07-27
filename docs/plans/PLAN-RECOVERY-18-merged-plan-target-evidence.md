@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-RECOVERY-17-merged-plan-target-evidence
-title: "PLAN-RECOVERY-17 (recovery): stacked PR merged-plan target evidence (issue #138)"
+plan_id: PLAN-RECOVERY-18-merged-plan-target-evidence
+title: "PLAN-RECOVERY-18 (recovery): stacked PR merged-plan target evidence (issue #138)"
 kind: recovery
 layer: cross
 drive: agent
@@ -24,7 +24,7 @@ agent_slots:
   - role: tl
     slot_label: "TL - main負債を隠さないこととLinux/Windows一致の検収"
 generates:
-  - artifact_path: docs/plans/PLAN-RECOVERY-17-merged-plan-target-evidence.md
+  - artifact_path: docs/plans/PLAN-RECOVERY-18-merged-plan-target-evidence.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/merged-plan-target-evidence.ts
     artifact_type: source_module
@@ -42,7 +42,7 @@ dependencies:
 review_evidence: []
 ---
 
-# PLAN-RECOVERY-17: stacked PR merged-plan target evidence
+# PLAN-RECOVERY-18: stacked PR merged-plan target evidence
 
 ## 1. 事故と不変条件
 
