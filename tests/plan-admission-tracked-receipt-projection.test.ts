@@ -52,10 +52,32 @@ describe("tracked admission receipt projection", () => {
   it("U-PADM-014: strict projectionを検証しcommand lookupを提供する", () => {
     const first = record(1, null, "91");
     const second = record(2, first.recordDigest, "92");
-    const result = parseTrackedReceiptProjection(json([first, second]));
+    // sealed lineage 移行後の successor asset は同一 path の revision 番号を 1 から
+    // 再開する (issue #143 / PLAN-RECOVERY-16 §2)。一意性は (path, asset, revision) で
+    // 判定し、別 asset の同 path・同 revision を重複扱いしない。
+    const successorBase = record(3, second.recordDigest, "91");
+    const successorUnsigned = {
+      ...successorBase,
+      commandId: "cmd-91-successor",
+      receiptId: "receipt-91-successor",
+      binding: {
+        ...successorBase.binding,
+        assetId: "plan:rebase:91-successor",
+        revision: 1,
+      },
+    };
+    const { recordDigest: _unsignedDigest, ...successorInput } = successorUnsigned;
+    const successor = {
+      ...successorUnsigned,
+      recordDigest: trackedReceiptRecordDigest(successorInput),
+    };
+    const result = parseTrackedReceiptProjection(json([first, second, successor]));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.lookup("cmd-92")?.binding.revision).toBe(2);
+    expect(result.value.lookup("cmd-91-successor")?.binding.assetId).toBe(
+      "plan:rebase:91-successor",
+    );
     expect(result.value).toMatchObject({
       integrity: "hash_chain_verified",
       issuerAuthenticity: "not_verified",

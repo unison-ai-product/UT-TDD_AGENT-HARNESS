@@ -1,17 +1,16 @@
 ---
 plan_id: PLAN-L4-02-architecture
-title: "PLAN-L4-02 (design/architecture): L4 基本設計 — 方式設計 (arc42 §4 Solution Strategy + §5 Building Block + §9 ADR + TS module 構成 + hook/CI 配線)"
+title: "PLAN-L4-02 (design/architecture): L4 基本設計 — 方式設計 (arc42 §4 Solution
+  Strategy + §5 Building Block + §9 ADR + TS module 構成 + hook/CI 配線)"
 kind: design
 layer: L4
-sub_doc: architecture
 drive: fullstack
-status: confirmed
 created: 2026-05-29
 updated: 2026-05-29
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL — 方式設計 / モジュール境界 / ADR の技術レビュー (別 runtime)"
+    slot_label: TL — 方式設計 / モジュール境界 / ADR の技術レビュー (別 runtime)
 generates:
   - artifact_path: docs/design/harness/L4-basic-design/architecture.md
     artifact_type: design_doc
@@ -34,10 +33,56 @@ v2_import: docs/migration/v2-import-ledger.md
 review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-05"
-    tests_green_at: "2026-06-05"
+    reviewed_at: 2026-06-05
+    tests_green_at: 2026-06-05
     verdict: approve
-    scope: "A-101 G4 L4 audit 4 軸 PASS (pmo-sonnet TL 代替、claude-only)"
+    scope: A-101 G4 L4 audit 4 軸 PASS (pmo-sonnet TL 代替、claude-only)
+route_signal: design_revision
+route_mode: redesign
+status: confirmed
+sub_doc: architecture
+github_issue_id: 152
+supersedes:
+  - PLAN-L4-02-architecture
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:c82407cb4d0de1c8db9a26638106b11f
+  command_id: pr154-route-metadata-l4-20260724
+  admitted_at: 2026-07-24T17:20:00.000Z
+  source_digest: sha256:75b828dc31458a685b1beb69a79237ac170c6210225a3bb14bcbcf493a258db0
+  decision_digest: sha256:735a9bb663445aa9c5888dbd9f5e61fd8fa6e7f9d6968ce6bcbca624240a37ad
+  receipt_digest: sha256:217b8a8cd30e2c5c4c999feab193e10f40c9cb11359c0e73ab510d13fc640525
+  binding:
+    path: docs/plans/PLAN-L4-02-architecture.md
+    plan_id: PLAN-L4-02-architecture
+    asset_id: plan:legacy:229babf84a28728be6088a0c783f5a3990f9a784ee7a791d3c30efa112a77fa5
+    revision: 3
+    content_digest: sha256:75b828dc31458a685b1beb69a79237ac170c6210225a3bb14bcbcf493a258db0
+  route:
+    signal: design_revision
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L4-02-architecture
+    revision: 2
+    digest: sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+      target_revision: 30
+  reentry:
+    target_plan_id: PLAN-L4-02-architecture
+    target_revision: 3
+    phase: forward_merge
+  escape_reason: PR 154 formal Forward metadata correction
+  supersedes:
+    - PLAN-L4-02-architecture
 ---
 
 # PLAN-L4-02 (design/architecture): L4 方式設計
@@ -113,3 +158,7 @@ ADR テンプレート (Context/Decision/Status/Consequences) を L4 方式設�
 ## §7 機能要求更新 (FR registry delta)
 
 > 現時点: **機能要求更新なし** (architecture は既存 FR の実現方式の明文化。新規 FR-L1 を生まない見込み。発見時は §1 registry へ back-merge)。
+
+> **Node control-plane差分**: Issue #152のRedesign `PLAN-L4-33-node-control-plane-redesign`が
+> Node runtime/build image/cutoverの差分を所有する。本PLANはそのpredecessor/referenceであり、
+> 一般architectureの正本性を維持する。

@@ -24,7 +24,7 @@ IMP-071 は review 前置の **presence + review_kind** を機械強制した。
 
 `review_evidence[]` の各 entry に**任意フィールド 2 つ** (既存 entry 非破壊):
 
-- `worker_model?: string` — レビュー対象成果物を産出した model (例: `claude-opus-4-8` / `gpt-5.5`)
+- `worker_model?: string` — レビュー対象成果物を産出した model (例: `claude-opus-5` / `gpt-5.5`)
 - `reviewer_model?: string` — reviewer の model (例: `claude-sonnet-4-6`)
 
 ## §3 判定関数 (DbC)

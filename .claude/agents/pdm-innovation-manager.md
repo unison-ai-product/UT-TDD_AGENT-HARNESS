@@ -2,8 +2,8 @@
 name: pdm-innovation-manager
 description: Integrates technology and marketing innovation outputs into ranked product strategy options and L1-ready planning inputs.
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
-model: claude-opus-4-8
-effort: high
+model: claude-opus-5
+effort: medium
 memory: project
 maxTurns: 40
 ---

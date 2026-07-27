@@ -1,0 +1,22 @@
+PLAN-L7-452 exact-HEAD verification
+recorded_at=2026-07-27T12:28:00+09:00
+anchor_commit=f38974da31eb243f53c7cae392a3108a1db765dd
+command=bun scripts/run-vitest-snapshot.ts tests/forward-escape-issue-contract.test.ts
+platform=Windows
+bun=1.3.14
+result=PASS
+test_files=1 passed
+tests=17 passed
+runs=2
+
+Independent review:
+author_runtime=codex
+reviewer_runtime=claude
+review_kind=cross_agent
+claim_blind=PASS
+spec_blind=PASS
+unrefuted_attacks=0
+
+The same 17-test suite also passed in GitHub Actions run 30233909741 at merge
+commit d847ba99; the only Linux failure was the aggregate merged-plan-status
+finding for PLAN-L7-452 and PLAN-RECOVERY-16 after 2333 other tests passed.
