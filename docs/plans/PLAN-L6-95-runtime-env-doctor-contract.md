@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L6-92-runtime-env-doctor-contract
-title: "PLAN-L6-92 (add-design/function-spec): runtime-env 検査契約 — AI CLI/拡張の設定ドリフト
+plan_id: PLAN-L6-95-runtime-env-doctor-contract
+title: "PLAN-L6-95 (add-design/function-spec): runtime-env 検査契約 — AI CLI/拡張の設定ドリフト
   自動検知と修復レシピ提示 (2026-07-22 監査所見の機構化)"
 kind: add-design
 layer: L6
@@ -24,7 +24,7 @@ agent_slots:
   - role: qa
     slot_label: "QA - 版ずれ/廃止キー/誤配置 fixture の Red oracle と誤検知負例"
 generates:
-  - artifact_path: docs/plans/PLAN-L6-92-runtime-env-doctor-contract.md
+  - artifact_path: docs/plans/PLAN-L6-95-runtime-env-doctor-contract.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L6-01-function-spec.md
@@ -40,7 +40,7 @@ status: draft
 sub_doc: edge-case
 ---
 
-# PLAN-L6-92: runtime-env 検査契約 — AI CLI/拡張の設定ドリフト自動検知
+# PLAN-L6-95: runtime-env 検査契約 — AI CLI/拡張の設定ドリフト自動検知
 
 ## 1. 目的と実測根拠 (2026-07-22 監査)
 

@@ -88,7 +88,7 @@ cross-runtime review (例: `cross_runtime_blind_review`、hybrid の非著者 pr
 
 - Codex に AGENTS.md ルールを守らせる仕組み (プロンプト強化・hook 強制) は本 PLAN の
   対象外。行動層の是正は別途扱い、本 gate はその成否を痕跡で可視化する側。
-- アダプタ経路の環境不備 (spawn 不能等) は PLAN-L6-92 runtime-env 検査の領分。
+- アダプタ経路の環境不備 (spawn 不能等) は PLAN-L6-95 runtime-env 検査の領分。
 
 ## 4. L6↔L7 pair / oracle
 
