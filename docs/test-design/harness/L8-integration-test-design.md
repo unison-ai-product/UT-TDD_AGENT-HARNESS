@@ -383,9 +383,9 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-025` | companion、protocol、D0-N generation receiptの一要素だけを旧値へ戻す | bundle identity不一致で拒否しcontrol process 0。rollbackはfloor超の新manifest再署名だけを許可 |
 | `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
 | `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
-| `IT-RGK-PHYS-016` | token/leaseのexecution/spec/attempt/custody/executor/boot/deadline/policy/authenticatorを各変異し、同nonce別payload、token/lease無しspawn/resume、旧variant、各state shutdownを投入 | 不正をdecode/verify/dispatch各境界で拒否しcustody/managed root 0。別execution fact再利用0、shutdownはempty/reap後だけ |
-| `IT-RGK-PHYS-017` | authority handoffのexecutor arm、lease返却、handle/cgroup bind、commit前後でcompanion/Nodeをcrash | arm/lease/commit前resume/exec 0、commit後はexecutorがdeadlineまでcustodyを維持 |
-| `IT-RGK-PHYS-018` | authority API/recovery supervisor crash後、executor recovery proofとjournalのexecution/spec/custody/epoch/boot/deadline/policy/transitionを各変異し、valid proofをCAS競合。host boot/clock jumpも併走 | 変異はreissue 0。valid一件だけ同deadline/policyのepoch+1 lease、生成/resume 0。executorは期限内kill→bounded recovery→reap/orphan 0、boot/clock不整合は期限切れreconcile |
+| `IT-RGK-PHYS-016` | token/leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/authenticatorを各変異し、同nonce別payload、旧variant、各state shutdownを投入 | 不正を各境界で拒否しcustody/managed root 0。別execution/bundle fact再利用0、shutdownはempty/reap後だけ |
+| `IT-RGK-PHYS-017` | executor arm/lease/attach/commit前後でcrash、suspended rootをdeadline/cancel | commit前resume 0。pre-start deadline/cancelはRootCreatedNotStarted receipt、terminate/reap proof。commit後はexecutorがcustody維持 |
+| `IT-RGK-PHYS-018` | authority crash後、recovery proof/journalのexecution/spec/bundle/custody/epoch/boot/deadline/policy/transitionを各変異しvalid proofをCAS競合 | 変異はreissue 0。winnerだけ同bundle/deadline/policyのepoch+1 leaseとtrace events、loser delta 0。executorは期限内kill/reap/orphan 0 |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。

@@ -60,18 +60,18 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7d714e6a6cd27948a7a397c01b315d2c
-  command_id: pr156-recovery-closure-l4-rev8-20260727
-  admitted_at: 2026-07-27T04:00:00.000Z
-  source_digest: sha256:db2f28310e873488037f60996eeab23edc0a65c66c95ac5a2307c87167bf0b20
-  decision_digest: sha256:de11ba49951d6d4c385b4371a4ac42fac8b5956b020d381c0457417ed92db4fe
-  receipt_digest: sha256:bd16c506a6df13abc0c068721d16298c9489393673b35055d17071882511e5a3
+  receipt_id: certificate:2484fb87fe900e8aefb61488bf183e1e
+  command_id: pr156-trace-closure-l4-rev9-20260727
+  admitted_at: 2026-07-27T05:00:00.000Z
+  source_digest: sha256:c6ea40400b15a6dd092022d46f272f27e280c5476c5c56ee9169ce128c4d962d
+  decision_digest: sha256:fe668784ed7a206cf24910c6addb59af931d905e3ce3c2f2880ded41b035d3a7
+  receipt_digest: sha256:8734bc74733b1d9de48ddc55c197d3f94c0b4c32bba2badd12a4e7626b157fe9
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 8
-    content_digest: sha256:db2f28310e873488037f60996eeab23edc0a65c66c95ac5a2307c87167bf0b20
+    revision: 9
+    content_digest: sha256:c6ea40400b15a6dd092022d46f272f27e280c5476c5c56ee9169ce128c4d962d
   route:
     signal: redesign
     mode: redesign
@@ -82,20 +82,20 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 7
+    revision: 8
     digest: sha256:51f08c0ac791ff3b1db0eeb1e74c1e3fd15362b38a2abf28511b3b6306da0f08
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 8
+      target_revision: 9
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: Resource Kernelのrecovery reissue・execution
-    trace・receipt全域性を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのrecovery dispatch・bundle binding・receipt
+    trace全域性を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -166,12 +166,17 @@ DB/CAS再利用、single-flight、local CI全体のqueue/headroom policyは本D0
 `ExecutionEvent`は`attempt_id + sequence`をidentityとするappend-onlyの事実である。`admission_requested`、
 `control_started`、`probe_recorded`、`capability_negotiated`、`admission_sealed`、`authority_prepared`、
 `custody_created`、`handoff_committed`、`process_attached`、`started`、`limit_observed`、
-`termination_requested`、`process_reaped`、`custody_empty`、`lease_released`、`finished`を、monotonic sequenceと
+`authority_recovery_requested`、`recovery_proof_verified`、`lease_reissued`、`termination_requested`、
+`process_reaped`、`custody_empty`、`lease_released`、`finished`を、monotonic sequenceと
 durable timestampで記録する。event payloadは過去eventを上書きせず、retryは新しい`attempt_id`へ分岐する。
+recovery CAS loserはevent/state delta 0、winnerだけがold/new epoch、proof digest、executor/bundle/policy bindingを
+`lease_reissued`へ保存し、terminal receiptのevent range/digestへ必ず含める。
 
 `ExecutionReceipt`は一つのattemptがterminalへ到達した時だけevent列から導出・封印するimmutable証跡であり、
 `execution_id + attempt_id`をidentityとする。途中経過recordや可変status rowをreceiptと呼ばない。全outcome共通fieldは
-canonical spec digest、policy/input revision、accepted/finished時刻、exit kind、event range/digestである。control processと
+canonical spec digest、policy/input revision、accepted/finished時刻、exit kind、event range/digestである。native bundle使用時は
+bundle sequence/manifest/component digestを必須とし、rollback再発行ならrollback reason、旧component digest、新manifest digestを
+同じprovenanceへ保存する。control processと
 managed workloadは別discriminantを持ち、native workload exitは`RootCreatedNotStarted|RootStarted`だけ必須、
 `RootNotCreated`は`not_applicable: managed_root_not_created`とする。outcome-discriminated unionとして次を持つ。
 
@@ -179,7 +184,7 @@ managed workloadは別discriminantを持ち、native workload exitは`RootCreate
   phase/reason、不足capabilityと`custody_disposition: absent | prepared_then_empty`を持つ。`absent`ではroot PID/custodyを
   `not_applicable: managed_root_not_created`とし、`prepared_then_empty`ではcustody identity、terminate/empty/reap/lease-release proofと
   independent root-absent proofを必須にする。control process identity/cleanupは独立fieldに保存する。
-- `RootCreatedNotStarted` terminal (`launch_failure|custody_failure`): suspended root PID、create/attach error、
+- `RootCreatedNotStarted` terminal (`launch_failure|custody_failure|deadline|cancelled`): suspended root PID、create/attach error、
   termination/reap、custody identity（作成済み時）、independent process-absent proofを必須にし、`started_at`は存在させない。
 - `RootStarted` outcome: started/termination-requested/reaped/finishedのmonotonic timestamp、platform custody identity、root PID、
   descendant観測（PID再利用に依存しないOS handle/cgroup identityを優先）。

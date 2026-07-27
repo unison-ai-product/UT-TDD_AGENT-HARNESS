@@ -1568,7 +1568,8 @@ Execution Kernel境界でexactly once closed `protocol_failure`へ正規化す�
 コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
 `RecoveryCustody(RecoveryCustodyCommand)`で閉じる。`Execute.operation`だけが
 `create_custody | spawn_attached | resume`を所有し、`AdmissionToken`とattempt/custody/bundle/probe bindingを必須とする。
-`RecoveryCustody.operation`は`observe | terminate_tree | prove_empty | shutdown`だけを所有し、`AuthorityLeaseV1`を必須とする。
+`RecoveryCustody.operation`は`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する。
+`recover_authority`は`ExecutorRecoveryProofV1`だけを入力とし、後4操作は`AuthorityLeaseV1`を必須とする。
 leaseの実行束縛は`authority_epoch`、`execution_id`、`execution_spec_digest`、`attempt_id`、`custody_nonce`である。
 custody束縛は`custody_identity`、`executor_id`、`effective_deadline_monotonic_ms`、`boot_id`である。
 policy束縛は`termination_policy_digest`、`recovery_grace_ms`、`recovery_deadline_monotonic_ms`である。
@@ -1594,7 +1595,7 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `AuthorityLeaseAuthenticatorPort.issue/verify` | canonical lease V1 payload、execution/spec、executor/custody、boot、deadline/policy | authenticatorとlease nonceを束縛し、unknown key/version、偽造、同nonce別payloadをattach/recovery前拒否。具体key storage/rotationはD0外 |
 | `ExecutorRecoveryProofPort.verifyAndReissue` | executor認証proof、durable journal、current epoch | execution/spec/custody/deadline/policy/transition全一致時だけepochをCAS+1し同契約の新leaseを発行。生成/resume/deadline延長0 |
 | `sealMonotonicDeadline` | verified token、同時観測wall/monotonic、boot ID | remainingをbudgetとwall残時間の小さい方へ固定し、開始後wall jumpで延長0。skew/boot不整合は期限切れfail-close |
-| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token又はspawn/resume lease無し・期限切れ・binding不一致のExecuteでcustody/managed root side effect 0。Recoveryはvalid authority leaseの既存custodyだけを操作し、生成・resume能力0。shutdown-before-emptyは拒否 |
+| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token又はspawn/resume lease不正のExecuteでside effect 0。Recoveryは`recover_authority(proof)`又は後4操作の`lease`をdiscriminantで分離し、生成・resume能力0。shutdown-before-emptyは拒否 |
 | `normalizeWireFault` | typed `WireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
 | `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |

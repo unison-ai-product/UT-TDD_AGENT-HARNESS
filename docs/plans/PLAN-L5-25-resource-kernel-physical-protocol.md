@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:263b5e0e2ecfa9406de20ba2bdde9ff1
-  command_id: pr156-recovery-closure-l5-rev8-20260727
-  admitted_at: 2026-07-27T04:00:01.000Z
-  source_digest: sha256:a7e781947c83ea43844ab37182f6ac5c50311ed0909fff3ce0d0965c4195ae6e
-  decision_digest: sha256:e02c290f698b6ec585b2a1a3eb9a3d284ae941484fe37dabf3d7ef3ac37022dd
-  receipt_digest: sha256:08066d4e5974a868b46996657aef12f4942f2e938399f2afd02569d67623e7ae
+  receipt_id: certificate:649bd05fe5d75f5f8b3346e2f88a25e3
+  command_id: pr156-trace-closure-l5-rev9-20260727
+  admitted_at: 2026-07-27T05:00:01.000Z
+  source_digest: sha256:5b32ad0dcaacf1bdd2f474e7a4d1b5c6a00e52b0d96032e07bdd8c961c4a9e4a
+  decision_digest: sha256:81dec5047d74e70c7e3226ed540c30c409be9ec2fb6cf2012595d19695eb66e1
+  receipt_digest: sha256:c24823d6e739edf7b813ce30e32d8c68f1b7671099063931309ce2443a8b192e
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 8
-    content_digest: sha256:a7e781947c83ea43844ab37182f6ac5c50311ed0909fff3ce0d0965c4195ae6e
+    revision: 9
+    content_digest: sha256:5b32ad0dcaacf1bdd2f474e7a4d1b5c6a00e52b0d96032e07bdd8c961c4a9e4a
   route:
     signal: redesign
     mode: redesign
@@ -65,20 +65,20 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 7
+    revision: 8
     digest: sha256:5d7da7bece7de30bd75eada98b0cf25e2c5046dc128d7be3e9b5f841222b138e
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 8
+      target_revision: 9
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 8
+    target_revision: 9
     phase: forward_merge
-  escape_reason: Resource Kernelのrecovery reissue・execution
-    trace・receipt全域性を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのrecovery dispatch・bundle binding・receipt
+    trace全域性を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -131,7 +131,7 @@ versioned canonical preimage全体の真正性とcommandのattempt/custody/bundl
 同nonce別payload、別operation replayを拒否する。token無し、空required capability、期限切れ、別probe、別attemptでは
 custody作成、spawn、resumeをすべて0にし、`managed_root_created=false`のまま拒否する。handshake成功をexecute許可へ暗黙昇格しない。
 `create_custody`はarm済みdeadline executorへ束縛した
-`AuthorityLeaseV1(authority_epoch, execution_id, execution_spec_digest, attempt_id, custody_nonce, custody_identity, executor_id,
+`AuthorityLeaseV1(authority_epoch, execution_id, execution_spec_digest, attempt_id, custody_nonce, bundle_digest, custody_identity, executor_id,
 effective_deadline_monotonic_ms, boot_id, termination_policy_digest, recovery_grace_ms,
 recovery_deadline_monotonic_ms, lease_nonce, issuer_key_id, authenticator)`を返し、`spawn_attached | resume`はtokenに加えて
 同じleaseを必須fieldとして照合する。missing/stale epoch、別attempt/nonce、executor binding不一致ならattach/resume 0とする。
@@ -140,7 +140,7 @@ recovery_deadline_monotonic_ms, lease_nonce, issuer_key_id, authenticator)`を�
 
 `RecoveryCustodyCommand.operation`は`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する。
 後4操作は完全な`AuthorityLeaseV1`を必須とする。`recover_authority`だけはleaseの代わりにexecutorが認証した
-`ExecutorRecoveryProofV1(executor_id, execution_id, execution_spec_digest, attempt_id, custody_nonce, custody_identity,
+`ExecutorRecoveryProofV1(executor_id, execution_id, execution_spec_digest, attempt_id, custody_nonce, bundle_digest, custody_identity,
 previous_authority_epoch, boot_id, effective_deadline_monotonic_ms, termination_policy_digest, recovery_grace_ms,
 recovery_deadline_monotonic_ms, last_transition_digest, recovery_nonce, issuer_key_id, authenticator)`を必須とする。
 `ExecutorRecoveryProofPort.verify`とdurable journal/executor factの全一致後、CASでepochを一つ進め、deadline/policyを変更しない

@@ -1774,6 +1774,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-ERROR-006` | orphan factをprocess failureへ変換するmutation | `orphan_detected`を保持しsuccess 0 |
 | `U-RGK-ERROR-007` | native error union exhaustive switchのvariant追加 | compile/runtime exhaustive guardがRed |
 | `U-RGK-ERROR-008` | protocol/bundle/pre-root failureとcustody prepared後root未生成をreceiptへproject | RootNotCreatedへ各exit kindをlossless保存。prepared caseはcustody identity+empty/reap/release proof必須、root PID N/A |
+| `U-RGK-ERROR-009` | suspended root作成後、start前にdeadline/cancel | RootCreatedNotStartedへ原因、terminate/reap、custody、root-absent proofを保存しstarted_at N/A |
 | `U-RGK-CAP-001` | required capabilityを一つずつ欠落 | 各case managed workload生成前`capability_failure` |
 | `U-RGK-CAP-002` | OS名一致だがprobe不足 | OS名推測せず拒否 |
 | `U-RGK-CAP-003` | stale/別bundle probe | expected bundle digest不一致で拒否 |
@@ -1783,7 +1784,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-CAP-007` | recorded probeとrequired集合完全一致 | attempt/nonce/bundle/probe/deadlineを結ぶsealed tokenを一つ生成 |
 | `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
 | `U-RGK-CAP-009` | token無し、またはtokenのattempt/nonce/bundle/probe/deadlineを各変異したExecuteの`create_custody | spawn_attached | resume` | 全variantを拒否しcustody/launcher call 0、別attemptへのside effect 0 |
-| `U-RGK-CAP-010` | create後のspawn/resumeへlease missing/stale/別execution/spec/attempt/nonce/custody/executor/boot/deadline/policy/issuer/authenticator変異と同lease nonce別payloadを投入 | 全不正leaseでattach/resume 0。valid leaseのterminate/prove-emptyはtoken期限後も可能 |
+| `U-RGK-CAP-010` | leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/issuer/authenticatorを各変異 | 全不正leaseでattach/resume 0。valid leaseのterminate/prove-emptyはtoken期限後も可能 |
 | `U-RGK-CAP-011` | canonical token field、issuer key/version、authenticator、operation、token nonceを各変異し、同nonce別payload/replayを投入 | verify前side effect 0。same operation/same payload retryだけ既存factへ冪等reconcileし、別operation replay 0 |
 | `U-RGK-CAP-012` | issued/deadline/budget不一致、許容skew超過、wall前進/後退、process restart/boot ID変更 | effective monotonic deadlineは初回値から延長0。曖昧/boot変更はexpireしkill要求、managed root生成0 |
 | `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
@@ -1798,7 +1799,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
 | `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
 | `U-RGK-LIFE-011` | Linux authority+supervisor dual crash | broker外deadline ownerが期限内killを発行し、bounded recovery後にreap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |
-| `U-RGK-LIFE-013` | executor recovery proofのexecution/spec/custody/epoch/boot/deadline/policy/transitionを各変異し、valid proofをCAS競合 | 変異はreissue 0。valid一件だけepoch+1の同deadline/policy lease、敗者state delta 0、生成/resume 0 |
+| `U-RGK-LIFE-013` | executor recovery proofのexecution/spec/bundle/custody/epoch/boot/deadline/policy/transitionを各変異し、valid proofをCAS競合 | 変異はreissue 0。valid一件だけepoch+1の同bundle/deadline/policy leaseと3 recovery event、敗者delta 0、生成/resume 0 |
 | `U-RGK-PORT-001` | Windows assign failure | resume 0、created-not-started cleanup proof必須 |
 | `U-RGK-PORT-002` | Linux事後attach adapter | hard custody capabilityをadvertiseせずlaunch 0 |
 | `U-RGK-PORT-003` | empty proof欠落mutation | success/receipt sealへ進まない |
