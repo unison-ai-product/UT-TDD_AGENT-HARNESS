@@ -15,7 +15,7 @@ updated: 2026-06-22
 # L2 UI 要素 (ui-element)
 
 > **SSoT 参照**: 各画面の情報要素・操作要素の正本は L1 [screen-requirements.md §1](../L1-requirements/screen-requirements.md) (15 画面詳細) + §3 横断原則 (CC2/CC3)。画面 ID/URL は [screen-list.md](./screen-list.md)、遷移は [screen-flow.md](./screen-flow.md) が正本。本 doc は L1 の操作/情報要素を **再利用可能な UI コンポーネント** に分解し、props / state / event 契約を L2 設計として確定する。用語独自定義は行わない (anti-corruption layer)。
-> **V-pair (IMP-039/058)**: ③ ペアは `wireframe.md` (mock、右腕 L10)。`next_pair_freeze: L10`。
+> **V-pair**: ③ ペアは `docs/test-design/harness/L10-ux-validation-test-design.md`。`wireframe.md` は L2 内の Low-Fi mock であり、テスト設計の代替ではない。`next_pair_freeze: L10`。
 > **実装状態**: 全コンポーネントは not-implemented (NFR-08、src/web は Phase B)。
 > **スコープ制約**: light モードのみ (Q30)、日本語固定 (Q31)、Desktop 専用 (S9=a)、30 秒ポーリング (S2=b、WebSocket 不使用)、UI 直接実行禁止 = CLI コマンド文字列コピーのみ (S5=b / CC2)。
 
@@ -103,4 +103,4 @@ L1 §3.1 横断原則 (CC2/CC3) を満たす再利用部品。全画面がこの
 - 上流: L1 [screen-requirements.md §1](../L1-requirements/screen-requirements.md) (各画面 情報要素/操作要素) + §3.1 横断原則 (CC2/CC3) + §3.2 採用済み要望。
 - L2 内: [screen-list.md](./screen-list.md) (ID/URL) → [screen-flow.md](./screen-flow.md) (遷移) → 本 ui-element (部品) → [wireframe.md](./wireframe.md) (レイアウト。③ pair の正本は L10-ux-validation-test-design.md)。
 - 下流: L10 UX refinement (デザイントークン High-Fi 確定 / a11y AA 実値 / High-Fi モック) → src/web 実装 (Phase B)。
-- pair: `wireframe.md` (mock = ③ test design、L2↔L10 右腕)。
+- pair: `docs/test-design/harness/L10-ux-validation-test-design.md` (独立③ test design、L2↔L10 右腕)。

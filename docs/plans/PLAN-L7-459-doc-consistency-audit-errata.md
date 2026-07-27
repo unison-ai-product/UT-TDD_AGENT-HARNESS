@@ -1,10 +1,12 @@
 ---
 plan_id: PLAN-L7-459-doc-consistency-audit-errata
 title: "PLAN-L7-459: 2026-07-22 ドキュメント整合性監査 errata 一括是正 (用語不整合・相反記述)"
-kind: troubleshoot
+kind: refactor
 layer: L7
 drive: fullstack
 status: draft
+route_signal: structural
+route_mode: refactor
 created: 2026-07-22
 updated: 2026-07-27
 owner: Claude
@@ -13,55 +15,11 @@ backprop_decision_reason: "本 PLAN は 2026-07-22 全ドキュメント監査�
 agent_slots:
   - role: tl
     slot_label: "TL - errata 是正の網羅確認と confirmed doc への correction note 規律検証"
+  - role: aim
+    slot_label: "AIM - 正本間の意味整合・V-pair・件数契約の独立監査"
 generates:
   - artifact_path: docs/plans/PLAN-L7-459-doc-consistency-audit-errata.md
     artifact_type: markdown_doc
-  - artifact_path: CLAUDE.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/governance/README.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/governance/gate-design.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/governance/vmodel-agent-contracts.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/process/README.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/process/modes/refactor.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/design/harness/L2-screen/screen-list.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L2-screen/screen-flow.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L2-screen/ui-element.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L2-screen/wireframe.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L3-functional/README.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L4-basic-design/data.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L5-detailed-design/module-decomposition.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L5-detailed-design/physical-data.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L6-function-design/fr-unit-coverage.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L1-requirements/screen-requirements.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L1-requirements/technical-requirements.md
-    artifact_type: design_doc
-  - artifact_path: docs/test-design/harness/L14-operational-test-design.md
-    artifact_type: test_design
-  - artifact_path: docs/governance/harness-v2-update-strategy.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/governance/reverse-fullback-backprop-audit-2026-06-22.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/governance/conditional-backfill-decision-audit-2026-06-22.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/design/harness/L3-functional/roadmap.md
-    artifact_type: design_doc
-  - artifact_path: docs/design/harness/L6-function-design/secret.md
-    artifact_type: design_doc
 dependencies:
   parent: null
   requires:
@@ -92,6 +50,10 @@ triage と、`src/schema/index.ts` / `src/assets/catalog.ts` / `src/lint/l6-fr-c
 silent overwrite せず、該当箇所に correction note (本 PLAN ID 引用) を残す。
 
 ## 是正項目 (DoD)
+
+- [ ] FLAG 再現で検出した L2 self-pair 残存、FR-L1 件数、route/role、artifact ownership を是正する。
+- [ ] 修正後 exact HEAD で機械 gate を実行し、出力を真正な evidence file と digest で記録する。
+- [ ] 非 author runtime の claim-blind / spec-blind 再レビューで FLAG が解消される。
 
 ### High
 
