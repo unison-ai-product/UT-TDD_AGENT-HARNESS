@@ -8,7 +8,7 @@ drive: db
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 owner: PO / Claude (Fable orchestrator)
 parent_design: docs/plans/PLAN-L4-22-vmodel-source-disposition-profile-ssot.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -40,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 119
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:98c5c3e74866b05cb19ccae62651d4cc
-  command_id: plan-l6-91-20260727-02
-  admitted_at: 2026-07-27T10:29:36.217Z
-  source_digest: sha256:9424d72f862a60f125ae05c6207ef4197ce9b8530135f722ec836902b1151f03
+  receipt_id: certificate:5525d5bfcf54efce57dfb03e55e46476
+  command_id: plan-l6-91-20260727-03
+  admitted_at: 2026-07-27T11:06:01.211Z
+  source_digest: sha256:c857943873e799f2bbc09ceb25217f5db4a07406cbfade76df167a072a593557
   decision_digest: sha256:5b65c4e69c2443ad017b3f0c47fc20f637023bab63f5e63a67d1b6fb39c0b0e3
-  receipt_digest: sha256:3dd543478703f92c31fc2b5c6101f42951ff99edb5b0c61715f4410bc8c6b098
+  receipt_digest: sha256:65e8aa9e80afb70d7cf45c1ea9eac2a300d3b5e696f73eba3f78b88c38428c54
   binding:
     path: docs/plans/PLAN-L6-91-disposition-claim-integrity-gate.md
     plan_id: PLAN-L6-91-disposition-claim-integrity-gate
     asset_id: plan:legacy:64bc729867f74597943e533396e4d022cf87e664059978169f9301441294ed75
-    revision: 2
-    content_digest: sha256:9424d72f862a60f125ae05c6207ef4197ce9b8530135f722ec836902b1151f03
+    revision: 3
+    content_digest: sha256:c857943873e799f2bbc09ceb25217f5db4a07406cbfade76df167a072a593557
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,7 +78,7 @@ admission_receipt:
 ## 1. 目的と実測根拠 (Issue #119)
 
 checked ZIP semantic item 163 件の忠実性監査 (2026-07-22、8 レーン実測) で、
-`vmodel-document-disposition-catalog.md` の統合主張 (claim) と受け皿正本の実体が乖離する 3 型を確認した:
+`vmodel-document-disposition-catalog.md` の統合主張 (claim) と受け皿正本の実体が乖離する 5 型を確認した:
 
 1. **claim 未履行 (quota 型)**: 「architecture.md の provider/token concurrency policy へ統合」と merge 宣言
    しながら、統合先に該当内容が存在しない (grep 0 件)。
@@ -87,6 +87,10 @@ checked ZIP semantic item 163 件の忠実性監査 (2026-07-22、8 レーン実
    一覧に未定義。
 3. **未定義 axis 参照 (regulated 型)**: 「regulated profile で採用」の参照先 profile が正本のどこにも定義
    されていない (二重欠落)。
+4. **api-service doc_type 不在**: `api_gov` / `api_portal` / `api_webhook` を受ける typed `doc_type_id`
+   が catalog に無く、採否を `adopt` / `not_applicable` の決定行として復元できない。
+5. **product profile の item 粒度崩壊**: mobile / desktop 系 12 item の個別 claim が
+   `DOC-L4-UI-STANDARD` 1 行へ集約され、`source_id` / `item_id` 単位の採否 coverage を証明できない。
 
 既存機構はこれを検出できない。PLAN-L7-417 (confirmed) の fail-close は参照レベル (path 実在・ID 解決・
 件数整合) 止まりで、path は実在するが中身・決定行が無い状態を green で通す。PLAN-L4-22 (draft) の
@@ -109,7 +113,13 @@ checked ZIP semantic item 163 件の忠実性監査 (2026-07-22、8 レーン実
    anchor 形式は security.md が既に実践する「実体は security.md §N (PLAN-L4-29)」方式を正規化する。
 4. **not_applicable の明示**: 採用しない判断は reason 付き `not_applicable` としてのみ許可し、無音の
    欠落 (claim も判断記録も無い) を残さない (issue #121 の受け皿)。
-5. 検出結果は既存 doctor gate の fail-close 方針へ合流し、`plan-governance` / `rule-drift` と同じ
+5. **api-service typed doc_type join**: `api_gov` / `api_portal` / `api_webhook` は、authoring source が定義する
+   typed `doc_type_id` と、その doc_type に対する `adopt` または reason 付き `not_applicable` 決定行を
+   必須とする。doc_type 不在、決定行不在、自由記述だけの採否は fail-close する。
+6. **product profile item coverage join**: mobile / desktop の採否は `source_id` / `item_id` ごとに決定行へ
+   join できなければならない。複数 item を `DOC-L4-UI-STANDARD` 1 行へ集約して個別 coverage を失う状態は
+   fail-close する。正本側の item 粒度を保持し、検出器都合で doc_type 1 行へ丸めない。
+7. 検出結果は既存 doctor gate の fail-close 方針へ合流し、`plan-governance` / `rule-drift` と同じ
    常設検出面に載せる。
 
 ## 3. 既存 PLAN との関係
@@ -131,13 +141,22 @@ L7 test-design に `U-DISPCLAIM-*` を追加し、少なくとも次を mutation
 3. 未定義 axis / 未登録 profile を参照する fixture を fail-close する (regulated 型回帰)。
 4. prose reason のみで型付き採用条件が無い `reference` 行を fail-close する。
 5. reason 付き `not_applicable` 行は green、reason 無しは fail-close する。
-6. 正常系 (anchor 実在 + 決定行 join 成立) の実 repo fixture が green である。
+6. `api_gov` / `api_portal` / `api_webhook` の typed doc_type または `adopt|not_applicable` 決定行を
+   1 箇所ずつ欠落させた fixture を fail-close する。
+7. mobile / desktop 12 item の `source_id` / `item_id` coverage を `DOC-L4-UI-STANDARD` 1 行へ集約した
+   fixture を fail-close し、全 item が個別に join する fixtureだけを green にする。
+8. 正常系 (anchor 実在 + 決定行 join + api-service decision + item coverage 成立) の実 repo fixtureが
+   green である。
 
 ## 5. AC
 
 - [ ] claim 語彙 (型付き採用条件 / claim anchor / not_applicable) が authoring source schema として
-      固定され、`U-DISPCLAIM-1..6` の oracle で fail-close を証明する。
-- [ ] issue #119 実測 3 型 (quota / billing・saas / regulated) を検出器が全件検出する (実 repo 回帰 fixture)。
+      固定され、`U-DISPCLAIM-1..8` の oracle で fail-close を証明する。
+- [ ] issue #119 実測 5 型 (quota / billing・saas / regulated / api-service doc_type 不在 /
+      mobile・desktop item 粒度崩壊) を検出器が全件検出する (実 repo 回帰 fixture)。
+- [ ] api-service 3 item は typed doc_type と `adopt|not_applicable` 決定行へ全件 join し、欠落 0 を証明する。
+- [ ] mobile / desktop 12 item は `source_id` / `item_id` 単位で coverage join し、
+      `DOC-L4-UI-STANDARD` 1 行への集約による未追跡 item 0 を証明する。
 - [ ] 検出器導入時点の既知乖離は「是正」または「正規の not_applicable / defer 記録」のどちらかへ収束し、
       無音欠落 0 で gate green になる。
 - [ ] PLAN-L7-417 の参照整合 projection と二重実装しない (検査責務の分担を doc で固定)。
