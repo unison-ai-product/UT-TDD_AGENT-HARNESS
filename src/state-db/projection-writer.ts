@@ -1132,7 +1132,16 @@ function projectVerificationBandExecution(db: HarnessDb): void {
   }
 }
 
-function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
+// PLAN-RECOVERY-14: gate 証跡 (.ut-tdd/gate_runs/*.json) は projectHookEvents /
+// projectReviewModelRuns 等と異なり legacy plan alias (PLAN rename でファイル名に説明的
+// suffix が付いた旧 short-id 参照) を解決していなかった。これが orphan_gate_run の主因の
+// 一つ (alias 解決可能な行が恒久 orphan として残り続ける)。他 projection と同じ
+// resolveProjectedPlanId で揃える。
+function projectGateRunEvidence(
+  repoRoot: string,
+  db: HarnessDb,
+  plans: Map<string, ProjectedPlan>,
+): void {
   const dir = join(repoRoot, ".ut-tdd", "gate_runs");
   if (!existsSync(dir)) return;
   const files = readdirSync(dir)
@@ -1169,7 +1178,8 @@ function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
       });
       continue;
     }
-    const planId = asString(parsed.plan_id ?? undefined) ?? "";
+    const rawPlanId = asString(parsed.plan_id ?? undefined) ?? "";
+    const planId = rawPlanId ? resolveProjectedPlanId(plans, rawPlanId) : "";
     recordProjectionEvent(db, {
       table: "gate_runs",
       id: gateRunId,
@@ -1190,7 +1200,13 @@ function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
       row: {
         workflow_run_id: workflowRunId,
         plan_id: planId,
-        drive_run_id: stableId("gate-drive", planId),
+        // Must match the "documented" (session_id="") drive_runs row id that
+        // projectDriveRuns always creates for every projected plan
+        // (`stableId("drive-run", `${planId}:documented`)`). The previous
+        // `stableId("gate-drive", planId)` used a different id prefix, so it could
+        // never join drive_runs — every gate-derived workflow_runs row was a
+        // guaranteed false-positive workflow_orphans hit (PLAN-RECOVERY-14 root cause).
+        drive_run_id: stableId("drive-run", `${planId}:documented`),
         workflow: "routine-gate",
         phase: gateId,
         ready_status: status === "passed" ? "passed" : "blocked",
@@ -2603,7 +2619,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectDesignPairFreezeFindings(repoRoot, db);
         projectDesignQualityCoverage(repoRoot, db);
         projectVerificationBandExecution(db);
-        projectGateRunEvidence(repoRoot, db);
+        projectGateRunEvidence(repoRoot, db, plans);
       });
       time("automation-memory", () => {
         projectAutomationAssets(repoRoot, db);
