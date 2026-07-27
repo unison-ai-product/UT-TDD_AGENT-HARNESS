@@ -125,18 +125,23 @@ ERR_FS_FILE_TOO_LARGE から原因ファイルへの手動探索を不要にす�
 
 ## 3. AC (完了条件)
 
-- [ ] U-FSTREAM-1: チャンク hash が従来丸読み hash と同一 sha256 を返す (複数サイズ、境界 =
+- [x] U-FSTREAM-1: チャンク hash が従来丸読み hash と同一 sha256 を返す (複数サイズ、境界 =
       チャンク長ちょうど/±1 バイトを含む)。
-- [ ] U-FSTREAM-2: チャンク読みの読取ループが EOF まで全バイトを消費する (部分 read の継続)。
-- [ ] U-FSTREAM-3: 読取失敗時のエラーに相対パスとサイズが含まれる (存在しないファイル/権限相当の
+- [x] U-FSTREAM-2: チャンク読みの読取ループが EOF まで全バイトを消費する (部分 read の継続)。
+- [x] U-FSTREAM-3: 読取失敗時のエラーに相対パスとサイズが含まれる (存在しないファイル/権限相当の
       注入で検証)。
-- [ ] U-DBVAC-1: freelist が閾値超の db で `maybeVacuumHarnessDb` が VACUUM を実行し、
+- [x] U-DBVAC-1: freelist が閾値超の db で `maybeVacuumHarnessDb` が VACUUM を実行し、
       ファイルサイズが縮小する (churn を人工生成した実 SQLite db で実測)。
-- [ ] U-DBVAC-2: 閾値未満では no-op (VACUUM 非実行を実測)。
-- [ ] U-DBVAC-3: VACUUM 失敗 (別接続の排他 lock 注入) で throw せず warning を返し、rebuild 結果を
+- [x] U-DBVAC-2: 閾値未満では no-op (VACUUM 非実行を実測)。
+- [x] U-DBVAC-3: VACUUM 失敗 (別接続の排他 lock 注入) で throw せず warning を返し、rebuild 結果を
       壊さない (fail-open)。
-- [ ] stop-refresh 経路が rebuild 完走後に maybeVacuum を呼ぶ (spawn/実行系ユニットで検証)。
-- [ ] 既存 fence / snapshot runner / db-currency の全既存テストが green (意味論不変)。
+- [x] stop-refresh 経路が rebuild 完走後に maybeVacuum を呼ぶ (spawn/実行系ユニットで検証)。
+- [x] 既存 fence / snapshot runner / db-currency の全既存テストが green (意味論不変)。
+
+
+根拠: review_evidence の codex-blind-reviewer green_commands (61/61, exit 0,
+2026-07-22T04:27:50Z) が AC 全 ID をテスト実走で裏取り済み。checkbox は confirm 時
+(2026-07-27, issue #157 drain) に同証跡へ整合させた。
 
 ## 4. 検証コマンド
 
