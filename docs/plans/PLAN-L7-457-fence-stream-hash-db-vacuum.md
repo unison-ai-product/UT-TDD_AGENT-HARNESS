@@ -4,7 +4,7 @@ title: "PLAN-L7-457 (troubleshoot): harness.db 肥大によるローカル検証
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-22
