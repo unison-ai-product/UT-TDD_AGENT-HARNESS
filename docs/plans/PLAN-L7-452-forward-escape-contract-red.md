@@ -8,7 +8,7 @@ status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-07-27
 owner: PO / Claude (起票・実装)
 parent_design: docs/plans/PLAN-L6-83-forward-escape-issue-contract.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
