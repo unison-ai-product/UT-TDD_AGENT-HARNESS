@@ -1,7 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstatSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
+import { lstatSync, readdirSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
+import {
+  hashFileChunkedWithDiagnostics,
+  updateHashWithFile,
+  wrapFileReadError,
+} from "./chunked-hash";
 
 export interface GitWorkspaceFingerprint {
   head: string;
@@ -27,7 +32,9 @@ export function captureWorkspaceInventory(root: string): { digest: string; entri
         entries.push(`d:${relativeEntry}`);
         visit(path, relativeEntry);
       } else if (stat.isFile()) {
-        entries.push(`f:${relativeEntry}:${digest(readFileSync(path))}`);
+        entries.push(
+          `f:${relativeEntry}:${hashFileChunkedWithDiagnostics("workspace fence", path, relativeEntry, stat.size)}`,
+        );
       } else {
         throw new Error(`workspace fence unsupported entry: ${relativeEntry}`);
       }
@@ -78,14 +85,28 @@ export function captureGitWorkspaceFingerprint(repoRoot: string): GitWorkspaceFi
     .split("\0")
     .filter(Boolean)
     .sort();
-  const untrackedChunks: Array<string | Buffer> = [];
+  // untracked ファイル内容は readFileSync 丸読みでなく streaming で hash へ流し込む
+  // (2GiB 超ファイル対応、issue #118)。digest(...chunks) と同じ update 順序を維持するため
+  // 単一の Hash インスタンスへ逐次 update する (array へ全文字列/Buffer を蓄積しない)。
+  const untrackedHash = createHash("sha256");
   for (const path of untrackedPaths) {
     const absolutePath = join(repoRoot, path);
     const stat = lstatSync(absolutePath);
-    if (stat.isSymbolicLink()) untrackedChunks.push(path, "\0", readlinkSync(absolutePath), "\0");
-    else if (stat.isFile()) untrackedChunks.push(path, "\0", readFileSync(absolutePath), "\0");
-    else if (stat.isDirectory()) untrackedChunks.push(path, "\0", "directory", "\0");
-    else throw new Error(`workspace fence unsupported untracked entry: ${path}`);
+    if (stat.isSymbolicLink()) {
+      untrackedHash.update(path).update("\0").update(readlinkSync(absolutePath)).update("\0");
+    } else if (stat.isFile()) {
+      untrackedHash.update(path).update("\0");
+      try {
+        updateHashWithFile(untrackedHash, absolutePath);
+      } catch (cause) {
+        throw wrapFileReadError("workspace fence", path, stat.size, cause);
+      }
+      untrackedHash.update("\0");
+    } else if (stat.isDirectory()) {
+      untrackedHash.update(path).update("\0").update("directory").update("\0");
+    } else {
+      throw new Error(`workspace fence unsupported untracked entry: ${path}`);
+    }
   }
   return {
     head: git(repoRoot, ["rev-parse", "HEAD"]).toString("utf8").trim(),
@@ -94,7 +115,7 @@ export function captureGitWorkspaceFingerprint(repoRoot: string): GitWorkspaceFi
     ),
     worktreeDigest: digest(git(repoRoot, ["diff", "--binary", "HEAD"])),
     indexDigest: digest(git(repoRoot, ["diff", "--cached", "--binary", "HEAD"])),
-    untrackedDigest: digest(...untrackedChunks),
+    untrackedDigest: untrackedHash.digest("hex"),
     inventoryDigest: inventory.digest,
     inventoryEntries: inventory.entries,
   };
