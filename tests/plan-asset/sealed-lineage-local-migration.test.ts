@@ -22,6 +22,8 @@ describe("sealed lineage local migration", () => {
     expect(count(db, "plan_revisions")).toBe(1);
     expect(count(db, "sealed_plan_lineages")).toBe(1);
     expect(count(db, "plan_lineage_migration_certificates")).toBe(1);
+    expect(count(db, "genesis_issue_custody")).toBe(1);
+    expect(count(db, "plan_admission_receipts")).toBe(1);
     expect(
       db.prepare("SELECT asset_id FROM plan_aliases WHERE alias = ?").get(PLAN_ID),
     ).toEqual({ asset_id: "plan:recovery-16-successor" });
@@ -40,7 +42,9 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual(baseline);
   });
 
-  it.each(["asset", "revision", "alias", "seal", "certificate", "receipt"] as const)(
+  it.each(
+    ["asset", "revision", "alias", "admission", "custody", "seal", "certificate", "receipt"] as const,
+  )(
     "U-PA-SEAL-003: %s faultで全writeをrollbackする",
     async (boundary) => {
       const { db, Transaction } = await baseFixture();
@@ -50,14 +54,22 @@ describe("sealed lineage local migration", () => {
         },
       });
       expect(() => transaction.migrate(input())).toThrow(`fault:${boundary}`);
-      expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0]);
+      expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
     },
   );
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";
 
-type Boundary = "asset" | "revision" | "alias" | "seal" | "certificate" | "receipt";
+type Boundary =
+  | "asset"
+  | "revision"
+  | "alias"
+  | "admission"
+  | "custody"
+  | "seal"
+  | "certificate"
+  | "receipt";
 
 interface MigrationInput {
   commandId: string;
@@ -65,6 +77,9 @@ interface MigrationInput {
   historicalAssetId: string;
   historicalTerminalRevision: number;
   historicalTailDigest: string;
+  historicalProjectionPath: string;
+  historicalProjectionBlobOid: string;
+  historicalProjectionContentDigest: string;
   successorAssetId: string;
   canonicalPayloadJson: string;
   canonicalPayloadDigest: string;
@@ -74,6 +89,14 @@ interface MigrationInput {
   actor: string;
   occurredAt: string;
   certificateDigest: string;
+  sourceAuthorityDigest: string;
+  reviewedImplementationAuthorityDigest: string;
+  trustedStatus: "draft";
+  issue: {
+    number: number;
+    episodeId: string;
+    preimageDigest: string;
+  };
 }
 
 interface MigrationResult {
@@ -119,6 +142,9 @@ function input(): MigrationInput {
     historicalAssetId: "plan:890b18d79d85d8d7cc2591c7146af5e2",
     historicalTerminalRevision: 3,
     historicalTailDigest: digest("record-3"),
+    historicalProjectionPath: "docs/governance/plan-admission-receipts.json",
+    historicalProjectionBlobOid: "b".repeat(40),
+    historicalProjectionContentDigest: digest("tracked projection"),
     successorAssetId: "plan:recovery-16-successor",
     canonicalPayloadJson: payload,
     canonicalPayloadDigest: digest(payload),
@@ -128,6 +154,14 @@ function input(): MigrationInput {
     actor: "codex",
     occurredAt: "2026-07-27T03:30:00.000Z",
     certificateDigest: digest("certificate"),
+    sourceAuthorityDigest: digest("trusted source"),
+    reviewedImplementationAuthorityDigest: digest("reviewed implementation"),
+    trustedStatus: "draft",
+    issue: {
+      number: 102,
+      episodeId: "E4-102",
+      preimageDigest: digest("issue 102"),
+    },
   };
 }
 
@@ -138,6 +172,8 @@ function counts(db: HarnessDb): number[] {
     "plan_aliases",
     "sealed_plan_lineages",
     "plan_lineage_migration_certificates",
+    "genesis_issue_custody",
+    "plan_admission_receipts",
     "append_command_receipts",
   ].map((table) => Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n));
 }
