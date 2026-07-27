@@ -33,11 +33,12 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 - **architecture.md**: building block 依存方向 (§3、schema 一方向・循環禁止) / fail-close (§2/§5) / hook 配線 (§6) → 統合 ST 必須
 - **function.md**: CLI コマンド (§2) / workflow オーケストレーション (§3 = Forward spine + 9 駆動モデル + 2 工程専門) / signal→mode routing 優先度 (§3.2) / 機能間依存 (§7) → end-to-end ST 必須
 - **external-if.md**: 境界 DbC (§3) / 失敗時 degradation (§4) / adapter (§6) → 境界統合 ST 必須
-- 孤児 = 0 (機械検証は L7 で `ut-tdd vmodel lint` / trace check に接続)
+- 従来baselineの孤児 = 0。D0-R redesign frontierは§9の追加oracleを含め再review完了まで未凍結
 
-## §1 総合テスト (ST-*) — ST カテゴリ凍結 / GWT は検証 band 展開
+## §1 総合テスト (ST-*) — baselineカテゴリとD0-R再open frontier
 
-> 本節は L4 設計要素から導出する ST カテゴリ (被覆を G4 で凍結、孤児 0)。個別 ST ケース (Given-When-Then) は検証 band (L8-L14) / L9 本起票で展開する。
+> 従来STカテゴリはG4 baselineで被覆済みだが、D0-Rが変更するcommand algebra・authority・release境界は
+> §9のdraft frontierとして再openする。個別GWTと双方向traceを再reviewするまで現行pairをconfirmedへ戻さない。
 
 ### §1.1 ST-DATA (data.md 由来 — 集約整合 / state schema)
 
@@ -111,11 +112,14 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 - external-if.md §3 境界 4 / §4 degradation → ST-EXT-01〜04
 - external-if.md §2/§3/§4 CLI user boundary (PLAN-REVERSE-395) → ST-EXT-05
 - **security.md §5-§9 (脅威モデル/供給網/鍵・秘密/監査ログ、PLAN-L4-29) → ST-EXT-06** (ZIP-DOC-102 相当の security verification 接続、孤児 0 に含める)
-- **孤児 (設計要素で ST 未被覆) = 0** を L9 本起票で機械確認する。Current hard evidence is pair-freeze orphan 0 + implemented asset-drift slice + L7 roster/skill/command contract evidence. No active ST-ASSET L7 carry remains in this document.
+- 従来baselineの孤児0は維持する。D0-R frontierの量閉じは§9.1のST-RGK-05/06/12/14で再確認し、
+  未実装Red oracleをGreen evidenceと数えない。No active ST-ASSET L7 carry remains in this document.
 
 ## §3 trace (④ → ②)
 
-本書の各 ST-* は `docs/design/harness/L4-basic-design/{data,architecture,function,external-if}.md` の設計要素と相互 reference する。**G4 (基本設計ゲート)** で 4 sub-doc 全体 ⇔ 本書 1 doc の pair 宣言を確定し、双方向 trace freeze は G7 (trace freeze) で実施する (L3↔L12 と同型)。
+本書の各 ST-* は `docs/design/harness/L4-basic-design/{data,architecture,function,external-if}.md` の設計要素と相互 reference する。
+従来G4 pair宣言はbaselineであり、D0-Rにより変更されたarchitecture §10と本書§9の双方向traceは現在draftである。
+独立reviewとG7 trace freeze後にだけpair宣言を再確定する。
 
 ## §4 carry / 次工程
 
@@ -195,7 +199,7 @@ Node build image、authoring qualification、main正常化をblockしない。
 本節は `PLAN-L4-32-resource-governed-execution-kernel.md` の L4↔L9 pair であり、
 `AC-RGK-01..15` のIDを維持する。D0-R merge gateでactiveなのは
 `AC-RGK-01..06/11/12/14/15`であり、resource budget、process-tree custody、capability、terminal receipt、
-signed companion bundleだけを実装前の **Red system oracle** として固定する。
+signed companion bundleを実装前の **draft Red system oracle** として定義する。
 `AC-RGK-07..10/13`は要件を削除せずIssue #152 later performance/control-plane waveへ明示deferし、
 D0-R merge gateへ含めない。root PIDの終了、`windowsHide`、またはdomain commandのexit 0だけを
 active IDのGreen証拠にしてはならない。
@@ -211,14 +215,14 @@ active IDのGreen証拠にしてはならない。
 | `ST-RGK-02` / `AC-RGK-02` | Windowsでnormal/deadline/cancel、Assign/handoff失敗、worker/companion/custodian/supervisor crash、custodian+supervisor同時喪失、old epoch/nonce replay、nested/breakaway競合を個別注入 | handoff失敗はsuspended PIDを一度もresumeせずreap。単独crashはnonce照合recovery、二者喪失はlast-handle killと独立active 0、欠測は`custody_failure` | commit前user code、stale nonce操作、deadline owner消失、dual crash証拠欠測success、rootだけkill、child残存 |
 | `ST-RGK-03` / `AC-RGK-03` | Linuxでclone3経路を実行し、非対応kernel、事後attach fallback、handoff barrier、特権uid/capability、double-fork、broker+通常recovery supervisor dual-crash、old epoch/nonceを注入。macOSへ同じhard要求を投入 | managed root開始前にbroker外durable deadline ownerへattempt/cgroup/deadlineをcommit。dual-crash後も期限内`cgroup.kill`、bounded recovery、`populated=0`、zombie 0、managed orphan 0まで実行する。ownerをarm不能ならroot生成前拒否 | 事後attachをhard custody受理、stale nonce操作、brokerだけがdeadline所有、dual-crash後に欠測findingだけ残してprocess生存、process groupだけでhard custody成功 |
 | `ST-RGK-04` / `AC-RGK-04` | wall、CPU、memory、process count、stdout、stderrの各上限を独立に超過 | 超過資源に対応する固有exit kind、要求値、適用値、観測peak、policy revision、termination/reap順序をreceiptに保存し、managed orphan 0 | 全超過を`timeout`へ丸める、観測不能値を要求値で埋める、出力打切り後もprocessが生存 |
-| `ST-RGK-05` / `AC-RGK-05` | root先行exit、journal flush失敗、lease解放遅延、terminal transaction/outbox crashを個別注入 | custody空/reap後、`lease_released + finished + sealed receipt`が同一commit position/digestでdurable exactly-once | root exit時finished、terminal片肺、flush前success、lease残存、orphan未確認を0扱い |
-| `ST-RGK-06` / `AC-RGK-06` | intent/started/termination-requested各時点でlauncherまたはKernelをcrashし、PID再利用fixtureを混在 | 再起動reconcilerがcustody identityとjournalから未完了attemptを一度だけ収束し、無関係な再利用PIDをkillせず、二重producer・未記録childとも0 | PIDだけで所有判定、同一executionの再実行、未完了attemptのsuccess化、未知childの放置 |
+| `ST-RGK-05` / `AC-RGK-05` | root先行exit、release_id commit/platform release/absence fact/disarm/revoke各直後crashを個別注入 | empty/reap後、custody_generation付きensureAbsentが同generationを冪等absenceへ収束し、fact後だけdisarm→revoke→finished→seal | root exit時finished、release effect複数、fact前disarm/revoke、terminal片肺、orphan未確認を0扱い |
+| `ST-RGK-06` / `AC-RGK-06` | 各lifecycle crashにPID再利用とraw OS custody identityの別generation再利用を混在 | 同generationだけを一度収束。別generationは削除0、identity_reused fact+quarantine。二重producer・未記録child0 | PID/raw identityだけで所有判定、古いreleaseで新generationを削除、未完了attemptのsuccess化 |
 | `ST-RGK-07` / `AC-RGK-07` **DEFERRED** | DB incremental/full rebuild同値性corpus | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
 | `ST-RGK-08` / `AC-RGK-08` **DEFERRED** | single-flight互換性、Request/Producer receipt、waiter独立terminal | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
 | `ST-RGK-09` / `AC-RGK-09` **DEFERRED** | snapshot CAS identity、hermetic materialize、publish/lease/GC fault | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
 | `ST-RGK-10` / `AC-RGK-10` **DEFERRED** | hook/doctor/snapshot/local CI横断のqueue/headroom admission、visible shell 0 | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
 | `ST-RGK-11` / `AC-RGK-11` | lifecycle各barrierでcrash/retryし、同一`execution_id`へ複数attemptを発行 | event sequenceはappend-onlyかつ欠番・上書きなし、各`attempt_id`のterminal receiptはexactly-once | mutable status rowをevent/receipt兼用、retryでattempt identityを再利用、terminal eventだけまたはreceiptだけ残存 |
-| `ST-RGK-12` / `AC-RGK-12` | capability欠落、probe/journal/token barrier除去、token authenticator/issuer/operation/nonce偽造、spawn/resume lease欠落/変異、Recovery生成variant、shutdown-before-empty、wall jump/restart matrix | 全不足・偽造・token/lease迂回caseでmanaged root 0。valid cleanupはtoken期限後も可能、shutdownはempty/reap後だけ。effective monotonic deadline延長0 | 自己署名token、lease無しattach、Recoveryから生成/resume、running shutdown、clock rollbackで延長、control/root単一boolean化、soft limit縮退 |
+| `ST-RGK-12` / `AC-RGK-12` | 5 variant全cross-dispatch、same/cross observation signer/schema変異、Recovery生成variant、shutdown-before-empty、wall jump/restart matrix | Rust RecoveryObservationはpinned signerのnative factだけでauthority delta 0。TSだけがBundleTrust検証後にCAS+lease+trace。Recovery/Controlからroot生成0、shutdownはempty/reap後だけ | RustがCAS/lease/journal更新、別bundle signer受理、cross schema混同、Recoveryから生成/resume、running shutdown |
 | `ST-RGK-13` / `AC-RGK-13` **DEFERRED** | DB canonical digestとCAS完全identityの一要素mutation | Issue #152 later performance/control-plane waveでGreen化。本D0-RではID・期待値だけを保持 | D0-Rのmerge判定へ偽Greenとして算入 |
 | `ST-RGK-14` / `AC-RGK-14` | target別bundleへbinary欠落、digest/署名/SBOM/protocol/target/D0-N receipt不一致を一つずつ注入し、旧componentをfloor超の新sequence manifestへ再review・再署名 | 静的不一致はcontrol process起動0。旧manifest復帰は拒否し、新manifestだけがtrust/target/実OS custody oracleを再通過。TS/Rust責務重複0 | 未検証control起動、旧sequence復帰、PATH探索、runtime download、片側rollback、direct spawn fallback、Rust側domain/policy/journal実装 |
 | `ST-RGK-15` / `AC-RGK-15` | PR #154 D0-Nのcutover receiptを入力し、native companion/bundle/Cargo差分へBun binary/API/lock/runtime dependencyを一要素ずつ注入 | D0-N prerequisite一致かつnative差分のBun依存増分0 | D0-Rがglobal cutover完了を再判定、またはnative経路へBun依存を追加 |
