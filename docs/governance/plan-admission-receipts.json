@@ -1712,6 +1712,70 @@
         "revision": 10,
         "content_digest": "sha256:857590bb861f2b2b60a0b790413b5875bf8069694c216a7cdb900c88ae98e960"
       }
+    },
+    {
+      "sequence": 108,
+      "previous_record_digest": "sha256:b27ec10587a31ea39f72c4069a8b4f2fafdc10e804f9cec49b2b149ddffc5e1f",
+      "record_digest": "sha256:fde3152dd6a2a6f760875855ee691300e1997e1d4c5b5501e532a8ac9d5e7af8",
+      "command_id": "pr156-transport-closure-l4-rev11-20260727",
+      "receipt_id": "certificate:c3ba6a7559e1bc69fd3660042ddb4896",
+      "receipt_digest": "sha256:3dc0417fda47a8118ce993a3a0a40962cef625e560c84532dbdff1d185c75579",
+      "decision_digest": "sha256:00755e3f1fd0ce311842e68033ade1d832e6559f51860fbb276d63a6abb83ccd",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 11,
+        "content_digest": "sha256:d51dd2e6e765242d57006cf6ed5592119042e89e30069564c594464b5a9564d1"
+      }
+    },
+    {
+      "sequence": 109,
+      "previous_record_digest": "sha256:fde3152dd6a2a6f760875855ee691300e1997e1d4c5b5501e532a8ac9d5e7af8",
+      "record_digest": "sha256:adb4f5e8c07697b6df672ff110acff588968a26d77e44e0adca9ac04d2623a30",
+      "command_id": "pr156-transport-closure-l5-rev10-20260727",
+      "receipt_id": "certificate:f56a3943d8832435d67045b1b52230ae",
+      "receipt_digest": "sha256:82525d4b00083d02a9cdcb5f6cb87188d8384c1809ee5de35abb76b268767a23",
+      "decision_digest": "sha256:9ad20935c6cda9b90e58d618c055baca92bc0d268c2d9bba6507930a900d32b7",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 10,
+        "content_digest": "sha256:4926bb1342a1a873d3866fe166e67b636a81a4d418d400abdb421ec64eda49d7"
+      }
+    },
+    {
+      "sequence": 110,
+      "previous_record_digest": "sha256:adb4f5e8c07697b6df672ff110acff588968a26d77e44e0adca9ac04d2623a30",
+      "record_digest": "sha256:bf601e8bb8ff403aac7ea7699b786a2edc59e850ffd53ca630d5bf4cffdfb075",
+      "command_id": "pr156-transport-closure-l6-rev10-20260727",
+      "receipt_id": "certificate:562695cc289cf7a66a1d3b187be395bd",
+      "receipt_digest": "sha256:e418861981474ba1b4f887f5e3a096b2c98cd12da3c013ded13a34b6b4168b67",
+      "decision_digest": "sha256:0483c4ff5898af1d1da653aa565e0807cf3421699303f94e9034f40e652f3e14",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 10,
+        "content_digest": "sha256:38ffc03ea981f406ccaf2421e635af2fdb42696be3a2bca843dcbe3dc3f04142"
+      }
+    },
+    {
+      "sequence": 111,
+      "previous_record_digest": "sha256:bf601e8bb8ff403aac7ea7699b786a2edc59e850ffd53ca630d5bf4cffdfb075",
+      "record_digest": "sha256:85f2188c0bf08669279e74d0314d2f758b38db66a9bd78b0577dfe6eebee73a3",
+      "command_id": "pr156-transport-closure-l7-rev10-20260727",
+      "receipt_id": "certificate:f1b705ce548b40bddb31869539d75bac",
+      "receipt_digest": "sha256:0d5a33dedca0e5229573137b1cc94c1d4cd3bbf7786dc355c599b19f9fc75098",
+      "decision_digest": "sha256:c78240c398ea42cf7d749895fb5896736b1ed347f3d144b848a5639ab4e2be40",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 10,
+        "content_digest": "sha256:57376c0a0bdef6bc0814722bdea3ea09cb445edf03827f65cc7ffce12f79efa7"
+      }
     }
   ]
 }

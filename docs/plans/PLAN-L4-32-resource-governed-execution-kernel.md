@@ -60,18 +60,18 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:abe1afa5ef2bfe86a4df13645648898e
-  command_id: pr156-command-algebra-closure-l4-rev10-20260727
-  admitted_at: 2026-07-27T06:00:00.000Z
-  source_digest: sha256:857590bb861f2b2b60a0b790413b5875bf8069694c216a7cdb900c88ae98e960
-  decision_digest: sha256:8d53a1da8c7468c9c2e1952b3a21f464712447a7f3db1ac5507404e08933e932
-  receipt_digest: sha256:cf1322f1491c2d3d93faa0af3fbd5b754ee83543c4ddbc904e48ee4234394340
+  receipt_id: certificate:c3ba6a7559e1bc69fd3660042ddb4896
+  command_id: pr156-transport-closure-l4-rev11-20260727
+  admitted_at: 2026-07-27T07:00:00.000Z
+  source_digest: sha256:d51dd2e6e765242d57006cf6ed5592119042e89e30069564c594464b5a9564d1
+  decision_digest: sha256:00755e3f1fd0ce311842e68033ade1d832e6559f51860fbb276d63a6abb83ccd
+  receipt_digest: sha256:3dc0417fda47a8118ce993a3a0a40962cef625e560c84532dbdff1d185c75579
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 10
-    content_digest: sha256:857590bb861f2b2b60a0b790413b5875bf8069694c216a7cdb900c88ae98e960
+    revision: 11
+    content_digest: sha256:d51dd2e6e765242d57006cf6ed5592119042e89e30069564c594464b5a9564d1
   route:
     signal: redesign
     mode: redesign
@@ -82,19 +82,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 9
+    revision: 10
     digest: sha256:51f08c0ac791ff3b1db0eeb1e74c1e3fd15362b38a2abf28511b3b6306da0f08
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 9
+      target_revision: 10
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: Recovery command代数と認証oracleを全層で一意化してForward実装へ再降下する
+  escape_reason: Resource Kernelのpre/post dispatch transport faultを分離してForward実装へ再降下する
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -166,7 +166,7 @@ DB/CAS再利用、single-flight、local CI全体のqueue/headroom policyは本D0
 `control_started`、`probe_recorded`、`capability_negotiated`、`admission_sealed`、`authority_prepared`、
 `custody_created`、`handoff_committed`、`process_attached`、`started`、`limit_observed`、
 `authority_recovery_requested`、`recovery_proof_verified`、`lease_reissued`、`termination_requested`、
-`process_reaped`、`custody_empty`、`lease_released`、`finished`を、monotonic sequenceと
+`dispatch_indeterminate`、`dispatch_reconciled`、`process_reaped`、`custody_empty`、`lease_released`、`finished`を、monotonic sequenceと
 durable timestampで記録する。event payloadは過去eventを上書きせず、retryは新しい`attempt_id`へ分岐する。
 recovery CAS loserはevent/state delta 0、winnerだけがold/new epoch、proof digest、executor/bundle/policy bindingを
 `lease_reissued`へ保存し、terminal receiptのevent range/digestへ必ず含める。
@@ -183,7 +183,7 @@ managed workloadは別discriminantを持ち、native workload exitは`RootCreate
   phase/reason、不足capabilityと`custody_disposition: absent | prepared_then_empty`を持つ。`absent`ではroot PID/custodyを
   `not_applicable: managed_root_not_created`とし、`prepared_then_empty`ではcustody identity、terminate/empty/reap/lease-release proofと
   independent root-absent proofを必須にする。control process identity/cleanupは独立fieldに保存する。
-- `RootCreatedNotStarted` terminal (`launch_failure|custody_failure|deadline|cancelled`): suspended root PID、create/attach error、
+- `RootCreatedNotStarted` terminal (`protocol_failure|launch_failure|custody_failure|deadline|cancelled`): suspended root PID、create/attach error、
   termination/reap、custody identity（作成済み時）、independent process-absent proofを必須にし、`started_at`は存在させない。
 - `RootStarted` outcome: started/termination-requested/reaped/finishedのmonotonic timestamp、platform custody identity、root PID、
   descendant観測（PID再利用に依存しないOS handle/cgroup identityを優先）。

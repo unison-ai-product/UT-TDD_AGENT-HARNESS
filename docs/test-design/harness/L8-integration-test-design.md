@@ -369,7 +369,7 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-007` | Linux clone/start barrierと事後attach fallbackを競合 | user code開始時からcgroup所属、事後attachはcapability failure |
 | `IT-RGK-PHYS-008` | Linux broker/subreaper crashとdouble-fork | reconcile後`populated=0`、zombie/managed orphan 0 |
 | `IT-RGK-PHYS-009` | root先行exit、terminate/cancel競合 | root exitではreturnせず、empty→reap後だけterminal |
-| `IT-RGK-PHYS-010` | pipe切断、companion crash、Node journal commit crash | custodyを失わず再接続、片肺terminal receipt 0 |
+| `IT-RGK-PHYS-010` | pre-decodeとmutating dispatch後response前でpipe切断、companion crash、Node journal commit crash | pre-decodeはside effect 0。post-dispatchはindeterminate event後、同idempotency identityでreconcileしactual phase/factを確定。確定前terminal receipt 0、片肺0 |
 | `IT-RGK-PHYS-011` | unsupported OS・権限不足・capability欠落 | probe後managed workload生成前拒否、control/workload identityを別保存、soft fallback 0 |
 | `IT-RGK-PHYS-012` | binary/schema/target/signature/SBOMを各一箇所変異 | admission前`bundle_failure`、PATH探索/download 0 |
 | `IT-RGK-PHYS-013` | 旧componentを旧manifestで直接復帰後、floor超の新sequence manifestへ再review・再署名 | 旧manifest復帰は拒否。新manifestがcompanion/protocol/D0-N receiptと実OS oracleを再通過した場合だけ利用 |

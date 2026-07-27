@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:649bd05fe5d75f5f8b3346e2f88a25e3
-  command_id: pr156-trace-closure-l5-rev9-20260727
-  admitted_at: 2026-07-27T05:00:01.000Z
-  source_digest: sha256:5b32ad0dcaacf1bdd2f474e7a4d1b5c6a00e52b0d96032e07bdd8c961c4a9e4a
-  decision_digest: sha256:81dec5047d74e70c7e3226ed540c30c409be9ec2fb6cf2012595d19695eb66e1
-  receipt_digest: sha256:c24823d6e739edf7b813ce30e32d8c68f1b7671099063931309ce2443a8b192e
+  receipt_id: certificate:f56a3943d8832435d67045b1b52230ae
+  command_id: pr156-transport-closure-l5-rev10-20260727
+  admitted_at: 2026-07-27T07:00:01.000Z
+  source_digest: sha256:4926bb1342a1a873d3866fe166e67b636a81a4d418d400abdb421ec64eda49d7
+  decision_digest: sha256:9ad20935c6cda9b90e58d618c055baca92bc0d268c2d9bba6507930a900d32b7
+  receipt_digest: sha256:82525d4b00083d02a9cdcb5f6cb87188d8384c1809ee5de35abb76b268767a23
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 9
-    content_digest: sha256:5b32ad0dcaacf1bdd2f474e7a4d1b5c6a00e52b0d96032e07bdd8c961c4a9e4a
+    revision: 10
+    content_digest: sha256:4926bb1342a1a873d3866fe166e67b636a81a4d418d400abdb421ec64eda49d7
   route:
     signal: redesign
     mode: redesign
@@ -65,20 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 8
+    revision: 9
     digest: sha256:5d7da7bece7de30bd75eada98b0cf25e2c5046dc128d7be3e9b5f841222b138e
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 9
+      target_revision: 10
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: Resource Kernelのrecovery dispatch・bundle binding・receipt
-    trace全域性を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのpre/post dispatch transport faultを分離してForward実装へ再降下する
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -111,9 +110,12 @@ Bun test runnerを新しい経路へ一切導入しない。
 - requestは`protocol_version`、`request_id`、`command`、`payload`、`deadline_unix_ms`、
   `expected_bundle_digest`を必須とし、unknown field/enum、duplicate key、非canonical number、末尾byteを拒否する。
 - responseは同じ`request_id`、`protocol_version`と、`ok:{fact}`または`error:{NativeError}`の排他的unionを持つ。
-  transport EOF、oversize、partial frame、UTF-8/JSON/schema不正はworkload domainの`NativeError`へ丸めず、
-  transport境界のclosed `protocol_failure`として返す。`protocol_failure`はdomain responseではなく、
-  requestを生成できなかったprotocol resultであり、launcher/custody side effectを伴わない。
+  request decode完了前のEOF、oversize、partial frame、UTF-8/JSON/schema不正はworkload domainの`NativeError`へ丸めず、
+  `PreDispatchWireFault`として返し、Kernel境界でclosed `protocol_failure`へexactly once正規化する。この経路は
+  request未生成でlauncher/custody side effect 0である。mutating request送信後からresponse確定前のEOF/pipe切断は
+  `DispatchIndeterminate(execution_id, execution_spec_digest, attempt_id, custody_nonce, operation, request_digest)`とし、
+  side effect 0やterminal `protocol_failure`へ推測しない。同じidempotency identityでauthority/journal/native factをreconcileし、
+  actual root/custody discriminatorを確定するまでterminal receiptを封印しない。
 - schema sourceはTypeScript側のversioned protocol schemaを正本とし、release時にcanonical schema digestを生成する。
   Rust DTOは生成物または適合実装であり、独立に語彙追加しない。digest不一致bundleは起動前拒否する。
 - stdoutはprotocol専用、診断はbounded stderrへ分離する。secret、raw env、署名鍵、payload本文をlog/receiptへ複製しない。
@@ -175,6 +177,8 @@ token検証前、probe欠測、control processだけ生成済みの状態では`
 Node client切断またはlauncher crash後もcustodian/brokerはdeadlineとtermination policyを保持し、未管理processへ降格させない。
 reconnectはbundle identity、attempt、custody nonceを照合し、別attemptを誤killしない。Node側journalが
 `custody_empty`をdurable化してからlease release・finished・sealed receiptを一つのterminal transaction/outboxで閉じる。
+post-dispatch response lossは`dispatch_indeterminate`と`dispatch_reconciled(actual_phase, fact_digest)`をappendし、
+reconcile後の実phaseに対応するreceipt variantへ`protocol_failure`原因を保存する。
 
 ### 4.1 Custody authorityとatomic handoff
 

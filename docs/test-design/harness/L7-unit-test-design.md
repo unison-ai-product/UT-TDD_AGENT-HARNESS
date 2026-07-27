@@ -1761,6 +1761,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-WIRE-002` | length 0/上限+1/partial/trailing | decoderはtyped `WireFault`、Node Kernel境界でexactly once `protocol_failure`。validated request ID前のwire response 0、launcher/custody side effect 0 |
 | `U-RGK-WIRE-003` | invalid UTF-8/JSON、duplicate/unknown/missing field | 全変異を拒否、launcher call 0 |
 | `U-RGK-WIRE-004` | unknown command/enum/version | fail-closeし既知値へ丸めない |
+| `U-RGK-WIRE-005` | mutating request書込み前/途中/完了後・response前後でEOF | pre-dispatchだけside effect 0 protocol failure。post-dispatchはindeterminate、reconcile前terminal seal 0、fact確定後だけ実phase receipt |
 | `U-RGK-WIRE-005` | request ID/version/bundle digest mismatch | responseを別requestへ合成しない |
 | `U-RGK-WIRE-006` | protocol stdoutへlog混入 | trailing byteとして拒否、stderrだけdiagnostic許可 |
 | `U-RGK-WIRE-007` | object key/order/number表現のproperty corpus | canonical encodeがlocale/order非依存 |

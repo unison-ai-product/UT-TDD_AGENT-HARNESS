@@ -1561,8 +1561,8 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 
 ### ワイヤ/エラー代数
 
-`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたはtyped `WireFault`を返す
-純粋関数とする。`WireFault`はwire responseやworkload domainの`NativeError`ではなく、Node `CustodyClient`が
+`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたはtyped `PreDispatchWireFault`を返す
+純粋関数とする。`PreDispatchWireFault`はwire responseやworkload domainの`NativeError`ではなく、Node `CustodyClient`が
 Execution Kernel境界でexactly once closed `protocol_failure`へ正規化する。decode失敗時のlauncher/custody side effectは0である。
 `encodeFrame`はcanonical bytesを決定論的に返す。
 コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
@@ -1597,6 +1597,7 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `sealMonotonicDeadline` | verified token、同時観測wall/monotonic、boot ID | remainingをbudgetとwall残時間の小さい方へ固定し、開始後wall jumpで延長0。skew/boot不整合は期限切れfail-close |
 | `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token又はspawn/resume lease不正のExecuteでside effect 0。Recoveryは`recover_authority(proof)`又は後4操作の`lease`をdiscriminantで分離し、生成・resume能力0。shutdown-before-emptyは拒否 |
 | `normalizeWireFault` | typed `WireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
+| `reconcileDispatchIndeterminate` | authenticated idempotency identity、authority/journal/native facts | response lossをside effect 0へ推測せずactual phase/fact digestを一意に確定。未確定中terminal seal 0、確定後は実phase receiptへprotocol failure原因を保存 |
 | `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
 | `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |

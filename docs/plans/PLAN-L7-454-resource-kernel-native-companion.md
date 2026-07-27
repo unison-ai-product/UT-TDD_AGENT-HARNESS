@@ -56,18 +56,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ec221db3df9e7a960a31ba1667660895
-  command_id: pr156-trace-closure-l7-rev9-20260727
-  admitted_at: 2026-07-27T05:00:03.000Z
-  source_digest: sha256:48256410450173ee2b85ca729ce92752e41200f196b91b4141d35901f79bc07b
-  decision_digest: sha256:068c1f443e26972e9b158a4455bba60be09006257976f4f697d93b2c2a1ce722
-  receipt_digest: sha256:ee0efd23fbff157cdefb668bc845cd181b9d315463fc941aaaeebd3b2654e337
+  receipt_id: certificate:f1b705ce548b40bddb31869539d75bac
+  command_id: pr156-transport-closure-l7-rev10-20260727
+  admitted_at: 2026-07-27T07:00:03.000Z
+  source_digest: sha256:57376c0a0bdef6bc0814722bdea3ea09cb445edf03827f65cc7ffce12f79efa7
+  decision_digest: sha256:c78240c398ea42cf7d749895fb5896736b1ed347f3d144b848a5639ab4e2be40
+  receipt_digest: sha256:0d5a33dedca0e5229573137b1cc94c1d4cd3bbf7786dc355c599b19f9fc75098
   binding:
     path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     plan_id: PLAN-L7-454-resource-kernel-native-companion
     asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 9
-    content_digest: sha256:48256410450173ee2b85ca729ce92752e41200f196b91b4141d35901f79bc07b
+    revision: 10
+    content_digest: sha256:57376c0a0bdef6bc0814722bdea3ea09cb445edf03827f65cc7ffce12f79efa7
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,20 +78,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L7-454-resource-kernel-native-companion
-    revision: 8
+    revision: 9
     digest: sha256:085def2940ad4463fb322c19b253c7703338199ee750fbc510b24eca81f81ed0
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 9
+      target_revision: 10
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 9
+    target_revision: 10
     phase: forward_merge
-  escape_reason: Resource Kernelのrecovery dispatch・bundle binding・receipt
-    trace全域性を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのpre/post dispatch transport faultを分離してForward実装へ再降下する
 ---
 
 # PLAN-L7-454: Resource Kernel native custody companion / Node protocol client
@@ -135,6 +134,7 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 - canonical token authenticator/issuer/operation/nonce検証、wall→monotonic縮小変換、別failure domain deadline executor。
 - canonical authority lease authenticator、custody/executor identity、boot ID、effective monotonic deadline、lease nonce検証。
 - execution/spec/bundle/termination/recovery policyをtoken/lease/proofへ束縛し、epoch CAS reissueとtrace eventを実装する。
+- pre-dispatch wire faultとpost-dispatch indeterminateを分離し、後者はidempotent reconcileでactual phaseを確定する。
 - `control_process_created`と`managed_root_created`の別identity・別phase応答。
 - Windowsのsuspended create→Job attach→resume、非継承handle、custodian/supervisor、tree empty proof。
 - Linuxのcgroup v2 / clone3 attach、broker/subreaper、budget適用、`populated=0`とreap proof。
