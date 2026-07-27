@@ -3,15 +3,13 @@ plan_id: PLAN-L6-01-function-spec
 title: "PLAN-L6-01: L6 機能設計 — 関数 schema / signature + DbC + pseudocode + WBS"
 kind: design
 layer: L6
-sub_doc: function-spec
 drive: fullstack
-status: confirmed
 created: 2026-05-29
 updated: 2026-05-29
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL — 関数 signature + DbC + pseudocode のレビュー (別 runtime)"
+    slot_label: TL — 関数 signature + DbC + pseudocode のレビュー (別 runtime)
 generates:
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
@@ -34,10 +32,57 @@ review_evidence:
     review_kind: cross_agent
     worker_model: codex:gpt-5.4
     reviewer_model: claude:pmo-sonnet
-    tests_green_at: "2026-06-09T13:00:00+09:00"
-    reviewed_at: "2026-06-09T13:10:23+09:00"
+    tests_green_at: 2026-06-09T13:00:00+09:00
+    reviewed_at: 2026-06-09T13:10:23+09:00
     verdict: approve
-    scope: "G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR coverage and guardrail coverage reviewed"
+    scope: G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR
+      coverage and guardrail coverage reviewed
+route_signal: design_revision
+route_mode: redesign
+status: confirmed
+sub_doc: function-spec
+github_issue_id: 152
+supersedes:
+  - PLAN-L6-01-function-spec
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:8ce1ef41fd5d80e6762e9eeacbac4679
+  command_id: pr154-route-metadata-l6-20260724
+  admitted_at: 2026-07-24T17:22:00.000Z
+  source_digest: sha256:5fe765b966ef316728549d73c69c99569c54c8aedfeebaa68dba83f1f32ed479
+  decision_digest: sha256:bae4bd9d664969546155aa9c6fb20cfbbd6ee0a6af3dc58d277d894ed995afa3
+  receipt_digest: sha256:54a00e30c869b8856e5aab6ffd252e022814f2ff54a42d5a8fef88903bef30b7
+  binding:
+    path: docs/plans/PLAN-L6-01-function-spec.md
+    plan_id: PLAN-L6-01-function-spec
+    asset_id: plan:legacy:f25f2045ea277f2984da3ab15a4259f0879fd3abd5b02e4b88cd3332f774c58c
+    revision: 3
+    content_digest: sha256:5fe765b966ef316728549d73c69c99569c54c8aedfeebaa68dba83f1f32ed479
+  route:
+    signal: design_revision
+    mode: redesign
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L6-01-function-spec
+    revision: 2
+    digest: sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95
+  transition:
+    direction: design_to_implementation
+    implementation_disposition: none
+    implementation_target:
+      target_plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+      target_revision: 30
+  reentry:
+    target_plan_id: PLAN-L6-01-function-spec
+    target_revision: 3
+    phase: forward_merge
+  escape_reason: PR 154 formal Forward metadata correction
+  supersedes:
+    - PLAN-L6-01-function-spec
 ---
 
 # PLAN-L6-01: L6 機能設計 — 関数 schema / signature + DbC + pseudocode + WBS
@@ -82,3 +127,7 @@ L6 機能設計の ① 必須 sub-doc = **function-spec**。internal-processing 
 - [ ] WBS (関数 → Sprint) を記載 (G6 WBS 要件)
 - [ ] artifact = `docs/design/harness/L6-function-design/function-spec.md` を pair=L7 で生成
 - [ ] self-review 通過
+
+> **Node bootstrap機能契約差分**: Issue #152のRedesign
+> `PLAN-L6-93-node-bootstrap-contract`が当該差分を所有し、L7-458の直接上流となる。本PLANは
+> predecessor/referenceとして一般機能契約の正本性を維持する。

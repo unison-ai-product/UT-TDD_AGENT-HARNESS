@@ -161,7 +161,7 @@ AC-FR-30-03 を **WCAG 2.2 AA へ更新**する (新 SC 2.4.11 Focus Appearance 
 - **`DesignDocTree`** + `DocPreview` (PM-06): L0-L14 layer×sub-doc ツリー、各ノードに status/pair-freeze
   `StatusBadge`。プレビューは `MarkdownRenderer` + `YamlFrontmatterView` + `MermaidRenderer` + ASCII。
   ツリー keyboard ↑/↓/→展開。doc パス `CopyButton`。PM-04 trace deep-link。read-only (編集なし、S5=b)。
-- **`FrStatusTable`** (HM-01): FR-L1 47 件 × `StatusBadge` (installed=ok/partial=warn/not-implemented=empty) +
+- **`FrStatusTable`** (HM-01): FR-L1 51 件 × `StatusBadge` (installed=ok/partial=warn/not-implemented=empty) +
   担当 PLAN + 対応画面列。FR 行 → 担当 PLAN 参照 / FR 行 → PM-06 設計書ビューア deep-link。
 - **`CoverageHeatmap`** + `AxisSelector` (HM-02): 観点 8 × 軸 5 = 40 cell、色密度 (`ok→error` の連続)。
   cell クリック → 不足項目一覧 + 起票候補テキスト `CopyButton`。横スクロール許容。

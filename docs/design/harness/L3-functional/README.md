@@ -11,15 +11,18 @@ updated: 2026-06-02
 
 L1 業務要求 / 機能要求 / NFR を L3 機能要件 (FR-* + AC-* + IPA グレード値) に詳細化する sub-doc 群。
 
-## 構成 (3 sub-doc)
+## 構成 (4 sub-doc)
 
 | sub-doc | 役割 | status | 担当 PLAN |
 |---------|------|--------|-----------|
 | `functional-requirements.md` | FR-* + AC-* (Given-When-Then) 詳細化、画面紐付き / mode / drive / 人間判断点 | draft | PLAN-L3-01-functional-detail |
 | `business-detail.md` | BR-21 詳細化 + HM-08 連動 + FR-L1-36/38/43 (Learning Engine、Phase B carry) | draft | PLAN-L3-02-business-detail |
 | `nfr-grade.md` | NFR-01〜17 の IPA グレード Lv + 受入閾値 + 測定方法 + pass 条件 | draft | PLAN-L3-03-nfr-grade |
+| `screen-functional.md` | 画面機能要求 (dashboard の screen-level FR/AC、product UI scope 有時の②選択 sub-doc) | confirmed | PLAN-L3-06-screen-functional-body |
 
-> **scope 分離**: L3 では screen / technical sub-doc を起こさない。screen は L1 + L2-screen で完結 (L10 UX 磨きへ continue)、technical は L4 ADR / L4 基本設計に直送。
+> **scope 分離 (2026-06-30 改訂、PLAN-L7-459 H5 で README 追従)**: 旧宣言「L3 では
+> screen sub-doc を起こさない」は `screen-functional.md` 新設 (PLAN-L3-06、schema
+> `VALID_SUB_DOCS.L3` 登録済) により superseded。technical は引き続き L4 ADR / L4 基本設計に直送。
 
 ## companion doc (sub_doc ではない)
 
@@ -27,7 +30,7 @@ L1 業務要求 / 機能要求 / NFR を L3 機能要件 (FR-* + AC-* + IPA グ�
 |-----|------|--------|
 | `roadmap.md` | 検証/改善ロードマップ (L0-L14 を横断する 7 フェーズ + 2 ゲート、PO /goal 2026-06-04)。L3 マイルストーンで起票する**設計層の計画 doc**。V-model の標準 sub_doc (テスト設計と pair する artifact) ではなく、L12 受入テストとは pair しない companion。CLAUDE.md Read Order / AGENTS.md Core Reads が常時参照する | draft |
 
-> roadmap.md は `sub_doc` enum (functional-requirement / business-requirement / nfr-grade) の対象外。G3 pair freeze の trace 対象にも含めない (pair artifact を持たないため)。詳細・配置根拠は roadmap.md §6 / IMP-036 を参照。
+> roadmap.md は `sub_doc` enum (business / functional / nfr / screen-functional) の対象外。G3 pair freeze の trace 対象にも含めない (pair artifact を持たないため)。詳細・配置根拠は roadmap.md §6 / IMP-036 を参照。
 
 ## L1 ↔ L3 ↔ L12 接続
 
