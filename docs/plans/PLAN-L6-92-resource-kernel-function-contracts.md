@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L6-92-resource-kernel-function-contracts
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f9b94799a6a3551919e1a7749f28f5be
-  command_id: pr156-owner-boundary-l6-rev14-20260727
-  admitted_at: 2026-07-27T03:59:47.388Z
-  source_digest: sha256:e29238b2166536d2a9cda891bcc292470e2ee9c2c04fdb5198e7964749cd73fb
-  decision_digest: sha256:9d892aeaa25d27f2c7d85108ad8739977de223932b47fb1d3d301e9feac16e6e
-  receipt_digest: sha256:3a0c0be2f158e3b3973d72e851b20ed7a06b380e3e7956f40f92de3992658b13
+  receipt_id: certificate:cfcc7246ded4c136fef34d686b7fa401
+  command_id: pr156-contract-closure-l6-rev15-20260727
+  admitted_at: 2026-07-27T04:06:47.414Z
+  source_digest: sha256:c175f3f2afc27aefc737cc8b76a09600332a650795f9a915e62215519072018c
+  decision_digest: sha256:214b323be000be52dc28366d699f9cfe8262123aeced0e40cb0bc250aa2f4279
+  receipt_digest: sha256:a363f2c14218949159999e1b85a3c63f67e1357714ef4283156d2fb87e00c0f3
   binding:
     path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
     asset_id: plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a
-    revision: 14
-    content_digest: sha256:e29238b2166536d2a9cda891bcc292470e2ee9c2c04fdb5198e7964749cd73fb
+    revision: 15
+    content_digest: sha256:c175f3f2afc27aefc737cc8b76a09600332a650795f9a915e62215519072018c
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    revision: 13
+    revision: 14
     digest: sha256:1532c5204c32fb65c44057fee0f065d02155c8faf22e16e32a350226f8cca01f
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 14
+      target_revision: 15
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 14
+    target_revision: 15
     phase: forward_merge
-  escape_reason: Resource Kernelのownership/recovery/fault/release契約を閉じてForward実装へ再降下する
+  escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる
   supersedes:
     - PLAN-L6-92-resource-kernel-function-contracts
 ---
@@ -109,6 +109,7 @@ L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`
   deadline、nonce、authenticatorを束縛する。effective deadline後もcleanup権限を失効させない。
 - Rust/native observationとTypeScript `recoverAuthority` transactionを分離する。Rustはschema/authenticator/binding+
   native factだけ、TSはjournal/current epoch照合→epoch CAS→cleanup lease+traceだけをatomic commitする。
+  observationはsame/cross-boot別のexact field unionとし、Rust native signerとTS bundle-trust verifierの所有者を固定する。
   recovery deadline超過はoverdue/admission遮断でありcleanup拒否理由ではない。reissue eventはterminal receipt digestへ含める。
 - deadline/cancel/abort/正常root exit/terminate intentはauthority mode CASとcleanup lease発行を同じtransactionで閉じる。
   cross-boot fenceはemptyを先取りせず、boot-fenced lease発行後のempty/reap proofからreleaseへ進む。
@@ -121,7 +122,8 @@ L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`
 - releaseはplatform fact後もcleanup authorityをexecutor disarmまで保持し、
   disarm後にauthority revoke+releasedをatomic commitしてrevoke後の回復不能gapを作らない。
 - deterministic release_idをplatform release前にcommitし、Rust `ensureAbsent`がrelease直後crashでも
-  committed empty/reap factに束縛されたnative absenceを再観測する。存在→不在effectは最大1、呼出しは再試行可能とする。
+  committed empty/reap factと非再利用custody generationに束縛されたnative absenceを再観測する。
+  raw identityの別generation再利用は削除せずquarantineし、存在→不在effectは最大1、呼出しは再試行可能とする。
 - request decode前だけ`PreDispatchWireFault`、mutating dispatch後の全response decode/correlation faultは
   `PostDispatchResponseFault→DispatchIndeterminate`としてactual fact確定までterminal sealを禁止する。
 - custody releaseはempty/reap fact commit後のplatform release→executor disarm→authority revoke+released atomic commitで閉じ、

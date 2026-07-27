@@ -984,7 +984,8 @@ authority modeは`live → cleanup_only → revoked`、boot変更時は`live | c
 deadline/cancel/abort/正常root exit/明示terminate intentのCASと同じtransactionで新nonce/authenticatorのcleanup leaseを発行し、
 execution capabilityを除去した後にliveへ戻さない。cross-boot fenceは旧boot workloadの実行不能だけを証明し、
 boot-fenced cleanup lease発行後にempty/reapを証明する。`empty_proven → released`はdeterministic `release_id`を先にcommitし、
-Rust `ensureAbsent(release_id)`で同一custody identityのnative absenceへ冪等収束させる。
+Rust `ensureAbsent(release_id)`でraw OS identityとcreate fact由来の非再利用`custody_generation`を含む
+同一custody identityのnative absenceへ冪等収束させる。raw identityが別generationへ再利用済みなら削除せずquarantineする。
 `CustodyAbsentFact`は削除因果ではなく終状態だけを証明し、存在→不在effect最大1、invocation再試行可、Rust durable marker/DB 0とする。
 absence fact commit、deadline executor disarm、authority revoke+released atomic commitを順に行う再開可能transactionとする。
 Windowsはsuspended create後にJob assignが成功するまでresumeしない。Linuxはuser code開始時点からtarget cgroupに属し、

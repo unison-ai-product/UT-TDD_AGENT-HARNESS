@@ -1833,12 +1833,12 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-PORT-015` | release→fact commit→disarm→revoke+released atomic commit→terminal sealの各barrierでcrash/reorder | disarmまでcleanup authority維持。journal済み段から再開し二重release・revoke後未完操作・早期seal 0。順序反転mutationはRed |
 | `U-RGK-PORT-016` | active custody/pending response/未解決pending-dispatch/indeterminate/reconciled-without-result/未flush outboxありでshutdown_companion | control shutdown 0、custody delta 0 |
 | `U-RGK-PORT-017` | 全custody released後のshutdown_companion | control processだけ終了、custody/authority delta 0 |
-| `U-RGK-PORT-018` | release_id commit前後、OS release成功直後response/fact前crash、同/別release_id retry | 同IDのensureAbsentはnative absenceを再観測しCustodyAbsentFactへ収束。存在→不在effect最大1、invocation再試行可、Rust marker/DB 0。別ID拒否 |
+| `U-RGK-PORT-018` | release crash retryとraw OS identityの別custody_generation再利用を競合 | 同generationはensureAbsentでabsenceへ収束。別generationは削除0、identity_reused fact+quarantine。存在→不在effect最大1、Rust marker/DB 0 |
 | `U-RGK-WIRE-011` | same-boot/cross-boot recovery observation discriminant混同 | decode拒否、Rust/TS epoch delta 0 |
 | `U-RGK-WIRE-012` | boot-fenced leaseへspawn/resume/old-PID操作field注入 | strict decode拒否、native call 0 |
 | `U-RGK-WIRE-013` | execution/cleanup/boot-fenced leaseの必須field欠落、別variant field、authority_mode差替え | canonical preimage生成/strict decode 0。各正規variantだけauthenticator検証へ到達 |
 | `U-RGK-WIRE-014` | execution/cleanup/boot-fenced lease×全operation直積 | executionはspawn/resume、cleanupはobserve/terminate/prove/release、boot-fencedはobserve/prove/releaseだけ受理。特にboot-fenced terminate_treeと全variant外operationはnative call 0 |
-| `U-RGK-WIRE-015` | token/3 lease/recovery observationのcanonical fieldを固定しauthenticator有無でpreimage生成 | wire DTOはauthenticator必須、authentication preimageはそのfieldだけ除外。自己包含0、他field一要素変異はverify拒否 |
+| `U-RGK-WIRE-015` | token/3 lease/same・cross observationのexact fieldとsigner/verifier ownerを固定し全field mutation | Rust native signerはpinned bundle keyだけ、TS verifierはBundleTrustPort trust inputだけを使用。authenticator以外の変異、unknown/別bundle key、variant field混同をCAS前拒否 |
 | `U-RGK-WIRE-016` | 同じinvalid framing/UTF-8/JSON/schema/trailing corpusをrequest decode前とmutating response decode後へ投入 | 前者だけPreDispatchWireFault+side effect 0。後者は全てPostDispatchResponseFault→indeterminate、terminal seal 0 |
 | `U-RGK-BUNDLE-001` | digest/signature/schema/target/SBOMを各変異 | verified handleを生成しない |
 | `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |

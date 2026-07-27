@@ -58,18 +58,18 @@ supersedes:
   - PLAN-L7-454-resource-kernel-native-companion
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3ab990e1b7afe985547e8782bad86b96
-  command_id: pr156-owner-boundary-l7-rev14-20260727
-  admitted_at: 2026-07-27T03:59:50.422Z
-  source_digest: sha256:f9e298ae6b38b372d13f71d96ed1931b6da97780e79f425236e0655073a6a96a
-  decision_digest: sha256:2febc6595dcae6f179a01c442c3cc1e2d179051a64f37c75018f0adeee57d35d
-  receipt_digest: sha256:744d9584e58ad74f6c9ae7a1f9d356c6d7a40c75ec1748e7561ac07cc37e98f3
+  receipt_id: certificate:7fa70641c40e0bf6ab5a5d7521e65f21
+  command_id: pr156-contract-closure-l7-rev15-20260727
+  admitted_at: 2026-07-27T04:06:51.705Z
+  source_digest: sha256:e439c2e20f52ced653baf026f6259a6c38e1ebd11250cd349c547a440bacebb9
+  decision_digest: sha256:518357c6bb212240480249beba506d5320f3c5a2dcd8437c56dca9c9a27ee1f9
+  receipt_digest: sha256:4af2d9fcdbdae4fe0f73390d0fc7338630cc789ad8f9143e3572353551c61c26
   binding:
     path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     plan_id: PLAN-L7-454-resource-kernel-native-companion
     asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 14
-    content_digest: sha256:f9e298ae6b38b372d13f71d96ed1931b6da97780e79f425236e0655073a6a96a
+    revision: 15
+    content_digest: sha256:e439c2e20f52ced653baf026f6259a6c38e1ebd11250cd349c547a440bacebb9
   route:
     signal: feature_addition
     mode: add-feature
@@ -80,19 +80,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L7-454-resource-kernel-native-companion
-    revision: 13
+    revision: 14
     digest: sha256:8efef5c13822842a4c0380061bdf3df06d20ffc723e6b5dbfe0b90826ed0363b
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 14
+      target_revision: 15
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 14
+    target_revision: 15
     phase: forward_merge
-  escape_reason: Resource Kernelのownership/recovery/fault/release契約を閉じてForward実装へ再降下する
+  escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる
   supersedes:
     - PLAN-L7-454-resource-kernel-native-companion
 ---
@@ -142,6 +142,8 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 - 3 lease variantのcanonical field/discriminant/禁止fieldをstrict schema化し、boot-fencedへexecution fieldを注入不能にする。
 - execution/spec/bundle/termination/recovery policyをtoken/lease/recovery observationへ束縛してstrict検証し、
   same-boot/cross-bootのnative recovery observation factだけを返す。epoch CAS、lease再発行、trace appendは所有しない。
+  native signerはpinned companion bundle identityでexact observationをsealし、TS verifierはBundleTrustPortの検証済み
+  signer/policy revisionだけをtrust inputにする。same/cross field unionと禁止fieldをstrictにする。
 - pre-dispatch wire faultとpost-dispatch indeterminateを分離し、後者はidempotent reconcileでactual phaseを確定する。
 - mutating dispatch後のEOFだけでなくresponse framing/UTF-8/JSON/schema/trailing/correlation不正を
   `PostDispatchResponseFault`として必ずindeterminateへ遷移する。

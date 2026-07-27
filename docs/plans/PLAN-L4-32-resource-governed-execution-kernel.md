@@ -60,18 +60,18 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c3ba6a7559e1bc69fd3660042ddb4896
-  command_id: pr156-transport-closure-l4-rev11-20260727
-  admitted_at: 2026-07-27T07:00:00.000Z
-  source_digest: sha256:d51dd2e6e765242d57006cf6ed5592119042e89e30069564c594464b5a9564d1
-  decision_digest: sha256:00755e3f1fd0ce311842e68033ade1d832e6559f51860fbb276d63a6abb83ccd
-  receipt_digest: sha256:3dc0417fda47a8118ce993a3a0a40962cef625e560c84532dbdff1d185c75579
+  receipt_id: certificate:9f6f36c65b38fdf8354780bce6fa9971
+  command_id: pr156-contract-closure-l4-rev12-20260727
+  admitted_at: 2026-07-27T04:06:37.354Z
+  source_digest: sha256:b0d5b5b4fd99deab736cf7ceee6dea050ff52e92e5bcc63517e56e0dc540c0d2
+  decision_digest: sha256:85ae3f2709570e89b8a41684bacec1b83f812dd4048159ae88977569f1d55427
+  receipt_digest: sha256:70479beaf61d956e72c565f7a71db1babc28f382def52ba92a97c77de0299103
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 11
-    content_digest: sha256:d51dd2e6e765242d57006cf6ed5592119042e89e30069564c594464b5a9564d1
+    revision: 12
+    content_digest: sha256:b0d5b5b4fd99deab736cf7ceee6dea050ff52e92e5bcc63517e56e0dc540c0d2
   route:
     signal: redesign
     mode: redesign
@@ -82,19 +82,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 10
+    revision: 11
     digest: sha256:51f08c0ac791ff3b1db0eeb1e74c1e3fd15362b38a2abf28511b3b6306da0f08
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 10
+      target_revision: 15
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 10
+    target_revision: 15
     phase: forward_merge
-  escape_reason: Resource Kernelのpre/post dispatch transport faultを分離してForward実装へ再降下する
+  escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -165,10 +165,10 @@ DB/CAS再利用、single-flight、local CI全体のqueue/headroom policyは本D0
 `ExecutionEvent`は`attempt_id + sequence`をidentityとするappend-onlyの事実である。`admission_requested`、
 `control_started`、`probe_recorded`、`capability_negotiated`、`admission_sealed`、`authority_prepared`、
 `custody_created`、`handoff_committed`、`process_attached`、`started`、`limit_observed`、
-`authority_recovery_requested`、`recovery_proof_verified`、`lease_reissued`、`termination_requested`、
+`authority_recovery_requested`、`recovery_observation_verified`、`lease_reissued`、`termination_requested`、
 `dispatch_indeterminate`、`dispatch_reconciled`、`process_reaped`、`custody_empty`、`lease_released`、`finished`を、monotonic sequenceと
 durable timestampで記録する。event payloadは過去eventを上書きせず、retryは新しい`attempt_id`へ分岐する。
-recovery CAS loserはevent/state delta 0、winnerだけがold/new epoch、proof digest、executor/bundle/policy bindingを
+recovery CAS loserはevent/state delta 0、winnerだけがold/new epoch、native observation digest、executor/bundle/policy bindingを
 `lease_reissued`へ保存し、terminal receiptのevent range/digestへ必ず含める。
 
 `ExecutionReceipt`は一つのattemptがterminalへ到達した時だけevent列から導出・封印するimmutable証跡であり、
@@ -238,15 +238,17 @@ required capabilityとの完全一致をadmissionが確定するまでは`manage
 `process_created`という単一booleanで両者を兼用してはならない。control processの起動自体を「workload未生成」の
 証拠に数えず、各identityのPID/nonce/bundle digest/生成時刻を別々に記録する。
 
-binary protocolは`Probe | Execute | RecoveryCustody`のcommand-discriminated closed unionとする。`Probe`はOS事実を返すだけで
+binary protocolは`Probe | Execute | RecoveryObservation | RecoveryCustody | ControlCommand`の5 variant closed unionとする。`Probe`はOS事実を返すだけで
 workload launcherへ到達できない。`Execute`だけが`create_custody | spawn_attached | resume`を所有し、control planeが封印した
 admission token（attempt、custody nonce、bundle/probe digest、required capability、absolute deadlineを結合）を必須とする。
-`RecoveryCustody`は`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する。
-`recover_authority`はexecutor認証済みproof、後4操作はauthority leaseを必須とし、launcher、managed-root生成、resumeの参照を
-型として持たない。`create_custody`が返すleaseは`spawn_attached | resume`でもtokenと同時に必須とする。
+`RecoveryObservation`はsame/cross-bootの認証済みnative factだけを返しauthority delta 0、
+TypeScript `recoverAuthority`だけがjournal/current epoch照合とCAS/lease/trace transactionを所有する。
+`RecoveryCustody`は`observe | terminate_tree | prove_empty | release_custody`だけ、`ControlCommand`は
+active custody/pending response/未flush outbox 0後の`shutdown_companion`だけを所有する。いずれもlauncher、
+managed-root生成、resumeの参照を型として持たない。`create_custody`が返すleaseは`spawn_attached | resume`でもtokenと同時に必須とする。
 admission tokenはversioned canonical payloadをissuer/verifier portで認証し、operation/nonce replayをfail-closeする。
 wall deadlineはadmission時に一度だけmonotonic deadlineへ縮小変換し、clock jumpや再起動で延長しない。
-token/lease/recovery proofは`execution_id + canonical execution_spec_digest + attempt_id + custody_nonce`を共通bindingとし、
+token/lease/recovery observationは`execution_id + canonical execution_spec_digest + attempt_id + custody_nonce`を共通bindingとし、
 別execution receiptへのnative fact誤帰属をfail-closeする。
 空のrequired capabilityやhandshake成功だけではexecution admissionにならない。
 

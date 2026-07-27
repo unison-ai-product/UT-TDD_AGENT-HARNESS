@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:12f6a0ba653fe076c48e1df10abc5dfd
-  command_id: pr156-owner-boundary-l5-rev14-20260727
-  admitted_at: 2026-07-27T03:59:43.783Z
-  source_digest: sha256:e399792b1916b82c4f12d434840537992f695dace4701dd55c00b1c9ea1f759a
-  decision_digest: sha256:0413c1a4e5f7a0e74b72e15ba7a2f88a5ffb81c78fb5c558f2d13c999c048f27
-  receipt_digest: sha256:dbb9a7fae3b11c34b1bea5ff8499ad03be0de15b1540d7b5d12a7d51330ab0b2
+  receipt_id: certificate:57e3ee86d1269c46afefa9ec5975bb49
+  command_id: pr156-contract-closure-l5-rev15-20260727
+  admitted_at: 2026-07-27T04:06:41.326Z
+  source_digest: sha256:4c1efaacd757a488444f0f2aa2f32e62430619974226e6b7be545dd57e066efa
+  decision_digest: sha256:19d0b7a7e1524d0e33b1bdc2dff5e70030282c7b45c46d10e892244a938123be
+  receipt_digest: sha256:7e0486812cc3db167d587fd9a75732a616cab6bcac8b1fee38d863d7186447ca
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 14
-    content_digest: sha256:e399792b1916b82c4f12d434840537992f695dace4701dd55c00b1c9ea1f759a
+    revision: 15
+    content_digest: sha256:4c1efaacd757a488444f0f2aa2f32e62430619974226e6b7be545dd57e066efa
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 13
+    revision: 14
     digest: sha256:5d7da7bece7de30bd75eada98b0cf25e2c5046dc128d7be3e9b5f841222b138e
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 14
+      target_revision: 15
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 14
+    target_revision: 15
     phase: forward_merge
-  escape_reason: Resource Kernelのownership/recovery/fault/release契約を閉じてForward実装へ再降下する
+  escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -175,11 +175,20 @@ control process自体の終了は別unionの`ControlCommand.shutdown_companion`�
 `observe | prove_empty | release_custody`は両cleanup variant、`terminate_tree`は`CleanupAuthorityLeaseV1`だけを必須とする。
 TypeScript内部の`recoverAuthority`だけが
 `AuthorityRecoveryObservationV1 = SameBootExecutorRecoveryObservationV1 | CrossBootFenceObservationV1`を入力とする。same-boot variantは
-`SameBootExecutorRecoveryObservationV1(executor_id, execution_id, execution_spec_digest, attempt_id, custody_nonce, bundle_digest, custody_identity,
+`SameBootExecutorRecoveryObservationV1(schema_version="same-boot-executor-recovery-observation/v1", executor_id, execution_id, execution_spec_digest, attempt_id, custody_nonce, bundle_digest, custody_identity,
 previous_authority_epoch, boot_id, effective_deadline_monotonic_ms, termination_policy_digest, recovery_grace_ms,
 recovery_deadline_monotonic_ms, last_transition_digest, recovery_nonce, issuer_key_id, authenticator)`を必須とする。
-cross-boot variantはprevious/current boot、platform boot fence fact、同じexecution/spec/attempt/custody/bundle/
-epoch/transition/recovery nonce/authenticatorを束縛する。observationとdurable journal/current epochの全一致後、
+cross-boot variantは
+`CrossBootFenceObservationV1(schema_version="cross-boot-fence-observation/v1", executor_id, execution_id,
+execution_spec_digest, attempt_id, custody_nonce, bundle_digest, custody_identity, previous_authority_epoch,
+previous_boot_id, current_boot_id, platform_boot_fact_digest, deadline_unix_ms, recovery_deadline_unix_ms,
+observed_wall_unix_ms, observed_monotonic_ms, termination_policy_digest, recovery_grace_ms,
+last_transition_digest, recovery_nonce, issuer_key_id, authenticator)`だけを必須fieldとし、旧boot monotonic deadline、
+authority mode、lease、launcher/resume fieldとunknown fieldを禁止する。
+Rust `NativeObservationSignerPort.seal`はpinned companion bundleのnative signer identityでfactを封印し、
+TypeScript `RecoveryObservationAuthenticatorPort.verify`は`BundleTrustPort`が検証済みのbundle signer/policy revisionだけを
+trust inputに用いる。unknown signer/version、別bundle key、canonical field変異をCAS前に拒否する。
+observationとdurable journal/current epochの全一致後、
 TypeScript `CustodyAuthorityPort`がCASでepochを一つ進め、
 same-bootは`CleanupAuthorityLeaseV1`、cross-bootは`BootFencedCleanupLeaseV1`だけを返す。launcher、managed-root生成、
 attach、resumeのfield/variantをschemaとして持たず、
@@ -238,11 +247,13 @@ reconnectはbundle identity、attempt、custody nonceを照合し、別attempt�
 authority revoke+released atomic commit、finished、sealed receiptを再開可能なterminal transaction/outboxで順に閉じる。
 `release_id = digest(execution_id, execution_spec_digest, attempt_id, custody_identity, authority_epoch,
 empty_fact_digest, reap_fact_digest)`をjournalへ先にcommitし、Rust `CustodyReleasePort.ensureAbsent(release_id)`は
-同じcustody identityを「存在しない」終状態へ収束させる冪等operationとする。OS release成功直後にresponse/factを失っても、
+同じcustody identityを「存在しない」終状態へ収束させる冪等operationとする。custody identityはraw OS identityに加え、
+create factで固定した非再利用`custody_generation`を含む。OS release成功直後にresponse/factを失っても、
 再試行はcommitted empty/reap factに束縛された同一identityのnative absenceを再観測し、
 `CustodyAbsentFact(release_id, custody_identity, empty_fact_digest, reap_fact_digest)`を返す。
 factは「この呼出しが削除した」という因果を主張せず、終状態のabsenceだけを証明する。release effectの存在→不在遷移は最大1、
-`ensureAbsent` invocationは再試行可能であり、Rust側durable DB/markerを追加しない。
+`ensureAbsent` invocationは再試行可能であり、Rust側durable DB/markerを追加しない。同じraw OS identityが別generationで
+再利用されていた場合は削除せず`custody_identity_reused` factでquarantineし、古いreleaseを新custodyへ適用しない。
 custodyはempty/reap済みなのでrelease後もdeadline executorの再killはno-target factとなり、fact commit後にだけdisarmする。
 disarm前はcleanup authorityを保持するためcrash retry可能で、revoke後に未完のexecutor操作を残さない。
 各barrier後のcrash/retryはjournal済み段階から再開し、二重releaseや早期terminal sealを許さない。

@@ -1589,6 +1589,15 @@ recovery_deadline_unix_ms/lease_nonce/issuer_key_id/authenticator`だけであ�
 boot-fenced variantはwall deadlineを共通fieldで保持するが、`boot_id`と旧bootのmonotonic deadlineを禁止し、
 `cleanup_deadline_monotonic_ms`をcurrent boot domainで再導出する。variant間field、operation、unknown fieldをstrict rejectする。
 launcher、managed-root生成、resumeの型参照を持たない。
+same-boot observationは`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/
+bundle_digest/custody_identity/previous_authority_epoch/boot_id/effective_deadline_monotonic_ms/
+termination_policy_digest/recovery_grace_ms/recovery_deadline_monotonic_ms/last_transition_digest/recovery_nonce/
+issuer_key_id/authenticator`のexact fieldだけを持つ。cross-boot observationは
+`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/
+custody_identity/previous_authority_epoch/previous_boot_id/current_boot_id/platform_boot_fact_digest/
+deadline_unix_ms/recovery_deadline_unix_ms/observed_wall_unix_ms/observed_monotonic_ms/
+termination_policy_digest/recovery_grace_ms/last_transition_digest/recovery_nonce/issuer_key_id/authenticator`
+のexact fieldだけを持ち、旧boot monotonic/lease/authority mode/launcher fieldを禁止する。
 `create_custody`はexecutor binding付きexecution leaseを返す。create/spawn/resumeはadmission chain上の
 別stage tokenを直前durable factの確認後に一回ずつ発行・消費し、`spawn_attached | resume`はtokenと同じleaseを照合する。
 `release_custody`は`empty_proven`かつreap proof後だけ許可し、`shutdown_companion`はcustody stateを変更しない。
@@ -1612,6 +1621,7 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `consumeAdmissionStageToken` | expected phase/operation、未消費token又は同一pending record | token消費と`consumed_pending_dispatch(request/token/idempotency/request digest)`を同一transactionでcommit。pending→indeterminate→reconciled→resultを同じrequest digestで継承。exact retryだけfact reconcile/side effect 0時の継続/同resultを許可し、digest不一致又はrecord欠測はreplay拒否 |
 | `AdmissionTokenAuthenticatorPort.seal/verify` | wire DTOからauthenticator自身だけ除外したcanonical V1 payload、issuer key ID/policy revision | 非自己包含preimageへoperation/token nonceを束縛し、unknown key/version、偽造、同nonce別payload/別operation replayをside effect前拒否。具体key storage/rotationはD0外 |
 | `AuthorityLeaseAuthenticatorPort.issue/verify` | wire DTOからauthenticator自身だけ除外したexact variant payload、execution/spec、executor/custody、boot、deadline/policy | 非自己包含preimageへlease nonceとallowed operationsを束縛し、unknown key/version、偽造、同nonce別payloadをattach/recovery前拒否。具体key storage/rotationはD0外 |
+| `NativeObservationSignerPort.seal` / `RecoveryObservationAuthenticatorPort.verify` | Rust: pinned companion bundleのnative signer identity。TS: `BundleTrustPort`が検証済みのbundle signer/policy revisionとauthenticatorを除くexact observation payload | Rustはnative factだけをsealしauthority delta 0。TSはunknown signer/version、別bundle key、same/cross schema混同、field変異をCAS前拒否。具体key storage/rotationはD0外 |
 | `recoverSameBootAuthority` | Rust/executor認証observation、durable journal、current epoch | TSがsemantic全binding一致時だけepochをCAS+1しcleanup lease+traceを同一transactionで発行。Rust DB/CAS/lease/trace 0 |
 | `recoverCrossBootAuthority` | old/new boot native fence observation、durable journal、current epoch | TSがemptyを先取りせずCAS+1でboot-fenced cleanup lease+traceだけを発行。そのleaseでempty後release。Rust DB/CAS/lease/trace 0 |
 | `transitionAuthorityToCleanup` | live execution authority、deadline/cancel/abort/normal-root-exit/terminate-intent、current epoch | epoch CASと同じtransactionで新lease nonce/authenticatorのcleanup leaseを発行しexecution capabilityを不可逆除去。敗者lease 0 |
@@ -1623,7 +1633,7 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `reduceCustody` | attempt、nonce、sequence連続 | 正常辺とprepared/attached-suspendedからterminatingへのcleanup辺だけを受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
 | `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
-| `releaseCustody` | empty/reap factとdeterministic release_idがjournal commit済み、current cleanup authority | Rust `ensureAbsent(release_id)`は同一identityの終状態absenceを冪等に観測し、因果を主張しない`CustodyAbsentFact`を返す。存在→不在effect最大1、invocation再試行可、Rust durable marker/DB 0。fact commit→executor disarm→revoke+released atomic |
+| `releaseCustody` | empty/reap fact、raw OS identity+非再利用custody_generationを束縛したdeterministic release_idがjournal commit済み | Rust `ensureAbsent`は同一generationの終状態absenceへ冪等収束。raw identityが別generationへ再利用済みなら削除せずquarantine。存在→不在effect最大1、Rust durable marker/DB 0。fact commit→disarm→revoke+released atomic |
 | `shutdownCompanion` | active custody 0、pending response 0、未解決pending/indeterminate/reconciled-without-result 0、terminal outbox flush済み | control processだけを終了しcustody/authority state delta 0 |
 | `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
 

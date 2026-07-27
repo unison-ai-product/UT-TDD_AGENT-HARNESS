@@ -398,10 +398,10 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-036` | deadline/cancel、host reboot、empty/releaseを組み合わせauthority mode全from/toを駆動 | 合法5辺だけjournal+lease/factと同時commit。不正backward/self/skipはauthority/OS delta 0、revokedから再開0 |
 | `IT-RGK-PHYS-037` | 正常root exitとdescendant遅延exit | root exitでcleanup leaseへ遷移し、descendant empty/reap前release 0。empty後release→disarm→revoke+released→terminal sealへ到達 |
 | `IT-RGK-PHYS-038` | 3 lease variantを各operationへcross-dispatchし、schema/mode/boot fieldも一要素ずつ変異 | operation×variant表の合法組だけ実行。boot-fenced terminate/旧boot monotonic field、variant外fieldはdecode/dispatch前拒否 |
-| `IT-RGK-PHYS-039` | token/lease/recovery observationのauthenticatorを発行・検証し、preimageへ自己包含mutationと他field変異を注入 | authenticator自身だけを除くcanonical preimageでround-trip Green。自己包含実装と他field変異はverify Red |
+| `IT-RGK-PHYS-039` | same/cross observation全field、signer key/policy、variant forbidden fieldをmutation | Rust pinned native signer→TS BundleTrust verifierだけがGreen。unknown/別bundle key、field混同、自己包含はCAS/lease/trace 0 |
 | `IT-RGK-PHYS-040` | same/cross-boot recoveryでRust fact laneとTS transaction laneを個別crash/spy | Rustはnative fact以外のDB/CAS/lease/trace 0。TSだけがfact+journal/current epoch一致後にCAS+lease+traceをatomic commitし、各crash retryでwinner1/重複0 |
 | `IT-RGK-PHYS-041` | mutating dispatch後responseへoversize/partial/invalid UTF-8/JSON/schema/trailing/mismatchを各注入 | 全case PostDispatchResponseFault→indeterminate、side effect 0推測/terminal seal 0。actual native fact後だけresult/receipt |
-| `IT-RGK-PHYS-042` | release_id commit、platform release、absence fact response、fact commit各直後にcrash | ensureAbsent再試行でnative absenceへ収束し存在→不在effect最大1、invocation複数可、Rust marker/DB 0。fact後だけdisarm→revoke+released |
+| `IT-RGK-PHYS-042` | release各barrier crashとraw OS identityの別custody_generation再利用を競合 | 同generationはabsenceへ収束、別generationは削除0+quarantine。effect最大1、Rust marker/DB 0。fact後だけdisarm→revoke+released |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。
