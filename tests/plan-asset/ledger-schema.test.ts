@@ -368,14 +368,14 @@ describe("PLAN Asset canonical ledger schema", () => {
   it("U-PADM-065: v5 ledgerへappend-only artifact cleanup operation schemaを原子的に追加する", () => {
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
       db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
       db.exec("DROP TABLE plan_draft_artifact_operation_events");
       db.setUserVersion(5);
 
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       expect(
         db
           .prepare(
@@ -396,7 +396,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       createLegacyCommittedLedger(db, version);
       const before = db.prepare("SELECT * FROM plan_draft_journal").get();
 
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       expect(db.prepare("SELECT * FROM plan_draft_journal").get()).toEqual(before);
       const operations = db
         .prepare(
@@ -426,7 +426,7 @@ describe("PLAN Asset canonical ledger schema", () => {
           .get()?.event_digest,
         reason: "旧schemaにはartifact cleanup provenanceが存在せず完了状態を証明できない",
       });
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       expect(
         db.prepare("SELECT COUNT(*) AS n FROM plan_draft_artifact_operation_events").get()?.n,
       ).toBe(1);
@@ -463,7 +463,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     const db = openHarnessDb(":memory:");
     try {
       createLegacyCommittedLedger(db, 5);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
       const current = db.prepare("SELECT * FROM plan_draft_artifact_operation_events").get();
       if (!current) throw new Error("legacy_unknown fixture missing");
@@ -714,7 +714,7 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
 }
 
 function createLegacyCommittedLedger(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
   db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
