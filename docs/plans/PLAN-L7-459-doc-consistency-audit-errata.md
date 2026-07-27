@@ -4,9 +4,9 @@ title: "PLAN-L7-459: 2026-07-22 ドキュメント整合性監査 errata 一括�
 kind: troubleshoot
 layer: L7
 drive: fullstack
-status: confirmed
+status: draft
 created: 2026-07-22
-updated: 2026-07-22
+updated: 2026-07-27
 owner: Claude
 backprop_decision: not_required
 backprop_decision_reason: "本 PLAN は 2026-07-22 全ドキュメント監査で検出した stale prose / 誤参照 / 表記矛盾の errata 一括是正であり、対象の design/governance/test-design doc 自体が是正先 SSoT である。要件・設計の意味変更は含まず (schema/実装は全件 ground truth として正、doc 側のみ追従)、上流 backprop は発生しない。"
@@ -66,24 +66,7 @@ dependencies:
   parent: null
   requires:
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
-review_evidence:
-  - reviewer: codex-blind-reviewer
-    review_kind: cross_provider
-    reviewed_at: "2026-07-22T20:10:00+09:00"
-    tests_green_at: "2026-07-22T20:10:00+09:00"
-    verdict: pass
-    scope: "PLAN-L7-459 errata batch (commit d7dcc320, 24 files)。blind review 判定 PASS: ground truth 整合 (VALID_SUB_DOCS/VALID_DRIVES/checkRosterConsistency fail-close)、correction note 規律、FR-L1-16 再マッピングの意味整合 (analyzeL6FrCoverage 51/51 green)、機械ゲート 5 種 green を reviewer 自走で実測。攻撃試行 (self-pair 残存/再誤配線/prose 逆転/無注記上書き) は全て反駁済。"
-    worker_model: claude-sonnet-5
-    reviewer_model: gpt-5.6-sol
-    green_commands:
-      - kind: lint
-        command: "bun src/cli.ts plan lint"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-22T20:10:00+09:00"
-        evidence_path: docs/plans/PLAN-L7-459-doc-consistency-audit-errata.md
-        anchor_commit: d7dcc32017418e5ab465072bd249641c0f04c490
+review_evidence: []
 ---
 
 # PLAN-L7-459: 2026-07-22 ドキュメント整合性監査 errata 一括是正
@@ -181,6 +164,25 @@ silent overwrite せず、該当箇所に correction note (本 PLAN ID 引用) �
   正規化する (当該 PLAN の AC へ委譲)。
 - **doctor 拡張 gap**: 「同一 typed-spec ID の複数 doc 所有を機械検出する仕組みの不在」(H2 の
   根因) と「l6-fr-coverage の意味整合非検証」(H8 の根因) は別途 gap 起票候補。
+
+## review 経緯 (status=draft の理由、2026-07-27)
+
+本 PLAN は 2026-07-22 に `status: confirmed` で PR #133 へ載せたが、`review-evidence` gate が
+`greenCommandViolations = invalid_output_digest` で fail-close していた (harness-check
+run 29915254231)。実体は以下であり、帳尻合わせで confirm を維持しない:
+
+- 2026-07-22 の Codex blind review (reviewer model `gpt-5.6-sol`、対象 commit `d7dcc320`) は
+  判定 **PASS** であり、reviewer は機械ゲート 5 種を自走で green 実測したと記録している。
+  ただし **その実行出力を evidence file として捕捉しておらず**、`green_commands.output_digest`
+  (`sha256:` 実 hash、`src/lint/green-command-digest.ts` が実 blob と照合) を後から真正に
+  復元できない。存在しないログの digest を書けば fake evidence になるため記録しない。
+- さらに 2026-07-27 の `origin/main` 取り込み (commit `83869469`) と連番改番
+  (`PLAN-L7-453` → `PLAN-L7-459`) により、review 対象 HEAD が前進している。
+
+したがって現状の正しい状態は **draft (review 未成立)** であり、confirm には
+「新 HEAD での gate 再実行 + 出力を `.ut-tdd/audit/` へ捕捉 + digest 記録」と
+「非 author runtime (Codex) による再 blind review」が必要。errata 本文 (H1-H8 / M1-M13) 自体は
+2026-07-22 review で PASS 済であり、以後の差分は main 取り込みと機械的改番のみ。
 
 ## 検証
 
