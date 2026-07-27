@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:f56a3943d8832435d67045b1b52230ae
-  command_id: pr156-transport-closure-l5-rev10-20260727
-  admitted_at: 2026-07-27T07:00:01.000Z
-  source_digest: sha256:4926bb1342a1a873d3866fe166e67b636a81a4d418d400abdb421ec64eda49d7
-  decision_digest: sha256:9ad20935c6cda9b90e58d618c055baca92bc0d268c2d9bba6507930a900d32b7
-  receipt_digest: sha256:82525d4b00083d02a9cdcb5f6cb87188d8384c1809ee5de35abb76b268767a23
+  receipt_id: certificate:f39fd96a9fd2d25c73ce34b0dd4821fd
+  command_id: pr156-lifecycle-closure-l5-rev11-20260727
+  admitted_at: 2026-07-27T08:00:00.000Z
+  source_digest: sha256:63a1060da26f3e90372e2bae3351b27b09d2677f3de43b80ca7d9b4ee9c321c6
+  decision_digest: sha256:1487f356bcc20d3761d28d03facb9de25a727d0019e667a07043c6dbf3c4a4f0
+  receipt_digest: sha256:b86248cc97e621cc90d8cd8b28cf69ee453452c40d78345c7104d056d0d5fe2e
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 10
-    content_digest: sha256:4926bb1342a1a873d3866fe166e67b636a81a4d418d400abdb421ec64eda49d7
+    revision: 11
+    content_digest: sha256:63a1060da26f3e90372e2bae3351b27b09d2677f3de43b80ca7d9b4ee9c321c6
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 9
+    revision: 10
     digest: sha256:5d7da7bece7de30bd75eada98b0cf25e2c5046dc128d7be3e9b5f841222b138e
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 10
+      target_revision: 11
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 10
+    target_revision: 11
     phase: forward_merge
-  escape_reason: Resource Kernelのpre/post dispatch transport faultを分離してForward実装へ再降下する
+  escape_reason: Resource Kernelのcustody nonce予約とpre-start cleanup遷移を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -132,6 +132,9 @@ versioned canonical preimage全体の真正性とcommandのattempt/custody/bundl
 `AdmissionTokenAuthenticatorPort.seal/verify`以外の自己申告tokenを認証済みに昇格せず、unknown key/version、authenticator不一致、
 同nonce別payload、別operation replayを拒否する。token無し、空required capability、期限切れ、別probe、別attemptでは
 custody作成、spawn、resumeをすべて0にし、`managed_root_created=false`のまま拒否する。handshake成功をexecute許可へ暗黙昇格しない。
+`custody_nonce`はOS custody identityではなく、`sealAdmission`前にcontrol planeが一意に予約するcreation nonceである。
+`create_custody`はこのnonceを入力に一度だけcustody identityを生成し、返却leaseへ同じnonceとidentityを束縛する。
+nonce未予約、再利用、別execution/specへの予約移送をside effect前に拒否する。
 `create_custody`はarm済みdeadline executorへ束縛した
 `AuthorityLeaseV1(authority_epoch, execution_id, execution_spec_digest, attempt_id, custody_nonce, bundle_digest, custody_identity, executor_id,
 effective_deadline_monotonic_ms, boot_id, termination_policy_digest, recovery_grace_ms,
@@ -163,8 +166,8 @@ deadline executorとauthorityを維持する。各responseは`control_process_cr
 | state | 許可event | 不変条件 |
 |---|---|---|
 | `absent` | probe / create | process 0、custody identity未発行 |
-| `prepared` | create→spawn-attached | custody containerは存在、user code未開始 |
-| `attached_suspended` | attach→resume / abort | rootはcustody所属、Windowsはsuspended、attach失敗時resume 0 |
+| `prepared` | spawn-attached / abort→terminating | custody containerは存在、user code未開始。root未生成failure/deadline/cancelでもcleanup可能 |
+| `attached_suspended` | resume / abort→terminating | rootはcustody所属、Windowsはsuspended、attach失敗・deadline・cancel時resume 0 |
 | `running` | observe / terminate | root/descendantは同一custody identityで追跡 |
 | `terminating` | terminate→reap | 新規childをcontainし続け、root exitをterminalとしない |
 | `empty_proven` | empty + reap proof | Job emptyまたは`populated=0`、zombie/managed orphan 0 |

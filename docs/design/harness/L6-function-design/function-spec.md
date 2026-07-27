@@ -1590,7 +1590,8 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `BundleActivationPort.activate` | verified handle、expected floor | 現在floorより厳密に大きいsequenceの再署名manifestだけを原子的にactivateする。同sequenceは同payloadでも新規activationに使わず、別payloadならfail-closeする。storage・clock・recovery方式はD0外 |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
-| `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
+| `reserveCustodyNonce` | execution/spec/attempt確定、token未seal | OS identityとは別の一意creation nonceを予約。同nonce再利用・別execution移送を拒否 |
+| `sealAdmission` | recorded probe、完全capability、予約済みcustody nonce、deadline内 | execution/spec/attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
 | `AdmissionTokenAuthenticatorPort.seal/verify` | canonical V1 payload、issuer key ID/policy revision | authenticatorとoperation/token nonceを束縛し、unknown key/version、偽造、同nonce別payload/別operation replayをside effect前拒否。具体key storage/rotationはD0外 |
 | `AuthorityLeaseAuthenticatorPort.issue/verify` | canonical lease V1 payload、execution/spec、executor/custody、boot、deadline/policy | authenticatorとlease nonceを束縛し、unknown key/version、偽造、同nonce別payloadをattach/recovery前拒否。具体key storage/rotationはD0外 |
 | `ExecutorRecoveryProofPort.verifyAndReissue` | executor認証proof、durable journal、current epoch | execution/spec/custody/deadline/policy/transition全一致時だけepochをCAS+1し同契約の新leaseを発行。生成/resume/deadline延長0 |
@@ -1598,7 +1599,7 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token又はspawn/resume lease不正のExecuteでside effect 0。Recoveryは`recover_authority(proof)`又は後4操作の`lease`をdiscriminantで分離し、生成・resume能力0。shutdown-before-emptyは拒否 |
 | `normalizeWireFault` | typed `WireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
 | `reconcileDispatchIndeterminate` | authenticated idempotency identity、authority/journal/native facts | response lossをside effect 0へ推測せずactual phase/fact digestを一意に確定。未確定中terminal seal 0、確定後は実phase receiptへprotocol failure原因を保存 |
-| `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
+| `reduceCustody` | attempt、nonce、sequence連続 | 正常辺とprepared/attached-suspendedからterminatingへのcleanup辺だけを受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
 | `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
 | `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |

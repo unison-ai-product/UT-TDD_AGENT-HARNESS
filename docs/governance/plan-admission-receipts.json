@@ -1776,6 +1776,54 @@
         "revision": 10,
         "content_digest": "sha256:57376c0a0bdef6bc0814722bdea3ea09cb445edf03827f65cc7ffce12f79efa7"
       }
+    },
+    {
+      "sequence": 112,
+      "previous_record_digest": "sha256:85f2188c0bf08669279e74d0314d2f758b38db66a9bd78b0577dfe6eebee73a3",
+      "record_digest": "sha256:a3f11855dc6c78cb845309352d6fc27a185f26cceaac1fed83cd72d24fac2783",
+      "command_id": "pr156-lifecycle-closure-l5-rev11-20260727",
+      "receipt_id": "certificate:f39fd96a9fd2d25c73ce34b0dd4821fd",
+      "receipt_digest": "sha256:b86248cc97e621cc90d8cd8b28cf69ee453452c40d78345c7104d056d0d5fe2e",
+      "decision_digest": "sha256:1487f356bcc20d3761d28d03facb9de25a727d0019e667a07043c6dbf3c4a4f0",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 11,
+        "content_digest": "sha256:63a1060da26f3e90372e2bae3351b27b09d2677f3de43b80ca7d9b4ee9c321c6"
+      }
+    },
+    {
+      "sequence": 113,
+      "previous_record_digest": "sha256:a3f11855dc6c78cb845309352d6fc27a185f26cceaac1fed83cd72d24fac2783",
+      "record_digest": "sha256:d08f623facbb7e4be49d4e2d4d91ffc0da771fd90ca84f45119b7237915db164",
+      "command_id": "pr156-lifecycle-closure-l6-rev11-20260727",
+      "receipt_id": "certificate:329852d09e5fdf2a80b6efe58cced989",
+      "receipt_digest": "sha256:90c666f759261789c09d6abea1622ffedf2d0c1755fae417e8af06cd1f073333",
+      "decision_digest": "sha256:2cfcfeb79765c661ca5445fca1b38364b224db3d0e0695024b1f15fd269d8031",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 11,
+        "content_digest": "sha256:2d78897b0c4c3bb34bf4b251c0cafd5340540d2f31d7ddf7c6983228a352e035"
+      }
+    },
+    {
+      "sequence": 114,
+      "previous_record_digest": "sha256:d08f623facbb7e4be49d4e2d4d91ffc0da771fd90ca84f45119b7237915db164",
+      "record_digest": "sha256:64740233bce9ae05c180f1fdbcb72cf182c8aa3ce4f7409dfce401ebb89407aa",
+      "command_id": "pr156-lifecycle-closure-l7-rev11-20260727",
+      "receipt_id": "certificate:39b78408003f9e37c49e3af3449964ac",
+      "receipt_digest": "sha256:063179ba0367febe2bfcfe8928b9733b2a75dbf0836b1939ac2b29c3936da752",
+      "decision_digest": "sha256:7346cffc37d9dd0cc4b50a493db708a0d66f0e707da486408e6e5327b5f22a3a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 11,
+        "content_digest": "sha256:9ce38b296b3623bfcfbee040e0f7a36ec24d41f0df8bf024e8a827f1247bdab5"
+      }
     }
   ]
 }

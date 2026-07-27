@@ -1762,7 +1762,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-WIRE-003` | invalid UTF-8/JSON、duplicate/unknown/missing field | 全変異を拒否、launcher call 0 |
 | `U-RGK-WIRE-004` | unknown command/enum/version | fail-closeし既知値へ丸めない |
 | `U-RGK-WIRE-005` | mutating request書込み前/途中/完了後・response前後でEOF | pre-dispatchだけside effect 0 protocol failure。post-dispatchはindeterminate、reconcile前terminal seal 0、fact確定後だけ実phase receipt |
-| `U-RGK-WIRE-005` | request ID/version/bundle digest mismatch | responseを別requestへ合成しない |
+| `U-RGK-WIRE-010` | request ID/version/bundle digest mismatch | responseを別requestへ合成しない |
 | `U-RGK-WIRE-006` | protocol stdoutへlog混入 | trailing byteとして拒否、stderrだけdiagnostic許可 |
 | `U-RGK-WIRE-007` | object key/order/number表現のproperty corpus | canonical encodeがlocale/order非依存 |
 | `U-RGK-WIRE-008` | frame上限ちょうどと多byte UTF-8境界 | byte lengthを正しくprefixし切断しない |
@@ -1782,7 +1782,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-CAP-004` | soft capabilityをhard requiredへ代用 | selection 0、missing集合をlossless保存 |
 | `U-RGK-CAP-005` | verified control processからprobeをrecord | `control_process_created=true`とidentity、probe digestをappendしmanaged root 0 |
 | `U-RGK-CAP-006` | unverified/stale control identityのprobe | journal delta 0、admission token生成0 |
-| `U-RGK-CAP-007` | recorded probeとrequired集合完全一致 | attempt/nonce/bundle/probe/deadlineを結ぶsealed tokenを一つ生成 |
+| `U-RGK-CAP-007` | recorded probeとrequired集合完全一致、custody nonce未予約/予約済み | 未予約はtoken 0。予約済みはexecution/spec/attempt/nonce/bundle/probe/deadlineを結ぶtokenを一つ生成 |
 | `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
 | `U-RGK-CAP-009` | token無し、またはtokenのattempt/nonce/bundle/probe/deadlineを各変異したExecuteの`create_custody | spawn_attached | resume` | 全variantを拒否しcustody/launcher call 0、別attemptへのside effect 0 |
 | `U-RGK-CAP-010` | leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/issuer/authenticatorを各変異 | 全不正leaseでattach/resume 0。valid leaseのterminate/prove-emptyはtoken期限後も可能 |
@@ -1790,6 +1790,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-CAP-012` | issued/deadline/budget不一致、許容skew超過、wall前進/後退、process restart/boot ID変更 | effective monotonic deadlineは初回値から延長0。曖昧/boot変更はexpireしkill要求、managed root生成0 |
 | `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
 | `U-RGK-LIFE-002` | resume-before-attach/release-before-empty/root-exit terminal | 全不正遷移を拒否 |
+| `U-RGK-LIFE-014` | prepared/attached_suspendedでfailure/deadline/cancel | terminating→empty_proven→releasedへ収束し、root未生成又はpre-start proofを保持 |
 | `U-RGK-LIFE-003` | sequence gap/重複別payload/attempt・nonce不一致 | state delta 0、closed finding |
 | `U-RGK-LIFE-004` | 同sequence同payload replay | 冪等に同state、event増殖0 |
 | `U-RGK-LIFE-005` | terminate/cancel/deadline同時入力 | 最初のdurable causeを維持しemptyへ収束 |

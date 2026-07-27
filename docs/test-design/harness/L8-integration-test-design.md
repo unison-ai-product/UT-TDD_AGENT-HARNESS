@@ -384,7 +384,7 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
 | `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
 | `IT-RGK-PHYS-016` | token/leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/authenticatorを各変異し、同nonce別payload、旧variant、各state shutdownを投入 | 不正を各境界で拒否しcustody/managed root 0。別execution/bundle fact再利用0、shutdownはempty/reap後だけ |
-| `IT-RGK-PHYS-017` | executor arm/lease/attach/commit前後でcrash、suspended rootをdeadline/cancel | commit前resume 0。pre-start deadline/cancelはRootCreatedNotStarted receipt、terminate/reap proof。commit後はexecutorがcustody維持 |
+| `IT-RGK-PHYS-017` | custody nonce予約/再利用/別execution移送、executor arm/lease/attach/commit前後crash、prepared又はsuspendedでdeadline/cancel | 不正nonceはcreate 0。prepared/attached_suspendedからterminating→empty/reap/release、resume 0、実phase receipt。commit後はexecutorがcustody維持 |
 | `IT-RGK-PHYS-018` | authority crash後、proof/journalのexecution/spec/bundle/attempt/custody nonce/identity/epoch/boot/deadline/policy/transition/recovery nonce/issuer/authenticatorを各変異しvalid proofをCAS競合 | 変異・stale・nonce replay・偽造はreissue 0。winnerだけ同bundle/deadline/policyのepoch+1 leaseとtrace events、loser delta 0。executorは期限内kill/reap/orphan 0 |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を

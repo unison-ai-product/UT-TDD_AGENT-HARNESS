@@ -970,7 +970,9 @@ probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず�
 
 ### D.2 カストディ・ライフサイクル
 
-`absent → prepared → attached_suspended → running → terminating → empty_proven → released`だけを合法とする。
+正常辺は`absent → prepared → attached_suspended → running → terminating → empty_proven → released`とする。
+cleanup辺として`prepared → terminating`と`attached_suspended → terminating`も合法にし、root未生成failure、
+handoff失敗、pre-start deadline/cancelを必ずempty/reap/releaseへ収束させる。これ以外のskip/backward辺は拒否する。
 Windowsはsuspended create後にJob assignが成功するまでresumeしない。Linuxはuser code開始時点からtarget cgroupに属し、
 事後attachをhard custodyとして受理しない。root exitはterminalではなく、Job emptyまたは`populated=0`とreap証拠が揃って
 初めて`empty_proven`となる。client/launcher crash後もcustodian/brokerがdeadlineとtree custodyを保持する。
