@@ -212,6 +212,10 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   job-levelの`GITHUB_OUTPUT`上書きも拒否する。source-doc doctorは各OSに1件以上、
   canonical doc条件・canonical command全文・shell/env未指定・fail-close実行だけを許可し、
   substring偽装、control operator、別profile、追加flagを拒否する。
+- runtime leg jobは`runs-on`/`steps`以外のexecution contextを拒否する。critical producerは
+  Linux=`name,id,run`、Windows=`name,id,shell,run`、doc doctor=`name,if,run`のexact key set
+  とし、working-directory/timeout/unknown key、job defaults/env/container/strategy、
+  duplicate producer idを構造driftとしてfail-closeする。
 - doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。

@@ -308,6 +308,14 @@ function hasCanonicalDocLaneDoctor(step: WorkflowStep): boolean {
   );
 }
 
+function hasExactKeys(value: object, expected: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const canonical = [...expected].sort();
+  return (
+    actual.length === canonical.length && actual.every((key, index) => key === canonical[index])
+  );
+}
+
 function checkLaneSkipSafety(input: {
   legs: readonly (WorkflowJob | null)[];
   doc: GithubWorkflowDoc;
@@ -316,6 +324,14 @@ function checkLaneSkipSafety(input: {
   for (const [index, leg] of input.legs.entries()) {
     if (!leg) continue;
     const name = RUNTIME_LEGS[index];
+    if (!hasExactKeys(leg, ["runs-on", "steps"])) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${name} must contain only runs-on and steps`,
+      });
+    }
     if (leg.if !== undefined) {
       pushViolation({
         violations: input.violations,
@@ -328,12 +344,17 @@ function checkLaneSkipSafety(input: {
       Array.isArray(leg.steps) && leg.steps.every(workflowStep)
         ? (leg.steps as WorkflowStep[])
         : [];
-    const producer = steps.find((step) => step.id === "classify");
+    const producers = steps.filter((step) => step.id === "classify");
+    const producer = producers[0];
+    const producerKeys =
+      name === "harness-check-windows" ? ["name", "id", "shell", "run"] : ["name", "id", "run"];
     if (
+      producers.length !== 1 ||
+      !producer ||
+      !hasExactKeys(producer, producerKeys) ||
       !hasCanonicalLaneProducer(producer?.run) ||
       producer?.if !== undefined ||
       producer?.env !== undefined ||
-      !producer ||
       !isFailCloseStep(producer) ||
       (name === "harness-check-linux" && producer?.shell !== undefined) ||
       (name === "harness-check-windows" && producer?.shell !== "bash")
@@ -345,7 +366,11 @@ function checkLaneSkipSafety(input: {
         detail: `jobs.${name} requires the canonical classify producer${name === "harness-check-windows" ? " with shell=bash" : " with no explicit shell"}`,
       });
     }
-    if (!steps.some(hasCanonicalDocLaneDoctor)) {
+    const docDoctors = steps.filter((step) => step.run?.includes("source-doc-lane"));
+    if (
+      !docDoctors.some(hasCanonicalDocLaneDoctor) ||
+      docDoctors.some((step) => !hasExactKeys(step, ["name", "if", "run"]))
+    ) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
@@ -353,11 +378,7 @@ function checkLaneSkipSafety(input: {
         detail: `jobs.${name} doc lane requires doctor --profile source-doc-lane`,
       });
     }
-    if (
-      steps.some(
-        (step) => step.run?.includes("source-doc-lane") && !hasCanonicalDocLaneDoctor(step),
-      )
-    ) {
+    if (docDoctors.some((step) => !hasCanonicalDocLaneDoctor(step))) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,

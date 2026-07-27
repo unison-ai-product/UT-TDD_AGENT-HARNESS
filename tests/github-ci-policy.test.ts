@@ -35,7 +35,8 @@ jobs:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - id: classify
+      - name: classify changed files
+        id: classify
         run: |
           bun src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
@@ -50,7 +51,8 @@ jobs:
       - run: bun run lint
       - run: bun src/cli.ts audit quality --include-tests
       - run: bun src/cli.ts doctor
-      - if: ${LANE_DOC_IF}
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
         run: bun src/cli.ts doctor --profile source-doc-lane
 `;
 
@@ -75,7 +77,8 @@ jobs:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - id: classify
+      - name: classify changed files
+        id: classify
         run: |
           bun src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
@@ -92,7 +95,8 @@ jobs:
         run: bun run test
       - if: ${LANE_DOC_IF}
         run: bun run test:doc-lane
-      - if: ${LANE_DOC_IF}
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
         run: bun src/cli.ts doctor --profile source-doc-lane
       - run: bun run lint
       - if: ${LANE_FULL_IF}
@@ -132,7 +136,8 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - id: classify
+      - name: classify changed files
+        id: classify
         shell: bash
         run: |
           bun src/cli.ts github classify-changes \
@@ -144,7 +149,8 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
-      - if: ${LANE_DOC_IF}
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
         run: bun src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
@@ -162,7 +168,8 @@ const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  ha
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - id: classify
+      - name: classify changed files
+        id: classify
         shell: bash
         run: |
           bun src/cli.ts github classify-changes \
@@ -174,7 +181,8 @@ const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  ha
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
-      - if: ${LANE_DOC_IF}
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
         run: bun src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
@@ -928,11 +936,7 @@ describe("github-ci-policy lint", () => {
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
     it.each([
-      [
-        "missing producer",
-        `      - id: classify\n        run: |\n          bun src/cli.ts github classify-changes \\\n            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}" \\\n            --base-sha "\${{ github.event.pull_request.base.sha }}" \\\n            --before-sha "\${{ github.event.before }}" \\\n            --github-output "$GITHUB_OUTPUT"\n`,
-        "",
-      ],
+      ["missing producer", "id: classify", "id: removed"],
       ["wrong id", "id: classify", "id: classify-docs"],
       ["echo spoof", "bun src/cli.ts github classify-changes", 'echo "github classify-changes" #'],
       [
@@ -948,23 +952,23 @@ describe("github-ci-policy lint", () => {
     it.each([
       [
         "if false",
-        "      - id: classify\n        run: |",
-        "      - id: classify\n        if: false\n        run: |",
+        "        id: classify\n        run: |",
+        "        id: classify\n        if: false\n        run: |",
       ],
       [
         "lane condition",
-        "      - id: classify\n        run: |",
-        `      - id: classify\n        if: ${LANE_FULL_IF}\n        run: |`,
+        "        id: classify\n        run: |",
+        `        id: classify\n        if: ${LANE_FULL_IF}\n        run: |`,
       ],
       [
         "step env",
-        "      - id: classify\n        run: |",
-        "      - id: classify\n        env:\n          GITHUB_OUTPUT: other\n        run: |",
+        "        id: classify\n        run: |",
+        "        id: classify\n        env:\n          GITHUB_OUTPUT: other\n        run: |",
       ],
       [
         "continue-on-error",
-        "      - id: classify\n        run: |",
-        "      - id: classify\n        continue-on-error: true\n        run: |",
+        "        id: classify\n        run: |",
+        "        id: classify\n        continue-on-error: true\n        run: |",
       ],
     ])("U-CIPOL-020af: rejects producer context mutation: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
@@ -977,6 +981,59 @@ describe("github-ci-policy lint", () => {
           SOURCE_WORKFLOW_WITH_LANE.replace(
             "  harness-check-linux:\n    runs-on: ubuntu-latest",
             "  harness-check-linux:\n    env:\n      GITHUB_OUTPUT: other\n    runs-on: ubuntu-latest",
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      "defaults",
+      "env",
+      "container",
+      "strategy",
+      "permissions",
+    ])("U-CIPOL-020ah: rejects runtime job execution key %s", (key) => {
+      const value =
+        key === "defaults"
+          ? "{ run: { shell: bash } }"
+          : key === "env"
+            ? "{ BASH_ENV: attack }"
+            : "{}";
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "  harness-check-linux:\n    runs-on: ubuntu-latest",
+            `  harness-check-linux:\n    ${key}: ${value}\n    runs-on: ubuntu-latest`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
+    it.each([
+      "working-directory",
+      "timeout-minutes",
+      "unknown-key",
+    ])("U-CIPOL-020ai: rejects critical producer key %s", (key) => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "        id: classify\n        run: |",
+            `        id: classify\n        ${key}: value\n        run: |`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020aj: rejects duplicate classify producer id", () => {
+      const duplicate = `      - name: duplicate\n        id: classify\n        run: echo duplicate\n`;
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "      - run: bun src/cli.ts github guard",
+            `${duplicate}      - run: bun src/cli.ts github guard`,
           ),
         ),
       );
@@ -1037,8 +1094,8 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(
         docs(
           SOURCE_WORKFLOW_WITH_LANE.replace(
-            "      - id: classify\n        run: |",
-            `      - id: classify\n        shell: ${shell}\n        run: |`,
+            "        id: classify\n        run: |",
+            `        id: classify\n        shell: ${shell}\n        run: |`,
           ),
         ),
       );
