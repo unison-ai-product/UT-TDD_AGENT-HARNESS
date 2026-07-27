@@ -358,7 +358,7 @@ export function loadRuntimeSessionUsage(dirs: SessionScanDirs): RunUsage[] {
  * repoRoot から Claude Code project-slug ディレクトリ名を導出する (純関数)。
  * Claude Code は `~/.claude/projects/` 配下に、絶対パスの区切り文字 (`\` `/`) とドライブ区切り `:` を
  * すべて `-` へ置換したディレクトリ名でセッションを保存する (実ディレクトリで確認済、例:
- * `C:\Users\user\workspace\repo` → `C--Users-user-workspace-repo`)。
+ * `<drive>:\workspace\repo` → `<drive>--workspace-repo`)。
  * 元パス中のハイフンはそのまま残る (二重 `--` は `:` `\` の連続置換由来であり衝突ではない)。
  */
 export function claudeProjectSlug(repoRoot: string): string {
