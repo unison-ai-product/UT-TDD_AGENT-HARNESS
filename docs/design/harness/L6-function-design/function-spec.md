@@ -1561,10 +1561,16 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 
 ### ワイヤ/エラー代数
 
-`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたは
-`protocol_failure`を返す純粋関数とする。`encodeFrame`はcanonical bytesを決定論的に返す。
+`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたはtyped `WireFault`を返す
+純粋関数とする。`WireFault`はwire responseやworkload domainの`NativeError`ではなく、Node `CustodyClient`が
+Execution Kernel境界でexactly once closed `protocol_failure`へ正規化する。decode失敗時のlauncher/custody side effectは0である。
+`encodeFrame`はcanonical bytesを決定論的に返す。
 コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
-`Custody(CustodyCommand)`で閉じる。phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
+`RecoveryCustody(RecoveryCustodyCommand)`で閉じる。`Execute.operation`だけが
+`create_custody | spawn_attached | resume`を所有し、`AdmissionToken`とattempt/custody/bundle/probe bindingを必須とする。
+`RecoveryCustody.operation`は`observe | terminate_tree | prove_empty | shutdown`だけを所有し、
+`AuthorityLease(authority_epoch, attempt_id, custody_nonce)`を必須とする。launcher、managed-root生成、resumeの型参照を持たない。
+phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
 エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
 
 ### メソッド契約
@@ -1574,11 +1580,12 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 | `canonicalizeBundleManifest` | schema/bundle revision/floor/component digestが全て型付き | 固定順length-framed bytesとdigestを返し、欠落・duplicate・unknown fieldを拒否 |
 | `verifyBundle` | trust identityとtarget明示 | canonical payload全体のsignatureとcompanion/protocol/SBOM/target/D0-N generation receiptの全一致時だけverified handle |
 | `BundleTrustPort.verify` | review済みtrust policy revisionとmanifest | ADR/L5の`TrustDecisionPort`をL6へ適応する唯一のadapter。`accepted` decisionとdecision digest/policy versionをverified handleへ束縛し、rejected、署名不一致、floor未満を拒否する。key rotation等の具体方式はD0外 |
-| `BundleActivationPort.activate` | verified handle、expected floor | floor以上の新しい再署名manifestだけを原子的にactivateする。storage・clock・recovery方式はD0外 |
+| `BundleActivationPort.activate` | verified handle、expected floor | 現在floorより厳密に大きいsequenceの再署名manifestだけを原子的にactivateする。同sequenceは同payloadでも新規activationに使わず、別payloadならfail-closeする。storage・clock・recovery方式はD0外 |
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
 | `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
-| `dispatchCommand` | closed command union | Probeからlauncher 0、token無しExecuteでmanaged root 0 |
+| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token無し・期限切れ・binding不一致のExecuteでcustody/managed root side effect 0。Recoveryはvalid authority leaseの既存custodyだけを操作し、生成・resume能力0 |
+| `normalizeWireFault` | typed `WireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
 | `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
 | `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
@@ -1596,6 +1603,6 @@ Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-
 それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
 Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。
 
-bundle rollbackは過去artifactを直接再activationせず、floor以上の新revisionとしてmanifestを再署名し、
+bundle rollbackは過去artifactを直接再activationせず、現在floorより厳密に大きいsequenceの新revisionとしてmanifestを再署名し、
 通常のtrust・component・target検証を再通過させる。D0はtrust/activationを抽象portに留め、
 rotation、revocation transport、secure clock、re-anchor、物理log schemaを後続implementation revisionへ送る。

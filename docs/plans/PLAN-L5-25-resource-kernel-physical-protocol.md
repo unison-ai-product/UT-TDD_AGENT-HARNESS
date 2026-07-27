@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:12b7643bea2791b3f86641430412594b
-  command_id: pr156-final-readmission-l5-rev4-20260724
-  admitted_at: 2026-07-24T14:46:00.000Z
-  source_digest: sha256:9f3186536236971293564736715ae69ceab0fbc869a615c309e476c758864da7
-  decision_digest: sha256:24222dddda82144d99e5b3feca4f1125ba47fc08d240326c527189dc03af2df5
-  receipt_digest: sha256:59dbef90ec645ffd0a0838eeec8adc30ccd2f88bde91175f90a6a1322dbe15d5
+  receipt_id: certificate:7ccf2e0e8e61d723bcbc76874a8e0a9d
+  command_id: pr156-contract-closure-2-rev5c-20260727
+  admitted_at: 2026-07-27T01:00:01.000Z
+  source_digest: sha256:5dfca3d50a513742fe4195368aa28f5a29c448ae393eb3101a1dbef31ff0d091
+  decision_digest: sha256:9f7421aeaef25daee1920c93e25629aac6478fa78ba8c1dc2debf628831cdbf3
+  receipt_digest: sha256:0fd5357197c28f0593752c30843f446d85172f64e72775ef972d45d11cbe445c
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 4
-    content_digest: sha256:9f3186536236971293564736715ae69ceab0fbc869a615c309e476c758864da7
+    revision: 5
+    content_digest: sha256:5dfca3d50a513742fe4195368aa28f5a29c448ae393eb3101a1dbef31ff0d091
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 3
-    digest: sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e
+    revision: 4
+    digest: sha256:5d7da7bece7de30bd75eada98b0cf25e2c5046dc128d7be3e9b5f841222b138e
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 4
+      target_revision: 5
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: Resource Kernel設計rev4をForward実装rev4へ再降下する
+  escape_reason: Resource Kernelのwire・admission・anti-rollback契約を上流から閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -110,21 +110,26 @@ Bun test runnerを新しい経路へ一切導入しない。
 - requestは`protocol_version`、`request_id`、`command`、`payload`、`deadline_unix_ms`、
   `expected_bundle_digest`を必須とし、unknown field/enum、duplicate key、非canonical number、末尾byteを拒否する。
 - responseは同じ`request_id`、`protocol_version`と、`ok:{fact}`または`error:{NativeError}`の排他的unionを持つ。
-  transport EOF、oversize、partial frame、UTF-8/JSON/schema不正をdomain errorへ丸めない。
+  transport EOF、oversize、partial frame、UTF-8/JSON/schema不正はworkload domainの`NativeError`へ丸めず、
+  transport境界のclosed `protocol_failure`として返す。`protocol_failure`はdomain responseではなく、
+  requestを生成できなかったprotocol resultであり、launcher/custody side effectを伴わない。
 - schema sourceはTypeScript側のversioned protocol schemaを正本とし、release時にcanonical schema digestを生成する。
   Rust DTOは生成物または適合実装であり、独立に語彙追加しない。digest不一致bundleは起動前拒否する。
 - stdoutはprotocol専用、診断はbounded stderrへ分離する。secret、raw env、署名鍵、payload本文をlog/receiptへ複製しない。
 
 ## 3. commandとfactの物理系列
 
-protocol envelopeは`ProbeRequest | ExecuteRequest | CustodyCommand`のclosed unionとする。`ProbeRequest`はbundle/protocol
-identityだけを入力にOS factを返し、workload launcherへの参照を型として持たない。`ExecuteRequest`はcontrol planeが
-封印した`AdmissionToken(attempt_id, custody_nonce, bundle_digest, probe_digest, required_capabilities, deadline_unix_ms)`を
-必須とし、空集合、期限切れ、別probe、別attemptでは`managed_root_created=false`のまま拒否する。handshake成功を
-execute許可へ暗黙昇格しない。
+protocol envelopeは`ProbeRequest | ExecuteRequest | RecoveryCustodyCommand`のclosed unionとする。`ProbeRequest`はbundle/protocol
+identityだけを入力にOS factを返し、workload launcherへの参照を型として持たない。`ExecuteRequest.operation`だけが
+`create_custody | spawn_attached | resume`を所有し、control planeが封印した
+`AdmissionToken(attempt_id, custody_nonce, bundle_digest, probe_digest, required_capabilities, deadline_unix_ms)`を必須fieldとして
+commandのattempt/custody/bundle/probe bindingと照合する。token無し、空required capability、期限切れ、別probe、別attemptでは
+custody作成、spawn、resumeをすべて0にし、`managed_root_created=false`のまま拒否する。handshake成功をexecute許可へ暗黙昇格しない。
 
-`probe`、`create_custody`、`spawn_attached`、`resume`、`observe`、`terminate_tree`、`prove_empty`、`shutdown`
-をversioned commandとする。各responseは`control_process_created`と`managed_root_created`を別fieldで返す。
+`RecoveryCustodyCommand.operation`は`observe | terminate_tree | prove_empty | shutdown`だけを所有し、
+`AuthorityLease(authority_epoch, attempt_id, custody_nonce)`を必須とする。launcher、managed-root生成、resumeのfield/variantを
+schemaとして持たず、admission token期限後も既存custodyの安全なterminate/reapを妨げない。stale epoch、別attempt/nonceは
+state delta 0で拒否する。各responseは`control_process_created`と`managed_root_created`を別fieldで返す。
 `spawn_attached`はWindowsではsuspended rootをJobへassignした後だけresume可能、Linuxでは
 最初のuser instructionより前にtarget cgroup所属を保証する。commandごとのnative factはcustody identity、root identity、
 適用limit、monotonic observation、OS error identityを返すが、`success`やdomain verdictを返さない。

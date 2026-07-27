@@ -56,18 +56,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5bf974957384ef602f6fbc1dbfb485a9
-  command_id: pr156-final-readmission-l7-rev4-20260724
-  admitted_at: 2026-07-24T14:48:00.000Z
-  source_digest: sha256:5dff5906aa83aa7282a39c7d99d81d091f0d7e288b26d71973a055bd687f9eb8
-  decision_digest: sha256:2ad38217474979f774b1d7708fe39f4b455874a5d11996856886a98d447cc32f
-  receipt_digest: sha256:23c9eb8284f8bc53593a5e0f3eabe6a9b430c75a1cff3a5bdcf6c1cfb6bc3a20
+  receipt_id: certificate:e2cb39c670b319b60ed83a02d2817b9f
+  command_id: pr156-contract-closure-l7-rev5c-20260727
+  admitted_at: 2026-07-27T01:00:00.000Z
+  source_digest: sha256:e2dfef9c9d7b9f4220c1e47e19471c394db8e344d6e6e5668ff8ec98df500ebe
+  decision_digest: sha256:7327c457755209949f1b6ec4f8b5c1d6c0b91b0a5f37fdb8ad341a05c486dd1e
+  receipt_digest: sha256:a01798143e5960d15bb9ccac9aa13337a6ef2a206900243d2add8bbba520b9b2
   binding:
     path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     plan_id: PLAN-L7-454-resource-kernel-native-companion
     asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 4
-    content_digest: sha256:5dff5906aa83aa7282a39c7d99d81d091f0d7e288b26d71973a055bd687f9eb8
+    revision: 5
+    content_digest: sha256:e2dfef9c9d7b9f4220c1e47e19471c394db8e344d6e6e5668ff8ec98df500ebe
   route:
     signal: feature_addition
     mode: add-feature
@@ -77,20 +77,20 @@ admission_receipt:
     episode_id: E4-152-resource-kernel-d0r
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
-    plan_id: PLAN-L6-92-resource-kernel-function-contracts
+    plan_id: PLAN-L7-454-resource-kernel-native-companion
     revision: 4
-    digest: sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247
+    digest: sha256:085def2940ad4463fb322c19b253c7703338199ee750fbc510b24eca81f81ed0
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 4
+      target_revision: 5
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: Resource Kernel L6 rev4からdraft実装rev4へ降下する
+  escape_reason: Resource Kernelのwire・admission・anti-rollback契約を上流から閉じてForward実装へ再降下する
 ---
 
 # PLAN-L7-454: Resource Kernel native custody companion / Node protocol client
@@ -126,7 +126,9 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 ### 2.1 Rust companionが所有するもの
 
 - versioned wire DTOのstrict decode/encodeとprotocol mismatchの開始前拒否。
-- probe commandからworkload launcherへの到達不能性、execute commandのsealed admission token/minimum capability強制。
+- `Probe | Execute | RecoveryCustody`のclosed union、Probeからworkload launcherへの到達不能性、
+  Executeだけが所有する`create_custody | spawn_attached | resume`のsealed admission token/binding/minimum capability強制。
+  Recoveryはauthority lease必須の`observe | terminate_tree | prove_empty | shutdown`だけを所有し、新規workload生成・resumeを型で不能にする。
 - `control_process_created`と`managed_root_created`の別identity・別phase応答。
 - Windowsのsuspended create→Job attach→resume、非継承handle、custodian/supervisor、tree empty proof。
 - Linuxのcgroup v2 / clone3 attach、broker/subreaper、budget適用、`populated=0`とreap proof。
@@ -159,7 +161,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
 | 3 | Windows adapterとcustody authorityを短いobject/portへ分割して実装 | atomic handoff前resume 0、deadline owner固定、dual crash後Job empty/orphan 0 |
 | 4 | Linux adapterとbroker authorityを同じprotocol portへ実装 | handoff前user code 0、epoch/nonce recovery、dual crash後`populated=0`とzombie 0 |
 | 5 | Node protocol clientとbundle verifierを実装 | probe→journal→admission barrier、control/workload identity分離、mismatch/欠落/権限不足でmanaged root 0 |
-| 6 | bundle署名検証port、SBOM、floor以上の新manifest再署名rollback、対象OS実runnerを接続 | `U-RGK-TRUST-*` / `U-RGK-BUNDLE-*`と`IT-RGK-PHYS-012..014,019..026`が同一revisionでGreen |
+| 6 | bundle署名検証port、SBOM、現在floorより厳密に大きいsequenceの新manifest再署名rollback、対象OS実runnerを接続 | `U-RGK-TRUST-*` / `U-RGK-BUNDLE-*`と`IT-RGK-PHYS-012..014,019..026`が同一revisionでGreen |
 | 7 | D0-N prerequisiteと局所Bun不増を検証 | PR #154のcutover receiptを参照し、native差分のBun dependency増分0 |
 | 8 | authorと別runtime/model familyのblind review、Reverse gap-only backfill | 未反駁attack 0、review receiptとtested commit一致 |
 

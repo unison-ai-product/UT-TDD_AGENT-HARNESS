@@ -263,7 +263,9 @@ Resource Kernelは、process tree、CPU・memory・process・output budget、dea
 OS強制境界で保証する。TypeScript control planeは`ExecutionSpec`、policy、journal、receiptを所有し、
 Rust companionはWindows Job ObjectまたはLinux cgroup v2へのprivileged custody操作だけを実行する。
 責務を両言語へ重複実装せず、capability probe、durable journal append、sealed admission token、
-managed workload生成の順序をbarrierとして固定する。
+managed workload生成の順序をbarrierとして固定する。wire commandは`Probe | Execute | RecoveryCustody`のclosed unionとし、
+生成・attach・resumeはtoken必須の`Execute`だけに閉じる。`RecoveryCustody`はauthority leaseで既存custodyを
+observe/terminate/prove-empty/shutdownできるが、launcher、managed-root生成、resumeへ型として到達できない。
 
 D0-R merge scopeはresource budget、process-tree custody、capability、terminal receipt、signed companion bundleに
 限定する。DB incremental rebuild、single-flight、snapshot CAS、hook/doctor/local CI横断のqueue/headroom admissionと

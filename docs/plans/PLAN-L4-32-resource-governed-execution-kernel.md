@@ -60,18 +60,18 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:5cd204e306581e9a984bd9ce3f0de086
-  command_id: pr156-final-readmission-l4-rev4b-20260724
-  admitted_at: 2026-07-24T14:45:00.000Z
-  source_digest: sha256:df68713973cc6785418206157a480bc6c4acdd7e4108a4820cc8a7e4b85645eb
-  decision_digest: sha256:0d7986339d40c106a9d2e7b33dbf118fae9c43b896b36d8ed9e9dcd905d938b5
-  receipt_digest: sha256:ca9bae59ebca9ab4f6d522c2e5fef5a46a3b2792530c4cfdafbcb517e5bbd361
+  receipt_id: certificate:a6a653e8bbc8d3327e3ce578668aa3c3
+  command_id: pr156-contract-closure-1-rev5c-20260727
+  admitted_at: 2026-07-27T01:00:00.000Z
+  source_digest: sha256:c45710165ba48bad24fd6fa2770e46816a1aedac5f856c0d7efe650962624167
+  decision_digest: sha256:480aefd9c2e911758e157732a8a45df432d39f231b48b63f907ea2ffa9756412
+  receipt_digest: sha256:4b230e6ec812c52ffc5abc9b82fb239311e2cfe5818a68ba999227da1329db2e
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 4
-    content_digest: sha256:df68713973cc6785418206157a480bc6c4acdd7e4108a4820cc8a7e4b85645eb
+    revision: 5
+    content_digest: sha256:c45710165ba48bad24fd6fa2770e46816a1aedac5f856c0d7efe650962624167
   route:
     signal: redesign
     mode: redesign
@@ -82,19 +82,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 3
-    digest: sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2
+    revision: 4
+    digest: sha256:51f08c0ac791ff3b1db0eeb1e74c1e3fd15362b38a2abf28511b3b6306da0f08
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 4
+      target_revision: 5
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 4
+    target_revision: 5
     phase: forward_merge
-  escape_reason: Resource Kernel設計rev4をForward実装rev4へ再降下する
+  escape_reason: Resource Kernelのwire・admission・anti-rollback契約を上流から閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -231,10 +231,11 @@ required capabilityとの完全一致をadmissionが確定するまでは`manage
 `process_created`という単一booleanで両者を兼用してはならない。control processの起動自体を「workload未生成」の
 証拠に数えず、各identityのPID/nonce/bundle digest/生成時刻を別々に記録する。
 
-binary protocolは`probe`と`execute`をcommand-discriminated unionとして分離する。`probe`はOS事実を返すだけで
-workload launcherへ到達できず、`execute`はcontrol planeが封印したadmission token（attempt、custody nonce、
-bundle/probe digest、required capability、absolute deadlineを結合）を必須とする。空のrequired capabilityや
-handshake成功だけではexecution admissionにならない。
+binary protocolは`Probe | Execute | RecoveryCustody`のcommand-discriminated closed unionとする。`Probe`はOS事実を返すだけで
+workload launcherへ到達できない。`Execute`だけが`create_custody | spawn_attached | resume`を所有し、control planeが封印した
+admission token（attempt、custody nonce、bundle/probe digest、required capability、absolute deadlineを結合）を必須とする。
+`RecoveryCustody`は`observe | terminate_tree | prove_empty | shutdown`とauthority leaseだけを所有し、launcher、
+managed-root生成、resumeの参照を型として持たない。空のrequired capabilityやhandshake成功だけではexecution admissionにならない。
 
 ### 3.1 Windows
 

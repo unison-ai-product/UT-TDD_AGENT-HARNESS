@@ -1758,7 +1758,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | ID | fixture / mutation | expected |
 |---|---|---|
 | `U-RGK-WIRE-001` | valid frame round-trip property | decode(encode(x))がcanonical x、同一xは同一digest |
-| `U-RGK-WIRE-002` | length 0/上限+1/partial/trailing | closed `protocol_failure`、side effect 0 |
+| `U-RGK-WIRE-002` | length 0/上限+1/partial/trailing | decoderはtyped `WireFault`、Node Kernel境界でexactly once `protocol_failure`。validated request ID前のwire response 0、launcher/custody side effect 0 |
 | `U-RGK-WIRE-003` | invalid UTF-8/JSON、duplicate/unknown/missing field | 全変異を拒否、launcher call 0 |
 | `U-RGK-WIRE-004` | unknown command/enum/version | fail-closeし既知値へ丸めない |
 | `U-RGK-WIRE-005` | request ID/version/bundle digest mismatch | responseを別requestへ合成しない |
@@ -1781,7 +1781,8 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-CAP-006` | unverified/stale control identityのprobe | journal delta 0、admission token生成0 |
 | `U-RGK-CAP-007` | recorded probeとrequired集合完全一致 | attempt/nonce/bundle/probe/deadlineを結ぶsealed tokenを一つ生成 |
 | `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
-| `U-RGK-CAP-009` | tokenのattempt/nonce/bundle/probe/deadlineを各変異 | execute拒否、launcher call 0、別attemptへのside effect 0 |
+| `U-RGK-CAP-009` | token無し、またはtokenのattempt/nonce/bundle/probe/deadlineを各変異したExecuteの`create_custody | spawn_attached | resume` | 全variantを拒否しcustody/launcher call 0、別attemptへのside effect 0 |
+| `U-RGK-CAP-010` | 全command discriminantを列挙し、Recoveryへ`create_custody | spawn_attached | resume`を追加するmutation。valid/stale/別nonce AuthorityLeaseも併走 | mutationはschema/exhaustive Red。valid leaseのterminate/prove-emptyはtoken期限後も可能、stale/別nonceはstate delta 0、新規workload/resume 0 |
 | `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
 | `U-RGK-LIFE-002` | resume-before-attach/release-before-empty/root-exit terminal | 全不正遷移を拒否 |
 | `U-RGK-LIFE-003` | sequence gap/重複別payload/attempt・nonce不一致 | state delta 0、closed finding |
@@ -1810,12 +1811,12 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |
 | `U-RGK-BUNDLE-003` | Rustへpolicy/journal/admission/receipt判断を追加 | responsibility-overlap findingでRed |
 | `U-RGK-BUNDLE-004` | manifestのcompanion/protocol/D0-N generation receiptを一要素だけ旧値へ更新 | bundle identity不一致で拒否 |
-| `U-RGK-BUNDLE-005` | floor以上の新revisionとして再署名したrollback manifest | companion/protocol/D0-N receiptを同時pinし通常のtrust/target検証要求を出す |
+| `U-RGK-BUNDLE-005` | 現在floorより厳密に大きいsequenceの新revisionとして再署名したrollback manifest | companion/protocol/D0-N receiptを同時pinし通常のtrust/target検証要求を出す。同sequenceは新規activation 0 |
 | `U-RGK-BUNDLE-006` | Bun binary/API/lockfileを新bundleへ追加 | permanent-ban findingでRed |
 | `U-RGK-TRUST-001` | bundle同梱key、未review signer、署名差替え | `BundleTrustPort`が拒否しverified handle 0 |
 | `U-RGK-TRUST-002` | manifestのbundle revision/component digest/schema/targetを各置換 | binding不一致で拒否 |
 | `U-RGK-TRUST-003` | floor未満の旧manifestを再activation | 署名が正しくても拒否しcurrent不変 |
-| `U-RGK-TRUST-004` | floor以上の新manifestへrollback対象を再署名 | 通常のtrust/component/target検証を再通過した場合だけactivate候補 |
+| `U-RGK-TRUST-004` | `F-1`、`F+同digest`、`F+別digest`、`F+1 valid`を同じcurrent floorへ投入 | `F-1`はstale、等値同digestはreplay、等値別digestはequivocationとしてactivation/advance 0。`F+1`だけ通常検証後にatomic compare-and-advance候補 |
 | `U-RGK-TRUST-005` | trust/activation portがmissing、unknown、failure | PATH探索、download、旧direct spawnへfallbackせず利用停止 |
 | `U-RGK-TRUST-006` | D0実装へrotation、signed clock、re-anchor、物理activation logを直書き | deferred ownership違反としてRed |
 

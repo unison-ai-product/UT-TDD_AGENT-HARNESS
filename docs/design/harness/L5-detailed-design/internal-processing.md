@@ -954,8 +954,10 @@ Node `CustodyClient`は署名済bundleから絶対pathのcompanionを選び、sh
 absolute deadlineで起動する。frameは4-byte big-endian length + UTF-8 JSON一件で、unknown/missing/duplicate field、
 unknown enum、oversize、partial frame、末尾byteを拒否する。stdoutはprotocol専用、diagnosticはbounded stderrへ分離する。
 request/responseは`protocol_version + request_id + expected_bundle_digest`を照合し、別requestの応答を合成しない。
-wire commandはlauncherを持たない`ProbeRequest`とsealed `AdmissionToken`必須の`ExecuteRequest`へ分離する。
-probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
+wire commandはlauncherを持たない`ProbeRequest`、sealed `AdmissionToken`必須で
+`create_custody | spawn_attached | resume`だけを所有する`ExecuteRequest`、および
+`AuthorityLease`必須で`observe | terminate_tree | prove_empty | shutdown`だけを所有する`RecoveryCustodyCommand`へ分離する。
+Recovery variantはlauncher、managed-root生成、resumeの型参照を持たない。probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
 `managed_root_created`を別identity/phaseで返す。空required capabilityやhandshake成功をexecute許可にしない。
 
 ### D.2 カストディ・ライフサイクル

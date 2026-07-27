@@ -361,7 +361,7 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | ID | boundary / fault injection | expected |
 |---|---|---|
 | `IT-RGK-PHYS-001` | valid requestを分割read/writeしresponseをcorrelate | 一件だけdecodeし同一request IDへ応答、余剰byte 0 |
-| `IT-RGK-PHYS-002` | oversize、partial、invalid UTF-8、duplicate/unknown field、trailing byte | `protocol_failure`、launcher call 0 |
+| `IT-RGK-PHYS-002` | oversize、partial、invalid UTF-8、duplicate/unknown field、trailing byte | decoder `WireFault`からNode Kernel境界でexactly once `protocol_failure`。validated request ID前のresponse 0、launcher/custody call 0、raw bytes/secret/path保存0 |
 | `IT-RGK-PHYS-003` | response ID/version/bundle digestを一要素ずつ変異 | Node clientが拒否しdirect spawn 0 |
 | `IT-RGK-PHYS-004` | 同一attempt/nonceのspawnをtimeout後再送 | processは最大1、既存custodyへreconcile |
 | `IT-RGK-PHYS-005` | Windows create→assign間でclient crash | suspended root resume 0、custodianがterminate/reap |
@@ -376,14 +376,14 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
 | `IT-RGK-PHYS-019` | bundle内key、未review signer、signature substitution | `BundleTrustPort`のbinding不一致でcontrol process 0 |
 | `IT-RGK-PHYS-020` | manifestのbundle revision/component digest/schema/targetを各変異 | 一要素でも不一致ならverified handle 0 |
-| `IT-RGK-PHYS-021` | floor未満の旧manifestを再activation | 正規署名でも拒否しcurrent bundle不変 |
-| `IT-RGK-PHYS-022` | floor以上の新manifestとしてrollback対象を再署名 | 通常のtrust/component/target検証を再通過した場合だけactivate候補 |
+| `IT-RGK-PHYS-021` | `F-1`、`F+同digest`、`F+別digest`のmanifestを再activation | 正規署名でも順にstale/replay/equivocationとして拒否し、current bundle/accepted fact/control launch不変 |
+| `IT-RGK-PHYS-022` | 現在floorより厳密に大きいsequenceの新manifestとしてrollback対象を再署名。同sequence以下も併走 | `>`かつ通常のtrust/component/target検証を再通過した場合だけactivate候補。同sequence以下はactivate 0 |
 | `IT-RGK-PHYS-023` | trust port missing/unknown/failure | PATH探索、runtime download、direct spawnへfallbackせず利用停止 |
 | `IT-RGK-PHYS-024` | activation port failureを各公開barrierで注入 | partial publish 0、旧verified bundle又は利用停止だけを観測 |
 | `IT-RGK-PHYS-025` | companion、protocol、D0-N generation receiptの一要素だけを旧値へ戻す | bundle identity不一致で拒否しcontrol process 0。rollbackはfloor超の新manifest再署名だけを許可 |
 | `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
 | `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
-| `IT-RGK-PHYS-016` | binaryへ空required、probe、token無しexecute、別attempt tokenを投入 | probe launcher 0、全不正executeでmanaged root 0、control process cleanup証拠あり |
+| `IT-RGK-PHYS-016` | binaryへ空required、probe、token無し/別attempt tokenのExecute各operation、旧`CustodyCommand(spawn_attached)`を投入。Recoveryへ生成/resume fieldを追加するschema mutationも攻撃 | probe launcher 0、全不正Execute/旧variantをdecode/dispatch双方で拒否しcustody/managed root 0。Recovery mutationはschema Red、valid leaseのcleanupはtoken期限後も可能 |
 | `IT-RGK-PHYS-017` | authority handoffのhandle/cgroup bind前後でcompanion/Nodeをcrash | commit前resume/exec 0、commit後はauthorityがdeadlineまでcustodyを維持 |
 | `IT-RGK-PHYS-018` | authority単独、supervisor/service manager単独、両者同時crashとold epoch/nonce replay | 単独crashは正規recovery。Linux dual crashはbroker外ownerが期限内kill→bounded recovery→reap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |
 
