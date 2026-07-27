@@ -960,7 +960,9 @@ wire commandはlauncherを持たない`ProbeRequest`、sealed `AdmissionToken`�
 `create_custody`が返すleaseは`spawn_attached | resume`でもtokenと同時に検証する。Recovery variantはlauncher、
 managed-root生成、resumeの型参照を持たず、`shutdown`はempty/reap proof後だけ許可する。tokenはversioned canonical payloadを
 `AdmissionTokenAuthenticatorPort`で認証する。leaseもcustody/executor identity、boot ID、effective monotonic deadline、
-lease nonceを`AuthorityLeaseAuthenticatorPort`で認証する。wall deadlineは一度だけmonotonicへ縮小変換する。
+lease nonce、execution/spec identity、termination/recovery policyを`AuthorityLeaseAuthenticatorPort`で認証する。
+authority再起動はexecutor認証済みproofとjournalを照合してepochをCAS更新し、同deadline/policyの新leaseだけを発行する。
+wall deadlineは一度だけmonotonicへ縮小変換する。
 probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
 `managed_root_created`を別identity/phaseで返す。空required capabilityやhandshake成功をexecute許可にしない。
 

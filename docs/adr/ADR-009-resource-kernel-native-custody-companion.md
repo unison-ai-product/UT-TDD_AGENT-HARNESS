@@ -50,7 +50,9 @@ launcher、managed-root生成、resumeの型参照を持たない。Node直spawn
 署名/MACし、companion側verifierがside effect前に真正性とbindingを検証する。具体的な鍵配布・rotationは後続revisionへ委譲するが、
 自己申告JSON、unknown key/version、偽造、別operation replayを受理できる実装はD0から禁止する。
 同じ原則を`AuthorityLeaseAuthenticatorPort`へ適用し、custody/executor identity、boot ID、effective monotonic deadline、
-lease nonceをcanonical payloadへ束縛する。3-fieldの自己申告leaseをauthority証拠として受理しない。
+lease nonce、execution/spec identity、termination/recovery policyをcanonical payloadへ束縛する。3-fieldの自己申告leaseを
+authority証拠として受理しない。authority再起動時はexecutor認証済みrecovery proofとdurable journalの一致からのみepochをCAS更新し、
+deadline/policyを変えない新leaseを発行する。recovery経路にworkload生成/resume能力を与えない。
 
 ### D3. companion bundleをrelease artifactとして配布する
 

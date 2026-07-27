@@ -60,18 +60,18 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:4cdb70537e560a21cabdedf1948bbf46
-  command_id: pr156-lease-closure-l4-rev7-20260727
-  admitted_at: 2026-07-27T03:00:00.000Z
-  source_digest: sha256:adf30ac0609bd47b680142d308c644157dc8031837b8080b634d139da3be1ae2
-  decision_digest: sha256:46a9a6eedc49f68a305ece45efdbc78eff8ba2299a2f3c82086e45a1d24441fb
-  receipt_digest: sha256:131e7f4b319495b72b898547e7395c0939e4bfb6b924b714d961f95fee0d7f1a
+  receipt_id: certificate:7d714e6a6cd27948a7a397c01b315d2c
+  command_id: pr156-recovery-closure-l4-rev8-20260727
+  admitted_at: 2026-07-27T04:00:00.000Z
+  source_digest: sha256:db2f28310e873488037f60996eeab23edc0a65c66c95ac5a2307c87167bf0b20
+  decision_digest: sha256:de11ba49951d6d4c385b4371a4ac42fac8b5956b020d381c0457417ed92db4fe
+  receipt_digest: sha256:bd16c506a6df13abc0c068721d16298c9489393673b35055d17071882511e5a3
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 7
-    content_digest: sha256:adf30ac0609bd47b680142d308c644157dc8031837b8080b634d139da3be1ae2
+    revision: 8
+    content_digest: sha256:db2f28310e873488037f60996eeab23edc0a65c66c95ac5a2307c87167bf0b20
   route:
     signal: redesign
     mode: redesign
@@ -82,19 +82,20 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 6
+    revision: 7
     digest: sha256:51f08c0ac791ff3b1db0eeb1e74c1e3fd15362b38a2abf28511b3b6306da0f08
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 7
+      target_revision: 8
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 7
+    target_revision: 8
     phase: forward_merge
-  escape_reason: Resource Kernelのlease真正性とdeadline clock domain契約を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのrecovery reissue・execution
+    trace・receipt全域性を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -174,13 +175,15 @@ canonical spec digest、policy/input revision、accepted/finished時刻、exit k
 managed workloadは別discriminantを持ち、native workload exitは`RootCreatedNotStarted|RootStarted`だけ必須、
 `RootNotCreated`は`not_applicable: managed_root_not_created`とする。outcome-discriminated unionとして次を持つ。
 
-- `RootNotCreated` terminal (`validation_failure|capability_failure|launch_failure`): phase/reason、不足capability。root PID/custodyは
-  `not_applicable: managed_root_not_created`であり、control process identity/cleanupは独立fieldに保存する。
+- `RootNotCreated` terminal (`protocol_failure|bundle_failure|validation_failure|capability_failure|launch_failure|custody_failure`):
+  phase/reason、不足capabilityと`custody_disposition: absent | prepared_then_empty`を持つ。`absent`ではroot PID/custodyを
+  `not_applicable: managed_root_not_created`とし、`prepared_then_empty`ではcustody identity、terminate/empty/reap/lease-release proofと
+  independent root-absent proofを必須にする。control process identity/cleanupは独立fieldに保存する。
 - `RootCreatedNotStarted` terminal (`launch_failure|custody_failure`): suspended root PID、create/attach error、
   termination/reap、custody identity（作成済み時）、independent process-absent proofを必須にし、`started_at`は存在させない。
 - `RootStarted` outcome: started/termination-requested/reaped/finishedのmonotonic timestamp、platform custody identity、root PID、
   descendant観測（PID再利用に依存しないOS handle/cgroup identityを優先）。
-- exit kind (`success | process_failure | deadline | cpu_budget | memory_budget | process_budget |
+- exit kind (`success | protocol_failure | bundle_failure | process_failure | deadline | cpu_budget | memory_budget | process_budget |
   output_budget | cancelled | validation_failure | capability_failure | launch_failure | custody_failure | orphan_detected`) とnative exit情報。
 - wall/CPU/peak-memory/outputの観測値、stdout/stderrまたはartifactのbounded digest参照。
 - managed root created/started outcomeはmanaged orphan count/reap結果を必須とする。
@@ -238,6 +241,8 @@ admission token（attempt、custody nonce、bundle/probe digest、required capab
 managed-root生成、resumeの参照を型として持たない。`create_custody`が返すleaseは`spawn_attached | resume`でもtokenと同時に必須とする。
 admission tokenはversioned canonical payloadをissuer/verifier portで認証し、operation/nonce replayをfail-closeする。
 wall deadlineはadmission時に一度だけmonotonic deadlineへ縮小変換し、clock jumpや再起動で延長しない。
+token/lease/recovery proofは`execution_id + canonical execution_spec_digest + attempt_id + custody_nonce`を共通bindingとし、
+別execution receiptへのnative fact誤帰属をfail-closeする。
 空のrequired capabilityやhandshake成功だけではexecution admissionにならない。
 
 ### 3.1 Windows

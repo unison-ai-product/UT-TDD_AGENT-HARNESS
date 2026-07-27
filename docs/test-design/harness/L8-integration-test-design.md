@@ -383,9 +383,9 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-025` | companion、protocol、D0-N generation receiptの一要素だけを旧値へ戻す | bundle identity不一致で拒否しcontrol process 0。rollbackはfloor超の新manifest再署名だけを許可 |
 | `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
 | `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
-| `IT-RGK-PHYS-016` | tokenのcanonical field/authenticator/issuer/operation/nonce、leaseのepoch/attempt/nonce/custody identity/executor/boot ID/issuer/authenticatorを各変異し、同nonce別payload、token/lease無しspawn/resume、旧CustodyCommand、各state shutdownを投入 | 不正をdecode/verify/dispatch各境界で拒否しcustody/managed root 0。token/lease replay 0、shutdownはempty/reap後だけ、valid同一retryだけreconcile |
+| `IT-RGK-PHYS-016` | token/leaseのexecution/spec/attempt/custody/executor/boot/deadline/policy/authenticatorを各変異し、同nonce別payload、token/lease無しspawn/resume、旧variant、各state shutdownを投入 | 不正をdecode/verify/dispatch各境界で拒否しcustody/managed root 0。別execution fact再利用0、shutdownはempty/reap後だけ |
 | `IT-RGK-PHYS-017` | authority handoffのexecutor arm、lease返却、handle/cgroup bind、commit前後でcompanion/Nodeをcrash | arm/lease/commit前resume/exec 0、commit後はexecutorがdeadlineまでcustodyを維持 |
-| `IT-RGK-PHYS-018` | authority API単独、recovery supervisor単独、両者同時crash、executor restart、host boot ID変更、issued/deadline/budget不一致、wall前進/後退、old epoch/nonce replay | process crashでは別failure domain executorが期限内kill→bounded recovery→reap/orphan 0。monotonic deadline延長0、executor restartは早いdeadlineを復元、host/clock不整合は再開禁止・期限切れreconcile。arm不能なら開始前拒否 |
+| `IT-RGK-PHYS-018` | authority API/recovery supervisor crash後、executor recovery proofとjournalのexecution/spec/custody/epoch/boot/deadline/policy/transitionを各変異し、valid proofをCAS競合。host boot/clock jumpも併走 | 変異はreissue 0。valid一件だけ同deadline/policyのepoch+1 lease、生成/resume 0。executorは期限内kill→bounded recovery→reap/orphan 0、boot/clock不整合は期限切れreconcile |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。
