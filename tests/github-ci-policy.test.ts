@@ -936,6 +936,23 @@ describe("github-ci-policy lint", () => {
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
     it.each([
+      ["defaults.run.shell", "defaults:\n  run:\n    shell: bash\n"],
+      ["env.BASH_ENV", "env:\n  BASH_ENV: attack\n"],
+      ["env.GITHUB_OUTPUT", "env:\n  GITHUB_OUTPUT: other\n"],
+      ["unknown root key", "x-runtime-context: attack\n"],
+    ])("U-CIPOL-020: rejects source workflow root context %s", (_label, injected) => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "name: harness-check\n",
+            `name: harness-check\n${injected}`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("malformed_workflow_shape");
+    });
+
+    it.each([
       ["missing producer", "id: classify", "id: removed"],
       ["wrong id", "id: classify", "id: classify-docs"],
       ["echo spoof", "bun src/cli.ts github classify-changes", 'echo "github classify-changes" #'],

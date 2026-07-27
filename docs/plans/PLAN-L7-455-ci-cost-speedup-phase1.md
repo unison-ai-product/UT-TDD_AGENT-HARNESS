@@ -216,6 +216,9 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   Linux=`name,id,run`、Windows=`name,id,shell,run`、doc doctor=`name,if,run`のexact key set
   とし、working-directory/timeout/unknown key、job defaults/env/container/strategy、
   duplicate producer idを構造driftとしてfail-closeする。
+- source runtime workflow rootも現実体の`name,on,permissions,concurrency,jobs`だけにsealし、
+  top-level `defaults.run.shell` / `env.BASH_ENV` / `env.GITHUB_OUTPUT`や未知root keyによる
+  runtime step hijackをfail-closeする。
 - doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。

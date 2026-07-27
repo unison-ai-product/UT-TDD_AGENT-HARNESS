@@ -711,6 +711,19 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
       continue;
     }
     const workflow = workflowRecord as WorkflowYaml;
+    if (
+      doc.role === "runtime" &&
+      doc.profile === "source" &&
+      !hasExactKeys(workflowRecord, ["name", "on", "permissions", "concurrency", "jobs"])
+    ) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "malformed_workflow_shape",
+        detail:
+          "source runtime workflow root must contain only name, on, permissions, concurrency, and jobs",
+      });
+    }
     if (workflowRecord.on !== undefined && !recordValue(workflowRecord.on)) {
       pushViolation({
         violations,
