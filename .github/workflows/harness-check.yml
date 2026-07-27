@@ -108,7 +108,10 @@ jobs:
         run: |
           bun src/cli.ts plan lint
           bun run test:doc-lane
-          bun src/cli.ts doctor --profile source-doc-lane
+
+      - name: doc lane source doctor
+        if: ${{ steps.classify.outputs.lane == 'doc' }}
+        run: bun src/cli.ts doctor --profile source-doc-lane
 
       - name: lint (biome)
         run: bun run lint

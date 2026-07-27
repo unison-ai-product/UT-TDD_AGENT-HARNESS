@@ -208,6 +208,10 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   のcanonical全文に完全一致させる。追加行/comment/`;`/`&&`/`||`/別output/引数順序変更は
   全てfail-closeする。shell契約はplatform別に固定し、Linux legは未指定のみ、
   Windows legは`bash`明示のみを許可する（Linuxのcustom shell/`bash`明示もfail-close）。
+- producerはさらに`if`/step env未指定、`continue-on-error`未指定またはfalseを必須とし、
+  job-levelの`GITHUB_OUTPUT`上書きも拒否する。source-doc doctorは各OSに1件以上、
+  canonical doc条件・canonical command全文・shell/env未指定・fail-close実行だけを許可し、
+  substring偽装、control operator、別profile、追加flagを拒否する。
 - doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。

@@ -91,9 +91,9 @@ jobs:
       - if: ${LANE_FULL_IF}
         run: bun run test
       - if: ${LANE_DOC_IF}
-        run: |
-          bun run test:doc-lane
-          bun src/cli.ts doctor --profile source-doc-lane
+        run: bun run test:doc-lane
+      - if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
       - run: bun run lint
       - if: ${LANE_FULL_IF}
         run: bun src/cli.ts audit quality --include-tests
@@ -946,6 +946,44 @@ describe("github-ci-policy lint", () => {
     });
 
     it.each([
+      [
+        "if false",
+        "      - id: classify\n        run: |",
+        "      - id: classify\n        if: false\n        run: |",
+      ],
+      [
+        "lane condition",
+        "      - id: classify\n        run: |",
+        `      - id: classify\n        if: ${LANE_FULL_IF}\n        run: |`,
+      ],
+      [
+        "step env",
+        "      - id: classify\n        run: |",
+        "      - id: classify\n        env:\n          GITHUB_OUTPUT: other\n        run: |",
+      ],
+      [
+        "continue-on-error",
+        "      - id: classify\n        run: |",
+        "      - id: classify\n        continue-on-error: true\n        run: |",
+      ],
+    ])("U-CIPOL-020af: rejects producer context mutation: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020ag: rejects job-level GITHUB_OUTPUT override", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "  harness-check-linux:\n    runs-on: ubuntu-latest",
+            "  harness-check-linux:\n    env:\n      GITHUB_OUTPUT: other\n    runs-on: ubuntu-latest",
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
       "--event-name",
       "--head-sha",
       "--base-sha",
@@ -1011,11 +1049,62 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(
         docs(
           SOURCE_WORKFLOW_WITH_LANE.replace(
-            "          bun src/cli.ts doctor --profile source-doc-lane\n",
+            "        run: bun src/cli.ts doctor --profile source-doc-lane\n",
             "",
           ),
         ),
       );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
+    });
+
+    it.each([
+      [
+        "echo",
+        "bun src/cli.ts doctor --profile source-doc-lane",
+        'echo "doctor --profile source-doc-lane"',
+      ],
+      [
+        "comment",
+        "bun src/cli.ts doctor --profile source-doc-lane",
+        "bun src/cli.ts doctor --profile source-doc-lane # ok",
+      ],
+      [
+        "control operator",
+        "bun src/cli.ts doctor --profile source-doc-lane",
+        "bun src/cli.ts doctor --profile source-doc-lane && true",
+      ],
+      [
+        "other profile",
+        "bun src/cli.ts doctor --profile source-doc-lane",
+        "bun src/cli.ts doctor --profile source-full",
+      ],
+      [
+        "extra flag",
+        "bun src/cli.ts doctor --profile source-doc-lane",
+        "bun src/cli.ts doctor --profile source-doc-lane --json",
+      ],
+      [
+        "env",
+        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - if: ${LANE_DOC_IF}\n        env:\n          X: y\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+      ],
+      [
+        "shell",
+        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - if: ${LANE_DOC_IF}\n        shell: bash\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+      ],
+      [
+        "wrong if",
+        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        "      - if: false\n        run: bun src/cli.ts doctor --profile source-doc-lane",
+      ],
+      [
+        "continue-on-error",
+        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - if: ${LANE_DOC_IF}\n        continue-on-error: true\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+      ],
+    ])("U-CIPOL-020ba: rejects doc doctor mutation: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
       expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
     });
     it("U-CIPOL-021: accepts a real-shaped workflow with canonical full/doc lane step conditions", () => {

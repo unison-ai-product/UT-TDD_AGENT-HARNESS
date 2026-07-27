@@ -52,6 +52,7 @@ export interface GithubCiPolicyResult {
 
 interface WorkflowStep {
   "continue-on-error"?: unknown;
+  env?: unknown;
   id?: string;
   name?: string;
   shell?: string;
@@ -62,6 +63,7 @@ interface WorkflowStep {
 
 interface WorkflowJob {
   "continue-on-error"?: unknown;
+  env?: unknown;
   needs?: unknown;
   if?: unknown;
   "runs-on"?: unknown;
@@ -211,6 +213,7 @@ function workflowStep(value: unknown): value is WorkflowStep {
   ) {
     return false;
   }
+  if (step.env !== undefined && !recordValue(step.env)) return false;
   return (typeof step.uses === "string") !== (typeof step.run === "string");
 }
 
@@ -284,6 +287,27 @@ function hasCanonicalLaneProducer(run: string | undefined): boolean {
   );
 }
 
+function normalizedRun(run: string | undefined): string {
+  return (run ?? "")
+    .replace(/\\\r?\n\s*/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function isFailCloseStep(step: WorkflowStep): boolean {
+  return step["continue-on-error"] === undefined || step["continue-on-error"] === false;
+}
+
+function hasCanonicalDocLaneDoctor(step: WorkflowStep): boolean {
+  return (
+    step.if === LANE_DOC_ONLY_IF &&
+    normalizedRun(step.run) === "bun src/cli.ts doctor --profile source-doc-lane" &&
+    step.shell === undefined &&
+    step.env === undefined &&
+    isFailCloseStep(step)
+  );
+}
+
 function checkLaneSkipSafety(input: {
   legs: readonly (WorkflowJob | null)[];
   doc: GithubWorkflowDoc;
@@ -307,6 +331,10 @@ function checkLaneSkipSafety(input: {
     const producer = steps.find((step) => step.id === "classify");
     if (
       !hasCanonicalLaneProducer(producer?.run) ||
+      producer?.if !== undefined ||
+      producer?.env !== undefined ||
+      !producer ||
+      !isFailCloseStep(producer) ||
       (name === "harness-check-linux" && producer?.shell !== undefined) ||
       (name === "harness-check-windows" && producer?.shell !== "bash")
     ) {
@@ -317,17 +345,33 @@ function checkLaneSkipSafety(input: {
         detail: `jobs.${name} requires the canonical classify producer${name === "harness-check-windows" ? " with shell=bash" : " with no explicit shell"}`,
       });
     }
+    if (!steps.some(hasCanonicalDocLaneDoctor)) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_doc_lane_doctor",
+        detail: `jobs.${name} doc lane requires doctor --profile source-doc-lane`,
+      });
+    }
     if (
-      !steps.some(
-        (step) =>
-          step.if === LANE_DOC_ONLY_IF && step.run?.includes("doctor --profile source-doc-lane"),
+      steps.some(
+        (step) => step.run?.includes("source-doc-lane") && !hasCanonicalDocLaneDoctor(step),
       )
     ) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
         reason: "missing_doc_lane_doctor",
-        detail: `jobs.${name} doc lane requires doctor --profile source-doc-lane`,
+        detail: `jobs.${name} contains a noncanonical source-doc-lane invocation`,
+      });
+    }
+    const jobEnv = recordValue(leg.env);
+    if (jobEnv && Object.hasOwn(jobEnv, "GITHUB_OUTPUT")) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_lane_producer",
+        detail: `jobs.${name} must not override GITHUB_OUTPUT at job level`,
       });
     }
     for (const step of steps) {
