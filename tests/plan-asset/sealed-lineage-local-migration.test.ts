@@ -24,9 +24,9 @@ describe("sealed lineage local migration", () => {
     expect(count(db, "plan_lineage_migration_certificates")).toBe(1);
     expect(count(db, "genesis_issue_custody")).toBe(1);
     expect(count(db, "plan_admission_receipts")).toBe(1);
-    expect(
-      db.prepare("SELECT asset_id FROM plan_aliases WHERE alias = ?").get(PLAN_ID),
-    ).toEqual({ asset_id: "plan:recovery-16-successor" });
+    expect(db.prepare("SELECT asset_id FROM plan_aliases WHERE alias = ?").get(PLAN_ID)).toEqual({
+      asset_id: "plan:recovery-16-successor",
+    });
   });
 
   it("U-PA-SEAL-002: same payload replayは冪等、history改変はconflictとしてwrite 0", async () => {
@@ -42,21 +42,25 @@ describe("sealed lineage local migration", () => {
     expect(counts(db)).toEqual(baseline);
   });
 
-  it.each(
-    ["asset", "revision", "alias", "admission", "custody", "seal", "certificate", "receipt"] as const,
-  )(
-    "U-PA-SEAL-003: %s faultで全writeをrollbackする",
-    async (boundary) => {
-      const { db, Transaction } = await baseFixture();
-      const transaction = new Transaction(db, {
-        after(actual) {
-          if (actual === boundary) throw new Error(`fault:${boundary}`);
-        },
-      });
-      expect(() => transaction.migrate(input())).toThrow(`fault:${boundary}`);
-      expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
-    },
-  );
+  it.each([
+    "asset",
+    "revision",
+    "alias",
+    "admission",
+    "custody",
+    "seal",
+    "certificate",
+    "receipt",
+  ] as const)("U-PA-SEAL-003: %s faultで全writeをrollbackする", async (boundary) => {
+    const { db, Transaction } = await baseFixture();
+    const transaction = new Transaction(db, {
+      after(actual) {
+        if (actual === boundary) throw new Error(`fault:${boundary}`);
+      },
+    });
+    expect(() => transaction.migrate(input())).toThrow(`fault:${boundary}`);
+    expect(counts(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
 });
 
 const PLAN_ID = "PLAN-RECOVERY-16-plan-revision-authoring";

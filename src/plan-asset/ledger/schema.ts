@@ -18,7 +18,7 @@ import {
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
 
-export const LEDGER_SCHEMA_VERSION = 6;
+export const LEDGER_SCHEMA_VERSION = 7;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -536,7 +536,94 @@ const v6Tables: readonly TableDef[] = [
   },
 ];
 
-const tables: readonly TableDef[] = [...v3Tables, ...v4Tables, ...v5Tables, ...v6Tables];
+const v7Tables: readonly TableDef[] = [
+  {
+    name: "genesis_issue_custody",
+    columns: [
+      pk("command_id"),
+      requiredCol("issue_number", "INTEGER"),
+      requiredCol("episode_id"),
+      requiredCol("drive_model"),
+      requiredCol("issue_preimage_digest"),
+      requiredCol("plan_asset_id"),
+      requiredCol("plan_revision", "INTEGER"),
+      requiredCol("custody_state"),
+      requiredCol("recorded_at"),
+      requiredCol("custody_digest"),
+    ],
+    checks: [enumCheck("drive_model", ["recovery"]), enumCheck("custody_state", ["committed"])],
+    foreignKeys: [
+      foreignKey(["plan_asset_id", "plan_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "sealed_plan_lineages",
+    columns: [
+      pk("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("plan_id"),
+      requiredCol("historical_asset_id"),
+      requiredCol("historical_terminal_revision", "INTEGER"),
+      requiredCol("historical_tail_digest"),
+      requiredCol("historical_projection_path"),
+      requiredCol("historical_projection_blob_oid"),
+      requiredCol("historical_projection_content_digest"),
+      requiredCol("disposition"),
+      requiredCol("successor_asset_id"),
+      requiredCol("successor_revision", "INTEGER"),
+      requiredCol("source_authority_digest"),
+      requiredCol("reviewed_implementation_authority_digest"),
+      requiredCol("trusted_status"),
+      requiredCol("certificate_digest"),
+      requiredCol("occurred_at"),
+      requiredCol("lineage_digest"),
+    ],
+    checks: [
+      enumCheck("disposition", ["historical_sealed_unrehydratable"]),
+      enumCheck("trusted_status", ["draft"]),
+    ],
+    foreignKeys: [
+      foreignKey(["successor_asset_id", "successor_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "plan_lineage_migration_certificates",
+    columns: [
+      pk("certificate_digest"),
+      requiredCol("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("certificate_json"),
+      requiredCol("source_authority_digest"),
+      requiredCol("reviewed_implementation_authority_digest"),
+      requiredCol("recorded_at"),
+      requiredCol("record_digest"),
+    ],
+    unique: [["command_id"]],
+    foreignKeys: [
+      foreignKey(["command_id"], {
+        table: "sealed_plan_lineages",
+        columns: ["command_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+];
+
+const tables: readonly TableDef[] = [
+  ...v3Tables,
+  ...v4Tables,
+  ...v5Tables,
+  ...v6Tables,
+  ...v7Tables,
+];
 
 const v3Indexes: readonly IndexDef[] = [
   { name: "idx_plan_assets_created_at", table: "plan_assets", columns: ["created_at"] },
@@ -641,7 +728,26 @@ const v6Indexes: readonly IndexDef[] = [
   },
 ];
 
-const indexes: readonly IndexDef[] = [...v3Indexes, ...v4Indexes, ...v5Indexes, ...v6Indexes];
+const v7Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_sealed_lineages_historical",
+    table: "sealed_plan_lineages",
+    columns: ["historical_asset_id", "historical_terminal_revision"],
+  },
+  {
+    name: "idx_sealed_lineages_successor",
+    table: "sealed_plan_lineages",
+    columns: ["successor_asset_id", "successor_revision"],
+  },
+];
+
+const indexes: readonly IndexDef[] = [
+  ...v3Indexes,
+  ...v4Indexes,
+  ...v5Indexes,
+  ...v6Indexes,
+  ...v7Indexes,
+];
 
 const v3HistoryTables = [
   "plan_assets",
@@ -658,6 +764,11 @@ const v4HistoryTables = [
 ] as const;
 const v5HistoryTables = ["legacy_plan_bootstrap_provenance"] as const;
 const v6HistoryTables = ["plan_draft_artifact_operation_events"] as const;
+const v7HistoryTables = [
+  "genesis_issue_custody",
+  "sealed_plan_lineages",
+  "plan_lineage_migration_certificates",
+] as const;
 
 function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerDef[] {
   return historyTables.flatMap((table) =>
@@ -675,11 +786,13 @@ const v3Triggers = appendOnlyTriggers(v3HistoryTables);
 const v4Triggers = appendOnlyTriggers(v4HistoryTables);
 const v5Triggers = appendOnlyTriggers(v5HistoryTables);
 const v6Triggers = appendOnlyTriggers(v6HistoryTables);
+const v7Triggers = appendOnlyTriggers(v7HistoryTables);
 const triggers: readonly TriggerDef[] = [
   ...v3Triggers,
   ...v4Triggers,
   ...v5Triggers,
   ...v6Triggers,
+  ...v7Triggers,
 ];
 
 export function ledgerSchemaDdl(): readonly string[] {
@@ -701,6 +814,7 @@ export function migratePlanLedger(
     version !== 3 &&
     version !== 4 &&
     version !== 5 &&
+    version !== 6 &&
     version !== LEDGER_SCHEMA_VERSION
   )
     return { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -781,6 +895,22 @@ export function migratePlanLedger(
       throw error;
     }
   }
+  if (db.userVersion() === 6) {
+    if (!v6LedgerValid(db)) return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      if (!v6LedgerValid(db)) {
+        db.exec("ROLLBACK");
+        return { ok: false, ruleId: "plan-ledger-unavailable" };
+      }
+      installV7(db);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v6-v7-verification-failed");
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  }
   return schemaMatches(db) && ledgerRowsValid(db)
     ? { ok: true, version: LEDGER_SCHEMA_VERSION }
     : { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -802,6 +932,16 @@ function v5LedgerValid(db: HarnessDb): boolean {
       tables: [...v3Tables, ...v4Tables, ...v5Tables],
       indexes: [...v3Indexes, ...v4Indexes, ...v5Indexes],
       triggers: [...v3Triggers, ...v4Triggers, ...v5Triggers],
+    }) && ledgerRowsValid(db)
+  );
+}
+
+function v6LedgerValid(db: HarnessDb): boolean {
+  return (
+    schemaMatchesVersion(db, {
+      tables: [...v3Tables, ...v4Tables, ...v5Tables, ...v6Tables],
+      indexes: [...v3Indexes, ...v4Indexes, ...v5Indexes, ...v6Indexes],
+      triggers: [...v3Triggers, ...v4Triggers, ...v5Triggers, ...v6Triggers],
     }) && ledgerRowsValid(db)
   );
 }
@@ -863,6 +1003,14 @@ function installV6(db: HarnessDb, sourceSchemaVersion: 2 | 3 | 4 | 5): void {
   backfillLegacyUnknownDraftCleanup(db, sourceSchemaVersion);
   for (const index of v6Indexes) db.exec(createIndexSql(index));
   for (const trigger of v6Triggers) db.exec(createTriggerSql(trigger));
+  db.setUserVersion(6);
+  installV7(db);
+}
+
+function installV7(db: HarnessDb): void {
+  for (const table of v7Tables) db.exec(createTableSql(table));
+  for (const index of v7Indexes) db.exec(createIndexSql(index));
+  for (const trigger of v7Triggers) db.exec(createTriggerSql(trigger));
   db.setUserVersion(LEDGER_SCHEMA_VERSION);
 }
 
