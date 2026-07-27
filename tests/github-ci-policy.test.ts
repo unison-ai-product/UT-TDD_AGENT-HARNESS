@@ -36,7 +36,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - id: classify
-        shell: bash
         run: |
           bun src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
@@ -77,7 +76,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - id: classify
-        shell: bash
         run: |
           bun src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
@@ -932,7 +930,7 @@ describe("github-ci-policy lint", () => {
     it.each([
       [
         "missing producer",
-        `      - id: classify\n        shell: bash\n        run: |\n          bun src/cli.ts github classify-changes \\\n            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}" \\\n            --base-sha "\${{ github.event.pull_request.base.sha }}" \\\n            --before-sha "\${{ github.event.before }}" \\\n            --github-output "$GITHUB_OUTPUT"\n`,
+        `      - id: classify\n        run: |\n          bun src/cli.ts github classify-changes \\\n            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}" \\\n            --base-sha "\${{ github.event.pull_request.base.sha }}" \\\n            --before-sha "\${{ github.event.before }}" \\\n            --github-output "$GITHUB_OUTPUT"\n`,
         "",
       ],
       ["wrong id", "id: classify", "id: classify-docs"],
@@ -957,40 +955,55 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(
         docs(SOURCE_WORKFLOW_WITH_LANE.replace(flag, "--removed-flag")),
       );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
 
-      it.each([
-        ["extra command", '\n          echo "extra"'],
-        ["comment", "\n          # classify"],
-        ["semicolon", "; true"],
-        ["and", " && true"],
-        ["or", " || true"],
-        ["different output", ' "$OTHER_OUTPUT"'],
-      ])("U-CIPOL-020ab: rejects canonical producer mutation: %s", (_label, suffix) => {
-        const marker = '            --github-output "$GITHUB_OUTPUT"';
-        const result = analyzeGithubCiPolicy(
-          docs(SOURCE_WORKFLOW_WITH_LANE.replace(marker, `${marker}${suffix}`)),
-        );
-        expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
-      });
+    it.each([
+      ["extra command", '\n          echo "extra"'],
+      ["comment", "\n          # classify"],
+      ["semicolon", "; true"],
+      ["and", " && true"],
+      ["or", " || true"],
+      ["different output", ' "$OTHER_OUTPUT"'],
+    ])("U-CIPOL-020ab: rejects canonical producer mutation: %s", (_label, suffix) => {
+      const marker = '            --github-output "$GITHUB_OUTPUT"';
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replace(marker, `${marker}${suffix}`)),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
 
-      it("U-CIPOL-020ac: rejects argument reordering", () => {
-        const result = analyzeGithubCiPolicy(
-          docs(
-            SOURCE_WORKFLOW_WITH_LANE.replace(
-              `            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}"`,
-              `            --head-sha "\${{ github.sha }}" \\\n            --event-name "\${{ github.event_name }}"`,
-            ),
+    it("U-CIPOL-020ac: rejects argument reordering", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            `            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}"`,
+            `            --head-sha "\${{ github.sha }}" \\\n            --event-name "\${{ github.event_name }}"`,
           ),
-        );
-        expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
-      });
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
 
-      it("U-CIPOL-020ad: rejects a Windows producer without shell=bash", () => {
-        const result = analyzeGithubCiPolicy(
-          docs(SOURCE_WORKFLOW_WITH_LANE.replaceAll("        shell: bash\n", "")),
-        );
-        expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
-      });
+    it("U-CIPOL-020ad: rejects a Windows producer without shell=bash", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replaceAll("        shell: bash\n", "")),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      "bash",
+      "echo {0}",
+    ])("U-CIPOL-020ae: rejects Linux producer with explicit shell=%s", (shell) => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "      - id: classify\n        run: |",
+            `      - id: classify\n        shell: ${shell}\n        run: |`,
+          ),
+        ),
+      );
       expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
     });
 

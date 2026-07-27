@@ -307,13 +307,14 @@ function checkLaneSkipSafety(input: {
     const producer = steps.find((step) => step.id === "classify");
     if (
       !hasCanonicalLaneProducer(producer?.run) ||
+      (name === "harness-check-linux" && producer?.shell !== undefined) ||
       (name === "harness-check-windows" && producer?.shell !== "bash")
     ) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
         reason: "missing_lane_producer",
-        detail: `jobs.${name} requires the canonical classify producer${name === "harness-check-windows" ? " with shell=bash" : ""}`,
+        detail: `jobs.${name} requires the canonical classify producer${name === "harness-check-windows" ? " with shell=bash" : " with no explicit shell"}`,
       });
     }
     if (
