@@ -4,7 +4,7 @@ title: "PLAN-L7-459: 2026-07-22 ドキュメント整合性監査 errata 一括�
 kind: refactor
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 route_signal: structural
 route_mode: refactor
 created: 2026-07-22
@@ -24,7 +24,34 @@ dependencies:
   parent: null
   requires:
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-07-27T12:03:27+09:00"
+    tests_green_at: "2026-07-27T12:01:00+09:00"
+    verdict: pass
+    worker_model: claude-opus-4-8
+    reviewer_model: gpt-5.6-sol
+    scope: "PR #133 exact HEAD 09230964 の claim-blind / spec-blind 再review。前回FLAG 4系統 (L2 self-pair残存、FR 47/51不整合、route/role/lifecycle、artifact ownership重複) の解消を独立確認。governance/schedule lint と diff check を自走し PASS。"
+    green_commands:
+      - kind: lint
+        command: "bun run src\\cli.ts plan lint --gate governance"
+        runner: bun
+        scope: gate
+        exit_code: 0
+        completed_at: "2026-07-27T12:01:00+09:00"
+        evidence_path: .ut-tdd/audit/PR-133-053ed50a-governance-lint.log
+        output_digest: "sha256:ecad94794ba36a089edd115ab44321e8f41a39c0f14b59f608dc2144bc28840e"
+        anchor_commit: 092309645ed92a351d71594a82946ad70e1938a5
+      - kind: typecheck
+        command: "bun run typecheck && bun run lint"
+        runner: bun
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-07-27T12:01:00+09:00"
+        evidence_path: .ut-tdd/audit/PR-133-053ed50a-quality.log
+        output_digest: "sha256:0d1934d22131694a72cfd64a5b05855180b226961c0a1167490748c1fa11f7a9"
+        anchor_commit: 092309645ed92a351d71594a82946ad70e1938a5
 ---
 
 # PLAN-L7-459: 2026-07-22 ドキュメント整合性監査 errata 一括是正
@@ -51,9 +78,9 @@ silent overwrite せず、該当箇所に correction note (本 PLAN ID 引用) �
 
 ## 是正項目 (DoD)
 
-- [ ] FLAG 再現で検出した L2 self-pair 残存、FR-L1 件数、route/role、artifact ownership を是正する。
-- [ ] 修正後 exact HEAD で機械 gate を実行し、出力を真正な evidence file と digest で記録する。
-- [ ] 非 author runtime の claim-blind / spec-blind 再レビューで FLAG が解消される。
+- [x] FLAG 再現で検出した L2 self-pair 残存、FR-L1 件数、route/role、artifact ownership を是正する。
+- [x] 修正後 exact HEAD で機械 gate を実行し、出力を真正な evidence file と digest で記録する。
+- [x] 非 author runtime の claim-blind / spec-blind 再レビューで FLAG が解消される。
 
 ### High
 
