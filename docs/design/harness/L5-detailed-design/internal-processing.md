@@ -1,7 +1,7 @@
 ---
 layer: L5
 sub_doc: internal-processing
-status: confirmed
+status: draft
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -944,7 +944,7 @@ migrationはbackup完了後の`BEGIN IMMEDIATE`内でadditive DDL+全chain検証
 ## 付録 D: Resource Kernelワイヤ・カストディ内部処理 (PLAN-L5-25)
 
 本節は`PLAN-L4-32`をL5へ降下し、`L8-integration-test-design.md`の
-`IT-RGK-PHYS-001..039`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
+`IT-RGK-PHYS-001..042`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
 Rust companionはstrict wireとprivileged OS custody factだけを所有する。両者に同じpolicy reducerや
 journalを置かない。新規Bun runtime/API/test pathは永久禁止する。
 
@@ -956,10 +956,11 @@ unknown enum、oversize、partial frame、末尾byteを拒否する。stdoutはp
 request/responseは`protocol_version + request_id + expected_bundle_digest`を照合し、別requestの応答を合成しない。
 wire commandはlauncherを持たない`ProbeRequest`、sealed stage token必須で
 `create_custody | spawn_attached | resume`だけを所有する`ExecuteRequest`、
-`recover_authority | observe | terminate_tree | prove_empty | release_custody`だけを所有する`RecoveryCustodyCommand`、
+native recovery factだけを返す`RecoveryObservationCommand(observe_recovery_fact | prove_boot_fence)`、
+`observe | terminate_tree | prove_empty | release_custody`だけを所有する`RecoveryCustodyCommand`、
 control processだけを終了する`ControlCommand.shutdown_companion`へ分離する。
-`recover_authority`はsame-boot executor proof又はcross-boot fence proofを必須とする。
 `observe/prove_empty/release_custody`は両cleanup lease、`terminate_tree`はsame-boot cleanup leaseだけを許可する。
+TypeScript内部`recoverAuthority`だけがsame/cross-boot observationをjournal/current epochと照合してCAS/lease/traceをcommitする。
 `create_custody`が返すexecution leaseは`spawn_attached | resume`でもstage tokenと同時に検証する。
 Recovery variantはlauncher、managed-root生成、attach、resumeの型参照を持たず、`release_custody`は
 empty/reap proof後だけ許可する。tokenはcreate/spawn/resume別のclosed stage unionとし、
@@ -967,7 +968,8 @@ admission chain、operation、直前durable fact digestを束縛する。各stag
 tokenはversioned canonical payloadを
 `AdmissionTokenAuthenticatorPort`で認証する。leaseもcustody/executor identity、boot ID、effective monotonic deadline、
 lease nonce、execution/spec identity、termination/recovery policyを`AuthorityLeaseAuthenticatorPort`で認証する。
-token/lease/recovery proofへbundle digestも束縛する。authority再起動はexecutor認証済みproofとjournalを照合してepochをCAS更新し、
+token/lease/recovery observationへbundle digestも束縛する。authority再起動はRust/executor認証済みnative observationを
+TypeScriptがjournal/current epochと照合してepochをCAS更新し、
 同bundle/deadline/policyの新leaseだけを発行する。
 wall deadlineは一度だけmonotonicへ縮小変換する。
 probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
@@ -981,8 +983,10 @@ handoff失敗、pre-start deadline/cancelを必ずempty/reap/releaseへ収束さ
 authority modeは`live → cleanup_only → revoked`、boot変更時は`live | cleanup_only → boot_fenced → revoked`で閉じ、
 deadline/cancel/abort/正常root exit/明示terminate intentのCASと同じtransactionで新nonce/authenticatorのcleanup leaseを発行し、
 execution capabilityを除去した後にliveへ戻さない。cross-boot fenceは旧boot workloadの実行不能だけを証明し、
-boot-fenced cleanup lease発行後にempty/reapを証明する。`empty_proven → released`はplatform release、release fact commit、
-deadline executor disarm、authority revoke+released atomic commitを順に行う再開可能transactionとする。
+boot-fenced cleanup lease発行後にempty/reapを証明する。`empty_proven → released`はdeterministic `release_id`を先にcommitし、
+Rust `ensureAbsent(release_id)`で同一custody identityのnative absenceへ冪等収束させる。
+`CustodyAbsentFact`は削除因果ではなく終状態だけを証明し、存在→不在effect最大1、invocation再試行可、Rust durable marker/DB 0とする。
+absence fact commit、deadline executor disarm、authority revoke+released atomic commitを順に行う再開可能transactionとする。
 Windowsはsuspended create後にJob assignが成功するまでresumeしない。Linuxはuser code開始時点からtarget cgroupに属し、
 事後attachをhard custodyとして受理しない。root exitはterminalではなく、Job emptyまたは`populated=0`とreap証拠が揃って
 初めて`empty_proven`となる。client/launcher crash後もcustodian/brokerがdeadlineとtree custodyを保持する。
@@ -994,11 +998,12 @@ ownerを強制不能なら開始前拒否し、欠測findingや`custody_failure`
 
 ### D.3 ポート/障害境界
 
-Rust portは`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/releaseCustody/
-proveBootFence/shutdownCompanion`を提供し、OS factだけを返す。effective deadlineは生成/attach/resumeだけを閉じ、
-cleanup authorityは失効させない。recovery deadline超過はoverdue/escalationと新規admission遮断を発火するが、
-terminate/prove/releaseを拒否しない。host boot変更時は旧monotonic値を比較せず、元のwall recovery deadlineと
-新bootのwall/monotonic同時観測から非延長cleanup上限を導出し、boot-fenced cleanup leaseへCAS移管する。
+Rust portは`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/ensureAbsent/
+proveBootFence/shutdownCompanion`を提供し、strict schema/authenticator/bindingを検証してOS/native observation factだけを返す。
+供給済みeffective deadlineを生成/attach/resumeへ強制するが、deadline導出、authority mode、CAS、lease発行、journalを所有しない。
+TypeScript `CustodyAuthorityPort`が元のwall recovery deadlineと新bootのwall/monotonic同時観測から非延長cleanup上限を導出し、
+Rustのboot fence factとjournal/current epochをsemantic照合してboot-fenced cleanup leaseへCAS移管する。
+recovery deadline超過のoverdue/escalationと新規admission遮断もTypeScriptが記録し、cleanup authorityは失効させない。
 stage token消費とpending-dispatch recordを同一transactionで閉じる。request/token/idempotency/request digestを
 pending→indeterminate→reconciled→resultへ継承し、全digest一致時だけnative fact reconcile又は同じresultへ進む。
 新request ID/別payload/record欠測はreplay拒否する。

@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L6-92-resource-kernel-function-contracts
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:dd9766f1a9f046a61b0b51cc0a16597d
-  command_id: pr156-closed-authority-l6-rev13-20260727
-  admitted_at: 2026-07-27T03:30:01.000Z
-  source_digest: sha256:73ceb48e99b1518fac5bcdfeb0c2ea7fade5a90e9c74492fa0ab19de5afc8337
-  decision_digest: sha256:72992aea09b8bf715e89b4de66abefccd2434652bff41037e12eb15ff4b603a9
-  receipt_digest: sha256:1ff94db84406d3146ccc5af29921964fcfff1637b4a181829d51871023b687c7
+  receipt_id: certificate:f9b94799a6a3551919e1a7749f28f5be
+  command_id: pr156-owner-boundary-l6-rev14-20260727
+  admitted_at: 2026-07-27T03:59:47.388Z
+  source_digest: sha256:e29238b2166536d2a9cda891bcc292470e2ee9c2c04fdb5198e7964749cd73fb
+  decision_digest: sha256:9d892aeaa25d27f2c7d85108ad8739977de223932b47fb1d3d301e9feac16e6e
+  receipt_digest: sha256:3a0c0be2f158e3b3973d72e851b20ed7a06b380e3e7956f40f92de3992658b13
   binding:
     path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
     asset_id: plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a
-    revision: 13
-    content_digest: sha256:73ceb48e99b1518fac5bcdfeb0c2ea7fade5a90e9c74492fa0ab19de5afc8337
+    revision: 14
+    content_digest: sha256:e29238b2166536d2a9cda891bcc292470e2ee9c2c04fdb5198e7964749cd73fb
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    revision: 12
+    revision: 13
     digest: sha256:1532c5204c32fb65c44057fee0f065d02155c8faf22e16e32a350226f8cca01f
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 13
+      target_revision: 14
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 13
+    target_revision: 14
     phase: forward_merge
-  escape_reason: Resource Kernelのauthority/token/recovery/release契約を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのownership/recovery/fault/release契約を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L6-92-resource-kernel-function-contracts
 ---
@@ -93,12 +93,13 @@ capability、custody lifecycle、platform port、bundle verificationの詳細契
 本PLANへ同じfunction表・状態遷移・field schemaを複製しない。
 
 TypeScript/Nodeはpolicy、journal、admission、receiptを所有し、Rustはstrict wireとOS custody factだけを所有する。
-DB/CAS、snapshot性能、local CI schedulerはIssue #152のlater waveであり、D0-RのL6/L7 gateに含めない。
+Issue #152へdeferするのはincremental DB、projection snapshot CAS、性能収束、local CI schedulerだけである。
+resource authorityのepoch/mode CASとrelease transactionは本D0-Rのactive safety contractであり、L6/L7 gateから除外しない。
 
 ## 2. L7 pairと受入条件
 
 L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`U-RGK-LIFE-*`、
-`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`を用い、L8は`IT-RGK-PHYS-001..039`を用いる。
+`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`を用い、L8は`IT-RGK-PHYS-001..042`を用いる。
 各IDのfixtureとoracleは対応するtest-designだけを正本とし、PLAN本文へ再掲しない。
 
 - probeからlauncherへ到達せず、valid admission前のmanaged root生成は0。
@@ -106,7 +107,8 @@ L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`
   issuer/operation/nonce/predecessorを検証する。skip/reorder/replayを拒否し、wall deadlineをmonotonicへ一度だけ縮小変換する。
 - authority leaseはexecution/cleanup/boot-fenced cleanupのclosed unionとし、custody/executor identity、boot ID、
   deadline、nonce、authenticatorを束縛する。effective deadline後もcleanup権限を失効させない。
-- same-boot recoveryとcross-boot fence proofを分離し、epoch CAS後もcleanup leaseだけを発行する。
+- Rust/native observationとTypeScript `recoverAuthority` transactionを分離する。Rustはschema/authenticator/binding+
+  native factだけ、TSはjournal/current epoch照合→epoch CAS→cleanup lease+traceだけをatomic commitする。
   recovery deadline超過はoverdue/admission遮断でありcleanup拒否理由ではない。reissue eventはterminal receipt digestへ含める。
 - deadline/cancel/abort/正常root exit/terminate intentはauthority mode CASとcleanup lease発行を同じtransactionで閉じる。
   cross-boot fenceはemptyを先取りせず、boot-fenced lease発行後のempty/reap proofからreleaseへ進む。
@@ -114,10 +116,14 @@ L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`
 - execution/cleanup/boot-fenced leaseのcanonical field/discriminant/禁止fieldを固定し、
   operation×variant行列をstrictにする。token消費とpending-dispatchを原子的に記録し、
   canonical request digestをpending/indeterminate/reconciled/resultへ継承してexact transport retryだけreconcileする。
-- token/lease/recovery proofはwire DTOのauthenticator自身だけをauthentication preimageから除外し、
+- token/lease/recovery observationはwire DTOのauthenticator自身だけをauthentication preimageから除外し、
   それ以外のexact canonical field全体を認証して自己包含を防ぐ。
 - releaseはplatform fact後もcleanup authorityをexecutor disarmまで保持し、
   disarm後にauthority revoke+releasedをatomic commitしてrevoke後の回復不能gapを作らない。
+- deterministic release_idをplatform release前にcommitし、Rust `ensureAbsent`がrelease直後crashでも
+  committed empty/reap factに束縛されたnative absenceを再観測する。存在→不在effectは最大1、呼出しは再試行可能とする。
+- request decode前だけ`PreDispatchWireFault`、mutating dispatch後の全response decode/correlation faultは
+  `PostDispatchResponseFault→DispatchIndeterminate`としてactual fact確定までterminal sealを禁止する。
 - custody releaseはempty/reap fact commit後のplatform release→executor disarm→authority revoke+released atomic commitで閉じ、
   control processのshutdownを別commandにしてcustody stateを変更させない。
 - RootNotCreatedはprotocol/bundle/pre-root custody、RootCreatedNotStartedはdeadline/cancelを含め全terminal phaseをlosslessに表す。
@@ -131,5 +137,5 @@ L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`
 
 ## 3. 実装開始境界
 
-本PLANとL7-454は`status: draft`である。L7 pair、L8 26件、対象OS capability、独立reviewがfreezeされるまで、
+本PLANとL7-454は`status: draft`である。L7 pair、L8 42件、対象OS capability、独立reviewがfreezeされるまで、
 実Job/cgroup adapterの実装完了、native custody Green、R4再合流を主張しない。

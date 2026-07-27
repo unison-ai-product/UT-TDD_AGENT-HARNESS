@@ -1,7 +1,7 @@
 ---
 layer: L6
 sub_doc: function-spec
-status: confirmed
+status: draft
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -1561,16 +1561,20 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 
 ### ワイヤ/エラー代数
 
-`decodeFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたはtyped `PreDispatchWireFault`を返す
-純粋関数とする。`PreDispatchWireFault`はwire responseやworkload domainの`NativeError`ではなく、Node `CustodyClient`が
+`decodeRequestFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたはtyped
+`PreDispatchWireFault`を返す純粋関数とする。`decodeResponseFrame(bytes, correlation, dispatch_state)`は
+valid response又はtyped `PostDispatchResponseFault`を返し、mutating dispatch後の全decode/correlation failureを
+pre-dispatchへ降格させない。`PreDispatchWireFault`はwire responseやworkload domainの`NativeError`ではなく、Node `CustodyClient`が
 Execution Kernel境界でexactly once closed `protocol_failure`へ正規化する。decode失敗時のlauncher/custody side effectは0である。
 `encodeFrame`はcanonical bytesを決定論的に返す。
 コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
-`RecoveryCustody(RecoveryCustodyCommand)`、control processだけを扱う`ControlCommand`の4 variantで閉じる。`Execute.operation`だけが
+native factだけを返す`RecoveryObservation(RecoveryObservationCommand)`、
+`RecoveryCustody(RecoveryCustodyCommand)`、control processだけを扱う`ControlCommand`の5 variantで閉じる。`Execute.operation`だけが
 `create_custody | spawn_attached | resume`を所有し、`AdmissionToken`とattempt/custody/bundle/probe bindingを必須とする。
-`RecoveryCustody.operation`は`recover_authority | observe | terminate_tree | prove_empty | release_custody`だけを所有し、
-`ControlCommand.shutdown_companion`を別unionとする。`recover_authority`は
-`SameBootExecutorRecoveryProofV1 | CrossBootFenceProofV1`だけを入力とし、
+`RecoveryObservation.operation`は`observe_recovery_fact | prove_boot_fence`だけを所有してnative observation factを返し、
+authority/journal delta 0とする。`RecoveryCustody.operation`は`observe | terminate_tree | prove_empty | release_custody`だけを所有し、
+`ControlCommand.shutdown_companion`を別unionとする。TypeScript内部`recoverAuthority`は
+`SameBootExecutorRecoveryObservationV1 | CrossBootFenceObservationV1`だけを入力とし、
 `observe/prove_empty/release_custody`は両cleanup variant、`terminate_tree`は`CleanupAuthorityLeaseV1`だけを必須とする。
 全leaseの共通fieldは`authority_epoch/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/
 custody_identity/executor_id/deadline_unix_ms/termination_policy_digest/recovery_grace_ms/
@@ -1608,25 +1612,26 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `consumeAdmissionStageToken` | expected phase/operation、未消費token又は同一pending record | token消費と`consumed_pending_dispatch(request/token/idempotency/request digest)`を同一transactionでcommit。pending→indeterminate→reconciled→resultを同じrequest digestで継承。exact retryだけfact reconcile/side effect 0時の継続/同resultを許可し、digest不一致又はrecord欠測はreplay拒否 |
 | `AdmissionTokenAuthenticatorPort.seal/verify` | wire DTOからauthenticator自身だけ除外したcanonical V1 payload、issuer key ID/policy revision | 非自己包含preimageへoperation/token nonceを束縛し、unknown key/version、偽造、同nonce別payload/別operation replayをside effect前拒否。具体key storage/rotationはD0外 |
 | `AuthorityLeaseAuthenticatorPort.issue/verify` | wire DTOからauthenticator自身だけ除外したexact variant payload、execution/spec、executor/custody、boot、deadline/policy | 非自己包含preimageへlease nonceとallowed operationsを束縛し、unknown key/version、偽造、同nonce別payloadをattach/recovery前拒否。具体key storage/rotationはD0外 |
-| `verifySameBootRecovery` | executor認証proof、durable journal、current epoch | same bootの全binding一致時だけepochをCAS+1しcleanup leaseを発行。生成/attach/resume/deadline延長0 |
-| `verifyCrossBootFence` | old/new boot chain、native platform boot fence fact、durable journal、current epoch | emptyを先取りせずCAS+1でboot-fenced cleanup leaseだけを発行。そのleaseでcross-boot emptyを証明後release。旧boot command、新規workload、旧PID操作0。proof不能はquarantine/admission遮断 |
+| `recoverSameBootAuthority` | Rust/executor認証observation、durable journal、current epoch | TSがsemantic全binding一致時だけepochをCAS+1しcleanup lease+traceを同一transactionで発行。Rust DB/CAS/lease/trace 0 |
+| `recoverCrossBootAuthority` | old/new boot native fence observation、durable journal、current epoch | TSがemptyを先取りせずCAS+1でboot-fenced cleanup lease+traceだけを発行。そのleaseでempty後release。Rust DB/CAS/lease/trace 0 |
 | `transitionAuthorityToCleanup` | live execution authority、deadline/cancel/abort/normal-root-exit/terminate-intent、current epoch | epoch CASと同じtransactionで新lease nonce/authenticatorのcleanup leaseを発行しexecution capabilityを不可逆除去。敗者lease 0 |
-| `sealMonotonicDeadline` | verified token、同時観測wall/monotonic、boot ID | remainingをbudgetとwall残時間の小さい方へ固定し、開始後wall jumpで延長0。skew/boot不整合は期限切れfail-close |
-| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody | ControlCommand` union | Probeからlauncher 0。stage token又はlease不正のExecuteでside effect 0。Recovery proof/cleanup leaseをdiscriminantで分離し、boot-fencedでterminate_treeを拒否。生成・resume能力0。release-before-empty拒否。control shutdownはcustody delta 0 |
-| `normalizeWireFault` | typed `WireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
+| `sealMonotonicDeadline` | TypeScript: verified token、Rustから受けた同時観測wall/monotonic fact、boot ID | TypeScriptがremainingをbudgetとwall残時間の小さい方へ固定してsigned arm request/journalへcommit。cross-bootも新boot観測から非延長で再導出する。Rustは観測と供給済みdeadlineの強制だけを所有し、開始後wall jumpによる延長0 |
+| `dispatchCommand` | closed `Probe | Execute | RecoveryObservation | RecoveryCustody | ControlCommand` union | Observationはnative factだけでauthority delta 0。Execute/cleanup leaseをdiscriminant分離しboot-fenced terminate拒否、生成・resume能力0。release-before-empty拒否。control shutdownはcustody delta 0 |
+| `normalizePreDispatchWireFault` | typed `PreDispatchWireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
+| `markPostDispatchResponseFault` | mutating dispatch済み、typed `PostDispatchResponseFault` | EOF/pipeだけでなくresponseのframing/UTF-8/JSON/schema/trailing/correlation不正を必ずindeterminateへ遷移。side effect 0推測・terminal seal 0 |
 | `reconcileDispatchIndeterminate` | request/token/idempotency/request digest全一致、authority/journal/native facts、又はdurable reconciled record | response lossをside effect 0へ推測せずindeterminate→reconciled→resultへactual phase/fact digestを一意に確定。reconciled後crashは4 digest+actual phase/fact digest一致からnative再実行0でresult commit。全stateでrequest digestを継承 |
 | `reduceCustody` | attempt、nonce、sequence連続 | 正常辺とprepared/attached-suspendedからterminatingへのcleanup辺だけを受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
 | `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
-| `releaseCustody` | empty/reap factがjournal commit済み、current cleanup authority | platform release→release fact commit→executor disarm→authority revoke+released atomic commitを再開可能に遂行。revoke後の未完executor操作0、途中crash/retryで二重release・早期seal 0 |
+| `releaseCustody` | empty/reap factとdeterministic release_idがjournal commit済み、current cleanup authority | Rust `ensureAbsent(release_id)`は同一identityの終状態absenceを冪等に観測し、因果を主張しない`CustodyAbsentFact`を返す。存在→不在effect最大1、invocation再試行可、Rust durable marker/DB 0。fact commit→executor disarm→revoke+released atomic |
 | `shutdownCompanion` | active custody 0、pending response 0、未解決pending/indeterminate/reconciled-without-result 0、terminal outbox flush済み | control processだけを終了しcustody/authority state delta 0 |
 | `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
 
 ### プラットフォームポート/責務非重複
 
-`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/releaseCustody/proveBootFence`で構成し、
+`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/observeRecoveryFact/terminateTree/proveEmpty/ensureAbsent/proveBootFence`で構成し、
 control process終了は`ControlShutdownPort`へ分離する。
-`CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/enforceDeadline/revokeAuthority`で構成し、
+`CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/recordDeadlinePolicy/armDeadlineExecutor/revokeAuthority`で構成し、
 handoff commit前resumeとstale epoch/nonceを拒否する。Linuxはbroker外deadline ownerをmanaged root開始前にarmし、
 dual-crash後も期限内kill→bounded recovery→reap/orphan 0を完遂する。ownerをarm不能なら開始前拒否し、
 証拠欠測を`custody_failure`へ変換するだけでは既存workloadの生存を許さない。
@@ -1635,7 +1640,9 @@ observe/terminate/prove/releaseに有効で、recovery deadline超過はoverdue 
 cleanup拒否理由にはしない。cross-bootでは元wall recovery deadlineから新bootのmonotonic上限を非延長で再導出する。
 Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
 `populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
-それぞれ一意に所有する。RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
+それぞれ一意に所有する。TypeScriptはdeadline policy決定とsigned arm request/journalを所有し、
+別failure domainのRust/native `DurableDeadlineExecutor`だけがdeadline killを強制してenforcement factを返す。
+RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
 Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。
 
 bundle rollbackは過去artifactを直接再activationせず、現在floorより厳密に大きいsequenceの新revisionとしてmanifestを再署名し、
