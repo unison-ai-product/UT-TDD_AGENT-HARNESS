@@ -1696,6 +1696,22 @@
         "revision": 9,
         "content_digest": "sha256:48256410450173ee2b85ca729ce92752e41200f196b91b4141d35901f79bc07b"
       }
+    },
+    {
+      "sequence": 107,
+      "previous_record_digest": "sha256:eb2d050d3651e6775677d6477cf1bcad16ded11ce1c0792a33136b8e0af5f5c2",
+      "record_digest": "sha256:b27ec10587a31ea39f72c4069a8b4f2fafdc10e804f9cec49b2b149ddffc5e1f",
+      "command_id": "pr156-command-algebra-closure-l4-rev10-20260727",
+      "receipt_id": "certificate:abe1afa5ef2bfe86a4df13645648898e",
+      "receipt_digest": "sha256:cf1322f1491c2d3d93faa0af3fbd5b754ee83543c4ddbc904e48ee4234394340",
+      "decision_digest": "sha256:8d53a1da8c7468c9c2e1952b3a21f464712447a7f3db1ac5507404e08933e932",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 10,
+        "content_digest": "sha256:857590bb861f2b2b60a0b790413b5875bf8069694c216a7cdb900c88ae98e960"
+      }
     }
   ]
 }

@@ -1799,7 +1799,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
 | `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
 | `U-RGK-LIFE-011` | Linux authority+supervisor dual crash | broker外deadline ownerが期限内killを発行し、bounded recovery後にreap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |
-| `U-RGK-LIFE-013` | executor recovery proofのexecution/spec/bundle/custody/epoch/boot/deadline/policy/transitionを各変異し、valid proofをCAS競合 | 変異はreissue 0。valid一件だけepoch+1の同bundle/deadline/policy leaseと3 recovery event、敗者delta 0、生成/resume 0 |
+| `U-RGK-LIFE-013` | recovery proofのexecution/spec/bundle/attempt/custody nonce/identity/epoch/boot/deadline/policy/transition/recovery nonce/issuer/authenticatorを各変異し、valid proofをCAS競合 | 変異・stale・nonce replay・偽造はreissue 0。valid一件だけepoch+1の同bundle/deadline/policy leaseと3 recovery event、敗者delta 0、生成/resume 0 |
 | `U-RGK-PORT-001` | Windows assign failure | resume 0、created-not-started cleanup proof必須 |
 | `U-RGK-PORT-002` | Linux事後attach adapter | hard custody capabilityをadvertiseせずlaunch 0 |
 | `U-RGK-PORT-003` | empty proof欠落mutation | success/receipt sealへ進まない |

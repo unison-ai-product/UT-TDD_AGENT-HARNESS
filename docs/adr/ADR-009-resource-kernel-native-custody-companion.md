@@ -43,8 +43,9 @@ binary欠落、署名・digest不一致、protocol非互換はcontrol process起
 `Probe`はworkload launcherへ到達不能、`Execute`だけが`create_custody | spawn_attached | resume`を所有し、暗号学的に認証された
 sealed admission tokenと空でないrequired capabilityを必須とする。`create_custody`が返す`AuthorityLease`は
 `spawn_attached | resume`でもtokenと同時に検証し、missing/stale/別attempt leaseではside effect 0とする。`RecoveryCustody`は
-`observe | terminate_tree | prove_empty | shutdown`と`AuthorityLease(authority_epoch, attempt_id, custody_nonce)`だけを所有し、
-launcher、managed-root生成、resumeの型参照を持たない。Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
+`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する。`recover_authority`はexecutor認証済みproof、
+後4操作は完全なauthority leaseを必須とし、launcher、managed-root生成、resumeの型参照を持たない。
+Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
 
 `AdmissionTokenAuthenticatorPort`はversioned canonical preimage、issuer key ID、policy revision、operation、token nonceを
 署名/MACし、companion側verifierがside effect前に真正性とbindingを検証する。具体的な鍵配布・rotationは後続revisionへ委譲するが、

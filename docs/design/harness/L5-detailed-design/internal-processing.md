@@ -956,8 +956,9 @@ unknown enum、oversize、partial frame、末尾byteを拒否する。stdoutはp
 request/responseは`protocol_version + request_id + expected_bundle_digest`を照合し、別requestの応答を合成しない。
 wire commandはlauncherを持たない`ProbeRequest`、sealed `AdmissionToken`必須で
 `create_custody | spawn_attached | resume`だけを所有する`ExecuteRequest`、および
-`AuthorityLease`必須で`observe | terminate_tree | prove_empty | shutdown`だけを所有する`RecoveryCustodyCommand`へ分離する。
-`create_custody`が返すleaseは`spawn_attached | resume`でもtokenと同時に検証する。Recovery variantはlauncher、
+`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する`RecoveryCustodyCommand`へ分離する。
+`recover_authority`はexecutor認証済みproof、後4操作は`AuthorityLease`を必須とする。`create_custody`が返すleaseは
+`spawn_attached | resume`でもtokenと同時に検証する。Recovery variantはlauncher、
 managed-root生成、resumeの型参照を持たず、`shutdown`はempty/reap proof後だけ許可する。tokenはversioned canonical payloadを
 `AdmissionTokenAuthenticatorPort`で認証する。leaseもcustody/executor identity、boot ID、effective monotonic deadline、
 lease nonce、execution/spec identity、termination/recovery policyを`AuthorityLeaseAuthenticatorPort`で認証する。
