@@ -4,11 +4,11 @@ title: "PLAN-RECOVERY-18 (recovery): stacked PR merged-plan target evidence (iss
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-23
-updated: 2026-07-23
+updated: 2026-07-27
 owner: PO / Codex
 github_issue_id: 138
 parent_design: docs/plans/PLAN-L7-87-merged-plan-status-kind-independent.md
@@ -39,7 +39,29 @@ dependencies:
     - docs/plans/PLAN-L7-86-merged-plan-status-deliverable-scope.md
     - src/lint/merged-plan-status.ts
     - tests/merged-plan-status.test.ts
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-07-27T16:51:30+09:00"
+    tests_green_at: "2026-07-27T16:51:14+09:00"
+    verdict: pass
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-4-8
+    scope: "PR #140 (Codex authored) の canonical target evidence resolver 全差分。
+      Claude 非author blind re-review PASS (2026-07-23T01:58:43Z, HEAD 09c262f9,
+      独立 worktree 実走) を先行証跡とし、merge 後 main (927e8891) で
+      tests/merged-plan-target-evidence.test.ts を snapshot runner 再実測 6/6 PASS。
+      RECOVERY-18 への改番 (b68e98a9) 後も 6/6 実測済み。"
+    green_commands:
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/merged-plan-target-evidence.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-27T16:51:14+09:00"
+        evidence_path: .ut-tdd/audit/PLAN-RECOVERY-18-927e8891-target-evidence-snapshot.log
+        output_digest: "sha256:4d26affc7bb7d4437d560ce2623d3b9e035b752e631ac0eecdb5497cadb3c228"
+        anchor_commit: dbb799df85975021eea513e8997b14371dbddc87
 ---
 
 # PLAN-RECOVERY-18: stacked PR merged-plan target evidence
