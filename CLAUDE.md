@@ -10,7 +10,12 @@ Claude Code treats the following as canonical in this repository:
 4. `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 5. `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`
 6. `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md`
-7. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+7. `docs/governance/repository-structure.md`
+8. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+
+The full canonical-set index (including V-model machinery docs) is
+`docs/governance/README.md`; this list is the startup minimum, not a competing
+definition (PLAN-L7-459 H1).
 
 Migration snapshots and migration docs are not normal startup reads. Read them
 only when migration, gap audit, or regression-source inspection requires it.
@@ -99,6 +104,7 @@ V-model artifacts must stay separated:
 
 - Read the relevant files before editing.
 - Match local naming, structure, and test placement.
+- 最小実装を優先する: 要件を満たす最短の解を選び、投機的な型・契約・層・機能の積み増し (over-engineering) をしない。object-oriented DDD はドメインを小さく凝集させ code 量を減らすための手段であって ceremony を増やすためではない。DDD が code を膨張させているなら設計を疑う。正本は `docs/governance/coding-rules.md` の「最小実装原則」。
 - Do not declare completion without tests or explicit verification.
 - Treat Codex / Claude Code as local CLI + hook surfaces managed by UT-TDD, not
   direct API calls.
@@ -151,6 +157,15 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
 
+## GitHub Issue Hierarchy
+
+- 正本は `docs/governance/github-issue-hierarchy.md`。
+- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
+- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
+  代替にしない。
+- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
+- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
+
 ## Canonical Commands
 
 - Setup: `ut-tdd setup`
@@ -173,32 +188,32 @@ fallback.
 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は role 検証 + routing を機械強制する
 (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close。判断ゲート role
 (reviewer / blind-reviewer / qa / tl / security 等) は族内 frontier reviewer tier
-(codex=`gpt-5.6-sol` / claude=`claude-opus-4-8`) へ固定し、worker role は intent 推定
+(codex=`gpt-5.6-sol` / claude=`claude-opus-5`) へ固定し、worker role は intent 推定
 (`selectTeamModel`) で創出=ROI 寄せの既定へ流す。明示 `--model`/`--effort` は常に優先。
 effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入される。
 判断側の族分離 (`same_model_approval: forbidden`) は routing で破らない。
 
 Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede):
 
-- Codex: テスト実装 = `gpt-5.6-terra`; 実装/ドキュメント修正 = `gpt-5.6-luna`
-  (effort `high` 基準、worker `middle` 既定の上書き); 検証/設計 = `gpt-5.6-sol`;
+- Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
+  `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-5.6-sol` (effort `low`);
   軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
-- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-4-8`);
+- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
   UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
-- Effort はモデル別基準ラダー (PO rule 2026-07-14) が既定: Sol/Terra/Fable =
-  `low`、Sonnet = `middle`、Opus/Luna/spark = `high`、mini = `xhigh`。回答が
-  浅い時は 1 段引き上げ (Sol/Terra/Fable → `middle`、Sonnet → `high`、Opus →
-  `xhigh`)、Terra が `middle` でも浅い場合は Sol `low` へ乗り換える
+- Effort はモデル別基準ラダー (PO rule 2026-07-27) が既定: Sol/Fable =
+  `low`、Terra/Sonnet/Opus = `middle`、Luna/spark = `high`、mini = `xhigh`。回答が
+  浅い時は 1 段引き上げ (Sol/Fable → `middle`、Terra/Sonnet → `high`、Opus →
+  `xhigh`)、Terra が `high` でも浅い場合は Sol `low` へ乗り換える
   (`escalateShallowResponse`)。ラダー外 (haiku 等) は従来既定 (Claude `high` /
   GPT `middle`)。UI/UX のみ task-kind 例外で `xhigh` (PO rule 2026-07-08)。
 - Implementation work in `hybrid` is cross-executed and cross-reviewed: the
   non-orchestrating provider executes, and review returns to the other
   provider (tier-router implementation lane, PO rule 2026-07-08).
 - Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-5.6-sol`) or Claude Opus (`claude-opus-4-8`) or above, behind the
+  (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
   explicit frontier gate.
 - advisor (PO rule 2026-07-14): 技術/設計/トラブルシューティング判断は
   `gpt-5.6-sol` 一次 (fallback Fable)、デザイン/UI 判断は `claude-fable-5` 一次

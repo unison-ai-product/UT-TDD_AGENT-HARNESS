@@ -74,6 +74,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "ddd-tdd-rules",
   "runtime-portability",
   "rule-drift",
+  "model-id-doc-drift",
   "gate-confirm",
   "gate-id-format",
   "plan-schedule",
