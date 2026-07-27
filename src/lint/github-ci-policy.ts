@@ -263,6 +263,29 @@ function matchesLaneSkipAllowlist(text: string): boolean {
   return LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS.some((matches) => matches(text));
 }
 
+const CLASSIFY_COMMAND = "bun src/cli.ts github classify-changes";
+const CLASSIFY_REQUIRED_FLAGS = [
+  "--event-name",
+  "--head-sha",
+  "--base-sha",
+  "--before-sha",
+  "--github-output",
+] as const;
+
+function hasCanonicalLaneProducer(run: string | undefined): boolean {
+  if (!run) return false;
+  const commands = run
+    .replace(/\\\r?\n\s*/g, " ")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return commands.some((command) => {
+    if (!(command === CLASSIFY_COMMAND || command.startsWith(`${CLASSIFY_COMMAND} `))) return false;
+    const tokens = command.split(/\s+/);
+    return CLASSIFY_REQUIRED_FLAGS.every((flag) => tokens.includes(flag));
+  });
+}
+
 function checkLaneSkipSafety(input: {
   legs: readonly (WorkflowJob | null)[];
   doc: GithubWorkflowDoc;
@@ -284,12 +307,12 @@ function checkLaneSkipSafety(input: {
         ? (leg.steps as WorkflowStep[])
         : [];
     const producer = steps.find((step) => step.id === "classify");
-    if (!producer?.run?.includes("github classify-changes")) {
+    if (!hasCanonicalLaneProducer(producer?.run)) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
         reason: "missing_lane_producer",
-        detail: `jobs.${name} requires id=classify running github classify-changes`,
+        detail: `jobs.${name} requires id=classify running ${CLASSIFY_COMMAND} with ${CLASSIFY_REQUIRED_FLAGS.join(", ")}`,
       });
     }
     if (

@@ -3,12 +3,9 @@
 // 設計 (docs/plans/PLAN-L7-455-ci-cost-speedup-phase1.md §設計判断記録・FLAG 是正記録):
 // - 「code を 1 ファイルでも含む → full」「保守的 allowlist のみ → doc lane」。判定不能・
 //   新種 path は fail-close で full へフォールバックする。
-// - doc-safe allowlist は意図的に狭い: `docs/**` (ただし `docs/plans/**` を除く) の `*.md` と
-//   `.ut-tdd/memory/**` のみ。`docs/plans/**` は PLAN frontmatter (status / review_evidence /
-//   supersession 等) を含み governance hard-gate (checkReviewEvidence / plan-supersession) の
-//   対象であるため doc-safe から明示的に除外する。グローバル `*.md` 規則は廃止済み: root の
-//   `README.md` / `CLAUDE.md` / `AGENTS.md` / `.claude/CLAUDE.md` 等の runtime 規則ファイルは
-//   doc-safe に含めず full へフォールバックする (blind review FLAG 是正、2026-07-21)。
+// - doc-safe allowlist は非正本の参照 prose 4 tree
+//   (`docs/archive|migration|reference|research/**.md`) のみに限定する。正本設計・governance・
+//   runtime規則・共有memoryはfullへfail-closeする。
 // - diff range を解決できない (force-push / 新規ブランチ / 未対応 event 等) 場合も full。
 //
 // 純粋関数 (classifyChangeLane / resolveChangeDiffRange) と副作用 (git diff 実行) を分離し、
@@ -24,7 +21,7 @@ export interface ChangeLaneClassification {
   fileCount: number;
 }
 
-/** doc-safe とみなす `.ut-tdd/memory/` 配下 prefix (任意拡張子)。 */
+/** doc-safe とみなす非正本の参照 prose prefix。 */
 const DOC_LANE_PREFIXES = [
   "docs/archive/",
   "docs/migration/",
@@ -38,8 +35,7 @@ function normalizeChangedPath(path: string): string {
 
 /**
  * 単一の変更 path が doc-safe allowlist に一致するか (fail-close: 未知 path は false)。
- * allowlist は意図的に狭い: `docs/**` (`docs/plans/**` を除く) の `*.md` と
- * `.ut-tdd/memory/**` のみ。root の `*.md` (README/CLAUDE/AGENTS 等) はここに含めない。
+ * allowlist は意図的に狭い: 非正本の参照 prose 4 treeにある `*.md` のみ。
  */
 export function isDocSafeChangePath(path: string): boolean {
   const normalized = normalizeChangedPath(path);

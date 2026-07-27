@@ -75,7 +75,7 @@ describe("change-lane classification (PLAN-L7-455)", () => {
     });
 
     it("regression: classifies a mix that includes one code path as full (負例 fail-close)", () => {
-      const result = classifyChangeLane(["docs/design/foo.md", "src/lint/github-ci-policy.ts"]);
+      const result = classifyChangeLane(["docs/reference/foo.md", "src/lint/github-ci-policy.ts"]);
       expect(result.lane).toBe("full");
       expect(result.reason).toContain("src/lint/github-ci-policy.ts");
     });
@@ -108,7 +108,7 @@ describe("change-lane classification (PLAN-L7-455)", () => {
     });
 
     it("blind review FLAG regression: a doc-safe path mixed with docs/plans/** classifies as full (fail-close on mix)", () => {
-      const result = classifyChangeLane(["docs/design/foo.md", "docs/plans/PLAN-X.md"]);
+      const result = classifyChangeLane(["docs/reference/foo.md", "docs/plans/PLAN-X.md"]);
       expect(result.lane).toBe("full");
     });
   });
@@ -165,7 +165,7 @@ describe("change-lane classification (PLAN-L7-455)", () => {
         eventName: "pull_request",
         headSha: "head",
         baseSha: "base",
-        git: fakeGit(["docs/design/foo.md"]),
+        git: fakeGit(["docs/reference/foo.md"]),
       });
       expect(result.lane).toBe("doc");
       expect(result.range).toBe("base...head");

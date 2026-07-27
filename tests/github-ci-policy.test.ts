@@ -66,7 +66,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - id: classify
-        run: bun src/cli.ts github classify-changes
+        run: bun src/cli.ts github classify-changes --event-name pull_request --head-sha head --base-sha base --before-sha before --github-output output
       - run: bun src/cli.ts github guard
       - if: ${LANE_FULL_IF}
         run: bun run typecheck
@@ -892,17 +892,31 @@ describe("github-ci-policy lint", () => {
     it.each([
       [
         "missing producer",
-        "      - id: classify\n        run: bun src/cli.ts github classify-changes\n",
+        "      - id: classify\n        run: bun src/cli.ts github classify-changes --event-name pull_request --head-sha head --base-sha base --before-sha before --github-output output\n",
         "",
       ],
       ["wrong id", "id: classify", "id: classify-docs"],
+      ["echo spoof", "bun src/cli.ts github classify-changes", 'echo "github classify-changes" #'],
       [
-        "missing command",
+        "substring/no-op",
         "bun src/cli.ts github classify-changes",
-        "bun src/cli.ts github summary",
+        "true # bun src/cli.ts github classify-changes",
       ],
     ])("U-CIPOL-020a: rejects %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      "--event-name",
+      "--head-sha",
+      "--base-sha",
+      "--before-sha",
+      "--github-output",
+    ])("U-CIPOL-020aa: rejects a producer missing %s", (flag) => {
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replace(flag, "--removed-flag")),
+      );
       expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
     });
 

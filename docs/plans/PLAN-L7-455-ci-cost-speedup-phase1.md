@@ -133,8 +133,8 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   両 leg に独立実装) を追加。`bun src/cli.ts github classify-changes` (新設 CLI、
   `src/github/change-lane.ts`) が git diff range (pull_request は base/head SHA、
   push は before/head SHA、force-push/新規ブランチ/未対応 event は range 解決不能
-  → fail-close) を解決し、変更ファイルを分類する。doc-only (`docs/**`, `*.md`,
-  `.ut-tdd/memory/**`) のときだけ `steps.classify.outputs.lane == 'full'` 条件の
+  → fail-close) を解決し、変更ファイルを分類する。doc-only (非正本参照prose 4 tree)
+  のときだけ `steps.classify.outputs.lane == 'full'` 条件の
   重い step (typecheck / db rebuild / 全回帰 vitest / audit quality / full doctor)
   を skip し、`lane == 'doc'` 条件の新 step (`bun src/cli.ts plan lint` +
   `bun run test:doc-lane` = readability/rule-drift/plan-lint) を実行する。
@@ -203,6 +203,10 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 
 - 各runtime legに `id: classify` + `github classify-changes` のlane output producerを必須化し、
   欠落・誤id・command差替えを `github-ci-policy` がfail-closeする。
+- producerはmultiline continuationを正規化した実command行が
+  `bun src/cli.ts github classify-changes` で始まり、`--event-name` / `--head-sha` /
+  `--base-sha` / `--before-sha` / `--github-output` を全て持つことまで検査する。
+  `echo`偽装、comment内substring、no-op、flag欠落はfail-closeする。
 - doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。
