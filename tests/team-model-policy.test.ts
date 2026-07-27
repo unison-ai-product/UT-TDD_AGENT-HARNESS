@@ -563,8 +563,10 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "xhigh" }),
     ).toBeNull();
+    // terra high は sol low へ乗り換え (上の assertion で検証済み)。真の行き止まりは
+    // shallow/escalate を持たない luna (base high 固定)。
     expect(
-      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "high" }),
+      escalateShallowResponse({ model: MODEL_IDS.codex.luna, currentEffort: "high" }),
     ).toBeNull();
   });
 
