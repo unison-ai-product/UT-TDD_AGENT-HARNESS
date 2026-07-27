@@ -2,7 +2,7 @@
 name: security-audit
 description: セキュリティ監査。OWASP Top 10・認証認可・入力バリデーション・秘密情報管理・依存脆弱性。G2/G4/G6/G7セキュリティゲート時に使う。
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: claude-opus-4-8
+model: claude-opus-5
 effort: high
 memory: project
 maxTurns: 20

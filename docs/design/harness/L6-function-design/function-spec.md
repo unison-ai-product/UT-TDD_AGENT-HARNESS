@@ -680,7 +680,7 @@ import edge を一方向 (acyclic) に保つ (cycle 回避は dependency-drift g
 
 3 archetype (役割の根本種別): **相談 (consult)** = tl/uiux (上位帯エスカレーション・プランナー、read-only)、
 **ワーカー (worker)** = se/docs (実装・文書、下位帯)、**検証 (verify)** = qa (テスト通過後カバレッジ相談、上位帯)。
-ティア表 `TIER_TABLE`: T0 = `{claude: claude-opus-4-8, codex: gpt-5.5}` (フロンティア/明示許可)、
+ティア表 `TIER_TABLE`: T0 = `{claude: claude-opus-5, codex: gpt-5.5}` (フロンティア/明示許可)、
 T1 = `{claude: claude-sonnet-4-6, codex: gpt-5.4}` (ワーカー専門)、T2 = `{claude: claude-haiku-4-5,
 codex: gpt-5.3-codex-spark}` (ワーカー軽量)。
 
@@ -725,14 +725,14 @@ role・engine・task text から推定する。これは provider 配置その�
 - research 系: Claude Haiku 系を優先する。
 - implementation 系: GPT/Codex 系を優先する。
 - lightweight 系: GPT/Codex の spark / mini lane を使い、並列 shard で閉鎖権限を持たせない。
-- design / implementation review: T0 reviewer として GPT frontier (`gpt-5.5`) または Claude Opus (`claude-opus-4-8`) 以上を明示許可ゲート付きで使う。
+- design / implementation review: T0 reviewer として GPT frontier (`gpt-5.5`) または Claude Opus (`claude-opus-5`) 以上を明示許可ゲート付きで使う。
 - UI/UX 系: Claude Sonnet 系を優先し、effort は `xhigh` とする。
 
 effort 既定:
 
 - Claude 系は `high` を標準にする。
 - GPT/Codex 系は `middle` を標準にする。
-- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `high` とする。
+- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `middle` とする。
 - spark / mini など軽量モデル lane は `high` を標準にする。
 - UI/UX は `xhigh` を指定する。
 
@@ -791,7 +791,7 @@ provider CLI を起動する。
 
 | 関数 / CLI | signature / command | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | Claude advisor は Opus (`claude-opus-4-8`) + `high`、Codex advisor は GPT frontier (`gpt-5.5`) + `xhigh`。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
+| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | Claude advisor は Opus (`claude-opus-5`) + `middle`、Codex advisor は GPT frontier (`gpt-5.5`) + `xhigh`。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
 | `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。 | `tests/cli-surface.test.ts` |
 
 ## 2026-06-23 artifact progress workflow trigger 追補

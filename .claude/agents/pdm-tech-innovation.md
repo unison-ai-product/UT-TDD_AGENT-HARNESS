@@ -2,7 +2,7 @@
 name: pdm-tech-innovation
 description: Product technology innovation scout for strategy options, engineering operating models, and technical adoption hypotheses.
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
-model: claude-opus-4-8
+model: claude-opus-5
 effort: high
 memory: project
 maxTurns: 30

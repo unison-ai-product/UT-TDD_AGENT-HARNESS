@@ -14,7 +14,7 @@ export const MODEL_IDS = {
   claude: {
     /** Claude 5 世代フロンティア (advisor 一次相談先、2026-07 更新)。 */
     fable: "claude-fable-5",
-    opus: "claude-opus-4-8",
+    opus: "claude-opus-5",
     /** Sonnet 5 世代 (2026-06 更新)。coding/agentic で旧 Opus 級、価格帯は 4-6 と同一。 */
     sonnet: "claude-sonnet-5",
     haiku: "claude-haiku-4-5",
@@ -140,7 +140,7 @@ export const MODEL_EFFORT_LADDER: Record<
   [MODEL_IDS.codex.spark]: { base: "high" },
   [MODEL_IDS.codex.mini]: { base: "xhigh" },
   [MODEL_IDS.claude.fable]: { base: "low", shallow: "middle" },
-  [MODEL_IDS.claude.opus]: { base: "high", shallow: "xhigh" },
+  [MODEL_IDS.claude.opus]: { base: "middle", shallow: "xhigh" },
   [MODEL_IDS.claude.sonnet]: { base: "middle", shallow: "high" },
 };
 

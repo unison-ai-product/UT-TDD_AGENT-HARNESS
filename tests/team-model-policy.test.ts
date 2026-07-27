@@ -532,19 +532,19 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toBe(true);
   });
 
-  it("U-ROUTE2-012: effort ladder 基準 — sol/terra/fable=low, sonnet=middle, opus/spark(luna)=high, mini=xhigh", () => {
+  it("U-ROUTE2-012: effort ladder 基準 — sol/terra/fable=low, sonnet/opus=middle, spark/luna=high, mini=xhigh", () => {
     const base = (model: string) => MODEL_EFFORT_LADDER[model]?.base;
     expect(base(MODEL_IDS.codex.frontier)).toBe("low");
     expect(base(MODEL_IDS.codex.worker)).toBe("low");
     expect(base(MODEL_IDS.claude.fable)).toBe("low");
     expect(base(MODEL_IDS.claude.sonnet)).toBe("middle");
-    expect(base(MODEL_IDS.claude.opus)).toBe("high");
+    expect(base(MODEL_IDS.claude.opus)).toBe("middle");
     expect(base(MODEL_IDS.codex.luna)).toBe("high");
     expect(base(MODEL_IDS.codex.spark)).toBe("high");
     expect(base(MODEL_IDS.codex.mini)).toBe("xhigh");
   });
 
-  it("U-ROUTE2-013: 浅い回答のエスカレーション — terra low→middle→sol low、opus high→xhigh、行き止まりは null", () => {
+  it("U-ROUTE2-013: 浅い回答のエスカレーション — terra low→middle→sol low、opus middle→xhigh、行き止まりは null", () => {
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "low" }),
     ).toEqual({ model: MODEL_IDS.codex.worker, effort: "middle" });
@@ -558,7 +558,7 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
       escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "middle" }),
     ).toBeNull();
     expect(
-      escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "high" }),
+      escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "middle" }),
     ).toEqual({ model: MODEL_IDS.claude.opus, effort: "xhigh" });
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "xhigh" }),

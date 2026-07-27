@@ -316,7 +316,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "",
     "| Model class | Default use | Effort |",
     "|---|---|---|",
-    `| Claude Opus (\`${CLAUDE_OPUS}\`) | final review, judgement gates, hardest design decisions | high / xhigh |`,
+    `| Claude Opus (\`${CLAUDE_OPUS}\`) | final review, judgement gates, hardest design decisions | middle / xhigh |`,
     `| Claude Sonnet (\`${CLAUDE_SONNET}\`) | docs, design, UI/UX, structured review | high (xhigh for UI/UX) |`,
     `| Claude Haiku (\`${CLAUDE_HAIKU}\`) | scouting, triage, lightweight parallel checks | high, small scoped tasks |`,
     `| GPT/Codex workers (\`${GPT_WORKER}\` / \`${GPT_SPARK}\`) | implementation lanes | middle |`,

@@ -2,7 +2,7 @@
 name: blind-reviewer
 description: 著者の主張・意図・自己評価を一切渡さず、成果物と spec とテスト実測だけから独立に判定するブラインドレビュー担当。忖度と確証バイアスを構造的に排し、PASS / PASS-WEAK / FLAG を返す。
 tools: Read, Grep, Glob, Bash
-model: claude-opus-4-8
+model: claude-opus-5
 effort: high
 memory: project
 maxTurns: 20

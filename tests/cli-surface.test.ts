@@ -588,7 +588,7 @@ describe("L7 CLI surface closure", () => {
           "--task",
           "mechanical ledger check",
           "--model",
-          "claude-opus-4-8",
+          "claude-opus-5",
           "--effort",
           "xhigh",
         ],
@@ -598,7 +598,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "claude",
         dry_run: true,
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
         effort: "high",
       });
       expect(payload.args).toEqual([
@@ -606,7 +606,7 @@ describe("L7 CLI surface closure", () => {
         "--input-format",
         "text",
         "--model",
-        "claude-opus-4-8",
+        "claude-opus-5",
         "--effort",
         "high",
       ]);
@@ -1421,8 +1421,8 @@ describe("L7 CLI surface closure", () => {
         "reason=ut-tdd-runtime-adapter-wrapper",
       );
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).not.toContain("raw=1");
-      // review task-kind は engine family より優先され Opus/high (PO rule 2026-07-14)。
-      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=high");
+      // repo語彙 Opus/middle は Claude CLI 正式値 medium へ正規化される。
+      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=medium");
     } finally {
       removeTestTree(root);
     }

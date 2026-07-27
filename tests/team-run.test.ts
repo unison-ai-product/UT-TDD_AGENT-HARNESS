@@ -511,7 +511,7 @@ describe("team run validation", () => {
     expect(se?.provider).toBe("codex");
     expect(se?.model_selection.model).toBe("gpt-5.3-codex-spark");
     expect(qa?.provider).toBe("claude");
-    expect(qa?.model_selection.model).toBe("claude-opus-4-8");
+    expect(qa?.model_selection.model).toBe("claude-opus-5");
     expect(se?.provider).not.toBe(qa?.provider);
     expect(se?.adapter?.command).toBe("codex");
     expect(qa?.adapter?.command).toBe("claude");
