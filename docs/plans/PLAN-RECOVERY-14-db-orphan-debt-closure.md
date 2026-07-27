@@ -8,7 +8,7 @@ status: draft
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
-updated: 2026-07-21
+updated: 2026-07-27
 owner: PM / PO
 parent_design: docs/design/harness/L5-detailed-design/physical-data.md
 backprop_decision: not_required
@@ -28,13 +28,13 @@ generates:
 dependencies:
   parent: null
   requires:
-    - PLAN-L7-456-gate-run-orphan-projection-fix
+    - PLAN-RECOVERY-19-gate-run-orphan-projection-fix
   blocks: []
   references:
     - docs/plans/PLAN-L7-363-routine-gate-run-projection.md
     - docs/plans/PLAN-L7-365-harness-db-currency-hook.md
     - docs/plans/PLAN-L7-409-runtime-plan-context-join-signal.md
-    - docs/plans/PLAN-L7-456-gate-run-orphan-projection-fix.md
+    - docs/plans/PLAN-RECOVERY-19-gate-run-orphan-projection-fix.md
 ---
 
 # PLAN-RECOVERY-14 (recovery): harness.db orphan データ負債の収束

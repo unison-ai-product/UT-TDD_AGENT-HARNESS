@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-456-gate-run-orphan-projection-fix
-title: "PLAN-L7-456 (recovery): gate-run projection の false orphan 修正"
+plan_id: PLAN-RECOVERY-19-gate-run-orphan-projection-fix
+title: "PLAN-RECOVERY-19 (recovery): gate-run projection の false orphan 修正"
 kind: recovery
 layer: cross
 drive: db
@@ -8,7 +8,7 @@ status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-07-27
 owner: SE / QA
 parent_design: docs/design/harness/L5-detailed-design/physical-data.md
 backprop_decision: not_required
@@ -19,7 +19,7 @@ agent_slots:
   - role: qa
     slot_label: "QA — false orphan 正例と真正 orphan 負例の回帰固定"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-456-gate-run-orphan-projection-fix.md
+  - artifact_path: docs/plans/PLAN-RECOVERY-19-gate-run-orphan-projection-fix.md
     artifact_type: markdown_doc
   - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module
@@ -55,7 +55,7 @@ review_evidence:
         anchor_commit: 691a479405f29d0486814d3ffbc42680fc5dafa1
 ---
 
-# PLAN-L7-456: gate-run projection の false orphan 修正
+# PLAN-RECOVERY-19: gate-run projection の false orphan 修正
 
 ## 目的と境界
 
