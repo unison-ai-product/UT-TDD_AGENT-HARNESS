@@ -42,7 +42,7 @@ describe("delegation routing (PLAN-L7-255)", () => {
       ok: true,
       model: MODEL_IDS.claude.opus,
       review_lane: "implementation-review",
-      effort: "high", // opus の ladder base
+      effort: "middle", // opus の ladder base
     });
   });
 

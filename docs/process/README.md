@@ -64,3 +64,7 @@ drive は「**その PLAN にどの専門職 (specialist) / 専門エージェ�
 ## §4 位置付け
 
 本 dir 全体は **正本化済** (PLAN-REVERSE-01、2026-06-04)。PLAN-DISCOVERY-04 (Discovery) dogfood 実績を経て、PLAN-REVERSE-01 終点で正本化した。規範変更は concept/requirements (上位正本) 先行 → 本 dir へ反映する。
+
+> **例外 (PLAN-L7-459 M6)**: `plan-asset-v2.md` / `design-detection-self-proof.md` は
+> ADR-008 (Proposed、未 accepted) に付随する `status: draft` であり、本 dir の正本化済
+> 宣言の対象外。ADR-008 が accepted になるまで確定仕様として扱わない。

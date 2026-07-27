@@ -120,6 +120,20 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 `harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
+#### §2.7.1 canonical ledgerファイル正本registry
+
+| ファイル | physical ownership | rebuild / migration / backup |
+|---|---|---|
+| `.ut-tdd/harness.db` | rebuildable projection only | docs/stateとcanonical ledgerのread-only入力からrebuild可能。truncate/deleteはprojection ownerだけが実行し、canonical receiptを保持しない |
+| `.ut-tdd/ledger/harness-ledger.db` | PLAN asset/revision/admission canonical ledger | PLAN ledger migration registryだけがschemaを変更する。projection rebuild/deleteから隔離し、欠落・未知version・digest不整合はfail-close |
+| `.ut-tdd/ledger/cutover-ledger.db` | cutover head/transition/typed object/ref canonical ledger | cutover固有`user_version`・migration registry・online backup/restoreだけが変更する。unknown newer、downgrade、migration failureはcanonical bytes不変でfail-close |
+
+cutover tablesを`.ut-tdd/harness.db`又はPLAN ledgerへ作成してはならない。projection writerは
+`cutover-ledger.db`をread-only transactionで投影し、rebuild/truncate/delete/migrationを伝播しない。
+backup/restoreはcutover DB全体とhead/refs/object digestを同一snapshotとして扱い、projection backupで代替しない。
+本registryは[architecture.md](../L4-basic-design/architecture.md)の3 DB boundaryと
+[internal-processing.md](internal-processing.md)のcutover writer/CAS契約を物理正本として双方向に拘束する。
+
 | table | primary key | 主な列 | 入力 |
 |---|---|---|---|
 | `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `route_mode`, `status`, `parent`, `updated_at`, `decision_outcome`, `source_hash` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |
@@ -147,19 +161,23 @@ data.md §3 の 12 値オブジェクトは全て **enum string** で物理表�
 
 **SubDoc zod 化方針 (IMP-026 解消済み)** — 値域は **requirements §1.10.G.1 が SSoT** で、`src/schema/index.ts` / `src/schema/frontmatter.ts` に実装済み:
 ```
-// src/schema/index.ts:
+// src/schema/index.ts (実装値と同期、PLAN-L7-459 H7 で snapshot 更新):
 export const VALID_SUB_DOCS = {
-  L1: ["business", "functional", "screen", "technical", "nfr"],              // 5
-  L2: ["screen-list", "screen-flow", "wireframe", "ui-element"],             // 4
-  L3: ["business-requirement", "functional-requirement", "nfr-grade"],       // 3
-  L4: ["architecture", "function", "screen", "data", "external-if"],         // 5
-  L5: ["internal-processing", "module-decomposition", "physical-data", "if-detail"], // 4
-  L6: ["function-spec", "class-design", "edge-case"],                        // 3
+  L1: ["business", "functional", "nfr", "technical", "screen"],              // 5
+  L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],             // 4
+  L3: ["business", "functional", "nfr", "screen-functional"],                // 4
+  L4: ["data", "architecture", "function", "external-if", "security",
+       "ui-standard", "report", "batch", "notification", "code-value"],      // 10
+  L5: ["physical-data", "module-decomposition", "internal-processing",
+       "if-detail", "ui-detail"],                                            // 5
+  L6: ["function-spec", "class-design", "edge-case", "screen-spec"],         // 4
 } as const;
 // subDocSchema + frontmatter superRefine で layer×sub_doc 整合を fail-close
 ```
-> 値域の SSoT は requirements §1.10.G.1。本 doc は物理化 (zod 定数 + superRefine) を設計し、実装は L7 (`src/schema` 追加 + frontmatter.ts superRefine 拡張)。
-> **⚠ 既存 doc との不整合 (IMP-029)**: 実在の L3 sub-doc frontmatter は `sub_doc: functional` / `business-detail` 等で、G.1 spec の `functional-requirement` / `business-requirement` と食い違う。IMP-026 実装時に既存 doc の `sub_doc` 値を G.1 へ正規化するか G.1 を実態へ合わせるかの decision が必要 (本 doc は G.1 を SSoT として記述)。
+> 値域の実装 SSoT は `src/schema/index.ts` (`sub-doc-catalog-drift` doctor gate が requirements
+> §1.10.G.1 表との drift を fail-close 検証)。本 snapshot は説明用であり、正は常に schema 実装。
+> 旧 snapshot の不整合注記 (IMP-029) は IMP-026 実装で解消済 (L3 は実態値 `functional` 等へ
+> 正規化され `screen-functional` / L5 `ui-detail` / L6 `screen-spec` 等が追加された)。
 
 ## §4 ID 採番 / index / 参照整合
 
