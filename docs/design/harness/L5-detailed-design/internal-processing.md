@@ -6,7 +6,9 @@ pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L8
-plan: docs/plans/PLAN-L5-03-internal-processing.md
+plan: docs/plans/PLAN-L5-26-node-generation-activation.md
+replacement_issue: 152
+predecessor_plan: docs/plans/PLAN-L5-03-internal-processing.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -388,3 +390,553 @@ C.7 の設計 + lint 契約まで。
 (adapter/config/registry の grey zone を作らない)。他 layer 設計 author への周知 = coding-rules.md へ
 C.7 相互参照を追加 (Important-3 対応)。結合テスト設計 = L8 (宣言×外部化なし→fail / opt-out→pass /
 config・registry 不在→既定 fail-close / 未知キー→fail-close)。
+
+## Node build generation内部処理（Issue #152 D0-N）
+
+1. Node build generation receiptの`subject_revision`は当該sliceのcandidate HEADへ固定する。review済みtoolchain provenanceはNode公式distribution archive SHA-256（OS/arch別）、同梱npm `11.6.2`のCLI relative path・expected SHA-256、`packageManager`/`engines`/lockfile identityを結ぶ。実Node/npm executableを絶対pathで解決し、version文字列だけでなくexpected digest/provenanceへ照合する。
+2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。
+3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
+4. generation内fileをflushし、POSIXでは可能な場合parent directoryも同期した後、immutable generation名へrenameする。activation markerはtemporary write→file sync→close後、存在しない一意final名へ同一filesystem renameする。Windows Node-onlyではprocess-crash atomicityを保証するが、power-loss後の最新marker persistenceを保証済みと主張しない。
+5. writerはexact path `dist/node-publish.lock/`をNode標準のatomic `mkdir`だけで取得する。`open("wx")`、別path、OS helper等の代替backendは禁止する。取得後にvalidated markerのmax sequenceを読み、`N+1`を割り当ててpublishし、最後に自分が正常完了した同一process内だけでleaseをreleaseする。同時writerはretryせずfail-closeする。
+6. lock directory内の`owner.json`は診断情報であり、欠落・破損してもlockを保持する。crash残留lockは永久fail-closeで、F0bにrecovery/steal/clear APIを作らず、手動削除もしない。marker rename後にcrashした場合もreaderはcomplete markerを利用できるがpublisher livenessは停止する。後続recovery PLANまでpublishを再開しない。
+7. readerはtemp、parse不能、digest不一致、generation未完成markerを無視し、検証可能complete markerが1件以上なら最大sequenceを返す。0件ならfail-closeする。power loss後に旧markerが必ず残るとは主張しない。
+
+envの`npm_config_user_agent`は証拠に使用せず、実npm executable/version/digestを測定する。receipt欠落、
+cross-revision replay、dependency/path/symlink drift、unknown field、partial generationはprocess生成前に
+fail-closeする。失敗時のBun/bunx/tsx/TS直実行/shell fallbackは存在しない。
+
+`GenerationPublisher`はtemp generation、exact publish lock、activation markerだけを所有する。F0bではautomatic GCとgeneration削除APIを禁止し、全immutable generationを保持する。reader leaseと安全なreclamationを設計する後続PLANまでGCをdeferし、cleanupはtempと正常完了した同一processが保有するlockに限定する。
+
+F0b rollbackは同一`subject_revision`の検証済み旧generationを指す、より大きいsequenceのmarker appendだけを許す。cross-revision rollbackはunsupportedでfail-closeする。通常のcross-revision復帰はgit revertで新revisionを作りF0a/F0bを再実行する。Resource Kernelまたは別PLANが設計されるまでtarget revision変更APIを持たない。
+
+### Node slice admission状態機械
+
+#### 共通`GitObjectId`
+
+全receipt graphのrevision/HEAD fieldは
+`GitObjectId = "git-sha1:" + 40 lowercase hex | "git-sha256:" + 64 lowercase hex`だけを使う。
+対象はSliceAdmission/SliceEvidenceのsubject、CutoverAdmission candidate、CutoverTransition subject、
+ReviewLane/ReviewBundle subject、L6Confirmation subject及びpayload内revisionである。
+raw hex、uppercase、prefix/length不一致、algorithm変換、field間の別表現を拒否する。
+
+slice admissionは`d0_admitted → f0a_complete → f0b_complete → f0c_complete → q0_complete`の
+一方向typed FSMとする。D0 genesisはreview済みかつadmission済みD0 draftを入力として
+`slice_id=d0`、`predecessor_receipt_digest=null`で作る。各後続commandは直前stateのreceipt digestを入力し、
+target sliceとsubject revisionへ拘束した`SliceAdmissionReceipt`をappendする。F0aはD0 genesis、F0bはF0a
+`f0a.static-custody`、F0cはF0b `f0b.sealed-generation`、Q0はF0c `f0c.os-jobs` aggregateを
+exactly one要求する。receipt欠落、別slice、別revision、失敗、replay、skipはcandidate commitのmerge
+admissionでfail-closeする。
+
+`SliceAdmissionReceipt` coreのzod正本は`src/schema/node-slice-admission.ts`であり、唯一のschemaは
+fieldは`{ schema_version, slice_id, predecessor_receipt_digest, subject_revision,
+required_input_receipt_digests, decision, producer, receipt_digest }`である。
+`schema_version="node-slice-admission.v1"`、`slice_id=d0|f0a|f0b|f0c|q0`、
+`decision=approved|rejected`、producerはPLAN-L7-458 ownership表の正規owner IDとする。
+required input digestsはslice別registry順の重複なしarrayである。coreはexact 8 fieldsで、
+`receipt_digest`を除く
+`[schema_version,slice_id,predecessor_receipt_digest,subject_revision,required_input_receipt_digests,`（前半）
+decision,producer]`のexact 7-field orderをUTF-8固定順JSON array、decimal byte-length frame、
+SHA-256 lowercase hexで封印する。field欠落又は順序変更を拒否する。
+positive transitionは直前approved receipt、同一subject lineage、全required input成功時だけapprovedをappendする。
+negative transitionは欠落、rejected input、owner不一致、revision drift、skip/replayをtyped rejected receiptとして
+残し、次stateへ進めない。
+coreは後述のexact `AttestedReceiptEnvelope<SliceAdmissionReceipt>`へ格納する。
+`predecessor_receipt_digest`、`required_input_receipt_digests`及び後続からの参照は、すべて対象coreではなく
+outer envelopeの`receipt_digest`を保持する。core `receipt_digest`はenvelope内の`record`整合性検証だけに使い、
+content-addressed lookup、FSM edge又はdeduplication keyには使わない。
+
+#### `NODE-SLICE-INPUT-REGISTRY-v1`
+
+`required_input_receipt_digests`は下表のrow順に固定し、同一row内は`plan_id`順とする。
+
+| slice | predecessor | required kind / count | producer | revision規則 |
+|---|---|---|---|---|
+| `d0` | `null` | `ReviewBundleReceipt` / 1（exact 2 lane） | `review-bundle-gate` | candidate HEAD（候補） |
+| `d0` | `null` | `AttestedTrackedReceiptRecord` / exact 4（PLAN-L4-33、L5-26、L6-93、L7-458各1） | `plan-admission-attestation-gate` | 各latest formal revisionかつcontent binding一致 |
+| `f0a` | approved `d0` / 1 | `f0a.static-custody` / 1 | `f0a-gate` | producer ancestor |
+| `f0b` | approved `f0a` / 1 | `f0b.sealed-generation` / 1 | `f0b-gate` | producer ancestor |
+| `f0c` | approved `f0b` / 1 | `f0c.os-jobs` / 1 | `f0c-gate` | producer ancestor |
+| `q0` | approved `f0c` / 1 | `q0.authoring` / 1、`q0.runtime-no-fallback` / 1 | `q0-authoring`、`q0-runtime` | candidate HEAD |
+
+`TrackedReceiptRecord`は`tracked-receipt-projection.ts` / `diff-fence.ts`のcanonical実型、すなわち
+`sequence, previousRecordDigest, recordDigest, commandId, receiptId, receiptDigest, decisionDigest,（正本）
+binding{path,planId,assetId,revision,contentDigest}`を正本とする。このhash chainの
+`issuerAuthenticity=not_verified`だけではD0 eligibilityを満たさない。`AttestedTrackedReceiptRecord`は
+`{schema_version,tracked_record,tracked_record_digest,producer_owner_id,attestation_producer,（固定）
+record_digest,attestation,receipt_digest}`のexact wrapperである。`tracked_record`はcanonical全fieldを保持し、
+`schema_version="attested-tracked-receipt.v1"`だけを許し、unknown versionを拒否する。
+`record_digest`はattestation前の先行5 field、`receipt_digest`はnested attestationを含む先行7 fieldを
+固定tuple/length-frame/SHA-256 lowerhexで封印する。canonical tracked record全体とそのdigestを既存nested `EvidenceAttestation`
+`{ schemaVersion:"evidence-attestation/v1", algorithm:"hmac-sha256", authorityId, keyVersion, signature }`
+へ束縛する正式wrapperである。producerとrecordDigestはattestation内fieldではなく、
+`EvidenceAttestationVerifierPort.verify({ producer, recordDigest }, attestation)`のinputとして渡す。
+`tracked_record_digest`はembedded `tracked_record.recordDigest`とexact一致しなければならず、
+wrapper側だけを再計算したdigest、別recordのdigest又はaliasを拒否する。
+D0 graphへ4 wrapperをtyped object/refとして格納し、unsigned/self-hash-only/forged/untrusted、欠落、重複、wrong plan、非latest revision、
+candidate artifactとのcontent/path binding driftをadmission前に拒否する。
+
+`CAND-NODEBOOT-017..020`は編集開始前の自己gateではない。各sliceのcandidate testとadmission
+schema/runtimeをTDD順で当該slice product changeより先に作り、同じcandidate commitへ含める。
+merge admissionがその完成commitに対してgateを実行し、approved receiptが無ければmergeを拒否する。
+admission kernelは`src/runtime/node-slice-admission.ts`、pair testは
+`tests/node-slice-admission.test.ts`であり、D0→F0a→F0b→F0c→Q0の正規ownerは
+PLAN-L7-458 ownership表を正本とする。
+
+このFSMはD0設計mergeと後続slice acceptanceだけを扱う。production activation、hook/runtime switch、
+Bun final deletion、cutover transitionは、L6 confirmedかつD0 review/admissionがcandidate HEADへ
+一致し、validated Q0及びrequired inherited debt evidenceが揃うまで別のproduction gateが拒否する。
+Issue #153は継承負債2件の記録でありwaiver、receipt又はtrust rootではない。
+
+`SliceAdmissionReceipt`は上記implementation slice専用で、cutover又はfinal revisionの許可には流用しない。
+cutover用zod正本`src/schema/cutover-transition.ts`は、別schemaとして
+field `CutoverAdmissionReceipt { schema_version, edge_id, candidate_head, artifact_digest, prior_validated_receipt_digest, l6_confirmation_receipt_digest, execution_mode, decision, producer_owner_id, attestation_producer, authority_id, record_digest, attestation, receipt_digest }`
+を持つ。`schema_version="cutover-admission.v1"`、
+decisionは`approved|rejected`、candidate headとedgeをexact bindingする。genesis admissionはvalidated
+Q0 `SliceAdmissionReceipt`をpriorに要求し、以後は直前validated cutover receiptをpriorに要求する。
+`record_digest`はnested attestationと自身以降を除く先行11 field、`receipt_digest`はnested attestationを含み自身を除く
+先行13 fieldを固定順canonical tuple+length frame+SHA-256で封印する。`authority_id`はnested
+`EvidenceAttestation.authorityId`とexact一致させる。`execution_mode`は同candidateの
+ReviewBundleReceipt、両ReviewLaneReceipt及びadmission実行時にcomposition rootが観測したmodeとexact一致させる。
+許可FSMは`q0_validated → genesis_approved → inventory_to_shadow_approved → shadow_to_primary_approved → primary_to_bun_removed_approved → bun_removed_to_sealed_approved`だけとする。
+
+| edge_id | `producer_owner_id` | `attestation_producer` | allowed `authority_id` | allowed `keyVersion` |
+|---|---|---|---|---|
+| `cutover.genesis` | `cutover-genesis-authority` | `ci` | `ut-tdd-cutover-genesis` | `v1` |
+| `cutover.inventory-frozen.node-shadow` | `cutover-shadow-authority` | `ci` | `ut-tdd-cutover-shadow` | `v1` |
+| `cutover.node-shadow.node-primary` | `cutover-primary-authority` | `ci` | `ut-tdd-cutover-primary` | `v1` |
+| `cutover.node-primary.bun-removed` | `cutover-removal-authority` | `ci` | `ut-tdd-cutover-removal` | `v1` |
+| `cutover.bun-removed.sealed` | `cutover-seal-authority` | `ci` | `ut-tdd-cutover-seal` | `v1` |
+
+各cutover/final revisionはexact candidate HEADに対してfresh admissionを発行できるが、authority/key
+version、prior receipt、edge、owner→EvidenceProducer写像又は`authority_id == attestation.authorityId`が
+上表と一致しなければrejectedとする。この5 rowを`CUTOVER-ADMISSION-PRODUCER-MAP-v1`のclosed setとし、
+unknown owner、wrong producer、authority ID driftをfail-closeする。別revisionのadmission replay、
+上表以外のtrusted CI authority/keyによる署名もedge authority replayとして拒否する。
+slice admission流用、skip、同一edge二重approvedを拒否する。
+
+### Node切替receipt chain
+
+cutover writerはvalidated latest receiptを読み、5状態の隣接一方向遷移だけを受理する。各guardはinventory freeze、
+Node parity aggregate、fallback/process 0、final deletion+独立reviewの順に対応する。canonical receiptへ
+下記唯一schemaのfieldを封印して`receipt_digest`を計算しappendする。
+invalid/skip/reverse/replay/digest不一致はappend前にfail-closeする。read modelはreceipt chainを
+foldして再構築し、DB/UIから状態を直接書き換えない。
+
+edge evidence registryはtransition discriminatorごとにrequired kind/count/producer/revision rule/digest/exit successを
+固定する。以下のregistryだけをcutover evidence契約の正本とし、PLAN、L6、test-designはRegistry IDを
+規範参照してkind/producer IDを再定義しない。
+
+#### `CUTOVER-EVIDENCE-REGISTRY-v1`
+
+| 遷移ID | kind ID | 件数 | producer ID | revision規則 |
+|---|---|---:|---|---|
+| `cutover.genesis` | `inventory.freeze` | 1 | `inventory-freezer` | `candidate-head` |
+| `cutover.genesis` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.genesis` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.genesis` | `design.l6-confirmed` | 1 | `l6-confirmation-gate` | `candidate-head` |
+| `cutover.inventory-frozen.node-shadow` | `f0a.static-custody` | 1 | `f0a-gate` | `producer-ancestor` |
+| `cutover.inventory-frozen.node-shadow` | `f0b.sealed-generation` | 1 | `f0b-gate` | `producer-ancestor` |
+| `cutover.inventory-frozen.node-shadow` | `f0c.os-jobs` | 1 | `f0c-gate` | `producer-ancestor` |
+| `cutover.inventory-frozen.node-shadow` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.inventory-frozen.node-shadow` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.node-shadow.node-primary` | `q0.authoring` | 1 | `q0-authoring` | `candidate-head` |
+| `cutover.node-shadow.node-primary` | `q0.runtime-no-fallback` | 1 | `q0-runtime` | `candidate-head` |
+| `cutover.node-shadow.node-primary` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.node-shadow.node-primary` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `inventory.zero` | 1 | `ban-audit` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `pack.acceptance` | 1 | `pack-gate` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.node-primary.bun-removed` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `debt.plan-recovery-16.repaired` | 1 | `plan-recovery-16-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `debt.plan-l7-452.repaired` | 1 | `plan-l7-452-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `issue.153-closed` | 1 | `github-evidence` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `aggregate.success` | 1 | `aggregate-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `review.bundle` | 1 | `review-bundle-gate` | `candidate-head` |
+| `cutover.bun-removed.sealed` | `admission.approved` | 1 | `admission-gate` | `candidate-head` |
+
+全rowでEdge ID、kind ID、producer ID、count、revision rule、digest、successをexact照合する。receipt schemaは
+種別で分離する。`SliceEvidenceReceipt`は`kind_id`でdiscriminateし、共通field
+`{ schema_version, edge_id, kind_id, producer_owner_id, attestation_producer, subject_revision,（固定）
+success, reference_kind, referenced_receipt_digest, payload_object_receipt_digest, payload_digest,（固定）
+record_digest, attestation, receipt_digest }`を持つ。
+`review.bundle`は`referenced_receipt_digest=AttestedReceiptEnvelope<ReviewBundleReceipt>.receipt_digest`、
+`admission.approved`は`referenced_receipt_digest=CutoverAdmissionReceipt.receipt_digest`を必須とする。
+その他generic payload kindだけが`payload_object_receipt_digest`と`payload_digest`を持つ。`schema_version`は
+`cutover-evidence.v1`とする。`subject_revision`はregistryのrevision規則でdiscriminateし、
+`producer-ancestor` rowではproducer commit、`candidate-head` rowではcandidate HEADをexact保持する。
+正規型`GitObjectId = "git-sha1:" + 40 lowercase hex | "git-sha256:" + 64 lowercase hex`だけを許す。
+現repositoryのSHA-1 object IDは`git-sha1:<40hex>`として保持する。algorithm prefixなし、長さ混同、
+uppercase又は同じhexを別algorithmへ付け替えたrevision replayを拒否する。
+`record_digest`はnested attestation、自身及び`receipt_digest`を除いた
+`schema_version,edge_id,kind_id,producer_owner_id,attestation_producer,subject_revision,success`（前半）と
+`reference_kind,referenced_receipt_digest|null,payload_object_receipt_digest|null,payload_digest|null`（後半）
+の固定11-field tupleを封印する。`receipt_digest`はその11 field、`record_digest`及びnested
+`EvidenceAttestation`を固定順に封印する。
+outer content-addressed objectの唯一のidentityとlookup keyは`receipt_digest`である。
+generic kindの`payload_digest`はpayload contentのdigestに限定し、object lookup、参照edge、deduplication keyへ流用しない。
+generic payloadの実体は
+`EvidencePayloadObject { schema_version, kind_id, payload_schema, payload_bytes, payload_digest,`（前半）
+`producer_owner_id, attestation_producer, record_digest, attestation, receipt_digest }`（後半）
+のexact schemaで保存する。`record_digest`はnested attestationと自身以降を除く先行7 field、
+`receipt_digest`は先行9 fieldを固定順で封印する。`SliceEvidenceReceipt.payload_object_receipt_digest`だけで
+`schema_version`はliteral `evidence-payload-object.v1`だけを許す。
+`payload_bytes`はdecoded payloadのRFC 8785 canonical JSONをUTF-8 encodeしたbyte列をRFC 4648
+base64url（`-`/`_` alphabet、paddingなし）で表す。標準base64、padding付き、非canonical JSON、invalid UTF-8、
+duplicate key又はdecode→再encode不一致を拒否する。このobjectを取得し、base64url decodeしたbytesから
+SHA-256 lowercase hex `payload_digest`を再計算してreceipt側とexact一致させる。
+さらに両receipt間で`kind_id`、`producer_owner_id`、`attestation_producer`及びregistryで定めた
+`payload_schema`をexact照合する。cross-kind、cross-owner、wrong producer又は別schema payloadのreceipt replayを拒否する。
+
+#### `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`
+
+decoded payloadの共通exact base fieldsは
+`{ schema_version:"evidence-payload.v1", schema_id:payload_schema literal, kind_id:string literal,`（共通前半）
+`subject_revision:GitObjectId, observed_at:RFC3339 UTC, result:"success" }`である。外側
+`SliceEvidenceReceipt.subject_revision`とexact equality、`EvidencePayloadObject.payload_schema == decoded.schema_id`
+を要求する。追加fieldを許可せず、下表のkind別required fieldsを加えた
+closed discriminated unionをRFC 8785 canonicalizeする。`uint`はJSON整数かつ`0..2^53-1`、digestは
+`sha256:` prefix付き64 lowercase hexである。
+
+| kind ID | payload_schema | kind別required fields（型 / domain / semantic predicate） |
+|---|---|---|
+| `inventory.freeze` | `inventory-freeze.v1` | `inventory_digest:digest`, `entry_count:uint` / freeze対象全件を数える |
+| `design.l6-confirmed` | `l6-confirmation-evidence.v1` | `plan_id:"PLAN-L6-93-node-bootstrap-contract"`, `plan_revision:uint`, `status:"confirmed"`, `content_digest:digest` / subjectとformal revision一致 |
+| `f0a.static-custody` | `f0a-static-custody.v1` | `node_version:string`, `npm_version:string`, `lock_digest:digest` / exact pinとclean lock graph一致 |
+| `f0b.sealed-generation` | `f0b-sealed-generation.v1` | `image_digest:digest`, `generation:uint`, `fallback_count:0` / sealed generation成功 |
+| `f0c.os-jobs` | `f0c-os-jobs.v1` | `workflow_revision:GitObjectId`, `run_id:string`, `run_attempt:uint>0`, `linux:{subject_revision:GitObjectId,run_id:string,run_attempt:uint,conclusion:"success",digest:digest}`, `windows:{同型}` / `workflow_revision == subject_revision == linux.subject_revision == windows.subject_revision && run_id/run_attemptが両OSと一致 && 両conclusion=="success"` |
+| `q0.authoring` | `q0-authoring.v1` | `fixture_digest:ContentDigest`, `case_manifest_envelope_digest:ReceiptDigest`, `executed_case_ids:string[] unique` / immutable manifest期待set equality |
+| `q0.runtime-no-fallback` | `q0-runtime-no-fallback.v1` | `runtime_digest:ContentDigest`, `case_manifest_envelope_digest:ReceiptDigest`, `executed_case_ids:string[] unique`, `bun_process_count:0`, `fallback_count:0` / immutable manifest expected set equalityかつNode-only |
+| `inventory.zero` | `inventory-zero.v1` | `scan_digest:digest`, `bun_reference_count:0` / inventory全対象0 |
+| `pack.acceptance` | `pack-acceptance.v1` | `pack_digest:digest`, `accepted:true` / clean Pack acceptance |
+| `debt.plan-recovery-16.repaired` | `plan-recovery-16-repair.v1` | `plan_id:"PLAN-RECOVERY-16-plan-revision-authoring"`, `repair_receipt_digest:digest` / formal repair済み |
+| `debt.plan-l7-452.repaired` | `plan-l7-452-repair.v1` | `plan_id:"PLAN-L7-452-forward-escape-contract-red"`, `repair_receipt_digest:digest` / formal repair済み |
+| `issue.153-closed` | `github-issue-closure.v1` | `issue_id:153`, `state:"closed"`, `event_digest:digest` / trusted closure event |
+| `aggregate.success` | `aggregate-success.v1` | `profile_id:"harness-check"`, `profile_revision:1`, `required_lane_ids:string[] unique`, `required_lane_set_digest:digest`, `workflow_revision:GitObjectId`, `run_id:string`, `run_attempt:uint>0`, `lanes:[{lane_id:string unique,subject_revision:GitObjectId,run_id:string,run_attempt:uint,outcome:"success"}]`, `aggregate:"success"` / profile exact set equalityかつ全lane success |
+
+generic kindはこのclosed registryのexact 1 rowを要求する。`review.bundle`と`admission.approved`はtyped refであり
+payload schema registryへ入れない。未知kind/schema、row追加を伴わないschema文字列又はcross-row再利用はfail-closeする。
+
+#### `CASE-MANIFEST-v1`
+
+`ReceiptDigest`はprefixなし64 lowercase hexで、core/outer `receipt_digest`、refs、DB PKにだけ使う。
+`ContentDigest`は`sha256:`+64 lowercase hexでartifact/content/required setにだけ使う。相互変換やprefix省略/
+付加を許さず、算出時と検証時にprefix有無をexact照合する。
+ContentDigestの全算出式は必ず文字列`"sha256:" + SHA-256-lowerhex(preimage)`を返す。
+`IdentityDigest`はContentDigest subtypeである。canonical identity object
+`{identity_schema:"ut-tdd-identity.v1",provider,runtime_family,stable_subject_id}`をRFC 8785 canonicalize→
+UTF-8→`"sha256:"+lowerhex`で算出する。
+`SessionIdentityDigest`もContentDigest subtypeで、canonical object
+`{session_schema:"ut-tdd-session.v1",provider,runtime_family,provider_issued_session_id}`を同じ式で算出する。
+provider-issued attestationを必須とし、raw session stringやaliasを受理しない。
+#### `MANAGED-SESSION-TRUST-REGISTRY-v1`
+
+| revision | provider | runtime_family | authorityId | algorithm | keyVersion | valid_from | valid_until |
+|---:|---|---|---|---|---|---|---|
+| 1 | `openai` | `codex` | `ut-tdd-managed-codex-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` |
+| 1 | `anthropic` | `claude` | `ut-tdd-managed-claude-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` |
+| 1 | `human` | `human` | `ut-tdd-managed-human-session-v1` | `ed25519` | `session-key-v1` | `2026-01-01T00:00:00Z` | `2027-01-01T00:00:00Z` |
+
+この3 rowをclosed setとし、standalone humanもhuman rowだけを使う。実key値は文書へ保存せずcomposition-root
+key handleへ解決する。D0正本はimmutable v1/revision 1だけで、unknown provider/runtime/authority/key/revisionを拒否する。
+v1の実行経路にrotationは0である。将来は別additive PLAN/design revisionと新registry ID v2をreview/admit後に実装し、
+v1を書き換えない。
+
+`ManagedSessionAttestation`は
+`{schemaVersion:"managed-session-attestation.v1",trust_registry_id:"MANAGED-SESSION-TRUST-REGISTRY-v1",`
+`trust_registry_revision:1,algorithm:"ed25519",authorityId,keyVersion,issued_at:RFC3339,signature}`
+のexact schemaである。
+`ManagedSessionAttestationVerifierPort.verify({provider,runtimeFamily,payloadBytes},attestation)`を使い、
+composition rootのclosed trust registryでprovider/runtime→allowed authorityId/algorithm/keyVersionを固定する。
+codex/claude/human/standaloneのUT-TDD managed delegation/session gateが発行し、外部provider API署名を仮定しない。
+unknown/wrong/expired key、forgery、algorithm drift、cross-provider replayを拒否する。
+`issued_at`がv1 rowの`[valid_from,valid_until)`内だけ発行/検証を許し、expiry後は新receipt発行0かつ全admission
+fail-closeとする。active signing-key compromiseの自動検出、rotation、revocationはD0実行経路に存在しない。
+侵害が外部security incidentとして報告された時点で該当authorityを運用停止し、managed-session verification、
+admission、cutoverを全面fail-closeする。既存receiptはmerge又はactivationの根拠に使わない。再開にはsecurity/PO承認の
+別ADR/PLAN、新registry ID v2、再review、再issueが必要であり、immutable v1自体は書き換えない。この境界はmachine
+Green oracle又はhistorical determinism claimではなく、明示的な高影響運用境界である。
+
+`SessionIdentityReceipt` coreは
+`{schema_version:"session-identity.v1",provider,runtime_family,provider_issued_session_id,stable_subject_id,`（前半）
+`identity_digest:IdentityDigest,session_identity_digest:SessionIdentityDigest,managed_session_attestation:ManagedSessionAttestation,producer_owner_id:"session-identity-gate",`
+`receipt_digest:ReceiptDigest}`（後半）のexact 10/self除外9-field preimageを持つ。self除外9 fieldsのcanonical
+objectをRFC 8785→UTF-8→SHA-256 raw ReceiptDigest化する。managed attestationとouter EvidenceAttestationを
+二段検証する。Attested envelopeへ格納しcore/outer ownerを一致、closed mapでEvidenceProducer `ci`へ写像する。
+producer/verifier共通の唯一の署名payloadはcanonical combined object
+`{identity_schema:"ut-tdd-identity.v1",stable_subject_id,session_schema:"ut-tdd-session.v1",provider,`
+`runtime_family,provider_issued_session_id,trust_registry_id:"MANAGED-SESSION-TRUST-REGISTRY-v1",`
+`trust_registry_revision:1,issued_at}`のRFC 8785 UTF-8 bytesである。
+同じmanaged authorityがstable subjectとsessionを同時証明し、IdentityDigest/SessionIdentityDigestを再導出する。
+
+producer自己申告から分離したimmutable `CaseManifestObject` coreを保存する。exact schemaは
+`{schema_version:"case-manifest.v1",subject_revision:GitObjectId,source_artifact_id:"NODE-Q0-CASE-MANIFEST-v1",`（前半）
+`source_artifact_path:"docs/test-design/harness/L8-integration-test-design.md",source_test_design_artifact_digest:ContentDigest,`
+`expected_case_ids:string[] unique sorted nonempty,required_set_digest:ContentDigest,producer_owner_id:"q0-case-manifest-gate",`（後半）
+receipt_digest}`である。selfを除くexact 8-field tupleをcore preimageとし、`receipt_digest`はこのtupleの
+RFC 8785 canonical JSONをUTF-8化してSHA-256 lowerhexを取ったexact値とする。
+`AttestedReceiptEnvelope<CaseManifestObject>`へ格納する。ownerはEvidenceProducer `ci`へ写像し、
+lookup/refはouter envelope digestだけを使う。Q0 payloadは`case_manifest_envelope_digest`を参照し、
+manifest subjectとpayload subjectを一致させ、executed IDsとexpected IDsのexact set equalityを要求する。
+`expected_case_ids`はUTF-8 code-point昇順のunique arrayとし、`required_set_digest`は
+`SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(expected_case_ids)))`のexact値を要求する。
+`source_test_design_artifact_digest`の唯一のpreimageはmarker間のsingle parsed JSON objectをRFC 8785
+canonicalizeしてUTF-8化したbytesであり、doc全体、marker行、改行を含めない。
+artifact extractionは上記pathのraw Markdown bytesをUTF-8 LFとして読む。開始行exact
+`` `NODE-Q0-CASE-MANIFEST-v1-BEGIN` ``と終了行exact
+`` `NODE-Q0-CASE-MANIFEST-v1-END` ``を各1行、開始→終了順で要求し、前後空白0とする。
+両行間はnonblank JSON line exact 1行だけを許す。JSONのrequired/allowed fieldsはexact
+`{artifact_id,schema_version,expected_case_ids}`で、artifact/schema literalを照合し、
+unknown/missing/duplicate keyを拒否する。RFC 8785 canonicalizeしたobjectのUTF-8 bytesからartifact digestを計算する。
+manifestの`expected_case_ids`はparsed JSON arrayと順序を含めexact一致させ、subset/extra/order drift/duplicateを拒否する。
+core `producer_owner_id`はouter `producer_owner_id`と一致させ、closed owner mapによりouter
+`attestation_producer == "ci"`を要求する。typed object storeは
+`UNIQUE(subject_revision, evidence_type='q0-case-manifest')`を保証し、同一outer digestの再登録だけを冪等成功、
+同一subjectで異なるdigestを競合拒否する。これはhead/CAS/version registryではない。
+`q0.authoring`とclosed literal `q0.runtime-no-fallback`は同じCaseManifest outer digestを参照する。EvidencePayloadObjectから
+CaseManifest outer digestへのtyped edgeを`cutover_evidence_refs`へ保存する。各`q0.authoring`/
+`q0.runtime-no-fallback` EvidencePayloadObjectは`edge_kind='q0.case-manifest'`, `ordinal=0`のedge exact 1を持ち、
+reducerはそのedgeだけを辿る。別edge kind/ordinal、複数、missing/orphan/different-manifest参照はfail-closeする。
+manifest変更は新subject revisionと通常のreview/admissionを必要とし、runtime mutable registry/head/removal APIは0とする。
+
+#### `AGGREGATE-PROFILE-REGISTRY-v1`
+
+| profile_id | revision | 必須lane exact set |
+|---|---:|---|
+| `harness-check` | 1 | `harness-check-linux`, `harness-check-windows`, `harness-check-aggregate` |
+
+`required_lane_set_digest`はsorted required IDsのcanonical JSON UTF-8 bytesのSHA-256である。
+payload required setとobserved lane setはprofile exact setへ一致させ、duplicate、extra、missing、
+profile/revision drift、aggregate laneだけの自己成功を拒否する。
+`object_digest` / `evidence_digest`を`receipt_digest`のaliasとして受理せず、nested payloadも各typed
+receipt自身の`receipt_digest`だけで取得する。
+`CutoverTransitionReceipt`の唯一のschemaは
+fieldは`{ schema_version, registry_id, transition_id, sequence, subject_revision, previous_state, current_state, evidence_set_digest, review_digest, admission_digest, previous_receipt_digest, receipt_digest }`である。
+`schema_version="cutover-transition.v1"`、`registry_id="CUTOVER-EVIDENCE-REGISTRY-v1"`、
+`transition_id`は該当Edge ID、`subject_revision`はtransition candidate HEADとする。
+全production edgeで`review.bundle` / `admission.approved` rowをexactly one要求するため、
+`review_digest` / `admission_digest`は非nullかつ各evidence receiptの`receipt_digest`とexact一致する。
+`admission.approved`は`CutoverAdmissionReceipt`だけを指し、`SliceAdmissionReceipt`を受理しない。
+別名`evidence_digest`又は`chain_digest`をtransition receipt fieldとして受理しない。
+`candidate-head` evidenceはcandidate HEADとexact一致する。
+`producer-ancestor` evidenceは各producer commitをexact保持し、candidate HEADが全producer commitの
+descendantであるancestry closureを要求する。producer commitがcandidate HEAD自身又はそのancestorでない場合、
+同一evidence digest/commitの再利用、既に消費したreceipt、previous chain head不一致をそれぞれ
+non-ancestor、stale/replay、chain mismatchとしてappend前に拒否する。transition receiptは全producer
+receiptを次の唯一の手順で`evidence_set_digest`へ封印し、別candidate HEADへの流用を拒否する。
+
+1. registryに記載したrow順を`row_ordinal`として固定し、各receiptを
+   配列`[schema_version, registry_id, transition_id, row_ordinal, edge_id, kind_id, producer_owner_id,
+   attestation_producer,
+   subject_revision, receipt_digest, success]`のJSON tupleへ射影する。`receipt_digest`が
+   kind別`referenced_receipt_digest`又は`payload_digest`を含むevidence receipt全体を封印するため、payload mutationも集合digestへ伝播する。
+2. 同一`(edge_id, kind_id, producer_owner_id, attestation_producer, subject_revision, receipt_digest)`又は同一expected rowの
+   duplicateをhash前に拒否し、registry row orderへstable sortする。
+3. 各tupleをUTF-8・無空白・固定array順のcanonical JSONへencodeし、
+   `<UTF-8 byte length in decimal>:<JSON bytes>`でlength-frameして連結する。
+4. 連結byte列のSHA-256 lowercase hexを`evidence_set_digest`とする。OS path separator、改行、
+   locale、object key iterationは入力に含めない。
+5. `receipt_digest`は上記12 fieldのうち自身だけを除いた固定順JSON arrayを同じlength-frame規則で
+   encodeし、SHA-256 lowercase hexで算出する。`previous_receipt_digest`は直前の`receipt_digest`又は
+   genesisの`null`だけを許す。
+
+`cutover.bun-removed.sealed`は`debt.plan-recovery-16.repaired`と
+`debt.plan-l7-452.repaired`の両typed rowを必須とし、片方だけ、旧generic `debt.repair`、
+未知PLAN IDは拒否する。
+
+`WorkProvenanceEventReceipt` coreは
+`{schema_version:"candidate-work-provenance.v1",base_revision:GitObjectId,subject_revision:GitObjectId,`
+`product_commit:GitObjectId,author_provider:string,author_identity_digest:IdentityDigest,author_session_identity_envelope_digest:ReceiptDigest,runtime_family:string,`
+`touched_paths:string[] sorted unique nonempty,touched_paths_digest:ContentDigest,producer_owner_id:"candidate-work-provenance-gate",receipt_digest:ReceiptDigest}`
+のexact 12 fields/self除外11-field RFC 8785/UTF-8/SHA-256 raw ReceiptDigest preimageを持ち、自身のdigestを
+preimageへ入れない。Attested envelopeへ格納しcore/outer ownerを一致、closed mapで`ci`へ写像し、
+provider/session attestationを検証する。
+参照SessionIdentityReceiptのprovider/runtime_familyはWorkEventのauthor_provider/runtime_familyとexact一致し、
+session canonical objectからSessionIdentityDigestを再導出する。
+WorkEvent `author_identity_digest`はSessionIdentityReceipt `identity_digest`とexact一致する。
+pathはGit tree由来repo-relative UTF-8 NFC、separator `/`、case-sensitiveとし、absolute、`.`、`..`、
+backslash、NUL、invalid UTF-8を拒否する。`touched_paths_digest`はexact arrayのRFC 8785→UTF-8→ContentDigestである。
+
+`CandidateAuthorshipReceipt` coreのself除外10 fieldsは次のfield orderのcanonical objectをRFC 8785→UTF-8→
+SHA-256 raw ReceiptDigest化する。
+`{schema_version:"candidate-authorship.v1",subject_revision:GitObjectId,`（前半）
+`artifact_digest:ContentDigest,base_revision:GitObjectId,author_identity_digest_set:IdentityDigest[] sorted unique nonempty,`
+`runtime_family_set:string[] sorted unique nonempty,author_session_identity_envelope_digests:ReceiptDigest[] sorted unique nonempty,`
+`work_provenance_event_envelope_digests:ReceiptDigest[] sorted unique nonempty,work_provenance_set_digest:ContentDigest,`
+`producer_owner_id:"candidate-custody-gate",receipt_digest:ReceiptDigest}`（後半）の
+exact 11 fields/self除外10-field preimageを持ちAttested envelopeへ格納する。trusted custody gate→`ci`とし、
+provider/session verifierがbase..subjectの全product-writing eventからsetsを再導出する。missing/unattested/
+forged/omitted writerを拒否し、自由な`author_identity`自己申告fieldを廃止する。
+work event outer ReceiptDigest arrayをRFC 8785→UTF-8→`sha256:`+lowerhex化して
+`work_provenance_set_digest`を再導出する。authorship→event edgeは
+`edge_kind='authorship.work-event'`, `ordinal=array index`のexact Nとし、missing/orphan/extra/order/digest mismatchを拒否する。
+base..subjectはfirst-parent linearだけを許しmerge commitを拒否する。各commitとfirst parentのdiffから得る
+全Git tracked changed paths exact set（除外0）を対応event `touched_paths`と一致させる。untracked/gitignored
+runtime stateはGit diffに存在しない。candidate coverageはevent arraysの
+path unionを直接比較しdigestから復元しない。commit/path omission、foreign subject/base/session/identityを拒否する。
+
+`ReviewBundleReceipt`は`{ schema_version, artifact_digest, subject_revision, base_revision,
+authorship_envelope_digest, execution_mode, lanes, receipt_digest }`のexact 8 fields/self除外7-field preimageで、
+`schema_version="review-bundle.v1"`、lanesはexactly twoである。
+各`ReviewLaneReceipt`は`{ schema_version, lane_id, verdict, artifact_digest, subject_revision, provider,
+reviewer_model, execution_mode, runtime_family, reviewer_identity_digest:IdentityDigest, reviewer_session_identity_envelope_digest:ReceiptDigest, receipt_digest }`とし、lane IDは
+`schema_version="review-lane.v1"`だけを許し、unknown versionを拒否する。
+`claim-blind` / `spec-blind`を各1、verdictは両方`PASS`だけを許す。両laneのartifact/revisionはbundleと一致し、
+`execution_mode=hybrid`ではprovider、session、identityがlane間で異なり、reviewer identity/session/runtimeは
+authorship receiptのauthor setsともdisjointである。
+`codex-only|claude-only`ではprovider/runtime familyの一致を許す一方、reviewer model、session、
+identityがlane間で異なり、reviewerはauthorとも異なる。異model2 laneを用意できなければfail-closeする。
+`standalone`はAI/subagent laneを禁止し、distinct human reviewer 2名を要求する。両laneは
+`provider=human, reviewer_model=none, runtime_family=human`、異なるidentity/session/evidenceで、
+authorとも異ならなければならない。人間2名を用意できなければfail-closeする。
+各laneは`receipt_digest`以外のexact 11 fieldを
+`[schema_version,lane_id,verdict,artifact_digest,subject_revision,provider,reviewer_model,`（前半）
+execution_mode,runtime_family,reviewer_identity_digest,reviewer_session_identity_envelope_digest]`の順で固定tuple/length-frame/SHA-256規則へ
+封印する。field欠落、順序変更、version除外又は旧10-field preimageを拒否する。
+bundleはlaneを`claim-blind, spec-blind`順へ固定し、`receipt_digest`以外のexact 7 field
+`[schema_version, artifact_digest, subject_revision, base_revision, authorship_envelope_digest, execution_mode,`（前半）
+`lanes=[claim-blind.receipt_digest,spec-blind.receipt_digest]]`（後半）
+を同じ規則で封印する。`lanes`に格納する2 digestは各lane coreではなく
+`AttestedReceiptEnvelope<ReviewLaneReceipt>.receipt_digest`である。そのbundle coreを包むouter envelope receipt digestを
+`review.bundle` evidence receiptが参照し、
+transitionの`review_digest`はそのevidence receipt `receipt_digest`と一致する。片lane、PASS以外、
+重複lane、artifact/revision drift、mode別independence違反は拒否する。
+bundleと両laneの`execution_mode`はactual admission modeとexact一致し、mixed/stale modeを拒否する。
+bundle→authorship outer digestのtyped refは`edge_kind='review.authorship'`, `ordinal=0` exact 1とし、
+D0 top-level 5 inputsは維持する。
+bundle/authorshipのsubject、artifact、baseをexact一致させ、baseはPR admission requestのreview base/merge-base
+GitObjectIdと一致させる。base drift/range truncation/cross-candidateを拒否する。reviewer IdentityDigest setと
+author/reviewer session envelopeをchain-only検証してSessionIdentityDigestを再導出し、envelope digestと
+SessionIdentityDigestの双方をdisjoint比較する。WorkEvent→sessionとReviewLane→sessionは各
+`edge_kind='identity.session'`, `ordinal=0` exact 1とする。
+ReviewLane参照SessionIdentityReceiptのprovider/runtime_familyはlane provider/runtime_familyとexact一致する。
+ReviewLane `reviewer_identity_digest`もSessionIdentityReceipt `identity_digest`とexact一致し、raw aliasは比較入力にしない。
+
+| `producer_owner_id` | `attestation_producer` |
+|---|---|
+| `inventory-freezer` | `ci` |
+| `review-bundle-gate` | `ci` |
+| `admission-gate` | `ci` |
+| `l6-confirmation-gate` | `ci` |
+| `f0a-gate` | `ci` |
+| `f0b-gate` | `ci` |
+| `f0c-gate` | `ci` |
+| `q0-authoring` | `ci` |
+| `q0-runtime` | `ci` |
+| `ban-audit` | `ci` |
+| `pack-gate` | `ci` |
+| `plan-recovery-16-gate` | `ci` |
+| `plan-l7-452-gate` | `ci` |
+| `github-evidence` | `ci` |
+| `aggregate-gate` | `ci` |
+| `plan-admission-attestation-gate` | `ci` |
+| `q0-case-manifest-gate` | `ci` |
+| `candidate-custody-gate` | `ci` |
+| `candidate-work-provenance-gate` | `ci` |
+| `session-identity-gate` | `ci` |
+
+この20 rowを`CUTOVER-EVIDENCE-PRODUCER-MAP-v1`のclosed setとする。slice admission owner 5種は
+PLAN-L7-458 `SliceAdmission producer registry`のclosed setとして全て`ci`へ写像する。review lane ownerは
+lane providerと同じ`human|codex|claude`、PO approval ownerは`po`へ写像する。
+
+owner IDはrecord preimageへ封印し、verifierには既存enumの`attestation_producer`だけを渡す。
+unknown/wrong mappingを拒否し、producerを`ci`へ丸めても署名対象recordDigest内のowner bindingを維持する。
+`hybrid`ではprovider/runtime familyを分離する。`codex-only` / `claude-only`でprovider差を
+構成できない場合に限り、異なるmodelかつ独立sessionのintra-runtime 2 laneを許可する。同一model、
+同一session、author自身のlaneは全modeで禁止し、Issue #153でもclaim-blind/spec-blind exact 2 laneを減免しない。
+standaloneは上記human 2 lane以外を許可しない。
+
+`ReviewLaneReceipt`、`ReviewBundleReceipt`、`CandidateAuthorshipReceipt`、`WorkProvenanceEventReceipt`、`SessionIdentityReceipt`、`SliceAdmissionReceipt`、`CaseManifestObject`の各core receiptは
+`AttestedReceiptEnvelope { schema_version, producer_owner_id, attestation_producer, record,`（前半）
+record_digest, attestation, receipt_digest }`のexact 7-field wrapperへ格納する。`record_digest`は
+`schema_version="attested-receipt-envelope.v1"`だけを許し、unknown versionを拒否する。
+`record_digest`は`[schema_version,producer_owner_id,attestation_producer,record]`のexact 4-field tuple、
+wrapper `receipt_digest`は自身を除くexact 6-field tupleを封印する。core `receipt_digest`も再計算し、
+CandidateAuthorship core `producer_owner_id`はouter ownerと一致し、outer `attestation_producer`はclosed mapの`ci`とexact一致する。
+`EvidenceAttestationVerifierPort.verify({producer: attestation_producer, recordDigest: record_digest},`（検証入力）
+attestation)`を構成する。core schemaを曖昧に拡張せずproducer、record digest、nested attestationを
+chainだけから復元する。
+SliceAdmission coreの`producer`はcanonical `producer_owner_id`として解釈し、outer envelopeの
+`producer_owner_id`とexact一致させる。core/outer owner差、outer `attestation_producer`のwrong mapping又は
+同じ署名を別ownerへ移したreplayを拒否する。
+
+`SliceAdmissionReceipt`、`CutoverAdmissionReceipt`は
+既存`EvidenceRecord` / `EvidenceAttestation`契約を必須利用し、独自の署名booleanや自己申告を持たない。
+各recordはproducer、subject revision、source commit、edge/slice binding、canonical record digestと、
+nested attestation `{ schemaVersion, algorithm, authorityId, keyVersion, signature }`を持ち、composition root固定
+`EvidenceAttestationVerifierPort`のtrusted verifierがeligibleと判定したものだけを数える。
+独自`issuer_key_id`は導入しない。unsigned、forged signature、unknown/untrusted authority又はkey version、
+producer/subject/edge binding不一致は監査保存しても
+gate件数には数えない。review lane independenceは上記execution mode別条件だけを正本とする。
+
+freshとは、bundle/admissionがtransition candidate HEADとそのartifact digestへexact拘束され、
+まだどのtransitionにも消費されていないことをいう。review後にproduct commitが追加されればrevision/
+artifact mismatchで失効する。`admission.approved`は同じcandidate HEADに対する正規ownerのapproved
+`CutoverAdmissionReceipt`を封印し、transitionの`admission_digest`はそのevidence receipt digestと一致する。
+
+chain entryはtransition receiptとその全immutable evidence receiptsを同じappend recordへ保存する。
+したがって外部review service又はIssueを再照会せず、chainだけでreview bundle、admission、evidence set、
+receipt digestを再検証できる。`initializeCutoverChain`は`sequence=0`かつ
+`expected_previous_receipt_digest=null`のCASだけを許す。`appendCutoverTransition`は
+`sequence=latest.sequence+1`、`expected_previous_receipt_digest=latest.receipt_digest`を要求する。
+writerはchain headに対するexclusive lock内でcompare-and-swapし、receipt/evidenceを単一atomic transactionでappendする。
+CAS loserは`cutover-write-conflict`でretryせず、double genesis、同一headからのfork、partial/crash appendを残さない。
+
+保存するtyped evidence unionは`SliceEvidenceReceipt | EvidencePayloadObject |`（先頭）、
+`AttestedReceiptEnvelope<ReviewLaneReceipt> | AttestedReceiptEnvelope<ReviewBundleReceipt> |`（レビュー）、
+`AttestedReceiptEnvelope<CandidateAuthorshipReceipt> | AttestedReceiptEnvelope<WorkProvenanceEventReceipt> | AttestedReceiptEnvelope<SessionIdentityReceipt> | AttestedReceiptEnvelope<SliceAdmissionReceipt> | AttestedReceiptEnvelope<CaseManifestObject> |`（残り）、
+CutoverAdmissionReceipt | AttestedTrackedReceiptRecord | L6ConfirmationReceipt`である。`L6ConfirmationReceipt`は
+`{schema_version,plan_id,plan_revision,status,content_digest,subject_head,tracked_record_digest,`（前半）
+producer_owner_id,attestation_producer,record_digest,attestation,receipt_digest}`のexact schemaである。
+`schema_version="l6-confirmation.v1"`だけを許し、unknown versionを拒否する。
+`record_digest`は先行9 field、`receipt_digest`はrecord digest+nested attestationを含む先行11 fieldを
+固定tuple/length-frame/SHA-256 lowerhexで封印する。
+verifier inputは`{producer,recordDigest}`とし、draft/unconfirmed/wrong plan/stale head/unsigned、
+schemaVersion/algorithm欠落、forged/untrustedを拒否する。
+content-addressed objectとして保存し、transition→evidence、bundle→2 lane、CutoverAdmission→validated Q0
+`AttestedReceiptEnvelope<SliceAdmissionReceipt>`又はprior cutoverと`L6ConfirmationReceipt`のdirect参照edgeを持つ。
+各参照はouter envelope `receipt_digest`だけでlookupする。core `receipt_digest`又はaliasからのlookupは拒否する。
+各`SliceAdmissionReceipt`は
+`predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refとして保存する。D0
+`SliceAdmissionReceipt`は既存`AttestedReceiptEnvelope<ReviewBundleReceipt>`のouter receipt digestへのtyped root refを必須とするため、
+Q0→F0c→F0b→F0a→D0 rootsを外部再照会なしで辿れる。reducerはroot transitionから全参照を
+digest照合しながら再帰走査し、欠落、型違い、cycle、orphan、attestation不一致を拒否する。
+
+物理backendは専用`<repo>/.ut-tdd/ledger/cutover-ledger.db`のSQLiteだけとし、file ownership正本は
+[physical-data.md](physical-data.md) §2.7.1を参照する。
+全canonical tableはSQLite `STRICT`とする。head tableは`cutover_chain_heads(chain_id TEXT PRIMARY KEY NOT NULL CHECK(length(chain_id)>0), head_digest TEXT, head_sequence INTEGER NOT NULL CHECK(head_sequence>=0), version INTEGER NOT NULL, CHECK((head_digest IS NULL AND head_sequence=0 AND version=0) OR (head_digest IS NOT NULL AND head_sequence>=0 AND version>=1 AND length(head_digest)=64 AND head_digest NOT GLOB '*[^0-9a-f]*'))) STRICT`、
+receipt tableは`cutover_transition_receipts(chain_id TEXT NOT NULL CHECK(length(chain_id)>0), sequence INTEGER NOT NULL CHECK(sequence>=0), receipt_digest TEXT NOT NULL CHECK(length(receipt_digest)=64 AND receipt_digest NOT GLOB '*[^0-9a-f]*'), receipt_json TEXT NOT NULL, UNIQUE(chain_id,sequence), UNIQUE(receipt_digest)) STRICT`、
+evidence object tableは`cutover_evidence_objects(receipt_digest TEXT PRIMARY KEY NOT NULL CHECK(length(receipt_digest)=64 AND receipt_digest NOT GLOB '*[^0-9a-f]*'), object_digest TEXT NOT NULL CHECK(length(object_digest)=64 AND object_digest NOT GLOB '*[^0-9a-f]*'), evidence_type TEXT NOT NULL, subject_revision TEXT GENERATED ALWAYS AS (CASE WHEN evidence_type='q0-case-manifest' THEN json_extract(payload_json,'$.record.subject_revision') END) STORED, payload_json TEXT NOT NULL, attestation_json TEXT NOT NULL, CHECK(object_digest=receipt_digest), CHECK(evidence_type IN ('slice-evidence','evidence-payload','review-lane','review-bundle','candidate-authorship','candidate-work-provenance','session-identity','slice-admission','q0-case-manifest','cutover-admission','tracked-receipt','l6-confirmation')), CHECK(evidence_type!='q0-case-manifest' OR subject_revision IS NOT NULL)) STRICT`、
+参照tableは`cutover_evidence_refs(from_receipt_digest TEXT NOT NULL CHECK(length(from_receipt_digest)=64 AND from_receipt_digest NOT GLOB '*[^0-9a-f]*'), to_receipt_digest TEXT NOT NULL CHECK(length(to_receipt_digest)=64 AND to_receipt_digest NOT GLOB '*[^0-9a-f]*'), edge_kind TEXT NOT NULL CHECK(length(edge_kind)>0), ordinal INTEGER NOT NULL CHECK(ordinal>=0), UNIQUE(from_receipt_digest,edge_kind,ordinal)) STRICT`
+を正本とする。writerは
+`CREATE UNIQUE INDEX uq_cutover_q0_manifest_subject ON cutover_evidence_objects(subject_revision) WHERE evidence_type='q0-case-manifest'`
+も正本DDLとして作成する。`subject_revision`はnullable GitObjectId canonical textだがCaseManifestではNOT NULL相当CHECKとする。
+同digest insertだけを冪等成功とし、同subject別digestのUNIQUE violationをfail-closeする。
+JSON validity、typed decode、schema literal、GitObjectIdはinsert前とread後の双方で検証する。
+versioned migrationはadditive可能な変更だけ`ALTER`し、constraint変更はtransaction内でcanonical new tableを作り、既存`evidence_type`全rowをdecode/validateしてcopyし、
+row countと全receipt/object digest一致を照合後にrename swapしてpartial indexを作る。unknown/null、decode、
+copy、count/digest、rename/indexのどこかが失敗すれば全rollbackする。fresh/migrated schemaは同一とする。
+decoded typed union kindとDB `evidence_type`のexact equalityをinsert/read双方で要求する。
+projection rebuildはcutover DBのsingle read transaction snapshotからstaging generationへ全投影し、
+complete marker後だけprojection側でatomic publishする。並行appendは次generationへ送り世代混在を0とし、
+canonical DBは不変とする。
+`PRAGMA journal_mode=WAL`、`PRAGMA synchronous=FULL`のconnectionで`BEGIN IMMEDIATE`し、
+evidence/receipt insert後の更新SQLは
+文`UPDATE cutover_chain_heads SET head_digest=?, head_sequence=?, version=version+1 WHERE chain_id=? AND head_digest IS ? AND head_sequence=? AND version=?`
+を実行する。affected rowがexactly 1でなければ
+全insertをrollbackして`cutover-write-conflict`、retry 0とする。genesisは事前作成した
+seedは`{head_digest:null,head_sequence:0,version:0}`、first transition receiptはsequence 0、CAS後headは
+`{digest,head_sequence:0,version:1}`とする。以後next receipt/head sequenceはN+1で、NULL復帰とdouble genesisを拒否する。
+append前に同一transactionで`head_sequence == MAX(cutover_transition_receipts.sequence)`かつ
+`head_digest == MAX sequence rowのreceipt_digest`を検証する。
+receipt 0件かつnull headのgenesisだけを例外とし、gap/driftは全rollbackする。
+commit成功をWAL/fsync barrier完了とし、その後だけreceiptを返す。process crash又はcommit errorはrollbackし、
+head/receipt/evidenceが部分可視にならない。抽象in-memory lockや別DBをproduction証拠にしない。
+
+cutover DBは独自migration registryと`user_version`を所有するcanonical sourceである。
+`.ut-tdd/harness.db`はrebuildable projectionだけ、`.ut-tdd/ledger/harness-ledger.db`はPLAN ledgerだけを所有する。
+projection writerはcutover DBをread-onlyで読み派生viewを再生成できるが、
+docs/git/logからledger receiptを再発行又は上書きしない。backupはSQLite online backup APIで一貫snapshotを作り、
+head digest/versionとbackup digestを別receiptへ封印する。recoveryはtrusted backupのintegrity check、
+schema version、head chain全検証後のatomic file replaceだけを許し、projection sourceからの復元を拒否する。
+migrationはbackup完了後の`BEGIN IMMEDIATE`内でadditive DDL+全chain検証+`user_version`更新をatomic実行し、
+失敗時rollback、未知newer version/downgradeをfail-closeする。

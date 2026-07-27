@@ -120,6 +120,20 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 `harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
+#### §2.7.1 canonical ledgerファイル正本registry
+
+| ファイル | physical ownership | rebuild / migration / backup |
+|---|---|---|
+| `.ut-tdd/harness.db` | rebuildable projection only | docs/stateとcanonical ledgerのread-only入力からrebuild可能。truncate/deleteはprojection ownerだけが実行し、canonical receiptを保持しない |
+| `.ut-tdd/ledger/harness-ledger.db` | PLAN asset/revision/admission canonical ledger | PLAN ledger migration registryだけがschemaを変更する。projection rebuild/deleteから隔離し、欠落・未知version・digest不整合はfail-close |
+| `.ut-tdd/ledger/cutover-ledger.db` | cutover head/transition/typed object/ref canonical ledger | cutover固有`user_version`・migration registry・online backup/restoreだけが変更する。unknown newer、downgrade、migration failureはcanonical bytes不変でfail-close |
+
+cutover tablesを`.ut-tdd/harness.db`又はPLAN ledgerへ作成してはならない。projection writerは
+`cutover-ledger.db`をread-only transactionで投影し、rebuild/truncate/delete/migrationを伝播しない。
+backup/restoreはcutover DB全体とhead/refs/object digestを同一snapshotとして扱い、projection backupで代替しない。
+本registryは[architecture.md](../L4-basic-design/architecture.md)の3 DB boundaryと
+[internal-processing.md](internal-processing.md)のcutover writer/CAS契約を物理正本として双方向に拘束する。
+
 | table | primary key | 主な列 | 入力 |
 |---|---|---|---|
 | `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `route_mode`, `status`, `parent`, `updated_at`, `decision_outcome`, `source_hash` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |
@@ -724,6 +738,21 @@ cross-subject/revision linkをSQLite実制約として拒否する。
 | `github_object_bindings` | `episode_id`, `object_kind`, `repository`, `external_id`, `number`, `url`, `remote_version`, `last_reconciled_head`, `projection_revision` | `(episode_id,object_kind)` UNIQUE。付替えはevent必須 |
 | `reentry_certificates` | `certificate_id`, `episode_id`, origin/target binding, drive/intermediate evidence digest, `policy_revision`, `issued_at`, `expires_at?`, `supersedes_id?`, `certificate_digest` | episode+origin revision FK、supersession cycle/fork禁止 |
 | `escape_learning_facts` | `episode_id`, origin L, escape type/cause, drive model, recurrence identity, outcome, upstream action, closed_at | E15から再構築可能、手入力status禁止 |
+
+PLAN-L7-452の先行sliceでは、全episode schemaの完成を待たずE2 custodyとE3/E4 outbox境界を
+`harness.db` schema version 27へ次の2表で実装する。これは検出器都合の簡略化ではなく、
+上表の`execution_episode_events` / `github_projection_outbox`へ後続合流するまでのdurable契約である。
+
+| テーブル | 主な列 | 制約 / 不変条件 |
+|---|---|---|
+| `forward_escape_validation_certificates` | `certificate_id`, `command_id`, `payload_digest`, `event_digest` | certificate PK、command/event digest UNIQUE。E2 commandとpayloadをopaque certificateへ固定し、改変時はcustody照合false |
+| `forward_escape_projection_events` | `command_id`, `sequence`, `event_json`, `previous_event_digest`, `event_digest` | `(command_id,sequence)` PK、certificate command FK、event digest UNIQUE。先頭はQueued、Deferred反復後にProjectedを最大1件、Projected後のeventは禁止 |
+
+`event_json`は種類ごとのexact key集合と閉じたfailure reasonを持つcanonical JSONだけを許可する。
+読取時はsequence、previous digest、row digest、event schema、command/payload一貫性、repository/body bindingの
+FSMを全て再検証する。GitHubの生error、header、transcriptは永続化せず、閉じたsecret-safe reasonへ正規化する。
+version 26以前からの`migrate(db)`は既存rowを削除せずregistry DDLで2表を追加し、`PRAGMA user_version=27`へ進める。
+同じversionへの再適用はno-opであり、close/reopen後もcertificateとdigest chainを再検証できなければfail-closeする。
 
 `issue_queue`は互換read modelに降格し、新規episodeの正本にしない。移行時は既存dry-run rowをorigin不明の
 episodeへ自動昇格せず、明示manifestがあるものだけimportし、残りは`legacy_unbound` findingとして保持する。

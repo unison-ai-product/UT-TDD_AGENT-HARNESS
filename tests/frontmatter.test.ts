@@ -414,6 +414,13 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     };
     // recovery + cross + phase なしは通る (解禁)
     expect(frontmatterSchema.safeParse(recBase).success).toBe(true);
+    expect(
+      frontmatterSchema.safeParse({
+        ...recBase,
+        backprop_decision: "required",
+        backprop_decision_reason: "L6 contract revision is required",
+      }).success,
+    ).toBe(true);
     // recovery に workflow_phase は fail
     expect(frontmatterSchema.safeParse({ ...recBase, workflow_phase: "S2" }).success).toBe(false);
     // 駆動トークン↔kind 不一致は fail (DISCOVERY token に recovery kind)

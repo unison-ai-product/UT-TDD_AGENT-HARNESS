@@ -35,6 +35,7 @@ import { registerFeedbackCommands } from "./cli/feedback";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { registerPlanDraftCommand } from "./cli/plan-draft";
+import { registerPlanRevisionCommand } from "./cli/plan-revise";
 import { contextSuggest } from "./context/doc-router";
 import { runDoctor } from "./doctor";
 import {
@@ -105,6 +106,7 @@ import {
 } from "./memory/index";
 import { lintPlanWithGate } from "./plan/lint";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
+import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner";
 import {
   type AdapterContextInjection,
   type AdapterProvider,
@@ -183,6 +185,7 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { buildScopeDryRunPreview } from "./state-db/scope-preview";
+import { runCoalescedStopRefresh, spawnDetachedStopRefresh } from "./state-db/stop-refresh";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -976,9 +979,41 @@ session
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
     const input = readHookInput("Stop", opts.session);
-    dispatch(input, nodeDeps(requireRuntimeRepoRoot(), gitBranch, gitHead), "Stop");
+    const repoRoot = requireRuntimeRepoRoot();
+    dispatch(input, nodeDeps(repoRoot, gitBranch, gitHead), "Stop");
     writeHandoverWarnings();
+    // PLAN-L7-365 Step 2 (issue #78): Stop 境界で on-disk harness.db を自動追従。
+    // Stop hook の timeout 予算 (5s) を消費しないよう detached で fire-and-forget 起動し、
+    // fail-open — 起動失敗は警告のみで session 終了 (exit 0) を妨げない。
+    const refresh = spawnDetachedStopRefresh({ repoRoot });
+    if (!refresh.launched && !refresh.coalesced) {
+      process.stderr.write(`session-log: db refresh not launched (${refresh.reason})\n`);
+    }
     process.stdout.write(`session-log: summary ${input.session_id ?? "ut-tdd-cli"}\n`);
+  });
+
+session
+  .command("db-refresh")
+  .description(
+    "Stop 境界の on-disk harness.db refresh (session summary から detached 起動される内部エントリ)",
+  )
+  .requiredOption("--generation <id>", "Stop refresh lease generation")
+  .action((opts: { generation: string }) => {
+    const result = runCoalescedStopRefresh({
+      repoRoot: requireRuntimeRepoRoot(),
+      generation: opts.generation,
+    });
+    const r = result.runs.at(-1);
+    if (!result.owned || !r) {
+      process.stderr.write("session-log: db refresh skipped (stale-generation)\n");
+      return;
+    }
+    if (!r.ok) {
+      process.stderr.write(`session-log: db refresh skipped (${r.skippedReason})\n`);
+    }
+    process.stdout.write(
+      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested})\n`,
+    );
   });
 
 const hook = program.command("hook").description("package-local hook entrypoints");
@@ -1172,6 +1207,7 @@ const plan = program.command("plan").description("PLAN 操作");
 registerPlanAssetCommands(plan);
 registerPlanAdmissionCommands(plan);
 registerPlanDraftCommand(plan, { runner: createNodePlanDraftRunner(process.cwd()) });
+registerPlanRevisionCommand(plan, { runner: createNodePlanRevisionRunner(process.cwd()) });
 plan
   .command("lint [path]")
   .description("PLAN lint")
