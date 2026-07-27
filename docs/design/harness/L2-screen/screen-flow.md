@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: screen-flow
-status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-02。③ pair=wireframe self (L2↔L10)。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-02。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-459 H4)。
 pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair (旧 hub 参照は RECOVERY-09 で撤去)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -16,7 +16,7 @@ updated: 2026-06-22
 
 > **SSoT 参照**: 遷移シナリオの正本は L1 [screen-requirements.md §2](../L1-requirements/screen-requirements.md) (6 パターン)。本 doc は各遷移に **trigger / 条件 / ステート保持 / auto 表示 / 戻る挙動** を L2 設計として付与する。画面 ID/URL は [screen-list.md](./screen-list.md) が正本。
 > **drift 訂正 (2026-06-22)**: 旧 placeholder の遷移表は L1 §2 と乖離 (例: シナリオ 2/5/6) していた。本材料化は L1 §2 を正本に再構築。
-> **V-pair (IMP-039/058)**: ③ ペアは `wireframe.md` (mock、右腕 L10)。
+> **V-pair**: ③ ペアは `docs/test-design/harness/L10-ux-validation-test-design.md`。`wireframe.md` は L2 内の Low-Fi mock であり、テスト設計の代替ではない。
 
 ## §1 遷移シナリオ (L1 §2 正本、6 パターン)
 
@@ -81,5 +81,5 @@ L1 §2 の横断シナリオ (S2/S3/S5/S6) を deep-link として一般化:
 ## §6 L1↔L2 trace + 次工程
 
 - 上流: L1 [screen-requirements.md §2](../L1-requirements/screen-requirements.md) 6 遷移シナリオ。
-- L2 内: [screen-list.md](./screen-list.md) (ID/URL) → 本 screen-flow (遷移) → [ui-element.md](./ui-element.md) (部品) → [wireframe.md](./wireframe.md) (レイアウト = ③ pair)。
+- L2 内: [screen-list.md](./screen-list.md) (ID/URL) → 本 screen-flow (遷移) → [ui-element.md](./ui-element.md) (部品) → [wireframe.md](./wireframe.md) (レイアウト。③ pair の正本は L10-ux-validation-test-design.md)。
 - 下流: L10 UX refinement → src/web 実装 (Phase B)。
