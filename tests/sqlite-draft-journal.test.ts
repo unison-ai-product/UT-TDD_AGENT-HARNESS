@@ -223,6 +223,16 @@ describe("SqliteDraftJournal", () => {
 });
 
 function downgradeCleanupSchema(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
+  // v7 (sealed lineage) のオブジェクトも落とさないと v4/v5 の版チェックが不一致になる
+  for (const table of [
+    "plan_lineage_migration_certificates",
+    "sealed_plan_lineages",
+    "genesis_issue_custody",
+  ]) {
+    db.exec(`DROP TRIGGER trg_${table}_no_update`);
+    db.exec(`DROP TRIGGER trg_${table}_no_delete`);
+    db.exec(`DROP TABLE ${table}`);
+  }
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
   db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
