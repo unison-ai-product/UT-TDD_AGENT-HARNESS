@@ -41,6 +41,7 @@ import {
 } from "../src/state-db/refactor-candidates";
 import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections";
 import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections";
+import { claudeProjectSlug } from "../src/state-db/token-tracker";
 
 interface VerificationWorkflowRow {
   phase: string;
@@ -2695,6 +2696,167 @@ Fixture.
       expect(improvementLog).toMatchObject({ status: "open" });
     } finally {
       db.close();
+    }
+  });
+});
+
+describe("rebuildHarnessDb: repo-scoped runtime token telemetry ingest (issue #82, PLAN-L7-454)", () => {
+  function withSessionDirEnv<T>(claudeDir: string, codexDir: string, run: () => T): T {
+    const prevClaude = process.env.UT_TDD_CLAUDE_SESSIONS_DIR;
+    const prevCodex = process.env.UT_TDD_CODEX_SESSIONS_DIR;
+    process.env.UT_TDD_CLAUDE_SESSIONS_DIR = claudeDir;
+    process.env.UT_TDD_CODEX_SESSIONS_DIR = codexDir;
+    try {
+      return run();
+    } finally {
+      if (prevClaude === undefined) delete process.env.UT_TDD_CLAUDE_SESSIONS_DIR;
+      else process.env.UT_TDD_CLAUDE_SESSIONS_DIR = prevClaude;
+      if (prevCodex === undefined) delete process.env.UT_TDD_CODEX_SESSIONS_DIR;
+      else process.env.UT_TDD_CODEX_SESSIONS_DIR = prevCodex;
+    }
+  }
+
+  it("(a)(b)(c) ingests only repo-owned session usage into model_runs; foreign-repo usage is excluded", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-repo-"));
+    const claudeRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-claude-"));
+    const codexRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-codex-"));
+    try {
+      // repo に対応する Claude project-slug ディレクトリ + 別 repo (混入させてはいけない) のディレクトリ。
+      const ownSlug = claudeProjectSlug(root);
+      mkdirSync(join(claudeRoot, ownSlug), { recursive: true });
+      mkdirSync(join(claudeRoot, `${ownSlug}-other-repo`), { recursive: true });
+      writeFileSync(
+        join(claudeRoot, ownSlug, "s1.jsonl"),
+        JSON.stringify({
+          type: "assistant",
+          sessionId: "own-session",
+          cwd: root,
+          message: {
+            model: "claude-opus-4-8",
+            usage: { input_tokens: 111, output_tokens: 22 },
+          },
+        }),
+        "utf8",
+      );
+      writeFileSync(
+        join(claudeRoot, `${ownSlug}-other-repo`, "foreign.jsonl"),
+        JSON.stringify({
+          type: "assistant",
+          sessionId: "foreign-session",
+          message: {
+            model: "claude-opus-4-8",
+            usage: { input_tokens: 90909, output_tokens: 90909 },
+          },
+        }),
+        "utf8",
+      );
+
+      // Codex: cwd 一致 (own) / cwd 不一致 (他 repo、混入させてはいけない)。
+      writeFileSync(
+        join(codexRoot, "own.jsonl"),
+        [
+          JSON.stringify({ type: "session_meta", payload: { model: "gpt-5.3-codex", cwd: root } }),
+          JSON.stringify({
+            type: "event_msg",
+            payload: {
+              type: "token_count",
+              info: { total_token_usage: { input_tokens: 300, output_tokens: 44 } },
+            },
+          }),
+        ].join("\n"),
+        "utf8",
+      );
+      writeFileSync(
+        join(codexRoot, "foreign.jsonl"),
+        [
+          JSON.stringify({
+            type: "session_meta",
+            payload: { model: "gpt-5.3-codex", cwd: `${root}-sibling-repo` },
+          }),
+          JSON.stringify({
+            type: "event_msg",
+            payload: {
+              type: "token_count",
+              info: { total_token_usage: { input_tokens: 80808, output_tokens: 80808 } },
+            },
+          }),
+        ].join("\n"),
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        const result = withSessionDirEnv(claudeRoot, codexRoot, () =>
+          rebuildHarnessDb({ repoRoot: root, db }),
+        );
+
+        // (c) rebuild 後の model_runs に実測 token 行 (input/output tokens 非 NULL) が存在する。
+        const measuredRows = db
+          .prepare(
+            "SELECT runtime, model, input_tokens, output_tokens FROM model_runs WHERE input_tokens IS NOT NULL ORDER BY runtime",
+          )
+          .all() as Array<{
+          runtime: string;
+          model: string;
+          input_tokens: number;
+          output_tokens: number;
+        }>;
+        expect(measuredRows).toHaveLength(2);
+
+        // (a) repo 帰属分のみ投入される。
+        const claudeRow = measuredRows.find((r) => r.runtime === "claude");
+        const codexRow = measuredRows.find((r) => r.runtime === "codex");
+        expect(claudeRow).toMatchObject({ input_tokens: 111, output_tokens: 22 });
+        expect(codexRow).toMatchObject({ input_tokens: 300, output_tokens: 44 });
+
+        // (b) 他 repo の usage (90909 / 80808) は一切混入していない。
+        expect(
+          measuredRows.some((r) => r.input_tokens === 90909 || r.output_tokens === 90909),
+        ).toBe(false);
+        expect(
+          measuredRows.some((r) => r.input_tokens === 80808 || r.output_tokens === 80808),
+        ).toBe(false);
+
+        // 可視化: rebuild 結果に repo スコープ ingest の走査統計が載る。
+        expect(result.tokenIngest).toMatchObject({
+          claudeProjectDirResolved: true,
+          claudeFilesScanned: 1,
+          codexFilesMatched: 1,
+          codexFilesForeignRepo: 1,
+        });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(claudeRoot, { recursive: true, force: true });
+      rmSync(codexRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("cold-start: no matching session logs => rebuild succeeds with 0 measured model_runs rows, no throw", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-cold-"));
+    const claudeRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-cold-claude-"));
+    const codexRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-cold-codex-"));
+    try {
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        const result = withSessionDirEnv(claudeRoot, codexRoot, () =>
+          rebuildHarnessDb({ repoRoot: root, db }),
+        );
+        expect(result.ok).toBe(true);
+        const measured = db
+          .prepare("SELECT COUNT(*) AS n FROM model_runs WHERE input_tokens IS NOT NULL")
+          .get() as { n: number };
+        expect(measured.n).toBe(0);
+        expect(result.tokenIngest).toMatchObject({ claudeProjectDirResolved: false });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(claudeRoot, { recursive: true, force: true });
+      rmSync(codexRoot, { recursive: true, force: true });
     }
   });
 });
