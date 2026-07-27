@@ -175,6 +175,20 @@ describe("github issue forms (PLAN-L7-451 W5)", () => {
       for (const id of ids) {
         expect(requiredIds, `${file} requires ${id}`).toContain(id);
       }
+      for (const hierarchyId of ["hierarchy_role", "parent_issue", "closure_condition"]) {
+        expect(requiredIds, `${file} requires ${hierarchyId}`).toContain(hierarchyId);
+      }
     }
+  });
+
+  it("U-L7-451-W5-002: Issue 階層規則が正式 parent・単一 parent・親子 close 境界を固定する", () => {
+    const policy = readFileSync(
+      join(process.cwd(), "docs/governance/github-issue-hierarchy.md"),
+      "utf8",
+    );
+    expect(policy).toContain("GitHub の正式な親子関係");
+    expect(policy).toContain("canonical parent は 1 件");
+    expect(policy).toContain("親 Issue は子 Issue の単なる close 数では閉じない");
+    expect(policy).toContain("新規 Issue を自動生成しない");
   });
 });
