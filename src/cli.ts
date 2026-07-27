@@ -1011,8 +1011,11 @@ session
     if (!r.ok) {
       process.stderr.write(`session-log: db refresh skipped (${r.skippedReason})\n`);
     }
+    if (r.vacuum?.warning) {
+      process.stderr.write(`session-log: db vacuum skipped (${r.vacuum.warning})\n`);
+    }
     process.stdout.write(
-      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested})\n`,
+      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested}, vacuumRan=${r.vacuum?.ran ?? false})\n`,
     );
   });
 
