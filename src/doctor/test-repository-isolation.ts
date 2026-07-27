@@ -25,9 +25,9 @@ vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
 secret-scan-diff:1
 feedback-log:2
-github-repository-policy:2
+github-repository-policy:3
 global-setup.ts:1 support/workspace-roots.ts:3
-global-setup-fence:1 vitest-snapshot-runner:1
+global-setup-fence:1 vitest-snapshot-runner:2
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2

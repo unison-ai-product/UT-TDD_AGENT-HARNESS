@@ -4,6 +4,30 @@ description: 実装観測から設計へ gap-only backfill する Reverse episod
 title: "Reverse: "
 labels: ["ut-tdd", "drive:reverse"]
 body:
+  - type: dropdown
+    id: hierarchy_role
+    attributes:
+      label: Hierarchy role
+      description: 既存の成果目標がある bounded slice は child を選び、起票後に正式な parent を設定する
+      options:
+        - child
+        - top-level outcome
+    validations:
+      required: true
+  - type: input
+    id: parent_issue
+    attributes:
+      label: Parent Issue
+      description: child の場合は #N。top-level の場合は N/A と理由を記載する
+    validations:
+      required: true
+  - type: textarea
+    id: closure_condition
+    attributes:
+      label: Closure condition
+      description: この Issue 固有の受入証跡と、親へ返す完了条件
+    validations:
+      required: true
   - type: input
     id: origin_plan
     attributes:

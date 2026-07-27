@@ -10,7 +10,12 @@ Claude Code treats the following as canonical in this repository:
 4. `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 5. `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`
 6. `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md`
-7. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+7. `docs/governance/repository-structure.md`
+8. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+
+The full canonical-set index (including V-model machinery docs) is
+`docs/governance/README.md`; this list is the startup minimum, not a competing
+definition (PLAN-L7-459 H1).
 
 Migration snapshots and migration docs are not normal startup reads. Read them
 only when migration, gap audit, or regression-source inspection requires it.
@@ -151,6 +156,15 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
+
+## GitHub Issue Hierarchy
+
+- 正本は `docs/governance/github-issue-hierarchy.md`。
+- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
+- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
+  代替にしない。
+- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
+- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
 
 ## Canonical Commands
 

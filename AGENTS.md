@@ -293,6 +293,15 @@ calls.
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
 
+## GitHub Issue Hierarchy
+
+- 正本は `docs/governance/github-issue-hierarchy.md`。
+- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
+- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
+  代替にしない。
+- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
+- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
+
 ## Doctor Invocation Discipline (PLAN-L7-442)
 
 `ut-tdd doctor` は長時間・read-only の **singleton** 検査。2 本目以降は exit 2
