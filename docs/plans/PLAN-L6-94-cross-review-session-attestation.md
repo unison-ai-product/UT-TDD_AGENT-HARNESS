@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L6-93-cross-review-session-attestation
-title: "PLAN-L6-93 (add-design/function-spec): cross-review セッション実在照合 — hybrid
+plan_id: PLAN-L6-94-cross-review-session-attestation
+title: "PLAN-L6-94 (add-design/function-spec): cross-review セッション実在照合 — hybrid
   クロスレビュー claim をアダプタ発火痕跡と機械照合する gate 契約"
 kind: add-design
 layer: L6
@@ -22,7 +22,7 @@ agent_slots:
   - role: qa
     slot_label: "QA - 痕跡なし claim の Red oracle と正当な単一ランタイム fallback の負例"
 generates:
-  - artifact_path: docs/plans/PLAN-L6-93-cross-review-session-attestation.md
+  - artifact_path: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L6-01-function-spec.md
@@ -38,7 +38,7 @@ status: draft
 sub_doc: edge-case
 ---
 
-# PLAN-L6-93: cross-review セッション実在照合 gate
+# PLAN-L6-94: cross-review セッション実在照合 gate
 
 対応 issue: #131 (hybrid: Codex 側から ut-tdd claude 委譲が発火せずクロスレビュー
 原則が素通り)。
