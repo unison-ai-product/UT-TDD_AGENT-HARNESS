@@ -1216,6 +1216,38 @@
         "revision": 3,
         "content_digest": "sha256:9f52e38d7779a40b8aa4f008d8161f64347487896dc8b95e16281a780991676e"
       }
+    },
+    {
+      "sequence": 77,
+      "previous_record_digest": "sha256:0d44818b6b075d0b0acf8ad6de02f359b9bbcb9c0e36d6822a4349bdecc944f8",
+      "record_digest": "sha256:a9447f407261d5edac8d34b40160e27609647789164245246d89e94d3d346faa",
+      "command_id": "plan-l6-90-20260721-01",
+      "receipt_id": "certificate:b16164ab91330ced198c273e62915d81",
+      "receipt_digest": "sha256:459663da8db6b4e7abd53b19508e5eab0861be877eeaf3bf78f7cb80bf847a75",
+      "decision_digest": "sha256:94cc2de363ffdb5ddc3aa3898dd7164a28fbb755d89932cbe80db4f1267ef7a8",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-90-ci-responsibility-contract.md",
+        "plan_id": "PLAN-L6-90-ci-responsibility-contract",
+        "asset_id": "plan:b16164ab91330ced198c273e62915d81",
+        "revision": 1,
+        "content_digest": "sha256:4a0542de34b03b142f6d00a12551eea786ed8136974c8820bad0de65a75a845c"
+      }
+    },
+    {
+      "sequence": 78,
+      "previous_record_digest": "sha256:a9447f407261d5edac8d34b40160e27609647789164245246d89e94d3d346faa",
+      "record_digest": "sha256:4eea4fd2e9e52bd313709f50180e91a43285f885f9d31567e27082a6c498a9e1",
+      "command_id": "plan-l6-90-20260721-02",
+      "receipt_id": "certificate:6f8694cea426b4c519701a1555bf4dc7",
+      "receipt_digest": "sha256:0fc17b48f3e57459c2798def5b4a7351cca9885a49c902936c37f5897711b345",
+      "decision_digest": "sha256:94cc2de363ffdb5ddc3aa3898dd7164a28fbb755d89932cbe80db4f1267ef7a8",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-90-ci-responsibility-contract.md",
+        "plan_id": "PLAN-L6-90-ci-responsibility-contract",
+        "asset_id": "plan:b16164ab91330ced198c273e62915d81",
+        "revision": 2,
+        "content_digest": "sha256:3bad56f2706d6a2ef4c72a6827184f433f48e3702db9cda398bfd2d3bd68fa2d"
+      }
     }
   ]
 }
