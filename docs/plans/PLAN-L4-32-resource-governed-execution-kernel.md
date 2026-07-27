@@ -60,18 +60,18 @@ supersedes:
   - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:c4e192432f90ec34c6018bbd9bc6167c
-  command_id: pr156-authority-closure-l4-rev6-20260727
-  admitted_at: 2026-07-27T02:00:00.000Z
-  source_digest: sha256:76d5d0f20d36fb722cdcda7961f736a44443eb712e06580dade7cfe2653ce130
-  decision_digest: sha256:694a03fc19392dff9e507484dafeb401900cbe44f5b70b6d9454248872087d73
-  receipt_digest: sha256:76767958d254eda3858f6331eae99efa839a026c80467200a4385b8568618222
+  receipt_id: certificate:4cdb70537e560a21cabdedf1948bbf46
+  command_id: pr156-lease-closure-l4-rev7-20260727
+  admitted_at: 2026-07-27T03:00:00.000Z
+  source_digest: sha256:adf30ac0609bd47b680142d308c644157dc8031837b8080b634d139da3be1ae2
+  decision_digest: sha256:46a9a6eedc49f68a305ece45efdbc78eff8ba2299a2f3c82086e45a1d24441fb
+  receipt_digest: sha256:131e7f4b319495b72b898547e7395c0939e4bfb6b924b714d961f95fee0d7f1a
   binding:
     path: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
     asset_id: plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff
-    revision: 6
-    content_digest: sha256:76d5d0f20d36fb722cdcda7961f736a44443eb712e06580dade7cfe2653ce130
+    revision: 7
+    content_digest: sha256:adf30ac0609bd47b680142d308c644157dc8031837b8080b634d139da3be1ae2
   route:
     signal: redesign
     mode: redesign
@@ -82,19 +82,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L4-32-resource-governed-execution-kernel
-    revision: 5
+    revision: 6
     digest: sha256:51f08c0ac791ff3b1db0eeb1e74c1e3fd15362b38a2abf28511b3b6306da0f08
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 6
+      target_revision: 7
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: Resource Kernelのauthority・deadline・token真正性契約を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのlease真正性とdeadline clock domain契約を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L4-32-resource-governed-execution-kernel
 ---
@@ -152,8 +152,8 @@ DB/CAS再利用、single-flight、local CI全体のqueue/headroom policyは本D0
 | `cwd` / `environment` | canonical cwdとallowlisted env delta。secret値をreceiptへ保存しない |
 | `input_revision` | commit SHA、working delta digest、fixture digest等のimmutable入力identity |
 | `resource_budget` | wall time、CPU time、peak memory、process count、output bytes、必要時I/O上限 |
-| `deadline` | absolute deadline。各child timeoutの寄せ集めではなくtree全体に適用 |
-| `termination_policy` | graceful猶予、強制終了、descendant reap、lease release、journal flush、terminal receipt sealの順序。`recovery_grace_ms`は正整数でpolicy revisionの`max_recovery_grace_ms`以下とし、`recovery_deadline = absolute_deadline + recovery_grace_ms`を型付きで導出する |
+| `deadline` | `issued_unix_ms + budget_ms + deadline_unix_ms`のwall sealを入力とし、admission時に`effective_deadline_monotonic_ms`へ一度だけ縮小変換してtree全体に適用。開始後wall clockで延長しない |
+| `termination_policy` | graceful猶予、強制終了、descendant reap、lease release、journal flush、terminal receipt sealの順序。`recovery_grace_ms`は正整数でpolicy revisionの`max_recovery_grace_ms`以下とし、同じboot/monotonic domainの`recovery_deadline_monotonic_ms = effective_deadline_monotonic_ms + recovery_grace_ms`を型付きで導出する |
 | `classification` | 実行種別。分類ごとの既定budgetはpolicy revisionで固定し、全体queue/headroom policyとは分離 |
 | `required_capabilities` | tree custody、hard memory/CPU/process limit、crash recovery等、実行に必須なcapability集合 |
 

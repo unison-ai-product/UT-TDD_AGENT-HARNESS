@@ -959,7 +959,8 @@ wire commandはlauncherを持たない`ProbeRequest`、sealed `AdmissionToken`�
 `AuthorityLease`必須で`observe | terminate_tree | prove_empty | shutdown`だけを所有する`RecoveryCustodyCommand`へ分離する。
 `create_custody`が返すleaseは`spawn_attached | resume`でもtokenと同時に検証する。Recovery variantはlauncher、
 managed-root生成、resumeの型参照を持たず、`shutdown`はempty/reap proof後だけ許可する。tokenはversioned canonical payloadを
-`AdmissionTokenAuthenticatorPort`で認証し、wall deadlineを一度だけmonotonicへ縮小変換する。
+`AdmissionTokenAuthenticatorPort`で認証する。leaseもcustody/executor identity、boot ID、effective monotonic deadline、
+lease nonceを`AuthorityLeaseAuthenticatorPort`で認証する。wall deadlineは一度だけmonotonicへ縮小変換する。
 probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
 `managed_root_created`を別identity/phaseで返す。空required capabilityやhandshake成功をexecute許可にしない。
 

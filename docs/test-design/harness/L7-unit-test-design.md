@@ -1782,7 +1782,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-CAP-007` | recorded probeとrequired集合完全一致 | attempt/nonce/bundle/probe/deadlineを結ぶsealed tokenを一つ生成 |
 | `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
 | `U-RGK-CAP-009` | token無し、またはtokenのattempt/nonce/bundle/probe/deadlineを各変異したExecuteの`create_custody | spawn_attached | resume` | 全variantを拒否しcustody/launcher call 0、別attemptへのside effect 0 |
-| `U-RGK-CAP-010` | create後のspawn/resumeへlease missing/stale/別attempt/別nonce/executor binding変異を投入。Recoveryへ生成variantを追加するmutationも併走 | 全不正leaseでattach/resume 0、mutationはschema/exhaustive Red。valid leaseのterminate/prove-emptyはtoken期限後も可能 |
+| `U-RGK-CAP-010` | create後のspawn/resumeへlease missing/stale/別attempt/別nonce/custody identity/executor/boot ID/issuer/authenticator変異と同lease nonce別payloadを投入。Recovery生成variant mutationも併走 | 全不正leaseでattach/resume 0、mutationはschema/exhaustive Red。valid leaseのterminate/prove-emptyはtoken期限後も可能 |
 | `U-RGK-CAP-011` | canonical token field、issuer key/version、authenticator、operation、token nonceを各変異し、同nonce別payload/replayを投入 | verify前side effect 0。same operation/same payload retryだけ既存factへ冪等reconcileし、別operation replay 0 |
 | `U-RGK-CAP-012` | issued/deadline/budget不一致、許容skew超過、wall前進/後退、process restart/boot ID変更 | effective monotonic deadlineは初回値から延長0。曖昧/boot変更はexpireしkill要求、managed root生成0 |
 | `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
@@ -1793,7 +1793,7 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 | `U-RGK-LIFE-006` | terminal後fact | state/receipt delta 0、closed violation |
 | `U-RGK-LIFE-007` | client再接続時の同一/別nonce | 同一だけreconcile、別attemptを操作しない |
 | `U-RGK-LIFE-008` | running/terminating/empty_proven各stateでRecovery shutdown | running/terminatingは拒否しexecutor/authority維持。empty/reap proof後だけshutdown→released |
-| `U-RGK-LIFE-008` | lifecycle reducerへOS/journal side effect spy | pure reduction以外のcall 0 |
+| `U-RGK-LIFE-012` | lifecycle reducerへOS/journal side effect spy | pure reduction以外のcall 0 |
 | `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
 | `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
 | `U-RGK-LIFE-011` | Linux authority+supervisor dual crash | broker外deadline ownerが期限内killを発行し、bounded recovery後にreap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |

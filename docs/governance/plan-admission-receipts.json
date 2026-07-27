@@ -1504,6 +1504,70 @@
         "revision": 6,
         "content_digest": "sha256:9d19902e0f882c102b8e5ad978ccbdf0e018a7303945d817abff76da1281eb3f"
       }
+    },
+    {
+      "sequence": 95,
+      "previous_record_digest": "sha256:3c69403dc5beb1187d909081f17717ab5cdd6025f2b81dd2ea4abb14c64403ed",
+      "record_digest": "sha256:7597258149b57f0a30f79442416bbac92601fad0c1784cc699fc003345d5a83d",
+      "command_id": "pr156-lease-closure-l4-rev7-20260727",
+      "receipt_id": "certificate:4cdb70537e560a21cabdedf1948bbf46",
+      "receipt_digest": "sha256:131e7f4b319495b72b898547e7395c0939e4bfb6b924b714d961f95fee0d7f1a",
+      "decision_digest": "sha256:46a9a6eedc49f68a305ece45efdbc78eff8ba2299a2f3c82086e45a1d24441fb",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 7,
+        "content_digest": "sha256:adf30ac0609bd47b680142d308c644157dc8031837b8080b634d139da3be1ae2"
+      }
+    },
+    {
+      "sequence": 96,
+      "previous_record_digest": "sha256:7597258149b57f0a30f79442416bbac92601fad0c1784cc699fc003345d5a83d",
+      "record_digest": "sha256:29ae683770ba16090d884f59cac435ca6331f07345335116650a98c33cfb40ed",
+      "command_id": "pr156-lease-closure-l5-rev7-20260727",
+      "receipt_id": "certificate:5e7fb7ccda37bd052bbfdd9eda64f357",
+      "receipt_digest": "sha256:534c2871b1dad567edf23c08ad5aa6dc4e772b25e859589809cd3977c22853d5",
+      "decision_digest": "sha256:0317d59e2793474d4c43a9c839a0f03e826ca897cc3321a9914fa2326ed60e9e",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 7,
+        "content_digest": "sha256:0a3a1d720d7be1762dc327c11f1b3c6f1b9ccaf57f4a82bfb6932430c09a6da8"
+      }
+    },
+    {
+      "sequence": 97,
+      "previous_record_digest": "sha256:29ae683770ba16090d884f59cac435ca6331f07345335116650a98c33cfb40ed",
+      "record_digest": "sha256:549f93cee2d9b95e2bf54daa1059fc50bb21d82cf332acd8df3f314c0fdcb31a",
+      "command_id": "pr156-lease-closure-l6-rev7-20260727",
+      "receipt_id": "certificate:cd93c690ac23fb48ed53ca44d3c7b0c3",
+      "receipt_digest": "sha256:302e11ed0f862c3bd720b6242851452c7c17e0516b572243aad5bf661e15db5d",
+      "decision_digest": "sha256:d1431dcdddbf128070813f359073b121dc166db8904071c658195e451cb57e82",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 7,
+        "content_digest": "sha256:29eaa1c40f450d4c07069109b5c268d397bee1c99ee62034d39d53305ef57357"
+      }
+    },
+    {
+      "sequence": 98,
+      "previous_record_digest": "sha256:549f93cee2d9b95e2bf54daa1059fc50bb21d82cf332acd8df3f314c0fdcb31a",
+      "record_digest": "sha256:57c0eeb7da7284db1436e848368ffa01a8cf1dfaab951ea0a324ef4ab4f6356b",
+      "command_id": "pr156-lease-closure-l7-rev7-20260727",
+      "receipt_id": "certificate:b0dd4a1639bf28fec29c798d6b578c38",
+      "receipt_digest": "sha256:3872bda160bf7a587c98b3e31b71a3091768ad32660a5a14f172dfa77b2cecd6",
+      "decision_digest": "sha256:4391d86c3da5a41d7eee56823374596631f0f5e58acb2294b680b4c4d5477d1a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 7,
+        "content_digest": "sha256:e69ad4e6f1c36c2febe7ab07193e3beeec9e736fb1c7f83e91e60eeef689a129"
+      }
     }
   ]
 }

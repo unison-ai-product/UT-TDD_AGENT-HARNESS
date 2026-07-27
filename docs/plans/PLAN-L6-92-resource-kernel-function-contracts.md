@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L6-92-resource-kernel-function-contracts
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:38966360ff772e45e215079c90dd006f
-  command_id: pr156-authority-closure-l6-rev6-20260727
-  admitted_at: 2026-07-27T02:00:02.000Z
-  source_digest: sha256:dfe29f70755e0c2d6980626378876e239257f5849c24fbb0652394d44747dfa8
-  decision_digest: sha256:28527cc3b8aae21d82b44f9e535e44793f9804e4f2f0f1f81238c4de467635e0
-  receipt_digest: sha256:d37c6ec30814c7333f8c3309ef922ef9957e694c2c18e390dfc7f3136379faac
+  receipt_id: certificate:cd93c690ac23fb48ed53ca44d3c7b0c3
+  command_id: pr156-lease-closure-l6-rev7-20260727
+  admitted_at: 2026-07-27T03:00:02.000Z
+  source_digest: sha256:29eaa1c40f450d4c07069109b5c268d397bee1c99ee62034d39d53305ef57357
+  decision_digest: sha256:d1431dcdddbf128070813f359073b121dc166db8904071c658195e451cb57e82
+  receipt_digest: sha256:302e11ed0f862c3bd720b6242851452c7c17e0516b572243aad5bf661e15db5d
   binding:
     path: docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
     asset_id: plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a
-    revision: 6
-    content_digest: sha256:dfe29f70755e0c2d6980626378876e239257f5849c24fbb0652394d44747dfa8
+    revision: 7
+    content_digest: sha256:29eaa1c40f450d4c07069109b5c268d397bee1c99ee62034d39d53305ef57357
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L6-92-resource-kernel-function-contracts
-    revision: 5
+    revision: 6
     digest: sha256:1532c5204c32fb65c44057fee0f065d02155c8faf22e16e32a350226f8cca01f
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 6
+      target_revision: 7
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 6
+    target_revision: 7
     phase: forward_merge
-  escape_reason: Resource Kernelのauthority・deadline・token真正性契約を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのlease真正性とdeadline clock domain契約を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L6-92-resource-kernel-function-contracts
 ---
@@ -103,7 +103,8 @@ L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`
 
 - probeからlauncherへ到達せず、valid admission前のmanaged root生成は0。
 - admission tokenはcanonical payload/authenticator/issuer/operation/nonceを検証し、wall deadlineをmonotonicへ一度だけ縮小変換する。
-- createが返すauthority leaseをspawn/resumeでも必須照合し、shutdownはempty/reap proof後だけ許可する。
+- createが返すauthority leaseはcustody/executor identity、boot ID、effective monotonic deadline、nonce、authenticatorを束縛し、
+  spawn/resumeでも必須照合する。shutdownはempty/reap proof後だけ許可する。
 - Windowsはattach-before-resume、Linuxはstart-in-cgroupを満たし、root exitをterminalとしない。
 - terminate後のempty/reap proofが欠ける場合はsuccessを返さない。
 - bundleはreview済みmanifestのdigest、schema、target、component集合を検証し、PATH探索、download、片側rollbackを拒否する。
