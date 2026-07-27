@@ -1,7 +1,7 @@
 ---
 layer: L4
 sub_doc: architecture
-status: confirmed
+status: draft
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -263,9 +263,12 @@ Resource Kernelは、process tree、CPU・memory・process・output budget、dea
 OS強制境界で保証する。TypeScript control planeは`ExecutionSpec`、policy、journal、receiptを所有し、
 Rust companionはWindows Job ObjectまたはLinux cgroup v2へのprivileged custody操作だけを実行する。
 責務を両言語へ重複実装せず、capability probe、durable journal append、sealed admission token、
-managed workload生成の順序をbarrierとして固定する。wire commandは`Probe | Execute | RecoveryCustody`のclosed unionとし、
-生成・attach・resumeはtoken必須の`Execute`だけに閉じる。`RecoveryCustody`はauthority leaseで既存custodyを
-observe/terminate/prove-empty/shutdownできるが、launcher、managed-root生成、resumeへ型として到達できない。
+managed workload生成の順序をbarrierとして固定する。wire commandは
+`Probe | Execute | RecoveryObservation | RecoveryCustody | ControlCommand`の5 variant closed unionとする。
+生成・attach・resumeはtoken必須の`Execute`だけに閉じる。`RecoveryObservation`は認証済みnative factだけを返し、
+TypeScriptだけがjournal照合・authority CAS・lease/trace transactionを所有する。`RecoveryCustody`はauthority leaseで
+既存custodyをobserve/terminate/prove-empty/releaseでき、`ControlCommand`は全custody解放後のshutdownだけを所有する。
+Recovery/Controlからlauncher、managed-root生成、resumeへ型として到達できない。
 `create_custody`が返すleaseをattach/resumeでも照合し、token真正性は抽象`AdmissionTokenAuthenticatorPort`で検証する。
 deadlineはwall sealからmonotonicへ開始時に一度だけ縮小変換し、broker/authority API/recovery supervisorとは独立した
 durable deadline executorをmanaged root生成前にarmする。

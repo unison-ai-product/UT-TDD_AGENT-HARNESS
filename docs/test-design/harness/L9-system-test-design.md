@@ -2,7 +2,7 @@
 layer: L4
 executed_at_layer: L9
 artifact_type: test_design
-status: confirmed
+status: draft
 pair_artifact: docs/design/harness/L4-basic-design/
 parent_doc: docs/plans/PLAN-L4-00-master.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -22,7 +22,7 @@ updated: 2026-05-29
 
 > **layer (作成層 = V-pair key)**: L4 (基本設計) / **executed_at_layer (実施層)**: L9 (総合テスト) / **artifact**: ④ テスト設計 (V-model 右、② L4 基本設計 全 sub-doc と対)
 > **pair (V-model L4↔L9)**: `docs/design/harness/L4-basic-design/{data,architecture,function,external-if}.md` 4 sub-doc 全体 ↔ 本書 1 doc
-> **status**: confirmed (G4/A-101 freeze — ST カテゴリ ⇔ L4 設計要素の被覆を凍結、孤児 0)。個別 ST ケース (Given-When-Then) は検証 band (L8-L14) / L9 本起票で展開する。L7 implemented evidence now covers the former ST-ASSET roster/skill carry rows.
+> **status**: draft (従来G4/A-101 freezeをD0-R redesignが意図的に再open。5 variant、recovery observation、authority ownership、release ABA oracleを含むL4↔L9 pairを独立review後に再凍結する)
 > **PLAN**: `docs/plans/PLAN-L4-{01..04}-*.md` の pair_artifact / DoD で本書参照
 
 ## §0 量閉じ原則 (L4 ↔ L9)
