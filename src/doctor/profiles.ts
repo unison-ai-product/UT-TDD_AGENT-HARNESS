@@ -2,12 +2,22 @@ export type DoctorScope = "full" | "toolchain";
 
 export type DoctorRunProfileId =
   | "source-full"
+  | "source-doc-lane"
   | "source-toolchain"
   | "consumer-toolchain"
   | "consumer-setup-smoke";
 export type DoctorRunProfileAudience = DoctorRunProfile["audience"];
 
 export type DoctorRunProfile =
+  | {
+      id: "source-doc-lane";
+      audience: "source";
+      invocation: "registry";
+      scope: "full";
+      setupSmoke: false;
+      outputIds: readonly string[];
+      sourceOnly: true;
+    }
   | {
       id: "source-full";
       audience: "source";
@@ -150,6 +160,12 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
 ] as const;
 
 export const TOOLCHAIN_DOCTOR_OUTPUT_IDS = ["toolchain-pin"] as const;
+export const SOURCE_DOC_LANE_OUTPUT_IDS = [
+  "readability",
+  "runtime-readability",
+  "rule-drift",
+  "secret-scan",
+] as const;
 
 export const DOCTOR_RUN_PROFILES = {
   "source-full": {
@@ -159,6 +175,15 @@ export const DOCTOR_RUN_PROFILES = {
     scope: "full",
     setupSmoke: false,
     outputIds: FULL_DOCTOR_OUTPUT_IDS,
+    sourceOnly: true,
+  },
+  "source-doc-lane": {
+    id: "source-doc-lane",
+    audience: "source",
+    invocation: "registry",
+    scope: "full",
+    setupSmoke: false,
+    outputIds: SOURCE_DOC_LANE_OUTPUT_IDS,
     sourceOnly: true,
   },
   "source-toolchain": {
@@ -191,6 +216,7 @@ export const DOCTOR_RUN_PROFILES = {
 
 export const DOCTOR_RUN_PROFILE_IDS = [
   "source-full",
+  "source-doc-lane",
   "source-toolchain",
   "consumer-toolchain",
   "consumer-setup-smoke",

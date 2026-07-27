@@ -75,7 +75,9 @@ jobs:
       - if: ${LANE_FULL_IF}
         run: bun run test
       - if: ${LANE_DOC_IF}
-        run: bun run test:doc-lane
+        run: |
+          bun run test:doc-lane
+          bun src/cli.ts doctor --profile source-doc-lane
       - run: bun run lint
       - if: ${LANE_FULL_IF}
         run: bun src/cli.ts audit quality --include-tests
@@ -887,6 +889,34 @@ describe("github-ci-policy lint", () => {
   // PLAN-L7-455 (troubleshoot, issue #109): doc-only lane 絞り込みが検証弱化にならないことの
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
+    it.each([
+      [
+        "missing producer",
+        "      - id: classify\n        run: bun src/cli.ts github classify-changes\n",
+        "",
+      ],
+      ["wrong id", "id: classify", "id: classify-docs"],
+      [
+        "missing command",
+        "bun src/cli.ts github classify-changes",
+        "bun src/cli.ts github summary",
+      ],
+    ])("U-CIPOL-020a: rejects %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020b: rejects a doc lane without the source-only doctor profile", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "          bun src/cli.ts doctor --profile source-doc-lane\n",
+            "",
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
+    });
     it("U-CIPOL-021: accepts a real-shaped workflow with canonical full/doc lane step conditions", () => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE));
 

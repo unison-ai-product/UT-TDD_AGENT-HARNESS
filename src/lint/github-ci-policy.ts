@@ -38,7 +38,9 @@ export interface GithubCiPolicyViolation {
     | "forbidden_raw_vitest"
     | "forbidden_source_full_tests"
     | "forbidden_job_level_lane_skip"
-    | "forbidden_lane_skip_step";
+    | "forbidden_lane_skip_step"
+    | "missing_lane_producer"
+    | "missing_doc_lane_doctor";
   detail: string;
 }
 
@@ -50,6 +52,7 @@ export interface GithubCiPolicyResult {
 
 interface WorkflowStep {
   "continue-on-error"?: unknown;
+  id?: string;
   name?: string;
   uses?: string;
   run?: string;
@@ -200,7 +203,7 @@ function workflowStep(value: unknown): value is WorkflowStep {
   const step = recordValue(value);
   if (
     !step ||
-    ![step.name, step.uses, step.run].every(
+    ![step.id, step.name, step.uses, step.run].every(
       (field) => field === undefined || typeof field === "string",
     ) ||
     (step["continue-on-error"] !== undefined && typeof step["continue-on-error"] !== "boolean")
@@ -253,7 +256,7 @@ const LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS: readonly ((text: string) => boolea
   (text) => /\bbun\s+run\s+test\b(?!:)/.test(text),
   (text) => text.includes("bun run test:fast"),
   (text) => text.includes("audit quality"),
-  (text) => text.includes("src/cli.ts doctor"),
+  (text) => text.includes("src/cli.ts doctor") && !text.includes("--profile source-doc-lane"),
 ];
 
 function matchesLaneSkipAllowlist(text: string): boolean {
@@ -280,6 +283,28 @@ function checkLaneSkipSafety(input: {
       Array.isArray(leg.steps) && leg.steps.every(workflowStep)
         ? (leg.steps as WorkflowStep[])
         : [];
+    const producer = steps.find((step) => step.id === "classify");
+    if (!producer?.run?.includes("github classify-changes")) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_lane_producer",
+        detail: `jobs.${name} requires id=classify running github classify-changes`,
+      });
+    }
+    if (
+      !steps.some(
+        (step) =>
+          step.if === LANE_DOC_ONLY_IF && step.run?.includes("doctor --profile source-doc-lane"),
+      )
+    ) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_doc_lane_doctor",
+        detail: `jobs.${name} doc lane requires doctor --profile source-doc-lane`,
+      });
+    }
     for (const step of steps) {
       const ifValue = step.if;
       if (typeof ifValue !== "string" || !ifValue.includes(LANE_REFERENCE_NEEDLE)) continue;

@@ -549,10 +549,12 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile()).toEqual(DOCTOR_RUN_PROFILES["source-full"]);
     expect(doctorRunProfilesForAudience("source").map((profile) => profile.id)).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
     ]);
     expect(doctorRunProfilesForAudience("source").filter((profile) => profile.sourceOnly)).toEqual([
       DOCTOR_RUN_PROFILES["source-full"],
+      DOCTOR_RUN_PROFILES["source-doc-lane"],
     ]);
     expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-full"])).toBe(false);
     expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-toolchain"])).toBe(true);

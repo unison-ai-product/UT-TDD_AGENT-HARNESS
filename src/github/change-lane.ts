@@ -25,11 +25,12 @@ export interface ChangeLaneClassification {
 }
 
 /** doc-safe とみなす `.ut-tdd/memory/` 配下 prefix (任意拡張子)。 */
-const DOC_LANE_MEMORY_PREFIX = ".ut-tdd/memory/";
-/** governance hard-gate (PLAN frontmatter) 対象のため doc-safe から除外する prefix。 */
-const DOC_LANE_GOVERNANCE_EXCLUDED_PREFIX = "docs/plans/";
-/** doc-safe とみなしうる `docs/` 配下 prefix (`docs/plans/` を除く、かつ `*.md` のみ)。 */
-const DOC_LANE_DOCS_PREFIX = "docs/";
+const DOC_LANE_PREFIXES = [
+  "docs/archive/",
+  "docs/migration/",
+  "docs/reference/",
+  "docs/research/",
+] as const;
 
 function normalizeChangedPath(path: string): string {
   return path.trim().replace(/\\/g, "/").replace(/^\.\//, "");
@@ -43,10 +44,9 @@ function normalizeChangedPath(path: string): string {
 export function isDocSafeChangePath(path: string): boolean {
   const normalized = normalizeChangedPath(path);
   if (!normalized) return false;
-  if (normalized.startsWith(DOC_LANE_MEMORY_PREFIX)) return true;
-  if (normalized.startsWith(DOC_LANE_GOVERNANCE_EXCLUDED_PREFIX)) return false;
-  if (normalized.startsWith(DOC_LANE_DOCS_PREFIX) && /\.md$/i.test(normalized)) return true;
-  return false;
+  return (
+    DOC_LANE_PREFIXES.some((prefix) => normalized.startsWith(prefix)) && /\.md$/i.test(normalized)
+  );
 }
 
 /** 変更ファイル一覧から lane を判定する純粋関数 (git 非依存、fail-close)。 */
@@ -71,8 +71,7 @@ export function classifyChangeLane(changedFiles: readonly string[]): ChangeLaneC
   }
   return {
     lane: "doc",
-    reason:
-      "all changed files match the doc-lane allowlist (docs/**.md minus docs/plans/**, .ut-tdd/memory/**)",
+    reason: "all changed files match the noncanonical prose doc-lane allowlist",
     fileCount: files.length,
   };
 }

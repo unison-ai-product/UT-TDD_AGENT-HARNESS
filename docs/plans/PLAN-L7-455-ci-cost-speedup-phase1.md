@@ -32,6 +32,12 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/change-lane.test.ts
     artifact_type: test_module
+  - artifact_path: src/doctor/profiles.ts
+    artifact_type: source_module
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test_module
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_module
 dependencies:
   parent: null
   requires: []
@@ -83,10 +89,10 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 - **採択: 変更種別の fail-close 分類**。「code を 1 ファイルでも含む → full」
   「保守的 doc-safe allowlist のみ → doc lane (lint / plan lint /
   readability / rule-drift 等の doc 系 check のみ)」。判定不能・新種 path は
-  full へフォールバック (fail-close)。doc-safe allowlist は **`docs/**` (ただし
-  `docs/plans/**` を除く) の `*.md`** と **`.ut-tdd/memory/**`** のみ
-  (§FLAG 是正記録参照。当初案の「docs/plans/governance 等」という表現は迂回を
-  誘発したため撤回)。
+  full へフォールバック (fail-close)。doc-safe allowlist は非正本の参照proseである
+  **`docs/archive/**.md` / `docs/migration/**.md` / `docs/reference/**.md` /
+  `docs/research/**.md`** のみに限定する。governance/design/process/adr/test-design/
+  templates/handover/memory と `.ut-tdd/memory/**` は常に full とする。
 - **required context (`harness-check` aggregate) は絞り込み後も常に生成する**。
   doc lane でも aggregate job は走り、doc 系 check green を集約して success を
   返す (branch protection の required check が pending 放置にならない)。
@@ -103,7 +109,7 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 ### Step 1: [直列] 変更分類 step + doc lane の導入
 - harness-check.yml に「変更ファイル分類」step を追加し、doc-only 判定時は
   重い step (full vitest / doctor full) を skip、doc 系 check のみ実行。
-  分類 allowlist は保守的に始める (docs/**, *.md, .ut-tdd/memory/** 等)。
+  分類 allowlist は上記4つの非正本 prose tree のみに限定する。
   code / config / workflow / スクリプト変更は常に full。
 
 ### Step 2: [並列] bun install cache
@@ -192,6 +198,14 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   path mixed with docs/plans/** classifies as full (fail-close on mix)」。
   攻撃再現 (governance 迂回) を固定し、`docs/design/foo.md` 等の正例は
   縮小後も doc lane のまま生きることも維持確認した。
+
+### 最終収束是正 (2026-07-27)
+
+- 各runtime legに `id: classify` + `github classify-changes` のlane output producerを必須化し、
+  欠落・誤id・command差替えを `github-ci-policy` がfail-closeする。
+- doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
+- source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
+  rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。
 
 ## AC
 
