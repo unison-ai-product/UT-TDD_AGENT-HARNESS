@@ -35,6 +35,15 @@ jobs:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - id: classify
+        shell: bash
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun src/cli.ts github guard
       - run: bun run typecheck
       - run: bun src/cli.ts db rebuild --json
@@ -42,6 +51,8 @@ jobs:
       - run: bun run lint
       - run: bun src/cli.ts audit quality --include-tests
       - run: bun src/cli.ts doctor
+      - if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
 `;
 
 // PLAN-L7-455 (troubleshoot): 実運用に近い形 (classify step + full/doc lane 条件付き step) の
@@ -66,7 +77,14 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - id: classify
-        run: bun src/cli.ts github classify-changes --event-name pull_request --head-sha head --base-sha base --before-sha before --github-output output
+        shell: bash
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun src/cli.ts github guard
       - if: ${LANE_FULL_IF}
         run: bun run typecheck
@@ -116,9 +134,20 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - id: classify
+        shell: bash
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
+      - if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
     if: \${{ always() }}
@@ -135,9 +164,20 @@ const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  ha
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - id: classify
+        shell: bash
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
+      - if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
     if: \${{ always() }}
@@ -892,7 +932,7 @@ describe("github-ci-policy lint", () => {
     it.each([
       [
         "missing producer",
-        "      - id: classify\n        run: bun src/cli.ts github classify-changes --event-name pull_request --head-sha head --base-sha base --before-sha before --github-output output\n",
+        `      - id: classify\n        shell: bash\n        run: |\n          bun src/cli.ts github classify-changes \\\n            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}" \\\n            --base-sha "\${{ github.event.pull_request.base.sha }}" \\\n            --before-sha "\${{ github.event.before }}" \\\n            --github-output "$GITHUB_OUTPUT"\n`,
         "",
       ],
       ["wrong id", "id: classify", "id: classify-docs"],
@@ -917,6 +957,40 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(
         docs(SOURCE_WORKFLOW_WITH_LANE.replace(flag, "--removed-flag")),
       );
+
+      it.each([
+        ["extra command", '\n          echo "extra"'],
+        ["comment", "\n          # classify"],
+        ["semicolon", "; true"],
+        ["and", " && true"],
+        ["or", " || true"],
+        ["different output", ' "$OTHER_OUTPUT"'],
+      ])("U-CIPOL-020ab: rejects canonical producer mutation: %s", (_label, suffix) => {
+        const marker = '            --github-output "$GITHUB_OUTPUT"';
+        const result = analyzeGithubCiPolicy(
+          docs(SOURCE_WORKFLOW_WITH_LANE.replace(marker, `${marker}${suffix}`)),
+        );
+        expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+      });
+
+      it("U-CIPOL-020ac: rejects argument reordering", () => {
+        const result = analyzeGithubCiPolicy(
+          docs(
+            SOURCE_WORKFLOW_WITH_LANE.replace(
+              `            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}"`,
+              `            --head-sha "\${{ github.sha }}" \\\n            --event-name "\${{ github.event_name }}"`,
+            ),
+          ),
+        );
+        expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+      });
+
+      it("U-CIPOL-020ad: rejects a Windows producer without shell=bash", () => {
+        const result = analyzeGithubCiPolicy(
+          docs(SOURCE_WORKFLOW_WITH_LANE.replaceAll("        shell: bash\n", "")),
+        );
+        expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+      });
       expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
     });
 

@@ -203,10 +203,10 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 
 - 各runtime legに `id: classify` + `github classify-changes` のlane output producerを必須化し、
   欠落・誤id・command差替えを `github-ci-policy` がfail-closeする。
-- producerはmultiline continuationを正規化した実command行が
-  `bun src/cli.ts github classify-changes` で始まり、`--event-name` / `--head-sha` /
-  `--base-sha` / `--before-sha` / `--github-output` を全て持つことまで検査する。
-  `echo`偽装、comment内substring、no-op、flag欠落はfail-closeする。
+- producerはmultiline continuation / CRLF / 空白だけを正規化し、現workflowの
+  `bun src/cli.ts github classify-changes` と5引数（GitHub式・順序・`$GITHUB_OUTPUT`を含む）
+  のcanonical全文に完全一致させる。追加行/comment/`;`/`&&`/`||`/別output/引数順序変更は
+  全てfail-closeする。Windows legはproducerの`bash` shellも必須とする。
 - doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。

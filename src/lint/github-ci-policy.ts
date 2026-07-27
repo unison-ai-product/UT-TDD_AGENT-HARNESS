@@ -54,6 +54,7 @@ interface WorkflowStep {
   "continue-on-error"?: unknown;
   id?: string;
   name?: string;
+  shell?: string;
   uses?: string;
   run?: string;
   if?: unknown;
@@ -203,7 +204,7 @@ function workflowStep(value: unknown): value is WorkflowStep {
   const step = recordValue(value);
   if (
     !step ||
-    ![step.id, step.name, step.uses, step.run].every(
+    ![step.id, step.name, step.shell, step.uses, step.run].every(
       (field) => field === undefined || typeof field === "string",
     ) ||
     (step["continue-on-error"] !== undefined && typeof step["continue-on-error"] !== "boolean")
@@ -263,27 +264,24 @@ function matchesLaneSkipAllowlist(text: string): boolean {
   return LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS.some((matches) => matches(text));
 }
 
-const CLASSIFY_COMMAND = "bun src/cli.ts github classify-changes";
-const CLASSIFY_REQUIRED_FLAGS = [
-  "--event-name",
-  "--head-sha",
-  "--base-sha",
-  "--before-sha",
-  "--github-output",
-] as const;
+const githubExpression = (expression: string): string => ["$", `{{ ${expression} }}`].join("");
+const CLASSIFY_COMMAND = [
+  "bun src/cli.ts github classify-changes",
+  `--event-name "${githubExpression("github.event_name")}"`,
+  `--head-sha "${githubExpression("github.sha")}"`,
+  `--base-sha "${githubExpression("github.event.pull_request.base.sha")}"`,
+  `--before-sha "${githubExpression("github.event.before")}"`,
+  '--github-output "$GITHUB_OUTPUT"',
+].join(" ");
 
 function hasCanonicalLaneProducer(run: string | undefined): boolean {
   if (!run) return false;
-  const commands = run
-    .replace(/\\\r?\n\s*/g, " ")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  return commands.some((command) => {
-    if (!(command === CLASSIFY_COMMAND || command.startsWith(`${CLASSIFY_COMMAND} `))) return false;
-    const tokens = command.split(/\s+/);
-    return CLASSIFY_REQUIRED_FLAGS.every((flag) => tokens.includes(flag));
-  });
+  return (
+    run
+      .replace(/\\\r?\n\s*/g, " ")
+      .trim()
+      .replace(/\s+/g, " ") === CLASSIFY_COMMAND
+  );
 }
 
 function checkLaneSkipSafety(input: {
@@ -307,12 +305,15 @@ function checkLaneSkipSafety(input: {
         ? (leg.steps as WorkflowStep[])
         : [];
     const producer = steps.find((step) => step.id === "classify");
-    if (!hasCanonicalLaneProducer(producer?.run)) {
+    if (
+      !hasCanonicalLaneProducer(producer?.run) ||
+      (name === "harness-check-windows" && producer?.shell !== "bash")
+    ) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
         reason: "missing_lane_producer",
-        detail: `jobs.${name} requires id=classify running ${CLASSIFY_COMMAND} with ${CLASSIFY_REQUIRED_FLAGS.join(", ")}`,
+        detail: `jobs.${name} requires the canonical classify producer${name === "harness-check-windows" ? " with shell=bash" : ""}`,
       });
     }
     if (
