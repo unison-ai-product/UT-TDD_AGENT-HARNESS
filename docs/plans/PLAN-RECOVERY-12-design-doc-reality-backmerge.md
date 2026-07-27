@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-12 (recovery): 設計 doc 実態乖離の一括 back-merge
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
@@ -36,24 +36,29 @@ dependencies:
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
 review_evidence:
-  - reviewer: blind-reviewer
+  - reviewer: codex-blind-reviewer
     review_kind: cross_agent
-    reviewed_at: "2026-07-21T12:48:00+09:00"
-    tests_green_at: "2026-07-21T12:53:00+09:00"
-    verdict: superseded_by_cross_review_flag
+    reviewed_at: "2026-07-27T17:20:00+09:00"
+    tests_green_at: "2026-07-27T17:12:00+09:00"
+    verdict: pass
     worker_model: claude-sonnet-5
     reviewer_model: gpt-5.6-sol
-    scope: "履歴証跡 (現在の閉鎖根拠ではない)。worktree 変更一式を blind review して当時 PASS としたが、後続 PR #107 クロスレビューで lint→team module cycle、生 literal oracle 不足、review_before_test を検出したため superseded。修正 HEAD の定量検証後に別 runtime が再レビューするまで approve へ戻さない。"
+    scope: "PLAN 自身が要求した『修正 HEAD の定量検証後の別 runtime 再レビュー』を充足。
+      merge HEAD 2c44a968 (origin/main 統合 + model-id literal 掃除) に対し gpt-5.6-sol
+      blind re-review PASS (finding 0): 先行 3 FLAG (lint→team module cycle / 生 literal
+      oracle 不足 / review_before_test) の全解消を import graph 実測・snapshot 実走
+      8/8・gate offenders 0 で裏取り。main 追記 (README V-model 節 / advisor 節 /
+      repository-structure) の欠落なしも blob 突合で確認。"
     green_commands:
       - kind: unit_test
-        command: "mktemp -d の独立ディレクトリへ .claude/ と docs/ を実体コピーし UT_TDD_HEAD_SNAPSHOT_ROOT に指定、UT_TDD_TEST_EXECUTION_ROOT/UT_TDD_TEST_FENCE_ROOT=live tree cwd で bunx vitest run tests/model-id-ssot-drift.test.ts (8 tests、負例 regression 含む)。commit 14dda22f 後に正規経路 bun scripts/run-vitest-snapshot.ts tests/model-id-ssot-drift.test.ts でも 8 passed (8) を再確認"
+        command: "bun scripts/run-vitest-snapshot.ts tests/model-id-ssot-drift.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-21T12:53:00+09:00"
-        evidence_path: tests/model-id-ssot-drift.test.ts
-        output_digest: "sha256:b9e0219af764cb2c589be9ee4dd77548c934bd40ebe405d553ac3ef64db768f7"
-        anchor_commit: 14dda22fc6aab513ed982e56c6161964d725076f
+        completed_at: "2026-07-27T17:12:00+09:00"
+        evidence_path: .ut-tdd/audit/PLAN-RECOVERY-12-2c44a968-model-id-drift-snapshot.log
+        output_digest: "sha256:01ffb31cc185514c0f0cac3ed3169ea81354b14021feafd9f3fae175c9a42da1"
+        anchor_commit: 0ab1fefd6b6dd5997c24b0a433c1be8630600bea
 ---
 
 # PLAN-RECOVERY-12 (recovery): 設計 doc 実態乖離の一括 back-merge
@@ -62,13 +67,26 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/8
 
 ## 2026-07-21 クロスレビュー再オープン
 
+### 履歴証跡 (superseded、機械 claim から除外)
+
+2026-07-21 の初回 blind review (reviewer=blind-reviewer, worker=claude-sonnet-5,
+reviewer_model=gpt-5.6-sol, reviewed_at 12:48 / tests_green_at 12:53, 当時 PASS →
+後続クロスレビューで superseded) は、`review_before_test` の順序契約を満たさないため
+review_evidence (機械検証対象) から本節へ移した。当時の green 実測:
+`bunx vitest run tests/model-id-ssot-drift.test.ts` 8 passed、
+output_digest sha256:b9e0219af764cb2c589be9ee4dd77548c934bd40ebe405d553ac3ef64db768f7、
+anchor_commit 14dda22fc6aab513ed982e56c6161964d725076f。現在の閉鎖根拠は
+2026-07-27 の sol 再レビュー entry のみ。
+
 PR #107 の独立クロスレビューで、`src/lint/model-id-doc-drift.ts` の
 `lint -> team` 依存による module cycle と、現行 catalog 値の生 literal を許す
 oracle 不足を検出した。さらに先行 `review_evidence` は `reviewed_at < tests_green_at`
 であり、定量検証後レビューの順序契約を満たさなかった。このため `confirmed` を撤回して
-`draft` へ戻す。修正後の定量検証を先に完了し、その HEAD を別 runtime が再レビューした
-新規 evidence を追記するまで再 confirmed しない。先行 evidence は当時の試行履歴として
-保持するが、現在の閉鎖根拠には使わない。
+`draft` へ戻した。その後、修正 HEAD (`2c44a968`、origin/main 統合 + literal 掃除) の
+定量検証 (snapshot 8/8 / gate offenders 0 / import graph で cycle 0) を先に完了し、
+別 runtime (gpt-5.6-sol) の blind 再レビュー PASS (finding 0、2026-07-27) を新規
+evidence として追記したため、宣言どおりの条件充足をもって再 confirmed した。
+先行 evidence は当時の試行履歴として保持するが、現在の閉鎖根拠には使わない。
 
 ## 背景 (2026-07-17 設計実態フルチェック監査での実測)
 
