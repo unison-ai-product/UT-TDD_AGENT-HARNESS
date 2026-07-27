@@ -4,7 +4,7 @@ title: "PLAN-L6-91 (add-design/function-spec): disposition claim↔実体整合 
   merge/adopt/reference 主張と受け皿正本の機械照合 (issue #119)"
 kind: add-design
 layer: L6
-drive: agent
+drive: db
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-22
@@ -26,8 +26,7 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L4-22-vmodel-source-disposition-profile-ssot.md
-  requires:
-    - docs/plans/PLAN-L4-22-vmodel-source-disposition-profile-ssot.md
+  requires: []
   references:
     - docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
     - docs/plans/PLAN-L6-70-source-catalog-profile-resolver-contracts.md
@@ -41,18 +40,18 @@ sub_doc: function-spec
 github_issue_id: 119
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e8307634350a525ec32fb23bbe010e53
-  command_id: plan-l6-91-20260722-01
-  admitted_at: 2026-07-22T02:53:58.988Z
-  source_digest: sha256:6a7293e5f38a1b9a5fae48b000596bbba7cc440e380fbb2934c9b61c9285ff85
-  decision_digest: sha256:cdb381ec8038c2a54335b96a47d83492aecd48db922e9926340c99743e88cda7
-  receipt_digest: sha256:c156fa73be59bfaeadb892d4919689e7c7e1a317eb4df01b3f8ced00e92ed51e
+  receipt_id: certificate:98c5c3e74866b05cb19ccae62651d4cc
+  command_id: plan-l6-91-20260727-02
+  admitted_at: 2026-07-27T10:29:36.217Z
+  source_digest: sha256:9424d72f862a60f125ae05c6207ef4197ce9b8530135f722ec836902b1151f03
+  decision_digest: sha256:5b65c4e69c2443ad017b3f0c47fc20f637023bab63f5e63a67d1b6fb39c0b0e3
+  receipt_digest: sha256:3dd543478703f92c31fc2b5c6101f42951ff99edb5b0c61715f4410bc8c6b098
   binding:
     path: docs/plans/PLAN-L6-91-disposition-claim-integrity-gate.md
     plan_id: PLAN-L6-91-disposition-claim-integrity-gate
-    asset_id: plan:e8307634350a525ec32fb23bbe010e53
-    revision: 1
-    content_digest: sha256:6a7293e5f38a1b9a5fae48b000596bbba7cc440e380fbb2934c9b61c9285ff85
+    asset_id: plan:legacy:64bc729867f74597943e533396e4d022cf87e664059978169f9301441294ed75
+    revision: 2
+    content_digest: sha256:9424d72f862a60f125ae05c6207ef4197ce9b8530135f722ec836902b1151f03
   route:
     signal: feature_addition
     mode: add-feature

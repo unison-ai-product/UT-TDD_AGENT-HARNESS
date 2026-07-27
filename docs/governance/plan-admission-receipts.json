@@ -1264,6 +1264,22 @@
         "revision": 1,
         "content_digest": "sha256:6a7293e5f38a1b9a5fae48b000596bbba7cc440e380fbb2934c9b61c9285ff85"
       }
+    },
+    {
+      "sequence": 80,
+      "previous_record_digest": "sha256:5e7d21d9a4fc7b408cfcac7418b62896d6bb3e7c64ff237bdc214a879e9f53b0",
+      "record_digest": "sha256:72672295234d8b5cd885c026aa5079390bac930ca8f6c6060fc62dbb3e529024",
+      "command_id": "plan-l6-91-20260727-02",
+      "receipt_id": "certificate:98c5c3e74866b05cb19ccae62651d4cc",
+      "receipt_digest": "sha256:3dd543478703f92c31fc2b5c6101f42951ff99edb5b0c61715f4410bc8c6b098",
+      "decision_digest": "sha256:5b65c4e69c2443ad017b3f0c47fc20f637023bab63f5e63a67d1b6fb39c0b0e3",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-91-disposition-claim-integrity-gate.md",
+        "plan_id": "PLAN-L6-91-disposition-claim-integrity-gate",
+        "asset_id": "plan:legacy:64bc729867f74597943e533396e4d022cf87e664059978169f9301441294ed75",
+        "revision": 2,
+        "content_digest": "sha256:9424d72f862a60f125ae05c6207ef4197ce9b8530135f722ec836902b1151f03"
+      }
     }
   ]
 }
