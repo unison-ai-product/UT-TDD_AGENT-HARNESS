@@ -49,6 +49,16 @@
   - #146+#147: oracle 宣言を U-DOCLEDGER-001..005 に絞り (006..010 は後続 slice へ)、PLAN-L7-422 改番後に束ねて design+impl 同時 merge。
   - 関連起票: #162 (post-merge罠) / #163 (PLAN番号衝突 lint、実例 L6-92・L7-422 追記済み) / #164 (genesis rev1) / #165 (oracle 2桁ID すり抜け)。
 
+## 日次クローズ (2026-07-27 EOD、PO 指示「#112 は明日に回す」)
+
+- 到達点: open PR 19 → 4 (14 merge + 2 close #117/#130 salvage 付き)。main は終日 GREEN。
+- **#112**: Codex が収束作業中で持ち越し (github-ci-policy 15件 Red = mutation fixture の旧断片置換を
+  replaceRequired fail-fast 化して同期済み、production detector 無変更、再 snapshot 段階)。
+  PLAN-L7-455 は confirmed 済み (post-merge 罠なし)。Claude 側に未 push の main merge commit
+  53eb506e あり (worktree C:/Users/micro/AppData/Local/Temp/claude-pr112-wt、不要なら worktree ごと破棄)。
+- 残: #113 (未診断、重い候補)、#125 (Codex 対応中)、#146/#147/#156 救済 (案A確定、#166=step1 済み)、
+  CI speedup phase2 要否、PLAN-L7-460 実装、#162-165 の機構化。
+
 ## 注意 (2026-07-27 に起きた失敗)
 
 - Claude から `ut-tdd codex --role se --execute` で #110/#111/#112/#122 の修正を委譲したが、
