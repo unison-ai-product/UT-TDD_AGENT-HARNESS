@@ -363,7 +363,7 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-001` | valid requestを分割read/writeしresponseをcorrelate | 一件だけdecodeし同一request IDへ応答、余剰byte 0 |
 | `IT-RGK-PHYS-002` | oversize、partial、invalid UTF-8、duplicate/unknown field、trailing byte | decoder `WireFault`からNode Kernel境界でexactly once `protocol_failure`。validated request ID前のresponse 0、launcher/custody call 0、raw bytes/secret/path保存0 |
 | `IT-RGK-PHYS-003` | response ID/version/bundle digestを一要素ずつ変異 | Node clientが拒否しdirect spawn 0 |
-| `IT-RGK-PHYS-004` | 同一attempt/nonceのspawnをtimeout後再送 | processは最大1、既存custodyへreconcile |
+| `IT-RGK-PHYS-004` | 同一request ID/token digest/idempotency identityのspawnをtimeout後再送 | pending/indeterminate/result recordから実phaseへreconcileしprocess最大1。attempt/nonceだけ同じ新requestはreplay拒否 |
 | `IT-RGK-PHYS-005` | Windows create→assign間でclient crash | suspended root resume 0、custodianがterminate/reap |
 | `IT-RGK-PHYS-006` | Windows assign成功後launcher/client crash | Job handle custodyを維持しdeadline後Job empty/orphan 0 |
 | `IT-RGK-PHYS-007` | Linux clone/start barrierと事後attach fallbackを競合 | user code開始時からcgroup所属、事後attachはcapability failure |
@@ -387,15 +387,18 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-025` | companion、protocol、D0-N generation receiptの一要素だけを旧値へ戻す | bundle identity不一致で拒否しcontrol process 0。rollbackはfloor超の新manifest再署名だけを許可 |
 | `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
 | `IT-RGK-PHYS-027` | create→spawn→resume完全positive chain | stage token 3枚とpredecessor factが連鎖しcustody/root各最大1 |
-| `IT-RGK-PHYS-028` | 各stage response lossと同一/別payload retry | 同一payloadは実phaseへreconcile、別payload拒否、custody/root増殖0 |
+| `IT-RGK-PHYS-028` | 各stageで消費+pending commit、side effect、indeterminate、reconciled、result前後にcrashし4 digestとphase/fact digestを各変異してretry | 全stateにrequest digest継承。reconciled後crashはexact一致からnative再実行0でresult commit。他stateも一致時だけreconcile/継続/同result、変異・record欠測は拒否、custody/root増殖0 |
 | `IT-RGK-PHYS-029` | effective deadline直前/同時/直後のspawn/resumeとcleanup CAS競合 | deadline後execution 0、winnerがcleanup leaseを同時発行してcleanup_onlyへ一方向遷移しempty/releaseへ収束 |
 | `IT-RGK-PHYS-030` | recovery deadline超過後のexecutor/supervisor | overdue/admission blockを記録し、kill/reap/releaseは停止しない |
 | `IT-RGK-PHYS-031` | Node/authority same-boot再起動とCAS競合 | winnerだけcleanup lease、旧epoch拒否、生成/attach/resume 0 |
 | `IT-RGK-PHYS-032` | host rebootでcross-boot proofをCAS競合/replay | winnerだけepoch+1 boot-fenced lease→empty proof→release→admission unblock。敗者/replay delta 0、旧boot lease/旧PID操作0 |
 | `IT-RGK-PHYS-033` | cross-boot proof欠損、boot chain不一致、旧custody identity再利用 | quarantine/admission block維持、新lease/root 0 |
-| `IT-RGK-PHYS-034` | empty fact commitからcontrol shutdownまで各barrier crash | release→fact→revoke→disarm→terminal seal→shutdown順を再開し、二重release・早期seal・survivor 0 |
-| `IT-RGK-PHYS-035` | active custody、pending response、未flush terminal outboxを一つずつ残してshutdown_companion | 各caseでcontrol shutdown 0、custody/authority delta 0。全条件解消後だけshutdown |
+| `IT-RGK-PHYS-034` | empty fact commitからcontrol shutdownまで各barrier crash | release→fact→disarm→revoke+released atomic commit→terminal seal→shutdown順を再開し、二重release・revoke後未完操作・早期seal・survivor 0 |
+| `IT-RGK-PHYS-035` | active custody、pending response、未解決pending-dispatch、indeterminate、reconciled-without-result、未flush terminal outboxを一つずつ残してshutdown_companion | 各caseでcontrol shutdown 0、custody/authority delta 0。全条件解消後だけshutdown |
 | `IT-RGK-PHYS-036` | deadline/cancel、host reboot、empty/releaseを組み合わせauthority mode全from/toを駆動 | 合法5辺だけjournal+lease/factと同時commit。不正backward/self/skipはauthority/OS delta 0、revokedから再開0 |
+| `IT-RGK-PHYS-037` | 正常root exitとdescendant遅延exit | root exitでcleanup leaseへ遷移し、descendant empty/reap前release 0。empty後release→disarm→revoke+released→terminal sealへ到達 |
+| `IT-RGK-PHYS-038` | 3 lease variantを各operationへcross-dispatchし、schema/mode/boot fieldも一要素ずつ変異 | operation×variant表の合法組だけ実行。boot-fenced terminate/旧boot monotonic field、variant外fieldはdecode/dispatch前拒否 |
+| `IT-RGK-PHYS-039` | token/lease/recovery proofのauthenticatorを発行・検証し、preimageへauthenticator自己包含mutationと他field変異を注入 | authenticator自身だけを除くcanonical preimageでround-trip Green。自己包含実装と他field変異はverify Red |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。

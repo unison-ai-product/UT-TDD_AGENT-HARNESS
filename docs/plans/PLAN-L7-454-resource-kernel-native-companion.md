@@ -58,18 +58,18 @@ supersedes:
   - PLAN-L7-454-resource-kernel-native-companion
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:3c9479cfef84643af21f915fe97622aa
-  command_id: pr156-authority-mode-l7-rev12-20260727
-  admitted_at: 2026-07-27T02:40:02.000Z
-  source_digest: sha256:b684e4ecc2f2a09555d0711ed76352c7cc0f6da20f543c6416180b4741694698
-  decision_digest: sha256:37b905b9b0c8287b707985289c506f44dd95bf77cfe00211b0096742450e8899
-  receipt_digest: sha256:e799fa472770dea4ba269d08f895e3f9a35d3c822439d8da1b28ebd77433aaa4
+  receipt_id: certificate:ce755fcc5d363e8b9ae087176b000fed
+  command_id: pr156-closed-authority-l7-rev13-20260727
+  admitted_at: 2026-07-27T03:30:02.000Z
+  source_digest: sha256:cf758ce85e6c0b4f953db5df4472bd42dfbd7b2b0b549b0257b5939aae876a92
+  decision_digest: sha256:4ca4117a2a88cf1563a429fde6b32dfac6d288217bda95d556c90ecedfc1231f
+  receipt_digest: sha256:f00b3b3a563cd98ace0f692822ea7c5486b084e40fd65443f4429367f5bd83f0
   binding:
     path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     plan_id: PLAN-L7-454-resource-kernel-native-companion
     asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 12
-    content_digest: sha256:b684e4ecc2f2a09555d0711ed76352c7cc0f6da20f543c6416180b4741694698
+    revision: 13
+    content_digest: sha256:cf758ce85e6c0b4f953db5df4472bd42dfbd7b2b0b549b0257b5939aae876a92
   route:
     signal: feature_addition
     mode: add-feature
@@ -80,20 +80,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L7-454-resource-kernel-native-companion
-    revision: 11
-    digest: sha256:085def2940ad4463fb322c19b253c7703338199ee750fbc510b24eca81f81ed0
+    revision: 12
+    digest: sha256:8efef5c13822842a4c0380061bdf3df06d20ffc723e6b5dbfe0b90826ed0363b
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 12
+      target_revision: 13
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 12
+    target_revision: 13
     phase: forward_merge
-  escape_reason: Resource Kernelのstage token、authority mode、cross-boot
-    fence、custody release契約を閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのauthority/token/recovery/release契約を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L7-454-resource-kernel-native-companion
 ---
@@ -138,6 +137,7 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
   releaseはempty/reap fact commit後だけ許可し、control process shutdownを別commandへ分離する。
 - canonical token authenticator/issuer/operation/nonce検証、wall→monotonic縮小変換、別failure domain deadline executor。
 - execution/cleanup/boot-fenced cleanup lease union、custody/executor identity、boot ID、deadline、lease nonce検証。
+- 3 lease variantのcanonical field/discriminant/禁止fieldをstrict schema化し、boot-fencedへexecution fieldを注入不能にする。
 - execution/spec/bundle/termination/recovery policyをtoken/lease/proofへ束縛し、same-boot/cross-bootを分離したepoch CASとtrace eventを実装する。
 - pre-dispatch wire faultとpost-dispatch indeterminateを分離し、後者はidempotent reconcileでactual phaseを確定する。
 - token前custody nonce予約と、prepared/attached-suspendedからterminatingへのpre-start cleanup辺を実装する。
@@ -149,6 +149,10 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 - custody authorityへのatomic handoff、broker外durable deadline enforcement、不可逆cleanup mode、epoch/nonce recovery、
   dual-crash後の期限内kill→bounded recovery→reap/orphan 0、host reboot後のboot fence→empty→release。
 - deadline/cancel/abortのmode CASとcleanup lease発行を原子的にし、cross-boot fenceではemptyを先取りしない。
+- 正常root exit/terminate intentもcleanup leaseへ遷移し、normal releaseを閉じる。
+- stage token消費とpending-dispatchを原子的にし、同一request/token digest/idempotency identityのtransport retryを
+  canonical request digest付きでpending/indeterminate/reconciled/resultからreconcileする。
+  authenticator自身を除くcanonical preimageを認証し、releaseはexecutor disarm後にrevoke+releasedをatomic commitする。
 
 ### 2.2 Node protocol clientが所有するもの
 
@@ -190,7 +194,7 @@ domain policyやreceipt sealは既存TypeScript側portへ返し、このclient�
       authority+supervisor dual-crash後も期限内kill→bounded recovery→reap/orphan 0を完遂し、欠測findingだけで代替しない。
 - [ ] RustとTypeScriptの責務重複が0で、domain/policy/journal/receiptの正本がTypeScript側に一つだけある。
 - [ ] `U-RGK-NATIVE-*`、`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、
-      `U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と`IT-RGK-PHYS-001..036`が
+      `U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と`IT-RGK-PHYS-001..039`が
       tested commitとevidence manifestを固定する。
 - [ ] Node/Cargoだけでclean install、targeted/full test、doctor、Windows/Linux aggregate CI、Pack acceptanceがGreen。
 - [ ] PR #154 D0-Nのcutover receiptを参照し、native companion/bundle差分のBun依存増分が0。
