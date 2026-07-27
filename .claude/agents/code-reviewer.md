@@ -3,7 +3,7 @@ name: code-reviewer
 description: Senior Staff Engineer 視点で 5軸レビューを実施。実装は行わず、Critical/Important/Minor で所見を整理し、ship skill の Phase B で統合されるレビュー結果を返す。
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: claude-opus-5
-effort: high
+effort: medium
 memory: project
 maxTurns: 20
 ---

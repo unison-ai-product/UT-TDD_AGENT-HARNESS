@@ -715,7 +715,7 @@ describe("L7 CLI surface closure", () => {
     expect(payload).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "consult",
       decision_kind: "design",
       current_model_lower_than_advisor: true,
@@ -768,7 +768,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "codex",
         model: MODEL_IDS.codex.frontier,
-        effort: "middle",
+        effort: "low",
         adapterPlan: {
           provider: "codex",
           model: MODEL_IDS.codex.frontier,

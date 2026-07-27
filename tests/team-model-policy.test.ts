@@ -135,7 +135,7 @@ describe("team model policy", () => {
     expect(claude).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "consult",
       decision_kind: "design",
       decision_kind_source: "explicit",
@@ -148,7 +148,7 @@ describe("team model policy", () => {
       fallback: {
         provider: "claude",
         model: MODEL_IDS.claude.fable,
-        effort: "middle",
+        effort: "low",
         consultation_mode: "consult",
       },
     });
@@ -166,12 +166,12 @@ describe("team model policy", () => {
     expect(decision).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "adversarial",
       fallback: {
         provider: "claude",
         model: MODEL_IDS.claude.fable,
-        effort: "middle",
+        effort: "low",
         consultation_mode: "consult",
       },
     });
@@ -187,7 +187,7 @@ describe("team model policy", () => {
     expect(sonnet).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "consult",
       decision_kind: "implementation",
       decision_kind_source: "inferred",
@@ -205,7 +205,7 @@ describe("team model policy", () => {
     expect(opus).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "adversarial",
     });
     expect(opus.adapterPlan.stdin).toContain("adversarial verifier");
@@ -222,7 +222,7 @@ describe("team model policy", () => {
     expect(codex).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "consult",
       adapterPlan: {
         provider: "codex",
@@ -230,13 +230,13 @@ describe("team model policy", () => {
         dry_run: false,
       },
     });
-    // effort argv 注入 (PLAN-L7-255): repo 語彙 "middle" は codex config 語彙 "medium" へ正規化される
+    // Sol advisor はモデル標準 effort=low を argv へ実注入する。
     expect(codex.adapterPlan.args).toEqual([
       "exec",
       "-m",
       MODEL_IDS.codex.frontier,
       "-c",
-      "model_reasoning_effort=medium",
+      "model_reasoning_effort=low",
       "-",
     ]);
     expect(codex.fallback).toBeUndefined();
@@ -275,7 +275,7 @@ describe("team model policy", () => {
 });
 
 describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
-  it("U-ROUTE2-001: codex テスト実装は terra + ladder base low effort", () => {
+  it("U-ROUTE2-001: codex テスト実装は terra + ladder base middle effort", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "se",
@@ -284,8 +284,8 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     });
     expect(selection).toMatchObject({
       model: MODEL_IDS.codex.worker,
-      // Terra は基準 low (effort ladder)。浅い時 middle、なお浅ければ Sol low へ乗り換え。
-      reasoning_effort: "low",
+      // Terra は基準 middle (effort ladder)。浅い時 high、なお浅ければ Sol low へ乗り換え。
+      reasoning_effort: "middle",
       task_intent: "test",
     });
   });
@@ -532,10 +532,10 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toBe(true);
   });
 
-  it("U-ROUTE2-012: effort ladder 基準 — sol/terra/fable=low, sonnet/opus=middle, spark/luna=high, mini=xhigh", () => {
+  it("U-ROUTE2-012: effort ladder 基準 — sol/fable=low, terra/sonnet/opus=middle, spark/luna=high, mini=xhigh", () => {
     const base = (model: string) => MODEL_EFFORT_LADDER[model]?.base;
     expect(base(MODEL_IDS.codex.frontier)).toBe("low");
-    expect(base(MODEL_IDS.codex.worker)).toBe("low");
+    expect(base(MODEL_IDS.codex.worker)).toBe("middle");
     expect(base(MODEL_IDS.claude.fable)).toBe("low");
     expect(base(MODEL_IDS.claude.sonnet)).toBe("middle");
     expect(base(MODEL_IDS.claude.opus)).toBe("middle");
@@ -544,12 +544,12 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     expect(base(MODEL_IDS.codex.mini)).toBe("xhigh");
   });
 
-  it("U-ROUTE2-013: 浅い回答のエスカレーション — terra low→middle→sol low、opus middle→xhigh、行き止まりは null", () => {
-    expect(
-      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "low" }),
-    ).toEqual({ model: MODEL_IDS.codex.worker, effort: "middle" });
+  it("U-ROUTE2-013: 浅い回答のエスカレーション — terra middle→high→sol low、opus middle→xhigh、行き止まりは null", () => {
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "middle" }),
+    ).toEqual({ model: MODEL_IDS.codex.worker, effort: "high" });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "high" }),
     ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "low" });
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "low" }),

@@ -118,8 +118,8 @@ export const PLAN_AGENT_MODELS = {
 /**
  * モデル別 effort 基準ラダー (PO 2026-07-14)。base が既定 effort、shallow は「回答が浅い」
  * と orchestrator が判断した時の引き上げ先。escalate は shallow でもなお浅い時の
- * モデル乗り換え先 (Terra middle → Sol low)。上位モデルほど低 effort で足り、下位帯
- * (spark/mini) は effort で能力を補う逆傾斜 (H4 ベンチ: Sol low ≈ Terra high の実測と整合)。
+ * モデル乗り換え先 (Terra high → Sol low)。上位モデルほど低 effort で足り、下位帯
+ * (spark/mini) は effort で能力を補う逆傾斜。
  * luna のみ base=high (PO 2026-07-14 の実装帯上書き)。haiku は未指定のため Claude 既定 (high)。
  */
 export const MODEL_EFFORT_LADDER: Record<
@@ -132,8 +132,8 @@ export const MODEL_EFFORT_LADDER: Record<
 > = {
   [MODEL_IDS.codex.frontier]: { base: "low", shallow: "middle" },
   [MODEL_IDS.codex.worker]: {
-    base: "low",
-    shallow: "middle",
+    base: "middle",
+    shallow: "high",
     escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
   },
   [MODEL_IDS.codex.luna]: { base: "high" },

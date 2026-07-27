@@ -181,18 +181,18 @@ effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入さ�
 
 Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede):
 
-- Codex: テスト実装 = `gpt-5.6-terra`; 実装/ドキュメント修正 = `gpt-5.6-luna`
-  (effort `high` 基準、worker `middle` 既定の上書き); 検証/設計 = `gpt-5.6-sol`;
+- Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
+  `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-5.6-sol` (effort `low`);
   軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
 - Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
   UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
-- Effort はモデル別基準ラダー (PO rule 2026-07-14) が既定: Sol/Terra/Fable =
-  `low`、Sonnet/Opus = `middle`、Luna/spark = `high`、mini = `xhigh`。回答が
-  浅い時は 1 段引き上げ (Sol/Terra/Fable → `middle`、Sonnet → `high`、Opus →
-  `xhigh`)、Terra が `middle` でも浅い場合は Sol `low` へ乗り換える
+- Effort はモデル別基準ラダー (PO rule 2026-07-27) が既定: Sol/Fable =
+  `low`、Terra/Sonnet/Opus = `middle`、Luna/spark = `high`、mini = `xhigh`。回答が
+  浅い時は 1 段引き上げ (Sol/Fable → `middle`、Terra/Sonnet → `high`、Opus →
+  `xhigh`)、Terra が `high` でも浅い場合は Sol `low` へ乗り換える
   (`escalateShallowResponse`)。ラダー外 (haiku 等) は従来既定 (Claude `high` /
   GPT `middle`)。UI/UX のみ task-kind 例外で `xhigh` (PO rule 2026-07-08)。
 - Implementation work in `hybrid` is cross-executed and cross-reviewed: the
