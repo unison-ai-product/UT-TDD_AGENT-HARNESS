@@ -1,0 +1,36 @@
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/micro/AppData/Local/Temp/claude/wt-issue-118[39m
+
+ [32mâœ“[39m tests/git-workspace-fingerprint.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 203[2mms[22m[39m
+(node:21232) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32mâœ“[39m tests/db-maintenance.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 391[2mms[22m[39m
+2 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ðˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+2 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ðˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-git-source-RIPllg-execution'...
+done.
+HEAD is now at cb42822 initial
+Cloning into 'C:\Users\micro\AppData\Local\Temp\ut-tdd-git-source-RIPllg-reference'...
+done.
+HEAD is now at cb42822 initial
+3 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ðˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+3 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ðˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+3 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ª³í‚Éˆ—‚³‚ê‚Ü‚µ‚½B0 ŒÂ‚Ìƒtƒ@ƒCƒ‹‚ðˆ—‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½
+ [32mâœ“[39m tests/vitest-snapshot-runner.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 2730[2mms[22m[39m
+   [33m[2mâœ“[22m[39m vitest snapshot runner[2m > [22mU-TESTHYGIENE-039: uses one captured Git revision for execution and reference [33m1547[2mms[22m[39m
+(node:12884) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ [32mâœ“[39m tests/db-currency.test.ts [2m([22m[2m27 tests[22m[2m)[22m[33m 10688[2mms[22m[39m
+   [33m[2mâœ“[22m[39m db-currency lint[2m > [22mU-DBCURRENCY-004: rebuilt on-disk harness.db is current against its PLAN docs [33m1455[2mms[22m[39m
+   [33m[2mâœ“[22m[39m db-currency lint[2m > [22mU-DBCURRENCY-005: Stop-hook refresh converges a stale persisted registry without manual rebuild (PLAN-L7-365 Step 2, issue #78) [33m1895[2mms[22m[39m
+   [33m[2mâœ“[22m[39m db-currency lint[2m > [22mU-DBCURRENCY-009: a real async spawn failure (ENOENT) is handled and does not crash the caller [33m554[2mms[22m[39m
+   [33m[2mâœ“[22m[39m db-currency lint[2m > [22mU-DBCURRENCY-010: 100 concurrent Stops coalesce behind one owner and one dirty marker [33m2954[2mms[22m[39m
+   [33m[2mâœ“[22m[39m db-currency lint[2m > [22mU-DBCURRENCY-012: completion performs at most one rerun and preserves later demand [33m332[2mms[22m[39m
+   [33m[2mâœ“[22m[39m db-currency lint[2m > [22mU-DBCURRENCY-016: separate worker processes race to exactly one generation owner [33m934[2mms[22m[39m
+   [33m[2mâœ“[22m[39m db-currency lint[2m > [22mU-DBCURRENCY-026: Stop-hook refresh calls maybeVacuumHarnessDb once, after a successful rebuild (PLAN-L7-457, issue #118) [33m1470[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[32m61 passed[39m[22m[90m (61)[39m
+[2m   Start at [22m 13:26:15
+[2m   Duration [22m 31.56s[2m (transform 1.74s, setup 0ms, collect 3.08s, tests 14.01s, environment 2ms, prepare 1.72s)[22m
+

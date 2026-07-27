@@ -1011,8 +1011,11 @@ session
     if (!r.ok) {
       process.stderr.write(`session-log: db refresh skipped (${r.skippedReason})\n`);
     }
+    if (r.vacuum?.warning) {
+      process.stderr.write(`session-log: db vacuum skipped (${r.vacuum.warning})\n`);
+    }
     process.stdout.write(
-      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested})\n`,
+      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested}, vacuumRan=${r.vacuum?.ran ?? false})\n`,
     );
   });
 
@@ -1504,6 +1507,15 @@ db.command("rebuild")
     process.stdout.write(
       "  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection\n",
     );
+    if (r.tokenIngest) {
+      const t = r.tokenIngest;
+      process.stdout.write(
+        `  token telemetry (repo-scoped, issue #82): claude files matched ${t.claudeFilesScanned}/${t.claudeFilesChecked} ` +
+          `(project dir resolved=${t.claudeProjectDirResolved}, foreign repo ${t.claudeFilesForeignRepo}, unknown cwd ${t.claudeFilesSkippedUnknownCwd}), ` +
+          `codex files matched ${t.codexFilesMatched}/${t.codexFilesChecked} ` +
+          `(foreign repo ${t.codexFilesForeignRepo}, unknown cwd ${t.codexFilesSkippedUnknownCwd})\n`,
+      );
+    }
   });
 db.command("scope-preview")
   .description("preview document/activation detection scope from harness.db profiles")
