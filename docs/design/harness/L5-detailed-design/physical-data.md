@@ -161,7 +161,7 @@ data.md §3 の 12 値オブジェクトは全て **enum string** で物理表�
 
 **SubDoc zod 化方針 (IMP-026 解消済み)** — 値域は **requirements §1.10.G.1 が SSoT** で、`src/schema/index.ts` / `src/schema/frontmatter.ts` に実装済み:
 ```
-// src/schema/index.ts (実装値と同期、PLAN-L7-453 H7 で snapshot 更新):
+// src/schema/index.ts (実装値と同期、PLAN-L7-459 H7 で snapshot 更新):
 export const VALID_SUB_DOCS = {
   L1: ["business", "functional", "nfr", "technical", "screen"],              // 5
   L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],             // 4

@@ -1,6 +1,6 @@
 # Conditional backfill decision 監査 (2026-06-22)
 
-> **姉妹機構注記 (PLAN-L7-453 M5)**: 本監査の `backprop_decision` / `backprop_decision_reason`
+> **姉妹機構注記 (PLAN-L7-459 M5)**: 本監査の `backprop_decision` / `backprop_decision_reason`
 > (conditional-kind PLAN 用) と `reverse-fullback-backprop-audit-2026-06-22.md` の
 > `backprop_scope` (fullback Reverse PLAN 用) は意図的に別フィールドの姉妹機構。相互流用不可。
 

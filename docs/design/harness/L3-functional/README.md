@@ -20,7 +20,7 @@ L1 業務要求 / 機能要求 / NFR を L3 機能要件 (FR-* + AC-* + IPA グ�
 | `nfr-grade.md` | NFR-01〜17 の IPA グレード Lv + 受入閾値 + 測定方法 + pass 条件 | draft | PLAN-L3-03-nfr-grade |
 | `screen-functional.md` | 画面機能要求 (dashboard の screen-level FR/AC、product UI scope 有時の②選択 sub-doc) | confirmed | PLAN-L3-06-screen-functional-body |
 
-> **scope 分離 (2026-06-30 改訂、PLAN-L7-453 H5 で README 追従)**: 旧宣言「L3 では
+> **scope 分離 (2026-06-30 改訂、PLAN-L7-459 H5 で README 追従)**: 旧宣言「L3 では
 > screen sub-doc を起こさない」は `screen-functional.md` 新設 (PLAN-L3-06、schema
 > `VALID_SUB_DOCS.L3` 登録済) により superseded。technical は引き続き L4 ADR / L4 基本設計に直送。
 

@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: ui-element
-status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-03。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-453 H4)。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-03。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-459 H4)。
 pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair (旧 hub 参照は RECOVERY-09 で撤去)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -58,7 +58,7 @@ L1 §3.1 横断原則 (CC2/CC3) を満たす再利用部品。全画面がこの
 
 | 画面 | 固有コンポーネント | props / 振る舞い | L1 参照 |
 |---|---|---|---|
-| **HM-01** | `HierarchyPulldown` (3 階層: 整備率/カテゴリ/FR 個別) + `FrStatusTable` (FR-L1 51 件 [functional-requirements.md 確定値、PLAN-L7-453 M7] × implementation_status バッジ + **対応画面列** screen §5 trace) | installed/partial/not-implemented バッジ + 担当 PLAN + 対応画面 / FR 行 → 担当 PLAN 参照 / **FR 行 → PM-06 設計書ビューア deep-link (対応画面要求プレビュー、機能一覧から画面要求を辿る、PO 2026-06-22)** / 未実装エクスポート | §1.HM.01 |
+| **HM-01** | `HierarchyPulldown` (3 階層: 整備率/カテゴリ/FR 個別) + `FrStatusTable` (FR-L1 51 件 [functional-requirements.md 確定値、PLAN-L7-459 M7] × implementation_status バッジ + **対応画面列** screen §5 trace) | installed/partial/not-implemented バッジ + 担当 PLAN + 対応画面 / FR 行 → 担当 PLAN 参照 / **FR 行 → PM-06 設計書ビューア deep-link (対応画面要求プレビュー、機能一覧から画面要求を辿る、PO 2026-06-22)** / 未実装エクスポート | §1.HM.01 |
 | **HM-02** | `CoverageHeatmap` (観点 8 × 軸 5 = 40 cell、色密度) + `AxisSelector` (観点/軸切替) | cell クリック→不足項目一覧 + 起票候補テキスト生成 (`CopyButton`) | §1.HM.02 |
 | **HM-03** | `WiringDiagram` (SVG 静的アーキ + 動的エラー赤) + `ConnectionDetailTable` (起点/終点/状態/最終チェック) + `ModeTransitionArrows` (detection-routing 4 象限→mode、L3 carry) | hook/provider/9 drive 区画状態 / active 遷移強調 / 接続線クリック→詳細 | §1.HM.03 |
 | **HM-04** | `TableExplorer` (.ut-tdd state 全 table 切替) + `IntegrityCheckSummary` (orphan/drift/不正値) | table 切替 / 行フィルタ / 整合性再実行トリガー / 問題行 `CopyButton` | §1.HM.04 |

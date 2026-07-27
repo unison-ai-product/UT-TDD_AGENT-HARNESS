@@ -103,7 +103,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | hook | 5 イベント hook (state 自動登録) | runtime/state | L7 + CLI 整備後 |
 | review | doc-reviewer 召喚 (FR-45) | adapter | L7 |
 | skill | L 別 skill 注入 (FR-12) | schema | L7 |
-| roster | 内部資産 subagent registry: **scan→registry** (`.claude/agents/*.md` を in-memory scan、永続なし fs 正本、ADR-004) → **capability/model resolve** → **guard allowlist 整合** (`roster check` の核)。確定設計 (PLAN-DISCOVERY-02 Discovery confirmed): **ID = filename stem** (agent-guard の `.claude/agents/<id>.md` 解決単位に一致)、**capability class ⊥ model family** (直交、pmo class 内に haiku/sonnet 混在)、filename↔frontmatter `name` 不一致は **nameMismatch fail-close (exit 1)** (旧記載「WARN」は実装 `src/assets/catalog.ts#checkRosterConsistency` / internal-processing.md §4 DbC と不一致のため PLAN-L7-453 H6 で訂正) | schema/fs (一方向)。`runtime(guard) → roster` 参照 (循環なし、移行段階は guard ハードコード維持) | L6 (関数 signature / capability resolver アルゴリズム / frontmatter parse の zod 化 / agents dir パス解決) + L7 実装。PLAN-L5-05 / PLAN-DISCOVERY-02 |
+| roster | 内部資産 subagent registry: **scan→registry** (`.claude/agents/*.md` を in-memory scan、永続なし fs 正本、ADR-004) → **capability/model resolve** → **guard allowlist 整合** (`roster check` の核)。確定設計 (PLAN-DISCOVERY-02 Discovery confirmed): **ID = filename stem** (agent-guard の `.claude/agents/<id>.md` 解決単位に一致)、**capability class ⊥ model family** (直交、pmo class 内に haiku/sonnet 混在)、filename↔frontmatter `name` 不一致は **nameMismatch fail-close (exit 1)** (旧記載「WARN」は実装 `src/assets/catalog.ts#checkRosterConsistency` / internal-processing.md §4 DbC と不一致のため PLAN-L7-459 H6 で訂正) | schema/fs (一方向)。`runtime(guard) → roster` 参照 (循環なし、移行段階は guard ハードコード維持) | L6 (関数 signature / capability resolver アルゴリズム / frontmatter parse の zod 化 / agents dir パス解決) + L7 実装。PLAN-L5-05 / PLAN-DISCOVERY-02 |
 | cutover | ロールバック (FR-10/26、CLI のみ S5=b) | state | L7 |
 | adapter | 外部 service 隔離 (Claude/Codex/gh、external-if §6) | (外部 SDK 隔離) | L7 + if-detail (PLAN-L5-04) |
 
@@ -139,7 +139,7 @@ PLAN-L5-06 は FR-L1-47 の L5 module-integration slice を close する。
 
 | component | L5 responsibility（責務） | dependency direction（依存方向） | carry |
 |---|---|---|---|
-| skill catalog | `skills/**/*.md` (旧 `docs/skills/` は ADR-004 訂正で移行済) を layer-1 source document として scan し、in-memory catalog を公開する。永続 `.ut-tdd` state は導入しない。 | `skill -> schema/fs`。runtime/guard から import しない。 | catalog loading は L7 実装済 (`src/skill-engine/recommend.ts`、§1 表と一致。旧 carry 記載を PLAN-L7-453 で訂正)。 |
+| skill catalog | `skills/**/*.md` (旧 `docs/skills/` は ADR-004 訂正で移行済) を layer-1 source document として scan し、in-memory catalog を公開する。永続 `.ut-tdd` state は導入しない。 | `skill -> schema/fs`。runtime/guard から import しない。 | catalog loading は L7 実装済 (`src/skill-engine/recommend.ts`、§1 表と一致。旧 carry 記載を PLAN-L7-459 で訂正)。 |
 | recommender | task/layer/drive context から candidate skill を解決し、project state を mutate せず ranked recommendation を返す。 | catalog load 後の pure analyzer。 | L6 が scoring input と deterministic tie-break を定義する。 |
 | injector | ADR-004 layer-1/layer-2 separation を維持しながら、runtime prompt 向け layer-scoped injection set を作る。 | catalog/recommender output を消費し、skill source docs は rewrite しない。 | L7 が provider adapter で injection を materialize する。 |
 
@@ -188,7 +188,7 @@ PLAN-L5-08 は既存 lint/rule module を置き換えず、DB-centered reference
 boundary rule: lint modules は first-class detector のままにする。DB layer はその outputs を記録・cross-reference するが、projection failure を success 扱いして failed checks を隠してはいけない。
 ## Appendix C: L5 trace coverage 追補 (descent-obligation)
 
-<!-- 旧見出しは「Appendix B」の重複 (copy 残骸)。参照一意性のため C へ改番 (PLAN-L7-453) -->
+<!-- 旧見出しは「Appendix B」の重複 (copy 残骸)。参照一意性のため C へ改番 (PLAN-L7-459) -->
 
 この L5 module-decomposition sub-doc は、§1-§5 と付録で分解された module の machine-readable な L4->L5 landing point である。各行は existing module boundaries / public IF / carry notes の trace coverage であり、新規 feature scope ではない。
 

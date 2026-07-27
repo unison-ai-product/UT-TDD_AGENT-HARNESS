@@ -31,7 +31,7 @@ agent_contracts:
       - doctor:db-currency
   - contract_id: VAGENT-002
     target_path: docs/governance/vmodel-typed-spec-definitions.md
-    # VMS-008/VMS-009 は VAGENT-004 (function-spec.md) の単独所有へ訂正 (PLAN-L7-453 H2。
+    # VMS-008/VMS-009 は VAGENT-004 (function-spec.md) の単独所有へ訂正 (PLAN-L7-459 H2。
     # 二重宣言は typed-spec-definitions.md §4 の単一所有不変条件に違反していた)
     defines: [VMS-004, VMS-007]
     read_first:

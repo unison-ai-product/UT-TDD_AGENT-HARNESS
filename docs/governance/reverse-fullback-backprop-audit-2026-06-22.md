@@ -1,6 +1,6 @@
 # Reverse fullback backprop 監査 (2026-06-22)
 
-> **姉妹機構注記 (PLAN-L7-453 M5)**: 本監査の `backprop_scope` (fullback Reverse PLAN 用の
+> **姉妹機構注記 (PLAN-L7-459 M5)**: 本監査の `backprop_scope` (fullback Reverse PLAN 用の
 > layer 別 backprop 判断 record) と、`conditional-backfill-decision-audit-2026-06-22.md` の
 > `backprop_decision: not_required` + `backprop_decision_reason` (refactor/retrofit/troubleshoot
 > 等 conditional-kind PLAN 用) は**意図的に別フィールドの姉妹機構**である。対象 PLAN 母集団が

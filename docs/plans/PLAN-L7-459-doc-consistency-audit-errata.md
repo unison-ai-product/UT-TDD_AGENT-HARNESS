@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-453-doc-consistency-audit-errata
-title: "PLAN-L7-453: 2026-07-22 ドキュメント整合性監査 errata 一括是正 (用語不整合・相反記述)"
+plan_id: PLAN-L7-459-doc-consistency-audit-errata
+title: "PLAN-L7-459: 2026-07-22 ドキュメント整合性監査 errata 一括是正 (用語不整合・相反記述)"
 kind: troubleshoot
 layer: L7
 drive: fullstack
@@ -14,7 +14,7 @@ agent_slots:
   - role: tl
     slot_label: "TL - errata 是正の網羅確認と confirmed doc への correction note 規律検証"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-453-doc-consistency-audit-errata.md
+  - artifact_path: docs/plans/PLAN-L7-459-doc-consistency-audit-errata.md
     artifact_type: markdown_doc
   - artifact_path: CLAUDE.md
     artifact_type: markdown_doc
@@ -72,7 +72,7 @@ review_evidence:
     reviewed_at: "2026-07-22T20:10:00+09:00"
     tests_green_at: "2026-07-22T20:10:00+09:00"
     verdict: pass
-    scope: "PLAN-L7-453 errata batch (commit d7dcc320, 24 files)。blind review 判定 PASS: ground truth 整合 (VALID_SUB_DOCS/VALID_DRIVES/checkRosterConsistency fail-close)、correction note 規律、FR-L1-16 再マッピングの意味整合 (analyzeL6FrCoverage 51/51 green)、機械ゲート 5 種 green を reviewer 自走で実測。攻撃試行 (self-pair 残存/再誤配線/prose 逆転/無注記上書き) は全て反駁済。"
+    scope: "PLAN-L7-459 errata batch (commit d7dcc320, 24 files)。blind review 判定 PASS: ground truth 整合 (VALID_SUB_DOCS/VALID_DRIVES/checkRosterConsistency fail-close)、correction note 規律、FR-L1-16 再マッピングの意味整合 (analyzeL6FrCoverage 51/51 green)、機械ゲート 5 種 green を reviewer 自走で実測。攻撃試行 (self-pair 残存/再誤配線/prose 逆転/無注記上書き) は全て反駁済。"
     worker_model: claude-sonnet-5
     reviewer_model: gpt-5.6-sol
     green_commands:
@@ -82,11 +82,19 @@ review_evidence:
         scope: full
         exit_code: 0
         completed_at: "2026-07-22T20:10:00+09:00"
-        evidence_path: docs/plans/PLAN-L7-453-doc-consistency-audit-errata.md
+        evidence_path: docs/plans/PLAN-L7-459-doc-consistency-audit-errata.md
         anchor_commit: d7dcc32017418e5ab465072bd249641c0f04c490
 ---
 
-# PLAN-L7-453: 2026-07-22 ドキュメント整合性監査 errata 一括是正
+# PLAN-L7-459: 2026-07-22 ドキュメント整合性監査 errata 一括是正
+
+> **採番注記 (2026-07-27)**: 本 PLAN は当初 `PLAN-L7-453` として起票したが、同一連番を
+> PR #106 (`PLAN-L7-453-snapshot-runner-root-guard`) と PR #125
+> (`PLAN-L7-453-provider-execution-receipt-contract`) が並行に確保しており、prose 内の
+> 「PLAN-L7-453」参照が merge 後に多義化する。連番の先取りは PR #106 (最先着) を正とし、
+> 本 PLAN を `PLAN-L7-459` へ改番した。内容・review evidence の対象成果物は不変
+> (改番前 commit `d7dcc320` / `db8d01bc`)。連番衝突が機械検出されない構造欠陥
+> (`plan lint` の `duplicate_plan_id` は plan_id 全文一致のみ判定) は別途 Issue 起票。
 
 ## 背景
 

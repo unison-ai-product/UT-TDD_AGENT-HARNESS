@@ -19,7 +19,7 @@ Sources of truth:
 - concept v3.1 section 2.5 and 2.6
 - requirements v1.2 section 1.3, 1.6, 1.8, 6.8.9
 - FR-L1-25
-- `skills/refactoring.md` (旧 `docs/skills/` は ADR-004 訂正で `skills/` へ移行済、PLAN-L7-453 H3)
+- `skills/refactoring.md` (旧 `docs/skills/` は ADR-004 訂正で `skills/` へ移行済、PLAN-L7-459 H3)
 - `docs/governance/vmodel-refactor-qa-release-gates.md`
 - `src/workflow/contracts.ts#assertRefactorInvariant`
 

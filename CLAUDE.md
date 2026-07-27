@@ -15,7 +15,7 @@ Claude Code treats the following as canonical in this repository:
 
 The full canonical-set index (including V-model machinery docs) is
 `docs/governance/README.md`; this list is the startup minimum, not a competing
-definition (PLAN-L7-453 H1).
+definition (PLAN-L7-459 H1).
 
 Migration snapshots and migration docs are not normal startup reads. Read them
 only when migration, gap audit, or regression-source inspection requires it.

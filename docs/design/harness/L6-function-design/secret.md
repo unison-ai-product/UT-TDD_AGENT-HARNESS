@@ -20,7 +20,7 @@ plan: docs/plans/PLAN-L6-01-function-spec.md
 
 本 module は網羅的 credential scanner ではない。既知 prefix の narrow guard として使い、広範な検出は別 scanner の責務とする。
 
-> **非共有の明示 (PLAN-L7-453 M12)**: `session-log` module の `sanitize()`
+> **非共有の明示 (PLAN-L7-459 M12)**: `session-log` module の `sanitize()`
 > (`src/runtime/session-log.ts`) は本 module の `SECRET_PATTERN`/`isSecretLike` を共有しない
 > **意図的な独立実装** (session-log は fail-open hook 経路であり、低レベル依存を増やさない)。
 > `SECRET_PATTERN` を拡張する際は session-log 側 sanitize の追随要否を個別に判断すること

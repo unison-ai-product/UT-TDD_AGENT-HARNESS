@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: screen-list
-status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-01 (15 画面)。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-453 H4)。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-01 (15 画面)。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-459 H4)。
 pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair (旧 hub 参照は RECOVERY-09 で撤去)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

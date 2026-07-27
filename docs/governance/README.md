@@ -22,7 +22,7 @@ V-model 機構の正本 (中核 5 点への追加読み。repository-structure.m
 9. `vmodel-typed-spec-definitions.md`
 
 > 本リストと root `CLAUDE.md` の Read Order は集合として同期する (裁定 =
-> `repository-structure.md` §1、PLAN-L7-453 H1)。CLAUDE.md 側は起動時の最小読み順、
+> `repository-structure.md` §1、PLAN-L7-459 H1)。CLAUDE.md 側は起動時の最小読み順、
 > 本リストは文書体系の完全な正本索引。
 
 > **ADR-001 境界**: 実装は UT-TDD 所有の TypeScript/Bun である。migration
@@ -33,7 +33,7 @@ V-model 機構の正本 (中核 5 点への追加読み。repository-structure.m
 
 以下の文書は背景、チーム運用、上位計画を補助する。上記の現行正本を上書きしない:
 
-> **「正本」の 2 用法 (PLAN-L7-453 M2)**: 本 README の「現行の正本」= リポジトリ全体の
+> **「正本」の 2 用法 (PLAN-L7-459 M2)**: 本 README の「現行の正本」= リポジトリ全体の
 > 必読 canonical 集合。一方、下記の各文書 (gate-design.md / coding-rules.md 等) が自己宣言
 > する「正本/SSoT」= その文書のドメイン内での単一情報源。両者は両立し、後者は前者を
 > 上書きしない (ドメイン内 SSoT であることと、全体必読集合の会員であることは別)。
