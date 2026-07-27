@@ -73,8 +73,11 @@ export interface DbConstraintCoverageResult {
   ok: boolean;
 }
 
-const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[1345679] .*)/;
-const SECTION_RE = /^###?\s+/;
+const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[13456789] .*)/;
+const HEADING_RE = /^(#{1,6})\s+/;
+const TABLE_SEPARATOR_CELL_RE = /^-{3,}$/;
+const INDEX_MARKER_RE = /^(?:必須|必要) index:$/;
+const INDEX_BULLET_RE = /^\s*-\s+`([^`(]+)\(([^`)]+)\)`/;
 
 function backtickValues(value: string): string[] {
   return [...value.matchAll(/`([^`]+)`/g)].map((match) => match[1]).filter(Boolean);
@@ -83,10 +86,54 @@ function backtickValues(value: string): string[] {
 function splitTableRow(line: string): string[] {
   return line
     .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
+    .slice(1, -1)
     .split("|")
     .map((cell) => cell.trim());
+}
+
+function normalizedHeaderCell(value: string): string {
+  let normalized = value.trim();
+  const wrappers = ["**", "__", "`", "*", "_"] as const;
+  let stripped = true;
+  while (stripped) {
+    stripped = false;
+    for (const wrapper of wrappers) {
+      if (
+        normalized.length >= wrapper.length * 2 &&
+        normalized.startsWith(wrapper) &&
+        normalized.endsWith(wrapper)
+      ) {
+        normalized = normalized.slice(wrapper.length, -wrapper.length).trim();
+        stripped = true;
+        break;
+      }
+    }
+  }
+  return normalized.toLowerCase();
+}
+
+function isTableSeparator(cells: readonly string[]): boolean {
+  return cells.length > 0 && cells.every((cell) => TABLE_SEPARATOR_CELL_RE.test(cell));
+}
+
+function isProjectionTableHeader(cells: readonly string[]): boolean {
+  const first = normalizedHeaderCell(cells[0] ?? "");
+  const second = normalizedHeaderCell(cells[1] ?? "");
+  return first === "table" && (second === "primary key" || second === "主キー");
+}
+
+function headingSectionNumber(line: string): string | undefined {
+  return /^#{1,6}\s+§?(\d+(?:\.\d+)*)/.exec(line)?.[1];
+}
+
+function isLogicalDescendant(section: string | undefined, parent: string | undefined): boolean {
+  return Boolean(section && parent && section.startsWith(`${parent}.`));
+}
+
+function fenceParts(line: string): { marker: "`" | "~"; length: number; rest: string } | undefined {
+  const match = /^(`{3,}|~{3,})(.*)$/.exec(line);
+  if (!match) return undefined;
+  return { marker: match[1][0] as "`" | "~", length: match[1].length, rest: match[2] };
 }
 
 export function extractDbProjectionRequirements(content: string): DbProjectionRequirement[] {
@@ -97,29 +144,110 @@ export function extractDbProjectionCoverageRequirements(content: string): DbProj
   const requirements: DbProjectionRequirement[] = [];
   const indexes: DbProjectionIndexRequirement[] = [];
   let section = "";
-  let inTarget = false;
+  let targetDepth = 0;
+  let targetSectionNumber: string | undefined;
+  let indexBlock: "none" | "armed" | "collecting" = "none";
+  let fence: { marker: "`" | "~"; length: number } | undefined;
+  let pendingHeader: string[] | undefined;
+  let tableKind: "none" | "projection" | "other" = "none";
   for (const line of content.split(/\r?\n/)) {
-    if (SECTION_RE.test(line)) {
+    const trimmed = line.trim();
+    const fenceMatch = fenceParts(line);
+    if (fence) {
+      if (
+        fenceMatch?.marker === fence.marker &&
+        fenceMatch.length >= fence.length &&
+        fenceMatch.rest.trim() === ""
+      ) {
+        fence = undefined;
+        pendingHeader = undefined;
+        tableKind = "none";
+        indexBlock = "none";
+      }
+      continue;
+    }
+    if (fenceMatch) {
+      fence = {
+        marker: fenceMatch.marker,
+        length: fenceMatch.length,
+      };
+      pendingHeader = undefined;
+      tableKind = "none";
+      indexBlock = "none";
+      continue;
+    }
+
+    if (targetDepth > 0 && INDEX_MARKER_RE.test(trimmed)) {
+      indexBlock = "armed";
+      continue;
+    }
+    if (indexBlock !== "none") {
+      if (indexBlock === "armed" && trimmed === "") continue;
+      const indexMatch = INDEX_BULLET_RE.exec(line);
+      if (indexMatch) {
+        indexBlock = "collecting";
+        indexes.push({
+          section,
+          name: indexMatch[1],
+          columns: indexMatch[2]
+            .split(",")
+            .map((column) => column.trim())
+            .filter(Boolean),
+        });
+        continue;
+      }
+      indexBlock = "none";
+    }
+
+    const heading = HEADING_RE.exec(line);
+    if (heading) {
+      const depth = heading[1].length;
+      const sectionNumber = headingSectionNumber(line);
+      const leavesNumberedTarget =
+        targetDepth > 0 &&
+        Boolean(sectionNumber) &&
+        sectionNumber !== targetSectionNumber &&
+        !isLogicalDescendant(sectionNumber, targetSectionNumber);
+      const leavesUnnumberedTarget = targetDepth > 0 && !sectionNumber && depth <= targetDepth;
+      if (leavesNumberedTarget || leavesUnnumberedTarget) {
+        targetDepth = 0;
+        targetSectionNumber = undefined;
+      }
       section = line.replace(/^#+\s*/, "").trim();
-      inTarget = TARGET_SECTION_RE.test(line);
+      if (TARGET_SECTION_RE.test(line)) {
+        targetDepth = depth;
+        targetSectionNumber = sectionNumber;
+      }
+      pendingHeader = undefined;
+      tableKind = "none";
+      indexBlock = "none";
       continue;
     }
-    if (!inTarget) continue;
-    const indexMatch = line.match(/-\s+`([^`(]+)\(([^`)]+)\)`/);
-    if (indexMatch) {
-      indexes.push({
-        section,
-        name: indexMatch[1],
-        columns: indexMatch[2]
-          .split(",")
-          .map((column) => column.trim())
-          .filter(Boolean),
-      });
+    if (targetDepth === 0) continue;
+
+    if (!(trimmed.startsWith("|") && trimmed.endsWith("|"))) {
+      pendingHeader = undefined;
+      tableKind = "none";
       continue;
     }
-    if (!line.trim().startsWith("|")) continue;
-    if (/^\|\s*-+\s*\|/.test(line) || /\|\s*table\s*\|/i.test(line)) continue;
+
     const cells = splitTableRow(line);
+    if (isTableSeparator(cells)) {
+      tableKind =
+        pendingHeader && cells.length === pendingHeader.length
+          ? isProjectionTableHeader(pendingHeader)
+            ? "projection"
+            : "other"
+          : "none";
+      pendingHeader = undefined;
+      continue;
+    }
+
+    if (tableKind === "none") {
+      pendingHeader = cells;
+      continue;
+    }
+    if (tableKind === "other") continue;
     if (cells.length < 3) continue;
     const table = backtickValues(cells[0])[0];
     const primaryKey = backtickValues(cells[1])[0] ?? "";

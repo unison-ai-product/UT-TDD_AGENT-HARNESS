@@ -95,6 +95,7 @@ export {
   checkDesignLanguage,
   checkGateConfirm,
   checkGateIdFormat,
+  checkModelIdDocDrift,
   checkReadability,
   checkRuleDrift,
   checkRuntimePortability,

@@ -19,6 +19,11 @@ import {
   loadGateIdFormatInput,
 } from "../lint/gate-id-format";
 import {
+  analyzeModelIdDocDrift,
+  loadModelIdDocDriftTexts,
+  modelIdDocDriftMessages,
+} from "../lint/model-id-doc-drift";
+import {
   analyzeArtifacts,
   loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
@@ -89,6 +94,21 @@ export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: bool
     return { messages: ruleDriftMessages(r), ok: r.ok };
   } catch {
     return { messages: ["rule-drift - violation: adapter rule docs could not be read"], ok: false };
+  }
+}
+
+export function checkModelIdDocDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["model-id-doc-drift - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeModelIdDocDrift(loadModelIdDocDriftTexts(repoRoot));
+    return { messages: modelIdDocDriftMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["model-id-doc-drift - violation: L6 doc model-id scan could not run"],
+      ok: false,
+    };
   }
 }
 

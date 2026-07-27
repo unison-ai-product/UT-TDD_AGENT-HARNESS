@@ -475,7 +475,9 @@ describe("parseCodexSessionMetaCwd + codexSessionBelongsToRepo (Codex cwd filter
     const repoRoot = "C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness";
     expect(codexSessionBelongsToRepo(repoRoot, repoRoot)).toBe(true);
     expect(
-      codexSessionBelongsToRepo("c:/users/micro/onedrive/desktop/ut-tdd-agent-harness", repoRoot),
+      codexSessionBelongsToRepo("c:/users/micro/onedrive/desktop/ut-tdd-agent-harness", repoRoot, {
+        platform: "win32",
+      }),
     ).toBe(true);
     expect(codexSessionBelongsToRepo(`${repoRoot}\\src\\state-db`, repoRoot)).toBe(true);
     // 負例: 同名 prefix を持つ **別 repo** (例: -engine-swap worktree) は混入させない。

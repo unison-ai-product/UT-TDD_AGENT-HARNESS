@@ -25,7 +25,7 @@ updated: 2026-07-09
 L3-acceptance §0 (L3↔L12) と**同形式**で、L1 5 sub-doc の各要求カテゴリを件数で量閉じする (V-pair 構造対称化、IMP-053 2026-06-04)。各件数の OT 被覆内訳は §3 量閉じ一覧が正本:
 
 - 全 BR-* (BR-01〜08 + BR-21/22) / **1 つ以上の OT に被覆**必須 (孤児業務要求 = 0)
-- 全 FR-L1-* (**47 件** = FR-L1-01〜35 + 37/39/40/41/42/44/45/46/47/48/49/50) / OT 対応必須 (孤児 = 0。軽量原則で代表 OT へ集約可)。**FR-L1-36/38/43 は上記 47 件から除外** (BR-21 派生の L3 forward carry。L14 時点では OT-18 で宣言確認のみ、FR 詳細化は L3) → G1-trace の孤児誤検知対象外
+- 全 FR-L1-* (**51 件** = FR-L1-01〜51) / OT 対応必須 (孤児 = 0。軽量原則で代表 OT へ集約可)。FR-L1-36/38/43 は PLAN-L7-53 で実装済みへ昇格しており、旧「L3 forward carry のため除外」は撤去する。FR-L1-51 も artifact progress color projection として対象に含める。
 - 全 SR-* (**15 画面** = PM-01〜06 + HM-01〜08 + GD-01) / OT 対応必須 (孤児 = 0)
 - 全 TR-* (state schema 二層 / skill 注入 / 9 mode 基盤 / drift 解消) / OT 対応必須 (孤児 = 0)
 - 全 NFR-* (**15 件** = NFR-01〜17、NFR-09/10 欠番。NFR-02 は L14 直接観測が弱く L4↔L9 pair で意図的 carry) / OT 対応必須
@@ -57,7 +57,7 @@ L3-acceptance §0 (L3↔L12) と**同形式**で、L1 5 sub-doc の各要求カ�
 | **OT-15** | PM-01〜PM-06 (PM 画面群全般) | L1 画面要求として宣言した PM カテゴリ 6 画面 (PM-01 俯瞰ダッシュボード / PM-02 工程ビュー / PM-03 Gate+詰まり要因 / PM-04 Trace+V-pair / PM-05 Handover / PM-06 設計書ビューア) が L2 モックで lift され、PO が「これで業務要求を満たす」と判定できる (PM-06 固有挙動は OT-47) | L2 mock で PO 判定 pass |
 | **OT-16** | TR-* (technical sub-doc 全般) | state schema 二層構造 + 工程別 skill 注入機構 + 9 mode 共通基盤 + drift 解消方針 が実装に反映され、HELIX-workflows の「新規 drift 0 件 / week」目標と整合する | 新規 drift 0 件 / week を運用観測 |
 | **OT-17** | NFR §7 IPA × ISO 25010 二軸表 | 全 NFR-NN が IPA 大項目 × ISO 25010 特性の二軸でタグ付けされ、対象外特性 (機能適合性 / 使用性) の除外理由も整合 | 二軸表に孤児 NFR 0 / 除外理由が査読 pass |
-| **OT-18** | BR-21 (AI 実行成果評価 L3 carry) | business sub-doc §1 に BR-21「AI 実行成果の継続評価と改善サイクル」が宣言されており、L3 forward carry pair (FR-L1-36/38/43) との接続が §7 対応表に明記されていることを確認 | BR-21 宣言が business sub-doc に存在 / §7 pair 表に L3 carry 接続が明記 / 不実装宣言なし (not-implemented) |
+| **OT-18** | BR-21 / FR-L1-36/38/43 (AI 実行成果評価) | `skill_evaluations` / `model_evaluations` / `poc_evaluations` の3 projectionを実データで更新し、cold-startは0行、対象run/PLAN追加後はrating・success rate・件数が再計算されることを運用観測する | 3 projectionが実データから再現可能 / cold-start契約を維持 / orphan評価行 0 |
 | **OT-19** | business §3.3 9 mode 統一合流原則 + Add-feature 例外 | concept §2.5 ecosystem 記述と business sub-doc §3.3 の「9 mode 統一合流原則 + Add-feature 例外注記」が整合していることを確認。Scrum/PoC/Reverse は V モデル昇華で収束、Add-feature のみ差分追補例外の記述が一致 | concept §2.5 と business §3.3 の整合 / 例外注記が逸脱なく記載 |
 | **OT-20** | business §4 ステークホルダー権限分離 (S-01〜S-05 + harness 運用者) | business sub-doc §4 に S-01〜S-05 (PO / PM / TL / SE / PE) + harness 運用者ロールが定義されており、各ロールの PLAN 承認権限 / gate 通過権限 / audit 閲覧権限が明示されていることを確認 | §4 権限表に harness 運用者ロールが存在 / 権限境界が査読 pass / 空白ロールなし |
 | **OT-21** | business §6.5 業務 KPI D-01〜D-09 | business sub-doc §6.5 の KPI 表 (D-01〜D-09) を観測し、KPI 計測式・目標値・計測場所 (ut-tdd doctor / dashboard / audit log) が整合しており、NFR-13 gate 通過率 ≥90% と矛盾しないことを確認 | D-01〜D-09 全件に計測式・目標値・計測場所が記載 / NFR-13 と矛盾なし |
@@ -75,11 +75,11 @@ L3-acceptance §0 (L3↔L12) と**同形式**で、L1 5 sub-doc の各要求カ�
 | **OT-33** | PM-02 (工程ビュー L0-L14 テンプレート: 進捗/担当/詰まり 3 軸) | PM-02 工程ビューで L0-L14 全工程のテンプレートが表示され、進捗・担当・詰まりの 3 軸のみが可視化され、機能内容 (FR 詳細) が画面に含まれないことを確認。各工程セルの状態 (not-started / in-progress / blocked / done) が PLAN state と整合することを観測 (not-implemented) | L0-L14 全工程が表示 / 3 軸以外の情報 (機能内容) が画面に露出しない / PLAN state 整合 |
 | **OT-34** | PM-03 (Gate + 詰まり要因: 現発生中トラブル横断) | PM-03 Gate + 詰まり要因ビューで現在発生中の gate fail / block / 詰まり要因が全 PLAN 横断で一覧表示されることを確認。詰まり要因の severity (critical/warning/info) 別集計と next_action 提示が動作することを観測 (not-implemented) | 現発生中詰まりが横断一覧 / severity 別集計が動作 / next_action が提示 |
 | **OT-35** | PM-04 (Trace + V-pair 統合: 4 artifact + 6 pair freeze 状態) | PM-04 Trace ビューで V-model の 4 artifact (設計/実装/テスト設計/テストコード) と 6 pair (L1↔L14 / L2↔L10 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7) の freeze 状態が可視化されることを確認。trace 断絶・孤立 artifact が検出されることを観測 (not-implemented) | 4 artifact + 6 pair が表示 / trace 断絶検出が動作 / 孤立 artifact がハイライト |
-| **OT-36** | HM-01 (機能一覧: FR-L1 47 件 × implementation_status 全件表示) | HM-01 機能一覧ビューで FR-L1-01〜35/37/39/40/41/42/44/45/46/47/48/49/50 の 47 件が implementation_status (not-implemented / design-only / implemented / deprecated) 付きで全件表示されることを確認。孤児 FR・status 欠落行が 0 件であることを観測 (not-implemented) | FR-L1 47 件が全件表示 / implementation_status 列が存在 / 孤児・欠落 0 |
+| **OT-36** | HM-01 (機能一覧: FR-L1 51 件 × implementation_status 全件表示) | HM-01 機能一覧ビューで FR-L1-01〜51 の 51 件が implementation_status (not-implemented / design-only / implemented / deprecated) 付きで全件表示されることを確認。孤児 FR・status 欠落行が 0 件であることを観測 (not-implemented) | FR-L1 51 件が全件表示 / implementation_status 列が存在 / 孤児・欠落 0 |
 | **OT-37** | HM-02 (カバレッジヒートマップ: 観点 8 × 軸 5 = 40 通り表示・弱点 cell 検出) | HM-02 カバレッジヒートマップビューで観点 8 軸 × カバレッジ軸 5 = 40 通りのセルが表示され、カバレッジ率が低いセル (弱点) がハイライト・識別されることを確認。全 40 セルが表示可能 (値 0% でも non-null) であることを観測 (not-implemented) | 40 通りセルが全件表示 / 弱点 cell が自動ハイライト / 空セル 0 |
 | **OT-38** | HM-03 (配線図 動的: hook/provider/drive エラー赤表示、CC1=a) | HM-03 配線図ビューで hook / provider / drive の接続状態が動的グラフで表示され、エラー状態のノード・エッジが赤 (🔴) でハイライトされることを確認。CC1=a (クリティカルチェーン優先度 a) の接続が正常時は緑 (🟢)、警告時は黄 (🟡) で表示されることを観測 (not-implemented) | 動的グラフが表示 / エラーノードが赤表示 / CC1=a 接続の色分け動作 |
 | **OT-39** | HM-04 (DB 閲覧 整合性チェック: orphan record / drift / 不正値検出) | HM-04 データベース閲覧ビューで state ストアの全テーブルが閲覧可能であり、整合性チェック (orphan record / drift / 不正値) の結果が行単位で視覚化されることを確認。不整合検出行が赤 (🔴) でハイライトされ、next_action が提示されることを観測 (not-implemented) | 全テーブル閲覧可能 / 不整合行が赤ハイライト / next_action 提示 |
-| **OT-40** | HM-08 (AI 効果データ + Learning Engine: BR-21 L3 carry、L1 宣言確認) | HM-08 AI 効果データ + Learning Engine ビューが screen sub-doc に宣言されており、BR-21 L3 carry との接続が §7 対応表に明記されていることを確認。L1 時点では宣言確認のみ (not-implemented)。L3 FR-L1-36/38/43 詳細化後に実装対象 | HM-08 宣言が screen sub-doc に存在 / BR-21 L3 carry pair が §7 に明記 / 詐称なし (not-implemented) |
+| **OT-40** | HM-08 (AI 効果データ + Learning Engine: BR-21 / FR-L1-36/38/43) | HM-08 が skill/model/PoC の評価projectionを同一as-of時点で表示し、元run・PLANへ追跡できることを確認する。画面未実装中は `not-implemented` と表示し、projection実装済みを画面実装済みと詐称しない | 3評価種を区別して表示 / as-ofと元証拠へtrace / UI未実装の詐称なし |
 | **OT-41** | GD-01 (ガイド統合ビュー: 7 カテゴリ左サイドナビ切替確認) | GD-01 ガイド/ドキュメント統合ビューで左サイドナビの 7 カテゴリ (Troubleshooting / Architecture / Onboarding / Tutorial / CLI / FAQ / Changelog) が切替可能であり、各カテゴリのコンテンツが表示されることを確認。カテゴリ未存在・孤立コンテンツが 0 件であることを観測 (not-implemented) | 7 カテゴリが左サイドナビに全件表示 / 切替動作 / 孤立コンテンツ 0 |
 | **OT-42** | §3 横断原則「人間主導 + AI 補助」確認 | 全 15 画面 (PM-01〜06 / HM-01〜08 / GD-01) で AI 指示 copy UI が存在し、S-01「AI は UI 操作なし」と整合することを確認。AI が UI を直接操作する導線が実装上 0 件であることを観測。人間 (PO/PM/TL) が最終判断を行う UX フローが全画面で保たれていることを確認 (not-implemented) | AI 指示 copy UI が全 15 画面に存在 / AI 直接 UI 操作の導線 0 / 人間判断フローが保持 |
 | **OT-43** | §3 横断原則「詳細データテーブル必須」確認 | 全 15 画面でサマリ表示のみの画面が 0 件であり、raw data を詳細テーブル形式で表示する UI が各画面に存在することを確認。テーブル表示の粒度 (行単位で個別レコードが確認可能) が全画面で保証されることを観測 (not-implemented) | サマリのみ画面 0 件 / 詳細データテーブルが全 15 画面に存在 / 行単位閲覧が可能 |
@@ -108,7 +108,7 @@ L1 5 sub-doc 構造に再編 (v1.2、v2 HELIX-workflows 設計概念参照) に�
 
 ### business sub-doc (BR-*) — `docs/design/harness/L1-requirements/business-requirements.md`
 - BR-01→OT-01 / BR-02→OT-02 / BR-03→OT-03 / BR-04→OT-04 / BR-05→OT-05 / BR-06→OT-06 / BR-07→OT-07 / BR-08→OT-08 / BR-22→OT-46。**孤児 BR = 0**。
-- BR-21 (新規、AI 実行成果評価 L3 carry) → **OT-18** (宣言確認のみ。実装はL3 FR-L1-36/38/43 carry)。
+- BR-21 (AI 実行成果評価) → **OT-18** (FR-L1-36/38/43 の3 projectionを実データで運用観測)。
 - business §3.3 9 mode 統一合流原則 + Add-feature 例外 → **OT-19** (concept §2.5 整合確認)。
 - business §4 ステークホルダー権限分離 (S-01〜S-05 + harness 運用者) → **OT-20** (権限境界確認)。
 - business §6.5 業務 KPI D-01〜D-09 → **OT-21** (KPI 計測式・目標値・計測場所 整合確認)。**孤児 BR = 0**。
@@ -118,8 +118,9 @@ L1 5 sub-doc 構造に再編 (v1.2、v2 HELIX-workflows 設計概念参照) に�
 - FR-L1-06/08/12/14/16/19/20 (P1 拡張機能代表) → **OT-24** (extended 部分のみ確認)。
 - FR-L1-37/39/40/41/42 (新規 P1 5 件、PO directed 2026-05-28) → **OT-22** (drive 自動判定 + model 推挙 + provider 引継ぎ代表シナリオ)。
 - FR-L1-44 (途中導入 onboarding workflow、新規 P1) → **OT-23** (baseline 作成シナリオ)。
-- FR-L1-36/38/43 (L3 carry、BR-21 経由) → **OT-18** (BR-21 宣言確認と pair。L3 で FR 詳細化)。
-- 詳細な機能要件レベルの受入条件は L3 で FR-* + AC-* として詳細化 (本書は L1 軽量、量閉じ確認のみ)。**孤児 FR-L1 = 0** (FR-L1-01〜35 + 37/39/40/41/42/44/45/46/47/48/49/50 = 計 47 件、全被覆)。
+- FR-L1-36/38/43 (BR-21、PLAN-L7-53 で実装済みへ昇格) → **OT-18** (skill/model/PoC evaluation projection の運用観測)。
+- FR-L1-51 (artifact progress color projection) → **OT-35 / OT-39** (Trace表示とDB整合性で赤黄緑状態・理由を観測)。
+- 詳細な機能要件レベルの受入条件は L3 で FR-* + AC-* として詳細化 (本書は L1 軽量、量閉じ確認のみ)。**孤児 FR-L1 = 0** (FR-L1-01〜51 = 計 51 件、全被覆)。
 
 ### screen sub-doc (SR-*) — `docs/design/harness/L1-requirements/screen-requirements.md`
 - PM-01〜PM-06 (PM 画面群 6 画面) → **OT-15** (L2 モック lift で PO 判定)。
@@ -129,7 +130,7 @@ L1 5 sub-doc 構造に再編 (v1.2、v2 HELIX-workflows 設計概念参照) に�
   - PM-04 Trace + V-pair 統合 → **OT-35** (4 artifact + 6 pair freeze 状態確認)。
   - PM-06 設計書ビューア (2026-06-22 追加) → **OT-47** (L0-L14 設計書 Markdown/YAML/Mermaid プレビュー確認)。
 - HM-01〜HM-08 (HM 画面群 8 画面):
-  - HM-01 機能一覧 → **OT-36** (FR-L1 47 件 × implementation_status 全件表示)。
+  - HM-01 機能一覧 → **OT-36** (FR-L1 51 件 × implementation_status 全件表示)。
   - HM-02 カバレッジヒートマップ → **OT-37** (観点 8 × 軸 5 = 40 通り表示・弱点 cell 検出)。
   - HM-03 配線図 (動的) → **OT-38** (hook/provider/drive エラー赤表示確認)。
   - HM-04 DB 閲覧 → **OT-39** (整合性チェック: orphan record / drift / 不正値検出)。
@@ -155,7 +156,7 @@ L1 5 sub-doc 構造に再編 (v1.2、v2 HELIX-workflows 設計概念参照) に�
 ### nfr sub-doc (NFR-*) — `docs/design/harness/L1-requirements/nfr.md`
 - NFR-01→OT-09 / NFR-03→OT-10 / NFR-04→OT-10 / NFR-05→OT-11 / NFR-06→OT-03 / NFR-08→OT-12 / **NFR-02→L4 carry (下記、意図的 OT 不立て)**。NFR-07→§2 総合。
 - NFR §7 IPA × ISO 25010 二軸表 → **OT-17** (孤児 NFR 0 + 除外理由整合)。
-- **NFR-02 (更新性)** は L14 運用での直接観測が弱く、実現方式が L4 ADR 送りのため、ここでは OT を立てず **L4↔L9 pair で被覆** (L1 時点の意図的 carry)。
+- **NFR-02 (更新性)** は L14 運用での直接観測が弱く、実現方式が L4 ADR 送りのため、ここでは OT を立てず **L4 carry (L4 ADR 確定後に L12 AT-NFR-02 として lift、L12-acceptance-test-design.md §carry 台帳が正本)** (L1 時点の意図的 carry。旧記載「L4↔L9 pair で被覆」は L9 に実体が無く、L9 自身の scope 宣言 [個別 NFR 受入は L12 担当] とも不一致のため PLAN-L7-459 M13 で訂正)。
 - NFR-13 (gate 通過率 ≥90%) → **OT-30** (KPI D-07 計測タイミング確認)。
 - NFR-14 (agent guard bypass PO 承認 + audit) → **OT-31** (audit log 取得確認 / S-03・B6 連動)。
 - NFR-16 (onboarding 互換性、新規) → **OT-29** (段階導入 block 回避シナリオ確認)。**孤児 NFR = 0** (NFR-01〜17 計 15 件、全被覆)。

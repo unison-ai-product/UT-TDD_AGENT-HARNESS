@@ -41,7 +41,7 @@ export function tierFor(role: RouterRole, difficulty: TaskDifficulty, riskFlags:
 export function resolveModel(role: RouterRole, tier: Tier, provider: Provider): string {
   if (ROLE_ARCHETYPE[role] === "worker" && tier === "T0") {
     throw new Error(
-      `invariant violation: worker role ${role} cannot resolve to T0 (frontier opus/gpt-5.5)`,
+      `invariant violation: worker role ${role} cannot resolve to T0 (frontier ${MODEL_IDS.claude.opus}/${MODEL_IDS.codex.frontier})`,
     );
   }
   return TIER_TABLE[tier][provider];

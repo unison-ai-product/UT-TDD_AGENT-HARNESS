@@ -57,6 +57,7 @@ export interface RunUsage {
  */
 export const CLAUDE_PRICING: Record<string, { input: number; output: number }> = {
   "claude-fable-5": { input: 10, output: 50 },
+  "claude-opus-5": { input: 5, output: 25 },
   "claude-opus-4-8": { input: 5, output: 25 },
   "claude-opus-4-7": { input: 5, output: 25 },
   "claude-opus-4-6": { input: 5, output: 25 },
@@ -357,7 +358,7 @@ export function loadRuntimeSessionUsage(dirs: SessionScanDirs): RunUsage[] {
  * repoRoot から Claude Code project-slug ディレクトリ名を導出する (純関数)。
  * Claude Code は `~/.claude/projects/` 配下に、絶対パスの区切り文字 (`\` `/`) とドライブ区切り `:` を
  * すべて `-` へ置換したディレクトリ名でセッションを保存する (実ディレクトリで確認済、例:
- * `C:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness` → `C--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness`)。
+ * `C:\Users\user\workspace\repo` → `C--Users-user-workspace-repo`)。
  * 元パス中のハイフンはそのまま残る (二重 `--` は `:` `\` の連続置換由来であり衝突ではない)。
  */
 export function claudeProjectSlug(repoRoot: string): string {
