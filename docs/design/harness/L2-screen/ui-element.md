@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: ui-element
-status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-03。③ pair=wireframe self (L2↔L10)。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-03。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-459 H4)。
 pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair (旧 hub 参照は RECOVERY-09 で撤去)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -15,7 +15,7 @@ updated: 2026-06-22
 # L2 UI 要素 (ui-element)
 
 > **SSoT 参照**: 各画面の情報要素・操作要素の正本は L1 [screen-requirements.md §1](../L1-requirements/screen-requirements.md) (15 画面詳細) + §3 横断原則 (CC2/CC3)。画面 ID/URL は [screen-list.md](./screen-list.md)、遷移は [screen-flow.md](./screen-flow.md) が正本。本 doc は L1 の操作/情報要素を **再利用可能な UI コンポーネント** に分解し、props / state / event 契約を L2 設計として確定する。用語独自定義は行わない (anti-corruption layer)。
-> **V-pair (IMP-039/058)**: ③ ペアは `wireframe.md` (mock、右腕 L10)。`next_pair_freeze: L10`。
+> **V-pair**: ③ ペアは `docs/test-design/harness/L10-ux-validation-test-design.md`。`wireframe.md` は L2 内の Low-Fi mock であり、テスト設計の代替ではない。`next_pair_freeze: L10`。
 > **実装状態**: 全コンポーネントは not-implemented (NFR-08、src/web は Phase B)。
 > **スコープ制約**: light モードのみ (Q30)、日本語固定 (Q31)、Desktop 専用 (S9=a)、30 秒ポーリング (S2=b、WebSocket 不使用)、UI 直接実行禁止 = CLI コマンド文字列コピーのみ (S5=b / CC2)。
 
@@ -58,7 +58,7 @@ L1 §3.1 横断原則 (CC2/CC3) を満たす再利用部品。全画面がこの
 
 | 画面 | 固有コンポーネント | props / 振る舞い | L1 参照 |
 |---|---|---|---|
-| **HM-01** | `HierarchyPulldown` (3 階層: 整備率/カテゴリ/FR 個別) + `FrStatusTable` (FR-L1 47 件 × implementation_status バッジ + **対応画面列** screen §5 trace) | installed/partial/not-implemented バッジ + 担当 PLAN + 対応画面 / FR 行 → 担当 PLAN 参照 / **FR 行 → PM-06 設計書ビューア deep-link (対応画面要求プレビュー、機能一覧から画面要求を辿る、PO 2026-06-22)** / 未実装エクスポート | §1.HM.01 |
+| **HM-01** | `HierarchyPulldown` (3 階層: 整備率/カテゴリ/FR 個別) + `FrStatusTable` (FR-L1 51 件 [functional-requirements.md 確定値、PLAN-L7-459 M7] × implementation_status バッジ + **対応画面列** screen §5 trace) | installed/partial/not-implemented バッジ + 担当 PLAN + 対応画面 / FR 行 → 担当 PLAN 参照 / **FR 行 → PM-06 設計書ビューア deep-link (対応画面要求プレビュー、機能一覧から画面要求を辿る、PO 2026-06-22)** / 未実装エクスポート | §1.HM.01 |
 | **HM-02** | `CoverageHeatmap` (観点 8 × 軸 5 = 40 cell、色密度) + `AxisSelector` (観点/軸切替) | cell クリック→不足項目一覧 + 起票候補テキスト生成 (`CopyButton`) | §1.HM.02 |
 | **HM-03** | `WiringDiagram` (SVG 静的アーキ + 動的エラー赤) + `ConnectionDetailTable` (起点/終点/状態/最終チェック) + `ModeTransitionArrows` (detection-routing 4 象限→mode、L3 carry) | hook/provider/9 drive 区画状態 / active 遷移強調 / 接続線クリック→詳細 | §1.HM.03 |
 | **HM-04** | `TableExplorer` (.ut-tdd state 全 table 切替) + `IntegrityCheckSummary` (orphan/drift/不正値) | table 切替 / 行フィルタ / 整合性再実行トリガー / 問題行 `CopyButton` | §1.HM.04 |
@@ -101,6 +101,6 @@ L1 §3.1 横断原則 (CC2/CC3) を満たす再利用部品。全画面がこの
 ## §6 L1↔L2 trace + 次工程
 
 - 上流: L1 [screen-requirements.md §1](../L1-requirements/screen-requirements.md) (各画面 情報要素/操作要素) + §3.1 横断原則 (CC2/CC3) + §3.2 採用済み要望。
-- L2 内: [screen-list.md](./screen-list.md) (ID/URL) → [screen-flow.md](./screen-flow.md) (遷移) → 本 ui-element (部品) → [wireframe.md](./wireframe.md) (レイアウト = ③ pair)。
+- L2 内: [screen-list.md](./screen-list.md) (ID/URL) → [screen-flow.md](./screen-flow.md) (遷移) → 本 ui-element (部品) → [wireframe.md](./wireframe.md) (レイアウト。③ pair の正本は L10-ux-validation-test-design.md)。
 - 下流: L10 UX refinement (デザイントークン High-Fi 確定 / a11y AA 実値 / High-Fi モック) → src/web 実装 (Phase B)。
-- pair: `wireframe.md` (mock = ③ test design、L2↔L10 右腕)。
+- pair: `docs/test-design/harness/L10-ux-validation-test-design.md` (独立③ test design、L2↔L10 右腕)。

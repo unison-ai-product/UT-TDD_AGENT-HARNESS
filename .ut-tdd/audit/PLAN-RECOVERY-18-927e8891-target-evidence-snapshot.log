@@ -1,0 +1,10 @@
+PLAN-RECOVERY-18 merged-plan target evidence verification
+recorded_at=2026-07-27T16:52:17+09:00
+anchor_commit=927e8891
+runner=bun scripts/run-vitest-snapshot.ts
+tests=tests/merged-plan-target-evidence.test.ts
+result=PASS
+test_files=1 passed
+tests_passed=6
+context=post-merge confirm (issue #157 drain; PR #140 merged f9200286; renumber b68e98a9 でも 6/6 実測済み)
+prior_review=PR #140 Claude non-author blind re-review PASS (2026-07-23T01:58:43Z, HEAD 09c262f9)
