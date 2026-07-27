@@ -56,18 +56,18 @@ status: draft
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:e2cb39c670b319b60ed83a02d2817b9f
-  command_id: pr156-contract-closure-l7-rev5c-20260727
-  admitted_at: 2026-07-27T01:00:00.000Z
-  source_digest: sha256:e2dfef9c9d7b9f4220c1e47e19471c394db8e344d6e6e5668ff8ec98df500ebe
-  decision_digest: sha256:7327c457755209949f1b6ec4f8b5c1d6c0b91b0a5f37fdb8ad341a05c486dd1e
-  receipt_digest: sha256:a01798143e5960d15bb9ccac9aa13337a6ef2a206900243d2add8bbba520b9b2
+  receipt_id: certificate:31c8b150db06b96027a1a548b95cfd9a
+  command_id: pr156-authority-closure-l7-rev6-20260727
+  admitted_at: 2026-07-27T02:00:03.000Z
+  source_digest: sha256:9d19902e0f882c102b8e5ad978ccbdf0e018a7303945d817abff76da1281eb3f
+  decision_digest: sha256:d1bae8d86887aa0db99aea657bb8d5ac2340dc584fc968c1e92c62cf37655973
+  receipt_digest: sha256:dd3568caa2ae77757c016ea715e908fcdaaf75b85b69dbec7ebf4ba95af9903b
   binding:
     path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
     plan_id: PLAN-L7-454-resource-kernel-native-companion
     asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 5
-    content_digest: sha256:e2dfef9c9d7b9f4220c1e47e19471c394db8e344d6e6e5668ff8ec98df500ebe
+    revision: 6
+    content_digest: sha256:9d19902e0f882c102b8e5ad978ccbdf0e018a7303945d817abff76da1281eb3f
   route:
     signal: feature_addition
     mode: add-feature
@@ -78,19 +78,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L7-454-resource-kernel-native-companion
-    revision: 4
+    revision: 5
     digest: sha256:085def2940ad4463fb322c19b253c7703338199ee750fbc510b24eca81f81ed0
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 5
+      target_revision: 6
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: Resource Kernelのwire・admission・anti-rollback契約を上流から閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのauthority・deadline・token真正性契約を閉じてForward実装へ再降下する
 ---
 
 # PLAN-L7-454: Resource Kernel native custody companion / Node protocol client
@@ -128,7 +128,10 @@ L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けて
 - versioned wire DTOのstrict decode/encodeとprotocol mismatchの開始前拒否。
 - `Probe | Execute | RecoveryCustody`のclosed union、Probeからworkload launcherへの到達不能性、
   Executeだけが所有する`create_custody | spawn_attached | resume`のsealed admission token/binding/minimum capability強制。
-  Recoveryはauthority lease必須の`observe | terminate_tree | prove_empty | shutdown`だけを所有し、新規workload生成・resumeを型で不能にする。
+  createが返すexecutor-bound authority leaseをspawn/resumeでも必須照合する。Recoveryはlease必須の
+  `observe | terminate_tree | prove_empty | shutdown`だけを所有し、新規workload生成・resumeを型で不能にする。
+  shutdownはempty/reap proof後だけ許可する。
+- canonical token authenticator/issuer/operation/nonce検証、wall→monotonic縮小変換、別failure domain deadline executor。
 - `control_process_created`と`managed_root_created`の別identity・別phase応答。
 - Windowsのsuspended create→Job attach→resume、非継承handle、custodian/supervisor、tree empty proof。
 - Linuxのcgroup v2 / clone3 attach、broker/subreaper、budget適用、`populated=0`とreap proof。

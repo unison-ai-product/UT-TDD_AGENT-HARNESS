@@ -43,18 +43,18 @@ supersedes:
   - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:7ccf2e0e8e61d723bcbc76874a8e0a9d
-  command_id: pr156-contract-closure-2-rev5c-20260727
-  admitted_at: 2026-07-27T01:00:01.000Z
-  source_digest: sha256:5dfca3d50a513742fe4195368aa28f5a29c448ae393eb3101a1dbef31ff0d091
-  decision_digest: sha256:9f7421aeaef25daee1920c93e25629aac6478fa78ba8c1dc2debf628831cdbf3
-  receipt_digest: sha256:0fd5357197c28f0593752c30843f446d85172f64e72775ef972d45d11cbe445c
+  receipt_id: certificate:c5b6a570d651f10f05450c403ccf6993
+  command_id: pr156-authority-closure-l5-rev6-20260727
+  admitted_at: 2026-07-27T02:00:01.000Z
+  source_digest: sha256:709c1fa73c8b7ab4ed86fac814c550f5a7ad7a620c24c2a9ce61017242d93af5
+  decision_digest: sha256:51f9408db11a60a0e70d49b39a75c8ddee5a406443c8c672264000b220613213
+  receipt_digest: sha256:11b8fcff9c18da1fa57ab787d031f490fbbd6634dd58e1cbd9ff700d559d1efb
   binding:
     path: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
     asset_id: plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455
-    revision: 5
-    content_digest: sha256:5dfca3d50a513742fe4195368aa28f5a29c448ae393eb3101a1dbef31ff0d091
+    revision: 6
+    content_digest: sha256:709c1fa73c8b7ab4ed86fac814c550f5a7ad7a620c24c2a9ce61017242d93af5
   route:
     signal: redesign
     mode: redesign
@@ -65,19 +65,19 @@ admission_receipt:
     projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
   origin:
     plan_id: PLAN-L5-25-resource-kernel-physical-protocol
-    revision: 4
+    revision: 5
     digest: sha256:5d7da7bece7de30bd75eada98b0cf25e2c5046dc128d7be3e9b5f841222b138e
   transition:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
       target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 5
+      target_revision: 6
   reentry:
     target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 5
+    target_revision: 6
     phase: forward_merge
-  escape_reason: Resource Kernelのwire・admission・anti-rollback契約を上流から閉じてForward実装へ再降下する
+  escape_reason: Resource Kernelのauthority・deadline・token真正性契約を閉じてForward実装へ再降下する
   supersedes:
     - PLAN-L5-25-resource-kernel-physical-protocol
 ---
@@ -122,14 +122,20 @@ Bun test runnerを新しい経路へ一切導入しない。
 protocol envelopeは`ProbeRequest | ExecuteRequest | RecoveryCustodyCommand`のclosed unionとする。`ProbeRequest`はbundle/protocol
 identityだけを入力にOS factを返し、workload launcherへの参照を型として持たない。`ExecuteRequest.operation`だけが
 `create_custody | spawn_attached | resume`を所有し、control planeが封印した
-`AdmissionToken(attempt_id, custody_nonce, bundle_digest, probe_digest, required_capabilities, deadline_unix_ms)`を必須fieldとして
-commandのattempt/custody/bundle/probe bindingと照合する。token無し、空required capability、期限切れ、別probe、別attemptでは
+`AdmissionTokenV1(attempt_id, custody_nonce, bundle_digest, probe_digest, required_capabilities, operation,
+issued_unix_ms, budget_ms, deadline_unix_ms, token_nonce, issuer_key_id, policy_revision, authenticator)`を必須fieldとして
+versioned canonical preimage全体の真正性とcommandのattempt/custody/bundle/probe/operation bindingを照合する。
+`AdmissionTokenAuthenticatorPort.seal/verify`以外の自己申告tokenを認証済みに昇格せず、unknown key/version、authenticator不一致、
+同nonce別payload、別operation replayを拒否する。token無し、空required capability、期限切れ、別probe、別attemptでは
 custody作成、spawn、resumeをすべて0にし、`managed_root_created=false`のまま拒否する。handshake成功をexecute許可へ暗黙昇格しない。
+`create_custody`はarm済みdeadline executorへ束縛した`AuthorityLease`を返し、`spawn_attached | resume`はtokenに加えて
+同じleaseを必須fieldとして照合する。missing/stale epoch、別attempt/nonce、executor binding不一致ならattach/resume 0とする。
 
 `RecoveryCustodyCommand.operation`は`observe | terminate_tree | prove_empty | shutdown`だけを所有し、
 `AuthorityLease(authority_epoch, attempt_id, custody_nonce)`を必須とする。launcher、managed-root生成、resumeのfield/variantを
 schemaとして持たず、admission token期限後も既存custodyの安全なterminate/reapを妨げない。stale epoch、別attempt/nonceは
-state delta 0で拒否する。各responseは`control_process_created`と`managed_root_created`を別fieldで返す。
+state delta 0で拒否する。`shutdown`は`empty_proven`とreap proofを事前条件とし、running/terminatingで拒否して
+deadline executorとauthorityを維持する。各responseは`control_process_created`と`managed_root_created`を別fieldで返す。
 `spawn_attached`はWindowsではsuspended rootをJobへassignした後だけresume可能、Linuxでは
 最初のuser instructionより前にtarget cgroup所属を保証する。commandごとのnative factはcustody identity、root identity、
 適用limit、monotonic observation、OS error identityを返すが、`success`やdomain verdictを返さない。
@@ -159,20 +165,30 @@ reconnectはbundle identity、attempt、custody nonceを照合し、別attempt�
 
 ### 4.1 Custody authorityとatomic handoff
 
-custodyのdurable authorityは一時的なNode client/companionではない。WindowsではSCM管理custodian、Linuxでは
-broker外のsystem-manager transient scope/timer又は同等のkernel-backed deadline ownerが所有する。
-`create_custody`はauthorityが`authority_epoch + attempt_id + custody_nonce + absolute_deadline +
+custodyのdurable authorityは一時的なNode client/companionではない。`CustodyAuthority`（command/lease照合）、
+`RecoverySupervisor`（再接続/reap）、`DurableDeadlineExecutor`（期限kill）を別identityとして分離する。WindowsではSCM/Job、
+Linuxではbroker外system-manager scope/timer又は同等のkernel-backed executorを使い、executorを他2processと同一failure domainへ置かない。
+`create_custody`はauthorityが`authority_epoch + attempt_id + custody_nonce + effective_deadline_monotonic_ms + boot_id +
 termination_policy_digest + recovery_grace_ms + recovery_deadline`をdurable化し、OS handle/cgroup identityをprimary ownershipへ結んだ
 `AuthorityLease`を返す。companionはこのleaseを照合してからsuspended root/cgroup childをatomic attachし、
 `handoff_committed` factをauthorityとjournalの双方が同じnonceで観測するまでresume/execしない。
 
+token verifierは受理時の`wall_now`と`monotonic_now`を同じ観測点で取得し、
+`remaining_ms = min(budget_ms, max(0, deadline_unix_ms - wall_now))`、
+`effective_deadline_monotonic_ms = monotonic_now + remaining_ms`として一度だけsealする。
+`deadline_unix_ms - issued_unix_ms != budget_ms`、許容skew超過、wall rollback/forward不整合は開始前拒否する。
+開始後のwall clock jumpでdeadlineを再計算せず、process restartはdurable remaining factとwall deadlineの早い方を採用し、
+boot ID不一致・clock不確実時は期限切れとしてkillする。secure clock/key rotationの具体方式は後続でも、延長fail-openはD0で禁止する。
+
 `recovery_grace_ms`は正整数かつpolicy revisionの`max_recovery_grace_ms`以下、`recovery_deadline`は
-`absolute_deadline + recovery_grace_ms`として検証する。deadlineの実行責任はauthority側にあり、
+effective deadlineに`recovery_grace_ms`を加えた上限として検証する。deadlineの実行責任は`DurableDeadlineExecutor`にあり、
 Node/companion/pipe喪失後も期限内kill→recovery deadline内empty/reapを遂行する。
 再起動時はauthority epoch、attempt、nonce、bundle digest、last durable transitionを照合し、旧epochのcommandを拒否する。
-authorityと通常のrecovery supervisorが同時に失われた場合は、Windowsではlast-handle-close kill、Linuxでは
-broker外ownerがabsolute deadlineまでに`cgroup.kill`を発行し、再起動broker/subreaperがrecovery deadlineまでに
+authority APIとrecovery supervisorが同時に失われても、別failure domainのexecutorがWindowsではJob kill、
+Linuxでは期限内`cgroup.kill`を発行し、再起動broker/subreaperがrecovery deadlineまでに
 `populated=0`、zombie 0、managed orphan 0を証明する。owner又はboundを開始前に強制不能ならmanaged rootを作らず拒否する。
+executor/system manager/kernel自体を同時に失うhost failureではworkload再開を禁止し、boot後reconcileで期限切れとしてkill/emptyを
+証明するまで新規admissionを遮断する。これをprocess dual-crash Greenへ混同しない。
 独立proof欠測時の`custody_failure`と新規admission遮断は追加措置であり、既存payloadのkill/reapを代替しない。
 
 ## 5. platform portとfailure isolation

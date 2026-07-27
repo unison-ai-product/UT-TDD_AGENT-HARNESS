@@ -383,9 +383,9 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 | `IT-RGK-PHYS-025` | companion、protocol、D0-N generation receiptの一要素だけを旧値へ戻す | bundle identity不一致で拒否しcontrol process 0。rollbackはfloor超の新manifest再署名だけを許可 |
 | `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
 | `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
-| `IT-RGK-PHYS-016` | binaryへ空required、probe、token無し/別attempt tokenのExecute各operation、旧`CustodyCommand(spawn_attached)`を投入。Recoveryへ生成/resume fieldを追加するschema mutationも攻撃 | probe launcher 0、全不正Execute/旧variantをdecode/dispatch双方で拒否しcustody/managed root 0。Recovery mutationはschema Red、valid leaseのcleanupはtoken期限後も可能 |
-| `IT-RGK-PHYS-017` | authority handoffのhandle/cgroup bind前後でcompanion/Nodeをcrash | commit前resume/exec 0、commit後はauthorityがdeadlineまでcustodyを維持 |
-| `IT-RGK-PHYS-018` | authority単独、supervisor/service manager単独、両者同時crashとold epoch/nonce replay | 単独crashは正規recovery。Linux dual crashはbroker外ownerが期限内kill→bounded recovery→reap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |
+| `IT-RGK-PHYS-016` | tokenのcanonical field/authenticator/issuer/operation/nonce、leaseのepoch/attempt/nonce/executor bindingを各変異し、token/lease無しspawn/resume、旧CustodyCommand、running/terminating/emptyでshutdownを投入 | 不正をdecode/verify/dispatch各境界で拒否しcustody/managed root 0。同nonce別payload/別operation replay 0。shutdownはempty/reap後だけ、valid同一retryだけreconcile |
+| `IT-RGK-PHYS-017` | authority handoffのexecutor arm、lease返却、handle/cgroup bind、commit前後でcompanion/Nodeをcrash | arm/lease/commit前resume/exec 0、commit後はexecutorがdeadlineまでcustodyを維持 |
+| `IT-RGK-PHYS-018` | authority API単独、recovery supervisor単独、両者同時crash、executor restart、host boot ID変更、issued/deadline/budget不一致、wall前進/後退、old epoch/nonce replay | process crashでは別failure domain executorが期限内kill→bounded recovery→reap/orphan 0。monotonic deadline延長0、executor restartは早いdeadlineを復元、host/clock不整合は再開禁止・期限切れreconcile。arm不能なら開始前拒否 |
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。

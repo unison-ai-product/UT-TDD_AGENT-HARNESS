@@ -957,7 +957,10 @@ request/responseは`protocol_version + request_id + expected_bundle_digest`を�
 wire commandはlauncherを持たない`ProbeRequest`、sealed `AdmissionToken`必須で
 `create_custody | spawn_attached | resume`だけを所有する`ExecuteRequest`、および
 `AuthorityLease`必須で`observe | terminate_tree | prove_empty | shutdown`だけを所有する`RecoveryCustodyCommand`へ分離する。
-Recovery variantはlauncher、managed-root生成、resumeの型参照を持たない。probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
+`create_custody`が返すleaseは`spawn_attached | resume`でもtokenと同時に検証する。Recovery variantはlauncher、
+managed-root生成、resumeの型参照を持たず、`shutdown`はempty/reap proof後だけ許可する。tokenはversioned canonical payloadを
+`AdmissionTokenAuthenticatorPort`で認証し、wall deadlineを一度だけmonotonicへ縮小変換する。
+probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
 `managed_root_created`を別identity/phaseで返す。空required capabilityやhandshake成功をexecute許可にしない。
 
 ### D.2 カストディ・ライフサイクル

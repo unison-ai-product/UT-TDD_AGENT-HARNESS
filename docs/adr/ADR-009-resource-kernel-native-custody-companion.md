@@ -40,10 +40,15 @@ binary欠落、署名・digest不一致、protocol非互換はcontrol process起
 `probe`目的で起動した後のprobe欠測、権限不足、unsupported platformはmanaged workload root生成前に
 `capability_failure`とする。`control_process_created`と`managed_root_created`を別identity/phaseで記録し、
 単一`process_created`へ縮退しない。top-level commandは`Probe | Execute | RecoveryCustody`のclosed unionとする。
-`Probe`はworkload launcherへ到達不能、`Execute`だけが`create_custody | spawn_attached | resume`を所有し、sealed
-admission tokenと空でないrequired capabilityを必須とする。`RecoveryCustody`は
+`Probe`はworkload launcherへ到達不能、`Execute`だけが`create_custody | spawn_attached | resume`を所有し、暗号学的に認証された
+sealed admission tokenと空でないrequired capabilityを必須とする。`create_custody`が返す`AuthorityLease`は
+`spawn_attached | resume`でもtokenと同時に検証し、missing/stale/別attempt leaseではside effect 0とする。`RecoveryCustody`は
 `observe | terminate_tree | prove_empty | shutdown`と`AuthorityLease(authority_epoch, attempt_id, custody_nonce)`だけを所有し、
 launcher、managed-root生成、resumeの型参照を持たない。Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
+
+`AdmissionTokenAuthenticatorPort`はversioned canonical preimage、issuer key ID、policy revision、operation、token nonceを
+署名/MACし、companion側verifierがside effect前に真正性とbindingを検証する。具体的な鍵配布・rotationは後続revisionへ委譲するが、
+自己申告JSON、unknown key/version、偽造、別operation replayを受理できる実装はD0から禁止する。
 
 ### D3. companion bundleをrelease artifactとして配布する
 

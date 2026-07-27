@@ -1570,6 +1570,8 @@ Execution Kernel境界でexactly once closed `protocol_failure`へ正規化す�
 `create_custody | spawn_attached | resume`を所有し、`AdmissionToken`とattempt/custody/bundle/probe bindingを必須とする。
 `RecoveryCustody.operation`は`observe | terminate_tree | prove_empty | shutdown`だけを所有し、
 `AuthorityLease(authority_epoch, attempt_id, custody_nonce)`を必須とする。launcher、managed-root生成、resumeの型参照を持たない。
+`create_custody`はexecutor binding付きleaseを返し、`spawn_attached | resume`はtokenと同じleaseを必須入力として照合する。
+`shutdown`は`empty_proven`かつreap proof後だけ許可する。
 phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
 エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
 
@@ -1584,7 +1586,9 @@ phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`�
 | `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
 | `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
 | `sealAdmission` | recorded probe、完全capability、deadline内 | attempt/nonce/bundle/probe/deadlineを結ぶtoken。空required拒否 |
-| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token無し・期限切れ・binding不一致のExecuteでcustody/managed root side effect 0。Recoveryはvalid authority leaseの既存custodyだけを操作し、生成・resume能力0 |
+| `AdmissionTokenAuthenticatorPort.seal/verify` | canonical V1 payload、issuer key ID/policy revision | authenticatorとoperation/token nonceを束縛し、unknown key/version、偽造、同nonce別payload/別operation replayをside effect前拒否。具体key storage/rotationはD0外 |
+| `sealMonotonicDeadline` | verified token、同時観測wall/monotonic、boot ID | remainingをbudgetとwall残時間の小さい方へ固定し、開始後wall jumpで延長0。skew/boot不整合は期限切れfail-close |
+| `dispatchCommand` | closed `Probe | Execute | RecoveryCustody` union | Probeからlauncher 0。token又はspawn/resume lease無し・期限切れ・binding不一致のExecuteでcustody/managed root side effect 0。Recoveryはvalid authority leaseの既存custodyだけを操作し、生成・resume能力0。shutdown-before-emptyは拒否 |
 | `normalizeWireFault` | typed `WireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
 | `reduceCustody` | attempt、nonce、sequence連続 | 合法遷移だけ受理し、resume-before-attach、release-before-emptyを拒否 |
 | `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
