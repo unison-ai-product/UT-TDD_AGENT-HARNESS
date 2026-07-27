@@ -201,6 +201,15 @@ const SOURCE_WORKFLOW_WITH_LANE = SOURCE_WORKFLOW;
 void LEGACY_SOURCE_WORKFLOW;
 void LEGACY_SOURCE_WORKFLOW_WITH_LANE;
 
+function replaceRequired(source: string, from: string | RegExp, to: string): string {
+  expect(source).toMatch(
+    typeof from === "string" ? new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : from,
+  );
+  const mutated = source.replace(from, to);
+  expect(mutated).not.toBe(source);
+  return mutated;
+}
+
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
     {
@@ -275,7 +284,7 @@ describe("github-ci-policy lint", () => {
   });
 
   it("U-CIPOL-016: requires always() so a failed runtime leg reaches the aggregate verdict", () => {
-    const workflow = SOURCE_WORKFLOW.replace(`    if: ${AGGREGATE_ALWAYS}\n`, "");
+    const workflow = replaceRequired(SOURCE_WORKFLOW, `    if: ${AGGREGATE_ALWAYS}\n`, "");
     const result = analyzeGithubCiPolicy(docs(workflow));
 
     expect(result.violations).toContainEqual({
@@ -333,7 +342,8 @@ describe("github-ci-policy lint", () => {
   });
 
   it("U-CIPOL-019: rejects aggregate scripts that observe results without failing closed", () => {
-    const echoOnly = SOURCE_WORKFLOW.replace(
+    const echoOnly = replaceRequired(
+      SOURCE_WORKFLOW,
       `run: ${REQUIRED_AGGREGATE_COMMAND}`,
       `run: echo "\${{ needs.harness-check-linux.result }} \${{ needs.harness-check-windows.result }}"`,
     );
@@ -691,7 +701,11 @@ describe("github-ci-policy lint", () => {
       });
     }
 
-    const malformedStep = SOURCE_WORKFLOW.replace("- uses: actions/checkout@v5", "- run: {}");
+    const malformedStep = replaceRequired(
+      SOURCE_WORKFLOW,
+      "        uses: actions/checkout@v5",
+      "        run: {}",
+    );
     expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
@@ -751,7 +765,11 @@ describe("github-ci-policy lint", () => {
     });
 
     for (const step of ["{}", "{ name: bogus }"]) {
-      const malformedStep = SOURCE_WORKFLOW.replace("- uses: actions/checkout@v5", `- ${step}`);
+      const malformedStep = replaceRequired(
+        SOURCE_WORKFLOW,
+        "        uses: actions/checkout@v5",
+        `        run: ${step}`,
+      );
       expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
@@ -867,7 +885,13 @@ describe("github-ci-policy lint", () => {
 
   it("requires source CI to keep full doctor in the required status check", () => {
     const result = analyzeGithubCiPolicy(
-      docs(SOURCE_WORKFLOW.replace("bun src/cli.ts doctor", "echo doctor omitted")),
+      docs(
+        replaceRequired(
+          SOURCE_WORKFLOW,
+          "        run: bun src/cli.ts doctor\n",
+          "        run: echo doctor omitted\n",
+        ),
+      ),
     );
 
     expect(result.ok).toBe(false);
@@ -1102,9 +1126,10 @@ describe("github-ci-policy lint", () => {
       const duplicate = `      - name: duplicate\n        id: classify\n        run: echo duplicate\n`;
       const result = analyzeGithubCiPolicy(
         docs(
-          SOURCE_WORKFLOW_WITH_LANE.replace(
-            "      - run: bun src/cli.ts github guard",
-            `${duplicate}      - run: bun src/cli.ts github guard`,
+          replaceRequired(
+            SOURCE_WORKFLOW_WITH_LANE,
+            "      - name: branch-type guard (commitlint / poc / hotfix)",
+            `${duplicate}      - name: branch-type guard (commitlint / poc / hotfix)`,
           ),
         ),
       );
@@ -1232,7 +1257,9 @@ describe("github-ci-policy lint", () => {
         `      - if: ${LANE_DOC_IF}\n        continue-on-error: true\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
       ],
     ])("U-CIPOL-020ba: rejects doc doctor mutation: %s", (_label, from, to) => {
-      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      const result = analyzeGithubCiPolicy(
+        docs(replaceRequired(SOURCE_WORKFLOW_WITH_LANE, from, to)),
+      );
       expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
     });
     it("U-CIPOL-021: accepts a real-shaped workflow with canonical full/doc lane step conditions", () => {
@@ -1272,9 +1299,10 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-023: 負例 — rejects a required full-lane check (full doctor) mis-conditioned on lane=='doc'", () => {
-      const doctorMisrouted = SOURCE_WORKFLOW_WITH_LANE.replace(
-        `      - if: ${LANE_FULL_IF}\n        run: bun src/cli.ts doctor`,
-        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor`,
+      const doctorMisrouted = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        `        if: ${LANE_FULL_IF}\n        run: bun src/cli.ts doctor\n`,
+        `        if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor\n`,
       );
       const result = analyzeGithubCiPolicy(docs(doctorMisrouted));
 
@@ -1289,9 +1317,10 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-024: 負例 — rejects a non-canonical lane condition expression", () => {
-      const garbled = SOURCE_WORKFLOW_WITH_LANE.replace(
-        `      - if: ${LANE_FULL_IF}\n        run: bun run typecheck`,
-        `      - if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: bun run typecheck`,
+      const garbled = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        `        if: ${LANE_FULL_IF}\n        run: bun run typecheck\n`,
+        `        if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: bun run typecheck\n`,
       );
       const result = analyzeGithubCiPolicy(docs(garbled));
 
