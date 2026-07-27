@@ -266,6 +266,167 @@ function hasLiveCleanupCall(path: string, source: string): boolean {
   return found;
 }
 
+function delegatedCleanupContract(source: string): { ownerPath: string; rootEnv: string } | null {
+  const match = source.match(
+    /^\s*\/\/\s*ut-tdd:cleanup-owner=(tests\/[a-z0-9./-]+\.test\.ts);root-env=([A-Z][A-Z0-9_]*)\s*$/m,
+  );
+  return match ? { ownerPath: match[1], rootEnv: match[2] } : null;
+}
+
+function hasDelegatedCleanupBinding(
+  path: string,
+  source: string,
+  workerPath: string,
+  rootEnv: string,
+): boolean {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const workerVariables = new Set<string>();
+  const cleanupRoots = new Set<string>();
+  const constIdentifiers = new Set<string>();
+  const mutatedIdentifiers = new Set<string>();
+  const declarationCounts = new Map<string, number>();
+  const collectBindings = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      declarationCounts.set(node.name.text, (declarationCounts.get(node.name.text) ?? 0) + 1);
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      ts.isVariableDeclarationList(node.parent) &&
+      (node.parent.flags & ts.NodeFlags.Const) !== 0
+    )
+      constIdentifiers.add(node.name.text);
+    if (
+      ts.isBinaryExpression(node) &&
+      ts.isIdentifier(node.left) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    )
+      mutatedIdentifiers.add(node.left.text);
+    if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      ts.isIdentifier(node.operand) &&
+      [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)
+    )
+      mutatedIdentifiers.add(node.operand.text);
+    ts.forEachChild(node, collectBindings);
+  };
+  collectBindings(file);
+  const resolvesWorkerPath = (call: ts.CallExpression): boolean => {
+    if (!ts.isIdentifier(call.expression) || !["join", "resolve"].includes(call.expression.text))
+      return false;
+    const parts: string[] = [];
+    for (const argument of call.arguments) {
+      if (ts.isStringLiteralLike(argument)) {
+        parts.push(argument.text);
+        continue;
+      }
+      if (
+        ts.isCallExpression(argument) &&
+        ts.isPropertyAccessExpression(argument.expression) &&
+        ts.isIdentifier(argument.expression.expression) &&
+        argument.expression.expression.text === "process" &&
+        argument.expression.name.text === "cwd" &&
+        argument.arguments.length === 0
+      )
+        continue;
+      return false;
+    }
+    return parts.join("/").replaceAll("\\", "/") === workerPath;
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isCallExpression(node.initializer) &&
+      resolvesWorkerPath(node.initializer) &&
+      constIdentifiers.has(node.name.text) &&
+      !mutatedIdentifiers.has(node.name.text) &&
+      declarationCounts.get(node.name.text) === 1
+    )
+      workerVariables.add(node.name.text);
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "spawn" &&
+      ts.isArrayLiteralExpression(node.arguments[1])
+    ) {
+      const launchesWorker = node.arguments[1].elements.some(
+        (element) => ts.isIdentifier(element) && workerVariables.has(element.text),
+      );
+      const options = node.arguments[2];
+      if (launchesWorker && options && ts.isObjectLiteralExpression(options)) {
+        const envProperty = options.properties.find(
+          (property): property is ts.PropertyAssignment =>
+            ts.isPropertyAssignment(property) &&
+            property.name.getText(file) === "env" &&
+            ts.isObjectLiteralExpression(property.initializer),
+        );
+        if (envProperty && ts.isObjectLiteralExpression(envProperty.initializer)) {
+          const rootProperty = envProperty.initializer.properties.find(
+            (property): property is ts.PropertyAssignment =>
+              ts.isPropertyAssignment(property) && property.name.getText(file) === rootEnv,
+          );
+          if (
+            rootProperty &&
+            ts.isIdentifier(rootProperty.initializer) &&
+            constIdentifiers.has(rootProperty.initializer.text) &&
+            !mutatedIdentifiers.has(rootProperty.initializer.text) &&
+            declarationCounts.get(rootProperty.initializer.text) === 1
+          )
+            cleanupRoots.add(rootProperty.initializer.text);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  let bound = false;
+  const isStaticallyDead = (node: ts.Node): boolean => {
+    for (let current = node.parent; current; current = current.parent) {
+      if (
+        ts.isIfStatement(current) &&
+        current.thenStatement.pos <= node.pos &&
+        node.end <= current.thenStatement.end &&
+        current.expression.kind === ts.SyntaxKind.FalseKeyword
+      )
+        return true;
+      if (
+        ts.isIfStatement(current) &&
+        current.elseStatement &&
+        current.elseStatement.pos <= node.pos &&
+        node.end <= current.elseStatement.end &&
+        current.expression.kind === ts.SyntaxKind.TrueKeyword
+      )
+        return true;
+      if (
+        ts.isBinaryExpression(current) &&
+        current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+        current.right.pos <= node.pos &&
+        node.end <= current.right.end &&
+        current.left.kind === ts.SyntaxKind.FalseKeyword
+      )
+        return true;
+    }
+    return false;
+  };
+  const findCleanup = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "removeTestTree" &&
+      ts.isIdentifier(node.arguments[0]) &&
+      cleanupRoots.has(node.arguments[0].text) &&
+      !isStaticallyDead(node)
+    )
+      bound = true;
+    ts.forEachChild(node, findCleanup);
+  };
+  findCleanup(file);
+  return bound;
+}
+
 describe("persistent harness DB cleanup contract", () => {
   it("U-TESTHYGIENE-026: resolves namespace DB owners and namespace recursive removal", () => {
     expect(
@@ -336,6 +497,90 @@ describe("persistent harness DB cleanup contract", () => {
     ).toBe(true);
   });
 
+  it("U-TESTHYGIENE-034: worker DB ownership requires an explicit parent cleanup contract", () => {
+    expect(
+      delegatedCleanupContract(
+        "// ut-tdd:cleanup-owner=tests/forward-escape-issue-contract.test.ts;root-env=UT_TDD_REPO\nopenHarnessDb(path);",
+      ),
+    ).toEqual({
+      ownerPath: "tests/forward-escape-issue-contract.test.ts",
+      rootEnv: "UT_TDD_REPO",
+    });
+    expect(delegatedCleanupContract("openHarnessDb(path);")).toBeNull();
+    expect(
+      delegatedCleanupContract(
+        "// ut-tdd:cleanup-owner=../outside.test.ts;root-env=UT_TDD_REPO\nopenHarnessDb(path);",
+      ),
+    ).toBeNull();
+    const owner =
+      "const repo = 'tmp'; const worker = join('tests', 'db-worker.ts'); spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); removeTestTree(repo);";
+    expect(
+      hasDelegatedCleanupBinding("tests/owner.test.ts", owner, "tests/db-worker.ts", "UT_TDD_REPO"),
+    ).toBe(true);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner.replace("join('tests', 'db-worker.ts')", "join('tests', 'evil', 'db-worker.ts')"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        "const repo = 'tmp'; { const worker = join('tests', 'db-worker.ts'); } { const worker = join('tests', 'evil.ts'); spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); } removeTestTree(repo);",
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        "const repo = 'tmp'; const worker = join('tests', 'db-worker.ts'); { const repo = 'other'; spawn(node, [runner, worker], { env: { UT_TDD_REPO: repo } }); } removeTestTree(repo);",
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner.replace(
+          "const worker = join('tests', 'db-worker.ts');",
+          "let worker = join('tests', 'db-worker.ts'); worker = join('tests', 'evil.ts');",
+        ),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner
+          .replace("UT_TDD_REPO: repo", "UT_TDD_REPO: root")
+          .replace("const worker =", "let root = repo; const worker =")
+          .replace("removeTestTree(repo)", "root = otherRoot; removeTestTree(root)"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner.replace("removeTestTree(repo)", "removeTestTree(otherRoot)"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+    expect(
+      hasDelegatedCleanupBinding(
+        "tests/owner.test.ts",
+        owner.replace("removeTestTree(repo)", "if (false) removeTestTree(repo)"),
+        "tests/db-worker.ts",
+        "UT_TDD_REPO",
+      ),
+    ).toBe(false);
+  });
+
   it("U-TESTHYGIENE-019: auto-discovers every persisted DB owner and requires retrying cleanup", () => {
     const root = process.cwd();
     const pending = [join(root, "tests")];
@@ -346,7 +591,7 @@ describe("persistent harness DB cleanup contract", () => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {
         const path = join(directory, entry.name);
         if (entry.isDirectory()) pending.push(path);
-        else if (entry.isFile() && entry.name.endsWith(".test.ts"))
+        else if (entry.isFile() && entry.name.endsWith(".ts"))
           files.push({
             path: relative(root, path).replaceAll("\\", "/"),
             source: readFileSync(path, "utf8"),
@@ -354,11 +599,29 @@ describe("persistent harness DB cleanup contract", () => {
       }
     }
     const owners = files.filter((file) => createsPersistedHarnessDb(file.path, file.source));
+    const filesByPath = new Map(files.map((file) => [file.path, file]));
 
     expect(owners.length).toBeGreaterThan(0);
     for (const owner of owners) {
-      expect(hasLiveCleanupCall(owner.path, owner.source), owner.path).toBe(true);
-      expect(usesRawRecursiveTreeRemoval(owner.path, owner.source), owner.path).toBe(false);
+      const delegated = delegatedCleanupContract(owner.source);
+      const cleanupOwner = delegated ? filesByPath.get(delegated.ownerPath) : owner;
+      if (!cleanupOwner) {
+        throw new Error(`${owner.path}: missing cleanup owner ${delegated?.ownerPath}`);
+      }
+      expect(
+        delegated === null ||
+          hasDelegatedCleanupBinding(
+            cleanupOwner.path,
+            cleanupOwner.source,
+            owner.path,
+            delegated.rootEnv,
+          ),
+        `${owner.path}: cleanup owner does not bind worker spawn root to cleanup root`,
+      ).toBe(true);
+      expect(hasLiveCleanupCall(cleanupOwner.path, cleanupOwner.source), owner.path).toBe(true);
+      expect(usesRawRecursiveTreeRemoval(cleanupOwner.path, cleanupOwner.source), owner.path).toBe(
+        false,
+      );
     }
   });
 });
