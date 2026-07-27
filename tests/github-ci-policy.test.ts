@@ -958,6 +958,28 @@ describe("github-ci-policy lint", () => {
       expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
     });
 
+    it.each([
+      ["branch guard separator", "\n          git log --format=%s", " git log --format=%s"],
+      ["doc checks separator", "\n          bun run test:doc-lane", " bun run test:doc-lane"],
+    ])("U-CIPOL-019aa: preserves command-separator newline: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
+    it("U-CIPOL-019ab: accepts CRLF as semantic-equivalent YAML line endings", () => {
+      expect(analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(/\n/g, "\r\n"))).ok).toBe(
+        true,
+      );
+    });
+
+    it("U-CIPOL-019ac: accepts indentation variance after explicit shell continuation", () => {
+      const variant = SOURCE_WORKFLOW_WITH_LANE.replace(
+        "\\\n            --event-name",
+        "\\\n                 --event-name",
+      );
+      expect(analyzeGithubCiPolicy(docs(variant)).ok).toBe(true);
+    });
+
     it("U-CIPOL-019b: rejects runtime step reorder", () => {
       const checkout = `      - name: checkout\n        uses: actions/checkout@v5\n        with:\n          fetch-depth: 0\n\n`;
       const setup = `      - name: setup bun\n        uses: oven-sh/setup-bun@v2\n        with:\n          bun-version: "1.3"\n\n`;

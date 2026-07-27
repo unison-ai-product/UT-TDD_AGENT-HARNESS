@@ -222,6 +222,9 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 - source runtime legsのsteps配列はOS別のordered canonical semantic manifestとして固定し、
   step件数・順序・全property/valueを完全一致検査する。YAML block whitespaceだけ正規化し、
   action/with/run/if/env/shellの差替え、command追記、step追加・削除・並替えをfail-closeする。
+- `run`正規化はCRLF→LF、明示shell continuation (`\`+改行+indent)→single space、
+  block外縁の空行除去だけに限定する。通常改行・line内space・quoted whitespaceは意味として保持し、
+  command separatorの改行をspaceへ変える攻撃を拒否する。
 - doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。

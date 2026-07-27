@@ -278,20 +278,14 @@ const CLASSIFY_COMMAND = [
 ].join(" ");
 
 function hasCanonicalLaneProducer(run: string | undefined): boolean {
-  if (!run) return false;
-  return (
-    run
-      .replace(/\\\r?\n\s*/g, " ")
-      .trim()
-      .replace(/\s+/g, " ") === CLASSIFY_COMMAND
-  );
+  return run !== undefined && normalizedRun(run) === CLASSIFY_COMMAND;
 }
 
 function normalizedRun(run: string | undefined): string {
   return (run ?? "")
-    .replace(/\\\r?\n\s*/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]*\\\n[ \t]*/g, " ")
+    .replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "");
 }
 
 function isFailCloseStep(step: WorkflowStep): boolean {
@@ -347,7 +341,9 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
         ),
         PR_BODY: githubExpression("github.event.pull_request.body || ''"),
       },
-      run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
+      run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt
+git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
+bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
     }),
     run("typecheck (tsc --noEmit)", "bun run typecheck", LANE_FULL_ONLY_IF),
     run(
@@ -358,7 +354,7 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
     run("test — 全回帰 (vitest run)", "bun run test", LANE_FULL_ONLY_IF),
     run(
       "doc lane checks (plan lint / readability / rule-drift)",
-      "bun src/cli.ts plan lint bun run test:doc-lane",
+      "bun src/cli.ts plan lint\nbun run test:doc-lane",
       LANE_DOC_ONLY_IF,
     ),
     run(
