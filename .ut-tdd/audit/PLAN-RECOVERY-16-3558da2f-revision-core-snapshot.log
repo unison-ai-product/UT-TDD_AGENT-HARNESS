@@ -1,0 +1,19 @@
+PLAN-RECOVERY-16 revision-authoring core verification
+recorded_at=2026-07-27T12:25:26+09:00
+anchor_commit=3558da2f
+runner=bun scripts/run-vitest-snapshot.ts
+tests=tests/node-plan-revision-runner.test.ts tests/plan-content-binding.test.ts tests/plan-asset/plan-revision-bootstrap.test.ts tests/plan-asset/plan-revision-ledger.test.ts tests/plan-revise-cli.test.ts
+result=PASS
+test_files=5 passed
+tests_passed=75
+duration=8.67s
+snapshot_runner_wall_time=227.1s
+readability_files_processed=5370
+readability_failures=0
+
+Per-file results:
+tests/plan-revise-cli.test.ts: 11 passed
+tests/plan-content-binding.test.ts: 3 passed
+tests/plan-asset/plan-revision-ledger.test.ts: 13 passed
+tests/plan-asset/plan-revision-bootstrap.test.ts: 20 passed
+tests/node-plan-revision-runner.test.ts: 28 passed
