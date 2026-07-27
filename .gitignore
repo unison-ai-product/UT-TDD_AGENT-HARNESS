@@ -39,6 +39,13 @@ docs/handover/session-handover-*.md
 .ut-tdd/harness.db
 .ut-tdd/harness.db-wal
 .ut-tdd/harness.db-shm
+
+# canonical ledger DBs under .ut-tdd/ledger/ (runtime state, never tracked —
+# same rationale as harness.db; separated per physical-data.md §2.7.1)
+.ut-tdd/ledger/*.db
+.ut-tdd/ledger/*.db-wal
+.ut-tdd/ledger/*.db-shm
+.ut-tdd/ledger/*.db-journal
 # Codex 委譲タスク入力 (transient、PM が貼る目標プロンプト)
 .ut-tdd/codex-tasks/
 .tools/

@@ -104,6 +104,7 @@ V-model artifacts must stay separated:
 
 - Read the relevant files before editing.
 - Match local naming, structure, and test placement.
+- 最小実装を優先する: 要件を満たす最短の解を選び、投機的な型・契約・層・機能の積み増し (over-engineering) をしない。object-oriented DDD はドメインを小さく凝集させ code 量を減らすための手段であって ceremony を増やすためではない。DDD が code を膨張させているなら設計を疑う。正本は `docs/governance/coding-rules.md` の「最小実装原則」。
 - Do not declare completion without tests or explicit verification.
 - Treat Codex / Claude Code as local CLI + hook surfaces managed by UT-TDD, not
   direct API calls.
