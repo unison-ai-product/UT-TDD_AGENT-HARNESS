@@ -4,12 +4,21 @@ title: "PLAN-L7-467 (add-impl): repository document disposition auditor / closur
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-23
+updated: 2026-07-28
 owner: PO / Codex
+review_evidence:
+  - reviewer: claude-cross-review
+    review_kind: cross_agent
+    reviewed_at: "2026-07-28"
+    tests_green_at: "2026-07-28"
+    verdict: pass
+    scope: "Design substantive HEAD 83a09fcb と implementation substantive HEAD c00d68e4 の claim-blind / spec-blind review は両 lane PASS。統合 HEAD bada31f4 は U-DOCLEDGER-001..005、oracle trace、plan lint、legacy migration、design-language、typecheck を通過し、PR #146 CI 30345405817 は Linux / Windows / aggregate gate Green。"
+    worker_model: codex-gpt-5.6-sol
+    reviewer_model: claude-opus-5
 parent_design: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
