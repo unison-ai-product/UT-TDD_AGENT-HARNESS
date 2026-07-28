@@ -93,7 +93,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-21T15:10:00+09:00"
         evidence_path: src/doctor/check-definition-groups.ts
-        output_digest: "sha256:584bee05dcbdbf74bc3352cd33ccd8680f7ced84b97c5724cfa8784054851696"
+        output_digest: "sha256:03cfc42451db4b0ab6668c174fb4af11ea50b299e5fb51f6c975ee9f90db73bc"
+        anchor_commit: 3c728fad6cacdd181080e39ad02be89d60ef2c81
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -101,7 +102,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-21T14:05:00+09:00"
         evidence_path: src/doctor/profiles.ts
-        output_digest: "sha256:8d848ddc52b46157b39b22d1925a305a732feb53eadf96d12265039dac31d61b"
+        output_digest: "sha256:63d798cd8b2e1ea16ea516739fc23ea210478c9f8706178980da0efc656d5d32"
+        anchor_commit: 3c728fad6cacdd181080e39ad02be89d60ef2c81
       - kind: unit_test
         command: "bunx vitest run tests/advisory-strict-gate-aging.test.ts --reporter=dot"
         runner: bun
@@ -117,7 +119,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-21T15:13:00+09:00"
         evidence_path: docs/plans/PLAN-L7-406-stable-id-helper.md
-        output_digest: "sha256:7ac29654fdd7eece3ef806004aa81b9562c42c24cfaa37dc901412d17e6a86e5"
+        output_digest: "sha256:9bc4ab9bdc0630629a500d6845371961b93e73ae8f7d9da65216781dd05e4ec2"
+        anchor_commit: dcb45479c0f335172e7d6110d98d65c08f7981fc
       - kind: smoke
         command: "bun src/cli.ts doctor --strict-green-command-digest"
         runner: bun
@@ -125,7 +128,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-21T14:20:00+09:00"
         evidence_path: .github/workflows/harness-check.yml
-        output_digest: "sha256:3383487fcfe98cbb0e3708a6a0a8c5822d138c2214bc2ad86606eb84eba42d18"
+        output_digest: "sha256:d42776e2106e158fe1329b7f0ff84afbc564d8dff38c7fd1b102db8ba13d8170"
+        anchor_commit: 3c728fad6cacdd181080e39ad02be89d60ef2c81
 ---
 
 # PLAN-L7-420 (troubleshoot): evidence 裏取り gate の CI 実効化
