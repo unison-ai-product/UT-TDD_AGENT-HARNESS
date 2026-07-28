@@ -13,6 +13,7 @@ export interface RepositoryReadContract {
 
 const CONTRACT_ROWS = `
 asset-catalog:3 asset-drift:1 backfill-pairing:2 cited-command-existence:1 cli-surface:2 cli:1
+advisory-strict-gate-aging:4
 codex-hook-adapter:1 coding-rules:1 context-doc-router:2 cycle-p4-verification:5 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:3 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:2 doctor-runtime-surface:2 doctor:25
 drive-model-passage:2 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
@@ -25,14 +26,15 @@ vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
 secret-scan-diff:1
 feedback-log:2
-github-repository-policy:2
+github-repository-policy:3
+github-ci-policy:1
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:2
 hook-native-launcher:1
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
-forward-escape-issue-contract:3
+forward-escape-issue-contract:4
 `;
 
 const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(

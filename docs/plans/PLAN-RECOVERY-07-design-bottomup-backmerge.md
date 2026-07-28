@@ -80,23 +80,25 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-07-02T22:19:00+09:00"
-        evidence_path: tests\\mode-catalog.test.ts
-        output_digest: "sha256:2c5fd637c9e85d2a238c007170542de3d8cd13e829a98f4524c727ec1929f811"
+        evidence_path: tests/mode-catalog.test.ts
+        output_digest: "sha256:e6bad9f66a1ff8a1ec1b41bc11f0076cda122380e078dbfe0b05a96a0f8d1224"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
         completed_at: "2026-07-02T22:19:00+09:00"
-        evidence_path: src\\schema\\mode-catalog.ts
-        output_digest: "sha256:417a9174f63d37c3f39736508c1a40ca476a7e97aafc1e2344bba01c929495de"
+        evidence_path: src/schema/mode-catalog.ts
+        output_digest: "sha256:3de3dafc58d26d75ff738cedae87897fb8330f3dbd6a46e9dc01d63c3a719981"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: unit_test
         command: "bun run vitest run tests\\drive-model-passage.test.ts tests\\mode-catalog.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
         completed_at: "2026-07-02T22:19:00+09:00"
-        evidence_path: tests\\drive-model-passage.test.ts
+        evidence_path: tests/drive-model-passage.test.ts
         output_digest: "sha256:9ef3188bb1234a0a95c336ca5075bda23aecd19af58e3f1763dd56355bf9d86a"
 ---
 

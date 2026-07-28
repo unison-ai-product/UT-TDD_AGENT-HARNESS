@@ -36,8 +36,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T18:55:57+09:00"
         evidence_path: tests/right-arm-gate-planning.test.ts
-        output_digest: "sha256:3ed3a8512c7a23825594e4f6e61bfaf5bfee793a96f74dda06a1ca692a3e9a38"
-        anchor_commit: 3d232e9cc187bc06006896dadc6774148a871a0b
+        output_digest: "sha256:2bbf22c3f583cec8beaa658998fe3d3ef6683f996d58b6d7ff7dd094acca9086"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bunx tsc --noEmit"
         runner: bun
@@ -45,8 +45,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T18:56:11+09:00"
         evidence_path: src/lint/right-arm-gate-planning.ts
-        output_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        anchor_commit: 3d232e9cc187bc06006896dadc6774148a871a0b
+        output_digest: "sha256:dc123b0f5e8822c4cd8c82a6f8e5c8da212fb3da6ecc9e459230dab55f4d159e"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 generates:
   - artifact_path: docs/plans/PLAN-L7-421-generic-right-arm-doctor-gate.md
     artifact_type: markdown_doc

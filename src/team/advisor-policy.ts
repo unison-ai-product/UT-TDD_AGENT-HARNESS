@@ -69,8 +69,8 @@ export interface AdvisorInput {
   contextInjection?: AdapterContextInjection;
 }
 
-/** 相談 effort は Fable / Codex とも middle 固定 (PO 指示 2026-07-08)。 */
-const ADVISOR_EFFORT: ReasoningEffort = "middle";
+/** advisor もモデル別標準 effort に従う。Sol / Fable は low。 */
+const ADVISOR_EFFORT: ReasoningEffort = "low";
 
 type OrchestratorFamily = "sonnet" | "opus" | "other";
 

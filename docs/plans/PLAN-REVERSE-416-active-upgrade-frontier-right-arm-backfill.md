@@ -32,8 +32,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:00:23+09:00"
         evidence_path: tests/backfill-pairing.test.ts
-        output_digest: "sha256:0a2f8aeb712cdf2edb03b35e4a6b7278cdbe5a6b01f3df045ee80b135f1dead4"
-        anchor_commit: 71a023b2c74ca15dbc88c4453ca7c9adb05ca58a
+        output_digest: "sha256:f80c0641ed17082b8b27eba0d623284c2979694663ccdc3bb66c31a1f0b0d4db"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 backprop_scope:
   - layer: L6-function-design
     decision: updated

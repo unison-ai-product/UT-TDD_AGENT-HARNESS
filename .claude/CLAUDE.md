@@ -59,6 +59,15 @@ PLAN requirements:
 - Design / implementation / add-* changes update terminology and L0 glossary
   where relevant.
 - Review evidence is recorded before asking for confirmation gates.
+- New PLANs carry a route certificate (`route_signal` + `route_mode`), and the
+  mode must allow the `kind` (SSoT: `src/schema/route-filing.ts` — e.g.
+  troubleshoot⇔incident, refactor⇔refactor). `kind` = poc / recovery /
+  troubleshoot also requires an `aim` agent slot.
+- **Draft PLANs must not list already-existing files in `generates`.** A draft
+  PLAN whose declared deliverable already exists in the tree trips
+  `merged-plan-status` and `duplicate-artifact-ownership`. Declare only the
+  PLAN doc itself at filing time; the implementing PR updates `generates`
+  together with the confirm (2026-07-28 lesson: PR #167 went red on this).
 
 PLAN claim discipline (errata countermeasure, PLAN-L7-89):
 
@@ -170,6 +179,16 @@ Source-snapshot exploration is not an active Claude Code subagent route. Use
 project-focused agents for repository inspection and treat migration snapshots
 as read-only material.
 
+## Parallel Task Limit
+
+Tasks that do not depend on each other may be submitted in parallel, default
+upper limit **8** concurrent subagent slots (`DEFAULT_MAX_PARALLEL` in
+`src/runtime/agent-slots.ts`, IMP-050). `agent-slots` records fire/release and
+warns when active slots reach this limit; it does not hard-block above it
+(fail-open advisory, not a fail-close gate). This restores the reference that
+`src/runtime/agent-slots.ts` and `docs/design/harness/L6-function-design/agent-slots.md`
+point back to (PLAN-RECOVERY-12, issue #85).
+
 ## Guard Rules
 
 - Escalate before changing authentication, authorization, payments, PII,
@@ -185,6 +204,12 @@ as read-only material.
   marker is **one-shot**: it is consumed (deleted) on the foreign edit it
   authorizes, so a stale marker cannot keep bypassing the guard. The env
   override is human-managed and not consumed.
+- The foreign-edit-override marker is **not scoped to the session that wrote
+  it**: any process reading `.ut-tdd/state/foreign-edit-override` before it is
+  consumed can spend it — it is first-come, first-served across concurrent
+  sessions, not an authorization tied to the writer's own next foreign edit
+  (observed 2026-07-17T01:33:51, a separate session consumed another
+  session's marker; see `.ut-tdd/logs/foreign-edit-overrides.jsonl`).
 - Do not treat `legacy local state/` as active runtime state.
 - Do not write secrets, PII, or credentials into docs, examples, or audit
   evidence.

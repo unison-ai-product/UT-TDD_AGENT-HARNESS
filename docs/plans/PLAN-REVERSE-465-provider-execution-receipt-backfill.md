@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-REVERSE-453-provider-execution-receipt-backfill
-title: "PLAN-REVERSE-453: provider execution capability / terminal receipt design back-fill"
+plan_id: PLAN-REVERSE-465-provider-execution-receipt-backfill
+title: "PLAN-REVERSE-465: provider execution capability / terminal receipt design back-fill"
 kind: reverse
 layer: cross
 workflow_phase: R4
@@ -20,7 +20,7 @@ agent_slots:
   - role: qa
     slot_label: "QA - design/test contract pairing review"
 generates:
-  - artifact_path: docs/plans/PLAN-REVERSE-453-provider-execution-receipt-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-465-provider-execution-receipt-backfill.md
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L4-basic-design/external-if.md
     artifact_type: design_doc
@@ -31,7 +31,7 @@ generates:
   - artifact_path: docs/test-design/harness/L9-system-test-design.md
     artifact_type: test_design
 dependencies:
-  parent: docs/plans/PLAN-L7-453-provider-execution-receipt-contract.md
+  parent: docs/plans/PLAN-L7-465-provider-execution-receipt-contract.md
   requires: []
   references:
     - docs/plans/PLAN-L6-20-runtime-adapter-session-lifecycle.md
@@ -42,11 +42,11 @@ dependencies:
 review_evidence: []
 ---
 
-# PLAN-REVERSE-453: provider execution capability / terminal receipt design back-fill
+# PLAN-REVERSE-465: provider execution capability / terminal receipt design back-fill
 
 ## 状態
 
-`PLAN-L7-453-provider-execution-receipt-contract` の実装観測から、既存provider adapter設計に
+`PLAN-L7-465-provider-execution-receipt-contract` の実装観測から、既存provider adapter設計に
 capability preflight、terminal receipt、process-tree cleanup証明の欠落が判明した。本PLANは
 その差分を実装の既成事実へ追従させるのではなく、L4/L6設計とL7/L9検証契約へR4で引き戻し、
 Forward再合流条件を固定するdraftである。
@@ -69,13 +69,13 @@ Forward再合流条件を固定するdraftである。
 ## Forward再合流
 
 R4差分は `PLAN-L6-20-runtime-adapter-session-lifecycle` を設計祖先とする
-`PLAN-L7-453-provider-execution-receipt-contract` へ再合流する。Forward側の実装完了は、
+`PLAN-L7-465-provider-execution-receipt-contract` へ再合流する。Forward側の実装完了は、
 unit fakeのGreenだけでOS custodyを主張せず、G9 evidenceとResource Kernelのnative検証を
 それぞれのacceptance gateで閉じることを条件とする。
 
 ## 完了条件
 
-- [x] Reverse側parentがForward側 `PLAN-L7-453` を指し、back-fill pairingが双方向契約を満たす。
+- [x] Reverse側parentがForward側 `PLAN-L7-465` を指し、back-fill pairingが双方向契約を満たす。
 - [x] L4/L6設計とL7/L9検証の各差分が対応づけられている。
 - [x] Forward再合流先と設計祖先が明示されている。
 - [ ] クロスレビューと実行証拠を記録し、R4をconfirmする。

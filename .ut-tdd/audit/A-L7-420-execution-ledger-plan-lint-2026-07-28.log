@@ -1,0 +1,6 @@
+command: bun src/cli.ts plan lint
+executed_at: 2026-07-28T13:02:00+09:00
+anchor_input_head: 3c728fad
+exit_code: 0
+output:
+plan-schedule — OK (§工程表 checked=834, §G.4 minimal slice)

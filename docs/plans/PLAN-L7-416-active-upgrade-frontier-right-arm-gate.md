@@ -29,8 +29,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T16:54:00+09:00"
         evidence_path: src/vmodel/lint.ts
-        output_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        anchor_commit: 71a023b2c74ca15dbc88c4453ca7c9adb05ca58a
+        output_digest: "sha256:455422067eb3134e3a561d6908ba6ed41cb0c150aa42523b2449941113b14d14"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: unit_test
         command: "bunx vitest run tests/vmodel-pair.test.ts tests/right-arm-gate-planning.test.ts tests/upgrade-frontier.test.ts tests/plan-lint.test.ts tests/backfill-pairing.test.ts tests/vmodel-source-assets.test.ts"
         runner: bun
@@ -38,8 +38,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:00:23+09:00"
         evidence_path: tests/vmodel-pair.test.ts
-        output_digest: "sha256:0a2f8aeb712cdf2edb03b35e4a6b7278cdbe5a6b01f3df045ee80b135f1dead4"
-        anchor_commit: 71a023b2c74ca15dbc88c4453ca7c9adb05ca58a
+        output_digest: "sha256:83225955f86a1bd7ec7d86d0d1d8fb2e2dd3a74aa682054a832467f76087b1c4"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 agent_slots:
   - role: se
     slot_label: "SE - schedule parser / right-arm analyzer実装"

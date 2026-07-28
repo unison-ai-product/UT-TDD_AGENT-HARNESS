@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-453-provider-execution-receipt-contract
-title: "PLAN-L7-453 (add-impl): provider execution capability / terminal receipt contract"
+plan_id: PLAN-L7-465-provider-execution-receipt-contract
+title: "PLAN-L7-465 (add-impl): provider execution capability / terminal receipt contract"
 kind: add-impl
 layer: L7
 drive: agent
@@ -21,7 +21,7 @@ agent_slots:
   - role: tl
     slot_label: "TL - external boundary and native custody separation review"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-453-provider-execution-receipt-contract.md
+  - artifact_path: docs/plans/PLAN-L7-465-provider-execution-receipt-contract.md
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L4-basic-design/external-if.md
     artifact_type: design_doc
@@ -46,7 +46,7 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
 ---
 
-# PLAN-L7-453 (add-impl): provider execution capability / terminal receipt contract
+# PLAN-L7-465 (add-impl): provider execution capability / terminal receipt contract
 
 ## §0 位置づけ
 
@@ -59,7 +59,7 @@ L6 function contract に追加された意味を独立した L7 資産として�
 偶発的なパス記載で孤児判定だけを回避しない。
 
 既存実装から判明した capability / terminal receipt の設計欠落は
-`PLAN-REVERSE-453-provider-execution-receipt-backfill` がR4で上流へ引き戻す。本PLANは
+`PLAN-REVERSE-465-provider-execution-receipt-backfill` がR4で上流へ引き戻す。本PLANは
 `PLAN-L6-20-runtime-adapter-session-lifecycle` を設計祖先としてForwardへ再合流し、
 `route_signal: feature_addition` / `route_mode: add-feature` の証明書を持つ。
 

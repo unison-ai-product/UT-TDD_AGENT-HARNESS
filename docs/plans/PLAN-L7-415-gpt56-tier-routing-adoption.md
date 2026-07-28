@@ -68,8 +68,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T15:13:23+09:00"
         evidence_path: tests/model-id-ssot-drift.test.ts
-        output_digest: "sha256:8743b1e4f59fe8fe16a8db767b1355e31ef0d4879c0ced7ebe420cffd8341c5f"
-        anchor_commit: 42ff3f0e
+        output_digest: "sha256:9bf4783585dec67b5e1e0d7fd1076b357eb21df13113553fcc2d901e896fa77b"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -77,8 +77,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T15:13:23+09:00"
         evidence_path: src/cli/delegation.ts
-        output_digest: "sha256:8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
-        anchor_commit: 42ff3f0e
+        output_digest: "sha256:4a83173a7156bea097a563452402303bad47844574c9cac980a77d3f5df78bd3"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -86,8 +86,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T15:13:23+09:00"
         evidence_path: src/team/model-policy.ts
-        output_digest: "sha256:246de80b8519745d9f14ed54e846f51c3fe1a7a46ef8e3a5067d8e0d5bb81f9f"
-        anchor_commit: 42ff3f0e
+        output_digest: "sha256:92e0f978042be31d58d61a8bc036d7be68690d76178e90e5abcd07bb9aae078a"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用
