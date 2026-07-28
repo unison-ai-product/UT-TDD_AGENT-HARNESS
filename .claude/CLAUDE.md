@@ -59,6 +59,15 @@ PLAN requirements:
 - Design / implementation / add-* changes update terminology and L0 glossary
   where relevant.
 - Review evidence is recorded before asking for confirmation gates.
+- New PLANs carry a route certificate (`route_signal` + `route_mode`), and the
+  mode must allow the `kind` (SSoT: `src/schema/route-filing.ts` — e.g.
+  troubleshoot⇔incident, refactor⇔refactor). `kind` = poc / recovery /
+  troubleshoot also requires an `aim` agent slot.
+- **Draft PLANs must not list already-existing files in `generates`.** A draft
+  PLAN whose declared deliverable already exists in the tree trips
+  `merged-plan-status` and `duplicate-artifact-ownership`. Declare only the
+  PLAN doc itself at filing time; the implementing PR updates `generates`
+  together with the confirm (2026-07-28 lesson: PR #167 went red on this).
 
 PLAN claim discipline (errata countermeasure, PLAN-L7-89):
 
