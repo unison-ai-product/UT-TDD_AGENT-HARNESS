@@ -100,6 +100,40 @@ V-model artifacts must stay separated:
 - test design: `docs/test-design/`
 - tests: `tests/`
 
+## Rule Placement Convention (ルールをどのファイルに書くか)
+
+**共通ルールは本ファイル (`CLAUDE.md`) のみに書く。** アダプタファイルはランタイム固有
+事項に限る (`.claude/CLAUDE.md` = Claude Code の hook / subagent / tool 呼び出し、
+`AGENTS.md` = Codex CLI 固有の経路と手順)。同じルールを 2 箇所に書けばそこが drift 源に
+なる (2026-07-28 実測: 片側欠落が 5 topic — Parallel Task Limit / foreign-edit override の
+one-shot 消費 / memory add 必須 / doctor singleton / effort ladder。矛盾ではなく欠落であり、
+`rule-drift` はマーカー節しか見ないので機械の視野外だった)。
+
+前提: **`AGENTS.md` の Core Reads は本ファイルを含む** (Codex が共通ルールに到達できる
+ことが規約の成立条件)。既存の重複記述は当面残す — 一部は `rule-drift` の必須マーカーに
+なっており、整理のために gate を壊すのは本末転倒だからである。規約は**新規ルールの置き場所**
+に適用する。
+
+判定に迷ったら「もう一方のランタイムでも成り立つか」で決める。成り立つなら共通 =
+本ファイル。成り立たないならアダプタ固有。
+
+## 定期棚卸し (EOD close-out)
+
+セッション終了時に以下を流す。新規機構は作らず、既存コマンド 1 本ずつで済ませる
+(2026-07-28 実測: open issue 29 件に対し triage 機構は存在せず、`issue triage` 系の記述は
+grep 0 件だった)。
+
+- `gh issue list --state open` — 起票したまま棚卸しされていない issue を数える。
+  harness.db への issue projection 機構化は `PLAN-L7-437` (blocked) の守備範囲であり、
+  凍結中に先回り実装しない。
+- advisor 発火の spot-check (`.claude/CLAUDE.md` §着手前 advisor 合意形成 のコマンド)。
+- 未 push commit と open PR の確認。
+- **harness.db projection の鮮度** (`ut-tdd db status`)。graph (`graph_nodes` /
+  `dependency_edges`) は PLAN 重複や影響範囲の判定入力であり、**古い projection を正本に
+  すると「重複なし」「影響なし」という偽の否定証明を出す**。2026-07-28 実例: PLAN-L6-94 と
+  PLAN-L7-465 の契約重複を機械が拾えなかった真因は検出方式ではなく projection の鮮度で、
+  両 PLAN が `graph_nodes` に存在していなかった (issue #169)。
+
 ## PLAN Filing Rules (both runtimes)
 
 PLAN 起票規律は**両ランタイム共通**であり、片方のアダプタにしか無い状態を作らない
@@ -269,6 +303,26 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   part of the clean Pack artifact set. The command must not commit or push;
   inspect its output and perform any Pack repo commit / push as a separate,
   human-reviewed step.
+
+## Shared Guard Discipline (both runtimes)
+
+配置規約に従い、両ランタイムで成り立つ guard 規律は本節が正本 (2026-07-28 時点で
+片側のアダプタにしか無かった 3 件を集約した)。
+
+- **doctor は singleton** (PLAN-L7-442)。二重起動は exit 2 + holder pid で fail-fast する。
+  exit 2 を見たら**待つ**。retry も別形式 (`bun -e` / `--json` / 直接 `runDoctor`) での
+  再起動もしない (2026-07-16 実害: doctor 16 並行、空きメモリ 31MB)。一部だけ要るなら
+  `--scope` や check 関数の直接呼び出しを使う。
+- **並列 subagent は既定上限 8** (`DEFAULT_MAX_PARALLEL`、`src/runtime/agent-slots.ts`)。
+  `agent-slots` が fire/release を記録し上限到達を警告する (fail-open advisory であって
+  fail-close gate ではない)。
+- **foreign-edit override は one-shot**。`.ut-tdd/state/foreign-edit-override` に非空の理由を
+  書いた場合のみ 1 回通り、その編集で消費 (削除) される。空 marker は通さない (理由なき
+  silent override を作らない)。bypass は `.ut-tdd/logs/foreign-edit-overrides.jsonl` へ監査
+  記録される。marker は**書いたセッションに紐付かない** — 消費前に読んだ任意のプロセスが
+  使えてしまう first-come-first-served であり、実際に別セッションが他セッションの marker を
+  消費した観測がある (2026-07-17T01:33:51)。env の `UT_TDD_ALLOW_FOREIGN_EDIT=1` は
+  human 管理で消費されない。
 
 ## Safety Boundaries
 

@@ -37,6 +37,11 @@ PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 
 For work in this repository, read the repository-owned sources below and follow
 their workflow.
 
+- `CLAUDE.md` - **shared project rules for both runtimes** (rule placement
+  convention, PLAN filing rules, EOD close-out, model/effort routing). Rules that
+  hold for both Codex and Claude live there and are not duplicated here, so this
+  file is not self-sufficient — read it (added 2026-07-28, after measuring that
+  the PLAN filing rules had never reached this adapter).
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` - concept for internal rollout
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` - requirements and acceptance criteria
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` - extraction / cutover plan from the source snapshot
