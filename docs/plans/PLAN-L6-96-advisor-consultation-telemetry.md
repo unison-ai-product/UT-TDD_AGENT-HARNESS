@@ -8,6 +8,7 @@ route_signal: po_change
 route_mode: add-feature
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: draft
+hold_reason: "条件付き保留 (PO 判断 2026-07-28)。運用ルール (.claude/CLAUDE.md) を先に置き、機構化は spot-check の実測が必要性を示した場合のみ着手する。"
 created: 2026-07-28
 updated: 2026-07-28
 backprop_decision: not_required
@@ -36,6 +37,26 @@ review_evidence: []
 ---
 
 # PLAN-L6-96 (add-design): advisor 相談の発火 telemetry と不在検知
+
+## Status: 条件付き保留 (PO 判断 2026-07-28)
+
+**本 PLAN は着手しない。** 先に運用ルールだけを置く (`.claude/CLAUDE.md`
+「着手前 advisor 合意形成」節。Claude 固有ルールのため共有 CLAUDE.md / AGENTS.md には
+置かない)。機構 (telemetry + 不在検知) はルールが守られないと**実測が示した場合にのみ**着手する。
+
+理由: 相談 baseline は 16 発火 / 10 PLAN (841 PLAN 中) であり、機構の実効性が現状を
+上回るという証拠がまだ無い。加えて本 repo は warn が恒久無視される失敗モードを実測済みで
+(`unresolved-join` 621 件 / `stale-runtime-plan-context` 3115 件)、不在検知 warn も同じ死に方を
+する公算がある。**発火ログは既に存在しクエリ可能**なので、ルールのみでも遵守状況は後から
+数えられる — 「気づく手段が無い」ではなく「手段はあるが見ない」状態であり、spot-check の
+運用固定で足りる。
+
+**着手 (機構化) の発火条件** — 次のいずれかを spot-check で観測したとき:
+
+- (a) 対象 kind の直近 20 PLAN が advisor 発火ゼロ
+- (b) override (advisor 推奨と異なる決定) が実測併記なしで複数回発生
+
+以下は、その条件が満たされたときに実装する設計の記録である。
 
 ## 背景 (PO 要求 2026-07-28 と、その場での設計転換)
 

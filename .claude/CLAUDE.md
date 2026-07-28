@@ -104,6 +104,39 @@ Do not make raw `codex exec` or raw `claude` the normal path for UT-TDD work.
 Use UT-TDD wrappers so session lifecycle, handover warnings, and audit evidence
 can be recorded.
 
+## 着手前 advisor 合意形成 (PO ルール 2026-07-28、Claude 固有)
+
+Opus / Sonnet が orchestration を担当するとき、**設計・実装・修正の方式判断は着手前に
+`ut-tdd advisor` で合意形成する**。対象は「trade-off が実在する方式選択」に限る
+(`docs/governance/design-decision-elicitation.md` と同じ線引き。自明な修正・可逆な作業・
+自力で確定できる事実は対象外)。
+
+- 実行: `ut-tdd advisor --decision design --current-model <model> --execute --task "..."`
+  (`--plan <id>` を付けると発火ログが PLAN に紐づく)。技術/設計/トラブルシューティングは
+  `gpt-5.6-sol` 一次、デザイン/UI は `claude-fable-5` 一次 (Model / Effort Routing 節)。
+- **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
+  (2026-07-28 実例: doctor 二重実行の方式判断で、memo 共有テストが 1 件でなく 19 件という
+  実測を差し戻して初回推奨が撤回された)。
+- 採択結果は PLAN の設計判断節へ記録する。推奨と異なる決定 (override) をした場合は、
+  その根拠となる実測 (run URL / テスト名 / 計測値) を併記する。
+
+これは**ルールであって機械強制ではない**。fail-close ゲートは作らない (2026-07-28 判断:
+相談 baseline が 16 発火 / 10 PLAN = 841 PLAN 中であり、いまゲート化すると初日でほぼ全作業が
+止まる。未計測のまま機構を建てない)。
+
+遵守は既存の発火ログで随時 spot-check できる (`ut-tdd advisor` は
+`.ut-tdd/logs/session/advisor-<provider>-<ts>.jsonl` を書き、`projectHookEvents` が
+harness.db の `hook_events` へ投影する。session_id は `advisor-` prefix):
+
+```bash
+# 直近の advisor 発火を PLAN 別に数える (EOD close-out で 1 本流す)
+bun -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0,by={};for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(!l.trim())continue;const o=JSON.parse(l);if(o.event_type==='tool_use'){n++;by[o.plan_id]=(by[o.plan_id]||0)+1}}console.log(n,by)"
+```
+
+**機構化 (telemetry + 不在検知) の起票条件**: spot-check で (a) 対象 kind の直近 20 PLAN が
+advisor 発火ゼロ、または (b) override が実測併記なしで複数回発生、のいずれかを観測したとき。
+それまで `docs/plans/PLAN-L6-96-advisor-consultation-telemetry.md` は条件付き保留とする。
+
 ## Native Tool Invocation
 
 Claude Code tools must be invoked through Claude Code's native tool-use
