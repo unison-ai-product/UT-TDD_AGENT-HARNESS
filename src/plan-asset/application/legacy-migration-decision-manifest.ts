@@ -41,8 +41,6 @@ export const REVIEWED_REKEY_DECISIONS = Object.freeze([
   ["PLAN-L7-420-vmodel-contract-compiler-registry", "PLAN-L7-420"],
   ["PLAN-L7-421-generic-right-arm-doctor-gate", "PLAN-L7-421"],
   ["PLAN-L7-421-test-hygiene-live-tree-fence", "PLAN-L7-421"],
-  ["PLAN-L7-422-feedback-saturation-visibility", "PLAN-L7-422"],
-  ["PLAN-L7-467-repository-document-disposition-closure-gate", "PLAN-L7-467"],
   ["PLAN-L7-423-engine-swap-domain-objects-ports", "PLAN-L7-423"],
   ["PLAN-L7-423-gate-minor-hardening-batch", "PLAN-L7-423"],
   ["PLAN-L7-424-git-hooks-ownership", "PLAN-L7-424"],
