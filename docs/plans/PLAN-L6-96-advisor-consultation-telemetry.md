@@ -53,8 +53,9 @@ review_evidence: []
 
 **着手 (機構化) の発火条件** — 次のいずれかを spot-check で観測したとき:
 
-- (a) 対象 kind の直近 20 PLAN が advisor 発火ゼロ
-- (b) override (advisor 推奨と異なる決定) が実測併記なしで複数回発生
+- (a) 設計判断節に 2 案以上の方式と trade-off を記録した直近 20 PLAN の全てが
+  advisor 発火ゼロ
+- (b) 同じ 20 PLAN 窓で override (advisor 推奨と異なる決定) が実測併記なしに 2 件以上
 
 以下は、その条件が満たされたときに実装する設計の記録である。
 
@@ -109,8 +110,9 @@ receipt binding + plan lint / doctor での fail-close ゲートだったが、P
 ### 3. 不在検知は PLAN-L7-95 invocation fence の同型
 
 「到達可能でテスト済みだが runtime path で一度も発火しない」という absence-blindness の
-検出は本 repo に先例がある (PLAN-L7-95)。今回の「対象 kind の PLAN が advisor 発火ゼロで
-confirm される」も同型であり、**到達可能性ではなく発火事実を数える**検出器パターンを流用する。
+検出は本 repo に先例がある (PLAN-L7-95)。今回の「設計判断節に 2 案以上の方式と trade-off
+を記録した PLAN が advisor 発火ゼロで confirm される」も同型であり、**到達可能性ではなく
+発火事実を数える**検出器パターンを流用する。
 
 ### 4. warn 飢餓を避ける出口条項 (これが無いなら warn-first を導入しない)
 
@@ -127,7 +129,7 @@ confirm される」も同型であり、**到達可能性ではなく発火事�
 
 1. advisor session jsonl の telemetry フィールド追記 (上記 2) の契約。
 2. projection での列昇格 (`hook_events` 拡張 or 専用 projection) の契約。
-3. 不在検知 signal の定義 (対象 kind、判定式、surface 地点 = confirm / merge) の契約。
+3. 不在検知 signal の定義 (上記の対象 PLAN、判定式、surface 地点 = confirm / merge) の契約。
 4. 集計 surface (相談率 / override 率) の契約と、出口条項 (4-b) の明文化。
 
 ## スコープ外
@@ -139,16 +141,17 @@ confirm される」も同型であり、**到達可能性ではなく発火事�
 ## Schedule
 
 - step 1 (serial): telemetry スキーマと不在検知の判定式 freeze (本 PLAN)
-- step 2 (serial): PO 採択 (対象 kind と計測窓の長さは PO 判断)
+- step 2 (serial): PO 採択 (対象 PLAN の意味条件と計測窓 20 件)
 - step 3 (serial): L7 add-impl PLAN + Reverse pairing 起票 → Red から実装
 - step 4 (serial): 計測窓経過後、実測を PO へ提示し fail-close 昇格 / warn 撤去を判断
 
 ## AC
 
 - AC-1: advisor 実行が telemetry フィールド付きで記録され、projection 後に
-  「相談率 (対象 kind の PLAN のうち発火 1 件以上を持つ割合)」を実測クエリできる。
+  「相談率 (設計判断節に 2 案以上の方式と trade-off を記録した PLAN のうち発火 1 件以上を
+  持つ割合)」を実測クエリできる。
   before baseline = **16 発火 / 10 PLAN (841 PLAN 中)** を evidence として引用する。
-- AC-2: 対象 kind の PLAN が advisor 発火ゼロで confirm される事象を検出する負例テストが
+- AC-2: 上記の対象 PLAN が advisor 発火ゼロで confirm される事象を検出する負例テストが
   green (発火事実を数える。到達可能性で代用しない)。
 - AC-3: 不在 warn が蓄積型 feedback list ではなく confirm / merge 地点で surface される
   ことをテストで固定 (warn 飢餓の構造的回避)。

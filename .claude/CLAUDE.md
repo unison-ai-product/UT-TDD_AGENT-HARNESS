@@ -133,8 +133,10 @@ harness.db の `hook_events` へ投影する。session_id は `advisor-` prefix)
 bun -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0,by={};for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(!l.trim())continue;const o=JSON.parse(l);if(o.event_type==='tool_use'){n++;by[o.plan_id]=(by[o.plan_id]||0)+1}}console.log(n,by)"
 ```
 
-**機構化 (telemetry + 不在検知) の起票条件**: spot-check で (a) 対象 kind の直近 20 PLAN が
-advisor 発火ゼロ、または (b) override が実測併記なしで複数回発生、のいずれかを観測したとき。
+**機構化 (telemetry + 不在検知) の起票条件**: 対象は、設計判断節に 2 案以上の方式と
+trade-off を記録した PLAN とする。spot-check で (a) この対象に該当する直近 20 PLAN の
+全てが advisor 発火ゼロ、または (b) 同じ 20 PLAN 窓で override が実測併記なしに 2 件以上、
+のいずれかを観測したとき。
 それまで `docs/plans/PLAN-L6-96-advisor-consultation-telemetry.md` は条件付き保留とする。
 
 ## Native Tool Invocation
