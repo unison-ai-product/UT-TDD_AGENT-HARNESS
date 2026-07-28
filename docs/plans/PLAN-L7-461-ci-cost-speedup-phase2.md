@@ -4,6 +4,8 @@ title: "PLAN-L7-461 (troubleshoot): GitHub CI 高速化 Phase 2 — doctor 二�
 kind: troubleshoot
 layer: L7
 drive: agent
+route_signal: incident
+route_mode: incident
 status: draft
 created: 2026-07-28
 updated: 2026-07-28
@@ -11,6 +13,8 @@ backprop_decision: not_required
 backprop_decision_reason: "Internal harness CI cost re-allocation; does not change the product's external requirement / design / test-design contract. Gate coverage itself is preserved fail-close (required contexts は増える方向のみ)。"
 owner: PM / PO
 agent_slots:
+  - role: aim
+    slot_label: "AIM - shard 境界と doctor 単一実行化方式の設計判断"
   - role: tl
     slot_label: "TL - shard 分割の fail-close 性 (required context 欠落なし) と doctor 単一実行化の等価性レビュー"
   - role: se
@@ -18,18 +22,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-461-ci-cost-speedup-phase2.md
     artifact_type: markdown_doc
-  - artifact_path: .github/workflows/harness-check.yml
-    artifact_type: config
-  - artifact_path: src/lint/github-ci-policy.ts
-    artifact_type: source_module
-  - artifact_path: tests/github-ci-policy.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
-  requires:
-    - docs/plans/PLAN-L7-455-ci-cost-speedup-phase1.md
+  requires: []
   references:
-    - docs/plans/PLAN-L7-221-github-ci-policy.md
+    - docs/plans/PLAN-L7-455-ci-cost-speedup-phase1.md
+    - docs/plans/PLAN-L7-221-github-ci-policy-gate.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
 ---
@@ -37,6 +35,12 @@ review_evidence: []
 # PLAN-L7-461 (troubleshoot): GitHub CI 高速化 Phase 2
 
 GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/109 (残 AC)
+
+注: 実装 deliverable (.github/workflows/harness-check.yml / src/lint/github-ci-policy.ts /
+tests/github-ci-policy.test.ts) は既存ファイルのため draft 段階の generates には載せない
+(merged-plan-status / duplicate-artifact-ownership 対策)。実装 PR で generates を更新し
+confirm と同時に宣言する。前提 PLAN-L7-455 (Phase 1) は PR #112 が merge されるまで
+references 扱い (requires の ready 条件を満たさないため)。
 
 ## 背景 (2026-07-28 実測、run 30261670421 = 直近 main green run)
 
