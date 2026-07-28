@@ -1409,10 +1409,12 @@ registry、receipt欠落・重複・staleをblockedにし、既存relation graph
 graph-snapshot-mismatch|registry-snapshot-mismatch|registry-revision-missing|
 policy-revision-missing|receipt-missing|receipt-duplicate|receipt-stale
 ```
-とする。evidence frameは
-`graph_digest,snapshot_digest,anchor_registry_digest,plan_registry_digest,adr_registry_digest,
+とする。evidence frameは次の順とする。
+```text
+graph_digest,snapshot_digest,anchor_registry_digest,plan_registry_digest,adr_registry_digest,
 spec_registry_digest,test_registry_digest,anchor_registry_revision,authority_policy_revision,
-applicability_policy_revision,subject_identity,subject_detail,reason_code`の順とする。
+applicability_policy_revision,subject_identity,subject_detail,reason_code
+```
 `subject_detail`は`receipt-duplicate`だけ、同一receipt owner配下の全`receiptDigest`を
 unsigned UTF-8順でsortし完全重複も保持したlength-prefixed multiset frame、その他は空文字とする。finding IDは
 `doc-reference-analysis-input-error,subject_identity,evidence_digest`から導出し、
@@ -1472,9 +1474,12 @@ DbC:
   別snapshotのblobから補完しない。callerが組み立てた同形DTOをsnapshot/blob authorityへ昇格させず、
   reader draftに`referenceId`、source/revision/evidence identityの自己申告を許さない。authoring docs、
   ledger、Git indexへの書込みその他の外部副作用を持たない。
-- `analyzeDocumentReferences(input: { snapshot: RepositoryDocsSnapshot; graph: DocumentReferenceGraph;
-  registries: DocumentReferenceRegistrySet; anchorRegistryRevision: string; authorityPolicyRevision: string;
-  applicabilityPolicyRevision: string }): DocumentReferenceAnalysisResult`
+- 参照解析関数の契約は次のとおり。
+  ```ts
+  analyzeDocumentReferences(input: { snapshot: RepositoryDocsSnapshot; graph: DocumentReferenceGraph;
+    registries: DocumentReferenceRegistrySet; anchorRegistryRevision: string; authorityPolicyRevision: string;
+    applicabilityPolicyRevision: string }): DocumentReferenceAnalysisResult
+  ```
   pre: `graph`は成功した`readDocumentReferences`が生成したGreen graphを名乗る候補であり、
   analyzerは同一`input.snapshot.snapshotDigest`への束縛と全snapshot memberのparse receipt exactly onceを
   authorityへ昇格する前に再検証する。`registries`も同snapshotへ束縛され、
