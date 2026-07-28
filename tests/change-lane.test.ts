@@ -9,6 +9,7 @@ import {
   resolveChangeDiffRange,
   runChangeLaneClassification,
 } from "../src/github/change-lane";
+import { workspaceRead } from "./support/workspace-roots";
 
 describe("change-lane classification (PLAN-L7-455)", () => {
   describe("isDocSafeChangePath", () => {
@@ -218,8 +219,19 @@ describe("change-lane classification (PLAN-L7-455)", () => {
     const MARKER = "doc-safe allowlist (SSoT: src/github/change-lane.ts DOC_LANE_PREFIXES):";
 
     function headerAllowlistPrefixes(): string[] {
+      // live root ではなく detached HEAD snapshot を読む (U-TESTHYGIENE-015 /
+      // test-repository-isolation の規律)。
       const workflow = readFileSync(
-        join(import.meta.dirname, "..", ".github", "workflows", "harness-check.yml"),
+        join(
+          workspaceRead({
+            id: "change-lane-workflow-header",
+            mode: "head_snapshot",
+            reason: "workflow header の doc-safe allowlist を実装と突き合わせるため",
+          }),
+          ".github",
+          "workflows",
+          "harness-check.yml",
+        ),
         "utf8",
       );
       const lines = workflow.split(/\r?\n/);
