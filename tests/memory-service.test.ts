@@ -290,6 +290,8 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       "state-db/projection-writer.ts",
       "lint/secret-scan.ts",
     ]);
+    // 本文を読む面 (service 経由が必須) と、ディレクトリ名を走査対象として持つだけの面を分ける。
+    // 後者を無条件に許すと境界が緩むので、本文 parse をしないことを別 assertion で固定する。
     const ALLOWED_DIR_ACCESS = new Set([
       "memory/index.ts",
       "memory/service.ts",
@@ -298,8 +300,18 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       "runtime/session-log.ts",
       "state-db/index.ts",
     ]);
+    const SCAN_ONLY_DIR_ACCESS = new Set(["lint/memory-sync.ts"]);
     expect(tableLiteral.filter((rel) => !ALLOWED_TABLE_ACCESS.has(rel))).toEqual([]);
-    expect(dirLiteral.filter((rel) => !ALLOWED_DIR_ACCESS.has(rel))).toEqual([]);
+    expect(
+      dirLiteral.filter((rel) => !ALLOWED_DIR_ACCESS.has(rel) && !SCAN_ONLY_DIR_ACCESS.has(rel)),
+    ).toEqual([]);
+    // scan-only の面は「git に path を尋ねるだけ」であること。本文を読み始めたら赤くする。
+    for (const rel of SCAN_ONLY_DIR_ACCESS) {
+      if (!dirLiteral.includes(rel)) continue;
+      const text = readFileSync(join(root, rel), "utf8");
+      expect(text, `${rel} must not read memory content directly`).not.toContain("readFileSync");
+      expect(text, `${rel} must not parse memory content directly`).not.toContain("parseMemoryFile");
+    }
     // 読み手 (CLI / digest) が格納面へ戻ることを個別に禁止する。
     expect(tableLiteral).not.toContain("cli.ts");
     expect(tableLiteral).not.toContain("handover/session-start-digest.ts");
