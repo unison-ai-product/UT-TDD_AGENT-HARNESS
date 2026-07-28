@@ -777,3 +777,22 @@ version 26以前からの`migrate(db)`は既存rowを削除せずregistry DDLで
 
 `issue_queue`は互換read modelに降格し、新規episodeの正本にしない。移行時は既存dry-run rowをorigin不明の
 episodeへ自動昇格せず、明示manifestがあるものだけimportし、残りは`legacy_unbound` findingとして保持する。
+
+## §12 Resource Kernel companion bundle永続境界（Issue #152）
+
+D0-Rはbundle activation DBを新設せず、Node generation/activationの物理正本をD0-Nから奪わない。
+永続化する論理factは次の一件だけである。
+
+```text
+AcceptedCompanionBundleFact {
+  bundle_sequence,
+  manifest_digest,
+  trust_decision_digest,
+  d0n_generation_receipt_digest
+}
+```
+
+adapterは直前accepted factとのcompare-and-advanceをdurableに行い、sequence減少、同sequence別payload、
+partial/corrupt factをfail-closeする。rollbackでも旧factへ戻さず、review・再署名済みの新sequence factをdurable化する。
+D0はtable名、SQLite利用、registry schema、clock anchor、rotation/revocation storeを固定しない。
+具体PKI/time/storageとcrash recovery方式はinstaller/release後続PLANで選定し、その実装が上記単調性を満たすことを検証する。

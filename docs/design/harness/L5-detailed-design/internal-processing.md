@@ -940,3 +940,90 @@ head digest/versionとbackup digestを別receiptへ封印する。recoveryはtru
 schema version、head chain全検証後のatomic file replaceだけを許し、projection sourceからの復元を拒否する。
 migrationはbackup完了後の`BEGIN IMMEDIATE`内でadditive DDL+全chain検証+`user_version`更新をatomic実行し、
 失敗時rollback、未知newer version/downgradeをfail-closeする。
+
+## 付録 D: Resource Kernelワイヤ・カストディ内部処理 (PLAN-L5-25)
+
+本節は`PLAN-L4-32`をL5へ降下し、`L8-integration-test-design.md`の
+`IT-RGK-PHYS-001..042`と対を成す。Node control planeはdomain/policy/journal/receipt sealを所有し、
+Rust companionはstrict wireとprivileged OS custody factだけを所有する。両者に同じpolicy reducerや
+journalを置かない。新規Bun runtime/API/test pathは永久禁止する。
+
+### D.1 厳格ワイヤ処理
+
+Node `CustodyClient`は署名済bundleから絶対pathのcompanionを選び、shellを介さないargv、bounded stdin/stdout、
+absolute deadlineで起動する。frameは4-byte big-endian length + UTF-8 JSON一件で、unknown/missing/duplicate field、
+unknown enum、oversize、partial frame、末尾byteを拒否する。stdoutはprotocol専用、diagnosticはbounded stderrへ分離する。
+request/responseは`protocol_version + request_id + expected_bundle_digest`を照合し、別requestの応答を合成しない。
+wire commandはlauncherを持たない`ProbeRequest`、sealed stage token必須で
+`create_custody | spawn_attached | resume`だけを所有する`ExecuteRequest`、
+native recovery factだけを返す`RecoveryObservationCommand(observe_recovery_fact | prove_boot_fence)`、
+`observe | terminate_tree | prove_empty | release_custody`だけを所有する`RecoveryCustodyCommand`、
+control processだけを終了する`ControlCommand.shutdown_companion`へ分離する。
+`observe/prove_empty/release_custody`は両cleanup lease、`terminate_tree`はsame-boot cleanup leaseだけを許可する。
+TypeScript内部`recoverAuthority`だけがsame/cross-boot observationをjournal/current epochと照合してCAS/lease/traceをcommitする。
+`create_custody`が返すexecution leaseは`spawn_attached | resume`でもstage tokenと同時に検証する。
+Recovery variantはlauncher、managed-root生成、attach、resumeの型参照を持たず、`release_custody`は
+empty/reap proof後だけ許可する。tokenはcreate/spawn/resume別のclosed stage unionとし、
+admission chain、operation、直前durable fact digestを束縛する。各stageを一回消費し、流用、skip/reorder/replayを拒否する。
+tokenはversioned canonical payloadを
+`AdmissionTokenAuthenticatorPort`で認証する。leaseもcustody/executor identity、boot ID、effective monotonic deadline、
+lease nonce、execution/spec identity、termination/recovery policyを`AuthorityLeaseAuthenticatorPort`で認証する。
+token/lease/recovery observationへbundle digestも束縛する。authority再起動はRust/executor認証済みnative observationを
+TypeScriptがjournal/current epochと照合してepochをCAS更新し、
+同bundle/deadline/policyの新leaseだけを発行する。
+wall deadlineは一度だけmonotonicへ縮小変換する。
+probe factをjournalへappendしtokenへ結ぶまでmanaged rootを生成せず、responseは`control_process_created`と
+`managed_root_created`を別identity/phaseで返す。空required capabilityやhandshake成功をexecute許可にしない。
+
+### D.2 カストディ・ライフサイクル
+
+正常辺は`absent → prepared → attached_suspended → running → terminating → empty_proven → released`とする。
+cleanup辺として`prepared → terminating`と`attached_suspended → terminating`も合法にし、root未生成failure、
+handoff失敗、pre-start deadline/cancelを必ずempty/reap/releaseへ収束させる。これ以外のskip/backward辺は拒否する。
+authority modeは`live → cleanup_only → revoked`、boot変更時は`live | cleanup_only → boot_fenced → revoked`で閉じ、
+deadline/cancel/abort/正常root exit/明示terminate intentのCASと同じtransactionで新nonce/authenticatorのcleanup leaseを発行し、
+execution capabilityを除去した後にliveへ戻さない。cross-boot fenceは旧boot workloadの実行不能だけを証明し、
+boot-fenced cleanup lease発行後にempty/reapを証明する。`empty_proven → released`はdeterministic `release_id`を先にcommitし、
+Rust `ensureAbsent(release_id)`でraw OS identityとcreate fact由来の非再利用`custody_generation`を含む
+同一custody identityのnative absenceへ冪等収束させる。raw identityが別generationへ再利用済みなら削除せずquarantineする。
+`CustodyAbsentFact`は削除因果ではなく終状態だけを証明し、存在→不在effect最大1、invocation再試行可、Rust durable marker/DB 0とする。
+absence fact commit、deadline executor disarm、authority revoke+released atomic commitを順に行う再開可能transactionとする。
+Windowsはsuspended create後にJob assignが成功するまでresumeしない。Linuxはuser code開始時点からtarget cgroupに属し、
+事後attachをhard custodyとして受理しない。root exitはterminalではなく、Job emptyまたは`populated=0`とreap証拠が揃って
+初めて`empty_proven`となる。client/launcher crash後もcustodian/brokerがdeadlineとtree custodyを保持する。
+custody authorityはepoch/attempt/nonce/deadline/policy digestをdurable化し、OS custodyへのatomic handoff commit前は
+resume/execを禁止する。WindowsはJob handle境界、Linuxはbroker外durable deadline ownerがNode/companion切断後も
+terminate→empty/reapを遂行する。Linux ownerはmanaged root開始前にarmし、broker+通常recovery supervisorのdual crash後も
+期限内`cgroup.kill`→bounded recovery→`populated=0`・zombie 0・managed orphan 0まで閉じる。
+ownerを強制不能なら開始前拒否し、欠測findingや`custody_failure`だけで既存workloadの生存を代替しない。
+
+### D.3 ポート/障害境界
+
+Rust portは`probe/createCustody/spawnAttached/resume/observe/terminateTree/proveEmpty/ensureAbsent/
+proveBootFence/shutdownCompanion`を提供し、strict schema/authenticator/bindingを検証してOS/native observation factだけを返す。
+供給済みeffective deadlineを生成/attach/resumeへ強制するが、deadline導出、authority mode、CAS、lease発行、journalを所有しない。
+TypeScript `CustodyAuthorityPort`が元のwall recovery deadlineと新bootのwall/monotonic同時観測から非延長cleanup上限を導出し、
+Rustのboot fence factとjournal/current epochをsemantic照合してboot-fenced cleanup leaseへCAS移管する。
+recovery deadline超過のoverdue/escalationと新規admission遮断もTypeScriptが記録し、cleanup authorityは失効させない。
+stage token消費とpending-dispatch recordを同一transactionで閉じる。request/token/idempotency/request digestを
+pending→indeterminate→reconciled→resultへ継承し、全digest一致時だけnative fact reconcile又は同じresultへ進む。
+新request ID/別payload/record欠測はreplay拒否する。
+side effect 0を独立証明できたpendingだけ同じlogical commandを継続し、response lossは実phase確定後に再応答する。
+Nodeはfactをappend-only journalへ保存してterminal receiptを封印する。bundle/protocolの静的不一致はcontrol process起動前、
+unsupported・権限不足・probe不一致はmanaged root生成前にfail-closeし、Node直spawn、Bun経路、PID polling、soft limitへfallbackしない。
+companion crash、client crash、SCM/broker crash、pipe切断、journal commit失敗を独立に注入できなければL5 freeze未達とする。
+
+### D.4 バンドル/ロールバック
+
+target別companion binary、versioned protocol descriptor、SBOM、manifest署名、D0-N generation receipt digestだけを
+companion bundleへ固定する。Node runtime、Node core、generation artifact、activation markerはD0-Nの所有であり、
+D0-R bundleへ複製しない。実行時download、PATH探索、未検証companionへの差替えを禁止する。
+
+`TrustDecisionPort`はbundle外のversioned installer/release policyでcanonical manifestを判定し、
+decision digestを返す。TS側は`bundle_sequence + manifest_digest + trust_decision_digest +
+d0n_generation_receipt_digest`のaccepted factをdurableにcompare-and-advanceし、floor未満、同sequence別payload、
+port欠測をfail-closeする。SQLite、PKI、rotation/revocation、secure clock、re-anchorの物理方式はD0では固定しない。
+
+旧componentへ戻す場合も旧manifestは再利用しない。現在floorより大きい新sequenceで、旧componentと現在互換な
+D0-N receiptを再review・再署名し、通常のL8/L9 oracleを再通過したmanifestだけを受理する。
+受理不能なら旧direct-spawnへ戻さず利用停止する。

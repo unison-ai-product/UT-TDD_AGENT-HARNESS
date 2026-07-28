@@ -1785,3 +1785,122 @@ cutover 3 functionsは`src/schema/cutover-transition.ts`→`src/runtime/cutover-
 test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する。正式IDは上記同commit昇格条件を
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust
 companionのunit oracleは本節に含めない。
+
+## PLAN-L7-466 Resource Kernel native companion oracle (2026-07-22)
+
+設計正本は`PLAN-L4-32`、ADR-009、実装PLANは`PLAN-L7-466`とする。ここでの静的oracleは
+native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS job・aggregateの縮退を検出する。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-RGK-NATIVE-001` | protocol scaffold | workspace/manifest/libを読取 | version 1のrequest/response DTOとJSON依存が存在 |
+| `U-RGK-NATIVE-002` | unsupported fail-close | native API未実装adapter | capabilityを広告せず、managed workload生成前に拒否 |
+| `U-RGK-NATIVE-003` | native CI custody | pin、Linux/Windows Cargo job、aggregate needs/resultを各欠落・Bunへ置換 | Rust `1.97.1`、両OSのfmt/clippy/test、review済みlockfile、4脚AND以外を拒否 |
+| `U-RGK-NATIVE-004` | binary command admission | binaryへ空required capability、probe、token無しexecuteを投入 | probeはlauncher call 0、executeは`managed_root_created=false`で拒否。handshake成功をexecution successにしない |
+
+`U-RGK-NATIVE-003`がGreenでもCargo compile/testの成功を意味しない。`Cargo.lock`正規生成後に
+同一commitの実Linux/Windows jobをGreenにし、そのURLをL9 evidenceへ固定して初めてnative CI成立とする。
+
+## PLAN-L6-92 Resource Kernel function contract oracle (2026-07-22)
+
+| ID | fixture / mutation | expected |
+|---|---|---|
+| `U-RGK-WIRE-001` | valid frame round-trip property | decode(encode(x))がcanonical x、同一xは同一digest |
+| `U-RGK-WIRE-002` | length 0/上限+1/partial/trailing | decoderはtyped `PreDispatchWireFault`、Node Kernel境界でexactly once `protocol_failure`。validated request ID前のwire response 0、launcher/custody side effect 0 |
+| `U-RGK-WIRE-003` | invalid UTF-8/JSON、duplicate/unknown/missing field | 全変異を拒否、launcher call 0 |
+| `U-RGK-WIRE-004` | unknown command/enum/version | fail-closeし既知値へ丸めない |
+| `U-RGK-WIRE-005` | mutating request書込み前/途中/完了後・response前後でEOF | request decode前だけside effect 0 protocol failure。post-dispatchは`PostDispatchResponseFault→indeterminate`、fact確定前terminal seal 0 |
+| `U-RGK-WIRE-010` | dispatch後responseのrequest ID/version/bundle digest mismatch | `PostDispatchResponseFault→indeterminate`として別requestへ合成せず、actual fact確定前terminal seal 0 |
+| `U-RGK-WIRE-006` | protocol stdoutへlog混入 | trailing byteとして拒否、stderrだけdiagnostic許可 |
+| `U-RGK-WIRE-007` | object key/order/number表現のproperty corpus | canonical encodeがlocale/order非依存 |
+| `U-RGK-WIRE-008` | frame上限ちょうどと多byte UTF-8境界 | byte lengthを正しくprefixし切断しない |
+| `U-RGK-WIRE-009` |同一DTOを反復encode | byte列・schema digestが決定論的一致 |
+| `U-RGK-ERROR-001` | error kind×process phase全積 | 合法組合せだけconstruct可能、N/Aと欠測を区別 |
+| `U-RGK-ERROR-002` | unknown native code/raw secret/path | closed failureへfail-closeし機密をredact |
+| `U-RGK-ERROR-003` | NotCreatedへPID/started_atを注入 | phase contradictionを拒否 |
+| `U-RGK-ERROR-004` | CreatedNotStartedでcleanup proof欠落 | terminal errorを構築しない |
+| `U-RGK-ERROR-005` | Started budget errorでapplied/observed欠落 | 欠測を要求値で補完せず拒否 |
+| `U-RGK-ERROR-006` | orphan factをprocess failureへ変換するmutation | `orphan_detected`を保持しsuccess 0 |
+| `U-RGK-ERROR-007` | native error union exhaustive switchのvariant追加 | compile/runtime exhaustive guardがRed |
+| `U-RGK-ERROR-008` | protocol/bundle/pre-root failureとcustody prepared後root未生成をreceiptへproject | RootNotCreatedへ各exit kindをlossless保存。prepared caseはcustody identity+empty/reap/release proof必須、root PID N/A |
+| `U-RGK-ERROR-009` | suspended root作成後、start前にdeadline/cancel | RootCreatedNotStartedへ原因、terminate/reap、custody、root-absent proofを保存しstarted_at N/A |
+| `U-RGK-CAP-001` | required capabilityを一つずつ欠落 | 各case managed workload生成前`capability_failure` |
+| `U-RGK-CAP-002` | OS名一致だがprobe不足 | OS名推測せず拒否 |
+| `U-RGK-CAP-003` | stale/別bundle probe | expected bundle digest不一致で拒否 |
+| `U-RGK-CAP-004` | soft capabilityをhard requiredへ代用 | selection 0、missing集合をlossless保存 |
+| `U-RGK-CAP-005` | verified control processからprobeをrecord | `control_process_created=true`とidentity、probe digestをappendしmanaged root 0 |
+| `U-RGK-CAP-006` | unverified/stale control identityのprobe | journal delta 0、admission token生成0 |
+| `U-RGK-CAP-007` | recorded probeとrequired集合完全一致、custody nonce未予約/予約済み | 未予約はtoken 0。予約済みはadmission chainへ束縛したcreate stage tokenを一つ生成 |
+| `U-RGK-CAP-008` | 空required、probe欠測/差替え、期限切れ | token生成0、`managed_root_created=false` |
+| `U-RGK-CAP-009` | token無し、またはtokenのattempt/nonce/bundle/probe/deadlineを各変異したExecuteの`create_custody | spawn_attached | resume` | 全variantを拒否しcustody/launcher call 0、別attemptへのside effect 0 |
+| `U-RGK-CAP-010` | leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/issuer/authenticatorを各変異 | 全不正leaseでattach/resume 0。authentic cleanup leaseのterminate/prove-emptyはtoken期限後も可能 |
+| `U-RGK-CAP-011` | canonical token field、issuer key/version、authenticator、operation、token nonceを各変異し、同nonce別payload/replayを投入 | 認証・nonce・payload変異はverify前side effect 0。4 digest全一致だけCAP-017のstate別retry reducerへ委譲し、別operation/new request replay 0 |
+| `U-RGK-CAP-012` | issued/deadline/budget不一致、許容skew超過、wall前進/後退、process restart/boot ID変更 | effective monotonic deadlineは初回値から延長0。曖昧/boot変更はexpireしkill要求、managed root生成0 |
+| `U-RGK-CAP-013` | create→spawn→resume正系列 | 3種類のtoken nonceとpredecessor fact digestが同じadmission chainで連鎖し、各一回消費 |
+| `U-RGK-CAP-014` | create tokenをspawn/resumeへ流用、stage skip/reorder | decode又はdispatch前拒否、custody/root delta 0 |
+| `U-RGK-CAP-015` | create fact未commitでspawn token発行 | token 0、launcher call 0 |
+| `U-RGK-CAP-016` | attached/handoff fact未commitでresume token発行 | token 0、user instruction 0 |
+| `U-RGK-CAP-017` | stage token消費transaction前後、pending、indeterminate、reconciled、result後に4 digestとactual phase/fact digestを各変異して再送 | 消費+pendingをatomic commitし全stateへrequest digest継承。reconciled後は全digest一致時だけnative再実行0でresult commit。pending/indeterminateのfact reconcile、side effect 0時継続、resultの同応答を許可し、変異/record欠測は拒否 |
+| `U-RGK-CAP-018` | cancel/abort後又は別chainでcustody nonce再利用 | token/create 0、予約はtombstoneのまま |
+| `U-RGK-LIFE-001` |合法遷移全辺 | sequenceを保ち唯一の次stateへreduce |
+| `U-RGK-LIFE-002` | resume-before-attach/release-before-empty/root-exit terminal | 全不正遷移を拒否 |
+| `U-RGK-LIFE-014` | prepared/attached_suspendedでfailure/deadline/cancel | terminating→empty_proven→releasedへ収束し、root未生成又はpre-start proofを保持 |
+| `U-RGK-LIFE-003` | sequence gap/重複別payload/attempt・nonce不一致 | state delta 0、closed finding |
+| `U-RGK-LIFE-004` | 同sequence同payload replay | 冪等に同state、event増殖0 |
+| `U-RGK-LIFE-005` | terminate/cancel/deadline同時入力 | 最初のdurable causeを維持しemptyへ収束 |
+| `U-RGK-LIFE-006` | terminal後fact | state/receipt delta 0、closed violation |
+| `U-RGK-LIFE-007` | client再接続時の同一/別nonce | 同一だけreconcile、別attemptを操作しない |
+| `U-RGK-LIFE-008` | running/terminating/empty_proven各stateでrelease_custody | running/terminatingは拒否しexecutor/authority維持。empty/reap fact commit後だけreleased |
+| `U-RGK-LIFE-012` | lifecycle reducerへOS/journal side effect spy | pure reduction以外のcall 0 |
+| `U-RGK-LIFE-009` | authority handoff commit前にresume/exec | illegal transition、managed user instruction 0 |
+| `U-RGK-LIFE-010` | authority再起動後にold epoch/別nonce command | state delta 0、別attempt操作0 |
+| `U-RGK-LIFE-011` | Linux authority+supervisor dual crash | broker外deadline ownerが期限内killを発行し、bounded recovery後にreap/orphan 0。ownerをarm不能なら開始前拒否し、欠測findingだけで代替しない |
+| `U-RGK-LIFE-013` | native recovery observationとjournal/current epochの各bindingを変異しTS recoverAuthorityをCAS競合 | Rustはnative fact以外delta 0。TSだけがvalid一件をepoch+1 cleanup lease+3 trace eventへatomic commit、敗者delta 0、生成/resume 0 |
+| `U-RGK-LIFE-015` | effective deadline/cancel/abort/normal-root-exit/terminate-intentとauthority modeのCAS競合 | winnerだけlive→cleanup_onlyと新nonce/authenticatorのcleanup leaseを同時commit。execution capabilityを不可逆除去し、敗者lease/live復帰0 |
+| `U-RGK-LIFE-016` | effective deadline後の各operation | spawn/resume 0、observe/terminate/prove/releaseはauthentic cleanup leaseで有効 |
+| `U-RGK-LIFE-017` | recovery deadline超過 | overdue findingとadmission遮断を出しつつterminate/prove/releaseを継続 |
+| `U-RGK-LIFE-018` | same-boot native observationをTS recoverAuthorityでCAS競合 | winnerだけepoch+1 cleanup lease+trace、Rust CAS/lease/trace 0、生成/attach/resume能力0 |
+| `U-RGK-LIFE-019` | cross-boot fence observationのCAS競合/replay→cross-boot empty proof | TS winnerだけepoch+1 boot-fenced lease+trace、Rust/敗者/replay delta 0。emptyを先取りせずleaseでempty/reap後release |
+| `U-RGK-LIFE-020` | cross-boot observation欠測/不整合 | quarantine/admission block維持、lease 0 |
+| `U-RGK-LIFE-021` | authority mode reducerへ全from/to直積 | 合法辺`live→cleanup_only`、`live→boot_fenced`、`cleanup_only→boot_fenced`、`cleanup_only→revoked`、`boot_fenced→revoked`だけを受理。`revoked→*`、`boot_fenced→live/cleanup_only`、`cleanup_only→live`、self/skipをstate delta 0で拒否 |
+| `U-RGK-LIFE-022` | 正常root exit→descendant empty/reap→release | root exit時にcleanup leaseを発行し、root exit単独をterminalにせずempty/reap後だけrevoked/releasedへ到達 |
+| `U-RGK-PORT-001` | Windows assign failure | resume 0、created-not-started cleanup proof必須 |
+| `U-RGK-PORT-002` | Linux事後attach adapter | hard custody capabilityをadvertiseせずlaunch 0 |
+| `U-RGK-PORT-003` | empty proof欠落mutation | success/receipt sealへ進まない |
+| `U-RGK-PORT-004` | direct spawn/PID polling/soft fallback mutation | 全mutation survivor 0 |
+| `U-RGK-PORT-005` | deadline超過を各OS call前後へ注入 | 超過後のlaunch/resume 0、既存custodyをcleanup |
+| `U-RGK-PORT-006` | terminate→proveEmptyの呼出順を反転 | illegal transitionで拒否 |
+| `U-RGK-PORT-007` | root exit後にdescendant残存 | empty proof false、return success 0 |
+| `U-RGK-PORT-008` | Windows PID再利用fixture | Job identityで別processを誤killしない |
+| `U-RGK-PORT-009` | Linux cgroup identity再作成fixture | nonce/cgroup identity不一致を拒否 |
+| `U-RGK-PORT-010` | unsupported port | capability空、全launch/terminate call 0 |
+| `U-RGK-PORT-011` | Probe commandへlauncher spyを注入 | launcher参照不能またはcall 0、probe factだけ返す |
+| `U-RGK-PORT-012` | Execute commandへtoken無し/空required | `managed_root_created=false`、custody作成・launcher call 0 |
+| `U-RGK-PORT-013` | control processだけ起動済みのphase/error全積 | control/workload identityを別保存し、単一`process_created`へ縮退しない |
+| `U-RGK-PORT-014` | empty/reap fact commit前のrelease_custody | platform release call 0 |
+| `U-RGK-PORT-015` | release→fact commit→disarm→revoke+released atomic commit→terminal sealの各barrierでcrash/reorder | disarmまでcleanup authority維持。journal済み段から再開し二重release・revoke後未完操作・早期seal 0。順序反転mutationはRed |
+| `U-RGK-PORT-016` | active custody/pending response/未解決pending-dispatch/indeterminate/reconciled-without-result/未flush outboxありでshutdown_companion | control shutdown 0、custody delta 0 |
+| `U-RGK-PORT-017` | 全custody released後のshutdown_companion | control processだけ終了、custody/authority delta 0 |
+| `U-RGK-PORT-018` | release crash retryとraw OS identityの別custody_generation再利用を競合 | 同generationはensureAbsentでabsenceへ収束。別generationは削除0、identity_reused fact+quarantine。存在→不在effect最大1、Rust marker/DB 0 |
+| `U-RGK-WIRE-011` | same-boot/cross-boot recovery observation discriminant混同 | decode拒否、Rust/TS epoch delta 0 |
+| `U-RGK-WIRE-012` | boot-fenced leaseへspawn/resume/old-PID操作field注入 | strict decode拒否、native call 0 |
+| `U-RGK-WIRE-013` | execution/cleanup/boot-fenced leaseの必須field欠落、別variant field、authority_mode差替え | canonical preimage生成/strict decode 0。各正規variantだけauthenticator検証へ到達 |
+| `U-RGK-WIRE-014` | execution/cleanup/boot-fenced lease×全operation直積 | executionはspawn/resume、cleanupはobserve/terminate/prove/release、boot-fencedはobserve/prove/releaseだけ受理。特にboot-fenced terminate_treeと全variant外operationはnative call 0 |
+| `U-RGK-WIRE-015` | token/3 lease/same・cross observationのexact fieldとsigner/verifier ownerを固定し全field mutation | Rust native signerはpinned bundle keyだけ、TS verifierはBundleTrustPort trust inputだけを使用。authenticator以外の変異、unknown/別bundle key、variant field混同をCAS前拒否 |
+| `U-RGK-WIRE-016` | 同じinvalid framing/UTF-8/JSON/schema/trailing corpusをrequest decode前とmutating response decode後へ投入 | 前者だけPreDispatchWireFault+side effect 0。後者は全てPostDispatchResponseFault→indeterminate、terminal seal 0 |
+| `U-RGK-BUNDLE-001` | digest/signature/schema/target/SBOMを各変異 | verified handleを生成しない |
+| `U-RGK-BUNDLE-002` | runtime download/PATH探索/片側rollback mutation | 全てfail-close |
+| `U-RGK-BUNDLE-003` | Rustへpolicy/journal/admission/receipt判断を追加 | responsibility-overlap findingでRed |
+| `U-RGK-BUNDLE-007` | Rust portとTypeScript CustodyAuthorityPortへDB/CAS/lease/trace/native fact spyを注入 | Rustはstrict schema/authenticator/binding+native observation factだけでDB/CAS/journal/lease/trace call 0。TSはjournal/current epoch semantic照合→CAS→lease issue/reissue→trace appendを一transactionで1回 |
+| `U-RGK-BUNDLE-004` | manifestのcompanion/protocol/D0-N generation receiptを一要素だけ旧値へ更新 | bundle identity不一致で拒否 |
+| `U-RGK-BUNDLE-005` | 現在floorより厳密に大きいsequenceの新revisionとして再署名したrollback manifest | companion/protocol/D0-N receiptを同時pinし通常のtrust/target検証要求を出す。同sequenceは新規activation 0 |
+| `U-RGK-BUNDLE-006` | Bun binary/API/lockfileを新bundleへ追加 | permanent-ban findingでRed |
+| `U-RGK-TRUST-001` | bundle同梱key、未review signer、署名差替え | `BundleTrustPort`が拒否しverified handle 0 |
+| `U-RGK-TRUST-002` | manifestのbundle revision/component digest/schema/targetを各置換 | binding不一致で拒否 |
+| `U-RGK-TRUST-003` | floor未満の旧manifestを再activation | 署名が正しくても拒否しcurrent不変 |
+| `U-RGK-TRUST-004` | `F-1`、`F+同digest`、`F+別digest`、`F+1 valid`を同じcurrent floorへ投入 | `F-1`はstale、等値同digestはreplay、等値別digestはequivocationとしてactivation/advance 0。`F+1`だけ通常検証後にatomic compare-and-advance候補 |
+| `U-RGK-TRUST-005` | trust/activation portがmissing、unknown、failure | PATH探索、download、旧direct spawnへfallbackせず利用停止 |
+| `U-RGK-TRUST-006` | D0実装へrotation、signed clock、re-anchor、物理activation logを直書き | deferred ownership違反としてRed |
+
+mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
+このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。

@@ -21,7 +21,7 @@ updated: 2026-07-10
 
 > **layer (作成層 = V-pair key)**: L5 (詳細設計) / **executed_at_layer (実施層)**: L8 (結合テスト) / **artifact**: ④ テスト設計 (V-model 右、② L5 詳細設計 全 sub-doc と対)
 > **pair (V-model L5↔L8)**: `docs/design/harness/L5-detailed-design/{physical-data,module-decomposition,internal-processing,if-detail}.md` 4 sub-doc 全体 ↔ 本書 1 doc
-> **status**: confirmed (L5↔L8 pair freeze。§5 が全 IT-* に GWT 粒度の confirmed IT case 設計を提供)
+> **status**: confirmed (D0-R redesignで再openしたL5↔L8 pairは、§5のIT-RGK-PHYS-001..042を含む独立review後に再凍結した)
 > **granularity correction (2026-06-08)**: resolved。各 IT-* は §5 で Given/When/Then、fixture、module boundary setup、mock/adapter 条件、期待 assertion、negative/edge coverage を備える。§1/§2 は §5 が upgrade する candidate skeleton として残す。
 > **encoding fix (2026-06-09)**: G5 freeze commit (14792e3) で本書本文 (§0-§4 / Appendix A) が UTF-8→CP932 誤読により文字化けしていたため、直前の clean 版 (7d6449c) から日本語本文を復元。§5 / Appendix B は英語で無傷のため現行を保持。
 > **PLAN**: `docs/plans/PLAN-L5-{01..04}-*.md` の pair_artifact / DoD で本書参照
@@ -352,3 +352,56 @@ owner revisionの同一commitへ追加した場合だけ正式`IT-CUTOVER-*`へ�
 zod schema `src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`からruntime
 `src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、test
 `tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ同一candidateをtraceする。
+
+## Resource Kernel物理統合（PLAN-L5-25、2026-07-22）
+
+mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を検証する。mock GreenをJob/cgroup Greenへ
+読み替えず、各caseはcontrol/workload別created count、custody identity、event sequence、empty/reap proofを保存する。
+
+| ID | boundary / fault injection | expected |
+|---|---|---|
+| `IT-RGK-PHYS-001` | valid requestを分割read/writeしresponseをcorrelate | 一件だけdecodeし同一request IDへ応答、余剰byte 0 |
+| `IT-RGK-PHYS-002` | oversize、partial、invalid UTF-8、duplicate/unknown field、trailing byte | decoder `PreDispatchWireFault`からNode Kernel境界でexactly once `protocol_failure`。validated request ID前のresponse 0、launcher/custody call 0、raw bytes/secret/path保存0 |
+| `IT-RGK-PHYS-003` | mutating dispatch後response ID/version/bundle digestを一要素ずつ変異 | PostDispatchResponseFault→indeterminate、direct spawn/terminal seal 0、actual factへreconcile |
+| `IT-RGK-PHYS-004` | 同一request ID/token digest/idempotency identityのspawnをtimeout後再送 | pending/indeterminate/result recordから実phaseへreconcileしprocess最大1。attempt/nonceだけ同じ新requestはreplay拒否 |
+| `IT-RGK-PHYS-005` | Windows create→assign間でclient crash | suspended root resume 0、custodianがterminate/reap |
+| `IT-RGK-PHYS-006` | Windows assign成功後launcher/client crash | Job handle custodyを維持しdeadline後Job empty/orphan 0 |
+| `IT-RGK-PHYS-007` | Linux clone/start barrierと事後attach fallbackを競合 | user code開始時からcgroup所属、事後attachはcapability failure |
+| `IT-RGK-PHYS-008` | Linux broker/subreaper crashとdouble-fork | reconcile後`populated=0`、zombie/managed orphan 0 |
+| `IT-RGK-PHYS-009` | root先行exit、terminate/cancel競合 | root exitではreturnせず、empty→reap後だけterminal |
+| `IT-RGK-PHYS-010` | request pre-decode faultとmutating dispatch後のpipe/response decode/correlation fault、companion/journal crash | pre-decodeだけside effect 0。post-dispatchは全てindeterminate→reconcile→actual phase/fact。確定前terminal receipt 0、片肺0 |
+| `IT-RGK-PHYS-011` | unsupported OS・権限不足・capability欠落 | probe後managed workload生成前拒否、control/workload identityを別保存、soft fallback 0 |
+| `IT-RGK-PHYS-012` | binary/schema/target/signature/SBOMを各一箇所変異 | admission前`bundle_failure`、PATH探索/download 0 |
+| `IT-RGK-PHYS-013` | 旧componentを旧manifestで直接復帰後、floor超の新sequence manifestへ再review・再署名 | 旧manifest復帰は拒否。新manifestがcompanion/protocol/D0-N receiptと実OS oracleを再通過した場合だけ利用 |
+| `IT-RGK-PHYS-014` | Bun binary/lockfile/API無しのNode+Cargo lane | 同じwire/custody oracleを実行しBun invocation 0 |
+| `IT-RGK-PHYS-015` | verified companionへprobe後、journal append前/後・token seal前/後でcrash | barrier前はmanaged root 0、再開時は同一probe digest/tokenだけを一度使用 |
+| `IT-RGK-PHYS-016` | stage token/leaseのexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/authenticatorを各変異し、同nonce別payload、旧variant、各state release_custodyを投入 | 不正を各境界で拒否しcustody/managed root 0。別execution/bundle fact再利用0、releaseはempty/reap fact commit後だけ |
+| `IT-RGK-PHYS-017` | custody nonce予約/再利用/別execution移送、executor arm/lease/attach/commit前後crash、prepared又はsuspendedでdeadline/cancel | 不正nonceはcreate 0。prepared/attached_suspendedからterminating→empty/reap/release、resume 0、実phase receipt。commit後はexecutorがcustody維持 |
+| `IT-RGK-PHYS-018` | authority crash後、Rust native observation/journal/current epochを各変異しTS recoverAuthorityをCAS競合 | Rustはfact以外delta 0。変異/stale/replayはreissue 0、TS winnerだけepoch+1 lease+trace atomic、loser delta 0 |
+| `IT-RGK-PHYS-019` | bundle内key、未review signer、signature substitution | `BundleTrustPort`のbinding不一致でcontrol process 0 |
+| `IT-RGK-PHYS-020` | manifestのbundle revision/component digest/schema/targetを各変異 | 一要素でも不一致ならverified handle 0 |
+| `IT-RGK-PHYS-021` | `F-1`、`F+同digest`、`F+別digest`のmanifestを再activation | 正規署名でも順にstale/replay/equivocationとして拒否し、current bundle/accepted fact/control launch不変 |
+| `IT-RGK-PHYS-022` | 現在floorより厳密に大きいsequenceの新manifestとしてrollback対象を再署名。同sequence以下も併走 | `>`かつ通常のtrust/component/target検証を再通過した場合だけactivate候補。同sequence以下はactivate 0 |
+| `IT-RGK-PHYS-023` | trust port missing/unknown/failure | PATH探索、runtime download、direct spawnへfallbackせず利用停止 |
+| `IT-RGK-PHYS-024` | activation port failureを各公開barrierで注入 | partial publish 0、旧verified bundle又は利用停止だけを観測 |
+| `IT-RGK-PHYS-025` | companion、protocol、D0-N generation receiptの一要素だけを旧値へ戻す | bundle identity不一致で拒否しcontrol process 0。rollbackはfloor超の新manifest再署名だけを許可 |
+| `IT-RGK-PHYS-026` | D0 adapterへrotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反としてRed、抽象port境界を維持 |
+| `IT-RGK-PHYS-027` | create→spawn→resume完全positive chain | stage token 3枚とpredecessor factが連鎖しcustody/root各最大1 |
+| `IT-RGK-PHYS-028` | 各stageで消費+pending commit、side effect、indeterminate、reconciled、result前後にcrashし4 digestとphase/fact digestを各変異してretry | 全stateにrequest digest継承。reconciled後crashはexact一致からnative再実行0でresult commit。他stateも一致時だけreconcile/継続/同result、変異・record欠測は拒否、custody/root増殖0 |
+| `IT-RGK-PHYS-029` | effective deadline直前/同時/直後のspawn/resumeとcleanup CAS競合 | deadline後execution 0、winnerがcleanup leaseを同時発行してcleanup_onlyへ一方向遷移しempty/releaseへ収束 |
+| `IT-RGK-PHYS-030` | recovery deadline超過後のexecutor/supervisor | overdue/admission blockを記録し、kill/reap/releaseは停止しない |
+| `IT-RGK-PHYS-031` | Node/authority same-boot再起動とCAS競合 | winnerだけcleanup lease、旧epoch拒否、生成/attach/resume 0 |
+| `IT-RGK-PHYS-032` | host rebootのRust cross-boot observationをTS CAS競合/replay | TS winnerだけboot-fenced lease+trace→empty→release→unblock。Rust/敗者/replay delta 0 |
+| `IT-RGK-PHYS-033` | cross-boot observation欠損、boot chain不一致、旧custody identity再利用 | quarantine/admission block維持、新lease/root 0 |
+| `IT-RGK-PHYS-034` | empty fact commitからcontrol shutdownまで各barrier crash | release→fact→disarm→revoke+released atomic commit→terminal seal→shutdown順を再開し、二重release・revoke後未完操作・早期seal・survivor 0 |
+| `IT-RGK-PHYS-035` | active custody、pending response、未解決pending-dispatch、indeterminate、reconciled-without-result、未flush terminal outboxを一つずつ残してshutdown_companion | 各caseでcontrol shutdown 0、custody/authority delta 0。全条件解消後だけshutdown |
+| `IT-RGK-PHYS-036` | deadline/cancel、host reboot、empty/releaseを組み合わせauthority mode全from/toを駆動 | 合法5辺だけjournal+lease/factと同時commit。不正backward/self/skipはauthority/OS delta 0、revokedから再開0 |
+| `IT-RGK-PHYS-037` | 正常root exitとdescendant遅延exit | root exitでcleanup leaseへ遷移し、descendant empty/reap前release 0。empty後release→disarm→revoke+released→terminal sealへ到達 |
+| `IT-RGK-PHYS-038` | 3 lease variantを各operationへcross-dispatchし、schema/mode/boot fieldも一要素ずつ変異 | operation×variant表の合法組だけ実行。boot-fenced terminate/旧boot monotonic field、variant外fieldはdecode/dispatch前拒否 |
+| `IT-RGK-PHYS-039` | same/cross observation全field、signer key/policy、variant forbidden fieldをmutation | Rust pinned native signer→TS BundleTrust verifierだけがGreen。unknown/別bundle key、field混同、自己包含はCAS/lease/trace 0 |
+| `IT-RGK-PHYS-040` | same/cross-boot recoveryでRust fact laneとTS transaction laneを個別crash/spy | Rustはnative fact以外のDB/CAS/lease/trace 0。TSだけがfact+journal/current epoch一致後にCAS+lease+traceをatomic commitし、各crash retryでwinner1/重複0 |
+| `IT-RGK-PHYS-041` | mutating dispatch後responseへoversize/partial/invalid UTF-8/JSON/schema/trailing/mismatchを各注入 | 全case PostDispatchResponseFault→indeterminate、side effect 0推測/terminal seal 0。actual native fact後だけresult/receipt |
+| `IT-RGK-PHYS-042` | release各barrier crashとraw OS identityの別custody_generation再利用を競合 | 同generationはabsenceへ収束、別generationは削除0+quarantine。effect最大1、Rust marker/DB 0。fact後だけdisarm→revoke+released |
+
+freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
+deferのままconfirmedへ昇格しない。

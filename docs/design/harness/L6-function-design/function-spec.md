@@ -1566,3 +1566,113 @@ cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCu
 `admitNodeSlice`のkernel/testは`src/runtime/node-slice-admission.ts` /
 `tests/node-slice-admission.test.ts`、zod正本は`src/schema/cutover-transition.ts` /
 `src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。
+
+## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
+
+本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、
+`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
+
+### ワイヤ/エラー代数
+
+`decodeRequestFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたはtyped
+`PreDispatchWireFault`を返す純粋関数とする。`decodeResponseFrame(bytes, correlation, dispatch_state)`は
+valid response又はtyped `PostDispatchResponseFault`を返し、mutating dispatch後の全decode/correlation failureを
+pre-dispatchへ降格させない。`PreDispatchWireFault`はwire responseやworkload domainの`NativeError`ではなく、Node `CustodyClient`が
+Execution Kernel境界でexactly once closed `protocol_failure`へ正規化する。decode失敗時のlauncher/custody side effectは0である。
+`encodeFrame`はcanonical bytesを決定論的に返す。
+コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
+native factだけを返す`RecoveryObservation(RecoveryObservationCommand)`、
+`RecoveryCustody(RecoveryCustodyCommand)`、control processだけを扱う`ControlCommand`の5 variantで閉じる。`Execute.operation`だけが
+`create_custody | spawn_attached | resume`を所有し、`AdmissionToken`とattempt/custody/bundle/probe bindingを必須とする。
+`RecoveryObservation.operation`は`observe_recovery_fact | prove_boot_fence`だけを所有してnative observation factを返し、
+authority/journal delta 0とする。`RecoveryCustody.operation`は`observe | terminate_tree | prove_empty | release_custody`だけを所有し、
+`ControlCommand.shutdown_companion`を別unionとする。TypeScript内部`recoverAuthority`は
+`SameBootExecutorRecoveryObservationV1 | CrossBootFenceObservationV1`だけを入力とし、
+`observe/prove_empty/release_custody`は両cleanup variant、`terminate_tree`は`CleanupAuthorityLeaseV1`だけを必須とする。
+全leaseの共通fieldは`authority_epoch/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/`
+を前半の必須項目とし、`custody_identity/executor_id/deadline_unix_ms/termination_policy_digest/recovery_grace_ms/`
+を後半の必須項目とする。さらに
+`recovery_deadline_unix_ms/lease_nonce/issuer_key_id/authenticator`だけを認証項目とする。exact variant schemaは次で閉じる。
+
+| schema/version literal | mode | 追加必須field | fixed allowed operations |
+|---|---|---|---|
+| `execution-authority/v1` | `live` | `boot_id/effective_deadline_monotonic_ms/recovery_deadline_monotonic_ms` | `spawn_attached,resume` |
+| `cleanup-authority/v1` | `cleanup_only` | `boot_id/effective_deadline_monotonic_ms/recovery_deadline_monotonic_ms/predecessor_lease_digest/cleanup_transition_fact_digest` | `observe,terminate_tree,prove_empty,release_custody` |
+| `boot-fenced-cleanup/v1` | `boot_fenced` | `previous_boot_id/current_boot_id/platform_boot_fact_digest/cleanup_deadline_monotonic_ms` | `observe,prove_empty,release_custody` |
+
+boot-fenced variantはwall deadlineを共通fieldで保持するが、`boot_id`と旧bootのmonotonic deadlineを禁止し、
+`cleanup_deadline_monotonic_ms`をcurrent boot domainで再導出する。variant間field、operation、unknown fieldをstrict rejectする。
+launcher、managed-root生成、resumeの型参照を持たない。
+same-boot observationは`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/`
+を識別項目とし、`bundle_digest/custody_identity/previous_authority_epoch/boot_id/effective_deadline_monotonic_ms/`
+を実行項目とする。加えて
+`termination_policy_digest/recovery_grace_ms/recovery_deadline_monotonic_ms/last_transition_digest/recovery_nonce/`
+を回復項目とし、
+`issuer_key_id/authenticator`を認証項目とする。このexact fieldだけを持つ。cross-boot observationは
+`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/`
+を識別項目とし、`custody_identity/previous_authority_epoch/previous_boot_id/current_boot_id/platform_boot_fact_digest/`
+を起動境界項目とする。さらに
+`deadline_unix_ms/recovery_deadline_unix_ms/observed_wall_unix_ms/observed_monotonic_ms/`
+を時刻観測項目とし、
+`termination_policy_digest/recovery_grace_ms/last_transition_digest/recovery_nonce/issuer_key_id/authenticator`
+のexact fieldだけを持ち、旧boot monotonic/lease/authority mode/launcher fieldを禁止する。
+`create_custody`はexecutor binding付きexecution leaseを返す。create/spawn/resumeはadmission chain上の
+別stage tokenを直前durable factの確認後に一回ずつ発行・消費し、`spawn_attached | resume`はtokenと同じleaseを照合する。
+`release_custody`は`empty_proven`かつreap proof後だけ許可し、`shutdown_companion`はcustody stateを変更しない。
+phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
+エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
+
+### メソッド契約
+
+| メソッド | 事前条件 | 事後条件 / 不変条件 |
+|---|---|---|
+| `canonicalizeBundleManifest` | schema/bundle revision/floor/component digestが全て型付き | 固定順length-framed bytesとdigestを返し、欠落・duplicate・unknown fieldを拒否 |
+| `verifyBundle` | trust identityとtarget明示 | canonical payload全体のsignatureとcompanion/protocol/SBOM/target/D0-N generation receiptの全一致時だけverified handle |
+| `BundleTrustPort.verify` | review済みtrust policy revisionとmanifest | ADR/L5の`TrustDecisionPort`をL6へ適応する唯一のadapter。`accepted` decisionとdecision digest/policy versionをverified handleへ束縛し、rejected、署名不一致、floor未満を拒否する。key rotation等の具体方式はD0外 |
+| `BundleActivationPort.activate` | verified handle、expected floor | 現在floorより厳密に大きいsequenceの再署名manifestだけを原子的にactivateする。同sequenceは同payloadでも新規activationに使わず、別payloadならfail-closeする。storage・clock・recovery方式はD0外 |
+| `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
+| `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
+| `reserveCustodyNonce` | execution/spec/attempt確定、token未seal | OS identityとは別の一意creation nonceを予約。同nonce再利用・別execution移送を拒否 |
+| `issueCreateCustodyToken` | recorded probe、完全capability、予約済みcustody nonce、deadline内 | admission chainとsequence 1を束縛し一度だけ発行。空required拒否 |
+| `issueSpawnAttachedToken` | create fact commit済み、current execution lease | sequence 2、custody/executor/epoch/lease nonce、create fact digestを束縛。未commit・別chain・replay拒否 |
+| `issueResumeToken` | attached factとhandoff commit済み、current execution lease | sequence 3、attached fact/handoff digestを束縛。skip/reorder/replay拒否 |
+| `consumeAdmissionStageToken` | expected phase/operation、未消費token又は同一pending record | token消費と`consumed_pending_dispatch(request/token/idempotency/request digest)`を同一transactionでcommit。pending→indeterminate→reconciled→resultを同じrequest digestで継承。exact retryだけfact reconcile/side effect 0時の継続/同resultを許可し、digest不一致又はrecord欠測はreplay拒否 |
+| `AdmissionTokenAuthenticatorPort.seal/verify` | wire DTOからauthenticator自身だけ除外したcanonical V1 payload、issuer key ID/policy revision | 非自己包含preimageへoperation/token nonceを束縛し、unknown key/version、偽造、同nonce別payload/別operation replayをside effect前拒否。具体key storage/rotationはD0外 |
+| `AuthorityLeaseAuthenticatorPort.issue/verify` | wire DTOからauthenticator自身だけ除外したexact variant payload、execution/spec、executor/custody、boot、deadline/policy | 非自己包含preimageへlease nonceとallowed operationsを束縛し、unknown key/version、偽造、同nonce別payloadをattach/recovery前拒否。具体key storage/rotationはD0外 |
+| `NativeObservationSignerPort.seal` / `RecoveryObservationAuthenticatorPort.verify` | Rust: pinned companion bundleのnative signer identity。TS: `BundleTrustPort`が検証済みのbundle signer/policy revisionとauthenticatorを除くexact observation payload | Rustはnative factだけをsealしauthority delta 0。TSはunknown signer/version、別bundle key、same/cross schema混同、field変異をCAS前拒否。具体key storage/rotationはD0外 |
+| `recoverSameBootAuthority` | Rust/executor認証observation、durable journal、current epoch | TSがsemantic全binding一致時だけepochをCAS+1しcleanup lease+traceを同一transactionで発行。Rust DB/CAS/lease/trace 0 |
+| `recoverCrossBootAuthority` | old/new boot native fence observation、durable journal、current epoch | TSがemptyを先取りせずCAS+1でboot-fenced cleanup lease+traceだけを発行。そのleaseでempty後release。Rust DB/CAS/lease/trace 0 |
+| `transitionAuthorityToCleanup` | live execution authority、deadline/cancel/abort/normal-root-exit/terminate-intent、current epoch | epoch CASと同じtransactionで新lease nonce/authenticatorのcleanup leaseを発行しexecution capabilityを不可逆除去。敗者lease 0 |
+| `sealMonotonicDeadline` | TypeScript: verified token、Rustから受けた同時観測wall/monotonic fact、boot ID | TypeScriptがremainingをbudgetとwall残時間の小さい方へ固定してsigned arm request/journalへcommit。cross-bootも新boot観測から非延長で再導出する。Rustは観測と供給済みdeadlineの強制だけを所有し、開始後wall jumpによる延長0 |
+| `dispatchCommand` | closed `Probe | Execute | RecoveryObservation | RecoveryCustody | ControlCommand` union | Observationはnative factだけでauthority delta 0。Execute/cleanup leaseをdiscriminant分離しboot-fenced terminate拒否、生成・resume能力0。release-before-empty拒否。control shutdownはcustody delta 0 |
+| `normalizePreDispatchWireFault` | typed `PreDispatchWireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
+| `markPostDispatchResponseFault` | mutating dispatch済み、typed `PostDispatchResponseFault` | EOF/pipeだけでなくresponseのframing/UTF-8/JSON/schema/trailing/correlation不正を必ずindeterminateへ遷移。side effect 0推測・terminal seal 0 |
+| `reconcileDispatchIndeterminate` | request/token/idempotency/request digest全一致、authority/journal/native facts、又はdurable reconciled record | response lossをside effect 0へ推測せずindeterminate→reconciled→resultへactual phase/fact digestを一意に確定。reconciled後crashは4 digest+actual phase/fact digest一致からnative再実行0でresult commit。全stateでrequest digestを継承 |
+| `reduceCustody` | attempt、nonce、sequence連続 | 正常辺とprepared/attached-suspendedからterminatingへのcleanup辺だけを受理し、resume-before-attach、release-before-emptyを拒否 |
+| `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
+| `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
+| `releaseCustody` | empty/reap fact、raw OS identity+非再利用custody_generationを束縛したdeterministic release_idがjournal commit済み | Rust `ensureAbsent`は同一generationの終状態absenceへ冪等収束。raw identityが別generationへ再利用済みなら削除せずquarantine。存在→不在effect最大1、Rust durable marker/DB 0。fact commit→disarm→revoke+released atomic |
+| `shutdownCompanion` | active custody 0、pending response 0、未解決pending/indeterminate/reconciled-without-result 0、terminal outbox flush済み | control processだけを終了しcustody/authority state delta 0 |
+| `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
+
+### プラットフォームポート/責務非重複
+
+`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/observeRecoveryFact/terminateTree/proveEmpty/ensureAbsent/proveBootFence`で構成し、
+control process終了は`ControlShutdownPort`へ分離する。
+`CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/recordDeadlinePolicy/armDeadlineExecutor/revokeAuthority`で構成し、
+handoff commit前resumeとstale epoch/nonceを拒否する。Linuxはbroker外deadline ownerをmanaged root開始前にarmし、
+dual-crash後も期限内kill→bounded recovery→reap/orphan 0を完遂する。ownerをarm不能なら開始前拒否し、
+証拠欠測を`custody_failure`へ変換するだけでは既存workloadの生存を許さない。
+lease verifierはcreate/spawn/resumeだけをeffective deadlineで拒否する。cleanup leaseはeffective deadline後も
+observe/terminate/prove/releaseに有効で、recovery deadline超過はoverdue findingと新規admission遮断を追加するが
+cleanup拒否理由にはしない。cross-bootでは元wall recovery deadlineから新bootのmonotonic上限を非延長で再導出する。
+Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
+`populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
+それぞれ一意に所有する。TypeScriptはdeadline policy決定とsigned arm request/journalを所有し、
+別failure domainのRust/native `DurableDeadlineExecutor`だけがdeadline killを強制してenforcement factを返す。
+RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
+Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。
+
+bundle rollbackは過去artifactを直接再activationせず、現在floorより厳密に大きいsequenceの新revisionとしてmanifestを再署名し、
+通常のtrust・component・target検証を再通過させる。D0はtrust/activationを抽象portに留め、
+rotation、revocation transport、secure clock、re-anchor、物理log schemaを後続implementation revisionへ送る。
