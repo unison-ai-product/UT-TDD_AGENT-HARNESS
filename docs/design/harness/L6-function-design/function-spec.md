@@ -1589,9 +1589,10 @@ authority/journal delta 0とする。`RecoveryCustody.operation`は`observe | te
 `ControlCommand.shutdown_companion`を別unionとする。TypeScript内部`recoverAuthority`は
 `SameBootExecutorRecoveryObservationV1 | CrossBootFenceObservationV1`だけを入力とし、
 `observe/prove_empty/release_custody`は両cleanup variant、`terminate_tree`は`CleanupAuthorityLeaseV1`だけを必須とする。
-全leaseの共通fieldは`authority_epoch/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/
-custody_identity/executor_id/deadline_unix_ms/termination_policy_digest/recovery_grace_ms/
-recovery_deadline_unix_ms/lease_nonce/issuer_key_id/authenticator`だけである。exact variant schemaは次で閉じる。
+全leaseの共通fieldは`authority_epoch/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/`
+を前半の必須項目とし、`custody_identity/executor_id/deadline_unix_ms/termination_policy_digest/recovery_grace_ms/`
+を後半の必須項目とする。さらに
+`recovery_deadline_unix_ms/lease_nonce/issuer_key_id/authenticator`だけを認証項目とする。exact variant schemaは次で閉じる。
 
 | schema/version literal | mode | 追加必須field | fixed allowed operations |
 |---|---|---|---|
@@ -1602,14 +1603,18 @@ recovery_deadline_unix_ms/lease_nonce/issuer_key_id/authenticator`だけであ�
 boot-fenced variantはwall deadlineを共通fieldで保持するが、`boot_id`と旧bootのmonotonic deadlineを禁止し、
 `cleanup_deadline_monotonic_ms`をcurrent boot domainで再導出する。variant間field、operation、unknown fieldをstrict rejectする。
 launcher、managed-root生成、resumeの型参照を持たない。
-same-boot observationは`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/
-bundle_digest/custody_identity/previous_authority_epoch/boot_id/effective_deadline_monotonic_ms/
-termination_policy_digest/recovery_grace_ms/recovery_deadline_monotonic_ms/last_transition_digest/recovery_nonce/
-issuer_key_id/authenticator`のexact fieldだけを持つ。cross-boot observationは
-`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/
-custody_identity/previous_authority_epoch/previous_boot_id/current_boot_id/platform_boot_fact_digest/
-deadline_unix_ms/recovery_deadline_unix_ms/observed_wall_unix_ms/observed_monotonic_ms/
-termination_policy_digest/recovery_grace_ms/last_transition_digest/recovery_nonce/issuer_key_id/authenticator`
+same-boot observationは`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/`
+を識別項目とし、`bundle_digest/custody_identity/previous_authority_epoch/boot_id/effective_deadline_monotonic_ms/`
+を実行項目とする。加えて
+`termination_policy_digest/recovery_grace_ms/recovery_deadline_monotonic_ms/last_transition_digest/recovery_nonce/`
+を回復項目とし、
+`issuer_key_id/authenticator`を認証項目とする。このexact fieldだけを持つ。cross-boot observationは
+`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/`
+を識別項目とし、`custody_identity/previous_authority_epoch/previous_boot_id/current_boot_id/platform_boot_fact_digest/`
+を起動境界項目とする。さらに
+`deadline_unix_ms/recovery_deadline_unix_ms/observed_wall_unix_ms/observed_monotonic_ms/`
+を時刻観測項目とし、
+`termination_policy_digest/recovery_grace_ms/last_transition_digest/recovery_nonce/issuer_key_id/authenticator`
 のexact fieldだけを持ち、旧boot monotonic/lease/authority mode/launcher fieldを禁止する。
 `create_custody`はexecutor binding付きexecution leaseを返す。create/spawn/resumeはadmission chain上の
 別stage tokenを直前durable factの確認後に一回ずつ発行・消費し、`spawn_attached | resume`はtokenと同じleaseを照合する。

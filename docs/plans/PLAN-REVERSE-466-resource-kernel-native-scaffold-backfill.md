@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill
-title: "PLAN-REVERSE-454: Resource Kernel native scaffold起点の設計・検証back-fill"
+plan_id: PLAN-REVERSE-466-resource-kernel-native-scaffold-backfill
+title: "PLAN-REVERSE-466: Resource Kernel native scaffold起点の設計・検証back-fill"
 kind: reverse
 layer: cross
 confirmed_reverse_type: design
@@ -12,7 +12,7 @@ promotion_strategy: reuse-with-hardening
 created: 2026-07-22
 updated: 2026-07-22
 owner: Codex TL / PO
-parent_design: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
+parent_design: docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: tl
@@ -20,10 +20,10 @@ agent_slots:
   - role: qa
     slot_label: QA - L7/L8/L9のRed oracleと実OS証拠の分離
 generates:
-  - artifact_path: docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-466-resource-kernel-native-scaffold-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
+  parent: docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
   requires: []
   blocks: []
   references:
@@ -37,47 +37,13 @@ review_evidence: []
 workflow_phase: R0
 status: draft
 github_issue_id: 152
-admission_receipt:
-  schema_version: v2
-  receipt_id: certificate:269e889bdf62a50c264919c338d93d19
-  command_id: pr156-final-readmission-reverse-rev4-20260724
-  admitted_at: 2026-07-24T14:49:00.000Z
-  source_digest: sha256:6c0afe546db55bf985500bae9c4209f2fb36c2a9d03d5a6949a79c12d6397eeb
-  decision_digest: sha256:2214f2c3e841786ea3af1a33d868a9209d11a94de62ea03464b9d1a281ee5f1b
-  receipt_digest: sha256:02a976c248d82fc82a6d2b7d130241e325497fb8769afbdf1174cad99c3cdc5f
-  binding:
-    path: docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
-    plan_id: PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill
-    asset_id: plan:legacy:d66396b73c7db2b8d007824dcb6cada0ec811ff802f42189d5687d3d9b6853af
-    revision: 4
-    content_digest: sha256:6c0afe546db55bf985500bae9c4209f2fb36c2a9d03d5a6949a79c12d6397eeb
-  route:
-    signal: design_gap
-    mode: reverse
-  issue:
-    provider: github
-    issue_id: 152
-    episode_id: E4-152-resource-kernel-d0r
-    projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
-  origin:
-    plan_id: PLAN-L7-454-resource-kernel-native-companion
-    revision: 4
-    digest: sha256:5dff5906aa83aa7282a39c7d99d81d091f0d7e288b26d71973a055bd687f9eb8
-  transition:
-    direction: implementation_to_design
-    implementation_disposition: preserved
-  reentry:
-    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 4
-    phase: forward_merge
-  escape_reason: Resource Kernel scaffoldのR0事実を設計へ戻しForward rev4へ再合流する
 ---
 
-# PLAN-REVERSE-454: Resource Kernel native scaffold起点の設計・検証back-fill
+# PLAN-REVERSE-466: Resource Kernel native scaffold起点の設計・検証back-fill
 
 ## 0. Reverse判定
 
-起点は`PLAN-L7-454`で先に作られたRust scaffoldである。scaffoldはversioned JSON handshake、
+起点は`PLAN-L7-466`で先に作られたRust scaffoldである。scaffoldはversioned JSON handshake、
 `deny_unknown_fields`、closed capability enum、`OsAdapter` / `ProcessLauncher` port、unsupported adapterの
 launch call 0を実装している。一方、実Job Object/cgroup、framed transport、Node client、closed terminal error、
 custodian lifecycle、bundle検証を実装していない。
@@ -125,9 +91,9 @@ scaffoldの再利用可能factと非証明範囲を独立evidenceへ固定した
 L5-25/L6-92、L6↔L7 pair、L5↔L8 `IT-RGK-PHYS-001..026`はR3の候補入力であり、
 review済み適用結果や完了証拠ではない。DB/CAS/performance oracleはIssue #152 later waveへdeferする。
 
-## 5. R4 — Forward `PLAN-L7-454`再合流
+## 5. R4 — Forward `PLAN-L7-466`再合流
 
-再合流先は`PLAN-L7-454-resource-kernel-native-companion`である。R4は次のAND条件を満たすまでconfirmedにしない。
+再合流先は`PLAN-L7-466-resource-kernel-native-companion`である。R4は次のAND条件を満たすまでconfirmedにしない。
 
 1. L5-25↔L8とL6-92↔L7を独立reviewし、未反駁attack 0。
 2. scaffold sourceがL6-92のwire/error/port contractへtraceされ、契約外の独自policy/state machine 0。
@@ -138,7 +104,7 @@ review済み適用結果や完了証拠ではない。DB/CAS/performance oracle�
 7. Forward側のtrace-freeze、cross-runtime blind review、tested commitとreview/evidence revision一致。
 
 R4再合流はscaffoldをそのまま完成扱いするpromotionではない。`reuse-with-hardening`として再利用するのはR0表の
-反証済みfactだけで、未実装契約と既存entrypointのadmission迂回はForward `PLAN-L7-454`のTDD工程で修正する。
+反証済みfactだけで、未実装契約と既存entrypointのadmission迂回はForward `PLAN-L7-466`のTDD工程で修正する。
 
 ## 6. 完了状態
 
@@ -146,5 +112,5 @@ R4再合流はscaffoldをそのまま完成扱いするpromotionではない。`
 - [ ] R0実装事実と非証明範囲を独立evidenceで分離。
 - [ ] R1/R2でL4/L5/L6/L7/L8/L9のgap-only back-fill先をreview。
 - [ ] R3で`IT-RGK-PHYS-001..026`とL7 unit familyを適用し、未反駁attack 0を記録。
-- [ ] Forward `PLAN-L7-454`へのR4再合流条件を満たす。
+- [ ] Forward `PLAN-L7-466`へのR4再合流条件を満たす。
 - [ ] Cargo/Node/実OS evidenceと独立cross-reviewを記録し、R4をconfirm。

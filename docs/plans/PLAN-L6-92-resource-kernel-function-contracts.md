@@ -30,7 +30,7 @@ dependencies:
   parent: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
   requires: []
   blocks:
-    - docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
+    - docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
   references:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
@@ -71,10 +71,10 @@ admission_receipt:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
-      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+      target_plan_id: PLAN-L7-466-resource-kernel-native-companion
       target_revision: 15
   reentry:
-    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_plan_id: PLAN-L7-466-resource-kernel-native-companion
     target_revision: 15
     phase: forward_merge
   escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる

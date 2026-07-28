@@ -51,7 +51,7 @@ dependencies:
     - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
-    - docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
+    - docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
 review_evidence: []
 status: draft
 sub_doc: architecture
@@ -88,10 +88,10 @@ admission_receipt:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
-      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+      target_plan_id: PLAN-L7-466-resource-kernel-native-companion
       target_revision: 15
   reentry:
-    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_plan_id: PLAN-L7-466-resource-kernel-native-companion
     target_revision: 15
     phase: forward_merge
   escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる
@@ -416,6 +416,6 @@ snapshot一時directoryの掃除だけでは本負債の完了証拠にならな
 | `RGK-EV-CI-03` | Actions run `29892125300` / Windows job `88834471971` | `72604cd13798a29828c84fbe927cb5cce166551b` | 04:50:44Z–04:55:04Z、DB 19秒、tests 200秒 | failure。PID/peak/orphan未計測 |
 | `RGK-EV-CI-04` | 同run / Linux job `88834471970` | 同commit | 04:50:44Z–04:55:23Z、DB 14秒、tests 249秒 | failure。PID/peak/orphan未計測 |
 
-downstreamは `PLAN-L5-25`、`PLAN-L6-92`、`PLAN-L7-454` とする。当初予定した`PLAN-L5-24`と`PLAN-L6-89`は
+downstreamは `PLAN-L5-25`、`PLAN-L6-92`、`PLAN-L7-466` とする。当初予定した`PLAN-L5-24`と`PLAN-L6-89`は
 別branchの正規PLANと衝突したため再利用しない。各draftの実在後も、layer-monotonicity、参照実在性、L5↔L8・L6↔L7の
 pair freezeを検出器で確認してからconfirmedへ昇格する。

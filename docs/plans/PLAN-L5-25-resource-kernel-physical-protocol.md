@@ -34,7 +34,7 @@ dependencies:
   references:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/test-design/harness/L9-system-test-design.md
-    - docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
+    - docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
 review_evidence: []
 status: draft
 sub_doc: internal-processing
@@ -71,10 +71,10 @@ admission_receipt:
     direction: design_to_implementation
     implementation_disposition: none
     implementation_target:
-      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+      target_plan_id: PLAN-L7-466-resource-kernel-native-companion
       target_revision: 15
   reentry:
-    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
+    target_plan_id: PLAN-L7-466-resource-kernel-native-companion
     target_revision: 15
     phase: forward_merge
   escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる

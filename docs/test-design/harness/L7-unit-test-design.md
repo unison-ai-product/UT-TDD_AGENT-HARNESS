@@ -1786,9 +1786,9 @@ test名とPLAN traceは`tests/node-self-host-bootstrap.test.ts`へ固定する�
 満たした`U-NODEBOOT-*`だけであり、別名・別IDで実装済みを主張しない。Resource Kernel / Rust
 companionのunit oracleは本節に含めない。
 
-## PLAN-L7-454 Resource Kernel native companion oracle (2026-07-22)
+## PLAN-L7-466 Resource Kernel native companion oracle (2026-07-22)
 
-設計正本は`PLAN-L4-32`、ADR-009、実装PLANは`PLAN-L7-454`とする。ここでの静的oracleは
+設計正本は`PLAN-L4-32`、ADR-009、実装PLANは`PLAN-L7-466`とする。ここでの静的oracleは
 native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS job・aggregateの縮退を検出する。
 
 | ID | 観点 | fixture / mutation | expected |

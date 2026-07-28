@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-454-resource-kernel-native-companion
-title: "PLAN-L7-454 (add-impl): Resource Kernel native custody companion / Node
+plan_id: PLAN-L7-466-resource-kernel-native-companion
+title: "PLAN-L7-466 (add-impl): Resource Kernel native custody companion / Node
   protocol client"
 kind: add-impl
 layer: L7
@@ -20,7 +20,7 @@ agent_slots:
   - role: qa
     slot_label: QA - 開始前fail-close、protocol mutation、実OS custodyのRed oracle
 generates:
-  - artifact_path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
+  - artifact_path: docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
     artifact_type: markdown_doc
   - artifact_path: native/resource-kernel/Cargo.toml
     artifact_type: source_module
@@ -50,54 +50,15 @@ dependencies:
     - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
-    - docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md
+    - docs/plans/PLAN-REVERSE-466-resource-kernel-native-scaffold-backfill.md
 review_evidence: []
 status: draft
 github_issue_id: 152
 supersedes:
-  - PLAN-L7-454-resource-kernel-native-companion
-admission_receipt:
-  schema_version: v2
-  receipt_id: certificate:7fa70641c40e0bf6ab5a5d7521e65f21
-  command_id: pr156-contract-closure-l7-rev15-20260727
-  admitted_at: 2026-07-27T04:06:51.705Z
-  source_digest: sha256:e439c2e20f52ced653baf026f6259a6c38e1ebd11250cd349c547a440bacebb9
-  decision_digest: sha256:518357c6bb212240480249beba506d5320f3c5a2dcd8437c56dca9c9a27ee1f9
-  receipt_digest: sha256:4af2d9fcdbdae4fe0f73390d0fc7338630cc789ad8f9143e3572353551c61c26
-  binding:
-    path: docs/plans/PLAN-L7-454-resource-kernel-native-companion.md
-    plan_id: PLAN-L7-454-resource-kernel-native-companion
-    asset_id: plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50
-    revision: 15
-    content_digest: sha256:e439c2e20f52ced653baf026f6259a6c38e1ebd11250cd349c547a440bacebb9
-  route:
-    signal: feature_addition
-    mode: add-feature
-  issue:
-    provider: github
-    issue_id: 152
-    episode_id: E4-152-resource-kernel-d0r
-    projection_digest: sha256:fbf4a02220f7f6f05a34e18480f77bbff707c740f931b961a7e4d51578f0b708
-  origin:
-    plan_id: PLAN-L7-454-resource-kernel-native-companion
-    revision: 14
-    digest: sha256:8efef5c13822842a4c0380061bdf3df06d20ffc723e6b5dbfe0b90826ed0363b
-  transition:
-    direction: design_to_implementation
-    implementation_disposition: none
-    implementation_target:
-      target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-      target_revision: 15
-  reentry:
-    target_plan_id: PLAN-L7-454-resource-kernel-native-companion
-    target_revision: 15
-    phase: forward_merge
-  escape_reason: 上流からrecovery observation認証・exact schema・custody generation契約を閉じる
-  supersedes:
-    - PLAN-L7-454-resource-kernel-native-companion
+  - PLAN-L7-466-resource-kernel-native-companion
 ---
 
-# PLAN-L7-454: Resource Kernel native custody companion / Node protocol client
+# PLAN-L7-466: Resource Kernel native custody companion / Node protocol client
 
 ## 1. 位置づけ
 
@@ -113,7 +74,7 @@ advertiseしないが、binary `main`がhandshakeだけを呼ぶ経路は空requ
 最初のTDD修正とする。`PLAN-L4-32`の
 `status: draft`およびL9 §9のRed system oracleをGreenへ読み替えない。
 
-先行scaffoldから判明した物理・機能設計gapは`PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill`がR4で
+先行scaffoldから判明した物理・機能設計gapは`PLAN-REVERSE-466-resource-kernel-native-scaffold-backfill`がR4で
 L5/L6と対になるL7/L8へ引き戻す。本PLANはそのback-fillを受けてForwardへ再合流する。
 
 ## 2. 設計正本と実装境界
