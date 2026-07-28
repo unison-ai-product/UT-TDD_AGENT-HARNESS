@@ -292,6 +292,7 @@ describe("L7 CLI surface closure", () => {
     expect(run.status).toBe(0);
     expect(payload.map((profile: { id: string }) => profile.id)).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
       "consumer-toolchain",
       "consumer-setup-smoke",
@@ -339,7 +340,7 @@ describe("L7 CLI surface closure", () => {
     expect(run.status).toBe(1);
     expect(payload.ok).toBe(false);
     expect(payload.messages).toEqual([
-      'doctor: invalid --profile "bogus" (expected: source-full, source-toolchain, consumer-toolchain, consumer-setup-smoke)',
+      'doctor: invalid --profile "bogus" (expected: source-full, source-doc-lane, source-toolchain, consumer-toolchain, consumer-setup-smoke)',
     ]);
   }, 15_000);
 

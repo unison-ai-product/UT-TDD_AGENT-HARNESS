@@ -36,7 +36,11 @@ export interface GithubCiPolicyViolation {
     | "missing_aggregate_result_guard"
     | "forbidden_full_doctor"
     | "forbidden_raw_vitest"
-    | "forbidden_source_full_tests";
+    | "forbidden_source_full_tests"
+    | "forbidden_job_level_lane_skip"
+    | "forbidden_lane_skip_step"
+    | "missing_lane_producer"
+    | "missing_doc_lane_doctor";
   detail: string;
 }
 
@@ -48,13 +52,18 @@ export interface GithubCiPolicyResult {
 
 interface WorkflowStep {
   "continue-on-error"?: unknown;
+  env?: unknown;
+  id?: string;
   name?: string;
+  shell?: string;
   uses?: string;
   run?: string;
+  if?: unknown;
 }
 
 interface WorkflowJob {
   "continue-on-error"?: unknown;
+  env?: unknown;
   needs?: unknown;
   if?: unknown;
   "runs-on"?: unknown;
@@ -197,13 +206,14 @@ function workflowStep(value: unknown): value is WorkflowStep {
   const step = recordValue(value);
   if (
     !step ||
-    ![step.name, step.uses, step.run].every(
+    ![step.id, step.name, step.shell, step.uses, step.run].every(
       (field) => field === undefined || typeof field === "string",
     ) ||
     (step["continue-on-error"] !== undefined && typeof step["continue-on-error"] !== "boolean")
   ) {
     return false;
   }
+  if (step.env !== undefined && !recordValue(step.env)) return false;
   return (typeof step.uses === "string") !== (typeof step.run === "string");
 }
 
@@ -233,6 +243,298 @@ function pushViolation(input: {
 }
 
 const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
+
+// PLAN-L7-455 (troubleshoot): doc-only lane 絞り込みが検証弱化にならないことを fail-close 検査する。
+// 正準の lane 条件式のみを許可し (非正準式は即 violation)、"full" 限定でしか skip してよい
+// step は保守的 allowlist に限定する。allowlist 外の step (github guard / lint / checkout 等)
+// が lane 条件を持つこと自体を drift として検出する。
+const LANE_REFERENCE_NEEDLE = "steps.classify.outputs.lane";
+const LANE_FULL_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
+const LANE_DOC_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
+// 注意: 素朴な部分文字列一致だと "bun run test" が doc lane 専用の
+// "bun run test:doc-lane" を誤って full-only allowlist に混入させる (substring collision)。
+// `\b...\b(?!:)` で script suffix (`:fast` 等) 付き script 名との衝突を避ける。
+const LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS: readonly ((text: string) => boolean)[] = [
+  (text) => text.includes("bun run typecheck"),
+  (text) => text.includes("db rebuild"),
+  (text) => /\bbun\s+run\s+test\b(?!:)/.test(text),
+  (text) => text.includes("bun run test:fast"),
+  (text) => text.includes("audit quality"),
+  (text) => text.includes("src/cli.ts doctor") && !text.includes("--profile source-doc-lane"),
+];
+
+function matchesLaneSkipAllowlist(text: string): boolean {
+  return LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS.some((matches) => matches(text));
+}
+
+const githubExpression = (expression: string): string => ["$", `{{ ${expression} }}`].join("");
+const CLASSIFY_COMMAND = [
+  "bun src/cli.ts github classify-changes",
+  `--event-name "${githubExpression("github.event_name")}"`,
+  `--head-sha "${githubExpression("github.sha")}"`,
+  `--base-sha "${githubExpression("github.event.pull_request.base.sha")}"`,
+  `--before-sha "${githubExpression("github.event.before")}"`,
+  '--github-output "$GITHUB_OUTPUT"',
+].join(" ");
+
+function hasCanonicalLaneProducer(run: string | undefined): boolean {
+  return run !== undefined && normalizedRun(run) === CLASSIFY_COMMAND;
+}
+
+function normalizedRun(run: string | undefined): string {
+  return (run ?? "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]*\\\n[ \t]*/g, " ")
+    .replace(/^(?:[ \t]*\n)+|(?:\n[ \t]*)+$/g, "");
+}
+
+function isFailCloseStep(step: WorkflowStep): boolean {
+  return step["continue-on-error"] === undefined || step["continue-on-error"] === false;
+}
+
+function hasCanonicalDocLaneDoctor(step: WorkflowStep): boolean {
+  return (
+    step.if === LANE_DOC_ONLY_IF &&
+    normalizedRun(step.run) === "bun src/cli.ts doctor --profile source-doc-lane" &&
+    step.shell === undefined &&
+    step.env === undefined &&
+    isFailCloseStep(step)
+  );
+}
+
+function hasExactKeys(value: object, expected: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const canonical = [...expected].sort();
+  return (
+    actual.length === canonical.length && actual.every((key, index) => key === canonical[index])
+  );
+}
+
+const step = (name: string, fields: Record<string, unknown>): Record<string, unknown> => ({
+  name,
+  ...fields,
+});
+const run = (name: string, command: string, condition?: string): Record<string, unknown> =>
+  step(name, { ...(condition ? { if: condition } : {}), run: command });
+const cacheWith = {
+  path: "~/.bun/install/cache",
+  key: `${githubExpression("runner.os")}-bun-${githubExpression("hashFiles('bun.lock')")}`,
+  "restore-keys": `${githubExpression("runner.os")}-bun-\n`,
+};
+const commonRuntimeSteps = [
+  step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
+  step("setup bun", { uses: "oven-sh/setup-bun@v2", with: { "bun-version": "1.3" } }),
+  step("cache bun install cache", { uses: "actions/cache@v4", with: cacheWith }),
+  run("install deps (frozen)", "bun install --frozen-lockfile"),
+] as const;
+const classifyFields = { id: "classify", run: CLASSIFY_COMMAND };
+const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly object[]> = {
+  "harness-check-linux": [
+    ...commonRuntimeSteps,
+    step("classify changed files (doc lane vs full, fail-close)", classifyFields),
+    step("branch-type guard (commitlint / poc / hotfix)", {
+      env: {
+        HEAD_REF: githubExpression("github.head_ref || github.ref_name"),
+        BASE_REF: githubExpression("github.base_ref || 'main'"),
+        PR_TITLE: githubExpression(
+          "github.event.pull_request.title || github.event.head_commit.message || ''",
+        ),
+        PR_BODY: githubExpression("github.event.pull_request.body || ''"),
+      },
+      run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt
+git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
+bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
+    }),
+    run("typecheck (tsc --noEmit)", "bun run typecheck", LANE_FULL_ONLY_IF),
+    run(
+      "db rebuild (deterministic projection)",
+      "bun src/cli.ts db rebuild --json",
+      LANE_FULL_ONLY_IF,
+    ),
+    run("test — 全回帰 (vitest run)", "bun run test", LANE_FULL_ONLY_IF),
+    run(
+      "doc lane checks (plan lint / readability / rule-drift)",
+      "bun src/cli.ts plan lint\nbun run test:doc-lane",
+      LANE_DOC_ONLY_IF,
+    ),
+    run(
+      "doc lane source doctor",
+      "bun src/cli.ts doctor --profile source-doc-lane",
+      LANE_DOC_ONLY_IF,
+    ),
+    run("lint (biome)", "bun run lint"),
+    run(
+      "audit quality (gate findings)",
+      "bun src/cli.ts audit quality --include-tests --limit 20",
+      LANE_FULL_ONLY_IF,
+    ),
+    run("doctor (governance hard gates)", "bun src/cli.ts doctor", LANE_FULL_ONLY_IF),
+    run(
+      "job summary (UT-TDD projection)",
+      'bun src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"',
+      REQUIRED_AGGREGATE_IF,
+    ),
+  ],
+  "harness-check-windows": [
+    ...commonRuntimeSteps,
+    step("classify changed files (doc lane vs full, fail-close)", {
+      ...classifyFields,
+      shell: "bash",
+    }),
+    run("typecheck (tsc --noEmit)", "bun run typecheck", LANE_FULL_ONLY_IF),
+    run(
+      "db rebuild (deterministic projection on Windows SQLite)",
+      "bun src/cli.ts db rebuild --json",
+      LANE_FULL_ONLY_IF,
+    ),
+    run("test — scoped 回帰 (vitest run, windows leg)", "bun run test:fast", LANE_FULL_ONLY_IF),
+    run(
+      "doc lane source checks",
+      "bun src/cli.ts doctor --profile source-doc-lane",
+      LANE_DOC_ONLY_IF,
+    ),
+    run("doctor (toolchain scope)", "bun src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
+  ],
+};
+
+function canonicalSemantic(value: unknown, key = ""): unknown {
+  if (typeof value === "string") return key === "run" ? normalizedRun(value) : value;
+  if (Array.isArray(value)) return value.map((item) => canonicalSemantic(item));
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([childKey, child]) => [childKey, canonicalSemantic(child, childKey)]),
+    );
+  return value;
+}
+
+function checkLaneSkipSafety(input: {
+  legs: readonly (WorkflowJob | null)[];
+  doc: GithubWorkflowDoc;
+  violations: GithubCiPolicyViolation[];
+}): void {
+  for (const [index, leg] of input.legs.entries()) {
+    if (!leg) continue;
+    const name = RUNTIME_LEGS[index];
+    if (!hasExactKeys(leg, ["runs-on", "steps"])) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${name} must contain only runs-on and steps`,
+      });
+    }
+    if (leg.if !== undefined) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "forbidden_job_level_lane_skip",
+        detail: `jobs.${name} must not carry a job-level if (lane classification must stay step-scoped, never skip the whole job)`,
+      });
+    }
+    const steps =
+      Array.isArray(leg.steps) && leg.steps.every(workflowStep)
+        ? (leg.steps as WorkflowStep[])
+        : [];
+    if (
+      JSON.stringify(canonicalSemantic(steps)) !==
+      JSON.stringify(canonicalSemantic(RUNTIME_STEP_MANIFESTS[name]))
+    ) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${name}.steps must exactly match the ordered canonical semantic manifest`,
+      });
+    }
+    const producers = steps.filter((step) => step.id === "classify");
+    const producer = producers[0];
+    const producerKeys =
+      name === "harness-check-windows" ? ["name", "id", "shell", "run"] : ["name", "id", "run"];
+    if (
+      producers.length !== 1 ||
+      !producer ||
+      !hasExactKeys(producer, producerKeys) ||
+      !hasCanonicalLaneProducer(producer?.run) ||
+      producer?.if !== undefined ||
+      producer?.env !== undefined ||
+      !isFailCloseStep(producer) ||
+      (name === "harness-check-linux" && producer?.shell !== undefined) ||
+      (name === "harness-check-windows" && producer?.shell !== "bash")
+    ) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_lane_producer",
+        detail: `jobs.${name} requires the canonical classify producer${name === "harness-check-windows" ? " with shell=bash" : " with no explicit shell"}`,
+      });
+    }
+    const docDoctors = steps.filter((step) => step.run?.includes("source-doc-lane"));
+    if (
+      !docDoctors.some(hasCanonicalDocLaneDoctor) ||
+      docDoctors.some((step) => !hasExactKeys(step, ["name", "if", "run"]))
+    ) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_doc_lane_doctor",
+        detail: `jobs.${name} doc lane requires doctor --profile source-doc-lane`,
+      });
+    }
+    if (docDoctors.some((step) => !hasCanonicalDocLaneDoctor(step))) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_doc_lane_doctor",
+        detail: `jobs.${name} contains a noncanonical source-doc-lane invocation`,
+      });
+    }
+    const jobEnv = recordValue(leg.env);
+    if (jobEnv && Object.hasOwn(jobEnv, "GITHUB_OUTPUT")) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_lane_producer",
+        detail: `jobs.${name} must not override GITHUB_OUTPUT at job level`,
+      });
+    }
+    for (const step of steps) {
+      const ifValue = step.if;
+      if (typeof ifValue !== "string" || !ifValue.includes(LANE_REFERENCE_NEEDLE)) continue;
+      const label = step.name ?? step.run ?? step.uses ?? "(unnamed step)";
+      const text = stepText(step);
+      if (ifValue === LANE_FULL_ONLY_IF) {
+        if (!matchesLaneSkipAllowlist(text)) {
+          pushViolation({
+            violations: input.violations,
+            doc: input.doc,
+            reason: "forbidden_lane_skip_step",
+            detail: `jobs.${name} step "${label}" is conditioned on lane=='full' but is not on the doc-lane skip allowlist`,
+          });
+        }
+        continue;
+      }
+      if (ifValue === LANE_DOC_ONLY_IF) {
+        if (matchesLaneSkipAllowlist(text)) {
+          pushViolation({
+            violations: input.violations,
+            doc: input.doc,
+            reason: "forbidden_lane_skip_step",
+            detail: `jobs.${name} step "${label}" is a required full-lane check but is conditioned on lane=='doc'`,
+          });
+        }
+        continue;
+      }
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "forbidden_lane_skip_step",
+        detail: `jobs.${name} step "${label}" uses a non-canonical lane condition: ${ifValue}`,
+      });
+    }
+  }
+}
 
 const aggregateResultExpression = (leg: (typeof RUNTIME_LEGS)[number]): string =>
   ["$", `{{ needs.${leg}.result }}`].join("");
@@ -282,6 +584,7 @@ function checkRuntimeAggregate(input: {
       detail: `jobs.${name} must run on ${expectedRunner} with non-empty fail-close steps`,
     });
   }
+  checkLaneSkipSafety({ legs, doc: input.doc, violations: input.violations });
   const aggregateValue = input.jobs["harness-check"];
   const aggregate = recordValue(aggregateValue) as WorkflowJob | null;
   if (aggregateValue === undefined) {
@@ -512,6 +815,19 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
       continue;
     }
     const workflow = workflowRecord as WorkflowYaml;
+    if (
+      doc.role === "runtime" &&
+      doc.profile === "source" &&
+      !hasExactKeys(workflowRecord, ["name", "on", "permissions", "concurrency", "jobs"])
+    ) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "malformed_workflow_shape",
+        detail:
+          "source runtime workflow root must contain only name, on, permissions, concurrency, and jobs",
+      });
+    }
     if (workflowRecord.on !== undefined && !recordValue(workflowRecord.on)) {
       pushViolation({
         violations,
