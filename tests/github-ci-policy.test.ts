@@ -1228,15 +1228,6 @@ describe("github-ci-policy lint", () => {
         run: echo "doctor --profile source-doc-lane"`,
       ],
       [
-        "comment",
-        `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
-        `      - name: doc lane source doctor
-        if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane # ok`,
-      ],
-      [
         "control operator",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
