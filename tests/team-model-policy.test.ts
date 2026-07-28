@@ -23,7 +23,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("uses mini and xhigh effort for trivial doc patches (effort ladder, PO rule 2026-07-14)", () => {
+  it("uses mini at ladder-base high effort for trivial doc patches (effort ladder, PO rule 2026-07-28)", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "docs",
@@ -35,7 +35,8 @@ describe("team model policy", () => {
       difficulty: "trivial",
       model_family: "fast",
       model: MODEL_IDS.codex.mini,
-      reasoning_effort: "xhigh",
+      // mini は base=high (改定前は xhigh)。深さが要るなら effort ではなく Terra へ上げる。
+      reasoning_effort: "high",
       task_intent: "docs",
     });
   });
@@ -532,7 +533,7 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toBe(true);
   });
 
-  it("U-ROUTE2-012: effort ladder 基準 — sol/fable=low, terra/sonnet/opus=middle, spark/luna=high, mini=xhigh", () => {
+  it("U-ROUTE2-012: effort ladder 基準 — sol/fable=low, opus/terra/sonnet=middle, luna/spark/mini=high", () => {
     const base = (model: string) => MODEL_EFFORT_LADDER[model]?.base;
     expect(base(MODEL_IDS.codex.frontier)).toBe("low");
     expect(base(MODEL_IDS.codex.worker)).toBe("middle");
@@ -541,33 +542,65 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     expect(base(MODEL_IDS.claude.opus)).toBe("middle");
     expect(base(MODEL_IDS.codex.luna)).toBe("high");
     expect(base(MODEL_IDS.codex.spark)).toBe("high");
-    expect(base(MODEL_IDS.codex.mini)).toBe("xhigh");
+    expect(base(MODEL_IDS.codex.mini)).toBe("high");
   });
 
-  it("U-ROUTE2-013: 浅い回答のエスカレーション — terra middle→high→sol low、opus middle→xhigh、行き止まりは null", () => {
+  // PO 2026-07-28:「xhigh 以上はモデル上げたほうがいい」。ラダーが既定として xhigh を配ると
+  // 深さを effort で買う経路が固定化するため、base / shallow から xhigh を外し、行き止まり
+  // (shallow も escalate も無い帯) を禁じる。明示 --effort xhigh (UI/UX 例外) は別経路。
+  it("U-ROUTE2-014: ラダーは既定値として xhigh を配らず、全帯が次段を持つ", () => {
+    for (const [model, ladder] of Object.entries(MODEL_EFFORT_LADDER)) {
+      expect(ladder.base, `${model} base must not default to xhigh`).not.toBe("xhigh");
+      expect(ladder.shallow, `${model} shallow must not default to xhigh`).not.toBe("xhigh");
+      expect(
+        Boolean(ladder.shallow) || Boolean(ladder.escalate),
+        `${model} needs an effort step or a model step`,
+      ).toBe(true);
+    }
+  });
+
+  it("U-ROUTE2-013: 浅い回答のエスカレーション — effort 1 段、その先はモデル上げ (PO 2026-07-28)", () => {
+    // terra: middle → high (effort) → sol low (モデル上げ)
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "middle" }),
     ).toEqual({ model: MODEL_IDS.codex.worker, effort: "high" });
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "high" }),
     ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "low" });
+    // sol: low → middle。frontier なのでその先は無い (advisor / 人間判断へ)
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "low" }),
     ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "middle" });
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "middle" }),
     ).toBeNull();
+    // opus: middle → high → sol low。改定前は shallow=xhigh だった (effort で深さを買っていた)
     expect(
       escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "middle" }),
-    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "xhigh" });
+    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "high" });
     expect(
-      escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "xhigh" }),
-    ).toBeNull();
-    // terra high は sol low へ乗り換え (上の assertion で検証済み)。真の行き止まりは
-    // shallow/escalate を持たない luna (base high 固定)。
+      escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "high" }),
+    ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "low" });
+    // sonnet: middle → high → opus middle (族内でモデル上げ)
     expect(
-      escalateShallowResponse({ model: MODEL_IDS.codex.luna, currentEffort: "high" }),
-    ).toBeNull();
+      escalateShallowResponse({ model: MODEL_IDS.claude.sonnet, currentEffort: "high" }),
+    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "middle" });
+    // base=high 帯 (luna / spark / mini) は shallow を持たず、base から直接モデル上げ。
+    // 改定前は luna / spark が行き止まり、mini が base=xhigh だった。
+    expect(escalateShallowResponse({ model: MODEL_IDS.codex.luna, currentEffort: "high" })).toEqual(
+      { model: MODEL_IDS.codex.frontier, effort: "low" },
+    );
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.spark, currentEffort: "high" }),
+    ).toEqual({ model: MODEL_IDS.codex.worker, effort: "middle" });
+    expect(escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "high" })).toEqual(
+      {
+        model: MODEL_IDS.codex.worker,
+        effort: "middle",
+      },
+    );
+    // ラダー外モデルは対象外 (従来どおり null)
+    expect(escalateShallowResponse({ model: "unknown-model", currentEffort: "low" })).toBeNull();
   });
 
   it("U-ROUTE2-011: レビュー 3 面と プランエージェント (fable 一次 / sol fallback) の正本", () => {

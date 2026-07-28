@@ -37,6 +37,11 @@ PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 
 For work in this repository, read the repository-owned sources below and follow
 their workflow.
 
+- `CLAUDE.md` - **shared project rules for both runtimes** (rule placement
+  convention, PLAN filing rules, EOD close-out, model/effort routing). Rules that
+  hold for both Codex and Claude live there and are not duplicated here, so this
+  file is not self-sufficient — read it (added 2026-07-28, after measuring that
+  the PLAN filing rules had never reached this adapter).
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` - concept for internal rollout
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` - requirements and acceptance criteria
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` - extraction / cutover plan from the source snapshot
@@ -163,12 +168,15 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
-- Effort はモデル別基準ラダー (PO rule 2026-07-27) が既定: Sol/Fable =
-  `low`、Terra/Sonnet/Opus = `middle`、Luna/spark = `high`、mini = `xhigh`。回答が
-  浅い時は 1 段引き上げ (Sol/Fable → `middle`、Terra/Sonnet → `high`、Opus →
-  `xhigh`)、Terra が `high` でも浅い場合は Sol `low` へ乗り換える
-  (`escalateShallowResponse`)。ラダー外 (haiku 等) は従来既定 (Claude `high` /
-  GPT `middle`)。UI/UX のみ task-kind 例外で `xhigh` (PO rule 2026-07-08)。
+- Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
+  Opus/Terra/Sonnet = `middle`、Luna/spark/mini = `high`。回答が浅い時は
+  **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
+  Sol/Fable → `middle`、Opus/Terra/Sonnet → `high`、そこでも浅ければ
+  Sonnet→Opus `middle` / Opus・Terra・Luna・Fable→Sol `low` / spark・mini→Terra
+  `middle`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
+  「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
+  (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
+  task-kind 例外 (PO rule 2026-07-08)。
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
   explicit frontier gate.
@@ -207,11 +215,12 @@ Codex tool names differ from Claude, so matchers are mapped (not copied):
 - `subagent-stop` (`SubagentStop`) has **no Codex surface** and is genuinely N/A:
   codex.exe 0.128.0 exposes only `PreToolUse` / `PostToolUse` / `SessionStart` /
   `Stop` / `UserPromptSubmit` hook events (no `SubagentStop`).
-- `agent-guard` (`Agent`) is **not yet wired** for Codex. Codex DOES have a
-  sub-agent surface (`spawn_agent` / `wait_agent` / `list_agents` tools), so an
-  agent-guard analog is a **deferred follow-up** (a real, currently-unguarded
-  surface), **not** an absent one. Wiring it needs a Codex allowlist/model design
-  because `spawn_agent` semantics differ from Claude's `subagent_type`.
+- `agent-guard` **is wired** for Codex: `.codex/hooks.json` matches
+  `spawn_agent|spawn_agents_on_csv` and runs the same `.claude/hooks/agent-guard.ts`
+  with `blockOnFailure`, so non-allowlisted Codex subagent spawns are blocked the
+  same way Claude's are. (This entry read "not yet wired" until 2026-07-28, which
+  the hook config itself already contradicted. Read `.codex/hooks.json` when in
+  doubt — it is the SSoT for what is actually wired.)
 
 `.codex/hooks.json` parity with `.claude/settings.json` is machine-checked by `doctor`
 `codex-hook-adapter`, which fails closed if a guard diverges, drops
@@ -254,6 +263,52 @@ calls.
   part of the clean Pack artifact set. The command must not commit or push;
   inspect its output and perform any Pack repo commit / push as a separate,
   human-reviewed step.
+
+## PLAN Rules
+
+These filing rules previously existed only in `.claude/CLAUDE.md`, so this
+runtime never received them (measured 2026-07-28: `route_signal` / `generates` /
+`plan_id` appeared 0 times in this file). They are shared workflow, not
+Claude-specific, and `rule-drift` now fail-closes if an adapter drops them.
+
+Before creating or updating PLAN files, inspect existing `docs/plans/` entries
+and prefer extending an existing PLAN over creating an overlapping one.
+
+- `plan_id` is unique and matches the filename.
+- `kind`, `layer`, `status`, `dependencies`, and `review_evidence` match the
+  current schema. Schedule steps show parallel or serial mode.
+- New PLANs carry a route certificate (`route_signal` + `route_mode`), and the
+  mode must allow the `kind` (SSoT: `src/schema/route-filing.ts` — e.g.
+  troubleshoot⇔incident, refactor⇔refactor, add-design/add-impl⇔add-feature).
+  `kind` = poc / recovery / troubleshoot also requires an `aim` agent slot.
+- `kind=add-impl` carries the required Reverse pairing (`backfill-pairing`
+  fail-closes without it). A conditional kind (troubleshoot / recovery /
+  refactor / retrofit) needs either a Reverse pair or
+  `backprop_decision: not_required` with a reason of at least 10 characters.
+  Rule of thumb: pure repair of existing spec → `not_required`; adding a new
+  contract (constraint, fail-close condition, physical parameter) → Reverse pair.
+- **Draft PLANs must not list already-existing files in `generates`.** A draft
+  PLAN whose declared deliverable already exists in the tree trips
+  `merged-plan-status` and `duplicate-artifact-ownership`. Declare only the PLAN
+  doc itself at filing time; the implementing PR updates `generates` together
+  with the confirm (2026-07-28 lesson: PR #167 went red on exactly this).
+- `requires` may only point at confirmed / completed PLANs. A dependency on a
+  draft PLAN belongs in `references`, with the ordering expressed in Schedule.
+- A falsifiable safety / completeness claim in `review_evidence` or AC — "blast
+  radius 0", "no false positives", "N green" — must cite the test or command
+  that substantiates it. The mechanical substitute for a prose claim is a
+  real-repo regression test, never a sentence (`coding ≠ substance`,
+  PLAN-L7-89).
+- When a confirmed PLAN's claim is later found wrong, do not overwrite it: the
+  successor declares `supersedes: [<old plan_id>]` and the superseded PLAN gets
+  a correction note naming the successor (`doctor plan-supersession` requires
+  the back-reference).
+- PLAN files are LF-only. Rewriting one with a tool that emits CRLF breaks
+  `deliverable-plan-trace` with an opaque YAML error (observed 2026-07-28).
+
+Verify with `ut-tdd plan lint` plus the targeted doctor checks
+(`plan-governance`, `merged-plan-status`, `deliverable-plan-trace`,
+`plan-artifact-existence`, `backfill`) before pushing.
 
 ## Editing Rules
 
