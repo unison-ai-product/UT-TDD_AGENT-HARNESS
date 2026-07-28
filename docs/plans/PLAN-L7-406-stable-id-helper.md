@@ -88,7 +88,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-21T00:00:00+09:00"
         evidence_path: .ut-tdd/audit/A-L7-420-l7-406-db-rebuild-correction-2026-07-21.log
-        output_digest: "sha256:8d6e20a8e9530ec9ea1b3c2708036e34fadb3c7077036da6b8a614368c380da8"
+        output_digest: "sha256:4984b34bde0735b580dad5c2cf745f8eb45e79396dcdbd70331aec997cefbd22"
+        anchor_commit: 3c728fad6cacdd181080e39ad02be89d60ef2c81
 ---
 
 # PLAN-L7-406: stable ID helper consolidation

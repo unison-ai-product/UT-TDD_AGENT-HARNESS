@@ -52,7 +52,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-21T14:39:00+09:00"
         evidence_path: tests/vitest-snapshot-runner.test.ts
-        output_digest: "sha256:d05b7dc96c43cd6505579e58a16fcefeb5b3a94af817c4313101a66c138d5f79"
+        output_digest: "sha256:106205272557819156470dbf889c1ff2afb2b6fa4ca802e8405d859967c7d217"
         anchor_commit: a0fda541f1a0755e2a4a874c906c0a3fe1f64ea8
   - reviewer: blind-reviewer
     review_kind: cross_agent

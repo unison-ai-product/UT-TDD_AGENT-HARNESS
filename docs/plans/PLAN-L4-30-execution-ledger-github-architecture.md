@@ -58,9 +58,9 @@ review_evidence:
         scope: full
         exit_code: 0
         completed_at: "2026-07-21T18:23:35+09:00"
-        evidence_path: .ut-tdd/audit/A-189-execution-ledger-design-trio-blind-review-2026-07-21.md
-        output_digest: "sha256:d03515a765cb89a50d2fc80c6a5aef3cfda573b8c2b1121959dfe89d85d1349a"
-        anchor_commit: 2c34ac34f343e54eb6a0e90f2348cc5420883604
+        evidence_path: .ut-tdd/audit/A-L7-420-execution-ledger-plan-lint-2026-07-28.log
+        output_digest: "sha256:bfb6d2cbe5ad2c112261bcd98c176c37f3697459b6be31b139146a1ea2f7a719"
+        anchor_commit: 33dbd46dfe7581428a1bc09ac1a8f7875f0782c0
 ---
 
 # PLAN-L4-30: Execution Ledger と GitHub Forward再合流アーキテクチャ
