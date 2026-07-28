@@ -29,11 +29,18 @@ dependencies:
     - .ut-tdd/memory/project-incident-bun-session-db-refresh-runaway-on-2026-07-27.md
     - src/state-db/stop-refresh-coordinator.ts
     - src/state-db/projection-writer.ts
+    - src/state-db/index.ts
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
 ---
 
 # PLAN-L7-460: session db-refresh の資源ガードレール
+
+GitHub issue: #124 (`fix(runtime): bound Stop db-refresh memory and snapshot runner
+preparation` — 本 PLAN が機構化の正本)、#169 (harness.db 4.4GB 残置)。
+関連: #118 (closed、2.97GB で snapshot runner が >2GiB 全滅)、#78 (closed、rebuild なし
+stale 化の再発)。初稿は #124 を引用しておらず、issue と PLAN の紐付けが欠けていた
+(2026-07-28 に補完)。
 
 ## 設計判断: backprop は Reverse 対起票 (2026-07-28、advisor: claude-fable-5)
 
@@ -90,6 +97,43 @@ incident メモリが要求する再発防止 5 点を機械強制する:
    synchronous=NORMAL 等の明示 pragma を導入する (現状 0 件、grep 実測
    2026-07-28)。Windows の書き込み遅延・handle 解放遅延の緩和を狙う。挙動
    等価性 (projection 決定性) は既存回帰で固定する。
+7. **projection 鮮度の fail-close (HEAD 刻印)**: rebuild 時に projection 元の commit
+   hash を meta へ刻印し、刻印 HEAD ≠ 現 HEAD のとき **「重複なし」「影響なし」といった
+   否定証明を返さず fail-close** する。鮮度は rebuild 時刻だけでは測れない (下記
+   2026-07-28 実測 3)。ブランチ作業中の摩擦は warn + 明示 override で緩和する。
+8. **rebuild = 新ファイルへ書いて atomic swap**: サイズ回収を手順 (人が VACUUM を
+   思い出すこと) ではなく**構造**で保証する。全置換 rebuild でもファイルは縮まないため
+   (下記実測 2)、VACUUM 相当を rebuild 経路に内在させる。
+
+## 2026-07-28 実測 (issue #169 の rebuild 実施で判明した 3 点)
+
+1. **rebuild は効くが 1 回目は fail-close した**: 手書きメモリの frontmatter 欠落
+   (`.ut-tdd/memory/project-po-issue-157-codex-goal-handover-2026-07-27.md`、ローカルが
+   古いブランチのため main の修正版と未同期) で 3m28s 後に中断。原子性が効き旧 projection は
+   無傷。main の版で上書きして再実行し 4m38s で成功。
+2. **行数 8,056,339 → 189,301 (43 分の 1) だがファイルは 4,434.6MB のまま**。SQLite は
+   VACUUM しない限り解放ページを再利用するだけで縮まない。→ スコープ 8 の根拠。
+   rebuild 後の上位テーブルは feedback_lifecycle 95,259 / hook_events 23,196 /
+   feedback_events 14,705 で、いずれも runtime append または jsonl 由来。retention 方針は
+   スコープ 3 のゲートが鳴った時点で rebuild 時の刈り込みとして足す (保持期間を先に決めない)。
+   **旧 8M 行の内訳は rebuild 済みのため既に測定不能** (誠実に記録: 主犯の特定はできていない)。
+3. **鮮度には HEAD 同一性が要る**: rebuild 成功後も PLAN-L6-94 / PLAN-L7-465 は
+   `graph_nodes` に載らなかった。DB が古いのではなく **projection 元の working tree が
+   別ブランチ (`docs/l7-453-doc-audit-errata`) で、そのブランチに両 PLAN が存在しない**ため。
+   つまり projection は「rebuild 時点の checkout」を映すので、時刻だけの鮮度判定では
+   偽の否定証明を通す。→ スコープ 7 の根拠。
+
+## 再発の履歴 (3 回目を機械で止める)
+
+- issue #118 (closed): harness.db 2.97GB → snapshot runner が
+  `ERR_FS_FILE_TOO_LARGE (>2GiB)` で全滅 (検証基盤が丸ごと停止する実害)。
+- issue #169 (open): 4.4GB。今回。
+- issue #78 (closed): 「rebuild なしで stale 化する」が**再発**とタイトルに明記。
+
+肥大と stale は設計問題ではなく**運用不変条件の欠落**であり (advisor: claude-fable-5、
+2026-07-28)、DB 再設計はコア安定後に回す。今固定するのはスコープ 3 / 7 / 8 の 3 点に限る。
+DB は正本ではなく「安く捨てて作り直せる派生 index」であり (rebuild 4m38s で決定論的に
+再生できることを実測)、依存面の縮小より再生保証の方が効く。
 
 ## スコープ外
 
@@ -108,3 +152,12 @@ incident メモリが要求する再発防止 5 点を機械強制する:
 - AC-2: size/time/memory いずれかの上限超過で rollback 終了する oracle テストが green
   (上限は fixture で人工的に小さくして実発火させる。prose 主張ではなくテストで裏取る)。
 - AC-3: 二重起動が single-flight で 1 本に収束するテストが green。
+- AC-4 (スコープ 7): 刻印 HEAD ≠ 現 HEAD の projection に対し、否定証明を返す系
+  (重複検出 / 影響範囲 / doctor の該当 check) が **fail-close する負例テストが green**。
+  刻印が一致する場合は従来どおり判定を返すこと (過剰 fail-close の回帰防止) も固定する。
+- AC-5 (スコープ 8): rebuild 後に **ファイルサイズが実測で縮む** ことを固定
+  (before/after のバイト数を評価。2026-07-28 の実測 = 行数 43 分の 1 でもサイズ不変
+  4,434.6MB を before として引用する)。rebuild 中断時に旧 DB が無傷で残ることも維持。
+- AC-6 (スコープ 3、再発検知): harness.db の size / 行数が閾値を超えたとき doctor が
+  fail する回帰テストが green (人間の気付きに依存しない)。閾値の根拠は append テーブルの
+  増加速度実測を引用する (未計測のまま定数を置かない)。
