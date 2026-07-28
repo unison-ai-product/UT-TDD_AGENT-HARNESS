@@ -50,6 +50,7 @@ import { computeSkillMetrics } from "./feedback/engine";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
+import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
 import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace";
@@ -1011,8 +1012,11 @@ session
     if (!r.ok) {
       process.stderr.write(`session-log: db refresh skipped (${r.skippedReason})\n`);
     }
+    if (r.vacuum?.warning) {
+      process.stderr.write(`session-log: db vacuum skipped (${r.vacuum.warning})\n`);
+    }
     process.stdout.write(
-      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested})\n`,
+      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested}, vacuumRan=${r.vacuum?.ran ?? false})\n`,
     );
   });
 
@@ -1504,6 +1508,15 @@ db.command("rebuild")
     process.stdout.write(
       "  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection\n",
     );
+    if (r.tokenIngest) {
+      const t = r.tokenIngest;
+      process.stdout.write(
+        `  token telemetry (repo-scoped, issue #82): claude files matched ${t.claudeFilesScanned}/${t.claudeFilesChecked} ` +
+          `(project dir resolved=${t.claudeProjectDirResolved}, foreign repo ${t.claudeFilesForeignRepo}, unknown cwd ${t.claudeFilesSkippedUnknownCwd}), ` +
+          `codex files matched ${t.codexFilesMatched}/${t.codexFilesChecked} ` +
+          `(foreign repo ${t.codexFilesForeignRepo}, unknown cwd ${t.codexFilesSkippedUnknownCwd})\n`,
+      );
+    }
   });
 db.command("scope-preview")
   .description("preview document/activation detection scope from harness.db profiles")
@@ -3178,6 +3191,47 @@ github
       if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       else process.stdout.write(renderGithubOpsGuard(result));
       process.exitCode = result.ok ? 0 : 1;
+    },
+  );
+
+// PLAN-L7-455 (troubleshoot): 変更ファイル分類 (doc-only lane 判定、fail-close)。
+// harness-check.yml の重い step (full vitest / full doctor 等) を doc-only 変更で
+// skip するための判定を出す。判定不能・新種 path は必ず "full" にフォールバックする。
+github
+  .command("classify-changes")
+  .description("git diff ベースの変更分類 (doc-only lane 判定、fail-close)")
+  .requiredOption("--event-name <name>", "github.event_name")
+  .requiredOption("--head-sha <sha>", "diff 対象 head SHA")
+  .option("--base-sha <sha>", "pull_request の base SHA")
+  .option("--before-sha <sha>", "push event の before SHA")
+  .option("--github-output <path>", "GITHUB_OUTPUT へ lane=<value> を追記するファイルパス")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      eventName: string;
+      headSha: string;
+      baseSha?: string;
+      beforeSha?: string;
+      githubOutput?: string;
+      json?: boolean;
+    }) => {
+      const result = runChangeLaneClassification({
+        eventName: opts.eventName,
+        headSha: opts.headSha,
+        baseSha: opts.baseSha,
+        beforeSha: opts.beforeSha,
+        git: new SystemGitDiffNamesPort(process.cwd()),
+      });
+      if (opts.githubOutput) {
+        appendFileSync(opts.githubOutput, `lane=${result.lane}\n`);
+      }
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(
+          `change lane: ${result.lane} (${result.reason}; range=${result.range ?? "none"}; files=${result.fileCount})\n`,
+        );
+      }
     },
   );
 

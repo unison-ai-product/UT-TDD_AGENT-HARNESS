@@ -33,8 +33,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-16T15:01:00+09:00"
         evidence_path: tests/doctor-singleton-lock.test.ts
-        output_digest: "sha256:ca259a61e50445b8230c92057880fc6b4e815497030ba3c76de891615ed97599"
-        anchor_commit: 897d3b02
+        output_digest: "sha256:2d92f153c116dc7ff7401b2dc7e3de4e071c71e14e520503923a91284e4d9f4f"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: unit_test
         command: "bun scripts/run-vitest-snapshot.ts tests/cli-surface.test.ts -t U-DOCLOCK-01"
         runner: bun
@@ -42,8 +42,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-16T15:35:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:ea45521a9931f94d1da74ee8920319ae4cc52eacc16ed30f137744ee553bda41"
-        anchor_commit: f25a0167
+        output_digest: "sha256:5a4da476d324cd4b0618907391e10f79d5486c18209653f4369005b16f763a0d"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bunx tsc --noEmit"
         runner: bun
@@ -51,8 +51,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-16T15:36:00+09:00"
         evidence_path: src/doctor/singleton-lock.ts
-        output_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        anchor_commit: f25a0167
+        output_digest: "sha256:b9c555441d38ca29d512de8f6fa15251d155499cc8f9466b3805bc25bb0078bf"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 generates:
   - artifact_path: docs/plans/PLAN-L7-442-doctor-singleton-guard.md
     artifact_type: markdown_doc

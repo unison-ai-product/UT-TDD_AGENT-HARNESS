@@ -1441,9 +1441,33 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-TESTHYGIENE-045` | `vitest-snapshot-runner.test.ts` | batch-only runner | `--watch`／`-w`／`--watch=...`はstale snapshotを監視するためfail-close、通常引数は許可 |
 | `U-TESTHYGIENE-046` | `vitest-snapshot-runner.test.ts` | watch script contract | live sourceを観測できない`test:watch` scriptはmanifestに存在しない |
 | `U-TESTHYGIENE-047` | `vitest-snapshot-runner.test.ts` | Bun runtime resolution | Vitest workerのNode binaryを継承せず、Bun runtimeのabsolute executableをsnapshot install/rebuild/Vitestに使う |
+| `U-TESTHYGIENE-048` | `vitest-snapshot-runner.test.ts` | POSIX root guard | `uid=0`はchmod sealを迂回できるため、原因・非root再実行を示してfail-fastする |
+| `U-TESTHYGIENE-049` | `vitest-snapshot-runner.test.ts` | root guard非対象 | `uid!=0`と`getuid`不在のWindowsはguardを素通りし、既存seal経路を維持する |
+| `U-TESTHYGIENE-050` | `vitest-snapshot-runner.test.ts` | entrypoint副作用境界 | `uid=0`はsnapshot一時領域を作る前に拒否され、seal前だけでなく全runner副作用前のfail-fastとなる |
+| `U-TESTHYGIENE-051` | `vitest-snapshot-runner.test.ts` | 非root entrypoint | `uid!=0`はguard後段へ到達し、root誤判定で処理を遮断しない |
+| `U-TESTHYGIENE-052` | `vitest-snapshot-runner.test.ts` | Windows ACL seal command | 対象identityへ継承付き`WD,AD` denyを再帰適用し、identity空値はfail-closeする。通常権限での実write拒否は036、Administratorによるtake-ownership等の明示bypass後の改変検出は042が担う |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
+
+## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
+
+対象 = `tests/support/chunked-hash.ts`（fence/snapshot共通のstreaming hashヘルパー）、
+`src/state-db/db-maintenance.ts`。実テスト = `tests/git-workspace-fingerprint.test.ts`、
+`tests/db-maintenance.test.ts`。
+
+| ID | 観点 | fixture / 実行 | expected |
+| --- | --- | --- | --- |
+| `U-FSTREAM-1` | チャンクhashの同値性 | 0／10バイト／チャンク長±1／2チャンク超のfileを注入チャンク長(64KiB)で`hashFileChunked` | `readFileSync`丸読み(`createHash("sha256").update(readFileSync(path))`)と完全一致するsha256 hex |
+| `U-FSTREAM-2` | 部分readの継続 | `readSync`が要求長より小さい値のみ返す`ChunkedFileIo`を注入 | EOFまで取りこぼさずchunk丸読みと同一digest。呼び出し回数はsub-chunk単位を上回る |
+| `U-FSTREAM-3` | 読取失敗の診断性 | 存在しないpathを`hashFileChunkedWithDiagnostics`へ注入 | throwするErrorに相対path・サイズ(bytes)・原因messageを含む |
+| `U-DBVAC-1` | 閾値超過でVACUUM発火 | 実SQLite dbへinsert→delete churnを生成し、`minFreelistBytes`/`freelistRatio`を低く注入 | `ran=true`、`afterBytes<beforeBytes`、on-disk file sizeが縮小 |
+| `U-DBVAC-2` | 閾値未満はno-op | 同churnを既定閾値(64MiB/25%)で評価 | `ran=false`、file sizeは不変、warningなし |
+| `U-DBVAC-3` | 排他lockでfail-open | 別接続で`BEGIN IMMEDIATE`保持中に`maybeVacuumHarnessDb`を実行 | throwせず`ran=false`、`warning`に失敗理由 |
+
+実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/db-maintenance.test.ts`、
+`tests/db-currency.test.ts`(`U-DBCURRENCY-026`/`027`、stop-refresh経路がrebuild完走後のみ
+`maybeVacuumHarnessDb`を呼ぶことの検証)。
 
 ## PLAN-L7-434 全PR共通harness-check trigger oracle (PLAN-REVERSE-434 backfill、2026-07-14)
 
@@ -1610,6 +1634,30 @@ property testは任意の合法event列でreplay同一性・単調append・termi
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
 cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする。
 
+## Issue #123 shell-free hook invocation oracle (2026-07-22)
+
+| U-ID | 対象 | oracle |
+|---|---|---|
+| `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 |
+| `U-HOOKEXEC-002` | Claude serializer | `command` は `node`、`args` は shell-free native Bun launcher、entrypoint、subcommand の token 配列になる。 |
+| `U-HOOKEXEC-003` | source Claude hooks | agent/work guards、session start/post-tool-use/summary、subagent-stop の全 6 hook が exec form である。 |
+| `U-HOOKEXEC-004` | policy preservation | guard は `blockOnFailure:true`、観測/session hook は既存 fail-open policy を保持する。 |
+| `U-HOOKEXEC-005` | Codex separation | Claude exec serializer の変更が Codex JSON shape を暗黙変更せず、両者は semantic invocation で等価比較される。 |
+| `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
+| `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
+| `U-HOOKEXEC-008` | Windows native smoke | hook host→Bun entrypoint の dispatch ancestry に `sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe` が無く、hook outcome は既存契約どおりである。 |
+| `U-HOOKEXEC-009` | Node TypeScript launcher floor | `package.json#engines.node` は無フラグ TypeScript execution が有効な `>=22.18` を要求し、22.6〜22.17を対応済みと宣言しない。 |
+| `U-HOOKEXEC-010` | Windows custody debt boundary | hook PLAN は `windowsHide` / shell-free Greenをprocess-tree custody証拠へ流用せず、Issue #134 / Windows Job Object / 未解消境界を明記する。 |
+
+実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
+`tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる
+`tests/hook-native-launcher.test.ts` は `process.cwd()` を 1 回だけ使用し、snapshot runner が
+準備した writable execution snapshot で source / Pack template の parity を検証する
+`isolated_fixture` 分類とする。live checkout の検証に切り替えたり、root 参照を
+追加した場合は `test-repository-isolation` の `callsite-drift` で fail-close する。
+
+Windows smoke は単なる exit code green では代替できない。process ancestry の捕捉結果を test artifact
+として残し、「Bun が起動した」ことと「shell/conhost を介さず Bun を起動した」ことを別 assertion にする。
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 
 以下はD0時点では全て設計候補である。対応test codeと実装をF0の同一commitへ追加し、Red実測を記録した

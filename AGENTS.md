@@ -155,22 +155,22 @@ attacker/defender providers stay separated. The Claude subagent counterpart is
 
 Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
 
-- Codex: テスト実装 = `gpt-5.6-terra`; 実装/ドキュメント修正 = `gpt-5.6-luna`
-  (effort `high` 基準、worker `middle` 既定の上書き); 検証/設計 = `gpt-5.6-sol`;
+- Codex: テスト実装 = `gpt-5.6-terra` (effort `middle`); 実装/ドキュメント修正 =
+  `gpt-5.6-luna` (effort `high`); 検証/設計 = `gpt-5.6-sol` (effort `low`);
   軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
-- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-4-8`);
+- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-5`);
   UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
-- Effort はモデル別基準ラダー (PO rule 2026-07-14) が既定: Sol/Terra/Fable =
-  `low`、Sonnet = `middle`、Opus/Luna/spark = `high`、mini = `xhigh`。回答が
-  浅い時は 1 段引き上げ (Sol/Terra/Fable → `middle`、Sonnet → `high`、Opus →
-  `xhigh`)、Terra が `middle` でも浅い場合は Sol `low` へ乗り換える
+- Effort はモデル別基準ラダー (PO rule 2026-07-27) が既定: Sol/Fable =
+  `low`、Terra/Sonnet/Opus = `middle`、Luna/spark = `high`、mini = `xhigh`。回答が
+  浅い時は 1 段引き上げ (Sol/Fable → `middle`、Terra/Sonnet → `high`、Opus →
+  `xhigh`)、Terra が `high` でも浅い場合は Sol `low` へ乗り換える
   (`escalateShallowResponse`)。ラダー外 (haiku 等) は従来既定 (Claude `high` /
   GPT `middle`)。UI/UX のみ task-kind 例外で `xhigh` (PO rule 2026-07-08)。
 - Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-5.6-sol`) or Claude Opus (`claude-opus-4-8`) or above, behind the
+  (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
   explicit frontier gate.
 - 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は上記 routing を機械強制する
   (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close、
@@ -290,8 +290,20 @@ calls.
   (`feedback_events`、PLAN-L7-110) から受け取り、stale 化する prose handover を正本にしない。
 - **永続教訓は共有 HARNESS メモリへ昇格する** (`ut-tdd memory add`、正本 `.ut-tdd/memory/`、
   PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
+  **メモリファイルの手書き作成は禁止** — frontmatter (memory_id/kind/title/tags/updated_at)
+  欠落は db rebuild が fail-close し CI が赤化する (2026-07-28 実例: PR #167)。必ず
+  `ut-tdd memory add` 経由で書く。
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
+
+## GitHub Issue Hierarchy
+
+- 正本は `docs/governance/github-issue-hierarchy.md`。
+- 新規 Issue の前に既存の成果目標を検索し、bounded slice は GitHub の正式な sub-issue にする。
+- top-level Issue は独立した成果目標だけに限定し、`Related` や本文の `Parent: #N` を親子関係の
+  代替にしない。
+- canonical parent は 1 件。別系統は横断リンクに留め、無関係な移行をブロッカー化しない。
+- 親 Issue は必須子 Issue と親固有 AC の両方が完了するまで close しない。
 
 ## Doctor Invocation Discipline (PLAN-L7-442)
 

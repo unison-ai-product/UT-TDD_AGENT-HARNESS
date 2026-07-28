@@ -41,6 +41,7 @@ import {
 } from "../src/state-db/refactor-candidates";
 import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections";
 import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections";
+import { claudeProjectSlug } from "../src/state-db/token-tracker";
 
 interface VerificationWorkflowRow {
   phase: string;
@@ -936,6 +937,226 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
           phase: "G4",
           attempt_count: 2,
         });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-DBPROJ-GATE-02 (PLAN-RECOVERY-14): gate-run-derived workflow_runs joins the plan's documented drive_runs row (no false workflow_orphans)", () => {
+    // Regression for the drive-db-registration `workflow_orphans` false-positive root
+    // cause: projectGateRunEvidence previously stamped drive_run_id via
+    // stableId("gate-drive", planId), a different id namespace than the
+    // stableId("drive-run", `${planId}:documented`) row projectDriveRuns always
+    // creates for every projected plan — so every gate-derived workflow_runs row was
+    // an unconditional orphan regardless of whether the plan was real and current.
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-orphan-fix-"));
+    const planId = "PLAN-TEST-recovery-14-gate-orphan";
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "plans", `${planId}.md`),
+        [
+          "---",
+          `plan_id: ${planId}`,
+          'title: "gate orphan join fixture"',
+          "kind: impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "created: 2026-07-17",
+          "updated: 2026-07-17",
+          "---",
+          "",
+          "# gate orphan join fixture",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      writeFileSync(
+        join(root, ".ut-tdd", "gate_runs", "G4-attempt-1.json"),
+        `${JSON.stringify(
+          {
+            schema_version: 1,
+            gate_run_id: "gate-run:G4:recovery-14-attempt-1",
+            gate_id: "G4",
+            plan_id: planId,
+            status: "passed",
+            checked_at: "2026-07-17T00:00:00.000Z",
+            session_id: "session-recovery-14",
+            mode: "hybrid",
+            tier: "cross_agent",
+            review_kind: "cross_agent",
+            static_applicable: true,
+            source: "ut-tdd gate",
+            messages: [],
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const driveRunId = String(
+          db.prepare("SELECT drive_run_id FROM drive_runs WHERE plan_id = ?").get(planId)
+            ?.drive_run_id,
+        );
+        const workflowRow = db
+          .prepare("SELECT drive_run_id FROM workflow_runs WHERE plan_id = ?")
+          .get(planId) as { drive_run_id?: string } | undefined;
+        expect(workflowRow?.drive_run_id).toBe(driveRunId);
+
+        const orphan = db
+          .prepare(
+            `SELECT COUNT(*) AS value
+             FROM workflow_runs w
+             LEFT JOIN drive_runs d ON d.drive_run_id = w.drive_run_id
+             WHERE d.drive_run_id IS NULL`,
+          )
+          .get() as { value: number };
+        expect(orphan.value).toBe(0);
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-DBPROJ-GATE-03 (PLAN-RECOVERY-14): gate-run evidence resolves legacy short plan_id aliases like other DB-linked projections", () => {
+    // gate_runs projection previously skipped the resolveProjectedPlanId alias
+    // resolution that projectHookEvents / model_runs / skill projections already apply
+    // (PLAN migrations that append a descriptive suffix to a plan_id leave older gate
+    // evidence pointing at the bare prefix). Unresolved aliases become permanent
+    // orphan_gate_run rows even though the PLAN is live under its current id.
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-alias-fix-"));
+    const shortPlanId = "PLAN-TEST-recovery-14-alias";
+    const currentPlanId = `${shortPlanId}-full-title`;
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "plans", `${currentPlanId}.md`),
+        [
+          "---",
+          `plan_id: ${currentPlanId}`,
+          'title: "gate alias fixture"',
+          "kind: impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "created: 2026-07-17",
+          "updated: 2026-07-17",
+          "---",
+          "",
+          "# gate alias fixture",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      writeFileSync(
+        join(root, ".ut-tdd", "gate_runs", "G4-attempt-1.json"),
+        `${JSON.stringify(
+          {
+            schema_version: 1,
+            gate_run_id: "gate-run:G4:recovery-14-alias-attempt-1",
+            gate_id: "G4",
+            plan_id: shortPlanId,
+            status: "passed",
+            checked_at: "2026-07-17T00:00:00.000Z",
+            session_id: "session-recovery-14-alias",
+            mode: "hybrid",
+            tier: "cross_agent",
+            review_kind: "cross_agent",
+            static_applicable: true,
+            source: "ut-tdd gate",
+            messages: [],
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const gateRow = db
+          .prepare("SELECT plan_id FROM gate_runs WHERE gate_run_id = ?")
+          .get("gate-run:G4:recovery-14-alias-attempt-1") as { plan_id?: string } | undefined;
+        expect(gateRow?.plan_id).toBe(currentPlanId);
+
+        const orphanGate = db
+          .prepare(
+            `SELECT COUNT(*) AS value
+             FROM gate_runs g
+             WHERE COALESCE(g.plan_id, '') <> ''
+               AND NOT EXISTS (SELECT 1 FROM plan_registry p WHERE p.plan_id = g.plan_id)`,
+          )
+          .get() as { value: number };
+        expect(orphanGate.value).toBe(0);
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-DBPROJ-GATE-04 (PLAN-RECOVERY-14): gate-run evidence for a genuinely nonexistent PLAN stays a fail-closed orphan_gate_run (negative regression)", () => {
+    // The alias-resolution and drive_run_id join fixes above must not silently swallow
+    // real orphans: evidence referencing a plan_id that never existed (typo, deleted
+    // PLAN, ad-hoc test run) must still trip gate-run-coverage.
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-real-orphan-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      writeFileSync(
+        join(root, ".ut-tdd", "gate_runs", "G4-attempt-1.json"),
+        `${JSON.stringify(
+          {
+            schema_version: 1,
+            gate_run_id: "gate-run:G4:recovery-14-real-orphan-attempt-1",
+            gate_id: "G4",
+            plan_id: "PLAN-DOES-NOT-EXIST-RECOVERY-14",
+            status: "passed",
+            checked_at: "2026-07-17T00:00:00.000Z",
+            session_id: "session-recovery-14-real-orphan",
+            mode: "hybrid",
+            tier: "cross_agent",
+            review_kind: "cross_agent",
+            static_applicable: true,
+            source: "ut-tdd gate",
+            messages: [],
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const orphanGate = db
+          .prepare(
+            `SELECT COUNT(*) AS value
+             FROM gate_runs g
+             WHERE COALESCE(g.plan_id, '') <> ''
+               AND NOT EXISTS (SELECT 1 FROM plan_registry p WHERE p.plan_id = g.plan_id)`,
+          )
+          .get() as { value: number };
+        expect(orphanGate.value).toBe(1);
       } finally {
         db.close();
       }
@@ -2475,6 +2696,167 @@ Fixture.
       expect(improvementLog).toMatchObject({ status: "open" });
     } finally {
       db.close();
+    }
+  });
+});
+
+describe("rebuildHarnessDb: repo-scoped runtime token telemetry ingest (issue #82, PLAN-L7-454)", () => {
+  function withSessionDirEnv<T>(claudeDir: string, codexDir: string, run: () => T): T {
+    const prevClaude = process.env.UT_TDD_CLAUDE_SESSIONS_DIR;
+    const prevCodex = process.env.UT_TDD_CODEX_SESSIONS_DIR;
+    process.env.UT_TDD_CLAUDE_SESSIONS_DIR = claudeDir;
+    process.env.UT_TDD_CODEX_SESSIONS_DIR = codexDir;
+    try {
+      return run();
+    } finally {
+      if (prevClaude === undefined) delete process.env.UT_TDD_CLAUDE_SESSIONS_DIR;
+      else process.env.UT_TDD_CLAUDE_SESSIONS_DIR = prevClaude;
+      if (prevCodex === undefined) delete process.env.UT_TDD_CODEX_SESSIONS_DIR;
+      else process.env.UT_TDD_CODEX_SESSIONS_DIR = prevCodex;
+    }
+  }
+
+  it("(a)(b)(c) ingests only repo-owned session usage into model_runs; foreign-repo usage is excluded", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-repo-"));
+    const claudeRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-claude-"));
+    const codexRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-codex-"));
+    try {
+      // repo に対応する Claude project-slug ディレクトリ + 別 repo (混入させてはいけない) のディレクトリ。
+      const ownSlug = claudeProjectSlug(root);
+      mkdirSync(join(claudeRoot, ownSlug), { recursive: true });
+      mkdirSync(join(claudeRoot, `${ownSlug}-other-repo`), { recursive: true });
+      writeFileSync(
+        join(claudeRoot, ownSlug, "s1.jsonl"),
+        JSON.stringify({
+          type: "assistant",
+          sessionId: "own-session",
+          cwd: root,
+          message: {
+            model: "claude-opus-4-8",
+            usage: { input_tokens: 111, output_tokens: 22 },
+          },
+        }),
+        "utf8",
+      );
+      writeFileSync(
+        join(claudeRoot, `${ownSlug}-other-repo`, "foreign.jsonl"),
+        JSON.stringify({
+          type: "assistant",
+          sessionId: "foreign-session",
+          message: {
+            model: "claude-opus-4-8",
+            usage: { input_tokens: 90909, output_tokens: 90909 },
+          },
+        }),
+        "utf8",
+      );
+
+      // Codex: cwd 一致 (own) / cwd 不一致 (他 repo、混入させてはいけない)。
+      writeFileSync(
+        join(codexRoot, "own.jsonl"),
+        [
+          JSON.stringify({ type: "session_meta", payload: { model: "gpt-5.3-codex", cwd: root } }),
+          JSON.stringify({
+            type: "event_msg",
+            payload: {
+              type: "token_count",
+              info: { total_token_usage: { input_tokens: 300, output_tokens: 44 } },
+            },
+          }),
+        ].join("\n"),
+        "utf8",
+      );
+      writeFileSync(
+        join(codexRoot, "foreign.jsonl"),
+        [
+          JSON.stringify({
+            type: "session_meta",
+            payload: { model: "gpt-5.3-codex", cwd: `${root}-sibling-repo` },
+          }),
+          JSON.stringify({
+            type: "event_msg",
+            payload: {
+              type: "token_count",
+              info: { total_token_usage: { input_tokens: 80808, output_tokens: 80808 } },
+            },
+          }),
+        ].join("\n"),
+        "utf8",
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        const result = withSessionDirEnv(claudeRoot, codexRoot, () =>
+          rebuildHarnessDb({ repoRoot: root, db }),
+        );
+
+        // (c) rebuild 後の model_runs に実測 token 行 (input/output tokens 非 NULL) が存在する。
+        const measuredRows = db
+          .prepare(
+            "SELECT runtime, model, input_tokens, output_tokens FROM model_runs WHERE input_tokens IS NOT NULL ORDER BY runtime",
+          )
+          .all() as Array<{
+          runtime: string;
+          model: string;
+          input_tokens: number;
+          output_tokens: number;
+        }>;
+        expect(measuredRows).toHaveLength(2);
+
+        // (a) repo 帰属分のみ投入される。
+        const claudeRow = measuredRows.find((r) => r.runtime === "claude");
+        const codexRow = measuredRows.find((r) => r.runtime === "codex");
+        expect(claudeRow).toMatchObject({ input_tokens: 111, output_tokens: 22 });
+        expect(codexRow).toMatchObject({ input_tokens: 300, output_tokens: 44 });
+
+        // (b) 他 repo の usage (90909 / 80808) は一切混入していない。
+        expect(
+          measuredRows.some((r) => r.input_tokens === 90909 || r.output_tokens === 90909),
+        ).toBe(false);
+        expect(
+          measuredRows.some((r) => r.input_tokens === 80808 || r.output_tokens === 80808),
+        ).toBe(false);
+
+        // 可視化: rebuild 結果に repo スコープ ingest の走査統計が載る。
+        expect(result.tokenIngest).toMatchObject({
+          claudeProjectDirResolved: true,
+          claudeFilesScanned: 1,
+          codexFilesMatched: 1,
+          codexFilesForeignRepo: 1,
+        });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(claudeRoot, { recursive: true, force: true });
+      rmSync(codexRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("cold-start: no matching session logs => rebuild succeeds with 0 measured model_runs rows, no throw", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-cold-"));
+    const claudeRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-cold-claude-"));
+    const codexRoot = mkdtempSync(join(tmpdir(), "ut-tdd-token-ingest-cold-codex-"));
+    try {
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        const result = withSessionDirEnv(claudeRoot, codexRoot, () =>
+          rebuildHarnessDb({ repoRoot: root, db }),
+        );
+        expect(result.ok).toBe(true);
+        const measured = db
+          .prepare("SELECT COUNT(*) AS n FROM model_runs WHERE input_tokens IS NOT NULL")
+          .get() as { n: number };
+        expect(measured.n).toBe(0);
+        expect(result.tokenIngest).toMatchObject({ claudeProjectDirResolved: false });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(claudeRoot, { recursive: true, force: true });
+      rmSync(codexRoot, { recursive: true, force: true });
     }
   });
 });

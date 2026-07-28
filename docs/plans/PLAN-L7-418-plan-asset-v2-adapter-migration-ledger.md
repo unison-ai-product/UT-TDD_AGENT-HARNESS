@@ -175,8 +175,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-15T12:52:01+09:00"
         evidence_path: .ut-tdd/audit/A-145-l7-418-final-review-receipt.md
-        output_digest: "sha256:a919420fdbc3e034c56f69e04bc4d55f1c474f86926b16a16ec2843e45bd4ca5"
-        anchor_commit: 85f78e6cfb97ac2517364795bd764d69a590d97c
+        output_digest: "sha256:308356e39532260c3807b4229eb9ce85fa23830538eb04dad8686d3e176839de"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-418

@@ -35,7 +35,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-17T15:58:00+09:00"
         evidence_path: .ut-tdd/audit/A-PR96-round6-typecheck.log
-        output_digest: "sha256:8366207267355d3e"
+        output_digest: "sha256:8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -43,7 +44,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-17T15:58:00+09:00"
         evidence_path: .ut-tdd/audit/A-PR96-round6-lint.log
-        output_digest: "sha256:1c5f728439ceb061"
+        output_digest: "sha256:1c5f728439ceb0616794197802c1f5b2c8aa77634836fecac6ef36760e65dd79"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 generates:
   - artifact_path: docs/plans/PLAN-L7-450-test-traceability-detector-hardening.md
     artifact_type: markdown_doc

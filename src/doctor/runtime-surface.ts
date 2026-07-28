@@ -113,34 +113,12 @@ export function checkCodexWrapperParity(deps: RuntimeSurfaceDeps): {
   const adapterTests = reads.get(requiredFiles[4]) ?? "";
   const testDesign = reads.get(requiredFiles[5]) ?? "";
   const violations: string[] = [];
-  const settingStrings: string[] = [];
-  try {
-    const walk = (value: unknown): void => {
-      if (typeof value === "string") {
-        settingStrings.push(value);
-        return;
-      }
-      if (Array.isArray(value)) {
-        for (const item of value) walk(item);
-        return;
-      }
-      if (value && typeof value === "object") {
-        for (const item of Object.values(value)) walk(item);
-      }
-    };
-    walk(JSON.parse(settings));
-  } catch {
-    violations.push(".claude/settings.json must be valid JSON");
-  }
-
-  const claudeHookCommands = [
-    'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start',
-    'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use',
-    'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary',
-  ];
-  for (const command of claudeHookCommands) {
-    if (!settingStrings.includes(command)) {
-      violations.push(`Claude project hook command missing: ${command}`);
+  const projectHooks = analyzeProjectHooks([{ file: requiredFiles[0], content: settings }]);
+  if (!projectHooks.ok) {
+    for (const violation of projectHooks.violations) {
+      violations.push(
+        `Claude project hook invocation invalid: ${violation.hook ?? "settings"}:${violation.reason}`,
+      );
     }
   }
 

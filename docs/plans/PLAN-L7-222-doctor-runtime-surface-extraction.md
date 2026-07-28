@@ -86,3 +86,14 @@ review_evidence:
 - `tests/doctor-runtime-surface.test.ts` で切り出し先モジュールを直接検証し、`tests/doctor.test.ts` の既存 import 経路も維持する。
 - full doctor で `github-ci-policy` / `codex-hook-adapter` / `codex-wrapper-parity` が OK のまま出力されることを確認する。
 - `impl-plan-trace` により新規 `src/doctor/runtime-surface.ts` が PLAN generates へ接続されることを確認する。
+
+## 2026-07-22 Issue #123 add-impl 追補
+
+runtime surface doctor は Claude hook を executable+argv の意味論へ正規化して検査する。6 hook の
+`command` が executable 1 token でない、`args` が期待 token と一致しない、shell operator/追加 argv
+で entrypoint が spoof される、guard/session policy が変わる場合は fail-close とする。
+
+Codex は別 serializer の出力として検査し、Claude の `command+args` shape をそのまま必須化しない。
+cross-runtime parity は正規化後の semantic invocation と policy で比較し、config schema 差を
+「不一致」にも「暗黙許容」にもしない。setup-smoke でも同じ checker を使い、consumer 生成物だけが
+shell form へ戻る drift を防ぐ。

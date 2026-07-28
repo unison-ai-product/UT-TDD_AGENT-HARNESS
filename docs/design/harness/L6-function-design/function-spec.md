@@ -680,14 +680,14 @@ import edge を一方向 (acyclic) に保つ (cycle 回避は dependency-drift g
 
 3 archetype (役割の根本種別): **相談 (consult)** = tl/uiux (上位帯エスカレーション・プランナー、read-only)、
 **ワーカー (worker)** = se/docs (実装・文書、下位帯)、**検証 (verify)** = qa (テスト通過後カバレッジ相談、上位帯)。
-ティア表 `TIER_TABLE`: T0 = `{claude: claude-opus-4-8, codex: gpt-5.5}` (フロンティア/明示許可)、
-T1 = `{claude: claude-sonnet-4-6, codex: gpt-5.4}` (ワーカー専門)、T2 = `{claude: claude-haiku-4-5,
-codex: gpt-5.3-codex-spark}` (ワーカー軽量)。
+ティア表 `TIER_TABLE`: T0 = `{claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier}` (フロンティア/明示許可)、
+T1 = `{claude: MODEL_IDS.claude.sonnet, codex: MODEL_IDS.codex.luna}` (ワーカー専門)、T2 = `{claude: MODEL_IDS.claude.haiku,
+codex: MODEL_IDS.codex.spark}` (ワーカー軽量)。
 
 **モデル id 単一正本 (`MODEL_IDS`、PLAN-L7-58 carry 解消)**: model id 文字列の正本は `src/team/model-policy.ts`
 の `MODEL_IDS` カタログ 1 箇所であり、`TIER_TABLE` (tier-router) と `modelForProvider` (model-policy) は
 両方ともこの catalog を参照して合成する。従来は両者が同じ id literal を二重に持ち typo/drift の温床だった。
-`MODEL_IDS.codex.frontier` = `gpt-5.5` (= `TIER_TABLE.T0.codex` = `modelForProvider` "frontier" family) のように
+`MODEL_IDS.codex.frontier` (= `TIER_TABLE.T0.codex` = `modelForProvider` "frontier" family) のように
 1 値 1 定義へ収束させた。oracle U-MODELID-001..004 が「合成一致」と「生 literal 不在」を fail-close で検査する
 (価格表 `src/state-db/token-tracker.ts` は外部 pricing 由来の superset で別正本、統合対象外)。
 
@@ -725,14 +725,14 @@ role・engine・task text から推定する。これは provider 配置その�
 - research 系: Claude Haiku 系を優先する。
 - implementation 系: GPT/Codex 系を優先する。
 - lightweight 系: GPT/Codex の spark / mini lane を使い、並列 shard で閉鎖権限を持たせない。
-- design / implementation review: T0 reviewer として GPT frontier (`gpt-5.5`) または Claude Opus (`claude-opus-4-8`) 以上を明示許可ゲート付きで使う。
+- design / implementation review: T0 reviewer として GPT frontier (`MODEL_IDS.codex.frontier`) または Claude Opus (`MODEL_IDS.claude.opus`) 以上を明示許可ゲート付きで使う。
 - UI/UX 系: Claude Sonnet 系を優先し、effort は `xhigh` とする。
 
 effort 既定:
 
 - Claude 系は `high` を標準にする。
 - GPT/Codex 系は `middle` を標準にする。
-- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `high` とする。
+- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `middle` とする。
 - spark / mini など軽量モデル lane は `high` を標準にする。
 - UI/UX は `xhigh` を指定する。
 
@@ -791,7 +791,7 @@ provider CLI を起動する。
 
 | 関数 / CLI | signature / command | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | Claude advisor は Opus (`claude-opus-4-8`) + `high`、Codex advisor は GPT frontier (`gpt-5.5`) + `xhigh`。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
+| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | 技術判断は Sol (`MODEL_IDS.codex.frontier`) + `low`、UI/UX 判断は Fable (`MODEL_IDS.claude.fable`) + `low` を一次とし、他方を fallback にする。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
 | `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。 | `tests/cli-surface.test.ts` |
 
 ## 2026-06-23 artifact progress workflow trigger 追補
@@ -1373,6 +1373,19 @@ HEAD SHA、run attempt、workflow revision、required check set、protection rev
 branch protectionのrequired contextも `harness-check` 一件へ固定し、実GitHub設定が未適用・乖離・
 取得不能なら「設定済み」と推測せずclosureをblockする。
 
+## 2026-07-22 Hook executable+argv contract 追補 (Issue #123)
+
+| 関数 | signature | 前提 | 事後 | invariant | oracle |
+|---|---|---|---|---|---|
+| `parseHookInvocation` | `(raw: RawHookInvocation) => HookInvocation \| null` | `command` と任意の `args` を受ける。 | runtime 固有 JSON を `executable`、`args` (意味上の argv)、`tokens`、`serialization` へ正規化する。不正型は `null`。 | shell quoting を exec-form argv の代用にせず、`args` 存在時は token 境界を保持する。 | U-HOOKEXEC-001..002 |
+| `invocationEquals` | `(actual: HookInvocation, expected: { executable: string; args: readonly string[] }) => boolean` | 両 invocation は正規化済み。 | executable と argv の長さ・順序・値が完全一致するときだけ true。 | 部分文字列、追加 token、近似 path を受理しない。 | U-HOOKEXEC-003..004 |
+| `wrapperHookArgs` | `(id: RequiredProjectHookId) => readonly string[]` | id は REQUIRED に存在する。 | consumer wrapper entrypoint と hook subcommand を token 配列で返す。 | source/built-in/docs template の argv 正本を分岐させない。 | U-HOOKEXEC-005..006 |
+| `analyzeProjectHooks` | `(docs: ProjectHookDoc[]) => ProjectHookResult` | setup/source の Claude hook config を与える。 | 6 hook の executable、argv、policy、個数を照合し、shell-form command、欠落 token、追加 token、argv spoofing を fail-close finding にする。 | detector の都合で設計を shell form に戻さない。 | U-HOOKEXEC-006..007 |
+| `observeWindowsHookDispatch` | `(run: HookSmokeRun, deps: ProcessTraceDeps) => HookDispatchObservation` | Windows native runner で hook を 1 回起動し process ancestry を捕捉できる。 | hook host→Bun entrypoint 間の intermediary image と exit/outcome を返す。 | dispatch 区間に shell host または dispatch 用 conhost があれば不合格。 | U-HOOKEXEC-008 |
+
+`HookInvocation` は `{ executable: string; args: readonly string[] }` (`args` は意味上の argv)。Claude / Codex の config JSON は
+runtime 固有 projection であり、意味論正本ではない。これにより project-hook、doctor、setup、Pack
+template が同じ invocation を比較しつつ、runtime ごとの schema capability を混同しない。
 ## Node self-host bootstrap機能契約（Issue #152 D0-N）
 
 関数`buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み

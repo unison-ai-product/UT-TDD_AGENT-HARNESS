@@ -5,11 +5,11 @@ kind: add-design
 layer: L4
 sub_doc: function
 drive: fullstack
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-15
-updated: 2026-07-15
+updated: 2026-07-21
 owner: PO / Codex
 parent_design: docs/design/harness/L4-basic-design/function.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -42,7 +42,25 @@ dependencies:
     - docs/process/gates.md
     - docs/governance/vmodel-upgrade-schedule.md
     - docs/test-design/harness/L9-system-test-design.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-21T18:24:00+09:00"
+    tests_green_at: "2026-07-21T18:23:35+09:00"
+    verdict: approve
+    scope: "claim-blind / spec-blind 両レーン PASS。L9 pair oracle (ST-EPISODE/ST-CLOSURE) 実在、Ledger=authoritative/GitHub=projection 不変条件の L4→L5→L6 降下整合を確認。詳細は A-189。"
+    worker_model: codex-gpt-5
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-21T18:23:35+09:00"
+        evidence_path: .ut-tdd/audit/A-L7-420-execution-ledger-plan-lint-2026-07-28.log
+        output_digest: "sha256:bfb6d2cbe5ad2c112261bcd98c176c37f3697459b6be31b139146a1ea2f7a719"
+        anchor_commit: 33dbd46dfe7581428a1bc09ac1a8f7875f0782c0
 ---
 
 # PLAN-L4-30: Execution Ledger と GitHub Forward再合流アーキテクチャ

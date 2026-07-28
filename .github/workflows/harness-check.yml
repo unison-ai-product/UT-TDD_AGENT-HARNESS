@@ -10,6 +10,25 @@
 # 現状実装される subjob = branch-type guard + typecheck + db rebuild + 全回帰 (vitest) + biome lint + audit quality + doctor。
 # この source workflow の `bun run test` / raw vitest 全量回帰は source-only governance docs を前提にする。
 # clean Pack workflow は `docs/templates/github/common/pack-harness-check.yml` の Pack smoke test と setup-smoke doctor を使う。
+#
+# PLAN-L7-455 (troubleshoot, issue #109) Phase 1: `classify` step (git diff ベース、
+# src/github/change-lane.ts) が doc-only 変更を検出したときだけ重い step
+# (typecheck / db rebuild / 全回帰 vitest / audit quality / full doctor) を skip する。
+# doc-safe allowlist (SSoT: src/github/change-lane.ts DOC_LANE_PREFIXES):
+#   docs/archive/**.md, docs/migration/**.md, docs/reference/**.md, docs/research/**.md
+# 上記 4 tree (非正本の参照 prose) の *.md のみ。正本設計・governance・PLAN
+# (docs/plans/**)・runtime 規則 (root および .claude/ の *.md)・共有 memory
+# (.ut-tdd/memory/**) はすべて full へ fail-close する (blind review FLAG 是正、
+# 2026-07-21)。判定不能・新種 path・diff range 解決不能も常に "full"。
+# この allowlist 記述はコメントと実装の drift を防ぐため
+# tests/change-lane.test.ts が本 header を parse して DOC_LANE_PREFIXES と
+# 集合一致を検査する (2026-07-28: 旧コメントが実装より広い allowlist を記述し、
+# orchestrator の lane 誤予測を招いた実害への countermeasure)。
+# biome lint と branch-type guard は lane に依らず常に実行する。doc lane では代わりに
+# plan lint / readability / rule-drift のみを実行する (doc-lane checks step)。
+# 集約 job (`harness-check`) は変更種別に依らず常に生成され (`if: always()`)、skip 可能な
+# step の allowlist は `src/lint/github-ci-policy.ts` の `checkLaneSkipSafety` が fail-close 検査する
+# (PLAN-RECOVERY-15 の aggregate 契約は不変)。
 name: harness-check
 
 on:
@@ -38,8 +57,28 @@ jobs:
         with:
           bun-version: "1.3"
 
+      - name: cache bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: install deps (frozen)
         run: bun install --frozen-lockfile
+
+      # PLAN-L7-455: 変更ファイル分類 (doc-only lane 判定、fail-close)。判定不能・新種 path は
+      # 必ず "full" になる。ロジック本体は src/github/change-lane.ts (unit test 済み)。
+      - name: classify changed files (doc lane vs full, fail-close)
+        id: classify
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "${{ github.event_name }}" \
+            --head-sha "${{ github.sha }}" \
+            --base-sha "${{ github.event.pull_request.base.sha }}" \
+            --before-sha "${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: branch-type guard (commitlint / poc / hotfix)
         env:
@@ -58,22 +97,45 @@ jobs:
             --commit-file .ut-tdd-commit-subjects.txt
 
       - name: typecheck (tsc --noEmit)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun run typecheck
 
       - name: db rebuild (deterministic projection)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun src/cli.ts db rebuild --json
 
       - name: test — 全回帰 (vitest run)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun run test
+
+      # doc lane では全回帰の代わりに doc 系 check (plan lint / readability / rule-drift) のみ実行する。
+      - name: doc lane checks (plan lint / readability / rule-drift)
+        if: ${{ steps.classify.outputs.lane == 'doc' }}
+        run: |
+          bun src/cli.ts plan lint
+          bun run test:doc-lane
+
+      - name: doc lane source doctor
+        if: ${{ steps.classify.outputs.lane == 'doc' }}
+        run: bun src/cli.ts doctor --profile source-doc-lane
 
       - name: lint (biome)
         run: bun run lint
 
       - name: audit quality (gate findings)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun src/cli.ts audit quality --include-tests --limit 20
 
       - name: doctor (governance hard gates)
-        run: bun src/cli.ts doctor
+        # PLAN-L7-420 Step 2: green-command-digest は L7-132/L7-194/L7-303 で opt-in strict として
+        # 設計されたが、CI がこのフラグ無しで doctor を回していたため strict gate がどの自動経路でも
+        # 走っていなかった (G-1)。PLAN-L7-420 Step 1 で不一致 49 件 (30 PLAN) を rerun-bound correction
+        # で是正し尽くしたことを前提に、ここで CI へ hard 投入する。
+        # telemetry-provenance (L7-192) は現状 runtime capture gap が残るため、投入は期限付き deferral
+        # (PLAN-L7-420 §telemetry-provenance strict deferral 参照)。
+        # PLAN-L7-455 lane 判定 (doc-only lane では skip) と PLAN-L7-420 strict flag を両立させる。
+        if: ${{ steps.classify.outputs.lane == 'full' }}
+        run: bun src/cli.ts doctor --strict-green-command-digest
 
       # PLAN-L7-451 W3: 人間向け projection。判定正本は上の gate 実測であり、
       # summary 生成は常に exit 0 (失敗で CI を red にしない)。
@@ -99,23 +161,54 @@ jobs:
         with:
           bun-version: "1.3"
 
+      - name: cache bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: install deps (frozen)
         run: bun install --frozen-lockfile
 
+      # PLAN-L7-455: Linux leg と同じ分類判定を独立実行する (job 間で output を共有しないため)。
+      # windows-latest の既定 shell (pwsh) では動かないため bash を明示する。
+      - name: classify changed files (doc lane vs full, fail-close)
+        id: classify
+        shell: bash
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "${{ github.event_name }}" \
+            --head-sha "${{ github.sha }}" \
+            --base-sha "${{ github.event.pull_request.base.sha }}" \
+            --before-sha "${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
+
       - name: typecheck (tsc --noEmit)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun run typecheck
 
       - name: db rebuild (deterministic projection on Windows SQLite)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun src/cli.ts db rebuild --json
 
       - name: test — scoped 回帰 (vitest run, windows leg)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun run test:fast
 
+      - name: doc lane source checks
+        if: ${{ steps.classify.outputs.lane == 'doc' }}
+        run: bun src/cli.ts doctor --profile source-doc-lane
+
       - name: doctor (toolchain scope)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
         run: bun src/cli.ts doctor --scope toolchain
 
   # PLAN-RECOVERY-15 / issue #97: Branch Protection が参照する唯一の Required
   # Status Check。片脚が failure / cancelled / skipped の場合も必ず起動して Red にする。
+  # doc lane で個別 step が skip されても、この aggregate job 自体は変更種別に依らず常に
+  # 生成される (PLAN-L7-455 の必須制約)。
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
     if: ${{ always() }}

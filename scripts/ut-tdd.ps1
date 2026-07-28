@@ -7,5 +7,8 @@ if (Test-Path $bin) {
     & $bin @args
     exit $LASTEXITCODE
 }
-& bun run (Join-Path $root "src\cli.ts") @args
+$bunCandidates = @((Join-Path $env:APPDATA "npm\node_modules\bun\bin\bun.exe"), (Join-Path $env:USERPROFILE ".bun\bin\bun.exe"))
+$bun = $bunCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+if (-not $bun) { throw "Native bun.exe not found. Install Bun before running the source entrypoint." }
+& $bun run (Join-Path $root "src\cli.ts") @args
 exit $LASTEXITCODE

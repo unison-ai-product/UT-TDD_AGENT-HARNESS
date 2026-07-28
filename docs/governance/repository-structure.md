@@ -42,6 +42,8 @@ UT-TDD-agent-harness/
 │   ├── ut-tdd.ps1                #   Windows PowerShell
 │   └── install-hooks.{sh,ps1}    #   [予定] hook installer
 │
+├── skills/                       # ★ Pack / runtime skill content の正本 (src/skill-engine/ は recommend/inject/scaffold の実装コード。docs/skills/ は legacy-derived 参照資料)
+│
 ├── docs/
 │   ├── governance/               # ★ 現行正本 (本書群)
 │   │   ├── README.md             #   正本 / 参照 / archive 境界
@@ -93,6 +95,7 @@ UT-TDD-agent-harness/
 | 工程 / 駆動モデル定義 | `docs/process/` | **工程(L0-L14)定義 + 駆動モデル(Forward/Scrum/Reverse/Recovery/Add-feature/Retrofit/Refactor/Research)正本**。「どの工程/駆動を増やすか」は要件 (L3) で決め本 dir に置く (本 session の発端 gap を解消)。既存 `docs/governance/recovery-workflow.md` は **`docs/process/modes/recovery.md` へ統合完了 (2026-06-04、IMP-060)** = recovery 正本は `docs/process/modes/recovery.md`。recovery-workflow.md は superseded (historical、冒頭 banner) |
 | 中央 Web UI service | `src/web/` | [予定] 全 project 横断の管理 UI (15 画面、GitHub backbone、ADR-005 D2)。backend 配置・通信境界は L2 設計 (ADR-003 §IMP-031 参照) |
 | テストコード | `tests/` | vitest、`*.test.ts`、src を mirror |
+| Pack / runtime skill content | `skills/` (root) | **skill doc の正本**。`src/skill-engine/` は recommend/inject/scaffold の実装コードで skill content dir ではない。`docs/skills/` 配下は legacy-derived 参照資料で Pack runtime skill root ではない |
 | OS entrypoint | `scripts/` | **薄い wrapper のみ**。currentは既存Bun commandを呼ぶmigration debt、targetはsealed Node generationだけを呼ぶ。core logicとfallbackを持たない |
 | enum / 契約 | `src/schema/` | **zod 単一正本**。enum を複数箇所に再定義しない (drift 防止、requirements §1.10 F) |
 | 現行正本 doc | `docs/governance/` | concept v3.1 / requirements v1.2 / README / extraction-plan / 本書 |

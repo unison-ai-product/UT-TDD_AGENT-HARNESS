@@ -465,7 +465,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
     projection: { path: projectionPath },
   };
   const db = openHarnessDb(":memory:");
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
   if (mode !== "legacy") seedAdopted(db, assetId, planId, basePayload, mode === "alias-mismatch");
   // close境界の呼出しを観測しつつ、write-set assertionまではin-memory DBを保持する。
   const close = vi.spyOn(db, "close").mockImplementation(() => undefined);

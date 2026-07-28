@@ -1,4 +1,5 @@
 import { checkHandoverOutstandingAnchor } from "../handover/index";
+import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging";
 import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import type { LintResult } from "../plan/lint";
 import {
@@ -74,6 +75,7 @@ import {
   checkDesignLanguage,
   checkGateConfirm,
   checkGateIdFormat,
+  checkModelIdDocDrift,
   checkReadability,
   checkRuleDrift,
   checkRuntimePortability,
@@ -174,6 +176,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("ddd-tdd-rules", () => checkDddTddRules(deps.repoRoot)),
         full("runtime-portability", () => checkRuntimePortability(deps.repoRoot)),
         full("rule-drift", () => checkRuleDrift(deps.repoRoot)),
+        full("model-id-doc-drift", () => checkModelIdDocDrift(deps.repoRoot)),
         full("gate-confirm", () => checkGateConfirm(deps.repoRoot)),
         full("gate-id-format", () => checkGateIdFormat(deps.repoRoot)),
         full("plan-schedule", () => checkPlanSchedule(deps.repoRoot)),
@@ -288,6 +291,9 @@ export function buildDoctorCheckDefinitionGroups(
             ok: options.strictGreenCommandDigest === true ? result.mismatches.length === 0 : true,
           };
         }),
+        full("advisory-strict-gate-aging", () =>
+          checkAdvisoryGateAging({ repoRoot: deps.repoRoot }),
+        ),
         full("forward-convergence", () => checkForwardConvergence(deps.repoRoot)),
         full("forward-convergence-audit", () => checkForwardConvergenceAudit(deps.repoRoot)),
       ],
