@@ -33,12 +33,6 @@ generates:
     artifact_type: source_module
   - artifact_path: src/doctor/profiles.ts
     artifact_type: source_module
-  - artifact_path: src/doctor/test-repository-isolation.ts
-    artifact_type: source_module
-  - artifact_path: src/lint/github-ci-policy.ts
-    artifact_type: source_module
-  - artifact_path: tests/github-ci-policy.test.ts
-    artifact_type: test_code
   - artifact_path: .github/workflows/harness-check.yml
     artifact_type: workflow_config
 dependencies:
@@ -69,67 +63,6 @@ review_evidence:
         evidence_path: tests/advisory-strict-gate-aging.test.ts
         output_digest: "sha256:4fee39488b915ad125067fbf4ac8df18418ea9e9b48d21a381ccdad1cdd4529d"
         anchor_commit: c30eb75b34aec08ee456f0c31d1c30ea8f1c80e6
-  - reviewer: claude-be-logic
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-21T14:30:00+09:00"
-    tests_green_at: "2026-07-21T14:30:00+09:00"
-    verdict: approve
-    scope: "Step 1: digest 不一致 49 件 (git diff 実測で是正対象は 30 PLAN、PLAN-L7-420 自身への新規 review_evidence 追記を含め計 31 PLAN を変更) を rerun-bound correction で是正 (fake 分類、historicalMatchCommit 0 件を実測確認)。Step 2: harness-check.yml へ --strict-green-command-digest を投入。telemetry-provenance は runtime capture gap (3 テーブル projection-only) を実測確認のうえ deferral。Step 3: advisory-strict-gate-aging check を新設・配線・regression test 固定。blind review (gpt-5.6-sol) FLAG 4 件 (PLAN 数の実測不一致・command claim の過剰一般化・audit log 追跡状態の記述不整合・promotedInCi の workflow 未検証) を是正 (詳細は §FLAG 是正記録)。typecheck / lint / plan lint (default + governance) / vitest / real-repo doctor --strict-green-command-digest を再実行し green を確認。"
-    worker_model: claude-sonnet-5
-    reviewer_model: claude-sonnet-5
-    green_commands:
-      - kind: typecheck
-        command: "bun run typecheck"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-21T15:10:00+09:00"
-        evidence_path: src/lint/advisory-strict-gate-aging.ts
-        output_digest: "sha256:b593ec6859797aca0cbe5f68404afa4446e4aedb1c9c4793d0e30427d0402057"
-      - kind: lint
-        command: "bun run lint"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-21T15:10:00+09:00"
-        evidence_path: src/doctor/check-definition-groups.ts
-        output_digest: "sha256:03cfc42451db4b0ab6668c174fb4af11ea50b299e5fb51f6c975ee9f90db73bc"
-        anchor_commit: 3c728fad6cacdd181080e39ad02be89d60ef2c81
-      - kind: lint
-        command: "bun run lint"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-21T14:05:00+09:00"
-        evidence_path: src/doctor/profiles.ts
-        output_digest: "sha256:63d798cd8b2e1ea16ea516739fc23ea210478c9f8706178980da0efc656d5d32"
-        anchor_commit: 3c728fad6cacdd181080e39ad02be89d60ef2c81
-      - kind: unit_test
-        command: "bunx vitest run tests/advisory-strict-gate-aging.test.ts --reporter=dot"
-        runner: bun
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-07-21T15:12:00+09:00"
-        evidence_path: tests/advisory-strict-gate-aging.test.ts
-        output_digest: "sha256:4fee39488b915ad125067fbf4ac8df18418ea9e9b48d21a381ccdad1cdd4529d"
-      - kind: lint
-        command: "bun src/cli.ts plan lint"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-21T15:13:00+09:00"
-        evidence_path: docs/plans/PLAN-L7-406-stable-id-helper.md
-        output_digest: "sha256:9bc4ab9bdc0630629a500d6845371961b93e73ae8f7d9da65216781dd05e4ec2"
-        anchor_commit: dcb45479c0f335172e7d6110d98d65c08f7981fc
-      - kind: smoke
-        command: "bun src/cli.ts doctor --strict-green-command-digest"
-        runner: bun
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-21T14:20:00+09:00"
-        evidence_path: .github/workflows/harness-check.yml
-        output_digest: "sha256:d42776e2106e158fe1329b7f0ff84afbc564d8dff38c7fd1b102db8ba13d8170"
-        anchor_commit: 3c728fad6cacdd181080e39ad02be89d60ef2c81
 ---
 
 # PLAN-L7-420 (troubleshoot): evidence 裏取り gate の CI 実効化
