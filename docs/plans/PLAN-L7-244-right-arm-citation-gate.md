@@ -36,6 +36,11 @@ dependencies:
 
 draft 起票 (PO /goal 2026-07-02、A-174 F-1 feature-gap [important])。
 
+2026-07-28 追記: issue #165 (PR #146/#147 構造分析で再発見) は本 PLAN スコープ 1 と同一の
+fail-open 穴。実害インスタンスが増えた: PR #146 宣言の 2 桁 ID (IT-DOCLEDGER-01..07 /
+ST-DOCLEDGER-01..05 / ST-DOCSEM-01..08) が U-OTT-004 zero-orphan gate の対象外。
+本 PLAN が #165 の機構化正本であり、新規 PLAN は起票しない (重複回避)。
+
 ## 背景 (A-174 F-1)
 
 `ORACLE_ID = /\b(?:U|IT)-[A-Z0-9]+-[0-9]{3}\b/` (src/lint/oracle-test-trace.ts:21) が 3 桁採番のみ対象のため、2 桁採番の IT-* (IT-CONTRACT-01〜03 = tests 実装 0 件・defer 宣言なし) と ST-* 全体が citation gate を素通り。「未実装」と「明示 defer」の機械区別も無く、G8/G9 close を宣言ベースで通過し得る (右腕片肺の残存形)。
