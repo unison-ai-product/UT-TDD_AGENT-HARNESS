@@ -21,8 +21,14 @@ export interface ChangeLaneClassification {
   fileCount: number;
 }
 
-/** doc-safe とみなす非正本の参照 prose prefix。 */
-const DOC_LANE_PREFIXES = [
+/**
+ * doc-safe とみなす非正本の参照 prose prefix (allowlist の SSoT)。
+ *
+ * `.github/workflows/harness-check.yml` の header コメントはこの配列を転記しており、
+ * `tests/change-lane.test.ts` が header を parse して集合一致を検査する
+ * (コメントが実装より広い allowlist を記述する drift の再発防止、2026-07-28)。
+ */
+export const DOC_LANE_PREFIXES = [
   "docs/archive/",
   "docs/migration/",
   "docs/reference/",

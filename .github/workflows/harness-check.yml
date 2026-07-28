@@ -12,12 +12,18 @@
 # clean Pack workflow は `docs/templates/github/common/pack-harness-check.yml` の Pack smoke test と setup-smoke doctor を使う。
 #
 # PLAN-L7-455 (troubleshoot, issue #109) Phase 1: `classify` step (git diff ベース、
-# src/github/change-lane.ts) が doc-only 変更 (docs/**.md 、ただし docs/plans/** は governance
-# hard-gate 対象のため除外、および .ut-tdd/memory/**) を検出したときだけ重い step
+# src/github/change-lane.ts) が doc-only 変更を検出したときだけ重い step
 # (typecheck / db rebuild / 全回帰 vitest / audit quality / full doctor) を skip する。
-# root の *.md (README/CLAUDE/AGENTS 等の runtime 規則ファイル) は doc-safe に含めない
-# (blind review FLAG 是正、2026-07-21)。判定不能・新種 path・diff range 解決不能は
-# fail-close で常に "full" になる。
+# doc-safe allowlist (SSoT: src/github/change-lane.ts DOC_LANE_PREFIXES):
+#   docs/archive/**.md, docs/migration/**.md, docs/reference/**.md, docs/research/**.md
+# 上記 4 tree (非正本の参照 prose) の *.md のみ。正本設計・governance・PLAN
+# (docs/plans/**)・runtime 規則 (root および .claude/ の *.md)・共有 memory
+# (.ut-tdd/memory/**) はすべて full へ fail-close する (blind review FLAG 是正、
+# 2026-07-21)。判定不能・新種 path・diff range 解決不能も常に "full"。
+# この allowlist 記述はコメントと実装の drift を防ぐため
+# tests/change-lane.test.ts が本 header を parse して DOC_LANE_PREFIXES と
+# 集合一致を検査する (2026-07-28: 旧コメントが実装より広い allowlist を記述し、
+# orchestrator の lane 誤予測を招いた実害への countermeasure)。
 # biome lint と branch-type guard は lane に依らず常に実行する。doc lane では代わりに
 # plan lint / readability / rule-drift のみを実行する (doc-lane checks step)。
 # 集約 job (`harness-check`) は変更種別に依らず常に生成され (`if: always()`)、skip 可能な
