@@ -2,7 +2,7 @@
 layer: L4
 executed_at_layer: L9
 artifact_type: test_design
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L4-basic-design/
 parent_doc: docs/plans/PLAN-L4-00-master.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -22,7 +22,7 @@ updated: 2026-05-29
 
 > **layer (作成層 = V-pair key)**: L4 (基本設計) / **executed_at_layer (実施層)**: L9 (総合テスト) / **artifact**: ④ テスト設計 (V-model 右、② L4 基本設計 全 sub-doc と対)
 > **pair (V-model L4↔L9)**: `docs/design/harness/L4-basic-design/{data,architecture,function,external-if}.md` 4 sub-doc 全体 ↔ 本書 1 doc
-> **status**: draft (従来G4/A-101 freezeをD0-R redesignが意図的に再open。5 variant、recovery observation、authority ownership、release ABA oracleを含むL4↔L9 pairを独立review後に再凍結する)
+> **status**: confirmed (D0-R redesignで再openしたL4↔L9 pairは、5 variant、recovery observation、authority ownership、release ABA oracleを含む独立review後に再凍結した)
 > **PLAN**: `docs/plans/PLAN-L4-{01..04}-*.md` の pair_artifact / DoD で本書参照
 
 ## §0 量閉じ原則 (L4 ↔ L9)
@@ -35,10 +35,10 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 - **external-if.md**: 境界 DbC (§3) / 失敗時 degradation (§4) / adapter (§6) → 境界統合 ST 必須
 - 従来baselineの孤児 = 0。D0-R redesign frontierは§9の追加oracleを含め再review完了まで未凍結
 
-## §1 総合テスト (ST-*) — baselineカテゴリとD0-R再open frontier
+## §1 総合テスト (ST-*) — baselineカテゴリとD0-R再凍結範囲
 
 > 従来STカテゴリはG4 baselineで被覆済みだが、D0-Rが変更するcommand algebra・authority・release境界は
-> §9のdraft frontierとして再openする。個別GWTと双方向traceを再reviewするまで現行pairをconfirmedへ戻さない。
+> §9をD0-Rの再凍結範囲とする。個別GWTと双方向traceの独立reviewを経て現行pairをconfirmedへ戻した。
 
 ### §1.1 ST-DATA (data.md 由来 — 集約整合 / state schema)
 

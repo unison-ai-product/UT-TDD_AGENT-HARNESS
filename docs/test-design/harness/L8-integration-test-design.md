@@ -2,7 +2,7 @@
 layer: L5
 executed_at_layer: L8
 artifact_type: test_design
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L5-detailed-design/
 parent_doc: docs/plans/PLAN-L5-00-master.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -21,7 +21,7 @@ updated: 2026-07-10
 
 > **layer (作成層 = V-pair key)**: L5 (詳細設計) / **executed_at_layer (実施層)**: L8 (結合テスト) / **artifact**: ④ テスト設計 (V-model 右、② L5 詳細設計 全 sub-doc と対)
 > **pair (V-model L5↔L8)**: `docs/design/harness/L5-detailed-design/{physical-data,module-decomposition,internal-processing,if-detail}.md` 4 sub-doc 全体 ↔ 本書 1 doc
-> **status**: draft (D0-R redesignはL5↔L8 pair全体を意図的に再openした。AdditiveRevisionFreezeのdelta扱いではなく、§5のIT-RGK-PHYS-001..042と独立reviewを再凍結するまで旧baselineをconfirmedとして数えない)
+> **status**: confirmed (D0-R redesignで再openしたL5↔L8 pairは、§5のIT-RGK-PHYS-001..042を含む独立review後に再凍結した)
 > **granularity correction (2026-06-08)**: resolved。各 IT-* は §5 で Given/When/Then、fixture、module boundary setup、mock/adapter 条件、期待 assertion、negative/edge coverage を備える。§1/§2 は §5 が upgrade する candidate skeleton として残す。
 > **encoding fix (2026-06-09)**: G5 freeze commit (14792e3) で本書本文 (§0-§4 / Appendix A) が UTF-8→CP932 誤読により文字化けしていたため、直前の clean 版 (7d6449c) から日本語本文を復元。§5 / Appendix B は英語で無傷のため現行を保持。
 > **PLAN**: `docs/plans/PLAN-L5-{01..04}-*.md` の pair_artifact / DoD で本書参照

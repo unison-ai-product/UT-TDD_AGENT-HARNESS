@@ -39,12 +39,15 @@ binary digest、build target、OS probe結果を照合し、要求capabilityを�
 binary欠落、署名・digest不一致、protocol非互換はcontrol process起動前に拒否する。静的検証済みcompanionを
 `probe`目的で起動した後のprobe欠測、権限不足、unsupported platformはmanaged workload root生成前に
 `capability_failure`とする。`control_process_created`と`managed_root_created`を別identity/phaseで記録し、
-単一`process_created`へ縮退しない。top-level commandは`Probe | Execute | RecoveryCustody`のclosed unionとする。
+単一`process_created`へ縮退しない。top-level commandは
+`Probe | Execute | RecoveryObservation | RecoveryCustody | ControlCommand`のclosed unionとする。
 `Probe`はworkload launcherへ到達不能、`Execute`だけが`create_custody | spawn_attached | resume`を所有し、暗号学的に認証された
 sealed admission tokenと空でないrequired capabilityを必須とする。`create_custody`が返す`AuthorityLease`は
 `spawn_attached | resume`でもtokenと同時に検証し、missing/stale/別attempt leaseではside effect 0とする。`RecoveryCustody`は
-`recover_authority | observe | terminate_tree | prove_empty | shutdown`だけを所有する。`recover_authority`はexecutor認証済みproof、
-後4操作は完全なauthority leaseを必須とし、launcher、managed-root生成、resumeの型参照を持たない。
+`observe | terminate_tree | prove_empty | release_custody`だけを所有する。`RecoveryObservation`は権限を持たない
+recovery factだけを返し、authority leaseを発行しない。`recoverAuthority`はTypeScript control planeだけが所有し、
+executor認証済みproofとdurable journalの一致から新leaseを発行する。`ControlCommand`は
+`shutdown_companion`だけを所有する。recovery系commandはlauncher、managed-root生成、resumeの型参照を持たない。
 Node直spawn、移行中Bun直spawn、soft limitへの暗黙fallbackは禁止する。
 
 `AdmissionTokenAuthenticatorPort`はversioned canonical preimage、issuer key ID、policy revision、operation、token nonceを
