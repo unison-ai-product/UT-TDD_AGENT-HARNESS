@@ -35,6 +35,18 @@ review_evidence: []
 
 # PLAN-L7-460: session db-refresh の資源ガードレール
 
+## 設計判断: backprop は Reverse 対起票 (2026-07-28、advisor: claude-fable-5)
+
+本 PLAN は既存挙動の修理ではなく **新しい契約の追加** (Node 経路固定 / 資源上限
+fail-close / single-flight / SQLite pragma) であるため、`backprop_decision:
+not_required` ではなく `PLAN-REVERSE-460-db-refresh-guardrail-backfill` を対起票して
+上流 (L5 物理データ / L6 機能契約) へ合流させる。gap 実測: L6 function-spec に
+db-refresh 記述 0 件、L5 internal-processing:922 の `synchronous=FULL` 規定と
+スコープ 6 の `NORMAL` が doc 上で衝突しうる。
+
+線引き (今後の troubleshoot 起票基準): 既存 spec への回帰 = 純修理なら
+`not_required`、新契約を足すなら Reverse 対。レーンの重さを基準にしない。
+
 ## Status
 
 draft (起票 2026-07-27)。
