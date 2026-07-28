@@ -51,20 +51,6 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/document-disposition/replay-document-deltas.test.ts
     artifact_type: test_code
-  - artifact_path: src/document-disposition/domain/document-reference.ts
-    artifact_type: source_module
-  - artifact_path: src/document-disposition/domain/document-reference-reader-registry.ts
-    artifact_type: source_module
-  - artifact_path: src/document-disposition/domain/document-reference-parse-finding.ts
-    artifact_type: source_module
-  - artifact_path: src/document-disposition/domain/read-document-references.ts
-    artifact_type: source_module
-  - artifact_path: src/document-disposition/application/load-repository-document-blobs.ts
-    artifact_type: source_module
-  - artifact_path: src/document-disposition/ports/repository-document-blob.ts
-    artifact_type: source_module
-  - artifact_path: tests/document-disposition/read-document-references.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-74-repository-docs-disposition-auditor-contracts.md
   requires: []
