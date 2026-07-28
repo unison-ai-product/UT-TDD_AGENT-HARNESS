@@ -141,6 +141,7 @@ function gitTextOrNull(repoRoot: string, args: readonly string[]): string | null
   try {
     return (
       execFileSync("git", ["-C", repoRoot, ...args], {
+        windowsHide: true,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
       }).trim() || null

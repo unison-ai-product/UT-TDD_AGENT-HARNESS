@@ -41,6 +41,11 @@ import {
   loadSystemSecretScanArtifacts,
   secretScanMessages,
 } from "../lint/secret-scan";
+import {
+  analyzeWindowsSpawnHide,
+  loadWindowsSpawnHideDocs,
+  windowsSpawnHideMessages,
+} from "../lint/windows-spawn-hide";
 
 export function checkCodingRules(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
@@ -204,5 +209,30 @@ export function checkSecretScan(repoRoot: string): { messages: string[]; ok: boo
     return { messages: secretScanMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return { messages: ["secret-scan — violation: secret scan artifacts を読めない"], ok: false };
+  }
+}
+
+/**
+ * windows-spawn-hide hard gate (PO 報告 2026-07-28、issue #123 の残件): 子プロセス起動が
+ * Windows でコンソールウィンドウを前面に出して操作を妨害する面を fail-close 検出する。
+ * PR #125 は hook 経路を shell-free 化したが、CLI / lint 内部の spawn は対象外だった。
+ */
+export function checkWindowsSpawnHide(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["windows-spawn-hide - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeWindowsSpawnHide(loadWindowsSpawnHideDocs(repoRoot));
+    return { messages: windowsSpawnHideMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: [
+        "windows-spawn-hide - violation: 子プロセス起動の windowsHide 検査を実行できなかった",
+      ],
+      ok: false,
+    };
   }
 }

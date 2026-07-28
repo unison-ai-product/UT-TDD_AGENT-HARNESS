@@ -174,6 +174,7 @@ export function loadBranchKindInput(repoRoot: string = process.cwd()): BranchKin
   let branch: string | null = null;
   try {
     branch = execFileSync("git", ["-C", repoRoot, "rev-parse", "--abbrev-ref", "HEAD"], {
+      windowsHide: true,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();

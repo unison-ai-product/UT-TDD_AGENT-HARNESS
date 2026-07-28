@@ -112,6 +112,7 @@ export function analyzeBranches(input: {
 
 function git(repoRoot: string, args: string[]): string {
   return execFileSync("git", ["-C", repoRoot, ...args], {
+    windowsHide: true,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   });

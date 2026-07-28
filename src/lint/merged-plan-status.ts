@@ -192,7 +192,10 @@ function frontmatterStatus(content: string): string | null {
 
 function gitObjectExists(repoRoot: string, object: string): boolean {
   try {
-    execFileSync("git", ["-C", repoRoot, "cat-file", "-e", object], { stdio: "ignore" });
+    execFileSync("git", ["-C", repoRoot, "cat-file", "-e", object], {
+      windowsHide: true,
+      stdio: "ignore",
+    });
     return true;
   } catch {
     return false;
@@ -200,7 +203,7 @@ function gitObjectExists(repoRoot: string, object: string): boolean {
 }
 
 function gitText(repoRoot: string, args: readonly string[]): string {
-  return execFileSync("git", ["-C", repoRoot, ...args], { encoding: "utf8" });
+  return execFileSync("git", ["-C", repoRoot, ...args], { windowsHide: true, encoding: "utf8" });
 }
 
 export function mergedPlanStatusMessages(r: MergedPlanStatusResult): string[] {

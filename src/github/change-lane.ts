@@ -125,6 +125,7 @@ export class SystemGitDiffNamesPort implements GitDiffNamesPort {
 
   diffNames(range: string): string[] {
     const output = execFileSync("git", ["-C", this.repoRoot, "diff", "--name-only", range], {
+      windowsHide: true,
       encoding: "utf8",
       maxBuffer: 64 * 1024 * 1024,
     });

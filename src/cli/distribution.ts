@@ -37,6 +37,7 @@ function gitHead(): string | null {
   // Linux subprocess implementation can retain the failed child status).  Probe
   // without inheriting stderr so command registration remains side-effect free.
   const result = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+    windowsHide: true,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   });
@@ -110,12 +111,17 @@ export function registerDistributionCommands(program: Command): void {
       const detection = detectMode();
       let bunVersion: string | null = null;
       try {
-        bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
+        bunVersion = execFileSync("bun", ["--version"], {
+          windowsHide: true,
+          encoding: "utf8",
+        }).trim();
       } catch {
         bunVersion = null;
       }
-      const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
-      const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
+      const hasGit =
+        spawnSync("git", ["--version"], { windowsHide: true, stdio: "ignore" }).status === 0;
+      const hasGh =
+        spawnSync("gh", ["--version"], { windowsHide: true, stdio: "ignore" }).status === 0;
       const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
       const hookWrapperPath = join(packageRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
       const packageBinPath = join(
@@ -128,6 +134,7 @@ export function registerDistributionCommands(program: Command): void {
       const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
       const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
       const utTddCli = spawnSync("ut-tdd", ["--help"], {
+        windowsHide: true,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -585,6 +592,7 @@ export function registerDistributionCommands(program: Command): void {
           // 解釈して "Cannot connect to C:" で必ず失敗する。cwd を outDir に固定し -f を相対 basename に
           // することで bsdtar/GNU tar の両実装で動く (PLAN-L7-361)。-C の引数は remote 解釈されない。
           tarResult = spawnSync("tar", ["-czf", basename(tarball), "-C", stage, "."], {
+            windowsHide: true,
             cwd: outDir,
             encoding: "utf8",
             stdio: ["ignore", "pipe", "pipe"],

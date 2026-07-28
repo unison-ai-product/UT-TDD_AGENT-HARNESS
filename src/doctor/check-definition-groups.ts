@@ -81,6 +81,7 @@ import {
   checkRuntimePortability,
   checkRuntimeReadability,
   checkSecretScan,
+  checkWindowsSpawnHide,
 } from "./rule-quality";
 import type { DoctorCheckDefinition, DoctorOptions } from "./runner";
 import { type DoctorDeps, handoverDeps } from "./runtime-state";
@@ -175,6 +176,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("design-language", () => checkDesignLanguage(deps.repoRoot)),
         full("ddd-tdd-rules", () => checkDddTddRules(deps.repoRoot)),
         full("runtime-portability", () => checkRuntimePortability(deps.repoRoot)),
+        full("windows-spawn-hide", () => checkWindowsSpawnHide(deps.repoRoot)),
         full("rule-drift", () => checkRuleDrift(deps.repoRoot)),
         full("model-id-doc-drift", () => checkModelIdDocDrift(deps.repoRoot)),
         full("gate-confirm", () => checkGateConfirm(deps.repoRoot)),

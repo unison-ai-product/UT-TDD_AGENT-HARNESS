@@ -16,6 +16,7 @@ import { defaultHarnessDbPath, openHarnessDb } from "../state-db/index";
 function gitBranch(): string | null {
   try {
     return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      windowsHide: true,
       encoding: "utf8",
     }).trim();
   } catch {

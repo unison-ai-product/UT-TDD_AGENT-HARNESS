@@ -43,6 +43,7 @@ export class SystemGitCommandPort implements GitCommandPort {
   run(args: readonly string[]): Uint8Array {
     try {
       return execFileSync("git", ["-C", this.repoRoot, ...args], {
+        windowsHide: true,
         encoding: "buffer",
         maxBuffer: 64 * 1024 * 1024,
         stdio: ["ignore", "pipe", "pipe"],

@@ -175,7 +175,7 @@ function firstOnPath(command: string, opts: ProviderCommandResolutionOptions = {
       ? win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "where.exe")
       : "which";
   try {
-    const found = execFileSync(finder, [command], { encoding: "utf8", env })
+    const found = execFileSync(finder, [command], { windowsHide: true, encoding: "utf8", env })
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
@@ -316,6 +316,7 @@ export function isProviderCommandSpawnable(
     opts.runProbe ??
     ((command: string, args: string[], probeEnv: NodeJS.ProcessEnv) =>
       spawnSync(command, args, {
+        windowsHide: true,
         env: probeEnv,
         stdio: "ignore",
         shell: invocation.shell ?? false,

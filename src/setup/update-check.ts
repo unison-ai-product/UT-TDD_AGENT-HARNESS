@@ -289,6 +289,7 @@ export function nodeUpdateCheckDeps(
     cacheRoot: () => process.env[UPDATE_CHECK_CACHE_DIR_ENV]?.trim() || null,
     listRemoteTags: (remote) => {
       const res = spawnSync("git", ["ls-remote", "--tags", remote], {
+        windowsHide: true,
         cwd: harnessRoot,
         encoding: "utf8",
         timeout: LS_REMOTE_TIMEOUT_MS,

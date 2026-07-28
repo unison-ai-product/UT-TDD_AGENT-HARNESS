@@ -39,7 +39,11 @@ export function analyzeTrackedCanonical(input: TrackedCanonicalInput): TrackedCa
 export function loadTrackedCanonicalInput(repoRoot: string): TrackedCanonicalInput {
   let trackedTopLevels: string[] = [];
   try {
-    const out = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" });
+    const out = execFileSync("git", ["ls-files"], {
+      windowsHide: true,
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
     trackedTopLevels = [
       ...new Set(
         out

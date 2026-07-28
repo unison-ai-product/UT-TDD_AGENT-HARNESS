@@ -57,7 +57,10 @@ export function buildTrackedTargetRegistry(
 }
 
 function trackedPaths(repoRoot: string): string[] {
-  return execFileSync("git", ["-C", repoRoot, "ls-files", "-z"], { encoding: "utf8" })
+  return execFileSync("git", ["-C", repoRoot, "ls-files", "-z"], {
+    windowsHide: true,
+    encoding: "utf8",
+  })
     .split("\0")
     .filter(Boolean)
     .map((path) => path.replaceAll("\\", "/"))

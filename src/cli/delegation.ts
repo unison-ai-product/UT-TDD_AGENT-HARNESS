@@ -100,6 +100,7 @@ export function executeAdapterPlanForCli(
     args: plan.args,
   });
   const child = spawnSync(invocation.command, invocation.args, {
+    windowsHide: true,
     input: plan.stdin,
     stdio:
       plan.stdin === undefined

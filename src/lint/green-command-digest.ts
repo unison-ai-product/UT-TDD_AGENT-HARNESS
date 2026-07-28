@@ -145,6 +145,7 @@ export function toGitPath(rel: string): string {
 function commitExists(repoRoot: string, sha: string): boolean {
   try {
     execFileSync("git", ["-C", repoRoot, "cat-file", "-e", `${sha}^{commit}`], {
+      windowsHide: true,
       stdio: ["ignore", "ignore", "ignore"],
     });
     return true;
@@ -165,6 +166,7 @@ export function nodeDigestAuditDeps(repoRoot: string): DigestAuditDeps {
       try {
         // encoding 未指定 = Buffer で返る (raw blob を hash するため text 変換しない)。
         const bytes = execFileSync("git", ["-C", repoRoot, "show", `${sha}:${toGitPath(rel)}`], {
+          windowsHide: true,
           stdio: ["ignore", "pipe", "ignore"],
           maxBuffer: 64 * 1024 * 1024,
         });
@@ -366,6 +368,7 @@ export function nodeHistoryScanDeps(repoRoot: string): HistoryScanDeps {
       if (cached) return cached;
       try {
         const out = execFileSync("git", ["-C", repoRoot, "log", "--format=%H", "--", gitPath], {
+          windowsHide: true,
           encoding: "utf8",
           stdio: ["ignore", "pipe", "ignore"],
           maxBuffer: 16 * 1024 * 1024,

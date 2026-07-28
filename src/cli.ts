@@ -228,6 +228,7 @@ const TASK_FILE_OPTION_DESCRIPTION = "read task text from file";
 function gitBranch(): string | null {
   try {
     return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      windowsHide: true,
       encoding: "utf8",
     }).trim();
   } catch {
@@ -237,7 +238,10 @@ function gitBranch(): string | null {
 
 function gitHead(): string | null {
   try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      windowsHide: true,
+      encoding: "utf8",
+    }).trim();
   } catch {
     return null;
   }
@@ -451,6 +455,7 @@ function attemptEscalationBlock(repoRoot: string, currentSessionId?: string): st
 function recentHeadCommits(repoRoot: string, limit = 5): string[] {
   try {
     const output = execFileSync("git", ["log", `-${limit}`, "--format=%h %s"], {
+      windowsHide: true,
       cwd: repoRoot,
       encoding: "utf8",
     }).trim();
@@ -3041,6 +3046,7 @@ team
               const invocation = buildProviderInvocation({ provider, command, args });
               const ioMode = opts.json ? "ignore" : "inherit";
               const child = spawn(invocation.command, invocation.args, {
+                windowsHide: true,
                 cwd: repoRoot,
                 env: adapterExecutionEnv(provider, env),
                 // Provider prompts are passed through stdin; argv carries only fixed
@@ -3282,7 +3288,7 @@ githubPr
     }) => {
       try {
         const resolve = (ref: string): string =>
-          execFileSync("git", ["rev-parse", ref], { encoding: "utf8" }).trim();
+          execFileSync("git", ["rev-parse", ref], { windowsHide: true, encoding: "utf8" }).trim();
         const block = renderPrTraceBlock({
           plan_id: opts.plan,
           route_mode: opts.routeMode,
@@ -3335,12 +3341,14 @@ const REPOSITORY_POLICY_PATH = "docs/governance/github-repository-policy.yaml";
 function fetchRulesetsViaGh(repository: string): unknown[] {
   const list = JSON.parse(
     execFileSync("gh", ["api", `repos/${repository}/rulesets?includes_parents=true`], {
+      windowsHide: true,
       encoding: "utf8",
     }),
   ) as Array<Record<string, unknown>>;
   return list.map((entry) =>
     JSON.parse(
       execFileSync("gh", ["api", `repos/${repository}/rulesets/${String(entry.id)}`], {
+        windowsHide: true,
         encoding: "utf8",
       }),
     ),

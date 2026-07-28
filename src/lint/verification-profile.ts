@@ -134,11 +134,16 @@ export function nodeVerificationProbeDeps(repoRoot: string = process.cwd()): Ver
     env: process.env,
     now: () => new Date().toISOString(),
     commandOk: (command, args) => {
-      const r = spawnSync(command, args, { stdio: "ignore", timeout: PROBE_TIMEOUT_MS });
+      const r = spawnSync(command, args, {
+        windowsHide: true,
+        stdio: "ignore",
+        timeout: PROBE_TIMEOUT_MS,
+      });
       return r.status === 0;
     },
     runCommand: (command, args) => {
       const r = spawnSync(command, args, {
+        windowsHide: true,
         stdio: "inherit",
         cwd: repoRoot,
         env: envWithoutAuthSecrets(process.env),

@@ -71,11 +71,16 @@ export function createNodePlanDraftRunner(repoRoot: string): NodePlanDraftRunner
   return new NodePlanDraftRunner({
     repoRoot,
     sourceCommit: () =>
-      execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8" }).trim(),
+      execFileSync("git", ["rev-parse", "HEAD"], {
+        windowsHide: true,
+        cwd: repoRoot,
+        encoding: "utf8",
+      }).trim(),
     actor: () => {
       try {
         return (
           execFileSync("git", ["config", "user.name"], {
+            windowsHide: true,
             cwd: repoRoot,
             encoding: "utf8",
           }).trim() || "ut-tdd"

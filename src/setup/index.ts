@@ -391,6 +391,7 @@ function readNonEmpty(deps: SetupDeps, path: string): boolean {
 export function nodeGh(args: string[]): { ok: boolean; stdout: string } {
   try {
     const stdout = execFileSync("gh", args, {
+      windowsHide: true,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });

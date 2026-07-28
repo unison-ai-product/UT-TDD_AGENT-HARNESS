@@ -263,7 +263,7 @@ function sha256(value: string): string {
 }
 
 function gitText(repoRoot: string, args: readonly string[]): string {
-  return execFileSync("git", ["-C", repoRoot, ...args], { encoding: "utf8" });
+  return execFileSync("git", ["-C", repoRoot, ...args], { windowsHide: true, encoding: "utf8" });
 }
 
 function gitHeadFiles(
@@ -271,6 +271,7 @@ function gitHeadFiles(
   paths: readonly string[],
 ): ReadonlyMap<string, { content: string; blobOid: string }> {
   const output = execFileSync("git", ["-C", repoRoot, "cat-file", "--batch"], {
+    windowsHide: true,
     input: paths.map((path) => `HEAD:${path}\n`).join(""),
     maxBuffer: 64 * 1024 * 1024,
   });

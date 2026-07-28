@@ -167,7 +167,8 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
     }
     const spawnImpl: DetachedSpawnImpl =
       options.spawnImpl ??
-      ((command, args, opts) => spawn(command, args, opts) as unknown as DetachedSpawnHandle);
+      ((command, args, opts) =>
+        spawn(command, args, { ...opts, windowsHide: true }) as unknown as DetachedSpawnHandle);
     const child = spawnImpl(
       execPath,
       [scriptPath, "session", "db-refresh", "--generation", generation],

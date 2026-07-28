@@ -217,6 +217,7 @@ export function parseGitPorcelain(output: string): string[] {
 
 export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
   const output = execFileSync("git", ["-C", repoRoot, "status", "--porcelain"], {
+    windowsHide: true,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   });
@@ -235,6 +236,7 @@ export function parseStagedNames(output: string): string[] {
 /** commit にステージ済みのファイル一覧 (commit 前 staged-diff 確認の機械化、IMP-137)。 */
 export function loadStagedFiles(repoRoot: string = process.cwd()): string[] {
   const output = execFileSync("git", ["-C", repoRoot, "diff", "--cached", "--name-only"], {
+    windowsHide: true,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   });
@@ -250,6 +252,7 @@ export function loadStagedFiles(repoRoot: string = process.cwd()): string[] {
 export function isGitRepository(repoRoot: string = process.cwd()): boolean {
   try {
     const out = execFileSync("git", ["-C", repoRoot, "rev-parse", "--is-inside-work-tree"], {
+      windowsHide: true,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });

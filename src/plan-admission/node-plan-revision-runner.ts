@@ -365,7 +365,10 @@ export function createNodePlanRevisionRunner(repoRoot: string): NodePlanRevision
     sourceCommit: () => git(repoRoot, ["rev-parse", "HEAD"]),
     sourceBlobOid: (commit, path) => git(repoRoot, ["rev-parse", `${commit}:${path}`]),
     headText: (commit, path) =>
-      execFileSync("git", ["-C", repoRoot, "show", `${commit}:${path}`], { encoding: "utf8" }),
+      execFileSync("git", ["-C", repoRoot, "show", `${commit}:${path}`], {
+        windowsHide: true,
+        encoding: "utf8",
+      }),
     repositoryIdentity: () => {
       const identity = loadProjectIdentityFromHead({ repoRoot });
       if (!identity.ok) throw new Error(identity.error.ruleId);
@@ -499,7 +502,7 @@ function digestEqual(left: string, right: string): boolean {
   return normalizeDigest(left) === normalizeDigest(right);
 }
 function git(root: string, args: string[]): string {
-  return execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
+  return execFileSync("git", ["-C", root, ...args], { windowsHide: true, encoding: "utf8" }).trim();
 }
 function resolveRepoPath(root: string, path: string): string {
   const normalized = path.replaceAll("\\", "/");

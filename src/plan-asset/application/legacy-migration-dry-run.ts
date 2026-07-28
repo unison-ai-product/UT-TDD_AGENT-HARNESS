@@ -195,7 +195,7 @@ export function targetSlotFindings(repoRoot: string): MigrationDryRunFinding[] {
 }
 
 function headBytes(repoRoot: string, path: string): Uint8Array {
-  return execFileSync("git", ["-C", repoRoot, "show", `HEAD:${path}`]);
+  return execFileSync("git", ["-C", repoRoot, "show", `HEAD:${path}`], { windowsHide: true });
 }
 
 class ReviewedDecisionManifest implements MigrationDecisionPort {
@@ -348,6 +348,7 @@ export class HeadTargetRegistry {
 
   static load(repoRoot: string): HeadTargetRegistry {
     const output = execFileSync("git", ["-C", repoRoot, "ls-tree", "-r", "-l", "HEAD"], {
+      windowsHide: true,
       encoding: "utf8",
     });
     const files = new Map<string, number>();

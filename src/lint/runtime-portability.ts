@@ -424,6 +424,7 @@ export function loadRuntimePortabilityDocs(
   let files: string[] = [];
   try {
     files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+      windowsHide: true,
       cwd: repoRoot,
       encoding: "utf8",
     })
