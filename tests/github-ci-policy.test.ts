@@ -284,7 +284,11 @@ describe("github-ci-policy lint", () => {
   });
 
   it("U-CIPOL-016: requires always() so a failed runtime leg reaches the aggregate verdict", () => {
-    const workflow = replaceRequired(SOURCE_WORKFLOW, `    if: ${AGGREGATE_ALWAYS}\n`, "");
+    const workflow = replaceRequired(
+      SOURCE_WORKFLOW,
+      /^[ ]{4}if: \$\{\{ always\(\) \}\}\r?\n/m,
+      "",
+    );
     const result = analyzeGithubCiPolicy(docs(workflow));
 
     expect(result.violations).toContainEqual({
@@ -354,15 +358,17 @@ describe("github-ci-policy lint", () => {
       detail: "aggregate verdict must require needs.harness-check-linux.result == success",
     });
 
-    const continueOnError = SOURCE_WORKFLOW.replace(
-      "      - name: Require Linux and Windows success",
-      "      - name: Require Linux and Windows success\n        continue-on-error: true",
+    const continueOnError = replaceRequired(
+      SOURCE_WORKFLOW,
+      "      - name: require Linux and Windows success",
+      "      - name: require Linux and Windows success\n        continue-on-error: true",
     );
     expect(
       analyzeGithubCiPolicy(docs(continueOnError)).violations.map((violation) => violation.reason),
     ).toContain("missing_aggregate_result_guard");
 
-    const expressionContinueOnError = SOURCE_WORKFLOW.replace(
+    const expressionContinueOnError = replaceRequired(
+      SOURCE_WORKFLOW,
       "    needs: [harness-check-linux, harness-check-windows]",
       `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows]`,
     );
@@ -898,8 +904,9 @@ describe("github-ci-policy lint", () => {
     expect(result.violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
-      reason: "missing_step",
-      detail: "full doctor",
+      reason: "missing_runtime_leg",
+      detail:
+        "jobs.harness-check-linux.steps must exactly match the ordered canonical semantic manifest",
     });
   });
 
@@ -1213,48 +1220,88 @@ describe("github-ci-policy lint", () => {
     it.each([
       [
         "echo",
-        "bun src/cli.ts doctor --profile source-doc-lane",
-        'echo "doctor --profile source-doc-lane"',
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: echo "doctor --profile source-doc-lane"`,
       ],
       [
         "comment",
-        "bun src/cli.ts doctor --profile source-doc-lane",
-        "bun src/cli.ts doctor --profile source-doc-lane # ok",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane # ok`,
       ],
       [
         "control operator",
-        "bun src/cli.ts doctor --profile source-doc-lane",
-        "bun src/cli.ts doctor --profile source-doc-lane && true",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane && true`,
       ],
       [
         "other profile",
-        "bun src/cli.ts doctor --profile source-doc-lane",
-        "bun src/cli.ts doctor --profile source-full",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-full`,
       ],
       [
         "extra flag",
-        "bun src/cli.ts doctor --profile source-doc-lane",
-        "bun src/cli.ts doctor --profile source-doc-lane --json",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane --json`,
       ],
       [
         "env",
-        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
-        `      - if: ${LANE_DOC_IF}\n        env:\n          X: y\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        env:
+          X: y
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
       ],
       [
         "shell",
-        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
-        `      - if: ${LANE_DOC_IF}\n        shell: bash\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        shell: bash
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
       ],
       [
         "wrong if",
-        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
-        "      - if: false\n        run: bun src/cli.ts doctor --profile source-doc-lane",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: false
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
       ],
       [
         "continue-on-error",
-        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
-        `      - if: ${LANE_DOC_IF}\n        continue-on-error: true\n        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        continue-on-error: true
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
       ],
     ])("U-CIPOL-020ba: rejects doc doctor mutation: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(
@@ -1270,9 +1317,11 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-022: 負例 — rejects a required check (github guard) hidden behind a non-allowlisted lane=='full' skip", () => {
-      const guardSkipped = SOURCE_WORKFLOW_WITH_LANE.replace(
-        "      - run: bun src/cli.ts github guard",
-        `      - if: ${LANE_FULL_IF}\n        run: bun src/cli.ts github guard`,
+      const guardSkipped = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        "      - name: branch-type guard (commitlint / poc / hotfix)",
+        `      - name: branch-type guard (commitlint / poc / hotfix)
+        if: ${LANE_FULL_IF}`,
       );
       const result = analyzeGithubCiPolicy(docs(guardSkipped));
 
@@ -1282,14 +1331,17 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "forbidden_lane_skip_step",
         detail:
-          "jobs.harness-check-linux step \"bun src/cli.ts github guard\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
+          "jobs.harness-check-linux step \"branch-type guard (commitlint / poc / hotfix)\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
       });
     });
 
     it("U-CIPOL-022b: 負例 — rejects lint (biome) hidden behind a lane=='full' skip", () => {
-      const lintSkipped = SOURCE_WORKFLOW_WITH_LANE.replace(
-        "      - run: bun run lint",
-        `      - if: ${LANE_FULL_IF}\n        run: bun run lint`,
+      const lintSkipped = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        "      - name: lint (biome)\n        run: bun run lint",
+        `      - name: lint (biome)
+        if: ${LANE_FULL_IF}
+        run: bun run lint`,
       );
       const result = analyzeGithubCiPolicy(docs(lintSkipped));
 
@@ -1312,7 +1364,7 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "forbidden_lane_skip_step",
         detail:
-          "jobs.harness-check-linux step \"bun src/cli.ts doctor\" is a required full-lane check but is conditioned on lane=='doc'",
+          "jobs.harness-check-linux step \"doctor (governance hard gates)\" is a required full-lane check but is conditioned on lane=='doc'",
       });
     });
 
