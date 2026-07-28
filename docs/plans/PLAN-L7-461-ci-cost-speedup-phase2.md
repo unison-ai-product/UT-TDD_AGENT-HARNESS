@@ -63,6 +63,31 @@ Phase 1 (PLAN-L7-455、PR #112) は doc-only lane を絞る。code PR の full l
 **静的なファイル単位 2-shard** で上位集中を分散でき、安全性は「両 shard を required
 context にする」だけで fail-close に保てる。
 
+## Phase 1 の realized benefit 実測と lane 戦略の設計判断 (2026-07-28、advisor: claude-fable-5)
+
+Phase 1 (PLAN-L7-455) の doc lane は **実トラフィックに対して 0% しか当たっていない**:
+
+- 実装された doc-safe allowlist は `docs/archive|migration|reference|research/**.md` の
+  4 tree のみ (`src/github/change-lane.ts` の `DOC_LANE_PREFIXES`)。2026-07-21 の blind
+  review FLAG 是正で正本設計・governance・PLAN・runtime 規則・共有 memory を除外した結果。
+- **main の first-parent commit 158 件 (2026-07-01 以降、基準HEAD `2f59e5a8`) のうち doc lane 該当は 0 件**
+  (実測)。実 doc トラフィックは `docs/plans/**` の PLAN 起票と `.ut-tdd/memory/**` が
+  支配的で、allowlist の 4 tree はほぼ触られない。
+
+**判断: Phase 2 に「PLAN doc / memory 向け governance lane」は追加しない。** docs/plans は
+vitest 内ゲート (U-TESTHYGIENE-028 の doctor 集約、backfill-pairing) の *入力* であり、
+2026-07-28 に PR #167 が PLAN doc 変更だけで両ゲートに落ちた実例がある (反例が実在)。
+手作業 allowlist の拡大は false-green (fail-open) を作る。lane 化が成立するのは
+「skip する step がその path を読まない」ことを機械的に示せる場合のみで、それには
+path→test 依存マップが前提 (別 PLAN の責務、本 PLAN スコープ外)。よって Phase 2 は
+下記スコープ 1・2 (全 PR に効く支配項) に集中する。
+
+副次是正 (本 PLAN で即時実施): workflow header のコメントが実装より広い allowlist
+(`docs/**.md` から docs/plans を除外 + `.ut-tdd/memory/**`) を記述する doc-code drift が
+あり、orchestrator の lane 誤予測という実害を出した。header を実装に合わせ、
+`tests/change-lane.test.ts` が header を parse して `DOC_LANE_PREFIXES` と集合一致を
+検査する回帰を追加する (コメント修正だけでは再発を止められないため)。
+
 ## スコープ
 
 1. **doctor 単一実行化 (最大単発効果、低リスク)**: linux leg で runDoctor を 1 回に
@@ -104,3 +129,6 @@ context にする」だけで fail-close に保てる。
   github-ci-policy detector が fail-close で検出する回帰テストが green。
 - AC-4: 両 shard + aggregate の required context 構成で PR CI が green になる実 run を
   evidence として引用。
+- AC-5: workflow header の doc-safe allowlist 記述が `DOC_LANE_PREFIXES` と集合一致し、
+  ずれた場合に落ちる回帰テストが green (tests/change-lane.test.ts、marker 欠落も
+  fail-close)。

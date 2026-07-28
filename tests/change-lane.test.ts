@@ -1,11 +1,15 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   classifyChangeLane,
+  DOC_LANE_PREFIXES,
   type GitDiffNamesPort,
   isDocSafeChangePath,
   resolveChangeDiffRange,
   runChangeLaneClassification,
 } from "../src/github/change-lane";
+import { workspaceRead } from "./support/workspace-roots";
 
 describe("change-lane classification (PLAN-L7-455)", () => {
   describe("isDocSafeChangePath", () => {
@@ -205,6 +209,51 @@ describe("change-lane classification (PLAN-L7-455)", () => {
       });
       expect(result.lane).toBe("full");
       expect(result.reason).toContain("diff-failed");
+    });
+  });
+
+  // 2026-07-28: harness-check.yml の header コメントが実装より広い allowlist
+  // (docs/**.md ・.ut-tdd/memory/**) を記述しており、orchestrator が lane を誤予測した。
+  // コメントは人間と agent が最初に読む面なので、実装との集合一致を機械で固定する。
+  describe("workflow header allowlist stays in sync with DOC_LANE_PREFIXES", () => {
+    const MARKER = "doc-safe allowlist (SSoT: src/github/change-lane.ts DOC_LANE_PREFIXES):";
+
+    function headerAllowlistPrefixes(): string[] {
+      // live root ではなく detached HEAD snapshot を読む (U-TESTHYGIENE-015 /
+      // test-repository-isolation の規律)。
+      const workflow = readFileSync(
+        join(
+          workspaceRead({
+            id: "change-lane-workflow-header",
+            mode: "head_snapshot",
+            reason: "workflow header の doc-safe allowlist を実装と突き合わせるため",
+          }),
+          ".github",
+          "workflows",
+          "harness-check.yml",
+        ),
+        "utf8",
+      );
+      const lines = workflow.split(/\r?\n/);
+      const markerIndex = lines.findIndex((line) => line.includes(MARKER));
+      // fail-close: marker を消した (= 契約を外した) 変更はテストを落とす。
+      expect(markerIndex, `workflow header lost the allowlist marker: ${MARKER}`).toBeGreaterThan(
+        -1,
+      );
+      const listLine = lines[markerIndex + 1] ?? "";
+      return [...listLine.matchAll(/docs\/([a-z0-9-]+)\/\*\*\.md/g)].map(
+        (match) => `docs/${match[1]}/`,
+      );
+    }
+
+    it("enumerates exactly the implemented doc-safe prefixes", () => {
+      expect([...headerAllowlistPrefixes()].sort()).toEqual([...DOC_LANE_PREFIXES].sort());
+    });
+
+    it("only enumerates prefixes the classifier actually accepts", () => {
+      for (const prefix of headerAllowlistPrefixes()) {
+        expect(isDocSafeChangePath(`${prefix}sample.md`)).toBe(true);
+      }
     });
   });
 });
