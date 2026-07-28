@@ -1,7 +1,6 @@
 import type { SurfacedFeedback, TakeoverFeedbackResult } from "../feedback/surface";
 import { selectTakeoverFeedback } from "../feedback/surface";
 import type { MemoryEntry } from "../memory/index";
-import { selectMemoryEntries } from "../memory/index";
 import type { HarnessDb } from "../state-db/index";
 
 type Rag = "green" | "yellow" | "red";
@@ -280,10 +279,15 @@ export function selectScheduleLiveState(
   };
 }
 
+/**
+ * `memory` は呼び元 (MemoryService) が正本ファイルから読んで渡す (PLAN-L7-468)。
+ * DB は body を持たない metadata index なので、digest は DB から本文を取らない。
+ */
 export function selectSessionStartDigest(
   db: HarnessDb,
   headCommits: string[],
   escalationLines: string[] = [],
+  memory: MemoryEntry[] = [],
 ): SessionStartDigest {
   db.exec("BEGIN");
   try {
@@ -293,7 +297,7 @@ export function selectSessionStartDigest(
       gate_runs: gateRuns,
       feedback: selectTakeoverFeedback(db, { limit: 1000 }),
       head_commits: headCommits.slice(0, 5),
-      memory: selectMemoryEntries(db, { limit: 5 }),
+      memory,
       escalation_lines: escalationLines.filter(Boolean),
     };
     db.exec("COMMIT");
