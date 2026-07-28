@@ -50,8 +50,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T14:20:00+09:00"
         evidence_path: docs/plans/PLAN-DISCOVERY-10-gpt56-tier-routing-bench.md
-        output_digest: "sha256:db8d825c3b4b5c1679a365d0f3e95a3ab41fd8a741a49fc292fa1b28f2e1dbc4"
-        anchor_commit: 9af32ba86bc658d5edde73bcd0664c5d8022063d
+        output_digest: "sha256:74869a1215f04e78b67379037b50eec1d9fbfb6aa1b2dc7b81c5fbd3e5507c8b"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: smoke
         command: "bunx vitest run tests/session-log.test.ts tests/agent-guard.test.ts tests/relation-graph-loader.test.ts tests/setup.test.ts (W2 oracle: fix commit worktree にモデル出力を適用して凍結テストを実走、terra 4/4 green / gpt-5.5 3/4)"
         runner: bun
@@ -59,8 +59,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T14:20:00+09:00"
         evidence_path: tests/session-log.test.ts
-        output_digest: "sha256:363b44844882f342615a786777263a86b41b9ac6491e5d873bf2b07c81e2f670"
-        anchor_commit: 80a1b3830acb61fbb69d665629a0fde8b0d49a32
+        output_digest: "sha256:98a8bfea82a852661e239c7cce0087f6c872cf1c129d7e0975604bedf5374c72"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-DISCOVERY-10 (kind=poc): GPT-5.6 レーン別 replay ベンチ

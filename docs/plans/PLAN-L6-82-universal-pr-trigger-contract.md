@@ -32,8 +32,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-15T11:14:59+09:00"
         evidence_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
-        output_digest: "sha256:89585907699109e2dab08a6499694d887ca338f0d7ff6852e536b0e42626d2e8"
-        anchor_commit: 9359a5b56f2208e7f708ba5d4d5715be70a9f8c8
+        output_digest: "sha256:4606e7d3c87602a7ce8297fc94d37afeb6cd3d5f02b6bed52460e5b676bc685c"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 agent_slots:
   - role: tl
     slot_label: "TL - trigger contract と branch-protection context 不変の検証"

@@ -57,7 +57,7 @@ review_evidence:
         completed_at: "2026-07-22T04:27:50+00:00"
         evidence_path: .ut-tdd/audit/A-L7-457-vitest.log
         output_digest: "sha256:864e3db42ba29c05aadd6f42c2f96d6b93ed54da93a608c654e823cf4aa36047"
-        anchor_commit: fb6d1127
+        anchor_commit: 3e366fa3cfd109388b9c0d4b1fa458b4332e02c8
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -66,7 +66,7 @@ review_evidence:
         completed_at: "2026-07-22T04:27:50+00:00"
         evidence_path: .ut-tdd/audit/A-L7-457-typecheck.log
         output_digest: "sha256:8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
-        anchor_commit: fb6d1127
+        anchor_commit: 3e366fa3cfd109388b9c0d4b1fa458b4332e02c8
 ---
 
 # PLAN-L7-457: harness.db 肥大によるローカル検証全停止の恒久対策 (issue #118)

@@ -368,7 +368,11 @@ bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-t
       "bun src/cli.ts audit quality --include-tests --limit 20",
       LANE_FULL_ONLY_IF,
     ),
-    run("doctor (governance hard gates)", "bun src/cli.ts doctor", LANE_FULL_ONLY_IF),
+    run(
+      "doctor (governance hard gates)",
+      "bun src/cli.ts doctor --strict-green-command-digest",
+      LANE_FULL_ONLY_IF,
+    ),
     run(
       "job summary (UT-TDD projection)",
       'bun src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"',

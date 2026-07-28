@@ -53,7 +53,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-03T18:40:00+09:00"
         evidence_path: docs/plans/PLAN-L7-329-module-l6-design-backfill.md
-        output_digest: "sha256:1d0f4bd4ce4c83b2bd5e7fc81330f50fb7be70f3be70b48b9480ab500fc0d7ad"
+        output_digest: "sha256:2329e1bda7a3abb20ec9ce3d5180725c8faf4d4893640b540ccfc1e9c8928f7a"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -61,7 +62,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-03T18:40:00+09:00"
         evidence_path: src/doctor/db-projection.ts
-        output_digest: "sha256:77118c7dd79d0ce3fe45292375d2ae6c520865f655e6997e777c9ca1547e1ee8"
+        output_digest: "sha256:9d2707b668dff32cdc472a50f7fc7a6200b775639a128f586002de96bf7b7fea"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-329: L6 module design backfill

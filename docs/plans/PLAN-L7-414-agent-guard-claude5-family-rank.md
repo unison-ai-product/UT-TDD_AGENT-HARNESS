@@ -49,8 +49,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:25:36+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:9acc85019ae639f593fe5bdf97b2be97dc24bf6c25a4c527019128bf805353bf"
-        anchor_commit: 15b46f94c3e14210996b933e3f5cd0a07b318680
+        output_digest: "sha256:702f538345e0e34bd1dddf142e108130d98806198fe759e010af99fb37f1c411"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: unit_test
         command: "bunx vitest run tests/model-id-ssot-drift.test.ts"
         runner: bun
@@ -58,8 +58,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:26:09+09:00"
         evidence_path: tests/model-id-ssot-drift.test.ts
-        output_digest: "sha256:927eb80fd73a4d851a670a72bbbe2d8e79a32eccfecd1445a60bb1bd4bf8837e"
-        anchor_commit: 15b46f94c3e14210996b933e3f5cd0a07b318680
+        output_digest: "sha256:9bf4783585dec67b5e1e0d7fd1076b357eb21df13113553fcc2d901e896fa77b"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -67,8 +67,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:25:46+09:00"
         evidence_path: src/runtime/agent-guard.ts
-        output_digest: "sha256:2a492cc4599b27e801dc1227fb948243f1efa93868c7b3de64304762682b3258"
-        anchor_commit: 15b46f94c3e14210996b933e3f5cd0a07b318680
+        output_digest: "sha256:637e0b66f83eb5acab471a5ab6d30ef895fec89a8f94820b2a2e83fcad57c6ec"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -76,8 +76,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:26:07+09:00"
         evidence_path: src/runtime/agent-guard.ts
-        output_digest: "sha256:9d1f09f906f2fabce27f2a76ee8647ac15aa67c7921e93131efb64f99f1b6d37"
-        anchor_commit: 15b46f94c3e14210996b933e3f5cd0a07b318680
+        output_digest: "sha256:637e0b66f83eb5acab471a5ab6d30ef895fec89a8f94820b2a2e83fcad57c6ec"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: vmodel_lint
         command: "bun run src/cli.ts plan lint"
         runner: bun
@@ -85,8 +85,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:27:17+09:00"
         evidence_path: docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
-        output_digest: "sha256:a273fcb3087ffb99e363f1de26afdff72d4952be8be74d48a4f15d8ec0ae4b6b"
-        anchor_commit: 15b46f94c3e14210996b933e3f5cd0a07b318680
+        output_digest: "sha256:06ecde85e3f2444bcb94d51a37ff1cf972a0d73c1260def8e344741ed14fbc68"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-414 (troubleshoot): agent-guard の Claude 5 世代 family 未正規化

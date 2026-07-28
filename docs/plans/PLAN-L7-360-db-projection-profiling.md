@@ -70,7 +70,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-03T18:17:00+09:00"
         evidence_path: src/doctor/db-projection.ts
-        output_digest: "sha256:e3110ffec9cbf1407ae6e7b9370c5708d18724dea9b1d1b09570f4e3ba8082a4"
+        output_digest: "sha256:9d2707b668dff32cdc472a50f7fc7a6200b775639a128f586002de96bf7b7fea"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-360: db projection ingestion profiling
