@@ -100,6 +100,24 @@ V-model artifacts must stay separated:
 - test design: `docs/test-design/`
 - tests: `tests/`
 
+## PLAN Filing Rules (both runtimes)
+
+PLAN 起票規律は**両ランタイム共通**であり、片方のアダプタにしか無い状態を作らない
+(2026-07-28 実測: `route_signal` / `generates` / `plan_id` が `AGENTS.md` に 0 件で、
+Codex はこれらの規律を一度も受け取っていなかった)。`rule-drift` が三アダプタ全てに
+`route_signal` / `generates` の記述を要求して fail-close する。
+
+- 新規 PLAN は route certificate (`route_signal` + `route_mode`) を持ち、mode が `kind` を
+  許すこと (SSoT: `src/schema/route-filing.ts`)。
+- **draft PLAN の `generates` に既存ファイルを書かない** (`merged-plan-status` /
+  `duplicate-artifact-ownership` が fail-close する)。宣言は実装 PR の confirm と同時。
+- `requires` は confirmed / completed のみ。draft への依存は `references` へ。
+- `kind=add-impl` は Reverse 対必須。conditional kind は Reverse 対か
+  `backprop_decision: not_required` + 理由 (純修理なら not_required、新契約なら Reverse 対)。
+- falsifiable な claim は根拠となるテスト / コマンドを引用する (`coding ≠ substance`)。
+
+詳細は `AGENTS.md` §PLAN Rules と `.claude/CLAUDE.md` §PLAN Rules (等価)。
+
 ## Coding Rules
 
 - Read the relevant files before editing.

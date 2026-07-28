@@ -52,11 +52,14 @@ review_evidence: []
    `checkCrossAgentModelPair(worker_model, reviewer_model)` が same_provider /
    same_model_or_missing / unknown_provider を検出し、doctor `review-evidence` hard gate に
    配線済み (PLAN-L7-14、IMP-076)。
-3. **非対称なのは subagent admission guard のみ**: Claude は
-   `.claude/hooks/agent-guard.ts` が PreToolUse(Agent|Task) で allowlist + model floor を
-   fail-close 強制するが、**Codex CLI には同等の hook 面が無い**。入口の完全対称は
-   作れない (擬似実装は保守債になるため追わない)。Codex 側の入口強制は
-   `ut-tdd codex` wrapper 内の role fail-close が上限。
+3. **hook 面は既に対称だった** (初稿の記述を 2026-07-28 に訂正): `.codex/hooks.json`
+   (PLAN-L7-139) が `spawn_agent|spawn_agents_on_csv` → `.claude/hooks/agent-guard.ts`、
+   `apply_patch|write_file` → `work-guard.ts` を `blockOnFailure` 付きで配線し、Claude と
+   **同一 entrypoint** を再利用している (SessionStart も配線済み)。Codex に surface が
+   無いのは `SubagentStop` のみで genuinely N/A。
+   ただし `AGENTS.md` は「agent-guard は Codex 未配線」と記述していて hook config と
+   矛盾していた。本 PLAN と同じ変更で是正済み — **rulebook が自 runtime について誤情報を
+   持つ状態自体が指示逸脱の原因**になるため、これは binding 問題と同根の負債である。
 4. **共通の穴 = author identity の自己申告**: `worker_model` は PLAN に手書きされる値で、
    「実際に誰が authored したか」と binding されていない。申告が正しい前提のまま
    routing 対称も証跡ゲートも空転しうる。
@@ -79,7 +82,7 @@ review_evidence: []
 
 ## スコープ外
 
-- Codex 側 PreToolUse 相当 hook の擬似実装 (実測 3 により追わない)。
+- Codex hook 面の追加配線 (実測 3 のとおり既に対称。SubagentStop のみ N/A)。
 - model 単位の binding (session log に model が無いため。必要なら別 PLAN で
   session log スキーマ拡張を先に行う)。
 
