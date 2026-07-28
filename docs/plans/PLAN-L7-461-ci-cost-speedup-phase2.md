@@ -70,7 +70,7 @@ Phase 1 (PLAN-L7-455) の doc lane は **実トラフィックに対して 0% �
 - 実装された doc-safe allowlist は `docs/archive|migration|reference|research/**.md` の
   4 tree のみ (`src/github/change-lane.ts` の `DOC_LANE_PREFIXES`)。2026-07-21 の blind
   review FLAG 是正で正本設計・governance・PLAN・runtime 規則・共有 memory を除外した結果。
-- **main の first-parent commit 156 件 (2026-07-01 以降) のうち doc lane 該当は 0 件**
+- **main の first-parent commit 158 件 (2026-07-01 以降、基準HEAD `2f59e5a8`) のうち doc lane 該当は 0 件**
   (実測)。実 doc トラフィックは `docs/plans/**` の PLAN 起票と `.ut-tdd/memory/**` が
   支配的で、allowlist の 4 tree はほぼ触られない。
 
