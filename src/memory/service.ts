@@ -77,7 +77,9 @@ export function loadMemoryCorpus(repoRoot: string): MemoryCorpus {
     if (!fileName.endsWith(".md")) continue;
     const sourcePath = relativeMemoryPath(fileName);
     try {
-      entries.push(parseMemoryFile(repoRoot, sourcePath, readFileSync(join(root, fileName), "utf8")));
+      entries.push(
+        parseMemoryFile(repoRoot, sourcePath, readFileSync(join(root, fileName), "utf8")),
+      );
     } catch (error) {
       findings.push({
         source_path: sourcePath,

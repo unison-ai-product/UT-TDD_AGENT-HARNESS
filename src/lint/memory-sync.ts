@@ -113,7 +113,12 @@ const ORIGIN_REF_CANDIDATES = ["origin/main", "origin/HEAD"] as const;
 
 function gitLines(repoRoot: string, args: string[]): string[] | undefined {
   try {
-    return execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" })
+    // stderr は握りつぶす (ref 探索の失敗は判定材料であり、呼び手のログを汚さない)。
+    return execFileSync("git", args, {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    })
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
@@ -127,8 +132,11 @@ export function loadMemorySyncInput(repoRoot: string): MemorySyncInput {
   const untracked =
     gitLines(repoRoot, ["ls-files", "--others", "--exclude-standard", "--", MEMORY_PATHSPEC]) ?? [];
   // 追跡済みで working tree に未コミット変更があるもの (内容が届いていない)。
-  const modified = new Set(gitLines(repoRoot, ["diff", "--name-only", "--", MEMORY_PATHSPEC]) ?? []);
-  const staged = gitLines(repoRoot, ["diff", "--cached", "--name-only", "--", MEMORY_PATHSPEC]) ?? [];
+  const modified = new Set(
+    gitLines(repoRoot, ["diff", "--name-only", "--", MEMORY_PATHSPEC]) ?? [],
+  );
+  const staged =
+    gitLines(repoRoot, ["diff", "--cached", "--name-only", "--", MEMORY_PATHSPEC]) ?? [];
   for (const path of staged) modified.add(path);
 
   let originRef = ORIGIN_REF_CANDIDATES[0] as string;
@@ -160,6 +168,8 @@ export function loadMemorySyncInput(repoRoot: string): MemorySyncInput {
     }
     files.push({ source_path: path, state: onOrigin.has(path) ? "shared" : "not-on-origin" });
   }
-  files.sort((a, b) => (a.source_path < b.source_path ? -1 : a.source_path > b.source_path ? 1 : 0));
+  files.sort((a, b) =>
+    a.source_path < b.source_path ? -1 : a.source_path > b.source_path ? 1 : 0,
+  );
   return { files, originResolved: onOrigin !== undefined, originRef };
 }

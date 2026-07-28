@@ -9,11 +9,7 @@ import {
   implPlanTraceMessages,
   loadImplPlanTraceInput,
 } from "../lint/impl-plan-trace";
-import {
-  analyzeMemorySync,
-  loadMemorySyncInput,
-  memorySyncMessages,
-} from "../lint/memory-sync";
+import { analyzeMemorySync, loadMemorySyncInput, memorySyncMessages } from "../lint/memory-sync";
 import {
   analyzeMergedPlanStatus,
   loadMergedPlanStatusInput,

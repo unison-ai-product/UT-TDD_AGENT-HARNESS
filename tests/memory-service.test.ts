@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -146,7 +146,9 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
 
       const result = readMemory({ repoRoot: repo });
       expect(result.entries.length).toBeGreaterThan(0);
-      expect(renderMemoryHealth(result)).toContain("memory unreadable: .ut-tdd/memory/project-broken.md");
+      expect(renderMemoryHealth(result)).toContain(
+        "memory unreadable: .ut-tdd/memory/project-broken.md",
+      );
     } finally {
       removeTestTree(repo);
     }
@@ -244,9 +246,7 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
   it("stays quiet only when the index matches every source file", () => {
     const entries: MemoryEntry[] = [];
     expect(compareIndexToCorpus(entries, []).fresh).toBe(true);
-    expect(
-      renderMemoryHealth({ entries: [], findings: [], freshness: "fresh" }),
-    ).toBe("");
+    expect(renderMemoryHealth({ entries: [], findings: [], freshness: "fresh" })).toBe("");
   });
 
   // U-MEMORY-018: AC-4 (静的側) — 直アクセスの混入を依存方向で止める
