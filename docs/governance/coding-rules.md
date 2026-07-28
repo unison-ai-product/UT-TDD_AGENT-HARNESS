@@ -4,6 +4,15 @@
 Requirements reference: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` §7.6.1.
 実行ゲート: `src/lint/coding-rules.ts` を `ut-tdd doctor` から実行する。
 
+## 最小実装原則 (anti-over-engineering)
+
+要件を満たす最短・最小の実装を選ぶ。over-engineering (投機的なコード・機能の大量生産) は品質欠陥として扱う。
+
+- 新しい型・契約・層・registry・receipt・機能を足す前に、既存の型/関数/データで解けないかを先に問う (YAGNI)。将来の投機で契約や抽象を増やさない。
+- 同じ問題は「コード・機能を大量に作る」より「短く解く」方を優先する。行数・型数・分岐が増える解は、要件が実際に要求している場合だけ採る。
+- object-oriented DDD を採る理由は、ドメインを小さく凝集した型で表現して code 量と分散を減らすためであって、ceremony (wrapper / envelope / registry の積み増し) を増やすためではない。DDD が code を膨張させているなら設計を疑う。
+- 設計 review / freeze では各契約・型・層について「要件のどの falsifiable な必要から来るか」を問い、答えられない追加は削るか後続 revision へ送る。
+
 ## Workflow Placement / workflow 上の位置づけ
 
 coding-rule 文書は workflow step であり、事後の CI note ではない。

@@ -483,6 +483,7 @@ describe("runDoctor", () => {
 
     expect(DOCTOR_RUN_PROFILE_IDS).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
       "consumer-toolchain",
       "consumer-setup-smoke",
@@ -549,10 +550,12 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile()).toEqual(DOCTOR_RUN_PROFILES["source-full"]);
     expect(doctorRunProfilesForAudience("source").map((profile) => profile.id)).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
     ]);
     expect(doctorRunProfilesForAudience("source").filter((profile) => profile.sourceOnly)).toEqual([
       DOCTOR_RUN_PROFILES["source-full"],
+      DOCTOR_RUN_PROFILES["source-doc-lane"],
     ]);
     expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-full"])).toBe(false);
     expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-toolchain"])).toBe(true);
@@ -1548,6 +1551,7 @@ describe("runDoctor", () => {
       "db-projection-ingestion",
       "design-detection",
       "rule-drift",
+      "model-id-doc-drift",
       "gate-confirm",
       "gate-id-format",
       "plan-schedule",

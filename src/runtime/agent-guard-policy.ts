@@ -31,7 +31,7 @@ export const SUBAGENT_ALLOWLIST: ReadonlySet<string> = new Set([
 export const CLAUDE_MODEL_FAMILY_CATALOG = {
   haiku: "claude-haiku-4-5",
   sonnet: "claude-sonnet-5",
-  opus: "claude-opus-4-8",
+  opus: "claude-opus-5",
   fable: "claude-fable-5",
 } as const;
 

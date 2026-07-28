@@ -8,13 +8,13 @@ import {
   lstatSync,
   mkdirSync,
   readdirSync,
-  readFileSync,
   readlinkSync,
   realpathSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, win32 } from "node:path";
+import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash";
 
 function run(
   command: string,
@@ -122,7 +122,9 @@ export function snapshotContentFingerprint(root: string): string {
       for (const entry of readdirSync(path).sort()) visit(join(path, entry));
       return;
     }
-    entries.push(`file:${rel}:${createHash("sha256").update(readFileSync(path)).digest("hex")}`);
+    entries.push(
+      `file:${rel}:${hashFileChunkedWithDiagnostics("snapshot fingerprint", path, rel, stat.size)}`,
+    );
   };
   visit(root);
   return createHash("sha256").update(entries.join("\n")).digest("hex");
@@ -141,6 +143,16 @@ export function assertSnapshotFingerprint(root: string, expectedFingerprint: str
 export function assertBatchVitestArgs(args: readonly string[]): void {
   if (args.some((arg) => arg === "-w" || arg === "--watch" || arg.startsWith("--watch=")))
     throw new Error("vitest snapshot runner is batch-only; watch mode would observe a stale snapshot");
+}
+
+export function assertNotRoot(getuid = process.getuid): void {
+  if (!getuid || getuid() !== 0) return;
+  throw new Error(
+    "vitest snapshot runner refuses to run as root (uid=0); chmod-based reference seal " +
+      "(0o555/0o444) is a DAC permission that root bypasses, so the reference tree would not " +
+      "be protected and the suite would fail late with an unrelated " +
+      "'snapshot reference fingerprint mismatch' instead of this cause. Re-run as a non-root user.",
+  );
 }
 
 export function finishSnapshotCleanup(
@@ -208,12 +220,27 @@ export function sealReference(referenceRoot: string): void {
   }
   const identity = output("whoami", [], referenceRoot);
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
-  run("attrib", ["+R", join(referenceRoot, "*"), "/S"], referenceRoot);
-  run(
-    "icacls",
-    [referenceRoot, "/deny", `${identity}:(OI)(CI)(WD,AD)`, "/T", "/C", "/Q"],
-    referenceRoot,
-  );
+  for (const command of windowsSealCommands(referenceRoot, identity))
+    run(command.file, command.args, referenceRoot);
+}
+
+export interface WindowsSealCommand {
+  file: "attrib" | "icacls";
+  args: string[];
+}
+
+export function windowsSealCommands(
+  referenceRoot: string,
+  identity: string,
+): WindowsSealCommand[] {
+  if (!identity.trim()) throw new Error("reference snapshot identity cannot be empty");
+  return [
+    { file: "attrib", args: ["+R", win32.join(referenceRoot, "*"), "/S"] },
+    {
+      file: "icacls",
+      args: [referenceRoot, "/deny", `${identity}:(OI)(CI)(WD,AD)`, "/T", "/C", "/Q"],
+    },
+  ];
 }
 
 export function unsealReference(referenceRoot: string): void {
@@ -235,8 +262,10 @@ export function unsealReference(referenceRoot: string): void {
 export function runSnapshotTests(
   args = process.argv.slice(2),
   repoRoot = process.cwd(),
+  getuid = process.getuid,
 ): void {
   assertBatchVitestArgs(args);
+  assertNotRoot(getuid);
   const snapshotRoot = join(
     tmpdir(),
     `ut-tdd-vitest-${process.pid}-${Date.now()}`,

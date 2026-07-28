@@ -23,7 +23,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | **対象 OS** | Windows / macOS / Linux 全て第一級サポート | NFR-01 cross-platform native |
 | **AI ランタイム** | Claude Code + Codex hybrid を主軸 (standalone / claude-only / codex-only / hybrid の 4 mode) | NFR-03 AI mode 非依存 |
 | **統制対象 repo 言語** | 非依存 (全種類) | NFR-04 言語非依存 |
-| **harness state** | ファイルベース (`.ut-tdd/` 配下) | 現行方針。DB は L2/L4 で検討 |
+| **harness state** | ファイルベース (`.ut-tdd/` 配下) + `.ut-tdd/harness.db` SQLite projection | 採用確定済 (functional-requirements.md / L4 data.md 準拠。旧「DB は L2/L4 で検討」は決定済につき PLAN-L7-459 M8 で更新)。file state が正本、DB は projection |
 | **source reference snapshot** | migration reference として snapshot 隔離、read-only | CLAUDE.md 禁止事項 |
 | **shell entrypoint** | `scripts/ut-tdd` (bash) / `scripts/ut-tdd.ps1` (PowerShell) | Windows ネイティブ対応 |
 | **テスト** | vitest (`tests/*.test.ts`) | ADR-001 TS/Bun 準拠 |

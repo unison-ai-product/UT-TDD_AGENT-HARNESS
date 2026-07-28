@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -35,6 +35,15 @@ jobs:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - name: classify changed files
+        id: classify
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun src/cli.ts github guard
       - run: bun run typecheck
       - run: bun src/cli.ts db rebuild --json
@@ -42,6 +51,9 @@ jobs:
       - run: bun run lint
       - run: bun src/cli.ts audit quality --include-tests
       - run: bun src/cli.ts doctor
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
 `;
 
 // PLAN-L7-455 (troubleshoot): 実運用に近い形 (classify step + full/doc lane 条件付き step) の
@@ -65,8 +77,15 @@ jobs:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - id: classify
-        run: bun src/cli.ts github classify-changes
+      - name: classify changed files
+        id: classify
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun src/cli.ts github guard
       - if: ${LANE_FULL_IF}
         run: bun run typecheck
@@ -76,6 +95,9 @@ jobs:
         run: bun run test
       - if: ${LANE_DOC_IF}
         run: bun run test:doc-lane
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
       - run: bun run lint
       - if: ${LANE_FULL_IF}
         run: bun src/cli.ts audit quality --include-tests
@@ -107,16 +129,29 @@ jobs:
       - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
-const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
+const LEGACY_SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
   harness-check-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - name: classify changed files
+        id: classify
+        shell: bash
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
     if: \${{ always() }}
@@ -126,16 +161,29 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
         run: ${REQUIRED_AGGREGATE_COMMAND}
 `;
 
-const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  harness-check:", "  harness-check-linux:")}
+const LEGACY_SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  harness-check:", "  harness-check-linux:")}
   harness-check-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - name: classify changed files
+        id: classify
+        shell: bash
+        run: |
+          bun src/cli.ts github classify-changes \
+            --event-name "\${{ github.event_name }}" \
+            --head-sha "\${{ github.sha }}" \
+            --base-sha "\${{ github.event.pull_request.base.sha }}" \
+            --before-sha "\${{ github.event.before }}" \
+            --github-output "$GITHUB_OUTPUT"
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
+      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
     if: \${{ always() }}
@@ -144,6 +192,23 @@ const SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replace("  ha
       - name: Require Linux and Windows success
         run: ${REQUIRED_AGGREGATE_COMMAND}
 `;
+
+const SOURCE_WORKFLOW = readFileSync(
+  join(process.cwd(), ".github", "workflows", "harness-check.yml"),
+  "utf8",
+);
+const SOURCE_WORKFLOW_WITH_LANE = SOURCE_WORKFLOW;
+void LEGACY_SOURCE_WORKFLOW;
+void LEGACY_SOURCE_WORKFLOW_WITH_LANE;
+
+function replaceRequired(source: string, from: string | RegExp, to: string): string {
+  expect(source).toMatch(
+    typeof from === "string" ? new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) : from,
+  );
+  const mutated = source.replace(from, to);
+  expect(mutated).not.toBe(source);
+  return mutated;
+}
 
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
@@ -219,7 +284,11 @@ describe("github-ci-policy lint", () => {
   });
 
   it("U-CIPOL-016: requires always() so a failed runtime leg reaches the aggregate verdict", () => {
-    const workflow = SOURCE_WORKFLOW.replace(`    if: ${AGGREGATE_ALWAYS}\n`, "");
+    const workflow = replaceRequired(
+      SOURCE_WORKFLOW,
+      /^[ ]{4}if: \$\{\{ always\(\) \}\}\r?\n/m,
+      "",
+    );
     const result = analyzeGithubCiPolicy(docs(workflow));
 
     expect(result.violations).toContainEqual({
@@ -277,7 +346,8 @@ describe("github-ci-policy lint", () => {
   });
 
   it("U-CIPOL-019: rejects aggregate scripts that observe results without failing closed", () => {
-    const echoOnly = SOURCE_WORKFLOW.replace(
+    const echoOnly = replaceRequired(
+      SOURCE_WORKFLOW,
       `run: ${REQUIRED_AGGREGATE_COMMAND}`,
       `run: echo "\${{ needs.harness-check-linux.result }} \${{ needs.harness-check-windows.result }}"`,
     );
@@ -288,15 +358,17 @@ describe("github-ci-policy lint", () => {
       detail: "aggregate verdict must require needs.harness-check-linux.result == success",
     });
 
-    const continueOnError = SOURCE_WORKFLOW.replace(
-      "      - name: Require Linux and Windows success",
-      "      - name: Require Linux and Windows success\n        continue-on-error: true",
+    const continueOnError = replaceRequired(
+      SOURCE_WORKFLOW,
+      "      - name: require Linux and Windows success",
+      "      - name: require Linux and Windows success\n        continue-on-error: true",
     );
     expect(
       analyzeGithubCiPolicy(docs(continueOnError)).violations.map((violation) => violation.reason),
     ).toContain("missing_aggregate_result_guard");
 
-    const expressionContinueOnError = SOURCE_WORKFLOW.replace(
+    const expressionContinueOnError = replaceRequired(
+      SOURCE_WORKFLOW,
       "    needs: [harness-check-linux, harness-check-windows]",
       `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows]`,
     );
@@ -635,7 +707,11 @@ describe("github-ci-policy lint", () => {
       });
     }
 
-    const malformedStep = SOURCE_WORKFLOW.replace("- uses: actions/checkout@v5", "- run: {}");
+    const malformedStep = replaceRequired(
+      SOURCE_WORKFLOW,
+      "        uses: actions/checkout@v5",
+      "        run: {}",
+    );
     expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
@@ -695,7 +771,11 @@ describe("github-ci-policy lint", () => {
     });
 
     for (const step of ["{}", "{ name: bogus }"]) {
-      const malformedStep = SOURCE_WORKFLOW.replace("- uses: actions/checkout@v5", `- ${step}`);
+      const malformedStep = replaceRequired(
+        SOURCE_WORKFLOW,
+        "        uses: actions/checkout@v5",
+        `        run: ${step}`,
+      );
       expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
         file: ".github/workflows/harness-check.yml",
         profile: "source",
@@ -811,15 +891,22 @@ describe("github-ci-policy lint", () => {
 
   it("requires source CI to keep full doctor in the required status check", () => {
     const result = analyzeGithubCiPolicy(
-      docs(SOURCE_WORKFLOW.replace("bun src/cli.ts doctor", "echo doctor omitted")),
+      docs(
+        replaceRequired(
+          SOURCE_WORKFLOW,
+          "        run: bun src/cli.ts doctor\n",
+          "        run: echo doctor omitted\n",
+        ),
+      ),
     );
 
     expect(result.ok).toBe(false);
     expect(result.violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
-      reason: "missing_step",
-      detail: "full doctor",
+      reason: "missing_runtime_leg",
+      detail:
+        "jobs.harness-check-linux.steps must exactly match the ordered canonical semantic manifest",
     });
   });
 
@@ -887,6 +974,332 @@ describe("github-ci-policy lint", () => {
   // PLAN-L7-455 (troubleshoot, issue #109): doc-only lane 絞り込みが検証弱化にならないことの
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
+    it.each([
+      ["pre-producer action swap", "actions/cache@v4", "actions/cache@v3"],
+      ["post-producer run mutation", "run: bun run lint", "run: bun run lint && true"],
+      [
+        "install append",
+        "run: bun install --frozen-lockfile",
+        "run: bun install --frozen-lockfile && echo extra",
+      ],
+      ["doc-check mutation", "bun run test:doc-lane", "bun run test:doc-lane --changed"],
+      ["with value mutation", 'bun-version: "1.3"', 'bun-version: "latest"'],
+    ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
+    it.each([
+      ["branch guard separator", "\n          git log --format=%s", " git log --format=%s"],
+      ["doc checks separator", "\n          bun run test:doc-lane", " bun run test:doc-lane"],
+    ])("U-CIPOL-019aa: preserves command-separator newline: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
+    it("U-CIPOL-019ab: accepts CRLF as semantic-equivalent YAML line endings", () => {
+      expect(analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(/\n/g, "\r\n"))).ok).toBe(
+        true,
+      );
+    });
+
+    it("U-CIPOL-019ac: accepts indentation variance after explicit shell continuation", () => {
+      const variant = SOURCE_WORKFLOW_WITH_LANE.replace(
+        "\\\n            --event-name",
+        "\\\n                 --event-name",
+      );
+      expect(analyzeGithubCiPolicy(docs(variant)).ok).toBe(true);
+    });
+
+    it("U-CIPOL-019b: rejects runtime step reorder", () => {
+      const checkout = `      - name: checkout\n        uses: actions/checkout@v5\n        with:\n          fetch-depth: 0\n\n`;
+      const setup = `      - name: setup bun\n        uses: oven-sh/setup-bun@v2\n        with:\n          bun-version: "1.3"\n\n`;
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replace(`${checkout}${setup}`, `${setup}${checkout}`)),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
+    it.each([
+      ["defaults.run.shell", "defaults:\n  run:\n    shell: bash\n"],
+      ["env.BASH_ENV", "env:\n  BASH_ENV: attack\n"],
+      ["env.GITHUB_OUTPUT", "env:\n  GITHUB_OUTPUT: other\n"],
+      ["unknown root key", "x-runtime-context: attack\n"],
+    ])("U-CIPOL-020: rejects source workflow root context %s", (_label, injected) => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "name: harness-check\n",
+            `name: harness-check\n${injected}`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("malformed_workflow_shape");
+    });
+
+    it.each([
+      ["missing producer", "id: classify", "id: removed"],
+      ["wrong id", "id: classify", "id: classify-docs"],
+      ["echo spoof", "bun src/cli.ts github classify-changes", 'echo "github classify-changes" #'],
+      [
+        "substring/no-op",
+        "bun src/cli.ts github classify-changes",
+        "true # bun src/cli.ts github classify-changes",
+      ],
+    ])("U-CIPOL-020a: rejects %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      [
+        "if false",
+        "        id: classify\n        run: |",
+        "        id: classify\n        if: false\n        run: |",
+      ],
+      [
+        "lane condition",
+        "        id: classify\n        run: |",
+        `        id: classify\n        if: ${LANE_FULL_IF}\n        run: |`,
+      ],
+      [
+        "step env",
+        "        id: classify\n        run: |",
+        "        id: classify\n        env:\n          GITHUB_OUTPUT: other\n        run: |",
+      ],
+      [
+        "continue-on-error",
+        "        id: classify\n        run: |",
+        "        id: classify\n        continue-on-error: true\n        run: |",
+      ],
+    ])("U-CIPOL-020af: rejects producer context mutation: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020ag: rejects job-level GITHUB_OUTPUT override", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "  harness-check-linux:\n    runs-on: ubuntu-latest",
+            "  harness-check-linux:\n    env:\n      GITHUB_OUTPUT: other\n    runs-on: ubuntu-latest",
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      "defaults",
+      "env",
+      "container",
+      "strategy",
+      "permissions",
+    ])("U-CIPOL-020ah: rejects runtime job execution key %s", (key) => {
+      const value =
+        key === "defaults"
+          ? "{ run: { shell: bash } }"
+          : key === "env"
+            ? "{ BASH_ENV: attack }"
+            : "{}";
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "  harness-check-linux:\n    runs-on: ubuntu-latest",
+            `  harness-check-linux:\n    ${key}: ${value}\n    runs-on: ubuntu-latest`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
+    });
+
+    it.each([
+      "working-directory",
+      "timeout-minutes",
+      "unknown-key",
+    ])("U-CIPOL-020ai: rejects critical producer key %s", (key) => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "        id: classify\n        run: |",
+            `        id: classify\n        ${key}: value\n        run: |`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020aj: rejects duplicate classify producer id", () => {
+      const duplicate = `      - name: duplicate\n        id: classify\n        run: echo duplicate\n`;
+      const result = analyzeGithubCiPolicy(
+        docs(
+          replaceRequired(
+            SOURCE_WORKFLOW_WITH_LANE,
+            "      - name: branch-type guard (commitlint / poc / hotfix)",
+            `${duplicate}      - name: branch-type guard (commitlint / poc / hotfix)`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      "--event-name",
+      "--head-sha",
+      "--base-sha",
+      "--before-sha",
+      "--github-output",
+    ])("U-CIPOL-020aa: rejects a producer missing %s", (flag) => {
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replace(flag, "--removed-flag")),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      ["extra command", '\n          echo "extra"'],
+      ["comment", "\n          # classify"],
+      ["semicolon", "; true"],
+      ["and", " && true"],
+      ["or", " || true"],
+      ["different output", ' "$OTHER_OUTPUT"'],
+    ])("U-CIPOL-020ab: rejects canonical producer mutation: %s", (_label, suffix) => {
+      const marker = '            --github-output "$GITHUB_OUTPUT"';
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replace(marker, `${marker}${suffix}`)),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020ac: rejects argument reordering", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            `            --event-name "\${{ github.event_name }}" \\\n            --head-sha "\${{ github.sha }}"`,
+            `            --head-sha "\${{ github.sha }}" \\\n            --event-name "\${{ github.event_name }}"`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020ad: rejects a Windows producer without shell=bash", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(SOURCE_WORKFLOW_WITH_LANE.replaceAll("        shell: bash\n", "")),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it.each([
+      "bash",
+      "echo {0}",
+    ])("U-CIPOL-020ae: rejects Linux producer with explicit shell=%s", (shell) => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "        id: classify\n        run: |",
+            `        id: classify\n        shell: ${shell}\n        run: |`,
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_lane_producer");
+    });
+
+    it("U-CIPOL-020b: rejects a doc lane without the source-only doctor profile", () => {
+      const result = analyzeGithubCiPolicy(
+        docs(
+          SOURCE_WORKFLOW_WITH_LANE.replace(
+            "        run: bun src/cli.ts doctor --profile source-doc-lane\n",
+            "",
+          ),
+        ),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
+    });
+
+    it.each([
+      [
+        "echo",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: echo "doctor --profile source-doc-lane"`,
+      ],
+      [
+        "control operator",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane && true`,
+      ],
+      [
+        "other profile",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-full`,
+      ],
+      [
+        "extra flag",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane --json`,
+      ],
+      [
+        "env",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        env:
+          X: y
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+      ],
+      [
+        "shell",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        shell: bash
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+      ],
+      [
+        "wrong if",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: false
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+      ],
+      [
+        "continue-on-error",
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        `      - name: doc lane source doctor
+        if: ${LANE_DOC_IF}
+        continue-on-error: true
+        run: bun src/cli.ts doctor --profile source-doc-lane`,
+      ],
+    ])("U-CIPOL-020ba: rejects doc doctor mutation: %s", (_label, from, to) => {
+      const result = analyzeGithubCiPolicy(
+        docs(replaceRequired(SOURCE_WORKFLOW_WITH_LANE, from, to)),
+      );
+      expect(result.violations.map((v) => v.reason)).toContain("missing_doc_lane_doctor");
+    });
     it("U-CIPOL-021: accepts a real-shaped workflow with canonical full/doc lane step conditions", () => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE));
 
@@ -895,9 +1308,11 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-022: 負例 — rejects a required check (github guard) hidden behind a non-allowlisted lane=='full' skip", () => {
-      const guardSkipped = SOURCE_WORKFLOW_WITH_LANE.replace(
-        "      - run: bun src/cli.ts github guard",
-        `      - if: ${LANE_FULL_IF}\n        run: bun src/cli.ts github guard`,
+      const guardSkipped = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        "      - name: branch-type guard (commitlint / poc / hotfix)",
+        `      - name: branch-type guard (commitlint / poc / hotfix)
+        if: ${LANE_FULL_IF}`,
       );
       const result = analyzeGithubCiPolicy(docs(guardSkipped));
 
@@ -907,14 +1322,17 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "forbidden_lane_skip_step",
         detail:
-          "jobs.harness-check-linux step \"bun src/cli.ts github guard\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
+          "jobs.harness-check-linux step \"branch-type guard (commitlint / poc / hotfix)\" is conditioned on lane=='full' but is not on the doc-lane skip allowlist",
       });
     });
 
     it("U-CIPOL-022b: 負例 — rejects lint (biome) hidden behind a lane=='full' skip", () => {
-      const lintSkipped = SOURCE_WORKFLOW_WITH_LANE.replace(
-        "      - run: bun run lint",
-        `      - if: ${LANE_FULL_IF}\n        run: bun run lint`,
+      const lintSkipped = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        "      - name: lint (biome)\n        run: bun run lint",
+        `      - name: lint (biome)
+        if: ${LANE_FULL_IF}
+        run: bun run lint`,
       );
       const result = analyzeGithubCiPolicy(docs(lintSkipped));
 
@@ -924,9 +1342,10 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-023: 負例 — rejects a required full-lane check (full doctor) mis-conditioned on lane=='doc'", () => {
-      const doctorMisrouted = SOURCE_WORKFLOW_WITH_LANE.replace(
-        `      - if: ${LANE_FULL_IF}\n        run: bun src/cli.ts doctor`,
-        `      - if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor`,
+      const doctorMisrouted = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        `        if: ${LANE_FULL_IF}\n        run: bun src/cli.ts doctor\n`,
+        `        if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor\n`,
       );
       const result = analyzeGithubCiPolicy(docs(doctorMisrouted));
 
@@ -936,14 +1355,15 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "forbidden_lane_skip_step",
         detail:
-          "jobs.harness-check-linux step \"bun src/cli.ts doctor\" is a required full-lane check but is conditioned on lane=='doc'",
+          "jobs.harness-check-linux step \"doctor (governance hard gates)\" is a required full-lane check but is conditioned on lane=='doc'",
       });
     });
 
     it("U-CIPOL-024: 負例 — rejects a non-canonical lane condition expression", () => {
-      const garbled = SOURCE_WORKFLOW_WITH_LANE.replace(
-        `      - if: ${LANE_FULL_IF}\n        run: bun run typecheck`,
-        `      - if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: bun run typecheck`,
+      const garbled = replaceRequired(
+        SOURCE_WORKFLOW_WITH_LANE,
+        `        if: ${LANE_FULL_IF}\n        run: bun run typecheck\n`,
+        `        if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: bun run typecheck\n`,
       );
       const result = analyzeGithubCiPolicy(docs(garbled));
 

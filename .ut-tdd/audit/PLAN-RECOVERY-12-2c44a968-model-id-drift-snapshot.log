@@ -1,0 +1,10 @@
+PLAN-RECOVERY-12 model-id doc drift gate verification (fixed HEAD re-review)
+recorded_at=2026-07-27T17:18:23+09:00
+anchor_commit=2c44a968
+runner=bun scripts/run-vitest-snapshot.ts
+tests=tests/model-id-ssot-drift.test.ts
+result=PASS
+tests_passed=8
+gate=analyzeModelIdDocDrift offenders=0 (checked=1)
+import_cycle=src/lint/model-id-doc-drift.ts deps = node:fs, node:path only (src/team 依存 0)
+re_review=gpt-5.6-sol blind re-review PASS finding 0 (2026-07-27, 先行3 FLAG 全解消)

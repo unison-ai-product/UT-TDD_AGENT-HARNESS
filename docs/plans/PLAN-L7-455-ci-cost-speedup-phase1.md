@@ -30,6 +30,14 @@ generates:
     artifact_type: config
   - artifact_path: src/lint/github-ci-policy.ts
     artifact_type: source_module
+  - artifact_path: tests/change-lane.test.ts
+    artifact_type: test_code
+  - artifact_path: src/doctor/profiles.ts
+    artifact_type: source_module
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -81,10 +89,10 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 - **採択: 変更種別の fail-close 分類**。「code を 1 ファイルでも含む → full」
   「保守的 doc-safe allowlist のみ → doc lane (lint / plan lint /
   readability / rule-drift 等の doc 系 check のみ)」。判定不能・新種 path は
-  full へフォールバック (fail-close)。doc-safe allowlist は **`docs/**` (ただし
-  `docs/plans/**` を除く) の `*.md`** と **`.ut-tdd/memory/**`** のみ
-  (§FLAG 是正記録参照。当初案の「docs/plans/governance 等」という表現は迂回を
-  誘発したため撤回)。
+  full へフォールバック (fail-close)。doc-safe allowlist は非正本の参照proseである
+  **`docs/archive/**.md` / `docs/migration/**.md` / `docs/reference/**.md` /
+  `docs/research/**.md`** のみに限定する。governance/design/process/adr/test-design/
+  templates/handover/memory と `.ut-tdd/memory/**` は常に full とする。
 - **required context (`harness-check` aggregate) は絞り込み後も常に生成する**。
   doc lane でも aggregate job は走り、doc 系 check green を集約して success を
   返す (branch protection の required check が pending 放置にならない)。
@@ -101,7 +109,7 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 ### Step 1: [直列] 変更分類 step + doc lane の導入
 - harness-check.yml に「変更ファイル分類」step を追加し、doc-only 判定時は
   重い step (full vitest / doctor full) を skip、doc 系 check のみ実行。
-  分類 allowlist は保守的に始める (docs/**, *.md, .ut-tdd/memory/** 等)。
+  分類 allowlist は上記4つの非正本 prose tree のみに限定する。
   code / config / workflow / スクリプト変更は常に full。
 
 ### Step 2: [並列] bun install cache
@@ -125,8 +133,8 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   両 leg に独立実装) を追加。`bun src/cli.ts github classify-changes` (新設 CLI、
   `src/github/change-lane.ts`) が git diff range (pull_request は base/head SHA、
   push は before/head SHA、force-push/新規ブランチ/未対応 event は range 解決不能
-  → fail-close) を解決し、変更ファイルを分類する。doc-only (`docs/**`, `*.md`,
-  `.ut-tdd/memory/**`) のときだけ `steps.classify.outputs.lane == 'full'` 条件の
+  → fail-close) を解決し、変更ファイルを分類する。doc-only (非正本参照prose 4 tree)
+  のときだけ `steps.classify.outputs.lane == 'full'` 条件の
   重い step (typecheck / db rebuild / 全回帰 vitest / audit quality / full doctor)
   を skip し、`lane == 'doc'` 条件の新 step (`bun src/cli.ts plan lint` +
   `bun run test:doc-lane` = readability/rule-drift/plan-lint) を実行する。
@@ -190,6 +198,36 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
   path mixed with docs/plans/** classifies as full (fail-close on mix)」。
   攻撃再現 (governance 迂回) を固定し、`docs/design/foo.md` 等の正例は
   縮小後も doc lane のまま生きることも維持確認した。
+
+### 最終収束是正 (2026-07-27)
+
+- 各runtime legに `id: classify` + `github classify-changes` のlane output producerを必須化し、
+  欠落・誤id・command差替えを `github-ci-policy` がfail-closeする。
+- producerはmultiline continuation / CRLF / 空白だけを正規化し、現workflowの
+  `bun src/cli.ts github classify-changes` と5引数（GitHub式・順序・`$GITHUB_OUTPUT`を含む）
+  のcanonical全文に完全一致させる。追加行/comment/`;`/`&&`/`||`/別output/引数順序変更は
+  全てfail-closeする。shell契約はplatform別に固定し、Linux legは未指定のみ、
+  Windows legは`bash`明示のみを許可する（Linuxのcustom shell/`bash`明示もfail-close）。
+- producerはさらに`if`/step env未指定、`continue-on-error`未指定またはfalseを必須とし、
+  job-levelの`GITHUB_OUTPUT`上書きも拒否する。source-doc doctorは各OSに1件以上、
+  canonical doc条件・canonical command全文・shell/env未指定・fail-close実行だけを許可し、
+  substring偽装、control operator、別profile、追加flagを拒否する。
+- runtime leg jobは`runs-on`/`steps`以外のexecution contextを拒否する。critical producerは
+  Linux=`name,id,run`、Windows=`name,id,shell,run`、doc doctor=`name,if,run`のexact key set
+  とし、working-directory/timeout/unknown key、job defaults/env/container/strategy、
+  duplicate producer idを構造driftとしてfail-closeする。
+- source runtime workflow rootも現実体の`name,on,permissions,concurrency,jobs`だけにsealし、
+  top-level `defaults.run.shell` / `env.BASH_ENV` / `env.GITHUB_OUTPUT`や未知root keyによる
+  runtime step hijackをfail-closeする。
+- source runtime legsのsteps配列はOS別のordered canonical semantic manifestとして固定し、
+  step件数・順序・全property/valueを完全一致検査する。YAML block whitespaceだけ正規化し、
+  action/with/run/if/env/shellの差替え、command追記、step追加・削除・並替えをfail-closeする。
+- `run`正規化はCRLF→LF、明示shell continuation (`\`+改行+indent)→single space、
+  block外縁の空行除去だけに限定する。通常改行・line内space・quoted whitespaceは意味として保持し、
+  command separatorの改行をspaceへ変える攻撃を拒否する。
+- doc-safeを4つの非正本prose treeだけへ再縮小し、正本・runtime rule・共有memoryをfullへ戻す。
+- source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
+  rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。
 
 ## AC
 

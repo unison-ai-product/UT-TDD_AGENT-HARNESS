@@ -9,11 +9,25 @@ import {
 
 describe("change-lane classification (PLAN-L7-455)", () => {
   describe("isDocSafeChangePath", () => {
-    it("accepts docs/**.md (excluding docs/plans/**) and .ut-tdd/memory/**", () => {
-      expect(isDocSafeChangePath("docs/governance/README.md")).toBe(true);
-      expect(isDocSafeChangePath("docs/design/foo.md")).toBe(true);
-      expect(isDocSafeChangePath(".ut-tdd/memory/foo.md")).toBe(true);
-      expect(isDocSafeChangePath(".ut-tdd/memory/nested/bar.json")).toBe(true);
+    it("accepts only noncanonical prose reference trees", () => {
+      expect(isDocSafeChangePath("docs/archive/README.md")).toBe(true);
+      expect(isDocSafeChangePath("docs/migration/note.md")).toBe(true);
+      expect(isDocSafeChangePath("docs/reference/api.md")).toBe(true);
+      expect(isDocSafeChangePath("docs/research/result.md")).toBe(true);
+    });
+
+    it("FLAG regression: canonical and runtime-bearing docs always use full lane", () => {
+      for (const path of [
+        "docs/governance/README.md",
+        "docs/design/foo.md",
+        "docs/process/runbook.md",
+        "docs/adr/ADR-001.md",
+        "docs/test-design/harness/L7-unit-test-design.md",
+        "docs/templates/plan.md",
+        "docs/handover/session.md",
+        ".ut-tdd/memory/foo.md",
+      ])
+        expect(isDocSafeChangePath(path)).toBe(false);
     });
 
     it("rejects code, config, workflow, and script paths (fail-close)", () => {
@@ -52,16 +66,16 @@ describe("change-lane classification (PLAN-L7-455)", () => {
   describe("classifyChangeLane", () => {
     it("classifies doc-only changes as the doc lane", () => {
       const result = classifyChangeLane([
-        "docs/design/foo.md",
-        "docs/governance/README.md",
-        ".ut-tdd/memory/note.md",
+        "docs/archive/foo.md",
+        "docs/migration/README.md",
+        "docs/reference/note.md",
       ]);
       expect(result.lane).toBe("doc");
       expect(result.fileCount).toBe(3);
     });
 
     it("regression: classifies a mix that includes one code path as full (負例 fail-close)", () => {
-      const result = classifyChangeLane(["docs/design/foo.md", "src/lint/github-ci-policy.ts"]);
+      const result = classifyChangeLane(["docs/reference/foo.md", "src/lint/github-ci-policy.ts"]);
       expect(result.lane).toBe("full");
       expect(result.reason).toContain("src/lint/github-ci-policy.ts");
     });
@@ -94,7 +108,7 @@ describe("change-lane classification (PLAN-L7-455)", () => {
     });
 
     it("blind review FLAG regression: a doc-safe path mixed with docs/plans/** classifies as full (fail-close on mix)", () => {
-      const result = classifyChangeLane(["docs/design/foo.md", "docs/plans/PLAN-X.md"]);
+      const result = classifyChangeLane(["docs/reference/foo.md", "docs/plans/PLAN-X.md"]);
       expect(result.lane).toBe("full");
     });
   });
@@ -151,7 +165,7 @@ describe("change-lane classification (PLAN-L7-455)", () => {
         eventName: "pull_request",
         headSha: "head",
         baseSha: "base",
-        git: fakeGit(["docs/design/foo.md"]),
+        git: fakeGit(["docs/reference/foo.md"]),
       });
       expect(result.lane).toBe("doc");
       expect(result.range).toBe("base...head");

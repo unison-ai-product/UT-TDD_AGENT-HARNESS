@@ -204,7 +204,7 @@ describe("legacy PLAN revision bootstrap transaction", () => {
     const input = bootstrap();
 
     expect(ledger.bootstrap(input)).toMatchObject({ ok: true, replayed: false });
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
     expect(ledger.bootstrap(input)).toMatchObject({
       ok: true,
       replayed: true,
@@ -217,7 +217,7 @@ describe("legacy PLAN revision bootstrap transaction", () => {
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
   return { db, ledger: new LegacyPlanRevisionBootstrapTransaction(db) };
 }
 

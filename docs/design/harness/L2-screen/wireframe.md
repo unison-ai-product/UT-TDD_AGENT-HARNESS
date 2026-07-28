@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: wireframe
-status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。Low-Fi 材料化 PLAN-L2-04。③ pair=self (L2↔L10)。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。Low-Fi 材料化 PLAN-L2-04。③ pair=L10-ux-validation-test-design.md (PLAN-RECOVERY-09、PLAN-L7-459 H4)。
 default_policy: low-fi-in-harness
 high_fi_policy: case-by-case (harness 内保持 OR 外部依頼のいずれか、ケース別判断)
 pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair。旧 self-pair (IMP-039/058) は PO 裁定なき作り込みとして撤去 (PLAN-RECOVERY-09)
@@ -16,8 +16,8 @@ updated: 2026-06-22
 
 # L2 ワイヤーフレーム (wireframe)
 
-> **SSoT 参照**: 画面 ID/URL は [screen-list.md](./screen-list.md)、UI 部品は [ui-element.md](./ui-element.md)、遷移は [screen-flow.md](./screen-flow.md) が正本。本 doc は Low-Fi ASCII でレイアウト・情報配置を示す (③ pair = self、L2↔L10)。
-> **V-pair (IMP-039/058)**: 本 mock 自体が L10 の③ペア。`docs/test-design/` に独立 doc は作らない。
+> **SSoT 参照**: 画面 ID/URL は [screen-list.md](./screen-list.md)、UI 部品は [ui-element.md](./ui-element.md)、遷移は [screen-flow.md](./screen-flow.md) が正本。本 doc は Low-Fi ASCII でレイアウト・情報配置を示す (③ pair = docs/test-design/harness/L10-ux-validation-test-design.md、L2↔L10)。
+> **V-pair**: ③ペアの正本は `docs/test-design/harness/L10-ux-validation-test-design.md`。旧 self-pair 規約 (IMP-039/058「本 mock 自体が③ペア、独立 doc を作らない」) は PO 裁定なき作り込みとして PLAN-RECOVERY-09 で撤去済 (本文残存を PLAN-L7-459 H4 で是正)。
 > **方針 (PO 確定 2026-05-28)**: Low-Fi は harness 内保持 (本ファイル)、High-Fi は **ケース別判断** (harness 内保持 OR 外部依頼、外部は許容オプションで強制ではない —「必ず外部にはならない」PO 訂正)。
 > **スコープ**: 15 画面 (PM 6 + HM 8 + GD 1)、Desktop 専用 (S9=a)、light のみ (Q30)、日本語固定 (Q31)。全画面 read-only + CLI コピー (S5=b)。
 
@@ -153,6 +153,6 @@ updated: 2026-06-22
 
 ## §4 carry / 次工程
 
-- 本 Low-Fi (§1-§2) が L2↔L10 の③ pair (self)。confirmed 昇格は G2 freeze (PLAN-L2-00 Step 4)。
+- L2↔L10 の③ pair は L10-ux-validation-test-design.md (旧 self-pair は PLAN-RECOVERY-09 撤去)。confirmed 昇格は G2 freeze (PLAN-L2-00 Step 4)。
 - **High-Fi 所在**: ケース別 (harness 内 OR 外部依頼)。外部選択時は back-propagation を通常運用として想定 (G1-trace 再検証必須)。
 - 下流: L10 UX refinement (High-Fi 判断 / デザイントークン実値 / a11y AA 実測) → src/web 実装 (Phase B)。

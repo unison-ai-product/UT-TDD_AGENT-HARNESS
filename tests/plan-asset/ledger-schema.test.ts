@@ -284,7 +284,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       createV4Ledger(db);
       seedAsset(db, "plan:a");
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
-      expect(db.userVersion()).toBe(6);
+      expect(db.userVersion()).toBe(LEDGER_SCHEMA_VERSION);
       expect(
         db
           .prepare(
@@ -351,7 +351,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
       db.setUserVersion(2);
       seedAsset(db, "plan:a");
-      expect(LEDGER_SCHEMA_VERSION).toBe(6);
+      expect(LEDGER_SCHEMA_VERSION).toBe(7);
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(
         db
@@ -368,14 +368,15 @@ describe("PLAN Asset canonical ledger schema", () => {
   it("U-PADM-065: v5 ledgerへappend-only artifact cleanup operation schemaを原子的に追加する", () => {
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+      dropV7Objects(db);
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
       db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
       db.exec("DROP TABLE plan_draft_artifact_operation_events");
       db.setUserVersion(5);
 
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       expect(
         db
           .prepare(
@@ -396,7 +397,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       createLegacyCommittedLedger(db, version);
       const before = db.prepare("SELECT * FROM plan_draft_journal").get();
 
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       expect(db.prepare("SELECT * FROM plan_draft_journal").get()).toEqual(before);
       const operations = db
         .prepare(
@@ -426,7 +427,7 @@ describe("PLAN Asset canonical ledger schema", () => {
           .get()?.event_digest,
         reason: "旧schemaにはartifact cleanup provenanceが存在せず完了状態を証明できない",
       });
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       expect(
         db.prepare("SELECT COUNT(*) AS n FROM plan_draft_artifact_operation_events").get()?.n,
       ).toBe(1);
@@ -463,7 +464,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     const db = openHarnessDb(":memory:");
     try {
       createLegacyCommittedLedger(db, 5);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
       db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
       const current = db.prepare("SELECT * FROM plan_draft_artifact_operation_events").get();
       if (!current) throw new Error("legacy_unknown fixture missing");
@@ -681,7 +682,11 @@ function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("legacy_plan_bootstrap_provenance") &&
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
-      !sql.includes("idx_plan_draft_artifact_operations_command"),
+      !sql.includes("idx_plan_draft_artifact_operations_command") &&
+      !sql.includes("genesis_issue_custody") &&
+      !sql.includes("sealed_plan_lineages") &&
+      !sql.includes("idx_sealed_lineages_") &&
+      !sql.includes("plan_lineage_migration_certificates"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -700,7 +705,11 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("legacy_plan_bootstrap_provenance") &&
       !sql.includes("idx_legacy_bootstrap_source_blob") &&
       !sql.includes("plan_draft_artifact_operation_events") &&
-      !sql.includes("idx_plan_draft_artifact_operations_command"),
+      !sql.includes("idx_plan_draft_artifact_operations_command") &&
+      !sql.includes("genesis_issue_custody") &&
+      !sql.includes("sealed_plan_lineages") &&
+      !sql.includes("idx_sealed_lineages_") &&
+      !sql.includes("plan_lineage_migration_certificates"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -714,7 +723,8 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
 }
 
 function createLegacyCommittedLedger(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 7 });
+  dropV7Objects(db);
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
   db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
   db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
@@ -918,6 +928,19 @@ function restoreTrigger(db: ReturnType<typeof openHarnessDb>, name: string): voi
   db.exec(trigger);
 }
 
+// v7 (sealed lineage) のオブジェクトを旧版 fixture から落とす共通 helper
+function dropV7Objects(db: ReturnType<typeof openHarnessDb>): void {
+  for (const table of [
+    "plan_lineage_migration_certificates",
+    "sealed_plan_lineages",
+    "genesis_issue_custody",
+  ]) {
+    db.exec(`DROP TRIGGER trg_${table}_no_update`);
+    db.exec(`DROP TRIGGER trg_${table}_no_delete`);
+    db.exec(`DROP TABLE ${table}`);
+  }
+}
+
 function legacyV2Ddl(): readonly string[] {
   return ledgerSchemaDdl()
     .filter(
@@ -928,7 +951,11 @@ function legacyV2Ddl(): readonly string[] {
         !sql.includes("legacy_plan_bootstrap_provenance") &&
         !sql.includes("idx_legacy_bootstrap_source_blob") &&
         !sql.includes("plan_draft_artifact_operation_events") &&
-        !sql.includes("idx_plan_draft_artifact_operations_command"),
+        !sql.includes("idx_plan_draft_artifact_operations_command") &&
+        !sql.includes("genesis_issue_custody") &&
+        !sql.includes("sealed_plan_lineages") &&
+        !sql.includes("idx_sealed_lineages_") &&
+        !sql.includes("plan_lineage_migration_certificates"),
     )
     .map((sql) =>
       sql
