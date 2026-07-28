@@ -58,7 +58,7 @@ review_evidence:
 
 > **採番注記 (2026-07-27)**: 本 PLAN は当初 `PLAN-L7-453` として起票したが、同一連番を
 > PR #106 (`PLAN-L7-453-snapshot-runner-root-guard`) と PR #125
-> (`PLAN-L7-453-provider-execution-receipt-contract`、後に `PLAN-L7-465` へ改番) が並行に確保しており、prose 内の
+> (`PLAN-L7-453-provider-execution-receipt-contract`) が並行に確保しており、prose 内の
 > 「PLAN-L7-453」参照が merge 後に多義化する。連番の先取りは PR #106 (最先着) を正とし、
 > 本 PLAN を `PLAN-L7-459` へ改番した。内容・review evidence の対象成果物は不変
 > (改番前 commit `d7dcc320` / `db8d01bc`)。連番衝突が機械検出されない構造欠陥

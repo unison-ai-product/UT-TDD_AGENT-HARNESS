@@ -59,14 +59,6 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 
 > Precondition/Postcondition の**詳細**(引数型・エラー型・リトライ・タイムアウト) は L5 D-API で確定 (§7 粒度境界)。
 
-### §3.1 provider execution seam（方式非依存の実行契約）
-
-AI runtime の起動方式を CLI、hook、将来の native companion のいずれへ差し替えても、core が観測する契約は同一とする。adapter は起動前に capability preflight を行い、要求された `deadline`、標準入力、終了観測、子孫 process 回収を実行方式が提供できることを確認する。能力不足または不明は起動前に fail-close し、別方式への silent fallback は行わない。
-
-起動を受理した adapter は、成功・provider 非 0・timeout・cancel・adapter error の全 terminal path で、一意な invocation ID に結び付く **terminal receipt** を exactly once 生成する。receipt は少なくとも終了種別、provider exit、deadline/cancel の原因、開始・終了時刻、回収結果を持ち、`orphan_count=0` が確認できない限り成功として扱わない。親 process の終了だけを terminal とみなしてはならず、起動した process tree の所有権は receipt 確定まで adapter が保持する。
-
-この seam は provider 実行の方式非依存契約であり、Windows Job Object / POSIX process group・cgroup 等を実装する native Resource Kernel 自体の OS 適合性契約ではない。前者は `ST-EXT-07`、後者は独立した `ST-RGK-*` 系で検証し、mock adapter の Green を native custody の証拠へ流用しない。
-
 > **`ut-tdd setup` の GitHub 設定境界 (PLAN-L6-05/L7-03、REVERSE-04 back-fill)**: solo/team で出し分ける GitHub 設定のうち **ファイル** (CODEOWNERS / `.github/workflows/` / ISSUE・PR テンプレ / commitlint) は harness が emit する (`GeneratedFile`)。**GitHub 設定操作** (branch protection / Required Status Checks / 必須レビュー数) はファイルで完結せず gh-api 操作 (`GithubAction`) であり、**既定は emit-only** (`scripts/setup-branch-protection.sh` 生成のみ、適用は admin 人間サインオフ = 認可・本番影響境界、CLAUDE.md エスカレーション境界)。`--apply-branch-protection` + 対話セッション下でのみ gh 経由適用 (非対話は precondition で封鎖)。**harness core は token を保持しない** (§5 GitHub 認証 = gh CLI 委譲)。参加規模検出も gh の認証状態に委ね token を読まない。
 
 ## §4 失敗時の振る舞い (fail-close / degradation)

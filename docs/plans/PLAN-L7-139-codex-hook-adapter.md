@@ -263,5 +263,5 @@ shell-free 起動の Green を `orphan_count=0` の証拠として扱っては�
 
 恒久解は Issue #134 の Node + Rust 移行で、Rust Resource Kernel が Windows Job Object を所有し、
 launcher・provider・全子孫の終了と空 custody receipt を検証する。Issue #134 が受入されるまでは
-本 PLAN を Windows process custody 完了証拠に使用せず、`ST-RGK-*` / `ST-EXT-07` を未充足のまま
+本 PLAN を Windows process custody 完了証拠に使用せず、`ST-RGK-*` を未充足のまま
 fail-closeする。
