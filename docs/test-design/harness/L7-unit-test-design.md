@@ -1343,11 +1343,6 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-DOCLEDGER-003` | missing/duplicate/phantom/case-fold path | closure analyzer | 対応するstable findingを全件返し、exit 1 |
 | `U-DOCLEDGER-004` | authoring loaderのskip→not_applicable/defer→deferred、canonical applicabilityのreason・condition・trigger・decider・PLAN欠落、unknown application status、又はdisposition後条件欠落 | authoring normalizer + closure analyzer | raw語はauthoring境界でcanonical化し、queryはcanonical値だけを受理。不足は`doc-disposition-incomplete`、exit 1。applicabilityとdispositionを第二enumで混同しない |
 | `U-DOCLEDGER-005` | 全4 kind正常replay、decisionのledger/snapshot/operation/member/path/digest欠落・余剰・重複・不一致、snapshot不一致、delta ID改竄、invalid factory input、add(existing)、modify/delete/rename missing source、stale before、rename target占有/same path、sequence gap/duplicate、empty/nonempty chain改竄、final/initial exact/case-fold重複path、final path/blob不一致 | `createDocumentDeltaEvent/Decision` + `replayDocumentDeltas` + final closure | factoryはinvalid state生成不能。正常列だけeffective集合/reduction/delta chain digestをouter closureまで返す。違反はreason codeとpath/blob identity別の`doc-delta-unregistered`を全件stable順で返しexit 1。invalid prefix後はstate poison。renameをGit heuristicで推測せず、明示renameなしはdelete+addとして報告。連続modify、add→modify/delete、rename→modify/delete、入力全体非変更、入力順反転、反復digest一致も固定 |
-| `U-DOCLEDGER-006` | frontmatter scalar/list、Markdown inline/reference/image、wiki path/fragment/label、ATX/Setext/explicit anchor、完全PLAN/ADR/spec/test IDの正常fixture。複数edge、edge 0件、入力順反転、反復、source blob/snapshot差替え、relative/dot segment、Unicode/percent fragmentも含む。propertyはblob/reader/error全permutation、mutationはsnapshot/blob比較、unknown scheme、error保持、parser/schema/reader revision frame、stable sortの各削除。さらに同形blob DTO、reader/input getter・iterator例外、duplicate draft、未知reason code、fence/引用内exact ID、loader await中snapshot変更、schema binding差替えを攻撃する | typed reference reader + parse receipt factory | source snapshot/path/blob/contentとparser/syntax/anchor/scheme/reader/frontmatter schema revisionへ束縛したtyped edge/receiptをstable identity順で返し、入力byte/DTO不変。同一入力digest再現、全mutation kill。blob/snapshot mismatch、root escape、encoded separator/dot、malformed percent、duplicate frontmatter/reference label、reader missing/duplicate/ambiguous claim、unknown schemeは型付きerrorでfail-closeし、edge=[]正常へ変換しない。reader draftはID/source/revisionを自己申告不能、blocked resultはgraphを持たずdiagnosticsのみ、Green graphのsnapshotDigestとParseError.sourceはsealed blob identityへ一致し、receiptId/revisions改変も検出する |
-| `U-DOCLEDGER-007` | graph/snapshot不一致、registry/policy revision欠落、registry snapshot不一致、parse receipt欠落・重複・stale、broken endpoint、anchor欠落/重複、typed ID欠落/多義、archived/superseded/generated_viewへの規範参照、stale inbound、semantic/applicability不一致、supersession cycle | reference analyzer | 入力契約違反は閉じたreasonの`ok:false` blocked result、endpoint/policy違反はreason別`doc-reference-orphan`で全件stable化しexit 1。readerの`ok:false`結果からanalyzerを呼ばず、readerはregistry/authority判断を行わずanalyzerはsyntaxを再parseしない |
-| `U-DOCLEDGER-008` | target blob変更後のcanonical assertion | closure analyzer | `doc-canonical-assertion-stale`、exit 1 |
-| `U-DOCLEDGER-009` | blocking findingとroute欠落・別snapshot・別finding digest | debt route verifier | `doc-debt-route-missing`又は`doc-debt-route-stale`、exit 1 |
-| `U-DOCLEDGER-010` | active debt route付きblocking finding | closure analyzer | routeを可視化するがfindingを消さず`closure=blocked`、exit 1 |
 | `CANDIDATE-DOMAIN-001` | domain import graph | dependency audit | domain→kernel以外の逆依存0 |
 | `CANDIDATE-DOMAIN-002` | barrel相互import fixture | dependency audit | `module-cycle`, exit 1 |
 | `CANDIDATE-DOMAIN-003` | command/query同時mutation fixture | CQS audit | `command-query-mixed`, exit 1 |
@@ -1381,7 +1376,8 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-M-SP-006` | DB-only補完mutation | mutation runner | mutation killed、exit 1 |
 | `CANDIDATE-M-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
 
-`U-DOCLEDGER-001..010`はPLAN-L6-74の実装前Red freezeである。test実体とGreen証拠が揃うまで
+`U-DOCLEDGER-001..005`を本sliceの実装前Red freezeとする。reference解析・canonical assertion・
+debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeするまでoracle宣言へ含めない。test実体とGreen証拠が揃うまで
 `CANDIDATE`への後戻り、既存detectorのpass/fail関数を期待値へ再利用すること、件数だけのGreenを禁止する。
 その他のnegative fixtureも期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。
 

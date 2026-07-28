@@ -1252,7 +1252,7 @@ verifyDocumentDebtRoutes(
 expected delta chain digestを不可分に持つ。domainのdecisionはvalidated `record`を合成し、
 physical adapterだけがL5の正規化columnへlossless展開する。
 
-#### typed reference reader契約 (U-DOCLEDGER-006)
+#### typed reference reader契約 (後続slice候補、unit oracle ID未採番)
 
 `RepositoryDocumentBlobPort`は`snapshotId,path,blobOid,contentDigest`を全て受け取り、固定commitの
 Git object byte列だけを返す。working tree fallbackを持たない。`loadRepositoryDocumentBlobs`は

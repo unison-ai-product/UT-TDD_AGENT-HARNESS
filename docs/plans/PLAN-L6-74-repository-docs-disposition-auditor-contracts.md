@@ -74,5 +74,6 @@ materializeした`DocumentDispositionLedger`、同snapshotのblobから抽出し
   receipt digestは入力順・OS・localeに依存せず、parse errorをedge 0件の正常結果へ変換しない。
 - blocking findingはsnapshot digest、subject path/edge、filing target、PLAN IDへ束縛したdebt routeを
   必須とする。route記録はfindingの解消やclosure Greenを意味しない。
-- `U-DOCLEDGER-001..010`、`IT-DOCLEDGER-01..07`、`ST-DOCLEDGER-01..05`を実装前Redとして固定する。
+- `U-DOCLEDGER-001..005`、`IT-DOCLEDGER-01..07`、`ST-DOCLEDGER-01..05`を本sliceの実装前Redとして固定する。
+  reference解析・canonical assertion・debt routeのunit oracleは後続sliceで再採番する。
   現時点ではoracle実装・Green証拠がないため、本PLANの設計freezeを実装完了と読み替えない。
