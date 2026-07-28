@@ -271,8 +271,13 @@ Minimum G8 close profile for the first L8 ascent:
 | `IT-PLANASSET-01` | v1 PLAN全件とnumeric core collision | canonical adapter+ledgerへmigrationする | 損失0、曖昧自動選択0、collision全件をmaterializeする | migration ledger、loss report |
 | `IT-WORKFLOW-01` | append-only transition/evidence列 | rebuild+reduceする | state/evidence usabilityが同一でstale/別revision evidenceを拒否する | event digest、reduction result |
 | `IT-VMCONTRACT-01` | L0-L14/G0.5-G14 authored contract | compileする | registry/doctor/roadmapのrule identityとdigestが一致する | compiled manifests 3面diff 0 |
-| `IT-DOCLEDGER-01` | baseline `3d232e9c`のdocs path集合921件 | init+materializeする | 全path exactly once、phantom/duplicate/case-fold collision 0になる | raw NUL hash、921件基準receipt |
-| `IT-DOCLEDGER-02` | baseline後のadd/delete/renameとbroken local reference fixture | final closureを実行する | 未台帳deltaとorphan/stale canonical assertionを拒否する | delta/edge finding manifest |
+| `IT-DOCLEDGER-01` | baseline `3d232e9c`のroot/docs tree object、`docs_tree` 921件receipt、その他必須zoneのcoverage expansion delta、空projection | snapshot capture→init→materialize→projection rebuildを実行する | 全zoneのsnapshot/ledger/projectionが同じidentity集合・digestを持ち、全path exactly once、unclassified/phantom/duplicate/case-fold collision 0 | zone別raw NUL/member hash、root/docs tree OID、selection/snapshot digest、`docs_tree` 921件基準receipt、全zone row diff 0 |
+| `IT-DOCLEDGER-02` | baseline後のadd/modify/delete/rename、exactly-one decision、正常event chain、未更新/改竄ledger | decision join→reducer→final closureを実行する | 正常4 kindはfinal path/blob集合と一致。decision/snapshot未束縛、未登録、illegal遷移、sequence gap/duplicate、空/非空chain改竄を別identityで拒否し、明示renameなしをdelete/addの片側だけで閉じない | decision/delta chain/reduction digest、finding manifest、期待exit |
+| `IT-DOCLEDGER-03` | frontmatter/Markdown/wiki/anchor/PLAN/spec/test IDを含むtracked blobとbroken/unknown fixture | reader群→reference graph→closure analyzerを結合する | 正常edgeはstable identity、parse error/orphan/anchor欠落/stale canonical assertionは別findingでfail-close | reader receipt、edge/finding manifest、expected exit |
+| `IT-DOCLEDGER-04` | blocking finding、正しいroute、route欠落、別snapshot/別finding digestのroute | debt verifierとclosure reportを実行する | 正しいrouteだけがfindingへjoinするがclosureはblockedのまま。欠落/stale routeを別findingにする | finding-route coverage manifest、route digest、exit 1 |
+| `IT-DOCLEDGER-05` | 同一Git snapshotに対するCLI `diff|references check|check|report`とdoctor consumer | 全query surfaceを実行する | finding ID、subject、snapshot digest、exitが一致し、どのsurfaceもledger/authoring docs/DB truthを更新しない | surface parity receipt、source/DB before-after diff 0 |
+| `IT-DOCLEDGER-06` | parse、複合FK、row write、swap各境界のfault fixtureと既存Green projection | transactional rebuildを実行する | 全faultで部分行0、旧Green projection digest不変、temporary table残留0、authoring source更新0になる | fault matrix、rollback receipt |
+| `IT-DOCLEDGER-07` | canonical/archive/history/否定文/引用/negative fixtureとlegacy command参照 | authored zoneとtyped reference policyを評価する | 全文書をexactly once台帳化しつつ旧語の存在だけではfailせず、規範参照・authority逆流・現行legacy実行例だけをstable findingにする | zone別count、positive/negative policy finding |
 | `IT-MODULE-01` | engine-swap module graph | dependency auditを実行する | domain逆依存、barrel cycle、doctor/CLI逆importが0になる | module graph、cycle count 0 |
 | `IT-PROJECTION-REBUILD-01` | captured source bundle、SQLite transaction adapter、CLI/doctor composition root | 同一bundleで`ut-tdd db rebuild`、doctor rebuild、drive fallbackを実行する | 全入口が同一`ProjectionRebuildCommand`を通り、table identity/digest/receiptが一致する | source digest、入口別row diff 0、composition inventory |
 | `IT-PROJECTION-REBUILD-02` | row/finding write境界の故障注入、secret-like finding payload | rebuildを実行する | guard拒否またはwrite失敗時は既存projectionを保持し、row/finding部分commit 0、authoring source更新0 | transaction rollback evidence、expected finding/exit |
@@ -281,6 +286,8 @@ Minimum G8 close profile for the first L8 ascent:
 | `IT-SELFPROOF-01` | contract ruleとmutation corpus | 独立process verifierを実行する | receipt exactly once、全mutation kill、正常fixture false-positive 0になる | receipt、mutation survivor 0 |
 
 全ITはauthoring sourceを変更しないread/rebuild境界で実行し、DB/生成viewから判断を逆生成しない。
+`IT-DOCLEDGER-01..07`は実装前TDD Redである。既存921件receiptはbaseline数量証拠に限定し、
+typed reference closure、route freshness、surface parityのGreen代用にしない。
 
 ## Execution Ledger / GitHub integration (PLAN-L5-23、2026-07-15)
 

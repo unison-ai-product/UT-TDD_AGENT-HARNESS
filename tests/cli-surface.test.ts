@@ -259,7 +259,7 @@ describe("L7 CLI surface closure", () => {
       ok: true,
       total: planCount,
       emitted: planCount,
-      decisionCounts: { migrated: planCount - 55, rekeyed: 55, rejected: 0, pending: 0 },
+      decisionCounts: { migrated: planCount - 53, rekeyed: 53, rejected: 0, pending: 0 },
       findings: [],
     });
   }, 15_000);

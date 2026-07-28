@@ -1338,11 +1338,11 @@ CHECK、複合PKを各1違反fixtureでDDL自身が拒否することを確認�
 上表のintegration oracleは`tests/disposition/projection.test.ts`へ昇格済みで、全projectionのPK、source/canonical digestを
 delete→rebuild前後で完全比較する。invalid authoringはtransaction rollbackし既存projectionを保持する。row countだけの比較、
 DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証拠に含めることは禁止する。
-| `CANDIDATE-DOCLEDGER-001` | baseline raw NUL path集合 | snapshot capture | count/tree OID/hashがfixture一致 |
-| `CANDIDATE-DOCLEDGER-002` | missing/duplicate/phantom/case-fold path | ledger validate | 各stable finding、exit 1 |
-| `CANDIDATE-DOCLEDGER-003` | conditional field欠落 | ledger validate | `doc-disposition-incomplete`, exit 1 |
-| `CANDIDATE-DOCLEDGER-004` | add/delete/rename未台帳 | final closure | `doc-delta-unregistered`, exit 1 |
-| `CANDIDATE-DOCLEDGER-005` | broken/superseded/archive依存edge | reference analyze | typed orphan finding、exit 1 |
+| `U-DOCLEDGER-001` | full commit/root tree、`repository-documents-v1`全zone、raw NUL path/blob OID集合 | `captureRepositoryDocsSnapshot` | zone/count/root tree/selection/path hash/zone集合/member集合/snapshot digestがfixture一致し、stable byte順。921は`docs_tree`だけ |
+| `U-DOCLEDGER-002` | short SHA、symbolic HEADだけ、root tree/selector mismatch、必須zone欠落、未分類文書、malformed NUL/UTF-8 | snapshot capture | `docs-snapshot-revision-missing`、`docs-snapshot-stream-malformed`又は`doc-selection-unclassified`、exit 1 |
+| `U-DOCLEDGER-003` | missing/duplicate/phantom/case-fold path | closure analyzer | 対応するstable findingを全件返し、exit 1 |
+| `U-DOCLEDGER-004` | authoring loaderのskip→not_applicable/defer→deferred、canonical applicabilityのreason・condition・trigger・decider・PLAN欠落、unknown application status、又はdisposition後条件欠落 | authoring normalizer + closure analyzer | raw語はauthoring境界でcanonical化し、queryはcanonical値だけを受理。不足は`doc-disposition-incomplete`、exit 1。applicabilityとdispositionを第二enumで混同しない |
+| `U-DOCLEDGER-005` | 全4 kind正常replay、decisionのledger/snapshot/operation/member/path/digest欠落・余剰・重複・不一致、snapshot不一致、delta ID改竄、invalid factory input、add(existing)、modify/delete/rename missing source、stale before、rename target占有/same path、sequence gap/duplicate、empty/nonempty chain改竄、final/initial exact/case-fold重複path、final path/blob不一致 | `createDocumentDeltaEvent/Decision` + `replayDocumentDeltas` + final closure | factoryはinvalid state生成不能。正常列だけeffective集合/reduction/delta chain digestをouter closureまで返す。違反はreason codeとpath/blob identity別の`doc-delta-unregistered`を全件stable順で返しexit 1。invalid prefix後はstate poison。renameをGit heuristicで推測せず、明示renameなしはdelete+addとして報告。連続modify、add→modify/delete、rename→modify/delete、入力全体非変更、入力順反転、反復digest一致も固定 |
 | `CANDIDATE-DOMAIN-001` | domain import graph | dependency audit | domain→kernel以外の逆依存0 |
 | `CANDIDATE-DOMAIN-002` | barrel相互import fixture | dependency audit | `module-cycle`, exit 1 |
 | `CANDIDATE-DOMAIN-003` | command/query同時mutation fixture | CQS audit | `command-query-mixed`, exit 1 |
@@ -1376,7 +1376,10 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-M-SP-006` | DB-only補完mutation | mutation runner | mutation killed、exit 1 |
 | `CANDIDATE-M-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
 
-実装前にnegative fixtureが期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。
+`U-DOCLEDGER-001..005`を本sliceの実装前Red freezeとする。reference解析・canonical assertion・
+debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeするまでoracle宣言へ含めない。test実体とGreen証拠が揃うまで
+`CANDIDATE`への後戻り、既存detectorのpass/fail関数を期待値へ再利用すること、件数だけのGreenを禁止する。
+その他のnegative fixtureも期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。
 
 ## PLAN-L7-428 ステージ紐付きエリシテーション oracle (PLAN-REVERSE-428 backfill、2026-07-13)
 

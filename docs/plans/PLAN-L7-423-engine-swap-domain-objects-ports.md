@@ -79,7 +79,7 @@ dependencies:
     - docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
     - docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md
     - docs/plans/PLAN-L7-420-vmodel-contract-compiler-registry.md
-    - docs/plans/PLAN-L7-422-repository-document-disposition-closure-gate.md
+    - docs/plans/PLAN-L7-467-repository-document-disposition-closure-gate.md
     - docs/plans/PLAN-REVERSE-423-engine-swap-domain-backfill.md
 review_evidence:
   - reviewer: claude-blind-reviewer
