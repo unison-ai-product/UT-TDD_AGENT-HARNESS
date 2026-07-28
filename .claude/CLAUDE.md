@@ -139,6 +139,38 @@ trade-off を記録した PLAN とする。spot-check で (a) この対象に該
 のいずれかを観測したとき。
 それまで `docs/plans/PLAN-L6-96-advisor-consultation-telemetry.md` は条件付き保留とする。
 
+## 委譲と判断層 (PO ルール 2026-07-28、Claude 固有)
+
+**作業は下位モデルへ委ねて判断層を厚くする。** orchestrator (Opus / Sonnet) が自分で
+書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。
+
+- 文書作成 = Sonnet (`claude-sonnet-5`)。実装 = Codex 側 worker (`gpt-5.6-terra` /
+  `gpt-5.6-luna`)。軽量探索・doc パッチ = spark / mini / haiku 級。
+- 判断ゲート (review / blind-review / qa / tl / security) は族内 frontier tier。
+  正規委譲経路 (`ut-tdd codex|claude --role <role>`) がこの routing を機械強制する
+  (`src/team/delegation-routing.ts`、未登録 role は fail-close)。
+
+**review は成果物を書いていない family の上位モデルで行う** (attacker/defender 分離):
+
+- Codex が実装 → **Claude** が review。Claude が実装 → **Codex** が review。
+- 証跡は PLAN の `review_evidence[].review_kind=cross_agent` に worker_model /
+  reviewer_model を記録する。doctor の `review-evidence` hard gate が
+  `checkCrossAgentModelPair` で same_provider / model 欠落 / 不明 provider を fail-close
+  で弾く (対象 kind = design / add-design / impl / add-impl、status = confirmed /
+  completed)。
+- 単一 runtime しか使えない場合のみ `intra_runtime_subagent` を記録する
+  (cross_agent を僭称しない)。
+
+### 唯一の回避条件: 利用上限による停止
+
+上記の委譲・cross-review 構造を外してよいのは、**担当すべき family / tier のモデルが
+利用上限 (rate / usage cap) で停止していて実行できないときだけ**。それ以外の理由
+(急ぎ・面倒・コスト・自分で書いた方が速い) は回避理由にならない。
+
+回避する場合は理由を記録する (どのモデルが、いつ、どの上限で止まったか)。回避のまま
+`cross_agent` を称してはならない — 上限で別 family を使えなかった場合は
+`intra_runtime_subagent` として記録し、上限解除後に cross review を取り直す。
+
 ## Native Tool Invocation
 
 Claude Code tools must be invoked through Claude Code's native tool-use
