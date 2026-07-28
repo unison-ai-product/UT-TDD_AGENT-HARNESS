@@ -4,6 +4,8 @@ title: "PLAN-L7-462 (troubleshoot): Bun runtime 撤退 — Node 一本化の段�
 kind: troubleshoot
 layer: L7
 drive: agent
+route_signal: incident
+route_mode: incident
 status: draft
 created: 2026-07-28
 updated: 2026-07-28
@@ -11,8 +13,10 @@ backprop_decision: not_required
 backprop_decision_reason: "Harness 自身の実行 runtime の差し替えであり、製品の外部 requirement / design / test-design 契約は変えない。言語は TypeScript のまま (ADR-001 の言語選定は不変、runtime 節のみ改訂対象)。"
 owner: PM / PO
 agent_slots:
+  - role: aim
+    slot_label: "AIM - TS 実行方式 (type-stripping / tsx / prebuild) と移行順序の設計判断"
   - role: tl
-    slot_label: "TL - TS 実行方式 (type-stripping / bundle) の設計判断と hook 起動系統の等価性レビュー"
+    slot_label: "TL - hook 起動系統の等価性と lint 反転 (fail-close 境界) のレビュー"
   - role: se
     slot_label: "SE - hooks / scripts / CI / snapshot runner の Node swap 実装"
 generates:
@@ -20,21 +24,11 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/adr/ADR-002-node-runtime-unification.md
     artifact_type: markdown_doc
-  - artifact_path: .claude/settings.json
-    artifact_type: config
-  - artifact_path: package.json
-    artifact_type: config
-  - artifact_path: .github/workflows/harness-check.yml
-    artifact_type: config
-  - artifact_path: scripts/run-vitest-snapshot.ts
-    artifact_type: source_module
-  - artifact_path: src/lint/runtime-portability.ts
-    artifact_type: source_module
 dependencies:
   parent: null
-  requires:
-    - docs/plans/PLAN-L7-460-db-refresh-resource-guardrails.md
+  requires: []
   references:
+    - docs/plans/PLAN-L7-460-db-refresh-resource-guardrails.md
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
     - .ut-tdd/memory/project-incident-bun-session-db-refresh-runaway-on-2026-07-27.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -42,6 +36,13 @@ review_evidence: []
 ---
 
 # PLAN-L7-462 (troubleshoot): Bun runtime 撤退 — Node 一本化の段階移行
+
+注: 実装 deliverable (.claude/settings.json / package.json / harness-check.yml /
+run-vitest-snapshot.ts / runtime-portability.ts) は既存ファイルのため draft 段階の
+generates には載せない (merged-plan-status / duplicate-artifact-ownership 対策)。
+実装 PR で generates を更新し confirm と同時に宣言する。前提 PLAN-L7-460 は
+draft のため requires の ready 条件を満たさず references 扱い (実装順序は
+Schedule step 0 で拘束)。
 
 ## 背景 (PO 方針 2026-07-28「Bun はトラブル多いから差し替えたい」)
 
