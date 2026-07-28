@@ -51,7 +51,9 @@ function collectHookInvocations(raw: string | null): HookInvocation[] | null {
     };
     return Object.values(parsed.hooks ?? {}).flatMap((entries) =>
       (entries ?? []).flatMap((entry) =>
-        (entry.hooks ?? []).map(parseHookInvocation).filter((hook): hook is HookInvocation => !!hook),
+        (entry.hooks ?? [])
+          .map(parseHookInvocation)
+          .filter((hook): hook is HookInvocation => !!hook),
       ),
     );
   } catch {
