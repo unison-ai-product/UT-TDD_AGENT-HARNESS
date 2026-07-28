@@ -85,6 +85,7 @@ current Bun経路を残さない。
 | **plan** (`src/plan/`) | PLAN frontmatter + 本文の lint | `lintPlan(path?)` | schema |
 | **vmodel** (`src/vmodel/`) | V-model 4 artifact 双方向 trace lint | `lintVmodel(path?)` | schema |
 | **disposition** (`src/disposition/`) | checked ZIP source/category/item/typed target aggregate、strict authoring loader、Git provenance port。DBやCLIをdomainへ持ち込まず、source→item target推論を禁止する | `DocumentDispositionCatalog.create()` / `loadTrackedCatalogInput()` / `verifyAuthoringProvenance()` | node:crypto / fs・git (adapterのみ) |
+| **document-disposition** (`src/document-disposition/`) | repository全tracked文書のGit object snapshot、baseline/decision/delta ledger、reference/closureを扱うbounded context。`src/disposition`のchecked ZIP semantic catalogとは責務を分け、working tree・DB・Git rename heuristicから判断を創作しない | `captureRepositoryDocsSnapshot()` / `validateDocumentDisposition()` / `replayDocumentDeltas()` / `analyzeRepositoryDocumentClosure()` | domainはcanonical frameのみ、applicationはGit object portへ依存 |
 | **profile** (`src/profile/`) | document `doc_type_id` scale/product profile masterとdecision overlay aggregate。semantic item profileを創作せず、決定論resolverを提供する | `createProfileCatalog()` / `resolveDocumentProfile()` / `loadTrackedDocumentProfileCatalog()` | disposition strict parser (adapterのみ) / node:crypto |
 | **plan-asset** (`src/plan-asset/`) | immutable PLAN identity/revision/evidence/reservationとv1 canonical adapter。`.ut-tdd/ledger/harness-ledger.db`をcanonical event/receipt正本として所有し、HEAD PLAN inventoryとshort alias多義をfail-closeする | `PlanAsset.create/reconstruct/revise()` / `EvidenceRecord.isUsableFor()` / `PlanIdReservation.reserve()` / `PlanLedger.reserve/release/expire()` / `adaptLegacyPlan()` / `buildLegacyPlanInventory()` / `loadProjectIdentityFromHead()` / `migratePlanLedger()` | schema typed DDL / state-db SQLite port / node:crypto / Git・fs（adapterのみ） |
 | **plan-admission** (`src/plan-admission/`) | PLAN起票の駆動モデル許可tuple、Reverse/Redesign遷移、receipt内容束縛、差分fenceを所有する。proposal routingのfallbackをauthoringへ持ち込まず、PLAN直接編集をfail-closeする | `evaluatePlanAdmission()` / `analyzePlanAdmissionDiff()` | schema / plan-asset adapter / Git read-only adapter |
@@ -214,6 +215,46 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 - **ADR-002/003 候補**の起票判断 = G4 前の PO/TL レビュー
 - **CI lint 配線** (doctor + lint + test の自動発火) = local gate 実装済み。外部 CI service 配備は infrastructure / ops 配備範囲
 - **plan-id-schema lint** (Plan 集約 ID 検証) = 第2弾 lint (IMP-004)
+
+## §9 Repository Document Ledger方式境界 (PLAN-L4-25)
+
+全tracked repository documentsの見直しは`src/lint`による都度scanではなく、Git objectで固定した
+zone別baseline、明示delta、final snapshotを持つDocument Ledger集約として実行する。authoring sourceは
+`docs/governance/repository-document-disposition/`配下のmanifest/entryであり、Markdown一覧と
+`harness.db`は生成view/read modelである。
+
+baseline `3d232e9c`の921件は`docs/**` zoneだけのGit subtree証拠であり、repository全体の文書件数ではない。
+`root_policy`、`runtime_policy`、`skills`、`github_policy`を同じsnapshotへ別zoneとして加え、
+未分類のtracked documentを検出した場合は自動除外せずclosureをblockedにする。
+
+方式上の依存方向は次に固定する。
+
+```text
+Git snapshot adapter → strict authoring loader → Document Ledger domain → closure application service
+→ Markdown/SQLite projection adapter
+```
+
+- Git adapterはcommit/tree/blob/raw NUL path streamを読むだけで、dispositionを推測しない。
+- domainはmeaning、applicability、authority、disposition、target、typed reference、不変条件を所有する。
+- closure serviceはbaseline/delta/finalとreference graphを同一runで評価し、途中greenを完了へ昇格しない。
+- detector/doctor/CLIはdomain verdictを表示するconsumerであり、欠落recordの自動補完、keywordによるsubstance判定、
+  targetの推測、silent repairを行わない。
+- write commandとqueryを分離し、materializeはselectorを恒久recordへ展開する明示commandとする。
+- generated viewの手編集、working treeからのbaseline再採取、既存baselineの上書きを禁止する。
+
+reference parserはpath linkだけでなくanchor、PLAN full ID、spec/test ID、supersession、semantic responsibilityを
+typed edge化する。GitHub URLや外部標準はexternal referenceとしてscheme/authorityを保持し、到達不能を
+内部missing pathと混同しない。parse不能をedge 0に変換するfail-openは禁止する。
+
+reference処理は、Git object blob取得、pure readerによる構文edge/receipt生成、analyzerによる
+endpoint/authority/meaning/applicability検証の3段に分離する。readerはsnapshot-bound byte列以外の
+filesystem、DB、network、relation graphを読まず、analyzerは構文を再parseしない。source memberごとの
+required reader receiptをexactly once要求し、reader登録順や既存edgeを欠落receiptの補完に使わない。
+現行relation graphは検証済みedgeのconsumerに限定する。
+
+system境界はL9 `ST-DOCSEM-01..08`で検証する。L9は件数一致だけでなく、意味不一致、適用条件未評価、
+reference target slot不在、stale inbound、archiveの正本化を負例として持つ。
+
 ## 2026-06-29 Task-Classify Route 追補
 
 `classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。
