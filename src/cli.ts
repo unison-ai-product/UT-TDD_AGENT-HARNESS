@@ -492,34 +492,38 @@ function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = "
     const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
     try {
       const block = renderSessionStartDigest(
-        selectSessionStartDigest(
-          db,
-          recentHeadCommits(repoRoot),
-          escalationBlock.trim().split(/\r?\n/).filter(Boolean),
-          memory.entries,
-        ),
+        selectSessionStartDigest(db, recentHeadCommits(repoRoot), {
+          escalationLines: escalationBlock.trim().split(/\r?\n/).filter(Boolean),
+          memory: memory.entries,
+        }),
       );
       if (block) process.stdout.write(block);
-      process.stdout.write(renderMemoryHealth(memory));
+      process.stderr.write(renderMemoryHealth(memory));
     } finally {
       db.close();
     }
   } catch (error) {
     // hook は止めないが、無音では終わらせない (「引き継ぎ情報が無い」と
     // 「読めなかった」を SessionStart で区別できないことが欠陥 3 の本体)。
-    process.stdout.write(
-      renderDegradedSessionStartDigest(repoRoot, memory, error, recentHeadCommits(repoRoot)),
+    // stdout は機械可読出力の面なので汚さない (JSON を parse する呼び手が壊れる)。
+    // 劣化は stderr に出して「無音ではない」を満たす。
+    process.stderr.write(
+      renderDegradedSessionStartDigest({
+        memory,
+        error,
+        headCommits: recentHeadCommits(repoRoot),
+      }),
     );
   }
 }
 
 /** DB 由来の段が全滅した場合の劣化 digest。memory と HEAD は DB に依存しないので残す。 */
-function renderDegradedSessionStartDigest(
-  repoRoot: string,
-  memory: MemoryReadResult,
-  error: unknown,
-  headCommits: string[],
-): string {
+function renderDegradedSessionStartDigest(input: {
+  memory: MemoryReadResult;
+  error: unknown;
+  headCommits: string[];
+}): string {
+  const { memory, error, headCommits } = input;
   const reason = error instanceof Error ? error.message : String(error);
   const lines = [
     "session-start digest DEGRADED — harness.db 由来の段 (state/gates, actionable) を読めなかった",

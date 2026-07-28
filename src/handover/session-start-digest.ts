@@ -286,9 +286,10 @@ export function selectScheduleLiveState(
 export function selectSessionStartDigest(
   db: HarnessDb,
   headCommits: string[],
-  escalationLines: string[] = [],
-  memory: MemoryEntry[] = [],
+  input: { escalationLines?: string[]; memory?: MemoryEntry[] } = {},
 ): SessionStartDigest {
+  const escalationLines = input.escalationLines ?? [];
+  const memory = input.memory ?? [];
   db.exec("BEGIN");
   try {
     const gateRuns = selectLatestGateRuns(db);

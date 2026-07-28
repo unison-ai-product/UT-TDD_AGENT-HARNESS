@@ -268,12 +268,10 @@ describe("schedule live SessionStart digest", () => {
       setUserVersion: (version) => database.setUserVersion(version),
       close: () => database.close(),
     };
-    const digest = selectSessionStartDigest(
-      snapshotDb,
-      ["abc123 feat: live schedule digest"],
-      ["attempt-escalation warning", "subject: 3 consecutive failures"],
-      memoryFromService,
-    );
+    const digest = selectSessionStartDigest(snapshotDb, ["abc123 feat: live schedule digest"], {
+      escalationLines: ["attempt-escalation warning", "subject: 3 consecutive failures"],
+      memory: memoryFromService,
+    });
     const rendered = renderSessionStartDigest(digest);
 
     expect(rendered.match(/^\[[1-4]\/4 /gm)).toHaveLength(4);
