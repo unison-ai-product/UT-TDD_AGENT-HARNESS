@@ -29,7 +29,7 @@ dependencies:
   parent: docs/plans/PLAN-L5-19-repository-document-disposition-ledger.md
   requires: []
   blocks:
-    - docs/plans/PLAN-L7-422-repository-document-disposition-closure-gate.md
+    - docs/plans/PLAN-L7-467-repository-document-disposition-closure-gate.md
 ---
 
 # PLAN-L6-74: repository docs disposition / closure auditor契約

@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-422-repository-document-disposition-closure-gate
-title: "PLAN-L7-422 (add-impl): repository document disposition auditor / closure gate"
+plan_id: PLAN-L7-467-repository-document-disposition-closure-gate
+title: "PLAN-L7-467 (add-impl): repository document disposition auditor / closure gate"
 kind: add-impl
 layer: L7
 drive: db
@@ -19,9 +19,9 @@ agent_slots:
   - role: qa
     slot_label: "QA - U-DOCLEDGER Red→Green"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-422-repository-document-disposition-closure-gate.md
+  - artifact_path: docs/plans/PLAN-L7-467-repository-document-disposition-closure-gate.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-REVERSE-422-repository-document-ledger-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-467-repository-document-ledger-backfill.md
     artifact_type: markdown_doc
   - artifact_path: src/document-disposition/application/capture-repository-docs-snapshot.ts
     artifact_type: source_module
@@ -57,11 +57,11 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
     - docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
-    - docs/plans/PLAN-REVERSE-422-repository-document-ledger-backfill.md
+    - docs/plans/PLAN-REVERSE-467-repository-document-ledger-backfill.md
 ---
 
-# PLAN-L7-422
+# PLAN-L7-467
 
-U-DOCLEDGERをRed freezeし、Git object snapshot、shard materialize、validator、typed reference closure、生成reportを実装する。baseline 3d232e9c/921を不変保持し以後をdelta化する。DoDはpending/orphan/phantom 0、review、Reverse-422合流である。
+U-DOCLEDGERをRed freezeし、Git object snapshot、shard materialize、validator、typed reference closure、生成reportを実装する。baseline 3d232e9c/921を不変保持し以後をdelta化する。DoDはpending/orphan/phantom 0、review、Reverse-467合流である。
 
 planned deliverablesは`docs/governance/repository-document-disposition/**`の921件materialized ledger、`src/document-disposition/{domain,application,ports,adapters}`、正規化DB schema/projection、write/query分離CLI、実行可能Red/property/mutation testである。既存relation graphは検証済みedgeのconsumerに限定しoracleにしない。
