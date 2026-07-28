@@ -207,11 +207,12 @@ Codex tool names differ from Claude, so matchers are mapped (not copied):
 - `subagent-stop` (`SubagentStop`) has **no Codex surface** and is genuinely N/A:
   codex.exe 0.128.0 exposes only `PreToolUse` / `PostToolUse` / `SessionStart` /
   `Stop` / `UserPromptSubmit` hook events (no `SubagentStop`).
-- `agent-guard` (`Agent`) is **not yet wired** for Codex. Codex DOES have a
-  sub-agent surface (`spawn_agent` / `wait_agent` / `list_agents` tools), so an
-  agent-guard analog is a **deferred follow-up** (a real, currently-unguarded
-  surface), **not** an absent one. Wiring it needs a Codex allowlist/model design
-  because `spawn_agent` semantics differ from Claude's `subagent_type`.
+- `agent-guard` **is wired** for Codex: `.codex/hooks.json` matches
+  `spawn_agent|spawn_agents_on_csv` and runs the same `.claude/hooks/agent-guard.ts`
+  with `blockOnFailure`, so non-allowlisted Codex subagent spawns are blocked the
+  same way Claude's are. (This entry read "not yet wired" until 2026-07-28, which
+  the hook config itself already contradicted. Read `.codex/hooks.json` when in
+  doubt — it is the SSoT for what is actually wired.)
 
 `.codex/hooks.json` parity with `.claude/settings.json` is machine-checked by `doctor`
 `codex-hook-adapter`, which fails closed if a guard diverges, drops
@@ -254,6 +255,52 @@ calls.
   part of the clean Pack artifact set. The command must not commit or push;
   inspect its output and perform any Pack repo commit / push as a separate,
   human-reviewed step.
+
+## PLAN Rules
+
+These filing rules previously existed only in `.claude/CLAUDE.md`, so this
+runtime never received them (measured 2026-07-28: `route_signal` / `generates` /
+`plan_id` appeared 0 times in this file). They are shared workflow, not
+Claude-specific, and `rule-drift` now fail-closes if an adapter drops them.
+
+Before creating or updating PLAN files, inspect existing `docs/plans/` entries
+and prefer extending an existing PLAN over creating an overlapping one.
+
+- `plan_id` is unique and matches the filename.
+- `kind`, `layer`, `status`, `dependencies`, and `review_evidence` match the
+  current schema. Schedule steps show parallel or serial mode.
+- New PLANs carry a route certificate (`route_signal` + `route_mode`), and the
+  mode must allow the `kind` (SSoT: `src/schema/route-filing.ts` — e.g.
+  troubleshoot⇔incident, refactor⇔refactor, add-design/add-impl⇔add-feature).
+  `kind` = poc / recovery / troubleshoot also requires an `aim` agent slot.
+- `kind=add-impl` carries the required Reverse pairing (`backfill-pairing`
+  fail-closes without it). A conditional kind (troubleshoot / recovery /
+  refactor / retrofit) needs either a Reverse pair or
+  `backprop_decision: not_required` with a reason of at least 10 characters.
+  Rule of thumb: pure repair of existing spec → `not_required`; adding a new
+  contract (constraint, fail-close condition, physical parameter) → Reverse pair.
+- **Draft PLANs must not list already-existing files in `generates`.** A draft
+  PLAN whose declared deliverable already exists in the tree trips
+  `merged-plan-status` and `duplicate-artifact-ownership`. Declare only the PLAN
+  doc itself at filing time; the implementing PR updates `generates` together
+  with the confirm (2026-07-28 lesson: PR #167 went red on exactly this).
+- `requires` may only point at confirmed / completed PLANs. A dependency on a
+  draft PLAN belongs in `references`, with the ordering expressed in Schedule.
+- A falsifiable safety / completeness claim in `review_evidence` or AC — "blast
+  radius 0", "no false positives", "N green" — must cite the test or command
+  that substantiates it. The mechanical substitute for a prose claim is a
+  real-repo regression test, never a sentence (`coding ≠ substance`,
+  PLAN-L7-89).
+- When a confirmed PLAN's claim is later found wrong, do not overwrite it: the
+  successor declares `supersedes: [<old plan_id>]` and the superseded PLAN gets
+  a correction note naming the successor (`doctor plan-supersession` requires
+  the back-reference).
+- PLAN files are LF-only. Rewriting one with a tool that emits CRLF breaks
+  `deliverable-plan-trace` with an opaque YAML error (observed 2026-07-28).
+
+Verify with `ut-tdd plan lint` plus the targeted doctor checks
+(`plan-governance`, `merged-plan-status`, `deliverable-plan-trace`,
+`plan-artifact-existence`, `backfill`) before pushing.
 
 ## Editing Rules
 
