@@ -202,7 +202,7 @@ describe("db-currency lint", () => {
     const calls: Array<{
       command: string;
       args: string[];
-      options: { cwd: string; detached: boolean; stdio: "ignore" };
+      options: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: boolean };
       unrefCalled: boolean;
     }> = [];
 
@@ -228,7 +228,12 @@ describe("db-currency lint", () => {
     expect(calls[0]?.args.slice(0, 3)).toEqual(["/repo/src/cli.ts", "session", "db-refresh"]);
     expect(calls[0]?.args[3]).toBe("--generation");
     expect(calls[0]?.args[4]).toMatch(/^[0-9a-f-]{36}$/);
-    expect(calls[0]?.options).toEqual({ cwd: root, detached: true, stdio: "ignore" });
+    expect(calls[0]?.options).toEqual({
+      cwd: root,
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
     expect(calls[0]?.unrefCalled).toBe(true);
     removeTestTree(root);
   });

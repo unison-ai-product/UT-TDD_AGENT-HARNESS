@@ -29,7 +29,8 @@ feedback-log:2
 github-repository-policy:3
 github-ci-policy:1
 global-setup.ts:1 support/workspace-roots.ts:3
-global-setup-fence:1 vitest-snapshot-runner:2
+global-setup-fence:1 vitest-snapshot-runner:3
+hook-native-launcher:1
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2
@@ -65,7 +66,7 @@ for (const [path, calls] of Object.entries({
   };
 
 repositoryReadContracts["tests/doctor.test.ts"] = {
-  mode_calls: { head_snapshot: 18, isolated_fixture: 7 },
+  mode_calls: { head_snapshot: 18, isolated_fixture: 8 },
   reason: "doctor aggregate test exercises both detached HEAD and execution fixture",
 };
 

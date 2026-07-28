@@ -1,4 +1,9 @@
 import { join } from "node:path";
+import {
+  type HookInvocation,
+  invocationEquals,
+  parseHookInvocation,
+} from "../lint/hook-invocation";
 
 export interface SetupSmokeDeps {
   repoRoot: string;
@@ -12,6 +17,7 @@ interface SetupSmokeCheck {
 }
 
 const SETUP_SMOKE_REQUIRED_FILES = [
+  ".ut-tdd/bin/run-bun.ts",
   ".ut-tdd/bin/ut-tdd.mjs",
   "AGENTS.md",
   "CLAUDE.md",
@@ -21,30 +27,42 @@ const SETUP_SMOKE_REQUIRED_FILES = [
   ".codex/hooks.json",
 ] as const;
 
-const SETUP_SMOKE_REQUIRED_COMMANDS = [
-  "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
-  "bun .ut-tdd/bin/ut-tdd.mjs session start",
-  "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use",
-  "bun .ut-tdd/bin/ut-tdd.mjs session summary",
+const nativeInvocation = (...suffix: string[]) => ({
+  executable: "node",
+  args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...suffix],
+});
+const SETUP_SMOKE_SHARED_INVOCATIONS = [
+  nativeInvocation("hook", "agent-guard"),
+  nativeInvocation("hook", "work-guard"),
+  nativeInvocation("session", "start"),
+  nativeInvocation("hook", "post-tool-use"),
+  nativeInvocation("session", "summary"),
+] as const;
+const SETUP_SMOKE_CLAUDE_INVOCATIONS = [
+  ...SETUP_SMOKE_SHARED_INVOCATIONS,
+  nativeInvocation("hook", "subagent-stop"),
 ] as const;
 
-const SETUP_SMOKE_CLAUDE_ONLY_COMMANDS = ["bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop"] as const;
-
-export function collectHookCommands(raw: string | null): string[] | null {
+function collectHookInvocations(raw: string | null): HookInvocation[] | null {
   if (raw === null) return null;
   try {
     const parsed = JSON.parse(raw) as {
-      hooks?: Record<string, { hooks?: { command?: string }[] }[]>;
+      hooks?: Record<string, { hooks?: { command?: unknown; args?: unknown }[] }[]>;
     };
     return Object.values(parsed.hooks ?? {}).flatMap((entries) =>
       (entries ?? []).flatMap((entry) =>
-        (entry.hooks ?? []).map((hook) => hook.command ?? "").filter(Boolean),
+        (entry.hooks ?? [])
+          .map(parseHookInvocation)
+          .filter((hook): hook is HookInvocation => !!hook),
       ),
     );
   } catch {
     return null;
   }
+}
+
+export function collectHookCommands(raw: string | null): string[] | null {
+  return collectHookInvocations(raw)?.map((invocation) => invocation.display) ?? null;
 }
 
 export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: string[] } {
@@ -58,49 +76,64 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
   }
 
   const wrapper = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/ut-tdd.mjs"));
+  const launcher = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/run-bun.ts"));
   checks.push({
     name: "wrapper-placeholder-free",
     ok: wrapper !== null && !/UT_TDD_SOURCE_CLI_JSON|__UT_TDD|placeholder/i.test(wrapper),
     message: "project-local wrapper has no template placeholder residue",
   });
+  checks.push({
+    name: "native-bun-launcher-contract",
+    ok:
+      launcher !== null &&
+      launcher.includes("windowsHide: true") &&
+      launcher.includes("realpathSync") &&
+      !launcher.includes("shell: true") &&
+      !launcher.includes("spawnSync"),
+    message: "native Bun launcher is shell-free, canonical-path checked, and signal-aware",
+  });
 
-  const claudeCommands = collectHookCommands(
+  const claudeInvocations = collectHookInvocations(
     deps.readText(join(deps.repoRoot, ".claude/settings.json")),
   );
-  const codexCommands = collectHookCommands(
+  const codexInvocations = collectHookInvocations(
     deps.readText(join(deps.repoRoot, ".codex/hooks.json")),
   );
   checks.push({
     name: "claude-hooks-json",
-    ok: claudeCommands !== null,
+    ok: claudeInvocations !== null,
     message: "Claude adapter hook JSON parses",
   });
   checks.push({
     name: "codex-hooks-json",
-    ok: codexCommands !== null,
+    ok: codexInvocations !== null,
     message: "Codex adapter hook JSON parses",
   });
 
-  for (const command of SETUP_SMOKE_REQUIRED_COMMANDS) {
+  for (const expected of SETUP_SMOKE_CLAUDE_INVOCATIONS) {
+    const display = [expected.executable, ...expected.args].join(" ");
     checks.push({
-      name: `claude-hook:${command}`,
-      ok: (claudeCommands ?? []).includes(command),
-      message: command,
-    });
-    checks.push({
-      name: `codex-hook:${command}`,
-      ok: (codexCommands ?? []).includes(command),
-      message: command,
+      name: `claude-hook:${display}`,
+      ok: (claudeInvocations ?? []).some(
+        (actual) => actual.serialization === "exec_args" && invocationEquals(actual, expected),
+      ),
+      message: display,
     });
   }
-  for (const command of SETUP_SMOKE_CLAUDE_ONLY_COMMANDS) {
+  for (const expected of SETUP_SMOKE_SHARED_INVOCATIONS) {
+    const display = [expected.executable, ...expected.args].join(" ");
     checks.push({
-      name: `claude-hook:${command}`,
-      ok: (claudeCommands ?? []).includes(command),
-      message: command,
+      name: `codex-hook:${display}`,
+      ok: (codexInvocations ?? []).some(
+        (actual) => actual.serialization === "exec_args" && invocationEquals(actual, expected),
+      ),
+      message: display,
     });
   }
-  const combinedCommands = [...(claudeCommands ?? []), ...(codexCommands ?? [])];
+  // CodexにはSubagentStop surfaceがないため、このcommandはClaude側のnative launcher契約にのみ存在する。
+  const combinedCommands = [...(claudeInvocations ?? []), ...(codexInvocations ?? [])].map(
+    (invocation) => invocation.display,
+  );
   checks.push({
     name: "portable-hook-paths",
     ok:

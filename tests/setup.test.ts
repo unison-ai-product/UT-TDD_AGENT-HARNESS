@@ -1,13 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -98,6 +90,7 @@ const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
 };
 
 const baseTemplates: TemplateSet = {
+  "common/run-bun.ts": "// shell-free native Bun launcher\n",
   "common/ut-tdd.mjs": "#!/usr/bin/env bun\n",
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
@@ -388,7 +381,10 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       const claude = JSON.parse(templates["adapter/.claude/settings.json"]) as {
         hooks: Record<
           string,
-          { matcher?: string; hooks: { command: string; blockOnFailure?: boolean }[] }[]
+          {
+            matcher?: string;
+            hooks: { command: string; args: string[]; blockOnFailure?: boolean }[];
+          }[]
         >;
       };
       const codex = JSON.parse(templates["adapter/.codex/hooks.json"]) as {
@@ -404,7 +400,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "Agent|Task",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -413,23 +410,26 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "Edit|Write|MultiEdit",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
           }),
         ]),
       );
-      expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe(
-        "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
-      );
+      expect(claude.hooks.SubagentStop[0].hooks[0]).toMatchObject({
+        command: "node",
+        args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
+      });
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             matcher: "spawn_agent|spawn_agents_on_csv",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -438,7 +438,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             matcher: "apply_patch|write_file",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -535,17 +536,29 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
     );
     expect(wrapper).toContain(
-      'existsSync(localBin) ? localBin : existsSync(sourceCli) ? "bun" : "ut-tdd"',
+      "const resolvedCli = existsSync(localPackageCli) ? localPackageCli : existsSync(sourceCli) ? sourceCli : null;",
     );
-    expect(wrapper).toContain("[sourceCli, ...process.argv.slice(2)]");
+    expect(wrapper).toContain(
+      "spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)]",
+    );
+    expect(wrapper).toContain("windowsHide: true");
+    expect(wrapper).not.toContain("shell:");
     expect(wrapper).not.toContain("{{UT_TDD_SOURCE_CLI_JSON}}");
 
-    const codexHooks = deps.files.get(join("/repo", ".codex", "hooks.json"));
-    const claudeSettings = deps.files.get(join("/repo", ".claude", "settings.json"));
-    expect(codexHooks).toContain("hook agent-guard");
-    expect(claudeSettings).toContain("hook agent-guard");
-    expect(() => JSON.parse(codexHooks ?? "")).not.toThrow();
-    expect(() => JSON.parse(claudeSettings ?? "")).not.toThrow();
+    const codexHooks = JSON.parse(deps.files.get(join("/repo", ".codex", "hooks.json")) ?? "") as {
+      hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
+    };
+    const claudeSettings = JSON.parse(
+      deps.files.get(join("/repo", ".claude", "settings.json")) ?? "",
+    ) as {
+      hooks: { PreToolUse: { hooks: { command: string; args: string[] }[] }[] };
+    };
+    const agentGuardInvocation = {
+      command: "node",
+      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+    };
+    expect(codexHooks.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
+    expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
   });
 
   it("U-SETUP-009b2: generated wrapper prefers consumer local bin when local and setup fallback both exist", () => {
@@ -558,30 +571,21 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       expect(wrapper).toBeTruthy();
 
       const wrapperPath = join(repo, ".ut-tdd", "bin", "ut-tdd.mjs");
-      const localBin = join(
-        repo,
-        "node_modules",
-        ".bin",
-        process.platform === "win32" ? "ut-tdd.cmd" : "ut-tdd",
-      );
+      const localPackageCli = join(repo, "node_modules", "ut-tdd", "src", "cli.ts");
       mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
-      mkdirSync(join(repo, "node_modules", ".bin"), { recursive: true });
+      mkdirSync(join(repo, "node_modules", "ut-tdd", "src"), { recursive: true });
       writeFileSync(wrapperPath, wrapper ?? "");
-      writeFileSync(
-        localBin,
-        process.platform === "win32"
-          ? "@echo off\r\necho local-bin %*\r\nexit /b 0\r\n"
-          : '#!/usr/bin/env sh\necho local-bin "$@"\n',
-      );
-      if (process.platform !== "win32") chmodSync(localBin, 0o755);
+      writeFileSync(localPackageCli, 'console.log("local-package", ...process.argv.slice(2));\n');
 
-      const result = spawnSync(process.execPath, [wrapperPath, "status", "--json"], {
+      const bunBinary =
+        process.env.UT_TDD_BUN_BINARY ?? (process.versions.bun ? process.execPath : "bun");
+      const result = spawnSync(bunBinary, [wrapperPath, "status", "--json"], {
         cwd: repo,
         encoding: "utf8",
       });
 
       expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe("local-bin status --json");
+      expect(result.stdout.trim()).toBe("local-package status --json");
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
@@ -600,7 +604,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
       writeFileSync(wrapperPath, wrapper ?? "");
 
-      const result = spawnSync(process.execPath, [wrapperPath, "status"], {
+      const bunBinary =
+        process.env.UT_TDD_BUN_BINARY ?? (process.versions.bun ? process.execPath : "bun");
+      const result = spawnSync(bunBinary, [wrapperPath, "status"], {
         cwd: repo,
         encoding: "utf8",
       });
@@ -1034,13 +1040,13 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`",
+      "Generated Claude/Codex hooks call the shell-free native Bun launcher",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "Do not rely on a global `bun link`",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Bun itself must still resolve",
+      "Native Bun itself must still resolve",
     );
   });
 

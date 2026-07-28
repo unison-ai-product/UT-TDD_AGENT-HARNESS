@@ -123,7 +123,7 @@ export interface DetachedSpawnHandle {
 export type DetachedSpawnImpl = (
   command: string,
   args: string[],
-  options: { cwd: string; detached: boolean; stdio: "ignore" },
+  options: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: boolean },
 ) => DetachedSpawnHandle;
 
 export interface SpawnStopRefreshOptions {
@@ -175,6 +175,7 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
         cwd: options.repoRoot,
         detached: true,
         stdio: "ignore",
+        windowsHide: true,
       },
     );
     // 非同期起動失敗 (ENOENT 等) は error event で届く。未処理のままだと親 process が
