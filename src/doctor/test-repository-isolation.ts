@@ -26,6 +26,7 @@ doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
 secret-scan-diff:1
 feedback-log:2
 github-repository-policy:3
+github-ci-policy:1
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:2
 profile/tracked-loader:2

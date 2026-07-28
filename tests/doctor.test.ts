@@ -483,6 +483,7 @@ describe("runDoctor", () => {
 
     expect(DOCTOR_RUN_PROFILE_IDS).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
       "consumer-toolchain",
       "consumer-setup-smoke",

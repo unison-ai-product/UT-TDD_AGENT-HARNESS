@@ -31,13 +31,13 @@ generates:
   - artifact_path: src/lint/github-ci-policy.ts
     artifact_type: source_module
   - artifact_path: tests/change-lane.test.ts
-    artifact_type: test_module
+    artifact_type: test_code
   - artifact_path: src/doctor/profiles.ts
     artifact_type: source_module
   - artifact_path: tests/doctor.test.ts
-    artifact_type: test_module
+    artifact_type: test_code
   - artifact_path: tests/cli-surface.test.ts
-    artifact_type: test_module
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
