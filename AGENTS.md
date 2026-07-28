@@ -163,12 +163,15 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
-- Effort はモデル別基準ラダー (PO rule 2026-07-27) が既定: Sol/Fable =
-  `low`、Terra/Sonnet/Opus = `middle`、Luna/spark = `high`、mini = `xhigh`。回答が
-  浅い時は 1 段引き上げ (Sol/Fable → `middle`、Terra/Sonnet → `high`、Opus →
-  `xhigh`)、Terra が `high` でも浅い場合は Sol `low` へ乗り換える
-  (`escalateShallowResponse`)。ラダー外 (haiku 等) は従来既定 (Claude `high` /
-  GPT `middle`)。UI/UX のみ task-kind 例外で `xhigh` (PO rule 2026-07-08)。
+- Effort はモデル別基準ラダー (PO rule 2026-07-28) が既定: Sol/Fable = `low`、
+  Opus/Terra/Sonnet = `middle`、Luna/spark/mini = `high`。回答が浅い時は
+  **まず effort を 1 段、その先はモデルを上げる** (`escalateShallowResponse`):
+  Sol/Fable → `middle`、Opus/Terra/Sonnet → `high`、そこでも浅ければ
+  Sonnet→Opus `middle` / Opus・Terra・Luna・Fable→Sol `low` / spark・mini→Terra
+  `middle`。**`xhigh` は既定として配らない** (PO rule 2026-07-28:
+  「xhigh 以上はモデルを上げたほうがいい」)。ラダー外 (haiku 等) は従来既定
+  (Claude `high` / GPT `middle`)。明示 `--effort xhigh` は有効で、UI/UX は
+  task-kind 例外 (PO rule 2026-07-08)。
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-5.6-sol`) or Claude Opus (`claude-opus-5`) or above, behind the
   explicit frontier gate.
