@@ -154,6 +154,9 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   PLAN-L7-110)。stale 化する prose handover を現状把握の正本にしない。CURRENT.json / prose は補助。
 - **永続教訓は共有 HARNESS メモリへ昇格する** (`ut-tdd memory add`、正本 `.ut-tdd/memory/`、
   PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
+  **メモリファイルの手書き作成は禁止** — frontmatter (memory_id/kind/title/tags/updated_at)
+  欠落は db rebuild が fail-close し CI が赤化する (2026-07-28 実例: PR #167)。必ず
+  `ut-tdd memory add` 経由で書く。
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
 
