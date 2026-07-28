@@ -22,7 +22,7 @@ function run(
   cwd: string,
   env = process.env,
 ): void {
-  const result = spawnSync(command, args, { cwd, env, stdio: "inherit" });
+  const result = spawnSync(command, args, { cwd, env, stdio: "inherit", windowsHide: true });
   if (result.status !== 0 || result.error) {
     throw new Error(
       `${command} ${args.join(" ")} failed: ${result.error?.message ?? result.status}`,
@@ -31,14 +31,20 @@ function run(
 }
 
 function output(command: string, args: string[], cwd: string): string | null {
-  const result = spawnSync(command, args, { cwd, encoding: "utf8" });
+  const result = spawnSync(command, args, { cwd, encoding: "utf8", windowsHide: true });
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
 export function resolveBunBinary(
   runtime = (globalThis as { Bun?: { which?: (command: string) => string | undefined } }).Bun,
+  current: { isBun: boolean; executable: string } = {
+    isBun: Boolean(process.versions.bun),
+    executable: process.execPath,
+  },
 ): string {
-  return runtime?.which?.("bun") ?? (process.versions.bun ? process.execPath : "bun");
+  // Bun上では現在のnative executableが最も強い証拠。Bun.which("bun")はWindowsで
+  // bun.cmdを返し、cmd.exe/conhost.exeを再導入するためfallbackに限定する。
+  return current.isBun ? current.executable : (runtime?.which?.("bun") ?? "bun");
 }
 
 export function canonicalPath(path: string): string {

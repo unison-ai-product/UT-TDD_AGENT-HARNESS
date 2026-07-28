@@ -150,3 +150,15 @@ doctor のガバナンス gate 群が self-application (source repo dogfood) 前
       (.ut-tdd/audit/A-172 §Correction Note 2026-07-03)
 - [x] Pack sync 反映 (PO 承認 2026-07-03: Codex sync 4f3cbf0〜 + `57c8fcb chore: sync clean pack
       fffb132` push、Pack CI success。v1.1 doc 2 件は --prune-local で除去)
+
+## 2026-07-22 Issue #123 recovery 追補
+
+consumer profile の「portable command」は path だけでなく process dispatch も含む。Claude hook は
+`command: "bun"` + structured `args` とし、fresh consumer の setup-smoke は source/built-in/docs
+template と同じ executable+argv を要求する。shell-form への退行、argv spoofing、6 hook の一部だけが
+旧形式に残る状態を doctor が fail-close する。
+
+Windows recovery exit は exit code green だけでは満たさない。hook host→Bun entrypoint の process
+ancestry を観測し、Git Bash (`sh.exe` / `bash.exe`)、command shell、dispatch 用 `conhost.exe` が無い
+ことを実測 evidence とする。Codex hook serialization は capability 未証明のためこの recovery の
+Claude exec-form 受入から分離し、semantic invocation の parity のみを維持する。

@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { analyzeProjectHooks, REQUIRED } from "../src/lint/project-hook";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
 
+const execHook = (script: string, ...args: string[]) => ({
+  type: "command",
+  command: "node",
+  args: ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", script, ...args],
+});
+
 function teamStandardSettings(): { hooks: Record<string, unknown> } {
   return {
     hooks: {
@@ -10,7 +16,7 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           matcher: "Agent|Task",
           hooks: [
             {
-              command: 'bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"',
+              ...execHook("${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"),
               blockOnFailure: true,
             },
           ],
@@ -19,24 +25,22 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           matcher: "Edit|Write|MultiEdit",
           hooks: [
             {
-              command: 'bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"',
+              ...execHook("${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"),
               blockOnFailure: true,
             },
           ],
         },
       ],
-      SessionStart: [
-        { hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start' }] },
-      ],
+      SessionStart: [{ hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "start")] }],
       PostToolUse: [
         {
           matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
-          hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use' }],
+          hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "post-tool-use")],
         },
       ],
-      Stop: [{ hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary' }] }],
+      Stop: [{ hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary")] }],
       SubagentStop: [
-        { hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook subagent-stop' }] },
+        { hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "subagent-stop")] },
       ],
     },
   };
@@ -50,6 +54,56 @@ describe("project-hook lint", () => {
 
     expect(result.ok).toBe(true);
     expect(result.violations).toEqual([]);
+  });
+
+  it("rejects legacy Claude shell command strings", () => {
+    const settings = teamStandardSettings() as { hooks: Record<string, unknown[]> };
+    settings.hooks.SessionStart = [
+      { hooks: [{ command: 'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start' }] },
+    ];
+
+    const result = analyzeProjectHooks([
+      { file: ".claude/settings.json", content: JSON.stringify(settings) },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContainEqual({
+      file: ".claude/settings.json",
+      hook: "SessionStart",
+      reason: "missing_hook",
+    });
+  });
+
+  it("rejects argv spoofing and forbidden values even when command is bun", () => {
+    const spoofed = teamStandardSettings() as { hooks: Record<string, unknown[]> };
+    spoofed.hooks.SessionStart = [
+      { hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.tsx", "session", "start")] },
+    ];
+    const forbidden = teamStandardSettings() as { hooks: Record<string, unknown[]> };
+    forbidden.hooks.SessionStart = [
+      {
+        hooks: [
+          execHook(
+            "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+            "session",
+            "start",
+            "C:\\Users\\alice\\private",
+          ),
+        ],
+      },
+    ];
+
+    expect(
+      analyzeProjectHooks([{ file: ".claude/settings.json", content: JSON.stringify(spoofed) }]).ok,
+    ).toBe(false);
+    expect(
+      analyzeProjectHooks([{ file: ".claude/settings.json", content: JSON.stringify(forbidden) }])
+        .violations,
+    ).toContainEqual({
+      file: ".claude/settings.json",
+      hook: "SessionStart",
+      reason: "forbidden_path",
+    });
   });
 
   // PLAN-RECOVERY-06 (A-172 C-2): setup が consumer へ生成する settings.json (wrapper 配線) が
@@ -137,8 +191,13 @@ describe("project-hook lint", () => {
       {
         hooks: [
           {
-            command:
-              'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start --legacy C:\\Users\\alice\\legacy',
+            ...execHook(
+              "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+              "session",
+              "start",
+              "--legacy",
+              "C:\\Users\\alice\\legacy",
+            ),
           },
         ],
       },
@@ -161,7 +220,9 @@ describe("project-hook lint", () => {
 
   it("rejects POSIX personal absolute paths in project hook commands", () => {
     const settings = teamStandardSettings();
-    settings.hooks.Notification = [{ hooks: [{ command: "node /Users/alice/private/hook.js" }] }];
+    settings.hooks.Notification = [
+      { hooks: [{ command: "node", args: ["/Users/alice/private/hook.js"] }] },
+    ];
 
     const result = analyzeProjectHooks([
       { file: ".claude/settings.json", content: JSON.stringify(settings) },
@@ -178,7 +239,9 @@ describe("project-hook lint", () => {
   it("rejects legacy runtime commands in any project hook command", () => {
     const settings = teamStandardSettings();
     const legacyName = ["he", "lix"].join("");
-    settings.hooks.Notification = [{ hooks: [{ command: `${legacyName} codex --role worker` }] }];
+    settings.hooks.Notification = [
+      { hooks: [{ command: legacyName, args: ["codex", "--role", "worker"] }] },
+    ];
 
     const result = analyzeProjectHooks([
       { file: ".claude/settings.json", content: JSON.stringify(settings) },

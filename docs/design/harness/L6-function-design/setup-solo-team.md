@@ -146,13 +146,13 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 
 ## §6 project-local wrapper 契約
 
-1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/ut-tdd.mjs` を投影し、Claude/Codex hook は `bun .ut-tdd/bin/ut-tdd.mjs ...` を呼ぶ。この wrapper は project root の `node_modules/.bin/ut-tdd` を最優先し、次に setup を実行した harness checkout の `src/cli.ts`、最後に bare `ut-tdd` へ fallback する。
+1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/run-bun.ts` と `.ut-tdd/bin/ut-tdd.mjs` を投影する。Claude hook は Node.js 22.18 以上の無フラグ native TypeScript execution を使う `node` exec-form から前者を経由して native Bun を shell-free で起動し、後者へ argv を渡す。Codex hook は文字列 serializer の能力境界により従来形式を維持する。wrapper は native Bunで実行中の`process.execPath`を維持し、project rootの`node_modules/ut-tdd/src/cli.ts`、次にsetupを実行したharness checkoutの`src/cli.ts`を直接起動する。`.cmd`・shell・bare global fallbackは使用せず、両entrypointがなければexit 127でfail-closeする。
 
 不変条件:
 
 - project ごとの tag pin / devDependency を優先し、同一PC上の他 project の harness version と衝突しない。
 - hook command は repo-local `.ut-tdd/bin/ut-tdd.mjs` を経由し、consumer の PATH に bare `ut-tdd` が無くても project-local binary または setup 元 harness checkout で動く。
-- Bun 自体は hook shell の PATH に必要だが、UT-TDD harness binary は project dependency として解決する。
+- Bun >=1.3 は core runtime、Node.js >=22.18 は Claude adapter の無フラグ TypeScript execution と shell-free native Bun launcherに必要である。UT-TDD harness binary は project dependency として解決する。
 - rollback 対象には `.ut-tdd/bin/ut-tdd.mjs` を含め、managed adapter と同じく再 setup で復元できる。
 
 ## §7 fresh-consumer setup-smoke 契約
@@ -174,3 +174,16 @@ L6 contract marker: `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult`
 - **TTL 24h キャッシュ**: 結果を harness root 側 `.ut-tdd/state/update-check.json` に remote キー付きで保存し、TTL 内かつ remote 一致のときだけ remote へ問い合わせない。壊れた cache は missing 扱い。remote 失敗時はキャッシュを書かず次回再試行する。
 - **表示面は `ut-tdd status` の additive 行**: text は `update:` の 1 行、`--json` は `update` フィールドを additive 付加する (既存フィールド不変、A-138 ITEM-1 / IMP-139 の前例)。CLI 配線は U-UPDCHK-015/016 が固定する。
 - 人間向けの push 通知経路 (GitHub Watch → Custom → Releases) は doc 契約 (setup-guide §4 / README) とし、機構側はこれを代替しない。
+
+## 2026-07-22 consumer hook の shell-free executable+argv 契約 (Issue #123)
+
+setup が生成する Claude hook は、意味論正本 `HookInvocation { executable, args }` (`args` は argv) から
+`{ type: "command", command: executable, args: argv }` へ serialize する。project-local wrapper を
+Claudeで使う hook の意味論は `executable="node"`、`argv[0]=".ut-tdd/bin/run-bun.ts"`、`argv[1]=".ut-tdd/bin/ut-tdd.mjs"`、残りを hook 固有
+subcommand とする。`command` に argv、quote、redirect、pipe、`&&` 等を埋め込んではならず、
+consumer template と built-in template は同じ materializer を使う。
+
+Codex hook は同じ `HookInvocation` を入力にするが、Codex の構造化 `args` capability が実証されるまで
+Claude serializer を流用しない。Codex 固有 serializer と doctor policy を独立させ、Claude の
+shell-free 化を理由に Codex config schema を推測で変更しない。setup preview、実生成物、clean Pack
+fixture のすべてで Claude 6 hook の exec form と argv 完全一致を `U-HOOKEXEC-003..006` が検証する。

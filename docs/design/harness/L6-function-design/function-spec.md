@@ -1373,6 +1373,19 @@ HEAD SHA、run attempt、workflow revision、required check set、protection rev
 branch protectionのrequired contextも `harness-check` 一件へ固定し、実GitHub設定が未適用・乖離・
 取得不能なら「設定済み」と推測せずclosureをblockする。
 
+## 2026-07-22 Hook executable+argv contract 追補 (Issue #123)
+
+| 関数 | signature | 前提 | 事後 | invariant | oracle |
+|---|---|---|---|---|---|
+| `parseHookInvocation` | `(raw: RawHookInvocation) => HookInvocation \| null` | `command` と任意の `args` を受ける。 | runtime 固有 JSON を `executable`、`args` (意味上の argv)、`tokens`、`serialization` へ正規化する。不正型は `null`。 | shell quoting を exec-form argv の代用にせず、`args` 存在時は token 境界を保持する。 | U-HOOKEXEC-001..002 |
+| `invocationEquals` | `(actual: HookInvocation, expected: { executable: string; args: readonly string[] }) => boolean` | 両 invocation は正規化済み。 | executable と argv の長さ・順序・値が完全一致するときだけ true。 | 部分文字列、追加 token、近似 path を受理しない。 | U-HOOKEXEC-003..004 |
+| `wrapperHookArgs` | `(id: RequiredProjectHookId) => readonly string[]` | id は REQUIRED に存在する。 | consumer wrapper entrypoint と hook subcommand を token 配列で返す。 | source/built-in/docs template の argv 正本を分岐させない。 | U-HOOKEXEC-005..006 |
+| `analyzeProjectHooks` | `(docs: ProjectHookDoc[]) => ProjectHookResult` | setup/source の Claude hook config を与える。 | 6 hook の executable、argv、policy、個数を照合し、shell-form command、欠落 token、追加 token、argv spoofing を fail-close finding にする。 | detector の都合で設計を shell form に戻さない。 | U-HOOKEXEC-006..007 |
+| `observeWindowsHookDispatch` | `(run: HookSmokeRun, deps: ProcessTraceDeps) => HookDispatchObservation` | Windows native runner で hook を 1 回起動し process ancestry を捕捉できる。 | hook host→Bun entrypoint 間の intermediary image と exit/outcome を返す。 | dispatch 区間に shell host または dispatch 用 conhost があれば不合格。 | U-HOOKEXEC-008 |
+
+`HookInvocation` は `{ executable: string; args: readonly string[] }` (`args` は意味上の argv)。Claude / Codex の config JSON は
+runtime 固有 projection であり、意味論正本ではない。これにより project-hook、doctor、setup、Pack
+template が同じ invocation を比較しつつ、runtime ごとの schema capability を混同しない。
 ## Node self-host bootstrap機能契約（Issue #152 D0-N）
 
 関数`buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
