@@ -23,7 +23,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("uses mini and xhigh effort for trivial doc patches (effort ladder, PO rule 2026-07-14)", () => {
+  it("uses mini at ladder-base high effort for trivial doc patches (effort ladder, PO rule 2026-07-28)", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "docs",
@@ -35,7 +35,8 @@ describe("team model policy", () => {
       difficulty: "trivial",
       model_family: "fast",
       model: MODEL_IDS.codex.mini,
-      reasoning_effort: "xhigh",
+      // mini は base=high (改定前は xhigh)。深さが要るなら effort ではなく Terra へ上げる。
+      reasoning_effort: "high",
       task_intent: "docs",
     });
   });
