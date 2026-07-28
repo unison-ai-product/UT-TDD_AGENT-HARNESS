@@ -903,7 +903,7 @@ doctor definition、roadmap obligationを生成し、source/generated digest dri
 - `captureDocsSnapshot(gitPort): DocsSnapshot`
 - `materializeDispositionBatch(command, current): CommandResult`
 - `validateDispositionLedger(snapshot, ledger, targetResolver): ContractResult`
-- `analyzeDocumentReferences(snapshot, readers): ReferenceClosureResult`
+- `analyzeDocumentReferences(input): DocumentReferenceAnalysisResult`
 - `evaluateSemanticItem(input, policy): SemanticAssessmentVerdict`
 - `routeAssessmentDebt(verdict, routeFilingPort): DebtRouteResult`
 - `runSelfProof(request, deps): Promise<SelfProofReport>`
@@ -911,6 +911,681 @@ doctor definition、roadmap obligationを生成し、source/generated digest dri
 snapshot queryはGit objectからraw NUL path集合を読む。batch commandはselectorを全path recordへmaterializeし、validatorは
 selectorを再評価しない。semantic evaluatorはauthored evidenceを照合するだけでverdictを創作しない。meta-verifierは
 ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdict関数をoracleとしてimportしない。
+
+#### リポジトリ文書snapshot／disposition／reference closureのfreeze (PLAN-L6-74)
+
+```ts
+type RepositoryDocsSnapshotResult =
+  | { ok: true; value: RepositoryDocsSnapshot }
+  | { ok: false; errors: readonly DocumentSnapshotError[] };
+
+type DocumentClosureResult = {
+  snapshotIdentity: RepositoryDocsSnapshotIdentity;
+  findings: readonly DocumentClosureFinding[];
+  routeRequirements: readonly DocumentDebtRouteRequirement[];
+  closure: "closed" | "blocked";
+};
+
+type DocumentMemberIdentity = {
+  path: string;
+  blobOid: string;
+  contentDigest: string;
+};
+
+type DocumentDeltaEvent =
+  | { deltaId: string; kind: "add"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; after: DocumentMemberIdentity; decisionDigest: string }
+  | { deltaId: string; kind: "modify"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; before: DocumentMemberIdentity; after: DocumentMemberIdentity; decisionDigest: string }
+  | { deltaId: string; kind: "delete"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; before: DocumentMemberIdentity; decisionDigest: string }
+  | { deltaId: string; kind: "rename"; sequence: number; fromSnapshotDigest: string; toSnapshotDigest: string; before: DocumentMemberIdentity; after: DocumentMemberIdentity; decisionDigest: string };
+
+type DocumentDeltaDecision = {
+  deltaId: string;
+  ledgerId: string;
+  fromSnapshotDigest: string;
+  toSnapshotDigest: string;
+  operationKind: "add" | "modify" | "delete" | "rename";
+  before?: DocumentMemberIdentity;
+  after?: DocumentMemberIdentity;
+  affectedPath: string;
+  record: DocumentDispositionInput;
+  decisionDigest: string;
+};
+
+type DocumentDeltaReplayResult =
+  | { ok: true; effective: readonly DocumentMemberIdentity[]; reductionDigest: string; deltaChainDigest: string }
+  | { ok: false; findings: readonly DocumentDeltaFinding[]; deltaChainDigest: string };
+
+type DocumentReferenceTargetKind =
+  | "document"
+  | "anchor"
+  | "plan"
+  | "spec"
+  | "test"
+  | "adr"
+  | "external";
+
+type DocumentReferenceTarget =
+  | { kind: "document"; path: string }
+  | { kind: "anchor"; path: string; fragment: string }
+  | { kind: "plan" | "spec" | "test" | "adr"; id: string }
+  | { kind: "external"; scheme: string; authority: string; reference: string };
+
+type DocumentReferenceSyntax =
+  | "frontmatter_path"
+  | "markdown_inline"
+  | "markdown_reference"
+  | "wiki_link"
+  | "heading_anchor"
+  | "typed_id";
+
+type ReadDocumentReferencesInput = {
+  snapshot: RepositoryDocsSnapshot;
+  blobs: readonly RepositoryDocumentBlob[];
+  parserRevision: "document-reference-parser-v1";
+  syntaxRevision: "document-reference-syntax-v1";
+  anchorRevision: "markdown-anchor-v1";
+  uriSchemeRegistryRevision: string;
+  frontmatterSchemaRevision: string;
+  frontmatterSchemaDigest: string;
+};
+
+type RepositoryDocumentBlob = {
+  snapshotDigest: string;
+  source: DocumentMemberIdentity;
+  bytes: Uint8Array;
+  bytesDigest: string;
+  provenanceDigest: string;
+};
+
+type DocumentReferenceEdge = {
+  referenceId: string;
+  snapshotDigest: string;
+  source: DocumentMemberIdentity;
+  syntax: DocumentReferenceSyntax;
+  sourceStartByte: number;
+  sourceEndByte: number;
+  rawTarget: string;
+  target: DocumentReferenceTarget;
+  semanticResponsibility?: string;
+  applicabilityCondition?: string;
+  readerId: string;
+  readerRevision: string;
+  edgeDigest: string;
+};
+
+type DocumentReferenceOccurrenceDraft = {
+  syntax: DocumentReferenceSyntax;
+  sourceStartByte: number;
+  sourceEndByte: number;
+  rawTarget: string;
+  target: DocumentReferenceTarget;
+  semanticResponsibility?: string;
+  applicabilityCondition?: string;
+};
+
+type DocumentReferenceParseReason =
+  | "source-member-missing"
+  | "source-member-extra"
+  | "source-blob-mismatch"
+  | "source-content-digest-mismatch"
+  | "syntax-invalid"
+  | "encoding-invalid"
+  | "scheme-unknown"
+  | "target-noncanonical"
+  | "reader-exception";
+
+type DocumentReferenceReaderRegistryError =
+  | {
+      reasonCode: "reader-missing" | "reader-duplicate" | "reader-ambiguous";
+      syntaxKind: DocumentReferenceSyntax;
+      registryDigest: string;
+      evidenceDigest: string;
+      findingId: string;
+    }
+  | {
+      reasonCode: "reader-revision-missing";
+      readerId: string;
+      registryDigest: string;
+      evidenceDigest: string;
+      findingId: string;
+    }
+  | {
+      reasonCode: "syntax-binding-mismatch";
+      bindingKind: "uri-scheme-registry" | "frontmatter-schema";
+      registryDigest: string;
+      evidenceDigest: string;
+      findingId: string;
+    };
+
+type DocumentReferenceParseError = {
+  reasonCode: DocumentReferenceParseReason;
+  source: DocumentMemberIdentity;
+  sourcePath: string;
+  readerId: string;
+  sourceStartByte: number;
+  sourceEndByte: number;
+  evidenceDigest: string;
+  findingId: string;
+};
+
+type DocumentReferenceParseErrorDraft = {
+  reasonCode: DocumentReferenceParseReason;
+  sourceStartByte: number;
+  sourceEndByte: number;
+};
+
+type DocumentReferenceReaderRegistration = {
+  readerId: string;
+  readerRevision: string;
+  claimedSyntaxKinds: readonly DocumentReferenceSyntax[];
+  read(blob: RepositoryDocumentBlob): {
+    edges: readonly DocumentReferenceOccurrenceDraft[];
+    errors: readonly DocumentReferenceParseErrorDraft[];
+  };
+};
+
+type DocumentReferenceReaderRegistry = {
+  registryDigest: string;
+  syntaxBinding: {
+    uriSchemeRegistryRevision: string;
+    frontmatterSchemaRevision: string;
+    frontmatterSchemaDigest: string;
+  };
+  readers: readonly DocumentReferenceReaderRegistration[];
+};
+
+type DocumentReferenceGraph = {
+  snapshotDigest: string;
+  edges: readonly DocumentReferenceEdge[];
+  receipts: readonly DocumentReferenceParseReceipt[];
+  graphDigest: string;
+};
+
+type DocumentReferenceRegistrySet = {
+  snapshotDigest: string;
+  anchorRegistryDigest: string;
+  planRegistryDigest: string;
+  adrRegistryDigest: string;
+  specRegistryDigest: string;
+  testRegistryDigest: string;
+};
+
+type DocumentReferenceAnalysisFinding = {
+  reasonCode:
+    | "target-missing"
+    | "anchor-missing"
+    | "anchor-ambiguous"
+    | "typed-id-missing"
+    | "typed-id-ambiguous"
+    | "authority-forbidden"
+    | "stale-inbound"
+    | "semantic-mismatch"
+    | "applicability-mismatch"
+    | "supersession-cycle";
+  referenceId: string;
+  evidenceDigest: string;
+  findingId: string;
+};
+
+type DocumentReferenceAnalysisInputReason =
+  | "graph-snapshot-mismatch"
+  | "registry-snapshot-mismatch"
+  | "registry-revision-missing"
+  | "policy-revision-missing"
+  | "receipt-missing"
+  | "receipt-duplicate"
+  | "receipt-stale";
+
+type DocumentReferenceAnalysisInputError = {
+  reasonCode: DocumentReferenceAnalysisInputReason;
+  subjectIdentity: string;
+  evidenceDigest: string;
+  findingId: string;
+};
+
+type DocumentReferenceAnalysisResult =
+  | {
+      ok: true;
+      graph: DocumentReferenceGraph;
+      findings: readonly DocumentReferenceAnalysisFinding[];
+      analysisDigest: string;
+      closure: "closed" | "blocked";
+    }
+  | {
+      ok: false;
+      errors: readonly DocumentReferenceAnalysisInputError[];
+      analysisDigest: string;
+      closure: "blocked";
+    };
+
+interface RepositoryDocumentBlobPort {
+  load(input: {
+    snapshotId: string;
+    path: string;
+    blobOid: string;
+    contentDigest: string;
+  }): Promise<Uint8Array>;
+}
+
+type DocumentReferenceParseReceipt = {
+  receiptId: string;
+  snapshotDigest: string;
+  source: DocumentMemberIdentity;
+  sourceBytesDigest: string;
+  revisions: {
+    parserRevision: string;
+    syntaxRevision: string;
+    anchorRevision: string;
+    uriSchemeRegistryRevision: string;
+    frontmatterSchemaRevision: string;
+    frontmatterSchemaDigest: string;
+    readerRegistryDigest: string;
+  };
+  readerId: string;
+  readerRevision: string;
+  edgeSetDigest: string;
+  errorSetDigest: string;
+  receiptDigest: string;
+};
+
+type ReadDocumentReferencesResult =
+  | { ok: true; graph: DocumentReferenceGraph; errors: readonly [] }
+  | {
+      ok: false;
+      errors: readonly (
+        | DocumentReferenceParseError
+        | DocumentReferenceReaderRegistryError
+      )[];
+      diagnostics: {
+        edges: readonly DocumentReferenceEdge[];
+        receipts: readonly DocumentReferenceParseReceipt[];
+      };
+    };
+
+captureRepositoryDocsSnapshot(
+  input: CaptureRepositoryDocsSnapshotInput,
+  git: GitObjectSnapshotPort,
+): Promise<RepositoryDocsSnapshotResult>;
+
+materializeDispositionBatch(
+  command: MaterializeDispositionBatchCommand,
+  current: DocumentDispositionLedger,
+): Result<DocumentDispositionLedger, readonly DocumentDispositionError[]>;
+
+loadRepositoryDocumentBlobs(
+  snapshot: RepositoryDocsSnapshot,
+  port: RepositoryDocumentBlobPort,
+): Promise<Result<readonly RepositoryDocumentBlob[], readonly DocumentReferenceError[]>>;
+
+readDocumentReferences(
+  input: ReadDocumentReferencesInput,
+  registry: DocumentReferenceReaderRegistry,
+): ReadDocumentReferencesResult;
+
+analyzeDocumentReferences(
+  input: {
+    snapshot: RepositoryDocsSnapshot;
+    graph: DocumentReferenceGraph;
+    registries: DocumentReferenceRegistrySet;
+    anchorRegistryRevision: string;
+    authorityPolicyRevision: string;
+    applicabilityPolicyRevision: string;
+  },
+): DocumentReferenceAnalysisResult;
+
+replayDocumentDeltas(
+  input: ReplayDocumentDeltasInput,
+): DocumentDeltaReplayResult;
+
+analyzeRepositoryDocumentClosure(
+  input: AnalyzeRepositoryDocumentClosureInput,
+  targets: DocumentTargetResolver,
+): DocumentClosureResult;
+
+verifyDocumentDebtRoutes(
+  findings: readonly DocumentClosureFinding[],
+  routes: readonly DocumentDebtRoute[],
+): DocumentDebtRouteVerification;
+```
+
+`ReplayDocumentDeltasInput`はbaseline/final snapshot、event列、`decisions`列、ledger/policy identity、
+expected delta chain digestを不可分に持つ。domainのdecisionはvalidated `record`を合成し、
+physical adapterだけがL5の正規化columnへlossless展開する。
+
+#### typed reference reader契約 (後続slice候補、unit oracle ID未採番)
+
+`RepositoryDocumentBlobPort`は`snapshotId,path,blobOid,contentDigest`を全て受け取り、固定commitの
+Git object byte列だけを返す。working tree fallbackを持たない。`loadRepositoryDocumentBlobs`は
+final snapshot memberとblob入力のexact集合を検証し、欠落・余剰・duplicate・case-fold collisionを
+parse前に拒否する。成功時はsnapshot/member/bytes digestから`provenanceDigest`を生成した
+`RepositoryDocumentBlob`だけを返す。`readDocumentReferences`はauthoritative snapshotとsealed blobの
+exact集合を再検証するため、callerが同じ形のDTOを組み立ててもauthorityへ昇格できない。
+readerはfinal snapshotの各memberと、そのmemberのblobから得た不変byte列だけを入力とする。
+blob `bytes`のSHA-256は`source.contentDigest`と一致し、`snapshotDigest`、path、blob OID、
+content digestの不一致はそれぞれ`source-member-extra|source-blob-mismatch|
+source-content-digest-mismatch`を返す。snapshot member欠落は`source-member-missing`とする。
+working tree、DB、既存relation graph、別snapshotのblobを
+不足入力の補完へ使わない。入力byte列とinput DTOは変更しない。
+
+reader registryは`readerId,readerRevision,claimedSyntaxKinds`を持つimmutable factoryで生成し、
+全syntax kindをexactly once所有する。missing/duplicate/ambiguous claim、空revision、
+requestとimmutable `syntaxBinding`の不一致はsource非依存の
+`DocumentReferenceReaderRegistryError`として生成時又はparse前に拒否する。
+registry digestを各receiptへ束縛し、配列順又はplugin登録順をwinner選択へ使わない。
+scheme/frontmatter registryのrevision/digestはregistry側のimmutable `syntaxBinding`を正本とし、
+request自己申告との不一致をparse前にfail-closeする。
+readerが返せるのはoccurrence/error draftだけであり、`referenceId`、`source`、revision、
+evidence digestを自己申告できない。coreがsealed blobとrevision setから完成edge/error/receiptを生成する。
+reader出力のgetter/iterator例外、同一draft重複、閉じたreason code外の値は全てtyped errorへfail-closeする。
+成功結果だけが`snapshotDigest`付きgraphを公開し、blocked結果はgraphを持たずdiagnosticsだけを返す。
+
+`document-reference-syntax-v1`が受理するsurface:
+
+| syntax | 受理する形 | typed target |
+|---|---|---|
+| `frontmatter_path` | schema registryでpath/ID fieldと宣言されたYAML scalar/list。未知fieldをpathと推測しない | field schemaが宣言したkind |
+| `markdown_inline` | CommonMark inline link/image destination。画像も依存edgeとして保持する | path/anchor/external |
+| `markdown_reference` | reference useとdefinitionを同一blob内でexactly once結合する | path/anchor/external |
+| `wiki_link` | `[[path]]`、`[[path#fragment]]`、`[[path#fragment\|label]]` | document/anchor |
+| `heading_anchor` | ATX/Setext headingと明示 `{#id}`。anchor slugは`markdown-anchor-v1`で導出する | anchor definition |
+| `typed_id` | prose又はinline codeのtoken境界にある完全なPLAN/ADR/spec/test ID。fenced code、引用fixture、部分一致は除外する | plan/adr/spec/test |
+
+Markdown parserはcode fence、inline code、escape、reference definitionを構文として扱い、
+正規表現のkeyword hitだけでedgeを作らない。ただしinline code全体がtyped ID一個と一致する場合は
+明示参照として扱う。frontmatterは先頭documentだけを読み、duplicate key、alias、merge key、
+非scalar pathをparse errorにする。reference labelの未定義・重複、wiki delimiter不整合、
+不正UTF-8、NUL、malformed percent tripletを空edgeへ変換しない。
+
+`markdown-anchor-v1`はheading文字列をUnicode NFC化し、Unicode 15.1のDefault Case Folding表でcase fold後に
+文字・数字・`_`・`-`以外を除去し、連続whitespaceを`-`一個へ変換し、連続`-`を一個へ畳む。
+空slugを拒否し、同一blob内の重複headingは文書順に2件目から`-1`,`-2`を付ける。
+明示`{#id}`はpercent decodeせずNFC case-sensitive identityとし、自動slugとの衝突も
+`anchor-ambiguous`へ送る。fragmentはsingle percent decode後NFC化し、同じ規則で比較する。
+
+内部pathはsource directoryを基準にPOSIX規則で一度だけ解決し、`\`、absolute、drive/UNC、
+NUL、空segment、repository rootを越える`..`を拒否する。`.`/`..`を解決した後にUnicode NFC化し、
+fragmentもpercent decodeを一度だけ行ってNFC化する。percent decode後の再decodeは禁止し、
+encoded `/`、`\`、NUL、dot segmentは拒否する。external URIは入力で固定した閉じた
+scheme syntax registryにあるschemeだけをURIとしてparseし、scheme不在をexternalへ推測しない。
+readerはschemeをASCII lowercase、hostをUnicode 15.1 / UTS #46 nontransitionalでIDNA ASCII lowercaseへ
+正規化し、userinfoを拒否し、
+HTTP/HTTPSのdefault portだけを除去する。percent tripletは一度だけ検証してhexをuppercase化し、
+path/query/fragmentの意味順を変えない。scheme/authorityの許可判断と到達性確認は行わない。
+
+readerは構文抽出と正規化までを担当し、targetの実在、authority、disposition、
+applicability、archive/superseded意味判定を行わない。analyzerだけがfinal snapshot、
+anchor registry、PLAN/ADR/spec/test registryをexact revisionで解決する。短縮ID又は同一IDの
+複数registry hitは一件を選ばず`typed-id-ambiguous`、未知IDは`typed-id-missing`とする。
+external scheme/authorityはanalyzerへ明示された`authorityPolicyRevision`で
+`authority-forbidden`を判定し、readerのURI構文registryと混同しない。
+
+edge identity frameは
+```text
+snapshot_digest, source_path, source_blob_oid, source_content_digest, syntax_kind,
+source_start_byte, source_end_byte, target_kind, raw_target, normalized_target,
+normalized_fragment, semantic_responsibility, applicability_condition,
+parser_revision, syntax_revision, anchor_revision, uri_scheme_registry_revision,
+frontmatter_schema_revision, frontmatter_schema_digest, reader_registry_digest,
+reader_id, reader_revision
+```
+の順の`canonical-frame-v1`とする。edgeはこのdigestのunsigned
+UTF-8 byte順で返す。同一identityの重複surfaceは勝手にdedupeせず、byte rangeを含む別edgeとして残す。
+
+parse receipt frameは
+```text
+snapshot_digest, source_path, source_blob_oid, source_content_digest, source_bytes_digest,
+parser_revision, syntax_revision, anchor_revision, uri_scheme_registry_revision,
+frontmatter_schema_revision, frontmatter_schema_digest, reader_registry_digest, reader_id, reader_revision,
+edge_set_digest, error_set_digest
+```
+の順とする。edge/error集合は各identity digestのstable sortを
+length-prefixed frame化する。edge 0件の正常blobもreceiptを返し、errorが一件でもあれば
+receiptと全errorを返すがGreen graphへ昇格しない。reader例外も
+`reader-exception`へ型付けし、握り潰さない。
+
+U006のsource parseに対する閉じたreason codeは
+```text
+source-member-missing|source-member-extra|source-blob-mismatch|source-content-digest-mismatch|
+syntax-invalid|encoding-invalid|scheme-unknown|target-noncanonical|reader-exception
+```
+とする。source非依存のreader registry reasonは
+```text
+reader-missing|reader-duplicate|reader-ambiguous|reader-revision-missing|syntax-binding-mismatch
+```
+とする。U007のresolver/policy reasonは
+```text
+target-missing|anchor-missing|anchor-ambiguous|typed-id-missing|typed-id-ambiguous|
+authority-forbidden|stale-inbound|semantic-mismatch|applicability-mismatch|supersession-cycle
+```
+とし、readerが先回りして生成しない。
+
+U006 parse findingのevidence frameは
+```text
+snapshot_digest, source_path, source_blob_oid, source_content_digest, reader_id,
+reader_revision, reason_code, source_start_byte, source_end_byte, parser_revision,
+syntax_revision, anchor_revision, uri_scheme_registry_revision, reader_registry_digest,
+frontmatter_schema_revision, frontmatter_schema_digest
+```
+の順とする。
+finding IDは`doc-reference-parse-error,source_path,evidence_digest`から導出し、
+出力順は`source_path,source_start_byte,reader_id,reason_code,finding_id`のunsigned UTF-8 byte順とする。
+一blob内の正常edgeとerrorを両方収集するが、error一件以上のgraphはblockedであり、
+正常edgeだけをclosure authorityへ昇格しない。
+
+reader registry errorのevidence frameはreason別に
+```text
+ownership: registry_digest, syntax_kind, reason_code, matching_registration_multiset_frame
+revision:  registry_digest, reader_id, reason_code, claimed_syntax_set_frame
+binding(uri): registry_digest, binding_kind, reason_code,
+              request_uri_scheme_registry_revision, registry_uri_scheme_registry_revision
+binding(frontmatter): registry_digest, binding_kind, reason_code,
+              request_frontmatter_schema_revision, request_frontmatter_schema_digest,
+              registry_frontmatter_schema_revision, registry_frontmatter_schema_digest
+```
+の順とする。`matching_registration_multiset_frame`は対象syntaxをclaimする全registrationを
+`reader_id,reader_revision,claimed_syntax_set_frame`のlength-prefixed
+`canonical-frame-v1`にし、そのframe byte列のunsigned UTF-8順でsortする。完全重複もdedupeせず
+出現回数分保持する。`claimed_syntax_set_frame`はsyntax kindをunsigned UTF-8順でsortし、
+重複を拒否したlength-prefixed frameとする。空値は空文字のlength 0としてframeへ残し、
+missing revision errorをdigest生成前に消さない。
+finding IDのsubjectはownership errorでは`syntax_kind`、revision errorでは`reader_id`、
+binding errorでは`binding_kind`とし、
+`doc-reference-reader-registry-error,subject,evidence_digest`から導出する。
+source path、byte span、架空reader ID又はsyntax kindのsentinelを合成せず、
+`reason_code,subject,finding_id`のunsigned UTF-8 byte順で返す。
+
+U007 analyzerは次のseedを使用する。
+```text
+graph_digest, snapshot_digest, anchor_registry_digest, plan_registry_digest,
+adr_registry_digest, spec_registry_digest, test_registry_digest, anchor_registry_revision,
+authority_policy_revision, applicability_policy_revision
+```
+この値をanalysis seedへ束縛する。
+各finding evidenceはseed、`reference_id,reason_code,target_identity`から導出し、analysis digestは
+seedとstable finding ID集合から生成する。registry又はpolicy revision欠落、graphと別snapshotの
+registry、receipt欠落・重複・staleをblockedにし、既存relation graphから補完しない。
+入力契約違反の閉じたreason codeは
+```text
+graph-snapshot-mismatch|registry-snapshot-mismatch|registry-revision-missing|
+policy-revision-missing|receipt-missing|receipt-duplicate|receipt-stale
+```
+とする。evidence frameは次の順とする。
+```text
+graph_digest,snapshot_digest,anchor_registry_digest,plan_registry_digest,adr_registry_digest,
+spec_registry_digest,test_registry_digest,anchor_registry_revision,authority_policy_revision,
+applicability_policy_revision,subject_identity,subject_detail,reason_code
+```
+`subject_detail`は`receipt-duplicate`だけ、同一receipt owner配下の全`receiptDigest`を
+unsigned UTF-8順でsortし完全重複も保持したlength-prefixed multiset frame、その他は空文字とする。finding IDは
+`doc-reference-analysis-input-error,subject_identity,evidence_digest`から導出し、
+全入力契約違反をstable順の`ok:false` resultで返す。domain findingを合成せず、未型付け例外へ変換しない。
+`subject_identity`はreason別に次へ固定する。
+
+| reason | subject identity |
+|---|---|
+| `graph-snapshot-mismatch` | `graph:<graph.graphDigest>` |
+| `registry-snapshot-mismatch` | `registries:<registries.snapshotDigest>` |
+| `registry-revision-missing` | `field:anchorRegistryRevision` |
+| `policy-revision-missing` | 欠落fieldごとに`field:authorityPolicyRevision`又は`field:applicabilityPolicyRevision` |
+| `receipt-missing` | `member:<member_identity_digest>` |
+| `receipt-duplicate` | `receipt-owner:<receipt_owner_digest>`（同一owner配下を1 findingとする） |
+| `receipt-stale` | `receipt:<receiptDigest>` |
+
+`member_identity_digest`は`path,blob_oid,content_digest`の順のlength-prefixed
+`canonical-frame-v1`のSHA-256とする。`receipt_owner_digest`は
+`member_identity_digest,reader_id,reader_revision`の順のlength-prefixed
+`canonical-frame-v1`のSHA-256とする。receipt ownerはsource member×reader identity/revisionであり、
+同一ownerにreceiptが2件以上あれば
+receipt digestが同一か相違するかを問わず`receipt-duplicate`とする。複数field又はmemberの違反は
+subjectごとに1 errorを生成し、表外のsubject選択やsentinelを許さない。
+
+property testはblob順・reader順・error入力順の全permutationでedge/receipt/finding digest一致と
+入力deep-equal不変を検査する。mutation testはsnapshot/blob比較、unknown scheme拒否、
+parse error保持、parser/schema/reader revision frame、stable sortを一つずつ除去した変異を全てkillする。
+
+DbC:
+
+- `captureRepositoryDocsSnapshot` 事前条件: repository identity、full commit OID、リポジトリroot tree OID、
+  `selection_revision=repository-documents-v1`とselector digestをcallerが明示する。
+  `GitObjectSnapshotPort`はL5 §9.15.2の全zoneをGit objectからraw NUL path streamとblob OIDで返す。
+  short SHA、symbolic HEADだけ、working tree scan、zone欠落、未分類文書の暗黙除外を拒否する。
+- post: pathはUTF-8 repo-relative canonical formでstable byte順、各pathは一回だけ、`trackedCount`は
+  entry数と一致し、`pathSetSha256`はGitが返した終端NUL付きbyte streamそのもの、
+  `snapshotDigest`はrepository identity、commit、root tree、selection revision/digest、path hash、
+  zone集合digest、member集合digestのfield-name付きlength-prefixed frameから生成する。zone集合は
+  selector digest、tree OID、member count、zone member digestを全5 zone分保持する。baseline 921件は`docs_tree`
+  zoneだけのfixtureであり、全zoneの`trackedCount`へ固定しない。
+- `materializeDispositionBatch` pre: commandはsnapshot identity、selector、decision、actor、reason、
+  command IDを持つ。post: selectorをその時点のsnapshot pathへ一度だけ展開し、各pathの個別recordと
+  selector receiptを返す。同じcommand ID+digestは冪等、異なるpayloadは
+  `doc-ledger-command-conflict`とする。
+- `readDocumentReferences(input: ReadDocumentReferencesInput, registry: DocumentReferenceReaderRegistry): ReadDocumentReferencesResult`
+  pre: `input.snapshot`は`captureRepositoryDocsSnapshot`が発行したauthoritative final snapshot、
+  `input.blobs`は`loadRepositoryDocumentBlobs`が同snapshotから発行したsealed blobのexact集合とする。
+  parser/syntax/anchor revisionを全て明示し、URI scheme/frontmatter schemaのrevision/digestはimmutable
+  `registry.syntaxBinding`と一致する。registryは全`DocumentReferenceSyntax`をnon-empty revision付き
+  typed readerへexactly once割り当て、missing/duplicate/ambiguous ownershipを許さない。
+  post: 各snapshot memberの不変byte列だけを読み、source blob×readerのparse receipt、canonical edge、
+  閉じたU006 parse errorをstable unsigned UTF-8 byte順で返す。errorが0件のときだけ`ok:true`の
+  `snapshotDigest`付きgraphを公開し、1件以上なら`ok:false`として全errorとdiagnosticsを返しgraphへ
+  昇格させない。reader/getter/iterator例外は`reader-exception`、未知schemeは`scheme-unknown`へ型付けし、
+  空edge又は正常結果へ変換しない。
+  invariant: `input`、blob byte列、registryを変更せず、working tree、DB、既存relation graph、
+  別snapshotのblobから補完しない。callerが組み立てた同形DTOをsnapshot/blob authorityへ昇格させず、
+  reader draftに`referenceId`、source/revision/evidence identityの自己申告を許さない。authoring docs、
+  ledger、Git indexへの書込みその他の外部副作用を持たない。
+- 参照解析関数の契約は次のとおり。
+  ```ts
+  analyzeDocumentReferences(input: { snapshot: RepositoryDocsSnapshot; graph: DocumentReferenceGraph;
+    registries: DocumentReferenceRegistrySet; anchorRegistryRevision: string; authorityPolicyRevision: string;
+    applicabilityPolicyRevision: string }): DocumentReferenceAnalysisResult
+  ```
+  pre: `graph`は成功した`readDocumentReferences`が生成したGreen graphを名乗る候補であり、
+  analyzerは同一`input.snapshot.snapshotDigest`への束縛と全snapshot memberのparse receipt exactly onceを
+  authorityへ昇格する前に再検証する。`registries`も同snapshotへ束縛され、
+  anchor/PLAN/ADR/spec/test registry digestとanchor/authority/applicability policy revisionを全て明示する。
+  post: final snapshotとexact registry/policy revisionだけでdocument/anchor/typed-ID/authority/semantic/
+  applicability/supersessionを解決し、閉じたU007 reason codeのfinding、stable `analysisDigest`、
+  `closed|blocked`を返す。未知・複数hitは任意候補を選ばず`*-missing|*-ambiguous`、
+  registry/policy revision欠落、別snapshot graph/registry、receipt欠落・重複・staleは
+  閉じた`DocumentReferenceAnalysisInputError`を全件返す`ok:false` blocked resultとする。
+  domain不適合を未型付け例外又はsilent successへ変換しない。
+  invariant: readerの構文抽出責務を再実行せず、既存relation graph、archive/superseded fallback、
+  DB rowで欠落を補完しない。snapshot、graph、registriesを変更せず、authoring docs、ledger、DB、
+  working tree、Git indexへの書込みその他の外部副作用を持たない。
+- `analyzeRepositoryDocumentClosure` 事前条件: snapshot、ledger、reference graph、canonical assertion、
+  debt routeは同じsnapshot digestへ束縛される。post:全snapshot pathをexactly once判定し、
+  ledger phantomとbaseline後のadd/modify/delete/renameを双方向比較し、全reference endpointとanchor、
+  canonical assertionのblob digestを再検証する。
+- invariant: queryはledger、authoring docs、DB、Git indexを更新しない。selector再評価、source edgeからの
+  disposition継承、DB rowによる欠落record補完、archive/superseded文書への暗黙fallbackを禁止する。
+- applicability invariant: canonical値域は`applicable|conditional|deferred|not_applicable`、
+  application status値域は`pending|applied|verified`とする。`conditional`はreason/observed condition/reevaluation trigger、
+  `deferred`はreason/reevaluation trigger/PLAN、`not_applicable`はreason/deciderを必須とする。
+  入力語`skip|defer`はauthoring境界でそれぞれ`not_applicable|deferred`へ正規化し、closure queryは
+  canonical値だけを受け取る。kind固有でないfieldはNULLとし、disposition enumへ混入させない。
+- delta invariant: snapshot memberはpath/blob OID/content digestを保持し、deltaをsequence順にreplayして
+  final snapshotと完全比較する。raw Git差分はrenameを推測せずadd/modify/deleteとして観測する。
+  明示rename deltaだけが対応するdelete+addを消費し、未登録renameはdelete/addの別findingとして返す。
+  各eventは同じ`deltaId`の`DocumentDeltaDecision`とexactly onceで結合し、eventの`decisionDigest`、
+  ledger、snapshot pair、operation、before/after member、affected path、disposition/applicability後条件を
+  再検証する。自己申告digest、decision欠落・余剰・重複、
+  add文書の判断欠落をGreenにしない。
+
+delta reducerの遷移表:
+
+| kind | 事前条件 | state更新 | 拒否reason |
+|---|---|---|---|
+| `add` | after path不在 | after memberを追加 | `path-already-exists` |
+| `modify` | before pathが存在しblob/content一致、before/after path同一 | after memberへ置換 | `source-missing|stale-before|path-changed` |
+| `delete` | before pathが存在しblob/content一致 | before pathを削除 | `source-missing|stale-before` |
+| `rename` | before pathが存在しblob/content一致、after path不在、旧新pathが異なる | oldを削除しafterを追加 | `source-missing|stale-before|target-exists|same-path` |
+
+入力順を権威にせず`sequence,event_digest`昇順でreplayするが、sequenceは1始まり・gap/duplicateなし、
+`previousEventDigest`は直前event digestと一致しなければならない。event frameは次の順序の
+`canonical-frame-v1`とする。
+
+```text
+delta_id, ledger_id, sequence, kind, from_snapshot_digest, to_snapshot_digest, from_path,
+to_path, before_blob_oid, before_content_digest, after_blob_oid, after_content_digest,
+decision_digest, previous_event_digest
+```
+
+先頭chain seedは`ledger_id, baseline_snapshot_digest, policy_revision`、
+各stepは`previous_chain_digest, event_digest`をframe化してSHA-256とし、最終値を`deltaChainDigest`とする。
+replay結果はfinal snapshotのpath/blob/content集合と完全一致させ、余剰deltaも成功扱いしない。
+空event列でもchain seedとexpected chain digestを必ず比較する。chain全体の不一致は
+`operation_kind=chain`、subject=`ledger_id`、sequence=0のfindingとし、架空のadd/deleteへ分類しない。
+sequence/chain/event/decision/snapshot検証が一件でも失敗した時点でreducer stateをpoisonし、以後のeventを
+stateへ適用しない。duplicate sequenceは全該当eventをcanonical tie-break順でfinding化し、入力順でwinnerを選ばない。
+baseline/final member path重複もMap last-winsせず、replay前にblocked findingとする。
+exact pathだけでなくUnicode NFC後のcase-fold path衝突をbaseline/final双方でblockedにする。
+`createDocumentDeltaEvent`と`createDocumentDeltaDecision`は正のsafe integer sequence、非空ID/digest、
+repo-relative NFC `/` path、非空blob/content identityを検査するfactoryとし、absolute/backslash/NUL/
+`.`/`..`/空segmentを持つinvalid stateを生成しない。
+物理`from_snapshot_id/to_snapshot_id`はsnapshot digestから一意に導出する
+`document-snapshot:sha256:<digest>`とし、APIのdigestとprojection IDの対応を再計算して検証する。
+
+`DocumentDeltaFinding`のoperation kindは`add|modify|delete|rename|chain`とする。evidence frameは
+次の順序とする。
+
+```text
+baseline_snapshot_digest, final_snapshot_digest, delta_chain_digest, reason_code, sequence,
+operation_kind, from_path, to_path, before_blob_oid, before_content_digest, after_blob_oid,
+after_content_digest, policy_revision
+```
+
+subjectはadd=`to_path`、delete=`from_path`、
+modify=`from_path`、invalid event=`delta_id`であり、finding IDはrule/subject/evidence digestから導出する。
+出力順は`operation_kind, subject_identity, sequence, finding_id`のunsigned UTF-8 byte順とする。
+成功結果はeffective member集合とそのreduction digest、delta chain digestを返す。blocked結果もfindingと
+delta chain digestを返すが、poison後のpartial effective集合をprojection authorityとして公開しない。
+outer `DocumentClosureResult`も成功時のeffective集合/reduction digestと全結果のdelta chain digestを保持し、
+application/DB adapterがreducer内部stateを再推測しない。
+
+typed finding/error:
+
+| ID | 発火条件 | closure / debt route |
+|---|---|---|
+| `docs-snapshot-revision-missing` | full commit/tree/repository identity欠落 | blocked、上流capture defect |
+| `docs-snapshot-stream-malformed` | NUL stream、UTF-8、count、tree/hash不整合 | blocked、Recovery |
+| `doc-disposition-missing` | baseline snapshot pathにbaseline recordなし | blocked、L4-25/L7-422 route必須 |
+| `doc-disposition-phantom` | baseline ledger pathがbaseline snapshotにない | blocked、削除/rename判断route必須 |
+| `doc-disposition-duplicate` | pathまたはcase-fold identity重複 | blocked、ledger correction |
+| `doc-disposition-incomplete` | canonical applicabilityのkind別field、application status、disposition後条件不足 | blocked、設計判断route必須 |
+| `doc-selection-unclassified` | selector zone外のtracked document、又は必須zone欠落 | blocked、上流selection設計route必須 |
+| `doc-delta-unregistered` | baseline後の未登録差分、illegal delta遷移、sequence/chain/final集合不一致 | blocked、reason codeと差分identity別route必須 |
+| `doc-reference-parse-error` | reader例外、未知scheme、構文不正 | blocked、reader defect |
+| `doc-reference-orphan` | source/target path、typed ID、anchor不在 | blocked、source owner route必須 |
+| `doc-canonical-assertion-stale` | assertionのtarget blob/digestがsnapshotと不一致 | blocked、assertion owner route必須 |
+| `doc-debt-route-missing` | blocking findingにactive routeなし | blocked、route filing |
+| `doc-debt-route-stale` | finding/snapshot/PLAN digestがrouteと不一致 | blocked、route再審査 |
+
+`DocumentDebtRoute`は`routeId`、`findingId`、`findingDigest`、`snapshotDigest`、`subjectIdentity`、
+`filingTargetId`、`planId`、`status`、`reason`、`reviewedBy`、`reviewedAt`を必須とする。active routeは
+findingを消さず、`closure="closed"`はfinding 0の場合だけ返す。既知gapをroute済みとして可視化する
+ことと、完了判定をGreenにすることを分離する。CLIはGreen=0、contract/closure violation=1、
+usage=2を維持する。
 
 ### Projection rebuild application契約 (PLAN-L6-75 / L7-423残DoD)
 
