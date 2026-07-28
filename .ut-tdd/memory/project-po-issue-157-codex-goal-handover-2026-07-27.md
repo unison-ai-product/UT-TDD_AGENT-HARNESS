@@ -1,3 +1,11 @@
+---
+memory_id: memory:project:po-issue-157-codex-goal-handover-2026-07-27
+kind: project
+title: "Issue #157 収束レーン — Codex へのゴール引き継ぎと日次クローズ (2026-07-27)"
+tags: ["issue-157", "pr-drain", "handover", "codex", "post-merge-trap", "receipts-rechain"]
+updated_at: 2026-07-27T13:30:00.000Z
+---
+
 # Issue #157 収束レーン — Codex へのゴール引き継ぎ (2026-07-27, Claude 5時間上限前の handover)
 
 ## ゴール (PO 指示)
