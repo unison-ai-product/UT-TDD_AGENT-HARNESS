@@ -276,7 +276,10 @@ describe("clean distribution local acceptance smoke", () => {
       ) as {
         hooks: Record<
           string,
-          { matcher?: string; hooks: { command: string; blockOnFailure?: boolean }[] }[]
+          {
+            matcher?: string;
+            hooks: { command: string; args?: string[]; blockOnFailure?: boolean }[];
+          }[]
         >;
       };
       expect(codexHooks.hooks.PreToolUse).toEqual(
@@ -285,7 +288,8 @@ describe("clean distribution local acceptance smoke", () => {
             matcher: "spawn_agent|spawn_agents_on_csv",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -294,7 +298,8 @@ describe("clean distribution local acceptance smoke", () => {
             matcher: "apply_patch|write_file",
             hooks: [
               expect.objectContaining({
-                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                command: "node",
+                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],

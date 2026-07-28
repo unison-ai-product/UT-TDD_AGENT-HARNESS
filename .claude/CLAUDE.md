@@ -59,6 +59,15 @@ PLAN requirements:
 - Design / implementation / add-* changes update terminology and L0 glossary
   where relevant.
 - Review evidence is recorded before asking for confirmation gates.
+- New PLANs carry a route certificate (`route_signal` + `route_mode`), and the
+  mode must allow the `kind` (SSoT: `src/schema/route-filing.ts` — e.g.
+  troubleshoot⇔incident, refactor⇔refactor). `kind` = poc / recovery /
+  troubleshoot also requires an `aim` agent slot.
+- **Draft PLANs must not list already-existing files in `generates`.** A draft
+  PLAN whose declared deliverable already exists in the tree trips
+  `merged-plan-status` and `duplicate-artifact-ownership`. Declare only the
+  PLAN doc itself at filing time; the implementing PR updates `generates`
+  together with the confirm (2026-07-28 lesson: PR #167 went red on this).
 
 PLAN claim discipline (errata countermeasure, PLAN-L7-89):
 
@@ -94,6 +103,73 @@ evidence as the substitute.
 Do not make raw `codex exec` or raw `claude` the normal path for UT-TDD work.
 Use UT-TDD wrappers so session lifecycle, handover warnings, and audit evidence
 can be recorded.
+
+## 着手前 advisor 合意形成 (PO ルール 2026-07-28、Claude 固有)
+
+Opus / Sonnet が orchestration を担当するとき、**設計・実装・修正の方式判断は着手前に
+`ut-tdd advisor` で合意形成する**。対象は「trade-off が実在する方式選択」に限る
+(`docs/governance/design-decision-elicitation.md` と同じ線引き。自明な修正・可逆な作業・
+自力で確定できる事実は対象外)。
+
+- 実行: `ut-tdd advisor --decision design --current-model <model> --execute --task "..."`
+  (`--plan <id>` を付けると発火ログが PLAN に紐づく)。技術/設計/トラブルシューティングは
+  `gpt-5.6-sol` 一次、デザイン/UI は `claude-fable-5` 一次 (Model / Effort Routing 節)。
+- **advisor の回答を鵜呑みにしない**。前提が事実か実測で確かめ、食い違ったら実測を突き返す
+  (2026-07-28 実例: doctor 二重実行の方式判断で、memo 共有テストが 1 件でなく 19 件という
+  実測を差し戻して初回推奨が撤回された)。
+- 採択結果は PLAN の設計判断節へ記録する。推奨と異なる決定 (override) をした場合は、
+  その根拠となる実測 (run URL / テスト名 / 計測値) を併記する。
+
+これは**ルールであって機械強制ではない**。fail-close ゲートは作らない (2026-07-28 判断:
+相談 baseline が 16 発火 / 10 PLAN = 841 PLAN 中であり、いまゲート化すると初日でほぼ全作業が
+止まる。未計測のまま機構を建てない)。
+
+遵守は既存の発火ログで随時 spot-check できる (`ut-tdd advisor` は
+`.ut-tdd/logs/session/advisor-<provider>-<ts>.jsonl` を書き、`projectHookEvents` が
+harness.db の `hook_events` へ投影する。session_id は `advisor-` prefix):
+
+```bash
+# 直近の advisor 発火を PLAN 別に数える (EOD close-out で 1 本流す)
+bun -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0,by={};for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(!l.trim())continue;const o=JSON.parse(l);if(o.event_type==='tool_use'){n++;by[o.plan_id]=(by[o.plan_id]||0)+1}}console.log(n,by)"
+```
+
+**機構化 (telemetry + 不在検知) の起票条件**: 対象は、設計判断節に 2 案以上の方式と
+trade-off を記録した PLAN とする。spot-check で (a) この対象に該当する直近 20 PLAN の
+全てが advisor 発火ゼロ、または (b) 同じ 20 PLAN 窓で override が実測併記なしに 2 件以上、
+のいずれかを観測したとき。
+それまで `docs/plans/PLAN-L6-96-advisor-consultation-telemetry.md` は条件付き保留とする。
+
+## 委譲と判断層 (PO ルール 2026-07-28、Claude 固有)
+
+**作業は下位モデルへ委ねて判断層を厚くする。** orchestrator (Opus / Sonnet) が自分で
+書き下ろすのではなく、創出は worker tier、判断は frontier tier に置く。
+
+- 文書作成 = Sonnet (`claude-sonnet-5`)。実装 = Codex 側 worker (`gpt-5.6-terra` /
+  `gpt-5.6-luna`)。軽量探索・doc パッチ = spark / mini / haiku 級。
+- 判断ゲート (review / blind-review / qa / tl / security) は族内 frontier tier。
+  正規委譲経路 (`ut-tdd codex|claude --role <role>`) がこの routing を機械強制する
+  (`src/team/delegation-routing.ts`、未登録 role は fail-close)。
+
+**review は成果物を書いていない family の上位モデルで行う** (attacker/defender 分離):
+
+- Codex が実装 → **Claude** が review。Claude が実装 → **Codex** が review。
+- 証跡は PLAN の `review_evidence[].review_kind=cross_agent` に worker_model /
+  reviewer_model を記録する。doctor の `review-evidence` hard gate が
+  `checkCrossAgentModelPair` で same_provider / model 欠落 / 不明 provider を fail-close
+  で弾く (対象 kind = design / add-design / impl / add-impl、status = confirmed /
+  completed)。
+- 単一 runtime しか使えない場合のみ `intra_runtime_subagent` を記録する
+  (cross_agent を僭称しない)。
+
+### 唯一の回避条件: 利用上限による停止
+
+上記の委譲・cross-review 構造を外してよいのは、**担当すべき family / tier のモデルが
+利用上限 (rate / usage cap) で停止していて実行できないときだけ**。それ以外の理由
+(急ぎ・面倒・コスト・自分で書いた方が速い) は回避理由にならない。
+
+回避する場合は理由を記録する (どのモデルが、いつ、どの上限で止まったか)。回避のまま
+`cross_agent` を称してはならない — 上限で別 family を使えなかった場合は
+`intra_runtime_subagent` として記録し、上限解除後に cross review を取り直す。
 
 ## Native Tool Invocation
 
@@ -170,6 +246,16 @@ Source-snapshot exploration is not an active Claude Code subagent route. Use
 project-focused agents for repository inspection and treat migration snapshots
 as read-only material.
 
+## Parallel Task Limit
+
+Tasks that do not depend on each other may be submitted in parallel, default
+upper limit **8** concurrent subagent slots (`DEFAULT_MAX_PARALLEL` in
+`src/runtime/agent-slots.ts`, IMP-050). `agent-slots` records fire/release and
+warns when active slots reach this limit; it does not hard-block above it
+(fail-open advisory, not a fail-close gate). This restores the reference that
+`src/runtime/agent-slots.ts` and `docs/design/harness/L6-function-design/agent-slots.md`
+point back to (PLAN-RECOVERY-12, issue #85).
+
 ## Guard Rules
 
 - Escalate before changing authentication, authorization, payments, PII,
@@ -185,6 +271,12 @@ as read-only material.
   marker is **one-shot**: it is consumed (deleted) on the foreign edit it
   authorizes, so a stale marker cannot keep bypassing the guard. The env
   override is human-managed and not consumed.
+- The foreign-edit-override marker is **not scoped to the session that wrote
+  it**: any process reading `.ut-tdd/state/foreign-edit-override` before it is
+  consumed can spend it — it is first-come, first-served across concurrent
+  sessions, not an authorization tied to the writer's own next foreign edit
+  (observed 2026-07-17T01:33:51, a separate session consumed another
+  session's marker; see `.ut-tdd/logs/foreign-edit-overrides.jsonl`).
 - Do not treat `legacy local state/` as active runtime state.
 - Do not write secrets, PII, or credentials into docs, examples, or audit
   evidence.

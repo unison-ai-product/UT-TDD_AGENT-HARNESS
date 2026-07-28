@@ -65,7 +65,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-08T21:57:00+09:00"
         evidence_path: docs/plans/PLAN-L7-368-design-lint-db-projection.md
-        output_digest: "sha256:698aab8273e59a9a404343f628e3a5b3aaba9e05cb358dd3df8261252320d5ba"
+        output_digest: "sha256:2c9df96a5aa1b53f26cfdf8a4a77abeeb1a6adcfd2e14037e3399e0f9ab8b253"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 agent_slots:
   - role: tl
     slot_label: "TL - 設計 lint の DB 投影 schema と gate severity の設計レビュー"

@@ -48,6 +48,2150 @@
         "revision": 3,
         "content_digest": "sha256:26bd013bec8ac2eafaa99eed4249e5563fd61fd61eab6d15294d6c2e9467132a"
       }
+    },
+    {
+      "sequence": 4,
+      "previous_record_digest": "sha256:cc1e6fe4d4af3e596af4cdf1fb37548264d58d7b0571e19f0086714d6a49997b",
+      "record_digest": "sha256:393b25501895bb2f92f151ec67a3695025280e3b0530b6c6a06412c09b57e270",
+      "command_id": "pr154-d0-admission-l4-20260724",
+      "receipt_id": "certificate:329aa11b865c23f5fa1de8ba11d86063",
+      "receipt_digest": "sha256:7f2ff2d39e7afa9d8ff9a9b75e96f1b92e599915f990d0016e84e7dcb0fc32fb",
+      "decision_digest": "sha256:8a51ab2b3e48b0a1a8885daee34993e1002f615f7dcd7cc0c70ea7aa924a37f6",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-33-node-control-plane-redesign.md",
+        "plan_id": "PLAN-L4-33-node-control-plane-redesign",
+        "asset_id": "plan:legacy:ba9f2efe68bd7373538eb65009dc992ad9d06677095453f0abbff9967f53d6cd",
+        "revision": 2,
+        "content_digest": "sha256:a59bd52fce71ff3ae2258f7ee35ac106277d1df17bb87bdd96de4ef90b59c05e"
+      }
+    },
+    {
+      "sequence": 5,
+      "previous_record_digest": "sha256:393b25501895bb2f92f151ec67a3695025280e3b0530b6c6a06412c09b57e270",
+      "record_digest": "sha256:dae872500b211bca291b1120d7b207485f5cc52683f7b92b11a867f684315a09",
+      "command_id": "pr154-d0-admission-l5-20260724",
+      "receipt_id": "certificate:8962e415155a779fbcea5c1fc297e504",
+      "receipt_digest": "sha256:e6a55a866baddcf4911c36eaa2537fc83957d5d1b85a4d6fa3d61ddd5bf03f06",
+      "decision_digest": "sha256:1024ce4c2e25bb2dac7c6ba552c46a0661cf9d60c26669e1e149594586e62dc2",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-26-node-generation-activation.md",
+        "plan_id": "PLAN-L5-26-node-generation-activation",
+        "asset_id": "plan:legacy:899f8a663115a111568393119bad90941df8d487e1f69e16a914b1bbb1cb90f5",
+        "revision": 2,
+        "content_digest": "sha256:ecc631bed18919241ec468a53b08970bbf7b8308aaf1f7b9b26f7d293ccf296f"
+      }
+    },
+    {
+      "sequence": 6,
+      "previous_record_digest": "sha256:dae872500b211bca291b1120d7b207485f5cc52683f7b92b11a867f684315a09",
+      "record_digest": "sha256:41255eb869d09c41c557ba778cb24137af5538bcfe9b1b9ea5f4fd80781acce0",
+      "command_id": "pr154-d0-admission-l6-20260724",
+      "receipt_id": "certificate:5079084d5efb89d622c80040abeb5abb",
+      "receipt_digest": "sha256:dd36f6d5e70d47b19cff18ec6b1123f91508207e8adf8c11ff65f5ddc80bb340",
+      "decision_digest": "sha256:cae5a1d30431c153b9fb30398d87f3ea6410fbe93c138d19da2c073a617d083d",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 2,
+        "content_digest": "sha256:604a59f1b5a0008c6574cb5433336fe4185d2a3b7dc2cb5d1b07b0aa83a451d9"
+      }
+    },
+    {
+      "sequence": 7,
+      "previous_record_digest": "sha256:41255eb869d09c41c557ba778cb24137af5538bcfe9b1b9ea5f4fd80781acce0",
+      "record_digest": "sha256:e198f8cb387714bd99e36ed02360e77d757acf0c3cd6dfa09997fb186023c323",
+      "command_id": "pr154-d0-admission-l7-20260724",
+      "receipt_id": "certificate:949664d4d46e01e1498114d5ef1d6494",
+      "receipt_digest": "sha256:5a8372860e09159eb3ee4d71c9b44ccf0a85156118456a9bb0fb7cfa1997586f",
+      "decision_digest": "sha256:cdfdfe16d065d579f30b8c07c9a587b79e1101ee45c7ddd3fddd874077290c8e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 2,
+        "content_digest": "sha256:b65cffec21905c2373ee52ab60a5fd3be61adcab5fbcb84ffef7f82b05318755"
+      }
+    },
+    {
+      "sequence": 8,
+      "previous_record_digest": "sha256:e198f8cb387714bd99e36ed02360e77d757acf0c3cd6dfa09997fb186023c323",
+      "record_digest": "sha256:65fe364ad7b6ca9c98d5d892a1022b2d0329b21692e8b5c50d9056f499580975",
+      "command_id": "pr154-formal-admission-l4-20260724",
+      "receipt_id": "certificate:d0bb0d7ef730224ee4a0f4158cf278e7",
+      "receipt_digest": "sha256:9ee40e762bff1364181f5a836046f0ff4d7574f539cee4b4887a571c30035447",
+      "decision_digest": "sha256:6ac490f0b504c39830076de7dc410990f09298b36118738ceda2519b577e68e8",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-02-architecture.md",
+        "plan_id": "PLAN-L4-02-architecture",
+        "asset_id": "plan:legacy:229babf84a28728be6088a0c783f5a3990f9a784ee7a791d3c30efa112a77fa5",
+        "revision": 2,
+        "content_digest": "sha256:3b7d663d5a6a63703a0ca3d03f1c0e7434554dbc53bc45c264843c37781b9f0a"
+      }
+    },
+    {
+      "sequence": 9,
+      "previous_record_digest": "sha256:65fe364ad7b6ca9c98d5d892a1022b2d0329b21692e8b5c50d9056f499580975",
+      "record_digest": "sha256:0beaefbe8d8b618764627db0ff48d17cf3673bca705c055dc9621cb41176a5c0",
+      "command_id": "pr154-formal-admission-l5-20260724",
+      "receipt_id": "certificate:419d264c23af4810dfc9ba219b4567d1",
+      "receipt_digest": "sha256:a97b62a2b1f67829f5d66aa151cff3bd8b2d49c2fb5f0f084a1c452c19c43f3b",
+      "decision_digest": "sha256:89e6fa5f5b083bc446ea4b106b2b79c3ade41c83841132b11713279b2d9b9761",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-03-internal-processing.md",
+        "plan_id": "PLAN-L5-03-internal-processing",
+        "asset_id": "plan:legacy:d0a0a54f059baf13e8b5ef5448f0c27ed671ff4377b96373ce0844b2dabf1793",
+        "revision": 2,
+        "content_digest": "sha256:7bad46547eb3ecf1422dcdaa851d7192c42f6a34b78ea14530ba31f800d97e48"
+      }
+    },
+    {
+      "sequence": 10,
+      "previous_record_digest": "sha256:0beaefbe8d8b618764627db0ff48d17cf3673bca705c055dc9621cb41176a5c0",
+      "record_digest": "sha256:35ee5fc9489e8e815187c089c181a8da32d847fd92677293f2cdce7158a6e302",
+      "command_id": "pr154-formal-admission-l6-20260724",
+      "receipt_id": "certificate:9bc92a7a80d232333175305d08b11326",
+      "receipt_digest": "sha256:6207cd86393e34e2618161dc1cd4cba21e88680473d69d1c24b78b7476e06d64",
+      "decision_digest": "sha256:70a9aa7b8987ebf84c055d06c001c5089b2a9ddad01774906fe77eadc97da6fa",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-01-function-spec.md",
+        "plan_id": "PLAN-L6-01-function-spec",
+        "asset_id": "plan:legacy:f25f2045ea277f2984da3ab15a4259f0879fd3abd5b02e4b88cd3332f774c58c",
+        "revision": 2,
+        "content_digest": "sha256:17aa0a9879af76091a2bc03bd96019c185eeaaadff6fbecdfad53d255be5fa95"
+      }
+    },
+    {
+      "sequence": 11,
+      "previous_record_digest": "sha256:35ee5fc9489e8e815187c089c181a8da32d847fd92677293f2cdce7158a6e302",
+      "record_digest": "sha256:2cb6f1609a127566cadf6e277b5fb1541fa02ee0f212173f1f54c42b81f99c7d",
+      "command_id": "pr154-formal-admission-reverse-20260724",
+      "receipt_id": "certificate:4679b92fb51c1ce6d9b6f87714f1393d",
+      "receipt_digest": "sha256:6c820ae26b0a3484181296a35baa63642ed2e11e6d9156c0e3925409d850bba8",
+      "decision_digest": "sha256:783d8bde2b3e540d9ff4d276d2298d841be54bef626290ac550de08a13cdc4c6",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md",
+        "plan_id": "PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill",
+        "asset_id": "plan:legacy:0c0e5d2dfcdd5f050ad3588b7ac1248e908e6c8c6b16d43cec3635c0723188d0",
+        "revision": 2,
+        "content_digest": "sha256:42302186a0033ae6bb2f8515daa483422222be98bcd3a269d66fbfbdd7527e2e"
+      }
+    },
+    {
+      "sequence": 12,
+      "previous_record_digest": "sha256:2cb6f1609a127566cadf6e277b5fb1541fa02ee0f212173f1f54c42b81f99c7d",
+      "record_digest": "sha256:71c8968fec3ab13cf5188151dc2614b48aa77d6843f94835965fddc83aa65b37",
+      "command_id": "pr154-final-flag-l7-458-ledger-retry-20260724",
+      "receipt_id": "certificate:f2150e32d70b5c66bb3cfe71a517768b",
+      "receipt_digest": "sha256:0fb83aad2c3d2b71e561f6591bb9b74566bb5d736cf71f6a3cdb19e5da7f7edf",
+      "decision_digest": "sha256:7d06fe14846494b1195217c5908bdac7d2c89cd4be231b33ac117b0c6bc71566",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 3,
+        "content_digest": "sha256:512b59cac67cf5887aeab259977ff75217d24752a3d0da200b22ac0834c8770e"
+      }
+    },
+    {
+      "sequence": 13,
+      "previous_record_digest": "sha256:71c8968fec3ab13cf5188151dc2614b48aa77d6843f94835965fddc83aa65b37",
+      "record_digest": "sha256:81e38f59d1f04bc1d8de6b8220c92c0d5cd3792a55bf4b6d71c06cea417e0872",
+      "command_id": "pr154-final-flag-l7-458-v4-20260724",
+      "receipt_id": "certificate:3e433c03169d54c084e1b9285e9e7f18",
+      "receipt_digest": "sha256:4365bd893cd6af0170c6969b06ec051274709e17d6c400c084af364aa25e05ee",
+      "decision_digest": "sha256:1e64341c118c9803018a3f0d0c7062f123da59c6fb7ae9247226e16622b84a70",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 4,
+        "content_digest": "sha256:d15b5a8ccd90f020dd4d110fe616db74e32ca2d11a77345e45d3ad378fed2dde"
+      }
+    },
+    {
+      "sequence": 14,
+      "previous_record_digest": "sha256:81e38f59d1f04bc1d8de6b8220c92c0d5cd3792a55bf4b6d71c06cea417e0872",
+      "record_digest": "sha256:3e1eb3c5b70ff6091925d9c167e545e334d3300dbc8a2ff4f7e7af57ad75c4f9",
+      "command_id": "pr154-claude-final-l7-458-v5-20260724",
+      "receipt_id": "certificate:be32303e49fbb7482fdc656eae1f6ac9",
+      "receipt_digest": "sha256:df02982422a682338c2deb343e98adf5c2be760e03a9999db6071200e38081cb",
+      "decision_digest": "sha256:f3f38121211594c19cf5b7928c8fe49aa8c1baa1557832d93764a44957f3af90",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 5,
+        "content_digest": "sha256:7ae8f9f8b0048611745987ad1d3b1f9aa47199982b4642d579c572a478fed02d"
+      }
+    },
+    {
+      "sequence": 15,
+      "previous_record_digest": "sha256:3e1eb3c5b70ff6091925d9c167e545e334d3300dbc8a2ff4f7e7af57ad75c4f9",
+      "record_digest": "sha256:490a8e0c94ada326240c757cc42ddad196644800701abf9bc4d817cda1e8d135",
+      "command_id": "pr154-final-scope-l4-20260724",
+      "receipt_id": "certificate:9872f6cb924b98c14cd57db59bc64f37",
+      "receipt_digest": "sha256:cdb7d1db91d9679cff449eb131222780f0a8411cb133429994b5a908695d3360",
+      "decision_digest": "sha256:2f0fd718383c570fa9233357a9c9962b21c4176bf01a8abf731fdec29ff6cf4e",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-33-node-control-plane-redesign.md",
+        "plan_id": "PLAN-L4-33-node-control-plane-redesign",
+        "asset_id": "plan:legacy:ba9f2efe68bd7373538eb65009dc992ad9d06677095453f0abbff9967f53d6cd",
+        "revision": 3,
+        "content_digest": "sha256:19ecee3ce9c5e8157380aeba2656bbd19ff43c63767739c974c0b020bf26f569"
+      }
+    },
+    {
+      "sequence": 16,
+      "previous_record_digest": "sha256:490a8e0c94ada326240c757cc42ddad196644800701abf9bc4d817cda1e8d135",
+      "record_digest": "sha256:0dd082f7b5fcb4304ee9b299f22ef2ed21eeec00c0963adb6d1a9d89a0db399a",
+      "command_id": "pr154-final-scope-l5-20260724",
+      "receipt_id": "certificate:21f5b3ba619c3f50f5996f1b4ae8c673",
+      "receipt_digest": "sha256:3f9983b8676004521c45635ae8b0f6e43386c52fcbaf3ef150d99f77d7a5311f",
+      "decision_digest": "sha256:4d41c4f6718d597db4ae3407e5089cf7d84f6debde3001dc81421c4834c0e966",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-26-node-generation-activation.md",
+        "plan_id": "PLAN-L5-26-node-generation-activation",
+        "asset_id": "plan:legacy:899f8a663115a111568393119bad90941df8d487e1f69e16a914b1bbb1cb90f5",
+        "revision": 3,
+        "content_digest": "sha256:c9226d1a28230f5a5116dd63b4f7ae171675f27e5e2e8f3709d006c52aca79a5"
+      }
+    },
+    {
+      "sequence": 17,
+      "previous_record_digest": "sha256:0dd082f7b5fcb4304ee9b299f22ef2ed21eeec00c0963adb6d1a9d89a0db399a",
+      "record_digest": "sha256:1b92ad06449f381e4bd57a1e498a6727dc87f604f6d97bb0ff326e12f2b90ada",
+      "command_id": "pr154-final-scope-l6-20260724",
+      "receipt_id": "certificate:0e85d614092a7b9d60d675ed85905748",
+      "receipt_digest": "sha256:f7229883f9fd354231ae6e90e29c07a030f6934fe581fb127e709565ac9901eb",
+      "decision_digest": "sha256:324a62abc87270c5dcef149347d51fd33bfbecd77df8aec49cbaa2f8dff0847a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 3,
+        "content_digest": "sha256:ec2f104bf8e62c4cd8cefcf73146460e636bd70e153776aeab8ba7be12631f94"
+      }
+    },
+    {
+      "sequence": 18,
+      "previous_record_digest": "sha256:1b92ad06449f381e4bd57a1e498a6727dc87f604f6d97bb0ff326e12f2b90ada",
+      "record_digest": "sha256:f402c2bb8ac42be60b662abcf860ffacb429f77f5fdb779c98a0cb901c4e8dd0",
+      "command_id": "pr154-final-scope-l7-20260724",
+      "receipt_id": "certificate:1c2d8c0aa2ab424c81151f5a29089566",
+      "receipt_digest": "sha256:554ae1ee3e32792c733a137fd03253633aae8efecef8c5416f526d8f2fd39aee",
+      "decision_digest": "sha256:9a46cb97c1fed6b718f76e59ff3fffb00721afa68a019a39b629273b8e78cb19",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 6,
+        "content_digest": "sha256:3a697b6e1379db998245767fc1bf12a845b0354bb2bddc83e43cf32b62c30b73"
+      }
+    },
+    {
+      "sequence": 19,
+      "previous_record_digest": "sha256:f402c2bb8ac42be60b662abcf860ffacb429f77f5fdb779c98a0cb901c4e8dd0",
+      "record_digest": "sha256:489fc27b82ba76216db8def6613d89e4e0ca768020ff2f6eaade172f3668d4f6",
+      "command_id": "pr154-trust-confirm-l4-20260724",
+      "receipt_id": "certificate:f445ac9d4c96432cf17c37e743bdf3a2",
+      "receipt_digest": "sha256:b8d4d2d155d5484c99c0d04dbe93049a0543e5e5440656d0ae29f58a447b94ac",
+      "decision_digest": "sha256:62e6ce75f2cd849b5f14d48a35ca71dfb96d3748dc8f9f6cb89d7af791f09a12",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-33-node-control-plane-redesign.md",
+        "plan_id": "PLAN-L4-33-node-control-plane-redesign",
+        "asset_id": "plan:legacy:ba9f2efe68bd7373538eb65009dc992ad9d06677095453f0abbff9967f53d6cd",
+        "revision": 4,
+        "content_digest": "sha256:a8e4d70f4b3df7b8c5ad3e351cc81ed5c7473dc829654160961a38484159b784"
+      }
+    },
+    {
+      "sequence": 20,
+      "previous_record_digest": "sha256:489fc27b82ba76216db8def6613d89e4e0ca768020ff2f6eaade172f3668d4f6",
+      "record_digest": "sha256:9f9b25aac5073895e536b6c470b3d36fe45d23dd0ca9077ee05ace0640a8f303",
+      "command_id": "pr154-trust-confirm-l5-20260724",
+      "receipt_id": "certificate:32609bf5993fe24c17679e378e4ad67a",
+      "receipt_digest": "sha256:05e82d85c3814d52e32c162fa702d2ec6bbf13404488498ef46b1ca62d43d70e",
+      "decision_digest": "sha256:3f19c930119437bd3cfd46aac862973c5750bd1a43f8b029f7446ccb11bc8f75",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-26-node-generation-activation.md",
+        "plan_id": "PLAN-L5-26-node-generation-activation",
+        "asset_id": "plan:legacy:899f8a663115a111568393119bad90941df8d487e1f69e16a914b1bbb1cb90f5",
+        "revision": 4,
+        "content_digest": "sha256:630f9d3e550c9b06c435e8076f72c94015df052579d617a5fdb2225aa5cf4222"
+      }
+    },
+    {
+      "sequence": 21,
+      "previous_record_digest": "sha256:9f9b25aac5073895e536b6c470b3d36fe45d23dd0ca9077ee05ace0640a8f303",
+      "record_digest": "sha256:3358f8f9c8927f873e7571d30668c87f557c2187e5241df20e960f5d750d88b5",
+      "command_id": "pr154-trust-confirm-l6-20260724",
+      "receipt_id": "certificate:63b5eef65f0f93d53fcb52d990072254",
+      "receipt_digest": "sha256:0912fb40e122503b512cc6eb29197c3b2e030e9af52ebf1f658c5b0ac9008ce2",
+      "decision_digest": "sha256:a56fc2a32bdaa2b090035b394395faf7cadbcfe38ceab8f65ce00819c4364012",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 4,
+        "content_digest": "sha256:e3dc0a0356fb2e78e860cc98e3139317be7845833dc69e060d86aaf7e955ca55"
+      }
+    },
+    {
+      "sequence": 22,
+      "previous_record_digest": "sha256:3358f8f9c8927f873e7571d30668c87f557c2187e5241df20e960f5d750d88b5",
+      "record_digest": "sha256:b8c078ff28bc790df0c344a6b2850ab26a90f7e573463d4f8de70846d59bec9d",
+      "command_id": "pr154-trust-confirm-l7-20260724",
+      "receipt_id": "certificate:0bd9ea6cc3a884bba827743b75e20e50",
+      "receipt_digest": "sha256:b094b8593a70dca2d3d7eedf936e31b690bf2d03d14b5e25b85db5f2cf848a5f",
+      "decision_digest": "sha256:1fc5c77769df08276a9fc24c68df4f14f1ac50b8f45f8b98c8ab01696b53e0fa",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 7,
+        "content_digest": "sha256:22086f080730ef725fc0ecffe2b083d88dd9a0ca2a5555aecb2906c61764fb9c"
+      }
+    },
+    {
+      "sequence": 23,
+      "previous_record_digest": "sha256:b8c078ff28bc790df0c344a6b2850ab26a90f7e573463d4f8de70846d59bec9d",
+      "record_digest": "sha256:9405aa566e53653c0639abe7f8bf2b5264d08a12cbda79b9cf55f9a2fe67a443",
+      "command_id": "pr154-preimage-l6-20260724",
+      "receipt_id": "certificate:a7b672013fdb3bfc1f7ad7838163c2ef",
+      "receipt_digest": "sha256:461b5a642bff84c92e313e384ac90eeeb1e3203e352d8733523c9f62926c7432",
+      "decision_digest": "sha256:1be9de7e0728817c779b76a41ec720b44f14cca48492d704b7e47f7f1b2e4fc8",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 5,
+        "content_digest": "sha256:9f40c1710a98175e63af62a0422b2a7ffaf481a3445c4de4c00a658dc923b1b8"
+      }
+    },
+    {
+      "sequence": 24,
+      "previous_record_digest": "sha256:9405aa566e53653c0639abe7f8bf2b5264d08a12cbda79b9cf55f9a2fe67a443",
+      "record_digest": "sha256:c53039518fc830b3be0a079ed63d8a7c0f9f2794034ea1b31e3966a146f71c3b",
+      "command_id": "pr154-preimage-l7-20260724",
+      "receipt_id": "certificate:62e991b40a13183be4aa649370159a78",
+      "receipt_digest": "sha256:15b9dc327cad7ea94cb395f22d2babe611ff3c1ab7aea9a0f69eb221f23ad920",
+      "decision_digest": "sha256:0aed2cae24588a7a0d080b13d9c5ea62c8bbdde7b107b090569026fa02ed5af7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 8,
+        "content_digest": "sha256:3424d8b44faaa0a39f69a1a0993d473a8307ba24bf0bf366d234585cbe31b825"
+      }
+    },
+    {
+      "sequence": 25,
+      "previous_record_digest": "sha256:c53039518fc830b3be0a079ed63d8a7c0f9f2794034ea1b31e3966a146f71c3b",
+      "record_digest": "sha256:85e1f78ba799b37bf8cb4d0ce70a00f067ad64851cb1823d2d42c73582844caf",
+      "command_id": "pr154-final-contract-l6-20260724",
+      "receipt_id": "certificate:704cb4e3834d46320c5eadcfd7c5b93a",
+      "receipt_digest": "sha256:1bbadf3396549751f0a99275f52df69a2f373e7e5731d8b4beadb9dbf65c24c1",
+      "decision_digest": "sha256:46b213a2fabc6d319875c64f44c681f8f9bcd3ed5fc7c1c80cec24631e0158b6",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 6,
+        "content_digest": "sha256:0f6da4335c3226b87a358ded1f6dfc61c1c9726f7d325d03be501cdc8e4b10d7"
+      }
+    },
+    {
+      "sequence": 26,
+      "previous_record_digest": "sha256:85e1f78ba799b37bf8cb4d0ce70a00f067ad64851cb1823d2d42c73582844caf",
+      "record_digest": "sha256:40188db81abfd25b1c246488b6fa09fb42fbaa185955746a1c9496a4d3f25a17",
+      "command_id": "pr154-final-contract-l7-20260724",
+      "receipt_id": "certificate:9f3438cd70055519b2e2aee2e17b0fe7",
+      "receipt_digest": "sha256:209f9d2b21f4cf77d9a53f7ba2f24fc575713e69833d00146007a0b804ea3ba3",
+      "decision_digest": "sha256:76982830812c5a072f144b54d9293999c0ac3ba4764bc65e17876dae221d7c7d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 9,
+        "content_digest": "sha256:b7c768f00b87a2e5e6e3df8902da33b5870f383a3d8f2778ab9238ebddc5a0a9"
+      }
+    },
+    {
+      "sequence": 27,
+      "previous_record_digest": "sha256:40188db81abfd25b1c246488b6fa09fb42fbaa185955746a1c9496a4d3f25a17",
+      "record_digest": "sha256:ba1a565fea5533f45d58ed323d4ddc32e67f0ca888fe0498369dcbcd5d242707",
+      "command_id": "pr154-envelope-l6-20260724",
+      "receipt_id": "certificate:69a444b2e9a4bf0ec06fda867a490f56",
+      "receipt_digest": "sha256:faca927154c4146b66c5736a48a650201adb1b809c33080209b00b7fa6e77b31",
+      "decision_digest": "sha256:05ba87c8b8802a09a61005c922e4d6d476ce3276d41b15c10b5c0fae739959be",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 7,
+        "content_digest": "sha256:335c8a43932298c84314f3ed73285bbd278f48b034f9265b42fe96675174f2a7"
+      }
+    },
+    {
+      "sequence": 28,
+      "previous_record_digest": "sha256:ba1a565fea5533f45d58ed323d4ddc32e67f0ca888fe0498369dcbcd5d242707",
+      "record_digest": "sha256:7287fca9a277fd9211ec10af53d45010b87f45691323eea105c07c717f9e7acc",
+      "command_id": "pr154-envelope-l7-20260724",
+      "receipt_id": "certificate:3f3dad73d88174e072e8bf6b3302e6d8",
+      "receipt_digest": "sha256:0ab8e5400347ebeb1031dd4a7fe6ff83ae057789679458e30db7614bab55db5e",
+      "decision_digest": "sha256:3e15642555d691dfbd02585438689f755c8a7bf37a1c3853d6e6e09c928c829d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 10,
+        "content_digest": "sha256:45fae226d905143a2aa77e3ed7db52ed9856f978bd6cca38632525598fa5b7f7"
+      }
+    },
+    {
+      "sequence": 29,
+      "previous_record_digest": "sha256:7287fca9a277fd9211ec10af53d45010b87f45691323eea105c07c717f9e7acc",
+      "record_digest": "sha256:40ef734ec00658beec47d760cdf62d85ed796fab1a3d14d2b9f79b5cadb93147",
+      "command_id": "pr154-payload-l6-20260724",
+      "receipt_id": "certificate:096023d30ed3006a1252f0bc630432df",
+      "receipt_digest": "sha256:99ee1780275c5cb2ecdfae096807901a05ad8ed537ab84384c87d87d3ee8154e",
+      "decision_digest": "sha256:2a7824743bb77c36d8c891f82f1d5b10d3481fe6ce4fe9dfb7a7fab959fa048a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 8,
+        "content_digest": "sha256:f3a8e3c31ea40f85fd79b6556c489b7254ff0d550d865a7e394ce3413c0a6b6f"
+      }
+    },
+    {
+      "sequence": 30,
+      "previous_record_digest": "sha256:40ef734ec00658beec47d760cdf62d85ed796fab1a3d14d2b9f79b5cadb93147",
+      "record_digest": "sha256:fc3be9ad45d7b94fe8af5359c56dd02527336efbe5857557483afee1d7e4df4a",
+      "command_id": "pr154-payload-l7-20260724",
+      "receipt_id": "certificate:951b8ec232933dcd0050b20829521f11",
+      "receipt_digest": "sha256:822048f4eeb72a52881ef2e7da42a0eac249bbb0bd942f3906a328bc4903ed9d",
+      "decision_digest": "sha256:3856560c7ed38d9820f1befbd43b2ba3d4621fd3a49d2289b3c0806c7f93ea0d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 11,
+        "content_digest": "sha256:479f653345cb76f6ed9f0f2c7a63dfe7074d52694706bfa8dfa589c6c9a185d8"
+      }
+    },
+    {
+      "sequence": 31,
+      "previous_record_digest": "sha256:fc3be9ad45d7b94fe8af5359c56dd02527336efbe5857557483afee1d7e4df4a",
+      "record_digest": "sha256:e99ef5f2305871ee7ccf39459ee4b94d99783f3289532ed3eb56c5e9363d1b6e",
+      "command_id": "pr154-semantic-l6-20260724",
+      "receipt_id": "certificate:d380a8f6e33eb74452782e40df8a798e",
+      "receipt_digest": "sha256:3c2fe7b1d9b7e7346301845fc18bed37d41b03b5c02e060d55294c26ecc31aa1",
+      "decision_digest": "sha256:2d9d8ba9ee76a291b2fceb54a4bfd1cfd4f64d95093bc41b3d3f13b94695bf0a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 9,
+        "content_digest": "sha256:a195ae17a28cc7d15980c111c1d346713990b13477a571e5e8647913e8a8d910"
+      }
+    },
+    {
+      "sequence": 32,
+      "previous_record_digest": "sha256:e99ef5f2305871ee7ccf39459ee4b94d99783f3289532ed3eb56c5e9363d1b6e",
+      "record_digest": "sha256:4746e42a8d32f1da6b9c7e17f8bf40ab2a608cd21797b20264502365e0baa611",
+      "command_id": "pr154-semantic-l7-20260724",
+      "receipt_id": "certificate:566d94a36abe39c581d5939d4c527f7c",
+      "receipt_digest": "sha256:164fc82e2c176c483d11418855e5730a273b5ab0ff07a7e36275302f520f67cf",
+      "decision_digest": "sha256:38b4999e468a29741af361a02c057d0058139299bfacade68619af769fd5ecb0",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 12,
+        "content_digest": "sha256:4136b96aca426b7a975a6ed9a1075ee7d086f9b8f8fb4050af97b5fda83873e4"
+      }
+    },
+    {
+      "sequence": 33,
+      "previous_record_digest": "sha256:4746e42a8d32f1da6b9c7e17f8bf40ab2a608cd21797b20264502365e0baa611",
+      "record_digest": "sha256:42091fe1278bc3776ffc5e69fb147673133fa3c8f90da3aa9b87be947829e535",
+      "command_id": "pr154-registry-l6-20260724",
+      "receipt_id": "certificate:5b76f5ce46b163c0b753bc26777b27c7",
+      "receipt_digest": "sha256:b0f30560bcbc8753628428c1bf0f463574fdab7a4dda7823a0ac2a42f3938a2b",
+      "decision_digest": "sha256:f87b6296f6ee5b87195377f6e040b6de2a7ced655169346b68a3604342d6043e",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 10,
+        "content_digest": "sha256:aeab42e93a8e37b6ddd7792a119e8455786a712669988ee4f3dbef8ea09ba0bd"
+      }
+    },
+    {
+      "sequence": 34,
+      "previous_record_digest": "sha256:42091fe1278bc3776ffc5e69fb147673133fa3c8f90da3aa9b87be947829e535",
+      "record_digest": "sha256:ea40bcef24ef2f3593312a66713199608fa390ea704a96f8ef73cb3f91b37867",
+      "command_id": "pr154-registry-l7-20260724",
+      "receipt_id": "certificate:cc16e0173602f19a4cc26a3eeca07546",
+      "receipt_digest": "sha256:a97b55ddd6c31091865a24612533f356cc6a65ca8d53c651a68f1affb045faf1",
+      "decision_digest": "sha256:e35405cd66f69ea3a1efd9b2821d6214fd2b629c301399afb48f2b8ba9c2bc4f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 13,
+        "content_digest": "sha256:6cb30c66f4e5160cd4505f46866320f57ee23500097702e232ec0322b016ca71"
+      }
+    },
+    {
+      "sequence": 35,
+      "previous_record_digest": "sha256:ea40bcef24ef2f3593312a66713199608fa390ea704a96f8ef73cb3f91b37867",
+      "record_digest": "sha256:973672369a8f4ef6daa31fc743b38aa3a393e2d62dfe6f1f56655525541b61ce",
+      "command_id": "pr154-policy-l6-20260724",
+      "receipt_id": "certificate:9518f6875e59edbff399e5308bc115ce",
+      "receipt_digest": "sha256:80c59a883ac101903efe4f44112665a05885119c0df2bc0df2f25ded98efd5e0",
+      "decision_digest": "sha256:b012eafcc2802419154c2d8b1bfe03c94d11d45f9d3756ad35d79571dda839ad",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 11,
+        "content_digest": "sha256:e0b0785510a027270c7382143be6b89b121358854bd7f4d95d67e44c04f18d58"
+      }
+    },
+    {
+      "sequence": 36,
+      "previous_record_digest": "sha256:973672369a8f4ef6daa31fc743b38aa3a393e2d62dfe6f1f56655525541b61ce",
+      "record_digest": "sha256:22b61a54883fa55f487d0ac20e1143ed0ae299feda6751979ec9a5f5dd7a9843",
+      "command_id": "pr154-policy-l7-20260724",
+      "receipt_id": "certificate:81f693d72d853b7cf8705a75d6ce23f4",
+      "receipt_digest": "sha256:9878746d28f33bc78cc1e45091d8e0ae055c9c05712aa2be76ace9b882f8d49a",
+      "decision_digest": "sha256:e9ae1198f3324f263f934d9946972909c6ef4b6725c0b9904c8fa811517d9dd7",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 14,
+        "content_digest": "sha256:3aee3f8a6df1a1187842d8876352e5f3eaeb6797607056be03446e6a077ad0fb"
+      }
+    },
+    {
+      "sequence": 37,
+      "previous_record_digest": "sha256:22b61a54883fa55f487d0ac20e1143ed0ae299feda6751979ec9a5f5dd7a9843",
+      "record_digest": "sha256:8cd731cee9c08ba86117e3eff023579ec611a026f06f370ca7a86c76e8ff8a49",
+      "command_id": "pr154-cas-l6-20260724",
+      "receipt_id": "certificate:61eeeaf72a980897db06ed8b8e448fb9",
+      "receipt_digest": "sha256:7eda78e2c3c1313cc440564bae9e67d4ec1d9c10e3816c4cdf9a977c9ef99925",
+      "decision_digest": "sha256:62b10b1a836f871de499102e59116d8943e782aaf07afb0f30a8796780e415a1",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 12,
+        "content_digest": "sha256:ea466bd79f0e7013a3b2f06106ba5b924c7c3d0ead0a85948c3bb9c6619a7bd8"
+      }
+    },
+    {
+      "sequence": 38,
+      "previous_record_digest": "sha256:8cd731cee9c08ba86117e3eff023579ec611a026f06f370ca7a86c76e8ff8a49",
+      "record_digest": "sha256:f80d0bd39df0d9d5d14d023b9d3a8990ba3646976a848a0c8e2cd05cdcba4321",
+      "command_id": "pr154-cas-l7-20260724",
+      "receipt_id": "certificate:c839057c23b2aaad4b5226c88691fc82",
+      "receipt_digest": "sha256:0f3f4a399580e483faa04b5d1f9237f13f6e41d806aa93c5d895cac23c92af65",
+      "decision_digest": "sha256:bb61b122a4becff92d7f4098381c4b761bfbb8b0a5252a79b8b4649fbcc1e13b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 15,
+        "content_digest": "sha256:b185dc7f56871a8c86a5585bb0d6af2828570eaabbd36dc472055516028e1a8f"
+      }
+    },
+    {
+      "sequence": 39,
+      "previous_record_digest": "sha256:f80d0bd39df0d9d5d14d023b9d3a8990ba3646976a848a0c8e2cd05cdcba4321",
+      "record_digest": "sha256:1245ca1e865fde90169c7d69da6e39324f41ee034a5e20cbb84da0ed9fdf44d1",
+      "command_id": "pr154-scope-l6-20260724",
+      "receipt_id": "certificate:f76978724ba049eb76065c6c765e293b",
+      "receipt_digest": "sha256:0a9fba746a4f1b6e776485cc388d0917b512937c3bd1667d5ab9695fefb5b3eb",
+      "decision_digest": "sha256:8619238257506cd476a4c7f97c42698b4e6bff1f39eb280395052972f0b7e529",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 13,
+        "content_digest": "sha256:d0696c605baa499122c4cabbb81b2d93f99b9cf3e36f480975ed8050017c30d6"
+      }
+    },
+    {
+      "sequence": 40,
+      "previous_record_digest": "sha256:1245ca1e865fde90169c7d69da6e39324f41ee034a5e20cbb84da0ed9fdf44d1",
+      "record_digest": "sha256:8a60128881699a02bf28590cc6e9c1ccbcda339a37d06cf30507a9e96834c52f",
+      "command_id": "pr154-scope-l7-20260724",
+      "receipt_id": "certificate:69e8de0e68c6acf05669b524c84b58c2",
+      "receipt_digest": "sha256:5fd72e8df710064da873b621f1ce40a86c4bdb39b59867d4bb2ca578e27aeced",
+      "decision_digest": "sha256:61b4dd780b82fc670b6efc732ab16cdede0543c6d0b647323efb70c3f0358253",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 16,
+        "content_digest": "sha256:056e51d3f5cacf9b8eb95024475dd79cee8836172c1ada9b1e59926c65335d7c"
+      }
+    },
+    {
+      "sequence": 41,
+      "previous_record_digest": "sha256:8a60128881699a02bf28590cc6e9c1ccbcda339a37d06cf30507a9e96834c52f",
+      "record_digest": "sha256:aca0ac5ee644ade6d403e803a69f13a1dd1d2b4b6595f760520099750d70e4c5",
+      "command_id": "pr154-manifest-l6-20260724",
+      "receipt_id": "certificate:85ad2501703a4408f3f208b7918b36e8",
+      "receipt_digest": "sha256:87bf33598f0ce23f76075e5c67215139163edab0ac47f604eac57670e79cad90",
+      "decision_digest": "sha256:2a4f53a6ceecb6cb0873d7267e469fbdf20841e7521860f9a462ed72f7cbecdb",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 14,
+        "content_digest": "sha256:33b45e5da1fecd31c69974663466fb20e6ebe121456b7b494b9c634be4afe8d2"
+      }
+    },
+    {
+      "sequence": 42,
+      "previous_record_digest": "sha256:aca0ac5ee644ade6d403e803a69f13a1dd1d2b4b6595f760520099750d70e4c5",
+      "record_digest": "sha256:083c630447a9428b729362e25196cff76b8487d351d04afc743aa3a4a024b02a",
+      "command_id": "pr154-manifest-l7-20260724",
+      "receipt_id": "certificate:7422044713d658ca8f91608cdb0c4586",
+      "receipt_digest": "sha256:8fac657546deec6f4b9b837907344ffe9c2f33c01269a8d5872f08717ea32238",
+      "decision_digest": "sha256:df5c646a91956019384eb01861c4d05558afa055bf47b8aa66e0f212d0be9de2",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 17,
+        "content_digest": "sha256:dccb77134d047db32db8aa7dcd7646a2bcb4d5504c4ec4f60c69fc267d135a5c"
+      }
+    },
+    {
+      "sequence": 43,
+      "previous_record_digest": "sha256:083c630447a9428b729362e25196cff76b8487d351d04afc743aa3a4a024b02a",
+      "record_digest": "sha256:4bd2b45373264adcda9b1badea247bc72b9a8535c815e286ed4d6b3ad896fc07",
+      "command_id": "pr154-manifest-artifact-l6-20260724",
+      "receipt_id": "certificate:0547ba713e545bd37c83c1e734f677c6",
+      "receipt_digest": "sha256:9997c4527d6c76a2fa203da1d81d39fb72d1f6675f219147bcd3b6772354b312",
+      "decision_digest": "sha256:680c219caa307622cc66969e2c33545252b488489d6367da0c6c8dd23e869e65",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 15,
+        "content_digest": "sha256:df609519c2e803940e28ff55e5998bb6c9a42cffab38ca8e941731c507bb1dc9"
+      }
+    },
+    {
+      "sequence": 44,
+      "previous_record_digest": "sha256:4bd2b45373264adcda9b1badea247bc72b9a8535c815e286ed4d6b3ad896fc07",
+      "record_digest": "sha256:1f1cf14c7011ec145f837d5a37fff0db3c206f096b3f28a32ec131cbf45ff51b",
+      "command_id": "pr154-manifest-artifact-l7-20260724",
+      "receipt_id": "certificate:39cd09cd7fb0d2a50322fde4c2e75f2d",
+      "receipt_digest": "sha256:e752117dabb20556037cfcef05b59e8a8a16721733a9bba0a7d7b608f6f7ab48",
+      "decision_digest": "sha256:f3573be012be3eb8378e80af3e816f9f1a6ffa96148c38d7a928d407cbcc6725",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 18,
+        "content_digest": "sha256:c88c34a60ac7f7c815be11ed0150423598406367924ac9a1e732fa8da756976a"
+      }
+    },
+    {
+      "sequence": 45,
+      "previous_record_digest": "sha256:1f1cf14c7011ec145f837d5a37fff0db3c206f096b3f28a32ec131cbf45ff51b",
+      "record_digest": "sha256:d5f5aa2ea6cdc75429cdd7d039c05d9c151c31d6c26c453914608e2f2f86471d",
+      "command_id": "pr154-manifest-parser-l6-20260724",
+      "receipt_id": "certificate:1789a2fdd25f05f3dff2f1cb98e50db1",
+      "receipt_digest": "sha256:b04f180701a62c3ae0e5a47c7fb3c199bc9c6b288229512bfc8591c4ae9e1b41",
+      "decision_digest": "sha256:781bd72b053891322111ac5e03b9517e72d109a3fd70d1720cf6184f37a4505a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 16,
+        "content_digest": "sha256:2b974c45511802db561ee144cc3b6637eaa40752eed15dfbb6be182d6aa0e3cb"
+      }
+    },
+    {
+      "sequence": 46,
+      "previous_record_digest": "sha256:d5f5aa2ea6cdc75429cdd7d039c05d9c151c31d6c26c453914608e2f2f86471d",
+      "record_digest": "sha256:73244bc83ad4a8f697eb995687f0fb75f75c24b1fe483624ccf2dd8a08f7b8db",
+      "command_id": "pr154-manifest-parser-l7-20260724",
+      "receipt_id": "certificate:963a83a6412bce968b3141d798349eeb",
+      "receipt_digest": "sha256:3d74d8288034f235c6c3376cfa996b7e36546ca0b0e4a2d1eaf94e29781c0006",
+      "decision_digest": "sha256:6fc3f649593778eeead10706556a5954576d056f4b546efe2422d7695ea11e3b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 19,
+        "content_digest": "sha256:58bdbb32b1a286a6752ed04c45c9f0eb8ca667a599478cc2282526660bfc446a"
+      }
+    },
+    {
+      "sequence": 47,
+      "previous_record_digest": "sha256:73244bc83ad4a8f697eb995687f0fb75f75c24b1fe483624ccf2dd8a08f7b8db",
+      "record_digest": "sha256:6644e4ffec1e3e3856902ee1b3633ceb9472c045559aad80301fdb8ad21478a3",
+      "command_id": "pr154-manifest-digest-l6-20260724",
+      "receipt_id": "certificate:849da9361606a34823bba44078b72f8e",
+      "receipt_digest": "sha256:5545f9faa745a46c80ba05d677588ea3cbfe950e72ec391db1f6b0c5533ffc7e",
+      "decision_digest": "sha256:149f3cdf0fc324baa7062c157683eef5b2b072caa3961ea1db490e2c72c9c07b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 17,
+        "content_digest": "sha256:e4f15e6d5d90b9e1c1dc1e069a5587c616fe7fbbc5dc414c40599a548f149bc3"
+      }
+    },
+    {
+      "sequence": 48,
+      "previous_record_digest": "sha256:6644e4ffec1e3e3856902ee1b3633ceb9472c045559aad80301fdb8ad21478a3",
+      "record_digest": "sha256:2eb6815bdd0d37a217de5c0a43799dc05ed0fbc4b1dd653827492d30eccb4ae3",
+      "command_id": "pr154-manifest-digest-l7-20260724",
+      "receipt_id": "certificate:d2b0ff809633499570e839c1e6af111a",
+      "receipt_digest": "sha256:8f920d6cb040d63ba52cf3f908634b09f8e1bb8e05f690cb1af7374efb1a761c",
+      "decision_digest": "sha256:02361dcf3737e5dec625528dd000438c322893c43391dc228d3bdbc2bf48812a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 20,
+        "content_digest": "sha256:e09a193047f961fdf0da75085e042e1df4fd40fe0fe8b56fb2456454945f1781"
+      }
+    },
+    {
+      "sequence": 49,
+      "previous_record_digest": "sha256:2eb6815bdd0d37a217de5c0a43799dc05ed0fbc4b1dd653827492d30eccb4ae3",
+      "record_digest": "sha256:ea284717ba59425a7d46087c660814e9a166e170ac30210f28f58e1f16cc3cef",
+      "command_id": "pr154-authorship-l6-20260724",
+      "receipt_id": "certificate:52ddac71ee94bc72d51c079b8383b81b",
+      "receipt_digest": "sha256:eec1457293b0029f9bc3e6bc266fce86a35c8775b51776aa8cfcf792d62d5ff3",
+      "decision_digest": "sha256:2bbeda2b622e8daca32aa7334841e037b2cb8c3dbe227ecb1d8541aa341fb26b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 18,
+        "content_digest": "sha256:fa3bf09dfd7bed7eb8b119017dcfbd8359e8b175caf7789b4b3bbdb0dbeee7e3"
+      }
+    },
+    {
+      "sequence": 50,
+      "previous_record_digest": "sha256:ea284717ba59425a7d46087c660814e9a166e170ac30210f28f58e1f16cc3cef",
+      "record_digest": "sha256:caa7152e40e400f8a0058b39a7df6103cce001c091e7f16c7b38bc954a6feb85",
+      "command_id": "pr154-authorship-l7-20260724",
+      "receipt_id": "certificate:c67803ef1eafa07e1c59b9a07d1c75d5",
+      "receipt_digest": "sha256:3b0c947b0b02b172c34bb73f35cec6a295e0d285ec502d9f5c88f292a564107c",
+      "decision_digest": "sha256:ab576a473231a5b4372196abef71d0302da9f49ff94cef3134f8a962eb8d8d9a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 21,
+        "content_digest": "sha256:e79d589572fd421f5a1ec555dc291630c5a53c3dc8953afcd2ffc985dfcceb96"
+      }
+    },
+    {
+      "sequence": 51,
+      "previous_record_digest": "sha256:caa7152e40e400f8a0058b39a7df6103cce001c091e7f16c7b38bc954a6feb85",
+      "record_digest": "sha256:1c749660c4775b3fbfd5643213ca0cf21b1d8e756a72db0c11d9b5c958e35c3c",
+      "command_id": "pr154-identity-l6-20260724",
+      "receipt_id": "certificate:5ea25a7a4b246339d5925c34161c12f4",
+      "receipt_digest": "sha256:6e4b749d81b78c712d9fa99fa585451eba6cb5127c78c375d6e092aef0006edf",
+      "decision_digest": "sha256:98e21339c869b063055d05d0876281bd01737ef1028b678530b22edf90d763f0",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 19,
+        "content_digest": "sha256:93accab9c02fe16ebc516b58b4c096fcea761b5dace36def2fa72c0427250cdf"
+      }
+    },
+    {
+      "sequence": 52,
+      "previous_record_digest": "sha256:1c749660c4775b3fbfd5643213ca0cf21b1d8e756a72db0c11d9b5c958e35c3c",
+      "record_digest": "sha256:8b40b89b8ec821604c9e3db2d51c9224c41282a48386854ff5e2a5601cf6a46a",
+      "command_id": "pr154-identity-l7-20260724",
+      "receipt_id": "certificate:d212482c4affe3ae11aeb78d74f4aabb",
+      "receipt_digest": "sha256:7e9bd786ca3f4308dfd58d8f2434b112cf5424e5a0540d72d3d9230499e03c44",
+      "decision_digest": "sha256:9ad52890dc06a834dcf36eaacfd2f9aeadc25c3226f6c425fc9bb8956f6f143d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 22,
+        "content_digest": "sha256:04fa3a444ecfddf82dcba1eb3087bd507df31ed98a09686c1c2b6ad6a1b040ea"
+      }
+    },
+    {
+      "sequence": 53,
+      "previous_record_digest": "sha256:8b40b89b8ec821604c9e3db2d51c9224c41282a48386854ff5e2a5601cf6a46a",
+      "record_digest": "sha256:d59815a59e63aa5e457e492df3a994215506af674f3d34857f13038ca3dd5c36",
+      "command_id": "pr154-work-event-l6-20260724",
+      "receipt_id": "certificate:59af88b57e296b51df3c07756922deaa",
+      "receipt_digest": "sha256:28249d81009745dccbf47c9e0b4dfecb28d6834410c97ca8b84c06360397a607",
+      "decision_digest": "sha256:76b566d67cd93a9fba50be36df308269903aa4339fb5d745e24e543e9da4816a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 20,
+        "content_digest": "sha256:81627a7831267bd89c5394281efc87ea4e56e4fb386e60178943e20a646ec5bb"
+      }
+    },
+    {
+      "sequence": 54,
+      "previous_record_digest": "sha256:d59815a59e63aa5e457e492df3a994215506af674f3d34857f13038ca3dd5c36",
+      "record_digest": "sha256:55483d804d031030d3c7f784b4ba0c343fc615cda02ae26e20b43806834a8f22",
+      "command_id": "pr154-work-event-l7-20260724",
+      "receipt_id": "certificate:e40173390e8b2f4e48174ad52997b5ad",
+      "receipt_digest": "sha256:83d1dba0752160f9e64d99f6ab6731de6063deb5f3da2f176c824f827a8c41bb",
+      "decision_digest": "sha256:6846a4b4826766b227aee615e50af5b1271a784548ffce33bc674b378daf890e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 23,
+        "content_digest": "sha256:bf72f81faad757647310748c12ede828260218640f67c65fffafc7fd091a99f2"
+      }
+    },
+    {
+      "sequence": 55,
+      "previous_record_digest": "sha256:55483d804d031030d3c7f784b4ba0c343fc615cda02ae26e20b43806834a8f22",
+      "record_digest": "sha256:480061497718b5cdbfc7e2d33d698926c370b981347bf3b51e4b3e43f6c6308b",
+      "command_id": "pr154-session-path-l6-20260724",
+      "receipt_id": "certificate:87d89e0fa229bf81a90c885ebf60f3db",
+      "receipt_digest": "sha256:917afdd66dd1b9b2fe5f0e1796549ee10963cd6efefe0125185631164c79429f",
+      "decision_digest": "sha256:35a405717784aac533deafe829995c8eeff6f95a43a0995b412ee8ee0ed44578",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 21,
+        "content_digest": "sha256:0f1fa79f86a0a3062359ceea8daf0077b80eea72df9ff284f7eaa7001e641665"
+      }
+    },
+    {
+      "sequence": 56,
+      "previous_record_digest": "sha256:480061497718b5cdbfc7e2d33d698926c370b981347bf3b51e4b3e43f6c6308b",
+      "record_digest": "sha256:9bc59acdc7aa67262e89c816bb1fd21829d9bd0bac3a38df431fc5ec0dd9c0e2",
+      "command_id": "pr154-session-path-l7-20260724",
+      "receipt_id": "certificate:dea729c799ca15e4a949f9f880b94b21",
+      "receipt_digest": "sha256:790b0caab478d29f2ada80d9d17b1731fcddfbfb45598b74d0405f7aef4f36ce",
+      "decision_digest": "sha256:ae7abc16bb279b64c14f1ad734dde26cc138f16f723e58b1dd2636f3b39a642c",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 24,
+        "content_digest": "sha256:5275df4bfa8c808112f9abf7c493513b07987bcc1ef8a639209bac360a227839"
+      }
+    },
+    {
+      "sequence": 57,
+      "previous_record_digest": "sha256:9bc59acdc7aa67262e89c816bb1fd21829d9bd0bac3a38df431fc5ec0dd9c0e2",
+      "record_digest": "sha256:28fc3eabec7b1f8e4d5315a82cbe359ec36c117ec93ef3b46dc7a5ef251fb8c3",
+      "command_id": "pr154-session-receipt-l6-20260724",
+      "receipt_id": "certificate:712c3003c6c939c16097ab26d93d1bb1",
+      "receipt_digest": "sha256:1886b56b1ec511b1ac2253c8b0656a70db5309e5f98b4011638952f20475cf43",
+      "decision_digest": "sha256:274e636564a4e90b13da2edef804be199774030ec34bb2eb1aaa5cb9b0883e5f",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 22,
+        "content_digest": "sha256:b2a43f342c238f4787fc91ebda860f8ca3e2bada2f52ece3ca851d77f1e404cf"
+      }
+    },
+    {
+      "sequence": 58,
+      "previous_record_digest": "sha256:28fc3eabec7b1f8e4d5315a82cbe359ec36c117ec93ef3b46dc7a5ef251fb8c3",
+      "record_digest": "sha256:6c3e1695c4a96cb42ad6e9d124e2a59abb7d6e44487af6a0dadfb9958e41f0ee",
+      "command_id": "pr154-session-receipt-l7-20260724",
+      "receipt_id": "certificate:b3e75844f76383e6247a4e486b558041",
+      "receipt_digest": "sha256:ef21abf75592f8ab5e1812e997e3a022024a6be84eb5ec46f00cd023cc3ec30f",
+      "decision_digest": "sha256:79ae70f3f19f48fae02ae105e105c89fa4a04f4b8354120349fa4b14550a423a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 25,
+        "content_digest": "sha256:00849b6d7401e0cd9372c00b8903324d414e20517dd5f9446a011ed05aa3b985"
+      }
+    },
+    {
+      "sequence": 59,
+      "previous_record_digest": "sha256:6c3e1695c4a96cb42ad6e9d124e2a59abb7d6e44487af6a0dadfb9958e41f0ee",
+      "record_digest": "sha256:1ff254fa016272da96da86e0da7fdd9571e53f68e8cf8b22ff41bfb36a0101dd",
+      "command_id": "pr154-managed-session-l6-20260724",
+      "receipt_id": "certificate:3eaef53282dff4339df7b9e042c63ceb",
+      "receipt_digest": "sha256:a65422867f5cd185a9ace3a1e1a1f7bb8e07b736986e7d033cad5124e687dd41",
+      "decision_digest": "sha256:74bbb0616712b65006470fc6b7d324e80c608c832fb59f153e265a46ae4e7a9a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 23,
+        "content_digest": "sha256:f1647064fbe6e224ae06e0b8a0d70a7458486baa49d10db734b42686ed18ce31"
+      }
+    },
+    {
+      "sequence": 60,
+      "previous_record_digest": "sha256:1ff254fa016272da96da86e0da7fdd9571e53f68e8cf8b22ff41bfb36a0101dd",
+      "record_digest": "sha256:886289c4fbeb01c340362b04b4a28043f102d6fed1fcbfc06b0181d61385bbb9",
+      "command_id": "pr154-managed-session-l7-20260724",
+      "receipt_id": "certificate:3023b8dbc600efd5c765dec285b379e3",
+      "receipt_digest": "sha256:f34bee1b46a0c854dbb491226029b1291313136dd2f6f719a8a9aaf461518862",
+      "decision_digest": "sha256:fe9595d8a56fb440215c3b745efe89b13a68241f40bccf65628e0afa9ec6a54d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 26,
+        "content_digest": "sha256:2687c8ffff8d6140bd37f50b808d2b613b136e697d67148cd790dae7e42b90b2"
+      }
+    },
+    {
+      "sequence": 61,
+      "previous_record_digest": "sha256:886289c4fbeb01c340362b04b4a28043f102d6fed1fcbfc06b0181d61385bbb9",
+      "record_digest": "sha256:344fb54d78a013068d53a966c4fbb491fc38d773ac69380ba391b0f40fb430ac",
+      "command_id": "pr154-managed-trust-l6-20260724",
+      "receipt_id": "certificate:192a0830dd855cd2bb96e10186ca373e",
+      "receipt_digest": "sha256:551cbea11f3418dd754d69da18cc33835b674a0596edc10a9342f65f73a1c244",
+      "decision_digest": "sha256:c78fa3bf1856eaa4c9544e66db657792daeb03872b9984791874c0a12ddd2a31",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 24,
+        "content_digest": "sha256:e50ecc874d8050e005cbb0df32e27a9e61718ee37736f875b60d943f823557d4"
+      }
+    },
+    {
+      "sequence": 62,
+      "previous_record_digest": "sha256:344fb54d78a013068d53a966c4fbb491fc38d773ac69380ba391b0f40fb430ac",
+      "record_digest": "sha256:0e097fc7a5942007e35571dfdd13162db25ce4b0c5332d0a6a98e8429e8c8ce3",
+      "command_id": "pr154-managed-trust-l7-20260724",
+      "receipt_id": "certificate:94ca75faf2c4199dfe7da4884b579627",
+      "receipt_digest": "sha256:42a9bb454ae9044eaa6ac10927f573ee613183724a3ba6d0d52cc9fb191a14e5",
+      "decision_digest": "sha256:2ef160b0d93aed2ac52f19922e2dd18ac346d8888a8f0182f470edd25fedb815",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 27,
+        "content_digest": "sha256:a5805bf36e6f314cb9c23e3455b78f0ac6cf99ced3fae011e517c2313f22699f"
+      }
+    },
+    {
+      "sequence": 63,
+      "previous_record_digest": "sha256:0e097fc7a5942007e35571dfdd13162db25ce4b0c5332d0a6a98e8429e8c8ce3",
+      "record_digest": "sha256:9519b0a428755a5a07628fdbee347a676554c0c0a6c9801e3c03947af4ab959c",
+      "command_id": "pr154-trust-snapshot-l6-20260724",
+      "receipt_id": "certificate:44525ac41995c6eefdc9b7be698aebc5",
+      "receipt_digest": "sha256:1808f4fd79c1d8924256dacf31eb78e8e2e430fea2880300866b8e9233f1811e",
+      "decision_digest": "sha256:c16e488cb9c227755c5f4258888b874e12c52f53e773d07d223a8fb7c138b494",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 25,
+        "content_digest": "sha256:7d9818268bf77e05a74fc8077bddb31d2c4de2db593705d11d0b8ce7cd6d010b"
+      }
+    },
+    {
+      "sequence": 64,
+      "previous_record_digest": "sha256:9519b0a428755a5a07628fdbee347a676554c0c0a6c9801e3c03947af4ab959c",
+      "record_digest": "sha256:b795be83e8c61fefc60a54e66de11ffe3cc176644c280d36e09ca4649bb1fab2",
+      "command_id": "pr154-trust-snapshot-l7-20260724",
+      "receipt_id": "certificate:fccb05eb7a85c17ca48df2421b6aa851",
+      "receipt_digest": "sha256:ff3906497c52b53998c088c7871bf2b7b5dc96bc489e6ea9bacfdbdc1b976a80",
+      "decision_digest": "sha256:d8a28dff3d1933f7de8b25dee2dfacd922b972c1b7015c72990f2501e06ff408",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 28,
+        "content_digest": "sha256:c0b5fdf05b4ac8c36f237b9402b05987f97e21010fa1a08f208551b256f6a3fe"
+      }
+    },
+    {
+      "sequence": 65,
+      "previous_record_digest": "sha256:b795be83e8c61fefc60a54e66de11ffe3cc176644c280d36e09ca4649bb1fab2",
+      "record_digest": "sha256:6d5fabec576493a554d9fa7b3d0b09c23d4a36f1bab39b8bebb372b3067407f8",
+      "command_id": "pr154-trust-v1-l6-20260724",
+      "receipt_id": "certificate:aaf83ebbe866c0cf48dc2fdb0001ff5d",
+      "receipt_digest": "sha256:d2c778f90653b34f28b1d658672cb88d387545f1289c1512bbfe817fbb71fbf0",
+      "decision_digest": "sha256:ce53793cff23528de35402956b085df9cb972abb1fc97105756cdc862c2530e3",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 26,
+        "content_digest": "sha256:47c49cad085dc1902ab797acd396288f43d1e000991f786788b0001ee1709996"
+      }
+    },
+    {
+      "sequence": 66,
+      "previous_record_digest": "sha256:6d5fabec576493a554d9fa7b3d0b09c23d4a36f1bab39b8bebb372b3067407f8",
+      "record_digest": "sha256:d5fd7de2fba78076234b0c8bf7bb4e82996f886b7d0dad36dbd65031526591d4",
+      "command_id": "pr154-trust-v1-l7-20260724",
+      "receipt_id": "certificate:6b78f662093c9906c3fa6ad58683e2c5",
+      "receipt_digest": "sha256:6bfc23dc1eafaf4acadc13475b164a271107dfaaf501ab3a3afb62d2d0f7063a",
+      "decision_digest": "sha256:f1d012dc992218a25579d12a8b5314a706a54f2ab3e5dd2f36e65fbd5600dca5",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 29,
+        "content_digest": "sha256:5fa3cf19e1242f4a43b67074242e9977961f06ff4323aeddb91871ec35307a8c"
+      }
+    },
+    {
+      "sequence": 67,
+      "previous_record_digest": "sha256:d5fd7de2fba78076234b0c8bf7bb4e82996f886b7d0dad36dbd65031526591d4",
+      "record_digest": "sha256:3fa46f4b74da27df70549b5ad2cca613e57fdff5bbb4cb68f8f31ef1ebc72b89",
+      "command_id": "pr154-trust-boundary-l6-20260724",
+      "receipt_id": "certificate:f7efb74757a4f49afa8b883d930cedd5",
+      "receipt_digest": "sha256:65b25f470553027bc796b38e89be60439b00f8de9518afc7eeeea336df23579a",
+      "decision_digest": "sha256:0319964350e137078c4526993df2313d608b02ba677372227484793269a5de32",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-93-node-bootstrap-contract.md",
+        "plan_id": "PLAN-L6-93-node-bootstrap-contract",
+        "asset_id": "plan:legacy:80a50dd958ae451ea13030276eb8c145a8fdc3104ec145560457f97a07594881",
+        "revision": 27,
+        "content_digest": "sha256:3c8030fa3d772ca8b7dd6f45d0c5076a6d04443a82a5c4230560490d3a09f1b7"
+      }
+    },
+    {
+      "sequence": 68,
+      "previous_record_digest": "sha256:3fa46f4b74da27df70549b5ad2cca613e57fdff5bbb4cb68f8f31ef1ebc72b89",
+      "record_digest": "sha256:10f7e322f869109dfbf8ed2565fba8062528cec2441cd1897c302e8f82ae8523",
+      "command_id": "pr154-trust-boundary-l7-20260724",
+      "receipt_id": "certificate:993c1842febd5f3ab1992ff9cb74d314",
+      "receipt_digest": "sha256:bf649102002d481a1b844b0fd3ec18e6e1de0c9aea48d0b22418ecacc9b0dcb7",
+      "decision_digest": "sha256:bf79a7255a3b454396165b520a7c8340109a70f571cdfec8e0a4ec99e87438ca",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        "plan_id": "PLAN-L7-458-node-self-hosted-bun-ban-foundation",
+        "asset_id": "plan:legacy:9e39f29233fcb59008e984524141aace22e53e748c4232d330abab93e14952c5",
+        "revision": 30,
+        "content_digest": "sha256:e09246c801c266de2784d6a900661e51a80d7281007be986691e983a535791e1"
+      }
+    },
+    {
+      "sequence": 69,
+      "previous_record_digest": "sha256:10f7e322f869109dfbf8ed2565fba8062528cec2441cd1897c302e8f82ae8523",
+      "record_digest": "sha256:db96d24162016bee7196fbf57cf34dc370cce09c15d94dc05b16ed24136ba188",
+      "command_id": "pr154-route-metadata-l4-20260724",
+      "receipt_id": "certificate:c82407cb4d0de1c8db9a26638106b11f",
+      "receipt_digest": "sha256:217b8a8cd30e2c5c4c999feab193e10f40c9cb11359c0e73ab510d13fc640525",
+      "decision_digest": "sha256:735a9bb663445aa9c5888dbd9f5e61fd8fa6e7f9d6968ce6bcbca624240a37ad",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-02-architecture.md",
+        "plan_id": "PLAN-L4-02-architecture",
+        "asset_id": "plan:legacy:229babf84a28728be6088a0c783f5a3990f9a784ee7a791d3c30efa112a77fa5",
+        "revision": 3,
+        "content_digest": "sha256:75b828dc31458a685b1beb69a79237ac170c6210225a3bb14bcbcf493a258db0"
+      }
+    },
+    {
+      "sequence": 70,
+      "previous_record_digest": "sha256:db96d24162016bee7196fbf57cf34dc370cce09c15d94dc05b16ed24136ba188",
+      "record_digest": "sha256:8d688c906b511d7552bd0f4912f275df274f79eabcce127ca299520ba5623f5c",
+      "command_id": "pr154-route-metadata-l5-20260724",
+      "receipt_id": "certificate:e6658e2f2ea752eaf6cf241a931debfa",
+      "receipt_digest": "sha256:87f9dcd0ec70febc22503d9e7a543146b23a0887dbb971542a1d80b1870413bb",
+      "decision_digest": "sha256:c34e410bf141fd5ff4113452e35eda3dcb07413341e789cef38278c51ec553e6",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-03-internal-processing.md",
+        "plan_id": "PLAN-L5-03-internal-processing",
+        "asset_id": "plan:legacy:d0a0a54f059baf13e8b5ef5448f0c27ed671ff4377b96373ce0844b2dabf1793",
+        "revision": 3,
+        "content_digest": "sha256:c4b9759a7ea90bd9497497c4e684ed5e51de01cd7d11f7eb41e7c2795a65a26a"
+      }
+    },
+    {
+      "sequence": 71,
+      "previous_record_digest": "sha256:8d688c906b511d7552bd0f4912f275df274f79eabcce127ca299520ba5623f5c",
+      "record_digest": "sha256:5fc817ce04e2031ff2693e9f5dd37525e3cbdb60832b44beccc0010d4ce70daa",
+      "command_id": "pr154-route-metadata-l6-20260724",
+      "receipt_id": "certificate:8ce1ef41fd5d80e6762e9eeacbac4679",
+      "receipt_digest": "sha256:54a00e30c869b8856e5aab6ffd252e022814f2ff54a42d5a8fef88903bef30b7",
+      "decision_digest": "sha256:bae4bd9d664969546155aa9c6fb20cfbbd6ee0a6af3dc58d277d894ed995afa3",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-01-function-spec.md",
+        "plan_id": "PLAN-L6-01-function-spec",
+        "asset_id": "plan:legacy:f25f2045ea277f2984da3ab15a4259f0879fd3abd5b02e4b88cd3332f774c58c",
+        "revision": 3,
+        "content_digest": "sha256:5fe765b966ef316728549d73c69c99569c54c8aedfeebaa68dba83f1f32ed479"
+      }
+    },
+    {
+      "sequence": 72,
+      "previous_record_digest": "sha256:5fc817ce04e2031ff2693e9f5dd37525e3cbdb60832b44beccc0010d4ce70daa",
+      "record_digest": "sha256:bc763182431d0fed3c2b8c6cfd37e9d26f6639aef02538d28f712936cec18eda",
+      "command_id": "plan-recovery-17-20260727-01",
+      "receipt_id": "certificate:3b2874683d6ab48da0bb8a40c28bb283",
+      "receipt_digest": "sha256:7525d37ada49e29ec2e43d8c033af4149eb1ebfcf75232950c8c2670da8b496f",
+      "decision_digest": "sha256:48da2326c865c5ba5013edc28c142bcd6ecfc46e13062f0086818b3e0108e93b",
+      "binding": {
+        "path": "docs/plans/PLAN-RECOVERY-17-redesign-bundle-reentry.md",
+        "plan_id": "PLAN-RECOVERY-17-redesign-bundle-reentry",
+        "asset_id": "plan:3b2874683d6ab48da0bb8a40c28bb283",
+        "revision": 1,
+        "content_digest": "sha256:3816dee8fbc7d6b5b5a0b336101495ba1d197a75df30268aede84a56ccd34665"
+      }
+    },
+    {
+      "sequence": 73,
+      "previous_record_digest": "sha256:bc763182431d0fed3c2b8c6cfd37e9d26f6639aef02538d28f712936cec18eda",
+      "record_digest": "sha256:7871f6b0dee0c09df2dfb91ebf972118a0bd265986e29c87c7db5134d48ff6cc",
+      "command_id": "plan-recovery-16-20260727-10",
+      "receipt_id": "certificate:236c9151622bb09826abfb69b9f1be97",
+      "receipt_digest": "sha256:1fbe943b554eae76edd2827108cfba8f9f7474a4507feb2d3eee830b2eb8b7ec",
+      "decision_digest": "sha256:c6e74f085830ff373e9868d3565cb11fc1c51188fd188a2991ff7cb38c0d2d63",
+      "binding": {
+        "path": "docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md",
+        "plan_id": "PLAN-RECOVERY-16-plan-revision-authoring",
+        "asset_id": "plan:rebase:74ca026f9a0b72dca6f4fb164dd4e8f43c9ea3c9b31c4db21dec38a66d9d7d57",
+        "revision": 2,
+        "content_digest": "sha256:4972eb44cab2f56834fb758b471f6fd5557561c5794b1cb823822a7e4ac48c30"
+      }
+    },
+    {
+      "sequence": 74,
+      "previous_record_digest": "sha256:7871f6b0dee0c09df2dfb91ebf972118a0bd265986e29c87c7db5134d48ff6cc",
+      "record_digest": "sha256:f0a170ac78611f7b069813b3167e591c07e82003309b40f4688419467324817e",
+      "command_id": "plan-l6-89-20260721-01",
+      "receipt_id": "certificate:ffcb68c5c115107bfeb9ad33557e897b",
+      "receipt_digest": "sha256:6cd82789426001caf1c143ce3c9e40cec54c7857684725ad1d6c3a8e9e534d86",
+      "decision_digest": "sha256:83c0bfb106d870f8c88c24f0e0259dee8d55fdb648af0f909e1a95ab114572d4",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-89-layer-verification-contract.md",
+        "plan_id": "PLAN-L6-89-layer-verification-contract",
+        "asset_id": "plan:ffcb68c5c115107bfeb9ad33557e897b",
+        "revision": 1,
+        "content_digest": "sha256:23c7239650bf0709e24252a3601e2f3bf61627f32b54a525c4c96b02a61eb77b"
+      }
+    },
+    {
+      "sequence": 75,
+      "previous_record_digest": "sha256:f0a170ac78611f7b069813b3167e591c07e82003309b40f4688419467324817e",
+      "record_digest": "sha256:fe2806cee93f59472000e71efd5684ffe447bbcd15185d7b3408b5447126ab06",
+      "command_id": "plan-l6-89-20260721-02",
+      "receipt_id": "certificate:1b610f799a3031186b4aaa4c46d45b4c",
+      "receipt_digest": "sha256:04d2935526d6357e8e7a25b376e36f43328d3f57279207fc6103c2cc3b868e34",
+      "decision_digest": "sha256:83c0bfb106d870f8c88c24f0e0259dee8d55fdb648af0f909e1a95ab114572d4",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-89-layer-verification-contract.md",
+        "plan_id": "PLAN-L6-89-layer-verification-contract",
+        "asset_id": "plan:ffcb68c5c115107bfeb9ad33557e897b",
+        "revision": 2,
+        "content_digest": "sha256:ae0f3d224c205f4321f9b24434778b33c2377d1b5c6d1c548bfcb402cfaa88eb"
+      }
+    },
+    {
+      "sequence": 76,
+      "previous_record_digest": "sha256:fe2806cee93f59472000e71efd5684ffe447bbcd15185d7b3408b5447126ab06",
+      "record_digest": "sha256:0d44818b6b075d0b0acf8ad6de02f359b9bbcb9c0e36d6822a4349bdecc944f8",
+      "command_id": "plan-l6-89-20260721-03",
+      "receipt_id": "certificate:e9905338d0f4f386db6e7c76cff93d40",
+      "receipt_digest": "sha256:3bd588e3961c4ee849556a56848724135767b3e9102cf968577ab3f4628d5422",
+      "decision_digest": "sha256:83c0bfb106d870f8c88c24f0e0259dee8d55fdb648af0f909e1a95ab114572d4",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-89-layer-verification-contract.md",
+        "plan_id": "PLAN-L6-89-layer-verification-contract",
+        "asset_id": "plan:ffcb68c5c115107bfeb9ad33557e897b",
+        "revision": 3,
+        "content_digest": "sha256:9f52e38d7779a40b8aa4f008d8161f64347487896dc8b95e16281a780991676e"
+      }
+    },
+    {
+      "sequence": 77,
+      "previous_record_digest": "sha256:0d44818b6b075d0b0acf8ad6de02f359b9bbcb9c0e36d6822a4349bdecc944f8",
+      "record_digest": "sha256:a9447f407261d5edac8d34b40160e27609647789164245246d89e94d3d346faa",
+      "command_id": "plan-l6-90-20260721-01",
+      "receipt_id": "certificate:b16164ab91330ced198c273e62915d81",
+      "receipt_digest": "sha256:459663da8db6b4e7abd53b19508e5eab0861be877eeaf3bf78f7cb80bf847a75",
+      "decision_digest": "sha256:94cc2de363ffdb5ddc3aa3898dd7164a28fbb755d89932cbe80db4f1267ef7a8",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-90-ci-responsibility-contract.md",
+        "plan_id": "PLAN-L6-90-ci-responsibility-contract",
+        "asset_id": "plan:b16164ab91330ced198c273e62915d81",
+        "revision": 1,
+        "content_digest": "sha256:4a0542de34b03b142f6d00a12551eea786ed8136974c8820bad0de65a75a845c"
+      }
+    },
+    {
+      "sequence": 78,
+      "previous_record_digest": "sha256:a9447f407261d5edac8d34b40160e27609647789164245246d89e94d3d346faa",
+      "record_digest": "sha256:4eea4fd2e9e52bd313709f50180e91a43285f885f9d31567e27082a6c498a9e1",
+      "command_id": "plan-l6-90-20260721-02",
+      "receipt_id": "certificate:6f8694cea426b4c519701a1555bf4dc7",
+      "receipt_digest": "sha256:0fc17b48f3e57459c2798def5b4a7351cca9885a49c902936c37f5897711b345",
+      "decision_digest": "sha256:94cc2de363ffdb5ddc3aa3898dd7164a28fbb755d89932cbe80db4f1267ef7a8",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-90-ci-responsibility-contract.md",
+        "plan_id": "PLAN-L6-90-ci-responsibility-contract",
+        "asset_id": "plan:b16164ab91330ced198c273e62915d81",
+        "revision": 2,
+        "content_digest": "sha256:3bad56f2706d6a2ef4c72a6827184f433f48e3702db9cda398bfd2d3bd68fa2d"
+      }
+    },
+    {
+      "sequence": 79,
+      "previous_record_digest": "sha256:4eea4fd2e9e52bd313709f50180e91a43285f885f9d31567e27082a6c498a9e1",
+      "record_digest": "sha256:5e7d21d9a4fc7b408cfcac7418b62896d6bb3e7c64ff237bdc214a879e9f53b0",
+      "command_id": "plan-l6-91-20260722-01",
+      "receipt_id": "certificate:e8307634350a525ec32fb23bbe010e53",
+      "receipt_digest": "sha256:c156fa73be59bfaeadb892d4919689e7c7e1a317eb4df01b3f8ced00e92ed51e",
+      "decision_digest": "sha256:cdb381ec8038c2a54335b96a47d83492aecd48db922e9926340c99743e88cda7",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-91-disposition-claim-integrity-gate.md",
+        "plan_id": "PLAN-L6-91-disposition-claim-integrity-gate",
+        "asset_id": "plan:e8307634350a525ec32fb23bbe010e53",
+        "revision": 1,
+        "content_digest": "sha256:6a7293e5f38a1b9a5fae48b000596bbba7cc440e380fbb2934c9b61c9285ff85"
+      }
+    },
+    {
+      "sequence": 80,
+      "previous_record_digest": "sha256:5e7d21d9a4fc7b408cfcac7418b62896d6bb3e7c64ff237bdc214a879e9f53b0",
+      "record_digest": "sha256:72672295234d8b5cd885c026aa5079390bac930ca8f6c6060fc62dbb3e529024",
+      "command_id": "plan-l6-91-20260727-02",
+      "receipt_id": "certificate:98c5c3e74866b05cb19ccae62651d4cc",
+      "receipt_digest": "sha256:3dd543478703f92c31fc2b5c6101f42951ff99edb5b0c61715f4410bc8c6b098",
+      "decision_digest": "sha256:5b65c4e69c2443ad017b3f0c47fc20f637023bab63f5e63a67d1b6fb39c0b0e3",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-91-disposition-claim-integrity-gate.md",
+        "plan_id": "PLAN-L6-91-disposition-claim-integrity-gate",
+        "asset_id": "plan:legacy:64bc729867f74597943e533396e4d022cf87e664059978169f9301441294ed75",
+        "revision": 2,
+        "content_digest": "sha256:9424d72f862a60f125ae05c6207ef4197ce9b8530135f722ec836902b1151f03"
+      }
+    },
+    {
+      "sequence": 81,
+      "previous_record_digest": "sha256:72672295234d8b5cd885c026aa5079390bac930ca8f6c6060fc62dbb3e529024",
+      "record_digest": "sha256:9ba2b5401830b98bd5491088a97aef0bacbb2b38716cb1be06477b56a63a9713",
+      "command_id": "plan-l6-91-20260727-03",
+      "receipt_id": "certificate:5525d5bfcf54efce57dfb03e55e46476",
+      "receipt_digest": "sha256:65e8aa9e80afb70d7cf45c1ea9eac2a300d3b5e696f73eba3f78b88c38428c54",
+      "decision_digest": "sha256:5b65c4e69c2443ad017b3f0c47fc20f637023bab63f5e63a67d1b6fb39c0b0e3",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-91-disposition-claim-integrity-gate.md",
+        "plan_id": "PLAN-L6-91-disposition-claim-integrity-gate",
+        "asset_id": "plan:legacy:64bc729867f74597943e533396e4d022cf87e664059978169f9301441294ed75",
+        "revision": 3,
+        "content_digest": "sha256:c857943873e799f2bbc09ceb25217f5db4a07406cbfade76df167a072a593557"
+      }
+    },
+    {
+      "sequence": 82,
+      "previous_record_digest": "sha256:9ba2b5401830b98bd5491088a97aef0bacbb2b38716cb1be06477b56a63a9713",
+      "record_digest": "sha256:69392f4ac51d34c37ed964faa9d59240e7e7412a87035232e091b48a99f80c31",
+      "command_id": "pr156-formal-admission-l4-20260724",
+      "receipt_id": "certificate:5c26509ec4bcd205c4d10abdad6c0dc1",
+      "receipt_digest": "sha256:3c5fe84f387326f6944b317b064f8c3f7909162941f450c11fb4a040c8336e3a",
+      "decision_digest": "sha256:8a01d498f503ad4a4d63259b3cf840eb4c8cda88b0663c54da05f62fbe6829a7",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 2,
+        "content_digest": "sha256:f5405ecc739d8d9aaaeab35d49c3f87f41e6461d4e0a94d1bb9306dab1c00570"
+      }
+    },
+    {
+      "sequence": 83,
+      "previous_record_digest": "sha256:69392f4ac51d34c37ed964faa9d59240e7e7412a87035232e091b48a99f80c31",
+      "record_digest": "sha256:e7487a1156e35fdc59fa369f87030aa77f25c5556e704d72974708066d74ba64",
+      "command_id": "pr156-formal-admission-l5-20260724",
+      "receipt_id": "certificate:ccd15e5634631054a4ab97f130a31620",
+      "receipt_digest": "sha256:6e16862f748249c8ce67d80a67df2828db79c636c4d48d39ba7c19c82e665f56",
+      "decision_digest": "sha256:a31a3abf8b5e91de7f66bc03846903381348e50df6f02ec8a9a7939817608271",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 2,
+        "content_digest": "sha256:3466c5fc588adbcfd0e8d61ecf53a75eebcda0b65d90393c8442c92cb9390d23"
+      }
+    },
+    {
+      "sequence": 84,
+      "previous_record_digest": "sha256:e7487a1156e35fdc59fa369f87030aa77f25c5556e704d72974708066d74ba64",
+      "record_digest": "sha256:f6dfbf3861e4043ebf25d4d94b7c2ac2e3c4d7773f6984108e33ef9e26322bf7",
+      "command_id": "pr156-formal-admission-l6-20260724",
+      "receipt_id": "certificate:84fa2f12040896224e626384290e1011",
+      "receipt_digest": "sha256:18ac8e4988b47837ce1fb7e636b88fd897ed572c8d31b5c67a9db8a59d101da7",
+      "decision_digest": "sha256:9e572b1a328d161c89bd067ef7125a70dfcba11802d36a5e2843f340280c637b",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 2,
+        "content_digest": "sha256:3f072ad4a6c637781bb1ec293c36f358c095ba5b98d15de772d7f250d49fd372"
+      }
+    },
+    {
+      "sequence": 85,
+      "previous_record_digest": "sha256:f6dfbf3861e4043ebf25d4d94b7c2ac2e3c4d7773f6984108e33ef9e26322bf7",
+      "record_digest": "sha256:d47c612e5c64d830c053ce882837d494d435b31c5d5a510ea16d1c0aa0d50a82",
+      "command_id": "pr156-formal-admission-l7-20260724",
+      "receipt_id": "certificate:f091788daf534b04775b395487ea1a6f",
+      "receipt_digest": "sha256:e14e88266d46044ae7881b84cd337480fb187121127c6b2de38919dfbb0733ea",
+      "decision_digest": "sha256:cb777d205fa97be2ac90e945142add13eef4073802b40b98b93644bcc80f639b",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 2,
+        "content_digest": "sha256:886ee033e089f9b46f5ad68cd8d3efdd45b0b0204cd05844597ea272787d06d5"
+      }
+    },
+    {
+      "sequence": 86,
+      "previous_record_digest": "sha256:d47c612e5c64d830c053ce882837d494d435b31c5d5a510ea16d1c0aa0d50a82",
+      "record_digest": "sha256:3e7fcc35eedc9107b791c32a146cc0398abfc0d86f66992d58f29c58d7c14c73",
+      "command_id": "pr156-formal-admission-reverse-20260724",
+      "receipt_id": "certificate:6af9e07741a6eb96938f69faa7f0755e",
+      "receipt_digest": "sha256:90740039911b8498a52066b3fdc8f5318ea6d6bc50ee3c6e927b455cadaf7257",
+      "decision_digest": "sha256:8f99eae2ad154f775b87e5d02046d125fefaaf73c93a9e6f34297ee8700c611e",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md",
+        "plan_id": "PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill",
+        "asset_id": "plan:legacy:d66396b73c7db2b8d007824dcb6cada0ec811ff802f42189d5687d3d9b6853af",
+        "revision": 2,
+        "content_digest": "sha256:ef2cb65b4c794e9ced9e70ec7c041487737f43e78bb9ad4c75ffcc88837d1a7c"
+      }
+    },
+    {
+      "sequence": 87,
+      "previous_record_digest": "sha256:3e7fcc35eedc9107b791c32a146cc0398abfc0d86f66992d58f29c58d7c14c73",
+      "record_digest": "sha256:e9741e724847869d866992b0949c980a2bac3f93fe8a4ad245e9b4cd4cd0e640",
+      "command_id": "pr156-redesign-convergence-l4-rev3-20260724",
+      "receipt_id": "certificate:0017c55f763d19dc70aafe4baf05a075",
+      "receipt_digest": "sha256:d1673be2e98eec7eff87a74270005d227d315fccbb4bf40a8d3e24c743f5a71a",
+      "decision_digest": "sha256:3814b4dba0eee0e45bfeb31ae630455a0f34426f316813d80fad6a588c06e42f",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 3,
+        "content_digest": "sha256:f9868a8e0bab03741183bf9b8171678e99ac69cfe23e9a1ab355fd91b4b547b2"
+      }
+    },
+    {
+      "sequence": 88,
+      "previous_record_digest": "sha256:e9741e724847869d866992b0949c980a2bac3f93fe8a4ad245e9b4cd4cd0e640",
+      "record_digest": "sha256:f08cdc2b97f9740c116ca013bb15196cdc081d9adfa3ab0fa7419090f8af40f9",
+      "command_id": "pr156-redesign-convergence-l5-rev3-20260724",
+      "receipt_id": "certificate:3c7a65ea0d060bde1a53b0f269199d0d",
+      "receipt_digest": "sha256:a183b26b9023cc6370c15a7b50e3fc63d5f2d1566dd85733db95594912b8cfdb",
+      "decision_digest": "sha256:ef4346a32e84db8c1b5169c6552dd9f7b5b20fb4fb134e8d357871695609054a",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 3,
+        "content_digest": "sha256:6ed69d27a760d06a567442bb9818009b10019de28b3d5a48e7b867f47a40ef0e"
+      }
+    },
+    {
+      "sequence": 89,
+      "previous_record_digest": "sha256:f08cdc2b97f9740c116ca013bb15196cdc081d9adfa3ab0fa7419090f8af40f9",
+      "record_digest": "sha256:cff98765e0a09681e866c70e32e5d91a127184f1717799a5163387eded8f5ea5",
+      "command_id": "pr156-redesign-convergence-l6-rev3-20260724",
+      "receipt_id": "certificate:41bd2f6bd58081263f2911eef3e45dbf",
+      "receipt_digest": "sha256:fb73e430a0bcb0098cf30d10be7df4421c93c49ae3f2cbbd0e10f5bf72d97648",
+      "decision_digest": "sha256:bf8b9a37e6517e39aa76153fbace08c45243141d646891eadb11dcf52b9d1fea",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 3,
+        "content_digest": "sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247"
+      }
+    },
+    {
+      "sequence": 90,
+      "previous_record_digest": "sha256:cff98765e0a09681e866c70e32e5d91a127184f1717799a5163387eded8f5ea5",
+      "record_digest": "sha256:3a6c0883f350e86946b7dae8653429cb11cfecdbfc2dfaa25e86756cdb55236b",
+      "command_id": "pr156-redesign-convergence-l7-rev3-20260724",
+      "receipt_id": "certificate:372bd30c6e5204d33ebf937444229e52",
+      "receipt_digest": "sha256:890762220c44b5bf101266a65d68ce5be83c206005252cbc7dcc015b406ae83d",
+      "decision_digest": "sha256:9e785085af441cf090146f6ebd6152f30a111f97b1144708fef7c8532f7b9c10",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 3,
+        "content_digest": "sha256:9cd2f45bce025a7200d86dca11d1d02dccd08cdc8796d4465c7adf713ef15db6"
+      }
+    },
+    {
+      "sequence": 91,
+      "previous_record_digest": "sha256:3a6c0883f350e86946b7dae8653429cb11cfecdbfc2dfaa25e86756cdb55236b",
+      "record_digest": "sha256:1e8ad4b0fdf68e8275bee845cb2f9f4422a879f6a8354c9c53bc136a494a11cd",
+      "command_id": "pr156-redesign-convergence-reverse-rev3-20260724",
+      "receipt_id": "certificate:5a9c363f35df7476c561a1f1a5893ecf",
+      "receipt_digest": "sha256:7a01e0d4fb9745ac7681a704a188ca236c22ddab739cf1105b5e9d6386951a77",
+      "decision_digest": "sha256:cc42c3857c4940477d067e7be1ce9cf21b4adcd7b6aedfdf32d54e7d166086c8",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md",
+        "plan_id": "PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill",
+        "asset_id": "plan:legacy:d66396b73c7db2b8d007824dcb6cada0ec811ff802f42189d5687d3d9b6853af",
+        "revision": 3,
+        "content_digest": "sha256:6c0afe546db55bf985500bae9c4209f2fb36c2a9d03d5a6949a79c12d6397eeb"
+      }
+    },
+    {
+      "sequence": 92,
+      "previous_record_digest": "sha256:1e8ad4b0fdf68e8275bee845cb2f9f4422a879f6a8354c9c53bc136a494a11cd",
+      "record_digest": "sha256:a887dab2d28c64897b284ca2218b375d8642650542220cd7eef87eb75464fa6b",
+      "command_id": "pr156-final-readmission-l4-rev4b-20260724",
+      "receipt_id": "certificate:5cd204e306581e9a984bd9ce3f0de086",
+      "receipt_digest": "sha256:ca9bae59ebca9ab4f6d522c2e5fef5a46a3b2792530c4cfdafbcb517e5bbd361",
+      "decision_digest": "sha256:0d7986339d40c106a9d2e7b33dbf118fae9c43b896b36d8ed9e9dcd905d938b5",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 4,
+        "content_digest": "sha256:df68713973cc6785418206157a480bc6c4acdd7e4108a4820cc8a7e4b85645eb"
+      }
+    },
+    {
+      "sequence": 93,
+      "previous_record_digest": "sha256:a887dab2d28c64897b284ca2218b375d8642650542220cd7eef87eb75464fa6b",
+      "record_digest": "sha256:bc601710b58d264c5e1932db467af27eb0dd28d9b31cdb0449f2dbe2f12a7aeb",
+      "command_id": "pr156-final-readmission-l5-rev4-20260724",
+      "receipt_id": "certificate:12b7643bea2791b3f86641430412594b",
+      "receipt_digest": "sha256:59dbef90ec645ffd0a0838eeec8adc30ccd2f88bde91175f90a6a1322dbe15d5",
+      "decision_digest": "sha256:24222dddda82144d99e5b3feca4f1125ba47fc08d240326c527189dc03af2df5",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 4,
+        "content_digest": "sha256:9f3186536236971293564736715ae69ceab0fbc869a615c309e476c758864da7"
+      }
+    },
+    {
+      "sequence": 94,
+      "previous_record_digest": "sha256:bc601710b58d264c5e1932db467af27eb0dd28d9b31cdb0449f2dbe2f12a7aeb",
+      "record_digest": "sha256:2bfcfc18aa56e6c93b794c158b988eaa937c856ab1b58870b0ce521d3e49a65c",
+      "command_id": "pr156-final-readmission-l6-rev4-20260724",
+      "receipt_id": "certificate:12ade6d6b1f1f4d1e3f8cb716966bfcc",
+      "receipt_digest": "sha256:8799083bf65e6bb6542f7c3b87fe96d3ee3fa82827381b3d30daa4d21eccebae",
+      "decision_digest": "sha256:f5a8868c18b1be05cbb7b75703c46dbaced76c7974e016badec863d9919a3204",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 4,
+        "content_digest": "sha256:1bb2af8c066c262a5b69da6328048d491f285db795d4550f2eb2f0d286ddc247"
+      }
+    },
+    {
+      "sequence": 95,
+      "previous_record_digest": "sha256:2bfcfc18aa56e6c93b794c158b988eaa937c856ab1b58870b0ce521d3e49a65c",
+      "record_digest": "sha256:bba205761f53d42ad082296114693ddb7a372f8a093e1462568be2f5679aa4d2",
+      "command_id": "pr156-final-readmission-l7-rev4-20260724",
+      "receipt_id": "certificate:5bf974957384ef602f6fbc1dbfb485a9",
+      "receipt_digest": "sha256:23c9eb8284f8bc53593a5e0f3eabe6a9b430c75a1cff3a5bdcf6c1cfb6bc3a20",
+      "decision_digest": "sha256:2ad38217474979f774b1d7708fe39f4b455874a5d11996856886a98d447cc32f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 4,
+        "content_digest": "sha256:5dff5906aa83aa7282a39c7d99d81d091f0d7e288b26d71973a055bd687f9eb8"
+      }
+    },
+    {
+      "sequence": 96,
+      "previous_record_digest": "sha256:bba205761f53d42ad082296114693ddb7a372f8a093e1462568be2f5679aa4d2",
+      "record_digest": "sha256:7cfd195af52be7231954d88d5079b5c286276da482a48b03ba7d057b3491bb3b",
+      "command_id": "pr156-final-readmission-reverse-rev4-20260724",
+      "receipt_id": "certificate:269e889bdf62a50c264919c338d93d19",
+      "receipt_digest": "sha256:02a976c248d82fc82a6d2b7d130241e325497fb8769afbdf1174cad99c3cdc5f",
+      "decision_digest": "sha256:2214f2c3e841786ea3af1a33d868a9209d11a94de62ea03464b9d1a281ee5f1b",
+      "binding": {
+        "path": "docs/plans/PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill.md",
+        "plan_id": "PLAN-REVERSE-454-resource-kernel-native-scaffold-backfill",
+        "asset_id": "plan:legacy:d66396b73c7db2b8d007824dcb6cada0ec811ff802f42189d5687d3d9b6853af",
+        "revision": 4,
+        "content_digest": "sha256:6c0afe546db55bf985500bae9c4209f2fb36c2a9d03d5a6949a79c12d6397eeb"
+      }
+    },
+    {
+      "sequence": 97,
+      "previous_record_digest": "sha256:7cfd195af52be7231954d88d5079b5c286276da482a48b03ba7d057b3491bb3b",
+      "record_digest": "sha256:197a27e8cd42b19b5d029d6752bee88ef7e4c36050d3e9374f265e43eafd634d",
+      "command_id": "pr156-contract-closure-1-rev5c-20260727",
+      "receipt_id": "certificate:a6a653e8bbc8d3327e3ce578668aa3c3",
+      "receipt_digest": "sha256:4b230e6ec812c52ffc5abc9b82fb239311e2cfe5818a68ba999227da1329db2e",
+      "decision_digest": "sha256:480aefd9c2e911758e157732a8a45df432d39f231b48b63f907ea2ffa9756412",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 5,
+        "content_digest": "sha256:c45710165ba48bad24fd6fa2770e46816a1aedac5f856c0d7efe650962624167"
+      }
+    },
+    {
+      "sequence": 98,
+      "previous_record_digest": "sha256:197a27e8cd42b19b5d029d6752bee88ef7e4c36050d3e9374f265e43eafd634d",
+      "record_digest": "sha256:fdc67adf5b4bdd0a7ce86866a06a3f657cdbc6552e0ad95c4f855f904a06713d",
+      "command_id": "pr156-contract-closure-2-rev5c-20260727",
+      "receipt_id": "certificate:7ccf2e0e8e61d723bcbc76874a8e0a9d",
+      "receipt_digest": "sha256:0fd5357197c28f0593752c30843f446d85172f64e72775ef972d45d11cbe445c",
+      "decision_digest": "sha256:9f7421aeaef25daee1920c93e25629aac6478fa78ba8c1dc2debf628831cdbf3",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 5,
+        "content_digest": "sha256:5dfca3d50a513742fe4195368aa28f5a29c448ae393eb3101a1dbef31ff0d091"
+      }
+    },
+    {
+      "sequence": 99,
+      "previous_record_digest": "sha256:fdc67adf5b4bdd0a7ce86866a06a3f657cdbc6552e0ad95c4f855f904a06713d",
+      "record_digest": "sha256:b78b4e3fb6dfbfd59d3e3205cf65405155d93560b969d5ac91b672556d9459da",
+      "command_id": "pr156-contract-closure-3-rev5c-20260727",
+      "receipt_id": "certificate:59c3fa7c2430f47a5fd7563979a7a6ad",
+      "receipt_digest": "sha256:5b95f98f863737d8c1c52af22029c78dc3397772708049d17838f688b6a28f9f",
+      "decision_digest": "sha256:8102740332f74cfed2c3d24cb08c70eee713fd17a47cebff2222139e85161b1a",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 5,
+        "content_digest": "sha256:246eedf26afa9e161239d3cda0df3e785ccaa4657b29e9478befd486e39e9536"
+      }
+    },
+    {
+      "sequence": 100,
+      "previous_record_digest": "sha256:b78b4e3fb6dfbfd59d3e3205cf65405155d93560b969d5ac91b672556d9459da",
+      "record_digest": "sha256:3e00139b4dc7f56a493692ef78e5bb58daac48438e1d45ffdb1264d19946ef83",
+      "command_id": "pr156-contract-closure-l7-rev5c-20260727",
+      "receipt_id": "certificate:e2cb39c670b319b60ed83a02d2817b9f",
+      "receipt_digest": "sha256:a01798143e5960d15bb9ccac9aa13337a6ef2a206900243d2add8bbba520b9b2",
+      "decision_digest": "sha256:7327c457755209949f1b6ec4f8b5c1d6c0b91b0a5f37fdb8ad341a05c486dd1e",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 5,
+        "content_digest": "sha256:e2dfef9c9d7b9f4220c1e47e19471c394db8e344d6e6e5668ff8ec98df500ebe"
+      }
+    },
+    {
+      "sequence": 101,
+      "previous_record_digest": "sha256:3e00139b4dc7f56a493692ef78e5bb58daac48438e1d45ffdb1264d19946ef83",
+      "record_digest": "sha256:d684c79de649830b9e563a5d3e8afb505bb739e196db5487f3a5d4cb02ca8805",
+      "command_id": "pr156-authority-closure-l4-rev6-20260727",
+      "receipt_id": "certificate:c4e192432f90ec34c6018bbd9bc6167c",
+      "receipt_digest": "sha256:76767958d254eda3858f6331eae99efa839a026c80467200a4385b8568618222",
+      "decision_digest": "sha256:694a03fc19392dff9e507484dafeb401900cbe44f5b70b6d9454248872087d73",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 6,
+        "content_digest": "sha256:76d5d0f20d36fb722cdcda7961f736a44443eb712e06580dade7cfe2653ce130"
+      }
+    },
+    {
+      "sequence": 102,
+      "previous_record_digest": "sha256:d684c79de649830b9e563a5d3e8afb505bb739e196db5487f3a5d4cb02ca8805",
+      "record_digest": "sha256:41d667be31cd2f6bbb2b69ddd5be0bb0d05731df5a9ee687c0ff316ec00b57ef",
+      "command_id": "pr156-authority-closure-l5-rev6-20260727",
+      "receipt_id": "certificate:c5b6a570d651f10f05450c403ccf6993",
+      "receipt_digest": "sha256:11b8fcff9c18da1fa57ab787d031f490fbbd6634dd58e1cbd9ff700d559d1efb",
+      "decision_digest": "sha256:51f9408db11a60a0e70d49b39a75c8ddee5a406443c8c672264000b220613213",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 6,
+        "content_digest": "sha256:709c1fa73c8b7ab4ed86fac814c550f5a7ad7a620c24c2a9ce61017242d93af5"
+      }
+    },
+    {
+      "sequence": 103,
+      "previous_record_digest": "sha256:41d667be31cd2f6bbb2b69ddd5be0bb0d05731df5a9ee687c0ff316ec00b57ef",
+      "record_digest": "sha256:8bbab22bd3d552b1226dbe0c9e5965dd1b12c39b183c0432e5728ae11bf0d28a",
+      "command_id": "pr156-authority-closure-l6-rev6-20260727",
+      "receipt_id": "certificate:38966360ff772e45e215079c90dd006f",
+      "receipt_digest": "sha256:d37c6ec30814c7333f8c3309ef922ef9957e694c2c18e390dfc7f3136379faac",
+      "decision_digest": "sha256:28527cc3b8aae21d82b44f9e535e44793f9804e4f2f0f1f81238c4de467635e0",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 6,
+        "content_digest": "sha256:dfe29f70755e0c2d6980626378876e239257f5849c24fbb0652394d44747dfa8"
+      }
+    },
+    {
+      "sequence": 104,
+      "previous_record_digest": "sha256:8bbab22bd3d552b1226dbe0c9e5965dd1b12c39b183c0432e5728ae11bf0d28a",
+      "record_digest": "sha256:a6f90cb84c8ee96bf05a9a8dcfb02a7bd12e8babc8737d33b8fd87fc96eff440",
+      "command_id": "pr156-authority-closure-l7-rev6-20260727",
+      "receipt_id": "certificate:31c8b150db06b96027a1a548b95cfd9a",
+      "receipt_digest": "sha256:dd3568caa2ae77757c016ea715e908fcdaaf75b85b69dbec7ebf4ba95af9903b",
+      "decision_digest": "sha256:d1bae8d86887aa0db99aea657bb8d5ac2340dc584fc968c1e92c62cf37655973",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 6,
+        "content_digest": "sha256:9d19902e0f882c102b8e5ad978ccbdf0e018a7303945d817abff76da1281eb3f"
+      }
+    },
+    {
+      "sequence": 105,
+      "previous_record_digest": "sha256:a6f90cb84c8ee96bf05a9a8dcfb02a7bd12e8babc8737d33b8fd87fc96eff440",
+      "record_digest": "sha256:b4647a2554203edb053b5d13f5bbe2670bd85b9728d08437cafd18f25359875f",
+      "command_id": "pr156-lease-closure-l4-rev7-20260727",
+      "receipt_id": "certificate:4cdb70537e560a21cabdedf1948bbf46",
+      "receipt_digest": "sha256:131e7f4b319495b72b898547e7395c0939e4bfb6b924b714d961f95fee0d7f1a",
+      "decision_digest": "sha256:46a9a6eedc49f68a305ece45efdbc78eff8ba2299a2f3c82086e45a1d24441fb",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 7,
+        "content_digest": "sha256:adf30ac0609bd47b680142d308c644157dc8031837b8080b634d139da3be1ae2"
+      }
+    },
+    {
+      "sequence": 106,
+      "previous_record_digest": "sha256:b4647a2554203edb053b5d13f5bbe2670bd85b9728d08437cafd18f25359875f",
+      "record_digest": "sha256:03fe091ea78ad750cbd55afd9dfd11633a8b487a56a87c6dbb3310273baeb8d2",
+      "command_id": "pr156-lease-closure-l5-rev7-20260727",
+      "receipt_id": "certificate:5e7fb7ccda37bd052bbfdd9eda64f357",
+      "receipt_digest": "sha256:534c2871b1dad567edf23c08ad5aa6dc4e772b25e859589809cd3977c22853d5",
+      "decision_digest": "sha256:0317d59e2793474d4c43a9c839a0f03e826ca897cc3321a9914fa2326ed60e9e",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 7,
+        "content_digest": "sha256:0a3a1d720d7be1762dc327c11f1b3c6f1b9ccaf57f4a82bfb6932430c09a6da8"
+      }
+    },
+    {
+      "sequence": 107,
+      "previous_record_digest": "sha256:03fe091ea78ad750cbd55afd9dfd11633a8b487a56a87c6dbb3310273baeb8d2",
+      "record_digest": "sha256:95236e2d9444b373a6780e5cb2733f9dbd62fb9861426f0c546ced89ff2ac60d",
+      "command_id": "pr156-lease-closure-l6-rev7-20260727",
+      "receipt_id": "certificate:cd93c690ac23fb48ed53ca44d3c7b0c3",
+      "receipt_digest": "sha256:302e11ed0f862c3bd720b6242851452c7c17e0516b572243aad5bf661e15db5d",
+      "decision_digest": "sha256:d1431dcdddbf128070813f359073b121dc166db8904071c658195e451cb57e82",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 7,
+        "content_digest": "sha256:29eaa1c40f450d4c07069109b5c268d397bee1c99ee62034d39d53305ef57357"
+      }
+    },
+    {
+      "sequence": 108,
+      "previous_record_digest": "sha256:95236e2d9444b373a6780e5cb2733f9dbd62fb9861426f0c546ced89ff2ac60d",
+      "record_digest": "sha256:04734cbdfdf32fc8caed25710aeedb8cec27b295ad0d666373a4cd7d2397e33e",
+      "command_id": "pr156-lease-closure-l7-rev7-20260727",
+      "receipt_id": "certificate:b0dd4a1639bf28fec29c798d6b578c38",
+      "receipt_digest": "sha256:3872bda160bf7a587c98b3e31b71a3091768ad32660a5a14f172dfa77b2cecd6",
+      "decision_digest": "sha256:4391d86c3da5a41d7eee56823374596631f0f5e58acb2294b680b4c4d5477d1a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 7,
+        "content_digest": "sha256:e69ad4e6f1c36c2febe7ab07193e3beeec9e736fb1c7f83e91e60eeef689a129"
+      }
+    },
+    {
+      "sequence": 109,
+      "previous_record_digest": "sha256:04734cbdfdf32fc8caed25710aeedb8cec27b295ad0d666373a4cd7d2397e33e",
+      "record_digest": "sha256:11d56df2d93f61ea110537a36b116a0a03d2cc832520b7de30cd42fd8cecc02f",
+      "command_id": "pr156-recovery-closure-l4-rev8-20260727",
+      "receipt_id": "certificate:7d714e6a6cd27948a7a397c01b315d2c",
+      "receipt_digest": "sha256:bd16c506a6df13abc0c068721d16298c9489393673b35055d17071882511e5a3",
+      "decision_digest": "sha256:de11ba49951d6d4c385b4371a4ac42fac8b5956b020d381c0457417ed92db4fe",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 8,
+        "content_digest": "sha256:db2f28310e873488037f60996eeab23edc0a65c66c95ac5a2307c87167bf0b20"
+      }
+    },
+    {
+      "sequence": 110,
+      "previous_record_digest": "sha256:11d56df2d93f61ea110537a36b116a0a03d2cc832520b7de30cd42fd8cecc02f",
+      "record_digest": "sha256:3f1164d2c39b1fd5fe6fb9f7b587384e734e056b9bb8cc7f6933b9af63866ab8",
+      "command_id": "pr156-recovery-closure-l5-rev8-20260727",
+      "receipt_id": "certificate:263b5e0e2ecfa9406de20ba2bdde9ff1",
+      "receipt_digest": "sha256:08066d4e5974a868b46996657aef12f4942f2e938399f2afd02569d67623e7ae",
+      "decision_digest": "sha256:e02c290f698b6ec585b2a1a3eb9a3d284ae941484fe37dabf3d7ef3ac37022dd",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 8,
+        "content_digest": "sha256:a7e781947c83ea43844ab37182f6ac5c50311ed0909fff3ce0d0965c4195ae6e"
+      }
+    },
+    {
+      "sequence": 111,
+      "previous_record_digest": "sha256:3f1164d2c39b1fd5fe6fb9f7b587384e734e056b9bb8cc7f6933b9af63866ab8",
+      "record_digest": "sha256:79c6a77d216355ab4cd4eddc18fd509a725cd9229e0665bf0c74972b45c4fdc4",
+      "command_id": "pr156-recovery-closure-l6-rev8-20260727",
+      "receipt_id": "certificate:b1f335cffea1aef1c6bcda067a8162e1",
+      "receipt_digest": "sha256:f16ee607fbcb5d853dc2c4bb73daf67104768e27f26d334fcda293499119f482",
+      "decision_digest": "sha256:ce30bed3bea285d36f28bdc3f1db041f9d2aaef988630de40a7d3ef269b2527e",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 8,
+        "content_digest": "sha256:cd8fbd41ba753fba686a8c6a4ed68672531f918cdcd7d397b195b5b34c512aee"
+      }
+    },
+    {
+      "sequence": 112,
+      "previous_record_digest": "sha256:79c6a77d216355ab4cd4eddc18fd509a725cd9229e0665bf0c74972b45c4fdc4",
+      "record_digest": "sha256:1f8d9921a147e9dbd9098963ebdde3dbcb5a4ef1ee7a0814c170aaa125da749c",
+      "command_id": "pr156-recovery-closure-l7-rev8-20260727",
+      "receipt_id": "certificate:28927ae2a0395c4270c2fde9466e164c",
+      "receipt_digest": "sha256:e70e86b8eb64bf211d281f88cefdc9c15835af1df8c41e56507d7a4d2c6be931",
+      "decision_digest": "sha256:dadf14c70045a2bde8ee1d7fd3cc200570732c7a52bb30f4377843877d38ab6a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 8,
+        "content_digest": "sha256:576e688d02bdd9b6093b3d3c9a4c583c49c32ef3c5a41b6dc20f428e9090eca3"
+      }
+    },
+    {
+      "sequence": 113,
+      "previous_record_digest": "sha256:1f8d9921a147e9dbd9098963ebdde3dbcb5a4ef1ee7a0814c170aaa125da749c",
+      "record_digest": "sha256:4aef691c563cd6e181b52a5992adc2251d02ea50980045b75cc6aa74b5584219",
+      "command_id": "pr156-trace-closure-l4-rev9-20260727",
+      "receipt_id": "certificate:2484fb87fe900e8aefb61488bf183e1e",
+      "receipt_digest": "sha256:8734bc74733b1d9de48ddc55c197d3f94c0b4c32bba2badd12a4e7626b157fe9",
+      "decision_digest": "sha256:fe668784ed7a206cf24910c6addb59af931d905e3ce3c2f2880ded41b035d3a7",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 9,
+        "content_digest": "sha256:c6ea40400b15a6dd092022d46f272f27e280c5476c5c56ee9169ce128c4d962d"
+      }
+    },
+    {
+      "sequence": 114,
+      "previous_record_digest": "sha256:4aef691c563cd6e181b52a5992adc2251d02ea50980045b75cc6aa74b5584219",
+      "record_digest": "sha256:9a8c3b56223ed31f8d9df33a95ce6e1abe737d1fcf644482da8ddaaa270db7c7",
+      "command_id": "pr156-trace-closure-l5-rev9-20260727",
+      "receipt_id": "certificate:649bd05fe5d75f5f8b3346e2f88a25e3",
+      "receipt_digest": "sha256:c24823d6e739edf7b813ce30e32d8c68f1b7671099063931309ce2443a8b192e",
+      "decision_digest": "sha256:81dec5047d74e70c7e3226ed540c30c409be9ec2fb6cf2012595d19695eb66e1",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 9,
+        "content_digest": "sha256:5b32ad0dcaacf1bdd2f474e7a4d1b5c6a00e52b0d96032e07bdd8c961c4a9e4a"
+      }
+    },
+    {
+      "sequence": 115,
+      "previous_record_digest": "sha256:9a8c3b56223ed31f8d9df33a95ce6e1abe737d1fcf644482da8ddaaa270db7c7",
+      "record_digest": "sha256:364e9e71205acf2e6c1820c333170cca3a79d8038ea1c343df7151338d4ab0b1",
+      "command_id": "pr156-trace-closure-l6-rev9-20260727",
+      "receipt_id": "certificate:233d60d4ae00225db0cb963fa11d4310",
+      "receipt_digest": "sha256:12cbe0baff89afbccbd28a564dee7d1ac284cad5e93abce291d08548e2b2dd31",
+      "decision_digest": "sha256:b7872687f8b9930564853f489ce0931937ca0fc26cebc6768a92c3a96e7709a1",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 9,
+        "content_digest": "sha256:01c379190f831eea725077df09a1cc11792218cefacd91e69fba3d400424a4aa"
+      }
+    },
+    {
+      "sequence": 116,
+      "previous_record_digest": "sha256:364e9e71205acf2e6c1820c333170cca3a79d8038ea1c343df7151338d4ab0b1",
+      "record_digest": "sha256:cebdf7fff550e0bd149bb0fdd6e7c74a2d614806a66f367e0273556cebe5ee3a",
+      "command_id": "pr156-trace-closure-l7-rev9-20260727",
+      "receipt_id": "certificate:ec221db3df9e7a960a31ba1667660895",
+      "receipt_digest": "sha256:ee0efd23fbff157cdefb668bc845cd181b9d315463fc941aaaeebd3b2654e337",
+      "decision_digest": "sha256:068c1f443e26972e9b158a4455bba60be09006257976f4f697d93b2c2a1ce722",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 9,
+        "content_digest": "sha256:48256410450173ee2b85ca729ce92752e41200f196b91b4141d35901f79bc07b"
+      }
+    },
+    {
+      "sequence": 117,
+      "previous_record_digest": "sha256:cebdf7fff550e0bd149bb0fdd6e7c74a2d614806a66f367e0273556cebe5ee3a",
+      "record_digest": "sha256:0dbd7cd1e3e86511b025d1ebdfe806673be2ff006a345f15251babc220c7d83b",
+      "command_id": "pr156-command-algebra-closure-l4-rev10-20260727",
+      "receipt_id": "certificate:abe1afa5ef2bfe86a4df13645648898e",
+      "receipt_digest": "sha256:cf1322f1491c2d3d93faa0af3fbd5b754ee83543c4ddbc904e48ee4234394340",
+      "decision_digest": "sha256:8d53a1da8c7468c9c2e1952b3a21f464712447a7f3db1ac5507404e08933e932",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 10,
+        "content_digest": "sha256:857590bb861f2b2b60a0b790413b5875bf8069694c216a7cdb900c88ae98e960"
+      }
+    },
+    {
+      "sequence": 118,
+      "previous_record_digest": "sha256:0dbd7cd1e3e86511b025d1ebdfe806673be2ff006a345f15251babc220c7d83b",
+      "record_digest": "sha256:d86dd2398db6d38bab09fb0f6637e53c30eee1e4f259aed4c732ac92bab01118",
+      "command_id": "pr156-transport-closure-l4-rev11-20260727",
+      "receipt_id": "certificate:c3ba6a7559e1bc69fd3660042ddb4896",
+      "receipt_digest": "sha256:3dc0417fda47a8118ce993a3a0a40962cef625e560c84532dbdff1d185c75579",
+      "decision_digest": "sha256:00755e3f1fd0ce311842e68033ade1d832e6559f51860fbb276d63a6abb83ccd",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 11,
+        "content_digest": "sha256:d51dd2e6e765242d57006cf6ed5592119042e89e30069564c594464b5a9564d1"
+      }
+    },
+    {
+      "sequence": 119,
+      "previous_record_digest": "sha256:d86dd2398db6d38bab09fb0f6637e53c30eee1e4f259aed4c732ac92bab01118",
+      "record_digest": "sha256:4c189054b4c42609da34dc0a4903f169748a5bc70cd88186d7043cf6a270b651",
+      "command_id": "pr156-transport-closure-l5-rev10-20260727",
+      "receipt_id": "certificate:f56a3943d8832435d67045b1b52230ae",
+      "receipt_digest": "sha256:82525d4b00083d02a9cdcb5f6cb87188d8384c1809ee5de35abb76b268767a23",
+      "decision_digest": "sha256:9ad20935c6cda9b90e58d618c055baca92bc0d268c2d9bba6507930a900d32b7",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 10,
+        "content_digest": "sha256:4926bb1342a1a873d3866fe166e67b636a81a4d418d400abdb421ec64eda49d7"
+      }
+    },
+    {
+      "sequence": 120,
+      "previous_record_digest": "sha256:4c189054b4c42609da34dc0a4903f169748a5bc70cd88186d7043cf6a270b651",
+      "record_digest": "sha256:1e80037ac4610d397fb9000202a76cb7234748cd7af02366b1de066d3dfab2e4",
+      "command_id": "pr156-transport-closure-l6-rev10-20260727",
+      "receipt_id": "certificate:562695cc289cf7a66a1d3b187be395bd",
+      "receipt_digest": "sha256:e418861981474ba1b4f887f5e3a096b2c98cd12da3c013ded13a34b6b4168b67",
+      "decision_digest": "sha256:0483c4ff5898af1d1da653aa565e0807cf3421699303f94e9034f40e652f3e14",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 10,
+        "content_digest": "sha256:38ffc03ea981f406ccaf2421e635af2fdb42696be3a2bca843dcbe3dc3f04142"
+      }
+    },
+    {
+      "sequence": 121,
+      "previous_record_digest": "sha256:1e80037ac4610d397fb9000202a76cb7234748cd7af02366b1de066d3dfab2e4",
+      "record_digest": "sha256:5665b053c2bcbffd2ff2dfa44d86de57a81b8e8a5034621efc6cabcecca60786",
+      "command_id": "pr156-transport-closure-l7-rev10-20260727",
+      "receipt_id": "certificate:f1b705ce548b40bddb31869539d75bac",
+      "receipt_digest": "sha256:0d5a33dedca0e5229573137b1cc94c1d4cd3bbf7786dc355c599b19f9fc75098",
+      "decision_digest": "sha256:c78240c398ea42cf7d749895fb5896736b1ed347f3d144b848a5639ab4e2be40",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 10,
+        "content_digest": "sha256:57376c0a0bdef6bc0814722bdea3ea09cb445edf03827f65cc7ffce12f79efa7"
+      }
+    },
+    {
+      "sequence": 122,
+      "previous_record_digest": "sha256:5665b053c2bcbffd2ff2dfa44d86de57a81b8e8a5034621efc6cabcecca60786",
+      "record_digest": "sha256:fcc48e0bc61428027d9d861f45095a6179c5524ea1f1f96ee06f3ab4c7639657",
+      "command_id": "pr156-lifecycle-closure-l5-rev11-20260727",
+      "receipt_id": "certificate:f39fd96a9fd2d25c73ce34b0dd4821fd",
+      "receipt_digest": "sha256:b86248cc97e621cc90d8cd8b28cf69ee453452c40d78345c7104d056d0d5fe2e",
+      "decision_digest": "sha256:1487f356bcc20d3761d28d03facb9de25a727d0019e667a07043c6dbf3c4a4f0",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 11,
+        "content_digest": "sha256:63a1060da26f3e90372e2bae3351b27b09d2677f3de43b80ca7d9b4ee9c321c6"
+      }
+    },
+    {
+      "sequence": 123,
+      "previous_record_digest": "sha256:fcc48e0bc61428027d9d861f45095a6179c5524ea1f1f96ee06f3ab4c7639657",
+      "record_digest": "sha256:d0a80d284cd736bf44acfddb789dbfb8ac24d3d57bd191886fc6b4621fe8abe1",
+      "command_id": "pr156-lifecycle-closure-l6-rev11-20260727",
+      "receipt_id": "certificate:329852d09e5fdf2a80b6efe58cced989",
+      "receipt_digest": "sha256:90c666f759261789c09d6abea1622ffedf2d0c1755fae417e8af06cd1f073333",
+      "decision_digest": "sha256:2cfcfeb79765c661ca5445fca1b38364b224db3d0e0695024b1f15fd269d8031",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 11,
+        "content_digest": "sha256:2d78897b0c4c3bb34bf4b251c0cafd5340540d2f31d7ddf7c6983228a352e035"
+      }
+    },
+    {
+      "sequence": 124,
+      "previous_record_digest": "sha256:d0a80d284cd736bf44acfddb789dbfb8ac24d3d57bd191886fc6b4621fe8abe1",
+      "record_digest": "sha256:2d1ec205df8200caa5b1e43d0d744d1fd9cde0a565759540dc886ad5b94b0676",
+      "command_id": "pr156-lifecycle-closure-l7-rev11-20260727",
+      "receipt_id": "certificate:39b78408003f9e37c49e3af3449964ac",
+      "receipt_digest": "sha256:063179ba0367febe2bfcfe8928b9733b2a75dbf0836b1939ac2b29c3936da752",
+      "decision_digest": "sha256:7346cffc37d9dd0cc4b50a493db708a0d66f0e707da486408e6e5327b5f22a3a",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 11,
+        "content_digest": "sha256:9ce38b296b3623bfcfbee040e0f7a36ec24d41f0df8bf024e8a827f1247bdab5"
+      }
+    },
+    {
+      "sequence": 125,
+      "previous_record_digest": "sha256:2d1ec205df8200caa5b1e43d0d744d1fd9cde0a565759540dc886ad5b94b0676",
+      "record_digest": "sha256:8fccdb3fae56237a9813f3965357b97cfe64d2923610bf17cd29eb90d480279b",
+      "command_id": "pr156-authority-mode-l5-rev12-20260727",
+      "receipt_id": "certificate:b35c3c4f4fa262dc7fb9fef5b1b41ff0",
+      "receipt_digest": "sha256:6c8621eda839da22ca4c8a0030b3074ff1eed6d7b419c2ec0408a8be785703c1",
+      "decision_digest": "sha256:9a2a6164b12724a19559fb1fba28d27d4797dec6433141ededf9d1050848aff8",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 12,
+        "content_digest": "sha256:1b19a16fb74ec89a3b48e98e081dcc332ee20aa176043cb9ae0a64a56823ac9e"
+      }
+    },
+    {
+      "sequence": 126,
+      "previous_record_digest": "sha256:8fccdb3fae56237a9813f3965357b97cfe64d2923610bf17cd29eb90d480279b",
+      "record_digest": "sha256:af1a8bd32ef84cde0637d7d91d8181ff11da8240426c861ebe939c2ce5ed0bf0",
+      "command_id": "pr156-authority-mode-l6-rev12-20260727",
+      "receipt_id": "certificate:79b3877d82d3a77a949bc2e2606ab473",
+      "receipt_digest": "sha256:64c383a2a3add8ec475d9b6d54e398f62d46511ca5d1840c93d98bad05269952",
+      "decision_digest": "sha256:bbce6ccd6353ab1fd3bccddc327f4b130bcc81fb8feac5c0afc8d45a5f425ebc",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 12,
+        "content_digest": "sha256:1b23caa2dbd441f7f392cdd5b9a0f9363f12f12ff59937a1014b1292c052a4d5"
+      }
+    },
+    {
+      "sequence": 127,
+      "previous_record_digest": "sha256:af1a8bd32ef84cde0637d7d91d8181ff11da8240426c861ebe939c2ce5ed0bf0",
+      "record_digest": "sha256:13b2ea1202e32167856dae2d8d7761808eb7799ef2c930d174e1ad723936173c",
+      "command_id": "pr156-authority-mode-l7-rev12-20260727",
+      "receipt_id": "certificate:3c9479cfef84643af21f915fe97622aa",
+      "receipt_digest": "sha256:e799fa472770dea4ba269d08f895e3f9a35d3c822439d8da1b28ebd77433aaa4",
+      "decision_digest": "sha256:37b905b9b0c8287b707985289c506f44dd95bf77cfe00211b0096742450e8899",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 12,
+        "content_digest": "sha256:b684e4ecc2f2a09555d0711ed76352c7cc0f6da20f543c6416180b4741694698"
+      }
+    },
+    {
+      "sequence": 128,
+      "previous_record_digest": "sha256:13b2ea1202e32167856dae2d8d7761808eb7799ef2c930d174e1ad723936173c",
+      "record_digest": "sha256:746e7d099c889b8848888ceae5e380f7f46ac5d891dc32372dcdbca2e83af2d5",
+      "command_id": "pr156-closed-authority-l5-rev13-20260727",
+      "receipt_id": "certificate:b6202c50d5041c0c3d341986aa4f3941",
+      "receipt_digest": "sha256:6a79a0f5ff4bf1d21f06ecf560ae126d297df5335ad7aa32157ec643de150f67",
+      "decision_digest": "sha256:1c6b951f10e636da0703358bd239ea296e280f453feac4709bd60b6884d0183d",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 13,
+        "content_digest": "sha256:35e452cd3a82cb76428654c00468175e68a6b05c2dd86026c052c1ec243da989"
+      }
+    },
+    {
+      "sequence": 129,
+      "previous_record_digest": "sha256:746e7d099c889b8848888ceae5e380f7f46ac5d891dc32372dcdbca2e83af2d5",
+      "record_digest": "sha256:59239176dd0b23fdeaa167d33704c774b243fa0585d5ed1ba0e84de3f4bf2ba9",
+      "command_id": "pr156-closed-authority-l6-rev13-20260727",
+      "receipt_id": "certificate:dd9766f1a9f046a61b0b51cc0a16597d",
+      "receipt_digest": "sha256:1ff94db84406d3146ccc5af29921964fcfff1637b4a181829d51871023b687c7",
+      "decision_digest": "sha256:72992aea09b8bf715e89b4de66abefccd2434652bff41037e12eb15ff4b603a9",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 13,
+        "content_digest": "sha256:73ceb48e99b1518fac5bcdfeb0c2ea7fade5a90e9c74492fa0ab19de5afc8337"
+      }
+    },
+    {
+      "sequence": 130,
+      "previous_record_digest": "sha256:59239176dd0b23fdeaa167d33704c774b243fa0585d5ed1ba0e84de3f4bf2ba9",
+      "record_digest": "sha256:2d3ca68cf3303e07b73da34763e8bbddde2c666d9af8d39de31bfb4292e09647",
+      "command_id": "pr156-closed-authority-l7-rev13-20260727",
+      "receipt_id": "certificate:ce755fcc5d363e8b9ae087176b000fed",
+      "receipt_digest": "sha256:f00b3b3a563cd98ace0f692822ea7c5486b084e40fd65443f4429367f5bd83f0",
+      "decision_digest": "sha256:4ca4117a2a88cf1563a429fde6b32dfac6d288217bda95d556c90ecedfc1231f",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 13,
+        "content_digest": "sha256:cf758ce85e6c0b4f953db5df4472bd42dfbd7b2b0b549b0257b5939aae876a92"
+      }
+    },
+    {
+      "sequence": 131,
+      "previous_record_digest": "sha256:2d3ca68cf3303e07b73da34763e8bbddde2c666d9af8d39de31bfb4292e09647",
+      "record_digest": "sha256:617bb9e42b32681c83a6296dcaa9e3eed12b4660ec3a39c64c1a8870bc43914c",
+      "command_id": "pr156-owner-boundary-l5-rev14-20260727",
+      "receipt_id": "certificate:12f6a0ba653fe076c48e1df10abc5dfd",
+      "receipt_digest": "sha256:dbb9a7fae3b11c34b1bea5ff8499ad03be0de15b1540d7b5d12a7d51330ab0b2",
+      "decision_digest": "sha256:0413c1a4e5f7a0e74b72e15ba7a2f88a5ffb81c78fb5c558f2d13c999c048f27",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 14,
+        "content_digest": "sha256:e399792b1916b82c4f12d434840537992f695dace4701dd55c00b1c9ea1f759a"
+      }
+    },
+    {
+      "sequence": 132,
+      "previous_record_digest": "sha256:617bb9e42b32681c83a6296dcaa9e3eed12b4660ec3a39c64c1a8870bc43914c",
+      "record_digest": "sha256:058d69efa67eb027d11bf468aad70c82b6805bfaf750fc559f495e1a18a944b7",
+      "command_id": "pr156-owner-boundary-l6-rev14-20260727",
+      "receipt_id": "certificate:f9b94799a6a3551919e1a7749f28f5be",
+      "receipt_digest": "sha256:3a0c0be2f158e3b3973d72e851b20ed7a06b380e3e7956f40f92de3992658b13",
+      "decision_digest": "sha256:9d892aeaa25d27f2c7d85108ad8739977de223932b47fb1d3d301e9feac16e6e",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 14,
+        "content_digest": "sha256:e29238b2166536d2a9cda891bcc292470e2ee9c2c04fdb5198e7964749cd73fb"
+      }
+    },
+    {
+      "sequence": 133,
+      "previous_record_digest": "sha256:058d69efa67eb027d11bf468aad70c82b6805bfaf750fc559f495e1a18a944b7",
+      "record_digest": "sha256:a029c40cc9f08aaa528576ce7535851296eb3d7caeb2c497cf3a7cd0448051a7",
+      "command_id": "pr156-owner-boundary-l7-rev14-20260727",
+      "receipt_id": "certificate:3ab990e1b7afe985547e8782bad86b96",
+      "receipt_digest": "sha256:744d9584e58ad74f6c9ae7a1f9d356c6d7a40c75ec1748e7561ac07cc37e98f3",
+      "decision_digest": "sha256:2febc6595dcae6f179a01c442c3cc1e2d179051a64f37c75018f0adeee57d35d",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 14,
+        "content_digest": "sha256:f9e298ae6b38b372d13f71d96ed1931b6da97780e79f425236e0655073a6a96a"
+      }
+    },
+    {
+      "sequence": 134,
+      "previous_record_digest": "sha256:a029c40cc9f08aaa528576ce7535851296eb3d7caeb2c497cf3a7cd0448051a7",
+      "record_digest": "sha256:1c2e46558f00e71a0bcdb9a93d0bdda675f4fb925a7bb6e07aa9d1b9f3cffb68",
+      "command_id": "pr156-contract-closure-l4-rev12-20260727",
+      "receipt_id": "certificate:9f6f36c65b38fdf8354780bce6fa9971",
+      "receipt_digest": "sha256:70479beaf61d956e72c565f7a71db1babc28f382def52ba92a97c77de0299103",
+      "decision_digest": "sha256:85ae3f2709570e89b8a41684bacec1b83f812dd4048159ae88977569f1d55427",
+      "binding": {
+        "path": "docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md",
+        "plan_id": "PLAN-L4-32-resource-governed-execution-kernel",
+        "asset_id": "plan:legacy:fd8e0f539c6088b10f953665a7f2103000564ee42d29b7784b3a41cb19f493ff",
+        "revision": 12,
+        "content_digest": "sha256:b0d5b5b4fd99deab736cf7ceee6dea050ff52e92e5bcc63517e56e0dc540c0d2"
+      }
+    },
+    {
+      "sequence": 135,
+      "previous_record_digest": "sha256:1c2e46558f00e71a0bcdb9a93d0bdda675f4fb925a7bb6e07aa9d1b9f3cffb68",
+      "record_digest": "sha256:fdc9505a8db0b84efbbae0dfa01987541605d3ea4542d5de8dd071067e025bcd",
+      "command_id": "pr156-contract-closure-l5-rev15-20260727",
+      "receipt_id": "certificate:57e3ee86d1269c46afefa9ec5975bb49",
+      "receipt_digest": "sha256:7e0486812cc3db167d587fd9a75732a616cab6bcac8b1fee38d863d7186447ca",
+      "decision_digest": "sha256:19d0b7a7e1524d0e33b1bdc2dff5e70030282c7b45c46d10e892244a938123be",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md",
+        "plan_id": "PLAN-L5-25-resource-kernel-physical-protocol",
+        "asset_id": "plan:legacy:2e0a2fa85c045fe01366ac802508ee775743d16e87ad42472550a25995146455",
+        "revision": 15,
+        "content_digest": "sha256:4c1efaacd757a488444f0f2aa2f32e62430619974226e6b7be545dd57e066efa"
+      }
+    },
+    {
+      "sequence": 136,
+      "previous_record_digest": "sha256:fdc9505a8db0b84efbbae0dfa01987541605d3ea4542d5de8dd071067e025bcd",
+      "record_digest": "sha256:ecdeb5520e4f9cf3e87b1b6b2abba8aad84c078e667c13a50c6b21f45c812faf",
+      "command_id": "pr156-contract-closure-l6-rev15-20260727",
+      "receipt_id": "certificate:cfcc7246ded4c136fef34d686b7fa401",
+      "receipt_digest": "sha256:a363f2c14218949159999e1b85a3c63f67e1357714ef4283156d2fb87e00c0f3",
+      "decision_digest": "sha256:214b323be000be52dc28366d699f9cfe8262123aeced0e40cb0bc250aa2f4279",
+      "binding": {
+        "path": "docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md",
+        "plan_id": "PLAN-L6-92-resource-kernel-function-contracts",
+        "asset_id": "plan:legacy:fef79873d9ab53b5ca019fb28a57b358c584fbfbc1fe1f7f1fda4a0461858e3a",
+        "revision": 15,
+        "content_digest": "sha256:c175f3f2afc27aefc737cc8b76a09600332a650795f9a915e62215519072018c"
+      }
+    },
+    {
+      "sequence": 137,
+      "previous_record_digest": "sha256:ecdeb5520e4f9cf3e87b1b6b2abba8aad84c078e667c13a50c6b21f45c812faf",
+      "record_digest": "sha256:5f96f26d27d5d3bddc81fa50a8d6c625516c92052e0d4c682cfd759e97a30e7d",
+      "command_id": "pr156-contract-closure-l7-rev15-20260727",
+      "receipt_id": "certificate:7fa70641c40e0bf6ab5a5d7521e65f21",
+      "receipt_digest": "sha256:4af2d9fcdbdae4fe0f73390d0fc7338630cc789ad8f9143e3572353551c61c26",
+      "decision_digest": "sha256:518357c6bb212240480249beba506d5320f3c5a2dcd8437c56dca9c9a27ee1f9",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-454-resource-kernel-native-companion.md",
+        "plan_id": "PLAN-L7-454-resource-kernel-native-companion",
+        "asset_id": "plan:legacy:ceb7816615f764c48e55b48871752c35a2cfd6058c2fe898ebe4495f0e88ed50",
+        "revision": 15,
+        "content_digest": "sha256:e439c2e20f52ced653baf026f6259a6c38e1ebd11250cd349c547a440bacebb9"
+      }
     }
   ]
 }

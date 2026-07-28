@@ -3,7 +3,7 @@ name: devops-deploy
 description: デプロイ・インフラ設計。Docker/CI-CD/環境分離/監視・アラート。L7 デプロイ・G7 安定性確認時に使う。
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: claude-sonnet-5
-effort: high
+effort: medium
 memory: project
 maxTurns: 25
 ---

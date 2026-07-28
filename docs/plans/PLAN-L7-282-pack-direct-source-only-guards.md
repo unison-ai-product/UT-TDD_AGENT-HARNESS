@@ -70,8 +70,9 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-07-02T22:05:00+09:00"
-        evidence_path: tests\\projection-writer.test.ts
-        output_digest: "sha256:90eda6ff5dfe5944db150759c31650e03a8d75f439ae287a21f508f6ca860b22"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:f0ffe1459d81c6fa0bdc11aa6510e3858856c084899db702bafbef97b9a187a3"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L7-282: Pack direct source-only test guards

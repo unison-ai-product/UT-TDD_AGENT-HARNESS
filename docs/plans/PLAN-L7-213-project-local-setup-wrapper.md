@@ -205,3 +205,15 @@ consumer がまだ package dependency を持たず、clone した harness checko
 - clean distribution acceptance smoke が updated adapter hook template を検証する。
 - tarball から展開した harness checkout が consumer repo に actual setup でき、生成 wrapper から `--help` と `status --json` が動く。
 - rollback managed paths に `.ut-tdd/bin/ut-tdd.mjs` が含まれる。
+
+## 2026-07-22 Issue #123 add-impl 追補
+
+project-local wrapper の解決順序は温存するが、Claude hook からの入口は shell-form command string から
+official exec form へ変更する。生成される各 hook は `command: "bun"` と
+`args: [".ut-tdd/bin/ut-tdd.mjs", ...hookArgv]` を持ち、command 文字列内へ wrapper path や
+subcommand を連結しない。source template、built-in fallback、clean Pack、fresh consumer setup は
+同一 materializer の executable+argv contract を使う。
+
+受入には全 6 Claude hook の構造一致、shell-form negative fixture、argv spoofing negative fixture、
+Windows native の hook dispatch ancestry に Git Bash / shell / dispatch 用 conhost が存在しない実測を
+追加する。Codex template は capability 未証明のため別 serializer に留める。

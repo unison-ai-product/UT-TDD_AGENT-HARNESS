@@ -29,8 +29,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:00:23+09:00"
         evidence_path: tests/vmodel-source-assets.test.ts
-        output_digest: "sha256:0a2f8aeb712cdf2edb03b35e4a6b7278cdbe5a6b01f3df045ee80b135f1dead4"
-        anchor_commit: 71a023b2c74ca15dbc88c4453ca7c9adb05ca58a
+        output_digest: "sha256:7872ee0f9acf7a4f221cec689c46bdf352d50e618edd3bb29501eb260d87d23a"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 agent_slots:
   - role: po
     slot_label: "PO - engine-swap/full-scopeと最終検収"

@@ -207,3 +207,17 @@ L9 では security boundary が external-if / CI / CLI 境界検証に混ざる�
 
 security verification (ZIP-DOC-102 相当) は L9 `ST-EXT-06` (§5-§9 の脅威モデル/供給網/鍵・秘密/監査ログ
 trace) として `L9-system-test-design.md` §1.4 に追加し、§2 量閉じ一覧の孤児 0 に含める。
+
+## 12. Resource Kernel bundle trust脅威モデル（Issue #152）
+
+| 脅威 | fail-close境界 |
+|---|---|
+| bundle内自己申告鍵・ambient鍵によるtrust差替え | bundle外のversioned `TrustDecisionPort`だけが署名可否を決定する。port欠測・unknown versionは拒否 |
+| companion/protocol/SBOM/D0-N receipt差替え | 全digest、target、required capability、D0-N generation receipt digestをcanonical manifest署名へ含める |
+| 古い正規署名manifestのreplay | durableなmonotonic accepted-sequence factのfloor未満、および同sequence別payloadを拒否 |
+| rollback名目の旧manifest直接復帰 | 旧componentも再reviewし、現在floorより大きい新sequence manifestとして再署名した場合だけ受理 |
+| Node runtime/core/activationの二重所有 | companion bundleはD0-N generation receiptを参照するだけで、Node artifactやactivation stateを含めない |
+
+D0は署名検証のport境界、canonical manifest、単調sequence、fail-closeを固定する。鍵rotation/revocation epoch、
+secure clock、re-anchor、installer registry、durable storeの具体方式はinstaller/release後続設計へ委譲し、
+未確定の物理方式をD0-Rの受入条件にしない。後続方式が未成立でも、旧direct-spawnや旧manifest replayへfallbackしない。

@@ -6,7 +6,9 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L7
-plan: docs/plans/PLAN-L6-01-function-spec.md
+plan: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
+replacement_issue: 152
+predecessor_plan: docs/plans/PLAN-L6-01-function-spec.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -678,14 +680,14 @@ import edge を一方向 (acyclic) に保つ (cycle 回避は dependency-drift g
 
 3 archetype (役割の根本種別): **相談 (consult)** = tl/uiux (上位帯エスカレーション・プランナー、read-only)、
 **ワーカー (worker)** = se/docs (実装・文書、下位帯)、**検証 (verify)** = qa (テスト通過後カバレッジ相談、上位帯)。
-ティア表 `TIER_TABLE`: T0 = `{claude: claude-opus-4-8, codex: gpt-5.5}` (フロンティア/明示許可)、
-T1 = `{claude: claude-sonnet-4-6, codex: gpt-5.4}` (ワーカー専門)、T2 = `{claude: claude-haiku-4-5,
-codex: gpt-5.3-codex-spark}` (ワーカー軽量)。
+ティア表 `TIER_TABLE`: T0 = `{claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier}` (フロンティア/明示許可)、
+T1 = `{claude: MODEL_IDS.claude.sonnet, codex: MODEL_IDS.codex.luna}` (ワーカー専門)、T2 = `{claude: MODEL_IDS.claude.haiku,
+codex: MODEL_IDS.codex.spark}` (ワーカー軽量)。
 
 **モデル id 単一正本 (`MODEL_IDS`、PLAN-L7-58 carry 解消)**: model id 文字列の正本は `src/team/model-policy.ts`
 の `MODEL_IDS` カタログ 1 箇所であり、`TIER_TABLE` (tier-router) と `modelForProvider` (model-policy) は
 両方ともこの catalog を参照して合成する。従来は両者が同じ id literal を二重に持ち typo/drift の温床だった。
-`MODEL_IDS.codex.frontier` = `gpt-5.5` (= `TIER_TABLE.T0.codex` = `modelForProvider` "frontier" family) のように
+`MODEL_IDS.codex.frontier` (= `TIER_TABLE.T0.codex` = `modelForProvider` "frontier" family) のように
 1 値 1 定義へ収束させた。oracle U-MODELID-001..004 が「合成一致」と「生 literal 不在」を fail-close で検査する
 (価格表 `src/state-db/token-tracker.ts` は外部 pricing 由来の superset で別正本、統合対象外)。
 
@@ -723,14 +725,14 @@ role・engine・task text から推定する。これは provider 配置その�
 - research 系: Claude Haiku 系を優先する。
 - implementation 系: GPT/Codex 系を優先する。
 - lightweight 系: GPT/Codex の spark / mini lane を使い、並列 shard で閉鎖権限を持たせない。
-- design / implementation review: T0 reviewer として GPT frontier (`gpt-5.5`) または Claude Opus (`claude-opus-4-8`) 以上を明示許可ゲート付きで使う。
+- design / implementation review: T0 reviewer として GPT frontier (`MODEL_IDS.codex.frontier`) または Claude Opus (`MODEL_IDS.claude.opus`) 以上を明示許可ゲート付きで使う。
 - UI/UX 系: Claude Sonnet 系を優先し、effort は `xhigh` とする。
 
 effort 既定:
 
 - Claude 系は `high` を標準にする。
 - GPT/Codex 系は `middle` を標準にする。
-- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `high` とする。
+- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `middle` とする。
 - spark / mini など軽量モデル lane は `high` を標準にする。
 - UI/UX は `xhigh` を指定する。
 
@@ -789,7 +791,7 @@ provider CLI を起動する。
 
 | 関数 / CLI | signature / command | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | Claude advisor は Opus (`claude-opus-4-8`) + `high`、Codex advisor は GPT frontier (`gpt-5.5`) + `xhigh`。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
+| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | 技術判断は Sol (`MODEL_IDS.codex.frontier`) + `low`、UI/UX 判断は Fable (`MODEL_IDS.claude.fable`) + `low` を一次とし、他方を fallback にする。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
 | `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。 | `tests/cli-surface.test.ts` |
 
 ## 2026-06-23 artifact progress workflow trigger 追補
@@ -2040,3 +2042,307 @@ HEAD SHA、run attempt、workflow revision、required check set、protection rev
 個別legや片OSのreceiptを参照せず、E13に束縛されたaggregate receipt digestだけを参照する。
 branch protectionのrequired contextも `harness-check` 一件へ固定し、実GitHub設定が未適用・乖離・
 取得不能なら「設定済み」と推測せずclosureをblockする。
+
+## 2026-07-22 Hook executable+argv contract 追補 (Issue #123)
+
+| 関数 | signature | 前提 | 事後 | invariant | oracle |
+|---|---|---|---|---|---|
+| `parseHookInvocation` | `(raw: RawHookInvocation) => HookInvocation \| null` | `command` と任意の `args` を受ける。 | runtime 固有 JSON を `executable`、`args` (意味上の argv)、`tokens`、`serialization` へ正規化する。不正型は `null`。 | shell quoting を exec-form argv の代用にせず、`args` 存在時は token 境界を保持する。 | U-HOOKEXEC-001..002 |
+| `invocationEquals` | `(actual: HookInvocation, expected: { executable: string; args: readonly string[] }) => boolean` | 両 invocation は正規化済み。 | executable と argv の長さ・順序・値が完全一致するときだけ true。 | 部分文字列、追加 token、近似 path を受理しない。 | U-HOOKEXEC-003..004 |
+| `wrapperHookArgs` | `(id: RequiredProjectHookId) => readonly string[]` | id は REQUIRED に存在する。 | consumer wrapper entrypoint と hook subcommand を token 配列で返す。 | source/built-in/docs template の argv 正本を分岐させない。 | U-HOOKEXEC-005..006 |
+| `analyzeProjectHooks` | `(docs: ProjectHookDoc[]) => ProjectHookResult` | setup/source の Claude hook config を与える。 | 6 hook の executable、argv、policy、個数を照合し、shell-form command、欠落 token、追加 token、argv spoofing を fail-close finding にする。 | detector の都合で設計を shell form に戻さない。 | U-HOOKEXEC-006..007 |
+| `observeWindowsHookDispatch` | `(run: HookSmokeRun, deps: ProcessTraceDeps) => HookDispatchObservation` | Windows native runner で hook を 1 回起動し process ancestry を捕捉できる。 | hook host→Bun entrypoint 間の intermediary image と exit/outcome を返す。 | dispatch 区間に shell host または dispatch 用 conhost があれば不合格。 | U-HOOKEXEC-008 |
+
+`HookInvocation` は `{ executable: string; args: readonly string[] }` (`args` は意味上の argv)。Claude / Codex の config JSON は
+runtime 固有 projection であり、意味論正本ではない。これにより project-hook、doctor、setup、Pack
+template が同じ invocation を比較しつつ、runtime ごとの schema capability を混同しない。
+## Node self-host bootstrap機能契約（Issue #152 D0-N）
+
+関数`buildNodeGeneration(candidateRevision)`はexact Node `24.13.0` / npm `11.6.2`、review済み
+検証済みツールチェーン来歴（Node配布物digest、同梱npm CLIの期待digest、package/lock identity）、
+入力には`package-lock.json`とbuilder/source graphも含め、compiled ESMと`NodeBootstrapReceipt`を
+同一generationへ原子的に公開する。receiptは少なくとも
+receipt項目は`subject_revision`、Node/npm実行ファイルの絶対path・version・digest、lock digest、
+外部dependency closure digest、builder policy/digest、source graph digest、
+compiled entrypointの相対path/digest、toolchain provenance digest、generation IDを持つ。
+
+関数`loadNodeGeneration(expectedRevision)`はappend-only activation marker集合を読み、
+全digest、exact version、review済みprovenance、dependency closure、subject revisionを照合する。同じ
+versionを返す別npm CLIもexpected digestが異なれば拒否する。不一致・欠落・未知schema・
+symlink escape・partial publishではtyped failureを返し、spawnを呼ばない。成功時だけ
+`shell=false`、Windowsでは`windowsHide=true`でsealed Node executable + compiled ESMを起動する。
+Bun、bunx、tsx、TS直実行、ambient PATH、runtime downloadへのfallbackは禁止する。
+
+`publishActivation`はexact path `dist/node-publish.lock/`をatomic `mkdir`で取得できた場合だけ、取得後の
+max sequence `N`から`N+1`を割り当てる。同時writerは`publish-lease-busy`でfail-closeしretryしない。
+`owner.json`欠落・破損をunlock根拠にせず、別path、open-wx、steal、clear、recovery APIを禁止する。
+crash残留lockは後続recovery PLANまで永久にpublishをblockする。marker rename後crashではreaderだけが
+complete markerを利用できる。
+
+process-crash atomicity oracleは各barrierのfault injectionと並行readerで、旧完全generationまたは新完全generation
+以外を観測しないことを要求する。markerはtemporary write + file sync + close後、存在しない一意final名へ
+same-filesystem renameする。POSIXは可能な場合parent directoryをsyncする。Windows Node-only F0bはpower-loss後の
+最新marker persistenceも旧marker存在も保証しない。検証可能complete markerが1件以上なら最大sequenceを選択し、
+0件なら`node-activation-marker-missing`でfail-closeする。power-loss
+durable activationはResource Kernel bundle trust floorの後続責務であり、F0 receiptへ虚偽のdurable claimを入れない。
+
+F0b rollbackは同一subject revision限定。cross-revision rollbackとtarget revision変更APIはunsupportedで
+fail-closeし、通常はgit revertから新revisionをbuildする。F0bはautomatic GC、generation deletion API、
+lease recovery/steal/clearを実装しない。CLI先行・receipt後行の二段rename、既存pointer上書き、
+shell/native helper fallbackは契約違反である。
+
+`initializeCutoverChain`は空chain、sequence 0、expected head nullだけでinventory/review/admission evidence setを検証してgenesisを作る。
+`appendCutoverTransition`は空chainを拒否し、validated receipt chain、previous/current state、subject revision、evidence receipt、
+review/admission receiptを受け、許可された隣接一方向遷移だけをappendする。返す
+`CutoverTransitionReceipt`の唯一のfield順は`schema_version`、`registry_id`、`transition_id`、`sequence`、
+`subject_revision`、`previous_state`、`current_state`、`evidence_set_digest`、`review_digest`、
+`admission_digest`、`previous_receipt_digest`、`receipt_digest`である。別名`evidence_digest` /
+`chain_digest`は受理しない。precondition不成立、skip/reverse/replay、revision又はchain不一致はtyped errorでfail-closeし、
+`projectCutoverState`はvalidated chainだけをfoldしてcurrent stateを返す。
+
+空chainは`uninitialized`で開始不可。genesisは`previous_state=null`、`previous_receipt_digest=null`、
+`current_state=inventory_frozen`とinventory evidence+review/admissionを要求する。edge-discriminated evidenceは
+kind/count/producer/subject revision/digest/exit successをexact照合し、wrong edge/replay/skipを拒否する。
+
+edge registryはL5のgenesis、inventory→shadow、shadow→primary、primary→bun_removed、bun_removed→sealedの
+5 Edge IDを`CUTOVER-EVIDENCE-REGISTRY-v1`から識別unionとして実装し、別edgeのevidence型を受理しない。
+inventory→shadowだけは各producer receiptのslice commit subjectとcandidate HEADのdescendant closureを検証し、
+同一subjectを要求しない。transition receiptはcandidate HEADをsubjectとし、stale/replay/non-ancestorを拒否する。
+`review_digest` / `admission_digest`は全edgeで非nullかつ対応registry rowのevidence receipt
+`receipt_digest`とexact一致する。`evidence_set_digest`はregistry row順の固定tupleをUTF-8 canonical JSON、
+decimal byte-length framing、SHA-256 lowercase hexで算出し、duplicateとcross-OS差を拒否する。
+sealed edgeは`PLAN-RECOVERY-16` / `PLAN-L7-452`のtyped rowを両方要求する。
+`SliceEvidenceReceipt`は11-field pre-attestation tuple、record digest、nested attestation、wrapper receipt digestを使う。
+generic kindはtyped `EvidencePayloadObject`をobject receipt digestで取得してpayload bytesを再hashする。
+SliceEvidenceとpayload objectのkind/owner/attestation producer/payload schemaを
+L5 `CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`のclosed discriminated unionへexact照合する。payloadはRFC 8785
+canonical JSON→UTF-8→RFC 4648 base64url paddingなしへ一意化し、decode bytesをSHA-256で再hashする。
+arbitrary bytes、schema spoof、cross-kind/cross-owner/cross-semantic replayを拒否する。
+subject revisionは`git-sha1:<40 lowerhex>|git-sha256:<64 lowerhex>`だけを許し、outer/payloadをexact一致させる。
+payload object/decoded payload/envelopeのschema version literal及び`payload_schema == schema_id`もexact照合する。
+同じ共通GitObjectId型をCutover candidate/transition、Review lane/bundle、L6 confirmation、Slice admission/evidenceへ
+適用しraw hexを拒否する。tracked/L6/reviewを含む全receipt schema versionをliteral v1へ閉じる。
+Q0 expected caseは同subjectのimmutable attested CaseManifestObjectから取得し、executed setを照合する。
+正本は`docs/test-design/harness/L8-integration-test-design.md`内の
+`NODE-Q0-CASE-MANIFEST-v1-BEGIN/END` exact 1組に挟まれたexact 1 JSON objectとする。
+artifact ID/path、marker数、duplicate/unknown fieldを検証し、RFC 8785 canonical object UTF-8 bytesから
+artifact digestを再計算する。manifest arrayはparsed arrayと順序込みexact一致させる。
+parserはraw MarkdownのUTF-8 LF、backtick込みmarker exact行、前後空白0、間のnonblank JSON exact 1行、
+required/allowed 3 fields exactを要求する。Q0 payload refは`edge_kind='q0.case-manifest'`,
+`ordinal=0` exact 1とする。DB discriminatorは`evidence_type`だけとしtyped union kindと双方向一致させる。
+Case IDはUTF-8 code-point昇順unique arrayとし、set digestは
+`SHA-256(lowerhex)(UTF-8(RFC8785 canonical JSON(array)))`で再計算する。test-design artifact digestも
+subject GitObjectId時点のcanonical bytesから再計算する。core/outer owner一致とclosed mapの`ci`を検証し、
+同一subjectは同一outer digestだけ冪等、異digestは競合拒否する。q0.authoring/q0.runtime-no-fallbackは同じouter digestを
+typed `cutover_evidence_refs` edgeで参照し、missing/orphan/split manifestを拒否する。
+ReceiptDigestはraw lowerhex 64、ContentDigestは`sha256:`付きlowerhex 64へ分離しprefix混同を拒否する。
+artifact digest preimageはmarker間single parsed JSONのRFC 8785 UTF-8 bytesだけとする。DB subjectはsigned
+payload JSONからgenerated columnで導出し、strict NOT NULL tableのtransactional rebuild migrationを要求する。
+ReviewBundleはattested CandidateAuthorshipReceipt outer digestをnested ref exact 1で参照し、provider由来の
+全writer identity/session/runtime setとreviewerをdisjoint検証する。自己申告author fieldを受理しない。
+IdentityDigestはcanonical identity objectのRFC 8785/UTF-8 ContentDigestとする。bundleへbase revisionを追加し、
+authorshipのsubject/artifact/base及びPR review base/merge-baseとexact一致させる。trusted work event ReceiptDigest
+集合がbase..subject全product path/commitをcoverし、そのsorted arrayからprovenance ContentDigestを再導出する。
+WorkProvenanceEventはtouched_pathsを含むexact 12/self除外11-field core+outer envelopeとし、authorshipへevent digest arrayと
+ordinal順typed edge exact Nを持たせる。ReviewBundleはexact 8/self除外7とする。genesis receipt sequenceは0、
+CAS後head sequence 0/version 1とする。
+SessionIdentityDigestへraw sessionを置換し、first-parent各commit diffのnormalized path exact setをevent arrayと
+照合する。head CASはexpected sequenceを含み、同transactionのMAX receipt sequenceと一致させる。
+SessionIdentityReceipt outer envelopeをWorkEvent/ReviewLaneがtyped edge exact 1で参照しchain-only再導出する。
+tracked changed pathsは除外0でexact照合し、head digestもMAX sequence row receipt digestと一致させる。
+session coreはManagedSessionAttestationとouter EvidenceAttestationを二段検証する。managed verifierのclosed
+trust registryがUT-TDD managed session authorityを検証し、外部provider API署名を仮定しない。
+WorkEvent/laneとsession receiptのprovider/runtimeをexact一致させる。
+管理対象trust registry 3 rowについてrevision、issued_at validity、wrong authority/key、forgery、provider binding、
+stable subject+session同時証明を検証する。
+SessionIdentityはexact10/self9 core+outer二段検証、combined payloadだけを使い、`identity.session` edge exact1を
+要求する。immutable v1/revision 1だけを使い、expiryでadmissionをfail-closeする。
+active signing-key compromiseの自動検出、rotation、revocationはD0実行経路に存在しない。侵害が外部security
+incidentとして報告された時点で該当authorityを運用停止し、managed-session verification、admission、cutoverを
+全面fail-closeして既存receiptをmerge/activation根拠に使わない。再開はsecurity/PO承認の別ADR/PLAN、新registry
+ID v2、再review/reissueを必須とし、immutable v1を書き換えない。これはmachine Green oracle又はhistorical
+determinism claimではなく、明示的な高影響運用境界である。
+projection rebuildはsingle read snapshot→staging generation→complete marker→atomic publishとする。
+aggregateはL5 profile registryのprofile revision、required lanes/set digestとobserved setをexact照合する。
+`ReviewBundleReceipt`はexact 8-field core/self除外7-field ordered preimageとexact 7-field
+`AttestedReceiptEnvelope`を使い、
+claim-blind/spec-blindのexact 2 lane PASSとartifact/revision一致を要求する。lane schemaのprovider、
+reviewer model、execution mode、runtime familyをdigest/attestationへ封印する。hybridはprovider/session/identity/
+runtime family/authorを分離する。codex-only/claude-onlyはruntime family一致を許す代わりに
+異model+独立session/identityを必須とする。standaloneはAI laneを禁止し、provider=human/model=none/
+runtime=humanのdistinct reviewer 2名と独立session/evidenceを要求する。条件を満たせなければfail-closeする。
+Issue #153でも2 laneを維持する。
+chain entryだけでbundle/admission/evidenceを再検証可能にする。attested coreの参照はすべてouter envelope
+`receipt_digest`だけとし、core receipt digest、payload `evidence_digest`又はaliasで取得しない。
+ReviewBundle→lane、SliceEvidence→ReviewBundle及びQ0 predecessorまで同じ規則を使う。
+`SliceEvidenceReceipt`はkindで
+discriminateし、review/admission kindは各ReviewBundle/CutoverAdmission receipt digestへのtyped ref、
+generic kindだけはpayload object receipt digestとcontent専用payload digestを持つ。owner IDと既存EvidenceProducer enumを分離し、ownerをpreimageへ、
+`human|po|codex|claude|ci`だけをverifier inputへ渡す。wrong mappingとreceipt digest自己参照を拒否する。
+append commandはlatest sequence+1とexpected previous digestを要求し、exclusive lock内CASでreceipt+evidenceを
+atomic appendする。double genesis、fork、CAS loser、crash partialをtyped failureにする。
+
+cutover/final revisionの許可はslice receiptと分離した`CutoverAdmissionReceipt`を使う。fieldは
+edge/candidate head/prior validated Q0又はcutover receipt/execution mode/decision/既存EvidenceRecordの
+authority ID+key version+signature+producer+record digest/receipt digestで、genesisはvalidated Q0
+`SliceAdmissionReceipt`をdirect参照し、以後は直前cutover receiptをpriorに要求する。独自`issuer_key_id`は持たない。全edgeのfresh admissionを
+正規producer registryで発行し、skip/replay/別edge/slice receipt流用を拒否する。
+CutoverAdmissionはowner、EvidenceProducer、nested authorityを分離し、L5
+`CUTOVER-ADMISSION-PRODUCER-MAP-v1`の5 edgeと`authority_id == attestation.authorityId`をexact照合する。
+edge別allowed authority ID/keyVersionもclosed照合し、別trusted CI authority replayを拒否する。
+ReviewLane preimageはversionを含むexact 11 fields/self除外として固定する。
+SliceAdmission coreは8 fields/self除外7-field ordered preimageへ固定する。
+execution modeはReviewLane/Bundle及びactual admission modeとexact一致させる。
+ReviewLane/Bundle coreはproducer/record digest/nested attestationを持つ
+exact `AttestedReceiptEnvelope`に格納し、両admission receiptは既存`EvidenceRecord` /
+`EvidenceAttestationVerifierPort`へ委譲する。attestationはnested
+`{schemaVersion:"evidence-attestation/v1",algorithm:"hmac-sha256",authorityId,keyVersion,signature}`だけを持ち、
+producer/recordDigestは`verify({producer,recordDigest},attestation)` inputとしてsubject/edge bindingと共に
+trusted verifierで検証する。unsigned/forged/untrusted、author reviewer、mode別independence違反を拒否する。
+production append portは`.ut-tdd/ledger/cutover-ledger.db` SQLiteだけを使い、`BEGIN IMMEDIATE`、WAL、
+`synchronous=FULL`、head digest/version条件付きUPDATE、chain+sequence/receipt digest UNIQUEを単一transactionで
+実行する。affected row 0のCAS loserは全insert rollback+retry 0。commit/fsync barrier後だけ成功を返す。
+cutover DBは独自migration registry/`user_version`を所有する。canonical ledger保守portはSQLite online backupで同一時点snapshotを作り、restore後のhead・全refs・object digestを
+元とexact照合する。migrationはbackup後の単一transactionで実行し、途中失敗を全rollbackする。未知newer schema、
+downgrade、projectionからのcanonical復元はfail-closeする。`.ut-tdd/harness.db`はrebuildable projectionだけ、
+`.ut-tdd/ledger/harness-ledger.db`はPLAN ledgerだけを所有し、projection writerはcutover DBをread-only投影する。
+
+`admitNodeSlice`はversion/slice/predecessor/subject/required inputs/decision/producer/receipt digestを持つ
+coreをexact `AttestedReceiptEnvelope<SliceAdmissionReceipt>`へ格納し、producer/record digest/nested attestationを
+既存verifierで検証してD0→F0a→F0b→F0c→Q0を実装する。typed unionへraw SliceAdmission coreを保存しない。
+core producer ownerとouter envelope producer ownerをexact一致させ、wrong outer owner/mappingを拒否する。
+F0b/F0c/Q0へそれぞれ直前のF0a custody/F0b sealed build/
+F0c aggregate receiptを要求する。`CAND-NODEBOOT-017..020`はedit-start hookでなくcandidate commitのmerge admissionで、
+gate test/schema/runtimeをproduct changeより先にTDD実装し同一commitを評価する。receipt欠落、別revision、owner違反、
+skip/replayはrejected receiptを残しmergeを拒否する。保存時は各sliceの
+`predecessor_receipt_digest`と`required_input_receipt_digests`をexplicit refsへ展開し、D0 SliceAdmissionから
+既存ReviewBundleReceiptのouter envelope digestをtyped root refとして保存する。
+Q0からD0 rootsまでchain-only closureが切れた場合は拒否する。
+required inputはL5 `NODE-SLICE-INPUT-REGISTRY-v1`順でdigest化する。D0はReviewBundle 1、canonical
+AttestedTrackedReceiptRecord exact 4だけを要求する。tracked projectionの
+integrity-only recordをformal plan admission-checkには使えてもD0 genesis trustには使わず、既存EvidenceAttestationへ
+record digestとfull bindingを束縛したwrapperだけをeligibleにする。unsigned/self-hash/forged/untrusted/
+wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c/Q0もregistryをexact照合する。
+
+production cutover genesisは`L6ConfirmationReceipt` exact 1を要求する。PLAN-L6-93のexact plan/revision、
+status confirmed、content digest、candidate HEADとtrusted nested attestationをchain-onlyで再検証し、
+CutoverAdmissionの`l6_confirmation_receipt_digest` direct refと一致させる。
+L6 confirmationはplan/revision/status/content/head/tracked digest/owner/attestation producerをrecord digestへ、
+nested attestationをwrapper receipt digestへ固定順で封印する。ReviewBundleはbundle execution modeを持ち、
+両lane及びactual admission modeとexact一致させる。
+
+cutover 3関数`initializeCutoverChain` / `appendCutoverTransition` / `projectCutoverState`の実装先は
+`src/runtime/cutover-transition.ts`、pair testは`tests/cutover-transition.test.ts`である。
+`admitNodeSlice`のkernel/testは`src/runtime/node-slice-admission.ts` /
+`tests/node-slice-admission.test.ts`、zod正本は`src/schema/cutover-transition.ts` /
+`src/schema/node-slice-admission.ts`である。D0では将来生成契約としてfreezeする。
+
+## PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約
+
+本節は`PLAN-L5-25`のL6降下であり、`L7-unit-test-design.md`の`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、
+`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`U-RGK-LIFE-*`、`U-RGK-PORT-*`、`U-RGK-BUNDLE-*`と対を成す。
+
+### ワイヤ/エラー代数
+
+`decodeRequestFrame(bytes, limits)`は4-byte lengthとexact JSON DTOを検証し、一つのrequestまたはtyped
+`PreDispatchWireFault`を返す純粋関数とする。`decodeResponseFrame(bytes, correlation, dispatch_state)`は
+valid response又はtyped `PostDispatchResponseFault`を返し、mutating dispatch後の全decode/correlation failureを
+pre-dispatchへ降格させない。`PreDispatchWireFault`はwire responseやworkload domainの`NativeError`ではなく、Node `CustodyClient`が
+Execution Kernel境界でexactly once closed `protocol_failure`へ正規化する。decode失敗時のlauncher/custody side effectは0である。
+`encodeFrame`はcanonical bytesを決定論的に返す。
+コマンド代数はlauncher参照を持たない`Probe(ProbeRequest)`、sealed token必須の`Execute(ExecuteRequest)`、
+native factだけを返す`RecoveryObservation(RecoveryObservationCommand)`、
+`RecoveryCustody(RecoveryCustodyCommand)`、control processだけを扱う`ControlCommand`の5 variantで閉じる。`Execute.operation`だけが
+`create_custody | spawn_attached | resume`を所有し、`AdmissionToken`とattempt/custody/bundle/probe bindingを必須とする。
+`RecoveryObservation.operation`は`observe_recovery_fact | prove_boot_fence`だけを所有してnative observation factを返し、
+authority/journal delta 0とする。`RecoveryCustody.operation`は`observe | terminate_tree | prove_empty | release_custody`だけを所有し、
+`ControlCommand.shutdown_companion`を別unionとする。TypeScript内部`recoverAuthority`は
+`SameBootExecutorRecoveryObservationV1 | CrossBootFenceObservationV1`だけを入力とし、
+`observe/prove_empty/release_custody`は両cleanup variant、`terminate_tree`は`CleanupAuthorityLeaseV1`だけを必須とする。
+全leaseの共通fieldは`authority_epoch/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/`
+を前半の必須項目とし、`custody_identity/executor_id/deadline_unix_ms/termination_policy_digest/recovery_grace_ms/`
+を後半の必須項目とする。さらに
+`recovery_deadline_unix_ms/lease_nonce/issuer_key_id/authenticator`だけを認証項目とする。exact variant schemaは次で閉じる。
+
+| schema/version literal | mode | 追加必須field | fixed allowed operations |
+|---|---|---|---|
+| `execution-authority/v1` | `live` | `boot_id/effective_deadline_monotonic_ms/recovery_deadline_monotonic_ms` | `spawn_attached,resume` |
+| `cleanup-authority/v1` | `cleanup_only` | `boot_id/effective_deadline_monotonic_ms/recovery_deadline_monotonic_ms/predecessor_lease_digest/cleanup_transition_fact_digest` | `observe,terminate_tree,prove_empty,release_custody` |
+| `boot-fenced-cleanup/v1` | `boot_fenced` | `previous_boot_id/current_boot_id/platform_boot_fact_digest/cleanup_deadline_monotonic_ms` | `observe,prove_empty,release_custody` |
+
+boot-fenced variantはwall deadlineを共通fieldで保持するが、`boot_id`と旧bootのmonotonic deadlineを禁止し、
+`cleanup_deadline_monotonic_ms`をcurrent boot domainで再導出する。variant間field、operation、unknown fieldをstrict rejectする。
+launcher、managed-root生成、resumeの型参照を持たない。
+same-boot observationは`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/`
+を識別項目とし、`bundle_digest/custody_identity/previous_authority_epoch/boot_id/effective_deadline_monotonic_ms/`
+を実行項目とする。加えて
+`termination_policy_digest/recovery_grace_ms/recovery_deadline_monotonic_ms/last_transition_digest/recovery_nonce/`
+を回復項目とし、
+`issuer_key_id/authenticator`を認証項目とする。このexact fieldだけを持つ。cross-boot observationは
+`schema_version/executor_id/execution_id/execution_spec_digest/attempt_id/custody_nonce/bundle_digest/`
+を識別項目とし、`custody_identity/previous_authority_epoch/previous_boot_id/current_boot_id/platform_boot_fact_digest/`
+を起動境界項目とする。さらに
+`deadline_unix_ms/recovery_deadline_unix_ms/observed_wall_unix_ms/observed_monotonic_ms/`
+を時刻観測項目とし、
+`termination_policy_digest/recovery_grace_ms/last_transition_digest/recovery_nonce/issuer_key_id/authenticator`
+のexact fieldだけを持ち、旧boot monotonic/lease/authority mode/launcher fieldを禁止する。
+`create_custody`はexecutor binding付きexecution leaseを返す。create/spawn/resumeはadmission chain上の
+別stage tokenを直前durable factの確認後に一回ずつ発行・消費し、`spawn_attached | resume`はtokenと同じleaseを照合する。
+`release_custody`は`empty_proven`かつreap proof後だけ許可し、`shutdown_companion`はcustody stateを変更しない。
+phaseは`ControlPhase`と`WorkloadPhase`へ分離し、単一`process_created`を禁止する。
+エラー直和は次の値だけで閉じる: `protocol_failure | bundle_failure | capability_failure | validation_failure | launch_failure | custody_failure | deadline | cpu_budget | memory_budget | process_budget | output_budget | cancelled | process_failure | orphan_detected`。未知native codeを成功や一般process failureへ丸めない。
+
+### メソッド契約
+
+| メソッド | 事前条件 | 事後条件 / 不変条件 |
+|---|---|---|
+| `canonicalizeBundleManifest` | schema/bundle revision/floor/component digestが全て型付き | 固定順length-framed bytesとdigestを返し、欠落・duplicate・unknown fieldを拒否 |
+| `verifyBundle` | trust identityとtarget明示 | canonical payload全体のsignatureとcompanion/protocol/SBOM/target/D0-N generation receiptの全一致時だけverified handle |
+| `BundleTrustPort.verify` | review済みtrust policy revisionとmanifest | ADR/L5の`TrustDecisionPort`をL6へ適応する唯一のadapter。`accepted` decisionとdecision digest/policy versionをverified handleへ束縛し、rejected、署名不一致、floor未満を拒否する。key rotation等の具体方式はD0外 |
+| `BundleActivationPort.activate` | verified handle、expected floor | 現在floorより厳密に大きいsequenceの再署名manifestだけを原子的にactivateする。同sequenceは同payloadでも新規activationに使わず、別payloadならfail-closeする。storage・clock・recovery方式はD0外 |
+| `negotiateCapabilities` | verified probe | required集合を完全包含する場合だけselection。不足は開始前failure |
+| `recordProbe` | verified control identity、strict probe | probe digestをdurable append。managed root side effect 0 |
+| `reserveCustodyNonce` | execution/spec/attempt確定、token未seal | OS identityとは別の一意creation nonceを予約。同nonce再利用・別execution移送を拒否 |
+| `issueCreateCustodyToken` | recorded probe、完全capability、予約済みcustody nonce、deadline内 | admission chainとsequence 1を束縛し一度だけ発行。空required拒否 |
+| `issueSpawnAttachedToken` | create fact commit済み、current execution lease | sequence 2、custody/executor/epoch/lease nonce、create fact digestを束縛。未commit・別chain・replay拒否 |
+| `issueResumeToken` | attached factとhandoff commit済み、current execution lease | sequence 3、attached fact/handoff digestを束縛。skip/reorder/replay拒否 |
+| `consumeAdmissionStageToken` | expected phase/operation、未消費token又は同一pending record | token消費と`consumed_pending_dispatch(request/token/idempotency/request digest)`を同一transactionでcommit。pending→indeterminate→reconciled→resultを同じrequest digestで継承。exact retryだけfact reconcile/side effect 0時の継続/同resultを許可し、digest不一致又はrecord欠測はreplay拒否 |
+| `AdmissionTokenAuthenticatorPort.seal/verify` | wire DTOからauthenticator自身だけ除外したcanonical V1 payload、issuer key ID/policy revision | 非自己包含preimageへoperation/token nonceを束縛し、unknown key/version、偽造、同nonce別payload/別operation replayをside effect前拒否。具体key storage/rotationはD0外 |
+| `AuthorityLeaseAuthenticatorPort.issue/verify` | wire DTOからauthenticator自身だけ除外したexact variant payload、execution/spec、executor/custody、boot、deadline/policy | 非自己包含preimageへlease nonceとallowed operationsを束縛し、unknown key/version、偽造、同nonce別payloadをattach/recovery前拒否。具体key storage/rotationはD0外 |
+| `NativeObservationSignerPort.seal` / `RecoveryObservationAuthenticatorPort.verify` | Rust: pinned companion bundleのnative signer identity。TS: `BundleTrustPort`が検証済みのbundle signer/policy revisionとauthenticatorを除くexact observation payload | Rustはnative factだけをsealしauthority delta 0。TSはunknown signer/version、別bundle key、same/cross schema混同、field変異をCAS前拒否。具体key storage/rotationはD0外 |
+| `recoverSameBootAuthority` | Rust/executor認証observation、durable journal、current epoch | TSがsemantic全binding一致時だけepochをCAS+1しcleanup lease+traceを同一transactionで発行。Rust DB/CAS/lease/trace 0 |
+| `recoverCrossBootAuthority` | old/new boot native fence observation、durable journal、current epoch | TSがemptyを先取りせずCAS+1でboot-fenced cleanup lease+traceだけを発行。そのleaseでempty後release。Rust DB/CAS/lease/trace 0 |
+| `transitionAuthorityToCleanup` | live execution authority、deadline/cancel/abort/normal-root-exit/terminate-intent、current epoch | epoch CASと同じtransactionで新lease nonce/authenticatorのcleanup leaseを発行しexecution capabilityを不可逆除去。敗者lease 0 |
+| `sealMonotonicDeadline` | TypeScript: verified token、Rustから受けた同時観測wall/monotonic fact、boot ID | TypeScriptがremainingをbudgetとwall残時間の小さい方へ固定してsigned arm request/journalへcommit。cross-bootも新boot観測から非延長で再導出する。Rustは観測と供給済みdeadlineの強制だけを所有し、開始後wall jumpによる延長0 |
+| `dispatchCommand` | closed `Probe | Execute | RecoveryObservation | RecoveryCustody | ControlCommand` union | Observationはnative factだけでauthority delta 0。Execute/cleanup leaseをdiscriminant分離しboot-fenced terminate拒否、生成・resume能力0。release-before-empty拒否。control shutdownはcustody delta 0 |
+| `normalizePreDispatchWireFault` | typed `PreDispatchWireFault`、correlation state | Kernel境界でexactly once `protocol_failure`へ変換する。validated request ID前はwire response 0、raw invalid bytes/secret/絶対pathをerror/receiptへ保存しない |
+| `markPostDispatchResponseFault` | mutating dispatch済み、typed `PostDispatchResponseFault` | EOF/pipeだけでなくresponseのframing/UTF-8/JSON/schema/trailing/correlation不正を必ずindeterminateへ遷移。side effect 0推測・terminal seal 0 |
+| `reconcileDispatchIndeterminate` | request/token/idempotency/request digest全一致、authority/journal/native facts、又はdurable reconciled record | response lossをside effect 0へ推測せずindeterminate→reconciled→resultへactual phase/fact digestを一意に確定。reconciled後crashは4 digest+actual phase/fact digest一致からnative再実行0でresult commit。全stateでrequest digestを継承 |
+| `reduceCustody` | attempt、nonce、sequence連続 | 正常辺とprepared/attached-suspendedからterminatingへのcleanup辺だけを受理し、resume-before-attach、release-before-emptyを拒否 |
+| `launchAttached` | verified bundle、prepared custody、deadline内 | attach-before-user-code。失敗時resume 0とcleanup proof |
+| `terminateAndProveEmpty` | created custody | terminate→empty→reap。proof不能時success 0 |
+| `releaseCustody` | empty/reap fact、raw OS identity+非再利用custody_generationを束縛したdeterministic release_idがjournal commit済み | Rust `ensureAbsent`は同一generationの終状態absenceへ冪等収束。raw identityが別generationへ再利用済みなら削除せずquarantine。存在→不在effect最大1、Rust durable marker/DB 0。fact commit→disarm→revoke+released atomic |
+| `shutdownCompanion` | active custody 0、pending response 0、未解決pending/indeterminate/reconciled-without-result 0、terminal outbox flush済み | control processだけを終了しcustody/authority state delta 0 |
+| `normalizeNativeError` | strict native errorとprocess phase | phase整合したclosed errorへ変換しN/Aと欠測を区別 |
+
+### プラットフォームポート/責務非重複
+
+`PlatformPort`は`probe/createCustody/spawnAttached/resume/observe/observeRecoveryFact/terminateTree/proveEmpty/ensureAbsent/proveBootFence`で構成し、
+control process終了は`ControlShutdownPort`へ分離する。
+`CustodyAuthorityPort`は`prepareAuthority/commitHandoff/recoverAuthority/recordDeadlinePolicy/armDeadlineExecutor/revokeAuthority`で構成し、
+handoff commit前resumeとstale epoch/nonceを拒否する。Linuxはbroker外deadline ownerをmanaged root開始前にarmし、
+dual-crash後も期限内kill→bounded recovery→reap/orphan 0を完遂する。ownerをarm不能なら開始前拒否し、
+証拠欠測を`custody_failure`へ変換するだけでは既存workloadの生存を許さない。
+lease verifierはcreate/spawn/resumeだけをeffective deadlineで拒否する。cleanup leaseはeffective deadline後も
+observe/terminate/prove/releaseに有効で、recovery deadline超過はoverdue findingと新規admission遮断を追加するが
+cleanup拒否理由にはしない。cross-bootでは元wall recovery deadlineから新bootのmonotonic上限を非延長で再導出する。
+Windowsはsuspended create・Job assign・non-inherit handle、Linuxはstart-in-cgroup・broker/subreaper・
+`populated=0`+reapを必須とする。Node clientはtransport/deadline、TS domainはpolicy/journal/receipt、RustはOS custody factを
+それぞれ一意に所有する。TypeScriptはdeadline policy決定とsigned arm request/journalを所有し、
+別failure domainのRust/native `DurableDeadlineExecutor`だけがdeadline killを強制してenforcement factを返す。
+RustにPLAN分類、admission、GitHub、DB/CAS判断、journal reducerを追加した場合は契約違反とする。
+Bun依存またはdirect spawn fallbackを追加する実装は入力条件にかかわらずRedとする。
+
+bundle rollbackは過去artifactを直接再activationせず、現在floorより厳密に大きいsequenceの新revisionとしてmanifestを再署名し、
+通常のtrust・component・target検証を再通過させる。D0はtrust/activationを抽象portに留め、
+rotation、revocation transport、secure clock、re-anchor、物理log schemaを後続implementation revisionへ送る。

@@ -24,11 +24,17 @@ generates:
     artifact_type: json_config
   - artifact_path: src/lint/codex-hook-adapter.ts
     artifact_type: source_module
+  - artifact_path: src/lint/hook-invocation.ts
+    artifact_type: source_module
+  - artifact_path: .claude/hooks/run-bun.ts
+    artifact_type: hook
   - artifact_path: src/cli.ts
     artifact_type: source_module
   - artifact_path: tests/codex-hook-adapter.test.ts
     artifact_type: test_code
   - artifact_path: tests/work-guard.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/hook-native-launcher.test.ts
     artifact_type: test_code
 dependencies:
   parent: null
@@ -229,3 +235,33 @@ The deferred `spawn_agent` guard surface is now locally wired:
 - **SSoT materializer**: emit `.claude/settings.json` and `.codex/hooks.json` from one
   source (`ut-tdd setup`) instead of two hand-maintained adapters; currently the
   `codex-hook-adapter` drift gate keeps them in sync.
+
+## 2026-07-22 Issue #123 add-impl 追補
+
+Claude hook の shell-free exec form 導入では、Codex hook serialization を同時に推測変更しない。
+shared contract は `HookInvocation { executable, args }` (`args` は argv) までとし、Claude / Codex の JSON projection は
+別 serializer が所有する。Codex の structured `args` capability が runtime 実機または公式 schema で
+証明されるまでは、Codex serializer は既存の実証済み形式を保持する。
+
+`codex-hook-adapter` の parity は raw command 文字列の同一性ではなく、runtime 固有 config を正規化した
+executable+argv の意味論、matcher、fail-close policy の一致を検証する。Claude exec form を Codex に
+要求すること、または Codex の shell form を Claude に許容することはどちらも禁止する。
+
+Issue #123 で新設した semantic invocation SSoT、source native launcher、対応 regression は
+本 PLAN の add-impl 成果物とする。`tests/hook-native-launcher.test.ts` は repository root を
+live tree として直接検証せず、snapshot runner が用意した writable execution snapshot を
+`process.cwd()` から 1 回参照する `isolated_fixture` 契約とする。この呼出し数は
+`test-repository-isolation` が fail-close し、実装側の例外 allowlist ではなく本 PLAN と
+L7 test design による設計 trace を正本とする。
+
+## 2026-07-23 Windows process custody の未解消境界
+
+`windowsHide: true` はコンソール窓を抑止するだけで、launcher とその子孫を同じ
+process-tree custody に収容しない。現在の `node -> bun` launcher は POSIX signal を子へ転送するが、
+Windows の `TerminateProcess` 終了時に孫 process を回収する保証を持たない。この seam は未解消であり、
+shell-free 起動の Green を `orphan_count=0` の証拠として扱ってはならない。
+
+恒久解は Issue #134 の Node + Rust 移行で、Rust Resource Kernel が Windows Job Object を所有し、
+launcher・provider・全子孫の終了と空 custody receipt を検証する。Issue #134 が受入されるまでは
+本 PLAN を Windows process custody 完了証拠に使用せず、`ST-RGK-*` を未充足のまま
+fail-closeする。

@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
 const legacyEnvPrefix = ["HE", "LIX"].join("");
+const claudeProjectDir = `$${"{CLAUDE_PROJECT_DIR}"}`;
 
 function runCli(cwd: string, args: string[], input?: unknown, env?: NodeJS.ProcessEnv) {
   const stdin = input === undefined ? undefined : JSON.stringify(input);
@@ -84,15 +85,33 @@ describe("runtime hook entrypoints", () => {
     const settings = JSON.parse(readFileSync(join(repoRoot, ".claude", "settings.json"), "utf8"));
     const hooks = settings.hooks;
 
-    expect(hooks.SessionStart[0].hooks[0].command).toBe(
-      'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start',
-    );
-    expect(hooks.PostToolUse[0].hooks[0].command).toBe(
-      'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use',
-    );
-    expect(hooks.Stop[0].hooks[0].command).toBe(
-      'bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary',
-    );
+    expect(hooks.SessionStart[0].hooks[0]).toMatchObject({
+      command: "node",
+      args: [
+        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
+        `${claudeProjectDir}/src/cli.ts`,
+        "session",
+        "start",
+      ],
+    });
+    expect(hooks.PostToolUse[0].hooks[0]).toMatchObject({
+      command: "node",
+      args: [
+        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
+        `${claudeProjectDir}/src/cli.ts`,
+        "hook",
+        "post-tool-use",
+      ],
+    });
+    expect(hooks.Stop[0].hooks[0]).toMatchObject({
+      command: "node",
+      args: [
+        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
+        `${claudeProjectDir}/src/cli.ts`,
+        "session",
+        "summary",
+      ],
+    });
   });
 
   it("shared CLI session/hook commands record a PLAN digest in a temp repo", () => {

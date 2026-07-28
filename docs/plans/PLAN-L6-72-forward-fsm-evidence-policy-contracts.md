@@ -62,3 +62,10 @@ review_evidence:
 - `workflow status|transition|explain`は共通JSON envelope/rule ID/verdictとexit 0/1/2/3を共有し、alias多義・future revision・transaction失敗をfail-closeする。
 - property oracleはseed、0〜64 event、全state×command、10,000列、決定論的shrinkerを記録する。
 - `U-FSM-001..007`と`P-FSM-001`で全正規遷移、skip、例外、reduction決定性、非許可状態到達不能を証明する。
+
+## 訂正注記 (2026-07-21)
+
+本 PLAN の evidence policy 契約部分は PLAN-L6-89-layer-verification-contract が訂正・拡張する
+(Issue #108 redesign、supersedes 双方向 back-reference)。PR #103 型の完了誤判定と A-189 型の
+pair oracle 未執筆を防ぐ L 別検証契約は L6-89 側が正本となる。Forward FSM 遷移契約
+(`U-FSM-001..007` / `P-FSM-001`) は本 PLAN のまま存続する。
