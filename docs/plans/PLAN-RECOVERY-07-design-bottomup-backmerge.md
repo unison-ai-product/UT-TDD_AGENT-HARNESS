@@ -98,7 +98,7 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-07-02T22:19:00+09:00"
-        evidence_path: tests\\drive-model-passage.test.ts
+        evidence_path: tests/drive-model-passage.test.ts
         output_digest: "sha256:9ef3188bb1234a0a95c336ca5075bda23aecd19af58e3f1763dd56355bf9d86a"
 ---
 
