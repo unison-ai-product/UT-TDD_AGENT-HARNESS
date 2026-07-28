@@ -79,7 +79,7 @@ $ bun src/cli.ts db rebuild --json
     "document_scale_profile_entries": 26,
     "document_scale_profile_reviews": 26,
     "spec_rag_closure_entries": 30,
-    "detector_route_candidates": 
+    "detector_route_candidates":
   ... (rowCounts truncated for audit-log brevity; full run exit_code=0)
       "actionsTaken": [],
       "ok": true

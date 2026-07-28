@@ -33,6 +33,12 @@ generates:
     artifact_type: source_module
   - artifact_path: src/doctor/profiles.ts
     artifact_type: source_module
+  - artifact_path: src/doctor/test-repository-isolation.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/github-ci-policy.ts
+    artifact_type: source_module
+  - artifact_path: tests/github-ci-policy.test.ts
+    artifact_type: test_code
   - artifact_path: .github/workflows/harness-check.yml
     artifact_type: workflow_config
 dependencies:

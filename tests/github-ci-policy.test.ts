@@ -894,7 +894,7 @@ describe("github-ci-policy lint", () => {
       docs(
         replaceRequired(
           SOURCE_WORKFLOW,
-          "        run: bun src/cli.ts doctor\n",
+          "        run: bun src/cli.ts doctor --strict-green-command-digest\n",
           "        run: echo doctor omitted\n",
         ),
       ),
@@ -1344,8 +1344,8 @@ describe("github-ci-policy lint", () => {
     it("U-CIPOL-023: 負例 — rejects a required full-lane check (full doctor) mis-conditioned on lane=='doc'", () => {
       const doctorMisrouted = replaceRequired(
         SOURCE_WORKFLOW_WITH_LANE,
-        `        if: ${LANE_FULL_IF}\n        run: bun src/cli.ts doctor\n`,
-        `        if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor\n`,
+        `        if: ${LANE_FULL_IF}\n        run: bun src/cli.ts doctor --strict-green-command-digest\n`,
+        `        if: ${LANE_DOC_IF}\n        run: bun src/cli.ts doctor --strict-green-command-digest\n`,
       );
       const result = analyzeGithubCiPolicy(docs(doctorMisrouted));
 
