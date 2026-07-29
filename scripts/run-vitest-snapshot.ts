@@ -89,6 +89,14 @@ export function createSnapshot(
   source = resolveSnapshotSource(repoRoot),
 ): void {
   if (source.kind === "git") {
+    const originCustodyRefs = ["origin/main", "origin/HEAD"]
+      .map((ref) => ({
+        ref,
+        revision: output("git", ["rev-parse", "--verify", `${ref}^{commit}`], repoRoot),
+      }))
+      .filter(
+        (entry): entry is { ref: string; revision: string } => entry.revision !== null,
+      );
     run(
       "git",
       [
@@ -101,6 +109,12 @@ export function createSnapshot(
       repoRoot,
     );
     run("git", ["checkout", "--detach", source.revision], snapshotRoot);
+    for (const { ref, revision } of originCustodyRefs) {
+      if (output("git", ["cat-file", "-e", `${revision}^{commit}`], snapshotRoot) === null) {
+        run("git", ["fetch", "--no-tags", repoRoot, revision], snapshotRoot);
+      }
+      run("git", ["update-ref", `refs/remotes/${ref}`, revision], snapshotRoot);
+    }
     if (output("git", ["rev-parse", "HEAD"], snapshotRoot) !== source.revision)
       throw new Error("snapshot revision mismatch");
     return;

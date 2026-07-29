@@ -208,6 +208,99 @@ describe("vitest snapshot runner", () => {
     }
   });
 
+  it("U-TESTHYGIENE-055: preserves distinct origin custody refs in a detached execution snapshot", () => {
+    const source = mkdtempSync(join(tmpdir(), "ut-tdd-git-custody-source-"));
+    const snapshot = `${source}-snapshot`;
+    try {
+      expect(spawnSync("git", ["init"], { cwd: source }).status).toBe(0);
+      const sourceBranch = spawnSync("git", ["branch", "--show-current"], {
+        cwd: source,
+        encoding: "utf8",
+      }).stdout.trim();
+      writeFileSync(join(source, "package.json"), "{}\n");
+      expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync(
+          "git",
+          [
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "-m",
+            "initial",
+          ],
+          { cwd: source },
+        ).status,
+      ).toBe(0);
+      const headRevision = spawnSync("git", ["rev-parse", "HEAD"], {
+        cwd: source,
+        encoding: "utf8",
+      }).stdout.trim();
+      expect(
+        spawnSync("git", ["checkout", "--orphan", "custody-source"], { cwd: source }).status,
+      ).toBe(0);
+      writeFileSync(join(source, "package.json"), '{"custody":true}\n');
+      expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync(
+          "git",
+          [
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "-m",
+            "custody",
+          ],
+          { cwd: source },
+        ).status,
+      ).toBe(0);
+      const custodyRevision = spawnSync("git", ["rev-parse", "HEAD"], {
+        cwd: source,
+        encoding: "utf8",
+      }).stdout.trim();
+      expect(spawnSync("git", ["checkout", sourceBranch], { cwd: source }).status).toBe(0);
+      expect(spawnSync("git", ["branch", "-D", "custody-source"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync("git", ["update-ref", "refs/remotes/origin/main", custodyRevision], {
+          cwd: source,
+        }).status,
+      ).toBe(0);
+      expect(
+        spawnSync("git", ["update-ref", "refs/remotes/origin/HEAD", custodyRevision], {
+          cwd: source,
+        }).status,
+      ).toBe(0);
+
+      createSnapshot(source, snapshot);
+
+      expect(
+        spawnSync("git", ["rev-parse", "HEAD"], {
+          cwd: snapshot,
+          encoding: "utf8",
+        }).stdout.trim(),
+      ).toBe(headRevision);
+      expect(
+        spawnSync("git", ["rev-parse", "origin/main"], {
+          cwd: snapshot,
+          encoding: "utf8",
+        }).stdout.trim(),
+      ).toBe(custodyRevision);
+      expect(
+        spawnSync("git", ["rev-parse", "origin/HEAD"], {
+          cwd: snapshot,
+          encoding: "utf8",
+        }).stdout.trim(),
+      ).toBe(custodyRevision);
+    } finally {
+      removeTestTree(source);
+      removeTestTree(snapshot);
+    }
+  });
+
   it("U-TESTHYGIENE-036: seals the reference for the whole test interval and unseals cleanup", () => {
     const reference = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-reference-"));
     const outside = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-outside-"));

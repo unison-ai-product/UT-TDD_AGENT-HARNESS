@@ -240,7 +240,7 @@ fail-openで呼んでいた。PLAN-L6-52 / PLAN-L7-412以降は選択関数だ�
 
 | 関数 / surface | 機械担保 |
 |---|---|
-| `writeMemoryEntry(repoRoot, input)` | `project` / `feedback` / `reference` / `user` の typed memory を `.ut-tdd/memory/<kind>-<slug>.md` に書く。title/body/tags は secret-like payload を fail-close し、raw transcript や credential を保存しない。 |
+| `writeMemory({ repoRoot, input })` | MemoryServiceの唯一の公開write入口。`project` / `feedback` / `reference` / `user` のtyped memoryを `.ut-tdd/memory/<kind>-<slug>.md` に書く。storage primitiveはservice内部に閉じ、productionからの直接import / export / re-exportを禁止する。title/body/tagsはsecret-like payloadを副作用前にfail-closeし、raw transcriptやcredentialを保存しない。 |
 | `loadMemoryEntries(repoRoot)` / `projectMemoryEntries(repoRoot, db)` | `.ut-tdd/memory/*.md` の frontmatter と本文を parse し、`memory_entries` へ deterministic projection する。authored markdown が正本、DB は rebuildable read model。 |
 | `selectMemoryEntries(db, {query, limit})` / `renderMemorySurface(entries)` | SessionStart 用の短い context block を read-only で作る。open feedback と同じく db lock / db 不在 / 破損時は fail-open で runtime を止めない。 |
 | `ut-tdd memory add/list/recall` | Claude Code と Codex が同じ CLI surface で memory を書き、db rebuild 後に同じ内容を recall できる。 |
@@ -279,7 +279,7 @@ telemetry lifecycle に責務を絞る。
 
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash) + §1.8.1 **U-MEMORY-001〜004** (共有 memory write/load/projection/secret/surface) + **U-SCHEDULE-LIVE-001〜004** (工程 live state / 固定4段 digest)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile + §2.9 の memory surface + §2.10 の live digest を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash) + §1.8.1 **U-MEMORY-001〜004 / U-MEMORY-019** (共有 memory write/load/projection/secret/surface/service境界) + **U-SCHEDULE-LIVE-001〜004** (工程 live state / 固定4段 digest)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile + §2.9 の memory surface + §2.10 の live digest を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 

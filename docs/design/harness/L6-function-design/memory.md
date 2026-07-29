@@ -12,7 +12,7 @@ plan: docs/plans/PLAN-L6-01-function-spec.md
 
 # L6 機能設計: memory
 
-> **L6 contract marker**: `writeMemoryEntry`, `parseMemoryFile`, `loadMemoryEntries`, `selectMemoryEntries`, `renderMemorySurface`, `evaluateMemoryPromotion` は unit-test 粒度の contracts とする。DbC pre/post/invariant は §2-§3、L7 oracle family は U-MEMORY-001..006。
+> **L6 contract marker**: 公開write契約 `writeMemory` と read契約 `readMemory`、`parseMemoryFile`、`loadMemoryCorpus`、`queryMemoryEntries`、`renderMemoryHealth`、`evaluateMemoryPromotion` は unit-test 粒度の contracts とする。storage primitive は MemoryService 内部に閉じ、productionからの直接import / export / re-exportを禁止する。DbC pre/post/invariant は §2-§3、L7 oracle family は U-MEMORY-001..006 / U-MEMORY-019。
 
 ## §1 概要
 
@@ -24,7 +24,7 @@ secret-like payload を含む memory は authoring / parsing 時点で fail-clos
 
 | 関数 | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `writeMemoryEntry` | writeMemoryEntry(repoRoot: string, input: MemoryWriteInput) => MemoryEntry | `kind/title/body` が妥当で secret-like payload を含まない | `.ut-tdd/memory/<kind>-<slug>.md` を書き、parse 済み entry を返す | secret-like payload は書き込み前に拒否する | U-MEMORY-001 |
+| `writeMemory` | writeMemory({ repoRoot, input }: { repoRoot: string; input: MemoryWriteInput }) => MemoryEntry | `kind/title/body` が妥当で secret-like payload を含まない | MemoryService内部primitiveで `.ut-tdd/memory/<kind>-<slug>.md` を書き、parse済みentryを返す | storage primitiveを公開せず、productionの直接import / export / re-exportをU-MEMORY-019で拒否する。secret-like payloadは副作用前に拒否する | U-MEMORY-001 / U-MEMORY-002 / U-MEMORY-019 |
 | `parseMemoryFile` | parseMemoryFile(repoRoot: string, sourcePath: string, content?: string) => MemoryEntry | frontmatter 付き markdown | typed `MemoryEntry` を返す | secret-like payload、invalid kind、空 title/body は throw | U-MEMORY-002 |
 | `loadMemoryEntries` | loadMemoryEntries(repoRoot: string) => MemoryEntry[] | repo root | `.ut-tdd/memory/*.md` を sort して parse する | directory 不在は空配列 | U-MEMORY-003 |
 | `selectMemoryEntries` | selectMemoryEntries(db, opts?: { query?: string; limit?: number }) => MemoryEntry[] | `memory_entries` table を持つ DB handle | query/limit に一致する memory rows を返す | read-only。`updated_at DESC, memory_id` で安定化。**読み路の正本ではない** (下記 `readMemory` が入口。本 API は等価性回帰の比較対象として残す) | U-MEMORY-004 |
