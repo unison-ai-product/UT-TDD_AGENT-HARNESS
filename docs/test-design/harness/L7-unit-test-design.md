@@ -1503,6 +1503,18 @@ source workflow / source template / Pack template / setup builtinのどれか1 a
 ## PLAN-L7-435 駆動モデル準拠PLAN Admission oracle (2026-07-15)
 
 対象 = `PlanAdmissionPolicy` / `ut-tdd plan draft` / admission receipt / PLAN tamper fence。
+
+Issue #163のadditive deltaは、PLAN IDを共有parserの
+`namespace + numeric ordinal` で一意化し、legacy collision debtをexact setとして検査する。
+
+| ID | 対象 | oracle |
+|---|---|---|
+| `U-PLANGOV-002a` | slug違いの同一L6 ordinal | 両PLANを`duplicate_plan_identity`で拒否 |
+| `U-PLANGOV-002b` | `RECOVERY-070` / `RECOVERY-70` | zero paddingを除いた同一座標として拒否 |
+| `U-PLANGOV-002c` | legacy collision exact set | 既知集合だけを許容 |
+| `U-PLANGOV-002d` | legacy座標への3件目追加 | 3件すべてを拒否 |
+| `U-PLANGOV-002e` | legacy構成plan_idの差し替え | exact set不一致として拒否 |
+| `U-PLANGOV-002f` | legacy collisionの一方を削除 | 解消済み単独PLANを許容 |
 候補oracleはL7実装と同時に `U-PADM-*` へ昇格し、tests内citationを必須とする。
 
 | ID | 観点 | fixture / mutation | expected |
