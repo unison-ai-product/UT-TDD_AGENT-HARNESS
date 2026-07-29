@@ -208,7 +208,7 @@ describe("vitest snapshot runner", () => {
     }
   });
 
-  it("U-TESTHYGIENE-053: preserves distinct origin custody refs in a detached execution snapshot", () => {
+  it("U-TESTHYGIENE-055: preserves distinct origin custody refs in a detached execution snapshot", () => {
     const source = mkdtempSync(join(tmpdir(), "ut-tdd-git-custody-source-"));
     const snapshot = `${source}-snapshot`;
     try {

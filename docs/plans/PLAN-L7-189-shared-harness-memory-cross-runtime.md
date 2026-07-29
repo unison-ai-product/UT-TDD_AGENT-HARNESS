@@ -76,7 +76,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-29T16:05:00+09:00"
         evidence_path: tests/memory-sync.test.ts
-        output_digest: "sha256:b5f68d35520a1a5b0ff73cb6081a054e4a984f995491de6b94c69b8194c56926"
+        output_digest: "sha256:a3d706ad8cf3dbccd084f38763522f480e4c6916689a732727876fa131cabf5a"
+        anchor_commit: 1324018814998257aa8783db36a95f365bb6ee75
     scope: "§5 追補 (memory service read 路 + memory-sync hard gate、PR #180) の cross-family review (Codex 著作 → Claude 検証)。verdict=pass-weak: 実装は動作し CI 両 leg green だが、不変条件 2 件が宣言どおりに到達していない。実測した範囲: (a) doctor 配線が fail-close (repo 読取不能・例外の両方で ok=false)、(b) origin ref 未解決時に『未評価』を surface し originResolved が真のときだけ『すべて到達』と言う実装で、判定不能と OK を混同しない、(c) untracked / 未コミット変更 = error、commit 済み origin 未到達 = warn の段階分けが in-flight ブランチを止めない。指摘 2 件: (1) 『共有済み = origin 到達』は git ls-tree のパス存在判定であり、既存 memory の更新を push 前でも shared と誤判定する (新規ファイルの欠落は検出できる) → issue #187、(2) 不変条件『読みも書きも MemoryService を通す』は read 路のみ実装で、ut-tdd memory add は writeMemoryEntry を CLI から直接呼び service を経由しない (§5.4 で後続へ送っている)。両方を §4 の不変条件へ到達状況として明記した。手続き上の瑕疵 (記録): 本 evidence は PR #180 マージ (2026-07-29T07:09:50Z) の **後** に記録した。CI green と部分レビューだけでマージへ進み、新規スコープの review evidence を先に記録しなかったのは review 前置規律 (IMP-071 / tests_green_at ≤ reviewed_at の思想) に反する順序であり、後続で同じ順序を繰り返さない。"
   - reviewer: codex
     review_kind: intra_runtime_subagent

@@ -1450,6 +1450,7 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 | `U-TESTHYGIENE-050` | `vitest-snapshot-runner.test.ts` | entrypoint副作用境界 | `uid=0`はsnapshot一時領域を作る前に拒否され、seal前だけでなく全runner副作用前のfail-fastとなる |
 | `U-TESTHYGIENE-051` | `vitest-snapshot-runner.test.ts` | 非root entrypoint | `uid!=0`はguard後段へ到達し、root誤判定で処理を遮断しない |
 | `U-TESTHYGIENE-052` | `vitest-snapshot-runner.test.ts` | Windows ACL seal command | 対象identityへ継承付き`WD,AD` denyを再帰適用し、identity空値はfail-closeする。通常権限での実write拒否は036、Administratorによるtake-ownership等の明示bypass後の改変検出は042が担う |
+| `U-TESTHYGIENE-055` | `vitest-snapshot-runner.test.ts` | origin custody ref保全 | detached snapshotがsourceの`refs/remotes/origin/*`をHEADと**別revision**のまま引き継ぐ。source HEADと同一revisionを注入するだけの実装では落ちる (ref依存checkがsnapshotで誤ってOKになるのを防ぐ) |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
