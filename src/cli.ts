@@ -3289,6 +3289,8 @@ githubProject
   .requiredOption("--number <n>", "GitHub Project number", (value) => Number.parseInt(value, 10))
   .requiredOption("--repository <id>", "repository identity (owner/name)")
   .option("--db <path>", "harness.db path (default: .ut-tdd/harness.db)")
+  .option("--plan <id>", "1 PLANだけを同期する")
+  .option("--all-active", "完了・保留を除く全active PLANを同期する")
   .option("--apply", "GitHubとbinding projectionへ反映する")
   .option("--json", "JSON output")
   .action(
@@ -3297,6 +3299,8 @@ githubProject
       number: number;
       repository: string;
       db?: string;
+      plan?: string;
+      allActive?: boolean;
       apply?: boolean;
       json?: boolean;
     }) => {
@@ -3305,14 +3309,31 @@ githubProject
         process.exitCode = 1;
         return;
       }
+      if (opts.plan && opts.allActive) {
+        process.stderr.write(
+          "github project sync: --plan and --all-active are mutually exclusive\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
+      if (opts.apply && !opts.plan && !opts.allActive) {
+        process.stderr.write("github project sync: --apply requires --plan or --all-active\n");
+        process.exitCode = 1;
+        return;
+      }
       const db = openHarnessDb(opts.db ?? defaultHarnessDbPath(process.cwd()), {
         repoRoot: process.cwd(),
       });
       try {
         if (opts.apply) migrate(db);
-        const rows = opts.apply
+        const projectedRows = opts.apply
           ? rebuildExecutionReadiness(db)
           : deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
+        const activeRows = projectedRows.filter(
+          (row) => row.readiness !== "完了" && row.readiness !== "保留",
+        );
+        const rows = opts.plan ? activeRows.filter((row) => row.planId === opts.plan) : activeRows;
+        if (opts.plan && rows.length === 0) throw new Error(`active PLAN not found: ${opts.plan}`);
         const outboxIds = opts.apply
           ? rows.map((row) =>
               queueGithubProjection({

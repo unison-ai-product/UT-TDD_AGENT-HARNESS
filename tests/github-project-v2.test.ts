@@ -98,11 +98,47 @@ describe("GitHub Project V2 reconciler", () => {
     expect(port.calls).toContain("select:field:実行状態:option:実行状態:着手可能");
   });
 
+  it("U-GHPROJ-023: existing equal item is a no-op", () => {
+    const port = new FakeProjectPort();
+    port.snapshot.items = [
+      {
+        id: "item:existing",
+        title: row.planId,
+        planId: row.planId,
+        fields: {
+          "PLAN ID": row.planId,
+          Vモデル層: row.layer,
+          実行状態: row.readiness,
+          現在ゲート: row.currentGate,
+          実装順序: row.implementationOrder,
+          先行PLAN: "",
+          阻害要因: "",
+          解除条件: "",
+          次の作業: row.nextPlanIds.join(", "),
+          解放される後続: "",
+          CI状態: row.ci,
+          レビュー状態: row.review,
+          対象HEAD: "",
+          同期状態: "同期済",
+        },
+      },
+    ];
+    const result = syncForwardProject({
+      rows: [row],
+      owner: "owner",
+      projectNumber: 6,
+      port,
+      apply: true,
+    });
+    expect(result.mutations).toEqual([]);
+    expect(port.calls).toEqual([]);
+  });
+
   it("U-GHPROJ-022: fails closed on duplicate items and missing fields", () => {
     const duplicatePort = new FakeProjectPort();
     duplicatePort.snapshot.items = [
-      { id: "a", title: "a", planId: row.planId },
-      { id: "b", title: "b", planId: row.planId },
+      { id: "a", title: "a", planId: row.planId, fields: {} },
+      { id: "b", title: "b", planId: row.planId, fields: {} },
     ];
     expect(() =>
       syncForwardProject({

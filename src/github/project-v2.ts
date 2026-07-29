@@ -14,6 +14,7 @@ export interface ProjectItem {
   id: string;
   title: string;
   planId: string;
+  fields: Record<string, string | number>;
 }
 
 export interface ProjectSnapshot {
@@ -134,6 +135,13 @@ export class GhProjectV2Adapter implements ProjectV2Port {
           id: String(item.id ?? ""),
           title: itemTitle,
           planId: String(item["PLAN ID"] ?? "") || titlePlanId,
+          fields: Object.fromEntries(
+            Object.entries(item).flatMap(([key, fieldValue]) =>
+              typeof fieldValue === "string" || typeof fieldValue === "number"
+                ? [[key, fieldValue]]
+                : [],
+            ),
+          ),
         };
       }),
     };
@@ -272,7 +280,8 @@ export function syncForwardProject(input: {
   const mutations: ProjectMutation[] = [];
   const itemIds: Record<string, string> = {};
   for (const row of input.rows) {
-    let itemId = byPlan.get(row.planId)?.id ?? "";
+    const existing = byPlan.get(row.planId);
+    let itemId = existing?.id ?? "";
     if (!itemId) {
       mutations.push({
         kind: "create",
@@ -292,6 +301,8 @@ export function syncForwardProject(input: {
     }
     itemIds[row.planId] = itemId;
     for (const [fieldName, value] of Object.entries(desiredFields(row))) {
+      if (existing && String(existing.fields[fieldName] ?? "").trim() === String(value).trim())
+        continue;
       mutations.push({ kind: "update", planId: row.planId, itemId, field: fieldName, value });
       if (!input.apply) continue;
       const field = fields.get(fieldName);
