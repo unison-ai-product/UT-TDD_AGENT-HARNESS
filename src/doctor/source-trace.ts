@@ -9,6 +9,7 @@ import {
   implPlanTraceMessages,
   loadImplPlanTraceInput,
 } from "../lint/impl-plan-trace";
+import { analyzeMemorySync, loadMemorySyncInput, memorySyncMessages } from "../lint/memory-sync";
 import {
   analyzeMergedPlanStatus,
   loadMergedPlanStatusInput,
@@ -137,6 +138,26 @@ export function checkOracleTestTrace(repoRoot: string): { messages: string[]; ok
   } catch {
     return {
       messages: ["oracle-test-trace - violation: test-design/tests could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/**
+ * memory-sync hard gate (PLAN-L7-468 PR-B、issue #175): 共有 memory が commit / push されず
+ * 「共有したつもり」で沈黙する欠落を fail-close 検出する。実測 (2026-07-28) では引き継ぎ目的で
+ * 書かれた 15 件が未コミットのまま残り、同時に origin 追跡分 32 件がローカルに欠落していた。
+ */
+export function checkMemorySync(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["memory-sync - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeMemorySync(loadMemorySyncInput(repoRoot));
+    return { messages: memorySyncMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["memory-sync - violation: 共有 memory の同期状態を読めなかった"],
       ok: false,
     };
   }

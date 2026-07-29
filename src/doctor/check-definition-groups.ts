@@ -94,6 +94,7 @@ import {
 import {
   checkDeliverablePlanTrace,
   checkImplPlanTrace,
+  checkMemorySync,
   checkMergedPlanStatus,
   checkOracleTestTrace,
   checkPlanArtifactExistence,
@@ -158,6 +159,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("test-design-naming", () => checkTestDesignNaming(deps.repoRoot)),
         full("module-drift", () => checkModuleDrift(deps.repoRoot)),
         full("merged-plan-status", () => checkMergedPlanStatus(deps.repoRoot)),
+        full("memory-sync", () => checkMemorySync(deps.repoRoot)),
         full("plan-artifact-existence", () => checkPlanArtifactExistence(deps.repoRoot)),
         full("asset-drift", () => checkAssetDrift(deps.repoRoot)),
         full("skill-assignment", () => checkSkillAssignment(deps.repoRoot)),

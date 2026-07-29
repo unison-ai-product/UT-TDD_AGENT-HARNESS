@@ -791,8 +791,8 @@ provider CLI を起動する。
 
 | 関数 / CLI | signature / command | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
-| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | 技術判断は Sol (`MODEL_IDS.codex.frontier`) + `low`、UI/UX 判断は Fable (`MODEL_IDS.claude.fable`) + `low` を一次とし、他方を fallback にする。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
-| `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。 | `tests/cli-surface.test.ts` |
+| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | 技術判断 (`implementation` / `troubleshooting`) は Sol (`MODEL_IDS.codex.frontier`) + `low`、設計・進行・デザイン判断 (`design` / `progress` / `uiux`) は Fable (`MODEL_IDS.claude.fable`) + `low` を一次とし、他方を fallback にする (PO 2026-07-29)。orchestrator が frontier 級 (opus) の場合、相談は provider を問わず `adversarial` へ切り替える。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute、U-ROUTE2-011〜U-ROUTE2-014 |
+| `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--decision`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。`--decision` の受理集合は `ADVISOR_DECISION_KINDS` (SSoT) と一致する。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。CLI 側に受理集合を別持ちしない (別持ちが `uiux` / `troubleshooting` を指定不能にする drift を生んでいた)。 | `tests/cli-surface.test.ts` |
 
 ## 2026-06-23 artifact progress workflow trigger 追補
 

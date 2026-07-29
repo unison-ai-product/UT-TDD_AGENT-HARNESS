@@ -1647,6 +1647,7 @@ describe("runDoctor", () => {
       "pair-freeze",
       "module-drift",
       "merged-plan-status",
+      "memory-sync",
       "review-evidence",
       "guardrail-invariants",
       "asset-drift",
