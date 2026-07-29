@@ -106,4 +106,37 @@ describe("GitHub Forward SQLite store", () => {
       db.close();
     }
   });
+
+  it("U-GHPROJ-013: rejects reassignment of one provider object to another PLAN revision", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      recordGithubBinding(db, {
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        objectKind: "pull_request",
+        objectId: "12",
+        state: "open",
+      });
+      expect(() =>
+        recordGithubBinding(db, {
+          repositoryId: "repo",
+          planId: "PLAN-L7-2-b",
+          planRevision: "rev2",
+          objectKind: "pull_request",
+          objectId: "12",
+          state: "open",
+        }),
+      ).toThrow(/identity conflict/);
+      expect(db.prepare("SELECT plan_id, plan_revision FROM github_object_bindings").get()).toEqual(
+        {
+          plan_id: "PLAN-L7-1-a",
+          plan_revision: "rev1",
+        },
+      );
+    } finally {
+      db.close();
+    }
+  });
 });
