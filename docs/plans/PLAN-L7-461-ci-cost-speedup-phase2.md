@@ -22,6 +22,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-461-ci-cost-speedup-phase2.md
     artifact_type: markdown_doc
+  - artifact_path: src/doctor/result-file.ts
+    artifact_type: source_module
+  - artifact_path: src/git/default-branch.ts
+    artifact_type: source_module
+  - artifact_path: tests/doctor-result-file.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []

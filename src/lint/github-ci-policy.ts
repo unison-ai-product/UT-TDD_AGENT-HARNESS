@@ -351,7 +351,22 @@ bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-t
       "bun src/cli.ts db rebuild --json",
       LANE_FULL_ONLY_IF,
     ),
-    run("test — 全回帰 (vitest run)", "bun run test", LANE_FULL_ONLY_IF),
+    step("doctor (governance hard gates)", {
+      if: LANE_FULL_ONLY_IF,
+      env: {
+        UT_TDD_DOCTOR_RESULT_FILE: `${githubExpression("runner.temp")}/ut-tdd-doctor-result.json`,
+      },
+      run: 'bun src/cli.ts doctor --strict-green-command-digest --result-file "$UT_TDD_DOCTOR_RESULT_FILE"',
+    }),
+    step("test — 全回帰 (vitest run)", {
+      if: LANE_FULL_ONLY_IF,
+      env: {
+        UT_TDD_DOCTOR_RESULT_FILE: `${githubExpression("runner.temp")}/ut-tdd-doctor-result.json`,
+        UT_TDD_DOCTOR_RESULT_ROOT: githubExpression("github.workspace"),
+        UT_TDD_DOCTOR_RESULT_STRICT: "1",
+      },
+      run: "bun run test",
+    }),
     run(
       "doc lane checks (plan lint / readability / rule-drift)",
       "bun src/cli.ts plan lint\nbun run test:doc-lane",
@@ -366,11 +381,6 @@ bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-t
     run(
       "audit quality (gate findings)",
       "bun src/cli.ts audit quality --include-tests --limit 20",
-      LANE_FULL_ONLY_IF,
-    ),
-    run(
-      "doctor (governance hard gates)",
-      "bun src/cli.ts doctor --strict-green-command-digest",
       LANE_FULL_ONLY_IF,
     ),
     run(

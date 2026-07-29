@@ -33,15 +33,25 @@ export interface EnvelopeConsumption {
   reason: string;
 }
 
+export interface EnvelopeConsumerDeps {
+  /** envelope の読み取り。テストは実ファイルを書かずにこの口へ差し込む。 */
+  readFile: (path: string) => string;
+}
+
+const NODE_CONSUMER_DEPS: EnvelopeConsumerDeps = {
+  readFile: (path) => readFileSync(path, "utf8"),
+};
+
 export function consumeDoctorResultEnvelopeWithReason(
   env: NodeJS.ProcessEnv = process.env,
+  deps: EnvelopeConsumerDeps = NODE_CONSUMER_DEPS,
 ): EnvelopeConsumption {
   const filePath = env[DOCTOR_RESULT_FILE_ENV];
   const declaredRoot = env[DOCTOR_RESULT_ROOT_ENV];
   if (!filePath || !declaredRoot) return { result: null, reason: "envelope-not-declared" };
   let raw: string;
   try {
-    raw = readFileSync(filePath, "utf8");
+    raw = deps.readFile(filePath);
   } catch {
     return { result: null, reason: "envelope-unreadable" };
   }
@@ -69,6 +79,7 @@ export function consumeDoctorResultEnvelopeWithReason(
 
 export function consumeDoctorResultEnvelope(
   env: NodeJS.ProcessEnv = process.env,
+  deps: EnvelopeConsumerDeps = NODE_CONSUMER_DEPS,
 ): DoctorResult | null {
-  return consumeDoctorResultEnvelopeWithReason(env).result;
+  return consumeDoctorResultEnvelopeWithReason(env, deps).result;
 }

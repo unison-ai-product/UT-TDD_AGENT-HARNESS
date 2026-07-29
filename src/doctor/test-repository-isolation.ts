@@ -65,6 +65,19 @@ for (const [path, calls] of Object.entries({
     reason: "repository contract read is fixed to detached HEAD",
   };
 
+// PLAN-L7-461: doctor envelope の consumer は「検証対象 = detached HEAD snapshot」を
+// 前提に観測面を突き合わせるため、HEAD snapshot 読みを契約として明示する。
+repositoryReadContracts["tests/support/doctor-envelope.ts"] = {
+  mode: "head_snapshot",
+  calls: 1,
+  reason: "doctor envelope consumer compares the CI measurement against the detached HEAD surface",
+};
+repositoryReadContracts["tests/doctor-result-file.test.ts"] = {
+  mode: "head_snapshot",
+  calls: 2,
+  reason: "doctor envelope oracles build fixtures from the detached HEAD observation surface",
+};
+
 repositoryReadContracts["tests/doctor.test.ts"] = {
   mode_calls: { head_snapshot: 18, isolated_fixture: 8 },
   reason: "doctor aggregate test exercises both detached HEAD and execution fixture",

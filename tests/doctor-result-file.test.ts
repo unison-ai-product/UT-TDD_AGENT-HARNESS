@@ -8,9 +8,6 @@
  * 観測面 (snapshot root / ref map / options / check ID 集合) の完全一致を要求する。
  */
 
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions";
 import {
@@ -167,10 +164,10 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
  */
 describe("doctor envelope consumption (PLAN-L7-461)", () => {
   const snapshotRoot = headSnapshotRoot();
-  const writeEnvelope = (overrides: Record<string, unknown> = {}): string => {
-    const dir = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-envelope-"));
-    const path = join(dir, "doctor-result.json");
-    const built = {
+  // 実ファイルは書かない (head snapshot 由来の値を書き込む経路を作らないため、
+  // test-repository-isolation の forbidden-live-root-source を構造的に避ける)。
+  const envelopeJson = (overrides: Record<string, unknown> = {}): string =>
+    JSON.stringify({
       ...buildDoctorResultEnvelope({
         headSha: headSha(snapshotRoot) ?? "",
         scope: "full",
@@ -180,53 +177,92 @@ describe("doctor envelope consumption (PLAN-L7-461)", () => {
         options: { strict_green_command_digest: true, timing: false },
         checkIds: buildFullDoctorCheckDefinitions(nodeDoctorDeps(snapshotRoot)).map((d) => d.id),
         producer: { command: "ut-tdd doctor", version: "test" },
-        result: { ok: true, messages: ["doctor: consumed-envelope — OK"] },
+        result: { ok: true, messages: ["doctor: consumed-envelope OK"] },
       }),
       ...overrides,
-    };
-    writeFileSync(path, JSON.stringify(built), "utf8");
-    return path;
+    });
+  const reader = (json: string) => ({ readFile: () => json });
+  const missingReader = {
+    readFile: () => {
+      throw new Error("ENOENT");
+    },
   };
-  const env = (path: string, overrides: Record<string, string> = {}) => ({
+  const env = (overrides: Record<string, string> = {}) => ({
     CI: "true",
-    UT_TDD_DOCTOR_RESULT_FILE: path,
+    UT_TDD_DOCTOR_RESULT_FILE: "/tmp/ut-tdd-doctor-result.json",
     UT_TDD_DOCTOR_RESULT_ROOT: snapshotRoot,
     UT_TDD_DOCTOR_RESULT_STRICT: "1",
     ...overrides,
   });
 
   it("U-DOCTORENV-008: consumes the envelope when the declared surface matches", () => {
-    const path = writeEnvelope();
-    const consumed = consumeDoctorResultEnvelopeWithReason(env(path));
+    const consumed = consumeDoctorResultEnvelopeWithReason(env(), reader(envelopeJson()));
     expect(consumed.reason).toBe("accepted");
-    expect(consumed.result?.messages).toEqual(["doctor: consumed-envelope — OK"]);
+    expect(consumed.result?.messages).toEqual(["doctor: consumed-envelope OK"]);
   });
 
   it("U-DOCTORENV-009: falls back to a self-run instead of trusting a partial declaration", () => {
-    const path = writeEnvelope();
-    expect(consumeDoctorResultEnvelopeWithReason({ CI: "true" })).toEqual({
+    const json = envelopeJson();
+    expect(consumeDoctorResultEnvelopeWithReason({ CI: "true" }, reader(json))).toEqual({
       result: null,
       reason: "envelope-not-declared",
     });
-    expect(consumeDoctorResultEnvelopeWithReason(env(join(path, "missing.json"))).reason).toBe(
+    expect(consumeDoctorResultEnvelopeWithReason(env(), missingReader).reason).toBe(
       "envelope-unreadable",
     );
-    expect(consumeDoctorResultEnvelopeWithReason(env(path, { CI: "false" })).reason).toBe(
+    expect(consumeDoctorResultEnvelopeWithReason(env({ CI: "false" }), reader(json)).reason).toBe(
       "not-ci-context",
     );
     expect(
-      consumeDoctorResultEnvelopeWithReason(env(path, { UT_TDD_DOCTOR_RESULT_STRICT: "0" })).reason,
+      consumeDoctorResultEnvelopeWithReason(env({ UT_TDD_DOCTOR_RESULT_STRICT: "0" }), reader(json))
+        .reason,
     ).toBe("options-mismatch");
     expect(
-      consumeDoctorResultEnvelopeWithReason(env(path, { UT_TDD_DOCTOR_RESULT_ROOT: tmpdir() }))
-        .reason,
+      consumeDoctorResultEnvelopeWithReason(
+        env({ UT_TDD_DOCTOR_RESULT_ROOT: "/tmp/other-root" }),
+        reader(json),
+      ).reason,
     ).toBe(`snapshot-root-mismatch:${canonicalRepoRoot(snapshotRoot)}`);
   });
 
   it("U-DOCTORENV-010: refuses an envelope measured at another head", () => {
-    const path = writeEnvelope({ head_sha: "f".repeat(40) });
-    expect(consumeDoctorResultEnvelopeWithReason(env(path)).reason).toBe(
+    const json = envelopeJson({ head_sha: "f".repeat(40) });
+    expect(consumeDoctorResultEnvelopeWithReason(env(), reader(json)).reason).toBe(
       `head-sha-mismatch:${"f".repeat(40)}`,
     );
+  });
+});
+
+describe("doctor check set equivalence across the single-run switch (PLAN-L7-461 AC-2)", () => {
+  it("U-DOCTORENV-011: never accepts a measurement whose check set is narrower than the fence expects", () => {
+    const snapshotRoot = headSnapshotRoot();
+    const fullIds = buildFullDoctorCheckDefinitions(nodeDoctorDeps(snapshotRoot)).map((d) => d.id);
+    expect(fullIds.length).toBeGreaterThan(50);
+    expect(new Set(fullIds).size).toBe(fullIds.length);
+
+    const narrowed = fullIds.slice(0, fullIds.length - 1);
+    const measured = buildDoctorResultEnvelope({
+      headSha: "a".repeat(40),
+      scope: "full",
+      profile: null,
+      snapshotRoot: "/tmp/root",
+      refMap: {},
+      options: { strict_green_command_digest: true, timing: false },
+      checkIds: narrowed,
+      producer: { command: "ut-tdd doctor", version: "test" },
+      result: { ok: true, messages: [] },
+    });
+
+    expect(
+      doctorResultEnvelopeUsability({
+        envelope: measured,
+        expectedHeadSha: "a".repeat(40),
+        expectedSnapshotRoot: "/tmp/root",
+        expectedRefMap: {},
+        expectedOptions: { strict_green_command_digest: true, timing: false },
+        expectedCheckIds: fullIds,
+        ci: true,
+      }),
+    ).toEqual({ usable: false, reason: "check-id-set-mismatch" });
   });
 });
