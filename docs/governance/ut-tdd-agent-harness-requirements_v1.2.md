@@ -1586,7 +1586,7 @@ scripts/
 └── install-hooks.ps1
 ```
 
-`plan lint` / `vmodel lint` / `doctor` / `gate` は個別 `.sh` ではなく compiled `ut-tdd` の **サブコマンド**として実装する。PowerShell と POSIX shell の entrypoint は同じ **TypeScript core** (開発時 `bun run`、配布時 `bun build --compile` の単一バイナリ) を呼び、検証結果と exit code を一致させる。`scripts/` 配下は薄い entrypoint / installer / CI helper に限定し、validator や runtime 判定などの実体は `src/` (TypeScript) に置く。OS 片系だけが通る状態は Phase 0 受入不可とする。
+`plan lint` / `vmodel lint` / `doctor` / `gate` は個別 `.sh` ではなく `ut-tdd` の **サブコマンド**として実装する。PowerShell と POSIX shell の entrypoint は同じ **TypeScript core** (開発時は Node 24 の native type stripping による `node src/cli.ts`、配布形式は PLAN-L7-462 の freeze に従う Node runtime artifact) を呼び、検証結果と exit code を一致させる。`scripts/` 配下は薄い entrypoint / installer / CI helper に限定し、validator や runtime 判定などの実体は `src/` (TypeScript) に置く。OS 片系だけが通る状態は Phase 0 受入不可とする。
 
 ### 実行モード検出
 
@@ -1974,8 +1974,8 @@ output:
 
 ADR-001 (2026-07-22 改訂) により `src/` core は TypeScript / Node runtime で実装する。Bun は永久 BAN であり新規依存・新規実行経路を追加しない (issue #134 / PLAN-L7-462)。coding rules は本要件定義と `docs/governance/coding-rules.md` を SSoT とし、AGENTS / CLAUDE adapter は再定義せず参照する。
 
-- [x] `tsconfig.json` は `strict: true` / `noImplicitOverride: true` / `noFallthroughCasesInSwitch: true` を維持し、`bun run typecheck` を必須検証に含める。
-- [x] formatter/linter は Biome (`bun run lint`) を正本とし、手動整形ルールではなく tool output を優先する。
+- [x] `tsconfig.json` は `strict: true` / `noImplicitOverride: true` / `noFallthroughCasesInSwitch: true` を維持し、`npm run typecheck` を必須検証に含める。
+- [x] formatter/linter は Biome (`npm run lint`) を正本とし、手動整形ルールではなく tool output を優先する。
 - [x] explicit `any` を禁止する。必要な場合は `unknown`、generic、または具体型を使う。
 - [x] `@ts-ignore` / `@ts-expect-error` / `eslint-disable` / `biome-ignore` を禁止する。例外が必要な場合は先に policy PLAN で例外条件を定義する。
 - [x] `src/**` の function / method / constructor / arrow function は 3 params 以下とする。4 以上は input object 化する。`tests/**` の helper arity は対象外だが、no-any / suppression / file naming は対象内。

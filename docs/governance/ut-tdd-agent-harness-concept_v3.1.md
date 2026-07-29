@@ -1088,7 +1088,7 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 
 | 用語 | 定義 |
 |---|---|
-| **coding-rules SSoT** | TypeScript/Bun core の coding rule 正本。`docs/governance/coding-rules.md` を rule ID と workflow placement の SSoT とし、doctor `checkCodingRules` が hard gate として検証する (導入層 L6、PLAN-L6-23/L7-24/REVERSE-23) |
+| **coding-rules SSoT** | TypeScript core (Node runtime) の coding rule 正本。`docs/governance/coding-rules.md` を rule ID と workflow placement の SSoT とし、doctor `checkCodingRules` が hard gate として検証する (導入層 L6、PLAN-L6-23/L7-24/REVERSE-23) |
 | **CODING-RULE-WORKFLOW** | coding-rule 文書化が CI 後付けではなく Forward/Add-feature/mode workflow step であることを示す process doc anchor (導入層 L6、PLAN-L6-23) |
 | **coding-rules workflow analyzer** | `loadCodingWorkflowDocs` / `analyzeCodingRules` によって coding-rule SSoT と workflow anchor の欠落を検出する lint (導入層 L7、PLAN-L7-24) |
 | **coding-rules back-fill** | implemented coding-rule workflow を Reverse PLAN へ接続し、add-impl orphan を防ぐ back-fill 記録 (導入層 cross、PLAN-REVERSE-23) |
