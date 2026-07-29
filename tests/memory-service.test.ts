@@ -9,6 +9,7 @@ import {
   queryMemoryEntries,
   readMemory,
   renderMemoryHealth,
+  writeMemory,
 } from "../src/memory/service";
 import { removeTestTree } from "./support/temp-tree";
 import { workspaceRead } from "./support/workspace-roots";
@@ -82,6 +83,28 @@ function seedCorpus(repo: string): void {
 }
 
 describe("MemoryService (PLAN-L7-468 PR-A)", () => {
+  it("owns the canonical write path as well as reads", () => {
+    const repo = tempRepo();
+    try {
+      const entry = writeMemory({
+        repoRoot: repo,
+        input: {
+          kind: "project",
+          title: "Service-owned write",
+          body: "CLI は storage primitive を直接呼ばない。",
+          tags: ["service"],
+          now: "2026-07-29T07:00:00.000Z",
+        },
+      });
+      expect(entry.source_path).toBe(".ut-tdd/memory/project-service-owned-write.md");
+      expect(loadMemoryCorpus(repo).entries.map((candidate) => candidate.memory_id)).toContain(
+        entry.memory_id,
+      );
+    } finally {
+      removeTestTree(repo);
+    }
+  });
+
   // U-MEMORY-010: AC-1 — 移植前後の等価性 (filter / 順位 / tie-break / limit)
   it("keeps the legacy DB read semantics when reading from source files", () => {
     const repo = tempRepo();
@@ -317,6 +340,7 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
     // 読み手 (CLI / digest) が格納面へ戻ることを個別に禁止する。
     expect(tableLiteral).not.toContain("cli.ts");
     expect(tableLiteral).not.toContain("handover/session-start-digest.ts");
+    expect(readFileSync(join(root, "cli.ts"), "utf8")).not.toContain("writeMemoryEntry");
     // service が実在し、読み路として登録されていること (境界の空振り防止)。
     expect(tableLiteral).toContain("memory/service.ts");
   });

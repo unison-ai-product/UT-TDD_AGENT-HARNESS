@@ -98,17 +98,13 @@ import {
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
 import { runWriteEncodingGuard } from "./lint/write-encoding-guard";
-import {
-  type MemoryKind,
-  renderMemoryList,
-  renderMemorySurface,
-  writeMemoryEntry,
-} from "./memory/index";
+import { type MemoryKind, renderMemoryList, renderMemorySurface } from "./memory/index";
 import {
   type MemoryQueryOptions,
   type MemoryReadResult,
   readMemory,
   renderMemoryHealth,
+  writeMemory,
 } from "./memory/service";
 import { lintPlanWithGate } from "./plan/lint";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
@@ -3553,11 +3549,14 @@ memory
             .filter(Boolean)
         : [];
       try {
-        const entry = writeMemoryEntry(process.cwd(), {
-          kind: opts.kind as MemoryKind,
-          title: opts.title,
-          body,
-          tags,
+        const entry = writeMemory({
+          repoRoot: process.cwd(),
+          input: {
+            kind: opts.kind as MemoryKind,
+            title: opts.title,
+            body,
+            tags,
+          },
         });
         process.stdout.write(`memory: wrote ${entry.source_path}\n`);
       } catch (error) {

@@ -14,7 +14,12 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type MemoryEntry, parseMemoryFile } from "./index";
+import {
+  type MemoryEntry,
+  type MemoryWriteInput,
+  parseMemoryFile,
+  writeMemoryEntry,
+} from "./index";
 
 /** index とファイル正本の関係。degraded を無音にしないための型。 */
 export type MemoryFreshness =
@@ -45,6 +50,11 @@ export interface MemoryReadResult extends MemoryCorpus {
 export interface MemoryQueryOptions {
   query?: string;
   limit?: number;
+}
+
+/** 正本への書き込みを含む memory storage の単一入口。 */
+export function writeMemory(input: { repoRoot: string; input: MemoryWriteInput }): MemoryEntry {
+  return writeMemoryEntry(input.repoRoot, input.input);
 }
 
 interface MemoryIndexDb {

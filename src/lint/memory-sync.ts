@@ -54,7 +54,7 @@ export function analyzeMemorySync(input: MemorySyncInput): MemorySyncResult {
   const violations = input.files.filter((file) => ERROR_STATES.has(file.state));
   const warnings = input.files.filter((file) => file.state === "not-on-origin");
   return {
-    ok: violations.length === 0,
+    ok: violations.length === 0 && input.originResolved,
     violations,
     warnings,
     shared: input.files.filter((file) => file.state === "shared").length,
@@ -89,10 +89,9 @@ export function memorySyncMessages(result: MemorySyncResult): string[] {
     );
   }
   if (!result.originResolved) {
-    // fail-open を無音にしない: 判定不能であることを surface する。
     messages.push(
-      `memory-sync - note: ${result.originRef} を解決できないため origin 到達の判定は未評価 ` +
-        "(untracked / 未コミット変更の検出のみ有効)",
+      `memory-sync - violation: ${result.originRef} を解決できず共有到達を判定不能 ` +
+        "(origin 到達を証明できないため hard gate は fail-close)",
     );
   }
   // origin を解決できない環境で「すべて到達」と言わない (未評価と OK を混同しない)。
