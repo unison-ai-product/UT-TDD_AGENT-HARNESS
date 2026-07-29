@@ -115,6 +115,29 @@ Bun 起因・Bun 関与のトラブルが反復している:
   いたが `ADR-002-dependency-direction-and-auto-map.md` が既存で **番号衝突**していた。
   空き番号は ADR-010 (001〜009 使用済み、実測)。
 
+## 記述の先行禁止 (2026-07-29、実測にもとづく errata の境界)
+
+決定事項の明示 (「Bun は永久 BAN、新規採用禁止」) と、**現状記述の Node 化**は別物である。
+後者を撤去 slice より先に doc へ書くと、doc が実装について嘘をつく。2026-07-29 に一度
+やってしまい、CI が 5 テストで検出した (`U-SETUP-004b2` / `U-SETUP-011e` /
+`U-MODELID-SSOT (b)` / `github-ci-policy` / doctor aggregate baseline)。
+
+実測 (この repo、2026-07-29):
+
+- `npm ci` — `package-lock.json` が存在しない (lockfile は `bun.lock` のみ) ため不成立。
+- `npm test` — `package.json` の `test` script が `bun run test:vitest-snapshot` へ委譲。
+- `node src/cli.ts` — `ERR_MODULE_NOT_FOUND` (extension-less import) で起動しない。
+
+したがって次の 3 面は **Schedule の該当 slice と同一 PR でしか書き換えない**:
+
+1. `docs/templates/github/common/*.yml` (consumer へ配られる実 CI。先行させると壊れた
+   workflow を配布する) — `BUILTIN_GITHUB_TEMPLATES` の mirror と同時。
+2. `docs/test-design/**` の oracle 行 (実装済み挙動の記述であり、願望を書く場所ではない)。
+3. README / governance の**コマンド例** (読者がそのまま実行する)。
+
+方針の宣言 (「禁止」「撤去対象」「PLAN-L7-462 で段階撤去中」) は現時点で真なので、
+本 PR のように先行して書いてよい。区別の基準は「今日 shell で叩いて通るか」。
+
 ## スコープ外
 
 - TypeScript 7 (ネイティブ tsc) への更新 — 別件 (typecheck 高速化)。
