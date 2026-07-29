@@ -1,0 +1,58 @@
+import { describe, expect, it } from "vitest";
+import { deriveForwardReadiness, type ForwardScheduleEntry } from "../src/github/forward-readiness";
+
+const entry = (
+  planId: string,
+  status: string,
+  predecessorPlanIds: string[] = [],
+): ForwardScheduleEntry => ({
+  planId,
+  revision: `${planId}@1`,
+  layer: "L7",
+  status,
+  currentLocation: "implement",
+  rag: "yellow",
+  blockedReason: "",
+  predecessorPlanIds,
+});
+
+describe("Forward work graph readiness", () => {
+  it("U-GHPROJ-001: blocks unresolved predecessors and unlocks only after all complete", () => {
+    const blocked = deriveForwardReadiness([
+      entry("PLAN-L7-1-a", "confirmed"),
+      entry("PLAN-L7-2-b", "draft"),
+      entry("PLAN-L7-3-c", "draft", ["PLAN-L7-1-a", "PLAN-L7-2-b"]),
+    ]);
+    expect(blocked[2]).toMatchObject({
+      readiness: "阻害中",
+      blockedReason: "先行PLAN未完了: PLAN-L7-2-b",
+    });
+    const released = deriveForwardReadiness([
+      entry("PLAN-L7-1-a", "confirmed"),
+      entry("PLAN-L7-2-b", "confirmed"),
+      entry("PLAN-L7-3-c", "draft", ["PLAN-L7-1-a", "PLAN-L7-2-b"]),
+    ]);
+    expect(released[2]?.readiness).toBe("着手可能");
+    expect(released[1]?.unlockedPlanIds).toEqual(["PLAN-L7-3-c"]);
+  });
+
+  it("U-GHPROJ-002: fails closed for missing plans, sync drift, CI, and review failures", () => {
+    const rows = deriveForwardReadiness(
+      [entry("PLAN-L7-4-d", "draft", ["PLAN-L7-404-missing"]), entry("PLAN-L7-5-e", "active")],
+      [
+        { planId: "PLAN-L7-4-d", sync: "不整合" },
+        { planId: "PLAN-L7-5-e", ci: "失敗", review: "要修正" },
+      ],
+    );
+    expect(rows[0]?.readiness).toBe("阻害中");
+    expect(rows[0]?.blockedReason).toContain("先行PLAN欠損");
+    expect(rows[0]?.blockedReason).toContain("同期不整合");
+    expect(rows[1]?.blockedReason).toBe("CI失敗; レビュー要修正");
+  });
+
+  it("U-GHPROJ-003: rejects duplicate plan identities", () => {
+    expect(() =>
+      deriveForwardReadiness([entry("PLAN-L7-1-a", "draft"), entry("PLAN-L7-1-a", "draft")]),
+    ).toThrow(/duplicate plan_id/);
+  });
+});

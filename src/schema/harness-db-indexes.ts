@@ -338,4 +338,24 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     table: "document_scale_profiles",
     columns: ["profile_axis", "profile_rank"],
   },
+  {
+    name: "idx_execution_readiness_state_order",
+    table: "execution_readiness_projection",
+    columns: ["readiness", "implementation_order", "plan_id"],
+  },
+  {
+    name: "idx_github_project_sync_status",
+    table: "github_project_item_projection",
+    columns: ["repository_id", "sync_status", "plan_id"],
+  },
+  {
+    name: "idx_github_binding_plan_kind",
+    table: "github_object_bindings",
+    columns: ["repository_id", "plan_id", "object_kind", "state"],
+  },
+  {
+    name: "idx_github_outbox_status",
+    table: "github_projection_outbox",
+    columns: ["status", "updated_at", "outbox_id"],
+  },
 ];

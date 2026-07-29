@@ -1,0 +1,351 @@
+import { execFileSync } from "node:child_process";
+import { stableId } from "../stable-id";
+import type { HarnessDb } from "../state-db/index";
+import type { ForwardReadinessRow } from "./forward-readiness";
+
+export interface ProjectField {
+  id: string;
+  name: string;
+  type: string;
+  options?: Array<{ id: string; name: string }>;
+}
+
+export interface ProjectItem {
+  id: string;
+  title: string;
+  planId: string;
+}
+
+export interface ProjectSnapshot {
+  id: string;
+  fields: ProjectField[];
+  items: ProjectItem[];
+}
+
+export interface ProjectV2Port {
+  inspect(owner: string, projectNumber: number): ProjectSnapshot;
+  createDraft(owner: string, projectNumber: number, title: string, body: string): string;
+  setText(projectId: string, itemId: string, fieldId: string, value: string): void;
+  setNumber(projectId: string, itemId: string, fieldId: string, value: number): void;
+  setSingleSelect(projectId: string, itemId: string, fieldId: string, optionId: string): void;
+}
+
+export interface GhCommandPort {
+  json(args: readonly string[]): unknown;
+  run(args: readonly string[]): void;
+}
+
+export class NodeGhCommandPort implements GhCommandPort {
+  json(args: readonly string[]): unknown {
+    const output = execFileSync("gh", [...args], {
+      encoding: "utf8",
+      timeout: 30_000,
+      maxBuffer: 16 * 1024 * 1024,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return JSON.parse(output);
+  }
+
+  run(args: readonly string[]): void {
+    execFileSync("gh", [...args], {
+      encoding: "utf8",
+      timeout: 30_000,
+      maxBuffer: 16 * 1024 * 1024,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
+}
+
+function object(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function list(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+export class GhProjectV2Adapter implements ProjectV2Port {
+  readonly #gh: GhCommandPort;
+
+  constructor(gh: GhCommandPort = new NodeGhCommandPort()) {
+    this.#gh = gh;
+  }
+
+  inspect(owner: string, projectNumber: number): ProjectSnapshot {
+    const project = object(
+      this.#gh.json([
+        "project",
+        "view",
+        String(projectNumber),
+        "--owner",
+        owner,
+        "--format",
+        "json",
+      ]),
+    );
+    const fieldsPayload = object(
+      this.#gh.json([
+        "project",
+        "field-list",
+        String(projectNumber),
+        "--owner",
+        owner,
+        "--limit",
+        "100",
+        "--format",
+        "json",
+      ]),
+    );
+    const itemsPayload = object(
+      this.#gh.json([
+        "project",
+        "item-list",
+        String(projectNumber),
+        "--owner",
+        owner,
+        "--limit",
+        "1000",
+        "--format",
+        "json",
+      ]),
+    );
+    return {
+      id: String(project.id ?? ""),
+      fields: list(fieldsPayload.fields).map((value) => {
+        const field = object(value);
+        return {
+          id: String(field.id ?? ""),
+          name: String(field.name ?? ""),
+          type: String(field.type ?? ""),
+          options: list(field.options).map((optionValue) => {
+            const option = object(optionValue);
+            return { id: String(option.id ?? ""), name: String(option.name ?? "") };
+          }),
+        };
+      }),
+      items: list(itemsPayload.items).map((value) => {
+        const item = object(value);
+        const itemTitle = String(item.title ?? "");
+        const titlePlanId =
+          itemTitle.match(/^(PLAN-[A-Z0-9]+-[0-9A-Za-z][0-9A-Za-z-]*)/)?.[1] ?? "";
+        return {
+          id: String(item.id ?? ""),
+          title: itemTitle,
+          planId: String(item["PLAN ID"] ?? "") || titlePlanId,
+        };
+      }),
+    };
+  }
+
+  createDraft(owner: string, projectNumber: number, title: string, body: string): string {
+    const result = object(
+      this.#gh.json([
+        "project",
+        "item-create",
+        String(projectNumber),
+        "--owner",
+        owner,
+        "--title",
+        title,
+        "--body",
+        body,
+        "--format",
+        "json",
+      ]),
+    );
+    const id = String(result.id ?? "");
+    if (!id) throw new Error("GitHub Project item-create returned no id");
+    return id;
+  }
+
+  setText(projectId: string, itemId: string, fieldId: string, value: string): void {
+    this.#edit(projectId, itemId, fieldId, ["--text", value]);
+  }
+
+  setNumber(projectId: string, itemId: string, fieldId: string, value: number): void {
+    this.#edit(projectId, itemId, fieldId, ["--number", String(value)]);
+  }
+
+  setSingleSelect(projectId: string, itemId: string, fieldId: string, optionId: string): void {
+    this.#edit(projectId, itemId, fieldId, ["--single-select-option-id", optionId]);
+  }
+
+  #edit(projectId: string, itemId: string, fieldId: string, valueArgs: string[]): void {
+    this.#gh.run([
+      "project",
+      "item-edit",
+      "--project-id",
+      projectId,
+      "--id",
+      itemId,
+      "--field-id",
+      fieldId,
+      ...valueArgs,
+    ]);
+  }
+}
+
+export interface ProjectMutation {
+  kind: "create" | "update";
+  planId: string;
+  itemId: string;
+  field: string;
+  value: string | number;
+}
+
+export interface ProjectSyncResult {
+  applied: boolean;
+  projectId: string;
+  mutations: ProjectMutation[];
+  itemIds: Record<string, string>;
+}
+
+function title(row: ForwardReadinessRow): string {
+  return `${row.planId}: ${row.currentGate}`;
+}
+
+function desiredFields(row: ForwardReadinessRow): Record<string, string | number> {
+  return {
+    "PLAN ID": row.planId,
+    Vモデル層: row.layer || "cross",
+    実行状態: row.readiness,
+    現在ゲート: row.currentGate,
+    実装順序: row.implementationOrder,
+    先行PLAN: row.predecessorPlanIds.join(", "),
+    阻害要因: row.blockedReason,
+    解除条件: row.unlockCondition,
+    次の作業: row.nextPlanIds.join(", "),
+    解放される後続: row.unlockedPlanIds.join(", "),
+    CI状態: row.ci,
+    レビュー状態: row.review,
+    対象HEAD: row.headSha,
+    同期状態: "同期済",
+  };
+}
+
+function assertProjectContract(snapshot: ProjectSnapshot): Map<string, ProjectField> {
+  if (!snapshot.id) throw new Error("GitHub Project id is missing");
+  const fields = new Map(snapshot.fields.map((field) => [field.name, field]));
+  const missing = Object.keys(
+    desiredFields({
+      planId: "PLAN-L0-0-contract",
+      revision: "contract",
+      layer: "L0",
+      readiness: "保留",
+      currentGate: "plan",
+      implementationOrder: 0,
+      predecessorPlanIds: [],
+      blockedReason: "",
+      unlockCondition: "",
+      nextPlanIds: [],
+      unlockedPlanIds: [],
+      headSha: "",
+      ci: "未実行",
+      review: "未依頼",
+      sync: "未同期",
+    }),
+  ).filter((name) => !fields.has(name));
+  if (missing.length > 0) throw new Error(`GitHub Project fields missing: ${missing.join(", ")}`);
+  return fields;
+}
+
+export function syncForwardProject(input: {
+  rows: readonly ForwardReadinessRow[];
+  owner: string;
+  projectNumber: number;
+  port: ProjectV2Port;
+  apply: boolean;
+}): ProjectSyncResult {
+  const snapshot = input.port.inspect(input.owner, input.projectNumber);
+  const fields = assertProjectContract(snapshot);
+  const duplicates = new Set<string>();
+  const byPlan = new Map<string, ProjectItem>();
+  for (const item of snapshot.items) {
+    if (!item.planId) continue;
+    if (byPlan.has(item.planId)) duplicates.add(item.planId);
+    byPlan.set(item.planId, item);
+  }
+  if (duplicates.size > 0)
+    throw new Error(`duplicate GitHub Project items: ${[...duplicates].sort().join(", ")}`);
+  const mutations: ProjectMutation[] = [];
+  const itemIds: Record<string, string> = {};
+  for (const row of input.rows) {
+    let itemId = byPlan.get(row.planId)?.id ?? "";
+    if (!itemId) {
+      mutations.push({
+        kind: "create",
+        planId: row.planId,
+        itemId: "",
+        field: "Title",
+        value: title(row),
+      });
+      if (input.apply)
+        itemId = input.port.createDraft(
+          input.owner,
+          input.projectNumber,
+          title(row),
+          `HARNESS DB projection\n\nPLAN: ${row.planId}\nRevision: ${row.revision}`,
+        );
+      else itemId = `dry-run:${row.planId}`;
+    }
+    itemIds[row.planId] = itemId;
+    for (const [fieldName, value] of Object.entries(desiredFields(row))) {
+      mutations.push({ kind: "update", planId: row.planId, itemId, field: fieldName, value });
+      if (!input.apply) continue;
+      const field = fields.get(fieldName);
+      if (!field) throw new Error(`field disappeared during sync: ${fieldName}`);
+      if (fieldName === "実装順序")
+        input.port.setNumber(snapshot.id, itemId, field.id, Number(value));
+      else if (field.type === "ProjectV2SingleSelectField") {
+        const option = field.options?.find((candidate) => candidate.name === String(value));
+        if (!option) throw new Error(`field option missing: ${fieldName}=${value}`);
+        input.port.setSingleSelect(snapshot.id, itemId, field.id, option.id);
+      } else input.port.setText(snapshot.id, itemId, field.id, String(value));
+    }
+  }
+  return { applied: input.apply, projectId: snapshot.id, mutations, itemIds };
+}
+
+export function persistProjectSync(input: {
+  db: HarnessDb;
+  repositoryId: string;
+  projectId: string;
+  rows: readonly ForwardReadinessRow[];
+  result: ProjectSyncResult;
+  now?: string;
+}): void {
+  const now = input.now ?? new Date().toISOString();
+  const statement = input.db.prepare(
+    `INSERT INTO github_project_item_projection (
+       projection_id, repository_id, project_id, project_item_id, plan_id,
+       plan_revision, content_node_id, head_sha, sync_status, last_reconciled_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(repository_id, plan_id, plan_revision) DO UPDATE SET
+       project_id=excluded.project_id, project_item_id=excluded.project_item_id,
+       head_sha=excluded.head_sha, sync_status=excluded.sync_status,
+       last_reconciled_at=excluded.last_reconciled_at`,
+  );
+  input.db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const row of input.rows) {
+      statement.run(
+        stableId("github-project-item", `${input.repositoryId}:${row.planId}:${row.revision}`),
+        input.repositoryId,
+        input.projectId,
+        input.result.itemIds[row.planId] ?? "",
+        row.planId,
+        row.revision,
+        "",
+        row.headSha,
+        input.result.applied ? "同期済" : "未同期",
+        now,
+      );
+    }
+    input.db.exec("COMMIT");
+  } catch (error) {
+    input.db.exec("ROLLBACK");
+    throw error;
+  }
+}

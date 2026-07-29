@@ -1,0 +1,128 @@
+import { describe, expect, it } from "vitest";
+import type { ForwardReadinessRow } from "../src/github/forward-readiness";
+import type { ProjectField, ProjectSnapshot, ProjectV2Port } from "../src/github/project-v2";
+import { syncForwardProject } from "../src/github/project-v2";
+
+const select = (name: string, options: string[]): ProjectField => ({
+  id: `field:${name}`,
+  name,
+  type: "ProjectV2SingleSelectField",
+  options: options.map((option) => ({ id: `option:${name}:${option}`, name: option })),
+});
+
+const fields: ProjectField[] = [
+  ...[
+    "PLAN ID",
+    "現在ゲート",
+    "先行PLAN",
+    "阻害要因",
+    "解除条件",
+    "次の作業",
+    "解放される後続",
+    "対象HEAD",
+  ].map((name) => ({ id: `field:${name}`, name, type: "ProjectV2Field" })),
+  { id: "field:実装順序", name: "実装順序", type: "ProjectV2Field" },
+  select("Vモデル層", ["L7", "cross"]),
+  select("実行状態", ["着手可能", "進行中", "阻害中", "保留", "レビュー中", "完了"]),
+  select("CI状態", ["未実行", "実行中", "成功", "失敗", "取消"]),
+  select("レビュー状態", ["未依頼", "依頼中", "承認", "要修正"]),
+  select("同期状態", ["同期済", "遅延", "不整合", "未同期"]),
+];
+
+class FakeProjectPort implements ProjectV2Port {
+  snapshot: ProjectSnapshot = { id: "project:6", fields, items: [] };
+  calls: string[] = [];
+  inspect(): ProjectSnapshot {
+    return this.snapshot;
+  }
+  createDraft(_owner: string, _project: number, title: string): string {
+    this.calls.push(`create:${title}`);
+    return "item:new";
+  }
+  setText(_project: string, _item: string, field: string, value: string): void {
+    this.calls.push(`text:${field}:${value}`);
+  }
+  setNumber(_project: string, _item: string, field: string, value: number): void {
+    this.calls.push(`number:${field}:${value}`);
+  }
+  setSingleSelect(_project: string, _item: string, field: string, option: string): void {
+    this.calls.push(`select:${field}:${option}`);
+  }
+}
+
+const row: ForwardReadinessRow = {
+  planId: "PLAN-L7-436-domain",
+  revision: "rev1",
+  layer: "L7",
+  readiness: "着手可能",
+  currentGate: "plan",
+  implementationOrder: 1,
+  predecessorPlanIds: [],
+  blockedReason: "",
+  unlockCondition: "",
+  nextPlanIds: ["PLAN-L7-437-adapter"],
+  unlockedPlanIds: [],
+  headSha: "",
+  ci: "未実行",
+  review: "未依頼",
+  sync: "未同期",
+};
+
+describe("GitHub Project V2 reconciler", () => {
+  it("U-GHPROJ-020: dry-run plans the same fields without mutations", () => {
+    const port = new FakeProjectPort();
+    const result = syncForwardProject({
+      rows: [row],
+      owner: "owner",
+      projectNumber: 6,
+      port,
+      apply: false,
+    });
+    expect(port.calls).toEqual([]);
+    expect(result.mutations).toHaveLength(15);
+    expect(result.itemIds[row.planId]).toBe(`dry-run:${row.planId}`);
+  });
+
+  it("U-GHPROJ-021: apply creates once and updates typed fields", () => {
+    const port = new FakeProjectPort();
+    const result = syncForwardProject({
+      rows: [row],
+      owner: "owner",
+      projectNumber: 6,
+      port,
+      apply: true,
+    });
+    expect(result.itemIds[row.planId]).toBe("item:new");
+    expect(port.calls.filter((call) => call.startsWith("create:"))).toHaveLength(1);
+    expect(port.calls).toContain("number:field:実装順序:1");
+    expect(port.calls).toContain("select:field:実行状態:option:実行状態:着手可能");
+  });
+
+  it("U-GHPROJ-022: fails closed on duplicate items and missing fields", () => {
+    const duplicatePort = new FakeProjectPort();
+    duplicatePort.snapshot.items = [
+      { id: "a", title: "a", planId: row.planId },
+      { id: "b", title: "b", planId: row.planId },
+    ];
+    expect(() =>
+      syncForwardProject({
+        rows: [row],
+        owner: "owner",
+        projectNumber: 6,
+        port: duplicatePort,
+        apply: false,
+      }),
+    ).toThrow(/duplicate/);
+    const missingPort = new FakeProjectPort();
+    missingPort.snapshot.fields = [];
+    expect(() =>
+      syncForwardProject({
+        rows: [row],
+        owner: "owner",
+        projectNumber: 6,
+        port: missingPort,
+        apply: false,
+      }),
+    ).toThrow(/fields missing/);
+  });
+});

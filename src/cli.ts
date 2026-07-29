@@ -52,9 +52,19 @@ import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
 import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane";
+import { deriveForwardReadiness } from "./github/forward-readiness";
+import {
+  markGithubProjectionApplied,
+  queueGithubProjection,
+  readForwardSchedule,
+  readGithubEvidence,
+  rebuildExecutionReadiness,
+  recordGithubBinding,
+} from "./github/forward-store";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
 import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace";
+import { GhProjectV2Adapter, persistProjectSync, syncForwardProject } from "./github/project-v2";
 import {
   diffRepositoryPolicy,
   normalizeRulesets,
@@ -3267,6 +3277,167 @@ branch
   });
 
 const github = program.command("github").description("GitHub operations guards");
+
+const githubProject = github
+  .command("project")
+  .description("HARNESS DB正本からGitHub Project V2へForward状態を投影する");
+
+githubProject
+  .command("sync")
+  .description("Project item差分をdry-runし、--apply指定時だけ反映する")
+  .requiredOption("--owner <login>", "GitHub Project owner")
+  .requiredOption("--number <n>", "GitHub Project number", (value) => Number.parseInt(value, 10))
+  .requiredOption("--repository <id>", "repository identity (owner/name)")
+  .option("--apply", "GitHubとbinding projectionへ反映する")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      owner: string;
+      number: number;
+      repository: string;
+      apply?: boolean;
+      json?: boolean;
+    }) => {
+      if (!Number.isInteger(opts.number) || opts.number < 1) {
+        process.stderr.write("github project sync: --number must be a positive integer\n");
+        process.exitCode = 1;
+        return;
+      }
+      const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+      try {
+        migrate(db);
+        const rows = opts.apply
+          ? rebuildExecutionReadiness(db)
+          : deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
+        const outboxIds = opts.apply
+          ? rows.map((row) =>
+              queueGithubProjection({
+                db,
+                repositoryId: opts.repository,
+                planId: row.planId,
+                planRevision: row.revision,
+                operation: "project-item-upsert",
+                payload: {
+                  owner: opts.owner,
+                  projectNumber: opts.number,
+                  readiness: row.readiness,
+                  currentGate: row.currentGate,
+                  headSha: row.headSha,
+                },
+              }),
+            )
+          : [];
+        const result = syncForwardProject({
+          rows,
+          owner: opts.owner,
+          projectNumber: opts.number,
+          port: new GhProjectV2Adapter(),
+          apply: Boolean(opts.apply),
+        });
+        if (opts.apply) {
+          persistProjectSync({
+            db,
+            repositoryId: opts.repository,
+            projectId: result.projectId,
+            rows,
+            result,
+          });
+          markGithubProjectionApplied(db, outboxIds);
+        }
+        if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        else
+          process.stdout.write(
+            `github project sync: ${result.applied ? "applied" : "dry-run"} plans=${rows.length} mutations=${result.mutations.length}\n`,
+          );
+      } catch (error) {
+        process.stderr.write(`github project sync failed: ${String(error)}\n`);
+        process.exitCode = 3;
+      } finally {
+        db.close();
+      }
+    },
+  );
+
+const githubBinding = github
+  .command("binding")
+  .description("Issue・branch・PR・CI・review・merge観測をPLANへ結合する");
+
+githubBinding
+  .command("observe")
+  .requiredOption("--repository <id>", "repository identity (owner/name)")
+  .requiredOption("--plan <id>", "PLAN ID")
+  .requiredOption("--revision <revision>", "PLAN revision/source hash")
+  .requiredOption("--kind <kind>", "project_item|issue|branch|pull_request|check_run|review|merge")
+  .requiredOption("--object-id <id>", "provider object identity")
+  .requiredOption("--state <state>", "normalized object state")
+  .option("--project-item-id <id>", "Project item identity")
+  .option("--url <url>", "provider URL")
+  .option("--head <sha>", "subject HEAD SHA")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      repository: string;
+      plan: string;
+      revision: string;
+      kind: string;
+      objectId: string;
+      state: string;
+      projectItemId?: string;
+      url?: string;
+      head?: string;
+      json?: boolean;
+    }) => {
+      const allowed = new Set([
+        "project_item",
+        "issue",
+        "branch",
+        "pull_request",
+        "check_run",
+        "review",
+        "merge",
+      ]);
+      if (!allowed.has(opts.kind)) {
+        process.stderr.write(`github binding observe: unsupported kind ${opts.kind}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+      try {
+        migrate(db);
+        const bindingId = recordGithubBinding(db, {
+          repositoryId: opts.repository,
+          planId: opts.plan,
+          planRevision: opts.revision,
+          projectItemId: opts.projectItemId,
+          objectKind: opts.kind as
+            | "project_item"
+            | "issue"
+            | "branch"
+            | "pull_request"
+            | "check_run"
+            | "review"
+            | "merge",
+          objectId: opts.objectId,
+          objectUrl: opts.url,
+          headSha: opts.head,
+          state: opts.state,
+        });
+        const rows = rebuildExecutionReadiness(db);
+        const output = {
+          ok: true,
+          bindingId,
+          readiness: rows.find((row) => row.planId === opts.plan),
+        };
+        if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        else process.stdout.write(`github binding observed: ${bindingId}\n`);
+      } catch (error) {
+        process.stderr.write(`github binding observe failed: ${String(error)}\n`);
+        process.exitCode = 1;
+      } finally {
+        db.close();
+      }
+    },
+  );
 
 github
   .command("guard")
