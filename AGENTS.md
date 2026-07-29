@@ -185,11 +185,14 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   判断ゲート role (reviewer / blind-reviewer / qa / tl 等) は族内 frontier reviewer tier
   へ固定、worker role は intent 推定既定。明示 `--model`/`--effort` が常に優先。
   effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入される。
-- advisor (PO rule 2026-07-14): 技術/設計/トラブルシューティング判断は
-  `gpt-5.6-sol` 一次 (fallback Fable)、デザイン/UI 判断は `claude-fable-5` 一次
-  (次点 `gpt-5.6-sol`)。迷う場合は
-  `ut-tdd advisor --task "..." --current-model <model>` を使い、実相談は
-  `--execute` を付ける。
+- advisor (PO rule 2026-07-29、2026-07-14 の行列を supersede): **技術判断**
+  (実装方式 / トラブルシューティング) は `gpt-5.6-sol` 一次 (fallback Fable)、
+  **設計・進行判断** (設計方式 / レーン選択 / 優先順位 / 段取り) と
+  **デザイン/UI 判断** は `claude-fable-5` 一次 (次点 `gpt-5.6-sol`)。
+  判断種別は `--decision design|progress|implementation|troubleshooting|uiux`
+  で明示でき、省略時は task 文から推論する (進行語は technical 語より優先)。
+  迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使い、
+  実相談は `--execute` を付ける。
 
 Do not add legacy commands as current company/product execution paths.
 
