@@ -52,8 +52,33 @@ dependencies:
     - docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
     - docs/plans/PLAN-L6-92-resource-kernel-function-contracts.md
     - docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T14:50:00+09:00"
+    tests_green_at: "2026-07-29T14:45:00+09:00"
+    verdict: pass
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint (848 PLAN、plan-schedule OK)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-29T14:40:00+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:368462623766175e76783b927571c6db812830af063e413cd5776e7280dc2ebf"
+      - kind: unit_test
+        command: "bun run test:vitest-snapshot tests/plan-lint.test.ts tests/review-evidence.test.ts tests/readability.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T14:45:00+09:00"
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
+    scope: "D0-R 設計 freeze の cross-family review (Codex/PO 著作 → Claude 検証、hybrid 非 author family)。実測した範囲: (a) 本 PLAN が宣言する oracle ID 15 件が pair 先 L9 に文字列一致で全件実在 (欠落 0)、(b) §1.2 の fail-close 不変条件 7 件について §1.3 の写像表を本 review で作成し、各不変条件に対応する L9 §9.1 の実在 ID と根拠記述を明示 (ST-RGK-07..10/13 は §9.1 で DEFERRED 明示のため merge 判定に不算入)、(c) pair 双方 (architecture.md / L9-system-test-design.md) が status=confirmed かつ pair_artifact / next_pair_freeze 相互整合、(d) generates / references の宣言ファイルが全件実在 (ADR-009 / security.md / repository-structure.md ほか)、(e) oracle-test-trace orphans=0、(f) ut-tdd plan lint 848 PLAN OK。未検証 (この evidence は主張しない): 設計方式そのものの妥当性 (custody 意味論で orphan 0 が実際に達成可能か等) と実行時挙動 — 実装が存在しないため add-design freeze の対象外であり、L7/L8 降下時に検証する。指摘 (Minor、freeze を止めない): L9 §9.6 の Issue #124 性能収束 oracle は DEFERRED で owner (#152 later wave) は明示だが exit 条件が日付・gate として固定されていない (open issue #136 と同型)。この deferral を #124 の closure と読み替えないこと。"
+status: confirmed
 sub_doc: architecture
 github_issue_id: 152
 supersedes:
@@ -136,6 +161,24 @@ DB/CAS再利用、single-flight、local CI全体のqueue/headroom policyは本D0
 5. receiptは実際に適用した制約と観測値を記録し、要求値を適用済みと自己申告しない。
 6. 実行開始前にplatform capabilityをnegotiationし、要求したcustody/budgetを完全強制できない組合せは開始しない。
 7. lifecycleの観測事実はappend-only event、終端判定はそれらから導出したimmutable receiptとし、同じrecordを更新して兼用しない。
+
+### 1.3 不変条件 → L9 oracle 写像 (2026-07-29 D0-R freeze review で追加)
+
+freeze 時点で「不変条件が oracle に覆われている」を prose ではなく ID 写像で示す。各行は
+`docs/test-design/harness/L9-system-test-design.md` §9.1 の実在 ID を指す (照合は ID 文字列一致で機械化可能)。
+
+| §1.2 不変条件 | 対応 L9 oracle | 対応の根拠 (L9 §9.1 の記述) |
+|---|---|---|
+| 1. `ExecutionSpec` 欠落・不正・強制不能なら開始しない | `ST-RGK-01`、`ST-RGK-12` | budget 欠落/負値/無制限値/不正 cwd/shell 文字列/強制不能 policy の投入、required capability・platform mismatch |
+| 2. accepted execution は必ず一つの OS custody container に所属し未所属期間を作らない | `ST-RGK-02`、`ST-RGK-03` | Windows の Assign/handoff 失敗注入、Linux の事後 attach fallback を hard custody として受理しない負 oracle |
+| 3. 全終了経路 (success/failure/timeout/budget exceeded/cancel/launcher crash) で子孫を reap | `ST-RGK-02`、`ST-RGK-03`、`ST-RGK-04`、`ST-RGK-05` | crash matrix の個別注入、各資源上限の独立超過、lifecycle 各段の crash 注入 |
+| 4. 終了時 managed orphan 0、証明できなければ success を返さない | `ST-RGK-04`、`ST-RGK-05`、§9.1 末尾の経路別 AND matrix | 「managed orphan 0」明記、`ensureAbsent` の冪等 absence 収束、worker exit・custody empty・lease release・terminal receipt・orphan 0 の五条件を同一 `attempt_id` で証明 |
+| 5. receipt は適用した制約と観測値を記録し、要求値を適用済みと自己申告しない | `ST-RGK-04` | 要求値・適用値・観測 peak・policy revision の保存を Green 条件とし、全超過を `timeout` へ丸める挙動を負 oracle に置く |
+| 6. 実行開始前に platform capability を negotiation し、完全強制できない組合せは開始しない | `ST-RGK-12`、`ST-RGK-03` | probe/journal/token barrier 除去と cross-dispatch の注入、deadline owner を arm 不能なら root 生成前に拒否 |
+| 7. append-only event と immutable receipt を分離し同一 record を兼用しない | `ST-RGK-11` | event sequence の append-only・欠番/上書きなし、`attempt_id` ごとの terminal receipt exactly-once、mutable status row の兼用を負 oracle に置く |
+
+`ST-RGK-07..10` / `ST-RGK-13` は §9.1 で **DEFERRED** (Issue #152 later performance/control-plane wave) と
+明示されており、本 D0-R の merge 判定には算入しない (偽 Green 化を負 oracle が禁じている)。
 
 ## 2. Object / port設計
 
