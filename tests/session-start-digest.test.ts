@@ -236,16 +236,20 @@ describe("schedule live SessionStart digest", () => {
       next_action: "observe only",
       created_at: "2026-07-10T00:01:00Z",
     });
-    put(database, "memory_entries", "memory_id", {
-      memory_id: "memory:project:vmodel",
-      kind: "project",
-      title: "V-model engine swap",
-      body: "設計を正本として検出系を追従させる。",
-      tags: "engine-swap",
-      source_path: ".ut-tdd/memory/project-vmodel.md",
-      updated_at: "2026-07-10T00:00:00Z",
-      content_hash: "abc",
-    });
+    // PLAN-L7-468: memory の本文は DB ではなく正本ファイル側 (MemoryService) から渡る。
+    // digest は受け取った entries をそのまま描画する契約なので、ここでは呼び元として供給する。
+    const memoryFromService = [
+      {
+        memory_id: "memory:project:vmodel",
+        kind: "project" as const,
+        title: "V-model engine swap",
+        body: "設計を正本として検出系を追従させる。",
+        tags: ["engine-swap"],
+        source_path: ".ut-tdd/memory/project-vmodel.md",
+        updated_at: "2026-07-10T00:00:00Z",
+        content_hash: "abc",
+      },
+    ];
 
     const transactionEvents: string[] = [];
     let gateReads = 0;
@@ -264,11 +268,10 @@ describe("schedule live SessionStart digest", () => {
       setUserVersion: (version) => database.setUserVersion(version),
       close: () => database.close(),
     };
-    const digest = selectSessionStartDigest(
-      snapshotDb,
-      ["abc123 feat: live schedule digest"],
-      ["attempt-escalation warning", "subject: 3 consecutive failures"],
-    );
+    const digest = selectSessionStartDigest(snapshotDb, ["abc123 feat: live schedule digest"], {
+      escalationLines: ["attempt-escalation warning", "subject: 3 consecutive failures"],
+      memory: memoryFromService,
+    });
     const rendered = renderSessionStartDigest(digest);
 
     expect(rendered.match(/^\[[1-4]\/4 /gm)).toHaveLength(4);

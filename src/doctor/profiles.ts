@@ -71,6 +71,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "test-design-naming",
   "module-drift",
   "merged-plan-status",
+  "memory-sync",
   "plan-artifact-existence",
   "asset-drift",
   "skill-assignment",

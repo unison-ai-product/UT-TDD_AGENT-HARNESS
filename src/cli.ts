@@ -102,9 +102,14 @@ import {
   type MemoryKind,
   renderMemoryList,
   renderMemorySurface,
-  selectMemoryEntries,
   writeMemoryEntry,
 } from "./memory/index";
+import {
+  type MemoryQueryOptions,
+  type MemoryReadResult,
+  readMemory,
+  renderMemoryHealth,
+} from "./memory/service";
 import { lintPlanWithGate } from "./plan/lint";
 import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
 import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner";
@@ -464,24 +469,81 @@ function recentHeadCommits(repoRoot: string, limit = 5): string[] {
   }
 }
 
+/**
+ * 共有 memory の読み出し入口 (PLAN-L7-468)。index (harness.db) が開けなくても
+ * 正本ファイルから結果を返し、degraded は freshness で可視化する。
+ */
+function readMemoryThroughService(
+  repoRoot: string,
+  options: MemoryQueryOptions = {},
+): MemoryReadResult {
+  let db: ReturnType<typeof openHarnessDb> | undefined;
+  try {
+    db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    return readMemory({ repoRoot, db, options });
+  } catch {
+    // index を開けないこと自体は読み出しの失敗ではない (ファイルが正本)。
+    return readMemory({ repoRoot, options });
+  } finally {
+    db?.close();
+  }
+}
+
 function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = ""): void {
+  // memory は DB 障害と独立に正本ファイルから読む (PLAN-L7-468 欠陥 3)。
+  const memory = readMemoryThroughService(repoRoot, { limit: 5 });
   try {
     const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
     try {
       const block = renderSessionStartDigest(
-        selectSessionStartDigest(
-          db,
-          recentHeadCommits(repoRoot),
-          escalationBlock.trim().split(/\r?\n/).filter(Boolean),
-        ),
+        selectSessionStartDigest(db, recentHeadCommits(repoRoot), {
+          escalationLines: escalationBlock.trim().split(/\r?\n/).filter(Boolean),
+          memory: memory.entries,
+        }),
       );
       if (block) process.stdout.write(block);
+      process.stderr.write(renderMemoryHealth(memory));
     } finally {
       db.close();
     }
-  } catch {
-    // fail-open: DB 不在 / lock / 破損で SessionStart を止めない。
+  } catch (error) {
+    // hook は止めないが、無音では終わらせない (「引き継ぎ情報が無い」と
+    // 「読めなかった」を SessionStart で区別できないことが欠陥 3 の本体)。
+    // stdout は機械可読出力の面なので汚さない (JSON を parse する呼び手が壊れる)。
+    // 劣化は stderr に出して「無音ではない」を満たす。
+    process.stderr.write(
+      renderDegradedSessionStartDigest({
+        memory,
+        error,
+        headCommits: recentHeadCommits(repoRoot),
+      }),
+    );
   }
+}
+
+/** DB 由来の段が全滅した場合の劣化 digest。memory と HEAD は DB に依存しないので残す。 */
+function renderDegradedSessionStartDigest(input: {
+  memory: MemoryReadResult;
+  error: unknown;
+  headCommits: string[];
+}): string {
+  const { memory, error, headCommits } = input;
+  const reason = error instanceof Error ? error.message : String(error);
+  const lines = [
+    "session-start digest DEGRADED — harness.db 由来の段 (state/gates, actionable) を読めなかった",
+    `  reason: ${reason}`,
+    "  → 「引き継ぎ情報が無い」ではなく「index が読めなかった」。DB 復旧まで判断の根拠にしない",
+    "[2/4 head]",
+  ];
+  if (headCommits.length === 0) lines.push("  - unavailable");
+  for (const commit of headCommits) lines.push(`  - ${commit}`);
+  lines.push("[4/4 memory] (source=.ut-tdd/memory 正本ファイル)");
+  if (memory.entries.length === 0) lines.push("  - none");
+  for (const entry of memory.entries) {
+    const body = entry.body.replace(/\s+/g, " ").slice(0, 160);
+    lines.push(`  - ${entry.kind} ${entry.title}: ${body}`);
+  }
+  return `${lines.join("\n")}\n${renderMemoryHealth(memory)}`;
 }
 
 const program = new Command();
@@ -3507,37 +3569,31 @@ memory
 
 memory
   .command("list")
-  .description("list shared memory entries from harness.db")
+  .description("list shared memory entries (source=.ut-tdd/memory files, harness.db=index)")
   .option("--query <text>", "filter by text")
   .option("--limit <n>", "maximum rows", "20")
   .action((opts: { query?: string; limit?: string }) => {
-    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
-    try {
-      process.stdout.write(
-        renderMemoryList(
-          selectMemoryEntries(db, { query: opts.query, limit: Number(opts.limit ?? 20) }),
-        ),
-      );
-    } finally {
-      db.close();
-    }
+    const result = readMemoryThroughService(process.cwd(), {
+      query: opts.query,
+      limit: Number(opts.limit ?? 20),
+    });
+    process.stdout.write(renderMemoryList(result.entries));
+    process.stderr.write(renderMemoryHealth(result));
   });
 
 memory
   .command("recall")
-  .description("render shared memory context from harness.db")
+  .description("render shared memory context (source=.ut-tdd/memory files, harness.db=index)")
   .option("--query <text>", "filter by text")
   .option("--limit <n>", "maximum rows", "5")
   .action((opts: { query?: string; limit?: string }) => {
-    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
-    try {
-      const block = renderMemorySurface(
-        selectMemoryEntries(db, { query: opts.query, limit: Number(opts.limit ?? 5) }),
-      );
-      process.stdout.write(block || "memory: no entries\n");
-    } finally {
-      db.close();
-    }
+    const result = readMemoryThroughService(process.cwd(), {
+      query: opts.query,
+      limit: Number(opts.limit ?? 5),
+    });
+    const block = renderMemorySurface(result.entries);
+    process.stdout.write(block || "memory: no entries\n");
+    process.stderr.write(renderMemoryHealth(result));
   });
 
 const elicit = program
