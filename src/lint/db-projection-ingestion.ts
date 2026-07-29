@@ -79,6 +79,10 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
     reason: "schedule entries are derived from PLAN schedule/frontmatter state",
   },
   {
+    table: "execution_readiness_projection",
+    reason: "Forward readiness is derived from schedule predecessor state",
+  },
+  {
     table: "activation_entries",
     reason: "activation entries are derived from route mode and drive profile declarations",
   },
@@ -124,6 +128,9 @@ export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [
   "model_evaluations",
   "retry_events",
   "detector_route_candidates",
+  "github_project_item_projection",
+  "github_object_bindings",
+  "github_projection_outbox",
 ];
 
 export const TELEMETRY_PROVENANCE_REQUIREMENTS: DbProjectionIngestionRequirement[] = [

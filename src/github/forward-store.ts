@@ -79,6 +79,7 @@ export function readGithubEvidence(db: HarnessDb): ForwardEvidence[] {
 export function rebuildExecutionReadiness(
   db: HarnessDb,
   now = new Date().toISOString(),
+  transactional = true,
 ): ForwardReadinessRow[] {
   const rows = deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
   const write = db.prepare(
@@ -95,7 +96,7 @@ export function rebuildExecutionReadiness(
        next_plan_ids=excluded.next_plan_ids, unlocked_plan_ids=excluded.unlocked_plan_ids,
        computed_at=excluded.computed_at`,
   );
-  db.exec("BEGIN IMMEDIATE");
+  if (transactional) db.exec("BEGIN IMMEDIATE");
   try {
     db.exec("DELETE FROM execution_readiness_projection");
     for (const row of rows) {
@@ -113,9 +114,9 @@ export function rebuildExecutionReadiness(
         now,
       );
     }
-    db.exec("COMMIT");
+    if (transactional) db.exec("COMMIT");
   } catch (error) {
-    db.exec("ROLLBACK");
+    if (transactional) db.exec("ROLLBACK");
     throw error;
   }
   return rows;

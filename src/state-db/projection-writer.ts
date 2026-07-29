@@ -10,6 +10,7 @@ import {
   type CanonicalDocumentFamily,
   parseCanonicalDocumentStructure,
 } from "../export/document-export";
+import { rebuildExecutionReadiness } from "../github/forward-store";
 import { loadRelationGraphSourceSet } from "../graph/loader";
 import { resolveLegacyPlanAlias } from "../kernel/plan-alias.js";
 import { loadChangedFiles } from "../lint/change-impact";
@@ -2671,6 +2672,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       );
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
       time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
+      time("forward-readiness", () => rebuildExecutionReadiness(db, nowIso(), false));
       time("feedback", () => {
         projectFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectVerificationDefectRoutingRefactorCandidates(db, projectionDeps);
