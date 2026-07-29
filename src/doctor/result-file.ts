@@ -268,10 +268,20 @@ export function writeDoctorResultEnvelopeFile(
   writeFileSync(filePath, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
 }
 
-/** producer と consumer で同じ正規化を使う (Windows の大小・区切り差で不一致にしない)。 */
+/**
+ * producer と consumer で同じ正規化を使う (Windows の大小・区切り差で不一致にしない)。
+ * 実在しない path でも throw せず正規化だけ行う (存在しない宣言 root は「不一致」として
+ * fail-close されるべきで、例外で判定経路ごと落とすべきではない)。
+ */
 export function canonicalRepoRoot(repoRoot: string): string {
-  const resolved = realpathSync.native(repoRoot).replaceAll("\\", "/");
-  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+  let resolved: string;
+  try {
+    resolved = realpathSync.native(repoRoot);
+  } catch {
+    resolved = repoRoot;
+  }
+  const normalized = resolved.replaceAll("\\", "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 
 function producerVersion(repoRoot: string): string {
