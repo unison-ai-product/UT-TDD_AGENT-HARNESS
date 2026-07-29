@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-07-29T15:00:00+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:368462623766175e76783b927571c6db812830af063e413cd5776e7280dc2ebf"
+        anchor_commit: 0912d8e05f72e8d5685a2c007992fd24b6098fab
       - kind: unit_test
         command: "bun run test:vitest-snapshot tests/plan-lint.test.ts tests/review-evidence.test.ts tests/readability.test.ts tests/green-command-digest.test.ts --reporter=dot"
         runner: bun
