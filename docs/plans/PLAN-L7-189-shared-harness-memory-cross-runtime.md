@@ -61,6 +61,23 @@ dependencies:
     - docs/plans/PLAN-L6-06-handover-mechanism.md
     - docs/plans/PLAN-L5-08-harness-db-feedback.md
 review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T16:20:00+09:00"
+    tests_green_at: "2026-07-29T16:05:00+09:00"
+    verdict: pass-weak
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: unit_test
+        command: "harness-check run 30429616284 (PR #180 head 13240188): linux / windows / 集約すべて pass"
+        runner: ci
+        scope: gate
+        exit_code: 0
+        completed_at: "2026-07-29T16:05:00+09:00"
+        evidence_path: tests/memory-sync.test.ts
+        output_digest: "sha256:a3d706ad8cf3dbccd084f38763522f480e4c6916689a732727876fa131cabf5a"
+    scope: "§5 追補 (memory service read 路 + memory-sync hard gate、PR #180) の cross-family review (Codex 著作 → Claude 検証)。verdict=pass-weak: 実装は動作し CI 両 leg green だが、不変条件 2 件が宣言どおりに到達していない。実測した範囲: (a) doctor 配線が fail-close (repo 読取不能・例外の両方で ok=false)、(b) origin ref 未解決時に『未評価』を surface し originResolved が真のときだけ『すべて到達』と言う実装で、判定不能と OK を混同しない、(c) untracked / 未コミット変更 = error、commit 済み origin 未到達 = warn の段階分けが in-flight ブランチを止めない。指摘 2 件: (1) 『共有済み = origin 到達』は git ls-tree のパス存在判定であり、既存 memory の更新を push 前でも shared と誤判定する (新規ファイルの欠落は検出できる) → issue #187、(2) 不変条件『読みも書きも MemoryService を通す』は read 路のみ実装で、ut-tdd memory add は writeMemoryEntry を CLI から直接呼び service を経由しない (§5.4 で後続へ送っている)。両方を §4 の不変条件へ到達状況として明記した。手続き上の瑕疵 (記録): 本 evidence は PR #180 マージ (2026-07-29T07:09:50Z) の **後** に記録した。CI green と部分レビューだけでマージへ進み、新規スコープの review evidence を先に記録しなかったのは review 前置規律 (IMP-071 / tests_green_at ≤ reviewed_at の思想) に反する順序であり、後続で同じ順序を繰り返さない。"
   - reviewer: codex
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T18:34:00+09:00"
@@ -226,9 +243,19 @@ silent divergence を作る)。2 巡目で PO 提案 (DB は関係のみ / servi
 2. **DB は派生 metadata index**。本文の複製に依存しない (全 78 件の直読は実測 **112ms**、
    body 合計 114KB / corpus 418KB で、複製の便益が無い)。
 3. **アクセスは service 単一路**。読みも書きも `MemoryService` を通す。
+   **到達状況 (2026-07-29 実測、誤読防止のため明記)**: この不変条件は **read 路だけが実装済み**
+   (`src/memory/service.ts` の `loadMemoryCorpus` / `queryMemoryEntries` / `readMemory`)。
+   **write 路は未到達**で、`ut-tdd memory add` は `src/memory/index.ts` の `writeMemoryEntry` を
+   `src/cli.ts` から直接呼んでおり service を経由しない (§5.4 で後続へ送っている)。
+   この項を「達成済み」と読まないこと。
 4. **staleness は可視**。index が古い / 読めない状態を無音で「0 件」に見せない。
 5. **「共有済み」= origin 到達**。同一 tree ではファイルは相手から見えるが、永続性・別 worktree・
    branch 切替に耐えるのは origin 到達のみで、「検証の基準点 = HEAD」規律と整合する。
+   **到達状況 (2026-07-29 実測)**: `src/lint/memory-sync.ts` の origin 判定は
+   `git ls-tree -r --name-only <origin-ref>` の **パス存在**であり、内容の到達を見ていない。
+   そのため既存 memory を編集して commit したが push していない場合、パスが origin にある限り
+   `shared` と誤判定される (新規ファイルの欠落は検出できる)。**この項も現時点では新規ファイルに
+   対してのみ成立**する。是正は issue #187。
 
 採らなかった案: **自動 commit** (「commit した = 共有した」という新しい偽安心に看板が替わるだけ。
 hybrid では commit してもブランチ上にある限り origin に届かない)、**物理ディレクトリ分離**
