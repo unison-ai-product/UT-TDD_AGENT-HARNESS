@@ -2,8 +2,9 @@
  * doctor envelope の消費側 (PLAN-L7-461)。
  *
  * CI では同一 job の `doctor (governance hard gates)` step が実測結果を envelope として書き、
- * real-repo fence はそれを消費して doctor の二重実行を避ける。採用条件は **観測面の完全一致**で、
- * 1 つでも違えば `null` を返して呼び出し側を自走させる (fail-close)。
+ * real-repo fence はそれを消費して doctor の二重実行を避ける。採用条件は、envelope が宣言する
+ * portable surface と producer receipt の一致である。gitignored state や process 環境まで同値とは
+ * 主張せず、1 つでも違えば `null` を返して呼び出し側を自走させる (fail-close)。
  *
  * ローカルでは採用しない。環境変数が指すファイルを権威にすると、fence が「実測ではなく
  * 差し込まれた JSON」を検証する経路になるため (advisor `gpt-5.6-sol` 2026-07-29 の条件)。
@@ -16,6 +17,7 @@ import {
   canonicalRepoRoot,
   DOCTOR_RESULT_FILE_ENV,
   doctorResultEnvelopeUsability,
+  doctorResultProducerIdentity,
   parseDoctorResultEnvelope,
 } from "../../src/doctor/result-file";
 import { nodeDoctorDeps } from "../../src/doctor/runtime-state";
@@ -61,7 +63,7 @@ export function consumeDoctorResultEnvelopeWithReason(
     // producer は checkout root、consumer は snapshot root だが、ref 注入により
     // ref 依存 check の入力は一致する。HEAD は snapshot が clone 元と同一 revision。
     expectedHeadSha: headSha(snapshotRoot) ?? "",
-    expectedSnapshotRoot: canonicalRepoRoot(declaredRoot),
+    expectedProducerRoot: canonicalRepoRoot(declaredRoot),
     expectedRefMap: defaultBranchRefMap(snapshotRoot),
     expectedOptions: {
       strict_green_command_digest: env[DOCTOR_RESULT_STRICT_ENV] === "1",
@@ -70,6 +72,7 @@ export function consumeDoctorResultEnvelopeWithReason(
     expectedCheckIds: buildFullDoctorCheckDefinitions(nodeDoctorDeps(snapshotRoot)).map(
       (definition) => definition.id,
     ),
+    expectedProducer: doctorResultProducerIdentity(snapshotRoot),
     ci: env.CI === "true",
   });
   if (!usability.usable) return { result: null, reason: usability.reason };

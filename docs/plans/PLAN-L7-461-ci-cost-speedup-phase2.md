@@ -150,16 +150,21 @@ doctor の実入力を表していないためで、具体的な反例が 3 件�
 - `merged-plan-status` は default branch SHA を解決できないと throw する (issue #186)。
 - CI step は `--strict-green-command-digest` 付き、vitest 側は無しで検査集合が異なる。
 
-採択したのは **観測面一致方式**:
+採択したのは **宣言済み portable surface + producer receipt 一致方式**:
 
 1. snapshot runner が default branch の ref→SHA を注入する (`src/git/default-branch.ts` が
    解決規則の SSoT、`scripts/run-vitest-snapshot.ts` が注入)。**解決できない面では注入せず
    従来どおり fail-close** (`U-TESTHYGIENE-054`)。
-2. envelope が観測面を全て持つ: `head_sha` / `scope` / `profile` / `snapshot_root` /
-   `ref_map` / `options` / `check_ids` / `producer` / `payload_digest`。
+2. envelope が再利用に必要な宣言済み surface を持つ: `head_sha` / `scope` / `profile` /
+   `producer_root` / `ref_map` / `options` / `check_ids` / `producer` / `payload_digest`。
+   closed schema として未知fieldを拒否し、producer command/versionもconsumer期待値と照合する。
 3. 消費は **CI 文脈かつ全項目一致時のみ**。ローカルは非権威 (`not-ci-context`)。
    1 つでも違えば full 自走へ落ちる。
 4. CI の doctor step を test step の前へ移し、envelope を書き出す。
+
+これは同一job内のproducer測定receiptであり、checkoutとdetached snapshotの再測定結果が完全一致する
+という主張ではない。gitignored runtime stateやprocess環境はportable surface外であり、その同値性を
+envelopeから推論しない。
 
 署名は置かない。同一 job 内の信頼済み step 間の受け渡しであり、鍵も同じ job に置く署名は
 同 job のコードに対して実効性が無い (advisor 判断)。`payload_digest` が破損検出であって

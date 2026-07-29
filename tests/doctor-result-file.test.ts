@@ -5,7 +5,9 @@
  * 依存し (memory-sync は origin ref、merged-plan-status は default branch SHA、CI step は
  * strict flag 付き)、弱い条件で採用すると **別条件で測った結果を fence の assertion に流し込む**。
  * advisor (gpt-5.6-sol、敵対検証 2026-07-29) がこの弱条件を refuted としたため、
- * 観測面 (snapshot root / ref map / options / check ID 集合) の完全一致を要求する。
+ * 宣言済み portable surface (producer root / ref map / options / check ID 集合) と
+ * producer command/version の完全一致を要求する。checkout と detached snapshot の
+ * gitignored state や process 環境が同値だとは主張しない。
  */
 
 import { describe, expect, it } from "vitest";
@@ -16,6 +18,7 @@ import {
   DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION,
   doctorResultEnvelopeUsability,
   doctorResultPayloadDigest,
+  doctorResultProducerIdentity,
   parseDoctorResultEnvelope,
 } from "../src/doctor/result-file";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state";
@@ -34,7 +37,7 @@ const envelope = (overrides: Record<string, unknown> = {}) => ({
     headSha: "a".repeat(40),
     scope: "full",
     profile: null,
-    snapshotRoot: "/tmp/ut-tdd-head-snapshot",
+    producerRoot: "/tmp/ut-tdd-head-snapshot",
     refMap: REF_MAP,
     options: OPTIONS,
     checkIds: CHECK_IDS,
@@ -48,19 +51,20 @@ const usability = (overrides: Record<string, unknown> = {}) =>
   doctorResultEnvelopeUsability({
     envelope: envelope(),
     expectedHeadSha: "a".repeat(40),
-    expectedSnapshotRoot: "/tmp/ut-tdd-head-snapshot",
+    expectedProducerRoot: "/tmp/ut-tdd-head-snapshot",
     expectedRefMap: REF_MAP,
     expectedOptions: OPTIONS,
     expectedCheckIds: CHECK_IDS,
+    expectedProducer: PRODUCER,
     ci: true,
     ...overrides,
   });
 
 describe("doctor result envelope (PLAN-L7-461)", () => {
-  it("U-DOCTORENV-001: accepts only an envelope measured on the same observation surface", () => {
+  it("U-DOCTORENV-001: accepts only an envelope with the same declared surface and producer", () => {
     expect(usability()).toEqual({
       usable: true,
-      reason: "same-observation-full-doctor-measurement",
+      reason: "same-declared-surface-producer-measurement",
     });
   });
 
@@ -71,9 +75,9 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
 
   it("U-DOCTORENV-003: fails closed when the observation surface differs", () => {
     expect(usability({ expectedHeadSha: "b".repeat(40) }).usable).toBe(false);
-    expect(usability({ expectedSnapshotRoot: "/tmp/other-root" })).toEqual({
+    expect(usability({ expectedProducerRoot: "/tmp/other-root" })).toEqual({
       usable: false,
-      reason: "snapshot-root-mismatch:/tmp/ut-tdd-head-snapshot",
+      reason: "producer-root-mismatch:/tmp/ut-tdd-head-snapshot",
     });
     expect(usability({ expectedRefMap: {} })).toEqual({
       usable: false,
@@ -90,6 +94,9 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
       usable: false,
       reason: "check-id-set-mismatch",
     });
+    expect(usability({ expectedProducer: { command: "ut-tdd doctor", version: "0.2.0" } })).toEqual(
+      { usable: false, reason: "producer-mismatch" },
+    );
   });
 
   it("U-DOCTORENV-004: fails closed for a narrowed check set even at the same head", () => {
@@ -127,7 +134,7 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
     for (const key of [
       "head_sha",
       "scope",
-      "snapshot_root",
+      "producer_root",
       "ref_map",
       "options",
       "check_ids",
@@ -145,11 +152,64 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
     expect(parseDoctorResultEnvelope(JSON.stringify(partialOptions))).toBeNull();
   });
 
+  it("U-DOCTORENV-006a: rejects unknown fields at every closed schema boundary", () => {
+    for (const mutate of [
+      (candidate: Record<string, unknown>) => {
+        candidate.unknown = true;
+      },
+      (candidate: Record<string, unknown>) => {
+        (candidate.options as Record<string, unknown>).unknown = true;
+      },
+      (candidate: Record<string, unknown>) => {
+        (candidate.producer as Record<string, unknown>).unknown = true;
+      },
+      (candidate: Record<string, unknown>) => {
+        (candidate.result as Record<string, unknown>).unknown = true;
+      },
+    ]) {
+      const candidate = JSON.parse(JSON.stringify(envelope())) as Record<string, unknown>;
+      mutate(candidate);
+      expect(parseDoctorResultEnvelope(JSON.stringify(candidate))).toBeNull();
+    }
+  });
+
+  it("U-DOCTORENV-006b: validates timing shape and binds timings into the digest", () => {
+    const timedResult = {
+      ok: true,
+      messages: ["doctor: timed — OK"],
+      timings: [{ id: "rule-drift", duration_ms: 1.25, ok: true, message_count: 1 }],
+    };
+    const timed = envelope({
+      options: { strict_green_command_digest: true, timing: true },
+      result: timedResult,
+      payload_digest: doctorResultPayloadDigest(timedResult),
+    });
+    expect(parseDoctorResultEnvelope(JSON.stringify(timed))).not.toBeNull();
+    const malformed = {
+      ...timed,
+      result: { ...timedResult, timings: [{ ...timedResult.timings[0], extra: true }] },
+    };
+    expect(parseDoctorResultEnvelope(JSON.stringify(malformed))).toBeNull();
+    const tampered = {
+      ...timed,
+      result: {
+        ...timedResult,
+        timings: [{ ...timedResult.timings[0], duration_ms: 99 }],
+      },
+    };
+    expect(
+      usability({
+        envelope: parseDoctorResultEnvelope(JSON.stringify(tampered)),
+        expectedOptions: { strict_green_command_digest: true, timing: true },
+      }),
+    ).toEqual({ usable: false, reason: "payload-digest-mismatch" });
+  });
+
   it("U-DOCTORENV-007: rejects a stale schema version", () => {
-    expect(DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION).toBe("v2");
-    expect(usability({ envelope: envelope({ schema_version: "v1" }) })).toEqual({
+    expect(DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION).toBe("v3");
+    expect(usability({ envelope: envelope({ schema_version: "v2" }) })).toEqual({
       usable: false,
-      reason: "schema-version-mismatch:v1",
+      reason: "schema-version-mismatch:v2",
     });
     expect(usability({ envelope: null })).toEqual({
       usable: false,
@@ -172,11 +232,11 @@ describe("doctor envelope consumption (PLAN-L7-461)", () => {
         headSha: headSha(snapshotRoot) ?? "",
         scope: "full",
         profile: null,
-        snapshotRoot: canonicalRepoRoot(snapshotRoot),
+        producerRoot: canonicalRepoRoot(snapshotRoot),
         refMap: defaultBranchRefMap(snapshotRoot),
         options: { strict_green_command_digest: true, timing: false },
         checkIds: buildFullDoctorCheckDefinitions(nodeDoctorDeps(snapshotRoot)).map((d) => d.id),
-        producer: { command: "ut-tdd doctor", version: "test" },
+        producer: doctorResultProducerIdentity(snapshotRoot),
         result: { ok: true, messages: ["doctor: consumed-envelope OK"] },
       }),
       ...overrides,
@@ -222,7 +282,7 @@ describe("doctor envelope consumption (PLAN-L7-461)", () => {
         env({ UT_TDD_DOCTOR_RESULT_ROOT: "/tmp/other-root" }),
         reader(json),
       ).reason,
-    ).toBe(`snapshot-root-mismatch:${canonicalRepoRoot(snapshotRoot)}`);
+    ).toBe(`producer-root-mismatch:${canonicalRepoRoot(snapshotRoot)}`);
   });
 
   it("U-DOCTORENV-010: refuses an envelope measured at another head", () => {
@@ -245,7 +305,7 @@ describe("doctor check set equivalence across the single-run switch (PLAN-L7-461
       headSha: "a".repeat(40),
       scope: "full",
       profile: null,
-      snapshotRoot: "/tmp/root",
+      producerRoot: "/tmp/root",
       refMap: {},
       options: { strict_green_command_digest: true, timing: false },
       checkIds: narrowed,
@@ -257,10 +317,11 @@ describe("doctor check set equivalence across the single-run switch (PLAN-L7-461
       doctorResultEnvelopeUsability({
         envelope: measured,
         expectedHeadSha: "a".repeat(40),
-        expectedSnapshotRoot: "/tmp/root",
+        expectedProducerRoot: "/tmp/root",
         expectedRefMap: {},
         expectedOptions: { strict_green_command_digest: true, timing: false },
         expectedCheckIds: fullIds,
+        expectedProducer: { command: "ut-tdd doctor", version: "test" },
         ci: true,
       }),
     ).toEqual({ usable: false, reason: "check-id-set-mismatch" });

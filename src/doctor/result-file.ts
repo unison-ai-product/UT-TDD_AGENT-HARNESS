@@ -15,8 +15,9 @@
  *
  * したがって「同一 HEAD かつ full scope」だけでは消費可否を判定できない (advisor
  * `gpt-5.6-sol` の敵対検証 2026-07-29 でこの弱い条件は refuted)。envelope は
- * **producer が何をどの面でどう観測したか**を全て持ち、consumer 側の期待と完全一致した
- * ときだけ採用する。
+ * producer が再利用に必要な **宣言済みportable surface** を持ち、consumer 側の期待と
+ * 完全一致したときだけ採用する。gitignored runtime stateやprocess環境まで同値とは主張しない。
+ * envelopeは同一job内のproducer測定receiptであり、detached snapshotの再測定ではない。
  *
  * 信頼境界: 同一 CI job 内の信頼済み step 間の受け渡しなので暗号署名は置かない
  * (鍵も同じ job に置く署名は同 job のコードに対して実効性が無い)。代わりに
@@ -35,7 +36,7 @@ import { buildFullDoctorCheckDefinitions } from "./check-definitions";
 import type { DoctorResult } from "./result";
 import { nodeDoctorDeps } from "./runtime-state";
 
-export const DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION = "v2";
+export const DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION = "v3";
 
 /** artifact のパスを渡す環境変数 (CI の doctor step が書き、vitest が読む)。 */
 export const DOCTOR_RESULT_FILE_ENV = "UT_TDD_DOCTOR_RESULT_FILE";
@@ -54,8 +55,8 @@ export interface DoctorResultEnvelope {
   scope: string;
   /** named profile 付き実行は検査集合が異なるため消費してはならない。 */
   profile: string | null;
-  /** doctor を回した repo root の canonical path (producer と consumer の面の同一性)。 */
-  snapshot_root: string;
+  /** doctor を回したproducer checkoutのcanonical path。snapshot同値性は表さない。 */
+  producer_root: string;
   /** 観測時に解決できた ref→SHA (ref 依存 check の入力同一性)。 */
   ref_map: Record<string, string>;
   /** 実際に適用した option 集合。 */
@@ -77,7 +78,11 @@ export interface EnvelopeUsability {
 
 /** result の canonical 表現。key 順を固定して digest を安定させる。 */
 export function doctorResultPayloadDigest(result: DoctorResult): string {
-  const canonical = JSON.stringify({ ok: result.ok, messages: result.messages });
+  const canonical = JSON.stringify({
+    ok: result.ok,
+    messages: result.messages,
+    ...(result.timings ? { timings: result.timings } : {}),
+  });
   return `sha256:${createHash("sha256").update(canonical).digest("hex")}`;
 }
 
@@ -85,7 +90,7 @@ export function buildDoctorResultEnvelope(input: {
   headSha: string;
   scope: string;
   profile?: string | null;
-  snapshotRoot: string;
+  producerRoot: string;
   refMap: Record<string, string>;
   options: DoctorRunOptions;
   checkIds: readonly string[];
@@ -97,7 +102,7 @@ export function buildDoctorResultEnvelope(input: {
     head_sha: input.headSha,
     scope: input.scope,
     profile: input.profile ?? null,
-    snapshot_root: input.snapshotRoot,
+    producer_root: input.producerRoot,
     ref_map: { ...input.refMap },
     options: { ...input.options },
     check_ids: [...input.checkIds].sort(),
@@ -112,6 +117,49 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   return Object.values(value as Record<string, unknown>).every((v) => typeof v === "string");
 }
 
+function hasExactKeys(
+  value: unknown,
+  expected: readonly string[],
+): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const actual = Object.keys(value as Record<string, unknown>).sort();
+  const sortedExpected = [...expected].sort();
+  return (
+    actual.length === sortedExpected.length &&
+    actual.every((key, index) => key === sortedExpected[index])
+  );
+}
+
+function isDoctorTimings(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.every((timing) => {
+    if (
+      !hasExactKeys(timing, ["duration_ms", "id", "message_count", "ok", "substeps"]) &&
+      !hasExactKeys(timing, ["duration_ms", "id", "message_count", "ok"])
+    ) {
+      return false;
+    }
+    if (
+      typeof timing.id !== "string" ||
+      typeof timing.duration_ms !== "number" ||
+      typeof timing.ok !== "boolean" ||
+      typeof timing.message_count !== "number"
+    ) {
+      return false;
+    }
+    if (!("substeps" in timing)) return true;
+    return (
+      Array.isArray(timing.substeps) &&
+      timing.substeps.every(
+        (substep) =>
+          hasExactKeys(substep, ["duration_ms", "id"]) &&
+          typeof substep.id === "string" &&
+          typeof substep.duration_ms === "number",
+      )
+    );
+  });
+}
+
 /** JSON 文字列を envelope として読む。1 つでも欠けていれば null (呼び出し側は自走へ落ちる)。 */
 export function parseDoctorResultEnvelope(raw: string): DoctorResultEnvelope | null {
   let parsed: unknown;
@@ -120,7 +168,23 @@ export function parseDoctorResultEnvelope(raw: string): DoctorResultEnvelope | n
   } catch {
     return null;
   }
-  if (!parsed || typeof parsed !== "object") return null;
+  if (
+    !hasExactKeys(parsed, [
+      "check_ids",
+      "head_sha",
+      "options",
+      "payload_digest",
+      "producer",
+      "producer_root",
+      "profile",
+      "ref_map",
+      "result",
+      "schema_version",
+      "scope",
+    ])
+  ) {
+    return null;
+  }
   const c = parsed as Record<string, unknown>;
   const result = c.result as Record<string, unknown> | undefined;
   const options = c.options as Record<string, unknown> | undefined;
@@ -129,23 +193,41 @@ export function parseDoctorResultEnvelope(raw: string): DoctorResultEnvelope | n
   if (typeof c.head_sha !== "string" || c.head_sha.trim() === "") return null;
   if (typeof c.scope !== "string") return null;
   if (c.profile !== null && typeof c.profile !== "string") return null;
-  if (typeof c.snapshot_root !== "string" || c.snapshot_root.trim() === "") return null;
+  if (typeof c.producer_root !== "string" || c.producer_root.trim() === "") return null;
   if (!isStringRecord(c.ref_map)) return null;
-  if (!options || typeof options.strict_green_command_digest !== "boolean") return null;
+  if (
+    !hasExactKeys(options, ["strict_green_command_digest", "timing"]) ||
+    typeof options.strict_green_command_digest !== "boolean"
+  ) {
+    return null;
+  }
   if (typeof options.timing !== "boolean") return null;
   if (!Array.isArray(c.check_ids) || c.check_ids.some((id) => typeof id !== "string")) return null;
-  if (!producer || typeof producer.command !== "string" || typeof producer.version !== "string") {
+  if (
+    !hasExactKeys(producer, ["command", "version"]) ||
+    typeof producer.command !== "string" ||
+    typeof producer.version !== "string"
+  ) {
     return null;
   }
   if (typeof c.payload_digest !== "string") return null;
-  if (!result || typeof result.ok !== "boolean" || !Array.isArray(result.messages)) return null;
+  if (
+    (!hasExactKeys(result, ["messages", "ok"]) &&
+      !hasExactKeys(result, ["messages", "ok", "timings"])) ||
+    typeof result.ok !== "boolean" ||
+    !Array.isArray(result.messages)
+  ) {
+    return null;
+  }
   if (result.messages.some((message) => typeof message !== "string")) return null;
+  if (options.timing !== "timings" in result) return null;
+  if ("timings" in result && !isDoctorTimings(result.timings)) return null;
   return {
     schema_version: c.schema_version,
     head_sha: c.head_sha,
     scope: c.scope,
     profile: (c.profile as string | null) ?? null,
-    snapshot_root: c.snapshot_root,
+    producer_root: c.producer_root,
     ref_map: c.ref_map,
     options: {
       strict_green_command_digest: options.strict_green_command_digest,
@@ -180,14 +262,16 @@ export function doctorResultEnvelopeUsability(input: {
   envelope: DoctorResultEnvelope | null;
   /** 消費側が検証したい HEAD (通常は detached HEAD snapshot の sha)。 */
   expectedHeadSha: string;
-  /** 消費側が観測する repo root の canonical path。 */
-  expectedSnapshotRoot: string;
+  /** 同一job内で測定を実行したproducer checkoutのcanonical path。 */
+  expectedProducerRoot: string;
   /** 消費側で解決した ref→SHA。 */
   expectedRefMap: Record<string, string>;
   /** 消費側が期待する option 集合。 */
   expectedOptions: DoctorRunOptions;
   /** 消費側が期待する check ID 集合。 */
   expectedCheckIds: readonly string[];
+  /** 消費を許可するproducer command/version。 */
+  expectedProducer: { command: string; version: string };
   /** CI 文脈か (ローカルでは artifact を権威にしない)。 */
   ci: boolean;
 }): EnvelopeUsability {
@@ -206,8 +290,8 @@ export function doctorResultEnvelopeUsability(input: {
   }
   if (envelope.profile !== null)
     return { usable: false, reason: `profile-set:${envelope.profile}` };
-  if (envelope.snapshot_root !== input.expectedSnapshotRoot) {
-    return { usable: false, reason: `snapshot-root-mismatch:${envelope.snapshot_root}` };
+  if (envelope.producer_root !== input.expectedProducerRoot) {
+    return { usable: false, reason: `producer-root-mismatch:${envelope.producer_root}` };
   }
   if (!sameRefMap(envelope.ref_map, input.expectedRefMap)) {
     return { usable: false, reason: "ref-map-mismatch" };
@@ -222,10 +306,16 @@ export function doctorResultEnvelopeUsability(input: {
   if (!sameIdSet(envelope.check_ids, input.expectedCheckIds)) {
     return { usable: false, reason: "check-id-set-mismatch" };
   }
+  if (
+    envelope.producer.command !== input.expectedProducer.command ||
+    envelope.producer.version !== input.expectedProducer.version
+  ) {
+    return { usable: false, reason: "producer-mismatch" };
+  }
   if (envelope.payload_digest !== doctorResultPayloadDigest(envelope.result)) {
     return { usable: false, reason: "payload-digest-mismatch" };
   }
-  return { usable: true, reason: "same-observation-full-doctor-measurement" };
+  return { usable: true, reason: "same-declared-surface-producer-measurement" };
 }
 
 // ---------------------------------------------------------------------------
@@ -257,11 +347,11 @@ export function writeDoctorResultEnvelopeFile(
     headSha: sha,
     scope: input.scope,
     profile: input.profile,
-    snapshotRoot: canonicalRepoRoot(repoRoot),
+    producerRoot: canonicalRepoRoot(repoRoot),
     refMap: defaultBranchRefMap(repoRoot),
     options: input.options,
     checkIds,
-    producer: { command: "ut-tdd doctor", version: producerVersion(repoRoot) },
+    producer: doctorResultProducerIdentity(repoRoot),
     result: input.result,
   });
   mkdirSync(dirname(filePath), { recursive: true });
@@ -293,4 +383,11 @@ function producerVersion(repoRoot: string): string {
   } catch {
     return "unknown";
   }
+}
+
+export function doctorResultProducerIdentity(repoRoot: string): {
+  command: string;
+  version: string;
+} {
+  return { command: "ut-tdd doctor", version: producerVersion(repoRoot) };
 }

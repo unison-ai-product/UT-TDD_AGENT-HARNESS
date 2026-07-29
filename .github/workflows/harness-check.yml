@@ -114,8 +114,9 @@ jobs:
         # PLAN-L7-455 lane 判定 (doc-only lane では skip) と PLAN-L7-420 strict flag を両立させる。
         if: ${{ steps.classify.outputs.lane == 'full' }}
         # PLAN-L7-461: 実測結果を envelope として書き出し、同一 job の vitest fence が
-        # doctor を二重実行せず消費できるようにする。消費は観測面 (HEAD / root / ref map /
-        # options / check ID 集合) の完全一致時のみで、不一致なら fence 側が自走する。
+        # doctor を二重実行せず消費できるようにする。消費は宣言済み portable surface
+        # (HEAD / producer root / ref map / options / check ID 集合 / producer identity)
+        # の完全一致時のみ。gitignored state や process 環境の同値性は主張しない。
         # そのため本 step は test step より前に置く。
         env:
           UT_TDD_DOCTOR_RESULT_FILE: ${{ runner.temp }}/ut-tdd-doctor-result.json
@@ -125,7 +126,7 @@ jobs:
 
       - name: test — 全回帰 (vitest run)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        # PLAN-L7-461: fence は上の doctor step の envelope を消費する。宣言した観測面
+        # PLAN-L7-461: fence は上の doctor step の envelope を消費する。宣言した surface
         # (root / strict flag) と一致しなければ従来どおり自走する (fail-close)。
         env:
           UT_TDD_DOCTOR_RESULT_FILE: ${{ runner.temp }}/ut-tdd-doctor-result.json
