@@ -85,12 +85,13 @@ describe("memory-sync (PLAN-L7-468 PR-B)", () => {
       git(repo, ["add", rel]);
       git(repo, ["commit", "-m", "add memory"]);
 
-      // commit しただけ = まだ origin に無い → warn 段 (error ではない)
+      // 最初の push 前は origin ref 自体を解決できず、到達を証明できないため fail-close。
       const committed = analyzeMemorySync(loadMemorySyncInput(repo));
-      expect(committed.ok).toBe(true);
+      expect(committed.ok).toBe(false);
+      expect(committed.originResolved).toBe(false);
       expect(committed.warnings).toHaveLength(1);
       expect(committed.warnings[0]?.state).toBe("not-on-origin");
-      expect(memorySyncMessages(committed).join("\n")).toContain("未到達");
+      expect(memorySyncMessages(committed).join("\n")).toContain("判定不能");
 
       git(repo, ["push", "origin", "main"]);
       const pushed = analyzeMemorySync(loadMemorySyncInput(repo));
@@ -114,8 +115,10 @@ describe("memory-sync (PLAN-L7-468 PR-B)", () => {
 
       const result = analyzeMemorySync(loadMemorySyncInput(repo));
       expect(result.originResolved).toBe(false);
+      expect(result.ok).toBe(false);
       const joined = memorySyncMessages(result).join("\n");
-      expect(joined).toContain("未評価");
+      expect(joined).toContain("violation");
+      expect(joined).toContain("判定不能");
       expect(joined).not.toContain("memory-sync — OK");
     } finally {
       removeTestTree(repo);
