@@ -2,67 +2,134 @@ import { describe, expect, it } from "vitest";
 import { checkToolchainPin } from "../src/doctor/index";
 import { analyzeToolchainPin, toolchainPinMessages } from "../src/lint/toolchain-pin";
 
-function packageJson(spec: string): string {
-  return JSON.stringify({
-    devDependencies: {
-      "@biomejs/biome": spec,
+const direct = {
+  "@biomejs/biome": "2.4.15",
+  esbuild: "0.21.5",
+};
+
+function fixture(
+  overrides: {
+    nodeFile?: string;
+    nodeEngine?: string;
+    npmEngine?: string;
+    packageManager?: string;
+    lockVersion?: number;
+    lockEsbuild?: string;
+    bunEsbuild?: string;
+    authority?: Record<string, string>;
+  } = {},
+) {
+  const packageJson = JSON.stringify({
+    packageManager:
+      overrides.packageManager ??
+      "npm@11.6.2+sha512-7iKzNfy8lWYs3zq4oFPa8EXZz5xt9gQNKJZau3B1ErLBb6bF7sBJ00x09485DOvRT2l5Gerbl3VlZNT57MxJVA==",
+    engines: { node: overrides.nodeEngine ?? "24.13.0", npm: overrides.npmEngine ?? "11.6.2" },
+    devDependencies: direct,
+    utTdd: {
+      nodeToolchain:
+        overrides.authority ??
+        ({
+          phase: "node_candidate",
+          nodeAuthority: "candidate",
+          bunAuthority: "legacy_migration_debt",
+          executableReceipt: "deferred_to_f0b",
+        } as const),
     },
   });
-}
-
-function bunLock(spec: string): string {
-  return [
-    "{",
-    '  "workspaces": {',
-    '    "": {',
-    '      "devDependencies": {',
-    `        "@biomejs/biome": "${spec}",`,
-    "      },",
-    "    },",
-    "  },",
-    '  "packages": {}',
-    "}",
-  ].join("\n");
+  const packageLock = JSON.stringify({
+    lockfileVersion: overrides.lockVersion ?? 3,
+    packages: {
+      "": {
+        devDependencies: { ...direct, esbuild: overrides.lockEsbuild ?? direct.esbuild },
+      },
+    },
+  });
+  const bunLock = JSON.stringify({
+    workspaces: {
+      "": {
+        devDependencies: { ...direct, esbuild: overrides.bunEsbuild ?? direct.esbuild },
+      },
+    },
+    packages: {},
+  });
+  return {
+    packageJson,
+    packageLock,
+    bunLock,
+    nodeVersion: overrides.nodeFile ?? "24.13.0",
+  };
 }
 
 describe("toolchain pin lint", () => {
-  it("rejects non-exact biome package and lock specs", () => {
-    const result = analyzeToolchainPin({
-      packageJson: packageJson("^2.4.15"),
-      bunLock: bunLock("^2.4.15"),
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.violations.map((v) => v.rule)).toEqual(
-      expect.arrayContaining(["biome-package-spec-not-exact", "biome-lock-spec-not-exact"]),
-    );
-    expect(toolchainPinMessages(result)[0]).toContain("toolchain-pin - violation");
-  });
-
-  it("accepts exact package and lock specs", () => {
-    const result = analyzeToolchainPin({
-      packageJson: packageJson("2.4.15"),
-      bunLock: bunLock("2.4.15"),
-    });
-
+  it("accepts the sealed F0a policy and three matching direct graphs", () => {
+    const result = analyzeToolchainPin(fixture());
     expect(result.ok).toBe(true);
-    expect(toolchainPinMessages(result)[0]).toContain("toolchain-pin - OK");
+    expect(toolchainPinMessages(result)[0]).toContain("phase=node_candidate");
   });
 
-  it("rejects package and lock spec mismatches", () => {
-    const result = analyzeToolchainPin({
-      packageJson: packageJson("2.4.15"),
-      bunLock: bunLock("2.4.16"),
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.violations.map((v) => v.rule)).toContain("biome-package-lock-mismatch");
+  it("rejects .node-version or engines.node one-sided drift", () => {
+    for (const docs of [fixture({ nodeFile: "24.13.1" }), fixture({ nodeEngine: "24.13.1" })])
+      expect(analyzeToolchainPin(docs).violations.map((v) => v.rule)).toContain(
+        "node-version-mismatch",
+      );
   });
 
-  it("wires the real repo toolchain pin check into doctor exports", () => {
+  it("rejects packageManager or engines.npm one-sided drift", () => {
+    for (const docs of [
+      fixture({ packageManager: "npm@11.6.3+sha512-AAAA" }),
+      fixture({ npmEngine: "11.6.3" }),
+    ])
+      expect(analyzeToolchainPin(docs).violations.map((v) => v.rule)).toContain(
+        "npm-version-mismatch",
+      );
+  });
+
+  it("rejects missing package-manager integrity custody", () => {
+    expect(
+      analyzeToolchainPin(fixture({ packageManager: "npm@11.6.2" })).violations.map((v) => v.rule),
+    ).toContain("npm-package-manager-integrity-missing");
+  });
+
+  it("rejects same-version packageManager with a non-reviewed integrity digest", () => {
+    expect(
+      analyzeToolchainPin(fixture({ packageManager: "npm@11.6.2+sha512-AAAA" })).violations.map(
+        (v) => v.rule,
+      ),
+    ).toContain("npm-package-manager-integrity-mismatch");
+  });
+
+  it("rejects npm lock version and root graph mutation", () => {
+    expect(
+      analyzeToolchainPin(fixture({ lockVersion: 2, lockEsbuild: "0.21.4" })).violations.map(
+        (v) => v.rule,
+      ),
+    ).toEqual(expect.arrayContaining(["npm-lock-version-mismatch", "npm-lock-root-drift"]));
+  });
+
+  it("rejects Bun transition direct parity mutation", () => {
+    expect(
+      analyzeToolchainPin(fixture({ bunEsbuild: "0.21.4" })).violations.map((v) => v.rule),
+    ).toEqual(expect.arrayContaining(["bun-direct-parity-drift", "esbuild-version-mismatch"]));
+  });
+
+  it("rejects runtime authority ambiguity", () => {
+    expect(
+      analyzeToolchainPin(
+        fixture({
+          authority: {
+            phase: "node_candidate",
+            nodeAuthority: "candidate",
+            bunAuthority: "candidate",
+            executableReceipt: "deferred_to_f0b",
+          },
+        }),
+      ).violations.map((v) => v.rule),
+    ).toContain("runtime-authority-ambiguous");
+  });
+
+  it("wires the real repo policy into doctor", () => {
     const result = checkToolchainPin(process.cwd());
-
     expect(result.ok).toBe(true);
-    expect(result.messages[0]).toContain("toolchain-pin - OK");
+    expect(result.messages[0]).toContain("phase=node_candidate");
   });
 });
