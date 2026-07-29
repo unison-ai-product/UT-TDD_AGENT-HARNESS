@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { ForwardReadinessRow } from "../src/github/forward-readiness";
-import type { ProjectField, ProjectSnapshot, ProjectV2Port } from "../src/github/project-v2";
-import { persistProjectSync, syncForwardProject } from "../src/github/project-v2";
+import type {
+  GhCommandPort,
+  ProjectField,
+  ProjectSnapshot,
+  ProjectV2Port,
+} from "../src/github/project-v2";
+import {
+  GhProjectV2Adapter,
+  persistProjectSync,
+  syncForwardProject,
+} from "../src/github/project-v2";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 
@@ -50,6 +59,9 @@ class FakeProjectPort implements ProjectV2Port {
   setSingleSelect(_project: string, _item: string, field: string, option: string): void {
     this.calls.push(`select:${field}:${option}`);
   }
+  clear(_project: string, _item: string, field: string): void {
+    this.calls.push(`clear:${field}`);
+  }
 }
 
 const row: ForwardReadinessRow = {
@@ -71,6 +83,38 @@ const row: ForwardReadinessRow = {
 };
 
 describe("GitHub Project V2 reconciler", () => {
+  it("U-GHPROJ-019: canonicalizes gh CLI custom field key mangling", () => {
+    let call = 0;
+    const gh: GhCommandPort = {
+      json: () => {
+        call += 1;
+        if (call === 1) return { id: "project:6" };
+        if (call === 2)
+          return {
+            fields: [
+              { id: "p", name: "PLAN ID", type: "ProjectV2Field" },
+              { id: "b", name: "阻害要因", type: "ProjectV2Field" },
+            ],
+          };
+        return {
+          items: [
+            {
+              id: "item:1",
+              title: "PLAN-L7-436-domain",
+              "pLAN ID": "PLAN-L7-436-domain",
+              "���害要因": "blocked",
+            },
+          ],
+        };
+      },
+      run: () => undefined,
+    };
+    expect(new GhProjectV2Adapter(gh).inspect("owner", 6).items[0]).toMatchObject({
+      planId: "PLAN-L7-436-domain",
+      fields: { "PLAN ID": "PLAN-L7-436-domain", 阻害要因: "blocked" },
+    });
+  });
+
   it("U-GHPROJ-020: dry-run plans the same fields without mutations", () => {
     const port = new FakeProjectPort();
     const result = syncForwardProject({

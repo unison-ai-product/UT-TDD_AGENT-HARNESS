@@ -30,6 +30,7 @@ export interface ProjectV2Port {
   setText(projectId: string, itemId: string, fieldId: string, value: string): void;
   setNumber(projectId: string, itemId: string, fieldId: string, value: number): void;
   setSingleSelect(projectId: string, itemId: string, fieldId: string, optionId: string): void;
+  clear(projectId: string, itemId: string, fieldId: string): void;
 }
 
 export interface GhCommandPort {
@@ -66,6 +67,30 @@ function object(value: unknown): Record<string, unknown> {
 
 function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
+}
+
+function canonicalFieldValues(
+  item: Record<string, unknown>,
+  fields: readonly ProjectField[],
+): Record<string, string | number> {
+  const scalarEntries = Object.entries(item).filter(
+    (entry): entry is [string, string | number] =>
+      typeof entry[1] === "string" || typeof entry[1] === "number",
+  );
+  return Object.fromEntries(
+    fields.flatMap((field) => {
+      const exact = scalarEntries.find(([key]) => key === field.name);
+      const asciiFold = scalarEntries.find(
+        ([key]) => key.toLocaleLowerCase() === field.name.toLocaleLowerCase(),
+      );
+      const suffix =
+        field.name.length > 1
+          ? scalarEntries.find(([key]) => key.endsWith(field.name.slice(1)))
+          : undefined;
+      const match = exact ?? asciiFold ?? suffix;
+      return match ? [[field.name, match[1]]] : [];
+    }),
+  );
 }
 
 export class GhProjectV2Adapter implements ProjectV2Port {
@@ -113,20 +138,21 @@ export class GhProjectV2Adapter implements ProjectV2Port {
         "json",
       ]),
     );
+    const fields = list(fieldsPayload.fields).map((value) => {
+      const field = object(value);
+      return {
+        id: String(field.id ?? ""),
+        name: String(field.name ?? ""),
+        type: String(field.type ?? ""),
+        options: list(field.options).map((optionValue) => {
+          const option = object(optionValue);
+          return { id: String(option.id ?? ""), name: String(option.name ?? "") };
+        }),
+      };
+    });
     return {
       id: String(project.id ?? ""),
-      fields: list(fieldsPayload.fields).map((value) => {
-        const field = object(value);
-        return {
-          id: String(field.id ?? ""),
-          name: String(field.name ?? ""),
-          type: String(field.type ?? ""),
-          options: list(field.options).map((optionValue) => {
-            const option = object(optionValue);
-            return { id: String(option.id ?? ""), name: String(option.name ?? "") };
-          }),
-        };
-      }),
+      fields,
       items: list(itemsPayload.items).map((value) => {
         const item = object(value);
         const itemTitle = String(item.title ?? "");
@@ -136,13 +162,7 @@ export class GhProjectV2Adapter implements ProjectV2Port {
           id: String(item.id ?? ""),
           title: itemTitle,
           planId: String(item["PLAN ID"] ?? "") || titlePlanId,
-          fields: Object.fromEntries(
-            Object.entries(item).flatMap(([key, fieldValue]) =>
-              typeof fieldValue === "string" || typeof fieldValue === "number"
-                ? [[key, fieldValue]]
-                : [],
-            ),
-          ),
+          fields: canonicalFieldValues(item, fields),
         };
       }),
     };
@@ -179,6 +199,10 @@ export class GhProjectV2Adapter implements ProjectV2Port {
 
   setSingleSelect(projectId: string, itemId: string, fieldId: string, optionId: string): void {
     this.#edit(projectId, itemId, fieldId, ["--single-select-option-id", optionId]);
+  }
+
+  clear(projectId: string, itemId: string, fieldId: string): void {
+    this.#edit(projectId, itemId, fieldId, ["--clear"]);
   }
 
   #edit(projectId: string, itemId: string, fieldId: string, valueArgs: string[]): void {
@@ -308,7 +332,8 @@ export function syncForwardProject(input: {
       if (!input.apply) continue;
       const field = fields.get(fieldName);
       if (!field) throw new Error(`field disappeared during sync: ${fieldName}`);
-      if (fieldName === "実装順序")
+      if (String(value) === "") input.port.clear(snapshot.id, itemId, field.id);
+      else if (fieldName === "実装順序")
         input.port.setNumber(snapshot.id, itemId, field.id, Number(value));
       else if (field.type === "ProjectV2SingleSelectField") {
         const option = field.options?.find((candidate) => candidate.name === String(value));
