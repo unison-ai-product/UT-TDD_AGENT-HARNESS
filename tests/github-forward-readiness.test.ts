@@ -16,22 +16,36 @@ const entry = (
   predecessorPlanIds,
 });
 
+const closed = (planId: string) => ({
+  planId,
+  ci: "成功" as const,
+  review: "承認" as const,
+  sync: "同期済" as const,
+  mergeVerified: true,
+});
+
 describe("Forward work graph readiness", () => {
   it("U-GHPROJ-001: blocks unresolved predecessors and unlocks only after all complete", () => {
-    const blocked = deriveForwardReadiness([
-      entry("PLAN-L7-1-a", "confirmed"),
-      entry("PLAN-L7-2-b", "draft"),
-      entry("PLAN-L7-3-c", "draft", ["PLAN-L7-1-a", "PLAN-L7-2-b"]),
-    ]);
+    const blocked = deriveForwardReadiness(
+      [
+        entry("PLAN-L7-1-a", "confirmed"),
+        entry("PLAN-L7-2-b", "draft"),
+        entry("PLAN-L7-3-c", "draft", ["PLAN-L7-1-a", "PLAN-L7-2-b"]),
+      ],
+      [closed("PLAN-L7-1-a")],
+    );
     expect(blocked[2]).toMatchObject({
       readiness: "阻害中",
       blockedReason: "先行PLAN未完了: PLAN-L7-2-b",
     });
-    const released = deriveForwardReadiness([
-      entry("PLAN-L7-1-a", "confirmed"),
-      entry("PLAN-L7-2-b", "confirmed"),
-      entry("PLAN-L7-3-c", "draft", ["PLAN-L7-1-a", "PLAN-L7-2-b"]),
-    ]);
+    const released = deriveForwardReadiness(
+      [
+        entry("PLAN-L7-1-a", "confirmed"),
+        entry("PLAN-L7-2-b", "confirmed"),
+        entry("PLAN-L7-3-c", "draft", ["PLAN-L7-1-a", "PLAN-L7-2-b"]),
+      ],
+      [closed("PLAN-L7-1-a"), closed("PLAN-L7-2-b")],
+    );
     expect(released[2]?.readiness).toBe("着手可能");
     expect(released[1]?.unlockedPlanIds).toEqual(["PLAN-L7-3-c"]);
   });
@@ -71,5 +85,17 @@ describe("Forward work graph readiness", () => {
     expect(row?.readiness).toBe("阻害中");
     expect(row?.blockedReason).toContain("CI失敗");
     expect(row?.blockedReason).toContain("review承認未確認");
+  });
+
+  it("U-GHPROJ-005: accepted schedule without closure evidence cannot complete or unlock", () => {
+    const rows = deriveForwardReadiness([
+      entry("PLAN-L7-7-g", "confirmed"),
+      entry("PLAN-L7-8-h", "draft", ["PLAN-L7-7-g"]),
+    ]);
+    expect(rows[0]?.readiness).toBe("阻害中");
+    expect(rows[0]?.currentGate).toBe("merge-closure");
+    expect(rows[0]?.blockedReason).toContain("merge/main CI未確認");
+    expect(rows[0]?.unlockedPlanIds).toEqual([]);
+    expect(rows[1]?.readiness).toBe("阻害中");
   });
 });

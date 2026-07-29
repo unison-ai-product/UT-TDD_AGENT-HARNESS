@@ -213,6 +213,14 @@ const frontmatterBaseSchema = z.object({
          *  供給できないため cross_agent を僭称できない。intra_runtime_subagent/human は任意。 */
         worker_model: z.string().optional(),
         reviewer_model: z.string().optional(),
+        lane: z.enum(["claim-blind", "spec-blind"]).optional(),
+        plan_revision: z.string().min(1).optional(),
+        subject_head: z
+          .string()
+          .regex(/^[0-9a-f]{7,40}$/i)
+          .optional(),
+        attack_trials: z.number().int().min(0).optional(),
+        citations: z.array(z.string().min(1)).optional(),
       }),
     )
     .optional(),

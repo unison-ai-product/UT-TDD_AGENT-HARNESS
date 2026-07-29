@@ -138,3 +138,26 @@ retryは指数backoffと上限を持つが、上限到達でepisodeを消さな�
 ## 6. 後続降下
 
 L6でExecution Episode domain、drive selection、reentry/merge policy、GitHub port/outbox/inbox contractを分割する。L7でmigration、repository、worker、CLI、GitHub adapterを実装し、L8 integration test designと対でfreezeする。
+
+## 7. Forward readiness / Project item projection
+
+新しい依存グラフ正本は作らない。既存の`plan_registry`、`schedule_entries`、
+`graph_nodes`、`dependency_edges`、`review_evidence_registry`を再利用し、次の再構築可能な
+projectionを追加する。
+
+- `execution_readiness_projection`: `plan_id`、`plan_revision`、`readiness`、
+  `current_gate`、`implementation_order`、`blocked_reason`、`unlock_condition`、
+  `next_plan_ids`、`unlocked_plan_ids`、`computed_at`
+- `github_project_item_projection`: `repository_id`、`project_id`、`project_item_id`、
+  `plan_id`、`plan_revision`、`content_node_id`、`head_sha`、`sync_status`、
+  `last_reconciled_at`
+
+`github_object_bindings.object_kind`は`project`、`project_item`、`branch`、`issue`、
+`pull_request`、`check_run`、`review`、`merge`を表現できること。Project itemの作成・更新は
+`(repository_id, plan_id, plan_revision)`を冪等keyとし、timeout後は同一keyで照合してから
+再送する。projectionは正本テーブルとproviderから完全再構築できなければならない。
+
+`github_review_lane_receipts`は`plan_id + plan_revision + lane + subject_head`を一意にし、
+`claim-blind`と`spec-blind`を別rowで保持する。各rowはverdict、review/test時刻、
+worker/reviewer model、attack trial数、citation、PLAN sourceを持つ。PLAN正本から再構築可能な
+projectionとし、merge closureは同一revision/HEADの両laneが揃わなければfail-closeする。

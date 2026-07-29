@@ -52,14 +52,13 @@ import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
 import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane";
-import { deriveForwardReadiness } from "./github/forward-readiness";
 import {
+  deriveStoredForwardReadiness,
   markGithubProjectionApplied,
   queueGithubProjection,
-  readForwardSchedule,
-  readGithubEvidence,
   rebuildExecutionReadiness,
   recordGithubBinding,
+  selectActiveProjectRows,
 } from "./github/forward-store";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
@@ -3329,10 +3328,14 @@ githubProject
         if (opts.apply) migrate(db);
         const projectedRows = opts.apply
           ? rebuildExecutionReadiness(db)
-          : deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
-        const activeRows = projectedRows.filter(
-          (row) => row.readiness !== "完了" && row.readiness !== "保留",
+          : deriveStoredForwardReadiness(db);
+        const existingProjectPlans = new Set(
+          db
+            .prepare("SELECT DISTINCT plan_id FROM github_project_item_projection")
+            .all()
+            .map((row) => String(row.plan_id ?? "")),
         );
+        const activeRows = selectActiveProjectRows(projectedRows, existingProjectPlans);
         const rows = opts.plan
           ? projectedRows.filter((row) => row.planId === opts.plan)
           : activeRows;
@@ -3422,7 +3425,7 @@ githubBinding
   .requiredOption("--repository <id>", "repository identity (owner/name)")
   .requiredOption("--plan <id>", "PLAN ID")
   .requiredOption("--revision <revision>", "PLAN revision/source hash")
-  .requiredOption("--kind <kind>", "project_item|issue|branch|pull_request|check_run|review|merge")
+  .requiredOption("--kind <kind>", "project_item|issue|branch|pull_request|check_run|review")
   .requiredOption("--object-id <id>", "provider object identity")
   .requiredOption("--state <state>", "normalized object state")
   .option("--project-item-id <id>", "Project item identity")
@@ -3449,7 +3452,6 @@ githubBinding
         "pull_request",
         "check_run",
         "review",
-        "merge",
       ]);
       if (!allowed.has(opts.kind)) {
         process.stderr.write(`github binding observe: unsupported kind ${opts.kind}\n`);
@@ -3470,8 +3472,7 @@ githubBinding
             | "branch"
             | "pull_request"
             | "check_run"
-            | "review"
-            | "merge",
+            | "review",
           objectId: opts.objectId,
           objectUrl: opts.url,
           headSha: opts.head,

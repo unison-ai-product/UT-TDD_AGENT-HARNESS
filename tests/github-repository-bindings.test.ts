@@ -1,4 +1,12 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  combinedReviewReceiptDigest,
+  decodeMergeClosureReceipt,
+  reviewReceiptDigest,
+} from "../src/github/closure-receipt";
 import { renderPrTraceBlock } from "../src/github/pr-trace";
 import type { GhCommandPort } from "../src/github/project-v2";
 import { syncRepositoryBindings } from "../src/github/repository-bindings";
@@ -18,8 +26,59 @@ class FakeGh implements GhCommandPort {
   }
 }
 
+function writeReviewPlan(
+  repoRoot: string,
+  sources: Array<{
+    planId: string;
+    planRevision: string;
+    headSha: string;
+    reviewKind: string;
+    verdict: string;
+    reviewedAt: string;
+    testsGreenAt: string;
+    workerModel: string;
+    reviewerModel: string;
+    lane: string;
+    attackTrials: number;
+    citations: string[];
+  }>,
+): void {
+  const [first] = sources;
+  if (!first) return;
+  const plansDir = join(repoRoot, "docs", "plans");
+  mkdirSync(plansDir, { recursive: true });
+  const entries = sources
+    .map(
+      (source) => `  - reviewer: blind-reviewer
+    review_kind: ${source.reviewKind}
+    reviewed_at: ${source.reviewedAt}
+    tests_green_at: ${source.testsGreenAt}
+    verdict: ${source.verdict}
+    worker_model: ${source.workerModel}
+    reviewer_model: ${source.reviewerModel}
+    lane: ${source.lane}
+    plan_revision: ${source.planRevision}
+    subject_head: ${source.headSha}
+    attack_trials: ${source.attackTrials}
+    citations:
+${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
+    )
+    .join("\n");
+  writeFileSync(
+    join(plansDir, `${first.planId}.md`),
+    `---
+plan_id: ${first.planId}
+review_evidence:
+${entries}
+---
+`,
+    "utf8",
+  );
+}
+
 describe("GitHub repository facts binding", () => {
   it("U-GHBIND-001: converges traced PR lifecycle facts into one PLAN revision", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-"));
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -28,6 +87,48 @@ describe("GitHub repository facts binding", () => {
           schedule_entry_id, plan_id, status, source_hash
         ) VALUES (?, ?, ?, ?)`,
       ).run("schedule:436", "PLAN-L7-436-domain", "confirmed", "rev1");
+      const reviewSources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
+        planId: "PLAN-L7-436-domain",
+        planRevision: "rev1",
+        headSha: "abcdef1",
+        reviewKind: "cross_agent",
+        verdict: "PASS",
+        reviewedAt: "2026-07-29T00:00:00Z",
+        testsGreenAt: "2026-07-28T23:00:00Z",
+        workerModel: "claude-sonnet-5",
+        reviewerModel: "gpt-5.6-sol",
+        source: "docs/plans/PLAN-L7-436-domain.md",
+        lane,
+        attackTrials: 3,
+        citations: ["docs/plans/PLAN-L7-436-domain.md:1"],
+      }));
+      for (const source of reviewSources)
+        db.prepare(
+          `INSERT INTO github_review_lane_receipts (
+            review_lane_receipt_id, plan_id, plan_revision, lane, subject_head,
+            verdict, reviewed_at, tests_green_at, worker_model, reviewer_model,
+            attack_trials, citations_json, source
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          `review:436:${source.lane}`,
+          source.planId,
+          source.planRevision,
+          source.lane,
+          source.headSha,
+          source.verdict,
+          source.reviewedAt,
+          source.testsGreenAt,
+          source.workerModel,
+          source.reviewerModel,
+          source.attackTrials,
+          JSON.stringify(source.citations),
+          source.source,
+        );
+      const reviewDigests = {
+        claimBlind: reviewReceiptDigest(reviewSources[0]),
+        specBlind: reviewReceiptDigest(reviewSources[1]),
+      };
+      writeReviewPlan(repoRoot, reviewSources);
       const body = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
         plan_revision: "rev1",
@@ -35,10 +136,12 @@ describe("GitHub repository facts binding", () => {
         subject_head: "abcdef1",
         base_sha: "1234567",
         issue_number: "70",
+        review_receipt_digest: combinedReviewReceiptDigest(reviewDigests),
       });
       const result = syncRepositoryBindings({
         db,
         repositoryId: "owner/repo",
+        repoRoot,
         gh: new FakeGh(
           [
             {
@@ -50,11 +153,15 @@ describe("GitHub repository facts binding", () => {
               mergedAt: "2026-07-29T00:00:00Z",
               mergeCommit: { oid: "fedcba1" },
               body,
-              statusCheckRollup: [{ conclusion: "SUCCESS" }],
+              statusCheckRollup: [
+                { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
+              ],
               reviews: [{ state: "APPROVED" }],
             },
           ],
-          { check_runs: [{ conclusion: "SUCCESS" }] },
+          {
+            check_runs: [{ name: "harness-check", id: "main-check-1", conclusion: "SUCCESS" }],
+          },
           { state: "CLOSED" },
         ),
       });
@@ -63,20 +170,31 @@ describe("GitHub repository facts binding", () => {
         tracedPullRequests: 1,
         skipped: [],
       });
-      expect(
-        db
-          .prepare("SELECT object_kind, state FROM github_object_bindings ORDER BY object_kind")
-          .all(),
-      ).toEqual([
+      const bindings = db
+        .prepare("SELECT object_kind, state FROM github_object_bindings ORDER BY object_kind")
+        .all();
+      expect(bindings.filter((row) => row.object_kind !== "merge")).toEqual([
         { object_kind: "branch", state: "merged" },
         { object_kind: "check_run", state: "成功" },
         { object_kind: "issue", state: "linked" },
-        { object_kind: "merge", state: "merged:fedcba1" },
         { object_kind: "pull_request", state: "merged" },
         { object_kind: "review", state: "承認" },
       ]);
+      expect(
+        decodeMergeClosureReceipt(
+          String(bindings.find((row) => row.object_kind === "merge")?.state),
+        ),
+      ).toMatchObject({
+        planId: "PLAN-L7-436-domain",
+        headSha: "abcdef1",
+        mergeSha: "fedcba1",
+        requiredCheck: "harness-check",
+        prCheckId: "pr-check-1",
+        mainCheckId: "main-check-1",
+      });
     } finally {
       db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 
@@ -109,6 +227,123 @@ describe("GitHub repository facts binding", () => {
       });
     } finally {
       db.close();
+    }
+  });
+
+  it("U-GHBIND-003: rejects incomplete checks, provider, lane, and HEAD custody", () => {
+    for (const scenario of [
+      "unrelated-check",
+      "same-provider",
+      "missing-lane",
+      "stale-head",
+      "forged-source",
+    ] as const) {
+      const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-"));
+      const db = openHarnessDb(":memory:");
+      try {
+        migrate(db);
+        db.prepare(
+          `INSERT INTO schedule_entries (
+            schedule_entry_id, plan_id, status, source_hash
+          ) VALUES (?, ?, ?, ?)`,
+        ).run("schedule:closure", "PLAN-L7-436-domain", "confirmed", "rev1");
+        const evidenceHead = scenario === "stale-head" ? "bbbbbbb" : "abcdef1";
+        const reviewSources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
+          planId: "PLAN-L7-436-domain",
+          planRevision: "rev1",
+          headSha: evidenceHead,
+          reviewKind: "cross_agent",
+          verdict: "PASS",
+          reviewedAt: "2026-07-29T00:00:00Z",
+          testsGreenAt: "2026-07-28T23:00:00Z",
+          workerModel: "gpt-5.6-terra",
+          reviewerModel: scenario === "same-provider" ? "gpt-5.6-sol" : "claude-opus-4-8",
+          source: "docs/plans/PLAN-L7-436-domain.md",
+          lane,
+          attackTrials: 3,
+          citations: ["docs/plans/PLAN-L7-436-domain.md:1"],
+        }));
+        for (const source of scenario === "missing-lane"
+          ? reviewSources.slice(0, 1)
+          : reviewSources)
+          db.prepare(
+            `INSERT INTO github_review_lane_receipts (
+              review_lane_receipt_id, plan_id, plan_revision, lane, subject_head,
+              verdict, reviewed_at, tests_green_at, worker_model, reviewer_model,
+              attack_trials, citations_json, source
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ).run(
+            `review:closure:${source.lane}`,
+            source.planId,
+            source.planRevision,
+            source.lane,
+            source.headSha,
+            source.verdict,
+            source.reviewedAt,
+            source.testsGreenAt,
+            source.workerModel,
+            source.reviewerModel,
+            source.attackTrials,
+            JSON.stringify(source.citations),
+            source.source,
+          );
+        const reviewDigests = {
+          claimBlind: reviewReceiptDigest(reviewSources[0]),
+          specBlind: reviewReceiptDigest(reviewSources[1]),
+        };
+        if (scenario !== "forged-source")
+          writeReviewPlan(
+            repoRoot,
+            scenario === "missing-lane" ? reviewSources.slice(0, 1) : reviewSources,
+          );
+        const body = renderPrTraceBlock({
+          plan_id: reviewSources[0].planId,
+          plan_revision: reviewSources[0].planRevision,
+          route_mode: "add-feature",
+          subject_head: "abcdef1",
+          base_sha: "1234567",
+          review_receipt_digest: combinedReviewReceiptDigest(reviewDigests),
+        });
+        const checkName = scenario === "unrelated-check" ? "docs-only" : "harness-check";
+        const result = syncRepositoryBindings({
+          db,
+          repositoryId: "owner/repo",
+          repoRoot,
+          gh: new FakeGh(
+            [
+              {
+                number: 16,
+                url: "https://github.com/owner/repo/pull/16",
+                headRefName: "feature/closure",
+                headRefOid: "abcdef1",
+                state: "MERGED",
+                mergedAt: "2026-07-29T00:00:00Z",
+                mergeCommit: { oid: "fedcba1" },
+                body,
+                statusCheckRollup: [
+                  { name: checkName, databaseId: "pr-check", conclusion: "SUCCESS" },
+                ],
+                reviews: [{ state: "APPROVED" }],
+              },
+            ],
+            {
+              check_runs: [{ name: "harness-check", id: "main-check", conclusion: "SUCCESS" }],
+            },
+          ),
+        });
+        expect(result.skipped).toContainEqual({
+          number: "16",
+          reason: "merge-closure-incomplete",
+        });
+        expect(
+          db
+            .prepare("SELECT state FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1")
+            .get(),
+        ).toEqual({ state: "invalidated:closure-incomplete" });
+      } finally {
+        db.close();
+        rmSync(repoRoot, { recursive: true, force: true });
+      }
     }
   });
 });

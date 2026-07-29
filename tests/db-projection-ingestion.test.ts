@@ -150,7 +150,12 @@ describe("db projection ingestion detector", () => {
       ]),
     );
     expect(EVIDENCE_GATED_DB_PROJECTION_TABLES).toEqual(
-      expect.arrayContaining(["model_evaluations", "retry_events", "detector_route_candidates"]),
+      expect.arrayContaining([
+        "model_evaluations",
+        "retry_events",
+        "detector_route_candidates",
+        "github_review_lane_receipts",
+      ]),
     );
   });
 

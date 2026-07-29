@@ -17,6 +17,7 @@ export interface ForwardEvidence {
   ci?: "未実行" | "実行中" | "成功" | "失敗" | "取消";
   review?: "未依頼" | "依頼中" | "承認" | "要修正";
   sync?: "同期済" | "遅延" | "不整合" | "未同期";
+  mergeVerified?: boolean;
 }
 
 export interface ForwardReadinessRow {
@@ -44,8 +45,17 @@ function cleanIds(ids: readonly string[]): string[] {
   return [...new Set(ids.map((id) => id.trim()).filter(Boolean))].sort();
 }
 
+function hasClosureEvidence(evidence: ForwardEvidence | undefined): boolean {
+  return (
+    evidence?.ci === "成功" &&
+    evidence.review === "承認" &&
+    evidence.sync === "同期済" &&
+    evidence.mergeVerified === true
+  );
+}
+
 function gate(entry: ForwardScheduleEntry, evidence: ForwardEvidence | undefined): string {
-  if (COMPLETE.has(entry.status)) return "accept";
+  if (COMPLETE.has(entry.status)) return hasClosureEvidence(evidence) ? "accept" : "merge-closure";
   if (evidence?.review === "承認" || evidence?.review === "依頼中") return "review";
   if (evidence?.ci === "成功") return "trace-freeze";
   if (entry.currentLocation.trim()) return entry.currentLocation.trim();
@@ -60,7 +70,13 @@ export function deriveForwardReadiness(
   if (byId.size !== entries.length) throw new Error("duplicate plan_id in schedule entries");
   const evidence = new Map(evidenceRows.map((row) => [row.planId, row]));
   const completed = new Set(
-    entries.filter((entry) => COMPLETE.has(entry.status)).map((entry) => entry.planId),
+    entries
+      .filter((entry) => {
+        if (!COMPLETE.has(entry.status)) return false;
+        const observation = evidence.get(entry.planId);
+        return hasClosureEvidence(observation);
+      })
+      .map((entry) => entry.planId),
   );
   const successors = new Map<string, string[]>();
   for (const entry of entries) {
@@ -76,14 +92,14 @@ export function deriveForwardReadiness(
       const unresolved = predecessors.filter((id) => byId.has(id) && !completed.has(id));
       const observation = evidence.get(entry.planId);
       const sync = observation?.sync ?? "未同期";
-      const completionEvidenceMissing =
-        COMPLETE.has(entry.status) && observation
-          ? [
-              observation.ci !== "成功" ? "完了条件: CI成功未確認" : "",
-              observation.review !== "承認" ? "完了条件: review承認未確認" : "",
-              sync !== "同期済" ? "完了条件: Project同期未確認" : "",
-            ].filter(Boolean)
-          : [];
+      const completionEvidenceMissing = COMPLETE.has(entry.status)
+        ? [
+            observation?.ci !== "成功" ? "完了条件: CI成功未確認" : "",
+            observation?.review !== "承認" ? "完了条件: review承認未確認" : "",
+            sync !== "同期済" ? "完了条件: Project同期未確認" : "",
+            observation?.mergeVerified !== true ? "完了条件: merge/main CI未確認" : "",
+          ].filter(Boolean)
+        : [];
       const reasons = [
         entry.blockedReason.trim(),
         missing.length > 0 ? `先行PLAN欠損: ${missing.join(", ")}` : "",

@@ -186,6 +186,11 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["plan_id", "has_evidence"],
   },
   {
+    name: "idx_github_review_lane_subject",
+    table: "github_review_lane_receipts",
+    columns: ["plan_id", "plan_revision", "subject_head", "lane"],
+  },
+  {
     name: "idx_descent_obligation_trace_status",
     table: "descent_obligations",
     columns: ["trace_key", "status", "required_layer"],

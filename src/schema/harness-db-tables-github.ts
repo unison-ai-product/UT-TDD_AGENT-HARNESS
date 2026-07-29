@@ -3,6 +3,25 @@ import { col, pk, requiredCol } from "./harness-db-table-builders";
 
 export const HARNESS_DB_GITHUB_TABLES: TableDef[] = [
   {
+    name: "github_review_lane_receipts",
+    columns: [
+      pk("review_lane_receipt_id"),
+      requiredCol("plan_id"),
+      requiredCol("plan_revision"),
+      requiredCol("lane"),
+      requiredCol("subject_head"),
+      requiredCol("verdict"),
+      requiredCol("reviewed_at"),
+      requiredCol("tests_green_at"),
+      requiredCol("worker_model"),
+      requiredCol("reviewer_model"),
+      col("attack_trials", "INTEGER"),
+      requiredCol("citations_json"),
+      requiredCol("source"),
+    ],
+    unique: [["plan_id", "plan_revision", "lane", "subject_head"]],
+  },
+  {
     name: "execution_readiness_projection",
     columns: [
       pk("plan_id"),

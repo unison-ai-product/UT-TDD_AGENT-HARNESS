@@ -1,8 +1,15 @@
+import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
+import {
+  combinedReviewReceiptDigest,
+  encodeMergeClosureReceipt,
+  REQUIRED_GITHUB_CHECK,
+} from "./closure-receipt";
 import { type GithubBindingInput, recordGithubBinding } from "./forward-store";
 import { validatePrTraceBody } from "./pr-trace";
 import type { GhCommandPort } from "./project-v2";
 import { NodeGhCommandPort } from "./project-v2";
+import { verifiedReviewLaneDigests } from "./review-lane-provenance";
 
 export interface RepositoryBindingSyncResult {
   inspectedPullRequests: number;
@@ -49,6 +56,19 @@ function ciState(checks: unknown[]): NonNullable<GithubBindingInput["state"]> {
   return "実行中";
 }
 
+function requiredCheck(checks: unknown[]): { state: string; id: string } {
+  const matches = checks
+    .map(object)
+    .filter((check) => text(check.name || check.context).toLowerCase() === REQUIRED_GITHUB_CHECK);
+  if (matches.length !== 1) return { state: "未実行", id: "" };
+  const check = matches[0] ?? {};
+  const state = text(check.conclusion || check.state || check.status).toUpperCase();
+  return {
+    state: state === "SUCCESS" ? "成功" : ciState(matches),
+    id: text(check.databaseId || check.id || check.node_id || check.url),
+  };
+}
+
 function reviewState(reviews: unknown[]): NonNullable<GithubBindingInput["state"]> {
   const states = reviews.map((value) => text(object(value).state).toUpperCase());
   if (states.includes("CHANGES_REQUESTED")) return "要修正";
@@ -87,6 +107,59 @@ function planAccepted(db: HarnessDb, planId: string): boolean {
   return ACCEPTED_PLAN_STATUSES.has(text(row?.status));
 }
 
+function recordMergeClosure(input: {
+  db: HarnessDb;
+  repositoryId: string;
+  planId: string;
+  planRevision: string;
+  projectItemId: string;
+  prNumber: string;
+  objectUrl: string;
+  headSha: string;
+  mergeSha: string;
+  state: string;
+  observedAt?: string;
+}): string {
+  const objectId = `pr:${input.prNumber}:merge:${input.mergeSha}`;
+  const existing = input.db
+    .prepare(
+      `SELECT plan_id, plan_revision FROM github_object_bindings
+        WHERE repository_id = ? AND object_kind = 'merge' AND object_id = ?`,
+    )
+    .get(input.repositoryId, objectId);
+  if (
+    existing &&
+    (text(existing.plan_id) !== input.planId || text(existing.plan_revision) !== input.planRevision)
+  )
+    throw new Error(`GitHub merge identity conflict: ${objectId}`);
+  const bindingId = stableId("github-binding", `${input.repositoryId}:merge:${objectId}`);
+  input.db
+    .prepare(
+      `INSERT INTO github_object_bindings (
+         binding_id, repository_id, plan_id, plan_revision, project_item_id,
+         object_kind, object_id, object_url, head_sha, state, observed_at
+       ) VALUES (?, ?, ?, ?, ?, 'merge', ?, ?, ?, ?, ?)
+       ON CONFLICT(repository_id, object_kind, object_id) DO UPDATE SET
+         plan_id=excluded.plan_id, plan_revision=excluded.plan_revision,
+         project_item_id=excluded.project_item_id, object_url=excluded.object_url,
+         head_sha=excluded.head_sha, state=excluded.state, observed_at=excluded.observed_at
+       WHERE excluded.observed_at >= github_object_bindings.observed_at`,
+    )
+    .run(
+      bindingId,
+      input.repositoryId,
+      input.planId,
+      input.planRevision,
+      input.projectItemId,
+      objectId,
+      input.objectUrl,
+      input.headSha,
+      input.state,
+      input.observedAt ?? new Date().toISOString(),
+    );
+  return bindingId;
+}
+
 function uniquePlanId(value: string): string {
   const matches = [...value.matchAll(/\bPLAN-[A-Z0-9]+-[0-9A-Za-z][0-9A-Za-z-]*/g)].map(
     (match) => match[0],
@@ -100,6 +173,7 @@ export function syncRepositoryBindings(input: {
   repositoryId: string;
   gh?: GhCommandPort;
   now?: string;
+  repoRoot?: string;
 }): RepositoryBindingSyncResult {
   const gh = input.gh ?? new NodeGhCommandPort();
   const payload = gh.json([
@@ -158,6 +232,24 @@ export function syncRepositoryBindings(input: {
       headSha,
       observedAt: input.now,
     };
+    const prRequiredCheck = requiredCheck(list(pullRequest.statusCheckRollup));
+    const remoteReviewState = reviewState(list(pullRequest.reviews));
+    const reviewDigests = verifiedReviewLaneDigests(input.db, {
+      repoRoot: input.repoRoot ?? process.cwd(),
+      planId,
+      planRevision: revision,
+      headSha,
+    });
+    const expectedReviewDigest = reviewDigests ? combinedReviewReceiptDigest(reviewDigests) : "";
+    const reviewReceiptMatches =
+      Boolean(trace.fields.review_receipt_digest) &&
+      trace.fields.review_receipt_digest === expectedReviewDigest;
+    const acceptedReviewState =
+      remoteReviewState === "承認" && reviewReceiptMatches
+        ? "承認"
+        : remoteReviewState === "要修正"
+          ? "要修正"
+          : "依頼中";
     const bindings: GithubBindingInput[] = [
       {
         ...common,
@@ -176,13 +268,13 @@ export function syncRepositoryBindings(input: {
         ...common,
         objectKind: "check_run",
         objectId: `pr:${number}:checks:${headSha}`,
-        state: ciState(list(pullRequest.statusCheckRollup)),
+        state: prRequiredCheck.state,
       },
       {
         ...common,
         objectKind: "review",
         objectId: `pr:${number}:reviews:${headSha}`,
-        state: reviewState(list(pullRequest.reviews)),
+        state: acceptedReviewState,
       },
     ];
     if (trace.fields.issue_number) {
@@ -199,7 +291,7 @@ export function syncRepositoryBindings(input: {
       const mainChecks = mergeSha
         ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
         : {};
-      const mainCi = ciState(list(mainChecks.check_runs));
+      const mainRequiredCheck = requiredCheck(list(mainChecks.check_runs));
       const issueClosed = trace.fields.issue_number
         ? text(
             object(
@@ -216,21 +308,53 @@ export function syncRepositoryBindings(input: {
           ).toUpperCase() === "CLOSED"
         : true;
       if (
+        reviewDigests &&
         mergeSha &&
-        ciState(list(pullRequest.statusCheckRollup)) === "成功" &&
+        prRequiredCheck.state === "成功" &&
+        prRequiredCheck.id &&
         reviewState(list(pullRequest.reviews)) === "承認" &&
-        mainCi === "成功" &&
+        mainRequiredCheck.state === "成功" &&
+        mainRequiredCheck.id &&
+        reviewReceiptMatches &&
         issueClosed &&
         planAccepted(input.db, planId)
       ) {
-        bindings.push({
-          ...common,
-          objectKind: "merge",
-          objectId: `pr:${number}:merge:${mergeSha}`,
-          objectUrl: text(pullRequest.url),
-          state: `merged:${mergeSha}`,
-        });
+        result.bindingIds.push(
+          recordMergeClosure({
+            db: input.db,
+            ...common,
+            prNumber: number,
+            objectUrl: text(pullRequest.url),
+            mergeSha,
+            state: encodeMergeClosureReceipt({
+              version: 1,
+              status: "verified",
+              planId,
+              planRevision: revision,
+              prNumber: number,
+              headSha,
+              mergeSha,
+              requiredCheck: REQUIRED_GITHUB_CHECK,
+              prCheckId: prRequiredCheck.id,
+              mainCheckId: mainRequiredCheck.id,
+              reviewReceiptDigests: reviewDigests,
+              issueClosed,
+            }),
+          }),
+        );
       } else {
+        if (mergeSha) {
+          result.bindingIds.push(
+            recordMergeClosure({
+              db: input.db,
+              ...common,
+              prNumber: number,
+              objectUrl: text(pullRequest.url),
+              mergeSha,
+              state: "invalidated:closure-incomplete",
+            }),
+          );
+        }
         result.skipped.push({ number, reason: "merge-closure-incomplete" });
       }
     }

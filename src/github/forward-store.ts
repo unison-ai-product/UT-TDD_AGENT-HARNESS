@@ -1,11 +1,13 @@
 import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
+import { decodeMergeClosureReceipt } from "./closure-receipt";
 import {
   deriveForwardReadiness,
   type ForwardEvidence,
   type ForwardReadinessRow,
   type ForwardScheduleEntry,
 } from "./forward-readiness";
+import { verifiedReviewLaneDigests } from "./review-lane-provenance";
 
 function text(value: unknown): string {
   return String(value ?? "").trim();
@@ -16,6 +18,23 @@ function ids(value: unknown): string[] {
     .split(/[|,]/)
     .map((id) => id.trim())
     .filter(Boolean);
+}
+
+function hasCurrentReviewReceipt(
+  db: HarnessDb,
+  receipt: NonNullable<ReturnType<typeof decodeMergeClosureReceipt>>,
+  repoRoot: string,
+): boolean {
+  const current = verifiedReviewLaneDigests(db, {
+    repoRoot,
+    planId: receipt.planId,
+    planRevision: receipt.planRevision,
+    headSha: receipt.headSha,
+  });
+  return (
+    current?.claimBlind === receipt.reviewReceiptDigests.claimBlind &&
+    current.specBlind === receipt.reviewReceiptDigests.specBlind
+  );
 }
 
 function lifecycleRank(kind: GithubBindingInput["objectKind"], state: string): number {
@@ -50,26 +69,53 @@ export function readForwardSchedule(db: HarnessDb): ForwardScheduleEntry[] {
     }));
 }
 
-export function readGithubEvidence(db: HarnessDb): ForwardEvidence[] {
+export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): ForwardEvidence[] {
+  const scheduleRevisions = new Map(
+    db
+      .prepare("SELECT plan_id, source_hash FROM schedule_entries")
+      .all()
+      .map((row) => [text(row.plan_id), text(row.source_hash)]),
+  );
   const rows = db
     .prepare(
-      `SELECT plan_id, object_kind, state, head_sha
+      `SELECT plan_id, plan_revision, object_kind, object_id, state, head_sha, observed_at
          FROM github_object_bindings
         ORDER BY observed_at, binding_id`,
     )
-    .all();
-  const latestPullRequestHead = new Map<string, string>();
+    .all()
+    .filter((row) => {
+      const current = scheduleRevisions.get(text(row.plan_id));
+      return !current || current === text(row.plan_revision);
+    });
+  const pullRequests = new Map<string, Array<Record<string, unknown>>>();
+  const mergeHeads = new Map<string, Set<string>>();
   for (const row of rows) {
+    const planId = text(row.plan_id);
     if (row.object_kind === "pull_request")
-      latestPullRequestHead.set(text(row.plan_id), text(row.head_sha));
+      pullRequests.set(planId, [...(pullRequests.get(planId) ?? []), row]);
+    if (row.object_kind === "merge")
+      mergeHeads.set(planId, new Set([...(mergeHeads.get(planId) ?? []), text(row.head_sha)]));
+  }
+  const selectedHead = new Map<string, string>();
+  const conflictingPlans = new Set<string>();
+  for (const [planId, candidates] of pullRequests) {
+    const open = candidates.filter((row) => text(row.state) === "open");
+    if (open.length > 1) conflictingPlans.add(planId);
+    const selected =
+      open.length === 1
+        ? open[0]
+        : ([...candidates]
+            .reverse()
+            .find((row) => mergeHeads.get(planId)?.has(text(row.head_sha))) ?? candidates.at(-1));
+    if (selected) selectedHead.set(planId, text(selected.head_sha));
   }
   const evidence = new Map<string, ForwardEvidence>();
   for (const row of rows) {
     const planId = text(row.plan_id);
     if (
       (row.object_kind === "check_run" || row.object_kind === "review") &&
-      latestPullRequestHead.get(planId) &&
-      text(row.head_sha) !== latestPullRequestHead.get(planId)
+      selectedHead.get(planId) &&
+      text(row.head_sha) !== selectedHead.get(planId)
     )
       continue;
     const current = evidence.get(planId) ?? { planId };
@@ -82,12 +128,31 @@ export function readGithubEvidence(db: HarnessDb): ForwardEvidence[] {
       current.ci = state as NonNullable<ForwardEvidence["ci"]>;
     if (row.object_kind === "review" && ["未依頼", "依頼中", "承認", "要修正"].includes(state))
       current.review = state as NonNullable<ForwardEvidence["review"]>;
+    if (
+      row.object_kind === "merge" &&
+      (() => {
+        const receipt = decodeMergeClosureReceipt(text(row.state));
+        return (
+          receipt?.planId === planId &&
+          receipt.planRevision === text(row.plan_revision) &&
+          receipt.headSha === text(row.head_sha) &&
+          text(row.object_id) === `pr:${receipt.prNumber}:merge:${receipt.mergeSha}` &&
+          hasCurrentReviewReceipt(db, receipt, repoRoot)
+        );
+      })() &&
+      (!selectedHead.get(planId) || text(row.head_sha) === selectedHead.get(planId))
+    )
+      current.mergeVerified = true;
     evidence.set(planId, current);
   }
   for (const row of db
-    .prepare("SELECT plan_id, sync_status, head_sha FROM github_project_item_projection")
+    .prepare(
+      "SELECT plan_id, plan_revision, sync_status, head_sha FROM github_project_item_projection ORDER BY last_reconciled_at",
+    )
     .all()) {
     const planId = text(row.plan_id);
+    const currentRevision = scheduleRevisions.get(planId);
+    if (currentRevision && currentRevision !== text(row.plan_revision)) continue;
     const current = evidence.get(planId) ?? { planId };
     const sync = text(row.sync_status);
     if (["同期済", "遅延", "不整合", "未同期"].includes(sync))
@@ -95,7 +160,27 @@ export function readGithubEvidence(db: HarnessDb): ForwardEvidence[] {
     current.headSha = text(row.head_sha) || current.headSha;
     evidence.set(planId, current);
   }
+  for (const planId of conflictingPlans) {
+    const current = evidence.get(planId) ?? { planId };
+    current.sync = "不整合";
+    evidence.set(planId, current);
+  }
   return [...evidence.values()];
+}
+
+export function deriveStoredForwardReadiness(db: HarnessDb): ForwardReadinessRow[] {
+  return deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
+}
+
+export function selectActiveProjectRows(
+  rows: readonly ForwardReadinessRow[],
+  existingProjectPlans: ReadonlySet<string>,
+): ForwardReadinessRow[] {
+  return rows.filter(
+    (row) =>
+      (row.readiness !== "完了" && row.readiness !== "保留") ||
+      existingProjectPlans.has(row.planId),
+  );
 }
 
 export function rebuildExecutionReadiness(
@@ -103,7 +188,7 @@ export function rebuildExecutionReadiness(
   now = new Date().toISOString(),
   transactional = true,
 ): ForwardReadinessRow[] {
-  const rows = deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
+  const rows = deriveStoredForwardReadiness(db);
   const write = db.prepare(
     `INSERT INTO execution_readiness_projection (
        plan_id, plan_revision, readiness, current_gate, implementation_order,
@@ -149,14 +234,7 @@ export interface GithubBindingInput {
   planId: string;
   planRevision: string;
   projectItemId?: string;
-  objectKind:
-    | "project_item"
-    | "issue"
-    | "branch"
-    | "pull_request"
-    | "check_run"
-    | "review"
-    | "merge";
+  objectKind: "project_item" | "issue" | "branch" | "pull_request" | "check_run" | "review";
   objectId: string;
   objectUrl?: string;
   headSha?: string;
@@ -166,6 +244,8 @@ export interface GithubBindingInput {
 
 export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): string {
   const observedAt = input.observedAt ?? new Date().toISOString();
+  if (String(input.objectKind) === "merge")
+    throw new Error("merge closure receipts are repository-sync only");
   const existing = db
     .prepare(
       `SELECT binding_id, plan_id, plan_revision, state, head_sha, observed_at
@@ -196,11 +276,7 @@ export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): s
         `GitHub observation conflict at ${observedAt}: ${input.objectKind}/${input.objectId}`,
       );
   }
-  if (
-    input.objectKind === "check_run" ||
-    input.objectKind === "review" ||
-    input.objectKind === "merge"
-  ) {
+  if (input.objectKind === "check_run" || input.objectKind === "review") {
     const pullRequest = db
       .prepare(
         `SELECT head_sha FROM github_object_bindings

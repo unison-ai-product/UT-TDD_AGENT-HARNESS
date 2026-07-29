@@ -877,6 +877,43 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
   }
 }
 
+function projectGithubReviewLaneReceipts(repoRoot: string, db: HarnessDb): void {
+  for (const plan of loadReviewPlans(repoRoot)) {
+    for (const [index, entry] of plan.crossEntries.entries()) {
+      if (
+        entry.review_kind !== "cross_agent" ||
+        !entry.lane ||
+        !entry.plan_revision ||
+        !entry.subject_head
+      )
+        continue;
+      const id = stableId(
+        "github-review-lane",
+        `${plan.plan_id}:${entry.plan_revision}:${entry.lane}:${entry.subject_head}:${index}`,
+      );
+      recordProjectionEvent(db, {
+        table: "github_review_lane_receipts",
+        id,
+        row: {
+          review_lane_receipt_id: id,
+          plan_id: plan.plan_id,
+          plan_revision: entry.plan_revision,
+          lane: entry.lane,
+          subject_head: entry.subject_head,
+          verdict: entry.verdict ?? "",
+          reviewed_at: entry.reviewed_at ?? "",
+          tests_green_at: entry.tests_green_at ?? "",
+          worker_model: entry.worker_model ?? "",
+          reviewer_model: entry.reviewer_model ?? "",
+          attack_trials: entry.attack_trials ?? 0,
+          citations_json: JSON.stringify(entry.citations ?? []),
+          source: normalizePath(join("docs", "plans", plan.file)),
+        },
+      });
+    }
+  }
+}
+
 function advisorySubject(rule: string, reviewEvidenceId: string): string {
   // Plan-id-free, stable subject. The warn-first advisory must surface as a
   // feedback event WITHOUT flipping automation readiness, which scans
@@ -2615,6 +2652,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       time("roadmap-review", () => {
         projectRoadmapRollup(repoRoot, db);
         projectReviewEvidenceRegistry(repoRoot, db);
+        projectGithubReviewLaneReceipts(repoRoot, db);
         projectGuardrailInvariantAdvisories(db);
         projectDescentObligations(repoRoot, db);
         projectDesignPairFreezeFindings(repoRoot, db);

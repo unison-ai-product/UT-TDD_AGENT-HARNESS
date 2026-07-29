@@ -128,6 +128,7 @@ export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [
   "model_evaluations",
   "retry_events",
   "detector_route_candidates",
+  "github_review_lane_receipts",
   "github_project_item_projection",
   "github_object_bindings",
   "github_projection_outbox",

@@ -1700,6 +1700,11 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `CANDIDATE-GHMERGE-006` | E15 closure | main CI未完またはIssue close失敗 | E15未到達、学習fact未確定。全成功時のみclosure |
 | `CANDIDATE-GHMERGE-007` | snapshot原子性 | 別時点のcertificate/check/reviewを混在 | TOCTOU snapshotを拒否しmerge command 0 |
 | `CANDIDATE-GHMERGE-008` | learning rebuild | projection削除後rebuildを2回 | learning identity/digest一致、retryで件数不増 |
+| `U-GHPROJ-001〜005` | Forward readiness reducer | 合流依存の部分解決、欠損先行、同期/CI/review不整合、PLAN重複、完了statusだけでclosure証跡なし | 全先行完了かつCI成功・review承認・Project同期・検証済みmerge receiptが揃う時だけ`完了`となり後続を`着手可能`へ解放。欠損・不整合・証跡不足は`阻害中`、重複identityはfail-close |
+| `U-GHPROJ-010〜014` | SQLite projection / binding custody | schedule投影、rebuild clear、out-of-order観測、stale HEAD、pending outbox、object付替え、revision rollover | readinessは再構築され、binding/outboxは保持。PR HEAD不一致のCI/review/mergeはwrite 0。provider identity付替えと古いrevisionへの後退を拒否 |
+| `U-GHPROJ-020〜024` | Project V2 reconcile | dry-run、create、同値再送、重複item、field欠損、binding保存 | dry-runはremote/DB mutation 0、同値はno-op、重複/契約driftはfail-close、item identityをdurable保存 |
+| `U-GHPROJ-030〜035` | lifecycle証跡選択 / closure fail-close | 複数open PR、旧merged PR後着、旧Project revision、管理済み完了item、証跡なし完了status、偽造・失効merge receipt | 複数openは`不整合`、現行open HEADだけを採用、旧revisionを無視、管理済みitemは完了状態まで収束同期する。statusだけでは完了・後続解放せず、main CI成功を含む正規receiptだけをmerge証跡に採用し、失効receiptは不採用 |
+| `U-GHBIND-001〜003` | repository facts同期 / typed closure receipt | typed PR trace、branch/check/review/merge/Issue、trace欠損、revision欠損、stale HEAD、無関係green check、同一provider review、片lane欠落、旧HEAD lane receipt、PLAN sourceなしの直接DB row注入 | 完全traceとPR/main双方のrequired `harness-check`、canonical PLAN frontmatterにexactly once存在し同一revision/HEADへ固定された異provider claim-blind/spec-blind両receiptの結合digestだけがclosure receiptへ収束。不完全・曖昧・DB単独の履歴は推測せずskipし、merge receiptを失効 |
 
 property testは任意の合法event列でreplay同一性・単調append・terminal後遷移禁止を確認する。
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、

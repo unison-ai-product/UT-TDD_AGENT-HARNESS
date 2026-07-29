@@ -39,6 +39,11 @@ export interface ReviewEntry {
   green_commands?: GreenCommandEvidence[];
   worker_model?: string;
   reviewer_model?: string;
+  lane?: "claim-blind" | "spec-blind";
+  plan_revision?: string;
+  subject_head?: string;
+  attack_trials?: number;
+  citations?: string[];
 }
 
 export interface GreenCommandEvidence {
@@ -156,6 +161,14 @@ export function extractReviewEntries(content: string): ReviewEntry[] {
         }
         if (typeof e.worker_model === "string") entry.worker_model = e.worker_model;
         if (typeof e.reviewer_model === "string") entry.reviewer_model = e.reviewer_model;
+        if (e.lane === "claim-blind" || e.lane === "spec-blind") entry.lane = e.lane;
+        if (typeof e.plan_revision === "string") entry.plan_revision = e.plan_revision;
+        if (typeof e.subject_head === "string") entry.subject_head = e.subject_head;
+        if (typeof e.attack_trials === "number") entry.attack_trials = e.attack_trials;
+        if (Array.isArray(e.citations))
+          entry.citations = e.citations.filter(
+            (citation): citation is string => typeof citation === "string",
+          );
         return entry;
       });
   } catch {

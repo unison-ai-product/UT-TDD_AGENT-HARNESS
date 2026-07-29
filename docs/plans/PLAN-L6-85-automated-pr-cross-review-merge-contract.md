@@ -117,3 +117,30 @@ merge後main CI失敗は成功を上書きせず`PostMergeRegressionDetected`を
 - [ ] GitHub障害、応答喪失、rate-limit、force-pushから重複・誤mergeなく再開できる。
 - [ ] merge後main CIとIssue closeを観測し、退行は新しいoff-Forward routeへ戻す。
 - [ ] `U/P-PRFLOW-*` Red、独立review、L7-439実装、Reverse backfill後にconfirmed化する。
+
+## 8. GitHub object binding / closure契約
+
+branch作成、draft PR、CI、review、mergeは同じ`plan_id`と`project_item_id`へbindingする。
+各provider eventは対象HEADを伴い、stale HEADのCI成功・承認・merge結果を現在ゲートへ
+流用してはならない。
+
+merge後はmain上の必須CIとaccept evidenceを確認してからPLANを完了し、Project itemの
+現在ゲート、CI状態、レビュー状態、対象HEAD、同期状態を更新する。同じclosure処理で
+後続PLANを再評価し、新たに解放された項目を`着手可能`へ投影する。
+
+完了statusはclosure証拠の代替ではない。CI成功、review承認、Project同期、main CI成功を含む
+検証済みmerge receiptが同じPLAN revisionとPR HEADへ結合されるまで`merge-closure`で阻害する。
+merge receiptはrepository同期だけが生成し、汎用の手動観測入口から作成できない。後続観測で
+main CI、Issue close又はaccept条件が崩れた場合は同じprovider identityのreceiptを失効させ、
+古い成功receiptを完了判定へ再利用しない。
+
+closure receiptは`plan_id`、PLAN revision、PR number/HEAD、merge SHA、PR/main双方の
+required `harness-check` identity、claim-blind/spec-blind各receipt digest、Issue close結果を
+型付きで保持し、自己digestを検証する。各review receiptはPLAN正本由来の`cross_agent`
+evidence自身にimmutableなPLAN revisionとsubject HEADを持ち、lane、worker/reviewerの異なる
+provider family、PASS系verdict、tests-before-review順序、attack trial、citationを満たす。
+両laneの結合digestがPR traceの`review_receipt_digest`と一致しなければならない。read projectionも
+現在の両lane evidenceからdigestを再計算し、HEAD更新、片lane欠落、レビュー撤回・差替え後に
+古いclosure receiptを有効化しない。DB rowだけを直接注入しても証拠にはならず、`source`は
+repository root配下のcanonical `docs/plans/*.md`に限定し、その現行frontmatterに全fieldが
+exactly once存在することをsync/read双方で再照合する。
