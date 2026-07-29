@@ -8,7 +8,7 @@ route_signal: incident
 route_mode: incident
 status: draft
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-07-29
 backprop_decision: not_required
 backprop_decision_reason: "Internal harness CI cost re-allocation; does not change the product's external requirement / design / test-design contract. Gate coverage itself is preserved fail-close (required contexts は増える方向のみ)。"
 owner: PM / PO
@@ -138,3 +138,78 @@ path→test 依存マップが前提 (別 PLAN の責務、本 PLAN スコープ
 - AC-5: workflow header の doc-safe allowlist 記述が `DOC_LANE_PREFIXES` と集合一致し、
   ずれた場合に落ちる回帰テストが green (tests/change-lane.test.ts、marker 欠落も
   fail-close)。
+
+## 2026-07-29 doctor 単一実行化の実装と before/after 実測 (スコープ 1)
+
+### 採択方式 (advisor `gpt-5.6-sol` 敵対検証で確定)
+
+当初案 (envelope を「同一 HEAD + full scope」だけで消費) は **refuted**。artifact の採用条件が
+doctor の実入力を表していないためで、具体的な反例が 3 件ある:
+
+- `memory-sync` は `git ls-tree origin/main` に依存する (snapshot に ref が無い)。
+- `merged-plan-status` は default branch SHA を解決できないと throw する (issue #186)。
+- CI step は `--strict-green-command-digest` 付き、vitest 側は無しで検査集合が異なる。
+
+採択したのは **観測面一致方式**:
+
+1. snapshot runner が default branch の ref→SHA を注入する (`src/git/default-branch.ts` が
+   解決規則の SSoT、`scripts/run-vitest-snapshot.ts` が注入)。**解決できない面では注入せず
+   従来どおり fail-close** (`U-TESTHYGIENE-054`)。
+2. envelope が観測面を全て持つ: `head_sha` / `scope` / `profile` / `snapshot_root` /
+   `ref_map` / `options` / `check_ids` / `producer` / `payload_digest`。
+3. 消費は **CI 文脈かつ全項目一致時のみ**。ローカルは非権威 (`not-ci-context`)。
+   1 つでも違えば full 自走へ落ちる。
+4. CI の doctor step を test step の前へ移し、envelope を書き出す。
+
+署名は置かない。同一 job 内の信頼済み step 間の受け渡しであり、鍵も同じ job に置く署名は
+同 job のコードに対して実効性が無い (advisor 判断)。`payload_digest` が破損検出であって
+真正性の証明ではないことは `U-DOCTORENV-005` で契約として固定した。
+
+### AC-2 (検査集合が縮まないこと) の機械固定
+
+`U-DOCTORENV-011`: producer の `check_ids` が consumer の期待集合より 1 件でも少なければ
+`check-id-set-mismatch` で不採用 → fence は自走する。縮んだ検査集合を fence が受理する経路は無い。
+
+### 実測 (AC-1)
+
+計測条件: 同一 runner class (ubuntu-latest)、同一 lane (full)、`harness-check-linux` leg、3 run 中央値。
+
+**before (main、PR #180/#182/#185 の CI):**
+
+| run | test step | doctor step | job |
+|---|---|---|---|
+| 30429616284 | 292s | 56s | 394s |
+| 30429538376 | 283s | 53s | 384s |
+| 30429216693 | 276s | 52s | 370s |
+| **中央値** | **283s** | **53s** | **384s** |
+
+**after (PR #189):**
+
+| run | test step | doctor step | job |
+|---|---|---|---|
+| 30439367501 | 241s | 54s | 332s |
+| 30439854225 | 176s | 38s | 251s |
+| 30440302849 | 240s | 54s | 334s |
+| **中央値** | **240s** | **54s** | **332s** |
+
+**差分 (中央値)**: test step **-43s (-15.2%)** / job **-52s (-13.5%)**。doctor step は +1s (誤差)。
+
+envelope が実際に消費されたことは CI ログの `doctor-envelope: accepted` で確認した
+(run 30439854225 / 30440302849。run 30439367501 は診断行の追加前で marker 無し)。
+自走へ落ちていれば marker は不採用理由を出す。
+
+### 見積もりの誤りを訂正する (実測に合わせる)
+
+本 PLAN §背景は vitest 内 doctor を **114s** (PR #113 run 29816573228) と記録し、advisor も
+その値から上限 32% を見積もった。**この値は再現しなかった**。実測の削減は中央値 43s であり、
+現在の runner class では vitest 内 doctor の実コストが 114s ではなく 40〜50s 程度である。
+114s は別日・別 runner の単発値であり、削減見積もりの基準にしてはならない。
+
+run 30439854225 は job 251s と他 2 本より 80s 速く、**runner 側のばらつきが削減幅と同程度**ある。
+したがって「約 15% 短縮」は中央値としての主張であり、単発 run の比較で語らない。
+
+### 残件
+
+- shard 分割 (スコープ 2) と windows leg の設計判断 (スコープ 3) は未着手。
+- 本 PR で declare した `generates` は **merge 時に confirm と同時**に有効化する必要がある
+  (`merged-plan-status` は merge 後に draft のままだと fail-close する。issue #162 の型)。
