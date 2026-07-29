@@ -154,7 +154,7 @@ export function checkMemorySync(repoRoot: string): { messages: string[]; ok: boo
   }
   try {
     const r = analyzeMemorySync(loadMemorySyncInput(repoRoot));
-    return { messages: memorySyncMessages(r), ok: r.ok };
+    return { messages: memorySyncMessages(r), ok: r.ok && r.originResolved };
   } catch {
     return {
       messages: ["memory-sync - violation: 共有 memory の同期状態を読めなかった"],

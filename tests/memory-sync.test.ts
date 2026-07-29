@@ -114,8 +114,10 @@ describe("memory-sync (PLAN-L7-468 PR-B)", () => {
 
       const result = analyzeMemorySync(loadMemorySyncInput(repo));
       expect(result.originResolved).toBe(false);
+      expect(result.ok).toBe(false);
       const joined = memorySyncMessages(result).join("\n");
-      expect(joined).toContain("未評価");
+      expect(joined).toContain("violation");
+      expect(joined).toContain("判定不能");
       expect(joined).not.toContain("memory-sync — OK");
     } finally {
       removeTestTree(repo);
