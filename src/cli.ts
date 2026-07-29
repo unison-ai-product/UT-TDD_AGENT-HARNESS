@@ -3288,6 +3288,7 @@ githubProject
   .requiredOption("--owner <login>", "GitHub Project owner")
   .requiredOption("--number <n>", "GitHub Project number", (value) => Number.parseInt(value, 10))
   .requiredOption("--repository <id>", "repository identity (owner/name)")
+  .option("--db <path>", "harness.db path (default: .ut-tdd/harness.db)")
   .option("--apply", "GitHubとbinding projectionへ反映する")
   .option("--json", "JSON output")
   .action(
@@ -3295,6 +3296,7 @@ githubProject
       owner: string;
       number: number;
       repository: string;
+      db?: string;
       apply?: boolean;
       json?: boolean;
     }) => {
@@ -3303,9 +3305,11 @@ githubProject
         process.exitCode = 1;
         return;
       }
-      const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+      const db = openHarnessDb(opts.db ?? defaultHarnessDbPath(process.cwd()), {
+        repoRoot: process.cwd(),
+      });
       try {
-        migrate(db);
+        if (opts.apply) migrate(db);
         const rows = opts.apply
           ? rebuildExecutionReadiness(db)
           : deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
