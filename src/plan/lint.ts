@@ -11,6 +11,7 @@ import {
   DESIGN_LAYERS_REQUIRING_SUB_DOC,
   INTERNAL_ASSET_EXTENSION_PLAN_IDS,
   KIND_LAYER_ENFORCEMENT_DATE,
+  LEGACY_PLAN_ID_COLLISION_DEBT,
   MODE_PATTERN,
   READY_DEPENDENCY_STATUSES,
   REQUIRED_AGENT_ROLE_ENFORCEMENT_DATE,
@@ -42,7 +43,6 @@ import type {
   PlanScheduleResult,
   PlanScheduleViolation,
 } from "./lint-types";
-import { LEGACY_PLAN_ID_COLLISION_DEBT } from "./plan-id-collision-debt";
 
 export type {
   LintResult,
