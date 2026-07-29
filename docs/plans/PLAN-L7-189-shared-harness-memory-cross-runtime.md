@@ -6,7 +6,7 @@ layer: L7
 drive: be
 status: confirmed
 created: 2026-06-29
-updated: 2026-07-28
+updated: 2026-07-29
 owner: Codex TL / PO
 parent_design: docs/design/harness/L6-function-design/handover-mechanism.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -243,11 +243,11 @@ silent divergence を作る)。2 巡目で PO 提案 (DB は関係のみ / servi
 2. **DB は派生 metadata index**。本文の複製に依存しない (全 78 件の直読は実測 **112ms**、
    body 合計 114KB / corpus 418KB で、複製の便益が無い)。
 3. **アクセスは service 単一路**。読みも書きも `MemoryService` を通す。
-   **到達状況 (2026-07-29 実測、誤読防止のため明記)**: この不変条件は **read 路だけが実装済み**
-   (`src/memory/service.ts` の `loadMemoryCorpus` / `queryMemoryEntries` / `readMemory`)。
-   **write 路は未到達**で、`ut-tdd memory add` は `src/memory/index.ts` の `writeMemoryEntry` を
-   `src/cli.ts` から直接呼んでおり service を経由しない (§5.4 で後続へ送っている)。
-   この項を「達成済み」と読まないこと。
+   **到達状況 (2026-07-29 是正済み)**: read 路は `loadMemoryCorpus` /
+   `queryMemoryEntries` / `readMemory`、write 路は `writeMemory` を
+   `src/memory/service.ts` が公開する。`ut-tdd memory add` は service を経由し、
+   `src/memory/index.ts` の storage primitive `writeMemoryEntry` を直接呼ばない。
+   境界テストは CLI への `writeMemoryEntry` 再流入を拒否する。
 4. **staleness は可視**。index が古い / 読めない状態を無音で「0 件」に見せない。
 5. **「共有済み」= origin 到達**。同一 tree ではファイルは相手から見えるが、永続性・別 worktree・
    branch 切替に耐えるのは origin 到達のみで、「検証の基準点 = HEAD」規律と整合する。
@@ -265,19 +265,21 @@ hybrid では commit してもブランチ上にある限り origin に届かな
 
 - `src/memory/service.ts`: `loadMemoryCorpus` (per-entry 隔離) / `queryMemoryEntries`
   (filter・順位・tie-break の唯一実装) / `compareIndexToCorpus` (content_hash 照合) /
-  `readMemory` / `renderMemoryHealth`。
-- `src/cli.ts`: `memory list` / `recall` を service 経由に。SessionStart digest は memory を
+  `readMemory` / `renderMemoryHealth` / `writeMemory`。
+- `src/cli.ts`: `memory add` / `list` / `recall` を service 経由に。SessionStart digest は memory を
   DB 障害と独立に読み、DB 段が全滅しても劣化 digest を出す (無音 `catch {}` の廃止)。
 - `src/handover/session-start-digest.ts`: `selectSessionStartDigest` は memory を引数で受け取る。
 - `src/lint/memory-sync.ts` + doctor hard gate `memory-sync`: untracked / 未コミット変更 =
-  **error**、commit 済み origin 未到達 = note。
+  **error**、commit 済み origin 未到達 = note。origin ref を解決できない場合は
+  共有到達を証明できないため `ok=false` とし、hard gate を fail-close する。
 
 ### 5.4 本追補のスコープ外 (後続)
 
 - `scope: lesson | episode` の型強制と `status: retired` 状態遷移、および既存 34 件の
   教訓抽出 → 昇格 → retire (**一括削除しない**)。
-- `memory add` の write-through。前提の SQLite pragma は **PLAN-L7-460 スコープ 6 の責務**
-  であり、二重実装を作らないため本 PLAN では扱わない。
+- `memory add` から DB index への即時 write-through。正本ファイルへの write は
+  MemoryService 単一路へ収束済みだが、SQLite index の即時更新は行わない。前提の SQLite pragma は
+  **PLAN-L7-460 スコープ 6 の責務**であり、二重実装を作らないため本 PLANでは扱わない。
 - `memory_entries` からの `body` 列 DROP (schema 変更は上流 doc 合流と同時に行う)。
 - OneDrive 配下での atomic rename / 一時 lock の挙動 (未実測、write-through 時に扱う)。
 
@@ -290,3 +292,16 @@ hybrid では commit してもブランチ上にある限り origin に届かな
 - 移植前後の等価性を golden 比較で固定 (9 組の options で旧 SQL 経路と ID 列一致、既定 limit=8 維持)。
 - 実装中に境界テストが自分の新 lint に発火したため、allowlist を広げず
   「scan-only の面は本文を読まない」を追加 assertion で固定した。
+
+### 5.6 PR #180 後追い収束 (2026-07-29)
+
+PR #180 のマージ後 review で検出した2件のうち、次を既存PR #188で是正した。
+
+- 原修正 commit: `73f0d845ee49787231482d776dd605140143bda8`
+- PR #188 取込 commit: `0488e5ed` (同一patchを競合なしでcherry-pick)
+- MemoryService write単一路: 達成済み。CLI直呼びを削除し、service所有writeと境界テストを追加。
+- origin ref未解決: fail-close済み。純粋判定とdoctor hard gateの双方で `ok=false`。
+
+一方、issue #187 の **既存memory内容を更新したcommitがoriginへ到達したかをpath存在だけで
+判定する欠陥**は本修正の対象外であり、§5.2 不変条件5の残件として維持する。origin refの
+解決可否と、解決済みref上のcontent同一性は別の契約であり、前者の是正を後者の達成証跡にしない。
