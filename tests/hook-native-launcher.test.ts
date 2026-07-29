@@ -85,7 +85,14 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     const manifest = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
       engines?: { node?: string };
     };
-    expect(manifest.engines?.node).toBe(">=22.18");
+    // F0a pins engines.node to an exact version (toolchain-pin lint); the
+    // unflagged-TS floor stays 22.18, so ranges and pins below it must fail.
+    const pinned = manifest.engines?.node ?? "";
+    const exact = /^(\d+)\.(\d+)\.\d+$/.exec(pinned);
+    expect(exact).not.toBeNull();
+    const major = Number(exact?.[1]);
+    const minor = Number(exact?.[2]);
+    expect(major > 22 || (major === 22 && minor >= 18)).toBe(true);
   });
 
   it("U-HOOKEXEC-010: keeps Windows process-tree custody open until the Rust kernel owns it", () => {
