@@ -4,12 +4,18 @@ import type { ExecutionMode } from "../runtime/detect";
 import { inferTaskIntent, MODEL_IDS, type ReasoningEffort, type TaskIntent } from "./model-policy";
 
 /**
- * advisor 判断種別 (PO ルーティング仕様 2026-07-14、2026-07-08 行列を supersede):
- * - design / implementation / troubleshooting: 技術系判断。一次相談先は Codex 最上位 (Sol)。
- * - uiux: デザイン/UI 判断。一次相談先は Claude フロンティア (Fable)、次点 Sol。
+ * advisor 判断種別 (PO ルーティング仕様 2026-07-29、2026-07-14 行列を supersede):
+ * - implementation / troubleshooting: 技術判断。一次相談先は Codex 最上位 (Sol)。
+ * - design / progress / uiux: 設計・進行・デザイン判断。一次相談先は Claude
+ *   フロンティア (Fable)、次点 Sol。
+ *
+ * 旧行列との差分は design の移動と progress の新設。旧行列は「設計 = 技術」と
+ * 束ねていたが、PO 判断は技術 (どう作るか) と設計・進行 (何をどの順で作るか) を
+ * 別軸として分ける。
  */
 export const ADVISOR_DECISION_KINDS = [
   "design",
+  "progress",
   "implementation",
   "troubleshooting",
   "uiux",
@@ -98,24 +104,26 @@ function codexRoute(mode: AdvisorConsultationMode): AdvisorRoute {
   };
 }
 
-function fableRoute(): AdvisorRoute {
+function fableRoute(mode: AdvisorConsultationMode): AdvisorRoute {
   return {
     provider: "claude",
     model: MODEL_IDS.claude.fable,
     effort: ADVISOR_EFFORT,
-    consultation_mode: "consult",
+    consultation_mode: mode,
   };
 }
 
 /**
- * ルーティング行列 (PO 仕様 2026-07-14、2026-07-08 行列を supersede):
+ * ルーティング行列 (PO 仕様 2026-07-29、2026-07-14 行列を supersede):
  *
- * | 判断                          | 一次           | fallback (レスポンスエラー時) |
- * | design/impl/troubleshooting  | Sol consult    | Fable consult                 |
- * | uiux (デザイン/UI)           | Fable consult  | Sol consult (次点、PO 明示)   |
+ * | 判断                           | 一次           | fallback (レスポンスエラー時) |
+ * | implementation/troubleshooting | Sol            | Fable                         |
+ * | design / progress / uiux       | Fable          | Sol (次点、PO 明示)           |
  *
- * orchestrator が Opus (frontier 級) の場合、Codex へ渡る経路では相談を
- * 敵対検証へ切り替える (同格追認ではなく反証で価値を出す)。
+ * orchestrator が Opus (frontier 級) の場合、相談は provider を問わず敵対検証へ
+ * 切り替える (同格追認ではなく反証で価値を出す)。判定軸は相談先の provider では
+ * なく orchestrator の tier なので、Fable 一次の経路でも同じ扱いにする
+ * (design を Fable へ移した際に敵対検証が消えるのを防ぐ)。
  * 根拠: Fable レート制限 (project-fable-5-7-13-rate-limit) と Sol の escalation 席実測。
  */
 export function resolveAdvisorRoutes(input: {
@@ -133,23 +141,49 @@ export function resolveAdvisorRoutes(input: {
   if (input.forcedProvider === "claude" || input.mode === "claude-only") {
     // 明示 claude 強制 / claude-only。claude-only では codex fallback を構成しない。
     return {
-      primary: fableRoute(),
+      primary: fableRoute(adversarialForOpus),
       ...(input.mode === "claude-only" ? {} : { fallback: codexRoute(adversarialForOpus) }),
     };
   }
-  if (input.decisionKind === "uiux") {
-    // デザイン/UI 判断は Fable 一次、次点 Sol (PO 2026-07-14)。
-    return { primary: fableRoute(), fallback: codexRoute(adversarialForOpus) };
+  if (
+    input.decisionKind === "design" ||
+    input.decisionKind === "progress" ||
+    input.decisionKind === "uiux"
+  ) {
+    // 設計 / 進行 / デザイン判断は Fable 一次、次点 Sol (PO 2026-07-29)。
+    return { primary: fableRoute(adversarialForOpus), fallback: codexRoute(adversarialForOpus) };
   }
-  // 技術/設計/トラブルシューティング判断は Sol 一次 (PO 2026-07-14)。
-  return { primary: codexRoute(adversarialForOpus), fallback: fableRoute() };
+  // 技術判断 (implementation / troubleshooting) は Sol 一次 (PO 2026-07-29 で不変)。
+  return { primary: codexRoute(adversarialForOpus), fallback: fableRoute(adversarialForOpus) };
 }
 
 const TROUBLESHOOTING_TERMS = ["bug", "crash", "debug", "error", "fail", "incident", "trouble"];
 
+/**
+ * 進行判断語。着手順・優先順位・レーン割りは「何をどの順でやるか」であって技術判断
+ * ではないため、technical term (fail / error 等) を含んでいても進行側へ寄せる。
+ * 実例 2026-07-29: 「CI が赤い PR を先に見るか、設計 freeze を先にやるか」は
+ * troubleshooting 語を含むがレーン選択。
+ */
+const PROGRESS_TERMS = [
+  "lane",
+  "レーン",
+  "優先",
+  "priority",
+  "prioriti",
+  "着手順",
+  "着手",
+  "進行",
+  "段取り",
+  "sequencing",
+  "backlog",
+  "triage",
+];
+
 function inferDecisionKind(taskIntent: TaskIntent, task: string): AdvisorDecisionKind {
   if (taskIntent === "uiux") return "uiux";
   const text = task.toLowerCase();
+  if (PROGRESS_TERMS.some((term) => text.includes(term))) return "progress";
   if (TROUBLESHOOTING_TERMS.some((term) => text.includes(term))) return "troubleshooting";
   return taskIntent === "implementation" || taskIntent === "test" || taskIntent === "lightweight"
     ? "implementation"

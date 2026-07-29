@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 status: confirmed
 created: 2026-07-01
-updated: 2026-07-02
+updated: 2026-07-29
 owner: Codex
 route_signal: feature_addition
 route_mode: add-feature
@@ -137,3 +137,46 @@ Pack review の P1/P2 指摘を受け、team schema / model policy が扱う UT-
 - `bun run lint` -> pass。
 - `bun run vitest run tests\team-model-policy.test.ts tests\team-launch-policy.test.ts tests\team-run.test.ts tests\team-schema.test.ts tests\runtime-adapter.test.ts tests\model-id-ssot.test.ts tests\cli-surface.test.ts --reporter=dot` -> 7 files / 89 tests passed。
 - `bun src\cli.ts db rebuild --json` -> `ok=true`。
+
+## 2026-07-29 advisor ルーティング行列改定 (PO ルール、2026-07-14 行列を supersede)
+
+### 設計判断
+
+**前提**: 旧行列は `design` を「技術系判断」に束ねて Sol 一次にしていた。PO 判断
+(2026-07-29) は、技術 (どう作るか) と設計・進行 (何をどの順で作るか) を別軸として
+分ける。実例として、2026-07-29 のレーン選択相談は `--decision design` で Sol へ
+流れたが、これは本来 Fable が受けるべき進行判断だった。
+
+| 判断種別 | 一次 | fallback |
+|---|---|---|
+| `implementation` / `troubleshooting` (技術) | `gpt-5.6-sol` | `claude-fable-5` |
+| `design` / `progress` / `uiux` (設計・進行・デザイン) | `claude-fable-5` | `gpt-5.6-sol` |
+
+採択した方式:
+
+1. `design` の一次を Sol から Fable へ移す。
+2. 進行判断の種別 `progress` を新設する (レーン選択・優先順位・着手順・段取り)。
+   推論は進行語を technical 語より先に評価する。「CI が fail している PR を先に
+   見るか」は `fail` を含むが判断そのものは進行であり、`troubleshooting` へ
+   流してはならない (U-ROUTE2-012)。
+3. CLI の `--decision` 受理集合を `ADVISOR_DECISION_KINDS` (SSoT) に一致させる。
+   旧実装は `design|implementation` をハードコードしており、既存の `uiux` /
+   `troubleshooting` が CLI から指定できない drift になっていた。
+
+不採択と理由:
+
+- **`design` を Sol に残し `progress` だけ Fable にする**: PO 指示が「設計/進行の
+  判断は Fable」であり、設計を技術側に残すと指示と実装が食い違う。
+- **`adversarial` を Codex 経路限定のまま据え置く**: `design` を Fable へ移すと、
+  opus orchestrator に対する敵対検証が黙って消える。敵対検証の判定軸は相談先の
+  provider ではなく orchestrator の tier なので、Fable 一次でも `adversarial` に
+  切り替える (U-ROUTE2-014 で固定)。
+
+### Evidence
+
+- `bun run test:vitest-snapshot tests/team-model-policy.test.ts` -> 38 passed / 38。
+  新規 oracle: U-ROUTE2-011 (進行判断の推論 → Fable 一次)、U-ROUTE2-012 (technical
+  語を含む進行判断の寄せ先)、U-ROUTE2-013 (技術判断は Sol 一次のまま)、
+  U-ROUTE2-014 (opus 相手は provider 非依存で敵対検証)。
+- `bun run typecheck` -> pass。
+- `bunx biome check src tests --diagnostic-level=error` -> 0 error。

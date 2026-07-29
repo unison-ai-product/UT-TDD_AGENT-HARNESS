@@ -197,7 +197,11 @@ import {
   routeTeamMembers,
   routeToAdapterPlan,
 } from "./task/tier-router";
-import { buildAdvisorDecision } from "./team/advisor-policy";
+import {
+  ADVISOR_DECISION_KINDS,
+  type AdvisorDecisionKind,
+  buildAdvisorDecision,
+} from "./team/advisor-policy";
 import { recommendTeamLaunch } from "./team/launch-policy";
 import {
   buildTeamRunPlan,
@@ -2445,7 +2449,10 @@ program
   .option("--task <text>", "task text")
   .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
   .option("--provider <provider>", "advisor provider (claude|codex)")
-  .option("--decision <kind>", "decision kind (design|implementation); inferred when omitted")
+  .option(
+    "--decision <kind>",
+    "decision kind (design|progress|implementation|troubleshooting|uiux); inferred when omitted",
+  )
   .option("--current-model <model>", "current orchestrator model that needs advice")
   .option("--reason <text>", "why upper-model advice is needed")
   .option("--plan <id>", "PLAN id")
@@ -2476,8 +2483,12 @@ program
         process.exitCode = 1;
         return;
       }
-      if (opts.decision && opts.decision !== "design" && opts.decision !== "implementation") {
-        process.stderr.write("advisor --decision must be design or implementation\n");
+      if (opts.decision && !(ADVISOR_DECISION_KINDS as readonly string[]).includes(opts.decision)) {
+        // 受理集合は advisor-policy の SSoT に従う (旧実装は design|implementation を
+        // ハードコードしており、uiux / troubleshooting が CLI から指定できなかった)。
+        process.stderr.write(
+          `advisor --decision must be one of ${ADVISOR_DECISION_KINDS.join(" | ")}\n`,
+        );
         process.exitCode = 1;
         return;
       }
@@ -2486,7 +2497,7 @@ program
         task,
         mode,
         provider: opts.provider as AdapterProvider | undefined,
-        decisionKind: opts.decision as "design" | "implementation" | undefined,
+        decisionKind: opts.decision as AdvisorDecisionKind | undefined,
         currentModel: opts.currentModel,
         reason: opts.reason,
         planId: opts.plan,
