@@ -81,5 +81,12 @@ export function consumeDoctorResultEnvelope(
   env: NodeJS.ProcessEnv = process.env,
   deps: EnvelopeConsumerDeps = NODE_CONSUMER_DEPS,
 ): DoctorResult | null {
-  return consumeDoctorResultEnvelopeWithReason(env, deps).result;
+  const consumption = consumeDoctorResultEnvelopeWithReason(env, deps);
+  // 採用/自走のどちらに落ちたかを実測として残す (削減効果の証跡は「消費された」ことに依存し、
+  // 黙って自走へ落ちると before/after の差分を誤読するため)。
+  if (env[DOCTOR_RESULT_FILE_ENV]) {
+    process.stderr.write(`doctor-envelope: ${consumption.reason}
+`);
+  }
+  return consumption.result;
 }
