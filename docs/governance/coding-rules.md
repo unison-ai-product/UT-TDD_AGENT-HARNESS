@@ -1,6 +1,8 @@
 # UT-TDD コーディング規約
 
-本書は TypeScript/Bun core の coding-rule SSoT である。
+本書は TypeScript core (Node runtime) の coding-rule SSoT である。Bun は PO 決定
+2026-07-22 で永久 BAN (issue #134 / PLAN-L7-462) であり、新規の Bun 依存・実行経路を
+書かない。
 Requirements reference: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` §7.6.1.
 実行ゲート: `src/lint/coding-rules.ts` を `ut-tdd doctor` から実行する。
 

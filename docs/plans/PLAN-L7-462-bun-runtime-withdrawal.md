@@ -8,7 +8,7 @@ route_signal: incident
 route_mode: incident
 status: draft
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-07-29
 backprop_decision: not_required
 backprop_decision_reason: "Harness 自身の実行 runtime の差し替えであり、製品の外部 requirement / design / test-design 契約は変えない。言語は TypeScript のまま (ADR-001 の言語選定は不変、runtime 節のみ改訂対象)。"
 owner: PM / PO
@@ -22,7 +22,7 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
     artifact_type: markdown_doc
-  - artifact_path: docs/adr/ADR-002-node-runtime-unification.md
+  - artifact_path: docs/adr/ADR-010-node-runtime-unification.md
     artifact_type: markdown_doc
 dependencies:
   parent: null
@@ -44,7 +44,16 @@ generates には載せない (merged-plan-status / duplicate-artifact-ownership 
 draft のため requires の ready 条件を満たさず references 扱い (実装順序は
 Schedule step 0 で拘束)。
 
-## 背景 (PO 方針 2026-07-28「Bun はトラブル多いから差し替えたい」)
+## 位置付け (決定事項であり選好ではない)
+
+Bun 撤退は **PO 決定 2026-07-22「Bun は永久 BAN」** の実行であり、方針検討ではない
+(正本 = issue #134 `Redesign: retire Bun and migrate control plane to TypeScript/Node + Rust`、
+共有 memory `user-po-bun-permanent-ban-node-rust-target`、ADR-001 は改訂済みで Bun を
+新規依存・fallback・検出器 runtime として禁止済み)。本 PLAN は #134 の段階移行を担う
+実行計画であり、採否を再検討する PLAN ではない。2026-07-29 errata: 旧記述は背景を
+「PO 方針 2026-07-28 (差し替えたい)」とだけ書き、決定日・issue #134 に接続していなかった。
+
+## 背景 (反復した Bun 起因トラブル)
 
 Bun 起因・Bun 関与のトラブルが反復している:
 
@@ -94,8 +103,17 @@ Bun 起因・Bun 関与のトラブルが反復している:
 - step 3 (step 2 と並列): `runtime-portability` lint の反転 — 「bun:sqlite 併記
   必須」を「node:sqlite 主・bun 依存の新規追加 fail-close」へ更新し、Bun 残滓の
   再流入を機械で止める。Bun グローバル API 1 ファイルの置換もここ。
-- step 4 (serial): ADR-002 (Node runtime 一本化) を draft し ADR-001 の runtime
+  **2026-07-29 実測で判明した反転対象 (この step の必須内訳)**: 現行
+  `src/lint/runtime-portability.ts` は Bun を *強制* しており、決定と逆を向いている。
+  `package-missing-bun-engine` (`engines.bun` 欠落を error)、build script への
+  `bun build --compile` 要求 (`:122`)、git hook dispatcher を「thin bun dispatcher」と
+  要求 (`:306`)。この 3 点を反転しない限り、Bun を外した瞬間にゲート自身が赤化して
+  撤退が機械的に不可能になる。
+- step 4 (serial): ADR-010 (Node runtime 一本化) を draft し ADR-001 の runtime
   節を supersede (言語 = TypeScript は不変)。PO 採択で confirm。
+  2026-07-29 errata: 旧 generates は `ADR-002-node-runtime-unification.md` を宣言して
+  いたが `ADR-002-dependency-direction-and-auto-map.md` が既存で **番号衝突**していた。
+  空き番号は ADR-010 (001〜009 使用済み、実測)。
 
 ## スコープ外
 
@@ -112,3 +130,7 @@ Bun 起因・Bun 関与のトラブルが反復している:
 - AC-3: 新規の bun: import / Bun グローバル参照が lint で fail-close する回帰
   テストが green (許可リスト方式の恒久 bypass は禁止)。
 - AC-4: db-refresh incident 系 oracle (PLAN-L7-460 の AC-1〜3) が移行後も green。
+- AC-5: `runtime-portability` の Bun 強制 3 点 (`package-missing-bun-engine` /
+  `bun build --compile` 要求 / thin bun dispatcher 要求) が反転され、Bun 非依存の
+  package.json + hook 構成で doctor が green になる回帰テストが存在する
+  (「反転した」という prose ではなく、実 repo 構成に対するゲート実行を証跡とする)。

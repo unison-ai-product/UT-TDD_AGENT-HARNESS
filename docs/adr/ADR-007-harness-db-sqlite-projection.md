@@ -5,6 +5,11 @@
 - **Deciders**: PM (Opus) + PO (ユーザー)
 - **関連**: `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` (state = YAML/JSON、SQLite は「必要時 better-sqlite3」として deferral) / `docs/plans/PLAN-L5-08-harness-db-feedback.md` / `.ut-tdd/audit/A-105-harness-db-feedback-l5.md` / `docs/design/harness/L5-detailed-design/physical-data.md` §2.7/§9 / requirements_v1.2 §6.8・functional-requirements §7 / CLAUDE.md 設計の柱3 (フィードバック機構)
 
+
+> **Runtime errata (2026-07-29)**: 本 ADR 本文の Bun 記述は決定当時の実行手段の記録である。
+> runtime は PO 決定 2026-07-22 (Bun 永久 BAN、issue #134) と ADR-001 改訂により **TypeScript / Node** へ
+> superseded 済み。撤去の段取りは PLAN-L7-462。本文は歴史記録として書き換えない。
+
 ## 背景
 
 ADR-001 (TS/Bun 全面再実装) は永続化を **`.ut-tdd/` file-based state (YAML/JSON)** とし、SQLite は **「必要時 `better-sqlite3`」として採用を deferral** していた (legacy `legacy DB` schema の流用却下は維持)。

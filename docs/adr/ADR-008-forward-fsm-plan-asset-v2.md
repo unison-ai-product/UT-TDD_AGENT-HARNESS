@@ -5,6 +5,11 @@
 - Decision owners: PO / TL
 - Related: `PLAN-L0-01`, `PLAN-L4-22`, `PLAN-L4-23`, `PLAN-L4-24`
 
+
+> **Runtime errata (2026-07-29)**: 本 ADR 本文の Bun 記述は決定当時の実行手段の記録である。
+> runtime は PO 決定 2026-07-22 (Bun 永久 BAN、issue #134) と ADR-001 改訂により **TypeScript / Node** へ
+> superseded 済み。撤去の段取りは PLAN-L7-462。本文は歴史記録として書き換えない。
+
 ## Context
 
 現行 HARNESS は TypeScript/Bun core、SQLite projection、豊富な lint/doctor、Git履歴を持つ一方、Forward の

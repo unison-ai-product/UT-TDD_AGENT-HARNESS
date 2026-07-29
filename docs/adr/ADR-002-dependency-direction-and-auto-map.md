@@ -5,6 +5,11 @@
 - **Deciders**: PM (Opus) + PO (ユーザー)
 - **関連**: `docs/design/harness/L4-basic-design/architecture.md` §3 / `docs/design/harness/L5-detailed-design/module-decomposition.md` §4・§7 / `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` / improvement-backlog IMP-032
 
+
+> **Runtime errata (2026-07-29)**: 本 ADR 本文の Bun 記述は決定当時の実行手段の記録である。
+> runtime は PO 決定 2026-07-22 (Bun 永久 BAN、issue #134) と ADR-001 改訂により **TypeScript / Node** へ
+> superseded 済み。撤去の段取りは PLAN-L7-462。本文は歴史記録として書き換えない。
+
 ## 背景
 
 UT-TDD harness の core が module 化する (cli/schema/lint/plan/vmodel/runtime/doctor + 将来 workflow/adapter ...) なかで、module 間の依存が複雑化する。逆依存や循環依存が混入すると保守が破綻し、テスト容易性も失われる。

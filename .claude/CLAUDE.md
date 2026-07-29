@@ -290,8 +290,11 @@ point back to (PLAN-RECOVERY-12, issue #85).
 ## Cutover Boundary
 
 UT-TDD imports design concepts from previous framework but current product code is
-TypeScript/Bun. Do not describe legacy Python modules or legacy commands as the
-current operating path.
+TypeScript on the Node runtime. Do not describe legacy Python modules or legacy
+commands as the current operating path. Bun is permanently banned as a runtime
+(PO decision 2026-07-22, issue #134): do not add a new Bun dependency or
+execution path, and do not describe the remaining Bun entrypoints as a supported
+fallback — they are time-boxed migration debt removed by PLAN-L7-462.
 
 Current cutover evidence:
 

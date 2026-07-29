@@ -30,8 +30,11 @@ source material is historical reference only; current UT-TDD runtime commands
 use `ut-tdd`, not legacy commands.
 
 ADR-001 is binding: source concepts may be used as design source material, but
-UT-TDD implementation is TypeScript/Bun. old W1-W3a Python is not
-current product runtime.
+UT-TDD implementation is TypeScript on the Node runtime. old W1-W3a Python is
+not current product runtime. Bun is permanently banned as a runtime (PO
+decision 2026-07-22, issue #134): no new Bun dependency or execution path may
+be added, and the remaining Bun entrypoints are time-boxed migration debt being
+removed by PLAN-L7-462, not a supported fallback.
 
 ## Purpose
 
@@ -86,7 +89,7 @@ PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-el
 ## Architecture Boundary
 
 - `docs/`: governance, requirements, ADRs, plans, design, test design, migration, archive
-- `src/`: TypeScript/Bun harness core
+- `src/`: TypeScript harness core (Node runtime; Bun は撤退中の migration debt)
 - `tests/`: Vitest tests
 - `scripts/`: thin OS entrypoints only
 - `.ut-tdd/`: UT-TDD runtime state and audit/handover evidence

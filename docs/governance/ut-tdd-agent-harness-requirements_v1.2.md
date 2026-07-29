@@ -1332,7 +1332,7 @@ Ledgerを直接上書きせず、remote observation eventだけを追加でき�
 | skill/roster/command docs を自動化基盤として catalog 化できる | skill/roster/command docs の path、trigger、role/capability、drift status、recommendation reason、search token を catalog projection として持ち、空 catalog・legacy source 前提残存・guard 不整合を検出できる。 |
 | UT evidence history を query できる (A-122 / IMP-109) | `test_cases / test_runs / test_results / test_artifact_edges / test_flake_events` 相当の projection を持ち、どの UT がどの PLAN / FR / U-* oracle / artifact を証明したか、いつ green だったか、flake や duration regression があるかを参照できる。 |
 | 定量 green profile を再現できる (A-122 / IMP-108) | `review_evidence.tests_green_at <= reviewed_at` に加え、`GreenDefinition` として required command profile、runner (`bun` / powershell / bash / ci)、scope、exit code、evidence path、output digest を記録し、定性レビューが正しい定量 green の後に実施されたことを検証できる。 |
-| DB projection 実装 profile を固定する (A-122 / IMP-110) | Core runtime は Bun/TypeScript を前提に `bun:sqlite` を第一候補とし、schema_version、deterministic rebuild、migration fixture、doctor integration、redacted failure digest を持つ。DB は projection であり docs/state/logs を authoring source として残す。 |
+| DB projection 実装 profile を固定する (A-122 / IMP-110) | Core runtime は TypeScript / Node を前提に `node:sqlite` を第一候補とし (2026-07-29 errata: 旧記述は `bun:sqlite` 第一候補。PO 決定 2026-07-22 の Bun 永久 BAN により反転)、schema_version、deterministic rebuild、migration fixture、doctor integration、redacted failure digest を持つ。DB は projection であり docs/state/logs を authoring source として残す。 |
 | CI / hook / OS evidence matrix を保持できる (A-122 / IMP-114) | PowerShell / Bash / Bun / Claude hook / CI の smoke と green command evidence を同じ projection profile で比較でき、Windows/POSIX 片側欠落を finding 化できる。 |
 | 機密を保存しない | provider transcript 本文、secret、credential、PII は保存対象外。DB は ID、digest、metadata、evidence path、redacted summary のみを持つ。 |
 
@@ -1399,7 +1399,7 @@ UT-TDD は「1 つを直したら、関連する設計・コード・テスト�
 
 **tool adapter 方針**:
 
-- Core collector は TypeScript/Bun で実装し、`bun:sqlite` へ projection する。外部 package は authoring source にしない。
+- Core collector は TypeScript / Node で実装し、`node:sqlite` へ projection する (2026-07-29 errata: 旧記述は TypeScript/Bun + `bun:sqlite`)。外部 package は authoring source にしない。
 - `dependency-cruiser` は JS/TS dependency rule + visualization の optional adapter 候補。循環依存、禁止依存、package.json 欠落、orphan 検出を候補にする。
 - `knip` は unused dependency / file / export 検出の optional adapter 候補。relation graph の dead-node 検出補助にする。
 - `madge` は circular dependency / dependency graph の optional adapter 候補。Graphviz 連携が必要な図化は optional とする。
@@ -1972,7 +1972,7 @@ output:
 
 ### 7.6.1 Coding Rules SSoT (TypeScript core) の正本
 
-ADR-001 により `src/` core は TypeScript/Bun で実装する。coding rules は本要件定義と `docs/governance/coding-rules.md` を SSoT とし、AGENTS / CLAUDE adapter は再定義せず参照する。
+ADR-001 (2026-07-22 改訂) により `src/` core は TypeScript / Node runtime で実装する。Bun は永久 BAN であり新規依存・新規実行経路を追加しない (issue #134 / PLAN-L7-462)。coding rules は本要件定義と `docs/governance/coding-rules.md` を SSoT とし、AGENTS / CLAUDE adapter は再定義せず参照する。
 
 - [x] `tsconfig.json` は `strict: true` / `noImplicitOverride: true` / `noFallthroughCasesInSwitch: true` を維持し、`bun run typecheck` を必須検証に含める。
 - [x] formatter/linter は Biome (`bun run lint`) を正本とし、手動整形ルールではなく tool output を優先する。
@@ -2002,7 +2002,7 @@ DDD/TDD strictness は `docs/governance/ddd-tdd-rules.md` を SSoT とし、doma
 
 # §7.7 source-derived skill pack の curate / 正本化要件
 
-source-derived skill は `vendor source snapshot` から直接実行しない。UT-TDD で使うものだけを `docs/skills/*.md` に **skill pack** として curate / 正本化し、`artifact_type=skill_doc` の PLAN 成果物として管理する。skill 本文は TypeScript literal 化しないが、catalog / recommender / injector / lint は TypeScript/Bun core で実装する。
+source-derived skill は `vendor source snapshot` から直接実行しない。UT-TDD で使うものだけを `docs/skills/*.md` に **skill pack** として curate / 正本化し、`artifact_type=skill_doc` の PLAN 成果物として管理する。skill 本文は TypeScript literal 化しないが、catalog / recommender / injector / lint は TypeScript core (Node runtime) で実装する。
 
 ## 7.7.1 curate 候補 skill pack
 

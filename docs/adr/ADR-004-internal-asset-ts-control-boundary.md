@@ -5,6 +5,11 @@
 - **Deciders**: PM (Opus) + TL (Codex gpt-5.x、real invocation 2026-06-01) + PO (ユーザー)
 - **関連**: [ADR-001](./ADR-001-ut-tdd-harness-redesign-and-language.md) (TS 全面再実装の根本方針、本 ADR が境界を補完) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (契約プラン CLI/hook 前提) / `docs/plans/PLAN-RECOVERY-01-internal-asset-recovery.md` (Recovery) / `docs/plans/PLAN-L4-10-internal-asset-master.md` (本 ADR の起票 PLAN) / `docs/migration/internal-asset-inventory.md` (棚卸) / FR-L1-46〜49 / BR-22
 
+
+> **Runtime errata (2026-07-29)**: 本 ADR 本文の Bun 記述は決定当時の実行手段の記録である。
+> runtime は PO 決定 2026-07-22 (Bun 永久 BAN、issue #134) と ADR-001 改訂により **TypeScript / Node** へ
+> superseded 済み。撤去の段取りは PLAN-L7-462。本文は歴史記録として書き換えない。
+
 ## 背景
 
 UT-TDD harness は source snapshot 由来の **runtime 内部資産** = subagent (`.claude/agents/*.md` 19 個) / skill (`vendor source snapshot skills` 107 個) / command を持つ。これらを「UT-TDD 用に作り替える」必要がある (BR-22、Recovery PLAN-RECOVERY-01 で前提抜けを是正)。
