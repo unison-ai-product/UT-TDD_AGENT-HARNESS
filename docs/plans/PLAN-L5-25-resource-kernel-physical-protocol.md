@@ -35,7 +35,33 @@ dependencies:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T15:10:00+09:00"
+    tests_green_at: "2026-07-29T15:05:00+09:00"
+    verdict: pass-weak
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint (848 PLAN、plan-schedule OK)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-29T15:00:00+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:368462623766175e76783b927571c6db812830af063e413cd5776e7280dc2ebf"
+      - kind: unit_test
+        command: "bun run test:vitest-snapshot tests/plan-lint.test.ts tests/review-evidence.test.ts tests/readability.test.ts tests/green-command-digest.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T15:05:00+09:00"
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
+        anchor_commit: 6fe8a6d5847d001ad29040dbed3a3c8120a32aa2
+    scope: "D0-R 降下 (L5) の cross-family review (Codex/PO 著作 → Claude 検証、hybrid 非 author family)。実測した範囲: (a) 本 PLAN §7 が宣言する IT-RGK-PHYS-001..042 は pair 先 L8 に42件すべて実在し、欠番・範囲外IDは0、(b) pair宣言、parent、generates / references / blocksは整合、(c) oracle-test-trace orphans=0、(d) plan lint green。初回の『oracle ID直書き0件』は3セグメントIDを落とした計測誤りで撤回する。一方、§7とL8 §5末尾がconfirmedの前提とするWindows/Linux実runner、全fixture・観測点・negative expected、control/workload別created count、およびL5全物理契約との全数写像は未検証である。したがってverdict=pass-weak、status=draftを維持し、実装・実runner証拠が揃うまでconfirmしない。"
 status: draft
 sub_doc: internal-processing
 github_issue_id: 152
@@ -89,6 +115,25 @@ admission_receipt:
 PLAN-L4-32が予定した`PLAN-L5-24`は、別ブランチでFreeze checkpoint物理設計として既に確保済みである。
 PLAN IDを再利用せず、全branch採番監査で空いている`PLAN-L5-25`へ本設計を収容する。L4のsystem保証を、
 実装都合で縮小せず、Node control planeとRust native companionの通信・配置・failure domainへ降下する。
+
+### 0.1 D0-R 降下 review の計測記録 (2026-07-29、verdict=pass-weak)
+
+初回 review の根拠の一部は計測誤りだったため撤回する。ただし別の未充足freeze条件が実在するため、
+`pass-weak` / `draft` は維持する。
+
+- **誤りだった記録**: 「本文に oracle ID の直書きが 0 件」。実際は §7 が
+  `IT-RGK-PHYS-001..042` を pair-freeze 条件として宣言している。抽出に使った正規表現が
+  3 セグメント ID (`IT-RGK-PHYS-001` の `RGK-PHYS` 部分) を取りこぼしていた。
+- **再計測 (2026-07-29)**: pair 先 `docs/test-design/harness/L8-integration-test-design.md` の
+  「Resource Kernel物理統合（PLAN-L5-25）」節に `IT-RGK-PHYS-001` から `IT-RGK-PHYS-042` が
+  **42 件すべて実在**し、欠番も範囲外 ID も 0 件。§7 の宣言範囲と完全一致する。
+- **未充足のfreeze条件 (blocking)**: §7は「L8で正負oracle、fixture、観測点、
+  control/workload別created countをfreezeするまでconfirmedにしない」と定める。
+  L8対象節も、Windows/Linux実runner不足をdeferしたままconfirmedへ昇格しないと明記する。
+  現時点では実装・実runner証拠と、L5全物理契約から42 IDへの全数写像が無いため、
+  設計行の存在だけでこの条件を充足したとは扱わない。
+- **解除条件**: 実装後にWindows/Linux両laneで全fixture・観測点・negative expected・
+  control/workload別created countを保存し、L5契約との全数写像で孤児0を証明する。
 
 ## 1. 責務配置と非重複境界
 

@@ -34,8 +34,34 @@ dependencies:
     - docs/test-design/harness/L8-integration-test-design.md
   blocks:
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
-review_evidence: []
-status: draft
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T15:10:00+09:00"
+    tests_green_at: "2026-07-29T15:05:00+09:00"
+    verdict: pass
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint (848 PLAN、plan-schedule OK)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-29T15:00:00+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:368462623766175e76783b927571c6db812830af063e413cd5776e7280dc2ebf"
+      - kind: unit_test
+        command: "bun run test:vitest-snapshot tests/plan-lint.test.ts tests/review-evidence.test.ts tests/readability.test.ts tests/green-command-digest.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T15:05:00+09:00"
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
+        anchor_commit: 6fe8a6d5847d001ad29040dbed3a3c8120a32aa2
+    scope: "D0-N 降下 (L5) の cross-family review (Codex/PO 著作 → Claude 検証、hybrid 非 author family)。実測した範囲: (a) 本 PLAN が宣言する oracle ID 2 件が pair 先 L8 に文字列一致で実在、(b) pair 先 L8 に CAND-CUTOVER 27 件 / CAND-NODEBOOT 13 件の群が実在し本 PLAN の cutover / activation 主題と対応、(c) pair 双方 (physical-data.md / L8-integration-test-design.md) が status=confirmed かつ pair_artifact / next_pair_freeze 相互整合、(d) parent (PLAN-L4-33) が同一 PR train で confirmed 済みであり降下順が成立、(e) generates / references / blocks の宣言ファイルが全件実在、(f) oracle-test-trace orphans=0、(g) ut-tdd plan lint 848 PLAN OK。未検証 (この evidence は主張しない): activation / generation の実行時挙動と、L8 oracle 群が本 PLAN の全契約を漏れなく覆うかの全数写像 — 前者は実装が存在しないため add-design freeze の対象外、後者は ID 存在照合と主題対応までを実測範囲とする。"
+status: confirmed
 sub_doc: internal-processing
 github_issue_id: 152
 admission_receipt:
