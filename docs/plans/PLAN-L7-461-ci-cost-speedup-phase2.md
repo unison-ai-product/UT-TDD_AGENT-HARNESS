@@ -49,7 +49,34 @@ dependencies:
     - docs/plans/PLAN-L7-455-ci-cost-speedup-phase1.md
     - docs/plans/PLAN-L7-221-github-ci-policy-gate.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-fable-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T20:28:00+09:00"
+    tests_green_at: "2026-07-29T20:20:00+09:00"
+    verdict: pass
+    worker_model: codex
+    reviewer_model: claude-fable-5
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint (848 PLAN、plan-schedule OK)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-29T21:35:00+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:d0e4a34c8fdbdd3c4e2931df6b72c812b4bdc9d866ca44550f6504176ce57cab"
+        anchor_commit: 9c9a94446f8b19dd374d34a936541e0a08850289
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/doctor-result-file.test.ts tests/vitest-snapshot-runner.test.ts tests/github-ci-policy.test.ts tests/green-command-digest.test.ts tests/change-lane.test.ts --reporter=dot (5 files / 168 tests passed、detached snapshot、exact HEAD d50962ae)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T20:20:00+09:00"
+        evidence_path: tests/doctor-result-file.test.ts
+        output_digest: "sha256:ca52965bd6ae6ae97f22c6f04156eb365e1729d9c692713415fe573cec82c79d"
+        anchor_commit: 9c9a94446f8b19dd374d34a936541e0a08850289
+    scope: "PR #189 exact HEAD d50962ae の closing cross-review (Codex 著作 → Claude 検証、blind、非 author family。PR #189 issuecomment-5117012108)。claim-blind=PASS: AC-1 の before/after を attempts API で独立復元 (run 30439854225 attempt 1 = linux success 251s、run 30440302849 doctor step 54s / test step 240s / job 334s、before 394s)、envelope 消費を CI ログ marker (doctor-envelope: accepted) で独立確認、detached snapshot で typecheck + 5 files / 168 tests green。spec-blind=FLAG 1 件 (moderate、issue #193 へ起票): --setup-smoke --result-file 併用で envelope が scope=full/全 check_ids の偽申告になり full 期待 consumer に受理される経路 (現行 CI 配線では runtime_step_manifest pin により非顕在)。本 confirm はスコープ 1 (doctor 単一実行化) 限定であり、スコープ 2 (test shard 分割、AC-3/4) は未着手のまま残 AC を issue #109 が保持する。注記: PR merge (2026-07-29T20:21 JST) が本レビュー判定投稿 (同 20:28-30 JST) に先行した。判定は merge 済み内容と同一の exact HEAD に対するもので有効だが、レビュー完了前 merge は工程違反としてインシデント記録済み。"
 ---
 
 # PLAN-L7-461 (troubleshoot): GitHub CI 高速化 Phase 2
