@@ -64,6 +64,57 @@ export function resolveSnapshotSource(repoRoot: string): SnapshotSource {
   return { kind: "git", revision };
 }
 
+/**
+ * snapshot 内で default branch の ref を解決できるようにするための注入情報 (PLAN-L7-461)。
+ *
+ * snapshot は clone なので、CI checkout のように local branch を持たない面
+ * (detached HEAD + remote-tracking ref のみ) から作ると default branch の ref が消える。
+ * ref 依存の doctor check — `memory-sync` (`git ls-tree origin/main`) と
+ * `merged-plan-status` (canonical target 解決、issue #186) — は snapshot 内で
+ * 評価不能になり、前者は判定が変わり後者は throw する。producer と consumer で
+ * 同じ観測をするために、作成時に ref→SHA をそのまま持ち込む。
+ */
+export interface DefaultBranchRef {
+  /** default branch 名 (例 `main`)。 */
+  branch: string;
+  /** source 側で解決できた ref の完全名。 */
+  sourceRef: string;
+  /** ref が指す commit SHA。 */
+  sha: string;
+}
+
+/**
+ * source 側の default branch ref を解決する。解決できない面では **null を返し注入しない**
+ * (存在しない ref を捏造すると ref 依存 check の fail-close が壊れる)。
+ */
+export function resolveDefaultBranchRef(repoRoot: string): DefaultBranchRef | null {
+  const symbolic = output("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], repoRoot);
+  const branch = symbolic?.replace(/^origin\//, "") || "main";
+  for (const sourceRef of [`refs/remotes/origin/${branch}`, `refs/heads/${branch}`]) {
+    const sha = output("git", ["rev-parse", "--verify", `${sourceRef}^{commit}`], repoRoot);
+    if (sha) return { branch, sourceRef, sha };
+  }
+  return null;
+}
+
+/**
+ * 解決済みの default branch ref を snapshot へ複製する。HEAD は動かさない
+ * (検証対象 revision は不変)。
+ */
+export function injectDefaultBranchRef(
+  snapshotRoot: string,
+  sourceRepo: string,
+  ref: DefaultBranchRef,
+): void {
+  const target = `refs/remotes/origin/${ref.branch}`;
+  run(
+    "git",
+    ["fetch", "--no-tags", "--quiet", sourceRepo, `+${ref.sourceRef}:${target}`],
+    snapshotRoot,
+  );
+  run("git", ["symbolic-ref", "refs/remotes/origin/HEAD", target], snapshotRoot);
+}
+
 export function removeSnapshot(snapshotRoot: string, remove = rmSync): void {
   const failures: unknown[] = [];
   try {
@@ -103,6 +154,10 @@ export function createSnapshot(
     run("git", ["checkout", "--detach", source.revision], snapshotRoot);
     if (output("git", ["rev-parse", "HEAD"], snapshotRoot) !== source.revision)
       throw new Error("snapshot revision mismatch");
+    // ref 依存 check を producer / consumer で同値にする (PLAN-L7-461)。
+    // 解決できない面では注入せず、従来どおり fail-close させる。
+    const defaultBranchRef = resolveDefaultBranchRef(repoRoot);
+    if (defaultBranchRef) injectDefaultBranchRef(snapshotRoot, repoRoot, defaultBranchRef);
     return;
   }
   cpSync(repoRoot, snapshotRoot, {

@@ -411,11 +411,15 @@ describe("snapshot default branch ref injection (PLAN-L7-461)", () => {
     try {
       // default branch の痕跡を全て落とす (解決不能な面)。
       git(checkout, "remote", "remove", "origin");
-      expect(gitStatus(checkout, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}")).not.toBe(0);
+      expect(
+        gitStatus(checkout, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}"),
+      ).not.toBe(0);
 
       createSnapshot(checkout, snapshot);
 
-      expect(gitStatus(snapshot, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}")).not.toBe(0);
+      expect(
+        gitStatus(snapshot, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}"),
+      ).not.toBe(0);
       expect(gitStatus(snapshot, "rev-parse", "--verify", "refs/heads/main^{commit}")).not.toBe(0);
     } finally {
       removeTestTree(origin);
