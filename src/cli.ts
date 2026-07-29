@@ -43,6 +43,7 @@ import {
   DOCTOR_RUN_PROFILES,
   type DoctorRunProfileId,
 } from "./doctor/check-registry";
+import { writeDoctorResultEnvelopeFile } from "./doctor/result-file";
 import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock";
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record";
@@ -601,6 +602,10 @@ program
   .option("--profiles", "list available doctor profiles and exit")
   .option("--scope <scope>", "limit doctor checks to a supported scope (full|toolchain)")
   .option("--timing", "include per-check doctor timing diagnostics")
+  .option(
+    "--result-file <path>",
+    "write the measured result as an envelope for a same-job consumer (PLAN-L7-461)",
+  )
   .option("--json", "JSON output")
   .action(
     (opts: {
@@ -611,6 +616,7 @@ program
       profiles?: boolean;
       scope?: string;
       timing?: boolean;
+      resultFile?: string;
       json?: boolean;
     }) => {
       if (opts.profiles === true) {
@@ -674,6 +680,26 @@ program
         });
       } finally {
         lock.release();
+      }
+      if (opts.resultFile) {
+        // PLAN-L7-461: 同一 job 内の consumer (vitest fence) が「どの面をどの条件で観測したか」を
+        // 完全一致で検査できるよう、観測面ごと書き出す。書き出し失敗は測定自体を失敗させない
+        // (consumer は envelope 不在で自走へ fail-close する)。
+        try {
+          writeDoctorResultEnvelopeFile(opts.resultFile, process.cwd(), {
+            scope,
+            profile: profile ?? null,
+            options: {
+              strict_green_command_digest: opts.strictGreenCommandDigest === true,
+              timing: opts.timing === true,
+            },
+            result: r,
+          });
+        } catch (error) {
+          process.stderr.write(
+            `doctor: result-file の書き出しに失敗 (consumer は自走へ落ちる): ${String(error)}\n`,
+          );
+        }
       }
       if (opts.json) {
         process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);

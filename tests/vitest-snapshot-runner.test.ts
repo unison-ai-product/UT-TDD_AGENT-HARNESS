@@ -440,3 +440,84 @@ describe("vitest snapshot runner", () => {
     expect(called).toEqual(["snapshot", "cache"]);
   });
 });
+
+/**
+ * PLAN-L7-461 スコープ1 前提: snapshot は clone なので、CI checkout のように
+ * local branch を持たない (detached HEAD) 面から作ると default branch の ref が消える。
+ * ref 依存 check (`memory-sync` の `git ls-tree origin/main`、`merged-plan-status` の
+ * canonical target 解決) は snapshot 内で評価不能になり、前者は判定変化、後者は throw する
+ * (issue #186 で実測)。snapshot 作成時に default branch の ref→SHA を注入して同値にする。
+ */
+describe("snapshot default branch ref injection (PLAN-L7-461)", () => {
+  const git = (cwd: string, ...args: string[]): string => {
+    const r = spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
+    return (r.stdout ?? "").trim();
+  };
+  const gitStatus = (cwd: string, ...args: string[]): number | null =>
+    spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true }).status;
+
+  /** CI checkout と同型の面を作る: default branch は remote-tracking ref にだけ在り、HEAD は detached。 */
+  const makeDetachedCheckout = (): { origin: string; checkout: string; sha: string } => {
+    const origin = mkdtempSync(join(tmpdir(), "ut-tdd-refinject-origin-"));
+    git(origin, "init", "--initial-branch=main");
+    git(origin, "config", "user.email", "test@example.com");
+    git(origin, "config", "user.name", "test");
+    writeFileSync(join(origin, "seed.txt"), "seed\n");
+    git(origin, "add", "seed.txt");
+    git(origin, "commit", "-m", "seed");
+    const sha = git(origin, "rev-parse", "HEAD");
+
+    const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-refinject-checkout-"));
+    removeTestTree(checkout);
+    git(tmpdir(), "clone", "--no-tags", origin, checkout);
+    git(checkout, "checkout", "--detach", sha);
+    git(checkout, "branch", "-D", "main");
+    return { origin, checkout, sha };
+  };
+
+  it("U-TESTHYGIENE-053: injects the default branch ref so ref-dependent checks resolve inside the snapshot", () => {
+    const { origin, checkout, sha } = makeDetachedCheckout();
+    const snapshot = `${checkout}-snapshot`;
+    try {
+      // 前提確認: local branch が無いので素の clone では default branch ref が生えない。
+      expect(gitStatus(checkout, "rev-parse", "--verify", "main^{commit}")).not.toBe(0);
+
+      createSnapshot(checkout, snapshot);
+
+      expect(git(snapshot, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}")).toBe(sha);
+      expect(git(snapshot, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")).toBe(
+        "origin/main",
+      );
+      // 注入は HEAD を動かさない (検証対象 revision は不変)。
+      expect(git(snapshot, "rev-parse", "HEAD")).toBe(sha);
+    } finally {
+      removeTestTree(origin);
+      removeTestTree(checkout);
+      removeTestTree(snapshot);
+    }
+  });
+
+  it("U-TESTHYGIENE-054: fabricates no ref when the source has no default branch, so ref-dependent checks stay fail-closed", () => {
+    const { origin, checkout } = makeDetachedCheckout();
+    const snapshot = `${checkout}-snapshot`;
+    try {
+      // default branch の痕跡を全て落とす (解決不能な面)。
+      git(checkout, "remote", "remove", "origin");
+      expect(
+        gitStatus(checkout, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}"),
+      ).not.toBe(0);
+
+      createSnapshot(checkout, snapshot);
+
+      expect(
+        gitStatus(snapshot, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}"),
+      ).not.toBe(0);
+      expect(gitStatus(snapshot, "rev-parse", "--verify", "refs/heads/main^{commit}")).not.toBe(0);
+    } finally {
+      removeTestTree(origin);
+      removeTestTree(checkout);
+      removeTestTree(snapshot);
+    }
+  });
+});

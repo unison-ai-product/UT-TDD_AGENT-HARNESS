@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, win32 } from "node:path";
+import { resolveDefaultBranchRef } from "../src/git/default-branch";
 import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash";
 
 function run(
@@ -62,6 +63,33 @@ export function resolveSnapshotSource(repoRoot: string): SnapshotSource {
   const revision = output("git", ["rev-parse", "HEAD"], repoRoot);
   if (!revision) throw new Error("snapshot source HEAD cannot be resolved");
   return { kind: "git", revision };
+}
+
+/**
+ * snapshot 内で default branch の ref を解決できるようにするための注入情報 (PLAN-L7-461)。
+ *
+ * snapshot は clone なので、CI checkout のように local branch を持たない面
+ * (detached HEAD + remote-tracking ref のみ) から作ると default branch の ref が消える。
+ * ref 依存の doctor check — `memory-sync` (`git ls-tree origin/main`) と
+ * `merged-plan-status` (canonical target 解決、issue #186) — は snapshot 内で
+ * 評価不能になり、前者は判定が変わり後者は throw する。producer と consumer で
+ * 同じ観測をするために、作成時に ref→SHA をそのまま持ち込む。
+ */
+export type { DefaultBranchRef } from "../src/git/default-branch";
+export { resolveDefaultBranchRef } from "../src/git/default-branch";
+
+/**
+ * 解決済みの default branch ref を snapshot へ複製する。HEAD は動かさない
+ * (検証対象 revision は不変)。
+ */
+export function injectDefaultBranchRef(
+  snapshotRoot: string,
+  sourceRepo: string,
+  ref: { branch: string; ref: string; sha: string },
+): void {
+  const target = `refs/remotes/origin/${ref.branch}`;
+  run("git", ["fetch", "--no-tags", "--quiet", sourceRepo, `+${ref.ref}:${target}`], snapshotRoot);
+  run("git", ["symbolic-ref", "refs/remotes/origin/HEAD", target], snapshotRoot);
 }
 
 export function removeSnapshot(snapshotRoot: string, remove = rmSync): void {
@@ -117,6 +145,10 @@ export function createSnapshot(
     }
     if (output("git", ["rev-parse", "HEAD"], snapshotRoot) !== source.revision)
       throw new Error("snapshot revision mismatch");
+    // ref 依存 check を producer / consumer で同値にする (PLAN-L7-461)。
+    // 解決できない面では注入せず、従来どおり fail-close させる。
+    const defaultBranchRef = resolveDefaultBranchRef(repoRoot);
+    if (defaultBranchRef) injectDefaultBranchRef(snapshotRoot, repoRoot, defaultBranchRef);
     return;
   }
   cpSync(repoRoot, snapshotRoot, {
