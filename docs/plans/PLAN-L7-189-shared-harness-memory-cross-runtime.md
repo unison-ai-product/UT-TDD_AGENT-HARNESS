@@ -302,6 +302,12 @@ PR #180 のマージ後 review で検出した2件のうち、次を既存PR #18
 - MemoryService write単一路: 達成済み。CLI直呼びを削除し、service所有writeと境界テストを追加。
 - origin ref未解決: fail-close済み。純粋判定とdoctor hard gateの双方で `ok=false`。
 
+| oracle | 契約 | 実装・証跡 |
+|---|---|---|
+| U-MEMORY-001 / 002 | authored memoryのservice writeとsecret副作用前拒否 | `src/memory/service.ts#writeMemory` / `tests/memory.test.ts` |
+| U-MEMORY-019 | storage primitiveの非公開化とproduction全体のdirect import / export / re-export禁止 | primitiveをMemoryService内部へ移動。`tests/memory-service.test.ts` が `src/**` 全件をnegative scan |
+| U-MEMSYNC-004 | origin ref未解決をOKにしない | `analyzeMemorySync.ok=false` + doctor hard gate。`tests/memory-sync.test.ts` |
+
 一方、issue #187 の **既存memory内容を更新したcommitがoriginへ到達したかをpath存在だけで
 判定する欠陥**は本修正の対象外であり、§5.2 不変条件5の残件として維持する。origin refの
 解決可否と、解決済みref上のcontent同一性は別の契約であり、前者の是正を後者の達成証跡にしない。

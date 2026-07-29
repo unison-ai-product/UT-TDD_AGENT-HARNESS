@@ -12,13 +12,15 @@
  * 旧経路 (`selectMemoryEntries(db)`) は DB 側 body を読む read model だった。本 service が
  * 読み路を引き継ぐため、呼び元は service を通す (境界は tests/memory-service.test.ts が固定)。
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { isSecretLike } from "../secret";
 import {
   type MemoryEntry,
+  type MemoryKind,
   type MemoryWriteInput,
+  memoryIdFor,
   parseMemoryFile,
-  writeMemoryEntry,
 } from "./index";
 
 /** index とファイル正本の関係。degraded を無音にしないための型。 */
@@ -55,6 +57,43 @@ export interface MemoryQueryOptions {
 /** 正本への書き込みを含む memory storage の単一入口。 */
 export function writeMemory(input: { repoRoot: string; input: MemoryWriteInput }): MemoryEntry {
   return writeMemoryEntry(input.repoRoot, input.input);
+}
+
+const WRITABLE_MEMORY_KINDS = new Set<MemoryKind>(["project", "feedback", "reference", "user"]);
+
+/** MemoryService 内部だけが所有する正本 storage primitive。 */
+function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntry {
+  if (!WRITABLE_MEMORY_KINDS.has(input.kind)) throw new Error(`unknown memory kind: ${input.kind}`);
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (!title) throw new Error("memory title is required");
+  if (!body) throw new Error("memory body is required");
+  const tags = [...new Set(input.tags ?? [])]
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .sort();
+  if (isSecretLike([title, body, ...tags].join("\n")))
+    throw new Error("memory must not contain secret-like values");
+
+  const memoryId = memoryIdFor({ kind: input.kind, title });
+  const slug = memoryId.slice(`memory:${input.kind}:`.length);
+  const sourcePath = join(".ut-tdd", "memory", `${input.kind}-${slug}.md`).replaceAll("\\", "/");
+  const updatedAt = input.now ?? new Date().toISOString();
+  const content = [
+    "---",
+    `memory_id: ${memoryId}`,
+    `kind: ${input.kind}`,
+    `title: ${JSON.stringify(title)}`,
+    `tags: [${tags.map((tag) => JSON.stringify(tag)).join(", ")}]`,
+    `updated_at: ${updatedAt}`,
+    "---",
+    "",
+    body,
+    "",
+  ].join("\n");
+  mkdirSync(join(repoRoot, ".ut-tdd", "memory"), { recursive: true });
+  writeFileSync(join(repoRoot, sourcePath), content, "utf8");
+  return parseMemoryFile(repoRoot, sourcePath, content);
 }
 
 interface MemoryIndexDb {

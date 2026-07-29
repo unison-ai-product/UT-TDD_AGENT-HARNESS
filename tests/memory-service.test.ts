@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { type MemoryEntry, selectMemoryEntries, writeMemoryEntry } from "../src/memory/index";
+import { type MemoryEntry, selectMemoryEntries } from "../src/memory/index";
 import {
   compareIndexToCorpus,
   loadMemoryCorpus,
@@ -53,32 +53,44 @@ function legacyDbFrom(entries: MemoryEntry[]) {
 }
 
 function seedCorpus(repo: string): void {
-  writeMemoryEntry(repo, {
-    kind: "project",
-    title: "Alpha lane",
-    body: "Codex レーンのゴールは train 単位で与える。",
-    tags: ["codex", "goal"],
-    now: "2026-07-02T00:00:00.000Z",
+  writeMemory({
+    repoRoot: repo,
+    input: {
+      kind: "project",
+      title: "Alpha lane",
+      body: "Codex レーンのゴールは train 単位で与える。",
+      tags: ["codex", "goal"],
+      now: "2026-07-02T00:00:00.000Z",
+    },
   });
-  writeMemoryEntry(repo, {
-    kind: "feedback",
-    title: "Beta rule",
-    body: "レビューは author でない family が行う。",
-    tags: ["review"],
-    now: "2026-07-03T00:00:00.000Z",
+  writeMemory({
+    repoRoot: repo,
+    input: {
+      kind: "feedback",
+      title: "Beta rule",
+      body: "レビューは author でない family が行う。",
+      tags: ["review"],
+      now: "2026-07-03T00:00:00.000Z",
+    },
   });
   // updated_at 同値で memory_id の tie-break が効くことを見るための 2 件。
-  writeMemoryEntry(repo, {
-    kind: "project",
-    title: "Gamma tie",
-    body: "tie-break は memory_id 昇順。",
-    now: "2026-07-01T00:00:00.000Z",
+  writeMemory({
+    repoRoot: repo,
+    input: {
+      kind: "project",
+      title: "Gamma tie",
+      body: "tie-break は memory_id 昇順。",
+      now: "2026-07-01T00:00:00.000Z",
+    },
   });
-  writeMemoryEntry(repo, {
-    kind: "project",
-    title: "Delta tie",
-    body: "tie-break は memory_id 昇順。",
-    now: "2026-07-01T00:00:00.000Z",
+  writeMemory({
+    repoRoot: repo,
+    input: {
+      kind: "project",
+      title: "Delta tie",
+      body: "tie-break は memory_id 昇順。",
+      now: "2026-07-01T00:00:00.000Z",
+    },
   });
 }
 
@@ -343,5 +355,33 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
     expect(readFileSync(join(root, "cli.ts"), "utf8")).not.toContain("writeMemoryEntry");
     // service が実在し、読み路として登録されていること (境界の空振り防止)。
     expect(tableLiteral).toContain("memory/service.ts");
+  });
+
+  // U-MEMORY-019: storage primitive は MemoryService 内部だけ。production の直接利用を fail-close。
+  it("rejects production imports, exports, and re-exports of the memory storage primitive", () => {
+    const root = join(
+      workspaceRead({
+        id: "memory-write-service-boundary",
+        mode: "head_snapshot",
+        reason: "PLAN-L7-189: write は MemoryService 単一路であることを全 production source で検査",
+      }),
+      "src",
+    );
+    const violations: string[] = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!entry.name.endsWith(".ts")) continue;
+        const rel = full.slice(root.length + 1).replaceAll("\\", "/");
+        if (rel === "memory/service.ts") continue;
+        if (readFileSync(full, "utf8").includes("writeMemoryEntry")) violations.push(rel);
+      }
+    };
+    walk(root);
+    expect(violations).toEqual([]);
   });
 });

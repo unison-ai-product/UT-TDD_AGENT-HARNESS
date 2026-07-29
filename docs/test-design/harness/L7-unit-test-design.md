@@ -155,12 +155,13 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | U-ID | 関数 / surface | oracle |
 |------|---|---|
-| U-MEMORY-001 | `writeMemoryEntry` / `loadMemoryEntries` | `.ut-tdd/memory/<kind>-<slug>.md` を authored source として書き、frontmatter (`memory_id`, `kind`, `title`, `tags`, `updated_at`) と本文を deterministic に再読込できる。 |
-| U-MEMORY-002 | `writeMemoryEntry` / `parseMemoryFile` | title/body/tags または file 全体に secret-like payload があれば fail-close し、memory file / projection row を作らない。 |
+| U-MEMORY-001 | `MemoryService.writeMemory` / `loadMemoryCorpus` | 唯一の公開write入口から `.ut-tdd/memory/<kind>-<slug>.md` をauthored sourceとして書き、frontmatter (`memory_id`, `kind`, `title`, `tags`, `updated_at`) と本文をdeterministicに再読込できる。 |
+| U-MEMORY-002 | `MemoryService.writeMemory` / `parseMemoryFile` | title/body/tagsまたはfile全体にsecret-like payloadがあれば副作用前にfail-closeし、memory file / projection rowを作らない。 |
 | U-MEMORY-003 | `rebuildHarnessDb` / `projectMemoryEntries` / `selectMemoryEntries` | `.ut-tdd/memory/*.md` から `memory_entries` へ projection し、query/limit 付きで read-only に選択できる。 |
 | U-MEMORY-004 | `renderMemorySurface` / `ut-tdd memory recall` / SessionStart side effect | Claude/Codex 共通の `harness.db memory` block を出力し、空ならノイズを出さない。db 不在・破損・lock 時は fail-open で runtime を止めない。 |
 | U-MEMORY-005 | `evaluateMemoryPromotion(events)` / Stop summary | commitまたはplan_switchがありmemory write成功が無いsessionだけ`memory_promotion_missed` telemetry候補へ進める。本文・prompt・git diffを読まず、memory書込みを強制しない。 |
 | U-MEMORY-006 | feedback lifecycle projection | telemetryだけがTTL後ack対象で、gate/actionableはsource解消まで残る。消化済telemetryは同一sourceの再投影でopenへ戻らず、新観測だけが新generationを作る。DB書込失敗はfail-open。 |
+| U-MEMORY-019 | MemoryService write boundary negative test | `src/**` の全production TypeScriptを走査し、MemoryService外でstorage primitiveを直接参照・import・export・re-exportするsourceが1件でもあればfail-closeする。primitiveはpublic exportに存在せず、CLIを含むconsumerは`writeMemory`だけを使う。 |
 
 ### §1.9 U-SLOT (agent-slots 由来、PLAN-L7-08 / IMP-050)
 

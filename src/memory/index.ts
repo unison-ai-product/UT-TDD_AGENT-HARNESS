@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { isSecretLike } from "../secret";
@@ -65,49 +65,8 @@ function memoryRoot(repoRoot: string): string {
   return join(repoRoot, ".ut-tdd", "memory");
 }
 
-function assertMemorySafe(input: { title: string; body: string; tags?: string[] }): void {
-  const payload = [input.title, input.body, ...(input.tags ?? [])].join("\n");
-  if (isSecretLike(payload)) {
-    throw new Error("memory must not contain secret-like values");
-  }
-}
-
 export function memoryIdFor(input: { kind: MemoryKind; title: string }): string {
   return `memory:${input.kind}:${slugify(input.title)}`;
-}
-
-export function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntry {
-  if (!VALID_KINDS.has(input.kind)) throw new Error(`unknown memory kind: ${input.kind}`);
-  const title = input.title.trim();
-  const body = input.body.trim();
-  if (!title) throw new Error("memory title is required");
-  if (!body) throw new Error("memory body is required");
-  const tags = [...new Set(input.tags ?? [])]
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .sort();
-  assertMemorySafe({ title, body, tags });
-
-  const root = memoryRoot(repoRoot);
-  mkdirSync(root, { recursive: true });
-  const id = memoryIdFor({ kind: input.kind, title });
-  const fileName = `${input.kind}-${slugify(title)}.md`;
-  const sourcePath = join(".ut-tdd", "memory", fileName).replaceAll("\\", "/");
-  const updatedAt = input.now ?? new Date().toISOString();
-  const content = [
-    "---",
-    `memory_id: ${id}`,
-    `kind: ${input.kind}`,
-    `title: ${JSON.stringify(title)}`,
-    `tags: [${tags.map((tag) => JSON.stringify(tag)).join(", ")}]`,
-    `updated_at: ${updatedAt}`,
-    "---",
-    "",
-    body,
-    "",
-  ].join("\n");
-  writeFileSync(join(repoRoot, sourcePath), content, "utf8");
-  return parseMemoryFile(repoRoot, sourcePath, content);
 }
 
 export function parseMemoryFile(
