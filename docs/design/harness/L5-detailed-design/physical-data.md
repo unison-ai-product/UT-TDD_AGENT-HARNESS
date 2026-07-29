@@ -118,7 +118,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 ### §2.7 SQLite projection DB の定義 (`harness.db`)
 
-`harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Node runtime の `node:sqlite` を唯一の core adapter とし、Bun adapter や runtime fallback は設けない。
+`harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
 #### §2.7.1 canonical ledgerファイル正本registry
 
@@ -355,7 +355,7 @@ Phase 2 close review では、DB design が workflow、guardrail、skill、quali
 | table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
 | `test_cases` | `test_case_id` (TEXT) | `test_run_id` (TEXT), `test_file` (TEXT), `test_name` (TEXT), `plan_id` (TEXT), `fr_id` (TEXT), `artifact_id` (TEXT), `kind` (TEXT), `oracle_id` (TEXT), `name` (TEXT), `first_seen_at` (TEXT), `last_seen_at` (TEXT), `status` (TEXT), `duration_ms` (REAL), `evidence_path` (TEXT) | 各 UT oracle を PLAN/FR/artifact で query 可能にする。 |
-| `test_runs` | `test_run_id` (TEXT) | `session_id` (TEXT), `plan_id` (TEXT), `command` (TEXT), `runner` (TEXT), `runtime` (TEXT), `os` (TEXT), `shell` (TEXT), `scope` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `exit_code` (INTEGER), `evidence_path` (TEXT), `output_digest` (TEXT), `green_definition_id` (TEXT), `status` (TEXT) | 実行済みの定量 test command を 1 run として記録する。主対象は Node/Vitest/doctor/lint run である。`review_evidence.green_commands[]` は PLAN-local green command projection の frontmatter source とする。 |
+| `test_runs` | `test_run_id` (TEXT) | `session_id` (TEXT), `plan_id` (TEXT), `command` (TEXT), `runner` (TEXT), `runtime` (TEXT), `os` (TEXT), `shell` (TEXT), `scope` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `exit_code` (INTEGER), `evidence_path` (TEXT), `output_digest` (TEXT), `green_definition_id` (TEXT), `status` (TEXT) | 実行済みの定量 test command を 1 run として記録する。主対象は Bun/vitest/doctor/lint run である。`review_evidence.green_commands[]` は PLAN-local green command projection の frontmatter source とする。 |
 | `test_results` | `test_result_id` (TEXT) | `test_run_id` (TEXT), `test_case_id` (TEXT), `oracle_id` (TEXT), `status` (TEXT), `duration_ms` (REAL), `failure_digest` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `message` (TEXT), `evidence_path` (TEXT) | case と run ごとの pass/fail/skip/todo を追跡する。 |
 | `test_artifact_edges` | `edge_id` (TEXT) | `test_artifact_edge_id` (TEXT), `test_case_id` (TEXT), `test_run_id` (TEXT), `artifact_id` (TEXT), `plan_id` (TEXT), `source_path` (TEXT), `artifact_path` (TEXT), `edge_kind` (TEXT), `oracle_id` (TEXT), `evidence_path` (TEXT) | `trace_edges` を過負荷にせず、test evidence を V-model trace へ戻す。 |
 | `test_flake_events` | `flake_event_id` | `test_case_id`, `window`, `pass_count`, `fail_count`, `flake_score`, `computed_at`, `evidence_path` | 不安定 test と duration regression を quality signal として surface する。 |
@@ -372,8 +372,8 @@ Phase 2 close review では、DB design が workflow、guardrail、skill、quali
 
 実装制約:
 
-- Node を default execution runtime とする。collector は利用可能な場合 Vitest JSON output を読み、individual case data が利用できない場合は command/evidence digest へ fallback する。
-- DB write は core runtime で `node:sqlite` を使う。Bun adapter / runtime fallback は設けない。
+- Bun を default execution runtime とする。collector は利用可能な場合 Bun/vitest JSON output を読み、individual case data が利用できない場合は command/evidence digest へ fallback する。
+- DB write は core runtime で `bun:sqlite` を使う。external adapter は同じ schema と rebuild semantics を維持する場合だけ compatibility layer を使ってよい。
 - raw provider transcript、secret、PII は挿入しない。`failure_digest` は persistence 前に redaction を適用した bounded digest とする。
 - missing `plan_id`、unresolved `oracle_id`、green definition mismatch は silent drop ではなく `findings` row にする。
 
@@ -436,7 +436,7 @@ DB は cross-cutting impact analysis を query 可能にしなければならな
 
 tool adapter profile:
 
-- core parser: TypeScript AST と Node 上の Markdown/YAML scanner。これを default SSoT path とする。
+- core parser: TypeScript/Bun AST と Markdown/YAML scanner。これを default SSoT path とする。
 - optional dependency rule/graph は `dependency-cruiser` とする。
 - optional unused dependency/export/file detector は `knip` とする。
 - optional circular graph helper は `madge` とする。

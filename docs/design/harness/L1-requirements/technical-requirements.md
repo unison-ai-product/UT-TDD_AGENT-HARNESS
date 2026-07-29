@@ -19,14 +19,14 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | 項目 | 内容 | 根拠 |
 |------|------|------|
-| **実装言語** | TypeScript (Node runtime) | ADR-001: legacy source は設計概念のみ取り込み、内部は TS で全面再実装 |
+| **実装言語** | TypeScript (Bun runtime) | ADR-001: legacy source は設計概念のみ取り込み、内部は TS で全面再実装 |
 | **対象 OS** | Windows / macOS / Linux 全て第一級サポート | NFR-01 cross-platform native |
 | **AI ランタイム** | Claude Code + Codex hybrid を主軸 (standalone / claude-only / codex-only / hybrid の 4 mode) | NFR-03 AI mode 非依存 |
 | **統制対象 repo 言語** | 非依存 (全種類) | NFR-04 言語非依存 |
 | **harness state** | ファイルベース (`.ut-tdd/` 配下) + `.ut-tdd/harness.db` SQLite projection | 採用確定済 (functional-requirements.md / L4 data.md 準拠。旧「DB は L2/L4 で検討」は決定済につき PLAN-L7-459 M8 で更新)。file state が正本、DB は projection |
 | **source reference snapshot** | migration reference として snapshot 隔離、read-only | CLAUDE.md 禁止事項 |
 | **shell entrypoint** | `scripts/ut-tdd` (bash) / `scripts/ut-tdd.ps1` (PowerShell) | Windows ネイティブ対応 |
-| **テスト** | vitest (`tests/*.test.ts`) | ADR-001 TS/Node 準拠 |
+| **テスト** | vitest (`tests/*.test.ts`) | ADR-001 TS/Bun 準拠 |
 | **reasoning model selection** | task × drive × L 別に model + reasoning effort を動的選定 (FR-L1-37)、L3 で具体的 model 候補確定 | FR-L1-37 連動 |
 | **配布 / 更新 channel** | **GitHub-pull** (git dependency, tag-pin、更新享受 = tag bump)。public npm 不要 (社内)。tool 非依存 package (CLI / CI / Codex 共通)。`ut-tdd setup` が adapter 投影。Claude plugin は補助チャネル | ADR-005 D1/D3 (L3 で FR 化) |
 
@@ -49,7 +49,7 @@ Phase B のサーバー同期 (PGlite + ElectricSQL 候補) は L3/L4 forward ca
 
 | 制約 | 内容 |
 |------|------|
-| **source reference snapshot** | read-only。productizing 時は設計概念だけを参照し、UT-TDD 所有パスで TS/Node として再実装 |
+| **source reference snapshot** | read-only。productizing 時は設計概念だけを参照し、UT-TDD 所有パスで TS/Bun として再実装 |
 | **`.ut-tdd/` state** | UT-TDD runtime state の正本。大半は gitignored |
 | **legacy local state** | migration evidence のみ。通常は Git 追跡しない。UT-TDD 正本 state にはしない |
 | **開発者規模** | チーム規模 2-5 名 + AI スロット 3 を想定 (B1=b / BR-02)。single-developer mode も互換維持 |

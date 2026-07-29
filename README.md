@@ -10,7 +10,7 @@ provider の API キーはリポジトリへ置かず、ローカル CLI と機�
 <br>
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A524-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Bun](https://img.shields.io/badge/Bun-%E2%89%A51.3-000000?style=for-the-badge&logo=bun&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-passing-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
 ![Biome](https://img.shields.io/badge/Biome-lint%20%2B%20format-60A5FA?style=for-the-badge&logo=biome&logoColor=white)
 
@@ -39,7 +39,7 @@ AI エージェントは速いです。速いぶん、**「とりあえず動く
 
 > [!NOTE]
 > ひとことで言えば、**AI の「完了しました」を、テストと機械チェックで検証し直す基盤**です。
-> V-model / TDD ガバナンス、`doctor`、ハンドオーバー、provider アダプタ、Claude / Codex のチーム委譲を、ローカルの TypeScript / Node で回します。
+> V-model / TDD ガバナンス、`doctor`、ハンドオーバー、provider アダプタ、Claude / Codex のチーム委譲を、ローカルの TypeScript / Bun で回します。
 > これは完成品アプリではなく、**プロダクト開発を安全にするための土台**です。
 
 ## 🧱 6 本の柱
@@ -166,12 +166,12 @@ worker と reviewer を**別 provider**(Codex ↔ Claude)に割り当て、同�
 ```sh
 git clone https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git
 cd UT-TDD_AGENT-HARNESS-Pack
-npm ci
-node src/cli.ts setup --solo
-node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke   # 期待値: OK (checked=22, failed=0)
+bun install --frozen-lockfile
+bun src/cli.ts setup --solo
+bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke   # 期待値: OK (checked=22, failed=0)
 ```
 
-生成される Claude/Codex hook は `node .ut-tdd/bin/ut-tdd.mjs ...` を呼びます。
+生成される Claude/Codex hook は `bun .ut-tdd/bin/ut-tdd.mjs ...` を呼びます。
 この wrapper は `ut-tdd setup` によって各 consumer リポジトリへ投影され、
 対象リポジトリの `node_modules/.bin/ut-tdd`、リポジトリ直下のハーネス source
 (`src/cli.ts`、CI runner でも有効)、setup を実行した Pack checkout、global `ut-tdd`
@@ -181,13 +181,14 @@ bootstrap できます。setup 済みと判定する前に、Claude/Codex hook
 が実際に動く shell で次を確認してください:
 
 ```sh
-node .ut-tdd/bin/ut-tdd.mjs --help
+bun .ut-tdd/bin/ut-tdd.mjs --help
 ```
 
-Windows では `scripts/ut-tdd.ps1` も同じ thin wrapper として使えます。現行 wrapper に残る Bun 解決は期限付き migration debt であり、新規利用は禁止、PLAN-L7-462 の撤去対象です。Node cutover 完了までは既存経路の回帰確認に限って次の診断を使います:
+Windows では `scripts/ut-tdd.ps1` も同じ thin wrapper として使えます。hook shell から Bun 本体も解決できる必要があるため、npm shim 経由で Bun を入れている場合は、setup 済みと判定する前に実 Bun binary directory を PATH に追加して確認します:
 
 ```powershell
-node .ut-tdd\bin\ut-tdd.mjs --help
+$env:PATH="$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"
+bun .ut-tdd\bin\ut-tdd.mjs --help
 ```
 
 ## ⚙️ セットアップ
@@ -215,9 +216,9 @@ Pack はタグ付き release (`v0.1.x`) で更新されます。変更点は [CH
 # Pack checkout で実行してください (consumer repo ではありません)
 git fetch --tags
 git checkout v0.1.4          # 追従運用なら: git pull origin main
-npm ci
-node src/cli.ts setup --solo  # 冪等再実行 (既存ファイルは保護、managed block のみ更新)
-node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
+bun install --frozen-lockfile
+bun src/cli.ts setup --solo  # 冪等再実行 (既存ファイルは保護、managed block のみ更新)
+bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 ```
 
 setup の再実行は**非破壊**です: あなたが所有するファイルは上書きされず (対話シェルでは
@@ -263,7 +264,7 @@ Pack 反映は source 開発 repo から直接 push しません。`sync-pack` �
 現在の配布形態は、公開パッケージではなく、Pack checkout / git 依存です。このハーネスを PATH に入れている場合は `ut-tdd` をそのまま使います。PATH に入れていない場合だけ、Pack checkout の wrapper (`<pack-checkout>/scripts/ut-tdd`) から実行します。Pack checkout では:
 
 ```sh
-npm install
+bun install
 ```
 
 次に、ハーネス状態を受け取りたい既存プロジェクトのディレクトリで setup を実行します:
@@ -298,7 +299,7 @@ scripts/setup-branch-protection.sh
 ```
 
 setup の経路には組み込みテンプレートがあるため、対象プロジェクトにこのリポジトリの `docs/templates/github` ツリーが存在する前でも実行できます。
-setup 直後の導通確認は `node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke` を使います。
+setup 直後の導通確認は `bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke` を使います。
 full `doctor` は、対象リポジトリに UT-TDD の設計 doc / PLAN / test-design が降下した後の
 ガバナンス検証です。ハーネス Pack そのものや、まだ設計文書を持たない consumer repo の
 初期導入判定には使いません。
@@ -413,7 +414,7 @@ model that routes work to specialised roles, and a deterministic `harness.db`
 projection that makes progress, gaps, and drift machine-visible. Workflow
 rules are enforced by schema, lint, doctor gates, and hooks — not by prose.
 
-- **Runtime**: TypeScript on Node (Windows-first; macOS/Linux supported). No
+- **Runtime**: TypeScript on Bun (Windows-first; macOS/Linux supported). No
   provider API keys are stored in the repository — agents run through local
   CLIs (Claude Code / Codex) wrapped by the `ut-tdd` CLI.
 - **Documentation language**: docs are intentionally written in Japanese
@@ -427,9 +428,9 @@ rules are enforced by schema, lint, doctor gates, and hooks — not by prose.
   [`UT-TDD_AGENT-HARNESS-Pack`](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack)
   (the `package.json` of the Pack artifact is rewritten to point there at
   sync time).
-- **Quick start**: `npm install`, then `node src/cli.ts setup` and
-  `node src/cli.ts doctor`. Tests run through a detached-HEAD snapshot runner,
-  so commit before measuring.
+- **Quick start**: `bun install`, then `bun src/cli.ts setup` and
+  `bun src/cli.ts doctor`. Tests run through a detached-HEAD snapshot runner
+  (`bun scripts/run-vitest-snapshot.ts <files>`), so commit before measuring.
 
 ## 📄 License
 
@@ -447,36 +448,33 @@ notice are included in all copies or substantial portions of the software. See
 Pack / consumer checkout での既定検証:
 
 ```sh
-npm run typecheck
-npm run lint
-npm test
+bun run typecheck
+bun run lint
+bun run test
 ```
 
 Pack の `test` は `test:pack` と同じ配布安全 smoke に固定されています。source repo 専用の
 governance docs、PLAN、`.ut-tdd` runtime state、harness DB を必要とするフル検証は含みません。
-Pack CI や consumer repo では raw `vitest run` を直接使わず、`npm test` または
-`npm run test:pack` を使います。raw `vitest run` / source `npm test` の全量回帰は
+Pack CI や consumer repo では raw `vitest run` を直接使わず、`bun run test` または
+`bun run test:pack` を使います。raw `vitest run` / source `bun run test` の全量回帰は
 source development repo 専用です。
 
 Source development repo での追加検証:
 
 ```sh
-npm run typecheck
-npm run lint
-npm run test:fast
-npm run test:db
-npm run test:cli
-npm test
-npm run test:node-fallback
+bun run typecheck
+bun run lint
+bun run test:fast
+bun run test:db
+bun run test:cli
+bun run test
+bun run test:node-fallback
 scripts/ut-tdd doctor
 ```
 
-これらの npm script が内部で呼ぶ既存 Bun runner は期限付き migration debt であり、新規 Bun
-利用は禁止、PLAN-L7-462 の撤去対象です。正本契約は sealed Node runtime です。
-
 > [!TIP]
 > plan やドキュメントの変更後に `.ut-tdd/harness.db` が古くなっている場合、`doctor` は失敗する想定です。
-> `node src/cli.ts db rebuild --json` で投影を再構築してから `doctor` を再実行してください。
+> `bun src/cli.ts db rebuild --json` で投影を再構築してから `doctor` を再実行してください。
 
 <div align="center">
 <br>

@@ -27,25 +27,24 @@ jobs:
       - name: checkout
         uses: actions/checkout@v5
 
-      - name: setup node
-        uses: actions/setup-node@v4
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: "24"
-          cache: npm
+          bun-version: "1.3"
 
       - name: install deps (frozen)
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: typecheck (tsc --noEmit)
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: pack smoke tests
-        run: npm run test:pack
+        run: bun run test:pack
 
       - name: lint (biome)
-        run: npm run lint
+        run: bun run lint
 
       - name: setup smoke
         run: |
-          node src/cli.ts setup --solo
-          node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
+          bun src/cli.ts setup --solo
+          bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
