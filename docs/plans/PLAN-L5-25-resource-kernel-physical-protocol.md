@@ -35,7 +35,32 @@ dependencies:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T15:10:00+09:00"
+    tests_green_at: "2026-07-29T15:05:00+09:00"
+    verdict: pass-weak
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint (848 PLAN、plan-schedule OK)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-29T15:00:00+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:368462623766175e76783b927571c6db812830af063e413cd5776e7280dc2ebf"
+      - kind: unit_test
+        command: "bun run test:vitest-snapshot tests/plan-lint.test.ts tests/review-evidence.test.ts tests/readability.test.ts tests/green-command-digest.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T15:05:00+09:00"
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
+    scope: "D0-R 降下 (L5) の cross-family review (Codex/PO 著作 → Claude 検証、hybrid 非 author family)。verdict=pass-weak であり confirm しない (status は draft のまま)。実測した範囲: (a) pair 先 L8 に『Resource Kernel物理統合 (PLAN-L5-25、2026-07-22)』節と RGK 系記述が実在、(b) pair 双方 (physical-data.md / L8-integration-test-design.md) が status=confirmed かつ pair_artifact / next_pair_freeze 相互整合、(c) parent (PLAN-L4-32) が同一 PR train で confirmed 済み、(d) generates / references / blocks の宣言ファイルが全件実在、(e) oracle-test-trace orphans=0、(f) ut-tdd plan lint 848 PLAN OK。confirm を見送った理由: 本 PLAN 本文に oracle ID の直書きが 0 件で、pair 先との binding が節見出しの主題一致に留まる。ID binding が無い設計は降下後に trace 不能になり (repo の missing-test-oracle-id telemetry は 982 件)、他 3 本と同じ verdict へ丸めると被覆の過大主張になる。confirm 前提は §0.1 に記載。"
 status: draft
 sub_doc: internal-processing
 github_issue_id: 152
@@ -89,6 +114,23 @@ admission_receipt:
 PLAN-L4-32が予定した`PLAN-L5-24`は、別ブランチでFreeze checkpoint物理設計として既に確保済みである。
 PLAN IDを再利用せず、全branch採番監査で空いている`PLAN-L5-25`へ本設計を収容する。L4のsystem保証を、
 実装都合で縮小せず、Node control planeとRust native companionの通信・配置・failure domainへ降下する。
+
+### 0.1 confirm 前提 (2026-07-29 D0-R 降下 review、verdict=pass-weak)
+
+本 PLAN は D0 freeze の cross-family review で `pass-weak` 判定となり、**confirm を見送っている**
+(status は draft のまま)。理由と解除条件を機械検証可能な形で残す。
+
+- **理由**: 本文に oracle ID の直書きが 0 件で、pair 先 `docs/test-design/harness/L8-integration-test-design.md`
+  との binding が「Resource Kernel物理統合 (PLAN-L5-25)」という節見出しの主題一致に留まる。
+  ID binding の無い設計は降下後に trace 不能になる (repo の `missing-test-oracle-id` telemetry は 982 件)。
+  同時に freeze した `PLAN-L4-32` / `PLAN-L4-33` / `PLAN-L5-26` は ID binding を持っており、
+  同じ verdict へ丸めると被覆の過大主張になる。
+- **解除条件 (これを満たしたら confirm 可)**: 本 PLAN の各物理契約 (wire framing / command・fact 系列 /
+  custodian lifecycle と durability barrier / platform port / companion bundle 配置) に対応する L8 の
+  oracle ID を本文へ明示し、`PLAN-L4-32` §1.3 と同じ形式の写像表を持つこと。ID は L8 側に実在し、
+  文字列一致で機械照合できること。
+- **止めていないもの**: 親 `PLAN-L4-32` の freeze と `PLAN-L5-26` の freeze は本件を待たない
+  (降下順は独立)。
 
 ## 1. 責務配置と非重複境界
 
