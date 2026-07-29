@@ -30,12 +30,6 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/support/doctor-envelope.ts
     artifact_type: test_code
-  - artifact_path: scripts/run-vitest-snapshot.ts
-    artifact_type: source_module
-  - artifact_path: tests/vitest-snapshot-runner.test.ts
-    artifact_type: test_code
-  - artifact_path: src/doctor/test-repository-isolation.ts
-    artifact_type: source_module
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: src/cli.ts
@@ -64,6 +58,9 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 
 本PLANはPhase 2aとしてdoctor単一実行化だけを所有する。実際に変更・検証した既存artifactも
 `generates`へ明示した。前提PLAN-L7-455 (Phase 1) はmerge済みのためreferencesとして参照する。
+`scripts/run-vitest-snapshot.ts` / `src/doctor/test-repository-isolation.ts` /
+`tests/vitest-snapshot-runner.test.ts` はPLAN-L7-421がownerであり、本PLANはdefault branch ref注入の
+additive modificationと回帰参照だけを行う。ownershipは移管せず二重ownerにしない。
 
 ## 背景 (2026-07-28 実測、run 30261670421 = 直近 main green run)
 
