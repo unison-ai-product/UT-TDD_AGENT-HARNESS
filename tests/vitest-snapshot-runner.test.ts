@@ -208,6 +208,52 @@ describe("vitest snapshot runner", () => {
     }
   });
 
+  it("U-TESTHYGIENE-051: preserves origin custody refs in a detached execution snapshot", () => {
+    const source = mkdtempSync(join(tmpdir(), "ut-tdd-git-custody-source-"));
+    const snapshot = `${source}-snapshot`;
+    try {
+      expect(spawnSync("git", ["init"], { cwd: source }).status).toBe(0);
+      writeFileSync(join(source, "package.json"), "{}\n");
+      expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync(
+          "git",
+          [
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "-m",
+            "initial",
+          ],
+          { cwd: source },
+        ).status,
+      ).toBe(0);
+      const revision = spawnSync("git", ["rev-parse", "HEAD"], {
+        cwd: source,
+        encoding: "utf8",
+      }).stdout.trim();
+      expect(
+        spawnSync("git", ["update-ref", "refs/remotes/origin/main", revision], {
+          cwd: source,
+        }).status,
+      ).toBe(0);
+
+      createSnapshot(source, snapshot);
+
+      expect(
+        spawnSync("git", ["rev-parse", "origin/main"], {
+          cwd: snapshot,
+          encoding: "utf8",
+        }).stdout.trim(),
+      ).toBe(revision);
+    } finally {
+      removeTestTree(source);
+      removeTestTree(snapshot);
+    }
+  });
+
   it("U-TESTHYGIENE-036: seals the reference for the whole test interval and unseals cleanup", () => {
     const reference = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-reference-"));
     const outside = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-outside-"));
