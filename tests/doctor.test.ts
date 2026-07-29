@@ -96,6 +96,7 @@ import {
   type DesignDetectionStats,
   designDetectionMessages,
 } from "../src/state-db/design-detection";
+import { consumeDoctorResultEnvelope } from "./support/doctor-envelope";
 import { headSnapshotRoot } from "./support/workspace-roots";
 
 const NOW = "2026-06-04T00:00:00.000Z";
@@ -504,8 +505,16 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
 
 describe("runDoctor", () => {
   let cachedRealRepoDoctor: ReturnType<typeof runDoctor> | null = null;
+  /**
+   * PLAN-L7-461: real-repo fence の生産者。CI では同一 job の doctor step が書いた envelope を
+   * 消費して doctor の二重実行を避ける。採用は **観測面 (HEAD / root / ref map / options /
+   * check ID 集合) が完全一致したときだけ**で、ローカル実行を含むそれ以外は従来どおり自走する
+   * (fence の assertion 対象は「real repo に対する doctor 実行の messages」のまま不変)。
+   */
   const realRepoDoctor = () => {
-    cachedRealRepoDoctor ??= runDoctor(nodeDoctorDeps(headSnapshotRoot()));
+    if (cachedRealRepoDoctor) return cachedRealRepoDoctor;
+    cachedRealRepoDoctor =
+      consumeDoctorResultEnvelope() ?? runDoctor(nodeDoctorDeps(headSnapshotRoot()));
     return cachedRealRepoDoctor;
   };
 

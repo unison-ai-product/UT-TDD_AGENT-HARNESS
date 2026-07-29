@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, win32 } from "node:path";
+import { resolveDefaultBranchRef } from "../src/git/default-branch";
 import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash";
 
 function run(
@@ -74,28 +75,8 @@ export function resolveSnapshotSource(repoRoot: string): SnapshotSource {
  * 評価不能になり、前者は判定が変わり後者は throw する。producer と consumer で
  * 同じ観測をするために、作成時に ref→SHA をそのまま持ち込む。
  */
-export interface DefaultBranchRef {
-  /** default branch 名 (例 `main`)。 */
-  branch: string;
-  /** source 側で解決できた ref の完全名。 */
-  sourceRef: string;
-  /** ref が指す commit SHA。 */
-  sha: string;
-}
-
-/**
- * source 側の default branch ref を解決する。解決できない面では **null を返し注入しない**
- * (存在しない ref を捏造すると ref 依存 check の fail-close が壊れる)。
- */
-export function resolveDefaultBranchRef(repoRoot: string): DefaultBranchRef | null {
-  const symbolic = output("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], repoRoot);
-  const branch = symbolic?.replace(/^origin\//, "") || "main";
-  for (const sourceRef of [`refs/remotes/origin/${branch}`, `refs/heads/${branch}`]) {
-    const sha = output("git", ["rev-parse", "--verify", `${sourceRef}^{commit}`], repoRoot);
-    if (sha) return { branch, sourceRef, sha };
-  }
-  return null;
-}
+export type { DefaultBranchRef } from "../src/git/default-branch";
+export { resolveDefaultBranchRef } from "../src/git/default-branch";
 
 /**
  * 解決済みの default branch ref を snapshot へ複製する。HEAD は動かさない
@@ -104,14 +85,10 @@ export function resolveDefaultBranchRef(repoRoot: string): DefaultBranchRef | nu
 export function injectDefaultBranchRef(
   snapshotRoot: string,
   sourceRepo: string,
-  ref: DefaultBranchRef,
+  ref: { branch: string; ref: string; sha: string },
 ): void {
   const target = `refs/remotes/origin/${ref.branch}`;
-  run(
-    "git",
-    ["fetch", "--no-tags", "--quiet", sourceRepo, `+${ref.sourceRef}:${target}`],
-    snapshotRoot,
-  );
+  run("git", ["fetch", "--no-tags", "--quiet", sourceRepo, `+${ref.ref}:${target}`], snapshotRoot);
   run("git", ["symbolic-ref", "refs/remotes/origin/HEAD", target], snapshotRoot);
 }
 

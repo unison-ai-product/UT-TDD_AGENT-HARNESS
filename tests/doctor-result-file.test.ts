@@ -8,14 +8,23 @@
  * 観測面 (snapshot root / ref map / options / check ID 集合) の完全一致を要求する。
  */
 
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions";
 import {
   buildDoctorResultEnvelope,
+  canonicalRepoRoot,
   DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION,
   doctorResultEnvelopeUsability,
   doctorResultPayloadDigest,
   parseDoctorResultEnvelope,
 } from "../src/doctor/result-file";
+import { nodeDoctorDeps } from "../src/doctor/runtime-state";
+import { defaultBranchRefMap, headSha } from "../src/git/default-branch";
+import { consumeDoctorResultEnvelopeWithReason } from "./support/doctor-envelope";
+import { headSnapshotRoot } from "./support/workspace-roots";
 
 const RESULT = { ok: true, messages: ["doctor: rule-drift — OK"] };
 const REF_MAP = { "refs/remotes/origin/main": "b155171cf23d619751c01f11a2630334adb74f9c" };
@@ -149,5 +158,75 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
       usable: false,
       reason: "envelope-missing-or-unreadable",
     });
+  });
+});
+
+/**
+ * consumer 側の回帰 (PLAN-L7-461)。CI で観測面が一致したときだけ採用し、
+ * 宣言不足・読めない・非 CI・面の不一致では null を返して呼び出し側を自走させる。
+ */
+describe("doctor envelope consumption (PLAN-L7-461)", () => {
+  const snapshotRoot = headSnapshotRoot();
+  const writeEnvelope = (overrides: Record<string, unknown> = {}): string => {
+    const dir = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-envelope-"));
+    const path = join(dir, "doctor-result.json");
+    const built = {
+      ...buildDoctorResultEnvelope({
+        headSha: headSha(snapshotRoot) ?? "",
+        scope: "full",
+        profile: null,
+        snapshotRoot: canonicalRepoRoot(snapshotRoot),
+        refMap: defaultBranchRefMap(snapshotRoot),
+        options: { strict_green_command_digest: true, timing: false },
+        checkIds: buildFullDoctorCheckDefinitions(nodeDoctorDeps(snapshotRoot)).map((d) => d.id),
+        producer: { command: "ut-tdd doctor", version: "test" },
+        result: { ok: true, messages: ["doctor: consumed-envelope — OK"] },
+      }),
+      ...overrides,
+    };
+    writeFileSync(path, JSON.stringify(built), "utf8");
+    return path;
+  };
+  const env = (path: string, overrides: Record<string, string> = {}) => ({
+    CI: "true",
+    UT_TDD_DOCTOR_RESULT_FILE: path,
+    UT_TDD_DOCTOR_RESULT_ROOT: snapshotRoot,
+    UT_TDD_DOCTOR_RESULT_STRICT: "1",
+    ...overrides,
+  });
+
+  it("U-DOCTORENV-008: consumes the envelope when the declared surface matches", () => {
+    const path = writeEnvelope();
+    const consumed = consumeDoctorResultEnvelopeWithReason(env(path));
+    expect(consumed.reason).toBe("accepted");
+    expect(consumed.result?.messages).toEqual(["doctor: consumed-envelope — OK"]);
+  });
+
+  it("U-DOCTORENV-009: falls back to a self-run instead of trusting a partial declaration", () => {
+    const path = writeEnvelope();
+    expect(consumeDoctorResultEnvelopeWithReason({ CI: "true" })).toEqual({
+      result: null,
+      reason: "envelope-not-declared",
+    });
+    expect(consumeDoctorResultEnvelopeWithReason(env(join(path, "missing.json"))).reason).toBe(
+      "envelope-unreadable",
+    );
+    expect(consumeDoctorResultEnvelopeWithReason(env(path, { CI: "false" })).reason).toBe(
+      "not-ci-context",
+    );
+    expect(
+      consumeDoctorResultEnvelopeWithReason(env(path, { UT_TDD_DOCTOR_RESULT_STRICT: "0" })).reason,
+    ).toBe("options-mismatch");
+    expect(
+      consumeDoctorResultEnvelopeWithReason(env(path, { UT_TDD_DOCTOR_RESULT_ROOT: tmpdir() }))
+        .reason,
+    ).toBe(`snapshot-root-mismatch:${canonicalRepoRoot(snapshotRoot)}`);
+  });
+
+  it("U-DOCTORENV-010: refuses an envelope measured at another head", () => {
+    const path = writeEnvelope({ head_sha: "f".repeat(40) });
+    expect(consumeDoctorResultEnvelopeWithReason(env(path)).reason).toBe(
+      `head-sha-mismatch:${"f".repeat(40)}`,
+    );
   });
 });

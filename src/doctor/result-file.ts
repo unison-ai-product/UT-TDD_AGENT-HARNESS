@@ -28,7 +28,12 @@
  */
 
 import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { defaultBranchRefMap, headSha } from "../git/default-branch";
+import { buildFullDoctorCheckDefinitions } from "./check-definitions";
 import type { DoctorResult } from "./result";
+import { nodeDoctorDeps } from "./runtime-state";
 
 export const DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION = "v2";
 
@@ -221,4 +226,61 @@ export function doctorResultEnvelopeUsability(input: {
     return { usable: false, reason: "payload-digest-mismatch" };
   }
   return { usable: true, reason: "same-observation-full-doctor-measurement" };
+}
+
+// ---------------------------------------------------------------------------
+// producer (実測した面ごと書き出す)
+// ---------------------------------------------------------------------------
+
+/**
+ * 実測結果を envelope として書き出す (PLAN-L7-461 producer 側)。
+ *
+ * 観測面 (HEAD / root / ref map / options / check ID 集合) を **測った側が申告する**。
+ * consumer はこれを自分の期待と完全一致で照合し、1 つでも違えば自走へ落ちる。
+ */
+export function writeDoctorResultEnvelopeFile(
+  filePath: string,
+  repoRoot: string,
+  input: {
+    scope: string;
+    profile: string | null;
+    options: DoctorRunOptions;
+    result: DoctorResult;
+  },
+): void {
+  const sha = headSha(repoRoot);
+  if (!sha) throw new Error("doctor result envelope requires a resolvable HEAD");
+  const checkIds = buildFullDoctorCheckDefinitions(nodeDoctorDeps(repoRoot)).map(
+    (definition) => definition.id,
+  );
+  const envelope = buildDoctorResultEnvelope({
+    headSha: sha,
+    scope: input.scope,
+    profile: input.profile,
+    snapshotRoot: canonicalRepoRoot(repoRoot),
+    refMap: defaultBranchRefMap(repoRoot),
+    options: input.options,
+    checkIds,
+    producer: { command: "ut-tdd doctor", version: producerVersion(repoRoot) },
+    result: input.result,
+  });
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
+}
+
+/** producer と consumer で同じ正規化を使う (Windows の大小・区切り差で不一致にしない)。 */
+export function canonicalRepoRoot(repoRoot: string): string {
+  const resolved = realpathSync.native(repoRoot).replaceAll("\\", "/");
+  return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+function producerVersion(repoRoot: string): string {
+  try {
+    const manifest = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
+      version?: unknown;
+    };
+    return typeof manifest.version === "string" ? manifest.version : "unknown";
+  } catch {
+    return "unknown";
+  }
 }
