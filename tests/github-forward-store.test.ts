@@ -139,4 +139,43 @@ describe("GitHub Forward SQLite store", () => {
       db.close();
     }
   });
+
+  it("U-GHPROJ-014: allows Project item revision rollover but rejects delayed regression", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const base = {
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        objectKind: "project_item" as const,
+        objectId: "item:1",
+        state: "同期済",
+      };
+      recordGithubBinding(db, {
+        ...base,
+        planRevision: "rev1",
+        observedAt: "2026-07-29T01:00:00Z",
+      });
+      recordGithubBinding(db, {
+        ...base,
+        planRevision: "rev2",
+        observedAt: "2026-07-29T02:00:00Z",
+      });
+      recordGithubBinding(db, {
+        ...base,
+        planRevision: "rev2",
+        state: "遅延",
+        observedAt: "2026-07-29T01:30:00Z",
+      });
+      expect(
+        db.prepare("SELECT plan_revision, state, observed_at FROM github_object_bindings").get(),
+      ).toEqual({
+        plan_revision: "rev2",
+        state: "同期済",
+        observed_at: "2026-07-29T02:00:00Z",
+      });
+    } finally {
+      db.close();
+    }
+  });
 });

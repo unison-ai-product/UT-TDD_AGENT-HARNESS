@@ -55,4 +55,21 @@ describe("Forward work graph readiness", () => {
       deriveForwardReadiness([entry("PLAN-L7-1-a", "draft"), entry("PLAN-L7-1-a", "draft")]),
     ).toThrow(/duplicate plan_id/);
   });
+
+  it("U-GHPROJ-004: accepted schedule remains blocked under negative closure evidence", () => {
+    const [row] = deriveForwardReadiness(
+      [entry("PLAN-L7-6-f", "confirmed")],
+      [
+        {
+          planId: "PLAN-L7-6-f",
+          ci: "失敗",
+          review: "要修正",
+          sync: "不整合",
+        },
+      ],
+    );
+    expect(row?.readiness).toBe("阻害中");
+    expect(row?.blockedReason).toContain("CI失敗");
+    expect(row?.blockedReason).toContain("review承認未確認");
+  });
 });

@@ -76,6 +76,14 @@ export function deriveForwardReadiness(
       const unresolved = predecessors.filter((id) => byId.has(id) && !completed.has(id));
       const observation = evidence.get(entry.planId);
       const sync = observation?.sync ?? "未同期";
+      const completionEvidenceMissing =
+        COMPLETE.has(entry.status) && observation
+          ? [
+              observation.ci !== "成功" ? "完了条件: CI成功未確認" : "",
+              observation.review !== "承認" ? "完了条件: review承認未確認" : "",
+              sync !== "同期済" ? "完了条件: Project同期未確認" : "",
+            ].filter(Boolean)
+          : [];
       const reasons = [
         entry.blockedReason.trim(),
         missing.length > 0 ? `先行PLAN欠損: ${missing.join(", ")}` : "",
@@ -83,11 +91,12 @@ export function deriveForwardReadiness(
         sync === "不整合" ? "GitHub Project同期不整合" : "",
         observation?.ci === "失敗" ? "CI失敗" : "",
         observation?.review === "要修正" ? "レビュー要修正" : "",
+        ...completionEvidenceMissing,
       ].filter(Boolean);
       let readiness: ForwardReadiness;
-      if (COMPLETE.has(entry.status)) readiness = "完了";
+      if (reasons.length > 0) readiness = "阻害中";
+      else if (COMPLETE.has(entry.status)) readiness = "完了";
       else if (PARKED.has(entry.status)) readiness = "保留";
-      else if (reasons.length > 0) readiness = "阻害中";
       else if (observation?.review === "依頼中" || observation?.review === "承認")
         readiness = "レビュー中";
       else if (

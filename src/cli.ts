@@ -3333,8 +3333,10 @@ githubProject
         const activeRows = projectedRows.filter(
           (row) => row.readiness !== "完了" && row.readiness !== "保留",
         );
-        const rows = opts.plan ? activeRows.filter((row) => row.planId === opts.plan) : activeRows;
-        if (opts.plan && rows.length === 0) throw new Error(`active PLAN not found: ${opts.plan}`);
+        const rows = opts.plan
+          ? projectedRows.filter((row) => row.planId === opts.plan)
+          : activeRows;
+        if (opts.plan && rows.length === 0) throw new Error(`PLAN not found: ${opts.plan}`);
         const outboxIds = opts.apply
           ? rows.map((row) =>
               queueGithubProjection({

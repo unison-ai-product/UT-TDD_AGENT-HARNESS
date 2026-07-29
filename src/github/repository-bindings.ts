@@ -11,6 +11,15 @@ export interface RepositoryBindingSyncResult {
   bindingIds: string[];
 }
 
+const ACCEPTED_PLAN_STATUSES = new Set([
+  "confirmed",
+  "completed",
+  "accepted",
+  "merged",
+  "closed",
+  "documented",
+]);
+
 function object(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
@@ -71,6 +80,13 @@ function currentRevision(db: HarnessDb, planId: string): string {
   return text(row?.source_hash);
 }
 
+function planAccepted(db: HarnessDb, planId: string): boolean {
+  const row = db
+    .prepare("SELECT status FROM schedule_entries WHERE plan_id = ? ORDER BY rowid DESC LIMIT 1")
+    .get(planId);
+  return ACCEPTED_PLAN_STATUSES.has(text(row?.status));
+}
+
 function uniquePlanId(value: string): string {
   const matches = [...value.matchAll(/\bPLAN-[A-Z0-9]+-[0-9A-Za-z][0-9A-Za-z-]*/g)].map(
     (match) => match[0],
@@ -96,7 +112,7 @@ export function syncRepositoryBindings(input: {
     "--limit",
     "1000",
     "--json",
-    "number,title,url,headRefName,headRefOid,state,mergedAt,body,statusCheckRollup,reviews",
+    "number,title,url,headRefName,headRefOid,state,mergedAt,mergeCommit,body,statusCheckRollup,reviews",
   ]);
   const pullRequests = list(payload);
   const result: RepositoryBindingSyncResult = {
@@ -122,6 +138,11 @@ export function syncRepositoryBindings(input: {
     const revision = trace.fields.plan_revision ?? currentRevision(input.db, planId);
     if (!revision) {
       result.skipped.push({ number, reason: "plan-revision-missing" });
+      continue;
+    }
+    const expectedRevision = currentRevision(input.db, planId);
+    if (expectedRevision && revision !== expectedRevision) {
+      result.skipped.push({ number, reason: "stale-plan-revision" });
       continue;
     }
     const headSha = text(pullRequest.headRefOid) || trace.fields.subject_head || "";
@@ -174,13 +195,44 @@ export function syncRepositoryBindings(input: {
       });
     }
     if (pullRequest.mergedAt) {
-      bindings.push({
-        ...common,
-        objectKind: "merge",
-        objectId: `pr:${number}:merge`,
-        objectUrl: text(pullRequest.url),
-        state: "merged",
-      });
+      const mergeSha = text(object(pullRequest.mergeCommit).oid);
+      const mainChecks = mergeSha
+        ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
+        : {};
+      const mainCi = ciState(list(mainChecks.check_runs));
+      const issueClosed = trace.fields.issue_number
+        ? text(
+            object(
+              gh.json([
+                "issue",
+                "view",
+                trace.fields.issue_number,
+                "--repo",
+                input.repositoryId,
+                "--json",
+                "state",
+              ]),
+            ).state,
+          ).toUpperCase() === "CLOSED"
+        : true;
+      if (
+        mergeSha &&
+        ciState(list(pullRequest.statusCheckRollup)) === "成功" &&
+        reviewState(list(pullRequest.reviews)) === "承認" &&
+        mainCi === "成功" &&
+        issueClosed &&
+        planAccepted(input.db, planId)
+      ) {
+        bindings.push({
+          ...common,
+          objectKind: "merge",
+          objectId: `pr:${number}:merge:${mergeSha}`,
+          objectUrl: text(pullRequest.url),
+          state: `merged:${mergeSha}`,
+        });
+      } else {
+        result.skipped.push({ number, reason: "merge-closure-incomplete" });
+      }
     }
     for (const binding of bindings) {
       if (!binding.objectId) continue;

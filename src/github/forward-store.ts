@@ -18,6 +18,17 @@ function ids(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function lifecycleRank(kind: GithubBindingInput["objectKind"], state: string): number {
+  const ranks: Partial<Record<GithubBindingInput["objectKind"], string[]>> = {
+    check_run: ["未実行", "実行中", "取消", "失敗", "成功"],
+    review: ["未依頼", "依頼中", "要修正", "承認"],
+    pull_request: ["open", "closed", "merged"],
+    branch: ["open", "active", "closed", "merged"],
+    project_item: ["未同期", "遅延", "不整合", "同期済"],
+  };
+  return ranks[kind]?.indexOf(state) ?? 0;
+}
+
 export function readForwardSchedule(db: HarnessDb): ForwardScheduleEntry[] {
   return db
     .prepare(
@@ -47,9 +58,20 @@ export function readGithubEvidence(db: HarnessDb): ForwardEvidence[] {
         ORDER BY observed_at, binding_id`,
     )
     .all();
+  const latestPullRequestHead = new Map<string, string>();
+  for (const row of rows) {
+    if (row.object_kind === "pull_request")
+      latestPullRequestHead.set(text(row.plan_id), text(row.head_sha));
+  }
   const evidence = new Map<string, ForwardEvidence>();
   for (const row of rows) {
     const planId = text(row.plan_id);
+    if (
+      (row.object_kind === "check_run" || row.object_kind === "review") &&
+      latestPullRequestHead.get(planId) &&
+      text(row.head_sha) !== latestPullRequestHead.get(planId)
+    )
+      continue;
     const current = evidence.get(planId) ?? { planId };
     const state = text(row.state);
     current.headSha = text(row.head_sha) || current.headSha;
@@ -143,19 +165,36 @@ export interface GithubBindingInput {
 }
 
 export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): string {
+  const observedAt = input.observedAt ?? new Date().toISOString();
   const existing = db
     .prepare(
-      `SELECT plan_id, plan_revision FROM github_object_bindings
+      `SELECT binding_id, plan_id, plan_revision, state, head_sha, observed_at
+         FROM github_object_bindings
         WHERE repository_id = ? AND object_kind = ? AND object_id = ?`,
     )
     .get(input.repositoryId, input.objectKind, input.objectId);
   if (
     existing &&
-    (text(existing.plan_id) !== input.planId || text(existing.plan_revision) !== input.planRevision)
+    (text(existing.plan_id) !== input.planId ||
+      (text(existing.plan_revision) !== input.planRevision && input.objectKind !== "project_item"))
   ) {
     throw new Error(
       `GitHub object identity conflict: ${input.objectKind}/${input.objectId} is already bound to ${text(existing.plan_id)}@${text(existing.plan_revision)}`,
     );
+  }
+  if (existing && observedAt < text(existing.observed_at)) return text(existing.binding_id);
+  if (
+    existing &&
+    observedAt === text(existing.observed_at) &&
+    (text(existing.state) !== input.state || text(existing.head_sha) !== (input.headSha ?? ""))
+  ) {
+    const previousRank = lifecycleRank(input.objectKind, text(existing.state));
+    const nextRank = lifecycleRank(input.objectKind, input.state);
+    if (nextRank < previousRank) return text(existing.binding_id);
+    if (nextRank === previousRank || text(existing.head_sha) !== (input.headSha ?? ""))
+      throw new Error(
+        `GitHub observation conflict at ${observedAt}: ${input.objectKind}/${input.objectId}`,
+      );
   }
   if (
     input.objectKind === "check_run" ||
@@ -201,7 +240,7 @@ export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): s
     input.objectUrl ?? "",
     input.headSha ?? "",
     input.state,
-    input.observedAt ?? new Date().toISOString(),
+    observedAt,
   );
   return bindingId;
 }

@@ -127,6 +127,13 @@ describe("GitHub Project V2 reconciler", () => {
     expect(port.calls).toEqual([]);
     expect(result.mutations).toHaveLength(15);
     expect(result.itemIds[row.planId]).toBe(`dry-run:${row.planId}`);
+    expect(result.mutations).toContainEqual({
+      kind: "update",
+      planId: row.planId,
+      itemId: `dry-run:${row.planId}`,
+      field: "同期状態",
+      value: "未同期",
+    });
   });
 
   it("U-GHPROJ-021: apply creates once and updates typed fields", () => {
@@ -230,5 +237,19 @@ describe("GitHub Project V2 reconciler", () => {
     } finally {
       db.close();
     }
+  });
+
+  it("U-GHPROJ-025: apply fails closed while DB reports inconsistent sync", () => {
+    const port = new FakeProjectPort();
+    expect(() =>
+      syncForwardProject({
+        rows: [{ ...row, sync: "不整合" }],
+        owner: "owner",
+        projectNumber: 6,
+        port,
+        apply: true,
+      }),
+    ).toThrow(/inconsistent/);
+    expect(port.calls).toEqual([]);
   });
 });

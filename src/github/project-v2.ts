@@ -239,7 +239,10 @@ function title(row: ForwardReadinessRow): string {
   return `${row.planId}: ${row.currentGate}`;
 }
 
-function desiredFields(row: ForwardReadinessRow): Record<string, string | number> {
+function desiredFields(
+  row: ForwardReadinessRow,
+  applying = false,
+): Record<string, string | number> {
   return {
     "PLAN ID": row.planId,
     Vモデル層: row.layer || "cross",
@@ -254,7 +257,7 @@ function desiredFields(row: ForwardReadinessRow): Record<string, string | number
     CI状態: row.ci,
     レビュー状態: row.review,
     対象HEAD: row.headSha,
-    同期状態: "同期済",
+    同期状態: applying ? "同期済" : row.sync,
   };
 }
 
@@ -292,6 +295,11 @@ export function syncForwardProject(input: {
   apply: boolean;
 }): ProjectSyncResult {
   const snapshot = input.port.inspect(input.owner, input.projectNumber);
+  const inconsistent = input.rows.filter((row) => row.sync === "不整合");
+  if (input.apply && inconsistent.length > 0)
+    throw new Error(
+      `GitHub Project sync is inconsistent: ${inconsistent.map((row) => row.planId).join(", ")}`,
+    );
   const fields = assertProjectContract(snapshot);
   const duplicates = new Set<string>();
   const byPlan = new Map<string, ProjectItem>();
@@ -325,7 +333,7 @@ export function syncForwardProject(input: {
       else itemId = `dry-run:${row.planId}`;
     }
     itemIds[row.planId] = itemId;
-    for (const [fieldName, value] of Object.entries(desiredFields(row))) {
+    for (const [fieldName, value] of Object.entries(desiredFields(row, input.apply))) {
       if (existing && String(existing.fields[fieldName] ?? "").trim() === String(value).trim())
         continue;
       mutations.push({ kind: "update", planId: row.planId, itemId, field: fieldName, value });
