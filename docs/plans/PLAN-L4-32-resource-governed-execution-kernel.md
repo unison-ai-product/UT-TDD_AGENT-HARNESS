@@ -55,11 +55,28 @@ dependencies:
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
-    reviewed_at: "2026-07-29T14:13:00+09:00"
-    tests_green_at: "2026-07-29T14:10:00+09:00"
+    reviewed_at: "2026-07-29T14:50:00+09:00"
+    tests_green_at: "2026-07-29T14:45:00+09:00"
     verdict: pass
     worker_model: codex
     reviewer_model: claude-opus-5
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint (848 PLAN、plan-schedule OK)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-29T14:40:00+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:368462623766175e76783b927571c6db812830af063e413cd5776e7280dc2ebf"
+      - kind: unit_test
+        command: "bun run test:vitest-snapshot tests/plan-lint.test.ts tests/review-evidence.test.ts tests/readability.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T14:45:00+09:00"
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
     scope: "D0-R 設計 freeze の cross-family review (Codex/PO 著作 → Claude 検証、hybrid 非 author family)。実測した範囲: (a) 本 PLAN が宣言する oracle ID 15 件が pair 先 L9 に文字列一致で全件実在 (欠落 0)、(b) §1.2 の fail-close 不変条件 7 件について §1.3 の写像表を本 review で作成し、各不変条件に対応する L9 §9.1 の実在 ID と根拠記述を明示 (ST-RGK-07..10/13 は §9.1 で DEFERRED 明示のため merge 判定に不算入)、(c) pair 双方 (architecture.md / L9-system-test-design.md) が status=confirmed かつ pair_artifact / next_pair_freeze 相互整合、(d) generates / references の宣言ファイルが全件実在 (ADR-009 / security.md / repository-structure.md ほか)、(e) oracle-test-trace orphans=0、(f) ut-tdd plan lint 848 PLAN OK。未検証 (この evidence は主張しない): 設計方式そのものの妥当性 (custody 意味論で orphan 0 が実際に達成可能か等) と実行時挙動 — 実装が存在しないため add-design freeze の対象外であり、L7/L8 降下時に検証する。指摘 (Minor、freeze を止めない): L9 §9.6 の Issue #124 性能収束 oracle は DEFERRED で owner (#152 later wave) は明示だが exit 条件が日付・gate として固定されていない (open issue #136 と同型)。この deferral を #124 の closure と読み替えないこと。"
 status: confirmed
 sub_doc: architecture
