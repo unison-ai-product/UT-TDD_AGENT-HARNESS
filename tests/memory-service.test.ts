@@ -310,7 +310,9 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
       if (!dirLiteral.includes(rel)) continue;
       const text = readFileSync(join(root, rel), "utf8");
       expect(text, `${rel} must not read memory content directly`).not.toContain("readFileSync");
-      expect(text, `${rel} must not parse memory content directly`).not.toContain("parseMemoryFile");
+      expect(text, `${rel} must not parse memory content directly`).not.toContain(
+        "parseMemoryFile",
+      );
     }
     // 読み手 (CLI / digest) が格納面へ戻ることを個別に禁止する。
     expect(tableLiteral).not.toContain("cli.ts");
