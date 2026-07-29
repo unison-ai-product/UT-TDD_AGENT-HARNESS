@@ -65,6 +65,7 @@ import { collectJobSummary, renderJobSummary } from "./github/job-summary";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
 import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace";
 import { GhProjectV2Adapter, persistProjectSync, syncForwardProject } from "./github/project-v2";
+import { syncRepositoryBindings } from "./github/repository-bindings";
 import {
   diffRepositoryPolicy,
   normalizeRulesets,
@@ -3386,6 +3387,33 @@ githubProject
 const githubBinding = github
   .command("binding")
   .description("Issue・branch・PR・CI・review・merge観測をPLANへ結合する");
+
+githubBinding
+  .command("sync")
+  .description("typed PR traceを持つGitHub PR群からlifecycle bindingを再構築する")
+  .requiredOption("--repository <id>", "repository identity (owner/name)")
+  .option("--db <path>", "harness.db path (default: .ut-tdd/harness.db)")
+  .option("--json", "JSON output")
+  .action((opts: { repository: string; db?: string; json?: boolean }) => {
+    const db = openHarnessDb(opts.db ?? defaultHarnessDbPath(process.cwd()), {
+      repoRoot: process.cwd(),
+    });
+    try {
+      migrate(db);
+      const result = syncRepositoryBindings({ db, repositoryId: opts.repository });
+      rebuildExecutionReadiness(db);
+      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else
+        process.stdout.write(
+          `github binding sync: inspected=${result.inspectedPullRequests} traced=${result.tracedPullRequests} bindings=${result.bindingIds.length} skipped=${result.skipped.length}\n`,
+        );
+    } catch (error) {
+      process.stderr.write(`github binding sync failed: ${String(error)}\n`);
+      process.exitCode = 3;
+    } finally {
+      db.close();
+    }
+  });
 
 githubBinding
   .command("observe")

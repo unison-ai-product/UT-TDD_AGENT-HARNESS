@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ForwardReadinessRow } from "../src/github/forward-readiness";
 import type { ProjectField, ProjectSnapshot, ProjectV2Port } from "../src/github/project-v2";
-import { syncForwardProject } from "../src/github/project-v2";
+import { persistProjectSync, syncForwardProject } from "../src/github/project-v2";
+import { openHarnessDb } from "../src/state-db/index";
+import { migrate } from "../src/state-db/migration";
 
 const select = (name: string, options: string[]): ProjectField => ({
   id: `field:${name}`,
@@ -160,5 +162,29 @@ describe("GitHub Project V2 reconciler", () => {
         apply: false,
       }),
     ).toThrow(/fields missing/);
+  });
+
+  it("U-GHPROJ-024: persists Project item identity as a durable binding", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      persistProjectSync({
+        db,
+        repositoryId: "owner/repo",
+        projectId: "project:6",
+        rows: [row],
+        result: {
+          applied: true,
+          projectId: "project:6",
+          mutations: [],
+          itemIds: { [row.planId]: "item:1" },
+        },
+      });
+      expect(
+        db.prepare("SELECT object_kind, object_id, state FROM github_object_bindings").get(),
+      ).toEqual({ object_kind: "project_item", object_id: "item:1", state: "同期済" });
+    } finally {
+      db.close();
+    }
   });
 });

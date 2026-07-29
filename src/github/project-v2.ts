@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
 import type { ForwardReadinessRow } from "./forward-readiness";
+import { recordGithubBinding } from "./forward-store";
 
 export interface ProjectField {
   id: string;
@@ -341,11 +342,12 @@ export function persistProjectSync(input: {
   input.db.exec("BEGIN IMMEDIATE");
   try {
     for (const row of input.rows) {
+      const itemId = input.result.itemIds[row.planId] ?? "";
       statement.run(
         stableId("github-project-item", `${input.repositoryId}:${row.planId}:${row.revision}`),
         input.repositoryId,
         input.projectId,
-        input.result.itemIds[row.planId] ?? "",
+        itemId,
         row.planId,
         row.revision,
         "",
@@ -353,6 +355,18 @@ export function persistProjectSync(input: {
         input.result.applied ? "同期済" : "未同期",
         now,
       );
+      if (input.result.applied && itemId) {
+        recordGithubBinding(input.db, {
+          repositoryId: input.repositoryId,
+          planId: row.planId,
+          planRevision: row.revision,
+          projectItemId: itemId,
+          objectKind: "project_item",
+          objectId: itemId,
+          state: "同期済",
+          observedAt: now,
+        });
+      }
     }
     input.db.exec("COMMIT");
   } catch (error) {
