@@ -135,15 +135,26 @@ export function resolveAdvisorRoutes(input: {
   const adversarialForOpus: AdvisorConsultationMode =
     input.family === "opus" ? "adversarial" : "consult";
 
-  if (input.forcedProvider === "codex" || input.mode === "codex-only") {
+  if (
+    (input.mode === "claude-only" && input.forcedProvider === "codex") ||
+    (input.mode === "codex-only" && input.forcedProvider === "claude")
+  ) {
+    throw new Error(
+      `advisor-provider-mode-conflict: provider=${input.forcedProvider} mode=${input.mode}`,
+    );
+  }
+  // 明示 provider は hybrid での一次経路を固定し、別 provider へ fallback しない。
+  if (input.forcedProvider === "codex") {
     return { primary: codexRoute(adversarialForOpus) };
   }
-  if (input.forcedProvider === "claude" || input.mode === "claude-only") {
-    // 明示 claude 強制 / claude-only。claude-only では codex fallback を構成しない。
-    return {
-      primary: fableRoute(adversarialForOpus),
-      ...(input.mode === "claude-only" ? {} : { fallback: codexRoute(adversarialForOpus) }),
-    };
+  if (input.forcedProvider === "claude") {
+    return { primary: fableRoute(adversarialForOpus) };
+  }
+  if (input.mode === "codex-only") {
+    return { primary: codexRoute(adversarialForOpus) };
+  }
+  if (input.mode === "claude-only") {
+    return { primary: fableRoute(adversarialForOpus) };
   }
   if (
     input.decisionKind === "design" ||
@@ -165,25 +176,18 @@ const TROUBLESHOOTING_TERMS = ["bug", "crash", "debug", "error", "fail", "incide
  * 実例 2026-07-29: 「CI が赤い PR を先に見るか、設計 freeze を先にやるか」は
  * troubleshooting 語を含むがレーン選択。
  */
-const PROGRESS_TERMS = [
-  "lane",
-  "レーン",
-  "優先",
-  "priority",
-  "prioriti",
-  "着手順",
-  "着手",
-  "進行",
-  "段取り",
-  "sequencing",
-  "backlog",
-  "triage",
+const PROGRESS_PATTERNS = [
+  /\b(?:lane|priorit\w*|sequenc\w*|schedul\w*|roadmap|backlog|triage)\b/i,
+  /\bwhich\b.{0,80}\b(?:should|to)\b.{0,40}\b(?:first|next)\b/i,
+  /\bwhat\b.{0,40}\b(?:should|to)\b.{0,40}\b(?:first|next)\b/i,
+  /\b(?:in what order|order of|execution order|work order)\b/i,
+  /(?:レーン|優先順位|着手順|段取り|どれを先|どちらを先|何から(?:始め|着手|対応|直)|次に何(?:を|から))/,
 ];
 
 function inferDecisionKind(taskIntent: TaskIntent, task: string): AdvisorDecisionKind {
   if (taskIntent === "uiux") return "uiux";
   const text = task.toLowerCase();
-  if (PROGRESS_TERMS.some((term) => text.includes(term))) return "progress";
+  if (PROGRESS_PATTERNS.some((pattern) => pattern.test(text))) return "progress";
   if (TROUBLESHOOTING_TERMS.some((term) => text.includes(term))) return "troubleshooting";
   return taskIntent === "implementation" || taskIntent === "test" || taskIntent === "lightweight"
     ? "implementation"

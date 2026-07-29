@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { OPENAI_PRICING } from "../src/state-db/token-tracker";
 import { TIER_TABLE } from "../src/task/tier-router-policy";
-import { buildAdvisorDecision } from "../src/team/advisor-policy";
+import { buildAdvisorDecision, resolveAdvisorRoutes } from "../src/team/advisor-policy";
 import {
   advisorHeavyUseRecommended,
   escalateShallowResponse,
@@ -581,6 +581,83 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
       currentModel: MODEL_IDS.claude.sonnet,
     });
     expect(sonnet.consultation_mode).toBe("consult");
+  });
+
+  it("U-ROUTE2-015: 実装の進行状況は進行判断へ過剰分類せず troubleshooting を優先する", () => {
+    const decision = buildAdvisorDecision({
+      task: "着手した実装が進行中に crash した。原因を debug したい",
+      mode: "hybrid",
+      currentModel: MODEL_IDS.claude.opus,
+    });
+    expect(decision).toMatchObject({
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
+      decision_kind: "troubleshooting",
+    });
+  });
+
+  it("U-ROUTE2-016: 英語の優先順判断は technical 語を含んでも progress を優先する", () => {
+    for (const task of ["Which failing PR should we fix first?", "Which failing PR to fix first?"]) {
+      const decision = buildAdvisorDecision({
+        task,
+        mode: "hybrid",
+        currentModel: MODEL_IDS.claude.opus,
+      });
+      expect(decision).toMatchObject({
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
+        decision_kind: "progress",
+      });
+    }
+  });
+
+  it("U-ROUTE2-016b: first/next を含む原因調査は progress へ誤分類しない", () => {
+    for (const task of [
+      "What caused the first crash?",
+      "What is the next error in this stack trace?",
+      "障害は何から発生したか debug したい",
+    ]) {
+      expect(
+        buildAdvisorDecision({
+          task,
+          mode: "hybrid",
+          currentModel: MODEL_IDS.claude.opus,
+        }),
+      ).toMatchObject({
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+        decision_kind: "troubleshooting",
+      });
+    }
+  });
+
+  it("U-ROUTE2-017: provider 強制は hybrid の単一路に限定し runtime-only 矛盾を fail-close する", () => {
+    const forcedCodex = resolveAdvisorRoutes({
+      decisionKind: "design",
+      family: "opus",
+      mode: "hybrid",
+      forcedProvider: "codex",
+    });
+    expect(forcedCodex).toMatchObject({
+      primary: { provider: "codex", model: MODEL_IDS.codex.frontier },
+    });
+    expect(forcedCodex).not.toHaveProperty("fallback");
+    expect(() =>
+      resolveAdvisorRoutes({
+        decisionKind: "design",
+        family: "opus",
+        mode: "claude-only",
+        forcedProvider: "codex",
+      }),
+    ).toThrow("advisor-provider-mode-conflict");
+    expect(() =>
+      resolveAdvisorRoutes({
+        decisionKind: "troubleshooting",
+        family: "opus",
+        mode: "codex-only",
+        forcedProvider: "claude",
+      }),
+    ).toThrow("advisor-provider-mode-conflict");
   });
 
   it("U-ROUTE2-010: 想定を下回る orchestrator は advisor 多用を推奨 (未知モデルは推奨側へ fail)", () => {

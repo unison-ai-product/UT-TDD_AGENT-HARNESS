@@ -162,6 +162,12 @@ Pack review の P1/P2 指摘を受け、team schema / model policy が扱う UT-
 3. CLI の `--decision` 受理集合を `ADVISOR_DECISION_KINDS` (SSoT) に一致させる。
    旧実装は `design|implementation` をハードコードしており、既存の `uiux` /
    `troubleshooting` が CLI から指定できない drift になっていた。
+4. 進行判断の推論は `着手` / `進行` の単独部分一致を使わず、優先順位・着手順・
+   `which ... first` など順序判断を表す強いパターンに限定する。実装が「進行中」に
+   crash しただけの相談は `troubleshooting` とする。
+5. `--provider` は `hybrid` で明示した単一 provider へ固定する override とし、
+   cross-provider fallback を構成しない。`claude-only` で Codex、`codex-only` で
+   Claude を強制する矛盾は黙って無視せず fail-close する。
 
 不採択と理由:
 
