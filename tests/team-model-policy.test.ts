@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { OPENAI_PRICING } from "../src/state-db/token-tracker";
 import { TIER_TABLE } from "../src/task/tier-router-policy";
-import { buildAdvisorDecision } from "../src/team/advisor-policy";
+import { buildAdvisorDecision, resolveAdvisorRoutes } from "../src/team/advisor-policy";
 import {
   advisorHeavyUseRecommended,
   escalateShallowResponse,
@@ -23,7 +23,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("uses mini and xhigh effort for trivial doc patches (effort ladder, PO rule 2026-07-14)", () => {
+  it("uses mini at ladder-base high effort for trivial doc patches (effort ladder, PO rule 2026-07-28)", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "docs",
@@ -35,7 +35,8 @@ describe("team model policy", () => {
       difficulty: "trivial",
       model_family: "fast",
       model: MODEL_IDS.codex.mini,
-      reasoning_effort: "xhigh",
+      // mini は base=high (改定前は xhigh)。深さが要るなら effort ではなく Terra へ上げる。
+      reasoning_effort: "high",
       task_intent: "docs",
     });
   });
@@ -124,7 +125,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("routes sonnet design decisions to sol with a fable fallback (PO rule 2026-07-14)", () => {
+  it("routes sonnet design decisions to fable with a sol fallback (PO rule 2026-07-29)", () => {
     const claude = buildAdvisorDecision({
       task: "review whether the release gate is safe to close",
       mode: "hybrid",
@@ -133,29 +134,29 @@ describe("team model policy", () => {
     });
 
     expect(claude).toMatchObject({
-      provider: "codex",
-      model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+      effort: "low",
       consultation_mode: "consult",
       decision_kind: "design",
       decision_kind_source: "explicit",
       current_model_lower_than_advisor: true,
       adapterPlan: {
-        provider: "codex",
-        model: MODEL_IDS.codex.frontier,
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
         dry_run: true,
       },
       fallback: {
-        provider: "claude",
-        model: MODEL_IDS.claude.fable,
-        effort: "middle",
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+        effort: "low",
         consultation_mode: "consult",
       },
     });
     expect(claude.adapterPlan.stdin).toContain("upper-model advisor");
   });
 
-  it("routes opus design decisions to adversarial sol with a fable fallback", () => {
+  it("routes opus design decisions to adversarial fable with a sol fallback", () => {
     const decision = buildAdvisorDecision({
       task: "decide the architecture split for the projection layer",
       mode: "hybrid",
@@ -164,15 +165,15 @@ describe("team model policy", () => {
     });
 
     expect(decision).toMatchObject({
-      provider: "codex",
-      model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+      effort: "low",
       consultation_mode: "adversarial",
       fallback: {
-        provider: "claude",
-        model: MODEL_IDS.claude.fable,
-        effort: "middle",
-        consultation_mode: "consult",
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+        effort: "low",
+        consultation_mode: "adversarial",
       },
     });
     expect(decision.adapterPlan.stdin).toContain("adversarial verifier");
@@ -187,7 +188,7 @@ describe("team model policy", () => {
     expect(sonnet).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "consult",
       decision_kind: "implementation",
       decision_kind_source: "inferred",
@@ -205,7 +206,7 @@ describe("team model policy", () => {
     expect(opus).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "adversarial",
     });
     expect(opus.adapterPlan.stdin).toContain("adversarial verifier");
@@ -222,7 +223,7 @@ describe("team model policy", () => {
     expect(codex).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      effort: "low",
       consultation_mode: "consult",
       adapterPlan: {
         provider: "codex",
@@ -230,13 +231,13 @@ describe("team model policy", () => {
         dry_run: false,
       },
     });
-    // effort argv 注入 (PLAN-L7-255): repo 語彙 "middle" は codex config 語彙 "medium" へ正規化される
+    // Sol advisor はモデル標準 effort=low を argv へ実注入する。
     expect(codex.adapterPlan.args).toEqual([
       "exec",
       "-m",
       MODEL_IDS.codex.frontier,
       "-c",
-      "model_reasoning_effort=medium",
+      "model_reasoning_effort=low",
       "-",
     ]);
     expect(codex.fallback).toBeUndefined();
@@ -266,8 +267,10 @@ describe("team model policy", () => {
           currentModel,
         }),
       ).toMatchObject({
-        provider: "codex",
-        model: MODEL_IDS.codex.frontier,
+        // design は Fable 一次 (PO 2026-07-29)。旧世代 sonnet / haiku は
+        // 世代を問わず advisor family より下位と判定される。
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
         current_model_lower_than_advisor: true,
       });
     }
@@ -275,7 +278,7 @@ describe("team model policy", () => {
 });
 
 describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
-  it("U-ROUTE2-001: codex テスト実装は terra + ladder base low effort", () => {
+  it("U-ROUTE2-001: codex テスト実装は terra + ladder base middle effort", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "se",
@@ -284,8 +287,8 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     });
     expect(selection).toMatchObject({
       model: MODEL_IDS.codex.worker,
-      // Terra は基準 low (effort ladder)。浅い時 middle、なお浅ければ Sol low へ乗り換え。
-      reasoning_effort: "low",
+      // Terra は基準 middle (effort ladder)。浅い時 high、なお浅ければ Sol low へ乗り換え。
+      reasoning_effort: "middle",
       task_intent: "test",
     });
   });
@@ -501,6 +504,165 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     });
   });
 
+  it("U-ROUTE2-011: 進行判断 (レーン選択・優先順位) は task 文から推論され fable 一次 (PO 2026-07-29)", () => {
+    for (const task of [
+      "どのレーンに着手するか優先順位を決めたい",
+      "decide the lane and sequencing for this block",
+    ]) {
+      const decision = buildAdvisorDecision({
+        task,
+        mode: "hybrid",
+        currentModel: MODEL_IDS.claude.opus,
+      });
+      expect(decision).toMatchObject({
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
+        decision_kind: "progress",
+        decision_kind_source: "inferred",
+      });
+      expect(decision.fallback).toMatchObject({
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+      });
+    }
+  });
+
+  it("U-ROUTE2-012: 進行判断は troubleshooting 語を含んでも進行側へ寄せる (レーン選択は技術判断でない)", () => {
+    const decision = buildAdvisorDecision({
+      // 実例 2026-07-29: 「CI が fail している PR を先に見るか」というレーン選択。
+      // fail / error 語を含むが判断そのものは進行。
+      task: "PR の CI fail を先に見るか、設計 freeze を先にやるか着手順を決めたい",
+      mode: "hybrid",
+      currentModel: MODEL_IDS.claude.opus,
+    });
+    expect(decision).toMatchObject({
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+      decision_kind: "progress",
+    });
+  });
+
+  it("U-ROUTE2-013: 技術判断 (implementation / troubleshooting) は sol 一次のまま (PO 2026-07-29 で不変)", () => {
+    for (const [task, kind] of [
+      ["implement the retry logic in src", "implementation"],
+      ["debug the crash in the projection writer", "troubleshooting"],
+    ] as const) {
+      const decision = buildAdvisorDecision({
+        task,
+        mode: "hybrid",
+        currentModel: MODEL_IDS.claude.opus,
+      });
+      expect(decision).toMatchObject({
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+        decision_kind: kind,
+      });
+      expect(decision.fallback).toMatchObject({
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
+      });
+    }
+  });
+
+  it("U-ROUTE2-014: opus orchestrator への相談は provider を問わず敵対検証 (追認バイアス防止の不変条件)", () => {
+    const design = buildAdvisorDecision({
+      task: "decide the architecture split for the projection layer",
+      mode: "hybrid",
+      decisionKind: "design",
+      currentModel: MODEL_IDS.claude.opus,
+    });
+    expect(design.consultation_mode).toBe("adversarial");
+    expect(design.adapterPlan.stdin).toContain("adversarial verifier");
+
+    const sonnet = buildAdvisorDecision({
+      task: "decide the architecture split for the projection layer",
+      mode: "hybrid",
+      decisionKind: "design",
+      currentModel: MODEL_IDS.claude.sonnet,
+    });
+    expect(sonnet.consultation_mode).toBe("consult");
+  });
+
+  it("U-ROUTE2-015: 実装の進行状況は進行判断へ過剰分類せず troubleshooting を優先する", () => {
+    const decision = buildAdvisorDecision({
+      task: "着手した実装が進行中に crash した。原因を debug したい",
+      mode: "hybrid",
+      currentModel: MODEL_IDS.claude.opus,
+    });
+    expect(decision).toMatchObject({
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
+      decision_kind: "troubleshooting",
+    });
+  });
+
+  it("U-ROUTE2-016: 英語の優先順判断は technical 語を含んでも progress を優先する", () => {
+    for (const task of [
+      "Which failing PR should we fix first?",
+      "Which failing PR to fix first?",
+    ]) {
+      const decision = buildAdvisorDecision({
+        task,
+        mode: "hybrid",
+        currentModel: MODEL_IDS.claude.opus,
+      });
+      expect(decision).toMatchObject({
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
+        decision_kind: "progress",
+      });
+    }
+  });
+
+  it("U-ROUTE2-016b: first/next を含む原因調査は progress へ誤分類しない", () => {
+    for (const task of [
+      "What caused the first crash?",
+      "What is the next error in this stack trace?",
+      "障害は何から発生したか debug したい",
+    ]) {
+      expect(
+        buildAdvisorDecision({
+          task,
+          mode: "hybrid",
+          currentModel: MODEL_IDS.claude.opus,
+        }),
+      ).toMatchObject({
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+        decision_kind: "troubleshooting",
+      });
+    }
+  });
+
+  it("U-ROUTE2-017: provider 強制は hybrid の単一路に限定し runtime-only 矛盾を fail-close する", () => {
+    const forcedCodex = resolveAdvisorRoutes({
+      decisionKind: "design",
+      family: "opus",
+      mode: "hybrid",
+      forcedProvider: "codex",
+    });
+    expect(forcedCodex).toMatchObject({
+      primary: { provider: "codex", model: MODEL_IDS.codex.frontier },
+    });
+    expect(forcedCodex).not.toHaveProperty("fallback");
+    expect(() =>
+      resolveAdvisorRoutes({
+        decisionKind: "design",
+        family: "opus",
+        mode: "claude-only",
+        forcedProvider: "codex",
+      }),
+    ).toThrow("advisor-provider-mode-conflict");
+    expect(() =>
+      resolveAdvisorRoutes({
+        decisionKind: "troubleshooting",
+        family: "opus",
+        mode: "codex-only",
+        forcedProvider: "claude",
+      }),
+    ).toThrow("advisor-provider-mode-conflict");
+  });
+
   it("U-ROUTE2-010: 想定を下回る orchestrator は advisor 多用を推奨 (未知モデルは推奨側へ fail)", () => {
     expect(
       advisorHeavyUseRecommended({
@@ -532,40 +694,74 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toBe(true);
   });
 
-  it("U-ROUTE2-012: effort ladder 基準 — sol/terra/fable=low, sonnet=middle, opus/spark(luna)=high, mini=xhigh", () => {
+  it("U-ROUTE2-012: effort ladder 基準 — sol/fable=low, opus/terra/sonnet=middle, luna/spark/mini=high", () => {
     const base = (model: string) => MODEL_EFFORT_LADDER[model]?.base;
     expect(base(MODEL_IDS.codex.frontier)).toBe("low");
-    expect(base(MODEL_IDS.codex.worker)).toBe("low");
+    expect(base(MODEL_IDS.codex.worker)).toBe("middle");
     expect(base(MODEL_IDS.claude.fable)).toBe("low");
     expect(base(MODEL_IDS.claude.sonnet)).toBe("middle");
-    expect(base(MODEL_IDS.claude.opus)).toBe("high");
+    expect(base(MODEL_IDS.claude.opus)).toBe("middle");
     expect(base(MODEL_IDS.codex.luna)).toBe("high");
     expect(base(MODEL_IDS.codex.spark)).toBe("high");
-    expect(base(MODEL_IDS.codex.mini)).toBe("xhigh");
+    expect(base(MODEL_IDS.codex.mini)).toBe("high");
   });
 
-  it("U-ROUTE2-013: 浅い回答のエスカレーション — terra low→middle→sol low、opus high→xhigh、行き止まりは null", () => {
-    expect(
-      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "low" }),
-    ).toEqual({ model: MODEL_IDS.codex.worker, effort: "middle" });
+  // PO 2026-07-28:「xhigh 以上はモデル上げたほうがいい」。ラダーが既定として xhigh を配ると
+  // 深さを effort で買う経路が固定化するため、base / shallow から xhigh を外し、行き止まり
+  // (shallow も escalate も無い帯) を禁じる。明示 --effort xhigh (UI/UX 例外) は別経路。
+  it("U-ROUTE2-014: ラダーは既定値として xhigh を配らず、全帯が次段を持つ", () => {
+    for (const [model, ladder] of Object.entries(MODEL_EFFORT_LADDER)) {
+      expect(ladder.base, `${model} base must not default to xhigh`).not.toBe("xhigh");
+      expect(ladder.shallow, `${model} shallow must not default to xhigh`).not.toBe("xhigh");
+      expect(
+        Boolean(ladder.shallow) || Boolean(ladder.escalate),
+        `${model} needs an effort step or a model step`,
+      ).toBe(true);
+    }
+  });
+
+  it("U-ROUTE2-013: 浅い回答のエスカレーション — effort 1 段、その先はモデル上げ (PO 2026-07-28)", () => {
+    // terra: middle → high (effort) → sol low (モデル上げ)
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "middle" }),
+    ).toEqual({ model: MODEL_IDS.codex.worker, effort: "high" });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "high" }),
     ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "low" });
+    // sol: low → middle。frontier なのでその先は無い (advisor / 人間判断へ)
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "low" }),
     ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "middle" });
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "middle" }),
     ).toBeNull();
+    // opus: middle → high → sol low。改定前は shallow=xhigh だった (effort で深さを買っていた)
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "middle" }),
+    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "high" });
     expect(
       escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "high" }),
-    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "xhigh" });
+    ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "low" });
+    // sonnet: middle → high → opus middle (族内でモデル上げ)
     expect(
-      escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "xhigh" }),
-    ).toBeNull();
+      escalateShallowResponse({ model: MODEL_IDS.claude.sonnet, currentEffort: "high" }),
+    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "middle" });
+    // base=high 帯 (luna / spark / mini) は shallow を持たず、base から直接モデル上げ。
+    // 改定前は luna / spark が行き止まり、mini が base=xhigh だった。
+    expect(escalateShallowResponse({ model: MODEL_IDS.codex.luna, currentEffort: "high" })).toEqual(
+      { model: MODEL_IDS.codex.frontier, effort: "low" },
+    );
     expect(
-      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "high" }),
-    ).toBeNull();
+      escalateShallowResponse({ model: MODEL_IDS.codex.spark, currentEffort: "high" }),
+    ).toEqual({ model: MODEL_IDS.codex.worker, effort: "middle" });
+    expect(escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "high" })).toEqual(
+      {
+        model: MODEL_IDS.codex.worker,
+        effort: "middle",
+      },
+    );
+    // ラダー外モデルは対象外 (従来どおり null)
+    expect(escalateShallowResponse({ model: "unknown-model", currentEffort: "low" })).toBeNull();
   });
 
   it("U-ROUTE2-011: レビュー 3 面と プランエージェント (fable 一次 / sol fallback) の正本", () => {

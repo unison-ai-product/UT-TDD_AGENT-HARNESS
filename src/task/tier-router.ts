@@ -6,8 +6,8 @@
  *
  * 不変条件 (PO 確定 2026-06-17):
  *   - archetype が tier 帯を決める: 相談 / 検証 = 上位 (T0)、ワーカー = 下位 (T1/T2)。
- *   - ワーカーは上位モデル (opus / gpt-5.5) に絶対に到達しない (原則安く、fail-close)。
- *   - T0 (opus / gpt-5.5) は明示許可ゲート: 指名 role (tl/qa/uiux) + 明示トリガでのみ発火。
+ *   - ワーカーは上位モデル (`MODEL_IDS.claude.opus` / `MODEL_IDS.codex.frontier`) に絶対に到達しない (原則安く、fail-close)。
+ *   - T0 (`MODEL_IDS.claude.opus` / `MODEL_IDS.codex.frontier`) は明示許可ゲート: 指名 role (tl/qa/uiux) + 明示トリガでのみ発火。
  *   - 主 provider (detectMode().currentRuntime) でクロス分岐し、Codex/GPT も Claude と対称。
  */
 import {
@@ -143,7 +143,7 @@ export function route(
         model: null,
         status: "blocked-needs-approval",
         reason: designated
-          ? "T0 (opus/gpt-5.5) は明示許可が必要です (--allow-frontier)。"
+          ? `T0 (${TIER_TABLE.T0.claude}/${TIER_TABLE.T0.codex}) は明示許可が必要です (--allow-frontier)。`
           : `role ${input.role} は上位帯 (T0) の指名 role ではありません。`,
       };
     }

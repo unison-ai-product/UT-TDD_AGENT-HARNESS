@@ -11,6 +11,7 @@ import {
   DESIGN_LAYERS_REQUIRING_SUB_DOC,
   INTERNAL_ASSET_EXTENSION_PLAN_IDS,
   KIND_LAYER_ENFORCEMENT_DATE,
+  LEGACY_PLAN_ID_COLLISION_DEBT,
   MODE_PATTERN,
   READY_DEPENDENCY_STATUSES,
   REQUIRED_AGENT_ROLE_ENFORCEMENT_DATE,
@@ -772,6 +773,7 @@ export function analyzePlanGovernance(
     { file: string; content: string; raw: Record<string, unknown>; parsed?: Frontmatter }
   >();
   const byPlanId = new Map<string, string[]>();
+  const byPlanIdentity = new Map<string, { file: string; planId: string }[]>();
 
   for (const doc of docs) {
     const raw = parsePlanFrontmatter(doc);
@@ -790,6 +792,11 @@ export function analyzePlanGovernance(
     const planId = stringField(raw.plan_id);
     if (planId) {
       byPlanId.set(planId, [...(byPlanId.get(planId) ?? []), doc.file]);
+      const identity = parsePlanIdIdentity(planId);
+      if (identity) {
+        const key = `${identity.namespace}:${identity.ordinal}`;
+        byPlanIdentity.set(key, [...(byPlanIdentity.get(key) ?? []), { file: doc.file, planId }]);
+      }
       parsed.set(doc.file, {
         file: doc.file,
         content: doc.content,
@@ -803,6 +810,22 @@ export function analyzePlanGovernance(
     if (files.length > 1) {
       for (const file of files)
         violations.push({ file, reason: "duplicate_plan_id", detail: planId });
+    }
+  }
+
+  for (const [key, entries] of byPlanIdentity) {
+    if (entries.length < 2) continue;
+    const actual = [...new Set(entries.map((entry) => entry.planId))].sort();
+    const legacy = [...(LEGACY_PLAN_ID_COLLISION_DEBT[key] ?? [])].sort();
+    if (
+      actual.length === legacy.length &&
+      actual.every((planId, index) => planId === legacy[index])
+    ) {
+      continue;
+    }
+    const detail = `${key}: ${actual.join(", ")}`;
+    for (const entry of entries) {
+      violations.push({ file: entry.file, reason: "duplicate_plan_identity", detail });
     }
   }
 

@@ -30,8 +30,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-10T17:00:23+09:00"
         evidence_path: tests/right-arm-gate-planning.test.ts
-        output_digest: "sha256:0a2f8aeb712cdf2edb03b35e4a6b7278cdbe5a6b01f3df045ee80b135f1dead4"
-        anchor_commit: 71a023b2c74ca15dbc88c4453ca7c9adb05ca58a
+        output_digest: "sha256:2bbf22c3f583cec8beaa658998fe3d3ef6683f996d58b6d7ff7dd094acca9086"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 agent_slots:
   - role: tl
     slot_label: "TL - schedule/right-arm fail-close境界"

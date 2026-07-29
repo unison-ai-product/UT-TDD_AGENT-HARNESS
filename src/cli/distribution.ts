@@ -31,11 +31,16 @@ import {
 } from "../setup/index";
 
 function gitHead(): string | null {
-  try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
-  } catch {
-    return null;
-  }
+  // Distribution commands are intentionally valid in an unpacked clean artifact,
+  // where no `.git` directory exists.  `execFileSync` writes rev-parse's fatal
+  // diagnostic to the parent stderr before the exception can be caught (and Bun's
+  // Linux subprocess implementation can retain the failed child status).  Probe
+  // without inheriting stderr so command registration remains side-effect free.
+  const result = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  return result.status === 0 ? result.stdout.trim() : null;
 }
 
 function collectDistributionCandidatePaths(repoRoot: string): string[] {
@@ -137,14 +142,14 @@ export function registerDistributionCommands(program: Command): void {
       const utTddCliMessage = hasUtTddCli
         ? undefined
         : [
-            "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
+            "Generated Claude/Codex hooks call the shell-free native Bun launcher so each project can use its own pinned UT-TDD package.",
             `Expected wrapper: ${hookWrapperPath}`,
             `Expected package bin: ${packageBinPath}`,
             `Expected source setup entrypoint: ${sourceSetupEntrypoint}`,
             `Observed: ${utTddCliObserved}`,
             utTddCliHints.length > 0
               ? `Detected global candidate path(s): ${utTddCliHints.join(", ")}. Prefer the project-local wrapper when multiple projects on one PC pin different harness versions.`
-              : "Add UT-TDD as a project dependency, run setup to emit the wrapper, and ensure Bun resolves on the hook shell PATH.",
+              : "Add UT-TDD as a project dependency, run setup to emit the wrapper, and ensure the native Bun executable can be resolved without a shell shim.",
           ].join(" ");
       const exportPlan = buildCleanDistributionPlan({
         paths: collectDistributionCandidatePaths(repoRoot),

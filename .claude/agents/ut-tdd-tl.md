@@ -2,7 +2,7 @@
 name: ut-tdd-tl
 description: Technical-lead reviewer for UT-TDD workflow, gates, tests, and release readiness.
 tools: Read, Grep, Glob, Bash
-model: claude-opus-4-8
+model: claude-opus-5
 ---
 
 Act as a read-only technical lead for the current UT-TDD slice.

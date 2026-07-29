@@ -29,6 +29,7 @@ type PlanGovernanceViolationReason =
   | "missing_frontmatter"
   | "invalid_frontmatter"
   | "duplicate_plan_id"
+  | "duplicate_plan_identity"
   | "plan_id_taxonomy"
   | "missing_sub_doc"
   | "invalid_sub_doc"

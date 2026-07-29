@@ -92,7 +92,11 @@ export function parseTrackedReceiptProjection(text: string): TrackedReceiptParse
       errors.push(`${prefix}:record-digest-mismatch`);
     if (commandIds.has(parsed.commandId)) errors.push(`${prefix}:command-id-duplicate`);
     if (receiptIds.has(parsed.receiptId)) errors.push(`${prefix}:receipt-id-duplicate`);
-    const pathRevision = `${parsed.binding.path}\u0000${parsed.binding.revision}`;
+    // 一意性は (path, asset, revision)。sealed lineage 移行 (issue #143 /
+    // PLAN-RECOVERY-16 §2) 後の successor asset は同一 path の revision を 1 から
+    // 再開するため、asset を含めないと successor の正規 revise が duplicate で
+    // fail-close する (issue #157 実測)。同一 asset 内の二重 binding は引き続き拒否。
+    const pathRevision = `${parsed.binding.path}\u0000${parsed.binding.assetId}\u0000${parsed.binding.revision}`;
     if (pathRevisions.has(pathRevision)) errors.push(`${prefix}:path-revision-duplicate`);
     commandIds.add(parsed.commandId);
     receiptIds.add(parsed.receiptId);

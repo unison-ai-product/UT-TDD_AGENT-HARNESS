@@ -259,7 +259,7 @@ describe("L7 CLI surface closure", () => {
       ok: true,
       total: planCount,
       emitted: planCount,
-      decisionCounts: { migrated: planCount - 55, rekeyed: 55, rejected: 0, pending: 0 },
+      decisionCounts: { migrated: planCount - 53, rekeyed: 53, rejected: 0, pending: 0 },
       findings: [],
     });
   }, 15_000);
@@ -292,6 +292,7 @@ describe("L7 CLI surface closure", () => {
     expect(run.status).toBe(0);
     expect(payload.map((profile: { id: string }) => profile.id)).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
       "consumer-toolchain",
       "consumer-setup-smoke",
@@ -339,7 +340,7 @@ describe("L7 CLI surface closure", () => {
     expect(run.status).toBe(1);
     expect(payload.ok).toBe(false);
     expect(payload.messages).toEqual([
-      'doctor: invalid --profile "bogus" (expected: source-full, source-toolchain, consumer-toolchain, consumer-setup-smoke)',
+      'doctor: invalid --profile "bogus" (expected: source-full, source-doc-lane, source-toolchain, consumer-toolchain, consumer-setup-smoke)',
     ]);
   }, 15_000);
 
@@ -588,7 +589,7 @@ describe("L7 CLI surface closure", () => {
           "--task",
           "mechanical ledger check",
           "--model",
-          "claude-opus-4-8",
+          "claude-opus-5",
           "--effort",
           "xhigh",
         ],
@@ -598,7 +599,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "claude",
         dry_run: true,
-        model: "claude-opus-4-8",
+        model: "claude-opus-5",
         effort: "high",
       });
       expect(payload.args).toEqual([
@@ -606,7 +607,7 @@ describe("L7 CLI surface closure", () => {
         "--input-format",
         "text",
         "--model",
-        "claude-opus-4-8",
+        "claude-opus-5",
         "--effort",
         "high",
       ]);
@@ -711,22 +712,22 @@ describe("L7 CLI surface closure", () => {
     const payload = JSON.parse(run.stdout);
 
     expect(run.status).toBe(0);
-    // 設計判断 (review intent → design) は Sol 一次 + Fable fallback (PO ルーティング 2026-07-14)。
+    // 設計判断 (review intent → design) は Fable 一次 + Sol fallback (PO ルーティング 2026-07-29)。
     expect(payload).toMatchObject({
-      provider: "codex",
-      model: MODEL_IDS.codex.frontier,
-      effort: "middle",
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+      effort: "low",
       consultation_mode: "consult",
       decision_kind: "design",
       current_model_lower_than_advisor: true,
       adapterPlan: {
-        provider: "codex",
-        model: MODEL_IDS.codex.frontier,
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
         dry_run: true,
       },
       fallback: {
-        provider: "claude",
-        model: "claude-fable-5",
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
         consultation_mode: "consult",
       },
     });
@@ -768,7 +769,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "codex",
         model: MODEL_IDS.codex.frontier,
-        effort: "middle",
+        effort: "low",
         adapterPlan: {
           provider: "codex",
           model: MODEL_IDS.codex.frontier,
@@ -1421,8 +1422,8 @@ describe("L7 CLI surface closure", () => {
         "reason=ut-tdd-runtime-adapter-wrapper",
       );
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).not.toContain("raw=1");
-      // review task-kind は engine family より優先され Opus/high (PO rule 2026-07-14)。
-      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=high");
+      // repo語彙 Opus/middle は Claude CLI 正式値 medium へ正規化される。
+      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=medium");
     } finally {
       removeTestTree(root);
     }

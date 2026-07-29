@@ -8,7 +8,7 @@ related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L9
 plan: docs/plans/PLAN-L4-33-node-control-plane-redesign.md
 replacement_issue: 152
-superseded_plan: docs/plans/PLAN-L4-02-architecture.md
+predecessor_plan: docs/plans/PLAN-L4-02-architecture.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
@@ -68,6 +68,7 @@ current Bun経路を残さない。
 | **export** (`src/export/`) | canonical doc から派生 export dataset / render artifact projection を作る pure 変換層。CSV/Markdown は内蔵 renderer、XLSX/PPTX は renderer readiness finding に閉じる (PLAN-L7-35) | `parseCanonicalDocumentStructure()` / `buildDocumentExportDataset()` / `renderDocumentExport()` / `recordDocumentExportArtifact()` | schema (path normalization) |
 | **projection** (`src/projection/`) | DB非依存のprojection domain、application command、意味的read/store portを所有する。SQLやfilesystemをdomain/applicationへ漏らさず、具象SQLite adapterは`state-db`側で実装する | `ProjectionStore` / `PocEvaluationReadPort` / `ModelEvaluationReadPort` / `OperationalMetricsReadPort` / 各project command | applicationは`stable-id`、repository config adapterだけがnode:fs/path + yamlへ依存する。state-dbへ逆依存しない |
 | **state-db** (`src/state-db/`) | `.ut-tdd/harness.db` projection の SQLite adapter (bun:sqlite first / node:sqlite fallback、runtime 出し分け) + registry-driven migration (PRAGMA user_version) + idempotent upsert。projection 充填は span ② で配線 (PLAN-L7-44/45) | `openHarnessDb()` / `migrate()` / `upsertRow()` / `harnessDbStatus()` | schema (harness-db registry) / kernel alias resolver / fs |
+| **cutover-ledger** (`src/runtime/cutover-transition.ts`) | canonical cutover receipt/object/refを専用`.ut-tdd/ledger/cutover-ledger.db`へappendする。独自migration registry、`user_version`、online backup/restoreを所有し、`.ut-tdd/harness.db`のprojection writerはread-only投影だけを行う。`.ut-tdd/ledger/harness-ledger.db`はPLAN ledger専用。物理正本はL5 [physical-data.md](../L5-detailed-design/physical-data.md) §2.7.1 | `initializeCutoverChain()` / `appendCutoverTransition()` / `backupCutoverLedger()` / `restoreCutoverLedger()` | schema / Node SQLite / fs |
 | **search** (`src/search/`) | `.ut-tdd/harness.db` の `search_index` を読み、PLAN/artifact/finding/skill/model/session の参照検索を提供する read-only query layer (PLAN-L7-47) | `findReference()` / `upsertSearchReference()` | state-db |
 | **feedback** (`src/feedback/`) | finding / quality_signal / skill recommendation/invocation を集約し、replanning input として `feedback_events` と skill metrics を projection する (PLAN-L7-47) | `computeSkillMetrics()` / `emitFeedbackEvents()` | state-db |
 | **elicitation** (`src/elicitation/`) | 設計判断エリシテーション文脈 (PLAN-L7-428)。工程表 live state + skill decision_points + typed-spec カバレッジを 1 packet に結合して `## 設計判断依頼` 雛形を描画し、採択結果を `.ut-tdd/logs/design-decisions.jsonl` へ append-only 記録する (正本 = PLAN 設計判断節 / ADR、governance = `docs/governance/design-decision-elicitation.md`) | `selectElicitationContext()` / `renderElicitationContext()` / `appendDesignDecision()` | handover (schedule live state) / skill-engine / state-db / fs |
@@ -84,17 +85,19 @@ current Bun経路を残さない。
 | **plan** (`src/plan/`) | PLAN frontmatter + 本文の lint | `lintPlan(path?)` | schema |
 | **vmodel** (`src/vmodel/`) | V-model 4 artifact 双方向 trace lint | `lintVmodel(path?)` | schema |
 | **disposition** (`src/disposition/`) | checked ZIP source/category/item/typed target aggregate、strict authoring loader、Git provenance port。DBやCLIをdomainへ持ち込まず、source→item target推論を禁止する | `DocumentDispositionCatalog.create()` / `loadTrackedCatalogInput()` / `verifyAuthoringProvenance()` | node:crypto / fs・git (adapterのみ) |
+| **document-disposition** (`src/document-disposition/`) | repository全tracked文書のGit object snapshot、baseline/decision/delta ledger、reference/closureを扱うbounded context。`src/disposition`のchecked ZIP semantic catalogとは責務を分け、working tree・DB・Git rename heuristicから判断を創作しない | `captureRepositoryDocsSnapshot()` / `validateDocumentDisposition()` / `replayDocumentDeltas()` / `analyzeRepositoryDocumentClosure()` | domainはcanonical frameのみ、applicationはGit object portへ依存 |
 | **profile** (`src/profile/`) | document `doc_type_id` scale/product profile masterとdecision overlay aggregate。semantic item profileを創作せず、決定論resolverを提供する | `createProfileCatalog()` / `resolveDocumentProfile()` / `loadTrackedDocumentProfileCatalog()` | disposition strict parser (adapterのみ) / node:crypto |
 | **plan-asset** (`src/plan-asset/`) | immutable PLAN identity/revision/evidence/reservationとv1 canonical adapter。`.ut-tdd/ledger/harness-ledger.db`をcanonical event/receipt正本として所有し、HEAD PLAN inventoryとshort alias多義をfail-closeする | `PlanAsset.create/reconstruct/revise()` / `EvidenceRecord.isUsableFor()` / `PlanIdReservation.reserve()` / `PlanLedger.reserve/release/expire()` / `adaptLegacyPlan()` / `buildLegacyPlanInventory()` / `loadProjectIdentityFromHead()` / `migratePlanLedger()` | schema typed DDL / state-db SQLite port / node:crypto / Git・fs（adapterのみ） |
 | **plan-admission** (`src/plan-admission/`) | PLAN起票の駆動モデル許可tuple、Reverse/Redesign遷移、receipt内容束縛、差分fenceを所有する。proposal routingのfallbackをauthoringへ持ち込まず、PLAN直接編集をfail-closeする | `evaluatePlanAdmission()` / `analyzePlanAdmissionDiff()` | schema / plan-asset adapter / Git read-only adapter |
 | **vmodel-contract** (`src/vmodel-contract/`) | L8-L14 verification obligation と L11/L13 pair 例外を宣言契約から検証済み registry へコンパイルする。domain/application と YAML/fs adapter を分離し、右腕・右肺 detector の手書き定数 drift を防ぐ | `compileRightArmContract()` / `loadCompiledRightArmRegistry()` | node:crypto / yaml / fs (adapterのみ) |
 | **runtime** (`src/runtime/`) | 実行モード検出 (detect) + runtime adapter dry-run plan + provider handover + agent-guard 判定本体 + agent-slots (並列 slot 記録、IMP-050) + forced-stop (強制停止推定、IMP-068) + session-log (session 観測、IMP-068) | `detectMode()` / `buildAdapterPlan()` / `runProviderHandover()` / `agent-guard` / `agent-slots` / `forced-stop` / `session-log` | schema (allowlist) / roster (将来、実装後に切替。現状ハードコード相当、§3.1 note + §4.1 移行段階) |
+| **resource-kernel** (`src/resource-kernel/`) | ExecutionSpec、resource/admission policy、journal/outbox、receipt封印のTypeScript正本。verified control processのprobeをdurable化してsealed admission tokenを発行し、managed workload生成を別barrierで許可する | `ExecutionKernel` / `CapabilityNegotiator` / `ExecutionJournal` | schema / state-db / native companion・custody authority port。Rust側へdomain ruleを複製しない |
 | **gate** (`src/gate/`) | execution mode 別 review-tier 判定 (judgment gate の cross-agent / intra_runtime_subagent / human review 強制) | `evaluateGateReview()` | runtime / fs (checklist load) |
 | **team** (`src/team/`) | hybrid team run の事前検証 + Claude/Codex 共通 launch plan + 難易度別の決定論的 model/effort policy + 明示 `--execute` 時の provider adapter 実行 (worker/reviewer provider 分離、duplicate role/provider 検出、`team_runner` slot fire/release) | `validateTeamRun()` / `selectTeamModel()` / `buildTeamRunPlan()` / `executeTeamRunPlan()` | schema / runtime / workflow |
 | **task** (`src/task/`) | FR-L1-39 タスク分類の公開 CLI 面。既存契約 (`scoreTaskComplexity` = FR-L1-39 / `classifyDrive` = FR-L1-41) + `inferTaskDifficulty` を合成し kind/drive/size/complexity/difficulty/risk を構造化出力 (`ut-tdd task classify`)。escalation-sensitive 領域 (auth/payments/PII/migration/schema/production) を risk flag 化し plan lint/gate/skill suggest の入力にする | `classifyTask()` | workflow / team |
 | **doctor** (`src/doctor/`) | 統合検証 (lint 群 + state 突合の集約) | `runDoctor()` | lint / runtime / schema |
 | **handover** (`src/handover/`) | session 引き継ぎ (CURRENT.json 生成/consume/stale 判定、prefill scope、PLAN-L6-06/L7-04 実装済) | `runHandover()` | schema / fs |
-| **memory** (`src/memory/`) | `.ut-tdd/memory/*.md` を authored source とする Claude/Codex 共有 memory。`memory_entries` へ deterministic projection し、SessionStart で read-only/fail-open に surface する。secret-like payload は write/parse 時に fail-close する (PLAN-L7-189)。 | `writeMemoryEntry()` / `loadMemoryEntries()` / `selectMemoryEntries()` / `renderMemorySurface()` | secret / state-db type / fs |
+| **memory** (`src/memory/`) | `.ut-tdd/memory/*.md` を authored source とする Claude/Codex 共有 memory。`memory_entries` へ deterministic projection する。**読み書きの公開入口は `MemoryService` (`src/memory/service.ts`) の `readMemory()` / `writeMemory()` に限定**し、storage primitive は service 内部から公開・再exportしない。本文は正本ファイルから読み、DB は `content_hash` 照合の派生 index として扱う。SessionStart は runtime を止めないが、DB 障害時は無音ではなく劣化 digest を出す (PLAN-L7-189 §5)。secret-like payload は service write / parse 時に fail-close する (PLAN-L7-189)。 | `writeMemory()` / `readMemory()` / `loadMemoryCorpus()` / `queryMemoryEntries()` / `renderMemoryHealth()` | secret / state-db type / fs |
 | **secret** (`src/secret.ts`) | projection、memory、audit、search が共有する secret-like token detector。低レベル module から参照できるよう依存なしに保ち、state-db への逆依存 cycle を作らない。 | `SECRET_PATTERN` / `isSecretLike()` | none |
 | **stable-id** (`src/stable-id.ts`) | DB projection / feedback / skill / workflow が共有する deterministic ID 正規化 helper。ASCII 正規化で情報が落ちる場合は hash suffix を付け、非ASCII見出しやパス由来 ID の衝突を防ぐ。低レベル module から参照できるよう依存は node:crypto のみに保つ。 | `stableId()` | none |
 | **setup** (`src/setup/`) | repo baseline 確立 (solo/team で出し分ける GitHub 設定ファイル emit、PLAN-L6-05/L7-03 実装済) | `runSetup()` | schema / fs |
@@ -200,6 +203,7 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 | **[ADR-004](../../../adr/ADR-004-internal-asset-ts-control-boundary.md)** | **accepted** (2026-06-01) | 内部資産 (subagent/skill/command) の TS 統制境界 = **層1 資産の中身 markdown 正本 / 層2 管理機構 TS**。TS は生成でなく検証/注入/統制。FR-L1-46〜49 / BR-22 / Recovery PLAN-RECOVERY-01 の設計根拠。real Codex TL 確定 |
 | **[ADR-005](../../../adr/ADR-005-distribution-model-and-central-ui.md)** | **accepted** (2026-06-01) | 配布モデル = **GitHub-pull + team server 中央 Web UI**。現行Bun単一バイナリはmigration baseline、target CLIはsealed Node generation。画面+DBは別adapter (`src/web/`、Phase B) |
 | **[ADR-006](../../../adr/ADR-006-cli-framework-commander.md)** | **accepted** (2026-06-05) | CLI フレームワーク = **commander** (oclif 却下)。ADR-001 保留の確定 + `src/cli.ts` 実装追認 (§2 注記の floating 解消、IMP-070 resolved) |
+| **[ADR-009](../../../adr/ADR-009-resource-kernel-native-custody-companion.md)** | **accepted** (2026-07-22) | Rustをprivileged OS custody companionに限定し、TypeScript domain/policy/journal正本、署名済bundle、SBOM、fail-close、rollbackを固定 |
 
 > ADR-002/003 は PO 承認済 (2026-05-29)、ADR-004/005 は TL 確定 + PO 承認 (2026-06-01)。将来 local↔Web 通信境界 (画面+DB サーバ化、IMP-031) は **ADR-005 (配布+中央UI)** が方針正本、通信は ADR-003 adapter の延長で Phase B に扱う。
 
@@ -211,15 +215,73 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 - **ADR-002/003 候補**の起票判断 = G4 前の PO/TL レビュー
 - **CI lint 配線** (doctor + lint + test の自動発火) = local gate 実装済み。外部 CI service 配備は infrastructure / ops 配備範囲
 - **plan-id-schema lint** (Plan 集約 ID 検証) = 第2弾 lint (IMP-004)
+
+## §9 Repository Document Ledger方式境界 (PLAN-L4-25)
+
+全tracked repository documentsの見直しは`src/lint`による都度scanではなく、Git objectで固定した
+zone別baseline、明示delta、final snapshotを持つDocument Ledger集約として実行する。authoring sourceは
+`docs/governance/repository-document-disposition/`配下のmanifest/entryであり、Markdown一覧と
+`harness.db`は生成view/read modelである。
+
+baseline `3d232e9c`の921件は`docs/**` zoneだけのGit subtree証拠であり、repository全体の文書件数ではない。
+`root_policy`、`runtime_policy`、`skills`、`github_policy`を同じsnapshotへ別zoneとして加え、
+未分類のtracked documentを検出した場合は自動除外せずclosureをblockedにする。
+
+方式上の依存方向は次に固定する。
+
+```text
+Git snapshot adapter → strict authoring loader → Document Ledger domain → closure application service
+→ Markdown/SQLite projection adapter
+```
+
+- Git adapterはcommit/tree/blob/raw NUL path streamを読むだけで、dispositionを推測しない。
+- domainはmeaning、applicability、authority、disposition、target、typed reference、不変条件を所有する。
+- closure serviceはbaseline/delta/finalとreference graphを同一runで評価し、途中greenを完了へ昇格しない。
+- detector/doctor/CLIはdomain verdictを表示するconsumerであり、欠落recordの自動補完、keywordによるsubstance判定、
+  targetの推測、silent repairを行わない。
+- write commandとqueryを分離し、materializeはselectorを恒久recordへ展開する明示commandとする。
+- generated viewの手編集、working treeからのbaseline再採取、既存baselineの上書きを禁止する。
+
+reference parserはpath linkだけでなくanchor、PLAN full ID、spec/test ID、supersession、semantic responsibilityを
+typed edge化する。GitHub URLや外部標準はexternal referenceとしてscheme/authorityを保持し、到達不能を
+内部missing pathと混同しない。parse不能をedge 0に変換するfail-openは禁止する。
+
+reference処理は、Git object blob取得、pure readerによる構文edge/receipt生成、analyzerによる
+endpoint/authority/meaning/applicability検証の3段に分離する。readerはsnapshot-bound byte列以外の
+filesystem、DB、network、relation graphを読まず、analyzerは構文を再parseしない。source memberごとの
+required reader receiptをexactly once要求し、reader登録順や既存edgeを欠落receiptの補完に使わない。
+現行relation graphは検証済みedgeのconsumerに限定する。
+
+system境界はL9 `ST-DOCSEM-01..08`で検証する。L9は件数一致だけでなく、意味不一致、適用条件未評価、
+reference target slot不在、stale inbound、archiveの正本化を負例として持つ。
+
 ## 2026-06-29 Task-Classify Route 追補
 
 `classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。
 
-## §9 Node control-plane cutover（Issue #152 / #153）
+## §9 Node制御面の切替（Issue #152 / #153）
 
 TypeScriptのdomain/control planeはcompiled ESMとしてNode上で自己ホストする。移行状態は
 `inventory_frozen → node_shadow → node_primary → bun_removed → sealed`の一方向であり、
-各遷移をsubject revisionへ拘束したreceiptで証明する。Node parity前に旧Bun経路を削除せず、
+各遷移をsubject revisionへ拘束したTypeScript-owned append-only `CutoverTransitionReceipt` chainで証明する。
+receiptの唯一のschemaは`schema_version`、`registry_id`、`transition_id`、`sequence`、`subject_revision`、
+`previous_state`、`current_state`、`evidence_set_digest`、`review_digest`、`admission_digest`、
+`previous_receipt_digest`、`receipt_digest`である。全edgeのfresh review/admission digestは非nullで、
+対応registry rowのevidence receipt `receipt_digest`とexact一致する。
+非隣接、skip、reverse、replay、chain不一致をfail-closeする。状態projectionはvalidated chainから再構築する。
+genesisはnull previous fieldsとinventory evidence+review/admissionを持ち、空chainは`uninitialized`で開始不可とする。
+F0a/F0b/F0c receiptは各producer commitをsubjectとし、node_shadow candidate HEADが全commitのdescendantである
+closureを検証する。transition receipt自体はcandidate HEADをsubjectにする。
+genesisはsequence 0/head null、通常appendはlatest+1とexpected head一致を要求し、exclusive lock内CASで
+receipt+evidenceをatomic appendする。fork、double genesis、CAS loser、partial appendを拒否する。
+slice admissionはD0→F0a→F0b→F0c→Q0のtyped一方向FSMとし、各candidate commitのmerge admissionが
+直前sliceの成功receiptを要求する。edit-start自己gateにはしない。
+review+admission済みD0 draft下で許可するのは順序内の非activation build/verifyとQ0 fixture/detector workだけであり、
+production activation、hook/runtime switch、Bun final deletion、cutoverはconfirmed L6+D0 admissionまで禁止する。
+zod SSoTは`src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`、runtimeは
+`src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、pair testは
+`tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ固定する。
+Node parity前に旧Bun経路を削除せず、
 `node_primary`後にBun、bunx、tsx、TS直実行、shellへfallbackしない。
 
 build imageはexact Node/npm pin、review済みlock graph、external dependency closure、compiled digestを
@@ -227,3 +289,52 @@ build imageはexact Node/npm pin、review済みlock graph、external dependency 
 harness legを最終aggregateがAND集約し、skip、欠測、別HEAD、別generationをGreenにしない。
 Issue #153は継承main負債2件だけを限定する一時envelopeであり、candidate固有のreceipt、review、
 Node matrix、aggregate failureを免除しない。Resource Kernel / Rust companionは別D0-R sliceで扱う。
+D0-N candidateのreview/admission欠落も免除対象外で、merge前修復を要求する。
+
+F0bのatomicityはprocess-crash境界で、`dist/node-publish.lock/`のglobal exclusive publish lease下のappend-only markerにより
+旧completeまたは新complete generationだけを選ぶことを意味する。power-loss durabilityとは区別し、
+Windows Node-only F0bでは最新markerの永続化完了も旧markerの存在も保証しない。power loss後に検証可能な
+complete markerが1件以上あれば最大sequenceを選び、0件ならfail-closeする。
+power-loss durable activationはResource Kernel bundle側trust floorへ委譲するが、D0-R未着地をF0の
+process-crash atomicity blockerにはしない。F0bではgeneration自動GCを禁止する。
+
+## §10 リソースカーネルのネイティブカストディ（Issue #152 D0-R）
+
+Resource Kernelは、process tree、CPU・memory・process・output budget、deadline、orphan zeroを
+OS強制境界で保証する。TypeScript control planeは`ExecutionSpec`、policy、journal、receiptを所有し、
+Rust companionはWindows Job ObjectまたはLinux cgroup v2へのprivileged custody操作だけを実行する。
+責務を両言語へ重複実装せず、capability probe、durable journal append、sealed admission token、
+managed workload生成の順序をbarrierとして固定する。wire commandは
+`Probe | Execute | RecoveryObservation | RecoveryCustody | ControlCommand`の5 variant closed unionとする。
+生成・attach・resumeはtoken必須の`Execute`だけに閉じる。`RecoveryObservation`は認証済みnative factだけを返し、
+TypeScriptだけがjournal照合・authority CAS・lease/trace transactionを所有する。`RecoveryCustody`はauthority leaseで
+既存custodyをobserve/terminate/prove-empty/releaseでき、`ControlCommand`は全custody解放後のshutdownだけを所有する。
+Recovery/Controlからlauncher、managed-root生成、resumeへ型として到達できない。
+`create_custody`が返すleaseをattach/resumeでも照合し、token真正性は抽象`AdmissionTokenAuthenticatorPort`で検証する。
+deadlineはwall sealからmonotonicへ開始時に一度だけ縮小変換し、broker/authority API/recovery supervisorとは独立した
+durable deadline executorをmanaged root生成前にarmする。
+
+D0-R merge scopeはresource budget、process-tree custody、capability、terminal receipt、signed companion bundleに
+限定する。DB incremental rebuild、single-flight、snapshot CAS、hook/doctor/local CI横断のqueue/headroom admissionと
+performance convergenceは要件を維持したままIssue #152 later performance/control-plane waveへdeferし、D0-Rの
+merge gateへ含めない。後続waveは本custody境界を利用するが、D0-RがDB/CAS/local CI policyやNode generation/activationを
+再所有したとは扱わない。
+
+配布単位はtarget別companion、versioned protocol descriptor、SBOM、署名、D0-N generation receipt参照を
+同一revisionへ束縛した署名済companion bundleとする。Node control plane/runtime/core/generation/activationは
+D0-N正本を参照し、D0-R bundleへ含めない。
+manifest、binary digest、protocol、target、SBOM、署名のいずれかが不一致ならcontrol processまたは
+managed root生成前にfail-closeする。L4受入は同一attemptのL9 `ST-RGK-*` receiptだけで判定し、
+検出器のskip・警告化・soft limitへの縮退によって設計契約を下げない。
+trust判定はbundle外のversioned installer/release policyを読む`TrustDecisionPort`へ集約し、署名対象は
+companion digest、protocol descriptor、SBOM、target、sequence、D0-N generation receipt digestを含むcanonical manifest全体とする。
+TS側は`bundle_sequence + manifest_digest + trust_decision_digest + d0n_generation_receipt_digest`の
+accepted factをdurableにcompare-and-advanceする。PKI rotation、secure clock、re-anchor、物理storeはD0-Rで固定せず、
+port欠測、floor未満、同sequence別payloadはfail-closeする。
+global Bun cutoverはPR #154 D0-Nのprerequisiteであり、D0-Rはnative差分のBun依存増分0だけを所有する。
+
+Linuxのmanaged rootは、broker自身ではなくbroker外のdurable deadline ownerへ
+`attempt_id + custody_nonce + cgroup identity + absolute deadline`を開始前commitする。system manager transient
+scope/timerまたは同等のkernel-backed supervisorが、brokerと通常のuser-space recovery supervisorのdual-crash後も期限内に`cgroup.kill`を発行し、
+bounded recovery内に再起動broker/subreaperが`populated=0`、zombie 0、managed orphan 0まで閉じる。
+このowner・kill・reapを強制不能なら開始前に拒否し、証拠欠測をfail-close findingへ変換するだけでは代替しない。

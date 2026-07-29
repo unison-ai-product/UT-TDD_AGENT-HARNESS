@@ -39,7 +39,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-17T19:20:00+09:00"
         evidence_path: .ut-tdd/audit/A-L7-451-typecheck.log
-        output_digest: "sha256:8366207267355d3e"
+        output_digest: "sha256:8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -47,7 +48,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-17T19:20:00+09:00"
         evidence_path: .ut-tdd/audit/A-L7-451-lint.log
-        output_digest: "sha256:86580aae589db1e6"
+        output_digest: "sha256:86580aae589db1e63e95ba45f9458dee377a21da653018f7472d3d93cdd5468a"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 generates:
   - artifact_path: docs/plans/PLAN-L7-451-github-ops-phase1-visibility-and-policy.md
     artifact_type: markdown_doc

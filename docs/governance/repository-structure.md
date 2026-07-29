@@ -44,6 +44,8 @@ UT-TDD-agent-harness/
 │   ├── ut-tdd.ps1                #   Windows PowerShell
 │   └── install-hooks.{sh,ps1}    #   [予定] hook installer
 │
+├── skills/                       # ★ Pack / runtime skill content の正本 (src/skill-engine/ は recommend/inject/scaffold の実装コード。docs/skills/ は legacy-derived 参照資料)
+│
 ├── docs/
 │   ├── governance/               # ★ 現行正本 (本書群)
 │   │   ├── README.md             #   正本 / 参照 / archive 境界
@@ -95,6 +97,7 @@ UT-TDD-agent-harness/
 | 工程 / 駆動モデル定義 | `docs/process/` | **工程(L0-L14)定義 + 駆動モデル(Forward/Scrum/Reverse/Recovery/Add-feature/Retrofit/Refactor/Research)正本**。「どの工程/駆動を増やすか」は要件 (L3) で決め本 dir に置く (本 session の発端 gap を解消)。既存 `docs/governance/recovery-workflow.md` は **`docs/process/modes/recovery.md` へ統合完了 (2026-06-04、IMP-060)** = recovery 正本は `docs/process/modes/recovery.md`。recovery-workflow.md は superseded (historical、冒頭 banner) |
 | 中央 Web UI service | `src/web/` | [予定] 全 project 横断の管理 UI (15 画面、GitHub backbone、ADR-005 D2)。backend 配置・通信境界は L2 設計 (ADR-003 §IMP-031 参照) |
 | テストコード | `tests/` | vitest、`*.test.ts`、src を mirror |
+| Pack / runtime skill content | `skills/` (root) | **skill doc の正本**。`src/skill-engine/` は recommend/inject/scaffold の実装コードで skill content dir ではない。`docs/skills/` 配下は legacy-derived 参照資料で Pack runtime skill root ではない |
 | OS entrypoint | `scripts/` | **薄い wrapper のみ**。currentは既存Bun commandを呼ぶmigration debt、targetはsealed Node generationだけを呼ぶ。core logicとfallbackを持たない |
 | enum / 契約 | `src/schema/` | **zod 単一正本**。enum を複数箇所に再定義しない (drift 防止、requirements §1.10 F) |
 | 現行正本 doc | `docs/governance/` | concept v3.1 / requirements v1.2 / README / extraction-plan / 本書 |
@@ -171,11 +174,12 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 - **engine は tool 非依存 package**: CLI / CI (Layer B-remote `.github/workflows`) / Codex / 将来ツールが同一 engine を GitHub から取得 (ルール同一性、concept §2.1.0)。Claude plugin は **任意の補助配信チャネル**で主軸でない (ADR-005 D3)。
 - consume 側 project の投影レイアウト (CLAUDE.md/.claude/AGENTS.md + `.ut-tdd/` state) の詳細は `ut-tdd setup` 仕様 (L4 external-if / L5 if-detail) で確定。
 
-## 10. Node control-plane build image（Issue #152 D0-N）
+## 10. Node制御面のビルドイメージ（Issue #152 D0-N）
 
-- F0aではrootの`.node-version`、`package.json`のexact `packageManager` / authority policy、`package-lock.json`をNode/npm/dependency graphの静的正本とする。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
-- F0aは上記正本、npm lock root graph、`bun.lock` direct parity、`node_candidate` authority policyの静的整合までを所有する。F0bはreview済みNode distribution/npm CLIのexpected digest provenanceを追加し、実npm executableのabsolute path・version・digestをreceiptへ封印する。F0aのGreenを実行時custody完了と読み替えない。
-- `dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、current pointerの一回のatomic swapで公開する。CLIとreceiptを別々に最終pathへrenameしない。
+- F0a（toolchain）はrootの`.node-version`、`package.json`のexact `packageManager` / engines / `npmIntegrity` authority policy、`package-lock.json`をNode/npm/dependency graphの静的正本として導入する。pinはexactであり、ambient PATHやruntime downloadへ解決しない。
+- F0aは上記正本、npm lock root graph、`bun.lock` direct parity、`node_candidate` authority policyの静的整合までを所有する。F0bはreview済みNode distribution/npm CLIのexpected digest provenance（`docs/governance/node-toolchain-provenance.json`）を追加し、実npm executableのabsolute path・version・digestをreceiptへ封印する。F0aのGreenを実行時custody完了と読み替えない。
+- F0b（sealed build）は`dist/node-generations/<generation-id>/`にcompiled ESMと`NodeBootstrapReceipt`を同居させ、exact lease path `dist/node-publish.lock/`のatomic `mkdir`取得後にappend-only immutable activation markerを追加する。current pointer上書き、別lease backend、CLI/receiptの別々の最終renameを禁止する。
+- F0c（CI）はF0bのsealed generationだけをLinux/Windows matrixと最終aggregateへ配線する。
 - receiptはsubject revision、実Node/npm executable identity、lock/build policy、external dependency closure、source graph、compiled CLI digestを封印する。
 - `src/runtime/node-bootstrap.ts`以外からproduction Node imageを直接解決しない。Bun、bunx、tsx、TS直実行、shell fallbackは禁止する。
 - Resource Kernel / Rust companionの配置は別設計sliceとし、D0-Nのbuild、review、F0開始条件へ混入させない。

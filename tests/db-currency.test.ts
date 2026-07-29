@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration";
+import { defaultHarnessDbPath } from "../src/state-db/index";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
 import {
   refreshHarnessDbOnStop,
@@ -201,7 +202,7 @@ describe("db-currency lint", () => {
     const calls: Array<{
       command: string;
       args: string[];
-      options: { cwd: string; detached: boolean; stdio: "ignore" };
+      options: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: boolean };
       unrefCalled: boolean;
     }> = [];
 
@@ -227,7 +228,12 @@ describe("db-currency lint", () => {
     expect(calls[0]?.args.slice(0, 3)).toEqual(["/repo/src/cli.ts", "session", "db-refresh"]);
     expect(calls[0]?.args[3]).toBe("--generation");
     expect(calls[0]?.args[4]).toMatch(/^[0-9a-f-]{36}$/);
-    expect(calls[0]?.options).toEqual({ cwd: root, detached: true, stdio: "ignore" });
+    expect(calls[0]?.options).toEqual({
+      cwd: root,
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true,
+    });
     expect(calls[0]?.unrefCalled).toBe(true);
     removeTestTree(root);
   });
@@ -783,6 +789,55 @@ describe("db-currency lint", () => {
         "verified-join-generation",
       );
       expect(existsSync(join(generation, `ack-${process.pid}.json`))).toBe(false);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-026: Stop-hook refresh calls maybeVacuumHarnessDb once, after a successful rebuild (PLAN-L7-457, issue #118)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-vacuum-"));
+    const emptySessions = mkdtempSync(join(tmpdir(), "ut-tdd-stop-vacuum-sessions-"));
+    try {
+      const calls: Array<{ dbPath: string; repoRoot?: string }> = [];
+      const refresh = refreshHarnessDbOnStop({
+        repoRoot: root,
+        claudeSessionsDir: emptySessions,
+        codexSessionsDir: emptySessions,
+        vacuum: (dbPath, options) => {
+          calls.push({ dbPath, repoRoot: options?.repoRoot });
+          return { ran: false };
+        },
+      });
+
+      expect(refresh.ok).toBe(true);
+      expect(refresh.rebuilt).toBe(true);
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.dbPath).toBe(defaultHarnessDbPath(root));
+      expect(calls[0]?.repoRoot).toBe(root);
+      expect(refresh.vacuum).toEqual({ ran: false });
+    } finally {
+      removeTestTree(root);
+      removeTestTree(emptySessions);
+    }
+  });
+
+  it("U-DBCURRENCY-027: Stop-hook refresh does not call maybeVacuum when rebuild fails", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-vacuum-skip-"));
+    try {
+      writeFileSync(join(root, ".ut-tdd"), "not a directory", "utf8");
+      let calls = 0;
+      const refresh = refreshHarnessDbOnStop({
+        repoRoot: root,
+        skipTokenIngest: true,
+        vacuum: () => {
+          calls += 1;
+          return { ran: false };
+        },
+      });
+
+      expect(refresh.ok).toBe(false);
+      expect(calls).toBe(0);
+      expect(refresh.vacuum).toBeUndefined();
     } finally {
       removeTestTree(root);
     }

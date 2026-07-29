@@ -120,14 +120,28 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 `harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
+#### §2.7.1 canonical ledgerファイル正本registry
+
+| ファイル | physical ownership | rebuild / migration / backup |
+|---|---|---|
+| `.ut-tdd/harness.db` | rebuildable projection only | docs/stateとcanonical ledgerのread-only入力からrebuild可能。truncate/deleteはprojection ownerだけが実行し、canonical receiptを保持しない |
+| `.ut-tdd/ledger/harness-ledger.db` | PLAN asset/revision/admission canonical ledger | PLAN ledger migration registryだけがschemaを変更する。projection rebuild/deleteから隔離し、欠落・未知version・digest不整合はfail-close |
+| `.ut-tdd/ledger/cutover-ledger.db` | cutover head/transition/typed object/ref canonical ledger | cutover固有`user_version`・migration registry・online backup/restoreだけが変更する。unknown newer、downgrade、migration failureはcanonical bytes不変でfail-close |
+
+cutover tablesを`.ut-tdd/harness.db`又はPLAN ledgerへ作成してはならない。projection writerは
+`cutover-ledger.db`をread-only transactionで投影し、rebuild/truncate/delete/migrationを伝播しない。
+backup/restoreはcutover DB全体とhead/refs/object digestを同一snapshotとして扱い、projection backupで代替しない。
+本registryは[architecture.md](../L4-basic-design/architecture.md)の3 DB boundaryと
+[internal-processing.md](internal-processing.md)のcutover writer/CAS契約を物理正本として双方向に拘束する。
+
 | table | primary key | 主な列 | 入力 |
 |---|---|---|---|
 | `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `route_mode`, `status`, `parent`, `updated_at`, `decision_outcome`, `source_hash` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |
 | `artifact_registry` | `artifact_id` | `artifact_type`, `path`, `pair_artifact`, `status`, `updated_at` | docs/test-design、source catalog、trace state を入力とする。 |
-| `model_runs` | `run_id` | `runtime`, `model`, `role`, `drive`, `plan_id`, `started_at`, `completed_at`, `evidence_path` | Codex / Claude / worker / reviewer の execution evidence を記録する。 |
+| `model_runs` | `run_id` (TEXT) | `runtime` (TEXT), `model` (TEXT), `role` (TEXT), `drive` (TEXT), `plan_id` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `evidence_path` (TEXT), `input_tokens` (INTEGER), `output_tokens` (INTEGER), `cached_input_tokens` (INTEGER), `reasoning_tokens` (INTEGER), `cost_usd` (REAL) | Codex / Claude / worker / reviewer の execution evidence を記録する。token telemetry 5 列 (FR-L1-38、PLAN-L7-57) は review-evidence 由来行で NULL、token-tracker がセッションログから投入した行のみ非 NULL。`cached_input_tokens`/`reasoning_tokens` は runtime により欠ける (Claude=cache_read、Codex=cached_input/reasoning)。`cost_usd` は Claude のみ算出可 (Codex は pricing source 未取得で NULL)。 |
 | `trace_edges` | `edge_id` | `from_artifact`, `to_artifact`, `edge_kind`, `plan_id`, `status` | artifact trace state |
 | `coverage` | `coverage_id` | `scope`, `subject_id`, `metric`, `value`, `threshold`, `status` | test coverage / trace coverage / plan coverage を保存する。 |
-| `findings` | `finding_id` | `kind`, `severity`, `subject_id`, `source`, `status`, `evidence_path` | doctor / vmodel lint / review findings を保存する。 |
+| `findings` | `finding_id` (TEXT) | `kind` (TEXT), `severity` (TEXT), `subject_id` (TEXT), `source` (TEXT), `status` (TEXT), `evidence_path` (TEXT), `next_action` (TEXT) | doctor / vmodel lint / review findings を保存する。 |
 | `gate_runs` | `gate_run_id` | `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | `.ut-tdd/gate_runs/*.json`, CI evidence |
 | spec IR tables | §9.9 | `spec_defs`, `spec_relations`, `schedule_entries`, `activation_entries`, `document_catalog_entries`, `spec_rag_closure_entries`, `detector_route_candidates` | Vモデル仕様 IR / 工程 / 活性化 / 文書カタログ / spec 閉包 RAG / 起票候補 projection。§2.7 基礎表を正本化せず、詳細は §9.9 で定義する。 |
 
@@ -147,19 +161,23 @@ data.md §3 の 12 値オブジェクトは全て **enum string** で物理表�
 
 **SubDoc zod 化方針 (IMP-026 解消済み)** — 値域は **requirements §1.10.G.1 が SSoT** で、`src/schema/index.ts` / `src/schema/frontmatter.ts` に実装済み:
 ```
-// src/schema/index.ts:
+// src/schema/index.ts (実装値と同期、PLAN-L7-459 H7 で snapshot 更新):
 export const VALID_SUB_DOCS = {
-  L1: ["business", "functional", "screen", "technical", "nfr"],              // 5
-  L2: ["screen-list", "screen-flow", "wireframe", "ui-element"],             // 4
-  L3: ["business-requirement", "functional-requirement", "nfr-grade"],       // 3
-  L4: ["architecture", "function", "screen", "data", "external-if"],         // 5
-  L5: ["internal-processing", "module-decomposition", "physical-data", "if-detail"], // 4
-  L6: ["function-spec", "class-design", "edge-case"],                        // 3
+  L1: ["business", "functional", "nfr", "technical", "screen"],              // 5
+  L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],             // 4
+  L3: ["business", "functional", "nfr", "screen-functional"],                // 4
+  L4: ["data", "architecture", "function", "external-if", "security",
+       "ui-standard", "report", "batch", "notification", "code-value"],      // 10
+  L5: ["physical-data", "module-decomposition", "internal-processing",
+       "if-detail", "ui-detail"],                                            // 5
+  L6: ["function-spec", "class-design", "edge-case", "screen-spec"],         // 4
 } as const;
 // subDocSchema + frontmatter superRefine で layer×sub_doc 整合を fail-close
 ```
-> 値域の SSoT は requirements §1.10.G.1。本 doc は物理化 (zod 定数 + superRefine) を設計し、実装は L7 (`src/schema` 追加 + frontmatter.ts superRefine 拡張)。
-> **⚠ 既存 doc との不整合 (IMP-029)**: 実在の L3 sub-doc frontmatter は `sub_doc: functional` / `business-detail` 等で、G.1 spec の `functional-requirement` / `business-requirement` と食い違う。IMP-026 実装時に既存 doc の `sub_doc` 値を G.1 へ正規化するか G.1 を実態へ合わせるかの decision が必要 (本 doc は G.1 を SSoT として記述)。
+> 値域の実装 SSoT は `src/schema/index.ts` (`sub-doc-catalog-drift` doctor gate が requirements
+> §1.10.G.1 表との drift を fail-close 検証)。本 snapshot は説明用であり、正は常に schema 実装。
+> 旧 snapshot の不整合注記 (IMP-029) は IMP-026 実装で解消済 (L3 は実態値 `functional` 等へ
+> 正規化され `screen-functional` / L5 `ui-detail` / L6 `screen-spec` 等が追加された)。
 
 ## §4 ID 採番 / index / 参照整合
 
@@ -225,20 +243,31 @@ PLAN-L5-08 は、SQLite を単なる storage ではなく reference-feedback mec
 
 ### §9.1 projection table 拡張
 
+**型表記の凡例 (PLAN-RECOVERY-12)**: 本節・§2.7・§9.4 の列名直後の `(TYPE)` は
+`src/schema/harness-db-tables-core.ts` (`col()`/`pk()`) の実装型を正本として転記した
+SQLite 型 (`TEXT`/`INTEGER`/`REAL`)。列名を `db-projection-coverage` gate
+(`src/lint/db-projection-coverage.ts`) が backtick 単位で厳密突合するため、型は
+backtick の**外側**に丸括弧で付記し、列名の backtick 内容は schema の列名と完全一致させる
+(型を同じ backtick 内に混在させると機械突合が壊れるため、意図的にこの表記にしている)。
+
 | table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
 | `drive_runs` | `drive_run_id` | `plan_id`, `session_id`, `drive`, `mode`, `layer`, `kind`, `started_at`, `completed_at`, `status` | V-model 以外の mode を含む drive/model 実行 lane を記録する。 |
 | `hook_events` | `event_id` | `session_id`, `plan_id`, `hook_name`, `event_type`, `occurred_at`, `digest`, `evidence_path` | SessionStart/PostToolUse/Stop、gate、PLAN event を state projection へ結合する。 |
 | `skill_invocations` | `skill_invocation_id` | `session_id`, `plan_id`, `skill_id`, `layer`, `drive`, `fired_at`, `source`, `accepted` | 実際に発火した skill event を永続化する。 |
 | `skill_recommendations` | `skill_recommendation_id` | `session_id`, `plan_id`, `skill_id`, `rank`, `score`, `reason`, `recommended_at` | skill firing rate と recommendation quality の denominator を永続化する。 |
-| `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `source_table`, `source_id`, `source_generation`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | 再構築可能なsource観測をreplanning inputへ変換する。`source_generation`は意味状態から決定論的に生成し、同一観測のrebuildでは変えない。 |
+| `feedback_events` | `feedback_event_id` (TEXT) | `finding_id` (TEXT), `plan_id` (TEXT), `source_table` (TEXT), `source_id` (TEXT), `source_generation` (TEXT), `source_color` (TEXT), `signal_type` (TEXT), `severity` (TEXT), `status` (TEXT), `next_action` (TEXT), `created_at` (TEXT) | 再構築可能なsource観測をreplanning inputへ変換する。`source_generation`は意味状態から決定論的に生成し、同一観測のrebuildでは変えない。`source_color`は`artifact_progress.color`(red/yellow/green)をfeedback入力へ運ぶ列で、§9.5の`feedback_events.source_table/source_id/source_color`prose記述と本表を一本化する。 |
 | `feedback_lifecycle` | `lifecycle_id` | `feedback_event_id`, `source_generation`, `state`, `occurred_at`, `reason` | `.ut-tdd/logs/feedback-lifecycle.jsonl` のappend-only消化履歴を投影する。同一generationのterminal stateをrebuildで再openしない。 |
-| `memory_entries` | `memory_id` | `kind`, `title`, `body`, `tags`, `source_path`, `updated_at`, `content_hash` | `.ut-tdd/memory/*.md` の authored memory を Claude/Codex 共有の read model として project する。SessionStart surface はこの table を read-only で読む。 |
+| `memory_entries` | `memory_id` | `kind`, `title`, `body`, `tags`, `source_path`, `updated_at`, `content_hash` | `.ut-tdd/memory/*.md` の authored memory を Claude/Codex 共有の **metadata index** として project する。**本文の正本はファイルであり、読み手 (SessionStart surface / recall) は `MemoryService` 経由でファイルから本文を読む**。本 table の役割は `content_hash` による鮮度照合で、`body` 列は後方互換のため残置 (読み路では参照しない、PLAN-L7-189 §5)。 |
 | `quality_signals` | `signal_id` | `source`, `subject_id`, `metric`, `value`, `threshold`, `status`, `computed_at` | orphan count、coverage、stale approval、gate-confirm coupling、schedule lint などの machine-check metrics を保存する。 |
 | `search_index` | `search_id` | `subject_type`, `subject_id`, `path`, `title`, `tokens`, `summary`, `updated_at` | PLAN/artifact/finding/skill/model/session query の lookup cost を下げる。 |
 | `workflow_runs` | `workflow_run_id` | `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | workflow automation readiness を query 可能かつ data-backed にする。 |
 | `guardrail_decisions` | `guardrail_decision_id` | `plan_id`, `session_id`, `guardrail`, `decision`, `mode`, `human_signoff_required`, `evidence_path`, `decided_at` | agent-guard、review evidence、escalation、same-model approval check の safety decision を永続化する。 |
-| `automation_assets` | `asset_id` | `asset_type`, `path`, `trigger`, `role`, `capability`, `drift_status`, `indexed_at` | skill/roster/command docs を automation input と search subject として catalog 化する。 |
+| `automation_assets` | `asset_id` (TEXT) | `asset_type` (TEXT), `path` (TEXT), `trigger` (TEXT), `role` (TEXT), `capability` (TEXT), `skill_type` (TEXT), `category` (TEXT), `applies_layers` (TEXT), `applies_drive_models` (TEXT), `drift_status` (TEXT), `indexed_at` (TEXT) | skill/roster/command docs を automation input と search subject として catalog 化する。`skill_type`/`category`/`applies_layers`/`applies_drive_models` は skill 資産の適用範囲 (層/drive_model) を machine-queryable にする。 |
+| `issue_queue` | `issue_queue_id` (TEXT) | `source_event_id` (TEXT), `plan_id` (TEXT), `target` (TEXT), `title` (TEXT), `body` (TEXT), `status` (TEXT), `human_approval_required` (INTEGER), `approved_by` (TEXT), `approved_at` (TEXT), `external_issue_id` (TEXT), `external_issue_url` (TEXT), `created_at` (TEXT) | trouble/retry/detector 由来の feedback signal を GitHub issue dry-run queue として保持し、human approval 前の外部 mutation を防ぐ (由来: PLAN-L3-05)。§9.15 engine-swap 世代からは互換 read model に降格し (`execution_episodes` 系が正本)、新規 episode の正本にはしない。 |
+| `trouble_events` | `trouble_event_id` (TEXT) | `source_event_id` (TEXT), `plan_id` (TEXT), `category` (TEXT), `severity` (TEXT), `summary` (TEXT), `status` (TEXT), `created_at` (TEXT) | `hook_events` の `forced_stop`/`error`/`failed` 系 event と `quality_signals.metric=trouble_event_rate` を trouble taxonomy row として永続化する (由来: PLAN-L3-05)。 |
+| `retry_events` | `retry_event_id` (TEXT) | `plan_id` (TEXT), `workflow` (TEXT), `phase` (TEXT), `attempt_count` (INTEGER), `status` (TEXT), `created_at` (TEXT) | 同一 `plan_id`/`workflow`/`phase` の `workflow_runs` 複数回 attempt を retry/bottleneck signal として集計する (由来: PLAN-L3-05)。 |
+| `improvement_log` | `improvement_log_id` (TEXT) | `source_event_id` (TEXT), `plan_id` (TEXT), `category` (TEXT), `summary` (TEXT), `next_action` (TEXT), `status` (TEXT), `created_at` (TEXT) | `issue_queue`/`retry_events` から self-improvement backlog row を派生させ、feedback loop の closure evidence にする (由来: PLAN-L3-05)。 |
 
 §2.7 の existing table は引き続き必須とする。source ID が存在する場合、new row は既存の `plan_registry`、`artifact_registry`、`model_runs`、`findings`、`gate_runs` を参照する。join key 欠落は silent skip ではなく `findings` row にする。
 
@@ -274,6 +303,10 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - `idx_feedback_source(source_table, source_id)`
 - `idx_feedback_lifecycle_event(feedback_event_id, source_generation, occurred_at)`
 - `idx_search_subject(subject_type, subject_id)`
+- `idx_issue_queue_plan_status(plan_id, status, created_at)`
+- `idx_trouble_events_plan_category(plan_id, category, created_at)`
+- `idx_retry_events_plan_phase(plan_id, workflow, phase)`
+- `idx_improvement_log_status(status, created_at)`
 
 不変条件:
 
@@ -282,6 +315,8 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - すべての non-green lint/doctor/vmodel/gate result は `findings` と optional `quality_signals` で表現できる。
 - `search_index` は docs/state/logs から rebuild 可能であり、authoritative state を変更せず delete/rebuild できる。
 - `feedback_events`は観測projection、`feedback_lifecycle`はdurableな消化履歴projectionである。current generationの最新transitionだけがsurface可否を決め、terminal eventのsourceをfinding/signal fallbackで再表示しない。
+- `issue_queue.human_approval_required=1` の row は `external_issue_id`/`external_issue_url` が確定するまで `status=queued_dry_run` を維持し、human approval なしに GitHub へ外部 mutation しない (`guardrail_decisions.guardrail=external-github-issue-approval` と 1:1、由来: PLAN-L3-05)。
+- `trouble_events`/`retry_events`/`improvement_log` は `hook_events`/`quality_signals`/`workflow_runs`/`issue_queue` から再構築可能な projection であり、authoring source ではない (由来: PLAN-L3-05)。
 
 ### 9.3.1 リファクタ候補 lifecycle 投影
 
@@ -319,10 +354,10 @@ Phase 2 close review では、DB design が workflow、guardrail、skill、quali
 
 | table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
-| `test_cases` | `test_case_id` | `test_file`, `test_name`, `oracle_id`, `plan_id`, `fr_id`, `artifact_id`, `kind`, `first_seen_at`, `last_seen_at` | 各 UT oracle を PLAN/FR/artifact で query 可能にする。 |
-| `test_runs` | `test_run_id` | `session_id`, `plan_id`, `command`, `runner`, `runtime`, `os`, `shell`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `output_digest`, `green_definition_id` | 実行済みの定量 test command を 1 run として記録する。主対象は Bun/vitest/doctor/lint run である。`review_evidence.green_commands[]` は PLAN-local green command projection の frontmatter source とする。 |
-| `test_results` | `test_result_id` | `test_run_id`, `test_case_id`, `status`, `duration_ms`, `failure_digest`, `started_at`, `completed_at` | case と run ごとの pass/fail/skip/todo を追跡する。 |
-| `test_artifact_edges` | `edge_id` | `test_case_id`, `artifact_id`, `edge_kind`, `plan_id`, `source_path` | `trace_edges` を過負荷にせず、test evidence を V-model trace へ戻す。 |
+| `test_cases` | `test_case_id` (TEXT) | `test_run_id` (TEXT), `test_file` (TEXT), `test_name` (TEXT), `plan_id` (TEXT), `fr_id` (TEXT), `artifact_id` (TEXT), `kind` (TEXT), `oracle_id` (TEXT), `name` (TEXT), `first_seen_at` (TEXT), `last_seen_at` (TEXT), `status` (TEXT), `duration_ms` (REAL), `evidence_path` (TEXT) | 各 UT oracle を PLAN/FR/artifact で query 可能にする。 |
+| `test_runs` | `test_run_id` (TEXT) | `session_id` (TEXT), `plan_id` (TEXT), `command` (TEXT), `runner` (TEXT), `runtime` (TEXT), `os` (TEXT), `shell` (TEXT), `scope` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `exit_code` (INTEGER), `evidence_path` (TEXT), `output_digest` (TEXT), `green_definition_id` (TEXT), `status` (TEXT) | 実行済みの定量 test command を 1 run として記録する。主対象は Bun/vitest/doctor/lint run である。`review_evidence.green_commands[]` は PLAN-local green command projection の frontmatter source とする。 |
+| `test_results` | `test_result_id` (TEXT) | `test_run_id` (TEXT), `test_case_id` (TEXT), `oracle_id` (TEXT), `status` (TEXT), `duration_ms` (REAL), `failure_digest` (TEXT), `started_at` (TEXT), `completed_at` (TEXT), `message` (TEXT), `evidence_path` (TEXT) | case と run ごとの pass/fail/skip/todo を追跡する。 |
+| `test_artifact_edges` | `edge_id` (TEXT) | `test_artifact_edge_id` (TEXT), `test_case_id` (TEXT), `test_run_id` (TEXT), `artifact_id` (TEXT), `plan_id` (TEXT), `source_path` (TEXT), `artifact_path` (TEXT), `edge_kind` (TEXT), `oracle_id` (TEXT), `evidence_path` (TEXT) | `trace_edges` を過負荷にせず、test evidence を V-model trace へ戻す。 |
 | `test_flake_events` | `flake_event_id` | `test_case_id`, `window`, `pass_count`, `fail_count`, `flake_score`, `computed_at`, `evidence_path` | 不安定 test と duration regression を quality signal として surface する。 |
 
 必須 UT-derived metrics:
@@ -600,10 +635,48 @@ workflow transition、evidence、doc監査判断を補完してはならない�
 ### §9.15.2 repository文書snapshot / shard schema
 
 `docs/governance/repository-document-disposition/manifest.yaml`は`schema_version`、baseline/final snapshot、
-`path_stream_algorithm=git-ls-tree-z-v1`、commit、tree OID、tracked count、raw NUL stream SHA-256、deltaを持つ。
-zone shardの全recordは`path`、baseline blob/digest、zone、disposition、reason、targets、plan IDs、impact tags、
-authoring provenance、application statusを必須とする。selectorはauthoring CLIの入力に使えるが、最終recordへ
-materializeされないselector自体を正本にしない。Markdown ledgerは生成view、DBはprojectionである。
+`selection_revision=repository-documents-v1`、selector digest、commit、リポジトリroot tree OID、
+zone別tree evidence、追跡件数、raw NUL stream SHA-256、shard digest、delta chain digestを持つ。
+snapshot IDはrepository identity、commit、root tree、selection revision/digest、count、path hash、
+zone集合digest、member集合digestのcanonical frameだけから作り、時刻・working tree・OSを含めない。
+
+`repository-documents-v1`のzoneは次に固定する。
+
+| zone | Git object selector | baseline規則 |
+|---|---|---|
+| `docs_tree` | `docs/**`の全tracked blob | `3d232e9c`で921件、docs subtree OID=`310ec6de57cf8313096ea4c0fd95e1cff3db5a48`、raw NUL path hash=`02b618ce268ca68a7b6636b9aa9216d157c21da45a633b0fbab73126e0f47382` |
+| `root_policy` | rootの`AGENTS.md`、`CLAUDE.md`、`README.md`、`CHANGELOG.md`、`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`LICENSE*`のうちtracked blob | 921件へ混ぜずcoverage expansion deltaとして全実在pathを登録 |
+| `runtime_policy` | `.claude/**/*.md`、`.codex/**/*.md`、`.ut-tdd/**/*.md`のtracked blob | 同上 |
+| `skills` | `skills/**/*.md`のtracked blob | 同上 |
+| `github_policy` | `.github/**/*.md`のtracked blob | 同上 |
+
+上記zone外のtracked `*.md|*.mdc|*.rst|*.adoc`は`doc-selection-unclassified` findingとし、
+暗黙除外しない。`docs_tree`以外を欠いたsnapshotを「全repository documents」と表示してはならない。
+`path_stream_algorithm=git-ls-tree-name-only-z-v1`は、full commitと上記selectorから
+`git ls-tree -r -z --name-only`が返すGit byte順の`path\0...`そのものとする。終端NULを必須とし、
+改行join、文字列再encode、OS sortを禁止する。member集合digestはstable path順でfield名を含む
+length-prefixed frame `(path, blob_oid, content_sha256, file_mode, zone)`を連結して計算する。
+
+`canonical-frame-v1`の各fieldは`uint32be(name_utf8_length) + name_utf8 +
+uint64be(value_byte_length) + value_bytes`とし、数値も10進ASCII bytesで表す。snapshot field順は
+識別子列は`repository_identity, commit_oid, repository_tree_oid, selection_revision, selection_digest,
+tracked_count, path_stream_hash, zone_set_digest, member_set_digest`、member field順は前段の定義順へ固定する。
+zone field順は`zone, selector_digest, tree_oid, member_count, member_set_digest`とし、
+全5 zoneをzone IDのunsigned UTF-8 byte順に連結して`zone_set_digest`を作る。treeを持たないzoneも
+空bytes fieldをframeへ含め、欠落と空を混同しない。
+集合はpathのunsigned UTF-8 byte順で並べ、SHA-256 hexは小文字64桁、snapshot IDは
+`document-snapshot:sha256:<snapshot_digest>`とする。JSON stringify、locale sort、native endianを禁止する。
+
+zone shardの全recordは`path`、baseline blob OID/content SHA-256、zone、disposition、reason、targets、plan IDs、
+impact tags、authoring provenance、application statusを必須とする。selectorはauthoring CLIの入力に使えるが、
+同一transactionで921 recordへ展開し、selector自体やrelation graphのnode数を正本にしない。baseline後の
+`add|modify|delete|rename`はsequenceとprevious digestを持つappend-only deltaであり、add recordにも同じ
+disposition fieldを要求する。
+
+pathはrepo-relative、`/`区切り、Unicode NFCでcanonical化し、`.`/`..`、absolute path、NUL、空segmentを拒否する。
+casefold pathは衝突検出専用でidentityに使わない。row digestはfield名を含むlength-prefixed UTF-8 frameを
+SHA-256化し、意味上unorderedなtarget/PLAN/tagをstable identity順へsortする。YAML表記順、改行、取得時刻を
+digestへ含めない。Markdown ledgerは生成view、DBはprojectionである。
 
 ### §9.15.3 索引 / rebuild / 保持
 
@@ -611,6 +684,9 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 - docs ledgerはpath/zone/disposition/impact tag、semantic assessmentはverdict/debt PLAN、self-proofはrule/surface/mutationへindexを張る。
 - append-only event/receipt/reviewを更新・削除で上書きせず、supersessionを新eventとして記録する。
 - projection全削除/rebuild後にrow countだけでなくidentity集合、digest、reduction verdict、finding IDが一致しなければfail-closeする。
+- docs ledger rebuildは固定Git objectとauthoring bundleをpreflightし、temporary table群への1 transaction
+  materialize、PK/FK/digest/delta reduction/final member/reference照合、transactional swapの順に行う。
+  parse/write/swap faultでは旧Green projectionを保持し、部分commitとauthoring source書戻しを0件にする。
 - raw ZIP本文、provider transcript、secret、credential、PIIをDB/receiptへ保存しない。
 
 ### §9.15.4 column / FK / 並び順 / migration契約
@@ -639,15 +715,20 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 | `workflow_event_evidence` | `event_id TEXT`, `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `requirement_id TEXT` | PK=`(event_id,evidence_id,subject_id,subject_revision,requirement_id)`、event/evidence subject-revision composite FK | event / evidence索引 |
 | `workflow_subject_states` | `subject_id TEXT`, `subject_revision INTEGER`, `current_state TEXT`, `resume_state TEXT?`, `last_sequence INTEGER`, `last_event_id TEXT?`, `state_digest TEXT` | workflow event reduction current projection。PK=`(subject_id,subject_revision)`、plan revision composite FK、`(last_event_id,subject_id,subject_revision)` composite FK（empty時だけNULL） | state / last event index |
 | `append_command_receipts` | `command_id TEXT`, `command_type TEXT`, `subject_kind TEXT`, `subject_key TEXT`, `plan_asset_id TEXT?`, `plan_revision INTEGER?`, `command_payload_digest TEXT`, `result_kind TEXT`, `result_ref TEXT`, `recorded_at TEXT`, `receipt_digest TEXT` | PK=`command_id`、全append context横断正本。subject kind=`plan_revision|reservation|legacy_migration`。plan_revision kindだけasset/revision必須+composite FK、他kindは両方NULL | subject/type/time index |
-| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `tree_oid TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `algorithm TEXT`, `captured_at TEXT` | PK=`snapshot_id`、commit/tree/hash UNIQUE、全列NOT NULL | commit/tree index |
-| `document_dispositions` | `baseline_id TEXT`, `path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `provenance_digest TEXT` | PK=`(baseline_id,path)`、snapshot FK、全baseline path exactly once、全列NOT NULL | zone/disposition/status index |
-| `document_disposition_targets` | `baseline_id TEXT`, `path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(baseline_id,path,target_ordinal)`、disposition FK、target実在CHECK | kind/ref index |
-| `document_disposition_plan_edges` | `baseline_id TEXT`, `path TEXT`, `plan_id TEXT`, `edge_kind TEXT` | PK=`(baseline_id,path,plan_id,edge_kind)`、disposition/PLAN FK | plan/path索引 |
-| `document_disposition_tags` | `baseline_id TEXT`, `path TEXT`, `impact_tag TEXT` | PK=`(baseline_id,path,impact_tag)`、disposition FK | tag/path索引 |
-| `document_delta_events` | `delta_id TEXT`, `baseline_id TEXT`, `kind TEXT`, `from_path TEXT?`, `to_path TEXT?`, `before_blob_oid TEXT?`, `after_blob_oid TEXT?`, `source_commit TEXT`, `event_digest TEXT` | PK=`delta_id`、add/delete/rename/modify別CHECK、snapshot FK | baseline/kind/path index |
-| `document_reference_edges` | `reference_id TEXT`, `from_path TEXT`, `to_kind TEXT`, `to_ref TEXT`, `anchor TEXT?`, `source_line INTEGER`, `edge_digest TEXT` | PK=`reference_id`、from disposition FK、typed target/anchor existence CHECK | from/to索引 |
-| `document_closure_runs` | `run_id TEXT`, `baseline_id TEXT`, `final_commit_oid TEXT`, `ledger_digest TEXT`, `reference_digest TEXT`, `verdict TEXT`, `executed_at TEXT` | PK=`run_id`、snapshot FK、全列NOT NULL | baseline/time index |
-| `document_closure_findings` | `finding_id TEXT`, `run_id TEXT`, `kind TEXT`, `severity TEXT`, `subject_path TEXT`, `target_ref TEXT?`, `message TEXT` | PK=`finding_id`、run FK、targetのみnullable | run/kind/path index |
+| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `repository_tree_oid TEXT`, `selection_revision TEXT`, `selection_digest TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `zone_set_digest TEXT`, `member_set_digest TEXT`, `algorithm TEXT`, `snapshot_digest TEXT`, `captured_at TEXT` | PK=`snapshot_id`、`(commit_oid,repository_tree_oid,selection_digest,path_stream_hash)` UNIQUE、identity列NOT NULL。`captured_at`は非identity | commit/tree/selection index |
+| `document_snapshot_zones` | `snapshot_id TEXT`, `zone TEXT`, `selector_digest TEXT`, `zone_tree_oid TEXT?`, `member_count INTEGER`, `member_set_digest TEXT` | PK=`(snapshot_id,zone)`、snapshot FK。`docs_tree`だけsubtree OID必須、他zoneはroot treeに束縛 | zone/tree index |
+| `document_snapshot_members` | `snapshot_id TEXT`, `path TEXT`, `casefold_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `file_mode TEXT`, `member_digest TEXT` | PK=`(snapshot_id,path)`、snapshot FK、`(snapshot_id,casefold_path)` UNIQUE、全列NOT NULL | snapshot/path/blob index |
+| `document_dispositions` | `ledger_id TEXT`, `baseline_snapshot_id TEXT`, `baseline_path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `applicability_kind TEXT`, `applicability_reason TEXT?`, `observed_condition TEXT?`, `reevaluation_trigger TEXT?`, `applicability_plan_id TEXT?`, `applicability_decider TEXT?`, `provenance_digest TEXT`, `row_digest TEXT` | PK=`(ledger_id,baseline_path)`、`(baseline_snapshot_id,baseline_path)`→member複合FK。status=`pending|applied|verified`、applicability=`applicable|conditional|deferred|not_applicable`。kind別必須field以外はNULL、baseline docs_tree 921 path exactly once | zone/disposition/applicability/status index |
+| `document_disposition_targets` | `ledger_id TEXT`, `baseline_path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(ledger_id,baseline_path,target_ordinal)`、disposition複合FK。kind=`artifact|family|plan|slot|archive`、typed target実在CHECK | kind/ref index |
+| `document_disposition_plan_edges` | `ledger_id TEXT`, `baseline_path TEXT`, `plan_id TEXT`, `edge_kind TEXT`, `edge_digest TEXT` | PK=`(ledger_id,baseline_path,plan_id,edge_kind)`、disposition/PLAN複合FK | plan/path index |
+| `document_disposition_tags` | `ledger_id TEXT`, `baseline_path TEXT`, `impact_tag TEXT`, `tag_digest TEXT` | PK=`(ledger_id,baseline_path,impact_tag)`、disposition複合FK | tag/path index |
+| `document_delta_events` | `delta_id TEXT`, `ledger_id TEXT`, `sequence INTEGER`, `kind TEXT`, `from_snapshot_id TEXT`, `from_path TEXT?`, `to_snapshot_id TEXT`, `to_path TEXT?`, `before_blob_oid TEXT?`, `before_content_digest TEXT?`, `after_blob_oid TEXT?`, `after_content_digest TEXT?`, `decision_digest TEXT`, `previous_event_digest TEXT?`, `event_digest TEXT` | PK=`delta_id`、`(ledger_id,sequence)` UNIQUE。event digestはdelta IDと両snapshot IDを含む。kind=`add|modify|delete|rename`別nullability/CHECK、before/after member複合FK、sequenceは1始まりgapなし、先頭previous=NULL・以後は直前event digest必須。L6 delta遷移表をreducerとrebuildで再検証 | ledger/sequence/kind/path index |
+| `document_delta_decisions` | `delta_id TEXT`, `ledger_id TEXT`, `from_snapshot_id TEXT`, `to_snapshot_id TEXT`, `operation_kind TEXT`, `before_path TEXT?`, `before_blob_oid TEXT?`, `before_content_digest TEXT?`, `after_path TEXT?`, `after_blob_oid TEXT?`, `after_content_digest TEXT?`, `affected_path TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `applicability_kind TEXT`, `applicability_reason TEXT?`, `observed_condition TEXT?`, `reevaluation_trigger TEXT?`, `applicability_plan_id TEXT?`, `applicability_decider TEXT?`, `decision_digest TEXT` | PK=`(ledger_id,delta_id)`、delta eventへexactly-one FK。ledger/snapshot/operation/member payloadとdecision digest一致。addを含む全deltaでdisposition/applicability後条件をbaseline recordと同じ規則で検証 | ledger/delta/path/disposition index |
+| `document_effective_paths` | `ledger_id TEXT`, `final_snapshot_id TEXT`, `path TEXT`, `origin_kind TEXT`, `origin_baseline_path TEXT?`, `origin_delta_id TEXT?`, `last_delta_id TEXT?`, `disposition TEXT`, `decision_digest TEXT`, `reduction_digest TEXT` | PK=`(ledger_id,final_snapshot_id,path)`、final member複合FK。origin=`baseline|add`で参照先を排他的に必須化し、modify/rename後もoriginを保持、`last_delta_id`で最新遷移へ辿る | ledger/final/path/disposition index |
+| `document_reference_parse_receipts` | `receipt_id TEXT`, `final_snapshot_id TEXT`, `source_path TEXT`, `source_blob_oid TEXT`, `source_content_digest TEXT`, `reader_id TEXT`, `reader_revision TEXT`, `reader_registry_digest TEXT`, `parser_revision TEXT`, `syntax_revision TEXT`, `anchor_revision TEXT`, `uri_scheme_registry_revision TEXT`, `frontmatter_schema_revision TEXT`, `frontmatter_schema_digest TEXT`, `input_digest TEXT`, `edge_set_digest TEXT`, `error_set_digest TEXT`, `receipt_digest TEXT` | PK=`receipt_id`、`(final_snapshot_id,source_path)`→member複合FKかつblob/content一致。`(final_snapshot_id,source_path,reader_id)` UNIQUE、required reader exactly once。時刻/messageはidentity外 | snapshot/source/reader index |
+| `document_reference_edges` | `reference_id TEXT`, `receipt_id TEXT`, `final_snapshot_id TEXT`, `from_path TEXT`, `source_blob_oid TEXT`, `source_content_digest TEXT`, `syntax_kind TEXT`, `source_start_byte INTEGER`, `source_end_byte INTEGER`, `to_kind TEXT`, `raw_target_digest TEXT`, `to_ref TEXT`, `anchor TEXT?`, `semantic_responsibility TEXT?`, `applicability_condition TEXT?`, `parser_revision TEXT`, `syntax_revision TEXT`, `anchor_revision TEXT`, `uri_scheme_registry_revision TEXT`, `frontmatter_schema_revision TEXT`, `frontmatter_schema_digest TEXT`, `reader_registry_digest TEXT`, `reader_id TEXT`, `reader_revision TEXT`, `edge_digest TEXT` | PK=`reference_id`、receipt FK、`(final_snapshot_id,from_path)`→member複合FKかつsource blob/content一致。byte spanは半開区間で非負。kind=`document|anchor|plan|spec|test|adr|external`、repo内target/anchor/typed ID実在CHECK。同一行同targetもspan別edgeとして保持 | snapshot/from/to/receipt index |
+| `document_closure_runs` | `run_id TEXT`, `ledger_id TEXT`, `baseline_snapshot_id TEXT`, `final_snapshot_id TEXT`, `ledger_digest TEXT`, `delta_chain_digest TEXT`, `reference_digest TEXT`, `parser_revision TEXT`, `policy_revision TEXT`, `verdict TEXT`, `executed_at TEXT`, `run_digest TEXT` | PK=`run_id`、baseline/final snapshot FK、identity列NOT NULL。`executed_at`は非identity | ledger/snapshot/verdict index |
+| `document_closure_findings` | `finding_id TEXT`, `run_id TEXT`, `finding_kind TEXT`, `severity TEXT`, `subject_path TEXT`, `target_ref TEXT?`, `policy_revision TEXT`, `evidence_digest TEXT`, `message TEXT` | PK=`finding_id`、run FK。finding identityはkind/subject/target/policy/evidenceから導出しmessage/timeを除外 | run/kind/path index |
 | `semantic_assessments` | `item_id TEXT`, `assessment_revision INTEGER`, `verdict TEXT`, `applicability TEXT`, `profile_id TEXT?`, `applicability_reason TEXT`, `approval_ref TEXT?`, `source_digest TEXT`, `severity TEXT`, `owner TEXT`, `next_transition TEXT`, `created_at TEXT` | PK=`(item_id,assessment_revision)`、item/profile FK、conditional/NA時reason+profile+approval CHECK | verdict/applicability/owner index |
 | `semantic_assessment_evidence` | `item_id TEXT`, `assessment_revision INTEGER`, `evidence_plane TEXT`, `evidence_ref TEXT`, `evidence_digest TEXT` | PK=`(item_id,assessment_revision,evidence_plane,evidence_ref)`、assessment FK、plane=`design|runtime|test` | plane/ref索引 |
 | `semantic_assessment_reviews` | `review_event_id TEXT`, `item_id TEXT`, `assessment_revision INTEGER`, `decision TEXT`, `reviewer TEXT`, `reason TEXT`, `occurred_at TEXT`, `supersedes_event_id TEXT?` | PK=`review_event_id`、assessment FK、append-only | item/revision/time索引 |
@@ -689,6 +770,12 @@ source-targetのreasonやcategory ordinalのようにauthoringにない意味fie
 event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、
 旧DBをin-place真実化せず、authoring sourceからtransactional rebuildする。migration前後でPK集合、FK orphan、
 UNIQUE違反、reduction digestを比較し、差があればcommitせずrollbackする。
+
+docs ledgerの旧projectionやrelation graphにしか存在しない判断を新schemaへ推測backfillしない。現行authoring
+manifest/shard/deltaへ結び付かない旧行は`legacy_unbound` findingとして隔離し、Green countへ含めない。
+`docs/archive/**`、history、否定文、引用、negative fixtureもsnapshot/member/dispositionから除外せず、
+authored zoneとして保持する。ただし旧語の単純存在をcanonical violationにせず、canonical→archive/historyの
+規範参照、archive→canonicalのauthority主張、legacy commandの現行実行例をtyped reference policyで判定する。
 
 PLAN Asset waveでは`IndexDef`へ任意SQL文字列でなくtyped predicate（`isNull(column)` / `equals(column,value)`のみ）を追加し、
 active aliasとactive ordinal leaseのpartial UNIQUEをDDL生成する。`plan_id_reservations`はauthoring/event正本ではなく
@@ -742,3 +829,22 @@ version 26以前からの`migrate(db)`は既存rowを削除せずregistry DDLで
 
 `issue_queue`は互換read modelに降格し、新規episodeの正本にしない。移行時は既存dry-run rowをorigin不明の
 episodeへ自動昇格せず、明示manifestがあるものだけimportし、残りは`legacy_unbound` findingとして保持する。
+
+## §12 Resource Kernel companion bundle永続境界（Issue #152）
+
+D0-Rはbundle activation DBを新設せず、Node generation/activationの物理正本をD0-Nから奪わない。
+永続化する論理factは次の一件だけである。
+
+```text
+AcceptedCompanionBundleFact {
+  bundle_sequence,
+  manifest_digest,
+  trust_decision_digest,
+  d0n_generation_receipt_digest
+}
+```
+
+adapterは直前accepted factとのcompare-and-advanceをdurableに行い、sequence減少、同sequence別payload、
+partial/corrupt factをfail-closeする。rollbackでも旧factへ戻さず、review・再署名済みの新sequence factをdurable化する。
+D0はtable名、SQLite利用、registry schema、clock anchor、rotation/revocation storeを固定しない。
+具体PKI/time/storageとcrash recovery方式はinstaller/release後続PLANで選定し、その実装が上記単調性を満たすことを検証する。

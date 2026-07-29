@@ -1,6 +1,11 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import {
+  type MaybeVacuumOptions,
+  type MaybeVacuumResult,
+  maybeVacuumHarnessDb,
+} from "./db-maintenance";
 import { defaultHarnessDbPath, openHarnessDb } from "./index";
 import { migrate } from "./migration";
 import { projectModelEvaluations, projectTokenUsage, rebuildHarnessDb } from "./projection-writer";
@@ -23,6 +28,8 @@ export interface StopRefreshResult {
   tokenRunsIngested: number;
   /** ok=false のときの skip 理由 (fail-open: 例外は握って理由へ落とす)。 */
   skippedReason?: string;
+  /** rebuild 完走後の条件付き VACUUM 結果 (PLAN-L7-457)。rebuild 未完走なら undefined。 */
+  vacuum?: MaybeVacuumResult;
 }
 
 export interface StopRefreshOptions {
@@ -32,6 +39,8 @@ export interface StopRefreshOptions {
   codexSessionsDir?: string;
   /** token ingest 自体を止める (rebuild のみ)。 */
   skipTokenIngest?: boolean;
+  /** test 注入用。未指定は maybeVacuumHarnessDb (PLAN-L7-457)。 */
+  vacuum?: (dbPath: string, options?: MaybeVacuumOptions) => MaybeVacuumResult;
 }
 
 /**
@@ -47,23 +56,28 @@ export function refreshHarnessDbOnStop(options: StopRefreshOptions): StopRefresh
   const { repoRoot } = options;
   let rebuilt = false;
   let tokenRunsIngested = 0;
+  let vacuum: MaybeVacuumResult | undefined;
   try {
     const rebuild = rebuildHarnessDb({ repoRoot });
     rebuilt = rebuild.ok;
     if (!rebuild.ok) {
       return { ok: false, rebuilt, tokenRunsIngested, skippedReason: "rebuild-failed" };
     }
+    // rebuild 完走後の条件付き自動 VACUUM (肥大再発防止、PLAN-L7-457)。fail-open:
+    // maybeVacuumHarnessDb 自体が失敗を throw せず warning へ落とすため、rebuild 成果は壊れない。
+    vacuum = (options.vacuum ?? maybeVacuumHarnessDb)(defaultHarnessDbPath(repoRoot), { repoRoot });
   } catch (error) {
     return {
       ok: false,
       rebuilt,
       tokenRunsIngested,
+      vacuum,
       skippedReason: `rebuild-error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 
   if (options.skipTokenIngest === true) {
-    return { ok: true, rebuilt, tokenRunsIngested };
+    return { ok: true, rebuilt, tokenRunsIngested, vacuum };
   }
 
   try {
@@ -91,11 +105,12 @@ export function refreshHarnessDbOnStop(options: StopRefreshOptions): StopRefresh
       ok: false,
       rebuilt,
       tokenRunsIngested,
+      vacuum,
       skippedReason: `token-ingest-error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 
-  return { ok: true, rebuilt, tokenRunsIngested };
+  return { ok: true, rebuilt, tokenRunsIngested, vacuum };
 }
 
 export interface DetachedSpawnHandle {
@@ -108,7 +123,7 @@ export interface DetachedSpawnHandle {
 export type DetachedSpawnImpl = (
   command: string,
   args: string[],
-  options: { cwd: string; detached: boolean; stdio: "ignore" },
+  options: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: boolean },
 ) => DetachedSpawnHandle;
 
 export interface SpawnStopRefreshOptions {
@@ -160,6 +175,7 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
         cwd: options.repoRoot,
         detached: true,
         stdio: "ignore",
+        windowsHide: true,
       },
     );
     // 非同期起動失敗 (ENOENT 等) は error event で届く。未処理のままだと親 process が

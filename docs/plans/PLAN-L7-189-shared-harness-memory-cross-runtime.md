@@ -6,7 +6,7 @@ layer: L7
 drive: be
 status: confirmed
 created: 2026-06-29
-updated: 2026-07-01
+updated: 2026-07-29
 owner: Codex TL / PO
 parent_design: docs/design/harness/L6-function-design/handover-mechanism.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -33,7 +33,17 @@ generates:
     artifact_type: source_module
   - artifact_path: src/schema/harness-db-indexes.ts
     artifact_type: source_module
+  - artifact_path: src/memory/service.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/memory-sync.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/source-trace.ts
+    artifact_type: source_module
   - artifact_path: tests/memory.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/memory-service.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/memory-sync.test.ts
     artifact_type: test_code
   - artifact_path: docs/design/harness/L5-detailed-design/physical-data.md
     artifact_type: design_doc
@@ -51,6 +61,24 @@ dependencies:
     - docs/plans/PLAN-L6-06-handover-mechanism.md
     - docs/plans/PLAN-L5-08-harness-db-feedback.md
 review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T16:20:00+09:00"
+    tests_green_at: "2026-07-29T16:05:00+09:00"
+    verdict: pass-weak
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: unit_test
+        command: "harness-check run 30429616284 (PR #180 head 13240188): linux / windows / 集約すべて pass"
+        runner: ci
+        scope: gate
+        exit_code: 0
+        completed_at: "2026-07-29T16:05:00+09:00"
+        evidence_path: tests/memory-sync.test.ts
+        output_digest: "sha256:a3d706ad8cf3dbccd084f38763522f480e4c6916689a732727876fa131cabf5a"
+        anchor_commit: 1324018814998257aa8783db36a95f365bb6ee75
+    scope: "§5 追補 (memory service read 路 + memory-sync hard gate、PR #180) の cross-family review (Codex 著作 → Claude 検証)。verdict=pass-weak: 実装は動作し CI 両 leg green だが、不変条件 2 件が宣言どおりに到達していない。実測した範囲: (a) doctor 配線が fail-close (repo 読取不能・例外の両方で ok=false)、(b) origin ref 未解決時に『未評価』を surface し originResolved が真のときだけ『すべて到達』と言う実装で、判定不能と OK を混同しない、(c) untracked / 未コミット変更 = error、commit 済み origin 未到達 = warn の段階分けが in-flight ブランチを止めない。指摘 2 件: (1) 『共有済み = origin 到達』は git ls-tree のパス存在判定であり、既存 memory の更新を push 前でも shared と誤判定する (新規ファイルの欠落は検出できる) → issue #187、(2) 不変条件『読みも書きも MemoryService を通す』は read 路のみ実装で、ut-tdd memory add は writeMemoryEntry を CLI から直接呼び service を経由しない (§5.4 で後続へ送っている)。両方を §4 の不変条件へ到達状況として明記した。手続き上の瑕疵 (記録): 本 evidence は PR #180 マージ (2026-07-29T07:09:50Z) の **後** に記録した。CI green と部分レビューだけでマージへ進み、新規スコープの review evidence を先に記録しなかったのは review 前置規律 (IMP-071 / tests_green_at ≤ reviewed_at の思想) に反する順序であり、後続で同じ順序を繰り返さない。"
   - reviewer: codex
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T18:34:00+09:00"
@@ -173,3 +201,114 @@ Claude Code と Codex の実行中コンテキストは `feedback_events` と Se
 
 - 実際の Claude memory から `.ut-tdd/memory` への移行は個人 state を触るため別判断。
 - Pack には機構を配布し、dogfood の `.ut-tdd/memory` 実データは含めない。
+
+## 5. 追補 (2026-07-28、issue #175): 同期契約とライフサイクル契約
+
+初版は「authored markdown → projection → SessionStart surface」の**経路**を作ったが、
+**同期状態とライフサイクルの契約を持たなかった**。運用 1 か月で以下が実測された。本節はその
+是正を本 PLAN のスコープに追加する (新規 PLAN を起こさず既存 PLAN の拡張とする。
+2026-07-28 の稼働ブロック不変条件「net-new draft 起票ゼロ / 既存 PLAN 拡張のみ」に従う)。
+
+### 5.1 実測された欠陥
+
+1. **未共有 memory が沈黙する**: `memory add` はファイルを書くだけで同期状態を誰も検査しない。
+   実測でローカル作業ツリーに origin 追跡分が **32 件欠落**、逆にローカルのみの未コミットが
+   **21 件** (両方向の乖離が同時発生)。21 件はすべて引き継ぎ目的で書かれ、書いた側は
+   「共有した」と認識していた。
+2. **完了エピソードの残置率 100%**: main の memory 92 件中 **34 件 (37%)** が PR/issue 番号を
+   持つエピソードで、参照 PR **20 本すべてが MERGED**。`CLAUDE.md` は「エピソード状態は
+   メモリに書かず digest に任せる」と規定するが機械契約が無く、回収機構も無い。
+3. **引き継ぎ経路が lock で無音消失**: `surfaceSessionStartDigestToStdout` の
+   `catch { /* fail-open */ }` により、DB lock / 破損時に memory / feedback / schedule を含む
+   digest 全段が無言で消えていた。「情報が無い」と「読めなかった」が区別できない。
+   (CLI の `recall` / `list` は例外を捕まえず非 0 終了するので無音ではない。無音は digest 側。)
+4. **書き路と読み路が full rebuild でしか繋がらない**: `memory_entries` の書き込み口は
+   `projectMemoryEntries` (rebuild 内 1 箇所) のみで、`memory add` は DB を触らない。
+   add 直後は recall / digest に出ない (ラグは次の Stop hook refresh まで、rebuild は実測 4m38s)。
+5. **破損 1 件が読み路全体を落とす**: `loadMemoryEntries` は全件を map するため、frontmatter
+   欠落 1 件で全件読みが throw する。実測: 2026-07-28 の db rebuild が手書き 1 件で 3m28s 後に中断。
+
+### 5.2 設計判断 (advisor 2 系統 × 2 巡、2026-07-28)
+
+`claude-fable-5` と `gpt-5.6-sol` に独立に投げ統合した。1 巡目は両者とも**ファイル直読を却下**
+(Sol: DB と同じ filter / 順位 / retire 規則を保証できないうちに fallback すると別種の
+silent divergence を作る)。2 巡目で PO 提案 (DB は関係のみ / service 層) を再投した結果:
+
+- **Sol は却下を明示的に撤回**: 「これは fallback ではなく、**唯一の正本 read path への変更**である」。
+- **Fable は失効条件を明示**: 却下理由が消えるのは「**読み路が service 1 本に統一された後**」であり、
+  統一前に fallback を先行させると元の理由が復活する。**順序が本質**。
+
+確定した不変条件:
+
+1. **ファイルが正本** (`.ut-tdd/memory/*.md`)。
+2. **DB は派生 metadata index**。本文の複製に依存しない (全 78 件の直読は実測 **112ms**、
+   body 合計 114KB / corpus 418KB で、複製の便益が無い)。
+3. **アクセスは service 単一路**。読みも書きも `MemoryService` を通す。
+   **到達状況 (2026-07-29 是正済み)**: read 路は `loadMemoryCorpus` /
+   `queryMemoryEntries` / `readMemory`、write 路は `writeMemory` を
+   `src/memory/service.ts` が公開する。`ut-tdd memory add` は service を経由し、
+   `src/memory/index.ts` の storage primitive `writeMemoryEntry` を直接呼ばない。
+   境界テストは CLI への `writeMemoryEntry` 再流入を拒否する。
+4. **staleness は可視**。index が古い / 読めない状態を無音で「0 件」に見せない。
+5. **「共有済み」= origin 到達**。同一 tree ではファイルは相手から見えるが、永続性・別 worktree・
+   branch 切替に耐えるのは origin 到達のみで、「検証の基準点 = HEAD」規律と整合する。
+   **到達状況 (2026-07-29 実測)**: `src/lint/memory-sync.ts` の origin 判定は
+   `git ls-tree -r --name-only <origin-ref>` の **パス存在**であり、内容の到達を見ていない。
+   そのため既存 memory を編集して commit したが push していない場合、パスが origin にある限り
+   `shared` と誤判定される (新規ファイルの欠落は検出できる)。**この項も現時点では新規ファイルに
+   対してのみ成立**する。是正は issue #187。
+
+採らなかった案: **自動 commit** (「commit した = 共有した」という新しい偽安心に看板が替わるだけ。
+hybrid では commit してもブランチ上にある限り origin に届かない)、**物理ディレクトリ分離**
+(projection / secret-scan / 既存参照の面を増やす)。
+
+### 5.3 本追補で実装した範囲
+
+- `src/memory/service.ts`: `loadMemoryCorpus` (per-entry 隔離) / `queryMemoryEntries`
+  (filter・順位・tie-break の唯一実装) / `compareIndexToCorpus` (content_hash 照合) /
+  `readMemory` / `renderMemoryHealth` / `writeMemory`。
+- `src/cli.ts`: `memory add` / `list` / `recall` を service 経由に。SessionStart digest は memory を
+  DB 障害と独立に読み、DB 段が全滅しても劣化 digest を出す (無音 `catch {}` の廃止)。
+- `src/handover/session-start-digest.ts`: `selectSessionStartDigest` は memory を引数で受け取る。
+- `src/lint/memory-sync.ts` + doctor hard gate `memory-sync`: untracked / 未コミット変更 =
+  **error**、commit 済み origin 未到達 = note。origin ref を解決できない場合は
+  共有到達を証明できないため `ok=false` とし、hard gate を fail-close する。
+
+### 5.4 本追補のスコープ外 (後続)
+
+- `scope: lesson | episode` の型強制と `status: retired` 状態遷移、および既存 34 件の
+  教訓抽出 → 昇格 → retire (**一括削除しない**)。
+- `memory add` から DB index への即時 write-through。正本ファイルへの write は
+  MemoryService 単一路へ収束済みだが、SQLite index の即時更新は行わない。前提の SQLite pragma は
+  **PLAN-L7-460 スコープ 6 の責務**であり、二重実装を作らないため本 PLANでは扱わない。
+- `memory_entries` からの `body` 列 DROP (schema 変更は上流 doc 合流と同時に行う)。
+- OneDrive 配下での atomic rename / 一時 lock の挙動 (未実測、write-through 時に扱う)。
+
+### 5.5 追補の受け入れ結果 (実測)
+
+- 新規テスト 14 件 (`tests/memory-service.test.ts` 9 / `tests/memory-sync.test.ts` 5)、
+  関連 4 ファイルで **21 tests green**。
+- `memory-sync` が**実 repo で 21 件の未共有を実発火**し (shared 59 / originResolved=true)、
+  clean tree では ok=true / shared 92 / violations 0 (CI は緑のまま、汚れたローカルでのみ鳴る)。
+- 移植前後の等価性を golden 比較で固定 (9 組の options で旧 SQL 経路と ID 列一致、既定 limit=8 維持)。
+- 実装中に境界テストが自分の新 lint に発火したため、allowlist を広げず
+  「scan-only の面は本文を読まない」を追加 assertion で固定した。
+
+### 5.6 PR #180 後追い収束 (2026-07-29)
+
+PR #180 のマージ後 review で検出した2件のうち、次を既存PR #188で是正した。
+
+- 原修正 commit: `73f0d845ee49787231482d776dd605140143bda8`
+- PR #188 取込 commit: `0488e5ed` (同一patchを競合なしでcherry-pick)
+- MemoryService write単一路: 達成済み。CLI直呼びを削除し、service所有writeと境界テストを追加。
+- origin ref未解決: fail-close済み。純粋判定とdoctor hard gateの双方で `ok=false`。
+
+| oracle | 契約 | 実装・証跡 |
+|---|---|---|
+| U-MEMORY-001 / 002 | authored memoryのservice writeとsecret副作用前拒否 | `src/memory/service.ts#writeMemory` / `tests/memory.test.ts` |
+| U-MEMORY-019 | storage primitiveの非公開化とproduction全体のdirect import / export / re-export禁止 | primitiveをMemoryService内部へ移動。`tests/memory-service.test.ts` が `src/**` 全件をnegative scan |
+| U-MEMSYNC-004 | origin ref未解決をOKにしない | `analyzeMemorySync.ok=false` + doctor hard gate。`tests/memory-sync.test.ts` |
+
+一方、issue #187 の **既存memory内容を更新したcommitがoriginへ到達したかをpath存在だけで
+判定する欠陥**は本修正の対象外であり、§5.2 不変条件5の残件として維持する。origin refの
+解決可否と、解決済みref上のcontent同一性は別の契約であり、前者の是正を後者の達成証跡にしない。

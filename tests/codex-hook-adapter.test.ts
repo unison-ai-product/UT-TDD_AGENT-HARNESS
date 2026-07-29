@@ -12,7 +12,12 @@ import {
   CODEX_NOT_APPLICABLE as CODEX_NOT_APPLICABLE_POLICY,
   CODEX_REQUIRED as CODEX_REQUIRED_POLICY,
 } from "../src/lint/codex-hook-adapter-policy";
-import { REQUIRED as CLAUDE_REQUIRED } from "../src/lint/project-hook";
+import { parseHookInvocation } from "../src/lint/hook-invocation";
+import {
+  REQUIRED as CLAUDE_REQUIRED,
+  WRAPPER_HOOK_LAUNCHER,
+  wrapperHookArgs,
+} from "../src/lint/project-hook";
 import { analyzeReadability } from "../src/lint/readability";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard";
 import { evaluateWorkGuard } from "../src/runtime/work-guard";
@@ -26,24 +31,60 @@ function validCodexHooks(): Record<string, unknown> {
         {
           matcher: "apply_patch|write_file",
           hooks: [
-            { type: "command", command: "bun .claude/hooks/work-guard.ts", blockOnFailure: true },
+            {
+              type: "command",
+              command: "node",
+              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("work-guard")],
+              blockOnFailure: true,
+            },
           ],
         },
         {
           matcher: "spawn_agent|spawn_agents_on_csv",
           hooks: [
-            { type: "command", command: "bun .claude/hooks/agent-guard.ts", blockOnFailure: true },
+            {
+              type: "command",
+              command: "node",
+              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("agent-guard")],
+              blockOnFailure: true,
+            },
           ],
         },
       ],
-      SessionStart: [{ hooks: [{ type: "command", command: "bun src/cli.ts session start" }] }],
+      SessionStart: [
+        {
+          hooks: [
+            {
+              type: "command",
+              command: "node",
+              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("session-start")],
+            },
+          ],
+        },
+      ],
       PostToolUse: [
         {
           matcher: "apply_patch|write_file|exec_command|local_shell",
-          hooks: [{ type: "command", command: "bun src/cli.ts hook post-tool-use" }],
+          hooks: [
+            {
+              type: "command",
+              command: "node",
+              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("post-tool-use")],
+            },
+          ],
         },
       ],
-      Stop: [{ hooks: [{ type: "command", command: "bun src/cli.ts session summary" }] }],
+      Stop: [
+        {
+          hooks: [
+            {
+              type: "command",
+              command: "node",
+              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("session-summary")],
+            },
+          ],
+        },
+      ],
     },
   };
 }
@@ -103,12 +144,35 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
   });
 
   it("U-CXHOOK-002d: Claude/Codex の wrapper 配線は定義上同一 (entrypoint 分岐防止)", () => {
-    const claudeWrapperById = new Map(
-      CLAUDE_REQUIRED.map((hook) => [hook.id, hook.wrapperCommand]),
-    );
+    const claudeWrapperById = new Map(CLAUDE_REQUIRED.map((hook) => [hook.id, hook.wrapperArgs]));
     for (const required of CODEX_REQUIRED) {
-      expect(required.wrapperCommand).toBe(claudeWrapperById.get(required.id));
+      expect(required.wrapperArgs).toBe(claudeWrapperById.get(required.id));
     }
+  });
+
+  it("U-CXHOOK-002f: Claude/Codex の native exec argv は同じ invocation semantics を持つ", () => {
+    const claude = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]) as {
+      hooks: Record<string, { hooks: { command: string; args: string[] }[] }[]>;
+    };
+    const codex = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]) as {
+      hooks: Record<string, { hooks: { command: string }[] }[]>;
+    };
+
+    const claudeInvocations = Object.values(claude.hooks)
+      .flatMap((entries) => entries.flatMap((entry) => entry.hooks))
+      .map((hook) => parseHookInvocation(hook))
+      .filter((invocation) => invocation !== null)
+      .map((invocation) => [invocation.executable, ...invocation.args].join(" "))
+      .filter((command) => !command.endsWith(" hook subagent-stop"))
+      .sort();
+    const codexInvocations = Object.values(codex.hooks)
+      .flatMap((entries) => entries.flatMap((entry) => entry.hooks))
+      .map((hook) => parseHookInvocation(hook))
+      .filter((invocation) => invocation !== null)
+      .map((invocation) => [invocation.executable, ...invocation.args].join(" "))
+      .sort();
+
+    expect(claudeInvocations).toEqual(codexInvocations);
   });
 
   it("U-CXHOOK-002b: policy prose is mojibake-free", () => {

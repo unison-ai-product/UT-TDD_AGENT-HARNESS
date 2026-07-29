@@ -4,22 +4,19 @@ title: "PLAN-REVERSE-458: Node self-hosted Bun permanent-ban implementation back
 kind: reverse
 layer: cross
 drive: fullstack
-status: draft
 route_signal: drift
 route_mode: reverse
-workflow_phase: R0
 confirmed_reverse_type: design
 created: 2026-07-23
 updated: 2026-07-23
 owner: PO / Codex
-github_issue_id: 152
 parent_design: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: tl
-    slot_label: "TL - Node self-host実装からL4-L6契約へのgap-only backfillとForward再合流判定"
+    slot_label: TL - Node self-host実装からL4-L6契約へのgap-only backfillとForward再合流判定
   - role: qa
-    slot_label: "QA - Bun process zero、Node bootstrap receipt、Linux/Windows証拠の照合"
+    slot_label: QA - Bun process zero、Node bootstrap receipt、Linux/Windows証拠の照合
 review_evidence: []
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
@@ -33,6 +30,44 @@ dependencies:
     - docs/design/harness/L5-detailed-design/internal-processing.md
     - docs/design/harness/L6-function-design/function-spec.md
   blocks: []
+workflow_phase: R0
+status: draft
+github_issue_id: 152
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:4679b92fb51c1ce6d9b6f87714f1393d
+  command_id: pr154-formal-admission-reverse-20260724
+  admitted_at: 2026-07-24T07:00:00.000Z
+  source_digest: sha256:42302186a0033ae6bb2f8515daa483422222be98bcd3a269d66fbfbdd7527e2e
+  decision_digest: sha256:783d8bde2b3e540d9ff4d276d2298d841be54bef626290ac550de08a13cdc4c6
+  receipt_digest: sha256:6c820ae26b0a3484181296a35baa63642ed2e11e6d9156c0e3925409d850bba8
+  binding:
+    path: docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
+    plan_id: PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill
+    asset_id: plan:legacy:0c0e5d2dfcdd5f050ad3588b7ac1248e908e6c8c6b16d43cec3635c0723188d0
+    revision: 2
+    content_digest: sha256:42302186a0033ae6bb2f8515daa483422222be98bcd3a269d66fbfbdd7527e2e
+  route:
+    signal: drift
+    mode: reverse
+  issue:
+    provider: github
+    issue_id: 152
+    episode_id: E4-152-node-control-plane-d0n
+    projection_digest: sha256:bc3454a066b640893922b0ad77dd27ad8baa0091586d82d152df0fc6e8d06f0e
+  origin:
+    plan_id: PLAN-L7-458-node-self-hosted-bun-ban-foundation
+    revision: 2
+    digest: sha256:b65cffec21905c2373ee52ab60a5fd3be61adcab5fbcb84ffef7f82b05318755
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L4-33-node-control-plane-redesign
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: Node self-hosted implementation facts require design backfill
+    before Forward merge
 ---
 
 # PLAN-REVERSE-458: Node self-hosted Bun permanent-ban implementation backfill

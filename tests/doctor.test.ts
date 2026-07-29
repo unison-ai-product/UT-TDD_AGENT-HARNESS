@@ -234,15 +234,105 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
   const file = (relativePath: string) => join(root, ...relativePath.split("/"));
   return new Map<string, string>(
     Object.entries({
-      ".claude/settings.json": [
-        "{",
-        '  "hooks": {',
-        '    "SessionStart": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session start" }] }],',
-        '    "PostToolUse": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" hook post-tool-use" }] }],',
-        '    "Stop": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session summary" }] }]',
-        "  }",
-        "}",
-      ].join("\n"),
+      ".claude/settings.json": JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            {
+              matcher: "Agent|Task",
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts",
+                  ],
+                  blockOnFailure: true,
+                },
+              ],
+            },
+            {
+              matcher: "Edit|Write|MultiEdit",
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts",
+                  ],
+                  blockOnFailure: true,
+                },
+              ],
+            },
+          ],
+          SessionStart: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "session",
+                    "start",
+                  ],
+                },
+              ],
+            },
+          ],
+          PostToolUse: [
+            {
+              matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "hook",
+                    "post-tool-use",
+                  ],
+                },
+              ],
+            },
+          ],
+          Stop: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "session",
+                    "summary",
+                  ],
+                },
+              ],
+            },
+          ],
+          SubagentStop: [
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "hook",
+                    "subagent-stop",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
       "src/runtime/adapter.ts": [
         'const args = isCodex ? ["exec", "-"] : ["--print", "--input-format", "text"];',
         "return { stdin: intent.task, plan_id: intent.planId };",
@@ -442,47 +532,71 @@ describe("runDoctor", () => {
   });
 
   it("U-SETUP-014: supports a fresh-consumer setup smoke without requiring dogfood PLAN/design docs", () => {
-    const hookJson = JSON.stringify({
+    const codexHook = (...args: string[]) => ({
+      type: "command",
+      command: "node",
+      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+    });
+    const codexHookJson = JSON.stringify({
       hooks: {
         PreToolUse: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }],
+            hooks: [codexHook("hook", "agent-guard")],
           },
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard" }],
+            hooks: [codexHook("hook", "work-guard")],
           },
         ],
-        SessionStart: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] }],
+        SessionStart: [{ hooks: [codexHook("session", "start")] }],
         PostToolUse: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" }],
+            hooks: [codexHook("hook", "post-tool-use")],
           },
         ],
         Stop: [
           {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" }],
-          },
-          {
-            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" }],
+            hooks: [codexHook("session", "summary")],
           },
         ],
       },
     });
+    const claudeHook = (...args: string[]) => ({
+      type: "command",
+      command: "node",
+      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+    });
+    const claudeHookJson = JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          { hooks: [claudeHook("hook", "agent-guard")] },
+          { hooks: [claudeHook("hook", "work-guard")] },
+        ],
+        SessionStart: [{ hooks: [claudeHook("session", "start")] }],
+        PostToolUse: [{ hooks: [claudeHook("hook", "post-tool-use")] }],
+        Stop: [{ hooks: [claudeHook("session", "summary")] }],
+        SubagentStop: [{ hooks: [claudeHook("hook", "subagent-stop")] }],
+      },
+    });
     const file = (path: string) => join("/repo", ...path.split("/"));
     const files = new Map<string, string>([
+      [
+        file(".ut-tdd/bin/run-bun.ts"),
+        "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
+      ],
       [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
       [file("AGENTS.md"), "UT-TDD adapter"],
       [file("CLAUDE.md"), "UT-TDD adapter"],
       [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
-      [file(".claude/settings.json"), hookJson],
+      [file(".claude/settings.json"), claudeHookJson],
       [file(".codex/config.toml"), "hooks = true"],
-      [file(".codex/hooks.json"), hookJson],
+      [file(".codex/hooks.json"), codexHookJson],
     ]);
 
     const r = runDoctor(deps({ files }), { setupSmoke: true });
 
     expect(DOCTOR_RUN_PROFILE_IDS).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
       "consumer-toolchain",
       "consumer-setup-smoke",
@@ -535,7 +649,7 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=24, failed=0)"]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {
@@ -549,10 +663,12 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile()).toEqual(DOCTOR_RUN_PROFILES["source-full"]);
     expect(doctorRunProfilesForAudience("source").map((profile) => profile.id)).toEqual([
       "source-full",
+      "source-doc-lane",
       "source-toolchain",
     ]);
     expect(doctorRunProfilesForAudience("source").filter((profile) => profile.sourceOnly)).toEqual([
       DOCTOR_RUN_PROFILES["source-full"],
+      DOCTOR_RUN_PROFILES["source-doc-lane"],
     ]);
     expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-full"])).toBe(false);
     expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-toolchain"])).toBe(true);
@@ -1531,6 +1647,7 @@ describe("runDoctor", () => {
       "pair-freeze",
       "module-drift",
       "merged-plan-status",
+      "memory-sync",
       "review-evidence",
       "guardrail-invariants",
       "asset-drift",
@@ -1548,6 +1665,7 @@ describe("runDoctor", () => {
       "db-projection-ingestion",
       "design-detection",
       "rule-drift",
+      "model-id-doc-drift",
       "gate-confirm",
       "gate-id-format",
       "plan-schedule",

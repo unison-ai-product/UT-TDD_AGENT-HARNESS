@@ -27,7 +27,7 @@ dependencies:
   parent: docs/plans/PLAN-L6-76-semantic-assessment-debt-routing-contracts.md
   requires: []
   references:
-    - docs/plans/PLAN-L7-422-repository-document-disposition-closure-gate.md
+    - docs/plans/PLAN-L7-467-repository-document-disposition-closure-gate.md
     - docs/plans/PLAN-L7-423-engine-swap-domain-objects-ports.md
     - docs/plans/PLAN-REVERSE-424-semantic-assessment-backfill.md
 ---

@@ -8,7 +8,7 @@ status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-15
-updated: 2026-07-16
+updated: 2026-07-29
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -53,8 +53,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-16T17:10:02+09:00"
         evidence_path: tests/node-plan-draft-runner.test.ts
-        output_digest: "sha256:77965ac5416bad549b6fb69079aacb059544059921139589508ec5baed0d8238"
-        anchor_commit: 975984a3837987f05bb67a28bbfd800e9458d1d4
+        output_digest: "sha256:e69fd63c64fa65b8fcb06019d5229f48ff7313119349a8a957d24a187e0014ff"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 generates:
   - artifact_path: docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     artifact_type: markdown_doc
@@ -63,6 +63,8 @@ generates:
   - artifact_path: src/schema/frontmatter.ts
     artifact_type: source_module
   - artifact_path: src/plan/lint.ts
+    artifact_type: source_module
+  - artifact_path: src/plan/lint-policy.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/diff-fence.ts
     artifact_type: source_module
@@ -140,6 +142,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/plan-id-identity.test.ts
     artifact_type: test_code
+  - artifact_path: tests/plan-lint.test.ts
+    artifact_type: test_code
   - artifact_path: tests/cli-plan-draft.test.ts
     artifact_type: test_code
 dependencies:
@@ -213,6 +217,24 @@ failure injection、replay、concurrent reservation、temp rename失敗、DB com
 - [ ] direct PLAN editとreceipt staleをhook/pre-push/CIでfail-closeする。
 - [ ] `U-PADM-*` / property / mutation / CLI実行がGreenとなり、Red oracle候補を実装oracleへ昇格する。
 - [ ] REVERSE-435で実装観測をL4-L6/L7 test-designへgap-only backfillする。
+
+### Issue #163 additive delta: PLAN numeric identity 一意性
+
+PLAN IDの一意性はslugを含む全文字列ではなく、共有
+`parsePlanIdIdentity` が返す `namespace + numeric ordinal` を正本とする。
+これによりslug違いとzero padding違い（`070` / `70`）を同一座標として
+`duplicate_plan_identity` でfail-closeする。
+
+既存衝突は `LEGACY_PLAN_ID_COLLISION_DEBT` のexact setだけを期限付きで許容する。
+座標だけのallowlistにはせず、既存集合への3件目追加、構成plan_idの差し替えは拒否する。
+衝突の一方を削除して解消した座標は許容し、debt集合を新規衝突の温存理由にしない。
+
+- [x] slug違いとzero padding違いを同一numeric identityとして拒否する
+  (`U-PLANGOV-002a` / `002b`)。
+- [x] legacy exact setだけを許容し、3件目・構成差し替えを拒否し、衝突解消後は許容する
+  (`U-PLANGOV-002c`〜`002f`)。
+- [x] Issue #163 → PLAN-L7-435 delta → L7 test-design → `src/plan/lint.ts` /
+  `src/plan/lint-policy.ts` → `tests/plan-lint.test.ts` を同一traceにする。
 
 ## テスト証跡
 

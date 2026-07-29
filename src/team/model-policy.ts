@@ -14,7 +14,7 @@ export const MODEL_IDS = {
   claude: {
     /** Claude 5 世代フロンティア (advisor 一次相談先、2026-07 更新)。 */
     fable: "claude-fable-5",
-    opus: "claude-opus-4-8",
+    opus: "claude-opus-5",
     /** Sonnet 5 世代 (2026-06 更新)。coding/agentic で旧 Opus 級、価格帯は 4-6 と同一。 */
     sonnet: "claude-sonnet-5",
     haiku: "claude-haiku-4-5",
@@ -116,11 +116,19 @@ export const PLAN_AGENT_MODELS = {
 } as const;
 
 /**
- * モデル別 effort 基準ラダー (PO 2026-07-14)。base が既定 effort、shallow は「回答が浅い」
+ * モデル別 effort 基準ラダー (PO 2026-07-28 改定)。base が既定 effort、shallow は「回答が浅い」
  * と orchestrator が判断した時の引き上げ先。escalate は shallow でもなお浅い時の
- * モデル乗り換え先 (Terra middle → Sol low)。上位モデルほど低 effort で足り、下位帯
- * (spark/mini) は effort で能力を補う逆傾斜 (H4 ベンチ: Sol low ≈ Terra high の実測と整合)。
- * luna のみ base=high (PO 2026-07-14 の実装帯上書き)。haiku は未指定のため Claude 既定 (high)。
+ * モデル乗り換え先。上位モデルほど低 effort で足り、下位帯 (spark/mini) は effort で
+ * 能力を補う逆傾斜。
+ *
+ * base: Sol / Fable = low、Opus / Terra / Sonnet = middle、Luna / spark / mini = high。
+ * haiku は未指定のため Claude 既定 (high)。
+ *
+ * **`xhigh` はラダーの基準値・shallow 値として使わない** (PO 2026-07-28:
+ * 「xhigh 以上はモデル上げたほうがいい」)。改定前は mini の base と Opus の shallow が
+ * `xhigh` で、深さを effort で買おうとしていた。現在は行き止まりを作らず全帯に escalate
+ * (モデル上げ) を持たせている。明示 `--effort xhigh` は引き続き有効 (UI/UX 例外、
+ * PO 2026-07-08) — 禁止するのは既定としての採用のみ。
  */
 export const MODEL_EFFORT_LADDER: Record<
   string,
@@ -132,21 +140,45 @@ export const MODEL_EFFORT_LADDER: Record<
 > = {
   [MODEL_IDS.codex.frontier]: { base: "low", shallow: "middle" },
   [MODEL_IDS.codex.worker]: {
+    base: "middle",
+    shallow: "high",
+    escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
+  },
+  [MODEL_IDS.codex.luna]: {
+    base: "high",
+    escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
+  },
+  [MODEL_IDS.codex.spark]: {
+    base: "high",
+    escalate: { model: MODEL_IDS.codex.worker, effort: "middle" },
+  },
+  [MODEL_IDS.codex.mini]: {
+    base: "high",
+    escalate: { model: MODEL_IDS.codex.worker, effort: "middle" },
+  },
+  [MODEL_IDS.claude.fable]: {
     base: "low",
     shallow: "middle",
     escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
   },
-  [MODEL_IDS.codex.luna]: { base: "high" },
-  [MODEL_IDS.codex.spark]: { base: "high" },
-  [MODEL_IDS.codex.mini]: { base: "xhigh" },
-  [MODEL_IDS.claude.fable]: { base: "low", shallow: "middle" },
-  [MODEL_IDS.claude.opus]: { base: "high", shallow: "xhigh" },
-  [MODEL_IDS.claude.sonnet]: { base: "middle", shallow: "high" },
+  [MODEL_IDS.claude.opus]: {
+    base: "middle",
+    shallow: "high",
+    escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
+  },
+  [MODEL_IDS.claude.sonnet]: {
+    base: "middle",
+    shallow: "high",
+    escalate: { model: MODEL_IDS.claude.opus, effort: "middle" },
+  },
 };
 
 /**
  * 「回答が浅い」時の次段。まず同モデルで shallow effort へ、それでも浅ければ escalate
  * (モデル乗り換え) へ。次段が無ければ null (それ以上は advisor / 人間判断)。
+ *
+ * base=high 帯 (luna / spark / mini) は shallow を持たない — そこから深さを買うなら
+ * `xhigh` ではなくモデル上げが PO 方針 (2026-07-28) なので、base から直接 escalate する。
  */
 export function escalateShallowResponse(input: {
   model: string;
@@ -157,7 +189,8 @@ export function escalateShallowResponse(input: {
   if (ladder.shallow && input.currentEffort === ladder.base) {
     return { model: input.model, effort: ladder.shallow };
   }
-  if (ladder.escalate && input.currentEffort === ladder.shallow) {
+  const escalateFrom = ladder.shallow ?? ladder.base;
+  if (ladder.escalate && input.currentEffort === escalateFrom) {
     return ladder.escalate;
   }
   return null;

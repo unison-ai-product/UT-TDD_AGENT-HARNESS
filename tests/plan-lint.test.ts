@@ -261,6 +261,102 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).toContain("skip_sub_doc_reason");
   });
 
+  it("U-PLANGOV-002a: different slugs cannot reuse the same PLAN namespace and ordinal", () => {
+    const docs = [
+      planDoc("PLAN-L6-991-contract-a", { layer: "L6", subDoc: "function-spec" }),
+      planDoc("PLAN-L6-991-contract-b", { layer: "L6", subDoc: "function-spec" }),
+    ];
+
+    const violations = analyzePlanGovernance(docs).violations.filter(
+      (violation) => violation.reason === "duplicate_plan_identity",
+    );
+
+    expect(violations.map((violation) => violation.file)).toEqual([
+      "docs/plans/PLAN-L6-991-contract-a.md",
+      "docs/plans/PLAN-L6-991-contract-b.md",
+    ]);
+    expect(violations.every((violation) => violation.detail?.includes("L6:991"))).toBe(true);
+  });
+
+  it("U-PLANGOV-002b: zero padding does not create a second PLAN identity", () => {
+    const docs = [
+      planDoc("PLAN-RECOVERY-070-repair-a", {
+        kind: "recovery",
+        layer: "cross",
+        subDoc: null,
+      }),
+      planDoc("PLAN-RECOVERY-70-repair-b", {
+        kind: "recovery",
+        layer: "cross",
+        subDoc: null,
+      }),
+    ];
+
+    const violations = analyzePlanGovernance(docs).violations.filter(
+      (violation) => violation.reason === "duplicate_plan_identity",
+    );
+
+    expect(violations).toHaveLength(2);
+    expect(violations.every((violation) => violation.detail?.includes("RECOVERY:70"))).toBe(true);
+  });
+
+  const legacyL6CollisionDocs = () => [
+    planDoc("PLAN-L6-70-source-catalog-profile-resolver-contracts", {
+      layer: "L6",
+      subDoc: "function-spec",
+    }),
+    planDoc("PLAN-L6-70-vmodel-judgement-skill-pack", {
+      layer: "L6",
+      subDoc: "function-spec",
+    }),
+  ];
+
+  it("U-PLANGOV-002c: accepts only the exact legacy collision set", () => {
+    const violations = analyzePlanGovernance(legacyL6CollisionDocs()).violations.filter(
+      (violation) => violation.reason === "duplicate_plan_identity",
+    );
+
+    expect(violations).toEqual([]);
+  });
+
+  it("U-PLANGOV-002d: rejects a third PLAN at a legacy collision coordinate", () => {
+    const docs = [
+      ...legacyL6CollisionDocs(),
+      planDoc("PLAN-L6-070-third-collision", {
+        layer: "L6",
+        subDoc: "function-spec",
+      }),
+    ];
+    const violations = analyzePlanGovernance(docs).violations.filter(
+      (violation) => violation.reason === "duplicate_plan_identity",
+    );
+
+    expect(violations).toHaveLength(3);
+  });
+
+  it("U-PLANGOV-002e: rejects substitution inside a legacy collision set", () => {
+    const docs = [
+      legacyL6CollisionDocs()[0],
+      planDoc("PLAN-L6-70-substituted-plan", {
+        layer: "L6",
+        subDoc: "function-spec",
+      }),
+    ];
+    const violations = analyzePlanGovernance(docs).violations.filter(
+      (violation) => violation.reason === "duplicate_plan_identity",
+    );
+
+    expect(violations).toHaveLength(2);
+  });
+
+  it("U-PLANGOV-002f: accepts a coordinate after its legacy collision is resolved", () => {
+    const violations = analyzePlanGovernance([legacyL6CollisionDocs()[0]]).violations.filter(
+      (violation) => violation.reason === "duplicate_plan_identity",
+    );
+
+    expect(violations).toEqual([]);
+  });
+
   it("U-PLANGOV-006: L4 標準成果物カタログ拡張 (report/batch/notification/code-value) を plan lint が valid sub_doc として受理", () => {
     const newTypes = ["report", "batch", "notification", "code-value", "security"];
     const docs = newTypes.map((t, i) => planDoc(`PLAN-L4-8${i}-${t}`, { layer: "L4", subDoc: t }));

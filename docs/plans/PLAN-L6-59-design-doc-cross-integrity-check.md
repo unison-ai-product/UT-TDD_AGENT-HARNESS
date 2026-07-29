@@ -32,7 +32,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-09T13:11:00+09:00"
         evidence_path: docs/plans/PLAN-L6-59-design-doc-cross-integrity-check.md
-        output_digest: "sha256:81d6ecc41beaa3c2a7c1fb2b453dd46b6ae6aff4eb38adf0cc0b8ef821bc23aa"
+        output_digest: "sha256:ba92f7e494330e26b4e58c8f5558900268b21e3cc540a9e4280280bd4a201b30"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 agent_slots:
   - role: tl
     slot_label: "TL - 設計 doc 級の重複定義/循環依存検出契約、既存 namespace 個別 dup / module 級 cycle との境界確認"

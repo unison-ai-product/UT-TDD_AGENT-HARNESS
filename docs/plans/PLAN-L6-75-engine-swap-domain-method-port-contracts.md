@@ -51,8 +51,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-14T15:00:10+09:00"
         evidence_path: tests/plan-lint.test.ts
-        output_digest: "sha256:afaaca592faa0bfed99d8629e283710c181b3f6da21a4230bde4a7760504e77a"
-        anchor_commit: 12e503a49902e2548bc98e0498e508a9abcd6dc3
+        output_digest: "sha256:368462623766175e76783b927571c6db812830af063e413cd5776e7280dc2ebf"
+        anchor_commit: 487ccd318a7e27f56ea35764d6204f35300d91d4
 ---
 
 # PLAN-L6-75: engine-swap domain class / method / port契約
