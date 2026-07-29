@@ -1,12 +1,12 @@
 ---
 plan_id: PLAN-L7-461-ci-cost-speedup-phase2
-title: "PLAN-L7-461 (troubleshoot): GitHub CI 高速化 Phase 2 — doctor 二重実行の解消 + 実測駆動 static shard (issue #109 残 AC)"
+title: "PLAN-L7-461 (troubleshoot): GitHub CI 高速化 Phase 2a — doctor 二重実行の解消"
 kind: troubleshoot
 layer: L7
 drive: agent
 route_signal: incident
 route_mode: incident
-status: draft
+status: confirmed
 created: 2026-07-28
 updated: 2026-07-29
 backprop_decision: not_required
@@ -28,6 +28,26 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/doctor-result-file.test.ts
     artifact_type: test_code
+  - artifact_path: tests/support/doctor-envelope.ts
+    artifact_type: test_code
+  - artifact_path: scripts/run-vitest-snapshot.ts
+    artifact_type: source_module
+  - artifact_path: tests/vitest-snapshot-runner.test.ts
+    artifact_type: test_code
+  - artifact_path: src/doctor/test-repository-isolation.ts
+    artifact_type: source_module
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: .github/workflows/harness-check.yml
+    artifact_type: config
+  - artifact_path: src/lint/github-ci-policy.ts
+    artifact_type: source_module
+  - artifact_path: tests/github-ci-policy.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/design/harness/L4-basic-design/architecture.md
+    artifact_type: design_doc
 dependencies:
   parent: null
   requires: []
@@ -42,11 +62,8 @@ review_evidence: []
 
 GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/109 (残 AC)
 
-注: 実装 deliverable (.github/workflows/harness-check.yml / src/lint/github-ci-policy.ts /
-tests/github-ci-policy.test.ts) は既存ファイルのため draft 段階の generates には載せない
-(merged-plan-status / duplicate-artifact-ownership 対策)。実装 PR で generates を更新し
-confirm と同時に宣言する。前提 PLAN-L7-455 (Phase 1) は PR #112 が merge されるまで
-references 扱い (requires の ready 条件を満たさないため)。
+本PLANはPhase 2aとしてdoctor単一実行化だけを所有する。実際に変更・検証した既存artifactも
+`generates`へ明示した。前提PLAN-L7-455 (Phase 1) はmerge済みのためreferencesとして参照する。
 
 ## 背景 (2026-07-28 実測、run 30261670421 = 直近 main green run)
 
@@ -103,13 +120,9 @@ path→test 依存マップが前提 (別 PLAN の責務、本 PLAN スコープ
    (b) U-TESTHYGIENE-028 相当の baseline 検査を doctor 本体の check に昇格し、vitest
    側は薄い契約テストに縮小する。**検査の等価性 (検出できる違反集合が縮まないこと) を
    TL レビューで確認するまで実装しない。**
-2. **linux vitest static 2-shard**: 実測 duration に基づくファイル単位の静的分割
-   (shard A ≈ doctor + projection-writer 系、shard B ≈ 残り)。両 shard job を
-   aggregate `harness-check` の needs に加え、github-ci-policy detector を追随させる
-   (shard 片肺・shard 欠落は fail-close)。
-3. **windows leg 特化の設計判断書き出しのみ** (実装しない): OS 依存面 (path separator /
-   SQLite handle / spawn 系) に test:fast を絞る案の被覆トレードオフを設計メモ化し、
-   QA/PO 判断に回す。Phase 2 では判断材料の作成まで。
+static shardとWindows leg特化は、doctor単一実行化と独立した変更・required context再設計を伴うため
+Phase 2aの完了条件へ混在させない。issue #109の残backlogとしてProject/Forward順序へ戻し、
+別sliceの設計・検証pairを持つまで本PLANは実装済みとも安全とも主張しない。
 
 ## スコープ外
 
@@ -120,9 +133,8 @@ path→test 依存マップが前提 (別 PLAN の責務、本 PLAN スコープ
 ## Schedule
 
 - step 1 (serial): doctor 単一実行化の方式設計メモ + 等価性の oracle 宣言 (テスト設計)
-- step 2 (step 1 と並列): shard 分割表の作成 (実測 duration 引用) + detector 追随のテスト設計
-- step 3 (serial): 実装 + before/after 実測 (run URL を evidence として引用)
-- step 4 (serial): blind review (非 author provider) → confirm
+- step 2 (serial): 実装 + before/after 実測 (run URL を evidence として引用)
+- step 3 (serial): blind review (非 author provider) → confirm
 
 ## AC
 
@@ -131,11 +143,9 @@ path→test 依存マップが前提 (別 PLAN の責務、本 PLAN スコープ
   断定禁止、PLAN-L7-89 claim discipline)。
 - AC-2: doctor の governance 検査集合が単一実行化の前後で縮まないことをテストで固定
   (check 名の集合比較、fail-close)。
-- AC-3: shard 片肺 (どちらかの shard job が required から外れる / 欠落する) を
-  github-ci-policy detector が fail-close で検出する回帰テストが green。
-- AC-4: 両 shard + aggregate の required context 構成で PR CI が green になる実 run を
-  evidence として引用。
-- AC-5: workflow header の doc-safe allowlist 記述が `DOC_LANE_PREFIXES` と集合一致し、
+- AC-3: Linux / Windows / aggregateの既存required context構成を縮めずPR CIがgreenになる実runを
+  evidenceとして引用。
+- AC-4: workflow header の doc-safe allowlist 記述が `DOC_LANE_PREFIXES` と集合一致し、
   ずれた場合に落ちる回帰テストが green (tests/change-lane.test.ts、marker 欠落も
   fail-close)。
 
@@ -213,8 +223,8 @@ envelope が実際に消費されたことは CI ログの `doctor-envelope: acc
 run 30439854225 は job 251s と他 2 本より 80s 速く、**runner 側のばらつきが削減幅と同程度**ある。
 したがって「約 15% 短縮」は中央値としての主張であり、単発 run の比較で語らない。
 
-### 残件
+### Phase 2a closureと残backlog
 
-- shard 分割 (スコープ 2) と windows leg の設計判断 (スコープ 3) は未着手。
-- 本 PR で declare した `generates` は **merge 時に confirm と同時**に有効化する必要がある
-  (`merged-plan-status` は merge 後に draft のままだと fail-close する。issue #162 の型)。
+- doctor単一実行化はAC-1〜4、exact HEAD CI、closed envelope custody、blind reviewでclosureした。
+- static shardとWindows leg特化は未着手であり、本PLANのconfirmedへ含めない。issue #109の残backlogを
+  Project/Forwardへ登録する後続sliceの責務とし、2aの完了表現から除外した。
