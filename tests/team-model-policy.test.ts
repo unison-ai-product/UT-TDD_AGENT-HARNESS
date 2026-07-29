@@ -597,7 +597,10 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
   });
 
   it("U-ROUTE2-016: 英語の優先順判断は technical 語を含んでも progress を優先する", () => {
-    for (const task of ["Which failing PR should we fix first?", "Which failing PR to fix first?"]) {
+    for (const task of [
+      "Which failing PR should we fix first?",
+      "Which failing PR to fix first?",
+    ]) {
       const decision = buildAdvisorDecision({
         task,
         mode: "hybrid",
