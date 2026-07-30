@@ -127,7 +127,9 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     };
     const orphanInFreeze = analyzeResourceKernelPairMapping({
       freezeRows: [base],
-      mappingRows: [{ contractId: "C-RGK-01", source: "§1", oracles: [] }],
+      mappingRows: [
+        { contractId: "C-RGK-01", source: "§1", summary: "test contract", oracles: [] },
+      ],
     });
     expect(orphanInFreeze.ok).toBe(false);
     expect(orphanInFreeze.oraclesMissingFromMapping).toEqual(["IT-RGK-PHYS-001"]);
@@ -135,14 +137,28 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
 
     const orphanInMapping = analyzeResourceKernelPairMapping({
       freezeRows: [],
-      mappingRows: [{ contractId: "C-RGK-01", source: "§1", oracles: ["IT-RGK-PHYS-099"] }],
+      mappingRows: [
+        {
+          contractId: "C-RGK-01",
+          source: "§1",
+          summary: "test contract",
+          oracles: ["IT-RGK-PHYS-099"],
+        },
+      ],
     });
     expect(orphanInMapping.ok).toBe(false);
     expect(orphanInMapping.oraclesMissingFromFreeze).toEqual(["IT-RGK-PHYS-099"]);
 
     const badRow = analyzeResourceKernelPairMapping({
       freezeRows: [{ ...base, lane: "assumed-green", observation: "" }],
-      mappingRows: [{ contractId: "C-RGK-01", source: "§1", oracles: ["IT-RGK-PHYS-001"] }],
+      mappingRows: [
+        {
+          contractId: "C-RGK-01",
+          source: "§1",
+          summary: "test contract",
+          oracles: ["IT-RGK-PHYS-001"],
+        },
+      ],
     });
     expect(badRow.ok).toBe(false);
     expect(badRow.rowsWithUnknownLane).toEqual(["IT-RGK-PHYS-001"]);
@@ -176,9 +192,24 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     ];
     // 期待集合 58 件のうち C-RGK-01 の重複 + 未知 C-RGK-99 + 出典 §7 (範囲外) を混入させる。
     const mappingRows = [
-      { contractId: "C-RGK-01", source: "§1", oracles: ["IT-RGK-PHYS-001"] },
-      { contractId: "C-RGK-01", source: "§1", oracles: ["IT-RGK-PHYS-001"] },
-      { contractId: "C-RGK-99", source: "§7", oracles: ["IT-RGK-PHYS-001"] },
+      {
+        contractId: "C-RGK-01",
+        source: "§1",
+        summary: "test contract",
+        oracles: ["IT-RGK-PHYS-001"],
+      },
+      {
+        contractId: "C-RGK-01",
+        source: "§1",
+        summary: "test contract",
+        oracles: ["IT-RGK-PHYS-001"],
+      },
+      {
+        contractId: "C-RGK-99",
+        source: "§7",
+        summary: "test contract",
+        oracles: ["IT-RGK-PHYS-001"],
+      },
     ];
     const r = analyzeResourceKernelPairMapping({ freezeRows, mappingRows });
     expect(r.ok).toBe(false);
@@ -388,6 +419,33 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     ]) {
       expect(parseFreezeAttributeRows(hidden)).toEqual([]);
       expect(parseLaneDeclarations(hidden)).toEqual([]);
+    }
+  });
+
+  it("U-RGKPAIR-012: 契約要約・exact出典・freeze属性の実質空洞化をfail-closeする", () => {
+    const repo = loadRepoRows();
+    const emptySummary = analyzeResourceKernelPairMapping({
+      ...repo,
+      mappingRows: repo.mappingRows.map((row) => ({ ...row, summary: "" })),
+    });
+    expect(emptySummary.ok).toBe(false);
+    expect(emptySummary.contractsWithEmptySummary).toHaveLength(EXPECTED_CONTRACT_COUNT);
+
+    const falseProvenance = analyzeResourceKernelPairMapping({
+      ...repo,
+      mappingRows: repo.mappingRows.map((row) => ({ ...row, source: "§1" })),
+    });
+    expect(falseProvenance.ok).toBe(false);
+    expect(falseProvenance.contractsWithUnexpectedSource).toContain("C-RGK-09");
+    expect(falseProvenance.contractsWithUnexpectedSource).toContain("C-RGK-58");
+
+    for (const patch of [{ createdCount: "TBD" }, { observation: "x" }]) {
+      const hollowFreeze = analyzeResourceKernelPairMapping({
+        ...repo,
+        freezeRows: repo.freezeRows.map((row, index) => (index === 0 ? { ...row, ...patch } : row)),
+      });
+      expect(hollowFreeze.ok).toBe(false);
+      expect(hollowFreeze.rowsWithInvalidAttribute).toEqual(["IT-RGK-PHYS-001"]);
     }
   });
 
