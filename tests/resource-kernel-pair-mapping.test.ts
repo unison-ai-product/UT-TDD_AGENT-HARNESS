@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   ALLOWED_LANES,
   analyzeResourceKernelPairMapping,
+  EXPECTED_CONTRACT_COUNT,
+  EXPECTED_CONTRACT_IDS,
   parseContractMappingRows,
   parseFreezeAttributeRows,
   resourceKernelPairMappingMessages,
@@ -101,5 +103,50 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     expect(badRow.rowsWithUnknownLane).toEqual(["IT-RGK-PHYS-001"]);
     expect(badRow.rowsWithEmptyAttribute).toEqual(["IT-RGK-PHYS-001"]);
     expect(resourceKernelPairMappingMessages(badRow).length).toBeGreaterThan(0);
+  });
+
+  it("U-RGKPAIR-005: 実 repo の契約 ID は C-RGK-01..58 の exact 集合 (欠番 0・重複 0・未知 0・出典正規)", () => {
+    const { mappingRows } = loadRepoRows();
+    // 「58 分割の全数性」を散文と人間レビューに依存させない (GPT5.6Pro 監査 2026-07-30)。
+    expect(mappingRows).toHaveLength(EXPECTED_CONTRACT_COUNT);
+    expect(mappingRows.map((r) => r.contractId)).toEqual([...EXPECTED_CONTRACT_IDS]);
+    const r = analyzeResourceKernelPairMapping(loadRepoRows());
+    expect(r.contractIdsMissing).toEqual([]);
+    expect(r.contractIdsUnknown).toEqual([]);
+    expect(r.contractIdsDuplicated).toEqual([]);
+    expect(r.contractsWithInvalidSource).toEqual([]);
+  });
+
+  it("U-RGKPAIR-006: 契約側の欠番・重複・未知 ID・出典逸脱を fail-close で検出する", () => {
+    const freezeRows = [
+      {
+        id: "IT-RGK-PHYS-001",
+        lane: "mock",
+        platform: "OS非依存",
+        fixture: "fx",
+        observation: "obs",
+        negativeExpected: "neg",
+        createdCount: "control 1 / workload 0",
+      },
+    ];
+    // 期待集合 58 件のうち C-RGK-01 の重複 + 未知 C-RGK-99 + 出典 §7 (範囲外) を混入させる。
+    const mappingRows = [
+      { contractId: "C-RGK-01", source: "§1", oracles: ["IT-RGK-PHYS-001"] },
+      { contractId: "C-RGK-01", source: "§1", oracles: ["IT-RGK-PHYS-001"] },
+      { contractId: "C-RGK-99", source: "§7", oracles: ["IT-RGK-PHYS-001"] },
+    ];
+    const r = analyzeResourceKernelPairMapping({ freezeRows, mappingRows });
+    expect(r.ok).toBe(false);
+    expect(r.contractIdsDuplicated).toEqual(["C-RGK-01"]);
+    expect(r.contractIdsUnknown).toEqual(["C-RGK-99"]);
+    // C-RGK-01 以外の 57 件が欠番として全数報告される (先頭だけ丸めない)。
+    expect(r.contractIdsMissing).toHaveLength(EXPECTED_CONTRACT_COUNT - 1);
+    expect(r.contractIdsMissing[0]).toBe("C-RGK-02");
+    expect(r.contractsWithInvalidSource).toEqual(["C-RGK-99"]);
+    const msgs = resourceKernelPairMappingMessages(r);
+    expect(msgs.some((m) => m.includes("欠番"))).toBe(true);
+    expect(msgs.some((m) => m.includes("重複"))).toBe(true);
+    expect(msgs.some((m) => m.includes("期待集合外"))).toBe(true);
+    expect(msgs.some((m) => m.includes("正規範囲外"))).toBe(true);
   });
 });

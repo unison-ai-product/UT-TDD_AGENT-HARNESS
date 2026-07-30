@@ -39,6 +39,14 @@ export interface ResourceKernelPairMappingResult {
   rowsWithUnknownLane: string[];
   /** 被覆 oracle 0 件の契約行。 */
   contractsWithoutOracle: string[];
+  /** 期待集合 (C-RGK-01..58) に無い契約 ID (未知 ID)。 */
+  contractIdsUnknown: string[];
+  /** 期待集合のうち写像表に現れない契約 ID (欠番)。 */
+  contractIdsMissing: string[];
+  /** 写像表内で重複する契約 ID。 */
+  contractIdsDuplicated: string[];
+  /** 出典が §1〜§6 (小数節可) の正規範囲外の契約行 (ID)。 */
+  contractsWithInvalidSource: string[];
   /** lane 別件数。 */
   laneCounts: Record<string, number>;
   ok: boolean;
@@ -46,6 +54,20 @@ export interface ResourceKernelPairMappingResult {
 
 /** freeze 属性表で許可する lane 語彙。mock Green を実 OS custody Green へ読み替えないための 3 値。 */
 export const ALLOWED_LANES = ["mock", "real-OS", "mock+real-OS"] as const;
+
+/**
+ * L5 物理契約の期待件数。§7.1 は「58 分割の exact 集合」を主張するため、42 oracle 側だけでなく
+ * 契約側も欠番・重複・未知 ID を機械検査する (GPT5.6Pro 監査 2026-07-30: 「58 契約側の全数性が
+ * 散文+人間レビュー依存」の指摘への対応)。分割数を変える場合は §7.1 とここを同時に更新する。
+ */
+export const EXPECTED_CONTRACT_COUNT = 58;
+export const EXPECTED_CONTRACT_IDS: readonly string[] = Array.from(
+  { length: EXPECTED_CONTRACT_COUNT },
+  (_, i) => `C-RGK-${String(i + 1).padStart(2, "0")}`,
+);
+
+/** 出典セルの正規形 (§1〜§6、§4.1 のような小数節を許容)。 */
+const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
 
@@ -147,6 +169,30 @@ export function analyzeResourceKernelPairMapping(input: {
     .map((r) => r.contractId)
     .sort();
 
+  // 契約側 exact 集合 (C-RGK-01..58): 欠番 / 未知 ID / 重複を機械検査する。
+  // 42 oracle 側の双方向孤児 0 だけでは「契約行を 1 本削っても残りが 42 を覆えば通る」ため、
+  // 58 分割の全数性そのものを検査対象にする。
+  const contractIdOccurrences = new Map<string, number>();
+  for (const r of input.mappingRows) {
+    contractIdOccurrences.set(r.contractId, (contractIdOccurrences.get(r.contractId) ?? 0) + 1);
+  }
+  const expectedSet = new Set(EXPECTED_CONTRACT_IDS);
+  const contractIdsUnknown = [...contractIdOccurrences.keys()]
+    .filter((id) => !expectedSet.has(id))
+    .sort();
+  const contractIdsMissing = EXPECTED_CONTRACT_IDS.filter(
+    (id) => !contractIdOccurrences.has(id),
+  ).sort();
+  const contractIdsDuplicated = [...contractIdOccurrences.entries()]
+    .filter(([, n]) => n > 1)
+    .map(([id]) => id)
+    .sort();
+
+  const contractsWithInvalidSource = input.mappingRows
+    .filter((r) => !CONTRACT_SOURCE_PATTERN.test(r.source.trim()))
+    .map((r) => r.contractId)
+    .sort();
+
   const laneCounts: Record<string, number> = {};
   for (const r of input.freezeRows) laneCounts[r.lane] = (laneCounts[r.lane] ?? 0) + 1;
 
@@ -156,13 +202,21 @@ export function analyzeResourceKernelPairMapping(input: {
     rowsWithEmptyAttribute,
     rowsWithUnknownLane,
     contractsWithoutOracle,
+    contractIdsUnknown,
+    contractIdsMissing,
+    contractIdsDuplicated,
+    contractsWithInvalidSource,
     laneCounts,
     ok:
       oraclesMissingFromMapping.length === 0 &&
       oraclesMissingFromFreeze.length === 0 &&
       rowsWithEmptyAttribute.length === 0 &&
       rowsWithUnknownLane.length === 0 &&
-      contractsWithoutOracle.length === 0,
+      contractsWithoutOracle.length === 0 &&
+      contractIdsUnknown.length === 0 &&
+      contractIdsMissing.length === 0 &&
+      contractIdsDuplicated.length === 0 &&
+      contractsWithInvalidSource.length === 0,
   };
 }
 
@@ -189,6 +243,20 @@ export function resourceKernelPairMappingMessages(r: ResourceKernelPairMappingRe
   }
   if (r.contractsWithoutOracle.length > 0) {
     msgs.push(`被覆 oracle 0 件の物理契約: ${r.contractsWithoutOracle.join(", ")}`);
+  }
+  if (r.contractIdsMissing.length > 0) {
+    msgs.push(
+      `期待集合 C-RGK-01..${EXPECTED_CONTRACT_COUNT} の欠番: ${r.contractIdsMissing.join(", ")}`,
+    );
+  }
+  if (r.contractIdsUnknown.length > 0) {
+    msgs.push(`期待集合外の契約 ID: ${r.contractIdsUnknown.join(", ")}`);
+  }
+  if (r.contractIdsDuplicated.length > 0) {
+    msgs.push(`重複する契約 ID: ${r.contractIdsDuplicated.join(", ")}`);
+  }
+  if (r.contractsWithInvalidSource.length > 0) {
+    msgs.push(`出典が §1〜§6 の正規範囲外の契約行: ${r.contractsWithInvalidSource.join(", ")}`);
   }
   return msgs;
 }
