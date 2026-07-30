@@ -26,6 +26,12 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L8-integration-test-design.md
     artifact_type: test_design
+  - artifact_path: docs/test-design/harness/resource-kernel-fixture-manifest.yaml
+    artifact_type: test_design
+  - artifact_path: src/lint/resource-kernel-fixture-manifest.ts
+    artifact_type: source_module
+  - artifact_path: tests/resource-kernel-fixture-manifest.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
   requires: []
@@ -388,3 +394,10 @@ stage token chain、Windows attach barrier、Linux start-in-cgroup、client/cust
 deadline後cleanup、custody release/control shutdown barrier、empty/reap、bundle mutation、rollback、Bun不在を境界故障として
 固定する。mockだけでOS custody Greenを宣言せず、mock/contract integrationと実OS integrationのlaneを明示分離する。
 L8で正負oracle、fixture、観測点、control/workload別created countをfreezeするまで本PLANはconfirmedにしない。
+
+`fixture`のfreezeは識別子の宣言では足りない。第三者が検証できる実体を次に置き、prose主張に留めない:
+`docs/test-design/harness/resource-kernel-fixture-manifest.yaml`がfixture正本 (配置先path、入力構成、
+生成規則、本PLANの契約節citation、実体有無の`status`)、`src/lint/resource-kernel-fixture-manifest.ts`が
+L8表との突合ロジック、`tests/resource-kernel-fixture-manifest.test.ts`が実repo回帰、
+doctor hard gate `resource-kernel-fixture-manifest` (`src/doctor/doc-registry.ts`経由で配線) がCI強制である。
+`status: planned`のentryは`path`が実在してはならず、実体が無いのに配置済みと読ませる偽装をfail-closeする。

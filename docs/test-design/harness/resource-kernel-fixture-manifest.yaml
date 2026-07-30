@@ -1,0 +1,432 @@
+# D0-R Resource Kernel 物理統合 fixture の正本 (PLAN-L5-25 §7 pair-freeze 条件、issue #149)。
+#
+# PLAN-L5-25 §7 は「L8 で正負 oracle、fixture、観測点、control/workload 別 created count を
+# freeze する」を pair-freeze 条件とする。L8 表の fixture 列は識別子と一行説明だけを持つため、
+# 「fixture が freeze されている」を第三者が検証できるように、入力構成・配置先・生成規則を本 manifest へ固定する。
+#
+# status 語彙は 2 値のみ:
+#   planned      — 実体は未作成。path は将来の配置先宣言であり、実在してはならない
+#                  (実在したら fail-close。宣言だけで実体があるかのように読ませないための不変条件)。
+#   materialized — 実体あり。path が実在しなければ fail-close。
+#
+# 検査は tests/resource-kernel-fixture-manifest.test.ts が実 repo に対して行う。
+# 実 runner 証跡は本 manifest の対象外 (PLAN-L5-25 §7.2 (B) が confirmed 昇格条件として保持する)。
+schema_version: v1
+plan_id: PLAN-L5-25-resource-kernel-physical-protocol
+contract_doc: docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md
+pair_artifact: docs/test-design/harness/L8-integration-test-design.md
+fixture_root: tests/fixtures/resource-kernel
+fixtures:
+  - id: fx-rgk-frame-split
+    case: IT-RGK-PHYS-001
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/frame-split
+    contract_ref: "§2"
+    inputs:
+      - canonical request DTO 1 件を length-prefixed UTF-8 JSON frame へ encode した byte 列
+      - 分割境界の全列挙 (1..frame_len-1)
+    generation: 境界ごとに byte 列を 2 分割して pipe へ順次 write する harness を生成し、response の correlation ID と余剰 byte 数を記録する
+  - id: fx-rgk-predecode-corpus
+    case: IT-RGK-PHYS-002
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/predecode-corpus
+    contract_ref: "§2"
+    inputs:
+      - oversize / partial / invalid UTF-8 / duplicate field / unknown field / trailing byte の 6 系統 corpus
+      - 各系統の期待 PreDispatchWireFault kind
+    generation: canonical frame を系統ごとに 1 箇所だけ壊して生成し、launcher/custody call 数と診断出力の機密混入数を計測する
+  - id: fx-rgk-response-mutate
+    case: IT-RGK-PHYS-003
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/response-mutate
+    contract_ref: "§2"
+    inputs:
+      - mutating dispatch 後の正常 response 1 件
+      - request ID / protocol_version / bundle digest を各 1 要素だけ変異した 3 変種
+    generation: 正常 response から 1 要素変異版を生成し、PostDispatchResponseFault と DispatchIndeterminate の 6 field を記録する
+  - id: fx-rgk-idempotent-retry
+    case: IT-RGK-PHYS-004
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/idempotent-retry
+    contract_ref: "§3"
+    inputs:
+      - 同一 request ID + token digest + idempotency identity の再送 request
+      - attempt/nonce だけ同じ別 payload の request (replay 判定用)
+    generation: transport timeout を注入して再送させ、pending/indeterminate/result record と process 生成数を記録する
+  - id: fx-rgk-win-crash-before-assign
+    case: IT-RGK-PHYS-005
+    lane: real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/win-crash-before-assign
+    contract_ref: "§1"
+    inputs:
+      - Windows Job object create 済み・assign 未実施の状態
+      - client process の異常終了トリガ
+    generation: create と assign の間で client を異常終了させ、suspended root の resume 回数と custodian の terminate/reap fact を記録する
+  - id: fx-rgk-win-crash-after-assign
+    case: IT-RGK-PHYS-006
+    lane: real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/win-crash-after-assign
+    contract_ref: "§1"
+    inputs:
+      - assign 成功済みの Job custody
+      - launcher と client の同時異常終了トリガ
+    generation: assign 後に launcher/client を落とし、Job handle custody の保持と deadline 後の Job empty proof / orphan 数を記録する
+  - id: fx-rgk-linux-start-in-cgroup
+    case: IT-RGK-PHYS-007
+    lane: real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/linux-start-in-cgroup
+    contract_ref: "§1"
+    inputs:
+      - cgroup v2 target と clone3(CLONE_INTO_CGROUP) 経路
+      - 事後 attach fallback 経路
+    generation: 両経路を競合起動し、user code 開始時点の cgroup 所属と事後 attach の capability failure を記録する
+  - id: fx-rgk-linux-broker-crash
+    case: IT-RGK-PHYS-008
+    lane: real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/linux-broker-crash
+    contract_ref: "§1"
+    inputs:
+      - subreaper 配下の double-fork workload
+      - broker/subreaper の異常終了トリガ
+    generation: broker 異常終了と double-fork を同時に起こし、reconcile 後の populated 値・zombie 数・managed orphan 数を記録する
+  - id: fx-rgk-root-exit-race
+    case: IT-RGK-PHYS-009
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/root-exit-race
+    contract_ref: "§4"
+    inputs:
+      - root 先行 exit のタイミング列
+      - terminate / cancel の同時投入
+    generation: root exit と terminate/cancel を競合させ、custody state 遷移列と empty+reap proof、terminal receipt 発行時刻を記録する
+  - id: fx-rgk-fault-domains
+    case: IT-RGK-PHYS-010
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/fault-domains
+    contract_ref: "§5"
+    inputs:
+      - pre-decode fault / post-dispatch pipe・decode・correlation fault / companion 異常終了 / journal commit 失敗の注入点集合
+    generation: 各 failure domain を独立に注入し、side effect 数・indeterminate から reconcile を経た actual phase 列・片肺状態を記録する
+  - id: fx-rgk-capability-absent
+    case: IT-RGK-PHYS-011
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/capability-absent
+    contract_ref: "§5"
+    inputs:
+      - unsupported OS stub
+      - 権限不足環境 (Windows は Job 作成権限なし / Linux は cgroup write 不可)
+      - required capability 空の request
+    generation: 3 条件を個別に与え、probe fact・capability 集合・control_process_created と managed_root_created の別値・拒否理由を記録する
+  - id: fx-rgk-bundle-mutate
+    case: IT-RGK-PHYS-012
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/bundle-mutate
+    contract_ref: "§6"
+    inputs:
+      - 正規 bundle 1 件
+      - binary / schema / target / signature / SBOM を各 1 箇所変異した 5 bundle
+    generation: 正規 bundle から 1 要素変異版を生成し、admission 前の bundle_failure と PATH 探索・download call 数を記録する
+  - id: fx-rgk-rollback-resign
+    case: IT-RGK-PHYS-013
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/rollback-resign
+    contract_ref: "§6"
+    inputs:
+      - 旧 component と旧 manifest による直接復帰入力
+      - floor 超 sequence で再 review・再署名した新 manifest
+    generation: 2 入力を順に activation へ投入し、旧 manifest 復帰の拒否理由と新 manifest の照合結果を記録する
+  - id: fx-rgk-bun-absent
+    case: IT-RGK-PHYS-014
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/bun-absent
+    contract_ref: "§1"
+    inputs:
+      - PATH から Bun を除いた環境
+      - Bun lockfile と Bun API 参照を持たない Node + Cargo lane
+    generation: Bun 不在環境で同一の wire/custody oracle を実行し、Bun invocation 数と実行できた oracle ID 集合を記録する
+  - id: fx-rgk-barrier-crash
+    case: IT-RGK-PHYS-015
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/barrier-crash
+    contract_ref: "§4"
+    inputs:
+      - verified companion への probe 済み状態
+      - journal append 前後・token seal 前後の 4 中断点
+    generation: 4 点で中断させて再開し、probe digest・journal append 記録・token seal 記録と再開時に使用した digest/token を記録する
+  - id: fx-rgk-token-mutate
+    case: IT-RGK-PHYS-016
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/token-mutate
+    contract_ref: "§3"
+    inputs:
+      - 正規 AdmissionStageTokenV1 1 枚
+      - execution / spec / bundle / attempt / custody / executor / boot / deadline / policy / authenticator を各変異した token 群、同 nonce 別 payload、旧 variant
+    generation: 正規 token から 1 要素変異版と replay 版を生成し、拒否境界・custody 作成数・managed root 数・fact 再利用検出を記録する
+  - id: fx-rgk-nonce-executor
+    case: IT-RGK-PHYS-017
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/nonce-executor
+    contract_ref: "§3"
+    inputs:
+      - custody nonce の予約済み / 再利用 / 別 execution 移送の 3 系統
+      - executor arm / lease / attach / commit の前後中断点
+    generation: nonce 系統と中断点を組み合わせ、nonce 予約 record・custody identity・state 遷移列・resume 数・実 phase receipt を記録する
+  - id: fx-rgk-authority-cas
+    case: IT-RGK-PHYS-018
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/authority-cas
+    contract_ref: "§3"
+    inputs:
+      - authority 喪失後の Rust native observation / journal / current epoch (各変異版を含む)
+      - TS recoverAuthority の同時実行数
+    generation: observation を変異させつつ CAS を競合させ、Rust 側 delta・勝者 epoch・lease と trace の atomic commit・敗者 delta を記録する
+  - id: fx-rgk-trust-binding
+    case: IT-RGK-PHYS-019
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/trust-binding
+    contract_ref: "§6"
+    inputs:
+      - bundle 内 key を signer とする manifest
+      - 未 review signer の署名
+      - signature 差替え版
+    generation: 3 系統を BundleTrustPort へ与え、trust decision digest・policy revision・binding 照合結果・control process 生成数を記録する
+  - id: fx-rgk-manifest-mutate
+    case: IT-RGK-PHYS-020
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/manifest-mutate
+    contract_ref: "§6"
+    inputs:
+      - 正規 manifest 1 件
+      - bundle revision / component digest / schema / target を各変異した 4 版
+    generation: 1 要素変異版を生成し、verified handle 発行数と不一致要素の識別を記録する
+  - id: fx-rgk-activation-sequence
+    case: IT-RGK-PHYS-021
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/activation-sequence
+    contract_ref: "§6"
+    inputs:
+      - accepted floor F の状態
+      - F-1 / F と同 digest / F と別 digest の 3 manifest
+    generation: 3 manifest を順に再 activation し、拒否分類 (stale / replay / equivocation)・current bundle・accepted fact・control launch 数を記録する
+  - id: fx-rgk-rollback-floor
+    case: IT-RGK-PHYS-022
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/rollback-floor
+    contract_ref: "§6"
+    inputs:
+      - 現在 floor より厳密に大きい sequence の再署名 manifest
+      - 同 sequence 以下の manifest (併走用)
+    generation: 両者を併走投入し、sequence 比較結果・trust/component/target 再検証記録・activate 候補判定を記録する
+  - id: fx-rgk-trust-port-absent
+    case: IT-RGK-PHYS-023
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/trust-port-absent
+    contract_ref: "§6"
+    inputs:
+      - TrustDecisionPort の missing / unknown version / failure の 3 系統
+    generation: 3 系統を与え、fail-close 理由・PATH 探索・download・direct spawn の call 数と利用停止状態を記録する
+  - id: fx-rgk-activation-fail
+    case: IT-RGK-PHYS-024
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/activation-fail
+    contract_ref: "§6"
+    inputs:
+      - activation port failure の注入点 (各公開 barrier)
+    generation: 各 barrier で failure を注入し、公開状態・観測された bundle・partial publish 検出を記録する
+  - id: fx-rgk-receipt-revert
+    case: IT-RGK-PHYS-025
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/receipt-revert
+    contract_ref: "§6"
+    inputs:
+      - companion / protocol / D0-N generation receipt を各 1 要素だけ旧値へ戻した 3 版
+    generation: 1 要素だけ旧値へ戻した bundle identity を与え、照合結果・拒否理由・control process 生成数・許可された rollback 形式を記録する
+  - id: fx-rgk-deferred-ownership
+    case: IT-RGK-PHYS-026
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/deferred-ownership
+    contract_ref: "§6"
+    inputs:
+      - D0 adapter へ注入する鍵 rotation / signed clock / re-anchor / 物理 log 依存の 4 系統
+    generation: 4 系統を D0 adapter へ注入し、deferred ownership 違反の検出と抽象 port 境界の維持を記録する
+  - id: fx-rgk-positive-chain
+    case: IT-RGK-PHYS-027
+    lane: real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/positive-chain
+    contract_ref: "§3"
+    inputs:
+      - stage token 3 枚 (create_custody / spawn_attached / resume)
+      - Windows Job 経路と Linux cgroup v2 経路
+    generation: create から spawn、resume までの positive chain を実 OS で通し、token 消費列・predecessor fact digest 連鎖・custody/root identity・適用 limit を記録する
+  - id: fx-rgk-dispatch-digests
+    case: IT-RGK-PHYS-028
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/dispatch-digests
+    contract_ref: "§3"
+    inputs:
+      - 各 stage の中断点 (消費と pending commit / side effect / indeterminate / reconciled / result の前後)
+      - 4 digest と phase/fact digest の各変異版
+    generation: 中断点と digest 変異を組み合わせて retry させ、request digest 継承・native 再実行数・result commit・custody/root 数を記録する
+  - id: fx-rgk-deadline-race
+    case: IT-RGK-PHYS-029
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/deadline-race
+    contract_ref: "§4.1"
+    inputs:
+      - effective deadline の直前 / 同時 / 直後に発火する spawn と resume
+      - cleanup CAS の同時実行
+    generation: 3 タイミングで spawn/resume と cleanup CAS を競合させ、wall と monotonic の観測点・effective deadline・cleanup lease 発行数・遷移方向を記録する
+  - id: fx-rgk-recovery-overdue
+    case: IT-RGK-PHYS-030
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/recovery-overdue
+    contract_ref: "§4.1"
+    inputs:
+      - recovery deadline を超過させる時計進行
+      - executor と supervisor の稼働状態
+    generation: recovery deadline 超過後に executor/supervisor を動かし、overdue fact・新規 admission 遮断記録・cleanup 系 operation の実行継続を記録する
+  - id: fx-rgk-same-boot-restart
+    case: IT-RGK-PHYS-031
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/same-boot-restart
+    contract_ref: "§4.1"
+    inputs:
+      - same-boot の Node/authority 再起動シナリオ
+      - 旧 epoch command
+    generation: 再起動を CAS 競合させ、勝者・発行 lease variant・旧 epoch command の拒否・生成/attach/resume 数を記録する
+  - id: fx-rgk-cross-boot
+    case: IT-RGK-PHYS-032
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/cross-boot
+    contract_ref: "§4.1"
+    inputs:
+      - boot ID が変化する host reboot fixture
+      - Rust cross-boot observation と replay 版
+    generation: cross-boot observation を TS CAS へ競合投入し、boot ID 対・platform boot fact digest・boot-fenced lease・empty から release までの列・敗者と replay の delta を記録する
+  - id: fx-rgk-boot-fence-missing
+    case: IT-RGK-PHYS-033
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/boot-fence-missing
+    contract_ref: "§4.1"
+    inputs:
+      - cross-boot observation 欠損 / boot chain 不一致 / 旧 custody identity 再利用の 3 系統
+    generation: 3 系統を与え、quarantine 状態・admission block 記録・新 lease 発行数・managed root 数を記録する
+  - id: fx-rgk-release-barriers
+    case: IT-RGK-PHYS-034
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/release-barriers
+    contract_ref: "§4"
+    inputs:
+      - empty fact commit から control shutdown までの各 barrier 中断点
+    generation: 各 barrier で中断させて再開し、release から terminal seal までの順序・二重 release・revoke 後の未完操作・残存 process 数を記録する
+  - id: fx-rgk-shutdown-preconditions
+    case: IT-RGK-PHYS-035
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/shutdown-preconditions
+    contract_ref: "§3"
+    inputs:
+      - active custody / pending response / 未解決 pending-dispatch / indeterminate / reconciled-without-result / 未 flush terminal outbox の 6 残置状態
+    generation: 6 状態を 1 つずつ残して shutdown_companion を呼び、shutdown 実行数・custody delta・authority delta と全条件解消後の挙動を記録する
+  - id: fx-rgk-authority-modes
+    case: IT-RGK-PHYS-036
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/authority-modes
+    contract_ref: "§4"
+    inputs:
+      - deadline と cancel、host reboot、empty と release の駆動入力
+      - authority mode の全 from/to 組合せ
+    generation: 全 from/to を駆動し、実行された辺の集合・journal と lease/fact の同時 commit・不正辺の authority/OS delta を記録する
+  - id: fx-rgk-descendant-delay
+    case: IT-RGK-PHYS-037
+    lane: real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/descendant-delay
+    contract_ref: "§4"
+    inputs:
+      - 正常 root exit
+      - exit を遅延させる descendant process
+    generation: root 正常 exit 後に descendant を残し、cleanup lease 遷移・descendant 生存記録・empty と reap proof・release 以降の順序を記録する
+  - id: fx-rgk-lease-cross-dispatch
+    case: IT-RGK-PHYS-038
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/lease-cross-dispatch
+    contract_ref: "§3"
+    inputs:
+      - 3 lease variant (execution / cleanup / boot-fenced)
+      - operation と variant の全組合せ、schema/mode/boot field の各変異版
+    generation: 全組合せを cross-dispatch し、合法表との一致・拒否時点・実行された operation 集合を記録する
+  - id: fx-rgk-observation-mutate
+    case: IT-RGK-PHYS-039
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/observation-mutate
+    contract_ref: "§3"
+    inputs:
+      - same-boot と cross-boot observation の全 field 変異版
+      - signer key と policy の差替え版、variant 禁止 field 混入版
+    generation: 変異 observation を verifier へ与え、signer identity・verifier 判定・CAS/lease/trace 実行数を記録する
+  - id: fx-rgk-recovery-lanes
+    case: IT-RGK-PHYS-040
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/recovery-lanes
+    contract_ref: "§4.1"
+    inputs:
+      - same-boot と cross-boot recovery シナリオ
+      - Rust fact lane と TS transaction lane の個別中断点
+    generation: 2 lane を個別に中断させ、Rust 側 DB/CAS/lease/trace delta・TS 側の一致確認と atomic commit・retry ごとの winner 数を記録する
+  - id: fx-rgk-response-inject
+    case: IT-RGK-PHYS-041
+    lane: mock
+    status: planned
+    path: tests/fixtures/resource-kernel/response-inject
+    contract_ref: "§2"
+    inputs:
+      - mutating dispatch 後 response への oversize / partial / invalid UTF-8 / JSON / schema / trailing / mismatch の 7 注入
+    generation: 7 注入を個別に与え、PostDispatchResponseFault・DispatchIndeterminate・terminal seal 数・actual native fact 後の result/receipt を記録する
+  - id: fx-rgk-release-generation
+    case: IT-RGK-PHYS-042
+    lane: mock+real-OS
+    status: planned
+    path: tests/fixtures/resource-kernel/release-generation
+    contract_ref: "§4"
+    inputs:
+      - release 各 barrier の中断点
+      - 同一 raw OS identity を別 custody_generation で再利用する競合入力
+    generation: barrier 中断と generation 再利用を競合させ、release_id・CustodyAbsentFact・削除 effect 数・quarantine fact・Rust marker/DB delta・disarm と revoke の順序を記録する
