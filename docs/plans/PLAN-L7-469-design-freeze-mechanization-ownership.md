@@ -29,6 +29,10 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/resource-kernel-fixture-manifest.test.ts
     artifact_type: test_code
+  - artifact_path: src/lint/resource-kernel-pair-mapping.ts
+    artifact_type: source_module
+  - artifact_path: tests/resource-kernel-pair-mapping.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -121,6 +125,14 @@ design PLAN の confirm 条件 (実 runner 証跡) と、merge 済み出荷物�
 |---|---|
 | `src/lint/resource-kernel-fixture-manifest.ts` | L8 freeze 属性表の fixture 列と正本 manifest (`docs/test-design/harness/resource-kernel-fixture-manifest.yaml`) の双方向突合。`status: planned` の entry が `path` を実在させていたら violation (実体の偽装検出)。 |
 | `tests/resource-kernel-fixture-manifest.test.ts` | 実 repo 回帰 `U-RGKFIX-001..005`。42 件の宣言・実体整合、planned 非実在、合成 violation 検出。 |
+| `src/lint/resource-kernel-pair-mapping.ts` | `PLAN-L5-25` §7.1 の L5 物理契約 → `IT-RGK-PHYS-*` 全数写像の突合。契約 ID `C-RGK-01..58` の exact 集合 (欠番・重複・未知 ID・出典逸脱) と、42 oracle 側の双方向孤児 0 を fail-close。 |
+| `tests/resource-kernel-pair-mapping.test.ts` | 上記の実 repo 回帰。 |
+
+pair-mapping の 2 成果物は §1 の一般則により本 PLAN が所有する (写像表の本文は design PLAN
+`PLAN-L5-25` §7.1 が持つが、機械検査出荷物の完了判定は merge 時点で閉じるため design PLAN の
+実 runner クロックと同居させない)。`PLAN-L5-25` へ再登録すると issue #162 の post-merge 罠が
+再発する。所有の追加は PR #197 で行い、同 PR の Codex 非 author closing cross-review PASS と
+CI green を review_evidence に追加してから merge する (PR #196 由来の 2 成果物と同じ規律)。
 
 doctor hard gate `resource-kernel-fixture-manifest` は `src/doctor/doc-registry.ts` →
 `src/doctor/check-definition-groups.ts` → `FULL_DOCTOR_OUTPUT_IDS` へ配線済み
