@@ -329,6 +329,10 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       "&emsp;",
       "&thinsp;",
       "&hairsp;",
+      "&zwnj;",
+      "&lrm;",
+      "&shy;",
+      "&InvisibleTimes;",
       "&ZeroWidthSpace;",
       "\u00a0",
       "\u200b",
@@ -339,6 +343,8 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       "<span><em></em></span>",
       "<span/>",
       "<wbr>",
+      "[&zwnj;](#)",
+      "**&lrm;**",
     ]) {
       const result = analyzeResourceKernelPairMapping({
         ...repo,
@@ -364,6 +370,10 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       `### Resource Kernel物理統合 freeze属性\n<div style="display:none">\n${fakeRow}\n${fakeDeclaration}\n</div>`,
       `### Resource Kernel物理統合 freeze属性\n<textarea>\n${fakeRow}\n${fakeDeclaration}\n</textarea>`,
       `### Resource Kernel物理統合 freeze属性\n<details>\n${fakeRow}\n${fakeDeclaration}\n</details>`,
+      `### Resource Kernel物理統合 freeze属性\n<x-hidden>\n${fakeRow}\n${fakeDeclaration}\n</x-hidden>`,
+      `### Resource Kernel物理統合 freeze属性\n<![CDATA[\n${fakeRow}\n${fakeDeclaration}\n]]>`,
+      `### Resource Kernel物理統合 freeze属性\n<?contract\n${fakeRow}\n${fakeDeclaration}\n?>`,
+      `### Resource Kernel物理統合 freeze属性\n<!DOCTYPE contract\n${fakeRow}\n${fakeDeclaration}\n>`,
       `### Resource Kernel物理統合 freeze属性\n\`\`\`\n    \`\`\`\n${fakeRow}\n\`\`\``,
     ]) {
       expect(parseFreezeAttributeRows(hidden)).toEqual([]);

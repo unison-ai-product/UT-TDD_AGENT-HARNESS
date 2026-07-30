@@ -121,12 +121,8 @@ const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
 const EMPTY_HTML_ELEMENT_PATTERN = /<([a-z][a-z0-9-]*)\b[^>]*>\s*<\/\1>/gi;
-const INVISIBLE_NAMED_ENTITY_PATTERN = /&(?:nbsp|ensp|emsp|thinsp|hairsp|ZeroWidthSpace);?/gi;
-const RAW_HTML_BLOCK_TAGS = new Set(
-  "address article aside base basefont blockquote body caption center col colgroup dd details dialog dir div dl dt fieldset figcaption figure footer form frame frameset head header hr html iframe legend li link main menu menuitem nav noframes ol optgroup option p param pre script search section style summary table tbody td textarea tfoot th thead title tr track ul template h1 h2 h3 h4 h5 h6".split(
-    " ",
-  ),
-);
+const INVISIBLE_NAMED_ENTITY_PATTERN =
+  /&(?:nbsp|ensp|emsp|thinsp|hairsp|ZeroWidthSpace|zwnj|zwj|lrm|rlm|shy|NoBreak|InvisibleTimes|InvisibleComma|ApplyFunction|NegativeMediumSpace|NegativeThickSpace|NegativeThinSpace|NegativeVeryThinSpace);?/gi;
 
 function isBlankMarkdownCell(value: string): boolean {
   let normalized = value
@@ -137,7 +133,9 @@ function isBlankMarkdownCell(value: string): boolean {
       const point = Number.parseInt(hex ?? decimal, hex ? 16 : 10);
       return Number.isSafeInteger(point) && point <= 0x10ffff ? String.fromCodePoint(point) : "";
     })
-    .replace(/<[^>]+>/g, "");
+    .replace(/<[^>]+>/g, "")
+    .replace(/!?\[((?:\s|\u200b|\u200c|\u200d|\u2060|\ufeff)*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_~`]+/g, "");
   let previous: string;
   do {
     previous = normalized;
@@ -162,16 +160,27 @@ function renderedMarkdownLines(markdown: string): string[] {
   const withoutComments = markdown.replace(/<!--[\s\S]*?-->/g, "");
   const visible: string[] = [];
   let fence: { marker: "`" | "~"; length: number } | undefined;
-  let htmlBlock: string | undefined;
+  let htmlBlockEnd: RegExp | undefined;
   for (const line of withoutComments.split(/\r?\n/)) {
-    if (htmlBlock) {
-      if (new RegExp(`</${htmlBlock}\\s*>`, "i").test(line)) htmlBlock = undefined;
+    if (htmlBlockEnd) {
+      if (htmlBlockEnd.test(line) || line.trim() === "") htmlBlockEnd = undefined;
+      continue;
+    }
+    const specialHtmlOpen = /^ {0,3}(?:<\?|<![A-Z]|<!\[CDATA\[)/i.exec(line);
+    if (specialHtmlOpen) {
+      const end = specialHtmlOpen[0].toUpperCase().includes("[CDATA[")
+        ? /\]\]>/
+        : specialHtmlOpen[0].includes("?")
+          ? /\?>/
+          : />/;
+      if (!end.test(line)) htmlBlockEnd = end;
       continue;
     }
     const htmlOpen = /^ {0,3}<([a-z][a-z0-9-]*)\b[^>]*>/i.exec(line);
-    if (htmlOpen && RAW_HTML_BLOCK_TAGS.has(htmlOpen[1].toLowerCase())) {
+    if (htmlOpen) {
       const tag = htmlOpen[1].toLowerCase();
-      if (!/\/>\s*$/.test(line) && !new RegExp(`</${tag}\\s*>`, "i").test(line)) htmlBlock = tag;
+      const end = new RegExp(`</${tag}\\s*>`, "i");
+      if (!/\/>\s*$/.test(line) && !end.test(line)) htmlBlockEnd = end;
       continue;
     }
     const opener = /^ {0,3}(`{3,}|~{3,})/.exec(line);
