@@ -120,14 +120,24 @@ export const REAL_RUNNER_LANES = ["real-OS", "mock+real-OS"] as const;
 const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
-const MARKDOWN_BLANK_ENTITY_PATTERN = /&(?:nbsp|ensp|emsp|ZeroWidthSpace);?|&#0*160;?|&#x0*a0;?/gi;
 const EMPTY_HTML_ELEMENT_PATTERN = /<([a-z][a-z0-9-]*)\b[^>]*>\s*<\/\1>/gi;
+const INVISIBLE_NAMED_ENTITY_PATTERN = /&(?:nbsp|ensp|emsp|thinsp|hairsp|ZeroWidthSpace);?/gi;
+const RAW_HTML_BLOCK_TAGS = new Set(
+  "address article aside base basefont blockquote body caption center col colgroup dd details dialog dir div dl dt fieldset figcaption figure footer form frame frameset head header hr html iframe legend li link main menu menuitem nav noframes ol optgroup option p param pre script search section style summary table tbody td textarea tfoot th thead title tr track ul template h1 h2 h3 h4 h5 h6".split(
+    " ",
+  ),
+);
 
 function isBlankMarkdownCell(value: string): boolean {
   let normalized = value
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<br\s*\/?>/gi, "")
-    .replace(MARKDOWN_BLANK_ENTITY_PATTERN, "");
+    .replace(INVISIBLE_NAMED_ENTITY_PATTERN, "")
+    .replace(/&#(?:x([0-9a-f]+)|([0-9]+));?/gi, (_, hex: string, decimal: string) => {
+      const point = Number.parseInt(hex ?? decimal, hex ? 16 : 10);
+      return Number.isSafeInteger(point) && point <= 0x10ffff ? String.fromCodePoint(point) : "";
+    })
+    .replace(/<[^>]+>/g, "");
   let previous: string;
   do {
     previous = normalized;
@@ -158,19 +168,19 @@ function renderedMarkdownLines(markdown: string): string[] {
       if (new RegExp(`</${htmlBlock}\\s*>`, "i").test(line)) htmlBlock = undefined;
       continue;
     }
-    const htmlOpen = /^\s*<(script|pre|style|template|div)\b[^>]*>/i.exec(line);
-    if (htmlOpen) {
+    const htmlOpen = /^ {0,3}<([a-z][a-z0-9-]*)\b[^>]*>/i.exec(line);
+    if (htmlOpen && RAW_HTML_BLOCK_TAGS.has(htmlOpen[1].toLowerCase())) {
       const tag = htmlOpen[1].toLowerCase();
-      if (!new RegExp(`</${tag}\\s*>`, "i").test(line)) htmlBlock = tag;
+      if (!/\/>\s*$/.test(line) && !new RegExp(`</${tag}\\s*>`, "i").test(line)) htmlBlock = tag;
       continue;
     }
-    const opener = /^\s*(`{3,}|~{3,})/.exec(line);
+    const opener = /^ {0,3}(`{3,}|~{3,})/.exec(line);
     if (!fence && opener) {
       fence = { marker: opener[1][0] as "`" | "~", length: opener[1].length };
       continue;
     }
     if (fence) {
-      const closer = new RegExp(`^\\s*\\${fence.marker}{${fence.length},}\\s*$`);
+      const closer = new RegExp(`^ {0,3}\\${fence.marker}{${fence.length},}\\s*$`);
       if (closer.test(line)) fence = undefined;
       continue;
     }
