@@ -419,6 +419,12 @@ deferのままconfirmedへ昇格しない。
 `negative expected` / `created count (control/workload)` を本節で固定する。これが PLAN-L5-25 §7 の
 「L8で正負oracle、fixture、観測点、control/workload別created countをfreezeする」条件の実体である。
 
+`fixture` 列は識別子と一行説明だけを持つ。識別子の宣言だけでは第三者が freeze を検証できないため、
+**fixture の正本は `docs/test-design/harness/resource-kernel-fixture-manifest.yaml`** とし、各 fixture の
+配置先 path・入力構成・生成規則・L5 契約節への citation・実体の有無 (`status`) をそこで固定する。
+`status: planned` の entry は path が実在してはならず (実在したら Red)、実体が無いのに配置済みと
+読ませる偽装を構造的に禁じる。突合は `tests/resource-kernel-fixture-manifest.test.ts` が実 repo で行う。
+
 `lane` の語彙は 3 値に閉じる。`mock` = mock/contract integration lane (wire・token・lease・journal・CAS を
 in-process fake と injected fault で駆動し、OS custody を主張しない)。`real-OS` = 実 runner lane
 (実 Job / 実 cgroup v2 でのみ Green を主張できる)。`mock+real-OS` = 両 lane で同一 case を実行し、
