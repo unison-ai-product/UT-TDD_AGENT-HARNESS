@@ -120,16 +120,20 @@ export const REAL_RUNNER_LANES = ["real-OS", "mock+real-OS"] as const;
 const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
-const MARKDOWN_BLANK_ENTITY_PATTERN = /&(?:nbsp|ensp|emsp|ZeroWidthSpace);|&#160;|&#x0*a0;/gi;
+const MARKDOWN_BLANK_ENTITY_PATTERN = /&(?:nbsp|ensp|emsp|ZeroWidthSpace);?|&#0*160;?|&#x0*a0;?/gi;
 const EMPTY_HTML_ELEMENT_PATTERN = /<([a-z][a-z0-9-]*)\b[^>]*>\s*<\/\1>/gi;
 
 function isBlankMarkdownCell(value: string): boolean {
-  const normalized = value
+  let normalized = value
     .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(EMPTY_HTML_ELEMENT_PATTERN, "")
     .replace(/<br\s*\/?>/gi, "")
-    .replace(MARKDOWN_BLANK_ENTITY_PATTERN, "")
-    .replace(/[\s\u00a0\u200b\u2060\ufeff]|\u200c|\u200d/g, "");
+    .replace(MARKDOWN_BLANK_ENTITY_PATTERN, "");
+  let previous: string;
+  do {
+    previous = normalized;
+    normalized = normalized.replace(EMPTY_HTML_ELEMENT_PATTERN, "");
+  } while (normalized !== previous);
+  normalized = normalized.replace(/[\s\u00a0\u200b\u2060\ufeff]|\u200c|\u200d/g, "");
   return normalized.length === 0;
 }
 
@@ -148,15 +152,29 @@ function renderedMarkdownLines(markdown: string): string[] {
   const withoutComments = markdown.replace(/<!--[\s\S]*?-->/g, "");
   const visible: string[] = [];
   let fence: { marker: "`" | "~"; length: number } | undefined;
+  let htmlBlock: string | undefined;
   for (const line of withoutComments.split(/\r?\n/)) {
-    const match = /^\s*(`{3,}|~{3,})/.exec(line);
-    if (match) {
-      const marker = match[1][0] as "`" | "~";
-      if (!fence) fence = { marker, length: match[1].length };
-      else if (fence.marker === marker && match[1].length >= fence.length) fence = undefined;
+    if (htmlBlock) {
+      if (new RegExp(`</${htmlBlock}\\s*>`, "i").test(line)) htmlBlock = undefined;
       continue;
     }
-    if (!fence) visible.push(line);
+    const htmlOpen = /^\s*<(script|pre|style|template|div)\b[^>]*>/i.exec(line);
+    if (htmlOpen) {
+      const tag = htmlOpen[1].toLowerCase();
+      if (!new RegExp(`</${tag}\\s*>`, "i").test(line)) htmlBlock = tag;
+      continue;
+    }
+    const opener = /^\s*(`{3,}|~{3,})/.exec(line);
+    if (!fence && opener) {
+      fence = { marker: opener[1][0] as "`" | "~", length: opener[1].length };
+      continue;
+    }
+    if (fence) {
+      const closer = new RegExp(`^\\s*\\${fence.marker}{${fence.length},}\\s*$`);
+      if (closer.test(line)) fence = undefined;
+      continue;
+    }
+    visible.push(line);
   }
   return visible;
 }
