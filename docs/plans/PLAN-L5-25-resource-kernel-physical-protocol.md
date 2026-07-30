@@ -26,6 +26,12 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L8-integration-test-design.md
     artifact_type: test_design
+  - artifact_path: docs/test-design/harness/resource-kernel-fixture-manifest.yaml
+    artifact_type: test_design
+  - artifact_path: src/lint/resource-kernel-fixture-manifest.ts
+    artifact_type: source_module
+  - artifact_path: tests/resource-kernel-fixture-manifest.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
   requires: []
