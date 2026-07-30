@@ -14,7 +14,12 @@ import {
   checkTypedSpecTraceClosure,
 } from "./db-projection";
 import { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
-import { checkDocConsistency, checkEntityCoverage, checkFrRegistryAudit } from "./doc-registry";
+import {
+  checkDocConsistency,
+  checkEntityCoverage,
+  checkFrRegistryAudit,
+  checkResourceKernelFixtureManifest,
+} from "./doc-registry";
 import {
   checkAssetDrift,
   checkBranchKind,
@@ -271,6 +276,9 @@ export function buildDoctorCheckDefinitionGroups(
         full("doc-consistency", () => checkDocConsistency(deps.repoRoot)),
         full("entity-coverage", () => checkEntityCoverage(deps.repoRoot)),
         full("fr-registry-audit", () => checkFrRegistryAudit(deps.repoRoot)),
+        full("resource-kernel-fixture-manifest", () =>
+          checkResourceKernelFixtureManifest(deps.repoRoot),
+        ),
       ],
     },
     {
