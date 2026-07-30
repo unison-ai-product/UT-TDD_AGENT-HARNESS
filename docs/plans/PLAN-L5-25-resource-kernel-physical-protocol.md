@@ -28,10 +28,6 @@ generates:
     artifact_type: test_design
   - artifact_path: docs/test-design/harness/resource-kernel-fixture-manifest.yaml
     artifact_type: test_design
-  - artifact_path: src/lint/resource-kernel-fixture-manifest.ts
-    artifact_type: source_module
-  - artifact_path: tests/resource-kernel-fixture-manifest.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
   requires: []
@@ -41,6 +37,7 @@ dependencies:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/test-design/harness/L9-system-test-design.md
     - docs/plans/PLAN-L7-466-resource-kernel-native-companion.md
+    - docs/plans/PLAN-L7-469-design-freeze-mechanization-ownership.md
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
@@ -401,3 +398,10 @@ L8で正負oracle、fixture、観測点、control/workload別created countをfre
 L8表との突合ロジック、`tests/resource-kernel-fixture-manifest.test.ts`が実repo回帰、
 doctor hard gate `resource-kernel-fixture-manifest` (`src/doctor/doc-registry.ts`経由で配線) がCI強制である。
 `status: planned`のentryは`path`が実在してはならず、実体が無いのに配置済みと読ませる偽装をfail-closeする。
+
+なお上記のうち **出荷物 (`src/lint/...` / `tests/...`) の `generates` 所有は
+`PLAN-L7-469-design-freeze-mechanization-ownership` が持つ**。本PLANの confirm 条件は実OS runner証跡
+(§7.2 (B)) であり、既にmerge済み・検証済みの機械検査成果物の完了判定とは別クロックで進むため、
+同一PLANで両方を所有すると `merged-plan-status` と `deliverable-plan-trace` が両立不能になる
+(PR #196 merge後にmainが実際にfail-closeした。open issue #186と同型)。本PLANはfixture正本yamlを含む
+docs成果物のみを所有し、機械検査の所在はここから辿る。
