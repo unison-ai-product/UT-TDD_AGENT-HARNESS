@@ -81,3 +81,30 @@ stack しないので、review も 1 本ずつ。
 - `green_command` は `anchor_commit` 必須 (#191)、かつ `completed_at <= tests_green_at`
   (#194 で Linux/Windows/aggregate 全 FAIL を出した実害)。時刻を過去へ偽装しない。
 - cross-review は常に非 author family。Claude 著作は Codex が、Codex 著作は Claude が判定する。
+
+## 改訂 1 (2026-07-30 17:40 JST、GPT5.6Pro 監査を受けて)
+
+**順序違反の事実を記録する**: Claude は S1 (#196 merge) 完了後、S2 (Bun spike)・S3 (torsion) を
+飛ばして S4 PR-2 (#197) を先に発行した。結果、飛ばした S3-3 の **#162 (post-merge 罠) がそのまま
+#197 を止めた** (merged-plan-status が main 接地後に発火、PR CI では base tree 判定のため事前検知
+不能)。予告済みの罠に自分から入った。順序は拘束条件であり、飛ばすなら本メモリを先に改訂する。
+
+なお当初この赤を #186 (stacked PR throw) と誤分類していたが、#196 は base=main の通常 PR であり
+**#162 そのもの**。#186 とは別事象 (S3-2 と S3-3 は「同じ検査の別断面」だが罠の型が違う)。
+
+**現行の拘束順序 (この改訂が正)**:
+
+1. **R1 = PR #198** (`fix/l5-25-mechanization-ownership`): main red の解消。#196 由来の機械検査
+   成果物の所有を PLAN-L7-469 (kind=troubleshoot、confirmed) へ移管。PLAN-L5-25 は draft 維持で
+   docs 成果物のみ所有。= #162 の第一 slice (所有層の是正)。**merge は Codex verdict 後**。
+2. **R2 = PR #197 の載せ直し**: #198 merge 後に main へ rebase し、pair-mapping 成果物の
+   `generates` を PLAN-L7-469 へ寄せ替える (PLAN-L5-25 へ再登録すると #162 再発)。
+   C-RGK-01..58 の exact 集合検査 (欠番・重複・未知 ID・出典逸脱の fail-close) は
+   `09b5c47f` で追加済み。全 CI green + Codex exact-HEAD PASS 後にのみ merge。
+3. **R3 = S2 (Bun 廃止 spike)**: 内容は原文どおり。
+4. **R4 = S3 残り**: #169 (db 肥大計測) → #162 の恒久機械化 (PR CI での merge 後 main tree
+   前倒し判定 + PLAN 状態遷移条件と所有 artifact 完了判定の同一性検査) → #186 (stacked PR throw)。
+5. **R5 = 旧 S4 PR-3** (PLAN-L6-92 実装開始境界)。
+
+**教訓 (恒久)**: 自分で決めた Projects 順序を拘束条件として扱う。順序変更は「先にメモリ改訂 →
+それから実行」。事後正当化 (走ってから理由を書く) を禁止する。

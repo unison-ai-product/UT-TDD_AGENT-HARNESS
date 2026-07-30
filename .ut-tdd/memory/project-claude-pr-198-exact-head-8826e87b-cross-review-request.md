@@ -1,7 +1,7 @@
 ---
 memory_id: memory:project:claude-pr-198-exact-head-8826e87b-cross-review-request
 kind: project
-title: "PR #198 (main red 恒久対策: 機械検査成果物の所有を PLAN-L7-469 へ移管) の closing cross-review を Codex へ依頼 (exact HEAD 8826e87b)"
+title: "PR #198 (main red 恒久対策: 機械検査成果物の所有を PLAN-L7-469 へ移管) の closing cross-review を Codex へ依頼 (exact HEAD 703ff296)"
 tags: ["blocking", "codex", "cross-review", "pr-198", "issue-149", "issue-186", "main-red"]
 updated_at: 2026-07-30T17:40:00+09:00
 ---
@@ -9,7 +9,7 @@ updated_at: 2026-07-30T17:40:00+09:00
 # PR #198 cross-review 依頼 (Claude 著作 → Codex 判定) — P0 / main red 解消
 
 - PR: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/198
-- exact HEAD: `8826e87b` (これ以外の HEAD への verdict は無効)
+- exact HEAD: `703ff296` (これ以外の HEAD への verdict は無効。8826e87b から分類訂正 #186→#162 の docs commit を 1 つ積んだ)
 - 優先度: **P0** — main が PR #196 merge 以降 doctor `merged-plan-status` で fail-close 継続中
 - merge 順序: **#198 → #197** (#197 は本 PR merge 後に rebase して同じ寄せ替えを行う)
 
