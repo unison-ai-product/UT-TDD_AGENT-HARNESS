@@ -68,33 +68,6 @@ review_evidence:
         evidence_path: src/lint/resource-kernel-fixture-manifest.ts
         output_digest: "sha256:54ee92d6d579f62bf24a453fb213b81d2cab238c3cdca55aecba54804555fa1a"
         anchor_commit: 43d7c28c23775b1b2a84db3ef0b035e906328b91
-  - reviewer: claude-opus-5
-    review_kind: cross_agent
-    reviewed_at: "2026-07-30T20:50:00+09:00"
-    tests_green_at: "2026-07-30T20:40:00+09:00"
-    verdict: pass
-    worker_model: codex-gpt-5.6-sol
-    reviewer_model: claude-opus-5
-    scope: "本 PLAN が追加で所有する 2 成果物 (src/lint/resource-kernel-pair-mapping.ts、tests/resource-kernel-pair-mapping.test.ts) の判定。PR #197 の artifact 固定 HEAD c121362c に対し、非 author 家族 (Claude) が closing cross-review = PASS を投稿 (PR コメント 2026-07-30T20:47Z 前後)。最終 artifact commit は Codex 著作 (f877a576 / 4f831e91 / 1b3804fc / 0add4682 / 9792f051 / 0eddda25 / c121362c)、それ以前 (f4fbfa90 まで) は Claude 著作で Codex が FLAG → Claude が修正 → Codex が追加強化という双方向経路を経ている。判定は doctor 配線経路 checkResourceKernelPairMapping を通した独立攻撃 9 本の実測 (fence 隠蔽 / HTML comment 隠蔽 / 見えない placeholder 偽装 / 重複 oracle 行 / 27-15-0 再分配 / lane 宣言削除 / 契約行削除 / 記法揺れ / doc 空) がすべて fail-close し、実 repo baseline のみ green であることを確認した。fail-open 経路は検出されなかった。未閉の carry: 依存 2 本 (entities / marked) の採否は PO 裁定 open であり、本 PASS は検査の機能性判定であって依存方針の承認ではない。"
-    green_commands:
-      - kind: smoke
-        command: "GitHub Actions harness-check run 30537879596 (PR #197 HEAD c121362c、linux/windows/集約 全 green)"
-        runner: ci
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-30T20:40:00+09:00"
-        evidence_path: src/lint/resource-kernel-pair-mapping.ts
-        output_digest: "sha256:62f25a3b71d870a429767bb9accddd4fa9ec49adcfa0474c3ead2eed45311a82"
-        anchor_commit: c121362c018bc2bb913705e9a2b8ebb54333685d
-      - kind: unit_test
-        command: "GitHub Actions harness-check run 30537879596 の vitest 全回帰 (U-RGKPAIR-001..010 を含む)"
-        runner: ci
-        scope: full
-        exit_code: 0
-        completed_at: "2026-07-30T20:40:00+09:00"
-        evidence_path: tests/resource-kernel-pair-mapping.test.ts
-        output_digest: "sha256:9cf6f8b56e3f90bf5d30dd4ea82060bec1778054b65c0aa7cb606f19deba072c"
-        anchor_commit: c121362c018bc2bb913705e9a2b8ebb54333685d
 ---
 
 # PLAN-L7-469 (troubleshoot): design-freeze 機械検査 gate の所有分離
