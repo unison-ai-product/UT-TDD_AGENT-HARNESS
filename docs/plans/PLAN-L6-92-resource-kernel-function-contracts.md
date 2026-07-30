@@ -35,7 +35,43 @@ dependencies:
     - docs/adr/ADR-009-resource-kernel-native-custody-companion.md
     - docs/plans/PLAN-L4-32-resource-governed-execution-kernel.md
     - docs/test-design/harness/L9-system-test-design.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-fable-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-29T21:55:00+09:00"
+    tests_green_at: "2026-07-29T21:50:00+09:00"
+    verdict: pass-weak
+    worker_model: codex
+    reviewer_model: claude-fable-5
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint (848 PLAN、plan-schedule OK)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-29T21:45:00+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:d0e4a34c8fdbdd3c4e2931df6b72c812b4bdc9d866ca44550f6504176ce57cab"
+        anchor_commit: 9c9a94446f8b19dd374d34a936541e0a08850289
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/plan-lint.test.ts tests/review-evidence.test.ts tests/readability.test.ts tests/green-command-digest.test.ts --reporter=dot (4 files / 136 tests passed)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T21:48:00+09:00"
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
+        anchor_commit: 9c9a94446f8b19dd374d34a936541e0a08850289
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/oracle-test-trace.test.ts --reporter=dot (1 file / 5 tests passed)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-29T21:50:00+09:00"
+        evidence_path: tests/oracle-test-trace.test.ts
+        output_digest: "sha256:f2b6b7c62a58bc99a69bf19d3048cb1f66f77e8e33d85f35320e3a91fbc6284d"
+        anchor_commit: 9c9a94446f8b19dd374d34a936541e0a08850289
+    scope: "D0-R 降下 (L6) の cross-family review (Codex/PO 著作 → Claude 検証、hybrid 非 author family)。実測した範囲 (基準 = main 9c9a9444): (a) §2 が L7 pair として宣言する 7 family (U-RGK-WIRE/TRUST/ERROR/CAP/LIFE/PORT/BUNDLE) は pair 先 docs/test-design/harness/L7-unit-test-design.md に全て実在し、ID は WIRE 16 / TRUST 6 / ERROR 9 / CAP 18 / LIFE 22 / PORT 18 / BUNDLE 7 件で各 family 連番・欠番 0 (L7-466 が使う U-RGK-NATIVE も 4 件連番)、(b) 詳細契約の唯一正本と宣言する function-spec.md の「PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約」節が実在、(c) parent (PLAN-L5-25) / blocks (PLAN-L7-466) / generates / references の宣言ファイルが全件実在 (本文 2 箇所の PLAN-L7-454 参照は renumber (f2c7404b) 取り残しの dangling であり、本 review と同一 PR で L7-466 へ是正)、(d) oracle-test-trace green、(e) plan lint 848 PLAN green。未検証 (この evidence は主張しない): 各 U-RGK ID の fixture/oracle 内容が §2 受入条件の全機能契約を漏れなく覆うかの全数写像、および実装・実 runner 証拠。§3 実装開始境界と parent L5-25 の保留 (pass-weak/draft、実装証拠待ち) に従い、verdict=pass-weak、status=draft を維持し、実装・実 runner 証拠が揃うまで confirm しない。"
 status: draft
 sub_doc: function-spec
 github_issue_id: 152
@@ -86,7 +122,8 @@ admission_receipt:
 
 ## 1. 所有境界
 
-本PLANはL5-25からL7-454へのroute、責務、pair、受入条件だけを所有する。wire algebra、closed error、
+本PLANはL5-25からL7-466へのroute、責務、pair、受入条件だけを所有する (実装slice PLAN-L7-454は
+PLAN-L7-466へrenumber済み、f2c7404b)。wire algebra、closed error、
 capability、custody lifecycle、platform port、bundle verificationの詳細契約は
 `docs/design/harness/L6-function-design/function-spec.md`の
 「PLAN-L6-92 Resource Kernelプロトコル・エラー・プラットフォームポート契約」を唯一の正本とする。
@@ -139,5 +176,5 @@ L7 pairは`U-RGK-WIRE-*`、`U-RGK-TRUST-*`、`U-RGK-ERROR-*`、`U-RGK-CAP-*`、`
 
 ## 3. 実装開始境界
 
-本PLANとL7-454は`status: draft`である。L7 pair、L8 42件、対象OS capability、独立reviewがfreezeされるまで、
+本PLANとL7-466は`status: draft`である。L7 pair、L8 42件、対象OS capability、独立reviewがfreezeされるまで、
 実Job/cgroup adapterの実装完了、native custody Green、R4再合流を主張しない。
