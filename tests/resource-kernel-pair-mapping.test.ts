@@ -318,7 +318,20 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
 
   it("U-RGKPAIR-010: HTML/Unicodeの空欄placeholderを充填済みとして扱わない", () => {
     const repo = loadRepoRows();
-    for (const placeholder of ["&nbsp;", "\u00a0", "\u200b", "\ufeff", "<br>"]) {
+    for (const placeholder of [
+      "&nbsp;",
+      "&#160;",
+      "&#xA0;",
+      "&ensp;",
+      "&emsp;",
+      "&ZeroWidthSpace;",
+      "\u00a0",
+      "\u200b",
+      "\ufeff",
+      "<br>",
+      "<!-- -->",
+      "<span></span>",
+    ]) {
       const result = analyzeResourceKernelPairMapping({
         ...repo,
         freezeRows: repo.freezeRows.map((row, index) =>
@@ -327,6 +340,19 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       });
       expect(result.ok).toBe(false);
       expect(result.rowsWithEmptyAttribute).toEqual(["IT-RGK-PHYS-001"]);
+    }
+  });
+
+  it("U-RGKPAIR-011: HTML comment/fenced code内の偽表・宣言・見出しを正本として数えない", () => {
+    const fakeRow = "| `IT-RGK-PHYS-001` | mock | all | fixture | obs | negative | 1 |";
+    const fakeDeclaration = "- `mock` 1 件: `001`";
+    for (const hidden of [
+      `<!--\n### Resource Kernel物理統合 freeze属性\n${fakeRow}\n${fakeDeclaration}\n-->`,
+      `### Resource Kernel物理統合 freeze属性\n\`\`\`markdown\n${fakeRow}\n${fakeDeclaration}\n\`\`\``,
+      `### Resource Kernel物理統合 freeze属性\n~~~~\n${fakeRow}\n${fakeDeclaration}\n~~~~`,
+    ]) {
+      expect(parseFreezeAttributeRows(hidden)).toEqual([]);
+      expect(parseLaneDeclarations(hidden)).toEqual([]);
     }
   });
 
