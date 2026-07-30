@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-L7-469-design-freeze-mechanization-ownership
-title: "PLAN-L7-469 (troubleshoot): design-freeze 機械検査 gate の所有分離 — merged-plan-status fail-close の恒久対策 (issue #149 / #186)"
+title: "PLAN-L7-469 (troubleshoot): design-freeze 機械検査 gate の所有分離 — merged-plan-status fail-close の恒久対策 (issue #149 / #162)"
 kind: troubleshoot
 layer: L7
 drive: agent
@@ -11,7 +11,7 @@ created: 2026-07-30
 updated: 2026-07-30
 owner: PM (Claude) / PO
 backprop_decision: not_required
-backprop_decision_reason: "既存 gate (merged-plan-status / deliverable-plan-trace / impl-plan-trace) の意味論も検査ロジックも変更しない。変更は PLAN 間の artifact 所有帰属 (generates) のみであり、新規 L0/L1 要件ではない。gate 自身の一般化 (状態遷移条件と所有 artifact 完了判定の同一性検査) は §5 carry-1 として issue #186 側の後続 slice へ routing する。"
+backprop_decision_reason: "既存 gate (merged-plan-status / deliverable-plan-trace / impl-plan-trace) の意味論も検査ロジックも変更しない。変更は PLAN 間の artifact 所有帰属 (generates) のみであり、新規 L0/L1 要件ではない。gate 自身の一般化 (状態遷移条件と所有 artifact 完了判定の同一性検査) と post-merge 罠の PR CI 前倒し判定は §5 carry-1 として issue #162 側の後続 slice へ routing する。"
 agent_slots:
   - role: aim
     slot_label: "AIM — artifact 所有帰属の境界判断 (PLAN 状態遷移条件と完了判定の同一性)"
@@ -81,7 +81,9 @@ src/lint/resource-kernel-fixture-manifest.ts, tests/resource-kernel-fixture-mani
 ```
 
 これは 2 つの正当な gate の要求が 1 つの PLAN 上で両立不能になった構造 torsion である
-(open issue #186 と同型):
+(open issue #162 の実例そのもの — merged-plan-status は PR CI では base tree 判定のため、未 confirm
+PLAN + deliverable を持ち込む PR は green のまま merge でき、**merge 後の main run で初めて赤化**する。
+当初 #186 (stacked PR の throw) と誤分類していたが、#196 は base=main の通常 PR であり #162 が正):
 
 - `deliverable-plan-trace` は `tests/` 配下の deliverable が**どこかの PLAN の `generates` に
   登録**されていることを要求する (本文 prose 参照では不足)。
@@ -136,8 +138,8 @@ doctor hard gate `resource-kernel-fixture-manifest` は `src/doctor/doc-registry
 
 1. **一般則の機械化が未了**: 本 PLAN は 1 件の torsion を解消したが、「PLAN の状態遷移条件と
    所有 artifact の完了判定が同一であること」を機械強制する gate は存在しない。同型違反は
-   今後も prose では防げない (機構化率の既往教訓)。issue #186 の恒久対策としてこの検査を
-   起票・実装するまで閉じない。
+   今後も prose では防げない (機構化率の既往教訓)。issue #162 の恒久対策 (PR CI での
+   merge 後 main tree 前倒し判定 + 所有同一性検査) を起票・実装するまで閉じない。
 2. **既存 PLAN の sweep 未実施**: 他の design lane PLAN が出荷物ルート artifact を `generates` に
    持っていないかの棚卸しは行っていない。1 の gate 実装と同時に行う。
 3. **PR #197 の pair-mapping 成果物**: `src/lint/resource-kernel-pair-mapping.ts` /

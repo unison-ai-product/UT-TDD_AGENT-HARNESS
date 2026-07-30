@@ -403,5 +403,5 @@ doctor hard gate `resource-kernel-fixture-manifest` (`src/doctor/doc-registry.ts
 `PLAN-L7-469-design-freeze-mechanization-ownership` が持つ**。本PLANの confirm 条件は実OS runner証跡
 (§7.2 (B)) であり、既にmerge済み・検証済みの機械検査成果物の完了判定とは別クロックで進むため、
 同一PLANで両方を所有すると `merged-plan-status` と `deliverable-plan-trace` が両立不能になる
-(PR #196 merge後にmainが実際にfail-closeした。open issue #186と同型)。本PLANはfixture正本yamlを含む
+(PR #196 merge後にmainが実際にfail-closeした。open issue #162 の post-merge 罠の実例)。本PLANはfixture正本yamlを含む
 docs成果物のみを所有し、機械検査の所在はここから辿る。
