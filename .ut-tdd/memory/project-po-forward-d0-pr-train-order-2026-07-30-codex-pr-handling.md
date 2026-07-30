@@ -3,7 +3,7 @@ memory_id: memory:project:po-forward-d0-pr-train-order-2026-07-30-codex-pr-handl
 kind: project
 title: "PO forward D0 PR train order 2026-07-30 (codex PR handling)"
 tags: ["2026-07-30", "bun-withdrawal", "codex-order", "issue-149", "pr-196", "torsion"]
-updated_at: 2026-07-30T01:37:30.257Z
+updated_at: 2026-07-30T09:15:00.000Z
 ---
 
 PO 指示 (2026-07-30): Forward 推進を主軸にし、イシューは通り道で回収する。あわせて
@@ -108,3 +108,33 @@ stack しないので、review も 1 本ずつ。
 
 **教訓 (恒久)**: 自分で決めた Projects 順序を拘束条件として扱う。順序変更は「先にメモリ改訂 →
 それから実行」。事後正当化 (走ってから理由を書く) を禁止する。
+
+## 改訂 2 (2026-07-30 18:15 JST) — R1 待機中の R3 並行着手を事前宣言
+
+実測した現状 (HEAD 基準、`gh` 実行結果):
+
+- **R1 = PR #198** (`fix/l5-25-mechanization-ownership`, exact HEAD `703ff296`): CI 3 leg 全 pass /
+  mergeable CLEAN。**Codex verdict 未着** (`reviews=0` / `comments=0`)。依頼メモリは commit
+  `8bfa6a15` で origin/main へ到達済み (未コミット memory は Codex に届かない = issue #175)。
+- **R2 = PR #197**: CI red 継続。原因は #162 (post-merge 罠) で R1 merge 前は構造的に green 不能。
+- main: `8bfa6a15` を含む直近 5 run すべて `harness-check` failure (P0 継続)。
+
+**判断**: R1 / R2 の残作業は **Codex 所有 (verdict 投稿)** であり、Claude 側に実行可能な残タスクは
+無い (自分の PR の review を自分で Codex 起動して回すのは PO 禁止事項、2026-07-16)。よって
+Claude は **R3 (Bun 廃止 spike) を待機中に並行着手**する。これは順序の入れ替えではなく、
+R1 完了を待つ間の並行実行である。R1 に Codex verdict が着いた時点で R1 merge → R2 rebase を
+**R3 より優先**して処理する (拘束順序 R1 > R2 > R3 は不変)。
+
+**並行安全性の根拠** (path 面の分離、宣言ベース):
+
+- R3 の Claude 作業面 = `docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md`、
+  `src/lint/bun-dependency-inventory.ts` (新規)、`tests/bun-dependency-inventory.test.ts` (新規)。
+- R1 / R2 の面 = `docs/plans/PLAN-L5-25-*` / `PLAN-L7-469-*` / `src/lint/resource-kernel-pair-mapping.ts`
+  / `tests/resource-kernel-pair-mapping.test.ts`。**交差ゼロ**。
+- R3 の第一成果物は read-only 実測 (依存点の全数列挙) であり、runtime / hook / CI の挙動を
+  変更しない。`runtime-portability` lint の反転 (PLAN-L7-462 step 3) は本 slice に含めない。
+
+**R3 の slice 境界 (1 PR = 1 論点)**: 「Bun 依存点の全数棚卸しを**機械導出**にする」。
+件数・総数はハードコードせず enumerator の導出値として出す (#146 の `total: 848` ハードコードと
+同型のずれを再発させない)。撤退順序と各撤退の fail-close 境界は PLAN-L7-462 の既存 Schedule を
+**拡張**する (net-new draft 起票ゼロ)。merge は例外なく Codex exact-HEAD verdict 後。
