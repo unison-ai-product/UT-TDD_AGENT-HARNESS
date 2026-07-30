@@ -138,3 +138,32 @@ R1 完了を待つ間の並行実行である。R1 に Codex verdict が着い�
 件数・総数はハードコードせず enumerator の導出値として出す (#146 の `total: 848` ハードコードと
 同型のずれを再発させない)。撤退順序と各撤退の fail-close 境界は PLAN-L7-462 の既存 Schedule を
 **拡張**する (net-new draft 起票ゼロ)。merge は例外なく Codex exact-HEAD verdict 後。
+
+## 改訂 3 (2026-07-30 21:00 JST) — R1 完了 / R2 freeze 決定 / R3 待機解除
+
+**R1 = 完了**: PR #198 は Codex PASS (exact HEAD `703ff296`) 後に Claude が merge (`ed62e5fa`)。
+main は同 commit で CI green に復帰し、#196 由来の main red (P0) は解消した。
+
+**R2 = PR #197**: Codex FLAG (attack 3 件) → Claude 修正 (`f4fbfa90`) → Codex が同一 PR へ強化を
+連続 push (artifact commit 15 本 / artifact HEAD 12 個) → 判定対象が確定せず verdict と evidence
+anchor が stale 化し続けた。Claude 側も一度 stale anchor の evidence を投入して Codex に除去され
+(`f1574404` → `27594bb6`)、共有 tree で測る規律違反を自分で犯した
+([[feedback-artifact-must-be-frozen-before-closing-review]])。
+
+**PO 指示 (2026-07-30、「次進めてよ」)** を受けて次を決定した:
+
+1. **artifact を `2c862cdc` で freeze**。以後の強化は follow-up PR へ回す。
+2. Claude が independent attack **17 本**を doctor 配線経路で実測。16 本 fail-close、
+   **1 本 fail-open** (記号 1 文字だけの属性セルが充填済み扱い) を発見 → **issue #199** に切り出し。
+3. verdict = **PASS-WEAK** として限界を隠さず記録し、evidence (`a3d4b716`) を
+   `anchor_commit: 2c862cdc` + 実 blob digest + CI run で投入。§7.1 の検査内訳も現行 7 系統へ同期。
+4. **依存 2 本 (`entities` / `marked`) の採否は未裁定のまま carry**。Pack clean artifact と
+   `PLAN-L7-462` の「依存追加ゼロ」判断に波及するため、依存方針は PLAN-L7-462 側で PO 裁定する。
+   裁定が「依存ゼロ」なら inline 正規化への差し戻しが必要 (issue #199 の follow-up と同時に扱える)。
+
+**R3 = 待機解除**: `work/l7-462-bun-inventory-spike` を最新 main へ rebase 済み、導出値
+(`execution` / `api` / `toolchain` / `policy` の内訳) と PLAN 依存点表の双方向照合、tsc / biome を
+green で再確認済み。#197 merge 直後に push して PR を出し、cross-review を Codex へ依頼する。
+
+**教訓の追加**: 「相手ランタイムが同一 PR の artifact を連続改修している間は evidence を書かない」。
+書けば必ず stale になる。freeze 宣言を先に取り、取れないなら PO 裁定へ上げる。
