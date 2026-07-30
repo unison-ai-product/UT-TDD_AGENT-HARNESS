@@ -11,6 +11,7 @@
  */
 
 import { decodeHTML } from "entities/decode";
+import { marked } from "marked";
 
 /** freeze 属性表の 1 行 (ID + 6 属性)。 */
 export interface FreezeAttributeRow {
@@ -135,7 +136,9 @@ function isBlankMarkdownCell(value: string): boolean {
     previous = normalized;
     normalized = normalized.replace(EMPTY_HTML_ELEMENT_PATTERN, "");
   } while (normalized !== previous);
-  normalized = normalized.replace(/[\p{White_Space}\p{Cf}]/gu, "");
+  normalized = normalized
+    .replace(/[\p{White_Space}\p{Default_Ignorable_Code_Point}\u115f\u1160\u3164\uffa0]/gu, "")
+    .replace(/\[|\]|[()*_~`#!]/g, "");
   return normalized.length === 0;
 }
 
@@ -149,49 +152,12 @@ export function sliceSection(markdown: string, headingPrefix: string): string {
   return (end < 0 ? rest : rest.slice(0, end)).join("\n");
 }
 
-/** HTML comment と fenced code block はrendered contractではないため、正本表・見出しの解析から除外する。 */
+/** CommonMark/GFM lexerがHTML・comment・codeと判定したblockを正本表・見出しの解析から除外する。 */
 function renderedMarkdownLines(markdown: string): string[] {
-  const withoutComments = markdown.replace(/<!--[\s\S]*?-->/g, "");
-  const visible: string[] = [];
-  let fence: { marker: "`" | "~"; length: number } | undefined;
-  let htmlBlock: { end: RegExp; blankTerminates: boolean } | undefined;
-  for (const line of withoutComments.split(/\r?\n/)) {
-    if (htmlBlock) {
-      if (htmlBlock.end.test(line) || (htmlBlock.blankTerminates && line.trim() === ""))
-        htmlBlock = undefined;
-      continue;
-    }
-    const specialHtmlOpen = /^ {0,3}(?:<\?|<![A-Z]|<!\[CDATA\[)/i.exec(line);
-    if (specialHtmlOpen) {
-      const end = specialHtmlOpen[0].toUpperCase().includes("[CDATA[")
-        ? /\]\]>/
-        : specialHtmlOpen[0].includes("?")
-          ? /\?>/
-          : />/;
-      if (!end.test(line)) htmlBlock = { end, blankTerminates: false };
-      continue;
-    }
-    const htmlOpen = /^ {0,3}<([a-z][a-z0-9-]*)\b[^>]*>/i.exec(line);
-    if (htmlOpen) {
-      const tag = htmlOpen[1].toLowerCase();
-      const end = new RegExp(`</${tag}\\s*>`, "i");
-      const blankTerminates = !/^(?:script|pre|style|textarea)$/i.test(tag);
-      if (!/\/>\s*$/.test(line) && !end.test(line)) htmlBlock = { end, blankTerminates };
-      continue;
-    }
-    const opener = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-    if (!fence && opener) {
-      fence = { marker: opener[1][0] as "`" | "~", length: opener[1].length };
-      continue;
-    }
-    if (fence) {
-      const closer = new RegExp(`^ {0,3}\\${fence.marker}{${fence.length},}\\s*$`);
-      if (closer.test(line)) fence = undefined;
-      continue;
-    }
-    visible.push(line);
-  }
-  return visible;
+  return marked
+    .lexer(markdown)
+    .filter((token) => token.type !== "html" && token.type !== "code")
+    .flatMap((token) => token.raw.split(/\r?\n/));
 }
 
 /** table 行を cell 配列へ分解する (`\|` エスケープを保持)。 */
