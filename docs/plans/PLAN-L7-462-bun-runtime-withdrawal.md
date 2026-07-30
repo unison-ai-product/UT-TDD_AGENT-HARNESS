@@ -71,6 +71,82 @@ Bun 起因・Bun 関与のトラブルが反復している:
 (`setup-bun` / `bun install --frozen-lockfile` / `bun x vitest`)、
 `scripts/run-vitest-snapshot.ts` の `bun.cmd` spawn。
 
+## R3 spike: Bun 依存点の全数棚卸し (機械導出、2026-07-30)
+
+順序契約 (`.ut-tdd/memory/project-po-forward-d0-pr-train-order-2026-07-30-codex-pr-handling.md`
+S2 / 改訂 2 の R3) の第一タスク「修理でなく実測」を、散文でなく **enumerator + 実 repo 回帰**で
+固定した。実装は `src/lint/bun-dependency-inventory.ts`、oracle は
+`tests/bun-dependency-inventory.test.ts`。
+
+**件数・総数を本文に書かない** (#146 の `total: 848` ハードコードと同型のずれの再発防止)。
+内訳は次で導出する:
+
+```
+bunInventoryMessages(analyzeBunDependencies(loadBunDependencyDocs(repoRoot)))
+```
+
+### 依存点表 (surface → 撤退 step)
+
+surface カタログは enumerator 側 (`BUN_SURFACES`) と本表の**双方向**で照合される
+(`crossCheckPlanSurfaces`、孤児 0 / step 不一致 0 を回帰で fail-close)。片側だけの追加は赤。
+
+| surface | 対象 | 主な結合の型 | 撤退 step |
+| --- | --- | --- | --- |
+| `claude-hooks` | `.claude/settings.json` の hook command / `.claude/hooks/*` | execution (`run-bun.ts` shim 経由の native Bun 起動、shebang) | `step-1` |
+| `package-scripts` | `package.json` の scripts / engines | execution (`bun run` / `bun build --compile`) + toolchain (`engines.bun`) | `step-2` |
+| `ci-workflow` | `.github/workflows/*` | toolchain (`setup-bun` / `bun install`) + execution (`bun src/cli.ts`) | `step-2` |
+| `os-entrypoint` | `scripts/ut-tdd` / `scripts/ut-tdd.ps1` | execution (thin wrapper の Bun 解決と起動) | `step-2` |
+| `test-runner` | `scripts/run-vitest-snapshot.ts` | execution (Bun binary 解決 / spawn) + api (`Bun.which` / `Bun.gc`) | `step-2` |
+| `git-hook` | `scripts/git-hooks/*` | execution (pre-push dispatcher と scanner の shebang) | `step-2` |
+| `lockfile` | `bun.lock` / `bunfig.toml` | toolchain (Bun 固有 lockfile) | `step-2` |
+| `core-source` | `src/**` | api (`bun:sqlite` 動的 require / `globalThis.Bun` 特徴検出) + policy (Bun 前提を機械強制している lint) | `step-3` |
+
+### 分類 (coupling) の定義
+
+- `execution`: Bun バイナリ / Bun runtime が実際に起動される。Node 一本化を**直接ブロック**する。
+- `api`: `bun:` builtin module の読み込み、または `Bun.*` グローバルの実呼び出し。
+- `toolchain`: インストーラ / lockfile / CI セットアップ / Bun 版要件。
+- `policy`: 文字列リテラル・コメント上の言及 (lint の期待値や検出テーブル)。実行経路ではない。
+- `unclassified`: 上のどれでもない Bun 言及。**hook / CI / entrypoint / runner 面では fail-close**
+  (棚卸し漏れを無音で通さない)。`src/` は policy 既定 (api / execution / toolchain 検出が先に当たる)。
+
+### 実測で判明した本 PLAN 自身の誤り (errata)
+
+1. 上記「移行コストの実測」節の「Bun グローバル API 依存は 1 ファイル
+   (`src/doctor/test-repository-isolation.ts`)」は**誤り**。同ファイルの `Bun.write` 出現は
+   AST 検出テーブルの**文字列リテラル**であり実呼び出しではない (`policy`)。実際の Bun
+   グローバル / モジュール結合は `scripts/run-vitest-snapshot.ts` (`Bun.which` / `Bun.gc`) と
+   `src/state-db/index.ts` (runtime 判定 + `nodeRequire("bun:sqlite")`) にある。
+   回帰: 「検出テーブルの文字列を api と誤判定しない」「動的 `bun:` require を api と数える」。
+2. `bun:sqlite` は **static import ではなく runtime 分岐越しの動的 require** であり、
+   `from "bun:` 系 grep では 0 件に見える。撤退手順を grep 前提で書くと取り落とす。
+3. hook 面は既に `.claude/hooks/run-bun.ts` shim (native `bun.exe` 探索 + spawn) を経由する。
+   step 1 の作業対象は個々の hook 行ではなく **shim 1 点**であり、shim を Node 起動へ置換すれば
+   hook 面の execution 結合はまとめて落ちる (settings.json の args は shim を指しているため)。
+4. 分類器自身の実測で潰した誤検出: `ubuntu-latest` / `AuthoringBundle` / 正規表現内
+   `\bunimplemented` の部分一致。token 境界 + camelCase 境界のみを認める検出に修正済み
+   (回帰ケースあり)。散文の grep 件数を棚卸しの根拠にしてはならない実例。
+
+### 撤退順序の fail-close 境界 (step ごと)
+
+- `step-1` (`claude-hooks`): shim を Node 起動へ置換後、`claude-hooks` surface の `execution`
+  件数が **0 へ落ちる**ことを oracle にする (現状 > 0 を主張する回帰があるので、撤退完了時に
+  この assertion を反転させる = 完了判定が機械側に残る)。
+- `step-2` (`package-scripts` / `ci-workflow` / `os-entrypoint` / `test-runner` / `git-hook` /
+  `lockfile`): CI 両 leg green の実 run URL を evidence とし、同 surface 群の `execution` /
+  `toolchain` が 0 になることを oracle にする。`bun.lock` 削除は `package-lock` 移行と同一 PR。
+- `step-3` (`core-source`): `runtime-portability` の Bun 要求 (`package-missing-bun-engine` /
+  `package-missing-compiled-build` / `sqlite-driver-fallback-missing`) を反転する前に、
+  `api` 件数 0 を先に満たす (逆順にすると二重ドライバが消える前に lint が緩む)。
+- `step-4` (ADR-002): 上記 3 step の oracle が green の状態でのみ confirm へ上げる。
+
+### 本 slice に含めないもの (境界の明示)
+
+- hook / CI / entrypoint の実際の Node 化 (step 1-2 の実装)。本 slice は read-only 実測のみ。
+- `runtime-portability` lint の反転 (step 3)。現状 lint は Bun を**要求**しており、棚卸しと
+  同時に反転すると撤退前に fail-close が緩む。
+- `docs/` の Bun 言及の是正 (PR #182 が扱った面)。走査面は runtime surface に限定する。
+
 ## 設計判断 (TL レビューで確定、実装前)
 
 - **TS 実行方式**: 推奨 = Node 24 ネイティブ type-stripping (`node src/cli.ts`)。
