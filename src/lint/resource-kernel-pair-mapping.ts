@@ -10,6 +10,8 @@
  * 本 lint は D0 範囲だけを補う専用検査であり、汎用抽出の修正を代替しない。
  */
 
+import { decodeHTML } from "entities/decode";
+
 /** freeze 属性表の 1 行 (ID + 6 属性)。 */
 export interface FreezeAttributeRow {
   id: string;
@@ -121,27 +123,19 @@ const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
 const EMPTY_HTML_ELEMENT_PATTERN = /<([a-z][a-z0-9-]*)\b[^>]*>\s*<\/\1>/gi;
-const INVISIBLE_NAMED_ENTITY_PATTERN =
-  /&(?:nbsp|ensp|emsp|thinsp|hairsp|ZeroWidthSpace|zwnj|zwj|lrm|rlm|shy|NoBreak|InvisibleTimes|InvisibleComma|ApplyFunction|NegativeMediumSpace|NegativeThickSpace|NegativeThinSpace|NegativeVeryThinSpace);?/gi;
-
 function isBlankMarkdownCell(value: string): boolean {
-  let normalized = value
+  let normalized = decodeHTML(value)
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<br\s*\/?>/gi, "")
-    .replace(INVISIBLE_NAMED_ENTITY_PATTERN, "")
-    .replace(/&#(?:x([0-9a-f]+)|([0-9]+));?/gi, (_, hex: string, decimal: string) => {
-      const point = Number.parseInt(hex ?? decimal, hex ? 16 : 10);
-      return Number.isSafeInteger(point) && point <= 0x10ffff ? String.fromCodePoint(point) : "";
-    })
     .replace(/<[^>]+>/g, "")
-    .replace(/!?\[((?:\s|\u200b|\u200c|\u200d|\u2060|\ufeff)*)\]\([^)]*\)/g, "$1")
+    .replace(/!?\[([^\]]*)\](?:\([^)]*\)|\[[^\]]*\])/g, "$1")
     .replace(/[*_~`]+/g, "");
   let previous: string;
   do {
     previous = normalized;
     normalized = normalized.replace(EMPTY_HTML_ELEMENT_PATTERN, "");
   } while (normalized !== previous);
-  normalized = normalized.replace(/[\s\u00a0\u200b\u2060\ufeff]|\u200c|\u200d/g, "");
+  normalized = normalized.replace(/[\p{White_Space}\p{Cf}]/gu, "");
   return normalized.length === 0;
 }
 
@@ -160,10 +154,11 @@ function renderedMarkdownLines(markdown: string): string[] {
   const withoutComments = markdown.replace(/<!--[\s\S]*?-->/g, "");
   const visible: string[] = [];
   let fence: { marker: "`" | "~"; length: number } | undefined;
-  let htmlBlockEnd: RegExp | undefined;
+  let htmlBlock: { end: RegExp; blankTerminates: boolean } | undefined;
   for (const line of withoutComments.split(/\r?\n/)) {
-    if (htmlBlockEnd) {
-      if (htmlBlockEnd.test(line) || line.trim() === "") htmlBlockEnd = undefined;
+    if (htmlBlock) {
+      if (htmlBlock.end.test(line) || (htmlBlock.blankTerminates && line.trim() === ""))
+        htmlBlock = undefined;
       continue;
     }
     const specialHtmlOpen = /^ {0,3}(?:<\?|<![A-Z]|<!\[CDATA\[)/i.exec(line);
@@ -173,14 +168,15 @@ function renderedMarkdownLines(markdown: string): string[] {
         : specialHtmlOpen[0].includes("?")
           ? /\?>/
           : />/;
-      if (!end.test(line)) htmlBlockEnd = end;
+      if (!end.test(line)) htmlBlock = { end, blankTerminates: false };
       continue;
     }
     const htmlOpen = /^ {0,3}<([a-z][a-z0-9-]*)\b[^>]*>/i.exec(line);
     if (htmlOpen) {
       const tag = htmlOpen[1].toLowerCase();
       const end = new RegExp(`</${tag}\\s*>`, "i");
-      if (!/\/>\s*$/.test(line) && !end.test(line)) htmlBlockEnd = end;
+      const blankTerminates = !/^(?:script|pre|style|textarea)$/i.test(tag);
+      if (!/\/>\s*$/.test(line) && !end.test(line)) htmlBlock = { end, blankTerminates };
       continue;
     }
     const opener = /^ {0,3}(`{3,}|~{3,})/.exec(line);
