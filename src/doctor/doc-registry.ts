@@ -10,6 +10,14 @@ import {
   parseFixtureManifest,
   parseL8FixtureRows,
 } from "../lint/resource-kernel-fixture-manifest";
+import {
+  analyzeResourceKernelPairMapping,
+  parseContractMappingRows,
+  parseFreezeAttributeRows,
+  parseLaneDeclarations,
+  parseRealRunnerTotal,
+  resourceKernelPairMappingMessages,
+} from "../lint/resource-kernel-pair-mapping";
 
 const RGK_L8_DOC = "docs/test-design/harness/L8-integration-test-design.md";
 const RGK_FIXTURE_MANIFEST = "docs/test-design/harness/resource-kernel-fixture-manifest.yaml";
@@ -55,6 +63,50 @@ export function checkResourceKernelFixtureManifest(repoRoot: string): {
     return {
       messages: [
         "resource-kernel-fixture-manifest — violation: L8 表 / fixture manifest / PLAN-L5-25 を読めなかった",
+      ],
+      ok: false,
+    };
+  }
+}
+
+/**
+ * D0-R の L5 物理契約 → L8 42 oracle 全数写像の双方向孤児 0 を hard gate 検査
+ * (PLAN-L5-25 §7.1 pair-freeze 条件、issue #149)。
+ *
+ * L8 freeze 属性表と PLAN-L5-25 §7.1 写像表を突合し、片側にしか現れない ID・
+ * lane 語彙逸脱・空属性を violation とする。doc 読み取り失敗も violation (fail-close)。
+ */
+export function checkResourceKernelPairMapping(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  try {
+    const l8Markdown = readFileSync(join(repoRoot, RGK_L8_DOC), "utf8");
+    const r = analyzeResourceKernelPairMapping({
+      freezeRows: parseFreezeAttributeRows(l8Markdown),
+      mappingRows: parseContractMappingRows(readFileSync(join(repoRoot, RGK_CONTRACT_DOC), "utf8")),
+      laneDeclarations: parseLaneDeclarations(l8Markdown),
+      declaredRealRunnerTotal: parseRealRunnerTotal(l8Markdown),
+    });
+    if (r.ok) {
+      const lanes = Object.entries(r.laneCounts)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(", ");
+      return {
+        messages: [`resource-kernel-pair-mapping — OK (lane ${lanes}、双方向孤児 0)`],
+        ok: true,
+      };
+    }
+    return {
+      messages: [
+        `resource-kernel-pair-mapping — violation: ${resourceKernelPairMappingMessages(r).join(" / ")}`,
+      ],
+      ok: false,
+    };
+  } catch {
+    return {
+      messages: [
+        "resource-kernel-pair-mapping — violation: L8 freeze 属性表 / PLAN-L5-25 §7.1 を読めなかった",
       ],
       ok: false,
     };
