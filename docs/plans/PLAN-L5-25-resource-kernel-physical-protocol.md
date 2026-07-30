@@ -417,6 +417,20 @@ docs成果物のみを所有し、機械検査の所在はここから辿る。�
 実 repo 回帰は `tests/resource-kernel-pair-mapping.test.ts`、CI 強制は doctor hard gate
 `resource-kernel-pair-mapping` (`src/doctor/doc-registry.ts` 経由で配線) である。
 
+**doctor が fail-close する検査の内訳** (Codex closing cross-review FLAG 2026-07-30 の指摘 2/3 を
+機械側へ落とし込んだもの。analyzer 直呼びだけでなく doctor 配線経路の負 test も持つ):
+
+1. **契約側 exact 集合** `C-RGK-01..58`: 欠番 / 未知 ID / 重複 / 出典 (§1〜§6) 逸脱。
+2. **oracle 側 exact 集合** `IT-RGK-PHYS-001..042`: 欠番 / 未知 ID / **重複**。
+   以前は freeze 行を集合化してから突合していたため、重複行を足しても無音で吸収され doctor が
+   green になり得た (指摘 2)。生の行列を数えて潰す。
+3. **lane 分布**: L8 §freeze 属性節の散文再掲一覧 (`mock` / `real-OS` / `mock+real-OS` の件数と
+   ID 列) を表の `lane` 列と**集合として**突合する。宣言・表のどちらか片側だけの書き換えは赤。
+   宣言そのものの削除も violation (検査を消して通す fail-open を作らない)。
+4. **実 runner lane の非空性**: `real-OS` + `mock+real-OS` の合計が宣言値と一致し、かつ 0 件でない。
+   表と宣言を同時に全 mock 化して「実 runner 証跡なしで freeze 成立」に見せる経路を塞ぐ (指摘 3)。
+   この合計 (現在 15 件) が §7.2 (B) の confirmed 昇格を律速する。
+
 | 契約 ID | 出典 | 物理契約 (要約) | 被覆 oracle |
 |---|---|---|---|
 | `C-RGK-01` | §1 | TS control planeの所有禁止 (Job/cgroup事実捏造、direct spawn fallback、Rustへdomain判断委譲) | `003`, `011`, `023` |

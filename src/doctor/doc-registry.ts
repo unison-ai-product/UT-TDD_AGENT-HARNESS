@@ -14,6 +14,8 @@ import {
   analyzeResourceKernelPairMapping,
   parseContractMappingRows,
   parseFreezeAttributeRows,
+  parseLaneDeclarations,
+  parseRealRunnerTotal,
   resourceKernelPairMappingMessages,
 } from "../lint/resource-kernel-pair-mapping";
 
@@ -79,9 +81,12 @@ export function checkResourceKernelPairMapping(repoRoot: string): {
   ok: boolean;
 } {
   try {
+    const l8Markdown = readFileSync(join(repoRoot, RGK_L8_DOC), "utf8");
     const r = analyzeResourceKernelPairMapping({
-      freezeRows: parseFreezeAttributeRows(readFileSync(join(repoRoot, RGK_L8_DOC), "utf8")),
+      freezeRows: parseFreezeAttributeRows(l8Markdown),
       mappingRows: parseContractMappingRows(readFileSync(join(repoRoot, RGK_CONTRACT_DOC), "utf8")),
+      laneDeclarations: parseLaneDeclarations(l8Markdown),
+      declaredRealRunnerTotal: parseRealRunnerTotal(l8Markdown),
     });
     if (r.ok) {
       const lanes = Object.entries(r.laneCounts)

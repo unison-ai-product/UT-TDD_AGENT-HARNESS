@@ -1,30 +1,65 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { checkResourceKernelPairMapping } from "../src/doctor/doc-registry";
 import {
   ALLOWED_LANES,
   analyzeResourceKernelPairMapping,
   EXPECTED_CONTRACT_COUNT,
   EXPECTED_CONTRACT_IDS,
+  EXPECTED_ORACLE_COUNT,
+  type LaneDeclaration,
   parseContractMappingRows,
   parseFreezeAttributeRows,
+  parseLaneDeclarations,
+  parseRealRunnerTotal,
+  REAL_RUNNER_LANES,
   resourceKernelPairMappingMessages,
 } from "../src/lint/resource-kernel-pair-mapping";
 import { workspaceRead } from "./support/workspace-roots";
 
-function loadRepoRows() {
-  const root = workspaceRead({
+const L8_DOC = "docs/test-design/harness/L8-integration-test-design.md";
+const L5_DOC = "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md";
+
+function snapshotRoot(): string {
+  return workspaceRead({
     id: "U-RGKPAIR",
     mode: "head_snapshot",
     reason: "D0-R の L5↔L8 pair 写像は HEAD の 2 doc を突合して判定する",
   });
-  const freezeRows = parseFreezeAttributeRows(
-    readFileSync(join(root, "docs/test-design/harness/L8-integration-test-design.md"), "utf8"),
-  );
-  const mappingRows = parseContractMappingRows(
-    readFileSync(join(root, "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md"), "utf8"),
-  );
-  return { freezeRows, mappingRows };
+}
+
+function loadRepoRows() {
+  const root = snapshotRoot();
+  const l8Markdown = readFileSync(join(root, L8_DOC), "utf8");
+  return {
+    freezeRows: parseFreezeAttributeRows(l8Markdown),
+    mappingRows: parseContractMappingRows(readFileSync(join(root, L5_DOC), "utf8")),
+    laneDeclarations: parseLaneDeclarations(l8Markdown),
+    declaredRealRunnerTotal: parseRealRunnerTotal(l8Markdown),
+  };
+}
+
+/** 実 doc を temp repo へ写し、指定の書き換えを施した repo root を返す (doctor 負 test 用)。 */
+function mutatedRepo(mutate: (docs: { l8: string; l5: string }) => { l8: string; l5: string }): {
+  root: string;
+  cleanup: () => void;
+} {
+  const source = snapshotRoot();
+  const root = mkdtempSync(join(tmpdir(), "rgk-pair-doctor-"));
+  const docs = mutate({
+    l8: readFileSync(join(source, L8_DOC), "utf8"),
+    l5: readFileSync(join(source, L5_DOC), "utf8"),
+  });
+  for (const [rel, text] of [
+    [L8_DOC, docs.l8],
+    [L5_DOC, docs.l5],
+  ] as const) {
+    mkdirSync(dirname(join(root, rel)), { recursive: true });
+    writeFileSync(join(root, rel), text, "utf8");
+  }
+  return { root, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }
 
 describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1)", () => {
@@ -61,13 +96,23 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
   });
 
   it("U-RGKPAIR-003: 実 runner を要する lane 件数が confirmed 律速の申告と一致する", () => {
-    const { freezeRows } = loadRepoRows();
-    const r = analyzeResourceKernelPairMapping({ freezeRows, mappingRows: [] });
+    const { freezeRows, laneDeclarations, declaredRealRunnerTotal } = loadRepoRows();
+    const r = analyzeResourceKernelPairMapping({
+      freezeRows,
+      mappingRows: [],
+      laneDeclarations,
+      declaredRealRunnerTotal,
+    });
     // PLAN-L5-25 §7.2 (B) は「real-OS 6 + mock+real-OS 9 = 15 件が confirmed 昇格を律速」と申告する。
     expect(r.laneCounts["real-OS"]).toBe(6);
     expect(r.laneCounts["mock+real-OS"]).toBe(9);
     expect(r.laneCounts.mock).toBe(27);
     expect((r.laneCounts["real-OS"] ?? 0) + (r.laneCounts["mock+real-OS"] ?? 0)).toBe(15);
+    // 散文の再掲一覧 (宣言) と表の lane 列 (正本) が集合として一致し、実 runner 合計宣言も一致する。
+    expect(declaredRealRunnerTotal).toBe(15);
+    expect(r.laneDeclarationsMissing).toEqual([]);
+    expect(r.laneDeclarationMismatch).toEqual([]);
+    expect(r.realRunnerTotalMismatch).toBeNull();
   });
 
   it("U-RGKPAIR-004: 片側欠落・属性欠落・lane 語彙外を fail-close で検出する", () => {
@@ -148,5 +193,141 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     expect(msgs.some((m) => m.includes("重複"))).toBe(true);
     expect(msgs.some((m) => m.includes("期待集合外"))).toBe(true);
     expect(msgs.some((m) => m.includes("正規範囲外"))).toBe(true);
+  });
+
+  it("U-RGKPAIR-007: oracle 側 exact 集合 (001..042) の重複・未知・欠番を fail-close で検出する", () => {
+    // Codex closing review FLAG (2026-07-30) attack 2: freeze 行を Set 化していたため
+    // 重複 oracle を足しても doctor が green になり得た。生の行列を数えて潰す。
+    const repo = loadRepoRows();
+    expect(repo.freezeRows).toHaveLength(EXPECTED_ORACLE_COUNT);
+
+    const duplicated = analyzeResourceKernelPairMapping({
+      ...repo,
+      freezeRows: [...repo.freezeRows, repo.freezeRows[0]],
+    });
+    expect(duplicated.ok).toBe(false);
+    expect(duplicated.oracleIdsDuplicated).toEqual(["IT-RGK-PHYS-001"]);
+    expect(resourceKernelPairMappingMessages(duplicated).some((m) => m.includes("重複"))).toBe(
+      true,
+    );
+
+    const missing = analyzeResourceKernelPairMapping({
+      ...repo,
+      freezeRows: repo.freezeRows.slice(1),
+    });
+    expect(missing.ok).toBe(false);
+    expect(missing.oracleIdsMissing).toEqual(["IT-RGK-PHYS-001"]);
+
+    const unknown = analyzeResourceKernelPairMapping({
+      ...repo,
+      freezeRows: [...repo.freezeRows, { ...repo.freezeRows[0], id: "IT-RGK-PHYS-099" }],
+    });
+    expect(unknown.ok).toBe(false);
+    expect(unknown.oracleIdsUnknown).toEqual(["IT-RGK-PHYS-099"]);
+  });
+
+  it("U-RGKPAIR-008: lane 分布の宣言不一致・全 mock 化・宣言削除を fail-close で検出する", () => {
+    // Codex closing review FLAG (2026-07-30) attack 3: lane 分布が doctor 強制されず
+    // 全 mock 化でも green になり得た。宣言 (散文再掲) と表 (正本) の集合一致を検査する。
+    const repo = loadRepoRows();
+
+    const laneFlipped = analyzeResourceKernelPairMapping({
+      ...repo,
+      freezeRows: repo.freezeRows.map((row) =>
+        row.id === "IT-RGK-PHYS-005" ? { ...row, lane: "mock" } : row,
+      ),
+    });
+    expect(laneFlipped.ok).toBe(false);
+    expect(laneFlipped.laneDeclarationMismatch.map((m) => m.lane).sort()).toEqual([
+      "mock",
+      "real-OS",
+    ]);
+
+    // 表と宣言を同時に全 mock 化しても、実 runner lane 0 件は設計上不正として落ちる。
+    const allMockRows = repo.freezeRows.map((row) => ({ ...row, lane: "mock" }));
+    const allMockDeclarations: LaneDeclaration[] = [
+      { lane: "mock", declaredCount: allMockRows.length, ids: allMockRows.map((r) => r.id) },
+      { lane: "real-OS", declaredCount: 0, ids: [] },
+      { lane: "mock+real-OS", declaredCount: 0, ids: [] },
+    ];
+    const allMock = analyzeResourceKernelPairMapping({
+      ...repo,
+      freezeRows: allMockRows,
+      laneDeclarations: allMockDeclarations,
+      declaredRealRunnerTotal: 0,
+    });
+    expect(allMock.ok).toBe(false);
+    expect(allMock.realRunnerTotalMismatch).toEqual({ declared: 0, counted: 0 });
+    expect(
+      resourceKernelPairMappingMessages(allMock).some((m) =>
+        m.includes(REAL_RUNNER_LANES.join(" / ")),
+      ),
+    ).toBe(true);
+
+    // 宣言そのものを消して検査を無効化する経路も塞ぐ (fail-open にしない)。
+    const declarationsRemoved = analyzeResourceKernelPairMapping({
+      ...repo,
+      laneDeclarations: [],
+      declaredRealRunnerTotal: null,
+    });
+    expect(declarationsRemoved.ok).toBe(false);
+    expect(declarationsRemoved.laneDeclarationsMissing).toEqual([
+      "mock",
+      "mock+real-OS",
+      "real-OS",
+    ]);
+    expect(declarationsRemoved.realRunnerTotalMismatch).toEqual({ declared: null, counted: 15 });
+  });
+
+  it("U-RGKPAIR-009: doctor hard gate が実 doc で green、改竄 doc で violation を返す", () => {
+    // doctor 単体 (analyzer 直呼びではない配線経路) で attack 2/3 が落ちることを確かめる。
+    const green = checkResourceKernelPairMapping(snapshotRoot());
+    expect(green.messages.join(" ")).toContain("resource-kernel-pair-mapping — OK");
+    expect(green.ok).toBe(true);
+
+    const duplicated = mutatedRepo(({ l8, l5 }) => {
+      const lines = l8.split(/\r?\n/);
+      // freeze 属性表の行 (7 列、lane セル付き) を狙う。同 ID は要約表にも現れるため
+      // 先頭一致で拾うと節外を書き換えてしまい、検査が空振りする。
+      const index = lines.findIndex((line) => /^\| `IT-RGK-PHYS-001` \| mock \|/.test(line));
+      expect(index).toBeGreaterThan(0);
+      lines.splice(index + 1, 0, lines[index]);
+      return { l8: lines.join("\n"), l5 };
+    });
+    try {
+      const result = checkResourceKernelPairMapping(duplicated.root);
+      expect(result.ok).toBe(false);
+      expect(result.messages.join(" ")).toContain("重複する oracle ID");
+    } finally {
+      duplicated.cleanup();
+    }
+
+    const allMock = mutatedRepo(({ l8, l5 }) => ({
+      l8: l8
+        .replace(/^(\| `IT-RGK-PHYS-\d{3}` \| )(?:real-OS|mock\+real-OS)( \|)/gm, "$1mock$2")
+        .replace(/^- `real-OS` 6 件.*$/m, "- `real-OS` 0 件: (なし)")
+        .replace(/^- `mock\+real-OS` 9 件.*$/m, "- `mock+real-OS` 0 件: (なし)")
+        .replace(
+          /`real-OS` 6 件 \+ `mock\+real-OS` 9 件 = 15 件/,
+          "`real-OS` 0 件 + `mock+real-OS` 0 件 = 0 件",
+        ),
+      l5,
+    }));
+    try {
+      const result = checkResourceKernelPairMapping(allMock.root);
+      expect(result.ok).toBe(false);
+      expect(result.messages.join(" ")).toContain("実 runner lane");
+    } finally {
+      allMock.cleanup();
+    }
+
+    const unreadable = mkdtempSync(join(tmpdir(), "rgk-pair-empty-"));
+    try {
+      const result = checkResourceKernelPairMapping(unreadable);
+      expect(result.ok).toBe(false);
+      expect(result.messages.join(" ")).toContain("読めなかった");
+    } finally {
+      rmSync(unreadable, { recursive: true, force: true });
+    }
   });
 });
