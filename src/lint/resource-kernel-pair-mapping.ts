@@ -10,6 +10,7 @@
  * 本 lint は D0 範囲だけを補う専用検査であり、汎用抽出の修正を代替しない。
  */
 
+import { createHash } from "node:crypto";
 import { decodeHTML } from "entities/decode";
 import { marked } from "marked";
 
@@ -87,6 +88,8 @@ export interface ResourceKernelPairMappingResult {
   contractsWithEmptySummary: string[];
   /** created count構文又はfixture/観測点/negative expectedの実質が不正なfreeze行。 */
   rowsWithInvalidAttribute: string[];
+  /** freeze済みL5写像/L8属性表の正規化内容digestと不一致の表。 */
+  contentDigestMismatch: string[];
   /** lane 別件数。 */
   laneCounts: Record<string, number>;
   ok: boolean;
@@ -131,6 +134,22 @@ const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 const CREATED_COUNT_PATTERN =
   /^control (?:0|1|≤1|1→0)(?: \([^)]*\))? \/ workload (?:0|1|≤1)(?: \([^)]*\))?$/;
 const PLACEHOLDER_PATTERN = /^(?:x|tbd|todo|n\/a|none|-|\?+)$/i;
+export const EXPECTED_MAPPING_CONTENT_DIGEST =
+  "1795fb80fb21ca043489302a213a9e8e3622945fd050d2af67614bbc22921e5e";
+export const EXPECTED_FREEZE_CONTENT_DIGEST =
+  "e828912b8a5ee253c74ea7c8e265da0c1a2b57da698fa3240f91cd0fa1ae9b91";
+
+function contentDigest(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
+}
+
+export function mappingContentDigest(rows: readonly ContractMappingRow[]): string {
+  return contentDigest(rows);
+}
+
+export function freezeContentDigest(rows: readonly FreezeAttributeRow[]): string {
+  return contentDigest(rows);
+}
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
 const EMPTY_HTML_ELEMENT_PATTERN = /<([a-z][a-z0-9-]*)\b[^>]*>\s*<\/\1>/gi;
@@ -298,6 +317,14 @@ export function analyzeResourceKernelPairMapping(input: {
     )
     .map((r) => r.id)
     .sort();
+  const contentDigestMismatch = [
+    ...(mappingContentDigest(input.mappingRows) === EXPECTED_MAPPING_CONTENT_DIGEST
+      ? []
+      : ["L5-contract-mapping"]),
+    ...(freezeContentDigest(input.freezeRows) === EXPECTED_FREEZE_CONTENT_DIGEST
+      ? []
+      : ["L8-freeze-attributes"]),
+  ];
 
   const contractsWithoutOracle = input.mappingRows
     .filter((r) => r.oracles.length === 0)
@@ -444,6 +471,7 @@ export function analyzeResourceKernelPairMapping(input: {
     rowsWithEmptyAttribute,
     rowsWithUnknownLane,
     rowsWithInvalidAttribute,
+    contentDigestMismatch,
     contractsWithoutOracle,
     contractIdsUnknown,
     contractIdsMissing,
@@ -466,6 +494,7 @@ export function analyzeResourceKernelPairMapping(input: {
       rowsWithEmptyAttribute.length === 0 &&
       rowsWithUnknownLane.length === 0 &&
       rowsWithInvalidAttribute.length === 0 &&
+      contentDigestMismatch.length === 0 &&
       contractsWithoutOracle.length === 0 &&
       contractIdsUnknown.length === 0 &&
       contractIdsMissing.length === 0 &&
@@ -531,6 +560,9 @@ export function resourceKernelPairMappingMessages(r: ResourceKernelPairMappingRe
   }
   if (r.rowsWithInvalidAttribute.length > 0) {
     msgs.push(`freeze 属性の構造又は実質が不正な行: ${r.rowsWithInvalidAttribute.join(", ")}`);
+  }
+  if (r.contentDigestMismatch.length > 0) {
+    msgs.push(`freeze済み表の内容digest不一致: ${r.contentDigestMismatch.join(", ")}`);
   }
   if (r.rowsWithUnknownLane.length > 0) {
     msgs.push(

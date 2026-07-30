@@ -447,6 +447,36 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       expect(hollowFreeze.ok).toBe(false);
       expect(hollowFreeze.rowsWithInvalidAttribute).toEqual(["IT-RGK-PHYS-001"]);
     }
+
+    const rotatedOracles = repo.mappingRows.map((row, index, rows) => ({
+      ...row,
+      oracles: rows[(index + 1) % rows.length].oracles,
+    }));
+    const swappedSummaries = repo.mappingRows.map((row, index, rows) => ({
+      ...row,
+      summary:
+        index === 0
+          ? rows[rows.length - 1].summary
+          : index === rows.length - 1
+            ? rows[0].summary
+            : row.summary,
+    }));
+    for (const mappingRows of [rotatedOracles, swappedSummaries]) {
+      const result = analyzeResourceKernelPairMapping({ ...repo, mappingRows });
+      expect(result.ok).toBe(false);
+      expect(result.contentDigestMismatch).toContain("L5-contract-mapping");
+    }
+    for (const patch of [
+      { observation: "TODO later" },
+      { createdCount: "control 0 / workload 1" },
+    ]) {
+      const result = analyzeResourceKernelPairMapping({
+        ...repo,
+        freezeRows: repo.freezeRows.map((row, index) => (index === 0 ? { ...row, ...patch } : row)),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.contentDigestMismatch).toContain("L8-freeze-attributes");
+    }
   });
 
   it("U-RGKPAIR-009: doctor hard gate が実 doc で green、改竄 doc で violation を返す", () => {
