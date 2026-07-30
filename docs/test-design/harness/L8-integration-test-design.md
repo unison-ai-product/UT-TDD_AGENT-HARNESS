@@ -14,7 +14,7 @@ related_l5_ui_detail: docs/design/harness/L5-detailed-design/ui-detail.md
 next_pair_freeze: L5
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-29
-updated: 2026-07-10
+updated: 2026-07-30
 ---
 
 # UT-TDD Agent Harness — L8 結合テスト設計 (④ / IT-*)
@@ -412,3 +412,75 @@ mock/contract laneはwireとfailure isolationを、実OS laneはcustody強制を
 
 freezeは全fixture、対象OS、required capability、観測点、negative expectedを固定し、Windows/Linux実runner不足を
 deferのままconfirmedへ昇格しない。
+
+### Resource Kernel物理統合 freeze属性（PLAN-L5-25 §7 pair-freeze条件、2026-07-30）
+
+上表の 42 case それぞれについて、`lane` / `対象OS + required capability` / `fixture` / `観測点 (保存する fact)` /
+`negative expected` / `created count (control/workload)` を本節で固定する。これが PLAN-L5-25 §7 の
+「L8で正負oracle、fixture、観測点、control/workload別created countをfreezeする」条件の実体である。
+
+`lane` の語彙は 3 値に閉じる。`mock` = mock/contract integration lane (wire・token・lease・journal・CAS を
+in-process fake と injected fault で駆動し、OS custody を主張しない)。`real-OS` = 実 runner lane
+(実 Job / 実 cgroup v2 でのみ Green を主張できる)。`mock+real-OS` = 両 lane で同一 case を実行し、
+mock Green を実 custody Green へ読み替えない。`created count` は `control` = companion control process、
+`workload` = managed root process の生成数期待値であり、`≤1` は「最大 1、超過は Red」を意味する。
+
+| ID | lane | 対象OS / required capability | fixture | 観測点 (保存する fact) | negative expected | created count (control/workload) |
+|---|---|---|---|---|---|---|
+| `IT-RGK-PHYS-001` | mock | OS非依存 / capability不要 (wire層のみ) | `fx-rgk-frame-split`: 4byte length前置frameを任意境界で分割read/write する pipe harness | decoded request ID、response correlation ID、余剰byte数 | 分割位置に依存した二重decode、余剰byte>0 | control 1 / workload 0 |
+| `IT-RGK-PHYS-002` | mock | OS非依存 / capability不要 | `fx-rgk-predecode-corpus`: oversize / partial / invalid UTF-8 / duplicate field / unknown field / trailing byte の 6 系統 corpus | `PreDispatchWireFault` kind、正規化後の`protocol_failure`件数、launcher call数、custody call数、log/receipt内のraw bytes・secret・path出現数 | validated request ID発行前のresponse>0、`protocol_failure`が2回以上または0回、launcher/custody call>0、raw bytes/secret/path保存>0 | control 1 / workload 0 |
+| `IT-RGK-PHYS-003` | mock | OS非依存 / capability不要 | `fx-rgk-response-mutate`: mutating dispatch後のresponseから ID / version / bundle digest を一要素ずつ変異 | `PostDispatchResponseFault`、`DispatchIndeterminate`の6 field、reconcile後のactual phase/fact digest | direct spawn>0、terminal seal>0、side effect 0の推測確定 | control 1 / workload ≤1 (reconcile結果に一致) |
+| `IT-RGK-PHYS-004` | mock | OS非依存 / capability不要 | `fx-rgk-idempotent-retry`: 同一 request ID + token digest + idempotency identity をtransport timeout後に再送。attempt/nonceだけ同じ別requestも投入 | pending / indeterminate / result record、idempotency identity、reconcile後のphase | process>1、replay requestの受理 | control 1 / workload ≤1 |
+| `IT-RGK-PHYS-005` | real-OS | Windows / Job object create+assign、non-inherit handle | `fx-rgk-win-crash-before-assign`: create後 assign前に client process を強制終了 | suspended root resume回数、custodian terminate/reap fact、Job empty proof | suspended root resume>0、reapなしで終了 | control 1 / workload ≤1 (suspendedのまま、resume 0) |
+| `IT-RGK-PHYS-006` | real-OS | Windows / Job object + SCM custodian、別failure domain | `fx-rgk-win-crash-after-assign`: assign成功後に launcher と client を落とす | Job handle custody保持、deadline後のJob empty proof、orphan数 | Job handle喪失、deadline後orphan>0 | control 1 / workload 1 |
+| `IT-RGK-PHYS-007` | real-OS | Linux / cgroup v2 + `clone3(CLONE_INTO_CGROUP)` | `fx-rgk-linux-start-in-cgroup`: clone/start barrier と事後attach fallback を競合させる | user code開始時点のcgroup所属、事後attach試行のcapability failure | 事後attachがhard custodyとして受理される、開始後attach | control 1 / workload 1 |
+| `IT-RGK-PHYS-008` | real-OS | Linux / subreaper + `cgroup.kill` + `cgroup.events populated` | `fx-rgk-linux-broker-crash`: broker/subreaper crash と double-fork を同時に起こす | reconcile後の`populated`値、zombie数、managed orphan数 | `populated!=0`、zombie>0、managed orphan>0 | control ≤1 (再起動broker) / workload 1 |
+| `IT-RGK-PHYS-009` | mock+real-OS | 両OS / custody terminate + empty proof | `fx-rgk-root-exit-race`: root先行exit と terminate/cancel を競合投入 | custody state遷移列、root exit fact、empty+reap proof、terminal receipt発行時刻 | root exitでterminal返却、empty/reap前のterminal | control 1 / workload 1 |
+| `IT-RGK-PHYS-010` | mock | OS非依存 / capability不要 (failure domain injection) | `fx-rgk-fault-domains`: pre-decode fault、post-dispatch pipe/decode/correlation fault、companion crash、journal crash を別domainとして注入 | 各domainのfault kind、side effect数、indeterminate→reconcile→actual phase列、片肺(journalのみ/nativeのみ)検出 | pre-decodeでside effect>0、post-dispatchで確定前terminal receipt>0、片肺>0 | control ≤1 / workload ≤1 |
+| `IT-RGK-PHYS-011` | mock+real-OS | 両OS / capability欠落・権限不足を再現 (Windows: Job作成権限剥奪 / Linux: cgroup write不可) | `fx-rgk-capability-absent`: unsupported OS stub、権限不足、required capability空 | probe fact、capability集合、`control_process_created`と`managed_root_created`の別値、拒否理由 | managed workload生成後の拒否、soft fallback>0、capability集合の共通最小への丸め | control 1 / workload 0 |
+| `IT-RGK-PHYS-012` | mock | OS非依存 / bundle検証のみ | `fx-rgk-bundle-mutate`: binary / schema / target / signature / SBOM を各一箇所変異した 5 bundle | admission前の`bundle_failure`、PATH探索call数、download call数 | admission通過、PATH探索>0、download>0 | control 0 / workload 0 |
+| `IT-RGK-PHYS-013` | mock | OS非依存 / trust + activation port | `fx-rgk-rollback-resign`: 旧componentを旧manifestで直接復帰、および floor超sequenceで再review・再署名した新manifest | 旧manifest復帰の拒否理由、新manifestのcompanion/protocol/D0-N receipt照合結果、実OS oracle再通過記録 | 旧manifest直接復帰の受理、oracle再通過なしのactivate | control ≤1 (新manifest受理時のみ) / workload 0 |
+| `IT-RGK-PHYS-014` | mock+real-OS | 両OS / Node + Cargo のみ (Bun binary・lockfile・APIを環境から除去) | `fx-rgk-bun-absent`: PATHからBunを除去し Bun lockfile / Bun API 参照を持たない lane で同一wire/custody oracleを実行 | Bun invocation数、実行したwire/custody oracle ID集合 | Bun invocation>0、Bun不在で実行不能となるoracle>0 | control 1 / workload ≤1 |
+| `IT-RGK-PHYS-015` | mock | OS非依存 / journal durability | `fx-rgk-barrier-crash`: verified companionへprobe後、journal append前/後、token seal前/後の 4 点でcrash | probe digest、journal append記録、token seal記録、再開時に使用したprobe digest/token | barrier前のmanaged root>0、同一probe digest/tokenの2回使用 | control 1 / workload 0 (barrier前) |
+| `IT-RGK-PHYS-016` | mock | OS非依存 / token authenticator port | `fx-rgk-token-mutate`: `AdmissionStageTokenV1`のexecution/spec/bundle/attempt/custody/executor/boot/deadline/policy/authenticator を各変異、同nonce別payload、旧variant、各stateの`release_custody`を投入 | 拒否境界 (decode前/verify前/dispatch前)、custody作成数、managed root数、fact再利用検出、release前提条件 | 不正tokenでcustody/managed root>0、別execution/bundle factの再利用、empty/reap fact commit前のrelease | control 1 / workload 0 |
+| `IT-RGK-PHYS-017` | mock+real-OS | 両OS / custody create + attach | `fx-rgk-nonce-executor`: custody nonce予約/再利用/別execution移送、executor arm/lease/attach/commit の前後crash、prepared又はsuspendedでdeadline/cancel | nonce予約record、custody identity、state遷移列 (`prepared`/`attached_suspended`→`terminating`→`empty_proven`→`released`)、resume数、実phase receipt | 不正nonceでcreate>0、resume>0、commit後にexecutorがcustodyを失う | control 1 / workload ≤1 |
+| `IT-RGK-PHYS-018` | mock | OS非依存 / CAS + native observation signer | `fx-rgk-authority-cas`: authority crash後にRust native observation / journal / current epoch を各変異し、TS `recoverAuthority`をCAS競合させる | Rust側delta (fact以外)、CAS勝者のepoch値、lease+trace commit atomicity、敗者delta | Rustがfact以外のdeltaを持つ、変異/stale/replayでreissue>0、敗者delta>0、winnerが2以上 | control 1 / workload 0 |
+| `IT-RGK-PHYS-019` | mock | OS非依存 / `BundleTrustPort` | `fx-rgk-trust-binding`: bundle内key、未reviewのsigner、signature substitution の 3 系統 | trust decision digest、policy revision、binding照合結果、control process生成数 | binding不一致でcontrol process>0 | control 0 / workload 0 |
+| `IT-RGK-PHYS-020` | mock | OS非依存 / manifest schema digest | `fx-rgk-manifest-mutate`: manifestのbundle revision / component digest / schema / target を各変異 | verified handle発行数、不一致要素の識別 | 一要素不一致でverified handle>0 | control 0 / workload 0 |
+| `IT-RGK-PHYS-021` | mock | OS非依存 / accepted-sequence fact store | `fx-rgk-activation-sequence`: `F-1`、`F+同digest`、`F+別digest`の 3 manifestを順に再activation | 拒否分類 (stale / replay / equivocation)、current bundle、accepted fact、control launch数 | 正規署名を理由とした受理、current bundle/accepted factの変化、control launch>0 | control 0 / workload 0 |
+| `IT-RGK-PHYS-022` | mock | OS非依存 / accepted-sequence fact store | `fx-rgk-rollback-floor`: 現在floorより厳密に大きいsequenceの再署名manifestと、同sequence以下のmanifestを併走 | sequence比較結果、trust/component/target再検証記録、activate候補判定 | 同sequence以下のactivate>0、再検証なしのactivate | control 0 / workload 0 |
+| `IT-RGK-PHYS-023` | mock | OS非依存 / `TrustDecisionPort` | `fx-rgk-trust-port-absent`: trust port missing / unknown version / failure の 3 系統 | fail-close理由、PATH探索call数、download call数、direct spawn call数、利用停止状態 | PATH探索・download・direct spawnへのfallback>0 | control 0 / workload 0 |
+| `IT-RGK-PHYS-024` | mock | OS非依存 / activation port | `fx-rgk-activation-fail`: activation port failureを各公開barrierで注入 | 各barrierでの公開状態、観測されたbundle (旧verified / 利用停止)、partial publish検出 | partial publish>0、未検証bundleの観測 | control 0 / workload 0 |
+| `IT-RGK-PHYS-025` | mock | OS非依存 / bundle identity照合 | `fx-rgk-receipt-revert`: companion / protocol / D0-N generation receipt の一要素だけを旧値へ戻す | bundle identity照合結果、拒否理由、control process生成数、許可されたrollback形式 | identity不一致でcontrol process>0、floor超再署名以外のrollback受理 | control 0 / workload 0 |
+| `IT-RGK-PHYS-026` | mock | OS非依存 / D0 defer境界 | `fx-rgk-deferred-ownership`: D0 adapterへ鍵rotation、signed clock、re-anchor、物理log依存を注入 | deferred ownership違反検出、抽象port境界の維持 | 注入がGreenとして通る、port境界に具体PKI/time/storageが露出 | control 0 / workload 0 |
+| `IT-RGK-PHYS-027` | real-OS | 両OS / Windows: Job create+assign+resume / Linux: cgroup v2 + `clone3(CLONE_INTO_CGROUP)` | `fx-rgk-positive-chain`: create→spawn→resume の完全positive chain (stage token 3枚) | stage token 3枚の消費列、predecessor fact digest連鎖、custody identity、root identity、適用limit | token流用、predecessor fact不連鎖、custody>1、root>1 | control 1 / workload 1 |
+| `IT-RGK-PHYS-028` | mock | OS非依存 / dispatch record store | `fx-rgk-dispatch-digests`: 各stageで消費+pending commit、side effect、indeterminate、reconciled、result の前後にcrashし、4 digestとphase/fact digestを各変異してretry | 全stateのrequest digest継承、reconciled後retryのnative再実行数、result commit、custody/root数 | request digest継承欠落、reconciled一致時にnative再実行>0、変異・record欠測の受理、custody/root増殖 | control 1 / workload ≤1 |
+| `IT-RGK-PHYS-029` | mock+real-OS | 両OS / durable deadline executor | `fx-rgk-deadline-race`: effective deadline直前/同時/直後のspawn/resume と cleanup CAS を競合 | wall/monotonic観測点、`effective_deadline_monotonic_ms`、cleanup lease発行数、state遷移方向 | deadline後execution>0、cleanup lease>1、`cleanup_only`から`live`への復帰 | control 1 / workload ≤1 (deadline前のみ) |
+| `IT-RGK-PHYS-030` | mock | OS非依存 / recovery deadline policy | `fx-rgk-recovery-overdue`: recovery deadline超過後のexecutor/supervisor動作 | overdue fact、新規admission遮断記録、kill/reap/release の実行継続記録 | overdue factなし、admission遮断なし、terminate/prove/releaseの拒否 | control ≤1 / workload ≤1 |
+| `IT-RGK-PHYS-031` | mock | OS非依存 / same-boot recovery observation | `fx-rgk-same-boot-restart`: Node/authority の same-boot再起動をCAS競合させる | CAS勝者、発行lease variant (`CleanupAuthorityLeaseV1`)、旧epoch commandの拒否 | 敗者へのlease発行、旧epoch受理、生成/attach/resume>0 | control ≤1 / workload 0 |
+| `IT-RGK-PHYS-032` | mock+real-OS | 両OS / host reboot fixture (boot ID変化)、cross-boot fact観測 | `fx-rgk-cross-boot`: host rebootのRust cross-boot observationをTS CASへ競合投入し、replayも併走 | boot ID対、`platform_boot_fact_digest`、boot-fenced lease、trace、empty→release→unblock列、Rust/敗者/replayのdelta | Rust/敗者/replayのdelta>0、boot-fenced以外のlease発行、empty proof先取り | control ≤1 / workload 0 |
+| `IT-RGK-PHYS-033` | mock | OS非依存 / quarantine + admission block | `fx-rgk-boot-fence-missing`: cross-boot observation欠損、boot chain不一致、旧custody identity再利用 | quarantine状態、admission block記録、新lease発行数、managed root数 | quarantine解除、admission block解除、新lease>0、root>0 | control 0 / workload 0 |
+| `IT-RGK-PHYS-034` | mock+real-OS | 両OS / custody release + authority revoke + deadline executor disarm | `fx-rgk-release-barriers`: empty fact commitからcontrol shutdownまで各barrierでcrash | 順序記録 (release→fact→disarm→revoke+released atomic→terminal seal→shutdown)、二重release検出、revoke後の未完操作、survivor数 | 二重release>0、revoke後の未完操作>0、早期seal、survivor>0 | control 1 / workload 0 (release時点) |
+| `IT-RGK-PHYS-035` | mock | OS非依存 / shutdown precondition評価 | `fx-rgk-shutdown-preconditions`: active custody、pending response、未解決pending-dispatch、indeterminate、reconciled-without-result、未flush terminal outbox を一つずつ残して`shutdown_companion` | 各caseのshutdown実行数、custody delta、authority delta、全条件解消後のshutdown | 未解消条件でcontrol shutdown>0、custody/authority delta>0 | control 1→0 (全条件解消時のみ) / workload 0 |
+| `IT-RGK-PHYS-036` | mock | OS非依存 / authority mode journal | `fx-rgk-authority-modes`: deadline/cancel、host reboot、empty/release を組み合わせ authority mode の全 from/to を駆動 | 実行された辺の集合 (合法 5 辺)、journal+lease/fact同時commit、不正辺のauthority/OS delta | 合法5辺以外の実行、backward/self/skipでのdelta>0、`revoked`からの再開 | control ≤1 / workload ≤1 |
+| `IT-RGK-PHYS-037` | real-OS | 両OS / descendant tracking + empty proof | `fx-rgk-descendant-delay`: 正常root exit と descendant遅延exit | cleanup lease遷移、descendant生存記録、empty/reap proof、release→disarm→revoke+released→terminal seal列 | descendantのempty/reap前release>0、root exit単独のterminal | control 1 / workload 1 |
+| `IT-RGK-PHYS-038` | mock | OS非依存 / lease authenticator port | `fx-rgk-lease-cross-dispatch`: 3 lease variantを各operationへcross-dispatchし、schema / mode / boot field も一要素ずつ変異 | operation×variant合法表との一致、拒否時点 (decode前 / dispatch前)、実行されたoperation集合 | 表外組合せの実行、boot-fenced terminate、旧boot monotonic fieldの受理、variant外fieldの通過 | control 1 / workload 0 |
+| `IT-RGK-PHYS-039` | mock | OS非依存 / pinned native signer + `BundleTrustPort` verifier | `fx-rgk-observation-mutate`: same/cross observation全field、signer key/policy、variant forbidden field をmutation | signer identity、verifier判定、CAS/lease/trace実行数 | pinned signer以外でGreen、unknown/別bundle key受理、field混同・自己包含の通過、CAS/lease/trace>0 | control 1 / workload 0 |
+| `IT-RGK-PHYS-040` | mock+real-OS | 両OS / Rust fact lane と TS transaction lane を個別crash可能 | `fx-rgk-recovery-lanes`: same/cross-boot recoveryでRust fact laneとTS transaction laneを個別にcrash/spy | Rust側のDB/CAS/lease/trace delta、TS側のfact+journal/current epoch一致確認、CAS+lease+trace atomic commit、crash retryごとのwinner数 | Rustがnative fact以外のdeltaを持つ、TSが一致確認前にcommit、winner!=1、重複>0 | control ≤1 / workload 0 |
+| `IT-RGK-PHYS-041` | mock | OS非依存 / response decode層 | `fx-rgk-response-inject`: mutating dispatch後のresponseへ oversize / partial / invalid UTF-8 / JSON / schema / trailing / mismatch を各注入 | 全caseの`PostDispatchResponseFault`、`DispatchIndeterminate`、terminal seal数、actual native fact後のresult/receipt | side effect 0の推測、terminal seal>0、native fact確定前のresult/receipt | control 1 / workload ≤1 |
+| `IT-RGK-PHYS-042` | mock+real-OS | 両OS / `CustodyReleasePort.ensureAbsent` + custody_generation | `fx-rgk-release-generation`: release各barrierでcrashさせ、raw OS identityの別`custody_generation`再利用を競合投入 | `release_id`、`CustodyAbsentFact`、削除effect数、quarantine fact、Rust側marker/DB delta、disarm/revoke順序 | 別generationの削除>0、quarantineなし、effect>1、Rust marker/DB delta>0、fact前のdisarm | control 1 / workload 0 |
+
+lane別の内訳は次のとおりで、合計は 27 + 6 + 9 = 42 件 (上表の全行)。上表の `lane` 列が正本であり、
+この一覧は同じ集合の再掲である。
+
+- `mock` 27 件: `001`、`002`、`003`、`004`、`010`、`012`、`013`、`015`、`016`、`018`、`019`、`020`、`021`、`022`、`023`、`024`、`025`、`026`、`028`、`030`、`031`、`033`、`035`、`036`、`038`、`039`、`041`
+- `real-OS` 6 件: Windows専用 `005`、`006` / Linux専用 `007`、`008` / 両OS `027`、`037`
+- `mock+real-OS` 9 件: `009`、`011`、`014`、`017`、`029`、`032`、`034`、`040`、`042`
+
+実 runner 証拠を要する case は `real-OS` 6 件 + `mock+real-OS` 9 件 = 15 件であり、この 15 件が
+PLAN-L5-25 の confirmed 昇格を律速する。残る 27 件は mock/contract lane だけで Red-freeze / Green 判定が閉じる。
+
+**この freeze が主張しないこと (誤読防止)**: 本節は fixture・観測点・negative expected・created count の
+**設計固定**であり、実行実測ではない。`real-OS` / `mock+real-OS` lane の Windows/Linux 実 runner 証拠は
+未取得であり、PLAN-L5-25 の `status: confirmed` 昇格条件は本節の freeze ではなく実 runner 証跡である
+(条件分離は PLAN-L5-25 §0.1 / §7.2 が保持する)。mock lane Green を Job/cgroup Green へ読み替えない。
