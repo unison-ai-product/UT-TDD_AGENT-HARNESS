@@ -128,7 +128,7 @@ function isBlankMarkdownCell(value: string): boolean {
   let normalized = decodeHTML(value)
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<br\s*\/?>/gi, "")
-    .replace(/<[^>]+>/g, "")
+    .replace(/<(?:[^>"']|"[^"]*"|'[^']*')+>/g, "")
     .replace(/!?\[([^\]]*)\](?:\([^)]*\)|\[[^\]]*\])/g, "$1")
     .replace(/[*_~`]+/g, "");
   let previous: string;

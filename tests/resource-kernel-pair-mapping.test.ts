@@ -343,6 +343,7 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       "<!-- -->",
       "<span></span>",
       "<span><em></em></span>",
+      '<span title=">"></span>',
       "<span/>",
       "<wbr>",
       "[&zwnj;](#)",
