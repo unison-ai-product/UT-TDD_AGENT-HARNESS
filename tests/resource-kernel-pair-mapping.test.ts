@@ -277,6 +277,57 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       "real-OS",
     ]);
     expect(declarationsRemoved.realRunnerTotalMismatch).toEqual({ declared: null, counted: 15 });
+
+    const redistributedRows = repo.freezeRows.map((row) =>
+      row.lane === "mock+real-OS" ? { ...row, lane: "real-OS" } : row,
+    );
+    const redistributedDeclarations: LaneDeclaration[] = [
+      {
+        lane: "mock",
+        declaredCount: 27,
+        ids: redistributedRows.filter((row) => row.lane === "mock").map((row) => row.id),
+      },
+      {
+        lane: "real-OS",
+        declaredCount: 15,
+        ids: redistributedRows.filter((row) => row.lane === "real-OS").map((row) => row.id),
+      },
+      { lane: "mock+real-OS", declaredCount: 0, ids: [] },
+    ];
+    const redistributed = analyzeResourceKernelPairMapping({
+      ...repo,
+      freezeRows: redistributedRows,
+      laneDeclarations: redistributedDeclarations,
+      declaredRealRunnerTotal: 15,
+    });
+    expect(redistributed.ok).toBe(false);
+    expect(redistributed.laneDeclarationMismatch).toEqual([]);
+    expect(redistributed.realRunnerTotalMismatch).toBeNull();
+    expect(redistributed.laneCountMismatch).toEqual([
+      { lane: "real-OS", expected: 6, actual: 15 },
+      { lane: "mock+real-OS", expected: 9, actual: 0 },
+    ]);
+
+    const duplicateDeclaration = analyzeResourceKernelPairMapping({
+      ...repo,
+      laneDeclarations: [...repo.laneDeclarations, repo.laneDeclarations[0]],
+    });
+    expect(duplicateDeclaration.ok).toBe(false);
+    expect(duplicateDeclaration.laneDeclarationsDuplicated).toEqual(["mock"]);
+  });
+
+  it("U-RGKPAIR-010: HTML/Unicodeの空欄placeholderを充填済みとして扱わない", () => {
+    const repo = loadRepoRows();
+    for (const placeholder of ["&nbsp;", "\u00a0", "\u200b", "\ufeff", "<br>"]) {
+      const result = analyzeResourceKernelPairMapping({
+        ...repo,
+        freezeRows: repo.freezeRows.map((row, index) =>
+          index === 0 ? { ...row, fixture: placeholder } : row,
+        ),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.rowsWithEmptyAttribute).toEqual(["IT-RGK-PHYS-001"]);
+    }
   });
 
   it("U-RGKPAIR-009: doctor hard gate が実 doc で green、改竄 doc で violation を返す", () => {
@@ -319,6 +370,29 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       expect(result.messages.join(" ")).toContain("実 runner lane");
     } finally {
       allMock.cleanup();
+    }
+
+    const redistributed = mutatedRepo(({ l8, l5 }) => ({
+      l8: l8
+        .replace(/^(\| `IT-RGK-PHYS-\d{3}` \| )mock\+real-OS( \|)/gm, "$1real-OS$2")
+        .replace(/^- `real-OS` 6 件.*$/m, (line) =>
+          line
+            .replace("6 件", "15 件")
+            .replace(/$/, "、`011`、`012`、`016`、`018`、`019`、`028`、`031`、`035`、`036`"),
+        )
+        .replace(/^- `mock\+real-OS` 9 件.*$/m, "- `mock+real-OS` 0 件: (なし)")
+        .replace(
+          /`real-OS` 6 件 \+ `mock\+real-OS` 9 件 = 15 件/,
+          "`real-OS` 15 件 + `mock+real-OS` 0 件 = 15 件",
+        ),
+      l5,
+    }));
+    try {
+      const result = checkResourceKernelPairMapping(redistributed.root);
+      expect(result.ok).toBe(false);
+      expect(result.messages.join(" ")).toContain("lane 固定件数不一致");
+    } finally {
+      redistributed.cleanup();
     }
 
     const unreadable = mkdtempSync(join(tmpdir(), "rgk-pair-empty-"));

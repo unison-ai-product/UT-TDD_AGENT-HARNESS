@@ -44,6 +44,10 @@ export interface ResourceKernelPairMappingResult {
   oracleIdsDuplicated: string[];
   /** lane 別内訳の宣言が読めなかった lane (宣言不在は fail-close)。 */
   laneDeclarationsMissing: string[];
+  /** 同じ lane の再掲宣言が複数ある lane。 */
+  laneDeclarationsDuplicated: string[];
+  /** 設計で固定した lane 件数 (mock=27 / real-OS=6 / mock+real-OS=9) との不一致。 */
+  laneCountMismatch: { lane: string; expected: number; actual: number }[];
   /** 宣言 lane 内訳と表の lane 列が食い違う点。 */
   laneDeclarationMismatch: {
     lane: string;
@@ -80,6 +84,11 @@ export interface ResourceKernelPairMappingResult {
 
 /** freeze 属性表で許可する lane 語彙。mock Green を実 OS custody Green へ読み替えないための 3 値。 */
 export const ALLOWED_LANES = ["mock", "real-OS", "mock+real-OS"] as const;
+export const EXPECTED_LANE_COUNTS: Readonly<Record<(typeof ALLOWED_LANES)[number], number>> = {
+  mock: 27,
+  "real-OS": 6,
+  "mock+real-OS": 9,
+};
 
 /**
  * L5 物理契約の期待件数。§7.1 は「58 分割の exact 集合」を主張するため、42 oracle 側だけでなく
@@ -111,6 +120,12 @@ export const REAL_RUNNER_LANES = ["real-OS", "mock+real-OS"] as const;
 const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
+const MARKDOWN_BLANK_PATTERN = /^(?:&nbsp;|&#160;|<br\s*\/?>)*$/i;
+
+function isBlankMarkdownCell(value: string): boolean {
+  const normalized = value.replace(/[\s\u00a0\u200b\u2060\ufeff]|\u200c|\u200d/g, "");
+  return normalized.length === 0 || MARKDOWN_BLANK_PATTERN.test(normalized);
+}
 
 /** markdown の見出し配下 (次の同レベル以上の見出しまで) を切り出す。 */
 export function sliceSection(markdown: string, headingPrefix: string): string {
@@ -226,7 +241,7 @@ export function analyzeResourceKernelPairMapping(input: {
   const rowsWithEmptyAttribute = input.freezeRows
     .filter((r) =>
       [r.lane, r.platform, r.fixture, r.observation, r.negativeExpected, r.createdCount].some(
-        (c) => c.length === 0,
+        isBlankMarkdownCell,
       ),
     )
     .map((r) => r.id)
@@ -289,9 +304,25 @@ export function analyzeResourceKernelPairMapping(input: {
   // 宣言不在も violation にする (宣言を消せば検査が消える fail-open を作らない)。
   const declarations = input.laneDeclarations ?? [];
   const declaredLanes = new Set(declarations.map((d) => d.lane));
+  const declarationOccurrences = new Map<string, number>();
+  for (const declaration of declarations) {
+    declarationOccurrences.set(
+      declaration.lane,
+      (declarationOccurrences.get(declaration.lane) ?? 0) + 1,
+    );
+  }
   const laneDeclarationsMissing = (ALLOWED_LANES as readonly string[])
     .filter((lane) => !declaredLanes.has(lane))
     .sort();
+  const laneDeclarationsDuplicated = [...declarationOccurrences.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([lane]) => lane)
+    .sort();
+  const laneCountMismatch = ALLOWED_LANES.flatMap((lane) => {
+    const actual = laneCounts[lane] ?? 0;
+    const expected = EXPECTED_LANE_COUNTS[lane];
+    return actual === expected ? [] : [{ lane, expected, actual }];
+  });
   const laneDeclarationMismatch: ResourceKernelPairMappingResult["laneDeclarationMismatch"] = [];
   for (const declaration of declarations) {
     const tableIds = input.freezeRows
@@ -338,6 +369,8 @@ export function analyzeResourceKernelPairMapping(input: {
     oracleIdsUnknown,
     oracleIdsDuplicated,
     laneDeclarationsMissing,
+    laneDeclarationsDuplicated,
+    laneCountMismatch,
     laneDeclarationMismatch,
     realRunnerTotalMismatch,
     oraclesMissingFromMapping,
@@ -355,6 +388,8 @@ export function analyzeResourceKernelPairMapping(input: {
       oracleIdsUnknown.length === 0 &&
       oracleIdsDuplicated.length === 0 &&
       laneDeclarationsMissing.length === 0 &&
+      laneDeclarationsDuplicated.length === 0 &&
+      laneCountMismatch.length === 0 &&
       laneDeclarationMismatch.length === 0 &&
       realRunnerTotalMismatch === null &&
       oraclesMissingFromMapping.length === 0 &&
@@ -385,6 +420,14 @@ export function resourceKernelPairMappingMessages(r: ResourceKernelPairMappingRe
   }
   if (r.laneDeclarationsMissing.length > 0) {
     msgs.push(`lane 別内訳の宣言が無い lane: ${r.laneDeclarationsMissing.join(", ")}`);
+  }
+  if (r.laneDeclarationsDuplicated.length > 0) {
+    msgs.push(`lane 別内訳の宣言が重複する lane: ${r.laneDeclarationsDuplicated.join(", ")}`);
+  }
+  for (const mismatch of r.laneCountMismatch) {
+    msgs.push(
+      `lane 固定件数不一致 (${mismatch.lane}): 期待 ${mismatch.expected} 件 / 実数 ${mismatch.actual} 件`,
+    );
   }
   for (const m of r.laneDeclarationMismatch) {
     msgs.push(
