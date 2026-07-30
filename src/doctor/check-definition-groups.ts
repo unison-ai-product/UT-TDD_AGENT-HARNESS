@@ -19,6 +19,7 @@ import {
   checkEntityCoverage,
   checkFrRegistryAudit,
   checkResourceKernelFixtureManifest,
+  checkResourceKernelPairMapping,
 } from "./doc-registry";
 import {
   checkAssetDrift,
@@ -279,6 +280,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("resource-kernel-fixture-manifest", () =>
           checkResourceKernelFixtureManifest(deps.repoRoot),
         ),
+        full("resource-kernel-pair-mapping", () => checkResourceKernelPairMapping(deps.repoRoot)),
       ],
     },
     {

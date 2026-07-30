@@ -404,4 +404,104 @@ doctor hard gate `resource-kernel-fixture-manifest` (`src/doctor/doc-registry.ts
 (§7.2 (B)) であり、既にmerge済み・検証済みの機械検査成果物の完了判定とは別クロックで進むため、
 同一PLANで両方を所有すると `merged-plan-status` と `deliverable-plan-trace` が両立不能になる
 (PR #196 merge後にmainが実際にfail-closeした。open issue #162 の post-merge 罠の実例)。本PLANはfixture正本yamlを含む
-docs成果物のみを所有し、機械検査の所在はここから辿る。
+docs成果物のみを所有し、機械検査の所在はここから辿る。本節 §7.1 の写像用機械検査
+(`src/lint/resource-kernel-pair-mapping.ts` / `tests/resource-kernel-pair-mapping.test.ts`) も
+同じ理由で `PLAN-L7-469` が所有する。
+
+### 7.1 L5物理契約 → L8 oracle 全数写像 (孤児 0)
+
+`pass-weak` の未充足理由の一つは「L5全物理契約から42 IDへの全数写像が無い」ことであった。本節が
+その写像を持つ。左列は§1〜§6の物理契約を分解した契約 ID、右列は被覆する `IT-RGK-PHYS-*` である。
+**双方向で孤児 0** を要求する: 契約側に被覆 oracle 0 の行は無く、42 ID 側にも本表へ現れない ID は無い。
+この主張は散文ではなく機械検査する: 突合ロジックは `src/lint/resource-kernel-pair-mapping.ts`、
+実 repo 回帰は `tests/resource-kernel-pair-mapping.test.ts`、CI 強制は doctor hard gate
+`resource-kernel-pair-mapping` (`src/doctor/doc-registry.ts` 経由で配線) である。
+
+| 契約 ID | 出典 | 物理契約 (要約) | 被覆 oracle |
+|---|---|---|---|
+| `C-RGK-01` | §1 | TS control planeの所有禁止 (Job/cgroup事実捏造、direct spawn fallback、Rustへdomain判断委譲) | `003`, `011`, `023` |
+| `C-RGK-02` | §1 | `CustodyClient`責務 (shell無しargv起動、bounded framed I/O、correlation、transport deadline、probe factのjournal化、admission token送信、protocol error正規化) | `001`, `002`, `015` |
+| `C-RGK-03` | §1 | `CustodyClient`所有禁止 (policy決定、receipt seal、PATH探索、Bun API、handshakeだけでworkload開始) | `014`, `016`, `023` |
+| `C-RGK-04` | §1 | Rust companion責務 (strict decode/encode、OS probe、admission token照合、開始前custody作成・attach・resume、limit適用、terminate・empty/reap proof) | `002`, `016`, `027` |
+| `C-RGK-05` | §1 | Rust companion所有禁止 (PLAN/GitHub/DB/CAS判断、admission policy、terminal success判定、SQLite journal、空required capabilityでのexecute受理) | `011`, `018`, `040` |
+| `C-RGK-06` | §1 | Windows custodian/supervisor (non-inherit Job handleを別failure domainで保持、SCM reconcile、tree emptyをOS identityで証明、PID pollingをproofとしない、attach前resume禁止) | `005`, `006` |
+| `C-RGK-07` | §1 | Linux broker/subreaper (cgroup v2 identity、`clone3(CLONE_INTO_CGROUP)`、subreaper、`cgroup.kill`、`populated=0`+reap、事後attachをhard custodyとしない) | `007`, `008` |
+| `C-RGK-08` | §1 | Bun binary / Bun API / Bun test runnerを新経路へ一切導入しない | `014` |
+| `C-RGK-09` | §2 | length-prefixed UTF-8 JSON frame (4byte BE length、改行区切り・EOF推測・複数JSON連結を受理しない) | `001`, `002` |
+| `C-RGK-10` | §2 | request必須field集合と、unknown field/enum・duplicate key・非canonical number・末尾byteの拒否 | `002` |
+| `C-RGK-11` | §2 | response排他union、`PreDispatchWireFault`→境界で`protocol_failure`へexactly once正規化、side effect 0 | `002`, `010` |
+| `C-RGK-12` | §2 | `PostDispatchResponseFault`→`DispatchIndeterminate`(6要素)遷移。side effect 0やterminal`protocol_failure`へ推測しない | `003`, `010`, `041` |
+| `C-RGK-13` | §2 | schema正本はTS versioned schema、canonical schema digest、digest不一致bundleは起動前拒否 | `012`, `020` |
+| `C-RGK-14` | §2 | stdoutはprotocol専用、診断はbounded stderr、secret/raw env/署名鍵/payload本文をlog・receiptへ複製しない | `002` |
+| `C-RGK-15` | §3 | protocol envelopeは5 variant closed union、`ProbeRequest`はworkload launcher参照を型として持たない | `011`, `038` |
+| `C-RGK-16` | §3 | `AdmissionStageTokenV1`のexact field集合と、`authenticator`自身だけを除くcanonical preimage | `016` |
+| `C-RGK-17` | §3 | token無し・空required capability・期限切れ・別probe・別attemptではcustody作成/spawn/resumeをすべて0、`managed_root_created=false` | `011`, `016` |
+| `C-RGK-18` | §3 | handshake成功をexecute許可へ暗黙昇格しない | `015` |
+| `C-RGK-19` | §3 | `custody_nonce`はOS identityでなくcreation nonce。未予約・再利用・別execution/specへの移送をside effect前に拒否 | `017` |
+| `C-RGK-20` | §3 | 1 operation = 1 token (`sequence` 1/2/3)、各token nonce相異、直前phaseとcurrent leaseのjournal確認後だけ次token発行、3 token消費を同一attemptへdurable化 | `016`, `027` |
+| `C-RGK-21` | §3 | `AuthorityLeaseV1`共通必須field + variant固有schema + 表から導出する固定`allowed_operations`、表外fieldは全拒否 | `038` |
+| `C-RGK-22` | §3 | `BootFencedCleanupLeaseV1`は旧boot monotonic fieldを持たず、`cleanup_deadline_monotonic_ms`を現bootで非延長再導出 | `032`, `033` |
+| `C-RGK-23` | §3 | `RecoveryObservationCommand`はnative observation factを返すが、authority state/epoch/lease/journal deltaは常に0 | `018`, `040` |
+| `C-RGK-24` | §3 | `RecoveryCustodyCommand`の4 operationとvariant必須対応。control process終了は`ControlCommand.shutdown_companion`へ分離 | `035`, `038` |
+| `C-RGK-25` | §3 | same-boot / cross-boot observationのexact field集合と禁止field (旧boot monotonic deadline、authority mode、lease、launcher/resume field) | `039` |
+| `C-RGK-26` | §3 | `NativeObservationSignerPort.seal` と、`BundleTrustPort`検証済 signer/policy revisionだけをtrust inputとする`RecoveryObservationAuthenticatorPort.verify` | `019`, `039` |
+| `C-RGK-27` | §3 | observationとdurable journal/current epochの全一致後にCASでepoch+1し、same-bootは`CleanupAuthorityLeaseV1`、cross-bootは`BootFencedCleanupLeaseV1`だけを返す | `018`, `031`, `032` |
+| `C-RGK-28` | §3 | `release_custody`は`empty_proven`+reap proofを事前条件とし、running/terminatingでは拒否してexecutor/authorityを維持 | `037`, `042` |
+| `C-RGK-29` | §3 | `shutdown_companion`の4前提条件 (active custody 0、pending response 0、未解決dispatch 0、terminal outbox flush済) とcustody state不変 | `035` |
+| `C-RGK-30` | §3 | 各responseは`control_process_created`と`managed_root_created`を別fieldで返す | `011`, `015` |
+| `C-RGK-31` | §3 | `spawn_attached`のplatform意味論 (WindowsはJob assign後だけresume可、Linuxは最初のuser instruction前にtarget cgroup所属) | `005`, `007`, `027` |
+| `C-RGK-32` | §3 | native factはcustody identity・root identity・適用limit・monotonic observation・OS error identityを返し、`success`やdomain verdictを返さない | `009`, `027` |
+| `C-RGK-33` | §3 | stage dispatch recordの状態機械と、`request_digest`をpending/indeterminate/reconciled/result全stateへ継承 | `028` |
+| `C-RGK-34` | §3 | idempotency identityの定義と、新request ID・別payload・record不在の再送をlogical replayとして拒否 (token再消費なし) | `004`, `028` |
+| `C-RGK-35` | §4 | custody lifecycle 7 stateと各不変条件 (root exit単独をterminalにしない、attach失敗/deadline/cancel時resume 0 ほか) | `009`, `017`, `037` |
+| `C-RGK-36` | §4 | authority modeを`live → cleanup_only → revoked`で管理し`live`へ戻る辺を持たない。CAS敗者はlease 0 | `029`, `036` |
+| `C-RGK-37` | §4 | probe/execution間のdurability barrier (control process起動事実・probe digest・capability集合のjournal append → token seal → `prepared`) | `015` |
+| `C-RGK-38` | §4 | client切断/launcher crash後もcustodian/brokerがdeadlineとtermination policyを保持し、reconnectはbundle identity・attempt・custody nonceを照合 | `006`, `008` |
+| `C-RGK-39` | §4 | release順序 (journal `custody_empty` → `release_custody` → platform release fact → executor disarm → authority revoke+released atomic → finished → sealed receipt) を再開可能なterminal transactionで閉じる | `034` |
+| `C-RGK-40` | §4 | `release_id`とRust `CustodyReleasePort.ensureAbsent`の冪等absence (因果を主張しない、effect遷移は最大1、Rust側durable DB/marker追加禁止) | `042` |
+| `C-RGK-41` | §4 | custody identityは非再利用`custody_generation`を含み、別generationでの再利用は削除せず`custody_identity_reused`でquarantine | `042` |
+| `C-RGK-42` | §4.1 | `CustodyAuthority` / `RecoverySupervisor` / `DurableDeadlineExecutor`のidentity分離と、executorを他2processと同一failure domainへ置かない | `029`, `030`, `034` |
+| `C-RGK-43` | §4.1 | companionはleaseを照合してからatomic attachし、`handoff_committed`をauthorityとjournalが同じnonceで観測するまでresume/execしない | `017`, `027` |
+| `C-RGK-44` | §4.1 | token verifierの`wall_now`/`monotonic_now`同一観測点sealing、skew超過・wall rollback/forward不整合の開始前拒否、開始後の再計算禁止 | `029` |
+| `C-RGK-45` | §4.1 | `recovery_grace_ms`制約と、recovery deadlineがcleanup権限の失効時刻でないこと (超過時はoverdue fact + 新規admission遮断、terminate/prove/releaseは拒否しない) | `030` |
+| `C-RGK-46` | §4.1 | same-boot / cross-bootのobservation分離と、旧epoch・旧bootの通常command拒否 | `031`, `032`, `040` |
+| `C-RGK-47` | §4.1 | executor/system manager/kernelの同時喪失ではworkload再開を禁止し、proof不能時はquarantineを維持 (process dual-crash Greenと混同しない) | `033` |
+| `C-RGK-48` | §5 | Rust内部の9 port分割と、custody release / authority revoke / control shutdownを同一operationへ畳み込まない | `024`, `034`, `035` |
+| `C-RGK-49` | §5 | capability差を共通最小集合へ丸めず、unsupported/権限不足はcapability 0を事実として返しlauncher call 0で閉じる | `011` |
+| `C-RGK-50` | §5 | failure domainの個別注入可能性 (companion/Node/SCM/broker crash、pipe切断、journal commit失敗)、native componentのjournal直書き禁止、確定不能時は`orphan_detected`/`custody_failure`へ収束 | `010`, `040` |
+| `C-RGK-51` | §6 | bundle構成 (target別companion binary、versioned protocol descriptor、SBOM、canonical manifest署名、D0-N generation receipt digest) を同一revisionへ結ぶ | `012`, `025` |
+| `C-RGK-52` | §6 | 実行時download、PATH探索、未検証companionへの差替えを禁止 | `012`, `023` |
+| `C-RGK-53` | §6 | `TrustDecisionPort`の`accepted \| rejected` + decision digest + policy version、port欠測・unknown version・各digest不一致はcontrol process起動前fail-close | `019`, `020`, `023` |
+| `C-RGK-54` | §6 | `bundle_sequence + manifest_digest + trust_decision_digest + d0n_generation_receipt_digest`のmonotonic accepted-sequence compare-and-advance (floor未満・同sequence別payload・partial/corrupt拒否) | `021`, `022` |
+| `C-RGK-55` | §6 | rollbackはfloor超の新sequenceへ再review・再署名し互換性とL8/L9 oracleを再検証する形式だけを許し、旧manifest/旧sequenceへの直接復帰を拒否。受理不能時はdirect-spawnへfallbackせず利用停止 | `013`, `022`, `025` |
+| `C-RGK-56` | §6 | D0が固定しない範囲 (鍵rotation/revocation epoch、secure clock、re-anchor、installer registry、SQLite schema) を後続へ委譲しつつ、D0 adapterへ持ち込ませない | `026` |
+| `C-RGK-57` | §6 | activationのpartial publish 0 (旧verified bundle又は利用停止だけを観測) | `024` |
+| `C-RGK-58` | §6 | DB incremental / snapshot CAS / performance convergenceは本L5責務外 (Issue #152へdefer) であり、D0-Rはcustody protocolとcompanion bundle境界だけをfreezeする | `026` |
+
+### 7.2 pair-freeze条件と confirmed 昇格条件の分離
+
+§0.1 の「解除条件」は 2 種類を 1 文へ畳み込んでいたため、**実装が存在しない段階では構造的に充足不能**な
+条件が pair-freeze の前提として読めていた。ここで両者を分離する (この構造穴自体は open issue #158 と同型:
+宣言済・未実装 oracle の Red-freeze record が無いため design-freeze が green 不能になる)。
+
+**(A) pair-freeze 条件 — 実装不要、本 PR 時点で充足**
+
+1. §7 宣言範囲 `IT-RGK-PHYS-001..042` が pair 先 L8 に全件実在し、欠番・範囲外 0 (2026-07-29 再計測)。
+2. 42 case それぞれの lane / 対象OS / required capability / fixture / 観測点 / negative expected /
+   control-workload 別 created count が L8「Resource Kernel物理統合 freeze属性」節で固定されている。
+3. L5 全物理契約 → 42 ID の全数写像が §7.1 に存在し、双方向で孤児 0 である。
+4. 上記 1〜3 が `tests/resource-kernel-pair-mapping.test.ts` により実 repo で機械検査される。
+
+**(B) confirmed 昇格条件 — 実 runner 証跡が必要、未充足 (本 PLAN は `draft` 維持)**
+
+1. L8 lane 分類のうち実 runner を要する 15 件 (`real-OS` 6 + `mock+real-OS` 9) を Windows/Linux 両 lane で実行し、
+   fixture・観測点・negative expected・created count の実測値を保存する。
+2. mock lane Green を Job/cgroup Green へ読み替えない (lane 別に証跡を分離保存する)。
+3. `PLAN-L7-466` の実装と `PLAN-REVERSE-466` の back-fill が着地している。
+
+**未機構化として残る点 (正直に記録)**: `src/lint/oracle-test-trace.ts` の `ORACLE_ID` は
+`\b(?:U|IT)-[A-Z0-9]+-[0-9]{3}\b` であり、`IT-RGK-PHYS-001` のような 3 セグメント ID に一致しない。
+したがって 42 件は汎用 oracle-test-trace gate から**一度も見えていない** (open issue #165 と同族の
+抽出漏れ)。本 PLAN は §7.1 の専用 regression test で D0 範囲だけを機械化しており、汎用 gate の
+抽出修正は #165 側の課題である。なお汎用 gate を先に修正すると、宣言済・未実装の 42 件が
+forward-citation 規律で即 orphan fail するため、#158 の Red-freeze record が先行して必要になる。
