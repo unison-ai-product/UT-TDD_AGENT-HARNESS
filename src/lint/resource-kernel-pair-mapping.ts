@@ -125,10 +125,12 @@ const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
 const EMPTY_HTML_ELEMENT_PATTERN = /<([a-z][a-z0-9-]*)\b[^>]*>\s*<\/\1>/gi;
 function isBlankMarkdownCell(value: string): boolean {
-  let normalized = decodeHTML(value)
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<br\s*\/?>/gi, "")
-    .replace(/<(?:[^>"']|"[^"]*"|'[^']*')+>/g, "")
+  let normalized = decodeHTML(
+    value
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<br\s*\/?>/gi, "")
+      .replace(/<(?:[^>"']|"[^"]*"|'[^']*')+>/g, ""),
+  )
     .replace(/!?\[([^\]]*)\](?:\([^)]*\)|\[[^\]]*\])/g, "$1")
     .replace(/[*_~`]+/g, "");
   let previous: string;
