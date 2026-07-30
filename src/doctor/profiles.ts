@@ -145,6 +145,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "doc-consistency",
   "entity-coverage",
   "fr-registry-audit",
+  "resource-kernel-fixture-manifest",
   "improvement-backlog",
   "right-arm-gate-planning",
   "right-lung-doc-governance",
