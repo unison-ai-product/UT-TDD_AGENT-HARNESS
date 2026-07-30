@@ -68,6 +68,33 @@ review_evidence:
         evidence_path: src/lint/resource-kernel-fixture-manifest.ts
         output_digest: "sha256:54ee92d6d579f62bf24a453fb213b81d2cab238c3cdca55aecba54804555fa1a"
         anchor_commit: 43d7c28c23775b1b2a84db3ef0b035e906328b91
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-07-30T21:20:00+09:00"
+    tests_green_at: "2026-07-30T21:10:00+09:00"
+    verdict: pass-weak
+    worker_model: codex-gpt-5.6-sol
+    reviewer_model: claude-opus-5
+    scope: "本 PLAN が追加で所有する pair-mapping 2 成果物 (src/lint/resource-kernel-pair-mapping.ts、tests/resource-kernel-pair-mapping.test.ts) の判定。artifact 固定 commit は 2c862cdc (両 artifact を最後に変更した commit)。最終 artifact commit 群は Codex 著作 (f877a576 以降)、それ以前 (f4fbfa90 まで) は Claude 著作で、Codex FLAG → Claude 修正 → Codex 追加強化 → Claude 判定という双方向経路を経ている。判定は doctor 配線経路 checkResourceKernelPairMapping を通した independent attack 17 本の実測。fail-close を確認した 16 本: 見えない placeholder 6 形式 (&nbsp; / <span></span> / <span title=\">\"></span> / <span title=\"&quot;>&quot;\"></span> / HTML comment / 空要素)、fence 隠蔽、HTML comment 隠蔽、重複 oracle 行、未知 ID 043、27-15-0 再分配、全 mock 化、lane 宣言削除、lane 宣言重複、契約行削除、出典範囲外、doc 空。実 repo baseline のみ green。**残存 fail-open 1 件**: 属性セルを &#34;&#8203; のように記号 1 文字だけにすると充填済みとして通過する (substance 検査未実装、issue #199 で follow-up)。したがって verdict=pass-weak。先行 evidence (f1574404) は anchor を c121362c と誤記しており Codex が 27594bb6 で除去した判断は正当、本 entry は artifact 最終変更 commit を anchor に置き直したもの。未閉 carry: 依存 2 本 (entities / marked) の採否は PLAN-L7-462 側の依存方針として PO 裁定 open。本判定は検査の機能性に対するもので依存方針の承認ではない。"
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions harness-check run 30539633176 (PR #197 HEAD 2c862cdc、linux/windows/集約 全 green)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-30T21:10:00+09:00"
+        evidence_path: src/lint/resource-kernel-pair-mapping.ts
+        output_digest: "sha256:dbca55b4967950756884487cc12e611e10788c5e71af2bfbc672ad7a0cf31ebd"
+        anchor_commit: 2c862cdcfa29dd48fda2bbef345a4ec23465e158
+      - kind: unit_test
+        command: "GitHub Actions harness-check run 30539633176 の vitest 全回帰 (U-RGKPAIR-001..010 を含む)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-30T21:10:00+09:00"
+        evidence_path: tests/resource-kernel-pair-mapping.test.ts
+        output_digest: "sha256:f6aa12848391399e9e1589014c239e3dc009dac6f45cb340ea1c841856c76624"
+        anchor_commit: 2c862cdcfa29dd48fda2bbef345a4ec23465e158
 ---
 
 # PLAN-L7-469 (troubleshoot): design-freeze 機械検査 gate の所有分離
@@ -157,7 +184,17 @@ doctor hard gate `resource-kernel-fixture-manifest` は `src/doctor/doc-registry
 3. **PR #197 の pair-mapping 成果物**: `src/lint/resource-kernel-pair-mapping.ts` /
    `tests/resource-kernel-pair-mapping.test.ts` は同型の成果物であり、merge 時には本 PLAN が
    所有する (PR #197 側で `generates` を本 PLAN へ寄せる)。`PLAN-L5-25` へ再び登録すると
-   同じ torsion が再発する。
+   同じ torsion が再発する。**着地済み** (PR #197、artifact 固定 commit `2c862cdc`)。
+4. **pair-mapping gate の substance 検査が未実装 (issue #199)**: 属性セルが記号 1 文字
+   (`&#34;` 等) だけの場合、entity decode 後に非空と判定され充填済みとして通過する
+   (independent attack 17 本中 1 本の fail-open として実測)。visible に英数字・仮名・漢字が
+   1 文字も無ければ空扱いにする follow-up が必要。文字数下限のハードコード (8 文字) は
+   doc の正当な短縮表記を殺すため採らない。本 PLAN の review_evidence は verdict=pass-weak で
+   この限界を明示している。
+5. **依存 2 本 (`entities` / `marked`) の採否が未裁定**: PR #197 の過程で harness core へ
+   runtime 依存 2 本が入った。Pack clean artifact の依存表と `PLAN-L7-462` (Bun→Node 一本化、
+   依存追加ゼロを設計判断の根拠にしている) に波及するため、依存方針は `PLAN-L7-462` 側で
+   PO 裁定する。裁定が「依存ゼロ」なら inline 正規化への差し戻しが必要。
 
 ## 6. 壊さない / 再発させない
 

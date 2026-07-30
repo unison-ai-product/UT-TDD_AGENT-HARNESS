@@ -424,12 +424,36 @@ docs成果物のみを所有し、機械検査の所在はここから辿る。�
 2. **oracle 側 exact 集合** `IT-RGK-PHYS-001..042`: 欠番 / 未知 ID / **重複**。
    以前は freeze 行を集合化してから突合していたため、重複行を足しても無音で吸収され doctor が
    green になり得た (指摘 2)。生の行列を数えて潰す。
-3. **lane 分布**: L8 §freeze 属性節の散文再掲一覧 (`mock` / `real-OS` / `mock+real-OS` の件数と
-   ID 列) を表の `lane` 列と**集合として**突合する。宣言・表のどちらか片側だけの書き換えは赤。
-   宣言そのものの削除も violation (検査を消して通す fail-open を作らない)。
-4. **実 runner lane の非空性**: `real-OS` + `mock+real-OS` の合計が宣言値と一致し、かつ 0 件でない。
+3. **lane 分布 (宣言 ↔ 表)**: L8 §freeze 属性節の散文再掲一覧 (`mock` / `real-OS` / `mock+real-OS`
+   の件数と ID 列) を表の `lane` 列と**集合として**突合する。宣言・表のどちらか片側だけの書き換えは赤。
+   宣言そのものの削除、および同一 lane の宣言が 2 行あるケースも violation
+   (検査を消して通す fail-open を作らない)。
+4. **lane 固定件数**: 設計で凍結した `mock=27` / `real-OS=6` / `mock+real-OS=9` と実数の一致。
+   宣言と表を**同時に**書き換える再分配 (例 27/15/0) は 3 の集合突合では通ってしまうため、
+   固定件数側で落とす。lane 設計を正当に変更する場合は code (`EXPECTED_LANE_COUNTS`) / 本 PLAN /
+   L8 の 3 箇所を同時更新する (片側だけの緩和は review で拒否する前提)。
+5. **実 runner lane の非空性**: `real-OS` + `mock+real-OS` の合計が宣言値と一致し、かつ 0 件でない。
    表と宣言を同時に全 mock 化して「実 runner 証跡なしで freeze 成立」に見せる経路を塞ぐ (指摘 3)。
    この合計 (現在 15 件) が §7.2 (B) の confirmed 昇格を律速する。
+6. **属性の実在性**: 空セルに加え、`&nbsp;` / `&#160;` / `&#xa0;` / NBSP / zero-width / BOM /
+   `<br>` / 空 HTML 要素 (`<span></span>`、`<span title=">"></span>` のような引用符内 `>` を含む
+   タグを含む) といった**見えない placeholder** を充填済みとして扱わない。
+7. **rendered contract 限定の解析**: fenced code block / HTML comment / HTML block の中身は
+   正本表・見出しの解析対象から除外する。表を fence や comment の中へ隠して「宣言はあるが
+   rendered には無い」状態を作る経路を塞ぐ (隠した場合は欠番として fail-close する)。
+
+上記 7 系統は `ok` 条件 17 項目として実装され、doctor 配線経路 (`checkResourceKernelPairMapping`)
+と実 repo 回帰の双方で検査される。2026-07-30、artifact 固定 commit `2c862cdc` に対して
+independent attack を **17 本**実測した (見えない placeholder 6 形式 / fence 隠蔽 / HTML comment
+隠蔽 / 重複 oracle 行 / 未知 ID `043` / 27-15-0 再分配 / 全 mock 化 / lane 宣言削除 / lane 宣言重複 /
+契約行削除 / 出典範囲外 / doc 空)。
+
+**残存する fail-open 1 件 (正直に記録)**: 属性セルを `&#34;&#8203;` のように**記号 1 文字だけ**に
+すると充填済みとして通過する (entity decode 後に `"` が残るため非空判定)。substance 検査
+(visible に英数字・仮名・漢字が 1 文字も無ければ空扱い) が未実装であることが原因で、
+**issue #199** で follow-up する。他 16 本は fail-close を実測済みであり、本節の freeze 主張は
+「exact 集合・lane 分布・rendered contract 限定解析については機械強制済み、記号 1 文字セルの
+substance は未強制」という限定付きで読むこと。
 
 | 契約 ID | 出典 | 物理契約 (要約) | 被覆 oracle |
 |---|---|---|---|
