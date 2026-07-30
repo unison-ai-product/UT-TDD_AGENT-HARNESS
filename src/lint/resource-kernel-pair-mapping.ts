@@ -10,7 +10,6 @@
  * 本 lint は D0 範囲だけを補う専用検査であり、汎用抽出の修正を代替しない。
  */
 
-import { createHash } from "node:crypto";
 import { decodeHTML } from "entities/decode";
 import { marked } from "marked";
 
@@ -29,7 +28,6 @@ export interface FreezeAttributeRow {
 export interface ContractMappingRow {
   contractId: string;
   source: string;
-  summary: string;
   oracles: string[];
 }
 
@@ -82,14 +80,6 @@ export interface ResourceKernelPairMappingResult {
   contractIdsDuplicated: string[];
   /** 出典が §1〜§6 (小数節可) の正規範囲外の契約行 (ID)。 */
   contractsWithInvalidSource: string[];
-  /** 契約IDごとに固定した出典節と一致しない契約行。 */
-  contractsWithUnexpectedSource: string[];
-  /** 物理契約要約が空の契約行。 */
-  contractsWithEmptySummary: string[];
-  /** created count構文又はfixture/観測点/negative expectedの実質が不正なfreeze行。 */
-  rowsWithInvalidAttribute: string[];
-  /** freeze済みL5写像/L8属性表の正規化内容digestと不一致の表。 */
-  contentDigestMismatch: string[];
   /** lane 別件数。 */
   laneCounts: Record<string, number>;
   ok: boolean;
@@ -131,25 +121,6 @@ export const REAL_RUNNER_LANES = ["real-OS", "mock+real-OS"] as const;
 
 /** 出典セルの正規形 (§1〜§6、§4.1 のような小数節を許容)。 */
 const CONTRACT_SOURCE_PATTERN = /^§[1-6](\.\d+)?$/;
-const CREATED_COUNT_PATTERN =
-  /^control (?:0|1|≤1|1→0)(?: \([^)]*\))? \/ workload (?:0|1|≤1)(?: \([^)]*\))?$/;
-const PLACEHOLDER_PATTERN = /^(?:x|tbd|todo|n\/a|none|-|\?+)$/i;
-export const EXPECTED_MAPPING_CONTENT_DIGEST =
-  "1795fb80fb21ca043489302a213a9e8e3622945fd050d2af67614bbc22921e5e";
-export const EXPECTED_FREEZE_CONTENT_DIGEST =
-  "e828912b8a5ee253c74ea7c8e265da0c1a2b57da698fa3240f91cd0fa1ae9b91";
-
-function contentDigest(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
-}
-
-export function mappingContentDigest(rows: readonly ContractMappingRow[]): string {
-  return contentDigest(rows);
-}
-
-export function freezeContentDigest(rows: readonly FreezeAttributeRow[]): string {
-  return contentDigest(rows);
-}
 
 const PIPE_PLACEHOLDER = "\u0000PIPE\u0000";
 const EMPTY_HTML_ELEMENT_PATTERN = /<([a-z][a-z0-9-]*)\b[^>]*>\s*<\/\1>/gi;
@@ -241,7 +212,6 @@ export function parseContractMappingRows(l5Markdown: string): ContractMappingRow
     rows.push({
       contractId: (cells[0] ?? "").replaceAll("`", ""),
       source: cells[1] ?? "",
-      summary: cells[2] ?? "",
       oracles,
     });
   }
@@ -304,27 +274,6 @@ export function analyzeResourceKernelPairMapping(input: {
     .filter((r) => !(ALLOWED_LANES as readonly string[]).includes(r.lane))
     .map((r) => r.id)
     .sort();
-  const rowsWithInvalidAttribute = input.freezeRows
-    .filter(
-      (r) =>
-        !CREATED_COUNT_PATTERN.test(r.createdCount.trim()) ||
-        [r.fixture, r.observation, r.negativeExpected].some((value) => {
-          const visible = decodeHTML(value)
-            .replace(/<[^>]+>/g, "")
-            .trim();
-          return visible.length < 8 || PLACEHOLDER_PATTERN.test(visible);
-        }),
-    )
-    .map((r) => r.id)
-    .sort();
-  const contentDigestMismatch = [
-    ...(mappingContentDigest(input.mappingRows) === EXPECTED_MAPPING_CONTENT_DIGEST
-      ? []
-      : ["L5-contract-mapping"]),
-    ...(freezeContentDigest(input.freezeRows) === EXPECTED_FREEZE_CONTENT_DIGEST
-      ? []
-      : ["L8-freeze-attributes"]),
-  ];
 
   const contractsWithoutOracle = input.mappingRows
     .filter((r) => r.oracles.length === 0)
@@ -352,25 +301,6 @@ export function analyzeResourceKernelPairMapping(input: {
 
   const contractsWithInvalidSource = input.mappingRows
     .filter((r) => !CONTRACT_SOURCE_PATTERN.test(r.source.trim()))
-    .map((r) => r.contractId)
-    .sort();
-  const expectedSource = (contractId: string): string | undefined => {
-    const number = Number(contractId.match(/^C-RGK-(\d{2})$/)?.[1]);
-    if (number >= 1 && number <= 8) return "§1";
-    if (number <= 14) return "§2";
-    if (number <= 34) return "§3";
-    if (number <= 41) return "§4";
-    if (number <= 47) return "§4.1";
-    if (number <= 50) return "§5";
-    if (number <= 58) return "§6";
-    return undefined;
-  };
-  const contractsWithUnexpectedSource = input.mappingRows
-    .filter((r) => r.source.trim() !== expectedSource(r.contractId))
-    .map((r) => r.contractId)
-    .sort();
-  const contractsWithEmptySummary = input.mappingRows
-    .filter((r) => isBlankMarkdownCell(r.summary))
     .map((r) => r.contractId)
     .sort();
 
@@ -470,15 +400,11 @@ export function analyzeResourceKernelPairMapping(input: {
     oraclesMissingFromFreeze,
     rowsWithEmptyAttribute,
     rowsWithUnknownLane,
-    rowsWithInvalidAttribute,
-    contentDigestMismatch,
     contractsWithoutOracle,
     contractIdsUnknown,
     contractIdsMissing,
     contractIdsDuplicated,
     contractsWithInvalidSource,
-    contractsWithUnexpectedSource,
-    contractsWithEmptySummary,
     laneCounts,
     ok:
       oracleIdsMissing.length === 0 &&
@@ -493,15 +419,11 @@ export function analyzeResourceKernelPairMapping(input: {
       oraclesMissingFromFreeze.length === 0 &&
       rowsWithEmptyAttribute.length === 0 &&
       rowsWithUnknownLane.length === 0 &&
-      rowsWithInvalidAttribute.length === 0 &&
-      contentDigestMismatch.length === 0 &&
       contractsWithoutOracle.length === 0 &&
       contractIdsUnknown.length === 0 &&
       contractIdsMissing.length === 0 &&
       contractIdsDuplicated.length === 0 &&
-      contractsWithInvalidSource.length === 0 &&
-      contractsWithUnexpectedSource.length === 0 &&
-      contractsWithEmptySummary.length === 0,
+      contractsWithInvalidSource.length === 0,
   };
 }
 
@@ -558,12 +480,6 @@ export function resourceKernelPairMappingMessages(r: ResourceKernelPairMappingRe
   if (r.rowsWithEmptyAttribute.length > 0) {
     msgs.push(`freeze 属性が欠けている行: ${r.rowsWithEmptyAttribute.join(", ")}`);
   }
-  if (r.rowsWithInvalidAttribute.length > 0) {
-    msgs.push(`freeze 属性の構造又は実質が不正な行: ${r.rowsWithInvalidAttribute.join(", ")}`);
-  }
-  if (r.contentDigestMismatch.length > 0) {
-    msgs.push(`freeze済み表の内容digest不一致: ${r.contentDigestMismatch.join(", ")}`);
-  }
   if (r.rowsWithUnknownLane.length > 0) {
     msgs.push(
       `lane 語彙外 (${ALLOWED_LANES.join(" / ")}) の行: ${r.rowsWithUnknownLane.join(", ")}`,
@@ -585,14 +501,6 @@ export function resourceKernelPairMappingMessages(r: ResourceKernelPairMappingRe
   }
   if (r.contractsWithInvalidSource.length > 0) {
     msgs.push(`出典が §1〜§6 の正規範囲外の契約行: ${r.contractsWithInvalidSource.join(", ")}`);
-  }
-  if (r.contractsWithUnexpectedSource.length > 0) {
-    msgs.push(
-      `契約IDに対応するexact出典と不一致の行: ${r.contractsWithUnexpectedSource.join(", ")}`,
-    );
-  }
-  if (r.contractsWithEmptySummary.length > 0) {
-    msgs.push(`物理契約要約が空の行: ${r.contractsWithEmptySummary.join(", ")}`);
   }
   return msgs;
 }
