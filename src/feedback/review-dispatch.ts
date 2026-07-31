@@ -67,7 +67,7 @@ export interface ReviewDispatchEntry {
   reviewerFamily?: ReviewerFamily;
   state: ReviewDispatchState;
   breaches: SlaBreach[];
-  ageMinutes: number;
+  ageMinutes: number | null;
   blocking: string[];
   reasons: string[];
 }
@@ -90,17 +90,39 @@ const RECEIPT_KINDS: ReviewReceiptKind[] = ["acknowledged", "in_review", "verdic
 const VERDICTS: ReviewVerdict[] = ["PASS", "PASS-WEAK", "FLAG"];
 const PR_STATES: PrObservation["state"][] = ["OPEN", "MERGED", "CLOSED"];
 const HEAD_PATTERN = /^[0-9a-f]{40}$/;
-const CANONICAL_UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const EXPLICIT_ZONE_TIMESTAMP_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
 
 /**
- * 全 runtime で同じ instant を表す唯一の dispatch timestamp 表現。
- * TZ 無し文字列や offset 文字列を Date.parse に委ねると、Windows/JST と CI の
- * 解釈差が receipt 順序・SLA を変えうるため、canonical ISO UTC 以外は拒否する。
+ * GitHub/API/PLAN の既存 producer が出す、timezone 明示済み ISO timestamp を読む。
+ * timezone 無し文字列だけは runtime の local timezone で意味が変わるため拒否する。
  */
-function parseCanonicalUtcTimestamp(value: unknown): number | undefined {
-  if (typeof value !== "string" || !CANONICAL_UTC_TIMESTAMP_PATTERN.test(value)) return undefined;
+function parseExplicitZoneTimestamp(value: unknown): number | undefined {
+  if (typeof value !== "string") return undefined;
+  const match = EXPLICIT_ZONE_TIMESTAMP_PATTERN.exec(value);
+  if (match == null) return undefined;
+  const [, year, month, day, hour, minute, second, , zone] = match;
+  const yearValue = Number(year);
+  const monthValue = Number(month);
+  const dayValue = Number(day);
+  const daysInMonth = new Date(Date.UTC(yearValue, monthValue, 0)).getUTCDate();
+  if (
+    monthValue < 1 ||
+    monthValue > 12 ||
+    dayValue < 1 ||
+    dayValue > daysInMonth ||
+    Number(hour) > 23 ||
+    Number(minute) > 59 ||
+    Number(second) > 59
+  ) {
+    return undefined;
+  }
+  if (zone !== "Z") {
+    const [offsetHour, offsetMinute] = zone.slice(1).split(":").map(Number);
+    if (offsetHour > 23 || offsetMinute > 59) return undefined;
+  }
   const parsed = Date.parse(value);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value ? parsed : undefined;
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function compareText(left: string, right: string): number {
@@ -119,8 +141,8 @@ function compareRequests(left: ReviewRequest, right: ReviewRequest): number {
 }
 
 function compareReceipts(left: ReviewReceipt, right: ReviewReceipt): number {
-  const leftAt = parseCanonicalUtcTimestamp(left.at);
-  const rightAt = parseCanonicalUtcTimestamp(right.at);
+  const leftAt = parseExplicitZoneTimestamp(left.at);
+  const rightAt = parseExplicitZoneTimestamp(right.at);
   if (leftAt != null && rightAt != null && leftAt !== rightAt) {
     return leftAt - rightAt;
   }
@@ -216,7 +238,7 @@ function isValidPr(value: unknown): value is number {
 }
 
 function isValidTimestamp(value: unknown, nowMs: number): string | undefined {
-  const timestamp = parseCanonicalUtcTimestamp(value);
+  const timestamp = parseExplicitZoneTimestamp(value);
   if (timestamp == null) return "invalid_timestamp";
   if (Number.isFinite(nowMs) && timestamp > nowMs) return "future_timestamp";
   return undefined;
@@ -292,11 +314,11 @@ function validateSla(sla: ReviewDispatchSla): boolean {
   );
 }
 
-function elapsedMinutes(requestedAt: string, nowMs: number): number {
-  const requestedMs = parseCanonicalUtcTimestamp(requestedAt);
+function elapsedMinutes(requestedAt: string, nowMs: number): number | null {
+  const requestedMs = parseExplicitZoneTimestamp(requestedAt);
   return requestedMs != null && Number.isFinite(nowMs)
     ? Math.max(0, (nowMs - requestedMs) / 60_000)
-    : 0;
+    : null;
 }
 
 function observationFor(request: ReviewRequest, prs: PrObservation[]): PrObservation | undefined {
@@ -328,7 +350,7 @@ function analyzeRequest(
   const { receipts, prs, nowMs, sla, globalReasons, duplicateRequestConflict } = context;
   const reasons = new Set([...globalReasons, ...validateRequest(request, nowMs)]);
   if (duplicateRequestConflict) reasons.add("duplicate_request_conflict");
-  const requestTimestamp = parseCanonicalUtcTimestamp(request.requestedAt);
+  const requestTimestamp = parseExplicitZoneTimestamp(request.requestedAt);
   const candidates = receipts.filter(
     (receipt) =>
       receipt.memoryId === request.memoryId &&
@@ -364,8 +386,8 @@ function analyzeRequest(
   for (let index = 1; index < RECEIPT_SEQUENCE.length; index += 1) {
     const previous = stageReceipts.get(RECEIPT_SEQUENCE[index - 1]);
     const current = stageReceipts.get(RECEIPT_SEQUENCE[index]);
-    const previousAt = previous && parseCanonicalUtcTimestamp(previous.at);
-    const currentAt = current && parseCanonicalUtcTimestamp(current.at);
+    const previousAt = previous && parseExplicitZoneTimestamp(previous.at);
+    const currentAt = current && parseExplicitZoneTimestamp(current.at);
     if (previousAt != null && currentAt != null && currentAt <= previousAt) {
       reasons.add("receipt_not_after_previous_state");
     }
@@ -377,7 +399,7 @@ function analyzeRequest(
       reasons.add("same_family_reviewer");
       continue;
     }
-    const receiptAt = parseCanonicalUtcTimestamp(receipt.at);
+    const receiptAt = parseExplicitZoneTimestamp(receipt.at);
     if (receiptAt == null) {
       reasons.add("invalid_timestamp");
       continue;
@@ -387,7 +409,7 @@ function analyzeRequest(
       continue;
     }
     const previous = acceptedReceipts.at(-1);
-    const previousAt = previous && parseCanonicalUtcTimestamp(previous.at);
+    const previousAt = previous && parseExplicitZoneTimestamp(previous.at);
     if (previousAt != null && receiptAt <= previousAt) {
       reasons.add("receipt_not_after_previous_state");
       continue;
@@ -413,9 +435,11 @@ function analyzeRequest(
   const hasStarted = acceptedReceipts.length >= 2;
   const ageMinutes = elapsedMinutes(request.requestedAt, nowMs);
   const breaches: SlaBreach[] = [];
-  if (!hasAcknowledged && ageMinutes > sla.ackMinutes) breaches.push("ack");
-  if (!hasStarted && ageMinutes > sla.startMinutes) breaches.push("start");
-  if (!hasVerdict && ageMinutes > sla.verdictMinutes) breaches.push("verdict");
+  if (!hasAcknowledged && (ageMinutes == null || ageMinutes > sla.ackMinutes)) breaches.push("ack");
+  if (!hasStarted && (ageMinutes == null || ageMinutes > sla.startMinutes)) breaches.push("start");
+  if (!hasVerdict && (ageMinutes == null || ageMinutes > sla.verdictMinutes)) {
+    breaches.push("verdict");
+  }
 
   const blocking =
     verdictReceipt?.verdict === "FLAG" ? [...(verdictReceipt.blockingFindings ?? [])] : [];
@@ -485,7 +509,7 @@ export function analyzeReviewDispatch(input: {
   now: string;
   sla?: ReviewDispatchSla;
 }): ReviewDispatchResult {
-  const nowMs = parseCanonicalUtcTimestamp(input.now);
+  const nowMs = parseExplicitZoneTimestamp(input.now);
   const sla = input.sla ?? DEFAULT_REVIEW_DISPATCH_SLA;
   const globalReasons = new Set<string>();
   const diagnostics = new Set<string>();

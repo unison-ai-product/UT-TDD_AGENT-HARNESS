@@ -81,7 +81,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | PR観測の競合と冪等replay | `U-RVDISP-027`〜`028` |
 | 同時刻receiptの飛越禁止、uppercase SHA拒否 | `U-RVDISP-029`〜`030` |
 | well-formed orphan診断とexactHead別通知identity | `U-RVDISP-031` |
-| canonical ISO UTC timestamp | `U-RVDISP-032` |
+| timezone明示ISO timestampと不正時刻のSLA fail-close | `U-RVDISP-032` |
 
 ## 4. スコープ外
 

@@ -67,7 +67,7 @@ function entry(result: { entries: ReviewDispatchEntry[] }): ReviewDispatchEntry 
 }
 
 describe("review dispatch analyzer (U-RVDISP)", () => {
-  it("U-RVDISP-032: timestamp はcanonical ISO UTCのみを受理し、TZ無し/offset表現を環境依存で解釈しない", () => {
+  it("U-RVDISP-032: timezone明示ISOを決定的に受理し、TZ無しはSLAごとfail-closeする", () => {
     const canonical = analyzeReviewDispatch({
       requests: [request()],
       receipts: [],
@@ -77,6 +77,16 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(canonical.ok).toBe(true);
     expect(entry(canonical).ageMinutes).toBe(10);
 
+    const githubSeconds = analyzeReviewDispatch({
+      requests: [request({ requestedAt: "2026-07-31T00:00:00Z" })],
+      receipts: [],
+      prs: [pr()],
+      now: "2026-07-31T09:10:00+09:00",
+    });
+    expect(githubSeconds.ok).toBe(true);
+    expect(entry(githubSeconds).ageMinutes).toBe(10);
+    expect(entry(githubSeconds).breaches).toEqual([]);
+
     const zoneLessRequest = analyzeReviewDispatch({
       requests: [request({ requestedAt: "2026-07-31T00:00:00" })],
       receipts: [],
@@ -84,16 +94,18 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       now: "2026-07-31T00:10:00.000Z",
     });
     expect(entry(zoneLessRequest).reasons).toContain("invalid_timestamp");
+    expect(entry(zoneLessRequest).ageMinutes).toBeNull();
+    expect(entry(zoneLessRequest).breaches).toEqual(["ack", "start", "verdict"]);
     expect(zoneLessRequest.ok).toBe(false);
 
-    const offsetNow = analyzeReviewDispatch({
-      requests: [request()],
+    const impossibleDate = analyzeReviewDispatch({
+      requests: [request({ requestedAt: "2026-02-30T00:00:00Z" })],
       receipts: [],
       prs: [pr()],
-      now: "2026-07-31T09:10:00.000+09:00",
+      now: "2026-07-31T00:10:00Z",
     });
-    expect(entry(offsetNow).reasons).toContain("invalid_timestamp");
-    expect(offsetNow.ok).toBe(false);
+    expect(entry(impossibleDate).reasons).toContain("invalid_timestamp");
+    expect(impossibleDate.ok).toBe(false);
   });
 
   it("U-RVDISP-001: 受領前は requested、SLA 内なら breach 無し", () => {

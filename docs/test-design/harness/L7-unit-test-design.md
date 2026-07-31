@@ -1476,7 +1476,7 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVDISP-029` | 同時刻FSM | acknowledged/in_review/verdictが同一timestamp | receipt stateを飛越しない |
 | `U-RVDISP-030` | canonical HEAD | uppercase 40-hex SHA | `invalid_head`でfail-close |
 | `U-RVDISP-031` | 孤児診断と通知identity | well-formed orphan＋同PR/同revision・異なるexactHeadの同一SLA違反 | orphan identityを診断へ保持し、messageにexactHeadを含めて通知dedupeで潰さない |
-| `U-RVDISP-032` | canonical UTC timestamp | TZ無し request / offset付き now と canonical ISO UTC入力 | canonical `YYYY-MM-DDTHH:mm:ss.sssZ` だけを受理し、Windows/JST とCIで異なる解釈をしうる文字列は `invalid_timestamp` でfail-close |
+| `U-RVDISP-032` | explicit-zone timestamp | GitHubの秒精度`Z`、offset付き入力、TZ無し request、不正暦日 | timezone明示ISOは同一instantとして受理し、TZ無し/不正暦日は`ageMinutes=null`かつ未達SLA全段をbreachにしてfail-close |
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`032`)。
 
