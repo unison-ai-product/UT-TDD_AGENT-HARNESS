@@ -1135,6 +1135,7 @@ dependencies:
       "add-feature": ["add-design", "add-impl"],
       "design-bottomup": ["add-design", "add-impl"],
       discovery: ["poc"],
+      forward: ["design", "impl"],
       incident: ["troubleshoot", "recovery"],
       recovery: ["recovery"],
       redesign: ["design", "add-design"],
@@ -1150,6 +1151,7 @@ dependencies:
       "add-feature": ["L3", "L4", "L5", "L6", "L7"],
       "design-bottomup": ["L2", "L3", "L4", "L5", "L6", "L7"],
       discovery: ["cross"],
+      forward: ["L1", "L2", "L3", "L4", "L5", "L6", "L7"],
       incident: ["L7", "cross"],
       recovery: ["cross"],
       redesign: ["L1", "L2", "L3", "L4", "L5", "L6"],
@@ -1164,6 +1166,24 @@ dependencies:
 
     expect(ROUTE_MODE_ALLOWED_KINDS).toEqual(expectedKinds);
     expect(ROUTE_MODE_LAYER_BANDS).toEqual(expectedLayerBands);
+  });
+
+  it("U-PLANGOV-011v3d: canonical forward design/impl route is registered, not unknown", () => {
+    const docs = [
+      planDoc("PLAN-L7-906-forward-impl", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        extra:
+          "route_signal: constraint\nroute_mode: forward\ncreated: 2026-07-31\nupdated: 2026-07-31\n",
+      }),
+    ];
+
+    const details = analyzePlanGovernance(docs)
+      .violations.filter((violation) => violation.reason === "route_mode_kind_mismatch")
+      .map((violation) => violation.detail ?? "");
+
+    expect(details).toEqual([]);
   });
 
   it("U-PLANGOV-011v3c: newly registered route modes no longer fail as unknown route_mode", () => {
