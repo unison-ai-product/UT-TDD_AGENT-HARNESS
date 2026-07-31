@@ -207,12 +207,48 @@ describe("analyzePlanSupersession", () => {
     // 既知債務 7 件は baseline 宣言済みなので ok。baseline 外の新規自己参照が 0 であることを固定する。
     expect(r.selfSupersedes).toEqual([]);
     expect(r.staleSelfBaseline).toEqual([]);
-    // 左右の完全一致なので、baseline に架空 ID を 1 件足すと右辺だけ増えて fail する
-    // (架空 ID は baselinedSelfSupersedes に載らない) = baseline の水増し防止フェンス。
     expect(r.baselinedSelfSupersedes.map((v) => v.plan_id).sort()).toEqual(
       [...PLAN_SUPERSESSION_SELF_BASELINE].sort(),
     );
     expect(r.ok).toBe(true);
+  });
+});
+
+/**
+ * issue #183 時点で実測した自己 supersede 債務の**凍結集合**。
+ *
+ * `PLAN_SUPERSESSION_SELF_BASELINE` (src 側) から独立に、テスト側でリテラルとして固定する。
+ * 上の実 repo oracle は左右とも src 側 baseline 由来なので、**実在 PLAN ID を baseline と実データへ
+ * 同時に追加**すると両辺が揃って増えて一致してしまい、「縮小のみ可」を保証できない
+ * (Codex/Tera closing review が `17c5a728` で指摘した攻撃)。凍結集合との subset 判定はこの経路を殺す。
+ *
+ * **このリストは減らす方向にしか編集してはならない。** 追加が必要になったなら、それは新しい
+ * 自己 supersede 債務を作っているということであり、baseline 拡大ではなく債務の解消 (issue #209) で
+ * 対処すべきである。
+ */
+const SELF_BASELINE_FROZEN_AT_ISSUE_183: ReadonlySet<string> = new Set([
+  "PLAN-L4-02-architecture",
+  "PLAN-L4-32-resource-governed-execution-kernel",
+  "PLAN-L5-03-internal-processing",
+  "PLAN-L5-25-resource-kernel-physical-protocol",
+  "PLAN-L6-01-function-spec",
+  "PLAN-L6-92-resource-kernel-function-contracts",
+  "PLAN-L7-466-resource-kernel-native-companion",
+]);
+
+describe("PLAN_SUPERSESSION_SELF_BASELINE は縮小のみ可", () => {
+  it("baseline は凍結集合の部分集合でなければならない (拡大・入れ替えを禁止)", () => {
+    const added = [...PLAN_SUPERSESSION_SELF_BASELINE]
+      .filter((planId) => !SELF_BASELINE_FROZEN_AT_ISSUE_183.has(planId))
+      .sort();
+    expect(added).toEqual([]);
+  });
+
+  it("baseline は凍結集合より大きくならない", () => {
+    expect(PLAN_SUPERSESSION_SELF_BASELINE.size).toBeLessThanOrEqual(
+      SELF_BASELINE_FROZEN_AT_ISSUE_183.size,
+    );
+    expect(SELF_BASELINE_FROZEN_AT_ISSUE_183.size).toBe(7);
   });
 });
 
