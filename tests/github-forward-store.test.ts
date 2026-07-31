@@ -259,11 +259,55 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         planId: "PLAN-L7-1-a",
         planRevision: "rev1",
         operation: "project-item-upsert",
-        payload: { state: "着手可能" },
+        payload: {
+          owner: "unison-ai-product",
+          projectNumber: 6,
+          readiness: "着手可能",
+          currentGate: "G7",
+          headSha: "abc",
+        },
       });
       clearRebuildableProjectionTables(db);
-      expect(db.prepare("SELECT status FROM github_projection_outbox").get()).toEqual({
-        status: "pending",
+      const queued = db
+        .prepare("SELECT payload_json, payload_digest, status FROM github_projection_outbox")
+        .get();
+      expect(queued).toMatchObject({ status: "pending" });
+      expect(JSON.parse(String(queued?.payload_json))).toEqual({
+        owner: "unison-ai-product",
+        projectNumber: 6,
+        readiness: "着手可能",
+        currentGate: "G7",
+        headSha: "abc",
+      });
+      expect(String(queued?.payload_digest)).toMatch(/^[a-f0-9]{64}$/);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHPROJ-039: rejects non-contract fields before persisting an outbox payload", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      expect(() =>
+        queueGithubProjection({
+          db,
+          repositoryId: "repo",
+          planId: "PLAN-L7-1-a",
+          planRevision: "rev1",
+          operation: "project-item-upsert",
+          payload: {
+            owner: "unison-ai-product",
+            projectNumber: 6,
+            readiness: "着手可能",
+            currentGate: "G7",
+            headSha: "abc",
+            token: "must-not-persist",
+          } as never,
+        }),
+      ).toThrow(/payload fields/);
+      expect(db.prepare("SELECT COUNT(*) AS count FROM github_projection_outbox").get()).toEqual({
+        count: 0,
       });
     } finally {
       db.close();

@@ -800,21 +800,38 @@ ledger DB不在・schema不一致・digest破損は空ledgerとして補完せ�
 `(event_id,subject_id,subject_revision)`→workflow event、`(evidence_id,subject_id,subject_revision)`→evidenceのcomposite FKで
 cross-subject/revision linkをSQLite実制約として拒否する。
 
-### 実行台帳 / GitHub投影テーブル
+### 9.10 GitHub Forward基盤テーブル（PLAN-L7-471）
+
+この節の5表はPLAN・依存グラフ・GitHub Project/Issue/branch/PR/check/review/mergeを結ぶ現行の
+Forward read-model / delivery intentである。Execution Episode完成後の配送表とは名前と責務を
+分離し、episode IDを捏造しない。`github_projection_outbox.payload_json`は
+`project-item-upsert`の閉じた5項目だけをcanonical順で保持し、同時に`payload_digest`を保存する。
+未知field、空値、不正Project番号はINSERT前に拒否し、secret・credential・provider transcriptを
+payloadへ入れない。
+
+| table | 主キー | 必須 columns | 入力 | 目的 |
+|---|---|---|---|---|
+| `github_review_lane_receipts` | `review_lane_receipt_id` | `plan_id`, `plan_revision`, `lane`, `subject_head`, `verdict`, `reviewed_at`, `tests_green_at`, `worker_model`, `reviewer_model`, `attack_trials`, `citations_json`, `source` | canonical PLAN review evidence | `(plan_id,plan_revision,lane,subject_head)` UNIQUE。canonical PLAN sourceとの再照合 |
+| `execution_readiness_projection` | `plan_id` | `plan_revision`, `readiness`, `current_gate`, `predecessor_plan_ids`, `blocked_reason`, `unlock_condition`, `next_plan_ids`, `unlocked_plan_ids`, `computed_at` | PLAN / dependency graph | `implementation_order`はnullable。依存グラフから再構築し、authoring sourceを更新しない |
+| `github_project_item_projection` | `projection_id` | `repository_id`, `project_id`, `project_item_id`, `plan_id`, `plan_revision`, `content_node_id`, `head_sha`, `sync_status`, `last_reconciled_at` | Project V2 observation | `(repository_id,plan_id,plan_revision)` UNIQUE |
+| `github_object_bindings` | `binding_id` | `repository_id`, `plan_id`, `plan_revision`, `project_item_id`, `object_kind`, `object_id`, `object_url`, `head_sha`, `state`, `observed_at` | GitHub repository facts | `(repository_id,object_kind,object_id)` UNIQUE。stale時刻・異PLAN再割当を拒否 |
+| `github_projection_outbox` | `outbox_id` | `repository_id`, `plan_id`, `plan_revision`, `operation`, `payload_json`, `payload_digest`, `status`, `attempt_count`, `last_error`, `created_at`, `updated_at` | Project同期intent | `(repository_id,plan_id,plan_revision,operation)` UNIQUE。payloadは閉じたsecret-safe schema + SHA-256 digest |
+
+### Execution Episode / GitHub配送の目標テーブル（後続降下）
 
 | テーブル | 主な列 | 制約 / 索引 |
 |---|---|---|
 | `execution_episodes` | `episode_id`, origin asset/revision/L/state, `escape_type`, `drive_model`, `reentry_target`, `last_sequence`, `last_event_digest`, `status` | PK episode。origin revision FK。drive/escape閉値域。current reductionのみ |
 | `execution_episode_events` | `event_id`, `episode_id`, `sequence`, `event_kind(E0..E15)`, `payload_json`, `payload_digest`, `previous_event_digest`, `occurred_at`, `actor` | `(episode_id,sequence)` UNIQUE、digest連鎖、追記専用trigger |
-| `github_projection_outbox` | `projection_id`, `episode_id`, `operation`, `idempotency_key`, `payload_digest`, `attempt_count`, `next_attempt_at`, `status`, `remote_ref` | idempotency UNIQUE。secret-safe payload。retry可能 |
+| `execution_github_projection_outbox` | `projection_id`, `episode_id`, `operation`, `idempotency_key`, `payload_digest`, `attempt_count`, `next_attempt_at`, `status`, `remote_ref` | idempotency UNIQUE。secret-safe payload。retry可能。現行`github_projection_outbox`からepisode確定後に明示変換する |
 | `github_inbound_events` | `delivery_id`, `repository`, `event_type`, `signature_verdict`, `remote_version`, `payload_digest`, `received_at`, `episode_id?`, `status` | delivery UNIQUE。未照合/署名不正を隔離 |
-| `github_object_bindings` | `episode_id`, `object_kind`, `repository`, `external_id`, `number`, `url`, `remote_version`, `last_reconciled_head`, `projection_revision` | `(episode_id,object_kind)` UNIQUE。付替えはevent必須 |
+| `execution_github_object_bindings` | `episode_id`, `object_kind`, `repository`, `external_id`, `number`, `url`, `remote_version`, `last_reconciled_head`, `projection_revision` | `(episode_id,object_kind)` UNIQUE。付替えはevent必須。現行PLAN bindingと別表で、episode未確定値を補完しない |
 | `reentry_certificates` | `certificate_id`, `episode_id`, origin/target binding, drive/intermediate evidence digest, `policy_revision`, `issued_at`, `expires_at?`, `supersedes_id?`, `certificate_digest` | episode+origin revision FK、supersession cycle/fork禁止 |
 | `escape_learning_facts` | `episode_id`, origin L, escape type/cause, drive model, recurrence identity, outcome, upstream action, closed_at | E15から再構築可能、手入力status禁止 |
 
 PLAN-L7-452の先行sliceでは、全episode schemaの完成を待たずE2 custodyとE3/E4 outbox境界を
 `harness.db` schema version 27へ次の2表で実装する。これは検出器都合の簡略化ではなく、
-上表の`execution_episode_events` / `github_projection_outbox`へ後続合流するまでのdurable契約である。
+上表の`execution_episode_events` / `execution_github_projection_outbox`へ後続合流するまでのdurable契約である。
 
 | テーブル | 主な列 | 制約 / 不変条件 |
 |---|---|---|

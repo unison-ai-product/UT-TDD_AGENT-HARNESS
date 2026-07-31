@@ -511,6 +511,29 @@ describe("db-projection-coverage detector", () => {
     ]);
   });
 
+  it("collects projection tables from multi-digit §9 sections", () => {
+    const requirements = extractDbProjectionCoverageRequirements(
+      [
+        "### 9.10 GitHub Forward基盤テーブル",
+        "",
+        "| テーブル | 主な列 | 制約 / 索引 |",
+        "|---|---|---|",
+        "| `github_projection_outbox` | `outbox_id`, `payload_digest` | PK outbox |",
+        "",
+        "### 9.11 Execution Episode目標テーブル",
+        "",
+        "| テーブル | 主な列 | 制約 / 索引 |",
+        "|---|---|---|",
+        "| `execution_github_projection_outbox` | `projection_id`, `episode_id` | PK projection |",
+      ].join("\n"),
+    );
+
+    expect(requirements.tables.map((requirement) => requirement.table)).toEqual([
+      "github_projection_outbox",
+      "execution_github_projection_outbox",
+    ]);
+  });
+
   it("ends projection data at a backtick-labelled non-projection table header", () => {
     const requirements = extractDbProjectionCoverageRequirements(
       [

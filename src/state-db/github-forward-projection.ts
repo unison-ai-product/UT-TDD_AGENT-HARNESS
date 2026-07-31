@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   deriveForwardReadiness,
   type ForwardEvidence,
@@ -409,11 +410,38 @@ export function queueGithubProjection(input: {
   repositoryId: string;
   planId: string;
   planRevision: string;
-  operation: string;
-  payload: unknown;
+  operation: "project-item-upsert";
+  payload: {
+    owner: string;
+    projectNumber: number;
+    readiness: string;
+    currentGate: string;
+    headSha: string;
+  };
   now?: string;
 }): string {
   const now = input.now ?? new Date().toISOString();
+  const payloadKeys = Object.keys(input.payload).sort();
+  const expectedPayloadKeys = ["currentGate", "headSha", "owner", "projectNumber", "readiness"];
+  if (payloadKeys.join("|") !== expectedPayloadKeys.join("|"))
+    throw new Error(`invalid GitHub projection payload fields: ${payloadKeys.join(",")}`);
+  if (
+    !text(input.payload.owner) ||
+    !Number.isSafeInteger(input.payload.projectNumber) ||
+    input.payload.projectNumber <= 0 ||
+    !text(input.payload.readiness) ||
+    !text(input.payload.currentGate) ||
+    !text(input.payload.headSha)
+  )
+    throw new Error("invalid GitHub projection payload values");
+  const payloadJson = JSON.stringify({
+    owner: input.payload.owner,
+    projectNumber: input.payload.projectNumber,
+    readiness: input.payload.readiness,
+    currentGate: input.payload.currentGate,
+    headSha: input.payload.headSha,
+  });
+  const payloadDigest = createHash("sha256").update(payloadJson).digest("hex");
   const outboxId = stableId(
     "github-outbox",
     `${input.repositoryId}:${input.planId}:${input.planRevision}:${input.operation}`,
@@ -421,11 +449,12 @@ export function queueGithubProjection(input: {
   input.db
     .prepare(
       `INSERT INTO github_projection_outbox (
-         outbox_id, repository_id, plan_id, plan_revision, operation, payload_json,
+         outbox_id, repository_id, plan_id, plan_revision, operation, payload_json, payload_digest,
          status, attempt_count, last_error, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, '', ?, ?)
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, '', ?, ?)
        ON CONFLICT(repository_id, plan_id, plan_revision, operation) DO UPDATE SET
          payload_json=excluded.payload_json,
+         payload_digest=excluded.payload_digest,
          status=CASE WHEN github_projection_outbox.status = 'applied' THEN 'applied' ELSE 'pending' END,
          updated_at=excluded.updated_at`,
     )
@@ -435,7 +464,8 @@ export function queueGithubProjection(input: {
       input.planId,
       input.planRevision,
       input.operation,
-      JSON.stringify(input.payload),
+      payloadJson,
+      payloadDigest,
       now,
       now,
     );
