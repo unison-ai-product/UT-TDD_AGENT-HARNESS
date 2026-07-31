@@ -136,6 +136,25 @@ describe("GitHub Project V2 reconciler", () => {
     });
   });
 
+  it("U-GHPROJ-020a: dry-run preserves a detected synchronization inconsistency", () => {
+    const port = new FakeProjectPort();
+    const inconsistent = { ...row, sync: "不整合" as const };
+    const result = syncForwardProject({
+      rows: [inconsistent],
+      owner: "owner",
+      projectNumber: 6,
+      port,
+      apply: false,
+    });
+    expect(result.mutations).toContainEqual({
+      kind: "update",
+      planId: row.planId,
+      itemId: `dry-run:${row.planId}`,
+      field: "同期状態",
+      value: "不整合",
+    });
+  });
+
   it("U-GHPROJ-021: apply creates once and updates typed fields", () => {
     const port = new FakeProjectPort();
     const result = syncForwardProject({

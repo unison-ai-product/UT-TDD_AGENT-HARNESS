@@ -13,6 +13,7 @@ import {
   rebuildExecutionReadiness,
   recordGithubBinding,
   selectActiveProjectRows,
+  selectExistingProjectPlans,
 } from "../src/state-db/github-forward-projection";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
@@ -44,6 +45,7 @@ describe("GitHub Forward SQLite store", () => {
       mergeSha: string;
       state?: string;
       repoRoot?: string;
+      includeCheckBindings?: boolean;
     },
   ) => {
     const reviewSources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
@@ -113,6 +115,26 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
 `,
         "utf8",
       );
+    }
+    if (!input.state && input.includeCheckBindings !== false) {
+      const checkRows = [
+        [`pr:${input.prNumber}:check:pr-check`, "pr-check"],
+        [`main:${input.mergeSha}:check:main-check`, "main-check"],
+      ] as const;
+      for (const [objectId, suffix] of checkRows)
+        db.prepare(
+          `INSERT INTO github_object_bindings (
+            binding_id, repository_id, plan_id, plan_revision, project_item_id,
+            object_kind, object_id, object_url, head_sha, state, observed_at
+          ) VALUES (?, 'repo', ?, ?, '', 'check_run', ?, '', ?, '成功', ?)`,
+        ).run(
+          `check:${input.prNumber}:${suffix}`,
+          input.planId,
+          input.revision,
+          objectId,
+          input.headSha,
+          "2026-07-29T01:30:00Z",
+        );
     }
     return db
       .prepare(
@@ -448,6 +470,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         {
           planId: "PLAN-L7-1-a",
           headSha: "current",
+          ci: "成功",
           mergeVerified: true,
         },
       ]);
@@ -634,6 +657,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
   });
 
   it("U-GHPROJ-035: rejects forged merge receipts and ignores invalidated receipts", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-forged-"));
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -667,6 +691,51 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         headSha: "head15",
       });
       expect(readGithubEvidence(db)[0]).not.toHaveProperty("mergeVerified");
+
+      insertSchedule(db, "PLAN-L7-2-forged");
+      recordGithubBinding(db, {
+        repositoryId: "repo",
+        planId: "PLAN-L7-2-forged",
+        planRevision: "rev1",
+        objectKind: "pull_request",
+        objectId: "16",
+        state: "merged",
+        headSha: "head16",
+      });
+      insertMerge(db, {
+        planId: "PLAN-L7-2-forged",
+        revision: "rev1",
+        prNumber: "16",
+        mergeSha: "def9876",
+        headSha: "head16",
+        repoRoot,
+        includeCheckBindings: false,
+      });
+      expect(
+        readGithubEvidence(db, repoRoot).find((row) => row.planId === "PLAN-L7-2-forged"),
+      ).not.toHaveProperty("mergeVerified");
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHPROJ-038: existing Project plans are scoped by repository", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      for (const [repositoryId, planId] of [
+        ["owner/repo-a", "PLAN-L7-1-a"],
+        ["owner/repo-b", "PLAN-L7-2-b"],
+      ])
+        db.prepare(
+          `INSERT INTO github_project_item_projection (
+            projection_id, repository_id, project_id, project_item_id, plan_id,
+            plan_revision, content_node_id, head_sha, sync_status, last_reconciled_at
+          ) VALUES (?, ?, 'project:1', ?, ?, 'rev1', '', '', '同期済', ?)`,
+        ).run(`projection:${planId}`, repositoryId, `item:${planId}`, planId, "2026-07-31");
+
+      expect(selectExistingProjectPlans(db, "owner/repo-a")).toEqual(new Set(["PLAN-L7-1-a"]));
     } finally {
       db.close();
     }

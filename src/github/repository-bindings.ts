@@ -85,7 +85,7 @@ function projectItemId(input: {
   repositoryId: string;
   planId: string;
   revision: string;
-}): string {
+}): string | undefined {
   const row = input.db
     .prepare(
       `SELECT project_item_id FROM github_project_item_projection
@@ -123,7 +123,7 @@ function recordMergeClosure(input: {
   mergeSha: string;
   state: string;
   observedAt?: string;
-}): string {
+}): string | undefined {
   const objectId = `pr:${input.prNumber}:merge:${input.mergeSha}`;
   const existing = input.db
     .prepare(
@@ -161,7 +161,8 @@ function recordMergeClosure(input: {
       input.state,
       input.observedAt ?? new Date().toISOString(),
     );
-  return bindingId;
+  const changes = input.db.prepare("SELECT changes() AS count").get();
+  return Number(changes?.count ?? 0) > 0 ? bindingId : undefined;
 }
 
 export function syncRepositoryBindings(input: {
@@ -193,7 +194,7 @@ export function syncRepositoryBindings(input: {
     skipped: [],
     bindingIds: [],
   };
-  const pendingWrites: Array<() => string> = [];
+  const pendingWrites: Array<() => string | undefined> = [];
   for (const value of pullRequests) {
     const pullRequest = object(value);
     const number = text(pullRequest.number);
@@ -267,7 +268,7 @@ export function syncRepositoryBindings(input: {
       {
         ...common,
         objectKind: "check_run",
-        objectId: `pr:${number}:checks:${headSha}`,
+        objectId: `pr:${number}:check:${prRequiredCheck.id || "missing"}`,
         state: prRequiredCheck.state,
       },
       {
@@ -292,6 +293,12 @@ export function syncRepositoryBindings(input: {
         ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
         : {};
       const mainRequiredCheck = requiredCheck(list(mainChecks.check_runs));
+      bindings.push({
+        ...common,
+        objectKind: "check_run",
+        objectId: `main:${mergeSha}:check:${mainRequiredCheck.id || "missing"}`,
+        state: mainRequiredCheck.state,
+      });
       const issueClosed = trace.fields.issue_number
         ? text(
             object(
@@ -324,6 +331,7 @@ export function syncRepositoryBindings(input: {
         const closure = {
           db: input.db,
           ...common,
+          projectItemId: common.projectItemId,
           prNumber: number,
           objectUrl: text(pullRequest.url),
           mergeSha,
@@ -348,6 +356,7 @@ export function syncRepositoryBindings(input: {
           const closure = {
             db: input.db,
             ...common,
+            projectItemId: common.projectItemId ?? "",
             prNumber: number,
             objectUrl: text(pullRequest.url),
             mergeSha,
@@ -365,7 +374,10 @@ export function syncRepositoryBindings(input: {
     result.tracedPullRequests += 1;
   }
   runSqliteTransaction(input.db, () => {
-    for (const write of pendingWrites) result.bindingIds.push(write());
+    for (const write of pendingWrites) {
+      const bindingId = write();
+      if (bindingId) result.bindingIds.push(bindingId);
+    }
   });
   return result;
 }

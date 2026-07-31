@@ -10,6 +10,7 @@ import {
   decodeMergeClosureReceipt,
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt";
+import { isManualGithubObservationKind } from "../src/state-db/github-forward-projection";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 
@@ -79,7 +80,7 @@ ${entries}
 }
 
 describe("GitHub repository facts binding", () => {
-  it("U-GHBIND-001: converges traced PR lifecycle facts into one PLAN revision", () => {
+  it("U-GHBIND-001/U-GHBIND-010: converges facts and reports only fresh writes", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-"));
     const db = openHarnessDb(":memory:");
     try {
@@ -157,32 +158,34 @@ describe("GitHub repository facts binding", () => {
         issue_number: "70",
         review_receipt_digest: combinedReviewReceiptDigest(reviewDigests),
       });
+      const gh = new FakeGh(
+        [
+          {
+            number: 12,
+            url: "https://github.com/owner/repo/pull/12",
+            headRefName: "feature/domain",
+            headRefOid: "abcdef1",
+            state: "MERGED",
+            mergedAt: "2026-07-29T00:00:00Z",
+            mergeCommit: { oid: "fedcba1" },
+            body,
+            statusCheckRollup: [
+              { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
+            ],
+            reviews: [{ state: "APPROVED" }],
+          },
+        ],
+        {
+          check_runs: [{ name: "harness-check", id: "main-check-1", conclusion: "SUCCESS" }],
+        },
+        { state: "CLOSED" },
+      );
       const result = syncRepositoryBindings({
         db,
         repositoryId: "owner/repo",
         repoRoot,
-        gh: new FakeGh(
-          [
-            {
-              number: 12,
-              url: "https://github.com/owner/repo/pull/12",
-              headRefName: "feature/domain",
-              headRefOid: "abcdef1",
-              state: "MERGED",
-              mergedAt: "2026-07-29T00:00:00Z",
-              mergeCommit: { oid: "fedcba1" },
-              body,
-              statusCheckRollup: [
-                { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
-              ],
-              reviews: [{ state: "APPROVED" }],
-            },
-          ],
-          {
-            check_runs: [{ name: "harness-check", id: "main-check-1", conclusion: "SUCCESS" }],
-          },
-          { state: "CLOSED" },
-        ),
+        gh,
+        now: "2026-07-30T00:00:00Z",
       });
       expect(result).toMatchObject({
         inspectedPullRequests: 1,
@@ -194,6 +197,7 @@ describe("GitHub repository facts binding", () => {
         .all();
       expect(bindings.filter((row) => row.object_kind !== "merge")).toEqual([
         { object_kind: "branch", state: "merged" },
+        { object_kind: "check_run", state: "成功" },
         { object_kind: "check_run", state: "成功" },
         { object_kind: "issue", state: "linked" },
         { object_kind: "pull_request", state: "merged" },
@@ -211,6 +215,14 @@ describe("GitHub repository facts binding", () => {
         prCheckId: "pr-check-1",
         mainCheckId: "main-check-1",
       });
+      const staleReplay = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh,
+        now: "2026-07-29T00:00:00Z",
+      });
+      expect(staleReplay.bindingIds).toEqual([]);
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
@@ -719,5 +731,12 @@ describe("GitHub repository facts binding", () => {
     } finally {
       db.close();
     }
+  });
+
+  it("U-GHBIND-009: manual observe cannot mint check or review evidence", () => {
+    expect(
+      ["project_item", "issue", "branch", "pull_request"].filter(isManualGithubObservationKind),
+    ).toEqual(["project_item", "issue", "branch", "pull_request"]);
+    expect(["check_run", "review", "merge"].some(isManualGithubObservationKind)).toBe(false);
   });
 });

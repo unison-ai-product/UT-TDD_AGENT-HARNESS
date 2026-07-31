@@ -37,6 +37,39 @@ function hasCurrentReviewReceipt(
   );
 }
 
+function hasCurrentCheckBindings(
+  db: HarnessDb,
+  input: {
+    repositoryId: string;
+    receipt: NonNullable<ReturnType<typeof decodeMergeClosureReceipt>>;
+  },
+): boolean {
+  const expectedObjectIds = [
+    `pr:${input.receipt.prNumber}:check:${input.receipt.prCheckId}`,
+    `main:${input.receipt.mergeSha}:check:${input.receipt.mainCheckId}`,
+  ];
+  const rows = db
+    .prepare(
+      `SELECT object_id
+         FROM github_object_bindings
+        WHERE repository_id = ?
+          AND plan_id = ?
+          AND plan_revision = ?
+          AND object_kind = 'check_run'
+          AND head_sha = ?
+          AND state = '成功'
+          AND object_id IN (?, ?)`,
+    )
+    .all(
+      input.repositoryId,
+      input.receipt.planId,
+      input.receipt.planRevision,
+      input.receipt.headSha,
+      ...expectedObjectIds,
+    );
+  return new Set(rows.map((row) => text(row.object_id))).size === expectedObjectIds.length;
+}
+
 function lifecycleRank(kind: GithubBindingInput["objectKind"], state: string): number {
   const ranks: Partial<Record<GithubBindingInput["objectKind"], string[]>> = {
     check_run: ["未実行", "実行中", "取消", "失敗", "成功"],
@@ -78,7 +111,7 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
   );
   const rows = db
     .prepare(
-      `SELECT plan_id, plan_revision, object_kind, object_id, state, head_sha, observed_at
+      `SELECT repository_id, plan_id, plan_revision, object_kind, object_id, state, head_sha, observed_at
          FROM github_object_bindings
         ORDER BY observed_at, binding_id`,
     )
@@ -137,6 +170,10 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
           receipt.planRevision === text(row.plan_revision) &&
           receipt.headSha === text(row.head_sha) &&
           text(row.object_id) === `pr:${receipt.prNumber}:merge:${receipt.mergeSha}` &&
+          hasCurrentCheckBindings(db, {
+            repositoryId: text(row.repository_id),
+            receipt,
+          }) &&
           hasCurrentReviewReceipt(db, receipt, repoRoot)
         );
       })() &&
@@ -191,6 +228,34 @@ export function selectActiveProjectRows(
       (row.readiness !== "完了" && row.readiness !== "保留") ||
       existingProjectPlans.has(row.planId),
   );
+}
+
+export function selectExistingProjectPlans(
+  db: HarnessDb,
+  repositoryId: string,
+): ReadonlySet<string> {
+  return new Set(
+    db
+      .prepare(
+        `SELECT DISTINCT plan_id
+           FROM github_project_item_projection
+          WHERE repository_id = ?`,
+      )
+      .all(repositoryId)
+      .map((row) => text(row.plan_id))
+      .filter(Boolean),
+  );
+}
+
+const MANUAL_GITHUB_OBSERVATION_KINDS = new Set([
+  "project_item",
+  "issue",
+  "branch",
+  "pull_request",
+]);
+
+export function isManualGithubObservationKind(kind: string): boolean {
+  return MANUAL_GITHUB_OBSERVATION_KINDS.has(kind);
 }
 
 export interface RebuildExecutionReadinessInput {
@@ -260,7 +325,7 @@ export interface GithubBindingInput {
   observedAt?: string;
 }
 
-export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): string {
+export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): string | undefined {
   const observedAt = input.observedAt ?? new Date().toISOString();
   if (String(input.objectKind) === "merge")
     throw new Error("merge closure receipts are repository-sync only");
@@ -280,7 +345,7 @@ export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): s
       `GitHub object identity conflict: ${input.objectKind}/${input.objectId} is already bound to ${text(existing.plan_id)}@${text(existing.plan_revision)}`,
     );
   }
-  if (existing && observedAt < text(existing.observed_at)) return text(existing.binding_id);
+  if (existing && observedAt < text(existing.observed_at)) return undefined;
   if (
     existing &&
     observedAt === text(existing.observed_at) &&
@@ -288,7 +353,7 @@ export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): s
   ) {
     const previousRank = lifecycleRank(input.objectKind, text(existing.state));
     const nextRank = lifecycleRank(input.objectKind, input.state);
-    if (nextRank < previousRank) return text(existing.binding_id);
+    if (nextRank < previousRank) return undefined;
     if (nextRank === previousRank || text(existing.head_sha) !== (input.headSha ?? ""))
       throw new Error(
         `GitHub observation conflict at ${observedAt}: ${input.objectKind}/${input.objectId}`,

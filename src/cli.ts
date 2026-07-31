@@ -183,11 +183,13 @@ import {
 import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold";
 import {
   deriveStoredForwardReadiness,
+  isManualGithubObservationKind,
   markGithubProjectionApplied,
   queueGithubProjection,
   rebuildExecutionReadiness,
   recordGithubBinding,
   selectActiveProjectRows,
+  selectExistingProjectPlans,
 } from "./state-db/github-forward-projection";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
 import { harnessDbStatus } from "./state-db/maintenance";
@@ -3329,12 +3331,7 @@ githubProject
         const projectedRows = opts.apply
           ? rebuildExecutionReadiness({ db })
           : deriveStoredForwardReadiness(db);
-        const existingProjectPlans = new Set(
-          db
-            .prepare("SELECT DISTINCT plan_id FROM github_project_item_projection")
-            .all()
-            .map((row) => String(row.plan_id ?? "")),
-        );
+        const existingProjectPlans = selectExistingProjectPlans(db, opts.repository);
         const activeRows = selectActiveProjectRows(projectedRows, existingProjectPlans);
         const rows = opts.plan
           ? projectedRows.filter((row) => row.planId === opts.plan)
@@ -3425,7 +3422,7 @@ githubBinding
   .requiredOption("--repository <id>", "repository identity (owner/name)")
   .requiredOption("--plan <id>", "PLAN ID")
   .requiredOption("--revision <revision>", "PLAN revision/source hash")
-  .requiredOption("--kind <kind>", "project_item|issue|branch|pull_request|check_run|review")
+  .requiredOption("--kind <kind>", "project_item|issue|branch|pull_request")
   .requiredOption("--object-id <id>", "provider object identity")
   .requiredOption("--state <state>", "normalized object state")
   .option("--project-item-id <id>", "Project item identity")
@@ -3445,15 +3442,7 @@ githubBinding
       head?: string;
       json?: boolean;
     }) => {
-      const allowed = new Set([
-        "project_item",
-        "issue",
-        "branch",
-        "pull_request",
-        "check_run",
-        "review",
-      ]);
-      if (!allowed.has(opts.kind)) {
+      if (!isManualGithubObservationKind(opts.kind)) {
         process.stderr.write(`github binding observe: unsupported kind ${opts.kind}\n`);
         process.exitCode = 1;
         return;
@@ -3466,13 +3455,7 @@ githubBinding
           planId: opts.plan,
           planRevision: opts.revision,
           projectItemId: opts.projectItemId,
-          objectKind: opts.kind as
-            | "project_item"
-            | "issue"
-            | "branch"
-            | "pull_request"
-            | "check_run"
-            | "review",
+          objectKind: opts.kind as "project_item" | "issue" | "branch" | "pull_request",
           objectId: opts.objectId,
           objectUrl: opts.url,
           headSha: opts.head,
@@ -3481,11 +3464,15 @@ githubBinding
         const rows = rebuildExecutionReadiness({ db });
         const output = {
           ok: true,
-          bindingId,
+          bindingId: bindingId ?? null,
+          written: bindingId !== undefined,
           readiness: rows.find((row) => row.planId === opts.plan),
         };
         if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-        else process.stdout.write(`github binding observed: ${bindingId}\n`);
+        else
+          process.stdout.write(
+            bindingId ? `github binding observed: ${bindingId}\n` : "github binding unchanged\n",
+          );
       } catch (error) {
         process.stderr.write(`github binding observe failed: ${String(error)}\n`);
         process.exitCode = 1;
