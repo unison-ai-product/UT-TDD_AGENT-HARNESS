@@ -168,8 +168,11 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
   return [...evidence.values()];
 }
 
-export function deriveStoredForwardReadiness(db: HarnessDb): ForwardReadinessRow[] {
-  return deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db));
+export function deriveStoredForwardReadiness(
+  db: HarnessDb,
+  repoRoot = process.cwd(),
+): ForwardReadinessRow[] {
+  return deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db, repoRoot));
 }
 
 export function selectActiveProjectRows(
@@ -187,8 +190,9 @@ export function rebuildExecutionReadiness(
   db: HarnessDb,
   now = new Date().toISOString(),
   transactional = true,
+  repoRoot = process.cwd(),
 ): ForwardReadinessRow[] {
-  const rows = deriveStoredForwardReadiness(db);
+  const rows = deriveStoredForwardReadiness(db, repoRoot);
   const write = db.prepare(
     `INSERT INTO execution_readiness_projection (
        plan_id, plan_revision, readiness, current_gate, implementation_order,

@@ -2710,7 +2710,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       );
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
       time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
-      time("forward-readiness", () => rebuildExecutionReadiness(db, nowIso(), false));
+      time("forward-readiness", () => rebuildExecutionReadiness(db, nowIso(), false, repoRoot));
       time("feedback", () => {
         projectFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectVerificationDefectRoutingRefactorCandidates(db, projectionDeps);
