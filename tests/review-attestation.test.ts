@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { registerDelegationCommands } from "../src/cli/delegation";
+import { isOutsideRepo, registerDelegationCommands } from "../src/cli/delegation";
 import {
   issueReviewRequest,
   projectReviewVerdict,
@@ -361,7 +361,11 @@ describe("review attestation (U-RVATT)", () => {
     const injected = JSON.parse(reviewer.stdout).env?.[REVIEW_VERDICT_FILE_ENV];
     expect(typeof injected).toBe("string");
     // read-only reviewer guard を壊さないため、書き込み先は repo の外でなければならない。
-    expect(injected.startsWith(process.cwd())).toBe(false);
+    // 「repo の外」を `process.cwd()` との比較で書くと実 repo 読みになり、
+    // `test-repository-isolation` ゲートが契約未登録として fail-close する
+    // (2026-07-31 の CI で実測)。読む必要が無いので OS temp 配下であることを直接固定する。
+    // 述語そのもの (repo 内かどうか) は U-RVATT-017 が合成 path で検証する。
+    expect(injected.startsWith(tmpdir())).toBe(true);
     expect(JSON.parse(worker.stdout).env?.[REVIEW_VERDICT_FILE_ENV]).toBeUndefined();
   });
 
@@ -437,6 +441,14 @@ describe("review attestation (U-RVATT)", () => {
         else process.env[key] = value;
       }
     }
+  });
+
+  it("U-RVATT-017: repo 内 path を repo 外と判定しない (合成 path、実 repo を読まない)", () => {
+    expect(isOutsideRepo("/repo", "/tmp/ut-tdd-review-x/verdict.txt")).toBe(true);
+    expect(isOutsideRepo("/repo", "/repo/.ut-tdd/verdict.txt")).toBe(false);
+    expect(isOutsideRepo("/repo", "/repo")).toBe(false);
+    // prefix が一致するだけの兄弟 dir を repo 内と誤判定しないこと。
+    expect(isOutsideRepo("/repo", "/repo-sibling/verdict.txt")).toBe(true);
   });
 
   it("U-RVATT-016: dry-run は注入用 temp dir を残さない", async () => {

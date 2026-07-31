@@ -98,7 +98,14 @@ function nowIso(): string {
   return new Date(performance.timeOrigin + performance.now()).toISOString();
 }
 
-function isOutsideRepo(repoRoot: string, candidate: string): boolean {
+/**
+ * `candidate` が repo の外にあるか。
+ *
+ * reviewer は read-only 契約 (`isReadOnlyDelegationRole` / `assessReviewSession`) の下で動くため、
+ * verdict file を repo 内に置くと reviewer の書き込みがツリー改変として誤検知される。
+ * 純関数なので合成 path で直接検証できる (U-RVATT-017)。
+ */
+export function isOutsideRepo(repoRoot: string, candidate: string): boolean {
   const rel = relative(resolve(repoRoot), resolve(candidate));
   return rel !== "" && rel !== "." && rel.startsWith("..");
 }
