@@ -130,6 +130,73 @@ describe("analyzePlanSupersession", () => {
     expect(r.missingBackrefs).toHaveLength(1);
   });
 
+  it("baseline 宣言済みの自己 supersede は ok を落とさず可視化だけする", () => {
+    const r = analyzePlanSupersession(
+      [plan({ plan_id: "PLAN-L7-1-x", supersedes: ["PLAN-L7-1-x"] })],
+      new Set(["PLAN-L7-1-x"]),
+    );
+    expect(r.selfSupersedes).toEqual([]);
+    expect(r.baselinedSelfSupersedes).toEqual([{ plan_id: "PLAN-L7-1-x", target: "PLAN-L7-1-x" }]);
+    expect(r.staleSelfBaseline).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("baseline 外の新規自己 supersede は baseline が在っても fail-close (baseline は増やせない)", () => {
+    const r = analyzePlanSupersession(
+      [
+        plan({ plan_id: "PLAN-L7-1-x", supersedes: ["PLAN-L7-1-x"] }),
+        plan({ plan_id: "PLAN-L7-2-y", supersedes: ["PLAN-L7-2-y"] }),
+      ],
+      new Set(["PLAN-L7-1-x"]),
+    );
+    expect(r.selfSupersedes).toEqual([{ plan_id: "PLAN-L7-2-y", target: "PLAN-L7-2-y" }]);
+    expect(r.ok).toBe(false);
+  });
+
+  // baseline は縮小のみ可。この負 oracle が無いと staleSelfBaseline の算出を空配列固定にしても
+  // 全テストが green のままになる (実 repo は現に stale 0 件なので拘束しない)。
+  it("baseline に載っているのに自己 supersede が消えたら staleSelfBaseline violation", () => {
+    const r = analyzePlanSupersession(
+      [plan({ plan_id: "PLAN-L7-1-x", supersedes: [] })],
+      new Set(["PLAN-L7-1-x"]),
+    );
+    expect(r.staleSelfBaseline).toEqual(["PLAN-L7-1-x"]);
+    expect(r.baselinedSelfSupersedes).toEqual([]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("staleSelfBaseline は複数件を昇順で列挙する", () => {
+    const r = analyzePlanSupersession(
+      [
+        plan({ plan_id: "PLAN-L7-2-b", supersedes: [] }),
+        plan({ plan_id: "PLAN-L7-1-a", supersedes: [] }),
+      ],
+      new Set(["PLAN-L7-2-b", "PLAN-L7-1-a"]),
+    );
+    expect(r.staleSelfBaseline).toEqual(["PLAN-L7-1-a", "PLAN-L7-2-b"]);
+  });
+
+  it("staleSelfBaseline の縮小要求を日本語メッセージで説明する", () => {
+    const r = analyzePlanSupersession(
+      [plan({ plan_id: "PLAN-L7-1-x", supersedes: [] })],
+      new Set(["PLAN-L7-1-x"]),
+    );
+    expect(planSupersessionMessages(r).join("\n")).toContain("baseline は縮小のみ可");
+  });
+
+  // 意図的な仕様: plans に無い baseline エントリは stale 扱いしない。単体テストは既定 baseline
+  // (実 repo の 7 件) を注入せず小さな plans 配列を渡すため、実在性を要求すると全件が stale に
+  // なってしまう。baseline に架空 ID を混ぜられないことは、下の実 repo oracle
+  // (baselinedSelfSupersedes == baseline 全体) が拘束する。
+  it("plans に存在しない baseline エントリは stale 扱いしない", () => {
+    const r = analyzePlanSupersession(
+      [plan({ plan_id: "PLAN-L7-9-z", supersedes: [] })],
+      new Set(["PLAN-GONE-01"]),
+    );
+    expect(r.staleSelfBaseline).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
   it("実 repo の supersede 検査は green になる", () => {
     const root = workspaceRead({
       id: "U-PSUP-SELF",
@@ -140,6 +207,8 @@ describe("analyzePlanSupersession", () => {
     // 既知債務 7 件は baseline 宣言済みなので ok。baseline 外の新規自己参照が 0 であることを固定する。
     expect(r.selfSupersedes).toEqual([]);
     expect(r.staleSelfBaseline).toEqual([]);
+    // 左右の完全一致なので、baseline に架空 ID を 1 件足すと右辺だけ増えて fail する
+    // (架空 ID は baselinedSelfSupersedes に載らない) = baseline の水増し防止フェンス。
     expect(r.baselinedSelfSupersedes.map((v) => v.plan_id).sort()).toEqual(
       [...PLAN_SUPERSESSION_SELF_BASELINE].sort(),
     );
