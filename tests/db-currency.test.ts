@@ -19,7 +19,9 @@ import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration
 import { defaultHarnessDbPath } from "../src/state-db/index";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
 import {
+  isBunExecutable,
   refreshHarnessDbOnStop,
+  refuseBunStopRefresh,
   runCoalescedStopRefresh,
   spawnDetachedStopRefresh,
 } from "../src/state-db/stop-refresh";
@@ -197,21 +199,38 @@ describe("db-currency lint", () => {
     }
   });
 
-  it("U-DBCURRENCY-007: Stop hook launches the refresh detached so the 5s hook budget is not consumed", () => {
+  it("U-DBCURRENCY-007: Stop hook refuses a Bun refresh worker and preserves retry evidence", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-launch-"));
-    const calls: Array<{
-      command: string;
-      args: string[];
-      options: { cwd: string; detached: boolean; stdio: "ignore"; windowsHide: boolean };
-      unrefCalled: boolean;
-    }> = [];
+    let spawns = 0;
 
     const result = spawnDetachedStopRefresh({
       repoRoot: root,
       execPath: "/usr/bin/bun",
       scriptPath: "/repo/src/cli.ts",
-      spawnImpl: (command, args, options) => {
-        const call = { command, args, options, unrefCalled: false };
+      spawnImpl: () => {
+        spawns += 1;
+        return { pid: 7001, unref: () => {} };
+      },
+    });
+
+    expect(result).toMatchObject({ launched: false, reason: "bun-runtime-refused" });
+    expect(spawns).toBe(0);
+    expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+    expect(readdirSync(join(root, ".ut-tdd", "state", "stop-refresh", "failures"))).toHaveLength(1);
+    expect(acquireStopRefreshLease(root, { generation: () => "retry" }).acquired).toBe(true);
+    removeTestTree(root);
+  });
+
+  it("U-DBCURRENCY-028: only an explicit Node-compatible executable launches detached", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-node-launch-"));
+    const calls: Array<{ command: string; args: string[]; unrefCalled: boolean }> = [];
+    const result = spawnDetachedStopRefresh({
+      repoRoot: root,
+      execPath: "/usr/bin/node",
+      scriptPath: "/repo/dist/cli.js",
+      runtimeBunVersion: null,
+      spawnImpl: (command, args) => {
+        const call = { command, args, unrefCalled: false };
         calls.push(call);
         return {
           pid: 7001,
@@ -224,26 +243,77 @@ describe("db-currency lint", () => {
 
     expect(result.launched).toBe(true);
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.command).toBe("/usr/bin/bun");
-    expect(calls[0]?.args.slice(0, 3)).toEqual(["/repo/src/cli.ts", "session", "db-refresh"]);
-    expect(calls[0]?.args[3]).toBe("--generation");
-    expect(calls[0]?.args[4]).toMatch(/^[0-9a-f-]{36}$/);
-    expect(calls[0]?.options).toEqual({
-      cwd: root,
-      detached: true,
-      stdio: "ignore",
-      windowsHide: true,
-    });
+    expect(calls[0]?.command).toBe("/usr/bin/node");
+    expect(calls[0]?.args.slice(0, 3)).toEqual(["/repo/dist/cli.js", "session", "db-refresh"]);
     expect(calls[0]?.unrefCalled).toBe(true);
     removeTestTree(root);
+  });
+
+  it("U-DBCURRENCY-029: Bun executable detection is path- and case-safe", () => {
+    expect(isBunExecutable("bun", null)).toBe(true);
+    expect(isBunExecutable("BUN.EXE", null)).toBe(true);
+    expect(isBunExecutable("C:\\tools\\bun.cmd", null)).toBe(true);
+    expect(isBunExecutable("/opt/bun/bin/bun", null)).toBe(true);
+    expect(isBunExecutable("/usr/bin/node", "1.3.14")).toBe(true);
+    expect(isBunExecutable("/usr/bin/node", null)).toBe(false);
+    expect(isBunExecutable("bun-wrapper", null)).toBe(false);
+  });
+
+  it("U-DBCURRENCY-030: direct Bun worker refusal releases ownership and records failure", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-direct-bun-"));
+    try {
+      expect(markStopRefreshDirty(root)).toBe(true);
+      const lease = acquireStopRefreshLease(root, { generation: () => "direct-bun" });
+      expect(lease.acquired).toBe(true);
+
+      expect(refuseBunStopRefresh(root, "direct-bun", "C:\\tools\\renamed.exe", "1.3.14")).toBe(
+        true,
+      );
+      expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+      expect(readdirSync(join(root, ".ut-tdd", "state", "stop-refresh", "failures"))).toHaveLength(
+        1,
+      );
+      expect(acquireStopRefreshLease(root, { generation: () => "retry" }).acquired).toBe(true);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-DBCURRENCY-031: detached refresh rejects non-Node and TypeScript entrypoints", () => {
+    for (const [execPath, scriptPath] of [
+      ["python", "cli.js"],
+      ["node", "cli.ts"],
+      ["powershell.exe", "cli.mjs"],
+    ]) {
+      const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-entry-refuse-"));
+      let spawns = 0;
+      const result = spawnDetachedStopRefresh({
+        repoRoot: root,
+        execPath,
+        scriptPath,
+        runtimeBunVersion: null,
+        spawnImpl: () => {
+          spawns += 1;
+          return { pid: 7002, unref: () => {} };
+        },
+      });
+      expect(result).toMatchObject({
+        launched: false,
+        reason: "unsupported-refresh-entrypoint",
+      });
+      expect(spawns).toBe(0);
+      expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+      removeTestTree(root);
+    }
   });
 
   it("U-DBCURRENCY-008: detached launch fails open (returns a reason instead of throwing)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-launch-fail-"));
     const result = spawnDetachedStopRefresh({
       repoRoot: root,
-      execPath: "/usr/bin/bun",
-      scriptPath: "/repo/src/cli.ts",
+      execPath: "/usr/bin/node",
+      scriptPath: "/repo/dist/cli.js",
+      runtimeBunVersion: null,
       spawnImpl: () => {
         throw new Error("spawn EPERM");
       },
@@ -261,8 +331,9 @@ describe("db-currency lint", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-async-fail-"));
     const result = spawnDetachedStopRefresh({
       repoRoot: root,
-      execPath: join(tmpdir(), "ut-tdd-no-such-executable-xyz"),
-      scriptPath: "irrelevant.ts",
+      execPath: join(tmpdir(), "node.exe"),
+      scriptPath: "irrelevant.js",
+      runtimeBunVersion: null,
     });
 
     // PIDを得られないspawnはownership handoff未成立として同期fail-openする。
@@ -284,8 +355,9 @@ describe("db-currency lint", () => {
       const results = Array.from({ length: 100 }, () =>
         spawnDetachedStopRefresh({
           repoRoot: root,
-          execPath: "bun",
-          scriptPath: "cli.ts",
+          execPath: "node",
+          scriptPath: "cli.js",
+          runtimeBunVersion: null,
           spawnImpl,
         }),
       );
@@ -376,8 +448,9 @@ describe("db-currency lint", () => {
     try {
       const result = spawnDetachedStopRefresh({
         repoRoot: root,
-        execPath: "missing",
-        scriptPath: "cli.ts",
+        execPath: "node",
+        scriptPath: "cli.js",
+        runtimeBunVersion: null,
         spawnImpl: () => ({
           pid: 7003,
           unref: () => {},
@@ -426,8 +499,9 @@ describe("db-currency lint", () => {
     try {
       const launched = spawnDetachedStopRefresh({
         repoRoot: root,
-        execPath: "bun",
-        scriptPath: "cli.ts",
+        execPath: "node",
+        scriptPath: "cli.js",
+        runtimeBunVersion: null,
         spawnImpl: () => ({ pid: 9001, unref: () => {}, on: () => {} }),
       });
       expect(launched.launched).toBe(true);
