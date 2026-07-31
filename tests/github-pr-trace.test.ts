@@ -1,6 +1,9 @@
 // PLAN-L7-451 W4: typed PR trace contract の unit oracle。
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderPrTraceBlock, validatePrTraceBody } from "../src/github/pr-trace";
+import { headSnapshotRoot } from "./support/workspace-roots";
 
 const VALID_FIELDS = {
   plan_id: "PLAN-L7-451-github-ops-phase1-visibility-and-policy",
@@ -75,5 +78,20 @@ describe("github pr trace contract (PLAN-L7-451 W4)", () => {
     const result = validatePrTraceBody(dupKey);
     expect(result.ok).toBe(false);
     expect(result.findings.map((f) => f.code)).toContain("trace-key-duplicated");
+  });
+
+  it("U-L7-451-W4-006: source/common PR templates require an Issue for every Forward PR", () => {
+    const root = headSnapshotRoot();
+    const templates = [
+      readFileSync(join(root, ".github", "PULL_REQUEST_TEMPLATE.md"), "utf8"),
+      readFileSync(
+        join(root, "docs", "templates", "github", "common", "PULL_REQUEST_TEMPLATE.md"),
+        "utf8",
+      ),
+    ];
+    for (const template of templates) {
+      expect(template).toContain("Closes #<issue-number>");
+      expect(template).not.toMatch(/通常 Forward.*Issue.*(?:不要|省略)/u);
+    }
   });
 });

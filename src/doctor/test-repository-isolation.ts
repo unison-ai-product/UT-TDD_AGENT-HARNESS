@@ -54,6 +54,7 @@ const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.f
 );
 
 for (const [path, calls] of Object.entries({
+  "tests/github-pr-trace.test.ts": 1,
   "tests/model-id-ssot-drift.test.ts": 1,
   "tests/model-id-ssot.test.ts": 1,
   "tests/plan-id-naming.test.ts": 1,
