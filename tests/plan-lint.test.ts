@@ -1175,15 +1175,15 @@ dependencies:
         layer: "L7",
         subDoc: null,
         extra:
-          "route_signal: constraint\nroute_mode: forward\ncreated: 2026-07-31\nupdated: 2026-07-31\n",
+          "route_signal: forward\nroute_mode: forward\ncreated: 2026-07-31\nupdated: 2026-07-31\n",
       }),
     ];
 
-    const details = analyzePlanGovernance(docs)
-      .violations.filter((violation) => violation.reason === "route_mode_kind_mismatch")
-      .map((violation) => violation.detail ?? "");
+    const violations = analyzePlanGovernance(docs).violations.filter((violation) =>
+      ["route_certificate_mismatch", "route_mode_kind_mismatch"].includes(violation.reason),
+    );
 
-    expect(details).toEqual([]);
+    expect(violations).toEqual([]);
   });
 
   it("U-PLANGOV-011v3c: newly registered route modes no longer fail as unknown route_mode", () => {

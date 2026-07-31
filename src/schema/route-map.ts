@@ -126,7 +126,7 @@ export const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
     requiresApproval: false,
   },
   {
-    tokens: ["interrupt", "constraint"],
+    tokens: ["forward", "interrupt", "constraint"],
     mode: "forward",
     command: ROUTE_COMMAND_TASK_CLASSIFY,
     preflight: true,
