@@ -50,7 +50,7 @@ describe("git workspace fence", () => {
     }
   });
 
-  it("U-TESTHYGIENE-021: ignores volatile harness DB family content changes", () => {
+  it("U-TESTHYGIENE-056: ignores volatile harness DB family content changes", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-"));
     try {
       const runtimeDirectory = join(root, ".ut-tdd");
@@ -73,21 +73,37 @@ describe("git workspace fence", () => {
     }
   });
 
-  it("U-TESTHYGIENE-022: does not read a locked volatile harness DB", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-locked-"));
-    const dbPath = join(root, ".ut-tdd", "harness.db");
-    mkdirSync(dirname(dbPath), { recursive: true });
-    writeFileSync(dbPath, "locked\n");
-    const fileDescriptor = openSync(dbPath, "r+");
+  /**
+   * 「読まない」は observable な帰結 (entry が content 由来の digest を持たないこと) で主張する。
+   * `openSync(path, "r+")` で lock を作る形は空振りする — libuv は
+   * `FILE_SHARE_READ|WRITE|DELETE` を立てるので Windows でも読み取りを阻害せず、
+   * 除外を外した実装でも `not.toThrow()` が成立してしまう (blind review F-2)。
+   */
+  it("U-TESTHYGIENE-057: emits a content-free entry for the volatile harness DB family", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-entry-"));
     try {
-      expect(() => captureWorkspaceInventory(root, { volatileRuntimeIndex: true })).not.toThrow();
+      const runtimeDirectory = join(root, ".ut-tdd");
+      mkdirSync(runtimeDirectory, { recursive: true });
+      for (const file of ["harness.db", "harness.db-journal", "harness.db-wal", "harness.db-shm"]) {
+        writeFileSync(join(runtimeDirectory, file), "content\n");
+      }
+      const { entries } = captureWorkspaceInventory(root, { volatileRuntimeIndex: true });
+      const volatileEntries = entries.filter((e) => e.startsWith("f:.ut-tdd/harness.db"));
+      expect(volatileEntries).toHaveLength(4);
+      // content hash (sha256 hex 64 桁) を含まない = 読んでいない。
+      for (const entry of volatileEntries) expect(entry).not.toMatch(/:[0-9a-f]{64}$/);
+      // 既定 (option 無し) では同じ 4 entry が content hash を持つ (検知力の非破壊)。
+      const defaultEntries = captureWorkspaceInventory(root).entries.filter((e) =>
+        e.startsWith("f:.ut-tdd/harness.db"),
+      );
+      expect(defaultEntries).toHaveLength(4);
+      for (const entry of defaultEntries) expect(entry).toMatch(/:[0-9a-f]{64}$/);
     } finally {
-      closeSync(fileDescriptor);
       removeTestTree(root);
     }
   });
 
-  it("U-TESTHYGIENE-023: keeps default inventory sensitive to harness DB content", () => {
+  it("U-TESTHYGIENE-058: keeps default inventory sensitive to harness DB content", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-default-db-"));
     try {
       const dbPath = join(root, ".ut-tdd", "harness.db");
@@ -101,7 +117,7 @@ describe("git workspace fence", () => {
     }
   });
 
-  it("U-TESTHYGIENE-024: retains ignored files and empty directories in volatile inventory", () => {
+  it("U-TESTHYGIENE-059: retains ignored files and empty directories in volatile inventory", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-structure-"));
     try {
       const before = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
@@ -120,7 +136,7 @@ describe("git workspace fence", () => {
     }
   });
 
-  it("U-TESTHYGIENE-025: retains volatile harness DB creation and deletion", () => {
+  it("U-TESTHYGIENE-060: retains volatile harness DB creation and deletion", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-presence-"));
     try {
       const dbPath = join(root, ".ut-tdd", "harness.db");
@@ -138,7 +154,7 @@ describe("git workspace fence", () => {
     }
   });
 
-  it("U-TESTHYGIENE-026: retains volatile harness DB type changes", () => {
+  it("U-TESTHYGIENE-061: retains volatile harness DB type changes", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-type-"));
     try {
       const dbPath = join(root, ".ut-tdd", "harness.db");
@@ -165,7 +181,9 @@ describe("git workspace fence", () => {
     ".ut-tdd/harness.db.bak",
     ".ut-tdd/sub/harness.db",
     "harness.db",
-  ])("U-TESTHYGIENE-027: remains sensitive to content changes outside the exact volatile path (%s)", (relativePath) => {
+    // 除外は case-sensitive な exact 一致。大文字表記は除外に当たらず検知側へ倒れる。
+    ".ut-tdd/HARNESS.DB",
+  ])("U-TESTHYGIENE-062: remains sensitive to content changes outside the exact volatile path (%s)", (relativePath) => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-exact-"));
     try {
       const filePath = join(root, ...relativePath.split("/"));
@@ -181,7 +199,7 @@ describe("git workspace fence", () => {
     }
   });
 
-  it("U-TESTHYGIENE-028: remains sensitive to ordinary .ut-tdd file content changes", () => {
+  it("U-TESTHYGIENE-063: remains sensitive to ordinary .ut-tdd file content changes", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-ordinary-"));
     try {
       const logPath = join(root, ".ut-tdd", "logs", "x.log");

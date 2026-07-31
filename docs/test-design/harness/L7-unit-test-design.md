@@ -1451,6 +1451,14 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 | `U-TESTHYGIENE-051` | `vitest-snapshot-runner.test.ts` | 非root entrypoint | `uid!=0`はguard後段へ到達し、root誤判定で処理を遮断しない |
 | `U-TESTHYGIENE-052` | `vitest-snapshot-runner.test.ts` | Windows ACL seal command | 対象identityへ継承付き`WD,AD` denyを再帰適用し、identity空値はfail-closeする。通常権限での実write拒否は036、Administratorによるtake-ownership等の明示bypass後の改変検出は042が担う |
 | `U-TESTHYGIENE-055` | `vitest-snapshot-runner.test.ts` | origin custody ref保全 | detached snapshotがsourceの`refs/remotes/origin/*`をHEADと**別revision**のまま引き継ぐ。source HEADと同一revisionを注入するだけの実装では落ちる (ref依存checkがsnapshotで誤ってOKになるのを防ぐ) |
+| `U-TESTHYGIENE-056` | `git-workspace-fingerprint.test.ts` | volatile DB内容変更 | live lane除外時、harness DB一族4パスの内容変更でinventory digestが変わらない (issue #203) |
+| `U-TESTHYGIENE-057` | 同上 | volatile entryの形 | 除外entryがcontent hash (sha256 hex 64桁) を持たない = 読んでいない。既定 (option無し) では同じ4 entryがhashを持つ |
+| `U-TESTHYGIENE-058` | 同上 | 既定の非破壊 | option無しの呼び出しは従来どおりharness DB内容変更を検知する |
+| `U-TESTHYGIENE-059` | 同上 | 漏洩検知の保持 | 除外option下でも`.ut-tdd/gate_runs/leak.json`と空directoryの新規作成を検知 (016の意図を保つ) |
+| `U-TESTHYGIENE-060` | 同上 | 存在の非免除 | 除外option下でもharness DBの作成・削除を検知する (中身だけ免除、存在は見る) |
+| `U-TESTHYGIENE-061` | 同上 | 型すり替え | 除外option下でもregular file→symlink/directoryの型変更を検知する |
+| `U-TESTHYGIENE-062` | 同上 | exact path限定 | `.bak`／`sub/`／root直下／大文字表記は除外に当たらず内容変更を検知する (case-sensitive exact一致) |
+| `U-TESTHYGIENE-063` | 同上 | 通常runtime file | 除外option下でも`.ut-tdd/logs/*`のような通常ファイルの内容変更を検知する |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。

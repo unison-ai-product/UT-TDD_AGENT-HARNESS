@@ -37,6 +37,7 @@ docs/handover/session-handover-*.md
 .ut-tdd/release-*/
 # harness.db projection (runtime state, rebuildable from docs/state/logs; never tracked)
 .ut-tdd/harness.db
+.ut-tdd/harness.db-journal
 .ut-tdd/harness.db-wal
 .ut-tdd/harness.db-shm
 # canonical ledger DBs under .ut-tdd/ledger/ (runtime state, never tracked —
