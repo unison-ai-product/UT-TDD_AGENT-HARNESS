@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, relative, resolve } from "node:path";
 import type { Command } from "commander";
+import {
+  issueReviewRequest,
+  projectReviewVerdict,
+  REVIEW_VERDICT_FILE_ENV,
+  type ReviewAttestationRequest,
+} from "../feedback/review-attestation";
 import { REVIEW_OUTPUT_CONTRACT } from "../feedback/review-verdict-contract";
 import { loadChangedFiles } from "../lint/change-impact";
 import {
@@ -27,6 +36,7 @@ export interface AdapterExecutionDeps {
     deps: ReturnType<typeof nodeDeps>,
   ) => void;
   writeHandoverWarnings: () => void;
+  now?: () => string;
 }
 
 export interface AdapterExecutionInput {
@@ -35,12 +45,18 @@ export interface AdapterExecutionInput {
   planId?: string;
   jsonOut?: boolean;
   reviewRole?: string;
+  review?: {
+    request: ReviewAttestationRequest;
+    verdictFile: string;
+    startedAt: string;
+  };
 }
 
 export interface AdapterExecutionResult {
   executed: true;
   exit_code: number | null;
   signal: string | null;
+  review?: ReturnType<typeof projectReviewVerdict>;
 }
 
 export interface DelegationCommandDeps extends AdapterExecutionDeps {
@@ -77,6 +93,24 @@ function safeLoadChangedFiles(repoRoot: string): string[] {
   }
 }
 
+function nowIso(): string {
+  return new Date(performance.timeOrigin + performance.now()).toISOString();
+}
+
+function isOutsideRepo(repoRoot: string, candidate: string): boolean {
+  const rel = relative(resolve(repoRoot), resolve(candidate));
+  return rel !== "" && rel !== "." && rel.startsWith("..");
+}
+
+function reviewVerdictPath(repoRoot: string): string {
+  let directory = mkdtempSync(join(tmpdir(), "ut-tdd-review-"));
+  if (!isOutsideRepo(repoRoot, directory)) {
+    rmSync(directory, { recursive: true, force: true });
+    directory = mkdtempSync(join(dirname(resolve(repoRoot)), "ut-tdd-review-"));
+  }
+  return join(directory, "verdict.txt");
+}
+
 export function executeAdapterPlanForCli(
   plan: AdapterPlan,
   input: AdapterExecutionInput,
@@ -84,6 +118,7 @@ export function executeAdapterPlanForCli(
 ): AdapterExecutionResult {
   const sessionId = `${input.sessionPrefix}-${Date.now()}`;
   const repoRoot = process.cwd();
+  const now = depsInput.now ?? nowIso;
   const deps = nodeDeps(repoRoot, depsInput.gitBranch, depsInput.gitHead);
   const startInput: SessionHookInput = {
     hook_event_name: "SessionStart",
@@ -110,6 +145,29 @@ export function executeAdapterPlanForCli(
     shell: invocation.shell ?? false,
     windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
   });
+  let reviewResult: ReturnType<typeof projectReviewVerdict> | undefined;
+  if (input.review) {
+    try {
+      reviewResult = projectReviewVerdict({
+        repoRoot,
+        request: input.review.request,
+        attestation: {
+          provider: plan.provider,
+          role: input.reviewRole ?? "reviewer",
+          model: plan.model ?? "unknown",
+          pr: input.review.request.pr,
+          head: input.review.request.exactHead,
+          reviewRevision: input.review.request.reviewRevision,
+          startedAt: input.review.startedAt,
+          completedAt: now(),
+          exitCode: child.status ?? 1,
+        },
+        verdictFile: input.review.verdictFile,
+      });
+    } finally {
+      rmSync(dirname(input.review.verdictFile), { recursive: true, force: true });
+    }
+  }
   if (child.error) {
     process.stderr.write(`${plan.provider}: failed to launch (${String(child.error)})\n`);
   }
@@ -143,7 +201,13 @@ export function executeAdapterPlanForCli(
     "Stop",
   );
   depsInput.writeHandoverWarnings();
-  return { executed: true, exit_code: child.status ?? null, signal: child.signal ?? null };
+  const exitCode = child.status === 0 && reviewResult?.ok === false ? 1 : child.status;
+  return {
+    executed: true,
+    exit_code: exitCode ?? null,
+    signal: child.signal ?? null,
+    ...(reviewResult ? { review: reviewResult } : {}),
+  };
 }
 
 function runtimeCommand(
@@ -160,6 +224,9 @@ function runtimeCommand(
     .option("--plan <id>", "PLAN id")
     .option("--model <model>", "provider model override for this call")
     .option("--effort <level>", "provider reasoning effort override for this call")
+    .option("--review-pr <number>", "reviewed pull request number")
+    .option("--review-head <sha>", "exact reviewed HEAD SHA")
+    .option("--review-revision <id>", "review revision identity")
     .option("--execute", "execute provider CLI instead of dry-run")
     .option("--json", "JSON output")
     .action(
@@ -170,6 +237,9 @@ function runtimeCommand(
         plan?: string;
         model?: string;
         effort?: string;
+        reviewPr?: string;
+        reviewHead?: string;
+        reviewRevision?: string;
         execute?: boolean;
         json?: boolean;
       }) => {
@@ -194,6 +264,16 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
+        if (routing.review_lane && (!opts.reviewPr || !opts.reviewHead || !opts.reviewRevision)) {
+          process.stderr.write(
+            "review_head_required: review lane requires --review-pr, --review-head, and --review-revision\n",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        const reviewPr = opts.reviewPr;
+        const reviewHead = opts.reviewHead;
+        const reviewRevision = opts.reviewRevision;
         const routingAudit =
           `delegation-routing: model=${routing.model} (${routing.model_source}) ` +
           `effort=${routing.effort} (${routing.effort_source})` +
@@ -222,11 +302,41 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
+        let reviewVerdictFile: string | undefined;
+        if (routing.review_lane) {
+          reviewVerdictFile = reviewVerdictPath(process.cwd());
+          plan.env = { ...(plan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: reviewVerdictFile };
+        }
         if (!opts.execute) {
           process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
           return;
         }
         const jsonOut = Boolean(opts.json);
+        const startedAt = deps.now?.() ?? nowIso();
+        const reviewRequest =
+          routing.review_lane && reviewVerdictFile && reviewPr && reviewHead && reviewRevision
+            ? {
+                memoryId: `review:${reviewPr}:${reviewHead}:${reviewRevision}`,
+                pr: Number(reviewPr),
+                exactHead: reviewHead,
+                reviewRevision,
+                authorFamily: (provider === "codex" ? "claude" : "codex") as "codex" | "claude",
+                requestedAt: startedAt,
+              }
+            : undefined;
+        if (reviewRequest && !Number.isInteger(reviewRequest.pr)) {
+          process.stderr.write("review_pr_required: --review-pr must be an integer\n");
+          process.exitCode = 1;
+          return;
+        }
+        if (reviewRequest) {
+          const issued = issueReviewRequest({ repoRoot: process.cwd(), request: reviewRequest });
+          if (!issued.ok) {
+            process.stderr.write(`${issued.reason}\n`);
+            process.exitCode = 1;
+            return;
+          }
+        }
         const execution = executeAdapterPlanForCli(
           plan,
           {
@@ -235,6 +345,9 @@ function runtimeCommand(
             planId: opts.plan,
             jsonOut,
             reviewRole: opts.role,
+            ...(reviewRequest && reviewVerdictFile
+              ? { review: { request: reviewRequest, verdictFile: reviewVerdictFile, startedAt } }
+              : {}),
           },
           deps,
         );
