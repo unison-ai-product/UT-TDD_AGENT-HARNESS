@@ -1,6 +1,14 @@
-import { chmodSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerDelegationCommands } from "../src/cli/delegation";
@@ -456,6 +464,10 @@ describe("review attestation (U-RVATT)", () => {
     const verdictFile = JSON.parse(delegated.stdout).env[REVIEW_VERDICT_FILE_ENV] as string;
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-wire-"));
     try {
+      // dry-run は temp dir を後始末する (execute 経路だけが子の実行中それを保持する)。
+      // ここで確かめたいのは「注入された path 文字列を reader がそのまま受理する」ことなので、
+      // 同じ path を作り直して読み戻す。
+      mkdirSync(dirname(verdictFile), { recursive: true });
       writeFileSync(verdictFile, "VERDICT: PASS\n", "utf8");
       const result = projectReviewVerdict({
         repoRoot: root,
