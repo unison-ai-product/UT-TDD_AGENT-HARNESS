@@ -8,6 +8,7 @@ import {
   projectReviewVerdict,
   REVIEW_VERDICT_FILE_ENV,
   type ReviewAttestationRequest,
+  resolveReviewAuthorFamily,
 } from "../feedback/review-attestation";
 import { REVIEW_OUTPUT_CONTRACT } from "../feedback/review-verdict-contract";
 import { loadChangedFiles } from "../lint/change-impact";
@@ -227,6 +228,7 @@ function runtimeCommand(
     .option("--review-pr <number>", "reviewed pull request number")
     .option("--review-head <sha>", "exact reviewed HEAD SHA")
     .option("--review-revision <id>", "review revision identity")
+    .option("--review-author-family <family>", "author family under review (codex|claude)")
     .option("--execute", "execute provider CLI instead of dry-run")
     .option("--json", "JSON output")
     .action(
@@ -240,6 +242,7 @@ function runtimeCommand(
         reviewPr?: string;
         reviewHead?: string;
         reviewRevision?: string;
+        reviewAuthorFamily?: string;
         execute?: boolean;
         json?: boolean;
       }) => {
@@ -249,7 +252,8 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
-        const mode = detectMode().mode;
+        const detection = detectMode();
+        const mode = detection.mode;
         // role 検証 + role/intent ベースの model/effort routing (PLAN-L7-255)。
         // 明示 --model/--effort は routing より常に優先される。
         const routing = resolveDelegationRouting({
@@ -302,31 +306,62 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
+        // 著者族は provider から独立した事実 (委譲を実行している runtime) から取る。
+        // provider の反対と定義すると D1 の同族レビュー検出が恒偽になり fail-open する
+        // (`resolveReviewAuthorFamily` の doc を参照)。判別できなければ推測せず落とす。
+        const authorFamily = routing.review_lane
+          ? resolveReviewAuthorFamily({
+              explicit: opts.reviewAuthorFamily,
+              currentRuntime: detection.currentRuntime,
+            })
+          : null;
+        if (routing.review_lane && !authorFamily) {
+          process.stderr.write(
+            "review_author_family_required: cannot determine the author family; " +
+              "pass --review-author-family <codex|claude>\n",
+          );
+          process.exitCode = 1;
+          return;
+        }
         let reviewVerdictFile: string | undefined;
         if (routing.review_lane) {
           reviewVerdictFile = reviewVerdictPath(process.cwd());
           plan.env = { ...(plan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: reviewVerdictFile };
         }
+        // verdict file の temp dir は execute 経路 (`executeAdapterPlanForCli`) が後始末する。
+        // dry-run と早期 return はそこへ到達しないので、ここで確実に捨てる (leak 防止)。
+        const discardVerdictDir = (): void => {
+          if (reviewVerdictFile) {
+            rmSync(dirname(reviewVerdictFile), { recursive: true, force: true });
+          }
+        };
         if (!opts.execute) {
           process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+          discardVerdictDir();
           return;
         }
         const jsonOut = Boolean(opts.json);
         const startedAt = deps.now?.() ?? nowIso();
         const reviewRequest =
-          routing.review_lane && reviewVerdictFile && reviewPr && reviewHead && reviewRevision
+          routing.review_lane &&
+          authorFamily &&
+          reviewVerdictFile &&
+          reviewPr &&
+          reviewHead &&
+          reviewRevision
             ? {
                 memoryId: `review:${reviewPr}:${reviewHead}:${reviewRevision}`,
                 pr: Number(reviewPr),
                 exactHead: reviewHead,
                 reviewRevision,
-                authorFamily: (provider === "codex" ? "claude" : "codex") as "codex" | "claude",
+                authorFamily,
                 requestedAt: startedAt,
               }
             : undefined;
         if (reviewRequest && !Number.isInteger(reviewRequest.pr)) {
           process.stderr.write("review_pr_required: --review-pr must be an integer\n");
           process.exitCode = 1;
+          discardVerdictDir();
           return;
         }
         if (reviewRequest) {
@@ -334,6 +369,7 @@ function runtimeCommand(
           if (!issued.ok) {
             process.stderr.write(`${issued.reason}\n`);
             process.exitCode = 1;
+            discardVerdictDir();
             return;
           }
         }

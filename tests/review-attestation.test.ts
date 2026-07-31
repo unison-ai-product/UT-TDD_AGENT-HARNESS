@@ -10,6 +10,7 @@ import {
   REVIEW_VERDICT_FILE_ENV,
   type ReviewAttestation,
   type ReviewAttestationRequest,
+  resolveReviewAuthorFamily,
 } from "../src/feedback/review-attestation";
 import { analyzeReviewDispatch } from "../src/feedback/review-dispatch";
 import { REVIEW_OUTPUT_CONTRACT } from "../src/feedback/review-verdict-contract";
@@ -343,6 +344,8 @@ describe("review attestation (U-RVATT)", () => {
       head,
       "--review-revision",
       "review-rvatt-1",
+      "--review-author-family",
+      "claude",
     ]);
     const worker = await runDelegation(["codex", "--role", "be-api", "--task", "implement slice"]);
     expect(reviewer.stdout, "review_lane の dry-run が stdout へ何も出していない").not.toBe("");
@@ -352,6 +355,80 @@ describe("review attestation (U-RVATT)", () => {
     // read-only reviewer guard を壊さないため、書き込み先は repo の外でなければならない。
     expect(injected.startsWith(process.cwd())).toBe(false);
     expect(JSON.parse(worker.stdout).env?.[REVIEW_VERDICT_FILE_ENV]).toBeUndefined();
+  });
+
+  // U-RVATT-013〜015 は **同族レビュー検出が発火可能であること**を守る。
+  // 著者族を「レビュアー族の反対」と導出すると D1 の
+  // `receipt.reviewerFamily === request.authorFamily` が恒偽になり、
+  // 「Claude の成果物を Claude がレビューした」を永久に検出できない fail-open になる。
+  it("U-RVATT-013: 著者族の解決は provider を参照せず、判別不能なら null を返す", () => {
+    expect(resolveReviewAuthorFamily({ currentRuntime: "codex" })).toBe("codex");
+    expect(resolveReviewAuthorFamily({ currentRuntime: "claude" })).toBe("claude");
+    expect(resolveReviewAuthorFamily({ currentRuntime: null })).toBe(null);
+    expect(resolveReviewAuthorFamily({ explicit: "codex", currentRuntime: "claude" })).toBe(
+      "codex",
+    );
+    expect(resolveReviewAuthorFamily({ explicit: "bogus", currentRuntime: "claude" })).toBe(null);
+  });
+
+  it("U-RVATT-014: 同族 (claude 著者 / claude レビュアー) は merge_ready にならない", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-samefamily-"));
+    const verdictFile = join(root, "reviewer.verdict");
+    try {
+      writeFileSync(verdictFile, "VERDICT: PASS\n", "utf8");
+      const sameFamilyRequest = { ...request(), authorFamily: "claude" as const };
+      const issued = issueReviewRequest({ repoRoot: root, request: sameFamilyRequest });
+      const projected = projectReviewVerdict({
+        repoRoot: root,
+        request: sameFamilyRequest,
+        attestation: attestation({ provider: "claude" }),
+        verdictFile,
+      });
+      expect(issued.ok).toBe(true);
+      expect(projected).toMatchObject({ ok: true, receipt: { reviewerFamily: "claude" } });
+      if (!issued.ok || !projected.ok) return;
+      const dispatch = analyzeReviewDispatch({
+        requests: [issued.request],
+        receipts: [projected.receipt],
+        prs: [{ pr: 731, headSha: head, state: "OPEN", checksGreen: true }],
+        now: "2026-07-31T01:10:00.000Z",
+      });
+      expect(dispatch.entries[0].state).not.toBe("merge_ready");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-015: 著者族が判別できない review_lane 委譲は fail-close する", async () => {
+    const runtimeKeys = ["CLAUDECODE", "CODEX_SANDBOX", "CODEX_HOME"];
+    const saved = new Map(runtimeKeys.map((key) => [key, process.env[key]]));
+    const priorExitCode = process.exitCode;
+    for (const key of runtimeKeys) delete process.env[key];
+    process.exitCode = undefined;
+    try {
+      const result = await runDelegation([
+        "codex",
+        "--role",
+        "blind-reviewer",
+        "--task",
+        "review slice",
+        "--review-pr",
+        "731",
+        "--review-head",
+        head,
+        "--review-revision",
+        "review-rvatt-1",
+      ]);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("review_author_family_required");
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = priorExitCode;
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
   });
 
   it("U-RVATT-011: 契約テキストと reader は同一の env 定数を根拠にする", () => {
@@ -372,6 +449,8 @@ describe("review attestation (U-RVATT)", () => {
       head,
       "--review-revision",
       "review-rvatt-1",
+      "--review-author-family",
+      "claude",
     ]);
     expect(delegated.stdout, "review_lane の dry-run が stdout へ何も出していない").not.toBe("");
     const verdictFile = JSON.parse(delegated.stdout).env[REVIEW_VERDICT_FILE_ENV] as string;

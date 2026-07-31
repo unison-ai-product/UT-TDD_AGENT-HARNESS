@@ -111,6 +111,10 @@ async function dryRunTask(provider: "claude" | "codex", role: string): Promise<s
           "a".repeat(40),
           "--review-revision",
           "contract-review-1",
+          // 著者族は CLAUDECODE / CODEX_* から推定されるが、CI runner にはどちらも無い。
+          // 環境依存を持ち込まないよう明示する (2026-07-31 の CI 事故と同型の予防)。
+          "--review-author-family",
+          "claude",
         ]
       : [];
     await program.parseAsync([

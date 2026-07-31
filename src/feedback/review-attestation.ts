@@ -123,6 +123,30 @@ function identityMatches(
   );
 }
 
+/**
+ * request の `authorFamily` を解決する。
+ *
+ * **provider (レビュアー族) を引数に取らないことが本質である。** 「著者族 = レビュアー族の反対」
+ * と導出すると、D1 の同族レビュー検出
+ * (`receipt.reviewerFamily === request.authorFamily`、`review-dispatch.ts`) が**恒偽**になり、
+ * 「Claude が書いた成果物を Claude がレビューした」場合でも機構が発火しない。
+ * 強制しているように見えて実際には検出不能という fail-open になる。
+ *
+ * よって著者族は provider から**独立した事実**、すなわち委譲を実行している runtime から取る。
+ * 判別できない場合は `null` を返し、呼び出し側で fail-close させる (推測しない)。
+ */
+export function resolveReviewAuthorFamily(input: {
+  explicit?: string;
+  currentRuntime: "codex" | "claude" | null;
+}): "codex" | "claude" | null {
+  if (input.explicit !== undefined) {
+    return PROVIDERS.includes(input.explicit as (typeof PROVIDERS)[number])
+      ? (input.explicit as "codex" | "claude")
+      : null;
+  }
+  return input.currentRuntime;
+}
+
 export function issueReviewRequest(input: {
   repoRoot: string;
   request: ReviewAttestationRequest;
