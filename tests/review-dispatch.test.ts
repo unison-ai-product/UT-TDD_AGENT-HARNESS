@@ -218,7 +218,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       prs: [pr({ headSha: "b".repeat(40) })],
     });
     expect(entry(stale).state).toBe("stale_head");
-    expect(stale.ok).toBe(false);
+    expect(stale.ok).toBe(true);
   });
 
   it("U-RVDISP-006: PASS-WEAK は merge_ready 対象、FLAG は blocking を残す", () => {
@@ -277,8 +277,8 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     });
 
     expect(entry(result).state).toBe("stale_head");
-    expect(entry(result).reasons).toContain("head_mismatch");
-    expect(result.ok).toBe(false);
+    expect(entry(result).progressDiagnostics).toContain("request_superseded");
+    expect(result.ok).toBe(true);
   });
 
   it("U-RVDISP-009: verdict 無しで MERGED された PR を手順違反として検出する", () => {
@@ -487,7 +487,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(invalidPass.ok).toBe(false);
   });
 
-  it("U-RVDISP-018: author family receipt は acknowledged/in_review/verdict 全てで拒否する", () => {
+  it("U-RVDISP-018: author family進捗は診断、verdictだけを承認から拒否する", () => {
     for (const kind of ["acknowledged", "in_review", "verdict"] as const) {
       const receipts = completeSequence().map((item) =>
         item.kind === kind ? { ...item, reviewerFamily: "claude" as const } : item,
@@ -499,9 +499,15 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
         now: "2026-07-31T00:10:00.000Z",
       });
 
-      expect(entry(result).reasons).toContain("same_family_reviewer");
-      expect(entry(result).state).not.toBe("merge_ready");
-      expect(result.ok).toBe(false);
+      if (kind === "verdict") {
+        expect(entry(result).reasons).toContain("same_family_reviewer");
+        expect(entry(result).state).not.toBe("merge_ready");
+        expect(result.ok).toBe(false);
+      } else {
+        expect(entry(result).progressDiagnostics).toContain("same_family_progress_receipt");
+        expect(entry(result).state).toBe("merge_ready");
+        expect(result.ok).toBe(true);
+      }
     }
   });
 
@@ -730,7 +736,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
         expect.stringContaining("orphan_pr_observation:unmatched_pr:"),
       ]),
     );
-    expect(messages.filter((message) => message.includes("SLA超過"))).toHaveLength(2);
+    expect(messages.filter((message) => message.includes("SLA超過"))).toHaveLength(1);
     expect(messages.some((message) => message.includes("a".repeat(40)))).toBe(true);
     expect(messages.some((message) => message.includes("b".repeat(40)))).toBe(true);
   });
@@ -880,5 +886,62 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       now: "2026-07-31T00:10:00.000Z",
     });
     expect(shuffled).toEqual(base);
+  });
+
+  it("U-RVDISP-043: stale HEAD requestはsuperseded終端としてSLAと全体okを汚染しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [],
+      prs: [pr({ headSha: "b".repeat(40) })],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("stale_head");
+    expect(entry(result).breaches).toEqual([]);
+    expect(entry(result).reasons).toEqual([]);
+    expect(entry(result).progressDiagnostics).toContain("request_superseded");
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-044: unmerged CLOSED requestはcancel終端としてbreachを出さない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [],
+      prs: [pr({ state: "CLOSED" })],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(entry(result).breaches).toEqual([]);
+    expect(entry(result).reasons).toEqual([]);
+    expect(entry(result).progressDiagnostics).toContain("review_request_closed");
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-045: request無しMERGED observationはokをfail-closeする", () => {
+    const result = analyzeReviewDispatch({
+      requests: [],
+      receipts: [],
+      prs: [pr({ state: "MERGED" })],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(result.entries).toEqual([]);
+    expect(result.diagnostics).toContain(
+      `orphan_pr_observation:merged_without_request:201@${"a".repeat(40)}`,
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-046: verdict無しMERGEDは手順違反だが未応答SLAを継続しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [],
+      prs: [pr({ state: "MERGED" })],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(entry(result).breaches).toEqual([]);
+    expect(entry(result).reasons).toContain("merged_without_verdict");
+    expect(result.ok).toBe(false);
   });
 });

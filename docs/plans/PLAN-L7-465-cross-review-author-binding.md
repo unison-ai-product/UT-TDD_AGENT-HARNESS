@@ -146,8 +146,10 @@ L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**�
 機械化する不変条件 (すべて fail-close):
 
 1. **同一 family の自己承認を verdict として受理しない** (`same_family_reviewer`)。
-   PLAN-L6-13 の `same_model_approval: forbidden` を dispatch 層でも保つ。
-2. **exact HEAD 限定** (`head_mismatch`)。古い HEAD への PASS で `merge_ready` にしない。
+   PLAN-L6-13 の `same_model_approval: forbidden` を dispatch 層でも保つ。ack / in_review は
+   承認権限を持たない進捗診断なので、別familyの有効verdictを汚染しない。
+2. **exact HEAD 限定**。古い HEAD への PASS で `merge_ready` にしない。PR HEADが進んだ
+   requestは`stale_head`終端として未応答SLAを停止し、新HEADのrequestへ収束させる。
 3. **verdict 無し merge の検出** (`merged_without_verdict`)。= PR #201 / incident #189 の実事象。
 4. **孤児 receipt を無視**。受領だけで「レビューされたこと」を捏造できない。
 5. **SLA 超過の検知**は verdict 未到達 60 分の一段だけ
@@ -155,6 +157,8 @@ L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**�
    ack 15 分 / start 30 分は producer 不在で偽陽性になるため D3 完了まで breach にしない。
    **無反応の検知**が目的であり、レビュー内容を急がせない。
 6. **決定論**: entries は `(pr 昇順, exactHead 昇順)` で安定。入力順に依存しない。
+7. **終端性**: stale HEAD / unmerged CLOSED / MERGED は未応答SLAを継続しない。
+   request無しMERGED観測とverdict無しMERGEDは手順違反としてfail-closeする。
 
 ### 後続 slice (本 slice に含めない)
 

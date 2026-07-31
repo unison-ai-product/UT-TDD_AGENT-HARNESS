@@ -77,8 +77,6 @@ export interface ReviewDispatchResult {
 
 interface DispatchAnalysis {
   entry: ReviewDispatchEntry;
-  hasVerdict: boolean;
-  hasHeadMismatch: boolean;
 }
 
 const REVIEWER_FAMILIES: ReviewerFamily[] = ["claude", "codex"];
@@ -88,6 +86,10 @@ const PR_STATES: PrObservation["state"][] = ["OPEN", "MERGED", "CLOSED"];
 const HEAD_PATTERN = /^[0-9a-f]{40}$/;
 const EXPLICIT_ZONE_TIMESTAMP_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
+
+function isBlockingDiagnostic(diagnostic: string): boolean {
+  return diagnostic.startsWith("orphan_pr_observation:merged_without_request:");
+}
 
 /**
  * GitHub/API/PLAN の既存 producer が出す、timezone 明示済み ISO timestamp を読む。
@@ -386,7 +388,11 @@ function analyzeRequest(
   const acceptedReceipts: ReviewReceipt[] = [];
   for (const receipt of deduplicatedReceipts) {
     if (receipt.reviewerFamily === request.authorFamily) {
-      reasons.add("same_family_reviewer");
+      if (receipt.kind === "verdict") {
+        reasons.add("same_family_reviewer");
+      } else {
+        progressDiagnostics.add("same_family_progress_receipt");
+      }
       continue;
     }
     const receiptAt = parseExplicitZoneTimestamp(receipt.at);
@@ -414,15 +420,6 @@ function analyzeRequest(
   const hasStarted = acceptedByKind.has("in_review");
   if (hasVerdict && !hasAcknowledged) progressDiagnostics.add("missing_acknowledged");
   if (hasVerdict && !hasStarted) progressDiagnostics.add("missing_in_review");
-  const ageMinutes = elapsedMinutes(request.requestedAt, nowMs);
-  const breaches: SlaBreach[] = [];
-  if (!hasVerdict && (ageMinutes == null || ageMinutes > sla.verdictMinutes)) {
-    breaches.push("verdict");
-  }
-
-  const blocking =
-    verdictReceipt?.verdict === "FLAG" ? [...(verdictReceipt.blockingFindings ?? [])] : [];
-  if (verdictReceipt?.verdict === "FLAG") reasons.add("flagged");
 
   const observationCandidates = prs.filter((observation) => observation.pr === request.pr);
   for (const candidate of observationCandidates) {
@@ -437,8 +434,23 @@ function analyzeRequest(
   if (observation == null) reasons.add("pr_observation_missing");
   const hasObservationHeadMismatch =
     observation != null && observation.headSha !== request.exactHead;
-  if (hasObservationHeadMismatch) reasons.add("head_mismatch");
+  if (hasObservationHeadMismatch) progressDiagnostics.add("request_superseded");
+  if (observation?.state === "CLOSED") progressDiagnostics.add("review_request_closed");
   if (observation?.state === "MERGED" && !hasVerdict) reasons.add("merged_without_verdict");
+
+  const ageMinutes = elapsedMinutes(request.requestedAt, nowMs);
+  const breaches: SlaBreach[] = [];
+  const reviewIsTerminal =
+    hasObservationHeadMismatch ||
+    observation?.state === "CLOSED" ||
+    observation?.state === "MERGED";
+  if (!hasVerdict && !reviewIsTerminal && (ageMinutes == null || ageMinutes > sla.verdictMinutes)) {
+    breaches.push("verdict");
+  }
+
+  const blocking =
+    verdictReceipt?.verdict === "FLAG" ? [...(verdictReceipt.blockingFindings ?? [])] : [];
+  if (verdictReceipt?.verdict === "FLAG") reasons.add("flagged");
 
   let state: ReviewDispatchState = hasVerdict
     ? "verdict"
@@ -447,8 +459,7 @@ function analyzeRequest(
       : hasAcknowledged
         ? "acknowledged"
         : "requested";
-  const hasHeadMismatch = hasObservationHeadMismatch;
-  if (hasHeadMismatch) {
+  if (hasObservationHeadMismatch) {
     state = "stale_head";
   } else if (
     reasons.size === 0 &&
@@ -475,8 +486,6 @@ function analyzeRequest(
       reasons: [...reasons].sort(compareText),
       progressDiagnostics: [...progressDiagnostics].sort(compareText),
     },
-    hasVerdict,
-    hasHeadMismatch,
   };
 }
 
@@ -516,10 +525,13 @@ export function analyzeReviewDispatch(input: {
   }
   for (const observation of input.prs) {
     if (!requestedPrs.has(observation.pr)) {
+      const valid = validateObservation(observation);
       diagnostics.add(
-        validateObservation(observation)
-          ? `orphan_pr_observation:unmatched_pr:${observation.pr}@${observation.headSha}`
-          : `orphan_pr_observation:invalid_pr_observation:${observation.pr}@${observation.headSha}`,
+        valid && observation.state === "MERGED"
+          ? `orphan_pr_observation:merged_without_request:${observation.pr}@${observation.headSha}`
+          : valid
+            ? `orphan_pr_observation:unmatched_pr:${observation.pr}@${observation.headSha}`
+            : `orphan_pr_observation:invalid_pr_observation:${observation.pr}@${observation.headSha}`,
       );
     }
   }
@@ -548,6 +560,7 @@ export function analyzeReviewDispatch(input: {
     diagnostics: [...diagnostics].sort(compareText),
     ok:
       globalReasons.size === 0 &&
+      [...diagnostics].every((diagnostic) => !isBlockingDiagnostic(diagnostic)) &&
       analyses.every(({ entry }) => entry.breaches.length === 0 && entry.reasons.length === 0),
   };
 }
@@ -564,13 +577,11 @@ export function reviewDispatchMessages(result: ReviewDispatchResult): string[] {
       const detail =
         reason === "same_family_reviewer"
           ? "同一 reviewer family の receipt は受理しない"
-          : reason === "head_mismatch"
-            ? "request・receipt・PR の exact HEAD が一致しない"
-            : reason === "merged_without_verdict"
-              ? "verdict 無しで PR が MERGED になった"
-              : reason === "flagged"
-                ? `FLAG verdict (${entry.blocking.join(", ") || "blocking finding なし"})`
-                : reason;
+          : reason === "merged_without_verdict"
+            ? "verdict 無しで PR が MERGED になった"
+            : reason === "flagged"
+              ? `FLAG verdict (${entry.blocking.join(", ") || "blocking finding なし"})`
+              : reason;
       messages.push(
         `review-dispatch — 手順違反: PR #${entry.pr} ${detail} (${entry.memoryId}@${entry.reviewRevision}#${entry.exactHead})`,
       );
