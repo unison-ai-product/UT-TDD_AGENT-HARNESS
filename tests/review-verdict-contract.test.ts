@@ -1,5 +1,8 @@
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Command } from "commander";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerDelegationCommands } from "../src/cli/delegation";
 import { analyzeReviewDispatch, type ReviewReceipt } from "../src/feedback/review-dispatch";
 import {
@@ -15,6 +18,40 @@ import {
 function failure(reason: string): { ok: false; reasons: string[] } {
   return { ok: false, reasons: [reason] };
 }
+
+// `detectMode()` は codex/claude を **実 spawn (`--version` が exit 0 か)** して mode を決め、
+// `buildAdapterPlan` は mode が codex-only / hybrid でなければ `plan.available=false` として
+// **stdout へ何も出さず stderr へ落ちる**。したがって provider CLI が入っていない機械では
+// dry-run JSON が空になり、この test file は「開発機だけで通る」状態になっていた。
+// 2026-07-31 の CI で実測: U-RVCON-016 が linux/windows 両方で
+// `SyntaxError: Unexpected end of JSON input` (= 空 stdout) で fail。
+// 対策として exit 0 のスタブを `UT_TDD_CODEX_BIN` へ差し、mode を機械非依存に固定する
+// (既存作法: tests/cli-surface.test.ts の `writeFakeProvider` / `UT_TDD_CODEX_BIN`)。
+let stubBinDir: string | undefined;
+const originalCodexBin = process.env.UT_TDD_CODEX_BIN;
+
+beforeAll(() => {
+  stubBinDir = mkdtempSync(join(tmpdir(), "ut-tdd-rvcon-bin-"));
+  if (process.platform === "win32") {
+    const stub = join(stubBinDir, "codex.cmd");
+    writeFileSync(stub, "@echo off\r\necho codex 0.0.0-stub\r\nexit /b 0\r\n", "utf8");
+    process.env.UT_TDD_CODEX_BIN = stub;
+    return;
+  }
+  const stub = join(stubBinDir, "codex");
+  writeFileSync(stub, "#!/bin/sh\necho codex 0.0.0-stub\nexit 0\n", {
+    encoding: "utf8",
+    mode: 0o755,
+  });
+  chmodSync(stub, 0o755);
+  process.env.UT_TDD_CODEX_BIN = stub;
+});
+
+afterAll(() => {
+  if (originalCodexBin === undefined) delete process.env.UT_TDD_CODEX_BIN;
+  else process.env.UT_TDD_CODEX_BIN = originalCodexBin;
+  if (stubBinDir) rmSync(stubBinDir, { recursive: true, force: true });
+});
 
 function verdictReceipt(extraction: VerdictExtraction): ReviewReceipt {
   return {
@@ -69,6 +106,15 @@ async function dryRunTask(provider: "claude" | "codex", role: string): Promise<s
     await program.parseAsync(["node", "ut-tdd", provider, "--role", role, "--task", "review task"]);
   } finally {
     process.stdout.write = write;
+  }
+  // 空 stdout を `JSON.parse` に食わせると `Unexpected end of JSON input` になり、
+  // 「provider が unavailable で dry-run が何も出していない」という真因が隠れる。
+  // 診断可能な形で落とす (2026-07-31 の CI 赤の再発防止)。
+  if (output.trim() === "") {
+    throw new Error(
+      `dry-run が stdout へ何も出力しなかった (provider=${provider} role=${role})。` +
+        "plan.available=false の疑い: detectMode() の spawn probe が失敗している。",
+    );
   }
   return JSON.parse(output).stdin as string;
 }
