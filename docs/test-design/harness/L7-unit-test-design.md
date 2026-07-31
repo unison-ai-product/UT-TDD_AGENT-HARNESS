@@ -507,6 +507,9 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-RVCON-014 | `extractVerdict` + `analyzeReviewDispatch` | 抽出した FLAG は merge_ready を阻止し、PASS は merge_ready になる |
 | U-RVCON-015 | `REVIEW_OUTPUT_CONTRACT` + `reviewOutputContractExample` + `extractVerdict` | contract の sentinel 内にある模範 FLAG 出力そのものを取り出して parser が受理し、producer/consumer の乖離を防ぐ。模範の `VERDICT:` を壊す mutation も検出する |
 | U-RVCON-016 | CLI delegation | review_lane を持つ role にだけ `REVIEW_OUTPUT_CONTRACT` を task stdin へ注入する |
+| U-RVCON-017 | `extractVerdict` | 契約が prompt echo されたログでも実判定 `PASS` を採用する (echo された模範 verdict を候補にしないので `verdict_ambiguous` にならない) |
+| U-RVCON-018 | `extractVerdict` | 契約 echo 下の `FLAG` は模範 finding を拾わず、実 finding だけを返す |
+| U-RVCON-019 | `REVIEW_OUTPUT_CONTRACT` / `reviewOutputContractExample` | 契約本文は行頭 `VERDICT:` / `FINDING:` を含まない (echo 汚染を作らない) が、dedent 後の模範は parser が受理する (round-trip 維持) |
 
 ### §1.16.2c U-DOCLOCK (doctor 多重起動 fail-fast、PLAN-L7-442)
 

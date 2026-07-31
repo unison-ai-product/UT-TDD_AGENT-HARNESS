@@ -180,4 +180,37 @@ describe("review verdict contract (U-RVCON)", () => {
     await expect(dryRunTask("codex", "blind-reviewer")).resolves.toContain(REVIEW_OUTPUT_CONTRACT);
     await expect(dryRunTask("codex", "be-api")).resolves.not.toContain(REVIEW_OUTPUT_CONTRACT);
   });
+
+  // 委譲した task text は provider の captured log へ**行頭のまま echo される** (2026-07-31 実測)。
+  // 契約の模範出力を行頭 `VERDICT:` で書くと、echo された値と実判定の 2 値が並び PASS が
+  // verdict_ambiguous で恒久 fail-close する (FLAG は同値なので通る = 非対称な破壊)。
+  it("U-RVCON-017: 契約が prompt echo されたログでも実判定 PASS を採用する", () => {
+    const log = [REVIEW_OUTPUT_CONTRACT, "", "レビュー結果:", "VERDICT: PASS"].join("\n");
+    expect(extractVerdict(log)).toEqual({
+      ok: true,
+      value: { verdict: "PASS", blockingFindings: [] },
+    });
+  });
+
+  it("U-RVCON-018: 契約 echo 下の FLAG は模範 finding を拾わず実 finding だけを返す", () => {
+    const log = [
+      REVIEW_OUTPUT_CONTRACT,
+      "",
+      "レビュー結果:",
+      "VERDICT: FLAG",
+      "FINDING: 実際の blocking finding",
+    ].join("\n");
+    expect(extractVerdict(log)).toEqual({
+      ok: true,
+      value: { verdict: "FLAG", blockingFindings: ["実際の blocking finding"] },
+    });
+  });
+
+  it("U-RVCON-019: 契約の模範ブロックは行頭 VERDICT/FINDING を含まない", () => {
+    const lines = REVIEW_OUTPUT_CONTRACT.split("\n");
+    expect(lines.filter((line) => /^VERDICT:/.test(line))).toEqual([]);
+    expect(lines.filter((line) => /^FINDING:/.test(line))).toEqual([]);
+    // それでも dedent 後は parser が受理する = round-trip は維持されている。
+    expect(extractVerdict(reviewOutputContractExample()).ok).toBe(true);
+  });
 });
