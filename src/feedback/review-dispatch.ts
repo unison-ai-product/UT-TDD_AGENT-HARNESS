@@ -482,10 +482,13 @@ export function analyzeReviewDispatch(input: {
     });
     if (!requestIdentities.has(receiptIdentity)) {
       const reasons = validateReceipt(receipt, nowMs);
+      const diagnosticIdentity = `${receipt.memoryId}@${receipt.pr}@${receipt.head}@${receipt.reviewRevision}`;
       if (reasons.length === 0) {
-        diagnostics.add("orphan_receipt:unmatched_identity");
+        diagnostics.add(`orphan_receipt:unmatched_identity:${diagnosticIdentity}`);
       } else {
-        for (const reason of reasons) diagnostics.add(`orphan_receipt:${reason}`);
+        for (const reason of reasons) {
+          diagnostics.add(`orphan_receipt:${reason}:${diagnosticIdentity}`);
+        }
       }
     }
   }
@@ -493,8 +496,8 @@ export function analyzeReviewDispatch(input: {
     if (!requestedPrs.has(observation.pr)) {
       diagnostics.add(
         validateObservation(observation)
-          ? "orphan_pr_observation:unmatched_pr"
-          : "orphan_pr_observation:invalid_pr_observation",
+          ? `orphan_pr_observation:unmatched_pr:${observation.pr}@${observation.headSha}`
+          : `orphan_pr_observation:invalid_pr_observation:${observation.pr}@${observation.headSha}`,
       );
     }
   }
@@ -532,7 +535,7 @@ export function reviewDispatchMessages(result: ReviewDispatchResult): string[] {
   for (const entry of result.entries) {
     for (const breach of entry.breaches) {
       messages.push(
-        `review-dispatch — SLA超過: PR #${entry.pr} ${breach} (${entry.memoryId}@${entry.reviewRevision})`,
+        `review-dispatch — SLA超過: PR #${entry.pr} ${breach} (${entry.memoryId}@${entry.reviewRevision}#${entry.exactHead})`,
       );
     }
     for (const reason of entry.reasons) {
@@ -547,7 +550,7 @@ export function reviewDispatchMessages(result: ReviewDispatchResult): string[] {
                 ? `FLAG verdict (${entry.blocking.join(", ") || "blocking finding なし"})`
                 : reason;
       messages.push(
-        `review-dispatch — 手順違反: PR #${entry.pr} ${detail} (${entry.memoryId}@${entry.reviewRevision})`,
+        `review-dispatch — 手順違反: PR #${entry.pr} ${detail} (${entry.memoryId}@${entry.reviewRevision}#${entry.exactHead})`,
       );
     }
   }

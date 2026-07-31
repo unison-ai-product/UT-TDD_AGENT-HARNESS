@@ -389,7 +389,9 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(entry(malformedReceipt).reasons).toEqual(
       expect.arrayContaining(["empty_identity", "empty_review_revision", "invalid_sla"]),
     );
-    expect(malformedReceipt.diagnostics).toContain("orphan_receipt:invalid_head");
+    expect(malformedReceipt.diagnostics).toEqual(
+      expect.arrayContaining([expect.stringContaining("orphan_receipt:invalid_head:")]),
+    );
     expect(malformedReceipt.ok).toBe(false);
 
     const invalidVerdictFields = analyzeReviewDispatch({
@@ -574,8 +576,8 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(result.ok).toBe(true);
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
-        "orphan_receipt:invalid_head",
-        "orphan_pr_observation:invalid_pr_observation",
+        expect.stringContaining("orphan_receipt:invalid_head:"),
+        expect.stringContaining("orphan_pr_observation:invalid_pr_observation:"),
       ]),
     );
   });
@@ -652,12 +654,9 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("U-RVDISP-031: well-formed orphan artifacts と revision 別reasonを診断で失わない", () => {
+  it("U-RVDISP-031: well-formed orphan と exact HEAD 別reasonを診断で失わない", () => {
     const result = analyzeReviewDispatch({
-      requests: [
-        request({ reviewRevision: "revision-001" }),
-        request({ reviewRevision: "revision-002" }),
-      ],
+      requests: [request({ exactHead: "a".repeat(40) }), request({ exactHead: "b".repeat(40) })],
       receipts: [
         receipt("acknowledged", {
           memoryId: "orphan-memory",
@@ -672,12 +671,12 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
 
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
-        "orphan_receipt:unmatched_identity",
-        "orphan_pr_observation:unmatched_pr",
+        expect.stringContaining("orphan_receipt:unmatched_identity:"),
+        expect.stringContaining("orphan_pr_observation:unmatched_pr:"),
       ]),
     );
     expect(messages.filter((message) => message.includes("SLA超過"))).toHaveLength(2);
-    expect(messages.some((message) => message.includes("revision-001"))).toBe(true);
-    expect(messages.some((message) => message.includes("revision-002"))).toBe(true);
+    expect(messages.some((message) => message.includes("a".repeat(40)))).toBe(true);
+    expect(messages.some((message) => message.includes("b".repeat(40)))).toBe(true);
   });
 });
