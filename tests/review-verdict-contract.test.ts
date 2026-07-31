@@ -1,15 +1,13 @@
 import { Command } from "commander";
 import { describe, expect, it } from "vitest";
 import { registerDelegationCommands } from "../src/cli/delegation";
+import { analyzeReviewDispatch, type ReviewReceipt } from "../src/feedback/review-dispatch";
 import {
-  REVIEW_OUTPUT_CONTRACT,
   extractVerdict,
+  REVIEW_OUTPUT_CONTRACT,
+  reviewOutputContractExample,
   type VerdictExtraction,
 } from "../src/feedback/review-verdict-contract";
-import {
-  analyzeReviewDispatch,
-  type ReviewReceipt,
-} from "../src/feedback/review-dispatch";
 
 function expectFailure(logText: string, reason: string): void {
   const result = extractVerdict(logText);
@@ -89,7 +87,13 @@ describe("review verdict contract (U-RVCON)", () => {
   });
 
   it("U-RVCON-003: 依頼文中のインデント・箇条書き・引用を候補にせず実判定を採用する", () => {
-    const log = ["依頼文の例:", "  VERDICT: PASS", "- Verdict: FLAG", "> VERDICT: FLAG", "VERDICT: PASS"].join("\n");
+    const log = [
+      "依頼文の例:",
+      "  VERDICT: PASS",
+      "- Verdict: FLAG",
+      "> VERDICT: FLAG",
+      "VERDICT: PASS",
+    ].join("\n");
     expect(extractVerdict(log)).toEqual({
       ok: true,
       value: { verdict: "PASS", blockingFindings: [] },
@@ -116,7 +120,9 @@ describe("review verdict contract (U-RVCON)", () => {
   });
 
   it("U-RVCON-008: FLAG 後の行頭 FINDING を順序を保って全件抽出する", () => {
-    expect(extractVerdict("VERDICT: FLAG\nFINDING: first\nFINDING: second\nFINDING: third")).toEqual({
+    expect(
+      extractVerdict("VERDICT: FLAG\nFINDING: first\nFINDING: second\nFINDING: third"),
+    ).toEqual({
       ok: true,
       value: { verdict: "FLAG", blockingFindings: ["first", "second", "third"] },
     });
@@ -163,6 +169,10 @@ describe("review verdict contract (U-RVCON)", () => {
     expect(extractVerdict("VERDICT: FLAG\nFINDING: blocking example")).toEqual({
       ok: true,
       value: { verdict: "FLAG", blockingFindings: ["blocking example"] },
+    });
+    expect(extractVerdict(reviewOutputContractExample())).toEqual({
+      ok: true,
+      value: { verdict: "FLAG", blockingFindings: ["blocking finding summary"] },
     });
   });
 

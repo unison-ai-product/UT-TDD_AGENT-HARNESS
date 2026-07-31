@@ -505,7 +505,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-RVCON-012 | `extractVerdict` | PASS/PASS-WEAK 上の finding を `findings_on_pass` で fail-close する |
 | U-RVCON-013 | `extractVerdict` | finding 本文の前後空白を trim する |
 | U-RVCON-014 | `extractVerdict` + `analyzeReviewDispatch` | 抽出した FLAG は merge_ready を阻止し、PASS は merge_ready になる |
-| U-RVCON-015 | `REVIEW_OUTPUT_CONTRACT` + `extractVerdict` | contract の模範 FLAG 出力を parser が受理し producer/consumer の乖離を防ぐ |
+| U-RVCON-015 | `REVIEW_OUTPUT_CONTRACT` + `reviewOutputContractExample` + `extractVerdict` | contract の sentinel 内にある模範 FLAG 出力そのものを取り出して parser が受理し、producer/consumer の乖離を防ぐ。模範の `VERDICT:` を壊す mutation も検出する |
 | U-RVCON-016 | CLI delegation | review_lane を持つ role にだけ `REVIEW_OUTPUT_CONTRACT` を task stdin へ注入する |
 
 ### §1.16.2c U-DOCLOCK (doctor 多重起動 fail-fast、PLAN-L7-442)
