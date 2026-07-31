@@ -110,6 +110,11 @@ describe("db-projection-coverage detector", () => {
       "spec_rag_closure_entries",
       "detector_route_candidates",
       "agent_contracts",
+      "github_review_lane_receipts",
+      "execution_readiness_projection",
+      "github_project_item_projection",
+      "github_object_bindings",
+      "github_projection_outbox",
     ]);
     expect(requirements.indexes.map((item) => item.name)).toEqual([
       "idx_plan_layer_drive_status",
@@ -516,15 +521,15 @@ describe("db-projection-coverage detector", () => {
       [
         "### 9.10 GitHub Forward基盤テーブル",
         "",
-        "| テーブル | 主な列 | 制約 / 索引 |",
-        "|---|---|---|",
-        "| `github_projection_outbox` | `outbox_id`, `payload_digest` | PK outbox |",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `github_projection_outbox` | `outbox_id` | `payload_digest` | fixture |",
         "",
         "### 9.11 Execution Episode目標テーブル",
         "",
-        "| テーブル | 主な列 | 制約 / 索引 |",
-        "|---|---|---|",
-        "| `execution_github_projection_outbox` | `projection_id`, `episode_id` | PK projection |",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `execution_github_projection_outbox` | `projection_id` | `episode_id` | fixture |",
       ].join("\n"),
     );
 
