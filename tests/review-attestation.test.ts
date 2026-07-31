@@ -439,6 +439,29 @@ describe("review attestation (U-RVATT)", () => {
     }
   });
 
+  it("U-RVATT-016: dry-run は注入用 temp dir を残さない", async () => {
+    const delegated = await runDelegation([
+      "codex",
+      "--role",
+      "blind-reviewer",
+      "--task",
+      "review slice",
+      "--review-pr",
+      "731",
+      "--review-head",
+      head,
+      "--review-revision",
+      "review-rvatt-1",
+      "--review-author-family",
+      "claude",
+    ]);
+    expect(delegated.stdout, "review_lane の dry-run が stdout へ何も出していない").not.toBe("");
+    const injected = JSON.parse(delegated.stdout).env[REVIEW_VERDICT_FILE_ENV] as string;
+    // execute 経路は子の実行中だけ dir を保持して後始末する。dry-run は子を起動しないので、
+    // 作った dir をその場で捨てなければ委譲のたびに temp が積み上がる。
+    expect(existsSync(dirname(injected))).toBe(false);
+  });
+
   it("U-RVATT-011: 契約テキストと reader は同一の env 定数を根拠にする", () => {
     expect(REVIEW_VERDICT_FILE_ENV).toBe("UT_TDD_REVIEW_VERDICT_FILE");
     expect(REVIEW_OUTPUT_CONTRACT).toContain(REVIEW_VERDICT_FILE_ENV);
