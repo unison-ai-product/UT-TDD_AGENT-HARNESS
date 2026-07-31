@@ -485,6 +485,29 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DELEG-008 | `resolveDelegationRouting` | subagent 名形 gate role (ut-tdd-tl/qa-test/security-audit) も worker tier へ落とさず族内 frontier reviewer tier へ固定する (2026-07-16 クロスレビュー指摘 1 regression) |
 | U-DELEG-009 | `buildAdapterPlan` (codex) | ladder base `xhigh` (mini lane) が `-c model_reasoning_effort=xhigh` として argv へ素通しされる (codex-cli 0.144.1 実機受理 2026-07-16) |
 
+### §1.16.2b3 U-RVCON (reviewer 出力契約と verdict 抽出)
+
+> ペア = `src/feedback/review-verdict-contract.ts` と `src/cli/delegation.ts` の判断ゲート委譲。reviewer に同一の行頭出力契約を注入し、その出力だけを fail-close で抽出する。D1 の receipt analyzer へ不正な verdict を流さず、producer 不在の consumer-only 検査を防ぐ。
+
+| ID | 対象 | Oracle |
+|---|---|---|
+| U-RVCON-001 | `extractVerdict` | 行頭 `VERDICT: PASS` 1件を空 findings として採用する |
+| U-RVCON-002 | `extractVerdict` | `PASS-WEAK` を値のハイフンを保持して採用する |
+| U-RVCON-003 | `extractVerdict` | インデント・箇条書き・引用内の verdict を候補にせず、行頭の実判定だけを採用する |
+| U-RVCON-004 | `extractVerdict` | 行頭候補なしを `verdict_absent` で fail-close する |
+| U-RVCON-005 | `extractVerdict` | 不一致の行頭候補を `verdict_ambiguous` で fail-close する |
+| U-RVCON-006 | `extractVerdict` | 同値の行頭候補再掲を冪等に受理する |
+| U-RVCON-007 | `extractVerdict` | 未知 verdict を `verdict_unknown` で fail-close する |
+| U-RVCON-008 | `extractVerdict` | FLAG 後の行頭 findings を順序を保って全件抽出する |
+| U-RVCON-009 | `extractVerdict` | finding 無し FLAG を `flag_without_findings` で fail-close する |
+| U-RVCON-010 | `extractVerdict` | 空白だけの finding を数えず `flag_without_findings` にする |
+| U-RVCON-011 | `extractVerdict` | 最後の行頭 verdict より前の finding を抽出範囲外として無視する |
+| U-RVCON-012 | `extractVerdict` | PASS/PASS-WEAK 上の finding を `findings_on_pass` で fail-close する |
+| U-RVCON-013 | `extractVerdict` | finding 本文の前後空白を trim する |
+| U-RVCON-014 | `extractVerdict` + `analyzeReviewDispatch` | 抽出した FLAG は merge_ready を阻止し、PASS は merge_ready になる |
+| U-RVCON-015 | `REVIEW_OUTPUT_CONTRACT` + `extractVerdict` | contract の模範 FLAG 出力を parser が受理し producer/consumer の乖離を防ぐ |
+| U-RVCON-016 | CLI delegation | review_lane を持つ role にだけ `REVIEW_OUTPUT_CONTRACT` を task stdin へ注入する |
+
 ### §1.16.2c U-DOCLOCK (doctor 多重起動 fail-fast、PLAN-L7-442)
 
 > ペア = doctor singleton lock (`src/doctor/singleton-lock.ts`)。owner固有claim集合を用い、release/reclaimで他者generationを触らず、agent 再試行嵐による doctor プロセス滞留 (2026-07-16 メモリ枯渇 incident) の再発を2本目以降の即時 fail-fastで防ぐ。advisory guardでありlock障害ではdoctorを止めない (fail-open)。
