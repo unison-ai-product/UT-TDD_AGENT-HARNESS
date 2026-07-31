@@ -389,22 +389,8 @@ function analyzeRequest(
     crossFamilyReceipts.push(receipt);
   }
 
-  const receiptByKind = new Map<ReviewReceiptKind, ReviewReceipt>();
-  const deduplicatedReceipts: ReviewReceipt[] = [];
+  const acceptedCandidates: ReviewReceipt[] = [];
   for (const receipt of crossFamilyReceipts) {
-    const previous = receiptByKind.get(receipt.kind);
-    if (previous == null) {
-      receiptByKind.set(receipt.kind, receipt);
-      deduplicatedReceipts.push(receipt);
-      continue;
-    }
-    if (receiptContentKey(previous) !== receiptContentKey(receipt)) {
-      reasons.add("duplicate_receipt_conflict");
-    }
-  }
-
-  const acceptedReceipts: ReviewReceipt[] = [];
-  for (const receipt of deduplicatedReceipts) {
     const receiptAt = parseExplicitZoneTimestamp(receipt.at);
     if (receiptAt == null) {
       reasons.add("invalid_timestamp");
@@ -418,14 +404,34 @@ function analyzeRequest(
       reasons.add("receipt_before_request");
       continue;
     }
-    acceptedReceipts.push(receipt);
+    acceptedCandidates.push(receipt);
+  }
+
+  const receiptByKind = new Map<ReviewReceiptKind, ReviewReceipt>();
+  for (const receipt of acceptedCandidates) {
+    const previous = receiptByKind.get(receipt.kind);
+    if (previous == null) {
+      receiptByKind.set(receipt.kind, receipt);
+      continue;
+    }
+    if (receiptContentKey(previous) !== receiptContentKey(receipt)) {
+      reasons.add("duplicate_receipt_conflict");
+    }
   }
 
   const acceptedByKind = new Map(
-    acceptedReceipts.map((receipt) => [receipt.kind, receipt] as const),
+    [...receiptByKind.values()].map((receipt) => [receipt.kind, receipt] as const),
   );
   const verdictReceipt = acceptedByKind.get("verdict");
   const hasVerdict = verdictReceipt != null;
+  const flagFindings = [
+    ...new Set(
+      acceptedCandidates
+        .filter((receipt) => receipt.kind === "verdict" && receipt.verdict === "FLAG")
+        .flatMap((receipt) => receipt.blockingFindings ?? []),
+    ),
+  ];
+  const hasFlagVerdict = flagFindings.length > 0;
   if (sameFamilyVerdictObserved) {
     if (hasVerdict) {
       progressDiagnostics.add("same_family_verdict_ignored");
@@ -467,9 +473,8 @@ function analyzeRequest(
     breaches.push("verdict");
   }
 
-  const blocking =
-    verdictReceipt?.verdict === "FLAG" ? [...(verdictReceipt.blockingFindings ?? [])] : [];
-  if (verdictReceipt?.verdict === "FLAG") reasons.add("flagged");
+  const blocking = hasFlagVerdict ? flagFindings : [];
+  if (hasFlagVerdict) reasons.add("flagged");
 
   let state: ReviewDispatchState = hasVerdict
     ? "verdict"
@@ -482,6 +487,7 @@ function analyzeRequest(
     state = "stale_head";
   } else if (
     reasons.size === 0 &&
+    !hasFlagVerdict &&
     (verdictReceipt?.verdict === "PASS" || verdictReceipt?.verdict === "PASS-WEAK") &&
     observation?.headSha === request.exactHead &&
     observation.checksGreen &&
@@ -497,7 +503,7 @@ function analyzeRequest(
       exactHead: request.exactHead,
       reviewRevision: request.reviewRevision,
       authorFamily: request.authorFamily,
-      reviewerFamily: verdictReceipt?.reviewerFamily ?? acceptedReceipts.at(-1)?.reviewerFamily,
+      reviewerFamily: verdictReceipt?.reviewerFamily ?? acceptedCandidates.at(-1)?.reviewerFamily,
       state,
       breaches,
       ageMinutes,

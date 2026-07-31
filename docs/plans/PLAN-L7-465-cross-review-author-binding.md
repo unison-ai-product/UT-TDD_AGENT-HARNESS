@@ -135,13 +135,14 @@ L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**�
 ### D1: dispatch 状態機械 (本 slice)
 
 実装: `src/feedback/review-dispatch.ts` (純粋関数、I/O なし、時刻は `now` 注入)。
-テスト: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`012`)。
+テスト: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
 
 進捗表示: `requested` → `acknowledged` → `in_review`。ただし、D3 の構造化 producer が
 まだ存在しない D1 では、現行 exact identity の有効な `verdict` を先行 receipt の有無と
 無関係な**終端証拠**として受理する。ack / in_review の欠落は診断に残すが blocking にしない。
 逸脱状態: `stale_head` (依頼 exact HEAD と receipt/PR HEAD の不一致)、
-`merge_ready` (verdict が PASS 系 + HEAD 三者一致 + CI green + PR OPEN の 4 条件全成立)。
+`merge_ready` (verdict が PASS 系 + HEAD 三者一致 + CI green + PR OPEN +
+fail-close reason 不在の 5 条件全成立)。
 
 機械化する不変条件 (すべて fail-close):
 

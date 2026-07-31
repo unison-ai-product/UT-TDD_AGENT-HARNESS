@@ -725,7 +725,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
           reviewRevision: "orphan-revision",
         }),
       ],
-      prs: [pr(), pr({ pr: 999 })],
+      prs: [pr(), pr({ headSha: "b".repeat(40) }), pr({ pr: 999 })],
       now: "2026-07-31T01:01:00.000Z",
     });
     const messages = reviewDispatchMessages(result);
@@ -736,9 +736,11 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
         expect.stringContaining("orphan_pr_observation:unmatched_pr:"),
       ]),
     );
-    expect(messages.filter((message) => message.includes("SLA超過"))).toHaveLength(1);
-    expect(messages.some((message) => message.includes("a".repeat(40)))).toBe(true);
-    expect(messages.some((message) => message.includes("b".repeat(40)))).toBe(true);
+    const slaMessages = messages.filter((message) => message.includes("SLA超過"));
+    expect(slaMessages).toHaveLength(2);
+    expect(new Set(slaMessages)).toHaveLength(2);
+    expect(slaMessages.some((message) => message.includes("a".repeat(40)))).toBe(true);
+    expect(slaMessages.some((message) => message.includes("b".repeat(40)))).toBe(true);
   });
 
   it("U-RVDISP-034: exact identityの非author PASS verdict単独でmerge_readyになる", () => {
@@ -1040,5 +1042,57 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       "orphan_pr_observation:invalid_merged_observation:999@not-a-head",
     ]);
     expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-051: 先行PASSと後発FLAGの競合ではblocking findingを失わない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [
+        receipt("verdict", {
+          verdict: "PASS",
+          at: "2026-07-31T00:03:00.000Z",
+        }),
+        receipt("verdict", {
+          verdict: "FLAG",
+          blockingFindings: ["late safety finding"],
+          at: "2026-07-31T00:04:00.000Z",
+        }),
+      ],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).reasons).toEqual(
+      expect.arrayContaining(["duplicate_receipt_conflict", "flagged"]),
+    );
+    expect(entry(result).blocking).toEqual(["late safety finding"]);
+    expect(entry(result).state).not.toBe("merge_ready");
+    expect(
+      reviewDispatchMessages(result).some((message) => message.includes("late safety finding")),
+    ).toBe(true);
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-052: request以前の同kind receiptは有効な後続receiptを隠さない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ requestedAt: "2026-07-31T00:02:00.000Z" })],
+      receipts: [
+        receipt("verdict", {
+          verdict: "PASS",
+          at: "2026-07-31T00:01:00.000Z",
+        }),
+        receipt("verdict", {
+          verdict: "PASS",
+          at: "2026-07-31T00:03:00.000Z",
+        }),
+      ],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).reasons).toContain("receipt_before_request");
+    expect(entry(result).reasons).not.toContain("duplicate_receipt_conflict");
+    expect(entry(result).state).toBe("verdict");
+    expect(entry(result).breaches).toEqual([]);
   });
 });

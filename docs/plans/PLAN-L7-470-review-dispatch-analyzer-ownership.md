@@ -68,8 +68,8 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
    `merge_ready` にもしない。
 5. PR observation の競合、不正時刻、不正SHA、replay競合は fail-close。
 6. 完全重複 replay は冪等で、孤児artifactは identity付きdiagnosticへ残す。
-7. `merge_ready` は非author family PASS系 verdict、三者HEAD一致、CI green、PR openの
-   全条件が揃った場合だけ到達する。
+7. `merge_ready` は非author family PASS系 verdict、三者HEAD一致、CI green、PR open、
+   fail-close reason不在の全条件が揃った場合だけ到達する。
 8. SLA breach は verdict 未到達60分の一段だけ。ack/start SLAはD3 producer完成まで
    発生させず、不正/future request時刻は `ageMinutes: null` としてfail-closeする。
 9. stale HEAD / unmerged CLOSED / MERGED は終端としてSLAを止める。request無しMERGEDと
@@ -97,6 +97,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | stale/CLOSED/MERGED終端、孤児MERGED fail-close | `U-RVDISP-043`〜`046` |
 | stale requestとmerge先HEAD requestの横断照合 | `U-RVDISP-047`〜`048` |
 | author family併存時のcross-family verdict保全、不正MERGED孤児のfail-close | `U-RVDISP-049`〜`050` |
+| 競合FLAGのblocking保全、request以前receiptと有効後続receiptの分離 | `U-RVDISP-051`〜`052` |
 
 ## 4. スコープ外
 
@@ -109,7 +110,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`050` が全件green。
+- AC-1: `U-RVDISP-001`〜`052` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。
