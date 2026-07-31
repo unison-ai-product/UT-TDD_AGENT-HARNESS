@@ -8,6 +8,8 @@ import {
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt";
 import {
+  markGithubProjectionApplied,
+  markGithubProjectionFailed,
   queueGithubProjection,
   readGithubEvidence,
   rebuildExecutionReadiness,
@@ -308,6 +310,122 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       ).toThrow(/payload fields/);
       expect(db.prepare("SELECT COUNT(*) AS count FROM github_projection_outbox").get()).toEqual({
         count: 0,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHPROJ-040: preserves an applied outbox only for an identical payload digest", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const input = {
+        db,
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        operation: "project-item-upsert" as const,
+        payload: {
+          owner: "unison-ai-product",
+          projectNumber: 6,
+          readiness: "着手可能",
+          currentGate: "implementation",
+          headSha: "abc",
+        },
+        now: "2026-07-31T00:00:00Z",
+      };
+      const firstId = queueGithubProjection(input);
+      markGithubProjectionApplied(db, [firstId], "2026-07-31T00:01:00Z");
+      expect(queueGithubProjection({ ...input, now: "2026-07-31T00:02:00Z" })).toBe(firstId);
+      expect(
+        db.prepare("SELECT status, attempt_count, last_error FROM github_projection_outbox").get(),
+      ).toEqual({ status: "applied", attempt_count: 1, last_error: "" });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHPROJ-041: changed payload creates a pending intent that an old completion cannot apply", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const base = {
+        db,
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        operation: "project-item-upsert" as const,
+        payload: {
+          owner: "unison-ai-product",
+          projectNumber: 6,
+          readiness: "着手可能",
+          currentGate: "implementation",
+          headSha: "abc",
+        },
+      };
+      const oldId = queueGithubProjection(base);
+      markGithubProjectionApplied(db, [oldId]);
+      const newId = queueGithubProjection({
+        ...base,
+        payload: { ...base.payload, currentGate: "review", headSha: "def" },
+      });
+      expect(newId).not.toBe(oldId);
+      markGithubProjectionApplied(db, [oldId]);
+      expect(
+        db
+          .prepare(
+            "SELECT outbox_id, status, attempt_count, last_error, payload_json FROM github_projection_outbox",
+          )
+          .get(),
+      ).toEqual({
+        outbox_id: newId,
+        status: "pending",
+        attempt_count: 0,
+        last_error: "",
+        payload_json: JSON.stringify({
+          owner: "unison-ai-product",
+          projectNumber: 6,
+          readiness: "着手可能",
+          currentGate: "review",
+          headSha: "def",
+        }),
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHPROJ-044: records a closed retryable failure without persisting provider output", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const id = queueGithubProjection({
+        db,
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        operation: "project-item-upsert",
+        payload: {
+          owner: "unison-ai-product",
+          projectNumber: 6,
+          readiness: "着手可能",
+          currentGate: "review",
+          headSha: "def",
+        },
+      });
+      markGithubProjectionFailed(db, [id], "2026-07-31T00:03:00Z");
+      expect(
+        db
+          .prepare(
+            "SELECT status, attempt_count, last_error, updated_at FROM github_projection_outbox",
+          )
+          .get(),
+      ).toEqual({
+        status: "pending",
+        attempt_count: 1,
+        last_error: "project-sync-failed",
+        updated_at: "2026-07-31T00:03:00Z",
       });
     } finally {
       db.close();

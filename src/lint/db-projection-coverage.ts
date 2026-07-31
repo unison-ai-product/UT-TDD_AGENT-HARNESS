@@ -73,7 +73,7 @@ export interface DbConstraintCoverageResult {
   ok: boolean;
 }
 
-const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.(?:[13456789]|1\d+) .*)/;
+const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.(?:[13456789]|[1-9]\d+) .*)/;
 const HEADING_RE = /^(#{1,6})\s+/;
 const TABLE_SEPARATOR_CELL_RE = /^-{3,}$/;
 const INDEX_MARKER_RE = /^(?:必須|必要) index:$/;

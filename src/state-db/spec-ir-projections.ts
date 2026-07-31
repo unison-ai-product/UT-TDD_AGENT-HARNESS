@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { resolvePlanRevisionIdentity } from "../kernel/plan-revision";
 import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
 import { stableId } from "../stable-id";
@@ -332,17 +333,8 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function recordField(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
 function projectedPlanRevision(source: SpecIrSource): string {
-  const admission = recordField(source.metadata.admission_receipt);
-  const binding = recordField(admission.binding);
-  const revision = Number(binding.revision);
-  return Number.isInteger(revision) && revision > 0 ? String(revision) : source.sourceHash;
+  return resolvePlanRevisionIdentity(source.content, sourcePlanId(source))?.token ?? "";
 }
 
 function stringList(value: unknown): string[] {
@@ -655,6 +647,8 @@ function parseScheduleAuthoringRows(
     for (const row of markdownTableRows(source.content, ["plan_id", "current_location"])) {
       const planId = row.plan_id ?? "";
       if (!planId) continue;
+      const planRevision = planRevisions.get(planId);
+      if (!planRevision) continue;
       const layer = row.layer ?? "";
       const status = row.status || "active";
       const rawPredecessors = row.predecessor_plan_ids || row.predecessors || "";
@@ -675,7 +669,7 @@ function parseScheduleAuthoringRows(
         status,
         blocked_reason: row.blocked_reason ?? "",
         source_path: source.path,
-        plan_revision: planRevisions.get(planId) ?? source.sourceHash,
+        plan_revision: planRevision,
         source_hash: source.sourceHash,
         indexed_at: indexedAt,
       });

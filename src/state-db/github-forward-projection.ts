@@ -444,7 +444,7 @@ export function queueGithubProjection(input: {
   const payloadDigest = createHash("sha256").update(payloadJson).digest("hex");
   const outboxId = stableId(
     "github-outbox",
-    `${input.repositoryId}:${input.planId}:${input.planRevision}:${input.operation}`,
+    `${input.repositoryId}:${input.planId}:${input.planRevision}:${input.operation}:${payloadDigest}`,
   );
   input.db
     .prepare(
@@ -453,9 +453,24 @@ export function queueGithubProjection(input: {
          status, attempt_count, last_error, created_at, updated_at
        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, '', ?, ?)
        ON CONFLICT(repository_id, plan_id, plan_revision, operation) DO UPDATE SET
+         outbox_id=excluded.outbox_id,
          payload_json=excluded.payload_json,
          payload_digest=excluded.payload_digest,
-         status=CASE WHEN github_projection_outbox.status = 'applied' THEN 'applied' ELSE 'pending' END,
+         status=CASE
+           WHEN github_projection_outbox.payload_digest = excluded.payload_digest
+             THEN github_projection_outbox.status
+           ELSE 'pending'
+         END,
+         attempt_count=CASE
+           WHEN github_projection_outbox.payload_digest = excluded.payload_digest
+             THEN github_projection_outbox.attempt_count
+           ELSE 0
+         END,
+         last_error=CASE
+           WHEN github_projection_outbox.payload_digest = excluded.payload_digest
+             THEN github_projection_outbox.last_error
+           ELSE ''
+         END,
          updated_at=excluded.updated_at`,
     )
     .run(
@@ -480,6 +495,20 @@ export function markGithubProjectionApplied(
   const statement = db.prepare(
     `UPDATE github_projection_outbox
         SET status = 'applied', attempt_count = attempt_count + 1, last_error = '', updated_at = ?
+      WHERE outbox_id = ?`,
+  );
+  for (const id of outboxIds) statement.run(now, id);
+}
+
+export function markGithubProjectionFailed(
+  db: HarnessDb,
+  outboxIds: readonly string[],
+  now = new Date().toISOString(),
+): void {
+  const statement = db.prepare(
+    `UPDATE github_projection_outbox
+        SET status = 'pending', attempt_count = attempt_count + 1,
+            last_error = 'project-sync-failed', updated_at = ?
       WHERE outbox_id = ?`,
   );
   for (const id of outboxIds) statement.run(now, id);

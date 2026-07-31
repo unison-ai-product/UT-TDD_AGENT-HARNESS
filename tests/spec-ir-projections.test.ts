@@ -168,6 +168,58 @@ describe("spec IR projections", () => {
     }
   });
 
+  it("U-GHPROJ-042: legacy revision excludes review evidence and remains distinct from source hash", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-legacy-revision-"));
+    try {
+      const planPath = "PLAN-L7-998-legacy-revision.md";
+      const source = [
+        "---",
+        "plan_id: PLAN-L7-998-legacy-revision",
+        "title: Legacy revision fixture",
+        "kind: add-impl",
+        "layer: L7",
+        "status: confirmed",
+        "review_evidence: []",
+        "---",
+        "",
+        "# Stable body",
+      ];
+      writePlan(root, planPath, source.join("\n"));
+      const before = collectSpecIrProjection(root, "2026-07-31T00:00:00.000Z").schedule_entries[0];
+      expect(before?.plan_revision).toMatch(/^legacy:sha256:[0-9a-f]{64}$/);
+      expect(before?.plan_revision).not.toBe(before?.source_hash);
+
+      source.splice(6, 1, "review_evidence:", "  - plan_revision: self-reference-free");
+      writePlan(root, planPath, source.join("\n"));
+      const after = collectSpecIrProjection(root, "2026-07-31T00:01:00.000Z").schedule_entries[0];
+      expect(after?.plan_revision).toBe(before?.plan_revision);
+      expect(after?.source_hash).not.toBe(before?.source_hash);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHPROJ-043: schedule authoring cannot invent a revision for a missing PLAN", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-missing-plan-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-upgrade-schedule.md",
+        [
+          "# V-model schedule",
+          "",
+          "| plan_id | layer | current_location | status |",
+          "|---|---|---|---|",
+          "| PLAN-L7-997-missing | L7 | must not project | active |",
+        ].join("\n"),
+      );
+      const projection = collectSpecIrProjection(root, "2026-07-31T00:00:00.000Z");
+      expect(projection.schedule_entries).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("joins activation profile authoring rows with the V-model schedule", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-activation-"));
     try {

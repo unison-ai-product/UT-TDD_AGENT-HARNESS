@@ -6,6 +6,7 @@ import {
   reviewReceiptDigest,
   validCrossReviewSource,
 } from "../kernel/github-closure-receipt";
+import { resolvePlanRevisionIdentity } from "../kernel/plan-revision";
 import type { HarnessDb } from "./index";
 
 function text(value: unknown): string {
@@ -43,14 +44,25 @@ function sourceFrontmatter(
   }
 }
 
+function sourceContent(repoRoot: string, source: string): string | undefined {
+  const path = canonicalPlanPath(repoRoot, source);
+  if (!path) return undefined;
+  try {
+    const physicalRoot = realpathSync(resolve(repoRoot));
+    const physicalPath = realpathSync(path);
+    const physicalRelative = relative(physicalRoot, physicalPath);
+    if (!physicalRelative || physicalRelative === ".." || physicalRelative.startsWith(`..${sep}`))
+      return undefined;
+    return readFileSync(physicalPath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
 export function canonicalPlanRevision(repoRoot: string, planId: string): string | undefined {
   if (!/^PLAN-[A-Za-z0-9-]+$/.test(planId)) return undefined;
-  const frontmatter = sourceFrontmatter(repoRoot, `docs/plans/${planId}.md`, planId);
-  const admission = frontmatter?.admission_receipt;
-  if (!admission || typeof admission !== "object" || Array.isArray(admission)) return undefined;
-  const binding = (admission as Record<string, unknown>).binding;
-  if (!binding || typeof binding !== "object" || Array.isArray(binding)) return undefined;
-  return text((binding as Record<string, unknown>).revision) || undefined;
+  const content = sourceContent(repoRoot, `docs/plans/${planId}.md`);
+  return content ? resolvePlanRevisionIdentity(content, planId)?.token : undefined;
 }
 
 function sourceEntries(

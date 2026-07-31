@@ -185,6 +185,7 @@ import {
   deriveStoredForwardReadiness,
   isManualGithubObservationKind,
   markGithubProjectionApplied,
+  markGithubProjectionFailed,
   queueGithubProjection,
   rebuildExecutionReadiness,
   recordGithubBinding,
@@ -3326,6 +3327,7 @@ githubProject
       const db = openHarnessDb(opts.db ?? defaultHarnessDbPath(process.cwd()), {
         repoRoot: process.cwd(),
       });
+      let outboxIds: string[] = [];
       try {
         if (opts.apply) migrate(db);
         const projectedRows = opts.apply
@@ -3337,7 +3339,7 @@ githubProject
           ? projectedRows.filter((row) => row.planId === opts.plan)
           : activeRows;
         if (opts.plan && rows.length === 0) throw new Error(`PLAN not found: ${opts.plan}`);
-        const outboxIds = opts.apply
+        outboxIds = opts.apply
           ? rows.map((row) =>
               queueGithubProjection({
                 db,
@@ -3378,6 +3380,7 @@ githubProject
             `github project sync: ${result.applied ? "applied" : "dry-run"} plans=${rows.length} mutations=${result.mutations.length}\n`,
           );
       } catch (error) {
+        if (opts.apply && outboxIds.length > 0) markGithubProjectionFailed(db, outboxIds);
         process.stderr.write(`github project sync failed: ${String(error)}\n`);
         process.exitCode = 3;
       } finally {

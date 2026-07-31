@@ -530,12 +530,19 @@ describe("db-projection-coverage detector", () => {
         "| table | 主キー | 必須 columns | 目的 |",
         "|---|---|---|---|",
         "| `execution_github_projection_outbox` | `projection_id` | `episode_id` | fixture |",
+        "",
+        "### 9.20 Future projection table",
+        "",
+        "| table | 主キー | 必須 columns | 目的 |",
+        "|---|---|---|---|",
+        "| `future_projection` | `projection_id` | `status` | fixture |",
       ].join("\n"),
     );
 
     expect(requirements.tables.map((requirement) => requirement.table)).toEqual([
       "github_projection_outbox",
       "execution_github_projection_outbox",
+      "future_projection",
     ]);
   });
 
