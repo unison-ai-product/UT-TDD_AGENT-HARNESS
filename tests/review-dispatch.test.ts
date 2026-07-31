@@ -15,6 +15,7 @@ function request(overrides: Partial<ReviewRequest> = {}): ReviewRequest {
     memoryId: "memory-001",
     pr: 201,
     exactHead: "a".repeat(40),
+    reviewRevision: "revision-001",
     authorFamily: "claude",
     requestedAt: REQUESTED_AT,
     ...overrides,
@@ -26,13 +27,27 @@ function receipt(
   overrides: Partial<ReviewReceipt> = {},
 ): ReviewReceipt {
   return {
+    memoryId: "memory-001",
     pr: 201,
     head: "a".repeat(40),
+    reviewRevision: "revision-001",
     reviewerFamily: "codex",
     kind,
     at: "2026-07-31T00:01:00.000Z",
     ...overrides,
   };
+}
+
+function completeSequence(overrides: Partial<ReviewReceipt> = {}): ReviewReceipt[] {
+  return [
+    receipt("acknowledged", { at: "2026-07-31T00:01:00.000Z", ...overrides }),
+    receipt("in_review", { at: "2026-07-31T00:02:00.000Z", ...overrides }),
+    receipt("verdict", {
+      at: "2026-07-31T00:03:00.000Z",
+      verdict: "PASS",
+      ...overrides,
+    }),
+  ];
 }
 
 function pr(overrides: Partial<PrObservation> = {}): PrObservation {
@@ -104,7 +119,10 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
   it("U-RVDISP-004: in_review から PASS verdict へ遷移する", () => {
     const reviewing = analyzeReviewDispatch({
       requests: [request()],
-      receipts: [receipt("in_review")],
+      receipts: [
+        receipt("acknowledged", { at: "2026-07-31T00:01:00.000Z" }),
+        receipt("in_review", { at: "2026-07-31T00:02:00.000Z" }),
+      ],
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
     });
@@ -112,7 +130,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
 
     const verdict = analyzeReviewDispatch({
       requests: [request()],
-      receipts: [receipt("verdict", { verdict: "PASS" })],
+      receipts: completeSequence(),
       prs: [pr({ checksGreen: false })],
       now: "2026-07-31T00:10:00.000Z",
     });
@@ -122,7 +140,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
   it("U-RVDISP-005: merge_ready は PASS・HEAD 一致・green・OPEN の全条件を要する", () => {
     const base = {
       requests: [request()],
-      receipts: [receipt("verdict", { verdict: "PASS" })],
+      receipts: completeSequence(),
       now: "2026-07-31T00:10:00.000Z",
     };
 
@@ -148,7 +166,9 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       entry(
         analyzeReviewDispatch({
           ...base,
-          receipts: [receipt("verdict", { verdict: "PASS-WEAK" })],
+          receipts: completeSequence().map((item) =>
+            item.kind === "verdict" ? { ...item, verdict: "PASS-WEAK" } : item,
+          ),
         }),
       ).state,
     ).toBe("merge_ready");
@@ -156,9 +176,11 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     const flagged = analyzeReviewDispatch({
       ...base,
       receipts: [
+        ...completeSequence().slice(0, 2),
         receipt("verdict", {
           verdict: "FLAG",
           blockingFindings: ["missing independent reviewer"],
+          at: "2026-07-31T00:03:00.000Z",
         }),
       ],
     });
@@ -170,7 +192,11 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
   it("U-RVDISP-007: 同一 family の自己承認 verdict は採用しない", () => {
     const result = analyzeReviewDispatch({
       requests: [request({ authorFamily: "claude" })],
-      receipts: [receipt("verdict", { reviewerFamily: "claude", verdict: "PASS" })],
+      receipts: [
+        receipt("acknowledged", { reviewerFamily: "claude" }),
+        receipt("in_review", { reviewerFamily: "claude" }),
+        receipt("verdict", { reviewerFamily: "claude", verdict: "PASS" }),
+      ],
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
     });
@@ -183,7 +209,11 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
   it("U-RVDISP-008: exact HEAD 不一致の verdict は stale_head として採用しない", () => {
     const result = analyzeReviewDispatch({
       requests: [request()],
-      receipts: [receipt("verdict", { verdict: "PASS", head: "b".repeat(40) })],
+      receipts: [
+        receipt("acknowledged", { at: "2026-07-31T00:01:00.000Z" }),
+        receipt("in_review", { at: "2026-07-31T00:02:00.000Z" }),
+        receipt("verdict", { verdict: "PASS", head: "b".repeat(40) }),
+      ],
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
     });
@@ -257,5 +287,189 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
 
     expect(result.entries).toEqual([]);
     expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-013: identity は PR を含み、同じ memory/head の別 PR を分離する", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ pr: 201 }), request({ pr: 202 })],
+      receipts: completeSequence(),
+      prs: [pr({ pr: 201 }), pr({ pr: 202 })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(result.entries).toHaveLength(2);
+    expect(result.entries.map((item) => [item.pr, item.state])).toEqual([
+      [201, "merge_ready"],
+      [202, "requested"],
+    ]);
+  });
+
+  it("U-RVDISP-014: reviewRevision が異なる receipt は相互適用しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [
+        request({ reviewRevision: "revision-001" }),
+        request({ reviewRevision: "revision-002" }),
+      ],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(result.entries).toHaveLength(2);
+    expect(result.entries.map((item) => [item.reviewRevision, item.state])).toEqual([
+      ["revision-001", "merge_ready"],
+      ["revision-002", "requested"],
+    ]);
+  });
+
+  it("U-RVDISP-015: old HEAD の receipt は new request を汚染しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ exactHead: "b".repeat(40), reviewRevision: "revision-002" })],
+      receipts: completeSequence({ head: "a".repeat(40), reviewRevision: "revision-001" }),
+      prs: [pr({ headSha: "b".repeat(40) })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("requested");
+    expect(entry(result).reasons).not.toContain("head_mismatch");
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-016: missing ack/start と receipt の逆順は fail closed", () => {
+    const missingAck = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("in_review"), receipt("verdict", { verdict: "PASS" })],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(missingAck).state).toBe("requested");
+    expect(entry(missingAck).reasons).toEqual(
+      expect.arrayContaining(["missing_acknowledged", "missing_in_review"]),
+    );
+    expect(missingAck.ok).toBe(false);
+
+    const reversed = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [
+        receipt("acknowledged", { at: "2026-07-31T00:03:00.000Z" }),
+        receipt("in_review", { at: "2026-07-31T00:02:00.000Z" }),
+        receipt("verdict", { at: "2026-07-31T00:04:00.000Z", verdict: "PASS" }),
+      ],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(reversed).state).not.toBe("merge_ready");
+    expect(entry(reversed).reasons).toContain("out_of_order_receipt");
+    expect(reversed.ok).toBe(false);
+  });
+
+  it("U-RVDISP-017: malformed timestamp/head/SLA/receipt fields は fail closed", () => {
+    const malformedTimestamp = analyzeReviewDispatch({
+      requests: [request({ requestedAt: "not-a-date" })],
+      receipts: [],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(malformedTimestamp).reasons).toContain("invalid_timestamp");
+    expect(malformedTimestamp.ok).toBe(false);
+
+    const futureTimestamp = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("acknowledged", { at: "2026-07-31T00:11:00.000Z" })],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(futureTimestamp).reasons).toContain("future_timestamp");
+    expect(futureTimestamp.ok).toBe(false);
+
+    const malformedReceipt = analyzeReviewDispatch({
+      requests: [request({ memoryId: "", reviewRevision: "" })],
+      receipts: [receipt("verdict", { verdict: "PASS", head: "not-a-head" })],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+      sla: { ackMinutes: 0, startMinutes: 30, verdictMinutes: 60 },
+    });
+    expect(entry(malformedReceipt).reasons).toEqual(
+      expect.arrayContaining([
+        "empty_identity",
+        "empty_review_revision",
+        "invalid_head",
+        "invalid_sla",
+      ]),
+    );
+    expect(malformedReceipt.ok).toBe(false);
+
+    const invalidVerdictFields = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("acknowledged", { verdict: "PASS" })],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(invalidVerdictFields).reasons).toContain("unexpected_verdict_fields");
+    expect(invalidVerdictFields.ok).toBe(false);
+
+    const missingVerdict = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("verdict")],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(missingVerdict).reasons).toContain("missing_verdict");
+    expect(missingVerdict.ok).toBe(false);
+
+    const invalidFlag = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("verdict", { verdict: "FLAG" })],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(invalidFlag).reasons).toContain("flag_without_blocking_findings");
+    expect(invalidFlag.ok).toBe(false);
+
+    const invalidPass = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("verdict", { verdict: "PASS", blockingFindings: ["unexpected"] })],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(invalidPass).reasons).toContain("blocking_findings_on_pass");
+    expect(invalidPass.ok).toBe(false);
+  });
+
+  it("U-RVDISP-018: author family receipt は acknowledged/in_review/verdict 全てで拒否する", () => {
+    for (const kind of ["acknowledged", "in_review", "verdict"] as const) {
+      const receipts = completeSequence().map((item) =>
+        item.kind === kind ? { ...item, reviewerFamily: "claude" as const } : item,
+      );
+      const result = analyzeReviewDispatch({
+        requests: [request({ authorFamily: "claude" })],
+        receipts,
+        prs: [pr()],
+        now: "2026-07-31T00:10:00.000Z",
+      });
+
+      expect(entry(result).reasons).toContain("same_family_reviewer");
+      expect(entry(result).state).not.toBe("merge_ready");
+      expect(result.ok).toBe(false);
+    }
+  });
+
+  it("U-RVDISP-019: complete valid cross-family sequence だけが merge_ready になる", () => {
+    const cases: Array<{ receipts: ReviewReceipt[]; state: string }> = [
+      { receipts: [receipt("acknowledged")], state: "acknowledged" },
+      { receipts: completeSequence().slice(0, 2), state: "in_review" },
+      { receipts: [receipt("verdict", { verdict: "PASS" })], state: "requested" },
+      { receipts: completeSequence(), state: "merge_ready" },
+    ];
+
+    for (const item of cases) {
+      const result = analyzeReviewDispatch({
+        requests: [request()],
+        receipts: item.receipts,
+        prs: [pr()],
+        now: "2026-07-31T00:10:00.000Z",
+      });
+      expect(entry(result).state).toBe(item.state);
+    }
   });
 });
