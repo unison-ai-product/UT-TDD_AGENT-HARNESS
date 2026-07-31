@@ -41,6 +41,8 @@ route_mode: redesign
 status: confirmed
 sub_doc: internal-processing
 github_issue_id: 152
+supersedes:
+  - PLAN-L5-03-internal-processing
 admission_receipt:
   schema_version: v2
   receipt_id: certificate:e6658e2f2ea752eaf6cf241a931debfa

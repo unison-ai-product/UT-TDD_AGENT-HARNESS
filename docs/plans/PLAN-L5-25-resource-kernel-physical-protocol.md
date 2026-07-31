@@ -69,6 +69,8 @@ review_evidence:
 status: draft
 sub_doc: internal-processing
 github_issue_id: 152
+supersedes:
+  - PLAN-L5-25-resource-kernel-physical-protocol
 admission_receipt:
   schema_version: v2
   receipt_id: certificate:57e3ee86d1269c46afefa9ec5975bb49

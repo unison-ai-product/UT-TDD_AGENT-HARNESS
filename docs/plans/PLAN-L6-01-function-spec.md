@@ -42,6 +42,8 @@ route_mode: redesign
 status: confirmed
 sub_doc: function-spec
 github_issue_id: 152
+supersedes:
+  - PLAN-L6-01-function-spec
 admission_receipt:
   schema_version: v2
   receipt_id: certificate:8ce1ef41fd5d80e6762e9eeacbac4679

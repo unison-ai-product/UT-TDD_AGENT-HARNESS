@@ -54,6 +54,8 @@ dependencies:
 review_evidence: []
 status: draft
 github_issue_id: 152
+supersedes:
+  - PLAN-L7-466-resource-kernel-native-companion
 ---
 
 # PLAN-L7-466: Resource Kernel native custody companion / Node protocol client

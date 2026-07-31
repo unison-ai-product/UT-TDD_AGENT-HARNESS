@@ -75,6 +75,8 @@ review_evidence:
 status: draft
 sub_doc: function-spec
 github_issue_id: 152
+supersedes:
+  - PLAN-L6-92-resource-kernel-function-contracts
 admission_receipt:
   schema_version: v2
   receipt_id: certificate:cfcc7246ded4c136fef34d686b7fa401
