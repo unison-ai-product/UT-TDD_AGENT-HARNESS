@@ -95,12 +95,49 @@ function projectItemId(input: {
   return text(row?.project_item_id);
 }
 
-function currentRevision(db: HarnessDb, planId: string): string {
+export function resolveCurrentPlanRevision(
+  db: HarnessDb,
+  planId: string,
+  repoRoot = process.cwd(),
+): string {
+  const hasLedger = db
+    .prepare(
+      "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name IN ('plan_aliases', 'plan_revisions')",
+    )
+    .get();
+  if (Number(hasLedger?.count ?? 0) === 2) {
+    const ledger = db
+      .prepare(
+        `SELECT MAX(revision.revision) AS revision
+           FROM plan_aliases alias
+           JOIN plan_revisions revision ON revision.asset_id = alias.asset_id
+          WHERE alias.alias = ? AND alias.valid_to_revision IS NULL`,
+      )
+      .get(planId);
+    if (ledger?.revision !== undefined && ledger?.revision !== null) return text(ledger.revision);
+  }
   const row = db
     .prepare(
-      "SELECT source_hash FROM schedule_entries WHERE plan_id = ? ORDER BY rowid DESC LIMIT 1",
+      "SELECT source_hash, source_path FROM schedule_entries WHERE plan_id = ? ORDER BY rowid DESC LIMIT 1",
     )
     .get(planId);
+  const sourcePath = text(row?.source_path);
+  if (/^docs\/plans\/[^/]+\.md$/.test(sourcePath)) {
+    const root = resolve(repoRoot);
+    const path = resolve(root, ...sourcePath.split("/"));
+    if (path.startsWith(`${root}${sep}`)) {
+      try {
+        const block = readFileSync(path, "utf8").match(/^---\r?\n([\s\S]*?)\r?\n---/);
+        const frontmatter = block ? object(parseYaml(block[1] ?? "")) : {};
+        const admission = object(frontmatter.admission_receipt);
+        const binding = object(admission.binding);
+        const revision = Number(binding.revision);
+        if (Number.isInteger(revision) && revision > 0) return String(revision);
+      } catch {
+        // Legacy/test sources without an admission receipt use their projected revision token.
+      }
+    }
+  }
   return text(row?.source_hash);
 }
 
@@ -183,7 +220,7 @@ export function syncRepositoryBindings(input: {
     "--limit",
     "1000",
     "--json",
-    "number,title,url,headRefName,headRefOid,state,mergedAt,mergeCommit,body,statusCheckRollup,reviews",
+    "number,title,url,baseRefName,headRefName,headRefOid,state,mergedAt,mergeCommit,body,statusCheckRollup,reviews",
   ]);
   const pullRequests = list(payload);
   if (pullRequests.length >= 1000)
@@ -210,7 +247,11 @@ export function syncRepositoryBindings(input: {
       result.skipped.push({ number, reason: "plan-revision-missing" });
       continue;
     }
-    const expectedRevision = currentRevision(input.db, planId);
+    const expectedRevision = resolveCurrentPlanRevision(
+      input.db,
+      planId,
+      input.repoRoot ?? process.cwd(),
+    );
     if (expectedRevision && revision !== expectedRevision) {
       result.skipped.push({ number, reason: "stale-plan-revision" });
       continue;
@@ -245,12 +286,11 @@ export function syncRepositoryBindings(input: {
     const reviewReceiptMatches =
       Boolean(trace.fields.review_receipt_digest) &&
       trace.fields.review_receipt_digest === expectedReviewDigest;
-    const acceptedReviewState =
-      remoteReviewState === "承認" && reviewReceiptMatches
-        ? "承認"
-        : remoteReviewState === "要修正"
-          ? "要修正"
-          : "依頼中";
+    const acceptedReviewState = reviewReceiptMatches
+      ? "承認"
+      : remoteReviewState === "要修正"
+        ? "要修正"
+        : "依頼中";
     const bindings: GithubBindingInput[] = [
       {
         ...common,
@@ -319,9 +359,9 @@ export function syncRepositoryBindings(input: {
       } else if (
         reviewDigests &&
         mergeSha &&
+        text(pullRequest.baseRefName) === "main" &&
         prRequiredCheck.state === "成功" &&
         prRequiredCheck.id &&
-        reviewState(list(pullRequest.reviews)) === "承認" &&
         mainRequiredCheck.state === "成功" &&
         mainRequiredCheck.id &&
         reviewReceiptMatches &&
@@ -381,3 +421,7 @@ export function syncRepositoryBindings(input: {
   });
   return result;
 }
+
+import { readFileSync } from "node:fs";
+import { resolve, sep } from "node:path";
+import { parse as parseYaml } from "yaml";

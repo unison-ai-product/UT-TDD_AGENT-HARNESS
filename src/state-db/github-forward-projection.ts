@@ -336,11 +336,7 @@ export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): s
         WHERE repository_id = ? AND object_kind = ? AND object_id = ?`,
     )
     .get(input.repositoryId, input.objectKind, input.objectId);
-  if (
-    existing &&
-    (text(existing.plan_id) !== input.planId ||
-      (text(existing.plan_revision) !== input.planRevision && input.objectKind !== "project_item"))
-  ) {
+  if (existing && text(existing.plan_id) !== input.planId) {
     throw new Error(
       `GitHub object identity conflict: ${input.objectKind}/${input.objectId} is already bound to ${text(existing.plan_id)}@${text(existing.plan_revision)}`,
     );

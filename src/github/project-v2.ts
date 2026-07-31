@@ -271,7 +271,7 @@ function desiredFields(row: ForwardReadinessRow): Record<string, string | number
     CI状態: row.ci,
     レビュー状態: row.review,
     対象HEAD: row.headSha,
-    同期状態: row.sync === "不整合" ? "不整合" : "同期済",
+    同期状態: row.sync,
   };
 }
 

@@ -167,6 +167,7 @@ describe("L7 workflow contract implementations", () => {
     expect(routeSignalCandidates("feature_addition")).toEqual(["add-feature"]);
     expect(routeSignalCandidates("version_deferral")).toEqual(["version-up"]);
     expect(routeSignalCandidates("verification_plan")).toEqual(["verify"]);
+    expect(routeSignalCandidates("forward_convergence_drift")).toEqual(["reverse"]);
     expect(routeSignalToMode({ signal: "reverse gap" }).candidates).toEqual(["reverse"]);
     expect(routeSignalToMode({ signal: "drift", drive: "agent" }).candidates[0]).toBe("reverse");
     expect(routeSignalToMode({ signal: "regression_prod" }).candidates[0]).toBe("incident");

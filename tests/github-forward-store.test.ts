@@ -342,6 +342,42 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     }
   });
 
+  it("U-GHPROJ-015: allows a newer lifecycle observation to roll the same PLAN revision", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const base = {
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        objectKind: "pull_request" as const,
+        objectId: "12",
+        state: "open",
+      };
+      recordGithubBinding(db, {
+        ...base,
+        planRevision: "1",
+        observedAt: "2026-07-29T01:00:00Z",
+      });
+      recordGithubBinding(db, {
+        ...base,
+        planRevision: "2",
+        observedAt: "2026-07-29T02:00:00Z",
+      });
+      expect(
+        recordGithubBinding(db, {
+          ...base,
+          planRevision: "1",
+          observedAt: "2026-07-29T01:30:00Z",
+        }),
+      ).toBeUndefined();
+      expect(
+        db.prepare("SELECT plan_revision, observed_at FROM github_object_bindings").get(),
+      ).toEqual({ plan_revision: "2", observed_at: "2026-07-29T02:00:00Z" });
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-GHPROJ-030: marks multiple open PR heads inconsistent and does not mix their evidence", () => {
     const db = openHarnessDb(":memory:");
     try {

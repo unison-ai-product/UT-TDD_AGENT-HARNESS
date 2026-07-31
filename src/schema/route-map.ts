@@ -137,9 +137,11 @@ export const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
 export function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: string): number {
   return Math.max(
     0,
-    ...entry.tokens.map((token) =>
-      normalizedSignal.includes(token.toLowerCase()) ? token.length : 0,
-    ),
+    ...entry.tokens.map((token) => {
+      const normalizedToken = token.toLowerCase();
+      if (normalizedToken === "forward" && normalizedSignal !== "forward") return 0;
+      return normalizedSignal.includes(normalizedToken) ? token.length : 0;
+    }),
   );
 }
 

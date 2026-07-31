@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderPrTraceBlock } from "../src/github/pr-trace";
 import type { GhCommandPort } from "../src/github/project-v2";
-import { syncRepositoryBindings } from "../src/github/repository-bindings";
+import {
+  resolveCurrentPlanRevision,
+  syncRepositoryBindings,
+} from "../src/github/repository-bindings";
 import {
   combinedReviewReceiptDigest,
   decodeMergeClosureReceipt,
@@ -167,13 +170,14 @@ describe("GitHub repository facts binding", () => {
               headRefName: "feature/domain",
               headRefOid: "abcdef1",
               state: "MERGED",
+              baseRefName: "main",
               mergedAt: "2026-07-29T00:00:00Z",
               mergeCommit: { oid: "fedcba1" },
               body,
               statusCheckRollup: [
                 { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
               ],
-              reviews: [{ state: "APPROVED" }],
+              reviews: [],
             },
           ],
           {
@@ -283,6 +287,7 @@ describe("GitHub repository facts binding", () => {
       "missing-issue",
       "stale-head",
       "forged-source",
+      "wrong-base",
     ] as const) {
       const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-"));
       const db = openHarnessDb(":memory:");
@@ -390,6 +395,7 @@ describe("GitHub repository facts binding", () => {
                 headRefName: "feature/closure",
                 headRefOid: "abcdef1",
                 state: "MERGED",
+                baseRefName: scenario === "wrong-base" ? "feature/stack" : "main",
                 mergedAt: "2026-07-29T00:00:00Z",
                 mergeCommit: { oid: "fedcba1" },
                 body,
@@ -580,6 +586,7 @@ describe("GitHub repository facts binding", () => {
                 headRefName: "feature/rollback",
                 headRefOid: "abcdef1",
                 state: "MERGED",
+                baseRefName: "main",
                 mergedAt: "2026-07-29T00:00:00Z",
                 mergeCommit: { oid: "fedcba1" },
                 body,
@@ -669,6 +676,7 @@ describe("GitHub repository facts binding", () => {
               headRefName: "feature/project-required",
               headRefOid: "abcdef1",
               state: "MERGED",
+              baseRefName: "main",
               mergedAt: "2026-07-29T00:00:00Z",
               mergeCommit: { oid: "fedcba1" },
               body,
@@ -709,6 +717,7 @@ describe("GitHub repository facts binding", () => {
             headRefName: "feature/no-network-in-tx",
             headRefOid: "abcdef1",
             state: "MERGED",
+            baseRefName: "main",
             mergedAt: "2026-07-29T00:00:00Z",
             mergeCommit: { oid: "fedcba1" },
             body: renderPrTraceBlock({
@@ -746,5 +755,32 @@ describe("GitHub repository facts binding", () => {
       ["project_item", "issue", "branch", "pull_request"].filter(isManualGithubObservationKind),
     ).toEqual(["project_item", "issue", "branch", "pull_request"]);
     expect(["check_run", "review", "merge"].some(isManualGithubObservationKind)).toBe(false);
+  });
+
+  it("U-GHBIND-011: PLAN revision comes from the admission binding, not the source hash", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-revision-"));
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const planPath = join(repoRoot, "docs", "plans", "PLAN-L7-436-domain.md");
+      mkdirSync(join(repoRoot, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        planPath,
+        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: 2\n---\n",
+        "utf8",
+      );
+      db.prepare(
+        "INSERT INTO schedule_entries (schedule_entry_id, plan_id, source_path, source_hash) VALUES (?, ?, ?, ?)",
+      ).run(
+        "schedule:1",
+        "PLAN-L7-436-domain",
+        "docs/plans/PLAN-L7-436-domain.md",
+        "whole-file-hash",
+      );
+      expect(resolveCurrentPlanRevision(db, "PLAN-L7-436-domain", repoRoot)).toBe("2");
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
   });
 });

@@ -132,7 +132,7 @@ describe("GitHub Project V2 reconciler", () => {
       planId: row.planId,
       itemId: `dry-run:${row.planId}`,
       field: "同期状態",
-      value: "同期済",
+      value: "未同期",
     });
   });
 
@@ -191,7 +191,7 @@ describe("GitHub Project V2 reconciler", () => {
           CI状態: row.ci,
           レビュー状態: row.review,
           対象HEAD: "",
-          同期状態: "同期済",
+          同期状態: "未同期",
         },
       },
     ];
