@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import type { Command } from "commander";
+import { REVIEW_OUTPUT_CONTRACT } from "../feedback/review-verdict-contract";
 import { loadChangedFiles } from "../lint/change-impact";
 import {
   type AdapterContextInjection,
@@ -199,11 +200,12 @@ function runtimeCommand(
           (routing.review_lane ? ` lane=${routing.review_lane}` : "") +
           (routing.task_intent ? ` intent=${routing.task_intent}` : "");
         const contextInjection = deps.resolveSkillContextInjection(opts.plan);
+        const taskForAdapter = routing.review_lane ? `${task}\n\n${REVIEW_OUTPUT_CONTRACT}` : task;
         const plan = buildAdapterPlan(
           {
             provider,
             role: opts.role,
-            task,
+            task: taskForAdapter,
             planId: opts.plan,
             model: routing.model,
             effort: routing.effort,

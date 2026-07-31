@@ -27,7 +27,11 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/feedback/review-dispatch.ts
     artifact_type: source_module
+  - artifact_path: src/feedback/review-verdict-contract.ts
+    artifact_type: source_module
   - artifact_path: tests/review-dispatch.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/review-verdict-contract.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
