@@ -90,9 +90,9 @@ describe("GitHub repository facts binding", () => {
       migrate(db);
       db.prepare(
         `INSERT INTO schedule_entries (
-          schedule_entry_id, plan_id, status, source_hash
-        ) VALUES (?, ?, ?, ?)`,
-      ).run("schedule:436", "PLAN-L7-436-domain", "confirmed", "rev1");
+          schedule_entry_id, plan_id, status, plan_revision, source_hash
+        ) VALUES (?, ?, ?, ?, ?)`,
+      ).run("schedule:436", "PLAN-L7-436-domain", "confirmed", "rev1", "whole-file-hash");
       db.prepare(
         `INSERT INTO github_project_item_projection (
           projection_id, repository_id, project_id, project_item_id, plan_id,
@@ -161,7 +161,7 @@ describe("GitHub repository facts binding", () => {
         issue_number: "70",
         review_receipt_digest: combinedReviewReceiptDigest(reviewDigests),
       });
-      const freshGh = () =>
+      const freshGh = (traceBody = body) =>
         new FakeGh(
           [
             {
@@ -173,7 +173,7 @@ describe("GitHub repository facts binding", () => {
               baseRefName: "main",
               mergedAt: "2026-07-29T00:00:00Z",
               mergeCommit: { oid: "fedcba1" },
-              body,
+              body: traceBody,
               statusCheckRollup: [
                 { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
               ],
@@ -235,6 +235,72 @@ describe("GitHub repository facts binding", () => {
           )
           .all(),
       ).toEqual([{ observed_at: "2026-07-30T00:00:00Z" }]);
+
+      db.prepare("UPDATE schedule_entries SET plan_revision = ? WHERE plan_id = ?").run(
+        "rev2",
+        "PLAN-L7-436-domain",
+      );
+      db.prepare(
+        "UPDATE github_project_item_projection SET plan_revision = ? WHERE plan_id = ?",
+      ).run("rev2", "PLAN-L7-436-domain");
+      const revisedSources = reviewSources.map((source) => ({
+        ...source,
+        planRevision: "rev2",
+        reviewedAt: "2026-07-30T01:00:00Z",
+        testsGreenAt: "2026-07-30T00:30:00Z",
+      }));
+      for (const source of revisedSources)
+        db.prepare(
+          `INSERT INTO github_review_lane_receipts (
+            review_lane_receipt_id, plan_id, plan_revision, lane, subject_head,
+            verdict, reviewed_at, tests_green_at, worker_model, reviewer_model,
+            attack_trials, citations_json, source
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          `review:436:rev2:${source.lane}`,
+          source.planId,
+          source.planRevision,
+          source.lane,
+          source.headSha,
+          source.verdict,
+          source.reviewedAt,
+          source.testsGreenAt,
+          source.workerModel,
+          source.reviewerModel,
+          source.attackTrials,
+          JSON.stringify(source.citations),
+          source.source,
+        );
+      writeReviewPlan(repoRoot, revisedSources);
+      const revisedDigests = {
+        claimBlind: reviewReceiptDigest(revisedSources[0]),
+        specBlind: reviewReceiptDigest(revisedSources[1]),
+      };
+      const revisedBody = renderPrTraceBlock({
+        plan_id: "PLAN-L7-436-domain",
+        plan_revision: "rev2",
+        route_mode: "add-feature",
+        subject_head: "abcdef1",
+        base_sha: "1234567",
+        issue_number: "70",
+        review_receipt_digest: combinedReviewReceiptDigest(revisedDigests),
+      });
+      expect(() =>
+        syncRepositoryBindings({
+          db,
+          repositoryId: "owner/repo",
+          repoRoot,
+          gh: freshGh(revisedBody),
+          now: "2026-07-30T02:00:00Z",
+        }),
+      ).not.toThrow();
+      expect(
+        db
+          .prepare(
+            "SELECT plan_revision FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1",
+          )
+          .get(),
+      ).toEqual({ plan_revision: "rev2" });
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
@@ -421,6 +487,12 @@ describe("GitHub repository facts binding", () => {
         expect(mergeBinding).toEqual(
           scenario === "missing-issue" ? undefined : { state: "invalidated:closure-incomplete" },
         );
+        if (scenario === "wrong-base")
+          expect(
+            db
+              .prepare("SELECT object_id FROM github_object_bindings WHERE object_id LIKE 'main:%'")
+              .all(),
+          ).toEqual([]);
       } finally {
         db.close();
         rmSync(repoRoot, { recursive: true, force: true });
@@ -758,29 +830,15 @@ describe("GitHub repository facts binding", () => {
   });
 
   it("U-GHBIND-011: PLAN revision comes from the admission binding, not the source hash", () => {
-    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-revision-"));
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      const planPath = join(repoRoot, "docs", "plans", "PLAN-L7-436-domain.md");
-      mkdirSync(join(repoRoot, "docs", "plans"), { recursive: true });
-      writeFileSync(
-        planPath,
-        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: 2\n---\n",
-        "utf8",
-      );
       db.prepare(
-        "INSERT INTO schedule_entries (schedule_entry_id, plan_id, source_path, source_hash) VALUES (?, ?, ?, ?)",
-      ).run(
-        "schedule:1",
-        "PLAN-L7-436-domain",
-        "docs/plans/PLAN-L7-436-domain.md",
-        "whole-file-hash",
-      );
-      expect(resolveCurrentPlanRevision(db, "PLAN-L7-436-domain", repoRoot)).toBe("2");
+        "INSERT INTO schedule_entries (schedule_entry_id, plan_id, plan_revision, source_hash) VALUES (?, ?, ?, ?)",
+      ).run("schedule:1", "PLAN-L7-436-domain", "2", "whole-file-hash");
+      expect(resolveCurrentPlanRevision(db, "PLAN-L7-436-domain")).toBe("2");
     } finally {
       db.close();
-      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 });

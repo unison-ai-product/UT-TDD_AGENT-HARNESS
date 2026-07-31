@@ -95,50 +95,14 @@ function projectItemId(input: {
   return text(row?.project_item_id);
 }
 
-export function resolveCurrentPlanRevision(
-  db: HarnessDb,
-  planId: string,
-  repoRoot = process.cwd(),
-): string {
-  const hasLedger = db
-    .prepare(
-      "SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name IN ('plan_aliases', 'plan_revisions')",
-    )
-    .get();
-  if (Number(hasLedger?.count ?? 0) === 2) {
-    const ledger = db
-      .prepare(
-        `SELECT MAX(revision.revision) AS revision
-           FROM plan_aliases alias
-           JOIN plan_revisions revision ON revision.asset_id = alias.asset_id
-          WHERE alias.alias = ? AND alias.valid_to_revision IS NULL`,
-      )
-      .get(planId);
-    if (ledger?.revision !== undefined && ledger?.revision !== null) return text(ledger.revision);
-  }
+export function resolveCurrentPlanRevision(db: HarnessDb, planId: string): string {
   const row = db
     .prepare(
-      "SELECT source_hash, source_path FROM schedule_entries WHERE plan_id = ? ORDER BY rowid DESC LIMIT 1",
+      `SELECT COALESCE(NULLIF(plan_revision, ''), source_hash) AS plan_revision
+         FROM schedule_entries WHERE plan_id = ? ORDER BY rowid DESC LIMIT 1`,
     )
     .get(planId);
-  const sourcePath = text(row?.source_path);
-  if (/^docs\/plans\/[^/]+\.md$/.test(sourcePath)) {
-    const root = resolve(repoRoot);
-    const path = resolve(root, ...sourcePath.split("/"));
-    if (path.startsWith(`${root}${sep}`)) {
-      try {
-        const block = readFileSync(path, "utf8").match(/^---\r?\n([\s\S]*?)\r?\n---/);
-        const frontmatter = block ? object(parseYaml(block[1] ?? "")) : {};
-        const admission = object(frontmatter.admission_receipt);
-        const binding = object(admission.binding);
-        const revision = Number(binding.revision);
-        if (Number.isInteger(revision) && revision > 0) return String(revision);
-      } catch {
-        // Legacy/test sources without an admission receipt use their projected revision token.
-      }
-    }
-  }
-  return text(row?.source_hash);
+  return text(row?.plan_revision);
 }
 
 function planAccepted(db: HarnessDb, planId: string): boolean {
@@ -168,10 +132,7 @@ function recordMergeClosure(input: {
         WHERE repository_id = ? AND object_kind = 'merge' AND object_id = ?`,
     )
     .get(input.repositoryId, objectId);
-  if (
-    existing &&
-    (text(existing.plan_id) !== input.planId || text(existing.plan_revision) !== input.planRevision)
-  )
+  if (existing && text(existing.plan_id) !== input.planId)
     throw new Error(`GitHub merge identity conflict: ${objectId}`);
   const bindingId = stableId("github-binding", `${input.repositoryId}:merge:${objectId}`);
   input.db
@@ -247,11 +208,7 @@ export function syncRepositoryBindings(input: {
       result.skipped.push({ number, reason: "plan-revision-missing" });
       continue;
     }
-    const expectedRevision = resolveCurrentPlanRevision(
-      input.db,
-      planId,
-      input.repoRoot ?? process.cwd(),
-    );
+    const expectedRevision = resolveCurrentPlanRevision(input.db, planId);
     if (expectedRevision && revision !== expectedRevision) {
       result.skipped.push({ number, reason: "stale-plan-revision" });
       continue;
@@ -333,12 +290,13 @@ export function syncRepositoryBindings(input: {
         ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
         : {};
       const mainRequiredCheck = requiredCheck(list(mainChecks.check_runs));
-      bindings.push({
-        ...common,
-        objectKind: "check_run",
-        objectId: `main:${mergeSha}:check:${mainRequiredCheck.id || "missing"}`,
-        state: mainRequiredCheck.state,
-      });
+      if (text(pullRequest.baseRefName) === "main")
+        bindings.push({
+          ...common,
+          objectKind: "check_run",
+          objectId: `main:${mergeSha}:check:${mainRequiredCheck.id || "missing"}`,
+          state: mainRequiredCheck.state,
+        });
       const issueClosed = trace.fields.issue_number
         ? text(
             object(
@@ -421,7 +379,3 @@ export function syncRepositoryBindings(input: {
   });
   return result;
 }
-
-import { readFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
-import { parse as parseYaml } from "yaml";

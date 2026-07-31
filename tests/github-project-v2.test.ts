@@ -271,4 +271,26 @@ describe("GitHub Project V2 reconciler", () => {
     ).toThrow(/inconsistent/);
     expect(port.calls).toEqual([]);
   });
+
+  it("U-GHPROJ-026: validates select options before the first remote mutation", () => {
+    const port = new FakeProjectPort();
+    port.snapshot.fields = fields.map((field) =>
+      field.name === "同期状態"
+        ? {
+            ...field,
+            options: field.options?.filter((option) => option.name !== "未同期"),
+          }
+        : field,
+    );
+    expect(() =>
+      syncForwardProject({
+        rows: [row],
+        owner: "owner",
+        projectNumber: 6,
+        port,
+        apply: true,
+      }),
+    ).toThrow(/field option missing: 同期状態=未同期/);
+    expect(port.calls).toEqual([]);
+  });
 });

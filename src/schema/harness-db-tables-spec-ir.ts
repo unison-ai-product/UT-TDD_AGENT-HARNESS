@@ -48,6 +48,7 @@ export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
       col("status"),
       col("blocked_reason"),
       col("source_path"),
+      col("plan_revision"),
       col("source_hash"),
       col("indexed_at"),
     ],

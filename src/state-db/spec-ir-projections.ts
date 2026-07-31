@@ -76,6 +76,7 @@ export interface ScheduleEntryRow {
   status: string;
   blocked_reason: string;
   source_path: string;
+  plan_revision?: string;
   source_hash: string;
   indexed_at: string;
 }
@@ -329,6 +330,19 @@ function parseYamlObject(raw: string): Record<string, unknown> | null {
 
 function stringField(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function recordField(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function projectedPlanRevision(source: SpecIrSource): string {
+  const admission = recordField(source.metadata.admission_receipt);
+  const binding = recordField(admission.binding);
+  const revision = Number(binding.revision);
+  return Number.isInteger(revision) && revision > 0 ? String(revision) : source.sourceHash;
 }
 
 function stringList(value: unknown): string[] {
@@ -632,6 +646,11 @@ function parseScheduleAuthoringRows(
   indexedAt: string,
 ): ScheduleEntryRow[] {
   const rows: ScheduleEntryRow[] = [];
+  const planRevisions = new Map(
+    sources
+      .filter((source) => source.kind === "plan" && sourcePlanId(source))
+      .map((source) => [sourcePlanId(source), projectedPlanRevision(source)]),
+  );
   for (const source of sources.filter((item) => item.kind === "schedule_doc")) {
     for (const row of markdownTableRows(source.content, ["plan_id", "current_location"])) {
       const planId = row.plan_id ?? "";
@@ -656,6 +675,7 @@ function parseScheduleAuthoringRows(
         status,
         blocked_reason: row.blocked_reason ?? "",
         source_path: source.path,
+        plan_revision: planRevisions.get(planId) ?? source.sourceHash,
         source_hash: source.sourceHash,
         indexed_at: indexedAt,
       });
@@ -910,6 +930,7 @@ export function parseScheduleEntries(
         status,
         blocked_reason: "",
         source_path: source.path,
+        plan_revision: projectedPlanRevision(source),
         source_hash: source.sourceHash,
         indexed_at: indexedAt,
       };

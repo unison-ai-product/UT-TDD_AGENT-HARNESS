@@ -44,6 +44,9 @@ describe("spec IR projections", () => {
           "drive: db",
           "status: confirmed",
           "route_mode: add-feature",
+          "admission_receipt:",
+          "  binding:",
+          "    revision: 3",
           "dependencies:",
           "  requires:",
           "    - PLAN-L5-999-missing-parent",
@@ -69,6 +72,7 @@ describe("spec IR projections", () => {
         expect.arrayContaining([
           expect.objectContaining({
             plan_id: "PLAN-L6-999-spec-ir-fixture",
+            plan_revision: "3",
             v_pair: "L7",
             rag: "green",
           }),
@@ -122,6 +126,9 @@ describe("spec IR projections", () => {
           "drive: db",
           "status: confirmed",
           "route_mode: add-feature",
+          "admission_receipt:",
+          "  binding:",
+          "    revision: 3",
           "---",
           "",
           "# Schedule fixture",
@@ -151,6 +158,7 @@ describe("spec IR projections", () => {
         blocked_reason: "CI gate",
         predecessor_plan_ids: "PLAN-L6-998-parent",
         source_path: "docs/governance/vmodel-upgrade-schedule.md",
+        plan_revision: "3",
       });
       expect(
         projection.schedule_entries.filter((row) => row.plan_id === "PLAN-L7-999-schedule-fixture"),

@@ -275,7 +275,10 @@ function desiredFields(row: ForwardReadinessRow): Record<string, string | number
   };
 }
 
-function assertProjectContract(snapshot: ProjectSnapshot): Map<string, ProjectField> {
+function assertProjectContract(
+  snapshot: ProjectSnapshot,
+  rows: readonly ForwardReadinessRow[],
+): Map<string, ProjectField> {
   if (!snapshot.id) throw new Error("GitHub Project id is missing");
   const fields = new Map(snapshot.fields.map((field) => [field.name, field]));
   const missing = Object.keys(
@@ -298,6 +301,14 @@ function assertProjectContract(snapshot: ProjectSnapshot): Map<string, ProjectFi
     }),
   ).filter((name) => !fields.has(name));
   if (missing.length > 0) throw new Error(`GitHub Project fields missing: ${missing.join(", ")}`);
+  for (const row of rows) {
+    for (const [fieldName, value] of Object.entries(desiredFields(row))) {
+      const field = fields.get(fieldName);
+      if (field?.type !== "ProjectV2SingleSelectField" || String(value) === "") continue;
+      if (!field.options?.some((candidate) => candidate.name === String(value)))
+        throw new Error(`field option missing: ${fieldName}=${value}`);
+    }
+  }
   return fields;
 }
 
@@ -314,7 +325,7 @@ export function syncForwardProject(input: {
     throw new Error(
       `GitHub Project sync is inconsistent: ${inconsistent.map((row) => row.planId).join(", ")}`,
     );
-  const fields = assertProjectContract(snapshot);
+  const fields = assertProjectContract(snapshot, input.rows);
   const duplicates = new Set<string>();
   const byPlan = new Map<string, ProjectItem>();
   for (const item of snapshot.items) {

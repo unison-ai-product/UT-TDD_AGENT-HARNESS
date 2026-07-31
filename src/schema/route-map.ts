@@ -139,7 +139,7 @@ export function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: stri
     0,
     ...entry.tokens.map((token) => {
       const normalizedToken = token.toLowerCase();
-      if (normalizedToken === "forward" && normalizedSignal !== "forward") return 0;
+      if (entry.mode === "forward" && normalizedSignal !== normalizedToken) return 0;
       return normalizedSignal.includes(normalizedToken) ? token.length : 0;
     }),
   );
