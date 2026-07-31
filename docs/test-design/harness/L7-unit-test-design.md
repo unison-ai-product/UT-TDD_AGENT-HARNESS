@@ -1522,6 +1522,27 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
 
+## D3b review attestation / verdict transport oracle (2026-07-31)
+
+対象 = `src/feedback/review-attestation.ts`、`src/cli/delegation.ts`、
+`src/feedback/review-verdict-contract.ts`。実テスト = `tests/review-attestation.test.ts`。
+reviewer の自己申告は受理せず、委譲境界の attestation と verdict file だけから request / receipt を
+content-addressed に投影する。D1 analyzer には投影済み artifact だけを渡す。
+
+| ID | 設計境界 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-RVATT-001` | family 証明 | caller が `reviewerFamily=claude` を混入、attestation.provider=`codex` | receipt family は `codex`、`at=completedAt`。自己申告で上書き不可 |
+| `U-RVATT-002` | exit fail-close | exitCode=17 と有効 verdict file | `reviewer_exit_nonzero`、receipt file 0 |
+| `U-RVATT-003` | receipt replay | 同一 request / attestation / verdict を2回投影 | receipt file 1、同一digestへ収束 |
+| `U-RVATT-004` | digest 実効性 | `completedAt` の末尾ミリ秒を `000` から `001` へ1 byte変更 | receipt file 2、digest collision を許さない |
+| `U-RVATT-005` | CLI identity fail-close | review_lane role で `--review-head` を欠落 | stdout空、`review_head_required`、exit 1 |
+| `U-RVATT-006` | exact-HEAD 結合 | attestation/receipt HEAD と PR observation HEAD を不一致化 | 実 `analyzeReviewDispatch` は `merge_ready` に到達しない |
+| `U-RVATT-007` | verdict file 未出力 | file 不在で完了 attestation を投影 | `verdict_file_missing`、receipt 0、D1 breach=`verdict` |
+| `U-RVATT-008` | echo 耐性輸送 | file に `REVIEW_OUTPUT_CONTRACT` echo と実 PASS | `extractVerdict` と同じ実 PASS を receipt に採用、契約は verdict file 書込を要求 |
+| `U-RVATT-009` | request 発行 / 照合 | review request と verdict receipt を同じ identity で投影 | request/receipt の memoryId・pr・exactHead/head・reviewRevision が突合可能、request file 1 |
+
+実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)。
+
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 
 対象 = `tests/support/chunked-hash.ts`（fence/snapshot共通のstreaming hashヘルパー）、
