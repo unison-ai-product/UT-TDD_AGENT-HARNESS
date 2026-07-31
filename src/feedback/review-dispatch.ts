@@ -136,13 +136,19 @@ function observationFor(request: ReviewRequest, prs: PrObservation[]): PrObserva
     )[0];
 }
 
+/** 1 件の request を判定するための観測入力 (coding-rule max-source-params のため object にまとめる)。 */
+interface DispatchObservationContext {
+  receipts: ReviewReceipt[];
+  prs: PrObservation[];
+  now: string;
+  sla: ReviewDispatchSla;
+}
+
 function analyzeRequest(
   request: ReviewRequest,
-  receipts: ReviewReceipt[],
-  prs: PrObservation[],
-  now: string,
-  sla: ReviewDispatchSla,
+  context: DispatchObservationContext,
 ): DispatchAnalysis {
+  const { receipts, prs, now, sla } = context;
   const reasons: string[] = [];
   const relevantReceipts = receipts.filter((receipt) => receipt.pr === request.pr);
   const acceptedReceipts: ReviewReceipt[] = [];
@@ -246,7 +252,7 @@ export function analyzeReviewDispatch(input: {
 }): ReviewDispatchResult {
   const sla = input.sla ?? DEFAULT_REVIEW_DISPATCH_SLA;
   const analyses = uniqueRequests(input.requests).map((request) =>
-    analyzeRequest(request, input.receipts, input.prs, input.now, sla),
+    analyzeRequest(request, { receipts: input.receipts, prs: input.prs, now: input.now, sla }),
   );
   analyses.sort(
     (left, right) =>
