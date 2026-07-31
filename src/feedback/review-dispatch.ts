@@ -89,7 +89,7 @@ const REVIEWER_FAMILIES: ReviewerFamily[] = ["claude", "codex"];
 const RECEIPT_KINDS: ReviewReceiptKind[] = ["acknowledged", "in_review", "verdict"];
 const VERDICTS: ReviewVerdict[] = ["PASS", "PASS-WEAK", "FLAG"];
 const PR_STATES: PrObservation["state"][] = ["OPEN", "MERGED", "CLOSED"];
-const HEAD_PATTERN = /^[0-9a-fA-F]{40}$/;
+const HEAD_PATTERN = /^[0-9a-f]{40}$/;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -158,6 +158,15 @@ function receiptContentKey(receipt: ReviewReceipt): string {
     receipt.verdict ?? null,
     receipt.blockingFindings ?? null,
     receipt.at,
+  ]);
+}
+
+function observationContentKey(observation: PrObservation): string {
+  return JSON.stringify([
+    observation.pr,
+    observation.headSha,
+    observation.state,
+    observation.checksGreen,
   ]);
 }
 
@@ -342,8 +351,8 @@ function analyzeRequest(
   for (let index = 1; index < RECEIPT_SEQUENCE.length; index += 1) {
     const previous = stageReceipts.get(RECEIPT_SEQUENCE[index - 1]);
     const current = stageReceipts.get(RECEIPT_SEQUENCE[index]);
-    if (previous && current && Date.parse(current.at) < Date.parse(previous.at)) {
-      reasons.add("receipt_before_previous_state");
+    if (previous && current && Date.parse(current.at) <= Date.parse(previous.at)) {
+      reasons.add("receipt_not_after_previous_state");
     }
   }
 
@@ -359,8 +368,8 @@ function analyzeRequest(
       continue;
     }
     const previous = acceptedReceipts.at(-1);
-    if (previous && receiptAt < Date.parse(previous.at)) {
-      reasons.add("receipt_before_previous_state");
+    if (previous && receiptAt <= Date.parse(previous.at)) {
+      reasons.add("receipt_not_after_previous_state");
       continue;
     }
     const expectedKind = RECEIPT_SEQUENCE[acceptedReceipts.length];
@@ -396,7 +405,12 @@ function analyzeRequest(
   for (const candidate of observationCandidates) {
     if (!validateObservation(candidate)) reasons.add("invalid_pr_observation");
   }
-  const observation = observationFor(request, observationCandidates.filter(validateObservation));
+  const observationsByContent = new Map<string, PrObservation>();
+  for (const candidate of observationCandidates.filter(validateObservation)) {
+    observationsByContent.set(observationContentKey(candidate), candidate);
+  }
+  if (observationsByContent.size > 1) reasons.add("duplicate_pr_observation_conflict");
+  const observation = observationFor(request, [...observationsByContent.values()]);
   if (observation == null) reasons.add("pr_observation_missing");
   const hasObservationHeadMismatch =
     observation != null && observation.headSha !== request.exactHead;
@@ -467,14 +481,21 @@ export function analyzeReviewDispatch(input: {
       reviewRevision: receipt.reviewRevision,
     });
     if (!requestIdentities.has(receiptIdentity)) {
-      for (const reason of validateReceipt(receipt, nowMs)) {
-        diagnostics.add(`orphan_receipt:${reason}`);
+      const reasons = validateReceipt(receipt, nowMs);
+      if (reasons.length === 0) {
+        diagnostics.add("orphan_receipt:unmatched_identity");
+      } else {
+        for (const reason of reasons) diagnostics.add(`orphan_receipt:${reason}`);
       }
     }
   }
   for (const observation of input.prs) {
-    if (!requestedPrs.has(observation.pr) && !validateObservation(observation)) {
-      diagnostics.add("orphan_pr_observation:invalid_pr_observation");
+    if (!requestedPrs.has(observation.pr)) {
+      diagnostics.add(
+        validateObservation(observation)
+          ? "orphan_pr_observation:unmatched_pr"
+          : "orphan_pr_observation:invalid_pr_observation",
+      );
     }
   }
 
@@ -510,7 +531,9 @@ export function reviewDispatchMessages(result: ReviewDispatchResult): string[] {
   const messages: string[] = [];
   for (const entry of result.entries) {
     for (const breach of entry.breaches) {
-      messages.push(`review-dispatch — SLA超過: PR #${entry.pr} ${breach} (${entry.memoryId})`);
+      messages.push(
+        `review-dispatch — SLA超過: PR #${entry.pr} ${breach} (${entry.memoryId}@${entry.reviewRevision})`,
+      );
     }
     for (const reason of entry.reasons) {
       const detail =
@@ -523,7 +546,9 @@ export function reviewDispatchMessages(result: ReviewDispatchResult): string[] {
               : reason === "flagged"
                 ? `FLAG verdict (${entry.blocking.join(", ") || "blocking finding なし"})`
                 : reason;
-      messages.push(`review-dispatch — 手順違反: PR #${entry.pr} ${detail}`);
+      messages.push(
+        `review-dispatch — 手順違反: PR #${entry.pr} ${detail} (${entry.memoryId}@${entry.reviewRevision})`,
+      );
     }
   }
   for (const diagnostic of result.diagnostics) {

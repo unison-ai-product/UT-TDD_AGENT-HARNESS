@@ -6,6 +6,7 @@ import {
   type ReviewDispatchEntry,
   type ReviewReceipt,
   type ReviewRequest,
+  reviewDispatchMessages,
 } from "../src/feedback/review-dispatch";
 
 const REQUESTED_AT = "2026-07-31T00:00:00.000Z";
@@ -597,5 +598,86 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(result.entries[1].state).toBe("merge_ready");
     expect(result.entries[1].reasons).toEqual([]);
     expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-027: conflicting PR observations は stale snapshot を優先せず fail closed", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: completeSequence(),
+      prs: [pr(), pr({ headSha: "b".repeat(40) })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).reasons).toContain("duplicate_pr_observation_conflict");
+    expect(entry(result).state).not.toBe("merge_ready");
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-028: identical PR observation replay は冪等", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: completeSequence(),
+      prs: [pr(), pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("merge_ready");
+    expect(entry(result).reasons).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-029: receipt state は同一 timestamp で飛越できない", () => {
+    const at = "2026-07-31T00:01:00.000Z";
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: completeSequence({ at }),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).reasons).toContain("receipt_not_after_previous_state");
+    expect(entry(result).state).not.toBe("merge_ready");
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-030: uppercase HEAD は canonical identity として受理しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ exactHead: "A".repeat(40) })],
+      receipts: [],
+      prs: [],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).reasons).toContain("invalid_head");
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-031: well-formed orphan artifacts と revision 別reasonを診断で失わない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [
+        request({ reviewRevision: "revision-001" }),
+        request({ reviewRevision: "revision-002" }),
+      ],
+      receipts: [
+        receipt("acknowledged", {
+          memoryId: "orphan-memory",
+          pr: 999,
+          reviewRevision: "orphan-revision",
+        }),
+      ],
+      prs: [pr(), pr({ pr: 999 })],
+      now: "2026-07-31T00:16:00.000Z",
+    });
+    const messages = reviewDispatchMessages(result);
+
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        "orphan_receipt:unmatched_identity",
+        "orphan_pr_observation:unmatched_pr",
+      ]),
+    );
+    expect(messages.filter((message) => message.includes("SLA超過"))).toHaveLength(2);
+    expect(messages.some((message) => message.includes("revision-001"))).toBe(true);
+    expect(messages.some((message) => message.includes("revision-002"))).toBe(true);
   });
 });
