@@ -6,10 +6,12 @@ import {
   openSync,
   readFileSync,
   readSync,
+  rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   type ChunkedFileIo,
@@ -47,6 +49,154 @@ describe("git workspace fence", () => {
       removeTestTree(root);
     }
   });
+
+  it("U-TESTHYGIENE-021: ignores volatile harness DB family content changes", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-"));
+    try {
+      const runtimeDirectory = join(root, ".ut-tdd");
+      const volatileFiles = [
+        "harness.db",
+        "harness.db-journal",
+        "harness.db-wal",
+        "harness.db-shm",
+      ];
+      mkdirSync(runtimeDirectory, { recursive: true });
+      for (const file of volatileFiles) writeFileSync(join(runtimeDirectory, file), "before\n");
+
+      const before = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
+      for (const file of volatileFiles) {
+        writeFileSync(join(runtimeDirectory, file), `after-${file}\n`);
+        expect(captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest).toBe(before);
+      }
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TESTHYGIENE-022: does not read a locked volatile harness DB", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-locked-"));
+    const dbPath = join(root, ".ut-tdd", "harness.db");
+    mkdirSync(dirname(dbPath), { recursive: true });
+    writeFileSync(dbPath, "locked\n");
+    const fileDescriptor = openSync(dbPath, "r+");
+    try {
+      expect(() => captureWorkspaceInventory(root, { volatileRuntimeIndex: true })).not.toThrow();
+    } finally {
+      closeSync(fileDescriptor);
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TESTHYGIENE-023: keeps default inventory sensitive to harness DB content", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-default-db-"));
+    try {
+      const dbPath = join(root, ".ut-tdd", "harness.db");
+      mkdirSync(dirname(dbPath), { recursive: true });
+      writeFileSync(dbPath, "before\n");
+      const before = captureWorkspaceInventory(root).digest;
+      writeFileSync(dbPath, "after\n");
+      expect(captureWorkspaceInventory(root).digest).not.toBe(before);
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TESTHYGIENE-024: retains ignored files and empty directories in volatile inventory", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-structure-"));
+    try {
+      const before = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
+      const gateRuns = join(root, ".ut-tdd", "gate_runs");
+      mkdirSync(gateRuns, { recursive: true });
+      const withEmptyDirectory = captureWorkspaceInventory(root, {
+        volatileRuntimeIndex: true,
+      }).digest;
+      expect(withEmptyDirectory).not.toBe(before);
+      writeFileSync(join(gateRuns, "leak.json"), "{}\n");
+      expect(captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest).not.toBe(
+        withEmptyDirectory,
+      );
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TESTHYGIENE-025: retains volatile harness DB creation and deletion", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-presence-"));
+    try {
+      const dbPath = join(root, ".ut-tdd", "harness.db");
+      mkdirSync(dirname(dbPath), { recursive: true });
+      const withoutDb = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
+      writeFileSync(dbPath, "present\n");
+      const withDb = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
+      expect(withDb).not.toBe(withoutDb);
+      rmSync(dbPath);
+      expect(captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest).not.toBe(
+        withDb,
+      );
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TESTHYGIENE-026: retains volatile harness DB type changes", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-type-"));
+    try {
+      const dbPath = join(root, ".ut-tdd", "harness.db");
+      const targetPath = join(root, ".ut-tdd", "symlink-target.db");
+      mkdirSync(dirname(dbPath), { recursive: true });
+      writeFileSync(targetPath, "target\n");
+      writeFileSync(dbPath, "regular\n");
+      const regularFile = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
+      rmSync(dbPath);
+      try {
+        symlinkSync(targetPath, dbPath, "file");
+      } catch {
+        mkdirSync(dbPath);
+      }
+      expect(captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest).not.toBe(
+        regularFile,
+      );
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.each([
+    ".ut-tdd/harness.db.bak",
+    ".ut-tdd/sub/harness.db",
+    "harness.db",
+  ])("U-TESTHYGIENE-027: remains sensitive to content changes outside the exact volatile path (%s)", (relativePath) => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-exact-"));
+    try {
+      const filePath = join(root, ...relativePath.split("/"));
+      mkdirSync(dirname(filePath), { recursive: true });
+      writeFileSync(filePath, "before\n");
+      const before = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
+      writeFileSync(filePath, "after\n");
+      expect(captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest).not.toBe(
+        before,
+      );
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it("U-TESTHYGIENE-028: remains sensitive to ordinary .ut-tdd file content changes", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-volatile-ordinary-"));
+    try {
+      const logPath = join(root, ".ut-tdd", "logs", "x.log");
+      mkdirSync(dirname(logPath), { recursive: true });
+      writeFileSync(logPath, "before\n");
+      const before = captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest;
+      writeFileSync(logPath, "after\n");
+      expect(captureWorkspaceInventory(root, { volatileRuntimeIndex: true }).digest).not.toBe(
+        before,
+      );
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
   it("U-TESTHYGIENE-010: accepts an unchanged dirty baseline", () => {
     expect(() => assertGitWorkspaceUnchanged(fingerprint, { ...fingerprint })).not.toThrow();
   });
