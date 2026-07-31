@@ -228,7 +228,12 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
       return { launched: false, reason: "bun-runtime-refused" };
     }
     if (!isNodeWorkerEntrypoint(execPath, scriptPath)) {
-      recordStopRefreshFailure(options.repoRoot, generation, "unsupported-refresh-entrypoint");
+      recordStopRefreshFailureOnce({
+        repoRoot: options.repoRoot,
+        generation,
+        reason: "unsupported-refresh-entrypoint",
+        key: "unsupported-refresh-entrypoint",
+      });
       releaseStopRefreshLease(options.repoRoot, generation);
       return { launched: false, reason: "unsupported-refresh-entrypoint" };
     }

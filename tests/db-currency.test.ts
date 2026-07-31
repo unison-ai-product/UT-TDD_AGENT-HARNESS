@@ -307,7 +307,7 @@ describe("db-currency lint", () => {
     ]) {
       const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-entry-refuse-"));
       let spawns = 0;
-      const result = spawnDetachedStopRefresh({
+      const options = {
         repoRoot: root,
         execPath,
         scriptPath,
@@ -316,13 +316,22 @@ describe("db-currency lint", () => {
           spawns += 1;
           return { pid: 7002, unref: () => {} };
         },
-      });
+      };
+      const result = spawnDetachedStopRefresh(options);
       expect(result).toMatchObject({
         launched: false,
         reason: "unsupported-refresh-entrypoint",
       });
       expect(spawns).toBe(0);
       expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
+      expect(spawnDetachedStopRefresh(options)).toMatchObject({
+        launched: false,
+        reason: "unsupported-refresh-entrypoint",
+      });
+      expect(spawns).toBe(0);
+      expect(readdirSync(join(root, ".ut-tdd", "state", "stop-refresh", "failures"))).toHaveLength(
+        1,
+      );
       removeTestTree(root);
     }
   });
