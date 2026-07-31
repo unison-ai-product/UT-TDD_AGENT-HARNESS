@@ -161,3 +161,13 @@ projectionを追加する。
 `claim-blind`と`spec-blind`を別rowで保持する。各rowはverdict、review/test時刻、
 worker/reviewer model、attack trial数、citation、PLAN sourceを持つ。PLAN正本から再構築可能な
 projectionとし、merge closureは同一revision/HEADの両laneが揃わなければfail-closeする。
+
+repository bindingの入力では、typed PR trace自身の`plan_revision`を必須とする。
+`schedule_entries.source_hash`は現行revisionとの一致検証にだけ使い、trace欠落値の補完には
+使わない。providerのPR、main CI、Issue状態はSQLite transaction開始前に全件観測して検証し、
+確定したbinding commandだけを単一transactionでcommitする。transaction内からnetwork/APIを
+呼び出してはならない。
+
+同一revisionのProject itemが保持する`head_sha`はPR bindingのexact HEADに従属する。
+両者が異なる場合、Project側の古いHEADで現在HEADを上書きせず、projectionを`不整合`として
+fail-closeする。

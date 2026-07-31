@@ -155,9 +155,16 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
     if (currentRevision && currentRevision !== text(row.plan_revision)) continue;
     const current = evidence.get(planId) ?? { planId };
     const sync = text(row.sync_status);
-    if (["同期済", "遅延", "不整合", "未同期"].includes(sync))
+    const projectHead = text(row.head_sha);
+    const authoritativeHead = selectedHead.get(planId) || current.headSha;
+    if (authoritativeHead && projectHead && authoritativeHead !== projectHead) {
+      current.sync = "不整合";
+      current.headSha = authoritativeHead;
+      conflictingPlans.add(planId);
+    } else if (["同期済", "遅延", "不整合", "未同期"].includes(sync)) {
       current.sync = sync as NonNullable<ForwardEvidence["sync"]>;
-    current.headSha = text(row.head_sha) || current.headSha;
+      current.headSha = authoritativeHead || projectHead || current.headSha;
+    }
     evidence.set(planId, current);
   }
   for (const planId of conflictingPlans) {

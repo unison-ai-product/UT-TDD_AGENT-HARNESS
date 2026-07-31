@@ -15,10 +15,12 @@ import { migrate } from "../src/state-db/migration";
 
 class FakeGh implements GhCommandPort {
   readonly #payloads: unknown[];
+  onJson?: () => void;
   constructor(...payloads: unknown[]) {
     this.#payloads = payloads;
   }
   json(): unknown {
+    this.onJson?.();
     return this.#payloads.shift() ?? {};
   }
   run(): void {
@@ -219,6 +221,10 @@ describe("GitHub repository facts binding", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
+      db.prepare(
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
+         VALUES (?, ?, ?, ?)`,
+      ).run("schedule:no-fallback", "PLAN-L7-436-domain", "confirmed", "rev1");
       const noRevision = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
         route_mode: "add-feature",
@@ -264,6 +270,23 @@ describe("GitHub repository facts binding", () => {
             schedule_entry_id, plan_id, status, source_hash
           ) VALUES (?, ?, ?, ?)`,
         ).run("schedule:closure", "PLAN-L7-436-domain", "confirmed", "rev1");
+        db.prepare(
+          `INSERT INTO github_project_item_projection (
+            projection_id, repository_id, project_id, project_item_id, plan_id,
+            plan_revision, content_node_id, head_sha, sync_status, last_reconciled_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          `project:closure:${scenario}`,
+          "owner/repo",
+          "project:1",
+          `item:closure:${scenario}`,
+          "PLAN-L7-436-domain",
+          "rev1",
+          "",
+          "abcdef1",
+          "同期済",
+          "2026-07-29T00:00:00Z",
+        );
         const evidenceHead = scenario === "stale-head" ? "bbbbbbb" : "abcdef1";
         const reviewSources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
           planId: "PLAN-L7-436-domain",
@@ -630,6 +653,54 @@ describe("GitHub repository facts binding", () => {
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHBIND-008: completes every provider observation before opening the write transaction", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      db.prepare(
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
+         VALUES (?, ?, ?, ?)`,
+      ).run("schedule:no-network-in-tx", "PLAN-L7-436-domain", "confirmed", "rev1");
+      const gh = new FakeGh(
+        [
+          {
+            number: 20,
+            url: "https://github.com/owner/repo/pull/20",
+            headRefName: "feature/no-network-in-tx",
+            headRefOid: "abcdef1",
+            state: "MERGED",
+            mergedAt: "2026-07-29T00:00:00Z",
+            mergeCommit: { oid: "fedcba1" },
+            body: renderPrTraceBlock({
+              plan_id: "PLAN-L7-436-domain",
+              plan_revision: "rev1",
+              route_mode: "add-feature",
+              subject_head: "abcdef1",
+              base_sha: "1234567",
+              issue_number: "70",
+            }),
+            statusCheckRollup: [],
+            reviews: [],
+          },
+        ],
+        { check_runs: [] },
+        { state: "OPEN" },
+      );
+      let providerCalls = 0;
+      gh.onJson = () => {
+        db.exec("BEGIN IMMEDIATE");
+        db.exec("ROLLBACK");
+        providerCalls += 1;
+      };
+
+      syncRepositoryBindings({ db, repositoryId: "owner/repo", gh });
+
+      expect(providerCalls).toBe(3);
+    } finally {
+      db.close();
     }
   });
 });

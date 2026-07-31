@@ -124,6 +124,15 @@ branch作成、draft PR、CI、review、mergeは同じ`plan_id`と`project_item_
 各provider eventは対象HEADを伴い、stale HEADのCI成功・承認・merge結果を現在ゲートへ
 流用してはならない。
 
+PR traceの`plan_revision`は明示必須であり、local schedule revisionからのfallbackは禁止する。
+repository同期はremote snapshotをSQLite transaction外で観測し、revision/HEAD/closure条件を
+検証した後、確定したbinding群を単一transactionでcommitする。network/API呼出しをtransaction
+内へ持ち込まない。
+
+PR bindingが選択したexact HEADとProject itemの`head_sha`が同一revision内で競合する場合は、
+PR HEADを保持して同期状態を`不整合`にする。Project itemの遅延観測が新しいPR HEADを
+上書きしてはならない。
+
 merge後はmain上の必須CIとaccept evidenceを確認してからPLANを完了し、Project itemの
 現在ゲート、CI状態、レビュー状態、対象HEAD、同期状態を更新する。同じclosure処理で
 後続PLANを再評価し、新たに解放された項目を`着手可能`へ投影する。

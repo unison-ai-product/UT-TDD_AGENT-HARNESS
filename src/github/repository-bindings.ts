@@ -190,174 +190,174 @@ export function syncRepositoryBindings(input: {
     skipped: [],
     bindingIds: [],
   };
-  return runSqliteTransaction(input.db, () => {
-    for (const value of pullRequests) {
-      const pullRequest = object(value);
-      const number = text(pullRequest.number);
-      const body = text(pullRequest.body);
-      const trace = validatePrTraceBody(body);
-      const planId = trace.ok ? (trace.fields.plan_id ?? "") : "";
-      if (!planId) {
-        result.skipped.push({ number, reason: trace.findings[0]?.code ?? "plan-id-unresolved" });
-        continue;
-      }
-      const revision = trace.fields.plan_revision ?? currentRevision(input.db, planId);
-      if (!revision) {
-        result.skipped.push({ number, reason: "plan-revision-missing" });
-        continue;
-      }
-      const expectedRevision = currentRevision(input.db, planId);
-      if (expectedRevision && revision !== expectedRevision) {
-        result.skipped.push({ number, reason: "stale-plan-revision" });
-        continue;
-      }
-      const headSha = text(pullRequest.headRefOid) || trace.fields.subject_head || "";
-      if (trace.ok && trace.fields.subject_head && headSha !== trace.fields.subject_head) {
-        result.skipped.push({ number, reason: "subject-head-mismatch" });
-        continue;
-      }
-      const common = {
-        repositoryId: input.repositoryId,
-        planId,
-        planRevision: revision,
-        projectItemId: projectItemId(input.db, input.repositoryId, planId, revision),
-        headSha,
-        observedAt: input.now,
-      };
-      const prRequiredCheck = requiredCheck(list(pullRequest.statusCheckRollup));
-      const remoteReviewState = reviewState(list(pullRequest.reviews));
-      const reviewDigests = verifiedReviewLaneDigests(input.db, {
-        repoRoot: input.repoRoot ?? process.cwd(),
-        planId,
-        planRevision: revision,
-        headSha,
-      });
-      const expectedReviewDigest = reviewDigests ? combinedReviewReceiptDigest(reviewDigests) : "";
-      const reviewReceiptMatches =
-        Boolean(trace.fields.review_receipt_digest) &&
-        trace.fields.review_receipt_digest === expectedReviewDigest;
-      const acceptedReviewState =
-        remoteReviewState === "承認" && reviewReceiptMatches
-          ? "承認"
-          : remoteReviewState === "要修正"
-            ? "要修正"
-            : "依頼中";
-      const bindings: GithubBindingInput[] = [
-        {
-          ...common,
-          objectKind: "branch",
-          objectId: text(pullRequest.headRefName),
-          state: text(pullRequest.state).toLowerCase(),
-        },
-        {
-          ...common,
-          objectKind: "pull_request",
-          objectId: number,
-          objectUrl: text(pullRequest.url),
-          state: text(pullRequest.state).toLowerCase(),
-        },
-        {
-          ...common,
-          objectKind: "check_run",
-          objectId: `pr:${number}:checks:${headSha}`,
-          state: prRequiredCheck.state,
-        },
-        {
-          ...common,
-          objectKind: "review",
-          objectId: `pr:${number}:reviews:${headSha}`,
-          state: acceptedReviewState,
-        },
-      ];
-      if (trace.fields.issue_number) {
-        bindings.push({
-          ...common,
-          objectKind: "issue",
-          objectId: trace.fields.issue_number,
-          objectUrl: `https://github.com/${input.repositoryId}/issues/${trace.fields.issue_number}`,
-          state: "linked",
-        });
-      }
-      if (pullRequest.mergedAt) {
-        const mergeSha = text(object(pullRequest.mergeCommit).oid);
-        const mainChecks = mergeSha
-          ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
-          : {};
-        const mainRequiredCheck = requiredCheck(list(mainChecks.check_runs));
-        const issueClosed = trace.fields.issue_number
-          ? text(
-              object(
-                gh.json([
-                  "issue",
-                  "view",
-                  trace.fields.issue_number,
-                  "--repo",
-                  input.repositoryId,
-                  "--json",
-                  "state",
-                ]),
-              ).state,
-            ).toUpperCase() === "CLOSED"
-          : true;
-        if (!common.projectItemId) {
-          result.skipped.push({ number, reason: "project-item-required" });
-        } else if (
-          reviewDigests &&
-          mergeSha &&
-          prRequiredCheck.state === "成功" &&
-          prRequiredCheck.id &&
-          reviewState(list(pullRequest.reviews)) === "承認" &&
-          mainRequiredCheck.state === "成功" &&
-          mainRequiredCheck.id &&
-          reviewReceiptMatches &&
-          issueClosed &&
-          planAccepted(input.db, planId)
-        ) {
-          result.bindingIds.push(
-            recordMergeClosure({
-              db: input.db,
-              ...common,
-              prNumber: number,
-              objectUrl: text(pullRequest.url),
-              mergeSha,
-              state: encodeMergeClosureReceipt({
-                version: 1,
-                status: "verified",
-                planId,
-                planRevision: revision,
-                prNumber: number,
-                headSha,
-                mergeSha,
-                requiredCheck: REQUIRED_GITHUB_CHECK,
-                prCheckId: prRequiredCheck.id,
-                mainCheckId: mainRequiredCheck.id,
-                reviewReceiptDigests: reviewDigests,
-                issueClosed,
-              }),
-            }),
-          );
-        } else {
-          if (mergeSha) {
-            result.bindingIds.push(
-              recordMergeClosure({
-                db: input.db,
-                ...common,
-                prNumber: number,
-                objectUrl: text(pullRequest.url),
-                mergeSha,
-                state: "invalidated:closure-incomplete",
-              }),
-            );
-          }
-          result.skipped.push({ number, reason: "merge-closure-incomplete" });
-        }
-      }
-      for (const binding of bindings) {
-        if (!binding.objectId) continue;
-        result.bindingIds.push(recordGithubBinding(input.db, binding));
-      }
-      result.tracedPullRequests += 1;
+  const pendingWrites: Array<() => string> = [];
+  for (const value of pullRequests) {
+    const pullRequest = object(value);
+    const number = text(pullRequest.number);
+    const body = text(pullRequest.body);
+    const trace = validatePrTraceBody(body);
+    const planId = trace.ok ? (trace.fields.plan_id ?? "") : "";
+    if (!planId) {
+      result.skipped.push({ number, reason: trace.findings[0]?.code ?? "plan-id-unresolved" });
+      continue;
     }
-    return result;
+    const revision = trace.fields.plan_revision ?? "";
+    if (!revision) {
+      result.skipped.push({ number, reason: "plan-revision-missing" });
+      continue;
+    }
+    const expectedRevision = currentRevision(input.db, planId);
+    if (expectedRevision && revision !== expectedRevision) {
+      result.skipped.push({ number, reason: "stale-plan-revision" });
+      continue;
+    }
+    const headSha = text(pullRequest.headRefOid) || trace.fields.subject_head || "";
+    if (trace.ok && trace.fields.subject_head && headSha !== trace.fields.subject_head) {
+      result.skipped.push({ number, reason: "subject-head-mismatch" });
+      continue;
+    }
+    const common = {
+      repositoryId: input.repositoryId,
+      planId,
+      planRevision: revision,
+      projectItemId: projectItemId(input.db, input.repositoryId, planId, revision),
+      headSha,
+      observedAt: input.now,
+    };
+    const prRequiredCheck = requiredCheck(list(pullRequest.statusCheckRollup));
+    const remoteReviewState = reviewState(list(pullRequest.reviews));
+    const reviewDigests = verifiedReviewLaneDigests(input.db, {
+      repoRoot: input.repoRoot ?? process.cwd(),
+      planId,
+      planRevision: revision,
+      headSha,
+    });
+    const expectedReviewDigest = reviewDigests ? combinedReviewReceiptDigest(reviewDigests) : "";
+    const reviewReceiptMatches =
+      Boolean(trace.fields.review_receipt_digest) &&
+      trace.fields.review_receipt_digest === expectedReviewDigest;
+    const acceptedReviewState =
+      remoteReviewState === "承認" && reviewReceiptMatches
+        ? "承認"
+        : remoteReviewState === "要修正"
+          ? "要修正"
+          : "依頼中";
+    const bindings: GithubBindingInput[] = [
+      {
+        ...common,
+        objectKind: "branch",
+        objectId: text(pullRequest.headRefName),
+        state: text(pullRequest.state).toLowerCase(),
+      },
+      {
+        ...common,
+        objectKind: "pull_request",
+        objectId: number,
+        objectUrl: text(pullRequest.url),
+        state: text(pullRequest.state).toLowerCase(),
+      },
+      {
+        ...common,
+        objectKind: "check_run",
+        objectId: `pr:${number}:checks:${headSha}`,
+        state: prRequiredCheck.state,
+      },
+      {
+        ...common,
+        objectKind: "review",
+        objectId: `pr:${number}:reviews:${headSha}`,
+        state: acceptedReviewState,
+      },
+    ];
+    if (trace.fields.issue_number) {
+      bindings.push({
+        ...common,
+        objectKind: "issue",
+        objectId: trace.fields.issue_number,
+        objectUrl: `https://github.com/${input.repositoryId}/issues/${trace.fields.issue_number}`,
+        state: "linked",
+      });
+    }
+    if (pullRequest.mergedAt) {
+      const mergeSha = text(object(pullRequest.mergeCommit).oid);
+      const mainChecks = mergeSha
+        ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
+        : {};
+      const mainRequiredCheck = requiredCheck(list(mainChecks.check_runs));
+      const issueClosed = trace.fields.issue_number
+        ? text(
+            object(
+              gh.json([
+                "issue",
+                "view",
+                trace.fields.issue_number,
+                "--repo",
+                input.repositoryId,
+                "--json",
+                "state",
+              ]),
+            ).state,
+          ).toUpperCase() === "CLOSED"
+        : true;
+      if (!common.projectItemId) {
+        result.skipped.push({ number, reason: "project-item-required" });
+      } else if (
+        reviewDigests &&
+        mergeSha &&
+        prRequiredCheck.state === "成功" &&
+        prRequiredCheck.id &&
+        reviewState(list(pullRequest.reviews)) === "承認" &&
+        mainRequiredCheck.state === "成功" &&
+        mainRequiredCheck.id &&
+        reviewReceiptMatches &&
+        issueClosed &&
+        planAccepted(input.db, planId)
+      ) {
+        const closure = {
+          db: input.db,
+          ...common,
+          prNumber: number,
+          objectUrl: text(pullRequest.url),
+          mergeSha,
+          state: encodeMergeClosureReceipt({
+            version: 1,
+            status: "verified",
+            planId,
+            planRevision: revision,
+            prNumber: number,
+            headSha,
+            mergeSha,
+            requiredCheck: REQUIRED_GITHUB_CHECK,
+            prCheckId: prRequiredCheck.id,
+            mainCheckId: mainRequiredCheck.id,
+            reviewReceiptDigests: reviewDigests,
+            issueClosed,
+          }),
+        };
+        pendingWrites.push(() => recordMergeClosure(closure));
+      } else {
+        if (mergeSha) {
+          const closure = {
+            db: input.db,
+            ...common,
+            prNumber: number,
+            objectUrl: text(pullRequest.url),
+            mergeSha,
+            state: "invalidated:closure-incomplete",
+          };
+          pendingWrites.push(() => recordMergeClosure(closure));
+        }
+        result.skipped.push({ number, reason: "merge-closure-incomplete" });
+      }
+    }
+    for (const binding of bindings) {
+      if (!binding.objectId) continue;
+      pendingWrites.push(() => recordGithubBinding(input.db, binding));
+    }
+    result.tracedPullRequests += 1;
+  }
+  runSqliteTransaction(input.db, () => {
+    for (const write of pendingWrites) result.bindingIds.push(write());
   });
+  return result;
 }
