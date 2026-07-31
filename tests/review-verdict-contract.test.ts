@@ -103,7 +103,26 @@ async function dryRunTask(provider: "claude" | "codex", role: string): Promise<s
     return true;
   }) as typeof process.stdout.write;
   try {
-    await program.parseAsync(["node", "ut-tdd", provider, "--role", role, "--task", "review task"]);
+    const reviewIdentity = role.startsWith("blind")
+      ? [
+          "--review-pr",
+          "701",
+          "--review-head",
+          "a".repeat(40),
+          "--review-revision",
+          "contract-review-1",
+        ]
+      : [];
+    await program.parseAsync([
+      "node",
+      "ut-tdd",
+      provider,
+      "--role",
+      role,
+      "--task",
+      "review task",
+      ...reviewIdentity,
+    ]);
   } finally {
     process.stdout.write = write;
   }
