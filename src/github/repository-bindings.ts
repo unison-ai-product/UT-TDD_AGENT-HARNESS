@@ -213,15 +213,19 @@ export function syncRepositoryBindings(input: {
     }
     const expectedRevision = resolveCurrentPlanRevision(input.db, planId);
     const sourceRevision = canonicalPlanRevision(input.repoRoot ?? process.cwd(), planId);
-    if (/^[1-9][0-9]*$/.test(expectedRevision) && !sourceRevision) {
+    if (!expectedRevision) {
+      result.skipped.push({ number, reason: "plan-projection-unavailable" });
+      continue;
+    }
+    if (!sourceRevision) {
       result.skipped.push({ number, reason: "plan-source-unavailable" });
       continue;
     }
-    if (sourceRevision && sourceRevision !== expectedRevision) {
+    if (sourceRevision !== expectedRevision) {
       result.skipped.push({ number, reason: "stale-plan-projection" });
       continue;
     }
-    if (expectedRevision && revision !== expectedRevision) {
+    if (revision !== expectedRevision) {
       result.skipped.push({ number, reason: "stale-plan-revision" });
       continue;
     }

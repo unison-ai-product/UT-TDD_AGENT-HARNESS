@@ -1328,6 +1328,22 @@ describe("spec IR projections", () => {
   it("turns malformed schedule authoring rows into integrity findings", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-schedule-bad-"));
     try {
+      writePlan(
+        root,
+        "PLAN-L7-999-duplicate.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-999-duplicate",
+          "layer: L7",
+          "status: active",
+          "admission_receipt:",
+          "  binding:",
+          "    revision: 1",
+          "---",
+          "",
+          "# Duplicate schedule fixture",
+        ].join("\n"),
+      );
       writeGovernanceDoc(
         root,
         "vmodel-upgrade-schedule.md",

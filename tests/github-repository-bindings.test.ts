@@ -13,6 +13,7 @@ import {
   decodeMergeClosureReceipt,
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt";
+import { resolvePlanRevisionIdentity } from "../src/kernel/plan-revision";
 import { isManualGithubObservationKind } from "../src/state-db/github-forward-projection";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
@@ -74,6 +75,9 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     join(plansDir, `${first.planId}.md`),
     `---
 plan_id: ${first.planId}
+admission_receipt:
+  binding:
+    revision: ${first.planRevision}
 review_evidence:
 ${entries}
 ---
@@ -83,6 +87,113 @@ ${entries}
 }
 
 describe("GitHub repository facts binding", () => {
+  it("U-GHBIND-013: rejects a traced PR when its PLAN projection is unavailable", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-missing-plan-"));
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const result = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: new FakeGh([
+          {
+            number: 213,
+            baseRefName: "main",
+            headRefOid: "abcdef1",
+            body: renderPrTraceBlock({
+              plan_id: "PLAN-L7-997-missing",
+              plan_revision: "forged",
+              route_mode: "add-feature",
+              subject_head: "abcdef1",
+              base_sha: "1234567",
+              issue_number: "213",
+            }),
+          },
+        ]),
+      });
+      expect(result.skipped).toEqual([{ number: "213", reason: "plan-projection-unavailable" }]);
+      expect(db.prepare("SELECT COUNT(*) AS count FROM github_object_bindings").get()).toEqual({
+        count: 0,
+      });
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHBIND-014/U-GHBIND-015: requires the canonical legacy PLAN source and exact token", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-legacy-plan-"));
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const planId = "PLAN-L7-996-legacy";
+      const source = `---\nplan_id: ${planId}\nlayer: L7\nstatus: active\n---\n\n# Legacy\n`;
+      const revision = resolvePlanRevisionIdentity(source, planId)?.token;
+      expect(revision).toMatch(/^legacy:sha256:/);
+      db.prepare(
+        "INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, plan_revision, source_hash) VALUES (?, ?, ?, ?, ?)",
+      ).run("schedule:legacy", planId, "active", revision, "whole-source-hash");
+      const pr = {
+        number: 214,
+        url: "https://github.com/owner/repo/pull/214",
+        baseRefName: "main",
+        headRefName: "feature/legacy",
+        headRefOid: "abcdef2",
+        state: "OPEN",
+        body: renderPrTraceBlock({
+          plan_id: planId,
+          plan_revision: revision ?? "",
+          route_mode: "add-feature",
+          subject_head: "abcdef2",
+          base_sha: "1234567",
+          issue_number: "214",
+        }),
+        statusCheckRollup: [],
+        reviews: [],
+      };
+      const missing = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: new FakeGh([pr]),
+      });
+      expect(missing.skipped).toEqual([{ number: "214", reason: "plan-source-unavailable" }]);
+      expect(db.prepare("SELECT COUNT(*) AS count FROM github_object_bindings").get()).toEqual({
+        count: 0,
+      });
+
+      const plansDir = join(repoRoot, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      writeFileSync(join(plansDir, `${planId}.md`), source, "utf8");
+      const accepted = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: new FakeGh([pr]),
+      });
+      expect(accepted.tracedPullRequests).toBe(1);
+      expect(accepted.skipped).toEqual([]);
+      const bindings = db
+        .prepare(
+          "SELECT object_kind, plan_revision FROM github_object_bindings ORDER BY object_kind",
+        )
+        .all();
+      expect(bindings).toHaveLength(5);
+      expect(bindings.every((binding) => binding.plan_revision === revision)).toBe(true);
+      expect(bindings.map((binding) => binding.object_kind)).toEqual([
+        "branch",
+        "check_run",
+        "issue",
+        "pull_request",
+        "review",
+      ]);
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it("U-GHBIND-001/U-GHBIND-010: converges facts and reports only fresh writes", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-"));
     const db = openHarnessDb(":memory:");
@@ -92,7 +203,7 @@ describe("GitHub repository facts binding", () => {
         `INSERT INTO schedule_entries (
           schedule_entry_id, plan_id, status, plan_revision, source_hash
         ) VALUES (?, ?, ?, ?, ?)`,
-      ).run("schedule:436", "PLAN-L7-436-domain", "confirmed", "rev1", "whole-file-hash");
+      ).run("schedule:436", "PLAN-L7-436-domain", "confirmed", "1", "whole-file-hash");
       db.prepare(
         `INSERT INTO github_project_item_projection (
           projection_id, repository_id, project_id, project_item_id, plan_id,
@@ -104,7 +215,7 @@ describe("GitHub repository facts binding", () => {
         "project:1",
         "item:436",
         "PLAN-L7-436-domain",
-        "rev1",
+        "1",
         "",
         "abcdef1",
         "同期済",
@@ -112,7 +223,7 @@ describe("GitHub repository facts binding", () => {
       );
       const reviewSources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
         planId: "PLAN-L7-436-domain",
-        planRevision: "rev1",
+        planRevision: "1",
         headSha: "abcdef1",
         reviewKind: "cross_agent",
         verdict: "PASS",
@@ -154,7 +265,7 @@ describe("GitHub repository facts binding", () => {
       writeReviewPlan(repoRoot, reviewSources);
       const body = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
-        plan_revision: "rev1",
+        plan_revision: "1",
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
@@ -237,15 +348,15 @@ describe("GitHub repository facts binding", () => {
       ).toEqual([{ observed_at: "2026-07-30T00:00:00Z" }]);
 
       db.prepare("UPDATE schedule_entries SET plan_revision = ? WHERE plan_id = ?").run(
-        "rev2",
+        "2",
         "PLAN-L7-436-domain",
       );
       db.prepare(
         "UPDATE github_project_item_projection SET plan_revision = ? WHERE plan_id = ?",
-      ).run("rev2", "PLAN-L7-436-domain");
+      ).run("2", "PLAN-L7-436-domain");
       const revisedSources = reviewSources.map((source) => ({
         ...source,
-        planRevision: "rev2",
+        planRevision: "2",
         reviewedAt: "2026-07-30T01:00:00Z",
         testsGreenAt: "2026-07-30T00:30:00Z",
       }));
@@ -257,7 +368,7 @@ describe("GitHub repository facts binding", () => {
             attack_trials, citations_json, source
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
-          `review:436:rev2:${source.lane}`,
+          `review:436:2:${source.lane}`,
           source.planId,
           source.planRevision,
           source.lane,
@@ -278,7 +389,7 @@ describe("GitHub repository facts binding", () => {
       };
       const revisedBody = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
-        plan_revision: "rev2",
+        plan_revision: "2",
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
@@ -300,13 +411,13 @@ describe("GitHub repository facts binding", () => {
             "SELECT plan_revision FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1",
           )
           .get(),
-      ).toEqual({ plan_revision: "rev2" });
+      ).toEqual({ plan_revision: "2" });
       const revisedMerge = db
         .prepare("SELECT state FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1")
         .get();
       expect(decodeMergeClosureReceipt(String(revisedMerge?.state))).toMatchObject({
         status: "verified",
-        planRevision: "rev2",
+        planRevision: "2",
       });
     } finally {
       db.close();
@@ -321,7 +432,7 @@ describe("GitHub repository facts binding", () => {
       db.prepare(
         `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
          VALUES (?, ?, ?, ?)`,
-      ).run("schedule:no-fallback", "PLAN-L7-436-domain", "confirmed", "rev1");
+      ).run("schedule:no-fallback", "PLAN-L7-436-domain", "confirmed", "1");
       const noRevision = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
         route_mode: "add-feature",
@@ -370,7 +481,7 @@ describe("GitHub repository facts binding", () => {
           `INSERT INTO schedule_entries (
             schedule_entry_id, plan_id, status, source_hash
           ) VALUES (?, ?, ?, ?)`,
-        ).run("schedule:closure", "PLAN-L7-436-domain", "confirmed", "rev1");
+        ).run("schedule:closure", "PLAN-L7-436-domain", "confirmed", "1");
         db.prepare(
           `INSERT INTO github_project_item_projection (
             projection_id, repository_id, project_id, project_item_id, plan_id,
@@ -382,7 +493,7 @@ describe("GitHub repository facts binding", () => {
           "project:1",
           `item:closure:${scenario}`,
           "PLAN-L7-436-domain",
-          "rev1",
+          "1",
           "",
           "abcdef1",
           "同期済",
@@ -391,7 +502,7 @@ describe("GitHub repository facts binding", () => {
         const evidenceHead = scenario === "stale-head" ? "bbbbbbb" : "abcdef1";
         const reviewSources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
           planId: "PLAN-L7-436-domain",
-          planRevision: "rev1",
+          planRevision: "1",
           headSha: evidenceHead,
           reviewKind: "cross_agent",
           verdict: "PASS",
@@ -514,7 +625,7 @@ describe("GitHub repository facts binding", () => {
       db.prepare(
         `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
          VALUES (?, ?, ?, ?)`,
-      ).run("schedule:fallback", "PLAN-L7-436-domain", "draft", "rev1");
+      ).run("schedule:fallback", "PLAN-L7-436-domain", "draft", "1");
       const result = syncRepositoryBindings({
         db,
         repositoryId: "owner/repo",
@@ -565,7 +676,7 @@ describe("GitHub repository facts binding", () => {
       db.prepare(
         `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
          VALUES (?, ?, ?, ?)`,
-      ).run("schedule:rollback", "PLAN-L7-436-domain", "confirmed", "rev1");
+      ).run("schedule:rollback", "PLAN-L7-436-domain", "confirmed", "1");
       db.prepare(
         `INSERT INTO github_project_item_projection (
           projection_id, repository_id, project_id, project_item_id, plan_id,
@@ -577,7 +688,7 @@ describe("GitHub repository facts binding", () => {
         "project:1",
         "item:436",
         "PLAN-L7-436-domain",
-        "rev1",
+        "1",
         "",
         "abcdef1",
         "同期済",
@@ -592,7 +703,7 @@ describe("GitHub repository facts binding", () => {
         "foreign-branch",
         "owner/repo",
         "PLAN-L7-999-foreign",
-        "rev1",
+        "1",
         "",
         "branch",
         "feature/rollback",
@@ -603,7 +714,7 @@ describe("GitHub repository facts binding", () => {
       );
       const sources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
         planId: "PLAN-L7-436-domain",
-        planRevision: "rev1",
+        planRevision: "1",
         headSha: "abcdef1",
         reviewKind: "cross_agent",
         verdict: "PASS",
@@ -645,7 +756,7 @@ describe("GitHub repository facts binding", () => {
       };
       const body = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
-        plan_revision: "rev1",
+        plan_revision: "1",
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
@@ -696,10 +807,10 @@ describe("GitHub repository facts binding", () => {
       db.prepare(
         `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
          VALUES (?, ?, ?, ?)`,
-      ).run("schedule:project-required", "PLAN-L7-436-domain", "confirmed", "rev1");
+      ).run("schedule:project-required", "PLAN-L7-436-domain", "confirmed", "1");
       const sources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
         planId: "PLAN-L7-436-domain",
-        planRevision: "rev1",
+        planRevision: "1",
         headSha: "abcdef1",
         reviewKind: "cross_agent",
         verdict: "PASS",
@@ -733,7 +844,7 @@ describe("GitHub repository facts binding", () => {
       writeReviewPlan(repoRoot, sources);
       const body = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
-        plan_revision: "rev1",
+        plan_revision: "1",
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
@@ -787,7 +898,7 @@ describe("GitHub repository facts binding", () => {
       db.prepare(
         `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
          VALUES (?, ?, ?, ?)`,
-      ).run("schedule:no-network-in-tx", "PLAN-L7-436-domain", "confirmed", "rev1");
+      ).run("schedule:no-network-in-tx", "PLAN-L7-436-domain", "confirmed", "1");
       const gh = new FakeGh(
         [
           {
@@ -801,7 +912,7 @@ describe("GitHub repository facts binding", () => {
             mergeCommit: { oid: "fedcba1" },
             body: renderPrTraceBlock({
               plan_id: "PLAN-L7-436-domain",
-              plan_revision: "rev1",
+              plan_revision: "1",
               route_mode: "add-feature",
               subject_head: "abcdef1",
               base_sha: "1234567",
@@ -858,17 +969,17 @@ describe("GitHub repository facts binding", () => {
       mkdirSync(plansDir, { recursive: true });
       writeFileSync(
         join(plansDir, "PLAN-L7-436-domain.md"),
-        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: rev2\n---\n",
+        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: 2\n---\n",
         "utf8",
       );
       db.prepare(
         `INSERT INTO schedule_entries (
           schedule_entry_id, plan_id, status, plan_revision, source_hash
         ) VALUES (?, ?, ?, ?, ?)`,
-      ).run("schedule:stale", "PLAN-L7-436-domain", "confirmed", "rev1", "old-hash");
+      ).run("schedule:stale", "PLAN-L7-436-domain", "confirmed", "1", "old-hash");
       const body = renderPrTraceBlock({
         plan_id: "PLAN-L7-436-domain",
-        plan_revision: "rev1",
+        plan_revision: "1",
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
