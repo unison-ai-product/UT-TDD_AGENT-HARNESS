@@ -117,3 +117,49 @@ L6-94 が 2026-07-22 に観測した「`claude-*` 方向の発火ゼロ = Codex�
   空 marker が通らないことをテストで固定。
 - AC-5: 既存 cross-review gate (PLAN-L7-14 / IMP-076) の検出集合が縮まないこと、および
   既存 confirmed PLAN の evidence が遡及 fail しないことをテストで固定。
+
+## dispatch lifecycle の追記 (2026-07-31、GPT5.6Pro 外部監査を受けて)
+
+L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**」を痕跡と突合する。しかし
+2026-07-31 の実測は、その手前に穴があることを示した:
+
+- **PR #201** (Codex 著作、issue #199): `reviews=0` / `comments=0` のまま merge された。
+  照合すべき痕跡そのものが存在しない = 「依頼したのに誰も拾わなかった」経路。
+- **PR #202** (Claude 著作): 差分小・CI 全 green・artifact freeze 済・exact HEAD 固定済・
+  merge 条件明示済でも、verdict が返るまで拘束順序全体が停止した。
+
+外部監査 (GPT5.6Pro) の診断は「実装・CI・証拠は機械化されたのに **review dispatch だけが
+半手動** (人間的な『気づいて拾う』に依存)」。本 PLAN は照合の正本なので、**照合対象となる
+痕跡を生む dispatch lifecycle** をここに追記する (net-new PLAN は起票しない)。
+
+### D1: dispatch 状態機械 (本 slice)
+
+実装: `src/feedback/review-dispatch.ts` (純粋関数、I/O なし、時刻は `now` 注入)。
+テスト: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`012`)。
+
+状態: `requested` → `acknowledged` → `in_review` → `verdict`。
+逸脱状態: `stale_head` (依頼 exact HEAD と receipt/PR HEAD の不一致)、
+`merge_ready` (verdict が PASS 系 + HEAD 三者一致 + CI green + PR OPEN の 4 条件全成立)。
+
+機械化する不変条件 (すべて fail-close):
+
+1. **同一 family の自己承認を verdict として受理しない** (`same_family_reviewer`)。
+   PLAN-L6-13 の `same_model_approval: forbidden` を dispatch 層でも保つ。
+2. **exact HEAD 限定** (`head_mismatch`)。古い HEAD への PASS で `merge_ready` にしない。
+3. **verdict 無し merge の検出** (`merged_without_verdict`)。= PR #201 / incident #189 の実事象。
+4. **孤児 receipt を無視**。受領だけで「レビューされたこと」を捏造できない。
+5. **SLA 超過の検知** (受領 15 分 / 開始 30 分 / verdict 60 分、`DEFAULT_REVIEW_DISPATCH_SLA`)。
+   閾値ちょうどは breach にしない。**無反応の検知**が目的であり、レビュー内容を急がせない。
+6. **決定論**: entries は `(pr 昇順, exactHead 昇順)` で安定。入力順に依存しない。
+
+### 後続 slice (本 slice に含めない)
+
+- **D2**: SLA 超過の surface 配線 (session-start digest / feedback イベント)。
+- **D3**: verdict 構造化 receipt の永続化と `merge_ready` 通知の自動化。
+- **D4**: reviewer lane の冗長化 / 再割当 (非 author family 契約は維持)。
+
+D1 は**純粋 analyzer のみ**で、永続化・GitHub 取得・CLI 配線・doctor 配線を含まない。
+`ok: false` を CI の hard gate にはまだ繋がない (繋ぐのは D2 以降)。
+PLAN-L7-465 は `status: draft` のままであり、本追記は `generates` を増やさない
+(deliverable 所有を draft PLAN に持たせると issue #162 の post-merge 罠を踏むため、
+`src/feedback/review-dispatch.ts` は本文参照による trace に留める)。
