@@ -4,7 +4,7 @@ title: "PLAN-L7-470 (troubleshoot): review dispatch analyzer の出荷物所有�
 kind: troubleshoot
 layer: L7
 drive: agent
-status: confirmed
+status: draft
 route_signal: incident
 route_mode: incident
 created: 2026-07-31
@@ -13,6 +13,8 @@ owner: PM / PO
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-465に定義済みのD1 dispatch lifecycleと実装の意味論は変更せず、draft設計PLANと完成済み出荷物のライフサイクルを分離してgenerates所有を確定する。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM - incident #201 / #202 のdispatch未着手・恒久停止境界を分析"
   - role: se
     slot_label: "SE - dispatch analyzerとU-RVDISP oracleの実装"
   - role: tl
@@ -29,21 +31,12 @@ generates:
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
-  requires:
-    - docs/plans/PLAN-L7-465-cross-review-author-binding.md
+  requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L6-94-cross-review-session-attestation.md
     - docs/plans/PLAN-L6-13-cross-review-enforcement.md
-review_evidence:
-  - reviewer: codex-tera-subagent
-    review_kind: cross_agent
-    reviewed_at: "2026-07-31T15:16:00+09:00"
-    tests_green_at: "2026-07-31T15:07:00+09:00"
-    verdict: pass
-    worker_model: gpt-5.6-sol
-    reviewer_model: gpt-5.6-terra
-    scope: "PLAN-L7-470 ownership separation、U-RVDISP-001..031のL7 test-design oracle対応、draft PLAN-L7-465非confirm、generatesの単独所有を独立監査。identity/FSM/replay/observation/diagnostic/message exactHeadについてattackを再導出し未反証attackなし。親実測はreview-dispatch 31件 + impl/deliverable trace 10件 = 41件green。"
+review_evidence: []
 ---
 
 # PLAN-L7-470: review dispatch analyzer の出荷物所有分離
@@ -88,6 +81,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | PR観測の競合と冪等replay | `U-RVDISP-027`〜`028` |
 | 同時刻receiptの飛越禁止、uppercase SHA拒否 | `U-RVDISP-029`〜`030` |
 | well-formed orphan診断とexactHead別通知identity | `U-RVDISP-031` |
+| canonical ISO UTC timestamp | `U-RVDISP-032` |
 
 ## 4. スコープ外
 
@@ -100,8 +94,15 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`031` が全件green。
+- AC-1: `U-RVDISP-001`〜`032` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。
 - AC-5: `PLAN-L7-465` はdraftを維持し、未実装のsession attestationを偽完了にしない。
+
+## レビュー状態
+
+本 PLAN は、Opus の exact-HEAD closing review が timestamp の環境依存解釈を FLAG したため、
+修正と再検証が完了するまで `draft` とする。過去の Codex 内レビューを cross-provider review と
+して記録しない。修正後の non-author provider closing review と、その前に完了した green command
+evidence を揃えた時だけ `confirmed` へ遷移する。

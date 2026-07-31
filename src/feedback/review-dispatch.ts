@@ -90,6 +90,18 @@ const RECEIPT_KINDS: ReviewReceiptKind[] = ["acknowledged", "in_review", "verdic
 const VERDICTS: ReviewVerdict[] = ["PASS", "PASS-WEAK", "FLAG"];
 const PR_STATES: PrObservation["state"][] = ["OPEN", "MERGED", "CLOSED"];
 const HEAD_PATTERN = /^[0-9a-f]{40}$/;
+const CANONICAL_UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+/**
+ * 全 runtime で同じ instant を表す唯一の dispatch timestamp 表現。
+ * TZ 無し文字列や offset 文字列を Date.parse に委ねると、Windows/JST と CI の
+ * 解釈差が receipt 順序・SLA を変えうるため、canonical ISO UTC 以外は拒否する。
+ */
+function parseCanonicalUtcTimestamp(value: unknown): number | undefined {
+  if (typeof value !== "string" || !CANONICAL_UTC_TIMESTAMP_PATTERN.test(value)) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value ? parsed : undefined;
+}
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -107,9 +119,9 @@ function compareRequests(left: ReviewRequest, right: ReviewRequest): number {
 }
 
 function compareReceipts(left: ReviewReceipt, right: ReviewReceipt): number {
-  const leftAt = Date.parse(left.at);
-  const rightAt = Date.parse(right.at);
-  if (Number.isFinite(leftAt) && Number.isFinite(rightAt) && leftAt !== rightAt) {
+  const leftAt = parseCanonicalUtcTimestamp(left.at);
+  const rightAt = parseCanonicalUtcTimestamp(right.at);
+  if (leftAt != null && rightAt != null && leftAt !== rightAt) {
     return leftAt - rightAt;
   }
   return (
@@ -204,8 +216,9 @@ function isValidPr(value: unknown): value is number {
 }
 
 function isValidTimestamp(value: unknown, nowMs: number): string | undefined {
-  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) return "invalid_timestamp";
-  if (Number.isFinite(nowMs) && Date.parse(value) > nowMs) return "future_timestamp";
+  const timestamp = parseCanonicalUtcTimestamp(value);
+  if (timestamp == null) return "invalid_timestamp";
+  if (Number.isFinite(nowMs) && timestamp > nowMs) return "future_timestamp";
   return undefined;
 }
 
@@ -280,8 +293,8 @@ function validateSla(sla: ReviewDispatchSla): boolean {
 }
 
 function elapsedMinutes(requestedAt: string, nowMs: number): number {
-  const requestedMs = Date.parse(requestedAt);
-  return Number.isFinite(requestedMs) && Number.isFinite(nowMs)
+  const requestedMs = parseCanonicalUtcTimestamp(requestedAt);
+  return requestedMs != null && Number.isFinite(nowMs)
     ? Math.max(0, (nowMs - requestedMs) / 60_000)
     : 0;
 }
@@ -315,7 +328,7 @@ function analyzeRequest(
   const { receipts, prs, nowMs, sla, globalReasons, duplicateRequestConflict } = context;
   const reasons = new Set([...globalReasons, ...validateRequest(request, nowMs)]);
   if (duplicateRequestConflict) reasons.add("duplicate_request_conflict");
-  const requestTimestamp = Date.parse(request.requestedAt);
+  const requestTimestamp = parseCanonicalUtcTimestamp(request.requestedAt);
   const candidates = receipts.filter(
     (receipt) =>
       receipt.memoryId === request.memoryId &&
@@ -351,7 +364,9 @@ function analyzeRequest(
   for (let index = 1; index < RECEIPT_SEQUENCE.length; index += 1) {
     const previous = stageReceipts.get(RECEIPT_SEQUENCE[index - 1]);
     const current = stageReceipts.get(RECEIPT_SEQUENCE[index]);
-    if (previous && current && Date.parse(current.at) <= Date.parse(previous.at)) {
+    const previousAt = previous && parseCanonicalUtcTimestamp(previous.at);
+    const currentAt = current && parseCanonicalUtcTimestamp(current.at);
+    if (previousAt != null && currentAt != null && currentAt <= previousAt) {
       reasons.add("receipt_not_after_previous_state");
     }
   }
@@ -362,13 +377,18 @@ function analyzeRequest(
       reasons.add("same_family_reviewer");
       continue;
     }
-    const receiptAt = Date.parse(receipt.at);
-    if (Number.isFinite(requestTimestamp) && receiptAt < requestTimestamp) {
+    const receiptAt = parseCanonicalUtcTimestamp(receipt.at);
+    if (receiptAt == null) {
+      reasons.add("invalid_timestamp");
+      continue;
+    }
+    if (requestTimestamp != null && receiptAt < requestTimestamp) {
       reasons.add("receipt_before_request");
       continue;
     }
     const previous = acceptedReceipts.at(-1);
-    if (previous && receiptAt <= Date.parse(previous.at)) {
+    const previousAt = previous && parseCanonicalUtcTimestamp(previous.at);
+    if (previousAt != null && receiptAt <= previousAt) {
       reasons.add("receipt_not_after_previous_state");
       continue;
     }
@@ -465,11 +485,11 @@ export function analyzeReviewDispatch(input: {
   now: string;
   sla?: ReviewDispatchSla;
 }): ReviewDispatchResult {
-  const nowMs = Date.parse(input.now);
+  const nowMs = parseCanonicalUtcTimestamp(input.now);
   const sla = input.sla ?? DEFAULT_REVIEW_DISPATCH_SLA;
   const globalReasons = new Set<string>();
   const diagnostics = new Set<string>();
-  if (!Number.isFinite(nowMs)) globalReasons.add("invalid_timestamp");
+  if (nowMs == null) globalReasons.add("invalid_timestamp");
   if (input.sla === null || !validateSla(sla)) globalReasons.add("invalid_sla");
   const requestIdentities = new Set(input.requests.map(identityKey));
   const requestedPrs = new Set(input.requests.map((request) => request.pr));
@@ -481,7 +501,7 @@ export function analyzeReviewDispatch(input: {
       reviewRevision: receipt.reviewRevision,
     });
     if (!requestIdentities.has(receiptIdentity)) {
-      const reasons = validateReceipt(receipt, nowMs);
+      const reasons = validateReceipt(receipt, nowMs ?? Number.NaN);
       const diagnosticIdentity = `${receipt.memoryId}@${receipt.pr}@${receipt.head}@${receipt.reviewRevision}`;
       if (reasons.length === 0) {
         diagnostics.add(`orphan_receipt:unmatched_identity:${diagnosticIdentity}`);
@@ -507,7 +527,7 @@ export function analyzeReviewDispatch(input: {
     analyzeRequest(request, {
       receipts: input.receipts,
       prs: input.prs,
-      nowMs,
+      nowMs: nowMs ?? Number.NaN,
       sla,
       globalReasons: [...globalReasons],
       duplicateRequestConflict: unique.conflictingIdentities.has(identityKey(request)),

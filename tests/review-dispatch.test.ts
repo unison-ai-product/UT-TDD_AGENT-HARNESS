@@ -67,6 +67,35 @@ function entry(result: { entries: ReviewDispatchEntry[] }): ReviewDispatchEntry 
 }
 
 describe("review dispatch analyzer (U-RVDISP)", () => {
+  it("U-RVDISP-032: timestamp はcanonical ISO UTCのみを受理し、TZ無し/offset表現を環境依存で解釈しない", () => {
+    const canonical = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(canonical.ok).toBe(true);
+    expect(entry(canonical).ageMinutes).toBe(10);
+
+    const zoneLessRequest = analyzeReviewDispatch({
+      requests: [request({ requestedAt: "2026-07-31T00:00:00" })],
+      receipts: [],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(zoneLessRequest).reasons).toContain("invalid_timestamp");
+    expect(zoneLessRequest.ok).toBe(false);
+
+    const offsetNow = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [],
+      prs: [pr()],
+      now: "2026-07-31T09:10:00.000+09:00",
+    });
+    expect(entry(offsetNow).reasons).toContain("invalid_timestamp");
+    expect(offsetNow.ok).toBe(false);
+  });
+
   it("U-RVDISP-001: 受領前は requested、SLA 内なら breach 無し", () => {
     const result = analyzeReviewDispatch({
       requests: [request()],
