@@ -158,33 +158,34 @@ describe("GitHub repository facts binding", () => {
         issue_number: "70",
         review_receipt_digest: combinedReviewReceiptDigest(reviewDigests),
       });
-      const gh = new FakeGh(
-        [
+      const freshGh = () =>
+        new FakeGh(
+          [
+            {
+              number: 12,
+              url: "https://github.com/owner/repo/pull/12",
+              headRefName: "feature/domain",
+              headRefOid: "abcdef1",
+              state: "MERGED",
+              mergedAt: "2026-07-29T00:00:00Z",
+              mergeCommit: { oid: "fedcba1" },
+              body,
+              statusCheckRollup: [
+                { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
+              ],
+              reviews: [{ state: "APPROVED" }],
+            },
+          ],
           {
-            number: 12,
-            url: "https://github.com/owner/repo/pull/12",
-            headRefName: "feature/domain",
-            headRefOid: "abcdef1",
-            state: "MERGED",
-            mergedAt: "2026-07-29T00:00:00Z",
-            mergeCommit: { oid: "fedcba1" },
-            body,
-            statusCheckRollup: [
-              { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
-            ],
-            reviews: [{ state: "APPROVED" }],
+            check_runs: [{ name: "harness-check", id: "main-check-1", conclusion: "SUCCESS" }],
           },
-        ],
-        {
-          check_runs: [{ name: "harness-check", id: "main-check-1", conclusion: "SUCCESS" }],
-        },
-        { state: "CLOSED" },
-      );
+          { state: "CLOSED" },
+        );
       const result = syncRepositoryBindings({
         db,
         repositoryId: "owner/repo",
         repoRoot,
-        gh,
+        gh: freshGh(),
         now: "2026-07-30T00:00:00Z",
       });
       expect(result).toMatchObject({
@@ -219,10 +220,17 @@ describe("GitHub repository facts binding", () => {
         db,
         repositoryId: "owner/repo",
         repoRoot,
-        gh,
+        gh: freshGh(),
         now: "2026-07-29T00:00:00Z",
       });
       expect(staleReplay.bindingIds).toEqual([]);
+      expect(
+        db
+          .prepare(
+            "SELECT DISTINCT observed_at FROM github_object_bindings WHERE object_kind <> 'project_item'",
+          )
+          .all(),
+      ).toEqual([{ observed_at: "2026-07-30T00:00:00Z" }]);
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
