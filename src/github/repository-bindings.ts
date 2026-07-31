@@ -1,16 +1,19 @@
-import { stableId } from "../stable-id";
-import type { HarnessDb } from "../state-db/index";
-import { runSqliteTransaction } from "../state-db/sqlite-transaction";
 import {
   combinedReviewReceiptDigest,
   encodeMergeClosureReceipt,
   REQUIRED_GITHUB_CHECK,
-} from "./closure-receipt";
-import { type GithubBindingInput, recordGithubBinding } from "./forward-store";
+} from "../kernel/github-closure-receipt";
+import { stableId } from "../stable-id";
+import {
+  type GithubBindingInput,
+  recordGithubBinding,
+} from "../state-db/github-forward-projection";
+import { verifiedReviewLaneDigests } from "../state-db/github-review-lane-provenance";
+import type { HarnessDb } from "../state-db/index";
+import { runSqliteTransaction } from "../state-db/sqlite-transaction";
 import { validatePrTraceBody } from "./pr-trace";
 import type { GhCommandPort } from "./project-v2";
 import { NodeGhCommandPort } from "./project-v2";
-import { verifiedReviewLaneDigests } from "./review-lane-provenance";
 
 export interface RepositoryBindingSyncResult {
   inspectedPullRequests: number;
@@ -77,18 +80,18 @@ function reviewState(reviews: unknown[]): NonNullable<GithubBindingInput["state"
   return states.length > 0 ? "依頼中" : "未依頼";
 }
 
-function projectItemId(
-  db: HarnessDb,
-  repositoryId: string,
-  planId: string,
-  revision: string,
-): string {
-  const row = db
+function projectItemId(input: {
+  db: HarnessDb;
+  repositoryId: string;
+  planId: string;
+  revision: string;
+}): string {
+  const row = input.db
     .prepare(
       `SELECT project_item_id FROM github_project_item_projection
         WHERE repository_id = ? AND plan_id = ? AND plan_revision = ?`,
     )
-    .get(repositoryId, planId, revision);
+    .get(input.repositoryId, input.planId, input.revision);
   return text(row?.project_item_id);
 }
 
@@ -220,7 +223,12 @@ export function syncRepositoryBindings(input: {
       repositoryId: input.repositoryId,
       planId,
       planRevision: revision,
-      projectItemId: projectItemId(input.db, input.repositoryId, planId, revision),
+      projectItemId: projectItemId({
+        db: input.db,
+        repositoryId: input.repositoryId,
+        planId,
+        revision,
+      }),
       headSha,
       observedAt: input.now,
     };

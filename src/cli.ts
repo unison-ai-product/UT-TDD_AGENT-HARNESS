@@ -52,14 +52,6 @@ import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
 import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane";
-import {
-  deriveStoredForwardReadiness,
-  markGithubProjectionApplied,
-  queueGithubProjection,
-  rebuildExecutionReadiness,
-  recordGithubBinding,
-  selectActiveProjectRows,
-} from "./github/forward-store";
 import { collectJobSummary, renderJobSummary } from "./github/job-summary";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
 import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace";
@@ -189,6 +181,14 @@ import {
   resolveRuntimeSessionId,
 } from "./skill-engine/recommend";
 import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold";
+import {
+  deriveStoredForwardReadiness,
+  markGithubProjectionApplied,
+  queueGithubProjection,
+  rebuildExecutionReadiness,
+  recordGithubBinding,
+  selectActiveProjectRows,
+} from "./state-db/github-forward-projection";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
 import { harnessDbStatus } from "./state-db/maintenance";
 import { migrate } from "./state-db/migration";
@@ -3327,7 +3327,7 @@ githubProject
       try {
         if (opts.apply) migrate(db);
         const projectedRows = opts.apply
-          ? rebuildExecutionReadiness(db)
+          ? rebuildExecutionReadiness({ db })
           : deriveStoredForwardReadiness(db);
         const existingProjectPlans = new Set(
           db
@@ -3406,7 +3406,7 @@ githubBinding
     try {
       migrate(db);
       const result = syncRepositoryBindings({ db, repositoryId: opts.repository });
-      rebuildExecutionReadiness(db);
+      rebuildExecutionReadiness({ db });
       if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       else
         process.stdout.write(
@@ -3478,7 +3478,7 @@ githubBinding
           headSha: opts.head,
           state: opts.state,
         });
-        const rows = rebuildExecutionReadiness(db);
+        const rows = rebuildExecutionReadiness({ db });
         const output = {
           ok: true,
           bindingId,

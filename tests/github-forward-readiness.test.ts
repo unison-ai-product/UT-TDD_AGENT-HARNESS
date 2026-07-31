@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveForwardReadiness, type ForwardScheduleEntry } from "../src/github/forward-readiness";
+import { deriveForwardReadiness, type ForwardScheduleEntry } from "../src/kernel/forward-readiness";
 
 const entry = (
   planId: string,

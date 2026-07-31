@@ -2,15 +2,18 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { encodeMergeClosureReceipt, reviewReceiptDigest } from "../src/github/closure-receipt";
-import { deriveForwardReadiness } from "../src/github/forward-readiness";
+import { deriveForwardReadiness } from "../src/kernel/forward-readiness";
+import {
+  encodeMergeClosureReceipt,
+  reviewReceiptDigest,
+} from "../src/kernel/github-closure-receipt";
 import {
   queueGithubProjection,
   readGithubEvidence,
   rebuildExecutionReadiness,
   recordGithubBinding,
   selectActiveProjectRows,
-} from "../src/github/forward-store";
+} from "../src/state-db/github-forward-projection";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild";
@@ -165,7 +168,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         objectId: "feature/a",
         state: "active",
       });
-      expect(rebuildExecutionReadiness(db)).toHaveLength(1);
+      expect(rebuildExecutionReadiness({ db })).toHaveLength(1);
       expect(db.prepare("SELECT readiness FROM execution_readiness_projection").get()).toEqual({
         readiness: "着手可能",
       });
@@ -500,8 +503,6 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
 
   it("U-GHPROJ-036: rebuild resolves review evidence from the supplied repository root, not process cwd", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-root-"));
-    const unrelatedCwd = mkdtempSync(join(tmpdir(), "ut-tdd-gh-unrelated-"));
-    const originalCwd = process.cwd();
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -549,17 +550,19 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         mergeSha: "def5678",
         repoRoot,
       });
-      process.chdir(unrelatedCwd);
       expect(
-        rebuildExecutionReadiness(db, "2026-07-29T03:00:00Z", true, repoRoot)[0],
+        rebuildExecutionReadiness({
+          db,
+          now: "2026-07-29T03:00:00Z",
+          transactional: true,
+          repoRoot,
+        })[0],
       ).toMatchObject({
         readiness: "完了",
       });
     } finally {
-      process.chdir(originalCwd);
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
-      rmSync(unrelatedCwd, { recursive: true, force: true });
     }
   });
 
@@ -621,7 +624,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         "PLAN-L7-1-a",
         "rev1",
       );
-      const rows = rebuildExecutionReadiness(db);
+      const rows = rebuildExecutionReadiness({ db });
       expect(rows[0]).toMatchObject({ readiness: "阻害中", currentGate: "merge-closure" });
       expect(rows[0]?.unlockedPlanIds).toEqual([]);
       expect(rows[1]?.readiness).toBe("阻害中");

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { ForwardReadinessRow } from "../src/github/forward-readiness";
 import type {
   GhCommandPort,
   ProjectField,
@@ -11,6 +10,7 @@ import {
   persistProjectSync,
   syncForwardProject,
 } from "../src/github/project-v2";
+import type { ForwardReadinessRow } from "../src/kernel/forward-readiness";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 
@@ -46,21 +46,21 @@ class FakeProjectPort implements ProjectV2Port {
   inspect(): ProjectSnapshot {
     return this.snapshot;
   }
-  createDraft(_owner: string, _project: number, title: string): string {
-    this.calls.push(`create:${title}`);
+  createDraft(input: Parameters<ProjectV2Port["createDraft"]>[0]): string {
+    this.calls.push(`create:${input.title}`);
     return "item:new";
   }
-  setText(_project: string, _item: string, field: string, value: string): void {
-    this.calls.push(`text:${field}:${value}`);
+  setText(input: Parameters<ProjectV2Port["setText"]>[0]): void {
+    this.calls.push(`text:${input.fieldId}:${input.value}`);
   }
-  setNumber(_project: string, _item: string, field: string, value: number): void {
-    this.calls.push(`number:${field}:${value}`);
+  setNumber(input: Parameters<ProjectV2Port["setNumber"]>[0]): void {
+    this.calls.push(`number:${input.fieldId}:${input.value}`);
   }
-  setSingleSelect(_project: string, _item: string, field: string, option: string): void {
-    this.calls.push(`select:${field}:${option}`);
+  setSingleSelect(input: Parameters<ProjectV2Port["setSingleSelect"]>[0]): void {
+    this.calls.push(`select:${input.fieldId}:${input.value}`);
   }
-  clear(_project: string, _item: string, field: string): void {
-    this.calls.push(`clear:${field}`);
+  clear(input: Parameters<ProjectV2Port["clear"]>[0]): void {
+    this.calls.push(`clear:${input.fieldId}`);
   }
 }
 

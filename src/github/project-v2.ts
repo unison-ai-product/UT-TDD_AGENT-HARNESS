@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
+import type { ForwardReadinessRow } from "../kernel/forward-readiness";
 import { stableId } from "../stable-id";
+import { recordGithubBinding } from "../state-db/github-forward-projection";
 import type { HarnessDb } from "../state-db/index";
-import type { ForwardReadinessRow } from "./forward-readiness";
-import { recordGithubBinding } from "./forward-store";
 
 export interface ProjectField {
   id: string;
@@ -26,11 +26,28 @@ export interface ProjectSnapshot {
 
 export interface ProjectV2Port {
   inspect(owner: string, projectNumber: number): ProjectSnapshot;
-  createDraft(owner: string, projectNumber: number, title: string, body: string): string;
-  setText(projectId: string, itemId: string, fieldId: string, value: string): void;
-  setNumber(projectId: string, itemId: string, fieldId: string, value: number): void;
-  setSingleSelect(projectId: string, itemId: string, fieldId: string, optionId: string): void;
-  clear(projectId: string, itemId: string, fieldId: string): void;
+  createDraft(input: ProjectDraftInput): string;
+  setText(input: ProjectFieldValue<string>): void;
+  setNumber(input: ProjectFieldValue<number>): void;
+  setSingleSelect(input: ProjectFieldValue<string>): void;
+  clear(input: ProjectFieldTarget): void;
+}
+
+export interface ProjectDraftInput {
+  owner: string;
+  projectNumber: number;
+  title: string;
+  body: string;
+}
+
+export interface ProjectFieldTarget {
+  projectId: string;
+  itemId: string;
+  fieldId: string;
+}
+
+export interface ProjectFieldValue<T> extends ProjectFieldTarget {
+  value: T;
 }
 
 export interface GhCommandPort {
@@ -168,18 +185,18 @@ export class GhProjectV2Adapter implements ProjectV2Port {
     };
   }
 
-  createDraft(owner: string, projectNumber: number, title: string, body: string): string {
+  createDraft(input: ProjectDraftInput): string {
     const result = object(
       this.#gh.json([
         "project",
         "item-create",
-        String(projectNumber),
+        String(input.projectNumber),
         "--owner",
-        owner,
+        input.owner,
         "--title",
-        title,
+        input.title,
         "--body",
-        body,
+        input.body,
         "--format",
         "json",
       ]),
@@ -189,32 +206,32 @@ export class GhProjectV2Adapter implements ProjectV2Port {
     return id;
   }
 
-  setText(projectId: string, itemId: string, fieldId: string, value: string): void {
-    this.#edit(projectId, itemId, fieldId, ["--text", value]);
+  setText(input: ProjectFieldValue<string>): void {
+    this.#edit(input, ["--text", input.value]);
   }
 
-  setNumber(projectId: string, itemId: string, fieldId: string, value: number): void {
-    this.#edit(projectId, itemId, fieldId, ["--number", String(value)]);
+  setNumber(input: ProjectFieldValue<number>): void {
+    this.#edit(input, ["--number", String(input.value)]);
   }
 
-  setSingleSelect(projectId: string, itemId: string, fieldId: string, optionId: string): void {
-    this.#edit(projectId, itemId, fieldId, ["--single-select-option-id", optionId]);
+  setSingleSelect(input: ProjectFieldValue<string>): void {
+    this.#edit(input, ["--single-select-option-id", input.value]);
   }
 
-  clear(projectId: string, itemId: string, fieldId: string): void {
-    this.#edit(projectId, itemId, fieldId, ["--clear"]);
+  clear(input: ProjectFieldTarget): void {
+    this.#edit(input, ["--clear"]);
   }
 
-  #edit(projectId: string, itemId: string, fieldId: string, valueArgs: string[]): void {
+  #edit(input: ProjectFieldTarget, valueArgs: string[]): void {
     this.#gh.run([
       "project",
       "item-edit",
       "--project-id",
-      projectId,
+      input.projectId,
       "--id",
-      itemId,
+      input.itemId,
       "--field-id",
-      fieldId,
+      input.fieldId,
       ...valueArgs,
     ]);
   }
@@ -324,12 +341,12 @@ export function syncForwardProject(input: {
         value: title(row),
       });
       if (input.apply)
-        itemId = input.port.createDraft(
-          input.owner,
-          input.projectNumber,
-          title(row),
-          `HARNESS DB projection\n\nPLAN: ${row.planId}\nRevision: ${row.revision}`,
-        );
+        itemId = input.port.createDraft({
+          owner: input.owner,
+          projectNumber: input.projectNumber,
+          title: title(row),
+          body: `HARNESS DB projection\n\nPLAN: ${row.planId}\nRevision: ${row.revision}`,
+        });
       else itemId = `dry-run:${row.planId}`;
     }
     itemIds[row.planId] = itemId;
@@ -340,14 +357,14 @@ export function syncForwardProject(input: {
       if (!input.apply) continue;
       const field = fields.get(fieldName);
       if (!field) throw new Error(`field disappeared during sync: ${fieldName}`);
-      if (String(value) === "") input.port.clear(snapshot.id, itemId, field.id);
-      else if (fieldName === "実装順序")
-        input.port.setNumber(snapshot.id, itemId, field.id, Number(value));
+      const target = { projectId: snapshot.id, itemId, fieldId: field.id };
+      if (String(value) === "") input.port.clear(target);
+      else if (fieldName === "実装順序") input.port.setNumber({ ...target, value: Number(value) });
       else if (field.type === "ProjectV2SingleSelectField") {
         const option = field.options?.find((candidate) => candidate.name === String(value));
         if (!option) throw new Error(`field option missing: ${fieldName}=${value}`);
-        input.port.setSingleSelect(snapshot.id, itemId, field.id, option.id);
-      } else input.port.setText(snapshot.id, itemId, field.id, String(value));
+        input.port.setSingleSelect({ ...target, value: option.id });
+      } else input.port.setText({ ...target, value: String(value) });
     }
   }
   return { applied: input.apply, projectId: snapshot.id, mutations, itemIds };

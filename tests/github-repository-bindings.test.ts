@@ -2,14 +2,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { renderPrTraceBlock } from "../src/github/pr-trace";
+import type { GhCommandPort } from "../src/github/project-v2";
+import { syncRepositoryBindings } from "../src/github/repository-bindings";
 import {
   combinedReviewReceiptDigest,
   decodeMergeClosureReceipt,
   reviewReceiptDigest,
-} from "../src/github/closure-receipt";
-import { renderPrTraceBlock } from "../src/github/pr-trace";
-import type { GhCommandPort } from "../src/github/project-v2";
-import { syncRepositoryBindings } from "../src/github/repository-bindings";
+} from "../src/kernel/github-closure-receipt";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 

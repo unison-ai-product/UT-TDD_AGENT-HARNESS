@@ -1,12 +1,12 @@
 import { readFileSync, realpathSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { HarnessDb } from "../state-db/index";
 import {
   type ReviewReceiptSource,
   reviewReceiptDigest,
   validCrossReviewSource,
-} from "./closure-receipt";
+} from "../kernel/github-closure-receipt";
+import type { HarnessDb } from "./index";
 
 function text(value: unknown): string {
   return String(value ?? "").trim();

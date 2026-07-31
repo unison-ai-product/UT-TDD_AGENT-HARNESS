@@ -1,13 +1,13 @@
-import { stableId } from "../stable-id";
-import type { HarnessDb } from "../state-db/index";
-import { decodeMergeClosureReceipt } from "./closure-receipt";
 import {
   deriveForwardReadiness,
   type ForwardEvidence,
   type ForwardReadinessRow,
   type ForwardScheduleEntry,
-} from "./forward-readiness";
-import { verifiedReviewLaneDigests } from "./review-lane-provenance";
+} from "../kernel/forward-readiness";
+import { decodeMergeClosureReceipt } from "../kernel/github-closure-receipt";
+import { stableId } from "../stable-id";
+import { verifiedReviewLaneDigests } from "./github-review-lane-provenance";
+import type { HarnessDb } from "./index";
 
 function text(value: unknown): string {
   return String(value ?? "").trim();
@@ -193,13 +193,20 @@ export function selectActiveProjectRows(
   );
 }
 
+export interface RebuildExecutionReadinessInput {
+  db: HarnessDb;
+  now?: string;
+  transactional?: boolean;
+  repoRoot?: string;
+}
+
 export function rebuildExecutionReadiness(
-  db: HarnessDb,
-  now = new Date().toISOString(),
-  transactional = true,
-  repoRoot = process.cwd(),
+  input: RebuildExecutionReadinessInput,
 ): ForwardReadinessRow[] {
-  const rows = deriveStoredForwardReadiness(db, repoRoot);
+  const now = input.now ?? new Date().toISOString();
+  const transactional = input.transactional ?? true;
+  const rows = deriveStoredForwardReadiness(input.db, input.repoRoot);
+  const db = input.db;
   const write = db.prepare(
     `INSERT INTO execution_readiness_projection (
        plan_id, plan_revision, readiness, current_gate, implementation_order,

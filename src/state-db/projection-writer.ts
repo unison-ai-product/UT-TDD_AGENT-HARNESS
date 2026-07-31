@@ -10,7 +10,6 @@ import {
   type CanonicalDocumentFamily,
   parseCanonicalDocumentStructure,
 } from "../export/document-export";
-import { rebuildExecutionReadiness } from "../github/forward-store";
 import { loadRelationGraphSourceSet } from "../graph/loader";
 import { resolveLegacyPlanAlias } from "../kernel/plan-alias.js";
 import { loadChangedFiles } from "../lint/change-impact";
@@ -81,6 +80,7 @@ import {
   projectVerificationDefectRoutingRefactorCandidates,
   reconcileFeedbackLifecycle,
 } from "./feedback-projections";
+import { rebuildExecutionReadiness } from "./github-forward-projection";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index";
 import { migrate, rowCounts } from "./migration";
@@ -2710,7 +2710,9 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       );
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
       time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
-      time("forward-readiness", () => rebuildExecutionReadiness(db, nowIso(), false, repoRoot));
+      time("forward-readiness", () =>
+        rebuildExecutionReadiness({ db, now: nowIso(), transactional: false, repoRoot }),
+      );
       time("feedback", () => {
         projectFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectVerificationDefectRoutingRefactorCandidates(db, projectionDeps);
