@@ -1455,6 +1455,30 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
 
+## PLAN-L7-470 review dispatch analyzer oracle (2026-07-31)
+
+対象 = `src/feedback/review-dispatch.ts`。実テスト = `tests/review-dispatch.test.ts`。
+identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・replay・古いHEADに
+左右されず、非author familyの有効verdictだけをmerge準備判定へ使う。
+
+| ID | 設計境界 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-RVDISP-001`〜`006` | 基本FSMとmerge準備 | requestedからverdictまでの各段階、PASS系＋CI/PR状態 | 順序どおりの状態、全merge条件成立時だけ`merge_ready` |
+| `U-RVDISP-007`〜`012` | SLA・自己承認・HEAD・決定論 | 閾値境界、同family、旧HEAD、入力shuffle、verdictなしmerge | breach/理由をfail-closeで返し、安定順を維持 |
+| `U-RVDISP-013`〜`020` | identityとreceipt妥当性 | memory/revision/head違い、不正時刻、future、family、順序欠落 | 別identityへ混入せず、局所理由付きで非ready |
+| `U-RVDISP-021` | request replay | 完全重複requestと同identity内容競合 | 完全重複は冪等、競合は`duplicate_request_conflict` |
+| `U-RVDISP-022` | old HEAD隔離 | 同reviewRevisionの旧HEAD receipt | 現HEAD requestの理由・状態を汚染しない |
+| `U-RVDISP-023` | PR観測欠落 | requestに対応するPR observationなし | retry可能な未確定状態としてfail-close |
+| `U-RVDISP-024` | reason付き非ready | verdict等が揃ってもvalidation reasonあり | `merge_ready`を返さない |
+| `U-RVDISP-025` | unrelated malformed隔離 | 別identityの不正artifact | 正常requestを汚染せずdiagnosticへ分離 |
+| `U-RVDISP-026` | matching malformed局所化 | 対応identityの不正artifact | 対応requestだけをfail-close |
+| `U-RVDISP-027`〜`028` | PR観測replay | 同PRの相反観測と完全重複観測 | 相反は`duplicate_pr_observation_conflict`、完全重複は冪等 |
+| `U-RVDISP-029` | 同時刻FSM | acknowledged/in_review/verdictが同一timestamp | receipt stateを飛越しない |
+| `U-RVDISP-030` | canonical HEAD | uppercase 40-hex SHA | `invalid_head`でfail-close |
+| `U-RVDISP-031` | 孤児診断と通知identity | well-formed orphan＋同PR/同revision・異なるexactHeadの同一SLA違反 | orphan identityを診断へ保持し、messageにexactHeadを含めて通知dedupeで潰さない |
+
+実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`031`)。
+
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 
 対象 = `tests/support/chunked-hash.ts`（fence/snapshot共通のstreaming hashヘルパー）、
