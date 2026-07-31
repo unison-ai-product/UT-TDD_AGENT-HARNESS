@@ -15,7 +15,7 @@ export type ReviewDispatchState =
 
 export type ReviewerFamily = "claude" | "codex";
 export type ReviewVerdict = "PASS" | "PASS-WEAK" | "FLAG";
-export type SlaBreach = "ack" | "start" | "verdict";
+export type SlaBreach = "verdict";
 export type ReviewReceiptKind = "acknowledged" | "in_review" | "verdict";
 
 export interface ReviewRequest {
@@ -47,14 +47,10 @@ export interface PrObservation {
 }
 
 export interface ReviewDispatchSla {
-  ackMinutes: number;
-  startMinutes: number;
   verdictMinutes: number;
 }
 
 export const DEFAULT_REVIEW_DISPATCH_SLA: ReviewDispatchSla = {
-  ackMinutes: 15,
-  startMinutes: 30,
   verdictMinutes: 60,
 };
 
@@ -70,6 +66,7 @@ export interface ReviewDispatchEntry {
   ageMinutes: number | null;
   blocking: string[];
   reasons: string[];
+  progressDiagnostics: string[];
 }
 
 export interface ReviewDispatchResult {
@@ -84,7 +81,6 @@ interface DispatchAnalysis {
   hasHeadMismatch: boolean;
 }
 
-const RECEIPT_SEQUENCE: ReviewReceiptKind[] = ["acknowledged", "in_review", "verdict"];
 const REVIEWER_FAMILIES: ReviewerFamily[] = ["claude", "codex"];
 const RECEIPT_KINDS: ReviewReceiptKind[] = ["acknowledged", "in_review", "verdict"];
 const VERDICTS: ReviewVerdict[] = ["PASS", "PASS-WEAK", "FLAG"];
@@ -314,15 +310,17 @@ function validateObservation(observation: PrObservation): boolean {
 
 function validateSla(sla: ReviewDispatchSla): boolean {
   if (sla == null || typeof sla !== "object") return false;
-  return [sla.ackMinutes, sla.startMinutes, sla.verdictMinutes].every(
-    (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
+  return (
+    typeof sla.verdictMinutes === "number" &&
+    Number.isFinite(sla.verdictMinutes) &&
+    sla.verdictMinutes > 0
   );
 }
 
 function elapsedMinutes(requestedAt: string, nowMs: number): number | null {
   const requestedMs = parseExplicitZoneTimestamp(requestedAt);
-  return requestedMs != null && Number.isFinite(nowMs)
-    ? Math.max(0, (nowMs - requestedMs) / 60_000)
+  return requestedMs != null && Number.isFinite(nowMs) && requestedMs <= nowMs
+    ? (nowMs - requestedMs) / 60_000
     : null;
 }
 
@@ -354,6 +352,7 @@ function analyzeRequest(
 ): DispatchAnalysis {
   const { receipts, prs, nowMs, sla, globalReasons, duplicateRequestConflict } = context;
   const reasons = new Set([...globalReasons, ...validateRequest(request, nowMs)]);
+  const progressDiagnostics = new Set<string>();
   if (duplicateRequestConflict) reasons.add("duplicate_request_conflict");
   const requestTimestamp = parseExplicitZoneTimestamp(request.requestedAt);
   const candidates = receipts.filter(
@@ -384,20 +383,6 @@ function analyzeRequest(
     }
   }
 
-  const stageReceipts = new Map<ReviewReceiptKind, ReviewReceipt>();
-  for (const receipt of deduplicatedReceipts) {
-    if (!stageReceipts.has(receipt.kind)) stageReceipts.set(receipt.kind, receipt);
-  }
-  for (let index = 1; index < RECEIPT_SEQUENCE.length; index += 1) {
-    const previous = stageReceipts.get(RECEIPT_SEQUENCE[index - 1]);
-    const current = stageReceipts.get(RECEIPT_SEQUENCE[index]);
-    const previousAt = previous && parseExplicitZoneTimestamp(previous.at);
-    const currentAt = current && parseExplicitZoneTimestamp(current.at);
-    if (previousAt != null && currentAt != null && currentAt <= previousAt) {
-      reasons.add("receipt_not_after_previous_state");
-    }
-  }
-
   const acceptedReceipts: ReviewReceipt[] = [];
   for (const receipt of deduplicatedReceipts) {
     if (receipt.reviewerFamily === request.authorFamily) {
@@ -409,39 +394,28 @@ function analyzeRequest(
       reasons.add("invalid_timestamp");
       continue;
     }
-    if (requestTimestamp != null && receiptAt < requestTimestamp) {
+    if (requestTimestamp == null) {
+      reasons.add("request_timestamp_unverifiable");
+      continue;
+    }
+    if (receiptAt < requestTimestamp) {
       reasons.add("receipt_before_request");
-      continue;
-    }
-    const previous = acceptedReceipts.at(-1);
-    const previousAt = previous && parseExplicitZoneTimestamp(previous.at);
-    if (previousAt != null && receiptAt <= previousAt) {
-      reasons.add("receipt_not_after_previous_state");
-      continue;
-    }
-    const expectedKind = RECEIPT_SEQUENCE[acceptedReceipts.length];
-    if (receipt.kind !== expectedKind) {
-      reasons.add("out_of_order_receipt");
-      const receiptIndex = RECEIPT_SEQUENCE.indexOf(receipt.kind);
-      if (receiptIndex > acceptedReceipts.length) {
-        for (let index = acceptedReceipts.length; index < receiptIndex; index += 1) {
-          reasons.add(`missing_${RECEIPT_SEQUENCE[index]}`);
-        }
-      }
       continue;
     }
     acceptedReceipts.push(receipt);
   }
 
-  const verdictReceipt =
-    acceptedReceipts.at(-1)?.kind === "verdict" ? acceptedReceipts.at(-1) : undefined;
+  const acceptedByKind = new Map(
+    acceptedReceipts.map((receipt) => [receipt.kind, receipt] as const),
+  );
+  const verdictReceipt = acceptedByKind.get("verdict");
   const hasVerdict = verdictReceipt != null;
-  const hasAcknowledged = acceptedReceipts.length >= 1;
-  const hasStarted = acceptedReceipts.length >= 2;
+  const hasAcknowledged = acceptedByKind.has("acknowledged");
+  const hasStarted = acceptedByKind.has("in_review");
+  if (hasVerdict && !hasAcknowledged) progressDiagnostics.add("missing_acknowledged");
+  if (hasVerdict && !hasStarted) progressDiagnostics.add("missing_in_review");
   const ageMinutes = elapsedMinutes(request.requestedAt, nowMs);
   const breaches: SlaBreach[] = [];
-  if (!hasAcknowledged && (ageMinutes == null || ageMinutes > sla.ackMinutes)) breaches.push("ack");
-  if (!hasStarted && (ageMinutes == null || ageMinutes > sla.startMinutes)) breaches.push("start");
   if (!hasVerdict && (ageMinutes == null || ageMinutes > sla.verdictMinutes)) {
     breaches.push("verdict");
   }
@@ -466,20 +440,18 @@ function analyzeRequest(
   if (hasObservationHeadMismatch) reasons.add("head_mismatch");
   if (observation?.state === "MERGED" && !hasVerdict) reasons.add("merged_without_verdict");
 
-  let state: ReviewDispatchState =
-    acceptedReceipts.length === 3
-      ? "verdict"
-      : acceptedReceipts.length === 2
-        ? "in_review"
-        : acceptedReceipts.length === 1
-          ? "acknowledged"
-          : "requested";
+  let state: ReviewDispatchState = hasVerdict
+    ? "verdict"
+    : hasStarted
+      ? "in_review"
+      : hasAcknowledged
+        ? "acknowledged"
+        : "requested";
   const hasHeadMismatch = hasObservationHeadMismatch;
   if (hasHeadMismatch) {
     state = "stale_head";
   } else if (
     reasons.size === 0 &&
-    acceptedReceipts.length === 3 &&
     (verdictReceipt?.verdict === "PASS" || verdictReceipt?.verdict === "PASS-WEAK") &&
     observation?.headSha === request.exactHead &&
     observation.checksGreen &&
@@ -495,12 +467,13 @@ function analyzeRequest(
       exactHead: request.exactHead,
       reviewRevision: request.reviewRevision,
       authorFamily: request.authorFamily,
-      reviewerFamily: acceptedReceipts.at(-1)?.reviewerFamily,
+      reviewerFamily: verdictReceipt?.reviewerFamily ?? acceptedReceipts.at(-1)?.reviewerFamily,
       state,
       breaches,
       ageMinutes,
       blocking,
       reasons: [...reasons].sort(compareText),
+      progressDiagnostics: [...progressDiagnostics].sort(compareText),
     },
     hasVerdict,
     hasHeadMismatch,
@@ -600,6 +573,11 @@ export function reviewDispatchMessages(result: ReviewDispatchResult): string[] {
                 : reason;
       messages.push(
         `review-dispatch — 手順違反: PR #${entry.pr} ${detail} (${entry.memoryId}@${entry.reviewRevision}#${entry.exactHead})`,
+      );
+    }
+    for (const diagnostic of entry.progressDiagnostics) {
+      messages.push(
+        `review-dispatch — 進捗診断: PR #${entry.pr} ${diagnostic} (${entry.memoryId}@${entry.reviewRevision}#${entry.exactHead})`,
       );
     }
   }

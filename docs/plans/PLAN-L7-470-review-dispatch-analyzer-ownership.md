@@ -60,7 +60,8 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 出荷物の完了条件として固定する。
 
 1. identity は `(memoryId, pr, exactHead, reviewRevision)`。
-2. `requested → acknowledged → in_review → verdict` の順序を外れた receipt は fail-close。
+2. 現行 exact identity の有効な非author family `verdict` は先行 receipt がなくても終端証拠
+   として受理する。ack / in_review の欠落は非blocking診断であり、`merge_ready` を妨げない。
 3. author family と同一 family の receipt は承認に使わない。
 4. 古い HEAD の receipt は現 HEAD の有効 verdict を無効化せず、古い verdict で
    `merge_ready` にもしない。
@@ -68,21 +69,26 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 6. 完全重複 replay は冪等で、孤児artifactは identity付きdiagnosticへ残す。
 7. `merge_ready` は非author family PASS系 verdict、三者HEAD一致、CI green、PR openの
    全条件が揃った場合だけ到達する。
+8. SLA breach は verdict 未到達60分の一段だけ。ack/start SLAはD3 producer完成まで
+   発生させず、不正/future request時刻は `ageMinutes: null` としてfail-closeする。
 
 ## 3. 設計と検証の対
 
 | 設計境界 | 対応oracle |
 | --- | --- |
 | 基本FSM、SLA、自己承認拒否、HEAD一致 | `U-RVDISP-001`〜`012` |
-| identity、時刻、family、receipt順序のfail-close | `U-RVDISP-013`〜`020` |
+| identity、時刻、family、verdict-anchorのfail-close | `U-RVDISP-013`〜`020` |
 | request replayの冪等・競合 | `U-RVDISP-021` |
 | old HEAD隔離、PR観測欠落、reason付き非ready | `U-RVDISP-022`〜`024` |
 | unrelated/matching malformed artifactの診断分離 | `U-RVDISP-025`〜`026` |
 | PR観測の競合と冪等replay | `U-RVDISP-027`〜`028` |
-| 同時刻receiptの飛越禁止、uppercase SHA拒否 | `U-RVDISP-029`〜`030` |
+| receipt時刻順と終端証拠の分離、uppercase SHA拒否 | `U-RVDISP-029`〜`030` |
 | well-formed orphan診断とexactHead別通知identity | `U-RVDISP-031` |
 | timezone明示ISO timestampと不正時刻のSLA fail-close | `U-RVDISP-032` |
 | 同一instantのtimestamp表現差を除外したreplay identity | `U-RVDISP-033` |
+| verdict単独PASS/FLAG、same-family/old HEAD拒否、old ack隔離 | `U-RVDISP-034`〜`037` |
+| verdict単一SLA、malformed/順序/identity拒否 | `U-RVDISP-038`〜`041` |
+| receipt/PR入力順に依存しない決定論 | `U-RVDISP-042` |
 
 ## 4. スコープ外
 
@@ -91,11 +97,11 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 - session-start / doctor / CI hard gateへの配線。
 - SLA超過通知、reviewer再割当、merge自動化。
 
-これらは順序契約 D2〜D4 で実装する。本 PLANをconfirmしても D2〜D4の完了を意味しない。
+これらは順序契約 **D3→D2→D4** で実装する。本 PLANをconfirmしても D2〜D4の完了を意味しない。
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`033` が全件green。
+- AC-1: `U-RVDISP-001`〜`042` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。

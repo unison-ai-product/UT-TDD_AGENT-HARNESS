@@ -137,7 +137,9 @@ L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**�
 実装: `src/feedback/review-dispatch.ts` (純粋関数、I/O なし、時刻は `now` 注入)。
 テスト: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`012`)。
 
-状態: `requested` → `acknowledged` → `in_review` → `verdict`。
+進捗表示: `requested` → `acknowledged` → `in_review`。ただし、D3 の構造化 producer が
+まだ存在しない D1 では、現行 exact identity の有効な `verdict` を先行 receipt の有無と
+無関係な**終端証拠**として受理する。ack / in_review の欠落は診断に残すが blocking にしない。
 逸脱状態: `stale_head` (依頼 exact HEAD と receipt/PR HEAD の不一致)、
 `merge_ready` (verdict が PASS 系 + HEAD 三者一致 + CI green + PR OPEN の 4 条件全成立)。
 
@@ -148,17 +150,21 @@ L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**�
 2. **exact HEAD 限定** (`head_mismatch`)。古い HEAD への PASS で `merge_ready` にしない。
 3. **verdict 無し merge の検出** (`merged_without_verdict`)。= PR #201 / incident #189 の実事象。
 4. **孤児 receipt を無視**。受領だけで「レビューされたこと」を捏造できない。
-5. **SLA 超過の検知** (受領 15 分 / 開始 30 分 / verdict 60 分、`DEFAULT_REVIEW_DISPATCH_SLA`)。
-   閾値ちょうどは breach にしない。**無反応の検知**が目的であり、レビュー内容を急がせない。
+5. **SLA 超過の検知**は verdict 未到達 60 分の一段だけ
+   (`DEFAULT_REVIEW_DISPATCH_SLA`)。閾値ちょうどは breach にしない。
+   ack 15 分 / start 30 分は producer 不在で偽陽性になるため D3 完了まで breach にしない。
+   **無反応の検知**が目的であり、レビュー内容を急がせない。
 6. **決定論**: entries は `(pr 昇順, exactHead 昇順)` で安定。入力順に依存しない。
 
 ### 後続 slice (本 slice に含めない)
 
-- **D2**: SLA 超過の surface 配線 (session-start digest / feedback イベント)。
-- **D3**: verdict 構造化 receipt の永続化と `merge_ready` 通知の自動化。
+- **D3**: trusted な構造化 receipt producer と reviewer family 証明の永続化。
+- **D2**: D3 の trusted receipt を入力にした SLA surface 配線
+  (session-start digest / feedback イベント)。
 - **D4**: reviewer lane の冗長化 / 再割当 (非 author family 契約は維持)。
 
-D1 は**純粋 analyzer のみ**で、永続化・GitHub 取得・CLI 配線・doctor 配線を含まない。
+D1→D3→D2→D4 の順序契約とする。D1 は**純粋 analyzer のみ**で、永続化・GitHub 取得・
+CLI 配線・doctor 配線を含まない。
 `ok: false` を CI の hard gate にはまだ繋がない (繋ぐのは D2 以降)。
 PLAN-L7-465 は `status: draft` のままであり、本追記は `generates` を増やさない
 (deliverable 所有を draft PLAN に持たせると issue #162 の post-merge 罠を踏むため、

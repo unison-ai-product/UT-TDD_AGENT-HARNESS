@@ -95,7 +95,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     });
     expect(entry(zoneLessRequest).reasons).toContain("invalid_timestamp");
     expect(entry(zoneLessRequest).ageMinutes).toBeNull();
-    expect(entry(zoneLessRequest).breaches).toEqual(["ack", "start", "verdict"]);
+    expect(entry(zoneLessRequest).breaches).toEqual(["verdict"]);
     expect(zoneLessRequest.ok).toBe(false);
 
     const impossibleDate = analyzeReviewDispatch({
@@ -142,30 +142,30 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("U-RVDISP-002: 受領 SLA 超過を検知し、境界ちょうどは breach にしない", () => {
+  it("U-RVDISP-002: verdict SLAだけを検知し、境界ちょうどは breach にしない", () => {
     const input = { requests: [request()], receipts: [], prs: [pr()] };
 
     expect(
       entry(analyzeReviewDispatch({ ...input, now: "2026-07-31T00:15:00.000Z" })).breaches,
     ).toEqual([]);
     const ackLate = analyzeReviewDispatch({ ...input, now: "2026-07-31T00:16:00.000Z" });
-    expect(entry(ackLate).breaches).toEqual(["ack"]);
-    expect(ackLate.ok).toBe(false);
+    expect(entry(ackLate).breaches).toEqual([]);
+    expect(ackLate.ok).toBe(true);
     expect(
       entry(analyzeReviewDispatch({ ...input, now: "2026-07-31T00:30:00.000Z" })).breaches,
-    ).toEqual(["ack"]);
+    ).toEqual([]);
     expect(
       entry(analyzeReviewDispatch({ ...input, now: "2026-07-31T00:31:00.000Z" })).breaches,
-    ).toEqual(["ack", "start"]);
+    ).toEqual([]);
     expect(
       entry(analyzeReviewDispatch({ ...input, now: "2026-07-31T01:00:00.000Z" })).breaches,
-    ).toEqual(["ack", "start"]);
+    ).toEqual([]);
     expect(
       entry(analyzeReviewDispatch({ ...input, now: "2026-07-31T01:01:00.000Z" })).breaches,
-    ).toEqual(["ack", "start", "verdict"]);
+    ).toEqual(["verdict"]);
   });
 
-  it("U-RVDISP-003: acknowledged receipt は ack breach を解消し、未開始なら start を検知する", () => {
+  it("U-RVDISP-003: acknowledged receipt は状態だけを進め、未開始SLAを発生させない", () => {
     const result = analyzeReviewDispatch({
       requests: [request()],
       receipts: [receipt("acknowledged")],
@@ -174,8 +174,8 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     });
 
     expect(entry(result).state).toBe("acknowledged");
-    expect(entry(result).breaches).toEqual(["start"]);
-    expect(result.ok).toBe(false);
+    expect(entry(result).breaches).toEqual([]);
+    expect(result.ok).toBe(true);
   });
 
   it("U-RVDISP-004: in_review から PASS verdict へ遷移する", () => {
@@ -317,10 +317,8 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(JSON.stringify(forward.entries)).toBe(JSON.stringify(reversed.entries));
   });
 
-  it("U-RVDISP-011: SLA は注入で上書きでき、既定契約は 15 / 30 / 60 分", () => {
+  it("U-RVDISP-011: SLA は注入で上書きでき、既定契約は verdict 60 分", () => {
     expect(DEFAULT_REVIEW_DISPATCH_SLA).toEqual({
-      ackMinutes: 15,
-      startMinutes: 30,
       verdictMinutes: 60,
     });
 
@@ -329,9 +327,9 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       receipts: [],
       prs: [pr()],
       now: "2026-07-31T00:04:00.000Z",
-      sla: { ackMinutes: 1, startMinutes: 2, verdictMinutes: 3 },
+      sla: { verdictMinutes: 3 },
     });
-    expect(entry(result).breaches).toEqual(["ack", "start", "verdict"]);
+    expect(entry(result).breaches).toEqual(["verdict"]);
     expect(result.ok).toBe(false);
   });
 
@@ -393,18 +391,16 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("U-RVDISP-016: missing ack/start と receipt の逆順は fail closed", () => {
+  it("U-RVDISP-016: missing ack/start は診断するが有効verdictを妨げない", () => {
     const missingAck = analyzeReviewDispatch({
       requests: [request()],
       receipts: [receipt("in_review"), receipt("verdict", { verdict: "PASS" })],
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
     });
-    expect(entry(missingAck).state).toBe("requested");
-    expect(entry(missingAck).reasons).toEqual(
-      expect.arrayContaining(["missing_acknowledged", "missing_in_review"]),
-    );
-    expect(missingAck.ok).toBe(false);
+    expect(entry(missingAck).state).toBe("merge_ready");
+    expect(entry(missingAck).progressDiagnostics).toEqual(["missing_acknowledged"]);
+    expect(missingAck.ok).toBe(true);
 
     const reversed = analyzeReviewDispatch({
       requests: [request()],
@@ -416,9 +412,8 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
     });
-    expect(entry(reversed).state).not.toBe("merge_ready");
-    expect(entry(reversed).reasons).toContain("out_of_order_receipt");
-    expect(reversed.ok).toBe(false);
+    expect(entry(reversed).state).toBe("merge_ready");
+    expect(reversed.ok).toBe(true);
   });
 
   it("U-RVDISP-017: malformed timestamp/head/SLA/receipt fields は fail closed", () => {
@@ -445,7 +440,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       receipts: [receipt("verdict", { verdict: "PASS", head: "not-a-head" })],
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
-      sla: { ackMinutes: 0, startMinutes: 30, verdictMinutes: 60 },
+      sla: { verdictMinutes: 0 },
     });
     expect(entry(malformedReceipt).reasons).toEqual(
       expect.arrayContaining(["empty_identity", "empty_review_revision", "invalid_sla"]),
@@ -510,11 +505,11 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     }
   });
 
-  it("U-RVDISP-019: complete valid cross-family sequence だけが merge_ready になる", () => {
+  it("U-RVDISP-019: valid cross-family verdict は単独でもmerge_readyになる", () => {
     const cases: Array<{ receipts: ReviewReceipt[]; state: string }> = [
       { receipts: [receipt("acknowledged")], state: "acknowledged" },
       { receipts: completeSequence().slice(0, 2), state: "in_review" },
-      { receipts: [receipt("verdict", { verdict: "PASS" })], state: "requested" },
+      { receipts: [receipt("verdict", { verdict: "PASS" })], state: "merge_ready" },
       { receipts: completeSequence(), state: "merge_ready" },
     ];
 
@@ -689,7 +684,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("U-RVDISP-029: receipt state は同一 timestamp で飛越できない", () => {
+  it("U-RVDISP-029: receiptの時刻順は終端verdictの受理を妨げない", () => {
     const at = "2026-07-31T00:01:00.000Z";
     const result = analyzeReviewDispatch({
       requests: [request()],
@@ -698,9 +693,8 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       now: "2026-07-31T00:10:00.000Z",
     });
 
-    expect(entry(result).reasons).toContain("receipt_not_after_previous_state");
-    expect(entry(result).state).not.toBe("merge_ready");
-    expect(result.ok).toBe(false);
+    expect(entry(result).state).toBe("merge_ready");
+    expect(result.ok).toBe(true);
   });
 
   it("U-RVDISP-030: uppercase HEAD は canonical identity として受理しない", () => {
@@ -726,7 +720,7 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
         }),
       ],
       prs: [pr(), pr({ pr: 999 })],
-      now: "2026-07-31T00:16:00.000Z",
+      now: "2026-07-31T01:01:00.000Z",
     });
     const messages = reviewDispatchMessages(result);
 
@@ -739,5 +733,152 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(messages.filter((message) => message.includes("SLA超過"))).toHaveLength(2);
     expect(messages.some((message) => message.includes("a".repeat(40)))).toBe(true);
     expect(messages.some((message) => message.includes("b".repeat(40)))).toBe(true);
+  });
+
+  it("U-RVDISP-034: exact identityの非author PASS verdict単独でmerge_readyになる", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("verdict", { verdict: "PASS" })],
+      prs: [pr()],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("merge_ready");
+    expect(entry(result).breaches).toEqual([]);
+    expect(entry(result).reasons).toEqual([]);
+    expect(entry(result).progressDiagnostics).toEqual([
+      "missing_acknowledged",
+      "missing_in_review",
+    ]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-035: FLAG verdict単独はblockingを保持し未応答breachを出さない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [
+        receipt("verdict", {
+          verdict: "FLAG",
+          blockingFindings: ["contract mismatch"],
+        }),
+      ],
+      prs: [pr()],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("verdict");
+    expect(entry(result).blocking).toEqual(["contract mismatch"]);
+    expect(entry(result).breaches).toEqual([]);
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-036: same-familyまたはold HEADのPASSは終端証拠にならない", () => {
+    const sameFamily = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [receipt("verdict", { reviewerFamily: "claude", verdict: "PASS" })],
+      prs: [pr()],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+    expect(entry(sameFamily).state).not.toBe("merge_ready");
+    expect(entry(sameFamily).breaches).toEqual(["verdict"]);
+
+    const oldHead = analyzeReviewDispatch({
+      requests: [request({ exactHead: "b".repeat(40), reviewRevision: "revision-002" })],
+      receipts: [receipt("verdict", { verdict: "PASS" })],
+      prs: [pr({ headSha: "b".repeat(40) })],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+    expect(entry(oldHead).state).not.toBe("merge_ready");
+    expect(entry(oldHead).breaches).toEqual(["verdict"]);
+  });
+
+  it("U-RVDISP-037: old HEAD ackはcurrent HEAD PASSを妨げない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ exactHead: "b".repeat(40), reviewRevision: "revision-002" })],
+      receipts: [
+        receipt("acknowledged"),
+        receipt("verdict", {
+          head: "b".repeat(40),
+          reviewRevision: "revision-002",
+          verdict: "PASS",
+        }),
+      ],
+      prs: [pr({ headSha: "b".repeat(40) })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("merge_ready");
+    expect(entry(result).breaches).toEqual([]);
+  });
+
+  it("U-RVDISP-038: 61分無verdictはverdict breachだけを返す", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [],
+      prs: [pr()],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+    expect(entry(result).breaches).toEqual(["verdict"]);
+  });
+
+  it("U-RVDISP-039: malformed・request以前・identity不一致verdictは61分時点で未応答", () => {
+    const cases: ReviewReceipt[][] = [
+      [receipt("verdict")],
+      [receipt("verdict", { verdict: "PASS", at: "2026-07-30T23:59:00.000Z" })],
+      [receipt("verdict", { verdict: "PASS", reviewRevision: "other-revision" })],
+    ];
+    for (const receipts of cases) {
+      const result = analyzeReviewDispatch({
+        requests: [request()],
+        receipts,
+        prs: [pr()],
+        now: "2026-07-31T01:01:00.000Z",
+      });
+      expect(entry(result).state).not.toBe("merge_ready");
+      expect(entry(result).breaches).toEqual(["verdict"]);
+    }
+  });
+
+  it("U-RVDISP-040: invalid/future request timestampはageをnullにしfail-closeする", () => {
+    for (const requestedAt of ["invalid", "2026-07-31T00:11:00.000Z"]) {
+      const result = analyzeReviewDispatch({
+        requests: [request({ requestedAt })],
+        receipts: [receipt("verdict", { verdict: "PASS" })],
+        prs: [pr()],
+        now: "2026-07-31T00:10:00.000Z",
+      });
+      expect(entry(result).ageMinutes).toBeNull();
+      expect(entry(result).state).not.toBe("merge_ready");
+      expect(result.ok).toBe(false);
+    }
+  });
+
+  it("U-RVDISP-041: request時刻が不正ならreceipt_before_requestを判定不能として受理しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ requestedAt: "invalid" })],
+      receipts: [receipt("verdict", { verdict: "PASS" })],
+      prs: [pr()],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+    expect(entry(result).state).not.toBe("merge_ready");
+    expect(entry(result).breaches).toEqual(["verdict"]);
+  });
+
+  it("U-RVDISP-042: receiptsとprsのshuffleで結果は不変", () => {
+    const receipts = completeSequence();
+    const prs = [pr(), pr()];
+    const base = analyzeReviewDispatch({
+      requests: [request()],
+      receipts,
+      prs,
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    const shuffled = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [...receipts].reverse(),
+      prs: [...prs].reverse(),
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(shuffled).toEqual(base);
   });
 });
