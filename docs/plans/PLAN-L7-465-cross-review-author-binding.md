@@ -158,11 +158,14 @@ L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**�
    **無反応の検知**が目的であり、レビュー内容を急がせない。
 6. **決定論**: entries は `(pr 昇順, exactHead 昇順)` で安定。入力順に依存しない。
 7. **終端性**: stale HEAD / unmerged CLOSED / MERGED は未応答SLAを継続しない。
-   request無しMERGED観測とverdict無しMERGEDは手順違反としてfail-closeする。
+   request無しMERGED観測とverdict無しMERGEDは手順違反としてfail-closeする。旧HEAD requestが
+   存在しても、merge先HEADのrequestが無ければPR横断照合でfail-closeし、逆にmerge先HEADの
+   有効verdictがあれば旧requestを恒久redにしない。
 
 ### 後続 slice (本 slice に含めない)
 
 - **D3**: trusted な構造化 receipt producer と reviewer family 証明の永続化。
+  同一identity・同一kindは状態変化時に一度だけemitし、再送は同一contentの冪等replayとする。
 - **D2**: D3 の trusted receipt を入力にした SLA surface 配線
   (session-start digest / feedback イベント)。
 - **D4**: reviewer lane の冗長化 / 再割当 (非 author family 契約は維持)。

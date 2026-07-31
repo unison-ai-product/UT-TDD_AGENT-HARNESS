@@ -74,6 +74,8 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
    発生させず、不正/future request時刻は `ageMinutes: null` としてfail-closeする。
 9. stale HEAD / unmerged CLOSED / MERGED は終端としてSLAを止める。request無しMERGEDと
    verdict無しMERGEDは手順違反としてfail-closeし、旧requestの恒久redを作らない。
+   MERGED観測のheadを全requestのexactHead集合へ横断照合し、旧HEAD requestだけで
+   merge先HEADのrequest欠落を隠せない。
 
 ## 3. 設計と検証の対
 
@@ -93,6 +95,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | verdict単一SLA、malformed/順序/identity拒否 | `U-RVDISP-038`〜`041` |
 | receipt/PR入力順に依存しない決定論 | `U-RVDISP-042` |
 | stale/CLOSED/MERGED終端、孤児MERGED fail-close | `U-RVDISP-043`〜`046` |
+| stale requestとmerge先HEAD requestの横断照合 | `U-RVDISP-047`〜`048` |
 
 ## 4. スコープ外
 
@@ -105,7 +108,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`046` が全件green。
+- AC-1: `U-RVDISP-001`〜`048` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。

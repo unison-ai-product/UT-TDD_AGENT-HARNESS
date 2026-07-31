@@ -88,7 +88,10 @@ const EXPLICIT_ZONE_TIMESTAMP_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
 
 function isBlockingDiagnostic(diagnostic: string): boolean {
-  return diagnostic.startsWith("orphan_pr_observation:merged_without_request:");
+  return (
+    diagnostic.startsWith("orphan_pr_observation:merged_without_request:") ||
+    diagnostic.startsWith("orphan_pr_observation:merged_head_without_request:")
+  );
 }
 
 /**
@@ -436,7 +439,9 @@ function analyzeRequest(
     observation != null && observation.headSha !== request.exactHead;
   if (hasObservationHeadMismatch) progressDiagnostics.add("request_superseded");
   if (observation?.state === "CLOSED") progressDiagnostics.add("review_request_closed");
-  if (observation?.state === "MERGED" && !hasVerdict) reasons.add("merged_without_verdict");
+  if (observation?.state === "MERGED" && !hasObservationHeadMismatch && !hasVerdict) {
+    reasons.add("merged_without_verdict");
+  }
 
   const ageMinutes = elapsedMinutes(request.requestedAt, nowMs);
   const breaches: SlaBreach[] = [];
@@ -504,6 +509,9 @@ export function analyzeReviewDispatch(input: {
   if (input.sla === null || !validateSla(sla)) globalReasons.add("invalid_sla");
   const requestIdentities = new Set(input.requests.map(identityKey));
   const requestedPrs = new Set(input.requests.map((request) => request.pr));
+  const requestedHeads = new Set(
+    input.requests.map((request) => `${request.pr}@${request.exactHead}`),
+  );
   for (const receipt of input.receipts) {
     const receiptIdentity = identityKey({
       memoryId: receipt.memoryId,
@@ -532,6 +540,14 @@ export function analyzeReviewDispatch(input: {
           : valid
             ? `orphan_pr_observation:unmatched_pr:${observation.pr}@${observation.headSha}`
             : `orphan_pr_observation:invalid_pr_observation:${observation.pr}@${observation.headSha}`,
+      );
+    } else if (
+      validateObservation(observation) &&
+      observation.state === "MERGED" &&
+      !requestedHeads.has(`${observation.pr}@${observation.headSha}`)
+    ) {
+      diagnostics.add(
+        `orphan_pr_observation:merged_head_without_request:${observation.pr}@${observation.headSha}`,
       );
     }
   }

@@ -944,4 +944,51 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(entry(result).reasons).toContain("merged_without_verdict");
     expect(result.ok).toBe(false);
   });
+
+  it("U-RVDISP-047: current HEAD verdict付きMERGEDはold requestを恒久redにしない", () => {
+    const currentHead = "b".repeat(40);
+    const result = analyzeReviewDispatch({
+      requests: [
+        request(),
+        request({
+          memoryId: "memory-002",
+          exactHead: currentHead,
+          reviewRevision: "revision-002",
+        }),
+      ],
+      receipts: [
+        receipt("verdict", {
+          memoryId: "memory-002",
+          head: currentHead,
+          reviewRevision: "revision-002",
+          verdict: "PASS",
+        }),
+      ],
+      prs: [pr({ headSha: currentHead, state: "MERGED" })],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(result.entries.map((item) => [item.exactHead, item.state, item.reasons])).toEqual([
+      ["a".repeat(40), "stale_head", []],
+      [currentHead, "verdict", []],
+    ]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-048: merge先HEADのrequestが無ければold requestがあってもfail-closeする", () => {
+    const currentHead = "b".repeat(40);
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [],
+      prs: [pr({ headSha: currentHead, state: "MERGED" })],
+      now: "2026-07-31T01:01:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("stale_head");
+    expect(entry(result).reasons).toEqual([]);
+    expect(result.diagnostics).toContain(
+      `orphan_pr_observation:merged_head_without_request:201@${currentHead}`,
+    );
+    expect(result.ok).toBe(false);
+  });
 });
