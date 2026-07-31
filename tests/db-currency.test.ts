@@ -217,7 +217,22 @@ describe("db-currency lint", () => {
     expect(spawns).toBe(0);
     expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
     expect(readdirSync(join(root, ".ut-tdd", "state", "stop-refresh", "failures"))).toHaveLength(1);
-    expect(acquireStopRefreshLease(root, { generation: () => "retry" }).acquired).toBe(true);
+    const retry = acquireStopRefreshLease(root, { generation: () => "retry" });
+    expect(retry.acquired).toBe(true);
+    if (retry.acquired) releaseStopRefreshLease(root, retry.owner.generation);
+
+    const repeated = spawnDetachedStopRefresh({
+      repoRoot: root,
+      execPath: "/usr/bin/bun",
+      scriptPath: "/repo/src/cli.ts",
+      spawnImpl: () => {
+        spawns += 1;
+        return { pid: 7002, unref: () => {} };
+      },
+    });
+    expect(repeated).toMatchObject({ launched: false, reason: "bun-runtime-refused" });
+    expect(spawns).toBe(0);
+    expect(readdirSync(join(root, ".ut-tdd", "state", "stop-refresh", "failures"))).toHaveLength(1);
     removeTestTree(root);
   });
 

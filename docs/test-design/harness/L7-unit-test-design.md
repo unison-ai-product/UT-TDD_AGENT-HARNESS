@@ -1489,7 +1489,7 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
-| `U-DBCURRENCY-007` | detached Bun拒否 | `execPath=/usr/bin/bun`、spawn spy | `launched=false`、`reason=bun-runtime-refused`、spawn 0回、dirtyとfailure receiptを保持し、leaseを再取得可能 |
+| `U-DBCURRENCY-007` | detached Bun拒否 | 実配線相当`execPath=/usr/bin/bun`＋`scriptPath=/repo/src/cli.ts`を反復、spawn spy | 常に`launched=false`、`reason=bun-runtime-refused`、spawn 0回、dirtyとreason単位の冪等failure receipt 1件を保持し、leaseを再取得可能 |
 | `U-DBCURRENCY-028` | Node正経路 | 明示Node executableとcompiled JavaScript entryを注入 | detached spawn 1回、ownership handoff後に`unref` |
 | `U-DBCURRENCY-029` | executable/runtime識別 | bare名、Windows/POSIX absolute path、`.cmd`、改名Bunのruntime version、類似名 | 名前または`process.versions.bun`相当でBunを拒否し、非Bun Nodeと`bun-wrapper`は誤拒否しない |
 | `U-DBCURRENCY-030` | direct worker拒否 | Bunで直接`session db-refresh`相当を起動済みleaseへ適用 | rebuildに入らず、dirtyとfailure receiptを保持してleaseを解放 |

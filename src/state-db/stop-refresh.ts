@@ -16,6 +16,7 @@ import {
   joinStopRefreshLease,
   markStopRefreshDirty,
   recordStopRefreshFailure,
+  recordStopRefreshFailureOnce,
   releaseStopRefreshLease,
   retryStopRefreshDemand,
   transferStopRefreshLease,
@@ -181,7 +182,12 @@ export function refuseBunStopRefresh(
 ): boolean {
   if (!isBunExecutable(options.execPath, options.runtimeBunVersion)) return false;
   if (joinStopRefreshLease(options.repoRoot, options.generation)) {
-    recordStopRefreshFailure(options.repoRoot, options.generation, "bun-runtime-refused");
+    recordStopRefreshFailureOnce({
+      repoRoot: options.repoRoot,
+      generation: options.generation,
+      reason: "bun-runtime-refused",
+      key: "bun-runtime-refused",
+    });
     releaseStopRefreshLease(options.repoRoot, options.generation);
   }
   return true;
@@ -212,7 +218,12 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
       return { launched: false, reason: "missing-entrypoint" };
     }
     if (isBunExecutable(execPath, options.runtimeBunVersion)) {
-      recordStopRefreshFailure(options.repoRoot, generation, "bun-runtime-refused");
+      recordStopRefreshFailureOnce({
+        repoRoot: options.repoRoot,
+        generation,
+        reason: "bun-runtime-refused",
+        key: "bun-runtime-refused",
+      });
       releaseStopRefreshLease(options.repoRoot, generation);
       return { launched: false, reason: "bun-runtime-refused" };
     }
