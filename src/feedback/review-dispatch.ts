@@ -90,7 +90,8 @@ const EXPLICIT_ZONE_TIMESTAMP_PATTERN =
 function isBlockingDiagnostic(diagnostic: string): boolean {
   return (
     diagnostic.startsWith("orphan_pr_observation:merged_without_request:") ||
-    diagnostic.startsWith("orphan_pr_observation:merged_head_without_request:")
+    diagnostic.startsWith("orphan_pr_observation:merged_head_without_request:") ||
+    diagnostic.startsWith("orphan_pr_observation:invalid_merged_observation:")
   );
 }
 
@@ -374,9 +375,23 @@ function analyzeRequest(
     .filter((receipt) => validateReceipt(receipt, nowMs).length === 0)
     .sort(compareReceipts);
 
+  const crossFamilyReceipts: ReviewReceipt[] = [];
+  let sameFamilyVerdictObserved = false;
+  for (const receipt of relevantReceipts) {
+    if (receipt.reviewerFamily === request.authorFamily) {
+      if (receipt.kind === "verdict") {
+        sameFamilyVerdictObserved = true;
+      } else {
+        progressDiagnostics.add("same_family_progress_receipt");
+      }
+      continue;
+    }
+    crossFamilyReceipts.push(receipt);
+  }
+
   const receiptByKind = new Map<ReviewReceiptKind, ReviewReceipt>();
   const deduplicatedReceipts: ReviewReceipt[] = [];
-  for (const receipt of relevantReceipts) {
+  for (const receipt of crossFamilyReceipts) {
     const previous = receiptByKind.get(receipt.kind);
     if (previous == null) {
       receiptByKind.set(receipt.kind, receipt);
@@ -390,14 +405,6 @@ function analyzeRequest(
 
   const acceptedReceipts: ReviewReceipt[] = [];
   for (const receipt of deduplicatedReceipts) {
-    if (receipt.reviewerFamily === request.authorFamily) {
-      if (receipt.kind === "verdict") {
-        reasons.add("same_family_reviewer");
-      } else {
-        progressDiagnostics.add("same_family_progress_receipt");
-      }
-      continue;
-    }
     const receiptAt = parseExplicitZoneTimestamp(receipt.at);
     if (receiptAt == null) {
       reasons.add("invalid_timestamp");
@@ -419,6 +426,13 @@ function analyzeRequest(
   );
   const verdictReceipt = acceptedByKind.get("verdict");
   const hasVerdict = verdictReceipt != null;
+  if (sameFamilyVerdictObserved) {
+    if (hasVerdict) {
+      progressDiagnostics.add("same_family_verdict_ignored");
+    } else {
+      reasons.add("same_family_reviewer");
+    }
+  }
   const hasAcknowledged = acceptedByKind.has("acknowledged");
   const hasStarted = acceptedByKind.has("in_review");
   if (hasVerdict && !hasAcknowledged) progressDiagnostics.add("missing_acknowledged");
@@ -537,9 +551,11 @@ export function analyzeReviewDispatch(input: {
       diagnostics.add(
         valid && observation.state === "MERGED"
           ? `orphan_pr_observation:merged_without_request:${observation.pr}@${observation.headSha}`
-          : valid
-            ? `orphan_pr_observation:unmatched_pr:${observation.pr}@${observation.headSha}`
-            : `orphan_pr_observation:invalid_pr_observation:${observation.pr}@${observation.headSha}`,
+          : observation.state === "MERGED"
+            ? `orphan_pr_observation:invalid_merged_observation:${observation.pr}@${observation.headSha}`
+            : valid
+              ? `orphan_pr_observation:unmatched_pr:${observation.pr}@${observation.headSha}`
+              : `orphan_pr_observation:invalid_pr_observation:${observation.pr}@${observation.headSha}`,
       );
     } else if (
       validateObservation(observation) &&

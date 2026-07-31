@@ -991,4 +991,54 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     );
     expect(result.ok).toBe(false);
   });
+
+  it("U-RVDISP-049: author family receipt は cross-family verdict を握り潰さない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ authorFamily: "claude" })],
+      receipts: [
+        receipt("acknowledged", {
+          reviewerFamily: "claude",
+          at: "2026-07-31T00:01:00.000Z",
+        }),
+        receipt("acknowledged", {
+          reviewerFamily: "codex",
+          at: "2026-07-31T00:02:00.000Z",
+        }),
+        receipt("verdict", {
+          reviewerFamily: "claude",
+          verdict: "PASS",
+          at: "2026-07-31T00:03:00.000Z",
+        }),
+        receipt("verdict", {
+          reviewerFamily: "codex",
+          verdict: "PASS",
+          at: "2026-07-31T00:04:00.000Z",
+        }),
+      ],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("merge_ready");
+    expect(entry(result).reasons).not.toContain("same_family_reviewer");
+    expect(entry(result).reasons).not.toContain("duplicate_receipt_conflict");
+    expect(entry(result).progressDiagnostics).toContain("same_family_progress_receipt");
+    expect(entry(result).progressDiagnostics).toContain("same_family_verdict_ignored");
+    expect(entry(result).breaches).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-050: request無しの不正MERGED observation は fail closed", () => {
+    const result = analyzeReviewDispatch({
+      requests: [],
+      receipts: [],
+      prs: [pr({ pr: 999, headSha: "not-a-head", state: "MERGED" })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(result.diagnostics).toEqual([
+      "orphan_pr_observation:invalid_merged_observation:999@not-a-head",
+    ]);
+    expect(result.ok).toBe(false);
+  });
 });

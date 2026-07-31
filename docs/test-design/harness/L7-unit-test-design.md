@@ -1483,8 +1483,9 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVDISP-042` | 入力順不変 | receipts/prsの順序反転 | entries・reason・breach・stateが完全一致 |
 | `U-RVDISP-043`〜`046` | request終端と孤児MERGED | stale HEAD、unmerged CLOSED、request無しMERGED、verdict無しMERGED | 終端後のSLAを停止し、MERGED手順違反だけをfail-close |
 | `U-RVDISP-047`〜`048` | merge先HEAD横断照合 | old request＋current verdict、old requestだけ＋別HEAD MERGED | current verdictがあればold request終端、無ければmerge先request欠落をfail-close |
+| `U-RVDISP-049`〜`050` | author family receipt併存・不正MERGED孤児 | author/cross-family同kind併存、request無し不正SHA MERGED | cross-family verdictを保持し、不正MERGED observationをfail-close |
 
-実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`048`)。
+実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`050`)。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 
