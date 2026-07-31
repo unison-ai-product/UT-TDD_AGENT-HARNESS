@@ -432,6 +432,60 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     }
   });
 
+  it("U-GHPROJ-045: a delayed failure cannot reopen an applied intent", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const id = queueGithubProjection({
+        db,
+        repositoryId: "owner/repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        operation: "project-item-upsert",
+        payload: {
+          owner: "unison-ai-product",
+          projectNumber: 6,
+          readiness: "着手可能",
+          currentGate: "review",
+          headSha: "def",
+        },
+      });
+      markGithubProjectionApplied(db, [id]);
+      markGithubProjectionFailed(db, [id]);
+      expect(
+        db.prepare("SELECT status, attempt_count, last_error FROM github_projection_outbox").get(),
+      ).toEqual({ status: "applied", attempt_count: 1, last_error: "" });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHPROJ-046: repository-scoped evidence excludes another repository", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      insertSchedule(db, "PLAN-L7-1-a");
+      for (const [repositoryId, state] of [
+        ["owner/repo-a", "成功"],
+        ["owner/repo-b", "失敗"],
+      ])
+        recordGithubBinding(db, {
+          repositoryId,
+          planId: "PLAN-L7-1-a",
+          planRevision: "rev1",
+          objectKind: "check_run",
+          objectId: "check:current",
+          state,
+          headSha: "abc",
+        });
+      expect(readGithubEvidence(db, process.cwd(), "owner/repo-a")).toEqual([
+        expect.objectContaining({ planId: "PLAN-L7-1-a", ci: "成功" }),
+      ]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-GHPROJ-013: rejects reassignment of one provider object to another PLAN revision", () => {
     const db = openHarnessDb(":memory:");
     try {

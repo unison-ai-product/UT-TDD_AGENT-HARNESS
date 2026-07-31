@@ -104,7 +104,11 @@ export function readForwardSchedule(db: HarnessDb): ForwardScheduleEntry[] {
     }));
 }
 
-export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): ForwardEvidence[] {
+export function readGithubEvidence(
+  db: HarnessDb,
+  repoRoot = process.cwd(),
+  repositoryId = "",
+): ForwardEvidence[] {
   const scheduleRevisions = new Map(
     db
       .prepare(
@@ -117,9 +121,10 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
     .prepare(
       `SELECT repository_id, plan_id, plan_revision, object_kind, object_id, state, head_sha, observed_at
          FROM github_object_bindings
+        WHERE (? = '' OR repository_id = ?)
         ORDER BY observed_at, binding_id`,
     )
-    .all()
+    .all(repositoryId, repositoryId)
     .filter((row) => {
       const current = scheduleRevisions.get(text(row.plan_id));
       return !current || current === text(row.plan_revision);
@@ -189,9 +194,12 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
   }
   for (const row of db
     .prepare(
-      "SELECT plan_id, plan_revision, sync_status, head_sha FROM github_project_item_projection ORDER BY last_reconciled_at",
+      `SELECT plan_id, plan_revision, sync_status, head_sha
+         FROM github_project_item_projection
+        WHERE (? = '' OR repository_id = ?)
+        ORDER BY last_reconciled_at`,
     )
-    .all()) {
+    .all(repositoryId, repositoryId)) {
     const planId = text(row.plan_id);
     const currentRevision = scheduleRevisions.get(planId);
     if (currentRevision && currentRevision !== text(row.plan_revision)) continue;
@@ -220,8 +228,12 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
 export function deriveStoredForwardReadiness(
   db: HarnessDb,
   repoRoot = process.cwd(),
+  repositoryId = "",
 ): ForwardReadinessRow[] {
-  return deriveForwardReadiness(readForwardSchedule(db), readGithubEvidence(db, repoRoot));
+  return deriveForwardReadiness(
+    readForwardSchedule(db),
+    readGithubEvidence(db, repoRoot, repositoryId),
+  );
 }
 
 export function selectActiveProjectRows(
@@ -268,6 +280,7 @@ export interface RebuildExecutionReadinessInput {
   now?: string;
   transactional?: boolean;
   repoRoot?: string;
+  repositoryId?: string;
 }
 
 export function rebuildExecutionReadiness(
@@ -275,7 +288,7 @@ export function rebuildExecutionReadiness(
 ): ForwardReadinessRow[] {
   const now = input.now ?? new Date().toISOString();
   const transactional = input.transactional ?? true;
-  const rows = deriveStoredForwardReadiness(input.db, input.repoRoot);
+  const rows = deriveStoredForwardReadiness(input.db, input.repoRoot, input.repositoryId);
   const db = input.db;
   const write = db.prepare(
     `INSERT INTO execution_readiness_projection (
@@ -509,7 +522,7 @@ export function markGithubProjectionFailed(
     `UPDATE github_projection_outbox
         SET status = 'pending', attempt_count = attempt_count + 1,
             last_error = 'project-sync-failed', updated_at = ?
-      WHERE outbox_id = ?`,
+      WHERE outbox_id = ? AND status = 'pending'`,
   );
   for (const id of outboxIds) statement.run(now, id);
 }

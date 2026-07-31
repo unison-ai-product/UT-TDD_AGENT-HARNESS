@@ -3331,8 +3331,8 @@ githubProject
       try {
         if (opts.apply) migrate(db);
         const projectedRows = opts.apply
-          ? rebuildExecutionReadiness({ db })
-          : deriveStoredForwardReadiness(db);
+          ? rebuildExecutionReadiness({ db, repositoryId: opts.repository })
+          : deriveStoredForwardReadiness(db, process.cwd(), opts.repository);
         const existingProjectPlans = selectExistingProjectPlans(db, opts.repository);
         const activeRows = selectActiveProjectRows(projectedRows, existingProjectPlans);
         const rows = opts.plan
@@ -3406,7 +3406,7 @@ githubBinding
     try {
       migrate(db);
       const result = syncRepositoryBindings({ db, repositoryId: opts.repository });
-      rebuildExecutionReadiness({ db });
+      rebuildExecutionReadiness({ db, repositoryId: opts.repository });
       if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       else
         process.stdout.write(
@@ -3464,7 +3464,7 @@ githubBinding
           headSha: opts.head,
           state: opts.state,
         });
-        const rows = rebuildExecutionReadiness({ db });
+        const rows = rebuildExecutionReadiness({ db, repositoryId: opts.repository });
         const output = {
           ok: true,
           bindingId: bindingId ?? null,

@@ -597,13 +597,19 @@ describe("GitHub repository facts binding", () => {
         expect(result.skipped).toContainEqual({
           number: "16",
           reason:
-            scenario === "missing-issue" ? "missing-issue-number" : "merge-closure-incomplete",
+            scenario === "missing-issue"
+              ? "missing-issue-number"
+              : scenario === "forged-source"
+                ? "plan-source-unavailable"
+                : "merge-closure-incomplete",
         });
         const mergeBinding = db
           .prepare("SELECT state FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1")
           .get();
         expect(mergeBinding).toEqual(
-          scenario === "missing-issue" ? undefined : { state: "invalidated:closure-incomplete" },
+          scenario === "missing-issue" || scenario === "forged-source"
+            ? undefined
+            : { state: "invalidated:closure-incomplete" },
         );
         if (scenario === "wrong-base")
           expect(
@@ -892,9 +898,17 @@ describe("GitHub repository facts binding", () => {
   });
 
   it("U-GHBIND-008: completes every provider observation before opening the write transaction", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-network-boundary-"));
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
+      const plansDir = join(repoRoot, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      writeFileSync(
+        join(plansDir, "PLAN-L7-436-domain.md"),
+        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: 1\n---\n",
+        "utf8",
+      );
       db.prepare(
         `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
          VALUES (?, ?, ?, ?)`,
@@ -932,11 +946,12 @@ describe("GitHub repository facts binding", () => {
         providerCalls += 1;
       };
 
-      syncRepositoryBindings({ db, repositoryId: "owner/repo", gh });
+      syncRepositoryBindings({ db, repositoryId: "owner/repo", repoRoot, gh });
 
       expect(providerCalls).toBe(3);
     } finally {
       db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 
