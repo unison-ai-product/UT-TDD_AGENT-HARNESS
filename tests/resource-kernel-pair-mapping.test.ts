@@ -355,6 +355,11 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
       "**&lrm;**",
       "&#847;",
       "&#12644;",
+      "&#34;&#8203;",
+      "&#39;",
+      ".",
+      "-",
+      "?",
     ]) {
       const result = analyzeResourceKernelPairMapping({
         ...repo,

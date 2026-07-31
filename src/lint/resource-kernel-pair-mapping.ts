@@ -141,7 +141,7 @@ function isBlankMarkdownCell(value: string): boolean {
   normalized = normalized
     .replace(/[\p{White_Space}\p{Default_Ignorable_Code_Point}\u115f\u1160\u3164\uffa0]/gu, "")
     .replace(/\[|\]|[()*_~`#!]/g, "");
-  return normalized.length === 0;
+  return !/[\p{L}\p{N}]/u.test(normalized);
 }
 
 /** markdown の見出し配下 (次の同レベル以上の見出しまで) を切り出す。 */
