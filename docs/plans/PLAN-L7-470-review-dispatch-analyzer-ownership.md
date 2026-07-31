@@ -4,7 +4,7 @@ title: "PLAN-L7-470 (troubleshoot): review dispatch analyzer の出荷物所有�
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-31
@@ -36,7 +36,52 @@ dependencies:
   references:
     - docs/plans/PLAN-L6-94-cross-review-session-attestation.md
     - docs/plans/PLAN-L6-13-cross-review-enforcement.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-31T08:20:40Z"
+    tests_green_at: "2026-07-31T08:18:53Z"
+    verdict: approve
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-5
+    scope: "PR #205 exact HEAD 329e1be7 のclosing review。後発FLAG findingsの安全側集約、request以前receiptの分離、通知dedupe oracle、same-family/PASS-WEAK/replay/入力順、設計記述と実装の一致を別providerのOpusが静的全経路で再監査しPASS。Tera delta監査、ローカル52/52・統合201/201、CI Linux/Windows/aggregate successを別途実測した。"
+    green_commands:
+      - kind: unit_test
+        command: "bun test tests/review-dispatch.test.ts (52 pass, 0 fail)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-31T08:13:00Z"
+        evidence_path: tests/review-dispatch.test.ts
+        output_digest: "sha256:aaecaf57bd06209c8ea32d0e65bbb851a337d522b3be1d2c18ea8d5b77183446"
+        anchor_commit: 329e1be7d6b35f9f404c433115a1b42542fec913
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-31T08:13:00Z"
+        evidence_path: src/feedback/review-dispatch.ts
+        output_digest: "sha256:902333ec0cbcfc172cc0b5c02a341b519543b1d6c3ec83cee86dc327c5026add"
+        anchor_commit: 329e1be7d6b35f9f404c433115a1b42542fec913
+      - kind: lint
+        command: "bun test tests/review-dispatch.test.ts tests/plan-lint.test.ts tests/frontmatter.test.ts tests/review-evidence.test.ts tests/merged-plan-status.test.ts tests/green-command-digest.test.ts (201 pass, 0 fail)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-31T08:13:00Z"
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: "sha256:ee01e53f0af860693bb3fc69eb700036943d5a76259e4aebb5a552507bc3cee5"
+        anchor_commit: 329e1be7d6b35f9f404c433115a1b42542fec913
+      - kind: integration_test
+        command: "GitHub Actions harness-check run 30615431150 (Linux/Windows/aggregate success)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-31T08:18:52Z"
+        evidence_path: tests/review-dispatch.test.ts
+        output_digest: "sha256:aaecaf57bd06209c8ea32d0e65bbb851a337d522b3be1d2c18ea8d5b77183446"
+        anchor_commit: 329e1be7d6b35f9f404c433115a1b42542fec913
 ---
 
 # PLAN-L7-470: review dispatch analyzer の出荷物所有分離
@@ -118,7 +163,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## レビュー状態
 
-本 PLAN は、Opus の exact-HEAD closing review が timestamp の環境依存解釈を FLAG したため、
-修正と再検証が完了するまで `draft` とする。過去の Codex 内レビューを cross-provider review と
-して記録しない。修正後の non-author provider closing review と、その前に完了した green command
-evidence を揃えた時だけ `confirmed` へ遷移する。
+本 PLAN は exact HEAD `329e1be7` に対する non-author providerのOpus closing reviewで
+`PASS`、Tera delta監査で`PASS`、ローカル52/52・統合201/201、CI Linux/Windows/aggregate
+successを確認し、上記証跡と同時に`confirmed`へ遷移した。`PLAN-L7-465`はD3/D2/D4が未完のため
+`draft`を維持し、本PLANの確定をsession attestation全体の完了とは扱わない。
