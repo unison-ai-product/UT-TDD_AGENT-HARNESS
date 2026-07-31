@@ -1463,6 +1463,39 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
 
+## PLAN-L7-470 review dispatch analyzer oracle (2026-07-31)
+
+対象 = `src/feedback/review-dispatch.ts`。実テスト = `tests/review-dispatch.test.ts`。
+identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・replay・古いHEADに
+左右されず、非author familyの有効verdictだけをmerge準備判定へ使う。
+
+| ID | 設計境界 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-RVDISP-001`〜`006` | 基本進捗とmerge準備 | requestedからverdictまでの表示、PASS系＋CI/PR状態 | 有効な終端verdictと全merge条件成立時だけ`merge_ready` |
+| `U-RVDISP-007`〜`012` | verdict単一SLA・自己承認・HEAD・決定論 | 60分境界、同family、旧HEAD、入力shuffle、verdictなしmerge | verdict未到達だけをbreachにし、理由と安定順を維持 |
+| `U-RVDISP-013`〜`020` | identityとreceipt妥当性 | memory/revision/head違い、不正時刻、future、family、進捗欠落 | 別identityへ混入せず、進捗欠落は非blocking診断にする |
+| `U-RVDISP-021` | request replay | 完全重複requestと同identity内容競合 | 完全重複は冪等、競合は`duplicate_request_conflict` |
+| `U-RVDISP-022` | old HEAD隔離 | 同reviewRevisionの旧HEAD receipt | 現HEAD requestの理由・状態を汚染しない |
+| `U-RVDISP-023` | PR観測欠落 | requestに対応するPR observationなし | retry可能な未確定状態としてfail-close |
+| `U-RVDISP-024` | reason付き非ready | verdict等が揃ってもvalidation reasonあり | `merge_ready`を返さない |
+| `U-RVDISP-025` | unrelated malformed隔離 | 別identityの不正artifact | 正常requestを汚染せずdiagnosticへ分離 |
+| `U-RVDISP-026` | matching malformed局所化 | 対応identityの不正artifact | 対応requestだけをfail-close |
+| `U-RVDISP-027`〜`028` | PR観測replay | 同PRの相反観測と完全重複観測 | 相反は`duplicate_pr_observation_conflict`、完全重複は冪等 |
+| `U-RVDISP-029` | 進捗時刻と終端証拠の分離 | acknowledged/in_review/verdictが同一timestamp | 有効verdictの終端証拠を進捗順序で拒否しない |
+| `U-RVDISP-030` | canonical HEAD | uppercase 40-hex SHA | `invalid_head`でfail-close |
+| `U-RVDISP-031` | 孤児診断と通知identity | well-formed orphan＋同PR/同revision・異なるexactHeadの同一SLA違反 | orphan identityを診断へ保持し、messageにexactHeadを含めて通知dedupeで潰さない |
+| `U-RVDISP-032` | explicit-zone timestamp | GitHubの秒精度`Z`、offset付き入力、TZ無し request、不正暦日 | timezone明示ISOは同一instantとして受理し、TZ無し/不正暦日は`ageMinutes=null`かつverdict未達をbreachにしてfail-close |
+| `U-RVDISP-033` | instant-normalized replay | 同一instantを秒精度`Z`、millis、offsetで表したrequest/receipt replay | timestamp表現差をcontent identityから除外し、重複競合や恒久non-readyを発生させない |
+| `U-RVDISP-034`〜`037` | verdict-anchor | PASS/FLAG単独、same-family、旧HEAD、旧HEAD ack＋現HEAD PASS | 非author current verdictだけを終端証拠にし、FLAGはblockingを保持 |
+| `U-RVDISP-038`〜`041` | 未応答と不正時刻 | 61分無verdict、malformed/request以前/identity不一致、invalid/future request | breachは`verdict`だけ。不正requestは`ageMinutes=null`で受理しない |
+| `U-RVDISP-042` | 入力順不変 | receipts/prsの順序反転 | entries・reason・breach・stateが完全一致 |
+| `U-RVDISP-043`〜`046` | request終端と孤児MERGED | stale HEAD、unmerged CLOSED、request無しMERGED、verdict無しMERGED | 終端後のSLAを停止し、MERGED手順違反だけをfail-close |
+| `U-RVDISP-047`〜`048` | merge先HEAD横断照合 | old request＋current verdict、old requestだけ＋別HEAD MERGED | current verdictがあればold request終端、無ければmerge先request欠落をfail-close |
+| `U-RVDISP-049`〜`050` | author family receipt併存・不正MERGED孤児 | author/cross-family同kind併存、request無し不正SHA MERGED | cross-family verdictを保持し、不正MERGED observationをfail-close |
+| `U-RVDISP-051`〜`052` | 競合verdictの安全側集約・request以前receipt分離 | 先行PASS＋後発FLAG、request以前PASS＋有効後続PASS | blocking findingを失わず、無効先行receiptが有効後続receiptを隠さない |
+
+実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
+
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 
 対象 = `tests/support/chunked-hash.ts`（fence/snapshot共通のstreaming hashヘルパー）、
