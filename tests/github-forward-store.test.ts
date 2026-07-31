@@ -454,6 +454,71 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     }
   });
 
+  it("U-GHPROJ-036: rebuild resolves review evidence from the supplied repository root, not process cwd", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-root-"));
+    const unrelatedCwd = mkdtempSync(join(tmpdir(), "ut-tdd-gh-unrelated-"));
+    const originalCwd = process.cwd();
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      insertSchedule(db, "PLAN-L7-1-a", "rev1", "confirmed");
+      recordGithubBinding(db, {
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        objectKind: "check_run",
+        objectId: "check:current",
+        state: "成功",
+        headSha: "current",
+      });
+      recordGithubBinding(db, {
+        repositoryId: "repo",
+        planId: "PLAN-L7-1-a",
+        planRevision: "rev1",
+        objectKind: "review",
+        objectId: "review:current",
+        state: "承認",
+        headSha: "current",
+      });
+      db.prepare(
+        `INSERT INTO github_project_item_projection (
+          projection_id, repository_id, project_id, project_item_id, plan_id,
+          plan_revision, content_node_id, head_sha, sync_status, last_reconciled_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "projection:current",
+        "repo",
+        "project",
+        "item",
+        "PLAN-L7-1-a",
+        "rev1",
+        "",
+        "current",
+        "同期済",
+        "2026-07-29T01:00:00Z",
+      );
+      insertMerge(db, {
+        planId: "PLAN-L7-1-a",
+        revision: "rev1",
+        prNumber: "14",
+        headSha: "current",
+        mergeSha: "def5678",
+        repoRoot,
+      });
+      process.chdir(unrelatedCwd);
+      expect(
+        rebuildExecutionReadiness(db, "2026-07-29T03:00:00Z", true, repoRoot)[0],
+      ).toMatchObject({
+        readiness: "完了",
+      });
+    } finally {
+      process.chdir(originalCwd);
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+      rmSync(unrelatedCwd, { recursive: true, force: true });
+    }
+  });
+
   it("U-GHPROJ-033: keeps managed completed rows in all-active convergence", () => {
     const rows = deriveForwardReadiness(
       [

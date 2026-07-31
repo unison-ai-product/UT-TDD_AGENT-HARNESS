@@ -87,6 +87,23 @@ describe("GitHub repository facts binding", () => {
           schedule_entry_id, plan_id, status, source_hash
         ) VALUES (?, ?, ?, ?)`,
       ).run("schedule:436", "PLAN-L7-436-domain", "confirmed", "rev1");
+      db.prepare(
+        `INSERT INTO github_project_item_projection (
+          projection_id, repository_id, project_id, project_item_id, plan_id,
+          plan_revision, content_node_id, head_sha, sync_status, last_reconciled_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "project:436",
+        "owner/repo",
+        "project:1",
+        "item:436",
+        "PLAN-L7-436-domain",
+        "rev1",
+        "",
+        "abcdef1",
+        "同期済",
+        "2026-07-29T00:00:00Z",
+      );
       const reviewSources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
         planId: "PLAN-L7-436-domain",
         planRevision: "rev1",
@@ -344,6 +361,275 @@ describe("GitHub repository facts binding", () => {
         db.close();
         rmSync(repoRoot, { recursive: true, force: true });
       }
+    }
+  });
+
+  it("U-GHBIND-004: rejects untyped PLAN ID text outside a typed PR trace", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      db.prepare(
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
+         VALUES (?, ?, ?, ?)`,
+      ).run("schedule:fallback", "PLAN-L7-436-domain", "draft", "rev1");
+      const result = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        gh: new FakeGh([
+          {
+            number: 17,
+            title: "PLAN-L7-436-domain: informal tracking title",
+            headRefName: "feature/PLAN-L7-436-domain",
+            headRefOid: "abcdef1",
+            state: "OPEN",
+            body: "This mentions PLAN-L7-436-domain but carries no typed trace.",
+          },
+        ]),
+      });
+      expect(result.skipped).toContainEqual({ number: "17", reason: "trace-block-missing" });
+      expect(db.prepare("SELECT COUNT(*) count FROM github_object_bindings").get()).toEqual({
+        count: 0,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHBIND-005: fails closed when a PR listing may be truncated at the provider limit", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      expect(() =>
+        syncRepositoryBindings({
+          db,
+          repositoryId: "owner/repo",
+          gh: new FakeGh(Array.from({ length: 1000 }, (_, index) => ({ number: index + 1 }))),
+        }),
+      ).toThrow(/truncat/i);
+      expect(db.prepare("SELECT COUNT(*) count FROM github_object_bindings").get()).toEqual({
+        count: 0,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHBIND-006: rolls back every binding when a later lifecycle write conflicts", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-"));
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      db.prepare(
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
+         VALUES (?, ?, ?, ?)`,
+      ).run("schedule:rollback", "PLAN-L7-436-domain", "confirmed", "rev1");
+      db.prepare(
+        `INSERT INTO github_project_item_projection (
+          projection_id, repository_id, project_id, project_item_id, plan_id,
+          plan_revision, content_node_id, head_sha, sync_status, last_reconciled_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "project:rollback",
+        "owner/repo",
+        "project:1",
+        "item:436",
+        "PLAN-L7-436-domain",
+        "rev1",
+        "",
+        "abcdef1",
+        "同期済",
+        "2026-07-29T00:00:00Z",
+      );
+      db.prepare(
+        `INSERT INTO github_object_bindings (
+          binding_id, repository_id, plan_id, plan_revision, project_item_id,
+          object_kind, object_id, object_url, head_sha, state, observed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "foreign-branch",
+        "owner/repo",
+        "PLAN-L7-999-foreign",
+        "rev1",
+        "",
+        "branch",
+        "feature/rollback",
+        "",
+        "oldhead",
+        "open",
+        "2026-07-28T00:00:00Z",
+      );
+      const sources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
+        planId: "PLAN-L7-436-domain",
+        planRevision: "rev1",
+        headSha: "abcdef1",
+        reviewKind: "cross_agent",
+        verdict: "PASS",
+        reviewedAt: "2026-07-29T00:00:00Z",
+        testsGreenAt: "2026-07-28T23:00:00Z",
+        workerModel: "claude-sonnet-5",
+        reviewerModel: "gpt-5.6-sol",
+        source: "docs/plans/PLAN-L7-436-domain.md",
+        lane,
+        attackTrials: 3,
+        citations: ["docs/plans/PLAN-L7-436-domain.md:1"],
+      }));
+      for (const source of sources)
+        db.prepare(
+          `INSERT INTO github_review_lane_receipts (
+            review_lane_receipt_id, plan_id, plan_revision, lane, subject_head,
+            verdict, reviewed_at, tests_green_at, worker_model, reviewer_model,
+            attack_trials, citations_json, source
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          `review:rollback:${source.lane}`,
+          source.planId,
+          source.planRevision,
+          source.lane,
+          source.headSha,
+          source.verdict,
+          source.reviewedAt,
+          source.testsGreenAt,
+          source.workerModel,
+          source.reviewerModel,
+          source.attackTrials,
+          JSON.stringify(source.citations),
+          source.source,
+        );
+      writeReviewPlan(repoRoot, sources);
+      const receiptDigests = {
+        claimBlind: reviewReceiptDigest(sources[0]),
+        specBlind: reviewReceiptDigest(sources[1]),
+      };
+      const body = renderPrTraceBlock({
+        plan_id: "PLAN-L7-436-domain",
+        plan_revision: "rev1",
+        route_mode: "add-feature",
+        subject_head: "abcdef1",
+        base_sha: "1234567",
+        review_receipt_digest: combinedReviewReceiptDigest(receiptDigests),
+      });
+      expect(() =>
+        syncRepositoryBindings({
+          db,
+          repositoryId: "owner/repo",
+          repoRoot,
+          gh: new FakeGh(
+            [
+              {
+                number: 18,
+                url: "https://github.com/owner/repo/pull/18",
+                headRefName: "feature/rollback",
+                headRefOid: "abcdef1",
+                state: "MERGED",
+                mergedAt: "2026-07-29T00:00:00Z",
+                mergeCommit: { oid: "fedcba1" },
+                body,
+                statusCheckRollup: [
+                  { name: "harness-check", databaseId: "pr-check", conclusion: "SUCCESS" },
+                ],
+                reviews: [{ state: "APPROVED" }],
+              },
+            ],
+            { check_runs: [{ name: "harness-check", id: "main-check", conclusion: "SUCCESS" }] },
+          ),
+        }),
+      ).toThrow(/identity conflict/);
+      expect(
+        db.prepare("SELECT binding_id FROM github_object_bindings ORDER BY binding_id").all(),
+      ).toEqual([{ binding_id: "foreign-branch" }]);
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHBIND-007: refuses merge closure before a non-empty Project item binding exists", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-review-"));
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      db.prepare(
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
+         VALUES (?, ?, ?, ?)`,
+      ).run("schedule:project-required", "PLAN-L7-436-domain", "confirmed", "rev1");
+      const sources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
+        planId: "PLAN-L7-436-domain",
+        planRevision: "rev1",
+        headSha: "abcdef1",
+        reviewKind: "cross_agent",
+        verdict: "PASS",
+        reviewedAt: "2026-07-29T00:00:00Z",
+        testsGreenAt: "2026-07-28T23:00:00Z",
+        workerModel: "claude-sonnet-5",
+        reviewerModel: "gpt-5.6-sol",
+        source: "docs/plans/PLAN-L7-436-domain.md",
+        lane,
+        attackTrials: 3,
+        citations: ["docs/plans/PLAN-L7-436-domain.md:1"],
+      }));
+      for (const source of sources)
+        db.prepare(
+          `INSERT INTO github_review_lane_receipts (review_lane_receipt_id, plan_id, plan_revision, lane, subject_head, verdict, reviewed_at, tests_green_at, worker_model, reviewer_model, attack_trials, citations_json, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(
+          `review:project-required:${source.lane}`,
+          source.planId,
+          source.planRevision,
+          source.lane,
+          source.headSha,
+          source.verdict,
+          source.reviewedAt,
+          source.testsGreenAt,
+          source.workerModel,
+          source.reviewerModel,
+          source.attackTrials,
+          JSON.stringify(source.citations),
+          source.source,
+        );
+      writeReviewPlan(repoRoot, sources);
+      const body = renderPrTraceBlock({
+        plan_id: "PLAN-L7-436-domain",
+        plan_revision: "rev1",
+        route_mode: "add-feature",
+        subject_head: "abcdef1",
+        base_sha: "1234567",
+        review_receipt_digest: combinedReviewReceiptDigest({
+          claimBlind: reviewReceiptDigest(sources[0]),
+          specBlind: reviewReceiptDigest(sources[1]),
+        }),
+      });
+      const result = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: new FakeGh(
+          [
+            {
+              number: 19,
+              url: "https://github.com/owner/repo/pull/19",
+              headRefName: "feature/project-required",
+              headRefOid: "abcdef1",
+              state: "MERGED",
+              mergedAt: "2026-07-29T00:00:00Z",
+              mergeCommit: { oid: "fedcba1" },
+              body,
+              statusCheckRollup: [
+                { name: "harness-check", databaseId: "pr-check", conclusion: "SUCCESS" },
+              ],
+              reviews: [{ state: "APPROVED" }],
+            },
+          ],
+          { check_runs: [{ name: "harness-check", id: "main-check", conclusion: "SUCCESS" }] },
+        ),
+      });
+      expect(result.skipped).toContainEqual({ number: "19", reason: "project-item-required" });
+      expect(
+        db
+          .prepare("SELECT COUNT(*) count FROM github_object_bindings WHERE object_kind = 'merge'")
+          .get(),
+      ).toEqual({ count: 0 });
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 });
