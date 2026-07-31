@@ -1,11 +1,10 @@
 ---
 plan_id: PLAN-L6-85-automated-pr-cross-review-merge-contract
-title: "PLAN-L6-85 (add-design/function-spec): certificate駆動draft PR・cross review・main merge契約"
+title: "PLAN-L6-85 (add-design/function-spec): certificate駆動draft PR・cross
+  review・main merge契約"
 kind: add-design
 layer: L6
-sub_doc: function-spec
 drive: agent
-status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-15
@@ -17,11 +16,11 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
   - role: tl
-    slot_label: "TL - PR lifecycle・accept・merge gate判定"
+    slot_label: TL - PR lifecycle・accept・merge gate判定
   - role: se
-    slot_label: "SE - GitHub port/outbox/reconciliation契約"
+    slot_label: SE - GitHub port/outbox/reconciliation契約
   - role: qa
-    slot_label: "QA - HEAD/CI/review freshness・障害再開oracle"
+    slot_label: QA - HEAD/CI/review freshness・障害再開oracle
 generates:
   - artifact_path: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
     artifact_type: markdown_doc
@@ -35,6 +34,43 @@ dependencies:
     - docs/design/harness/L6-function-design/test-before-review.md
   blocks:
     - docs/plans/PLAN-L7-439-cross-review-merge-learning-closure.md
+status: draft
+sub_doc: function-spec
+github_issue_id: 213
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:fce32baf2decfd7f43c2f8b10b345906
+  command_id: command:pr210-reverse-backfill:2:1785497598366
+  admitted_at: 2026-07-31T11:33:18.366Z
+  source_digest: sha256:7f822e8cbc533306baccbf4702fc01c3ebb9133a4b3baec8ac84359c99ed156f
+  decision_digest: sha256:07ec83f12c07e854b4218d806fab36dac4fccf407d63fe87aa17ed8bcf1cd9a8
+  receipt_digest: sha256:29efb0d2e3a988b54d915c8814db722e140d916efedc3c5bfdea6b679ce9597c
+  binding:
+    path: docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
+    plan_id: PLAN-L6-85-automated-pr-cross-review-merge-contract
+    asset_id: plan:legacy:12217dd457a8fedb0c1df1449559998db289a4d264dbda0de6e35396b03cb3c0
+    revision: 2
+    content_digest: sha256:7f822e8cbc533306baccbf4702fc01c3ebb9133a4b3baec8ac84359c99ed156f
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 213
+    episode_id: E4-213
+    projection_digest: sha256:bc53329c5463b7eb8e9e9f65a6b57824e7207ff8fe6160f4c8ba066c7343bd97
+  origin:
+    plan_id: PLAN-L6-85-automated-pr-cross-review-merge-contract
+    revision: 1
+    digest: sha256:5b1935f5314f207166b138bd0798e44c25a09e765efbacef951d6254db94cf26
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L6-85-automated-pr-cross-review-merge-contract
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "PR #210で確定したGitHub Forward Foundation実装事実のgap-only reverse backfill"
 ---
 
 # PLAN-L6-85: certificate駆動draft PR・cross review・main merge契約
@@ -117,3 +153,29 @@ merge後main CI失敗は成功を上書きせず`PostMergeRegressionDetected`を
 - [ ] GitHub障害、応答喪失、rate-limit、force-pushから重複・誤mergeなく再開できる。
 - [ ] merge後main CIとIssue closeを観測し、退行は新しいoff-Forward routeへ戻す。
 - [ ] `U/P-PRFLOW-*` Red、独立review、L7-439実装、Reverse backfill後にconfirmed化する。
+
+## 8. GitHub object binding / closure契約（Reverse backfill 2026-07-31）
+
+branch、Issue、draft PR、CI、review、mergeは同じ`plan_id`、PLAN revision、
+`project_item_id`、exact PR HEADへbindingする。PR traceの`plan_revision`とIssue番号は明示必須で、
+local scheduleから欠落値を補完しない。Project itemのrevision/HEAD不一致は`不整合`として
+fail-closeし、遅延観測で現在HEADを上書きしない。
+
+repository同期はremote snapshotをSQLite transaction外で観測し、revision、HEAD、provider identity、
+closure条件を検証した後、確定したbinding群を単一transactionでcommitする。main以外をbaseにした
+mergeへ`main:*` check binding又はverified closureを発行しない。
+
+完了status又はGitHub approval表示はclosure証拠の代替ではない。次が同じrevision/HEADへ揃うまで
+`merge-closure`で阻害する。
+
+- PR HEAD上とmain merge SHA上のexact required `harness-check` identity
+- closed Issueと同期済みProject item
+- canonical PLAN frontmatter由来のclaim-blind/spec-blind cross-provider receipt
+- PR traceに記録した両lane結合digest
+- accepted PLAN状態とmain base custody
+
+closure receiptはrepository同期だけが生成し、汎用の手動観測入口から作成できない。receiptは
+PLAN ID/revision、PR number/HEAD、merge SHA、PR/main check ID、review receipt digest、Issue closeを
+型付きで保持する。自己digestは改変検知に用い、真正性はproviderから再観測したidentity、
+canonical PLAN source、DB projectionの一致で検証する。同一PLANの正式revision更新は同じmerge
+identityへ再収束できるが、異PLANへの再割当は拒否する。stale replayは既存証拠を後退させない。

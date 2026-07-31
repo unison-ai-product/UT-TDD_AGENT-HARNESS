@@ -1,11 +1,10 @@
 ---
 plan_id: PLAN-L5-23-execution-ledger-github-physical-data
-title: "PLAN-L5-23 (add-design/physical-data): Execution Ledger・GitHub projection・再合流証跡の物理設計"
+title: "PLAN-L5-23 (add-design/physical-data): Execution Ledger・GitHub
+  projection・再合流証跡の物理設計"
 kind: add-design
 layer: L5
-sub_doc: physical-data
 drive: db
-status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-15
@@ -17,11 +16,11 @@ pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 agent_slots:
   - role: tl
-    slot_label: "TL - append-only正本、projection再構築、retention境界"
+    slot_label: TL - append-only正本、projection再構築、retention境界
   - role: se
-    slot_label: "SE - table/FK/UNIQUE/outbox/inbox/idempotency transaction設計"
+    slot_label: SE - table/FK/UNIQUE/outbox/inbox/idempotency transaction設計
   - role: qa
-    slot_label: "QA - crash recovery、duplicate delivery、rebuild、stale evidenceのL8 oracle"
+    slot_label: QA - crash recovery、duplicate delivery、rebuild、stale evidenceのL8 oracle
 generates:
   - artifact_path: docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md
     artifact_type: markdown_doc
@@ -42,22 +41,60 @@ dependencies:
 review_evidence:
   - reviewer: claude-blind-reviewer
     review_kind: cross_agent
-    reviewed_at: "2026-07-21T18:24:00+09:00"
-    tests_green_at: "2026-07-21T18:23:35+09:00"
+    reviewed_at: 2026-07-21T18:24:00+09:00
+    tests_green_at: 2026-07-21T18:23:35+09:00
     verdict: approve
-    scope: "claim-blind / spec-blind 両レーン PASS。L8 pair oracle (IT-EXEP/IT-GHISS) 実在、冪等 key 階層と transaction 境界の内部整合を確認。詳細は A-189。"
+    scope: claim-blind / spec-blind 両レーン PASS。L8 pair oracle (IT-EXEP/IT-GHISS)
+      実在、冪等 key 階層と transaction 境界の内部整合を確認。詳細は A-189。
     worker_model: codex-gpt-5
     reviewer_model: claude-opus-4-8
     green_commands:
       - kind: lint
-        command: "bun src/cli.ts plan lint"
+        command: bun src/cli.ts plan lint
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-21T18:23:35+09:00"
+        completed_at: 2026-07-21T18:23:35+09:00
         evidence_path: .ut-tdd/audit/A-L7-420-execution-ledger-plan-lint-2026-07-28.log
-        output_digest: "sha256:bfb6d2cbe5ad2c112261bcd98c176c37f3697459b6be31b139146a1ea2f7a719"
+        output_digest: sha256:bfb6d2cbe5ad2c112261bcd98c176c37f3697459b6be31b139146a1ea2f7a719
         anchor_commit: 33dbd46dfe7581428a1bc09ac1a8f7875f0782c0
+status: confirmed
+sub_doc: physical-data
+github_issue_id: 213
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:b4183e3aca5384557c95ee027208cee7
+  command_id: command:pr210-reverse-backfill:1:1785497595795
+  admitted_at: 2026-07-31T11:33:15.796Z
+  source_digest: sha256:02625bf28b7997fcaf424588624209b57cc0581bb89979ce9f26a842432b8311
+  decision_digest: sha256:c0382ebfd456dab48610da5adf342074adf6f814a284a9a3ff1fcb503d67ff5b
+  receipt_digest: sha256:446f2b9f5463fe0109775dfd1b8e4047c4b14a269fbc0722242af4c5095514ac
+  binding:
+    path: docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md
+    plan_id: PLAN-L5-23-execution-ledger-github-physical-data
+    asset_id: plan:legacy:f2525adb50df140055a950653d54731a769ce2cf4e2e5287d1edcce0ed9bbe37
+    revision: 2
+    content_digest: sha256:02625bf28b7997fcaf424588624209b57cc0581bb89979ce9f26a842432b8311
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 213
+    episode_id: E4-213
+    projection_digest: sha256:bc53329c5463b7eb8e9e9f65a6b57824e7207ff8fe6160f4c8ba066c7343bd97
+  origin:
+    plan_id: PLAN-L5-23-execution-ledger-github-physical-data
+    revision: 1
+    digest: sha256:c3580d6156df400edc0d8a9ddf7ddbae3dda3b3c3f9899af006e4ecd3028fdcb
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L5-23-execution-ledger-github-physical-data
+    target_revision: 2
+    phase: forward_merge
+  escape_reason: "PR #210で確定したGitHub Forward Foundation実装事実のgap-only reverse backfill"
 ---
 
 # PLAN-L5-23: Execution Ledger・GitHub projection・再合流証跡の物理設計
@@ -138,3 +175,36 @@ retryは指数backoffと上限を持つが、上限到達でepisodeを消さな�
 ## 6. 後続降下
 
 L6でExecution Episode domain、drive selection、reentry/merge policy、GitHub port/outbox/inbox contractを分割する。L7でmigration、repository、worker、CLI、GitHub adapterを実装し、L8 integration test designと対でfreezeする。
+
+## 7. Forward readiness / Project item projection（Reverse backfill 2026-07-31）
+
+新しい依存グラフ正本は作らない。既存の`plan_registry`、`schedule_entries`、
+`graph_nodes`、`dependency_edges`、`review_evidence_registry`を再利用し、次の再構築可能な
+projectionを追加する。
+
+- `execution_readiness_projection`: `plan_id`、`plan_revision`、`readiness`、
+  `current_gate`、`implementation_order`、`blocked_reason`、`unlock_condition`、
+  `next_plan_ids`、`unlocked_plan_ids`、`computed_at`
+- `github_project_item_projection`: `repository_id`、`project_id`、`project_item_id`、
+  `plan_id`、`plan_revision`、`content_node_id`、`head_sha`、`sync_status`、
+  `last_reconciled_at`
+
+`schedule_entries.plan_revision`は対応PLANの`admission_receipt.binding.revision`を保持し、
+`source_hash`は文書内容fingerprintとして分離する。schedule authoring sourceを優先する場合も
+対応PLANからrevisionを解決し、receiptを持たないlegacy PLANだけsource hashへfallbackする。
+
+`github_object_bindings.object_kind`は`project`、`project_item`、`branch`、`issue`、
+`pull_request`、`check_run`、`review`、`merge`を表現できること。provider object identityの
+異PLAN再割当を拒否し、同一PLANの正式revision更新は同じidentityへ収束させる。stale観測は
+`observed_at`を後退させずno-opにする。
+
+`github_review_lane_receipts`は`plan_id + plan_revision + lane + subject_head`を一意にし、
+`claim-blind`と`spec-blind`を別rowで保持する。各rowはverdict、review/test時刻、
+worker/reviewer model、attack trial数、citation、PLAN sourceを持つ。DB rowだけでなくcanonical
+`docs/plans/*.md` frontmatterと再照合し、両laneの結合digestがPR traceと一致しなければ
+merge closureをfail-closeする。digestは改変検知であり、真正性はprovider identity、exact HEAD、
+canonical PLAN sourceの結合から得る。
+
+Project V2はfield名・single-select option・duplicate itemをremote mutation前に全件検証する。
+remote観測もSQLite transaction開始前に完了し、確定したbinding commandだけを単一transactionで
+commitする。transaction内からnetwork/APIを呼び出してはならない。
