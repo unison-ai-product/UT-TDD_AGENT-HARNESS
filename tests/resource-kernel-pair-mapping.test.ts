@@ -372,6 +372,58 @@ describe("Resource Kernel L5↔L8 pair mapping lint (U-RGKPAIR, PLAN-L5-25 §7.1
     }
   });
 
+  /**
+   * issue #199 の fail-open (記号 1 文字セルが充填済みとして通過) に対する PR #201
+   * (`022e0b43`、`isBlankMarkdownCell` を `!/[\p{L}\p{N}]/u` へ) の独立回帰 fence。
+   *
+   * U-RGKPAIR-010 が拾えていない 2 方向を固定する:
+   * 1. 記号のみのセルを **空扱いにする** 側 — #201 の負 test 5 件より広い記号面を張る。
+   * 2. 可視 1 文字 (`1` / `全` / `あ`) を **空扱いにしない** 側 — 「visible N 文字未満は空」の
+   *    ような文字数下限ハードコードを将来入れさせないための逆向き fence
+   *    (PR #197 の `9792f051` が入れて `c121362c` で撤回した仕様を復活させない)。
+   */
+  it("U-RGKPAIR-012: 可視の英数字・仮名・漢字を含まない記号セルを空欄として扱う", () => {
+    const repo = loadRepoRows();
+    for (const placeholder of [
+      "&#34;",
+      "&#39;",
+      "&quot;",
+      "&apos;",
+      ".",
+      "-",
+      "?",
+      ",",
+      ";",
+      ":",
+      '"',
+      "'",
+      "/",
+      "\\",
+      "&#124;",
+      "&#34;&#8203;",
+      "<span>&#34;</span>",
+    ]) {
+      const result = analyzeResourceKernelPairMapping({
+        ...repo,
+        freezeRows: repo.freezeRows.map((row, index) =>
+          index === 0 ? { ...row, fixture: placeholder } : row,
+        ),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.rowsWithEmptyAttribute).toEqual(["IT-RGK-PHYS-001"]);
+    }
+
+    for (const visibleContent of ["1", "all", "mock", "x86", "全", "あ", "ア", "0", "n"]) {
+      const result = analyzeResourceKernelPairMapping({
+        ...repo,
+        freezeRows: repo.freezeRows.map((row, index) =>
+          index === 0 ? { ...row, fixture: visibleContent } : row,
+        ),
+      });
+      expect(result.rowsWithEmptyAttribute).toEqual([]);
+    }
+  });
+
   it("U-RGKPAIR-011: HTML comment/fenced code内の偽表・宣言・見出しを正本として数えない", () => {
     const fakeRow = "| `IT-RGK-PHYS-001` | mock | all | fixture | obs | negative | 1 |";
     const fakeDeclaration = "- `mock` 1 件: `001`";
