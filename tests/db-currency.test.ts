@@ -266,9 +266,14 @@ describe("db-currency lint", () => {
       const lease = acquireStopRefreshLease(root, { generation: () => "direct-bun" });
       expect(lease.acquired).toBe(true);
 
-      expect(refuseBunStopRefresh(root, "direct-bun", "C:\\tools\\renamed.exe", "1.3.14")).toBe(
-        true,
-      );
+      expect(
+        refuseBunStopRefresh({
+          repoRoot: root,
+          generation: "direct-bun",
+          execPath: "C:\\tools\\renamed.exe",
+          runtimeBunVersion: "1.3.14",
+        }),
+      ).toBe(true);
       expect(existsSync(stopRefreshDirtyPath(root))).toBe(true);
       expect(readdirSync(join(root, ".ut-tdd", "state", "stop-refresh", "failures"))).toHaveLength(
         1,

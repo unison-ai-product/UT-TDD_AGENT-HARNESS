@@ -1094,12 +1094,12 @@ session
   .action((opts: { generation: string }) => {
     const repoRoot = requireRuntimeRepoRoot();
     if (
-      refuseBunStopRefresh(
+      refuseBunStopRefresh({
         repoRoot,
-        opts.generation,
-        process.execPath,
-        (process.versions as NodeJS.ProcessVersions & { bun?: string }).bun,
-      )
+        generation: opts.generation,
+        execPath: process.execPath,
+        runtimeBunVersion: (process.versions as NodeJS.ProcessVersions & { bun?: string }).bun,
+      })
     ) {
       process.stderr.write("session-log: db refresh skipped (bun-runtime-refused)\n");
       return;

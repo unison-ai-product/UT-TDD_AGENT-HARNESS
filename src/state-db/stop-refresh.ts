@@ -170,15 +170,15 @@ function isNodeWorkerEntrypoint(execPath: string, scriptPath: string): boolean {
 
 /** 直接起動されたBun workerを証跡付きで停止し、次回再試行を可能にする。 */
 export function refuseBunStopRefresh(
-  repoRoot: string,
-  generation: string,
-  execPath: string | undefined,
-  runtimeBunVersion?: string | null,
+  options: Pick<SpawnStopRefreshOptions, "repoRoot" | "runtimeBunVersion"> & {
+    generation: string;
+    execPath: string | undefined;
+  },
 ): boolean {
-  if (!isBunExecutable(execPath, runtimeBunVersion)) return false;
-  if (joinStopRefreshLease(repoRoot, generation)) {
-    recordStopRefreshFailure(repoRoot, generation, "bun-runtime-refused");
-    releaseStopRefreshLease(repoRoot, generation);
+  if (!isBunExecutable(options.execPath, options.runtimeBunVersion)) return false;
+  if (joinStopRefreshLease(options.repoRoot, options.generation)) {
+    recordStopRefreshFailure(options.repoRoot, options.generation, "bun-runtime-refused");
+    releaseStopRefreshLease(options.repoRoot, options.generation);
   }
   return true;
 }
