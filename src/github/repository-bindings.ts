@@ -8,7 +8,10 @@ import {
   type GithubBindingInput,
   recordGithubBinding,
 } from "../state-db/github-forward-projection";
-import { verifiedReviewLaneDigests } from "../state-db/github-review-lane-provenance";
+import {
+  canonicalPlanRevision,
+  verifiedReviewLaneDigests,
+} from "../state-db/github-review-lane-provenance";
 import type { HarnessDb } from "../state-db/index";
 import { runSqliteTransaction } from "../state-db/sqlite-transaction";
 import { validatePrTraceBody } from "./pr-trace";
@@ -209,6 +212,15 @@ export function syncRepositoryBindings(input: {
       continue;
     }
     const expectedRevision = resolveCurrentPlanRevision(input.db, planId);
+    const sourceRevision = canonicalPlanRevision(input.repoRoot ?? process.cwd(), planId);
+    if (/^[1-9][0-9]*$/.test(expectedRevision) && !sourceRevision) {
+      result.skipped.push({ number, reason: "plan-source-unavailable" });
+      continue;
+    }
+    if (sourceRevision && sourceRevision !== expectedRevision) {
+      result.skipped.push({ number, reason: "stale-plan-projection" });
+      continue;
+    }
     if (expectedRevision && revision !== expectedRevision) {
       result.skipped.push({ number, reason: "stale-plan-revision" });
       continue;

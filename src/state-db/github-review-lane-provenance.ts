@@ -20,33 +20,51 @@ function canonicalPlanPath(repoRoot: string, source: string): string | undefined
   return rel && !rel.startsWith(`..${sep}`) && rel !== ".." ? path : undefined;
 }
 
-function sourceEntries(
+function sourceFrontmatter(
   repoRoot: string,
   source: string,
   expectedPlanId: string,
-): Record<string, unknown>[] {
+): Record<string, unknown> | undefined {
   const path = canonicalPlanPath(repoRoot, source);
-  if (!path) return [];
+  if (!path) return undefined;
   try {
     const physicalRoot = realpathSync(resolve(repoRoot));
     const physicalPath = realpathSync(path);
     const physicalRelative = relative(physicalRoot, physicalPath);
     if (!physicalRelative || physicalRelative === ".." || physicalRelative.startsWith(`..${sep}`))
-      return [];
+      return undefined;
     const content = readFileSync(physicalPath, "utf8");
     const block = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    if (!block) return [];
+    if (!block) return undefined;
     const frontmatter = parseYaml(block[1] ?? "") as Record<string, unknown>;
-    if (text(frontmatter.plan_id) !== expectedPlanId) return [];
-    return Array.isArray(frontmatter.review_evidence)
-      ? frontmatter.review_evidence.filter(
-          (entry): entry is Record<string, unknown> =>
-            Boolean(entry) && typeof entry === "object" && !Array.isArray(entry),
-        )
-      : [];
+    return text(frontmatter.plan_id) === expectedPlanId ? frontmatter : undefined;
   } catch {
-    return [];
+    return undefined;
   }
+}
+
+export function canonicalPlanRevision(repoRoot: string, planId: string): string | undefined {
+  if (!/^PLAN-[A-Za-z0-9-]+$/.test(planId)) return undefined;
+  const frontmatter = sourceFrontmatter(repoRoot, `docs/plans/${planId}.md`, planId);
+  const admission = frontmatter?.admission_receipt;
+  if (!admission || typeof admission !== "object" || Array.isArray(admission)) return undefined;
+  const binding = (admission as Record<string, unknown>).binding;
+  if (!binding || typeof binding !== "object" || Array.isArray(binding)) return undefined;
+  return text((binding as Record<string, unknown>).revision) || undefined;
+}
+
+function sourceEntries(
+  repoRoot: string,
+  source: string,
+  expectedPlanId: string,
+): Record<string, unknown>[] {
+  const frontmatter = sourceFrontmatter(repoRoot, source, expectedPlanId);
+  return Array.isArray(frontmatter?.review_evidence)
+    ? frontmatter.review_evidence.filter(
+        (entry): entry is Record<string, unknown> =>
+          Boolean(entry) && typeof entry === "object" && !Array.isArray(entry),
+      )
+    : [];
 }
 
 function validCitations(repoRoot: string, citations: readonly string[]): boolean {

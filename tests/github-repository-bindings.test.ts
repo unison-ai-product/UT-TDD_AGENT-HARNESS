@@ -848,4 +848,93 @@ describe("GitHub repository facts binding", () => {
       db.close();
     }
   });
+
+  it("U-GHBIND-012: rejects a stale DB projection against the canonical PLAN revision", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-projection-freshness-"));
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const plansDir = join(repoRoot, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      writeFileSync(
+        join(plansDir, "PLAN-L7-436-domain.md"),
+        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: rev2\n---\n",
+        "utf8",
+      );
+      db.prepare(
+        `INSERT INTO schedule_entries (
+          schedule_entry_id, plan_id, status, plan_revision, source_hash
+        ) VALUES (?, ?, ?, ?, ?)`,
+      ).run("schedule:stale", "PLAN-L7-436-domain", "confirmed", "rev1", "old-hash");
+      const body = renderPrTraceBlock({
+        plan_id: "PLAN-L7-436-domain",
+        plan_revision: "rev1",
+        route_mode: "add-feature",
+        subject_head: "abcdef1",
+        base_sha: "1234567",
+        issue_number: "213",
+      });
+      const result = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: new FakeGh([
+          {
+            number: 18,
+            url: "https://github.com/owner/repo/pull/18",
+            headRefName: "feature/stale-projection",
+            headRefOid: "abcdef1",
+            state: "OPEN",
+            baseRefName: "main",
+            body,
+            statusCheckRollup: [],
+            reviews: [],
+          },
+        ]),
+      });
+      expect(result.skipped).toContainEqual({ number: "18", reason: "stale-plan-projection" });
+      expect(db.prepare("SELECT COUNT(*) AS count FROM github_object_bindings").get()).toEqual({
+        count: 0,
+      });
+      db.prepare("UPDATE schedule_entries SET plan_revision = ? WHERE plan_id = ?").run(
+        "2",
+        "PLAN-L7-436-domain",
+      );
+      rmSync(join(plansDir, "PLAN-L7-436-domain.md"));
+      const missingSource = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: new FakeGh([
+          {
+            number: 19,
+            headRefName: "feature/missing-plan-source",
+            headRefOid: "abcdef2",
+            state: "OPEN",
+            baseRefName: "main",
+            body: renderPrTraceBlock({
+              plan_id: "PLAN-L7-436-domain",
+              plan_revision: "2",
+              route_mode: "add-feature",
+              subject_head: "abcdef2",
+              base_sha: "1234567",
+              issue_number: "213",
+            }),
+            statusCheckRollup: [],
+            reviews: [],
+          },
+        ]),
+      });
+      expect(missingSource.skipped).toContainEqual({
+        number: "19",
+        reason: "plan-source-unavailable",
+      });
+      expect(db.prepare("SELECT COUNT(*) AS count FROM github_object_bindings").get()).toEqual({
+        count: 0,
+      });
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
 });
