@@ -410,6 +410,17 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         state: "open",
         headSha: "def",
       });
+      expect(() =>
+        recordGithubBinding(db, {
+          repositoryId: "repo",
+          planId: "PLAN-L7-1-a",
+          planRevision: "rev1",
+          objectKind: "check_run",
+          objectId: "check:def",
+          state: "成功",
+          headSha: "def",
+        }),
+      ).not.toThrow();
       const [evidence] = readGithubEvidence(db);
       expect(evidence).toMatchObject({
         planId: "PLAN-L7-1-a",

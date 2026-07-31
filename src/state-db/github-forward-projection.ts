@@ -148,6 +148,7 @@ export function readGithubEvidence(db: HarnessDb, repoRoot = process.cwd()): For
   const evidence = new Map<string, ForwardEvidence>();
   for (const row of rows) {
     const planId = text(row.plan_id);
+    if (conflictingPlans.has(planId)) continue;
     if (
       (row.object_kind === "check_run" || row.object_kind === "review") &&
       selectedHead.get(planId) &&
@@ -361,16 +362,16 @@ export function recordGithubBinding(db: HarnessDb, input: GithubBindingInput): s
   if (input.objectKind === "check_run" || input.objectKind === "review") {
     const pullRequest = db
       .prepare(
-        `SELECT head_sha FROM github_object_bindings
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN head_sha = ? THEN 1 ELSE 0 END) AS matching
+           FROM github_object_bindings
           WHERE repository_id = ? AND plan_id = ? AND plan_revision = ?
-            AND object_kind = 'pull_request'
-          ORDER BY observed_at DESC LIMIT 1`,
+            AND object_kind = 'pull_request'`,
       )
-      .get(input.repositoryId, input.planId, input.planRevision);
-    const expectedHead = text(pullRequest?.head_sha);
-    if (expectedHead && input.headSha && expectedHead !== input.headSha) {
+      .get(input.headSha ?? "", input.repositoryId, input.planId, input.planRevision);
+    if (Number(pullRequest?.total ?? 0) > 0 && Number(pullRequest?.matching ?? 0) === 0) {
       throw new Error(
-        `stale GitHub observation: ${input.objectKind} head ${input.headSha} != PR head ${expectedHead}`,
+        `stale GitHub observation: ${input.objectKind} head ${input.headSha} has no matching PR head`,
       );
     }
   }

@@ -301,6 +301,13 @@ describe("GitHub repository facts binding", () => {
           )
           .get(),
       ).toEqual({ plan_revision: "rev2" });
+      const revisedMerge = db
+        .prepare("SELECT state FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1")
+        .get();
+      expect(decodeMergeClosureReceipt(String(revisedMerge?.state))).toMatchObject({
+        status: "verified",
+        planRevision: "rev2",
+      });
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });

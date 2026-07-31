@@ -286,11 +286,13 @@ export function syncRepositoryBindings(input: {
     }
     if (pullRequest.mergedAt) {
       const mergeSha = text(object(pullRequest.mergeCommit).oid);
-      const mainChecks = mergeSha
-        ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
-        : {};
+      const mergesToMain = text(pullRequest.baseRefName) === "main";
+      const mainChecks =
+        mergeSha && mergesToMain
+          ? object(gh.json(["api", `repos/${input.repositoryId}/commits/${mergeSha}/check-runs`]))
+          : {};
       const mainRequiredCheck = requiredCheck(list(mainChecks.check_runs));
-      if (text(pullRequest.baseRefName) === "main")
+      if (mergesToMain)
         bindings.push({
           ...common,
           objectKind: "check_run",
@@ -317,7 +319,7 @@ export function syncRepositoryBindings(input: {
       } else if (
         reviewDigests &&
         mergeSha &&
-        text(pullRequest.baseRefName) === "main" &&
+        mergesToMain &&
         prRequiredCheck.state === "成功" &&
         prRequiredCheck.id &&
         mainRequiredCheck.state === "成功" &&

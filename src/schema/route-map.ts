@@ -139,7 +139,7 @@ export function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: stri
     0,
     ...entry.tokens.map((token) => {
       const normalizedToken = token.toLowerCase();
-      if (entry.mode === "forward" && normalizedSignal !== normalizedToken) return 0;
+      if (normalizedToken === "forward" && normalizedSignal !== normalizedToken) return 0;
       return normalizedSignal.includes(normalizedToken) ? token.length : 0;
     }),
   );
@@ -147,12 +147,19 @@ export function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: stri
 
 export function routeSignalCandidates(signal: string): string[] {
   const normalized = signal.trim().toLowerCase();
-  return ROUTE_SIGNAL_MAP.map((entry, index) => ({
+  const matched = ROUTE_SIGNAL_MAP.map((entry, index) => ({
     entry,
     index,
     matchLength: routeMatchLength(entry, normalized),
   }))
     .filter((candidate) => candidate.matchLength > 0)
-    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)
-    .map((candidate) => candidate.entry.mode);
+    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index);
+  const longest = matched[0]?.matchLength ?? 0;
+  return [
+    ...new Set(
+      matched
+        .filter((candidate) => candidate.matchLength === longest)
+        .map((candidate) => candidate.entry.mode),
+    ),
+  ];
 }
