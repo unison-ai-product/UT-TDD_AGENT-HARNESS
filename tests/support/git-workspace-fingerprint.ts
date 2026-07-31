@@ -18,7 +18,22 @@ export interface GitWorkspaceFingerprint {
   inventoryEntries: string[];
 }
 
-export function captureWorkspaceInventory(root: string): { digest: string; entries: string[] } {
+export interface WorkspaceInventoryOptions {
+  /** live worktree lane 専用。daemon 所有の harness DB 一族を content 非読取りで entry 化する。 */
+  volatileRuntimeIndex?: boolean;
+}
+
+const volatileRuntimeFiles = new Set([
+  ".ut-tdd/harness.db",
+  ".ut-tdd/harness.db-journal",
+  ".ut-tdd/harness.db-wal",
+  ".ut-tdd/harness.db-shm",
+]);
+
+export function captureWorkspaceInventory(
+  root: string,
+  options?: WorkspaceInventoryOptions,
+): { digest: string; entries: string[] } {
   const entries: string[] = [];
   const visit = (directory: string, relativePath: string): void => {
     for (const entry of readdirSync(directory).sort()) {
@@ -32,8 +47,12 @@ export function captureWorkspaceInventory(root: string): { digest: string; entri
         entries.push(`d:${relativeEntry}`);
         visit(path, relativeEntry);
       } else if (stat.isFile()) {
+        const volatileRuntimeFile =
+          options?.volatileRuntimeIndex && volatileRuntimeFiles.has(relativeEntry);
         entries.push(
-          `f:${relativeEntry}:${hashFileChunkedWithDiagnostics("workspace fence", path, relativeEntry, stat.size)}`,
+          volatileRuntimeFile
+            ? `f:${relativeEntry}:volatile-runtime`
+            : `f:${relativeEntry}:${hashFileChunkedWithDiagnostics("workspace fence", path, relativeEntry, stat.size)}`,
         );
       } else {
         throw new Error(`workspace fence unsupported entry: ${relativeEntry}`);
@@ -67,8 +86,11 @@ function digest(...chunks: Array<string | Buffer>): string {
   return hash.digest("hex");
 }
 
-export function captureGitWorkspaceFingerprint(repoRoot: string): GitWorkspaceFingerprint {
-  const inventory = captureWorkspaceInventory(repoRoot);
+export function captureGitWorkspaceFingerprint(
+  repoRoot: string,
+  options?: WorkspaceInventoryOptions,
+): GitWorkspaceFingerprint {
+  const inventory = captureWorkspaceInventory(repoRoot, options);
   if (!isGitRepository(repoRoot)) {
     return {
       head: "non-git",
