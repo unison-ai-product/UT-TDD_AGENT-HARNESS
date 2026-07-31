@@ -144,16 +144,50 @@ function receiptIdentityKey(receipt: ReviewReceipt): string {
   });
 }
 
-function uniqueRequests(requests: ReviewRequest[]): ReviewRequest[] {
-  const seen = new Set<string>();
+function requestContentKey(request: ReviewRequest): string {
+  return JSON.stringify([
+    request.memoryId,
+    request.pr,
+    request.exactHead,
+    request.reviewRevision,
+    request.authorFamily,
+    request.requestedAt,
+  ]);
+}
+
+function receiptContentKey(receipt: ReviewReceipt): string {
+  return JSON.stringify([
+    receipt.memoryId,
+    receipt.pr,
+    receipt.head,
+    receipt.reviewRevision,
+    receipt.reviewerFamily,
+    receipt.kind,
+    receipt.verdict ?? null,
+    receipt.blockingFindings ?? null,
+    receipt.at,
+  ]);
+}
+
+function uniqueRequests(requests: ReviewRequest[]): {
+  requests: ReviewRequest[];
+  conflictingIdentities: Set<string>;
+} {
+  const seen = new Map<string, string>();
+  const conflictingIdentities = new Set<string>();
   const result: ReviewRequest[] = [];
   for (const request of [...requests].sort(compareRequests)) {
     const key = identityKey(request);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const contentKey = requestContentKey(request);
+    const previousContentKey = seen.get(key);
+    if (previousContentKey != null) {
+      if (previousContentKey !== contentKey) conflictingIdentities.add(key);
+      continue;
+    }
+    seen.set(key, contentKey);
     result.push(request);
   }
-  return result;
+  return { requests: result, conflictingIdentities };
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -270,14 +304,16 @@ interface DispatchObservationContext {
   nowMs: number;
   sla: ReviewDispatchSla;
   globalReasons: string[];
+  duplicateRequestConflict: boolean;
 }
 
 function analyzeRequest(
   request: ReviewRequest,
   context: DispatchObservationContext,
 ): DispatchAnalysis {
-  const { receipts, prs, nowMs, sla, globalReasons } = context;
+  const { receipts, prs, nowMs, sla, globalReasons, duplicateRequestConflict } = context;
   const reasons = new Set([...globalReasons, ...validateRequest(request, nowMs)]);
+  if (duplicateRequestConflict) reasons.add("duplicate_request_conflict");
   const requestTimestamp = Date.parse(request.requestedAt);
   const candidates = receipts.filter(
     (receipt) =>
@@ -290,13 +326,22 @@ function analyzeRequest(
     .filter((receipt) => validateReceipt(receipt, nowMs).length === 0)
     .sort(compareReceipts);
 
-  const hasReceiptHeadMismatch = candidates.some(
-    (receipt) => isValidHead(receipt.head) && receipt.head !== request.exactHead,
-  );
-  if (hasReceiptHeadMismatch) reasons.add("head_mismatch");
+  const receiptByKind = new Map<ReviewReceiptKind, ReviewReceipt>();
+  const deduplicatedReceipts: ReviewReceipt[] = [];
+  for (const receipt of relevantReceipts) {
+    const previous = receiptByKind.get(receipt.kind);
+    if (previous == null) {
+      receiptByKind.set(receipt.kind, receipt);
+      deduplicatedReceipts.push(receipt);
+      continue;
+    }
+    if (receiptContentKey(previous) !== receiptContentKey(receipt)) {
+      reasons.add("duplicate_receipt_conflict");
+    }
+  }
 
   const stageReceipts = new Map<ReviewReceiptKind, ReviewReceipt>();
-  for (const receipt of relevantReceipts) {
+  for (const receipt of deduplicatedReceipts) {
     if (!stageReceipts.has(receipt.kind)) stageReceipts.set(receipt.kind, receipt);
   }
   for (let index = 1; index < RECEIPT_SEQUENCE.length; index += 1) {
@@ -308,7 +353,7 @@ function analyzeRequest(
   }
 
   const acceptedReceipts: ReviewReceipt[] = [];
-  for (const receipt of relevantReceipts) {
+  for (const receipt of deduplicatedReceipts) {
     if (receipt.reviewerFamily === request.authorFamily) {
       reasons.add("same_family_reviewer");
       continue;
@@ -353,6 +398,7 @@ function analyzeRequest(
   if (verdictReceipt?.verdict === "FLAG") reasons.add("flagged");
 
   const observation = observationFor(request, prs);
+  if (observation == null) reasons.add("pr_observation_missing");
   const hasObservationHeadMismatch =
     observation != null && observation.headSha !== request.exactHead;
   if (hasObservationHeadMismatch) reasons.add("head_mismatch");
@@ -366,10 +412,11 @@ function analyzeRequest(
         : acceptedReceipts.length === 1
           ? "acknowledged"
           : "requested";
-  const hasHeadMismatch = hasReceiptHeadMismatch || hasObservationHeadMismatch;
+  const hasHeadMismatch = hasObservationHeadMismatch;
   if (hasHeadMismatch) {
     state = "stale_head";
   } else if (
+    reasons.size === 0 &&
     acceptedReceipts.length === 3 &&
     (verdictReceipt?.verdict === "PASS" || verdictReceipt?.verdict === "PASS-WEAK") &&
     observation?.headSha === request.exactHead &&
@@ -417,13 +464,15 @@ export function analyzeReviewDispatch(input: {
     if (!validateObservation(observation)) globalReasons.add("invalid_pr_observation");
   }
 
-  const analyses = uniqueRequests(input.requests).map((request) =>
+  const unique = uniqueRequests(input.requests);
+  const analyses = unique.requests.map((request) =>
     analyzeRequest(request, {
       receipts: input.receipts,
       prs: input.prs,
       nowMs,
       sla,
       globalReasons: [...globalReasons],
+      duplicateRequestConflict: unique.conflictingIdentities.has(identityKey(request)),
     }),
   );
   analyses.sort(

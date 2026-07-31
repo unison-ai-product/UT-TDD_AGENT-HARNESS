@@ -206,15 +206,11 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("U-RVDISP-008: exact HEAD 不一致の verdict は stale_head として採用しない", () => {
+  it("U-RVDISP-008: current PR の exact HEAD 不一致は stale_head として採用しない", () => {
     const result = analyzeReviewDispatch({
       requests: [request()],
-      receipts: [
-        receipt("acknowledged", { at: "2026-07-31T00:01:00.000Z" }),
-        receipt("in_review", { at: "2026-07-31T00:02:00.000Z" }),
-        receipt("verdict", { verdict: "PASS", head: "b".repeat(40) }),
-      ],
-      prs: [pr()],
+      receipts: completeSequence(),
+      prs: [pr({ headSha: "b".repeat(40) })],
       now: "2026-07-31T00:10:00.000Z",
     });
 
@@ -471,5 +467,93 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       });
       expect(entry(result).state).toBe(item.state);
     }
+  });
+
+  it("U-RVDISP-020: identical receipt replay は冪等、同一 stage の矛盾は fail closed", () => {
+    const sequence = completeSequence();
+    const replayed = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [...sequence, ...sequence],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(replayed).state).toBe("merge_ready");
+    expect(entry(replayed).reasons).toEqual([]);
+    expect(replayed.ok).toBe(true);
+
+    const conflicting = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [...sequence, receipt("acknowledged", { at: "2026-07-31T00:01:30.000Z" })],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(conflicting).reasons).toContain("duplicate_receipt_conflict");
+    expect(entry(conflicting).state).not.toBe("merge_ready");
+    expect(conflicting.ok).toBe(false);
+  });
+
+  it("U-RVDISP-021: identical request replay は冪等、同一 identity の矛盾は fail closed", () => {
+    const duplicated = analyzeReviewDispatch({
+      requests: [request(), request()],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(duplicated.entries).toHaveLength(1);
+    expect(entry(duplicated).state).toBe("merge_ready");
+    expect(duplicated.ok).toBe(true);
+
+    const conflicting = analyzeReviewDispatch({
+      requests: [request(), request({ requestedAt: "2026-07-31T00:00:30.000Z" })],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(conflicting.entries).toHaveLength(1);
+    expect(entry(conflicting).reasons).toContain("duplicate_request_conflict");
+    expect(entry(conflicting).state).not.toBe("merge_ready");
+    expect(conflicting.ok).toBe(false);
+  });
+
+  it("U-RVDISP-022: old HEAD receipt は reviewRevision が同じでも new request を汚染しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request({ exactHead: "b".repeat(40) })],
+      receipts: completeSequence({ head: "a".repeat(40) }),
+      prs: [pr({ headSha: "b".repeat(40) })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("requested");
+    expect(entry(result).reasons).not.toContain("head_mismatch");
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RVDISP-023: PR observation 欠落は retry が必要な未確定状態として fail closed", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: completeSequence(),
+      prs: [],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("verdict");
+    expect(entry(result).reasons).toContain("pr_observation_missing");
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-024: validation reason がある entry は merge_ready を名乗らない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [
+        ...completeSequence(),
+        receipt("acknowledged", { at: "2026-07-31T00:01:30.000Z" }),
+      ],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).reasons.length).toBeGreaterThan(0);
+    expect(entry(result).state).not.toBe("merge_ready");
+    expect(result.ok).toBe(false);
   });
 });
