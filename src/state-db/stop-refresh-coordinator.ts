@@ -438,6 +438,45 @@ export function recordStopRefreshFailure(
   }
 }
 
+export function recordStopRefreshFailureOnce(options: {
+  repoRoot: string;
+  generation: string;
+  reason: string;
+  key: string;
+}): boolean {
+  try {
+    validateComponent(options.generation);
+    validateComponent(options.key);
+    const failures = secureSubdirectory(options.repoRoot, "failures");
+    const id = `once-${options.key}`;
+    const receipt = {
+      generation: options.generation,
+      occurred_at: new Date().toISOString(),
+      reason: safeFailureReason(options.reason),
+      id,
+    };
+    const digest = createHash("sha256").update(JSON.stringify(receipt)).digest("hex");
+    const path = join(failures, `${id}.json`);
+    try {
+      writeFileSync(path, `${JSON.stringify({ ...receipt, digest })}\n`, { flag: "wx" });
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") return false;
+      const stat = lstatSync(path);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 4096) return false;
+      const existing = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+      const { digest: existingDigest, ...payload } = existing;
+      return (
+        existing.id === id &&
+        existing.reason === receipt.reason &&
+        existingDigest === createHash("sha256").update(JSON.stringify(payload)).digest("hex")
+      );
+    }
+  } catch {
+    return false;
+  }
+}
+
 function safeFailureReason(reason: string): string {
   return /^[a-z0-9][a-z0-9-]{0,63}$/.test(reason) ? reason : "redacted";
 }

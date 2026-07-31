@@ -188,7 +188,11 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { buildScopeDryRunPreview } from "./state-db/scope-preview";
-import { runCoalescedStopRefresh, spawnDetachedStopRefresh } from "./state-db/stop-refresh";
+import {
+  refuseBunStopRefresh,
+  runCoalescedStopRefresh,
+  spawnDetachedStopRefresh,
+} from "./state-db/stop-refresh";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -1088,8 +1092,20 @@ session
   )
   .requiredOption("--generation <id>", "Stop refresh lease generation")
   .action((opts: { generation: string }) => {
+    const repoRoot = requireRuntimeRepoRoot();
+    if (
+      refuseBunStopRefresh({
+        repoRoot,
+        generation: opts.generation,
+        execPath: process.execPath,
+        runtimeBunVersion: (process.versions as NodeJS.ProcessVersions & { bun?: string }).bun,
+      })
+    ) {
+      process.stderr.write("session-log: db refresh skipped (bun-runtime-refused)\n");
+      return;
+    }
     const result = runCoalescedStopRefresh({
-      repoRoot: requireRuntimeRepoRoot(),
+      repoRoot,
       generation: opts.generation,
     });
     const r = result.runs.at(-1);

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
   type MaybeVacuumOptions,
   type MaybeVacuumResult,
@@ -16,6 +16,7 @@ import {
   joinStopRefreshLease,
   markStopRefreshDirty,
   recordStopRefreshFailure,
+  recordStopRefreshFailureOnce,
   releaseStopRefreshLease,
   retryStopRefreshDemand,
   transferStopRefreshLease,
@@ -131,6 +132,8 @@ export interface SpawnStopRefreshOptions {
   /** 再入用エントリ (通常 process.execPath = bun と process.argv[1] = CLI script)。 */
   execPath?: string;
   scriptPath?: string;
+  /** test注入用。undefinedは現在runtime、nullはBunでないruntimeを表す。 */
+  runtimeBunVersion?: string | null;
   /** test 注入用。未指定は node:child_process.spawn。 */
   spawnImpl?: DetachedSpawnImpl;
 }
@@ -139,6 +142,55 @@ export interface SpawnStopRefreshResult {
   launched: boolean;
   reason?: string;
   coalesced?: boolean;
+}
+
+function portableBasename(path: string): string {
+  return basename(path.replaceAll("\\", "/"));
+}
+
+/** Bun から重い refresh worker を再帰起動しないための fail-close 判定。 */
+export function isBunExecutable(
+  execPath: string | undefined,
+  runtimeBunVersion?: string | null,
+): boolean {
+  const observedBunVersion =
+    runtimeBunVersion === undefined
+      ? (process.versions as NodeJS.ProcessVersions & { bun?: string }).bun
+      : runtimeBunVersion;
+  if (observedBunVersion) return true;
+  if (!execPath) return false;
+  return (
+    portableBasename(execPath)
+      .toLowerCase()
+      .replace(/\.(?:cmd|exe)$/u, "") === "bun"
+  );
+}
+
+function isNodeWorkerEntrypoint(execPath: string, scriptPath: string): boolean {
+  const executable = portableBasename(execPath)
+    .toLowerCase()
+    .replace(/\.exe$/u, "");
+  return executable === "node" && /\.(?:c|m)?js$/iu.test(scriptPath);
+}
+
+/** 直接起動されたBun workerを証跡付きで停止し、次回再試行を可能にする。 */
+export function refuseBunStopRefresh(
+  options: Pick<SpawnStopRefreshOptions, "repoRoot" | "runtimeBunVersion"> & {
+    generation: string;
+    execPath: string | undefined;
+  },
+): boolean {
+  if (!isBunExecutable(options.execPath, options.runtimeBunVersion)) return false;
+  if (joinStopRefreshLease(options.repoRoot, options.generation)) {
+    recordStopRefreshFailureOnce({
+      repoRoot: options.repoRoot,
+      generation: options.generation,
+      reason: "bun-runtime-refused",
+      key: "bun-runtime-refused",
+    });
+    releaseStopRefreshLease(options.repoRoot, options.generation);
+  }
+  return true;
 }
 
 /**
@@ -164,6 +216,26 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
     if (!execPath || !scriptPath) {
       releaseStopRefreshLease(options.repoRoot, generation);
       return { launched: false, reason: "missing-entrypoint" };
+    }
+    if (isBunExecutable(execPath, options.runtimeBunVersion)) {
+      recordStopRefreshFailureOnce({
+        repoRoot: options.repoRoot,
+        generation,
+        reason: "bun-runtime-refused",
+        key: "bun-runtime-refused",
+      });
+      releaseStopRefreshLease(options.repoRoot, generation);
+      return { launched: false, reason: "bun-runtime-refused" };
+    }
+    if (!isNodeWorkerEntrypoint(execPath, scriptPath)) {
+      recordStopRefreshFailureOnce({
+        repoRoot: options.repoRoot,
+        generation,
+        reason: "unsupported-refresh-entrypoint",
+        key: "unsupported-refresh-entrypoint",
+      });
+      releaseStopRefreshLease(options.repoRoot, generation);
+      return { launched: false, reason: "unsupported-refresh-entrypoint" };
     }
     const spawnImpl: DetachedSpawnImpl =
       options.spawnImpl ??

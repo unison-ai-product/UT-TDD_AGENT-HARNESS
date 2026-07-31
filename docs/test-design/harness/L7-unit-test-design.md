@@ -1482,6 +1482,19 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 `tests/db-currency.test.ts`(`U-DBCURRENCY-026`/`027`、stop-refresh経路がrebuild完走後のみ
 `maybeVacuumHarnessDb`を呼ぶことの検証)。
 
+## PLAN-L7-460 db-refresh Bun再帰起動の封じ込め oracle (2026-07-31)
+
+対象 = `src/state-db/stop-refresh.ts` / `src/cli.ts`。実テスト =
+`tests/db-currency.test.ts`。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-DBCURRENCY-007` | detached Bun拒否 | 実配線相当`execPath=/usr/bin/bun`＋`scriptPath=/repo/src/cli.ts`を反復、spawn spy | 常に`launched=false`、`reason=bun-runtime-refused`、spawn 0回、dirtyとreason単位の冪等failure receipt 1件を保持し、leaseを再取得可能 |
+| `U-DBCURRENCY-028` | Node正経路 | 明示Node executableとcompiled JavaScript entryを注入 | detached spawn 1回、ownership handoff後に`unref` |
+| `U-DBCURRENCY-029` | executable/runtime識別 | bare名、Windows/POSIX absolute path、`.cmd`、改名Bunのruntime version、類似名 | 名前または`process.versions.bun`相当でBunを拒否し、非Bun Nodeと`bun-wrapper`は誤拒否しない |
+| `U-DBCURRENCY-030` | direct worker拒否 | Bunで直接`session db-refresh`相当を起動済みleaseへ適用 | rebuildに入らず、dirtyとfailure receiptを保持してleaseを解放 |
+| `U-DBCURRENCY-031` | worker allowlist | Python／PowerShell executable、Node＋TypeScript source entryを各2回反復 | 全件spawn 0回、`unsupported-refresh-entrypoint`、dirtyとreason単位の冪等failure receipt 1件を保持。Node＋compiled JSだけ028で許可 |
+
 ## PLAN-L7-434 全PR共通harness-check trigger oracle (PLAN-REVERSE-434 backfill、2026-07-14)
 
 対象 = `.github/workflows/harness-check.yml` / `docs/templates/github/common/{harness-check,pack-harness-check}.yml` /
