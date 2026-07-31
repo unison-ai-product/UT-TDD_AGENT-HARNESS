@@ -83,8 +83,6 @@ review_evidence:
 status: confirmed
 sub_doc: architecture
 github_issue_id: 152
-supersedes:
-  - PLAN-L4-32-resource-governed-execution-kernel
 admission_receipt:
   schema_version: v2
   receipt_id: certificate:9f6f36c65b38fdf8354780bce6fa9971

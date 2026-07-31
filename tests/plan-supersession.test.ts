@@ -5,9 +5,11 @@ import { describe, expect, it } from "vitest";
 import { checkPlanSupersession } from "../src/doctor/index";
 import {
   analyzePlanSupersession,
+  loadSupersedePlans,
   type ParsedSupersedePlan,
   parseSupersedes,
   planCoreId,
+  planSupersessionMessages,
 } from "../src/lint/plan-supersession";
 
 // PLAN-L7-89: 誤記対策 — confirmed PLAN の誤った主張を後継が直したとき、errata リンクが
@@ -48,6 +50,48 @@ describe("analyzePlanSupersession", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("自己 supersede は violation になる", () => {
+    const r = analyzePlanSupersession([
+      plan({ plan_id: "PLAN-L7-1-x", supersedes: ["PLAN-L7-1-x"] }),
+    ]);
+    expect(r.ok).toBe(false);
+    expect(r).toMatchObject({
+      selfSupersedes: [{ plan_id: "PLAN-L7-1-x", target: "PLAN-L7-1-x" }],
+    });
+    expect(r.missingTargets).toEqual([]);
+    expect(r.missingBackrefs).toEqual([]);
+  });
+
+  it("slug 違いの自己参照も core-id で violation になる", () => {
+    const r = analyzePlanSupersession([
+      plan({ plan_id: "PLAN-L7-1-x", supersedes: ["PLAN-L7-1-y"] }),
+    ]);
+    expect(r.ok).toBe(false);
+    expect(r).toMatchObject({
+      selfSupersedes: [{ plan_id: "PLAN-L7-1-x", target: "PLAN-L7-1-y" }],
+    });
+    expect(r.missingTargets).toEqual([]);
+    expect(r.missingBackrefs).toEqual([]);
+  });
+
+  it("正当な supersede は従来どおり green", () => {
+    const r = analyzePlanSupersession([
+      plan({ plan_id: "PLAN-L7-1-x", supersedes: ["PLAN-L7-2-y"] }),
+      plan({ plan_id: "PLAN-L7-2-y", content: "訂正: PLAN-L7-1 が supersede した。" }),
+    ]);
+    expect(r.selfSupersedes).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("自己 supersede の理由を日本語メッセージで説明する", () => {
+    const r = analyzePlanSupersession([
+      plan({ plan_id: "PLAN-L7-1-x", supersedes: ["PLAN-L7-1-x"] }),
+    ]);
+    expect(planSupersessionMessages(r).join("\n")).toContain(
+      "自己 supersede は errata ゲートを自明通過する",
+    );
+  });
+
   it("supersede 先が実在しない → missingTargets violation", () => {
     const r = analyzePlanSupersession([
       plan({ plan_id: "PLAN-L7-87-kind", supersedes: ["PLAN-NOPE-99"] }),
@@ -82,6 +126,11 @@ describe("analyzePlanSupersession", () => {
     ]);
     expect(r.ok).toBe(false);
     expect(r.missingBackrefs).toHaveLength(1);
+  });
+
+  it("実 repo の supersede 検査は green になる", () => {
+    const r = analyzePlanSupersession(loadSupersedePlans(process.cwd()));
+    expect(r.ok).toBe(true);
   });
 });
 

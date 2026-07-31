@@ -42,8 +42,6 @@ route_mode: redesign
 status: confirmed
 sub_doc: architecture
 github_issue_id: 152
-supersedes:
-  - PLAN-L4-02-architecture
 admission_receipt:
   schema_version: v2
   receipt_id: certificate:c82407cb4d0de1c8db9a26638106b11f

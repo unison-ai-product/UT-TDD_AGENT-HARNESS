@@ -9,6 +9,12 @@
  * 原 PLAN が誤った主張のまま残る) を fail-close する (CLAUDE.md「誤った残渣は明確に supersede せよ」)。
  *
  * 検出規則: PLAN P が frontmatter `supersedes: [X, ...]` を宣言したら、各 X について
+ *  0. X が P 自身 (core-id 一致) でないこと (issue #183)。自己参照は 1/2 を**無検査で満たす** —
+ *     実在は自明、back-reference も自分の frontmatter の `plan_id` が必ず一致するため。
+ *     結果 errata の双方向性 (誤りと判明した先行 PLAN が後継を指す) が担保されないまま gate を
+ *     自明通過する。revision lineage の正本は `admission_receipt.origin.{plan_id, revision}` で
+ *     あり自己 supersede は冗長。evidence 層 (`plan-asset/domain/evidence-record.ts`) が
+ *     `supersedesEvidenceId === evidenceId` を無効入力として reject しているのと同じ規律。
  *  1. X が実在する plan_id であること (誤記/typo の supersede 先を弾く)。
  *  2. X の本文が P の core-id (`PLAN-<cat>-<n>`) を含むこと (= 原 PLAN に訂正 back-reference がある)。
  * いずれか欠落 → violation。`supersedes` 非宣言の PLAN は対象外 (誤記の有無は判定しない = prose 真偽は
@@ -33,6 +39,8 @@ export interface PlanSupersessionResult {
   missingTargets: { plan_id: string; target: string }[];
   /** supersede 先が宣言元への back-reference 訂正注記を持たない (片肺 errata)。 */
   missingBackrefs: { plan_id: string; target: string }[];
+  /** supersede 先が自分自身 (core-id 一致)。errata ゲートを自明通過させる (issue #183)。 */
+  selfSupersedes: { plan_id: string; target: string }[];
   ok: boolean;
 }
 
@@ -69,11 +77,18 @@ export function analyzePlanSupersession(plans: ParsedSupersedePlan[]): PlanSuper
   const byId = new Map(plans.map((p) => [p.plan_id, p]));
   const missingTargets: { plan_id: string; target: string }[] = [];
   const missingBackrefs: { plan_id: string; target: string }[] = [];
+  const selfSupersedes: { plan_id: string; target: string }[] = [];
 
   for (const p of plans) {
     const core = planCoreId(p.plan_id);
     const backref = new RegExp(`\\b${core.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
     for (const target of p.supersedes) {
+      // 自己参照は 2 条件を無検査で満たす (実在は自明、back-reference は自分の frontmatter の
+      // plan_id が必ず一致) ため、存在・back-reference の判定より前に弾く (issue #183)。
+      if (planCoreId(target) === core) {
+        selfSupersedes.push({ plan_id: p.plan_id, target });
+        continue;
+      }
       const t = byId.get(target);
       if (!t) {
         missingTargets.push({ plan_id: p.plan_id, target });
@@ -89,7 +104,8 @@ export function analyzePlanSupersession(plans: ParsedSupersedePlan[]): PlanSuper
   return {
     missingTargets,
     missingBackrefs,
-    ok: missingTargets.length === 0 && missingBackrefs.length === 0,
+    selfSupersedes,
+    ok: missingTargets.length === 0 && missingBackrefs.length === 0 && selfSupersedes.length === 0,
   };
 }
 
@@ -106,6 +122,12 @@ export function loadSupersedePlans(repoRoot: string = process.cwd()): ParsedSupe
 
 export function planSupersessionMessages(r: PlanSupersessionResult): string[] {
   const msgs: string[] = [];
+  if (r.selfSupersedes.length > 0) {
+    const refs = r.selfSupersedes.map((v) => `${v.plan_id}→${v.target}`).join(", ");
+    msgs.push(
+      `plan-supersession - violation: 自己 supersede は errata ゲートを自明通過するため禁止 (${refs}): revision lineage の正本は admission_receipt.origin であり、自己参照は冗長である`,
+    );
+  }
   if (r.missingTargets.length > 0) {
     const refs = r.missingTargets.map((v) => `${v.plan_id}→${v.target}`).join(", ");
     msgs.push(
