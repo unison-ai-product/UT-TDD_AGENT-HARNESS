@@ -9,9 +9,11 @@ import {
   type VerdictExtraction,
 } from "../src/feedback/review-verdict-contract";
 
-function expectFailure(logText: string, reason: string): void {
-  const result = extractVerdict(logText);
-  expect(result).toEqual({ ok: false, reasons: [reason] });
+// 期待値ビルダのみを共通化し、`expect` は各 test body に残す。
+// `ddd-tdd-rules` の `test-oracle-strength` は AST で body 内の literal expect/assert を要求するため、
+// assertion をヘルパへ括り出すと「oracle なし」と判定される (2026-07-31 の CI で実測: violation 7)。
+function failure(reason: string): { ok: false; reasons: string[] } {
+  return { ok: false, reasons: [reason] };
 }
 
 function verdictReceipt(extraction: VerdictExtraction): ReviewReceipt {
@@ -101,11 +103,11 @@ describe("review verdict contract (U-RVCON)", () => {
   });
 
   it("U-RVCON-004: 行頭候補が無ければ verdict_absent で fail-close する", () => {
-    expectFailure("Verdict: PASS\n  VERDICT: FLAG", "verdict_absent");
+    expect(extractVerdict("Verdict: PASS\n  VERDICT: FLAG")).toEqual(failure("verdict_absent"));
   });
 
   it("U-RVCON-005: 異なる行頭候補は verdict_ambiguous で fail-close する", () => {
-    expectFailure("VERDICT: PASS\nVERDICT: FLAG", "verdict_ambiguous");
+    expect(extractVerdict("VERDICT: PASS\nVERDICT: FLAG")).toEqual(failure("verdict_ambiguous"));
   });
 
   it("U-RVCON-006: 同値の行頭候補3件は冪等な再掲として採用する", () => {
@@ -116,7 +118,7 @@ describe("review verdict contract (U-RVCON)", () => {
   });
 
   it("U-RVCON-007: 未知の verdict は verdict_unknown で fail-close する", () => {
-    expectFailure("VERDICT: MAYBE", "verdict_unknown");
+    expect(extractVerdict("VERDICT: MAYBE")).toEqual(failure("verdict_unknown"));
   });
 
   it("U-RVCON-008: FLAG 後の行頭 FINDING を順序を保って全件抽出する", () => {
@@ -129,19 +131,23 @@ describe("review verdict contract (U-RVCON)", () => {
   });
 
   it("U-RVCON-009: finding の無い FLAG は flag_without_findings で fail-close する", () => {
-    expectFailure("VERDICT: FLAG", "flag_without_findings");
+    expect(extractVerdict("VERDICT: FLAG")).toEqual(failure("flag_without_findings"));
   });
 
   it("U-RVCON-010: 空白だけの FINDING は数えず FLAG を fail-close する", () => {
-    expectFailure("VERDICT: FLAG\nFINDING:   ", "flag_without_findings");
+    expect(extractVerdict("VERDICT: FLAG\nFINDING:   ")).toEqual(failure("flag_without_findings"));
   });
 
   it("U-RVCON-011: 最後の VERDICT より前の FINDING は抽出せず fail-close する", () => {
-    expectFailure("FINDING: stale request text\nVERDICT: FLAG", "flag_without_findings");
+    expect(extractVerdict("FINDING: stale request text\nVERDICT: FLAG")).toEqual(
+      failure("flag_without_findings"),
+    );
   });
 
   it("U-RVCON-012: PASS 上の FINDING は findings_on_pass で fail-close する", () => {
-    expectFailure("VERDICT: PASS\nFINDING: must not be present", "findings_on_pass");
+    expect(extractVerdict("VERDICT: PASS\nFINDING: must not be present")).toEqual(
+      failure("findings_on_pass"),
+    );
   });
 
   it("U-RVCON-013: finding 本文の前後空白を trim する", () => {
