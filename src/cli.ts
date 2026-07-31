@@ -3607,7 +3607,7 @@ githubPr
   .option("--base <sha>", "base SHA (default: git rev-parse origin/main)")
   .option("--plan-revision <n>", "PLAN revision")
   .option("--episode-id <id>", "execution episode ID (Forward 外のみ)")
-  .option("--issue-number <n>", "GitHub issue number (Forward 外のみ)")
+  .requiredOption("--issue-number <n>", "GitHub issue number")
   .action(
     (opts: {
       plan: string;
@@ -3616,7 +3616,7 @@ githubPr
       base?: string;
       planRevision?: string;
       episodeId?: string;
-      issueNumber?: string;
+      issueNumber: string;
     }) => {
       try {
         const resolve = (ref: string): string =>

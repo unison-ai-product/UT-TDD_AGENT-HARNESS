@@ -230,6 +230,7 @@ describe("GitHub repository facts binding", () => {
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
+        issue_number: "70",
       });
       const result = syncRepositoryBindings({
         db,
@@ -257,7 +258,9 @@ describe("GitHub repository facts binding", () => {
     for (const scenario of [
       "unrelated-check",
       "same-provider",
+      "unknown-provider",
       "missing-lane",
+      "missing-issue",
       "stale-head",
       "forged-source",
     ] as const) {
@@ -296,8 +299,13 @@ describe("GitHub repository facts binding", () => {
           verdict: "PASS",
           reviewedAt: "2026-07-29T00:00:00Z",
           testsGreenAt: "2026-07-28T23:00:00Z",
-          workerModel: "gpt-5.6-terra",
-          reviewerModel: scenario === "same-provider" ? "gpt-5.6-sol" : "claude-opus-4-8",
+          workerModel: scenario === "unknown-provider" ? "sol" : "gpt-5.6-terra",
+          reviewerModel:
+            scenario === "same-provider"
+              ? "gpt-5.6-sol"
+              : scenario === "unknown-provider"
+                ? "luna"
+                : "claude-opus-4-8",
           source: "docs/plans/PLAN-L7-436-domain.md",
           lane,
           attackTrials: 3,
@@ -336,14 +344,19 @@ describe("GitHub repository facts binding", () => {
             repoRoot,
             scenario === "missing-lane" ? reviewSources.slice(0, 1) : reviewSources,
           );
-        const body = renderPrTraceBlock({
+        const bodyWithIssue = renderPrTraceBlock({
           plan_id: reviewSources[0].planId,
           plan_revision: reviewSources[0].planRevision,
           route_mode: "add-feature",
           subject_head: "abcdef1",
           base_sha: "1234567",
+          issue_number: "70",
           review_receipt_digest: combinedReviewReceiptDigest(reviewDigests),
         });
+        const body =
+          scenario === "missing-issue"
+            ? bodyWithIssue.replace("issue_number: 70\n", "")
+            : bodyWithIssue;
         const checkName = scenario === "unrelated-check" ? "docs-only" : "harness-check";
         const result = syncRepositoryBindings({
           db,
@@ -373,13 +386,15 @@ describe("GitHub repository facts binding", () => {
         });
         expect(result.skipped).toContainEqual({
           number: "16",
-          reason: "merge-closure-incomplete",
+          reason:
+            scenario === "missing-issue" ? "missing-issue-number" : "merge-closure-incomplete",
         });
-        expect(
-          db
-            .prepare("SELECT state FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1")
-            .get(),
-        ).toEqual({ state: "invalidated:closure-incomplete" });
+        const mergeBinding = db
+          .prepare("SELECT state FROM github_object_bindings WHERE object_kind = 'merge' LIMIT 1")
+          .get();
+        expect(mergeBinding).toEqual(
+          scenario === "missing-issue" ? undefined : { state: "invalidated:closure-incomplete" },
+        );
       } finally {
         db.close();
         rmSync(repoRoot, { recursive: true, force: true });
@@ -529,6 +544,7 @@ describe("GitHub repository facts binding", () => {
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
+        issue_number: "70",
         review_receipt_digest: combinedReviewReceiptDigest(receiptDigests),
       });
       expect(() =>
@@ -615,6 +631,7 @@ describe("GitHub repository facts binding", () => {
         route_mode: "add-feature",
         subject_head: "abcdef1",
         base_sha: "1234567",
+        issue_number: "70",
         review_receipt_digest: combinedReviewReceiptDigest({
           claimBlind: reviewReceiptDigest(sources[0]),
           specBlind: reviewReceiptDigest(sources[1]),

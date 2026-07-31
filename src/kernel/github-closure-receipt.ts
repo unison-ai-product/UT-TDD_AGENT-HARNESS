@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { checkCrossAgentModelPair } from "../schema";
 
 export const REQUIRED_GITHUB_CHECK = "harness-check";
 
@@ -41,13 +42,6 @@ function digest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
-function providerFamily(model: string): string {
-  const normalized = model.trim().toLowerCase();
-  if (/^(gpt|codex|openai)/.test(normalized)) return "openai";
-  if (/^(claude|opus|sonnet|haiku)/.test(normalized)) return "anthropic";
-  return normalized.split(/[-/:]/)[0] ?? "";
-}
-
 export function reviewReceiptDigest(source: ReviewReceiptSource): string {
   return digest(source);
 }
@@ -67,7 +61,7 @@ export function validCrossReviewSource(source: ReviewReceiptSource): boolean {
     ["claim-blind", "spec-blind"].includes(source.lane) &&
     ["PASS", "PASS-WEAK"].includes(source.verdict.trim().toUpperCase()) &&
     Boolean(source.headSha && source.workerModel && source.reviewerModel && source.source) &&
-    providerFamily(source.workerModel) !== providerFamily(source.reviewerModel) &&
+    checkCrossAgentModelPair(source.workerModel, source.reviewerModel).ok &&
     Number.isFinite(testsGreenAt) &&
     Number.isFinite(reviewedAt) &&
     testsGreenAt <= reviewedAt &&

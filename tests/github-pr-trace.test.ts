@@ -7,11 +7,12 @@ const VALID_FIELDS = {
   route_mode: "add-feature",
   subject_head: "abc123def456abc123def456abc123def456abcd",
   base_sha: "5eff8549",
+  issue_number: "97",
 } as const;
 
 describe("github pr trace contract (PLAN-L7-451 W4)", () => {
   it("U-L7-451-W4-001: render が有効な trace block を生成し validate が受理する", () => {
-    const block = renderPrTraceBlock({ ...VALID_FIELDS, issue_number: "97" });
+    const block = renderPrTraceBlock(VALID_FIELDS);
     expect(block).toContain("<!-- ut-tdd:trace/v1");
     expect(block).toContain(`plan_id: ${VALID_FIELDS.plan_id}`);
     const body = `## 概要\n\nやったこと\n\n${block}\n`;
@@ -51,6 +52,9 @@ describe("github pr trace contract (PLAN-L7-451 W4)", () => {
     );
     expect(() => renderPrTraceBlock({ ...VALID_FIELDS, subject_head: "not-hex" })).toThrow(
       /invalid-subject-head/,
+    );
+    expect(() => renderPrTraceBlock({ ...VALID_FIELDS, issue_number: undefined } as never)).toThrow(
+      /missing-issue-number/,
     );
   });
 

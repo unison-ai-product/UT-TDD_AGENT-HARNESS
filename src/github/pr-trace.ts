@@ -12,18 +12,23 @@ export interface PrTraceFields {
   route_mode: string;
   subject_head: string;
   base_sha: string;
+  issue_number: string;
   plan_revision?: string;
   episode_id?: string;
-  issue_number?: string;
   admission_receipt_digest?: string;
   review_receipt_digest?: string;
 }
 
-const REQUIRED_KEYS = ["plan_id", "route_mode", "subject_head", "base_sha"] as const;
+const REQUIRED_KEYS = [
+  "plan_id",
+  "route_mode",
+  "subject_head",
+  "base_sha",
+  "issue_number",
+] as const;
 const OPTIONAL_KEYS = [
   "plan_revision",
   "episode_id",
-  "issue_number",
   "admission_receipt_digest",
   "review_receipt_digest",
 ] as const;

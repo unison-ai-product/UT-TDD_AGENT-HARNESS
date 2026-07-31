@@ -256,10 +256,7 @@ function title(row: ForwardReadinessRow): string {
   return `${row.planId}: ${row.currentGate}`;
 }
 
-function desiredFields(
-  row: ForwardReadinessRow,
-  applying = false,
-): Record<string, string | number> {
+function desiredFields(row: ForwardReadinessRow): Record<string, string | number> {
   return {
     "PLAN ID": row.planId,
     Vモデル層: row.layer || "cross",
@@ -274,7 +271,7 @@ function desiredFields(
     CI状態: row.ci,
     レビュー状態: row.review,
     対象HEAD: row.headSha,
-    同期状態: applying ? "同期済" : row.sync,
+    同期状態: "同期済",
   };
 }
 
@@ -350,7 +347,7 @@ export function syncForwardProject(input: {
       else itemId = `dry-run:${row.planId}`;
     }
     itemIds[row.planId] = itemId;
-    for (const [fieldName, value] of Object.entries(desiredFields(row, input.apply))) {
+    for (const [fieldName, value] of Object.entries(desiredFields(row))) {
       if (existing && String(existing.fields[fieldName] ?? "").trim() === String(value).trim())
         continue;
       mutations.push({ kind: "update", planId: row.planId, itemId, field: fieldName, value });

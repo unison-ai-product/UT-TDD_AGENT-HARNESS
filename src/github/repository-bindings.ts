@@ -306,7 +306,7 @@ export function syncRepositoryBindings(input: {
               ]),
             ).state,
           ).toUpperCase() === "CLOSED"
-        : true;
+        : false;
       if (!common.projectItemId) {
         result.skipped.push({ number, reason: "project-item-required" });
       } else if (
