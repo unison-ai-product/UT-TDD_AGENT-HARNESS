@@ -108,6 +108,26 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(impossibleDate.ok).toBe(false);
   });
 
+  it("U-RVDISP-033: 同一instantの秒/millis/offset表現はrequest/receipt replayで競合しない", () => {
+    const result = analyzeReviewDispatch({
+      requests: [
+        request({ requestedAt: "2026-07-31T00:00:00Z" }),
+        request({ requestedAt: "2026-07-31T09:00:00.000+09:00" }),
+      ],
+      receipts: [
+        receipt("acknowledged", { at: "2026-07-31T00:01:00Z" }),
+        receipt("acknowledged", { at: "2026-07-31T09:01:00.000+09:00" }),
+      ],
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("acknowledged");
+    expect(entry(result).reasons).not.toContain("duplicate_request_conflict");
+    expect(entry(result).reasons).not.toContain("duplicate_receipt_conflict");
+    expect(result.ok).toBe(true);
+  });
+
   it("U-RVDISP-001: 受領前は requested、SLA 内なら breach 無し", () => {
     const result = analyzeReviewDispatch({
       requests: [request()],

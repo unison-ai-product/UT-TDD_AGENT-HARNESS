@@ -1477,8 +1477,9 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVDISP-030` | canonical HEAD | uppercase 40-hex SHA | `invalid_head`でfail-close |
 | `U-RVDISP-031` | 孤児診断と通知identity | well-formed orphan＋同PR/同revision・異なるexactHeadの同一SLA違反 | orphan identityを診断へ保持し、messageにexactHeadを含めて通知dedupeで潰さない |
 | `U-RVDISP-032` | explicit-zone timestamp | GitHubの秒精度`Z`、offset付き入力、TZ無し request、不正暦日 | timezone明示ISOは同一instantとして受理し、TZ無し/不正暦日は`ageMinutes=null`かつ未達SLA全段をbreachにしてfail-close |
+| `U-RVDISP-033` | instant-normalized replay | 同一instantを秒精度`Z`、millis、offsetで表したrequest/receipt replay | timestamp表現差をcontent identityから除外し、重複競合や恒久non-readyを発生させない |
 
-実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`032`)。
+実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`033`)。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 

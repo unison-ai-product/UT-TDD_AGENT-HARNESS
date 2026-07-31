@@ -170,6 +170,11 @@ function identityKey(value: {
   return JSON.stringify([value.memoryId, value.pr, value.exactHead, value.reviewRevision]);
 }
 
+function timestampContentKey(value: string): string {
+  const instant = parseExplicitZoneTimestamp(value);
+  return instant == null ? `invalid:${value}` : `instant:${instant}`;
+}
+
 function requestContentKey(request: ReviewRequest): string {
   return JSON.stringify([
     request.memoryId,
@@ -177,7 +182,7 @@ function requestContentKey(request: ReviewRequest): string {
     request.exactHead,
     request.reviewRevision,
     request.authorFamily,
-    request.requestedAt,
+    timestampContentKey(request.requestedAt),
   ]);
 }
 
@@ -191,7 +196,7 @@ function receiptContentKey(receipt: ReviewReceipt): string {
     receipt.kind,
     receipt.verdict ?? null,
     receipt.blockingFindings ?? null,
-    receipt.at,
+    timestampContentKey(receipt.at),
   ]);
 }
 

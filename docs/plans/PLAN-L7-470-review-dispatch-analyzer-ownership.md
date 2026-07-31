@@ -82,6 +82,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | 同時刻receiptの飛越禁止、uppercase SHA拒否 | `U-RVDISP-029`〜`030` |
 | well-formed orphan診断とexactHead別通知identity | `U-RVDISP-031` |
 | timezone明示ISO timestampと不正時刻のSLA fail-close | `U-RVDISP-032` |
+| 同一instantのtimestamp表現差を除外したreplay identity | `U-RVDISP-033` |
 
 ## 4. スコープ外
 
@@ -94,7 +95,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 ## 5. AC
 
-- AC-1: `U-RVDISP-001`〜`032` が全件green。
+- AC-1: `U-RVDISP-001`〜`033` が全件green。
 - AC-2: `tsc --noEmit` とBiomeがgreen。
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。
