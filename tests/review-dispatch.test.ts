@@ -386,13 +386,9 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
       sla: { ackMinutes: 0, startMinutes: 30, verdictMinutes: 60 },
     });
     expect(entry(malformedReceipt).reasons).toEqual(
-      expect.arrayContaining([
-        "empty_identity",
-        "empty_review_revision",
-        "invalid_head",
-        "invalid_sla",
-      ]),
+      expect.arrayContaining(["empty_identity", "empty_review_revision", "invalid_sla"]),
     );
+    expect(malformedReceipt.diagnostics).toContain("orphan_receipt:invalid_head");
     expect(malformedReceipt.ok).toBe(false);
 
     const invalidVerdictFields = analyzeReviewDispatch({
@@ -554,6 +550,52 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
 
     expect(entry(result).reasons.length).toBeGreaterThan(0);
     expect(entry(result).state).not.toBe("merge_ready");
+    expect(result.ok).toBe(false);
+  });
+
+  it("U-RVDISP-025: unrelated malformed artifact は正常 request を汚染せず診断へ分離する", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request()],
+      receipts: [
+        ...completeSequence(),
+        receipt("acknowledged", {
+          memoryId: "orphan-memory",
+          pr: 999,
+          head: "not-a-head",
+        }),
+      ],
+      prs: [pr(), pr({ pr: 999, headSha: "not-a-head" })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(entry(result).state).toBe("merge_ready");
+    expect(entry(result).reasons).toEqual([]);
+    expect(result.ok).toBe(true);
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        "orphan_receipt:invalid_head",
+        "orphan_pr_observation:invalid_pr_observation",
+      ]),
+    );
+  });
+
+  it("U-RVDISP-026: matching malformed artifact は対応 request だけを fail closed にする", () => {
+    const result = analyzeReviewDispatch({
+      requests: [request(), request({ memoryId: "memory-002", pr: 202 })],
+      receipts: [
+        ...completeSequence(),
+        receipt("acknowledged", { at: "not-a-date" }),
+        ...completeSequence({ memoryId: "memory-002", pr: 202 }),
+      ],
+      prs: [pr(), pr({ pr: 202 })],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+
+    expect(result.entries).toHaveLength(2);
+    expect(result.entries[0].reasons).toContain("invalid_timestamp");
+    expect(result.entries[0].state).not.toBe("merge_ready");
+    expect(result.entries[1].state).toBe("merge_ready");
+    expect(result.entries[1].reasons).toEqual([]);
     expect(result.ok).toBe(false);
   });
 });

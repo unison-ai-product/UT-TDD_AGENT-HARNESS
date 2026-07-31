@@ -74,6 +74,7 @@ export interface ReviewDispatchEntry {
 
 export interface ReviewDispatchResult {
   entries: ReviewDispatchEntry[];
+  diagnostics: string[];
   ok: boolean;
 }
 
@@ -133,15 +134,6 @@ function identityKey(value: {
   reviewRevision: string;
 }): string {
   return JSON.stringify([value.memoryId, value.pr, value.exactHead, value.reviewRevision]);
-}
-
-function receiptIdentityKey(receipt: ReviewReceipt): string {
-  return identityKey({
-    memoryId: receipt.memoryId,
-    pr: receipt.pr,
-    exactHead: receipt.head,
-    reviewRevision: receipt.reviewRevision,
-  });
 }
 
 function requestContentKey(request: ReviewRequest): string {
@@ -319,10 +311,13 @@ function analyzeRequest(
     (receipt) =>
       receipt.memoryId === request.memoryId &&
       receipt.pr === request.pr &&
+      receipt.head === request.exactHead &&
       receipt.reviewRevision === request.reviewRevision,
   );
+  for (const receipt of candidates) {
+    for (const reason of validateReceipt(receipt, nowMs)) reasons.add(reason);
+  }
   const relevantReceipts = candidates
-    .filter((receipt) => receiptIdentityKey(receipt) === identityKey(request))
     .filter((receipt) => validateReceipt(receipt, nowMs).length === 0)
     .sort(compareReceipts);
 
@@ -397,7 +392,11 @@ function analyzeRequest(
     verdictReceipt?.verdict === "FLAG" ? [...(verdictReceipt.blockingFindings ?? [])] : [];
   if (verdictReceipt?.verdict === "FLAG") reasons.add("flagged");
 
-  const observation = observationFor(request, prs);
+  const observationCandidates = prs.filter((observation) => observation.pr === request.pr);
+  for (const candidate of observationCandidates) {
+    if (!validateObservation(candidate)) reasons.add("invalid_pr_observation");
+  }
+  const observation = observationFor(request, observationCandidates.filter(validateObservation));
   if (observation == null) reasons.add("pr_observation_missing");
   const hasObservationHeadMismatch =
     observation != null && observation.headSha !== request.exactHead;
@@ -455,13 +454,28 @@ export function analyzeReviewDispatch(input: {
   const nowMs = Date.parse(input.now);
   const sla = input.sla ?? DEFAULT_REVIEW_DISPATCH_SLA;
   const globalReasons = new Set<string>();
+  const diagnostics = new Set<string>();
   if (!Number.isFinite(nowMs)) globalReasons.add("invalid_timestamp");
   if (input.sla === null || !validateSla(sla)) globalReasons.add("invalid_sla");
+  const requestIdentities = new Set(input.requests.map(identityKey));
+  const requestedPrs = new Set(input.requests.map((request) => request.pr));
   for (const receipt of input.receipts) {
-    for (const reason of validateReceipt(receipt, nowMs)) globalReasons.add(reason);
+    const receiptIdentity = identityKey({
+      memoryId: receipt.memoryId,
+      pr: receipt.pr,
+      exactHead: receipt.head,
+      reviewRevision: receipt.reviewRevision,
+    });
+    if (!requestIdentities.has(receiptIdentity)) {
+      for (const reason of validateReceipt(receipt, nowMs)) {
+        diagnostics.add(`orphan_receipt:${reason}`);
+      }
+    }
   }
   for (const observation of input.prs) {
-    if (!validateObservation(observation)) globalReasons.add("invalid_pr_observation");
+    if (!requestedPrs.has(observation.pr) && !validateObservation(observation)) {
+      diagnostics.add("orphan_pr_observation:invalid_pr_observation");
+    }
   }
 
   const unique = uniqueRequests(input.requests);
@@ -485,6 +499,7 @@ export function analyzeReviewDispatch(input: {
 
   return {
     entries: analyses.map(({ entry }) => entry),
+    diagnostics: [...diagnostics].sort(compareText),
     ok:
       globalReasons.size === 0 &&
       analyses.every(({ entry }) => entry.breaches.length === 0 && entry.reasons.length === 0),
@@ -510,6 +525,9 @@ export function reviewDispatchMessages(result: ReviewDispatchResult): string[] {
                 : reason;
       messages.push(`review-dispatch — 手順違反: PR #${entry.pr} ${detail}`);
     }
+  }
+  for (const diagnostic of result.diagnostics) {
+    messages.push(`review-dispatch — 未帰属診断: ${diagnostic}`);
   }
   const uniqueMessages = [...new Set(messages)];
   return uniqueMessages.length > 0 ? uniqueMessages : ["review-dispatch — OK"];
