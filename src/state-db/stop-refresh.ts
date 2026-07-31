@@ -143,6 +143,10 @@ export interface SpawnStopRefreshResult {
   coalesced?: boolean;
 }
 
+function portableBasename(path: string): string {
+  return basename(path.replaceAll("\\", "/"));
+}
+
 /** Bun から重い refresh worker を再帰起動しないための fail-close 判定。 */
 export function isBunExecutable(
   execPath: string | undefined,
@@ -155,14 +159,14 @@ export function isBunExecutable(
   if (observedBunVersion) return true;
   if (!execPath) return false;
   return (
-    basename(execPath)
+    portableBasename(execPath)
       .toLowerCase()
       .replace(/\.(?:cmd|exe)$/u, "") === "bun"
   );
 }
 
 function isNodeWorkerEntrypoint(execPath: string, scriptPath: string): boolean {
-  const executable = basename(execPath)
+  const executable = portableBasename(execPath)
     .toLowerCase()
     .replace(/\.exe$/u, "");
   return executable === "node" && /\.(?:c|m)?js$/iu.test(scriptPath);
