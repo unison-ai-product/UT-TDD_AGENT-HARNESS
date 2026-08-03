@@ -442,8 +442,7 @@ export function queueGithubProjection(input: {
     !Number.isSafeInteger(input.payload.projectNumber) ||
     input.payload.projectNumber <= 0 ||
     !text(input.payload.readiness) ||
-    !text(input.payload.currentGate) ||
-    !text(input.payload.headSha)
+    !text(input.payload.currentGate)
   )
     throw new Error("invalid GitHub projection payload values");
   const payloadJson = JSON.stringify({

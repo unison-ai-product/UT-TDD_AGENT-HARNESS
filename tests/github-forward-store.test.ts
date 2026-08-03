@@ -317,6 +317,32 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     }
   });
 
+  it("U-GHPROJ-052: queues an unstarted PLAN with an explicit empty HEAD", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      queueGithubProjection({
+        db,
+        repositoryId: "owner/repo",
+        planId: "PLAN-L7-1-unstarted",
+        planRevision: "rev1",
+        operation: "project-item-upsert",
+        payload: {
+          owner: "owner",
+          projectNumber: 6,
+          readiness: "着手可能",
+          currentGate: "implementation",
+          headSha: "",
+        },
+      });
+      const row = db.prepare("SELECT payload_json, status FROM github_projection_outbox").get();
+      expect(JSON.parse(String(row?.payload_json))).toMatchObject({ headSha: "" });
+      expect(row?.status).toBe("pending");
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-GHPROJ-040: preserves an applied outbox only for an identical payload digest", () => {
     const db = openHarnessDb(":memory:");
     try {
