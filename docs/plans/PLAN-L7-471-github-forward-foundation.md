@@ -105,20 +105,21 @@ dependencies:
   references:
     - docs/test-design/harness/L7-unit-test-design.md
   blocks: []
+status: confirmed
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:35c999f6d0daaeafe8f50c17410151b8
-  command_id: command:pr210-green-command-digest-revision4:1785729123542
-  admitted_at: 2026-08-03T03:52:03.543Z
-  source_digest: sha256:a4c87a6442155518a9e265c88da2ccb24749c13c47ef2c070fb8c1dd6faa63c2
-  decision_digest: sha256:65eed824e231bcdeda7fa7c085c0a2bf8801a90086969bb32f57f95a35655f23
-  receipt_digest: sha256:478d1a2a9b8587ca8df128e1ea6ca46e87197d1889f90ea8a6da742efca5a1b9
+  receipt_id: certificate:0018148d33b2f73ccdab25b5e2ffb96d
+  command_id: command:pr210-status-confirmed-revision5:1785729317332
+  admitted_at: 2026-08-03T03:55:17.333Z
+  source_digest: sha256:0672c808e2c0fd91f07c3eead43b7684a3c4fe881f992f8ccc4359ad7342754c
+  decision_digest: sha256:1ea1ca059209fbe6fcde0b72335c1ffa29beaec9a276abc7c26a9edbedc4cc0c
+  receipt_digest: sha256:32aae123cdd9d3f69247060df4f8535c7dc41b9553b55a89cfdd74ee26a7bb3f
   binding:
     path: docs/plans/PLAN-L7-471-github-forward-foundation.md
     plan_id: PLAN-L7-471-github-forward-foundation
     asset_id: plan:5e3651c92d0e10e531bacfab12ef4c06
-    revision: 4
-    content_digest: sha256:a4c87a6442155518a9e265c88da2ccb24749c13c47ef2c070fb8c1dd6faa63c2
+    revision: 5
+    content_digest: sha256:0672c808e2c0fd91f07c3eead43b7684a3c4fe881f992f8ccc4359ad7342754c
   route:
     signal: forward
     mode: forward
