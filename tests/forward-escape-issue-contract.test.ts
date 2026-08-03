@@ -584,7 +584,11 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const worker = join(concurrentRepo, "worker.mjs");
     try {
       buildSync({
-        entryPoints: [join(process.cwd(), "tests", "workers", "forward-escape-sqlite-worker.ts")],
+        stdin: {
+          contents: `import { existsSync, writeFileSync } from "node:fs";\nimport { SqliteForwardEscapeJournal } from "./src/execution/sqlite-forward-escape-journal.ts";\nimport { openHarnessDb } from "./src/state-db/index.ts";\nimport { migrate } from "./src/state-db/migration.ts";\nconst db = openHarnessDb(${JSON.stringify(dbPath)}, { repoRoot: ${JSON.stringify(concurrentRepo)} });\ntry { migrate(db); const journal = new SqliteForwardEscapeJournal(db); writeFileSync(${JSON.stringify(ready)} + "/" + process.pid, "ready"); while (existsSync(${JSON.stringify(gate)})) await new Promise((resolve) => setTimeout(resolve, 2)); const certificate = journal.issue({ command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}" }); const receipt = journal.append({ type: "IssueProjectionQueued", command_id: "cmd-concurrent", payload_digest: "${"a".repeat(64)}", repository: "owner/repo", body_digest: "${"b".repeat(64)}" }); console.log("UT_TDD_WORKER_RESULT=" + JSON.stringify({ certificate, receipt })); } finally { db.close(); }\n`,
+          resolveDir: process.cwd(),
+          sourcefile: "forward-escape-sqlite-worker.ts",
+        },
         bundle: true,
         format: "esm",
         platform: "node",
