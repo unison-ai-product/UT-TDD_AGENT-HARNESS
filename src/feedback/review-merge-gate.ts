@@ -8,9 +8,6 @@
  * 看板替えになるため、迂回検知の無い環境へ B だけを配線してはならない。
  */
 
-import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   analyzeReviewDispatch,
   type PrObservation,
@@ -39,8 +36,6 @@ export interface UnattestedMergeFinding {
   head: string;
   finding: "merged_without_gate_receipt" | "merged_without_verdict";
 }
-
-const MERGES_CATEGORY = "merges";
 
 /**
  * merge 可否の唯一の根拠は D1 analyzer の `merge_ready` である。判定不能 (request 不在 /
@@ -96,43 +91,47 @@ export function evaluateMergeGate(input: {
   return { ok: true, pr: input.pr, head: currentHead, state: entry.state, reasons: [] };
 }
 
-function mergeGateDigest(receipt: Pick<MergeGateReceipt, "pr" | "head">): string {
-  return createHash("sha256")
-    .update(JSON.stringify({ pr: receipt.pr, head: receipt.head }), "utf8")
-    .digest("hex")
-    .slice(0, 16);
+/**
+ * gate 通過証跡の正本は **PR コメントの構造化 marker** である (advisor 裁定 2026-08-03、
+ * PR #219 Codex FLAG の是正)。ローカルファイルを正本にすると fresh checkout / CI から
+ * 見えず、audit が正規 merge を恒久誤検知する。marker は PR 自体に随伴するため
+ * (pr, head) identity と保管場所が一致し、`gh` 一本でどの環境からも判定できる。
+ */
+export const MERGE_GATE_MARKER_TAG = "ut-tdd:merge-gate/v1";
+
+const MARKER_PATTERN = /<!--\s*ut-tdd:merge-gate\/v1\n([\s\S]*?)\n-->/g;
+const HEAD_PATTERN = /^[0-9a-f]{40}$/;
+
+export function renderMergeGateMarker(receipt: MergeGateReceipt): string {
+  return `<!-- ${MERGE_GATE_MARKER_TAG}\n${JSON.stringify(receipt, null, 2)}\n-->`;
+}
+
+function isValidMergeGateReceipt(value: MergeGateReceipt): boolean {
+  return (
+    value.kind === "merge_gate" &&
+    Number.isInteger(value.pr) &&
+    value.pr > 0 &&
+    typeof value.head === "string" &&
+    HEAD_PATTERN.test(value.head) &&
+    value.state === "merge_ready" &&
+    typeof value.decidedAt === "string"
+  );
 }
 
 /**
- * gate 通過の証跡。digest は (pr, head) の安定 identity のみ — 再実行は同 path 上書きで
- * 冪等 (decidedAt は本文 metadata)。この receipt の不在が「wrapper を迂回した merge」の
- * 検知根拠になるため、merge 実行と同一フローで必ず書く。
+ * コメント本文群から有効な merker receipt を抽出する。壊れた JSON・版違い・フィールド
+ * 不全は黙って除外する (存在しない扱い → audit 側が fail-close で拾う)。
  */
-export function writeMergeGateReceipt(input: { repoRoot: string; receipt: MergeGateReceipt }): {
-  path: string;
-  digest: string;
-} {
-  const digest = mergeGateDigest(input.receipt);
-  const directory = join(input.repoRoot, ".ut-tdd", "review", MERGES_CATEGORY);
-  mkdirSync(directory, { recursive: true });
-  const path = join(directory, `${digest}.json`);
-  writeFileSync(path, `${JSON.stringify(input.receipt, null, 2)}\n`, "utf8");
-  return { path, digest };
-}
-
-export function loadMergeGateReceipts(repoRoot: string): MergeGateReceipt[] {
-  const directory = join(repoRoot, ".ut-tdd", "review", MERGES_CATEGORY);
-  if (!existsSync(directory)) return [];
+export function extractMergeGateReceipts(bodies: string[]): MergeGateReceipt[] {
   const receipts: MergeGateReceipt[] = [];
-  for (const name of readdirSync(directory)) {
-    if (!name.endsWith(".json")) continue;
-    try {
-      const parsed = JSON.parse(readFileSync(join(directory, name), "utf8")) as MergeGateReceipt;
-      if (parsed.kind === "merge_gate" && Number.isInteger(parsed.pr) && parsed.head) {
-        receipts.push(parsed);
+  for (const body of bodies) {
+    for (const match of body.matchAll(MARKER_PATTERN)) {
+      try {
+        const parsed = JSON.parse(match[1] ?? "") as MergeGateReceipt;
+        if (isValidMergeGateReceipt(parsed)) receipts.push(parsed);
+      } catch {
+        // 機械可読でない marker は証跡として数えない。
       }
-    } catch {
-      // 壊れた receipt は「存在しない」扱い (検知側が拾う)。黙って通す側には使われない。
     }
   }
   return receipts;

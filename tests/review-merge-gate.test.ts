@@ -1,19 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import type { PrObservation, ReviewReceipt, ReviewRequest } from "../src/feedback/review-dispatch";
 import {
   detectUnattestedMerges,
   evaluateMergeGate,
-  loadMergeGateReceipts,
+  extractMergeGateReceipts,
   type MergeGateReceipt,
-  writeMergeGateReceipt,
+  renderMergeGateMarker,
 } from "../src/feedback/review-merge-gate";
-import type {
-  PrObservation,
-  ReviewReceipt,
-  ReviewRequest,
-} from "../src/feedback/review-dispatch";
 
 const head = "a".repeat(40);
 const otherHead = "b".repeat(40);
@@ -159,46 +152,30 @@ describe("D2 merge gate (U-RVMG)", () => {
     expect(decision.reasons).toEqual(["observation_pr_mismatch"]);
   });
 
-  it("U-RVMG-010: gate receipt は (pr, head) identity で冪等に上書きされる", () => {
-    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-receipt-"));
-    try {
-      const first = writeMergeGateReceipt({
-        repoRoot,
-        receipt: { kind: "merge_gate", pr: 900, head, state: "merge_ready", decidedAt: now },
-      });
-      const second = writeMergeGateReceipt({
-        repoRoot,
-        receipt: {
-          kind: "merge_gate",
-          pr: 900,
-          head,
-          state: "merge_ready",
-          decidedAt: "2026-08-03T08:00:00.000Z",
-        },
-      });
-      expect(second.path).toBe(first.path);
-      expect(second.digest).toBe(first.digest);
-      const loaded = loadMergeGateReceipts(repoRoot);
-      expect(loaded).toHaveLength(1);
-      expect(loaded[0]?.decidedAt).toBe("2026-08-03T08:00:00.000Z");
-    } finally {
-      rmSync(repoRoot, { recursive: true, force: true });
-    }
+  // 証跡の正本は PR コメント marker — fresh checkout / CI からも gh 一本で判定でき、
+  // ローカル書込のみで audit が正規 merge を恒久誤検知する fail-open (PR #219 Codex FLAG)
+  // を作らない。
+  it("U-RVMG-010: marker は render → extract の round-trip で identity を保存する", () => {
+    const receipt: MergeGateReceipt = {
+      kind: "merge_gate",
+      pr: 900,
+      head,
+      state: "merge_ready",
+      decidedAt: now,
+    };
+    const body = `前置きコメント\n${renderMergeGateMarker(receipt)}\n後置き`;
+    const extracted = extractMergeGateReceipts([body, "無関係なコメント"]);
+    expect(extracted).toEqual([receipt]);
   });
 
-  it("U-RVMG-011: 壊れた gate receipt は有効扱いしない (検知側で迂回として拾われる)", () => {
-    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-broken-"));
-    try {
-      const written = writeMergeGateReceipt({
-        repoRoot,
-        receipt: { kind: "merge_gate", pr: 900, head, state: "merge_ready", decidedAt: now },
-      });
-      writeFileSync(written.path, "{ broken json", "utf8");
-      expect(existsSync(written.path)).toBe(true);
-      expect(loadMergeGateReceipts(repoRoot)).toEqual([]);
-    } finally {
-      rmSync(repoRoot, { recursive: true, force: true });
-    }
+  it("U-RVMG-011: 壊れた marker・版違い・フィールド不全は証跡として抽出しない", () => {
+    const bodies = [
+      "<!-- ut-tdd:merge-gate/v1\n{ broken json\n-->",
+      "<!-- ut-tdd:merge-gate/v2\n{}\n-->",
+      `<!-- ut-tdd:merge-gate/v1\n${JSON.stringify({ kind: "merge_gate", pr: 900, head: "short", state: "merge_ready", decidedAt: now })}\n-->`,
+      `<!-- ut-tdd:merge-gate/v1\n${JSON.stringify({ kind: "other", pr: 900, head, state: "merge_ready", decidedAt: now })}\n-->`,
+    ];
+    expect(extractMergeGateReceipts(bodies)).toEqual([]);
   });
 
   it("U-RVMG-012: gate receipt の無い merge は迂回として検知される", () => {

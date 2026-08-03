@@ -52,8 +52,8 @@ import { loadReviewReceipts, loadReviewRequests } from "./feedback/review-attest
 import {
   detectUnattestedMerges,
   evaluateMergeGate,
-  loadMergeGateReceipts,
-  writeMergeGateReceipt,
+  extractMergeGateReceipts,
+  renderMergeGateMarker,
 } from "./feedback/review-merge-gate";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { writeGateRunEvidence } from "./gate/run-evidence";
@@ -3712,17 +3712,27 @@ prGate
       process.exitCode = 1;
       return;
     }
-    const receipt = writeMergeGateReceipt({
-      repoRoot,
-      receipt: {
-        kind: "merge_gate",
-        pr,
-        head: decision.head as string,
-        state: "merge_ready",
-        decidedAt: new Date().toISOString(),
-      },
+    // 証跡の正本は PR コメント marker (fresh checkout / CI から gh 一本で判定できる)。
+    // 投稿失敗は fail-silent にしない: exit 非 0 + 再投稿用 marker を提示し、audit 側は
+    // marker 不在を FLAG のまま維持する (fail-close 継続)。
+    const marker = renderMergeGateMarker({
+      kind: "merge_gate",
+      pr,
+      head: decision.head as string,
+      state: "merge_ready",
+      decidedAt: new Date().toISOString(),
     });
-    process.stdout.write(`pr merge — MERGED pr=#${pr} gate receipt ${receipt.path}\n`);
+    try {
+      execFileSync("gh", ["pr", "comment", String(pr), "--body", marker], { encoding: "utf8" });
+    } catch (error) {
+      process.stderr.write(
+        `pr merge: merged but gate marker post failed (${String(error)})\n` +
+          `repost manually with: gh pr comment ${pr} --body-file <file containing:>\n${marker}\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+    process.stdout.write(`pr merge — MERGED pr=#${pr} gate marker posted\n`);
   });
 
 prGate
@@ -3751,10 +3761,32 @@ prGate
       process.exitCode = 1;
       return;
     }
-    const observations = numbers.map((number) => fetchPrObservationForGate(number));
+    // 三値判定: attested / unattested / unknown。コメント取得不能 (offline / 認証切れ) を
+    // FLAG に潰すと今回是正した恒久誤検知を再生産するため、unknown は findings と区別して
+    // audit_unavailable で終了する。
+    let observations: ReturnType<typeof fetchPrObservationForGate>[];
+    let commentBodies: string[];
+    try {
+      observations = numbers.map((number) => fetchPrObservationForGate(number));
+      commentBodies = numbers.flatMap((number) => {
+        const raw = execFileSync("gh", ["pr", "view", String(number), "--json", "comments"], {
+          encoding: "utf8",
+        });
+        return (JSON.parse(raw) as { comments: { body: string }[] }).comments.map(
+          (comment) => comment.body,
+        );
+      });
+    } catch (error) {
+      process.stderr.write(
+        `pr audit: audit_unavailable — GitHub observation/comments unreachable (${String(error)}); ` +
+          "verdict is neither PASS nor FLAG\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
     const findings = detectUnattestedMerges({
       observations,
-      gateReceipts: loadMergeGateReceipts(repoRoot),
+      gateReceipts: extractMergeGateReceipts(commentBodies),
       requests: loadReviewRequests(repoRoot),
       receipts: loadReviewReceipts(repoRoot),
       now: new Date().toISOString(),
