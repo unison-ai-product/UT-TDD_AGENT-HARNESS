@@ -14,6 +14,11 @@ import {
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt";
 import { resolvePlanRevisionIdentity } from "../src/kernel/plan-revision";
+import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence";
+import {
+  TRACKED_RECEIPT_SCHEMA,
+  trackedReceiptRecordDigest,
+} from "../src/plan-admission/tracked-receipt-projection";
 import { isManualGithubObservationKind } from "../src/state-db/github-forward-projection";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
@@ -21,11 +26,16 @@ import { migrate } from "../src/state-db/migration";
 class FakeGh implements GhCommandPort {
   readonly #payloads: unknown[];
   onJson?: () => void;
+  compareStatus = "ahead";
   constructor(...payloads: unknown[]) {
     this.#payloads = payloads;
   }
-  json(): unknown {
+  json(args: readonly string[] = []): unknown {
     this.onJson?.();
+    if (args[0] === "api" && args[1]?.includes("/compare/")) {
+      if (this.compareStatus === "error") throw new Error("compare failed");
+      return { status: this.compareStatus };
+    }
     return this.#payloads.shift() ?? {};
   }
   run(): void {
@@ -71,17 +81,79 @@ function writeReviewPlan(
 ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
     )
     .join("\n");
-  writeFileSync(
-    join(plansDir, `${first.planId}.md`),
-    `---
+  const commandId = `command:test:${first.planId}`;
+  const receiptId = `certificate:test-${first.planId.toLowerCase()}`;
+  const receiptDigest = `sha256:${"a".repeat(64)}`;
+  const decisionDigest = `sha256:${"b".repeat(64)}`;
+  const planPath = `docs/plans/${first.planId}.md`;
+  const render = (contentDigest: string) => `---
 plan_id: ${first.planId}
 admission_receipt:
+  schema_version: v2
+  receipt_id: ${receiptId}
+  command_id: ${commandId}
+  admitted_at: 2026-07-31T00:00:00.000Z
+  source_digest: ${contentDigest}
+  decision_digest: ${decisionDigest}
+  receipt_digest: ${receiptDigest}
   binding:
+    path: ${planPath}
+    plan_id: ${first.planId}
+    asset_id: plan:test-repository-binding
     revision: ${first.planRevision}
+    content_digest: ${contentDigest}
+  route:
+    signal: forward
+    mode: forward
 review_evidence:
 ${entries}
 ---
-`,
+`;
+  const placeholder = `sha256:${"0".repeat(64)}`;
+  const contentDigest = canonicalPlanContentDigest(render(placeholder));
+  if (!contentDigest) throw new Error("test PLAN digest unavailable");
+  writeFileSync(join(plansDir, `${first.planId}.md`), render(contentDigest), "utf8");
+  const record = {
+    sequence: 1,
+    previousRecordDigest: null,
+    commandId,
+    receiptId,
+    receiptDigest,
+    decisionDigest,
+    binding: {
+      path: planPath,
+      planId: first.planId,
+      assetId: "plan:test-repository-binding",
+      revision: Number(first.planRevision),
+      contentDigest,
+    },
+  };
+  const projection = {
+    schema_version: TRACKED_RECEIPT_SCHEMA,
+    records: [
+      {
+        sequence: record.sequence,
+        previous_record_digest: record.previousRecordDigest,
+        record_digest: trackedReceiptRecordDigest(record),
+        command_id: record.commandId,
+        receipt_id: record.receiptId,
+        receipt_digest: record.receiptDigest,
+        decision_digest: record.decisionDigest,
+        binding: {
+          path: record.binding.path,
+          plan_id: record.binding.planId,
+          asset_id: record.binding.assetId,
+          revision: record.binding.revision,
+          content_digest: record.binding.contentDigest,
+        },
+      },
+    ],
+  };
+  const governanceDir = join(repoRoot, "docs", "governance");
+  mkdirSync(governanceDir, { recursive: true });
+  writeFileSync(
+    join(governanceDir, "plan-admission-receipts.json"),
+    `${JSON.stringify(projection, null, 2)}\n`,
     "utf8",
   );
 }

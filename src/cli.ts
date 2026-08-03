@@ -182,9 +182,9 @@ import {
 } from "./skill-engine/recommend";
 import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold";
 import {
+  claimGithubProjection,
   deriveStoredForwardReadiness,
   isManualGithubObservationKind,
-  markGithubProjectionApplied,
   markGithubProjectionFailed,
   queueGithubProjection,
   rebuildExecutionReadiness,
@@ -3328,6 +3328,7 @@ githubProject
         repoRoot: process.cwd(),
       });
       let outboxIds: string[] = [];
+      let outboxClaimed = false;
       try {
         if (opts.apply) migrate(db);
         const projectedRows = deriveStoredForwardReadiness(db, process.cwd(), opts.repository);
@@ -3355,6 +3356,10 @@ githubProject
               }),
             )
           : [];
+        if (opts.apply) {
+          claimGithubProjection(db, outboxIds);
+          outboxClaimed = true;
+        }
         const result = syncForwardProject({
           rows,
           owner: opts.owner,
@@ -3369,8 +3374,8 @@ githubProject
             projectId: result.projectId,
             rows,
             result,
+            outboxIds,
           });
-          markGithubProjectionApplied(db, outboxIds);
         }
         if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         else
@@ -3378,7 +3383,8 @@ githubProject
             `github project sync: ${result.applied ? "applied" : "dry-run"} plans=${rows.length} mutations=${result.mutations.length}\n`,
           );
       } catch (error) {
-        if (opts.apply && outboxIds.length > 0) markGithubProjectionFailed(db, outboxIds);
+        if (opts.apply && outboxClaimed && outboxIds.length > 0)
+          markGithubProjectionFailed(db, outboxIds);
         process.stderr.write(`github project sync failed: ${String(error)}\n`);
         process.exitCode = 3;
       } finally {

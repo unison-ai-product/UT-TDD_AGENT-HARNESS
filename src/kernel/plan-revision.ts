@@ -5,6 +5,45 @@ export type PlanRevisionIdentity =
   | { kind: "admission"; token: string }
   | { kind: "legacy-content"; token: string };
 
+function nonEmpty(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function sha256(value: unknown): value is string {
+  return typeof value === "string" && /^sha256:[a-f0-9]{64}$/i.test(value);
+}
+
+function admittedRevision(admission: unknown, planId: string): { token: string } | undefined {
+  if (!admission || typeof admission !== "object" || Array.isArray(admission)) return undefined;
+  const receipt = admission as Record<string, unknown>;
+  const binding = receipt.binding;
+  const route = receipt.route;
+  if (!binding || typeof binding !== "object" || Array.isArray(binding)) return undefined;
+  if (!route || typeof route !== "object" || Array.isArray(route)) return undefined;
+  const bound = binding as Record<string, unknown>;
+  const routed = route as Record<string, unknown>;
+  const revision = Number(bound.revision);
+  if (
+    receipt.schema_version !== "v2" ||
+    !nonEmpty(receipt.receipt_id) ||
+    !nonEmpty(receipt.command_id) ||
+    !nonEmpty(receipt.admitted_at) ||
+    !sha256(receipt.source_digest) ||
+    !sha256(receipt.decision_digest) ||
+    !sha256(receipt.receipt_digest) ||
+    bound.path !== `docs/plans/${planId}.md` ||
+    bound.plan_id !== planId ||
+    !nonEmpty(bound.asset_id) ||
+    !Number.isSafeInteger(revision) ||
+    revision <= 0 ||
+    !sha256(bound.content_digest) ||
+    !nonEmpty(routed.signal) ||
+    !nonEmpty(routed.mode)
+  )
+    return undefined;
+  return { token: String(revision) };
+}
+
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value && typeof value === "object") {
@@ -47,15 +86,11 @@ export function resolvePlanRevisionIdentity(
   const planId = String(document.frontmatter.plan_id ?? "").trim();
   if (!planId || (expectedPlanId && planId !== expectedPlanId)) return undefined;
 
-  const admission = document.frontmatter.admission_receipt;
-  if (admission && typeof admission === "object" && !Array.isArray(admission)) {
-    const binding = (admission as Record<string, unknown>).binding;
-    if (binding && typeof binding === "object" && !Array.isArray(binding)) {
-      const revision = Number((binding as Record<string, unknown>).revision);
-      if (Number.isSafeInteger(revision) && revision > 0)
-        return { kind: "admission", token: String(revision) };
-    }
-  }
+  const embeddedAdmission = document.frontmatter.admission_receipt;
+  const admission = admittedRevision(embeddedAdmission, planId);
+  if (admission) return { kind: "admission", token: admission.token };
+  // receiptを名乗る壊れた/部分的な形をlegacyへ降格するとcustodyを迂回できる。
+  if (embeddedAdmission !== undefined) return undefined;
 
   const canonicalFrontmatter = { ...document.frontmatter };
   delete canonicalFrontmatter.review_evidence;

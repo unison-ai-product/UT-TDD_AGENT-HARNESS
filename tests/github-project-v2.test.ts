@@ -11,6 +11,10 @@ import {
   syncForwardProject,
 } from "../src/github/project-v2";
 import type { ForwardReadinessRow } from "../src/kernel/forward-readiness";
+import {
+  claimGithubProjection,
+  queueGithubProjection,
+} from "../src/state-db/github-forward-projection";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 
@@ -238,6 +242,21 @@ describe("GitHub Project V2 reconciler", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
+      const outboxId = queueGithubProjection({
+        db,
+        repositoryId: "owner/repo",
+        planId: row.planId,
+        planRevision: row.revision,
+        operation: "project-item-upsert",
+        payload: {
+          owner: "owner",
+          projectNumber: 6,
+          readiness: row.readiness,
+          currentGate: row.currentGate,
+          headSha: row.headSha,
+        },
+      });
+      claimGithubProjection(db, [outboxId]);
       persistProjectSync({
         db,
         repositoryId: "owner/repo",
@@ -249,10 +268,64 @@ describe("GitHub Project V2 reconciler", () => {
           mutations: [],
           itemIds: { [row.planId]: "item:1" },
         },
+        outboxIds: [outboxId],
       });
       expect(
         db.prepare("SELECT object_kind, object_id, state FROM github_object_bindings").get(),
       ).toEqual({ object_kind: "project_item", object_id: "item:1", state: "同期済" });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHPROJ-048/U-GHPROJ-049: serializes remote intent and completes projection atomically", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const input = {
+        db,
+        repositoryId: "owner/repo",
+        planId: row.planId,
+        planRevision: row.revision,
+        operation: "project-item-upsert" as const,
+        payload: {
+          owner: "owner",
+          projectNumber: 6,
+          readiness: row.readiness,
+          currentGate: row.currentGate,
+          headSha: row.headSha,
+        },
+      };
+      const outboxId = queueGithubProjection(input);
+      claimGithubProjection(db, [outboxId]);
+      expect(() =>
+        queueGithubProjection({
+          ...input,
+          payload: { ...input.payload, currentGate: "review", headSha: "new-head" },
+        }),
+      ).toThrow(/already applying/);
+      expect(
+        db.prepare("SELECT COUNT(*) AS count FROM github_project_item_projection").get(),
+      ).toEqual({ count: 0 });
+      persistProjectSync({
+        db,
+        repositoryId: "owner/repo",
+        projectId: "project:6",
+        rows: [row],
+        result: {
+          applied: true,
+          projectId: "project:6",
+          mutations: [],
+          itemIds: { [row.planId]: "item:1" },
+        },
+        outboxIds: [outboxId],
+      });
+      expect(
+        db.prepare("SELECT status, attempt_count FROM github_projection_outbox").get(),
+      ).toEqual({ status: "applied", attempt_count: 1 });
+      expect(
+        db.prepare("SELECT head_sha, sync_status FROM github_project_item_projection").get(),
+      ).toEqual({ head_sha: row.headSha, sync_status: "同期済" });
     } finally {
       db.close();
     }

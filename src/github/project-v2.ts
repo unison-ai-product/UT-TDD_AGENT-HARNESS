@@ -384,8 +384,11 @@ export function persistProjectSync(input: {
   projectId: string;
   rows: readonly ForwardReadinessRow[];
   result: ProjectSyncResult;
+  outboxIds: readonly string[];
   now?: string;
 }): void {
+  if (input.rows.length !== input.outboxIds.length)
+    throw new Error("project sync outbox custody mismatch");
   const now = input.now ?? new Date().toISOString();
   const statement = input.db.prepare(
     `INSERT INTO github_project_item_projection (
@@ -399,7 +402,22 @@ export function persistProjectSync(input: {
   );
   input.db.exec("BEGIN IMMEDIATE");
   try {
-    for (const row of input.rows) {
+    const currentOutbox = input.db.prepare(
+      `SELECT outbox_id, status FROM github_projection_outbox
+        WHERE repository_id = ? AND plan_id = ? AND plan_revision = ?
+          AND operation = 'project-item-upsert'`,
+    );
+    const applyOutbox = input.db.prepare(
+      `UPDATE github_projection_outbox
+          SET status = 'applied', attempt_count = attempt_count + 1,
+              last_error = '', updated_at = ?
+        WHERE outbox_id = ? AND status = 'applying'`,
+    );
+    for (const [index, row] of input.rows.entries()) {
+      const outboxId = input.outboxIds[index] ?? "";
+      const custody = currentOutbox.get(input.repositoryId, row.planId, row.revision);
+      if (custody?.outbox_id !== outboxId || custody?.status !== "applying")
+        throw new Error(`stale project sync completion: ${row.planId}`);
       const itemId = input.result.itemIds[row.planId] ?? "";
       statement.run(
         stableId("github-project-item", `${input.repositoryId}:${row.planId}:${row.revision}`),
@@ -425,6 +443,7 @@ export function persistProjectSync(input: {
           observedAt: now,
         });
       }
+      applyOutbox.run(now, outboxId);
     }
     input.db.exec("COMMIT");
   } catch (error) {

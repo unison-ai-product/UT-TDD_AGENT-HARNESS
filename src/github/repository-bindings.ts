@@ -234,6 +234,22 @@ export function syncRepositoryBindings(input: {
       result.skipped.push({ number, reason: "subject-head-mismatch" });
       continue;
     }
+    let baseComparison: Record<string, unknown>;
+    try {
+      baseComparison = object(
+        gh.json([
+          "api",
+          `repos/${input.repositoryId}/compare/${trace.fields.base_sha}...${headSha}`,
+        ]),
+      );
+    } catch {
+      result.skipped.push({ number, reason: "base-sha-unverified" });
+      continue;
+    }
+    if (!["ahead", "identical"].includes(text(baseComparison.status).toLowerCase())) {
+      result.skipped.push({ number, reason: "base-sha-unverified" });
+      continue;
+    }
     const common = {
       repositoryId: input.repositoryId,
       planId,

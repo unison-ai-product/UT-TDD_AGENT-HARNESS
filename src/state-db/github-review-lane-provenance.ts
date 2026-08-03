@@ -7,6 +7,8 @@ import {
   validCrossReviewSource,
 } from "../kernel/github-closure-receipt";
 import { resolvePlanRevisionIdentity } from "../kernel/plan-revision";
+import { canonicalPlanContentDigest } from "../plan-admission/diff-fence";
+import { parseTrackedReceiptProjection } from "../plan-admission/tracked-receipt-projection";
 import type { HarnessDb } from "./index";
 
 function text(value: unknown): string {
@@ -59,10 +61,52 @@ function sourceContent(repoRoot: string, source: string): string | undefined {
   }
 }
 
+function trackedReceiptProjectionContent(repoRoot: string): string | undefined {
+  const root = resolve(repoRoot);
+  const path = resolve(root, "docs", "governance", "plan-admission-receipts.json");
+  try {
+    const physicalRoot = realpathSync(root);
+    const physicalPath = realpathSync(path);
+    const rel = relative(physicalRoot, physicalPath);
+    if (!rel || rel === ".." || rel.startsWith(`..${sep}`)) return undefined;
+    return readFileSync(physicalPath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
 export function canonicalPlanRevision(repoRoot: string, planId: string): string | undefined {
   if (!/^PLAN-[A-Za-z0-9-]+$/.test(planId)) return undefined;
-  const content = sourceContent(repoRoot, `docs/plans/${planId}.md`);
-  return content ? resolvePlanRevisionIdentity(content, planId)?.token : undefined;
+  const source = `docs/plans/${planId}.md`;
+  const content = sourceContent(repoRoot, source);
+  if (!content) return undefined;
+  const identity = resolvePlanRevisionIdentity(content, planId);
+  if (!identity || identity.kind === "legacy-content") return identity?.token;
+  const frontmatter = sourceFrontmatter(repoRoot, source, planId);
+  const receipt = frontmatter?.admission_receipt;
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return undefined;
+  const embedded = receipt as Record<string, unknown>;
+  const binding = embedded.binding as Record<string, unknown> | undefined;
+  const projectionContent = trackedReceiptProjectionContent(repoRoot);
+  if (!binding || !projectionContent) return undefined;
+  const projection = parseTrackedReceiptProjection(projectionContent);
+  if (!projection.ok) return undefined;
+  const projected = projection.value.lookup(text(embedded.command_id));
+  const contentDigest = canonicalPlanContentDigest(content);
+  if (
+    !projected ||
+    projected.receiptId !== text(embedded.receipt_id) ||
+    projected.receiptDigest !== text(embedded.receipt_digest) ||
+    projected.decisionDigest !== text(embedded.decision_digest) ||
+    projected.binding.path !== binding.path ||
+    projected.binding.planId !== binding.plan_id ||
+    projected.binding.assetId !== binding.asset_id ||
+    projected.binding.revision !== Number(binding.revision) ||
+    projected.binding.contentDigest !== binding.content_digest ||
+    contentDigest !== binding.content_digest
+  )
+    return undefined;
+  return identity.token;
 }
 
 function sourceEntries(

@@ -458,9 +458,19 @@ export function queueGithubProjection(input: {
     "github-outbox",
     `${input.repositoryId}:${input.planId}:${input.planRevision}:${input.operation}:${payloadDigest}`,
   );
-  input.db
-    .prepare(
-      `INSERT INTO github_projection_outbox (
+  input.db.exec("BEGIN IMMEDIATE");
+  try {
+    const current = input.db
+      .prepare(
+        `SELECT status FROM github_projection_outbox
+          WHERE repository_id = ? AND plan_id = ? AND plan_revision = ? AND operation = ?`,
+      )
+      .get(input.repositoryId, input.planId, input.planRevision, input.operation);
+    if (current?.status === "applying")
+      throw new Error(`GitHub projection already applying: ${input.planId}`);
+    input.db
+      .prepare(
+        `INSERT INTO github_projection_outbox (
          outbox_id, repository_id, plan_id, plan_revision, operation, payload_json, payload_digest,
          status, attempt_count, last_error, created_at, updated_at
        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 0, '', ?, ?)
@@ -484,19 +494,44 @@ export function queueGithubProjection(input: {
            ELSE ''
          END,
          updated_at=excluded.updated_at`,
-    )
-    .run(
-      outboxId,
-      input.repositoryId,
-      input.planId,
-      input.planRevision,
-      input.operation,
-      payloadJson,
-      payloadDigest,
-      now,
-      now,
-    );
+      )
+      .run(
+        outboxId,
+        input.repositoryId,
+        input.planId,
+        input.planRevision,
+        input.operation,
+        payloadJson,
+        payloadDigest,
+        now,
+        now,
+      );
+    input.db.exec("COMMIT");
+  } catch (error) {
+    input.db.exec("ROLLBACK");
+    throw error;
+  }
   return outboxId;
+}
+
+export function claimGithubProjection(db: HarnessDb, outboxIds: readonly string[]): void {
+  const claim = db.prepare(
+    `UPDATE github_projection_outbox SET status = 'applying', updated_at = ?
+      WHERE outbox_id = ? AND status IN ('pending', 'applied')`,
+  );
+  const now = new Date().toISOString();
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const id of outboxIds) {
+      claim.run(now, id);
+      if (Number(db.prepare("SELECT changes() AS count").get()?.count ?? 0) !== 1)
+        throw new Error(`stale GitHub projection claim: ${id}`);
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function markGithubProjectionApplied(
@@ -521,7 +556,7 @@ export function markGithubProjectionFailed(
     `UPDATE github_projection_outbox
         SET status = 'pending', attempt_count = attempt_count + 1,
             last_error = 'project-sync-failed', updated_at = ?
-      WHERE outbox_id = ? AND status = 'pending'`,
+      WHERE outbox_id = ? AND status IN ('pending', 'applying')`,
   );
   for (const id of outboxIds) statement.run(now, id);
 }
