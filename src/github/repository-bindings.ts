@@ -71,7 +71,7 @@ function requiredCheck(checks: unknown[]): { state: string; id: string } {
   const check = matches[0] ?? {};
   const state = text(check.conclusion || check.state || check.status).toUpperCase();
   return {
-    state: state === "SUCCESS" ? "成功" : ciState(matches),
+    state: state === "SUCCESS" ? "成功" : state === "NEUTRAL" ? "失敗" : ciState(matches),
     id: text(check.databaseId || check.id || check.node_id || check.url),
   };
 }

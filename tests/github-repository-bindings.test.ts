@@ -425,7 +425,7 @@ describe("GitHub repository facts binding", () => {
         issue_number: "70",
         review_receipt_digest: combinedReviewReceiptDigest(reviewDigests),
       });
-      const freshGh = (traceBody = body) =>
+      const freshGh = (traceBody = body, prConclusion = "SUCCESS", mainConclusion = "SUCCESS") =>
         new FakeGh(
           [
             {
@@ -439,16 +439,33 @@ describe("GitHub repository facts binding", () => {
               mergeCommit: { oid: "fedcba1" },
               body: traceBody,
               statusCheckRollup: [
-                { name: "harness-check", databaseId: "pr-check-1", conclusion: "SUCCESS" },
+                { name: "harness-check", databaseId: "pr-check-1", conclusion: prConclusion },
               ],
               reviews: [],
             },
           ],
           {
-            check_runs: [{ name: "harness-check", id: "main-check-1", conclusion: "SUCCESS" }],
+            check_runs: [{ name: "harness-check", id: "main-check-1", conclusion: mainConclusion }],
           },
           { state: "CLOSED" },
         );
+      for (const [prConclusion, mainConclusion] of [
+        ["NEUTRAL", "SUCCESS"],
+        ["SKIPPED", "SUCCESS"],
+        ["SUCCESS", "NEUTRAL"],
+        ["SUCCESS", "SKIPPED"],
+      ]) {
+        syncRepositoryBindings({
+          db,
+          repositoryId: "owner/repo",
+          repoRoot,
+          gh: freshGh(body, prConclusion, mainConclusion),
+        });
+        expect(
+          db.prepare("SELECT state FROM github_object_bindings WHERE object_kind = 'merge'").get(),
+        ).toEqual({ state: "invalidated:closure-incomplete" });
+        db.exec("DELETE FROM github_object_bindings");
+      }
       const result = syncRepositoryBindings({
         db,
         repositoryId: "owner/repo",
