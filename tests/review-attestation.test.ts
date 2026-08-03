@@ -4,6 +4,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -519,6 +520,56 @@ describe("review attestation (U-RVATT)", () => {
     // execute 経路は子の実行中だけ dir を保持して後始末する。dry-run は子を起動しないので、
     // 作った dir をその場で捨てなければ委譲のたびに temp が積み上がる。
     expect(existsSync(dirname(injected))).toBe(false);
+  });
+
+  // 識別子なしの review lane では verdict の読み手 (receipt 投影) が存在しない。この経路で
+  // verdict temp dir を作ると、execute の後始末 (`input.review` 経由) に到達せず委譲のたびに
+  // OS temp へ ut-tdd-review-* が積み上がる (PR #214 Codex FLAG)。dry-run JSON の env 注入が
+  // 無いことを回帰フェンスにする — 生成と注入は reviewRequest と同一述語なので、注入が無い
+  // ことは dir を作っていないことと等価 (単一述語の設計、delegation.ts 参照)。
+  it("U-RVATT-020: 識別子なしの review lane は verdict file を生成も注入もしない", async () => {
+    const before = readdirSync(tmpdir()).filter((name) => name.startsWith("ut-tdd-review-"));
+    const delegated = await runDelegation(["codex", "--role", "qa", "--task", "write red tests"]);
+    expect(
+      delegated.stdout,
+      "識別子なし review lane の dry-run が stdout へ何も出していない",
+    ).not.toBe("");
+    const env = JSON.parse(delegated.stdout).env as Record<string, string> | undefined;
+    expect(env?.[REVIEW_VERDICT_FILE_ENV]).toBeUndefined();
+    const after = readdirSync(tmpdir()).filter((name) => name.startsWith("ut-tdd-review-"));
+    expect(after).toEqual(before);
+  });
+
+  // requestedAt は retry のたびに変わる。digest に入れると同一レビュー要求の retry が別
+  // request として併存し、D1 の duplicate_request_conflict を偶発させる (PR #214 Codex 指摘)。
+  it("U-RVATT-021: 同一 identity の request 再発行は requestedAt が違っても同じ digest へ収束する", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-idem-"));
+    try {
+      const base = {
+        memoryId: "review:731:head:rev",
+        pr: 731,
+        exactHead: head,
+        reviewRevision: "review-rvatt-idem",
+        authorFamily: "claude" as const,
+      };
+      const first = issueReviewRequest({
+        repoRoot,
+        request: { ...base, requestedAt: "2026-08-03T00:00:00.000Z" },
+      });
+      const second = issueReviewRequest({
+        repoRoot,
+        request: { ...base, requestedAt: "2026-08-03T01:23:45.678Z" },
+      });
+      if (!first.ok || !second.ok) throw new Error("request issuance failed");
+      expect(second.digest).toBe(first.digest);
+      expect(second.path).toBe(first.path);
+      // 上書き後の本文は最新の requestedAt を保持する (metadata であって identity ではない)。
+      expect(JSON.parse(readFileSync(first.path, "utf8")).requestedAt).toBe(
+        "2026-08-03T01:23:45.678Z",
+      );
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
   });
 
   it("U-RVATT-011: 契約テキストと reader は同一の env 定数を根拠にする", () => {

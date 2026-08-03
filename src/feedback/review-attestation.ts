@@ -100,11 +100,12 @@ function persist(
   repoRoot: string,
   category: "requests" | "receipts",
   value: unknown,
+  digestSource: unknown = value,
 ): {
   path: string;
   digest: string;
 } {
-  const valueDigest = digest(value);
+  const valueDigest = digest(digestSource);
   const directory = join(repoRoot, ".ut-tdd", "review", category);
   mkdirSync(directory, { recursive: true });
   const path = join(directory, `${valueDigest}.json`);
@@ -152,7 +153,17 @@ export function issueReviewRequest(input: {
   request: ReviewAttestationRequest;
 }): ReviewRequestResult {
   if (!isValidRequest(input.request)) return { ok: false, reason: "invalid_review_request" };
-  const persisted = persist(input.repoRoot, "requests", input.request);
+  // request digest は安定識別子 (pr / exactHead / reviewRevision / authorFamily / memoryId)
+  // のみで構成する。`requestedAt` を digest に入れると、同一レビュー要求の retry が別 request
+  // ファイルとして併存し、D1 (`review-dispatch.ts`) の duplicate_request_conflict を偶発させる。
+  // retry は同 digest → 同 path への上書き = 冪等 (requestedAt は本文 metadata として更新される)。
+  const persisted = persist(input.repoRoot, "requests", input.request, {
+    memoryId: input.request.memoryId,
+    pr: input.request.pr,
+    exactHead: input.request.exactHead,
+    reviewRevision: input.request.reviewRevision,
+    authorFamily: input.request.authorFamily,
+  });
   return { ok: true, request: input.request, ...persisted };
 }
 

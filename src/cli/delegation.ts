@@ -358,8 +358,14 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
+        // verdict の輸送先は「receipt に投影される review (= 識別子宣言あり)」に限って作る。
+        // 識別子なし review lane (qa / tl / uiux 等) では verdict の読み手 (receipt 投影) が
+        // 存在せず、execute 経路の後始末 (`input.review` 経由) にも到達しないため、無条件に
+        // 作ると temp dir が委譲のたびに leak する (PR #214 Codex FLAG、U-RVATT-020)。
+        // reviewRequest 生成 (下) と同じ reviewIdentityRequested を述語にする — 二重実装に
+        // すると生成条件と輸送条件が再び drift する。
         let reviewVerdictFile: string | undefined;
-        if (routing.review_lane) {
+        if (routing.review_lane && reviewIdentityRequested) {
           reviewVerdictFile = reviewVerdictPath(process.cwd());
           plan.env = { ...(plan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: reviewVerdictFile };
         }
