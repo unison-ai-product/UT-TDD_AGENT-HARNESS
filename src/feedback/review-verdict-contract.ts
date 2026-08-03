@@ -7,6 +7,9 @@ export interface VerdictExtraction {
 
 export type Outcome<T> = { ok: true; value: T } | { ok: false; reasons: string[] };
 
+/** reviewer が verdict file を書くための単一の環境変数名。 */
+export const REVIEW_VERDICT_FILE_ENV = "UT_TDD_REVIEW_VERDICT_FILE";
+
 const EXAMPLE_START = "<!-- review-output-example:start -->";
 const EXAMPLE_END = "<!-- review-output-example:end -->";
 const VERDICTS: readonly ReviewVerdictName[] = ["PASS", "PASS-WEAK", "FLAG"];
@@ -33,6 +36,7 @@ export const REVIEW_OUTPUT_CONTRACT = [
   "使用できる verdict は `VERDICT: PASS`、`VERDICT: PASS-WEAK`、`VERDICT: FLAG` の 3 種だけです。",
   "FLAG の場合は、行頭 `FINDING:` に blocking finding を 1 件以上、1 行ずつ出力してください。",
   "PASS または PASS-WEAK の場合は `FINDING:` を出力しないでください。",
+  `同じ verdict ブロックを ${REVIEW_VERDICT_FILE_ENV} が指す path にも書いてください。`,
   "下記は書式の例です。**実際の出力は行頭に置くこと** (下の例は説明用に字下げしてあります)。",
   EXAMPLE_START,
   `${EXAMPLE_INDENT}VERDICT: FLAG`,

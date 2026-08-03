@@ -33,6 +33,10 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/review-verdict-contract.test.ts
     artifact_type: test_code
+  - artifact_path: src/feedback/review-attestation.ts
+    artifact_type: source_module
+  - artifact_path: tests/review-attestation.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
   requires: []

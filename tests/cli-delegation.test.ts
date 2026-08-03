@@ -69,6 +69,10 @@ describe("CLI delegation command registration", () => {
         "--plan",
         "--model",
         "--effort",
+        "--review-pr",
+        "--review-head",
+        "--review-revision",
+        "--review-author-family",
         "--execute",
         "--json",
       ]);

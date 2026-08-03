@@ -487,7 +487,6 @@ function analyzeRequest(
     state = "stale_head";
   } else if (
     reasons.size === 0 &&
-    !hasFlagVerdict &&
     (verdictReceipt?.verdict === "PASS" || verdictReceipt?.verdict === "PASS-WEAK") &&
     observation?.headSha === request.exactHead &&
     observation.checksGreen &&
