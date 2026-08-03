@@ -1532,9 +1532,12 @@ template。永続memoryと即時配送runtime stateを分離し、通知をrevie
 | `U-MEMWAKE-001` | 別worktree、同一entry二重watch、配送後retry | git common dirからatomic claimし一度だけ配送。次回はtimeout |
 | `U-MEMWAKE-002` | 同一operation同内容retry / 異内容差替え | 前者は同一pathへ収束、後者は`claude_inbox_projection_conflict` |
 | `U-MEMWAKE-003` | 本文に閉じmarkerと`<`を混入 | JSON data escapeに閉じ、通知fenceは一組だけ |
+| `U-MEMWAKE-004` | Git共通dirを解決できないrootへpublish | repo-localへ黙って迂回せず`claude_inbox_git_common_dir_required` |
+| `U-MEMWAKE-005` | NaNまたは非正のpoll/max wait | silent無効化・hot loopにせずfail-close |
 
 `tests/runtime-hook-entrypoints.test.ts`はsource Stop hookの`asyncRewake=true`、
-`tests/setup.test.ts`はconsumer templateの同一配線を検証する。
+`tests/setup.test.ts`はconsumer templateの同一配線、`tests/project-hook.test.ts`は
+`asyncRewake`欠落を機械的に拒否することを検証する。`U-MEMWAKE-001`は配送後inbox除去も固定する。
 
 ## D3b review attestation / verdict transport oracle (2026-07-31)
 

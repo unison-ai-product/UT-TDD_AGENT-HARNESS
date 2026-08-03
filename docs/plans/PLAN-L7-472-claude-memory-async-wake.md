@@ -57,6 +57,8 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 4. 通知本文はJSON data fenceへ閉じ、閉じmarkerや`<`をescapeする。
 5. inbox conflict、破損entry、claim競合はfail-safeに扱い、通常session summaryを妨げない。
 6. PR/HEAD/API/署名の正当性はD3cが再取得・検証する。memory通知だけでmerge可にしない。
+7. Git共通dirを解決できないpublishと不正な待機値はfail-closeし、配送済みinboxを除去する。
+8. `asyncRewake=true`をproject-hookで強制し、待機上限15分、claim/generation保持7日とする。
 
 ## 設計と検証の対
 
@@ -65,7 +67,9 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 | Git共通dir・一度だけ配送 | `U-MEMWAKE-001` |
 | 冪等retry・異内容競合 | `U-MEMWAKE-002` |
 | data fence escape | `U-MEMWAKE-003` |
-| Stop hook `asyncRewake` 配線 | `tests/runtime-hook-entrypoints.test.ts` |
+| Git root fail-close | `U-MEMWAKE-004` |
+| 待機値fail-close | `U-MEMWAKE-005` |
+| Stop hook `asyncRewake` 配線と機械検査 | `tests/runtime-hook-entrypoints.test.ts` / `tests/project-hook.test.ts` |
 | consumer template配線 | `tests/setup.test.ts` |
 
 ## Schedule

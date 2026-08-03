@@ -45,12 +45,14 @@ git common dir配下のruntime inboxへexclusive createする。Claude CodeのSt
 | 関数 | DbC | 対応oracle |
 | --- | --- | --- |
 | `buildClaudeInboxEntry` | parse済み`MemoryEntry`と非空operation IDから配送DTOを作る。本文の権威昇格は禁止 | U-MEMWAKE-001〜003 |
-| `publishClaudeInboxEntry` | git common dirへ`wx`で保存。同一内容retryは冪等、同一ID異内容は拒否 | U-MEMWAKE-001〜002 |
-| `waitForClaudeMemory` | 未claim entryだけを選びgenerationで旧watcherを停止、claim成功時だけ配送 | U-MEMWAKE-001 |
+| `publishClaudeInboxEntry` | git common dirへ`wx`で保存。解決不能rootはfail-closeし、同一内容retryは冪等、同一ID異内容は拒否 | U-MEMWAKE-001〜002 / 004 |
+| `waitForClaudeMemory` | 正の有限待機値だけを受理し、未claim entryを選ぶ。generationで旧watcherを停止し、claim成功時だけ配送済みinboxを除去する | U-MEMWAKE-001 / 005 |
 | `renderClaudeWakeMessage` | 本文を長さ上限付きJSON dataとしてescapeし、閉じmarkerを一つに保つ | U-MEMWAKE-003 |
 
 runtime inboxは通知キューであり、review verdict、provider family、PR HEAD、署名の信頼根ではない。
 D3cは通知受領後もGitHub APIとprovider別署名receiptを独立検証する。
+Stop hookは`asyncRewake=true`を機械検査し、待機上限を15分（hook timeout 930秒）に閉じる。
+claim/generationは7日retentionでGCし、session数に比例した永久増加を防ぐ。
 
 ## §3 失敗方針
 
