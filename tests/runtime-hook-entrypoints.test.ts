@@ -177,7 +177,6 @@ describe("runtime hook entrypoints", () => {
         ["hook", "claude-memory-wake"],
         { hook_event_name: "Stop", session_id: "delegated-review" },
         {
-          UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE: "1",
           UT_TDD_CLAUDE_WAKE_MAX_MS: "invalid-if-not-skipped",
         },
       );

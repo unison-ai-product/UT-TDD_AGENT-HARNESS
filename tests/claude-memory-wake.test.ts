@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoryEntry } from "../src/memory";
 import {
   buildClaudeInboxEntry,
+  isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
   renderClaudeWakeMessage,
   waitForClaudeMemory,
@@ -29,6 +30,18 @@ function fixture(): string {
 }
 
 describe("Claude HARNESS memory async wake", () => {
+  it("U-MEMWAKE-006: VS Code extension entrypointだけをpositiveにwake対象化する", () => {
+    expect(isClaudeMemoryWakeTarget({ CLAUDE_CODE_ENTRYPOINT: "claude-vscode" })).toBe(true);
+    expect(isClaudeMemoryWakeTarget({})).toBe(false);
+    expect(isClaudeMemoryWakeTarget({ CLAUDE_CODE_ENTRYPOINT: "cli" })).toBe(false);
+    expect(
+      isClaudeMemoryWakeTarget({
+        CLAUDE_CODE_ENTRYPOINT: "claude-vscode",
+        UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE: "1",
+      }),
+    ).toBe(false);
+  });
+
   it("U-MEMWAKE-001: Git共通dirの通知を同一sessionへ一度だけ配送する", async () => {
     const root = fixture();
     try {
