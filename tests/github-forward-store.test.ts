@@ -182,9 +182,9 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       db.prepare(
         `INSERT INTO schedule_entries (
           schedule_entry_id, plan_id, layer, status, current_location, rag,
-          blocked_reason, predecessor_plan_ids, source_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run("s1", "PLAN-L7-1-a", "L7", "draft", "plan", "yellow", "", "", "rev1");
+          blocked_reason, predecessor_plan_ids, plan_revision, source_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run("s1", "PLAN-L7-1-a", "L7", "draft", "plan", "yellow", "", "", "rev1", "hash1");
       recordGithubBinding(db, {
         repositoryId: "repo",
         planId: "PLAN-L7-1-a",
@@ -736,7 +736,6 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         "item",
         "PLAN-L7-1-a",
         "rev1",
-        "rev1",
         "content",
         "old",
         "同期済",
@@ -927,8 +926,8 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       db.prepare(
         `INSERT INTO schedule_entries (
           schedule_entry_id, plan_id, layer, status, current_location, rag,
-          blocked_reason, predecessor_plan_ids, source_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          blocked_reason, predecessor_plan_ids, plan_revision, source_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         "schedule:PLAN-L7-2-b",
         "PLAN-L7-2-b",
@@ -939,6 +938,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         "",
         "PLAN-L7-1-a",
         "rev1",
+        "hash2",
       );
       const rows = rebuildExecutionReadiness({ db });
       expect(rows[0]).toMatchObject({ readiness: "阻害中", currentGate: "merge-closure" });

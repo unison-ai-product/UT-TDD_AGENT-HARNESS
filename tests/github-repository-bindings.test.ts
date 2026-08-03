@@ -632,9 +632,9 @@ describe("GitHub repository facts binding", () => {
         migrate(db);
         db.prepare(
           `INSERT INTO schedule_entries (
-            schedule_entry_id, plan_id, status, source_hash
-          ) VALUES (?, ?, ?, ?)`,
-        ).run("schedule:closure", "PLAN-L7-436-domain", "confirmed", "1");
+            schedule_entry_id, plan_id, status, plan_revision, source_hash
+          ) VALUES (?, ?, ?, ?, ?)`,
+        ).run("schedule:closure", "PLAN-L7-436-domain", "confirmed", "1", "hash1");
         db.prepare(
           `INSERT INTO github_project_item_projection (
             projection_id, repository_id, project_id, project_item_id, plan_id,
@@ -782,9 +782,9 @@ describe("GitHub repository facts binding", () => {
     try {
       migrate(db);
       db.prepare(
-        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
-         VALUES (?, ?, ?, ?)`,
-      ).run("schedule:fallback", "PLAN-L7-436-domain", "draft", "1");
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, plan_revision, source_hash)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run("schedule:fallback", "PLAN-L7-436-domain", "draft", "1", "hash1");
       const result = syncRepositoryBindings({
         db,
         repositoryId: "owner/repo",
@@ -833,9 +833,9 @@ describe("GitHub repository facts binding", () => {
     try {
       migrate(db);
       db.prepare(
-        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
-         VALUES (?, ?, ?, ?)`,
-      ).run("schedule:rollback", "PLAN-L7-436-domain", "confirmed", "1");
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, plan_revision, source_hash)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run("schedule:rollback", "PLAN-L7-436-domain", "confirmed", "1", "hash1");
       db.prepare(
         `INSERT INTO github_project_item_projection (
           projection_id, repository_id, project_id, project_item_id, plan_id,
@@ -964,9 +964,9 @@ describe("GitHub repository facts binding", () => {
     try {
       migrate(db);
       db.prepare(
-        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
-         VALUES (?, ?, ?, ?)`,
-      ).run("schedule:project-required", "PLAN-L7-436-domain", "confirmed", "1");
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, plan_revision, source_hash)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run("schedule:project-required", "PLAN-L7-436-domain", "confirmed", "1", "hash1");
       const sources = (["claim-blind", "spec-blind"] as const).map((lane) => ({
         planId: "PLAN-L7-436-domain",
         planRevision: "1",
@@ -1057,9 +1057,9 @@ describe("GitHub repository facts binding", () => {
       migrate(db);
       writeAdmittedTestPlan(repoRoot, "PLAN-L7-436-domain", "1");
       db.prepare(
-        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
-         VALUES (?, ?, ?, ?)`,
-      ).run("schedule:no-network-in-tx", "PLAN-L7-436-domain", "confirmed", "1");
+        `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, plan_revision, source_hash)
+         VALUES (?, ?, ?, ?, ?)`,
+      ).run("schedule:no-network-in-tx", "PLAN-L7-436-domain", "confirmed", "1", "hash1");
       const gh = new FakeGh(
         [
           {
