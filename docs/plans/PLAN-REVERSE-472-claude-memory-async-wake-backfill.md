@@ -6,7 +6,7 @@ layer: cross
 drive: agent
 workflow_phase: R4
 confirmed_reverse_type: fullback
-forward_routing: L6
+forward_routing: L5
 promotion_strategy: reuse-with-hardening
 route_signal: reverse
 route_mode: reverse
