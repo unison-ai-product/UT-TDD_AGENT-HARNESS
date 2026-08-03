@@ -287,8 +287,11 @@ function runtimeCommand(
         // よって現時点で保証できるのは「未宣言レビューは receipt を生まないので `merge_ready` に
         // 到達しない」ことだけであり、未宣言レビュー自体の検出は D2 の merge gate の責務。
         // 顧問 2 名 (Fable / Sol) が独立に同じ refutation を出し、実測で確認済み。
+        // --review-author-family も宣言入力に含める。三識別子だけを宣言と数えると、
+        // author-family 単独指定が「識別子なし委譲」として素通りし、値が黙って捨てられる
+        // (silent discard、PR #214 precheck FLAG)。宣言 = 4 flag のいずれかを渡したこと。
         const reviewIdentityRequested = Boolean(
-          opts.reviewPr || opts.reviewHead || opts.reviewRevision,
+          opts.reviewPr || opts.reviewHead || opts.reviewRevision || opts.reviewAuthorFamily,
         );
         if (
           reviewIdentityRequested &&

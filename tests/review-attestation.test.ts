@@ -540,6 +540,30 @@ describe("review attestation (U-RVATT)", () => {
     expect(after).toEqual(before);
   });
 
+  // --review-author-family も宣言入力。三識別子だけを宣言と数えると author-family 単独指定が
+  // 「識別子なし委譲」として素通りし、値が黙って捨てられる (silent discard の禁止、
+  // PR #214 precheck FLAG)。
+  it("U-RVATT-022: --review-author-family 単独指定は識別子なし扱いで素通りせず fail-close する", async () => {
+    const priorExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      const result = await runDelegation([
+        "codex",
+        "--role",
+        "qa",
+        "--task",
+        "write red tests",
+        "--review-author-family",
+        "bogus",
+      ]);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("review_head_required");
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = priorExitCode;
+    }
+  });
+
   // requestedAt は retry のたびに変わる。digest に入れると同一レビュー要求の retry が別
   // request として併存し、D1 の duplicate_request_conflict を偶発させる (PR #214 Codex 指摘)。
   it("U-RVATT-021: 同一 identity の request 再発行は requestedAt が違っても同じ digest へ収束する", () => {
