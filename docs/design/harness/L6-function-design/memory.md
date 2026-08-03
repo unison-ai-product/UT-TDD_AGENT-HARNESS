@@ -58,6 +58,9 @@ claim/generationは7日retentionでGCし、session数に比例した永久増加
 終了する。加えてUT-TDDが`claude --print`で起動する有限委譲processは
 `UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE=1`を強制し、呼出側envで解除できない。これによりraw headless
 Claudeとclosing reviewが15分watcherに保持されることを防ぐ（U-MEMWAKE-006）。
+inbox v2 entryは通知をauthoringしたGit worktree rootの正規化SHA-256を`targetWorkspaceId`へ持つ。
+Stop hookは自身のworktree identityと一致するentryだけをclaimし、同じgit common dirを共有する
+別worktreeのClaude sessionによる先取り配送を拒否する（U-MEMWAKE-007）。絶対pathは保存しない。
 
 ## §3 失敗方針
 

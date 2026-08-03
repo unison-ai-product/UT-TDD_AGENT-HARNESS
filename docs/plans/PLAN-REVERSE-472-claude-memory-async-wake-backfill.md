@@ -44,7 +44,7 @@ review_evidence: []
 
 - R0: HELIX参考実装とUT-TDD現行memory/hookを観測し、即時配送欠落を確定する。
 - R1: authored memory、runtime inbox、Claude session、D3c信頼根の責務を分離する。
-- R2: U-MEMWAKE-001〜006とhook/setup/project-hook回帰を追加する。
+- R2: U-MEMWAKE-001〜007とhook/setup/project-hook回帰を追加する。
 - R3: 実通知E2Eとcross-family reviewでdata fence・重複配送・権威混同を検証する。
 - R4: `memory.md`とL7 unit-test designへ契約を合流しForwardへ戻す。
 

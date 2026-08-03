@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   closeSync,
   existsSync,
@@ -13,7 +14,7 @@ import {
 import { join } from "node:path";
 import type { MemoryEntry } from "../memory";
 
-export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v1" as const;
+export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 
 export interface ClaudeInboxEntry {
@@ -23,6 +24,7 @@ export interface ClaudeInboxEntry {
   readonly body: string;
   readonly originRuntime: "codex" | "system";
   readonly operationId: string;
+  readonly targetWorkspaceId: string;
   readonly createdAt: string;
 }
 
@@ -40,6 +42,21 @@ export function isClaudeMemoryWakeTarget(env: NodeJS.ProcessEnv): boolean {
 
 export function resolveClaudeWakeDelay(value: string | undefined, fallback: number): number {
   return value?.trim() ? Number(value) : fallback;
+}
+
+export function claudeWorkspaceId(repoRoot: string): string {
+  try {
+    const worktreeRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (!worktreeRoot) throw new Error("empty");
+    const normalized = process.platform === "win32" ? worktreeRoot.toLowerCase() : worktreeRoot;
+    return createHash("sha256").update(normalized.replaceAll("\\", "/")).digest("hex");
+  } catch {
+    throw new Error("claude_workspace_git_root_required");
+  }
 }
 
 function safeFilePart(value: string): string {
@@ -63,17 +80,22 @@ function runtimeRoot(repoRoot: string): string {
 export function buildClaudeInboxEntry(input: {
   memory: MemoryEntry;
   operationId: string;
+  workspaceId: string;
   originRuntime?: "codex" | "system";
   now?: string;
 }): ClaudeInboxEntry {
   if (!input.operationId.trim()) throw new Error("claude_inbox_operation_id_required");
+  if (!/^[a-f0-9]{64}$/.test(input.workspaceId)) {
+    throw new Error("claude_inbox_workspace_id_invalid");
+  }
   return {
     schemaVersion: CLAUDE_INBOX_SCHEMA,
-    id: `${input.memory.memory_id}:op:${input.operationId}`,
+    id: `${input.memory.memory_id}:workspace:${input.workspaceId}:op:${input.operationId}`,
     memoryId: input.memory.memory_id,
     body: input.memory.body,
     originRuntime: input.originRuntime ?? "codex",
     operationId: input.operationId,
+    targetWorkspaceId: input.workspaceId,
     createdAt: input.now ?? new Date().toISOString(),
   };
 }
@@ -106,6 +128,7 @@ function decodeEntry(value: string): ClaudeInboxEntry | undefined {
       !entry.body.trim() ||
       !["codex", "system"].includes(entry.originRuntime) ||
       !entry.operationId.trim() ||
+      !/^[a-f0-9]{64}$/.test(entry.targetWorkspaceId) ||
       !Number.isFinite(Date.parse(entry.createdAt))
     ) {
       return undefined;
@@ -236,6 +259,7 @@ export async function waitForClaudeMemory(input: {
   const sleep =
     input.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const root = runtimeRoot(input.repoRoot);
+  const workspaceId = claudeWorkspaceId(input.repoRoot);
   mkdirSync(root, { recursive: true });
   pruneRuntimeFiles(root, Date.now());
   const generationPath = join(root, `${safeFilePart(input.sessionId)}.generation`);
@@ -249,7 +273,10 @@ export async function waitForClaudeMemory(input: {
     }
     const unavailable = claimedIds(root);
     for (const id of unclaimable) unavailable.add(id);
-    const entry = selectClaudeInboxEntry(readInbox(input.repoRoot), unavailable);
+    const entry = selectClaudeInboxEntry(
+      readInbox(input.repoRoot).filter((candidate) => candidate.targetWorkspaceId === workspaceId),
+      unavailable,
+    );
     if (entry) {
       if (claim({ repoRoot: input.repoRoot, entry, sessionId: input.sessionId, at: now() })) {
         try {

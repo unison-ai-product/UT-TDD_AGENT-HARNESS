@@ -61,6 +61,7 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 8. `asyncRewake=true`をproject-hookで強制し、待機上限15分、claim/generation保持7日とする。
 9. VS Code拡張が設定する`CLAUDE_CODE_ENTRYPOINT=claude-vscode`だけをpositiveなwake対象とし、
    未知・欠落entrypointとUT-TDDの有限Claude委譲はpoll前に即時終了させる。
+10. inbox v2をauthoring worktreeのSHA-256 identityへ束縛し、別worktree sessionのclaimを拒否する。
 
 ## 設計と検証の対
 
@@ -72,6 +73,7 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 | Git root fail-close | `U-MEMWAKE-004` |
 | 待機値fail-close | `U-MEMWAKE-005` |
 | interactive sessionと有限委譲の分離 | `U-MEMWAKE-006` |
+| workspace宛先とCLI exit 2配送 | `U-MEMWAKE-007` |
 | Stop hook `asyncRewake` 配線と機械検査 | `tests/runtime-hook-entrypoints.test.ts` / `tests/project-hook.test.ts` |
 | consumer template配線 | `tests/setup.test.ts` |
 

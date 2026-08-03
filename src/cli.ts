@@ -138,6 +138,7 @@ import {
 } from "./runtime/attempt-escalation";
 import {
   buildClaudeInboxEntry,
+  claudeWorkspaceId,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
   resolveClaudeWakeDelay,
@@ -3859,7 +3860,11 @@ memory
         process.stdout.write(`memory: wrote ${entry.source_path}\n`);
         if (opts.notifyClaude) {
           const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
-          const notification = buildClaudeInboxEntry({ memory: entry, operationId });
+          const notification = buildClaudeInboxEntry({
+            memory: entry,
+            operationId,
+            workspaceId: claudeWorkspaceId(process.cwd()),
+          });
           const deliveryPath = publishClaudeInboxEntry(process.cwd(), notification);
           process.stdout.write(`memory: notified Claude via ${deliveryPath}\n`);
         }
