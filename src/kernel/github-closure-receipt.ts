@@ -238,28 +238,44 @@ function parseTrackedReceiptRecord(
   errors: string[],
 ): TrackedReceiptRecord | undefined {
   const keys = [
-    "sequence", "previous_record_digest", "record_digest", "command_id", "receipt_id",
-    "receipt_digest", "decision_digest", "binding",
+    "sequence",
+    "previous_record_digest",
+    "record_digest",
+    "command_id",
+    "receipt_id",
+    "receipt_digest",
+    "decision_digest",
+    "binding",
   ];
   if (!isExactObject(value, keys)) {
     errors.push(`${prefix}:shape-invalid`);
     return undefined;
   }
-  if (!isExactObject(value.binding, ["path", "plan_id", "asset_id", "revision", "content_digest"])) {
+  if (
+    !isExactObject(value.binding, ["path", "plan_id", "asset_id", "revision", "content_digest"])
+  ) {
     errors.push(`${prefix}:binding-shape-invalid`);
     return undefined;
   }
   const binding = value.binding;
   const valid =
-    Number.isSafeInteger(value.sequence) && Number(value.sequence) > 0 &&
+    Number.isSafeInteger(value.sequence) &&
+    Number(value.sequence) > 0 &&
     (value.previous_record_digest === null || isTrackedReceiptSha(value.previous_record_digest)) &&
-    isTrackedReceiptSha(value.record_digest) && nonEmptyTrackedReceipt(value.command_id) &&
-    nonEmptyTrackedReceipt(value.receipt_id) && isTrackedReceiptSha(value.receipt_digest) &&
-    isTrackedReceiptSha(value.decision_digest) && typeof binding.path === "string" &&
-    TRACKED_RECEIPT_PLAN_PATH.test(binding.path) && typeof binding.plan_id === "string" &&
-    PLAN_ID_PATTERN.test(binding.plan_id) && typeof binding.asset_id === "string" &&
-    TRACKED_RECEIPT_ASSET_ID.test(binding.asset_id) && Number.isSafeInteger(binding.revision) &&
-    Number(binding.revision) > 0 && isTrackedReceiptSha(binding.content_digest);
+    isTrackedReceiptSha(value.record_digest) &&
+    nonEmptyTrackedReceipt(value.command_id) &&
+    nonEmptyTrackedReceipt(value.receipt_id) &&
+    isTrackedReceiptSha(value.receipt_digest) &&
+    isTrackedReceiptSha(value.decision_digest) &&
+    typeof binding.path === "string" &&
+    TRACKED_RECEIPT_PLAN_PATH.test(binding.path) &&
+    typeof binding.plan_id === "string" &&
+    PLAN_ID_PATTERN.test(binding.plan_id) &&
+    typeof binding.asset_id === "string" &&
+    TRACKED_RECEIPT_ASSET_ID.test(binding.asset_id) &&
+    Number.isSafeInteger(binding.revision) &&
+    Number(binding.revision) > 0 &&
+    isTrackedReceiptSha(binding.content_digest);
   if (!valid) {
     errors.push(`${prefix}:field-invalid`);
     return undefined;

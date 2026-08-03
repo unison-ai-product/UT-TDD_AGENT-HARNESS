@@ -13,7 +13,6 @@ import {
   decodeMergeClosureReceipt,
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt";
-import { resolvePlanRevisionIdentity } from "../src/state-db/github-review-lane-provenance";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence";
 import {
   TRACKED_RECEIPT_SCHEMA,
@@ -23,6 +22,7 @@ import {
   isManualGithubObservationKind,
   readForwardSchedule,
 } from "../src/state-db/github-forward-projection";
+import { resolvePlanRevisionIdentity } from "../src/state-db/github-review-lane-provenance";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 

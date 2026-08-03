@@ -5,7 +5,10 @@ import { parse as parseYaml } from "yaml";
 import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
 import { stableId } from "../stable-id";
-import { canonicalPlanRevision, resolvePlanRevisionIdentity } from "./github-review-lane-provenance";
+import {
+  canonicalPlanRevision,
+  resolvePlanRevisionIdentity,
+} from "./github-review-lane-provenance";
 import type { HarnessDb } from "./index";
 
 type SpecIrSourceKind =
