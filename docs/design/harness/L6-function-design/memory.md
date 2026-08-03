@@ -35,6 +35,23 @@ secret-like payload を含む memory は authoring / parsing 時点で fail-clos
 | `renderMemorySurface` | renderMemorySurface(entries: MemoryEntry[]) => string | 任意の entry 配列 | SessionStart / recall 用の人間可読 text | 空 entry は空文字列。長文 body は短縮 | U-MEMORY-004 |
 | `evaluateMemoryPromotion` | `(events: SessionEvent[]) => { should_nudge: boolean; reason: string }` | 1 session分のsanitize済 event列 | commitまたはplan_switchあり、かつmemory write成功eventなしの時だけnudge候補を返す | 本文・git差分を読まない純関数。nudgeはmemory作成を強制しない | U-MEMORY-005 |
 
+## Claude宛て即時配送 (PLAN-L7-472)
+
+`.ut-tdd/memory/*.md`への永続化と、稼働中Claude sessionへの通知を分離する。
+`ut-tdd memory add --notify-claude`は`writeMemory`成功後だけ、memory IDと安定operation IDを
+git common dir配下のruntime inboxへexclusive createする。Claude CodeのStop hookは
+`asyncRewake=true`でinboxを待ち、entryをatomic claimして同一sessionへ一度だけ返す。
+
+| 関数 | DbC | 対応oracle |
+| --- | --- | --- |
+| `buildClaudeInboxEntry` | parse済み`MemoryEntry`と非空operation IDから配送DTOを作る。本文の権威昇格は禁止 | U-MEMWAKE-001〜003 |
+| `publishClaudeInboxEntry` | git common dirへ`wx`で保存。同一内容retryは冪等、同一ID異内容は拒否 | U-MEMWAKE-001〜002 |
+| `waitForClaudeMemory` | 未claim entryだけを選びgenerationで旧watcherを停止、claim成功時だけ配送 | U-MEMWAKE-001 |
+| `renderClaudeWakeMessage` | 本文を長さ上限付きJSON dataとしてescapeし、閉じmarkerを一つに保つ | U-MEMWAKE-003 |
+
+runtime inboxは通知キューであり、review verdict、provider family、PR HEAD、署名の信頼根ではない。
+D3cは通知受領後もGitHub APIとprovider別署名receiptを独立検証する。
+
 ## §3 失敗方針
 
 - authoring/parsing は fail-close。secret-like token、invalid kind、必須項目欠落を永続化しない。

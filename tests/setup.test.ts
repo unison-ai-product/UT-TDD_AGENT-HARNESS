@@ -383,7 +383,13 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
           string,
           {
             matcher?: string;
-            hooks: { command: string; args: string[]; blockOnFailure?: boolean }[];
+            hooks: {
+              command: string;
+              args: string[];
+              blockOnFailure?: boolean;
+              asyncRewake?: boolean;
+              timeout?: number;
+            }[];
           }[]
         >;
       };
@@ -421,6 +427,12 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       expect(claude.hooks.SubagentStop[0].hooks[0]).toMatchObject({
         command: "node",
         args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
+      });
+      expect(claude.hooks.Stop[1].hooks[0]).toMatchObject({
+        command: "node",
+        args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
+        timeout: 7230,
+        asyncRewake: true,
       });
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([

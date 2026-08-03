@@ -136,6 +136,11 @@ import {
   renderEscalationSignals,
   selectPrecedingSessionFile,
 } from "./runtime/attempt-escalation";
+import {
+  buildClaudeInboxEntry,
+  publishClaudeInboxEntry,
+  waitForClaudeMemory,
+} from "./runtime/claude-memory-wake";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect";
 import { scanDanglingStops } from "./runtime/forced-stop";
 import {
@@ -1138,6 +1143,23 @@ session
   });
 
 const hook = program.command("hook").description("package-local hook entrypoints");
+hook
+  .command("claude-memory-wake")
+  .description("wait for a HARNESS memory notification and rewake an idle Claude session")
+  .action(async () => {
+    const input = readHookInput("Stop");
+    const result = await waitForClaudeMemory({
+      repoRoot: requireRuntimeRepoRoot({ allowCwdFallback: true }),
+      sessionId: input.session_id ?? "claude-session",
+      pollIntervalMs: Number(process.env.UT_TDD_CLAUDE_WAKE_POLL_MS ?? 2_000),
+      maxWaitMs: Number(process.env.UT_TDD_CLAUDE_WAKE_MAX_MS ?? 7_200_000),
+    });
+    if (result.kind === "delivered" && result.message) {
+      process.stderr.write(`${result.message}\n`);
+      process.exitCode = 2;
+    }
+  });
+
 hook
   .command("post-tool-use")
   .description("record PostToolUse through the shared session-log core")
@@ -3802,8 +3824,18 @@ memory
   .option("--body <text>", "memory body")
   .option("--body-file <path>", "read memory body from a UTF-8 file")
   .option("--tags <csv>", "comma-separated tags")
+  .option("--notify-claude", "deliver this memory to an active Claude session immediately")
+  .option("--operation-id <id>", "stable delivery operation id")
   .action(
-    (opts: { title: string; kind: string; body?: string; bodyFile?: string; tags?: string }) => {
+    (opts: {
+      title: string;
+      kind: string;
+      body?: string;
+      bodyFile?: string;
+      tags?: string;
+      notifyClaude?: boolean;
+      operationId?: string;
+    }) => {
       const body = opts.bodyFile ? readFileSync(opts.bodyFile, "utf8") : (opts.body ?? "");
       const tags = opts.tags
         ? opts.tags
@@ -3822,6 +3854,12 @@ memory
           },
         });
         process.stdout.write(`memory: wrote ${entry.source_path}\n`);
+        if (opts.notifyClaude) {
+          const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
+          const notification = buildClaudeInboxEntry({ memory: entry, operationId });
+          const deliveryPath = publishClaudeInboxEntry(process.cwd(), notification);
+          process.stdout.write(`memory: notified Claude via ${deliveryPath}\n`);
+        }
       } catch (error) {
         process.stderr.write(`memory: ${error instanceof Error ? error.message : String(error)}\n`);
         process.exitCode = 1;

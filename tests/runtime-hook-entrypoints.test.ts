@@ -112,6 +112,17 @@ describe("runtime hook entrypoints", () => {
         "summary",
       ],
     });
+    expect(hooks.Stop[1].hooks[0]).toMatchObject({
+      command: "node",
+      args: [
+        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
+        `${claudeProjectDir}/src/cli.ts`,
+        "hook",
+        "claude-memory-wake",
+      ],
+      timeout: 7230,
+      asyncRewake: true,
+    });
   });
 
   it("shared CLI session/hook commands record a PLAN digest in a temp repo", () => {

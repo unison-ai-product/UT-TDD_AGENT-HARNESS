@@ -66,6 +66,18 @@
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
+            "timeout": 7230,
+            "asyncRewake": true,
+            "statusMessage": "HARNESS memory: Claude宛て通知を待機"
+          }
+        ]
       }
     ],
     "SubagentStop": [

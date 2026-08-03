@@ -1522,6 +1522,20 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
 
+## Claude HARNESS memory async wake oracle (2026-08-03)
+
+対象 = `src/runtime/claude-memory-wake.ts`、`src/cli.ts`、Claude Stop hook、consumer setup
+template。永続memoryと即時配送runtime stateを分離し、通知をreview/署名の権威へ昇格させない。
+
+| ID | 攻撃・入力 | oracle |
+| --- | --- | --- |
+| `U-MEMWAKE-001` | 別worktree、同一entry二重watch、配送後retry | git common dirからatomic claimし一度だけ配送。次回はtimeout |
+| `U-MEMWAKE-002` | 同一operation同内容retry / 異内容差替え | 前者は同一pathへ収束、後者は`claude_inbox_projection_conflict` |
+| `U-MEMWAKE-003` | 本文に閉じmarkerと`<`を混入 | JSON data escapeに閉じ、通知fenceは一組だけ |
+
+`tests/runtime-hook-entrypoints.test.ts`はsource Stop hookの`asyncRewake=true`、
+`tests/setup.test.ts`はconsumer templateの同一配線を検証する。
+
 ## D3b review attestation / verdict transport oracle (2026-07-31)
 
 対象 = `src/feedback/review-attestation.ts`、`src/cli/delegation.ts`、

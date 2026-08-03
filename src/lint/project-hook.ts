@@ -33,6 +33,7 @@ interface HookCommand {
   command?: unknown;
   args?: unknown;
   blockOnFailure?: boolean;
+  asyncRewake?: boolean;
 }
 
 interface HookEntry {
@@ -115,6 +116,14 @@ export const REQUIRED = [
     wrapperCommand: wrapperCommand("session summary"),
     sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary"),
     wrapperArgs: args(WRAPPER_CLI, "session", "summary"),
+  },
+  {
+    id: "claude-memory-wake",
+    event: "Stop",
+    commandParts: ["src/cli.ts", "hook claude-memory-wake"],
+    wrapperCommand: wrapperCommand("hook claude-memory-wake"),
+    sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"),
+    wrapperArgs: args(WRAPPER_CLI, "hook", "claude-memory-wake"),
   },
   {
     id: "subagent-stop",
