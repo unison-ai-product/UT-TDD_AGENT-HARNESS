@@ -53,6 +53,10 @@ runtime inboxは通知キューであり、review verdict、provider family、PR
 D3cは通知受領後もGitHub APIとprovider別署名receiptを独立検証する。
 Stop hookは`asyncRewake=true`を機械検査し、待機上限を15分（hook timeout 930秒）に閉じる。
 claim/generationは7日retentionでGCし、session数に比例した永久増加を防ぐ。
+通知対象はVS Code拡張などの生存中interactive Claude sessionに限定する。UT-TDDが
+`claude --print`で起動する有限委譲processは`UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE=1`を
+強制し、Stop hookを即時終了させる。呼出側のenvでこの抑止を解除できない。これにより
+closing reviewのprovider processが15分watcherに保持されることを防ぐ（U-MEMWAKE-006）。
 
 ## §3 失敗方針
 

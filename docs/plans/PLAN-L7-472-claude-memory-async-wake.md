@@ -59,6 +59,8 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 6. PR/HEAD/API/署名の正当性はD3cが再取得・検証する。memory通知だけでmerge可にしない。
 7. Git共通dirを解決できないpublishと不正な待機値はfail-closeし、配送済みinboxを除去する。
 8. `asyncRewake=true`をproject-hookで強制し、待機上限15分、claim/generation保持7日とする。
+9. VS Code拡張のinteractive sessionだけをwake対象とし、UT-TDDの有限Claude委譲は
+   抑止envを強制してStop hookを即時終了させる。
 
 ## 設計と検証の対
 
@@ -69,6 +71,7 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 | data fence escape | `U-MEMWAKE-003` |
 | Git root fail-close | `U-MEMWAKE-004` |
 | 待機値fail-close | `U-MEMWAKE-005` |
+| interactive sessionと有限委譲の分離 | `U-MEMWAKE-006` |
 | Stop hook `asyncRewake` 配線と機械検査 | `tests/runtime-hook-entrypoints.test.ts` / `tests/project-hook.test.ts` |
 | consumer template配線 | `tests/setup.test.ts` |
 
