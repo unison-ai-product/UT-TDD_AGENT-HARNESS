@@ -8,6 +8,7 @@ import {
   buildClaudeInboxEntry,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
+  resolveClaudeWakeDelay,
   renderClaudeWakeMessage,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake";
@@ -92,6 +93,14 @@ describe("Claude HARNESS memory async wake", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("U-MEMWAKE-005: 未設定と空白envは既定値へ戻し、非空値だけを数値化する", () => {
+    expect(resolveClaudeWakeDelay(undefined, 2_000)).toBe(2_000);
+    expect(resolveClaudeWakeDelay("", 2_000)).toBe(2_000);
+    expect(resolveClaudeWakeDelay("  ", 900_000)).toBe(900_000);
+    expect(resolveClaudeWakeDelay("25", 2_000)).toBe(25);
+    expect(resolveClaudeWakeDelay("invalid", 2_000)).toBeNaN();
   });
 
   it("U-MEMWAKE-002: 同一operationは冪等、異内容は競合として拒否する", () => {
