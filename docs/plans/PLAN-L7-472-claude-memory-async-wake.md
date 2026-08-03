@@ -59,8 +59,8 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 6. PR/HEAD/API/署名の正当性はD3cが再取得・検証する。memory通知だけでmerge可にしない。
 7. Git共通dirを解決できないpublishと不正な待機値はfail-closeし、配送済みinboxを除去する。
 8. `asyncRewake=true`をproject-hookで強制し、待機上限15分、claim/generation保持7日とする。
-9. VS Code拡張のinteractive sessionだけをwake対象とし、UT-TDDの有限Claude委譲は
-   抑止envを強制してStop hookを即時終了させる。
+9. VS Code拡張が設定する`CLAUDE_CODE_ENTRYPOINT=claude-vscode`だけをpositiveなwake対象とし、
+   未知・欠落entrypointとUT-TDDの有限Claude委譲はpoll前に即時終了させる。
 
 ## 設計と検証の対
 

@@ -32,6 +32,12 @@ export interface ClaudeMemoryWakeResult {
   readonly message?: string;
 }
 
+export function isClaudeMemoryWakeTarget(env: NodeJS.ProcessEnv): boolean {
+  return (
+    env.CLAUDE_CODE_ENTRYPOINT === "claude-vscode" && env.UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE !== "1"
+  );
+}
+
 function safeFilePart(value: string): string {
   return value.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160);
 }

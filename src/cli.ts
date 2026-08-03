@@ -138,6 +138,7 @@ import {
 } from "./runtime/attempt-escalation";
 import {
   buildClaudeInboxEntry,
+  isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
   waitForClaudeMemory,
 } from "./runtime/claude-memory-wake";
@@ -1147,7 +1148,7 @@ hook
   .command("claude-memory-wake")
   .description("wait for a HARNESS memory notification and rewake an idle Claude session")
   .action(async () => {
-    if (process.env.UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE === "1") return;
+    if (!isClaudeMemoryWakeTarget(process.env)) return;
     const input = readHookInput("Stop");
     const result = await waitForClaudeMemory({
       repoRoot: requireRuntimeRepoRoot({ allowCwdFallback: true }),

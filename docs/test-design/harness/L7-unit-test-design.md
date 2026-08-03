@@ -1534,7 +1534,7 @@ template。永続memoryと即時配送runtime stateを分離し、通知をrevie
 | `U-MEMWAKE-003` | 本文に閉じmarkerと`<`を混入 | JSON data escapeに閉じ、通知fenceは一組だけ |
 | `U-MEMWAKE-004` | Git共通dirを解決できないrootへpublish | repo-localへ黙って迂回せず`claude_inbox_git_common_dir_required` |
 | `U-MEMWAKE-005` | NaNまたは非正のpoll/max wait | silent無効化・hot loopにせずfail-close |
-| `U-MEMWAKE-006` | UT-TDDの有限Claude委譲にStop hookが発火し、呼出側が抑止envを解除しようとする | `adapterExecutionEnv`が抑止値を強制し、wake entrypointはgit/poll処理前にexit 0。VS Code interactive sessionのhook配線は維持 |
+| `U-MEMWAKE-006` | entrypoint欠落・未知値・`claude-vscode`、およびUT-TDD有限委譲からの抑止解除を個別投入 | `claude-vscode`だけをpositive受理し、それ以外はpoll前にexit 0。有限委譲は抑止値を強制 |
 
 `tests/runtime-hook-entrypoints.test.ts`はsource Stop hookの`asyncRewake=true`、
 `tests/setup.test.ts`はconsumer templateの同一配線、`tests/project-hook.test.ts`は
