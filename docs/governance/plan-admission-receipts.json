@@ -2290,9 +2290,9 @@
       }
     },
     {
-      "sequence": 140,
-      "previous_record_digest": "sha256:95b88308975caeb47a9c664677d36d37bdbf9f3db5afd08a8e15ac26b6cb7e22",
-      "record_digest": "sha256:9f6d847c4970246e613aa633ac3009f35e1ce7240621409570fd9f50b451135d",
+      "sequence": 144,
+      "previous_record_digest": "sha256:0b3fc0c0f3ca7f96a507c1a8a3cb76750aab46725faa469fafb3b63a4953bb07",
+      "record_digest": "sha256:5b85fbc6a463229a600d49a6e4963016308bb744332b84045ca4339022de565a",
       "command_id": "command:pr210-review-kind-close:1785726599513",
       "receipt_id": "certificate:fe2573e611ae427627b344fe9d14b6d9",
       "receipt_digest": "sha256:36a30058592a16c2e2d8143df8a6a6402685c9e84ed93c63f41f86a3277cbd7f",
