@@ -48,6 +48,13 @@ import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record";
 import { computeSkillMetrics } from "./feedback/engine";
+import { loadReviewReceipts, loadReviewRequests } from "./feedback/review-attestation";
+import {
+  detectUnattestedMerges,
+  evaluateMergeGate,
+  loadMergeGateReceipts,
+  writeMergeGateReceipt,
+} from "./feedback/review-merge-gate";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
@@ -3586,6 +3593,158 @@ github
     } catch (error) {
       process.stdout.write(`## UT-TDD harness summary\n\n> summary degraded: ${String(error)}\n`);
     }
+  });
+
+// D2 merge gate (PLAN-L7-465 D2 scope 改訂 2026-08-03、incident #210 対策)。
+// merge の正規経路は `ut-tdd pr merge` であり、判定正本は D1 analyzer の merge_ready。
+// gh 直叩き merge は `pr audit` (gate receipt 不在検知) が事後 fail-close で拾う。
+interface GhPrCheckRollup {
+  name?: string;
+  conclusion?: string;
+}
+
+function fetchPrObservationForGate(pr: number): {
+  pr: number;
+  headSha: string;
+  state: "OPEN" | "MERGED" | "CLOSED";
+  checksGreen: boolean;
+} {
+  const raw = execFileSync(
+    "gh",
+    ["pr", "view", String(pr), "--json", "headRefOid,state,statusCheckRollup"],
+    { encoding: "utf8" },
+  );
+  const parsed = JSON.parse(raw) as {
+    headRefOid: string;
+    state: "OPEN" | "MERGED" | "CLOSED";
+    statusCheckRollup: GhPrCheckRollup[];
+  };
+  const rollup = parsed.statusCheckRollup ?? [];
+  // pending (conclusion 空) や check ゼロは green 扱いしない (fail-close)。
+  const checksGreen = rollup.length > 0 && rollup.every((check) => check.conclusion === "SUCCESS");
+  return { pr, headSha: parsed.headRefOid, state: parsed.state, checksGreen };
+}
+
+const prGate = program
+  .command("pr")
+  .description("PR merge gate — D2 (PLAN-L7-465): verdict 無し merge の機械 block");
+
+prGate
+  .command("merge")
+  .description("merge の正規経路。D1 analyzer が merge_ready の時だけ merge する (fail-close)")
+  .requiredOption("--pr <n>", "PR number")
+  .option("--execute", "実際に merge する (default: 判定のみの dry-run)")
+  .option("--json", "JSON output")
+  .action((opts: { pr: string; execute?: boolean; json?: boolean }) => {
+    const pr = Number(opts.pr);
+    if (!Number.isInteger(pr) || pr <= 0) {
+      process.stderr.write("pr merge: --pr must be a positive integer\n");
+      process.exitCode = 1;
+      return;
+    }
+    const repoRoot = process.cwd();
+    let observation: ReturnType<typeof fetchPrObservationForGate>;
+    try {
+      observation = fetchPrObservationForGate(pr);
+    } catch (error) {
+      process.stderr.write(`pr merge: PR observation unavailable — deny (${String(error)})\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const decision = evaluateMergeGate({
+      pr,
+      requests: loadReviewRequests(repoRoot),
+      receipts: loadReviewReceipts(repoRoot),
+      observation,
+      now: new Date().toISOString(),
+    });
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify({ ...decision, executed: false }, null, 2)}\n`);
+    }
+    if (!decision.ok) {
+      if (!opts.json) {
+        process.stdout.write(
+          `pr merge — DENY pr=#${pr} head=${decision.head ?? "unknown"} state=${decision.state ?? "none"}\n` +
+            decision.reasons.map((reason) => `  - ${reason}\n`).join(""),
+        );
+      }
+      process.exitCode = 1;
+      return;
+    }
+    if (!opts.execute) {
+      if (!opts.json) {
+        process.stdout.write(
+          `pr merge — READY pr=#${pr} head=${decision.head} (dry-run; pass --execute to merge)\n`,
+        );
+      }
+      return;
+    }
+    try {
+      execFileSync("gh", ["pr", "merge", String(pr), "--merge"], { stdio: "inherit" });
+    } catch (error) {
+      process.stderr.write(`pr merge: gh merge failed (${String(error)})\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const receipt = writeMergeGateReceipt({
+      repoRoot,
+      receipt: {
+        kind: "merge_gate",
+        pr,
+        head: decision.head as string,
+        state: "merge_ready",
+        decidedAt: new Date().toISOString(),
+      },
+    });
+    process.stdout.write(`pr merge — MERGED pr=#${pr} gate receipt ${receipt.path}\n`);
+  });
+
+prGate
+  .command("audit")
+  .description("merge 済み PR の gate 迂回 / verdict 無し merge を事後検知する (backstop)")
+  .option("--limit <n>", "直近の merged PR を何件検査するか", "10")
+  .option("--json", "JSON output")
+  .action((opts: { limit: string; json?: boolean }) => {
+    const limit = Number(opts.limit);
+    if (!Number.isInteger(limit) || limit <= 0) {
+      process.stderr.write("pr audit: --limit must be a positive integer\n");
+      process.exitCode = 1;
+      return;
+    }
+    const repoRoot = process.cwd();
+    let numbers: number[];
+    try {
+      const raw = execFileSync(
+        "gh",
+        ["pr", "list", "--state", "merged", "--limit", String(limit), "--json", "number"],
+        { encoding: "utf8" },
+      );
+      numbers = (JSON.parse(raw) as { number: number }[]).map((entry) => entry.number);
+    } catch (error) {
+      process.stderr.write(`pr audit: PR list unavailable — fail-close (${String(error)})\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const observations = numbers.map((number) => fetchPrObservationForGate(number));
+    const findings = detectUnattestedMerges({
+      observations,
+      gateReceipts: loadMergeGateReceipts(repoRoot),
+      requests: loadReviewRequests(repoRoot),
+      receipts: loadReviewReceipts(repoRoot),
+      now: new Date().toISOString(),
+    });
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify({ findings }, null, 2)}\n`);
+    } else if (findings.length === 0) {
+      process.stdout.write(`pr audit — OK (${observations.length} merged PRs attested)\n`);
+    } else {
+      for (const finding of findings) {
+        process.stdout.write(
+          `pr audit — ${finding.finding} pr=#${finding.pr} head=${finding.head.slice(0, 8)}\n`,
+        );
+      }
+    }
+    if (findings.length > 0) process.exitCode = 1;
   });
 
 const githubPr = github
