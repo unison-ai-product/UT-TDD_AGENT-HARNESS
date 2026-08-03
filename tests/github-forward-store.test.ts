@@ -267,7 +267,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
           projectNumber: 6,
           readiness: "着手可能",
           currentGate: "G7",
-          headSha: "abc",
+          headSha: "abcdef1",
         },
       });
       clearRebuildableProjectionTables(db);
@@ -280,7 +280,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         projectNumber: 6,
         readiness: "着手可能",
         currentGate: "G7",
-        headSha: "abc",
+        headSha: "abcdef1",
       });
       expect(String(queued?.payload_digest)).toMatch(/^[a-f0-9]{64}$/);
     } finally {
@@ -304,7 +304,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
             projectNumber: 6,
             readiness: "着手可能",
             currentGate: "G7",
-            headSha: "abc",
+            headSha: "abcdef1",
             token: "must-not-persist",
           } as never,
         }),
@@ -338,6 +338,27 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       const row = db.prepare("SELECT payload_json, status FROM github_projection_outbox").get();
       expect(JSON.parse(String(row?.payload_json))).toMatchObject({ headSha: "" });
       expect(row?.status).toBe("pending");
+      for (const invalidHeadSha of [" ", "not-a-sha", undefined, { oid: "abcdef1" }]) {
+        expect(() =>
+          queueGithubProjection({
+            db,
+            repositoryId: "owner/repo",
+            planId: "PLAN-L7-2-invalid-head",
+            planRevision: "rev1",
+            operation: "project-item-upsert",
+            payload: {
+              owner: "owner",
+              projectNumber: 6,
+              readiness: "着手可能",
+              currentGate: "implementation",
+              headSha: invalidHeadSha,
+            } as never,
+          }),
+        ).toThrow(/payload values/);
+      }
+      expect(db.prepare("SELECT COUNT(*) AS count FROM github_projection_outbox").get()).toEqual({
+        count: 1,
+      });
     } finally {
       db.close();
     }
@@ -358,7 +379,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
           projectNumber: 6,
           readiness: "着手可能",
           currentGate: "implementation",
-          headSha: "abc",
+          headSha: "abcdef1",
         },
         now: "2026-07-31T00:00:00Z",
       };
@@ -388,14 +409,14 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
           projectNumber: 6,
           readiness: "着手可能",
           currentGate: "implementation",
-          headSha: "abc",
+          headSha: "abcdef1",
         },
       };
       const oldId = queueGithubProjection(base);
       markGithubProjectionApplied(db, [oldId]);
       const newId = queueGithubProjection({
         ...base,
-        payload: { ...base.payload, currentGate: "review", headSha: "def" },
+        payload: { ...base.payload, currentGate: "review", headSha: "def5678" },
       });
       expect(newId).not.toBe(oldId);
       markGithubProjectionApplied(db, [oldId]);
@@ -415,7 +436,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
           projectNumber: 6,
           readiness: "着手可能",
           currentGate: "review",
-          headSha: "def",
+          headSha: "def5678",
         }),
       });
     } finally {
@@ -438,7 +459,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
           projectNumber: 6,
           readiness: "着手可能",
           currentGate: "review",
-          headSha: "def",
+          headSha: "def5678",
         },
       });
       markGithubProjectionFailed(db, [id], "2026-07-31T00:03:00Z");
@@ -474,7 +495,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
           projectNumber: 6,
           readiness: "着手可能",
           currentGate: "review",
-          headSha: "def",
+          headSha: "def5678",
         },
       });
       markGithubProjectionApplied(db, [id]);

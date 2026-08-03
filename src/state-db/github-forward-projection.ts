@@ -435,6 +435,7 @@ export function queueGithubProjection(input: {
   const now = input.now ?? new Date().toISOString();
   const payloadKeys = Object.keys(input.payload).sort();
   const expectedPayloadKeys = ["currentGate", "headSha", "owner", "projectNumber", "readiness"];
+  const headSha = input.payload.headSha;
   if (payloadKeys.join("|") !== expectedPayloadKeys.join("|"))
     throw new Error(`invalid GitHub projection payload fields: ${payloadKeys.join(",")}`);
   if (
@@ -442,7 +443,8 @@ export function queueGithubProjection(input: {
     !Number.isSafeInteger(input.payload.projectNumber) ||
     input.payload.projectNumber <= 0 ||
     !text(input.payload.readiness) ||
-    !text(input.payload.currentGate)
+    !text(input.payload.currentGate) ||
+    (headSha !== "" && (typeof headSha !== "string" || !/^[0-9a-f]{7,64}$/i.test(headSha)))
   )
     throw new Error("invalid GitHub projection payload values");
   const payloadJson = JSON.stringify({
@@ -450,7 +452,7 @@ export function queueGithubProjection(input: {
     projectNumber: input.payload.projectNumber,
     readiness: input.payload.readiness,
     currentGate: input.payload.currentGate,
-    headSha: input.payload.headSha,
+    headSha,
   });
   const payloadDigest = createHash("sha256").update(payloadJson).digest("hex");
   const outboxId = stableId(
