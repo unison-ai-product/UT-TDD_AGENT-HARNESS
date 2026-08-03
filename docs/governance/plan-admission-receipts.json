@@ -2304,6 +2304,22 @@
         "revision": 3,
         "content_digest": "sha256:9672eed288c8ffec4bd6aeccb3cb4ff9716357170fb39c83980b550778f955e4"
       }
+    },
+    {
+      "sequence": 145,
+      "previous_record_digest": "sha256:5b85fbc6a463229a600d49a6e4963016308bb744332b84045ca4339022de565a",
+      "record_digest": "sha256:714a2e7b41dc3144e97d36b3199392e8159a39c0b766483cf80add1a654a278b",
+      "command_id": "command:pr210-green-command-digest-revision4:1785729123542",
+      "receipt_id": "certificate:35c999f6d0daaeafe8f50c17410151b8",
+      "receipt_digest": "sha256:478d1a2a9b8587ca8df128e1ea6ca46e87197d1889f90ea8a6da742efca5a1b9",
+      "decision_digest": "sha256:65eed824e231bcdeda7fa7c085c0a2bf8801a90086969bb32f57f95a35655f23",
+      "binding": {
+        "path": "docs/plans/PLAN-L7-471-github-forward-foundation.md",
+        "plan_id": "PLAN-L7-471-github-forward-foundation",
+        "asset_id": "plan:5e3651c92d0e10e531bacfab12ef4c06",
+        "revision": 4,
+        "content_digest": "sha256:a4c87a6442155518a9e265c88da2ccb24749c13c47ef2c070fb8c1dd6faa63c2"
+      }
     }
   ]
 }

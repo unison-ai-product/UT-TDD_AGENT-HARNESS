@@ -44,7 +44,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-08-03T02:46:55.000Z
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
-        output_digest: sha256:0812be2fb9c1020bf072c65131585cae9e840a291429b43b0a2f2945c5d889b2
+        output_digest: sha256:a603f560c0df9558cb5a333bfd81865c3396d04e6416038731f96b98c0e08236
         anchor_commit: 5cacb2c5
   - reviewer: claude-blind-reviewer
     review_kind: cross_agent
@@ -72,7 +72,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-08-03T02:46:55.000Z
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
-        output_digest: sha256:0812be2fb9c1020bf072c65131585cae9e840a291429b43b0a2f2945c5d889b2
+        output_digest: sha256:a603f560c0df9558cb5a333bfd81865c3396d04e6416038731f96b98c0e08236
         anchor_commit: 5cacb2c5
 generates:
   - artifact_path: src/kernel/forward-readiness.ts
@@ -105,21 +105,20 @@ dependencies:
   references:
     - docs/test-design/harness/L7-unit-test-design.md
   blocks: []
-status: confirmed
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:fe2573e611ae427627b344fe9d14b6d9
-  command_id: command:pr210-review-kind-close:1785726599513
-  admitted_at: 2026-08-03T03:09:59.513Z
-  source_digest: sha256:9672eed288c8ffec4bd6aeccb3cb4ff9716357170fb39c83980b550778f955e4
-  decision_digest: sha256:3262bbb57bd1c55a9bf93aa752bebb1686b7159d53293dfbf00aa5b428251881
-  receipt_digest: sha256:36a30058592a16c2e2d8143df8a6a6402685c9e84ed93c63f41f86a3277cbd7f
+  receipt_id: certificate:35c999f6d0daaeafe8f50c17410151b8
+  command_id: command:pr210-green-command-digest-revision4:1785729123542
+  admitted_at: 2026-08-03T03:52:03.543Z
+  source_digest: sha256:a4c87a6442155518a9e265c88da2ccb24749c13c47ef2c070fb8c1dd6faa63c2
+  decision_digest: sha256:65eed824e231bcdeda7fa7c085c0a2bf8801a90086969bb32f57f95a35655f23
+  receipt_digest: sha256:478d1a2a9b8587ca8df128e1ea6ca46e87197d1889f90ea8a6da742efca5a1b9
   binding:
     path: docs/plans/PLAN-L7-471-github-forward-foundation.md
     plan_id: PLAN-L7-471-github-forward-foundation
     asset_id: plan:5e3651c92d0e10e531bacfab12ef4c06
-    revision: 3
-    content_digest: sha256:9672eed288c8ffec4bd6aeccb3cb4ff9716357170fb39c83980b550778f955e4
+    revision: 4
+    content_digest: sha256:a4c87a6442155518a9e265c88da2ccb24749c13c47ef2c070fb8c1dd6faa63c2
   route:
     signal: forward
     mode: forward
