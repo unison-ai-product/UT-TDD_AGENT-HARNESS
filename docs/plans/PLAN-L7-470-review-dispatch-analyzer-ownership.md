@@ -37,6 +37,10 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/review-attestation.test.ts
     artifact_type: test_code
+  - artifact_path: src/feedback/review-merge-gate.ts
+    artifact_type: source_module
+  - artifact_path: tests/review-merge-gate.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
   requires: []
