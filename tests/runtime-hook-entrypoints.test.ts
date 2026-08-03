@@ -169,6 +169,26 @@ describe("runtime hook entrypoints", () => {
     }
   });
 
+  it("U-MEMWAKE-006: delegated Claude process skips the long-lived wake hook", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wake-skip-"));
+    try {
+      const result = runCli(
+        cwd,
+        ["hook", "claude-memory-wake"],
+        { hook_event_name: "Stop", session_id: "delegated-review" },
+        {
+          UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE: "1",
+          UT_TDD_CLAUDE_WAKE_MAX_MS: "invalid-if-not-skipped",
+        },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toBe("");
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("records hook state at the repository root when launched from a nested cwd", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-hook-root-"));
     try {
