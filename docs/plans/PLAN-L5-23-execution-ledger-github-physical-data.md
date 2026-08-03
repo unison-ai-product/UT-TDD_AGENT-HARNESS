@@ -63,18 +63,18 @@ sub_doc: physical-data
 github_issue_id: 213
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:ea33e36eaf38c2331c6d62c7331080a4
-  command_id: command:pr210-schema-reconcile:1785500248403
-  admitted_at: 2026-07-31T12:17:28.403Z
-  source_digest: sha256:d133956efc4af9726e50eb13a30a431af5cee0f0859eeaa0d00bc53a1777ce49
-  decision_digest: sha256:4462c11ef8f4fd999e05d0312516d197d31ee1520ad85e70e389e14502f8573e
-  receipt_digest: sha256:5aba110cb258ad350d7474ac223a17f25884918d4a7014fbe8e18d91d38e8a25
+  receipt_id: certificate:ec36419530f98d9aa1e6978eceba16bf
+  command_id: command:pr210-custody-close:1785723730226
+  admitted_at: 2026-08-03T02:22:10.225Z
+  source_digest: sha256:d95775aec34b7807c88bb59c04e8313efd347f09ff4696c38e2df27c60d349ea
+  decision_digest: sha256:c50e97dc94c941b7668d577e0597f2e41ec0d41c3b4da500652819d16ca2b638
+  receipt_digest: sha256:8d8afc854aef7f3e5d4e5848ef89f166213eac3c672e906d32fc65b45cf4e734
   binding:
     path: docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md
     plan_id: PLAN-L5-23-execution-ledger-github-physical-data
     asset_id: plan:legacy:f2525adb50df140055a950653d54731a769ce2cf4e2e5287d1edcce0ed9bbe37
-    revision: 3
-    content_digest: sha256:d133956efc4af9726e50eb13a30a431af5cee0f0859eeaa0d00bc53a1777ce49
+    revision: 4
+    content_digest: sha256:d95775aec34b7807c88bb59c04e8313efd347f09ff4696c38e2df27c60d349ea
   route:
     signal: feature_addition
     mode: add-feature
@@ -85,16 +85,16 @@ admission_receipt:
     projection_digest: sha256:bc53329c5463b7eb8e9e9f65a6b57824e7207ff8fe6160f4c8ba066c7343bd97
   origin:
     plan_id: PLAN-L5-23-execution-ledger-github-physical-data
-    revision: 2
+    revision: 3
     digest: sha256:f8c6cfbc155fcdf7413c81d2780e9e3ce28fba3c17d8c2346864b2ddad09bc54
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
   reentry:
     target_plan_id: PLAN-L5-23-execution-ledger-github-physical-data
-    target_revision: 3
+    target_revision: 4
     phase: forward_merge
-  escape_reason: "PR #210 cross-reviewで検出したForward基盤表とExecution Episode目標表のschema名衝突を解消する"
+  escape_reason: "PR #210 closing reviewで確定したadmission・outbox・trace base custodyを物理設計へ反映する"
 ---
 
 # PLAN-L5-23: Execution Ledger・GitHub projection・再合流証跡の物理設計
@@ -191,7 +191,7 @@ projectionを追加する。
 
 `schedule_entries.plan_revision`は対応PLANの`admission_receipt.binding.revision`を保持し、
 `source_hash`は文書内容fingerprintとして分離する。schedule authoring sourceを優先する場合も
-対応PLANからrevisionを解決し、receiptを持たないlegacy PLANだけsource hashへfallbackする。
+対応PLANからrevisionを解決する。admission済みPLANはtracked receipt hash chain・binding・canonical content digestを照合し、partial・未追跡・digest不一致はwrite-zeroとする。receipt不在legacyだけcanonical content tokenを使い、`source_hash`はrevisionへfallbackしない。
 
 `github_object_bindings.object_kind`は`project`、`project_item`、`branch`、`issue`、
 `pull_request`、`check_run`、`review`、`merge`を表現できること。provider object identityの
@@ -206,11 +206,10 @@ merge closureをfail-closeする。digestは改変検知であり、真正性は
 canonical PLAN sourceの結合から得る。
 
 Project V2はfield名・single-select option・duplicate itemをremote mutation前に全件検証する。
-remote観測もSQLite transaction開始前に完了し、確定したbinding commandだけを単一transactionで
-commitする。transaction内からnetwork/APIを呼び出してはならない。
+remote観測もSQLite transaction開始前に完了し、trace base SHAはrepository-scoped compareでPR HEADの祖先または同一と確認する。確定したbinding commandだけを単一transactionでcommitし、transaction内からnetwork/APIを呼び出してはならない。
 
 現行の`github_object_bindings` / `github_projection_outbox`はPLAN revisionを主語にしたForward基盤であり、
 episode未確定の段階でepisode IDを創作しない。Execution Episode降下時は
 `execution_github_object_bindings` / `execution_github_projection_outbox`へ明示変換し、同名表を
 非互換schemaで上書きしない。現行outbox payloadは`project-item-upsert`の
-`owner,projectNumber,readiness,currentGate,headSha`だけをcanonical JSONで保存し、SHA-256 digestを併記する。
+`owner,projectNumber,readiness,currentGate,headSha`だけをcanonical JSONで保存し、SHA-256 digestを併記する。dispatch前に`applying`へatomic claimし、Project projection/binding保存と`applied`化はcurrent outbox identityを再照合する同一transactionで行う。

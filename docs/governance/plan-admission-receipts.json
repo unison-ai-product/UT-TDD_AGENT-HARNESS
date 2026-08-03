@@ -2256,6 +2256,22 @@
         "revision": 3,
         "content_digest": "sha256:d133956efc4af9726e50eb13a30a431af5cee0f0859eeaa0d00bc53a1777ce49"
       }
+    },
+    {
+      "sequence": 142,
+      "previous_record_digest": "sha256:f18f73e2584a98d75484a3487fcf855fc4422b1a9c2a1a000079fbc80302de07",
+      "record_digest": "sha256:a79fc32396f42af8be8afae3b8d6314b82253cc3d7169d2b1cbf7f7a594bcfdd",
+      "command_id": "command:pr210-custody-close:1785723730226",
+      "receipt_id": "certificate:ec36419530f98d9aa1e6978eceba16bf",
+      "receipt_digest": "sha256:8d8afc854aef7f3e5d4e5848ef89f166213eac3c672e906d32fc65b45cf4e734",
+      "decision_digest": "sha256:c50e97dc94c941b7668d577e0597f2e41ec0d41c3b4da500652819d16ca2b638",
+      "binding": {
+        "path": "docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md",
+        "plan_id": "PLAN-L5-23-execution-ledger-github-physical-data",
+        "asset_id": "plan:legacy:f2525adb50df140055a950653d54731a769ce2cf4e2e5287d1edcce0ed9bbe37",
+        "revision": 4,
+        "content_digest": "sha256:d95775aec34b7807c88bb59c04e8313efd347f09ff4696c38e2df27c60d349ea"
+      }
     }
   ]
 }
