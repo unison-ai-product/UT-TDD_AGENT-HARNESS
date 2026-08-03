@@ -275,9 +275,22 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
-        if (routing.review_lane && (!opts.reviewPr || !opts.reviewHead || !opts.reviewRevision)) {
+        // レビュー識別子は **opt-in**。`review_lane` には qa / tl / uiux のように
+        // 「まだ成果物が存在しない」委譲 (テスト作成依頼など) も含まれるため、
+        // 全 review lane に PR/HEAD を強制すると正当な用法を壊す。
+        // 識別子を 1 つでも渡した時点で「verdict を出す宣言」とみなし、**部分指定は fail-close**
+        // する (どの成果物に対する verdict か不明な receipt を作らせない)。
+        // 識別子なしの委譲は receipt を作らないので、D1 側は「誰も反応していない」= SLA breach
+        // として観測する。fail-close の向きは保たれる。
+        const reviewIdentityRequested = Boolean(
+          opts.reviewPr || opts.reviewHead || opts.reviewRevision,
+        );
+        if (
+          reviewIdentityRequested &&
+          (!opts.reviewPr || !opts.reviewHead || !opts.reviewRevision)
+        ) {
           process.stderr.write(
-            "review_head_required: review lane requires --review-pr, --review-head, and --review-revision\n",
+            "review_head_required: review identity requires --review-pr, --review-head, and --review-revision together\n",
           );
           process.exitCode = 1;
           return;
@@ -316,13 +329,13 @@ function runtimeCommand(
         // 著者族は provider から独立した事実 (委譲を実行している runtime) から取る。
         // provider の反対と定義すると D1 の同族レビュー検出が恒偽になり fail-open する
         // (`resolveReviewAuthorFamily` の doc を参照)。判別できなければ推測せず落とす。
-        const authorFamily = routing.review_lane
+        const authorFamily = reviewIdentityRequested
           ? resolveReviewAuthorFamily({
               explicit: opts.reviewAuthorFamily,
               currentRuntime: detection.currentRuntime,
             })
           : null;
-        if (routing.review_lane && !authorFamily) {
+        if (reviewIdentityRequested && !authorFamily) {
           process.stderr.write(
             "review_author_family_required: cannot determine the author family; " +
               "pass --review-author-family <codex|claude>\n",

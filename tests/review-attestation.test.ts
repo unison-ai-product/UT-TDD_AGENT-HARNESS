@@ -451,6 +451,23 @@ describe("review attestation (U-RVATT)", () => {
     expect(isOutsideRepo("/repo", "/repo-sibling/verdict.txt")).toBe(true);
   });
 
+  // review_lane には qa / tl / uiux のように「まだ成果物が存在しない」委譲も含まれる。
+  // 全 review lane に PR/HEAD を強制すると、テスト作成依頼のような正当な用法を壊す
+  // (2026-07-31 の CI で実測: cli-surface の `--role reviewer` dry-run 2 件が fail-close した)。
+  it("U-RVATT-018: 識別子なしの review_lane 委譲は fail-close しない", async () => {
+    const priorExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      const result = await runDelegation(["codex", "--role", "qa", "--task", "write red tests"]);
+      expect(result.stderr).not.toContain("review_head_required");
+      expect(result.stderr).not.toContain("review_author_family_required");
+      expect(result.stdout, "識別子なしの review_lane 委譲が dry-run を出せていない").not.toBe("");
+      expect(process.exitCode).toBe(undefined);
+    } finally {
+      process.exitCode = priorExitCode;
+    }
+  });
+
   it("U-RVATT-016: dry-run は注入用 temp dir を残さない", async () => {
     const delegated = await runDelegation([
       "codex",
