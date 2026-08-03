@@ -176,6 +176,26 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
 
+### PR スコープ規律 (PO ルール 2026-08-03、両ランタイム共通)
+
+PR 肥大と方式の場当たり発明の再発防止 (実測: PR #219 は D3 未完のまま D2 を着工し、
+receipt 置き場を PR 内で自作した結果、gate / CLI / 保管方式 / audit の複数論点が混入して
+close された)。新規機構は作らず、既存工程の遵守を規律として固定する:
+
+1. **順序契約の厳守**: PLAN が宣言する実装順序 (例: D1→D3→D2) に従い、依存する正本が
+   閉じる前に下流を着工しない。
+2. **契約 freeze が実装 PR の前提** (pair-freeze の復元): 正本・信頼根・データ形式などの
+   方式判断は実装 PR の中で発明・変更しない。先に PLAN の設計判断節へ契約を freeze し、
+   その改訂を cross-review してから実装 PR を出す。実装中に方式変更が必要になったら
+   PR を close して契約改訂へ戻る (積み増し禁止)。
+3. **1 PR = 1 論点**: 新規 source_module 1 個 + 対になるテスト + 最小配線まで。
+   CLI surface / audit / 別 consumer は別 PR。
+4. **scope 構造を指す FLAG は close→分割再出が既定**。同一 PR への是正 commit
+   積み増しで応じない。
+
+この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
+(宣言の初出: issue #218、2026-08-03)。
+
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
 
 実運用では **Codex (もう一方のランタイム) が並行に作業を進め、コミットまで完了させる**。Claude は
