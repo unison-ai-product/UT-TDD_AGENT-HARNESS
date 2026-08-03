@@ -158,7 +158,31 @@ ${entries}
   );
 }
 
+function writeAdmittedTestPlan(repoRoot: string, planId: string, revision: string): void {
+  writeReviewPlan(repoRoot, [
+    {
+      planId,
+      planRevision: revision,
+      headSha: "abcdef1",
+      reviewKind: "cross_agent",
+      verdict: "approve",
+      reviewedAt: "2026-07-31T00:00:00Z",
+      testsGreenAt: "2026-07-31T00:00:00Z",
+      workerModel: "gpt-worker",
+      reviewerModel: "claude-reviewer",
+      lane: "claim-blind",
+      attackTrials: 3,
+      citations: [`docs/plans/${planId}.md:1`],
+    },
+  ]);
+}
+
 describe("GitHub repository facts binding", () => {
+  it("U-GHPROJ-050: rejects a partial admission receipt instead of downgrading it to legacy", () => {
+    const partial = `---\nplan_id: PLAN-L7-995-partial\nadmission_receipt:\n  binding:\n    revision: 1\n---\n`;
+    expect(resolvePlanRevisionIdentity(partial, "PLAN-L7-995-partial")).toBeUndefined();
+  });
+
   it("U-GHBIND-013: rejects a traced PR when its PLAN projection is unavailable", () => {
     const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-missing-plan-"));
     const db = openHarnessDb(":memory:");
@@ -260,6 +284,60 @@ describe("GitHub repository facts binding", () => {
         "pull_request",
         "review",
       ]);
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHBIND-016〜019: verifies trace base SHA as an ancestor in the scoped repository", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-gh-base-custody-"));
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      writeAdmittedTestPlan(repoRoot, "PLAN-L7-436-domain", "1");
+      db.prepare(
+        "INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, plan_revision, source_hash) VALUES (?, ?, ?, ?, ?)",
+      ).run("schedule:base", "PLAN-L7-436-domain", "active", "1", "source");
+      const pullRequest = {
+        number: 216,
+        url: "https://github.com/owner/repo/pull/216",
+        baseRefName: "main",
+        headRefName: "feature/base-custody",
+        headRefOid: "abcdef1",
+        state: "OPEN",
+        body: renderPrTraceBlock({
+          plan_id: "PLAN-L7-436-domain",
+          plan_revision: "1",
+          route_mode: "forward",
+          subject_head: "abcdef1",
+          base_sha: "1234567",
+          issue_number: "216",
+        }),
+        statusCheckRollup: [],
+        reviews: [],
+      };
+      const rejectedGh = new FakeGh([pullRequest]);
+      rejectedGh.compareStatus = "diverged";
+      const rejected = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: rejectedGh,
+      });
+      expect(rejected.skipped).toContainEqual({ number: "216", reason: "base-sha-unverified" });
+      expect(db.prepare("SELECT COUNT(*) AS count FROM github_object_bindings").get()).toEqual({
+        count: 0,
+      });
+
+      const accepted = syncRepositoryBindings({
+        db,
+        repositoryId: "owner/repo",
+        repoRoot,
+        gh: new FakeGh([pullRequest]),
+      });
+      expect(accepted.skipped).toEqual([]);
+      expect(accepted.tracedPullRequests).toBe(1);
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
@@ -974,13 +1052,7 @@ describe("GitHub repository facts binding", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      const plansDir = join(repoRoot, "docs", "plans");
-      mkdirSync(plansDir, { recursive: true });
-      writeFileSync(
-        join(plansDir, "PLAN-L7-436-domain.md"),
-        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: 1\n---\n",
-        "utf8",
-      );
+      writeAdmittedTestPlan(repoRoot, "PLAN-L7-436-domain", "1");
       db.prepare(
         `INSERT INTO schedule_entries (schedule_entry_id, plan_id, status, source_hash)
          VALUES (?, ?, ?, ?)`,
@@ -1020,7 +1092,7 @@ describe("GitHub repository facts binding", () => {
 
       syncRepositoryBindings({ db, repositoryId: "owner/repo", repoRoot, gh });
 
-      expect(providerCalls).toBe(3);
+      expect(providerCalls).toBe(4);
     } finally {
       db.close();
       rmSync(repoRoot, { recursive: true, force: true });
@@ -1052,13 +1124,8 @@ describe("GitHub repository facts binding", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
+      writeAdmittedTestPlan(repoRoot, "PLAN-L7-436-domain", "2");
       const plansDir = join(repoRoot, "docs", "plans");
-      mkdirSync(plansDir, { recursive: true });
-      writeFileSync(
-        join(plansDir, "PLAN-L7-436-domain.md"),
-        "---\nplan_id: PLAN-L7-436-domain\nadmission_receipt:\n  binding:\n    revision: 2\n---\n",
-        "utf8",
-      );
       db.prepare(
         `INSERT INTO schedule_entries (
           schedule_entry_id, plan_id, status, plan_revision, source_hash

@@ -242,6 +242,7 @@ describe("GitHub Project V2 reconciler", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
+      const persistedRow = { ...row, headSha: "abc1234" };
       const outboxId = queueGithubProjection({
         db,
         repositoryId: "owner/repo",
@@ -251,9 +252,9 @@ describe("GitHub Project V2 reconciler", () => {
         payload: {
           owner: "owner",
           projectNumber: 6,
-          readiness: row.readiness,
-          currentGate: row.currentGate,
-          headSha: row.headSha,
+          readiness: persistedRow.readiness,
+          currentGate: persistedRow.currentGate,
+          headSha: persistedRow.headSha,
         },
       });
       claimGithubProjection(db, [outboxId]);
@@ -261,7 +262,7 @@ describe("GitHub Project V2 reconciler", () => {
         db,
         repositoryId: "owner/repo",
         projectId: "project:6",
-        rows: [row],
+        rows: [persistedRow],
         result: {
           applied: true,
           projectId: "project:6",
@@ -282,6 +283,7 @@ describe("GitHub Project V2 reconciler", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
+      const persistedRow = { ...row, headSha: "abc1234" };
       const input = {
         db,
         repositoryId: "owner/repo",
@@ -291,9 +293,9 @@ describe("GitHub Project V2 reconciler", () => {
         payload: {
           owner: "owner",
           projectNumber: 6,
-          readiness: row.readiness,
-          currentGate: row.currentGate,
-          headSha: row.headSha,
+          readiness: persistedRow.readiness,
+          currentGate: persistedRow.currentGate,
+          headSha: persistedRow.headSha,
         },
       };
       const outboxId = queueGithubProjection(input);
@@ -311,7 +313,7 @@ describe("GitHub Project V2 reconciler", () => {
         db,
         repositoryId: "owner/repo",
         projectId: "project:6",
-        rows: [row],
+        rows: [persistedRow],
         result: {
           applied: true,
           projectId: "project:6",
@@ -325,7 +327,7 @@ describe("GitHub Project V2 reconciler", () => {
       ).toEqual({ status: "applied", attempt_count: 1 });
       expect(
         db.prepare("SELECT head_sha, sync_status FROM github_project_item_projection").get(),
-      ).toEqual({ head_sha: row.headSha, sync_status: "同期済" });
+      ).toEqual({ head_sha: persistedRow.headSha, sync_status: "同期済" });
     } finally {
       db.close();
     }
