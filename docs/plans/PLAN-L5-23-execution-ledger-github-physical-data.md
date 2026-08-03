@@ -1,11 +1,10 @@
 ---
 plan_id: PLAN-L5-23-execution-ledger-github-physical-data
-title: "PLAN-L5-23 (add-design/physical-data): Execution Ledger・GitHub projection・再合流証跡の物理設計"
+title: "PLAN-L5-23 (add-design/physical-data): Execution Ledger・GitHub
+  projection・再合流証跡の物理設計"
 kind: add-design
 layer: L5
-sub_doc: physical-data
 drive: db
-status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-15
@@ -17,11 +16,11 @@ pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 agent_slots:
   - role: tl
-    slot_label: "TL - append-only正本、projection再構築、retention境界"
+    slot_label: TL - append-only正本、projection再構築、retention境界
   - role: se
-    slot_label: "SE - table/FK/UNIQUE/outbox/inbox/idempotency transaction設計"
+    slot_label: SE - table/FK/UNIQUE/outbox/inbox/idempotency transaction設計
   - role: qa
-    slot_label: "QA - crash recovery、duplicate delivery、rebuild、stale evidenceのL8 oracle"
+    slot_label: QA - crash recovery、duplicate delivery、rebuild、stale evidenceのL8 oracle
 generates:
   - artifact_path: docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md
     artifact_type: markdown_doc
@@ -42,22 +41,60 @@ dependencies:
 review_evidence:
   - reviewer: claude-blind-reviewer
     review_kind: cross_agent
-    reviewed_at: "2026-07-21T18:24:00+09:00"
-    tests_green_at: "2026-07-21T18:23:35+09:00"
+    reviewed_at: 2026-07-21T18:24:00+09:00
+    tests_green_at: 2026-07-21T18:23:35+09:00
     verdict: approve
-    scope: "claim-blind / spec-blind 両レーン PASS。L8 pair oracle (IT-EXEP/IT-GHISS) 実在、冪等 key 階層と transaction 境界の内部整合を確認。詳細は A-189。"
+    scope: claim-blind / spec-blind 両レーン PASS。L8 pair oracle (IT-EXEP/IT-GHISS)
+      実在、冪等 key 階層と transaction 境界の内部整合を確認。詳細は A-189。
     worker_model: codex-gpt-5
     reviewer_model: claude-opus-4-8
     green_commands:
       - kind: lint
-        command: "bun src/cli.ts plan lint"
+        command: bun src/cli.ts plan lint
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-21T18:23:35+09:00"
+        completed_at: 2026-07-21T18:23:35+09:00
         evidence_path: .ut-tdd/audit/A-L7-420-execution-ledger-plan-lint-2026-07-28.log
-        output_digest: "sha256:bfb6d2cbe5ad2c112261bcd98c176c37f3697459b6be31b139146a1ea2f7a719"
+        output_digest: sha256:bfb6d2cbe5ad2c112261bcd98c176c37f3697459b6be31b139146a1ea2f7a719
         anchor_commit: 33dbd46dfe7581428a1bc09ac1a8f7875f0782c0
+status: confirmed
+sub_doc: physical-data
+github_issue_id: 213
+admission_receipt:
+  schema_version: v2
+  receipt_id: certificate:ec36419530f98d9aa1e6978eceba16bf
+  command_id: command:pr210-custody-close:1785723730226
+  admitted_at: 2026-08-03T02:22:10.225Z
+  source_digest: sha256:d95775aec34b7807c88bb59c04e8313efd347f09ff4696c38e2df27c60d349ea
+  decision_digest: sha256:c50e97dc94c941b7668d577e0597f2e41ec0d41c3b4da500652819d16ca2b638
+  receipt_digest: sha256:8d8afc854aef7f3e5d4e5848ef89f166213eac3c672e906d32fc65b45cf4e734
+  binding:
+    path: docs/plans/PLAN-L5-23-execution-ledger-github-physical-data.md
+    plan_id: PLAN-L5-23-execution-ledger-github-physical-data
+    asset_id: plan:legacy:f2525adb50df140055a950653d54731a769ce2cf4e2e5287d1edcce0ed9bbe37
+    revision: 4
+    content_digest: sha256:d95775aec34b7807c88bb59c04e8313efd347f09ff4696c38e2df27c60d349ea
+  route:
+    signal: feature_addition
+    mode: add-feature
+  issue:
+    provider: github
+    issue_id: 213
+    episode_id: E4-213
+    projection_digest: sha256:bc53329c5463b7eb8e9e9f65a6b57824e7207ff8fe6160f4c8ba066c7343bd97
+  origin:
+    plan_id: PLAN-L5-23-execution-ledger-github-physical-data
+    revision: 3
+    digest: sha256:f8c6cfbc155fcdf7413c81d2780e9e3ce28fba3c17d8c2346864b2ddad09bc54
+  transition:
+    direction: implementation_to_design
+    implementation_disposition: preserved
+  reentry:
+    target_plan_id: PLAN-L5-23-execution-ledger-github-physical-data
+    target_revision: 4
+    phase: forward_merge
+  escape_reason: "PR #210 closing reviewで確定したadmission・outbox・trace base custodyを物理設計へ反映する"
 ---
 
 # PLAN-L5-23: Execution Ledger・GitHub projection・再合流証跡の物理設計
@@ -78,9 +115,9 @@ PLAN-L4-30のE0-E15 lifecycleを、SQLite transaction、append-only event、tran
 
 ### 1.2 配送テーブル
 
-- `github_projection_outbox`: outbox ID、episode、operation kind、target logical key、idempotency key、canonical payload/digest、attempt count、next attempt、lease、ack observation ID。
+- `execution_github_projection_outbox`: outbox ID、episode、operation kind、target logical key、idempotency key、canonical payload/digest、attempt count、next attempt、lease、ack observation ID。
 - `github_inbound_events`: provider event identity PK、delivery ID、repository、event kind、external object ID、head SHA、received timestamp、raw payload digest、normalized payload、processing result。
-- `github_object_bindings`: `(episode_id, object_kind)` UNIQUE、external ID/number/URL、repository、last reconciled head、projection revision。
+- `execution_github_object_bindings`: `(episode_id, object_kind)` UNIQUE、external ID/number/URL、repository、last reconciled head、projection revision。
 
 Issue、branch、PRのcreate operationは`(repository, episode_id, object_kind, intent_revision)`を冪等keyとし、HTTP timeout後も同一keyでreconcileしてから再送する。webhook delivery IDだけに依存せず、provider event identityとobject/head identityで重複を吸収する。
 
@@ -138,3 +175,41 @@ retryは指数backoffと上限を持つが、上限到達でepisodeを消さな�
 ## 6. 後続降下
 
 L6でExecution Episode domain、drive selection、reentry/merge policy、GitHub port/outbox/inbox contractを分割する。L7でmigration、repository、worker、CLI、GitHub adapterを実装し、L8 integration test designと対でfreezeする。
+
+## 7. Forward readiness / Project item projection（Reverse backfill 2026-07-31）
+
+新しい依存グラフ正本は作らない。既存の`plan_registry`、`schedule_entries`、
+`graph_nodes`、`dependency_edges`、`review_evidence_registry`を再利用し、次の再構築可能な
+projectionを追加する。
+
+- `execution_readiness_projection`: `plan_id`、`plan_revision`、`readiness`、
+  `current_gate`、`implementation_order`、`blocked_reason`、`unlock_condition`、
+  `next_plan_ids`、`unlocked_plan_ids`、`computed_at`
+- `github_project_item_projection`: `repository_id`、`project_id`、`project_item_id`、
+  `plan_id`、`plan_revision`、`content_node_id`、`head_sha`、`sync_status`、
+  `last_reconciled_at`
+
+`schedule_entries.plan_revision`は対応PLANの`admission_receipt.binding.revision`を保持し、
+`source_hash`は文書内容fingerprintとして分離する。schedule authoring sourceを優先する場合も
+対応PLANからrevisionを解決する。admission済みPLANはtracked receipt hash chain・binding・canonical content digestを照合し、partial・未追跡・digest不一致はwrite-zeroとする。receipt不在legacyだけcanonical content tokenを使い、`source_hash`はrevisionへfallbackしない。
+
+`github_object_bindings.object_kind`は`project`、`project_item`、`branch`、`issue`、
+`pull_request`、`check_run`、`review`、`merge`を表現できること。provider object identityの
+異PLAN再割当を拒否し、同一PLANの正式revision更新は同じidentityへ収束させる。stale観測は
+`observed_at`を後退させずno-opにする。
+
+`github_review_lane_receipts`は`plan_id + plan_revision + lane + subject_head`を一意にし、
+`claim-blind`と`spec-blind`を別rowで保持する。各rowはverdict、review/test時刻、
+worker/reviewer model、attack trial数、citation、PLAN sourceを持つ。DB rowだけでなくcanonical
+`docs/plans/*.md` frontmatterと再照合し、両laneの結合digestがPR traceと一致しなければ
+merge closureをfail-closeする。digestは改変検知であり、真正性はprovider identity、exact HEAD、
+canonical PLAN sourceの結合から得る。
+
+Project V2はfield名・single-select option・duplicate itemをremote mutation前に全件検証する。
+remote観測もSQLite transaction開始前に完了し、trace base SHAはrepository-scoped compareでPR HEADの祖先または同一と確認する。確定したbinding commandだけを単一transactionでcommitし、transaction内からnetwork/APIを呼び出してはならない。
+
+現行の`github_object_bindings` / `github_projection_outbox`はPLAN revisionを主語にしたForward基盤であり、
+episode未確定の段階でepisode IDを創作しない。Execution Episode降下時は
+`execution_github_object_bindings` / `execution_github_projection_outbox`へ明示変換し、同名表を
+非互換schemaで上書きしない。現行outbox payloadは`project-item-upsert`の
+`owner,projectNumber,readiness,currentGate,headSha`だけをcanonical JSONで保存し、SHA-256 digestを併記する。dispatch前に`applying`へatomic claimし、Project projection/binding保存と`applied`化はcurrent outbox identityを再照合する同一transactionで行う。

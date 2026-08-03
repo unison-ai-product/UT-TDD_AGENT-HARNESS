@@ -1,17 +1,21 @@
 // PLAN-L7-451 W4: typed PR trace contract の unit oracle。
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderPrTraceBlock, validatePrTraceBody } from "../src/github/pr-trace";
+import { headSnapshotRoot } from "./support/workspace-roots";
 
 const VALID_FIELDS = {
   plan_id: "PLAN-L7-451-github-ops-phase1-visibility-and-policy",
   route_mode: "add-feature",
   subject_head: "abc123def456abc123def456abc123def456abcd",
   base_sha: "5eff8549",
+  issue_number: "97",
 } as const;
 
 describe("github pr trace contract (PLAN-L7-451 W4)", () => {
   it("U-L7-451-W4-001: render が有効な trace block を生成し validate が受理する", () => {
-    const block = renderPrTraceBlock({ ...VALID_FIELDS, issue_number: "97" });
+    const block = renderPrTraceBlock(VALID_FIELDS);
     expect(block).toContain("<!-- ut-tdd:trace/v1");
     expect(block).toContain(`plan_id: ${VALID_FIELDS.plan_id}`);
     const body = `## 概要\n\nやったこと\n\n${block}\n`;
@@ -52,6 +56,9 @@ describe("github pr trace contract (PLAN-L7-451 W4)", () => {
     expect(() => renderPrTraceBlock({ ...VALID_FIELDS, subject_head: "not-hex" })).toThrow(
       /invalid-subject-head/,
     );
+    expect(() => renderPrTraceBlock({ ...VALID_FIELDS, issue_number: undefined } as never)).toThrow(
+      /missing-issue-number/,
+    );
   });
 
   it("U-L7-451-W4-005: block 重複とキー重複を fail-close する", () => {
@@ -71,5 +78,20 @@ describe("github pr trace contract (PLAN-L7-451 W4)", () => {
     const result = validatePrTraceBody(dupKey);
     expect(result.ok).toBe(false);
     expect(result.findings.map((f) => f.code)).toContain("trace-key-duplicated");
+  });
+
+  it("U-L7-451-W4-006: source/common PR templates require an Issue for every Forward PR", () => {
+    const root = headSnapshotRoot();
+    const templates = [
+      readFileSync(join(root, ".github", "PULL_REQUEST_TEMPLATE.md"), "utf8"),
+      readFileSync(
+        join(root, "docs", "templates", "github", "common", "PULL_REQUEST_TEMPLATE.md"),
+        "utf8",
+      ),
+    ];
+    for (const template of templates) {
+      expect(template).toContain("Closes #<issue-number>");
+      expect(template).not.toMatch(/通常 Forward.*Issue.*(?:不要|省略)/u);
+    }
   });
 });

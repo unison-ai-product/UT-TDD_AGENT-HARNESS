@@ -31,6 +31,7 @@ const populatedAutomaticProjectionCounts = {
   spec_defs: 1,
   spec_relations: 1,
   schedule_entries: 1,
+  execution_readiness_projection: 1,
   activation_entries: 1,
   activation_schedule_reviews: 1,
   document_catalog_entries: 1,
@@ -57,6 +58,7 @@ describe("db projection ingestion detector", () => {
       expect(result.rowCounts.spec_defs).toBeGreaterThan(0);
       expect(result.rowCounts.spec_relations).toBeGreaterThan(0);
       expect(result.rowCounts.schedule_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.execution_readiness_projection).toBeGreaterThan(0);
       expect(result.rowCounts.activation_entries).toBeGreaterThan(0);
       expect(result.rowCounts.activation_schedule_reviews).toBeGreaterThan(0);
       expect(result.rowCounts.document_catalog_entries).toBeGreaterThan(0);
@@ -148,7 +150,12 @@ describe("db projection ingestion detector", () => {
       ]),
     );
     expect(EVIDENCE_GATED_DB_PROJECTION_TABLES).toEqual(
-      expect.arrayContaining(["model_evaluations", "retry_events", "detector_route_candidates"]),
+      expect.arrayContaining([
+        "model_evaluations",
+        "retry_events",
+        "detector_route_candidates",
+        "github_review_lane_receipts",
+      ]),
     );
   });
 

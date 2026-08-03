@@ -3,8 +3,7 @@
 ## 関連 PLAN / Issue
 PLAN:
 
-Forward escape episodeの場合のみ: `Closes #<issue-number>`
-通常Forwardの場合はIssue不要。空の`Closes #`を残さない。
+`Closes #<issue-number>`（通常Forwardを含む全PRで必須。空の`Closes #`を残さない）
 
 ## V-model artifact (該当に ✓)
 - [ ] ① 設計 (docs/design/)

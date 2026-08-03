@@ -555,7 +555,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 |---|---|---|---|---|
 | `spec_defs` | `spec_id` | `spec_kind`, `layer`, `sub_doc`, `owner_artifact_id`, `owner_path`, `section_anchor`, `title`, `lifecycle_status`, `plan_id`, `source_path`, `source_hash`, `indexed_at` | 所有 artifact 本文の `spec.defines` / `docs/governance/vmodel-typed-spec-definitions.md` bootstrap / design docs / PLAN frontmatter / test-design headings | 要件・設計要素・テスト設計要素を安定 ID と章 anchor で検索可能にする。typed spec 宣言は `section_anchor=spec.defines:<id>` として格納し、見出し推測より優先する。 |
 | `spec_relations` | `relation_id` | `from_spec_id`, `to_spec_id`, `relation_kind`, `plan_id`, `status`, `source`, `evidence_path`, `indexed_at` | `spec.defines[].traces_from` / `traces_to` / `tests` / pair 宣言 / design-to-test 参照 / PLAN dependencies | `defines` / `requires` / `verifies` / `pairs` / `derives` / `supersedes` / `traces_from` / `traces_to` / `tests` を edge として保存し、未定義・未参照・双方向不一致・test backlink 欠落・missing-test・ledger mismatch を検出する。 |
-| `schedule_entries` | `schedule_entry_id` | `plan_id`, `layer`, `sub_doc`, `v_pair`, `predecessor_plan_ids`, `current_location`, `rag`, `status`, `blocked_reason`, `source_path`, `source_hash`, `indexed_at` | `docs/governance/vmodel-upgrade-schedule.md` / Forward spine / PLAN frontmatter fallback | 現在地と次工程を query 可能にし、工程表の空セル・逆流・未合流 branch を検出する。専用工程表に掲載された `plan_id` は PLAN frontmatter fallback より優先する。`predecessor_plan_ids` は comma を含まない plan_id list の serialized TEXT とする。 |
+| `schedule_entries` | `schedule_entry_id` | `plan_id`, `plan_revision`, `layer`, `sub_doc`, `v_pair`, `predecessor_plan_ids`, `current_location`, `rag`, `status`, `blocked_reason`, `source_path`, `source_hash`, `indexed_at` | `docs/governance/vmodel-upgrade-schedule.md` / Forward spine / PLAN frontmatter fallback | 現在地と次工程を query 可能にし、工程表の空セル・逆流・未合流 branch を検出する。`plan_revision` は対応PLANの `admission_receipt.binding.revision`、legacy PLANでは `review_evidence` / `admission_receipt` を除いたcanonical contentの `legacy:sha256:<digest>`、`source_hash` は投影元文書全体の fingerprint として別namespaceにする。専用工程表に掲載された `plan_id` は PLAN frontmatter fallback より優先するが、revisionは対応PLANから解決する。対応PLANが存在しない工程行はrevisionを創作せずwrite-zeroとする。`predecessor_plan_ids` は comma を含まない plan_id list の serialized TEXT とする。 |
 | `activation_entries` | `activation_entry_id` | `profile_id`, `target_kind`, `target_id`, `scope_status`, `target_version`, `defer_reason`, `enabled`, `source_path`, `plan_id`, `indexed_at` | `docs/governance/vmodel-activation-profiles.md` / activation profile / version target / 適用除外宣言 / PLAN frontmatter fallback | profile ごとの in_scope / out_of_scope / deferred を明示し、駆動モデル選択を厳格化する。専用 activation profile に掲載された `plan_id` は PLAN frontmatter fallback より優先する。 |
 | `activation_schedule_reviews` | `activation_schedule_review_id` | `profile_id`, `plan_id`, `schedule_entry_id`, `activation_entry_id`, `target_kind`, `target_id`, `scope_status`, `enabled`, `target_version`, `defer_reason`, `current_location`, `rag`, `schedule_status`, `layer`, `sub_doc`, `v_pair`, `source_path`, `indexed_at` | `activation_entries` × `schedule_entries` | version-up wave の対象/除外/延期理由と現在地を join し、検索・検出が同じ read-model を参照できるようにする。 |
 | `document_catalog_entries` | `document_catalog_entry_id` | `doc_type_id`, `layer`, `sub_doc`, `category`, `requirement_class`, `applicability`, `default_status`, `source_doc_family`, `authoring_source_path`, `projection_table`, `profile_controlled`, `skip_reason_required`, `source_path`, `indexed_at` | `docs/governance/vmodel-document-catalog.md` | ZIP `catalog.yaml` 相当の文書種別カタログを投影する。`document-system-map.md` は意味定義、本 table は検出・検索が読む機械可読 read-model。 |
@@ -596,7 +596,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - typed spec 宣言の `source_path` が台帳 `ledger_sources` に含まれない場合は `typed-spec-owned-source-mismatch` finding にする。これは central bootstrap に残った所有外宣言、または誤った artifact への宣言移動を検出する。
 - typed spec 宣言元 artifact から owner phase を解決できない場合は `typed-spec-owner-phase-missing`、台帳 `v_phase` と owner phase が食い違う場合は `typed-spec-phase-layer-mismatch` finding にする。owner phase は `typed_spec_phase_owner`、`executed_at_layer`、`layer`、path 由来 layer の順で解決する。
 - agent contract は `target_path` / `defines` / `read_first` / `done_when` を必須とする。`target_path` または `read_first` 参照先欠落は `agent-contract-target-missing` / `agent-contract-read-first-missing`、空 `defines` / `done_when` は `agent-contract-defines-missing` / `agent-contract-done-when-missing`、`done_when` の未知 doctor gate は `agent-contract-doctor-gate-unknown` finding にする。
-- `schedule_entries` は工程管理表と PLAN frontmatter fallback の projection であり、PLAN status や dependencies を暗黙更新しない。工程表掲載 row は fallback row に上書きされない。
+- `schedule_entries` は工程管理表と PLAN frontmatter fallback の projection であり、PLAN status や dependencies を暗黙更新しない。工程表掲載 row は fallback row に上書きされない。`plan_revision` と `source_hash` を混用せず、Project・PR・review・merge bindingは前者だけでrevision照合する。
 - `activation_entries.scope_status=out_of_scope|deferred` は理由 (`defer_reason`) を必須とし、理由なし除外は `findings.kind=activation-reason-missing` とする。
 - `activation_schedule_reviews` は `activation_entries.plan_id` と `schedule_entries.plan_id` の join 結果である。工程表に存在しない `target_kind=plan` は `findings.kind=activation-schedule-missing` とし、projection 側で工程行を創作しない。
 - `document_catalog_entries` は `vmodel-document-catalog.md` からのみ作る。`document-system-map.md` の本文表を直接 scrape して正本化せず、意味定義と機械可読一覧を分離する。
@@ -800,21 +800,44 @@ ledger DB不在・schema不一致・digest破損は空ledgerとして補完せ�
 `(event_id,subject_id,subject_revision)`→workflow event、`(evidence_id,subject_id,subject_revision)`→evidenceのcomposite FKで
 cross-subject/revision linkをSQLite実制約として拒否する。
 
-### 実行台帳 / GitHub投影テーブル
+### 9.10 GitHub Forward基盤テーブル（PLAN-L7-471）
+
+この節の5表はPLAN・依存グラフ・GitHub Project/Issue/branch/PR/check/review/mergeを結ぶ現行の
+Forward read-model / delivery intentである。Execution Episode完成後の配送表とは名前と責務を
+分離し、episode IDを捏造しない。`github_projection_outbox.payload_json`は
+`project-item-upsert`の閉じた5項目だけをcanonical順で保持し、同時に`payload_digest`を保存する。
+未知field、空値、不正Project番号はINSERT前に拒否し、secret・credential・provider transcriptを
+payloadへ入れない。
+同一digestの再送だけは既存status / attemptを保持する。dispatch前に対象全件を`applying`へatomic claimし、
+同一logical keyが`applying`中のenqueueを拒否する。digestが変わる場合は新しい`outbox_id`へ原子的に
+置換する。remote成功後はcurrent outbox identityと`applying`を再照合し、Project projection/binding保存と
+`applied`化を同一transactionでcommitするため、stale workerは新payloadを完了・rollbackできない。
+同期失敗はproviderのraw errorを保存せず、閉じた`project-sync-failed`を`last_error`へ記録して
+attemptを加算し、retry可能な`pending`を維持する。
+
+| table | 主キー | 必須 columns | 入力 | 目的 |
+|---|---|---|---|---|
+| `github_review_lane_receipts` | `review_lane_receipt_id` | `plan_id`, `plan_revision`, `lane`, `subject_head`, `verdict`, `reviewed_at`, `tests_green_at`, `worker_model`, `reviewer_model`, `attack_trials`, `citations_json`, `source` | canonical PLAN review evidence | `(plan_id,plan_revision,lane,subject_head)` UNIQUE。canonical PLAN sourceとの再照合 |
+| `execution_readiness_projection` | `plan_id` | `plan_revision`, `readiness`, `current_gate`, `predecessor_plan_ids`, `blocked_reason`, `unlock_condition`, `next_plan_ids`, `unlocked_plan_ids`, `computed_at` | PLAN / dependency graph | `implementation_order`はnullable。依存グラフから再構築し、authoring sourceを更新しない |
+| `github_project_item_projection` | `projection_id` | `repository_id`, `project_id`, `project_item_id`, `plan_id`, `plan_revision`, `content_node_id`, `head_sha`, `sync_status`, `last_reconciled_at` | Project V2 observation | `(repository_id,plan_id,plan_revision)` UNIQUE |
+| `github_object_bindings` | `binding_id` | `repository_id`, `plan_id`, `plan_revision`, `project_item_id`, `object_kind`, `object_id`, `object_url`, `head_sha`, `state`, `observed_at` | GitHub repository facts | `(repository_id,object_kind,object_id)` UNIQUE。stale時刻・異PLAN再割当を拒否 |
+| `github_projection_outbox` | `outbox_id` | `repository_id`, `plan_id`, `plan_revision`, `operation`, `payload_json`, `payload_digest`, `status`, `attempt_count`, `last_error`, `created_at`, `updated_at` | Project同期intent | `(repository_id,plan_id,plan_revision,operation)` UNIQUE。status=`pending|applying|applied`。payloadは閉じたsecret-safe schema + SHA-256 digest。claimとProject永続化のCAS境界でstale workerを隔離 |
+
+### Execution Episode / GitHub配送の目標テーブル（後続降下）
 
 | テーブル | 主な列 | 制約 / 索引 |
 |---|---|---|
 | `execution_episodes` | `episode_id`, origin asset/revision/L/state, `escape_type`, `drive_model`, `reentry_target`, `last_sequence`, `last_event_digest`, `status` | PK episode。origin revision FK。drive/escape閉値域。current reductionのみ |
 | `execution_episode_events` | `event_id`, `episode_id`, `sequence`, `event_kind(E0..E15)`, `payload_json`, `payload_digest`, `previous_event_digest`, `occurred_at`, `actor` | `(episode_id,sequence)` UNIQUE、digest連鎖、追記専用trigger |
-| `github_projection_outbox` | `projection_id`, `episode_id`, `operation`, `idempotency_key`, `payload_digest`, `attempt_count`, `next_attempt_at`, `status`, `remote_ref` | idempotency UNIQUE。secret-safe payload。retry可能 |
+| `execution_github_projection_outbox` | `projection_id`, `episode_id`, `operation`, `idempotency_key`, `payload_digest`, `attempt_count`, `next_attempt_at`, `status`, `remote_ref` | idempotency UNIQUE。secret-safe payload。retry可能。現行`github_projection_outbox`からepisode確定後に明示変換する |
 | `github_inbound_events` | `delivery_id`, `repository`, `event_type`, `signature_verdict`, `remote_version`, `payload_digest`, `received_at`, `episode_id?`, `status` | delivery UNIQUE。未照合/署名不正を隔離 |
-| `github_object_bindings` | `episode_id`, `object_kind`, `repository`, `external_id`, `number`, `url`, `remote_version`, `last_reconciled_head`, `projection_revision` | `(episode_id,object_kind)` UNIQUE。付替えはevent必須 |
+| `execution_github_object_bindings` | `episode_id`, `object_kind`, `repository`, `external_id`, `number`, `url`, `remote_version`, `last_reconciled_head`, `projection_revision` | `(episode_id,object_kind)` UNIQUE。付替えはevent必須。現行PLAN bindingと別表で、episode未確定値を補完しない |
 | `reentry_certificates` | `certificate_id`, `episode_id`, origin/target binding, drive/intermediate evidence digest, `policy_revision`, `issued_at`, `expires_at?`, `supersedes_id?`, `certificate_digest` | episode+origin revision FK、supersession cycle/fork禁止 |
 | `escape_learning_facts` | `episode_id`, origin L, escape type/cause, drive model, recurrence identity, outcome, upstream action, closed_at | E15から再構築可能、手入力status禁止 |
 
 PLAN-L7-452の先行sliceでは、全episode schemaの完成を待たずE2 custodyとE3/E4 outbox境界を
 `harness.db` schema version 27へ次の2表で実装する。これは検出器都合の簡略化ではなく、
-上表の`execution_episode_events` / `github_projection_outbox`へ後続合流するまでのdurable契約である。
+上表の`execution_episode_events` / `execution_github_projection_outbox`へ後続合流するまでのdurable契約である。
 
 | テーブル | 主な列 | 制約 / 不変条件 |
 |---|---|---|

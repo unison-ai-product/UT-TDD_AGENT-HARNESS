@@ -5,6 +5,10 @@ import { parse as parseYaml } from "yaml";
 import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
 import { stableId } from "../stable-id";
+import {
+  canonicalPlanRevision,
+  resolvePlanRevisionIdentity,
+} from "./github-review-lane-provenance";
 import type { HarnessDb } from "./index";
 
 type SpecIrSourceKind =
@@ -76,6 +80,7 @@ export interface ScheduleEntryRow {
   status: string;
   blocked_reason: string;
   source_path: string;
+  plan_revision?: string;
   source_hash: string;
   indexed_at: string;
 }
@@ -329,6 +334,13 @@ function parseYamlObject(raw: string): Record<string, unknown> | null {
 
 function stringField(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function projectedPlanRevision(source: SpecIrSource, repoRoot?: string): string {
+  const planId = sourcePlanId(source);
+  return repoRoot
+    ? (canonicalPlanRevision(repoRoot, planId) ?? "")
+    : (resolvePlanRevisionIdentity(source.content, planId)?.token ?? "");
 }
 
 function stringList(value: unknown): string[] {
@@ -630,12 +642,20 @@ function markdownTableRows(content: string, requiredHeaders: string[]): Record<s
 function parseScheduleAuthoringRows(
   sources: SpecIrSource[],
   indexedAt: string,
+  repoRoot?: string,
 ): ScheduleEntryRow[] {
   const rows: ScheduleEntryRow[] = [];
+  const planRevisions = new Map(
+    sources
+      .filter((source) => source.kind === "plan" && sourcePlanId(source))
+      .map((source) => [sourcePlanId(source), projectedPlanRevision(source, repoRoot)]),
+  );
   for (const source of sources.filter((item) => item.kind === "schedule_doc")) {
     for (const row of markdownTableRows(source.content, ["plan_id", "current_location"])) {
       const planId = row.plan_id ?? "";
       if (!planId) continue;
+      const planRevision = planRevisions.get(planId);
+      if (!planRevision) continue;
       const layer = row.layer ?? "";
       const status = row.status || "active";
       const rawPredecessors = row.predecessor_plan_ids || row.predecessors || "";
@@ -656,6 +676,7 @@ function parseScheduleAuthoringRows(
         status,
         blocked_reason: row.blocked_reason ?? "",
         source_path: source.path,
+        plan_revision: planRevision,
         source_hash: source.sourceHash,
         indexed_at: indexedAt,
       });
@@ -883,12 +904,14 @@ export function parseSpecRelations(
 export function parseScheduleEntries(
   sources: SpecIrSource[],
   indexedAt: string,
+  repoRoot?: string,
 ): ScheduleEntryRow[] {
-  const authoredRows = parseScheduleAuthoringRows(sources, indexedAt);
+  const authoredRows = parseScheduleAuthoringRows(sources, indexedAt, repoRoot);
   const authoredPlanIds = new Set(authoredRows.map((row) => row.plan_id));
   const fallbackRows = sources
     .filter((source) => source.kind === "plan" && sourcePlanId(source))
     .filter((source) => !authoredPlanIds.has(sourcePlanId(source)))
+    .filter((source) => Boolean(projectedPlanRevision(source, repoRoot)))
     .map((source) => {
       const planId = sourcePlanId(source);
       const status = sourceStatus(source);
@@ -910,6 +933,7 @@ export function parseScheduleEntries(
         status,
         blocked_reason: "",
         source_path: source.path,
+        plan_revision: projectedPlanRevision(source, repoRoot),
         source_hash: source.sourceHash,
         indexed_at: indexedAt,
       };
@@ -2285,7 +2309,7 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
   const sources = loadSpecIrSources(repoRoot);
   const defs = parseSpecDefs(sources, indexedAt);
   const relationResult = parseSpecRelations(sources, defs, indexedAt);
-  const schedules = parseScheduleEntries(sources, indexedAt);
+  const schedules = parseScheduleEntries(sources, indexedAt, repoRoot);
   const activations = parseActivationEntries(sources, indexedAt);
   const documentCatalogEntries = parseDocumentCatalogEntries(sources, indexedAt);
   const documentScaleProfileEntries = parseDocumentScaleProfileEntries(sources, indexedAt);

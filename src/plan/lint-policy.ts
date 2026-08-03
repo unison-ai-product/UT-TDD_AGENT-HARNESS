@@ -33,7 +33,7 @@ function expandLayerBand(values: readonly string[]): string[] {
   });
 }
 
-const routeModes = Object.entries(FILING_TARGET_BY_MODE).filter(([mode]) => mode !== "forward");
+const routeModes = Object.entries(FILING_TARGET_BY_MODE);
 
 const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = Object.fromEntries(
   routeModes.map(([mode, target]) => [mode, [...target.allowed_kinds]]),

@@ -126,7 +126,7 @@ export const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
     requiresApproval: false,
   },
   {
-    tokens: ["interrupt", "constraint"],
+    tokens: ["forward", "interrupt", "constraint"],
     mode: "forward",
     command: ROUTE_COMMAND_TASK_CLASSIFY,
     preflight: true,
@@ -137,20 +137,29 @@ export const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
 export function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: string): number {
   return Math.max(
     0,
-    ...entry.tokens.map((token) =>
-      normalizedSignal.includes(token.toLowerCase()) ? token.length : 0,
-    ),
+    ...entry.tokens.map((token) => {
+      const normalizedToken = token.toLowerCase();
+      if (normalizedToken === "forward" && normalizedSignal !== normalizedToken) return 0;
+      return normalizedSignal.includes(normalizedToken) ? token.length : 0;
+    }),
   );
 }
 
 export function routeSignalCandidates(signal: string): string[] {
   const normalized = signal.trim().toLowerCase();
-  return ROUTE_SIGNAL_MAP.map((entry, index) => ({
+  const matched = ROUTE_SIGNAL_MAP.map((entry, index) => ({
     entry,
     index,
     matchLength: routeMatchLength(entry, normalized),
   }))
     .filter((candidate) => candidate.matchLength > 0)
-    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)
-    .map((candidate) => candidate.entry.mode);
+    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index);
+  const longest = matched[0]?.matchLength ?? 0;
+  return [
+    ...new Set(
+      matched
+        .filter((candidate) => candidate.matchLength === longest)
+        .map((candidate) => candidate.entry.mode),
+    ),
+  ];
 }

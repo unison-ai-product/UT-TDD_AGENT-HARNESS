@@ -28,6 +28,7 @@ secret-scan-diff:1
 feedback-log:2
 github-repository-policy:3
 github-ci-policy:1
+github-forward-store:2
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
 hook-native-launcher:1
@@ -54,6 +55,7 @@ const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.f
 );
 
 for (const [path, calls] of Object.entries({
+  "tests/github-pr-trace.test.ts": 1,
   "tests/model-id-ssot-drift.test.ts": 1,
   "tests/model-id-ssot.test.ts": 1,
   "tests/plan-id-naming.test.ts": 1,

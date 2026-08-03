@@ -1,5 +1,5 @@
 <!-- PLAN-L7-451 W4: typed PR trace contract。trace block は手書きせず
-     `bun src/cli.ts github pr render --plan <PLAN-ID> --route-mode <mode>` の出力を貼る。
+     `bun src/cli.ts github pr render --plan <PLAN-ID> --route-mode <mode> --issue-number <n>` の出力を貼る。
      検証: `bun src/cli.ts github pr validate --body-file <body.md>` -->
 
 ## 概要
@@ -8,8 +8,7 @@
 
 PLAN:
 
-Forward escape episode の場合のみ: `Closes #<issue-number>`
-通常 Forward の場合は Issue 不要。空の `Closes #` を残さない。
+`Closes #<issue-number>`（通常Forwardを含む全PRで必須。空の`Closes #`を残さない）
 
 ## V-model artifact (該当に ✓)
 

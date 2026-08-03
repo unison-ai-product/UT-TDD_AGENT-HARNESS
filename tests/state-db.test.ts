@@ -13,6 +13,7 @@ import { HARNESS_DB_INDEXES as SECTION_HARNESS_DB_INDEXES } from "../src/schema/
 import { col, pk } from "../src/schema/harness-db-table-builders";
 import { HARNESS_DB_CORE_TABLES } from "../src/schema/harness-db-tables-core";
 import { HARNESS_DB_EVALUATION_TABLES } from "../src/schema/harness-db-tables-evaluation";
+import { HARNESS_DB_GITHUB_TABLES } from "../src/schema/harness-db-tables-github";
 import { HARNESS_DB_GRAPH_EXPORT_TABLES } from "../src/schema/harness-db-tables-graph";
 import { HARNESS_DB_SPEC_IR_TABLES } from "../src/schema/harness-db-tables-spec-ir";
 import { HARNESS_DB_VMODEL_TABLES } from "../src/schema/harness-db-tables-vmodel";
@@ -63,6 +64,7 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
       [
         ...HARNESS_DB_CORE_TABLES,
         ...HARNESS_DB_GRAPH_EXPORT_TABLES,
+        ...HARNESS_DB_GITHUB_TABLES,
         ...HARNESS_DB_EVALUATION_TABLES,
         ...HARNESS_DB_VMODEL_TABLES,
         ...HARNESS_DB_SPEC_IR_TABLES,

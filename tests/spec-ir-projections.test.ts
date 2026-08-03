@@ -69,6 +69,7 @@ describe("spec IR projections", () => {
         expect.arrayContaining([
           expect.objectContaining({
             plan_id: "PLAN-L6-999-spec-ir-fixture",
+            plan_revision: expect.stringMatching(/^legacy:sha256:/),
             v_pair: "L7",
             rag: "green",
           }),
@@ -151,10 +152,108 @@ describe("spec IR projections", () => {
         blocked_reason: "CI gate",
         predecessor_plan_ids: "PLAN-L6-998-parent",
         source_path: "docs/governance/vmodel-upgrade-schedule.md",
+        plan_revision: expect.stringMatching(/^legacy:sha256:/),
       });
       expect(
         projection.schedule_entries.filter((row) => row.plan_id === "PLAN-L7-999-schedule-fixture"),
       ).toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHPROJ-042: legacy revision excludes review evidence and remains distinct from source hash", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-legacy-revision-"));
+    try {
+      const planPath = "PLAN-L7-998-legacy-revision.md";
+      const source = [
+        "---",
+        "plan_id: PLAN-L7-998-legacy-revision",
+        "title: Legacy revision fixture",
+        "kind: add-impl",
+        "layer: L7",
+        "status: confirmed",
+        "review_evidence: []",
+        "---",
+        "",
+        "# Stable body",
+      ];
+      writePlan(root, planPath, source.join("\n"));
+      const before = collectSpecIrProjection(root, "2026-07-31T00:00:00.000Z").schedule_entries[0];
+      expect(before?.plan_revision).toMatch(/^legacy:sha256:[0-9a-f]{64}$/);
+      expect(before?.plan_revision).not.toBe(before?.source_hash);
+
+      source.splice(6, 1, "review_evidence:", "  - plan_revision: self-reference-free");
+      writePlan(root, planPath, source.join("\n"));
+      const after = collectSpecIrProjection(root, "2026-07-31T00:01:00.000Z").schedule_entries[0];
+      expect(after?.plan_revision).toBe(before?.plan_revision);
+      expect(after?.source_hash).not.toBe(before?.source_hash);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHPROJ-051: invalid or untracked admission receipts never enter the Forward schedule", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-invalid-admission-"));
+    try {
+      writePlan(
+        root,
+        "PLAN-L7-996-partial.md",
+        "---\nplan_id: PLAN-L7-996-partial\nadmission_receipt:\n  binding:\n    revision: 1\n---\n",
+      );
+      const digest = `sha256:${"a".repeat(64)}`;
+      writePlan(
+        root,
+        "PLAN-L7-997-untracked.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-997-untracked",
+          "admission_receipt:",
+          "  schema_version: v2",
+          "  receipt_id: certificate:untracked",
+          "  command_id: command:untracked",
+          "  admitted_at: 2026-07-31T00:00:00.000Z",
+          `  source_digest: ${digest}`,
+          `  decision_digest: ${digest}`,
+          `  receipt_digest: ${digest}`,
+          "  binding:",
+          "    path: docs/plans/PLAN-L7-997-untracked.md",
+          "    plan_id: PLAN-L7-997-untracked",
+          "    asset_id: plan:test-untracked",
+          "    revision: 1",
+          `    content_digest: ${digest}`,
+          "  route:",
+          "    signal: forward",
+          "    mode: forward",
+          "---",
+        ].join("\n"),
+      );
+      writePlan(root, "PLAN-L7-998-legacy.md", "---\nplan_id: PLAN-L7-998-legacy\n---\n");
+
+      const schedules = collectSpecIrProjection(root, "2026-08-03T00:00:00.000Z").schedule_entries;
+      expect(schedules.map((row) => row.plan_id)).toEqual(["PLAN-L7-998-legacy"]);
+      expect(schedules[0]?.plan_revision).toMatch(/^legacy:sha256:/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHPROJ-043: schedule authoring cannot invent a revision for a missing PLAN", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-missing-plan-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-upgrade-schedule.md",
+        [
+          "# V-model schedule",
+          "",
+          "| plan_id | layer | current_location | status |",
+          "|---|---|---|---|",
+          "| PLAN-L7-997-missing | L7 | must not project | active |",
+        ].join("\n"),
+      );
+      const projection = collectSpecIrProjection(root, "2026-07-31T00:00:00.000Z");
+      expect(projection.schedule_entries).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1268,6 +1367,19 @@ describe("spec IR projections", () => {
   it("turns malformed schedule authoring rows into integrity findings", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-schedule-bad-"));
     try {
+      writePlan(
+        root,
+        "PLAN-L7-999-duplicate.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-999-duplicate",
+          "layer: L7",
+          "status: active",
+          "---",
+          "",
+          "# Duplicate schedule fixture",
+        ].join("\n"),
+      );
       writeGovernanceDoc(
         root,
         "vmodel-upgrade-schedule.md",

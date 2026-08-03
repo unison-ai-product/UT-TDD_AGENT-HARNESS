@@ -24,6 +24,36 @@ const plan = (o: Partial<ParsedReviewPlan>): ParsedReviewPlan => ({
   ...o,
 });
 
+describe("GitHub review lane custody", () => {
+  it("U-GHBIND-004: extracts immutable lane, revision, HEAD, trials, and citations", () => {
+    const [entry] = extractReviewEntries(`---
+plan_id: PLAN-L7-1-example
+review_evidence:
+  - reviewer: blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: 2026-07-29T01:00:00Z
+    tests_green_at: 2026-07-29T00:00:00Z
+    verdict: PASS
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    lane: claim-blind
+    plan_revision: rev-1
+    subject_head: abcdef1
+    attack_trials: 3
+    citations:
+      - src/example.ts:10
+---
+`);
+    expect(entry).toMatchObject({
+      lane: "claim-blind",
+      plan_revision: "rev-1",
+      subject_head: "abcdef1",
+      attack_trials: 3,
+      citations: ["src/example.ts:10"],
+    });
+  });
+});
+
 describe("green command evidence (IMP-108)", () => {
   it("returns an empty plan set when docs/plans is absent", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-no-plans-"));
