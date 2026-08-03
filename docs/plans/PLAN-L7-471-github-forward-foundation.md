@@ -19,11 +19,12 @@ agent_slots:
     slot_label: QA - stale identity・closure custody・Project convergence oracle
 review_evidence:
   - reviewer: codex-blind-reviewer
-    review_kind: cross_agent
+    review_kind: intra_runtime_subagent
     reviewed_at: 2026-08-03T02:48:00.000Z
     tests_green_at: 2026-08-03T02:46:55.000Z
     verdict: approve
-    scope: claim-blind closing review。admission/outbox/base custodyの4攻撃を再導出しPASS。
+    scope: claim-blind intra-runtime closing review。admission/outbox/base
+      custodyの4攻撃を再導出しPASS。closing authorityはOpus cross-provider laneが担う。
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-terra
     lane: claim-blind
@@ -107,18 +108,18 @@ dependencies:
 status: confirmed
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:aebf5e231d13eafd34db9d47669d4898
-  command_id: command:pr210-foundation-close:1785726101971
-  admitted_at: 2026-08-03T03:01:41.971Z
-  source_digest: sha256:ce5979af5825335928c9d0bc83ad98173ab862dc007ffa676711eb883f1a40b6
+  receipt_id: certificate:fe2573e611ae427627b344fe9d14b6d9
+  command_id: command:pr210-review-kind-close:1785726599513
+  admitted_at: 2026-08-03T03:09:59.513Z
+  source_digest: sha256:9672eed288c8ffec4bd6aeccb3cb4ff9716357170fb39c83980b550778f955e4
   decision_digest: sha256:3262bbb57bd1c55a9bf93aa752bebb1686b7159d53293dfbf00aa5b428251881
-  receipt_digest: sha256:af2783d80a6a2c6165d06e4bb2a1f83f4fe0c5475542dec2a9452ea60dead098
+  receipt_digest: sha256:36a30058592a16c2e2d8143df8a6a6402685c9e84ed93c63f41f86a3277cbd7f
   binding:
     path: docs/plans/PLAN-L7-471-github-forward-foundation.md
     plan_id: PLAN-L7-471-github-forward-foundation
     asset_id: plan:5e3651c92d0e10e531bacfab12ef4c06
-    revision: 2
-    content_digest: sha256:ce5979af5825335928c9d0bc83ad98173ab862dc007ffa676711eb883f1a40b6
+    revision: 3
+    content_digest: sha256:9672eed288c8ffec4bd6aeccb3cb4ff9716357170fb39c83980b550778f955e4
   route:
     signal: forward
     mode: forward
