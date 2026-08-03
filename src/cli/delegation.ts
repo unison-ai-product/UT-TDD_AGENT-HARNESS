@@ -83,7 +83,14 @@ export function adapterExecutionEnv(
     delete env[key];
   }
   if (provider !== "claude" && provider !== "codex") return env;
-  return { ...env, ...extraEnv };
+  return {
+    ...env,
+    ...extraEnv,
+    // `claude --print` is a finite delegated process, not the live VS Code
+    // session that owns asyncRewake delivery.  A long-lived Stop hook keeps
+    // the delegated provider's stdio/process tree open on Windows.
+    ...(provider === "claude" ? { UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE: "1" } : {}),
+  };
 }
 
 function safeLoadChangedFiles(repoRoot: string): string[] {
