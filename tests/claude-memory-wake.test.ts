@@ -8,8 +8,8 @@ import {
   buildClaudeInboxEntry,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
-  resolveClaudeWakeDelay,
   renderClaudeWakeMessage,
+  resolveClaudeWakeDelay,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake";
 
