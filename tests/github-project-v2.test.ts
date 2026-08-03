@@ -303,7 +303,7 @@ describe("GitHub Project V2 reconciler", () => {
       expect(() =>
         queueGithubProjection({
           ...input,
-          payload: { ...input.payload, currentGate: "review", headSha: "new-head" },
+          payload: { ...input.payload, currentGate: "review", headSha: "def5678" },
         }),
       ).toThrow(/already applying/);
       expect(
