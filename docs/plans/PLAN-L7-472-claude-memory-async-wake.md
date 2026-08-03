@@ -71,7 +71,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-03T11:11:52Z"
         evidence_path: src/runtime/claude-memory-wake.ts
-        output_digest: "sha256:1d370f5034e2eeda10616638c8eae08d9fca8c57c285602b1be64959b358f6da"
+        output_digest: "sha256:57d3890076450b07509091e3e588347c2eaf2a5ed5c219d077337dfd71094f64"
         anchor_commit: 09cf615062214d280913c5c82cadbdea2a31e1a9
       - kind: smoke
         command: "PR worktree publish -> main workspace hook exit 0 -> target workspace hook exit 2（WORKSPACE_ISOLATION_E2E）"
