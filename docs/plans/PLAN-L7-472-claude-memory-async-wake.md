@@ -23,6 +23,24 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
     artifact_type: markdown_doc
+  - artifact_path: .claude/settings.json
+    artifact_type: config
+  - artifact_path: docs/templates/adapter/.claude/settings.json
+    artifact_type: config
+  - artifact_path: src/runtime/claude-memory-wake.ts
+    artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/project-hook.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: tests/claude-memory-wake.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/runtime-hook-entrypoints.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/setup.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/design/harness/L6-function-design/memory.md
   requires: []
@@ -76,4 +94,3 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 - [ ] typecheck/Biome/plan lintがgreen。
 - [ ] 実HARNESSメモリ通知でClaude sessionが即時再開する。
 - [ ] non-author familyのclosing reviewで未解決FLAGがない。
-

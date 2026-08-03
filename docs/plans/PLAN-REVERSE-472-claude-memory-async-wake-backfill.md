@@ -20,6 +20,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-472-claude-memory-async-wake-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/memory.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
   requires: []
