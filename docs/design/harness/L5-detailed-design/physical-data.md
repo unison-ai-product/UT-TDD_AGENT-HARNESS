@@ -808,9 +808,10 @@ Forward read-model / delivery intentである。Execution Episode完成後の配
 `project-item-upsert`の閉じた5項目だけをcanonical順で保持し、同時に`payload_digest`を保存する。
 未知field、空値、不正Project番号はINSERT前に拒否し、secret・credential・provider transcriptを
 payloadへ入れない。
-同一digestの再送だけは既存status / attemptを保持する。digestが変わる場合は新しい`outbox_id`へ
-原子的に置換して`pending`、attempt 0、空errorへ戻すため、旧intentの完了通知は新payloadを
-`applied`へ遷移できない。
+同一digestの再送だけは既存status / attemptを保持する。dispatch前に対象全件を`applying`へatomic claimし、
+同一logical keyが`applying`中のenqueueを拒否する。digestが変わる場合は新しい`outbox_id`へ原子的に
+置換する。remote成功後はcurrent outbox identityと`applying`を再照合し、Project projection/binding保存と
+`applied`化を同一transactionでcommitするため、stale workerは新payloadを完了・rollbackできない。
 同期失敗はproviderのraw errorを保存せず、閉じた`project-sync-failed`を`last_error`へ記録して
 attemptを加算し、retry可能な`pending`を維持する。
 
@@ -820,7 +821,7 @@ attemptを加算し、retry可能な`pending`を維持する。
 | `execution_readiness_projection` | `plan_id` | `plan_revision`, `readiness`, `current_gate`, `predecessor_plan_ids`, `blocked_reason`, `unlock_condition`, `next_plan_ids`, `unlocked_plan_ids`, `computed_at` | PLAN / dependency graph | `implementation_order`はnullable。依存グラフから再構築し、authoring sourceを更新しない |
 | `github_project_item_projection` | `projection_id` | `repository_id`, `project_id`, `project_item_id`, `plan_id`, `plan_revision`, `content_node_id`, `head_sha`, `sync_status`, `last_reconciled_at` | Project V2 observation | `(repository_id,plan_id,plan_revision)` UNIQUE |
 | `github_object_bindings` | `binding_id` | `repository_id`, `plan_id`, `plan_revision`, `project_item_id`, `object_kind`, `object_id`, `object_url`, `head_sha`, `state`, `observed_at` | GitHub repository facts | `(repository_id,object_kind,object_id)` UNIQUE。stale時刻・異PLAN再割当を拒否 |
-| `github_projection_outbox` | `outbox_id` | `repository_id`, `plan_id`, `plan_revision`, `operation`, `payload_json`, `payload_digest`, `status`, `attempt_count`, `last_error`, `created_at`, `updated_at` | Project同期intent | `(repository_id,plan_id,plan_revision,operation)` UNIQUE。payloadは閉じたsecret-safe schema + SHA-256 digest。outbox identityはdigestを含み、変更payloadを旧完了通知から隔離 |
+| `github_projection_outbox` | `outbox_id` | `repository_id`, `plan_id`, `plan_revision`, `operation`, `payload_json`, `payload_digest`, `status`, `attempt_count`, `last_error`, `created_at`, `updated_at` | Project同期intent | `(repository_id,plan_id,plan_revision,operation)` UNIQUE。status=`pending|applying|applied`。payloadは閉じたsecret-safe schema + SHA-256 digest。claimとProject永続化のCAS境界でstale workerを隔離 |
 
 ### Execution Episode / GitHub配送の目標テーブル（後続降下）
 
