@@ -1,14 +1,14 @@
+import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify } from "yaml";
 import {
   type ReviewReceiptSource,
   reviewReceiptDigest,
   validCrossReviewSource,
 } from "../kernel/github-closure-receipt";
 import { resolvePlanRevisionIdentity } from "../kernel/plan-revision";
-import { canonicalPlanContentDigest } from "../plan-admission/diff-fence";
-import { parseTrackedReceiptProjection } from "../plan-admission/tracked-receipt-projection";
+import { parseTrackedReceiptProjection } from "../shared/tracked-receipt-projection";
 import type { HarnessDb } from "./index";
 
 function text(value: unknown): string {
@@ -56,6 +56,23 @@ function sourceContent(repoRoot: string, source: string): string | undefined {
     if (!physicalRelative || physicalRelative === ".." || physicalRelative.startsWith(`..${sep}`))
       return undefined;
     return readFileSync(physicalPath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function canonicalPlanContentDigest(content: string): string | undefined {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(content);
+  if (!match) return undefined;
+  try {
+    const parsed = parseYaml(match[1] ?? "");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+    const frontmatter = { ...(parsed as Record<string, unknown>) };
+    if (typeof frontmatter.plan_id !== "string" || !frontmatter.plan_id.trim()) return undefined;
+    delete frontmatter.admission_receipt;
+    return `sha256:${createHash("sha256")
+      .update(`${stringify(frontmatter)}---\n${match[2] ?? ""}`)
+      .digest("hex")}`;
   } catch {
     return undefined;
   }
