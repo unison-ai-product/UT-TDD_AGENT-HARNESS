@@ -61,6 +61,12 @@ export function detectWorkingTreeMutation(before: string[], after: string[]): st
   return [...mutated].sort();
 }
 
+/** 委譲機構が管理する review custody 投影。reviewer 本人の編集ではない。 */
+export function isReviewCustodyProjection(path: string): boolean {
+  const normalized = path.replaceAll("\\", "/");
+  return /^\.ut-tdd\/review\/(?:requests|receipts)\//.test(normalized);
+}
+
 export interface ReviewSessionInput {
   role: string;
   /** session 開始前の working-tree 変更パス (git status --porcelain 由来)。 */
@@ -85,7 +91,9 @@ export interface ReviewSessionAssessment {
  */
 export function assessReviewSession(input: ReviewSessionInput): ReviewSessionAssessment {
   const readOnly = isReadOnlyDelegationRole(input.role);
-  const mutatedPaths = detectWorkingTreeMutation(input.before, input.after);
+  const mutatedPaths = detectWorkingTreeMutation(input.before, input.after).filter(
+    (path) => !isReviewCustodyProjection(path),
+  );
   return {
     role: normalizeRole(input.role),
     readOnly,

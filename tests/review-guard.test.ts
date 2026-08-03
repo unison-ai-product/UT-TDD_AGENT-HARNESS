@@ -3,6 +3,7 @@ import {
   assessReviewSession,
   detectWorkingTreeMutation,
   isReadOnlyDelegationRole,
+  isReviewCustodyProjection,
   reviewGuardMessages,
   summarizeStagedReview,
 } from "../src/runtime/review-guard";
@@ -54,6 +55,17 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
   });
 
   describe("assessReviewSession", () => {
+    it("U-RGUARD-013: delegation-owned review custody projection is not reviewer mutation", () => {
+      const a = assessReviewSession({
+        role: "blind-reviewer",
+        before: [],
+        after: [".ut-tdd/review/requests/request.json", ".ut-tdd/review/receipts/receipt.json"],
+      });
+      expect(a.mutatedPaths).toEqual([]);
+      expect(a.violation).toBe(false);
+      expect(isReviewCustodyProjection(".ut-tdd/review/receipts/x.json")).toBe(true);
+      expect(isReviewCustodyProjection(".ut-tdd/review/other/x.json")).toBe(false);
+    });
     it("U-RGUARD-006: read-only role that mutates the tree is a violation", () => {
       const a = assessReviewSession({
         role: "qa",
