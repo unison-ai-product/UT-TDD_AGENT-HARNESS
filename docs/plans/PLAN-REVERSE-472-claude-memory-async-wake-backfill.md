@@ -3,7 +3,7 @@ plan_id: PLAN-REVERSE-472-claude-memory-async-wake-backfill
 title: "PLAN-REVERSE-472: Claude memory async wake設計backfill"
 kind: reverse
 layer: cross
-drive: reverse
+drive: agent
 route_signal: reverse
 route_mode: reverse
 status: draft

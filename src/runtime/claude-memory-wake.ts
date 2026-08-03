@@ -143,10 +143,15 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
     .filter((entry): entry is ClaudeInboxEntry => entry !== undefined);
 }
 
-function claim(repoRoot: string, entry: ClaudeInboxEntry, sessionId: string, at: string): boolean {
-  const root = runtimeRoot(repoRoot);
+function claim(input: {
+  repoRoot: string;
+  entry: ClaudeInboxEntry;
+  sessionId: string;
+  at: string;
+}): boolean {
+  const root = runtimeRoot(input.repoRoot);
   mkdirSync(root, { recursive: true });
-  const path = join(root, `${safeFilePart(entry.id)}.claim`);
+  const path = join(root, `${safeFilePart(input.entry.id)}.claim`);
   let descriptor: number;
   try {
     descriptor = openSync(path, "wx", 0o600);
@@ -154,7 +159,14 @@ function claim(repoRoot: string, entry: ClaudeInboxEntry, sessionId: string, at:
     return false;
   }
   try {
-    writeFileSync(descriptor, `${JSON.stringify({ id: entry.id, sessionId, deliveredAt: at })}\n`);
+    writeFileSync(
+      descriptor,
+      `${JSON.stringify({
+        id: input.entry.id,
+        sessionId: input.sessionId,
+        deliveredAt: input.at,
+      })}\n`,
+    );
   } finally {
     closeSync(descriptor);
   }
@@ -206,7 +218,7 @@ export async function waitForClaudeMemory(input: {
     for (const id of unclaimable) unavailable.add(id);
     const entry = selectClaudeInboxEntry(readInbox(input.repoRoot), unavailable);
     if (entry) {
-      if (claim(input.repoRoot, entry, input.sessionId, now())) {
+      if (claim({ repoRoot: input.repoRoot, entry, sessionId: input.sessionId, at: now() })) {
         return { kind: "delivered", entry, message: renderClaudeWakeMessage(entry) };
       }
       unclaimable.add(entry.id);

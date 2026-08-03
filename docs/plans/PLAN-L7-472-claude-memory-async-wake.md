@@ -10,7 +10,7 @@ status: draft
 created: 2026-08-03
 updated: 2026-08-03
 owner: Codex / TL
-parent_design: docs/design/harness/L6-function-design/memory.md
+parent_design: docs/plans/PLAN-L7-465-cross-review-author-binding.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
@@ -23,31 +23,18 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
     artifact_type: markdown_doc
-  - artifact_path: .claude/settings.json
-    artifact_type: config
-  - artifact_path: docs/templates/adapter/.claude/settings.json
-    artifact_type: config
   - artifact_path: src/runtime/claude-memory-wake.ts
-    artifact_type: source_module
-  - artifact_path: src/cli.ts
-    artifact_type: source_module
-  - artifact_path: src/lint/project-hook.ts
-    artifact_type: source_module
-  - artifact_path: src/setup/templates.ts
     artifact_type: source_module
   - artifact_path: tests/claude-memory-wake.test.ts
     artifact_type: test_code
-  - artifact_path: tests/runtime-hook-entrypoints.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/setup.test.ts
-    artifact_type: test_code
 dependencies:
-  parent: docs/design/harness/L6-function-design/memory.md
+  parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
   requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L7-465-cross-review-author-binding.md
     - docs/plans/PLAN-REVERSE-472-claude-memory-async-wake-backfill.md
+    - docs/design/harness/L6-function-design/memory.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/RetryYN/HELIX-HARNESS
 review_evidence: []
