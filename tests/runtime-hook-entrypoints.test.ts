@@ -189,6 +189,43 @@ describe("runtime hook entrypoints", () => {
     }
   });
 
+  it("U-MEMWAKE-007: CLI hook delivers a targeted workspace inbox and exits 2", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wake-delivery-"));
+    try {
+      spawnSync("git", ["init", "-q"], { cwd });
+      const publish = runCli(cwd, [
+        "memory",
+        "add",
+        "--kind",
+        "project",
+        "--title",
+        "wake delivery",
+        "--body",
+        "workspace-targeted notification",
+        "--notify-claude",
+        "--operation-id",
+        "cli-hook-delivery",
+      ]);
+      expect(publish.status).toBe(0);
+
+      const delivery = runCli(
+        cwd,
+        ["hook", "claude-memory-wake"],
+        { hook_event_name: "Stop", session_id: "vscode-target" },
+        {
+          CLAUDE_CODE_ENTRYPOINT: "claude-vscode",
+          UT_TDD_CLAUDE_WAKE_POLL_MS: "10",
+          UT_TDD_CLAUDE_WAKE_MAX_MS: "20",
+        },
+      );
+      expect(delivery.status).toBe(2);
+      expect(delivery.stderr).toContain("[UT_TDD_CLAUDE_INBOX]");
+      expect(delivery.stderr).toContain("workspace-targeted notification");
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("records hook state at the repository root when launched from a nested cwd", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-hook-root-"));
     try {

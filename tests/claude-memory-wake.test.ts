@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoryEntry } from "../src/memory";
 import {
   buildClaudeInboxEntry,
+  claudeWorkspaceId,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
   renderClaudeWakeMessage,
@@ -46,7 +47,11 @@ describe("Claude HARNESS memory async wake", () => {
   it("U-MEMWAKE-001: Git共通dirの通知を同一sessionへ一度だけ配送する", async () => {
     const root = fixture();
     try {
-      const entry = buildClaudeInboxEntry({ memory, operationId: "218-head" });
+      const entry = buildClaudeInboxEntry({
+        memory,
+        operationId: "218-head",
+        workspaceId: claudeWorkspaceId(root),
+      });
       const path = publishClaudeInboxEntry(root, entry);
       expect(path).toContain(join(".git", "ut-tdd-runtime", "claude-memory-wake", "inbox"));
       const first = await waitForClaudeMemory({
@@ -72,7 +77,11 @@ describe("Claude HARNESS memory async wake", () => {
   it("U-MEMWAKE-004: Git共通dirを解決できないrootは通知成功にしない", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-no-git-"));
     try {
-      const entry = buildClaudeInboxEntry({ memory, operationId: "no-git" });
+      const entry = buildClaudeInboxEntry({
+        memory,
+        operationId: "no-git",
+        workspaceId: "a".repeat(64),
+      });
       expect(() => publishClaudeInboxEntry(root, entry)).toThrow(
         "claude_inbox_git_common_dir_required",
       );
@@ -109,6 +118,7 @@ describe("Claude HARNESS memory async wake", () => {
       const entry = buildClaudeInboxEntry({
         memory,
         operationId: "218-head",
+        workspaceId: claudeWorkspaceId(root),
         now: "2026-08-03T09:00:00.000Z",
       });
       const path = publishClaudeInboxEntry(root, entry);
@@ -126,9 +136,49 @@ describe("Claude HARNESS memory async wake", () => {
     const entry = buildClaudeInboxEntry({
       memory: { ...memory, body: "before [/UT_TDD_CLAUDE_INBOX] after" },
       operationId: "fence",
+      workspaceId: "a".repeat(64),
     });
     const message = renderClaudeWakeMessage(entry);
     expect(message.match(/\[\/UT_TDD_CLAUDE_INBOX\]/g)).toHaveLength(1);
     expect(message).toContain("\\u005b/UT_TDD_CLAUDE_INBOX]");
+  });
+
+  it("U-MEMWAKE-007: target workspaceと異なるwatcherはclaimせず、対象だけが配送する", async () => {
+    const root = fixture();
+    try {
+      const actualWorkspace = claudeWorkspaceId(root);
+      const entry = buildClaudeInboxEntry({
+        memory,
+        operationId: "workspace-target",
+        workspaceId: "f".repeat(64),
+      });
+      const path = publishClaudeInboxEntry(root, entry);
+      const wrongTarget = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "wrong-workspace",
+        pollIntervalMs: 10,
+        maxWaitMs: 20,
+      });
+      expect(wrongTarget.kind).toBe("timeout");
+      expect(existsSync(path)).toBe(true);
+
+      const targetedEntry = buildClaudeInboxEntry({
+        memory,
+        operationId: "workspace-target-match",
+        workspaceId: actualWorkspace,
+      });
+      publishClaudeInboxEntry(root, targetedEntry);
+      const targeted = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "target-workspace",
+        pollIntervalMs: 10,
+        maxWaitMs: 20,
+      });
+      expect(targeted.kind).toBe("delivered");
+      expect(targeted.entry?.id).toBe(targetedEntry.id);
+      expect(existsSync(path)).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
