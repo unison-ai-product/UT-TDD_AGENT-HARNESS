@@ -47,7 +47,7 @@ review_evidence:
     reviewer_model: claude-opus-5
     lane: claim-blind
     subject_head: f8bcfb3a004978516f9294fb341b7b4d260c364a
-    scope: "PR #220 exact HEAD f8bcfb3a。先行FLAGのN-1を実VS Code環境で22/22 greenにより解錠し、公式asyncRewake契約、empty-inbox production default非block、workspace宛先束縛、L6/L7/Reverse同期を再判定した。後続GitHub Actions run 30808894193もLinux/Windows/aggregate 3/3 SUCCESS。"
+    scope: "PR #220 exact HEAD f8bcfb3a。claude-fable-5 orchestratorが先行FLAGのN-1を実VS Code環境で22/22 greenにより解錠し、claude-opus-5 blind-reviewerが公式asyncRewake契約、empty-inbox production default非block、workspace宛先束縛、L6/L7/Reverse同期を再判定した。後続GitHub Actions run 30808894193もLinux/Windows/aggregate 3/3 SUCCESS。"
     citations:
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/220#issuecomment-5165446977
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/220#issuecomment-5165586153
@@ -56,7 +56,7 @@ review_evidence:
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/30808894193
     green_commands:
       - kind: integration_test
-        command: "bunx vitest run tests/claude-memory-wake.test.ts tests/runtime-hook-entrypoints.test.ts tests/cli-delegation.test.ts（Claude reviewerが実VS Code session環境で22/22 passを実走）"
+        command: "./node_modules/.bin/vitest run tests/claude-memory-wake.test.ts tests/runtime-hook-entrypoints.test.ts tests/cli-delegation.test.ts（UT_TDD_TEST_EXECUTION_ROOT等3環境変数をworktreeへ固定し、claude-fable-5 orchestratorが22/22 passを実走）"
         runner: bun
         scope: targeted
         exit_code: 0

@@ -56,7 +56,7 @@ review_evidence:
     reviewer_model: claude-opus-5
     lane: claim-blind
     subject_head: f8bcfb3a004978516f9294fb341b7b4d260c364a
-    scope: "PR #220 exact HEAD f8bcfb3a。L6 memory契約、U-MEMWAKE-001〜007、Forward PLANの対応とRuntime E2E 3本をClaude Opus 5がdelta再判定しPASS。"
+    scope: "PR #220 exact HEAD f8bcfb3a。claude-fable-5 orchestratorが22/22を実走し、L6 memory契約、U-MEMWAKE-001〜007、Forward PLANの対応とRuntime E2E 3本をclaude-opus-5 blind-reviewerがdelta再判定しPASS。"
     citations:
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/220#issuecomment-5165446977
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/220#issuecomment-5165586153
@@ -64,7 +64,7 @@ review_evidence:
       - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/220#issuecomment-5165655786
     green_commands:
       - kind: integration_test
-        command: "bunx vitest run tests/claude-memory-wake.test.ts tests/runtime-hook-entrypoints.test.ts tests/cli-delegation.test.ts（Claude reviewerが実VS Code session環境で22/22 passを実走）"
+        command: "./node_modules/.bin/vitest run tests/claude-memory-wake.test.ts tests/runtime-hook-entrypoints.test.ts tests/cli-delegation.test.ts（UT_TDD_TEST_EXECUTION_ROOT等3環境変数をworktreeへ固定し、claude-fable-5 orchestratorが22/22 passを実走）"
         runner: bun
         scope: targeted
         exit_code: 0
