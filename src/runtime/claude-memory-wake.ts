@@ -38,6 +38,10 @@ export function isClaudeMemoryWakeTarget(env: NodeJS.ProcessEnv): boolean {
   );
 }
 
+export function resolveClaudeWakeDelay(value: string | undefined, fallback: number): number {
+  return value?.trim() ? Number(value) : fallback;
+}
+
 function safeFilePart(value: string): string {
   return value.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160);
 }
