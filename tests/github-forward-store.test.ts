@@ -33,8 +33,8 @@ describe("GitHub Forward SQLite store", () => {
       .prepare(
         `INSERT INTO schedule_entries (
           schedule_entry_id, plan_id, layer, status, current_location, rag,
-          blocked_reason, predecessor_plan_ids, source_hash
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          blocked_reason, predecessor_plan_ids, plan_revision, source_hash
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(`schedule:${planId}`, planId, "L7", status, "plan", "yellow", "", "", revision);
 
@@ -735,6 +735,7 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
         "project",
         "item",
         "PLAN-L7-1-a",
+        "rev1",
         "rev1",
         "content",
         "old",

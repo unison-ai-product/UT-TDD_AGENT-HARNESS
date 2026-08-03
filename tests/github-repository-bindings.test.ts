@@ -19,7 +19,10 @@ import {
   TRACKED_RECEIPT_SCHEMA,
   trackedReceiptRecordDigest,
 } from "../src/plan-admission/tracked-receipt-projection";
-import { isManualGithubObservationKind } from "../src/state-db/github-forward-projection";
+import {
+  isManualGithubObservationKind,
+  readForwardSchedule,
+} from "../src/state-db/github-forward-projection";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 
@@ -1114,6 +1117,20 @@ describe("GitHub repository facts binding", () => {
         "INSERT INTO schedule_entries (schedule_entry_id, plan_id, plan_revision, source_hash) VALUES (?, ?, ?, ?)",
       ).run("schedule:1", "PLAN-L7-436-domain", "2", "whole-file-hash");
       expect(resolveCurrentPlanRevision(db, "PLAN-L7-436-domain")).toBe("2");
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHBIND-020: source hash is never accepted as a PLAN revision", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      db.prepare(
+        "INSERT INTO schedule_entries (schedule_entry_id, plan_id, source_hash) VALUES (?, ?, ?)",
+      ).run("schedule:missing-revision", "PLAN-L7-436-no-revision", "sha256:not-a-revision");
+      expect(resolveCurrentPlanRevision(db, "PLAN-L7-436-no-revision")).toBe("");
+      expect(readForwardSchedule(db)).toEqual([]);
     } finally {
       db.close();
     }

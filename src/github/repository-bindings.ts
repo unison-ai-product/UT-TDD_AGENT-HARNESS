@@ -101,8 +101,10 @@ function projectItemId(input: {
 export function resolveCurrentPlanRevision(db: HarnessDb, planId: string): string {
   const row = db
     .prepare(
-      `SELECT COALESCE(NULLIF(plan_revision, ''), source_hash) AS plan_revision
-         FROM schedule_entries WHERE plan_id = ? ORDER BY rowid DESC LIMIT 1`,
+      `SELECT plan_revision
+         FROM schedule_entries
+        WHERE plan_id = ? AND NULLIF(plan_revision, '') IS NOT NULL
+        ORDER BY rowid DESC LIMIT 1`,
     )
     .get(planId);
   return text(row?.plan_revision);

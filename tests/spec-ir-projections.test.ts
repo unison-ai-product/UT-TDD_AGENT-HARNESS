@@ -27,29 +27,6 @@ function writeMarkdown(root: string, relativePath: string, body: string): void {
   writeFileSync(path, body, "utf8");
 }
 
-function admissionReceiptLines(planId: string, revision: number): string[] {
-  const digest = `sha256:${"a".repeat(64)}`;
-  return [
-    "admission_receipt:",
-    "  schema_version: v2",
-    `  receipt_id: certificate:test-${planId.toLowerCase()}`,
-    `  command_id: command:test-${planId.toLowerCase()}`,
-    "  admitted_at: 2026-07-31T00:00:00.000Z",
-    `  source_digest: ${digest}`,
-    `  decision_digest: ${digest}`,
-    `  receipt_digest: ${digest}`,
-    "  binding:",
-    `    path: docs/plans/${planId}.md`,
-    `    plan_id: ${planId}`,
-    "    asset_id: plan:test-spec-ir",
-    `    revision: ${revision}`,
-    `    content_digest: ${digest}`,
-    "  route:",
-    "    signal: forward",
-    "    mode: forward",
-  ];
-}
-
 describe("spec IR projections", () => {
   it("builds deterministic spec IR rows and routes orphan findings as non-ready candidates", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-"));
@@ -67,7 +44,6 @@ describe("spec IR projections", () => {
           "drive: db",
           "status: confirmed",
           "route_mode: add-feature",
-          ...admissionReceiptLines("PLAN-L6-999-spec-ir-fixture", 3),
           "dependencies:",
           "  requires:",
           "    - PLAN-L5-999-missing-parent",
@@ -93,7 +69,7 @@ describe("spec IR projections", () => {
         expect.arrayContaining([
           expect.objectContaining({
             plan_id: "PLAN-L6-999-spec-ir-fixture",
-            plan_revision: "3",
+            plan_revision: expect.stringMatching(/^legacy:sha256:/),
             v_pair: "L7",
             rag: "green",
           }),
@@ -147,7 +123,6 @@ describe("spec IR projections", () => {
           "drive: db",
           "status: confirmed",
           "route_mode: add-feature",
-          ...admissionReceiptLines("PLAN-L7-999-schedule-fixture", 3),
           "---",
           "",
           "# Schedule fixture",
@@ -177,7 +152,7 @@ describe("spec IR projections", () => {
         blocked_reason: "CI gate",
         predecessor_plan_ids: "PLAN-L6-998-parent",
         source_path: "docs/governance/vmodel-upgrade-schedule.md",
-        plan_revision: "3",
+        plan_revision: expect.stringMatching(/^legacy:sha256:/),
       });
       expect(
         projection.schedule_entries.filter((row) => row.plan_id === "PLAN-L7-999-schedule-fixture"),
@@ -213,6 +188,51 @@ describe("spec IR projections", () => {
       const after = collectSpecIrProjection(root, "2026-07-31T00:01:00.000Z").schedule_entries[0];
       expect(after?.plan_revision).toBe(before?.plan_revision);
       expect(after?.source_hash).not.toBe(before?.source_hash);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-GHPROJ-051: invalid or untracked admission receipts never enter the Forward schedule", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-invalid-admission-"));
+    try {
+      writePlan(
+        root,
+        "PLAN-L7-996-partial.md",
+        "---\nplan_id: PLAN-L7-996-partial\nadmission_receipt:\n  binding:\n    revision: 1\n---\n",
+      );
+      const digest = `sha256:${"a".repeat(64)}`;
+      writePlan(
+        root,
+        "PLAN-L7-997-untracked.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-997-untracked",
+          "admission_receipt:",
+          "  schema_version: v2",
+          "  receipt_id: certificate:untracked",
+          "  command_id: command:untracked",
+          "  admitted_at: 2026-07-31T00:00:00.000Z",
+          `  source_digest: ${digest}`,
+          `  decision_digest: ${digest}`,
+          `  receipt_digest: ${digest}`,
+          "  binding:",
+          "    path: docs/plans/PLAN-L7-997-untracked.md",
+          "    plan_id: PLAN-L7-997-untracked",
+          "    asset_id: plan:test-untracked",
+          "    revision: 1",
+          `    content_digest: ${digest}`,
+          "  route:",
+          "    signal: forward",
+          "    mode: forward",
+          "---",
+        ].join("\n"),
+      );
+      writePlan(root, "PLAN-L7-998-legacy.md", "---\nplan_id: PLAN-L7-998-legacy\n---\n");
+
+      const schedules = collectSpecIrProjection(root, "2026-08-03T00:00:00.000Z").schedule_entries;
+      expect(schedules.map((row) => row.plan_id)).toEqual(["PLAN-L7-998-legacy"]);
+      expect(schedules[0]?.plan_revision).toMatch(/^legacy:sha256:/);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1355,7 +1375,6 @@ describe("spec IR projections", () => {
           "plan_id: PLAN-L7-999-duplicate",
           "layer: L7",
           "status: active",
-          ...admissionReceiptLines("PLAN-L7-999-duplicate", 1),
           "---",
           "",
           "# Duplicate schedule fixture",

@@ -86,9 +86,9 @@ export function readForwardSchedule(db: HarnessDb): ForwardScheduleEntry[] {
   return db
     .prepare(
       `SELECT plan_id, layer, status, current_location, rag, blocked_reason,
-              predecessor_plan_ids,
-              COALESCE(NULLIF(plan_revision, ''), source_hash) AS plan_revision
+              predecessor_plan_ids, plan_revision
          FROM schedule_entries
+        WHERE NULLIF(plan_revision, '') IS NOT NULL
         ORDER BY rowid`,
     )
     .all()
@@ -112,7 +112,7 @@ export function readGithubEvidence(
   const scheduleRevisions = new Map(
     db
       .prepare(
-        "SELECT plan_id, COALESCE(NULLIF(plan_revision, ''), source_hash) AS plan_revision FROM schedule_entries",
+        "SELECT plan_id, plan_revision FROM schedule_entries WHERE NULLIF(plan_revision, '') IS NOT NULL",
       )
       .all()
       .map((row) => [text(row.plan_id), text(row.plan_revision)]),

@@ -6,6 +6,7 @@ import { resolvePlanRevisionIdentity } from "../kernel/plan-revision";
 import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
 import { stableId } from "../stable-id";
+import { canonicalPlanRevision } from "./github-review-lane-provenance";
 import type { HarnessDb } from "./index";
 
 type SpecIrSourceKind =
@@ -333,8 +334,11 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function projectedPlanRevision(source: SpecIrSource): string {
-  return resolvePlanRevisionIdentity(source.content, sourcePlanId(source))?.token ?? "";
+function projectedPlanRevision(source: SpecIrSource, repoRoot?: string): string {
+  const planId = sourcePlanId(source);
+  return repoRoot
+    ? (canonicalPlanRevision(repoRoot, planId) ?? "")
+    : (resolvePlanRevisionIdentity(source.content, planId)?.token ?? "");
 }
 
 function stringList(value: unknown): string[] {
@@ -636,12 +640,13 @@ function markdownTableRows(content: string, requiredHeaders: string[]): Record<s
 function parseScheduleAuthoringRows(
   sources: SpecIrSource[],
   indexedAt: string,
+  repoRoot?: string,
 ): ScheduleEntryRow[] {
   const rows: ScheduleEntryRow[] = [];
   const planRevisions = new Map(
     sources
       .filter((source) => source.kind === "plan" && sourcePlanId(source))
-      .map((source) => [sourcePlanId(source), projectedPlanRevision(source)]),
+      .map((source) => [sourcePlanId(source), projectedPlanRevision(source, repoRoot)]),
   );
   for (const source of sources.filter((item) => item.kind === "schedule_doc")) {
     for (const row of markdownTableRows(source.content, ["plan_id", "current_location"])) {
@@ -897,12 +902,14 @@ export function parseSpecRelations(
 export function parseScheduleEntries(
   sources: SpecIrSource[],
   indexedAt: string,
+  repoRoot?: string,
 ): ScheduleEntryRow[] {
-  const authoredRows = parseScheduleAuthoringRows(sources, indexedAt);
+  const authoredRows = parseScheduleAuthoringRows(sources, indexedAt, repoRoot);
   const authoredPlanIds = new Set(authoredRows.map((row) => row.plan_id));
   const fallbackRows = sources
     .filter((source) => source.kind === "plan" && sourcePlanId(source))
     .filter((source) => !authoredPlanIds.has(sourcePlanId(source)))
+    .filter((source) => Boolean(projectedPlanRevision(source, repoRoot)))
     .map((source) => {
       const planId = sourcePlanId(source);
       const status = sourceStatus(source);
@@ -924,7 +931,7 @@ export function parseScheduleEntries(
         status,
         blocked_reason: "",
         source_path: source.path,
-        plan_revision: projectedPlanRevision(source),
+        plan_revision: projectedPlanRevision(source, repoRoot),
         source_hash: source.sourceHash,
         indexed_at: indexedAt,
       };
@@ -2300,7 +2307,7 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
   const sources = loadSpecIrSources(repoRoot);
   const defs = parseSpecDefs(sources, indexedAt);
   const relationResult = parseSpecRelations(sources, defs, indexedAt);
-  const schedules = parseScheduleEntries(sources, indexedAt);
+  const schedules = parseScheduleEntries(sources, indexedAt, repoRoot);
   const activations = parseActivationEntries(sources, indexedAt);
   const documentCatalogEntries = parseDocumentCatalogEntries(sources, indexedAt);
   const documentScaleProfileEntries = parseDocumentScaleProfileEntries(sources, indexedAt);
