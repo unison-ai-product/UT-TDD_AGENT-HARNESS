@@ -8,6 +8,7 @@ import {
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt";
 import {
+  deriveStoredForwardReadiness,
   markGithubProjectionApplied,
   markGithubProjectionFailed,
   queueGithubProjection,
@@ -481,6 +482,34 @@ ${source.citations.map((citation) => `      - "${citation}"`).join("\n")}`,
       expect(readGithubEvidence(db, process.cwd(), "owner/repo-a")).toEqual([
         expect.objectContaining({ planId: "PLAN-L7-1-a", ci: "成功" }),
       ]);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-GHPROJ-047: repository-scoped derive cannot truncate the global readiness projection", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      insertSchedule(db, "PLAN-L7-1-a");
+      insertSchedule(db, "PLAN-L7-2-b");
+      for (const [repositoryId, planId] of [
+        ["owner/repo-a", "PLAN-L7-1-a"],
+        ["owner/repo-b", "PLAN-L7-2-b"],
+      ])
+        recordGithubBinding(db, {
+          repositoryId,
+          planId,
+          planRevision: "rev1",
+          objectKind: "branch",
+          objectId: `branch:${planId}`,
+          state: "active",
+        });
+      rebuildExecutionReadiness({ db, now: "2026-08-03T00:00:00Z" });
+      expect(deriveStoredForwardReadiness(db, process.cwd(), "owner/repo-a")).toHaveLength(2);
+      expect(
+        db.prepare("SELECT plan_id FROM execution_readiness_projection ORDER BY plan_id").all(),
+      ).toEqual([{ plan_id: "PLAN-L7-1-a" }, { plan_id: "PLAN-L7-2-b" }]);
     } finally {
       db.close();
     }

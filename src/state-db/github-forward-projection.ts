@@ -280,7 +280,6 @@ export interface RebuildExecutionReadinessInput {
   now?: string;
   transactional?: boolean;
   repoRoot?: string;
-  repositoryId?: string;
 }
 
 export function rebuildExecutionReadiness(
@@ -288,7 +287,7 @@ export function rebuildExecutionReadiness(
 ): ForwardReadinessRow[] {
   const now = input.now ?? new Date().toISOString();
   const transactional = input.transactional ?? true;
-  const rows = deriveStoredForwardReadiness(input.db, input.repoRoot, input.repositoryId);
+  const rows = deriveStoredForwardReadiness(input.db, input.repoRoot);
   const db = input.db;
   const write = db.prepare(
     `INSERT INTO execution_readiness_projection (
