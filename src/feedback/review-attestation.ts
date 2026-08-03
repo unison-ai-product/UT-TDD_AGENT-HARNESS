@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ReviewReceipt } from "./review-dispatch";
 import { extractVerdict, type ReviewVerdictName } from "./review-verdict-contract";
@@ -214,4 +214,46 @@ export function projectReviewVerdict(input: {
   };
   const persisted = persist({ repoRoot: input.repoRoot, category: "receipts", value: receipt });
   return { ok: true, receipt, ...persisted };
+}
+
+function loadCategory<T>(input: {
+  repoRoot: string;
+  category: "requests" | "receipts";
+  isValid: (value: T) => boolean;
+}): T[] {
+  const directory = join(input.repoRoot, ".ut-tdd", "review", input.category);
+  if (!existsSync(directory)) return [];
+  const values: T[] = [];
+  for (const name of readdirSync(directory)) {
+    if (!name.endsWith(".json")) continue;
+    try {
+      const parsed = JSON.parse(readFileSync(join(directory, name), "utf8")) as T;
+      if (input.isValid(parsed)) values.push(parsed);
+    } catch {
+      // 壊れたファイルは黙って有効扱いしない。読める有効分だけを返し、判定は
+      // 消費者 (merge gate 等) が「現 HEAD の request 不在 = deny」で fail-close する。
+    }
+  }
+  return values;
+}
+
+const RECEIPT_LOAD_KINDS = ["acknowledged", "in_review", "verdict"] as const;
+
+/** merge gate (D2) など analyzer 消費者向けの読み口。無効・破損は含めない。 */
+export function loadReviewRequests(repoRoot: string): ReviewAttestationRequest[] {
+  return loadCategory({ repoRoot, category: "requests", isValid: isValidRequest });
+}
+
+export function loadReviewReceipts(repoRoot: string): ReviewReceipt[] {
+  return loadCategory<ReviewReceipt>({
+    repoRoot,
+    category: "receipts",
+    isValid: (value) =>
+      Number.isInteger(value.pr) &&
+      typeof value.head === "string" &&
+      typeof value.reviewRevision === "string" &&
+      PROVIDERS.includes(value.reviewerFamily) &&
+      RECEIPT_LOAD_KINDS.includes(value.kind) &&
+      typeof value.at === "string",
+  });
 }
