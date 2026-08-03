@@ -96,16 +96,17 @@ function digest(value: unknown): string {
   return createHash("sha256").update(normalizedJson(value), "utf8").digest("hex").slice(0, 16);
 }
 
-function persist(
-  repoRoot: string,
-  category: "requests" | "receipts",
-  value: unknown,
-  digestSource: unknown = value,
-): {
+function persist(input: {
+  repoRoot: string;
+  category: "requests" | "receipts";
+  value: unknown;
+  digestSource?: unknown;
+}): {
   path: string;
   digest: string;
 } {
-  const valueDigest = digest(digestSource);
+  const { repoRoot, category, value } = input;
+  const valueDigest = digest(input.digestSource ?? value);
   const directory = join(repoRoot, ".ut-tdd", "review", category);
   mkdirSync(directory, { recursive: true });
   const path = join(directory, `${valueDigest}.json`);
@@ -157,12 +158,17 @@ export function issueReviewRequest(input: {
   // のみで構成する。`requestedAt` を digest に入れると、同一レビュー要求の retry が別 request
   // ファイルとして併存し、D1 (`review-dispatch.ts`) の duplicate_request_conflict を偶発させる。
   // retry は同 digest → 同 path への上書き = 冪等 (requestedAt は本文 metadata として更新される)。
-  const persisted = persist(input.repoRoot, "requests", input.request, {
-    memoryId: input.request.memoryId,
-    pr: input.request.pr,
-    exactHead: input.request.exactHead,
-    reviewRevision: input.request.reviewRevision,
-    authorFamily: input.request.authorFamily,
+  const persisted = persist({
+    repoRoot: input.repoRoot,
+    category: "requests",
+    value: input.request,
+    digestSource: {
+      memoryId: input.request.memoryId,
+      pr: input.request.pr,
+      exactHead: input.request.exactHead,
+      reviewRevision: input.request.reviewRevision,
+      authorFamily: input.request.authorFamily,
+    },
   });
   return { ok: true, request: input.request, ...persisted };
 }
@@ -206,6 +212,6 @@ export function projectReviewVerdict(input: {
     blockingFindings: extracted.value.blockingFindings,
     at: input.attestation.completedAt,
   };
-  const persisted = persist(input.repoRoot, "receipts", receipt);
+  const persisted = persist({ repoRoot: input.repoRoot, category: "receipts", value: receipt });
   return { ok: true, receipt, ...persisted };
 }
