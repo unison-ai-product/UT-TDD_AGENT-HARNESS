@@ -13,7 +13,7 @@ import {
   decodeMergeClosureReceipt,
   reviewReceiptDigest,
 } from "../src/kernel/github-closure-receipt";
-import { resolvePlanRevisionIdentity } from "../src/kernel/plan-revision";
+import { resolvePlanRevisionIdentity } from "../src/state-db/github-review-lane-provenance";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence";
 import {
   TRACKED_RECEIPT_SCHEMA,

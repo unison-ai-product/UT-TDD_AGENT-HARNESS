@@ -1,1 +1,1 @@
-export * from "../shared/tracked-receipt-projection";
+export * from "../kernel/github-closure-receipt";

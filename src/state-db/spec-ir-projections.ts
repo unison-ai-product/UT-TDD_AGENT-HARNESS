@@ -2,11 +2,10 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { resolvePlanRevisionIdentity } from "../kernel/plan-revision";
 import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
 import { stableId } from "../stable-id";
-import { canonicalPlanRevision } from "./github-review-lane-provenance";
+import { canonicalPlanRevision, resolvePlanRevisionIdentity } from "./github-review-lane-provenance";
 import type { HarnessDb } from "./index";
 
 type SpecIrSourceKind =
