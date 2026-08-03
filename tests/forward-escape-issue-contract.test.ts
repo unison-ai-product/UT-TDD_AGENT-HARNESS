@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildSync } from "esbuild";
 import { describe, expect, it } from "vitest";
 import {
   checkDriveModelAlignment,
@@ -580,29 +581,35 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     const ready = join(concurrentRepo, "ready");
     mkdirSync(ready);
     writeFileSync(gate, "wait", "utf8");
-    const worker = join(process.cwd(), "tests", "workers", "forward-escape-sqlite-worker.ts");
-    const vitest = join(process.cwd(), "node_modules", "vitest", "vitest.mjs");
-    const workerConfig = join(process.cwd(), "tests", "workers", "vitest-worker-config.ts");
+    const worker = join(concurrentRepo, "worker.mjs");
+    try {
+      buildSync({
+        entryPoints: [join(process.cwd(), "tests", "workers", "forward-escape-sqlite-worker.ts")],
+        bundle: true,
+        format: "esm",
+        platform: "node",
+        target: "node24",
+        outfile: worker,
+      });
+    } catch (error) {
+      removeTestTree(concurrentRepo);
+      throw error;
+    }
     const nodeBinary = process.env.UT_TDD_NODE_BIN?.trim() || "node";
-    const children = Array.from({ length: 2 }, (_, workerIndex) => {
+    const children = Array.from({ length: 2 }, () => {
       // workerはNode binaryを明示し、親test runtimeがBunでもBunを再起動しない。
-      const child = spawn(
-        nodeBinary,
-        [vitest, "run", "--config", workerConfig, worker, "--reporter=dot"],
-        {
-          cwd: process.cwd(),
-          env: {
-            ...process.env,
-            UT_TDD_FORWARD_ESCAPE_DB: dbPath,
-            UT_TDD_FORWARD_ESCAPE_REPO: concurrentRepo,
-            UT_TDD_FORWARD_ESCAPE_GATE: gate,
-            UT_TDD_FORWARD_ESCAPE_READY: ready,
-            UT_TDD_VITEST_CACHE_DIR: join(concurrentRepo, `.vite-worker-${workerIndex}`),
-          },
-          stdio: ["ignore", "pipe", "pipe"],
-          windowsHide: true,
+      const child = spawn(nodeBinary, [worker], {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          UT_TDD_FORWARD_ESCAPE_DB: dbPath,
+          UT_TDD_FORWARD_ESCAPE_REPO: concurrentRepo,
+          UT_TDD_FORWARD_ESCAPE_GATE: gate,
+          UT_TDD_FORWARD_ESCAPE_READY: ready,
         },
-      );
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      });
       let stdout = "";
       let stderr = "";
       let launchError = "";
