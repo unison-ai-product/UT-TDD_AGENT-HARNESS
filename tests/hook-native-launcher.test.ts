@@ -118,7 +118,7 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
       entries.flatMap((entry) => entry.hooks),
     );
 
-    expect(hooks).toHaveLength(6);
+    expect(hooks).toHaveLength(7);
     for (const hook of hooks) {
       expect(hook.command).toBe("node");
       expect(hook.args?.[0]).toBe("$" + "{CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts");
@@ -164,7 +164,10 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
       PostToolUse: [
         ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"],
       ],
-      Stop: [["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"]],
+      Stop: [
+        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"],
+        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
+      ],
       SubagentStop: [
         ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
       ],

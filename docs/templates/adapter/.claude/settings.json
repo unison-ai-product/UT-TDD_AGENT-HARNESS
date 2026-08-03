@@ -72,7 +72,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
+            "args": [".ut-tdd/bin/run-bun.ts",".ut-tdd/bin/ut-tdd.mjs","hook","claude-memory-wake"],
             "timeout": 930,
             "asyncRewake": true,
             "statusMessage": "HARNESS memory: Claude宛て通知を待機"
