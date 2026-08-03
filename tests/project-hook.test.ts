@@ -38,7 +38,17 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "post-tool-use")],
         },
       ],
-      Stop: [{ hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary")] }],
+      Stop: [
+        { hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary")] },
+        {
+          hooks: [
+            {
+              ...execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"),
+              asyncRewake: true,
+            },
+          ],
+        },
+      ],
       SubagentStop: [
         { hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "subagent-stop")] },
       ],
@@ -138,6 +148,27 @@ describe("project-hook lint", () => {
       file: ".claude/settings.json",
       hook: "PreToolUse",
       reason: "missing_block_on_failure",
+    });
+  });
+
+  it("rejects a Claude memory wake hook that drops asyncRewake", () => {
+    const generated = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.claude/settings.json"]) as {
+      hooks: Record<string, { hooks: { args?: string[]; asyncRewake?: boolean }[] }[]>;
+    };
+    for (const entry of generated.hooks.Stop) {
+      for (const hook of entry.hooks) {
+        if (hook.args?.includes("claude-memory-wake")) delete hook.asyncRewake;
+      }
+    }
+
+    const result = analyzeProjectHooks([
+      { file: ".claude/settings.json", content: JSON.stringify(generated) },
+    ]);
+
+    expect(result.violations).toContainEqual({
+      file: ".claude/settings.json",
+      hook: "Stop",
+      reason: "missing_async_rewake",
     });
   });
 

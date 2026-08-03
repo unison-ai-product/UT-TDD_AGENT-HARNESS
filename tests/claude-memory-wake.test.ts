@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -49,6 +49,33 @@ describe("Claude HARNESS memory async wake", () => {
       });
       expect(first.kind).toBe("delivered");
       expect(second.kind).toBe("timeout");
+      expect(existsSync(path)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-MEMWAKE-004: Git共通dirを解決できないrootは通知成功にしない", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-no-git-"));
+    try {
+      const entry = buildClaudeInboxEntry({ memory, operationId: "no-git" });
+      expect(() => publishClaudeInboxEntry(root, entry)).toThrow(
+        "claude_inbox_git_common_dir_required",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-MEMWAKE-005: 非数値または非正の待機値をfail-closeする", async () => {
+    const root = fixture();
+    try {
+      await expect(
+        waitForClaudeMemory({ repoRoot: root, sessionId: "invalid", pollIntervalMs: Number.NaN }),
+      ).rejects.toThrow("claude_wake_poll_interval_invalid");
+      await expect(
+        waitForClaudeMemory({ repoRoot: root, sessionId: "invalid", maxWaitMs: 0 }),
+      ).rejects.toThrow("claude_wake_max_wait_invalid");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

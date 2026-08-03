@@ -431,7 +431,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       expect(claude.hooks.Stop[1].hooks[0]).toMatchObject({
         command: "node",
         args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
-        timeout: 7230,
+        timeout: 930,
         asyncRewake: true,
       });
       expect(codex.hooks.PreToolUse).toEqual(

@@ -6,6 +6,8 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -43,9 +45,9 @@ function runtimeRoot(repoRoot: string): string {
     ).trim();
     if (commonDir) return join(commonDir, "ut-tdd-runtime", "claude-memory-wake");
   } catch {
-    // Git外のfixtureはrepo-local runtime stateへ閉じる。
+    throw new Error("claude_inbox_git_common_dir_required");
   }
-  return join(repoRoot, ".ut-tdd", "state", "claude-memory-wake");
+  throw new Error("claude_inbox_git_common_dir_required");
 }
 
 export function buildClaudeInboxEntry(input: {
@@ -107,9 +109,7 @@ function decodeEntry(value: string): ClaudeInboxEntry | undefined {
 function claimedIds(root: string): Set<string> {
   const ids = new Set<string>();
   if (!existsSync(root)) return ids;
-  for (const name of readdirSync(root).filter(
-    (candidate) => candidate.endsWith(".claim") || candidate.endsWith(".skip"),
-  )) {
+  for (const name of readdirSync(root).filter((candidate) => candidate.endsWith(".claim"))) {
     try {
       const value = JSON.parse(readFileSync(join(root, name), "utf8")) as { id?: unknown };
       if (typeof value.id === "string") ids.add(value.id);
@@ -125,13 +125,27 @@ export function selectClaudeInboxEntry(
   unavailableIds: ReadonlySet<string>,
 ): ClaudeInboxEntry | undefined {
   return entries
-    .filter((entry) => entry.originRuntime !== "system" || entry.memoryId.startsWith("memory:"))
     .filter((entry) => !unavailableIds.has(entry.id))
     .sort(
       (left, right) =>
         left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
     )
     .at(-1);
+}
+
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1_000;
+
+function pruneRuntimeFiles(root: string, nowMs: number): void {
+  if (!existsSync(root)) return;
+  for (const name of readdirSync(root)) {
+    if (!name.endsWith(".claim") && !name.endsWith(".generation")) continue;
+    const path = join(root, name);
+    try {
+      if (nowMs - statSync(path).mtimeMs > RETENTION_MS) unlinkSync(path);
+    } catch {
+      // 競合削除は次回GCへ委ねる。
+    }
+  }
 }
 
 function readInbox(repoRoot: string): ClaudeInboxEntry[] {
@@ -198,13 +212,22 @@ export async function waitForClaudeMemory(input: {
   now?: () => string;
   sleep?: (ms: number) => Promise<void>;
 }): Promise<ClaudeMemoryWakeResult> {
-  const pollIntervalMs = Math.max(10, input.pollIntervalMs ?? 2_000);
-  const maxWaitMs = Math.max(pollIntervalMs, input.maxWaitMs ?? 7_200_000);
+  const requestedPollMs = input.pollIntervalMs ?? 2_000;
+  const requestedMaxMs = input.maxWaitMs ?? 900_000;
+  if (!Number.isFinite(requestedPollMs) || requestedPollMs <= 0) {
+    throw new Error("claude_wake_poll_interval_invalid");
+  }
+  if (!Number.isFinite(requestedMaxMs) || requestedMaxMs <= 0) {
+    throw new Error("claude_wake_max_wait_invalid");
+  }
+  const pollIntervalMs = Math.max(10, requestedPollMs);
+  const maxWaitMs = Math.max(pollIntervalMs, requestedMaxMs);
   const now = input.now ?? (() => new Date().toISOString());
   const sleep =
     input.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const root = runtimeRoot(input.repoRoot);
   mkdirSync(root, { recursive: true });
+  pruneRuntimeFiles(root, Date.now());
   const generationPath = join(root, `${safeFilePart(input.sessionId)}.generation`);
   const generation = `${process.pid}:${Date.now()}`;
   writeFileSync(generationPath, `${generation}\n`, { encoding: "utf8", mode: 0o600 });
@@ -219,6 +242,11 @@ export async function waitForClaudeMemory(input: {
     const entry = selectClaudeInboxEntry(readInbox(input.repoRoot), unavailable);
     if (entry) {
       if (claim({ repoRoot: input.repoRoot, entry, sessionId: input.sessionId, at: now() })) {
+        try {
+          unlinkSync(join(root, "inbox", `${safeFilePart(entry.id)}.json`));
+        } catch {
+          // claim が配送の正本。inbox GC は次回へ委ねる。
+        }
         return { kind: "delivered", entry, message: renderClaudeWakeMessage(entry) };
       }
       unclaimable.add(entry.id);

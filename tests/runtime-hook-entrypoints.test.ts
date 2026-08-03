@@ -120,7 +120,7 @@ describe("runtime hook entrypoints", () => {
         "hook",
         "claude-memory-wake",
       ],
-      timeout: 7230,
+      timeout: 930,
       asyncRewake: true,
     });
   });

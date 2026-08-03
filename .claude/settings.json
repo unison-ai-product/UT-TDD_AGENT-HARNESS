@@ -73,7 +73,7 @@
             "type": "command",
             "command": "node",
             "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"],
-            "timeout": 7230,
+            "timeout": 930,
             "asyncRewake": true,
             "statusMessage": "HARNESS memory: Claude宛て通知を待機"
           }

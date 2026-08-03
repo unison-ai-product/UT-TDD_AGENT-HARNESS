@@ -18,6 +18,7 @@ export interface ProjectHookViolation {
     | "missing_project_dir"
     | "shell_form"
     | "missing_block_on_failure"
+    | "missing_async_rewake"
     | "tracked_permissions"
     | "forbidden_path";
 }
@@ -55,6 +56,7 @@ interface RequiredProjectHook {
   sourceArgs: readonly string[];
   wrapperArgs: readonly string[];
   blockOnFailure?: boolean;
+  asyncRewake?: boolean;
 }
 
 /**
@@ -124,6 +126,7 @@ export const REQUIRED = [
     wrapperCommand: wrapperCommand("hook claude-memory-wake"),
     sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"),
     wrapperArgs: args(WRAPPER_CLI, "hook", "claude-memory-wake"),
+    asyncRewake: true,
   },
   {
     id: "subagent-stop",
@@ -273,6 +276,13 @@ export function analyzeProjectHooks(docs: ProjectHookDoc[]): ProjectHookResult {
               file: doc.file,
               hook: required.event,
               reason: "missing_block_on_failure",
+            });
+          }
+          if (required.asyncRewake && hook.asyncRewake !== true) {
+            violations.push({
+              file: doc.file,
+              hook: required.event,
+              reason: "missing_async_rewake",
             });
           }
         }

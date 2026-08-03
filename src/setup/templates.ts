@@ -484,7 +484,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '            "type": "command",',
     '            "command": "node",',
     `            "args": ${JSON.stringify([WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("claude-memory-wake")])},`,
-    '            "timeout": 7230,',
+    '            "timeout": 930,',
     '            "asyncRewake": true,',
     '            "statusMessage": "HARNESS memory: Claude宛て通知を待機"',
     "          }",

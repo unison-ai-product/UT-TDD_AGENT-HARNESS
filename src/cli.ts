@@ -1152,7 +1152,7 @@ hook
       repoRoot: requireRuntimeRepoRoot({ allowCwdFallback: true }),
       sessionId: input.session_id ?? "claude-session",
       pollIntervalMs: Number(process.env.UT_TDD_CLAUDE_WAKE_POLL_MS ?? 2_000),
-      maxWaitMs: Number(process.env.UT_TDD_CLAUDE_WAKE_MAX_MS ?? 7_200_000),
+      maxWaitMs: Number(process.env.UT_TDD_CLAUDE_WAKE_MAX_MS ?? 900_000),
     });
     if (result.kind === "delivered" && result.message) {
       process.stderr.write(`${result.message}\n`);
