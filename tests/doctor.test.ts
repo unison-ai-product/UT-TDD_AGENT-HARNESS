@@ -315,6 +315,21 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                 },
               ],
             },
+            {
+              hooks: [
+                {
+                  type: "command",
+                  command: "node",
+                  args: [
+                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
+                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    "hook",
+                    "claude-memory-wake",
+                  ],
+                  asyncRewake: true,
+                },
+              ],
+            },
           ],
           SubagentStop: [
             {

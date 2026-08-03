@@ -112,6 +112,17 @@ describe("runtime hook entrypoints", () => {
         "summary",
       ],
     });
+    expect(hooks.Stop[1].hooks[0]).toMatchObject({
+      command: "node",
+      args: [
+        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
+        `${claudeProjectDir}/src/cli.ts`,
+        "hook",
+        "claude-memory-wake",
+      ],
+      timeout: 930,
+      asyncRewake: true,
+    });
   });
 
   it("shared CLI session/hook commands record a PLAN digest in a temp repo", () => {
@@ -153,6 +164,63 @@ describe("runtime hook entrypoints", () => {
       expect(digest.files_touched).toEqual(["Edit src/cli.ts"]);
       expect(digest.event_counts.session_start).toBe(1);
       expect(digest.event_counts.tool_use).toBe(1);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("U-MEMWAKE-006: delegated Claude process skips the long-lived wake hook", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wake-skip-"));
+    try {
+      const result = runCli(
+        cwd,
+        ["hook", "claude-memory-wake"],
+        { hook_event_name: "Stop", session_id: "delegated-review" },
+        {
+          CLAUDE_CODE_ENTRYPOINT: "",
+          UT_TDD_CLAUDE_WAKE_MAX_MS: "invalid-if-not-skipped",
+        },
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toBe("");
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("U-MEMWAKE-007: CLI hook delivers a targeted workspace inbox and exits 2", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wake-delivery-"));
+    try {
+      spawnSync("git", ["init", "-q"], { cwd });
+      const publish = runCli(cwd, [
+        "memory",
+        "add",
+        "--kind",
+        "project",
+        "--title",
+        "wake delivery",
+        "--body",
+        "workspace-targeted notification",
+        "--notify-claude",
+        "--operation-id",
+        "cli-hook-delivery",
+      ]);
+      expect(publish.status).toBe(0);
+
+      const delivery = runCli(
+        cwd,
+        ["hook", "claude-memory-wake"],
+        { hook_event_name: "Stop", session_id: "vscode-target" },
+        {
+          CLAUDE_CODE_ENTRYPOINT: "claude-vscode",
+          UT_TDD_CLAUDE_WAKE_POLL_MS: "10",
+          UT_TDD_CLAUDE_WAKE_MAX_MS: "20",
+        },
+      );
+      expect(delivery.status).toBe(2);
+      expect(delivery.stderr).toContain("[UT_TDD_CLAUDE_INBOX]");
+      expect(delivery.stderr).toContain("workspace-targeted notification");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

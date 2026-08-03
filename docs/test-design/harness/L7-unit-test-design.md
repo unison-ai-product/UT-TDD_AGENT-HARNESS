@@ -1522,6 +1522,28 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
 
+## Claude HARNESS memory async wake oracle (2026-08-03)
+
+対象 = `src/runtime/claude-memory-wake.ts`、`src/cli.ts`、Claude Stop hook、consumer setup
+template。永続memoryと即時配送runtime stateを分離し、通知をreview/署名の権威へ昇格させない。
+
+| ID | 攻撃・入力 | oracle |
+| --- | --- | --- |
+| `U-MEMWAKE-001` | 別worktree、同一entry二重watch、配送後retry | git common dirからatomic claimし一度だけ配送。次回はtimeout |
+| `U-MEMWAKE-002` | 同一operation同内容retry / 異内容差替え | 前者は同一pathへ収束、後者は`claude_inbox_projection_conflict` |
+| `U-MEMWAKE-003` | 本文に閉じmarkerと`<`を混入 | JSON data escapeに閉じ、通知fenceは一組だけ |
+| `U-MEMWAKE-004` | Git共通dirを解決できないrootへpublish | repo-localへ黙って迂回せず`claude_inbox_git_common_dir_required` |
+| `U-MEMWAKE-005` | NaNまたは非正のpoll/max wait | silent無効化・hot loopにせずfail-close |
+| `U-MEMWAKE-006` | entrypoint欠落・未知値・`claude-vscode`、およびUT-TDD有限委譲からの抑止解除を個別投入 | `claude-vscode`だけをpositive受理し、それ以外はpoll前にexit 0。有限委譲は抑止値を強制 |
+| `U-MEMWAKE-007` | 同一git common dir上のtarget一致・不一致workspace、およびCLI publish→Stop hook配送 | 不一致watcherはclaim 0でentryを保持。一致workspaceだけが本文をstderrへ返しexit 2 |
+
+`tests/runtime-hook-entrypoints.test.ts`はsource Stop hookの`asyncRewake=true`、
+`tests/setup.test.ts`はconsumer templateの同一配線、`tests/project-hook.test.ts`は
+`asyncRewake`欠落を機械的に拒否することを検証する。`tests/cli-delegation.test.ts`と
+`tests/runtime-hook-entrypoints.test.ts`はU-MEMWAKE-006の有限委譲除外とU-MEMWAKE-007の
+CLI実配送（publish→hook stderr→exit 2）を固定する。
+`U-MEMWAKE-001`は配送後inbox除去も固定する。
+
 ## D3b review attestation / verdict transport oracle (2026-07-31)
 
 対象 = `src/feedback/review-attestation.ts`、`src/cli/delegation.ts`、

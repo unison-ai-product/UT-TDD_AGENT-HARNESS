@@ -163,7 +163,11 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
       .map((hook) => parseHookInvocation(hook))
       .filter((invocation) => invocation !== null)
       .map((invocation) => [invocation.executable, ...invocation.args].join(" "))
-      .filter((command) => !command.endsWith(" hook subagent-stop"))
+      // CodexにはClaude宛てwakeとSubagentStopの対応surfaceがない。
+      .filter(
+        (command) =>
+          !command.endsWith(" hook subagent-stop") && !command.endsWith(" hook claude-memory-wake"),
+      )
       .sort();
     const codexInvocations = Object.values(codex.hooks)
       .flatMap((entries) => entries.flatMap((entry) => entry.hooks))

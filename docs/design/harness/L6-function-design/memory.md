@@ -35,6 +35,33 @@ secret-like payload を含む memory は authoring / parsing 時点で fail-clos
 | `renderMemorySurface` | renderMemorySurface(entries: MemoryEntry[]) => string | 任意の entry 配列 | SessionStart / recall 用の人間可読 text | 空 entry は空文字列。長文 body は短縮 | U-MEMORY-004 |
 | `evaluateMemoryPromotion` | `(events: SessionEvent[]) => { should_nudge: boolean; reason: string }` | 1 session分のsanitize済 event列 | commitまたはplan_switchあり、かつmemory write成功eventなしの時だけnudge候補を返す | 本文・git差分を読まない純関数。nudgeはmemory作成を強制しない | U-MEMORY-005 |
 
+## Claude宛て即時配送 (PLAN-L7-472)
+
+`.ut-tdd/memory/*.md`への永続化と、稼働中Claude sessionへの通知を分離する。
+`ut-tdd memory add --notify-claude`は`writeMemory`成功後だけ、memory IDと安定operation IDを
+git common dir配下のruntime inboxへexclusive createする。Claude CodeのStop hookは
+`asyncRewake=true`でinboxを待ち、entryをatomic claimして同一sessionへ一度だけ返す。
+
+| 関数 | DbC | 対応oracle |
+| --- | --- | --- |
+| `buildClaudeInboxEntry` | parse済み`MemoryEntry`と非空operation IDから配送DTOを作る。本文の権威昇格は禁止 | U-MEMWAKE-001〜003 |
+| `publishClaudeInboxEntry` | git common dirへ`wx`で保存。解決不能rootはfail-closeし、同一内容retryは冪等、同一ID異内容は拒否 | U-MEMWAKE-001〜002 / 004 |
+| `waitForClaudeMemory` | 正の有限待機値だけを受理し、未claim entryを選ぶ。generationで旧watcherを停止し、claim成功時だけ配送済みinboxを除去する | U-MEMWAKE-001 / 005 |
+| `renderClaudeWakeMessage` | 本文を長さ上限付きJSON dataとしてescapeし、閉じmarkerを一つに保つ | U-MEMWAKE-003 |
+
+runtime inboxは通知キューであり、review verdict、provider family、PR HEAD、署名の信頼根ではない。
+D3cは通知受領後もGitHub APIとprovider別署名receiptを独立検証する。
+Stop hookは`asyncRewake=true`を機械検査し、待機上限を15分（hook timeout 930秒）に閉じる。
+claim/generationは7日retentionでGCし、session数に比例した永久増加を防ぐ。
+通知対象はVS Code拡張の生存中Claude sessionに限定する。hookは拡張がClaude processへ設定する
+`CLAUDE_CODE_ENTRYPOINT=claude-vscode`をpositive identityとして要求し、欠落・未知値ではpoll前に
+終了する。加えてUT-TDDが`claude --print`で起動する有限委譲processは
+`UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE=1`を強制し、呼出側envで解除できない。これによりraw headless
+Claudeとclosing reviewが15分watcherに保持されることを防ぐ（U-MEMWAKE-006）。
+inbox v2 entryは通知をauthoringしたGit worktree rootの正規化SHA-256を`targetWorkspaceId`へ持つ。
+Stop hookは自身のworktree identityと一致するentryだけをclaimし、同じgit common dirを共有する
+別worktreeのClaude sessionによる先取り配送を拒否する（U-MEMWAKE-007）。絶対pathは保存しない。
+
 ## §3 失敗方針
 
 - authoring/parsing は fail-close。secret-like token、invalid kind、必須項目欠落を永続化しない。
