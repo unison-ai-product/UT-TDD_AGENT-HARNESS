@@ -3,7 +3,7 @@ plan_id: PLAN-L7-472-claude-memory-async-wake
 title: "PLAN-L7-472 (add-impl): Claude宛てHARNESS memoryの即時async wake"
 kind: add-impl
 layer: L7
-drive: agent
+drive: be
 route_signal: feature_addition
 route_mode: add-feature
 status: draft

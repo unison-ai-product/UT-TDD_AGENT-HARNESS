@@ -4,6 +4,8 @@ title: "PLAN-REVERSE-472: Claude memory async wake設計backfill"
 kind: reverse
 layer: cross
 drive: agent
+workflow_phase: R4
+confirmed_reverse_type: fullback
 route_signal: reverse
 route_mode: reverse
 status: draft
