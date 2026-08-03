@@ -468,6 +468,36 @@ describe("review attestation (U-RVATT)", () => {
     }
   });
 
+  // 「識別子を渡した = receipt を作る宣言」なら、receipt を作れない条件が揃った時に黙って
+  // 捨ててはいけない。旧実装は review_lane でない role へ識別子を渡すと request が silent に
+  // undefined になり、部分指定 fail-close の思想と矛盾していた (顧問 2 名が独立に指摘)。
+  it("U-RVATT-019: review lane でない role への識別子指定は fail-close する", async () => {
+    const priorExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      const result = await runDelegation([
+        "codex",
+        "--role",
+        "be-api",
+        "--task",
+        "implement slice",
+        "--review-pr",
+        "731",
+        "--review-head",
+        head,
+        "--review-revision",
+        "review-rvatt-1",
+        "--review-author-family",
+        "claude",
+      ]);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("review_identity_requires_review_lane");
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = priorExitCode;
+    }
+  });
+
   it("U-RVATT-016: dry-run は注入用 temp dir を残さない", async () => {
     const delegated = await runDelegation([
       "codex",

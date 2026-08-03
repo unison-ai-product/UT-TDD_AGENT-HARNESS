@@ -280,8 +280,13 @@ function runtimeCommand(
         // 全 review lane に PR/HEAD を強制すると正当な用法を壊す。
         // 識別子を 1 つでも渡した時点で「verdict を出す宣言」とみなし、**部分指定は fail-close**
         // する (どの成果物に対する verdict か不明な receipt を作らせない)。
-        // 識別子なしの委譲は receipt を作らないので、D1 側は「誰も反応していない」= SLA breach
-        // として観測する。fail-close の向きは保たれる。
+        // **注意 (誤った論拠の訂正、2026-08-03)**: 「識別子なしでも D1 が SLA breach として拾う」
+        // というのは**誤り**。breach 判定は `input.requests` を起点にするため
+        // (`review-dispatch.ts` の `uniqueRequests(input.requests)`)、request が発行されない
+        // 未宣言レビューは **breach 判定の対象にすらならない** (窓は 60 分ではなく無限)。
+        // よって現時点で保証できるのは「未宣言レビューは receipt を生まないので `merge_ready` に
+        // 到達しない」ことだけであり、未宣言レビュー自体の検出は D2 の merge gate の責務。
+        // 顧問 2 名 (Fable / Sol) が独立に同じ refutation を出し、実測で確認済み。
         const reviewIdentityRequested = Boolean(
           opts.reviewPr || opts.reviewHead || opts.reviewRevision,
         );
@@ -291,6 +296,16 @@ function runtimeCommand(
         ) {
           process.stderr.write(
             "review_head_required: review identity requires --review-pr, --review-head, and --review-revision together\n",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        // 識別子を渡した = receipt を作る宣言。review lane でない role では receipt を作れないので、
+        // 宣言済み入力を黙って捨てず fail-close する (silent undefined の禁止)。
+        if (reviewIdentityRequested && !routing.review_lane) {
+          process.stderr.write(
+            `review_identity_requires_review_lane: role=${opts.role} is not a review lane role; ` +
+              "review identity flags produce no receipt here\n",
           );
           process.exitCode = 1;
           return;
@@ -362,8 +377,13 @@ function runtimeCommand(
         }
         const jsonOut = Boolean(opts.json);
         const startedAt = deps.now?.() ?? nowIso();
+        // 宣言 (= 識別子あり) なら上流の guard で review_lane / authorFamily / verdictFile /
+        // 3 識別子が揃うことが保証済みなので、この条件が偽になるのは「宣言なし」の場合だけ。
+        // 残りの連言は型の絞り込み用であって、宣言済み入力を黙って落とす経路ではない。
+        // (防御的な到達不能分岐は足さない — D1 の `!hasFlagVerdict &&` を死に分岐として
+        //  削除したのと同じ理由。)
         const reviewRequest =
-          routing.review_lane &&
+          reviewIdentityRequested &&
           authorFamily &&
           reviewVerdictFile &&
           reviewPr &&
