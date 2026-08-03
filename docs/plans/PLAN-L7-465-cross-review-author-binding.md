@@ -9,7 +9,7 @@ route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 status: draft
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-08-03
 owner: PM / PO
 agent_slots:
   - role: tl
@@ -168,8 +168,31 @@ fail-close reason 不在の 5 条件全成立)。
 - **D3**: trusted な構造化 receipt producer と reviewer family 証明の永続化。
   同一identity・同一kindは状態変化時に一度だけemitし、再送は同一contentの冪等replayとする。
 - **D2**: D3 の trusted receipt を入力にした SLA surface 配線
-  (session-start digest / feedback イベント)。
+  (session-start digest / feedback イベント) **+ merge gate 配線** (2026-08-03 改訂、下記)。
 - **D4**: reviewer lane の冗長化 / 再割当 (非 author family 契約は維持)。
+
+#### D2 scope 改訂 (2026-08-03、incident #210 対策、advisor: claude-fable-5)
+
+PR #210 が Claude closing FLAG 未解消・再依頼なしのまま merge された
+(incident memory: `project-incident-pr-210-merged-with-open-flag-2026-08-03`)。
+analyzer (D1) と trusted receipt (D3) が揃っても消費者ゼロでは prose の FLAG は
+素通りする。advisor 裁定 (C 採用・重心 B) に従い D2 を次の 3 面で構成する:
+
+1. **B (一次防壁)**: `ut-tdd pr merge --pr <N>` を正規 merge 経路にする。merge 直前に
+   `analyzeReviewDispatch` を exact HEAD で評価し、`merge_ready` 以外 (FLAG open /
+   verdict 無し / HEAD mismatch / 判定不能) は fail-close で merge しない。HEAD
+   mismatch は必ず breach 側へ倒す。wrapper 実行の receipt を残す。
+2. **D (backstop、B と対で必須)**: wrapper receipt の無い merge (gh 直叩き迂回) と
+   `merged_without_verdict` を post-merge 検知し、session-start digest / feedback
+   イベントへ fail-close 表示する (静かに流れる状態の根絶)。B 単独は「迂回が検知
+   される」ことに依存するため、D 無しの B は fail-open の看板替えになる。
+3. **A (摩擦・可視化、薄く)**: `enforce_admins=false` の solo 運用では required
+   check は block にならない (実測: 全 push が "Bypassed rule violations")。よって
+   A は block でなく「事故 merge を意図的行為へ格上げする」摩擦として CI に薄く併設
+   し、bypass の事実自体を監査シグナルとする。
+
+両ランタイム規約 (AGENTS.md / CLAUDE.md) へ「merge は `ut-tdd pr merge` 経由」を
+同時掲載する (片側のみだと rule-drift の再演)。
 
 D1→D3→D2→D4 の順序契約とする。D1 は**純粋 analyzer のみ**で、永続化・GitHub 取得・
 CLI 配線・doctor 配線を含まない。
