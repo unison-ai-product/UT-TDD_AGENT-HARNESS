@@ -119,6 +119,7 @@ import {
   checkRightArmGatePlanning,
   checkRightLungDocGovernance,
 } from "./workflow-quality";
+import { checkWorktreeTopology } from "./worktree-topology";
 
 const fullProfile = ["full"] as const;
 const fullAndToolchainProfiles = ["full", "toolchain"] as const;
@@ -214,6 +215,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("codex-hook-adapter", () => checkCodexHookAdapter(deps.repoRoot)),
         full("codex-wrapper-parity", () => checkCodexWrapperParity(deps)),
         fullAndToolchain("toolchain-pin", () => checkToolchainPin(deps.repoRoot)),
+        full("worktree-topology", () => checkWorktreeTopology(deps.repoRoot)),
       ],
     },
     {

@@ -2080,3 +2080,27 @@ Red test citationを追加する。generic regexを4 segmentへ広げず、他�
 | `U-RVGHA-D3C-016` | Check RunだけPASS、D1 `analyzeReviewDispatch`は非`merge_ready` | Check Runを第二SSoTにせず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-017` | 承認済み`VerifiedProviderIdentity` + D1 merge_ready + D3b/D3c全検証green | D3d `custody_admitted`、D2 AND入力だけがaccepting候補 |
 | `U-RVGHA-D3C-018` | RFC 8785 exact preimageのkey順・locale・digest自己field・既存16桁digestを各変異 | receiptは同一objectだけ64 lowerhex一致。外部artifact digestは完成bytesから一方向計算し、不一致は`identity_mismatch` |
+
+## worktree topology 健全性・寿命検出 oracle (2026-08-05)
+
+対象 = `src/runtime/worktree-topology-collect.ts` (facts I/O)、`src/runtime/worktree-topology.ts`
+(純粋 analyzer)、`src/doctor/worktree-topology.ts` (advisory 配線)。配置移設
+(`PLAN-L4-34-repository-runtime-placement-topology`) の acceptance oracle として、worktree の
+link 健全性 (admin ⇄ worktree 双方向) と liveness (dirty/active/merged/detached) を分類する。
+advisory (`ut-tdd doctor` の `ok` に影響しない) であり CI (worktree 不在) では no-op。
+
+| ID | 攻撃・入力 | oracle |
+| --- | --- | --- |
+| `U-WTTOPO-001` | 全リンク一致・findings なしの worktree | `healthy` に計上し findings は空配列 |
+| `U-WTTOPO-002` | worktree 側 `.git` file の gitdir 参照が admin と不一致 | `link_broken` を検出し `healthy` から除外 |
+| `U-WTTOPO-003` | admin `.git/worktrees/<id>` の back pointer が worktree dir と不一致 | `link_broken` を検出 (admin→worktree 方向) |
+| `U-WTTOPO-004` | admin entry が参照する worktree dir が存在しない | `dir_missing` を検出 |
+| `U-WTTOPO-005` | `dir_missing` かつ admin entry 自体が孤立 | `orphan_admin` を検出 |
+| `U-WTTOPO-006` | uncommitted change ありの worktree が同時に merged/detached 条件も満たす | `dirty` を最優先し他分類と排他 |
+| `U-WTTOPO-007` | dirty でない merged / findings なし detached の混在集合 | `retirable` 集合へ両方を含め、dirty は除外 |
+| `U-WTTOPO-008` | main (root) worktree | 分類対象から除外し `healthy` / `retirable` のいずれにも数えない |
+| `U-WTTOPO-009` | facts の入力順序を反転して再実行 | `healthy` / `retirable` / findings が入力順に依存せず一致 |
+| `U-WTTOPO-010` | findings (`link_broken`/`dir_missing`/`orphan_admin`) がある worktree | `healthy` に数えない (findings ある worktree は liveness 分類と独立に非 healthy) |
+
+実行対応: `tests/worktree-topology.test.ts` (`U-WTTOPO-001`〜`010`)。設計元 =
+`docs/plans/PLAN-L7-474-worktree-topology-detector.md`。
