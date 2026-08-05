@@ -6,7 +6,6 @@ import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
 import { parsePlanIdIdentity } from "../schema/plan-id";
 import { routeSignalCandidates } from "../schema/route-map";
-import { PARENT_DRIVE_MISMATCH_BASELINE } from "./parent-drive-mismatch-baseline";
 import {
   DB_PROJECTION_BACKPROP_REQUIRED_GENERATES,
   DESIGN_LAYERS_REQUIRING_SUB_DOC,
@@ -44,6 +43,7 @@ import type {
   PlanScheduleResult,
   PlanScheduleViolation,
 } from "./lint-types";
+import { PARENT_DRIVE_MISMATCH_BASELINE } from "./parent-drive-mismatch-baseline";
 
 export type {
   LintResult,
