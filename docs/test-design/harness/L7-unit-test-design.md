@@ -1831,6 +1831,7 @@ S1では以下を未実装のcandidate RED oracleとして登録する。各cand
 | `CANDIDATE-RELMAN-014` | PF-5 aggregate / #251 | exact HEAD final treeからmanifest SSoT、clean Pack allowlist、`sync-pack --channel` selected-revision copy predicateを1点ずつ欠落 | aggregate admission guardが3 predicateをside effect前にAND判定し、欠落時はsealed planを発行せずresolver/materializer/copy/write count 0。Git commit境界は判定しない |
 | `CANDIDATE-RELMAN-015` | PF-5 aggregate / #251 | schema invalid manifestをaggregate admissionへ入力 | pure errorを受けてresolver/materializer/copy/write count 0。PF-1のpure `001`とは別に実測する |
 | `CANDIDATE-RELMAN-016` | PF-5 aggregate / #251 | unknown channelをaggregate admissionへ入力 | `unknown_channel`を保持しresolver/materializer/copy/write count 0。PF-1のpure `002`とは別に実測する |
+| `CANDIDATE-RELMAN-017` | PF-5 aggregate / #251 | 3 predicate全成立後、sealed applyのstaging write/copyとdestination commit境界へ1..N番目faultを総当たり注入 | 全faultでstaging破棄、destinationとcontrol manifest/allowlist/copy入力のprior bytes/mode/path不変、partial publish 0。全境界成功時だけdestination transactionを1回commit/apply |
 
 digest oracleはmaterializer version、destination path UTF-8 byte昇順、length-prefix framing、Pack output
 mode/contentを固定し、path連結曖昧性・package変換・remap・symlink・Windows executable bit観測差・

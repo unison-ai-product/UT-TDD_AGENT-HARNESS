@@ -137,7 +137,10 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
    PR履歴を入力にせず、exact HEADのfinal treeから (A) manifest SSoTが正規pathに一意かつschema valid、
    (B) clean distribution planがそのcontrol manifest copyをallowlist到達物として含む、(C) channelが選ぶ
    artifact revisionをresolver→materializer→Pack destinationへ写す経路が存在する、の3 predicateを
-   side effect前にAND判定する。全成立時だけsealed write planを返して1回applyし、1点でも欠ければ
+   side effect前にAND判定する。全成立時だけsealed write planを返す。applyはまずisolated stagingへ
+   全artifactをmaterialize・検証し、完了後にall-or-nothing destination transactionを1回だけcommitする。
+   staging中またはcommit境界のN番目faultはstagingを破棄し、destinationとcontrol manifest / allowlist /
+   copy入力のprior stateを保つ。1点でも欠ければ
    resolver/materializer/copy/write count 0で拒否する。従って子slice化はscope縮小ではなく、外部可視な
    AC-6をPF-5 admissionまで不可分に保ったまま内部証明を依存順に積む実装順序契約である。
 
@@ -192,6 +195,9 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 - AC-10: PR #244 prototypeで未検出だったown-property lookup、artifact digest単独mutation、型不正、
   unknown channelをRED oracleとして保持する。PF-1はpure返値だけを`001/002`として昇格でき、
   aggregate resolver/materializer/copy/write 0は別の`015/016`としてPF-5までRED維持する。
+- AC-11: PF-5はsealed plan後の各write/copy境界へN番目faultを注入し、失敗時staging破棄、
+  destination/control inputsのprior state不変、partial publish 0を`017`で証明する。成功時だけ
+  destination transactionを1回commit/applyする。
 
 ## 6. 子sliceとpromotable oracle
 
@@ -202,7 +208,7 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 | PF-2 / #248 | versioned materializer | `011` | destination path/mode/transformed bytes/framingのdigest mutationがGreen |
 | PF-3 / #249 | isolated Git resolver | `012` | control/artifact revision分離、object不在時network/reconstruction/copy 0がGreen |
 | PF-4 / #250 | `sync-pack --channel` adapter内部 | `006` | attested/mismatch/unavailableを保持し、CLI/FS seamの副作用を計測可能 |
-| PF-5 / #251 | aggregate acceptance | `014`, `015`, `016` | final-tree 3 predicateをpreflightし、全成立時だけsealed write planをapply。欠落/invalid/unknownは全side effect 0 |
+| PF-5 / #251 | aggregate acceptance | `014`, `015`, `016`, `017` | final-tree preflight後はisolated staging。fault時破棄・prior state不変、成功時だけdestination transactionを1回commit |
 | S3 | promotion / rollback gate | `003`, `004`, `005`, `008`, `010` | D2/D3/QA証跡と非破壊pointer deltaを結線 |
 
 番号はtest-designの`CANDIDATE-RELMAN-*`と一致させる。前段で後段oracleを昇格したり、単体testの
@@ -222,7 +228,7 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 
 ## 完了条件 (S1)
 
-- [x] `CANDIDATE-RELMAN-001`〜`016` が test-design へRED oracleとして登録されている。
+- [x] `CANDIDATE-RELMAN-001`〜`017` が test-design へRED oracleとして登録されている。
   S2は実装test citationと同じcommitで確定`U-*` IDへ昇格する。
 - [ ] 設計判断節が non-author family の cross-review で PASS。
 - [x] `PLAN-L6-63` との責務分離・存続・相互参照が技術判断として確定している。
