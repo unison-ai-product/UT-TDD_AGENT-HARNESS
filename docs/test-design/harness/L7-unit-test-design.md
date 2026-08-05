@@ -2067,7 +2067,7 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `CANDIDATE-WTTOPO-005` | 登録されていないadmin entry | `orphan_admin`を検出 |
 | `CANDIDATE-WTTOPO-006` | dirty worktreeが同時にmerged/detached条件を満たす | `dirty`を最優先として他分類と排他 |
 | `CANDIDATE-WTTOPO-007` | findingなしのclean merged、保持refから到達可能なclean detached、activeが混在 | mergedと到達可能detachedだけを`retirable`へ、activeは除外 |
-| `CANDIDATE-WTTOPO-008` | main root worktree | liveness/`retirable`から除外しmain件数だけへ計上 |
+| `CANDIDATE-WTTOPO-008` | findingなしのmain root worktree | `healthy`/identity集合/`mainCount=1`へ含め、liveness/`retirable`から除外 |
 | `CANDIDATE-WTTOPO-009` | 同一factsを入力順だけ反転 | findings/counts/`retirable`が決定論的一致 |
 | `CANDIDATE-WTTOPO-010` | link/dir findingを持つworktreeと正常worktreeの混在 | finding面を`healthy`に数えない |
 | `CANDIDATE-WTTOPO-011` | link/dir findingでdirty/merged観測が既定値へ倒れるworktree | 分類は表示しても`retirable`へ混入させない（fail-safe） |
@@ -2075,6 +2075,9 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `CANDIDATE-WTTOPO-013` | before/afterでhealthy件数は同じだがworktree Aが壊れ別worktree Cが追加 | normalized path/admin/HEAD identity集合digest不一致で移設acceptance拒否 |
 | `CANDIDATE-WTTOPO-014` | malformed porcelain、root外へ解決する相対gitdir、Git command失敗を各入力 | collectorは正常factsへ丸めずtyped observation findingを返す |
 | `CANDIDATE-WTTOPO-015` | empty factsとadvisory finding factsをdoctor consumerへ個別入力 | emptyは出力なし。findingは表示するがhard-gate/CI成功判定を変更しない |
+| `CANDIDATE-WTTOPO-016` | 同じWindows pathをdrive小文字・backslash・reparse経由で入力し、別fixtureで末尾separatorとcase-only別名を入力 | realpath後drive uppercase + `/` + root以外末尾除去へ収束。path全体はcase-foldせず別identityを誤併合しない |
+| `CANDIDATE-WTTOPO-017` | malformed porcelain、Git exit nonzero、root外path、reachability失敗を各1件入力 | `collector_parse_error` / `collector_command_error` / `path_escape` / `reachability_unavailable`を区別し必須fieldを保持、raw command/stdoutは保持しない |
+| `CANDIDATE-WTTOPO-018` | identity入力順反転、合法remap、重複from、変換後collision、root外escapeを各mutation | `topology-v1` framed SHA-256は合法入力で同一。ambiguous/unsafe remapはacceptance比較前に拒否 |
 
 ## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
 
