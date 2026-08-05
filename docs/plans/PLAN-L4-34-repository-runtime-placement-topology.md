@@ -30,10 +30,15 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/141
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/169
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/228
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/232
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/134
+    - docs/plans/PLAN-L4-33-node-control-plane-redesign.md
     - docs/plans/PLAN-L7-348-runtime-state-recoverability.md
     - docs/governance/repository-structure.md
     - docs/design/harness/L4-basic-design/architecture.md
     - docs/test-design/harness/L9-system-test-design.md
+    - docs/test-design/harness/L12-acceptance-test-design.md
+    - docs/test-design/harness/L14-operational-test-design.md
 github_issue_id: 141
 backprop_decision: not_required
 backprop_decision_reason: >-
@@ -91,7 +96,9 @@ OneDrive 上の primary clone + 共通 `.git` + worktree ごとの `.ut-tdd` と
 
 1. **cutover / rollback / write fence**: OneDrive 外 new clone への正式 cutover、old/new
    identity の対応付け、rollback 手順、**旧 clone の write fence** (cutover 後に旧 clone へ
-   誤って書き込まれないことの機械的保証)、新旧二重稼働の禁止 (検知・拒否)。
+   誤って書き込まれないことの機械的保証)、新旧二重稼働の禁止 (検知・拒否)。この契約の
+   canonical authority は後述する immutable `PlacementCutoverReceipt` chain だけとし、旧/new
+   clone の任意の `.ut-tdd`、環境変数、README、operator の口頭状態を authority にしない。
 2. **4-class 台帳と canonical state root resolver**: `durable / cache / scratch / evidence`
    の全 path を分類する台帳と、それを解決する canonical state root resolver。現状は
    repository-local `.ut-tdd` 固定 (cwd 依存) であり、4.4GB の DB を単純に「移設」しても
@@ -109,6 +116,47 @@ OneDrive 上の primary clone + 共通 `.git` + worktree ごとの `.ut-tdd` と
 6. **secret / PII / retention / backup 責任境界**: 移送対象に secret・PII が含まれないことの
    確認手順、retention policy、backup の責任境界 (誰が・いつ・何を保持するか)。
 
+### 3.1 canonical identity / write fence / cutover authority
+
+S2 は repository lineage を `origin canonical URL + initial root commit OID + common-dir object-format`
+で束縛した `repository_lineage_id` として一意に解決する。path、worktree 名、cwd、DB path は identity
+ではない。S3 の開始前に Node control plane が source clone の `HEAD`、remote URL、lineage、clean/dirty
+worktree inventory、未 push branch 一覧を snapshot し、同じ `repository_lineage_id` に対する唯一の
+`PlacementCutoverReceipt` chain を canonical state root に append する。状態は次だけを許す。
+
+`prepared -> fenced_old -> active_new -> rollback_window -> retired_old`
+
+- `prepared -> fenced_old` は new clone の clone digest、必要 worktree の再生成計画、S2 の L9/L12/L13
+  Green evidence、old clone write fence の lease を同一 receipt に束縛する。どれかが欠ければ開始不能。
+- `fenced_old` 中、旧 clone は `ut-tdd` の state writer、migration、doctor repair、worktree create/remove を
+  fail-close する。read-only inventory は許すが、canonical state root を作成・更新しない。
+- `active_new` は new clone の lease owner と `repository_lineage_id` が receipt と一致し、old fence lease が
+  生きている場合だけ許す。new/old から同時に writer lease を取得する試行、または receipt chain head が
+  異なる試行は fail-close する。これが「両方の clone がそれぞれ canonical」と主張する
+  dual-canonical counterexample を拒否する機械境界である。
+- rollback は `rollback_window` 内に限り、**new writer を先に fence してから** receipt chain に old の
+  single-writer lease を移す。old clone を再開する条件は (a) new writer が停止し lease release receipt が
+  ある、(b) new 側の evidence/projection が immutable receipt へ export 済み、(c) old checkout が
+  recorded rollback commit と lineage に一致、(d) L13 rollback oracle が Green、である。一つでも欠ける
+  old-clone restart は fail-close する。
+- `retired_old` 後の old clone は read-only archive であり、rollback/restart を許さない。物理削除は本
+  PLAN の scope 外で、retention owner の人間承認を別 receipt に残すまで行わない。
+
+### 3.2 OS / path / runtime boundary
+
+S2/S3 の migration、diagnostic、verification の executable authority は **sealed Node control plane** と
+必要時の Rust companion のみである。`bun` executable、`bun:*` import、`Bun.*` API、Bun shell shim は当該
+経路で禁止する。既存 Bun migration debt は `PLAN-L4-33` / issue #228・#134 の管理下であり、本 PLAN は
+Node parity 前の既存 gate 削除を許可しない。
+
+path input は shell string ではなく argv/path object として渡し、`realpath` 後の canonical path で判定する。
+Windows は drive letter case・junction/reparse point を解決し、実パスが 240 UTF-16 code units を超える場合は
+long-path 設定の有無を推測せず診断付き fail-close、空白を含む path は reject せず同じ argv oracle で扱う。
+OneDrive の known sync root、または ancestor の OneDrive reparse/provider 属性を検出した source/common-dir/
+state-root は fail-close とし、検出根拠と OneDrive 外への再配置候補を返す。Linux は `realpath`、mount/device、
+POSIX `PATH_MAX` を検査し、空白 path を同じ argv contract で許可する。両 OS とも unresolved link、reserved
+Windows name、canonicalization 不能は migration を開始しない。診断器自体も Bun を起動しない。
+
 ## 4. 移設手順の骨子 (設計として固定する要件。実行手順書ではない)
 
 - **共通 `.git` 依存の全 worktree 破壊契約**: 2026-08-05 時点で 118 worktree が単一の共通
@@ -124,14 +172,51 @@ OneDrive 上の primary clone + 共通 `.git` + worktree ごとの `.ut-tdd` と
   state は「hash/count が一致」を検証条件とする。両者を混同しない (rebuildable を hash 一致で
   縛らない、durable を re-build で代替しない)。
 
-## 5. 段階化 (S1/S2/S3)
+## 5. 段階化と将来 dependency edge (S1/S2/S3)
 
-- **S1 (本 PLAN の scope)**: 本設計を L4/L9 pair-freeze で凍結する。**実行 (cutover) を含まない**。
-- **S2**: canonical state root resolver の L5/L6 降下 + 4-class 台帳の schema 化。
-- **S3**: cutover 実行 (new clone 生成、worktree 再生成、DB 再構築) + L12/L14 acceptance の
-  system 実走。
+- **S1 (本 PLAN の scope)**: L4/L9 pair-freeze と本節の dependency graph を凍結する。**実装・
+  cutover・worktree cleanup は含まない**。
+- **S2 (future add-design → add-impl)**: canonical state root resolver、4-class 台帳、path diagnostic、
+  write fence / receipt chain を L5/L6/L7 へ降下する。既存の bounded child **issue #232** は
+  worktree health/lifetime oracle を所有し、S2 の `worktree-inventory` port の先行 dependency である。
+  Bun retirement の runtime authority は既存 **issue #134 / PLAN-L4-33**、OneDrive 再現根拠は
+  **issue #228**、derived DB rebuild policy は **issue #169** が所有する。新しい重複 Issue は作らない。
+- **S3 (future add-impl / operational cutover)**: Node/Rust-only の cutover runner が new clone 生成、
+  必要 worktree 再生成、derived DB rebuild、single-writer activation、rollback receipt を実走し、L12/L13/L14
+  の acceptance/operational evidence を append する。
 
-S1 は設計のみであり、S2/S3 の着手は S1 の confirmed 後、別 PLAN として起票する。
+S2/S3 は本 PLAN が `confirmed` になった後に別 PLAN として起票する。draft PLAN の `requires` が draft
+を指せない規則に従い、今は本 PLAN frontmatter の `references` に将来 edge の根拠だけを置く。S2 PLAN は
+`requires: [PLAN-L4-34-repository-runtime-placement-topology]` と #232 の merged health oracle を要求し、
+S3 PLAN は S2 confirmed PLAN と L12/L13/L14 test-design freeze を `requires` に置く。各将来 PLAN は
+GitHub Issue #141 の正式 sub-issue として登録し、Project #6 の `先行PLAN` / `実装順序` /
+`阻害要因` / `解放される後続` に `#232 -> S2 -> S3`、横断 reference を
+`#134/#228/#169 -> S2` として同期する。#141 は親成果目標であり、
+S3 の L14 acceptance と #141 固有 AC が完了するまで close しない。
+
+### 5.1 L12 / L13 / L14 の実行対
+
+| V execution layer | future deliverable | oracle / evidence | gate と順序 |
+|---|---|---|---|
+| **L12 acceptance** | `placement-acceptance-manifest`。lineage、canonical state root、4-class inventory、old/new receipt head、DB rebuild digest、retention decision を immutable evidence として結合する。 | `AT-PLACE-001` clean new clone が canonical root を唯一に解決、`AT-PLACE-002` old fence / dual-writer を拒否、`AT-PLACE-003` fresh rebuild の projection/ledger continuity。 | S2 L7 trace-freeze 後、S3 activation 前に全 mandatory AT Green。defer は activation の根拠にできない。 |
+| **L13 deployment / migration execution** | `PlacementCutoverReceipt` chain と Node/Rust runner release manifest。operator は receipt を生成する command 以外で状態を変更できない。 | `DT-PLACE-001` prepared→fenced_old→active_new の CAS / crash-replay、`DT-PLACE-002` recorded rollback commit だけへの fenced rollback、`DT-PLACE-003` Node/Rust command invocation に Bun trace が 0。 | L12 Green の後に serial 実行。任意の write、old restart、receipt fork、Bun invocation は fail-close。 |
+| **L14 operational acceptance** | `placement-operational-report`。Windows/Linux・long-path・spaces・OneDrive、再起動、OneDrive 停止、old archive/rollback-window の実走結果を receipt に anchor する。 | `OT-PLACE-001` OS/path diagnostic、`OT-PLACE-002` reboot/partial migration recovery、`OT-PLACE-003` rollback authority、`OT-PLACE-004` retired-old restart reject。 | S3 activation 後、L14 mandatory OT Green と non-author cross-review PASS で #141 の operational AC を閉じる。失敗は S2/S3 correction に戻し、old clone を勝手に再開しない。 |
+
+L13 はここでいう deployment/migration execution layer であり、既存 L14 operational test design の運用 oracle と
+役割を重複させない。正式 artifact path/PLAN ID は S2/S3 起票時に `plan draft` が採番し、既存 artifact を
+draft `generates` に予告登録しない。
+
+### 5.2 Schedule
+
+| step | mode | entry | exit / 次 edge |
+|---|---|---|---|
+| S1-a: L4 contract freeze | **serial** | #141 と #232/#134/#228/#169 の ownership を確認 | §3–§5.1 と L9 RED candidates が reviewable |
+| S1-b: L9 pair-freeze | **serial (S1-a の後)** | §8 の `U-PLACE-*` candidates | L4↔L9 trace と negative boundary を確定。S2 planning を解放 |
+| S2-a: worktree health/lifetime | **parallel** | #232 の正式 sub-issue | health inventory port と migration input contract を freeze |
+| S2-b: Node/Rust placement core | **parallel (S2-a contract read-only)** | #134/#228/#169 の横断 input、S1 confirmed | resolver、diagnostic、4-class ledger、write fence を TDD で実装 |
+| S2-c: L12/L13/L14 test-design freeze | **serial (S2-a/S2-b の後)** | implementation contract と RED oracle | activation 専用 manifest/receipt/oracle を freeze |
+| S3-a: prepared/fenced_old/active_new cutover | **serial** | S2 confirmed + L12/13/14 freeze + clean-window evidence | receipt chain の一方向 CAS でのみ activation |
+| S3-b: operational acceptance / rollback drill | **serial (S3-a の後)** | L14 OT mandatory set | #141 close eligibility を判定。FLAG は S2/S3 correction へ戻す |
 
 ## 6. 暫定緩和 (本 PLAN の AC とは別に明記)
 
@@ -157,6 +242,15 @@ S1 は設計のみであり、S2/S3 の着手は S1 の confirmed 後、別 PLAN
 - **AC-PLACE-05**: worktree 寿命契約 (owner/TTL/終了時登録解除) が S2 以降の降下対象として
   明示され、`git worktree prune` の「stale 0 = 全部生存」という現状の限界 (§2) を放置しない
   設計になっている。
+- **AC-PLACE-06**: Windows/Linux、long path、spaces、OneDrive/reparse point の入力規約が frozen
+  され、OneDrive と canonicalization 不能は診断付き fail-close、spaces は argv contract で Green と
+  明記されている。
+- **AC-PLACE-07**: migration/diagnostic/verification が Node/Rust-only であり、Bun executable/API/shim
+  invocation は evidence で検出して fail-close する RED oracle を持つ。
+- **AC-PLACE-08**: L12/L13/L14 の deliverable、oracle、mandatory gate、serial execution order が
+  §5.1/§5.2 に固定され、S2/S3 の Issue/PLAN/Project dependency edge が #141/#232 と同期する。
+- **AC-PLACE-09**: canonical authority、write fence、rollback trigger、old-clone restart conditions が
+  immutable receipt と single-writer lease に束縛され、dual-canonical counterexample を拒否する。
 
 ## 8. 設計と検証の対 (RED oracle 案、L9 pair-freeze 入力)
 
@@ -177,6 +271,12 @@ S1 は設計のみであり、S2/S3 の着手は S1 の confirmed 後、別 PLAN
 | `U-PLACE-010` | worktree の owner/TTL が期限切れの scratch worktree を、success/failure/timeout/parent-loss の全経路で登録解除・実体回収する | positive |
 | `U-PLACE-011` | PC 再起動 / OneDrive 停止後、進行中だった移送 (partial migration) の状態から安全に復旧・再開または明示 fail-close する | negative → positive収束 |
 | `U-PLACE-012` | secret/PII が durable 台帳に含まれないことを移送前 scan で検出する (含まれる場合は fail-close) | negative |
+| `U-PLACE-013` | Windows と Linux で canonicalized path を解決し、Windows の long path (>240 UTF-16) / unresolved link / reserved name を診断付き fail-close、空白 path を argv 経由で成功させる | mixed |
+| `U-PLACE-014` | source/common-dir/state-root の OneDrive known root または OneDrive reparse/provider ancestor を検出し、根拠 path と再配置先を出して fail-close する | negative |
+| `U-PLACE-015` | S2/S3 の migration、diagnostic、verification command trace に `bun` executable、`bun:*` import、`Bun.*` API、Bun shell shim が一つでもあれば fail-close する。Node/Rust-only trace は Green | negative → positive収束 |
+| `U-PLACE-016` | same `repository_lineage_id` の old/new clone が同時に writer lease を取得、または別 receipt head を canonical と主張すると両方を activation 前に拒否する | negative |
+| `U-PLACE-017` | rollback で new fence release receipt / immutable evidence export / recorded rollback commit / L13 Green のいずれかを欠く old clone restart を fail-close する | negative |
+| `U-PLACE-018` | L12 manifest、L13 receipt chain、L14 operational report の mandatory evidence が欠ける activation/close を fail-close する | negative |
 
 ## 9. Reverse 対の判定 (kind=add-design)
 
