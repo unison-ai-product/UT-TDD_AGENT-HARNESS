@@ -703,16 +703,17 @@ manifest変更は新subject revisionと通常のreview/admissionを必要とし�
 | profile_id | revision | 必須lane exact set |
 |---|---:|---|
 | `harness-check` | 1 | `harness-check-linux`, `harness-check-windows`, `harness-check-aggregate` |
-| `harness-ci` | 2 | `harness-check-linux`, `harness-check-windows`, `harness-ci-aggregate` |
 
 `required_lane_set_digest`はsorted required IDsのcanonical JSON UTF-8 bytesのSHA-256である。
 payload required setとobserved lane setはprofile exact setへ一致させ、duplicate、extra、missing、
 profile/revision drift、aggregate laneだけの自己成功を拒否する。
-Issue #231のD2 targetでは本profileは**CI evidence profile**であり、branch protectionのrequired
-contextではない。最終required context `harness-check`はD1候補・D3d custody・本profile receiptの
-AND出力であり、`AggregateCiReceipt`へ逆流させない。旧`harness-check` revision 1 profile行は
-既存`CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`と履歴receiptの検証互換性のため残すが、D2 targetの
-新規receiptへ使用しない。新規D2 consumerは`harness-ci` revision 2をexact指定する。
+このregistryは`CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`の`aggregate.success` payloadだけを検証する
+legacy cutover profileであり、GitHub workflow job名やIssue #231のD2 CI evidence profileを表さない。
+`harness-check-aggregate`は当該closed payload schemaのlane literalであって、現行workflowの
+`harness-check` jobへ読み替えない。新規D2 consumerは本registryを参照せず、L6で定義する
+`AggregateCiReceipt`のclosed schema（Linux/Windows/`harness-ci-aggregate`）を直接検証する。
+したがってD2用profile rowを本registryへ追加したり、`aggregate.success` payloadをD2 receiptへ
+流用したりしてはならない。
 `object_digest` / `evidence_digest`を`receipt_digest`のaliasとして受理せず、nested payloadも各typed
 receipt自身の`receipt_digest`だけで取得する。
 `CutoverTransitionReceipt`の唯一のschemaは
