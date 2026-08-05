@@ -25,6 +25,10 @@ dependencies:
   requires: []
   blocks: []
   references:
+    - docs/plans/PLAN-L7-475-worktree-topology-pf1-pure-analyzer.md
+    - docs/plans/PLAN-L7-476-worktree-topology-pf2-os-collector.md
+    - docs/plans/PLAN-L7-477-worktree-topology-pf3-doctor-advisory.md
+    - docs/plans/PLAN-L7-478-worktree-topology-pf4-migration-acceptance.md
     - docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
     - docs/design/harness/L6-function-design/governance-enforcement.md
     - docs/test-design/harness/L7-unit-test-design.md
@@ -45,6 +49,9 @@ link破損と終了済みclean worktreeを判定できないという観測か�
 R0 は実装観測ではない。実装、テスト、実測件数、green verdictは未取得であり、本PLANは
 それらを完了済みとして扱わない。
 
+PR #243の実装commitは回収可能な履歴資料であり、R1以降の完了証拠ではない。PF1〜PF3の
+landed事実を順に観測してからR1〜R3を進め、PF4がaggregate acceptanceを検証した時点でのみR4を行う。
+
 ## 上流合流の問い
 
 1. `.git` / admin 双方向のlink契約を L6 governance-enforcement へ恒久契約として追記すべきか。
@@ -56,12 +63,15 @@ R0 は実装観測ではない。実装、テスト、実測件数、green verdi
 ## Schedule
 
 - R0 [完了]: Issue #232 と pair-freeze から上流差分候補を記録した。
-- R1 [直列]: add-impl の実装事実と L4/L6既存契約を照合し、各問いを
+- R1 [直列・PF1/PF2 landed後]: add-impl の実装事実と L4/L6既存契約を照合し、各問いを
   `backfill_required` または `not_impacted` と理由付きで判定する。
-- R2 [直列]: R1で必要と判定された面だけを上流へ gap-only 追記する。
-- R3 [直列]: `CANDIDATE-WTTOPO-001`〜`018` を実装test citationと同じcommitで
+- R2 [直列・PF3 landed後]: R1で必要と判定された面だけを上流へ gap-only 追記する。
+- R3 [直列・PF1〜PF4]: 各ownerの`CANDIDATE-WTTOPO-*`を実装test citationと同じcommitで
   対応する確定 `U-*` IDへ昇格し、実装とのトレースを照合する。
-- R4 [直列]: Forward再合流を判定し、実装PLANの確認条件へ反映する。
+- R4 [直列・PF4のみ]: aggregate移設acceptanceとbyte vector Green後にForward再合流を判定する。
+  PF1〜PF3やmasterから先行完了してはならない。
+- post-R4 [直列・master所有]: PF4 merge後に全子landedとR4完了を確認し、master専用exact HEAD closing
+  PASS後だけ`PLAN-L7-474`をconfirmedへ遷移してIssue #232をcloseする。これはPF4 exitではない。
 
 ## AC
 

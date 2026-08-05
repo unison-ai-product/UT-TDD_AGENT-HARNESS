@@ -27,6 +27,10 @@ dependencies:
   requires: []
   blocks: []
   references:
+    - docs/plans/PLAN-L7-475-worktree-topology-pf1-pure-analyzer.md
+    - docs/plans/PLAN-L7-476-worktree-topology-pf2-os-collector.md
+    - docs/plans/PLAN-L7-477-worktree-topology-pf3-doctor-advisory.md
+    - docs/plans/PLAN-L7-478-worktree-topology-pf4-migration-acceptance.md
     - docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
     - docs/plans/PLAN-REVERSE-474-worktree-topology-detector-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
@@ -42,9 +46,10 @@ Issue #232 の worktree link 健全性と終了判定を、配置移設
 (`PLAN-L4-34-repository-runtime-placement-topology`) の前後比較に使える
 **advisory の acceptance oracle** として設計固定する。
 
-本PRは pair-freeze だけである。collector、analyzer、doctor配線、テストコード、実行結果は
-まだ出荷物として宣言しない。後続の add-impl PR が本PLANを確認済みにし、そのとき初めて
-実装出荷物を `generates` へ追加する。
+本PLANはmaster contractであり、直接実装を所有しない。PR #243の実装commitは履歴として保持するが、
+設計正本ではない。PF-0 correction merge後、適合するcommitだけを正式子sliceへ再利用する。
+masterはPF1〜PF4、Reverse R4、最新exact HEADのclosing PASSがすべて揃うまで`draft`を維持し、
+`generates`へ子sliceの実装成果物を集約せず、landed/confirmedを主張しない。
 
 ## 固定する契約
 
@@ -90,10 +95,21 @@ Issue #232 の worktree link 健全性と終了判定を、配置移設
 ## 設計と検証の対
 
 oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
-`CANDIDATE-WTTOPO-001`〜`018` である。これは #234 の実装候補から抽出して契約化したものであり、
-本PRでは test code の存在・green・実リポジトリの計測値を主張しない。
-後続の実装PRは各candidateとテストcitationを同じcommitで追加し、その時点でのみ
-対応する確定 `U-*` IDへ原子的に昇格する。
+`CANDIDATE-WTTOPO-001`〜`018` である。ownerはPF1〜PF4のいずれか一つに固定し、各子sliceが
+test citationと実装を同じcommitで追加した時点だけ対応する`U-*`へ昇格する。masterやPF-0を
+Green証拠に数えない。
+
+## 正式子sliceと順序契約
+
+| slice | PLAN / Issue | 所有範囲 | entry | exit / unlock |
+|---|---|---|---|---|
+| PF1 | `PLAN-L7-475` / #253 | pure analyzer、canonical identity/remap、決定論 | PF-0 merge | owner oracle Green + closing PASS |
+| PF2 | `PLAN-L7-476` / #254 | OS collector、realpath/reparse、retained ref解決 | PF1 merge | real OS証跡 + closing PASS |
+| PF3 | `PLAN-L7-477` / #255 | doctor advisory結線 | PF2 merge | empty/advisory/hard-gate不変 + closing PASS |
+| PF4 | `PLAN-L7-478` / #256 | aggregate移設acceptance、byte vector、Reverse R4 | PF3 merge | known vector + R4 + closing PASS |
+
+順序は`PF-0 → PF1 → PF2 → PF3 → PF4 → master confirm/close`で固定する。PF1もPF-0 merge前は
+Blockedであり、後続は直前sliceのmergeとclosing PASSの両方でだけ解放する。
 
 ## スコープ外
 
@@ -103,8 +119,7 @@ oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
 
 ## 後続の実装受入条件
 
-- AC-1: `CANDIDATE-WTTOPO-001`〜`018` をテストコードで実装し、同じcommitで
-  対応する確定 `U-*` IDへ昇格して全件を検証する。
+- AC-1: PF1〜PF4がowner候補をテストコードで実装し、同じcommitで対応する確定`U-*`へ昇格する。
 - AC-2: facts collector と純粋 analyzer のI/O境界、双方向link検査、fail-safe retirable除外を
   非author familyがレビューする。
 - AC-3: doctorへのadvisory配線が hard gate / CIの成功判定を変えないことを実測で示す。
@@ -115,6 +130,10 @@ oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
 
 ## Schedule
 
-1. [完了] 設計と L7 oracle を pair-freeze する。
-2. [直列] 別 add-impl PR で collector / analyzer / doctor advisory / テストを実装する。
-3. [直列] Reverse R0〜R4、cross-review、trace-freeze を実施して確認する。
+1. [進行中] PF-0: master/Reverse/test-design/子PLANとGitHub順序をcorrection freezeする。
+2. [阻害中] PF1: PF-0 merge後にpure analyzerを実装する。
+3. [直列] PF2 → PF3 → PF4を各closing PASS後に解放する。
+4. [直列] PF4でReverse R4とaggregate acceptanceを完了する。
+5. [直列・post-PF4 master step] PF4 merge後に全子landedとR4完了をmaster側から確認し、PF4とは別の
+   master exact HEAD closing PASSを取得する。その後だけmasterをconfirmedへ遷移し#232をcloseする。
+   このmaster stepをPF4のmerge条件へ戻して自己参照cycleを作らない。
