@@ -137,10 +137,9 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
    PR履歴を入力にせず、exact HEADのfinal treeから (A) manifest SSoTが正規pathに一意かつschema valid、
    (B) clean distribution planがそのcontrol manifest copyをallowlist到達物として含む、(C) channelが選ぶ
    artifact revisionをresolver→materializer→Pack destinationへ写す経路が存在する、の3 predicateを
-   side effect前にAND判定する。全成立時だけsealed write planを返す。applyはまずisolated stagingへ
-   全artifactをmaterialize・検証し、完了後にall-or-nothing destination transactionを1回だけcommitする。
-   staging中またはcommit境界のN番目faultはstagingを破棄し、destinationとcontrol manifest / allowlist /
-   copy入力のprior stateを保つ。1点でも欠ければ
+   side effect前にAND判定する。全成立時だけsealed write planを返す。
+   **3 predicate全成立後の staging write/copy および destination commit/apply の各境界へ1..N faultを総当たり注入する。全faultでstagingを破棄し、destination/control manifest/allowlist/copy inputのprior bytes/mode/pathを不変に保ち、partial publish 0とする。成功時のみcommit/apply exactly 1とする。**
+   1点でも欠ければ
    resolver/materializer/copy/write count 0で拒否する。従って子slice化はscope縮小ではなく、外部可視な
    AC-6をPF-5 admissionまで不可分に保ったまま内部証明を依存順に積む実装順序契約である。
 
@@ -195,9 +194,7 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 - AC-10: PR #244 prototypeで未検出だったown-property lookup、artifact digest単独mutation、型不正、
   unknown channelをRED oracleとして保持する。PF-1はpure返値だけを`001/002`として昇格でき、
   aggregate resolver/materializer/copy/write 0は別の`015/016`としてPF-5までRED維持する。
-- AC-11: PF-5はsealed plan後の各write/copy境界へN番目faultを注入し、失敗時staging破棄、
-  destination/control inputsのprior state不変、partial publish 0を`017`で証明する。成功時だけ
-  destination transactionを1回commit/applyする。
+- AC-11 (`017`): **3 predicate全成立後の staging write/copy および destination commit/apply の各境界へ1..N faultを総当たり注入する。全faultでstagingを破棄し、destination/control manifest/allowlist/copy inputのprior bytes/mode/pathを不変に保ち、partial publish 0とする。成功時のみcommit/apply exactly 1とする。**
 
 ## 6. 子sliceとpromotable oracle
 

@@ -82,7 +82,7 @@ mergeされた時点で完了する。実装をR1完了証拠の代替にしな�
 | R2 / PF-2 #248 | `011` materializer Green・review・merge | R2 / PF-3 #249 | PF-2へ戻る |
 | R2 / PF-3 #249 | `012` resolver Green・review・merge | R2 / PF-4 #250 | PF-3へ戻る |
 | R2 / PF-4 #250 | `006` adapter内部Green・review・merge、外部結線0 | R2 / PF-5 #251 | PF-4へ戻る |
-| R2 / PF-5 #251 | `014/015/016/017` aggregate Green。final-tree preflight→isolated staging→all-or-nothing destination transaction。fault時prior state不変、成功時commit/apply 1回、full CI PASS | R3 | PF-5へ戻りstagingを破棄、partial stateをpublishしない |
+| R2 / PF-5 #251 | `014/015/016/017` aggregate Green。**3 predicate全成立後の staging write/copy および destination commit/apply の各境界へ1..N faultを総当たり注入する。全faultでstagingを破棄し、destination/control manifest/allowlist/copy inputのprior bytes/mode/pathを不変に保ち、partial publish 0とする。成功時のみcommit/apply exactly 1とする。** full CI PASS | R3 | PF-5へ戻りstagingを破棄、partial stateをpublishしない |
 | R3 | cross-family review PASS + backprop先確定 | R4 | finding所有PFへ戻る |
 | R4 | L6合流・Forward routing確定・closing gate PASS | Forward merge | R4未完了のまま保持 |
 
