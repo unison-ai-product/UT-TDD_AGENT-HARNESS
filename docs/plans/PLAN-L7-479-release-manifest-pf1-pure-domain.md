@@ -1,0 +1,66 @@
+---
+plan_id: PLAN-L7-479-release-manifest-pf1-pure-domain
+title: "PLAN-L7-479 (impl): PF-1 release manifest pure domain pair-freeze"
+kind: impl
+layer: L7
+drive: be
+route_signal: forward
+route_mode: forward
+status: draft
+created: 2026-08-05
+updated: 2026-08-05
+owner: PM / PO
+parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+agent_slots:
+  - role: se
+    slot_label: "SE - release manifest pure parser、immutable identity、own-property channel resolverをTDD実装する"
+  - role: qa
+    slot_label: "QA - PF-1 owner oracleの型、identity、order、prototype境界を検証する"
+generates:
+  - artifact_path: docs/plans/PLAN-L7-479-release-manifest-pf1-pure-domain.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
+  requires: []
+  blocks: []
+  references:
+    - docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
+    - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
+    - docs/test-design/harness/L7-unit-test-design.md
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/247
+review_evidence: []
+---
+
+# PF-1: release manifest pure domain pair-freeze
+
+本 PLAN は master `PLAN-L7-473` のPF-1を、実行可能かつ検証所有が一意なforward implementation
+partitionへ分けるdocs-only pair-freezeである。master PLANはPF-5 aggregate acceptanceまでdraftのまま
+保持し、Reverse R1〜R4と最終のaggregate原子性を所有し続ける。本 PLAN は新しいfeature lifecycle、
+Git/FS/CLI adapter、materializer、isolated Git resolver、copy/writeを追加しない。
+
+## Entry
+
+PF-0のdocs-only訂正PR #246がmainへmergeされ、Issue #247がReadyであること。本PLAN自身が
+exact-HEAD CIとnon-author closing reviewを通過してmainへmergeするまで、PF-1実装は開始しない。
+
+## Scope / owner
+
+PF-1が所有するのは以下のcandidateだけである。
+
+- `CANDIDATE-RELMAN-001`: strict schema type、unknown version、unknown fieldのpure fail-close
+- `CANDIDATE-RELMAN-002`: pure channel resolutionの`unknown_channel`
+- `CANDIDATE-RELMAN-007`: custom channelと`channelOrder`のown-key完全列挙
+- `CANDIDATE-RELMAN-009`: release ID、source commit、artifact digestの独立identity mutation
+- `CANDIDATE-RELMAN-013`: `toString`、`constructor`、`__proto__`を含むown-property境界
+
+実装PRは `src/schema/release-manifest.ts` というsource module 1個と対になるunit testだけを同じ
+commitで追加し、上記5件を`U-RELMAN-*`へ昇格する。parse成功値はimmutable release identityを返す。
+`CANDIDATE-RELMAN-014`〜`017`、特にinvalid/unknown channel時のresolver/materializer/copy/write 0と
+fault injectionはPF-5のままREDを維持する。PF-1のpure返値を副作用証明の代替にしてはならない。
+
+## Exit
+
+- このdocs-only PLANがmainへmergeされる。
+- 後続のPF-1実装PRが、上記5 candidateの実装test citationを同じcommitで`U-RELMAN-*`へ昇格する。
+- exact HEAD CIとnon-author closing PASSを満たすまでIssue #247をcloseせず、PF-2 #248を解除しない。
