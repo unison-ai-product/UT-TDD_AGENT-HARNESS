@@ -94,7 +94,7 @@ PR #220 / #225 宛の依頼) が「新着」として Claude セッションへ 
 
 | 案 | 方式 | trade-off |
 |---|---|---|
-| **A (採択)** | frontmatter に `lifecycle: durable\|episode` と `bound_to: <PR/issue URL>` を足し、doctor が bound_to closed かつ未昇格の episode を検出する | 書き込み経路が `ut-tdd memory add` 単一路なので機械強制でき self-report 頼みにならない。既存 139 件は backfill が要る |
+| **A (採択)** | frontmatter に `lifecycle: durable\|episode` と `bound_to: <PR/issue URL>` を足し、doctor が bound_to closed かつ未昇格の episode を検出する | 書き込み経路が `ut-tdd memory add` 単一路なので**宣言の存在と形式**は機械強制できる (分類の正しさ自体は作者申告のままで、機械が保証するのは「未分類の新規 memory が存在しない」こと)。既存 139 件は backfill が要る |
 | B | フィールドを足さず、doctor がファイル名/本文の PR 参照を GitHub 状態と突合して警告する | 実測のとおり durable 教訓 (~8 件) を誤検知する構造的欠陥。警告がノイズ化すれば gate として死ぬ (fail-open 看板化) |
 | C | レビュー依頼は memory ではなく既存 `.ut-tdd/review/requests` チャネルへ構造分離し、memory は永続教訓のみとする | PR #241 型の再発防止としては正しいが、**既存 63 件の backlog に何も作用しない**。新方式ではなく既存ルール (CLAUDE.md §Hybrid 協調) の再締結 |
 
@@ -120,18 +120,28 @@ advisor は B を却下する根拠として「63 件の PR 参照のうち**相
 
 1. **分類フィールド**: `lifecycle` は `durable` | `episode` の 2 値。`episode` は `bound_to` 必須。
    `bound_to` は GitHub の PR / issue URL とし、path や PLAN ID は取らない (解決可能性を型で担保)。
-2. **既定値と後方互換**: `lifecycle` 未宣言の既存 memory は `durable` として扱う。**不明を
-   episode 側へ倒さない** — 誤って回収すると教訓が消えるためで、fail-safe の向きは保持側である。
-3. **書き込み時の強制**: `ut-tdd memory add --lifecycle episode` は `--bound-to` 無しで fail-close。
-   手書きメモリは既に禁止されているので、単一経路で機械強制が成立する。
+2. **既定値と後方互換 (既存分のみ)**: `lifecycle` 未宣言の**既存** memory (backfill 完了前の
+   139 件) は `durable` として扱う。**不明を episode 側へ倒さない** — 誤って回収すると教訓が
+   消えるためで、fail-safe の向きは保持側である。既存分の分類確定は AC-4 の backfill が行う。
+3. **書き込み時の強制 (新規は宣言必須)**: `ut-tdd memory add` は **`--lifecycle` 省略で
+   fail-close** し、`--lifecycle episode` は `--bound-to` 無しで fail-close する。
+   **省略を durable へ倒すのは既存分の読み取り時だけであり、新規書き込みには適用しない** —
+   さもないと「宣言しなければ検査の外」という回避経路が残り、案 A の採択理由 (単一経路での
+   機械強制) が成立しなくなる (blind review FLAG 2026-08-05 の指摘 1)。機械強制されるのは
+   宣言の存在と形式であり、分類の正しさ自体は作者の自己申告のまま — この残余は backfill
+   (AC-4) と回収報告のレビューで補う、と明示しておく。
 4. **回収判定**: `bound_to` が closed / merged かつ `lifecycle: episode` の memory を
    `retirable` として報告する。**削除は自動化しない** — 報告までを機構の責務とし、削除は
    人間または明示コマンドの操作とする。
 5. **unknown の扱い**: GitHub 到達不能・URL 解決不能は `unknown` とし、`retirable` にも `ok` にも
    混ぜない三値。「判定できなかった」を「回収不要」と言わない。
 6. **配送側の消費**: 即時配送 (claude-memory-wake) は `lifecycle: episode` かつ `bound_to` が
-   closed の entry を**配送しない** (stale replay の抑止。2026-08-05 実測: #228 修正直後に
-   merge 済み PR #220/#225 宛の依頼 4 件が新着として replay された)。
+   **確定的に closed** の entry を**配送しない** (stale replay の抑止。2026-08-05 実測: #228
+   修正直後に merge 済み PR #220/#225 宛の依頼 4 件が新着として replay された)。
+   **`unknown` (GitHub 不達・URL 解決不能) は配送する** — 配送は message bus であり、生きた
+   依頼を offline を理由に落とす方が stale replay より高くつく。抑止は「closed と確定した」
+   場合に限る (doctor 三値の unknown を配送側では可用性側へ倒す。向きが doctor と逆になる
+   理由ごと freeze する — blind review FLAG 2026-08-05 の指摘 2)。
 7. **既存ルールとの関係 (C 相当)**: レビュー依頼・verdict・進捗連絡は `lifecycle: episode` で
    書くのではなく、そもそも `.ut-tdd/review/requests` / `receipts` へ置く。これは CLAUDE.md の
    「エピソード状態はメモリに書かず DB/HEAD 由来の digest に任せる」の再掲であり本 PLAN は
@@ -148,6 +158,11 @@ advisor は B を却下する根拠として「63 件の PR 参照のうち**相
 - **AC-4**: backfill 対象の分類は**実測サンプリングを先行**させる。60 件全数のタイトル+本文を
   分類し、durable 混入率を数値で確定してから backfill PR を出す。本 PLAN では実施しない。
 - **AC-5**: 削除は自動化されていないこと (報告のみ) をテストで固定する。
+- **AC-6**: 新規 `memory add` の `--lifecycle` 省略が fail-close であり、既定値へ silent に
+  倒れないことをテストで固定する (省略回避経路の封鎖)。
+- **AC-7**: 配送側の三値の倒し方 (closed=抑止 / open=配送 / unknown=配送) がテストで固定され、
+  doctor 側の unknown の扱い (retirable にも ok にも混ぜない) と**向きが逆である理由**が
+  L6 function-spec に記述されている。
 
 ## 5. 設計と検証の対 (未実装 oracle は CANDIDATE 表記)
 
@@ -162,6 +177,8 @@ advisor は B を却下する根拠として「63 件の PR 参照のうち**相
 | `CANDIDATE-MEMEPI-007` | `retirable` 検出後にファイルが残存 | 自動削除されていない |
 | `CANDIDATE-MEMEPI-008` | `lifecycle: durable` + `bound_to` あり (教訓の根拠引用) | `retirable` にしない |
 | `CANDIDATE-MEMEPI-009` | closed 参照つき episode の即時配送 | 配送しない (stale replay 抑止) |
+| `CANDIDATE-MEMEPI-010` | `bound_to` 解決不能 (unknown) な episode の即時配送 | **配送する** (message bus の可用性側へ倒す) |
+| `CANDIDATE-MEMEPI-011` | 新規 `memory add` で `--lifecycle` 省略 | fail-close (exit 1、既定へ倒さない) |
 
 `CANDIDATE-*` は未 freeze 候補であり実テスト citation として数えない。実装 slice 開始時に
 Red test を追加してから `U-MEMEPI-*` へ昇格する
