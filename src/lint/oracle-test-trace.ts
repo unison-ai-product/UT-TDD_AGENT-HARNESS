@@ -18,10 +18,15 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { ORACLE_ID_DUPLICATE_BASELINE } from "./oracle-id-duplicate-baseline";
 import { ORACLE_TEST_TRACE_BASELINE } from "./oracle-test-trace-baseline";
 import { ORACLE_TEST_TRACE_WIDENED_BASELINE } from "./oracle-test-trace-widened-baseline";
 
-export { ORACLE_TEST_TRACE_BASELINE, ORACLE_TEST_TRACE_WIDENED_BASELINE };
+export {
+  ORACLE_ID_DUPLICATE_BASELINE,
+  ORACLE_TEST_TRACE_BASELINE,
+  ORACLE_TEST_TRACE_WIDENED_BASELINE,
+};
 
 /**
  * oracle ID パターン (`U-RELGRAPH-001` / `IT-DOCEXPORT-003` / `ST-DATA-01` / `U-RVGHA-D3C-001`)。
@@ -51,6 +56,8 @@ export interface OracleTestTraceInput {
   widenedBaseline: ReadonlySet<string>;
   /** 同一 ID の重複宣言 (issue #206)。 */
   duplicates: OracleDuplicateDeclaration[];
+  /** 検査有効化時点で既に重複していた ID (issue #206 ratchet、2026-08-05 凍結)。 */
+  duplicateBaseline: ReadonlySet<string>;
 }
 
 export interface OracleTestTraceResult {
@@ -63,9 +70,8 @@ export interface OracleTestTraceResult {
  * 宣言済だが未 citation かつ baseline 外の oracle を orphan として返し、同一 ID の重複宣言を
  * 併せて報告する。どちらかが非空なら fail (`ok=false`)。
  *
- * 重複には baseline を置かない。検査を有効化した時点の実 repo で 0 件だったため、
- * grandfather する債務が存在しないからである (空 baseline を置くと「例外がある」という
- * 誤った期待だけが残る)。
+ * 重複も orphan と同じ ratchet で扱う。検査を有効化した 2026-08-05 時点の 64 件は
+ * `ORACLE_ID_DUPLICATE_BASELINE` へ凍結し、それ以降に生まれた重複だけを fail-close する。
  */
 export function analyzeOracleTestTrace(input: OracleTestTraceInput): OracleTestTraceResult {
   const orphans = [...new Set(input.declared)]
@@ -74,7 +80,9 @@ export function analyzeOracleTestTrace(input: OracleTestTraceInput): OracleTestT
         !input.referenced.has(id) && !input.baseline.has(id) && !input.widenedBaseline.has(id),
     )
     .sort();
-  const duplicates = [...input.duplicates].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const duplicates = input.duplicates
+    .filter((d) => !input.duplicateBaseline.has(d.id))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return { orphans, duplicates, ok: orphans.length === 0 && duplicates.length === 0 };
 }
 
@@ -152,6 +160,7 @@ export function loadOracleTestTraceInput(repoRoot: string): OracleTestTraceInput
     baseline: ORACLE_TEST_TRACE_BASELINE,
     widenedBaseline: ORACLE_TEST_TRACE_WIDENED_BASELINE,
     duplicates,
+    duplicateBaseline: ORACLE_ID_DUPLICATE_BASELINE,
   };
 }
 

@@ -10,6 +10,7 @@ import {
   analyzeOracleTestTrace,
   collectDeclarationRows,
   loadOracleTestTraceInput,
+  ORACLE_ID_DUPLICATE_BASELINE,
   ORACLE_TEST_TRACE_BASELINE,
   ORACLE_TEST_TRACE_WIDENED_BASELINE,
 } from "../src/lint/oracle-test-trace";
@@ -20,6 +21,7 @@ describe("analyzeOracleTestTrace (U-OTT-001..003)", () => {
     baseline: new Set(["U-BAR-002"]),
     widenedBaseline: new Set<string>(),
     duplicates: [],
+    duplicateBaseline: new Set<string>(),
   };
 
   it("U-OTT-001: 宣言済だが未 citation かつ baseline 外 = orphan (NEW fail-close)", () => {
@@ -46,6 +48,7 @@ describe("検出範囲拡張 (issue #165、U-OTT-006..008)", () => {
     baseline: new Set<string>(),
     widenedBaseline: new Set(["ST-DATA-01"]),
     duplicates: [],
+    duplicateBaseline: new Set<string>(),
   };
 
   // 旧 ORACLE_ID は 3 桁固定だったため 2 桁 ID は宣言されても一切見えなかった。
@@ -91,6 +94,7 @@ describe("重複宣言検出 (issue #206、U-OTT-009..011)", () => {
       duplicates: [
         { id: "U-DUP-001", descriptions: ["最初の oracle exit 0", "別の oracle exit 1"] },
       ],
+      duplicateBaseline: new Set<string>(),
     });
     expect(r.duplicates).toHaveLength(1);
     expect(r.ok).toBe(false);
@@ -128,10 +132,14 @@ describe("loadOracleTestTraceInput real repo (U-OTT-004/005/012)", () => {
     expect(ORACLE_TEST_TRACE_WIDENED_BASELINE.size).toBe(350);
   });
 
-  // 重複には baseline を置かない。有効化時点の実 repo で 0 件だったため、grandfather する
-  // 債務が存在しない。ここが非 0 になったら新規の採番衝突である。
-  it("U-OTT-013: 実 repo の重複宣言は 0 件", () => {
+  // baseline 適用後の重複が 0 = 2026-08-05 以降に新規の採番衝突が入っていない、の回帰網。
+  it("U-OTT-013: 実 repo の baseline 外 重複宣言は 0 件", () => {
     const r = analyzeOracleTestTrace(loadOracleTestTraceInput(process.cwd()));
     expect(r.duplicates).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("U-OTT-014: duplicate baseline は 64 件スナップショット (縮小のみ可)", () => {
+    expect(ORACLE_ID_DUPLICATE_BASELINE.size).toBe(64);
   });
 });
