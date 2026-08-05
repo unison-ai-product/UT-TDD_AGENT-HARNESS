@@ -1001,24 +1001,28 @@ export function analyzePlanGovernance(
 
     const parent = stringField(deps.parent);
     if (parent) {
-      const parentRecord = byRef.get(normalizePlanRef(parent));
-      if (!parentRecord) {
-        violations.push({ file: entry.file, reason: "parent_missing", detail: parent });
-      } else {
-        const parentDrive = stringField(parentRecord.raw.drive);
-        const drive = stringField(raw.drive);
-        if (drive && parentDrive && drive !== parentDrive && parentDrive !== "fullstack") {
-          const planId = stringField(raw.plan_id);
-          if (planId && PARENT_DRIVE_MISMATCH_BASELINE.has(planId)) {
-            parentDriveMismatchBaselineMatches.add(planId);
-          } else {
-            violations.push({
-              file: entry.file,
-              reason: "parent_drive_mismatch",
-              detail: `${drive} != ${parentDrive}`,
-            });
+      if (isPlanRef(parent)) {
+        const parentRecord = byRef.get(normalizePlanRef(parent));
+        if (!parentRecord) {
+          violations.push({ file: entry.file, reason: "parent_missing", detail: parent });
+        } else {
+          const parentDrive = stringField(parentRecord.raw.drive);
+          const drive = stringField(raw.drive);
+          if (drive && parentDrive && drive !== parentDrive && parentDrive !== "fullstack") {
+            const planId = stringField(raw.plan_id);
+            if (planId && PARENT_DRIVE_MISMATCH_BASELINE.has(planId)) {
+              parentDriveMismatchBaselineMatches.add(planId);
+            } else {
+              violations.push({
+                file: entry.file,
+                reason: "parent_drive_mismatch",
+                detail: `${drive} != ${parentDrive}`,
+              });
+            }
           }
         }
+      } else if (!pathExists(repoRoot, parent)) {
+        violations.push({ file: entry.file, reason: "parent_missing", detail: parent });
       }
     }
 

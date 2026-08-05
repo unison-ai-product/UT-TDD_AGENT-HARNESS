@@ -34,7 +34,7 @@ generates:
   - artifact_path: docs/design/harness/L6-function-design/agent-slots.md
     artifact_type: design_doc
 dependencies:
-  parent: PLAN-L7-62
+  parent: PLAN-L7-62-runtime-portability-guard
   requires:
     - docs/design/harness/L6-function-design/agent-slots.md
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md

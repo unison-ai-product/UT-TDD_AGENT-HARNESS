@@ -32,7 +32,7 @@ generates:
   - artifact_path: docs/governance/repository-structure.md
     artifact_type: doc_update
 dependencies:
-  parent: PLAN-L7-65
+  parent: PLAN-L7-65-deterministic-model-policy
   requires:
     - docs/design/harness/L6-function-design/setup-solo-team.md
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md

@@ -40,7 +40,7 @@ generates:
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
 dependencies:
-  parent: PLAN-L7-59
+  parent: PLAN-L7-59-detector-hardening
   requires:
     - docs/design/harness/L5-detailed-design/physical-data.md
     - docs/design/harness/L6-function-design/function-spec.md

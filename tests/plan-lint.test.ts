@@ -428,6 +428,33 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).toContain("parent_drive_mismatch");
   });
 
+  it("U-PLANGOV-003d: 非 PLAN 親参照はファイル実在なら親チェックを通過する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-governance-nonplan-parent-"));
+    try {
+      const parentArtifact = join(root, "docs", "design", "harness", "L6-function-design", "function-spec.md");
+      mkdirSync(join(root, "docs", "design", "harness", "L6-function-design"), { recursive: true });
+      writeFileSync(parentArtifact, "---\nstatus: completed\n---\n", "utf8");
+
+      const docs = [
+        planDoc("PLAN-L7-1000-impl", {
+          kind: "impl",
+          layer: "L7",
+          drive: "agent",
+          parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+          dependencies: `  parent: docs/design/harness/L6-function-design/function-spec.md\n  requires: []\n  blocks: []`,
+          subDoc: null,
+        }),
+      ];
+
+      const reasons = analyzePlanGovernance(docs, root).violations.map((v) => v.reason);
+
+      expect(reasons).not.toContain("parent_missing");
+      expect(reasons).not.toContain("parent_drive_mismatch");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PLANGOV-003b: parent_drive_mismatch debt は既知項目で WARN（fail-close しない）", () => {
     const baselinePlanId = [...PARENT_DRIVE_MISMATCH_BASELINE][0];
     const baselineDocs = [
