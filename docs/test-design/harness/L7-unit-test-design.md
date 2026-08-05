@@ -2159,7 +2159,7 @@ Red test citationを追加する。generic regexを4 segmentへ広げず、他�
 
 ## oracle-test-trace 検出範囲拡張 (issue #165 / PLAN-L7-480)
 
-PLAN-L7-480 の `CANDIDATE-OIDGATE-001`〜`007` を、実装と同 commit で以下へ昇格する
+PLAN-L7-480 の CANDIDATE-OIDGATE-001〜007 (昇格済みのため candidate 台帳には残さない) を、実装と同 commit で以下へ昇格する
 (tests/oracle-test-trace.test.ts が citation)。
 
 注 (契約衝突の記録): 上の D3c freeze は「generic regex を 4 segment へ広げない」前提で
@@ -2170,7 +2170,7 @@ baseline 縮小を機械強制する (詳細は issue #218 のコメント参照
 
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|
-| `U-OIDGATE-001` | `CANDIDATE-M-SP-002` / `CANDIDATE-U-FOO-001` / `CANDIDATE-P-FSM-001` を含む test-design fixture | `collectOracleIds` | 1 件も抽出しない (左 token 境界)。CANDIDATE 表記は citation 不要のまま |
+| `U-OIDGATE-001` | CANDIDATE-M-SP-002 / CANDIDATE-U-FOO-001 / CANDIDATE-P-FSM-001 を含む test-design fixture (backtick 無し表記 — candidate 台帳への再掲ではなく fixture 入力の記述であり、U-VMSRC-009 の一意性検査の対象外とする) | `collectOracleIds` | 1 件も抽出しない (左 token 境界)。CANDIDATE 表記は citation 不要のまま |
 | `U-OIDGATE-002` | 2 桁番号の架空 ID (`ST-ZZDATA-01` / `U-ZZFUNC-01`) 宣言 fixture (実在 ID を fixture に書くと偽 citation で ratchet 圧が漏れるため架空とする) | `collectOracleIds` + `analyzeOracleTestTrace` | 収集され、未 citation なら orphan (旧 regex の視野外を解消) |
 | `U-OIDGATE-003` | 多 segment 架空 ID `U-ZZMULTI-D3C-001` と `U-ZZVTR-005-L7` の宣言 fixture | `collectOracleIds` + `analyzeOracleTestTrace` | 多 segment を収集し orphan 経路まで通す。末尾 segment が非数字の `...-005-L7` 型は全体・部分とも抽出しない |
 | `U-OIDGATE-004` | widened baseline 収載 ID が未 citation | `analyzeOracleTestTrace` | orphan にしない (ratchet) |
