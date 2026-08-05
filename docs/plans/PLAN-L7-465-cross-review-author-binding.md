@@ -219,20 +219,34 @@ provider receipt -> 実 GitHub green/red -> D2 consumer -> D4` とし、D3d が�
    judgment payload 内の `reviewerFamily` や `reviewerModel` の真実性は証明しない。
 2. `reviewerFamily` の自己申告、PR comment marker、HARNESS memory本文、commit trailer、
    local JSON/HMAC、同一 OS user が利用できる鍵は provider family の信頼根にしない。
-3. D3b の検証済み judgment attestation と D3c mechanical envelope は AND 入力とする。
+3. D3b の schema 検証済み judgment payload と D3c mechanical envelope は AND 入力とする。
    片方だけ、または family の強い証明がない状態は `unverified_family` であり、
    `merge_ready` へ昇格しない。
 4. family を機械的に強証明する provider 別 GitHub App / bot / OIDC subject 等は、
    authentication / authorization を変える外部権限設計である。本 freeze では方式を
    仮決めせず、PO の明示承認を得る D3d 境界へ送る。
-5. merge 可否の SSoT は D1 `evaluateMergeGate` の `merge_ready` である。GitHub Check Run は
-   D1 judgment と D3 verified custody を消費した投影であり、独立した第二の判定器にしない。
+5. D1 の現行 SSoT は `analyzeReviewDispatch` が返す `merge_ready` 状態である。D2 の
+   `evaluateMergeGate` はその後段 consumer であり、D3d 実装前の構造・順序・CI 判定器として
+   存続する。D3d 後は D1 `merge_ready` AND D3d `custody_admitted` だけを D2 が受理する。
+   GitHub Check Run はこの単一判断の投影であり、独立した第二の判定器にしない。
+
+`D3a` は review request/response の配送、`D3b` は judgment payload の schema・digest 検証、
+`D3c` は本契約 freeze、`D3d` は GitHub provenance と provider-family authority を検証する
+adapter 実装を指す。D3b は payload の意味と family の外部真正性までは証明しない。
+
+provider-family authority が PO 未承認または未実装の間、D3d は `unverified_family` を返し、
+`custody_admitted` を生成しない。この trusted-custody 経路に accepting state はなく、既存 D2 の
+判定をその保証へ暗黙昇格しない。承認済み `VerifiedProviderIdentity` と残る全条件が揃った時だけ、
+D3d は custody を受理できる。
 
 ### 既存実装との所有境界
 
-- judgment schemaとprovider側判定は既存`src/feedback/review-attestation.ts`を再利用する。
-- artifact署名・検証portは既存`src/plan-asset/ports/evidence-attestation.ts`を拡張して使い、
-  D3専用の第三signer/verifierを作らない。既存local HMAC adapterはGitHubの信頼根にしない。
+- judgment schemaの意味は既存`src/feedback/review-attestation.ts`と整合させるが、同実装の
+  16桁digestや自由形式`reviewRevision`をD3 receiptへ流用しない。
+- D3dは非同期・typed resultの専用`GitHubAttestationVerifierPort`を`src/feedback/ports/`へ置く。
+  同期booleanかつ`hmac-sha256`固定の既存`src/plan-asset/ports/evidence-attestation.ts`は変更せず、
+  GitHub信頼根にもprovider-family証明にも使わない。これは第三signerの追加ではなく、GitHubを
+  唯一のartifact provenance verifierとしてapplication portへ隔離する境界である。
 - D3dの新規domainはmechanical envelopeのstrict decode、GitHub factsの二重照合、judgmentと
   envelopeのAND評価に限定する。GitHub取得、署名、D1判定の責務をdomainへ複製しない。
 - RetryYN/HELIX-HARNESS `main@1ee1bb5bd55078252490d5e3f3f70d7363a00f4a`は、closed
@@ -250,8 +264,8 @@ provider transcriptは含めず、sanitized digest / typed resultだけを参照
 | `repository` / `prNumber` / `baseRef` | GitHub API と event payload の双方から再取得して完全一致 |
 | `headSha` | immutable 40 hex。PR HEAD、request、judgment、Check Runを同一subjectへ束縛 |
 | `mergeSha` / `mergeMethod` / `mergedAt` | post-mergeだけ必須。pre-mergeへ注入、post-mergeで欠落はいずれも拒否 |
-| `planId` / `planRevision` / `reviewRevision` | closed formatで機械導出し、自由文字列の自己申告を受理しない |
-| `judgmentDigest` / `artifactDigest` | SHA-256。本文を複製せず、検証済み対象との一致を要求 |
+| `planId` / `planRevision` / `reviewRevision` | `reviewRevision`はcanonical request digest由来の`rv1-<64 lowerhex>`だけを受理 |
+| `judgmentDigest` / `receiptDigest` / `artifactDigest` | SHA-256 lowerhex。本文を複製せず、検証済み対象との一致を要求 |
 | `workflowRef` / `workflowSha` / `runId` / `runAttempt` / `issuer` | Artifact Attestation と GitHub API factsへ束縛 |
 | `providerEvidenceRef` | D3bの検証済みprovider judgment参照。存在だけではfamily強証明にしない |
 
@@ -259,21 +273,32 @@ provider transcriptは含めず、sanitized digest / typed resultだけを参照
 冪等 replay とし、repository / PR / HEAD / revision / kind のいずれかが変わったreceiptは別
 subjectとして旧receiptを利用できない。
 
+canonicalization は RFC 8785 JSON Canonicalization Scheme → UTF-8 → SHA-256 lowerhex とする。
+`reviewRevision` の preimage は exact request object
+`{schemaVersion:"review-request/v1",memoryId,pr,exactHead,authorFamily,requestedAt}`、
+`receiptDigest` の preimage は上表の全fieldから `receiptDigest` と外部attestation/signature bytesを
+除いた exact object とし、field追加や独自並べ替えを許さない。`artifactDigest` は完成したreceipt
+artifact bytesをGitHubが証明するdigestであり、自己参照させない。既存の16桁digest、`REV-000`、
+自由文字列、再計算不一致は`identity_mismatch`で拒否する。
+
 ### 発行・検証境界
 
 1. GitHub factsは開始時と発行直前の2回取得し、event payload、API read 1、API read 2の
    repository / PR / base / head / stateを比較する。race、closed/merged状態のkind不整合、
    fork/別repositoryへの差替えではattestationを0件とする。
-2. `pull_request_target`を使う場合はdefault branchのpinned workflowだけを実行し、PR HEADの
+2. D3d workflow は固定パス `.github/workflows/review-attestation.yml` に分離する。
+   `pull_request_target`を使う場合はdefault branchのpinned workflowだけを実行し、PR HEADの
    checkout、PR code、PR由来artifact/cache、PR制御のscript/actionを実行しない。permissionsは
-   contents readとattestation発行に必要な最小集合へ閉じ、この制約を`github-ci-policy`系lintで
-   fail-closeする。
+   `contents: read`、`id-token: write`、`attestations: write`のprofile別allowlistへ閉じる。
+   D3dは`github-ci-policy` loaderへこの固定パスの`attestation_runtime` roleを明示追加し、source
+   profileで必須、Pack profileで対象外とする。任意globは使わず、欠落・trigger・permission・
+   PR入力実行をfail-closeする。既存`harness-check.yml`のstep/permission/required-check契約は変えない。
 3. required `harness-check`は同一HEADのLinux/Windows/aggregateが全てsuccessの場合だけ受理する。
    missing / failure / cancelled / skipped / stale HEADは全てmerge非適格とする。main protectionの
    `enforce_admins=true`は実効blockの検証対象だが、receiptの真正性そのものの代替ではない。
 4. attestation不在、signature/issuer/binding不一致、artifact retention切れ、`gh attestation
-   verify`不能を成功へ丸めない。検証不能は`audit_unavailable`、不正は`unverified`として分け、
-   いずれも`merge_ready`に数えない。
+   verify`不能を成功へ丸めない。不在は`missing`、署名不正は`signature_unverified`、issuer不一致は
+   `signer_mismatch`、取得・検証不能は`audit_unavailable`とし、いずれも`merge_ready`に数えない。
 5. token、credential、raw transcript、raw exception/stack、personal absolute path、PR本文由来の
    実行命令をreceiptへ保存しない。provider timeout/rate limit retryは有界で、exhaustion時は
    receipt 0件 + typed reasonとする。
