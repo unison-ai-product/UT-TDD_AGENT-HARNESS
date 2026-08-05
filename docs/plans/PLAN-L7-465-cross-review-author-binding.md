@@ -9,7 +9,7 @@ route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 status: draft
 created: 2026-07-28
-updated: 2026-08-03
+updated: 2026-08-05
 owner: PM / PO
 agent_slots:
   - role: tl
@@ -200,3 +200,94 @@ CLI 配線・doctor 配線を含まない。
 PLAN-L7-465 は `status: draft` のままであり、本追記は `generates` を増やさない
 (deliverable 所有を draft PLAN に持たせると issue #162 の post-merge 罠を踏むため、
 `src/feedback/review-dispatch.ts` は本文参照による trace に留める)。
+
+## D3c trusted custody 契約 freeze（2026-08-05）
+
+### 位置づけと順序
+
+本節は D1 が出した judgment を GitHub の検証可能な機械 envelope へ束縛する D3c の
+**契約 freeze**である。この slice は PLAN と対になる L7 oracle だけを変更し、source code、
+workflow、CLI、永続化、外部認証設定を変更しない。実装順序は `D1 -> D3c freeze -> D3d
+provider receipt -> 実 GitHub green/red -> D2 consumer -> D4` とし、D3d が未完の間は D2 を
+着工しない。既存 `work/d3-trusted-custody` の spike は設計入力に限り、freeze の成果物へ
+含めない。
+
+### 信頼根を誇張しない
+
+1. GitHub Artifact Attestation が証明できるのは、artifact digest と GitHub が検証した
+   repository / workflow / run / issuer の provenance、および発行後の非改竄である。
+   judgment payload 内の `reviewerFamily` や `reviewerModel` の真実性は証明しない。
+2. `reviewerFamily` の自己申告、PR comment marker、HARNESS memory本文、commit trailer、
+   local JSON/HMAC、同一 OS user が利用できる鍵は provider family の信頼根にしない。
+3. D3b の検証済み judgment attestation と D3c mechanical envelope は AND 入力とする。
+   片方だけ、または family の強い証明がない状態は `unverified_family` であり、
+   `merge_ready` へ昇格しない。
+4. family を機械的に強証明する provider 別 GitHub App / bot / OIDC subject 等は、
+   authentication / authorization を変える外部権限設計である。本 freeze では方式を
+   仮決めせず、PO の明示承認を得る D3d 境界へ送る。
+5. merge 可否の SSoT は D1 `evaluateMergeGate` の `merge_ready` である。GitHub Check Run は
+   D1 judgment と D3 verified custody を消費した投影であり、独立した第二の判定器にしない。
+
+### 既存実装との所有境界
+
+- judgment schemaとprovider側判定は既存`src/feedback/review-attestation.ts`を再利用する。
+- artifact署名・検証portは既存`src/plan-asset/ports/evidence-attestation.ts`を拡張して使い、
+  D3専用の第三signer/verifierを作らない。既存local HMAC adapterはGitHubの信頼根にしない。
+- D3dの新規domainはmechanical envelopeのstrict decode、GitHub factsの二重照合、judgmentと
+  envelopeのAND評価に限定する。GitHub取得、署名、D1判定の責務をdomainへ複製しない。
+- RetryYN/HELIX-HARNESS `main@1ee1bb5bd55078252490d5e3f3f70d7363a00f4a`は、closed
+  provider enum、judgment/provenance分離、exact-subject freshness、typed failure、bounded retryの
+  参考に限る。`.helix`、HELIX CLI/env/DB/runtime、local authenticity方式はUT-TDDへ導入しない。
+
+### Receipt envelope
+
+receipt は strict schema とし、unknown field、欠落、型違いを拒否する。judgment本文やraw
+provider transcriptは含めず、sanitized digest / typed resultだけを参照する。
+
+| field | 契約 |
+|---|---|
+| `schemaVersion` / `receiptKind` | closed enum。`pre_merge_review` と `post_merge_closure` を混同しない |
+| `repository` / `prNumber` / `baseRef` | GitHub API と event payload の双方から再取得して完全一致 |
+| `headSha` | immutable 40 hex。PR HEAD、request、judgment、Check Runを同一subjectへ束縛 |
+| `mergeSha` / `mergeMethod` / `mergedAt` | post-mergeだけ必須。pre-mergeへ注入、post-mergeで欠落はいずれも拒否 |
+| `planId` / `planRevision` / `reviewRevision` | closed formatで機械導出し、自由文字列の自己申告を受理しない |
+| `judgmentDigest` / `artifactDigest` | SHA-256。本文を複製せず、検証済み対象との一致を要求 |
+| `workflowRef` / `workflowSha` / `runId` / `runAttempt` / `issuer` | Artifact Attestation と GitHub API factsへ束縛 |
+| `providerEvidenceRef` | D3bの検証済みprovider judgment参照。存在だけではfamily強証明にしない |
+
+予測不能 `nonce` は採用しない。同一subjectと同一contentの再送は同一canonical digestとなる
+冪等 replay とし、repository / PR / HEAD / revision / kind のいずれかが変わったreceiptは別
+subjectとして旧receiptを利用できない。
+
+### 発行・検証境界
+
+1. GitHub factsは開始時と発行直前の2回取得し、event payload、API read 1、API read 2の
+   repository / PR / base / head / stateを比較する。race、closed/merged状態のkind不整合、
+   fork/別repositoryへの差替えではattestationを0件とする。
+2. `pull_request_target`を使う場合はdefault branchのpinned workflowだけを実行し、PR HEADの
+   checkout、PR code、PR由来artifact/cache、PR制御のscript/actionを実行しない。permissionsは
+   contents readとattestation発行に必要な最小集合へ閉じ、この制約を`github-ci-policy`系lintで
+   fail-closeする。
+3. required `harness-check`は同一HEADのLinux/Windows/aggregateが全てsuccessの場合だけ受理する。
+   missing / failure / cancelled / skipped / stale HEADは全てmerge非適格とする。main protectionの
+   `enforce_admins=true`は実効blockの検証対象だが、receiptの真正性そのものの代替ではない。
+4. attestation不在、signature/issuer/binding不一致、artifact retention切れ、`gh attestation
+   verify`不能を成功へ丸めない。検証不能は`audit_unavailable`、不正は`unverified`として分け、
+   いずれも`merge_ready`に数えない。
+5. token、credential、raw transcript、raw exception/stack、personal absolute path、PR本文由来の
+   実行命令をreceiptへ保存しない。provider timeout/rate limit retryは有界で、exhaustion時は
+   receipt 0件 + typed reasonとする。
+
+### Fail-close reason
+
+`missing` / `signature_unverified` / `signer_mismatch` / `identity_mismatch` /
+`receipt_corrupt` / `head_raced` / `provider_failed` / `verdict_flagged` /
+`unverified_family` / `audit_unavailable` を区別する。`missing`への平坦化や、判定不能を
+PASSへ寄せるfallbackは禁止する。
+
+### D3c freeze 完了条件
+
+- [ ] 上記の信頼根、receipt schema、TOCTOU、安全workflow、fail-close分類がL7 RED oracleと対になる。
+- [ ] claim-blindで各契約にcitation付き反駁が成立し、spec-blindで3 attack trial以上を記録する。
+- [ ] non-author Claude familyのOpus reviewで未解決FLAGがない。
+- [ ] 実装・workflow・CLI・外部権限変更が本doc-only sliceに混入していない。

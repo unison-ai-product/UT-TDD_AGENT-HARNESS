@@ -2050,3 +2050,27 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 
 mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
 このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。
+
+## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
+
+本表は契約freeze用のRED oracleであり、このdoc-only sliceではtest codeを追加しない。D3d実装
+PLANが各IDを先にRed化し、Green後にPLAN-L7-465の`generates`へ実装成果物を登録する。
+
+| U-ID | mutation / fixture | expected |
+|---|---|---|
+| `U-RVGHA-D3C-001` | valid D3b judgment + GitHub attestation + PR/API/Check Runの同一subject | custody valid。ただしfamily強証明が無ければ`unverified_family`でmerge_ready 0 |
+| `U-RVGHA-D3C-002` | repository / PR / baseRef / headSha / planRevision / reviewRevisionを各1軸変異 | 全件replay拒否、receipt消費0 |
+| `U-RVGHA-D3C-003` | unknown field、必須field欠落、digest/type/schemaVersion差替え | strict decode失敗、`receipt_corrupt`、missing扱い0 |
+| `U-RVGHA-D3C-004` | payloadのreviewerFamily=claude、issuer/signerは同一author channel | family自己申告をtrustedへ昇格せず`unverified_family` |
+| `U-RVGHA-D3C-005` | Artifact Attestationだけ、またはD3b judgmentだけ | judgment/provenance片面ではmerge_ready 0 |
+| `U-RVGHA-D3C-006` | event payloadとAPI read 1のrepo/PR/base/headを各変異 | 発行0、`identity_mismatch`または`head_raced` |
+| `U-RVGHA-D3C-007` | API read 1後、read 2前にHEAD/state変更 | TOCTOU拒否、attestation発行0 |
+| `U-RVGHA-D3C-008` | fork/別repo/別PR、pre receiptへmerged fact、post receiptでmergeSha欠落 | kind/subject不整合を拒否 |
+| `U-RVGHA-D3C-009` | required Linux/Windows/aggregateのmissing/failure/cancelled/skipped/stale | 各case merge_ready 0、success全一致だけ次段へ |
+| `U-RVGHA-D3C-010` | pull_request_targetがPR HEAD checkout、PR code/artifact/cache、過剰permissionを使用 | policy lint violation、workflow実行資格なし |
+| `U-RVGHA-D3C-011` | attestation absent、verify failure、issuer mismatch、retention expiry | absent/invalidは`unverified`、保存期限等の取得不能は`audit_unavailable`、PASS 0 |
+| `U-RVGHA-D3C-012` | 同一subject+contentを反復、またはtupleだけを変えて旧receiptを投入 | 前者は同一digestで冪等、後者はreplay拒否 |
+| `U-RVGHA-D3C-013` | 正規署名receiptだがjudgment=FLAG | custody validとmerge eligibilityを分離し`verdict_flagged` |
+| `U-RVGHA-D3C-014` | token/raw transcript/raw stack/absolute path/PR実行命令を任意fieldへ追加 | strict schemaまたはsecret hygiene gateで拒否 |
+| `U-RVGHA-D3C-015` | provider障害をretry上限超過まで注入 | receipt 0、typed `provider_failed`、無限retry 0 |
+| `U-RVGHA-D3C-016` | Check RunだけPASS、D1 evaluateMergeGateは非merge_ready | Check Runを第二SSoTにせずmerge非適格 |
