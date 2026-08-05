@@ -1804,6 +1804,32 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 
 Windows smoke は単なる exit code green では代替できない。process ancestry の捕捉結果を test artifact
 として残し、「Bun が起動した」ことと「shell/conhost を介さず Bun を起動した」ことを別 assertion にする。
+
+## 段階リリース channel manifest RED oracle (PLAN-L7-473、2026-08-05)
+
+S1では以下を未実装のcandidate RED oracleとして登録する。S2は各candidateと実装test citationを
+同じcommitで確定`U-*` IDへ昇格し、設計側の契約を弱めずGreen化する。control manifestは
+現在revision、artifact setはrecordが指す別revisionとして扱う。
+
+| candidate ID | mutation / 入力 | oracle |
+|---|---|---|
+| `CANDIDATE-RELMAN-001` | 必須field欠落・型不正・未知schema version | parse/lint/doctorがfail-closeし同期write 0 |
+| `CANDIDATE-RELMAN-002` | manifestに存在しないchannelを`--channel`へ指定 | `unknown_channel`、resolver/copy 0 |
+| `CANDIDATE-RELMAN-003` | harness-check / QA Go / cross-review receiptを各1件欠落 | promotion拒否、pointer不変 |
+| `CANDIDATE-RELMAN-004` | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束 |
+| `CANDIDATE-RELMAN-005` | rollback実行計画を生成 | force push / tag付替え / commit / push command 0 |
+| `CANDIDATE-RELMAN-006` | object不在、digest不一致、完全一致を個別入力 | 順に`unavailable` / `mismatch` / `attested`、三値を二値へ丸めない |
+| `CANDIDATE-RELMAN-007` | canary/stable以外の順序付きchannelを追加 | schema準拠なら受理し未知参照は拒否 |
+| `CANDIDATE-RELMAN-008` | no-go未解除のままstableへpromotion | dependency不足で拒否、canary pointerも不変 |
+| `CANDIDATE-RELMAN-009` | release ID、source commit、artifact digestを各1 byte変異 | 導出式不一致または衝突として拒否 |
+| `CANDIDATE-RELMAN-010` | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write 0 |
+| `CANDIDATE-RELMAN-011` | dry-run/applyへ同じchannelを入力し、`docs/skills→skills` remap、workflow template source mapping、`package.json` transform、symlink target/modeを各1件mutation | version固定materializer後のdestination path/mode/contentから同一digest。source blobだけ同じでPack outputが違えばmismatch。manifestはcontrol copyでdigest対象外 |
+| `CANDIDATE-RELMAN-012` | control HEADで`stable=v1` / `canary=v2`、v1/v2 objectを個別解決し、object欠落もmutation | 選択channelだけを対応revisionからmaterialize。control HEADとのSHA一致を要求せず、欠落時network/reconstruction/copy 0 |
+
+digest oracleはmaterializer version、destination path UTF-8 byte昇順、length-prefix framing、Pack output
+mode/contentを固定し、path連結曖昧性・package変換・remap・symlink・Windows executable bit観測差・
+manifest自己参照のmutationを個別にkillする。
+
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 
 以下はD0時点では全て設計候補である。対応test codeと実装をF0の同一commitへ追加し、Red実測を記録した
