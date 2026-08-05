@@ -75,6 +75,28 @@ AskUserQuestion をこの用途に限って使ってよい (必要なら preview
 Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力して停止する。採択結果は
 PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
 
+#### PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
+
+「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
+`ut-tdd advisor --decision <kind> --current-model <current-model> --execute --task "<判断内容>"`
+で第三者判断を得る。設計・進行・優先順位・UI/UX は
+`claude-fable-5`、実装方式・技術的トラブルシュートは `gpt-5.6-sol` へrouteする
+(正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
+advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
+一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
+POへの責任転送の前置きにしてはならない。
+
+production infrastructure、destructive data operation、authentication/authorization、payment、
+PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
+かかわらず変更前にPO承認を得る。advisor相談は承認の代替ではない。それ以外でPOへ上げてよいのは、
+advisor相談と実測後にも複数案の実在するtrade-offが残り、product scopeなどPO権限を要する判断に
+限る。その場合も、相談したadvisor/model、検証した事実、解消できなかったtrade-off、推奨案を
+`docs/governance/design-decision-elicitation.md` の形式で提示する。
+単なる事実確認、既存責務から導ける所有境界、可逆な実装順序、進捗報告をPO判断にしてはならない。
+Fable/Solの双方が利用不能なら相談attemptとfailureを記録し、判断を捏造しない。高影響境界は
+advisor unavailableの証跡を添えてPOへ上げる。高影響境界に該当せず既存契約から一意に決まる判断は
+継続し、advisorを要する未解決trade-offだけを利用可能になるまで保留する。
+
 ## Canonical Docs
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
