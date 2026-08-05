@@ -224,6 +224,26 @@ close された)。新規機構は作らず、既存工程の遵守を規律と�
 この規律から外れた PR は内容の当否に関わらず FLAG (process violation) とする
 (宣言の初出: issue #218、2026-08-03)。
 
+#### freeze PR に oracle ID 表を載せない (2026-08-05、issue #158 の暫定回避)
+
+**規律 2 の分割順序は、oracle を宣言する PLAN では現行ゲートと衝突する。**
+`oracle-test-trace` は「test-design で宣言された oracle ID は同一 tree の tests から
+citation されること」を fail-close で要求するため、テストを含まない docs-only freeze PR は
+oracle 表を test-design に載せた瞬間に必ず赤くなる (実測 2026-08-05: PR #234 が同梱で
+process FLAG → 分割した PR #237 が `U-WTTOPO-001`〜`011` の 11 件 orphan で CI failure)。
+同梱は規律違反だが同時にゲートを満たす唯一の形でもあり、どちらを選んでも赤くなる。
+
+回避 (新規機構なし):
+
+- **freeze PR は PLAN のみ**に載せる。契約散文と「設計と検証の対」表は PLAN 内に書く
+  (PLAN 内の表は `oracle-test-trace` の宣言源ではないので契約の可読性は保てる)。
+- **oracle ID 表は実装 PR で tests と同時に** `docs/test-design/` へ載せる。実装 PR が
+  表 + tests + `generates` 更新 + confirm を原子的に行う。
+
+これは**暫定**であり、恒久解は issue #158 (宣言済・未実装 oracle の Red-freeze record を
+所有 PLAN と exit 条件つきで機械追跡する) である。**規律だけを締めてゲートを直さないと、
+正しく従うほど詰む**という失敗型なので、#158 の解決時に本節を supersede する。
+
 ### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
 
 実運用では **Codex (もう一方のランタイム) が並行に作業を進め、コミットまで完了させる**。Claude は
