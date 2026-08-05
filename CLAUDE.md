@@ -75,6 +75,21 @@ AskUserQuestion をこの用途に限って使ってよい (必要なら preview
 Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力して停止する。採択結果は
 PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
 
+#### PO 判断への反射的エスカレーション禁止 (PO ルール 2026-08-05)
+
+「PO 判断必須」「PO 承認待ち」「PO が決める」と記載して作業を止める前に、必ず
+`ut-tdd advisor --execute` で第三者判断を得る。設計・進行・優先順位・UI/UX は
+`claude-fable-5`、実装方式・技術的トラブルシュートは `gpt-5.6-sol` へrouteする
+(正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
+advisor結果は前提をrepo実測で検証し、既存の層・責務・契約から一意に決まるなら、AIランタイムが
+技術判断として決定・記録して作業を継続する。advisor相談をPOへの責任転送の前置きにしてはならない。
+
+POへ上げてよいのは、advisor相談と実測後にも複数案の実在するtrade-offが残り、かつ
+product scope、外部authentication/authorization、payment、PII、secret、licensing、外部API前提など
+PO権限を要する判断に限る。その場合も、相談したadvisor/model、検証した事実、解消できなかった
+trade-off、推奨案を `docs/governance/design-decision-elicitation.md` の形式で提示する。
+単なる事実確認、既存責務から導ける所有境界、可逆な実装順序、進捗報告をPO判断にしてはならない。
+
 ## Canonical Docs
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
