@@ -32,6 +32,8 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/228
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/232
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/134
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/124
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/118
     - docs/plans/PLAN-L4-33-node-control-plane-redesign.md
     - docs/plans/PLAN-L7-348-runtime-state-recoverability.md
     - docs/governance/repository-structure.md
@@ -180,7 +182,11 @@ Windows name、canonicalization 不能は migration を開始しない。診断�
   write fence / receipt chain を L5/L6/L7 へ降下する。既存の bounded child **issue #232** は
   worktree health/lifetime oracle を所有し、S2 の `worktree-inventory` port の先行 dependency である。
   Bun retirement の runtime authority は既存 **issue #134 / PLAN-L4-33**、OneDrive 再現根拠は
-  **issue #228**、derived DB rebuild policy は **issue #169** が所有する。新しい重複 Issue は作らない。
+  **issue #228**、derived DB rebuild policy は **issue #169** が所有する。closed **issue #118** の
+  DB肥大・再構築責務はsuccessor #169へ移管済みであり、#118を別blockerとして復活させない。
+  **issue #124** はparent-loss時のworker停止・child cleanup・lease release receiptを所有する。
+  本PLANはworker lifecycleを複製せず、clean windowとold lease解放の入力として#124のterminal receiptを
+  消費し、receipt不在ではS3 activationを拒否する。新しい重複 Issue は作らない。
 - **S3 (future add-impl / operational cutover)**: Node/Rust-only の cutover runner が new clone 生成、
   必要 worktree 再生成、derived DB rebuild、single-writer activation、rollback receipt を実走し、L12/L13/L14
   の acceptance/operational evidence を append する。
@@ -190,8 +196,9 @@ S2/S3 は本 PLAN が `confirmed` になった後に別 PLAN として起票す�
 `requires: [PLAN-L4-34-repository-runtime-placement-topology]` と #232 の merged health oracle を要求し、
 S3 PLAN は S2 confirmed PLAN と L12/L13/L14 test-design freeze を `requires` に置く。各将来 PLAN は
 GitHub Issue #141 の正式 sub-issue として登録し、Project #6 の `先行PLAN` / `実装順序` /
-`阻害要因` / `解放される後続` に `#232 -> S2 -> S3`、横断 reference を
-`#134/#228/#169 -> S2` として同期する。#141 は親成果目標であり、
+`阻害要因` / `解放される後続` に `#232 contract freeze -> (#232 implementation || S2 placement core)
+-> S3`、横断 reference を `#134/#228/#169 -> S2`、activation blockerを`#124 terminal receipt -> S3`
+として同期する。#118は#169へのclosed predecessorとして表示し、独立edgeを作らない。#141 は親成果目標であり、
 S3 の L14 acceptance と #141 固有 AC が完了するまで close しない。
 
 ### 5.1 L12 / L13 / L14 の実行対
@@ -210,13 +217,14 @@ draft `generates` に予告登録しない。
 
 | step | mode | entry | exit / 次 edge |
 |---|---|---|---|
-| S1-a: L4 contract freeze | **serial** | #141 と #232/#134/#228/#169 の ownership を確認 | §3–§5.1 と L9 RED candidates が reviewable |
+| S1-a: L4 contract freeze | **serial** | #141 と #118→#169/#124/#232/#134/#228 の ownership を確認 | §3–§5.1 と L9 RED candidates が reviewable |
 | S1-b: L9 pair-freeze | **serial (S1-a の後)** | §8 の `U-PLACE-*` candidates | L4↔L9 trace と negative boundary を確定。S2 planning を解放 |
-| S2-a: worktree health/lifetime | **parallel** | #232 の正式 sub-issue | health inventory port と migration input contract を freeze |
-| S2-b: Node/Rust placement core | **parallel (S2-a contract read-only)** | #134/#228/#169 の横断 input、S1 confirmed | resolver、diagnostic、4-class ledger、write fence を TDD で実装 |
-| S2-c: L12/L13/L14 test-design freeze | **serial (S2-a/S2-b の後)** | implementation contract と RED oracle | activation 専用 manifest/receipt/oracle を freeze |
+| S2-a: worktree health/lifetime contract freeze | **serial prerequisite** | #232 / PR #237 merged contract | migration input contractを固定しconsumer実装を解放 |
+| S2-b1: worktree health implementation | **parallel (S2-a の後)** | #232 confirmed contract | health inventory portをTDD実装 |
+| S2-b2: Node/Rust placement core | **parallel (S2-a の後、S2-b1と並列可)** | #134/#228/#169 の横断 input、S1 confirmed | resolver、diagnostic、4-class ledger、write fence をTDD実装 |
+| S2-c: L12/L13/L14 test-design freeze | **serial (S2-b1/S2-b2 の後)** | implementation contract と RED oracle | activation 専用 manifest/receipt/oracle を freeze |
 | S3-a: prepared/fenced_old/active_new cutover | **serial** | S2 confirmed + L12/13/14 freeze + clean-window evidence | receipt chain の一方向 CAS でのみ activation |
-| S3-b: operational acceptance / rollback drill | **serial (S3-a の後)** | L14 OT mandatory set | #141 close eligibility を判定。FLAG は S2/S3 correction へ戻す |
+| S3-b: operational acceptance / rollback drill | **serial (S3-a の後)** | #124 terminal lease-release receipt + L14 OT mandatory set | #141 close eligibility を判定。FLAG は S2/S3 correction へ戻す |
 
 ## 6. 暫定緩和 (本 PLAN の AC とは別に明記)
 
