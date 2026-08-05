@@ -48,8 +48,10 @@ R0 は実装観測ではない。実装、テスト、実測件数、green verdi
 ## 上流合流の問い
 
 1. `.git` / admin 双方向のlink契約を L6 governance-enforcement へ恒久契約として追記すべきか。
-2. `dirty` 優先と finding面のretirable除外を、L4配置移設の安全条件へ反映すべきか。
-3. `healthy` を `PLAN-L4-34` の移設前後 acceptance comparator として参照させるべきか。
+2. `dirty` 優先、detached HEADの保持ref到達可能性、finding面のretirable除外を、L4配置移設の
+   安全条件へ反映すべきか。
+3. stable topology identity集合とdigestを `PLAN-L4-34` の移設前後 acceptance comparator として
+   参照させるべきか。
 
 ## Schedule
 
@@ -57,7 +59,7 @@ R0 は実装観測ではない。実装、テスト、実測件数、green verdi
 - R1 [直列]: add-impl の実装事実と L4/L6既存契約を照合し、各問いを
   `backfill_required` または `not_impacted` と理由付きで判定する。
 - R2 [直列]: R1で必要と判定された面だけを上流へ gap-only 追記する。
-- R3 [直列]: `CANDIDATE-WTTOPO-001`〜`011` を実装test citationと同じcommitで
+- R3 [直列]: `CANDIDATE-WTTOPO-001`〜`015` を実装test citationと同じcommitで
   対応する確定 `U-*` IDへ昇格し、実装とのトレースを照合する。
 - R4 [直列]: Forward再合流を判定し、実装PLANの確認条件へ反映する。
 

@@ -1,7 +1,7 @@
 ---
 plan_id: PLAN-L7-474-worktree-topology-detector
-title: "PLAN-L7-474 (add-design): worktree topology 健全性・寿命検出の契約 freeze"
-kind: add-design
+title: "PLAN-L7-474 (add-impl): worktree topology 健全性・寿命検出の契約 freeze"
+kind: add-impl
 layer: L7
 drive: be
 route_signal: feature_addition
@@ -16,7 +16,7 @@ agent_slots:
   - role: se
     slot_label: "SE - freeze済み facts collector / 純粋 analyzer / doctor advisory 契約を実装する"
   - role: qa
-    slot_label: "QA - CANDIDATE-WTTOPO-001〜011 の実装テストと fail-safe 境界を検証する"
+    slot_label: "QA - CANDIDATE-WTTOPO-001〜015 の実装テストと fail-safe 境界を検証する"
   - role: tl
     slot_label: "TL - advisory境界と移設acceptance oracleの独立レビュー"
 generates:
@@ -55,17 +55,24 @@ Issue #232 の worktree link 健全性と終了判定を、配置移設
    worktree directory 不在は `dir_missing`、未登録admin entryは `orphan_admin` とする。
 3. liveness は排他的に `dirty > detached > merged > active` で分類する。
    `dirty` は他条件に優先し、main worktree は liveness/retirable から除外する。
-4. `retirable` は finding の無い clean `merged` または clean `detached` だけである。
+4. `retirable` は finding の無い clean `merged`、または clean `detached` かつそのHEADが
+   main以外を含む保持対象refから到達可能と証明できるものだけである。固有commitまたは
+   到達可能性を観測できないdetached worktreeはreview-requiredとして除外する。
    link/dir の観測不能面は `dirty=false` 等の既定値を信用せず retirable から除外する。
 5. 診断は doctor の advisory surface に置き、hard gate / CI成功判定を変更しない。
    worktree が無いCI環境は empty facts として診断を出さない。
-6. `healthy` は link/dir finding の無い登録 worktree の件数である。移設の実行や削除は
-   本スコープ外であり、移設側が前後の `healthy` を比較するための入力だけを提供する。
+6. `healthy` は link/dir finding の無い登録 worktree の件数に加え、normalized worktree path、
+   admin path、HEAD、main/non-main属性のstable identity集合とそのcanonical digestを返す。
+   配置移設のacceptanceは件数一致ではなく、許可されたpath remapを適用したidentity集合一致と
+   findings 0を要求する。同数の別worktreeへの置換を成功扱いしない。
+7. collectorはGitのporcelain出力と`.git`/admin pathをtyped factsへ変換し、parse不能・相対pathの
+   root外解決・Git command失敗を正常値へ丸めず観測不能findingへ変換する。doctor consumerは
+   empty factsでno-op、findingがあってもadvisoryのままとしhard-gate結果を変更しない。
 
 ## 設計と検証の対
 
 oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
-`CANDIDATE-WTTOPO-001`〜`011` である。これは #234 の実装候補から抽出して契約化したものであり、
+`CANDIDATE-WTTOPO-001`〜`015` である。これは #234 の実装候補から抽出して契約化したものであり、
 本PRでは test code の存在・green・実リポジトリの計測値を主張しない。
 後続の実装PRは各candidateとテストcitationを同じcommitで追加し、その時点でのみ
 対応する確定 `U-*` IDへ原子的に昇格する。
@@ -78,12 +85,13 @@ oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
 
 ## 後続の実装受入条件
 
-- AC-1: `CANDIDATE-WTTOPO-001`〜`011` をテストコードで実装し、同じcommitで
+- AC-1: `CANDIDATE-WTTOPO-001`〜`015` をテストコードで実装し、同じcommitで
   対応する確定 `U-*` IDへ昇格して全件を検証する。
 - AC-2: facts collector と純粋 analyzer のI/O境界、双方向link検査、fail-safe retirable除外を
   非author familyがレビューする。
 - AC-3: doctorへのadvisory配線が hard gate / CIの成功判定を変えないことを実測で示す。
 - AC-4: `PLAN-REVERSE-474` の R0〜R4 を完了し、L4/L6への必要最小限の合流を判定する。
+- AC-5: detached固有commitをretirableへ入れず、移設前後はidentity集合で照合する。
 
 ## Schedule
 
