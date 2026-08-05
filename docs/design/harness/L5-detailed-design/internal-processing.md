@@ -702,11 +702,15 @@ manifest変更は新subject revisionと通常のreview/admissionを必要とし�
 
 | profile_id | revision | 必須lane exact set |
 |---|---:|---|
-| `harness-check` | 1 | `harness-check-linux`, `harness-check-windows`, `harness-check-aggregate` |
+| `harness-ci` | 2 | `harness-check-linux`, `harness-check-windows`, `harness-ci-aggregate` |
 
 `required_lane_set_digest`はsorted required IDsのcanonical JSON UTF-8 bytesのSHA-256である。
 payload required setとobserved lane setはprofile exact setへ一致させ、duplicate、extra、missing、
 profile/revision drift、aggregate laneだけの自己成功を拒否する。
+Issue #231のD2 targetでは本profileは**CI evidence profile**であり、branch protectionのrequired
+contextではない。最終required context `harness-check`はD1候補・D3d custody・本profile receiptの
+AND出力であり、`AggregateCiReceipt`へ逆流させない。旧`harness-check` revision 1 profileは
+現行三jobworkflowの履歴入力に限り、D2 targetの新規receiptへ使用しない。
 `object_digest` / `evidence_digest`を`receipt_digest`のaliasとして受理せず、nested payloadも各typed
 receipt自身の`receipt_digest`だけで取得する。
 `CutoverTransitionReceipt`の唯一のschemaは

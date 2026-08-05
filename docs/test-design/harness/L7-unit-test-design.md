@@ -2057,8 +2057,8 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 
 | candidate ID | Red入力 | target oracle |
 |---|---|---|
-| `CANDIDATE-RVD2-001` | 同一HEADのlinux/windows component success、D1 PASS、D3d custody admitted | D1内部`merge_ready`候補をD2が受け、最終aggregateだけをsuccessへ投影 |
-| `CANDIDATE-RVD2-002` | aggregate `harness-check` successだけをcomponent evidenceとして供給、またはcomponentのHEAD/name/conclusionを各1件変異 | typed providerが拒否しD1候補/D2 aggregate success 0 |
+| `CANDIDATE-RVD2-001` | 同一HEADのlinux/windows/`harness-ci-aggregate` success receipt、D1 PASS、D3d custody admitted | D1内部`merge_ready`候補をD2が受け、最終required `harness-check`だけをsuccessへ投影 |
+| `CANDIDATE-RVD2-002` | 最終required `harness-check` successだけをCI evidenceとして供給、またはCI receiptのHEAD/name/conclusionを各1件変異 | typed providerが拒否しD1候補/D2 required success 0 |
 | `CANDIDATE-RVD2-003` | D1候補またはD3d custodyの片面だけsuccess | D2 aggregateはfailure。required contextや第二判定器を増設しない |
 
 現行`analyzeReviewDispatch`のopaque `checksGreen`は上記Green証拠ではない。D2実装PRはprovider binding、
@@ -2081,7 +2081,7 @@ Red test citationを追加する。generic regexを4 segmentへ広げず、他�
 | `U-RVGHA-D3C-006` | event payloadとAPI read 1のrepo/PR/base/headを各変異 | 発行0、`identity_mismatch`または`head_raced` |
 | `U-RVGHA-D3C-007` | API read 1後、read 2前にHEAD/state変更 | TOCTOU拒否、attestation発行0 |
 | `U-RVGHA-D3C-008` | fork/別repo/別PR、pre receiptへmerged fact、post receiptでmergeSha欠落 | kind/subject不整合を拒否 |
-| `U-RVGHA-D3C-009` | required Linux/Windows/aggregateのmissing/failure/cancelled/skipped/stale | D1 `merge_ready` 0。正規receiptのcustody判定は変えず、将来D2のAND受理候補0 |
+| `U-RVGHA-D3C-009` | CI evidence Linux/Windows/`harness-ci-aggregate`のmissing/failure/cancelled/skipped/stale、または最終required `harness-check`の入力混入 | D1 `merge_ready` 0。正規receiptのcustody判定は変えず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-010` | 固定workflowがPR HEAD checkout、PR code/artifact/cache、過剰permissionを使用 | `github-ci-policy` violation、workflow実行資格なし |
 | `U-RVGHA-D3C-011` | attestation absent / signature failure / issuer mismatch / retention・verify取得不能 | 順に`missing` / `signature_unverified` / `signer_mismatch` / `audit_unavailable`、`custody_admitted` 0 |
 | `U-RVGHA-D3C-012` | 同一subject+contentを反復、またはtupleだけを変えて旧receiptを投入 | 前者は同一digestで冪等、後者はreplay拒否 |
