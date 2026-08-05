@@ -38,10 +38,12 @@ const input = (facts: WorktreeFact[], observations = []) => ({
 describe("worktree topology (U-WTTOPO)", () => {
   it("U-WTTOPO-001: 正常linkはhealthyへ入る", () =>
     expect(analyzeWorktreeTopology(input([main, fact()])).healthy).toBe(2));
+  // U-WTTOPO-003: admin → worktree の方向も個別に citation する。
   it("U-WTTOPO-002/003: 両方向link不整合をlink_brokenにする", () => {
     for (const broken of [fact({ worktreeToAdminOk: false }), fact({ adminToWorktreeOk: false })])
       expect(analyzeWorktreeTopology(input([main, broken])).findings[0]?.kind).toBe("link_broken");
   });
+  // U-WTTOPO-005: orphan admin を個別に citation する。
   it("U-WTTOPO-004/005: directory不在と孤児adminを区別する", () => {
     expect(
       analyzeWorktreeTopology(input([main, fact({ directoryObserved: false })])).findings[0]?.kind,
@@ -53,6 +55,7 @@ describe("worktree topology (U-WTTOPO)", () => {
       }).findings[0]?.kind,
     ).toBe("orphan_admin");
   });
+  // U-WTTOPO-007: clean detached の保持ref到達可能性を個別に citation する。
   it("U-WTTOPO-006/007: dirty優先、clean mergedと到達可能detachedだけretirable", () => {
     const report = analyzeWorktreeTopology(
       input([
@@ -65,6 +68,7 @@ describe("worktree topology (U-WTTOPO)", () => {
     expect(report.counts.dirty).toBe(1);
     expect(report.retirable).toEqual(["/repo/d", "/repo/m"]);
   });
+  // U-WTTOPO-009: digest の入力順不変性を個別に citation する。
   it("U-WTTOPO-008/009: mainをidentityに含め、入力順に依存しない", () => {
     const facts = [
       main,
@@ -75,6 +79,8 @@ describe("worktree topology (U-WTTOPO)", () => {
       analyzeWorktreeTopology(input([...facts].reverse())).digest,
     );
   });
+  // U-WTTOPO-011: fail-safe を個別に citation する。
+  // U-WTTOPO-012: 到達不能 detached を個別に citation する。
   it("U-WTTOPO-010/011/012: 観測不能または固有detachedをretirableにしない", () => {
     const report = analyzeWorktreeTopology(
       input([

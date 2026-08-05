@@ -6,7 +6,7 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
+status: draft
 created: 2026-08-05
 updated: 2026-08-05
 owner: PM / PO
@@ -25,7 +25,7 @@ generates:
   - artifact_path: src/runtime/worktree-topology.ts
     artifact_type: source_module
   - artifact_path: tests/worktree-topology.test.ts
-    artifact_type: test_module
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-222-doctor-runtime-surface-extraction.md
   requires: []
@@ -35,8 +35,7 @@ dependencies:
     - docs/plans/PLAN-REVERSE-474-worktree-topology-detector-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/232
-review_evidence:
-  - "bun scripts/run-vitest-snapshot.ts tests/worktree-topology.test.ts --reporter=dot (U-WTTOPO-001〜013,016,018)"
+review_evidence: []
 ---
 
 # PLAN-L7-474: worktree topology 健全性・寿命検出の契約 freeze
