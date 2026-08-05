@@ -2056,8 +2056,9 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 本表は契約freeze用のRED oracleであり、このdoc-only sliceではtest codeを追加しない。D3d実装
 PLANが各IDを先にRed化し、Green後にPLAN-L7-465の`generates`へ実装成果物を登録する。
 4 segmentの`U-RVGHA-D3C-NNN`は現行`oracle-test-trace`の収集対象外である。D3d実装PRは
-entry commitで収集regexを4 segmentへ拡張し、同じcommitで全IDのRed test citationを追加する。
-収集だけを先行して未citation状態を作らず、本doc-only freezeをGreen実装の証拠に数えない。
+entry commitで本18 IDだけを3 segmentの`U-RVGHAD3C-NNN`へ原子的renameし、同じcommitで全IDの
+Red test citationを追加する。generic regexを4 segmentへ広げず、他レーンの既存4 segment oracleを
+巻き込まない。renameだけを先行して未citation状態を作らず、本doc-only freezeをGreen証拠に数えない。
 
 | U-ID | mutation / fixture | expected |
 |---|---|---|
@@ -2069,7 +2070,7 @@ entry commitで収集regexを4 segmentへ拡張し、同じcommitで全IDのRed 
 | `U-RVGHA-D3C-006` | event payloadとAPI read 1のrepo/PR/base/headを各変異 | 発行0、`identity_mismatch`または`head_raced` |
 | `U-RVGHA-D3C-007` | API read 1後、read 2前にHEAD/state変更 | TOCTOU拒否、attestation発行0 |
 | `U-RVGHA-D3C-008` | fork/別repo/別PR、pre receiptへmerged fact、post receiptでmergeSha欠落 | kind/subject不整合を拒否 |
-| `U-RVGHA-D3C-009` | required Linux/Windows/aggregateのmissing/failure/cancelled/skipped/stale | 各case`custody_admitted` 0、success全一致だけ次段へ |
+| `U-RVGHA-D3C-009` | required Linux/Windows/aggregateのmissing/failure/cancelled/skipped/stale | D1 `merge_ready` 0。正規receiptのcustody判定は変えず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-010` | 固定workflowがPR HEAD checkout、PR code/artifact/cache、過剰permissionを使用 | `github-ci-policy` violation、workflow実行資格なし |
 | `U-RVGHA-D3C-011` | attestation absent / signature failure / issuer mismatch / retention・verify取得不能 | 順に`missing` / `signature_unverified` / `signer_mismatch` / `audit_unavailable`、`custody_admitted` 0 |
 | `U-RVGHA-D3C-012` | 同一subject+contentを反復、またはtupleだけを変えて旧receiptを投入 | 前者は同一digestで冪等、後者はreplay拒否 |
@@ -2078,4 +2079,4 @@ entry commitで収集regexを4 segmentへ拡張し、同じcommitで全IDのRed 
 | `U-RVGHA-D3C-015` | provider障害をretry上限超過まで注入 | receipt 0、typed `provider_failed`、無限retry 0 |
 | `U-RVGHA-D3C-016` | Check RunだけPASS、D1 `analyzeReviewDispatch`は非`merge_ready` | Check Runを第二SSoTにせず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-017` | 承認済み`VerifiedProviderIdentity` + D1 merge_ready + D3b/D3c全検証green | D3d `custody_admitted`、D2 AND入力だけがaccepting候補 |
-| `U-RVGHA-D3C-018` | RFC 8785 exact preimageのkey順・locale・digest自己field・既存16桁digestを各変異 | 同一objectだけ64 lowerhex一致、自己参照0、不一致は`identity_mismatch` |
+| `U-RVGHA-D3C-018` | RFC 8785 exact preimageのkey順・locale・digest自己field・既存16桁digestを各変異 | receiptは同一objectだけ64 lowerhex一致。外部artifact digestは完成bytesから一方向計算し、不一致は`identity_mismatch` |

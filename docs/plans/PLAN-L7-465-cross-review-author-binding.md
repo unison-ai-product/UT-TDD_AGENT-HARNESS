@@ -265,7 +265,7 @@ provider transcriptは含めず、sanitized digest / typed resultだけを参照
 | `headSha` | immutable 40 hex。PR HEAD、request、judgment、Check Runを同一subjectへ束縛 |
 | `mergeSha` / `mergeMethod` / `mergedAt` | post-mergeだけ必須。pre-mergeへ注入、post-mergeで欠落はいずれも拒否 |
 | `planId` / `planRevision` / `reviewRevision` | `reviewRevision`はcanonical request digest由来の`rv1-<64 lowerhex>`だけを受理 |
-| `judgmentDigest` / `receiptDigest` / `artifactDigest` | SHA-256 lowerhex。本文を複製せず、検証済み対象との一致を要求 |
+| `judgmentDigest` / `receiptDigest` | SHA-256 lowerhex。本文を複製せず、検証済み対象との一致を要求 |
 | `workflowRef` / `workflowSha` / `runId` / `runAttempt` / `issuer` | Artifact Attestation と GitHub API factsへ束縛 |
 | `providerEvidenceRef` | D3bの検証済みprovider judgment参照。存在だけではfamily強証明にしない |
 
@@ -277,10 +277,11 @@ canonicalization は RFC 8785 JSON Canonicalization Scheme → UTF-8 → SHA-256
 `reviewRevision` の preimage は exact request identity object
 `{schemaVersion:"review-request/v1",memoryId,pr,exactHead,authorFamily}`とする。`requestedAt`は更新可能な
 metadataでありidentityへ含めないため、同一レビューのretryは同じrevisionになる。
-`receiptDigest` の preimage は receipt schema のfieldから `receiptDigest`、`artifactDigest`、外部
+`receiptDigest` の preimage は receipt schema のfieldから `receiptDigest` と外部
 attestation/signature bytesを除いた exact object とし、field追加や独自並べ替えを許さない。
-`artifactDigest` は完成したreceipt artifact bytesをGitHubが証明するdigestであり、自己参照や
-digest間の循環を作らない。既存の16桁digest、`REV-000`、
+`artifactDigest` は receipt field ではなく、`receiptDigest`を含む完成receipt artifact bytesから
+外部で計算し、GitHub Artifact Attestation と `GitHubAttestationVerifierPort` のbinding入力にする。
+receipt自身へ書き戻さないため自己参照やdigest間の循環を作らない。既存の16桁digest、`REV-000`、
 自由文字列、再計算不一致は`identity_mismatch`で拒否する。
 
 ### 発行・検証境界
@@ -295,8 +296,10 @@ digest間の循環を作らない。既存の16桁digest、`REV-000`、
    D3dは`github-ci-policy` loaderへこの固定パスの`attestation_runtime` roleを明示追加し、source
    profileで必須、Pack profileで対象外とする。任意globは使わず、欠落・trigger・permission・
    PR入力実行をfail-closeする。既存`harness-check.yml`のstep/permission/required-check契約は変えない。
-3. required `harness-check`は同一HEADのLinux/Windows/aggregateが全てsuccessの場合だけ受理する。
-   missing / failure / cancelled / skipped / stale HEADは全てmerge非適格とする。main protectionの
+3. required `harness-check`はD1が所有し、同一HEADのLinux/Windows/aggregateが全てsuccessの場合だけ
+   `merge_ready`候補にする。missing / failure / cancelled / skipped / stale HEADはmerge非適格だが、
+   それだけで正規receiptのcustodyを無効化しない。D3dはCI判定やreasonを複製せず、将来D2が
+   D1 `merge_ready` AND D3d `custody_admitted`を評価する。main protectionの
    `enforce_admins=true`は実効blockの検証対象だが、receiptの真正性そのものの代替ではない。
 4. attestation不在、signature/issuer/binding不一致、artifact retention切れ、`gh attestation
    verify`不能を成功へ丸めない。不在は`missing`、署名不正は`signature_unverified`、issuer不一致は
