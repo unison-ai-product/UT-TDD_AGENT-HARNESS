@@ -36,7 +36,7 @@ generates:
   - artifact_path: tests/state-db.test.ts
     artifact_type: test_code
 dependencies:
-  parent: PLAN-L7-60
+  parent: PLAN-L7-60-change-set-integrity
   requires:
     - docs/design/harness/L1-requirements/nfr.md
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md

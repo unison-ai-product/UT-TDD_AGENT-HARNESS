@@ -3,7 +3,7 @@ plan_id: PLAN-L7-61-telemetry-ingestion-metatest
 title: "PLAN-L7-61: telemetry ingestion transaction metatest"
 kind: impl
 layer: L7
-drive: fullstack
+drive: db
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: completed
 created: 2026-06-16
@@ -24,7 +24,7 @@ generates:
   - artifact_path: tests/token-tracker.test.ts
     artifact_type: test_code
 dependencies:
-  parent: PLAN-L7-58
+  parent: PLAN-L7-58-telemetry-cost-enrichment
   requires:
     - src/state-db/projection-writer.ts
     - src/state-db/token-tracker.ts

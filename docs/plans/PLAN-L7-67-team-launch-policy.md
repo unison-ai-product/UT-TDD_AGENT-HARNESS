@@ -36,7 +36,7 @@ generates:
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 dependencies:
-  parent: PLAN-L7-65
+  parent: PLAN-L7-65-deterministic-model-policy
   requires:
     - docs/design/harness/L6-function-design/agent-slots.md
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
