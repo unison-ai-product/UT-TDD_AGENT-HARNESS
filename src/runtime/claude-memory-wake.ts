@@ -77,6 +77,17 @@ function runtimeRoot(repoRoot: string): string {
   throw new Error("claude_inbox_git_common_dir_required");
 }
 
+function ensureDirectory(path: string): void {
+  if (existsSync(path)) return;
+  try {
+    mkdirSync(path, { recursive: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+      throw error;
+    }
+  }
+}
+
 export function buildClaudeInboxEntry(input: {
   memory: MemoryEntry;
   operationId: string;
@@ -102,7 +113,7 @@ export function buildClaudeInboxEntry(input: {
 
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
   const directory = join(runtimeRoot(repoRoot), "inbox");
-  mkdirSync(directory, { recursive: true });
+  ensureDirectory(directory);
   const target = join(directory, `${safeFilePart(entry.id)}.json`);
   const serialized = JSON.stringify(entry);
   if (existsSync(target)) {
@@ -197,7 +208,7 @@ function claim(input: {
   at: string;
 }): boolean {
   const root = runtimeRoot(input.repoRoot);
-  mkdirSync(root, { recursive: true });
+  ensureDirectory(root);
   const path = join(root, `${safeFilePart(input.entry.id)}.claim`);
   let descriptor: number;
   try {
@@ -260,7 +271,7 @@ export async function waitForClaudeMemory(input: {
     input.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const root = runtimeRoot(input.repoRoot);
   const workspaceId = claudeWorkspaceId(input.repoRoot);
-  mkdirSync(root, { recursive: true });
+  ensureDirectory(root);
   pruneRuntimeFiles(root, Date.now());
   const generationPath = join(root, `${safeFilePart(input.sessionId)}.generation`);
   const generation = `${process.pid}:${Date.now()}`;
