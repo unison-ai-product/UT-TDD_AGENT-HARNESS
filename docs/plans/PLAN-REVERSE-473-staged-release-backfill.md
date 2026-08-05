@@ -58,8 +58,9 @@ review_evidence: []
   fetchも現在treeからの再構成も行わない。manifestをartifact digestから除外して自己参照を避ける。
 - R1: manifest 正本・sync-pack 実行・Pack repo 側 tag/revert runbook の 3 責務を分離する
   (S2 着手後)。
-- R2: `U-RELMAN-001`〜`012` をS1のRED oracleとしてtest-designへ登録済み。S2では実装testへ
-  citationを接続し、Green化する。
+- R2: S1でForward側test-designへ登録済みの`CANDIDATE-RELMAN-001`〜`012`を入力とし、
+  R1完了後に実装test citationと同じcommitで確定`U-*` IDへ昇格してGreen化する
+  (R0時点では未着手)。
 - R3: 実装後、cross-family review で正本選択 (manifest vs harness.db vs GitHub Releases)
   の不変条件と非破壊契約を検証する (S2 完了後)。
 - R4: `docs/design/harness/L6-function-design/` へ release channel manifest 契約を合流し、
