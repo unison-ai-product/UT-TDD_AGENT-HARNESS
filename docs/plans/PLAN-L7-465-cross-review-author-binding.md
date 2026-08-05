@@ -186,10 +186,30 @@ analyzer (D1) と trusted receipt (D3) が揃っても消費者ゼロでは pros
    `merged_without_verdict` を post-merge 検知し、session-start digest / feedback
    イベントへ fail-close 表示する (静かに流れる状態の根絶)。B 単独は「迂回が検知
    される」ことに依存するため、D 無しの B は fail-open の看板替えになる。
-3. **A (摩擦・可視化、薄く)**: `enforce_admins=false` の solo 運用では required
-   check は block にならない (実測: 全 push が "Bypassed rule violations")。よって
-   A は block でなく「事故 merge を意図的行為へ格上げする」摩擦として CI に薄く併設
-   し、bypass の事実自体を監査シグナルとする。
+3. **A (GitHub 強制・可視化)**: D2 は既存の単一 required check `harness-check` へ
+   `D1 merge_ready AND D3d custody_admitted` の結果を投影する。現行main保護ではこの結果が
+   GitHub mergeの実効blockになる。D3d receipt workflow自体をrequired contextとして増設せず、
+   custody片面だけでgreenを発行しない。
+
+> **訂正注 (2026-08-05、issue #231、main protection read-only実測)**:
+> 旧記述の`enforce_admins=false`は現行mainに適用しない。現在は`enforce_admins=true`、
+> required status checkは`harness-check`、active rulesetのbypass actorは0であり、現在のactorは
+> bypass不可である。従ってrequired checkは単なる摩擦ではなく実効防壁である。ただし、そのgreen
+> だけではreviewer family、judgment provenance、exact-subject custodyを証明しないため、D3dの
+> 代替にはならない。旧solo実測は履歴上の前提として残し、本訂正が現行判断をsupersedeする。
+
+#### required check単純案との対効果 (issue #231 BF-5)
+
+| 案 | 得るもの | 残る穴 | 採否 |
+|---|---|---|---|
+| required `harness-check`だけ | 現行保護下で未green PRのmergeをGitHubがblock | 現在はD1/D3のlive入力を消費せず、family、署名provenance、TOCTOU、receipt replayを証明しない | 単独案は不採用 |
+| D3 trusted custodyだけ | judgmentとGitHub provenanceをexact subjectへ束縛しtyped fail-close | 単独ではGitHub mergeをblockせず、未承認family authorityも解決しない | 単独案は不採用 |
+| D1 + D3d + D2 required check | D1判断、D3d custody、GitHub実効blockを単一ANDへ束縛 | provider-family authorityは承認済み外部方式が必要 | 採用 |
+
+D3dは複雑な第二merge gateではなく、required checkが消費する信頼入力を作る。D2が既存の単一
+`harness-check`へAND結果を投影するため、required contextの増殖と判定器の重複を避けられる。
+実装順序`D1 -> D3c -> D3d -> D2 -> D4`は維持し、D2着工時に「片面green禁止」と保護設定driftの
+RED oracleを追加する。
 
 両ランタイム規約 (AGENTS.md / CLAUDE.md) へ「merge は `ut-tdd pr merge` 経由」を
 同時掲載する (片側のみだと rule-drift の再演)。
