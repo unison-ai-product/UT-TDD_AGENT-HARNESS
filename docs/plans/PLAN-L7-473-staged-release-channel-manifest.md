@@ -50,9 +50,11 @@ harness は製品開発の OS であり、自身の配布物 (`unison-ai-product
 一般化する add-impl であり、`PLAN-L6-63` を parent design として引き継ぐ。**`PLAN-L6-63` の
 既存記述を上書きしない** — L6-63 が持つ「ローカル copy-plan/staging は非破壊済み」「Pack repo
 側の tag/revert runbook が未確認」という切り分けは本 PLAN の前提として維持し、L6-63 は
-本 PLAN の manifest 契約が固まった時点で内容を合流し supersede するか、Pack 側 tag/revert
-runbook の実装確認 PLAN として存続させるかを PO 判断で決める (現時点では未決、下記
-Problem 相当の設計判断として明示する)。
+本 PLAN の manifest 契約が固まった後も、Pack 側 tag/release/revert runbook を所有する
+`PLAN-L6-63` は存続させる。本 PLAN は manifest / channel / promotion の機械契約を所有し、
+L6-63 は Pack repository の運用設計を所有するため、上下流の相互参照で結び、supersede しない。
+これは層と責務から一意に決まる技術判断であり、PO 判断待ちにはしない
+(Codex independent review、2026-08-05)。
 
 本 PLAN は **S1 (契約 freeze、設計専用)** であり、実装コードは生成しない。`generates` は
 本 PLAN doc 自身のみとし、schema/実装モジュールは S2 着手時に確定 PLAN の `generates` へ
@@ -66,8 +68,12 @@ Problem 相当の設計判断として明示する)。
 
 ## 2. 設計判断節
 
-1. **正本 = repo 内 manifest ファイル** (`release/manifest.yaml` 想定)。schema は
+1. **正本 = source development repo 内 manifest ファイル** (`release/manifest.yaml` 想定)。schema は
    `src/schema/release-manifest.ts` に置き、lint/doctor が fail-close で検証する。
+   S2 は同ファイルを clean Pack artifact allowlist へ追加し、`buildCleanDistributionPlan` と
+   `sync-pack` が Pack checkout へcopyする経路を同じ変更で実装・検証する。Pack側のcopyは
+   source manifestから生成した配布物であり第二正本にしない。下流製品は同じschemaで各repo内に
+   自身のmanifest正本を持つ。
    - 案B (harness.db 正本) は不採用。db は派生 projection であり、これを正本にすると
      「projection が古いだけ」を「重複なし/影響なし」という偽の否定証明にすり替える
      (issue #169 実例: PLAN-L6-94 と PLAN-L7-465 の契約重複を graph 未投影で検出できなかった)。
@@ -75,7 +81,8 @@ Problem 相当の設計判断として明示する)。
      での決定性が失われる。ただし tag/Release は「配送済み事実の証跡」として manifest と
      突合する auditor の入力に使う (後続 slice、本 PLAN のスコープ外)。
    - (advisor 裁定 2026-08-04、design 判断、claude-fable-5)
-2. **着手順 = `sync-pack --channel` の最小実装から** (dogfood 先行)。下流製品向けの汎用
+2. **着手順 = `sync-pack --channel` の最小実装から** (dogfood 先行、Codex independent
+   technical review、2026-08-05)。下流製品向けの汎用
    domain model を先に立てるのは不採用 — 消費者が Pack 1 つの段階で抽象化を先取りするのは
    最小実装原則違反 (投機的な型・契約の積み増し)。2 例目の消費者 (下流製品) が実際に現れた
    時点で Reverse により汎用契約を抽出する。
@@ -87,11 +94,44 @@ Problem 相当の設計判断として明示する)。
 4. **既定チャネル = canary → stable の 2 段** (PO 採択 2026-08-04)。schema はチャネルを
    後から追加できる形 (配列 + 順序メタデータ) にし、下流製品が自分の段数を定義できることを
    前提として許容する。
+5. **control-plane manifest と artifact source revision を分離する** (Codex independent technical
+   review、2026-08-05)。現在の control checkout にある manifest は `releases` map と `channels` map
+   を保持し、各 release record は immutable な release ID、`artifactSourceCommit` (40桁 SHA)、
+   `artifactSetDigest` を持つ。`channels.<name>` は release ID だけを指す。`sync-pack --channel
+   <name>` は現在の manifest を読んだまま、選択 record の `artifactSourceCommit` を local Git object
+   database から isolated temporary tree/archive へ解決し、その revision の clean Pack artifact setを
+   生成・照合して 1 つの Pack checkout へ materialize する。control checkout の HEAD と
+   `artifactSourceCommit` の一致は要求しない。object 不在時に network fetch や現在treeからの再構成を
+   行わず `unavailable` でfail-closeする。これにより manifest を更新した commit が自身のSHAを含む
+   自己参照を避け、`stable=v1 / canary=v2` と rollback pointer を同じcontrol HEADで解決できる。
+   Packへcopyする現在manifestはcontrol metadataでありartifact-set digest対象外とする。tag/Release
+   auditor は外部配送証跡であり、このlocatorの正本にはしない。
+6. **artifact digest と release ID はmaterialize後のbyte列で決定論化する** (Codex independent
+   technical review、2026-08-05)。release recordは`materializerVersion`を持ち、runtimeがそのversionを
+   実装していなければ`unavailable`で拒否する。version 1は選択`artifactSourceCommit`のtracked pathsを
+   入力に、version固定のclean allow/deny、`cleanDistributionSourcePath`、
+   `cleanDistributionArtifactPath`、`transformCleanDistributionArtifact`相当の規則を順に適用し、
+   **Packへ書くdestination path / mode / content**を生成する。`docs/skills/* → skills/*`、workflow
+   template source mapping、`package.json`変換をdigest前に適用する。current control manifestのPack copyは
+   control metadataとしてartifact setから除外する。通常fileは変換後raw bytes、symlinkはPack destination
+   に作るlinkのtarget raw bytesとGit mode `120000`、通常modeは`100644`/`100755`とする。unsupported
+   file kindやroot外symlinkはfail-closeする。entryはdestination POSIX `/` pathのUTF-8 byte昇順で並べ、
+   `uint32be(pathBytes.length) || pathBytes || uint32be(modeBytes.length) || modeBytes ||
+   uint64be(contentBytes.length) || contentBytes`を連結してSHA-256を取る。
+   `artifactSetDigest = sha256:<lowercase hex>`、`releaseId = rel-sha256:<SHA-256 lowercase hex of
+   ASCII(materializerVersion) || 0x00 || ASCII(artifactSourceCommit) || 0x00 || raw 32-byte artifact digest>`
+   とする。同じrelease IDに異なるrecordを宣言した場合は履歴比較に依存せず導出式不一致として拒否する。
+   materializer変更はversionを上げ、既存releaseを解決する旧versionを消さない。
 
 ## 3. 契約骨子
 
-- リリース単位 = artifact set + version manifest。1 リリースは 1 つの検証可能な version
-  identity (semver または content hash) に対応する。
+- リリース単位 = immutable release record + artifact set。release ID は
+  `artifactSourceCommit` と canonical artifact-set digest から導出し、同じ ID の内容変更を拒否する。
+  semver は表示用 metadata として保持できるが locator には使わない。
+- channel pointer と release record を分離する。複数チャネルが異なる release ID を同時に指せる。
+  `sync-pack --channel` と実状態突合は現在manifestの選択 channel 単位で行い、isolated resolverが
+  対応artifact revisionを解決できない状態は `unavailable`、解決できるがdigestが異なる状態は
+  `mismatch` とする。
 - チャネル昇格は「宣言変更 + 証跡条件」の組で表現する。証跡条件は最低限
   harness-check green、QA Go/No-Go、cross-review receipt の 3 点を含む。
 - manifest ↔ Pack 実状態の突合 verify を AC に含める。突合結果は
@@ -115,28 +155,37 @@ Problem 相当の設計判断として明示する)。
 
 - AC-1: 本契約が non-author family の cross-review で PASS を得ている。
 - AC-2: manifest schema の fail-close 境界 (未知チャネル、schema 不正、昇格条件不足) が
-  test-design oracle (`U-RELMAN-*`) と対になっている。
+  test-design candidate oracle (`CANDIDATE-RELMAN-*`) と対になっている。
 - AC-3: rollback の意味論が非破壊 (宣言変更のみ、Git 履行履歴不変) で閉じていることが
   設計判断節に明示されている。
-- AC-4: 設計判断節の各項目が advisor 相談または PO 採択のいずれかの記録を持つ。
-- AC-5: `PLAN-L6-63` との関係 (合流/存続の判断) が本 PLAN の confirm 前に PO 判断として
-  記録される (§0 の未決事項)。
+- AC-4: 設計判断節の各項目が advisor相談、PO採択、または独立技術レビューの記録を持つ。
+- AC-5: `PLAN-L6-63` は Pack repository のtag/release/revert runbookとして存続し、本PLANは
+  manifest/channel/promotion機械契約を所有する。相互参照で接続し、supersedeしない。
+- AC-6: source repoの`release/manifest.yaml`だけを正本とし、clean Pack allowlistと
+  `sync-pack`による配布copyをS2で原子的に追加する。Pack copyを第二正本にしない。
+- AC-7: `stable` と `canary` が異なる immutable release ID を同時に指せる。`sync-pack --channel`
+  はcontrol manifestを保持したまま選択channelのartifact revisionをisolated treeへ解決し、digestを
+  完全照合する。object不在時はnetwork取得・現在treeからの再構成をせずfail-closeする。
+- AC-8: canonical artifact-set digestのmaterializer version、destination path、変換後content、mode、
+  path順序・framing・manifest除外とrelease ID導出式が実装者に依存しないbyte-level契約として
+  固定されている。
 
 ## 6. 設計と検証の対 (S1 時点の RED oracle 案)
 
 | 設計境界 | oracle (案) |
 | --- | --- |
-| manifest schema 不正の fail-close | `U-RELMAN-001` |
-| 未知チャネル名の拒否 | `U-RELMAN-002` |
-| 昇格条件 (harness-check green / QA Go-No-Go / cross-review receipt) 不足の拒否 | `U-RELMAN-003` |
-| rollback の決定論 (同一入力 → 同一巻き戻し結果) | `U-RELMAN-004` |
-| rollback が Git 履行履歴を書き換えないこと (非破壊不変条件) | `U-RELMAN-005` |
-| manifest↔Pack 実状態突合の三値判定 (attested/mismatch/unavailable) | `U-RELMAN-006` |
-| チャネル追加 (canary/stable 以外) の schema 拡張性 | `U-RELMAN-007` |
-| no-go 未解除時の stable 昇格拒否 (依存関係表現) | `U-RELMAN-008` |
-| version identity の一意性・衝突検知 | `U-RELMAN-009` |
-| 昇格・巻き戻し PR が merge gate (D2 merge_ready) を回避しないこと | `U-RELMAN-010` |
-| sync-pack `--channel` 最小実装との配線境界 (S2 引き渡し境界の明示) | `U-RELMAN-011` |
+| manifest schema 不正の fail-close | `CANDIDATE-RELMAN-001` |
+| 未知チャネル名の拒否 | `CANDIDATE-RELMAN-002` |
+| 昇格条件 (harness-check green / QA Go-No-Go / cross-review receipt) 不足の拒否 | `CANDIDATE-RELMAN-003` |
+| rollback の決定論 (同一入力 → 同一巻き戻し結果) | `CANDIDATE-RELMAN-004` |
+| rollback が Git 履行履歴を書き換えないこと (非破壊不変条件) | `CANDIDATE-RELMAN-005` |
+| manifest↔Pack 実状態突合の三値判定 (attested/mismatch/unavailable) | `CANDIDATE-RELMAN-006` |
+| チャネル追加 (canary/stable 以外) の schema 拡張性 | `CANDIDATE-RELMAN-007` |
+| no-go 未解除時の stable 昇格拒否 (依存関係表現) | `CANDIDATE-RELMAN-008` |
+| version identity の一意性・衝突検知 | `CANDIDATE-RELMAN-009` |
+| 昇格・巻き戻し PR が merge gate (D2 merge_ready) を回避しないこと | `CANDIDATE-RELMAN-010` |
+| sync-pack `--channel` のmaterialize後digest（path remap / package変換 / symlinkを含む） | `CANDIDATE-RELMAN-011` |
+| `stable=v1 / canary=v2` の同時保持、control/artifact revision分離、object不在時の再構成拒否 | `CANDIDATE-RELMAN-012` |
 
 ## 7. Schedule
 
@@ -148,7 +197,8 @@ Problem 相当の設計判断として明示する)。
 
 ## 完了条件 (S1)
 
-- [ ] `U-RELMAN-001`〜`011` (案) が test-design へ registered され、oracle として承認される。
+- [x] `CANDIDATE-RELMAN-001`〜`012` が test-design へRED oracleとして登録されている。
+  S2は実装test citationと同じcommitで確定`U-*` IDへ昇格する。
 - [ ] 設計判断節が non-author family の cross-review で PASS。
-- [ ] `PLAN-L6-63` との関係が PO 判断で確定する。
-- [ ] `PLAN-REVERSE-473` が R0 を完了し、既存実装との責務境界を確認する。
+- [x] `PLAN-L6-63` との責務分離・存続・相互参照が技術判断として確定している。
+- [x] `PLAN-REVERSE-473` が R0 を完了し、既存実装との責務境界を確認する。

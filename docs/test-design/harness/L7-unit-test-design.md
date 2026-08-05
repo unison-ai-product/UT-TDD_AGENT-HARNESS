@@ -1804,6 +1804,32 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 
 Windows smoke は単なる exit code green では代替できない。process ancestry の捕捉結果を test artifact
 として残し、「Bun が起動した」ことと「shell/conhost を介さず Bun を起動した」ことを別 assertion にする。
+
+## 段階リリース channel manifest RED oracle (PLAN-L7-473、2026-08-05)
+
+S1では以下を未実装のcandidate RED oracleとして登録する。S2は各candidateと実装test citationを
+同じcommitで確定`U-*` IDへ昇格し、設計側の契約を弱めずGreen化する。control manifestは
+現在revision、artifact setはrecordが指す別revisionとして扱う。
+
+| candidate ID | mutation / 入力 | oracle |
+|---|---|---|
+| `CANDIDATE-RELMAN-001` | 必須field欠落・型不正・未知schema version | parse/lint/doctorがfail-closeし同期write 0 |
+| `CANDIDATE-RELMAN-002` | manifestに存在しないchannelを`--channel`へ指定 | `unknown_channel`、resolver/copy 0 |
+| `CANDIDATE-RELMAN-003` | harness-check / QA Go / cross-review receiptを各1件欠落 | promotion拒否、pointer不変 |
+| `CANDIDATE-RELMAN-004` | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束 |
+| `CANDIDATE-RELMAN-005` | rollback実行計画を生成 | force push / tag付替え / commit / push command 0 |
+| `CANDIDATE-RELMAN-006` | object不在、digest不一致、完全一致を個別入力 | 順に`unavailable` / `mismatch` / `attested`、三値を二値へ丸めない |
+| `CANDIDATE-RELMAN-007` | canary/stable以外の順序付きchannelを追加 | schema準拠なら受理し未知参照は拒否 |
+| `CANDIDATE-RELMAN-008` | no-go未解除のままstableへpromotion | dependency不足で拒否、canary pointerも不変 |
+| `CANDIDATE-RELMAN-009` | release ID、source commit、artifact digestを各1 byte変異 | 導出式不一致または衝突として拒否 |
+| `CANDIDATE-RELMAN-010` | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write 0 |
+| `CANDIDATE-RELMAN-011` | dry-run/applyへ同じchannelを入力し、`docs/skills→skills` remap、workflow template source mapping、`package.json` transform、symlink target/modeを各1件mutation | version固定materializer後のdestination path/mode/contentから同一digest。source blobだけ同じでPack outputが違えばmismatch。manifestはcontrol copyでdigest対象外 |
+| `CANDIDATE-RELMAN-012` | control HEADで`stable=v1` / `canary=v2`、v1/v2 objectを個別解決し、object欠落もmutation | 選択channelだけを対応revisionからmaterialize。control HEADとのSHA一致を要求せず、欠落時network/reconstruction/copy 0 |
+
+digest oracleはmaterializer version、destination path UTF-8 byte昇順、length-prefix framing、Pack output
+mode/contentを固定し、path連結曖昧性・package変換・remap・symlink・Windows executable bit観測差・
+manifest自己参照のmutationを個別にkillする。
+
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 
 以下はD0時点では全て設計候補である。対応test codeと実装をF0の同一commitへ追加し、Red実測を記録した
@@ -2050,3 +2076,33 @@ native custody完成の代替ではなく、Cargo実走前にもtoolchain・OS j
 
 mutation gateはdeadline再検査削除、strict unknown-field削除、attach前resume、empty/reap省略、Bun dependency追加もkillする。
 このL7 pairをfreezeするまで実Job/cgroup adapterのimplementation Greenを宣言しない。
+
+## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
+
+本表は契約freeze用のRED oracleであり、このdoc-only sliceではtest codeを追加しない。D3d実装
+PLANが各IDを先にRed化し、Green後にPLAN-L7-465の`generates`へ実装成果物を登録する。
+4 segmentの`U-RVGHA-D3C-NNN`は現行`oracle-test-trace`の収集対象外である。D3d実装PRは
+entry commitで本18 IDだけを3 segmentの`U-RVGHAD3C-NNN`へ原子的renameし、同じcommitで全IDの
+Red test citationを追加する。generic regexを4 segmentへ広げず、他レーンの既存4 segment oracleを
+巻き込まない。renameだけを先行して未citation状態を作らず、本doc-only freezeをGreen証拠に数えない。
+
+| U-ID | mutation / fixture | expected |
+|---|---|---|
+| `U-RVGHA-D3C-001` | valid D3b payload + GitHub attestation + PR/API/Check Runの同一subject、family authorityなし | mechanical custodyはvalidでも`unverified_family`、`custody_admitted` 0 |
+| `U-RVGHA-D3C-002` | repository / PR / baseRef / headSha / planRevision / reviewRevisionを各1軸変異 | 全件replay拒否、receipt消費0 |
+| `U-RVGHA-D3C-003` | unknown field、必須field欠落、digest/type/schemaVersion差替え | strict decode失敗、`receipt_corrupt`、missing扱い0 |
+| `U-RVGHA-D3C-004` | payloadのreviewerFamily=claude、issuer/signerは同一author channel | family自己申告をtrustedへ昇格せず`unverified_family` |
+| `U-RVGHA-D3C-005` | Artifact Attestationだけ、またはD3b payloadだけ | judgment/provenance片面では`custody_admitted` 0 |
+| `U-RVGHA-D3C-006` | event payloadとAPI read 1のrepo/PR/base/headを各変異 | 発行0、`identity_mismatch`または`head_raced` |
+| `U-RVGHA-D3C-007` | API read 1後、read 2前にHEAD/state変更 | TOCTOU拒否、attestation発行0 |
+| `U-RVGHA-D3C-008` | fork/別repo/別PR、pre receiptへmerged fact、post receiptでmergeSha欠落 | kind/subject不整合を拒否 |
+| `U-RVGHA-D3C-009` | required Linux/Windows/aggregateのmissing/failure/cancelled/skipped/stale | D1 `merge_ready` 0。正規receiptのcustody判定は変えず、将来D2のAND受理候補0 |
+| `U-RVGHA-D3C-010` | 固定workflowがPR HEAD checkout、PR code/artifact/cache、過剰permissionを使用 | `github-ci-policy` violation、workflow実行資格なし |
+| `U-RVGHA-D3C-011` | attestation absent / signature failure / issuer mismatch / retention・verify取得不能 | 順に`missing` / `signature_unverified` / `signer_mismatch` / `audit_unavailable`、`custody_admitted` 0 |
+| `U-RVGHA-D3C-012` | 同一subject+contentを反復、またはtupleだけを変えて旧receiptを投入 | 前者は同一digestで冪等、後者はreplay拒否 |
+| `U-RVGHA-D3C-013` | 正規署名receiptだがjudgment=FLAG | custody validとmerge eligibilityを分離し`verdict_flagged` |
+| `U-RVGHA-D3C-014` | token/raw transcript/raw stack/absolute path/PR実行命令を任意fieldへ追加 | strict schemaまたはsecret hygiene gateで拒否 |
+| `U-RVGHA-D3C-015` | provider障害をretry上限超過まで注入 | receipt 0、typed `provider_failed`、無限retry 0 |
+| `U-RVGHA-D3C-016` | Check RunだけPASS、D1 `analyzeReviewDispatch`は非`merge_ready` | Check Runを第二SSoTにせず、将来D2のAND受理候補0 |
+| `U-RVGHA-D3C-017` | 承認済み`VerifiedProviderIdentity` + D1 merge_ready + D3b/D3c全検証green | D3d `custody_admitted`、D2 AND入力だけがaccepting候補 |
+| `U-RVGHA-D3C-018` | RFC 8785 exact preimageのkey順・locale・digest自己field・既存16桁digestを各変異 | receiptは同一objectだけ64 lowerhex一致。外部artifact digestは完成bytesから一方向計算し、不一致は`identity_mismatch` |
