@@ -1807,28 +1807,36 @@ Windows smoke は単なる exit code green では代替できない。process an
 
 ## 段階リリース channel manifest RED oracle (PLAN-L7-473、2026-08-05)
 
-S1では以下を未実装のcandidate RED oracleとして登録する。S2は各candidateと実装test citationを
-同じcommitで確定`U-*` IDへ昇格し、設計側の契約を弱めずGreen化する。control manifestは
-現在revision、artifact setはrecordが指す別revisionとして扱う。
+S1では以下を未実装のcandidate RED oracleとして登録する。各candidateはPLAN-L7-473 §6の所有sliceで、
+先行slice Greenかつ当該sliceのdocs-only pair-freezeがmainへmergeされた後に限り、実装test citationと
+同じcommitで確定`U-*` IDへ昇格できる。control manifestは現在revision、artifact setはrecordが指す
+別revisionとして扱う。PR #244で`U-*`名だけ先行させたprototypeはclosing FLAGで未マージclose済みであり、
+以下は全てREDのまま維持する。
 
-| candidate ID | mutation / 入力 | oracle |
-|---|---|---|
-| `CANDIDATE-RELMAN-001` | 必須field欠落・型不正・未知schema version | parse/lint/doctorがfail-closeし同期write 0 |
-| `CANDIDATE-RELMAN-002` | manifestに存在しないchannelを`--channel`へ指定 | `unknown_channel`、resolver/copy 0 |
-| `CANDIDATE-RELMAN-003` | harness-check / QA Go / cross-review receiptを各1件欠落 | promotion拒否、pointer不変 |
-| `CANDIDATE-RELMAN-004` | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束 |
-| `CANDIDATE-RELMAN-005` | rollback実行計画を生成 | force push / tag付替え / commit / push command 0 |
-| `CANDIDATE-RELMAN-006` | object不在、digest不一致、完全一致を個別入力 | 順に`unavailable` / `mismatch` / `attested`、三値を二値へ丸めない |
-| `CANDIDATE-RELMAN-007` | canary/stable以外の順序付きchannelを追加 | schema準拠なら受理し未知参照は拒否 |
-| `CANDIDATE-RELMAN-008` | no-go未解除のままstableへpromotion | dependency不足で拒否、canary pointerも不変 |
-| `CANDIDATE-RELMAN-009` | release ID、source commit、artifact digestを各1 byte変異 | 導出式不一致または衝突として拒否 |
-| `CANDIDATE-RELMAN-010` | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write 0 |
-| `CANDIDATE-RELMAN-011` | dry-run/applyへ同じchannelを入力し、`docs/skills→skills` remap、workflow template source mapping、`package.json` transform、symlink target/modeを各1件mutation | version固定materializer後のdestination path/mode/contentから同一digest。source blobだけ同じでPack outputが違えばmismatch。manifestはcontrol copyでdigest対象外 |
-| `CANDIDATE-RELMAN-012` | control HEADで`stable=v1` / `canary=v2`、v1/v2 objectを個別解決し、object欠落もmutation | 選択channelだけを対応revisionからmaterialize。control HEADとのSHA一致を要求せず、欠落時network/reconstruction/copy 0 |
+| candidate ID | 所有slice | mutation / 入力 | oracle |
+|---|---|---|---|
+| `CANDIDATE-RELMAN-001` | PF-1 pure domain | 必須field欠落に加え、object/array/string/number/nullを各fieldへ型違いで入力、未知schema version・未知fieldも個別入力 | parseが全mutationをfail-close。aggregateではlint/doctorも拒否しresolver/copy/write count 0 |
+| `CANDIDATE-RELMAN-002` | PF-1 + PF-4 aggregate | manifestに存在しないchannelを`--channel`へ指定 | `unknown_channel`。injected Git resolver、materializer、copy、manifest writeを各spyで0回と実測する |
+| `CANDIDATE-RELMAN-003` | S3 promotion | harness-check / QA Go / cross-review receiptを各1件欠落 | promotion拒否、pointer不変 |
+| `CANDIDATE-RELMAN-004` | S3 rollback | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束 |
+| `CANDIDATE-RELMAN-005` | S3 rollback | rollback実行計画を生成 | force push / tag付替え / commit / push command 0 |
+| `CANDIDATE-RELMAN-006` | PF-4 adapter | object不在、digest不一致、完全一致を個別入力 | 順に`unavailable` / `mismatch` / `attested`、三値を二値へ丸めない |
+| `CANDIDATE-RELMAN-007` | PF-1 pure domain | canary/stable以外のchannelを追加し、`channelOrder`の欠落・重複・余剰・unknown名を各mutation | own channel keyをちょうど1回列挙するorderだけ受理し、未登録release参照も拒否。promotion可否はS3まで推測しない |
+| `CANDIDATE-RELMAN-008` | S3 promotion | no-go未解除のままstableへpromotion | dependency不足で拒否、canary pointerも不変 |
+| `CANDIDATE-RELMAN-009` | PF-1 pure domain | release ID key、source commit、artifact digestのhexをそれぞれ単独で1 nibble変異 | 各mutationが独立に導出式不一致となる。artifact digest mutationをsource commit mutationで代替しない |
+| `CANDIDATE-RELMAN-010` | S3 promotion / rollback | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write 0 |
+| `CANDIDATE-RELMAN-011` | PF-2 materializer | dry-run/applyへ同じchannelを入力し、`docs/skills→skills` remap、workflow template source mapping、`package.json` transform、symlink target/modeを各1件mutation | version固定materializer後のdestination path/mode/contentから同一digest。source blobだけ同じでPack outputが違えばmismatch。manifestはcontrol copyでdigest対象外 |
+| `CANDIDATE-RELMAN-012` | PF-3 resolver | control HEADで`stable=v1` / `canary=v2`、v1/v2 objectを個別解決し、object欠落もmutation | 選択channelだけを対応revisionからmaterialize。control HEADとのSHA一致を要求せず、欠落時network/reconstruction/copy 0 |
+| `CANDIDATE-RELMAN-013` | PF-1 pure domain | channel名に`toString` / `constructor` / `__proto__`等のprototype由来名を指定し、通常object・null-prototype objectを交差 | own propertyでないchannelを必ず`unknown_channel`として拒否し、`release: undefined`の成功値を返さない |
+| `CANDIDATE-RELMAN-014` | PF-5 aggregate | manifest SSoT、clean Pack allowlist、`sync-pack --channel` selected-revision copyの各結線を1点ずつ欠落・別commit化 | 3点が同一変更で揃う場合だけattested copy。1点欠落なら同期write 0でAC-6をfail-close |
 
 digest oracleはmaterializer version、destination path UTF-8 byte昇順、length-prefix framing、Pack output
 mode/contentを固定し、path連結曖昧性・package変換・remap・symlink・Windows executable bit観測差・
 manifest自己参照のmutationを個別にkillする。
+
+PF-0〜PF-5の実装順序自体も検証対象とする。各実装PRは当該sliceのpair-freeze merge SHAを
+PR metadata / PLAN referenceに持ち、存在しない、未merge、または後続sliceを指す場合は
+implementation-firstとしてadmission/closing reviewで拒否する。
 
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 

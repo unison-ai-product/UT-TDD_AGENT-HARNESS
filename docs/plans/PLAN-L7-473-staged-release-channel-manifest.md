@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: draft
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-08-05
 owner: PO / Claude
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -81,19 +81,22 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
      での決定性が失われる。ただし tag/Release は「配送済み事実の証跡」として manifest と
      突合する auditor の入力に使う (後続 slice、本 PLAN のスコープ外)。
    - (advisor 裁定 2026-08-04、design 判断、claude-fable-5)
-2. **着手順 = `sync-pack --channel` の最小実装から** (dogfood 先行、Codex independent
-   technical review、2026-08-05)。下流製品向けの汎用
-   domain model を先に立てるのは不採用 — 消費者が Pack 1 つの段階で抽象化を先取りするのは
-   最小実装原則違反 (投機的な型・契約の積み増し)。2 例目の消費者 (下流製品) が実際に現れた
-   時点で Reverse により汎用契約を抽出する。
+2. **着手順 = contract → pure manifest domain → versioned materializer → isolated Git resolver →
+   `sync-pack --channel` adapter → aggregate acceptance** (PR #244 Sol closing FLAG訂正、2026-08-05)。
+   adapterから先に作ると、未確定のidentity/digest/resolver契約へCLIを合わせる逆転が起きるため禁止する。
+   各子sliceは「docs-only pair-freezeをcross-reviewしてmainへmerge → 対応実装とtest citationを同じ
+   commitで追加 → exact-HEAD CIとnon-author review」の順を守り、前段のGreenを後段着手条件とする。
+   ただし下流製品向けの汎用domain抽出はS4まで行わない。S2のpure domainはPack manifest契約だけを
+   小さく閉じ、2例目のconsumerが現れた時点でReverseにより一般化する。
 3. **rollback = manifest 巻き戻しのみ** (PO 採択 2026-08-04)。チャネルが指すバージョンを
    前バージョンへ戻す宣言変更に限定し、配布先 repo の Git 履行履歴そのものは書き換えない
    (非破壊)。実巻き戻しの自動化 (force push / tag 付け替え) は不採用 — `sync-pack` が既に
    持つ「commit/push は行わない、human-reviewed step として分離する」契約
    (`ut-tdd distribution sync-pack --repo-dir` の既存境界) を維持する。
-4. **既定チャネル = canary → stable の 2 段** (PO 採択 2026-08-04)。schema はチャネルを
-   後から追加できる形 (配列 + 順序メタデータ) にし、下流製品が自分の段数を定義できることを
-   前提として許容する。
+4. **既定チャネル = canary → stable の 2 段** (PO 採択 2026-08-04)。schema は
+   `channels: Record<channelName, releaseId>` と `channelOrder: channelName[]` を分離し、後者は
+   channelsのown keyを重複なく全件ちょうど1回列挙する。custom channelは追加可能だが、未登録release、
+   inherited property、orderの欠落/重複/余剰を拒否する。promotion可否の意味論はS3まで追加しない。
 5. **control-plane manifest と artifact source revision を分離する** (Codex independent technical
    review、2026-08-05)。現在の control checkout にある manifest は `releases` map と `channels` map
    を保持し、各 release record は immutable な release ID、`artifactSourceCommit` (40桁 SHA)、
@@ -122,6 +125,12 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
    ASCII(materializerVersion) || 0x00 || ASCII(artifactSourceCommit) || 0x00 || raw 32-byte artifact digest>`
    とする。同じrelease IDに異なるrecordを宣言した場合は履歴比較に依存せず導出式不一致として拒否する。
    materializer変更はversionを上げ、既存releaseを解決する旧versionを消さない。
+
+7. **AC-6の原子性は最終aggregate境界で保持する**。前段sliceがpure moduleを追加しても、
+   `release/manifest.yaml`の正本化、clean Pack allowlistへの追加、`sync-pack --channel`からの選択・copyを
+   個別に有効化してはならない。これら3点はadapterの内部完成後、aggregate acceptance PRで同時に結線し、
+   1点でも欠ければ同期write 0でfail-closeする。従って子slice化はscope縮小ではなく、外部可視なAC-6を
+   最終commitまで不可分に保ったまま、内部証明を依存順に積むための実装順序契約である。
 
 ## 3. 契約骨子
 
@@ -169,35 +178,40 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 - AC-8: canonical artifact-set digestのmaterializer version、destination path、変換後content、mode、
   path順序・framing・manifest除外とrelease ID導出式が実装者に依存しないbyte-level契約として
   固定されている。
+- AC-9: 各子sliceは対応するcandidate oracleを持ち、docs-only pair-freezeがmainへmergeされる前に
+  implementation fileを追加しない。candidateから`U-*`への昇格は実装test citationと同じcommitだけで行う。
+- AC-10: PR #244 prototypeで未検出だったown-property lookup、artifact digest単独mutation、型不正、
+  unknown channel時のresolver/copy/write副作用をRED oracleとして保持し、Green証跡なしに消さない。
 
-## 6. 設計と検証の対 (S1 時点の RED oracle 案)
+## 6. 子sliceとpromotable oracle
 
-| 設計境界 | oracle (案) |
-| --- | --- |
-| manifest schema 不正の fail-close | `CANDIDATE-RELMAN-001` |
-| 未知チャネル名の拒否 | `CANDIDATE-RELMAN-002` |
-| 昇格条件 (harness-check green / QA Go-No-Go / cross-review receipt) 不足の拒否 | `CANDIDATE-RELMAN-003` |
-| rollback の決定論 (同一入力 → 同一巻き戻し結果) | `CANDIDATE-RELMAN-004` |
-| rollback が Git 履行履歴を書き換えないこと (非破壊不変条件) | `CANDIDATE-RELMAN-005` |
-| manifest↔Pack 実状態突合の三値判定 (attested/mismatch/unavailable) | `CANDIDATE-RELMAN-006` |
-| チャネル追加 (canary/stable 以外) の schema 拡張性 | `CANDIDATE-RELMAN-007` |
-| no-go 未解除時の stable 昇格拒否 (依存関係表現) | `CANDIDATE-RELMAN-008` |
-| version identity の一意性・衝突検知 | `CANDIDATE-RELMAN-009` |
-| 昇格・巻き戻し PR が merge gate (D2 merge_ready) を回避しないこと | `CANDIDATE-RELMAN-010` |
-| sync-pack `--channel` のmaterialize後digest（path remap / package変換 / symlinkを含む） | `CANDIDATE-RELMAN-011` |
-| `stable=v1 / canary=v2` の同時保持、control/artifact revision分離、object不在時の再構成拒否 | `CANDIDATE-RELMAN-012` |
+| 順序 | 子slice | このsliceでのみ昇格可能なoracle | merge条件 |
+| --- | --- | --- | --- |
+| PF-0 | contract / pair-freeze訂正 | なし (全てRED維持) | 本PLAN・Reverse・test-designだけのPRがcross-review PASS |
+| PF-1 | pure manifest domain | `001`, `002`, `007`, `009`, `013` | parser / identity / own-property / channel解決testがGreen。Git・FS・copy依存0 |
+| PF-2 | versioned materializer | `011` | destination path/mode/transformed bytes/framingのdigest mutationがGreen |
+| PF-3 | isolated Git resolver | `012` | control/artifact revision分離、object不在時network/reconstruction/copy 0がGreen |
+| PF-4 | `sync-pack --channel` adapter内部 | `006` | attested/mismatch/unavailableを保持し、CLI/FS seamの副作用を計測可能 |
+| PF-5 | aggregate acceptance | `014` と残存するS2 oracle | manifest SSoT + allowlist + selected-revision copyを同一commitで結線しAC-6を実repo検証 |
+| S3 | promotion / rollback gate | `003`, `004`, `005`, `008`, `010` | D2/D3/QA証跡と非破壊pointer deltaを結線 |
+
+番号はtest-designの`CANDIDATE-RELMAN-*`と一致させる。前段で後段oracleを昇格したり、単体testの
+返値だけでresolver/copy/write 0を主張したりしない。
 
 ## 7. Schedule
 
-1. [直列] 本 PLAN の設計判断・契約骨子を cross-review で確定する (S1 closing)。
-2. [直列] `PLAN-REVERSE-473` を R0 で開始し、既存 `sync-pack` / `buildPackSyncPlan` との
-   責務境界を確認する。
-3. (S2 以降、本 PLAN のスコープ外) schema 実装、CLI 配線、lint/doctor 検査を確定 PLAN へ
-   追加する。
+1. [直列 / PF-0] 本訂正をdocs-only pair-freezeとしてcross-reviewし、mainへmergeする。
+2. [直列 / PF-1] pure manifest domainのpair-freezeをmergeしてから、対応実装PRを作る。
+3. [直列 / PF-2] PF-1 Green後にmaterializerのpair-freeze → 実装を行う。
+4. [直列 / PF-3] PF-2 Green後にisolated resolverのpair-freeze → 実装を行う。
+5. [直列 / PF-4] PF-3 Green後にadapter内部のpair-freeze → 実装を行う。外部結線はまだ行わない。
+6. [直列 / PF-5] manifest正本・allowlist・sync-pack copyを1 PRで結線し、aggregate acceptanceを通す。
+7. [直列] `PLAN-REVERSE-473` R3/R4を閉じ、Forwardへmergeする。FLAG時は該当phaseへ戻り、
+   未検証oracleの昇格と後続slice着手を取り消す。
 
 ## 完了条件 (S1)
 
-- [x] `CANDIDATE-RELMAN-001`〜`012` が test-design へRED oracleとして登録されている。
+- [x] `CANDIDATE-RELMAN-001`〜`014` が test-design へRED oracleとして登録されている。
   S2は実装test citationと同じcommitで確定`U-*` IDへ昇格する。
 - [ ] 設計判断節が non-author family の cross-review で PASS。
 - [x] `PLAN-L6-63` との責務分離・存続・相互参照が技術判断として確定している。

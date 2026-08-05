@@ -4,7 +4,7 @@ title: "PLAN-REVERSE-473: 段階リリース管理 設計backfill"
 kind: reverse
 layer: cross
 drive: agent
-workflow_phase: R0
+workflow_phase: R1
 confirmed_reverse_type: fullback
 route_signal: reverse
 route_mode: reverse
@@ -38,10 +38,11 @@ review_evidence: []
 # PLAN-REVERSE-473: 段階リリース管理 設計backfill
 
 本 PLAN は `PLAN-L7-473-staged-release-channel-manifest` (add-impl) の Reverse 対である
-(`kind=add-impl` は Reverse 対必須)。S1 時点では設計降下がまだ行われていないため、R0 の
-観測のみを記録し、R1 以降は S2 (schema/CLI 実装) の着手後に進める。
+(`kind=add-impl` は Reverse 対必須)。R0の既存実装観測を完了し、PR #244 prototypeのclosing FLAGを
+受けてR1の責務分割・pair-freeze訂正へ進んだ。R1は本docs-only訂正がcross-review PASSかつmainへ
+mergeされた時点で完了する。実装をR1完了証拠の代替にしない。
 
-## R0-R4 (S1 時点は R0 のみ着手)
+## R0-R4 と状態遷移
 
 - R0: 既存 `sync-pack` / `buildPackSyncPlan` (`src/setup/distribution.ts`,
   `src/cli/distribution.ts`) が既に持つ非破壊 copy-plan/staging・rollback managed paths・
@@ -56,15 +57,31 @@ review_evidence: []
   immutable release recordを解決し、recordの`artifactSourceCommit`をlocal Git object databaseから
   isolated tree/archiveへmaterializeする。現在checkoutとのSHA一致は要求せず、object不在時はnetwork
   fetchも現在treeからの再構成も行わない。manifestをartifact digestから除外して自己参照を避ける。
-- R1: manifest 正本・sync-pack 実行・Pack repo 側 tag/revert runbook の 3 責務を分離する
-  (S2 着手後)。
-- R2: S1でForward側test-designへ登録済みの`CANDIDATE-RELMAN-001`〜`012`を入力とし、
-  R1完了後に実装test citationと同じcommitで確定`U-*` IDへ昇格してGreen化する
-  (R0時点では未着手)。
-- R3: 実装後、cross-family review で正本選択 (manifest vs harness.db vs GitHub Releases)
-  の不変条件と非破壊契約を検証する (S2 完了後)。
-- R4: `docs/design/harness/L6-function-design/` へ release channel manifest 契約を合流し、
-  `forward_routing` / `promotion_strategy` を確定して Forward へ戻す (S2 完了後)。
+- R1 (現在): manifest正本、pure domain、versioned materializer、isolated Git resolver、
+  `sync-pack --channel` adapter、aggregate acceptance、Pack repo側tag/revert runbookの責務を分離する。
+  AC-6のmanifest SSoT + allowlist + selected-revision copyはPF-5まで外部結線せず、最終変更で同時に有効化する。
+- R2: Forward test-designの`CANDIDATE-RELMAN-001`〜`014`を、PF-1→PF-2→PF-3→PF-4→PF-5の
+  直列順にGreen化する。各PFは「当該docs-only pair-freeze merge → implementation+test citation同一commit
+  → exact-HEAD CI/review → merge」を1遷移とする。候補IDは所有PF以外で昇格しない。
+- R3: PF-5 aggregate acceptance後、cross-family reviewで正本選択、control/artifact分離、digest、
+  非破壊性、AC-6原子性を再導出する。単体Greenの合算をaggregate PASSの代替にしない。
+- R4: R3 PASS後に`docs/design/harness/L6-function-design/`へrelease channel manifest契約を合流し、
+  `forward_routing` / `promotion_strategy`を確定してForwardへ戻す。S3 promotion/rollbackは
+  `003/004/005/008/010`をRED入力として別pair-freezeから開始する。
+
+| from | transition guard | to | FLAG / failure |
+| --- | --- | --- | --- |
+| R0 | 本docs-only訂正がexact-HEAD CI + cross-review PASSでmainへmerge | R1 complete / PF-1 pair-freeze | R0/R1へ留まり実装禁止 |
+| R1 / PF-1 | pure domain pair-freeze merge後、`001/002/007/009/013`実装Green・review・merge | R2 / PF-2 | PF-1へ戻し、候補はRED維持 |
+| R2 / PF-2 | `011` materializer Green・review・merge | R2 / PF-3 | PF-2へ戻る |
+| R2 / PF-3 | `012` resolver Green・review・merge | R2 / PF-4 | PF-3へ戻る |
+| R2 / PF-4 | `006` adapter内部Green・review・merge、外部結線0 | R2 / PF-5 | PF-4へ戻る |
+| R2 / PF-5 | `014` aggregate Green、AC-6の3結線が同一HEAD、full CI PASS | R3 | PF-5へ戻りpartial結線をmergeしない |
+| R3 | cross-family review PASS + backprop先確定 | R4 | finding所有PFへ戻る |
+| R4 | L6合流・Forward routing確定・closing gate PASS | Forward merge | R4未完了のまま保持 |
+
+PR #244のprototype commitは上表のR1 guard前に実装を置いたため、証拠として再利用しない。履歴は
+force rewriteせずclosed PRとして保持し、各candidateは新しい正規sliceでREDから再実測する。
 
 ## backprop_scope (仮、R4 で確定)
 
@@ -77,8 +94,10 @@ review_evidence: []
 
 上記は R0 時点の見立てであり、R4 で実測に基づき確定する (仮置きを完了条件の代替にしない)。
 
-## 完了条件 (S1 時点)
+## 完了条件 (R1 pair-freeze)
 
 - [x] R0: `sync-pack` / `buildPackSyncPlan` / `PLAN-L6-63` との責務境界がPLAN-L7-473の
   設計判断節と矛盾なく記録される。
-- [ ] R1〜R4 は S2 着手後に着手する (本 PLAN は S1 では draft のまま維持する)。
+- [x] R1: PF-0〜PF-5の責務、所有oracle、AC-6 aggregate原子性、implementation-first禁止が定義される。
+- [ ] R1 closing: 本docs-only訂正がcross-review PASSかつmainへmergeされる。
+- [ ] R2〜R4: 上表のguardを順に満たすまで未着手。後続phaseの実装を先行しない。
