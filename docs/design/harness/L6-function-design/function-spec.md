@@ -2040,7 +2040,8 @@ E13 `AggregateCiReceipt`、D1 `merge_ready`候補、D3d `custody_admitted`のAND
 自身のconclusionをE13/D1入力へ戻さない。
 
 `GithubCiPolicy` はruntime dual-leg profileとconsumer template single-leg profileを明示入力で
-区別する。runtime profileには上記四job topologyを要求し、job名、`needs` 完全一致、`always()`、
+区別する。**D2 targetのruntime profile**には上記四job topologyを要求し、現行三jobprofileは
+target実装PRが移行するまで既存契約として検証する。targetではjob名、`needs` 完全一致、`always()`、
 明示result guardの欠落・余剰依存・循環・同名job偽装をviolationにする。template profileには
 runtime固有のWindows legを推測追加しない。profileをworkflow本文やjob数から自己推論してはならない。
 
