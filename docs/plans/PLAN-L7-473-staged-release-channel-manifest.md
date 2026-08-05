@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: draft
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-08-05
 owner: PO / Claude
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -22,6 +22,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
     artifact_type: markdown_doc
+  - artifact_path: src/schema/release-manifest.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-manifest.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
   requires: []
