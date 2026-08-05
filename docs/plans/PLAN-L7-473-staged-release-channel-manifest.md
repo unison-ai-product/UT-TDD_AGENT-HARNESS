@@ -3,7 +3,7 @@ plan_id: PLAN-L7-473-staged-release-channel-manifest
 title: "PLAN-L7-473 (add-impl): 段階リリース管理 — release channel manifest 契約 freeze (S1)"
 kind: add-impl
 layer: L7
-drive: be
+drive: agent
 route_signal: feature_addition
 route_mode: add-feature
 status: draft
