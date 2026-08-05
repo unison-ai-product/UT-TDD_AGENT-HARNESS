@@ -82,17 +82,20 @@ PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-el
 で第三者判断を得る。設計・進行・優先順位・UI/UX は
 `claude-fable-5`、実装方式・技術的トラブルシュートは `gpt-5.6-sol` へrouteする
 (正規の `--decision design|progress|uiux|implementation|troubleshooting` を使う)。
-advisor結果は前提をrepo実測で検証し、既存の層・責務・契約から一意に決まるなら、AIランタイムが
-技術判断として決定・記録して作業を継続する。advisor相談をPOへの責任転送の前置きにしてはならない。
+advisor結果は前提をrepo実測で検証し、下記の高影響境界に該当せず、既存の層・責務・契約から
+一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
+POへの責任転送の前置きにしてはならない。
 
-POへ上げてよいのは、advisor相談と実測後にも複数案の実在するtrade-offが残り、かつ
-product scope、production infrastructure、destructive data operation、外部authentication/authorization、
-payment、PII、secret、licensing、外部API前提などPO権限を要する判断に限る。その場合も、相談した
-advisor/model、検証した事実、解消できなかった
-trade-off、推奨案を `docs/governance/design-decision-elicitation.md` の形式で提示する。
+production infrastructure、destructive data operation、外部authentication/authorization、payment、
+PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
+かかわらず変更前にPO承認を得る。advisor相談は承認の代替ではない。それ以外でPOへ上げてよいのは、
+advisor相談と実測後にも複数案の実在するtrade-offが残り、product scopeなどPO権限を要する判断に
+限る。その場合も、相談したadvisor/model、検証した事実、解消できなかったtrade-off、推奨案を
+`docs/governance/design-decision-elicitation.md` の形式で提示する。
 単なる事実確認、既存責務から導ける所有境界、可逆な実装順序、進捗報告をPO判断にしてはならない。
-Fable/Solの双方が利用不能なら相談attemptとfailureを記録し、判断を捏造しない。緊急の安全境界だけは
-advisor unavailableの証跡を添えてPOへ上げ、通常の技術判断は利用可能になるまで保留する。
+Fable/Solの双方が利用不能なら相談attemptとfailureを記録し、判断を捏造しない。高影響境界は
+advisor unavailableの証跡を添えてPOへ上げる。高影響境界に該当せず既存契約から一意に決まる判断は
+継続し、advisorを要する未解決trade-offだけを利用可能になるまで保留する。
 
 ## Canonical Docs
 
