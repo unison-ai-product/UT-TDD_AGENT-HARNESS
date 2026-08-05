@@ -80,8 +80,10 @@ describe("token 境界と検出範囲 (issue #165 / PLAN-L7-480、U-OIDGATE-001.
     const root = declarationFixture(
       "| `U-RVGHA-D3C-001` | 多 segment | RED |\n| `U-VTRIG-005-L7` | 右境界 fixture | — |",
     );
+    // `U-VTRIG-005-L7` は末尾 segment が数字でないため ID として成立しない — 全体一致も
+    // 部分抽出 (`U-VTRIG-005`) もせず、抽出 0 が正しい。
     const declared = [...collectOracleIds(root).declared].sort();
-    expect(declared).toEqual(["U-RVGHA-D3C-001", "U-VTRIG-005-L7"]);
+    expect(declared).toEqual(["U-RVGHA-D3C-001"]);
     expect(declared).not.toContain("U-VTRIG-005");
   });
 

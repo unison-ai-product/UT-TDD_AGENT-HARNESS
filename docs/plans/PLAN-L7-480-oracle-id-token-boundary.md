@@ -21,6 +21,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-480-oracle-id-token-boundary.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/oracle-test-trace-widened-baseline.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L7-244-right-arm-citation-gate.md
   requires: []

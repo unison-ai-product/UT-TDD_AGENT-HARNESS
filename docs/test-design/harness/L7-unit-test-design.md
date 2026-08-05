@@ -2172,7 +2172,7 @@ baseline 縮小を機械強制する (詳細は issue #218 のコメント参照
 |---|---|---|---|
 | `U-OIDGATE-001` | `CANDIDATE-M-SP-002` / `CANDIDATE-U-FOO-001` / `CANDIDATE-P-FSM-001` を含む test-design fixture | `collectOracleIds` | 1 件も抽出しない (左 token 境界)。CANDIDATE 表記は citation 不要のまま |
 | `U-OIDGATE-002` | 2 桁番号 `ST-DATA-01` / `U-FUNC-01` の宣言 fixture | `collectOracleIds` + `analyzeOracleTestTrace` | 収集され、未 citation なら orphan (旧 regex の視野外を解消) |
-| `U-OIDGATE-003` | 多 segment `U-RVGHA-D3C-001` と `U-VTRIG-005-L7` の宣言 fixture | `collectOracleIds` | 多 segment を収集し、右境界の部分抽出 (`U-VTRIG-005`) をしない |
+| `U-OIDGATE-003` | 多 segment `U-RVGHA-D3C-001` と `U-VTRIG-005-L7` の宣言 fixture | `collectOracleIds` | 多 segment を収集する。`U-VTRIG-005-L7` は末尾 segment が非数字のため全体・部分 (`U-VTRIG-005`) とも抽出しない |
 | `U-OIDGATE-004` | widened baseline 収載 ID が未 citation | `analyzeOracleTestTrace` | orphan にしない (ratchet) |
 | `U-OIDGATE-005` | 実 repo | 再導出 orphan 集合 vs `ORACLE_TEST_TRACE_WIDENED_BASELINE` | **集合一致** (件数でなく要素)。収載 oracle の citation 追加は baseline 縮小を機械強制する |
 | `U-OIDGATE-006` | citation 済み ID を混ぜた stale baseline | 集合比較 | 不一致として検出 (腐る baseline の抑止) |
