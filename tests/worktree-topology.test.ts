@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeWorktreeTopology,
+  compareTopologySnapshots,
+  normalizeTopologyPath,
   remapTopologyIdentities,
   topologyDigest,
   type WorktreeFact,
@@ -61,7 +63,12 @@ describe("worktree topology (U-WTTOPO)", () => {
       input([
         main,
         fact({ dirty: true, mergedIntoMain: true }),
-        fact({ worktreePathKey: "/repo/d", branch: undefined, detachedReachable: true }),
+        fact({
+          worktreePathKey: "/repo/d",
+          branch: undefined,
+          reachabilityObserved: true,
+          containingRefs: ["refs/tags/keep"],
+        }),
         fact({ worktreePathKey: "/repo/m", mergedIntoMain: true }),
       ]),
     );
@@ -85,9 +92,19 @@ describe("worktree topology (U-WTTOPO)", () => {
     const report = analyzeWorktreeTopology(
       input([
         main,
-        fact({ worktreeToAdminOk: false, branch: undefined, detachedReachable: true }),
-        fact({ worktreePathKey: "/repo/u", branch: undefined, detachedReachable: undefined }),
-        fact({ worktreePathKey: "/repo/x", branch: undefined, detachedReachable: false }),
+        fact({
+          worktreeToAdminOk: false,
+          branch: undefined,
+          reachabilityObserved: true,
+          containingRefs: ["refs/tags/keep"],
+        }),
+        fact({ worktreePathKey: "/repo/u", branch: undefined, reachabilityObserved: false }),
+        fact({
+          worktreePathKey: "/repo/x",
+          branch: undefined,
+          reachabilityObserved: true,
+          containingRefs: ["refs/pull/12/head", "refs/stash"],
+        }),
       ]),
     );
     expect(report.retirable).toEqual([]);
@@ -133,5 +150,100 @@ describe("worktree topology (U-WTTOPO)", () => {
         { fromPrefix: "/repo", toPrefix: "/y" },
       ]),
     ).toThrow("duplicate");
+  });
+
+  it("U-WTTOPO-007: refs/pull/stash/他remoteは保持refに昇格しない", () => {
+    const rejected = analyzeWorktreeTopology(
+      input([
+        main,
+        fact({
+          branch: undefined,
+          reachabilityObserved: true,
+          containingRefs: ["refs/pull/1/head", "refs/stash", "refs/remotes/upstream/x"],
+        }),
+      ]),
+    );
+    const accepted = analyzeWorktreeTopology(
+      input([
+        main,
+        fact({
+          branch: undefined,
+          reachabilityObserved: true,
+          containingRefs: ["refs/tags/keep"],
+        }),
+      ]),
+    );
+    expect(rejected.retirable).toEqual([]);
+    expect(accepted.retirable).toEqual(["/repo/w"]);
+  });
+
+  it("U-WTTOPO-013: allowed remap後のidentity集合だけをacceptする", () => {
+    const before = analyzeWorktreeTopology(input([main, fact()]));
+    const after = analyzeWorktreeTopology(
+      input([
+        fact({
+          worktreePathKey: "/moved",
+          adminPathKey: "/moved/.git",
+          isMain: true,
+          branch: "main",
+        }),
+        fact({ worktreePathKey: "/moved/w", adminPathKey: "/moved/.git/worktrees/w" }),
+      ]),
+    );
+    expect(
+      compareTopologySnapshots(before, after, [{ fromPrefix: "/repo", toPrefix: "/moved" }]),
+    ).toMatchObject({ accepted: true });
+    expect(compareTopologySnapshots(before, after)).toMatchObject({
+      accepted: false,
+      reason: "identity_mismatch",
+    });
+  });
+
+  it("U-WTTOPO-016: rootを保持しrealpath factでWindows aliasを同一identityにする", () => {
+    expect(normalizeTopologyPath("/")).toBe("/");
+    expect(normalizeTopologyPath("c:\\")).toBe("C:/");
+    const aliases = analyzeWorktreeTopology(
+      input([
+        main,
+        fact({
+          worktreePathKey: "c:\\Repo\\A\\",
+          adminPathKey: "c:\\Repo\\.git\\worktrees\\A\\",
+          worktreeRealPath: "C:/Repo/A",
+          adminRealPath: "C:/Repo/.git/worktrees/A",
+        }),
+      ]),
+    );
+    const canonical = analyzeWorktreeTopology(
+      input([
+        main,
+        fact({
+          worktreePathKey: "C:/Repo/A",
+          adminPathKey: "C:/Repo/.git/worktrees/A",
+        }),
+      ]),
+    );
+    expect(aliases.digest).toBe(canonical.digest);
+  });
+
+  it("U-WTTOPO-018: root外escapeとmany-to-one/path collisionを拒否する", () => {
+    const identities = [
+      { worktreePathKey: "/a/w", adminPathKey: "/a/g", headOid: "a", isMain: false },
+      { worktreePathKey: "/b/w", adminPathKey: "/b/g", headOid: "b", isMain: false },
+    ];
+    expect(() =>
+      remapTopologyIdentities(identities, [{ fromPrefix: "../a", toPrefix: "/x" }]),
+    ).toThrow("escape");
+    expect(() =>
+      remapTopologyIdentities(identities, [
+        { fromPrefix: "/a", toPrefix: "/x" },
+        { fromPrefix: "/b", toPrefix: "/x" },
+      ]),
+    ).toThrow("collision");
+    expect(() =>
+      remapTopologyIdentities(
+        [{ worktreePathKey: "/a/w", adminPathKey: "/b/w", headOid: "a", isMain: false }],
+        [{ fromPrefix: "/a", toPrefix: "/b" }],
+      ),
+    ).toThrow("collision");
   });
 });

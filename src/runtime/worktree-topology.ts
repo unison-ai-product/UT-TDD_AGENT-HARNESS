@@ -27,13 +27,19 @@ export interface TopologyIdentity {
 }
 
 export interface WorktreeFact extends TopologyIdentity {
+  /** collector が realpath.native で解決した実体path。指定時は identity key より優先する。 */
+  worktreeRealPath?: string;
+  adminRealPath?: string;
   directoryObserved: boolean;
   worktreeToAdminOk: boolean;
   adminToWorktreeOk: boolean;
   dirty: boolean;
   branch?: string;
   mergedIntoMain: boolean;
-  detachedReachable?: boolean;
+  /** detached HEAD を含むref列挙が成功した場合だけ true。 */
+  reachabilityObserved?: boolean;
+  /** `git for-each-ref --contains <HEAD>` の完全なref name。 */
+  containingRefs?: readonly string[];
 }
 
 export interface WorktreeAdminEntry {
@@ -71,11 +77,28 @@ export interface AllowedPathRemap {
   toPrefix: string;
 }
 
+export interface TopologyComparisonResult {
+  accepted: boolean;
+  reason?: "finding_present" | "unsafe_remap" | "identity_mismatch";
+  beforeDigest?: string;
+  afterDigest?: string;
+}
+
 export function normalizeTopologyPath(value: string): string {
-  const normalized = value.replace(/\\/g, "/").replace(/\/+$/, "");
-  return /^[a-z]:\//.test(normalized)
-    ? `${normalized[0].toUpperCase()}${normalized.slice(1)}`
-    : normalized;
+  const separators = value.replace(/\\/g, "/");
+  const driveNormalized = /^[a-zA-Z]:\//.test(separators)
+    ? `${separators[0].toUpperCase()}${separators.slice(1)}`
+    : separators;
+  if (driveNormalized === "/" || /^[A-Z]:\/$/.test(driveNormalized)) return driveNormalized;
+  return driveNormalized.replace(/\/+$/, "");
+}
+
+function canonicalIdentity(identity: TopologyIdentity): TopologyIdentity {
+  return {
+    ...identity,
+    worktreePathKey: normalizeTopologyPath(identity.worktreePathKey),
+    adminPathKey: normalizeTopologyPath(identity.adminPathKey),
+  };
 }
 
 function compareText(left: string, right: string): number {
@@ -94,7 +117,9 @@ function identityKey(identity: TopologyIdentity): string {
 }
 
 export function canonicalIdentities(identities: readonly TopologyIdentity[]): TopologyIdentity[] {
-  return [...identities].sort((left, right) => compareText(identityKey(left), identityKey(right)));
+  return identities
+    .map(canonicalIdentity)
+    .sort((left, right) => compareText(identityKey(left), identityKey(right)));
 }
 
 function frame(value: string): Buffer {
@@ -130,11 +155,25 @@ function liveness(fact: WorktreeFact): "dirty" | "detached" | "merged" | "active
   return fact.mergedIntoMain ? "merged" : "active";
 }
 
+const RETAINED_REF = /^(?:refs\/heads\/|refs\/remotes\/origin\/|refs\/tags\/)/;
+const MAIN_REFS = new Set(["refs/heads/main", "refs/remotes/origin/main"]);
+
+export function isDetachedHeadRetained(fact: WorktreeFact): boolean | undefined {
+  if (fact.branch) return undefined;
+  if (fact.reachabilityObserved !== true || !fact.containingRefs) return undefined;
+  return fact.containingRefs.some((ref) => RETAINED_REF.test(ref) && !MAIN_REFS.has(ref));
+}
+
 export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeTopologyReport {
+  const facts = input.facts.map((fact) => ({
+    ...fact,
+    worktreePathKey: normalizeTopologyPath(fact.worktreeRealPath ?? fact.worktreePathKey),
+    adminPathKey: normalizeTopologyPath(fact.adminRealPath ?? fact.adminPathKey),
+  }));
   const findings = new Map<string, TopologyFinding>();
   const add = (finding: TopologyFinding): void => void findings.set(findingKey(finding), finding);
   for (const observation of input.observations ?? []) add(observation);
-  for (const fact of input.facts) {
+  for (const fact of facts) {
     if (!fact.directoryObserved)
       add({
         kind: "dir_missing",
@@ -159,7 +198,7 @@ export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeT
         worktreePathKey: fact.worktreePathKey,
         adminPathKey: fact.adminPathKey,
       });
-    if (!fact.isMain && !fact.branch && fact.detachedReachable === undefined)
+    if (!fact.isMain && !fact.branch && isDetachedHeadRetained(fact) === undefined)
       add({
         kind: "reachability_unavailable",
         operation: "reachability",
@@ -174,7 +213,7 @@ export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeT
         kind: "orphan_admin",
         operation: "admin-enumeration",
         evidenceCode: "unregistered",
-        adminPathKey: entry.adminPathKey,
+        adminPathKey: normalizeTopologyPath(entry.adminPathKey),
       });
   const findingList = [...findings.values()].sort((left, right) =>
     compareText(findingKey(left), findingKey(right)),
@@ -183,7 +222,7 @@ export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeT
     findingList.map((finding) => finding.worktreePathKey).filter(Boolean),
   );
   const counts: WorktreeTopologyCounts = {
-    total: input.facts.length,
+    total: facts.length,
     main: 0,
     dirty: 0,
     detached: 0,
@@ -191,7 +230,7 @@ export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeT
     active: 0,
   };
   const retirable: string[] = [];
-  for (const fact of input.facts) {
+  for (const fact of facts) {
     if (fact.isMain) {
       counts.main += 1;
       continue;
@@ -199,19 +238,21 @@ export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeT
     const state = liveness(fact);
     counts[state] += 1;
     if (unsafeWorktrees.has(fact.worktreePathKey)) continue;
-    if (state === "merged" || (state === "detached" && fact.detachedReachable === true))
+    if (state === "merged" || (state === "detached" && isDetachedHeadRetained(fact) === true))
       retirable.push(fact.worktreePathKey);
   }
   retirable.sort(compareText);
   const identities = canonicalIdentities(
-    input.facts
+    facts
       .filter((fact) => !unsafeWorktrees.has(fact.worktreePathKey))
-      .map(({ worktreePathKey, adminPathKey, headOid, isMain }) => ({
-        worktreePathKey,
-        adminPathKey,
-        headOid,
-        isMain,
-      })),
+      .map(
+        ({ worktreePathKey, adminPathKey, worktreeRealPath, adminRealPath, headOid, isMain }) => ({
+          worktreePathKey: worktreeRealPath ?? worktreePathKey,
+          adminPathKey: adminRealPath ?? adminPathKey,
+          headOid,
+          isMain,
+        }),
+      ),
   );
   return {
     ok: findingList.length === 0,
@@ -236,6 +277,15 @@ export function remapTopologyIdentities(
     fromPrefix: normalizeTopologyPath(remap.fromPrefix),
     toPrefix: normalizeTopologyPath(remap.toPrefix),
   }));
+  const absolute = (path: string): boolean => path.startsWith("/") || /^[A-Z]:\//.test(path);
+  const unsafePrefix = normalized.some(
+    (remap) =>
+      !absolute(remap.fromPrefix) ||
+      !absolute(remap.toPrefix) ||
+      remap.fromPrefix.split("/").includes("..") ||
+      remap.toPrefix.split("/").includes(".."),
+  );
+  if (unsafePrefix) throw new Error("remap path escape");
   if (new Set(normalized.map((remap) => remap.fromPrefix)).size !== normalized.length)
     throw new Error("duplicate remap prefix");
   const apply = (path: string): string => {
@@ -250,12 +300,43 @@ export function remapTopologyIdentities(
     if (suffix.split("/").includes("..")) throw new Error("remap path escape");
     return `${match.toPrefix}${suffix}`;
   };
-  const result = identities.map((identity) => ({
+  const result = canonicalIdentities(identities).map((identity) => ({
     ...identity,
     worktreePathKey: apply(identity.worktreePathKey),
     adminPathKey: apply(identity.adminPathKey),
   }));
   if (new Set(result.map(identityKey)).size !== result.length)
     throw new Error("remap identity collision");
+  const worktreePaths = result.map((identity) => identity.worktreePathKey);
+  const adminPaths = result.map((identity) => identity.adminPathKey);
+  if (
+    new Set(worktreePaths).size !== worktreePaths.length ||
+    new Set(adminPaths).size !== adminPaths.length ||
+    worktreePaths.some((path) => adminPaths.includes(path))
+  )
+    throw new Error("remap path collision");
   return canonicalIdentities(result);
+}
+
+export function compareTopologySnapshots(
+  before: WorktreeTopologyReport,
+  after: WorktreeTopologyReport,
+  remaps: readonly AllowedPathRemap[] = [],
+): TopologyComparisonResult {
+  if (before.findings.length > 0 || after.findings.length > 0)
+    return { accepted: false, reason: "finding_present" };
+  let remapped: TopologyIdentity[];
+  try {
+    remapped = remapTopologyIdentities(before.identities, remaps);
+  } catch {
+    return { accepted: false, reason: "unsafe_remap" };
+  }
+  const beforeDigest = topologyDigest(remapped);
+  const afterDigest = topologyDigest(after.identities);
+  return {
+    accepted: beforeDigest === afterDigest,
+    ...(beforeDigest === afterDigest ? {} : { reason: "identity_mismatch" as const }),
+    beforeDigest,
+    afterDigest,
+  };
 }
