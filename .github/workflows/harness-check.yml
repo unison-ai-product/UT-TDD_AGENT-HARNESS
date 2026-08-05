@@ -3,7 +3,9 @@
 # §6.9: ローカル hook は早期検知のみ。全量テスト・回帰確認は GitHub Actions で実行する。
 # §6.2: Branch Protection の Required Status Checks は本 `harness-check` 1 本のみ (集約 gate)。
 #
-# 本 workflow は §6.5 Phase 0-A 相当 (配備するが Required 化はしない / solo)。
+# 本 workflow の aggregate `harness-check` は現行 main protection の唯一の Required Status Check。
+# `harness-check-linux` / `harness-check-windows` は component CI evidence であり、将来の D2 は
+# D1 candidate と trusted custody の最終 AND をこの aggregate 出力へ一方向に投影する。
 # トリガは §7.5-7.6 の「全 PR 共通 aggregate harness-check」契約に従い pull_request を base 限定しない
 # (stacked PR (base≠main) を除外しない — issue #57 / PLAN-L6-82)。solo main 直開発の即 dogfood 用に `push: [main]` を維持する。
 #
