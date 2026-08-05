@@ -6,7 +6,7 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-05
 updated: 2026-08-05
 owner: PM / PO
@@ -22,6 +22,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-474-worktree-topology-detector.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/worktree-topology.ts
+    artifact_type: source_module
+  - artifact_path: tests/worktree-topology.test.ts
+    artifact_type: test_module
 dependencies:
   parent: docs/plans/PLAN-L7-222-doctor-runtime-surface-extraction.md
   requires: []
@@ -31,7 +35,8 @@ dependencies:
     - docs/plans/PLAN-REVERSE-474-worktree-topology-detector-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/232
-review_evidence: []
+review_evidence:
+  - "bun scripts/run-vitest-snapshot.ts tests/worktree-topology.test.ts --reporter=dot (U-WTTOPO-001〜013,016,018)"
 ---
 
 # PLAN-L7-474: worktree topology 健全性・寿命検出の契約 freeze
@@ -90,10 +95,10 @@ Issue #232 の worktree link 健全性と終了判定を、配置移設
 ## 設計と検証の対
 
 oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
-`CANDIDATE-WTTOPO-001`〜`018` である。これは #234 の実装候補から抽出して契約化したものであり、
-本PRでは test code の存在・green・実リポジトリの計測値を主張しない。
-後続の実装PRは各candidateとテストcitationを同じcommitで追加し、その時点でのみ
-対応する確定 `U-*` IDへ原子的に昇格する。
+`U-WTTOPO-001`〜`013`、`016`、`018` と、後続の `CANDIDATE-WTTOPO-014`、`015`、`017`
+である。本PRは one source_module の原則に従い、`src/runtime/worktree-topology.ts` の typed
+facts/analyzer/identity/digest/remap と同名testだけを実装する。collectorのtyped observationと
+doctor advisoryは child add-impl slice（Issue #232）で同じ凍結契約に結線する。
 
 ## スコープ外
 
@@ -103,8 +108,7 @@ oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
 
 ## 後続の実装受入条件
 
-- AC-1: `CANDIDATE-WTTOPO-001`〜`018` をテストコードで実装し、同じcommitで
-  対応する確定 `U-*` IDへ昇格して全件を検証する。
+- AC-1: `U-WTTOPO-001`〜`013`、`016`、`018` をテストコードで実装し、全件を検証する。
 - AC-2: facts collector と純粋 analyzer のI/O境界、双方向link検査、fail-safe retirable除外を
   非author familyがレビューする。
 - AC-3: doctorへのadvisory配線が hard gate / CIの成功判定を変えないことを実測で示す。
@@ -116,5 +120,6 @@ oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
 ## Schedule
 
 1. [完了] 設計と L7 oracle を pair-freeze する。
-2. [直列] 別 add-impl PR で collector / analyzer / doctor advisory / テストを実装する。
-3. [直列] Reverse R0〜R4、cross-review、trace-freeze を実施して確認する。
+2. [進行中] 本add-impl PRで pure analyzer / identity / digest / remap / テストを実装する。
+3. [直列] child add-impl PRで collector / doctor advisory と `CANDIDATE-WTTOPO-014`、`015`、`017`を実装する。
+4. [直列] Reverse R0〜R4、cross-review、trace-freeze を実施して確認する。

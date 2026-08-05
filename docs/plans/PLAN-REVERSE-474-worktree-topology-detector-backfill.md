@@ -59,8 +59,9 @@ R0 は実装観測ではない。実装、テスト、実測件数、green verdi
 - R1 [直列]: add-impl の実装事実と L4/L6既存契約を照合し、各問いを
   `backfill_required` または `not_impacted` と理由付きで判定する。
 - R2 [直列]: R1で必要と判定された面だけを上流へ gap-only 追記する。
-- R3 [直列]: `CANDIDATE-WTTOPO-001`〜`018` を実装test citationと同じcommitで
-  対応する確定 `U-*` IDへ昇格し、実装とのトレースを照合する。
+- R3 [部分実装]: `U-WTTOPO-001`〜`013`、`016`、`018` を
+  `tests/worktree-topology.test.ts` の同名test citationで実装した。collector/doctorの
+  `CANDIDATE-WTTOPO-014`、`015`、`017` は child slice で昇格する。R1/R2/R4は別途実測・レビュー後に行う。
 - R4 [直列]: Forward再合流を判定し、実装PLANの確認条件へ反映する。
 
 ## AC
