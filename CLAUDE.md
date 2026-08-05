@@ -86,7 +86,7 @@ advisor結果は前提をrepo実測で検証し、下記の高影響境界に該
 一意に決まるなら、AIランタイムが技術判断として決定・記録して作業を継続する。advisor相談を
 POへの責任転送の前置きにしてはならない。
 
-production infrastructure、destructive data operation、外部authentication/authorization、payment、
+production infrastructure、destructive data operation、authentication/authorization、payment、
 PII、secret、licensing、外部API前提の変更は高影響境界であり、trade-offの有無やadvisor回答に
 かかわらず変更前にPO承認を得る。advisor相談は承認の代替ではない。それ以外でPOへ上げてよいのは、
 advisor相談と実測後にも複数案の実在するtrade-offが残り、product scopeなどPO権限を要する判断に
