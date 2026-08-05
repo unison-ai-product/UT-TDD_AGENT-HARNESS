@@ -34,6 +34,11 @@ dependencies:
     - src/setup/distribution.ts
     - src/cli/distribution.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/224
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/247
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/248
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/249
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/250
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/251
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
 ---
@@ -126,11 +131,15 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
    とする。同じrelease IDに異なるrecordを宣言した場合は履歴比較に依存せず導出式不一致として拒否する。
    materializer変更はversionを上げ、既存releaseを解決する旧versionを消さない。
 
-7. **AC-6の原子性は最終aggregate境界で保持する**。前段sliceがpure moduleを追加しても、
+7. **AC-6の原子性はPF-5の単一final-tree admission transactionで保持する**。前段sliceがpure moduleを追加しても、
    `release/manifest.yaml`の正本化、clean Pack allowlistへの追加、`sync-pack --channel`からの選択・copyを
-   個別に有効化してはならない。これら3点はadapterの内部完成後、aggregate acceptance PRで同時に結線し、
-   1点でも欠ければ同期write 0でfail-closeする。従って子slice化はscope縮小ではなく、外部可視なAC-6を
-   最終commitまで不可分に保ったまま、内部証明を依存順に積むための実装順序契約である。
+   個別にpublishしてはならない。`release-channel-aggregate-admission` guardはGitのcommit境界・merge方式・
+   PR履歴を入力にせず、exact HEADのfinal treeから (A) manifest SSoTが正規pathに一意かつschema valid、
+   (B) clean distribution planがそのcontrol manifest copyをallowlist到達物として含む、(C) channelが選ぶ
+   artifact revisionをresolver→materializer→Pack destinationへ写す経路が存在する、の3 predicateを
+   side effect前にAND判定する。全成立時だけsealed write planを返して1回applyし、1点でも欠ければ
+   resolver/materializer/copy/write count 0で拒否する。従って子slice化はscope縮小ではなく、外部可視な
+   AC-6をPF-5 admissionまで不可分に保ったまま内部証明を依存順に積む実装順序契約である。
 
 ## 3. 契約骨子
 
@@ -181,18 +190,19 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 - AC-9: 各子sliceは対応するcandidate oracleを持ち、docs-only pair-freezeがmainへmergeされる前に
   implementation fileを追加しない。candidateから`U-*`への昇格は実装test citationと同じcommitだけで行う。
 - AC-10: PR #244 prototypeで未検出だったown-property lookup、artifact digest単独mutation、型不正、
-  unknown channel時のresolver/copy/write副作用をRED oracleとして保持し、Green証跡なしに消さない。
+  unknown channelをRED oracleとして保持する。PF-1はpure返値だけを`001/002`として昇格でき、
+  aggregate resolver/materializer/copy/write 0は別の`015/016`としてPF-5までRED維持する。
 
 ## 6. 子sliceとpromotable oracle
 
 | 順序 | 子slice | このsliceでのみ昇格可能なoracle | merge条件 |
 | --- | --- | --- | --- |
 | PF-0 | contract / pair-freeze訂正 | なし (全てRED維持) | 本PLAN・Reverse・test-designだけのPRがcross-review PASS |
-| PF-1 | pure manifest domain | `001`, `002`, `007`, `009`, `013` | parser / identity / own-property / channel解決testがGreen。Git・FS・copy依存0 |
-| PF-2 | versioned materializer | `011` | destination path/mode/transformed bytes/framingのdigest mutationがGreen |
-| PF-3 | isolated Git resolver | `012` | control/artifact revision分離、object不在時network/reconstruction/copy 0がGreen |
-| PF-4 | `sync-pack --channel` adapter内部 | `006` | attested/mismatch/unavailableを保持し、CLI/FS seamの副作用を計測可能 |
-| PF-5 | aggregate acceptance | `014` と残存するS2 oracle | manifest SSoT + allowlist + selected-revision copyを同一commitで結線しAC-6を実repo検証 |
+| PF-1 / #247 | pure manifest domain | `001`, `002`, `007`, `009`, `013` | parser / identity / own-property / channel解決のpure testがGreen。aggregate side-effect 0は主張しない |
+| PF-2 / #248 | versioned materializer | `011` | destination path/mode/transformed bytes/framingのdigest mutationがGreen |
+| PF-3 / #249 | isolated Git resolver | `012` | control/artifact revision分離、object不在時network/reconstruction/copy 0がGreen |
+| PF-4 / #250 | `sync-pack --channel` adapter内部 | `006` | attested/mismatch/unavailableを保持し、CLI/FS seamの副作用を計測可能 |
+| PF-5 / #251 | aggregate acceptance | `014`, `015`, `016` | final-tree 3 predicateをpreflightし、全成立時だけsealed write planをapply。欠落/invalid/unknownは全side effect 0 |
 | S3 | promotion / rollback gate | `003`, `004`, `005`, `008`, `010` | D2/D3/QA証跡と非破壊pointer deltaを結線 |
 
 番号はtest-designの`CANDIDATE-RELMAN-*`と一致させる。前段で後段oracleを昇格したり、単体testの
@@ -205,13 +215,14 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 3. [直列 / PF-2] PF-1 Green後にmaterializerのpair-freeze → 実装を行う。
 4. [直列 / PF-3] PF-2 Green後にisolated resolverのpair-freeze → 実装を行う。
 5. [直列 / PF-4] PF-3 Green後にadapter内部のpair-freeze → 実装を行う。外部結線はまだ行わない。
-6. [直列 / PF-5] manifest正本・allowlist・sync-pack copyを1 PRで結線し、aggregate acceptanceを通す。
+6. [直列 / PF-5] exact HEAD final treeのmanifest正本・allowlist・sync-pack copyを単一admissionでAND判定し、
+   sealed planだけをapplyする。commit分割やmerge方式ではなくfinal-tree invariantでaggregate acceptanceを通す。
 7. [直列] `PLAN-REVERSE-473` R3/R4を閉じ、Forwardへmergeする。FLAG時は該当phaseへ戻り、
    未検証oracleの昇格と後続slice着手を取り消す。
 
 ## 完了条件 (S1)
 
-- [x] `CANDIDATE-RELMAN-001`〜`014` が test-design へRED oracleとして登録されている。
+- [x] `CANDIDATE-RELMAN-001`〜`016` が test-design へRED oracleとして登録されている。
   S2は実装test citationと同じcommitで確定`U-*` IDへ昇格する。
 - [ ] 設計判断節が non-author family の cross-review で PASS。
 - [x] `PLAN-L6-63` との責務分離・存続・相互参照が技術判断として確定している。

@@ -32,6 +32,11 @@ dependencies:
     - docs/design/harness/L6-function-design/setup-solo-team.md
     - src/setup/distribution.ts
     - src/cli/distribution.ts
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/247
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/248
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/249
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/250
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/251
 review_evidence: []
 ---
 
@@ -59,8 +64,9 @@ mergeされた時点で完了する。実装をR1完了証拠の代替にしな�
   fetchも現在treeからの再構成も行わない。manifestをartifact digestから除外して自己参照を避ける。
 - R1 (現在): manifest正本、pure domain、versioned materializer、isolated Git resolver、
   `sync-pack --channel` adapter、aggregate acceptance、Pack repo側tag/revert runbookの責務を分離する。
-  AC-6のmanifest SSoT + allowlist + selected-revision copyはPF-5まで外部結線せず、最終変更で同時に有効化する。
-- R2: Forward test-designの`CANDIDATE-RELMAN-001`〜`014`を、PF-1→PF-2→PF-3→PF-4→PF-5の
+  AC-6のmanifest SSoT + allowlist + selected-revision copyはPF-5までpublishせず、exact HEAD final treeを
+  読む単一admission transactionで全predicate成立時だけsealed planをapplyする。
+- R2: Forward test-designの`CANDIDATE-RELMAN-001`〜`016`を、#247→#248→#249→#250→#251の
   直列順にGreen化する。各PFは「当該docs-only pair-freeze merge → implementation+test citation同一commit
   → exact-HEAD CI/review → merge」を1遷移とする。候補IDは所有PF以外で昇格しない。
 - R3: PF-5 aggregate acceptance後、cross-family reviewで正本選択、control/artifact分離、digest、
@@ -72,11 +78,11 @@ mergeされた時点で完了する。実装をR1完了証拠の代替にしな�
 | from | transition guard | to | FLAG / failure |
 | --- | --- | --- | --- |
 | R0 | 本docs-only訂正がexact-HEAD CI + cross-review PASSでmainへmerge | R1 complete / PF-1 pair-freeze | R0/R1へ留まり実装禁止 |
-| R1 / PF-1 | pure domain pair-freeze merge後、`001/002/007/009/013`実装Green・review・merge | R2 / PF-2 | PF-1へ戻し、候補はRED維持 |
-| R2 / PF-2 | `011` materializer Green・review・merge | R2 / PF-3 | PF-2へ戻る |
-| R2 / PF-3 | `012` resolver Green・review・merge | R2 / PF-4 | PF-3へ戻る |
-| R2 / PF-4 | `006` adapter内部Green・review・merge、外部結線0 | R2 / PF-5 | PF-4へ戻る |
-| R2 / PF-5 | `014` aggregate Green、AC-6の3結線が同一HEAD、full CI PASS | R3 | PF-5へ戻りpartial結線をmergeしない |
+| R1 / PF-1 #247 | pure domain pair-freeze merge後、`001/002/007/009/013`のpure実装Green・review・merge。`015/016`はRED | R2 / PF-2 #248 | PF-1へ戻し、候補はRED維持 |
+| R2 / PF-2 #248 | `011` materializer Green・review・merge | R2 / PF-3 #249 | PF-2へ戻る |
+| R2 / PF-3 #249 | `012` resolver Green・review・merge | R2 / PF-4 #250 | PF-3へ戻る |
+| R2 / PF-4 #250 | `006` adapter内部Green・review・merge、外部結線0 | R2 / PF-5 #251 | PF-4へ戻る |
+| R2 / PF-5 #251 | `014/015/016` aggregate Green。final-tree 3 predicateをside effect前にAND判定し、sealed planだけをapply。full CI PASS | R3 | PF-5へ戻りpartial stateをpublishしない |
 | R3 | cross-family review PASS + backprop先確定 | R4 | finding所有PFへ戻る |
 | R4 | L6合流・Forward routing確定・closing gate PASS | Forward merge | R4未完了のまま保持 |
 
