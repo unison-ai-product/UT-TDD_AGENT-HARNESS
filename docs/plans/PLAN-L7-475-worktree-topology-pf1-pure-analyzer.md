@@ -20,6 +20,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-475-worktree-topology-pf1-pure-analyzer.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/worktree-topology.ts
+    artifact_type: source_module
+  - artifact_path: tests/worktree-topology.test.ts
+    artifact_type: test_module
 dependencies:
   parent: docs/plans/PLAN-L7-474-worktree-topology-detector.md
   requires: []
@@ -27,7 +31,10 @@ dependencies:
   references:
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/253
-review_evidence: []
+review_evidence:
+  - review_kind: local_verification
+    command: "bunx tsc --noEmit && bunx biome check src/runtime/worktree-topology.ts tests/worktree-topology.test.ts"
+    result: pass
 ---
 
 # PF1: pure analyzer・canonical identity/remap
@@ -53,3 +60,10 @@ many-to-one/cross-path collisionを純粋判定する。
 ## Exit
 
 owner oracleのRed→Green、同commitでの`U-*`昇格、exact HEAD CI、非author closing PASSを満たす。
+
+## 実装証跡
+
+`src/runtime/worktree-topology.ts` は PF1 の唯一の source module とし、collector / Git I/O / OS
+realpath は持たない。入力factsを canonical identity、stable findings、counts、retirableへ純粋に
+還元する。`tests/worktree-topology.test.ts` は `U-WTTOPO-001`〜`006`、`008`〜`011` と、PF1が
+所有する canonical remapの root・longest-prefix・alias/collision/escape境界を引用する。
