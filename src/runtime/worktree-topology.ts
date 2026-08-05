@@ -40,6 +40,8 @@ export interface WorktreeFact extends TopologyIdentity {
   reachabilityObserved?: boolean;
   /** `git for-each-ref --contains <HEAD>` の完全なref name。 */
   containingRefs?: readonly string[];
+  /** symbolic refを観測した場合の解決先。未解決aliasはfail-safeで到達性不明とする。 */
+  symbolicRefTargets?: Readonly<Record<string, string>>;
 }
 
 export interface WorktreeAdminEntry {
@@ -161,7 +163,16 @@ const MAIN_REFS = new Set(["refs/heads/main", "refs/remotes/origin/main"]);
 export function isDetachedHeadRetained(fact: WorktreeFact): boolean | undefined {
   if (fact.branch) return undefined;
   if (fact.reachabilityObserved !== true || !fact.containingRefs) return undefined;
-  return fact.containingRefs.some((ref) => RETAINED_REF.test(ref) && !MAIN_REFS.has(ref));
+  let unresolvedAlias = false;
+  for (const ref of fact.containingRefs) {
+    const resolved = ref === "refs/remotes/origin/HEAD" ? fact.symbolicRefTargets?.[ref] : ref;
+    if (!resolved) {
+      unresolvedAlias = true;
+      continue;
+    }
+    if (RETAINED_REF.test(resolved) && !MAIN_REFS.has(resolved)) return true;
+  }
+  return unresolvedAlias ? undefined : false;
 }
 
 export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeTopologyReport {
@@ -266,7 +277,15 @@ export function analyzeWorktreeTopology(input: WorktreeTopologyInput): WorktreeT
 }
 
 function pathMatchesPrefix(path: string, prefix: string): boolean {
+  if (prefix === "/") return path.startsWith("/");
+  if (/^[A-Z]:\/$/.test(prefix)) return path.startsWith(prefix);
   return path === prefix || path.startsWith(`${prefix}/`);
+}
+
+function joinCanonicalPrefix(prefix: string, suffix: string): string {
+  if (!suffix) return prefix;
+  const child = suffix.replace(/^\/+/, "");
+  return normalizeTopologyPath(prefix.endsWith("/") ? `${prefix}${child}` : `${prefix}/${child}`);
 }
 
 export function remapTopologyIdentities(
@@ -298,7 +317,7 @@ export function remapTopologyIdentities(
     const match = matches[0];
     const suffix = path.slice(match.fromPrefix.length);
     if (suffix.split("/").includes("..")) throw new Error("remap path escape");
-    return `${match.toPrefix}${suffix}`;
+    return joinCanonicalPrefix(match.toPrefix, suffix);
   };
   const result = canonicalIdentities(identities).map((identity) => ({
     ...identity,

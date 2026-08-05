@@ -6,7 +6,7 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-05
 updated: 2026-08-05
 owner: PM / PO
@@ -35,7 +35,28 @@ dependencies:
     - docs/plans/PLAN-REVERSE-474-worktree-topology-detector-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/232
-review_evidence: []
+review_evidence:
+  - reviewer: "gpt-5.6-sol delta reviewer"
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-05T04:51:42Z"
+    tests_green_at: "2026-08-05T04:49:09Z"
+    verdict: flag
+    scope: "PR #243 exact a9a5275370ab3a2771de89e22139e397ec2fa9ec: root remap、origin/HEAD alias、Forward/Reverse state の是正要求"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    subject_head: a9a5275370ab3a2771de89e22139e397ec2fa9ec
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/243#issuecomment-5187692257"
+    green_commands:
+      - kind: integration_test
+        command: "GitHub Actions harness-check (run 30975901531)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-05T04:49:09Z"
+        evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/30975901531"
+        output_digest: "sha256:410ee6fe36ca6128c0dddf2500e7c5fc8e9d7e14dde0f559cef7c063637dbad0"
+        anchor_commit: a9a5275370ab3a2771de89e22139e397ec2fa9ec
 ---
 
 # PLAN-L7-474: worktree topology 健全性・寿命検出の契約 freeze
@@ -46,9 +67,9 @@ Issue #232 の worktree link 健全性と終了判定を、配置移設
 (`PLAN-L4-34-repository-runtime-placement-topology`) の前後比較に使える
 **advisory の acceptance oracle** として設計固定する。
 
-本PRは pair-freeze だけである。collector、analyzer、doctor配線、テストコード、実行結果は
-まだ出荷物として宣言しない。後続の add-impl PR が本PLANを確認済みにし、そのとき初めて
-実装出荷物を `generates` へ追加する。
+pair-freeze は PR #237 で完了した。本PRは one source_module の実装sliceとして、純粋analyzerと
+対応testを `generates` に登録した。collectorとdoctor配線は後続child sliceまで未実装であり、
+`CANDIDATE-WTTOPO-014`、`015`、`017`を確定IDへ昇格しない。
 
 ## 固定する契約
 
@@ -119,6 +140,6 @@ doctor advisoryは child add-impl slice（Issue #232）で同じ凍結契約に�
 ## Schedule
 
 1. [完了] 設計と L7 oracle を pair-freeze する。
-2. [進行中] 本add-impl PRで pure analyzer / identity / digest / remap / テストを実装する。
+2. [完了] 本add-impl PRで pure analyzer / identity / digest / remap / テストを実装する。
 3. [直列] child add-impl PRで collector / doctor advisory と `CANDIDATE-WTTOPO-014`、`015`、`017`を実装する。
-4. [直列] Reverse R0〜R4、cross-review、trace-freeze を実施して確認する。
+4. [進行中] Reverse R0〜R3を実施済み。R4はclosing review PASSとchild slice境界確認後に行う。

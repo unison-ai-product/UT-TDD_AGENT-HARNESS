@@ -177,6 +177,26 @@ describe("worktree topology (U-WTTOPO)", () => {
     expect(accepted.retirable).toEqual(["/repo/w"]);
   });
 
+  it("U-WTTOPO-007: origin/HEADは解決factなしでfail-safe、main aliasは保持根拠にしない", () => {
+    const alias = (symbolicRefTargets?: Readonly<Record<string, string>>) =>
+      analyzeWorktreeTopology(
+        input([
+          main,
+          fact({
+            branch: undefined,
+            reachabilityObserved: true,
+            containingRefs: ["refs/remotes/origin/HEAD"],
+            symbolicRefTargets,
+          }),
+        ]),
+      );
+    expect(alias().findings.map((finding) => finding.kind)).toContain("reachability_unavailable");
+    expect(alias({ "refs/remotes/origin/HEAD": "refs/remotes/origin/main" }).retirable).toEqual([]);
+    expect(alias({ "refs/remotes/origin/HEAD": "refs/remotes/origin/feature" }).retirable).toEqual([
+      "/repo/w",
+    ]);
+  });
+
   it("U-WTTOPO-013: allowed remap後のidentity集合だけをacceptする", () => {
     const before = analyzeWorktreeTopology(input([main, fact()]));
     const after = analyzeWorktreeTopology(
@@ -245,5 +265,29 @@ describe("worktree topology (U-WTTOPO)", () => {
         [{ fromPrefix: "/a", toPrefix: "/b" }],
       ),
     ).toThrow("collision");
+  });
+
+  it("U-WTTOPO-018: root remapと逆向きremapをcanonical joinで往復する", () => {
+    const original = [
+      {
+        worktreePathKey: "/repo/w",
+        adminPathKey: "/repo/.git/worktrees/w",
+        headOid: "a",
+        isMain: false,
+      },
+    ];
+    const moved = remapTopologyIdentities(original, [{ fromPrefix: "/", toPrefix: "/moved" }]);
+    expect(moved).toEqual([
+      {
+        worktreePathKey: "/moved/repo/w",
+        adminPathKey: "/moved/repo/.git/worktrees/w",
+        headOid: "a",
+        isMain: false,
+      },
+    ]);
+    expect(remapTopologyIdentities(moved, [{ fromPrefix: "/moved", toPrefix: "/" }])).toEqual(
+      original,
+    );
+    expect(moved[0].adminPathKey).not.toContain("//");
   });
 });

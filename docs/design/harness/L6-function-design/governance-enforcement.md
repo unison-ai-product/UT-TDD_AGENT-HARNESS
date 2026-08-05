@@ -94,3 +94,16 @@ PowerShell `Get-Content` / `Set-Content` / `Out-File` の既定 encoding 差分�
 | `runWriteEncodingGuard` | `runWriteEncodingGuard(input, deps) -> WriteEncodingGuardResult` | `repoRoot` は作業 repo。検査は advisory である。 | 対象 artifact を single read し、`analyzeArtifacts` を再利用して違反 message と jsonl 証跡を出す。 | 検出ロジックは readability gate と同じ `src/lint` 境界で共有し、hook は exit 0 の fail-open を維持する。 | U-WENC-001..004 |
 
 `hook post-tool-use` は既存 session-log 記録の後に `runWriteEncodingGuard` を呼ぶ。`Write` / `Edit` / `MultiEdit` / `apply_patch` / `write_file` は明示 target だけを検査する。`Bash` / `exec_command` / `local_shell` は tool payload から書込先を決定できないため、`git status --porcelain` の changed file list を fallback target とする。完全性は doctor/CI の `readability` / `runtime-readability` が引き続き担保し、PostToolUse guard は事故の早期発見と連鎖防止を担う。
+
+## worktree topology acceptance（PLAN-REVERSE-474 R2）
+
+worktree配置の移設・回収候補判定は、Git I/Oから分離した純粋analyzerの次の契約に従う。
+
+- worktree側gitdirとadmin側back pointerを双方向に検査し、link/dir findingを持つ面は
+  healthyおよびretirableから除外する。
+- livenessは`dirty > detached > merged > active`の排他順とする。detachedのretirable根拠は
+  `refs/heads/*`、`refs/remotes/origin/*`、`refs/tags/*`だけであり、main alias、`refs/pull/*`、
+  stash、他remote、到達性不明は保持証明にしない。
+- 移設前後のacceptanceはfindings 0かつ、canonical pathへの許可remap後の
+  `{worktreePathKey, adminPathKey, headOid, isMain}`集合digest一致で判定する。
+  件数一致、root外escape、曖昧prefix、many-to-one/path collisionを成功扱いしない。
