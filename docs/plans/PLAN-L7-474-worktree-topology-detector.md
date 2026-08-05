@@ -16,7 +16,7 @@ agent_slots:
   - role: se
     slot_label: "SE - freeze済み facts collector / 純粋 analyzer / doctor advisory 契約を実装する"
   - role: qa
-    slot_label: "QA - U-WTTOPO-001〜011 の実装テストと fail-safe 境界を検証する"
+    slot_label: "QA - CANDIDATE-WTTOPO-001〜011 の実装テストと fail-safe 境界を検証する"
   - role: tl
     slot_label: "TL - advisory境界と移設acceptance oracleの独立レビュー"
 generates:
@@ -65,8 +65,10 @@ Issue #232 の worktree link 健全性と終了判定を、配置移設
 ## 設計と検証の対
 
 oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
-`U-WTTOPO-001`〜`011` である。これは #234 の実装候補から抽出して契約化したものであり、
+`CANDIDATE-WTTOPO-001`〜`011` である。これは #234 の実装候補から抽出して契約化したものであり、
 本PRでは test code の存在・green・実リポジトリの計測値を主張しない。
+後続の実装PRは各candidateとテストcitationを同じcommitで追加し、その時点でのみ
+対応する確定 `U-*` IDへ原子的に昇格する。
 
 ## スコープ外
 
@@ -76,7 +78,8 @@ oracle の正本は `docs/test-design/harness/L7-unit-test-design.md` の
 
 ## 後続の実装受入条件
 
-- AC-1: `U-WTTOPO-001`〜`011` をテストコードで実装し全件を検証する。
+- AC-1: `CANDIDATE-WTTOPO-001`〜`011` をテストコードで実装し、同じcommitで
+  対応する確定 `U-*` IDへ昇格して全件を検証する。
 - AC-2: facts collector と純粋 analyzer のI/O境界、双方向link検査、fail-safe retirable除外を
   非author familyがレビューする。
 - AC-3: doctorへのadvisory配線が hard gate / CIの成功判定を変えないことを実測で示す。

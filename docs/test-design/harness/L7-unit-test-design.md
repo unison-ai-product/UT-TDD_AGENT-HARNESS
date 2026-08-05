@@ -2055,21 +2055,22 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 
 > 対象設計は `PLAN-L7-474-worktree-topology-detector`。以下は将来の add-impl PR が実装すべき
 > oracle であり、この文書は collector / analyzer / doctor配線 / テストコードの存在またはgreenを
-> 主張しない。診断は advisory であり、CIのhard gateを変更しない。
+> 主張しない。診断は advisory であり、CIのhard gateを変更しない。実装PRはtest citationと同じ
+> commitで `CANDIDATE-*` を `U-*` へ昇格し、未実装の確定oracleを作らない。
 
 | ID | 攻撃・入力 | oracle |
 | --- | --- | --- |
-| `U-WTTOPO-001` | 全link一致・findingsなしの登録worktree | `healthy`へ計上し findingsは空 |
-| `U-WTTOPO-002` | worktree側`.git`のgitdir参照がadminと不一致 | `link_broken`を検出し`healthy`から除外 |
-| `U-WTTOPO-003` | admin back pointerがworktree側`.git`と不一致 | `link_broken`を検出（admin→worktree方向） |
-| `U-WTTOPO-004` | 登録worktree directoryが不在 | `dir_missing`を検出 |
-| `U-WTTOPO-005` | 登録されていないadmin entry | `orphan_admin`を検出 |
-| `U-WTTOPO-006` | dirty worktreeが同時にmerged/detached条件を満たす | `dirty`を最優先として他分類と排他 |
-| `U-WTTOPO-007` | findingなしのclean merged、clean detached、activeが混在 | merged/detachedだけを`retirable`へ、activeは除外 |
-| `U-WTTOPO-008` | main root worktree | liveness/`retirable`から除外しmain件数だけへ計上 |
-| `U-WTTOPO-009` | 同一factsを入力順だけ反転 | findings/counts/`retirable`が決定論的一致 |
-| `U-WTTOPO-010` | link/dir findingを持つworktreeと正常worktreeの混在 | finding面を`healthy`に数えない |
-| `U-WTTOPO-011` | link/dir findingでdirty/merged観測が既定値へ倒れるworktree | 分類は表示しても`retirable`へ混入させない（fail-safe） |
+| `CANDIDATE-WTTOPO-001` | 全link一致・findingsなしの登録worktree | `healthy`へ計上し findingsは空 |
+| `CANDIDATE-WTTOPO-002` | worktree側`.git`のgitdir参照がadminと不一致 | `link_broken`を検出し`healthy`から除外 |
+| `CANDIDATE-WTTOPO-003` | admin back pointerがworktree側`.git`と不一致 | `link_broken`を検出（admin→worktree方向） |
+| `CANDIDATE-WTTOPO-004` | 登録worktree directoryが不在 | `dir_missing`を検出 |
+| `CANDIDATE-WTTOPO-005` | 登録されていないadmin entry | `orphan_admin`を検出 |
+| `CANDIDATE-WTTOPO-006` | dirty worktreeが同時にmerged/detached条件を満たす | `dirty`を最優先として他分類と排他 |
+| `CANDIDATE-WTTOPO-007` | findingなしのclean merged、clean detached、activeが混在 | merged/detachedだけを`retirable`へ、activeは除外 |
+| `CANDIDATE-WTTOPO-008` | main root worktree | liveness/`retirable`から除外しmain件数だけへ計上 |
+| `CANDIDATE-WTTOPO-009` | 同一factsを入力順だけ反転 | findings/counts/`retirable`が決定論的一致 |
+| `CANDIDATE-WTTOPO-010` | link/dir findingを持つworktreeと正常worktreeの混在 | finding面を`healthy`に数えない |
+| `CANDIDATE-WTTOPO-011` | link/dir findingでdirty/merged観測が既定値へ倒れるworktree | 分類は表示しても`retirable`へ混入させない（fail-safe） |
 
 ## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
 

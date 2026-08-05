@@ -57,7 +57,8 @@ R0 は実装観測ではない。実装、テスト、実測件数、green verdi
 - R1 [直列]: add-impl の実装事実と L4/L6既存契約を照合し、各問いを
   `backfill_required` または `not_impacted` と理由付きで判定する。
 - R2 [直列]: R1で必要と判定された面だけを上流へ gap-only 追記する。
-- R3 [直列]: `U-WTTOPO-001`〜`011` と実装のトレースを照合する。
+- R3 [直列]: `CANDIDATE-WTTOPO-001`〜`011` を実装test citationと同じcommitで
+  対応する確定 `U-*` IDへ昇格し、実装とのトレースを照合する。
 - R4 [直列]: Forward再合流を判定し、実装PLANの確認条件へ反映する。
 
 ## AC
