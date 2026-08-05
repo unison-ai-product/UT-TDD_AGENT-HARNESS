@@ -94,11 +94,27 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 4. **既定チャネル = canary → stable の 2 段** (PO 採択 2026-08-04)。schema はチャネルを
    後から追加できる形 (配列 + 順序メタデータ) にし、下流製品が自分の段数を定義できることを
    前提として許容する。
+5. **チャネルは immutable release record を参照する** (Codex independent technical review、
+   2026-08-05)。manifest は `releases` map と `channels` map を分離する。`releases` の各 record は
+   immutable な release ID、source commit (40桁 SHA)、clean Pack artifact set の canonical
+   SHA-256 digest を持ち、`channels.<name>` は release ID だけを指す。同じ release ID の record
+   上書きは禁止する。`sync-pack --channel <name>` は channel → release record を解決し、実行中の
+   source checkout の commit と export plan の digest が record と完全一致するときだけ、その
+   artifact set を 1 つの Pack checkout へ materialize する。一致しない場合は旧 release を現在の
+   source tree から再構成せず fail-close し、対応する source revision の checkout での再実行を
+   要求する。したがって `stable=v1 / canary=v2` は manifest 上で同時に保持できる一方、1 回の
+   `sync-pack` は選択した 1 channel だけを実体化する。rollback は channel pointer を既存の prior
+   release ID へ戻し、その release record と一致する source checkout から同期する。tag/Release
+   auditor は外部配送証跡であり、この locator の正本にはしない。
 
 ## 3. 契約骨子
 
-- リリース単位 = artifact set + version manifest。1 リリースは 1 つの検証可能な version
-  identity (semver または content hash) に対応する。
+- リリース単位 = immutable release record + artifact set。release ID は 1 つの source commit と
+  canonical artifact-set digest の組に対応し、同じ ID の内容変更を拒否する。semver は表示用
+  metadata として保持できるが locator には使わない。
+- channel pointer と release record を分離する。複数チャネルが異なる release ID を同時に指せる。
+  `sync-pack --channel` と実状態突合は選択 channel 単位で行い、対応 source revision を解決できない
+  状態は `unavailable`、解決できるが digest が異なる状態は `mismatch` とする。
 - チャネル昇格は「宣言変更 + 証跡条件」の組で表現する。証跡条件は最低限
   harness-check green、QA Go/No-Go、cross-review receipt の 3 点を含む。
 - manifest ↔ Pack 実状態の突合 verify を AC に含める。突合結果は
@@ -130,6 +146,9 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
   manifest/channel/promotion機械契約を所有する。相互参照で接続し、supersedeしない。
 - AC-6: source repoの`release/manifest.yaml`だけを正本とし、clean Pack allowlistと
   `sync-pack`による配布copyをS2で原子的に追加する。Pack copyを第二正本にしない。
+- AC-7: `stable` と `canary` が異なる immutable release ID を同時に指せる。`sync-pack --channel`
+  は選択 channel の source commit と artifact-set digest を完全照合し、対応 revision でない
+  checkout から別 release を再構成せず fail-close する。
 
 ## 6. 設計と検証の対 (S1 時点の RED oracle 案)
 
@@ -146,6 +165,7 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 | version identity の一意性・衝突検知 | `U-RELMAN-009` |
 | 昇格・巻き戻し PR が merge gate (D2 merge_ready) を回避しないこと | `U-RELMAN-010` |
 | sync-pack `--channel` 最小実装との配線境界 (S2 引き渡し境界の明示) | `U-RELMAN-011` |
+| `stable=v1 / canary=v2` の同時保持、選択channel解決、異なるsource revisionからの再構成拒否 | `U-RELMAN-012` |
 
 ## 7. Schedule
 
@@ -157,7 +177,7 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
 
 ## 完了条件 (S1)
 
-- [ ] `U-RELMAN-001`〜`011` (案) が test-design へ registered され、oracle として承認される。
+- [ ] `U-RELMAN-001`〜`012` (案) が test-design へ registered され、oracle として承認される。
 - [ ] 設計判断節が non-author family の cross-review で PASS。
 - [x] `PLAN-L6-63` との責務分離・存続・相互参照が技術判断として確定している。
-- [ ] `PLAN-REVERSE-473` が R0 を完了し、既存実装との責務境界を確認する。
+- [x] `PLAN-REVERSE-473` が R0 を完了し、既存実装との責務境界を確認する。

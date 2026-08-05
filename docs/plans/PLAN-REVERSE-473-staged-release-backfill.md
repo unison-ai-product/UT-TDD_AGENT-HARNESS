@@ -10,7 +10,7 @@ route_signal: reverse
 route_mode: reverse
 status: draft
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-08-05
 owner: PO / Claude
 parent_design: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -50,10 +50,14 @@ review_evidence: []
   tag/revert runbook」との責務差分もここで確定する。2026-08-05 の実装観測では、clean Packの
   `CLEAN_ALLOW_PREFIXES` / `CLEAN_ALLOW_FILES` に `release/` は無く、`artifactPaths`はallowlist
   通過物だけ、`sync-pack`はその集合だけをcopyする。従ってS2はsource repo manifestを唯一の
-  正本としてallowlistとcopy testを同時追加し、Pack copyを派生artifactに固定する。
+  正本としてallowlistとcopy testを同時追加し、Pack copyを派生artifactに固定する。また現行
+  `sync-pack` は現在の source tree から単一 artifact set を単一 checkout へ materialize するだけで、
+  過去 revision の artifact locator を持たない。S2 では manifest の channel pointer から immutable
+  release record を解決し、record の source commit と canonical artifact-set digest が実行中 checkout
+  に一致する場合だけ選択 channel を同期する。過去 release を現在の tree から再構成しない。
 - R1: manifest 正本・sync-pack 実行・Pack repo 側 tag/revert runbook の 3 責務を分離する
   (S2 着手後)。
-- R2: `U-RELMAN-001`〜`011` (案) を確定 oracle として test-design へ登録する (S2 着手後)。
+- R2: `U-RELMAN-001`〜`012` (案) を確定 oracle として test-design へ登録する (S2 着手後)。
 - R3: 実装後、cross-family review で正本選択 (manifest vs harness.db vs GitHub Releases)
   の不変条件と非破壊契約を検証する (S2 完了後)。
 - R4: `docs/design/harness/L6-function-design/` へ release channel manifest 契約を合流し、
