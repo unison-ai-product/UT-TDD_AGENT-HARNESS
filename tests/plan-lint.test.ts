@@ -19,6 +19,7 @@ import {
   ROUTE_MODE_LAYER_BANDS,
   VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
 } from "../src/plan/lint-policy";
+import { PARENT_DRIVE_MISMATCH_BASELINE } from "../src/plan/parent-drive-mismatch-baseline";
 import type { LintResult as SidecarLintResult } from "../src/plan/lint-types";
 
 const compliant = `---
@@ -401,6 +402,75 @@ describe("plan schedule lint (IMP-081)", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("U-PLANGOV-003a: parent_drive_mismatch applies to impl kind children", () => {
+    const docs = [
+      planDoc("PLAN-L7-91-parent-drive", {
+        kind: "add-impl",
+        layer: "L7",
+        drive: "be",
+        status: "draft",
+        subDoc: "function-spec",
+      }),
+      planDoc("PLAN-L7-92-child-impl", {
+        kind: "impl",
+        layer: "L7",
+        drive: "agent",
+        subDoc: null,
+        dependencies:
+          "  parent: docs/plans/PLAN-L7-91-parent-drive.md\n  requires: []\n  blocks: []",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("parent_drive_mismatch");
+  });
+
+  it("U-PLANGOV-003b: parent_drive_mismatch debt は既知項目で WARN（fail-close しない）", () => {
+    const baselinePlanId = [...PARENT_DRIVE_MISMATCH_BASELINE][0];
+    const baselineDocs = [
+      planDoc("PLAN-L7-basis-parent", {
+        kind: "impl",
+        layer: "L7",
+        drive: "agent",
+        status: "confirmed",
+      }),
+      planDoc(baselinePlanId, {
+        kind: "impl",
+        layer: "L7",
+        drive: "be",
+        dependencies:
+          "  parent: docs/plans/PLAN-L7-basis-parent.md\n  requires: []\n  blocks: []",
+      }),
+    ];
+    const reasons = analyzePlanGovernance(baselineDocs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("parent_drive_mismatch");
+    expect(reasons).not.toContain("parent_drive_mismatch_debt_stale");
+  });
+
+  it("U-PLANGOV-003c: parent_drive_mismatch debt を fixed すると baseline stale として再通知", () => {
+    const baselinePlanId = [...PARENT_DRIVE_MISMATCH_BASELINE][0];
+    const baselineMatchFixed = [
+      planDoc("PLAN-L7-basis-parent", {
+        kind: "impl",
+        layer: "L7",
+        drive: "agent",
+        status: "confirmed",
+      }),
+      planDoc(baselinePlanId, {
+        kind: "impl",
+        layer: "L7",
+        drive: "agent",
+        dependencies:
+          "  parent: docs/plans/PLAN-L7-basis-parent.md\n  requires: []\n  blocks: []",
+      }),
+    ];
+    const reasons = analyzePlanGovernance(baselineMatchFixed).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("parent_drive_mismatch_debt_stale");
   });
 
   it("U-PLANGOV-004: artifact requires use filesystem existence instead of PLAN status", () => {

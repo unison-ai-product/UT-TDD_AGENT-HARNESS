@@ -6,6 +6,7 @@ import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
 import { parsePlanIdIdentity } from "../schema/plan-id";
 import { routeSignalCandidates } from "../schema/route-map";
+import { PARENT_DRIVE_MISMATCH_BASELINE } from "./parent-drive-mismatch-baseline";
 import {
   DB_PROJECTION_BACKPROP_REQUIRED_GENERATES,
   DESIGN_LAYERS_REQUIRING_SUB_DOC,
@@ -833,6 +834,7 @@ export function analyzePlanGovernance(
     string,
     { file: string; content: string; raw: Record<string, unknown>; parsed?: Frontmatter }
   >();
+  const parentDriveMismatchBaselineMatches = new Set<string>();
   for (const entry of parsed.values()) {
     const planId = stringField(entry.raw.plan_id);
     if (planId) byRef.set(planId, entry);
@@ -998,7 +1000,7 @@ export function analyzePlanGovernance(
     }
 
     const parent = stringField(deps.parent);
-    if ((kind === "add-design" || kind === "add-impl") && parent) {
+    if (parent) {
       const parentRecord = byRef.get(normalizePlanRef(parent));
       if (!parentRecord) {
         violations.push({ file: entry.file, reason: "parent_missing", detail: parent });
@@ -1006,11 +1008,16 @@ export function analyzePlanGovernance(
         const parentDrive = stringField(parentRecord.raw.drive);
         const drive = stringField(raw.drive);
         if (drive && parentDrive && drive !== parentDrive && parentDrive !== "fullstack") {
-          violations.push({
-            file: entry.file,
-            reason: "parent_drive_mismatch",
-            detail: `${drive} != ${parentDrive}`,
-          });
+          const planId = stringField(raw.plan_id);
+          if (planId && PARENT_DRIVE_MISMATCH_BASELINE.has(planId)) {
+            parentDriveMismatchBaselineMatches.add(planId);
+          } else {
+            violations.push({
+              file: entry.file,
+              reason: "parent_drive_mismatch",
+              detail: `${drive} != ${parentDrive}`,
+            });
+          }
         }
       }
     }
@@ -1048,6 +1055,16 @@ export function analyzePlanGovernance(
     if (files.length > 1) {
       for (const file of files)
         violations.push({ file, reason: "duplicate_layer_sub_doc", detail: key });
+    }
+  }
+
+  const staleParentDriveMismatchBaseline = [...PARENT_DRIVE_MISMATCH_BASELINE].filter(
+    (planId) => byRef.has(planId) && !parentDriveMismatchBaselineMatches.has(planId),
+  );
+  for (const planId of staleParentDriveMismatchBaseline) {
+    const files = byPlanId.get(planId) ?? [];
+    for (const file of files) {
+      violations.push({ file, reason: "parent_drive_mismatch_debt_stale", detail: planId });
     }
   }
 

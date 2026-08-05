@@ -37,6 +37,7 @@ type PlanGovernanceViolationReason =
   | "skip_sub_doc_reason"
   | "parent_missing"
   | "parent_drive_mismatch"
+  | "parent_drive_mismatch_debt_stale"
   | "requires_missing"
   | "requires_not_ready"
   | "parent_design_missing"
