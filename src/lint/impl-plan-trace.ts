@@ -18,7 +18,6 @@ import { normalizePath } from "./shared";
 
 /** A-108 以前からの既存 untraced lint (known-debt)。段階 back-fill で縮小する。 */
 export const IMPL_PLAN_TRACE_BASELINE: ReadonlySet<string> = new Set([
-  "src/plan/parent-drive-mismatch-baseline.ts",
   "src/lint/asset-drift.ts",
   "src/lint/change-impact.ts",
   "src/lint/doc-consistency.ts",
