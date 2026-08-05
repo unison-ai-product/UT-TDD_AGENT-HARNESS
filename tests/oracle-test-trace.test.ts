@@ -60,39 +60,50 @@ describe("token 境界と検出範囲 (issue #165 / PLAN-L7-480、U-OIDGATE-001.
   });
 
   it("U-OIDGATE-002: 2 桁番号 / ST prefix の宣言も収集し、未 citation なら orphan", () => {
+    // fixture は架空 ID を使う (実在 ID を書くと素朴 ID マッチがこのファイルを citation と
+    // 数え、実 oracle が ratchet 圧の外へ漏れる — blind review minor 指摘)。
     const root = declarationFixture(
-      "| `ST-DATA-01` | 2 桁 oracle | exit 1 |\n| `U-FUNC-01` | 〃 | 〃 |",
+      "| `ST-ZZDATA-01` | 2 桁 oracle | exit 1 |\n| `U-ZZFUNC-01` | 〃 | 〃 |",
     );
     const { declared } = collectOracleIds(root);
-    expect([...declared].sort()).toEqual(["ST-DATA-01", "U-FUNC-01"]);
+    expect([...declared].sort()).toEqual(["ST-ZZDATA-01", "U-ZZFUNC-01"]);
     const r = analyzeOracleTestTrace({
       declared: [...declared],
       referenced: new Set(),
       baseline: new Set(),
       widenedBaseline: new Set(),
     });
-    expect(r.orphans).toEqual(["ST-DATA-01", "U-FUNC-01"]);
+    expect(r.orphans).toEqual(["ST-ZZDATA-01", "U-ZZFUNC-01"]);
     expect(r.ok).toBe(false);
   });
 
-  it("U-OIDGATE-003: 多 segment 名 (U-RVGHA-D3C-001) も収集し、右境界の部分抽出をしない", () => {
-    // 右境界が \b のままだと U-VTRIG-005-L7 から U-VTRIG-005 を部分抽出する (PR #263 Minor 1)。
+  it("U-OIDGATE-003: 多 segment 名も収集し、右境界の部分抽出をしない", () => {
+    // fixture は架空 ID (実在 ID を書くと素朴 ID マッチがこのファイルを citation と数え、
+    // 実 oracle が ratchet 圧の外へ漏れる)。右境界が \b のままだと `...-005-L7` 型から
+    // `-005` までを部分抽出する (PR #263 Minor 1)。末尾 segment が非数字の全体は ID として
+    // 成立しないため、全体・部分とも抽出 0 が正しい。
     const root = declarationFixture(
-      "| `U-RVGHA-D3C-001` | 多 segment | RED |\n| `U-VTRIG-005-L7` | 右境界 fixture | — |",
+      "| `U-ZZMULTI-D3C-001` | 多 segment | RED |\n| `U-ZZVTR-005-L7` | 右境界 fixture | — |",
     );
-    // `U-VTRIG-005-L7` は末尾 segment が数字でないため ID として成立しない — 全体一致も
-    // 部分抽出 (`U-VTRIG-005`) もせず、抽出 0 が正しい。
     const declared = [...collectOracleIds(root).declared].sort();
-    expect(declared).toEqual(["U-RVGHA-D3C-001"]);
-    expect(declared).not.toContain("U-VTRIG-005");
+    expect(declared).toEqual(["U-ZZMULTI-D3C-001"]);
+    expect(declared).not.toContain("U-ZZVTR-005");
+    // 収集後の orphan 経路 (spec CANDIDATE-OIDGATE-003 の oracle 本文) まで通す。
+    const r = analyzeOracleTestTrace({
+      declared,
+      referenced: new Set(),
+      baseline: new Set(),
+      widenedBaseline: new Set(),
+    });
+    expect(r.orphans).toEqual(["U-ZZMULTI-D3C-001"]);
   });
 
   it("U-OIDGATE-004: widened baseline 収載 ID は orphan にしない (ratchet)", () => {
     const r = analyzeOracleTestTrace({
-      declared: ["ST-DATA-01"],
+      declared: ["ST-ZZDATA-01"],
       referenced: new Set(),
       baseline: new Set(),
-      widenedBaseline: new Set(["ST-DATA-01"]),
+      widenedBaseline: new Set(["ST-ZZDATA-01"]),
     });
     expect(r.orphans).toEqual([]);
     expect(r.ok).toBe(true);
@@ -111,10 +122,20 @@ describe("derived ratchet 検証 (U-OIDGATE-005..007)", () => {
     expect(derived).toEqual([...ORACLE_TEST_TRACE_WIDENED_BASELINE].sort());
   });
 
-  it("U-OIDGATE-006: baseline に citation 済み ID が混ざると stale として検出できる (集合不一致)", () => {
-    const derived = new Set(["U-REAL-ORPHAN-001"]);
-    const staleBaseline = new Set(["U-REAL-ORPHAN-001", "U-ALREADY-CITED-001"]);
-    expect([...derived].sort()).not.toEqual([...staleBaseline].sort());
+  it("U-OIDGATE-006: baseline に citation 済み ID が混ざると derived 集合との不一致で stale 検出される", () => {
+    // 実機構を通す: 実 repo の derived 集合に対し、citation 済みの実宣言 oracle を 1 件
+    // widened baseline へ混入させると、U-OIDGATE-005 と同じ集合一致検証が必ず fail する
+    // (blind review blocking 是正 — リテラル同士の比較では production コードを検証しない)。
+    const { declared, referenced } = collectOracleIds(process.cwd());
+    const derived = [...declared]
+      .filter((id) => !referenced.has(id) && !ORACLE_TEST_TRACE_BASELINE.has(id))
+      .sort();
+    const cited = [...declared].find(
+      (id) => referenced.has(id) && !ORACLE_TEST_TRACE_WIDENED_BASELINE.has(id),
+    );
+    expect(cited).toBeDefined();
+    const stale = [...new Set([...ORACLE_TEST_TRACE_WIDENED_BASELINE, cited as string])].sort();
+    expect(derived).not.toEqual(stale);
   });
 
   it("U-OIDGATE-007: 既存 89 件 baseline は本変更で不変 (別集合 ratchet)", () => {

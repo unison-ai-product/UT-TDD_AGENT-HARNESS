@@ -2,10 +2,9 @@
  * oracle-test-trace の検出範囲拡張 (issue #165 / PLAN-L7-480) で可視化された既存債務。
  *
  * 旧 `ORACLE_ID` は 3 桁番号 + `U|IT` prefix 固定で、2 桁番号 (`ST-DATA-01`)・ST/P/M prefix・
- * 多 segment 名 (`U-RVGHA-D3C-001`) を見ていなかった。freeze 時点 (PLAN-L7-480) の実測は
- * 344 件 (U=177 / IT=103 / ST=64、第三者導出と一致)。本実装 commit では **342 件** — 差分 2 件
- * (`U-RVGHA-D3C-001` / `U-VTRIG-005-L7`) は本実装のテスト fixture 文字列が citation として
- * 数えられるため (素朴 ID マッチの既知特性)。集合の正は常に再導出 (U-OIDGATE-005) が持つ。
+ * 多 segment 名 (`U-RVGHA-D3C-001`) を見ていなかった。freeze 時点 (PLAN-L7-480) の実測 344 件
+ * と本 commit の再導出集合は完全一致する (テスト fixture は架空 ID のみを使い、実在 oracle への
+ * 偽 citation を作らない)。集合の正は常に再導出 (U-OIDGATE-005) が持ち、件数は主張しない。
  *
  * `ORACLE_TEST_TRACE_BASELINE` (89 件、2026-06-10 凍結) とは別集合として持つ。既存 baseline の
  * 「縮小のみ可・新規追加禁止」契約を、検出範囲拡張という別事由で汚さないためである。
@@ -209,6 +208,7 @@ export const ORACLE_TEST_TRACE_WIDENED_BASELINE: ReadonlySet<string> = new Set([
   "U-FR-L1-48",
   "U-FR-L1-50",
   "U-FR-L1-51",
+  "U-FUNC-01",
   "U-FUNC-02",
   "U-FUNC-03",
   "U-FUNC-04",
@@ -322,6 +322,7 @@ export const ORACLE_TEST_TRACE_WIDENED_BASELINE: ReadonlySet<string> = new Set([
   "U-RULE-01",
   "U-RULE-02",
   "U-RULE-03",
+  "U-RVGHA-D3C-001",
   "U-RVGHA-D3C-002",
   "U-RVGHA-D3C-003",
   "U-RVGHA-D3C-004",
