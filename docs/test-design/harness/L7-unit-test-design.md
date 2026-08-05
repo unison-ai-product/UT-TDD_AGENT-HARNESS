@@ -1813,15 +1813,15 @@ S1では以下を未実装のcandidate RED oracleとして登録する。S2は�
 
 | candidate ID | mutation / 入力 | oracle |
 |---|---|---|
-| `CANDIDATE-RELMAN-001` | 必須field欠落・型不正・未知schema version | parse/lint/doctorがfail-closeし同期write 0 |
-| `CANDIDATE-RELMAN-002` | manifestに存在しないchannelを`--channel`へ指定 | `unknown_channel`、resolver/copy 0 |
+| `U-RELMAN-001` | 必須field欠落・型不正・未知schema version | `parseReleaseManifest` がfail-closeする。`tests/release-manifest.test.ts` の `U-RELMAN-001` が固定 |
+| `U-RELMAN-002` | manifestに存在しないchannelを`--channel`へ指定 | `resolveReleaseChannel` が `unknown_channel` を返し、resolver/copy 0。`tests/release-manifest.test.ts` の `U-RELMAN-002` が固定 |
 | `CANDIDATE-RELMAN-003` | harness-check / QA Go / cross-review receiptを各1件欠落 | promotion拒否、pointer不変 |
 | `CANDIDATE-RELMAN-004` | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束 |
 | `CANDIDATE-RELMAN-005` | rollback実行計画を生成 | force push / tag付替え / commit / push command 0 |
 | `CANDIDATE-RELMAN-006` | object不在、digest不一致、完全一致を個別入力 | 順に`unavailable` / `mismatch` / `attested`、三値を二値へ丸めない |
-| `CANDIDATE-RELMAN-007` | canary/stable以外の順序付きchannelを追加 | schema準拠なら受理し未知参照は拒否 |
+| `U-RELMAN-007` | canary/stable以外の順序付きchannelを追加 | schema準拠なら任意名のchannel pointerを受理し未知参照は拒否。順序/昇格はS3の責務。`tests/release-manifest.test.ts` の `U-RELMAN-007` が固定 |
 | `CANDIDATE-RELMAN-008` | no-go未解除のままstableへpromotion | dependency不足で拒否、canary pointerも不変 |
-| `CANDIDATE-RELMAN-009` | release ID、source commit、artifact digestを各1 byte変異 | 導出式不一致または衝突として拒否 |
+| `U-RELMAN-009` | release ID、source commit、artifact digestを各1 byte変異 | record/map key と導出式の不一致として拒否。`tests/release-manifest.test.ts` の `U-RELMAN-009` が固定 |
 | `CANDIDATE-RELMAN-010` | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write 0 |
 | `CANDIDATE-RELMAN-011` | dry-run/applyへ同じchannelを入力し、`docs/skills→skills` remap、workflow template source mapping、`package.json` transform、symlink target/modeを各1件mutation | version固定materializer後のdestination path/mode/contentから同一digest。source blobだけ同じでPack outputが違えばmismatch。manifestはcontrol copyでdigest対象外 |
 | `CANDIDATE-RELMAN-012` | control HEADで`stable=v1` / `canary=v2`、v1/v2 objectを個別解決し、object欠落もmutation | 選択channelだけを対応revisionからmaterialize。control HEADとのSHA一致を要求せず、欠落時network/reconstruction/copy 0 |
