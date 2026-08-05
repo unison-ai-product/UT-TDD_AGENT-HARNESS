@@ -2069,13 +2069,13 @@ entry commitで収集regexを4 segmentへ拡張し、同じcommitで全IDのRed 
 | `U-RVGHA-D3C-006` | event payloadとAPI read 1のrepo/PR/base/headを各変異 | 発行0、`identity_mismatch`または`head_raced` |
 | `U-RVGHA-D3C-007` | API read 1後、read 2前にHEAD/state変更 | TOCTOU拒否、attestation発行0 |
 | `U-RVGHA-D3C-008` | fork/別repo/別PR、pre receiptへmerged fact、post receiptでmergeSha欠落 | kind/subject不整合を拒否 |
-| `U-RVGHA-D3C-009` | required Linux/Windows/aggregateのmissing/failure/cancelled/skipped/stale | 各case merge_ready 0、success全一致だけ次段へ |
+| `U-RVGHA-D3C-009` | required Linux/Windows/aggregateのmissing/failure/cancelled/skipped/stale | 各case`custody_admitted` 0、success全一致だけ次段へ |
 | `U-RVGHA-D3C-010` | 固定workflowがPR HEAD checkout、PR code/artifact/cache、過剰permissionを使用 | `github-ci-policy` violation、workflow実行資格なし |
-| `U-RVGHA-D3C-011` | attestation absent / signature failure / issuer mismatch / retention・verify取得不能 | 順に`missing` / `signature_unverified` / `signer_mismatch` / `audit_unavailable`、PASS 0 |
+| `U-RVGHA-D3C-011` | attestation absent / signature failure / issuer mismatch / retention・verify取得不能 | 順に`missing` / `signature_unverified` / `signer_mismatch` / `audit_unavailable`、`custody_admitted` 0 |
 | `U-RVGHA-D3C-012` | 同一subject+contentを反復、またはtupleだけを変えて旧receiptを投入 | 前者は同一digestで冪等、後者はreplay拒否 |
 | `U-RVGHA-D3C-013` | 正規署名receiptだがjudgment=FLAG | custody validとmerge eligibilityを分離し`verdict_flagged` |
 | `U-RVGHA-D3C-014` | token/raw transcript/raw stack/absolute path/PR実行命令を任意fieldへ追加 | strict schemaまたはsecret hygiene gateで拒否 |
 | `U-RVGHA-D3C-015` | provider障害をretry上限超過まで注入 | receipt 0、typed `provider_failed`、無限retry 0 |
-| `U-RVGHA-D3C-016` | Check RunだけPASS、D1 `analyzeReviewDispatch`は非`merge_ready` | Check Runを第二SSoTにせずmerge非適格 |
+| `U-RVGHA-D3C-016` | Check RunだけPASS、D1 `analyzeReviewDispatch`は非`merge_ready` | Check Runを第二SSoTにせず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-017` | 承認済み`VerifiedProviderIdentity` + D1 merge_ready + D3b/D3c全検証green | D3d `custody_admitted`、D2 AND入力だけがaccepting候補 |
 | `U-RVGHA-D3C-018` | RFC 8785 exact preimageのkey順・locale・digest自己field・既存16桁digestを各変異 | 同一objectだけ64 lowerhex一致、自己参照0、不一致は`identity_mismatch` |

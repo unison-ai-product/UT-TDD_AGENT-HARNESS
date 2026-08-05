@@ -221,13 +221,13 @@ provider receipt -> 実 GitHub green/red -> D2 consumer -> D4` とし、D3d が�
    local JSON/HMAC、同一 OS user が利用できる鍵は provider family の信頼根にしない。
 3. D3b の schema 検証済み judgment payload と D3c mechanical envelope は AND 入力とする。
    片方だけ、または family の強い証明がない状態は `unverified_family` であり、
-   `merge_ready` へ昇格しない。
+   D3d の `custody_admitted` へ昇格しない。
 4. family を機械的に強証明する provider 別 GitHub App / bot / OIDC subject 等は、
    authentication / authorization を変える外部権限設計である。本 freeze では方式を
    仮決めせず、PO の明示承認を得る D3d 境界へ送る。
-5. D1 の現行 SSoT は `analyzeReviewDispatch` が返す `merge_ready` 状態である。D2 の
-   `evaluateMergeGate` はその後段 consumer であり、D3d 実装前の構造・順序・CI 判定器として
-   存続する。D3d 後は D1 `merge_ready` AND D3d `custody_admitted` だけを D2 が受理する。
+5. D1 の現行 SSoT は `analyzeReviewDispatch` が返す `merge_ready` 状態である。D2 は未着工で、
+   現HEADに`evaluateMergeGate`は存在しない。D3d green後にD2がその後段consumerを導入し、
+   D1 `merge_ready` AND D3d `custody_admitted` だけを受理する。
    GitHub Check Run はこの単一判断の投影であり、独立した第二の判定器にしない。
 
 `D3a` は review request/response の配送、`D3b` は judgment payload の schema・digest 検証、
@@ -274,11 +274,13 @@ provider transcriptは含めず、sanitized digest / typed resultだけを参照
 subjectとして旧receiptを利用できない。
 
 canonicalization は RFC 8785 JSON Canonicalization Scheme → UTF-8 → SHA-256 lowerhex とする。
-`reviewRevision` の preimage は exact request object
-`{schemaVersion:"review-request/v1",memoryId,pr,exactHead,authorFamily,requestedAt}`、
-`receiptDigest` の preimage は上表の全fieldから `receiptDigest` と外部attestation/signature bytesを
-除いた exact object とし、field追加や独自並べ替えを許さない。`artifactDigest` は完成したreceipt
-artifact bytesをGitHubが証明するdigestであり、自己参照させない。既存の16桁digest、`REV-000`、
+`reviewRevision` の preimage は exact request identity object
+`{schemaVersion:"review-request/v1",memoryId,pr,exactHead,authorFamily}`とする。`requestedAt`は更新可能な
+metadataでありidentityへ含めないため、同一レビューのretryは同じrevisionになる。
+`receiptDigest` の preimage は receipt schema のfieldから `receiptDigest`、`artifactDigest`、外部
+attestation/signature bytesを除いた exact object とし、field追加や独自並べ替えを許さない。
+`artifactDigest` は完成したreceipt artifact bytesをGitHubが証明するdigestであり、自己参照や
+digest間の循環を作らない。既存の16桁digest、`REV-000`、
 自由文字列、再計算不一致は`identity_mismatch`で拒否する。
 
 ### 発行・検証境界
@@ -298,7 +300,7 @@ artifact bytesをGitHubが証明するdigestであり、自己参照させない
    `enforce_admins=true`は実効blockの検証対象だが、receiptの真正性そのものの代替ではない。
 4. attestation不在、signature/issuer/binding不一致、artifact retention切れ、`gh attestation
    verify`不能を成功へ丸めない。不在は`missing`、署名不正は`signature_unverified`、issuer不一致は
-   `signer_mismatch`、取得・検証不能は`audit_unavailable`とし、いずれも`merge_ready`に数えない。
+   `signer_mismatch`、取得・検証不能は`audit_unavailable`とし、いずれも`custody_admitted`に数えない。
 5. token、credential、raw transcript、raw exception/stack、personal absolute path、PR本文由来の
    実行命令をreceiptへ保存しない。provider timeout/rate limit retryは有界で、exhaustion時は
    receipt 0件 + typed reasonとする。
