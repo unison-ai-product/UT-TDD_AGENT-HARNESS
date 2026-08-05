@@ -19,8 +19,8 @@ import {
   ROUTE_MODE_LAYER_BANDS,
   VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
 } from "../src/plan/lint-policy";
-import { PARENT_DRIVE_MISMATCH_BASELINE } from "../src/plan/parent-drive-mismatch-baseline";
 import type { LintResult as SidecarLintResult } from "../src/plan/lint-types";
+import { PARENT_DRIVE_MISMATCH_BASELINE } from "../src/plan/parent-drive-mismatch-baseline";
 
 const compliant = `---
 plan_id: PLAN-X
@@ -431,7 +431,14 @@ describe("plan schedule lint (IMP-081)", () => {
   it("U-PLANGOV-003d: 非 PLAN 親参照はファイル実在なら親チェックを通過する", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-governance-nonplan-parent-"));
     try {
-      const parentArtifact = join(root, "docs", "design", "harness", "L6-function-design", "function-spec.md");
+      const parentArtifact = join(
+        root,
+        "docs",
+        "design",
+        "harness",
+        "L6-function-design",
+        "function-spec.md",
+      );
       mkdirSync(join(root, "docs", "design", "harness", "L6-function-design"), { recursive: true });
       writeFileSync(parentArtifact, "---\nstatus: completed\n---\n", "utf8");
 
@@ -468,8 +475,7 @@ describe("plan schedule lint (IMP-081)", () => {
         kind: "impl",
         layer: "L7",
         drive: "be",
-        dependencies:
-          "  parent: docs/plans/PLAN-L7-basis-parent.md\n  requires: []\n  blocks: []",
+        dependencies: "  parent: docs/plans/PLAN-L7-basis-parent.md\n  requires: []\n  blocks: []",
       }),
     ];
     const reasons = analyzePlanGovernance(baselineDocs).violations.map((v) => v.reason);
@@ -491,8 +497,7 @@ describe("plan schedule lint (IMP-081)", () => {
         kind: "impl",
         layer: "L7",
         drive: "agent",
-        dependencies:
-          "  parent: docs/plans/PLAN-L7-basis-parent.md\n  requires: []\n  blocks: []",
+        dependencies: "  parent: docs/plans/PLAN-L7-basis-parent.md\n  requires: []\n  blocks: []",
       }),
     ];
     const reasons = analyzePlanGovernance(baselineMatchFixed).violations.map((v) => v.reason);
