@@ -12,9 +12,10 @@
  * 旧経路 (`selectMemoryEntries(db)`) は DB 側 body を読む read model だった。本 service が
  * 読み路を引き継ぐため、呼び元は service を通す (境界は tests/memory-service.test.ts が固定)。
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { isSecretLike } from "../secret";
+import { ensureDir } from "../shared/fs";
 import {
   type MemoryEntry,
   type MemoryKind,
@@ -91,16 +92,7 @@ function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntr
     body,
     "",
   ].join("\n");
-  const root = memoryRoot(repoRoot);
-  if (!existsSync(root)) {
-    try {
-      mkdirSync(root, { recursive: true });
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-        throw error;
-      }
-    }
-  }
+  ensureDir(join(repoRoot, ".ut-tdd", "memory"), { recursive: true });
   writeFileSync(join(repoRoot, sourcePath), content, "utf8");
   return parseMemoryFile(repoRoot, sourcePath, content);
 }

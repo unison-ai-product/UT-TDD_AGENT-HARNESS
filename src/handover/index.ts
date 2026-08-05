@@ -11,7 +11,7 @@
  * 型で分離し、AI が Next Action を捏造しない。current-plan 活性化 (Gap B) の writer は循環 import
  * 回避のため session-log.ts に置き、本 module は import 再利用する (PLAN §1.1)。
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { computeOutstandingWork, outstandingSummaryLine } from "../lint/outstanding";
 import {
@@ -23,6 +23,7 @@ import {
   sanitize,
   setActivePlan,
 } from "../runtime/session-log";
+import { ensureDir } from "../shared/fs";
 import {
   CURRENT_PLAN_REL,
   GENERATED_BY,
@@ -798,7 +799,7 @@ export function nodeHandoverDeps(repoRoot: string): HandoverDeps {
     now: () => new Date().toISOString(),
     readText: (p) => (existsSync(p) ? readFileSync(p, "utf8") : null),
     writeText: (p, c) => {
-      mkdirSync(dirname(p), { recursive: true });
+      ensureDir(dirname(p), { recursive: true });
       writeFileSync(p, c);
     },
     listDir: (dir) => (existsSync(dir) ? readdirSync(dir) : []),

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ensureDir } from "../shared/fs";
 import type { ReviewReceipt } from "./review-dispatch";
 import { extractVerdict, type ReviewVerdictName } from "./review-verdict-contract";
 
@@ -108,7 +109,7 @@ function persist(input: {
   const { repoRoot, category, value } = input;
   const valueDigest = digest(input.digestSource ?? value);
   const directory = join(repoRoot, ".ut-tdd", "review", category);
-  mkdirSync(directory, { recursive: true });
+  ensureDir(directory, { recursive: true });
   const path = join(directory, `${valueDigest}.json`);
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   return { path, digest: valueDigest };

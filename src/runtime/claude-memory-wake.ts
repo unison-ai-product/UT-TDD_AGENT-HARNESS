@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import {
   closeSync,
   existsSync,
-  mkdirSync,
   openSync,
   readdirSync,
   readFileSync,
@@ -13,6 +12,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { MemoryEntry } from "../memory";
+import { ensureDir } from "../shared/fs";
 
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
@@ -77,17 +77,6 @@ function runtimeRoot(repoRoot: string): string {
   throw new Error("claude_inbox_git_common_dir_required");
 }
 
-function ensureDirectory(path: string): void {
-  if (existsSync(path)) return;
-  try {
-    mkdirSync(path, { recursive: true });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-      throw error;
-    }
-  }
-}
-
 export function buildClaudeInboxEntry(input: {
   memory: MemoryEntry;
   operationId: string;
@@ -113,7 +102,7 @@ export function buildClaudeInboxEntry(input: {
 
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
   const directory = join(runtimeRoot(repoRoot), "inbox");
-  ensureDirectory(directory);
+  ensureDir(directory, { recursive: true });
   const target = join(directory, `${safeFilePart(entry.id)}.json`);
   const serialized = JSON.stringify(entry);
   if (existsSync(target)) {
@@ -208,7 +197,7 @@ function claim(input: {
   at: string;
 }): boolean {
   const root = runtimeRoot(input.repoRoot);
-  ensureDirectory(root);
+  ensureDir(root, { recursive: true });
   const path = join(root, `${safeFilePart(input.entry.id)}.claim`);
   let descriptor: number;
   try {
@@ -271,7 +260,7 @@ export async function waitForClaudeMemory(input: {
     input.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const root = runtimeRoot(input.repoRoot);
   const workspaceId = claudeWorkspaceId(input.repoRoot);
-  ensureDirectory(root);
+  ensureDir(root, { recursive: true });
   pruneRuntimeFiles(root, Date.now());
   const generationPath = join(root, `${safeFilePart(input.sessionId)}.generation`);
   const generation = `${process.pid}:${Date.now()}`;

@@ -13,9 +13,10 @@
  *   ④ 検出不能は solo に安全フォールバック (緩い側に倒す)。
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, readSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, readSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureDir } from "../shared/fs";
 import {
   applyBranchProtection as applyBranchProtectionImpl,
   type Confirm,
@@ -439,7 +440,7 @@ export function nodeSetupDeps(repoRoot: string): SetupDeps {
     gh: nodeGh,
     readText: (p) => (existsSync(p) ? readFileSync(p, "utf8") : null),
     writeText: (p, c) => {
-      mkdirSync(dirname(p), { recursive: true });
+      ensureDir(dirname(p), { recursive: true });
       writeFileSync(p, c);
     },
     confirm: nodeConfirm,

@@ -8,10 +8,10 @@
  *
  * 不変条件 (PLAN-L7-45 §2): DB path は `.ut-tdd/` 配下に限定 (`:memory:` は test 用に許可)。
  */
-import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { assertSqlIdentifier } from "../schema/harness-db";
+import { ensureDir } from "../shared/fs";
 
 export { isSecretLike, SECRET_PATTERN } from "../secret";
 
@@ -111,7 +111,7 @@ export function defaultHarnessDbPath(repoRoot: string = process.cwd()): string {
 export function openHarnessDb(path: string, options: { repoRoot?: string } = {}): HarnessDb {
   const repoRoot = options.repoRoot ?? process.cwd();
   assertWithinUtTdd(path, repoRoot);
-  if (path !== ":memory:") mkdirSync(dirname(resolve(repoRoot, path)), { recursive: true });
+  if (path !== ":memory:") ensureDir(dirname(resolve(repoRoot, path)), { recursive: true });
   const driver = currentDriver();
   const native = openNative(path, driver);
   // 参照整合・外部キー強制 (projection の未解消 join を finding 化する前提の健全性)。

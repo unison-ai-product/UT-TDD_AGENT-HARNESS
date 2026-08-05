@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { ensureDir } from "../shared/fs";
 
 export interface GateRunEvidenceInput {
   repoRoot: string;
@@ -118,7 +119,7 @@ export function buildGateRunEvidence(input: GateRunEvidenceInput): GateRunEviden
 export function writeGateRunEvidence(input: GateRunEvidenceInput): WrittenGateRunEvidence {
   const evidence = buildGateRunEvidence(input);
   const dir = gateRunEvidenceDir(input.repoRoot);
-  mkdirSync(dir, { recursive: true });
+  ensureDir(dir, { recursive: true });
   const timestamp = compactSlug(evidence.checked_at.replace(/[:.]/g, "-"));
   const suffix = shortHash(evidence.gate_run_id);
   const absolutePath = join(dir, `${compactSlug(evidence.gate_id)}-${timestamp}-${suffix}.json`);
