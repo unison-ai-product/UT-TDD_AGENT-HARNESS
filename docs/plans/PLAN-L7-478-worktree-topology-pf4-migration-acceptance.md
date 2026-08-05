@@ -53,5 +53,6 @@ PF3がmainへmergeし、Issue #256がReadyへ更新されていること。
 
 ## Exit
 
-known vectorとaggregate acceptance Green、Reverse R4、全子landed確認、最新exact HEAD closing PASS後に
-masterをconfirmedへ遷移し、Issue #232をclose可能にする。
+known vectorとaggregate acceptance Green、Reverse R4、PF4 exact HEAD closing PASSを満たした時点で
+PF4をmerge可能にする。全子landed確認、master closing PASS、master confirmed遷移、Issue #232 closeは
+PF4自身のexit条件へ含めず、masterのpost-PF4 stepが所有する。

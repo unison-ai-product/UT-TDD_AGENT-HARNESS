@@ -70,6 +70,8 @@ landed事実を順に観測してからR1〜R3を進め、PF4がaggregate accept
   対応する確定 `U-*` IDへ昇格し、実装とのトレースを照合する。
 - R4 [直列・PF4のみ]: aggregate移設acceptanceとbyte vector Green後にForward再合流を判定する。
   PF1〜PF3やmasterから先行完了してはならない。
+- post-R4 [直列・master所有]: PF4 merge後に全子landedとR4完了を確認し、master専用exact HEAD closing
+  PASS後だけ`PLAN-L7-474`をconfirmedへ遷移してIssue #232をcloseする。これはPF4 exitではない。
 
 ## AC
 

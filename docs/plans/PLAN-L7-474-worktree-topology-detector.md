@@ -134,4 +134,6 @@ Blockedであり、後続は直前sliceのmergeとclosing PASSの両方でだけ
 2. [阻害中] PF1: PF-0 merge後にpure analyzerを実装する。
 3. [直列] PF2 → PF3 → PF4を各closing PASS後に解放する。
 4. [直列] PF4でReverse R4とaggregate acceptanceを完了する。
-5. [直列] 全子landed、R4完了、master exact HEAD closing PASS後だけmasterをconfirmedへ遷移し#232をcloseする。
+5. [直列・post-PF4 master step] PF4 merge後に全子landedとR4完了をmaster側から確認し、PF4とは別の
+   master exact HEAD closing PASSを取得する。その後だけmasterをconfirmedへ遷移し#232をcloseする。
+   このmaster stepをPF4のmerge条件へ戻して自己参照cycleを作らない。
