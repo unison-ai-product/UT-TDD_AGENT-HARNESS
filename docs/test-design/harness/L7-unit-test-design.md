@@ -2053,6 +2053,17 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 
 ## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
 
+### D2 component evidence / aggregate循環防止 candidate（Issue #231訂正）
+
+| candidate ID | Red入力 | target oracle |
+|---|---|---|
+| `CANDIDATE-RVD2-001` | 同一HEADのlinux/windows component success、D1 PASS、D3d custody admitted | D1内部`merge_ready`候補をD2が受け、最終aggregateだけをsuccessへ投影 |
+| `CANDIDATE-RVD2-002` | aggregate `harness-check` successだけをcomponent evidenceとして供給、またはcomponentのHEAD/name/conclusionを各1件変異 | typed providerが拒否しD1候補/D2 aggregate success 0 |
+| `CANDIDATE-RVD2-003` | D1候補またはD3d custodyの片面だけsuccess | D2 aggregateはfailure。required contextや第二判定器を増設しない |
+
+現行`analyzeReviewDispatch`のopaque `checksGreen`は上記Green証拠ではない。D2実装PRはprovider binding、
+D1 input変更、aggregate出力を同じcommitで実装し、candidateをtest citation付き確定`U-*`へ昇格する。
+
 本表は契約freeze用のRED oracleであり、このdoc-only sliceではtest codeを追加しない。D3d実装
 PLANが各IDを先にRed化し、Green後にPLAN-L7-465の`generates`へ実装成果物を登録する。
 4 segmentの`U-RVGHA-D3C-NNN`は現行`oracle-test-trace`の収集対象外である。D3d実装PRは

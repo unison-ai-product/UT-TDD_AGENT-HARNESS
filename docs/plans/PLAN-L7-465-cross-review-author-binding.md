@@ -142,7 +142,9 @@ L6-94 §2 の 4 検査は「**主張された cross-review が実在したか**�
 無関係な**終端証拠**として受理する。ack / in_review の欠落は診断に残すが blocking にしない。
 逸脱状態: `stale_head` (依頼 exact HEAD と receipt/PR HEAD の不一致)、
 `merge_ready` (verdict が PASS 系 + HEAD 三者一致 + CI green + PR OPEN +
-fail-close reason 不在の 5 条件全成立)。
+fail-close reason 不在の 5 条件全成立)。この名前はD1内部の**候補状態**であり、GitHub mergeの
+最終authorizationではない。現行実装のCI入力はcaller供給のopaque `checksGreen: boolean`で、
+component check名・HEAD・conclusionへのtyped束縛はまだ無い。この未実装gapをD2着工前に閉じる。
 
 機械化する不変条件 (すべて fail-close):
 
@@ -187,10 +189,13 @@ analyzer (D1) と trusted receipt (D3) が揃っても消費者ゼロでは pros
    イベントへ fail-close 表示する (静かに流れる状態の根絶)。B 単独は「迂回が検知
    される」ことに依存するため、D 無しの B は fail-open の看板替えになる。
 3. **A (GitHub 強制・可視化)**: D2 は既存の単一 required aggregate check
-   `harness-check` を所有し、`D1 merge_ready_candidate AND D3d custody_admitted` の最終 AND を
-   その出力へ投影する。D1 は同一HEADの `harness-check-linux` / `harness-check-windows` の
-   component CI evidence だけから candidate を作り、aggregate `harness-check` を入力に戻さない。
-   したがって、D1 → D3d → D2 → required aggregate の一方向であり、自己参照の循環はない。
+   `harness-check` を所有し、`D1 merge_ready AND D3d custody_admitted` の最終 AND をその出力へ
+   投影する。D2のGitHub adapterは同一HEADの`harness-check-linux` / `harness-check-windows`だけを
+   typed component CI evidenceへ変換し、純粋D1はその入力から内部候補`merge_ready`を作る。
+   aggregate `harness-check`をcomponent evidenceとして受理してはならない。target契約は
+   component evidence provider → D1候補 + D3d → D2 → required aggregate の一方向である。
+   **現HEADはまだopaque `checksGreen`のため、この循環除去を実装済みとは扱わない**。D2実装PRが
+   provider bindingとnegative oracleを同時にGreen化して初めてtargetへ到達する。
    現行main保護ではこの最終出力がGitHub mergeの実効blockになる。D3d receipt workflow自体を
    required contextとして増設せず、custody片面だけでgreenを発行しない。
 
@@ -219,9 +224,10 @@ analyzer (D1) と trusted receipt (D3) が揃っても消費者ゼロでは pros
 | D3 trusted custodyだけ | judgmentとGitHub provenanceをexact subjectへ束縛しtyped fail-close | 単独ではGitHub mergeをblockせず、未承認family authorityも解決しない | 単独案は不採用 |
 | component CI evidence + D1 + D3d + D2 required aggregate | D1候補、D3d custody、GitHub実効blockを一方向の単一ANDへ束縛 | provider-family authorityは承認済み外部方式が必要 | 採用 |
 
-D3dは複雑な第二merge gateではなく、D2が消費する信頼入力を作る。D1は個別CI証跡から
-`merge_ready_candidate`を作り、D2だけが既存の単一`harness-check`へ最終AND結果を投影するため、
-required contextの増殖、aggregate出力の自己入力、判定器の重複を避けられる。
+D3dは複雑な第二merge gateではなく、D2が消費する信頼入力を作る。targetではD2 adapterが
+個別CI証跡をtyped入力へ束縛し、D1は既存名`merge_ready`の内部候補を作り、D2だけが既存の単一
+`harness-check`へ最終AND結果を投影する。required contextの増殖、aggregate出力の自己入力、
+判定器の重複を避ける。現行opaque boolean経路は未達gapとして残し、Green証拠に数えない。
 実装順序`D1 -> D3c -> D3d -> D2 -> D4`は維持し、D2着工時に「片面green禁止」と保護設定driftの
 RED oracleを追加する。
 
@@ -259,13 +265,12 @@ provider receipt -> 実 GitHub green/red -> D2 consumer -> D4` とし、D3d が�
 4. family を機械的に強証明する provider 別 GitHub App / bot / OIDC subject 等は、
    authentication / authorization を変える外部権限設計である。本 freeze では方式を
    仮決めせず、PO の明示承認を得る D3d 境界へ送る。
-5. D1 の現行 SSoT は `analyzeReviewDispatch` が返す `merge_ready_candidate` 状態である。
-   この candidate は同一HEADの `harness-check-linux` / `harness-check-windows` component CI evidence と
-   review dispatch の条件からのみ導き、aggregate `harness-check` を読まない。D2 は未着工で、
-   現HEADに`evaluateMergeGate`は存在しない。D3d green後にD2が唯一の後段consumerとして
-   D1 `merge_ready_candidate` AND D3d `custody_admitted` を評価し、既存 aggregate
-   `harness-check` へ投影する。GitHub Check Run はこの単一判断の出力であり、独立した第二の
-   判定器にもD1への入力にもならない。
+5. D1 の現行 SSoT は `analyzeReviewDispatch` が返す `merge_ready` 状態である。ただし現行
+   `checksGreen`はopaque booleanであり、component CI証跡への束縛は未実装である。D2は未着工で、
+   現HEADに`evaluateMergeGate`は存在しない。targetではD2 adapterが同一HEADの
+   `harness-check-linux` / `harness-check-windows`だけをtyped evidenceへ変換し、D1 `merge_ready`
+   AND D3d `custody_admitted`をD2が評価して既存aggregate `harness-check`へ投影する。aggregate
+   Check Runは最終出力であり、D1入力に戻さない。現状記述とtarget契約を混同しない。
 
 `D3a` は review request/response の配送、`D3b` は judgment payload の schema・digest 検証、
 `D3c` は本契約 freeze、`D3d` は GitHub provenance と provider-family authority を検証する
@@ -333,12 +338,14 @@ receipt自身へ書き戻さないため自己参照やdigest間の循環を作�
    D3dは`github-ci-policy` loaderへこの固定パスの`attestation_runtime` roleを明示追加し、source
    profileで必須、Pack profileで対象外とする。任意globは使わず、欠落・trigger・permission・
    PR入力実行をfail-closeする。既存`harness-check.yml`のstep/permission/required-check契約は変えない。
-3. component CI evidence `harness-check-linux` と `harness-check-windows` はD1が所有し、同一HEADの
-   両方がsuccessの場合だけ`merge_ready_candidate`にする。aggregate `harness-check` はD2だけが所有する
-   最終出力であり、D1の入力にしない。missing / failure / cancelled / skipped / stale HEADはcandidateを
-   merge非適格にするが、それだけで正規receiptのcustodyを無効化しない。D3dはCI判定やreasonを複製せず、
-   将来D2がD1 `merge_ready_candidate` AND D3d `custody_admitted`を評価する。main protectionの
-   `enforce_admins=true`は実効blockの検証対象だが、receiptの真正性そのものの代替ではない。
+3. targetではD2 GitHub adapterがcomponent CI evidence `harness-check-linux` と
+   `harness-check-windows`を同一HEADへ束縛し、純粋D1へtyped入力として渡す。両方がsuccessの場合だけ
+   D1内部状態`merge_ready`候補を許し、aggregate `harness-check`はD2だけが所有する最終出力として
+   D1入力から拒否する。missing / failure / cancelled / skipped / stale HEADも候補をmerge非適格に
+   するが、それだけで正規receiptのcustodyを無効化しない。現行`checksGreen` booleanはこのtargetを
+   満たさない。D3dはCI判定やreasonを複製せず、将来D2がD1 `merge_ready` AND D3d
+   `custody_admitted`を評価する。main protectionの`enforce_admins=true`は実効blockの検証対象だが、
+   receiptの真正性そのものの代替ではない。
 4. attestation不在、signature/issuer/binding不一致、artifact retention切れ、`gh attestation
    verify`不能を成功へ丸めない。不在は`missing`、署名不正は`signature_unverified`、issuer不一致は
    `signer_mismatch`、取得・検証不能は`audit_unavailable`とし、いずれも`custody_admitted`に数えない。
