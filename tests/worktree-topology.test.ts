@@ -43,10 +43,12 @@ describe("worktree topology PF1", () => {
     expect(report).toMatchObject({ healthy: 2, counts: { main: 1, active: 1 }, findings: [] });
   });
   it("U-WTTOPO-002/003: 双方向link不整合を個別に検出する", () => {
+    // U-WTTOPO-003: admin -> worktreeの逆方向も独立して保持する。
     for (const broken of [fact({ worktreeToAdminOk: false }), fact({ adminToWorktreeOk: false })])
       expect(analyzeWorktreeTopology(input([main, broken])).findings[0]?.kind).toBe("link_broken");
   });
   it("U-WTTOPO-004/005: directory不在とorphan adminを区別する", () => {
+    // U-WTTOPO-005: orphan adminはworktree factが無くても検出する。
     expect(
       analyzeWorktreeTopology(input([main, fact({ directoryObserved: false })])).findings[0]?.kind,
     ).toBe("dir_missing");
@@ -65,6 +67,8 @@ describe("worktree topology PF1", () => {
     expect(report.retirable).toEqual([]);
   });
   it("U-WTTOPO-008/010/011: mainはidentityへ入れ、finding面はhealthy/retirableから除く", () => {
+    // U-WTTOPO-010: finding面はhealthyに混入させない。
+    // U-WTTOPO-011: finding面のmerged既定値もretirableへ昇格させない。
     const report = analyzeWorktreeTopology(
       input([main, fact({ worktreeToAdminOk: false, mergedIntoMain: true })]),
     );

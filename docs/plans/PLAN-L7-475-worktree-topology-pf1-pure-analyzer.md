@@ -23,7 +23,7 @@ generates:
   - artifact_path: src/runtime/worktree-topology.ts
     artifact_type: source_module
   - artifact_path: tests/worktree-topology.test.ts
-    artifact_type: test_module
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-474-worktree-topology-detector.md
   requires: []
@@ -31,10 +31,7 @@ dependencies:
   references:
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/253
-review_evidence:
-  - review_kind: local_verification
-    command: "bunx tsc --noEmit && bunx biome check src/runtime/worktree-topology.ts tests/worktree-topology.test.ts"
-    result: pass
+review_evidence: []
 ---
 
 # PF1: pure analyzer・canonical identity/remap
@@ -67,3 +64,5 @@ owner oracleのRed→Green、同commitでの`U-*`昇格、exact HEAD CI、非aut
 realpath は持たない。入力factsを canonical identity、stable findings、counts、retirableへ純粋に
 還元する。`tests/worktree-topology.test.ts` は `U-WTTOPO-001`〜`006`、`008`〜`011` と、PF1が
 所有する canonical remapの root・longest-prefix・alias/collision/escape境界を引用する。
+型検査と Biome は実装commit前に Green を確認した。closing review と exact HEAD CI は本PLANのExitまで
+未取得のため、review evidenceへ先取り記録しない。
