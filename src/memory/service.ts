@@ -91,7 +91,16 @@ function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntr
     body,
     "",
   ].join("\n");
-  mkdirSync(join(repoRoot, ".ut-tdd", "memory"), { recursive: true });
+  const root = memoryRoot(repoRoot);
+  if (!existsSync(root)) {
+    try {
+      mkdirSync(root, { recursive: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+        throw error;
+      }
+    }
+  }
   writeFileSync(join(repoRoot, sourcePath), content, "utf8");
   return parseMemoryFile(repoRoot, sourcePath, content);
 }
