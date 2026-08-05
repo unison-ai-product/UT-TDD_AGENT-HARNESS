@@ -707,6 +707,13 @@ manifest変更は新subject revisionと通常のreview/admissionを必要とし�
 `required_lane_set_digest`はsorted required IDsのcanonical JSON UTF-8 bytesのSHA-256である。
 payload required setとobserved lane setはprofile exact setへ一致させ、duplicate、extra、missing、
 profile/revision drift、aggregate laneだけの自己成功を拒否する。
+このregistryは`CUTOVER-PAYLOAD-SCHEMA-REGISTRY-v1`の`aggregate.success` payloadだけを検証する
+legacy cutover profileであり、GitHub workflow job名やIssue #231のD2 CI evidence profileを表さない。
+`harness-check-aggregate`は当該closed payload schemaのlane literalであって、現行workflowの
+`harness-check` jobへ読み替えない。新規D2 consumerは本registryを参照せず、L6で定義する
+`AggregateCiReceipt`のclosed schema（Linux/Windows/`harness-ci-aggregate`）を直接検証する。
+したがってD2用profile rowを本registryへ追加したり、`aggregate.success` payloadをD2 receiptへ
+流用したりしてはならない。
 `object_digest` / `evidence_digest`を`receipt_digest`のaliasとして受理せず、nested payloadも各typed
 receipt自身の`receipt_digest`だけで取得する。
 `CutoverTransitionReceipt`の唯一のschemaは
