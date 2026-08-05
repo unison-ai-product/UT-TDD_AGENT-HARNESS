@@ -2097,17 +2097,17 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 
 | ID | Owner | 攻撃・入力 | oracle |
 | --- | --- | --- | --- |
-| `CANDIDATE-WTTOPO-001` | PF1 / `PLAN-L7-475` | 全link一致・findingsなしの登録worktree | `healthy`へ計上し findingsは空 |
-| `CANDIDATE-WTTOPO-002` | PF1 / `PLAN-L7-475` | worktree側`.git`のgitdir参照がadminと不一致 | `link_broken`を検出し`healthy`から除外 |
-| `CANDIDATE-WTTOPO-003` | PF1 / `PLAN-L7-475` | admin back pointerがworktree側`.git`と不一致 | `link_broken`を検出（admin→worktree方向） |
-| `CANDIDATE-WTTOPO-004` | PF1 / `PLAN-L7-475` | 登録worktree directoryが不在 | `dir_missing`を検出 |
-| `CANDIDATE-WTTOPO-005` | PF1 / `PLAN-L7-475` | 登録されていないadmin entry | `orphan_admin`を検出 |
-| `CANDIDATE-WTTOPO-006` | PF1 / `PLAN-L7-475` | dirty worktreeが同時にmerged/detached条件を満たす | `dirty`を最優先として他分類と排他 |
+| `U-WTTOPO-001` | PF1 / `PLAN-L7-475` | 全link一致・findingsなしの登録worktree | `healthy`へ計上し findingsは空。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-002` | PF1 / `PLAN-L7-475` | worktree側`.git`のgitdir参照がadminと不一致 | `link_broken`を検出し`healthy`から除外。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-003` | PF1 / `PLAN-L7-475` | admin back pointerがworktree側`.git`と不一致 | `link_broken`を検出（admin→worktree方向）。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-004` | PF1 / `PLAN-L7-475` | 登録worktree directoryが不在 | `dir_missing`を検出。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-005` | PF1 / `PLAN-L7-475` | 登録されていないadmin entry | `orphan_admin`を検出。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-006` | PF1 / `PLAN-L7-475` | dirty worktreeが同時にmerged/detached条件を満たす | `dirty`を最優先として他分類と排他。`tests/worktree-topology.test.ts` |
 | `CANDIDATE-WTTOPO-007` | PF2 / `PLAN-L7-476` | findingなしのclean merged、保持refから到達可能なclean detached、activeが混在 | mergedと到達可能detachedだけを`retirable`へ、activeは除外 |
-| `CANDIDATE-WTTOPO-008` | PF1 / `PLAN-L7-475` | findingなしのmain root worktree | `healthy`/identity集合/`mainCount=1`へ含め、liveness/`retirable`から除外 |
-| `CANDIDATE-WTTOPO-009` | PF1 / `PLAN-L7-475` | 同じfacts・admin entries・observationsを個別に全順列化 | findings本体と順序、全count bucket、`retirable`、`healthy`、identity集合、digestがすべて入力順に依存せず一致 |
-| `CANDIDATE-WTTOPO-010` | PF1 / `PLAN-L7-475` | link/dir findingを持つworktreeと正常worktreeの混在 | finding面を`healthy`に数えない |
-| `CANDIDATE-WTTOPO-011` | PF1 / `PLAN-L7-475` | link/dir findingでdirty/merged観測が既定値へ倒れるworktree | 分類は表示しても`retirable`へ混入させない（fail-safe） |
+| `U-WTTOPO-008` | PF1 / `PLAN-L7-475` | findingなしのmain root worktree | `healthy`/identity集合/`mainCount=1`へ含め、liveness/`retirable`から除外。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-009` | PF1 / `PLAN-L7-475` | 同じfacts・admin entries・observationsを個別に全順列化 | findings本体と順序、全count bucket、`retirable`、`healthy`、identity集合、digestがすべて入力順に依存せず一致。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-010` | PF1 / `PLAN-L7-475` | link/dir findingを持つworktreeと正常worktreeの混在 | finding面を`healthy`に数えない。`tests/worktree-topology.test.ts` |
+| `U-WTTOPO-011` | PF1 / `PLAN-L7-475` | link/dir findingでdirty/merged観測が既定値へ倒れるworktree | 分類は表示しても`retirable`へ混入させない（fail-safe）。`tests/worktree-topology.test.ts` |
 | `CANDIDATE-WTTOPO-012` | PF2 / `PLAN-L7-476` | clean detached HEADがmain/保持対象refのどこからも到達不能、または到達可能性を観測不能 | review-requiredとして`retirable`から除外 |
 | `CANDIDATE-WTTOPO-013` | PF4 / `PLAN-L7-478` | before/afterでhealthy件数は同じだがworktree Aが壊れ別worktree Cが追加 | normalized path/admin/HEAD identity集合digest不一致で移設acceptance拒否 |
 | `CANDIDATE-WTTOPO-014` | PF2 / `PLAN-L7-476` | malformed porcelain、root外へ解決する相対gitdir、Git command失敗を各入力 | collectorは正常factsへ丸めずtyped observation findingを返す |
