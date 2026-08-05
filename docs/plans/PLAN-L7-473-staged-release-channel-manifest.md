@@ -50,9 +50,11 @@ harness は製品開発の OS であり、自身の配布物 (`unison-ai-product
 一般化する add-impl であり、`PLAN-L6-63` を parent design として引き継ぐ。**`PLAN-L6-63` の
 既存記述を上書きしない** — L6-63 が持つ「ローカル copy-plan/staging は非破壊済み」「Pack repo
 側の tag/revert runbook が未確認」という切り分けは本 PLAN の前提として維持し、L6-63 は
-本 PLAN の manifest 契約が固まった時点で内容を合流し supersede するか、Pack 側 tag/revert
-runbook の実装確認 PLAN として存続させるかを PO 判断で決める (現時点では未決、下記
-Problem 相当の設計判断として明示する)。
+本 PLAN の manifest 契約が固まった後も、Pack 側 tag/release/revert runbook を所有する
+`PLAN-L6-63` は存続させる。本 PLAN は manifest / channel / promotion の機械契約を所有し、
+L6-63 は Pack repository の運用設計を所有するため、上下流の相互参照で結び、supersede しない。
+これは層と責務から一意に決まる技術判断であり、PO 判断待ちにはしない
+(Codex independent review、2026-08-05)。
 
 本 PLAN は **S1 (契約 freeze、設計専用)** であり、実装コードは生成しない。`generates` は
 本 PLAN doc 自身のみとし、schema/実装モジュールは S2 着手時に確定 PLAN の `generates` へ
@@ -66,8 +68,12 @@ Problem 相当の設計判断として明示する)。
 
 ## 2. 設計判断節
 
-1. **正本 = repo 内 manifest ファイル** (`release/manifest.yaml` 想定)。schema は
+1. **正本 = source development repo 内 manifest ファイル** (`release/manifest.yaml` 想定)。schema は
    `src/schema/release-manifest.ts` に置き、lint/doctor が fail-close で検証する。
+   S2 は同ファイルを clean Pack artifact allowlist へ追加し、`buildCleanDistributionPlan` と
+   `sync-pack` が Pack checkout へcopyする経路を同じ変更で実装・検証する。Pack側のcopyは
+   source manifestから生成した配布物であり第二正本にしない。下流製品は同じschemaで各repo内に
+   自身のmanifest正本を持つ。
    - 案B (harness.db 正本) は不採用。db は派生 projection であり、これを正本にすると
      「projection が古いだけ」を「重複なし/影響なし」という偽の否定証明にすり替える
      (issue #169 実例: PLAN-L6-94 と PLAN-L7-465 の契約重複を graph 未投影で検出できなかった)。
@@ -75,7 +81,8 @@ Problem 相当の設計判断として明示する)。
      での決定性が失われる。ただし tag/Release は「配送済み事実の証跡」として manifest と
      突合する auditor の入力に使う (後続 slice、本 PLAN のスコープ外)。
    - (advisor 裁定 2026-08-04、design 判断、claude-fable-5)
-2. **着手順 = `sync-pack --channel` の最小実装から** (dogfood 先行)。下流製品向けの汎用
+2. **着手順 = `sync-pack --channel` の最小実装から** (dogfood 先行、Codex independent
+   technical review、2026-08-05)。下流製品向けの汎用
    domain model を先に立てるのは不採用 — 消費者が Pack 1 つの段階で抽象化を先取りするのは
    最小実装原則違反 (投機的な型・契約の積み増し)。2 例目の消費者 (下流製品) が実際に現れた
    時点で Reverse により汎用契約を抽出する。
@@ -118,9 +125,11 @@ Problem 相当の設計判断として明示する)。
   test-design oracle (`U-RELMAN-*`) と対になっている。
 - AC-3: rollback の意味論が非破壊 (宣言変更のみ、Git 履行履歴不変) で閉じていることが
   設計判断節に明示されている。
-- AC-4: 設計判断節の各項目が advisor 相談または PO 採択のいずれかの記録を持つ。
-- AC-5: `PLAN-L6-63` との関係 (合流/存続の判断) が本 PLAN の confirm 前に PO 判断として
-  記録される (§0 の未決事項)。
+- AC-4: 設計判断節の各項目が advisor相談、PO採択、または独立技術レビューの記録を持つ。
+- AC-5: `PLAN-L6-63` は Pack repository のtag/release/revert runbookとして存続し、本PLANは
+  manifest/channel/promotion機械契約を所有する。相互参照で接続し、supersedeしない。
+- AC-6: source repoの`release/manifest.yaml`だけを正本とし、clean Pack allowlistと
+  `sync-pack`による配布copyをS2で原子的に追加する。Pack copyを第二正本にしない。
 
 ## 6. 設計と検証の対 (S1 時点の RED oracle 案)
 
@@ -150,5 +159,5 @@ Problem 相当の設計判断として明示する)。
 
 - [ ] `U-RELMAN-001`〜`011` (案) が test-design へ registered され、oracle として承認される。
 - [ ] 設計判断節が non-author family の cross-review で PASS。
-- [ ] `PLAN-L6-63` との関係が PO 判断で確定する。
+- [x] `PLAN-L6-63` との責務分離・存続・相互参照が技術判断として確定している。
 - [ ] `PLAN-REVERSE-473` が R0 を完了し、既存実装との責務境界を確認する。
