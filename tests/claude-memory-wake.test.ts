@@ -222,7 +222,7 @@ describe("Claude HARNESS memory async wake", () => {
     }
   });
 
-  it("U-MEMWAKE-001補遺: inbox JSONを古い順で削除し、壊れエントリを先に除外しない", () => {
+  it("U-MEMWAKE-001補遺: inbox JSONを古い順で削除し、壊れエントリを先に除外しない", async () => {
     const root = fixture();
     try {
       const now = Math.floor(Date.now() / 1000) - 10 * 24 * 60 * 60;
@@ -244,15 +244,14 @@ describe("Claude HARNESS memory async wake", () => {
       utimesSync(stale, now, now);
 
       expect(existsSync(stale)).toBe(true);
-      return waitForClaudeMemory({
+      const result = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "prune",
         pollIntervalMs: 10,
         maxWaitMs: 40,
-      }).then((result) => {
-        expect(result.kind).toBe("delivered");
-        expect(existsSync(stale)).toBe(false);
       });
+      expect(result.kind).toBe("delivered");
+      expect(existsSync(stale)).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

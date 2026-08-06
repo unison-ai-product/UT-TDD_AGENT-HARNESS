@@ -3859,8 +3859,6 @@ memory
         : [];
       try {
         const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
-        const mode = detectMode();
-        const originRuntime = mode.currentRuntime === "claude" ? "system" : "codex";
         const entry = writeMemory({
           repoRoot,
           input: {
@@ -3872,6 +3870,8 @@ memory
         });
         process.stdout.write(`memory: wrote ${entry.source_path}\n`);
         if (opts.notifyClaude) {
+          const mode = detectMode();
+          const originRuntime = mode.currentRuntime === "claude" ? "system" : "codex";
           const operationId = opts.operationId?.trim() || entry.content_hash.slice(0, 16);
           const notification = buildClaudeInboxEntry({
             memory: entry,

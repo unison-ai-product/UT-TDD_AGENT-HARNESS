@@ -149,18 +149,18 @@ export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntr
     });
     throw new Error("claude_inbox_projection_conflict");
   }
-  writeAuditLog(repoRoot, {
-    event: "publish",
-    status: "created",
-    entryId: entry.id,
-    operationId: entry.operationId,
-  });
   const descriptor = openSync(target, "wx", 0o600);
   try {
     writeFileSync(descriptor, `${serialized}\n`);
   } finally {
     closeSync(descriptor);
   }
+  writeAuditLog(repoRoot, {
+    event: "publish",
+    status: "created",
+    entryId: entry.id,
+    operationId: entry.operationId,
+  });
   return target;
 }
 
@@ -216,14 +216,18 @@ const RETENTION_MS = 7 * 24 * 60 * 60 * 1_000;
 
 function pruneRuntimeFiles(root: string, nowMs: number): void {
   if (!existsSync(root)) return;
-  for (const name of readdirSync(root)) {
-    if (!name.endsWith(".claim") && !name.endsWith(".generation") && !name.endsWith(".json"))
-      continue;
-    const path = join(root, name);
-    try {
-      if (nowMs - statSync(path).mtimeMs > RETENTION_MS) unlinkSync(path);
-    } catch {
-      // 競合削除は次回GCへ委ねる。
+  for (const directory of [root, join(root, "inbox")]) {
+    if (!existsSync(directory)) continue;
+    for (const name of readdirSync(directory)) {
+      if (!name.endsWith(".claim") && !name.endsWith(".generation") && !name.endsWith(".json"))
+        continue;
+      const path = join(directory, name);
+      try {
+        const stat = statSync(path);
+        if (stat.isFile() && nowMs - stat.mtimeMs > RETENTION_MS) unlinkSync(path);
+      } catch {
+        // 競合削除は次回GCへ委ねる。
+      }
     }
   }
 }
@@ -243,10 +247,13 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
     .filter((entry): entry is ClaudeInboxEntry => entry !== undefined);
 }
 
-function summarizeEntries(entries: readonly ClaudeInboxEntry[]): ClaudeInboxBacklogSummary {
+function summarizeEntries(
+  entries: readonly ClaudeInboxEntry[],
+  workspaceId: string,
+): ClaudeInboxBacklogSummary {
   if (entries.length === 0) {
     return {
-      workspaceId: "",
+      workspaceId,
       pending: 0,
       oldestEntryId: null,
       oldestCreatedAt: null,
@@ -273,11 +280,11 @@ export function summarizeUnclaimedInbox(
   workspaceId: string,
 ): ClaudeInboxBacklogSummary {
   const root = runtimeRoot(repoRoot);
-  const unclaimed = new Set(claimedIds(root));
+  const claimed = new Set(claimedIds(root));
   const entries = readInbox(repoRoot).filter(
-    (entry) => entry.targetWorkspaceId === workspaceId && !unclaimed.has(entry.id),
+    (entry) => entry.targetWorkspaceId === workspaceId && !claimed.has(entry.id),
   );
-  return summarizeEntries(entries);
+  return summarizeEntries(entries, workspaceId);
 }
 
 function claim(input: {
