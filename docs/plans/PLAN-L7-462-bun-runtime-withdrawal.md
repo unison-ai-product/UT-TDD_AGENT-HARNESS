@@ -78,18 +78,28 @@ Bun 起因・Bun 関与のトラブルが反復している:
 fallback = claude-fable-5、発火ログ 2026-08-06) が同方式を推奨し、前提を repo
 実測で検証した上で採択する。
 
-実測 (2026-08-06) — 起票時の「blocker 0 件」claim は**一部誤り**だった:
+実測 (2026-08-06、基準 = main HEAD `11816bfd`。初版 freeze の数値は blind review FLAG
+で 3 点是正済み — 過小計数 grep / `.js` 指定子クラスの欠落 / 基準 commit 不明):
 
-- 拡張子なし相対 import **773 箇所** (Node ESM は拡張子必須で `ERR_MODULE_NOT_FOUND`)。
-  `.ts` 拡張子付き import は node 24.13.0 / bun 1.3.14 の両方で動作を実証済み。
-  tsconfig へ `allowImportingTsExtensions: true` を追加する (noEmit 下で許可)。
-- **parameter properties (`constructor(private readonly ...)`) が 18 箇所 / 13
-  ファイルに実在** (起票時 grep は enum/namespace/decorator のみで見落とし)。素の
-  type-stripping は fail、`--experimental-transform-types` なら通るが experimental
-  flag を hook 恒久経路に置かない。→ 18 箇所を明示 field 代入へ機械是正し
-  erasable-only を維持する。
+- 拡張子なし相対 import **755 箇所** (Node ESM は拡張子必須で `ERR_MODULE_NOT_FOUND`)。
+  根拠: `grep -rEn 'from "\.\.?/[^"]*"' src/ .claude/hooks/ scripts/ --include="*.ts" |
+  grep -vc '\.ts"|\.js"|\.json"'`。`.ts` 拡張子付き import は node 24.13.0 /
+  bun 1.3.14 の両方で動作を実証済み。tsconfig へ `allowImportingTsExtensions: true`
+  を追加する (noEmit 下で許可。`verbatimModuleSyntax: true` 既設のため型 import 残存の
+  危険も既に封じられている)。
+- **相対 `.js` 指定子 import が 215 行** (tests/ 含む) 実在し、全て `.ts` 実ファイルを
+  指す (`find src -name "*.js"` = 0)。node は `ERR_MODULE_NOT_FOUND`、bun は解決する
+  ため bun 併用中は不可視の blocker。codemod scope に含め `.ts` へ書き換える。
+- **parameter properties が 54 箇所 / 27 ファイル** (tests/ scripts/ 含む、複数行
+  constructor を含む計数)。初版 freeze の「18 箇所 / 13 ファイル」は 1 行 constructor
+  のみの grep で、起票時と同種の grep 盲点を再生産していた (blind review A1)。根拠:
+  `constructor\s*\(([^)]*)\)` を dotall で全 match し
+  `(private|public|protected|readonly)\s+\w` を param 単位で計数。素の type-stripping
+  は複数行形でも `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` で fail することを実走確認。
+  `--experimental-transform-types` は通るが experimental flag を hook 恒久経路に
+  置かない。→ 全 54 箇所を明示 field 代入へ機械是正し erasable-only を維持する。
 - 変数引数の dynamic import / require: **0 件**。enum / namespace: **0 件**。
-- node 起動実測: 0.138s (hook timeout 5s に対し十分)。
+- node 起動実測: 0.138s (単一 module、hook timeout 5s に対し十分)。
 
 対抗案と棄却理由:
 
@@ -98,11 +108,18 @@ fallback = claude-fable-5、発火ログ 2026-08-06) が同方式を推奨し、
 - (c) esbuild prebuild: hook 経路にビルド段と stale-artifact 問題 (編集→ビルド忘れ
   →古い挙動) を持ち込み、fail-close 設計と相性が悪い。
 
-**step 1 の PR 構成契約**: (1) tsconfig + 拡張子なし相対 import 禁止 lint +
-773 箇所 codemod + parameter properties 18 箇所是正を **1 PR で一括** (gate と
-codemod を分割すると全体赤化か再流入のどちらかになる)。着工は Codex in-flight PR
-(#268) が閉じた同期点に固定し、機械 diff を即 commit・即 push する。(2) hooks の
-`bun` → `node` 差し替えは**その後の別 PR**。
+**step 1 の PR 構成契約** (blind review B3 を反映し不変条件境界で分割):
+
+- PR-A: tsconfig + import 指定子 codemod (拡張子なし 755 + `.js` 指定子 215 行) +
+  再流入 lint (「相対 import は実在する `.ts` ファイルを指す拡張子必須」— 拡張子なし
+  だけでなく `.js` 指定子も fail-close)。gate と対象 codemod は同一 PR (分割すると
+  全体赤化か再流入)。
+- PR-B: parameter properties 54 箇所の erasable 化 + erasable-only 再流入 gate
+  (全 `.ts` — tests/ 含む — を node strip-only で構文検証する回帰)。
+- PR-C: hooks の `bun` → `node` 差し替え (PR-A/B の後)。
+
+着工同期点条項 (#268 close 待ち) は 2026-08-06 の #268 merge により充足済み。
+機械 diff は即 commit・即 push する。
 
 - **配布バイナリ**: `bun build --compile` の代替は Node SEA か「bundle + node
   実行」の 2 案。配布 (Pack) は現在 no-go 中のため、本 PLAN では方式メモまで。
@@ -111,9 +128,12 @@ codemod を分割すると全体赤化か再流入のどちらかになる)。�
 
 - step 0 (前提、別 PLAN): PLAN-L7-460 = db-refresh の Node 経路固定 + Bun 起動
   fail-close。
-- step 1 (serial): hooks 起動系の Node 化 — `.claude/settings.json` の全 hook を
-  `node` 起動へ swap し、SessionStart / PostToolUse / Stop / SubagentStop の
-  発火等価性を回帰で固定。console flash 抑止 (PR #125 系) と整合させる。
+- step 1 (serial、設計判断節の PR-A/B/C 構成に従う): まず code を Node 実行可能へ
+  是正 (PR-A: import 指定子 codemod + 拡張子 lint、PR-B: erasable 化 +
+  erasable-only gate)、その後 hooks 起動系の Node 化 (PR-C) — `.claude/settings.json`
+  の全 hook を `node` 起動へ swap し、SessionStart / PostToolUse / Stop /
+  SubagentStop の発火等価性を回帰で固定。console flash 抑止 (PR #125 系) と
+  整合させる。
 - step 2 (step 1 の後、serial): scripts / snapshot runner / CI の swap —
   package.json scripts、`run-vitest-snapshot.ts` の spawn 系統、CI の
   setup-bun → setup-node + lockfile 移行 (bun.lock → package-lock)。CI 両 leg
@@ -139,3 +159,8 @@ codemod を分割すると全体赤化か再流入のどちらかになる)。�
 - AC-3: 新規の bun: import / Bun グローバル参照が lint で fail-close する回帰
   テストが green (許可リスト方式の恒久 bypass は禁止)。
 - AC-4: db-refresh incident 系 oracle (PLAN-L7-460 の AC-1〜3) が移行後も green。
+- AC-5: 全 `.ts` (src/ tests/ scripts/ .claude/hooks/) が node strip-only で構文
+  解析可能であることを検証する回帰 gate が green (vitest は esbuild 経由で
+  strip-only 違反を検出できないため独立 gate が必要 — blind review B2)。あわせて
+  相対 import 指定子の再流入 lint (拡張子なし / `.js` 指定子の両方を fail-close)
+  が green。
