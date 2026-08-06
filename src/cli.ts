@@ -141,6 +141,7 @@ import {
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
   resolveClaudeWakeDelay,
+  summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "./runtime/claude-memory-wake.ts";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
@@ -514,6 +515,13 @@ function readMemoryThroughService(
 function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = ""): void {
   // memory は DB 障害と独立に正本ファイルから読む (PLAN-L7-468 欠陥 3)。
   const memory = readMemoryThroughService(repoRoot, { limit: 5 });
+  let unclaimedInbox: ReturnType<typeof summarizeUnclaimedInbox> | undefined;
+  try {
+    const workspaceId = claudeWorkspaceId(repoRoot);
+    unclaimedInbox = summarizeUnclaimedInbox(repoRoot, workspaceId);
+  } catch {
+    unclaimedInbox = undefined;
+  }
   try {
     const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
     try {
@@ -521,6 +529,7 @@ function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = "
         selectSessionStartDigest(db, recentHeadCommits(repoRoot), {
           escalationLines: escalationBlock.trim().split(/\r?\n/).filter(Boolean),
           memory: memory.entries,
+          unclaimedInbox,
         }),
       );
       if (block) process.stdout.write(block);
@@ -1152,9 +1161,10 @@ hook
   .action(async () => {
     if (!isClaudeMemoryWakeTarget(process.env)) return;
     const input = readHookInput("Stop");
+    const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
     const result = await waitForClaudeMemory({
-      repoRoot: requireRuntimeRepoRoot({ allowCwdFallback: true }),
-      sessionId: input.session_id ?? "claude-session",
+      repoRoot,
+      sessionId: input.session_id ?? "ut-tdd-cli",
       pollIntervalMs: resolveClaudeWakeDelay(process.env.UT_TDD_CLAUDE_WAKE_POLL_MS, 2_000),
       maxWaitMs: resolveClaudeWakeDelay(process.env.UT_TDD_CLAUDE_WAKE_MAX_MS, 900_000),
     });
@@ -3848,8 +3858,11 @@ memory
             .filter(Boolean)
         : [];
       try {
+        const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
+        const mode = detectMode();
+        const originRuntime = mode.currentRuntime === "claude" ? "system" : "codex";
         const entry = writeMemory({
-          repoRoot: process.cwd(),
+          repoRoot,
           input: {
             kind: opts.kind as MemoryKind,
             title: opts.title,
@@ -3863,9 +3876,10 @@ memory
           const notification = buildClaudeInboxEntry({
             memory: entry,
             operationId,
-            workspaceId: claudeWorkspaceId(process.cwd()),
+            workspaceId: claudeWorkspaceId(repoRoot),
+            originRuntime,
           });
-          const deliveryPath = publishClaudeInboxEntry(process.cwd(), notification);
+          const deliveryPath = publishClaudeInboxEntry(repoRoot, notification);
           process.stdout.write(`memory: notified Claude via ${deliveryPath}\n`);
         }
       } catch (error) {

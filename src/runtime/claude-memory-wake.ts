@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  appendFileSync,
   closeSync,
   existsSync,
   openSync,
@@ -32,6 +33,14 @@ export interface ClaudeMemoryWakeResult {
   readonly kind: "delivered" | "timeout" | "superseded";
   readonly entry?: ClaudeInboxEntry;
   readonly message?: string;
+}
+
+export interface ClaudeInboxBacklogSummary {
+  readonly workspaceId: string;
+  readonly pending: number;
+  readonly oldestEntryId: string | null;
+  readonly oldestCreatedAt: string | null;
+  readonly oldestAgeMs: number | null;
 }
 
 export function isClaudeMemoryWakeTarget(env: NodeJS.ProcessEnv): boolean {
@@ -77,6 +86,23 @@ function runtimeRoot(repoRoot: string): string {
   throw new Error("claude_inbox_git_common_dir_required");
 }
 
+function logPath(repoRoot: string): string {
+  return join(repoRoot, ".ut-tdd", "logs", "claude-memory-wake.jsonl");
+}
+
+function writeAuditLog(repoRoot: string, event: Record<string, unknown>): void {
+  try {
+    const path = logPath(repoRoot);
+    ensureDir(join(path, ".."), { recursive: true });
+    appendFileSync(path, `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+  } catch {
+    // 監査は best effort
+  }
+}
+
 export function buildClaudeInboxEntry(input: {
   memory: MemoryEntry;
   operationId: string;
@@ -93,7 +119,7 @@ export function buildClaudeInboxEntry(input: {
     id: `${input.memory.memory_id}:workspace:${input.workspaceId}:op:${input.operationId}`,
     memoryId: input.memory.memory_id,
     body: input.memory.body,
-    originRuntime: input.originRuntime ?? "codex",
+    originRuntime: input.originRuntime ?? "system",
     operationId: input.operationId,
     targetWorkspaceId: input.workspaceId,
     createdAt: input.now ?? new Date().toISOString(),
@@ -106,9 +132,29 @@ export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntr
   const target = join(directory, `${safeFilePart(entry.id)}.json`);
   const serialized = JSON.stringify(entry);
   if (existsSync(target)) {
-    if (readFileSync(target, "utf8").trim() === serialized) return target;
+    if (readFileSync(target, "utf8").trim() === serialized) {
+      writeAuditLog(repoRoot, {
+        event: "publish",
+        status: "idempotent",
+        entryId: entry.id,
+        operationId: entry.operationId,
+      });
+      return target;
+    }
+    writeAuditLog(repoRoot, {
+      event: "publish",
+      status: "conflict",
+      entryId: entry.id,
+      operationId: entry.operationId,
+    });
     throw new Error("claude_inbox_projection_conflict");
   }
+  writeAuditLog(repoRoot, {
+    event: "publish",
+    status: "created",
+    entryId: entry.id,
+    operationId: entry.operationId,
+  });
   const descriptor = openSync(target, "wx", 0o600);
   try {
     writeFileSync(descriptor, `${serialized}\n`);
@@ -163,7 +209,7 @@ export function selectClaudeInboxEntry(
       (left, right) =>
         left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
     )
-    .at(-1);
+    .at(0);
 }
 
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1_000;
@@ -171,7 +217,8 @@ const RETENTION_MS = 7 * 24 * 60 * 60 * 1_000;
 function pruneRuntimeFiles(root: string, nowMs: number): void {
   if (!existsSync(root)) return;
   for (const name of readdirSync(root)) {
-    if (!name.endsWith(".claim") && !name.endsWith(".generation")) continue;
+    if (!name.endsWith(".claim") && !name.endsWith(".generation") && !name.endsWith(".json"))
+      continue;
     const path = join(root, name);
     try {
       if (nowMs - statSync(path).mtimeMs > RETENTION_MS) unlinkSync(path);
@@ -186,8 +233,51 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
   if (!existsSync(directory)) return [];
   return readdirSync(directory)
     .filter((name) => name.endsWith(".json"))
-    .map((name) => decodeEntry(readFileSync(join(directory, name), "utf8")))
+    .map((name) => {
+      try {
+        return decodeEntry(readFileSync(join(directory, name), "utf8"));
+      } catch {
+        return undefined;
+      }
+    })
     .filter((entry): entry is ClaudeInboxEntry => entry !== undefined);
+}
+
+function summarizeEntries(entries: readonly ClaudeInboxEntry[]): ClaudeInboxBacklogSummary {
+  if (entries.length === 0) {
+    return {
+      workspaceId: "",
+      pending: 0,
+      oldestEntryId: null,
+      oldestCreatedAt: null,
+      oldestAgeMs: null,
+    };
+  }
+
+  const ordered = [...entries].sort(
+    (left, right) =>
+      left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
+  );
+  const oldest = ordered[0];
+  return {
+    workspaceId: oldest.targetWorkspaceId,
+    pending: entries.length,
+    oldestEntryId: oldest.id,
+    oldestCreatedAt: oldest.createdAt,
+    oldestAgeMs: Date.now() - Date.parse(oldest.createdAt),
+  };
+}
+
+export function summarizeUnclaimedInbox(
+  repoRoot: string,
+  workspaceId: string,
+): ClaudeInboxBacklogSummary {
+  const root = runtimeRoot(repoRoot);
+  const unclaimed = new Set(claimedIds(root));
+  const entries = readInbox(repoRoot).filter(
+    (entry) => entry.targetWorkspaceId === workspaceId && !unclaimed.has(entry.id),
+  );
+  return summarizeEntries(entries);
 }
 
 function claim(input: {
@@ -268,7 +358,31 @@ export async function waitForClaudeMemory(input: {
   const started = Date.now();
   const unclaimable = new Set<string>();
   while (Date.now() - started < maxWaitMs) {
-    if (readFileSync(generationPath, "utf8").trim() !== generation) {
+    let currentGeneration: string | null = null;
+    try {
+      if (!existsSync(generationPath)) {
+        writeAuditLog(input.repoRoot, {
+          event: "supersede",
+          reason: "generation_file_missing",
+          sessionId: input.sessionId,
+        });
+        return { kind: "superseded" };
+      }
+      currentGeneration = readFileSync(generationPath, "utf8").trim();
+    } catch {
+      writeAuditLog(input.repoRoot, {
+        event: "supersede",
+        reason: "generation_read_failed",
+        sessionId: input.sessionId,
+      });
+      return { kind: "superseded" };
+    }
+    if (currentGeneration !== generation) {
+      writeAuditLog(input.repoRoot, {
+        event: "supersede",
+        reason: "generation_changed",
+        sessionId: input.sessionId,
+      });
       return { kind: "superseded" };
     }
     const unavailable = claimedIds(root);
@@ -279,6 +393,13 @@ export async function waitForClaudeMemory(input: {
     );
     if (entry) {
       if (claim({ repoRoot: input.repoRoot, entry, sessionId: input.sessionId, at: now() })) {
+        writeAuditLog(input.repoRoot, {
+          event: "claim",
+          status: "ok",
+          entryId: entry.id,
+          operationId: entry.operationId,
+          sessionId: input.sessionId,
+        });
         try {
           unlinkSync(join(root, "inbox", `${safeFilePart(entry.id)}.json`));
         } catch {
@@ -286,6 +407,14 @@ export async function waitForClaudeMemory(input: {
         }
         return { kind: "delivered", entry, message: renderClaudeWakeMessage(entry) };
       }
+      writeAuditLog(input.repoRoot, {
+        event: "claim",
+        status: "skip",
+        entryId: entry.id,
+        operationId: entry.operationId,
+        sessionId: input.sessionId,
+        reason: "already_claimed",
+      });
       unclaimable.add(entry.id);
       continue;
     }
