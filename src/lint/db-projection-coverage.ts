@@ -7,7 +7,7 @@ import {
   HARNESS_DB_TABLES,
   primaryKeyColumnsOf,
   type TableDef,
-} from "../schema/harness-db";
+} from "../schema/harness-db.ts";
 
 /** lintがstate-db実装へ逆依存しないためのSQLite introspection port。 */
 export interface DbIntrospectionPort {

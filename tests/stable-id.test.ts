@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stableId } from "../src/stable-id";
+import { stableId } from "../src/stable-id.ts";
 
 describe("stableId", () => {
   it("keeps existing ASCII identifiers unchanged", () => {

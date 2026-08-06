@@ -7,8 +7,8 @@ import {
   analyzeMemorySync,
   loadMemorySyncInput,
   memorySyncMessages,
-} from "../src/lint/memory-sync";
-import { removeTestTree } from "./support/temp-tree";
+} from "../src/lint/memory-sync.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function git(repo: string, args: string[]): void {
   execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: "pipe" });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RuntimeDetection } from "../src/runtime/detect";
+import type { RuntimeDetection } from "../src/runtime/detect.ts";
 import {
   assignCross,
   isRouterRole,
@@ -7,7 +7,7 @@ import {
   route,
   routeTeamMembers,
   routeToAdapterPlan,
-} from "../src/task/tier-router";
+} from "../src/task/tier-router.ts";
 import {
   FRONTIER_MODELS,
   FRONTIER_ROLES,
@@ -16,8 +16,8 @@ import {
   resolveModel,
   TIER_TABLE,
   tierFor,
-} from "../src/task/tier-router-policy";
-import { MODEL_IDS } from "../src/team/model-policy";
+} from "../src/task/tier-router-policy.ts";
+import { MODEL_IDS } from "../src/team/model-policy.ts";
 
 function det(
   mode: RuntimeDetection["mode"],

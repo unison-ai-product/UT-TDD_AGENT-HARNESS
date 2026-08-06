@@ -3,8 +3,8 @@ import {
   type GitObjectTreeSnapshot,
   REPOSITORY_DOCUMENT_ZONES,
   type RepositoryDocumentZone,
-} from "../ports/git-object-snapshot";
-import { canonicalField, sha256 } from "./canonical-frame";
+} from "../ports/git-object-snapshot.ts";
+import { canonicalField, sha256 } from "./canonical-frame.ts";
 
 export type DocumentSnapshotRuleId =
   | "docs-snapshot-revision-missing"

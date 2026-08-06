@@ -24,7 +24,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fmValue } from "./shared";
+import { fmValue } from "./shared.ts";
 
 export interface ParsedSupersedePlan {
   plan_id: string;

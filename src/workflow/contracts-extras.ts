@@ -1,5 +1,5 @@
-import { stableId } from "../stable-id";
-import type { ContractResult, Finding } from "./contracts-types";
+import { stableId } from "../stable-id.ts";
+import type { ContractResult, Finding } from "./contracts-types.ts";
 
 function finding(
   code: string,

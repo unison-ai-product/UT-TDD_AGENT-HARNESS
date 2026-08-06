@@ -1,4 +1,4 @@
-import { ROUTE_SIGNAL_MAP, routeSignalCandidates } from "./route-map";
+import { ROUTE_SIGNAL_MAP, routeSignalCandidates } from "./route-map.ts";
 
 export interface RouteFilingFinding {
   code: string;

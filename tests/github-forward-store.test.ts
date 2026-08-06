@@ -2,11 +2,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { deriveForwardReadiness } from "../src/kernel/forward-readiness";
+import { deriveForwardReadiness } from "../src/kernel/forward-readiness.ts";
 import {
   encodeMergeClosureReceipt,
   reviewReceiptDigest,
-} from "../src/kernel/github-closure-receipt";
+} from "../src/kernel/github-closure-receipt.ts";
 import {
   deriveStoredForwardReadiness,
   markGithubProjectionApplied,
@@ -17,10 +17,10 @@ import {
   recordGithubBinding,
   selectActiveProjectRows,
   selectExistingProjectPlans,
-} from "../src/state-db/github-forward-projection";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild";
+} from "../src/state-db/github-forward-projection.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild.ts";
 
 describe("GitHub Forward SQLite store", () => {
   const insertSchedule = (

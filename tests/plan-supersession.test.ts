@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkPlanSupersession } from "../src/doctor/index";
+import { checkPlanSupersession } from "../src/doctor/index.ts";
 import {
   analyzePlanSupersession,
   loadSupersedePlans,
@@ -11,8 +11,8 @@ import {
   parseSupersedes,
   planCoreId,
   planSupersessionMessages,
-} from "../src/lint/plan-supersession";
-import { workspaceRead } from "./support/workspace-roots";
+} from "../src/lint/plan-supersession.ts";
+import { workspaceRead } from "./support/workspace-roots.ts";
 
 // PLAN-L7-89: 誤記対策 — confirmed PLAN の誤った主張を後継が直したとき、errata リンクが
 // 双方向 (supersedes 宣言 + 原 PLAN の訂正 back-reference) であることを fail-close 強制する。

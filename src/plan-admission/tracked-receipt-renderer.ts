@@ -1,22 +1,22 @@
 import { createHash } from "node:crypto";
 import { stringify } from "yaml";
-import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory";
-import { frontmatterSchema } from "../schema/frontmatter";
-import { canonicalPlanContentDigest } from "./diff-fence";
-import { bindPlanSourceToAdmission } from "./plan-content-binding";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
+import { frontmatterSchema } from "../schema/frontmatter.ts";
+import { canonicalPlanContentDigest } from "./diff-fence.ts";
+import { bindPlanSourceToAdmission } from "./plan-content-binding.ts";
 import type {
   DraftArtifactRendererPort,
   DraftReceiptBinding,
   PlanDraftCommand,
-} from "./plan-draft-service";
-import type { PlanAdmissionRequest } from "./policy";
-import { evaluatePlanAdmission } from "./policy";
+} from "./plan-draft-service.ts";
+import type { PlanAdmissionRequest } from "./policy.ts";
+import { evaluatePlanAdmission } from "./policy.ts";
 import {
   parseTrackedReceiptProjection,
   TRACKED_RECEIPT_SCHEMA,
   type TrackedReceiptRecord,
   trackedReceiptRecordDigest,
-} from "./tracked-receipt-projection";
+} from "./tracked-receipt-projection.ts";
 
 export interface AdmissionBearingPayload {
   readonly admission: PlanAdmissionRequest;

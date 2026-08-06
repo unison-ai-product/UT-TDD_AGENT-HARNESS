@@ -1,7 +1,7 @@
-import type { SurfacedFeedback, TakeoverFeedbackResult } from "../feedback/surface";
-import { selectTakeoverFeedback } from "../feedback/surface";
-import type { MemoryEntry } from "../memory/index";
-import type { HarnessDb } from "../state-db/index";
+import type { SurfacedFeedback, TakeoverFeedbackResult } from "../feedback/surface.ts";
+import { selectTakeoverFeedback } from "../feedback/surface.ts";
+import type { MemoryEntry } from "../memory/index.ts";
+import type { HarnessDb } from "../state-db/index.ts";
 
 type Rag = "green" | "yellow" | "red";
 

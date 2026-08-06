@@ -1,16 +1,16 @@
 import { timingSafeEqual } from "node:crypto";
-import type { HarnessDb } from "../../state-db/index.js";
+import type { HarnessDb } from "../../state-db/index.ts";
 import type {
   ReservationLedgerPort,
   ReservationLedgerRecord,
-} from "../ports/reservation-ledger.js";
+} from "../ports/reservation-ledger.ts";
 import {
   AppendCommandTransaction,
   type AppendResult,
   type LedgerFaultPort,
-} from "./append-command.js";
-import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
-import type { LedgerTransactionPort } from "./transaction.js";
+} from "./append-command.ts";
+import { ledgerRowDigest, migratePlanLedger } from "./schema.ts";
+import type { LedgerTransactionPort } from "./transaction.ts";
 
 type LedgerResult = AppendResult;
 

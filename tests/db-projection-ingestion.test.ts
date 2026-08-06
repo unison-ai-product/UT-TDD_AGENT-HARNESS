@@ -2,15 +2,15 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkDbProjectionIngestion } from "../src/doctor/db-projection";
+import { checkDbProjectionIngestion } from "../src/doctor/db-projection.ts";
 import {
   AUTOMATIC_DB_PROJECTION_REQUIREMENTS,
   analyzeDbProjectionIngestion,
   dbProjectionIngestionMessages,
   EVIDENCE_GATED_DB_PROJECTION_TABLES,
-} from "../src/lint/db-projection-ingestion";
-import { openHarnessDb } from "../src/state-db/index";
-import { rebuildHarnessDb } from "../src/state-db/projection-writer";
+} from "../src/lint/db-projection-ingestion.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
 
 const populatedAutomaticProjectionCounts = {
   graph_nodes: 1,

@@ -20,7 +20,7 @@ import type {
   DraftCleanupOperation,
   DraftPublisherPort,
   DraftPublishToken,
-} from "./plan-draft-service";
+} from "./plan-draft-service.ts";
 
 export type DraftPublisherFaultPoint =
   | "stage:before-write"

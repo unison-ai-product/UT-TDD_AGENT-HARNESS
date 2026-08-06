@@ -10,7 +10,7 @@ import {
   lintPlanWithGate,
   planGovernanceMessages,
   planScheduleMessages,
-} from "../src/plan/lint";
+} from "../src/plan/lint.ts";
 import {
   READY_DEPENDENCY_STATUSES,
   ROUTE_MODE_ALLOWED_KINDS,
@@ -18,9 +18,9 @@ import {
   ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
   ROUTE_MODE_LAYER_BANDS,
   VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
-} from "../src/plan/lint-policy";
-import type { LintResult as SidecarLintResult } from "../src/plan/lint-types";
-import { PARENT_DRIVE_MISMATCH_BASELINE } from "../src/plan/parent-drive-mismatch-baseline";
+} from "../src/plan/lint-policy.ts";
+import type { LintResult as SidecarLintResult } from "../src/plan/lint-types.ts";
+import { PARENT_DRIVE_MISMATCH_BASELINE } from "../src/plan/parent-drive-mismatch-baseline.ts";
 
 const compliant = `---
 plan_id: PLAN-X

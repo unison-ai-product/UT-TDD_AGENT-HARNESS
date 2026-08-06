@@ -1,4 +1,4 @@
-import { type DocumentPack, doc } from "./proposal-document-pack-types";
+import { type DocumentPack, doc } from "./proposal-document-pack-types.ts";
 
 export const DOCUMENT_PACKS_CORE: DocumentPack[] = [
   {

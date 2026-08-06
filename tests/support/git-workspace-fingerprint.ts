@@ -6,7 +6,7 @@ import {
   hashFileChunkedWithDiagnostics,
   updateHashWithFile,
   wrapFileReadError,
-} from "./chunked-hash";
+} from "./chunked-hash.ts";
 
 export interface GitWorkspaceFingerprint {
   head: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planIdTaxonomyViolations } from "../src/plan/lint";
+import { planIdTaxonomyViolations } from "../src/plan/lint.ts";
 
 /**
  * 規定外起票ブロックゲート (plan_id taxonomy)。

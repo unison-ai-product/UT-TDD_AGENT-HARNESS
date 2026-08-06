@@ -1,6 +1,6 @@
-import { canonicalField, sha256 } from "./canonical-frame";
-import type { DocumentDelta, DocumentMemberIdentity } from "./document-delta";
-import { compareUtf8 } from "./document-delta-reducer";
+import { canonicalField, sha256 } from "./canonical-frame.ts";
+import type { DocumentDelta, DocumentMemberIdentity } from "./document-delta.ts";
+import { compareUtf8 } from "./document-delta-reducer.ts";
 
 export interface DocumentDeltaFinding {
   readonly findingId: string;

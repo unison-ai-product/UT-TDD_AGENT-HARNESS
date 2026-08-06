@@ -1,15 +1,15 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { HarnessDb } from "../../state-db/index.js";
-import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
-import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
-import { PlanAsset } from "../domain/plan-asset.js";
+import type { HarnessDb } from "../../state-db/index.ts";
+import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.ts";
+import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.ts";
+import { PlanAsset } from "../domain/plan-asset.ts";
 import {
   type AppendPlanRevisionInput,
   type AppendPlanRevisionResult,
   replayBindingValid,
-} from "./plan-revision-ledger.js";
-import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
-import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
+} from "./plan-revision-ledger.ts";
+import { ledgerRowDigest, migratePlanLedger } from "./schema.ts";
+import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.ts";
 
 export interface BootstrapLegacyPlanRevisionInput
   extends Omit<AppendPlanRevisionInput, "assetId" | "basePayloadDigest"> {

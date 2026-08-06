@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions";
+import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions.ts";
 import {
   buildDoctorResultEnvelope,
   canonicalRepoRoot,
@@ -20,11 +20,11 @@ import {
   doctorResultPayloadDigest,
   doctorResultProducerIdentity,
   parseDoctorResultEnvelope,
-} from "../src/doctor/result-file";
-import { nodeDoctorDeps } from "../src/doctor/runtime-state";
-import { defaultBranchRefMap, headSha } from "../src/git/default-branch";
-import { consumeDoctorResultEnvelopeWithReason } from "./support/doctor-envelope";
-import { headSnapshotRoot } from "./support/workspace-roots";
+} from "../src/doctor/result-file.ts";
+import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
+import { defaultBranchRefMap, headSha } from "../src/git/default-branch.ts";
+import { consumeDoctorResultEnvelopeWithReason } from "./support/doctor-envelope.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const RESULT = { ok: true, messages: ["doctor: rule-drift — OK"] };
 const REF_MAP = { "refs/remotes/origin/main": "b155171cf23d619751c01f11a2630334adb74f9c" };

@@ -3,17 +3,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
-} from "../src/kernel/plan-draft-command-digest.js";
-import type { PlanDraftExecutionPayload } from "../src/plan-admission/plan-draft-command-assembler.js";
+} from "../src/kernel/plan-draft-command-digest.ts";
+import type { PlanDraftExecutionPayload } from "../src/plan-admission/plan-draft-command-assembler.ts";
 import {
   PlanDraftLedgerAdapter,
   PlanDraftLedgerDigestMismatchError,
   type PlanDraftLedgerRejectedError,
-} from "../src/plan-admission/plan-draft-ledger-adapter.js";
-import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service.js";
-import type { PlanAdmissionRequest } from "../src/plan-admission/policy.js";
-import { PlanDraftLedgerTransaction } from "../src/plan-asset/ledger/plan-draft-ledger.js";
-import { openHarnessDb } from "../src/state-db/index.js";
+} from "../src/plan-admission/plan-draft-ledger-adapter.ts";
+import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service.ts";
+import type { PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
+import { PlanDraftLedgerTransaction } from "../src/plan-asset/ledger/plan-draft-ledger.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
 const admission: PlanAdmissionRequest = {

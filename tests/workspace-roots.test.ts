@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots";
+import { headSnapshotRoot, workspaceRead } from "./support/workspace-roots.ts";
 
 describe("repository test workspace roots", () => {
   it("U-TESTHYGIENE-012: exposes the detached HEAD snapshot as the sole repository read root", () => {

@@ -4,7 +4,7 @@ import {
   loadRefactorQaReleaseContractInput,
   type RefactorQaReleaseContractInput,
   refactorQaReleaseContractMessages,
-} from "../src/vmodel/lint";
+} from "../src/vmodel/lint.ts";
 
 const authoringSource = [
   "VMS-012",

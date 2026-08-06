@@ -1,10 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { ClockPort } from "../ports/clock.js";
-import type { LeaseTokenKeyRingPort } from "../ports/lease-token-key-ring.js";
+import type { ClockPort } from "../ports/clock.ts";
+import type { LeaseTokenKeyRingPort } from "../ports/lease-token-key-ring.ts";
 import type {
   ReservationLedgerPort,
   ReservationLedgerRecord,
-} from "../ports/reservation-ledger.js";
+} from "../ports/reservation-ledger.ts";
 
 export interface ReserveRequest {
   readonly reservationId: string;

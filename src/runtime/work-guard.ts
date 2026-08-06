@@ -11,7 +11,7 @@
  * 判定本体は純関数。git / session-log / env の I/O は hook 側 (.claude/hooks/work-guard.ts)。
  */
 
-export { extractEditTargets, normalizeRepoRelative } from "../shared/edit-targets";
+export { extractEditTargets, normalizeRepoRelative } from "../shared/edit-targets.ts";
 
 export interface WorkGuardInput {
   /** 編集対象 (repo-relative, forward-slash 正規化済)。 */

@@ -12,9 +12,9 @@ import {
   parseL4MapCatalog,
   type SubDocSchemaIntegrityInput,
   subDocSchemaIntegrityMessages,
-} from "../src/lint/sub-doc-schema-integrity";
-import { VALID_SUB_DOCS } from "../src/schema/index";
-import { headSnapshotRoot } from "./support/workspace-roots";
+} from "../src/lint/sub-doc-schema-integrity.ts";
+import { VALID_SUB_DOCS } from "../src/schema/index.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const SCHEMA = {
   L6: ["function-spec", "class-design", "edge-case", "screen-spec"],

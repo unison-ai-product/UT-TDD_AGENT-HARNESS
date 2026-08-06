@@ -2,14 +2,14 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
-import { isSecretLike } from "../secret";
-import { stableId } from "../stable-id";
+import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema/index.ts";
+import { isSecretLike } from "../secret.ts";
+import { stableId } from "../stable-id.ts";
 import {
   canonicalPlanRevision,
   resolvePlanRevisionIdentity,
-} from "./github-review-lane-provenance";
-import type { HarnessDb } from "./index";
+} from "./github-review-lane-provenance.ts";
+import type { HarnessDb } from "./index.ts";
 
 type SpecIrSourceKind =
   | "plan"

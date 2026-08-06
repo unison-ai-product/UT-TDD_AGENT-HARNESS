@@ -1,15 +1,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency";
-import { analyzeEntityCoverage, loadBusiness as loadEntityBusiness } from "../lint/entity-coverage";
-import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit";
+import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency.ts";
+import { analyzeEntityCoverage, loadBusiness as loadEntityBusiness } from "../lint/entity-coverage.ts";
+import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit.ts";
 import {
   analyzeFixtureManifest,
   fixtureManifestMessages,
   parseContractSections,
   parseFixtureManifest,
   parseL8FixtureRows,
-} from "../lint/resource-kernel-fixture-manifest";
+} from "../lint/resource-kernel-fixture-manifest.ts";
 import {
   analyzeResourceKernelPairMapping,
   parseContractMappingRows,
@@ -17,7 +17,7 @@ import {
   parseLaneDeclarations,
   parseRealRunnerTotal,
   resourceKernelPairMappingMessages,
-} from "../lint/resource-kernel-pair-mapping";
+} from "../lint/resource-kernel-pair-mapping.ts";
 
 const RGK_L8_DOC = "docs/test-design/harness/L8-integration-test-design.md";
 const RGK_FIXTURE_MANIFEST = "docs/test-design/harness/resource-kernel-fixture-manifest.yaml";

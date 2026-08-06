@@ -1,7 +1,7 @@
 import { stringify } from "yaml";
-import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
-import { canonicalPlanContentDigest } from "./diff-fence.js";
-import type { PlanAdmissionRequest } from "./policy.js";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
+import { canonicalPlanContentDigest } from "./diff-fence.ts";
+import type { PlanAdmissionRequest } from "./policy.ts";
 
 /** Receiptを除く、admission適用後のPLAN本文を一意に構成する。 */
 export function bindPlanSourceToAdmission(input: {

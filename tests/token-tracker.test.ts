@@ -10,9 +10,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { projectModelEvaluations, projectTokenUsage } from "../src/state-db/projection-writer";
+import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { projectModelEvaluations, projectTokenUsage } from "../src/state-db/projection-writer.ts";
 import {
   claudeProjectSlug,
   codexSessionBelongsToRepo,
@@ -26,8 +26,8 @@ import {
   type RunUsage,
   resolveClaudeProjectDir,
   summarizeRunUsage,
-} from "../src/state-db/token-tracker";
-import { MODEL_IDS } from "../src/team/model-policy";
+} from "../src/state-db/token-tracker.ts";
+import { MODEL_IDS } from "../src/team/model-policy.ts";
 
 describe("computeClaudeCostUsd", () => {
   it("computes cost from CLAUDE_PRICING (input + cache multipliers + output)", () => {

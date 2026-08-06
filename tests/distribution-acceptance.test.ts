@@ -18,8 +18,8 @@ import {
   cleanDistributionSourcePath,
   gitAddPathspecCommands,
   transformCleanDistributionArtifact,
-} from "../src/setup/index";
-import { removeTestTree } from "./support/temp-tree";
+} from "../src/setup/index.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
 

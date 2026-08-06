@@ -7,9 +7,9 @@ import {
   checkRosterConsistency,
   listRosterRegistry,
   scanSkillCatalog,
-} from "../src/assets/catalog";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate, rowCounts } from "../src/state-db/migration";
+} from "../src/assets/catalog.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate, rowCounts } from "../src/state-db/migration.ts";
 
 const legacyRuntimeName = ["he", "lix"].join("");
 

@@ -8,7 +8,7 @@ import {
   documentDeltaChainDigest,
   type ReplayDocumentDeltasInput,
   replayDocumentDeltas,
-} from "../../src/document-disposition/domain/replay-document-deltas";
+} from "../../src/document-disposition/domain/replay-document-deltas.ts";
 
 const member = (path: string, blobOid = `oid:${path}`, contentDigest = `sha:${path}`) => ({
   path,

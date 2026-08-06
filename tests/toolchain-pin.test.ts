@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkToolchainPin } from "../src/doctor/index";
-import { analyzeToolchainPin, toolchainPinMessages } from "../src/lint/toolchain-pin";
+import { checkToolchainPin } from "../src/doctor/index.ts";
+import { analyzeToolchainPin, toolchainPinMessages } from "../src/lint/toolchain-pin.ts";
 
 const direct = {
   "@biomejs/biome": "2.4.15",

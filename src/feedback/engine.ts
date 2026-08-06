@@ -1,8 +1,8 @@
-import { stableId } from "../stable-id";
-import type { HarnessDb } from "../state-db/index";
-import { upsertRow } from "../state-db/index";
-import { detectorRouteCandidateAction } from "../state-db/route-candidate-review";
-import { RUNTIME_SKILL_SOURCE_PREFIX } from "../state-db/skill-projections";
+import { stableId } from "../stable-id.ts";
+import type { HarnessDb } from "../state-db/index.ts";
+import { upsertRow } from "../state-db/index.ts";
+import { detectorRouteCandidateAction } from "../state-db/route-candidate-review.ts";
+import { RUNTIME_SKILL_SOURCE_PREFIX } from "../state-db/skill-projections.ts";
 
 export interface SkillMetric {
   plan_id: string;

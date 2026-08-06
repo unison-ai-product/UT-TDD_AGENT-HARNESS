@@ -6,15 +6,15 @@ import {
   extractDbProjectionCoverageRequirements,
   extractDbProjectionRequirements,
   loadDbProjectionRequirements,
-} from "../src/lint/db-projection-coverage";
-import { createTableSql, type TableDef } from "../src/schema/harness-db";
+} from "../src/lint/db-projection-coverage.ts";
+import { createTableSql, type TableDef } from "../src/schema/harness-db.ts";
 import {
   enumCheck,
   foreignKey,
   reference,
   requiredCol,
-} from "../src/schema/harness-db-table-builders";
-import { openHarnessDb } from "../src/state-db";
+} from "../src/schema/harness-db-table-builders.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
 
 const parent: TableDef = {
   name: "coverage_parent",

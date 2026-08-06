@@ -1,25 +1,25 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { parseStrictMarkdownTable } from "../../disposition/adapters/strict-markdown-table.js";
+import { parseStrictMarkdownTable } from "../../disposition/adapters/strict-markdown-table.ts";
 import {
   resolveCanonicalTarget,
   type TargetRegistry,
-} from "../../disposition/domain/target-resolver.js";
-import { type Role, VALID_ROLES } from "../../schema/index.js";
+} from "../../disposition/domain/target-resolver.ts";
+import { type Role, VALID_ROLES } from "../../schema/index.ts";
 import {
   buildLegacyPlanInventory,
   type LegacyPlanCollisionGroup,
   type LegacyPlanInventoryItem,
-} from "../adapters/legacy-plan-inventory.js";
+} from "../adapters/legacy-plan-inventory.ts";
 import {
   loadRoleContractRegistry,
   type RoleContractRegistry,
-} from "../adapters/role-contract-registry.js";
-import { validateMigrationFields } from "../domain/legacy-migration.js";
+} from "../adapters/role-contract-registry.ts";
+import { validateMigrationFields } from "../domain/legacy-migration.ts";
 import {
   MIGRATION_REVIEW_PLAN_ID,
   REVIEWED_REKEY_DECISIONS,
-} from "./legacy-migration-decision-manifest.js";
+} from "./legacy-migration-decision-manifest.ts";
 
 export type MigrationPreviewDecision = "migrated" | "rekeyed" | "rejected" | "pending";
 

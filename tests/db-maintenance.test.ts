@@ -2,9 +2,9 @@ import { existsSync, mkdtempSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { maybeVacuumHarnessDb } from "../src/state-db/db-maintenance";
-import { openHarnessDb } from "../src/state-db/index";
-import { removeTestTree } from "./support/temp-tree";
+import { maybeVacuumHarnessDb } from "../src/state-db/db-maintenance.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 /**
  * Stop ごとの rebuild (delete+reinsert churn) を人工生成する。VACUUM/auto_vacuum を明示的に

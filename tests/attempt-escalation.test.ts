@@ -6,8 +6,8 @@ import {
   evaluateAttemptEscalation,
   renderEscalationSignals,
   selectPrecedingSessionFile,
-} from "../src/runtime/attempt-escalation";
-import type { SessionEvent } from "../src/runtime/session-log";
+} from "../src/runtime/attempt-escalation.ts";
+import type { SessionEvent } from "../src/runtime/session-log.ts";
 
 function toolEvent(target: string, outcome: "ok" | "error", ts = "1"): SessionEvent {
   return {

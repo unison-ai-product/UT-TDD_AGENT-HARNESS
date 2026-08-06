@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import type { Command } from "commander";
 import { z } from "zod";
-import type { DraftReceiptBinding, PlanDraftResult } from "../plan-admission/plan-draft-service";
+import type { DraftReceiptBinding, PlanDraftResult } from "../plan-admission/plan-draft-service.ts";
 import {
   type AdmissionDecision,
   evaluatePlanAdmission,
   type PlanAdmissionRequest,
-} from "../plan-admission/policy";
+} from "../plan-admission/policy.ts";
 import {
   driveSchema,
   kindSchema,
@@ -14,7 +14,7 @@ import {
   statusSchema,
   subDocSchema,
   workflowPhaseSchema,
-} from "../schema/index";
+} from "../schema/index.ts";
 
 const routeModeSchema = z.enum([
   "forward",

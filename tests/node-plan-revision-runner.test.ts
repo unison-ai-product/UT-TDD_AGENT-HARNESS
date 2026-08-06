@@ -3,24 +3,24 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PlanRevisionManifest } from "../src/cli/plan-revise.js";
-import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.js";
+import type { PlanRevisionManifest } from "../src/cli/plan-revise.ts";
+import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.ts";
 import {
   NodePlanRevisionRunner,
   revisionUsesLegacyBootstrap,
-} from "../src/plan-admission/node-plan-revision-runner.js";
-import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-command-assembler.js";
-import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
-import { trackedReceiptRecordDigest } from "../src/plan-admission/tracked-receipt-projection.js";
-import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.js";
-import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
-import { PlanRevisionLedgerTransaction } from "../src/plan-asset/ledger/plan-revision-ledger.js";
+} from "../src/plan-admission/node-plan-revision-runner.ts";
+import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-command-assembler.ts";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
+import { trackedReceiptRecordDigest } from "../src/plan-admission/tracked-receipt-projection.ts";
+import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.ts";
+import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.ts";
+import { PlanRevisionLedgerTransaction } from "../src/plan-asset/ledger/plan-revision-ledger.ts";
 import {
   ledgerRowDigest,
   ledgerSchemaDdl,
   migratePlanLedger,
-} from "../src/plan-asset/ledger/schema.js";
-import { openHarnessDb } from "../src/state-db/index.js";
+} from "../src/plan-asset/ledger/schema.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
 
 const roots: string[] = [];
 afterEach(() => {

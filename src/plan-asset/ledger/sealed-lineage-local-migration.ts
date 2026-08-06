@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { HarnessDb } from "../../state-db/index.js";
-import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
-import { ImmediateLedgerTransaction } from "./transaction.js";
+import type { HarnessDb } from "../../state-db/index.ts";
+import { ledgerRowDigest, migratePlanLedger } from "./schema.ts";
+import { ImmediateLedgerTransaction } from "./transaction.ts";
 
 export type SealedLineageBoundary =
   | "asset"

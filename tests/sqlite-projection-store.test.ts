@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild.ts";
 import {
   type ProjectionFindingInput,
   SqliteProjectionStore,
-} from "../src/state-db/sqlite-projection-store";
+} from "../src/state-db/sqlite-projection-store.ts";
 
 describe("U-DOMAIN-004: SQLite projection adapter", () => {
   it("normalizes schema columns, preserves explicit PK, and fails closed on secrets", () => {

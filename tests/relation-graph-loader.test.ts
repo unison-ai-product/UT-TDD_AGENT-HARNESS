@@ -2,12 +2,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadRelationGraphSourceSet } from "../src/graph/loader";
+import { loadRelationGraphSourceSet } from "../src/graph/loader.ts";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
   exportRelationDiagram,
-} from "../src/lint/relation-graph";
+} from "../src/lint/relation-graph.ts";
 
 // PLAN-L7-32 §9 discharge: repo→RelationGraphSourceSet loader の結合テスト。
 // tmp repo に PLAN(generates)+src+test(import)+design(pair_artifact)+test-design を置き、

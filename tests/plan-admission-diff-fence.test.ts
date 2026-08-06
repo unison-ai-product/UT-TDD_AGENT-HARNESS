@@ -4,7 +4,7 @@ import {
   type AdmissionReceiptProjection,
   analyzePlanAdmissionDiff,
   canonicalPlanContentDigest,
-} from "../src/plan-admission/diff-fence";
+} from "../src/plan-admission/diff-fence.ts";
 
 const path = "docs/plans/PLAN-L7-99-admission-fixture.md";
 

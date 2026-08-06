@@ -3,7 +3,7 @@ import {
   analyzeDesignLanguage,
   type DesignLanguageDoc,
   designLanguageMessages,
-} from "../src/lint/design-language";
+} from "../src/lint/design-language.ts";
 
 function doc(text: string): DesignLanguageDoc {
   return { path: "docs/design/harness/example.md", text };

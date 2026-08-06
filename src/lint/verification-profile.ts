@@ -1,11 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { ensureDir } from "../shared/fs";
-import { loadChangedFiles } from "./change-impact";
-import { normalizePath } from "./shared";
-import { PROFILE_RUNNERS, PROFILES, SIGNAL_TO_PROFILE } from "./verification-profile-catalog";
-import { planExternalProfileActivation } from "./verification-profile-safety";
+import { ensureDir } from "../shared/fs.ts";
+import { loadChangedFiles } from "./change-impact.ts";
+import { normalizePath } from "./shared.ts";
+import { PROFILE_RUNNERS, PROFILES, SIGNAL_TO_PROFILE } from "./verification-profile-catalog.ts";
+import { planExternalProfileActivation } from "./verification-profile-safety.ts";
 import {
   type McpInspectResult,
   type SaveVerificationEvidenceInput,
@@ -25,7 +25,7 @@ import {
   type VerificationRecommendation,
   type VerificationRecommendationResult,
   type VerificationSignal,
-} from "./verification-profile-types";
+} from "./verification-profile-types.ts";
 
 export type {
   ExternalProfileActivationInput,
@@ -55,8 +55,8 @@ export type {
   VerificationRecommendation,
   VerificationRecommendationResult,
   VerificationSignal,
-} from "./verification-profile-types";
-export { VERIFICATION_EVIDENCE_SCHEMA_VERSION } from "./verification-profile-types";
+} from "./verification-profile-types.ts";
+export { VERIFICATION_EVIDENCE_SCHEMA_VERSION } from "./verification-profile-types.ts";
 
 export function listVerificationProfiles(): VerificationProfile[] {
   return Object.values(PROFILES);
@@ -79,7 +79,7 @@ export {
   analyzeVerificationProfileSafety,
   planExternalProfileActivation,
   renderGeneratedMcpConfig,
-} from "./verification-profile-safety";
+} from "./verification-profile-safety.ts";
 
 function tokenizeCommand(command: string): string[] {
   return command

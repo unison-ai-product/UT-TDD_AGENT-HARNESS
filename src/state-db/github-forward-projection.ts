@@ -4,11 +4,11 @@ import {
   type ForwardEvidence,
   type ForwardReadinessRow,
   type ForwardScheduleEntry,
-} from "../kernel/forward-readiness";
-import { decodeMergeClosureReceipt } from "../kernel/github-closure-receipt";
-import { stableId } from "../stable-id";
-import { verifiedReviewLaneDigests } from "./github-review-lane-provenance";
-import type { HarnessDb } from "./index";
+} from "../kernel/forward-readiness.ts";
+import { decodeMergeClosureReceipt } from "../kernel/github-closure-receipt.ts";
+import { stableId } from "../stable-id.ts";
+import { verifiedReviewLaneDigests } from "./github-review-lane-provenance.ts";
+import type { HarnessDb } from "./index.ts";
 
 function text(value: unknown): string {
   return String(value ?? "").trim();

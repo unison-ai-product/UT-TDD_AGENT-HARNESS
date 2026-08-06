@@ -1,4 +1,4 @@
-import { canonicalField, sha256 } from "./canonical-frame";
+import { canonicalField, sha256 } from "./canonical-frame.ts";
 
 export interface DocumentMemberIdentity {
   readonly path: string;

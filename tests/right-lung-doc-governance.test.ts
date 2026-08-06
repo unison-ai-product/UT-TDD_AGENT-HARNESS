@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeRightLungDocGovernance,
   loadRightLungDocGovernanceInput,
-} from "../src/lint/right-lung-doc-governance";
+} from "../src/lint/right-lung-doc-governance.ts";
 
 const completeDoc = `
 ## §6 G12-WORKFLOW

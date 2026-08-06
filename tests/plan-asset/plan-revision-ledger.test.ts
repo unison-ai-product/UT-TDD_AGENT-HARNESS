@@ -5,9 +5,9 @@ import {
   derivePlanRevisionDigests,
   PlanRevisionLedgerTransaction,
   replayBindingFailures,
-} from "../../src/plan-asset/ledger/plan-revision-ledger.js";
-import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
-import { openHarnessDb } from "../../src/state-db/index.js";
+} from "../../src/plan-asset/ledger/plan-revision-ledger.ts";
+import { ledgerRowDigest, migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
+import { openHarnessDb } from "../../src/state-db/index.ts";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
 afterEach(() => {

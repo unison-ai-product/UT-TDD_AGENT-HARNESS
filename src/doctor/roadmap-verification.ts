@@ -8,8 +8,8 @@ import {
   loadRoadmaps,
   PARKED_BANDS,
   programCoverageMessages,
-} from "../lint/roadmap-registry";
-import { fmValue } from "../lint/shared";
+} from "../lint/roadmap-registry.ts";
+import { fmValue } from "../lint/shared.ts";
 import {
   analyzeForwardFreezeContracts,
   analyzePairFreeze,
@@ -22,12 +22,12 @@ import {
   refactorQaReleaseContractMessages,
   verificationGroupMessages,
   verificationGroupsOk,
-} from "../vmodel/lint";
+} from "../vmodel/lint.ts";
 import {
   parseUpgradeFrontier,
   upgradeFrontierMessage,
   upgradeFrontierViolations,
-} from "../vmodel/upgrade-frontier";
+} from "../vmodel/upgrade-frontier.ts";
 
 /** 工程表 roadmap の span 実在性と層内 gate 進捗を hard gate として検査する。 */
 export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolean } {

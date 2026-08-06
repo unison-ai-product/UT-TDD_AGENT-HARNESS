@@ -5,7 +5,7 @@
 // summary 生成の失敗で CI を red にしない: 入力欠落は degrade して exit 0 を維持する。
 
 import { existsSync } from "node:fs";
-import { openHarnessDb } from "../state-db/index";
+import { openHarnessDb } from "../state-db/index.ts";
 
 export interface GateMatrixRow {
   gateId: string;

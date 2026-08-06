@@ -12,7 +12,7 @@ import {
   parseConvergencePlan,
   parseLegacyAuditPlanIds,
   partitionConvergenceDebt,
-} from "../src/lint/forward-convergence";
+} from "../src/lint/forward-convergence.ts";
 
 function plan(overrides: Partial<ConvergencePlan> = {}): ConvergencePlan {
   return {

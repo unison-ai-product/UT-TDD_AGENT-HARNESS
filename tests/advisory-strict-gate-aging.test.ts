@@ -12,7 +12,7 @@ import {
   promotedGateWorkflowDriftMessages,
   readHarnessCheckWorkflowContent,
   verifyPromotedGatesAgainstWorkflow,
-} from "../src/lint/advisory-strict-gate-aging";
+} from "../src/lint/advisory-strict-gate-aging.ts";
 
 // PLAN-L7-420 Step 3: doctor 自身が「strict 化待ちのまま放置されている advisory gate」を検出する
 // meta check。green-command-digest (PLAN-L7-132) が opt-in strict のまま CI に投入されず、

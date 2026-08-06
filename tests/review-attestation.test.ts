@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { isOutsideRepo, registerDelegationCommands } from "../src/cli/delegation";
+import { isOutsideRepo, registerDelegationCommands } from "../src/cli/delegation.ts";
 import {
   issueReviewRequest,
   projectReviewVerdict,
@@ -20,9 +20,9 @@ import {
   type ReviewAttestation,
   type ReviewAttestationRequest,
   resolveReviewAuthorFamily,
-} from "../src/feedback/review-attestation";
-import { analyzeReviewDispatch } from "../src/feedback/review-dispatch";
-import { REVIEW_OUTPUT_CONTRACT } from "../src/feedback/review-verdict-contract";
+} from "../src/feedback/review-attestation.ts";
+import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
+import { REVIEW_OUTPUT_CONTRACT } from "../src/feedback/review-verdict-contract.ts";
 
 const head = "a".repeat(40);
 const otherHead = "b".repeat(40);

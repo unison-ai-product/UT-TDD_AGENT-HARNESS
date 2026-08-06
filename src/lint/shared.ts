@@ -2,9 +2,9 @@
 // 配置 = src/lint (domain-boundary: lint 内 import と vmodel→lint import は許可)。
 import { basename } from "node:path";
 import type ts from "typescript";
-import { normalizePath } from "../shared/source-text";
+import { normalizePath } from "../shared/source-text.ts";
 
-export { normalizePath } from "../shared/source-text";
+export { normalizePath } from "../shared/source-text.ts";
 
 /**
  * frontmatter 1 行 `key: value` の value を取り出す。

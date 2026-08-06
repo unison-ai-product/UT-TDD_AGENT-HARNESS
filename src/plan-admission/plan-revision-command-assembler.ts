@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
-import type { BootstrapLegacyPlanRevisionInput } from "../plan-asset/ledger/plan-revision-bootstrap.js";
-import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision-ledger.js";
-import { bindPlanSourceToAdmission } from "./plan-content-binding.js";
-import type { PlanDraftCommand } from "./plan-draft-service.js";
-import { evaluatePlanAdmission, type PlanAdmissionRequest } from "./policy.js";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
+import type { BootstrapLegacyPlanRevisionInput } from "../plan-asset/ledger/plan-revision-bootstrap.ts";
+import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision-ledger.ts";
+import { bindPlanSourceToAdmission } from "./plan-content-binding.ts";
+import type { PlanDraftCommand } from "./plan-draft-service.ts";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "./policy.ts";
 
 export interface PlanRevisionEnvironment {
   repositoryIdentity: string;

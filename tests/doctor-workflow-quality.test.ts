@@ -11,7 +11,7 @@ import {
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
   checkRightLungDocGovernance,
-} from "../src/doctor/workflow-quality";
+} from "../src/doctor/workflow-quality.ts";
 
 describe("doctor workflow quality checks", () => {
   it("fails closed when workflow quality inputs cannot read the repo root", () => {

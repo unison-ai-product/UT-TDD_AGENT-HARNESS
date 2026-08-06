@@ -7,8 +7,8 @@ import {
   type ReviewReceiptSource,
   reviewReceiptDigest,
   validCrossReviewSource,
-} from "../kernel/github-closure-receipt";
-import type { HarnessDb } from "./index";
+} from "../kernel/github-closure-receipt.ts";
+import type { HarnessDb } from "./index.ts";
 
 export type PlanRevisionIdentity =
   | { kind: "admission"; token: string }

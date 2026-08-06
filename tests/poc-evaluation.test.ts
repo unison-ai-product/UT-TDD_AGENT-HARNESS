@@ -12,10 +12,10 @@
  * AC-FR-BR21-43-02 cold-start: 0 PoC PLANs => 0 rows
  */
 import { describe, expect, it } from "vitest";
-import { openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate, rowCounts } from "../src/state-db/migration";
-import { projectPocEvaluations } from "../src/state-db/projection-writer";
-import { summarizePocEvaluations } from "../src/state-db/projections/poc-evaluations";
+import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate, rowCounts } from "../src/state-db/migration.ts";
+import { projectPocEvaluations } from "../src/state-db/projection-writer.ts";
+import { summarizePocEvaluations } from "../src/state-db/projections/poc-evaluations.ts";
 
 function seedPocPlan(
   db: ReturnType<typeof openHarnessDb>,

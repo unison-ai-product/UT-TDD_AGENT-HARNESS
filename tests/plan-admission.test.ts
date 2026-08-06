@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 
 const forward: PlanAdmissionRequest = {
   routeSignal: "forward",

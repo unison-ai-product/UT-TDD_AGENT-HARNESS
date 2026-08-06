@@ -16,7 +16,7 @@ import {
   UPDATE_CHECK_TTL_MS,
   type UpdateCheckDeps,
   updateCheckDisabled,
-} from "../src/setup/update-check";
+} from "../src/setup/update-check.ts";
 
 const ROOT = "/harness";
 const EXECUTION_ROOT = process.env.UT_TDD_TEST_EXECUTION_ROOT;

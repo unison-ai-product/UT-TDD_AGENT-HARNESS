@@ -1,16 +1,16 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
-import { deriveLegacyAssetId } from "../../src/plan-asset/adapters/legacy-plan-adapter.js";
+import { deriveLegacyAssetId } from "../../src/plan-asset/adapters/legacy-plan-adapter.ts";
 import {
   type BootstrapLegacyPlanRevisionInput,
   LegacyPlanRevisionBootstrapTransaction,
-} from "../../src/plan-asset/ledger/plan-revision-bootstrap.js";
+} from "../../src/plan-asset/ledger/plan-revision-bootstrap.ts";
 import {
   ledgerRowDigest,
   ledgerSchemaDdl,
   migratePlanLedger,
-} from "../../src/plan-asset/ledger/schema.js";
-import { openHarnessDb } from "../../src/state-db/index.js";
+} from "../../src/plan-asset/ledger/schema.ts";
+import { openHarnessDb } from "../../src/state-db/index.ts";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
 afterEach(() => {

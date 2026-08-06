@@ -15,7 +15,7 @@ import {
   type DraftPublisherFaultPoint,
   NODE_PATH_MUTATION_SAFETY,
   NodeAtomicDraftPublisher,
-} from "../src/plan-admission/node-atomic-draft-publisher";
+} from "../src/plan-admission/node-atomic-draft-publisher.ts";
 
 const roots: string[] = [];
 

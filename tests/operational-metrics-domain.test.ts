@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { projectOperationalMetrics } from "../src/projection/application/project-operational-metrics";
+import { projectOperationalMetrics } from "../src/projection/application/project-operational-metrics.ts";
 import {
   deriveOperationalMetrics,
   type OperationalMetricFacts,
-} from "../src/projection/domain/operational-metrics";
-import { stableId } from "../src/stable-id";
+} from "../src/projection/domain/operational-metrics.ts";
+import { stableId } from "../src/stable-id.ts";
 
 const facts: OperationalMetricFacts = {
   drives: [

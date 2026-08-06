@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance";
-import { verifyAuthoringProvenance } from "../../src/disposition/domain/authoring-provenance";
+import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
+import { verifyAuthoringProvenance } from "../../src/disposition/domain/authoring-provenance.ts";
 
 describe("Git authoring provenance adapter", () => {
   it("binds tracked working bytes to the Git index blob and HEAD", async () => {

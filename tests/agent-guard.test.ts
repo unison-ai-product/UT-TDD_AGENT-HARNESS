@@ -6,8 +6,8 @@ import {
   normalizeModelFamily,
   type ResolvedFamily,
   SUBAGENT_ALLOWLIST,
-} from "../src/runtime/agent-guard";
-import { AGENT_GUARD_BYPASS_HINT, AGENT_TOOL_NAME } from "../src/runtime/agent-guard-policy";
+} from "../src/runtime/agent-guard.ts";
+import { AGENT_GUARD_BYPASS_HINT, AGENT_TOOL_NAME } from "../src/runtime/agent-guard-policy.ts";
 
 const FAMILIES: Record<string, ResolvedFamily> = {
   "be-api": "sonnet",

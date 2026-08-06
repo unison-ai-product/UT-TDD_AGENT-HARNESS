@@ -2,8 +2,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { renderPrTraceBlock, validatePrTraceBody } from "../src/github/pr-trace";
-import { headSnapshotRoot } from "./support/workspace-roots";
+import { renderPrTraceBlock, validatePrTraceBody } from "../src/github/pr-trace.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const VALID_FIELDS = {
   plan_id: "PLAN-L7-451-github-ops-phase1-visibility-and-policy",

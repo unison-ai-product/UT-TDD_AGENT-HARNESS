@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parsePlanDraftManifest, registerPlanDraftCommand } from "../src/cli/plan-draft";
+import { parsePlanDraftManifest, registerPlanDraftCommand } from "../src/cli/plan-draft.ts";
 
 const originalExitCode = process.exitCode;
 afterEach(() => {

@@ -16,14 +16,14 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, readSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ensureDir } from "../shared/fs";
+import { ensureDir } from "../shared/fs.ts";
 import {
   applyBranchProtection as applyBranchProtectionImpl,
   type Confirm,
   type GhRunner,
-} from "./branch-protection";
+} from "./branch-protection.ts";
 
-export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution";
+export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
@@ -34,9 +34,9 @@ export {
   gitAddPathspecCommands,
   PACK_SAFE_TEST_SCRIPT,
   transformCleanDistributionArtifact,
-} from "./distribution";
+} from "./distribution.ts";
 
-import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates";
+import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 
 export type { Confirm, GhRunner };
 

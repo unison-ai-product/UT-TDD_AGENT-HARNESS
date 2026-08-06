@@ -1,4 +1,4 @@
-import type { HarnessDb } from "./index";
+import type { HarnessDb } from "./index.ts";
 
 export interface ScopePreviewInput {
   profileId: string;

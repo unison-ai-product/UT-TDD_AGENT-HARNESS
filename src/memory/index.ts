@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { isSecretLike } from "../secret";
+import { isSecretLike } from "../secret.ts";
 
 export type MemoryKind = "project" | "feedback" | "reference" | "user";
 

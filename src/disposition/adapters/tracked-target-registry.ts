@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import type { TargetRegistry } from "../domain/target-resolver";
-import { parseStrictMarkdownTable } from "./strict-markdown-table";
+import type { TargetRegistry } from "../domain/target-resolver.ts";
+import { parseStrictMarkdownTable } from "./strict-markdown-table.ts";
 
 export function buildTrackedTargetRegistry(
   repoRoot: string,

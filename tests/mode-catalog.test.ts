@@ -11,15 +11,15 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeDriveDbRegistration } from "../src/lint/drive-db-registration";
+import { analyzeDriveDbRegistration } from "../src/lint/drive-db-registration.ts";
 import {
   MODE_CATALOG_DOC_FILES,
   ROUTE_MODE_DISPLAY,
   routeModesWithoutCatalogDoc,
   unmappedModeCatalogDocs,
   workflowModeForPlan,
-} from "../src/schema/mode-catalog";
-import { ROUTE_SIGNAL_MAP } from "../src/schema/route-map";
+} from "../src/schema/mode-catalog.ts";
+import { ROUTE_SIGNAL_MAP } from "../src/schema/route-map.ts";
 
 describe("PLAN-L7-243: mode catalog derivation", () => {
   it("route_mode frontmatter wins over plan_id prefix and kind", () => {

@@ -22,7 +22,7 @@ import {
   AGENT_TOOL_NAMES,
   CLAUDE_MODEL_FAMILY_CATALOG,
   SUBAGENT_ALLOWLIST,
-} from "./agent-guard-policy";
+} from "./agent-guard-policy.ts";
 
 export type ModelFamily = keyof typeof CLAUDE_MODEL_FAMILY_CATALOG;
 
@@ -43,7 +43,7 @@ const FABLE_QUALITY_CHECK_SUBAGENTS = new Set([
   "qa-test",
 ]);
 
-export { SUBAGENT_ALLOWLIST } from "./agent-guard-policy";
+export { SUBAGENT_ALLOWLIST } from "./agent-guard-policy.ts";
 
 export interface AgentGuardInput {
   tool_name?: string;

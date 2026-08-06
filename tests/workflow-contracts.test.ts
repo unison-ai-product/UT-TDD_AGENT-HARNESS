@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { recommendedCommandV1Schema } from "../src/schema/index";
-import { routeSignalCandidates } from "../src/schema/route-map";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
+import { recommendedCommandV1Schema } from "../src/schema/index.ts";
+import { routeSignalCandidates } from "../src/schema/route-map.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 import {
   assertRefactorInvariant,
   classifyDriveTddFits,
@@ -21,7 +21,7 @@ import {
   validateDContractDsl,
   validateFrontendDesignWorkflow,
   validateScreenDesignWorkflow,
-} from "../src/workflow/contracts";
+} from "../src/workflow/contracts.ts";
 import {
   buildCommandCatalog,
   catalogExistingAssets,
@@ -35,15 +35,15 @@ import {
   suggestSkillInjection,
   validateDriveStatePartitions,
   validateFolderRules,
-} from "../src/workflow/contracts-extras";
-import { DRIVE_TDD_FITS } from "../src/workflow/contracts-policy";
-import type { ContractResult as SidecarContractResult } from "../src/workflow/contracts-types";
+} from "../src/workflow/contracts-extras.ts";
+import { DRIVE_TDD_FITS } from "../src/workflow/contracts-policy.ts";
+import type { ContractResult as SidecarContractResult } from "../src/workflow/contracts-types.ts";
 import {
   evaluateRouteCommand,
   routeFiling,
   routeSignalToMode,
   validateRouteConfigText,
-} from "../src/workflow/routing-contracts";
+} from "../src/workflow/routing-contracts.ts";
 
 // @ut-tdd-trace FR-L1-06
 // @ut-tdd-trace FR-L1-08

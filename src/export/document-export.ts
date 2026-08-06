@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { normalizePath } from "../shared/source-text";
+import { normalizePath } from "../shared/source-text.ts";
 
 export type CanonicalDocumentFamily =
   | "concept"

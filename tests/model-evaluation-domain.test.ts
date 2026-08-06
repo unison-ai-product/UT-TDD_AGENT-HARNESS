@@ -2,12 +2,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { RepositoryModelEvaluationConfig } from "../src/projection/adapters/model-evaluation-config";
-import { projectModelEvaluations } from "../src/projection/application/project-model-evaluations";
+import { RepositoryModelEvaluationConfig } from "../src/projection/adapters/model-evaluation-config.ts";
+import { projectModelEvaluations } from "../src/projection/application/project-model-evaluations.ts";
 import {
   buildModelEvaluationEvent,
   type ModelEvaluationFacts,
-} from "../src/projection/domain/model-evaluations";
+} from "../src/projection/domain/model-evaluations.ts";
 
 const facts: ModelEvaluationFacts = {
   model: "model-A",

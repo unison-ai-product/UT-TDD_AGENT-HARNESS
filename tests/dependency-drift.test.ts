@@ -5,7 +5,7 @@ import {
   dependencyDriftMessages,
   expandRegressionScope,
   loadDependencyDriftInput,
-} from "../src/lint/dependency-drift";
+} from "../src/lint/dependency-drift.ts";
 
 const input: DependencyDriftInput = {
   sourceDocs: [
@@ -33,7 +33,7 @@ const input: DependencyDriftInput = {
     },
     {
       path: "tests/doctor.test.ts",
-      text: 'import { doctor } from "../src/doctor/index"; doctor;',
+      text: 'import { doctor } from "../src/doctor/index.ts"; doctor;',
     },
   ],
 };

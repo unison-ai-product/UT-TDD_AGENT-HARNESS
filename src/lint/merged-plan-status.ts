@@ -40,9 +40,9 @@ import {
   classifyTargetArtifacts,
   type MergedPlanTargetEvidence,
   resolveMergedPlanTargetEvidence,
-} from "./merged-plan-target-evidence";
-import { loadReviewPlans } from "./review-evidence";
-import { normalizePath } from "./shared";
+} from "./merged-plan-target-evidence.ts";
+import { loadReviewPlans } from "./review-evidence.ts";
+import { normalizePath } from "./shared.ts";
 
 // review-evidence gate との scope 差は意図的 (別関心、reviewer I-1/I-2):
 //   - 本 gate = **status 正確性**の強制 = 「出荷物を merge したら PLAN を draft のままにするな」。

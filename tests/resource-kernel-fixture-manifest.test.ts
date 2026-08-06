@@ -9,8 +9,8 @@ import {
   parseContractSections,
   parseFixtureManifest,
   parseL8FixtureRows,
-} from "../src/lint/resource-kernel-fixture-manifest";
-import { workspaceRead } from "./support/workspace-roots";
+} from "../src/lint/resource-kernel-fixture-manifest.ts";
+import { workspaceRead } from "./support/workspace-roots.ts";
 
 const L8 = "docs/test-design/harness/L8-integration-test-design.md";
 const MANIFEST = "docs/test-design/harness/resource-kernel-fixture-manifest.yaml";

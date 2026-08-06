@@ -7,7 +7,7 @@ import {
   type HandoverDeps,
   type HandoverPointer,
   handoverStale,
-} from "../handover/index";
+} from "../handover/index.ts";
 import {
   type AgentSlotsDeps,
   DEFAULT_STALE_MINUTES,
@@ -15,7 +15,7 @@ import {
   listStaleSlots,
   loadSlots,
   peakParallel,
-} from "../runtime/agent-slots";
+} from "../runtime/agent-slots.ts";
 
 /** I/O・clock 注入 (test 可能、handover staleness 検査用)。 */
 export interface DoctorDeps {

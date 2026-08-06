@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { checkCrossAgentModelPair } from "../schema";
-import { PLAN_ID_PATTERN } from "../schema/plan-id";
+import { checkCrossAgentModelPair } from "../schema/index.ts";
+import { PLAN_ID_PATTERN } from "../schema/plan-id.ts";
 
 export const REQUIRED_GITHUB_CHECK = "harness-check";
 

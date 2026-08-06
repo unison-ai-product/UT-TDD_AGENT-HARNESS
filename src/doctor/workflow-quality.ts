@@ -3,47 +3,47 @@ import {
   analyzeFrontendDesignCoverage,
   frontendDesignCoverageMessages,
   loadFrontendDesignCoverageInput,
-} from "../lint/frontend-design-coverage";
+} from "../lint/frontend-design-coverage.ts";
 import {
   analyzeG8IntegrationWorkflow,
   canLoadG8IntegrationWorkflowInput,
   g8IntegrationWorkflowMessages,
   loadG8IntegrationWorkflowInput,
-} from "../lint/g8-integration-workflow";
+} from "../lint/g8-integration-workflow.ts";
 import {
   analyzeG9SystemWorkflow,
   canLoadG9SystemWorkflowInput,
   g9SystemWorkflowMessages,
   loadG9SystemWorkflowInput,
-} from "../lint/g9-system-workflow";
+} from "../lint/g9-system-workflow.ts";
 import {
   analyzeG10UxWorkflow,
   canLoadG10UxWorkflowInput,
   g10UxWorkflowMessages,
   loadG10UxWorkflowInput,
-} from "../lint/g10-ux-workflow";
+} from "../lint/g10-ux-workflow.ts";
 import {
   analyzeImprovementBacklog,
   loadBacklog as loadImprovementBacklog,
-} from "../lint/improvement-backlog";
-import { analyzeLintWiring, lintWiringMessages, loadLintWiringInput } from "../lint/lint-wiring";
+} from "../lint/improvement-backlog.ts";
+import { analyzeLintWiring, lintWiringMessages, loadLintWiringInput } from "../lint/lint-wiring.ts";
 import {
   analyzeProposalDocumentCoverage,
   loadProposalDocumentCoverageLintInput,
   proposalDocumentCoverageMessages,
-} from "../lint/proposal-document-coverage";
+} from "../lint/proposal-document-coverage.ts";
 import {
   analyzeRightArmGatePlanning,
   loadRightArmGatePlanningInput,
   rightArmGatePlanningMessages,
-} from "../lint/right-arm-gate-planning";
+} from "../lint/right-arm-gate-planning.ts";
 import {
   analyzeRightLungDocGovernance,
   canLoadRightLungDocGovernanceInput,
   loadRightLungDocGovernanceInput,
   rightLungDocGovernanceMessages,
-} from "../lint/right-lung-doc-governance";
-import { classifyProposalDocumentCoverage } from "../task/classify";
+} from "../lint/right-lung-doc-governance.ts";
+import { classifyProposalDocumentCoverage } from "../task/classify.ts";
 
 /**
  * improvement-backlog lint を hard gate 検査 (PLAN-L7-95、要件 §1.10.G.12 の「構造健全性検証」配線)。

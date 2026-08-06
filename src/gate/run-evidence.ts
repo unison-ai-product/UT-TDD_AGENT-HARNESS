@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { ensureDir } from "../shared/fs";
+import { ensureDir } from "../shared/fs.ts";
 
 export interface GateRunEvidenceInput {
   repoRoot: string;

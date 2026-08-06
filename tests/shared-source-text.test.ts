@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { normalizePath as lintNormalizePath } from "../src/lint/shared";
-import { normalizePath } from "../src/shared/source-text";
+import { normalizePath as lintNormalizePath } from "../src/lint/shared.ts";
+import { normalizePath } from "../src/shared/source-text.ts";
 
 describe("source text shared contract", () => {
   it("U-DOMAIN-001: normalizes Windows separators through the neutral shared boundary", () => {

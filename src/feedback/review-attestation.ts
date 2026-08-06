@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ensureDir } from "../shared/fs";
-import type { ReviewReceipt } from "./review-dispatch";
-import { extractVerdict, type ReviewVerdictName } from "./review-verdict-contract";
+import { ensureDir } from "../shared/fs.ts";
+import type { ReviewReceipt } from "./review-dispatch.ts";
+import { extractVerdict, type ReviewVerdictName } from "./review-verdict-contract.ts";
 
-export { REVIEW_VERDICT_FILE_ENV } from "./review-verdict-contract";
+export { REVIEW_VERDICT_FILE_ENV } from "./review-verdict-contract.ts";
 
 export interface ReviewAttestation {
   provider: "codex" | "claude";

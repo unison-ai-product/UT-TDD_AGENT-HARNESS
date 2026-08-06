@@ -1,12 +1,12 @@
-import { canonicalField, sha256 } from "./canonical-frame";
-import { type DocumentDispositionInput, validateDocumentDisposition } from "./document-disposition";
+import { canonicalField, sha256 } from "./canonical-frame.ts";
+import { type DocumentDispositionInput, validateDocumentDisposition } from "./document-disposition.ts";
 import {
   type DocumentDelta,
   type DocumentDeltaDecision,
   type DocumentDeltaFinding,
   type DocumentMemberIdentity,
   replayDocumentDeltas,
-} from "./replay-document-deltas";
+} from "./replay-document-deltas.ts";
 
 export type DocumentMembershipRuleId =
   | "doc-disposition-missing"

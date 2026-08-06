@@ -11,7 +11,7 @@ import {
   loadOracleTestTraceInput,
   ORACLE_TEST_TRACE_BASELINE,
   ORACLE_TEST_TRACE_WIDENED_BASELINE,
-} from "../src/lint/oracle-test-trace";
+} from "../src/lint/oracle-test-trace.ts";
 
 /** test-design fixture を作り、規定パターンでの宣言収集だけを隔離検証する。 */
 function declarationFixture(markdown: string): string {

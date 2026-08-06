@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type AdmissionComparison,
   checkPlanAdmission,
-} from "../src/plan-admission/admission-check";
+} from "../src/plan-admission/admission-check.ts";
 
 const path = "docs/plans/PLAN-L7-99-admission-fixture.md";
 

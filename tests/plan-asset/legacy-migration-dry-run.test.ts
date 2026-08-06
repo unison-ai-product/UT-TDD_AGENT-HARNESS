@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { loadRoleContractRegistry } from "../../src/plan-asset/adapters/role-contract-registry.js";
-import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.js";
+import { loadRoleContractRegistry } from "../../src/plan-asset/adapters/role-contract-registry.ts";
+import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.ts";
 import {
   HeadTargetRegistry,
   LegacyMigrationDryRun,
   type MigrationDecisionPort,
   targetSlotFindings,
-} from "../../src/plan-asset/application/legacy-migration-dry-run.js";
-import { headPlanDocCount } from "./head-plan-doc-count.js";
+} from "../../src/plan-asset/application/legacy-migration-dry-run.ts";
+import { headPlanDocCount } from "./head-plan-doc-count.ts";
 
 describe("legacy migration dry-run", () => {
   it("U-PA-038: proves exact files and directory families against non-empty HEAD blobs", () => {

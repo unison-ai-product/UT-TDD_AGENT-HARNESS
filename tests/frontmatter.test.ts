@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { frontmatterSchema } from "../src/schema/frontmatter";
+import { frontmatterSchema } from "../src/schema/frontmatter.ts";
 
 /** 有効な normal impl frontmatter の最小形 */
 function implBase(overrides: Record<string, unknown> = {}) {

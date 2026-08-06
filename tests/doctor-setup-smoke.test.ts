@@ -4,7 +4,7 @@ import {
   checkSetupSmoke,
   collectHookCommands,
   type SetupSmokeDeps,
-} from "../src/doctor/setup-smoke";
+} from "../src/doctor/setup-smoke.ts";
 
 const codexCommands = [
   "node .ut-tdd/bin/run-bun.ts .ut-tdd/bin/ut-tdd.mjs hook agent-guard",

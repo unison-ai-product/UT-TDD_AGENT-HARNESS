@@ -8,7 +8,7 @@ import {
   loadRuntimePortabilityDocs,
   type RuntimePortabilityDoc,
   runtimePortabilityMessages,
-} from "../src/lint/runtime-portability";
+} from "../src/lint/runtime-portability.ts";
 
 const validDocs: RuntimePortabilityDoc[] = [
   {

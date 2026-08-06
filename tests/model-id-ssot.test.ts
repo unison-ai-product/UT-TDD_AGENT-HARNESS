@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { TIER_TABLE } from "../src/task/tier-router";
-import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES, selectTeamModel } from "../src/team/model-policy";
+import { TIER_TABLE } from "../src/task/tier-router.ts";
+import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES, selectTeamModel } from "../src/team/model-policy.ts";
 
 /**
  * U-MODELID: model-id SSoT (PLAN-L7-58 carry)。
@@ -12,7 +12,7 @@ import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES, selectTeamModel } from "../src/team
  * を値で確認し、かつ「両モジュールに生の ID literal が再混入していないか」をソース走査で fail-close する。
  */
 
-import { headSnapshotRoot } from "./support/workspace-roots";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const repoRoot = headSnapshotRoot();
 const ALL_IDS: string[] = [...Object.values(MODEL_IDS.claude), ...Object.values(MODEL_IDS.codex)];

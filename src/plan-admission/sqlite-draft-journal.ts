@@ -1,13 +1,13 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { ledgerRowDigest, migratePlanLedger } from "../plan-asset/ledger/schema.js";
-import type { HarnessDb } from "../state-db/index.js";
+import { ledgerRowDigest, migratePlanLedger } from "../plan-asset/ledger/schema.ts";
+import type { HarnessDb } from "../state-db/index.ts";
 import type {
   DraftCleanupOperation,
   DraftJournalCommand,
   DraftJournalEntry,
   DraftJournalPort,
   DraftReceiptBinding,
-} from "./plan-draft-service.js";
+} from "./plan-draft-service.ts";
 
 export class DraftJournalIntegrityError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -284,7 +284,7 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
   private cleanupBinding(
     commandId: string,
     payloadDigest: string,
-  ): import("./plan-draft-service.js").DraftCleanupBinding {
+  ): import("./plan-draft-service.ts").DraftCleanupBinding {
     const rows = this.db
       .prepare(
         "SELECT * FROM plan_draft_artifact_operation_events WHERE command_id = ? ORDER BY sequence",

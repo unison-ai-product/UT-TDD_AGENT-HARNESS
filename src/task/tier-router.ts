@@ -14,10 +14,10 @@ import {
   type AdapterContextInjection,
   type AdapterPlan,
   buildAdapterPlan,
-} from "../runtime/adapter";
-import type { ExecutionMode, RuntimeDetection } from "../runtime/detect";
-import type { TaskDifficulty } from "../team/model-policy";
-import { type ClassifyTaskInput, classifyTask } from "./classify";
+} from "../runtime/adapter.ts";
+import type { ExecutionMode, RuntimeDetection } from "../runtime/detect.ts";
+import type { TaskDifficulty } from "../team/model-policy.ts";
+import { type ClassifyTaskInput, classifyTask } from "./classify.ts";
 import {
   FRONTIER_ROLES,
   other,
@@ -27,9 +27,9 @@ import {
   reviewPolicy,
   TIER_TABLE,
   tierFor,
-} from "./tier-router-policy";
+} from "./tier-router-policy.ts";
 
-export type { ReviewEntry } from "./tier-router-policy";
+export type { ReviewEntry } from "./tier-router-policy.ts";
 export {
   FRONTIER_MODELS,
   FRONTIER_ROLES,
@@ -38,7 +38,7 @@ export {
   resolveModel,
   TIER_TABLE,
   tierFor,
-} from "./tier-router-policy";
+} from "./tier-router-policy.ts";
 
 export type Provider = "claude" | "codex";
 export type Archetype = "consult" | "worker" | "verify";

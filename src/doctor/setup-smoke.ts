@@ -3,7 +3,7 @@ import {
   type HookInvocation,
   invocationEquals,
   parseHookInvocation,
-} from "../lint/hook-invocation";
+} from "../lint/hook-invocation.ts";
 
 export interface SetupSmokeDeps {
   repoRoot: string;

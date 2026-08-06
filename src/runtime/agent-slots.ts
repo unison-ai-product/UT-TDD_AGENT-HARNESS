@@ -17,7 +17,7 @@
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { z } from "zod";
-import { ensureDir } from "../shared/fs";
+import { ensureDir } from "../shared/fs.ts";
 
 export type {
   RosterCapabilityEntry,
@@ -25,8 +25,8 @@ export type {
   RosterCapabilityInput,
   RosterCapabilityResult,
   RosterSlotSource,
-} from "./agent-slots-roster";
-export { resolveRosterCapability } from "./agent-slots-roster";
+} from "./agent-slots-roster.ts";
+export { resolveRosterCapability } from "./agent-slots-roster.ts";
 
 export type SlotStatus = "running" | "completed" | "failed" | "cancelled";
 export type SlotSource = "agent_guard" | "team_runner" | "manual";

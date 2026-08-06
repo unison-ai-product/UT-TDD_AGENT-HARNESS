@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { SECRET_PATTERN } from "../secret";
+import { SECRET_PATTERN } from "../secret.ts";
 
 export interface SecretScanArtifact {
   path: string;

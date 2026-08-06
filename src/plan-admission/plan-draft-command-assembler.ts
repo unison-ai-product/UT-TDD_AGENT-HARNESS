@@ -1,15 +1,15 @@
 import {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
-} from "../kernel/plan-draft-command-digest.js";
-import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
-import { parseReservablePlanIdIdentity, planIdMatchesShape } from "../schema/plan-id.js";
-import type { PlanDraftCommand } from "./plan-draft-service.js";
+} from "../kernel/plan-draft-command-digest.ts";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
+import { parseReservablePlanIdIdentity, planIdMatchesShape } from "../schema/plan-id.ts";
+import type { PlanDraftCommand } from "./plan-draft-service.ts";
 import {
   type AdmissionDecision,
   evaluatePlanAdmission,
   type PlanAdmissionRequest,
-} from "./policy.js";
+} from "./policy.ts";
 
 export interface DraftManifestV2 {
   readonly version: 2;

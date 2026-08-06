@@ -1,11 +1,11 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace";
-import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace";
-import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
-import { parsePlanIdIdentity } from "../schema/plan-id";
-import { routeSignalCandidates } from "../schema/route-map";
+import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace.ts";
+import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace.ts";
+import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter.ts";
+import { parsePlanIdIdentity } from "../schema/plan-id.ts";
+import { routeSignalCandidates } from "../schema/route-map.ts";
 import {
   DB_PROJECTION_BACKPROP_REQUIRED_GENERATES,
   DESIGN_LAYERS_REQUIRING_SUB_DOC,
@@ -31,7 +31,7 @@ import {
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,
   VALID_SUB_DOCS,
   VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
-} from "./lint-policy";
+} from "./lint-policy.ts";
 import type {
   LintResult,
   PlanGovernanceDoc,
@@ -42,8 +42,8 @@ import type {
   PlanScheduleDoc,
   PlanScheduleResult,
   PlanScheduleViolation,
-} from "./lint-types";
-import { PARENT_DRIVE_MISMATCH_BASELINE } from "./parent-drive-mismatch-baseline";
+} from "./lint-types.ts";
+import { PARENT_DRIVE_MISMATCH_BASELINE } from "./parent-drive-mismatch-baseline.ts";
 
 export type {
   LintResult,
@@ -57,7 +57,7 @@ export type {
   PlanScheduleDoc,
   PlanScheduleResult,
   PlanScheduleViolation,
-} from "./lint-types";
+} from "./lint-types.ts";
 
 const ROUTE_MODE_KIND_DEBT_GUIDANCE =
   "see docs/governance/route-mode-kind-debt-audit-2026-07-02.md and docs/plans/PLAN-L7-263-route-mode-kind-certificate.md";

@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalizePath } from "./shared";
+import { normalizePath } from "./shared.ts";
 
 export interface RuntimePortabilityDoc {
   path: string;

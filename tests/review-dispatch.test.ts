@@ -7,7 +7,7 @@ import {
   type ReviewReceipt,
   type ReviewRequest,
   reviewDispatchMessages,
-} from "../src/feedback/review-dispatch";
+} from "../src/feedback/review-dispatch.ts";
 
 const REQUESTED_AT = "2026-07-31T00:00:00.000Z";
 

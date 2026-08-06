@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { analyzeProjectHooks, REQUIRED } from "../src/lint/project-hook";
-import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
+import { analyzeProjectHooks, REQUIRED } from "../src/lint/project-hook.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 const execHook = (script: string, ...args: string[]) => ({
   type: "command",

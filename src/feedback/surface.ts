@@ -1,6 +1,6 @@
-import { isTelemetryFeedback } from "../shared/feedback-lifecycle";
-import { stableId } from "../stable-id";
-import type { HarnessDb } from "../state-db/index";
+import { isTelemetryFeedback } from "../shared/feedback-lifecycle.ts";
+import { stableId } from "../stable-id.ts";
+import type { HarnessDb } from "../state-db/index.ts";
 
 /**
  * Takeover feedback surface (PLAN-L7-110).

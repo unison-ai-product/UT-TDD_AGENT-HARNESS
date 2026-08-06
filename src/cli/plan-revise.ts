@@ -5,7 +5,7 @@ import {
   type AdmissionDecision,
   evaluatePlanAdmission,
   type PlanAdmissionRequest,
-} from "../plan-admission/policy";
+} from "../plan-admission/policy.ts";
 import {
   driveSchema,
   kindSchema,
@@ -13,7 +13,7 @@ import {
   statusSchema,
   subDocSchema,
   workflowPhaseSchema,
-} from "../schema/index";
+} from "../schema/index.ts";
 
 const digestSchema = z.string().regex(/^(?:sha256:)?[0-9a-f]{64}$/);
 const gitOidSchema = z.string().regex(/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/);

@@ -1,26 +1,26 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { calculatePlanDraftCommandDigests } from "../kernel/plan-draft-command-digest.js";
-import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
-import { PlanDraftLedgerTransaction } from "../plan-asset/ledger/plan-draft-ledger.js";
-import { openPlanLedger } from "../plan-asset/ledger/schema.js";
-import { parseReservablePlanIdIdentity, planIdMatchesShape } from "../schema/plan-id.js";
-import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
+import { calculatePlanDraftCommandDigests } from "../kernel/plan-draft-command-digest.ts";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
+import { PlanDraftLedgerTransaction } from "../plan-asset/ledger/plan-draft-ledger.ts";
+import { openPlanLedger } from "../plan-asset/ledger/schema.ts";
+import { parseReservablePlanIdIdentity, planIdMatchesShape } from "../schema/plan-id.ts";
+import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.ts";
 import {
   assemblePlanDraftCommand,
   type DraftManifestV2,
   type PlanDraftEnvironmentSnapshot,
   type PlanDraftExecutionPayload,
-} from "./plan-draft-command-assembler.js";
+} from "./plan-draft-command-assembler.ts";
 import {
   PlanDraftLedgerAdapter,
   type PlanDraftLedgerReceipt,
-} from "./plan-draft-ledger-adapter.js";
-import { type DraftReceiptBinding, PlanDraftService } from "./plan-draft-service.js";
-import { evaluatePlanAdmission, type PlanAdmissionRequest } from "./policy.js";
-import { SqliteDraftJournal } from "./sqlite-draft-journal.js";
-import { TrackedReceiptRenderer } from "./tracked-receipt-renderer.js";
+} from "./plan-draft-ledger-adapter.ts";
+import { type DraftReceiptBinding, PlanDraftService } from "./plan-draft-service.ts";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "./policy.ts";
+import { SqliteDraftJournal } from "./sqlite-draft-journal.ts";
+import { TrackedReceiptRenderer } from "./tracked-receipt-renderer.ts";
 
 export interface NodePlanDraftRunnerDeps {
   readonly repoRoot: string;

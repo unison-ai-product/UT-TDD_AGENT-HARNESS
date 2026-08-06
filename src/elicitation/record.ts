@@ -10,7 +10,7 @@
 
 import { appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { ensureDir } from "../shared/fs";
+import { ensureDir } from "../shared/fs.ts";
 
 export const DESIGN_DECISION_LOG_PATH = ".ut-tdd/logs/design-decisions.jsonl";
 

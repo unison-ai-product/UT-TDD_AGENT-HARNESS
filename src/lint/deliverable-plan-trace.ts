@@ -4,8 +4,8 @@ import { parse as parseYaml } from "yaml";
 import {
   analyzeArtifactOwnership,
   type DuplicateArtifactOwnershipFinding,
-} from "./artifact-ownership";
-import { normalizePath } from "./shared";
+} from "./artifact-ownership.ts";
+import { normalizePath } from "./shared.ts";
 
 export interface DeliverablePlanTraceFinding {
   kind: "orphan-deliverable" | "stale-deliverable-trace-debt";

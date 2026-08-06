@@ -18,8 +18,8 @@
 import { type Dirent, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { loadFrDocs, parseFrRows } from "../lint/fr-registry-audit";
-import { loadImplPlanTraceInput } from "../lint/impl-plan-trace";
+import { loadFrDocs, parseFrRows } from "../lint/fr-registry-audit.ts";
+import { loadImplPlanTraceInput } from "../lint/impl-plan-trace.ts";
 import type {
   DesignDocInput,
   PlanInput,
@@ -28,10 +28,10 @@ import type {
   SourceFileInput,
   TestDesignDocInput,
   TestFileInput,
-} from "../lint/relation-graph";
-import { loadReviewPlans } from "../lint/review-evidence";
-import { normalizePath } from "../shared/source-text";
-import { loadPairDocs } from "../vmodel/lint";
+} from "../lint/relation-graph.ts";
+import { loadReviewPlans } from "../lint/review-evidence.ts";
+import { normalizePath } from "../shared/source-text.ts";
+import { loadPairDocs } from "../vmodel/lint.ts";
 
 // ---- helpers ----------------------------------------------------------------
 

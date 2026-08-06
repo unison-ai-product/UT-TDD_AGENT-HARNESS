@@ -6,7 +6,7 @@ import {
   analyzeImplPlanTrace,
   IMPL_PLAN_TRACE_BASELINE,
   loadImplPlanTraceInput,
-} from "../src/lint/impl-plan-trace";
+} from "../src/lint/impl-plan-trace.ts";
 
 describe("analyzeImplPlanTrace (U-IPT-001..003)", () => {
   const base = {

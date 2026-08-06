@@ -1,4 +1,4 @@
-import { REQUIRED as CLAUDE_REQUIRED, wrapperHookArgs } from "./project-hook";
+import { REQUIRED as CLAUDE_REQUIRED, wrapperHookArgs } from "./project-hook.ts";
 
 interface CodexRequiredHook {
   id: string;

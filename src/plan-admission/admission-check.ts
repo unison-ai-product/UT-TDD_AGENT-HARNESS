@@ -4,7 +4,7 @@ import {
   analyzePlanAdmissionDiff,
   type PlanBlob,
   type PlanChange,
-} from "./diff-fence";
+} from "./diff-fence.ts";
 
 export interface AdmissionComparison {
   base: readonly PlanBlob[];

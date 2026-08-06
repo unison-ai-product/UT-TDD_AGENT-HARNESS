@@ -3,33 +3,33 @@ import {
   analyzeDeliverableTraceGate,
   deliverablePlanTraceMessages,
   loadDeliverablePlanTraceInput,
-} from "../lint/deliverable-plan-trace";
+} from "../lint/deliverable-plan-trace.ts";
 import {
   analyzeImplPlanTrace,
   implPlanTraceMessages,
   loadImplPlanTraceInput,
-} from "../lint/impl-plan-trace";
-import { analyzeMemorySync, loadMemorySyncInput, memorySyncMessages } from "../lint/memory-sync";
+} from "../lint/impl-plan-trace.ts";
+import { analyzeMemorySync, loadMemorySyncInput, memorySyncMessages } from "../lint/memory-sync.ts";
 import {
   analyzeMergedPlanStatus,
   loadMergedPlanStatusInput,
   mergedPlanStatusMessages,
-} from "../lint/merged-plan-status";
+} from "../lint/merged-plan-status.ts";
 import {
   analyzeOracleTestTrace,
   loadOracleTestTraceInput,
   oracleTestTraceMessages,
-} from "../lint/oracle-test-trace";
+} from "../lint/oracle-test-trace.ts";
 import {
   analyzePlanArtifactExistence,
   loadPlanArtifactExistenceInput,
   planArtifactExistenceMessages,
-} from "../lint/plan-artifact-existence";
+} from "../lint/plan-artifact-existence.ts";
 import {
   analyzeTrackedCanonical,
   loadTrackedCanonicalInput,
   trackedCanonicalMessages,
-} from "../lint/tracked-canonical";
+} from "../lint/tracked-canonical.ts";
 
 /**
  * merged-plan-status hard gate (PO 指摘 2026-06-15): generated src が merge 済みなのに owning PLAN が

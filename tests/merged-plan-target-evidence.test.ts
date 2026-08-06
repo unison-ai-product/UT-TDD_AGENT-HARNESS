@@ -3,12 +3,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeMergedPlanStatus, loadMergedPlanStatusInput } from "../src/lint/merged-plan-status";
+import { analyzeMergedPlanStatus, loadMergedPlanStatusInput } from "../src/lint/merged-plan-status.ts";
 import {
   classifyTargetArtifacts,
   resolveMergedPlanTargetEvidence,
   selectCanonicalMergedTarget,
-} from "../src/lint/merged-plan-target-evidence";
+} from "../src/lint/merged-plan-target-evidence.ts";
 
 describe("merged-plan canonical target evidence", () => {
   it("selects the remote default branch instead of the immediate stacked PR base", () => {

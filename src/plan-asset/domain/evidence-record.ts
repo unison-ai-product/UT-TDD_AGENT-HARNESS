@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { EvidenceAttestationIssuerPort } from "../ports/evidence-attestation.js";
+import type { EvidenceAttestationIssuerPort } from "../ports/evidence-attestation.ts";
 import {
   canonicalJson,
   cloneCanonical,
@@ -8,8 +8,8 @@ import {
   isNonempty,
   isPlainObject,
   validIso,
-} from "./evidence-canonical.js";
-import { claimsValid } from "./evidence-claims.js";
+} from "./evidence-canonical.ts";
+import { claimsValid } from "./evidence-claims.ts";
 import {
   EVIDENCE_KINDS,
   EVIDENCE_PRODUCERS,
@@ -21,14 +21,14 @@ import {
   type EvidenceProducer,
   type EvidenceRecordInput,
   type StoredEvidenceRecord,
-} from "./evidence-types.js";
+} from "./evidence-types.ts";
 import {
   isRedactedCommandArgs,
   REDACTED_ARGS_SCHEMA,
   type RedactedCommandArgs,
   restoreRedactedCommandArgs,
   storedRedactedArgsValid,
-} from "./redacted-command-args.js";
+} from "./redacted-command-args.ts";
 
 export type {
   EvidenceClaims,
@@ -39,8 +39,8 @@ export type {
   EvidenceProducer,
   EvidenceRecordInput,
   StoredEvidenceRecord,
-} from "./evidence-types.js";
-export { createRedactedCommandArgs } from "./redacted-command-args.js";
+} from "./evidence-types.ts";
+export { createRedactedCommandArgs } from "./redacted-command-args.ts";
 
 type Result<T, E> =
   | { readonly ok: true; readonly value: T }

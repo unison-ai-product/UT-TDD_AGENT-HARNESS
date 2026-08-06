@@ -2,10 +2,10 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
-} from "../../kernel/plan-draft-command-digest.js";
-import type { HarnessDb } from "../../state-db/index.js";
-import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
-import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
+} from "../../kernel/plan-draft-command-digest.ts";
+import type { HarnessDb } from "../../state-db/index.ts";
+import { ledgerRowDigest, migratePlanLedger } from "./schema.ts";
+import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.ts";
 
 const PLAN_DRAFT_LEASE_KEY_VERSION = "plan-draft-v1";
 

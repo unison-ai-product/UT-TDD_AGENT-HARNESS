@@ -6,7 +6,7 @@ import {
   analyzeSecretScan,
   loadSystemSecretScanArtifacts,
   secretScanMessages,
-} from "../src/lint/secret-scan";
+} from "../src/lint/secret-scan.ts";
 
 describe("docs-wide secret scan", () => {
   it("U-DOCSECRET-001: detects credential families required by PLAN-L6-62", () => {

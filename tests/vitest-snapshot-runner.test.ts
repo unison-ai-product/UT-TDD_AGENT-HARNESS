@@ -28,8 +28,8 @@ import {
   snapshotContentFingerprint,
   unsealReference,
   windowsSealCommands,
-} from "../scripts/run-vitest-snapshot";
-import { removeTestTree } from "./support/temp-tree";
+} from "../scripts/run-vitest-snapshot.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("vitest snapshot runner", () => {
   it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {

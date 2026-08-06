@@ -15,7 +15,7 @@ import {
   parsePairDoc,
   stripInlineComment,
   verificationGroupMessages,
-} from "../src/vmodel/lint";
+} from "../src/vmodel/lint.ts";
 
 const doc = (
   path: string,

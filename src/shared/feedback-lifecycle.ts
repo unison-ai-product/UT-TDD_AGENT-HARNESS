@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { ensureDir } from "./fs";
+import { ensureDir } from "./fs.ts";
 
 export type FeedbackLifecycleState = "open" | "ack" | "closed" | "superseded";
 

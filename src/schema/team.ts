@@ -10,7 +10,7 @@
  * いずれか true → 直列化必須。すべて false → 並列投入可 (.claude/CLAUDE.md 上限 8)。
  */
 import { z } from "zod";
-import { roleSchema } from "./index";
+import { roleSchema } from "./index.ts";
 
 /** 実行戦略。default=sequential (安全側)。 */
 export const VALID_TEAM_STRATEGIES = ["sequential", "parallel"] as const;

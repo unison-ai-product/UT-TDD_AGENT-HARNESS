@@ -3,12 +3,12 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadRepositoryPlanSources } from "../src/projection/adapters/repository-plan-sources";
+import { loadRepositoryPlanSources } from "../src/projection/adapters/repository-plan-sources.ts";
 import {
   type ProjectionPlanSource,
   projectPlanSources,
-} from "../src/projection/domain/plan-projection";
-import { stableId } from "../src/stable-id";
+} from "../src/projection/domain/plan-projection.ts";
+import { stableId } from "../src/stable-id.ts";
 
 const context = {
   stableId,

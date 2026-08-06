@@ -1,4 +1,4 @@
-import { type FilingTarget, routeFiling } from "../schema/route-filing";
+import { type FilingTarget, routeFiling } from "../schema/route-filing.ts";
 
 export interface DetectorRouteCandidateLike {
   route_candidate_id?: unknown;

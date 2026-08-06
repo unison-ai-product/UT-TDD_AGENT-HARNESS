@@ -8,7 +8,7 @@ import {
   normalizeRulesets,
   parseRepositoryPolicy,
   renderPolicyDiff,
-} from "../src/github/repository-policy";
+} from "../src/github/repository-policy.ts";
 
 const POLICY_PATH = join(process.cwd(), "docs/governance/github-repository-policy.yaml");
 

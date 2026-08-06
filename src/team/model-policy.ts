@@ -1,5 +1,5 @@
-import { recommendModelEffort } from "../workflow/contracts";
-import type { TeamProvider } from "./run";
+import { recommendModelEffort } from "../workflow/contracts.ts";
+import type { TeamProvider } from "./run.ts";
 
 /**
  * 正本モデル ID カタログ (SSoT)。tier-router の `TIER_TABLE` と本ファイルの `modelForProvider`

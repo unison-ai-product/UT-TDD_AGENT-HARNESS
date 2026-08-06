@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { loadChangedFiles } from "./change-impact";
-import { normalizePath } from "./shared";
+import { loadChangedFiles } from "./change-impact.ts";
+import { normalizePath } from "./shared.ts";
 
 export type BranchKind =
   | "feature"

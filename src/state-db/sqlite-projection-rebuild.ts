@@ -1,5 +1,5 @@
-import { HARNESS_DB_TABLES } from "../schema/harness-db";
-import type { HarnessDb } from "./index";
+import { HARNESS_DB_TABLES } from "../schema/harness-db.ts";
+import type { HarnessDb } from "./index.ts";
 
 const REBUILD_PERSISTENT_TABLES = new Set([
   "refactor_candidates",

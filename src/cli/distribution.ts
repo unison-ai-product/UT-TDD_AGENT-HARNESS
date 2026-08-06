@@ -12,13 +12,13 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { Command } from "commander";
-import { buildReleasePublicationPlan } from "../github/ops-guard";
+import { buildReleasePublicationPlan } from "../github/ops-guard.ts";
 import {
   analyzeSecretScan,
   loadSecretScanArtifactsForPaths,
   secretScanMessages,
-} from "../lint/secret-scan";
-import { detectMode } from "../runtime/detect";
+} from "../lint/secret-scan.ts";
+import { detectMode } from "../runtime/detect.ts";
 import {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
@@ -27,8 +27,8 @@ import {
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
   transformCleanDistributionArtifact,
-} from "../setup/index";
-import { ensureDir } from "../shared/fs";
+} from "../setup/index.ts";
+import { ensureDir } from "../shared/fs.ts";
 
 function gitHead(): string | null {
   // Distribution commands are intentionally valid in an unpacked clean artifact,

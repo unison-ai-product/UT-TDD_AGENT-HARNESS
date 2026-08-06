@@ -1,5 +1,5 @@
-import type { CheckExpression, TableDef } from "./harness-db";
-import { col, enumCheck, foreignKey, pk, requiredCol } from "./harness-db-table-builders";
+import type { CheckExpression, TableDef } from "./harness-db.ts";
+import { col, enumCheck, foreignKey, pk, requiredCol } from "./harness-db-table-builders.ts";
 
 const dispositions = ["adopt", "merge", "reference", "defer", "not_applicable", "reject"];
 const targetKinds = ["plan_alias", "artifact_family", "artifact_path", "target_slot"];

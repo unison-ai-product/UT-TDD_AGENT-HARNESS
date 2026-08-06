@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
-import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.js";
+import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
+import { type HarnessDb, openHarnessDb } from "../../src/state-db/index.ts";
 
 const opened: HarnessDb[] = [];
 
@@ -120,7 +120,7 @@ interface TransactionConstructor {
 }
 
 async function loadTransaction(): Promise<TransactionConstructor> {
-  const modulePath = "../../src/plan-asset/ledger/sealed-lineage-local-migration.js";
+  const modulePath = "../../src/plan-asset/ledger/sealed-lineage-local-migration.ts";
   const module = (await import(/* @vite-ignore */ modulePath)) as Record<string, unknown>;
   expect(module.SealedLineageLocalMigration).toBeTypeOf("function");
   return module.SealedLineageLocalMigration as TransactionConstructor;

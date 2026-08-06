@@ -12,8 +12,8 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { fmValue } from "../lint/shared";
-import type { LintResult } from "../plan/lint";
+import { fmValue } from "../lint/shared.ts";
+import type { LintResult } from "../plan/lint.ts";
 
 export interface PairDoc {
   /** repo 相対 path (forward slash 正規化)。 */

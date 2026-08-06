@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { projectPocEvaluations } from "../src/projection/application/project-poc-evaluations";
+import { projectPocEvaluations } from "../src/projection/application/project-poc-evaluations.ts";
 
 describe("U-DOMAIN-003: PoC projection ports", () => {
   it("projects a semantic read result through the store without SQLite", () => {

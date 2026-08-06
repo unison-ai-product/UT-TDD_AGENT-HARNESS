@@ -1,10 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { analyzeArtifactOwnership } from "../lint/artifact-ownership";
+import { analyzeArtifactOwnership } from "../lint/artifact-ownership.ts";
 import {
   analyzeDeliverablePlanTrace,
   loadDeliverablePlanTraceInput,
-} from "../lint/deliverable-plan-trace";
+} from "../lint/deliverable-plan-trace.ts";
 
 const repoRoot = process.cwd();
 const input = loadDeliverablePlanTraceInput(repoRoot);

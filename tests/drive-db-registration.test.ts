@@ -6,16 +6,16 @@ import {
   analyzeDriveDbRegistration,
   type DriveDbRegistrationStats,
   driveDbRegistrationMessages,
-} from "../src/lint/drive-db-registration";
+} from "../src/lint/drive-db-registration.ts";
 import {
   collectDriveDbRegistrationStats,
   loadDriveDbRegistrationStats,
   loadOrBuildDriveDbRegistrationStats,
-} from "../src/state-db/drive-registration";
-import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { rebuildHarnessDb } from "../src/state-db/projection-writer";
-import { removeTestTree } from "./support/temp-tree";
+} from "../src/state-db/drive-registration.ts";
+import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const compliant: DriveDbRegistrationStats = {
   planCount: 10,

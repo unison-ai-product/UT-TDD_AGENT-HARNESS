@@ -35,8 +35,8 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { isValidSubDocForLayer, VALID_SUB_DOCS } from "../schema/index";
-import { normalizePath } from "./shared";
+import { isValidSubDocForLayer, VALID_SUB_DOCS } from "../schema/index.ts";
+import { normalizePath } from "./shared.ts";
 
 export const DESIGN_DOC_ROOT = "docs/design/harness";
 export const DOCUMENT_SYSTEM_MAP_PATH = "docs/governance/document-system-map.md";

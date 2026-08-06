@@ -14,8 +14,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, win32 } from "node:path";
-import { resolveDefaultBranchRef } from "../src/git/default-branch";
-import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash";
+import { resolveDefaultBranchRef } from "../src/git/default-branch.ts";
+import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash.ts";
 
 function run(
   command: string,
@@ -75,8 +75,8 @@ export function resolveSnapshotSource(repoRoot: string): SnapshotSource {
  * 評価不能になり、前者は判定が変わり後者は throw する。producer と consumer で
  * 同じ観測をするために、作成時に ref→SHA をそのまま持ち込む。
  */
-export type { DefaultBranchRef } from "../src/git/default-branch";
-export { resolveDefaultBranchRef } from "../src/git/default-branch";
+export type { DefaultBranchRef } from "../src/git/default-branch.ts";
+export { resolveDefaultBranchRef } from "../src/git/default-branch.ts";
 
 /**
  * 解決済みの default branch ref を snapshot へ複製する。HEAD は動かさない

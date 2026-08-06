@@ -11,7 +11,7 @@ import {
   doctorLockClaimPath,
   doctorLockClaimsPath,
   isStaleDoctorLock,
-} from "../src/doctor/singleton-lock";
+} from "../src/doctor/singleton-lock.ts";
 
 const NOW = Date.parse("2026-07-16T12:00:00+09:00");
 

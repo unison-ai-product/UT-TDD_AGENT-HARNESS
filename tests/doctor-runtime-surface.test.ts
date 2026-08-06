@@ -6,7 +6,7 @@ import {
   checkGithubCiPolicy,
   checkProjectHooks,
   type RuntimeSurfaceDeps,
-} from "../src/doctor/runtime-surface";
+} from "../src/doctor/runtime-surface.ts";
 
 function wrapperParityFiles(root: string, overrides: Record<string, string> = {}) {
   const file = (relativePath: string) => join(root, ...relativePath.split("/"));

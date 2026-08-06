@@ -1,5 +1,5 @@
-import type { TableDef } from "./harness-db";
-import { col, foreignKey, pk, requiredCol } from "./harness-db-table-builders";
+import type { TableDef } from "./harness-db.ts";
+import { col, foreignKey, pk, requiredCol } from "./harness-db-table-builders.ts";
 
 export const HARNESS_DB_CORE_TABLES: TableDef[] = [
   // --- §2.7 基本 7 ---

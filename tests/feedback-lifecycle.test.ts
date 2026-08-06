@@ -2,22 +2,22 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { selectTakeoverFeedback } from "../src/feedback/surface";
-import { evaluateMemoryPromotion } from "../src/runtime/memory-promotion";
+import { selectTakeoverFeedback } from "../src/feedback/surface.ts";
+import { evaluateMemoryPromotion } from "../src/runtime/memory-promotion.ts";
 import {
   appendFeedbackLifecycle,
   appendFeedbackLifecycleBatch,
   feedbackLifecyclePath,
   parseFeedbackLifecycle,
   resolveFeedbackLifecycle,
-} from "../src/shared/feedback-lifecycle";
-import { stableId } from "../src/stable-id";
+} from "../src/shared/feedback-lifecycle.ts";
+import { stableId } from "../src/stable-id.ts";
 import {
   projectFeedbackLifecycle,
   reconcileFeedbackLifecycle,
-} from "../src/state-db/feedback-projections";
-import { openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
+} from "../src/state-db/feedback-projections.ts";
+import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 
 describe("feedback lifecycle", () => {
   const open = {

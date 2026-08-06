@@ -4,7 +4,7 @@ import {
   loadRuleAdapterDocs,
   type RuleAdapterDocs,
   ruleDriftMessages,
-} from "../src/lint/rule-drift";
+} from "../src/lint/rule-drift.ts";
 
 const markers = [
   "ut-tdd status",

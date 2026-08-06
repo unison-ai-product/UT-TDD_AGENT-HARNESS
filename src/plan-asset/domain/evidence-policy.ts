@@ -1,11 +1,11 @@
 import {
   type CapturedEvidenceAttestationVerifier,
   captureEvidenceAttestationVerifier,
-} from "../kernel/hmac-evidence-attestation-verifier.js";
-import type { EvidenceAttestationVerifierPort } from "../ports/evidence-attestation.js";
-import { cloneCanonical, deepFreeze } from "./evidence-canonical.js";
-import { claimsRuleValidFor, claimsSatisfy } from "./evidence-claims.js";
-import type { EvidenceRecord } from "./evidence-record.js";
+} from "../kernel/hmac-evidence-attestation-verifier.ts";
+import type { EvidenceAttestationVerifierPort } from "../ports/evidence-attestation.ts";
+import { cloneCanonical, deepFreeze } from "./evidence-canonical.ts";
+import { claimsRuleValidFor, claimsSatisfy } from "./evidence-claims.ts";
+import type { EvidenceRecord } from "./evidence-record.ts";
 import {
   EVIDENCE_KINDS,
   EVIDENCE_PRODUCERS,
@@ -13,7 +13,7 @@ import {
   type EvidenceExitRule,
   type EvidenceKind,
   type EvidenceProducer,
-} from "./evidence-types.js";
+} from "./evidence-types.ts";
 
 type Result<T, E> =
   | { readonly ok: true; readonly value: T }

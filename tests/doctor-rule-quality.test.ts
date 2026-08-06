@@ -12,7 +12,7 @@ import {
   checkRuntimePortability,
   checkRuntimeReadability,
   checkSecretScan,
-} from "../src/doctor/rule-quality";
+} from "../src/doctor/rule-quality.ts";
 
 describe("doctor rule quality checks", () => {
   it("U-DOCSECRET-005: fails closed when rule and readability inputs cannot read the repo root", () => {

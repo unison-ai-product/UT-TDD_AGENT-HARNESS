@@ -4,7 +4,7 @@ import {
   type AuthoringReceipt,
   gitBlobOid,
   verifyAuthoringProvenance,
-} from "../../src/disposition/domain/authoring-provenance";
+} from "../../src/disposition/domain/authoring-provenance.ts";
 
 const bytes = new TextEncoder().encode("authored\n");
 const commit = "a".repeat(40);

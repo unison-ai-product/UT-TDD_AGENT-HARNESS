@@ -2,8 +2,8 @@ import type {
   ModelEvaluationConfigPort,
   ModelEvaluationReadPort,
   ProjectionStore,
-} from "../contracts/projection-store";
-import { buildModelEvaluationEvent } from "../domain/model-evaluations";
+} from "../contracts/projection-store.ts";
+import { buildModelEvaluationEvent } from "../domain/model-evaluations.ts";
 
 export function projectModelEvaluations(input: {
   config: ModelEvaluationConfigPort;

@@ -14,7 +14,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ensureDir } from "../shared/fs";
+import { ensureDir } from "../shared/fs.ts";
 
 export const UPDATE_CHECK_TTL_MS = 24 * 60 * 60 * 1000;
 export const UPDATE_CHECK_CACHE_PATH = join(".ut-tdd", "state", "update-check.json");

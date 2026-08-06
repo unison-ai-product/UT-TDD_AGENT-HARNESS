@@ -2,14 +2,14 @@ import type { Command } from "commander";
 import {
   type AdmissionProjectionPort,
   checkPlanAdmission,
-} from "../plan-admission/admission-check";
+} from "../plan-admission/admission-check.ts";
 import {
   GitAdmissionChangesAdapter,
   GitDiffAdapterError,
   readUtf8BlobAtRef,
   SystemGitCommandPort,
-} from "../plan-admission/git-diff-adapter";
-import { parseTrackedReceiptProjection } from "../plan-admission/tracked-receipt-projection";
+} from "../plan-admission/git-diff-adapter.ts";
+import { parseTrackedReceiptProjection } from "../plan-admission/tracked-receipt-projection.ts";
 
 const PROJECTION_PATH = "docs/governance/plan-admission-receipts.json";
 

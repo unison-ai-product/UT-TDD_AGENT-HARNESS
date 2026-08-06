@@ -4,70 +4,70 @@ import { homedir } from "node:os";
 import { join, relative } from "node:path";
 import { performance } from "node:perf_hooks";
 import { parse as parseYaml } from "yaml";
-import type { DocumentExportProjectionRows } from "../export/document-export";
+import type { DocumentExportProjectionRows } from "../export/document-export.ts";
 import {
   buildDocumentExportDataset,
   type CanonicalDocumentFamily,
   parseCanonicalDocumentStructure,
-} from "../export/document-export";
-import { loadRelationGraphSourceSet } from "../graph/loader";
-import { resolveLegacyPlanAlias } from "../kernel/plan-alias.js";
-import { loadChangedFiles } from "../lint/change-impact";
+} from "../export/document-export.ts";
+import { loadRelationGraphSourceSet } from "../graph/loader.ts";
+import { resolveLegacyPlanAlias } from "../kernel/plan-alias.ts";
+import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   analyzeDescentObligations,
   loadDeferLedger,
   loadDescentAdjacency,
   loadTraceKeyedArtifacts,
-} from "../lint/descent-obligation";
-import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency";
-import { analyzeEntityCoverage, loadBusiness as loadEntityBusiness } from "../lint/entity-coverage";
-import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit";
+} from "../lint/descent-obligation.ts";
+import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency.ts";
+import { analyzeEntityCoverage, loadBusiness as loadEntityBusiness } from "../lint/entity-coverage.ts";
+import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit.ts";
 import {
   analyzeFrRoadmapCoverageWithRoot,
   loadFrRoadmapCoverageDocs,
-} from "../lint/fr-roadmap-coverage";
-import { analyzeL6FrCoverage, loadL6FrCoverageDocs } from "../lint/l6-fr-coverage";
-import { analyzeModuleDrift, loadModuleDocs } from "../lint/module-drift";
+} from "../lint/fr-roadmap-coverage.ts";
+import { analyzeL6FrCoverage, loadL6FrCoverageDocs } from "../lint/l6-fr-coverage.ts";
+import { analyzeModuleDrift, loadModuleDocs } from "../lint/module-drift.ts";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
   type RelationGraphProjection,
   type VerificationEvidenceProjection,
-} from "../lint/relation-graph";
-import { loadReviewPlans } from "../lint/review-evidence";
+} from "../lint/relation-graph.ts";
+import { loadReviewPlans } from "../lint/review-evidence.ts";
 import {
   computeGateProgress,
   computeProgramRollup,
   loadRoadmaps,
   PARKED_BANDS,
-} from "../lint/roadmap-registry";
+} from "../lint/roadmap-registry.ts";
 import {
   analyzeSubDocCatalogDrift,
   loadSubDocCatalogDriftInput,
-} from "../lint/sub-doc-catalog-drift";
+} from "../lint/sub-doc-catalog-drift.ts";
 import {
   analyzeSubDocSectionStructure,
   loadSubDocSectionStructureInput,
-} from "../lint/sub-doc-section-structure";
+} from "../lint/sub-doc-section-structure.ts";
 import {
   catalogVerificationProfiles,
   recommendVerificationProfiles,
-} from "../lint/verification-profile";
-import { loadMemoryEntries } from "../memory/index";
-import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config";
-import { loadRepositoryPlanSources } from "../projection/adapters/repository-plan-sources";
-import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations";
-import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics";
-import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations";
-import type { ProjectionEvent } from "../projection/contracts/projection-store";
-import { type ProjectedPlan, projectPlanSources } from "../projection/domain/plan-projection";
-import { HARNESS_DB_TABLES } from "../schema/harness-db";
-import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
-import { normalizePath } from "../shared/source-text";
-import { stableId } from "../stable-id";
-import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint";
-import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
-import { DESIGN_QUALITY_CHECK_IDS, type DesignQualityCheckId } from "./design-detection";
+} from "../lint/verification-profile.ts";
+import { loadMemoryEntries } from "../memory/index.ts";
+import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config.ts";
+import { loadRepositoryPlanSources } from "../projection/adapters/repository-plan-sources.ts";
+import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations.ts";
+import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics.ts";
+import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations.ts";
+import type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
+import { type ProjectedPlan, projectPlanSources } from "../projection/domain/plan-projection.ts";
+import { HARNESS_DB_TABLES } from "../schema/harness-db.ts";
+import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog.ts";
+import { normalizePath } from "../shared/source-text.ts";
+import { stableId } from "../stable-id.ts";
+import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint.ts";
+import { deriveArtifactProgressDecision } from "./artifact-progress-decision.ts";
+import { DESIGN_QUALITY_CHECK_IDS, type DesignQualityCheckId } from "./design-detection.ts";
 import {
   projectFeedbackEvents,
   projectFeedbackLifecycle,
@@ -79,36 +79,36 @@ import {
   projectTroubleEvents,
   projectVerificationDefectRoutingRefactorCandidates,
   reconcileFeedbackLifecycle,
-} from "./feedback-projections";
-import { rebuildExecutionReadiness } from "./github-forward-projection";
-import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants";
-import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index";
-import { migrate, rowCounts } from "./migration";
+} from "./feedback-projections.ts";
+import { rebuildExecutionReadiness } from "./github-forward-projection.ts";
+import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants.ts";
+import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
+import { migrate, rowCounts } from "./migration.ts";
 import {
   projectRuntimeGuardrailDecisionFromSessionEvent as projectRuntimeGuardrailDecisionFromSessionEventCore,
   projectRuntimeSkillInvocationFromSessionEvent as projectRuntimeSkillInvocationFromSessionEventCore,
   projectRuntimeSkillInvocationsFromSessionLogs as projectRuntimeSkillInvocationsFromSessionLogsCore,
   projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore,
-} from "./runtime-projections";
+} from "./runtime-projections.ts";
 import {
   projectSkillEvaluations as projectSkillEvaluationsCore,
   projectSkillMetrics as projectSkillMetricsCore,
   projectSkillTelemetry as projectSkillTelemetryCore,
   skillScore,
-} from "./skill-projections";
-import { projectSpecIr } from "./spec-ir-projections";
-import { clearRebuildableProjectionTables } from "./sqlite-projection-rebuild";
-import { type ProjectionFindingInput, SqliteProjectionStore } from "./sqlite-projection-store";
-import { runSqliteTransaction } from "./sqlite-transaction";
+} from "./skill-projections.ts";
+import { projectSpecIr } from "./spec-ir-projections.ts";
+import { clearRebuildableProjectionTables } from "./sqlite-projection-rebuild.ts";
+import { type ProjectionFindingInput, SqliteProjectionStore } from "./sqlite-projection-store.ts";
+import { runSqliteTransaction } from "./sqlite-transaction.ts";
 import {
   loadRepoScopedRuntimeSessionUsage,
   type RepoScopeIngestStats,
   type RunUsage,
   type SessionScanDirs,
-} from "./token-tracker";
-import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
+} from "./token-tracker.ts";
+import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections.ts";
 
-export type { ProjectionEvent } from "../projection/contracts/projection-store";
+export type { ProjectionEvent } from "../projection/contracts/projection-store.ts";
 
 export interface RebuildHarnessDbInput {
   repoRoot?: string;
@@ -145,7 +145,7 @@ export {
   type ArtifactProgressDecisionInput,
   type ArtifactProgressState,
   deriveArtifactProgressDecision,
-} from "./artifact-progress-decision";
+} from "./artifact-progress-decision.ts";
 
 interface PlanDigestProjection {
   plan_id: string;

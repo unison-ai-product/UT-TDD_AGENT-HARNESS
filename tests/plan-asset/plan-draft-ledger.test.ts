@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   type AppendPlanDraftInput,
   PlanDraftLedgerTransaction,
-} from "../../src/plan-asset/ledger/plan-draft-ledger.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
-import { openHarnessDb } from "../../src/state-db/index.js";
+} from "../../src/plan-asset/ledger/plan-draft-ledger.ts";
+import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
+import { openHarnessDb } from "../../src/state-db/index.ts";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
 afterEach(() => {

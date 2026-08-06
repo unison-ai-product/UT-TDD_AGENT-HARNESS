@@ -6,7 +6,7 @@ import {
   analyzeTestDesignNaming,
   loadTestDesignDocs,
   testDesignNamingMessages,
-} from "../src/lint/test-design-naming";
+} from "../src/lint/test-design-naming.ts";
 
 describe("test-design right-arm naming lint (U-TDNAME, PLAN-RECOVERY-09)", () => {
   it("U-TDNAME-001: 右腕層命名 + executed_at_layer 一致は準拠", () => {

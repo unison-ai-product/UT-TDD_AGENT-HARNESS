@@ -8,9 +8,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { planIdSchema } from "../src/schema/frontmatter";
+import { planIdSchema } from "../src/schema/frontmatter.ts";
 
-import { headSnapshotRoot } from "./support/workspace-roots";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const plansDir = join(headSnapshotRoot(), "docs", "plans");
 

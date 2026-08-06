@@ -3,15 +3,15 @@ import type {
   OperationalMetricsReadPort,
   ProjectionEvent,
   ProjectionStore,
-} from "../projection/contracts/projection-store";
-import type { ModelEvaluationFacts } from "../projection/domain/model-evaluations";
-import type { OperationalMetricFacts } from "../projection/domain/operational-metrics";
-import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status";
-import type { PocDecisionCount } from "../projection/domain/poc-evaluations";
-import { HARNESS_DB_TABLE_BY_NAME, primaryKeyOf, type TableDef } from "../schema/harness-db";
-import { stableId } from "../stable-id";
-import { type HarnessDb, SECRET_PATTERN, upsertRow } from "./index";
-import { runSqliteTransaction } from "./sqlite-transaction";
+} from "../projection/contracts/projection-store.ts";
+import type { ModelEvaluationFacts } from "../projection/domain/model-evaluations.ts";
+import type { OperationalMetricFacts } from "../projection/domain/operational-metrics.ts";
+import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status.ts";
+import type { PocDecisionCount } from "../projection/domain/poc-evaluations.ts";
+import { HARNESS_DB_TABLE_BY_NAME, primaryKeyOf, type TableDef } from "../schema/harness-db.ts";
+import { stableId } from "../stable-id.ts";
+import { type HarnessDb, SECRET_PATTERN, upsertRow } from "./index.ts";
+import { runSqliteTransaction } from "./sqlite-transaction.ts";
 
 const RAW_PAYLOAD_KEYS = new Set([
   "rawMcpResponse",

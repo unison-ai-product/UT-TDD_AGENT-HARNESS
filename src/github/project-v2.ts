@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
-import type { ForwardReadinessRow } from "../kernel/forward-readiness";
-import { stableId } from "../stable-id";
-import { recordGithubBinding } from "../state-db/github-forward-projection";
-import type { HarnessDb } from "../state-db/index";
+import type { ForwardReadinessRow } from "../kernel/forward-readiness.ts";
+import { stableId } from "../stable-id.ts";
+import { recordGithubBinding } from "../state-db/github-forward-projection.ts";
+import type { HarnessDb } from "../state-db/index.ts";
 
 export interface ProjectField {
   id: string;

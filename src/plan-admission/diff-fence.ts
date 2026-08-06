@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { stringify } from "yaml";
-import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory";
-import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.ts";
+import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter.ts";
 
 export interface PlanBlob {
   path: string;

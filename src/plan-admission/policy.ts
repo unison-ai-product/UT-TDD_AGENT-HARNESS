@@ -1,5 +1,5 @@
-import type { Drive, Kind, Layer, SubDoc, WorkflowPhase } from "../schema/index";
-import { routeSignalCandidates } from "../schema/route-map";
+import type { Drive, Kind, Layer, SubDoc, WorkflowPhase } from "../schema/index.ts";
+import { routeSignalCandidates } from "../schema/route-map.ts";
 
 export type AdmissionRouteMode =
   | "forward"

@@ -1,5 +1,5 @@
-import { MODEL_IDS, type TaskDifficulty } from "../team/model-policy";
-import type { Archetype, Provider, RouterRole, Tier } from "./tier-router";
+import { MODEL_IDS, type TaskDifficulty } from "../team/model-policy.ts";
+import type { Archetype, Provider, RouterRole, Tier } from "./tier-router.ts";
 
 export const ROLE_ARCHETYPE: Record<RouterRole, Archetype> = {
   tl: "consult",

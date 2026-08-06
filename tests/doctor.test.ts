@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups";
+import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups.ts";
 import {
   buildFullDoctorCheckDefinitions,
   collectDoctorCheckRun,
@@ -15,11 +15,11 @@ import {
   isConsumerSafeDoctorRunProfile,
   resolveDoctorRunProfile,
   selectDoctorCheckDefinitions,
-} from "../src/doctor/check-registry";
+} from "../src/doctor/check-registry.ts";
 import {
   checkDependencyDrift as checkDependencyDriftAdapter,
   checkRegressionExpansion as checkRegressionExpansionAdapter,
-} from "../src/doctor/dependency-regression";
+} from "../src/doctor/dependency-regression.ts";
 import {
   checkAgentContractDetection,
   checkAgentSlots,
@@ -86,18 +86,18 @@ import {
   type DoctorDeps,
   nodeDoctorDeps,
   runDoctor,
-} from "../src/doctor/index";
-import { buildDoctorResult } from "../src/doctor/result";
-import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage";
-import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
+} from "../src/doctor/index.ts";
+import { buildDoctorResult } from "../src/doctor/result.ts";
+import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage.ts";
+import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots.ts";
 import {
   analyzeDesignDetectionStats,
   DESIGN_QUALITY_CHECK_IDS,
   type DesignDetectionStats,
   designDetectionMessages,
-} from "../src/state-db/design-detection";
-import { consumeDoctorResultEnvelope } from "./support/doctor-envelope";
-import { headSnapshotRoot } from "./support/workspace-roots";
+} from "../src/state-db/design-detection.ts";
+import { consumeDoctorResultEnvelope } from "./support/doctor-envelope.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");

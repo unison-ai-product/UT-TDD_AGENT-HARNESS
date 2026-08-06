@@ -1,4 +1,4 @@
-import type { HarnessDb } from "../../state-db/index.js";
+import type { HarnessDb } from "../../state-db/index.ts";
 
 export interface LedgerTransactionPort {
   run<T>(work: () => { readonly commit: boolean; readonly value: T }): T;

@@ -1,5 +1,5 @@
-import { exactKeys, isNonempty, isPlainObject, validIso } from "./evidence-canonical.js";
-import type { EvidenceClaims, EvidenceClaimsRule, EvidenceKind } from "./evidence-types.js";
+import { exactKeys, isNonempty, isPlainObject, validIso } from "./evidence-canonical.ts";
+import type { EvidenceClaims, EvidenceClaimsRule, EvidenceKind } from "./evidence-types.ts";
 
 export function claimsValid(kind: EvidenceKind, value: unknown): value is EvidenceClaims {
   if (!isPlainObject(value)) return false;

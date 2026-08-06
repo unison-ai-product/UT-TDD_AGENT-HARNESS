@@ -1,6 +1,6 @@
-import { stableId } from "../../stable-id";
-import type { OperationalMetricsReadPort, ProjectionStore } from "../contracts/projection-store";
-import { deriveOperationalMetrics } from "../domain/operational-metrics";
+import { stableId } from "../../stable-id.ts";
+import type { OperationalMetricsReadPort, ProjectionStore } from "../contracts/projection-store.ts";
+import { deriveOperationalMetrics } from "../domain/operational-metrics.ts";
 
 export function projectOperationalMetrics(input: {
   read: OperationalMetricsReadPort;

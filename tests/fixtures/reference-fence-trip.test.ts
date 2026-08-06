@@ -1,7 +1,7 @@
 import { appendFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { unsealReference } from "../../scripts/run-vitest-snapshot";
+import { unsealReference } from "../../scripts/run-vitest-snapshot.ts";
 
 describe.skipIf(process.env.UT_TDD_FENCE_TRIP !== "1")("reference fence trip fixture", () => {
   it("mutates the supplied HEAD snapshot after global setup captures it", () => {

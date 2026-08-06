@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { invocationEquals, parseHookInvocation } from "./hook-invocation";
-import { PERSONAL_ABSOLUTE_PATH_PATTERN } from "./personal-path";
+import { invocationEquals, parseHookInvocation } from "./hook-invocation.ts";
+import { PERSONAL_ABSOLUTE_PATH_PATTERN } from "./personal-path.ts";
 
 export interface ProjectHookDoc {
   file: string;

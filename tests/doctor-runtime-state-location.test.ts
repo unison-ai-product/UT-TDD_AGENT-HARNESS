@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   checkRuntimeStateLocation,
   findRuntimeStateLocationFindings,
-} from "../src/doctor/runtime-state-location";
-import { removeTestTree } from "./support/temp-tree";
+} from "../src/doctor/runtime-state-location.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("doctor runtime state location", () => {
   it("U-TESTHYGIENE-004: accepts only the canonical root runtime state", () => {

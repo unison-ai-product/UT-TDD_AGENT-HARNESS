@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { buildScopeDryRunPreview } from "../src/state-db/scope-preview";
+import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { buildScopeDryRunPreview } from "../src/state-db/scope-preview.ts";
 
 function insertDocumentReview(
   db: ReturnType<typeof openHarnessDb>,

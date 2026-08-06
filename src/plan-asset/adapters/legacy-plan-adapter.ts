@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-export { resolveLegacyPlanAlias } from "../../kernel/plan-alias.js";
+export { resolveLegacyPlanAlias } from "../../kernel/plan-alias.ts";
 
 type Result<T, E> =
   | { readonly ok: true; readonly value: T }

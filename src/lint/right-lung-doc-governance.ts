@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import {
   loadCompiledRightArmRegistry,
   VMODEL_CONTRACT_PATH,
-} from "../vmodel-contract/adapters/yaml-contract-loader";
+} from "../vmodel-contract/adapters/yaml-contract-loader.ts";
 
 export interface RightLungDocGovernanceDoc {
   layer: string;

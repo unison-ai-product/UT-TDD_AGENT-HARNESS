@@ -1,6 +1,6 @@
-import type { ModelEvaluationFacts } from "../domain/model-evaluations";
-import type { OperationalMetricFacts } from "../domain/operational-metrics";
-import type { PocDecisionCount } from "../domain/poc-evaluations";
+import type { ModelEvaluationFacts } from "../domain/model-evaluations.ts";
+import type { OperationalMetricFacts } from "../domain/operational-metrics.ts";
+import type { PocDecisionCount } from "../domain/poc-evaluations.ts";
 
 export interface ProjectionEvent {
   table: string;

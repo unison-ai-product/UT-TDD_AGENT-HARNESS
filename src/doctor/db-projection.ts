@@ -8,27 +8,27 @@ import {
   dbConstraintCoverageMessages,
   dbProjectionCoverageMessages,
   loadDbProjectionRequirements,
-} from "../lint/db-projection-coverage";
+} from "../lint/db-projection-coverage.ts";
 import {
   analyzeDbProjectionIngestion,
   type DbProjectionIngestionResult,
   type DbTelemetryProvenanceStats,
   dbProjectionIngestionMessages,
-} from "../lint/db-projection-ingestion";
-import type { LintResult } from "../plan/lint";
+} from "../lint/db-projection-ingestion.ts";
+import type { LintResult } from "../plan/lint.ts";
 import {
   analyzeDesignDetectionStats,
   collectDesignDetectionStats,
   designDetectionMessages,
-} from "../state-db/design-detection";
-import type { HarnessDb } from "../state-db/index";
-import { openHarnessDb } from "../state-db/index";
-import { migrate } from "../state-db/migration";
+} from "../state-db/design-detection.ts";
+import type { HarnessDb } from "../state-db/index.ts";
+import { openHarnessDb } from "../state-db/index.ts";
+import { migrate } from "../state-db/migration.ts";
 import {
   type ProjectionTiming,
   projectTokenUsage,
   rebuildHarnessDb,
-} from "../state-db/projection-writer";
+} from "../state-db/projection-writer.ts";
 import {
   type AgentContractIntegrityResult,
   analyzeAgentContractIntegrity,
@@ -44,9 +44,9 @@ import {
   type TypedSpecOwnedArtifactDispersalResult,
   type TypedSpecPhaseLayerAlignmentResult,
   type TypedSpecTraceClosureResult,
-} from "../state-db/spec-ir-projections";
-import { loadRuntimeSessionUsage } from "../state-db/token-tracker";
-import { FULL_DOCTOR_OUTPUT_IDS } from "./profiles";
+} from "../state-db/spec-ir-projections.ts";
+import { loadRuntimeSessionUsage } from "../state-db/token-tracker.ts";
+import { FULL_DOCTOR_OUTPUT_IDS } from "./profiles.ts";
 
 export interface DbProjectionDoctorOptions {
   strictTelemetryProvenance?: boolean;

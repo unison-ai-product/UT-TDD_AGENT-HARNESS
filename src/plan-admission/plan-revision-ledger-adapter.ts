@@ -1,11 +1,11 @@
-import type { LegacyPlanRevisionBootstrapTransaction } from "../plan-asset/ledger/plan-revision-bootstrap.js";
-import type { PlanRevisionLedgerTransaction } from "../plan-asset/ledger/plan-revision-ledger.js";
+import type { LegacyPlanRevisionBootstrapTransaction } from "../plan-asset/ledger/plan-revision-bootstrap.ts";
+import type { PlanRevisionLedgerTransaction } from "../plan-asset/ledger/plan-revision-ledger.ts";
 import type {
   DraftLedgerPort,
   DraftReceiptBinding,
   PlanDraftCommand,
-} from "./plan-draft-service.js";
-import type { PlanRevisionExecutionPayload } from "./plan-revision-command-assembler.js";
+} from "./plan-draft-service.ts";
+import type { PlanRevisionExecutionPayload } from "./plan-revision-command-assembler.ts";
 
 export interface PlanRevisionReceipt extends DraftReceiptBinding {
   certificateDigest?: string;

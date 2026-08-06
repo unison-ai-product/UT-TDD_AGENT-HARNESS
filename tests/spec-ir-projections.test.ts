@@ -7,7 +7,7 @@ import {
   analyzeTypedSpecTraceClosure,
   collectSpecIrProjection,
   deriveSpecRagClosureEntries,
-} from "../src/state-db/spec-ir-projections";
+} from "../src/state-db/spec-ir-projections.ts";
 
 function writePlan(root: string, name: string, body: string): void {
   const dir = join(root, "docs", "plans");

@@ -4,92 +4,92 @@ import {
   analyzeCycleP4Verification,
   cycleP4VerificationMessages,
   loadCycleP4VerificationDocs,
-} from "../lint/cycle-p4-verification";
-import { analyzeDbCurrency, dbCurrencyMessages } from "../lint/db-currency";
+} from "../lint/cycle-p4-verification.ts";
+import { analyzeDbCurrency, dbCurrencyMessages } from "../lint/db-currency.ts";
 import {
   analyzeDriveDbRegistration,
   driveDbRegistrationMessages,
-} from "../lint/drive-db-registration";
+} from "../lint/drive-db-registration.ts";
 import {
   analyzeDriveModelPassage,
   driveModelPassageMessages,
   loadDriveModelPassageDocs,
-} from "../lint/drive-model-passage";
+} from "../lint/drive-model-passage.ts";
 import {
   analyzeFeedbackLog,
   feedbackLogMessages,
   loadFeedbackLogInput,
-} from "../lint/feedback-log";
+} from "../lint/feedback-log.ts";
 import {
   analyzeFrRoadmapCoverageWithRoot,
   frRoadmapCoverageMessages,
   loadFrRoadmapCoverageDocs,
-} from "../lint/fr-roadmap-coverage";
-import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../lint/gate-run-coverage";
+} from "../lint/fr-roadmap-coverage.ts";
+import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../lint/gate-run-coverage.ts";
 import {
   analyzeL6Completion,
   canLoadL6CompletionInputs,
   l6CompletionMessages,
   loadL6CompletionInputs,
-} from "../lint/l6-completion";
+} from "../lint/l6-completion.ts";
 import {
   analyzeL6FrCoverage,
   l6FrCoverageMessages,
   loadL6FrCoverageDocs,
-} from "../lint/l6-fr-coverage";
+} from "../lint/l6-fr-coverage.ts";
 import {
   analyzeL7Completion,
   l7CompletionMessages,
   loadL7CompletionDocs,
-} from "../lint/l7-completion";
+} from "../lint/l7-completion.ts";
 import {
   analyzeL14CloseAudit,
   l14CloseAuditMessages,
   loadL14CloseAuditDocs,
-} from "../lint/l14-close-audit";
+} from "../lint/l14-close-audit.ts";
 import {
   analyzePlaceholderDeps,
   loadPlaceholderDepsDocs,
   placeholderDepsMessages,
-} from "../lint/placeholder-deps";
-import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod";
+} from "../lint/placeholder-deps.ts";
+import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod.ts";
 import {
   analyzeRuleAutomationClosure,
   loadRuleAutomationClosureDocs,
   ruleAutomationClosureMessages,
-} from "../lint/rule-automation-closure";
+} from "../lint/rule-automation-closure.ts";
 import {
   analyzeScreenImplPairFreeze,
   loadScreenImplPairFreezeInput,
   screenImplPairFreezeMessages,
-} from "../lint/screen-impl-pair-freeze";
+} from "../lint/screen-impl-pair-freeze.ts";
 import {
   analyzeSubDocCatalogDrift,
   loadSubDocCatalogDriftInput,
   subDocCatalogDriftMessages,
-} from "../lint/sub-doc-catalog-drift";
+} from "../lint/sub-doc-catalog-drift.ts";
 import {
   analyzeSubDocSchemaIntegrity,
   loadSubDocSchemaIntegrityInput,
   subDocSchemaIntegrityMessages,
-} from "../lint/sub-doc-schema-integrity";
+} from "../lint/sub-doc-schema-integrity.ts";
 import {
   analyzeSubDocSectionStructure,
   loadSubDocSectionStructureInput,
   subDocSectionStructureMessages,
-} from "../lint/sub-doc-section-structure";
+} from "../lint/sub-doc-section-structure.ts";
 import {
   analyzeTelemetryClosure,
   loadTelemetryClosureDocs,
   telemetryClosureMessages,
-} from "../lint/telemetry-closure";
-import { lintPlanWithGate } from "../plan/lint";
+} from "../lint/telemetry-closure.ts";
+import { lintPlanWithGate } from "../plan/lint.ts";
 import {
   loadDriveDbRegistrationStats,
   loadOrBuildDriveDbRegistrationStats,
-} from "../state-db/drive-registration";
-import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "../state-db/index";
-import { rebuildHarnessDb } from "../state-db/projection-writer";
+} from "../state-db/drive-registration.ts";
+import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "../state-db/index.ts";
+import { rebuildHarnessDb } from "../state-db/projection-writer.ts";
 
 export function checkPlanDod(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {

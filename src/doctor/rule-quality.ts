@@ -5,42 +5,42 @@ import {
   loadCodingRuleDocs,
   loadCodingRulePolicy,
   loadCodingWorkflowDocs,
-} from "../lint/coding-rules";
-import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
+} from "../lint/coding-rules.ts";
+import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules.ts";
 import {
   analyzeDesignLanguage,
   designLanguageMessages,
   loadDesignLanguageDocs,
-} from "../lint/design-language";
-import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
+} from "../lint/design-language.ts";
+import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm.ts";
 import {
   analyzeGateIdFormat,
   gateIdFormatMessages,
   loadGateIdFormatInput,
-} from "../lint/gate-id-format";
+} from "../lint/gate-id-format.ts";
 import {
   analyzeModelIdDocDrift,
   loadModelIdDocDriftTexts,
   modelIdDocDriftMessages,
-} from "../lint/model-id-doc-drift";
+} from "../lint/model-id-doc-drift.ts";
 import {
   analyzeArtifacts,
   loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
   readabilityMessages,
   runtimeReadabilityMessages,
-} from "../lint/readability";
-import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
+} from "../lint/readability.ts";
+import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift.ts";
 import {
   analyzeRuntimePortability,
   loadRuntimePortabilityDocs,
   runtimePortabilityMessages,
-} from "../lint/runtime-portability";
+} from "../lint/runtime-portability.ts";
 import {
   analyzeSecretScan,
   loadSystemSecretScanArtifacts,
   secretScanMessages,
-} from "../lint/secret-scan";
+} from "../lint/secret-scan.ts";
 
 export function checkCodingRules(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {

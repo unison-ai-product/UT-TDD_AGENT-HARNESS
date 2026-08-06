@@ -1,5 +1,5 @@
-import { VALID_SUB_DOCS as SCHEMA_VALID_SUB_DOCS } from "../schema/index";
-import { FILING_TARGET_BY_MODE } from "../schema/route-filing";
+import { VALID_SUB_DOCS as SCHEMA_VALID_SUB_DOCS } from "../schema/index.ts";
+import { FILING_TARGET_BY_MODE } from "../schema/route-filing.ts";
 
 const SERIAL_REASONS = ["file_conflict", "downstream_dependency", "shared_state"] as const;
 const MODE_PATTERN = /\[(並列|直列)\]/;

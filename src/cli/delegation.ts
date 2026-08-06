@@ -9,24 +9,24 @@ import {
   REVIEW_VERDICT_FILE_ENV,
   type ReviewAttestationRequest,
   resolveReviewAuthorFamily,
-} from "../feedback/review-attestation";
-import { REVIEW_OUTPUT_CONTRACT } from "../feedback/review-verdict-contract";
-import { loadChangedFiles } from "../lint/change-impact";
+} from "../feedback/review-attestation.ts";
+import { REVIEW_OUTPUT_CONTRACT } from "../feedback/review-verdict-contract.ts";
+import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
   type AdapterPlan,
   type AdapterProvider,
   buildAdapterPlan,
   buildProviderInvocation,
-} from "../runtime/adapter";
-import { detectMode } from "../runtime/detect";
+} from "../runtime/adapter.ts";
+import { detectMode } from "../runtime/detect.ts";
 import {
   assessReviewSession,
   isReadOnlyDelegationRole,
   reviewGuardMessages,
-} from "../runtime/review-guard";
-import { dispatch, nodeDeps, type SessionHookInput } from "../runtime/session-log";
-import { resolveDelegationRouting } from "../team/delegation-routing";
+} from "../runtime/review-guard.ts";
+import { dispatch, nodeDeps, type SessionHookInput } from "../runtime/session-log.ts";
+import { resolveDelegationRouting } from "../team/delegation-routing.ts";
 
 export interface AdapterExecutionDeps {
   gitBranch: () => string | null;

@@ -3,7 +3,7 @@ import {
   analyzeGateIdFormat,
   gateIdFormatMessages,
   loadGateIdFormatInput,
-} from "../src/lint/gate-id-format";
+} from "../src/lint/gate-id-format.ts";
 
 describe("gate id format lint", () => {
   it("U-GID-001: accepts canonical forward gate ids and split shorthand rows", () => {

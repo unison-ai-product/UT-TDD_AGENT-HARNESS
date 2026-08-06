@@ -4,7 +4,7 @@ import YAML from "yaml";
 import {
   type CompiledRightArmRegistry,
   compileRightArmContract,
-} from "../application/contract-compiler";
+} from "../application/contract-compiler.ts";
 
 export const VMODEL_CONTRACT_PATH = "docs/process/vmodel-contract.yaml";
 

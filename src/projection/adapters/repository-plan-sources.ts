@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { normalizePath } from "../../shared/source-text";
-import type { ProjectionPlanSource } from "../domain/plan-projection";
+import { normalizePath } from "../../shared/source-text.ts";
+import type { ProjectionPlanSource } from "../domain/plan-projection.ts";
 
 /** Repository I/O を plan projection から隔離する source adapter。 */
 export function loadRepositoryPlanSources(repoRoot: string): readonly ProjectionPlanSource[] {

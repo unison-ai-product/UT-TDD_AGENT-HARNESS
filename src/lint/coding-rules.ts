@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import ts from "typescript";
-import { importedSourceModule, lineOf, normalizePath, sourceModule } from "./shared";
+import { importedSourceModule, lineOf, normalizePath, sourceModule } from "./shared.ts";
 
 export type CodingRulesScope = "source" | "test";
 

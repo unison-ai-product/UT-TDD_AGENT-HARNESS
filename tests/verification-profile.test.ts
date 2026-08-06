@@ -14,14 +14,14 @@ import {
   verificationProfileGateMessages,
   verificationRecommendationMermaid,
   verificationRecommendationMessages,
-} from "../src/lint/verification-profile";
-import { PROFILES } from "../src/lint/verification-profile-catalog";
+} from "../src/lint/verification-profile.ts";
+import { PROFILES } from "../src/lint/verification-profile-catalog.ts";
 import {
   analyzeVerificationProfileSafety,
   planExternalProfileActivation,
   renderGeneratedMcpConfig,
-} from "../src/lint/verification-profile-safety";
-import type { VerificationProfileRunResult as SidecarVerificationProfileRunResult } from "../src/lint/verification-profile-types";
+} from "../src/lint/verification-profile-safety.ts";
+import type { VerificationProfileRunResult as SidecarVerificationProfileRunResult } from "../src/lint/verification-profile-types.ts";
 
 function deps(over: Partial<VerificationProbeDeps> = {}): VerificationProbeDeps {
   return {

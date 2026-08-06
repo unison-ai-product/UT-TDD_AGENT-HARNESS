@@ -11,8 +11,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import type { MemoryEntry } from "../memory";
-import { ensureDir } from "../shared/fs";
+import type { MemoryEntry } from "../memory/index.ts";
+import { ensureDir } from "../shared/fs.ts";
 
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
