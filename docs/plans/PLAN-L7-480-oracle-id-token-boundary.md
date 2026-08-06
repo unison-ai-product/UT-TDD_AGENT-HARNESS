@@ -33,10 +33,7 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
 github_issue_id: 165
 backprop_decision: not_required
-backprop_decision_reason: >-
-  既存 gate (oracle-test-trace、正本 PLAN-L7-244 の citation 契約) の検出盲点の純修理であり、
-  新しい契約層・設計正本を作らない。可視化された既存債務は widened ratchet baseline として
-  gate 内部に閉じ、Forward 設計正本への逆伝播対象が存在しない。
+backprop_decision_reason: "既存 gate (oracle-test-trace、正本 PLAN-L7-244 の citation 契約) の検出盲点の純修理であり、新しい契約層・設計正本を作らない。可視化された既存債務は widened ratchet baseline として gate 内部に閉じ、Forward 設計正本への逆伝播対象が存在しない。"
 review_evidence:
   - reviewer: claude-fable-5
     review_kind: intra_runtime_subagent
