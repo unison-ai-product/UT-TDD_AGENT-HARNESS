@@ -309,7 +309,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "  fail(error);",
     "}",
     "function fail(error: unknown): void {",
-    '  process.stderr.write("UT-TDD hook launcher: " + (error instanceof Error ? error.message : String(error)) + "\\\\n");',
+    '  process.stderr.write("UT-TDD hook launcher: " + (error instanceof Error ? error.message : String(error)) + "\\n");',
     "  process.exitCode = 1;",
     "}",
     "",
