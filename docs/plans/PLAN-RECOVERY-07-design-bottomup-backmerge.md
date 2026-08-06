@@ -48,7 +48,7 @@ generates:
     artifact_type: test_code
     evidence:
       - command: "Get-FileHash -Algorithm SHA256 -Path tests\\drive-model-passage.test.ts"
-        output_digest: "sha256:9ef3188bb1234a0a95c336ca5075bda23aecd19af58e3f1763dd56355bf9d86a"
+        output_digest: "sha256:42c265d9f7940db88a6d2ed973ba0078ff55768315f74fb49efe3060e20af222"
   - artifact_path: tests/mode-catalog.test.ts
     artifact_type: test_code
     evidence:
@@ -99,7 +99,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-02T22:19:00+09:00"
         evidence_path: tests/drive-model-passage.test.ts
-        output_digest: "sha256:9ef3188bb1234a0a95c336ca5075bda23aecd19af58e3f1763dd56355bf9d86a"
+        output_digest: "sha256:42c265d9f7940db88a6d2ed973ba0078ff55768315f74fb49efe3060e20af222"
 ---
 
 # PLAN-RECOVERY-07: design-bottomup mode 正本 back-merge

@@ -6,14 +6,16 @@
  * あること。拡張子なし (Node ESM で ERR_MODULE_NOT_FOUND) だけでなく `.js` 指定子
  * (bun は解決するが node は fail する不可視 blocker) も fail-close する。
  *
- * 検出は正規表現の行 match でなく mini-scanner で行う: 文字列リテラル・template literal・
- * コメントの中身を code として読まない (tests/ の fixture 文字列に埋まった import 記述を
- * 誤検出しないため — 実測で 24 行の埋め込み fixture が存在する)。
+ * 検出は TypeScript compiler API の AST で行う: 文字列リテラル・template literal・コメント・
+ * 正規表現リテラルの中身を code として読まない (tests/ の fixture 文字列に埋まった import 記述を
+ * 誤検出しない。初版の手書き mini-scanner は regex literal で desync し 26/634 ファイルの
+ * 盲点を作った — blind review BL-1。dependency-drift / ddd-tdd-rules と同じ AST 経路へ統一)。
  *
  * 純関数 (analyzeImportSpecifiers) + I/O loader (loadImportSpecifierInput) を分離 (lint 共通様式)。
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, posix, sep } from "node:path";
+import { join, posix } from "node:path";
+import ts from "typescript";
 
 export const IMPORT_SPECIFIER_SCOPES = ["src", "tests", "scripts", ".claude/hooks"] as const;
 
@@ -44,74 +46,43 @@ interface FoundSpecifier {
 }
 
 /**
- * code 状態で現れる import 系キーワード直後の文字列リテラルだけを抽出する mini-scanner。
+ * import 系構文の文字列リテラル指定子を TypeScript AST で抽出する。
  * 対象: `import ... from "x"` / `export ... from "x"` / `import "x"` / `import("x")` /
- * `require("x")` / `vi.mock("x")`。文字列・template・コメント内は code として読まない。
+ * `require("x")` / `vi.mock("x")`。文字列・template・コメント・regex literal 内は
+ * AST 上 code でないため構造的に誤検出しない。複数行 import も構文単位で拾う。
  */
 export function extractImportSpecifiers(text: string): FoundSpecifier[] {
+  const file = ts.createSourceFile("input.ts", text, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const found: FoundSpecifier[] = [];
-  const n = text.length;
-  let i = 0;
-  let line = 1;
-  const keyword = /(?:from|import|require|vi\.mock)$/;
-  // 直近の code トークン列 (キーワード判定用の小さな窓)。
-  let tail = "";
-  while (i < n) {
-    const c = text[i];
-    if (c === "\n") {
-      line += 1;
-      tail = "";
-      i += 1;
-      continue;
+  const push = (literal: ts.StringLiteralLike): void => {
+    found.push({
+      specifier: literal.text,
+      line: file.getLineAndCharacterOfPosition(literal.getStart(file)).line + 1,
+    });
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier != null &&
+      ts.isStringLiteralLike(node.moduleSpecifier)
+    ) {
+      push(node.moduleSpecifier);
     }
-    if (c === "/" && text[i + 1] === "/") {
-      while (i < n && text[i] !== "\n") i += 1;
-      continue;
+    if (ts.isCallExpression(node) && node.arguments.length >= 1) {
+      const arg = node.arguments[0];
+      const callee = node.expression;
+      const isImportCall = callee.kind === ts.SyntaxKind.ImportKeyword;
+      const isRequire = ts.isIdentifier(callee) && callee.text === "require";
+      const isViMock =
+        ts.isPropertyAccessExpression(callee) &&
+        ts.isIdentifier(callee.expression) &&
+        callee.expression.text === "vi" &&
+        callee.name.text === "mock";
+      if ((isImportCall || isRequire || isViMock) && ts.isStringLiteralLike(arg)) push(arg);
     }
-    if (c === "/" && text[i + 1] === "*") {
-      i += 2;
-      while (i < n && !(text[i] === "*" && text[i + 1] === "/")) {
-        if (text[i] === "\n") line += 1;
-        i += 1;
-      }
-      i += 2;
-      continue;
-    }
-    if (c === "`") {
-      i += 1;
-      while (i < n && text[i] !== "`") {
-        if (text[i] === "\\") i += 1;
-        if (text[i] === "\n") line += 1;
-        i += 1;
-      }
-      i += 1;
-      tail = "";
-      continue;
-    }
-    if (c === '"' || c === "'") {
-      const quote = c;
-      const startLine = line;
-      let value = "";
-      i += 1;
-      while (i < n && text[i] !== quote) {
-        if (text[i] === "\\") {
-          value += text[i];
-          i += 1;
-        }
-        if (text[i] === "\n") line += 1;
-        value += text[i];
-        i += 1;
-      }
-      i += 1;
-      // キーワード直後 (from "x" / import "x" / import("x" / require("x" / vi.mock("x") のみ採用。
-      const t = tail.replace(/[\s(]+$/, "");
-      if (keyword.test(t)) found.push({ specifier: value, line: startLine });
-      tail = "";
-      continue;
-    }
-    tail = (tail + c).slice(-16);
-    i += 1;
-  }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
   return found;
 }
 
@@ -142,6 +113,8 @@ export function analyzeImportSpecifiers(input: ImportSpecifierInput): ImportSpec
         });
         continue;
       }
+      // 相対 .json は現状 0 件の意図的例外 (node では import attributes も要るため、
+      // 実際に導入する PR がこの分岐を契約ごと更新する — blind review mn-4 記録)。
       if (specifier.endsWith(".json")) continue;
       if (!specifier.endsWith(".ts")) {
         violations.push({
