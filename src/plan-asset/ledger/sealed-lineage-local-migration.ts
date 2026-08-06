@@ -55,10 +55,12 @@ export type SealedLineageMigrationResult =
  * remote comment/outboxは別portであり、このlocal writer transactionには含めない。
  */
 export class SealedLineageLocalMigration {
-  constructor(
-    private readonly db: HarnessDb,
-    private readonly fault?: { after(boundary: SealedLineageBoundary): void },
-  ) {
+  private readonly db: HarnessDb;
+  private readonly fault?: { after(boundary: SealedLineageBoundary): void };
+
+  constructor(db: HarnessDb, fault?: { after(boundary: SealedLineageBoundary): void }) {
+    this.db = db;
+    this.fault = fault;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
   }
 

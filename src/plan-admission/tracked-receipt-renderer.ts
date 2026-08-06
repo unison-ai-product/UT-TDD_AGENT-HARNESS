@@ -43,7 +43,11 @@ export class TrackedReceiptRenderer<
   TPayload extends AdmissionBearingPayload = TrackedReceiptDraftPayload,
 > implements DraftArtifactRendererPort<TPayload, TrackedReceiptDraftReceipt>
 {
-  constructor(private readonly projections: TrackedReceiptProjectionReader) {}
+  private readonly projections: TrackedReceiptProjectionReader;
+
+  constructor(projections: TrackedReceiptProjectionReader) {
+    this.projections = projections;
+  }
 
   render(
     command: PlanDraftCommand<TPayload>,

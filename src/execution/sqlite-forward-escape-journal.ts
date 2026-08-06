@@ -139,7 +139,10 @@ function assertProjectionFsm(events: readonly DurableIssueProjectionEvent[]): vo
 export class SqliteForwardEscapeJournal
   implements ForwardEscapeProjectionJournal, ForwardEscapeCustodyPort
 {
-  constructor(private readonly db: HarnessDb) {
+  private readonly db: HarnessDb;
+
+  constructor(db: HarnessDb) {
+    this.db = db;
     // DDLはHARNESS_DB_TABLES/SCHEMA_VERSION/migrateだけが所有する。
     // 別runtime/workerの短いBEGIN IMMEDIATE競合はbounded wait後に同じrowを再読する。
     this.db.exec("PRAGMA busy_timeout = 5000");

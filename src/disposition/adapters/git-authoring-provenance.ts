@@ -5,7 +5,11 @@ import { join } from "node:path";
 import type { AuthoringProvenancePort } from "../ports/authoring-provenance.ts";
 
 export class GitAuthoringProvenance implements AuthoringProvenancePort {
-  constructor(private readonly repoRoot: string) {}
+  private readonly repoRoot: string;
+
+  constructor(repoRoot: string) {
+    this.repoRoot = repoRoot;
+  }
 
   receipts(paths: readonly string[]) {
     const sourceCommit = this.git(["rev-parse", "HEAD"]).trim();

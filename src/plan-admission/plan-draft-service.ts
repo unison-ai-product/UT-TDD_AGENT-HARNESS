@@ -144,12 +144,11 @@ export class PlanDraftRecoveryRequiredError extends Error {
 
 /** 論理commit後の一時成果物cleanupだけが未完了であることを表す。 */
 export class PlanDraftCleanupPendingError<TReceipt extends DraftReceiptBinding> extends Error {
-  constructor(
-    message: string,
-    readonly receipt: TReceipt,
-    options?: ErrorOptions,
-  ) {
+  readonly receipt: TReceipt;
+
+  constructor(message: string, receipt: TReceipt, options?: ErrorOptions) {
     super(message, options);
+    this.receipt = receipt;
     this.name = "PlanDraftCleanupPendingError";
   }
 }
@@ -159,7 +158,11 @@ export class PlanDraftCleanupPendingError<TReceipt extends DraftReceiptBinding> 
  * portの実装はstage時点で既存内容を退避し、restoreを冪等にしなければならない。
  */
 export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
-  constructor(private readonly ports: PlanDraftServicePorts<TPayload, TReceipt>) {}
+  private readonly ports: PlanDraftServicePorts<TPayload, TReceipt>;
+
+  constructor(ports: PlanDraftServicePorts<TPayload, TReceipt>) {
+    this.ports = ports;
+  }
 
   execute(command: PlanDraftCommand<TPayload>): PlanDraftResult<TReceipt> {
     this.ports.validator.validate(command);

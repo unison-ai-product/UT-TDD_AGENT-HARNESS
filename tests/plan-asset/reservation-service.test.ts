@@ -223,7 +223,11 @@ describe("PLAN reservation service", () => {
 
 class SequenceClock implements ClockPort {
   calls = 0;
-  constructor(private readonly values: string[]) {}
+  private readonly values: string[];
+
+  constructor(values: string[]) {
+    this.values = values;
+  }
   now(): string {
     this.calls += 1;
     const value = this.values.shift();
@@ -254,7 +258,11 @@ class FakeKeyRing implements LeaseTokenKeyRingPort {
 class RaceLedger implements ReservationLedgerPort {
   private reads = 0;
 
-  constructor(private readonly winner: ReservationLedgerRecord) {}
+  private readonly winner: ReservationLedgerRecord;
+
+  constructor(winner: ReservationLedgerRecord) {
+    this.winner = winner;
+  }
 
   findReserveByCommand(): ReservationLedgerRecord | null {
     this.reads += 1;

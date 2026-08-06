@@ -35,11 +35,12 @@ interface CloseInput {
 export class PlanLedger implements ReservationLedgerPort {
   private readonly appendCommands: AppendCommandTransaction;
 
-  constructor(
-    private readonly db: HarnessDb,
-    transactionPort?: LedgerTransactionPort,
-    private readonly fault?: LedgerFaultPort,
-  ) {
+  private readonly db: HarnessDb;
+  private readonly fault?: LedgerFaultPort;
+
+  constructor(db: HarnessDb, transactionPort?: LedgerTransactionPort, fault?: LedgerFaultPort) {
+    this.db = db;
+    this.fault = fault;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
     this.appendCommands = new AppendCommandTransaction(db, transactionPort, fault);
   }

@@ -25,11 +25,12 @@ interface AppendCommand {
 export class AppendCommandTransaction {
   private readonly transaction: LedgerTransactionPort;
 
-  constructor(
-    private readonly db: HarnessDb,
-    transaction?: LedgerTransactionPort,
-    private readonly fault?: LedgerFaultPort,
-  ) {
+  private readonly db: HarnessDb;
+  private readonly fault?: LedgerFaultPort;
+
+  constructor(db: HarnessDb, transaction?: LedgerTransactionPort, fault?: LedgerFaultPort) {
+    this.db = db;
+    this.fault = fault;
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
   }
 

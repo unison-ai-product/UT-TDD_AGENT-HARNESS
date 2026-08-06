@@ -22,6 +22,7 @@ import {
 } from "./runtime-state.ts";
 import { checkSetupSmoke } from "./setup-smoke.ts";
 
+export { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 export { checkImportSpecifiers } from "../lint/import-specifier.ts";
 export type { DoctorOptions } from "./check-registry.ts";
 export {

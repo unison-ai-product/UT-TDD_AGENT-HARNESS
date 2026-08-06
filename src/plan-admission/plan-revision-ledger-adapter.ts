@@ -15,10 +15,16 @@ export interface PlanRevisionReceipt extends DraftReceiptBinding {
 export class PlanRevisionLedgerAdapter
   implements DraftLedgerPort<PlanRevisionExecutionPayload, PlanRevisionReceipt>
 {
+  private readonly adopted: PlanRevisionLedgerTransaction;
+  private readonly legacy: LegacyPlanRevisionBootstrapTransaction;
+
   constructor(
-    private readonly adopted: PlanRevisionLedgerTransaction,
-    private readonly legacy: LegacyPlanRevisionBootstrapTransaction,
-  ) {}
+    adopted: PlanRevisionLedgerTransaction,
+    legacy: LegacyPlanRevisionBootstrapTransaction,
+  ) {
+    this.adopted = adopted;
+    this.legacy = legacy;
+  }
 
   transact(
     command: PlanDraftCommand<PlanRevisionExecutionPayload>,

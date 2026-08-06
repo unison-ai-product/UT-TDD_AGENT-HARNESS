@@ -30,10 +30,10 @@ export type AppendPlanDraftResult =
 export class PlanDraftLedgerTransaction {
   private readonly transaction: LedgerTransactionPort;
 
-  constructor(
-    private readonly db: HarnessDb,
-    transaction?: LedgerTransactionPort,
-  ) {
+  private readonly db: HarnessDb;
+
+  constructor(db: HarnessDb, transaction?: LedgerTransactionPort) {
+    this.db = db;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
   }

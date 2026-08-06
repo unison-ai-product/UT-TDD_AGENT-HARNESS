@@ -85,6 +85,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "ddd-tdd-rules",
   "runtime-portability",
   "import-specifier",
+  "erasable-syntax",
   "rule-drift",
   "model-id-doc-drift",
   "gate-confirm",

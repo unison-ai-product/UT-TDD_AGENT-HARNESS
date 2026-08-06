@@ -79,7 +79,11 @@ export interface MigrationDecisionPort {
 }
 
 export class LegacyMigrationDryRun {
-  constructor(private readonly decisions: MigrationDecisionPort = new ReviewedDecisionManifest()) {}
+  private readonly decisions: MigrationDecisionPort;
+
+  constructor(decisions: MigrationDecisionPort = new ReviewedDecisionManifest()) {
+    this.decisions = decisions;
+  }
 
   run(repoRoot: string): MigrationDryRunReport | { readonly ok: false; readonly ruleId: string } {
     const inventory = buildLegacyPlanInventory(repoRoot);
@@ -344,7 +348,11 @@ function artifactFindings(
 }
 
 export class HeadTargetRegistry {
-  private constructor(private readonly files: ReadonlyMap<string, number>) {}
+  private readonly files: ReadonlyMap<string, number>;
+
+  private constructor(files: ReadonlyMap<string, number>) {
+    this.files = files;
+  }
 
   static load(repoRoot: string): HeadTargetRegistry {
     const output = execFileSync("git", ["-C", repoRoot, "ls-tree", "-r", "-l", "HEAD"], {

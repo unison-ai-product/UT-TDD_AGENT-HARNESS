@@ -121,7 +121,11 @@ export interface GitDiffNamesPort {
 }
 
 export class SystemGitDiffNamesPort implements GitDiffNamesPort {
-  constructor(private readonly repoRoot: string) {}
+  private readonly repoRoot: string;
+
+  constructor(repoRoot: string) {
+    this.repoRoot = repoRoot;
+  }
 
   diffNames(range: string): string[] {
     const output = execFileSync("git", ["-C", this.repoRoot, "diff", "--name-only", range], {

@@ -29,11 +29,15 @@ export type ReservationLease =
   | { readonly ok: false; readonly ruleId: string };
 
 export class ReservationService {
-  constructor(
-    private readonly ledger: ReservationLedgerPort,
-    private readonly clock: ClockPort,
-    private readonly keyRing: LeaseTokenKeyRingPort,
-  ) {}
+  private readonly ledger: ReservationLedgerPort;
+  private readonly clock: ClockPort;
+  private readonly keyRing: LeaseTokenKeyRingPort;
+
+  constructor(ledger: ReservationLedgerPort, clock: ClockPort, keyRing: LeaseTokenKeyRingPort) {
+    this.ledger = ledger;
+    this.clock = clock;
+    this.keyRing = keyRing;
+  }
 
   reserve(request: ReserveRequest): ReservationLease {
     if (!validRequest(request)) return failed("plan-id-reservation-invalid");
