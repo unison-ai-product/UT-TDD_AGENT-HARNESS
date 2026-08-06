@@ -13,14 +13,8 @@ import type { PairDoc } from "../src/vmodel/lint.ts";
 const cliPath = join(process.cwd(), "src", "cli.ts");
 
 function runCli(args: string[], cwd = process.cwd()) {
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd,
-      encoding: "utf8",
-    });
-  }
-  return spawnSync("bun", [cliPath, ...args], { cwd, encoding: "utf8" });
+  // PLAN-L7-462 step 2: CLI 実発火 oracle は node 直 spawn (cmd.exe/bun 経由なし)。
+  return spawnSync("node", [cliPath, ...args], { cwd, encoding: "utf8", windowsHide: true });
 }
 
 const doc = (

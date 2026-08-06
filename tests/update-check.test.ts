@@ -24,12 +24,9 @@ if (!EXECUTION_ROOT) throw new Error("update-check CLI tests require an executio
 const CLI_PATH = join(EXECUTION_ROOT, "src", "cli.ts");
 
 function runCli(args: string[], env: NodeJS.ProcessEnv, cwd = EXECUTION_ROOT) {
-  const base = { cwd, encoding: "utf8" as const, env, timeout: 120_000 };
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", CLI_PATH, ...args], base);
-  }
-  return spawnSync("bun", [CLI_PATH, ...args], base);
+  const base = { cwd, encoding: "utf8" as const, env, timeout: 120_000, windowsHide: true };
+  // PLAN-L7-462 step 2: CLI 実発火 oracle は node 直 spawn (cmd.exe/bun 経由なし)。
+  return spawnSync("node", [CLI_PATH, ...args], base);
 }
 
 function mockDeps(

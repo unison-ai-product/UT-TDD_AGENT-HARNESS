@@ -14,20 +14,13 @@ const cliPath = join(repoRoot, "src", "cli.ts");
 
 function runCli(cwd: string, args: string[], input?: unknown) {
   const stdin = input === undefined ? undefined : JSON.stringify(input);
-  if (process.platform === "win32") {
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd,
-      encoding: "utf8",
-      env: process.env,
-      input: stdin,
-    });
-  }
-  return spawnSync("bun", [cliPath, ...args], {
+  // PLAN-L7-462 step 2: CLI 実発火 oracle は node 直 spawn (cmd.exe/bun 経由なし)。
+  return spawnSync("node", [cliPath, ...args], {
     cwd,
     encoding: "utf8",
     env: process.env,
     input: stdin,
+    windowsHide: true,
   });
 }
 

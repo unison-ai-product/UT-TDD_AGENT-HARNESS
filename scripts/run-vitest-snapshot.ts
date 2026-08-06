@@ -13,7 +13,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, win32 } from "node:path";
+import { dirname, join, relative, win32 } from "node:path";
 import { resolveDefaultBranchRef } from "../src/git/default-branch.ts";
 import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash.ts";
 
@@ -45,7 +45,32 @@ export function resolveBunBinary(
 ): string {
   // Bun上では現在のnative executableが最も強い証拠。Bun.which("bun")はWindowsで
   // bun.cmdを返し、cmd.exe/conhost.exeを再導入するためfallbackに限定する。
+  // PLAN-L7-462 step 2 以降、bun は harness 実行系ではなく Pack/consumer acceptance
+  // テストの fixture 依存 (UT_TDD_BUN_BINARY 契約) のためだけに解決する。
   return current.isBun ? current.executable : (runtime?.which?.("bun") ?? "bun");
+}
+
+export function resolveNodeBinary(current = {
+  isBun: Boolean(process.versions.bun),
+  executable: process.execPath,
+}): string {
+  // node 上では現在の executable が正。bun 経由で起動された場合のみ PATH 解決へ落とす。
+  return current.isBun ? "node" : current.executable;
+}
+
+export function resolveNpmCli(nodeBinary = resolveNodeBinary()): string {
+  // npm を .cmd shim (cmd.exe/conhost 再導入) なしで起動するため npm-cli.js を直接指す。
+  // Windows: <nodedir>/node_modules/npm/bin/npm-cli.js
+  // POSIX:   <nodedir>/../lib/node_modules/npm/bin/npm-cli.js
+  const nodeDir = dirname(nodeBinary === "node" ? (output("node", ["-e", "console.log(process.execPath)"], process.cwd()) ?? "node") : nodeBinary);
+  const candidates = [
+    join(nodeDir, "node_modules", "npm", "bin", "npm-cli.js"),
+    join(nodeDir, "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error(`npm-cli.js not found next to node executable (${nodeDir})`);
 }
 
 export function canonicalPath(path: string): string {
@@ -334,12 +359,14 @@ export function runSnapshotTests(
   let sealedReferenceFingerprint: string | undefined;
   try {
     const bun = resolveBunBinary();
+    const node = resolveNodeBinary();
+    const npmCli = resolveNpmCli(node);
     const source = resolveSnapshotSource(repoRoot);
     createSnapshot(repoRoot, snapshotRoot, source);
     createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot));
     if (source.kind === "copy") assertSnapshotContentMatch(snapshotRoot, referenceRoot);
-    run(bun, ["install", "--frozen-lockfile"], snapshotRoot);
-    run(bun, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
+    run(node, [npmCli, "ci", "--no-audit", "--no-fund"], snapshotRoot);
+    run(node, ["src/cli.ts", "db", "rebuild"], snapshotRoot);
     copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);
     if (source.kind === "git")
       run(
@@ -349,7 +376,7 @@ export function runSnapshotTests(
     );
     sealReference(referenceRoot);
     sealedReferenceFingerprint = snapshotContentFingerprint(referenceRoot);
-    run(bun, ["x", "vitest", "run", ...args], snapshotRoot, {
+    run(node, [join("node_modules", "vitest", "vitest.mjs"), "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
       UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,

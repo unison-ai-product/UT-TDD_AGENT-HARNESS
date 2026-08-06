@@ -39,7 +39,8 @@ function commandFor(raw: string): string[] {
 
 try {
   const raw = await readStdin();
-  const child = spawnSync("bun", [join(repoRoot, "src", "cli.ts"), ...commandFor(raw)], {
+  // PLAN-L7-462 step 2: 後方互換 shim も node 直起動 (settings.json 側 swap に覆われない入口)。
+  const child = spawnSync("node", [join(repoRoot, "src", "cli.ts"), ...commandFor(raw)], {
     cwd: repoRoot,
     encoding: "utf8",
     input: raw,

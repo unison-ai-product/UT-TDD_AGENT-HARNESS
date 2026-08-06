@@ -135,13 +135,16 @@ const PULL_REQUEST_ACTIVITY_TYPES = new Set([
 
 const SOURCE_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
-  { label: "setup-bun@v2", any: ["oven-sh/setup-bun@v2"] },
-  { label: "frozen install", any: ["bun install --frozen-lockfile"] },
+  // PLAN-L7-462 step 2: node が harness 実行系の正式 runtime。setup-bun は
+  // Pack/consumer acceptance テストの fixture 依存としてのみ残置 (Issue #134 debt)。
+  { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
+  { label: "setup-bun@v2 (fixture)", any: ["oven-sh/setup-bun@v2"] },
+  { label: "frozen install", any: ["npm ci"] },
   { label: "github guard", any: ["github guard"] },
-  { label: "typecheck", any: ["bun run typecheck"] },
+  { label: "typecheck", any: ["npm run typecheck"] },
   { label: "db rebuild", any: ["db rebuild"] },
-  { label: "full tests", any: ["bun run test"] },
-  { label: "lint", any: ["bun run lint"] },
+  { label: "full tests", any: ["npm run test"] },
+  { label: "lint", any: ["npm run lint"] },
   { label: "audit quality", any: ["audit quality"] },
   { label: "full doctor", any: ["src/cli.ts doctor"] },
 ] as const;
@@ -251,14 +254,15 @@ const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
 const LANE_REFERENCE_NEEDLE = "steps.classify.outputs.lane";
 const LANE_FULL_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'full' }}";
 const LANE_DOC_ONLY_IF = "$" + "{{ steps.classify.outputs.lane == 'doc' }}";
-// 注意: 素朴な部分文字列一致だと "bun run test" が doc lane 専用の
-// "bun run test:doc-lane" を誤って full-only allowlist に混入させる (substring collision)。
+// 注意: 素朴な部分文字列一致だと "npm run test" が doc lane 専用の
+// "npm run test:doc-lane" を誤って full-only allowlist に混入させる (substring collision)。
 // `\b...\b(?!:)` で script suffix (`:fast` 等) 付き script 名との衝突を避ける。
 const LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS: readonly ((text: string) => boolean)[] = [
-  (text) => text.includes("bun run typecheck"),
+  (text) => text.includes("npm run typecheck"),
   (text) => text.includes("db rebuild"),
-  (text) => /\bbun\s+run\s+test\b(?!:)/.test(text),
-  (text) => text.includes("bun run test:fast"),
+  (text) => /\bnpm\s+run\s+test\b(?!:)/.test(text),
+  (text) => text.includes("npm run test:fast"),
+  (text) => text.includes("npm run test:cli"),
   (text) => text.includes("audit quality"),
   (text) => text.includes("src/cli.ts doctor") && !text.includes("--profile source-doc-lane"),
 ];
@@ -269,7 +273,7 @@ function matchesLaneSkipAllowlist(text: string): boolean {
 
 const githubExpression = (expression: string): string => ["$", `{{ ${expression} }}`].join("");
 const CLASSIFY_COMMAND = [
-  "bun src/cli.ts github classify-changes",
+  "node src/cli.ts github classify-changes",
   `--event-name "${githubExpression("github.event_name")}"`,
   `--head-sha "${githubExpression("github.sha")}"`,
   `--base-sha "${githubExpression("github.event.pull_request.base.sha")}"`,
@@ -295,7 +299,7 @@ function isFailCloseStep(step: WorkflowStep): boolean {
 function hasCanonicalDocLaneDoctor(step: WorkflowStep): boolean {
   return (
     step.if === LANE_DOC_ONLY_IF &&
-    normalizedRun(step.run) === "bun src/cli.ts doctor --profile source-doc-lane" &&
+    normalizedRun(step.run) === "node src/cli.ts doctor --profile source-doc-lane" &&
     step.shell === undefined &&
     step.env === undefined &&
     isFailCloseStep(step)
@@ -343,12 +347,12 @@ const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly obj
       },
       run: `printf '%s\\n' "$PR_BODY" > .ut-tdd-pr-body.txt
 git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
-bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
+node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt`,
     }),
-    run("typecheck (tsc --noEmit)", "bun run typecheck", LANE_FULL_ONLY_IF),
+    run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
     run(
       "db rebuild (deterministic projection)",
-      "bun src/cli.ts db rebuild --json",
+      "node src/cli.ts db rebuild --json",
       LANE_FULL_ONLY_IF,
     ),
     step("doctor (governance hard gates)", {
@@ -356,7 +360,7 @@ bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-t
       env: {
         UT_TDD_DOCTOR_RESULT_FILE: `${githubExpression("runner.temp")}/ut-tdd-doctor-result.json`,
       },
-      run: 'bun src/cli.ts doctor --strict-green-command-digest --result-file "$UT_TDD_DOCTOR_RESULT_FILE"',
+      run: 'node src/cli.ts doctor --strict-green-command-digest --result-file "$UT_TDD_DOCTOR_RESULT_FILE"',
     }),
     step("test — 全回帰 (vitest run)", {
       if: LANE_FULL_ONLY_IF,
@@ -365,7 +369,7 @@ bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-t
         UT_TDD_DOCTOR_RESULT_ROOT: githubExpression("github.workspace"),
         UT_TDD_DOCTOR_RESULT_STRICT: "1",
       },
-      run: "bun run test",
+      run: "npm run test",
     }),
     run(
       "doc lane checks (plan lint / readability / rule-drift)",
@@ -374,18 +378,18 @@ bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-t
     ),
     run(
       "doc lane source doctor",
-      "bun src/cli.ts doctor --profile source-doc-lane",
+      "node src/cli.ts doctor --profile source-doc-lane",
       LANE_DOC_ONLY_IF,
     ),
-    run("lint (biome)", "bun run lint"),
+    run("lint (biome)", "npm run lint"),
     run(
       "audit quality (gate findings)",
-      "bun src/cli.ts audit quality --include-tests --limit 20",
+      "node src/cli.ts audit quality --include-tests --limit 20",
       LANE_FULL_ONLY_IF,
     ),
     run(
       "job summary (UT-TDD projection)",
-      'bun src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"',
+      'node src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"',
       REQUIRED_AGGREGATE_IF,
     ),
   ],
@@ -395,19 +399,24 @@ bun src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-t
       ...classifyFields,
       shell: "bash",
     }),
-    run("typecheck (tsc --noEmit)", "bun run typecheck", LANE_FULL_ONLY_IF),
+    run("typecheck (tsc --noEmit)", "npm run typecheck", LANE_FULL_ONLY_IF),
     run(
       "db rebuild (deterministic projection on Windows SQLite)",
-      "bun src/cli.ts db rebuild --json",
+      "node src/cli.ts db rebuild --json",
       LANE_FULL_ONLY_IF,
     ),
-    run("test — scoped 回帰 (vitest run, windows leg)", "bun run test:fast", LANE_FULL_ONLY_IF),
+    run("test — scoped 回帰 (vitest run, windows leg)", "npm run test:fast", LANE_FULL_ONLY_IF),
+    run(
+      "test — CLI/hook 実発火 (vitest run test:cli, windows leg)",
+      "npm run test:cli",
+      LANE_FULL_ONLY_IF,
+    ),
     run(
       "doc lane source checks",
-      "bun src/cli.ts doctor --profile source-doc-lane",
+      "node src/cli.ts doctor --profile source-doc-lane",
       LANE_DOC_ONLY_IF,
     ),
-    run("doctor (toolchain scope)", "bun src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
+    run("doctor (toolchain scope)", "node src/cli.ts doctor --scope toolchain", LANE_FULL_ONLY_IF),
   ],
 };
 
