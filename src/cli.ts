@@ -8,7 +8,6 @@ import { execFileSync, spawn } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
   statSync,
@@ -180,6 +179,7 @@ import {
   UPDATE_CHECK_DISABLE_ENV,
   updateCheckDisabled,
 } from "./setup/update-check";
+import { ensureDir } from "./shared/fs";
 import {
   bucketRecommendations,
   buildSkillInjectionSet,
@@ -1986,7 +1986,7 @@ skill
       let written = false;
       if (writable) {
         const absolute = join(repoRoot, result.path);
-        mkdirSync(dirname(absolute), { recursive: true });
+        ensureDir(dirname(absolute), { recursive: true });
         writeFileSync(absolute, result.content, "utf8");
         written = true;
       }
@@ -2476,7 +2476,7 @@ function loadRouteApprovalPolicy(repoRoot: string): RouteApprovalPolicy | undefi
 
 function appendRouteApprovalAudit(repoRoot: string, evaluated: RouteEvalResult): string {
   const auditDir = join(repoRoot, ".ut-tdd", "audit");
-  mkdirSync(auditDir, { recursive: true });
+  ensureDir(auditDir, { recursive: true });
   const auditPath = join(auditDir, "route-approval.jsonl");
   appendFileSync(
     auditPath,

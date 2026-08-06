@@ -8,8 +8,9 @@
  * 付きで残す。
  */
 
-import { appendFileSync, mkdirSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { ensureDir } from "../shared/fs";
 
 export const DESIGN_DECISION_LOG_PATH = ".ut-tdd/logs/design-decisions.jsonl";
 
@@ -54,7 +55,7 @@ export function appendDesignDecision(
   if (!record.chosen) throw new Error("chosen is required");
   if (!record.reason) throw new Error("reason is required");
   const logPath = join(repoRoot, DESIGN_DECISION_LOG_PATH);
-  mkdirSync(dirname(logPath), { recursive: true });
+  ensureDir(dirname(logPath), { recursive: true });
   appendFileSync(logPath, `${JSON.stringify(record)}\n`, "utf8");
   return record;
 }

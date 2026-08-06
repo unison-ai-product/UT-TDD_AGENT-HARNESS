@@ -1,6 +1,7 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
 import { extractEditTargets, normalizeRepoRelative } from "../shared/edit-targets";
+import { ensureDir } from "../shared/fs";
 import { analyzeArtifacts, type ReadabilityArtifact, type ReadabilityResult } from "./readability";
 
 export interface WriteEncodingGuardInput {
@@ -148,7 +149,7 @@ export function appendWriteEncodingViolationLog(opts: {
   const { repoRoot, input, result, now = () => new Date().toISOString() } = opts;
   if (result.ok) return;
   const path = join(repoRoot, ".ut-tdd", "logs", "encoding-violations.jsonl");
-  mkdirSync(dirname(path), { recursive: true });
+  ensureDir(dirname(path), { recursive: true });
   appendFileSync(
     path,
     `${JSON.stringify({

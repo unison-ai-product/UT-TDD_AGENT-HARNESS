@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { ensureDir } from "../shared/fs";
 import { loadChangedFiles } from "./change-impact";
 import { normalizePath } from "./shared";
 import { PROFILE_RUNNERS, PROFILES, SIGNAL_TO_PROFILE } from "./verification-profile-catalog";
@@ -148,7 +149,7 @@ export function nodeVerificationProbeDeps(repoRoot: string = process.cwd()): Ver
     },
     readText: (path) => (existsSync(path) ? readFileSync(path, "utf8") : null),
     writeText: (path, content) => {
-      mkdirSync(dirname(path), { recursive: true });
+      ensureDir(dirname(path), { recursive: true });
       writeFileSync(path, content);
     },
   };

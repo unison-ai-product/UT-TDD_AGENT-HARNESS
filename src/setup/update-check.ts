@@ -11,9 +11,10 @@
  * - Remote results are cached for 24 hours under the harness root.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureDir } from "../shared/fs";
 
 export const UPDATE_CHECK_TTL_MS = 24 * 60 * 60 * 1000;
 export const UPDATE_CHECK_CACHE_PATH = join(".ut-tdd", "state", "update-check.json");
@@ -281,7 +282,7 @@ export function nodeUpdateCheckDeps(
       }
     },
     writeText: (p, c) => {
-      mkdirSync(dirname(p), { recursive: true });
+      ensureDir(dirname(p), { recursive: true });
       writeFileSync(p, c);
     },
     hasOwnGit: () => existsSync(join(harnessRoot, ".git")),

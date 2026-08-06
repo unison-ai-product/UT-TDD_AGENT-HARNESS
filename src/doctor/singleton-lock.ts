@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
+import { ensureDir } from "../shared/fs";
 
 /**
  * doctor 多重起動ガード (PLAN-L7-442)。
@@ -80,7 +81,7 @@ export function defaultDoctorLockDeps(): DoctorLockDeps {
 
 export function defaultDoctorLockIo(): DoctorLockIo {
   return {
-    mkdirRecursive: (path) => mkdirSync(path, { recursive: true }),
+    mkdirRecursive: (path) => ensureDir(path, { recursive: true }),
     createExclusive: (path, content) => writeFileSync(path, content, { flag: "wx" }),
     readText: (path) => readFileSync(path, "utf8"),
     list: (path) => readdirSync(path),

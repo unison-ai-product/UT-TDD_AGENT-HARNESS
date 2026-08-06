@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
-  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -29,6 +28,7 @@ import {
   gitAddPathspecCommands,
   transformCleanDistributionArtifact,
 } from "../setup/index";
+import { ensureDir } from "../shared/fs";
 
 function gitHead(): string | null {
   // Distribution commands are intentionally valid in an unpacked clean artifact,
@@ -72,7 +72,7 @@ function copyCleanDistributionArtifact(input: {
 }): void {
   const from = join(input.sourceRoot, ...input.sourcePath.split("/"));
   const to = join(input.targetRoot, ...input.artifactPath.split("/"));
-  mkdirSync(dirname(to), { recursive: true });
+  ensureDir(dirname(to), { recursive: true });
   if (input.artifactPath === "package.json") {
     writeFileSync(
       to,
@@ -291,7 +291,7 @@ export function registerDistributionCommands(program: Command): void {
           stagingDir: outDir,
           branch: opts.branch,
         });
-        mkdirSync(outDir, { recursive: true });
+        ensureDir(outDir, { recursive: true });
         const plannedArtifacts = new Set(exportPlan.artifactPaths);
         const unmanagedExistingPaths = collectDistributionCandidatePaths(outDir).filter(
           (path) =>
@@ -444,7 +444,7 @@ export function registerDistributionCommands(program: Command): void {
               )
             : existingBefore;
         const manifestDir = join(repoRoot, ".ut-tdd", "pack-sync");
-        mkdirSync(manifestDir, { recursive: true });
+        ensureDir(manifestDir, { recursive: true });
         const manifest = join(
           manifestDir,
           `${exportPlan.sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-")}.sync-pack.json`,
@@ -571,7 +571,7 @@ export function registerDistributionCommands(program: Command): void {
       let tarResult: ReturnType<typeof spawnSync> | null = null;
       try {
         if (exportPlan.ok && secretScan.ok) {
-          mkdirSync(outDir, { recursive: true });
+          ensureDir(outDir, { recursive: true });
           for (const rel of exportPlan.artifactPaths) {
             const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
             copyCleanDistributionArtifact({

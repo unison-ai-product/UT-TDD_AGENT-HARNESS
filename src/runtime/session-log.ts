@@ -12,13 +12,13 @@
 import {
   appendFileSync,
   existsSync,
-  mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { ensureDir } from "../shared/fs";
 import { evaluateMemoryPromotion } from "./memory-promotion";
 import { classifyVerificationVerb } from "./verb-classify";
 
@@ -554,12 +554,12 @@ export function nodeDeps(
     repoRoot,
     now: () => new Date().toISOString(),
     appendLine: (path, line) => {
-      mkdirSync(dirname(path), { recursive: true });
+      ensureDir(dirname(path), { recursive: true });
       appendFileSync(path, `${line}\n`, "utf8");
     },
     readText: (path) => (existsSync(path) ? readFileSync(path, "utf8") : null),
     writeText: (path, content) => {
-      mkdirSync(dirname(path), { recursive: true });
+      ensureDir(dirname(path), { recursive: true });
       writeFileSync(path, content, "utf8");
     },
     currentBranch: gitBranch,

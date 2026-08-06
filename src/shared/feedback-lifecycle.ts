@@ -1,5 +1,6 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { ensureDir } from "./fs";
 
 export type FeedbackLifecycleState = "open" | "ack" | "closed" | "superseded";
 
@@ -78,7 +79,7 @@ export function appendFeedbackLifecycleBatch(
   if (records.length === 0) return true;
   try {
     const path = feedbackLifecyclePath(repoRoot);
-    mkdirSync(dirname(path), { recursive: true });
+    ensureDir(dirname(path), { recursive: true });
     appendFileSync(path, records.map(renderFeedbackLifecycle).join(""), "utf8");
     return true;
   } catch {

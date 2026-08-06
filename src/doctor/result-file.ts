@@ -29,9 +29,10 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { defaultBranchRefMap, headSha } from "../git/default-branch";
+import { ensureDir } from "../shared/fs";
 import { buildFullDoctorCheckDefinitions } from "./check-definitions";
 import type { DoctorResult } from "./result";
 import { nodeDoctorDeps } from "./runtime-state";
@@ -354,7 +355,7 @@ export function writeDoctorResultEnvelopeFile(
     producer: doctorResultProducerIdentity(repoRoot),
     result: input.result,
   });
-  mkdirSync(dirname(filePath), { recursive: true });
+  ensureDir(dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${JSON.stringify(envelope, null, 2)}\n`, "utf8");
 }
 

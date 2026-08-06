@@ -8,7 +8,7 @@ status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-03
-updated: 2026-07-08
+updated: 2026-08-05
 owner: PM / PO
 review_evidence:
   - reviewer: codex-tl
@@ -71,11 +71,15 @@ generates:
     artifact_type: source_module
   - artifact_path: src/shared/edit-targets.ts
     artifact_type: source_module
+  - artifact_path: src/shared/fs.ts
+    artifact_type: source_module
   - artifact_path: src/runtime/work-guard.ts
     artifact_type: source_module
   - artifact_path: src/cli.ts
     artifact_type: source_module
   - artifact_path: tests/write-encoding-guard.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/shared-fs.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-395-byte-integrity-readability-guard.md
