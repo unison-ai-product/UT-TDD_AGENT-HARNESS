@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { HarnessDb } from "../../state-db/index.js";
-import { ledgerRowDigest } from "./schema.js";
-import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
+import type { HarnessDb } from "../../state-db/index.ts";
+import { ledgerRowDigest } from "./schema.ts";
+import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.ts";
 
 export type AppendResult =
   | { readonly ok: true; readonly replayed: boolean; readonly resultRef: string }

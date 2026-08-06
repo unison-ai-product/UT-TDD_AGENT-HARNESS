@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePlanIdIdentity, parseReservablePlanIdIdentity } from "../src/schema/plan-id.js";
+import { parsePlanIdIdentity, parseReservablePlanIdIdentity } from "../src/schema/plan-id.ts";
 
 describe("PLAN draft shared identity (PLAN-L7-435)", () => {
   it.each([

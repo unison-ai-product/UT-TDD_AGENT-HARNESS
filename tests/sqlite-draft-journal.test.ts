@@ -4,9 +4,9 @@ import {
   DraftJournalIntegrityError,
   DraftJournalRecoveryRequiredError,
   SqliteDraftJournal,
-} from "../src/plan-admission/sqlite-draft-journal.js";
-import { PlanDraftLedgerTransaction } from "../src/plan-asset/ledger/plan-draft-ledger.js";
-import { openHarnessDb } from "../src/state-db/index.js";
+} from "../src/plan-admission/sqlite-draft-journal.ts";
+import { PlanDraftLedgerTransaction } from "../src/plan-asset/ledger/plan-draft-ledger.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
 afterEach(() => {

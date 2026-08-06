@@ -1,5 +1,5 @@
-import { canonicalField, sha256 } from "./canonical-frame";
-import type { DocumentDelta, DocumentMemberIdentity } from "./document-delta";
+import { canonicalField, sha256 } from "./canonical-frame.ts";
+import type { DocumentDelta, DocumentMemberIdentity } from "./document-delta.ts";
 
 const encoder = new TextEncoder();
 

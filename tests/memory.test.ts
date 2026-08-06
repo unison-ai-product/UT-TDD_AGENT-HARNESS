@@ -2,12 +2,16 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadMemoryEntries, renderMemorySurface, selectMemoryEntries } from "../src/memory/index";
-import { writeMemory } from "../src/memory/service";
-import { isSecretLike } from "../src/secret";
-import { openHarnessDb } from "../src/state-db/index";
-import { rebuildHarnessDb } from "../src/state-db/projection-writer";
-import { removeTestTree } from "./support/temp-tree";
+import {
+  loadMemoryEntries,
+  renderMemorySurface,
+  selectMemoryEntries,
+} from "../src/memory/index.ts";
+import { writeMemory } from "../src/memory/service.ts";
+import { isSecretLike } from "../src/secret.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function tempRepo(): string {
   return mkdtempSync(join(tmpdir(), "ut-tdd-memory-"));

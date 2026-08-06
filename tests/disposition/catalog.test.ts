@@ -4,7 +4,7 @@ import {
   type CatalogInput,
   DocumentDispositionCatalog,
   sourceItemEdgeId,
-} from "../../src/disposition/domain/document-disposition-catalog";
+} from "../../src/disposition/domain/document-disposition-catalog.ts";
 
 const digest = (seed: string) => createHash("sha256").update(seed).digest("hex");
 

@@ -17,14 +17,14 @@ import {
   type ChunkedFileIo,
   hashFileChunked,
   hashFileChunkedWithDiagnostics,
-} from "./support/chunked-hash";
+} from "./support/chunked-hash.ts";
 import {
   assertGitWorkspaceUnchanged,
   captureGitWorkspaceFingerprint,
   captureWorkspaceInventory,
   type GitWorkspaceFingerprint,
-} from "./support/git-workspace-fingerprint";
-import { removeTestTree } from "./support/temp-tree";
+} from "./support/git-workspace-fingerprint.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const fingerprint: GitWorkspaceFingerprint = {
   head: "head",

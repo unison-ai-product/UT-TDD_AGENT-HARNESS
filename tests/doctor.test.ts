@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups";
+import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups.ts";
 import {
   buildFullDoctorCheckDefinitions,
   collectDoctorCheckRun,
@@ -15,11 +15,11 @@ import {
   isConsumerSafeDoctorRunProfile,
   resolveDoctorRunProfile,
   selectDoctorCheckDefinitions,
-} from "../src/doctor/check-registry";
+} from "../src/doctor/check-registry.ts";
 import {
   checkDependencyDrift as checkDependencyDriftAdapter,
   checkRegressionExpansion as checkRegressionExpansionAdapter,
-} from "../src/doctor/dependency-regression";
+} from "../src/doctor/dependency-regression.ts";
 import {
   checkAgentContractDetection,
   checkAgentSlots,
@@ -86,18 +86,18 @@ import {
   type DoctorDeps,
   nodeDoctorDeps,
   runDoctor,
-} from "../src/doctor/index";
-import { buildDoctorResult } from "../src/doctor/result";
-import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage";
-import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
+} from "../src/doctor/index.ts";
+import { buildDoctorResult } from "../src/doctor/result.ts";
+import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage.ts";
+import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots.ts";
 import {
   analyzeDesignDetectionStats,
   DESIGN_QUALITY_CHECK_IDS,
   type DesignDetectionStats,
   designDetectionMessages,
-} from "../src/state-db/design-detection";
-import { consumeDoctorResultEnvelope } from "./support/doctor-envelope";
-import { headSnapshotRoot } from "./support/workspace-roots";
+} from "../src/state-db/design-detection.ts";
+import { consumeDoctorResultEnvelope } from "./support/doctor-envelope.ts";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
@@ -245,8 +245,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                   type: "command",
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts",
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`,
                   ],
                   blockOnFailure: true,
                 },
@@ -259,8 +259,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                   type: "command",
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts",
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`,
                   ],
                   blockOnFailure: true,
                 },
@@ -274,8 +274,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                   type: "command",
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
-                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
+                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
                     "session",
                     "start",
                   ],
@@ -291,8 +291,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                   type: "command",
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
-                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
+                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
                     "hook",
                     "post-tool-use",
                   ],
@@ -307,8 +307,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                   type: "command",
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
-                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
+                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
                     "session",
                     "summary",
                   ],
@@ -321,8 +321,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                   type: "command",
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
-                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
+                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
                     "hook",
                     "claude-memory-wake",
                   ],
@@ -338,8 +338,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
                   type: "command",
                   command: "node",
                   args: [
-                    "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts",
-                    "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
+                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
                     "hook",
                     "subagent-stop",
                   ],
@@ -1635,8 +1635,8 @@ describe("runDoctor", () => {
     expect(indexSource).toContain(
       "const { checks, timings } = collectDoctorCheckRun(deps, options)",
     );
-    expect(registrySource).toContain('} from "./runner"');
-    expect(registrySource).toContain('} from "./check-definitions"');
+    expect(registrySource).toContain('} from "./runner.ts"');
+    expect(registrySource).toContain('} from "./check-definitions.ts"');
     expect(runnerSource).toContain("export function collectDoctorCheckRun");
     expect(runnerSource).toContain("export function collectDoctorChecks");
     expect(definitionsSource).toContain("export function buildFullDoctorCheckDefinitions");
@@ -1644,7 +1644,7 @@ describe("runDoctor", () => {
     expect(groupSource).toContain("export function buildDoctorCheckDefinitionGroups");
     expect(runnerSource).toContain("buildFullDoctorCheckDefinitions(deps, options)");
     expect(definitionsSource).not.toContain("checkPlanReferenceFreshnessAdvisory");
-    expect(registrySource).toContain('} from "./profiles"');
+    expect(registrySource).toContain('} from "./profiles.ts"');
     expect(profileSource).toContain("export const DOCTOR_RUN_PROFILES");
     expect(profileSource).toContain("export const DOCTOR_RUN_PROFILE_IDS");
     expect(profileSource).toContain("export function resolveDoctorRunProfile");

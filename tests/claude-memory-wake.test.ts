@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import type { MemoryEntry } from "../src/memory";
+import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
   claudeWorkspaceId,
@@ -12,7 +12,7 @@ import {
   renderClaudeWakeMessage,
   resolveClaudeWakeDelay,
   waitForClaudeMemory,
-} from "../src/runtime/claude-memory-wake";
+} from "../src/runtime/claude-memory-wake.ts";
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:review-218",

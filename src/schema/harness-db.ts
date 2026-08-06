@@ -1,6 +1,6 @@
-import { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "./harness-db-catalog";
+import { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "./harness-db-catalog.ts";
 
-export { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "./harness-db-catalog";
+export { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "./harness-db-catalog.ts";
 
 /**
  * harness.db projection schema — 単一正本 (PLAN-L7-45, 工程表 PLAN-L7-44 span ①)。

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { removeTestTree } from "./support/temp-tree";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("temporary tree cleanup", () => {
   it("U-TESTHYGIENE-008: collects DB handles before retrying Windows tree removal", () => {

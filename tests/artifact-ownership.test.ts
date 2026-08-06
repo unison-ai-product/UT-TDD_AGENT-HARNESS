@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeArtifactOwnership } from "../src/lint/artifact-ownership";
+import { analyzeArtifactOwnership } from "../src/lint/artifact-ownership.ts";
 
 describe("PLAN-L7-450 W2 duplicate artifact ownership", () => {
   it("U-L7-450-W2-001: duplicate declaration is a fail-closed finding, not last-wins", () => {

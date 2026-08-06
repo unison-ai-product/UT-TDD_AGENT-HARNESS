@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { type MemoryEntry, selectMemoryEntries } from "../src/memory/index";
+import { type MemoryEntry, selectMemoryEntries } from "../src/memory/index.ts";
 import {
   compareIndexToCorpus,
   loadMemoryCorpus,
@@ -10,9 +10,9 @@ import {
   readMemory,
   renderMemoryHealth,
   writeMemory,
-} from "../src/memory/service";
-import { removeTestTree } from "./support/temp-tree";
-import { workspaceRead } from "./support/workspace-roots";
+} from "../src/memory/service.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
+import { workspaceRead } from "./support/workspace-roots.ts";
 
 function tempRepo(): string {
   return mkdtempSync(join(tmpdir(), "ut-tdd-memory-service-"));

@@ -10,7 +10,7 @@
  * 物理サイズ最適化であり、rebuild が担う鮮度保証 (PLAN-L7-365) の一部ではないため。
  */
 import { existsSync, statSync } from "node:fs";
-import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index";
+import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
 
 export interface MaybeVacuumOptions {
   /** VACUUM 発火閾値の絶対下限 (bytes)。既定 64MiB。 */

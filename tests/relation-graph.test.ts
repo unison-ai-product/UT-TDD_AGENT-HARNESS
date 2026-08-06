@@ -15,9 +15,9 @@ import {
   exportRelationDiagram,
   type RelationGraphSourceSet,
   type RelationImpactActionKind,
-} from "../src/lint/relation-graph";
-import { collectVerificationEvidenceProjection } from "../src/lint/relation-graph-evidence";
-import type { RelationGraphProjection as SidecarRelationGraphProjection } from "../src/lint/relation-graph-types";
+} from "../src/lint/relation-graph.ts";
+import { collectVerificationEvidenceProjection } from "../src/lint/relation-graph-evidence.ts";
+import type { RelationGraphProjection as SidecarRelationGraphProjection } from "../src/lint/relation-graph-types.ts";
 
 describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
   it("U-RELGRAPH-001: requirements/PLAN/design/test-design/source/test fixtures が安定 node ID + typed edge を生成し (kind,id,path) 重複行ゼロ", () => {

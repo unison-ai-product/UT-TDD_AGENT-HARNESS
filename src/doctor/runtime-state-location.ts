@@ -1,6 +1,6 @@
 import { type Dirent, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
-import type { LintResult } from "../plan/lint";
+import type { LintResult } from "../plan/lint.ts";
 
 export interface RuntimeStateLocationFinding {
   kind: "misplaced" | "scan-error";

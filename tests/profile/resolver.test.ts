@@ -5,7 +5,7 @@ import {
   type DocumentProfile,
   type DocumentProfileDecision,
   resolveDocumentProfile,
-} from "../../src/profile/domain/resolver.js";
+} from "../../src/profile/domain/resolver.ts";
 
 const profiles: DocumentProfile[] = [
   {

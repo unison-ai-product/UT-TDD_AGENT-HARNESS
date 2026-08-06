@@ -31,11 +31,11 @@
 import { createHash } from "node:crypto";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { defaultBranchRefMap, headSha } from "../git/default-branch";
-import { ensureDir } from "../shared/fs";
-import { buildFullDoctorCheckDefinitions } from "./check-definitions";
-import type { DoctorResult } from "./result";
-import { nodeDoctorDeps } from "./runtime-state";
+import { defaultBranchRefMap, headSha } from "../git/default-branch.ts";
+import { ensureDir } from "../shared/fs.ts";
+import { buildFullDoctorCheckDefinitions } from "./check-definitions.ts";
+import type { DoctorResult } from "./result.ts";
+import { nodeDoctorDeps } from "./runtime-state.ts";
 
 export const DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION = "v3";
 

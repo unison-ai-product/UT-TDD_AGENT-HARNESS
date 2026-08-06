@@ -3,8 +3,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeLayerPairGate, evaluateStaticGate, readCoverageSummary } from "../src/gate/static";
-import type { PairDoc } from "../src/vmodel/lint";
+import {
+  analyzeLayerPairGate,
+  evaluateStaticGate,
+  readCoverageSummary,
+} from "../src/gate/static.ts";
+import type { PairDoc } from "../src/vmodel/lint.ts";
 
 const cliPath = join(process.cwd(), "src", "cli.ts");
 

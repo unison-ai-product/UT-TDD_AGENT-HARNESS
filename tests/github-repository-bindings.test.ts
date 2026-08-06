@@ -2,29 +2,29 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { renderPrTraceBlock } from "../src/github/pr-trace";
-import type { GhCommandPort } from "../src/github/project-v2";
+import { renderPrTraceBlock } from "../src/github/pr-trace.ts";
+import type { GhCommandPort } from "../src/github/project-v2.ts";
 import {
   resolveCurrentPlanRevision,
   syncRepositoryBindings,
-} from "../src/github/repository-bindings";
+} from "../src/github/repository-bindings.ts";
 import {
   combinedReviewReceiptDigest,
   decodeMergeClosureReceipt,
   reviewReceiptDigest,
-} from "../src/kernel/github-closure-receipt";
-import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence";
+} from "../src/kernel/github-closure-receipt.ts";
+import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
 import {
   TRACKED_RECEIPT_SCHEMA,
   trackedReceiptRecordDigest,
-} from "../src/plan-admission/tracked-receipt-projection";
+} from "../src/plan-admission/tracked-receipt-projection.ts";
 import {
   isManualGithubObservationKind,
   readForwardSchedule,
-} from "../src/state-db/github-forward-projection";
-import { resolvePlanRevisionIdentity } from "../src/state-db/github-review-lane-provenance";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
+} from "../src/state-db/github-forward-projection.ts";
+import { resolvePlanRevisionIdentity } from "../src/state-db/github-review-lane-provenance.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 
 class FakeGh implements GhCommandPort {
   readonly #payloads: unknown[];

@@ -14,8 +14,8 @@ import {
   OPTIONAL_SKILL_LABEL,
   REQUIRED_SKILL_LABEL,
   unavailableProviderMessage,
-} from "./adapter-policy";
-import type { ExecutionMode } from "./detect";
+} from "./adapter-policy.ts";
+import type { ExecutionMode } from "./detect.ts";
 
 export type AdapterProvider = "claude" | "codex";
 

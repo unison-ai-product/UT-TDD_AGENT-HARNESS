@@ -6,22 +6,22 @@ import {
   CODEX_REQUIRED,
   codexHookAdapterMessages,
   loadCodexHookAdapterInput,
-} from "../src/lint/codex-hook-adapter";
+} from "../src/lint/codex-hook-adapter.ts";
 import {
   CODEX_DEFERRED_SURFACE as CODEX_DEFERRED_SURFACE_POLICY,
   CODEX_NOT_APPLICABLE as CODEX_NOT_APPLICABLE_POLICY,
   CODEX_REQUIRED as CODEX_REQUIRED_POLICY,
-} from "../src/lint/codex-hook-adapter-policy";
-import { parseHookInvocation } from "../src/lint/hook-invocation";
+} from "../src/lint/codex-hook-adapter-policy.ts";
+import { parseHookInvocation } from "../src/lint/hook-invocation.ts";
 import {
   REQUIRED as CLAUDE_REQUIRED,
   WRAPPER_HOOK_LAUNCHER,
   wrapperHookArgs,
-} from "../src/lint/project-hook";
-import { analyzeReadability } from "../src/lint/readability";
-import { evaluateAgentGuard } from "../src/runtime/agent-guard";
-import { evaluateWorkGuard } from "../src/runtime/work-guard";
-import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
+} from "../src/lint/project-hook.ts";
+import { analyzeReadability } from "../src/lint/readability.ts";
+import { evaluateAgentGuard } from "../src/runtime/agent-guard.ts";
+import { evaluateWorkGuard } from "../src/runtime/work-guard.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 /** .codex/hooks.json と同型の有効な Codex adapter fixture (mutate して fail-close を検証)。 */
 function validCodexHooks(): Record<string, unknown> {

@@ -5,7 +5,7 @@ import {
   type TopologyFinding,
   topologyDigest,
   type WorktreeFact,
-} from "../src/runtime/worktree-topology";
+} from "../src/runtime/worktree-topology.ts";
 
 const oid = "a".repeat(40);
 function fact(overrides: Partial<WorktreeFact> = {}): WorktreeFact {

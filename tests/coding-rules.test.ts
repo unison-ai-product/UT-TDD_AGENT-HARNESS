@@ -6,7 +6,7 @@ import {
   loadCodingRuleDocs,
   loadCodingRulePolicy,
   loadCodingWorkflowDocs,
-} from "../src/lint/coding-rules";
+} from "../src/lint/coding-rules.ts";
 
 describe("U-CODE coding-rules lint", () => {
   it("detects source naming, explicit any, suppression comments, and >3 source params", () => {

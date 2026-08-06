@@ -9,7 +9,7 @@ import {
   extractEditTargets,
   normalizeRepoRelative,
   resolveForeignEditOverride,
-} from "../src/runtime/work-guard";
+} from "../src/runtime/work-guard.ts";
 
 const hookRepoRoot = process.cwd();
 const workGuardHook = join(hookRepoRoot, ".claude", "hooks", "work-guard.ts");

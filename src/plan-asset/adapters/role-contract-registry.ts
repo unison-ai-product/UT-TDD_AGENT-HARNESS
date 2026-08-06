@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
-import { type Role, VALID_ROLES } from "../../schema/index.js";
+import { type Role, VALID_ROLES } from "../../schema/index.ts";
 
 const SOURCE = "docs/governance/vmodel-role-contracts.md";
 

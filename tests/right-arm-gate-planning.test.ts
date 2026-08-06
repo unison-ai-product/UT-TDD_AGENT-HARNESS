@@ -6,7 +6,7 @@ import {
   type RightArmGatePlanningInput,
   type RightArmVerifyPlan,
   rightArmGatePlanningMessages,
-} from "../src/lint/right-arm-gate-planning";
+} from "../src/lint/right-arm-gate-planning.ts";
 
 const layers = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"];
 const expectedVerifyPlans = layers.map((layer) => ({

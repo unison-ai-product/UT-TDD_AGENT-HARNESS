@@ -19,9 +19,9 @@ import {
   sanitize,
   setActivePlan,
   summarize,
-} from "../src/runtime/session-log";
-import { openHarnessDb } from "../src/state-db";
-import { rebuildHarnessDb } from "../src/state-db/projection-writer";
+} from "../src/runtime/session-log.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
 
 /** in-memory file store の mock deps (now 固定で決定論)。 */
 function mockDeps(

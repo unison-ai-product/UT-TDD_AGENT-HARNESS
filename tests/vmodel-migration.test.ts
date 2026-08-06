@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { SCHEMA_VERSION } from "../src/schema/harness-db";
-import { openHarnessDb } from "../src/state-db";
-import { migrate } from "../src/state-db/migration";
+import { SCHEMA_VERSION } from "../src/schema/harness-db.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 
 describe("V-model version 26 projection migration", () => {
   it("rebuilds derived profile tables with typed constraints instead of nullable ALTER", () => {

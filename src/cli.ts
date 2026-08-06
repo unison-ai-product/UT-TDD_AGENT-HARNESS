@@ -21,48 +21,48 @@ import {
   catalogAutomationAssets,
   checkRosterConsistency,
   listRosterRegistry,
-} from "./assets/catalog";
-import { loadBranchAudit, renderBranchAudit } from "./audit/branches";
-import { renderQualityAudit, runQualityAudit } from "./audit/quality";
+} from "./assets/catalog.ts";
+import { loadBranchAudit, renderBranchAudit } from "./audit/branches.ts";
+import { renderQualityAudit, runQualityAudit } from "./audit/quality.ts";
 import {
   adapterExecutionEnv,
   executeAdapterPlanForCli,
   registerDelegationCommands,
-} from "./cli/delegation";
-import { registerDistributionCommands } from "./cli/distribution";
-import { registerFeedbackCommands } from "./cli/feedback";
-import { registerPlanAdmissionCommands } from "./cli/plan-admission";
-import { registerPlanAssetCommands } from "./cli/plan-asset";
-import { registerPlanDraftCommand } from "./cli/plan-draft";
-import { registerPlanRevisionCommand } from "./cli/plan-revise";
-import { contextSuggest } from "./context/doc-router";
-import { runDoctor } from "./doctor";
+} from "./cli/delegation.ts";
+import { registerDistributionCommands } from "./cli/distribution.ts";
+import { registerFeedbackCommands } from "./cli/feedback.ts";
+import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
+import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
+import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
+import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
+import { contextSuggest } from "./context/doc-router.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
   DOCTOR_RUN_PROFILES,
   type DoctorRunProfileId,
-} from "./doctor/check-registry";
-import { writeDoctorResultEnvelopeFile } from "./doctor/result-file";
-import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock";
-import { renderElicitationContext, selectElicitationContext } from "./elicitation/context";
-import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record";
-import { computeSkillMetrics } from "./feedback/engine";
-import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
-import { writeGateRunEvidence } from "./gate/run-evidence";
-import { evaluateStaticGate } from "./gate/static";
-import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane";
-import { collectJobSummary, renderJobSummary } from "./github/job-summary";
-import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
-import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace";
-import { GhProjectV2Adapter, persistProjectSync, syncForwardProject } from "./github/project-v2";
-import { syncRepositoryBindings } from "./github/repository-bindings";
+} from "./doctor/check-registry.ts";
+import { runDoctor } from "./doctor/index.ts";
+import { writeDoctorResultEnvelopeFile } from "./doctor/result-file.ts";
+import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock.ts";
+import { renderElicitationContext, selectElicitationContext } from "./elicitation/context.ts";
+import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record.ts";
+import { computeSkillMetrics } from "./feedback/engine.ts";
+import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier.ts";
+import { writeGateRunEvidence } from "./gate/run-evidence.ts";
+import { evaluateStaticGate } from "./gate/static.ts";
+import { runChangeLaneClassification, SystemGitDiffNamesPort } from "./github/change-lane.ts";
+import { collectJobSummary, renderJobSummary } from "./github/job-summary.ts";
+import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard.ts";
+import { renderPrTraceBlock, validatePrTraceBody } from "./github/pr-trace.ts";
+import { GhProjectV2Adapter, persistProjectSync, syncForwardProject } from "./github/project-v2.ts";
+import { syncRepositoryBindings } from "./github/repository-bindings.ts";
 import {
   diffRepositoryPolicy,
   normalizeRulesets,
   parseRepositoryPolicy,
   renderPolicyDiff,
-} from "./github/repository-policy";
-import { loadRelationGraphSourceSet } from "./graph/loader";
+} from "./github/repository-policy.ts";
+import { loadRelationGraphSourceSet } from "./graph/loader.ts";
 import {
   checkHandoverBypass,
   checkHandoverDiscipline,
@@ -70,25 +70,25 @@ import {
   nodeHandoverDeps,
   runHandover,
   setActivePlanCli,
-} from "./handover/index";
+} from "./handover/index.ts";
 import {
   renderSessionStartDigest,
   selectSessionStartDigest,
-} from "./handover/session-start-digest";
-import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact";
+} from "./handover/session-start-digest.ts";
+import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
 import {
   applyDigestAnchorCandidatesToContent,
   nodeHistoryScanDeps,
   planDigestMigration,
-} from "./lint/green-command-digest";
-import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding";
+} from "./lint/green-command-digest.ts";
+import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding.ts";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
   exportRelationDiagram,
   type RelationDiagramAdapter,
-} from "./lint/relation-graph";
-import { loadReviewPlans } from "./lint/review-evidence";
+} from "./lint/relation-graph.ts";
+import { loadReviewPlans } from "./lint/review-evidence.ts";
 import {
   inspectMcpProfile,
   listVerificationProfiles,
@@ -98,43 +98,43 @@ import {
   runVerificationProfile,
   saveVerificationEvidence,
   verificationRecommendationMermaid,
-} from "./lint/verification-profile";
-import { runWriteEncodingGuard } from "./lint/write-encoding-guard";
-import { type MemoryKind, renderMemoryList, renderMemorySurface } from "./memory/index";
+} from "./lint/verification-profile.ts";
+import { runWriteEncodingGuard } from "./lint/write-encoding-guard.ts";
+import { type MemoryKind, renderMemoryList, renderMemorySurface } from "./memory/index.ts";
 import {
   type MemoryQueryOptions,
   type MemoryReadResult,
   readMemory,
   renderMemoryHealth,
   writeMemory,
-} from "./memory/service";
-import { lintPlanWithGate } from "./plan/lint";
-import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner";
-import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner";
+} from "./memory/service.ts";
+import { lintPlanWithGate } from "./plan/lint.ts";
+import { createNodePlanDraftRunner } from "./plan-admission/node-plan-draft-runner.ts";
+import { createNodePlanRevisionRunner } from "./plan-admission/node-plan-revision-runner.ts";
 import {
   type AdapterContextInjection,
   type AdapterProvider,
   buildProviderInvocation,
-} from "./runtime/adapter";
+} from "./runtime/adapter.ts";
 import {
   type AgentGuardInput,
   evaluateAgentGuard,
   normalizeModelFamily,
   type ResolvedFamily,
-} from "./runtime/agent-guard";
-import { SUBAGENT_ALLOWLIST } from "./runtime/agent-guard-policy";
+} from "./runtime/agent-guard.ts";
+import { SUBAGENT_ALLOWLIST } from "./runtime/agent-guard-policy.ts";
 import {
   nodeAgentSlotsDeps,
   recordGuardFire,
   releaseOldestGuardSlot,
   sweepStaleGuardSlots,
-} from "./runtime/agent-slots";
+} from "./runtime/agent-slots.ts";
 import {
   attemptsFromSessionEvents,
   evaluateAttemptEscalation,
   renderEscalationSignals,
   selectPrecedingSessionFile,
-} from "./runtime/attempt-escalation";
+} from "./runtime/attempt-escalation.ts";
 import {
   buildClaudeInboxEntry,
   claudeWorkspaceId,
@@ -142,17 +142,17 @@ import {
   publishClaudeInboxEntry,
   resolveClaudeWakeDelay,
   waitForClaudeMemory,
-} from "./runtime/claude-memory-wake";
-import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect";
-import { scanDanglingStops } from "./runtime/forced-stop";
+} from "./runtime/claude-memory-wake.ts";
+import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
+import { scanDanglingStops } from "./runtime/forced-stop.ts";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
   readProviderHandoverCurrent,
   runProviderHandover,
-} from "./runtime/provider-handover";
-import { requireRuntimeRepoRoot } from "./runtime/repo-root";
-import { summarizeStagedReview } from "./runtime/review-guard";
+} from "./runtime/provider-handover.ts";
+import { requireRuntimeRepoRoot } from "./runtime/repo-root.ts";
+import { summarizeStagedReview } from "./runtime/review-guard.ts";
 import {
   dispatch,
   nodeDeps,
@@ -161,15 +161,15 @@ import {
   resolveActivePlan,
   type SessionHookInput,
   safeName,
-} from "./runtime/session-log";
+} from "./runtime/session-log.ts";
 import {
   evaluateWorkGuardTargets,
   extractEditTargets,
   normalizeRepoRelative,
   resolveForeignEditOverride,
-} from "./runtime/work-guard";
-import { findReference } from "./search/index";
-import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
+} from "./runtime/work-guard.ts";
+import { findReference } from "./search/index.ts";
+import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index.ts";
 import {
   checkForUpdate,
   defaultHarnessRoot,
@@ -178,8 +178,8 @@ import {
   renderUpdateLine,
   UPDATE_CHECK_DISABLE_ENV,
   updateCheckDisabled,
-} from "./setup/update-check";
-import { ensureDir } from "./shared/fs";
+} from "./setup/update-check.ts";
+import { ensureDir } from "./shared/fs.ts";
 import {
   bucketRecommendations,
   buildSkillInjectionSet,
@@ -187,8 +187,8 @@ import {
   recommendSkillsForText,
   recordSkillRecommendations,
   resolveRuntimeSessionId,
-} from "./skill-engine/recommend";
-import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold";
+} from "./skill-engine/recommend.ts";
+import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold.ts";
 import {
   claimGithubProjection,
   deriveStoredForwardReadiness,
@@ -199,23 +199,23 @@ import {
   recordGithubBinding,
   selectActiveProjectRows,
   selectExistingProjectPlans,
-} from "./state-db/github-forward-projection";
-import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
-import { harnessDbStatus } from "./state-db/maintenance";
-import { migrate } from "./state-db/migration";
+} from "./state-db/github-forward-projection.ts";
+import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index.ts";
+import { harnessDbStatus } from "./state-db/maintenance.ts";
+import { migrate } from "./state-db/migration.ts";
 import {
   projectModelEvaluations,
   projectTokenUsage,
   rebuildHarnessDb,
-} from "./state-db/projection-writer";
-import { buildScopeDryRunPreview } from "./state-db/scope-preview";
+} from "./state-db/projection-writer.ts";
+import { buildScopeDryRunPreview } from "./state-db/scope-preview.ts";
 import {
   refuseBunStopRefresh,
   runCoalescedStopRefresh,
   spawnDetachedStopRefresh,
-} from "./state-db/stop-refresh";
-import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
-import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
+} from "./state-db/stop-refresh.ts";
+import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker.ts";
+import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify.ts";
 import {
   type Provider,
   type RouterRole,
@@ -223,22 +223,22 @@ import {
   route,
   routeTeamMembers,
   routeToAdapterPlan,
-} from "./task/tier-router";
+} from "./task/tier-router.ts";
 import {
   ADVISOR_DECISION_KINDS,
   type AdvisorDecisionKind,
   buildAdvisorDecision,
-} from "./team/advisor-policy";
-import { recommendTeamLaunch } from "./team/launch-policy";
+} from "./team/advisor-policy.ts";
+import { recommendTeamLaunch } from "./team/launch-policy.ts";
 import {
   buildTeamRunPlan,
   executeTeamRunPlan,
   loadTeamDefinition,
   type MemberPlacement,
-} from "./team/run";
-import { analyzeTraceImpact } from "./trace/impact";
-import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection";
-import { lintVmodel } from "./vmodel/lint";
+} from "./team/run.ts";
+import { analyzeTraceImpact } from "./trace/impact.ts";
+import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection.ts";
+import { lintVmodel } from "./vmodel/lint.ts";
 import {
   buildCommandCatalog,
   evaluateRouteCommand,
@@ -247,8 +247,8 @@ import {
   type RouteEvalResult,
   type RouteSignalEntry,
   validateRouteConfigText,
-} from "./workflow/contracts";
-import { evaluateAutomationReadiness } from "./workflow/readiness";
+} from "./workflow/contracts.ts";
+import { evaluateAutomationReadiness } from "./workflow/readiness.ts";
 
 const HOOK_EVENT_SESSION_START = "SessionStart";
 const SAVE_EVIDENCE_OPTION_DESCRIPTION = "persist normalized evidence for DB collector";

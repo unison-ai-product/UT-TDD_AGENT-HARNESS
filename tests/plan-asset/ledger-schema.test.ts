@@ -7,8 +7,8 @@ import {
   ledgerSchemaDdl,
   migratePlanLedger,
   openPlanLedger,
-} from "../../src/plan-asset/ledger/schema.js";
-import { openHarnessDb } from "../../src/state-db/index.js";
+} from "../../src/plan-asset/ledger/schema.ts";
+import { openHarnessDb } from "../../src/state-db/index.ts";
 
 describe("PLAN Asset canonical ledger schema", () => {
   it("U-PA-009: enforces active alias and ordinal partial uniqueness", () => {

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { invocationEquals, parseHookInvocation } from "./hook-invocation";
-import { PERSONAL_ABSOLUTE_PATH_PATTERN } from "./personal-path";
+import { invocationEquals, parseHookInvocation } from "./hook-invocation.ts";
+import { PERSONAL_ABSOLUTE_PATH_PATTERN } from "./personal-path.ts";
 
 export interface ProjectHookDoc {
   file: string;
@@ -66,7 +66,7 @@ interface RequiredProjectHook {
  * PLAN-RECOVERY-06: gate 要求と setup 生成物の黙った再乖離を防ぐ)。
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
-export const SOURCE_HOOK_LAUNCHER = "${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts";
+export const SOURCE_HOOK_LAUNCHER = `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`;
 export const WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.ts";
 
 const wrapperCommand = (subcommand: string): string => `bun ${WRAPPER_CLI} ${subcommand}`;
@@ -80,7 +80,7 @@ export const REQUIRED = [
     matcher: "Agent|Task",
     commandParts: [".claude/hooks/agent-guard.ts"],
     wrapperCommand: wrapperCommand("hook agent-guard"),
-    sourceArgs: args("${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"),
+    sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`),
     wrapperArgs: args(WRAPPER_CLI, "hook", "agent-guard"),
     blockOnFailure: true,
   },
@@ -90,7 +90,7 @@ export const REQUIRED = [
     matcher: "Edit|Write|MultiEdit",
     commandParts: [".claude/hooks/work-guard.ts"],
     wrapperCommand: wrapperCommand("hook work-guard"),
-    sourceArgs: args("${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"),
+    sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`),
     wrapperArgs: args(WRAPPER_CLI, "hook", "work-guard"),
     blockOnFailure: true,
   },
@@ -99,7 +99,7 @@ export const REQUIRED = [
     event: "SessionStart",
     commandParts: ["src/cli.ts", "session start"],
     wrapperCommand: wrapperCommand("session start"),
-    sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "start"),
+    sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "session", "start"),
     wrapperArgs: args(WRAPPER_CLI, "session", "start"),
   },
   {
@@ -108,7 +108,7 @@ export const REQUIRED = [
     matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
     commandParts: ["src/cli.ts", "hook post-tool-use"],
     wrapperCommand: wrapperCommand("hook post-tool-use"),
-    sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "post-tool-use"),
+    sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "post-tool-use"),
     wrapperArgs: args(WRAPPER_CLI, "hook", "post-tool-use"),
   },
   {
@@ -116,7 +116,7 @@ export const REQUIRED = [
     event: "Stop",
     commandParts: ["src/cli.ts", "session summary"],
     wrapperCommand: wrapperCommand("session summary"),
-    sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary"),
+    sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "session", "summary"),
     wrapperArgs: args(WRAPPER_CLI, "session", "summary"),
   },
   {
@@ -124,7 +124,7 @@ export const REQUIRED = [
     event: "Stop",
     commandParts: ["src/cli.ts", "hook claude-memory-wake"],
     wrapperCommand: wrapperCommand("hook claude-memory-wake"),
-    sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"),
+    sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "claude-memory-wake"),
     wrapperArgs: args(WRAPPER_CLI, "hook", "claude-memory-wake"),
     asyncRewake: true,
   },
@@ -133,7 +133,7 @@ export const REQUIRED = [
     event: "SubagentStop",
     commandParts: ["src/cli.ts", "hook subagent-stop"],
     wrapperCommand: wrapperCommand("hook subagent-stop"),
-    sourceArgs: args("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "subagent-stop"),
+    sourceArgs: args(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "subagent-stop"),
     wrapperArgs: args(WRAPPER_CLI, "hook", "subagent-stop"),
   },
 ] satisfies readonly RequiredProjectHook[];
@@ -259,7 +259,7 @@ export function analyzeProjectHooks(docs: ProjectHookDoc[]): ProjectHookResult {
             sourceForm &&
             !invocation.args.some(
               (arg) =>
-                arg.includes("${CLAUDE_PROJECT_DIR}/") || arg.includes("$CLAUDE_PROJECT_DIR/"),
+                arg.includes(`\${CLAUDE_PROJECT_DIR}/`) || arg.includes("$CLAUDE_PROJECT_DIR/"),
             )
           ) {
             violations.push({

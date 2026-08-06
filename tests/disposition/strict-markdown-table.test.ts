@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStrictMarkdownTable } from "../../src/disposition/adapters/strict-markdown-table";
+import { parseStrictMarkdownTable } from "../../src/disposition/adapters/strict-markdown-table.ts";
 
 const encode = (text: string) => new TextEncoder().encode(text);
 const valid = "| `id` | name |\n|---|---|\n| `A` | Alpha |\n";

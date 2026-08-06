@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
-} from "../src/kernel/plan-draft-command-digest.js";
+} from "../src/kernel/plan-draft-command-digest.ts";
 
 const command: CanonicalPlanDraftCommand = {
   commandId: "command:draft-1",

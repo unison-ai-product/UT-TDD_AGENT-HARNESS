@@ -6,7 +6,7 @@ import {
   isReviewCustodyProjection,
   reviewGuardMessages,
   summarizeStagedReview,
-} from "../src/runtime/review-guard";
+} from "../src/runtime/review-guard.ts";
 
 describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
   describe("isReadOnlyDelegationRole", () => {

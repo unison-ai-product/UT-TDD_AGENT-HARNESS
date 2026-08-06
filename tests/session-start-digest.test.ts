@@ -3,9 +3,9 @@ import {
   renderSessionStartDigest,
   selectScheduleLiveState,
   selectSessionStartDigest,
-} from "../src/handover/session-start-digest";
-import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
+} from "../src/handover/session-start-digest.ts";
+import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 
 const opened: HarnessDb[] = [];
 

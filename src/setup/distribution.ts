@@ -1,4 +1,4 @@
-import { COMMON_FILES } from "./templates";
+import { COMMON_FILES } from "./templates.ts";
 
 export interface CleanDistributionPlan {
   ok: boolean;

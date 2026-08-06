@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { resolveBunBinary } from "../scripts/run-vitest-snapshot";
+import { resolveBunBinary } from "../scripts/run-vitest-snapshot.ts";
 
 describe("global setup fence", () => {
   it("U-TESTHYGIENE-043: turns a sealed detached-reference teardown violation into a nonzero runner process", () => {

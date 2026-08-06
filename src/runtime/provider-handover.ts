@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { ensureDir } from "../shared/fs";
-import { sanitize } from "./session-log";
+import { ensureDir } from "../shared/fs.ts";
+import { sanitize } from "./session-log.ts";
 
 export type ProviderRuntime = "claude" | "codex";
 

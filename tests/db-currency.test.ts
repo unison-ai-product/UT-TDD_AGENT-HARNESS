@@ -13,18 +13,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency";
-import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration";
-import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration";
-import { defaultHarnessDbPath } from "../src/state-db/index";
-import { rebuildHarnessDb } from "../src/state-db/projection-writer";
+import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency.ts";
+import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration.ts";
+import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration.ts";
+import { defaultHarnessDbPath } from "../src/state-db/index.ts";
+import { rebuildHarnessDb } from "../src/state-db/projection-writer.ts";
 import {
   isBunExecutable,
   refreshHarnessDbOnStop,
   refuseBunStopRefresh,
   runCoalescedStopRefresh,
   spawnDetachedStopRefresh,
-} from "../src/state-db/stop-refresh";
+} from "../src/state-db/stop-refresh.ts";
 import {
   acquireStopRefreshLease,
   joinStopRefreshLease,
@@ -33,8 +33,8 @@ import {
   releaseStopRefreshLease,
   stopRefreshDirtyPath,
   transferStopRefreshLease,
-} from "../src/state-db/stop-refresh-coordinator";
-import { removeTestTree } from "./support/temp-tree";
+} from "../src/state-db/stop-refresh-coordinator.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const currentStats: DriveDbRegistrationStats = {
   planCount: 10,

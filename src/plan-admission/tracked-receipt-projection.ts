@@ -1,1 +1,1 @@
-export * from "../kernel/github-closure-receipt";
+export * from "../kernel/github-closure-receipt.ts";

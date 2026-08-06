@@ -2,13 +2,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PlanLedger } from "../../src/plan-asset/ledger/plan-ledger.js";
+import { PlanLedger } from "../../src/plan-asset/ledger/plan-ledger.ts";
 import {
   ledgerSchemaDdl,
   migratePlanLedger,
   openPlanLedger,
-} from "../../src/plan-asset/ledger/schema.js";
-import { openHarnessDb } from "../../src/state-db/index.js";
+} from "../../src/plan-asset/ledger/schema.ts";
+import { openHarnessDb } from "../../src/state-db/index.ts";
 
 const digest = "a".repeat(64);
 const now = "2026-07-13T00:00:00Z";

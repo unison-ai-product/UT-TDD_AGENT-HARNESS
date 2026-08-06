@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { isAlias, isMap, isScalar, isSeq, parseDocument } from "yaml";
-import { deriveLegacyAssetId } from "./legacy-plan-adapter.js";
-import { loadProjectIdentityFromHead } from "./project-identity-loader.js";
+import { deriveLegacyAssetId } from "./legacy-plan-adapter.ts";
+import { loadProjectIdentityFromHead } from "./project-identity-loader.ts";
 
 export interface LegacyPlanInventoryItem {
   readonly sourcePath: string;

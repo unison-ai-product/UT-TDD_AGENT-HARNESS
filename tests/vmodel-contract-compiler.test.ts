@@ -6,7 +6,7 @@ import {
   compileRightArmContract,
   RIGHT_ARM_LAYERS,
   VMODEL_LAYERS,
-} from "../src/vmodel-contract/application/contract-compiler";
+} from "../src/vmodel-contract/application/contract-compiler.ts";
 
 function source(): string {
   return readFileSync(resolve(process.cwd(), "docs/process/vmodel-contract.yaml"), "utf8");

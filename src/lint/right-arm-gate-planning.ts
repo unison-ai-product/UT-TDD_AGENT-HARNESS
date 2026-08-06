@@ -9,9 +9,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import YAML from "yaml";
-import { loadCompiledRightArmRegistry } from "../vmodel-contract/adapters/yaml-contract-loader";
-import { parseBacklogEntries } from "./improvement-backlog";
-import { fmValue } from "./shared";
+import { loadCompiledRightArmRegistry } from "../vmodel-contract/adapters/yaml-contract-loader.ts";
+import { parseBacklogEntries } from "./improvement-backlog.ts";
+import { fmValue } from "./shared.ts";
 
 export interface RightArmGatePlanningInput {
   gatesMd: string;

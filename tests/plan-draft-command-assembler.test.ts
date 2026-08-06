@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calculatePlanDraftCommandDigests } from "../src/kernel/plan-draft-command-digest.js";
+import { calculatePlanDraftCommandDigests } from "../src/kernel/plan-draft-command-digest.ts";
 import {
   assemblePlanDraftCommand,
   type DraftManifestV2,
   type PlanDraftEnvironmentSnapshot,
-} from "../src/plan-admission/plan-draft-command-assembler.js";
-import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
+} from "../src/plan-admission/plan-draft-command-assembler.ts";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 
 const planId = "PLAN-L7-999-command-assembler";
 const admission: PlanAdmissionRequest = {

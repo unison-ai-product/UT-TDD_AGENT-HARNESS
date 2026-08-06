@@ -4,7 +4,7 @@ import {
   forwardFreezeContractMessages,
   loadPairDocs,
   type PairDoc,
-} from "../src/vmodel/lint";
+} from "../src/vmodel/lint.ts";
 
 const doc = (
   path: string,

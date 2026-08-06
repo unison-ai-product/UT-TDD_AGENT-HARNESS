@@ -1,4 +1,4 @@
-import type { IndexDef } from "./harness-db";
+import type { IndexDef } from "./harness-db.ts";
 
 export const HARNESS_DB_INDEXES: IndexDef[] = [
   {

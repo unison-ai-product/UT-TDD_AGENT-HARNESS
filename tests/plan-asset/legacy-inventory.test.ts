@@ -3,9 +3,9 @@ import {
   buildLegacyPlanInventory,
   inventoryProjectionDigest,
   parseLegacyPlanSource,
-} from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
-import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.js";
-import { headPlanDocCount } from "./head-plan-doc-count.js";
+} from "../../src/plan-asset/adapters/legacy-plan-inventory.ts";
+import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.ts";
+import { headPlanDocCount } from "./head-plan-doc-count.ts";
 
 describe("legacy PLAN HEAD inventory", () => {
   it("U-PA-019: inventories every HEAD PLAN losslessly with unique asset identities", () => {

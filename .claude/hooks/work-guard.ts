@@ -29,7 +29,7 @@ import {
   normalizeRepoRelative,
   resolveForeignEditOverride,
   type WorkGuardResult,
-} from "../../src/runtime/work-guard";
+} from "../../src/runtime/work-guard.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.CLAUDE_PROJECT_DIR ?? join(here, "..", "..");

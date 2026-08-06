@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
-import { type AuthoringReceipt, verifyAuthoringProvenance } from "../domain/authoring-provenance";
-import { type CatalogInput, sourceItemEdgeId } from "../domain/document-disposition-catalog";
-import { parseStrictMarkdownTable } from "./strict-markdown-table";
+import {
+  type AuthoringReceipt,
+  verifyAuthoringProvenance,
+} from "../domain/authoring-provenance.ts";
+import { type CatalogInput, sourceItemEdgeId } from "../domain/document-disposition-catalog.ts";
+import { parseStrictMarkdownTable } from "./strict-markdown-table.ts";
 
 export type AuthoringBundle = Readonly<Record<string, Uint8Array>>;
 type Row = Readonly<Record<string, string>>;

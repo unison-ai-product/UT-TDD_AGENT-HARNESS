@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance.js";
+import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance.ts";
 import {
   loadTrackedDocumentProfileCatalog,
   type ProfileAuthoringBundle,
-} from "../../src/profile/adapters/tracked-profile-loader.js";
+} from "../../src/profile/adapters/tracked-profile-loader.ts";
 
 const profilePath = "docs/governance/vmodel-document-scale-profiles.md";
 const catalogPath = "docs/governance/vmodel-document-catalog.md";

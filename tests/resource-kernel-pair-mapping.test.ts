@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkResourceKernelPairMapping } from "../src/doctor/doc-registry";
+import { checkResourceKernelPairMapping } from "../src/doctor/doc-registry.ts";
 import {
   ALLOWED_LANES,
   analyzeResourceKernelPairMapping,
@@ -16,8 +16,8 @@ import {
   parseRealRunnerTotal,
   REAL_RUNNER_LANES,
   resourceKernelPairMappingMessages,
-} from "../src/lint/resource-kernel-pair-mapping";
-import { workspaceRead } from "./support/workspace-roots";
+} from "../src/lint/resource-kernel-pair-mapping.ts";
+import { workspaceRead } from "./support/workspace-roots.ts";
 
 const L8_DOC = "docs/test-design/harness/L8-integration-test-design.md";
 const L5_DOC = "docs/plans/PLAN-L5-25-resource-kernel-physical-protocol.md";

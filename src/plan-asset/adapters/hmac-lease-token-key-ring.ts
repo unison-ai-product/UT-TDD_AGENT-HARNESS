@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import type { LeaseTokenKeyRingPort, LeaseTokenMac } from "../ports/lease-token-key-ring.js";
+import type { LeaseTokenKeyRingPort, LeaseTokenMac } from "../ports/lease-token-key-ring.ts";
 
 export interface LeaseTokenKeyMaterial {
   readonly version: string;

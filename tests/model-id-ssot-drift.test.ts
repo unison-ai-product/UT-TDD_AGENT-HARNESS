@@ -1,11 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { findStaleModelIdLiterals } from "../src/lint/model-id-doc-drift";
-import { normalizeModelFamily } from "../src/runtime/agent-guard";
-import { CLAUDE_MODEL_FAMILY_CATALOG, SUBAGENT_ALLOWLIST } from "../src/runtime/agent-guard-policy";
-import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
-import { MODEL_IDS } from "../src/team/model-policy";
+import { findStaleModelIdLiterals } from "../src/lint/model-id-doc-drift.ts";
+import { normalizeModelFamily } from "../src/runtime/agent-guard.ts";
+import {
+  CLAUDE_MODEL_FAMILY_CATALOG,
+  SUBAGENT_ALLOWLIST,
+} from "../src/runtime/agent-guard-policy.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
+import { MODEL_IDS } from "../src/team/model-policy.ts";
 
 // PLAN-L7-256: real-repo regression for model ID SSoT drift.
 // loadTemplates prefers disk templates over built-ins, so both sources must stay aligned.
@@ -29,7 +32,7 @@ import { MODEL_IDS } from "../src/team/model-policy";
 //       && UT_TDD_TEST_EXECUTION_ROOT="$(pwd)" UT_TDD_TEST_FENCE_ROOT="$(pwd)" \
 //          UT_TDD_HEAD_SNAPSHOT_ROOT="$DEST" \
 //          bunx vitest run tests/model-id-ssot-drift.test.ts
-import { headSnapshotRoot } from "./support/workspace-roots";
+import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const repoRoot = headSnapshotRoot();
 const CLAUDE_CATALOG = new Set<string>(Object.values(MODEL_IDS.claude));

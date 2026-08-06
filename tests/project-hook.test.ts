@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { analyzeProjectHooks, REQUIRED } from "../src/lint/project-hook";
-import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
+import { analyzeProjectHooks, REQUIRED } from "../src/lint/project-hook.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 const execHook = (script: string, ...args: string[]) => ({
   type: "command",
   command: "node",
-  args: ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", script, ...args],
+  args: [`\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`, script, ...args],
 });
 
 function teamStandardSettings(): { hooks: Record<string, unknown> } {
@@ -16,7 +16,7 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           matcher: "Agent|Task",
           hooks: [
             {
-              ...execHook("${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"),
+              ...execHook(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`),
               blockOnFailure: true,
             },
           ],
@@ -25,32 +25,34 @@ function teamStandardSettings(): { hooks: Record<string, unknown> } {
           matcher: "Edit|Write|MultiEdit",
           hooks: [
             {
-              ...execHook("${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"),
+              ...execHook(`\${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`),
               blockOnFailure: true,
             },
           ],
         },
       ],
-      SessionStart: [{ hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "start")] }],
+      SessionStart: [
+        { hooks: [execHook(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "session", "start")] },
+      ],
       PostToolUse: [
         {
           matcher: "Edit|Write|MultiEdit|Bash|PowerShell",
-          hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "post-tool-use")],
+          hooks: [execHook(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "post-tool-use")],
         },
       ],
       Stop: [
-        { hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary")] },
+        { hooks: [execHook(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "session", "summary")] },
         {
           hooks: [
             {
-              ...execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"),
+              ...execHook(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "claude-memory-wake"),
               asyncRewake: true,
             },
           ],
         },
       ],
       SubagentStop: [
-        { hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "subagent-stop")] },
+        { hooks: [execHook(`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "subagent-stop")] },
       ],
     },
   };
@@ -87,14 +89,14 @@ describe("project-hook lint", () => {
   it("rejects argv spoofing and forbidden values even when command is bun", () => {
     const spoofed = teamStandardSettings() as { hooks: Record<string, unknown[]> };
     spoofed.hooks.SessionStart = [
-      { hooks: [execHook("${CLAUDE_PROJECT_DIR}/src/cli.tsx", "session", "start")] },
+      { hooks: [execHook(`\${CLAUDE_PROJECT_DIR}/src/cli.tsx`, "session", "start")] },
     ];
     const forbidden = teamStandardSettings() as { hooks: Record<string, unknown[]> };
     forbidden.hooks.SessionStart = [
       {
         hooks: [
           execHook(
-            "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+            `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
             "session",
             "start",
             "C:\\Users\\alice\\private",
@@ -223,7 +225,7 @@ describe("project-hook lint", () => {
         hooks: [
           {
             ...execHook(
-              "${CLAUDE_PROJECT_DIR}/src/cli.ts",
+              `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
               "session",
               "start",
               "--legacy",

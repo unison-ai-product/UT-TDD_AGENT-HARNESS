@@ -26,8 +26,8 @@ import type {
   RelationNodeKind,
   VerificationEvidenceInput,
   VerificationProfileRow,
-} from "./relation-graph-types";
-import { normalizePath } from "./shared";
+} from "./relation-graph-types.ts";
+import { normalizePath } from "./shared.ts";
 
 export type {
   DbTableInput,
@@ -55,7 +55,7 @@ export type {
   TestFileInput,
   VerificationEvidenceInput,
   VerificationProfileRow,
-} from "./relation-graph-types";
+} from "./relation-graph-types.ts";
 
 function nodeId(kind: RelationNodeKind, key: string): string {
   return `${kind}:${key}`;
@@ -651,4 +651,4 @@ export function exportRelationDiagram(input: ExportRelationDiagramInput): Diagra
   };
 }
 
-export * from "./relation-graph-evidence";
+export * from "./relation-graph-evidence.ts";

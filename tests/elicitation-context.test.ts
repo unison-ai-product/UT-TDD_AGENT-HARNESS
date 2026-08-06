@@ -2,10 +2,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { renderElicitationContext, selectElicitationContext } from "../src/elicitation/context";
-import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "../src/elicitation/record";
-import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
+import { renderElicitationContext, selectElicitationContext } from "../src/elicitation/context.ts";
+import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "../src/elicitation/record.ts";
+import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 
 const opened: HarnessDb[] = [];
 const tempDirs: string[] = [];

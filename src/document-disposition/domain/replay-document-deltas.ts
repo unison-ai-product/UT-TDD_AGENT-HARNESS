@@ -1,4 +1,4 @@
-import { canonicalField, sha256 } from "./canonical-frame";
+import { canonicalField, sha256 } from "./canonical-frame.ts";
 import {
   afterOf,
   beforeOf,
@@ -7,12 +7,12 @@ import {
   documentDeltaChainDigest,
   documentDeltaEventDigest,
   validDocumentMemberIdentity,
-} from "./document-delta";
+} from "./document-delta.ts";
 import {
   createDocumentDeltaFinding,
   type DocumentDeltaFinding,
   stableDocumentDeltaFindings,
-} from "./document-delta-finding";
+} from "./document-delta-finding.ts";
 import {
   affectedPath,
   applyDocumentDelta,
@@ -21,8 +21,11 @@ import {
   duplicatePaths,
   effectiveReductionDigest,
   sameMember,
-} from "./document-delta-reducer";
-import { type DocumentDispositionInput, validateDocumentDisposition } from "./document-disposition";
+} from "./document-delta-reducer.ts";
+import {
+  type DocumentDispositionInput,
+  validateDocumentDisposition,
+} from "./document-disposition.ts";
 
 export {
   createDocumentDeltaEvent,
@@ -30,9 +33,9 @@ export {
   type DocumentDeltaPayload,
   type DocumentMemberIdentity,
   documentDeltaChainDigest,
-} from "./document-delta";
+} from "./document-delta.ts";
 
-export type { DocumentDeltaFinding } from "./document-delta-finding";
+export type { DocumentDeltaFinding } from "./document-delta-finding.ts";
 
 export interface DocumentDeltaDecision {
   readonly deltaId: string;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { OPENAI_PRICING } from "../src/state-db/token-tracker";
-import { TIER_TABLE } from "../src/task/tier-router-policy";
-import { buildAdvisorDecision, resolveAdvisorRoutes } from "../src/team/advisor-policy";
+import { OPENAI_PRICING } from "../src/state-db/token-tracker.ts";
+import { TIER_TABLE } from "../src/task/tier-router-policy.ts";
+import { buildAdvisorDecision, resolveAdvisorRoutes } from "../src/team/advisor-policy.ts";
 import {
   advisorHeavyUseRecommended,
   escalateShallowResponse,
@@ -13,7 +13,7 @@ import {
   REVIEW_LANE_MODELS,
   REVIEW_LANES,
   selectTeamModel,
-} from "../src/team/model-policy";
+} from "../src/team/model-policy.ts";
 
 describe("team model policy", () => {
   it("infers critical difficulty from high-risk task terms", () => {

@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance";
-import { openHarnessDb } from "../../src/state-db";
-import { migrate } from "../../src/state-db/migration";
-import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections";
+import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
+import { openHarnessDb } from "../../src/state-db/index.ts";
+import { migrate } from "../../src/state-db/migration.ts";
+import { projectVmodelAuthoring } from "../../src/state-db/vmodel-projections.ts";
 
 const tables = [
   "vmodel_sources",

@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   adaptLegacyPlan,
   resolveLegacyPlanAlias,
-} from "../../src/plan-asset/adapters/legacy-plan-adapter.js";
+} from "../../src/plan-asset/adapters/legacy-plan-adapter.ts";
 import {
   createRedactedCommandArgs,
   EvidenceRecord,
-} from "../../src/plan-asset/domain/evidence-record.js";
-import { PlanAsset, PlanRevision } from "../../src/plan-asset/domain/plan-asset.js";
-import { PlanIdReservation } from "../../src/plan-asset/domain/reservation.js";
+} from "../../src/plan-asset/domain/evidence-record.ts";
+import { PlanAsset, PlanRevision } from "../../src/plan-asset/domain/plan-asset.ts";
+import { PlanIdReservation } from "../../src/plan-asset/domain/reservation.ts";
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);

@@ -3,7 +3,7 @@ import {
   buildReleasePublicationPlan,
   evaluateGithubOpsGuard,
   normalizeBranchRef,
-} from "../src/github/ops-guard";
+} from "../src/github/ops-guard.ts";
 
 describe("github ops guard", () => {
   it("blocks poc branches from merging directly to main", () => {

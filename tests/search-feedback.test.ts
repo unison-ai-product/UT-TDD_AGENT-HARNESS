@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeSkillMetrics, emitFeedbackEvents } from "../src/feedback/engine";
-import { findReference, upsertSearchReference } from "../src/search/index";
-import { openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate, rowCounts } from "../src/state-db/migration";
+import { computeSkillMetrics, emitFeedbackEvents } from "../src/feedback/engine.ts";
+import { findReference, upsertSearchReference } from "../src/search/index.ts";
+import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate, rowCounts } from "../src/state-db/migration.ts";
 
 describe("IT-SEARCH-01 / IT-DB-03 / IT-FEEDBACK-01", () => {
   it("findReference returns exact ID matches before fuzzy token matches without mutating sources", () => {

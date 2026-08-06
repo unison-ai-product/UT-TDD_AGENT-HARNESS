@@ -6,8 +6,8 @@ import {
   loadSubDocCatalogDriftInput,
   parseRequirementCatalog,
   subDocCatalogDriftMessages,
-} from "../src/lint/sub-doc-catalog-drift";
-import { VALID_SUB_DOCS } from "../src/schema/index";
+} from "../src/lint/sub-doc-catalog-drift.ts";
+import { VALID_SUB_DOCS } from "../src/schema/index.ts";
 
 describe("parseRequirementCatalog (U-SDCD-001..002)", () => {
   it("U-SDCD-001: §G.1 code block の単一行/複数行 array を layer→値へ parse する", () => {

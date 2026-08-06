@@ -1,19 +1,19 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { CanonicalPlanDraftCommand } from "../src/kernel/plan-draft-command-digest";
-import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence";
-import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service";
-import type { PlanAdmissionRequest } from "../src/plan-admission/policy";
+import type { CanonicalPlanDraftCommand } from "../src/kernel/plan-draft-command-digest.ts";
+import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence.ts";
+import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service.ts";
+import type { PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 import {
   parseTrackedReceiptProjection,
   TRACKED_RECEIPT_SCHEMA,
-} from "../src/plan-admission/tracked-receipt-projection";
+} from "../src/plan-admission/tracked-receipt-projection.ts";
 import {
   type TrackedReceiptDraftPayload,
   type TrackedReceiptDraftReceipt,
   TrackedReceiptRenderer,
-} from "../src/plan-admission/tracked-receipt-renderer";
-import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory";
+} from "../src/plan-admission/tracked-receipt-renderer.ts";
+import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.ts";
 
 const sourcePath = "docs/plans/PLAN-L7-435-drive-plan-admission-impl.md";
 const projectionPath = "docs/governance/plan-admission-receipts.json";

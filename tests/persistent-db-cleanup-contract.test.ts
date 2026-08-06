@@ -197,7 +197,7 @@ function hasLiveCleanupCall(path: string, source: string): boolean {
     if (
       !ts.isImportDeclaration(statement) ||
       !ts.isStringLiteralLike(statement.moduleSpecifier) ||
-      !/(?:^|\/)support\/temp-tree$/.test(statement.moduleSpecifier.text) ||
+      !/(?:^|\/)support\/temp-tree(?:\.ts)?$/.test(statement.moduleSpecifier.text) ||
       !statement.importClause?.namedBindings ||
       !ts.isNamedImports(statement.importClause.namedBindings)
     )

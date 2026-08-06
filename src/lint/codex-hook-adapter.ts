@@ -22,14 +22,14 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CODEX_REQUIRED } from "./codex-hook-adapter-policy";
-import { invocationEquals, parseHookInvocation } from "./hook-invocation";
+import { CODEX_REQUIRED } from "./codex-hook-adapter-policy.ts";
+import { invocationEquals, parseHookInvocation } from "./hook-invocation.ts";
 import {
   REQUIRED as CLAUDE_REQUIRED,
   FORBIDDEN_PATH_RE,
   SOURCE_HOOK_LAUNCHER,
   WRAPPER_HOOK_LAUNCHER,
-} from "./project-hook";
+} from "./project-hook.ts";
 
 export { CODEX_REQUIRED };
 

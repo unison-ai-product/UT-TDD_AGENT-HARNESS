@@ -20,11 +20,11 @@ import {
   reconcileIssueProjection,
   renderForwardEscapeIssueBody,
   validateForwardEscape,
-} from "../src/execution/forward-escape";
-import { SqliteForwardEscapeJournal } from "../src/execution/sqlite-forward-escape-journal";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { removeTestTree } from "./support/temp-tree";
+} from "../src/execution/forward-escape.ts";
+import { SqliteForwardEscapeJournal } from "../src/execution/sqlite-forward-escape-journal.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 function validCommand(overrides: Partial<RequestForwardEscape> = {}): RequestForwardEscape {
   return {

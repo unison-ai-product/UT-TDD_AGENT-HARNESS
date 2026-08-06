@@ -18,9 +18,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { ensureDir } from "../shared/fs";
-import { evaluateMemoryPromotion } from "./memory-promotion";
-import { classifyVerificationVerb } from "./verb-classify";
+import { ensureDir } from "../shared/fs.ts";
+import { evaluateMemoryPromotion } from "./memory-promotion.ts";
+import { classifyVerificationVerb } from "./verb-classify.ts";
 
 export type SessionEventType =
   | "session_start"

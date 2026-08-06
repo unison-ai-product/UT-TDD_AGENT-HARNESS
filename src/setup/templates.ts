@@ -1,11 +1,11 @@
 import { join } from "node:path";
 // Hook 配線の単一定義源: 生成 settings.json / hooks.json の command は project-hook lint の
 // wrapper 正規形から構築する (gate 要求と setup 生成物の再乖離防止、PLAN-RECOVERY-06)。
-import { WRAPPER_HOOK_LAUNCHER, wrapperHookArgs } from "../lint/project-hook";
+import { WRAPPER_HOOK_LAUNCHER, wrapperHookArgs } from "../lint/project-hook.ts";
 // model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
 // 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
-import { MODEL_IDS } from "../team/model-policy";
-import type { GeneratedFile } from "./index";
+import { MODEL_IDS } from "../team/model-policy.ts";
+import type { GeneratedFile } from "./index.ts";
 
 export type TemplateSet = { [name: string]: string };
 
@@ -309,7 +309,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "  fail(error);",
     "}",
     "function fail(error: unknown): void {",
-    "  process.stderr.write(`UT-TDD hook launcher: ${error instanceof Error ? error.message : String(error)}\\n`);",
+    '  process.stderr.write("UT-TDD hook launcher: " + (error instanceof Error ? error.message : String(error)) + "\\n");',
     "  process.exitCode = 1;",
     "}",
     "",

@@ -4,19 +4,19 @@ import {
   analyzeCodexHookAdapter,
   codexHookAdapterMessages,
   loadCodexHookAdapterInput,
-} from "../lint/codex-hook-adapter";
+} from "../lint/codex-hook-adapter.ts";
 import {
   analyzeGithubCiPolicy,
   githubCiPolicyMessages,
   loadGithubCiPolicyDocs,
   resolveGithubCiRuntimeProfile,
-} from "../lint/github-ci-policy";
+} from "../lint/github-ci-policy.ts";
 import {
   analyzeProjectHooks,
   loadProjectHookDocs,
   projectHookMessages,
-} from "../lint/project-hook";
-import { BUILTIN_GITHUB_TEMPLATES } from "../setup/templates";
+} from "../lint/project-hook.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../setup/templates.ts";
 
 export interface RuntimeSurfaceDeps {
   repoRoot: string;

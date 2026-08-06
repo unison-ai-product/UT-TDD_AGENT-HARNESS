@@ -10,10 +10,10 @@
  */
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { assertSqlIdentifier } from "../schema/harness-db";
-import { ensureDir } from "../shared/fs";
+import { assertSqlIdentifier } from "../schema/harness-db.ts";
+import { ensureDir } from "../shared/fs.ts";
 
-export { isSecretLike, SECRET_PATTERN } from "../secret";
+export { isSecretLike, SECRET_PATTERN } from "../secret.ts";
 
 const nodeRequire = createRequire(import.meta.url);
 

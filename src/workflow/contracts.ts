@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { stableId } from "../stable-id";
-import type { HarnessDb } from "../state-db/index";
-import { upsertRow } from "../state-db/index";
-import { DRIVE_TDD_FITS, type DriveTddFit } from "./contracts-policy";
+import { stableId } from "../stable-id.ts";
+import type { HarnessDb } from "../state-db/index.ts";
+import { upsertRow } from "../state-db/index.ts";
+import { DRIVE_TDD_FITS, type DriveTddFit } from "./contracts-policy.ts";
 import type {
   CommandEvidence,
   ContractResult,
@@ -10,9 +10,9 @@ import type {
   ProjectionRef,
   Severity,
   TestRunEvidenceInput,
-} from "./contracts-types";
+} from "./contracts-types.ts";
 
-export type { DriveTddFit, TddCompatibility } from "./contracts-policy";
+export type { DriveTddFit, TddCompatibility } from "./contracts-policy.ts";
 export type {
   CommandEvidence,
   ContractResult,
@@ -21,7 +21,7 @@ export type {
   Severity,
   TestCaseEvidence,
   TestRunEvidenceInput,
-} from "./contracts-types";
+} from "./contracts-types.ts";
 
 function finding(
   code: string,
@@ -272,7 +272,7 @@ export type {
   RouteEvalResult,
   RouteFilingResult,
   RouteSignalEntry,
-} from "./routing-contracts";
+} from "./routing-contracts.ts";
 export {
   detectRouteEscalationBoundaries,
   evaluateRouteCommand,
@@ -280,7 +280,7 @@ export {
   routeSignalToMode,
   validateDContractDsl,
   validateRouteConfigText,
-} from "./routing-contracts";
+} from "./routing-contracts.ts";
 export function recordCrossCuttingEvent(input: {
   type: string;
   subject_id: string;
@@ -320,7 +320,7 @@ export {
   scoreTaskComplexity,
   suggestSkillInjection,
   validateFolderRules,
-} from "./contracts-extras";
+} from "./contracts-extras.ts";
 export function enforceForwardOrder(input: {
   layer: string;
   gate: string;

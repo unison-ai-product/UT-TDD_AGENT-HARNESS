@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { analyzeTraceImpact } from "../src/trace/impact";
+import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { analyzeTraceImpact } from "../src/trace/impact.ts";
 
 function insertSpec(
   db: ReturnType<typeof openHarnessDb>,

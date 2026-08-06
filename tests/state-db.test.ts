@@ -7,20 +7,20 @@ import {
   primaryKeyOf,
   SCHEMA_VERSION,
   schemaDdl,
-} from "../src/schema/harness-db";
-import { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "../src/schema/harness-db-catalog";
-import { HARNESS_DB_INDEXES as SECTION_HARNESS_DB_INDEXES } from "../src/schema/harness-db-indexes";
-import { col, pk } from "../src/schema/harness-db-table-builders";
-import { HARNESS_DB_CORE_TABLES } from "../src/schema/harness-db-tables-core";
-import { HARNESS_DB_EVALUATION_TABLES } from "../src/schema/harness-db-tables-evaluation";
-import { HARNESS_DB_GITHUB_TABLES } from "../src/schema/harness-db-tables-github";
-import { HARNESS_DB_GRAPH_EXPORT_TABLES } from "../src/schema/harness-db-tables-graph";
-import { HARNESS_DB_SPEC_IR_TABLES } from "../src/schema/harness-db-tables-spec-ir";
-import { HARNESS_DB_VMODEL_TABLES } from "../src/schema/harness-db-tables-vmodel";
-import { assertWithinUtTdd, openHarnessDb, upsertRow } from "../src/state-db/index";
-import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenance";
-import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration";
-import { removeTestTree } from "./support/temp-tree";
+} from "../src/schema/harness-db.ts";
+import { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "../src/schema/harness-db-catalog.ts";
+import { HARNESS_DB_INDEXES as SECTION_HARNESS_DB_INDEXES } from "../src/schema/harness-db-indexes.ts";
+import { col, pk } from "../src/schema/harness-db-table-builders.ts";
+import { HARNESS_DB_CORE_TABLES } from "../src/schema/harness-db-tables-core.ts";
+import { HARNESS_DB_EVALUATION_TABLES } from "../src/schema/harness-db-tables-evaluation.ts";
+import { HARNESS_DB_GITHUB_TABLES } from "../src/schema/harness-db-tables-github.ts";
+import { HARNESS_DB_GRAPH_EXPORT_TABLES } from "../src/schema/harness-db-tables-graph.ts";
+import { HARNESS_DB_SPEC_IR_TABLES } from "../src/schema/harness-db-tables-spec-ir.ts";
+import { HARNESS_DB_VMODEL_TABLES } from "../src/schema/harness-db-tables-vmodel.ts";
+import { assertWithinUtTdd, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenance.ts";
+import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 /**
  * bun:sqlite releases the OS file handle on GC finalization rather than synchronously on

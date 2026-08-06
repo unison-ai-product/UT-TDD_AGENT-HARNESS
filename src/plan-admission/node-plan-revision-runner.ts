@@ -1,24 +1,24 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.js";
-import { LegacyPlanRevisionBootstrapTransaction } from "../plan-asset/ledger/plan-revision-bootstrap.js";
+import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
+import { LegacyPlanRevisionBootstrapTransaction } from "../plan-asset/ledger/plan-revision-bootstrap.ts";
 import {
   type AppendPlanRevisionInput,
   derivePlanRevisionDigests,
   PlanRevisionLedgerTransaction,
   replayBindingValid,
-} from "../plan-asset/ledger/plan-revision-ledger.js";
-import { openPlanLedger } from "../plan-asset/ledger/schema.js";
-import type { HarnessDb } from "../state-db/index.js";
-import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
-import { bindPlanSourceToAdmission } from "./plan-content-binding.js";
+} from "../plan-asset/ledger/plan-revision-ledger.ts";
+import { openPlanLedger } from "../plan-asset/ledger/schema.ts";
+import type { HarnessDb } from "../state-db/index.ts";
+import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.ts";
+import { bindPlanSourceToAdmission } from "./plan-content-binding.ts";
 import {
   type DraftArtifact,
   type DraftPublisherPort,
   PlanDraftCleanupPendingError,
   PlanDraftService,
-} from "./plan-draft-service.js";
+} from "./plan-draft-service.ts";
 import {
   assemblePlanRevisionCommand,
   canonicalPlanPayload,
@@ -27,19 +27,19 @@ import {
   planRevisionReplayBindingDigest,
   stableJson,
   validatePlanRevisionCommand,
-} from "./plan-revision-command-assembler.js";
+} from "./plan-revision-command-assembler.ts";
 import {
   PlanRevisionLedgerAdapter,
   type PlanRevisionReceipt,
-} from "./plan-revision-ledger-adapter.js";
+} from "./plan-revision-ledger-adapter.ts";
 import {
   type AdmissionDecision,
   evaluatePlanAdmission,
   type PlanAdmissionRequest,
-} from "./policy.js";
-import { SqliteDraftJournal } from "./sqlite-draft-journal.js";
-import { parseTrackedReceiptProjection } from "./tracked-receipt-projection.js";
-import { TrackedReceiptRenderer } from "./tracked-receipt-renderer.js";
+} from "./policy.ts";
+import { SqliteDraftJournal } from "./sqlite-draft-journal.ts";
+import { parseTrackedReceiptProjection } from "./tracked-receipt-projection.ts";
+import { TrackedReceiptRenderer } from "./tracked-receipt-renderer.ts";
 
 export interface NodePlanRevisionRunnerDeps {
   repoRoot: string;
@@ -200,7 +200,7 @@ function assertCommittedReplayBinding(binding: {
   db: HarnessDb;
   manifest: PlanRevisionManifest;
   admission: PlanAdmissionRequest;
-  receipt: import("./plan-draft-service.js").DraftReceiptBinding;
+  receipt: import("./plan-draft-service.ts").DraftReceiptBinding;
   expectedActor: string;
   repositoryIdentity: string;
   baseSource: string;
@@ -344,7 +344,7 @@ class RevisionRenderer {
   ) {}
 
   render(
-    command: import("./plan-draft-service.js").PlanDraftCommand<PlanRevisionExecutionPayload>,
+    command: import("./plan-draft-service.ts").PlanDraftCommand<PlanRevisionExecutionPayload>,
     receipt: PlanRevisionReceipt,
   ): readonly [DraftArtifact, DraftArtifact] {
     if (!receipt.certificateDigest) throw new Error("plan-revision-receipt-incomplete");

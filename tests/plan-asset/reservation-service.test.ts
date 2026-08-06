@@ -1,24 +1,24 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { HmacLeaseTokenKeyRing } from "../../src/plan-asset/adapters/hmac-lease-token-key-ring.js";
+import { HmacLeaseTokenKeyRing } from "../../src/plan-asset/adapters/hmac-lease-token-key-ring.ts";
 import {
   frameLeaseTokenContext,
   ReservationService,
-} from "../../src/plan-asset/application/reservation-service.js";
-import { PlanLedger } from "../../src/plan-asset/ledger/plan-ledger.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
-import type { ClockPort } from "../../src/plan-asset/ports/clock.js";
+} from "../../src/plan-asset/application/reservation-service.ts";
+import { PlanLedger } from "../../src/plan-asset/ledger/plan-ledger.ts";
+import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.ts";
+import type { ClockPort } from "../../src/plan-asset/ports/clock.ts";
 import type {
   LeaseTokenKeyRingPort,
   LeaseTokenMac,
-} from "../../src/plan-asset/ports/lease-token-key-ring.js";
+} from "../../src/plan-asset/ports/lease-token-key-ring.ts";
 import type {
   ReservationLedgerPort,
   ReservationLedgerRecord,
   ReservationLedgerResult,
   ReserveLedgerInput,
-} from "../../src/plan-asset/ports/reservation-ledger.js";
-import { openHarnessDb } from "../../src/state-db/index.js";
+} from "../../src/plan-asset/ports/reservation-ledger.ts";
+import { openHarnessDb } from "../../src/state-db/index.ts";
 
 describe("PLAN reservation service", () => {
   it("U-PA-043: freezes the seven-field length-prefixed HMAC input and known vector", () => {

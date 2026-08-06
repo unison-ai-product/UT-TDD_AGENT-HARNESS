@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createTableSql, primaryKeyOf, validateTableDef } from "../src/schema/harness-db";
-import { HARNESS_DB_VMODEL_TABLES } from "../src/schema/harness-db-tables-vmodel";
-import { openHarnessDb } from "../src/state-db";
+import { createTableSql, primaryKeyOf, validateTableDef } from "../src/schema/harness-db.ts";
+import { HARNESS_DB_VMODEL_TABLES } from "../src/schema/harness-db-tables-vmodel.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
 
 const byName = new Map(HARNESS_DB_VMODEL_TABLES.map((table) => [table.name, table]));
 

@@ -4,14 +4,14 @@
  * gate 判定群を runDoctor.ok に連動させて fail-close する。handover / agent-slots は warning surface。
  */
 
-import { detectMode } from "../runtime/detect";
+import { detectMode } from "../runtime/detect.ts";
 import {
   collectDoctorCheckRun,
   type DoctorOptions,
   resolveDoctorRunProfile,
-} from "./check-registry";
-import { checkPlanReferenceFreshnessAdvisory } from "./plan-governance";
-import { buildDoctorResult, type DoctorResult } from "./result";
+} from "./check-registry.ts";
+import { checkPlanReferenceFreshnessAdvisory } from "./plan-governance.ts";
+import { buildDoctorResult, type DoctorResult } from "./result.ts";
 import {
   checkAgentSlots,
   checkHandover,
@@ -19,10 +19,11 @@ import {
   type DoctorDeps,
   doctorSlotsDeps,
   nodeDoctorDeps,
-} from "./runtime-state";
-import { checkSetupSmoke } from "./setup-smoke";
+} from "./runtime-state.ts";
+import { checkSetupSmoke } from "./setup-smoke.ts";
 
-export type { DoctorOptions } from "./check-registry";
+export { checkImportSpecifiers } from "../lint/import-specifier.ts";
+export type { DoctorOptions } from "./check-registry.ts";
 export {
   checkAgentContractDetection,
   checkDbProjectionCoverage,
@@ -33,9 +34,9 @@ export {
   checkTypedSpecOwnedArtifactDispersal,
   checkTypedSpecPhaseLayerAlignment,
   checkTypedSpecTraceClosure,
-} from "./db-projection";
-export { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
-export { checkDocConsistency, checkEntityCoverage, checkFrRegistryAudit } from "./doc-registry";
+} from "./db-projection.ts";
+export { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression.ts";
+export { checkDocConsistency, checkEntityCoverage, checkFrRegistryAudit } from "./doc-registry.ts";
 export {
   checkAssetDrift,
   checkBranchKind,
@@ -45,7 +46,7 @@ export {
   checkModuleDrift,
   checkSkillAssignment,
   checkVerificationProfile,
-} from "./lint-gates";
+} from "./lint-gates.ts";
 export {
   checkBackfill,
   checkBackfillResult,
@@ -62,7 +63,7 @@ export {
   checkPropagation,
   checkReviewEvidence,
   checkScrumReverse,
-} from "./plan-governance";
+} from "./plan-governance.ts";
 export {
   checkCycleP4Verification,
   checkDbCurrency,
@@ -83,12 +84,12 @@ export {
   checkSubDocCatalogDrift,
   checkSubDocSectionStructure,
   checkTelemetryClosure,
-} from "./process-quality";
+} from "./process-quality.ts";
 export {
   checkRoadmap,
   checkVerificationGroups,
   checkVerificationGroupsResult,
-} from "./roadmap-verification";
+} from "./roadmap-verification.ts";
 export {
   checkCodingRules,
   checkDddTddRules,
@@ -101,24 +102,24 @@ export {
   checkRuntimePortability,
   checkRuntimeReadability,
   checkSecretScan,
-} from "./rule-quality";
+} from "./rule-quality.ts";
 export {
   checkAgentSlots,
   checkHandover,
   checkHandoverDisciplineMessages,
   type DoctorDeps,
   nodeDoctorDeps,
-} from "./runtime-state";
+} from "./runtime-state.ts";
 export {
   checkRuntimeStateLocation,
   findRuntimeStateLocationFindings,
-} from "./runtime-state-location";
+} from "./runtime-state-location.ts";
 export {
   checkCodexHookAdapter,
   checkCodexWrapperParity,
   checkGithubCiPolicy,
   checkProjectHooks,
-} from "./runtime-surface";
+} from "./runtime-surface.ts";
 export {
   checkDeliverablePlanTrace,
   checkImplPlanTrace,
@@ -126,9 +127,9 @@ export {
   checkOracleTestTrace,
   checkPlanArtifactExistence,
   checkTrackedCanonical,
-} from "./source-trace";
-export { checkTestRepositoryIsolation } from "./test-repository-isolation";
-export { checkToolchainPin } from "./toolchain";
+} from "./source-trace.ts";
+export { checkTestRepositoryIsolation } from "./test-repository-isolation.ts";
+export { checkToolchainPin } from "./toolchain.ts";
 export {
   checkFrontendDesignCoverage,
   checkG8IntegrationWorkflow,
@@ -139,7 +140,7 @@ export {
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
   checkRightLungDocGovernance,
-} from "./workflow-quality";
+} from "./workflow-quality.ts";
 
 export function runDoctor(
   deps: DoctorDeps = nodeDoctorDeps(process.cwd()),

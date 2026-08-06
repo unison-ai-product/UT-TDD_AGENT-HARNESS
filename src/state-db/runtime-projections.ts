@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { normalizePath } from "../shared/source-text";
-import { shouldScoreSkillAsset } from "../skill-scoring/scoring";
-import type { HarnessDb } from "./index";
+import { normalizePath } from "../shared/source-text.ts";
+import { shouldScoreSkillAsset } from "../skill-scoring/scoring.ts";
+import type { HarnessDb } from "./index.ts";
 
 export interface RuntimeSessionLogProjection {
   ts?: string;

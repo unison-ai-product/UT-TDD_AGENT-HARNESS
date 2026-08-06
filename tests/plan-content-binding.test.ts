@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { bindPlanSourceToAdmission } from "../src/plan-admission/plan-content-binding.js";
-import type { PlanAdmissionRequest } from "../src/plan-admission/policy.js";
-import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
+import { bindPlanSourceToAdmission } from "../src/plan-admission/plan-content-binding.ts";
+import type { PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
+import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.ts";
 
 const planId = "PLAN-L6-999-content-binding";
 const source = `---

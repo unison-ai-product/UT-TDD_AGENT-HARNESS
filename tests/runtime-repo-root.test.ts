@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { requireRuntimeRepoRoot, resolveRuntimeRepoRoot } from "../src/runtime/repo-root";
+import { requireRuntimeRepoRoot, resolveRuntimeRepoRoot } from "../src/runtime/repo-root.ts";
 
 describe("U-TESTHYGIENE-002: runtime repo root", () => {
   it("walks from a nested hook cwd to the nearest UT-TDD root", () => {

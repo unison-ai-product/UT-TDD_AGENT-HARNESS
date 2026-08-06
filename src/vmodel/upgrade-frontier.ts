@@ -1,4 +1,4 @@
-import { VALID_STATUSES } from "../schema";
+import { VALID_STATUSES } from "../schema/index.ts";
 
 export interface UpgradeFrontierEntry {
   planId: string;

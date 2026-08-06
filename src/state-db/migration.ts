@@ -6,15 +6,15 @@
  * DDL は `CREATE TABLE/INDEX IF NOT EXISTS` で冪等。同 DB に複数回適用しても安全 (deterministic)。
  */
 
-import type { ColumnDef } from "../schema/harness-db";
+import type { ColumnDef } from "../schema/harness-db.ts";
 import {
   assertSqlIdentifier,
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,
   SCHEMA_VERSION,
   schemaDdl,
-} from "../schema/harness-db";
-import type { HarnessDb } from "./index";
+} from "../schema/harness-db.ts";
+import type { HarnessDb } from "./index.ts";
 
 export interface MigrationResult {
   /** 適用前の user_version。 */

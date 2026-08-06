@@ -4,7 +4,7 @@ import {
   type MigrationEvent,
   reduceLegacyMigration,
   validateMigrationFields,
-} from "../../src/plan-asset/domain/legacy-migration.js";
+} from "../../src/plan-asset/domain/legacy-migration.ts";
 
 describe("legacy migration reducer", () => {
   it("U-PA-023: observes pending without inventing a canonical revision", () => {

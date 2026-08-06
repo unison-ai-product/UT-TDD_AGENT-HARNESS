@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
-import type { LintResult } from "../plan/lint";
+import type { LintResult } from "../plan/lint.ts";
 
 export type RepositoryReadMode = "head_snapshot" | "isolated_fixture";
 export interface RepositoryReadContract {
@@ -17,7 +17,7 @@ advisory-strict-gate-aging:4
 codex-hook-adapter:1 coding-rules:1 context-doc-router:2 cycle-p4-verification:5 db-currency:1 db-projection-coverage:1 db-projection-ingestion:3
 dependency-drift:3 descent-obligation:3 distribution-acceptance:1 distribution-scratch-ignore:1 doctor-runtime-surface:2 doctor:25
 drive-model-passage:2 fr-roadmap-coverage:4 frontend-design-coverage:1 g10-ux-workflow:5 g8-integration-workflow:6 g9-system-workflow:7
-gate-static:9 impl-plan-trace:1 l14-close-audit:8 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:3
+gate-static:9 impl-plan-trace:1 import-specifier:2 l14-close-audit:8 l6-completion:2 l6-fr-coverage:2 mode-catalog:1 model-id-ssot:1 model-id-ssot-drift:1 module-drift:2 oracle-test-trace:3
 plan-id-naming:1 plan-lint:10 projection-writer:13 proposal-document-coverage:2 readability:5 relation-graph-loader:1 review-green-command-projection:1
 right-arm-gate-planning:1 right-lung-doc-governance:1 roadmap:1 rule-automation-closure:1 rule-drift:2 runtime-hook-entrypoints:1
 runtime-portability:2 screen-impl-pair-freeze:1 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1

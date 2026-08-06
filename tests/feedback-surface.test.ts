@@ -4,9 +4,9 @@ import {
   renderFeedbackEventRows,
   renderTakeoverFeedback,
   selectTakeoverFeedback,
-} from "../src/feedback/surface";
-import { openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
+} from "../src/feedback/surface.ts";
+import { openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 
 function insertFinding(
   db: ReturnType<typeof openHarnessDb>,

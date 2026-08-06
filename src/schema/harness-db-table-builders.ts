@@ -1,4 +1,4 @@
-import type { CheckExpression, ColumnReference, ColumnType, ForeignKeyDef } from "./harness-db";
+import type { CheckExpression, ColumnReference, ColumnType, ForeignKeyDef } from "./harness-db.ts";
 
 export const col = (name: string, type: ColumnType = "TEXT") => ({ name, type });
 export const pk = (name: string) => ({ name, type: "TEXT" as const, primaryKey: true });

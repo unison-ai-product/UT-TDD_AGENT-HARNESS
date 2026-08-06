@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { captureRepositoryDocsSnapshot } from "../../src/document-disposition/application/capture-repository-docs-snapshot";
+import { captureRepositoryDocsSnapshot } from "../../src/document-disposition/application/capture-repository-docs-snapshot.ts";
 import type {
   GitObjectSnapshotPort,
   GitObjectTreeSnapshot,
-} from "../../src/document-disposition/ports/git-object-snapshot";
+} from "../../src/document-disposition/ports/git-object-snapshot.ts";
 
 const FULL_COMMIT = "1".repeat(40);
 const ROOT_TREE = "2".repeat(40);

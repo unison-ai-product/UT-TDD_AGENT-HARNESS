@@ -4,9 +4,9 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { collectJobSummary, renderJobSummary } from "../src/github/job-summary";
-import { openHarnessDb } from "../src/state-db/index";
-import { removeTestTree } from "./support/temp-tree";
+import { collectJobSummary, renderJobSummary } from "../src/github/job-summary.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const tempDirs: string[] = [];
 

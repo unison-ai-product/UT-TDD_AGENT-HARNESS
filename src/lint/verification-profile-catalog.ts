@@ -2,7 +2,7 @@ import type {
   VerificationProfile,
   VerificationProfileId,
   VerificationSignal,
-} from "./verification-profile-types";
+} from "./verification-profile-types.ts";
 
 export const PROFILES: Record<VerificationProfileId, VerificationProfile> = {
   "bun-unit": {

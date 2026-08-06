@@ -18,8 +18,8 @@ import {
   evaluateAgentGuard,
   normalizeModelFamily,
   type ResolvedFamily,
-} from "../../src/runtime/agent-guard";
-import { DEFAULT_MAX_PARALLEL, nodeAgentSlotsDeps, recordGuardFire } from "../../src/runtime/agent-slots";
+} from "../../src/runtime/agent-guard.ts";
+import { DEFAULT_MAX_PARALLEL, nodeAgentSlotsDeps, recordGuardFire } from "../../src/runtime/agent-slots.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..");

@@ -1,12 +1,12 @@
-import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard-policy";
-import { READ_ONLY_DELEGATION_ROLES } from "../runtime/review-guard";
+import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard-policy.ts";
+import { READ_ONLY_DELEGATION_ROLES } from "../runtime/review-guard.ts";
 import {
   MODEL_EFFORT_LADDER,
   MODEL_IDS,
   REVIEW_LANE_MODELS,
   type ReviewLane,
   selectTeamModel,
-} from "./model-policy";
+} from "./model-policy.ts";
 
 /**
  * 正規委譲経路 (`ut-tdd codex/claude --role`) の role 検証 + model/effort routing

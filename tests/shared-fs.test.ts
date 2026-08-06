@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ensureDir } from "../src/shared/fs";
+import { ensureDir } from "../src/shared/fs.ts";
 
 describe("shared fs", () => {
   const mkRoot = () => mkdtempSync(join(tmpdir(), "ut-tdd-shared-fs-"));

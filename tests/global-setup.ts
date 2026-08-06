@@ -1,8 +1,8 @@
-import { canonicalPath } from "../scripts/run-vitest-snapshot";
+import { canonicalPath } from "../scripts/run-vitest-snapshot.ts";
 import {
   assertGitWorkspaceUnchanged,
   captureGitWorkspaceFingerprint,
-} from "./support/git-workspace-fingerprint";
+} from "./support/git-workspace-fingerprint.ts";
 
 export default function setup(): () => void {
   const repoRoot = process.cwd();

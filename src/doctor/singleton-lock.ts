@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { ensureDir } from "../shared/fs";
+import { ensureDir } from "../shared/fs.ts";
 
 /**
  * doctor 多重起動ガード (PLAN-L7-442)。

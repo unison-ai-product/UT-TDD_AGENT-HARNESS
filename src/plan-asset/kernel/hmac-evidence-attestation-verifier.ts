@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { EvidenceAttestation, EvidenceProducer } from "../domain/evidence-types.js";
+import type { EvidenceAttestation, EvidenceProducer } from "../domain/evidence-types.ts";
 import type {
   EvidenceAttestationInput,
   EvidenceAttestationVerifierPort,
-} from "../ports/evidence-attestation.js";
+} from "../ports/evidence-attestation.ts";
 
 export interface EvidenceVerifierKeyMaterial {
   readonly version: string;

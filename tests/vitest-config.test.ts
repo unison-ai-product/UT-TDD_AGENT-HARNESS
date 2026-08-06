@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import config from "../vitest.config";
+import config from "../vitest.config.ts";
 
 describe("U-TESTHYGIENE-001: vitest execution boundary", () => {
   it("pins test discovery, exclusions, and timeout", () => {

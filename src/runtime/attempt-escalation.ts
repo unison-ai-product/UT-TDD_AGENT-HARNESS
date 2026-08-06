@@ -12,7 +12,7 @@
  * (`attemptsFromSessionEvents`) を分離し、emission/wiring は呼び出し側に委ねる
  * (forced-stop.ts と同方針、fail-open)。
  */
-import type { SessionEvent } from "./session-log";
+import type { SessionEvent } from "./session-log.ts";
 
 /** 1 回の修正試行。subject=対象 (file path / gate id / test name)、outcome=結果。 */
 export interface AttemptRecord {

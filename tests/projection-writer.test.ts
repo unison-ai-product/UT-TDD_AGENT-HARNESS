@@ -4,23 +4,23 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { findReference } from "../src/search/index";
-import { stableId } from "../src/stable-id";
-import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
+import { findReference } from "../src/search/index.ts";
+import { stableId } from "../src/stable-id.ts";
+import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision.ts";
 import {
   analyzeDesignDetectionStats,
   collectDesignDetectionStats,
   DESIGN_QUALITY_CHECK_IDS,
-} from "../src/state-db/design-detection";
+} from "../src/state-db/design-detection.ts";
 import {
   decideRefactorCandidate,
   projectFeedbackEvents,
   projectIssueApprovalGuardrails,
   projectIssueQueue,
   projectRefactorCandidateSignals,
-} from "../src/state-db/feedback-projections";
-import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
-import { migrate, rowCounts } from "../src/state-db/migration";
+} from "../src/state-db/feedback-projections.ts";
+import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index.ts";
+import { migrate, rowCounts } from "../src/state-db/migration.ts";
 import {
   latestReviewEvidenceEntry,
   missingTestPlanIdNextAction,
@@ -30,18 +30,18 @@ import {
   projectRuntimeTestRunFromSessionEvent,
   rebuildHarnessDb,
   recordProjectionEvent,
-} from "../src/state-db/projection-writer";
+} from "../src/state-db/projection-writer.ts";
 import {
   REFACTOR_CANDIDATE_THRESHOLDS,
   REFACTOR_POLICY_TERMS,
-} from "../src/state-db/refactor-candidate-policy";
+} from "../src/state-db/refactor-candidate-policy.ts";
 import {
   analyzeRefactorCandidates,
   refactorCandidateKey,
-} from "../src/state-db/refactor-candidates";
-import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections";
-import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections";
-import { claudeProjectSlug } from "../src/state-db/token-tracker";
+} from "../src/state-db/refactor-candidates.ts";
+import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections.ts";
+import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections.ts";
+import { claudeProjectSlug } from "../src/state-db/token-tracker.ts";
 
 interface VerificationWorkflowRow {
   phase: string;

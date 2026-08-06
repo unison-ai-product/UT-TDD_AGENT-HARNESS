@@ -2,21 +2,21 @@ import {
   combinedReviewReceiptDigest,
   encodeMergeClosureReceipt,
   REQUIRED_GITHUB_CHECK,
-} from "../kernel/github-closure-receipt";
-import { stableId } from "../stable-id";
+} from "../kernel/github-closure-receipt.ts";
+import { stableId } from "../stable-id.ts";
 import {
   type GithubBindingInput,
   recordGithubBinding,
-} from "../state-db/github-forward-projection";
+} from "../state-db/github-forward-projection.ts";
 import {
   canonicalPlanRevision,
   verifiedReviewLaneDigests,
-} from "../state-db/github-review-lane-provenance";
-import type { HarnessDb } from "../state-db/index";
-import { runSqliteTransaction } from "../state-db/sqlite-transaction";
-import { validatePrTraceBody } from "./pr-trace";
-import type { GhCommandPort } from "./project-v2";
-import { NodeGhCommandPort } from "./project-v2";
+} from "../state-db/github-review-lane-provenance.ts";
+import type { HarnessDb } from "../state-db/index.ts";
+import { runSqliteTransaction } from "../state-db/sqlite-transaction.ts";
+import { validatePrTraceBody } from "./pr-trace.ts";
+import type { GhCommandPort } from "./project-v2.ts";
+import { NodeGhCommandPort } from "./project-v2.ts";
 
 export interface RepositoryBindingSyncResult {
   inspectedPullRequests: number;

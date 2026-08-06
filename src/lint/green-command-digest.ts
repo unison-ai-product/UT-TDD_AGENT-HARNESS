@@ -17,7 +17,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadReviewPlans, type ParsedReviewPlan } from "./review-evidence";
+import { loadReviewPlans, type ParsedReviewPlan } from "./review-evidence.ts";
 
 export interface DigestMismatch {
   plan_id: string;

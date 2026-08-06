@@ -2,20 +2,20 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadSlots, nodeAgentSlotsDeps } from "../src/runtime/agent-slots";
-import type { RuntimeDetection } from "../src/runtime/detect";
-import { type TeamDefinition, teamMemberSchema } from "../src/schema/team";
-import { classifyProposalDocumentCoverage } from "../src/task/classify";
-import { routeTeamMembers } from "../src/task/tier-router";
-import { recommendTeamLaunch } from "../src/team/launch-policy";
-import { MODEL_IDS } from "../src/team/model-policy";
+import { loadSlots, nodeAgentSlotsDeps } from "../src/runtime/agent-slots.ts";
+import type { RuntimeDetection } from "../src/runtime/detect.ts";
+import { type TeamDefinition, teamMemberSchema } from "../src/schema/team.ts";
+import { classifyProposalDocumentCoverage } from "../src/task/classify.ts";
+import { routeTeamMembers } from "../src/task/tier-router.ts";
+import { recommendTeamLaunch } from "../src/team/launch-policy.ts";
+import { MODEL_IDS } from "../src/team/model-policy.ts";
 import {
   buildTeamRunPlan,
   executeTeamRunPlan,
   type MemberPlacement,
   providerFromEngine,
   validateTeamRun,
-} from "../src/team/run";
+} from "../src/team/run.ts";
 import {
   dependencyFailedMessage,
   duplicateRoleProviderMessage,
@@ -24,7 +24,7 @@ import {
   TEAM_MEMBER_PROMPT_HEADER,
   TEAM_RUN_REQUIRES_CROSS_PROVIDER_REVIEW_MESSAGE,
   TEAM_RUN_REQUIRES_HYBRID_MESSAGE,
-} from "../src/team/run-policy";
+} from "../src/team/run-policy.ts";
 
 const hybrid = (currentRuntime: "claude" | "codex"): RuntimeDetection => ({
   mode: "hybrid",

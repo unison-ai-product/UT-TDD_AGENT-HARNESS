@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseStrictMarkdownTable } from "../../src/disposition/adapters/strict-markdown-table";
-import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader";
-import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance";
-import { DocumentDispositionCatalog } from "../../src/disposition/domain/document-disposition-catalog";
+import { parseStrictMarkdownTable } from "../../src/disposition/adapters/strict-markdown-table.ts";
+import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader.ts";
+import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance.ts";
+import { DocumentDispositionCatalog } from "../../src/disposition/domain/document-disposition-catalog.ts";
 
 const read = (path: string) => readFileSync(path);
 

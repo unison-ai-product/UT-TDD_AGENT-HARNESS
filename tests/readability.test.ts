@@ -13,7 +13,7 @@ import {
   type ReadabilityArtifact,
   readabilityMessages,
   runtimeReadabilityMessages,
-} from "../src/lint/readability";
+} from "../src/lint/readability.ts";
 
 describe("readability lint (freeze doc mojibake guard)", () => {
   it("detects replacement characters and em-space/ascii mojibake", () => {

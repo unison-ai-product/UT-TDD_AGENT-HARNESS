@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest";
 import {
   collectWriteEncodingGuardTargets,
   runWriteEncodingGuard,
-} from "../src/lint/write-encoding-guard";
-import { extractEditTargets } from "../src/shared/edit-targets";
+} from "../src/lint/write-encoding-guard.ts";
+import { extractEditTargets } from "../src/shared/edit-targets.ts";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");

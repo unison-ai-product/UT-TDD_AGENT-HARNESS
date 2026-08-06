@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeTestRepositoryIsolation,
   checkTestRepositoryIsolation,
-} from "../src/doctor/test-repository-isolation";
+} from "../src/doctor/test-repository-isolation.ts";
 
 describe("doctor test repository isolation", () => {
   it("U-TESTHYGIENE-013: rejects a new unclassified live repository read", () => {

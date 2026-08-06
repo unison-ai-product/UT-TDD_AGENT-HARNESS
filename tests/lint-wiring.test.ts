@@ -6,7 +6,7 @@ import {
   type LintWiringInput,
   lintWiringMessages,
   loadLintWiringInput,
-} from "../src/lint/lint-wiring";
+} from "../src/lint/lint-wiring.ts";
 
 function input(lintModules: string[], reachableModules: string[]): LintWiringInput {
   return {

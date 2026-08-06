@@ -10,9 +10,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadTemplates } from "../src/setup/index";
-import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
-import { MODEL_IDS } from "../src/team/model-policy";
+import { loadTemplates } from "../src/setup/index.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
+import { MODEL_IDS } from "../src/team/model-policy.ts";
 
 const GATE_REVIEWERS = ["code-reviewer", "qa-test", "security-audit", "ut-tdd-tl"] as const;
 const OPUS = MODEL_IDS.claude.opus;

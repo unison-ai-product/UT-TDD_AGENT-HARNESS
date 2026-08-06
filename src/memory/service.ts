@@ -14,15 +14,15 @@
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { isSecretLike } from "../secret";
-import { ensureDir } from "../shared/fs";
+import { isSecretLike } from "../secret.ts";
+import { ensureDir } from "../shared/fs.ts";
 import {
   type MemoryEntry,
   type MemoryKind,
   type MemoryWriteInput,
   memoryIdFor,
   parseMemoryFile,
-} from "./index";
+} from "./index.ts";
 
 /** index とファイル正本の関係。degraded を無音にしないための型。 */
 export type MemoryFreshness =

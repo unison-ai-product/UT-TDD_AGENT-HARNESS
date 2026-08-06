@@ -1,7 +1,7 @@
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { type RecommendedCommandV1, recommendedCommandV1Schema } from "../schema/index";
-import { type FilingTarget, type RouteFilingResult, routeFiling } from "../schema/route-filing";
+import { type RecommendedCommandV1, recommendedCommandV1Schema } from "../schema/index.ts";
+import { type FilingTarget, type RouteFilingResult, routeFiling } from "../schema/route-filing.ts";
 import {
   ROUTE_COMMAND_DOCTOR,
   ROUTE_COMMAND_TASK_CLASSIFY,
@@ -9,10 +9,10 @@ import {
   type RouteSignalEntry,
   routeMatchLength,
   routeSignalCandidates,
-} from "../schema/route-map";
-import type { ContractResult, Finding, Severity } from "./contracts-types";
+} from "../schema/route-map.ts";
+import type { ContractResult, Finding, Severity } from "./contracts-types.ts";
 
-export type { RouteSignalEntry } from "../schema/route-map";
+export type { RouteSignalEntry } from "../schema/route-map.ts";
 export type { FilingTarget, RouteFilingResult };
 export { routeFiling };
 

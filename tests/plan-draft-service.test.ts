@@ -13,7 +13,7 @@ import {
   PlanDraftConflictError,
   PlanDraftRecoveryRequiredError,
   PlanDraftService,
-} from "../src/plan-admission/plan-draft-service";
+} from "../src/plan-admission/plan-draft-service.ts";
 
 type Payload = { planId: string };
 type Receipt = {

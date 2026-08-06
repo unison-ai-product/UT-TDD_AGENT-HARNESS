@@ -1,8 +1,12 @@
 import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
-import { extractEditTargets, normalizeRepoRelative } from "../shared/edit-targets";
-import { ensureDir } from "../shared/fs";
-import { analyzeArtifacts, type ReadabilityArtifact, type ReadabilityResult } from "./readability";
+import { extractEditTargets, normalizeRepoRelative } from "../shared/edit-targets.ts";
+import { ensureDir } from "../shared/fs.ts";
+import {
+  analyzeArtifacts,
+  type ReadabilityArtifact,
+  type ReadabilityResult,
+} from "./readability.ts";
 
 export interface WriteEncodingGuardInput {
   session_id?: string;

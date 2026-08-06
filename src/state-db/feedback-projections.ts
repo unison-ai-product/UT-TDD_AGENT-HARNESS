@@ -4,8 +4,8 @@ import {
   isTelemetryFeedback,
   loadFeedbackLifecycle,
   resolveFeedbackLifecycle,
-} from "../shared/feedback-lifecycle";
-import type { HarnessDb } from "./index";
+} from "../shared/feedback-lifecycle.ts";
+import type { HarnessDb } from "./index.ts";
 import {
   analyzeRefactorCandidates,
   candidateRank,
@@ -15,8 +15,8 @@ import {
   type RefactorCandidate,
   type RefactorCandidateLifecycleState,
   refactorCandidateKey,
-} from "./refactor-candidates";
-import { detectorRouteCandidateAction } from "./route-candidate-review";
+} from "./refactor-candidates.ts";
+import { detectorRouteCandidateAction } from "./route-candidate-review.ts";
 
 interface FeedbackProjectionDeps {
   nowIso: () => string;

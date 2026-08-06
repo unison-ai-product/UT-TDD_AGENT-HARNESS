@@ -25,8 +25,8 @@ import {
   statusSchema,
   subDocSchema,
   workflowPhaseSchema,
-} from "./index";
-import { PLAN_ID_PATTERN } from "./plan-id";
+} from "./index.ts";
+import { PLAN_ID_PATTERN } from "./plan-id.ts";
 
 /**
  * §1.10 A plan_id 形式 (phase-aware + 駆動モデル legible): `PLAN-<token>-<NN>-slug`。

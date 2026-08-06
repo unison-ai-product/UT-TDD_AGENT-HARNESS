@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { recommendTeamLaunch } from "../src/team/launch-policy";
-import { buildTeamRunPlan } from "../src/team/run";
+import { recommendTeamLaunch } from "../src/team/launch-policy.ts";
+import { buildTeamRunPlan } from "../src/team/run.ts";
 
 describe("U-TEAM-003 team launch policy", () => {
   it("U-TEAM-003: does not launch a team for trivial work in hybrid mode", () => {

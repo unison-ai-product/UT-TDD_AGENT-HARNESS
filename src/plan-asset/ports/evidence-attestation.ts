@@ -1,4 +1,4 @@
-import type { EvidenceAttestation, EvidenceProducer } from "../domain/evidence-types.js";
+import type { EvidenceAttestation, EvidenceProducer } from "../domain/evidence-types.ts";
 
 export interface EvidenceAttestationInput {
   readonly producer: EvidenceProducer;

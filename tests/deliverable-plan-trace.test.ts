@@ -3,7 +3,7 @@ import {
   analyzeDeliverablePlanTrace,
   analyzeDeliverableTraceGate,
   isDeliverableArtifactPath,
-} from "../src/lint/deliverable-plan-trace";
+} from "../src/lint/deliverable-plan-trace.ts";
 
 describe("PLAN-L7-450 W4/W3 deliverable trace", () => {
   it("U-L7-450-W4-001: a new orphan test file fails closed and a declared file is green", () => {

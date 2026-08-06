@@ -3,7 +3,7 @@ import {
   parseUpgradeFrontier,
   upgradeFrontierMessage,
   upgradeFrontierViolations,
-} from "../src/vmodel/upgrade-frontier";
+} from "../src/vmodel/upgrade-frontier.ts";
 
 describe("active Vモデル upgrade frontier", () => {
   const schedule = [

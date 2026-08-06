@@ -10,7 +10,7 @@ import {
   loadGithubCiPolicyDocs,
   REQUIRED_AGGREGATE_COMMAND,
   resolveGithubCiRuntimeProfile,
-} from "../src/lint/github-ci-policy";
+} from "../src/lint/github-ci-policy.ts";
 
 const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
 // PLAN-L7-455 (troubleshoot): doc-only lane 分岐の canonical if 条件式。

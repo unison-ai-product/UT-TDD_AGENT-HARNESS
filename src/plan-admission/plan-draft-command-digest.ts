@@ -7,4 +7,4 @@ export {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
   type PlanDraftCommandDigests,
-} from "../kernel/plan-draft-command-digest.js";
+} from "../kernel/plan-draft-command-digest.ts";

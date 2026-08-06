@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { analyzeRepositoryDocumentClosure } from "../../src/document-disposition/domain/analyze-repository-document-closure";
-import type { DocumentDispositionInput } from "../../src/document-disposition/domain/document-disposition";
+import { analyzeRepositoryDocumentClosure } from "../../src/document-disposition/domain/analyze-repository-document-closure.ts";
+import type { DocumentDispositionInput } from "../../src/document-disposition/domain/document-disposition.ts";
 import {
   createDocumentDeltaDecision,
   createDocumentDeltaEvent,
   type DocumentDelta,
   documentDeltaChainDigest,
-} from "../../src/document-disposition/domain/replay-document-deltas";
+} from "../../src/document-disposition/domain/replay-document-deltas.ts";
 
 function snapshot(snapshotDigest: string, paths: readonly string[]) {
   return {

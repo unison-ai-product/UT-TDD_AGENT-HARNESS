@@ -3,7 +3,7 @@ import {
   reconcileDispositionTarget,
   resolveCanonicalTarget,
   type TargetRegistry,
-} from "../../src/disposition/domain/target-resolver.js";
+} from "../../src/disposition/domain/target-resolver.ts";
 
 const registry: TargetRegistry = {
   aliases: {

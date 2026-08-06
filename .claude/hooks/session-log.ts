@@ -13,7 +13,7 @@
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { SessionHookInput } from "../../src/runtime/session-log";
+import type { SessionHookInput } from "../../src/runtime/session-log.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.CLAUDE_PROJECT_DIR ?? join(here, "..", "..");

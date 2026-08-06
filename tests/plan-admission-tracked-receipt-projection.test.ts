@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseTrackedReceiptProjection,
   trackedReceiptRecordDigest,
-} from "../src/plan-admission/tracked-receipt-projection";
+} from "../src/plan-admission/tracked-receipt-projection.ts";
 
 const sha = (digit: string) => `sha256:${digit.repeat(64)}`;
 

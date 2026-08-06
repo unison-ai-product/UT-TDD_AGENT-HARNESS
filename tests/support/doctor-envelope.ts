@@ -11,18 +11,18 @@
  */
 
 import { readFileSync } from "node:fs";
-import { buildFullDoctorCheckDefinitions } from "../../src/doctor/check-definitions";
-import type { DoctorResult } from "../../src/doctor/result";
+import { buildFullDoctorCheckDefinitions } from "../../src/doctor/check-definitions.ts";
+import type { DoctorResult } from "../../src/doctor/result.ts";
 import {
   canonicalRepoRoot,
   DOCTOR_RESULT_FILE_ENV,
   doctorResultEnvelopeUsability,
   doctorResultProducerIdentity,
   parseDoctorResultEnvelope,
-} from "../../src/doctor/result-file";
-import { nodeDoctorDeps } from "../../src/doctor/runtime-state";
-import { defaultBranchRefMap, headSha } from "../../src/git/default-branch";
-import { headSnapshotRoot } from "./workspace-roots";
+} from "../../src/doctor/result-file.ts";
+import { nodeDoctorDeps } from "../../src/doctor/runtime-state.ts";
+import { defaultBranchRefMap, headSha } from "../../src/git/default-branch.ts";
+import { headSnapshotRoot } from "./workspace-roots.ts";
 
 /** producer が申告すべき root (CI の doctor step が回した面)。 */
 export const DOCTOR_RESULT_ROOT_ENV = "UT_TDD_DOCTOR_RESULT_ROOT";

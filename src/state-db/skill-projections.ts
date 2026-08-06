@@ -2,8 +2,8 @@ import {
   type SkillLearningSignals,
   scoreSkill as scoreSkillShared,
   shouldScoreSkillAsset,
-} from "../skill-scoring/scoring";
-import type { HarnessDb } from "./index";
+} from "../skill-scoring/scoring.ts";
+import type { HarnessDb } from "./index.ts";
 
 // PLAN-L7-262: provenance 分離。
 // - rebuild 由来の間接推定行は session 不明を明示する (空文字での偽装をやめる)。
@@ -34,9 +34,9 @@ export interface SkillProjectionDeps {
   skillDriveModelForPlan: (planId: string) => string;
 }
 
-export { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status";
+export { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status.ts";
 
-import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status";
+import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status.ts";
 
 export function skillScore(input: {
   plan: SkillProjectedPlan;

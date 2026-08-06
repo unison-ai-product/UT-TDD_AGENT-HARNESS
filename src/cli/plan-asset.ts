@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { LegacyMigrationDryRun } from "../plan-asset/application/legacy-migration-dry-run.js";
+import { LegacyMigrationDryRun } from "../plan-asset/application/legacy-migration-dry-run.ts";
 
 export function registerPlanAssetCommands(plan: Command): void {
   plan

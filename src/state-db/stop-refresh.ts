@@ -5,10 +5,14 @@ import {
   type MaybeVacuumOptions,
   type MaybeVacuumResult,
   maybeVacuumHarnessDb,
-} from "./db-maintenance";
-import { defaultHarnessDbPath, openHarnessDb } from "./index";
-import { migrate } from "./migration";
-import { projectModelEvaluations, projectTokenUsage, rebuildHarnessDb } from "./projection-writer";
+} from "./db-maintenance.ts";
+import { defaultHarnessDbPath, openHarnessDb } from "./index.ts";
+import { migrate } from "./migration.ts";
+import {
+  projectModelEvaluations,
+  projectTokenUsage,
+  rebuildHarnessDb,
+} from "./projection-writer.ts";
 import {
   acquireStopRefreshLease,
   claimStopRefreshDemand,
@@ -20,8 +24,8 @@ import {
   releaseStopRefreshLease,
   retryStopRefreshDemand,
   transferStopRefreshLease,
-} from "./stop-refresh-coordinator";
-import { loadRuntimeSessionUsage } from "./token-tracker";
+} from "./stop-refresh-coordinator.ts";
+import { loadRuntimeSessionUsage } from "./token-tracker.ts";
 
 export interface StopRefreshResult {
   ok: boolean;

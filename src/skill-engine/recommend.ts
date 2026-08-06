@@ -1,15 +1,15 @@
-import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
+import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog.ts";
 import {
   type SkillLearningSignals,
   type SkillScoringContext,
   scoreSkillDetailed,
   shouldScoreSkillAsset,
   skillScoreReason,
-} from "../skill-scoring/scoring";
-import { stableId } from "../stable-id";
-import type { HarnessDb } from "../state-db/index";
-import { upsertRow } from "../state-db/index";
-import { classifyTask } from "../task/classify";
+} from "../skill-scoring/scoring.ts";
+import { stableId } from "../stable-id.ts";
+import type { HarnessDb } from "../state-db/index.ts";
+import { upsertRow } from "../state-db/index.ts";
+import { classifyTask } from "../task/classify.ts";
 
 export interface PlanSkillContext {
   plan_id: string;

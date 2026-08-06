@@ -1,15 +1,15 @@
 import { createHash } from "node:crypto";
-import { parseStrictMarkdownTable } from "../../disposition/adapters/strict-markdown-table.js";
+import { parseStrictMarkdownTable } from "../../disposition/adapters/strict-markdown-table.ts";
 import {
   type AuthoringReceipt,
   verifyAuthoringProvenance,
-} from "../../disposition/domain/authoring-provenance.js";
+} from "../../disposition/domain/authoring-provenance.ts";
 import {
   createProfileCatalog,
   type DocumentProfile,
   type DocumentProfileDecision,
   type ProfileCatalog,
-} from "../domain/resolver.js";
+} from "../domain/resolver.ts";
 
 export type ProfileAuthoringBundle = Record<string, Uint8Array>;
 type Row = Readonly<Record<string, string>>;

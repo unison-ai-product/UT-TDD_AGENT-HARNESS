@@ -1,4 +1,4 @@
-import type { HarnessDb } from "../state-db/index";
+import type { HarnessDb } from "../state-db/index.ts";
 
 export interface TraceImpactNode {
   spec_id: string;

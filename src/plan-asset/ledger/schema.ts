@@ -7,16 +7,16 @@ import {
   type IndexDef,
   type TableDef,
   type TriggerDef,
-} from "../../schema/harness-db.js";
+} from "../../schema/harness-db.ts";
 import {
   col,
   enumCheck,
   foreignKey,
   pk,
   requiredCol,
-} from "../../schema/harness-db-table-builders.js";
-import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
-import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
+} from "../../schema/harness-db-table-builders.ts";
+import { type HarnessDb, openHarnessDb } from "../../state-db/index.ts";
+import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.ts";
 
 export const LEDGER_SCHEMA_VERSION = 7;
 

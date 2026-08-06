@@ -3,14 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { registerDelegationCommands } from "../src/cli/delegation";
-import { analyzeReviewDispatch, type ReviewReceipt } from "../src/feedback/review-dispatch";
+import { registerDelegationCommands } from "../src/cli/delegation.ts";
+import { analyzeReviewDispatch, type ReviewReceipt } from "../src/feedback/review-dispatch.ts";
 import {
   extractVerdict,
   REVIEW_OUTPUT_CONTRACT,
   reviewOutputContractExample,
   type VerdictExtraction,
-} from "../src/feedback/review-verdict-contract";
+} from "../src/feedback/review-verdict-contract.ts";
 
 // 期待値ビルダのみを共通化し、`expect` は各 test body に残す。
 // `ddd-tdd-rules` の `test-oracle-strength` は AST で body 内の literal expect/assert を要求するため、

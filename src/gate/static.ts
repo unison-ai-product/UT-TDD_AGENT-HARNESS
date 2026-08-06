@@ -4,13 +4,13 @@ import {
   analyzeImplPlanTrace,
   implPlanTraceMessages,
   loadImplPlanTraceInput,
-} from "../lint/impl-plan-trace";
+} from "../lint/impl-plan-trace.ts";
 import {
   analyzeOracleTestTrace,
   loadOracleTestTraceInput,
   oracleTestTraceMessages,
-} from "../lint/oracle-test-trace";
-import { lintPlanWithGate } from "../plan/lint";
+} from "../lint/oracle-test-trace.ts";
+import { lintPlanWithGate } from "../plan/lint.ts";
 import {
   analyzePairFreeze,
   analyzeVerificationGroups,
@@ -21,7 +21,7 @@ import {
   type PairDoc,
   pairFreezeMessages,
   verificationGroupMessages,
-} from "../vmodel/lint";
+} from "../vmodel/lint.ts";
 
 const REVIEW_ONLY_STATIC_GATES = new Set(["G0.5", "R4"]);
 

@@ -15,8 +15,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { type CrossAgentModelIssue, checkCrossAgentModelPair } from "../schema";
-import { fmValue } from "./shared";
+import { type CrossAgentModelIssue, checkCrossAgentModelPair } from "../schema/index.ts";
+import { fmValue } from "./shared.ts";
 
 /**
  * review 前置 MUST の対象 kind (§1.8 / requirements §7.8.7)。

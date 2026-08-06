@@ -3,7 +3,7 @@ import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 const repoRoot = process.cwd();
 const launcher = join(repoRoot, ".claude", "hooks", "run-bun.ts");

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { afterEach, describe, expect, it } from "vitest";
-import { adapterExecutionEnv, registerDelegationCommands } from "../src/cli/delegation";
+import { adapterExecutionEnv, registerDelegationCommands } from "../src/cli/delegation.ts";
 
 const legacyPrefix = ["HE", "LIX"].join("");
 const touchedKeys = [

@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { normalizePath } from "../shared/source-text";
+import { normalizePath } from "../shared/source-text.ts";
 import {
   REFACTOR_CANDIDATE_THRESHOLDS,
   REFACTOR_POLICY_TERMS,
   REFACTOR_SCAN_ROOTS,
-} from "./refactor-candidate-policy";
+} from "./refactor-candidate-policy.ts";
 
 export type RefactorCandidateKind =
   | "split-module"

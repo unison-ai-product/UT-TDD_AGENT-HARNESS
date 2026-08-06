@@ -29,7 +29,7 @@
  * fail-close へ昇格できる (PLAN-L7-260 §4 DoD)。
  */
 import { spawnSync } from "node:child_process";
-import { analyzeSecretScan, secretScanMessages, type SecretScanArtifact } from "../../src/lint/secret-scan";
+import { analyzeSecretScan, secretScanMessages, type SecretScanArtifact } from "../../src/lint/secret-scan.ts";
 
 /** pre-push が検査する変更ファイルの対象 prefix (PO 採択案 A、3 パターン限定を撤廃)。 */
 export const WIDENED_SCAN_PREFIXES = [

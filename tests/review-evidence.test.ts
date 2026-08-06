@@ -9,7 +9,7 @@ import {
   loadReviewPlans,
   type ParsedReviewPlan,
   parseReviewPlan,
-} from "../src/lint/review-evidence";
+} from "../src/lint/review-evidence.ts";
 
 /** review-evidence lint (IMP-071 presence + IMP-076 cross-review semantic) — review 前置証跡の機械強制。 */
 

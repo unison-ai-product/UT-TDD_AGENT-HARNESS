@@ -12,11 +12,11 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
-import { MODEL_IDS } from "../src/team/model-policy";
-import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.js";
-import { removeTestTree } from "./support/temp-tree";
+import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
+import { MODEL_IDS } from "../src/team/model-policy.ts";
+import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.ts";
+import { removeTestTree } from "./support/temp-tree.ts";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");

@@ -4,19 +4,19 @@ import type {
   ProjectField,
   ProjectSnapshot,
   ProjectV2Port,
-} from "../src/github/project-v2";
+} from "../src/github/project-v2.ts";
 import {
   GhProjectV2Adapter,
   persistProjectSync,
   syncForwardProject,
-} from "../src/github/project-v2";
-import type { ForwardReadinessRow } from "../src/kernel/forward-readiness";
+} from "../src/github/project-v2.ts";
+import type { ForwardReadinessRow } from "../src/kernel/forward-readiness.ts";
 import {
   claimGithubProjection,
   queueGithubProjection,
-} from "../src/state-db/github-forward-projection";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate } from "../src/state-db/migration";
+} from "../src/state-db/github-forward-projection.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate } from "../src/state-db/migration.ts";
 
 const select = (name: string, options: string[]): ProjectField => ({
   id: `field:${name}`,

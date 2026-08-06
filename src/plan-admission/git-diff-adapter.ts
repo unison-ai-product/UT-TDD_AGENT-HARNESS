@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
-import type { AdmissionChangesPort, AdmissionComparison } from "./admission-check";
-import type { PlanBlob, PlanChange } from "./diff-fence";
+import type { AdmissionChangesPort, AdmissionComparison } from "./admission-check.ts";
+import type { PlanBlob, PlanChange } from "./diff-fence.ts";
 
 const PLAN_PATH = /^docs\/plans\/PLAN-[A-Za-z0-9-]+\.md$/;
 const UTF8 = new TextDecoder("utf-8", { fatal: true });

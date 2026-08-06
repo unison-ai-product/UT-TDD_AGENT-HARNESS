@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeDocumentApplicability,
   validateDocumentDisposition,
-} from "../../src/document-disposition/domain/document-disposition";
+} from "../../src/document-disposition/domain/document-disposition.ts";
 
 const base = {
   baselinePath: "docs/a.md",

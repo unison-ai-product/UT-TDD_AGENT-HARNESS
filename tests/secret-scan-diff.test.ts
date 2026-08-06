@@ -10,7 +10,7 @@ import {
   type PushedFileEntry,
   resolveScanMode,
   runSecretScanDiff,
-} from "../scripts/git-hooks/secret-scan-diff";
+} from "../scripts/git-hooks/secret-scan-diff.ts";
 
 const repoRoot = process.cwd();
 const hooksDir = join(repoRoot, "scripts", "git-hooks");

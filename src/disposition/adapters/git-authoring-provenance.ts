@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AuthoringProvenancePort } from "../ports/authoring-provenance";
+import type { AuthoringProvenancePort } from "../ports/authoring-provenance.ts";
 
 export class GitAuthoringProvenance implements AuthoringProvenancePort {
   constructor(private readonly repoRoot: string) {}

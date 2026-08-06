@@ -7,13 +7,16 @@ import {
   recommendSkillsForText,
   recordSkillInvocations,
   recordSkillRecommendations,
-} from "../src/skill-engine/recommend";
-import { scoreSkillDetailed, shouldScoreSkillAsset } from "../src/skill-scoring/scoring";
-import { stableId } from "../src/stable-id";
-import { openHarnessDb } from "../src/state-db/index";
-import { migrate, rowCounts } from "../src/state-db/migration";
-import { recordProjectionEvent } from "../src/state-db/projection-writer";
-import { projectSkillEvaluations, projectSkillTelemetry } from "../src/state-db/skill-projections";
+} from "../src/skill-engine/recommend.ts";
+import { scoreSkillDetailed, shouldScoreSkillAsset } from "../src/skill-scoring/scoring.ts";
+import { stableId } from "../src/stable-id.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
+import { migrate, rowCounts } from "../src/state-db/migration.ts";
+import { recordProjectionEvent } from "../src/state-db/projection-writer.ts";
+import {
+  projectSkillEvaluations,
+  projectSkillTelemetry,
+} from "../src/state-db/skill-projections.ts";
 
 describe("skill recommendation telemetry", () => {
   function seedPlan(

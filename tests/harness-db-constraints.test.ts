@@ -6,14 +6,14 @@ import {
   primaryKeyColumnsOf,
   type TableDef,
   validateTableDef,
-} from "../src/schema/harness-db";
+} from "../src/schema/harness-db.ts";
 import {
   enumCheck,
   foreignKey,
   reference,
   requiredCol,
-} from "../src/schema/harness-db-table-builders";
-import { openHarnessDb } from "../src/state-db";
+} from "../src/schema/harness-db-table-builders.ts";
+import { openHarnessDb } from "../src/state-db/index.ts";
 
 const constrainedTable: TableDef = {
   name: "child_rows",

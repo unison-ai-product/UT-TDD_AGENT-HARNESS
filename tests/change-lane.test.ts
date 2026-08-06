@@ -8,8 +8,8 @@ import {
   isDocSafeChangePath,
   resolveChangeDiffRange,
   runChangeLaneClassification,
-} from "../src/github/change-lane";
-import { workspaceRead } from "./support/workspace-roots";
+} from "../src/github/change-lane.ts";
+import { workspaceRead } from "./support/workspace-roots.ts";
 
 describe("change-lane classification (PLAN-L7-455)", () => {
   describe("isDocSafeChangePath", () => {

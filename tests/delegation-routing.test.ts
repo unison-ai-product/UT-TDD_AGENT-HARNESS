@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildAdapterPlan } from "../src/runtime/adapter";
+import { buildAdapterPlan } from "../src/runtime/adapter.ts";
 import {
   DELEGATION_ROLE_ALLOWLIST,
   MODEL_IDS,
   resolveDelegationRouting,
-} from "../src/team/delegation-routing";
+} from "../src/team/delegation-routing.ts";
 
 describe("delegation routing (PLAN-L7-255)", () => {
   it("U-DELEG-001: unknown role fail-closes with the allowlist named", () => {

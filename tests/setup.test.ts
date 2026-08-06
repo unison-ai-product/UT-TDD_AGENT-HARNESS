@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildBranchProtectionPayload } from "../src/setup/branch-protection";
+import { buildBranchProtectionPayload } from "../src/setup/branch-protection.ts";
 import {
   applyBranchProtection,
   buildCleanDistributionPlan,
@@ -23,9 +23,9 @@ import {
   type SetupDeps,
   type SetupState,
   transformCleanDistributionArtifact,
-} from "../src/setup/index";
-import { COMMON_FILES, type TemplateSet } from "../src/setup/templates";
-import { MODEL_IDS } from "../src/team/model-policy";
+} from "../src/setup/index.ts";
+import { COMMON_FILES, type TemplateSet } from "../src/setup/templates.ts";
+import { MODEL_IDS } from "../src/team/model-policy.ts";
 
 /** in-memory file store + gh 呼び出し記録の mock deps (now 固定で決定論)。 */
 function mockDeps(

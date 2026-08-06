@@ -3,7 +3,7 @@ import {
   type HookInvocation,
   invocationEquals,
   parseHookInvocation,
-} from "../lint/hook-invocation";
+} from "../lint/hook-invocation.ts";
 
 export interface SetupSmokeDeps {
   repoRoot: string;
@@ -85,8 +85,7 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
   checks.push({
     name: "native-bun-launcher-contract",
     ok:
-      launcher !== null &&
-      launcher.includes("windowsHide: true") &&
+      !!launcher?.includes("windowsHide: true") &&
       launcher.includes("realpathSync") &&
       !launcher.includes("shell: true") &&
       !launcher.includes("spawnSync"),

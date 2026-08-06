@@ -1,4 +1,4 @@
-import type { HarnessDb } from "./index";
+import type { HarnessDb } from "./index.ts";
 
 /** SQLite固有の原子境界。applicationはこの実装を直接参照しない。 */
 const transactionDepth = new WeakMap<HarnessDb, number>();

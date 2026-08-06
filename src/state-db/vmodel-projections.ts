@@ -1,18 +1,18 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { GitAuthoringProvenance } from "../disposition/adapters/git-authoring-provenance";
-import { buildTrackedTargetRegistry } from "../disposition/adapters/tracked-target-registry";
-import { loadTrackedCatalogInput } from "../disposition/adapters/tracked-vmodel-loader";
-import { DocumentDispositionCatalog } from "../disposition/domain/document-disposition-catalog";
+import { GitAuthoringProvenance } from "../disposition/adapters/git-authoring-provenance.ts";
+import { buildTrackedTargetRegistry } from "../disposition/adapters/tracked-target-registry.ts";
+import { loadTrackedCatalogInput } from "../disposition/adapters/tracked-vmodel-loader.ts";
+import { DocumentDispositionCatalog } from "../disposition/domain/document-disposition-catalog.ts";
 import {
   reconcileDispositionTarget,
   resolveCanonicalTarget,
-} from "../disposition/domain/target-resolver";
-import type { AuthoringProvenancePort } from "../disposition/ports/authoring-provenance";
-import { loadTrackedDocumentProfileCatalog } from "../profile/adapters/tracked-profile-loader";
-import { stableId } from "../stable-id";
-import type { HarnessDb } from "./index";
-import { upsertRow } from "./index";
+} from "../disposition/domain/target-resolver.ts";
+import type { AuthoringProvenancePort } from "../disposition/ports/authoring-provenance.ts";
+import { loadTrackedDocumentProfileCatalog } from "../profile/adapters/tracked-profile-loader.ts";
+import { stableId } from "../stable-id.ts";
+import type { HarnessDb } from "./index.ts";
+import { upsertRow } from "./index.ts";
 
 const catalogPaths = [
   "docs/governance/vmodel-source-manifest.md",

@@ -1,7 +1,8 @@
-import { checkHandoverOutstandingAnchor } from "../handover/index";
-import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging";
-import { checkGreenCommandDigests } from "../lint/green-command-digest";
-import type { LintResult } from "../plan/lint";
+import { checkHandoverOutstandingAnchor } from "../handover/index.ts";
+import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging.ts";
+import { checkGreenCommandDigests } from "../lint/green-command-digest.ts";
+import { checkImportSpecifiers } from "../lint/import-specifier.ts";
+import type { LintResult } from "../plan/lint.ts";
 import {
   checkAgentContractDetection,
   checkDbProjectionCoverage,
@@ -12,15 +13,15 @@ import {
   checkTypedSpecOwnedArtifactDispersal,
   checkTypedSpecPhaseLayerAlignment,
   checkTypedSpecTraceClosure,
-} from "./db-projection";
-import { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
+} from "./db-projection.ts";
+import { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression.ts";
 import {
   checkDocConsistency,
   checkEntityCoverage,
   checkFrRegistryAudit,
   checkResourceKernelFixtureManifest,
   checkResourceKernelPairMapping,
-} from "./doc-registry";
+} from "./doc-registry.ts";
 import {
   checkAssetDrift,
   checkBranchKind,
@@ -30,7 +31,7 @@ import {
   checkModuleDrift,
   checkSkillAssignment,
   checkVerificationProfile,
-} from "./lint-gates";
+} from "./lint-gates.ts";
 import {
   checkBackfillResult,
   checkForwardConvergence,
@@ -46,7 +47,7 @@ import {
   checkReviewEvidence,
   checkScrumReverse,
   checkTestDesignNaming,
-} from "./plan-governance";
+} from "./plan-governance.ts";
 import {
   checkCycleP4Verification,
   checkDbCurrency,
@@ -68,13 +69,13 @@ import {
   checkSubDocSchemaIntegrity,
   checkSubDocSectionStructure,
   checkTelemetryClosure,
-} from "./process-quality";
+} from "./process-quality.ts";
 import {
   checkForwardFreezeContractsResult,
   checkRefactorQaReleaseContractsResult,
   checkRoadmap,
   checkVerificationGroupsResult,
-} from "./roadmap-verification";
+} from "./roadmap-verification.ts";
 import {
   checkCodingRules,
   checkDddTddRules,
@@ -87,16 +88,16 @@ import {
   checkRuntimePortability,
   checkRuntimeReadability,
   checkSecretScan,
-} from "./rule-quality";
-import type { DoctorCheckDefinition, DoctorOptions } from "./runner";
-import { type DoctorDeps, handoverDeps } from "./runtime-state";
-import { checkRuntimeStateLocation } from "./runtime-state-location";
+} from "./rule-quality.ts";
+import type { DoctorCheckDefinition, DoctorOptions } from "./runner.ts";
+import { type DoctorDeps, handoverDeps } from "./runtime-state.ts";
+import { checkRuntimeStateLocation } from "./runtime-state-location.ts";
 import {
   checkCodexHookAdapter,
   checkCodexWrapperParity,
   checkGithubCiPolicy,
   checkProjectHooks,
-} from "./runtime-surface";
+} from "./runtime-surface.ts";
 import {
   checkDeliverablePlanTrace,
   checkImplPlanTrace,
@@ -105,9 +106,9 @@ import {
   checkOracleTestTrace,
   checkPlanArtifactExistence,
   checkTrackedCanonical,
-} from "./source-trace";
-import { checkTestRepositoryIsolation } from "./test-repository-isolation";
-import { checkToolchainPin } from "./toolchain";
+} from "./source-trace.ts";
+import { checkTestRepositoryIsolation } from "./test-repository-isolation.ts";
+import { checkToolchainPin } from "./toolchain.ts";
 import {
   checkFrontendDesignCoverage,
   checkG8IntegrationWorkflow,
@@ -118,7 +119,7 @@ import {
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
   checkRightLungDocGovernance,
-} from "./workflow-quality";
+} from "./workflow-quality.ts";
 
 const fullProfile = ["full"] as const;
 const fullAndToolchainProfiles = ["full", "toolchain"] as const;
@@ -183,6 +184,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("design-language", () => checkDesignLanguage(deps.repoRoot)),
         full("ddd-tdd-rules", () => checkDddTddRules(deps.repoRoot)),
         full("runtime-portability", () => checkRuntimePortability(deps.repoRoot)),
+        full("import-specifier", () => checkImportSpecifiers(deps.repoRoot)),
         full("rule-drift", () => checkRuleDrift(deps.repoRoot)),
         full("model-id-doc-drift", () => checkModelIdDocDrift(deps.repoRoot)),
         full("gate-confirm", () => checkGateConfirm(deps.repoRoot)),

@@ -1,14 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { HarnessDb } from "../state-db/index.js";
-import { runSqliteTransaction } from "../state-db/sqlite-transaction.js";
+import type { HarnessDb } from "../state-db/index.ts";
+import { runSqliteTransaction } from "../state-db/sqlite-transaction.ts";
 import type {
   DurableIssueProjectionEvent,
   ForwardEscapeCustodyPort,
   ForwardEscapeProjectionJournal,
   ForwardEscapeValidationCertificate,
   ValidatedForwardEscape,
-} from "./forward-escape.js";
-import { DURABLE_PROJECTION_FAILURE_REASONS } from "./forward-escape.js";
+} from "./forward-escape.ts";
+import { DURABLE_PROJECTION_FAILURE_REASONS } from "./forward-escape.ts";
 
 function digest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");

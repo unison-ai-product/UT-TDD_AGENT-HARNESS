@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import type { ModelEvaluationConfigPort } from "../contracts/projection-store";
+import type { ModelEvaluationConfigPort } from "../contracts/projection-store.ts";
 
 export class RepositoryModelEvaluationConfig implements ModelEvaluationConfigPort {
   readonly #repoRoot: string;

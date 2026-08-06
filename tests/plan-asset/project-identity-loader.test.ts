@@ -4,7 +4,7 @@ import {
   loadProjectIdentityFromHead,
   loadTrackedProjectIdentity,
   type ProjectIdentityReceipt,
-} from "../../src/plan-asset/adapters/project-identity-loader.js";
+} from "../../src/plan-asset/adapters/project-identity-loader.ts";
 
 const path = "ut-tdd.project.json";
 const commit = "a".repeat(40);

@@ -15,8 +15,8 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { ORACLE_TEST_TRACE_BASELINE } from "./oracle-test-trace-baseline";
-import { ORACLE_TEST_TRACE_WIDENED_BASELINE } from "./oracle-test-trace-widened-baseline";
+import { ORACLE_TEST_TRACE_BASELINE } from "./oracle-test-trace-baseline.ts";
+import { ORACLE_TEST_TRACE_WIDENED_BASELINE } from "./oracle-test-trace-widened-baseline.ts";
 
 export { ORACLE_TEST_TRACE_BASELINE, ORACLE_TEST_TRACE_WIDENED_BASELINE };
 

@@ -12,9 +12,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
-import { type ScheduleLiveEntry, selectScheduleLiveState } from "../handover/session-start-digest";
-import { buildSkillInjectionSet, recommendSkillsForPlan } from "../skill-engine/recommend";
-import type { HarnessDb } from "../state-db/index";
+import {
+  type ScheduleLiveEntry,
+  selectScheduleLiveState,
+} from "../handover/session-start-digest.ts";
+import { buildSkillInjectionSet, recommendSkillsForPlan } from "../skill-engine/recommend.ts";
+import type { HarnessDb } from "../state-db/index.ts";
 
 export interface ElicitationPlanInfo {
   plan_id: string;

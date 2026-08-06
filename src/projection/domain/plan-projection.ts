@@ -1,4 +1,4 @@
-import type { ProjectionEvent } from "../contracts/projection-store";
+import type { ProjectionEvent } from "../contracts/projection-store.ts";
 
 export interface ProjectionPlanSource {
   readonly path: string;

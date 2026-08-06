@@ -2,14 +2,14 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { NodePlanDraftRunner } from "../src/plan-admission/node-plan-draft-runner.js";
-import type { DraftManifestV2 } from "../src/plan-admission/plan-draft-command-assembler.js";
-import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
+import { NodePlanDraftRunner } from "../src/plan-admission/node-plan-draft-runner.ts";
+import type { DraftManifestV2 } from "../src/plan-admission/plan-draft-command-assembler.ts";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.ts";
 import {
   parseTrackedReceiptProjection,
   TRACKED_RECEIPT_SCHEMA,
-} from "../src/plan-admission/tracked-receipt-projection.js";
-import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
+} from "../src/plan-admission/tracked-receipt-projection.ts";
+import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.ts";
 
 const roots: string[] = [];
 afterEach(() => {

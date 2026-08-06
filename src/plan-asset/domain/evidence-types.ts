@@ -1,4 +1,4 @@
-import type { RedactedCommandArgs } from "./redacted-command-args.js";
+import type { RedactedCommandArgs } from "./redacted-command-args.ts";
 
 export interface EvidenceError {
   readonly ruleId: string;

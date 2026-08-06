@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance";
-import { buildTrackedTargetRegistry } from "../../src/disposition/adapters/tracked-target-registry";
-import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader";
-import { resolveCanonicalTarget } from "../../src/disposition/domain/target-resolver";
+import { GitAuthoringProvenance } from "../../src/disposition/adapters/git-authoring-provenance.ts";
+import { buildTrackedTargetRegistry } from "../../src/disposition/adapters/tracked-target-registry.ts";
+import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader.ts";
+import { resolveCanonicalTarget } from "../../src/disposition/domain/target-resolver.ts";
 
 const paths = [
   "docs/governance/vmodel-source-manifest.md",

@@ -1,5 +1,5 @@
-import type { PocEvaluationReadPort, ProjectionStore } from "../contracts/projection-store";
-import { summarizePocEvaluations } from "../domain/poc-evaluations";
+import type { PocEvaluationReadPort, ProjectionStore } from "../contracts/projection-store.ts";
+import { summarizePocEvaluations } from "../domain/poc-evaluations.ts";
 
 export function projectPocEvaluations(input: {
   read: PocEvaluationReadPort;

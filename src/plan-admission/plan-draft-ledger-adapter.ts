@@ -1,12 +1,12 @@
 import { timingSafeEqual } from "node:crypto";
-import { calculatePlanDraftCommandDigests } from "../kernel/plan-draft-command-digest.js";
-import type { PlanDraftLedgerTransaction } from "../plan-asset/ledger/plan-draft-ledger.js";
-import type { PlanDraftExecutionPayload } from "./plan-draft-command-assembler.js";
+import { calculatePlanDraftCommandDigests } from "../kernel/plan-draft-command-digest.ts";
+import type { PlanDraftLedgerTransaction } from "../plan-asset/ledger/plan-draft-ledger.ts";
+import type { PlanDraftExecutionPayload } from "./plan-draft-command-assembler.ts";
 import type {
   DraftLedgerPort,
   DraftReceiptBinding,
   PlanDraftCommand,
-} from "./plan-draft-service.js";
+} from "./plan-draft-service.ts";
 
 /** Saga が journal・artifact と結合するために必要な永続 receipt。 */
 export interface PlanDraftLedgerReceipt extends DraftReceiptBinding {

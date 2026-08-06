@@ -14,8 +14,8 @@ import {
   nodeHistoryScanDeps,
   planDigestMigration,
   toGitPath,
-} from "../src/lint/green-command-digest";
-import type { GreenCommandEvidence, ParsedReviewPlan } from "../src/lint/review-evidence";
+} from "../src/lint/green-command-digest.ts";
+import type { GreenCommandEvidence, ParsedReviewPlan } from "../src/lint/review-evidence.ts";
 
 function plan(
   planId: string,
