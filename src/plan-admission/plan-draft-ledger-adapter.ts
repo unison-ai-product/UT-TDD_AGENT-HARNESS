@@ -14,8 +14,11 @@ export interface PlanDraftLedgerReceipt extends DraftReceiptBinding {
 }
 
 export class PlanDraftLedgerRejectedError extends Error {
-  constructor(readonly ruleId: string) {
+  readonly ruleId: string;
+
+  constructor(ruleId: string) {
     super(`PLAN draft ledgerが起票を拒否しました: ${ruleId}`);
+    this.ruleId = ruleId;
     this.name = "PlanDraftLedgerRejectedError";
   }
 }
@@ -31,7 +34,11 @@ export class PlanDraftLedgerDigestMismatchError extends Error {
 export class PlanDraftLedgerAdapter
   implements DraftLedgerPort<PlanDraftExecutionPayload, PlanDraftLedgerReceipt>
 {
-  constructor(private readonly ledger: PlanDraftLedgerTransaction) {}
+  private readonly ledger: PlanDraftLedgerTransaction;
+
+  constructor(ledger: PlanDraftLedgerTransaction) {
+    this.ledger = ledger;
+  }
 
   transact(
     command: PlanDraftCommand<PlanDraftExecutionPayload>,

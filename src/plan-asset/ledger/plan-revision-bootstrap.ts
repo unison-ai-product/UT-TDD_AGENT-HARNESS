@@ -46,11 +46,16 @@ export interface LegacyPlanRevisionBootstrapFaultPort {
 export class LegacyPlanRevisionBootstrapTransaction {
   private readonly transaction: LedgerTransactionPort;
 
+  private readonly db: HarnessDb;
+  private readonly fault?: LegacyPlanRevisionBootstrapFaultPort;
+
   constructor(
-    private readonly db: HarnessDb,
+    db: HarnessDb,
     transaction?: LedgerTransactionPort,
-    private readonly fault?: LegacyPlanRevisionBootstrapFaultPort,
+    fault?: LegacyPlanRevisionBootstrapFaultPort,
   ) {
+    this.db = db;
+    this.fault = fault;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
   }

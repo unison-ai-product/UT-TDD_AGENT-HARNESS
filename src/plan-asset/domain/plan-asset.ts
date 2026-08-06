@@ -60,10 +60,12 @@ export class PlanRevision {
 }
 
 export class PlanAsset {
-  private constructor(
-    readonly assetId: string,
-    readonly revisions: readonly PlanRevision[],
-  ) {
+  readonly assetId: string;
+  readonly revisions: readonly PlanRevision[];
+
+  private constructor(assetId: string, revisions: readonly PlanRevision[]) {
+    this.assetId = assetId;
+    this.revisions = revisions;
     Object.freeze(this);
   }
 

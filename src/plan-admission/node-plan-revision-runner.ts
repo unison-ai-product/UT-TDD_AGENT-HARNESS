@@ -54,7 +54,11 @@ export interface NodePlanRevisionRunnerDeps {
 
 /** HEAD preimage、working tree CAS、ledgerを一つのrevision Sagaへ閉じるNode adapter。 */
 export class NodePlanRevisionRunner {
-  constructor(private readonly deps: NodePlanRevisionRunnerDeps) {}
+  private readonly deps: NodePlanRevisionRunnerDeps;
+
+  constructor(deps: NodePlanRevisionRunnerDeps) {
+    this.deps = deps;
+  }
 
   run(input: {
     manifest: PlanRevisionManifest;
@@ -337,11 +341,19 @@ export function revisionUsesLegacyBootstrap(
 }
 
 class RevisionRenderer {
+  private readonly delegate: TrackedReceiptRenderer<PlanRevisionExecutionPayload>;
+  private readonly sourceDigest: `sha256:${string}`;
+  private readonly projectionDigest: `sha256:${string}`;
+
   constructor(
-    private readonly delegate: TrackedReceiptRenderer<PlanRevisionExecutionPayload>,
-    private readonly sourceDigest: `sha256:${string}`,
-    private readonly projectionDigest: `sha256:${string}`,
-  ) {}
+    delegate: TrackedReceiptRenderer<PlanRevisionExecutionPayload>,
+    sourceDigest: `sha256:${string}`,
+    projectionDigest: `sha256:${string}`,
+  ) {
+    this.delegate = delegate;
+    this.sourceDigest = sourceDigest;
+    this.projectionDigest = projectionDigest;
+  }
 
   render(
     command: import("./plan-draft-service.ts").PlanDraftCommand<PlanRevisionExecutionPayload>,

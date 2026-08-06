@@ -5,7 +5,11 @@ export interface LedgerTransactionPort {
 }
 
 export class ImmediateLedgerTransaction implements LedgerTransactionPort {
-  constructor(private readonly db: HarnessDb) {}
+  private readonly db: HarnessDb;
+
+  constructor(db: HarnessDb) {
+    this.db = db;
+  }
 
   run<T>(work: () => { readonly commit: boolean; readonly value: T }): T {
     this.db.exec("BEGIN IMMEDIATE");

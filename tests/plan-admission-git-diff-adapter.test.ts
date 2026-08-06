@@ -11,10 +11,13 @@ const HEAD = "b".repeat(40);
 const encoder = new TextEncoder();
 
 class FakeGit implements GitCommandPort {
-  constructor(
-    private readonly diff: Uint8Array,
-    private readonly blobs: ReadonlyMap<string, Uint8Array> = new Map(),
-  ) {}
+  private readonly diff: Uint8Array;
+  private readonly blobs: ReadonlyMap<string, Uint8Array>;
+
+  constructor(diff: Uint8Array, blobs: ReadonlyMap<string, Uint8Array> = new Map()) {
+    this.diff = diff;
+    this.blobs = blobs;
+  }
 
   run(args: readonly string[]): Uint8Array {
     if (args[0] === "rev-parse")

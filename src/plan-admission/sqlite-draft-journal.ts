@@ -19,21 +19,25 @@ export class DraftJournalIntegrityError extends Error {
 export class DraftJournalRecoveryRequiredError extends DraftJournalIntegrityError {
   readonly ruleId = "draft-journal-legacy-cleanup-provenance-unknown" as const;
 
-  constructor(
-    readonly commandId: string,
-    readonly reason: string,
-  ) {
+  readonly commandId: string;
+  readonly reason: string;
+
+  constructor(commandId: string, reason: string) {
     super("draft-journal-legacy-cleanup-provenance-unknown");
+    this.commandId = commandId;
+    this.reason = reason;
     this.name = "DraftJournalRecoveryRequiredError";
   }
 }
 
 /** SQLite v3 journal eventを正本、plan_draft_journalをcurrent projectionとして扱う。 */
 export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding> {
-  constructor(
-    private readonly db: HarnessDb,
-    private readonly now: () => string = () => new Date().toISOString(),
-  ) {
+  private readonly db: HarnessDb;
+  private readonly now: () => string;
+
+  constructor(db: HarnessDb, now: () => string = () => new Date().toISOString()) {
+    this.db = db;
+    this.now = now;
     if (!migratePlanLedger(db).ok) throw new DraftJournalIntegrityError("plan-ledger-unavailable");
   }
 

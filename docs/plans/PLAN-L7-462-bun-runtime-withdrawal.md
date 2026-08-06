@@ -26,6 +26,10 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/import-specifier.test.ts
     artifact_type: test_code
+  - artifact_path: src/lint/erasable-syntax.ts
+    artifact_type: source_module
+  - artifact_path: tests/erasable-syntax.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []

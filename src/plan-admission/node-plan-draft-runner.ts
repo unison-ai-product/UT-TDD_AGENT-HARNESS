@@ -31,7 +31,11 @@ export interface NodePlanDraftRunnerDeps {
 
 /** CLI resource scope: ledger DBを一回のcommandに閉じ、成功・失敗の双方でcloseする。 */
 export class NodePlanDraftRunner {
-  constructor(private readonly deps: NodePlanDraftRunnerDeps) {}
+  private readonly deps: NodePlanDraftRunnerDeps;
+
+  constructor(deps: NodePlanDraftRunnerDeps) {
+    this.deps = deps;
+  }
 
   run(input: {
     manifest: DraftManifestV2;

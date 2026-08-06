@@ -66,7 +66,11 @@ class Journal implements DraftJournalPort<Receipt> {
   failCommit = false;
   failCleanupPending = false;
 
-  constructor(private readonly events: string[]) {}
+  private readonly events: string[];
+
+  constructor(events: string[]) {
+    this.events = events;
+  }
 
   find(): DraftJournalEntry<Receipt> | undefined {
     this.events.push("journal.find");
@@ -122,7 +126,11 @@ class Publisher implements DraftPublisherPort {
   finalizeFailures = 0;
   failResume = false;
 
-  constructor(private readonly events: string[]) {}
+  private readonly events: string[];
+
+  constructor(events: string[]) {
+    this.events = events;
+  }
 
   stage(artifacts: readonly DraftArtifact[]): DraftPublishToken {
     this.events.push(`publisher.stage:${artifacts.map((item) => item.path).join(",")}`);

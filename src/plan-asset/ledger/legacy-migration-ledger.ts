@@ -60,11 +60,12 @@ export interface AdoptMigrationInput {
 export class LegacyMigrationLedger {
   private readonly commands: AppendCommandTransaction;
 
-  constructor(
-    private readonly db: HarnessDb,
-    transaction?: LedgerTransactionPort,
-    private readonly fault?: LedgerFaultPort,
-  ) {
+  private readonly db: HarnessDb;
+  private readonly fault?: LedgerFaultPort;
+
+  constructor(db: HarnessDb, transaction?: LedgerTransactionPort, fault?: LedgerFaultPort) {
+    this.db = db;
+    this.fault = fault;
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
     this.commands = new AppendCommandTransaction(db, transaction, fault);
   }

@@ -1,5 +1,6 @@
 import { checkHandoverOutstandingAnchor } from "../handover/index.ts";
 import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging.ts";
+import { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 import { checkGreenCommandDigests } from "../lint/green-command-digest.ts";
 import { checkImportSpecifiers } from "../lint/import-specifier.ts";
 import type { LintResult } from "../plan/lint.ts";
@@ -185,6 +186,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("ddd-tdd-rules", () => checkDddTddRules(deps.repoRoot)),
         full("runtime-portability", () => checkRuntimePortability(deps.repoRoot)),
         full("import-specifier", () => checkImportSpecifiers(deps.repoRoot)),
+        full("erasable-syntax", () => checkErasableSyntax(deps.repoRoot)),
         full("rule-drift", () => checkRuleDrift(deps.repoRoot)),
         full("model-id-doc-drift", () => checkModelIdDocDrift(deps.repoRoot)),
         full("gate-confirm", () => checkGateConfirm(deps.repoRoot)),

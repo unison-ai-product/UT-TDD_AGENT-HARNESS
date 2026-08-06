@@ -15,12 +15,13 @@ export type GitDiffAdapterErrorCode =
   | "git-blob-invalid-utf8";
 
 export class GitDiffAdapterError extends Error {
-  constructor(
-    readonly code: GitDiffAdapterErrorCode,
-    message: string,
-    readonly path?: string,
-  ) {
+  readonly code: GitDiffAdapterErrorCode;
+  readonly path?: string;
+
+  constructor(code: GitDiffAdapterErrorCode, message: string, path?: string) {
     super(message);
+    this.code = code;
+    this.path = path;
     this.name = "GitDiffAdapterError";
   }
 }
@@ -38,7 +39,11 @@ export interface AdmissionGitDiff {
 }
 
 export class SystemGitCommandPort implements GitCommandPort {
-  constructor(private readonly repoRoot: string) {}
+  private readonly repoRoot: string;
+
+  constructor(repoRoot: string) {
+    this.repoRoot = repoRoot;
+  }
 
   run(args: readonly string[]): Uint8Array {
     try {
@@ -100,7 +105,11 @@ export function readAdmissionGitDiff(input: {
 }
 
 export class GitAdmissionChangesAdapter implements AdmissionChangesPort {
-  constructor(private readonly git: GitCommandPort) {}
+  private readonly git: GitCommandPort;
+
+  constructor(git: GitCommandPort) {
+    this.git = git;
+  }
 
   compare(baseRef: string, headRef: string): AdmissionComparison {
     const comparison = readAdmissionGitDiff({ baseRef, headRef, git: this.git });
