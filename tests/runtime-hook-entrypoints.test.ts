@@ -87,35 +87,19 @@ describe("runtime hook entrypoints", () => {
 
     expect(hooks.SessionStart[0].hooks[0]).toMatchObject({
       command: "node",
-      args: [
-        `${claudeProjectDir}/src/cli.ts`,
-        "session",
-        "start",
-      ],
+      args: [`${claudeProjectDir}/src/cli.ts`, "session", "start"],
     });
     expect(hooks.PostToolUse[0].hooks[0]).toMatchObject({
       command: "node",
-      args: [
-        `${claudeProjectDir}/src/cli.ts`,
-        "hook",
-        "post-tool-use",
-      ],
+      args: [`${claudeProjectDir}/src/cli.ts`, "hook", "post-tool-use"],
     });
     expect(hooks.Stop[0].hooks[0]).toMatchObject({
       command: "node",
-      args: [
-        `${claudeProjectDir}/src/cli.ts`,
-        "session",
-        "summary",
-      ],
+      args: [`${claudeProjectDir}/src/cli.ts`, "session", "summary"],
     });
     expect(hooks.Stop[1].hooks[0]).toMatchObject({
       command: "node",
-      args: [
-        `${claudeProjectDir}/src/cli.ts`,
-        "hook",
-        "claude-memory-wake",
-      ],
+      args: [`${claudeProjectDir}/src/cli.ts`, "hook", "claude-memory-wake"],
       timeout: 930,
       asyncRewake: true,
     });
