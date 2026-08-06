@@ -3,6 +3,7 @@ import {
   existsSync,
   linkSync,
   lstatSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   realpathSync,
@@ -12,7 +13,6 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { ensureDir } from "../shared/fs";
 
 const UNVERIFIABLE_OWNER_TTL_MS = 15 * 60 * 1000;
 const SELF_PROCESS_BIRTH = `${process.pid}:${Date.now() - Math.floor(process.uptime() * 1000)}`;
@@ -55,7 +55,11 @@ function secureRoot(repoRoot: string): string {
   let current = canonicalRepo;
   for (const part of [".ut-tdd", "state", "stop-refresh"]) {
     const next = join(current, part);
-    ensureDir(next);
+    try {
+      mkdirSync(next);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
     const stat = lstatSync(next);
     if (!stat.isDirectory() || stat.isSymbolicLink())
       throw new Error("stop-refresh-state-path-invalid");
@@ -69,7 +73,7 @@ function secureRoot(repoRoot: string): string {
 
 function generationsDir(repoRoot: string): string {
   const path = join(secureRoot(repoRoot), "generations");
-  ensureDir(path, { recursive: true });
+  mkdirSync(path, { recursive: true });
   const stat = lstatSync(path);
   if (!stat.isDirectory() || stat.isSymbolicLink())
     throw new Error("stop-refresh-generations-invalid");
@@ -256,7 +260,7 @@ export function acquireStopRefreshLease(
   const owner: StopRefreshOwner = { ...payload, digest: digestPayload(payload) };
   try {
     validateComponent(generation);
-    ensureDir(generationDir(repoRoot, generation));
+    mkdirSync(generationDir(repoRoot, generation));
     writeOwner(anchorPath(repoRoot, generation), owner);
     writeOwner(claimPath(repoRoot, generation, pid), owner);
     try {
@@ -602,7 +606,7 @@ function secureSubdirectory(repoRoot: string, name: string): string {
   const base = secureRoot(repoRoot);
   const path = join(base, name);
   try {
-    ensureDir(path);
+    mkdirSync(path);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
   }
