@@ -8,7 +8,7 @@ route_signal: incident
 route_mode: incident
 status: draft
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-08-06
 backprop_decision: not_required
 backprop_decision_reason: "Harness 自身の実行 runtime の差し替えであり、製品の外部 requirement / design / test-design 契約は変えない。言語は TypeScript のまま (ADR-001 の言語選定は不変、runtime 節のみ改訂対象)。"
 owner: PM / PO
@@ -71,12 +71,39 @@ Bun 起因・Bun 関与のトラブルが反復している:
 (`setup-bun` / `bun install --frozen-lockfile` / `bun x vitest`)、
 `scripts/run-vitest-snapshot.ts` の `bun.cmd` spawn。
 
-## 設計判断 (TL レビューで確定、実装前)
+## 設計判断 (freeze 2026-08-06、advisor 諮問済み)
 
-- **TS 実行方式**: 推奨 = Node 24 ネイティブ type-stripping (`node src/cli.ts`)。
-  理由: 依存追加ゼロ・ビルド段不要 (enum 等の blocker 0 件を実測済み)。
-  対抗: (a) tsx loader (依存 +1、erasable でない構文も通る)、(b) esbuild
-  prebuild (起動最速だがビルド段が hook 経路に入る)。採択は PLAN 設計判断節へ記録。
+**採択: Node 24 ネイティブ type-stripping (`node src/cli.ts`)。** advisor
+(implementation、`ut-tdd advisor --execute`、Codex frontier 利用上限のため
+fallback = claude-fable-5、発火ログ 2026-08-06) が同方式を推奨し、前提を repo
+実測で検証した上で採択する。
+
+実測 (2026-08-06) — 起票時の「blocker 0 件」claim は**一部誤り**だった:
+
+- 拡張子なし相対 import **773 箇所** (Node ESM は拡張子必須で `ERR_MODULE_NOT_FOUND`)。
+  `.ts` 拡張子付き import は node 24.13.0 / bun 1.3.14 の両方で動作を実証済み。
+  tsconfig へ `allowImportingTsExtensions: true` を追加する (noEmit 下で許可)。
+- **parameter properties (`constructor(private readonly ...)`) が 18 箇所 / 13
+  ファイルに実在** (起票時 grep は enum/namespace/decorator のみで見落とし)。素の
+  type-stripping は fail、`--experimental-transform-types` なら通るが experimental
+  flag を hook 恒久経路に置かない。→ 18 箇所を明示 field 代入へ機械是正し
+  erasable-only を維持する。
+- 変数引数の dynamic import / require: **0 件**。enum / namespace: **0 件**。
+- node 起動実測: 0.138s (hook timeout 5s に対し十分)。
+
+対抗案と棄却理由:
+
+- (b) tsx loader: 依存 +1、hook 5s 制約下で毎回 loader 起動を払い、erasable でない
+  構文も通すため「Node type-stripping で動く」という本 PLAN の終状態検証を汚す。
+- (c) esbuild prebuild: hook 経路にビルド段と stale-artifact 問題 (編集→ビルド忘れ
+  →古い挙動) を持ち込み、fail-close 設計と相性が悪い。
+
+**step 1 の PR 構成契約**: (1) tsconfig + 拡張子なし相対 import 禁止 lint +
+773 箇所 codemod + parameter properties 18 箇所是正を **1 PR で一括** (gate と
+codemod を分割すると全体赤化か再流入のどちらかになる)。着工は Codex in-flight PR
+(#268) が閉じた同期点に固定し、機械 diff を即 commit・即 push する。(2) hooks の
+`bun` → `node` 差し替えは**その後の別 PR**。
+
 - **配布バイナリ**: `bun build --compile` の代替は Node SEA か「bundle + node
   実行」の 2 案。配布 (Pack) は現在 no-go 中のため、本 PLAN では方式メモまで。
 
