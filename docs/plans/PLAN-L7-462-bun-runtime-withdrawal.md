@@ -78,18 +78,24 @@ Bun 起因・Bun 関与のトラブルが反復している:
 fallback = claude-fable-5、発火ログ 2026-08-06) が同方式を推奨し、前提を repo
 実測で検証した上で採択する。
 
-実測 (2026-08-06、基準 = main HEAD `11816bfd`。初版 freeze の数値は blind review FLAG
-で 3 点是正済み — 過小計数 grep / `.js` 指定子クラスの欠落 / 基準 commit 不明):
+実測 (2026-08-06、基準 = 計測時点の main HEAD `11816bfd`。初版 freeze の数値は blind
+review FLAG で是正済み — 過小計数 grep / `.js` 指定子クラスの欠落 / 基準 commit 不明。
+対象 scope は tsconfig `include` と同じ **4 ディレクトリ全域 (src/ tests/ scripts/
+.claude/hooks/)** — tests/ を除外しない):
 
-- 拡張子なし相対 import **755 箇所** (Node ESM は拡張子必須で `ERR_MODULE_NOT_FOUND`)。
-  根拠: `grep -rEn 'from "\.\.?/[^"]*"' src/ .claude/hooks/ scripts/ --include="*.ts" |
-  grep -vc '\.ts"|\.js"|\.json"'`。`.ts` 拡張子付き import は node 24.13.0 /
-  bun 1.3.14 の両方で動作を実証済み。tsconfig へ `allowImportingTsExtensions: true`
-  を追加する (noEmit 下で許可。`verbatimModuleSyntax: true` 既設のため型 import 残存の
-  危険も既に封じられている)。
-- **相対 `.js` 指定子 import が 215 行** (tests/ 含む) 実在し、全て `.ts` 実ファイルを
-  指す (`find src -name "*.js"` = 0)。node は `ERR_MODULE_NOT_FOUND`、bun は解決する
-  ため bun 併用中は不可視の blocker。codemod scope に含め `.ts` へ書き換える。
+- 拡張子なし相対 import **1319 行** (内訳: src/ + scripts/ + .claude/hooks/ = 755、
+  tests/ = 564。Node ESM は拡張子必須で `ERR_MODULE_NOT_FOUND`)。根拠:
+  `grep -rEn 'from "\.\.?/[^"]*"' src/ .claude/hooks/ scripts/ tests/ --include="*.ts" |
+  grep -vc '\.ts"\|\.js"\|\.json"'` (alternation は BRE のため `\|`)。`.ts` 拡張子付き
+  import は node 24.13.0 / bun 1.3.14 の両方で動作を実証済み。tsconfig へ
+  `allowImportingTsExtensions: true` を追加する (noEmit 下で許可。
+  `verbatimModuleSyntax: true` 既設のため型 import 残存の危険も既に封じられている)。
+- **相対 `.js` 指定子が 219 行** (4 ディレクトリ、値/型全位置) 実在し、全て `.ts`
+  実ファイルを指す (`find src -name "*.js"` = 0)。根拠:
+  `grep -rEn '"\.\.?/[^"]*\.js"' src/ .claude/hooks/ scripts/ tests/ --include="*.ts" | wc -l`。
+  うち 3 件は型位置の `import("./x.js").T` で strip 時に消えるが、指定子統一のため
+  codemod で同様に `.ts` へ書き換える。node は `ERR_MODULE_NOT_FOUND`、bun は解決する
+  ため bun 併用中は不可視の blocker。
 - **parameter properties が 54 箇所 / 27 ファイル** (tests/ scripts/ 含む、複数行
   constructor を含む計数)。初版 freeze の「18 箇所 / 13 ファイル」は 1 行 constructor
   のみの grep で、起票時と同種の grep 盲点を再生産していた (blind review A1)。根拠:
@@ -110,10 +116,11 @@ fallback = claude-fable-5、発火ログ 2026-08-06) が同方式を推奨し、
 
 **step 1 の PR 構成契約** (blind review B3 を反映し不変条件境界で分割):
 
-- PR-A: tsconfig + import 指定子 codemod (拡張子なし 755 + `.js` 指定子 215 行) +
-  再流入 lint (「相対 import は実在する `.ts` ファイルを指す拡張子必須」— 拡張子なし
-  だけでなく `.js` 指定子も fail-close)。gate と対象 codemod は同一 PR (分割すると
-  全体赤化か再流入)。
+- PR-A: tsconfig + import 指定子 codemod (拡張子なし 1319 行 + `.js` 指定子 219 行、
+  **4 ディレクトリ全域 — tests/ を含む**) + 再流入 lint (「相対 import は実在する
+  `.ts` ファイルを指す拡張子必須」— 拡張子なしだけでなく `.js` 指定子も fail-close、
+  lint scope も同じ 4 ディレクトリ = AC-5 と一致)。gate と対象 codemod は同一 PR
+  (分割すると全体赤化か再流入)。
 - PR-B: parameter properties 54 箇所の erasable 化 + erasable-only 再流入 gate
   (全 `.ts` — tests/ 含む — を node strip-only で構文検証する回帰)。
 - PR-C: hooks の `bun` → `node` 差し替え (PR-A/B の後)。
