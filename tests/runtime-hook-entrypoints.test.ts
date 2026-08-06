@@ -88,7 +88,6 @@ describe("runtime hook entrypoints", () => {
     expect(hooks.SessionStart[0].hooks[0]).toMatchObject({
       command: "node",
       args: [
-        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
         `${claudeProjectDir}/src/cli.ts`,
         "session",
         "start",
@@ -97,7 +96,6 @@ describe("runtime hook entrypoints", () => {
     expect(hooks.PostToolUse[0].hooks[0]).toMatchObject({
       command: "node",
       args: [
-        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
         `${claudeProjectDir}/src/cli.ts`,
         "hook",
         "post-tool-use",
@@ -106,7 +104,6 @@ describe("runtime hook entrypoints", () => {
     expect(hooks.Stop[0].hooks[0]).toMatchObject({
       command: "node",
       args: [
-        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
         `${claudeProjectDir}/src/cli.ts`,
         "session",
         "summary",
@@ -115,7 +112,6 @@ describe("runtime hook entrypoints", () => {
     expect(hooks.Stop[1].hooks[0]).toMatchObject({
       command: "node",
       args: [
-        `${claudeProjectDir}/.claude/hooks/run-bun.ts`,
         `${claudeProjectDir}/src/cli.ts`,
         "hook",
         "claude-memory-wake",

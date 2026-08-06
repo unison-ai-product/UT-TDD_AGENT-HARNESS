@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"],
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"],
             "timeout": 5,
             "statusMessage": "subagent allowlist + explicit-model + opus-override guard (env-independent TS)",
             "blockOnFailure": true
@@ -20,7 +20,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"],
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"],
             "timeout": 5,
             "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed",
             "blockOnFailure": true
@@ -34,7 +34,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "start"],
+            "args": ["${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "start"],
             "timeout": 5,
             "statusMessage": "session-log: session start (fail-open)"
           }
@@ -48,7 +48,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "post-tool-use"],
+            "args": ["${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "post-tool-use"],
             "timeout": 5,
             "statusMessage": "session-log: post tool use (fail-open)"
           }
@@ -61,7 +61,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary"],
+            "args": ["${CLAUDE_PROJECT_DIR}/src/cli.ts", "session", "summary"],
             "timeout": 5,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }
@@ -72,7 +72,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"],
+            "args": ["${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "claude-memory-wake"],
             "timeout": 930,
             "asyncRewake": true,
             "statusMessage": "HARNESS memory: Claude宛て通知を待機"
@@ -86,7 +86,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts", "${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "subagent-stop"],
+            "args": ["${CLAUDE_PROJECT_DIR}/src/cli.ts", "hook", "subagent-stop"],
             "timeout": 5,
             "statusMessage": "agent-slots: release subagent slot (fail-open)"
           }

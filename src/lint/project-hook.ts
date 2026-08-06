@@ -66,7 +66,6 @@ interface RequiredProjectHook {
  * PLAN-RECOVERY-06: gate 要求と setup 生成物の黙った再乖離を防ぐ)。
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
-export const SOURCE_HOOK_LAUNCHER = `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`;
 export const WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.ts";
 
 const wrapperCommand = (subcommand: string): string => `bun ${WRAPPER_CLI} ${subcommand}`;
@@ -183,12 +182,13 @@ function matcherOk(actual: string | undefined, expected: string | undefined): bo
 }
 
 function isSourceForm(hook: HookCommand, required: RequiredProjectHook): boolean {
+  // PLAN-L7-462 PR-C: source 配線は node 直起動 (launcher shim 撤去、Bun 撤退 step 1)。
   const invocation = parseHookInvocation(hook);
   return (
     invocation !== null &&
     invocationEquals(invocation, {
       executable: "node",
-      args: [SOURCE_HOOK_LAUNCHER, ...required.sourceArgs],
+      args: [...required.sourceArgs],
     })
   );
 }
