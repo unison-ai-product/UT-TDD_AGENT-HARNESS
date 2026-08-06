@@ -21,10 +21,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   type: "command",
                   command: "node",
-                  args: [
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`,
-                  ],
+                  args: [`\${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`],
                   blockOnFailure: true,
                 },
               ],
@@ -35,10 +32,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   type: "command",
                   command: "node",
-                  args: [
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`,
-                  ],
+                  args: [`\${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`],
                   blockOnFailure: true,
                 },
               ],
@@ -50,12 +44,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   type: "command",
                   command: "node",
-                  args: [
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
-                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
-                    "session",
-                    "start",
-                  ],
+                  args: [`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "session", "start"],
                 },
               ],
             },
@@ -67,12 +56,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   type: "command",
                   command: "node",
-                  args: [
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
-                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
-                    "hook",
-                    "post-tool-use",
-                  ],
+                  args: [`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "post-tool-use"],
                 },
               ],
             },
@@ -83,12 +67,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   type: "command",
                   command: "node",
-                  args: [
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
-                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
-                    "session",
-                    "summary",
-                  ],
+                  args: [`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "session", "summary"],
                 },
               ],
             },
@@ -97,12 +76,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   type: "command",
                   command: "node",
-                  args: [
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
-                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
-                    "hook",
-                    "claude-memory-wake",
-                  ],
+                  args: [`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "claude-memory-wake"],
                   asyncRewake: true,
                 },
               ],
@@ -114,12 +88,7 @@ function wrapperParityFiles(root: string, overrides: Record<string, string> = {}
                 {
                   type: "command",
                   command: "node",
-                  args: [
-                    `\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`,
-                    `\${CLAUDE_PROJECT_DIR}/src/cli.ts`,
-                    "hook",
-                    "subagent-stop",
-                  ],
+                  args: [`\${CLAUDE_PROJECT_DIR}/src/cli.ts`, "hook", "subagent-stop"],
                 },
               ],
             },

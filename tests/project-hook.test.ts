@@ -5,7 +5,7 @@ import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 const execHook = (script: string, ...args: string[]) => ({
   type: "command",
   command: "node",
-  args: [`\${CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts`, script, ...args],
+  args: [script, ...args],
 });
 
 function teamStandardSettings(): { hooks: Record<string, unknown> } {

@@ -27,7 +27,6 @@ import { invocationEquals, parseHookInvocation } from "./hook-invocation.ts";
 import {
   REQUIRED as CLAUDE_REQUIRED,
   FORBIDDEN_PATH_RE,
-  SOURCE_HOOK_LAUNCHER,
   WRAPPER_HOOK_LAUNCHER,
 } from "./project-hook.ts";
 
@@ -178,8 +177,9 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
     const matchingCommands = entries
       .flatMap((entry) => entry.hooks ?? [])
       // type==="command" の hook のみが guard を充足しうる (非 command エントリで偽充足させない)。
-      // source 配線と setup 生成 wrapper 配線を受理する。wrapper は shell 文字列ではなく
-      // node + run-bun + argv の完全一致に限定し、Windows shell host を再導入させない。
+      // source 配線 (node 直起動、PR-C で launcher shim 撤去) と setup 生成 wrapper 配線を
+      // 受理する。いずれも shell 文字列でなく node + argv の完全一致に限定し、
+      // Windows shell host を再導入させない。
       .filter((hook) => {
         if (hook.type !== "command") return false;
         const invocation = parseHookInvocation(hook);
@@ -187,10 +187,7 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
           invocation !== null &&
           (invocationEquals(invocation, {
             executable: "node",
-            args: [
-              SOURCE_HOOK_LAUNCHER.slice(SOURCE_HOOK_LAUNCHER.indexOf(".claude/")),
-              ...required.sourceArgs,
-            ],
+            args: [...required.sourceArgs],
           }) ||
             invocationEquals(invocation, {
               executable: "node",

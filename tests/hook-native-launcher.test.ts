@@ -6,7 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 const repoRoot = process.cwd();
-const launcher = join(repoRoot, ".claude", "hooks", "run-bun.ts");
+// PLAN-L7-462 PR-C: repo 自身の hooks は node 直起動になり shim は撤去済み。
+// launcher の挙動検証は consumer 向け template (setup が生成する wrapper) を実体化して行う。
 const temporaryDirectories: string[] = [];
 
 function temporaryDirectory(): string {
@@ -20,6 +21,11 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+// module 寿命の実体化 (afterEach の cleanup 対象に載せない)。
+const launcherDirectory = mkdtempSync(join(tmpdir(), "ut-tdd-hook-launcher-src-"));
+const launcher = join(launcherDirectory, "run-bun.ts");
+writeFileSync(launcher, BUILTIN_GITHUB_TEMPLATES["common/run-bun.ts"]);
 
 describe("Claude native Bun hook launcher (issue #123)", () => {
   it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged to a native Bun executable", () => {
@@ -67,7 +73,6 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
 
   it("U-HOOKEXEC-008: uses direct executable spawning and never delegates to a shell host", () => {
     const source = readFileSync(launcher, "utf8");
-    const consumerTemplate = BUILTIN_GITHUB_TEMPLATES["common/run-bun.ts"];
 
     expect(source).toContain("spawn(findBun(), process.argv.slice(2)");
     expect(source).toContain("windowsHide: true");
@@ -78,7 +83,6 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(source).toContain("child.kill(signal)");
     expect(source).not.toMatch(/\b(?:cmd(?:\.exe)?|powershell(?:\.exe)?|pwsh|sh(?:\.exe)?)\b/i);
     expect(source).not.toContain("shell: true");
-    expect(consumerTemplate.replace(/\s+/g, "")).toBe(source.replace(/\s+/g, ""));
   });
 
   it("U-HOOKEXEC-009: requires the first Node release line with unflagged TypeScript execution", () => {
@@ -121,7 +125,11 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(hooks).toHaveLength(7);
     for (const hook of hooks) {
       expect(hook.command).toBe("node");
-      expect(hook.args?.[0]).toBe("$" + "{CLAUDE_PROJECT_DIR}/.claude/hooks/run-bun.ts");
+      // PR-C: launcher shim を廃し node 直起動 (第一引数は実 hook script / cli)。
+      expect(hook.args?.[0]).toMatch(
+        /^\$\{CLAUDE_PROJECT_DIR\}\/(?:\.claude\/hooks\/[a-z-]+\.ts|src\/cli\.ts)$/,
+      );
+      expect(hook.args?.some((token) => token.includes("run-bun"))).toBe(false);
       expect(hook.args?.slice(1).every((token) => token.length > 0)).toBe(true);
       expect(
         hook.args?.some((token) => /(?:cmd|powershell|pwsh|sh)(?:\.exe)?/i.test(basename(token))),
