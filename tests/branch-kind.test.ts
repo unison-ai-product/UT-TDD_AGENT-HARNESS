@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { analyzeBranchKind, branchKindMessages, classifyBranchKind } from "../src/lint/branch-kind.ts";
+import {
+  analyzeBranchKind,
+  branchKindMessages,
+  classifyBranchKind,
+} from "../src/lint/branch-kind.ts";
 
 describe("branch-kind-check", () => {
   it("classifies governed branch prefixes", () => {

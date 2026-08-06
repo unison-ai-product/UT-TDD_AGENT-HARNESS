@@ -52,7 +52,13 @@ interface FoundSpecifier {
  * AST 上 code でないため構造的に誤検出しない。複数行 import も構文単位で拾う。
  */
 export function extractImportSpecifiers(text: string): FoundSpecifier[] {
-  const file = ts.createSourceFile("input.ts", text, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const file = ts.createSourceFile(
+    "input.ts",
+    text,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TS,
+  );
   const found: FoundSpecifier[] = [];
   const push = (literal: ts.StringLiteralLike): void => {
     found.push({
@@ -186,9 +192,7 @@ export function renderImportSpecifierMessages(r: ImportSpecifierResult): string[
       `import-specifier — OK (checked=${r.checked}, relative specifiers=${r.specifiers}, 拡張子違反 0)`,
     ];
   }
-  const head = r.violations
-    .slice(0, 10)
-    .map((v) => `${v.path}:${v.line} ${v.rule} ${v.specifier}`);
+  const head = r.violations.slice(0, 10).map((v) => `${v.path}:${v.line} ${v.rule} ${v.specifier}`);
   return [
     `import-specifier — violation ${r.violations.length} 件 (相対 import は実在 .ts 拡張子必須、PLAN-L7-462 PR-A): ${head.join("; ")}`,
   ];

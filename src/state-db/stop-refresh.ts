@@ -8,7 +8,11 @@ import {
 } from "./db-maintenance.ts";
 import { defaultHarnessDbPath, openHarnessDb } from "./index.ts";
 import { migrate } from "./migration.ts";
-import { projectModelEvaluations, projectTokenUsage, rebuildHarnessDb } from "./projection-writer.ts";
+import {
+  projectModelEvaluations,
+  projectTokenUsage,
+  rebuildHarnessDb,
+} from "./projection-writer.ts";
 import {
   acquireStopRefreshLease,
   claimStopRefreshDemand,

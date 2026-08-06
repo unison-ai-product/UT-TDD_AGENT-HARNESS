@@ -18,4 +18,8 @@ export {
   TOOLCHAIN_DOCTOR_OUTPUT_IDS,
 } from "./profiles.ts";
 export type { DoctorCheckDefinition, DoctorCheckRun, DoctorOptions } from "./runner.ts";
-export { collectDoctorCheckRun, collectDoctorChecks, selectDoctorCheckDefinitions } from "./runner.ts";
+export {
+  collectDoctorCheckRun,
+  collectDoctorChecks,
+  selectDoctorCheckDefinitions,
+} from "./runner.ts";

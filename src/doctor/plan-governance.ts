@@ -22,7 +22,11 @@ import {
   loadSupersedePlans,
   planSupersessionMessages,
 } from "../lint/plan-supersession.ts";
-import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation.ts";
+import {
+  analyzePropagation,
+  loadPropagationDocs,
+  propagationMessages,
+} from "../lint/propagation.ts";
 import {
   analyzeReviewEvidence,
   loadReviewPlans,

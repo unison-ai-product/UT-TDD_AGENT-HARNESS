@@ -8,7 +8,13 @@
 import { existsSync } from "node:fs";
 import { SCHEMA_VERSION } from "../schema/harness-db.ts";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index.ts";
-import { type MigrationResult, migrate, missingTables, rowCounts, tableNames } from "./migration.ts";
+import {
+  type MigrationResult,
+  migrate,
+  missingTables,
+  rowCounts,
+  tableNames,
+} from "./migration.ts";
 
 export interface HarnessDbStatus {
   path: string;

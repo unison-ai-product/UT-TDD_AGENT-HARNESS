@@ -3,7 +3,10 @@ import {
   RepositoryDocsSnapshotValue,
   validateSnapshotRequest,
 } from "../domain/repository-docs-snapshot.ts";
-import type { GitObjectSnapshotPort, GitObjectSnapshotRequest } from "../ports/git-object-snapshot.ts";
+import type {
+  GitObjectSnapshotPort,
+  GitObjectSnapshotRequest,
+} from "../ports/git-object-snapshot.ts";
 
 export async function captureRepositoryDocsSnapshot(
   input: GitObjectSnapshotRequest,

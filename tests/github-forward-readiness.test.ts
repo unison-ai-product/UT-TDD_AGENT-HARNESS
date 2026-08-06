@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { deriveForwardReadiness, type ForwardScheduleEntry } from "../src/kernel/forward-readiness.ts";
+import {
+  deriveForwardReadiness,
+  type ForwardScheduleEntry,
+} from "../src/kernel/forward-readiness.ts";
 
 const entry = (
   planId: string,

@@ -1,6 +1,7 @@
 import { checkHandoverOutstandingAnchor } from "../handover/index.ts";
 import { checkAdvisoryGateAging } from "../lint/advisory-strict-gate-aging.ts";
 import { checkGreenCommandDigests } from "../lint/green-command-digest.ts";
+import { checkImportSpecifiers } from "../lint/import-specifier.ts";
 import type { LintResult } from "../plan/lint.ts";
 import {
   checkAgentContractDetection,
@@ -75,7 +76,6 @@ import {
   checkRoadmap,
   checkVerificationGroupsResult,
 } from "./roadmap-verification.ts";
-import { checkImportSpecifiers } from "../lint/import-specifier.ts";
 import {
   checkCodingRules,
   checkDddTddRules,

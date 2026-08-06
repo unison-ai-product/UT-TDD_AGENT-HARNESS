@@ -6,13 +6,21 @@ import {
   loadCodingRulePolicy,
   loadCodingWorkflowDocs,
 } from "../lint/coding-rules.ts";
-import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules.ts";
+import {
+  analyzeDddTddRules,
+  dddTddRulesMessages,
+  loadDddTddInputs,
+} from "../lint/ddd-tdd-rules.ts";
 import {
   analyzeDesignLanguage,
   designLanguageMessages,
   loadDesignLanguageDocs,
 } from "../lint/design-language.ts";
-import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm.ts";
+import {
+  analyzeGateConfirm,
+  gateConfirmMessages,
+  loadGateConfirmDocs,
+} from "../lint/gate-confirm.ts";
 import {
   analyzeGateIdFormat,
   gateIdFormatMessages,

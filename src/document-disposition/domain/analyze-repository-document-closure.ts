@@ -1,5 +1,8 @@
 import { canonicalField, sha256 } from "./canonical-frame.ts";
-import { type DocumentDispositionInput, validateDocumentDisposition } from "./document-disposition.ts";
+import {
+  type DocumentDispositionInput,
+  validateDocumentDisposition,
+} from "./document-disposition.ts";
 import {
   type DocumentDelta,
   type DocumentDeltaDecision,

@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkMergedPlanStatus } from "../src/doctor/index.ts";
-import { analyzeMergedPlanStatus, loadMergedPlanStatusInput } from "../src/lint/merged-plan-status.ts";
+import {
+  analyzeMergedPlanStatus,
+  loadMergedPlanStatusInput,
+} from "../src/lint/merged-plan-status.ts";
 
 // PO 指摘 2026-06-15: merge 済み generated artifact を持つのに owning PLAN が draft のまま
 // 放置される V-model state 不整合 (PLAN-L7-53 の実例) を機械検出する gate の回帰。

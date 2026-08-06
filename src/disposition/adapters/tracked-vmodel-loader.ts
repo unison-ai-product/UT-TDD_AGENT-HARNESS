@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { type AuthoringReceipt, verifyAuthoringProvenance } from "../domain/authoring-provenance.ts";
+import {
+  type AuthoringReceipt,
+  verifyAuthoringProvenance,
+} from "../domain/authoring-provenance.ts";
 import { type CatalogInput, sourceItemEdgeId } from "../domain/document-disposition-catalog.ts";
 import { parseStrictMarkdownTable } from "./strict-markdown-table.ts";
 

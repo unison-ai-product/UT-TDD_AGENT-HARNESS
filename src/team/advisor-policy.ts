@@ -1,7 +1,12 @@
 import type { AdapterContextInjection, AdapterPlan, AdapterProvider } from "../runtime/adapter.ts";
 import { buildAdapterPlan } from "../runtime/adapter.ts";
 import type { ExecutionMode } from "../runtime/detect.ts";
-import { inferTaskIntent, MODEL_IDS, type ReasoningEffort, type TaskIntent } from "./model-policy.ts";
+import {
+  inferTaskIntent,
+  MODEL_IDS,
+  type ReasoningEffort,
+  type TaskIntent,
+} from "./model-policy.ts";
 
 /**
  * advisor 判断種別 (PO ルーティング仕様 2026-07-29、2026-07-14 行列を supersede):

@@ -22,7 +22,10 @@ import {
   effectiveReductionDigest,
   sameMember,
 } from "./document-delta-reducer.ts";
-import { type DocumentDispositionInput, validateDocumentDisposition } from "./document-disposition.ts";
+import {
+  type DocumentDispositionInput,
+  validateDocumentDisposition,
+} from "./document-disposition.ts";
 
 export {
   createDocumentDeltaEvent,

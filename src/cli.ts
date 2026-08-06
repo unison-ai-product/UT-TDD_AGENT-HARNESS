@@ -36,12 +36,12 @@ import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { contextSuggest } from "./context/doc-router.ts";
-import { runDoctor } from "./doctor/index.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
   DOCTOR_RUN_PROFILES,
   type DoctorRunProfileId,
 } from "./doctor/check-registry.ts";
+import { runDoctor } from "./doctor/index.ts";
 import { writeDoctorResultEnvelopeFile } from "./doctor/result-file.ts";
 import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock.ts";
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context.ts";

@@ -1,6 +1,6 @@
 // PLAN-L7-462 PR-A (AC-5 前半): 相対 import 指定子の拡張子必須 gate。
 // 拡張子なし / .js 指定子 / 実在しない .ts target を fail-close し、fixture 文字列・
-// コメント内の import 記述を誤検出しない (mini-scanner)。
+// コメント・regex literal 内の import 記述を誤検出しない (TS AST 抽出)。
 import { describe, expect, it } from "vitest";
 import {
   analyzeImportSpecifiers,
@@ -42,7 +42,7 @@ describe("extractImportSpecifiers (scanner)", () => {
       "`;",
       '// import { z } from "./commented";',
       '/* import { w } from "./block"; */',
-      'expect(src).toContain(\'} from "./runner"\');',
+      "expect(src).toContain('} from \"./runner\"');",
     ].join("\n");
     expect(extractImportSpecifiers(text)).toEqual([]);
   });
@@ -51,7 +51,7 @@ describe("extractImportSpecifiers (scanner)", () => {
     // 初版 mini-scanner は /"/ を文字列開始と誤認し、以降ファイル末尾まで盲域になった
     // (src/lint/relation-graph.ts:563 の実在パターン)。
     const text = [
-      "const esc = (label: string) => label.replace(/\\\\/g, \"\\\\\\\\\").replace(/\"/g, '\\\\\"');",
+      'const esc = (label: string) => label.replace(/\\\\/g, "\\\\\\\\").replace(/"/g, \'\\\\"\');',
       'export * from "./after-regex";',
     ].join("\n");
     expect(extractImportSpecifiers(text).map((s) => s.specifier)).toEqual(["./after-regex"]);

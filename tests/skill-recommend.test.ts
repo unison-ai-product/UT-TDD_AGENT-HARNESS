@@ -13,7 +13,10 @@ import { stableId } from "../src/stable-id.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate, rowCounts } from "../src/state-db/migration.ts";
 import { recordProjectionEvent } from "../src/state-db/projection-writer.ts";
-import { projectSkillEvaluations, projectSkillTelemetry } from "../src/state-db/skill-projections.ts";
+import {
+  projectSkillEvaluations,
+  projectSkillTelemetry,
+} from "../src/state-db/skill-projections.ts";
 
 describe("skill recommendation telemetry", () => {
   function seedPlan(

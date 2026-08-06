@@ -3,7 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { analyzeMergedPlanStatus, loadMergedPlanStatusInput } from "../src/lint/merged-plan-status.ts";
+import {
+  analyzeMergedPlanStatus,
+  loadMergedPlanStatusInput,
+} from "../src/lint/merged-plan-status.ts";
 import {
   classifyTargetArtifacts,
   resolveMergedPlanTargetEvidence,

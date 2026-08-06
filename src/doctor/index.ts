@@ -22,6 +22,7 @@ import {
 } from "./runtime-state.ts";
 import { checkSetupSmoke } from "./setup-smoke.ts";
 
+export { checkImportSpecifiers } from "../lint/import-specifier.ts";
 export type { DoctorOptions } from "./check-registry.ts";
 export {
   checkAgentContractDetection,
@@ -89,7 +90,6 @@ export {
   checkVerificationGroups,
   checkVerificationGroupsResult,
 } from "./roadmap-verification.ts";
-export { checkImportSpecifiers } from "../lint/import-specifier.ts";
 export {
   checkCodingRules,
   checkDddTddRules,

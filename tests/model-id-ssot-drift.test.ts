@@ -3,7 +3,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { findStaleModelIdLiterals } from "../src/lint/model-id-doc-drift.ts";
 import { normalizeModelFamily } from "../src/runtime/agent-guard.ts";
-import { CLAUDE_MODEL_FAMILY_CATALOG, SUBAGENT_ALLOWLIST } from "../src/runtime/agent-guard-policy.ts";
+import {
+  CLAUDE_MODEL_FAMILY_CATALOG,
+  SUBAGENT_ALLOWLIST,
+} from "../src/runtime/agent-guard-policy.ts";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
 

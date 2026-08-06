@@ -2,7 +2,11 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadMemoryEntries, renderMemorySurface, selectMemoryEntries } from "../src/memory/index.ts";
+import {
+  loadMemoryEntries,
+  renderMemorySurface,
+  selectMemoryEntries,
+} from "../src/memory/index.ts";
 import { writeMemory } from "../src/memory/service.ts";
 import { isSecretLike } from "../src/secret.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";

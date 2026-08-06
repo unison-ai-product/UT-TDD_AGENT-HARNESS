@@ -1,7 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency.ts";
-import { analyzeEntityCoverage, loadBusiness as loadEntityBusiness } from "../lint/entity-coverage.ts";
+import {
+  analyzeEntityCoverage,
+  loadBusiness as loadEntityBusiness,
+} from "../lint/entity-coverage.ts";
 import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit.ts";
 import {
   analyzeFixtureManifest,

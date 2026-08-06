@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { planIdSchema } from "../src/schema/frontmatter.ts";
 import {
   kindSchema,
   recommendedCommandV1Schema,
@@ -8,7 +9,6 @@ import {
   VALID_LAYERS,
   VALID_ORCHESTRATION_MODES,
 } from "../src/schema/index.ts";
-import { planIdSchema } from "../src/schema/frontmatter.ts";
 
 describe("planIdSchema (§1.10 A、NN = d{2,} で 99 ceiling 解消)", () => {
   it("2 桁 plan_id を受理", () => {
