@@ -289,4 +289,23 @@ describe("schedule live SessionStart digest", () => {
     expect(transactionEvents).toEqual(["BEGIN", "COMMIT"]);
     expect(gateReads).toBe(1);
   });
+
+  it("U-SCHEDULE-LIVE-005: renders unclaimed inbox backlog in session-start digest", () => {
+    const database = db();
+    const digest = selectSessionStartDigest(database, ["abc123 feat: backlog visibility"], {
+      memory: [],
+      unclaimedInbox: {
+        workspaceId: "workspace-1",
+        pending: 2,
+        oldestEntryId: "memory:backlog-1",
+        oldestCreatedAt: "2026-08-01T00:00:00Z",
+        oldestAgeMs: 1234,
+      },
+    });
+    const rendered = renderSessionStartDigest(digest);
+
+    expect(rendered).toContain(
+      "inbox: pending=2 oldest=memory:backlog-1 at=2026-08-01T00:00:00Z age_ms=1234",
+    );
+  });
 });
