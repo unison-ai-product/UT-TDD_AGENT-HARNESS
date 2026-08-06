@@ -19,22 +19,14 @@ const claudeProjectDir = `$${"{CLAUDE_PROJECT_DIR}"}`;
 
 function runCli(cwd: string, args: string[], input?: unknown, env?: NodeJS.ProcessEnv) {
   const stdin = input === undefined ? undefined : JSON.stringify(input);
-  if (process.platform === "win32") {
-    // cmd.exe は PATH 探索でなく %SystemRoot% から canonical に解決する。
-    // PATH 注入事故 (System32 欠落) でテストが環境誘発 fail しないため (A-128 F-7)。
-    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd,
-      encoding: "utf8",
-      env: { ...process.env, ...env },
-      input: stdin,
-    });
-  }
-  return spawnSync("bun", [cliPath, ...args], {
+  // PLAN-L7-462 PR-C (AC-1): hooks は node 直起動が正式経路。実発火 oracle も node で固定し、
+  // shell host (cmd.exe) を経由しない (settings.json の宣言形と実行系統を一致させる)。
+  return spawnSync("node", [cliPath, ...args], {
     cwd,
     encoding: "utf8",
     env: { ...process.env, ...env },
     input: stdin,
+    windowsHide: true,
   });
 }
 
