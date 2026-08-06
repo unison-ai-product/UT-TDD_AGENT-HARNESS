@@ -26,6 +26,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/lint/import-specifier.ts
     artifact_type: source_module
+  - artifact_path: tests/import-specifier.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
