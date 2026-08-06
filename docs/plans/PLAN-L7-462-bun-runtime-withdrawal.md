@@ -165,6 +165,37 @@ review FLAG で是正済み — 過小計数 grep / `.js` 指定子クラスの�
 - **配布バイナリ**: `bun build --compile` の代替は Node SEA か「bundle + node
   実行」の 2 案。配布 (Pack) は現在 no-go 中のため、本 PLAN では方式メモまで。
 
+**step 2 の CI 構成契約 (freeze 2026-08-06、advisor 諮問済み — 案A 採択)。**
+advisor (implementation、`gpt-5.6-sol`、`ut-tdd advisor --execute`、発火ログ
+2026-08-06) の推奨どおり、CI は setup-node を harness の正式実行系とし、
+**setup-bun は Pack/consumer acceptance テストの fixture 依存としてのみ併置残置**
+する。理由 (repo 実測): `tests/distribution-acceptance.test.ts` (`runBun`) と
+`tests/setup.test.ts` (U-SETUP-009b 系、`UT_TDD_BUN_BINARY`) の consumer wrapper
+実発火 oracle は bun バイナリ実体を spawn しており、setup-bun を除去すると
+oracle ごと赤化する。consumer templates (`src/setup/templates.ts` の run-bun.ts
+= `Bun.spawn` 間接起動) の node 化は Pack scope (no-go 中) への越境になるため
+本 PLAN では行わない。
+
+- AC-2 の「setup-node 構成」の解釈: **harness 実行系 (install / typecheck / db
+  rebuild / doctor / test runner / cli 呼び出し) が node で起動されること**。
+  bun 呼び出しは distribution/setup acceptance テスト内に限定され、workflow 上の
+  setup-bun step に fixture 用である旨をコメント明記する。
+- 対抗案と棄却理由: (B) 同 PR で consumer templates / acceptance oracle も node 化
+  — Pack scope 外への越境 + PR 肥大 (スコープ規律違反) で棄却。(C) distribution 系
+  テストの CI exclude — gate 弱体化で棄却。
+- **setup-bun 撤去の exit criteria** (Pack 解禁時の後続 PLAN が declare する):
+  consumer templates / wrapper / acceptance oracle の node 化が完了し、bun spawn
+  が repo から 0 件になった時点で setup-bun step と `UT_TDD_BUN_BINARY` 契約を
+  同時撤去する。
+- step 1 blind review 申し送りの帰属 (2026-08-06): `tests/secret-scan-diff.test.ts`
+  の hook 実発火 bun spawn と CLI 実発火 5 ファイル (cli-surface / gate-static /
+  update-check / write-encoding-guard / distribution-acceptance) の launcher
+  node 化は **step 2 の守備範囲**とする (harness 実行系の oracle であり fixture
+  依存ではない。distribution-acceptance の runBun のみ上記 fixture 例外)。
+  `test:cli` が CI 未実行で `runtime-hook-entrypoints.test.ts` の Windows 面が
+  gate 外である点は step 2 で windows leg の対象へ含めるか exclusion 理由を
+  workflow へ明記する。
+
 ## Schedule (段階移行 — 事故った場所から順に Node へ)
 
 - step 0 (前提、別 PLAN): PLAN-L7-460 = db-refresh の Node 経路固定 + Bun 起動
