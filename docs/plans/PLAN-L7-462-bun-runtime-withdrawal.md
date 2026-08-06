@@ -80,7 +80,7 @@ fallback = claude-fable-5、発火ログ 2026-08-06) が同方式を推奨し、
 
 実測 (2026-08-06、基準 = 計測時点の main HEAD `11816bfd`。初版 freeze の数値は blind
 review FLAG で是正済み — 過小計数 grep / `.js` 指定子クラスの欠落 / 基準 commit 不明。
-対象 scope は tsconfig `include` と同じ **4 ディレクトリ全域 (src/ tests/ scripts/
+対象 scope は **4 ディレクトリ全域 (src/ tests/ scripts/
 .claude/hooks/)** — tests/ を除外しない):
 
 - 拡張子なし相対 import **1319 行** (内訳: src/ + scripts/ + .claude/hooks/ = 755、
@@ -96,7 +96,8 @@ review FLAG で是正済み — 過小計数 grep / `.js` 指定子クラスの�
   うち 3 件は型位置の `import("./x.js").T` で strip 時に消えるが、指定子統一のため
   codemod で同様に `.ts` へ書き換える。node は `ERR_MODULE_NOT_FOUND`、bun は解決する
   ため bun 併用中は不可視の blocker。
-- **parameter properties が 54 箇所 / 27 ファイル** (tests/ scripts/ 含む、複数行
+- **parameter properties が概算 54 箇所 / 27 ファイル** (正確な scope は AC-5 /
+  PR-B の strip-only gate が機械決定する概算値。tests/ scripts/ 含む、複数行
   constructor を含む計数)。初版 freeze の「18 箇所 / 13 ファイル」は 1 行 constructor
   のみの grep で、起票時と同種の grep 盲点を再生産していた (blind review A1)。根拠:
   `constructor\s*\(([^)]*)\)` を dotall で全 match し
@@ -105,7 +106,8 @@ review FLAG で是正済み — 過小計数 grep / `.js` 指定子クラスの�
   `--experimental-transform-types` は通るが experimental flag を hook 恒久経路に
   置かない。→ 全 54 箇所を明示 field 代入へ機械是正し erasable-only を維持する。
 - 変数引数の dynamic import / require: **0 件**。enum / namespace: **0 件**。
-- node 起動実測: 0.138s (単一 module、hook timeout 5s に対し十分)。
+- node 起動実測: 0.138s (単一 `.ts` module + 相対 `.ts` import 1 本を `time node
+  main.ts` で 1 回計測した wall-clock。hook timeout 5s に対し十分)。
 
 対抗案と棄却理由:
 
