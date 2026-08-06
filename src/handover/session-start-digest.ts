@@ -1,6 +1,7 @@
 import type { SurfacedFeedback, TakeoverFeedbackResult } from "../feedback/surface.ts";
 import { selectTakeoverFeedback } from "../feedback/surface.ts";
 import type { MemoryEntry } from "../memory/index.ts";
+import type { ClaudeInboxBacklogSummary } from "../runtime/claude-memory-wake.ts";
 import type { HarnessDb } from "../state-db/index.ts";
 
 type Rag = "green" | "yellow" | "red";
@@ -62,6 +63,7 @@ export interface SessionStartDigest {
   head_commits: string[];
   memory: MemoryEntry[];
   escalation_lines: string[];
+  unclaimed_inbox?: ClaudeInboxBacklogSummary;
 }
 
 const AUTHORING_SCHEDULE = "docs/governance/vmodel-upgrade-schedule.md";
@@ -286,7 +288,11 @@ export function selectScheduleLiveState(
 export function selectSessionStartDigest(
   db: HarnessDb,
   headCommits: string[],
-  input: { escalationLines?: string[]; memory?: MemoryEntry[] } = {},
+  input: {
+    escalationLines?: string[];
+    memory?: MemoryEntry[];
+    unclaimedInbox?: ClaudeInboxBacklogSummary;
+  } = {},
 ): SessionStartDigest {
   const escalationLines = input.escalationLines ?? [];
   const memory = input.memory ?? [];
@@ -300,6 +306,7 @@ export function selectSessionStartDigest(
       head_commits: headCommits.slice(0, 5),
       memory,
       escalation_lines: escalationLines.filter(Boolean),
+      unclaimed_inbox: input.unclaimedInbox,
     };
     db.exec("COMMIT");
     return digest;
@@ -337,6 +344,17 @@ export function renderSessionStartDigest(digest: SessionStartDigest): string {
   for (const line of digest.escalation_lines) lines.push(`  escalation: ${line}`);
   const gateFeedback = digest.feedback.items.filter((item) => item.bucket === "gate");
   for (const item of gateFeedback) lines.push(feedbackLine(item));
+
+  if (digest.unclaimed_inbox) {
+    const backlog = digest.unclaimed_inbox;
+    if (backlog.pending <= 0) {
+      lines.push("  inbox: no unclaimed Claude payload");
+    } else {
+      lines.push(
+        `  inbox: pending=${backlog.pending} oldest=${backlog.oldestEntryId} at=${backlog.oldestCreatedAt} age_ms=${backlog.oldestAgeMs}`,
+      );
+    }
+  }
 
   lines.push("[2/4 head]");
   if (digest.head_commits.length === 0) lines.push("  - unavailable");
