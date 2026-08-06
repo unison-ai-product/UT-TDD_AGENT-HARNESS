@@ -24,6 +24,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/adr/ADR-002-node-runtime-unification.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/import-specifier.ts
+    artifact_type: source_module
 dependencies:
   parent: null
   requires: []
