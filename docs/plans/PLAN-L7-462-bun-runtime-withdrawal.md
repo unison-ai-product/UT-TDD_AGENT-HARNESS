@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: incident
 route_mode: incident
-status: draft
+status: confirmed
 created: 2026-07-28
 updated: 2026-08-06
 backprop_decision: not_required
@@ -22,8 +22,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
     artifact_type: markdown_doc
-  - artifact_path: docs/adr/ADR-002-node-runtime-unification.md
-    artifact_type: markdown_doc
   - artifact_path: src/lint/import-specifier.ts
     artifact_type: source_module
   - artifact_path: tests/import-specifier.test.ts
@@ -36,7 +34,32 @@ dependencies:
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
     - .ut-tdd/memory/project-incident-bun-session-db-refresh-runaway-on-2026-07-27.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-fable-5
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-06T15:20:00+09:00"
+    tests_green_at: "2026-08-06T15:10:00+09:00"
+    verdict: approve
+    scope: >-
+      PR-A (import 指定子 codemod + 再流入 lint、PR #273) の blind review。Codex frontier
+      利用上限中のため intra_runtime_subagent として記録 (cross_agent を僭称しない。上限解除後に
+      Codex 側 cross review を取り直す)。経過: freeze 初版 FLAG (blocking 4) → errata FLAG
+      (blocking 1) → 実装初回 FLAG (BL-1: scanner regex-literal desync、盲点 26/634) →
+      TS AST 置換 + canary 全数回帰で PASS (blocking 0) → delta 追認 PASS 維持 (6702a692)。
+      reviewer 側実測: canary mutation 634 全数 26→0、敵対入力 29 ケース、変更 7 ファイルの
+      値保存分類、PR-A gate 実走 (specifiers 1531 / violations 0)。
+    worker_model: claude-fable-5
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/import-specifier.test.ts tests/lint-wiring.test.ts tests/doctor-test-repository-isolation.test.ts tests/impl-plan-trace.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-06T15:10:00+09:00"
+        evidence_path: src/lint/import-specifier.ts
+        output_digest: "sha256:06fcceb1057a6db761142deea340b6e466ba1c5d7dc18b836aee6b3ef062d758"
+        anchor_commit: 6702a692929b1639183616babe35cfc1968622cb
 ---
 
 # PLAN-L7-462 (troubleshoot): Bun runtime 撤退 — Node 一本化の段階移行
@@ -44,7 +67,7 @@ review_evidence: []
 注: 実装 deliverable (.claude/settings.json / package.json / harness-check.yml /
 run-vitest-snapshot.ts / runtime-portability.ts) は既存ファイルのため draft 段階の
 generates には載せない (merged-plan-status / duplicate-artifact-ownership 対策)。
-実装 PR で generates を更新し confirm と同時に宣言する。前提 PLAN-L7-460 は
+実装 PR で generates を更新し confirm と同時に宣言する。 ADR-002 は step 4 の実装 PR で宣言する (phantom 回避)。前提 PLAN-L7-460 は
 draft のため requires の ready 条件を満たさず references 扱い (実装順序は
 Schedule step 0 で拘束)。
 
