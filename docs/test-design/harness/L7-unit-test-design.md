@@ -2156,3 +2156,24 @@ Red test citationを追加する。generic regexを4 segmentへ広げず、他�
 | `U-RVGHA-D3C-016` | Check RunだけPASS、D1 `analyzeReviewDispatch`は非`merge_ready` | Check Runを第二SSoTにせず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-017` | 承認済み`VerifiedProviderIdentity` + D1 merge_ready + D3b/D3c全検証green | D3d `custody_admitted`、D2 AND入力だけがaccepting候補 |
 | `U-RVGHA-D3C-018` | RFC 8785 exact preimageのkey順・locale・digest自己field・既存16桁digestを各変異 | receiptは同一objectだけ64 lowerhex一致。外部artifact digestは完成bytesから一方向計算し、不一致は`identity_mismatch` |
+
+## oracle-test-trace 検出範囲拡張 (issue #165 / PLAN-L7-480)
+
+PLAN-L7-480 の CANDIDATE-OIDGATE-001〜007 (昇格済みのため candidate 台帳には残さない) を、実装と同 commit で以下へ昇格する
+(tests/oracle-test-trace.test.ts が citation)。
+
+注 (契約衝突の記録): 上の D3c freeze は「generic regex を 4 segment へ広げない」前提で
+`U-RVGHA-D3C-NNN` → `U-RVGHAD3C-NNN` の原子的 rename を計画していたが、後発の PLAN-L7-480
+契約 2 (多 segment 対応) が優先される。`U-RVGHA-D3C-001`〜`018` は widened baseline に収載
+され赤を出さない。D3d 実装 PR は rename 不要になり、citation 追加時に `U-OIDGATE-005` が
+baseline 縮小を機械強制する (詳細は issue #218 のコメント参照)。
+
+| test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
+|---|---|---|---|
+| `U-OIDGATE-001` | CANDIDATE-M-SP-002 / CANDIDATE-U-FOO-001 / CANDIDATE-P-FSM-001 を含む test-design fixture (backtick 無し表記 — candidate 台帳への再掲ではなく fixture 入力の記述であり、U-VMSRC-009 の一意性検査の対象外とする) | `collectOracleIds` | 1 件も抽出しない (左 token 境界)。CANDIDATE 表記は citation 不要のまま |
+| `U-OIDGATE-002` | 2 桁番号の架空 ID (`ST-ZZDATA-01` / `U-ZZFUNC-01`) 宣言 fixture (実在 ID を fixture に書くと偽 citation で ratchet 圧が漏れるため架空とする) | `collectOracleIds` + `analyzeOracleTestTrace` | 収集され、未 citation なら orphan (旧 regex の視野外を解消) |
+| `U-OIDGATE-003` | 多 segment 架空 ID `U-ZZMULTI-D3C-001` と `U-ZZVTR-005-L7` の宣言 fixture | `collectOracleIds` + `analyzeOracleTestTrace` | 多 segment を収集し orphan 経路まで通す。末尾 segment が非数字の `...-005-L7` 型は全体・部分とも抽出しない |
+| `U-OIDGATE-004` | widened baseline 収載 ID が未 citation | `analyzeOracleTestTrace` | orphan にしない (ratchet) |
+| `U-OIDGATE-005` | 実 repo | 再導出 orphan 集合 vs `ORACLE_TEST_TRACE_WIDENED_BASELINE` | **集合一致** (件数でなく要素)。収載 oracle の citation 追加は baseline 縮小を機械強制する |
+| `U-OIDGATE-006` | 実 repo の derived 集合 + citation 済み実宣言 oracle を 1 件混入させた widened baseline | `collectOracleIds` + 集合比較 | 実機構経由で不一致として検出 (腐る baseline の抑止) |
+| `U-OIDGATE-007` | 既存 `ORACLE_TEST_TRACE_BASELINE` | 要素数と内容 | 89 件のまま不変。widened 集合と交差 0 |

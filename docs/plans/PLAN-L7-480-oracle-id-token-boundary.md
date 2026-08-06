@@ -5,7 +5,7 @@ kind: impl
 layer: L7
 sub_doc: function-spec
 drive: be
-status: draft
+status: confirmed
 route_signal: forward
 route_mode: forward
 created: 2026-08-05
@@ -21,6 +21,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-480-oracle-id-token-boundary.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/oracle-test-trace-widened-baseline.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L7-244-right-arm-citation-gate.md
   requires: []
@@ -30,7 +32,36 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/259
     - docs/test-design/harness/L7-unit-test-design.md
 github_issue_id: 165
-review_evidence: []
+backprop_decision: not_required
+backprop_decision_reason: "既存 gate (oracle-test-trace、正本 PLAN-L7-244 の citation 契約) の検出盲点の純修理であり、新しい契約層・設計正本を作らない。可視化された既存債務は widened ratchet baseline として gate 内部に閉じ、Forward 設計正本への逆伝播対象が存在しない。"
+review_evidence:
+  - reviewer: claude-fable-5
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-05T21:20:00+09:00"
+    tests_green_at: "2026-08-05T21:05:00+09:00"
+    verdict: approve
+    scope: >-
+      issue #165 実装 slice の blind review (author 主張・自己評価を秘匿したパケットで
+      claim-blind / spec-blind の 2 レーン)。Codex frontier が利用上限で停止中のため
+      intra_runtime_subagent として記録 (cross_agent を僭称しない。上限解除後に Codex 側で
+      cross review を取り直す — #252 記録)。初回 verdict FLAG: blocking 1 件 (U-OIDGATE-006 が
+      production コード非経由の自明 pass) + minor 3 件 (fixture の実在 ID 使用による ratchet 漏れ、
+      test-design/コメントの記述齟齬)。是正 849d0397 で U-OIDGATE-006 を実 repo derived 集合 +
+      実 baseline 経由の実機構テストへ差し替え、fixture を架空 ID 化。これにより widened baseline
+      は freeze 時実測 344 件と完全一致へ復元。reviewer 側実測: regex 単体挙動 (CANDIDATE 非抽出 /
+      多 segment 抽出 / 2 桁抽出 / 右境界)、baseline 第三者再導出の集合一致、旧 89 件不変・交差 0。
+    worker_model: claude-fable-5
+    reviewer_model: claude-fable-5
+    green_commands:
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/oracle-test-trace.test.ts tests/impl-plan-trace.test.ts tests/doctor-test-repository-isolation.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-05T21:05:00+09:00"
+        evidence_path: tests/oracle-test-trace.test.ts
+        output_digest: "sha256:7cc2c1436ae6f0cb923190c83e3c98203f229444ededcbd3754557c0c1e36b13"
+        anchor_commit: 849d039708fee6befb544578a276e35e93907a5a
 ---
 
 # PLAN-L7-480: oracle ID の token 境界と検出範囲 ratchet
