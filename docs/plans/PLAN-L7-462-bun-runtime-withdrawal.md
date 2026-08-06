@@ -22,8 +22,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
     artifact_type: markdown_doc
-  - artifact_path: docs/adr/ADR-002-node-runtime-unification.md
-    artifact_type: markdown_doc
   - artifact_path: src/lint/import-specifier.ts
     artifact_type: source_module
   - artifact_path: tests/import-specifier.test.ts
@@ -44,7 +42,7 @@ review_evidence: []
 注: 実装 deliverable (.claude/settings.json / package.json / harness-check.yml /
 run-vitest-snapshot.ts / runtime-portability.ts) は既存ファイルのため draft 段階の
 generates には載せない (merged-plan-status / duplicate-artifact-ownership 対策)。
-実装 PR で generates を更新し confirm と同時に宣言する。前提 PLAN-L7-460 は
+実装 PR で generates を更新し confirm と同時に宣言する。 ADR-002 は step 4 の実装 PR で宣言する (phantom 回避)。前提 PLAN-L7-460 は
 draft のため requires の ready 条件を満たさず references 扱い (実装順序は
 Schedule step 0 で拘束)。
 
