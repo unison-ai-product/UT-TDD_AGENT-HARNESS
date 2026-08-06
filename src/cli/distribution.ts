@@ -110,7 +110,20 @@ export function registerDistributionCommands(program: Command): void {
       const detection = detectMode();
       let bunVersion: string | null = null;
       try {
-        bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
+        // PLAN-L7-462 step 2: node の spawn は Windows で npm 配布の bun.cmd shim を
+        // 解決しないため、win32 のみ ComSpec 経由で probe する (fail-soft は従来どおり)。
+        if (process.platform === "win32") {
+          const cmdExe =
+            process.env.ComSpec ??
+            join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+          const probe = spawnSync(cmdExe, ["/d", "/c", "bun", "--version"], {
+            encoding: "utf8",
+            windowsHide: true,
+          });
+          bunVersion = probe.status === 0 ? probe.stdout.trim() : null;
+        } else {
+          bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
+        }
       } catch {
         bunVersion = null;
       }
