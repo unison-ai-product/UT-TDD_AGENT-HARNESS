@@ -197,21 +197,28 @@ oracle ごと赤化する。consumer templates (`src/setup/templates.ts` の run
   数えることを終状態とする。残置 bun は PO 永久 BAN 決定 (Issue #134、
   「既存依存は migration debt として inventory 化し段階撤去」) の migration debt
   として本 PLAN と Issue #134 に帰属する — 完了状態への読み替えを禁止する。
-- step 1 blind review 申し送りの帰属 (2026-08-06)。**bun 実発火サイトは計 8
-  ファイル** (freeze 時実測):
-  - **step 2 で node 化する (harness 実行系の oracle、fixture 依存ではない)**:
-    `tests/cli-surface.test.ts` / `tests/gate-static.test.ts` /
+- step 1 blind review 申し送りの帰属 (2026-08-06)。**bun 実発火サイトは計 10
+  ファイル** (freeze 時実測、再審 blind review C1 で 2 サイト追補):
+  - **step 2 で node 化する (harness 実行系の oracle / 起動系統、fixture 依存では
+    ない)**: `tests/cli-surface.test.ts` / `tests/gate-static.test.ts` /
     `tests/update-check.test.ts` / `tests/write-encoding-guard.test.ts` の CLI
     実発火 launcher、`tests/secret-scan-diff.test.ts` の hook 実発火 spawn、
     `tests/global-setup-fence.test.ts:8` の snapshot runner 起動
     (`UT_TDD_BUN_BINARY ?? resolveBunBinary()`) — runner 本体の node 化
-    (step 2 本文) と同時に追随する。
+    (step 2 本文) と同時に追随する。加えて `.claude/hooks/session-log.ts:42` の
+    後方互換 shim (`spawnSync("bun", [src/cli.ts, ...])`) — settings.json は
+    step 1 PR-C で node swap 済みだが、この shim は settings.json 側の swap に
+    覆われない (concept v3.1 と L6 design session-log.md が正本として記載する
+    入口のため、shim 本体の spawn を node へ swap する)。
   - **fixture 例外 (setup-bun 残置の根拠、Pack 解禁時の後続 PLAN へ deferral)**:
     `tests/distribution-acceptance.test.ts` **全体** (runBun (:45-56) に加え
     :89/93 のテストが書き出す偽 `ut-tdd` shim も bun を exec する — 本ファイルは
     consumer/Pack acceptance oracle であり step 2 の node 化対象に含めない)、
     `tests/setup.test.ts` の U-SETUP-009b 系 (consumer wrapper の bun fallback
-    実発火)。
+    実発火)、`src/cli/distribution.ts:113` の `bun --version` probe (Pack
+    toolchain 検出、try/catch fail-soft — consumer 側 toolchain が bun である
+    限り必要な検出であり、Pack 解禁時の後続 PLAN で bun 子プロセス契約と同時に
+    撤去する)。
   `test:cli` が CI 未実行で `runtime-hook-entrypoints.test.ts` の Windows 面が
   gate 外である点は step 2 で windows leg の対象へ含めるか exclusion 理由を
   workflow へ明記する。
@@ -248,8 +255,12 @@ oracle ごと赤化する。consumer templates (`src/setup/templates.ts` の run
   PostToolUse の実発火 oracle、prose 主張禁止)。
 - AC-2: CI 両 leg が setup-node 構成で green になった実 run URL を evidence として
   引用 (before = setup-bun 構成の直近 green run)。
-- AC-3: 新規の bun: import / Bun グローバル参照が lint で fail-close する回帰
-  テストが green (許可リスト方式の恒久 bypass は禁止)。
+- AC-3: 新規の bun: import / Bun グローバル参照 / **bun 実発火 spawn 引数**
+  (`spawn`/`spawnSync`/`execFile*` 系の第 1 引数に bun を渡す箇所 —
+  `src/lint/runtime-portability.ts` の既存 spawn 引数クラス検出器の拡張) が
+  lint で fail-close する回帰テストが green (許可リスト方式の恒久 bypass は禁止。
+  step 2 freeze の fixture 例外 3 サイトのみ、Issue #134 debt 帰属を明記した
+  期限付き例外として扱う)。
 - AC-4: db-refresh incident 系 oracle (PLAN-L7-460 の AC-1〜3) が移行後も green。
 - AC-5: 全 `.ts` (src/ tests/ scripts/ .claude/hooks/) が node strip-only で構文
   解析可能であることを検証する回帰 gate が green (vitest は esbuild 経由で
