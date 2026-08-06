@@ -26,8 +26,6 @@ generates:
     artifact_type: source_module
   - artifact_path: src/lint/hook-invocation.ts
     artifact_type: source_module
-  - artifact_path: .claude/hooks/run-bun.ts
-    artifact_type: hook
   - artifact_path: src/cli.ts
     artifact_type: source_module
   - artifact_path: tests/codex-hook-adapter.test.ts
@@ -265,3 +263,7 @@ shell-free 起動の Green を `orphan_count=0` の証拠として扱っては�
 launcher・provider・全子孫の終了と空 custody receipt を検証する。Issue #134 が受入されるまでは
 本 PLAN を Windows process custody 完了証拠に使用せず、`ST-RGK-*` を未充足のまま
 fail-closeする。
+
+## 訂正注記 (2026-08-06)
+
+`.claude/hooks/run-bun.ts` (hook launcher shim) は PLAN-L7-462 PR-C (Bun 撤退 step 1) で撤去され、hooks は node 直起動になった。generates から当該 artifact を除去 (plan-artifact-existence の phantom 化対応)。launcher の挙動契約は consumer 向け template (src/setup/templates.ts "common/run-bun.ts") 側に存続し、その撤去は PLAN-L7-462 step 2 が所有する。
