@@ -5,6 +5,7 @@ import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 const execHook = (script: string, ...args: string[]) => ({
   type: "command",
   command: "node",
+  args: [script, ...args],
 });
 
 function teamStandardSettings(): { hooks: Record<string, unknown> } {
