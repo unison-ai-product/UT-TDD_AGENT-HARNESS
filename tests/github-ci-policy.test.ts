@@ -976,7 +976,7 @@ describe("github-ci-policy lint", () => {
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
     it.each([
-      ["pre-producer action swap", "actions/cache@v4", "actions/cache@v3"],
+      ["pre-producer action swap", "actions/setup-node@v4", "actions/setup-node@v3"],
       ["post-producer run mutation", "run: npm run lint", "run: npm run lint && true"],
       [
         "install append",

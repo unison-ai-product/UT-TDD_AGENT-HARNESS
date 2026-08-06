@@ -51,8 +51,10 @@ export function gitLsRemoteInvocation(
     if (found) break;
   }
   if (found && /\.(cmd|bat)$/i.test(found)) {
-    const quote = (token: string) => `"${token.replace(/"/g, '""')}"`;
-    const inner = [found, ...args].map(quote).join(" ");
+    // 空白・cmd メタ文字を含む token のみ引用する (全引用すると shim 側の %1 比較を壊す)。
+    const quote = (token: string) =>
+      /[\s"^&|<>()%!]/.test(token) ? `"${token.replace(/"/g, '""')}"` : token;
+    const inner = [quote(found), ...args.map(quote)].join(" ");
     return {
       command: env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe"),
       args: ["/d", "/s", "/c", `"${inner}"`],
