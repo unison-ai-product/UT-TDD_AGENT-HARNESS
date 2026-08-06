@@ -39,7 +39,7 @@ dependencies:
     - .ut-tdd/memory/project-incident-bun-session-db-refresh-runaway-on-2026-07-27.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence:
-  - reviewer: claude-fable-5
+  - reviewer: claude-opus-5
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-06T15:20:00+09:00"
     tests_green_at: "2026-08-06T15:10:00+09:00"
@@ -54,6 +54,7 @@ review_evidence:
       値保存分類、PR-A gate 実走 (specifiers 1531 / violations 0)。
     worker_model: claude-fable-5
     reviewer_model: claude-opus-5
+    # green_commands は author 側実走 (reviewer 実測は scope 欄の列挙が正)。
     green_commands:
       - kind: unit_test
         command: "bun scripts/run-vitest-snapshot.ts tests/import-specifier.test.ts tests/lint-wiring.test.ts tests/doctor-test-repository-isolation.test.ts tests/impl-plan-trace.test.ts --reporter=dot"
