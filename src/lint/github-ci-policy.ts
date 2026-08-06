@@ -320,16 +320,19 @@ const step = (name: string, fields: Record<string, unknown>): Record<string, unk
 });
 const run = (name: string, command: string, condition?: string): Record<string, unknown> =>
   step(name, { ...(condition ? { if: condition } : {}), run: command });
-const cacheWith = {
-  path: "~/.bun/install/cache",
-  key: `${githubExpression("runner.os")}-bun-${githubExpression("hashFiles('bun.lock')")}`,
-  "restore-keys": `${githubExpression("runner.os")}-bun-\n`,
-};
 const commonRuntimeSteps = [
   step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
-  step("setup bun", { uses: "oven-sh/setup-bun@v2", with: { "bun-version": "1.3" } }),
-  step("cache bun install cache", { uses: "actions/cache@v4", with: cacheWith }),
-  run("install deps (frozen)", "bun install --frozen-lockfile"),
+  // PLAN-L7-462 step 2: node が harness 実行系の正式 runtime。setup-bun は
+  // Pack/consumer acceptance テストの fixture 依存としてのみ残置 (Issue #134 debt)。
+  step("setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)", {
+    uses: "actions/setup-node@v4",
+    with: { "node-version": "24.13.0", cache: "npm" },
+  }),
+  step("setup bun (Pack/consumer acceptance fixture のみ)", {
+    uses: "oven-sh/setup-bun@v2",
+    with: { "bun-version": "1.3" },
+  }),
+  run("install deps (frozen)", "npm ci --no-audit --no-fund"),
 ] as const;
 const classifyFields = { id: "classify", run: CLASSIFY_COMMAND };
 const RUNTIME_STEP_MANIFESTS: Record<(typeof RUNTIME_LEGS)[number], readonly object[]> = {
@@ -373,7 +376,7 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
     }),
     run(
       "doc lane checks (plan lint / readability / rule-drift)",
-      "bun src/cli.ts plan lint\nbun run test:doc-lane",
+      "node src/cli.ts plan lint\nnpm run test:doc-lane",
       LANE_DOC_ONLY_IF,
     ),
     run(
