@@ -1635,8 +1635,8 @@ describe("runDoctor", () => {
     expect(indexSource).toContain(
       "const { checks, timings } = collectDoctorCheckRun(deps, options)",
     );
-    expect(registrySource).toContain('} from "./runner"');
-    expect(registrySource).toContain('} from "./check-definitions"');
+    expect(registrySource).toContain('} from "./runner.ts"');
+    expect(registrySource).toContain('} from "./check-definitions.ts"');
     expect(runnerSource).toContain("export function collectDoctorCheckRun");
     expect(runnerSource).toContain("export function collectDoctorChecks");
     expect(definitionsSource).toContain("export function buildFullDoctorCheckDefinitions");
@@ -1644,7 +1644,7 @@ describe("runDoctor", () => {
     expect(groupSource).toContain("export function buildDoctorCheckDefinitionGroups");
     expect(runnerSource).toContain("buildFullDoctorCheckDefinitions(deps, options)");
     expect(definitionsSource).not.toContain("checkPlanReferenceFreshnessAdvisory");
-    expect(registrySource).toContain('} from "./profiles"');
+    expect(registrySource).toContain('} from "./profiles.ts"');
     expect(profileSource).toContain("export const DOCTOR_RUN_PROFILES");
     expect(profileSource).toContain("export const DOCTOR_RUN_PROFILE_IDS");
     expect(profileSource).toContain("export function resolveDoctorRunProfile");
