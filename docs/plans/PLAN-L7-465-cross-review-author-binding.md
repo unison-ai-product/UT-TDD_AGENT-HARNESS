@@ -380,6 +380,65 @@ receipt自身へ書き戻さないため自己参照やdigest間の循環を作�
 `unverified_family` / `audit_unavailable` を区別する。`missing`への平坦化や、判定不能を
 PASSへ寄せるfallbackは禁止する。
 
+## D3d 実装 (2026-08-07、trusted remote receipt を main へ着地)
+
+D3c freeze の契約をそのまま実装した。**契約の再定義はしていない** (実装 PR 内での方式発明は
+PR スコープ規律 2 の禁止事項)。着手前に `ut-tdd advisor --decision design --current-model
+claude-opus-5 --execute` で 3 案 (A: custody_admitted を機械 custody へ再定義 / B: freeze どおり
+family authority を AND 入力に据える / C: family 軸を D3e へ分離) を諮り、**案B が生存**した
+(advisor: `claude-fable-5`。A/C は D2 の `merge_ready AND custody_admitted` から family 軸が
+無言で脱落する fail-open の看板替えとして refuted)。
+
+### 出荷物と責務
+
+| artifact | 責務 |
+|---|---|
+| `src/feedback/review-custody-canonical.ts` | RFC 8785 JCS → UTF-8 → SHA-256 lowerhex 64 桁。`reviewRevision` = `rv1-<64hex>` を exact request identity から導出 |
+| `src/feedback/review-custody.ts` | receipt の strict decode、subject 束縛、TOCTOU、run facts、attestation AND、`custody_admitted` / typed fail-close |
+| `src/feedback/ports/github-attestation-verifier.ts` | 非同期 typed の GitHub provenance verifier port |
+| `src/feedback/ports/provider-family-authority.ts` | `VerifiedProviderIdentity` port。**受理側実装は本 repo に無い** |
+| `src/feedback/adapters/gh-attestation-verifier.ts` | `gh attestation verify` adapter。certificate URI を receipt field 形へ正規化するだけで判定しない |
+| `src/feedback/review-custody-runner.ts` | workflow 側 entrypoint (`issue` / `admit`)。I/O のみ |
+| `.github/workflows/review-attestation.yml` | 固定パスの独立 workflow。`workflow_dispatch` のみ |
+
+### 契約に対する実装上の確定事項
+
+1. **既存資産を流用しない境界を守った**: `review-attestation.ts` の 16 桁 digest と
+   `localeCompare` による key 整列は D3 receipt に使っていない (locale で順序が動くため
+   attestation の binding 入力にできない)。`src/plan-asset/ports/evidence-attestation.ts` は
+   無変更。
+2. **receipt の全 field を pattern / enum / 整数域で閉じた**。自由文字列 field が 1 つも無いので、
+   token / raw transcript / raw stack / absolute path / 実行命令は構造的に混入できない
+   (`U-RVGHA-D3C-014` がこの性質を検査する)。
+3. **`artifactDigest` は receipt field ではない**。完成 receipt bytes から一方向に計算し、
+   attestation の subject と突き合わせる。receipt へ書き戻さないので自己参照も digest 間の
+   循環も作らない。
+4. **`AdmittedCustody` は CI / merge 由来 field を 1 つも持たない** (`U-RVGHA-D3C-016` が key
+   集合で固定)。Check Run を第二 SSoT にせず、merge 適格性は D1 `merge_ready` と D2 の所有の
+   まま残る。
+5. **workflow は `workflow_dispatch` のみ**。freeze は `pull_request_target` を使う場合の条件を
+   定めていたが、trigger を dispatch だけに閉じれば PR 由来 code / script / action / artifact /
+   cache を実行する経路自体が存在しない (より強い側へ倒した)。`github-ci-policy` に
+   `attestation_runtime` role を追加し、trigger 逸脱・過剰 permission・PR 入力実行・
+   default branch 非固定・必須 step 欠落を fail-close する。
+6. **`attestation_runtime` を `requiredRoles` へは足していない**。あの必須集合は部分 fixture にも
+   一律適用されるため、追加すると本 gate と無関係な既存 oracle が 7 件 `missing_workflow` で
+   落ちるだけで検出力が増えない (2026-08-07 実測)。workflow の実在は `U-RVGHA-D3C-010` が
+   実 repo の `loadGithubCiPolicyDocs` に対して強制する。
+7. **`harness-check.yml` / `src/cli.ts` / merge gate には触れていない**。D2 の最終 AND 配線
+   (required `harness-check` への投影、`harness-ci-aggregate` への rename) は本 PR の範囲外。
+
+### 誠実に明記する未達
+
+- **provider-family authority は未承認・未実装**。したがって実 GitHub 実行では機械 custody が
+  全 green でも終端は `unverified_family` であり、`custody_admitted` は port double を注入した
+  単体テスト (`U-RVGHA-D3C-017`) でのみ観測できる。これは freeze の意図した fail-close であって
+  欠陥ではないが、**承認前に実環境で `custody_admitted` が観測されたらそれ自体がバグ**という
+  負の oracle として機能する。方式承認 (provider 別 GitHub App / bot / OIDC subject 等) は
+  authentication / authorization を変える高影響境界であり、PO 承認事案として D2 着工時に残る。
+- `U-RVGHA-D3C-009` / `-016` は D3d 所有範囲 (custody が CI 状態から独立であること) までを固定し、
+  D2 の CI aggregate receipt provider 配線は `CANDIDATE-RVD2-001`〜`003` のまま残す。
+
 ### D3c freeze 完了条件
 
 - [ ] 上記の信頼根、receipt schema、TOCTOU、安全workflow、fail-close分類がL7 RED oracleと対になる。
