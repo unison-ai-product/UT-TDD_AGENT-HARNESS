@@ -99,6 +99,11 @@ const BUN_GLOBAL_PATTERN = new RegExp(
 // pin を超える行が現れた時点でその超過行を fail-close するため、収載ファイル内への
 // 新規サイト追加は素通りしない (恒久 bypass 面を作らない)。debt が減る方向は自由。
 // pin 値の更新は debt サイトの増減を伴う PR でのみ行い、増加は Issue #134 の帰属注記を要する。
+// 限界の明示 (blind review G): count-pin は純増のみを検出し、同数 swap (既存 debt 行の除去と
+// 新規サイト追加が同一 PR に同居) は静的には見えない。burn-down PR では pin を実測で追随減算
+// することをレビュー規律とする (サイト同一性の機械追跡は AST 化とセットで Issue #134 後続)。
+// また quote lookbehind の副作用で `globalThis["Bun"]` / `process.versions["bun"]` の
+// 文字列 key 形は検出対象外 (検出語彙除外との trade-off、限界の明示)。
 const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   // step 2 freeze の fixture 例外: Pack/consumer toolchain 検出の posix probe。
   ["src/cli/distribution.ts", 2],
@@ -108,8 +113,8 @@ const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   ["scripts/run-vitest-snapshot.ts", 1],
   // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
   ["tests/distribution-acceptance.test.ts", 2],
-  // step 2 freeze の fixture 例外: consumer wrapper の bun fallback 実発火 (U-SETUP-009b)。
-  ["tests/setup.test.ts", 1],
+  // tests/setup.test.ts の bun fallback (U-SETUP-009b) は global 側で計上され、spawn クラスの
+  // 実サイトは 0 (blind review F: 空 pin 枠は置かない)。
   // 検出語彙 (lint fixture 文字列 / consumer template fixture) であり実発火ではない。
   ["tests/dependency-drift.test.ts", 1],
   ["tests/runtime-portability.test.ts", 11],

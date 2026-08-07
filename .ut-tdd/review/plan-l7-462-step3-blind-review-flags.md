@@ -45,3 +45,15 @@ tests/runtime-portability.test.ts のコメントに対応が残る。)
 - R1: `bun-unit` / `vitest-browser-playwright` の command を PROFILE_RUNNERS と同一の
   snapshot runner 起動形へ統一。
 - R2: runner args から `"--"` を除去。
+
+## 第 3 ラウンド (対象 HEAD d468d61e、verdict FLAG → 是正)
+
+- A-4' / R1 / R2 / 種別 3 は閉塞確認 (レーン B は PASS、新規回帰なし)。
+- **F** (blocking): `tests/setup.test.ts` の spawn pin=1 が実サイト 0 に対する空枠で、
+  1 行の新規 bun spawn が素通りする (実ファイル実証 violations=0)。→ 空 pin 枠を撤去。
+- **G** (設計限界): count-pin は純増のみ検出し、同数 swap (debt 除去 + 新規追加の同居) は
+  静的に見えない。→ source の限界注記へ明文化し、burn-down PR での pin 実測追随減算を
+  レビュー規律とする。サイト同一性の機械追跡 (AST 化) は Issue #134 後続へ帰属。
+- 非 blocking 注記: `globalThis["Bun"]` / `process.versions["bun"]` の文字列 key 形は
+  quote lookbehind の副作用で対象外 (限界注記へ明文化)。command と PROFILE_RUNNERS の
+  一致を将来強制する gate は未整備 (再乖離は無音で起きうる — 後続論点)。
