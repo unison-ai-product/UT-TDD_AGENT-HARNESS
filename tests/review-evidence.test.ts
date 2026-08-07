@@ -5,11 +5,15 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeReviewEvidence,
   extractReviewEntries,
+  GREEN_COMMAND_KINDS,
+  GREEN_COMMAND_RUNNERS,
+  GREEN_COMMAND_SCOPES,
   hasReviewEvidence,
   loadReviewPlans,
   type ParsedReviewPlan,
   parseReviewPlan,
 } from "../src/lint/review-evidence.ts";
+import { frontmatterSchema } from "../src/schema/frontmatter.ts";
 
 /** review-evidence lint (IMP-071 presence + IMP-076 cross-review semantic) — review 前置証跡の機械強制。 */
 
@@ -235,6 +239,49 @@ describe("green command evidence (IMP-108)", () => {
       { plan_id: "PLAN-NEW-GREEN-NO-COMPLETED-AT", reason: "missing_completed_at" },
     ]);
     expect(r.ok).toBe(false);
+  });
+});
+
+describe("green command vocabulary pin (schema ↔ lint SSoT)", () => {
+  // PR #293 review 申し送り: schema (frontmatter.ts) と lint (review-evidence.ts) の
+  // green_commands 語彙は 2 箇所に重複しており、片側だけの変更が無音で通る。
+  // zod の invalid_enum_value issue が持つ options (= schema 側 enum の実体) を
+  // 突き合わせて同期を恒久固定する (U-VPROF-RUNNER-001 と同型)。
+  function schemaEnumOptions(field: "kind" | "runner" | "scope"): string[] {
+    const r = frontmatterSchema.safeParse({
+      review_evidence: [
+        {
+          reviewer: "r",
+          review_kind: "human",
+          reviewed_at: "2026-08-07",
+          verdict: "approve",
+          green_commands: [
+            {
+              kind: "__probe__",
+              command: "c",
+              runner: "__probe__",
+              scope: "__probe__",
+              exit_code: 0,
+              evidence_path: "p",
+              output_digest: "sha256:0123456789abcdef",
+            },
+          ],
+        },
+      ],
+    });
+    expect(r.success).toBe(false);
+    if (r.success) return [];
+    const issue = r.error.issues.find(
+      (i) => i.code === "invalid_enum_value" && i.path.at(-1) === field,
+    );
+    expect(issue, `no invalid_enum_value issue for ${field}`).toBeDefined();
+    return [...((issue as { options?: readonly (string | number)[] }).options ?? [])].map(String);
+  }
+
+  it("U-GREENDEF-007: schema enum と lint 語彙集合が kind/runner/scope の 3 面で一致する", () => {
+    expect(schemaEnumOptions("kind").sort()).toEqual([...GREEN_COMMAND_KINDS].sort());
+    expect(schemaEnumOptions("runner").sort()).toEqual([...GREEN_COMMAND_RUNNERS].sort());
+    expect(schemaEnumOptions("scope").sort()).toEqual([...GREEN_COMMAND_SCOPES].sort());
   });
 });
 

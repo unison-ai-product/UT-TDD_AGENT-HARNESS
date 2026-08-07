@@ -92,7 +92,7 @@ export interface ReviewEvidenceResult {
 }
 
 const GREEN_COMMAND_ENFORCEMENT_DATE = "2026-06-23";
-const GREEN_COMMAND_KINDS = new Set([
+export const GREEN_COMMAND_KINDS = new Set([
   "unit_test",
   "integration_test",
   "typecheck",
@@ -102,8 +102,8 @@ const GREEN_COMMAND_KINDS = new Set([
   "smoke",
 ]);
 // node = Node 一本化 (PLAN-L7-462) 後の正規 runner (schema と同期、SSoT は frontmatter.ts)。
-const GREEN_COMMAND_RUNNERS = new Set(["bun", "node", "powershell", "bash", "ci"]);
-const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files", "gate"]);
+export const GREEN_COMMAND_RUNNERS = new Set(["bun", "node", "powershell", "bash", "ci"]);
+export const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files", "gate"]);
 
 function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
   if (issue === "same_provider") return "same_provider";
