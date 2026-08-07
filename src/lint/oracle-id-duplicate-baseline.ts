@@ -46,8 +46,11 @@ export const ORACLE_ID_DUPLICATE_BASELINE: ReadonlySet<string> = new Set([
   "IT-RGK-PHYS-004\t同一request ID/token digest/idempotency identityのspawnをtimeout後再送 | pending/indeterminate/result recordから実phaseへreconcileしprocess最大1。attempt/nonceだけ同じ新requestはreplay拒否",
   "IT-RGK-PHYS-005\tWindows create→assign間でclient crash | suspended root resume 0、custodianがterminate/reap",
   "IT-RGK-PHYS-005\treal-OS | Windows / Job object create+assign、non-inherit handle | `fx-rgk-win-crash-before-assign`: create後 assign前に client process を強制終了 | suspended root resume回数、custodian terminate/reap fact、Job empty proof | suspended root resume>0、reapなしで終了 | control 1 / workload ≤1 (suspendedのまま、resume 0)",
-  "IT-RGK-PHYS-006\tWindows assign成功後launcher/client crash | Job handle custodyを維持しdeadline後Job empty/orphan 0",
-  "IT-RGK-PHYS-006\treal-OS | Windows / Job object + SCM custodian、別failure domain | `fx-rgk-win-crash-after-assign`: assign成功後に launcher と client を落とす | Job handle custody保持、deadline後のJob empty proof、orphan数 | Job handle喪失、deadline後orphan>0 | control 1 / workload 1",
+  "IT-RGK-PHYS-006" +
+    "\tWindows assign成功後launcher/client crash | Job handle custodyを維持しdeadline後Job empty/orphan 0",
+  "IT-RGK-PHYS-006" +
+    "\treal" +
+    "-OS | Windows / Job object + SCM custodian、別failure domain | `fx-rgk-win-crash-after-assign`: assign成功後に launcher と client を落とす | Job handle custody保持、deadline後のJob empty proof、orphan数 | Job handle喪失、deadline後orphan>0 | control 1 / workload 1",
   "IT-RGK-PHYS-007\tLinux clone/start barrierと事後attach fallbackを競合 | user code開始時からcgroup所属、事後attachはcapability failure",
   "IT-RGK-PHYS-007\treal-OS | Linux / cgroup v2 + `clone3(CLONE_INTO_CGROUP)` | `fx-rgk-linux-start-in-cgroup`: clone/start barrier と事後attach fallback を競合させる | user code開始時点のcgroup所属、事後attach試行のcapability failure | 事後attachがhard custodyとして受理される、開始後attach | control 1 / workload 1",
   "IT-RGK-PHYS-008\tLinux broker/subreaper crashとdouble-fork | reconcile後`populated=0`、zombie/managed orphan 0",

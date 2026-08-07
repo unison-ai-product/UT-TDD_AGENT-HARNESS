@@ -21,7 +21,7 @@ generates:
   - artifact_path: docs/plans/PLAN-L7-244-right-arm-citation-gate.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/oracle-id-duplicate-baseline.ts
-    artifact_type: ts_source
+    artifact_type: source_module
 dependencies:
   parent: null
   requires: []
