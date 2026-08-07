@@ -15,7 +15,7 @@ import {
   verificationRecommendationMermaid,
   verificationRecommendationMessages,
 } from "../src/lint/verification-profile.ts";
-import { PROFILES } from "../src/lint/verification-profile-catalog.ts";
+import { PROFILE_RUNNERS, PROFILES } from "../src/lint/verification-profile-catalog.ts";
 import {
   analyzeVerificationProfileSafety,
   planExternalProfileActivation,
@@ -181,6 +181,18 @@ describe("verification profile recommendation", () => {
 
     expect(result?.status).toBe("failed");
     expect(result?.exitCode).toBe(7);
+  });
+
+  it("U-VPROF-RUNNER-001: PROFILE_RUNNERS entries stay identical to the profile command (no silent divergence)", () => {
+    // PLAN-L7-462 step 3 blind review R1 の申し送り: command (表示/MCP config 面) と
+    // PROFILE_RUNNERS (実行面) が別の起動形へ分岐しても既存テストは緑のままだった。
+    // 同一 profile の 2 面は常に同一 argv を指すことを恒久固定する。
+    for (const [id, runner] of Object.entries(PROFILE_RUNNERS)) {
+      const [command, args] = runner;
+      const profile = PROFILES[id as keyof typeof PROFILES];
+      expect(profile, `runner entry ${id} has no profile`).toBeDefined();
+      expect([command, ...args].join(" "), `profile ${id}`).toBe(profile.command);
+    }
   });
 
   it("supports dry-run for builtin profile runners", () => {
