@@ -63,7 +63,9 @@ function canonicalizeValue(value: unknown): string | null {
  */
 export function canonicalize(value: unknown): CanonicalOutcome {
   const encoded = canonicalizeValue(value);
-  return encoded === null ? { ok: false, reason: "canonical_unsupported_value" } : { ok: true, value: encoded };
+  return encoded === null
+    ? { ok: false, reason: "canonical_unsupported_value" }
+    : { ok: true, value: encoded };
 }
 
 /** UTF-8 bytes の SHA-256 を 64 桁 lowerhex で返す (切り詰めない)。 */

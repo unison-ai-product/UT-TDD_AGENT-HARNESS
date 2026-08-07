@@ -56,7 +56,9 @@ function pick(source: unknown, key: string): unknown {
 }
 
 /** Sigstore certificate extension の URI 形を receipt の field 形へ正規化する。 */
-export function normalizeAttestationCertificate(certificate: unknown): GitHubAttestationFacts | null {
+export function normalizeAttestationCertificate(
+  certificate: unknown,
+): GitHubAttestationFacts | null {
   const repository = stripGitHubPrefix(readText(pick(certificate, "sourceRepositoryURI")));
   const workflowRef = stripGitHubPrefix(readText(pick(certificate, "buildSignerURI")));
   const workflowSha = readText(pick(certificate, "buildSignerDigest"));

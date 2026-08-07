@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  ATTESTATION_WORKFLOW_FILE,
   aggregateHarnessResultsPass,
   analyzeGithubCiPolicy,
   type GithubWorkflowDoc,
@@ -1403,6 +1404,85 @@ describe("github-ci-policy lint", () => {
       expect(
         result.violations.some((violation) => violation.detail.includes("test:doc-lane")),
       ).toBe(false);
+    });
+  });
+
+  describe("D3d attestation runtime workflow (PLAN-L7-465)", () => {
+    const attestationDoc = (content: string): GithubWorkflowDoc => ({
+      file: ATTESTATION_WORKFLOW_FILE,
+      content,
+      profile: "source",
+      role: "attestation_runtime",
+    });
+
+    const VALID_ATTESTATION_WORKFLOW = readFileSync(
+      join(process.cwd(), ATTESTATION_WORKFLOW_FILE),
+      "utf8",
+    );
+
+    /** 他 role の doc を渡していない分の missing_workflow は本 oracle の対象外。 */
+    const attestationViolations = (content: string) =>
+      analyzeGithubCiPolicy([attestationDoc(content)]).violations.filter(
+        (violation) => violation.file === ATTESTATION_WORKFLOW_FILE,
+      );
+
+    it("U-RVGHA-D3C-010: repo の D3d workflow は固定パス契約 (workflow_dispatch のみ / permission allowlist / default branch 固定 / issue+admit+attest) を満たす", () => {
+      expect(attestationViolations(VALID_ATTESTATION_WORKFLOW)).toEqual([]);
+    });
+
+    it("U-RVGHA-D3C-010: PR HEAD checkout / PR 由来入力 / 過剰 permission / trigger 逸脱を fail-close する", () => {
+      // 既存 fixture と同じく、GitHub 式は連結で書いて template literal 誤検知を避ける。
+      const expression = (body: string) => `$${"{{"} ${body} ${"}}"}`;
+      const prHeadCheckout = VALID_ATTESTATION_WORKFLOW.replace(
+        expression("github.event.repository.default_branch"),
+        expression("github.event.pull_request.head.sha"),
+      );
+      expect(
+        attestationViolations(prHeadCheckout)
+          .map((violation) => violation.reason)
+          .sort(),
+      ).toEqual(["forbidden_pull_request_input_execution", "missing_step"]);
+
+      const prTrigger = VALID_ATTESTATION_WORKFLOW.replace(
+        "on:\n  workflow_dispatch:",
+        "on:\n  pull_request_target:\n  workflow_dispatch:",
+      );
+      expect(attestationViolations(prTrigger).map((violation) => violation.reason)).toContain(
+        "invalid_attestation_trigger",
+      );
+
+      const overPermissioned = VALID_ATTESTATION_WORKFLOW.replace(
+        "permissions:\n  contents: read",
+        "permissions:\n  contents: write",
+      );
+      expect(
+        attestationViolations(overPermissioned).map((violation) => violation.reason),
+      ).toContain("missing_permission");
+
+      const withoutAttestation = VALID_ATTESTATION_WORKFLOW.replace(
+        "actions/attest-build-provenance@v2",
+        "actions/upload-artifact@v4",
+      );
+      expect(
+        attestationViolations(withoutAttestation).map((violation) => violation.detail),
+      ).toContain("attest-build-provenance");
+    });
+
+    it("U-RVGHA-D3C-010: source profile の実 repo は固定パスの D3d workflow を必ず load し、Pack profile では対象外にする", () => {
+      const sourceDocs = loadGithubCiPolicyDocs({
+        repoRoot: process.cwd(),
+        runtimeProfile: "source",
+      });
+      const attestation = sourceDocs.filter((doc) => doc.role === "attestation_runtime");
+      expect(attestation.map((doc) => doc.file)).toEqual([ATTESTATION_WORKFLOW_FILE]);
+      expect(
+        analyzeGithubCiPolicy(sourceDocs).violations.filter(
+          (violation) => violation.file === ATTESTATION_WORKFLOW_FILE,
+        ),
+      ).toEqual([]);
+
+      const packDocs = loadGithubCiPolicyDocs({ repoRoot: process.cwd(), runtimeProfile: "pack" });
+      expect(packDocs.some((doc) => doc.role === "attestation_runtime")).toBe(false);
     });
   });
 });

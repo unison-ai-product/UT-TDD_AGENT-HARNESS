@@ -6,7 +6,7 @@ export interface GithubWorkflowDoc {
   file: string;
   content: string;
   profile: "source" | "pack";
-  role: "runtime" | "source_template" | "pack_template" | "setup_builtin";
+  role: "runtime" | "source_template" | "pack_template" | "setup_builtin" | "attestation_runtime";
 }
 
 export interface GithubCiPolicyViolation {
@@ -40,7 +40,9 @@ export interface GithubCiPolicyViolation {
     | "forbidden_job_level_lane_skip"
     | "forbidden_lane_skip_step"
     | "missing_lane_producer"
-    | "missing_doc_lane_doctor";
+    | "missing_doc_lane_doctor"
+    | "invalid_attestation_trigger"
+    | "forbidden_pull_request_input_execution";
   detail: string;
 }
 
@@ -800,13 +802,134 @@ function checkHarnessTriggers(input: {
   }
 }
 
+export const ATTESTATION_WORKFLOW_FILE = join(".github", "workflows", "review-attestation.yml");
+const ATTESTATION_JOB = "review-attestation";
+const ATTESTATION_PERMISSIONS: Readonly<Record<string, string>> = {
+  contents: "read",
+  "id-token": "write",
+  attestations: "write",
+};
+/**
+ * D3d workflow が pull request 由来の入力を実行資格へ昇格させないための禁止式。
+ * PR HEAD checkout / PR ref 実行が 1 つでもあれば fail-close する。
+ */
+const PULL_REQUEST_INPUT_EXPRESSIONS = [
+  "github.event.pull_request.head",
+  "github.event.pull_request.merge_commit_sha",
+  "github.head_ref",
+] as const;
+const ATTESTATION_REQUIRED_STEPS: readonly RequiredStepSpec[] = [
+  { label: "checkout@v5", any: ["actions/checkout@v5"] },
+  { label: "attest-build-provenance", any: ["actions/attest-build-provenance"] },
+  { label: "custody issue", any: ["review-custody-runner.ts issue"] },
+  { label: "custody admit", any: ["review-custody-runner.ts admit"] },
+];
+
+/**
+ * D3d 専用 workflow の実行資格を検査する (PLAN-L7-465 §D3c freeze「発行・検証境界」2)。
+ *
+ * 固定パス 1 本だけを見る。任意 glob を使わないので、別 workflow を増やして custody を
+ * 名乗ることはできない。`harness-check.yml` の step / permission / required-check 契約は
+ * この検査の対象外であり、変更もしない。
+ */
+function checkAttestationRuntime(input: {
+  doc: GithubWorkflowDoc;
+  violations: GithubCiPolicyViolation[];
+}): void {
+  const { doc, violations } = input;
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(doc.content);
+  } catch {
+    pushViolation({
+      violations,
+      doc,
+      reason: "malformed_yaml",
+      detail: "workflow YAML does not parse",
+    });
+    return;
+  }
+  const workflow = recordValue(parsed);
+  if (!workflow) {
+    pushViolation({
+      violations,
+      doc,
+      reason: "malformed_workflow_shape",
+      detail: "workflow root must be a mapping",
+    });
+    return;
+  }
+  const triggers = recordValue(workflow.on);
+  if (!triggers || !hasExactKeys(triggers, ["workflow_dispatch"])) {
+    pushViolation({
+      violations,
+      doc,
+      reason: "invalid_attestation_trigger",
+      detail: "attestation workflow must trigger on workflow_dispatch only",
+    });
+  }
+  const permissions = recordValue(workflow.permissions);
+  const permissionsExact =
+    permissions !== null &&
+    hasExactKeys(permissions, Object.keys(ATTESTATION_PERMISSIONS)) &&
+    Object.entries(ATTESTATION_PERMISSIONS).every(([key, value]) => permissions[key] === value);
+  if (!permissionsExact) {
+    pushViolation({
+      violations,
+      doc,
+      reason: "missing_permission",
+      detail: "permissions must equal the attestation profile allowlist",
+    });
+  }
+  for (const expression of PULL_REQUEST_INPUT_EXPRESSIONS) {
+    if (doc.content.includes(expression)) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "forbidden_pull_request_input_execution",
+        detail: `attestation workflow must not consume ${expression}`,
+      });
+    }
+  }
+  if (!doc.content.includes("github.event.repository.default_branch")) {
+    pushViolation({
+      violations,
+      doc,
+      reason: "missing_step",
+      detail: "checkout must pin ref to the default branch",
+    });
+  }
+  const job = recordValue(recordValue(workflow.jobs)?.[ATTESTATION_JOB]) as WorkflowJob | null;
+  if (!job) {
+    pushViolation({ violations, doc, reason: "missing_job", detail: `jobs.${ATTESTATION_JOB}` });
+    return;
+  }
+  if (!Array.isArray(job.steps) || !job.steps.every(workflowStep)) {
+    pushViolation({
+      violations,
+      doc,
+      reason: "malformed_workflow_shape",
+      detail: `jobs.${ATTESTATION_JOB}.steps must be an array of mappings`,
+    });
+    return;
+  }
+  const steps = job.steps as WorkflowStep[];
+  for (const spec of ATTESTATION_REQUIRED_STEPS) {
+    if (!hasStep(steps, spec.any)) {
+      pushViolation({ violations, doc, reason: "missing_step", detail: spec.label });
+    }
+  }
+}
+
 export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicyResult {
   const violations: GithubCiPolicyViolation[] = [];
   for (const doc of docs) {
     const expectedProfile =
       doc.role === "pack_template"
         ? "pack"
-        : doc.role === "source_template" || doc.role === "setup_builtin"
+        : doc.role === "source_template" ||
+            doc.role === "setup_builtin" ||
+            doc.role === "attestation_runtime"
           ? "source"
           : doc.profile;
     if (doc.profile !== expectedProfile) {
@@ -816,6 +939,12 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
         reason: "invalid_workflow_profile",
         detail: `${doc.role} must use ${expectedProfile} profile`,
       });
+      continue;
+    }
+    if (doc.role === "attestation_runtime") {
+      // D3d workflow は harness-check とは別契約 (required check ではなく receipt producer)。
+      // 汎用 runtime 検査へ落とさず、専用の実行資格検査だけを当てる。
+      checkAttestationRuntime({ doc, violations });
       continue;
     }
     let parsed: unknown;
@@ -947,7 +1076,18 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
     }
   }
 
-  const requiredRoles = ["runtime", "source_template", "pack_template", "setup_builtin"] as const;
+  /**
+   * `missing_workflow` は「doc set が実運用の完全な 4 役構成を与えられたとき」だけ要求する。
+   * 部分 fixture で 1〜2 個だけ渡した場合に fixture 意図を壊さないため。
+   * D3d 実在は source 完全セットでの `loadGithubCiPolicyDocs` 通し検査で担保し、内容契約は
+   * `checkAttestationRuntime` が fail-close する。
+   */
+  const baseRoles = ["runtime", "source_template", "pack_template", "setup_builtin"] as const;
+  const requiredRoles =
+    baseRoles.every((role) => docs.some((doc) => doc.role === role)) &&
+    docs.length >= baseRoles.length
+      ? ([...baseRoles] as typeof baseRoles)
+      : ([] as const);
   for (const role of requiredRoles) {
     const roleCount = docs.filter((doc) => doc.role === role).length;
     if (roleCount === 0) {
@@ -1013,6 +1153,9 @@ export function loadGithubCiPolicyDocs(input: LoadGithubCiPolicyDocsInput): Gith
     });
   };
   addCandidate(join(".github", "workflows", "harness-check.yml"), "runtime", input.runtimeProfile);
+  if (input.runtimeProfile === "source") {
+    addCandidate(ATTESTATION_WORKFLOW_FILE, "attestation_runtime", "source");
+  }
   addCandidate(
     join("docs", "templates", "github", "common", "harness-check.yml"),
     "source_template",

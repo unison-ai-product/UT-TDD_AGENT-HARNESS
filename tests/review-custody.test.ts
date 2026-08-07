@@ -6,7 +6,6 @@ import type {
   GitHubAttestationVerifierPort,
 } from "../src/feedback/ports/github-attestation-verifier.ts";
 import type { VerifiedProviderIdentity } from "../src/feedback/ports/provider-family-authority.ts";
-import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
 import {
   admitReviewCustody,
   buildReviewCustodyReceipt,
@@ -24,6 +23,7 @@ import {
   type ReviewRequestIdentity,
   sha256Hex,
 } from "../src/feedback/review-custody-canonical.ts";
+import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
 
 const REPOSITORY = "unison-ai-product/UT-TDD_AGENT-HARNESS";
 const HEAD = "a".repeat(40);
@@ -107,7 +107,9 @@ function observations(overrides: Partial<CustodyObservations> = {}): CustodyObse
   };
 }
 
-function expectation(overrides: Partial<CustodySubjectExpectation> = {}): CustodySubjectExpectation {
+function expectation(
+  overrides: Partial<CustodySubjectExpectation> = {},
+): CustodySubjectExpectation {
   return {
     repository: REPOSITORY,
     prNumber: 283,

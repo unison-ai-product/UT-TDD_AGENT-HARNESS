@@ -19,6 +19,22 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     artifact_type: markdown_doc
+  - artifact_path: src/feedback/review-custody.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/review-custody-canonical.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/review-custody-runner.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/ports/github-attestation-verifier.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/ports/provider-family-authority.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/adapters/gh-attestation-verifier.ts
+    artifact_type: source_module
+  - artifact_path: tests/review-custody.test.ts
+    artifact_type: test_code
+  - artifact_path: .github/workflows/review-attestation.yml
+    artifact_type: yaml_config
 dependencies:
   parent: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
   requires:
