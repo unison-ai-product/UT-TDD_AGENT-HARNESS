@@ -31,14 +31,12 @@ import { resolveDelegationRouting } from "../team/delegation-routing.ts";
 export interface AdapterExecutionDeps {
   gitBranch: () => string | null;
   gitHead: () => string | null;
-  runSessionStartSideEffects: (
-    input: {
-      repoRoot: string;
-      input: SessionHookInput;
-      deps: ReturnType<typeof nodeDeps>;
-      json?: boolean;
-    },
-  ) => void;
+  runSessionStartSideEffects: (input: {
+    repoRoot: string;
+    input: SessionHookInput;
+    deps: ReturnType<typeof nodeDeps>;
+    json?: boolean;
+  }) => void;
   writeHandoverWarnings: () => void;
   now?: () => string;
 }

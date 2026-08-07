@@ -3213,7 +3213,11 @@ team
         const repoHasGitDir = existsSync(join(repoRoot, ".git"));
         const cachedBranch = repoHasGitDir ? gitBranch() : null;
         const cachedHead = repoHasGitDir ? gitHead() : null;
-        const sessionDeps = nodeDeps(repoRoot, () => cachedBranch, () => cachedHead);
+        const sessionDeps = nodeDeps(
+          repoRoot,
+          () => cachedBranch,
+          () => cachedHead,
+        );
         if (opts.json) {
           sessionDeps.warn = (message) => process.stderr.write(`${message}\n`);
         }
