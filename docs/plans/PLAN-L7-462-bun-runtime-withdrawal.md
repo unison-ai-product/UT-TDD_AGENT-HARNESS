@@ -84,13 +84,14 @@ review_evidence:
         scope: full
         exit_code: 0
         completed_at: "2026-08-06T23:50:00+09:00"
+        # output_digest = anchor_commit 時点の evidence_path blob sha256 (green-command-digest 契約)。
         evidence_path: .github/workflows/harness-check.yml
-        output_digest: "sha256:38ce49d5686605adffaca7863968c237f3d89e0b87f97c1a24e365e8b078f2d8"
+        output_digest: "sha256:d9fa9da53d2dfc7a442b2b23064ce3017787814f55fb7e4577eafad33936cc81"
         anchor_commit: 445c710fea2e16e584f6b76a3e4db1ca82329c90
   - reviewer: claude-opus-5
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-07T15:40:00+09:00"
-    tests_green_at: "2026-08-07T15:20:00+09:00"
+    reviewed_at: "2026-08-07T17:00:00+09:00"
+    tests_green_at: "2026-08-07T16:52:30+09:00"
     verdict: approve
     scope: >-
       step 3 (PR #284) の blind review 4 ラウンド + delta 追認。FLAG 原文と閉塞判定は
@@ -111,7 +112,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-07T16:52:30+09:00"
         evidence_path: src/lint/runtime-portability.ts
-        output_digest: "sha256:57ad96dec5ec629dd5699e4f747ddd8a1a1c44ec9c46021872ed4290bd25d9b8"
+        output_digest: "sha256:ed9e843fc3f01dea22413dbe5627cede5f1e1de40c64677c914e99993f28a522"
         anchor_commit: 305df9ed5a4418d6f12cf784eaaaab21da654b68
       - kind: smoke
         command: "gh run view 31154290456 --json conclusion,jobs"
@@ -120,7 +121,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-07T15:35:00+09:00"
         evidence_path: .github/workflows/harness-check.yml
-        output_digest: "sha256:2ea98ab453a7be0ee603710518e6d01022934103f2ffb8a0c50565c2b6337d34"
+        output_digest: "sha256:d9fa9da53d2dfc7a442b2b23064ce3017787814f55fb7e4577eafad33936cc81"
         anchor_commit: cc3ed37f265e4df71ecb3e17c22f5b5b5d1b0e97
 ---
 
