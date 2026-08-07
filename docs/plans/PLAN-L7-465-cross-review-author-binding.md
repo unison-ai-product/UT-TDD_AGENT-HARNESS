@@ -7,7 +7,7 @@ drive: be
 route_signal: feature_addition
 route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
-status: draft
+status: confirmed
 created: 2026-07-28
 updated: 2026-08-07
 owner: PM / PO
@@ -47,7 +47,39 @@ dependencies:
     - src/state-db/projection-writer.ts
     - src/team/delegation-routing.ts
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-closing-285
+    review_kind: cross_agent
+    reviewed_at: "2026-08-07T07:26:50Z"
+    tests_green_at: "2026-08-07T07:19:50Z"
+    verdict: approve
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    scope: "PR #285 exact HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2; CI run 31156402592 (Linux/Windows/aggregate) green; claim-blind/spec-blind closing review PASS; post-merge live dispatch was deferred until merge by design."
+    subject_head: "9dff55704b1c22b1c22272502006a2c24035e0c2"
+    attack_trials: 3
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/285#issuecomment-5213879263"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31156402592"
+    green_commands:
+      - kind: unit_test
+        command: "bun test tests/review-custody.test.ts tests/github-ci-policy.test.ts"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-07T07:19:50Z"
+        evidence_path: tests/review-custody.test.ts
+        output_digest: "sha256:a5634d67b958d1bc04056ab3993bee80845e5c340e028663c294e5307db2c4ba"
+        anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
+      - kind: typecheck
+        command: "bunx tsc --noEmit"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-07T07:19:50Z"
+        evidence_path: src/feedback/review-custody-runner.ts
+        output_digest: "sha256:ff15ed577f28a9a0ed8cd2b5f6391037d09019ebc7e00f84d2732f671e0d1dd8"
+        anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
