@@ -12,6 +12,7 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { utTddCliProbe } from "../src/cli/distribution.ts";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 import { MODEL_IDS } from "../src/team/model-policy.ts";
@@ -141,6 +142,24 @@ function withFakeProviderEnv(provider: "codex" | "claude") {
     },
   };
 }
+
+describe("utTddCliProbe (PLAN-L7-462 step 2 .cmd shim probe)", () => {
+  it("U-DIST-CLI-PROBE: resolves a PATH-provided ut-tdd.cmd via ComSpec on win32 (bare node spawn would ENOENT)", () => {
+    if (process.platform !== "win32") {
+      expect(utTddCliProbe(process.env, "linux").error?.message ?? "").not.toContain("EINVAL");
+      return;
+    }
+    const tmp = mkdtempSync(join(tmpdir(), "ut-tdd-cli-probe-"));
+    try {
+      writeFileSync(join(tmp, "ut-tdd.cmd"), "@echo off\r\necho ut-tdd 0.0.0\r\nexit /b 0\r\n");
+      const probe = utTddCliProbe({ ...process.env, PATH: tmp }, "win32");
+      expect(probe.status).toBe(0);
+      expect(probe.stdout).toContain("ut-tdd 0.0.0");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("L7 CLI surface closure", () => {
   it("U-GATE-007 persists gate run evidence without changing gate verdict semantics", () => {
