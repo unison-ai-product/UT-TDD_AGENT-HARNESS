@@ -169,11 +169,11 @@ describe("宣言 site 収集 (Issue #206)", () => {
   it("candidate/概要表は confirmed/freeze の同一ID行があれば構造的再掲として除外する", () => {
     const root = declarationFixture(
       [
-        "### §1.1 IT-CONTRACT (candidate skeleton)",
+        "### arbitrary summary heading",
         "| IT-ID (候補) | 対象 | シナリオ |",
         "|---|---|---|",
         "| `IT-DECL-001` | draft | 概要 |",
-        "## §5 Confirmed IT Case Design (G5 Freeze)",
+        "## arbitrary confirmed heading",
         "| IT-ID | Given | When | Then |",
         "|---|---|---|---|",
         "| `IT-DECL-001` | request | execute | reject |",
@@ -211,6 +211,82 @@ describe("宣言 site 収集 (Issue #206)", () => {
       declarationSites: sites,
     });
     expect(r.duplicates).toHaveLength(1);
+    expect(r.ok).toBe(false);
+  });
+
+  it("resource kernel の概要/freeze 表も列スキーマで構造的再掲を除外する", () => {
+    const root = declarationFixture(
+      [
+        "## renamed overview",
+        "| ID | boundary / fault injection | expected |",
+        "|---|---|---|",
+        "| `IT-DECL-007` | wire fault | reject |",
+        "## renamed freeze",
+        "| ID | lane | 対象OS / required capability | fixture | 観測点 (保存する fact) | negative expected | created count (control/workload) |",
+        "|---|---|---|---|---|---|---|",
+        "| `IT-DECL-007` | mock | OS非依存 | fx | fault | side effect | control 1 / workload 0 |",
+      ].join("\n"),
+    );
+    expect(collectOracleDeclarationSites(root)).toEqual([
+      {
+        id: "IT-DECL-007",
+        path: "docs/test-design/L7.md",
+        line: 8,
+        description: "mock | OS非依存 | fx | fault | side effect | control 1 / workload 0",
+      },
+    ]);
+  });
+
+  it("構造的 mirror の概要表内で同一IDを二重定義した場合は抑制しない", () => {
+    const root = declarationFixture(
+      [
+        "## summary",
+        "| IT-ID (候補) | 対象 | シナリオ |",
+        "|---|---|---|",
+        "| `IT-DECL-009` | first | contract A |",
+        "| `IT-DECL-009` | second | contract B |",
+        "## confirmed",
+        "| IT-ID | Given | When | Then |",
+        "|---|---|---|---|",
+        "| `IT-DECL-009` | request | execute | reject |",
+      ].join("\n"),
+    );
+    const sites = collectOracleDeclarationSites(root);
+    expect(sites).toHaveLength(3);
+    const r = analyzeOracleTestTrace({
+      declared: ["IT-DECL-009"],
+      referenced: new Set(["IT-DECL-009"]),
+      baseline: new Set(),
+      widenedBaseline: new Set(),
+      declarationSites: sites,
+    });
+    expect(r.duplicates[0]?.id).toBe("IT-DECL-009");
+    expect(r.ok).toBe(false);
+  });
+
+  it("未知の表スキーマは見出しが addendum でも折り畳まず、別 oracle を可視化する", () => {
+    const root = declarationFixture(
+      [
+        "## summary",
+        "| U-ID | 対象関数 | DbC oracle |",
+        "|---|---|---|",
+        "| `U-DECL-008` | `summaryFn` | 概要契約 |",
+        "## addendum",
+        "| U-ID | Target | Oracle |",
+        "|---|---|---|",
+        "| `U-DECL-008` | `addendumFn` | 別契約 |",
+      ].join("\n"),
+    );
+    const sites = collectOracleDeclarationSites(root);
+    expect(sites).toHaveLength(2);
+    const r = analyzeOracleTestTrace({
+      declared: ["U-DECL-008"],
+      referenced: new Set(["U-DECL-008"]),
+      baseline: new Set(),
+      widenedBaseline: new Set(),
+      declarationSites: sites,
+    });
+    expect(r.duplicates[0]?.id).toBe("U-DECL-008");
     expect(r.ok).toBe(false);
   });
 });
@@ -324,10 +400,13 @@ describe("loadOracleTestTraceInput real repo (U-OTT-004/005)", () => {
     expect(r.staleDuplicateBaseline).toEqual([]);
   });
 
-  it("U-OTT-005: baseline は canonical 衝突 2 件のスナップショット (縮小のみ可)", () => {
-    // 概要/候補と confirmed/freeze の構造的再掲は collector 側で除外し、
-    // 現在残る canonical IT-MODULE-01 の衝突だけを ratchet する。
-    expect(ORACLE_ID_DUPLICATE_BASELINE.size).toBe(2);
+  it("U-OTT-005: baseline は既知の衝突 4 件のスナップショット (縮小のみ可)", () => {
+    // 概要/候補と confirmed/freeze の構造的再掲は列スキーマで除外する一方、
+    // U-PHOVER-002 の同一ID・別 oracle は既知債務として台帳に残す。
+    expect(ORACLE_ID_DUPLICATE_BASELINE.size).toBe(4);
+    expect(
+      [...ORACLE_ID_DUPLICATE_BASELINE].filter((key) => key.startsWith("U-PHOVER-002\t")),
+    ).toHaveLength(2);
   });
 
   it("U-OTT-006: 既存の citation baseline 89 件は本変更で不変", () => {

@@ -59,10 +59,16 @@ export interface OracleDeclarationSite {
   description: string;
 }
 
-type DeclarationSurface = "summary" | "canonical";
+/**
+ * 既知の「候補/概要表 → confirmed/freeze 表」の構造的再掲だけを折り畳む。
+ * 見出し名ではなく列スキーマで認識するため、見出しの改名で検出範囲が変わらない。
+ */
+type DeclarationMirror =
+  | { kind: "it-case"; role: "summary" | "canonical" }
+  | { kind: "resource-kernel"; role: "summary" | "canonical" };
 
 interface RawOracleDeclarationSite extends OracleDeclarationSite {
-  surface: DeclarationSurface;
+  mirror: DeclarationMirror | null;
 }
 
 export interface OracleDuplicate {
@@ -189,17 +195,51 @@ function markdownCells(line: string): string[] | null {
     .map((cell) => cell.trim());
 }
 
-function declarationSurface(heading: string): DeclarationSurface {
-  const normalized = heading.toLowerCase();
+function normalizedHeaderCells(headers: readonly string[]): string[] {
+  return headers.map((header) =>
+    header.replace(/`/g, "").replace(/\s+/g, " ").trim().toLowerCase(),
+  );
+}
+
+function declarationMirror(headers: readonly string[]): DeclarationMirror | null {
+  const normalized = normalizedHeaderCells(headers);
+  const has = (value: string): boolean => normalized.some((header) => header === value);
+  const hasContaining = (value: string): boolean =>
+    normalized.some((header) => header.includes(value));
+
+  // L8 candidate skeleton and §5 GWT table. The schema, not the heading, is the contract.
   if (
-    /^#{2,3}\s§1\./u.test(heading) ||
-    /candidate|skeleton|候補|mapping/u.test(normalized) ||
-    (/resource kernel物理統合/u.test(normalized) && !/freeze/u.test(normalized))
+    hasContaining("it-id") &&
+    (has("検証対象") || has("対象") || has("source contract")) &&
+    (has("シナリオ") || has("scenario"))
   ) {
-    return "summary";
+    return { kind: "it-case", role: "summary" };
   }
-  if (/confirmed|freeze|addendum|engine-swap/u.test(normalized)) return "canonical";
-  return "summary";
+  if (has("it-id") && has("given") && has("when") && has("then")) {
+    return { kind: "it-case", role: "canonical" };
+  }
+
+  // Resource Kernel overview and its freeze-attribute table.
+  if (has("id") && has("boundary / fault injection") && has("expected")) {
+    return { kind: "resource-kernel", role: "summary" };
+  }
+  if (
+    has("id") &&
+    has("lane") &&
+    hasContaining("対象os") &&
+    has("fixture") &&
+    hasContaining("観測点") &&
+    has("negative expected") &&
+    hasContaining("created count")
+  ) {
+    return { kind: "resource-kernel", role: "canonical" };
+  }
+  return null;
+}
+
+function isMarkdownSeparatorRow(line: string): boolean {
+  const cells = markdownCells(line);
+  return cells !== null && cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/u.test(cell));
 }
 
 function collectDeclarationSitesFromFile(
@@ -208,14 +248,23 @@ function collectDeclarationSitesFromFile(
 ): RawOracleDeclarationSite[] {
   const lines = readFileSync(fullPath, "utf8").split(/\r?\n/);
   const sites: RawOracleDeclarationSite[] = [];
-  let heading = "";
+  let tableHeaders: string[] | null = null;
   for (let index = 0; index < lines.length; index += 1) {
-    if (/^#{1,6}\s/u.test(lines[index])) {
-      heading = lines[index].trim();
+    const line = lines[index];
+    if (/^#{1,6}\s/u.test(line)) {
+      tableHeaders = null;
       continue;
     }
-    const cells = markdownCells(lines[index]);
-    if (!cells) continue;
+    const cells = markdownCells(line);
+    if (!cells) {
+      tableHeaders = null;
+      continue;
+    }
+    if (isMarkdownSeparatorRow(line)) continue;
+    if (isMarkdownSeparatorRow(lines[index + 1] ?? "")) {
+      tableHeaders = cells;
+      continue;
+    }
     const idCells = cells.flatMap((cell, cellIndex) => {
       const matches = oracleMatches(cell);
       const normalized = cell.replace(/`/g, "").trim();
@@ -237,7 +286,7 @@ function collectDeclarationSitesFromFile(
         path: relativePath,
         line: index + 1,
         description,
-        surface: declarationSurface(heading),
+        mirror: declarationMirror(tableHeaders ?? []),
       });
     }
   }
@@ -256,9 +305,16 @@ function selectCanonicalDeclarationSites(
   }
   const selected: OracleDeclarationSite[] = [];
   for (const group of byIdAndPath.values()) {
-    const canonical = group.filter((site) => site.surface === "canonical");
-    const retained = canonical.length > 0 ? canonical : group;
-    selected.push(...retained.map(({ surface: _surface, ...site }) => site));
+    const canonicalMirrors = group.filter((site) => site.mirror?.role === "canonical");
+    const summaryMirrors = group.filter((site) => site.mirror?.role === "summary");
+    const mirrorKinds = new Set(group.flatMap((site) => (site.mirror ? [site.mirror.kind] : [])));
+    const hasStructuralMirror =
+      canonicalMirrors.length > 0 && summaryMirrors.length > 0 && mirrorKinds.size === 1;
+    const retained =
+      hasStructuralMirror && summaryMirrors.length === 1
+        ? group.filter((site) => site.mirror?.role !== "summary")
+        : group;
+    selected.push(...retained.map(({ mirror: _mirror, ...site }) => site));
   }
   return selected;
 }
