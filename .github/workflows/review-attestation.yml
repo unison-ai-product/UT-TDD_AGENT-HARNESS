@@ -61,6 +61,14 @@ on:
           - PASS
           - PASS-WEAK
           - FLAG
+      merge_method:
+        description: merge method recorded for a post-merge closure receipt
+        required: false
+        type: choice
+        options:
+          - merge
+          - squash
+          - rebase
 
 permissions:
   contents: read
@@ -96,6 +104,7 @@ jobs:
           UT_TDD_CUSTODY_REVIEWER_FAMILY: ${{ github.event.inputs.reviewer_family }}
           UT_TDD_CUSTODY_AUTHOR_FAMILY: ${{ github.event.inputs.author_family }}
           UT_TDD_CUSTODY_VERDICT: ${{ github.event.inputs.verdict }}
+          UT_TDD_CUSTODY_MERGE_METHOD: ${{ github.event.inputs.merge_method }}
           UT_TDD_CUSTODY_RECEIPT_PATH: review-custody-receipt.json
         run: node src/feedback/review-custody-runner.ts issue
       - name: Attest receipt provenance
@@ -111,5 +120,6 @@ jobs:
           UT_TDD_CUSTODY_MEMORY_ID: ${{ github.event.inputs.memory_id }}
           UT_TDD_CUSTODY_JUDGMENT_DIGEST: ${{ github.event.inputs.judgment_digest }}
           UT_TDD_CUSTODY_AUTHOR_FAMILY: ${{ github.event.inputs.author_family }}
+          UT_TDD_CUSTODY_MERGE_METHOD: ${{ github.event.inputs.merge_method }}
           UT_TDD_CUSTODY_RECEIPT_PATH: review-custody-receipt.json
         run: node src/feedback/review-custody-runner.ts admit

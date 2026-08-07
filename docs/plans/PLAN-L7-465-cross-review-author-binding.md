@@ -7,9 +7,9 @@ drive: be
 route_signal: feature_addition
 route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
-status: draft
+status: confirmed
 created: 2026-07-28
-updated: 2026-08-05
+updated: 2026-08-07
 owner: PM / PO
 agent_slots:
   - role: tl
@@ -47,7 +47,39 @@ dependencies:
     - src/state-db/projection-writer.ts
     - src/team/delegation-routing.ts
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-closing-285
+    review_kind: cross_agent
+    reviewed_at: "2026-08-07T07:26:50Z"
+    tests_green_at: "2026-08-07T07:19:50Z"
+    verdict: approve
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    scope: "PR #285 exact HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2; CI run 31156402592 (Linux/Windows/aggregate) green; claim-blind/spec-blind closing review PASS; post-merge live dispatch was deferred until merge by design."
+    subject_head: "9dff55704b1c22b1c22272502006a2c24035e0c2"
+    attack_trials: 3
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/285#issuecomment-5213879263"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31156402592"
+    green_commands:
+      - kind: unit_test
+        command: "npm run test"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-07T07:19:50Z"
+        evidence_path: tests/review-custody.test.ts
+        output_digest: "sha256:a5634d67b958d1bc04056ab3993bee80845e5c340e028663c294e5307db2c4ba"
+        anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
+      - kind: typecheck
+        command: "npm run typecheck"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-07T07:19:50Z"
+        evidence_path: src/feedback/review-custody-runner.ts
+        output_digest: "sha256:ff15ed577f28a9a0ed8cd2b5f6391037d09019ebc7e00f84d2732f671e0d1dd8"
+        anchor_commit: 9dff55704b1c22b1c22272502006a2c24035e0c2
 ---
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
@@ -324,7 +356,7 @@ provider transcriptは含めず、sanitized digest / typed resultだけを参照
 | `schemaVersion` / `receiptKind` | closed enum。`pre_merge_review` と `post_merge_closure` を混同しない |
 | `repository` / `prNumber` / `baseRef` | GitHub API と event payload の双方から再取得して完全一致 |
 | `headSha` | immutable 40 hex。PR HEAD、request、judgment、Check Runを同一subjectへ束縛 |
-| `mergeSha` / `mergeMethod` / `mergedAt` | post-mergeだけ必須。pre-mergeへ注入、post-mergeで欠落はいずれも拒否 |
+| `mergeSha` / `mergeMethod` / `mergedAt` | post-mergeだけ必須。`mergeSha`/`mergedAt` は GitHub API facts へ束縛し、`mergeMethod` は workflow dispatch の operator-supplied assertion として issue/admit の両 step で一致照合する（GitHub API が方式の真実性を証明する field ではない）。pre-mergeへ注入、post-mergeで欠落はいずれも拒否 |
 | `planId` / `planRevision` / `reviewRevision` | `reviewRevision`はcanonical request digest由来の`rv1-<64 lowerhex>`だけを受理 |
 | `judgmentDigest` / `receiptDigest` | SHA-256 lowerhex。本文を複製せず、検証済み対象との一致を要求 |
 | `workflowRef` / `workflowSha` / `runId` / `runAttempt` / `issuer` | Artifact Attestation と GitHub API factsへ束縛 |
@@ -428,6 +460,34 @@ family authority を AND 入力に据える / C: family 軸を D3e へ分離) �
 7. **`harness-check.yml` / `src/cli.ts` / merge gate には触れていない**。D2 の最終 AND 配線
    (required `harness-check` への投影、`harness-ci-aggregate` への rename) は本 PR の範囲外。
 
+### Merge 後 live dispatch の実測と是正 (2026-08-07)
+
+PR #285 の merge commit `e032e0787a26231c28e939d85b45668ad9915080` 直後に、メモリの手順どおり
+`review-attestation.yml` を default branch から dispatch した。Issue receipt と Artifact Attestation
+は成功したが、Admit が `identity_mismatch (pre_merge_requires_open_pull_request)` で停止した
+(run `31157752744`)。原因は workflow runner が PR の現状態を読んでいたにもかかわらず、receipt と
+expected の `receiptKind` を常に `pre_merge_review` に固定していたことである。これは merge 後の
+post-merge closure 契約を満たさない実バグであり、既知の provider-family `unverified_family` とは
+別の blocking failure として扱う。
+
+是正では次を固定する。
+
+1. GitHub facts の `state=MERGED` から runner が `post_merge_closure` を導出し、`mergeSha` と
+   `mergedAt` を API facts と receipt の双方へ束縛する。`OPEN` の場合だけ従来どおり
+   `pre_merge_review` を発行する。
+2. GitHub API が事後に返さない merge method は `workflow_dispatch` の
+   `merge_method` choice input から受け取る operator-supplied assertion とし、
+   `merge|squash|rebase` 以外・MERGED 時の欠落を fail-close にする。workflow の issue/admit
+   両 step が値を必須取得し、admit は receipt の `mergeMethod` と一致しない値を
+   `identity_mismatch` で拒否する。これは step 間の配線同一性を保証するものであり、GitHub API
+   facts による merge 方式の真実性証明ではない。
+3. `U-RVGHA-D3C-008` に post-merge closure の正常系・`mergedAt` drift の負例を追加し、runner の
+   state 導出・pre/post metadata・欠落入力を同じ test lane で検証する。
+
+修正を main へ着地した後、同じ judgment subject を新しい exact HEAD へ更新して live dispatch を
+再実行する。期待する終端は provider-family authority 未承認による `unverified_family` であり、
+`pre_merge_requires_open_pull_request` や `post_merge_*` の kind 不整合を再発させない。
+
 ### `gh attestation verify` 実出力による adapter 是正 (2026-08-07、merge 前)
 
 初版の adapter は `gh attestation verify --format=json` の出力形と引数形を**実出力を見ずに**書いて
@@ -454,6 +514,12 @@ fixture として写し、推測が再混入したら赤になるようにした
 (freeze の issuer 束縛を gh 側でも強制する)。
 
 ### 誠実に明記する未達
+
+- `mergeMethod` は GitHub API の merge facts に含まれないため、Artifact Attestation が保証するのは
+  workflow が発行した bytes の provenance だけであり、方式そのものの真実性ではない。本 PR は
+  issue/admit 間の一致と enum/欠落の fail-close までを実装し、GitHub facts からの方式判定は別契約へ
+  膨らませない。D2 がこの field を merge eligibility の根拠に使う場合は、方式の検証可能性を別 PLAN
+  で定義する。
 
 - **provider-family authority は未承認・未実装**。したがって実 GitHub 実行では機械 custody が
   全 green でも終端は `unverified_family` であり、`custody_admitted` は port double を注入した

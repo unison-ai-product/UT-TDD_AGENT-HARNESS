@@ -216,6 +216,8 @@ export interface CustodyPullRequestFacts {
   readonly headSha: string;
   readonly state: "OPEN" | "MERGED" | "CLOSED";
   readonly mergeSha: string | null;
+  /** GitHub の merged_at。post-merge receipt の subject を API facts へ束縛する。 */
+  readonly mergedAt: string | null;
 }
 
 export interface CustodyWorkflowRunFacts {
@@ -276,6 +278,8 @@ export interface CustodySubjectExpectation {
   readonly baseRef: string;
   readonly headSha: string;
   readonly receiptKind: ReviewCustodyReceiptKind;
+  /** post-merge dispatch assertion。GitHub API の merge method facts ではない。 */
+  readonly mergeMethod?: "merge" | "squash" | "rebase";
   readonly planId: string;
   readonly planRevision: string;
   readonly requestIdentity: ReviewRequestIdentity;
@@ -350,7 +354,8 @@ function samePullRequestFacts(
     left.baseRef === right.baseRef &&
     left.headSha === right.headSha &&
     left.state === right.state &&
-    left.mergeSha === right.mergeSha
+    left.mergeSha === right.mergeSha &&
+    left.mergedAt === right.mergedAt
   );
 }
 
@@ -376,6 +381,9 @@ function subjectMismatches(input: {
     ["judgmentDigest", receipt.judgmentDigest, expected.judgmentDigest],
     ["workflowRef", receipt.workflowRef, expected.workflowRef],
     ["issuer", receipt.issuer, expected.issuer],
+    ...(receipt.receiptKind === "post_merge_closure"
+      ? [["mergeMethod", receipt.mergeMethod, expected.mergeMethod] as const]
+      : []),
   ];
   return pairs
     .filter(([, actual, wanted]) => actual !== wanted)
@@ -393,10 +401,15 @@ function kindCoherenceDetail(input: {
     return null;
   }
   if (facts.state !== "MERGED") return "post_merge_requires_merged_pull_request";
-  if (receipt.mergeSha === undefined || receipt.mergeMethod === undefined) {
+  if (
+    receipt.mergeSha === undefined ||
+    receipt.mergeMethod === undefined ||
+    receipt.mergedAt === undefined
+  ) {
     return "post_merge_missing_merge_fields";
   }
   if (facts.mergeSha !== receipt.mergeSha) return "post_merge_sha_mismatch";
+  if (facts.mergedAt !== receipt.mergedAt) return "post_merge_timestamp_mismatch";
   return null;
 }
 

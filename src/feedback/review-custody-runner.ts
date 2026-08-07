@@ -73,6 +73,7 @@ function readPullRequestFacts(input: {
   const merged = pick(parsed, "merged") === true;
   const rawState = pick(parsed, "state");
   const mergeCommitSha = pick(parsed, "merge_commit_sha");
+  const mergedAt = pick(parsed, "merged_at");
   const state: CustodyPullRequestFacts["state"] = merged
     ? "MERGED"
     : rawState === "open"
@@ -85,6 +86,7 @@ function readPullRequestFacts(input: {
     headSha: String(pick(head, "sha") ?? ""),
     state,
     mergeSha: merged && typeof mergeCommitSha === "string" ? mergeCommitSha : null,
+    mergedAt: merged && typeof mergedAt === "string" ? mergedAt : null,
   };
 }
 
@@ -123,12 +125,18 @@ function draftFromEnvironment(input: {
   if (verdict !== "PASS" && verdict !== "PASS-WEAK" && verdict !== "FLAG") {
     throw new Error("UT_TDD_CUSTODY_VERDICT must be PASS, PASS-WEAK, or FLAG");
   }
+  const receiptKind = facts.state === "MERGED" ? "post_merge_closure" : "pre_merge_review";
+  const mergeMethod =
+    receiptKind === "post_merge_closure" ? requireMergeMethod({ env }) : undefined;
   return {
-    receiptKind: "pre_merge_review",
+    receiptKind,
     repository: facts.repository,
     prNumber: facts.prNumber,
     baseRef: facts.baseRef,
     headSha: facts.headSha,
+    mergeSha: receiptKind === "post_merge_closure" ? (facts.mergeSha ?? undefined) : undefined,
+    mergeMethod,
+    mergedAt: receiptKind === "post_merge_closure" ? (facts.mergedAt ?? undefined) : undefined,
     planId: requireText({ env, name: "UT_TDD_CUSTODY_PLAN_ID" }),
     planRevision: requireText({ env, name: "UT_TDD_CUSTODY_PLAN_REVISION" }),
     requestIdentity: requestIdentity({ env, prNumber: facts.prNumber, headSha: facts.headSha }),
@@ -144,6 +152,14 @@ function draftFromEnvironment(input: {
     verdict,
     blockingFindingCount: Number(env.get("UT_TDD_CUSTODY_BLOCKING_FINDINGS") ?? "0"),
   };
+}
+
+function requireMergeMethod(input: { env: RunnerEnvironment }): "merge" | "squash" | "rebase" {
+  const value = requireText({ env: input.env, name: "UT_TDD_CUSTODY_MERGE_METHOD" });
+  if (value !== "merge" && value !== "squash" && value !== "rebase") {
+    throw new Error("UT_TDD_CUSTODY_MERGE_METHOD must be merge, squash, or rebase");
+  }
+  return value;
 }
 
 function runFacts(input: {
@@ -218,7 +234,8 @@ export async function admitCustodyReceipt(env: RunnerEnvironment): Promise<Runne
       prNumber: facts.prNumber,
       baseRef: facts.baseRef,
       headSha: facts.headSha,
-      receiptKind: "pre_merge_review",
+      receiptKind: facts.state === "MERGED" ? "post_merge_closure" : "pre_merge_review",
+      mergeMethod: facts.state === "MERGED" ? requireMergeMethod({ env }) : undefined,
       planId: requireText({ env, name: "UT_TDD_CUSTODY_PLAN_ID" }),
       planRevision: requireText({ env, name: "UT_TDD_CUSTODY_PLAN_REVISION" }),
       requestIdentity: requestIdentity({ env, prNumber: facts.prNumber, headSha: facts.headSha }),
