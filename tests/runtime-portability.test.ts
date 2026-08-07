@@ -16,7 +16,7 @@ const validDocs: RuntimePortabilityDoc[] = [
     text: JSON.stringify({
       type: "module",
       bin: { "ut-tdd": "./src/cli.ts" },
-      engines: { bun: ">=1.3" },
+      engines: { node: "24.13.0", bun: ">=1.3" },
       scripts: {
         build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
         test: "vitest run",
@@ -42,11 +42,11 @@ const validDocs: RuntimePortabilityDoc[] = [
   { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
   {
     path: "scripts/ut-tdd",
-    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec bun run "$ROOT/src/cli.ts" "$@"\n',
+    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec node "$ROOT/src/cli.ts" "$@"\n',
   },
   {
     path: "scripts/ut-tdd.ps1",
-    text: '$root = "."\n& "$root\\dist\\ut-tdd.exe" @args\n& bun run (Join-Path $root "src\\cli.ts") @args\n',
+    text: '$root = "."\n& "$root\\dist\\ut-tdd.exe" @args\n& node (Join-Path $root "src\\cli.ts") @args\n',
   },
 ];
 
@@ -119,7 +119,7 @@ describe("runtime-portability lint", () => {
     expect(result.violations.map((v) => v.rule)).toEqual(
       expect.arrayContaining([
         "package-missing-esm",
-        "package-missing-bun-engine",
+        "package-missing-node-engine",
         "package-bin-not-source-cli",
         "package-missing-compiled-build",
         "package-missing-node-fallback-smoke",
@@ -128,6 +128,109 @@ describe("runtime-portability lint", () => {
         "tsconfig-missing-node-types",
         "sqlite-driver-fallback-missing",
       ]),
+    );
+  });
+
+  it("U-RPORT-015: node:sqlite alone satisfies the inverted primary-driver contract", () => {
+    const result = analyzeRuntimePortability([
+      { path: "src/state-db/index.ts", text: 'nodeRequire("node:sqlite");' },
+    ]);
+    expect(result.violations.map((v) => v.rule)).not.toContain("sqlite-driver-fallback-missing");
+  });
+
+  it("U-RPORT-016: fail-closes new bun spawn / bun: import / Bun global outside the debt allowlist (PLAN-L7-462 step 3, AC-3)", () => {
+    const result = analyzeRuntimePortability([
+      { path: "src/new-module.ts", text: 'spawnSync("bun", ["src/cli.ts"]);' },
+      { path: "scripts/new-tool.ts", text: 'import { Database } from "bun:sqlite";' },
+      { path: ".claude/hooks/new-hook.ts", text: "await Bun.write(target, data);" },
+      // 間接形の再流入 (blind review A-1): findBun launcher / `?? "bun"` fallback /
+      // cmd.exe 経由 / runner tuple / shell wrapper。
+      { path: "src/new-launcher.ts", text: "const child = spawn(findBun(), args);" },
+      { path: "src/new-fallback.ts", text: 'const bin = env.BIN ?? "bun"; spawnSync(bin, a);' },
+      { path: "src/new-cmd.ts", text: 'spawnSync(cmdExe, ["/d", "/c", "bun", "--version"]);' },
+      { path: "src/new-runner.ts", text: 'const r = ["bun", ["run", "test"]] as const;' },
+      { path: "scripts/new-wrapper", text: 'exec bun run "$ROOT/src/cli.ts" "$@"' },
+      // globalThis 形 / optional chaining / bracket access (blind review A-4)。
+      { path: "src/new-global.ts", text: "(globalThis as any).Bun.write(p, d);" },
+      { path: "src/new-optional.ts", text: "Bun?.gc?.(true);" },
+      { path: "src/new-bracket.ts", text: 'Bun["write"](p, d);' },
+      // tests/ scope の再流入 (blind review A-3)。
+      { path: "tests/new-bun.test.ts", text: 'spawnSync("bun", [cliPath, "--help"]);' },
+      // typeof / 末尾参照 / process.versions.bun 形 (blind review A-4')。
+      {
+        path: "src/new-driver.ts",
+        text: 'typeof (globalThis as { Bun?: unknown }).Bun !== "undefined" ? "bun" : "node";',
+      },
+      { path: "src/new-gc.ts", text: "const bun = (globalThis as { Bun?: unknown }).Bun;" },
+      { path: "src/new-guard.ts", text: 'if (typeof Bun !== "undefined") { doBunThing(); }' },
+      {
+        path: "src/new-tern.ts",
+        text: "const hasBun = process.versions.bun !== undefined;",
+      },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => [v.path, v.rule])).toEqual(
+      expect.arrayContaining([
+        ["src/new-module.ts", "bun-runtime-spawn"],
+        ["scripts/new-tool.ts", "bun-module-import"],
+        [".claude/hooks/new-hook.ts", "bun-global-reference"],
+        ["src/new-launcher.ts", "bun-runtime-spawn"],
+        ["src/new-fallback.ts", "bun-runtime-spawn"],
+        ["src/new-cmd.ts", "bun-runtime-spawn"],
+        ["src/new-runner.ts", "bun-runtime-spawn"],
+        ["scripts/new-wrapper", "bun-runtime-spawn"],
+        ["src/new-global.ts", "bun-global-reference"],
+        ["src/new-optional.ts", "bun-global-reference"],
+        ["src/new-bracket.ts", "bun-global-reference"],
+        ["tests/new-bun.test.ts", "bun-runtime-spawn"],
+        ["src/new-driver.ts", "bun-global-reference"],
+        ["src/new-gc.ts", "bun-global-reference"],
+        ["src/new-guard.ts", "bun-global-reference"],
+        ["src/new-tern.ts", "bun-global-reference"],
+      ]),
+    );
+  });
+
+  it("U-RPORT-017: debt allowlist stays scoped to the frozen fixture sites (no permanent bypass surface)", () => {
+    // 例外サイトは Issue #134 debt として PLAN-L7-462 freeze が帰属した実ファイルに限る。
+    // 別 path が同名 suffix でも bypass しないこと (path 完全一致)。
+    const result = analyzeRuntimePortability([
+      { path: "src/cli/other-distribution.ts", text: 'execFileSync("bun", ["--version"]);' },
+      { path: "src/state-db/other-index.ts", text: 'nodeRequire("bun:sqlite");' },
+    ]);
+    expect(result.violations.map((v) => [v.path, v.rule])).toEqual(
+      expect.arrayContaining([
+        ["src/cli/other-distribution.ts", "bun-runtime-spawn"],
+        ["src/state-db/other-index.ts", "bun-module-import"],
+      ]),
+    );
+  });
+
+  it("U-RPORT-018: allowlisted files fail-close when a new site exceeds the pinned debt count (blind review A-2')", () => {
+    // 収載 path でも pin (現 debt 行数) を超えた行は違反になる — file 単位の素通しを作らない。
+    const twoProbes = 'execFileSync("bun", ["--version"]);\nspawnSync("bun", ["x"]);\n';
+    const result = analyzeRuntimePortability([
+      // src/cli/distribution.ts の spawn pin は 2。pin 内 2 行 + 追加 1 行 → 追加行のみ違反。
+      {
+        path: "src/cli/distribution.ts",
+        text: `${twoProbes}spawnSync("bun", ["brand-new-attack.ts"]);\n`,
+      },
+      // import pin 2 の src/state-db/index.ts へ 3 行目の bun: import → 違反。
+      {
+        path: "src/state-db/index.ts",
+        text: 'nodeRequire("bun:sqlite");\nnodeRequire("node:sqlite");\nimport x from "bun:ffi";\nimport y from "bun:jsc";\n',
+      },
+    ]);
+    const hits = result.violations.map((v) => [v.path, v.rule, v.line]);
+    expect(hits).toEqual(
+      expect.arrayContaining([
+        ["src/cli/distribution.ts", "bun-runtime-spawn", 3],
+        ["src/state-db/index.ts", "bun-module-import", 4],
+      ]),
+    );
+    // pin 内の既存 debt 行は違反にならない (burn-down の自由度は保つ)。
+    expect(hits).not.toEqual(
+      expect.arrayContaining([["src/cli/distribution.ts", "bun-runtime-spawn", 1]]),
     );
   });
 
@@ -164,7 +267,7 @@ describe("runtime-portability lint", () => {
       "set -e",
     ]);
     expect(wrapper).toContain('exec "$ROOT/dist/ut-tdd" "$@"');
-    expect(wrapper).toContain('exec bun run "$ROOT/src/cli.ts" "$@"');
+    expect(wrapper).toContain('exec node "$ROOT/src/cli.ts" "$@"');
   });
 
   it("U-RPORT-005: scans untracked runtime files during active Windows setup work", () => {
@@ -223,7 +326,7 @@ describe("runtime-portability lint", () => {
       ...validDocs,
       {
         path: "scripts/git-hooks/pre-push",
-        text: '#!/usr/bin/env bash\nset -euo pipefail\nbun "$hook_dir/secret-scan-diff.ts"\n',
+        text: '#!/usr/bin/env bash\nset -euo pipefail\nnode "$hook_dir/secret-scan-diff.ts"\n',
       },
       {
         path: "scripts/git-hooks/secret-scan-diff.ts",
@@ -263,7 +366,7 @@ describe("runtime-portability lint", () => {
     );
   });
 
-  it("U-RPORT-013: rejects a git-hooks pre-push that stops dispatching to the bun scanner", () => {
+  it("U-RPORT-013: rejects a git-hooks pre-push that stops dispatching to the node scanner", () => {
     const result = analyzeRuntimePortability([
       ...validDocs,
       { path: "scripts/git-hooks/pre-push", text: "#!/usr/bin/env bash\necho no-op\n" },

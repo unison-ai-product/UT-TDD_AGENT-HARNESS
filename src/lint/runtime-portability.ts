@@ -58,6 +58,94 @@ const LOCAL_ABSOLUTE_PATH_PATTERN =
   /(?:[A-Za-z]:\\Users\\|\/home\/|\/Users\/|~\/ai-dev-kit-vscode)/;
 const SHELL_RUNTIME_PATTERN =
   /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`](?:bash|sh|python|python3|powershell|pwsh|cmd(?:\.exe)?)(?:["'`]|\s)/;
+// PLAN-L7-462 step 3 (AC-3): bun 実発火 spawn 引数 / bun: import / Bun-global 参照の
+// 新規追加を fail-close する。既存残存は Issue #134 の migration debt として下記
+// 例外リスト (path 完全一致・サイト単位注記付き) に帰属し、Pack 解禁時の後続 PLAN で
+// 撤去する (恒久 bypass ではない期限付き例外)。検出は行単位で全件数える (exit criteria
+// のカウンタ用途)。
+// - spawn クラス: リテラル第 1 引数に加え、実在する間接形 (findBun() launcher /
+//   `?? "bun"` fallback / cmd.exe 経由の `"/c", "bun"` / `["bun", [...]]` runner tuple /
+//   shell wrapper の `exec bun`) を検出する。任意の変数間接は静的には閉じないため、
+//   検出器は「repo に実在するイディオムの再流入」を止める網であり、完全な意味解析
+//   ではない (限界の明示)。
+const BUN_SPAWN_PATTERN = new RegExp(
+  [
+    /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`]bun(?:\.cmd|\.exe)?["'`]/
+      .source,
+    /\bfindBun\s*\(/.source,
+    /\?\?\s*["'`]bun(?:\.cmd|\.exe)?["'`]/.source,
+    /["'`]\/c["'`]\s*,\s*["'`]bun(?:\.cmd|\.exe)?["'`]/.source,
+    /\[\s*["'`]bun(?:\.cmd|\.exe)?["'`]\s*,\s*\[/.source,
+    /\bexec\s+bun\b/.source,
+  ].join("|"),
+);
+// テンプレート補間 (`bun:${...}`) と素の "bun" モジュール import は検出対象外 (限界の明示。
+// 前者は動的識別子、後者は現 repo に 0 件で AC-3 の対象クラス外)。
+const BUN_IMPORT_PATTERN = /["'`]bun:[a-z]/;
+// quote を lookbehind に含め、検出語彙 ("Bun.write" 等の文字列 key) を構造的に除外する。
+// `globalThis.Bun.x` / `Bun?.x` / `Bun["x"]` を含めるため `.` は除外しない。
+// blind review A-4' 追随: member access 形だけでなく、Bun 分岐再流入の最頻イディオムである
+// `typeof Bun` / `(globalThis as {...}).Bun` の末尾参照 / `process.versions.bun` 判定も検出する。
+const BUN_GLOBAL_PATTERN = new RegExp(
+  [
+    /(?<![\w$"'`])Bun\s*\??\s*[.[]/.source,
+    /\btypeof\s+(?:\([^)]*\)\s*\.\s*)?Bun\b/.source,
+    /\)\s*\.\s*Bun\b/.source,
+    /\bglobalThis\s*\.\s*Bun\b/.source,
+    /\bprocess\.versions\.bun\b/.source,
+  ].join("|"),
+);
+// 例外は「path 完全一致 + 現在の debt 行数 pin」で持つ (blind review A-2' 追随)。
+// pin を超える行が現れた時点でその超過行を fail-close するため、収載ファイル内への
+// 新規サイト追加は素通りしない (恒久 bypass 面を作らない)。debt が減る方向は自由。
+// pin 値の更新は debt サイトの増減を伴う PR でのみ行い、増加は Issue #134 の帰属注記を要する。
+// 限界の明示 (blind review G): count-pin は純増のみを検出し、同数 swap (既存 debt 行の除去と
+// 新規サイト追加が同一 PR に同居) は静的には見えない。burn-down PR では pin を実測で追随減算
+// することをレビュー規律とする (サイト同一性の機械追跡は AST 化とセットで Issue #134 後続)。
+// また quote lookbehind の副作用で `globalThis["Bun"]` / `process.versions["bun"]` の
+// 文字列 key 形は検出対象外 (検出語彙除外との trade-off、限界の明示)。
+const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
+  // step 2 freeze の fixture 例外: Pack/consumer toolchain 検出の posix probe。
+  ["src/cli/distribution.ts", 2],
+  // step 2 freeze の fixture 例外: consumer wrapper template (findBun launcher)。
+  ["src/setup/templates.ts", 2],
+  // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
+  ["scripts/run-vitest-snapshot.ts", 1],
+  // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
+  ["tests/distribution-acceptance.test.ts", 2],
+  // tests/setup.test.ts の bun fallback (U-SETUP-009b) は global 側で計上され、spawn クラスの
+  // 実サイトは 0 (blind review F: 空 pin 枠は置かない)。
+  // 検出語彙 (lint fixture 文字列 / consumer template fixture) であり実発火ではない。
+  ["tests/dependency-drift.test.ts", 1],
+  ["tests/runtime-portability.test.ts", 11],
+  ["tests/doctor-setup-smoke.test.ts", 1],
+  ["tests/doctor.test.ts", 1],
+  ["tests/hook-native-launcher.test.ts", 1],
+  // 本 lint 自身 (pattern 定義とその注記 = 検出語彙)。
+  ["src/lint/runtime-portability.ts", 4],
+]);
+const BUN_IMPORT_DEBT_ALLOWLIST = new Map<string, number>([
+  // bun:sqlite / node:sqlite 二重ドライバ (PLAN-L7-45)。node:sqlite 主は
+  // sqliteFallbackViolations が別途強制する。
+  ["src/state-db/index.ts", 2],
+  // 検出語彙 (lint fixture 文字列)。本 lint 自身の pattern 定義行は char class 表記のため
+  // 自己一致しない (pin 0 = 収載不要)。
+  ["tests/runtime-portability.test.ts", 5],
+]);
+const BUN_GLOBAL_DEBT_ALLOWLIST = new Map<string, number>([
+  // optional chaining で guard された Bun-global (gc / which) 参照。node では no-op。
+  ["scripts/run-vitest-snapshot.ts", 5],
+  // typeof / globalThis guard 付きの Bun 判定 (bun:sqlite 二重ドライバの分岐、Issue #134 debt)。
+  ["src/state-db/index.ts", 1],
+  ["tests/state-db.test.ts", 1],
+  ["tests/support/temp-tree.ts", 1],
+  // guard 済み Bun 判定 fixture (U-SETUP-009b)。
+  ["tests/setup.test.ts", 1],
+  // 検出語彙 (lint fixture 文字列 / isolation 契約テストの Bun.write fixture / 本 lint 自身)。
+  ["tests/runtime-portability.test.ts", 7],
+  ["tests/doctor-test-repository-isolation.test.ts", 2],
+  ["src/lint/runtime-portability.ts", 3],
+]);
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
 const LEGACY_RUNTIME_MARKER_PATTERN = new RegExp(
@@ -114,12 +202,14 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "TypeScript runtime package must use ESM module semantics.",
     });
   }
-  if (!pkg.engines?.bun) {
+  // PLAN-L7-462 step 3: runtime 正本は Node (ADR-002 予定)。engines.node を必須とし、
+  // engines.bun は Pack/consumer fixture の残存宣言として任意 (Issue #134 debt)。
+  if (!pkg.engines?.node) {
     violations.push({
       path,
       line: 1,
-      rule: "package-missing-bun-engine",
-      message: "ADR-001 runtime contract must declare the Bun engine.",
+      rule: "package-missing-node-engine",
+      message: "Node runtime contract must declare the Node engine (PLAN-L7-462 step 3).",
     });
   }
   if (!/\bbun\s+build\b.*--compile\b/.test(pkg.scripts?.build ?? "")) {
@@ -301,12 +391,13 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
         message: "git-hooks entrypoints must not reintroduce Python runtime dispatch.",
       });
     }
-    if (!/\bbun\b/.test(doc.text) || !doc.text.includes("secret-scan-diff.ts")) {
+    // PLAN-L7-462 step 3: dispatcher は node 起動へ swap (bun 残置は fail-close 対象)。
+    if (!/\bnode\b/.test(doc.text) || !doc.text.includes("secret-scan-diff.ts")) {
       violations.push({
         path,
         line: 1,
         rule: "git-hook-entrypoint-not-thin",
-        message: `${GIT_HOOK_DISPATCHER_PATH} must stay a thin bun dispatcher to ${GIT_HOOK_SCANNER_PATH}, not reimplement scan logic.`,
+        message: `${GIT_HOOK_DISPATCHER_PATH} must stay a thin node dispatcher to ${GIT_HOOK_SCANNER_PATH}, not reimplement scan logic.`,
       });
     }
   }
@@ -353,7 +444,51 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       message: "Source modules must not dispatch through shell-specific runtimes.",
     });
   }
-  if (LOCAL_ABSOLUTE_PATH_PATTERN.test(doc.text)) {
+  if (
+    path.startsWith("src/") ||
+    path.startsWith(".claude/hooks/") ||
+    path.startsWith("scripts/") ||
+    path.startsWith("tests/")
+  ) {
+    // 行単位で全件数える (exit criteria のカウンタ用途、B-4)。scope は shell wrapper
+    // (scripts/ut-tdd 等の非 .ts) と tests/ を含む — tests 側 launcher の bun 再流入も
+    // fail-close する (freeze の fixture 例外は上の allowlist に path 完全一致で帰属)。
+    const bunRules: readonly [RegExp, Map<string, number>, string, string][] = [
+      [
+        BUN_SPAWN_PATTERN,
+        BUN_SPAWN_DEBT_ALLOWLIST,
+        "bun-runtime-spawn",
+        "New bun child-process launches are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      ],
+      [
+        BUN_IMPORT_PATTERN,
+        BUN_IMPORT_DEBT_ALLOWLIST,
+        "bun-module-import",
+        "New bun: module imports are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      ],
+      [
+        BUN_GLOBAL_PATTERN,
+        BUN_GLOBAL_DEBT_ALLOWLIST,
+        "bun-global-reference",
+        "New Bun global API references are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      ],
+    ];
+    const lines = doc.text.split(/\r?\n/);
+    for (const [pattern, allowlist, rule, message] of bunRules) {
+      // pin (許容 debt 行数) を超えた行だけを違反にする。非収載 path は pin=0 で全行 fail-close。
+      const pinned = allowlist.get(path) ?? 0;
+      let seen = 0;
+      for (let i = 0; i < lines.length; i += 1) {
+        if (pattern.test(lines[i])) {
+          seen += 1;
+          if (seen > pinned) {
+            violations.push({ path, line: i + 1, rule, message });
+          }
+        }
+      }
+    }
+  }
+  if (!path.startsWith("tests/") && LOCAL_ABSOLUTE_PATH_PATTERN.test(doc.text)) {
     violations.push({
       path,
       line: lineOf(doc.text, LOCAL_ABSOLUTE_PATH_PATTERN),
@@ -379,13 +514,15 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
 function sqliteFallbackViolations(docs: RuntimePortabilityDoc[]): RuntimePortabilityViolation[] {
   const stateDb = docs.find((doc) => normalizePath(doc.path) === "src/state-db/index.ts");
   if (!stateDb) return [];
-  if (stateDb.text.includes("bun:sqlite") && stateDb.text.includes("node:sqlite")) return [];
+  // PLAN-L7-462 step 3 (反転): node:sqlite が主ドライバとして必須。bun:sqlite は
+  // 残存 debt として任意 (撤去は Issue #134 の段階撤去に従う)。
+  if (stateDb.text.includes("node:sqlite")) return [];
   return [
     {
       path: stateDb.path,
       line: 1,
       rule: "sqlite-driver-fallback-missing",
-      message: "SQLite adapter must keep both bun:sqlite and node:sqlite drivers visible.",
+      message: "SQLite adapter must keep the node:sqlite primary driver visible.",
     },
   ];
 }
@@ -446,7 +583,8 @@ export function loadRuntimePortabilityDocs(
         path === "bun.lock" ||
         path.startsWith("src/") ||
         path.startsWith(".claude/hooks/") ||
-        path.startsWith("scripts/"),
+        path.startsWith("scripts/") ||
+        path.startsWith("tests/"),
     )
     .filter((path) => !path.startsWith("src/web/") || path.endsWith(".gitkeep"))
     .filter((path) => existsSync(join(repoRoot, path)))

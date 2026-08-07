@@ -127,7 +127,7 @@ describe("verification profile recommendation", () => {
     expect(result?.checks.map((check) => check.name)).toContain("package");
     expect(result?.checks.map((check) => check.name)).toContain("executable");
     expect(
-      result?.checks.some((check) => check.message.includes("bun add -D testcontainers")),
+      result?.checks.some((check) => check.message.includes("npm install -D testcontainers")),
     ).toBe(true);
   });
 
@@ -187,7 +187,7 @@ describe("verification profile recommendation", () => {
     const result = runVerificationProfile("bun-unit", { dryRun: true }, deps());
 
     expect(result?.status).toBe("dry-run");
-    expect(result?.command).toBe("bun run test");
+    expect(result?.command).toBe("node scripts/run-vitest-snapshot.ts");
   });
 
   it("saves normalized evidence records for later DB collection", () => {
@@ -225,7 +225,7 @@ describe("verification profile recommendation", () => {
     expect(result?.ready).toBe(false);
     expect(result?.checks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "executable", ok: true, message: "bun --version" }),
+        expect.objectContaining({ name: "executable", ok: true, message: "node --version" }),
         expect.objectContaining({ name: "launcher", ok: false, message: "ut-tdd --help" }),
       ]),
     );
@@ -348,17 +348,17 @@ describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
 
     // command is the head token; args carry the remaining argv (no re-inclusion
     // of the executable, no whole-command-string-as-one-arg).
-    expect(config.mcpServers["bun-unit"].command).toBe("bun");
-    expect(config.mcpServers["bun-unit"].args).toEqual(["run", "test"]);
+    expect(config.mcpServers["bun-unit"].command).toBe("node");
+    expect(config.mcpServers["bun-unit"].args).toEqual(["scripts/run-vitest-snapshot.ts"]);
 
     // Wrapper command whose first token ("ut-tdd") differs from the probe-hint
-    // executable ("bun"): the launch command is the command head, not the hint.
+    // executable ("node"): the launch command is the command head, not the hint.
     expect(config.mcpServers["mcp-inspector-smoke"].command).toBe("ut-tdd");
     expect(config.mcpServers["mcp-inspector-smoke"].args[0]).toBe("mcp");
 
     // Regression for the pre-fix bug: args must never be the whole command line.
     for (const server of Object.values(config.mcpServers)) {
-      expect(server.args).not.toContain("bun run test");
+      expect(server.args).not.toContain("node scripts/run-vitest-snapshot.ts");
       expect(server.args[0]).not.toBe(server.command);
     }
   });

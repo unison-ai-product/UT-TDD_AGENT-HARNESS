@@ -316,7 +316,9 @@ function resolveSkillContextInjection(
   const db = openHarnessDb(":memory:", { repoRoot });
   try {
     try {
-      rebuildHarnessDb({ repoRoot, db });
+      // 文脈注入は skill/PLAN 投影だけが必要で、グローバル token telemetry の再走査は不要。
+      // 毎回の provider 起動で home 配下を走査すると実行境界を不必要に遅延させる。
+      rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
     } catch {
       recordSkillInjectionAttempt(
         { plan_id: planId, status: "skipped", reason: "rebuild-failed", required: 0, optional: 0 },
@@ -440,18 +442,34 @@ function writeHandoverWarnings(): void {
   }
 }
 
-function runSessionStartSideEffects(
-  repoRoot: string,
-  input: SessionHookInput,
-  deps: ReturnType<typeof nodeDeps>,
-): void {
+type SessionStartSideEffectInput = {
+  repoRoot: string;
+  input: SessionHookInput;
+  deps: ReturnType<typeof nodeDeps>;
+  json?: boolean;
+};
+
+function runSessionStartSideEffects({
+  repoRoot,
+  input,
+  deps,
+  json = false,
+}: SessionStartSideEffectInput): void {
   try {
     scanDanglingStops(deps, input.session_id);
     sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
   } catch {
     // fail-open: lifecycle maintenance must not block the runtime.
   }
-  surfaceSessionStartDigestToStdout(repoRoot, attemptEscalationBlock(repoRoot, input.session_id));
+  // JSON は機械可読な実行結果だけを stdout に返す契約。人間向け digest は
+  // 並列 provider ごとに DB / memory を再読する必要がなく、lifecycle dispatch
+  // (SessionStart/Stop) は呼び出し側で継続するため、JSON 経路では省略する。
+  if (json) return;
+  surfaceSessionStartDigestToStdout(
+    repoRoot,
+    attemptEscalationBlock(repoRoot, input.session_id),
+    "stdout",
+  );
 }
 
 /**
@@ -512,7 +530,18 @@ function readMemoryThroughService(
   }
 }
 
-function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = ""): void {
+function surfaceSessionStartDigestToStdout(
+  repoRoot: string,
+  escalationBlock = "",
+  outputTo: "stdout" | "stderr" = "stdout",
+): void {
+  const writeOutput = (text: string) => {
+    if (outputTo === "stderr") {
+      process.stderr.write(text);
+      return;
+    }
+    process.stdout.write(text);
+  };
   // memory は DB 障害と独立に正本ファイルから読む (PLAN-L7-468 欠陥 3)。
   const memory = readMemoryThroughService(repoRoot, { limit: 5 });
   let unclaimedInbox: ReturnType<typeof summarizeUnclaimedInbox> | undefined;
@@ -532,7 +561,7 @@ function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = "
           unclaimedInbox,
         }),
       );
-      if (block) process.stdout.write(block);
+      if (block) writeOutput(block);
       process.stderr.write(renderMemoryHealth(memory));
     } finally {
       db.close();
@@ -1091,7 +1120,7 @@ session
     const input = readHookInput(HOOK_EVENT_SESSION_START, opts.session);
     const repoRoot = requireRuntimeRepoRoot();
     const deps = nodeDeps(repoRoot, gitBranch, gitHead);
-    runSessionStartSideEffects(repoRoot, input, deps);
+    runSessionStartSideEffects({ repoRoot, input, deps });
     dispatch(input, deps, HOOK_EVENT_SESSION_START);
     process.stdout.write(`session-log: start ${input.session_id ?? "ut-tdd-cli"}\n`);
   });
@@ -3185,7 +3214,17 @@ team
         }
         let teamSessionSeq = 0;
         const repoRoot = process.cwd();
-        const sessionDeps = nodeDeps(repoRoot, gitBranch, gitHead);
+        const repoHasGitDir = existsSync(join(repoRoot, ".git"));
+        const cachedBranch = repoHasGitDir ? gitBranch() : null;
+        const cachedHead = repoHasGitDir ? gitHead() : null;
+        const sessionDeps = nodeDeps(
+          repoRoot,
+          () => cachedBranch,
+          () => cachedHead,
+        );
+        if (opts.json) {
+          sessionDeps.warn = (message) => process.stderr.write(`${message}\n`);
+        }
         const execution = await executeTeamRunPlan(result, {
           slots: nodeAgentSlotsDeps(repoRoot),
           runCommand: ({ command, args, provider, env, stdin }) =>
@@ -3196,23 +3235,48 @@ team
                 session_id: sessionId,
                 ...(opts.plan ? { plan_id: opts.plan } : {}),
               };
-              runSessionStartSideEffects(repoRoot, startInput, sessionDeps);
+              runSessionStartSideEffects({
+                repoRoot,
+                input: startInput,
+                deps: sessionDeps,
+                json: Boolean(opts.json),
+              });
               dispatch(startInput, sessionDeps, HOOK_EVENT_SESSION_START);
               const invocation = buildProviderInvocation({ provider, command, args });
               const ioMode = opts.json ? "ignore" : "inherit";
-              const child = spawn(invocation.command, invocation.args, {
-                cwd: repoRoot,
-                env: adapterExecutionEnv(provider, env),
-                // Provider prompts are passed through stdin; argv carries only fixed
-                // command flags so shell metacharacters and tool markup stay inert.
-                // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
-                stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
-                shell: invocation.shell ?? false,
-                windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
-              });
+              let child: ReturnType<typeof spawn>;
+              try {
+                child = spawn(invocation.command, invocation.args, {
+                  cwd: repoRoot,
+                  env: adapterExecutionEnv(provider, env),
+                  // Provider prompts are passed through stdin; argv carries only fixed
+                  // command flags so shell metacharacters and tool markup stay inert.
+                  // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
+                  stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
+                  shell: invocation.shell ?? false,
+                  windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+                });
+              } catch (error) {
+                process.stderr.write(
+                  `${provider} provider launch failed (team run): ${String(error)}\n`,
+                );
+                resolve({ exitCode: null });
+                return;
+              }
               if (stdin !== undefined) {
-                child.stdin?.write(stdin);
-                child.stdin?.end();
+                const inputStream = child.stdin;
+                if (inputStream) {
+                  // Provider が入力を読む前に終了すると Node は stdin の EPIPE を
+                  // 未処理 error event として親プロセスへ上げる。close event の終了
+                  // コードを正本にし、早期 close は team run を落とさない。
+                  inputStream.on("error", () => undefined);
+                  try {
+                    inputStream.write(stdin);
+                    inputStream.end();
+                  } catch {
+                    // close/error handler が最終結果を確定する。
+                  }
+                }
               }
               let finalized = false;
               const finish = (exitCode: number | null) => {

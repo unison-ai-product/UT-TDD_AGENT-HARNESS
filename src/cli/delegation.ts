@@ -31,11 +31,12 @@ import { resolveDelegationRouting } from "../team/delegation-routing.ts";
 export interface AdapterExecutionDeps {
   gitBranch: () => string | null;
   gitHead: () => string | null;
-  runSessionStartSideEffects: (
-    repoRoot: string,
-    input: SessionHookInput,
-    deps: ReturnType<typeof nodeDeps>,
-  ) => void;
+  runSessionStartSideEffects: (input: {
+    repoRoot: string;
+    input: SessionHookInput;
+    deps: ReturnType<typeof nodeDeps>;
+    json?: boolean;
+  }) => void;
   writeHandoverWarnings: () => void;
   now?: () => string;
 }
@@ -135,12 +136,20 @@ export function executeAdapterPlanForCli(
   const repoRoot = process.cwd();
   const now = depsInput.now ?? nowIso;
   const deps = nodeDeps(repoRoot, depsInput.gitBranch, depsInput.gitHead);
+  if (input.jsonOut) {
+    deps.warn = (message) => process.stderr.write(`${message}\n`);
+  }
   const startInput: SessionHookInput = {
     hook_event_name: "SessionStart",
     session_id: sessionId,
     ...(input.planId ? { plan_id: input.planId } : {}),
   };
-  depsInput.runSessionStartSideEffects(repoRoot, startInput, deps);
+  depsInput.runSessionStartSideEffects({
+    repoRoot,
+    input: startInput,
+    deps,
+    json: Boolean(input.jsonOut),
+  });
   dispatch(startInput, deps, "SessionStart");
 
   const guardActive = input.reviewRole !== undefined && isReadOnlyDelegationRole(input.reviewRole);
