@@ -499,7 +499,7 @@ describe("D3 trusted custody receipt", () => {
     const postClosure = await admitReviewCustody(
       admissionInput({
         receiptText: postClosureText,
-        expected: expectation({ receiptKind: "post_merge_closure" }),
+        expected: expectation({ receiptKind: "post_merge_closure", mergeMethod: "squash" }),
         observations: observations({
           eventPayload: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
           apiRead1: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
@@ -520,7 +520,7 @@ describe("D3 trusted custody receipt", () => {
     const postTimestampDrift = await admitReviewCustody(
       admissionInput({
         receiptText: postClosureText,
-        expected: expectation({ receiptKind: "post_merge_closure" }),
+        expected: expectation({ receiptKind: "post_merge_closure", mergeMethod: "squash" }),
         observations: observations({
           eventPayload: prFacts({
             state: "MERGED",
@@ -548,6 +548,23 @@ describe("D3 trusted custody receipt", () => {
       state: "custody_rejected",
       reasons: ["identity_mismatch"],
       details: ["post_merge_timestamp_mismatch"],
+    });
+
+    const postMergeMethodMismatch = await admitReviewCustody(
+      admissionInput({
+        receiptText: postClosureText,
+        expected: expectation({ receiptKind: "post_merge_closure", mergeMethod: "rebase" }),
+        observations: observations({
+          eventPayload: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
+          apiRead1: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
+          apiRead2: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
+        }),
+      }),
+    );
+    expect(postMergeMethodMismatch).toEqual({
+      state: "custody_rejected",
+      reasons: ["identity_mismatch"],
+      details: ["subject_field_mismatch:mergeMethod"],
     });
 
     const forkSubject = await admitReviewCustody(
@@ -960,7 +977,7 @@ describe("D3 attestation verifier adapter", () => {
 });
 
 describe("D3d runner の merge 後 receipt kind", () => {
-  it("MERGED facts から post_merge_closure を導出し、merge facts を receipt へ束縛する", () => {
+  it("U-RVGHA-D3C-008: MERGED facts から post_merge_closure を導出し、merge facts を receipt へ束縛する", () => {
     const fixture = runnerEnvironment({
       pullRequest: runnerPullRequest({ merged: true, mergedAt: MERGED_AT }),
       mergeMethod: "squash",
@@ -979,7 +996,7 @@ describe("D3d runner の merge 後 receipt kind", () => {
     });
   });
 
-  it("OPEN facts では pre_merge_review を維持し、merge metadata を要求しない", () => {
+  it("U-RVGHA-D3C-008: OPEN facts では pre_merge_review を維持し、merge metadata を要求しない", () => {
     const fixture = runnerEnvironment({ pullRequest: runnerPullRequest({ merged: false }) });
 
     expect(issueCustodyReceipt(fixture.env).exitCode).toBe(0);
@@ -990,7 +1007,7 @@ describe("D3d runner の merge 後 receipt kind", () => {
     expect(receipt).not.toHaveProperty("mergedAt");
   });
 
-  it("MERGED facts で merge method が欠落した場合は fail-close する", () => {
+  it("U-RVGHA-D3C-008: MERGED facts で merge method が欠落した場合は fail-close する", () => {
     const fixture = runnerEnvironment({
       pullRequest: runnerPullRequest({ merged: true, mergedAt: MERGED_AT }),
     });

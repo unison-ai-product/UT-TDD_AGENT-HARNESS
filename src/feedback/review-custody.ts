@@ -278,6 +278,8 @@ export interface CustodySubjectExpectation {
   readonly baseRef: string;
   readonly headSha: string;
   readonly receiptKind: ReviewCustodyReceiptKind;
+  /** post-merge dispatch assertion。GitHub API の merge method facts ではない。 */
+  readonly mergeMethod?: "merge" | "squash" | "rebase";
   readonly planId: string;
   readonly planRevision: string;
   readonly requestIdentity: ReviewRequestIdentity;
@@ -379,6 +381,9 @@ function subjectMismatches(input: {
     ["judgmentDigest", receipt.judgmentDigest, expected.judgmentDigest],
     ["workflowRef", receipt.workflowRef, expected.workflowRef],
     ["issuer", receipt.issuer, expected.issuer],
+    ...(receipt.receiptKind === "post_merge_closure"
+      ? [["mergeMethod", receipt.mergeMethod, expected.mergeMethod] as const]
+      : []),
   ];
   return pairs
     .filter(([, actual, wanted]) => actual !== wanted)

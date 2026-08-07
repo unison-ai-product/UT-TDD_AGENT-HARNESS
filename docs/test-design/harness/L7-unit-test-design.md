@@ -2187,7 +2187,9 @@ CI / merge 由来 field を 1 つも持たないことを検査)。D2 の CI agg
 これは provider-family の `unverified_family` とは別の実バグであり、U-RVGHA-D3C-008 の既存負例に
 post-merge closure 正常系・`mergedAt` drift・runner の state 導出を同じ test file で追加した。
 `mergeMethod` は GitHub API の事後 facts に含まれないため、workflow dispatch の choice input を
-`merge|squash|rebase` に閉じ、MERGED 時の欠落・不正は issue 段階で fail-close する。
+`merge|squash|rebase` に閉じる。MERGED 時の欠落・不正は issue 段階で fail-close し、admit 段階でも
+同じ input を必須取得して receipt の `mergeMethod` と不一致なら `identity_mismatch` にする。
+これは operator-supplied assertion の step 間一致であり、GitHub API による方式の真実性証明ではない。
 
 ## oracle-test-trace 検出範囲拡張 (issue #165 / PLAN-L7-480)
 

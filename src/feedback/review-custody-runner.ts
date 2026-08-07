@@ -235,6 +235,7 @@ export async function admitCustodyReceipt(env: RunnerEnvironment): Promise<Runne
       baseRef: facts.baseRef,
       headSha: facts.headSha,
       receiptKind: facts.state === "MERGED" ? "post_merge_closure" : "pre_merge_review",
+      mergeMethod: facts.state === "MERGED" ? requireMergeMethod({ env }) : undefined,
       planId: requireText({ env, name: "UT_TDD_CUSTODY_PLAN_ID" }),
       planRevision: requireText({ env, name: "UT_TDD_CUSTODY_PLAN_REVISION" }),
       requestIdentity: requestIdentity({ env, prNumber: facts.prNumber, headSha: facts.headSha }),
