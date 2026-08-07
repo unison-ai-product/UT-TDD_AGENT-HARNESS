@@ -156,6 +156,17 @@ describe("runtime-portability lint", () => {
       { path: "src/new-bracket.ts", text: 'Bun["write"](p, d);' },
       // tests/ scope の再流入 (blind review A-3)。
       { path: "tests/new-bun.test.ts", text: 'spawnSync("bun", [cliPath, "--help"]);' },
+      // typeof / 末尾参照 / process.versions.bun 形 (blind review A-4')。
+      {
+        path: "src/new-driver.ts",
+        text: 'typeof (globalThis as { Bun?: unknown }).Bun !== "undefined" ? "bun" : "node";',
+      },
+      { path: "src/new-gc.ts", text: "const bun = (globalThis as { Bun?: unknown }).Bun;" },
+      { path: "src/new-guard.ts", text: 'if (typeof Bun !== "undefined") { doBunThing(); }' },
+      {
+        path: "src/new-tern.ts",
+        text: "const hasBun = process.versions.bun !== undefined;",
+      },
     ]);
     expect(result.ok).toBe(false);
     expect(result.violations.map((v) => [v.path, v.rule])).toEqual(
@@ -172,6 +183,10 @@ describe("runtime-portability lint", () => {
         ["src/new-optional.ts", "bun-global-reference"],
         ["src/new-bracket.ts", "bun-global-reference"],
         ["tests/new-bun.test.ts", "bun-runtime-spawn"],
+        ["src/new-driver.ts", "bun-global-reference"],
+        ["src/new-gc.ts", "bun-global-reference"],
+        ["src/new-guard.ts", "bun-global-reference"],
+        ["src/new-tern.ts", "bun-global-reference"],
       ]),
     );
   });
@@ -188,6 +203,34 @@ describe("runtime-portability lint", () => {
         ["src/cli/other-distribution.ts", "bun-runtime-spawn"],
         ["src/state-db/other-index.ts", "bun-module-import"],
       ]),
+    );
+  });
+
+  it("U-RPORT-018: allowlisted files fail-close when a new site exceeds the pinned debt count (blind review A-2')", () => {
+    // 収載 path でも pin (現 debt 行数) を超えた行は違反になる — file 単位の素通しを作らない。
+    const twoProbes = 'execFileSync("bun", ["--version"]);\nspawnSync("bun", ["x"]);\n';
+    const result = analyzeRuntimePortability([
+      // src/cli/distribution.ts の spawn pin は 2。pin 内 2 行 + 追加 1 行 → 追加行のみ違反。
+      {
+        path: "src/cli/distribution.ts",
+        text: `${twoProbes}spawnSync("bun", ["brand-new-attack.ts"]);\n`,
+      },
+      // import pin 2 の src/state-db/index.ts へ 3 行目の bun: import → 違反。
+      {
+        path: "src/state-db/index.ts",
+        text: 'nodeRequire("bun:sqlite");\nnodeRequire("node:sqlite");\nimport x from "bun:ffi";\nimport y from "bun:jsc";\n',
+      },
+    ]);
+    const hits = result.violations.map((v) => [v.path, v.rule, v.line]);
+    expect(hits).toEqual(
+      expect.arrayContaining([
+        ["src/cli/distribution.ts", "bun-runtime-spawn", 3],
+        ["src/state-db/index.ts", "bun-module-import", 4],
+      ]),
+    );
+    // pin 内の既存 debt 行は違反にならない (burn-down の自由度は保つ)。
+    expect(hits).not.toEqual(
+      expect.arrayContaining([["src/cli/distribution.ts", "bun-runtime-spawn", 1]]),
     );
   });
 

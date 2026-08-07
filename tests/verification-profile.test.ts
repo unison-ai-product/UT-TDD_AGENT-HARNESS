@@ -348,8 +348,8 @@ describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
 
     // command is the head token; args carry the remaining argv (no re-inclusion
     // of the executable, no whole-command-string-as-one-arg).
-    expect(config.mcpServers["bun-unit"].command).toBe("npm");
-    expect(config.mcpServers["bun-unit"].args).toEqual(["run", "test"]);
+    expect(config.mcpServers["bun-unit"].command).toBe("node");
+    expect(config.mcpServers["bun-unit"].args).toEqual(["scripts/run-vitest-snapshot.ts"]);
 
     // Wrapper command whose first token ("ut-tdd") differs from the probe-hint
     // executable ("node"): the launch command is the command head, not the hint.
@@ -358,7 +358,7 @@ describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
 
     // Regression for the pre-fix bug: args must never be the whole command line.
     for (const server of Object.values(config.mcpServers)) {
-      expect(server.args).not.toContain("npm run test");
+      expect(server.args).not.toContain("node scripts/run-vitest-snapshot.ts");
       expect(server.args[0]).not.toBe(server.command);
     }
   });

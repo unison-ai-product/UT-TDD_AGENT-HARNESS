@@ -8,7 +8,8 @@ export const PROFILES: Record<VerificationProfileId, VerificationProfile> = {
   "bun-unit": {
     id: "bun-unit",
     label: "Bun/Vitest unit regression",
-    command: "npm run test",
+    // command と PROFILE_RUNNERS は同一の起動形を指す (snapshot runner が SSoT)。
+    command: "node scripts/run-vitest-snapshot.ts",
     sourceType: "builtin",
     packageName: null,
     executable: "node",
@@ -98,7 +99,7 @@ export const PROFILES: Record<VerificationProfileId, VerificationProfile> = {
   "vitest-browser-playwright": {
     id: "vitest-browser-playwright",
     label: "Vitest Browser Mode with Playwright provider",
-    command: "npm run test -- --browser",
+    command: "node scripts/run-vitest-snapshot.ts --browser",
     sourceType: "test-foundation",
     packageName: "@vitest/browser-playwright",
     executable: "node",
@@ -175,10 +176,9 @@ export const PROFILE_RUNNERS: Partial<
 > = {
   "bun-unit": ["node", ["scripts/run-vitest-snapshot.ts"]] as const,
   doctor: ["node", ["src/cli.ts", "doctor"]] as const,
-  "vitest-browser-playwright": [
-    "node",
-    ["scripts/run-vitest-snapshot.ts", "--", "--browser"],
-  ] as const,
+  // "--" は付けない: snapshot runner は残余 argv をそのまま vitest へ渡すため、
+  // package-manager 消費前提の "--" は素通りして vitest の引数を汚す (blind review R2)。
+  "vitest-browser-playwright": ["node", ["scripts/run-vitest-snapshot.ts", "--browser"]] as const,
 };
 
 export const SIGNAL_TO_PROFILE: Record<VerificationSignal, VerificationProfileId[]> = {

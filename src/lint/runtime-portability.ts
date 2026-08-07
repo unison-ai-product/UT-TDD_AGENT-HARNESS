@@ -84,42 +84,62 @@ const BUN_SPAWN_PATTERN = new RegExp(
 const BUN_IMPORT_PATTERN = /["'`]bun:[a-z]/;
 // quote を lookbehind に含め、検出語彙 ("Bun.write" 等の文字列 key) を構造的に除外する。
 // `globalThis.Bun.x` / `Bun?.x` / `Bun["x"]` を含めるため `.` は除外しない。
-const BUN_GLOBAL_PATTERN = /(?<![\w$"'`])Bun\s*\??\s*[.[]/;
-const BUN_SPAWN_DEBT_ALLOWLIST = new Set([
+// blind review A-4' 追随: member access 形だけでなく、Bun 分岐再流入の最頻イディオムである
+// `typeof Bun` / `(globalThis as {...}).Bun` の末尾参照 / `process.versions.bun` 判定も検出する。
+const BUN_GLOBAL_PATTERN = new RegExp(
+  [
+    /(?<![\w$"'`])Bun\s*\??\s*[.[]/.source,
+    /\btypeof\s+(?:\([^)]*\)\s*\.\s*)?Bun\b/.source,
+    /\)\s*\.\s*Bun\b/.source,
+    /\bglobalThis\s*\.\s*Bun\b/.source,
+    /\bprocess\.versions\.bun\b/.source,
+  ].join("|"),
+);
+// 例外は「path 完全一致 + 現在の debt 行数 pin」で持つ (blind review A-2' 追随)。
+// pin を超える行が現れた時点でその超過行を fail-close するため、収載ファイル内への
+// 新規サイト追加は素通りしない (恒久 bypass 面を作らない)。debt が減る方向は自由。
+// pin 値の更新は debt サイトの増減を伴う PR でのみ行い、増加は Issue #134 の帰属注記を要する。
+const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   // step 2 freeze の fixture 例外: Pack/consumer toolchain 検出の posix probe。
-  "src/cli/distribution.ts",
+  ["src/cli/distribution.ts", 2],
   // step 2 freeze の fixture 例外: consumer wrapper template (findBun launcher)。
-  "src/setup/templates.ts",
+  ["src/setup/templates.ts", 2],
   // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
-  "scripts/run-vitest-snapshot.ts",
+  ["scripts/run-vitest-snapshot.ts", 1],
   // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
-  "tests/distribution-acceptance.test.ts",
+  ["tests/distribution-acceptance.test.ts", 2],
   // step 2 freeze の fixture 例外: consumer wrapper の bun fallback 実発火 (U-SETUP-009b)。
-  "tests/setup.test.ts",
+  ["tests/setup.test.ts", 1],
   // 検出語彙 (lint fixture 文字列 / consumer template fixture) であり実発火ではない。
-  "tests/dependency-drift.test.ts",
-  "tests/runtime-portability.test.ts",
-  "tests/doctor-setup-smoke.test.ts",
-  "tests/doctor.test.ts",
-  "tests/hook-native-launcher.test.ts",
+  ["tests/dependency-drift.test.ts", 1],
+  ["tests/runtime-portability.test.ts", 11],
+  ["tests/doctor-setup-smoke.test.ts", 1],
+  ["tests/doctor.test.ts", 1],
+  ["tests/hook-native-launcher.test.ts", 1],
   // 本 lint 自身 (pattern 定義とその注記 = 検出語彙)。
-  "src/lint/runtime-portability.ts",
+  ["src/lint/runtime-portability.ts", 4],
 ]);
-const BUN_IMPORT_DEBT_ALLOWLIST = new Set([
+const BUN_IMPORT_DEBT_ALLOWLIST = new Map<string, number>([
   // bun:sqlite / node:sqlite 二重ドライバ (PLAN-L7-45)。node:sqlite 主は
   // sqliteFallbackViolations が別途強制する。
-  "src/state-db/index.ts",
-  // 検出語彙 (lint fixture 文字列 / 本 lint 自身の pattern 定義)。
-  "tests/runtime-portability.test.ts",
-  "src/lint/runtime-portability.ts",
+  ["src/state-db/index.ts", 2],
+  // 検出語彙 (lint fixture 文字列)。本 lint 自身の pattern 定義行は char class 表記のため
+  // 自己一致しない (pin 0 = 収載不要)。
+  ["tests/runtime-portability.test.ts", 5],
 ]);
-const BUN_GLOBAL_DEBT_ALLOWLIST = new Set([
+const BUN_GLOBAL_DEBT_ALLOWLIST = new Map<string, number>([
   // optional chaining で guard された Bun-global (gc / which) 参照。node では no-op。
-  "scripts/run-vitest-snapshot.ts",
+  ["scripts/run-vitest-snapshot.ts", 5],
+  // typeof / globalThis guard 付きの Bun 判定 (bun:sqlite 二重ドライバの分岐、Issue #134 debt)。
+  ["src/state-db/index.ts", 1],
+  ["tests/state-db.test.ts", 1],
+  ["tests/support/temp-tree.ts", 1],
+  // guard 済み Bun 判定 fixture (U-SETUP-009b)。
+  ["tests/setup.test.ts", 1],
   // 検出語彙 (lint fixture 文字列 / isolation 契約テストの Bun.write fixture / 本 lint 自身)。
-  "tests/runtime-portability.test.ts",
-  "tests/doctor-test-repository-isolation.test.ts",
-  "src/lint/runtime-portability.ts",
+  ["tests/runtime-portability.test.ts", 7],
+  ["tests/doctor-test-repository-isolation.test.ts", 2],
+  ["src/lint/runtime-portability.ts", 3],
 ]);
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
@@ -428,7 +448,7 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
     // 行単位で全件数える (exit criteria のカウンタ用途、B-4)。scope は shell wrapper
     // (scripts/ut-tdd 等の非 .ts) と tests/ を含む — tests 側 launcher の bun 再流入も
     // fail-close する (freeze の fixture 例外は上の allowlist に path 完全一致で帰属)。
-    const bunRules: readonly [RegExp, Set<string>, string, string][] = [
+    const bunRules: readonly [RegExp, Map<string, number>, string, string][] = [
       [
         BUN_SPAWN_PATTERN,
         BUN_SPAWN_DEBT_ALLOWLIST,
@@ -450,10 +470,15 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
     ];
     const lines = doc.text.split(/\r?\n/);
     for (const [pattern, allowlist, rule, message] of bunRules) {
-      if (allowlist.has(path)) continue;
+      // pin (許容 debt 行数) を超えた行だけを違反にする。非収載 path は pin=0 で全行 fail-close。
+      const pinned = allowlist.get(path) ?? 0;
+      let seen = 0;
       for (let i = 0; i < lines.length; i += 1) {
         if (pattern.test(lines[i])) {
-          violations.push({ path, line: i + 1, rule, message });
+          seen += 1;
+          if (seen > pinned) {
+            violations.push({ path, line: i + 1, rule, message });
+          }
         }
       }
     }
