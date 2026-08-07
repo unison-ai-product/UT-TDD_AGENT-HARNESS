@@ -51,9 +51,12 @@ export function gitLsRemoteInvocation(
     if (found) break;
   }
   if (found && /\.(cmd|bat)$/i.test(found)) {
+    // cmd.exe は引用の内側でも %VAR% を展開するため、% を含む remote は安全に渡せない。
+    // その場合は wrap を諦めて素の "git" に落とす (advisory の fail-open 契約に一致)。
+    if (args.some((token) => token.includes("%"))) return { command: "git", args };
     // 空白・cmd メタ文字を含む token のみ引用する (全引用すると shim 側の %1 比較を壊す)。
     const quote = (token: string) =>
-      /[\s"^&|<>()%!]/.test(token) ? `"${token.replace(/"/g, '""')}"` : token;
+      /[\s"^&|<>()!]/.test(token) ? `"${token.replace(/"/g, '""')}"` : token;
     const inner = [quote(found), ...args.map(quote)].join(" ");
     return {
       command: env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe"),
