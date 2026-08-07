@@ -283,7 +283,7 @@ describe("runtime-portability lint", () => {
       ...validDocs,
       {
         path: "scripts/git-hooks/pre-push",
-        text: '#!/usr/bin/env bash\nset -euo pipefail\nbun "$hook_dir/secret-scan-diff.ts"\n',
+        text: '#!/usr/bin/env bash\nset -euo pipefail\nnode "$hook_dir/secret-scan-diff.ts"\n',
       },
       {
         path: "scripts/git-hooks/secret-scan-diff.ts",
