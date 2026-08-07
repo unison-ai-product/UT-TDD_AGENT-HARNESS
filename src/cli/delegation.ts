@@ -35,6 +35,7 @@ export interface AdapterExecutionDeps {
     repoRoot: string,
     input: SessionHookInput,
     deps: ReturnType<typeof nodeDeps>,
+    opts?: { json?: boolean },
   ) => void;
   writeHandoverWarnings: () => void;
   now?: () => string;
@@ -140,8 +141,10 @@ export function executeAdapterPlanForCli(
     session_id: sessionId,
     ...(input.planId ? { plan_id: input.planId } : {}),
   };
-  depsInput.runSessionStartSideEffects(repoRoot, startInput, deps);
-  dispatch(startInput, deps, "SessionStart");
+  depsInput.runSessionStartSideEffects(repoRoot, startInput, deps, { json: Boolean(input.jsonOut) });
+  if (!input.jsonOut) {
+    dispatch(startInput, deps, "SessionStart");
+  }
 
   const guardActive = input.reviewRole !== undefined && isReadOnlyDelegationRole(input.reviewRole);
   const treeBefore = guardActive ? safeLoadChangedFiles(repoRoot) : [];
@@ -194,28 +197,30 @@ export function executeAdapterPlanForCli(
     });
     for (const message of reviewGuardMessages(assessment)) process.stderr.write(`${message}\n`);
   }
-  dispatch(
-    {
-      hook_event_name: "PostToolUse",
-      session_id: sessionId,
-      ...(input.planId ? { plan_id: input.planId } : {}),
-      tool_name: input.toolName,
-      tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
-      tool_response: { outcome: child.status === 0 ? "ok" : "error" },
-    },
-    deps,
-    "PostToolUse",
-  );
-  dispatch(
-    {
-      hook_event_name: "Stop",
-      session_id: sessionId,
-      ...(input.planId ? { plan_id: input.planId } : {}),
-    },
-    deps,
-    "Stop",
-  );
-  depsInput.writeHandoverWarnings();
+  if (!input.jsonOut) {
+    dispatch(
+      {
+        hook_event_name: "PostToolUse",
+        session_id: sessionId,
+        ...(input.planId ? { plan_id: input.planId } : {}),
+        tool_name: input.toolName,
+        tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
+        tool_response: { outcome: child.status === 0 ? "ok" : "error" },
+      },
+      deps,
+      "PostToolUse",
+    );
+    dispatch(
+      {
+        hook_event_name: "Stop",
+        session_id: sessionId,
+        ...(input.planId ? { plan_id: input.planId } : {}),
+      },
+      deps,
+      "Stop",
+    );
+    depsInput.writeHandoverWarnings();
+  }
   const exitCode = child.status === 0 && reviewResult?.ok === false ? 1 : child.status;
   return {
     executed: true,

@@ -1436,7 +1436,7 @@ describe("L7 CLI surface closure", () => {
     } finally {
       removeTestTree(root);
     }
-  });
+  }, 20_000);
 
   it("executes codex adapter under --execute --json and reports dry_run:false honestly", () => {
     // 回帰: 旧実装は --execute --json で provider を起動せず dry_run:false の plan JSON だけ

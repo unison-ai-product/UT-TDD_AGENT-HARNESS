@@ -444,6 +444,7 @@ function runSessionStartSideEffects(
   repoRoot: string,
   input: SessionHookInput,
   deps: ReturnType<typeof nodeDeps>,
+  opts: { json?: boolean } = {},
 ): void {
   try {
     scanDanglingStops(deps, input.session_id);
@@ -451,7 +452,11 @@ function runSessionStartSideEffects(
   } catch {
     // fail-open: lifecycle maintenance must not block the runtime.
   }
-  surfaceSessionStartDigestToStdout(repoRoot, attemptEscalationBlock(repoRoot, input.session_id));
+  surfaceSessionStartDigestToStdout(
+    repoRoot,
+    attemptEscalationBlock(repoRoot, input.session_id),
+    opts.json ? "stderr" : "stdout",
+  );
 }
 
 /**
@@ -512,7 +517,18 @@ function readMemoryThroughService(
   }
 }
 
-function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = ""): void {
+function surfaceSessionStartDigestToStdout(
+  repoRoot: string,
+  escalationBlock = "",
+  outputTo: "stdout" | "stderr" = "stdout",
+): void {
+  const writeOutput = (text: string) => {
+    if (outputTo === "stderr") {
+      process.stderr.write(text);
+      return;
+    }
+    process.stdout.write(text);
+  };
   // memory は DB 障害と独立に正本ファイルから読む (PLAN-L7-468 欠陥 3)。
   const memory = readMemoryThroughService(repoRoot, { limit: 5 });
   let unclaimedInbox: ReturnType<typeof summarizeUnclaimedInbox> | undefined;
@@ -532,7 +548,7 @@ function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = "
           unclaimedInbox,
         }),
       );
-      if (block) process.stdout.write(block);
+      if (block) writeOutput(block);
       process.stderr.write(renderMemoryHealth(memory));
     } finally {
       db.close();
@@ -3185,7 +3201,10 @@ team
         }
         let teamSessionSeq = 0;
         const repoRoot = process.cwd();
-        const sessionDeps = nodeDeps(repoRoot, gitBranch, gitHead);
+        const repoHasGitDir = existsSync(join(repoRoot, ".git"));
+        const cachedBranch = repoHasGitDir ? gitBranch() : null;
+        const cachedHead = repoHasGitDir ? gitHead() : null;
+        const sessionDeps = nodeDeps(repoRoot, () => cachedBranch, () => cachedHead);
         const execution = await executeTeamRunPlan(result, {
           slots: nodeAgentSlotsDeps(repoRoot),
           runCommand: ({ command, args, provider, env, stdin }) =>
@@ -3196,20 +3215,31 @@ team
                 session_id: sessionId,
                 ...(opts.plan ? { plan_id: opts.plan } : {}),
               };
-              runSessionStartSideEffects(repoRoot, startInput, sessionDeps);
-              dispatch(startInput, sessionDeps, HOOK_EVENT_SESSION_START);
+              if (!opts.json) {
+                runSessionStartSideEffects(repoRoot, startInput, sessionDeps, { json: false });
+                dispatch(startInput, sessionDeps, HOOK_EVENT_SESSION_START);
+              }
               const invocation = buildProviderInvocation({ provider, command, args });
               const ioMode = opts.json ? "ignore" : "inherit";
-              const child = spawn(invocation.command, invocation.args, {
-                cwd: repoRoot,
-                env: adapterExecutionEnv(provider, env),
-                // Provider prompts are passed through stdin; argv carries only fixed
-                // command flags so shell metacharacters and tool markup stay inert.
-                // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
-                stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
-                shell: invocation.shell ?? false,
-                windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
-              });
+              let child: ReturnType<typeof spawn>;
+              try {
+                child = spawn(invocation.command, invocation.args, {
+                  cwd: repoRoot,
+                  env: adapterExecutionEnv(provider, env),
+                  // Provider prompts are passed through stdin; argv carries only fixed
+                  // command flags so shell metacharacters and tool markup stay inert.
+                  // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
+                  stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
+                  shell: invocation.shell ?? false,
+                  windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+                });
+              } catch (error) {
+                process.stderr.write(
+                  `${provider} provider launch failed (team run): ${String(error)}\n`,
+                );
+                resolve({ exitCode: null });
+                return;
+              }
               if (stdin !== undefined) {
                 child.stdin?.write(stdin);
                 child.stdin?.end();
@@ -3218,34 +3248,38 @@ team
               const finish = (exitCode: number | null) => {
                 if (finalized) return;
                 finalized = true;
-                dispatch(
-                  {
-                    hook_event_name: "PostToolUse",
-                    session_id: sessionId,
-                    ...(opts.plan ? { plan_id: opts.plan } : {}),
-                    tool_name: provider,
-                    tool_input: { command: `${command} ${args.join(" ")}` },
-                    tool_response: { outcome: exitCode === 0 ? "ok" : "error" },
-                  },
-                  sessionDeps,
-                  "PostToolUse",
-                );
-                dispatch(
-                  {
-                    hook_event_name: "Stop",
-                    session_id: sessionId,
-                    ...(opts.plan ? { plan_id: opts.plan } : {}),
-                  },
-                  sessionDeps,
-                  "Stop",
-                );
+                if (!opts.json) {
+                  dispatch(
+                    {
+                      hook_event_name: "PostToolUse",
+                      session_id: sessionId,
+                      ...(opts.plan ? { plan_id: opts.plan } : {}),
+                      tool_name: provider,
+                      tool_input: { command: `${command} ${args.join(" ")}` },
+                      tool_response: { outcome: exitCode === 0 ? "ok" : "error" },
+                    },
+                    sessionDeps,
+                    "PostToolUse",
+                  );
+                  dispatch(
+                    {
+                      hook_event_name: "Stop",
+                      session_id: sessionId,
+                      ...(opts.plan ? { plan_id: opts.plan } : {}),
+                    },
+                    sessionDeps,
+                    "Stop",
+                  );
+                }
                 resolve({ exitCode });
               };
               child.on("error", () => finish(null));
               child.on("close", (code) => finish(code));
             }),
         });
-        writeHandoverWarnings();
+        if (!opts.json) {
+          writeHandoverWarnings();
+        }
         if (opts.json) process.stdout.write(`${JSON.stringify(execution, null, 2)}\n`);
         else {
           process.stdout.write(
