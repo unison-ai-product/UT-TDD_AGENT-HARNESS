@@ -440,12 +440,19 @@ function writeHandoverWarnings(): void {
   }
 }
 
-function runSessionStartSideEffects(
-  repoRoot: string,
-  input: SessionHookInput,
-  deps: ReturnType<typeof nodeDeps>,
-  opts: { json?: boolean } = {},
-): void {
+type SessionStartSideEffectInput = {
+  repoRoot: string;
+  input: SessionHookInput;
+  deps: ReturnType<typeof nodeDeps>;
+  json?: boolean;
+};
+
+function runSessionStartSideEffects({
+  repoRoot,
+  input,
+  deps,
+  json = false,
+}: SessionStartSideEffectInput): void {
   try {
     scanDanglingStops(deps, input.session_id);
     sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
@@ -455,7 +462,7 @@ function runSessionStartSideEffects(
   surfaceSessionStartDigestToStdout(
     repoRoot,
     attemptEscalationBlock(repoRoot, input.session_id),
-    opts.json ? "stderr" : "stdout",
+    json ? "stderr" : "stdout",
   );
 }
 
@@ -1107,7 +1114,7 @@ session
     const input = readHookInput(HOOK_EVENT_SESSION_START, opts.session);
     const repoRoot = requireRuntimeRepoRoot();
     const deps = nodeDeps(repoRoot, gitBranch, gitHead);
-    runSessionStartSideEffects(repoRoot, input, deps);
+    runSessionStartSideEffects({ repoRoot, input, deps });
     dispatch(input, deps, HOOK_EVENT_SESSION_START);
     process.stdout.write(`session-log: start ${input.session_id ?? "ut-tdd-cli"}\n`);
   });
@@ -3216,7 +3223,7 @@ team
                 ...(opts.plan ? { plan_id: opts.plan } : {}),
               };
               if (!opts.json) {
-                runSessionStartSideEffects(repoRoot, startInput, sessionDeps, { json: false });
+                runSessionStartSideEffects({ repoRoot, input: startInput, deps: sessionDeps });
                 dispatch(startInput, sessionDeps, HOOK_EVENT_SESSION_START);
               }
               const invocation = buildProviderInvocation({ provider, command, args });
