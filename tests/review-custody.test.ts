@@ -24,6 +24,10 @@ import {
   type ReviewRequestIdentity,
   sha256Hex,
 } from "../src/feedback/review-custody-canonical.ts";
+import {
+  issueCustodyReceipt,
+  type RunnerEnvironment,
+} from "../src/feedback/review-custody-runner.ts";
 import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
 
 const REPOSITORY = "unison-ai-product/UT-TDD_AGENT-HARNESS";
@@ -31,6 +35,7 @@ const HEAD = "a".repeat(40);
 const OTHER_HEAD = "b".repeat(40);
 const WORKFLOW_SHA = "c".repeat(40);
 const MERGE_SHA = "d".repeat(40);
+const MERGED_AT = "2026-08-07T07:28:00Z";
 const PLAN_REVISION = "1".repeat(64);
 const JUDGMENT_DIGEST = "2".repeat(64);
 const PROVIDER_EVIDENCE_REF = `d3b:${"3".repeat(64)}`;
@@ -85,6 +90,7 @@ function prFacts(overrides: Partial<CustodyPullRequestFacts> = {}): CustodyPullR
     headSha: HEAD,
     state: "OPEN",
     mergeSha: null,
+    mergedAt: null,
     ...overrides,
   };
 }
@@ -193,6 +199,61 @@ function admissionInput(overrides: Partial<CustodyAdmissionInput> = {}): Custody
     observations: observations(),
     authority: { attestationVerifier: acceptingVerifier().port, providerIdentity: null },
     ...overrides,
+  };
+}
+
+function runnerEnvironment(input: {
+  readonly pullRequest: Record<string, unknown>;
+  readonly mergeMethod?: string;
+}): { env: RunnerEnvironment; written: () => string | null } {
+  const values: Record<string, string> = {
+    GITHUB_REPOSITORY: REPOSITORY,
+    UT_TDD_CUSTODY_PR: "283",
+    UT_TDD_CUSTODY_PLAN_ID: "PLAN-L7-465",
+    UT_TDD_CUSTODY_PLAN_REVISION: PLAN_REVISION,
+    UT_TDD_CUSTODY_MEMORY_ID: REQUEST_IDENTITY.memoryId,
+    UT_TDD_CUSTODY_JUDGMENT_DIGEST: JUDGMENT_DIGEST,
+    UT_TDD_CUSTODY_PROVIDER_EVIDENCE_REF: PROVIDER_EVIDENCE_REF,
+    UT_TDD_CUSTODY_REVIEWER_FAMILY: "codex",
+    UT_TDD_CUSTODY_AUTHOR_FAMILY: "claude",
+    UT_TDD_CUSTODY_VERDICT: "PASS",
+    GITHUB_WORKFLOW_REF: WORKFLOW_REF,
+    GITHUB_SHA: WORKFLOW_SHA,
+    GITHUB_RUN_ID: RUN_ID,
+    GITHUB_RUN_ATTEMPT: "1",
+    UT_TDD_CUSTODY_RECEIPT_PATH: "review-custody-receipt.json",
+  };
+  if (input.mergeMethod !== undefined) values.UT_TDD_CUSTODY_MERGE_METHOD = input.mergeMethod;
+  const stdout = JSON.stringify(input.pullRequest);
+  let output: string | null = null;
+  return {
+    env: {
+      get: (name) => values[name],
+      runGh: () => ({ status: 0, stdout }),
+      readFile: () => {
+        throw new Error("not used by issue");
+      },
+      writeFile: (_path, content) => {
+        output = content;
+      },
+      log: () => undefined,
+    },
+    written: () => output,
+  };
+}
+
+function runnerPullRequest(input: {
+  readonly merged: boolean;
+  readonly mergedAt?: string;
+}): Record<string, unknown> {
+  return {
+    number: 283,
+    state: input.merged ? "closed" : "open",
+    merged: input.merged,
+    merged_at: input.mergedAt ?? null,
+    merge_commit_sha: input.merged ? MERGE_SHA : null,
+    base: { ref: "main" },
+    head: { sha: HEAD, repo: { full_name: REPOSITORY } },
   };
 }
 
@@ -428,6 +489,66 @@ describe("D3 trusted custody receipt", () => {
     });
     expect(postWithoutMergeSha.ok).toBe(false);
     expect(postWithoutMergeSha.ok === false && postWithoutMergeSha.reason).toBe("receipt_corrupt");
+
+    const postClosureText = buildText({
+      receiptKind: "post_merge_closure",
+      mergeSha: MERGE_SHA,
+      mergeMethod: "squash",
+      mergedAt: MERGED_AT,
+    });
+    const postClosure = await admitReviewCustody(
+      admissionInput({
+        receiptText: postClosureText,
+        expected: expectation({ receiptKind: "post_merge_closure" }),
+        observations: observations({
+          eventPayload: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
+          apiRead1: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
+          apiRead2: prFacts({ state: "MERGED", mergeSha: MERGE_SHA, mergedAt: MERGED_AT }),
+        }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: null,
+        },
+      }),
+    );
+    expect(postClosure).toEqual({
+      state: "custody_rejected",
+      reasons: ["unverified_family"],
+      details: ["provider_family_authority_absent"],
+    });
+
+    const postTimestampDrift = await admitReviewCustody(
+      admissionInput({
+        receiptText: postClosureText,
+        expected: expectation({ receiptKind: "post_merge_closure" }),
+        observations: observations({
+          eventPayload: prFacts({
+            state: "MERGED",
+            mergeSha: MERGE_SHA,
+            mergedAt: "2026-08-07T07:29:00Z",
+          }),
+          apiRead1: prFacts({
+            state: "MERGED",
+            mergeSha: MERGE_SHA,
+            mergedAt: "2026-08-07T07:29:00Z",
+          }),
+          apiRead2: prFacts({
+            state: "MERGED",
+            mergeSha: MERGE_SHA,
+            mergedAt: "2026-08-07T07:29:00Z",
+          }),
+        }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: null,
+        },
+      }),
+    );
+    expect(postTimestampDrift).toEqual({
+      state: "custody_rejected",
+      reasons: ["identity_mismatch"],
+      details: ["post_merge_timestamp_mismatch"],
+    });
 
     const forkSubject = await admitReviewCustody(
       admissionInput({
@@ -835,5 +956,47 @@ describe("D3 attestation verifier adapter", () => {
       reasons: ["signer_mismatch"],
       details: ["attestation_facts_disagree_with_receipt"],
     });
+  });
+});
+
+describe("D3d runner の merge 後 receipt kind", () => {
+  it("MERGED facts から post_merge_closure を導出し、merge facts を receipt へ束縛する", () => {
+    const fixture = runnerEnvironment({
+      pullRequest: runnerPullRequest({ merged: true, mergedAt: MERGED_AT }),
+      mergeMethod: "squash",
+    });
+
+    expect(issueCustodyReceipt(fixture.env)).toEqual({
+      exitCode: 0,
+      summary: expect.any(String),
+    });
+    const receipt = JSON.parse(fixture.written() ?? "{}") as Record<string, unknown>;
+    expect(receipt).toMatchObject({
+      receiptKind: "post_merge_closure",
+      mergeSha: MERGE_SHA,
+      mergeMethod: "squash",
+      mergedAt: MERGED_AT,
+    });
+  });
+
+  it("OPEN facts では pre_merge_review を維持し、merge metadata を要求しない", () => {
+    const fixture = runnerEnvironment({ pullRequest: runnerPullRequest({ merged: false }) });
+
+    expect(issueCustodyReceipt(fixture.env).exitCode).toBe(0);
+    const receipt = JSON.parse(fixture.written() ?? "{}") as Record<string, unknown>;
+    expect(receipt.receiptKind).toBe("pre_merge_review");
+    expect(receipt).not.toHaveProperty("mergeSha");
+    expect(receipt).not.toHaveProperty("mergeMethod");
+    expect(receipt).not.toHaveProperty("mergedAt");
+  });
+
+  it("MERGED facts で merge method が欠落した場合は fail-close する", () => {
+    const fixture = runnerEnvironment({
+      pullRequest: runnerPullRequest({ merged: true, mergedAt: MERGED_AT }),
+    });
+
+    expect(() => issueCustodyReceipt(fixture.env)).toThrow(
+      "missing required environment value: UT_TDD_CUSTODY_MERGE_METHOD",
+    );
   });
 });

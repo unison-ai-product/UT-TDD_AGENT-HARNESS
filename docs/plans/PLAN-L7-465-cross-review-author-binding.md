@@ -9,7 +9,7 @@ route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 status: draft
 created: 2026-07-28
-updated: 2026-08-05
+updated: 2026-08-07
 owner: PM / PO
 agent_slots:
   - role: tl
@@ -427,6 +427,32 @@ family authority を AND 入力に据える / C: family 軸を D3e へ分離) �
    実 repo の `loadGithubCiPolicyDocs` に対して強制する。
 7. **`harness-check.yml` / `src/cli.ts` / merge gate には触れていない**。D2 の最終 AND 配線
    (required `harness-check` への投影、`harness-ci-aggregate` への rename) は本 PR の範囲外。
+
+### Merge 後 live dispatch の実測と是正 (2026-08-07)
+
+PR #285 の merge commit `e032e0787a26231c28e939d85b45668ad9915080` 直後に、メモリの手順どおり
+`review-attestation.yml` を default branch から dispatch した。Issue receipt と Artifact Attestation
+は成功したが、Admit が `identity_mismatch (pre_merge_requires_open_pull_request)` で停止した
+(run `31157752744`)。原因は workflow runner が PR の現状態を読んでいたにもかかわらず、receipt と
+expected の `receiptKind` を常に `pre_merge_review` に固定していたことである。これは merge 後の
+post-merge closure 契約を満たさない実バグであり、既知の provider-family `unverified_family` とは
+別の blocking failure として扱う。
+
+是正では次を固定する。
+
+1. GitHub facts の `state=MERGED` から runner が `post_merge_closure` を導出し、`mergeSha` と
+   `mergedAt` を API facts と receipt の双方へ束縛する。`OPEN` の場合だけ従来どおり
+   `pre_merge_review` を発行する。
+2. GitHub API が事後に返さない merge method は `workflow_dispatch` の
+   `merge_method` choice input から受け取り、`merge|squash|rebase` 以外・MERGED 時の欠落を
+   fail-close にする。workflow の issue/admit 両 step に同じ値を渡し、kind を片側だけで変更できない
+   ようにする。
+3. `U-RVGHA-D3C-008` に post-merge closure の正常系・`mergedAt` drift の負例を追加し、runner の
+   state 導出・pre/post metadata・欠落入力を同じ test lane で検証する。
+
+修正を main へ着地した後、同じ judgment subject を新しい exact HEAD へ更新して live dispatch を
+再実行する。期待する終端は provider-family authority 未承認による `unverified_family` であり、
+`pre_merge_requires_open_pull_request` や `post_merge_*` の kind 不整合を再発させない。
 
 ### `gh attestation verify` 実出力による adapter 是正 (2026-08-07、merge 前)
 

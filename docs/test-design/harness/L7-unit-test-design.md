@@ -2170,7 +2170,7 @@ CI / merge 由来 field を 1 つも持たないことを検査)。D2 の CI agg
 | `U-RVGHA-D3C-005` | Artifact Attestationだけ、またはD3b payloadだけ | judgment/provenance片面では`custody_admitted` 0 |
 | `U-RVGHA-D3C-006` | event payloadとAPI read 1のrepo/PR/base/headを各変異 | 発行0、`identity_mismatch`または`head_raced` |
 | `U-RVGHA-D3C-007` | API read 1後、read 2前にHEAD/state変更 | TOCTOU拒否、attestation発行0 |
-| `U-RVGHA-D3C-008` | fork/別repo/別PR、pre receiptへmerged fact、post receiptでmergeSha欠落 | kind/subject不整合を拒否 |
+| `U-RVGHA-D3C-008` | fork/別repo/別PR、pre receiptへmerged fact、post receiptでmergeSha/mergedAt欠落またはmergedAt drift、runnerのOPEN/MERGED state導出 | kind/subject不整合を拒否し、MERGED の正常系だけ `post_merge_closure` として機械検証へ進める |
 | `U-RVGHA-D3C-009` | CI evidence Linux/Windows/`harness-ci-aggregate`のmissing/failure/cancelled/skipped/stale、または最終required `harness-check`の入力混入 | D1 `merge_ready` 0。正規receiptのcustody判定は変えず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-010` | 固定workflowがPR HEAD checkout、PR code/artifact/cache、過剰permissionを使用 | `github-ci-policy` violation、workflow実行資格なし |
 | `U-RVGHA-D3C-011` | attestation absent / signature failure / issuer mismatch / retention・verify取得不能 | 順に`missing` / `signature_unverified` / `signer_mismatch` / `audit_unavailable`、`custody_admitted` 0 |
@@ -2181,6 +2181,13 @@ CI / merge 由来 field を 1 つも持たないことを検査)。D2 の CI agg
 | `U-RVGHA-D3C-016` | Check RunだけPASS、D1 `analyzeReviewDispatch`は非`merge_ready` | Check Runを第二SSoTにせず、将来D2のAND受理候補0 |
 | `U-RVGHA-D3C-017` | 承認済み`VerifiedProviderIdentity` + D1 merge_ready + D3b/D3c全検証green | D3d `custody_admitted`、D2 AND入力だけがaccepting候補 |
 | `U-RVGHA-D3C-018` | RFC 8785 exact preimageのkey順・locale・digest自己field・既存16桁digestを各変異 | receiptは同一objectだけ64 lowerhex一致。外部artifact digestは完成bytesから一方向計算し、不一致は`identity_mismatch` |
+
+2026-08-07 の merge 後 live dispatch (`run 31157752744`) で、runner が常に
+`pre_merge_review` を発行していたため `pre_merge_requires_open_pull_request` が実測された。
+これは provider-family の `unverified_family` とは別の実バグであり、U-RVGHA-D3C-008 の既存負例に
+post-merge closure 正常系・`mergedAt` drift・runner の state 導出を同じ test file で追加した。
+`mergeMethod` は GitHub API の事後 facts に含まれないため、workflow dispatch の choice input を
+`merge|squash|rebase` に閉じ、MERGED 時の欠落・不正は issue 段階で fail-close する。
 
 ## oracle-test-trace 検出範囲拡張 (issue #165 / PLAN-L7-480)
 
