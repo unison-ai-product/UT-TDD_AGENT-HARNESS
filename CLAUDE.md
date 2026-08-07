@@ -197,6 +197,7 @@ Codex はこれらの規律を一度も受け取っていなかった)。`rule-d
 - Push at coherent PLAN / task boundaries when requested.
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
+- PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
 
 ### 運用規律の再締結 (PO ルール 2026-08-03、両ランタイム共通)
 
