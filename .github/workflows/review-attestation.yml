@@ -81,9 +81,9 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version-file: package.json
+          node-version: "24.13.0"
       - name: Issue trusted custody receipt
         env:
           GH_TOKEN: ${{ github.token }}
@@ -99,7 +99,7 @@ jobs:
           UT_TDD_CUSTODY_RECEIPT_PATH: review-custody-receipt.json
         run: node src/feedback/review-custody-runner.ts issue
       - name: Attest receipt provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v2
         with:
           subject-path: review-custody-receipt.json
       - name: Admit trusted custody receipt

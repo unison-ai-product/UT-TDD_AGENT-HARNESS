@@ -437,7 +437,8 @@ family authority を AND 入力に据える / C: family 軸を D3e へ分離) �
   負の oracle として機能する。方式承認 (provider 別 GitHub App / bot / OIDC subject 等) は
   authentication / authorization を変える高影響境界であり、PO 承認事案として D2 着工時に残る。
 - `U-RVGHA-D3C-009` / `-016` は D3d 所有範囲 (custody が CI 状態から独立であること) までを固定し、
-  D2 の CI aggregate receipt provider 配線は `CANDIDATE-RVD2-001`〜`003` のまま残す。
+  D2 の CI aggregate receipt provider 配線は D2 component evidence の candidate 表 (CANDIDATE-RVD2 系)
+  のまま残す。
 
 ### D3c freeze 完了条件
 

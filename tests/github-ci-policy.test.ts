@@ -194,8 +194,10 @@ const LEGACY_SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replac
         run: ${REQUIRED_AGGREGATE_COMMAND}
 `;
 
+// repo 読みの入口を 1 箇所へ集約する (doctor test-repository-isolation の callsite 契約)。
+const REPO_ROOT = process.cwd();
 const SOURCE_WORKFLOW = readFileSync(
-  join(process.cwd(), ".github", "workflows", "harness-check.yml"),
+  join(REPO_ROOT, ".github", "workflows", "harness-check.yml"),
   "utf8",
 );
 const SOURCE_WORKFLOW_WITH_LANE = SOURCE_WORKFLOW;
@@ -1416,7 +1418,7 @@ describe("github-ci-policy lint", () => {
     });
 
     const VALID_ATTESTATION_WORKFLOW = readFileSync(
-      join(process.cwd(), ATTESTATION_WORKFLOW_FILE),
+      join(REPO_ROOT, ATTESTATION_WORKFLOW_FILE),
       "utf8",
     );
 
@@ -1470,7 +1472,7 @@ describe("github-ci-policy lint", () => {
 
     it("U-RVGHA-D3C-010: source profile の実 repo は固定パスの D3d workflow を必ず load し、Pack profile では対象外にする", () => {
       const sourceDocs = loadGithubCiPolicyDocs({
-        repoRoot: process.cwd(),
+        repoRoot: REPO_ROOT,
         runtimeProfile: "source",
       });
       const attestation = sourceDocs.filter((doc) => doc.role === "attestation_runtime");
@@ -1481,7 +1483,7 @@ describe("github-ci-policy lint", () => {
         ),
       ).toEqual([]);
 
-      const packDocs = loadGithubCiPolicyDocs({ repoRoot: process.cwd(), runtimeProfile: "pack" });
+      const packDocs = loadGithubCiPolicyDocs({ repoRoot: REPO_ROOT, runtimeProfile: "pack" });
       expect(packDocs.some((doc) => doc.role === "attestation_runtime")).toBe(false);
     });
   });

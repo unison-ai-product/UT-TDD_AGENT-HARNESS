@@ -2147,7 +2147,9 @@ Red test citationを追加する。generic regexを4 segmentへ広げず、他�
 固定する形で実装した (D1 `analyzeReviewDispatch` を直接 citation し、CI 非 green で
 `merge_ready` が出ないこと + 同一 subject の custody 判定が変わらないこと + `AdmittedCustody` が
 CI / merge 由来 field を 1 つも持たないことを検査)。D2 の CI aggregate receipt provider 配線
-そのものは `CANDIDATE-RVD2-001`〜`003` のまま D2 実装 PR に残す。
+そのものは D2 component evidence の candidate 表 (CANDIDATE-RVD2 系) のまま D2 実装 PR に残す
+(backtick 無し表記 — candidate 台帳への再掲ではなく参照であり、U-VMSRC-009 の一意性検査の
+対象外とする)。
 
 `U-RVGHA-D3C-017` の `VerifiedProviderIdentity` は **承認済み authority を模した port double** で
 あり、実在の authority ではない。PO 承認済みの provider-family authority が実装されるまで、
