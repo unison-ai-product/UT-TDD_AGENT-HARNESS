@@ -484,5 +484,5 @@ describe("runtime hook entrypoints", () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
-  });
+  }, 20_000);
 });

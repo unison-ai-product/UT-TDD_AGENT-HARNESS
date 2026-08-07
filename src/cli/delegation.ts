@@ -138,6 +138,9 @@ export function executeAdapterPlanForCli(
   const repoRoot = process.cwd();
   const now = depsInput.now ?? nowIso;
   const deps = nodeDeps(repoRoot, depsInput.gitBranch, depsInput.gitHead);
+  if (input.jsonOut) {
+    deps.warn = (message) => process.stderr.write(`${message}\n`);
+  }
   const startInput: SessionHookInput = {
     hook_event_name: "SessionStart",
     session_id: sessionId,
@@ -149,9 +152,7 @@ export function executeAdapterPlanForCli(
     deps,
     json: Boolean(input.jsonOut),
   });
-  if (!input.jsonOut) {
-    dispatch(startInput, deps, "SessionStart");
-  }
+  dispatch(startInput, deps, "SessionStart");
 
   const guardActive = input.reviewRole !== undefined && isReadOnlyDelegationRole(input.reviewRole);
   const treeBefore = guardActive ? safeLoadChangedFiles(repoRoot) : [];
@@ -204,30 +205,28 @@ export function executeAdapterPlanForCli(
     });
     for (const message of reviewGuardMessages(assessment)) process.stderr.write(`${message}\n`);
   }
-  if (!input.jsonOut) {
-    dispatch(
-      {
-        hook_event_name: "PostToolUse",
-        session_id: sessionId,
-        ...(input.planId ? { plan_id: input.planId } : {}),
-        tool_name: input.toolName,
-        tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
-        tool_response: { outcome: child.status === 0 ? "ok" : "error" },
-      },
-      deps,
-      "PostToolUse",
-    );
-    dispatch(
-      {
-        hook_event_name: "Stop",
-        session_id: sessionId,
-        ...(input.planId ? { plan_id: input.planId } : {}),
-      },
-      deps,
-      "Stop",
-    );
-    depsInput.writeHandoverWarnings();
-  }
+  dispatch(
+    {
+      hook_event_name: "PostToolUse",
+      session_id: sessionId,
+      ...(input.planId ? { plan_id: input.planId } : {}),
+      tool_name: input.toolName,
+      tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
+      tool_response: { outcome: child.status === 0 ? "ok" : "error" },
+    },
+    deps,
+    "PostToolUse",
+  );
+  dispatch(
+    {
+      hook_event_name: "Stop",
+      session_id: sessionId,
+      ...(input.planId ? { plan_id: input.planId } : {}),
+    },
+    deps,
+    "Stop",
+  );
+  depsInput.writeHandoverWarnings();
   const exitCode = child.status === 0 && reviewResult?.ok === false ? 1 : child.status;
   return {
     executed: true,

@@ -316,7 +316,9 @@ function resolveSkillContextInjection(
   const db = openHarnessDb(":memory:", { repoRoot });
   try {
     try {
-      rebuildHarnessDb({ repoRoot, db });
+      // 文脈注入は skill/PLAN 投影だけが必要で、グローバル token telemetry の再走査は不要。
+      // 毎回の provider 起動で home 配下を走査すると実行境界を不必要に遅延させる。
+      rebuildHarnessDb({ repoRoot, db, skipTokenTelemetry: true });
     } catch {
       recordSkillInjectionAttempt(
         { plan_id: planId, status: "skipped", reason: "rebuild-failed", required: 0, optional: 0 },
@@ -3212,6 +3214,9 @@ team
         const cachedBranch = repoHasGitDir ? gitBranch() : null;
         const cachedHead = repoHasGitDir ? gitHead() : null;
         const sessionDeps = nodeDeps(repoRoot, () => cachedBranch, () => cachedHead);
+        if (opts.json) {
+          sessionDeps.warn = (message) => process.stderr.write(`${message}\n`);
+        }
         const execution = await executeTeamRunPlan(result, {
           slots: nodeAgentSlotsDeps(repoRoot),
           runCommand: ({ command, args, provider, env, stdin }) =>
@@ -3222,10 +3227,13 @@ team
                 session_id: sessionId,
                 ...(opts.plan ? { plan_id: opts.plan } : {}),
               };
-              if (!opts.json) {
-                runSessionStartSideEffects({ repoRoot, input: startInput, deps: sessionDeps });
-                dispatch(startInput, sessionDeps, HOOK_EVENT_SESSION_START);
-              }
+              runSessionStartSideEffects({
+                repoRoot,
+                input: startInput,
+                deps: sessionDeps,
+                json: Boolean(opts.json),
+              });
+              dispatch(startInput, sessionDeps, HOOK_EVENT_SESSION_START);
               const invocation = buildProviderInvocation({ provider, command, args });
               const ioMode = opts.json ? "ignore" : "inherit";
               let child: ReturnType<typeof spawn>;
@@ -3255,38 +3263,34 @@ team
               const finish = (exitCode: number | null) => {
                 if (finalized) return;
                 finalized = true;
-                if (!opts.json) {
-                  dispatch(
-                    {
-                      hook_event_name: "PostToolUse",
-                      session_id: sessionId,
-                      ...(opts.plan ? { plan_id: opts.plan } : {}),
-                      tool_name: provider,
-                      tool_input: { command: `${command} ${args.join(" ")}` },
-                      tool_response: { outcome: exitCode === 0 ? "ok" : "error" },
-                    },
-                    sessionDeps,
-                    "PostToolUse",
-                  );
-                  dispatch(
-                    {
-                      hook_event_name: "Stop",
-                      session_id: sessionId,
-                      ...(opts.plan ? { plan_id: opts.plan } : {}),
-                    },
-                    sessionDeps,
-                    "Stop",
-                  );
-                }
+                dispatch(
+                  {
+                    hook_event_name: "PostToolUse",
+                    session_id: sessionId,
+                    ...(opts.plan ? { plan_id: opts.plan } : {}),
+                    tool_name: provider,
+                    tool_input: { command: `${command} ${args.join(" ")}` },
+                    tool_response: { outcome: exitCode === 0 ? "ok" : "error" },
+                  },
+                  sessionDeps,
+                  "PostToolUse",
+                );
+                dispatch(
+                  {
+                    hook_event_name: "Stop",
+                    session_id: sessionId,
+                    ...(opts.plan ? { plan_id: opts.plan } : {}),
+                  },
+                  sessionDeps,
+                  "Stop",
+                );
                 resolve({ exitCode });
               };
               child.on("error", () => finish(null));
               child.on("close", (code) => finish(code));
             }),
         });
-        if (!opts.json) {
-          writeHandoverWarnings();
-        }
+        writeHandoverWarnings();
         if (opts.json) process.stdout.write(`${JSON.stringify(execution, null, 2)}\n`);
         else {
           process.stdout.write(

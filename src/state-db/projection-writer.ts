@@ -120,6 +120,8 @@ export interface RebuildHarnessDbInput {
   documentExports?: DocumentExportProjectionRows;
   verificationEvidence?: VerificationEvidenceProjection;
   timing?: boolean;
+  /** token telemetry は外部セッション走査を伴うため、軽量な in-memory 投影では省略できる。 */
+  skipTokenTelemetry?: boolean;
 }
 
 export interface ProjectionTiming {
@@ -2676,18 +2678,20 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectSkillEvaluations(db);
         projectPocEvaluations(db);
       });
-      // repo スコープ token telemetry ingest (issue #82、PLAN-L7-454): 従来 model_runs には
-      // review-evidence 由来行しか無かった実測欠落を是正する。model-operational (token 効率集計) より
-      // 前に走らせ、同一 rebuild 内の projectModelEvaluations が新規 token 行を反映できるようにする。
-      // 専用の timing id で計測し、他の projection と切り分けて可視化する。session ログ読取の想定外失敗は
-      // fail-open とし、rebuild 全体を落とさない (cold-start / 権限エラー等でも継続)。
-      time("token-telemetry", () => {
-        try {
-          tokenIngestStats = projectRepoScopedTokenUsage(repoRoot, db);
-        } catch {
-          tokenIngestStats = undefined;
-        }
-      });
+      if (!input.skipTokenTelemetry) {
+        // repo スコープ token telemetry ingest (issue #82、PLAN-L7-454): 従来 model_runs には
+        // review-evidence 由来行しか無かった実測欠落を是正する。model-operational (token 効率集計) より
+        // 前に走らせ、同一 rebuild 内の projectModelEvaluations が新規 token 行を反映できるようにする。
+        // 専用の timing id で計測し、他の projection と切り分けて可視化する。session ログ読取の想定外失敗は
+        // fail-open とし、rebuild 全体を落とさない (cold-start / 権限エラー等でも継続)。
+        time("token-telemetry", () => {
+          try {
+            tokenIngestStats = projectRepoScopedTokenUsage(repoRoot, db);
+          } catch {
+            tokenIngestStats = undefined;
+          }
+        });
+      }
       time("model-operational", () => {
         projectModelEvaluations(db, repoRoot);
         projectOperationalMetrics(db);
