@@ -45,7 +45,7 @@ fail-open 穴。実害インスタンスが増えた: PR #146 宣言の 2 桁 ID
 ST-DOCLEDGER-01..05 / ST-DOCSEM-01..08) が U-OTT-004 zero-orphan gate の対象外。
 本 PLAN が #165 の機構化正本であり、新規 PLAN は起票しない (重複回避)。
 
-2026-08-07 追記: Issue #206 の oracle ID 再利用検出を本 PLAN の拡張スコープとして回収する。単純な複数ファイル出現は正当な再引用を誤検知するため採用せず、同一 ID が test-design の別説明へ割り当てられた衝突を宣言 site (ID / path / line / 説明) から検出する。既存の `collectOracleIds` の Set/配列契約は維持し、既存衝突は provenance 付き ratchet baseline として固定、新規衝突のみ fail-close とする。Issue #259 (cited-but-not-declared の逆向き検査) は別スコープとして分離する。
+2026-08-07 追記: Issue #206 の oracle ID 再利用検出を本 PLAN の拡張スコープとして回収する。単純な複数ファイル出現は正当な再引用を誤検知するため採用せず、同一 ID が test-design の別説明へ割り当てられた衝突を宣言 site (ID / path / line / 説明) から検出する。candidate/概要表と confirmed/freeze/addendum 表の構造的な再掲は同一 path + ID の canonical surface 選択で除外し、canonical 同士・別 path・新規説明は fail-close する。正確な ID セルを持つ行は説明側の別 ID 再引用があっても site を落とさない。既存の `collectOracleIds` の Set/配列契約は維持し、既知の canonical 衝突だけを provenance 付き ratchet baseline として固定する。Issue #259 (cited-but-not-declared の逆向き検査) は別スコープとして分離する。
 
 2026-08-07 補足: #165 の ID pattern 拡張は PR #269 (PLAN-L7-480) で main に反映済み。本追記の未完了対象は #206 の provenance-aware uniqueness だけとし、#259 は別の検証設計として残す。
 
@@ -60,7 +60,7 @@ ST-DOCLEDGER-01..05 / ST-DOCSEM-01..08) が U-OTT-004 zero-orphan gate の対象
 1. ORACLE_ID の桁ゆらぎ吸収 (2-3 桁) + ST-* パターン追加 (baseline 拡張は縮小のみ可ルール維持)。
 2. test-design 側 defer の機械追跡 (defer 宣言 frontmatter/表形式の規格化 + 「未実装かつ非 defer」の fail-close)。
 3. IT-CONTRACT-01〜03 の実装 or 明示 defer 化 (QA 判断)。
-4. Issue #206 の citation site 収集、意味衝突の baseline/ratchet、既存 API を壊さない detector/doctor/CI 配線。
+4. Issue #206 の provenance-aware citation site 収集 (canonical surface 選択 / multi-ID 行の exact ID cell)、意味衝突の baseline/ratchet、既存 API を壊さない detector/doctor/CI 配線。
 
 ## Steps
 
@@ -69,11 +69,12 @@ ST-DOCLEDGER-01..05 / ST-DOCSEM-01..08) が U-OTT-004 zero-orphan gate の対象
 | 1 | regex/パターン拡張 + 影響 baseline 算定 | 直列 |
 | 2 | defer 機械追跡の規格化 | 1 と並列 |
 | 3 | IT-CONTRACT disposition + G8/G9 close 前提の regression test | 直列 |
-| 4 | #206 の重複検出を Red test → detector → doctor → exact-head CI の順で実装 | 1 と並列 |
+| 4 | #206 の重複検出を Red test → canonical provenance detector → doctor → exact-head CI の順で実装 | 1 と並列 |
 
 ## DoD
-- [ ] Issue #206: 同一 oracle ID を test-design の別説明へ再利用した宣言 site 衝突を検出し、新規衝突を fail-close する。単純な複数ファイル出現や tests 側の正当な再引用は赤化しない。
-- [ ] 既存の `collectOracleIds` の Set/配列契約を維持し、既存衝突は ratchet baseline として固定する。#259 の cited-but-not-declared 逆向き検査は別スコープに残す。
+- [ ] Issue #206: 同一 oracle ID を canonical test-design の別説明へ再利用した宣言 site 衝突を検出し、新規衝突を fail-close する。candidate/概要と confirmed/freeze の構造的な再掲、単純な複数ファイル出現や tests 側の正当な再引用は赤化しない。
+- [ ] multi-ID 行の正確な ID セルを収集し、説明側の再引用で declared site を欠落させない。baseline-only の単独説明を「重複」と報告せず、stale/更新要求として分離する。
+- [ ] 既存の `collectOracleIds` の Set/配列契約を維持し、既知の canonical 衝突だけを ratchet baseline として固定する。#259 の cited-but-not-declared 逆向き検査は別スコープに残す。
 - [ ] Red test → detector → doctor → exact-head CI → 非author closing review の証跡を揃える。
 
 - [ ] IT/ST 全採番が citation gate 被覆 (test 固定)

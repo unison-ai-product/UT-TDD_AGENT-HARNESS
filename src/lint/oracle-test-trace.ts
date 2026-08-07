@@ -59,6 +59,12 @@ export interface OracleDeclarationSite {
   description: string;
 }
 
+type DeclarationSurface = "summary" | "canonical";
+
+interface RawOracleDeclarationSite extends OracleDeclarationSite {
+  surface: DeclarationSurface;
+}
+
 export interface OracleDuplicate {
   id: string;
   descriptions: string[];
@@ -128,10 +134,8 @@ function analyzeDeclarationUniqueness(
     const known = baselineById.get(id);
     const unexpected = known
       ? [...observed].filter((description) => !known.has(description))
-      : observed.size > 1
-        ? [...observed]
-        : [];
-    if (unexpected.length === 0) continue;
+      : [...observed];
+    if (observed.size <= 1 || (known && unexpected.length === 0)) continue;
     const conflictDescriptions = [...observed].sort();
     duplicates.push({
       id,
@@ -185,35 +189,83 @@ function markdownCells(line: string): string[] | null {
     .map((cell) => cell.trim());
 }
 
+function declarationSurface(heading: string): DeclarationSurface {
+  const normalized = heading.toLowerCase();
+  if (
+    /^#{2,3}\s§1\./u.test(heading) ||
+    /candidate|skeleton|候補|mapping/u.test(normalized) ||
+    (/resource kernel物理統合/u.test(normalized) && !/freeze/u.test(normalized))
+  ) {
+    return "summary";
+  }
+  if (/confirmed|freeze|addendum|engine-swap/u.test(normalized)) return "canonical";
+  return "summary";
+}
+
 function collectDeclarationSitesFromFile(
   fullPath: string,
   relativePath: string,
-): OracleDeclarationSite[] {
+): RawOracleDeclarationSite[] {
   const lines = readFileSync(fullPath, "utf8").split(/\r?\n/);
-  const sites: OracleDeclarationSite[] = [];
+  const sites: RawOracleDeclarationSite[] = [];
+  let heading = "";
   for (let index = 0; index < lines.length; index += 1) {
+    if (/^#{1,6}\s/u.test(lines[index])) {
+      heading = lines[index].trim();
+      continue;
+    }
     const cells = markdownCells(lines[index]);
     if (!cells) continue;
-    const matches = cells.flatMap((cell) => oracleMatches(cell));
-    if (matches.length !== 1) continue;
-    const id = matches[0];
-    const idCell = cells.findIndex((cell) => cell.replace(/`/g, "").trim() === id);
-    if (idCell < 0) continue;
+    const idCells = cells.flatMap((cell, cellIndex) => {
+      const matches = oracleMatches(cell);
+      const normalized = cell.replace(/`/g, "").trim();
+      return matches.length === 1 && normalized === matches[0]
+        ? [{ cellIndex, id: matches[0] }]
+        : [];
+    });
+    if (idCells.length === 0) continue;
     const description = normalizeDescription(
       cells
-        .filter((_, cellIndex) => cellIndex !== idCell)
+        .filter((_, cellIndex) => !idCells.some((entry) => entry.cellIndex === cellIndex))
         .map((cell) => cell.trim())
         .filter(Boolean)
         .join(" | "),
     );
-    sites.push({ id, path: relativePath, line: index + 1, description });
+    for (const { id } of idCells) {
+      sites.push({
+        id,
+        path: relativePath,
+        line: index + 1,
+        description,
+        surface: declarationSurface(heading),
+      });
+    }
   }
   return sites;
 }
 
+function selectCanonicalDeclarationSites(
+  sites: readonly RawOracleDeclarationSite[],
+): OracleDeclarationSite[] {
+  const byIdAndPath = new Map<string, RawOracleDeclarationSite[]>();
+  for (const site of sites) {
+    const key = `${site.path}\t${site.id}`;
+    const group = byIdAndPath.get(key) ?? [];
+    group.push(site);
+    byIdAndPath.set(key, group);
+  }
+  const selected: OracleDeclarationSite[] = [];
+  for (const group of byIdAndPath.values()) {
+    const canonical = group.filter((site) => site.surface === "canonical");
+    const retained = canonical.length > 0 ? canonical : group;
+    selected.push(...retained.map(({ surface: _surface, ...site }) => site));
+  }
+  return selected;
+}
+
 /** test-design の宣言行だけを provenance 付きで収集する。family range / 本文再引用は除外する。 */
 export function collectOracleDeclarationSites(repoRoot: string): OracleDeclarationSite[] {
-  const sites: OracleDeclarationSite[] = [];
+  const sites: RawOracleDeclarationSite[] = [];
   const walk = (dir: string): void => {
     let entries: string[];
     try {
@@ -232,7 +284,7 @@ export function collectOracleDeclarationSites(repoRoot: string): OracleDeclarati
     }
   };
   walk(join(repoRoot, "docs", "test-design"));
-  return sites;
+  return selectCanonicalDeclarationSites(sites);
 }
 
 /** 宣言 (test-design) と citation (tests) を規定パターンで収集する。derived 検証にも使う。 */
