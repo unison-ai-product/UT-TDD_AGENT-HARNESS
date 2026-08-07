@@ -2136,6 +2136,31 @@ entry commitで本18 IDだけを3 segmentの`U-RVGHAD3C-NNN`へ原子的rename�
 Red test citationを追加する。generic regexを4 segmentへ広げず、他レーンの既存4 segment oracleを
 巻き込まない。renameだけを先行して未citation状態を作らず、本doc-only freezeをGreen証拠に数えない。
 
+**D3d 実装後の実測 (2026-08-07、PLAN-L7-465 D3d PR)**: 上記の rename 計画は PLAN-L7-480 契約 2
+(多 segment 対応) により不要になった。18 ID は rename せずそのまま citation され、
+`ORACLE_TEST_TRACE_WIDENED_BASELINE` から ratchet 除去済みである (`U-OIDGATE-005` の集合一致が
+機械強制)。citation 先は `tests/review-custody.test.ts` (001〜009 / 011〜018) と
+`tests/github-ci-policy.test.ts` (010)。実装は `src/feedback/review-custody.ts` /
+`review-custody-canonical.ts` / `review-custody-runner.ts` / `ports/` / `adapters/`。
+
+`U-RVGHA-D3C-009` / `-016` は D3d の所有範囲で「custody 判定が CI 状態から独立であること」を
+固定する形で実装した (D1 `analyzeReviewDispatch` を直接 citation し、CI 非 green で
+`merge_ready` が出ないこと + 同一 subject の custody 判定が変わらないこと + `AdmittedCustody` が
+CI / merge 由来 field を 1 つも持たないことを検査)。D2 の CI aggregate receipt provider 配線
+そのものは D2 component evidence の candidate 表 (CANDIDATE-RVD2 系) のまま D2 実装 PR に残す
+(backtick 無し表記 — candidate 台帳への再掲ではなく参照であり、U-VMSRC-009 の一意性検査の
+対象外とする)。
+
+`U-RVGHA-D3C-011` は adapter 面へ拡張した。fixture は **実測した `gh attestation verify
+--format=json` 出力** (gh 2.87.3、cli/cli の attested release 資産で実走) を写しており、
+推測形へ戻ると赤になる。合わせて (a) subject が positional path で渡ること (`--digest` は
+存在しない)、(b) 検証済み statement が対象 digest を被覆しない場合を成功へ丸めないこと、
+(c) usage error / spawn 不能 / parse 不能を `missing` と `audit_unavailable` に区別することを固定した。
+
+`U-RVGHA-D3C-017` の `VerifiedProviderIdentity` は **承認済み authority を模した port double** で
+あり、実在の authority ではない。PO 承認済みの provider-family authority が実装されるまで、
+実 GitHub 実行では機械 custody が全 green でも終端は `unverified_family` になる (freeze どおり)。
+
 | U-ID | mutation / fixture | expected |
 |---|---|---|
 | `U-RVGHA-D3C-001` | valid D3b payload + GitHub attestation + PR/API/Check Runの同一subject、family authorityなし | mechanical custodyはvalidでも`unverified_family`、`custody_admitted` 0 |
