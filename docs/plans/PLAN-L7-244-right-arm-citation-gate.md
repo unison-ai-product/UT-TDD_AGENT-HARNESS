@@ -20,8 +20,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-244-right-arm-citation-gate.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/oracle-id-duplicate-baseline.ts
-    artifact_type: source_module
 dependencies:
   parent: null
   requires: []
@@ -30,6 +28,7 @@ dependencies:
     - src/lint/oracle-test-trace.ts
     - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
     - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
+    - docs/plans/PLAN-L7-482-oracle-provenance-uniqueness.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/206
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/259
 ---
@@ -48,6 +47,11 @@ ST-DOCLEDGER-01..05 / ST-DOCSEM-01..08) が U-OTT-004 zero-orphan gate の対象
 2026-08-07 追記: Issue #206 の oracle ID 再利用検出を本 PLAN の拡張スコープとして回収する。単純な複数ファイル出現は正当な再引用を誤検知するため採用せず、同一 ID が test-design の別説明へ割り当てられた衝突を宣言 site (ID / path / line / 説明) から検出する。candidate/概要表と confirmed/freeze 表、Resource Kernel の概要/freeze 表という**列スキーマが契約化された構造的再掲だけ**を同一 path + ID の mirror として除外する。未知の表スキーマや addendum は見出し名に関係なく保持し、canonical 同士・別 path・新規説明は fail-close する。正確な ID セルを持つ行は説明側の別 ID 再引用があっても site を落とさない。既知の別 oracle 衝突 (U-PHOVER-002 / IT-MODULE-01) は provenance 付き ratchet baseline として固定し、新しい説明の追加を fail-close する。既存の `collectOracleIds` の Set/配列契約は維持し、Issue #259 (cited-but-not-declared の逆向き検査) は別スコープとして分離する。
 
 2026-08-07 補足: #165 の ID pattern 拡張は PR #269 (PLAN-L7-480) で main に反映済み。本追記の未完了対象は #206 の provenance-aware uniqueness だけとし、#259 は別の検証設計として残す。
+
+2026-08-07 所有分離: #206 のうち PR #290 で実装・検証・main merge 済みの provenance-aware
+uniqueness は、本 PLAN の残存スコープ (defer 規格化 / IT-CONTRACT disposition) とライフサイクルが
+異なるため、専用子 PLAN-L7-482 が実装成果物 `src/lint/oracle-id-duplicate-baseline.ts` を所有する。
+本 PLAN は集約設計として draft のまま残し、#206 の完了を本 PLAN 全体の完了とみなさない。
 
 ## 背景 (A-174 F-1)
 
