@@ -78,13 +78,14 @@ review_evidence:
     worker_model: claude-fable-5
     reviewer_model: claude-opus-5
     green_commands:
-      - kind: ci_run
+      - kind: smoke
         command: "gh run view 31140910029 --json conclusion,jobs"
-        runner: github-actions
+        runner: ci
         scope: full
         exit_code: 0
         completed_at: "2026-08-06T23:50:00+09:00"
         evidence_path: .github/workflows/harness-check.yml
+        output_digest: "sha256:38ce49d5686605adffaca7863968c237f3d89e0b87f97c1a24e365e8b078f2d8"
         anchor_commit: 445c710fea2e16e584f6b76a3e4db1ca82329c90
   - reviewer: claude-opus-5
     review_kind: intra_runtime_subagent
@@ -101,21 +102,25 @@ review_evidence:
     worker_model: claude-fable-5
     reviewer_model: claude-opus-5
     green_commands:
+      # runner enum に node が無いため bash (実行 shell) で記録 (enum への node 追加は
+      # Bun 残滓撤去の後続 = schema 側の別 PR)。
       - kind: unit_test
         command: "node scripts/run-vitest-snapshot.ts tests/runtime-portability.test.ts tests/verification-profile.test.ts --reporter=dot"
-        runner: node
+        runner: bash
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-07T15:20:00+09:00"
+        completed_at: "2026-08-07T16:52:30+09:00"
         evidence_path: src/lint/runtime-portability.ts
-        anchor_commit: ef27022ba1075396b933fd8b6cb80131ba60461e
-      - kind: ci_run
+        output_digest: "sha256:57ad96dec5ec629dd5699e4f747ddd8a1a1c44ec9c46021872ed4290bd25d9b8"
+        anchor_commit: 305df9ed5a4418d6f12cf784eaaaab21da654b68
+      - kind: smoke
         command: "gh run view 31154290456 --json conclusion,jobs"
-        runner: github-actions
+        runner: ci
         scope: full
         exit_code: 0
         completed_at: "2026-08-07T15:35:00+09:00"
         evidence_path: .github/workflows/harness-check.yml
+        output_digest: "sha256:2ea98ab453a7be0ee603710518e6d01022934103f2ffb8a0c50565c2b6337d34"
         anchor_commit: cc3ed37f265e4df71ecb3e17c22f5b5b5d1b0e97
 ---
 
