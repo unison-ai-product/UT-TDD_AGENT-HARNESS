@@ -1,8 +1,12 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Command } from "commander";
 import { describe, expect, it } from "vitest";
+import { registerPrMergeCommands } from "../src/cli/pr-merge.ts";
 import {
+  createGhPrMergePorts,
   type GhPrMergePorts,
   type MergeGateFacts,
   runPrMerge,
@@ -59,6 +63,61 @@ function seedReview(root: string, verdict?: "PASS" | "FLAG", reviewHead = head):
   }
 }
 
+function writeRequest(
+  root: string,
+  input: {
+    file: string;
+    memoryId: string;
+    reviewRevision: string;
+    exactHead?: string;
+    authorFamily?: "claude" | "codex";
+  },
+): void {
+  const requests = join(root, ".ut-tdd", "review", "requests");
+  mkdirSync(requests, { recursive: true });
+  writeFileSync(
+    join(requests, input.file),
+    JSON.stringify({
+      memoryId: input.memoryId,
+      pr: 465,
+      exactHead: input.exactHead ?? head,
+      reviewRevision: input.reviewRevision,
+      authorFamily: input.authorFamily ?? "claude",
+      requestedAt: "2026-08-07T00:30:00.000Z",
+    }),
+    "utf8",
+  );
+}
+
+function writeVerdict(
+  root: string,
+  input: {
+    file: string;
+    memoryId: string;
+    reviewRevision: string;
+    verdict: "PASS" | "FLAG";
+    reviewerFamily?: "claude" | "codex";
+  },
+): void {
+  const receipts = join(root, ".ut-tdd", "review", "receipts");
+  mkdirSync(receipts, { recursive: true });
+  writeFileSync(
+    join(receipts, input.file),
+    JSON.stringify({
+      memoryId: input.memoryId,
+      pr: 465,
+      head,
+      reviewRevision: input.reviewRevision,
+      reviewerFamily: input.reviewerFamily ?? "codex",
+      kind: "verdict",
+      verdict: input.verdict,
+      blockingFindings: input.verdict === "FLAG" ? ["finding"] : [],
+      at: "2026-08-07T00:45:00.000Z",
+    }),
+    "utf8",
+  );
+}
+
 function ports(
   input: { getFacts?: () => MergeGateFacts; merge?: () => void } = {},
 ): GhPrMergePorts {
@@ -71,10 +130,10 @@ function ports(
 function receipt(root: string): Record<string, unknown> {
   const log = readdirSync(join(root, ".ut-tdd", "logs")).find((name) => name.endsWith(".jsonl"));
   if (!log) throw new Error("merge receipt not written");
-  return JSON.parse(readFileSync(join(root, ".ut-tdd", "logs", log), "utf8").trim()) as Record<
-    string,
-    unknown
-  >;
+  const lines = readFileSync(join(root, ".ut-tdd", "logs", log), "utf8")
+    .trim()
+    .split("\n");
+  return JSON.parse(lines.at(-1) ?? "") as Record<string, unknown>;
 }
 
 describe("D2-B PR merge gate", () => {
@@ -102,7 +161,22 @@ describe("D2-B PR merge gate", () => {
         decision: "merge",
         reason: "merge_ready",
         timestamp: now,
+        receiptKind: "merge_result",
+        authorizedEntry: {
+          memoryId: "review:465:head:1",
+          reviewRevision: "review-r1",
+          reviewerFamily: "codex",
+        },
       });
+
+      const receipts = readFileSync(
+        join(root, ".ut-tdd", "logs", "review-merge-gate.jsonl"),
+        "utf8",
+      )
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+      expect(receipts.map((item) => item.receiptKind)).toEqual(["merge_intent", "merge_result"]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -196,6 +270,195 @@ describe("D2-B PR merge gate", () => {
         verdict: "PASS",
         decision: "merge_failed",
       });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVMG-007: 同一 exact HEAD の pending request は SLA 経過に関係なく merge を拒否する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      seedReview(root, "PASS");
+      writeRequest(root, {
+        file: "request-pending.json",
+        memoryId: "review:465:head:2",
+        reviewRevision: "review-r2",
+      });
+      const atThirtyMinutes = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => "2026-08-07T01:00:00.000Z",
+        ports: ports(),
+      });
+      const atTwoHours = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => "2026-08-07T02:30:00.000Z",
+        ports: ports(),
+      });
+
+      expect(atThirtyMinutes.ok).toBe(false);
+      expect(atTwoHours.ok).toBe(false);
+      expect(atThirtyMinutes.reason).toContain("pending_request_for_head");
+      expect(atTwoHours.reason).toContain("pending_request_for_head");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVMG-008: CLI の非数値 PR は invalid_pr と exit 1 で拒否する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-cli-"));
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [join(process.cwd(), "src", "cli.ts"), "pr", "merge", "--pr", "abc", "--json"],
+        { cwd: root, encoding: "utf8", windowsHide: true },
+      );
+      expect(result.status).toBe(1);
+      expect(JSON.parse(result.stdout)).toMatchObject({ ok: false, reason: "invalid_pr" });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVMG-008b: CLI の deny は exit 1 を返す", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-cli-"));
+    const previousCwd = process.cwd();
+    const previousExitCode = process.exitCode;
+    try {
+      process.chdir(root);
+      const program = new Command();
+      registerPrMergeCommands(program, { ports: ports() });
+      process.exitCode = 0;
+      await program.parseAsync(["node", "ut-tdd", "pr", "merge", "--pr", "465", "--json"]);
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.chdir(previousCwd);
+      process.exitCode = previousExitCode;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVMG-009: 空または conclusion 欠落の statusCheckRollup は checksGreen=false とする", () => {
+    const outputs = [
+      JSON.stringify({ headRefOid: head, state: "OPEN", statusCheckRollup: [] }),
+      JSON.stringify({
+        headRefOid: head,
+        state: "OPEN",
+        statusCheckRollup: [{ status: "COMPLETED" }],
+      }),
+    ];
+    for (const output of outputs) {
+      const exec = ((..._args: unknown[]) => {
+        return output;
+      }) as never;
+      const result = createGhPrMergePorts({ execFileSync: exec }).getPullRequest(465);
+      expect(result.checksGreen).toBe(false);
+    }
+  });
+
+  it("U-RVMG-009b: adapter は gh pr view の第二観測を evaluatedHeadSha に束縛する", () => {
+    const snapshots = [
+      JSON.stringify({ headRefOid: head, state: "OPEN", statusCheckRollup: [] }),
+      JSON.stringify({ headRefOid: otherHead, state: "OPEN", statusCheckRollup: [] }),
+    ];
+    let observed = 0;
+    const exec = ((..._args: unknown[]) => snapshots[observed++]) as never;
+    const result = createGhPrMergePorts({ execFileSync: exec }).getPullRequest(465);
+    expect(observed).toBe(2);
+    expect(result.headSha).toBe(head);
+    expect(result.evaluatedHeadSha).toBe(otherHead);
+  });
+
+  it("U-RVMG-010: gh merge は判定済み exact HEAD を --match-head-commit へ渡す", () => {
+    const calls: unknown[][] = [];
+    const exec = ((...args: unknown[]) => {
+      calls.push(args);
+      return "";
+    }) as never;
+    createGhPrMergePorts({ execFileSync: exec }).mergePullRequest(465, head);
+    expect(calls).toEqual([
+      ["gh", ["pr", "merge", "465", "--merge", "--match-head-commit", head], { stdio: "inherit" }],
+    ]);
+  });
+
+  it("U-RVMG-011: intent receipt が書けない場合は merge せず fail-close する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    let merged = false;
+    try {
+      mkdirSync(join(root, ".ut-tdd"), { recursive: true });
+      writeFileSync(join(root, ".ut-tdd", "logs"), "not a directory", "utf8");
+      seedReview(root, "PASS");
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: ports({
+          merge: () => {
+            merged = true;
+          },
+        }),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain("intent_receipt_write_failed");
+      expect(merged).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVMG-011b: result receipt が書けない場合は警告付きで exit failure 相当になる", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      seedReview(root, "PASS");
+      const result = runPrMerge({
+        repoRoot: root,
+        pr: 465,
+        now: () => now,
+        ports: ports({
+          merge: () => {
+            const resultPath = join(root, ".ut-tdd", "logs", "review-merge-gate.jsonl");
+            rmSync(resultPath);
+            mkdirSync(resultPath);
+          },
+        }),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain("result_receipt_write_failed");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVMG-012: merge を認可した entry の verdict と識別子を result receipt に記録する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      writeRequest(root, {
+        file: "request-a.json",
+        memoryId: "review:465:head:a",
+        reviewRevision: "review-ra",
+      });
+      writeRequest(root, {
+        file: "request-b.json",
+        memoryId: "review:465:head:b",
+        reviewRevision: "review-rb",
+      });
+      writeVerdict(root, {
+        file: "a-flag.json",
+        memoryId: "review:465:head:b",
+        reviewRevision: "review-rb",
+        verdict: "FLAG",
+      });
+      writeVerdict(root, {
+        file: "z-pass.json",
+        memoryId: "review:465:head:a",
+        reviewRevision: "review-ra",
+        verdict: "PASS",
+      });
+      const result = runPrMerge({ repoRoot: root, pr: 465, now: () => now, ports: ports() });
+      expect(result.ok).toBe(false);
+      expect(result.verdict).toBe("PASS");
+      expect(receipt(root).authorizedEntry).toBeNull();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
