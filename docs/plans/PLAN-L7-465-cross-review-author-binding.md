@@ -428,6 +428,31 @@ family authority を AND 入力に据える / C: family 軸を D3e へ分離) �
 7. **`harness-check.yml` / `src/cli.ts` / merge gate には触れていない**。D2 の最終 AND 配線
    (required `harness-check` への投影、`harness-ci-aggregate` への rename) は本 PR の範囲外。
 
+### `gh attestation verify` 実出力による adapter 是正 (2026-08-07、merge 前)
+
+初版の adapter は `gh attestation verify --format=json` の出力形と引数形を**実出力を見ずに**書いて
+いた。merge 前に実測して 2 件の実バグを潰した (gh 2.87.3、
+`gh attestation verify gh_2.97.0_windows_arm64.zip --repo cli/cli --format json` を実走)。
+
+1. **`--digest` フラグは存在しない** (実測: `unknown flag: --digest`、exit 1、stdout 空)。subject は
+   positional の file path か `oci://` URI でしか渡せない。digest だけを渡す初版は、usage error が
+   exit 1 + stdout 空になるため **`missing` (attestation 不在) へ誤分類**していた — 「コマンドが
+   動かなかった」を「証跡が無い」と報告する fail-close の質の劣化である。
+   `GitHubAttestationQuery.artifactPath` を必須にし、`CustodyAdmissionInput.receiptPath` から
+   domain を素通しして port へ渡す (domain は path を読まない)。
+2. **subject digest の照合が抜けていた**。実測で `verificationResult.statement.subject` は
+   `{name, digest:{sha256}}` の**配列**であり、1 つの attestation が複数 artifact を被覆しうる
+   (cli/cli の 1 attestation が全リリース資産を被覆していた)。「attestation が verify できた」
+   ことと「それが**この** artifact に対する attestation である」ことは別であり、後者を見て
+   いなかった。`GitHubAttestationFacts.subjectDigests` を追加し、membership 判定は domain
+   (`attestationFactsMatch`) に置いた。adapter が嘘の facts を返しても別 artifact の attestation を
+   流用できない。
+
+certificate の field 名 (`sourceRepositoryURI` / `buildSignerURI` / `buildSignerDigest` /
+`runInvocationURI` / `issuer`) と URI 形は実出力と一致していた。実測値を `U-RVGHA-D3C-011` の
+fixture として写し、推測が再混入したら赤になるようにした。`--cert-oidc-issuer` も明示指定へ変更
+(freeze の issuer 束縛を gh 側でも強制する)。
+
 ### 誠実に明記する未達
 
 - **provider-family authority は未承認・未実装**。したがって実 GitHub 実行では機械 custody が

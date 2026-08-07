@@ -55,10 +55,39 @@ function pick(source: unknown, key: string): unknown {
   return (source as Record<string, unknown>)[key];
 }
 
-/** Sigstore certificate extension の URI 形を receipt の field 形へ正規化する。 */
-export function normalizeAttestationCertificate(
-  certificate: unknown,
-): GitHubAttestationFacts | null {
+/**
+ * statement の subject digest 集合を取り出す。
+ *
+ * 実測 (2026-08-07、`gh attestation verify gh_2.97.0_windows_arm64.zip --repo cli/cli
+ * --format json`): `verificationResult.statement.subject` は `{name, digest:{sha256}}` の配列で、
+ * 1 つの attestation が複数 artifact を被覆しうる。したがって「entry があること」ではなく
+ * 「対象 digest を被覆していること」を見る必要がある。
+ */
+function subjectDigests(verification: unknown): string[] {
+  const subject = pick(pick(verification, "statement"), "subject");
+  if (!Array.isArray(subject)) return [];
+  const digests: string[] = [];
+  for (const entry of subject as readonly unknown[]) {
+    const value = readText(pick(pick(entry, "digest"), "sha256"));
+    if (value !== null) digests.push(value);
+  }
+  return digests;
+}
+
+/**
+ * Sigstore certificate extension の URI 形を receipt の field 形へ正規化する。
+ *
+ * field 名と URI 形は実出力で確認済み (同上の実測):
+ * `sourceRepositoryURI=https://github.com/cli/cli`、
+ * `buildSignerURI=https://github.com/cli/cli/.github/workflows/deployment.yml@refs/heads/trunk`、
+ * `buildSignerDigest=<40 lowerhex>`、`issuer=https://token.actions.githubusercontent.com`、
+ * `runInvocationURI=https://github.com/cli/cli/actions/runs/<id>/attempts/<n>`。
+ */
+export function normalizeAttestationCertificate(input: {
+  certificate: unknown;
+  subjectDigests: readonly string[];
+}): GitHubAttestationFacts | null {
+  const { certificate } = input;
   const repository = stripGitHubPrefix(readText(pick(certificate, "sourceRepositoryURI")));
   const workflowRef = stripGitHubPrefix(readText(pick(certificate, "buildSignerURI")));
   const workflowSha = readText(pick(certificate, "buildSignerDigest"));
@@ -82,14 +111,14 @@ export function normalizeAttestationCertificate(
     runId: runMatch[1],
     runAttempt: Number(runMatch[2]),
     issuer,
+    subjectDigests: [...input.subjectDigests],
   };
 }
 
-function firstCertificate(parsed: unknown): unknown {
-  const head = Array.isArray(parsed) ? parsed[0] : parsed;
-  const verification = pick(head, "verificationResult") ?? head;
-  const signature = pick(verification, "signature");
-  return pick(signature, "certificate");
+/** 実出力の外殻 (`[{attestation, verificationResult}]`) を剥がして entry 列を返す。 */
+function verificationResults(parsed: unknown): unknown[] {
+  const entries = Array.isArray(parsed) ? (parsed as unknown[]) : [parsed];
+  return entries.map((entry) => pick(entry, "verificationResult") ?? entry);
 }
 
 /** `gh attestation verify` を呼ぶ port 実装。 */
@@ -102,10 +131,12 @@ export function createGhAttestationVerifier(
       const result = run([
         "attestation",
         "verify",
+        // subject は positional の file path でしか渡せない (`--digest` は存在しない)。
+        query.artifactPath,
         `--repo=${query.repository}`,
         `--signer-workflow=${query.expectedWorkflowRef.split("@")[0]}`,
+        `--cert-oidc-issuer=${query.expectedIssuer}`,
         "--format=json",
-        `--digest=sha256:${query.artifactDigest}`,
       ]);
       if (result.status === null) {
         return Promise.resolve({ ok: false, reason: "audit_unavailable" });
@@ -125,12 +156,24 @@ export function createGhAttestationVerifier(
         void kind;
         return Promise.resolve({ ok: false, reason: "audit_unavailable" });
       }
-      const facts = normalizeAttestationCertificate(firstCertificate(parsed));
-      if (facts === null) return Promise.resolve({ ok: false, reason: "audit_unavailable" });
-      if (facts.issuer !== query.expectedIssuer) {
-        return Promise.resolve({ ok: false, reason: "signer_mismatch" });
+      let normalized = 0;
+      for (const verification of verificationResults(parsed)) {
+        const digests = subjectDigests(verification);
+        const facts = normalizeAttestationCertificate({
+          certificate: pick(pick(verification, "signature"), "certificate"),
+          subjectDigests: digests,
+        });
+        if (facts === null) continue;
+        normalized += 1;
+        if (digests.includes(query.artifactDigest)) return Promise.resolve({ ok: true, facts });
       }
-      return Promise.resolve({ ok: true, facts });
+      // certificate が 1 件も読めないのは検証結果を解釈できていない状態 (成功へ丸めない)。
+      // 読めたが対象 digest を被覆する statement が無い場合は、この artifact の attestation は
+      // 存在しない。
+      return Promise.resolve({
+        ok: false,
+        reason: normalized === 0 ? "audit_unavailable" : "missing",
+      });
     },
   };
 }

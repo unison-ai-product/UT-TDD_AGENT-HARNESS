@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { createGhAttestationVerifier } from "../src/feedback/adapters/gh-attestation-verifier.ts";
 import type {
   GitHubAttestationQuery,
   GitHubAttestationVerification,
@@ -143,6 +144,7 @@ function acceptingVerifier(overrides: Partial<GitHubAttestationFactsShape> = {})
           runId: RUN_ID,
           runAttempt: 1,
           issuer: ISSUER,
+          subjectDigests: [query.artifactDigest],
           ...overrides,
         },
       });
@@ -158,6 +160,7 @@ interface GitHubAttestationFactsShape {
   runId: string;
   runAttempt: number;
   issuer: string;
+  subjectDigests: readonly string[];
 }
 
 function rejectingVerifier(
@@ -185,6 +188,7 @@ const APPROVED_IDENTITY: VerifiedProviderIdentity = {
 function admissionInput(overrides: Partial<CustodyAdmissionInput> = {}): CustodyAdmissionInput {
   return {
     receiptText: buildText(),
+    receiptPath: "review-custody-receipt.json",
     expected: expectation(),
     observations: observations(),
     authority: { attestationVerifier: acceptingVerifier().port, providerIdentity: null },
@@ -683,5 +687,153 @@ describe("D3 trusted custody receipt", () => {
     const outcome = decodeReviewCustodyReceipt(JSON.stringify(wellFormedButWrong));
     expect(outcome.ok === false && outcome.reason).toBe("identity_mismatch");
     expect(canonicalize({ n: 1.5 })).toEqual({ ok: false, reason: "canonical_unsupported_value" });
+  });
+});
+
+/**
+ * adapter の入出力は**実測した `gh attestation verify --format=json` 出力**で固定する。
+ *
+ * 実測 (2026-08-07、gh 2.87.3):
+ *   `gh attestation verify gh_2.97.0_windows_arm64.zip --repo cli/cli --format json`
+ * 出力は `[{attestation, verificationResult}]` で、`verificationResult.signature.certificate` に
+ * 下記 fixture の field が、`verificationResult.statement.subject` に `{name, digest:{sha256}}` の
+ * 配列が入る。この形を推測で書くと live で `audit_unavailable` に落ちるため、実出力を写す。
+ */
+describe("D3 attestation verifier adapter", () => {
+  const ARTIFACT_DIGEST = "e".repeat(64);
+  const OTHER_DIGEST = "f".repeat(64);
+  const CLI_REPOSITORY = "cli/cli";
+  const CLI_WORKFLOW_REF = "cli/cli/.github/workflows/deployment.yml@refs/heads/trunk";
+  const CLI_WORKFLOW_SHA = "55dbb4dc6b7edb10b48e3d7fc5bccd32318d1b55";
+
+  function measuredOutput(digests: readonly string[]): string {
+    return JSON.stringify([
+      {
+        attestation: { bundleUrl: "https://api.github.com/…" },
+        verificationResult: {
+          mediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+          signature: {
+            certificate: {
+              certificateIssuer: "CN=sigstore-intermediate,O=sigstore.dev",
+              subjectAlternativeName: `https://github.com/${CLI_WORKFLOW_REF}`,
+              issuer: ISSUER,
+              githubWorkflowSHA: CLI_WORKFLOW_SHA,
+              buildSignerURI: `https://github.com/${CLI_WORKFLOW_REF}`,
+              buildSignerDigest: CLI_WORKFLOW_SHA,
+              runnerEnvironment: "github-hosted",
+              sourceRepositoryURI: `https://github.com/${CLI_REPOSITORY}`,
+              runInvocationURI: `https://github.com/${CLI_REPOSITORY}/actions/runs/30597407850/attempts/1`,
+            },
+          },
+          statement: {
+            _type: "https://in-toto.io/Statement/v1",
+            predicateType: "https://slsa.dev/provenance/v1",
+            subject: digests.map((digest, index) => ({
+              name: `artifact-${index}`,
+              digest: { sha256: digest },
+            })),
+          },
+        },
+      },
+    ]);
+  }
+
+  function query(): GitHubAttestationQuery {
+    return {
+      artifactDigest: ARTIFACT_DIGEST,
+      artifactPath: "review-custody-receipt.json",
+      repository: CLI_REPOSITORY,
+      expectedWorkflowRef: CLI_WORKFLOW_REF,
+      expectedIssuer: ISSUER,
+    };
+  }
+
+  it("U-RVGHA-D3C-011: 実測形の出力を receipt field 形へ正規化し、subject を positional path で問い合わせる (--digest は存在しない)", async () => {
+    const calls: (readonly string[])[] = [];
+    const verifier = createGhAttestationVerifier({
+      runCommand: (args) => {
+        calls.push(args);
+        return { status: 0, stdout: measuredOutput([OTHER_DIGEST, ARTIFACT_DIGEST]) };
+      },
+    });
+    const result = await verifier.verify(query());
+    expect(result).toEqual({
+      ok: true,
+      facts: {
+        repository: CLI_REPOSITORY,
+        workflowRef: CLI_WORKFLOW_REF,
+        workflowSha: CLI_WORKFLOW_SHA,
+        runId: "30597407850",
+        runAttempt: 1,
+        issuer: ISSUER,
+        subjectDigests: [OTHER_DIGEST, ARTIFACT_DIGEST],
+      },
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual([
+      "attestation",
+      "verify",
+      "review-custody-receipt.json",
+      `--repo=${CLI_REPOSITORY}`,
+      "--signer-workflow=cli/cli/.github/workflows/deployment.yml",
+      `--cert-oidc-issuer=${ISSUER}`,
+      "--format=json",
+    ]);
+    expect(calls[0].some((arg) => arg.startsWith("--digest="))).toBe(false);
+  });
+
+  it("U-RVGHA-D3C-011: 対象 digest を被覆しない statement を成功へ丸めず missing にする", async () => {
+    const verifier = createGhAttestationVerifier({
+      runCommand: () => ({ status: 0, stdout: measuredOutput([OTHER_DIGEST]) }),
+    });
+    expect(await verifier.verify(query())).toEqual({ ok: false, reason: "missing" });
+  });
+
+  it("U-RVGHA-D3C-011: exit / 出力の各異常を typed reason へ落とし、判定不能を成功にしない", async () => {
+    const cases: Array<{ result: { status: number | null; stdout: string }; reason: string }> = [
+      // 実測: 未知フラグや不在は exit 1 + stdout 空。usage error を「不在」以上に解釈しない。
+      { result: { status: 1, stdout: "" }, reason: "missing" },
+      { result: { status: 1, stdout: "verification failed" }, reason: "signature_unverified" },
+      // spawn 不能 (gh 不在等) は「検証できなかった」であって「検証に失敗した」ではない。
+      { result: { status: null, stdout: "" }, reason: "audit_unavailable" },
+      { result: { status: 0, stdout: "{not json" }, reason: "audit_unavailable" },
+      { result: { status: 0, stdout: "[]" }, reason: "audit_unavailable" },
+      {
+        result: { status: 0, stdout: JSON.stringify([{ verificationResult: {} }]) },
+        reason: "audit_unavailable",
+      },
+    ];
+    for (const entry of cases) {
+      const verifier = createGhAttestationVerifier({ runCommand: () => entry.result });
+      expect(await verifier.verify(query())).toEqual({ ok: false, reason: entry.reason });
+    }
+  });
+
+  it("U-RVGHA-D3C-011: subject を被覆しない facts を返す verifier を domain が signer_mismatch で弾く", async () => {
+    const lyingVerifier: GitHubAttestationVerifierPort = {
+      verify: () =>
+        Promise.resolve({
+          ok: true,
+          facts: {
+            repository: REPOSITORY,
+            workflowRef: WORKFLOW_REF,
+            workflowSha: WORKFLOW_SHA,
+            runId: RUN_ID,
+            runAttempt: 1,
+            issuer: ISSUER,
+            subjectDigests: [OTHER_DIGEST],
+          },
+        }),
+    };
+    const decision = await admitReviewCustody(
+      admissionInput({
+        authority: { attestationVerifier: lyingVerifier, providerIdentity: APPROVED_IDENTITY },
+      }),
+    );
+    expect(decision).toEqual({
+      state: "custody_rejected",
+      reasons: ["signer_mismatch"],
+      details: ["attestation_facts_disagree_with_receipt"],
+    });
   });
 });

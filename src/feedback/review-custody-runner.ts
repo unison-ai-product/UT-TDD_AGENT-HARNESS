@@ -212,6 +212,7 @@ export async function admitCustodyReceipt(env: RunnerEnvironment): Promise<Runne
   const facts = observeStable({ env, repository, prNumber });
   const decision = await admitReviewCustody({
     receiptText,
+    receiptPath,
     expected: {
       repository: facts.repository,
       prNumber: facts.prNumber,

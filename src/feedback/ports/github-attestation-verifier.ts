@@ -13,6 +13,14 @@
 export interface GitHubAttestationQuery {
   /** 完成 receipt artifact bytes から一方向計算した 64 lowerhex。 */
   readonly artifactDigest: string;
+  /**
+   * 検証対象 artifact の実体 path。
+   *
+   * `gh attestation verify` は subject を **file path か `oci://` URI でしか受け取らない**
+   * (2026-08-07 実測: `--digest` は `unknown flag` で exit 1、stdout 空)。digest だけを
+   * 渡す設計にすると usage error が「attestation 不在」へ誤分類されるため、path を必須にする。
+   */
+  readonly artifactPath: string;
   readonly repository: string;
   readonly expectedWorkflowRef: string;
   readonly expectedIssuer: string;
@@ -25,6 +33,8 @@ export interface GitHubAttestationFacts {
   readonly runId: string;
   readonly runAttempt: number;
   readonly issuer: string;
+  /** 検証済み statement が被覆する subject digest (64 lowerhex)。domain が membership を検査する。 */
+  readonly subjectDigests: readonly string[];
 }
 
 export type GitHubAttestationVerification =

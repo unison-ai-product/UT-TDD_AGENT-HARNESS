@@ -2151,6 +2151,12 @@ CI / merge 由来 field を 1 つも持たないことを検査)。D2 の CI agg
 (backtick 無し表記 — candidate 台帳への再掲ではなく参照であり、U-VMSRC-009 の一意性検査の
 対象外とする)。
 
+`U-RVGHA-D3C-011` は adapter 面へ拡張した。fixture は **実測した `gh attestation verify
+--format=json` 出力** (gh 2.87.3、cli/cli の attested release 資産で実走) を写しており、
+推測形へ戻ると赤になる。合わせて (a) subject が positional path で渡ること (`--digest` は
+存在しない)、(b) 検証済み statement が対象 digest を被覆しない場合を成功へ丸めないこと、
+(c) usage error / spawn 不能 / parse 不能を `missing` と `audit_unavailable` に区別することを固定した。
+
 `U-RVGHA-D3C-017` の `VerifiedProviderIdentity` は **承認済み authority を模した port double** で
 あり、実在の authority ではない。PO 承認済みの provider-family authority が実装されるまで、
 実 GitHub 実行では機械 custody が全 green でも終端は `unverified_family` になる (freeze どおり)。

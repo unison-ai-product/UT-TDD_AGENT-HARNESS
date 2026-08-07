@@ -297,6 +297,12 @@ export interface CustodyAuthorityInput {
 export interface CustodyAdmissionInput {
   /** 完成 receipt artifact の exact bytes (文字列)。artifact digest はここから導出する。 */
   readonly receiptText: string;
+  /**
+   * `receiptText` の出所となった artifact path。verifier port へそのまま渡す
+   * (domain は読まない)。GitHub の verifier は subject を path でしか受け取らないため、
+   * digest だけでは検証を発火できない。
+   */
+  readonly receiptPath: string;
   readonly expected: CustodySubjectExpectation;
   readonly observations: CustodyObservations;
   readonly authority: CustodyAuthorityInput;
@@ -423,6 +429,7 @@ function runFactsDetail(input: {
 function attestationFactsMatch(input: {
   facts: GitHubAttestationFacts;
   receipt: ReviewCustodyReceipt;
+  artifactDigest: string;
 }): boolean {
   const { facts, receipt } = input;
   return (
@@ -431,7 +438,11 @@ function attestationFactsMatch(input: {
     facts.workflowSha === receipt.workflowSha &&
     facts.runId === receipt.runId &&
     facts.runAttempt === receipt.runAttempt &&
-    facts.issuer === receipt.issuer
+    facts.issuer === receipt.issuer &&
+    // 検証済み statement が対象 artifact を被覆していること。adapter 側でも選別しているが、
+    // 「どの artifact に対する attestation か」の判定は domain が持つ (port を差し替えられても
+    // 別 artifact の attestation が流用できない)。
+    facts.subjectDigests.includes(input.artifactDigest)
   );
 }
 
@@ -507,6 +518,7 @@ export async function admitReviewCustody(input: CustodyAdmissionInput): Promise<
     verifier: input.authority.attestationVerifier,
     query: {
       artifactDigest,
+      artifactPath: input.receiptPath,
       repository: receipt.repository,
       expectedWorkflowRef: receipt.workflowRef,
       expectedIssuer: receipt.issuer,
@@ -514,7 +526,7 @@ export async function admitReviewCustody(input: CustodyAdmissionInput): Promise<
     maxAttempts: input.authority.maxVerificationAttempts ?? DEFAULT_CUSTODY_VERIFICATION_ATTEMPTS,
   });
   if (!verification.ok) return reject(verification.reason, `attestation_${verification.reason}`);
-  if (!attestationFactsMatch({ facts: verification.facts, receipt })) {
+  if (!attestationFactsMatch({ facts: verification.facts, receipt, artifactDigest })) {
     return reject("signer_mismatch", "attestation_facts_disagree_with_receipt");
   }
 
