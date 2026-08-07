@@ -568,7 +568,19 @@ D3 の live 結合試験はこれで閉じる。`unverified_family` を先へ進
 
 ### D3c freeze 完了条件
 
-- [ ] 上記の信頼根、receipt schema、TOCTOU、安全workflow、fail-close分類がL7 RED oracleと対になる。
-- [ ] claim-blindで各契約にcitation付き反駁が成立し、spec-blindで3 attack trial以上を記録する。
-- [ ] non-author Claude familyのOpus reviewで未解決FLAGがない。
-- [ ] 実装・workflow・CLI・外部権限変更が本doc-only sliceに混入していない。
+- [x] 上記の信頼根、receipt schema、TOCTOU、安全workflow、fail-close分類がL7 RED oracleと対になる。
+  根拠: `U-RVGHA-D3C-001`〜`-018` の 18 件が test-design で宣言され、同じ 18 件が実テストから
+  引用されている (`tests/review-custody.test.ts` に 17 件、`tests/github-ci-policy.test.ts` に
+  `U-RVGHA-D3C-010`)。宣言集合と引用集合の一致は `U-OIDGATE-005` が機械強制する。
+- [x] claim-blindで各契約にcitation付き反駁が成立し、spec-blindで3 attack trial以上を記録する。
+  根拠: PR #285 の Codex closing cross-review が citation 付き blocking FLAG を成立させ
+  (issuecomment-5213358715、`gh attestation verify` の引数形/出力形が未検証の推測である点)、
+  是正後 PASS (issuecomment-5213879263)。`review_evidence[0].attack_trials: 3`。
+- [x] non-author Claude familyのOpus reviewで未解決FLAGがない。
+  根拠: Codex authored の PR #287 に対する Claude (`claude-opus-5`) closing review が
+  blocking FLAG (BL-1: admit 側が `UT_TDD_CUSTODY_MERGE_METHOD` を消費していない) を出し、
+  是正後 exact HEAD `ef26c18b` で PASS (issuecomment-5214789116)。未解決 FLAG は残っていない。
+- [x] 実装・workflow・CLI・外部権限変更が本doc-only sliceに混入していない。
+  根拠: D3c freeze slice は PLAN と L7 oracle のみを変更した。実装・workflow は後続の D3d
+  (PR #285) で入れ、CLI 配線と外部権限変更は D2 以降として未着手のまま
+  (`src/cli.ts` / `.github/workflows/harness-check.yml` は D3 レーンで未変更)。
