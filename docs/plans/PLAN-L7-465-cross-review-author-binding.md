@@ -513,6 +513,41 @@ certificate の field 名 (`sourceRepositoryURI` / `buildSignerURI` / `buildSign
 fixture として写し、推測が再混入したら赤になるようにした。`--cert-oidc-issuer` も明示指定へ変更
 (freeze の issuer 束縛を gh 側でも強制する)。
 
+### 是正後 live dispatch の実測 (2026-08-07、main `c211ff92`)
+
+receipt kind バグの是正 (`#287`、merge commit `c211ff92f7743766ff116fa49db0e40607d9e6a0`) を main へ
+着地させたうえで、default branch の `review-attestation.yml` を `workflow_dispatch` で 2 本走らせ、
+post-merge closure 経路が終端まで通ることを実測した。両 run とも conclusion は success である。
+
+| run | dispatch 元 | artifactDigest | 終端 |
+| --- | --- | --- | --- |
+| 31163323673 | Codex family | `fd08ae362f1d358d41b38ecaad60ab027e5ee0232ec63155977e9c3121fa01d9` | `unverified_family` |
+| 31163381133 | Claude family | `6bd96f9441af19277874e6b857ef2a372df5a63ed220d3d501077bb402205c58` | `unverified_family` |
+
+admit step の出力は両 run で同一である。
+
+```
+review-custody admit - OK (mechanical custody verified; terminal state unverified_family,
+                           provider family authority is not approved yet)
+```
+
+実測から確定したこと。
+
+1. **issue → attest → admit の 3 段が実 GitHub 上で通る。** `actions/attest-build-provenance@v2` が
+   発行した attestation を `gh attestation verify` 経由の adapter が読み、subject digest の membership、
+   signer workflow、OIDC issuer の照合まで到達している。前段の run `31157752744` が出した
+   `identity_mismatch (pre_merge_requires_open_pull_request)` は再現しない。
+2. **終端は `unverified_family` であり `custody_admitted` は出ない。** これは freeze が意図した
+   fail-close であって欠陥ではない。逆に承認前の実環境で `custody_admitted` が観測されたら、
+   それ自体が負の oracle の発火である。
+3. **receipt が request 内容に束縛されている。** 2 run は memory id / judgment digest /
+   provider evidence ref が異なり、artifactDigest も異なる。同一入力でなければ同じ receipt に
+   ならないため、cross-PR replay や入力差し替えは digest 不一致として現れる。
+
+D3 の live 結合試験はこれで閉じる。`unverified_family` を先へ進めるには provider family authority の
+信頼根が要り、それは authentication / authorization を変える高影響境界として D2 着工時の PO 承認事案に
+残る。
+
 ### 誠実に明記する未達
 
 - `mergeMethod` は GitHub API の merge facts に含まれないため、Artifact Attestation が保証するのは
