@@ -58,29 +58,68 @@ const LOCAL_ABSOLUTE_PATH_PATTERN =
   /(?:[A-Za-z]:\\Users\\|\/home\/|\/Users\/|~\/ai-dev-kit-vscode)/;
 const SHELL_RUNTIME_PATTERN =
   /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`](?:bash|sh|python|python3|powershell|pwsh|cmd(?:\.exe)?)(?:["'`]|\s)/;
-// PLAN-L7-462 step 3 (AC-3): bun 実発火 spawn 引数 / bun: import / Bun グローバル参照の
+// PLAN-L7-462 step 3 (AC-3): bun 実発火 spawn 引数 / bun: import / Bun-global 参照の
 // 新規追加を fail-close する。既存残存は Issue #134 の migration debt として下記
-// 例外リストに帰属し、Pack 解禁時の後続 PLAN で撤去する (恒久 bypass ではない期限付き例外)。
-const BUN_SPAWN_PATTERN =
-  /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`]bun(?:\.cmd|\.exe)?["'`]/;
+// 例外リスト (path 完全一致・サイト単位注記付き) に帰属し、Pack 解禁時の後続 PLAN で
+// 撤去する (恒久 bypass ではない期限付き例外)。検出は行単位で全件数える (exit criteria
+// のカウンタ用途)。
+// - spawn クラス: リテラル第 1 引数に加え、実在する間接形 (findBun() launcher /
+//   `?? "bun"` fallback / cmd.exe 経由の `"/c", "bun"` / `["bun", [...]]` runner tuple /
+//   shell wrapper の `exec bun`) を検出する。任意の変数間接は静的には閉じないため、
+//   検出器は「repo に実在するイディオムの再流入」を止める網であり、完全な意味解析
+//   ではない (限界の明示)。
+const BUN_SPAWN_PATTERN = new RegExp(
+  [
+    /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`]bun(?:\.cmd|\.exe)?["'`]/
+      .source,
+    /\bfindBun\s*\(/.source,
+    /\?\?\s*["'`]bun(?:\.cmd|\.exe)?["'`]/.source,
+    /["'`]\/c["'`]\s*,\s*["'`]bun(?:\.cmd|\.exe)?["'`]/.source,
+    /\[\s*["'`]bun(?:\.cmd|\.exe)?["'`]\s*,\s*\[/.source,
+    /\bexec\s+bun\b/.source,
+  ].join("|"),
+);
+// テンプレート補間 (`bun:${...}`) と素の "bun" モジュール import は検出対象外 (限界の明示。
+// 前者は動的識別子、後者は現 repo に 0 件で AC-3 の対象クラス外)。
 const BUN_IMPORT_PATTERN = /["'`]bun:[a-z]/;
-const BUN_GLOBAL_PATTERN = /(?<![\w.$])Bun\s*\.\s*\w/;
+// quote を lookbehind に含め、検出語彙 ("Bun.write" 等の文字列 key) を構造的に除外する。
+// `globalThis.Bun.x` / `Bun?.x` / `Bun["x"]` を含めるため `.` は除外しない。
+const BUN_GLOBAL_PATTERN = /(?<![\w$"'`])Bun\s*\??\s*[.[]/;
 const BUN_SPAWN_DEBT_ALLOWLIST = new Set([
-  // Pack/consumer toolchain 検出の posix probe (fixture 例外、PLAN-L7-462 step 2 freeze)。
+  // step 2 freeze の fixture 例外: Pack/consumer toolchain 検出の posix probe。
   "src/cli/distribution.ts",
+  // step 2 freeze の fixture 例外: consumer wrapper template (findBun launcher)。
+  "src/setup/templates.ts",
+  // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
+  "scripts/run-vitest-snapshot.ts",
+  // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
+  "tests/distribution-acceptance.test.ts",
+  // step 2 freeze の fixture 例外: consumer wrapper の bun fallback 実発火 (U-SETUP-009b)。
+  "tests/setup.test.ts",
+  // 検出語彙 (lint fixture 文字列 / consumer template fixture) であり実発火ではない。
+  "tests/dependency-drift.test.ts",
+  "tests/runtime-portability.test.ts",
+  "tests/doctor-setup-smoke.test.ts",
+  "tests/doctor.test.ts",
+  "tests/hook-native-launcher.test.ts",
+  // 本 lint 自身 (pattern 定義とその注記 = 検出語彙)。
+  "src/lint/runtime-portability.ts",
 ]);
 const BUN_IMPORT_DEBT_ALLOWLIST = new Set([
   // bun:sqlite / node:sqlite 二重ドライバ (PLAN-L7-45)。node:sqlite 主は
   // sqliteFallbackViolations が別途強制する。
   "src/state-db/index.ts",
+  // 検出語彙 (lint fixture 文字列 / 本 lint 自身の pattern 定義)。
+  "tests/runtime-portability.test.ts",
+  "src/lint/runtime-portability.ts",
 ]);
 const BUN_GLOBAL_DEBT_ALLOWLIST = new Set([
-  // 検出語彙 ("Bun.write" という文字列/AST matcher、本 lint 自身の pattern/注記) であり
-  // runtime 依存ではない。
-  "src/doctor/test-repository-isolation.ts",
-  "src/lint/runtime-portability.ts",
-  // optional chaining で guard された Bun.gc / Bun.which (node では no-op)。
+  // optional chaining で guard された Bun-global (gc / which) 参照。node では no-op。
   "scripts/run-vitest-snapshot.ts",
+  // 検出語彙 (lint fixture 文字列 / isolation 契約テストの Bun.write fixture / 本 lint 自身)。
+  "tests/runtime-portability.test.ts",
+  "tests/doctor-test-repository-isolation.test.ts",
+  "src/lint/runtime-portability.ts",
 ]);
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
@@ -380,38 +419,45 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
     });
   }
   if (
-    (path.startsWith("src/") || path.startsWith(".claude/hooks/") || path.startsWith("scripts/")) &&
-    path.endsWith(".ts")
+    path.startsWith("src/") ||
+    path.startsWith(".claude/hooks/") ||
+    path.startsWith("scripts/") ||
+    path.startsWith("tests/")
   ) {
-    if (BUN_SPAWN_PATTERN.test(doc.text) && !BUN_SPAWN_DEBT_ALLOWLIST.has(path)) {
-      violations.push({
-        path,
-        line: lineOf(doc.text, BUN_SPAWN_PATTERN),
-        rule: "bun-runtime-spawn",
-        message:
-          "New bun child-process launches are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
-      });
-    }
-    if (BUN_IMPORT_PATTERN.test(doc.text) && !BUN_IMPORT_DEBT_ALLOWLIST.has(path)) {
-      violations.push({
-        path,
-        line: lineOf(doc.text, BUN_IMPORT_PATTERN),
-        rule: "bun-module-import",
-        message:
-          "New bun: module imports are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
-      });
-    }
-    if (BUN_GLOBAL_PATTERN.test(doc.text) && !BUN_GLOBAL_DEBT_ALLOWLIST.has(path)) {
-      violations.push({
-        path,
-        line: lineOf(doc.text, BUN_GLOBAL_PATTERN),
-        rule: "bun-global-reference",
-        message:
-          "New Bun global API references are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
-      });
+    // 行単位で全件数える (exit criteria のカウンタ用途、B-4)。scope は shell wrapper
+    // (scripts/ut-tdd 等の非 .ts) と tests/ を含む — tests 側 launcher の bun 再流入も
+    // fail-close する (freeze の fixture 例外は上の allowlist に path 完全一致で帰属)。
+    const bunRules: readonly [RegExp, Set<string>, string, string][] = [
+      [
+        BUN_SPAWN_PATTERN,
+        BUN_SPAWN_DEBT_ALLOWLIST,
+        "bun-runtime-spawn",
+        "New bun child-process launches are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      ],
+      [
+        BUN_IMPORT_PATTERN,
+        BUN_IMPORT_DEBT_ALLOWLIST,
+        "bun-module-import",
+        "New bun: module imports are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      ],
+      [
+        BUN_GLOBAL_PATTERN,
+        BUN_GLOBAL_DEBT_ALLOWLIST,
+        "bun-global-reference",
+        "New Bun global API references are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      ],
+    ];
+    const lines = doc.text.split(/\r?\n/);
+    for (const [pattern, allowlist, rule, message] of bunRules) {
+      if (allowlist.has(path)) continue;
+      for (let i = 0; i < lines.length; i += 1) {
+        if (pattern.test(lines[i])) {
+          violations.push({ path, line: i + 1, rule, message });
+        }
+      }
     }
   }
-  if (LOCAL_ABSOLUTE_PATH_PATTERN.test(doc.text)) {
+  if (!path.startsWith("tests/") && LOCAL_ABSOLUTE_PATH_PATTERN.test(doc.text)) {
     violations.push({
       path,
       line: lineOf(doc.text, LOCAL_ABSOLUTE_PATH_PATTERN),
@@ -506,7 +552,8 @@ export function loadRuntimePortabilityDocs(
         path === "bun.lock" ||
         path.startsWith("src/") ||
         path.startsWith(".claude/hooks/") ||
-        path.startsWith("scripts/"),
+        path.startsWith("scripts/") ||
+        path.startsWith("tests/"),
     )
     .filter((path) => !path.startsWith("src/web/") || path.endsWith(".gitkeep"))
     .filter((path) => existsSync(join(repoRoot, path)))

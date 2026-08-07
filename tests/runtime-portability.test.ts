@@ -143,6 +143,19 @@ describe("runtime-portability lint", () => {
       { path: "src/new-module.ts", text: 'spawnSync("bun", ["src/cli.ts"]);' },
       { path: "scripts/new-tool.ts", text: 'import { Database } from "bun:sqlite";' },
       { path: ".claude/hooks/new-hook.ts", text: "await Bun.write(target, data);" },
+      // 間接形の再流入 (blind review A-1): findBun launcher / `?? "bun"` fallback /
+      // cmd.exe 経由 / runner tuple / shell wrapper。
+      { path: "src/new-launcher.ts", text: "const child = spawn(findBun(), args);" },
+      { path: "src/new-fallback.ts", text: 'const bin = env.BIN ?? "bun"; spawnSync(bin, a);' },
+      { path: "src/new-cmd.ts", text: 'spawnSync(cmdExe, ["/d", "/c", "bun", "--version"]);' },
+      { path: "src/new-runner.ts", text: 'const r = ["bun", ["run", "test"]] as const;' },
+      { path: "scripts/new-wrapper", text: 'exec bun run "$ROOT/src/cli.ts" "$@"' },
+      // globalThis 形 / optional chaining / bracket access (blind review A-4)。
+      { path: "src/new-global.ts", text: "(globalThis as any).Bun.write(p, d);" },
+      { path: "src/new-optional.ts", text: "Bun?.gc?.(true);" },
+      { path: "src/new-bracket.ts", text: 'Bun["write"](p, d);' },
+      // tests/ scope の再流入 (blind review A-3)。
+      { path: "tests/new-bun.test.ts", text: 'spawnSync("bun", [cliPath, "--help"]);' },
     ]);
     expect(result.ok).toBe(false);
     expect(result.violations.map((v) => [v.path, v.rule])).toEqual(
@@ -150,6 +163,15 @@ describe("runtime-portability lint", () => {
         ["src/new-module.ts", "bun-runtime-spawn"],
         ["scripts/new-tool.ts", "bun-module-import"],
         [".claude/hooks/new-hook.ts", "bun-global-reference"],
+        ["src/new-launcher.ts", "bun-runtime-spawn"],
+        ["src/new-fallback.ts", "bun-runtime-spawn"],
+        ["src/new-cmd.ts", "bun-runtime-spawn"],
+        ["src/new-runner.ts", "bun-runtime-spawn"],
+        ["scripts/new-wrapper", "bun-runtime-spawn"],
+        ["src/new-global.ts", "bun-global-reference"],
+        ["src/new-optional.ts", "bun-global-reference"],
+        ["src/new-bracket.ts", "bun-global-reference"],
+        ["tests/new-bun.test.ts", "bun-runtime-spawn"],
       ]),
     );
   });
