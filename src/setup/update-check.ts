@@ -23,6 +23,47 @@ export const UPDATE_CHECK_REMOTE_ENV = "UT_TDD_UPDATE_CHECK_REMOTE";
 export const UPDATE_CHECK_CACHE_DIR_ENV = "UT_TDD_UPDATE_CHECK_CACHE_DIR";
 const LS_REMOTE_TIMEOUT_MS = 5000;
 
+/**
+ * PLAN-L7-462 step 2: node の spawn は Windows で `.cmd`/`.bat` を PATH 解決しない
+ * (bun は解決していたため不可視だった)。adapter の provider `.cmd` shim 方式
+ * (src/runtime/adapter.ts buildProviderInvocation) を踏襲し、PATH 上の git が
+ * command script のときだけ ComSpec 経由 (shell:false) で包む。
+ */
+export function gitLsRemoteInvocation(
+  remote: string,
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): { command: string; args: string[]; windowsVerbatimArguments?: boolean } {
+  const args = ["ls-remote", "--tags", remote];
+  if (platform !== "win32") return { command: "git", args };
+  const pathValue = env.PATH ?? env.Path ?? "";
+  const exts = [".exe", ".com", ".cmd", ".bat"];
+  let found: string | null = null;
+  for (const dir of pathValue.split(";")) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const candidate = join(dir, `git${ext}`);
+      if (existsSync(candidate)) {
+        found = candidate;
+        break;
+      }
+    }
+    if (found) break;
+  }
+  if (found && /\.(cmd|bat)$/i.test(found)) {
+    // 空白・cmd メタ文字を含む token のみ引用する (全引用すると shim 側の %1 比較を壊す)。
+    const quote = (token: string) =>
+      /[\s"^&|<>()%!]/.test(token) ? `"${token.replace(/"/g, '""')}"` : token;
+    const inner = [quote(found), ...args.map(quote)].join(" ");
+    return {
+      command: env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe"),
+      args: ["/d", "/s", "/c", `"${inner}"`],
+      windowsVerbatimArguments: true,
+    };
+  }
+  return { command: found ?? "git", args };
+}
+
 export interface UpdateCheckDeps {
   /** Harness checkout root, not consumer cwd. */
   harnessRoot: string;
@@ -289,11 +330,14 @@ export function nodeUpdateCheckDeps(
     remoteOverride: () => process.env[UPDATE_CHECK_REMOTE_ENV]?.trim() || null,
     cacheRoot: () => process.env[UPDATE_CHECK_CACHE_DIR_ENV]?.trim() || null,
     listRemoteTags: (remote) => {
-      const res = spawnSync("git", ["ls-remote", "--tags", remote], {
+      const invocation = gitLsRemoteInvocation(remote);
+      const res = spawnSync(invocation.command, invocation.args, {
         cwd: harnessRoot,
         encoding: "utf8",
         timeout: LS_REMOTE_TIMEOUT_MS,
         stdio: ["ignore", "pipe", "ignore"],
+        windowsVerbatimArguments: invocation.windowsVerbatimArguments,
+        windowsHide: true,
       });
       if (res.error || res.status !== 0 || typeof res.stdout !== "string") return null;
       const tags: string[] = [];

@@ -260,7 +260,7 @@ describe("clean distribution local acceptance smoke", () => {
       expect(packPackageJson.scripts["test:pack"]).toContain(
         "tests/distribution-acceptance.test.ts",
       );
-      expect(packPackageJson.scripts["test:source"]).toBe("bun run test:vitest-snapshot");
+      expect(packPackageJson.scripts["test:source"]).toBe("npm run test:vitest-snapshot");
 
       const status = runBun(cleanRoot, ["src/cli.ts", "status", "--json"], env);
       expect(status.status, status.stderr || status.stdout).toBe(0);

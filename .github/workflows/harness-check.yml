@@ -10,7 +10,7 @@
 # (stacked PR (base≠main) を除外しない — issue #57 / PLAN-L6-82)。solo main 直開発の即 dogfood 用に `push: [main]` を維持する。
 #
 # 現状実装される subjob = branch-type guard + typecheck + db rebuild + 全回帰 (vitest) + biome lint + audit quality + doctor。
-# この source workflow の `bun run test` / raw vitest 全量回帰は source-only governance docs を前提にする。
+# この source workflow の `npm run test` / raw vitest 全量回帰は source-only governance docs を前提にする。
 # clean Pack workflow は `docs/templates/github/common/pack-harness-check.yml` の Pack smoke test と setup-smoke doctor を使う。
 #
 # PLAN-L7-455 (troubleshoot, issue #109) Phase 1: `classify` step (git diff ベース、
@@ -54,28 +54,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup bun
+      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+          cache: npm
+
+      # PLAN-L7-462 step 2 (案A): bun は harness 実行系ではなく Pack/consumer acceptance
+      # テスト (tests/distribution-acceptance.test.ts / tests/setup.test.ts U-SETUP-009b 系)
+      # の fixture 依存としてのみ残置する。撤去条件は PLAN-L7-462 の exit criteria
+      # (Issue #134 migration debt) を参照。
+      - name: setup bun (Pack/consumer acceptance fixture のみ)
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3"
 
-      - name: cache bun install cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
       - name: install deps (frozen)
-        run: bun install --frozen-lockfile
+        run: npm ci --no-audit --no-fund
 
       # PLAN-L7-455: 変更ファイル分類 (doc-only lane 判定、fail-close)。判定不能・新種 path は
       # 必ず "full" になる。ロジック本体は src/github/change-lane.ts (unit test 済み)。
       - name: classify changed files (doc lane vs full, fail-close)
         id: classify
         run: |
-          bun src/cli.ts github classify-changes \
+          node src/cli.ts github classify-changes \
             --event-name "${{ github.event_name }}" \
             --head-sha "${{ github.sha }}" \
             --base-sha "${{ github.event.pull_request.base.sha }}" \
@@ -91,7 +93,7 @@ jobs:
         run: |
           printf '%s\n' "$PR_BODY" > .ut-tdd-pr-body.txt
           git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
-          bun src/cli.ts github guard \
+          node src/cli.ts github guard \
             --head-ref "$HEAD_REF" \
             --base-ref "$BASE_REF" \
             --pr-title "$PR_TITLE" \
@@ -100,11 +102,11 @@ jobs:
 
       - name: typecheck (tsc --noEmit)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: bun run typecheck
+        run: npm run typecheck
 
       - name: db rebuild (deterministic projection)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: bun src/cli.ts db rebuild --json
+        run: node src/cli.ts db rebuild --json
 
       - name: doctor (governance hard gates)
         # PLAN-L7-420 Step 2: green-command-digest は L7-132/L7-194/L7-303 で opt-in strict として
@@ -123,7 +125,7 @@ jobs:
         env:
           UT_TDD_DOCTOR_RESULT_FILE: ${{ runner.temp }}/ut-tdd-doctor-result.json
         run: >-
-          bun src/cli.ts doctor --strict-green-command-digest
+          node src/cli.ts doctor --strict-green-command-digest
           --result-file "$UT_TDD_DOCTOR_RESULT_FILE"
 
       - name: test — 全回帰 (vitest run)
@@ -134,31 +136,31 @@ jobs:
           UT_TDD_DOCTOR_RESULT_FILE: ${{ runner.temp }}/ut-tdd-doctor-result.json
           UT_TDD_DOCTOR_RESULT_ROOT: ${{ github.workspace }}
           UT_TDD_DOCTOR_RESULT_STRICT: "1"
-        run: bun run test
+        run: npm run test
 
       # doc lane では全回帰の代わりに doc 系 check (plan lint / readability / rule-drift) のみ実行する。
       - name: doc lane checks (plan lint / readability / rule-drift)
         if: ${{ steps.classify.outputs.lane == 'doc' }}
         run: |
-          bun src/cli.ts plan lint
-          bun run test:doc-lane
+          node src/cli.ts plan lint
+          npm run test:doc-lane
 
       - name: doc lane source doctor
         if: ${{ steps.classify.outputs.lane == 'doc' }}
-        run: bun src/cli.ts doctor --profile source-doc-lane
+        run: node src/cli.ts doctor --profile source-doc-lane
 
       - name: lint (biome)
-        run: bun run lint
+        run: npm run lint
 
       - name: audit quality (gate findings)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: bun src/cli.ts audit quality --include-tests --limit 20
+        run: node src/cli.ts audit quality --include-tests --limit 20
 
       # PLAN-L7-451 W3: 人間向け projection。判定正本は上の gate 実測であり、
       # summary 生成は常に exit 0 (失敗で CI を red にしない)。
       - name: job summary (UT-TDD projection)
         if: ${{ always() }}
-        run: bun src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"
+        run: node src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"
 
   # PLAN-L7-448 (issue #81): Windows first-class 方針 (.claude/CLAUDE.md Guard Rules) に対する
   # CI 被覆。ubuntu leg では構造的に検証不能な Windows 固有経路 (path separator / SQLite handle
@@ -173,21 +175,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup bun
+      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+          cache: npm
+
+      # PLAN-L7-462 step 2 (案A): bun は harness 実行系ではなく Pack/consumer acceptance
+      # テスト (tests/distribution-acceptance.test.ts / tests/setup.test.ts U-SETUP-009b 系)
+      # の fixture 依存としてのみ残置する。撤去条件は PLAN-L7-462 の exit criteria
+      # (Issue #134 migration debt) を参照。
+      - name: setup bun (Pack/consumer acceptance fixture のみ)
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3"
 
-      - name: cache bun install cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
       - name: install deps (frozen)
-        run: bun install --frozen-lockfile
+        run: npm ci --no-audit --no-fund
 
       # PLAN-L7-455: Linux leg と同じ分類判定を独立実行する (job 間で output を共有しないため)。
       # windows-latest の既定 shell (pwsh) では動かないため bash を明示する。
@@ -195,7 +199,7 @@ jobs:
         id: classify
         shell: bash
         run: |
-          bun src/cli.ts github classify-changes \
+          node src/cli.ts github classify-changes \
             --event-name "${{ github.event_name }}" \
             --head-sha "${{ github.sha }}" \
             --base-sha "${{ github.event.pull_request.base.sha }}" \
@@ -204,23 +208,30 @@ jobs:
 
       - name: typecheck (tsc --noEmit)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: bun run typecheck
+        run: npm run typecheck
 
       - name: db rebuild (deterministic projection on Windows SQLite)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: bun src/cli.ts db rebuild --json
+        run: node src/cli.ts db rebuild --json
 
       - name: test — scoped 回帰 (vitest run, windows leg)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: bun run test:fast
+        run: npm run test:fast
+
+      # PLAN-L7-462 step 2 freeze の申し送り: test:cli (runtime-hook-entrypoints 含む) が
+      # CI 未実行で Windows 面が恒久 gate 外だった点の是正。CLI/hook 実発火 oracle を
+      # windows leg でも強制する。
+      - name: test — CLI/hook 実発火 (vitest run test:cli, windows leg)
+        if: ${{ steps.classify.outputs.lane == 'full' }}
+        run: npm run test:cli
 
       - name: doc lane source checks
         if: ${{ steps.classify.outputs.lane == 'doc' }}
-        run: bun src/cli.ts doctor --profile source-doc-lane
+        run: node src/cli.ts doctor --profile source-doc-lane
 
       - name: doctor (toolchain scope)
         if: ${{ steps.classify.outputs.lane == 'full' }}
-        run: bun src/cli.ts doctor --scope toolchain
+        run: node src/cli.ts doctor --scope toolchain
 
   # PLAN-RECOVERY-15 / issue #97: Branch Protection が参照する唯一の Required
   # Status Check。片脚が failure / cancelled / skipped の場合も必ず起動して Red にする。

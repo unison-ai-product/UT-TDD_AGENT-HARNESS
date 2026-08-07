@@ -38,7 +38,7 @@ jobs:
       - name: classify changed files
         id: classify
         run: |
-          bun src/cli.ts github classify-changes \
+          node src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
             --head-sha "\${{ github.sha }}" \
             --base-sha "\${{ github.event.pull_request.base.sha }}" \
@@ -53,7 +53,7 @@ jobs:
       - run: bun src/cli.ts doctor
       - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane
+        run: node src/cli.ts doctor --profile source-doc-lane
 `;
 
 // PLAN-L7-455 (troubleshoot): 実運用に近い形 (classify step + full/doc lane 条件付き step) の
@@ -80,7 +80,7 @@ jobs:
       - name: classify changed files
         id: classify
         run: |
-          bun src/cli.ts github classify-changes \
+          node src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
             --head-sha "\${{ github.sha }}" \
             --base-sha "\${{ github.event.pull_request.base.sha }}" \
@@ -97,7 +97,7 @@ jobs:
         run: bun run test:doc-lane
       - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane
+        run: node src/cli.ts doctor --profile source-doc-lane
       - run: bun run lint
       - if: ${LANE_FULL_IF}
         run: bun src/cli.ts audit quality --include-tests
@@ -140,7 +140,7 @@ const LEGACY_SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:"
         id: classify
         shell: bash
         run: |
-          bun src/cli.ts github classify-changes \
+          node src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
             --head-sha "\${{ github.sha }}" \
             --base-sha "\${{ github.event.pull_request.base.sha }}" \
@@ -151,7 +151,7 @@ const LEGACY_SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:"
       - run: bun run lint
       - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane
+        run: node src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
     if: \${{ always() }}
@@ -172,7 +172,7 @@ const LEGACY_SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replac
         id: classify
         shell: bash
         run: |
-          bun src/cli.ts github classify-changes \
+          node src/cli.ts github classify-changes \
             --event-name "\${{ github.event_name }}" \
             --head-sha "\${{ github.sha }}" \
             --base-sha "\${{ github.event.pull_request.base.sha }}" \
@@ -183,7 +183,7 @@ const LEGACY_SOURCE_WORKFLOW_WITH_LANE = `${SOURCE_LEG_WORKFLOW_WITH_LANE.replac
       - run: bun run lint
       - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane
+        run: node src/cli.ts doctor --profile source-doc-lane
   harness-check:
     needs: [harness-check-linux, harness-check-windows]
     if: \${{ always() }}
@@ -895,7 +895,7 @@ describe("github-ci-policy lint", () => {
         replaceRequired(
           SOURCE_WORKFLOW,
           // PLAN-L7-461 で doctor step は envelope 書き出し付きの folded scalar になった。
-          "        run: >-\n          bun src/cli.ts doctor --strict-green-command-digest\n",
+          "        run: >-\n          node src/cli.ts doctor --strict-green-command-digest\n",
           "        run: echo doctor omitted\n",
         ),
       ),
@@ -976,14 +976,14 @@ describe("github-ci-policy lint", () => {
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
     it.each([
-      ["pre-producer action swap", "actions/cache@v4", "actions/cache@v3"],
-      ["post-producer run mutation", "run: bun run lint", "run: bun run lint && true"],
+      ["pre-producer action swap", "actions/setup-node@v4", "actions/setup-node@v3"],
+      ["post-producer run mutation", "run: npm run lint", "run: npm run lint && true"],
       [
         "install append",
-        "run: bun install --frozen-lockfile",
-        "run: bun install --frozen-lockfile && echo extra",
+        "run: npm ci --no-audit --no-fund",
+        "run: npm ci --no-audit --no-fund && echo extra",
       ],
-      ["doc-check mutation", "bun run test:doc-lane", "bun run test:doc-lane --changed"],
+      ["doc-check mutation", "npm run test:doc-lane", "npm run test:doc-lane --changed"],
       ["with value mutation", 'bun-version: "1.3"', 'bun-version: "latest"'],
     ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
@@ -992,7 +992,7 @@ describe("github-ci-policy lint", () => {
 
     it.each([
       ["branch guard separator", "\n          git log --format=%s", " git log --format=%s"],
-      ["doc checks separator", "\n          bun run test:doc-lane", " bun run test:doc-lane"],
+      ["doc checks separator", "\n          npm run test:doc-lane", " npm run test:doc-lane"],
     ])("U-CIPOL-019aa: preserves command-separator newline: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
       expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
@@ -1014,7 +1014,7 @@ describe("github-ci-policy lint", () => {
 
     it("U-CIPOL-019b: rejects runtime step reorder", () => {
       const checkout = `      - name: checkout\n        uses: actions/checkout@v5\n        with:\n          fetch-depth: 0\n\n`;
-      const setup = `      - name: setup bun\n        uses: oven-sh/setup-bun@v2\n        with:\n          bun-version: "1.3"\n\n`;
+      const setup = `      - name: setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)\n        uses: actions/setup-node@v4\n        with:\n          node-version: "24.13.0"\n          cache: npm\n\n`;
       const result = analyzeGithubCiPolicy(
         docs(SOURCE_WORKFLOW_WITH_LANE.replace(`${checkout}${setup}`, `${setup}${checkout}`)),
       );
@@ -1041,11 +1041,11 @@ describe("github-ci-policy lint", () => {
     it.each([
       ["missing producer", "id: classify", "id: removed"],
       ["wrong id", "id: classify", "id: classify-docs"],
-      ["echo spoof", "bun src/cli.ts github classify-changes", 'echo "github classify-changes" #'],
+      ["echo spoof", "node src/cli.ts github classify-changes", 'echo "github classify-changes" #'],
       [
         "substring/no-op",
-        "bun src/cli.ts github classify-changes",
-        "true # bun src/cli.ts github classify-changes",
+        "node src/cli.ts github classify-changes",
+        "true # node src/cli.ts github classify-changes",
       ],
     ])("U-CIPOL-020a: rejects %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
@@ -1210,7 +1210,7 @@ describe("github-ci-policy lint", () => {
       const result = analyzeGithubCiPolicy(
         docs(
           SOURCE_WORKFLOW_WITH_LANE.replace(
-            "        run: bun src/cli.ts doctor --profile source-doc-lane\n",
+            "        run: node src/cli.ts doctor --profile source-doc-lane\n",
             "",
           ),
         ),
@@ -1223,7 +1223,7 @@ describe("github-ci-policy lint", () => {
         "echo",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
         run: echo "doctor --profile source-doc-lane"`,
@@ -1232,68 +1232,68 @@ describe("github-ci-policy lint", () => {
         "control operator",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane && true`,
+        run: node src/cli.ts doctor --profile source-doc-lane && true`,
       ],
       [
         "other profile",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-full`,
+        run: node src/cli.ts doctor --profile source-full`,
       ],
       [
         "extra flag",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane --json`,
+        run: node src/cli.ts doctor --profile source-doc-lane --json`,
       ],
       [
         "env",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
         env:
           X: y
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
       ],
       [
         "shell",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
         shell: bash
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
       ],
       [
         "wrong if",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: false
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
       ],
       [
         "continue-on-error",
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
         `      - name: doc lane source doctor
         if: ${LANE_DOC_IF}
         continue-on-error: true
-        run: bun src/cli.ts doctor --profile source-doc-lane`,
+        run: node src/cli.ts doctor --profile source-doc-lane`,
       ],
     ])("U-CIPOL-020ba: rejects doc doctor mutation: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(
@@ -1330,10 +1330,10 @@ describe("github-ci-policy lint", () => {
     it("U-CIPOL-022b: 負例 — rejects lint (biome) hidden behind a lane=='full' skip", () => {
       const lintSkipped = replaceRequired(
         SOURCE_WORKFLOW_WITH_LANE,
-        "      - name: lint (biome)\n        run: bun run lint",
+        "      - name: lint (biome)\n        run: npm run lint",
         `      - name: lint (biome)
         if: ${LANE_FULL_IF}
-        run: bun run lint`,
+        run: npm run lint`,
       );
       const result = analyzeGithubCiPolicy(docs(lintSkipped));
 
@@ -1364,8 +1364,8 @@ describe("github-ci-policy lint", () => {
     it("U-CIPOL-024: 負例 — rejects a non-canonical lane condition expression", () => {
       const garbled = replaceRequired(
         SOURCE_WORKFLOW_WITH_LANE,
-        `        if: ${LANE_FULL_IF}\n        run: bun run typecheck\n`,
-        `        if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: bun run typecheck\n`,
+        `        if: ${LANE_FULL_IF}\n        run: npm run typecheck\n`,
+        `        if: ${"$" + "{{ steps.classify.outputs.lane != 'doc' }}"}\n        run: npm run typecheck\n`,
       );
       const result = analyzeGithubCiPolicy(docs(garbled));
 
@@ -1397,7 +1397,7 @@ describe("github-ci-policy lint", () => {
     });
 
     it("U-CIPOL-026: doc-lane-only steps (e.g. test:doc-lane) never trip the full-lane skip allowlist (substring-collision regression)", () => {
-      // "bun run test:doc-lane" と "bun run test:fast" は "bun run test" の prefix-substring だが、
+      // "npm run test:doc-lane" と "npm run test:fast" は "npm run test" の prefix-substring だが、
       // それぞれ doc lane 専用 / full lane 専用の別 script であり誤って allowlist に混入してはならない。
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE));
       expect(

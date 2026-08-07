@@ -62,12 +62,13 @@ function commitFile(root: string, relPath: string, content: string): string {
 
 /** `scripts/git-hooks/secret-scan-diff.ts` を stdin 経由で直接叩く (CLI entrypoint、実 git blob 使用)。 */
 function runHookCli(cwd: string, stdin: string, env?: NodeJS.ProcessEnv) {
-  return spawnSync("bun", [join(hooksDir, "secret-scan-diff.ts")], {
+  // PLAN-L7-462 step 2: hook 実発火 oracle は node 直 spawn (shell/bun 経由なし)。
+  return spawnSync("node", [join(hooksDir, "secret-scan-diff.ts")], {
     cwd,
     encoding: "utf8",
     input: stdin,
     env: { ...process.env, ...env },
-    shell: process.platform === "win32",
+    windowsHide: true,
   });
 }
 
