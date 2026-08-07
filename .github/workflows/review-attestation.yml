@@ -1,0 +1,115 @@
+name: review-attestation
+
+# D3d trusted custody receipt producer (PLAN-L7-465).
+#
+# This workflow is deliberately isolated from harness-check.yml: it is not a required
+# status check and it never gates a merge. It issues a receipt that binds repository,
+# pull request number, exact HEAD, workflow run, issuer, request digest and verdict
+# digest, attests it with GitHub Artifact Attestation, then verifies and admits it.
+#
+# Safety contract (frozen in PLAN-L7-465 D3c):
+# - workflow_dispatch only. No pull_request / pull_request_target trigger, therefore no
+#   pull request controlled code, script, action, artifact or cache is ever executed.
+# - No checkout of the pull request HEAD. Only the default branch is checked out.
+# - permissions are pinned to the attestation profile allowlist.
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: pull request number to bind the receipt to
+        required: true
+        type: string
+      plan_id:
+        description: PLAN id owning the review
+        required: true
+        type: string
+      plan_revision:
+        description: SHA-256 lowerhex of the PLAN document
+        required: true
+        type: string
+      memory_id:
+        description: review request memory id
+        required: true
+        type: string
+      judgment_digest:
+        description: SHA-256 lowerhex of the verified D3b judgment payload
+        required: true
+        type: string
+      provider_evidence_ref:
+        description: verified D3b provider judgment reference (d3b:<64 lowerhex>)
+        required: true
+        type: string
+      reviewer_family:
+        description: reviewer provider family (self declared, never promoted to trusted)
+        required: true
+        type: choice
+        options:
+          - codex
+          - claude
+      author_family:
+        description: author provider family
+        required: true
+        type: choice
+        options:
+          - claude
+          - codex
+      verdict:
+        description: review verdict carried by the judgment
+        required: true
+        type: choice
+        options:
+          - PASS
+          - PASS-WEAK
+          - FLAG
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: review-attestation-${{ github.event.inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  review-attestation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+      - name: Issue trusted custody receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UT_TDD_CUSTODY_PR: ${{ github.event.inputs.pr }}
+          UT_TDD_CUSTODY_PLAN_ID: ${{ github.event.inputs.plan_id }}
+          UT_TDD_CUSTODY_PLAN_REVISION: ${{ github.event.inputs.plan_revision }}
+          UT_TDD_CUSTODY_MEMORY_ID: ${{ github.event.inputs.memory_id }}
+          UT_TDD_CUSTODY_JUDGMENT_DIGEST: ${{ github.event.inputs.judgment_digest }}
+          UT_TDD_CUSTODY_PROVIDER_EVIDENCE_REF: ${{ github.event.inputs.provider_evidence_ref }}
+          UT_TDD_CUSTODY_REVIEWER_FAMILY: ${{ github.event.inputs.reviewer_family }}
+          UT_TDD_CUSTODY_AUTHOR_FAMILY: ${{ github.event.inputs.author_family }}
+          UT_TDD_CUSTODY_VERDICT: ${{ github.event.inputs.verdict }}
+          UT_TDD_CUSTODY_RECEIPT_PATH: review-custody-receipt.json
+        run: node src/feedback/review-custody-runner.ts issue
+      - name: Attest receipt provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: review-custody-receipt.json
+      - name: Admit trusted custody receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UT_TDD_CUSTODY_PR: ${{ github.event.inputs.pr }}
+          UT_TDD_CUSTODY_PLAN_ID: ${{ github.event.inputs.plan_id }}
+          UT_TDD_CUSTODY_PLAN_REVISION: ${{ github.event.inputs.plan_revision }}
+          UT_TDD_CUSTODY_MEMORY_ID: ${{ github.event.inputs.memory_id }}
+          UT_TDD_CUSTODY_JUDGMENT_DIGEST: ${{ github.event.inputs.judgment_digest }}
+          UT_TDD_CUSTODY_AUTHOR_FAMILY: ${{ github.event.inputs.author_family }}
+          UT_TDD_CUSTODY_RECEIPT_PATH: review-custody-receipt.json
+        run: node src/feedback/review-custody-runner.ts admit
