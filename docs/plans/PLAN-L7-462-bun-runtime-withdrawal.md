@@ -77,6 +77,15 @@ review_evidence:
       intra_runtime_subagent (retake は Issue #252 で追跡)。
     worker_model: claude-fable-5
     reviewer_model: claude-opus-5
+    green_commands:
+      - kind: ci_run
+        command: "gh run view 31140910029 --json conclusion,jobs"
+        runner: github-actions
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-06T23:50:00+09:00"
+        evidence_path: .github/workflows/harness-check.yml
+        anchor_commit: 445c710fea2e16e584f6b76a3e4db1ca82329c90
   - reviewer: claude-opus-5
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-07T15:40:00+09:00"
@@ -91,6 +100,23 @@ review_evidence:
       のため intra_runtime_subagent (retake は Issue #252 で追跡)。
     worker_model: claude-fable-5
     reviewer_model: claude-opus-5
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/runtime-portability.test.ts tests/verification-profile.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-07T15:20:00+09:00"
+        evidence_path: src/lint/runtime-portability.ts
+        anchor_commit: ef27022ba1075396b933fd8b6cb80131ba60461e
+      - kind: ci_run
+        command: "gh run view 31154290456 --json conclusion,jobs"
+        runner: github-actions
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-07T15:35:00+09:00"
+        evidence_path: .github/workflows/harness-check.yml
+        anchor_commit: cc3ed37f265e4df71ecb3e17c22f5b5b5d1b0e97
 ---
 
 # PLAN-L7-462 (troubleshoot): Bun runtime 撤退 — Node 一本化の段階移行
@@ -271,8 +297,9 @@ oracle ごと赤化する。consumer templates (`src/setup/templates.ts` の run
 - step 4 (serial): ~~ADR-002 (Node runtime 一本化) を draft し ADR-001 の runtime
   節を supersede (言語 = TypeScript は不変)。PO 採択で confirm。~~
   **是正 (2026-08-07)**: ADR 新設は不要。ADR-001 の decision 節は 2026-07-24 改訂で
-  既に「TypeScript (strict) / Node 24.13.0 正本 + Bun は新規禁止・既存は Issue #152/#134
-  の期限付き migration debt」を宣言しており、本 PLAN の終状態はその実装である
+  既に「TypeScript (strict) / Node 24.13.0 正本 + Bun は新規禁止・既存は期限付き
+  migration debt (ADR-001 の出典は Issue #152 / bootstrap envelope #153)」を宣言しており、
+  本 PLAN の lint debt allowlist の帰属先は別途 Issue #134。本 PLAN の終状態は ADR-001 の実装である
   (新たな方式判断が発生していないため ADR の対象外)。また ADR-002 番号は
   ADR-002-dependency-direction-and-auto-map.md が既使用。step 4 の残作業は本完了記録の
   確定のみへ縮退した。
@@ -318,8 +345,10 @@ oracle ごと赤化する。consumer templates (`src/setup/templates.ts` の run
   count-pin 化 debt allowlist (pin 全数 slack=0 を reviewer 実測)。回帰 =
   U-RPORT-015〜018。恒久 bypass 面の残課題 (同数 swap の静的不可視) は限界注記 +
   Issue #134 後続 (AST 化) へ帰属。
-- **AC-4** (db-refresh incident 系 oracle): PLAN-L7-460 の AC oracle は step 2/3 の CI
-  run (上記 AC-2 / merge run 31154290456) に含まれ green 維持。
+- **AC-4** (db-refresh incident 系 oracle): PLAN-L7-460 の AC oracle =
+  `tests/db-currency.test.ts` の U-DBCURRENCY-007/029/030/031 (Bun refresh 拒否) と
+  U-DBCURRENCY-010/011/016 (single-flight 収束) が step 2/3 の CI run
+  (上記 AC-2 / merge run 31154290456) に含まれ green 維持。
 - **AC-5** (strip-only gate + import 指定子 lint): PR #273 (PR-A codemod + lint) /
   PR #277 (PR-B erasable 化 + strip-only gate)。oracle は
   `tests/import-specifier.test.ts` / `tests/erasable-syntax.test.ts`。
