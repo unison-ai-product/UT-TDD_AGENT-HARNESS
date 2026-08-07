@@ -16,7 +16,13 @@ export interface MergeGateFacts extends PrObservation {
 
 export interface GhPrMergePorts {
   getPullRequest: (pr: number) => MergeGateFacts;
-  mergePullRequest: (pr: number) => void;
+  mergePullRequest: (pr: number, headSha: string) => void;
+}
+
+export interface AuthorizedReviewEntry {
+  memoryId: string;
+  reviewRevision: string;
+  reviewerFamily: "claude" | "codex";
 }
 
 export interface MergeGateDecision {
@@ -26,16 +32,32 @@ export interface MergeGateDecision {
   verdict: ReviewVerdict | null;
   state: string | null;
   reasons: string[];
+  authorizedEntry: AuthorizedReviewEntry | null;
 }
 
 export interface MergeExecutionReceipt {
+  receiptKind: "merge_result";
   pr: number;
   headSha: string | null;
   verdict: ReviewVerdict | null;
   decision: "merge" | "deny" | "merge_failed";
   reason: string;
   timestamp: string;
+  authorizedEntry: AuthorizedReviewEntry | null;
 }
+
+interface MergeIntentReceipt {
+  receiptKind: "merge_intent";
+  pr: number;
+  headSha: string;
+  verdict: ReviewVerdict;
+  decision: "merge";
+  reason: "merge_ready";
+  timestamp: string;
+  authorizedEntry: AuthorizedReviewEntry;
+}
+
+type MergeReceipt = MergeExecutionReceipt | MergeIntentReceipt;
 
 export interface PrMergeResult {
   ok: boolean;
@@ -76,21 +98,10 @@ function loadReviewInputs(repoRoot: string): {
   };
 }
 
-function currentVerdict(
-  receipts: ReviewReceipt[],
-  pr: number,
-  headSha: string,
-): ReviewVerdict | null {
-  const receipt = receipts.find(
-    (candidate) =>
-      candidate.pr === pr && candidate.head === headSha && candidate.kind === "verdict",
-  );
-  return receipt?.verdict ?? null;
-}
-
 /**
  * D2-B の一次防壁。D1 の `merge_ready` 以外はすべて deny とする。
- * `evaluatedHeadSha` は gh adapter の取得値と評価対象を明示的に比較するための二重束縛である。
+ * `headSha` は最初の gh 観測値、`evaluatedHeadSha` は判定直前の第二観測値であり、
+ * 観測間の HEAD 差替えを fail-close する。
  */
 export function evaluateMergeGate(input: {
   pr: number;
@@ -100,15 +111,15 @@ export function evaluateMergeGate(input: {
   now: string;
 }): MergeGateDecision {
   const headSha = input.facts.headSha;
-  const verdict = currentVerdict(input.receipts, input.pr, headSha);
   if (input.facts.pr !== input.pr) {
     return {
       ok: false,
       pr: input.pr,
       headSha,
-      verdict,
+      verdict: null,
       state: null,
       reasons: ["pr_mismatch"],
+      authorizedEntry: null,
     };
   }
   if (headSha !== input.facts.evaluatedHeadSha) {
@@ -116,9 +127,10 @@ export function evaluateMergeGate(input: {
       ok: false,
       pr: input.pr,
       headSha,
-      verdict,
+      verdict: null,
       state: "breach",
       reasons: ["head_mismatch"],
+      authorizedEntry: null,
     };
   }
 
@@ -128,19 +140,44 @@ export function evaluateMergeGate(input: {
     prs: [input.facts],
     now: input.now,
   });
-  const entry = result.entries.find(
+  const entriesForHead = result.entries.filter(
     (candidate) => candidate.pr === input.pr && candidate.exactHead === headSha,
   );
+  const entry = entriesForHead[0];
+  const authorizedEntry = entry?.reviewerFamily
+    ? {
+        memoryId: entry.memoryId,
+        reviewRevision: entry.reviewRevision,
+        reviewerFamily: entry.reviewerFamily,
+      }
+    : null;
+  const verdict = entry?.verdict ?? null;
   const reasons = [...result.diagnostics];
-  if (verdict === null) reasons.push("verdict_missing");
-  if (!entry) {
+  if (entriesForHead.length === 0) {
     reasons.push("no_request_for_current_head");
-    return { ok: false, pr: input.pr, headSha, verdict, state: "breach", reasons };
+    return {
+      ok: false,
+      pr: input.pr,
+      headSha,
+      verdict: null,
+      state: "breach",
+      reasons,
+      authorizedEntry: null,
+    };
   }
-  reasons.push(...entry.reasons, ...entry.blocking.map((finding) => `blocking_finding:${finding}`));
+  if (entriesForHead.some((candidate) => candidate.verdict == null)) {
+    reasons.push("pending_request_for_head");
+  }
+  for (const candidate of entriesForHead) {
+    if (candidate.verdict == null) reasons.push("verdict_missing");
+    reasons.push(
+      ...candidate.reasons,
+      ...candidate.blocking.map((finding) => `blocking_finding:${finding}`),
+    );
+    if (candidate.state !== "merge_ready") reasons.push(`state:${candidate.state}`);
+  }
   if (!result.ok) reasons.push("dispatch_analysis_failed");
-  if (entry.state !== "merge_ready") reasons.push(`state:${entry.state}`);
-  if (reasons.length > 0 || entry.state !== "merge_ready") {
+  if (reasons.length > 0 || entriesForHead.some((candidate) => candidate.state !== "merge_ready")) {
     return {
       ok: false,
       pr: input.pr,
@@ -148,12 +185,21 @@ export function evaluateMergeGate(input: {
       verdict,
       state: entry.state,
       reasons: [...new Set(reasons)],
+      authorizedEntry,
     };
   }
-  return { ok: true, pr: input.pr, headSha, verdict, state: entry.state, reasons: [] };
+  return {
+    ok: true,
+    pr: input.pr,
+    headSha,
+    verdict,
+    state: entry.state,
+    reasons: [],
+    authorizedEntry,
+  };
 }
 
-function writeExecutionReceipt(repoRoot: string, receipt: MergeExecutionReceipt): string {
+function writeReceipt(repoRoot: string, receipt: MergeReceipt): string {
   const directory = join(repoRoot, ".ut-tdd", "logs");
   mkdirSync(directory, { recursive: true });
   const path = join(repoRoot, REVIEW_LOG_PATH);
@@ -165,21 +211,25 @@ function makeResult(
   input: Omit<PrMergeResult, "receiptPath">,
   repoRoot: string,
   timestamp: string,
+  authorizedEntry: AuthorizedReviewEntry | null = null,
 ): PrMergeResult {
   const receipt: MergeExecutionReceipt = {
+    receiptKind: "merge_result",
     pr: input.pr,
     headSha: input.headSha,
     verdict: input.verdict,
     decision: input.decision,
     reason: input.reason,
     timestamp,
+    authorizedEntry,
   };
   try {
-    const receiptPath = writeExecutionReceipt(repoRoot, receipt);
+    const receiptPath = writeReceipt(repoRoot, receipt);
     return { ...input, receiptPath };
-  } catch {
-    // receipt failure must not turn a deny into an implicit allow. The gate result is preserved.
-    return { ...input, receiptPath: null };
+  } catch (error) {
+    const reason = `result_receipt_write_failed:${errorMessage(error)}`;
+    process.stderr.write(`review merge: ${reason}\n`);
+    return { ...input, ok: false, reason: `${input.reason},${reason}`, receiptPath: null };
   }
 }
 
@@ -256,8 +306,51 @@ export function runPrMerge(input: {
     );
   }
 
+  if (decision.headSha === null || decision.verdict === null || decision.authorizedEntry === null) {
+    return makeResult(
+      {
+        ok: false,
+        pr: input.pr,
+        headSha: decision.headSha,
+        verdict: decision.verdict,
+        decision: "deny",
+        reason: "merge_authorization_incomplete",
+      },
+      input.repoRoot,
+      timestamp,
+    );
+  }
+
   try {
-    input.ports.mergePullRequest(input.pr);
+    writeReceipt(input.repoRoot, {
+      receiptKind: "merge_intent",
+      pr: input.pr,
+      headSha: decision.headSha,
+      verdict: decision.verdict,
+      decision: "merge",
+      reason: "merge_ready",
+      timestamp,
+      authorizedEntry: decision.authorizedEntry,
+    });
+  } catch (error) {
+    const reason = `intent_receipt_write_failed:${errorMessage(error)}`;
+    process.stderr.write(`review merge: ${reason}\n`);
+    return makeResult(
+      {
+        ok: false,
+        pr: input.pr,
+        headSha: decision.headSha,
+        verdict: decision.verdict,
+        decision: "deny",
+        reason,
+      },
+      input.repoRoot,
+      timestamp,
+    );
+  }
+
+  try {
+    input.ports.mergePullRequest(input.pr, decision.headSha);
   } catch (error) {
     return makeResult(
       {
@@ -270,6 +363,7 @@ export function runPrMerge(input: {
       },
       input.repoRoot,
       timestamp,
+      decision.authorizedEntry,
     );
   }
   return makeResult(
@@ -283,6 +377,7 @@ export function runPrMerge(input: {
     },
     input.repoRoot,
     timestamp,
+    decision.authorizedEntry,
   );
 }
 
@@ -292,8 +387,10 @@ interface GhPrView {
   statusCheckRollup?: unknown;
 }
 
-function readGhFacts(pr: number): MergeGateFacts {
-  const raw = execFileSync(
+type ExecFileSync = typeof execFileSync;
+
+function readGhView(pr: number, runGh: ExecFileSync): Omit<MergeGateFacts, "evaluatedHeadSha"> {
+  const raw = runGh(
     "gh",
     ["pr", "view", String(pr), "--json", "headRefOid,state,statusCheckRollup"],
     { encoding: "utf8" },
@@ -316,14 +413,30 @@ function readGhFacts(pr: number): MergeGateFacts {
     );
   const headSha = parsed.headRefOid;
   const state = parsed.state as MergeGateFacts["state"];
-  return { pr, headSha, evaluatedHeadSha: headSha, state, checksGreen };
+  return { pr, headSha, state, checksGreen };
 }
 
-export function createGhPrMergePorts(): GhPrMergePorts {
+function readGhFacts(pr: number, runGh: ExecFileSync = execFileSync): MergeGateFacts {
+  const observed = readGhView(pr, runGh);
+  const evaluated = readGhView(pr, runGh);
   return {
-    getPullRequest: readGhFacts,
-    mergePullRequest: (pr) => {
-      execFileSync("gh", ["pr", "merge", String(pr), "--merge"], { stdio: "inherit" });
+    ...observed,
+    state: evaluated.state,
+    checksGreen: evaluated.checksGreen,
+    evaluatedHeadSha: evaluated.headSha,
+  };
+}
+
+export function createGhPrMergePorts(
+  dependencies: { execFileSync?: ExecFileSync } = {},
+): GhPrMergePorts {
+  const runGh = dependencies.execFileSync ?? execFileSync;
+  return {
+    getPullRequest: (pr) => readGhFacts(pr, runGh),
+    mergePullRequest: (pr, headSha) => {
+      runGh("gh", ["pr", "merge", String(pr), "--merge", "--match-head-commit", headSha], {
+        stdio: "inherit",
+      });
     },
   };
 }

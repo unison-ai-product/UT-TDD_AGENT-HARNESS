@@ -333,6 +333,7 @@ Verify with `ut-tdd plan lint` plus the targeted doctor checks
 
 - Use Conventional Commits. Stage explicit paths only (`git add <path>`; never
   `git add -A` / `git add .`).
+- PR merge は必ず `ut-tdd pr merge --pr <N>` 経由とし、`gh pr merge` の直叩きで迂回しない。
 - **history を書き換える前に `git log` / `git reflog` を確認**し、もう一方のランタイム
   (Claude) の commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない。
   working tree の foreign 変更は既定で「相手ランタイムの正規作業」とみなす。判断不能なら
