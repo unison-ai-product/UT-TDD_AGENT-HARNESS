@@ -1401,9 +1401,10 @@ describe("L7 CLI surface closure", () => {
         ["team", "run", "--definition", teamPath, "--mode", "hybrid", "--execute", "--json"],
         env,
       );
-      const payload = JSON.parse(run.stdout);
+      // parseCliJson は status/stdout の assert に stderr を添える — JSON が空のときも
+      // 失敗原因 (CLI の stderr) が CI ログへ出る。
+      const payload = parseCliJson(run);
 
-      expect(run.status).toBe(0);
       expect(run.stdout).not.toContain("noisy-codex");
       expect(run.stdout).not.toContain("noisy-claude");
       expect(payload).toMatchObject({
