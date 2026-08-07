@@ -3264,8 +3264,19 @@ team
                 return;
               }
               if (stdin !== undefined) {
-                child.stdin?.write(stdin);
-                child.stdin?.end();
+                const inputStream = child.stdin;
+                if (inputStream) {
+                  // Provider が入力を読む前に終了すると Node は stdin の EPIPE を
+                  // 未処理 error event として親プロセスへ上げる。close event の終了
+                  // コードを正本にし、早期 close は team run を落とさない。
+                  inputStream.on("error", () => undefined);
+                  try {
+                    inputStream.write(stdin);
+                    inputStream.end();
+                  } catch {
+                    // close/error handler が最終結果を確定する。
+                  }
+                }
               }
               let finalized = false;
               const finish = (exitCode: number | null) => {
