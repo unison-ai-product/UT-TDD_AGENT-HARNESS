@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeOracleTestTrace,
+  collectOracleDeclarationSites,
   collectOracleIds,
   loadOracleTestTraceInput,
   ORACLE_TEST_TRACE_BASELINE,
@@ -43,6 +44,93 @@ describe("analyzeOracleTestTrace (U-OTT-001..003)", () => {
   it("U-OTT-003: baseline 済 oracle は orphan でない (known-debt)", () => {
     const r = analyzeOracleTestTrace({ declared: ["U-BAR-002"], ...base });
     expect(r.orphans).toHaveLength(0);
+  });
+});
+
+describe("宣言 provenance の一意性 (Issue #206)", () => {
+  const base = {
+    declared: [],
+    referenced: new Set<string>(),
+    baseline: new Set<string>(),
+    widenedBaseline: new Set<string>(),
+  };
+
+  it("同一ID・別説明は baseline 外なら fail-close する", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      declarationSites: [
+        { id: "U-NEW-001", path: "docs/test-design/a.md", line: 10, description: "入力を拒否する" },
+        {
+          id: "U-NEW-001",
+          path: "docs/test-design/a.md",
+          line: 11,
+          description: "入力を永続化する",
+        },
+      ],
+    });
+    expect(r.duplicates).toHaveLength(1);
+    expect(r.duplicates[0]?.id).toBe("U-NEW-001");
+    expect(r.ok).toBe(false);
+  });
+
+  it("同一ID・同一説明の再掲は重複扱いしない", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      declarationSites: [
+        { id: "U-NEW-001", path: "docs/test-design/a.md", line: 10, description: "同じ契約" },
+        { id: "U-NEW-001", path: "docs/test-design/b.md", line: 20, description: "同じ契約" },
+      ],
+    });
+    expect(r.duplicates).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("既存衝突の baseline に無い説明の追加は fail-close する", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      duplicateBaseline: new Set(["U-NEW-001\t既存契約"]),
+      declarationSites: [
+        { id: "U-NEW-001", path: "docs/test-design/a.md", line: 10, description: "既存契約" },
+        { id: "U-NEW-001", path: "docs/test-design/a.md", line: 11, description: "新規契約" },
+      ],
+    });
+    expect(r.duplicates[0]?.descriptions).toContain("新規契約");
+    expect(r.staleDuplicateBaseline).toEqual([]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("既存衝突が解消され baseline 行だけ残る場合は stale として fail-close する", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      duplicateBaseline: new Set(["U-NEW-001\t解消済み契約", "U-NEW-001\t残置契約"]),
+      declarationSites: [
+        { id: "U-NEW-001", path: "docs/test-design/a.md", line: 10, description: "解消済み契約" },
+      ],
+    });
+    expect(r.staleDuplicateBaseline).toEqual(["U-NEW-001\t残置契約"]);
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe("宣言 site 収集 (Issue #206)", () => {
+  it("正確なIDセルだけを宣言として収集し、family range の再引用を除外する", () => {
+    const root = declarationFixture(
+      [
+        "| U-ID | 対象 | oracle |",
+        "|---|---|---|",
+        "| `U-DECL-001` | `service` | 入力を拒否する |",
+        "| `docs/design/x.md` | U-DECL-001..003 | `tests/x.test.ts` |",
+      ].join("\n"),
+    );
+    const sites = collectOracleDeclarationSites(root);
+    expect(sites).toEqual([
+      {
+        id: "U-DECL-001",
+        path: "docs/test-design/L7.md",
+        line: 3,
+        description: "`service` | 入力を拒否する",
+      },
+    ]);
   });
 });
 
