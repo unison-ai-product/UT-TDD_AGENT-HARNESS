@@ -33,6 +33,8 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/206
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/290
 github_issue_id: 206
+backprop_decision: not_required
+backprop_decision_reason: "既存 PLAN-L7-244 の citation gate に対する内部検出強化であり、L0-L6 要件・設計・外部仕様を変更しない。上流への逆伝播は不要。"
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
