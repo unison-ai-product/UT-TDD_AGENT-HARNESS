@@ -6,9 +6,9 @@ layer: L7
 drive: agent
 route_signal: incident
 route_mode: incident
-status: confirmed
+status: completed
 created: 2026-07-28
-updated: 2026-08-06
+updated: 2026-08-07
 backprop_decision: not_required
 backprop_decision_reason: "Harness 自身の実行 runtime の差し替えであり、製品の外部 requirement / design / test-design 契約は変えない。言語は TypeScript のまま (ADR-001 の言語選定は不変、runtime 節のみ改訂対象)。"
 owner: PM / PO
@@ -65,6 +65,64 @@ review_evidence:
         evidence_path: src/lint/import-specifier.ts
         output_digest: "sha256:06fcceb1057a6db761142deea340b6e466ba1c5d7dc18b836aee6b3ef062d758"
         anchor_commit: 6702a692929b1639183616babe35cfc1968622cb
+  - reviewer: claude-opus-5
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-07T00:30:00+09:00"
+    tests_green_at: "2026-08-06T23:50:00+09:00"
+    verdict: approve
+    scope: >-
+      step 2 (PR #277/#278/#279/#280/#281/#283) の blind review 累積。CI 構成契約 freeze の
+      再審 FLAG 是正 (run-bun launcher 実態訂正 / bun 実発火 10 ファイル帰属 / exit criteria
+      測定 gate) を経て PR #283 で closing PASS。Codex frontier 利用上限中のため
+      intra_runtime_subagent (retake は Issue #252 で追跡)。
+    worker_model: claude-fable-5
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: smoke
+        command: "gh run view 31140910029 --json conclusion,jobs"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-06T23:50:00+09:00"
+        # output_digest = anchor_commit 時点の evidence_path blob sha256 (green-command-digest 契約)。
+        evidence_path: .github/workflows/harness-check.yml
+        output_digest: "sha256:d9fa9da53d2dfc7a442b2b23064ce3017787814f55fb7e4577eafad33936cc81"
+        anchor_commit: 445c710fea2e16e584f6b76a3e4db1ca82329c90
+  - reviewer: claude-opus-5
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-07T17:00:00+09:00"
+    tests_green_at: "2026-08-07T16:52:30+09:00"
+    verdict: approve
+    scope: >-
+      step 3 (PR #284) の blind review 4 ラウンド + delta 追認。FLAG 原文と閉塞判定は
+      .ut-tdd/review/plan-l7-462-step3-blind-review-flags.md に永続化。最終 PASS は
+      HEAD ef27022b、delta 追認 PASS は merge HEAD cc3ed37f (CI run 31154290456 両 leg
+      success を reviewer が独立確認)。reviewer 実測: 敵対 probe 31 ケース、pin 全数
+      slack=0、実 repo lint ok=true checked=642、48 tests green。Codex frontier 利用上限中
+      のため intra_runtime_subagent (retake は Issue #252 で追跡)。
+    worker_model: claude-fable-5
+    reviewer_model: claude-opus-5
+    green_commands:
+      # runner enum に node が無いため bash (実行 shell) で記録 (enum への node 追加は
+      # Bun 残滓撤去の後続 = schema 側の別 PR)。
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/runtime-portability.test.ts tests/verification-profile.test.ts --reporter=dot"
+        runner: bash
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-07T16:52:30+09:00"
+        evidence_path: src/lint/runtime-portability.ts
+        output_digest: "sha256:ed9e843fc3f01dea22413dbe5627cede5f1e1de40c64677c914e99993f28a522"
+        anchor_commit: 305df9ed5a4418d6f12cf784eaaaab21da654b68
+      - kind: smoke
+        command: "gh run view 31154290456 --json conclusion,jobs"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-07T15:35:00+09:00"
+        evidence_path: .github/workflows/harness-check.yml
+        output_digest: "sha256:d9fa9da53d2dfc7a442b2b23064ce3017787814f55fb7e4577eafad33936cc81"
+        anchor_commit: cc3ed37f265e4df71ecb3e17c22f5b5b5d1b0e97
 ---
 
 # PLAN-L7-462 (troubleshoot): Bun runtime 撤退 — Node 一本化の段階移行
@@ -72,7 +130,9 @@ review_evidence:
 注: 実装 deliverable (.claude/settings.json / package.json / harness-check.yml /
 run-vitest-snapshot.ts / runtime-portability.ts) は既存ファイルのため draft 段階の
 generates には載せない (merged-plan-status / duplicate-artifact-ownership 対策)。
-実装 PR で generates を更新し confirm と同時に宣言する。 ADR-002 は step 4 の実装 PR で宣言する (phantom 回避)。前提 PLAN-L7-460 は
+実装 PR で generates を更新し confirm と同時に宣言する。~~ADR-002 は step 4 の実装 PR で
+宣言する (phantom 回避)。~~ **是正 (2026-08-07)**: ADR 新設は不要 — §完了記録の step 4 是正
+注記を参照。前提 PLAN-L7-460 は
 draft のため requires の ready 条件を満たさず references 扱い (実装順序は
 Schedule step 0 で拘束)。
 
@@ -240,8 +300,15 @@ oracle ごと赤化する。consumer templates (`src/setup/templates.ts` の run
 - step 3 (step 2 と並列): `runtime-portability` lint の反転 — 「bun:sqlite 併記
   必須」を「node:sqlite 主・bun 依存の新規追加 fail-close」へ更新し、Bun 残滓の
   再流入を機械で止める。Bun グローバル API 1 ファイルの置換もここ。
-- step 4 (serial): ADR-002 (Node runtime 一本化) を draft し ADR-001 の runtime
-  節を supersede (言語 = TypeScript は不変)。PO 採択で confirm。
+- step 4 (serial): ~~ADR-002 (Node runtime 一本化) を draft し ADR-001 の runtime
+  節を supersede (言語 = TypeScript は不変)。PO 採択で confirm。~~
+  **是正 (2026-08-07)**: ADR 新設は不要。ADR-001 の decision 節は 2026-07-24 改訂で
+  既に「TypeScript (strict) / Node 24.13.0 正本 + Bun は新規禁止・既存は期限付き
+  migration debt (ADR-001 の出典は Issue #152 / bootstrap envelope #153)」を宣言しており、
+  本 PLAN の lint debt allowlist の帰属先は別途 Issue #134。本 PLAN の終状態は ADR-001 の実装である
+  (新たな方式判断が発生していないため ADR の対象外)。また ADR-002 番号は
+  ADR-002-dependency-direction-and-auto-map.md が既使用。step 4 の残作業は本完了記録の
+  確定のみへ縮退した。
 
 ## スコープ外
 
@@ -267,3 +334,32 @@ oracle ごと赤化する。consumer templates (`src/setup/templates.ts` の run
   strip-only 違反を検出できないため独立 gate が必要 — blind review B2)。あわせて
   相対 import 指定子の再流入 lint (拡張子なし / `.js` 指定子の両方を fail-close)
   が green。
+
+## 完了記録 (2026-08-07)
+
+各 AC の evidence (falsifiable claim には根拠 run / PR を引用、`coding ≠ substance`):
+
+- **AC-1** (hook の Node 起動実発火): PR #278 (hooks node 化) + PR #279 (実発火 helper の
+  node 直 spawn 化、blind review BL-2 追随)。oracle は
+  `tests/runtime-hook-entrypoints.test.ts` / `tests/hook-native-launcher.test.ts`。
+- **AC-2** (CI setup-node 構成 green): GitHub Actions run **31100893368** /
+  **31140910029** (step 2、linux/windows 両 leg success)。setup-bun は
+  distribution/setup acceptance fixture 依存として注記付き残置 (§step 2 の CI 構成契約)。
+- **AC-3** (bun 再流入 fail-close): PR #284 (merge squash 4d500690)。
+  `bun-runtime-spawn` (間接形 5 クラス含む) / `bun-module-import` /
+  `bun-global-reference` (typeof / globalThis / process.versions.bun 形含む) の 3 ルール +
+  count-pin 化 debt allowlist (pin 全数 slack=0 を reviewer 実測)。回帰 =
+  U-RPORT-015〜018。恒久 bypass 面の残課題 (同数 swap の静的不可視) は限界注記 +
+  Issue #134 後続 (AST 化) へ帰属。
+- **AC-4** (db-refresh incident 系 oracle): PLAN-L7-460 の AC oracle =
+  `tests/db-currency.test.ts` の U-DBCURRENCY-007/029/030/031 (Bun refresh 拒否) と
+  U-DBCURRENCY-010/011/016 (single-flight 収束) が step 2/3 の CI run
+  (上記 AC-2 / merge run 31154290456) に含まれ green 維持。
+- **AC-5** (strip-only gate + import 指定子 lint): PR #273 (PR-A codemod + lint) /
+  PR #277 (PR-B erasable 化 + strip-only gate)。oracle は
+  `tests/import-specifier.test.ts` / `tests/erasable-syntax.test.ts`。
+
+step 3 の blind review 証跡 (FLAG 原文 4 ラウンド分) は
+`.ut-tdd/review/plan-l7-462-step3-blind-review-flags.md`。process note: PR #284 の merge
+実行は delta 追認 verdict の受領と近接しており、merge 操作は Codex 側で行われた
+(verdict 自体は同 HEAD cc3ed37f で PASS、CI run 31154290456 success を独立確認済み)。
