@@ -138,6 +138,38 @@ describe("green command evidence (IMP-108)", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("U-GREENDEF-006: runner=node is a valid green command runner after the Node cutover (PLAN-L7-462)", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-NEW-GREEN-NODE",
+        updated: "2026-06-23",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-23",
+            tests_green_at: "2026-06-23",
+            green_commands: [
+              {
+                kind: "unit_test",
+                command: "node scripts/run-vitest-snapshot.ts tests/review-evidence.test.ts",
+                runner: "node",
+                scope: "targeted",
+                exit_code: 0,
+                evidence_path: "tests/review-evidence.test.ts",
+                output_digest: "sha256:0123456789abcdef",
+                completed_at: "2026-06-23",
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
+
+    expect(r.greenCommandViolations).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
   it("U-GREENDEF-004: nonzero green command exit code fails", () => {
     const r = analyzeReviewEvidence([
       plan({

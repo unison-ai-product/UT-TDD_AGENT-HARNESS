@@ -101,7 +101,8 @@ const GREEN_COMMAND_KINDS = new Set([
   "vmodel_lint",
   "smoke",
 ]);
-const GREEN_COMMAND_RUNNERS = new Set(["bun", "powershell", "bash", "ci"]);
+// node = Node 一本化 (PLAN-L7-462) 後の正規 runner (schema と同期、SSoT は frontmatter.ts)。
+const GREEN_COMMAND_RUNNERS = new Set(["bun", "node", "powershell", "bash", "ci"]);
 const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files", "gate"]);
 
 function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
