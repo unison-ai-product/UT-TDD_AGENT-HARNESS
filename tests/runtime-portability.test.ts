@@ -16,7 +16,7 @@ const validDocs: RuntimePortabilityDoc[] = [
     text: JSON.stringify({
       type: "module",
       bin: { "ut-tdd": "./src/cli.ts" },
-      engines: { bun: ">=1.3" },
+      engines: { node: "24.13.0", bun: ">=1.3" },
       scripts: {
         build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
         test: "vitest run",
@@ -119,7 +119,7 @@ describe("runtime-portability lint", () => {
     expect(result.violations.map((v) => v.rule)).toEqual(
       expect.arrayContaining([
         "package-missing-esm",
-        "package-missing-bun-engine",
+        "package-missing-node-engine",
         "package-bin-not-source-cli",
         "package-missing-compiled-build",
         "package-missing-node-fallback-smoke",
@@ -127,6 +127,44 @@ describe("runtime-portability lint", () => {
         "tsconfig-not-strict",
         "tsconfig-missing-node-types",
         "sqlite-driver-fallback-missing",
+      ]),
+    );
+  });
+
+  it("U-RPORT-015: node:sqlite alone satisfies the inverted primary-driver contract", () => {
+    const result = analyzeRuntimePortability([
+      { path: "src/state-db/index.ts", text: 'nodeRequire("node:sqlite");' },
+    ]);
+    expect(result.violations.map((v) => v.rule)).not.toContain("sqlite-driver-fallback-missing");
+  });
+
+  it("U-RPORT-016: fail-closes new bun spawn / bun: import / Bun global outside the debt allowlist (PLAN-L7-462 step 3, AC-3)", () => {
+    const result = analyzeRuntimePortability([
+      { path: "src/new-module.ts", text: 'spawnSync("bun", ["src/cli.ts"]);' },
+      { path: "scripts/new-tool.ts", text: 'import { Database } from "bun:sqlite";' },
+      { path: ".claude/hooks/new-hook.ts", text: "await Bun.write(target, data);" },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => [v.path, v.rule])).toEqual(
+      expect.arrayContaining([
+        ["src/new-module.ts", "bun-runtime-spawn"],
+        ["scripts/new-tool.ts", "bun-module-import"],
+        [".claude/hooks/new-hook.ts", "bun-global-reference"],
+      ]),
+    );
+  });
+
+  it("U-RPORT-017: debt allowlist stays scoped to the frozen fixture sites (no permanent bypass surface)", () => {
+    // 例外サイトは Issue #134 debt として PLAN-L7-462 freeze が帰属した実ファイルに限る。
+    // 別 path が同名 suffix でも bypass しないこと (path 完全一致)。
+    const result = analyzeRuntimePortability([
+      { path: "src/cli/other-distribution.ts", text: 'execFileSync("bun", ["--version"]);' },
+      { path: "src/state-db/other-index.ts", text: 'nodeRequire("bun:sqlite");' },
+    ]);
+    expect(result.violations.map((v) => [v.path, v.rule])).toEqual(
+      expect.arrayContaining([
+        ["src/cli/other-distribution.ts", "bun-runtime-spawn"],
+        ["src/state-db/other-index.ts", "bun-module-import"],
       ]),
     );
   });

@@ -58,6 +58,30 @@ const LOCAL_ABSOLUTE_PATH_PATTERN =
   /(?:[A-Za-z]:\\Users\\|\/home\/|\/Users\/|~\/ai-dev-kit-vscode)/;
 const SHELL_RUNTIME_PATTERN =
   /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`](?:bash|sh|python|python3|powershell|pwsh|cmd(?:\.exe)?)(?:["'`]|\s)/;
+// PLAN-L7-462 step 3 (AC-3): bun 実発火 spawn 引数 / bun: import / Bun グローバル参照の
+// 新規追加を fail-close する。既存残存は Issue #134 の migration debt として下記
+// 例外リストに帰属し、Pack 解禁時の後続 PLAN で撤去する (恒久 bypass ではない期限付き例外)。
+const BUN_SPAWN_PATTERN =
+  /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`]bun(?:\.cmd|\.exe)?["'`]/;
+const BUN_IMPORT_PATTERN = /["'`]bun:[a-z]/;
+const BUN_GLOBAL_PATTERN = /(?<![\w.$])Bun\s*\.\s*\w/;
+const BUN_SPAWN_DEBT_ALLOWLIST = new Set([
+  // Pack/consumer toolchain 検出の posix probe (fixture 例外、PLAN-L7-462 step 2 freeze)。
+  "src/cli/distribution.ts",
+]);
+const BUN_IMPORT_DEBT_ALLOWLIST = new Set([
+  // bun:sqlite / node:sqlite 二重ドライバ (PLAN-L7-45)。node:sqlite 主は
+  // sqliteFallbackViolations が別途強制する。
+  "src/state-db/index.ts",
+]);
+const BUN_GLOBAL_DEBT_ALLOWLIST = new Set([
+  // 検出語彙 ("Bun.write" という文字列/AST matcher、本 lint 自身の pattern/注記) であり
+  // runtime 依存ではない。
+  "src/doctor/test-repository-isolation.ts",
+  "src/lint/runtime-portability.ts",
+  // optional chaining で guard された Bun.gc / Bun.which (node では no-op)。
+  "scripts/run-vitest-snapshot.ts",
+]);
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
 const LEGACY_RUNTIME_MARKER_PATTERN = new RegExp(
@@ -114,12 +138,14 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "TypeScript runtime package must use ESM module semantics.",
     });
   }
-  if (!pkg.engines?.bun) {
+  // PLAN-L7-462 step 3: runtime 正本は Node (ADR-002 予定)。engines.node を必須とし、
+  // engines.bun は Pack/consumer fixture の残存宣言として任意 (Issue #134 debt)。
+  if (!pkg.engines?.node) {
     violations.push({
       path,
       line: 1,
-      rule: "package-missing-bun-engine",
-      message: "ADR-001 runtime contract must declare the Bun engine.",
+      rule: "package-missing-node-engine",
+      message: "Node runtime contract must declare the Node engine (PLAN-L7-462 step 3).",
     });
   }
   if (!/\bbun\s+build\b.*--compile\b/.test(pkg.scripts?.build ?? "")) {
@@ -353,6 +379,38 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       message: "Source modules must not dispatch through shell-specific runtimes.",
     });
   }
+  if (
+    (path.startsWith("src/") || path.startsWith(".claude/hooks/") || path.startsWith("scripts/")) &&
+    path.endsWith(".ts")
+  ) {
+    if (BUN_SPAWN_PATTERN.test(doc.text) && !BUN_SPAWN_DEBT_ALLOWLIST.has(path)) {
+      violations.push({
+        path,
+        line: lineOf(doc.text, BUN_SPAWN_PATTERN),
+        rule: "bun-runtime-spawn",
+        message:
+          "New bun child-process launches are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      });
+    }
+    if (BUN_IMPORT_PATTERN.test(doc.text) && !BUN_IMPORT_DEBT_ALLOWLIST.has(path)) {
+      violations.push({
+        path,
+        line: lineOf(doc.text, BUN_IMPORT_PATTERN),
+        rule: "bun-module-import",
+        message:
+          "New bun: module imports are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      });
+    }
+    if (BUN_GLOBAL_PATTERN.test(doc.text) && !BUN_GLOBAL_DEBT_ALLOWLIST.has(path)) {
+      violations.push({
+        path,
+        line: lineOf(doc.text, BUN_GLOBAL_PATTERN),
+        rule: "bun-global-reference",
+        message:
+          "New Bun global API references are fail-closed; Node is the runtime authority (PLAN-L7-462 step 3, Issue #134).",
+      });
+    }
+  }
   if (LOCAL_ABSOLUTE_PATH_PATTERN.test(doc.text)) {
     violations.push({
       path,
@@ -379,13 +437,15 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
 function sqliteFallbackViolations(docs: RuntimePortabilityDoc[]): RuntimePortabilityViolation[] {
   const stateDb = docs.find((doc) => normalizePath(doc.path) === "src/state-db/index.ts");
   if (!stateDb) return [];
-  if (stateDb.text.includes("bun:sqlite") && stateDb.text.includes("node:sqlite")) return [];
+  // PLAN-L7-462 step 3 (反転): node:sqlite が主ドライバとして必須。bun:sqlite は
+  // 残存 debt として任意 (撤去は Issue #134 の段階撤去に従う)。
+  if (stateDb.text.includes("node:sqlite")) return [];
   return [
     {
       path: stateDb.path,
       line: 1,
       rule: "sqlite-driver-fallback-missing",
-      message: "SQLite adapter must keep both bun:sqlite and node:sqlite drivers visible.",
+      message: "SQLite adapter must keep the node:sqlite primary driver visible.",
     },
   ];
 }
