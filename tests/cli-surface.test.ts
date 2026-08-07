@@ -144,19 +144,15 @@ function withFakeProviderEnv(provider: "codex" | "claude") {
 }
 
 describe("utTddCliProbe (PLAN-L7-462 step 2 .cmd shim probe)", () => {
-  it("U-DIST-CLI-PROBE: resolves a PATH-provided ut-tdd.cmd via ComSpec on win32 (bare node spawn would ENOENT)", () => {
-    if (process.platform !== "win32") {
-      expect(utTddCliProbe(process.env, "linux").error?.message ?? "").not.toContain("EINVAL");
-      return;
-    }
+  it("U-DIST-CLI-PROBE: resolves a PATH-provided ut-tdd shim (win32 は ComSpec 経由 — bare node spawn だと ENOENT)", () => {
     const tmp = mkdtempSync(join(tmpdir(), "ut-tdd-cli-probe-"));
     try {
-      writeFileSync(join(tmp, "ut-tdd.cmd"), "@echo off\r\necho ut-tdd 0.0.0\r\nexit /b 0\r\n");
-      const probe = utTddCliProbe({ ...process.env, PATH: tmp }, "win32");
+      writeFakeUtTdd(tmp);
+      const probe = utTddCliProbe({ ...process.env, PATH: tmp }, process.platform);
       expect(probe.status).toBe(0);
       expect(probe.stdout).toContain("ut-tdd 0.0.0");
     } finally {
-      rmSync(tmp, { recursive: true, force: true });
+      removeTestTree(tmp);
     }
   });
 });
