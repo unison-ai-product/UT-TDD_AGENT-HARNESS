@@ -42,11 +42,11 @@ const validDocs: RuntimePortabilityDoc[] = [
   { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
   {
     path: "scripts/ut-tdd",
-    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec bun run "$ROOT/src/cli.ts" "$@"\n',
+    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec node "$ROOT/src/cli.ts" "$@"\n',
   },
   {
     path: "scripts/ut-tdd.ps1",
-    text: '$root = "."\n& "$root\\dist\\ut-tdd.exe" @args\n& bun run (Join-Path $root "src\\cli.ts") @args\n',
+    text: '$root = "."\n& "$root\\dist\\ut-tdd.exe" @args\n& node (Join-Path $root "src\\cli.ts") @args\n',
   },
 ];
 
@@ -149,7 +149,7 @@ describe("runtime-portability lint", () => {
       { path: "src/new-fallback.ts", text: 'const bin = env.BIN ?? "bun"; spawnSync(bin, a);' },
       { path: "src/new-cmd.ts", text: 'spawnSync(cmdExe, ["/d", "/c", "bun", "--version"]);' },
       { path: "src/new-runner.ts", text: 'const r = ["bun", ["run", "test"]] as const;' },
-      { path: "scripts/new-wrapper", text: 'exec bun run "$ROOT/src/cli.ts" "$@"' },
+      { path: "scripts/new-wrapper", text: 'exec node "$ROOT/src/cli.ts" "$@"' },
       // globalThis 形 / optional chaining / bracket access (blind review A-4)。
       { path: "src/new-global.ts", text: "(globalThis as any).Bun.write(p, d);" },
       { path: "src/new-optional.ts", text: "Bun?.gc?.(true);" },
@@ -224,7 +224,7 @@ describe("runtime-portability lint", () => {
       "set -e",
     ]);
     expect(wrapper).toContain('exec "$ROOT/dist/ut-tdd" "$@"');
-    expect(wrapper).toContain('exec bun run "$ROOT/src/cli.ts" "$@"');
+    expect(wrapper).toContain('exec node "$ROOT/src/cli.ts" "$@"');
   });
 
   it("U-RPORT-005: scans untracked runtime files during active Windows setup work", () => {
@@ -323,7 +323,7 @@ describe("runtime-portability lint", () => {
     );
   });
 
-  it("U-RPORT-013: rejects a git-hooks pre-push that stops dispatching to the bun scanner", () => {
+  it("U-RPORT-013: rejects a git-hooks pre-push that stops dispatching to the node scanner", () => {
     const result = analyzeRuntimePortability([
       ...validDocs,
       { path: "scripts/git-hooks/pre-push", text: "#!/usr/bin/env bash\necho no-op\n" },

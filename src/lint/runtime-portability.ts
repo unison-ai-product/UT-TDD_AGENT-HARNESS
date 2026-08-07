@@ -366,12 +366,13 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
         message: "git-hooks entrypoints must not reintroduce Python runtime dispatch.",
       });
     }
-    if (!/\bbun\b/.test(doc.text) || !doc.text.includes("secret-scan-diff.ts")) {
+    // PLAN-L7-462 step 3: dispatcher は node 起動へ swap (bun 残置は fail-close 対象)。
+    if (!/\bnode\b/.test(doc.text) || !doc.text.includes("secret-scan-diff.ts")) {
       violations.push({
         path,
         line: 1,
         rule: "git-hook-entrypoint-not-thin",
-        message: `${GIT_HOOK_DISPATCHER_PATH} must stay a thin bun dispatcher to ${GIT_HOOK_SCANNER_PATH}, not reimplement scan logic.`,
+        message: `${GIT_HOOK_DISPATCHER_PATH} must stay a thin node dispatcher to ${GIT_HOOK_SCANNER_PATH}, not reimplement scan logic.`,
       });
     }
   }
