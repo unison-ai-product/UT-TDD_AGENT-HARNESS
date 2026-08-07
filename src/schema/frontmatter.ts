@@ -197,7 +197,9 @@ const frontmatterBaseSchema = z.object({
                 "smoke",
               ]),
               command: z.string().min(1),
-              runner: z.enum(["bun", "powershell", "bash", "ci"]),
+              // node = Node 一本化 (PLAN-L7-462) 後の正規 runner。bun は既存証跡の後方互換
+              // のため残置 (新規記録では使わない)。
+              runner: z.enum(["bun", "node", "powershell", "bash", "ci"]),
               scope: z.enum(["full", "targeted", "changed-files", "gate"]),
               exit_code: z.literal(0),
               completed_at: z.string().optional(),
