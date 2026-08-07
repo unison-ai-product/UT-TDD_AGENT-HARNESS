@@ -140,10 +140,20 @@ export function registerDistributionCommands(program: Command): void {
       const sourceSetupEntrypoint = join(packageRoot, "src", "cli.ts");
       const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
       const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
-      const utTddCli = spawnSync("ut-tdd", ["--help"], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+      // PLAN-L7-462 step 2: ut-tdd のグローバル CLI は .cmd shim 配布のため、
+      // bun probe と同様に win32 は ComSpec 経由で探す (fail-soft は従来どおり)。
+      const utTddCli =
+        process.platform === "win32"
+          ? spawnSync(
+              process.env.ComSpec ??
+                join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe"),
+              ["/d", "/c", "ut-tdd", "--help"],
+              { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
+            )
+          : spawnSync("ut-tdd", ["--help"], {
+              encoding: "utf8",
+              stdio: ["ignore", "pipe", "pipe"],
+            });
       const hasUtTddCli = hasProjectLocalUtTdd || hasSourceSetupEntrypoint || utTddCli.status === 0;
       const utTddCliObserved =
         utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;

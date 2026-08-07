@@ -34,9 +34,10 @@ function usesVitestEntrypoint(
 ): boolean {
   return (
     VITEST_ENTRYPOINT.test(script ?? "") ||
-    // PLAN-L7-462 step 2: source は npm run 経由、Pack artifact は bun run 経由の
-    // 間接参照を許す (どちらも test:vitest-snapshot が runner を指すことが条件)。
-    ((script === "npm run test:vitest-snapshot" || script === "bun run test:vitest-snapshot") &&
+    // PLAN-L7-462 step 2: source の `test` は npm run 経由の間接参照
+    // (test:vitest-snapshot が runner を指すことが条件)。Pack artifact の `test` は
+    // `bun run test:pack` で、test:pack が runner を直接指すため上の直接一致で足りる。
+    (script === "npm run test:vitest-snapshot" &&
       VITEST_ENTRYPOINT.test(scripts?.["test:vitest-snapshot"] ?? ""))
   );
 }

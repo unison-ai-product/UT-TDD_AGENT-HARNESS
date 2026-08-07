@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkForUpdate,
   compareSemver,
+  gitLsRemoteInvocation,
   latestReleaseTag,
   normalizeRepositoryUrl,
   parseSemver,
@@ -307,6 +308,63 @@ describe("renderUpdateLine", () => {
     expect(renderUpdateLine(updateCheckDisabled("CI"))).toBe(
       "update: check skipped (disabled by CI)",
     );
+  });
+});
+
+describe("gitLsRemoteInvocation (PLAN-L7-462 step 2 .cmd shim 対応)", () => {
+  it("U-UPDCHK-021: passes through on posix without wrapping", () => {
+    expect(gitLsRemoteInvocation("https://x/y.git", {}, "linux")).toEqual({
+      command: "git",
+      args: ["ls-remote", "--tags", "https://x/y.git"],
+    });
+  });
+
+  it("U-UPDCHK-022: wraps a PATH-resolved git.cmd via ComSpec without over-quoting plain tokens", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "ut-tdd-gitcmd-"));
+    try {
+      writeFileSync(join(tmp, "git.cmd"), "@echo off\r\n");
+      const inv = gitLsRemoteInvocation(
+        "https://example.com/pack.git",
+        { PATH: tmp, ComSpec: "C:\\Windows\\System32\\cmd.exe" },
+        "win32",
+      );
+      expect(inv.command).toBe("C:\\Windows\\System32\\cmd.exe");
+      expect(inv.windowsVerbatimArguments).toBe(true);
+      const inner = inv.args[inv.args.length - 1];
+      // shim 側の %1 比較を壊さないため、素の token は引用されない。
+      expect(inner).toContain(" ls-remote --tags https://example.com/pack.git");
+      expect(inner).not.toContain('"ls-remote"');
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("U-UPDCHK-023: prefers git.exe over git.cmd and never wraps executables", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "ut-tdd-gitexe-"));
+    try {
+      writeFileSync(join(tmp, "git.exe"), "");
+      writeFileSync(join(tmp, "git.cmd"), "@echo off\r\n");
+      const inv = gitLsRemoteInvocation("https://x/y.git", { PATH: tmp }, "win32");
+      expect(inv.command).toBe(join(tmp, "git.exe"));
+      expect(inv.args).toEqual(["ls-remote", "--tags", "https://x/y.git"]);
+      expect(inv.windowsVerbatimArguments).toBeUndefined();
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("U-UPDCHK-024: falls back to bare git when the remote contains % (cmd 展開破壊の回避)", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "ut-tdd-gitpct-"));
+    try {
+      writeFileSync(join(tmp, "git.cmd"), "@echo off\r\n");
+      const inv = gitLsRemoteInvocation("https://x/%PATH%.git", { PATH: tmp }, "win32");
+      expect(inv).toEqual({
+        command: "git",
+        args: ["ls-remote", "--tags", "https://x/%PATH%.git"],
+      });
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
 
