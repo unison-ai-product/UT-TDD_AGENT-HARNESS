@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   cpSync,
@@ -95,6 +95,32 @@ function runDistributionSecretScan(input: {
   return analyzeSecretScan(loadSecretScanArtifactsForPaths(input.repoRoot, sourceArtifactPaths));
 }
 
+/**
+ * PLAN-L7-462 step 2: ut-tdd のグローバル CLI は .cmd shim 配布のため、node の
+ * spawn では PATH 解決されない。bun probe と同様に win32 は ComSpec 経由で探す
+ * (fail-soft は従来どおり)。単体テスト U-DIST-CLI-PROBE が「素の spawn に戻すと
+ * ENOENT で status=null になる」ことを fail-close で固定する。
+ */
+export function utTddCliProbe(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): SpawnSyncReturns<string> {
+  if (platform === "win32") {
+    const cmdExe = env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+    return spawnSync(cmdExe, ["/d", "/c", "ut-tdd", "--help"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+      env,
+    });
+  }
+  return spawnSync("ut-tdd", ["--help"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    env,
+  });
+}
+
 export function registerDistributionCommands(program: Command): void {
   const distribution = program.command("distribution").description("clean distribution planning");
 
@@ -140,10 +166,7 @@ export function registerDistributionCommands(program: Command): void {
       const sourceSetupEntrypoint = join(packageRoot, "src", "cli.ts");
       const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
       const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
-      const utTddCli = spawnSync("ut-tdd", ["--help"], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+      const utTddCli = utTddCliProbe();
       const hasUtTddCli = hasProjectLocalUtTdd || hasSourceSetupEntrypoint || utTddCli.status === 0;
       const utTddCliObserved =
         utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
