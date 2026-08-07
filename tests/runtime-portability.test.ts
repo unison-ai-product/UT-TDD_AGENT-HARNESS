@@ -149,7 +149,7 @@ describe("runtime-portability lint", () => {
       { path: "src/new-fallback.ts", text: 'const bin = env.BIN ?? "bun"; spawnSync(bin, a);' },
       { path: "src/new-cmd.ts", text: 'spawnSync(cmdExe, ["/d", "/c", "bun", "--version"]);' },
       { path: "src/new-runner.ts", text: 'const r = ["bun", ["run", "test"]] as const;' },
-      { path: "scripts/new-wrapper", text: 'exec node "$ROOT/src/cli.ts" "$@"' },
+      { path: "scripts/new-wrapper", text: 'exec bun run "$ROOT/src/cli.ts" "$@"' },
       // globalThis 形 / optional chaining / bracket access (blind review A-4)。
       { path: "src/new-global.ts", text: "(globalThis as any).Bun.write(p, d);" },
       { path: "src/new-optional.ts", text: "Bun?.gc?.(true);" },

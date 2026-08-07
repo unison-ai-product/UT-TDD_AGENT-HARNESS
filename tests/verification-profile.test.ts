@@ -127,7 +127,7 @@ describe("verification profile recommendation", () => {
     expect(result?.checks.map((check) => check.name)).toContain("package");
     expect(result?.checks.map((check) => check.name)).toContain("executable");
     expect(
-      result?.checks.some((check) => check.message.includes("bun add -D testcontainers")),
+      result?.checks.some((check) => check.message.includes("npm install -D testcontainers")),
     ).toBe(true);
   });
 
