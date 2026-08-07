@@ -461,10 +461,14 @@ function runSessionStartSideEffects({
   } catch {
     // fail-open: lifecycle maintenance must not block the runtime.
   }
+  // JSON は機械可読な実行結果だけを stdout に返す契約。人間向け digest は
+  // 並列 provider ごとに DB / memory を再読する必要がなく、lifecycle dispatch
+  // (SessionStart/Stop) は呼び出し側で継続するため、JSON 経路では省略する。
+  if (json) return;
   surfaceSessionStartDigestToStdout(
     repoRoot,
     attemptEscalationBlock(repoRoot, input.session_id),
-    json ? "stderr" : "stdout",
+    "stdout",
   );
 }
 
