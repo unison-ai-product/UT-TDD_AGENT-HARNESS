@@ -131,7 +131,7 @@ describe("worktree topology PF2 OS collector", () => {
     expect(commands.some((command) => command.args.includes("for-each-ref"))).toBe(true);
   });
 
-  it("U-WTTOPO-014/017: malformed porcelain、command failure、root escape を typed finding にする", () => {
+  it("U-WTTOPO-014/U-WTTOPO-017: malformed porcelain、command failure、root escape を typed finding にする", () => {
     const root = tempRoot();
     mkdirSync(join(root, ".git"));
     const cases: Array<{
