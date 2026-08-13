@@ -2245,3 +2245,25 @@ baseline 縮小を機械強制する (詳細は issue #218 のコメント参照
 | `U-OIDGATE-005` | 実 repo | 再導出 orphan 集合 vs `ORACLE_TEST_TRACE_WIDENED_BASELINE` | **集合一致** (件数でなく要素)。収載 oracle の citation 追加は baseline 縮小を機械強制する |
 | `U-OIDGATE-006` | 実 repo の derived 集合 + citation 済み実宣言 oracle を 1 件混入させた widened baseline | `collectOracleIds` + 集合比較 | 実機構経由で不一致として検出 (腐る baseline の抑止) |
 | `U-OIDGATE-007` | 既存 `ORACLE_TEST_TRACE_BASELINE` | 要素数と内容 | 89 件のまま不変。widened 集合と交差 0 |
+
+## oracle-test-trace 逆向き test-label citation (Issue #259 / PLAN-L7-483)
+
+`oracle-test-trace` の reverse leg は、`tests/**/*.ts` の `describe` / `it` / `test` が実行する
+静的な最初の label 文字列だけを citation surface とする。fixture・コメント・本文・data provider
+配列の ID は citation とみなさない。既存の未宣言 label は ratchet baseline とし、新規だけを
+fail-close する。oracle-test-trace 自身の既存 test はこの表へ自己宣言する。
+
+| test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
+|---|---|---|---|
+| `U-OTT-001` | 宣言済だが未 citation の架空 oracle | `analyzeOracleTestTrace` | baseline 外の forward orphan を返し `ok=false` |
+| `U-OTT-002` | tests 側へ citation 済みの架空 oracle | `analyzeOracleTestTrace` | forward orphan 0 |
+| `U-OTT-003` | forward baseline 済み oracle | `analyzeOracleTestTrace` | known debt として orphan 0 |
+| `U-OTT-004` | 実 repo の forward orphan | `loadOracleTestTraceInput` | baseline 適用後 orphan 0 |
+| `U-OTT-005` | duplicate provenance baseline と実 repo | `loadOracleTestTraceInput` | duplicate / stale duplicate 0 |
+| `U-OTT-006` | forward baseline の不変性 | `ORACLE_TEST_TRACE_BASELINE` | 既存 89 件を維持 |
+| `U-OIDGATE-008` | static `it("U-...")` label と、本文 fixture 内の fake ID | `collectOracleCitationSites` | label だけ site になり、本文 fake ID は無視 |
+| `U-OIDGATE-009` | `it.each(...)("U-...", ...)` / `skipIf(...)("U-...", ...)` | `collectOracleCitationSites` | chained label のみ site になり data provider は無視 |
+| `U-OIDGATE-010` | test-label の未宣言 ID | `analyzeOracleTestTrace` | citation finding を返し `ok=false` |
+| `U-OIDGATE-011` | 既存未宣言 label 集合 | `collectOracleIds` + `ORACLE_TEST_CITATION_BASELINE` | derived 集合と baseline が要素一致 |
+| `U-OIDGATE-012` | baseline に宣言済み ID を混入 | `analyzeOracleTestTrace` | stale citation baseline として `ok=false` |
+| `U-OIDGATE-013` | baseline 外の新規 label ID | `analyzeOracleTestTrace` | 新規 citation のみ fail-close、既存 debt は許容 |
