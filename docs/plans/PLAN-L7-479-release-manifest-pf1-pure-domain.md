@@ -8,7 +8,7 @@ route_signal: forward
 route_mode: forward
 status: draft
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-13
 owner: PM / PO
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -69,8 +69,10 @@ fault injectionはPF-5のままREDを維持する。PF-1のpure返値を副作�
   `channels` と `channelOrder` のown-key完全列挙、immutableな成功値、own-propertyだけを使う
   channel resolverを提供するpure domain moduleとする。
 - `tests/release-manifest.test.ts` は `U-RELMAN-001`、`002`、`007`、`009`、`013` を各 `it()` と
-  1:1に対応させる。Git/FS/CLI adapter、materializer、resolver I/O、copy/write、feature lifecycleは
-  追加しない。`014`〜`017`はPF-5のRED oracleとして変更しない。
+  1:1に対応させる。`007` は存在しないrelease IDへのchannel参照と、channel数と同数長の重複
+  `channelOrder`も拒否する。`013` は`unknown_channel`の`ok: false`とerror値、および`channels`と
+  `channelOrder`のfreezeを直接pinする。Git/FS/CLI adapter、materializer、resolver I/O、copy/write、
+  feature lifecycleは追加しない。`014`〜`017`はPF-5のRED oracleとして変更しない。
 
 ## Exit
 

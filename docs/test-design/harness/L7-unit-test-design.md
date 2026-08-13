@@ -1849,7 +1849,7 @@ S1では以下を未実装のcandidate RED oracleとして登録する。各cand
 
 | candidate ID | 所有slice | mutation / 入力 | oracle |
 |---|---|---|---|
-| `U-RELMAN-001` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-001` | 必須field欠落に加え、object/array/string/number/nullを各fieldへ型違いで入力、未知schema version・未知fieldも個別入力し、pure parseが全mutationをtyped errorでfail-closeする。I/O副作用はこのoracleの主張外 |
+| `U-RELMAN-001` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-001` | `releases` / `channelOrder`の必須field欠落、object/array/string/number/nullを各fieldへ型違いで入力、未知schema version・root / nested recordの未知field、`schema_version` / source commit / artifact digest / release IDの形式違反を各1件入力し、pure parseが全mutationをtyped errorでfail-closeする。I/O副作用はこのoracleの主張外 |
 | `U-RELMAN-002` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-002` | manifestに存在しないchannelをpure resolverへ指定し、`unknown_channel`を返してrelease成功値を返さない。aggregate side-effect 0はこのoracleの主張外 |
 | `CANDIDATE-RELMAN-003` | S3 promotion | harness-check / QA Go / cross-review receiptを各1件欠落 | promotion拒否、pointer不変 |
 | `CANDIDATE-RELMAN-004` | S3 rollback | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束 |
@@ -1861,7 +1861,7 @@ S1では以下を未実装のcandidate RED oracleとして登録する。各cand
 | `CANDIDATE-RELMAN-010` | S3 promotion / rollback | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write 0 |
 | `CANDIDATE-RELMAN-011` | PF-2 materializer / #248 | dry-run/applyへ同じchannelを入力し、`docs/skills→skills` remap、workflow template source mapping、`package.json` transform、symlink target/modeを各1件mutation | version固定materializer後のdestination path/mode/contentから同一digest。source blobだけ同じでPack outputが違えばmismatch。manifestはcontrol copyでdigest対象外 |
 | `CANDIDATE-RELMAN-012` | PF-3 resolver / #249 | control HEADで`stable=v1` / `canary=v2`、v1/v2 objectを個別解決し、object欠落もmutation | 選択channelだけを対応revisionからmaterialize。control HEADとのSHA一致を要求せず、欠落時network/reconstruction/copy 0 |
-| `U-RELMAN-013` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-013` | channel名に`toString` / `constructor` / `__proto__`等のprototype由来名を指定し、通常object・null-prototype objectを交差して、own propertyでないchannelを必ず`unknown_channel`として拒否し、`release: undefined`の成功値を返さない |
+| `U-RELMAN-013` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-013` | channel名に`toString` / `constructor` / `__proto__`等のprototype由来名を指定し、通常object・null-prototype objectを交差して、own propertyでないchannelを必ず`{ ok: false, error: "unknown_channel" }`として拒否し、`release: undefined`の成功値を返さない。parse成功値、`channels`、`channelOrder`はそれぞれfreezeされる |
 | `CANDIDATE-RELMAN-014` | PF-5 aggregate / #251 | exact HEAD final treeからmanifest SSoT、clean Pack allowlist、`sync-pack --channel` selected-revision copy predicateを1点ずつ欠落 | aggregate admission guardが3 predicateをside effect前にAND判定し、欠落時はsealed planを発行せずresolver/materializer/copy/write count 0。Git commit境界は判定しない |
 | `CANDIDATE-RELMAN-015` | PF-5 aggregate / #251 | schema invalid manifestをaggregate admissionへ入力 | pure errorを受けてresolver/materializer/copy/write count 0。PF-1のpure `001`とは別に実測する |
 | `CANDIDATE-RELMAN-016` | PF-5 aggregate / #251 | unknown channelをaggregate admissionへ入力 | `unknown_channel`を保持しresolver/materializer/copy/write count 0。PF-1のpure `002`とは別に実測する |
