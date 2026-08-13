@@ -10,8 +10,12 @@
  * gitignored state や process 環境が同値だとは主張しない。
  */
 
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildFullDoctorCheckDefinitions } from "../src/doctor/check-definitions.ts";
+import { runDoctorMeasured } from "../src/doctor/index.ts";
 import {
   buildDoctorResultEnvelope,
   canonicalRepoRoot,
@@ -20,6 +24,7 @@ import {
   doctorResultPayloadDigest,
   doctorResultProducerIdentity,
   parseDoctorResultEnvelope,
+  writeDoctorResultEnvelopeFile,
 } from "../src/doctor/result-file.ts";
 import { nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import { defaultBranchRefMap, headSha } from "../src/git/default-branch.ts";
@@ -28,7 +33,11 @@ import { headSnapshotRoot } from "./support/workspace-roots.ts";
 
 const RESULT = { ok: true, messages: ["doctor: rule-drift — OK"] };
 const REF_MAP = { "refs/remotes/origin/main": "b155171cf23d619751c01f11a2630334adb74f9c" };
-const OPTIONS = { strict_green_command_digest: true, timing: false };
+const OPTIONS = {
+  strict_green_command_digest: true,
+  strict_telemetry_provenance: false,
+  timing: false,
+};
 const CHECK_IDS = ["memory-sync", "merged-plan-status", "rule-drift"];
 const PRODUCER = { command: "ut-tdd doctor", version: "0.1.0" };
 
@@ -88,7 +97,13 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
       reason: "ref-map-mismatch",
     });
     expect(
-      usability({ expectedOptions: { strict_green_command_digest: false, timing: false } }),
+      usability({
+        expectedOptions: {
+          strict_green_command_digest: false,
+          strict_telemetry_provenance: false,
+          timing: false,
+        },
+      }),
     ).toEqual({ usable: false, reason: "options-mismatch" });
     expect(usability({ expectedCheckIds: ["rule-drift"] })).toEqual({
       usable: false,
@@ -180,7 +195,11 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
       timings: [{ id: "rule-drift", duration_ms: 1.25, ok: true, message_count: 1 }],
     };
     const timed = envelope({
-      options: { strict_green_command_digest: true, timing: true },
+      options: {
+        strict_green_command_digest: true,
+        strict_telemetry_provenance: false,
+        timing: true,
+      },
       result: timedResult,
       payload_digest: doctorResultPayloadDigest(timedResult),
     });
@@ -200,13 +219,17 @@ describe("doctor result envelope (PLAN-L7-461)", () => {
     expect(
       usability({
         envelope: parseDoctorResultEnvelope(JSON.stringify(tampered)),
-        expectedOptions: { strict_green_command_digest: true, timing: true },
+        expectedOptions: {
+          strict_green_command_digest: true,
+          strict_telemetry_provenance: false,
+          timing: true,
+        },
       }),
     ).toEqual({ usable: false, reason: "payload-digest-mismatch" });
   });
 
   it("U-DOCTORENV-007: rejects a stale schema version", () => {
-    expect(DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION).toBe("v3");
+    expect(DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION).toBe("v4");
     expect(usability({ envelope: envelope({ schema_version: "v2" }) })).toEqual({
       usable: false,
       reason: "schema-version-mismatch:v2",
@@ -234,7 +257,7 @@ describe("doctor envelope consumption (PLAN-L7-461)", () => {
         profile: null,
         producerRoot: canonicalRepoRoot(snapshotRoot),
         refMap: defaultBranchRefMap(snapshotRoot),
-        options: { strict_green_command_digest: true, timing: false },
+        options: OPTIONS,
         checkIds: buildFullDoctorCheckDefinitions(nodeDoctorDeps(snapshotRoot)).map((d) => d.id),
         producer: doctorResultProducerIdentity(snapshotRoot),
         result: { ok: true, messages: ["doctor: consumed-envelope OK"] },
@@ -307,7 +330,7 @@ describe("doctor check set equivalence across the single-run switch (PLAN-L7-461
       profile: null,
       producerRoot: "/tmp/root",
       refMap: {},
-      options: { strict_green_command_digest: true, timing: false },
+      options: OPTIONS,
       checkIds: narrowed,
       producer: { command: "ut-tdd doctor", version: "test" },
       result: { ok: true, messages: [] },
@@ -319,11 +342,59 @@ describe("doctor check set equivalence across the single-run switch (PLAN-L7-461
         expectedHeadSha: "a".repeat(40),
         expectedProducerRoot: "/tmp/root",
         expectedRefMap: {},
-        expectedOptions: { strict_green_command_digest: true, timing: false },
+        expectedOptions: OPTIONS,
         expectedCheckIds: fullIds,
         expectedProducer: { command: "ut-tdd doctor", version: "test" },
         ci: true,
       }),
     ).toEqual({ usable: false, reason: "check-id-set-mismatch" });
+  });
+});
+
+describe("doctor result envelope measured surface (PLAN-L7-484)", () => {
+  it("U-DOCTORENV-012: reports the resolved setup-smoke profile and only its executed check", () => {
+    const measured = runDoctorMeasured(nodeDoctorDeps(headSnapshotRoot()), { setupSmoke: true });
+    expect(measured.profile.id).toBe("consumer-setup-smoke");
+    expect(measured.checkIds).toEqual(["setup-smoke"]);
+  });
+
+  it("U-DOCTORENV-013: writes supplied measured check IDs without rebuilding the full registry", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-envelope-"));
+    const file = join(dir, "result.json");
+    try {
+      writeDoctorResultEnvelopeFile(file, headSnapshotRoot(), {
+        scope: "setup-smoke",
+        profile: "consumer-setup-smoke",
+        options: OPTIONS,
+        checkIds: ["setup-smoke"],
+        result: RESULT,
+      });
+      const written = parseDoctorResultEnvelope(readFileSync(file, "utf8"));
+      expect(written?.check_ids).toEqual(["setup-smoke"]);
+      expect(written?.scope).toBe("setup-smoke");
+      expect(written?.profile).toBe("consumer-setup-smoke");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("U-DOCTORENV-014: rejects a strict telemetry option mismatch", () => {
+    expect(
+      usability({
+        expectedOptions: { ...OPTIONS, strict_telemetry_provenance: true },
+      }),
+    ).toEqual({ usable: false, reason: "options-mismatch" });
+  });
+
+  it("U-DOCTORENV-015: a setup-smoke measurement cannot be consumed as full", () => {
+    expect(
+      usability({
+        envelope: envelope({
+          scope: "setup-smoke",
+          profile: "consumer-setup-smoke",
+          check_ids: ["setup-smoke"],
+        }),
+      }),
+    ).toEqual({ usable: false, reason: "scope-not-full:setup-smoke" });
   });
 });

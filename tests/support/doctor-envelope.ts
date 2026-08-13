@@ -67,6 +67,7 @@ export function consumeDoctorResultEnvelopeWithReason(
     expectedRefMap: defaultBranchRefMap(snapshotRoot),
     expectedOptions: {
       strict_green_command_digest: env[DOCTOR_RESULT_STRICT_ENV] === "1",
+      strict_telemetry_provenance: false,
       timing: false,
     },
     expectedCheckIds: buildFullDoctorCheckDefinitions(nodeDoctorDeps(snapshotRoot)).map(

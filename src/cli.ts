@@ -42,7 +42,7 @@ import {
   DOCTOR_RUN_PROFILES,
   type DoctorRunProfileId,
 } from "./doctor/check-registry.ts";
-import { runDoctor } from "./doctor/index.ts";
+import { runDoctor, runDoctorMeasured } from "./doctor/index.ts";
 import { writeDoctorResultEnvelopeFile } from "./doctor/result-file.ts";
 import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock.ts";
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context.ts";
@@ -732,9 +732,9 @@ program
         process.exitCode = 2;
         return;
       }
-      let r: ReturnType<typeof runDoctor>;
+      let measured: ReturnType<typeof runDoctorMeasured>;
       try {
-        r = runDoctor(undefined, {
+        measured = runDoctorMeasured(undefined, {
           strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
           strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
           setupSmoke: opts.setupSmoke === true,
@@ -745,18 +745,26 @@ program
       } finally {
         lock.release();
       }
+      const r = measured.result;
       if (opts.resultFile) {
         // PLAN-L7-461: 同一 job 内の consumer (vitest fence) が「どの面をどの条件で観測したか」を
         // 完全一致で検査できるよう、観測面ごと書き出す。書き出し失敗は測定自体を失敗させない
         // (consumer は envelope 不在で自走へ fail-close する)。
         try {
           writeDoctorResultEnvelopeFile(opts.resultFile, process.cwd(), {
-            scope,
-            profile: profile ?? null,
+            scope:
+              measured.profile.invocation === "registry" ? measured.profile.scope : "setup-smoke",
+            profile: profile
+              ? (profile as DoctorRunProfileId)
+              : opts.setupSmoke === true
+                ? measured.profile.id
+                : null,
             options: {
               strict_green_command_digest: opts.strictGreenCommandDigest === true,
+              strict_telemetry_provenance: opts.strictTelemetryProvenance === true,
               timing: opts.timing === true,
             },
+            checkIds: measured.checkIds,
             result: r,
           });
         } catch (error) {
