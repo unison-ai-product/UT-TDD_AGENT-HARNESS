@@ -21,11 +21,11 @@ generates:
   - artifact_path: docs/plans/PLAN-L7-485-workflow-suggest-composition.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L6-99-workflow-suggest-add-design.md
+  parent: docs/plans/PLAN-L6-100-workflow-suggest-add-design.md
   requires: []
   blocks: []
   references:
-    - docs/plans/PLAN-L6-99-workflow-suggest-add-design.md
+    - docs/plans/PLAN-L6-100-workflow-suggest-add-design.md
     - docs/plans/PLAN-L7-72-task-classify-cli.md
     - docs/plans/PLAN-REVERSE-485-workflow-suggest-backfill.md
     - docs/design/harness/L6-function-design/function-spec.md
@@ -50,10 +50,10 @@ workflow を advisory 出力する CLI を追加する。S2 (#305 の FLAG 還�
 
 本 PLAN は `kind=add-impl` であり、Reverse 対 `PLAN-REVERSE-485-workflow-suggest-backfill` を持つ。
 add-feature 経路 B (`add-design → add-impl`) に従い、設計側の親は
-`PLAN-L6-99-workflow-suggest-add-design` (L6 add-design) である。family map / drive×kind matrix /
-exit semantics の設計判断はすべて L6-99 §1 に freeze されており、本 PLAN と実装 PR はそれを
+`PLAN-L6-100-workflow-suggest-add-design` (L6 add-design) である。family map / drive×kind matrix /
+exit semantics の設計判断はすべて L6-100 §1 に freeze されており、本 PLAN と実装 PR はそれを
 発明・変更しない。L6 doc 実体 (`docs/design/harness/L6-function-design/workflow-suggest.md`) は
-`U-WFSUG-*` 昇格と同一 PR で合流する (L6-99 §冒頭の orphan 回避順序)。
+`U-WFSUG-*` 昇格と同一 PR で合流する (L6-100 §冒頭の orphan 回避順序)。
 
 ## §1 契約 freeze (実装 PR で発明しない)
 
@@ -65,7 +65,7 @@ ut-tdd workflow suggest --text "..." | --issue <N> | --plan <id>
 
 - 入力 3 経路は排他。いずれも最終的に「1 本の入力テキスト + 任意の PLAN context」へ正規化してから
   composer へ渡す。
-- exit semantics は L6-99 §1.3 の 3 区分 (advisory=0 / usage error=2 / operational failure=1 +
+- exit semantics は L6-100 §1.3 の 3 区分 (advisory=0 / usage error=2 / operational failure=1 +
   stderr) に従う。advisory の非 blocking 性を、道具の利用不能・取得不能・生成不能の exit 0 への
   丸めに拡大解釈しない。
 - `--issue <N>` は `gh` 読みの**薄い adapter のみ**とする。Issue の harness.db inbound projection
@@ -92,7 +92,7 @@ composer 側で再実装しない (再実装が必要に見えたら実装を止
    `src/team/delegation-routing.ts` で解決可能なものだけを使う (未登録 role を出力しない)。
    生成物はそのまま `ut-tdd team run --definition` の schema validation を通ること。
 2. **駆動別検証次元 checklist**: `skills/review-checklist.yaml` (`review-checklist.v1`) の派生 schema
-   `workflow-checklist.v1` を持つ versioned data asset。項目の選択は L6-99 §1.2 で freeze した
+   `workflow-checklist.v1` を持つ versioned data asset。項目の選択は L6-100 §1.2 で freeze した
    drive×kind 静的 matrix の評価のみで行い、取捨ロジックを composer 側で発明しない。未知の
    drive / kind は全項目へ倒す (fail-safe)。
 
@@ -112,7 +112,7 @@ composer 側で再実装しない (再実装が必要に見えたら実装を止
 
 ### 1.4 family 候補提案
 
-family label 未付与 issue に対し、L6-99 §1.1 で freeze した `family-map.v1` (静的 signal→family
+family label 未付与 issue に対し、L6-100 §1.1 で freeze した `family-map.v1` (静的 signal→family
 表、先勝ち、未一致は候補なし) の決定的 lookup で family 候補を提案する。scoring・推論ロジックを
 composer 側に持たず、提案は出力に含めるだけで label 付与は行わない (書き込み副作用を持たない)。
 
@@ -132,7 +132,7 @@ candidate として freeze する。各行が入力・期待出力・失敗境�
 | `CANDIDATE-WFSUG-001` | 生成 team YAML | `src/schema/team.ts` の schema parse を通り、`delegation-routing` 未登録 role を含まない。未登録 role を含む合成入力では serialization failure (exit 1) |
 | `CANDIDATE-WFSUG-002` | `--text` と `--issue` の同時指定 | usage error: exit 2 + stderr。advisory 出力を出さない |
 | `CANDIDATE-WFSUG-003` | `gh` fetch 失敗 (`--issue` で到達不能) | exit 1 + stderr。exit 0 / 空提案へ丸めない |
-| `CANDIDATE-WFSUG-004` | (code, impl 系) と (code, docs 系) の 2 入力 | checklist が 7 項目 vs 4 項目 (L6-99 §1.2 matrix と要素一致)。matrix を無視した実装では差分が出ず RED |
+| `CANDIDATE-WFSUG-004` | (code, impl 系) と (code, docs 系) の 2 入力 | checklist が 7 項目 vs 4 項目 (L6-100 §1.2 matrix と要素一致)。matrix を無視した実装では差分が出ず RED |
 | `CANDIDATE-WFSUG-005` | family-map 一致 keyword / 全不一致テキスト | 一致 → 表の先勝ち family 候補、不一致 → 候補なし (空)。推測で埋める実装は RED |
 | `CANDIDATE-WFSUG-006` | 4 部品の出力 stub 差し替え | composer 出力が部品出力へ追随する (再実装していれば追随せず RED)。import 実測で部品 module 以外の分類・route・scoring 実装が composer に無い |
 | `CANDIDATE-WFSUG-007` | 正常 `--text` 入力 (提案 0 件ケースを含む) | exit 0 + stdout に advisory (0 件でも exit 0) |
@@ -181,7 +181,7 @@ closing review が対象を固定できない。PASS verdict 受領前に merge 
 
 - [ ] 実 issue 3 件 (うち absence-blindness 類型 1 件以上) で生成試走し、生成 YAML が
       `ut-tdd team run` の schema validation を通る。
-- [ ] checklist が drive×kind で内容を変える (L6-99 §1.2 で pin した 2 組 — (code, impl 系) 7 項目
+- [ ] checklist が drive×kind で内容を変える (L6-100 §1.2 で pin した 2 組 — (code, impl 系) 7 項目
       vs (code, docs 系) 4 項目、(agent, impl 系) vs (agent, docs 系) — で要素差分を実証する)。
 - [ ] §1.6 の candidate 8 件が `U-WFSUG-*` へ昇格し、test-design と 1:1 で対応する。
 - [ ] composer が既存 4 部品の再実装を含まない (import 実測で確認する)。
@@ -191,5 +191,5 @@ closing review が対象を固定できない。PASS verdict 受領前に merge 
 ## §5 Exit
 
 上記 DoD 全項目が実測で満たされ、closing review PASS 後に merge した時点で confirmed へ遷移する。
-設計の upstream closure は L6-99 (add-design) が所有し、Reverse 対 `PLAN-REVERSE-485` の R3/R4 が
+設計の upstream closure は L6-100 (add-design) が所有し、Reverse 対 `PLAN-REVERSE-485` の R3/R4 が
 L6 doc 実体の合流と設計判断の実測整合を再検証する。

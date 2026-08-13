@@ -42,8 +42,8 @@ review_evidence: []
 # PLAN-REVERSE-485: workflow suggest 生成器 設計backfill
 
 本 PLAN は `PLAN-L7-485-workflow-suggest-composition` (add-impl) の Reverse 対である
-(`kind=add-impl` は Reverse 対必須)。Forward 側の設計親は `PLAN-L6-99-workflow-suggest-add-design`
-(add-feature 経路 B) であり、設計判断 (family map / drive×kind matrix / exit semantics) は L6-99 §1
+(`kind=add-impl` は Reverse 対必須)。Forward 側の設計親は `PLAN-L6-100-workflow-suggest-add-design`
+(add-feature 経路 B) であり、設計判断 (family map / drive×kind matrix / exit semantics) は L6-100 §1
 に freeze されている。本 Reverse 対は「既存部品の契約と composer の責務境界の観測」と「L6 doc 実体
 (`workflow-suggest.md`) 合流の upstream closure 再検証」を負う。実装を R1 完了証拠の代替にしない。
 
@@ -63,10 +63,10 @@ review_evidence: []
   候補 oracle は所有 slice 以外で昇格しない。
 - R3: 非 author family の cross-review で、合成のみ (再実装なし) / 出力 2 面の schema 適合 /
   drive×kind の差分実在 / advisory only を再導出する。単体 Green の合算を PASS の代替にしない。
-- R4: R3 PASS 後に、L6-99 が所有する L6 doc 実体
+- R4: R3 PASS 後に、L6-100 が所有する L6 doc 実体
   (`docs/design/harness/L6-function-design/workflow-suggest.md`) が `U-WFSUG-*` と同一 PR で
-  合流済みであること、および doc 内容が L6-99 §1 の freeze と実装実測の双方に整合することを
-  再検証する (upstream closure の確認)。乖離があれば L6-99 の契約改訂へ戻す。
+  合流済みであること、および doc 内容が L6-100 §1 の freeze と実装実測の双方に整合することを
+  再検証する (upstream closure の確認)。乖離があれば L6-100 の契約改訂へ戻す。
 
 | from | transition guard | to | FLAG / failure |
 | --- | --- | --- | --- |
@@ -80,7 +80,7 @@ review_evidence: []
 
 - requirements: 既存要件を変更しない (advisory 出力の追加に閉じる)。
 - L4-basic-design: 外部機能境界・component 責務は変更しない。
-- L5/L6: composer の合成契約は `PLAN-L6-99` (add-design) が所有し、
+- L5/L6: composer の合成契約は `PLAN-L6-100` (add-design) が所有し、
   `docs/design/harness/L6-function-design/workflow-suggest.md` として合流する (対象確定済み)。
   本 Reverse は合流の実在と整合を R4 で再検証する。
 
