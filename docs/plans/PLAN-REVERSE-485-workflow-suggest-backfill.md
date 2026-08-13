@@ -42,9 +42,10 @@ review_evidence: []
 # PLAN-REVERSE-485: workflow suggest 生成器 設計backfill
 
 本 PLAN は `PLAN-L7-485-workflow-suggest-composition` (add-impl) の Reverse 対である
-(`kind=add-impl` は Reverse 対必須)。Forward 側は L1-L6 に降下元 doc を持たない local-impl-only
-合成であり、本 Reverse 対が「既存部品の契約と composer の責務境界を観測し、設計 back-fill の
-要否を確定する」責務を負う。実装を R1 完了証拠の代替にしない。
+(`kind=add-impl` は Reverse 対必須)。Forward 側の設計親は `PLAN-L6-99-workflow-suggest-add-design`
+(add-feature 経路 B) であり、設計判断 (family map / drive×kind matrix / exit semantics) は L6-99 §1
+に freeze されている。本 Reverse 対は「既存部品の契約と composer の責務境界の観測」と「L6 doc 実体
+(`workflow-suggest.md`) 合流の upstream closure 再検証」を負う。実装を R1 完了証拠の代替にしない。
 
 ## R0-R4 と状態遷移
 
@@ -62,10 +63,10 @@ review_evidence: []
   候補 oracle は所有 slice 以外で昇格しない。
 - R3: 非 author family の cross-review で、合成のみ (再実装なし) / 出力 2 面の schema 適合 /
   drive×kind の差分実在 / advisory only を再導出する。単体 Green の合算を PASS の代替にしない。
-- R4: R3 PASS 後に設計 back-fill の要否を確定する。back-fill が必要と判定した場合のみ
-  `docs/design/harness/L6-function-design/` へ composer 契約を合流し、`forward_routing` /
-  `promotion_strategy` を確定して Forward へ戻す。不要と判定した場合は Forward 側の
-  `backprop_decision: not_required` を実測付きで確定する。
+- R4: R3 PASS 後に、L6-99 が所有する L6 doc 実体
+  (`docs/design/harness/L6-function-design/workflow-suggest.md`) が `U-WFSUG-*` と同一 PR で
+  合流済みであること、および doc 内容が L6-99 §1 の freeze と実装実測の双方に整合することを
+  再検証する (upstream closure の確認)。乖離があれば L6-99 の契約改訂へ戻す。
 
 | from | transition guard | to | FLAG / failure |
 | --- | --- | --- | --- |
@@ -73,16 +74,15 @@ review_evidence: []
 | R1 | 本 docs-only 訂正が cross-review PASS で main へ merge | R2 | R1 へ戻し、oracle は RED 維持 |
 | R2 | `U-WFSUG-*` が Green、実 issue 3 件の試走で team YAML が schema validation を通る | R3 | R2 へ戻る |
 | R3 | 非 author family の cross-review PASS + back-fill 先の確定 | R4 | finding 所有 slice へ戻る |
-| R4 | 設計 back-fill 要否の確定 (要なら L6 合流) と closing gate PASS | Forward merge | R4 未完了のまま保持 |
+| R4 | L6 doc 実体の合流確認と freeze・実測整合の再検証、closing gate PASS | Forward merge | R4 未完了のまま保持 |
 
-## backprop_scope (仮、R4 で確定)
+## backprop_scope
 
-設計降下前のため本節は仮置きとする。現時点で予想される影響範囲:
-
-- requirements: 既存要件を変更しない見込み (advisory 出力の追加に閉じる)。
-- L4-basic-design: 外部機能境界・component 責務は変更しない見込み。
-- L5/L6: composer の合成契約を新規追加する可能性がある
-  (`docs/design/harness/L6-function-design/` 配下、対象ファイルは R3 で確定)。
+- requirements: 既存要件を変更しない (advisory 出力の追加に閉じる)。
+- L4-basic-design: 外部機能境界・component 責務は変更しない。
+- L5/L6: composer の合成契約は `PLAN-L6-99` (add-design) が所有し、
+  `docs/design/harness/L6-function-design/workflow-suggest.md` として合流する (対象確定済み)。
+  本 Reverse は合流の実在と整合を R4 で再検証する。
 
 上記は R0 時点の見立てであり、R4 で実測に基づき確定する (仮置きを完了条件の代替にしない)。
 
