@@ -8,7 +8,7 @@ route_signal: incident
 route_mode: incident
 status: completed
 created: 2026-07-28
-updated: 2026-08-07
+updated: 2026-08-13
 backprop_decision: not_required
 backprop_decision_reason: "Harness 自身の実行 runtime の差し替えであり、製品の外部 requirement / design / test-design 契約は変えない。言語は TypeScript のまま (ADR-001 の言語選定は不変、runtime 節のみ改訂対象)。"
 owner: PM / PO
@@ -123,6 +123,34 @@ review_evidence:
         evidence_path: .github/workflows/harness-check.yml
         output_digest: "sha256:d9fa9da53d2dfc7a442b2b23064ce3017787814f55fb7e4577eafad33936cc81"
         anchor_commit: cc3ed37f265e4df71ecb3e17c22f5b5b5d1b0e97
+  - reviewer: gpt-5.6-sol
+    review_kind: cross_agent
+    reviewed_at: "2026-08-13T01:04:40Z"
+    tests_green_at: "2026-08-07T09:30:40Z"
+    verdict: approve
+    scope: >-
+      PR #286 (exact HEAD 4634fcdb) に対する Codex frontier non-author closing review の
+      事後取得 (retake — 共有メモリ project-plan-l7-462-cross-review-retake-codex-frontier-
+      pr-284-286 の要求充足)。Codex 側の独立再検証は反証なし: ADR-001/ADR-002 記述の実在、
+      U-DBCURRENCY-007/010/011/016/029/030/031 の tests/db-currency.test.ts 実在、
+      green_commands blob digest の独立再計算一致 (445c710f / cc3ed37f / 305df9ed)、
+      CI run 31165362419 の Linux/Windows/aggregate success。verdict 原文は PR #286
+      comment 5274667758 (内容反証なし。FLAG は cross_agent 記録の
+      欠落のみであり、本追記がその是正)。reviewer_model は Codex frontier reviewer tier
+      の routing 既定を示す記録 (comment に実モデル ID の保存なし — PLAN-L7-482 と同じ
+      自己開示方式)。
+    worker_model: claude-fable-5
+    reviewer_model: gpt-5.6-sol
+    green_commands:
+      - kind: smoke
+        command: "gh api repos/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31165362419"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-07T09:30:40Z"
+        evidence_path: docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
+        output_digest: "sha256:806979e991c8982193bdac09f0ef58b461b386fac4aea6195f91b694b418192f"
+        anchor_commit: 4634fcdb343cc3fe3ef914f611542a28b30fdd94
 ---
 
 # PLAN-L7-462 (troubleshoot): Bun runtime 撤退 — Node 一本化の段階移行
