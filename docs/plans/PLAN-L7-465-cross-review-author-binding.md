@@ -646,3 +646,63 @@ PR #299 の Claude family blind re-review (subject `021cb536`) は `blocking 0` 
 前回 subject に対する証跡であり、rebase 後 HEAD `5215bc23` に対する closing review は本 slice
 の定量検証後に再取得する予定である。frontmatter の `review_evidence` に
 `worker_model: gpt-5.6-luna` / `reviewer_model: claude-opus-5` として append した。
+
+#### D2-D 実装契約 freeze (2026-08-13)
+
+D2 scope 改訂 (2026-08-03) §2 の backstop を、B 面 (D2-B、PR #299 merge 済) に対で実装する
+契約として本節に freeze する。B は「wrapper 経由の merge を fail-close で deny する」一次防壁
+であり、D は「wrapper を迂回した merge を post-merge に検知して可視化する」backstop である。
+D 無しの B は迂回が静かに通る fail-open の看板替えになるため対必須 (D2 scope 改訂 §2 既定)。
+
+**検知対象 (2 種、いずれも main への merge を対象)**
+
+1. `bypass_merge`: merge commit を B の wrapper receipt (`.ut-tdd/logs/review-merge-gate.jsonl`
+   の `merge_result` 行、decision=merge) と突合できない merge (= `gh` 直叩き等の wrapper 迂回)。
+2. `merged_without_verdict`: D1 analyzer (`analyzeReviewDispatch`、
+   `src/feedback/review-dispatch.ts:464` の既存 reason) を merge commit の PR exact HEAD で
+   評価した結果、この reason を含むもの。
+
+**突合先の正本 = ローカル wrapper receipt JSONL のまま (案 a 採用)**。検知 surface
+(session-start digest / `feedback_events`) はローカル実行であり、両ランタイム (Claude /
+Codex) は同一機械・同一 repo checkout を共有するため、receipt はどちらの merge でも見える。
+receipt を追跡ファイルへ昇格する案 (案 b) は不採用とする — Safety Boundaries が定める
+「非追跡 runtime artifact を track しない」境界の例外を増やすだけで、検知精度は上がらず
+最小実装原則に反する。trade-off として、**検知は wrapper を実行した機械と同一機械上でのみ
+完全**であることをここに明記する。機械横断の検知強化 (receipt の共有ストレージ化等) は
+本 freeze の範囲外とし、必要になった時点で別 PLAN を起票する。
+
+**cutoff baseline (ratchet)**: D 実装 commit の merge 時刻より前の merge は検知対象外とする。
+B 着地 (PR #299) 以前は wrapper 自体が存在せず、既往 merge を遡って全部 `bypass_merge` 扱い
+にすると偽陽性で埋まるため。baseline の具体値 (定数 or receipt 初行 anchor) は実装 PR で確定し、
+確定後にこの節へ追記する。
+
+**検知の入力**: `gh api` による直近 merged PR 一覧 (merge commit SHA / mergedAt / PR 番号 /
+head SHA)。`gh api` が到達不能な場合、検知を無音で skip せず「検知不能」を digest / event へ
+明示する (fail-close 表示の一種。判定不能を green へ丸めない D3c 既定の踏襲)。
+
+**表示配線**: session-start digest (`src/handover/session-start-digest.ts`、`SessionStartDigest`
+の既存 fail-close 段の並びに追加) に bypass/merged_without_verdict の件数 + PR 番号を出す。
+`feedback_events` (`src/feedback/engine.ts` の `emitFeedbackEvents(db)`、`FeedbackEvent` 既存
+schema — `signal_type` / `severity` / `next_action` 等の既存 field に従う) へ同内容のイベント行を
+投影する。surface は `src/feedback/surface.ts` の既存 selection 経路に乗せ、新しい層・新しい
+DB テーブルは作らない。検知は可視化のみであり、自動 revert 等の破壊的動作はしない。
+
+**oracle 対**: `U-RVMG-*` の続番で以下を宣言し、実装 PR で test-design と 1:1 にする。
+
+1. receipt ありの正常 merge (deny 経路を通った merge) が誤検知されない。
+2. receipt 無し merge が `bypass_merge` として検知される。
+3. cutoff baseline より前の merge が検知対象に含まれない。
+4. `merged_without_verdict` の PR が検知される。
+5. `gh api` 不能時に「検知不能」が digest / event へ明示される (無音 skip の禁止)。
+
+**advisor 諮問記録 (2026-08-13)**: `ut-tdd advisor --decision design --current-model
+claude-fable-5 --plan PLAN-L7-465 --execute` を実行し、provider=claude / model=claude-fable-5 /
+exit=0 で応答を得た (2026-08-07 の provider 無応答 —
+`.ut-tdd/memory/reference-ut-tdd-advisor-execute-provider-2026-08-07-dry-run.md` — からの回復を
+実測)。推奨は案 a 採用で本 freeze と一致: 突合式 = 「baseline 以降の merge commit ∖ receipt」、
+baseline は tracked に記録、案 b は「複数機械運用が実在した時点で GitHub merge イベント突合へ
+escalate する条件付き将来案」として明記、の 3 点。差分の取り込み: baseline は「tracked な定数
+(実装 source 内 anchor)」とし cutoff 節の実装 PR 確定条項に反映、案 b の escalate 条件
+(複数機械運用の実在) を上記案 b 却下段落の再検討条件として採用する。advisor の
+「severity = advisory」は表示が session を block しない意味であり、本節の「fail-close 表示
+(無音 skip 禁止)」と矛盾しない (検知は可視化のみ・破壊的動作なしの既定と同義)。
