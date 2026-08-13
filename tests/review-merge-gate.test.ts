@@ -236,7 +236,7 @@ describe("D2-B PR merge gate", () => {
     }
   });
 
-  it("U-RVMG-014: FLAG と pending の deny 候補順序を反転しても receipt は同一になる", () => {
+  it("U-RVMG-014: deny receipt は候補の順序・入力形に依存せず未確定なら束縛しない", () => {
     const cases = ["review:465:head:a", "review:465:head:b"] as const;
     const receipts = cases.map((flagMemoryId) => {
       const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
@@ -268,6 +268,102 @@ describe("D2-B PR merge gate", () => {
       decision: "deny",
       authorizedEntry: null,
     });
+
+    const passPendingRoot = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      writeRequest(passPendingRoot, {
+        file: "a-request.json",
+        memoryId: "review:465:head:a",
+        reviewRevision: "review-ra",
+      });
+      writeRequest(passPendingRoot, {
+        file: "b-request.json",
+        memoryId: "review:465:head:b",
+        reviewRevision: "review-rb",
+      });
+      writeVerdict(passPendingRoot, {
+        file: "a-pass.json",
+        memoryId: "review:465:head:a",
+        reviewRevision: "review-ra",
+        verdict: "PASS",
+      });
+      const result = runPrMerge({
+        repoRoot: passPendingRoot,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain("pending_request_for_head");
+      expect(result.verdict).toBeNull();
+      expect(receipt(passPendingRoot)).toMatchObject({
+        verdict: null,
+        decision: "deny",
+        authorizedEntry: null,
+      });
+    } finally {
+      rmSync(passPendingRoot, { recursive: true, force: true });
+    }
+
+    const multipleVerdictRoot = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      for (const memoryId of cases) {
+        writeRequest(multipleVerdictRoot, {
+          file: `${memoryId.endsWith(":a") ? "a" : "b"}-request.json`,
+          memoryId,
+          reviewRevision: `review-r${memoryId.endsWith(":a") ? "a" : "b"}`,
+        });
+        writeVerdict(multipleVerdictRoot, {
+          file: `${memoryId.endsWith(":a") ? "a" : "b"}-pass.json`,
+          memoryId,
+          reviewRevision: `review-r${memoryId.endsWith(":a") ? "a" : "b"}`,
+          verdict: "PASS",
+        });
+      }
+      const result = runPrMerge({
+        repoRoot: multipleVerdictRoot,
+        pr: 465,
+        now: () => now,
+        ports: ports({ getFacts: () => facts({ checksGreen: false }) }),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain("state:verdict");
+      expect(result.verdict).toBeNull();
+      expect(receipt(multipleVerdictRoot)).toMatchObject({
+        verdict: null,
+        decision: "deny",
+        authorizedEntry: null,
+      });
+    } finally {
+      rmSync(multipleVerdictRoot, { recursive: true, force: true });
+    }
+
+    const orphanReceiptRoot = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      seedReview(orphanReceiptRoot, "PASS");
+      writeVerdict(orphanReceiptRoot, {
+        file: "orphan-pass.json",
+        memoryId: "review:465:head:orphan",
+        reviewRevision: "review-ro",
+        verdict: "PASS",
+      });
+      const result = runPrMerge({
+        repoRoot: orphanReceiptRoot,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain("orphan_receipt");
+      expect(result.verdict).toBeNull();
+      expect(receipt(orphanReceiptRoot)).toMatchObject({
+        verdict: null,
+        decision: "deny",
+        authorizedEntry: null,
+      });
+    } finally {
+      rmSync(orphanReceiptRoot, { recursive: true, force: true });
+    }
   });
 
   it("U-RVMG-003: verdict 無しは fail-close で receipt を残す", () => {

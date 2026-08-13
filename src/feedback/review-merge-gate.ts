@@ -159,10 +159,6 @@ export function evaluateMergeGate(input: {
           reviewerFamily: candidate.reviewerFamily,
         }
       : null;
-  const authorizedEntry = result.ok
-    ? authorizedEntryFrom(entry)
-    : authorizedEntryFrom(denyingEntry);
-  const verdict = result.ok ? (entry?.verdict ?? null) : (denyingEntry?.verdict ?? null);
   const reasons = [...result.diagnostics];
   if (entriesForHead.length === 0) {
     reasons.push("no_request_for_current_head");
@@ -188,7 +184,13 @@ export function evaluateMergeGate(input: {
     if (candidate.state !== "merge_ready") reasons.push(`state:${candidate.state}`);
   }
   if (!result.ok) reasons.push("dispatch_analysis_failed");
-  if (reasons.length > 0 || entriesForHead.some((candidate) => candidate.state !== "merge_ready")) {
+  const denied =
+    !result.ok ||
+    reasons.length > 0 ||
+    entriesForHead.some((candidate) => candidate.state !== "merge_ready");
+  const authorizedEntry = denied ? authorizedEntryFrom(denyingEntry) : authorizedEntryFrom(entry);
+  const verdict = denied ? (denyingEntry?.verdict ?? null) : (entry?.verdict ?? null);
+  if (denied) {
     return {
       ok: false,
       pr: input.pr,

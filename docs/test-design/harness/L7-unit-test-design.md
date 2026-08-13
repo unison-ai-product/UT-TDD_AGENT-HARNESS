@@ -1543,7 +1543,7 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVMG-011` | 第二観測 HEAD と `gh merge --match-head-commit` 引数を検査 | 第二観測を `evaluatedHeadSha` へ束縛し、merge は判定済み exact HEAD を渡す |
 | `U-RVMG-012` | intent receipt / result receipt の書込先をファイル・ディレクトリ衝突へ変異 | intent は fail-close、result は警告付き failure 相当、fixture 外書込 0 |
 | `U-RVMG-013` | result receipt の書込を失敗させる | 警告付き failure 相当となり、result receipt の書込失敗を surface |
-| `U-RVMG-014` | 同一 HEAD の FLAG / pending deny 候補を `[FLAG, pending]` と `[pending, FLAG]` に反転 | 両順序の receipt が同一で、`verdict: null` かつ `authorizedEntry: null` |
+| `U-RVMG-014` | 同一 HEAD の FLAG / pending、PASS / pending、複数 `state:verdict`、orphan receipt の deny 経路を順序・入力形ごとに変異 | deny receipt は判定不能な候補を束縛せず、`verdict: null` かつ `authorizedEntry: null`（FLAG / pending の両順序も同一） |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 
