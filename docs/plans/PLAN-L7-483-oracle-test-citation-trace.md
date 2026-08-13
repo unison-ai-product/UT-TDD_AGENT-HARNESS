@@ -22,6 +22,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-483-oracle-test-citation-trace.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/oracle-test-citation.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/oracle-test-citation-baseline.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L7-244-right-arm-citation-gate.md
   requires: []
