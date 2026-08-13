@@ -1107,12 +1107,29 @@ export function lintPlan(path?: string, repoRoot: string = process.cwd()): LintR
   return { ok: result.ok, messages: planScheduleMessages(result) };
 }
 
+/**
+ * The default CLI lint is the pre-push safety surface: schedule structure and
+ * PLAN frontmatter/cross-record governance must be checked together.  Keep
+ * `lintPlan` schedule-only for the doctor sub-gate, which exposes the two
+ * checks as separate named rows.
+ */
+export function lintPlanDefault(path?: string, repoRoot: string = process.cwd()): LintResult {
+  const docs = loadPlanScheduleDocs(repoRoot, path);
+  const schedule = analyzePlanSchedule(docs);
+  const governance = analyzePlanGovernance(docs, repoRoot);
+  return {
+    ok: schedule.ok && governance.ok,
+    messages: [...planScheduleMessages(schedule), ...planGovernanceMessages(governance)],
+  };
+}
+
 export function lintPlanGate(
   gate: string | undefined,
   path?: string,
   repoRoot: string = process.cwd(),
 ): LintResult {
-  if (!gate || gate === "schedule") return lintPlan(path, repoRoot);
+  if (!gate) return lintPlanDefault(path, repoRoot);
+  if (gate === "schedule") return lintPlan(path, repoRoot);
 
   if (gate === "governance" || gate === "frontmatter") {
     const result = analyzePlanGovernance(loadPlanGovernanceDocs(repoRoot, path), repoRoot);

@@ -642,6 +642,32 @@ dependencies:
     }
   });
 
+  it("U-PLANLINT-001: default plan lint includes frontmatter governance", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-default-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      const fixture = planDoc("PLAN-L4-96-default-lint", {
+        extra: 'github_issue_id: "bad"\n',
+      });
+      const content = fixture.content.replace(
+        "## body",
+        "## §3 工程表 (Step + 進捗)\n\n### Step 1: [直列] review\n直列理由: downstream_dependency\n\n## §3.1 実装計画\n\n## body",
+      );
+      writeFileSync(join(plansDir, "PLAN-L4-96-default-lint.md"), content, "utf8");
+
+      const r = lintPlanWithGate(undefined, root);
+
+      expect(r.ok).toBe(false);
+      expect(r.messages.some((message) => message.includes("plan-schedule — OK"))).toBe(true);
+      expect(r.messages.some((message) => message.includes("plan-governance - violation"))).toBe(
+        true,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PLANGOV-007: progress color DB projection requires Reverse and upstream design backprop", () => {
     const docs = [
       dbProgressPlanDoc("PLAN-L7-98-progress-leak", [

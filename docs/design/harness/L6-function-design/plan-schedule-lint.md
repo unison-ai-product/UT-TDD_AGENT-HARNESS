@@ -22,11 +22,12 @@ plan: docs/plans/PLAN-L6-19-plan-schedule-lint.md
 | `analyzePlanSchedule(docs)` | 各 `### Step N:` heading の `[並列]` / `[直列]`、`[直列]` block の `file_conflict` / `downstream_dependency` / `shared_state`、review step heading、`§3.1 実装計画` を確認する。 |
 | `loadPlanScheduleDocs(repoRoot, target?)` | 単一 PLAN または全 `docs/plans/PLAN-*.md` を読み込む。 |
 | `planScheduleMessages(result)` | OK / violation message を出力する。 |
-| `lintPlan(path?, repoRoot?)` | CLI-facing wrapper。path ありなら単一 PLAN、path なしなら全 plans を lint する。 |
+| `lintPlan(path?, repoRoot?)` | schedule 専用 wrapper。path ありなら単一 PLAN、path なしなら全 plans を lint する。 |
+| `lintPlanDefault(path?, repoRoot?)` | 既定の CLI surface。schedule と frontmatter/cross-record governance を同時に実行し、どちらかの違反でも fail-close する。 |
 
 ## §3 Doctor 挙動
 
-`ut-tdd plan lint` は violation 時に `ok=false` を返す。Doctor は `plan-schedule` を hard/fail-close gate として含め、`planSchedule.ok` を `runDoctor.ok` へ接続する。そのため PLAN schedule drift は `ut-tdd plan lint` と `ut-tdd doctor` の両方を block する。
+`ut-tdd plan lint` は schedule と frontmatter/cross-record governance を既定で実行し、いずれかの violation 時に `ok=false` を返す。`--gate schedule` / `--gate governance` では個別実行できる。Doctor は両者を別の hard/fail-close gate として含めるため、schedule drift と governance drift は `ut-tdd plan lint` と `ut-tdd doctor` の両方を block する。
 
 ## §4 Test Oracle 検証観点
 
