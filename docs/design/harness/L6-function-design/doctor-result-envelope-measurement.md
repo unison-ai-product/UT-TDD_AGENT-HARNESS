@@ -1,3 +1,13 @@
+---
+layer: L6
+artifact_type: design_doc
+status: confirmed
+sub_doc: function-spec
+artifact_role: topic_doctor_result_envelope_measurement
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+plan: docs/plans/PLAN-L6-99-doctor-result-envelope-measurement-contract.md
+---
+
 # doctor result envelope 実測面契約
 
 ## 1. 目的
@@ -28,7 +38,7 @@ envelope writer はこの measurement と実際に適用した strict options �
   `checkIds=[setup-smoke]` を投影可能にする。
 - invariant: `runDoctor` は同じ measured path の `result` projection であり、判定ロジックを二重化しない。
 
-### envelope producer
+### envelope生成器
 
 - pre: `DoctorMeasurement` は直前の同一実行から得た値である。
 - post: `scope` / `profile` / `check_ids` は measurement と起動形の実態を表す。
