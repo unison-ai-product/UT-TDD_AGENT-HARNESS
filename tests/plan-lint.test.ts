@@ -727,6 +727,42 @@ dependencies:
     }
   });
 
+  it("U-PLANLINT-004: path scope uses canonical identity and fails closed outside corpus", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-path-identity-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      const draftsDir = join(root, "docs", "drafts");
+      const nestedDir = join(plansDir, "sub");
+      mkdirSync(draftsDir, { recursive: true });
+      mkdirSync(nestedDir, { recursive: true });
+
+      const corpus = planDoc("PLAN-L4-99-path-identity", {
+        extra: 'github_issue_id: "bad"\n',
+      });
+      writeFileSync(join(root, corpus.file), corpus.content, "utf8");
+      const clean = planDoc("PLAN-L4-99-path-identity").content;
+      const targets = [
+        [join(draftsDir, "PLAN-L4-99-path-identity.md"), clean],
+        [join(nestedDir, "PLAN-L4-99-path-identity.md"), clean],
+        [join(plansDir, "plan-l4-99-path-identity.md"), clean],
+      ] as const;
+
+      for (const [target, content] of targets) {
+        writeFileSync(target, content, "utf8");
+        const result = lintPlanWithGate(target, root);
+        expect(result.ok).toBe(false);
+        expect(result.messages.some((message) => message.includes("target_context_missing"))).toBe(
+          true,
+        );
+        expect(result.messages.some((message) => message.includes("invalid_frontmatter"))).toBe(
+          false,
+        );
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PLANGOV-007: progress color DB projection requires Reverse and upstream design backprop", () => {
     const docs = [
       dbProgressPlanDoc("PLAN-L7-98-progress-leak", [

@@ -584,6 +584,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-PLANLINT-001 | `lintPlanWithGate` 既定経路 | schedule + frontmatter governance を合成し、schema 違反を fail-close |
 | U-PLANLINT-002 | path-form cross-record lookup | 対象外 PLAN の parent/requires を解決し、対象 PLAN の missing 誤検出を出さない |
 | U-PLANLINT-003 | path-form scope filter | POSIX/Windows の slash 表記差があっても対象 PLAN の governance violation を検出する |
+| U-PLANLINT-004 | path-form canonical identity | corpus 外ディレクトリ・PLAN subdir・小文字 basename・同名 corpus を誤帰属せず、context 外 target は `target_context_missing` へ fail-close |
 
 ### §1.20 U-FRCOV (FR unit coverage substance、PLAN-L7-22 / A-110)
 

@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { isAbsolute, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace.ts";
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace.ts";
@@ -118,7 +118,7 @@ export function loadPlanScheduleDocs(
   target?: string,
 ): PlanScheduleDoc[] {
   if (target) {
-    const p = join(repoRoot, target);
+    const p = isAbsolute(target) ? target : join(repoRoot, target);
     return [{ file: target, content: readFileSync(p, "utf8") }];
   }
   const plansDir = join(repoRoot, "docs", "plans");
@@ -169,6 +169,18 @@ function normalizePlanRef(ref: string): string {
   const normalized = ref.replaceAll("\\", "/");
   const basename = normalized.split("/").at(-1) ?? normalized;
   return basename.endsWith(".md") ? basename.slice(0, -3) : basename;
+}
+
+function canonicalPlanPath(repoRoot: string | undefined, ref: string): string {
+  const absolute = isAbsolute(ref) ? resolve(ref) : resolve(repoRoot ?? process.cwd(), ref);
+  let canonical = absolute;
+  try {
+    canonical = realpathSync.native(absolute);
+  } catch {
+    // Synthetic test docs and missing targets still use normalized absolute identity.
+  }
+  const normalized = canonical.replaceAll("\\", "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 
 function normalizeArtifactPath(ref: string): string {
@@ -1081,9 +1093,25 @@ export function analyzePlanGovernance(
   const scopedViolations =
     contextDocs === docs
       ? violations
-      : violations.filter((violation) =>
-          docs.some((doc) => normalizePlanRef(doc.file) === normalizePlanRef(violation.file)),
-        );
+      : (() => {
+          const targetFiles = new Set(docs.map((doc) => canonicalPlanPath(repoRoot, doc.file)));
+          const contextFiles = new Set(
+            contextDocs.map((doc) => canonicalPlanPath(repoRoot, doc.file)),
+          );
+          const selected = violations.filter((violation) =>
+            targetFiles.has(canonicalPlanPath(repoRoot, violation.file)),
+          );
+          for (const doc of docs) {
+            if (!contextFiles.has(canonicalPlanPath(repoRoot, doc.file))) {
+              selected.push({
+                file: doc.file,
+                reason: "target_context_missing",
+                detail: "target PLAN is outside the loaded governance context",
+              });
+            }
+          }
+          return selected;
+        })();
   return {
     violations: scopedViolations,
     checked: docs.length,

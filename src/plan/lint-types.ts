@@ -27,6 +27,7 @@ interface PlanGovernanceDoc {
 
 type PlanGovernanceViolationReason =
   | "missing_frontmatter"
+  | "target_context_missing"
   | "invalid_frontmatter"
   | "duplicate_plan_id"
   | "duplicate_plan_identity"
