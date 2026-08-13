@@ -1081,7 +1081,9 @@ export function analyzePlanGovernance(
   const scopedViolations =
     contextDocs === docs
       ? violations
-      : violations.filter((violation) => docs.some((doc) => doc.file === violation.file));
+      : violations.filter((violation) =>
+          docs.some((doc) => normalizePlanRef(doc.file) === normalizePlanRef(violation.file)),
+        );
   return {
     violations: scopedViolations,
     checked: docs.length,

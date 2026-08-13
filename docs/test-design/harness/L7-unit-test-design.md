@@ -575,6 +575,16 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-PLANSCH-005 | `analyzePlanSchedule` | review Step heading 不在 → violation |
 | U-PLANSCH-006 | `analyzePlanSchedule` | §3.1 実装計画 不在 → violation |
 
+### §1.19a U-PLANLINT (既定 plan lint governance 合成、Issue #296)
+
+> ペア = `plan-schedule-lint.md` §既定 lint。path 指定時も全 PLAN を参照コンテキストに使い、対象 PLAN の違反だけを slash 表記に依存せず返す。
+
+| Test ID | 対象 | 期待 |
+|---|---|---|
+| U-PLANLINT-001 | `lintPlanWithGate` 既定経路 | schedule + frontmatter governance を合成し、schema 違反を fail-close |
+| U-PLANLINT-002 | path-form cross-record lookup | 対象外 PLAN の parent/requires を解決し、対象 PLAN の missing 誤検出を出さない |
+| U-PLANLINT-003 | path-form scope filter | POSIX/Windows の slash 表記差があっても対象 PLAN の governance violation を検出する |
+
 ### §1.20 U-FRCOV (FR unit coverage substance、PLAN-L7-22 / A-110)
 
 > ペア = `fr-unit-coverage.md` + `function-spec.md` FR registry addendum。FR→L6→U oracle の ID 接続だけでなく、型 body と pseudocode/explicit_l7_defer の substance を検査する。

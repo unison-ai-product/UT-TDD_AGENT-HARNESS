@@ -698,6 +698,35 @@ dependencies:
     }
   });
 
+  it("U-PLANLINT-003: path-form governance violations survive slash normalization", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-path-scope-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      const fixture = planDoc("PLAN-L4-98-path-scope", {
+        extra: 'github_issue_id: "bad"\n',
+      });
+      writeFileSync(join(root, fixture.file), fixture.content, "utf8");
+
+      const forward = lintPlanWithGate(fixture.file, root);
+      expect(forward.ok).toBe(false);
+      expect(forward.messages.some((message) => message.includes("invalid_frontmatter"))).toBe(
+        true,
+      );
+
+      if (process.platform === "win32") {
+        const windowsPath = fixture.file.replaceAll("/", "\\");
+        const backslash = lintPlanWithGate(windowsPath, root);
+        expect(backslash.ok).toBe(false);
+        expect(backslash.messages.some((message) => message.includes("invalid_frontmatter"))).toBe(
+          true,
+        );
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PLANGOV-007: progress color DB projection requires Reverse and upstream design backprop", () => {
     const docs = [
       dbProgressPlanDoc("PLAN-L7-98-progress-leak", [
