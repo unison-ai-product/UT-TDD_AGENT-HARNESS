@@ -402,7 +402,7 @@ describe("derived ratchet 検証 (U-OIDGATE-005..007)", () => {
   });
 });
 
-describe("逆向き test-label citation (Issue #259 / U-OIDGATE-008..013)", () => {
+describe("逆向き test-label citation (Issue #259 / U-OIDGATE-008..015)", () => {
   const base = {
     declared: [],
     referenced: new Set<string>(),
@@ -439,6 +439,31 @@ describe("逆向き test-label citation (Issue #259 / U-OIDGATE-008..013)", () =
     expect(collectOracleCitationSites(root).map((site) => site.id)).toEqual([
       "U-ZZCITE-002",
       "U-ZZCITE-003",
+    ]);
+  });
+
+  it("U-OIDGATE-014: regex literal 内の引用符で後続 static label を消費しない", () => {
+    const root = citationFixture(
+      [
+        'expect(csv).not.toMatch(/,"=cmd/);',
+        'it("U-ZZCITE-004: label after regex", () => {});',
+      ].join("\n"),
+    );
+    expect(collectOracleCitationSites(root).map((site) => site.id)).toEqual(["U-ZZCITE-004"]);
+  });
+
+  it("U-OIDGATE-015: skip/only/todo modifier の静的 label を収集する", () => {
+    const root = citationFixture(
+      [
+        'it.skip("U-ZZCITE-005: skipped", () => {});',
+        'describe.only("U-ZZCITE-006: focused", () => {});',
+        'test.todo("U-ZZCITE-007: todo");',
+      ].join("\n"),
+    );
+    expect(collectOracleCitationSites(root).map((site) => site.id)).toEqual([
+      "U-ZZCITE-005",
+      "U-ZZCITE-006",
+      "U-ZZCITE-007",
     ]);
   });
 

@@ -2268,3 +2268,5 @@ oracle-test-trace 自身の既存 test はこの表へ自己宣言する。
 | `U-OIDGATE-011` | 既存未宣言 label 集合 | `collectOracleIds` + `ORACLE_TEST_CITATION_BASELINE` | derived 集合と baseline が要素一致 |
 | `U-OIDGATE-012` | baseline に宣言済み ID を混入 | `analyzeOracleTestTrace` | stale citation baseline として `ok=false` |
 | `U-OIDGATE-013` | baseline 外の新規 label ID | `analyzeOracleTestTrace` | 新規 citation のみ fail-close、既存 debt は許容 |
+| `U-OIDGATE-014` | 引用符を含む regex literal の直後に static test label | `collectOracleCitationSites` | regex 内の引用符を文字列開始と誤認せず、後続 label を収集 |
+| `U-OIDGATE-015` | `it.skip` / `describe.only` / `test.todo` の static label | `collectOracleCitationSites` | modifier 呼び出し自身の最初の label を収集 |

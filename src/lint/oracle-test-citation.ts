@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 const ORACLE_ID = /(?<![A-Z0-9-])(?:U|IT|ST|P|M)-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{2,3}(?![A-Z0-9-])/g;
 const TEST_CALLS = new Set(["describe", "it", "test"]);
+const LABEL_MODIFIERS = new Set(["only", "skip", "todo"]);
 
 export interface OracleCitationSite {
   id: string;
@@ -34,6 +35,35 @@ function skipComment(text: string, start: number): number {
   return start + 1;
 }
 
+function skipRegex(text: string, start: number): number {
+  let inClass = false;
+  for (let index = start + 1; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === "\\") {
+      index += 1;
+      continue;
+    }
+    if (char === "[") inClass = true;
+    else if (char === "]") inClass = false;
+    else if (char === "/" && !inClass) {
+      index += 1;
+      while (/[A-Za-z]/u.test(text[index] ?? "")) index += 1;
+      return index;
+    }
+    if (char === "\n" || char === "\r") return start + 1;
+  }
+  return start + 1;
+}
+
+function startsRegex(text: string, start: number): boolean {
+  let index = start - 1;
+  while (index >= 0 && /\s/u.test(text[index] ?? "")) index -= 1;
+  if (index < 0) return true;
+  if (/[([{,:;=!?&|+*%^~<>-]/u.test(text[index] ?? "")) return true;
+  const prefix = text.slice(0, index + 1);
+  return /\b(?:return|case|throw|else|do|yield|await)\s*$/u.test(prefix);
+}
+
 function balancedEnd(text: string, start: number): number {
   const open = text[start];
   const close = open === "(" ? ")" : open === "[" ? "]" : "}";
@@ -43,6 +73,10 @@ function balancedEnd(text: string, start: number): number {
     const char = text[index];
     if (char === "/" && (text[index + 1] === "/" || text[index + 1] === "*")) {
       index = skipComment(text, index);
+      continue;
+    }
+    if (char === "/" && startsRegex(text, index)) {
+      index = skipRegex(text, index);
       continue;
     }
     if (char === '"' || char === "'" || char === "`") {
@@ -88,6 +122,9 @@ function readTestLabel(text: string, start: number): { value: string; index: num
       if (!method) return null;
       cursor = skipWhitespace(text, cursor + method[0].length);
       if (text[cursor] !== "(") return null;
+      if (LABEL_MODIFIERS.has(method[0])) {
+        return readLiteral(text, skipWhitespace(text, cursor + 1));
+      }
       cursor = balancedEnd(text, cursor);
       cursor = skipWhitespace(text, cursor);
       continue;
@@ -113,6 +150,10 @@ function scanTestLabels(text: string, relativePath: string): OracleCitationSite[
     const char = text[index];
     if (char === "/" && (text[index + 1] === "/" || text[index + 1] === "*")) {
       index = skipComment(text, index);
+      continue;
+    }
+    if (char === "/" && startsRegex(text, index)) {
+      index = skipRegex(text, index);
       continue;
     }
     if (char === '"' || char === "'" || char === "`") {
