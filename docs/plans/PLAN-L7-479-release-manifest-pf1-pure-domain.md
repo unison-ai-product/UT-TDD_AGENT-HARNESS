@@ -6,7 +6,7 @@ layer: L7
 drive: be
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-05
 updated: 2026-08-13
 owner: PM / PO
@@ -33,7 +33,32 @@ dependencies:
     - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/247
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-13T10:21:18Z"
+    tests_green_at: "2026-08-13T10:16:36Z"
+    verdict: approve
+    scope: >-
+      PR #307 の blind closing review 2 周。初回 FLAG は U-RELMAN-007 の oracle 空証明であり、
+      テスト追補 dc007c6c で mutA を KILL した。mutD は等価 mutant と判明し、kill は 3 から 6 へ
+      増加して PASS となった。subject は exact HEAD dc007c6cf282b884771ae7a15bf2ca5eda8b2082。
+    worker_model: gpt-5.6-terra
+    reviewer_model: claude-opus-5
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/307#issuecomment-5278656377"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/307#issuecomment-5279055340"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31689925418"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/release-manifest.test.ts"
+        runner: bash
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-13T10:16:36Z"
+        evidence_path: tests/release-manifest.test.ts
+        output_digest: "sha256:23f7fa804c934d2f2978f6fd2c3978afd88bd1fbda923894e791f0d56f810f85"
+        anchor_commit: dc007c6cf282b884771ae7a15bf2ca5eda8b2082
 ---
 
 # PF-1: release manifest pure domain pair-freeze
@@ -76,6 +101,7 @@ fault injectionはPF-5のままREDを維持する。PF-1のpure返値を副作�
 
 ## Exit
 
+- [Claude non-author closing review の PASS](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/307#issuecomment-5279055340) と [CI run 31689925418](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31689925418) を confirm 根拠とする。
 - このdocs-only PLANがmainへmergeされる。
 - 後続のPF-1実装PRが、上記5 candidateの実装test citationを同じcommitで`U-RELMAN-*`へ昇格する。
 - exact HEAD CIとnon-author closing PASSを満たすまでIssue #247をcloseせず、PF-2 #248を解除しない。
