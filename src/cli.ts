@@ -35,6 +35,7 @@ import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
+import { registerPrMergeCommands } from "./cli/pr-merge.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
@@ -3822,6 +3823,7 @@ githubPolicy
   });
 
 registerFeedbackCommands(program);
+registerPrMergeCommands(program);
 
 program
   .command("setup")

@@ -61,6 +61,7 @@ export interface ReviewDispatchEntry {
   reviewRevision: string;
   authorFamily: ReviewerFamily;
   reviewerFamily?: ReviewerFamily;
+  verdict?: ReviewVerdict;
   state: ReviewDispatchState;
   breaches: SlaBreach[];
   ageMinutes: number | null;
@@ -503,6 +504,7 @@ function analyzeRequest(
       reviewRevision: request.reviewRevision,
       authorFamily: request.authorFamily,
       reviewerFamily: verdictReceipt?.reviewerFamily ?? acceptedCandidates.at(-1)?.reviewerFamily,
+      verdict: verdictReceipt?.verdict,
       state,
       breaches,
       ageMinutes,
