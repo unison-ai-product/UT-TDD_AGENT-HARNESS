@@ -195,7 +195,7 @@ export function evaluateMergeGate(input: {
       headSha,
       verdict,
       state: entry.state,
-      reasons: [...new Set(reasons)],
+      reasons: [...new Set(reasons)].sort(),
       authorizedEntry,
     };
   }
@@ -315,6 +315,7 @@ export function runPrMerge(input: {
       },
       repoRoot: input.repoRoot,
       timestamp,
+      authorizedEntry: decision.authorizedEntry,
     });
   }
 
