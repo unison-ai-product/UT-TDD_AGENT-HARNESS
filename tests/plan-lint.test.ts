@@ -744,7 +744,9 @@ dependencies:
       const targets = [
         [join(draftsDir, "PLAN-L4-99-path-identity.md"), clean],
         [join(nestedDir, "PLAN-L4-99-path-identity.md"), clean],
-        [join(plansDir, "plan-l4-99-path-identity.md"), clean],
+        // Keep the lowercase basename on a distinct directory: Windows treats
+        // a case-only spelling of the corpus path as the same physical file.
+        [join(nestedDir, "plan-l4-99-path-identity.md"), clean],
       ] as const;
 
       for (const [target, content] of targets) {
