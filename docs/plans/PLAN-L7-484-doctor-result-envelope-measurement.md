@@ -51,6 +51,16 @@ review_evidence:
     citations:
       - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/310#issuecomment-5280288483"
       - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31694626856"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/cli-surface.test.ts -t U-DOCTORENV-016"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-13T11:22:48Z"
+        evidence_path: tests/cli-surface.test.ts
+        output_digest: "sha256:181ab4f9befec61fe37921f1fe1bc6fee5f5e1c70647fbf7ca2dd079017b4c3f"
+        anchor_commit: e064a6605fd44ae50087f3927862c4143deb04ef
 ---
 
 # PLAN-L7-484: doctor result envelope の実測面投影
