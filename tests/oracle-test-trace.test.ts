@@ -7,10 +7,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeOracleTestTrace,
+  collectOracleCitationSites,
   collectOracleDeclarationSites,
   collectOracleIds,
   loadOracleTestTraceInput,
   ORACLE_ID_DUPLICATE_BASELINE,
+  ORACLE_TEST_CITATION_BASELINE,
   ORACLE_TEST_TRACE_BASELINE,
   ORACLE_TEST_TRACE_WIDENED_BASELINE,
 } from "../src/lint/oracle-test-trace.ts";
@@ -20,6 +22,14 @@ function declarationFixture(markdown: string): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-oidgate-"));
   mkdirSync(join(root, "docs", "test-design"), { recursive: true });
   writeFileSync(join(root, "docs", "test-design", "L7.md"), markdown, "utf8");
+  return root;
+}
+
+/** tests fixture を作り、label と本文/fixture の分類を隔離検証する。 */
+function citationFixture(source: string): string {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-citation-"));
+  mkdirSync(join(root, "tests"), { recursive: true });
+  writeFileSync(join(root, "tests", "sample.test.ts"), source, "utf8");
   return root;
 }
 
@@ -392,12 +402,131 @@ describe("derived ratchet 検証 (U-OIDGATE-005..007)", () => {
   });
 });
 
+describe("逆向き test-label citation (Issue #259 / U-OIDGATE-008..015)", () => {
+  const base = {
+    declared: [],
+    referenced: new Set<string>(),
+    baseline: new Set<string>(),
+    widenedBaseline: new Set<string>(),
+  };
+
+  it("U-OIDGATE-008: static label だけを収集し、本文の fake ID は無視する", () => {
+    const root = citationFixture(
+      [
+        'it("U-ZZCITE-001: static label", () => {',
+        '  const fixture = "U-ZZBODY-001";',
+        "});",
+        '// it("U-ZZCOMMENT-001: comment", () => {});',
+      ].join("\n"),
+    );
+    expect(collectOracleCitationSites(root)).toEqual([
+      {
+        id: "U-ZZCITE-001",
+        path: "tests/sample.test.ts",
+        line: 1,
+        kind: "static-test-label",
+      },
+    ]);
+  });
+
+  it("U-OIDGATE-009: chained label は収集し、data provider の ID は無視する", () => {
+    const root = citationFixture(
+      [
+        'it.each([["U-ZZDATA-001"]])(\n  "U-ZZCITE-002: chained label",\n  () => {},\n);',
+        'describe.skipIf(false)("U-ZZCITE-003: skipIf label", () => {});',
+      ].join("\n"),
+    );
+    expect(collectOracleCitationSites(root).map((site) => site.id)).toEqual([
+      "U-ZZCITE-002",
+      "U-ZZCITE-003",
+    ]);
+  });
+
+  it("U-OIDGATE-014: regex literal 内の引用符で後続 static label を消費しない", () => {
+    const root = citationFixture(
+      [
+        'expect(csv).not.toMatch(/,"=cmd/);',
+        'it("U-ZZCITE-004: label after regex", () => {});',
+      ].join("\n"),
+    );
+    expect(collectOracleCitationSites(root).map((site) => site.id)).toEqual(["U-ZZCITE-004"]);
+  });
+
+  it("U-OIDGATE-015: skip/only/todo modifier の静的 label を収集する", () => {
+    const root = citationFixture(
+      [
+        'it.skip("U-ZZCITE-005: skipped", () => {});',
+        'describe.only("U-ZZCITE-006: focused", () => {});',
+        'test.todo("U-ZZCITE-007: todo");',
+      ].join("\n"),
+    );
+    expect(collectOracleCitationSites(root).map((site) => site.id)).toEqual([
+      "U-ZZCITE-005",
+      "U-ZZCITE-006",
+      "U-ZZCITE-007",
+    ]);
+  });
+
+  it("U-OIDGATE-010: 未宣言の新規 label citation は fail-close する", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      citationSites: [
+        { id: "U-ZZNEW-001", path: "tests/new.test.ts", line: 8, kind: "static-test-label" },
+      ],
+      citationBaseline: new Set(),
+    });
+    expect(r.undeclaredCitations.map((site) => site.id)).toEqual(["U-ZZNEW-001"]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-OIDGATE-011: 既存未宣言 label は baseline との集合一致で ratchet する", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      citationSites: [
+        { id: "U-ZZDEBT-001", path: "tests/debt.test.ts", line: 4, kind: "static-test-label" },
+      ],
+      citationBaseline: new Set(["U-ZZDEBT-001"]),
+    });
+    expect(r.undeclaredCitations).toEqual([]);
+    expect(r.staleCitationBaseline).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("U-OIDGATE-012: 宣言済みになった baseline は stale として fail-close する", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      declared: ["U-ZZDEBT-002"],
+      citationSites: [
+        { id: "U-ZZDEBT-002", path: "tests/debt.test.ts", line: 5, kind: "static-test-label" },
+      ],
+      citationBaseline: new Set(["U-ZZDEBT-002"]),
+    });
+    expect(r.staleCitationBaseline).toEqual(["U-ZZDEBT-002"]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-OIDGATE-013: baseline 外の新規だけを citation finding にする", () => {
+    const r = analyzeOracleTestTrace({
+      ...base,
+      citationSites: [
+        { id: "U-ZZDEBT-003", path: "tests/debt.test.ts", line: 6, kind: "static-test-label" },
+        { id: "U-ZZNEW-002", path: "tests/new.test.ts", line: 7, kind: "static-test-label" },
+      ],
+      citationBaseline: new Set(["U-ZZDEBT-003"]),
+    });
+    expect(r.undeclaredCitations.map((site) => site.id)).toEqual(["U-ZZNEW-002"]);
+    expect(r.ok).toBe(false);
+  });
+});
+
 describe("loadOracleTestTraceInput real repo (U-OTT-004/005)", () => {
   it("U-OTT-004: 実 repo の orphan は 0 (両 baseline 適用後、NEW oracle は fail-close 回帰網)", () => {
     const r = analyzeOracleTestTrace(loadOracleTestTraceInput(process.cwd()));
     expect(r.orphans).toEqual([]);
     expect(r.duplicates).toEqual([]);
     expect(r.staleDuplicateBaseline).toEqual([]);
+    expect(r.undeclaredCitations).toEqual([]);
+    expect(r.staleCitationBaseline).toEqual([]);
   });
 
   it("U-OTT-005: baseline は既知の衝突 4 件のスナップショット (縮小のみ可)", () => {
@@ -411,5 +540,14 @@ describe("loadOracleTestTraceInput real repo (U-OTT-004/005)", () => {
 
   it("U-OTT-006: 既存の citation baseline 89 件は本変更で不変", () => {
     expect(ORACLE_TEST_TRACE_BASELINE.size).toBe(89);
+  });
+
+  it("U-OIDGATE-011: 実 repo の未宣言 test-label 集合は citation baseline と一致する", () => {
+    const declared = new Set(collectOracleDeclarationSites(process.cwd()).map((site) => site.id));
+    const { citationSites } = collectOracleIds(process.cwd());
+    const derived = [
+      ...new Set(citationSites.filter((site) => !declared.has(site.id)).map((site) => site.id)),
+    ].sort();
+    expect(derived).toEqual([...ORACLE_TEST_CITATION_BASELINE].sort());
   });
 });

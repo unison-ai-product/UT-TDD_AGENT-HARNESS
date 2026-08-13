@@ -16,11 +16,16 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { ORACLE_ID_DUPLICATE_BASELINE } from "./oracle-id-duplicate-baseline.ts";
+import { collectOracleCitationSites, type OracleCitationSite } from "./oracle-test-citation.ts";
+import { ORACLE_TEST_CITATION_BASELINE } from "./oracle-test-citation-baseline.ts";
 import { ORACLE_TEST_TRACE_BASELINE } from "./oracle-test-trace-baseline.ts";
 import { ORACLE_TEST_TRACE_WIDENED_BASELINE } from "./oracle-test-trace-widened-baseline.ts";
 
+export type { OracleCitationSite } from "./oracle-test-citation.ts";
 export {
+  collectOracleCitationSites,
   ORACLE_ID_DUPLICATE_BASELINE,
+  ORACLE_TEST_CITATION_BASELINE,
   ORACLE_TEST_TRACE_BASELINE,
   ORACLE_TEST_TRACE_WIDENED_BASELINE,
 };
@@ -50,6 +55,10 @@ export interface OracleTestTraceInput {
   declarationSites?: readonly OracleDeclarationSite[];
   /** 既存の ID→説明集合の ratchet。ID 単独の免除は許可しない。 */
   duplicateBaseline?: ReadonlySet<string>;
+  /** test label の明示 citation provenance (fixture / 本文参照は含めない)。 */
+  citationSites?: readonly OracleCitationSite[];
+  /** 既存の未宣言 test-label citation。縮小のみ可。 */
+  citationBaseline?: ReadonlySet<string>;
 }
 
 export interface OracleDeclarationSite {
@@ -81,6 +90,8 @@ export interface OracleTestTraceResult {
   orphans: string[];
   duplicates: OracleDuplicate[];
   staleDuplicateBaseline: string[];
+  undeclaredCitations: OracleCitationSite[];
+  staleCitationBaseline: string[];
   ok: boolean;
 }
 
@@ -96,12 +107,41 @@ export function analyzeOracleTestTrace(input: OracleTestTraceInput): OracleTestT
     input.declarationSites ?? [],
     input.duplicateBaseline ?? new Set(),
   );
+  const citationDeclared = input.declarationSites?.map((site) => site.id) ?? input.declared;
+  const { undeclaredCitations, staleCitationBaseline } = analyzeCitationTrace(
+    citationDeclared,
+    input.citationSites ?? [],
+    input.citationBaseline ?? new Set(),
+  );
   return {
     orphans,
     duplicates,
     staleDuplicateBaseline,
-    ok: orphans.length === 0 && duplicates.length === 0 && staleDuplicateBaseline.length === 0,
+    undeclaredCitations,
+    staleCitationBaseline,
+    ok:
+      orphans.length === 0 &&
+      duplicates.length === 0 &&
+      staleDuplicateBaseline.length === 0 &&
+      undeclaredCitations.length === 0 &&
+      staleCitationBaseline.length === 0,
   };
+}
+
+function analyzeCitationTrace(
+  declared: readonly string[],
+  sites: readonly OracleCitationSite[],
+  baseline: ReadonlySet<string>,
+): { undeclaredCitations: OracleCitationSite[]; staleCitationBaseline: string[] } {
+  const declaredSet = new Set(declared);
+  const observedUndeclared = new Set(
+    sites.filter((site) => !declaredSet.has(site.id)).map((site) => site.id),
+  );
+  const undeclaredCitations = sites
+    .filter((site) => observedUndeclared.has(site.id) && !baseline.has(site.id))
+    .sort((a, b) => a.id.localeCompare(b.id) || a.path.localeCompare(b.path) || a.line - b.line);
+  const staleCitationBaseline = [...baseline].filter((id) => !observedUndeclared.has(id)).sort();
+  return { undeclaredCitations, staleCitationBaseline };
 }
 
 const DUPLICATE_KEY_SEPARATOR = "\t";
@@ -348,16 +388,22 @@ export function collectOracleIds(repoRoot: string): {
   declared: Set<string>;
   referenced: Set<string>;
   declarationSites: OracleDeclarationSite[];
+  citationSites: OracleCitationSite[];
 } {
   const declared = new Set<string>();
   collectIds(join(repoRoot, "docs", "test-design"), ".md", declared);
   const referenced = new Set<string>();
   collectIds(join(repoRoot, "tests"), ".ts", referenced);
-  return { declared, referenced, declarationSites: collectOracleDeclarationSites(repoRoot) };
+  return {
+    declared,
+    referenced,
+    declarationSites: collectOracleDeclarationSites(repoRoot),
+    citationSites: collectOracleCitationSites(repoRoot),
+  };
 }
 
 export function loadOracleTestTraceInput(repoRoot: string): OracleTestTraceInput {
-  const { declared, referenced, declarationSites } = collectOracleIds(repoRoot);
+  const { declared, referenced, declarationSites, citationSites } = collectOracleIds(repoRoot);
   return {
     declared: [...declared],
     referenced,
@@ -365,6 +411,8 @@ export function loadOracleTestTraceInput(repoRoot: string): OracleTestTraceInput
     widenedBaseline: ORACLE_TEST_TRACE_WIDENED_BASELINE,
     declarationSites,
     duplicateBaseline: ORACLE_ID_DUPLICATE_BASELINE,
+    citationSites,
+    citationBaseline: ORACLE_TEST_CITATION_BASELINE,
   };
 }
 
@@ -397,9 +445,20 @@ export function oracleTestTraceMessages(r: OracleTestTraceResult): string[] {
       `oracle-test-trace — ⚠ stale duplicate baseline ${r.staleDuplicateBaseline.length} 件: ${r.staleDuplicateBaseline.join(", ")}。解消済み行を baseline から削除する。`,
     );
   }
+  if (r.undeclaredCitations.length > 0) {
+    const ids = [...new Set(r.undeclaredCitations.map((site) => site.id))].sort();
+    messages.push(
+      `oracle-test-trace — ⚠ test-label citation が test-design 未宣言 ${ids.length} 件 (baseline 外): ${ids.join(", ")}。test-design に正確な ID 行を追加する。`,
+    );
+  }
+  if (r.staleCitationBaseline.length > 0) {
+    messages.push(
+      `oracle-test-trace — ⚠ stale citation baseline ${r.staleCitationBaseline.length} 件: ${r.staleCitationBaseline.join(", ")}。解消済み行を baseline から削除する。`,
+    );
+  }
   return messages.length > 0
     ? messages
     : [
-        "oracle-test-trace — OK (宣言 oracle 全件 tests citation / baseline 被覆、NEW 未 citation 0、宣言 provenance 重複 0)",
+        "oracle-test-trace — OK (宣言 oracle 全件 tests citation / baseline 被覆、test-label 逆向き citation 断線 0、宣言 provenance 重複 0)",
       ];
 }
