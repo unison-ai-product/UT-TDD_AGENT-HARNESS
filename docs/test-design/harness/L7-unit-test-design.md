@@ -2251,7 +2251,8 @@ baseline 縮小を機械強制する (詳細は issue #218 のコメント参照
 `oracle-test-trace` の reverse leg は、`tests/**/*.ts` の `describe` / `it` / `test` が実行する
 静的な最初の label 文字列だけを citation surface とする。fixture・コメント・本文・data provider
 配列の ID は citation とみなさない。既存の未宣言 label は ratchet baseline とし、新規だけを
-fail-close する。oracle-test-trace 自身の既存 test はこの表へ自己宣言する。
+fail-close する。設計正本は `docs/design/harness/L6-function-design/oracle-test-citation-trace.md`、
+oracle-test-trace 自身の既存 test はこの表へ自己宣言する。
 
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|

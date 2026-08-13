@@ -7,7 +7,7 @@ sub_doc: function-spec
 drive: be
 route_signal: forward
 route_mode: forward
-status: confirmed
+status: draft
 created: 2026-08-13
 updated: 2026-08-13
 owner: PO / TL
@@ -22,10 +22,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-483-oracle-test-citation-trace.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/oracle-test-citation.ts
-    artifact_type: source_module
-  - artifact_path: src/lint/oracle-test-citation-baseline.ts
-    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L7-244-right-arm-citation-gate.md
   requires: []
@@ -86,8 +82,8 @@ Issue #259 の bounded slice。`oracle-test-trace` が持つ
 
 ## 完了条件
 
-- [ ] L6 契約、L7 test-design、implementation、unit test が同じ PR に揃う。
-- [ ] `U-OTT-001..006` を test-design に自己宣言し、ゲート自身の設計片側欠落を解消する。
-- [ ] 新規 test-label citation は宣言が無ければ hard gate が失敗する。
-- [ ] 現存の 500 件超の debt は baseline として可視化し、fixture/doc 引用は検出しない。
+- [x] L6 契約、L7 test-design、implementation、unit test が同じ PR に揃う。
+- [x] `U-OTT-001..006` を test-design に自己宣言し、ゲート自身の設計片側欠落を解消する。
+- [x] 新規 test-label citation は宣言が無ければ hard gate が失敗する。
+- [x] 現存の 500 件超の debt は baseline として可視化し、fixture/doc 引用は検出しない。
 - [ ] exact-head の Linux/Windows/aggregate CI と非author closing review が揃うまで merge しない。

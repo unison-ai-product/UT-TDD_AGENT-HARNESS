@@ -1,7 +1,7 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: confirmed
+status: draft
 sub_doc: function-spec
 artifact_role: topic_oracle_test_citation_trace
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -45,7 +45,18 @@ stale baseline として fail-close し、baseline の縮小を要求する。�
 forward 側の `referenced` 集合は既存契約を維持する。reverse 側だけが static test-label surface
 を使うため、fixture の ID を既存 forward gate から取り除くことはしない。
 
-## 4. V-model 対と受入条件
+## 4. 関数契約
+
+`collectOracleCitationSites(repoRoot) => OracleCitationSite[]` は、`repoRoot/tests/` を読み取り、
+静的 test label の ID・相対 path・行番号・`kind` を返す純粋な収集境界である。
+
+- **pre**: `repoRoot` は検査対象リポジトリの root で、`tests/` が存在する。
+- **post**: 返却 site は相対 POSIX path・1-origin 行番号・許可された oracle ID のみを持ち、
+  同一 label の再走査で重複しない。
+- **invariant**: コメント・fixture/body・baseline・dynamic label の ID は返却集合へ混入しない。
+- **oracle**: `U-OIDGATE-008..013` が static/chained、除外、new、baseline、stale、集合一致を固定する。
+
+## 5. V-model 対と受入条件
 
 - L6 の本契約と L7 `U-OIDGATE-008..013` を同一 freeze とする。
 - `U-OTT-001..006` は oracle-test-trace 自身の test-design 台帳へ追加する。
