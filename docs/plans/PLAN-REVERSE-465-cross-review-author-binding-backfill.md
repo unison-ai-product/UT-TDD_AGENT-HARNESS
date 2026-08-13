@@ -49,6 +49,11 @@ PLAN-L7-465 は PLAN-L6-94 契約の L7 実装であり、既存 cross-review �
 2. `unverified` (照合不能) を green に混ぜないという判定規則を契約化。
 3. 利用上限による `intra_runtime_subagent` 格下げ条項を契約へ明記
    (marker + 理由 + one-shot + audit)。
+4. **D2-D backstop 契約** (Forward §D2-D 実装契約 freeze 2026-08-13) の上流合流:
+   `bypass_merge` / `merged_without_verdict` の 2 検知類型、cutoff baseline
+   (tracked source 唯一の定数 = D 実装 PR HEAD commit の committer date)、merged PR 一覧の
+   pagination 終端まで全走査、途中失敗・partial/malformed・終端不能を「検知不能」へ倒す
+   fail-close 表示。これらが実装だけが知る条件にならないよう gap-only で L6 契約へ記述する。
 
 ## Schedule
 
@@ -65,3 +70,6 @@ PLAN-L7-465 は PLAN-L6-94 契約の L7 実装であり、既存 cross-review �
 - AC-2: 利用上限による回避条項が契約に明記され、`cross_agent` 僭称が契約上も禁じられて
   いること。
 - AC-3: L4 / L5 への影響有無が明示的に判定され、未判定の面が残っていない。
+- AC-4: D2-D backstop の検知 2 類型 / cutoff baseline の確定手続 / pagination 全走査と検知不能
+  表示 (Forward oracle 対 1〜9) が L6 契約に記載され、実装挙動と一致することを照合済み。
+  Forward §D2-D の宣言と本 Reverse の scope/AC が二読みなく一致していること。

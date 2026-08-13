@@ -676,9 +676,13 @@ B 着地 (PR #299) 以前は wrapper 自体が存在せず、既往 merge を遡
 にすると偽陽性で埋まるため。**baseline の正本は tracked source 内の唯一の定数** (D 実装
 module 内に export する ISO UTC 時刻定数 1 個) とし、receipt 初行 anchor 等の untracked 値を
 正本にしない (clean checkout / 別 machine で ratchet を再構成できないため。cross-review FLAG
-2026-08-13 指摘 1 の是正)。定数の具体値は D 実装 PR の merge 時刻で確定し、値の根拠
-(merge commit SHA / mergedAt) を実装 PR の review_evidence citation に固定した上で、確定後に
-この節へ追記する。
+2026-08-13 指摘 1 の是正)。**定数の具体値は「D 実装 PR の HEAD commit の committer date (UTC)」
+とする** — merge 前に `git log -1 --format=%cI` で確定でき、merge 時刻のように merge 後まで
+存在しない値を merge 対象 source へ書く循環を持たない (delta FLAG 2026-08-13 blocking 1 の是正。
+実装時発明の余地を残さない固定手続)。是正 commit を積むたびに HEAD commit の値へ更新して
+merge する。baseline と実 merge の間隙は D 実装 PR 自身の merge だけであり、それは B wrapper
+経由 (decision=merge receipt あり) で行うため偽陽性を生まない。値の根拠 (HEAD commit SHA) を
+実装 PR の review_evidence citation に固定した上で、確定後にこの節へ追記する。
 
 **検知の入力**: `gh api` による merged PR 一覧 (merge commit SHA / mergedAt / PR 番号 /
 head SHA)。取得は「直近一覧」ではなく **baseline 以降の merged PR を pagination 終端まで
@@ -708,6 +712,12 @@ DB テーブルは作らない。検知は可視化のみであり、自動 reve
 5. `gh api` 不能時に「検知不能」が digest / event へ明示される (無音 skip の禁止)。
 6. merged PR 一覧の pagination 途中失敗 (2 ページ目以降の取得失敗) で、部分結果が green に
    ならず「検知不能」が明示される。
+7. 対象 (receipt 無し merge) が **2 ページ目以降にのみ存在する正常 multi-page 系**で検知される
+   (先頭 page 固定の実装は RED)。
+8. pagination の終端判定: 同一 cursor / 同一 page が反復する応答で無限 loop せず、走査上限
+   到達時は結果を green に丸めず「検知不能」へ倒す (bounded traversal)。
+9. HTTP 成功だが必須 field (merge commit SHA / mergedAt / PR 番号) が欠落・malformed な
+   partial response は、当該 page 以降を「検知不能」として扱い、部分結果を green に丸めない。
 
 **Reverse 合流**: 本 D2-D 追加契約 (bypass_merge / merged_without_verdict / cutoff baseline /
 pagination 全走査 / 検知不能表示) は `PLAN-REVERSE-465` の上流合流 (R1〜R4) 対象に含める。
