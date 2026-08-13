@@ -673,12 +673,22 @@ receipt を追跡ファイルへ昇格する案 (案 b) は不採用とする �
 
 **cutoff baseline (ratchet)**: D 実装 commit の merge 時刻より前の merge は検知対象外とする。
 B 着地 (PR #299) 以前は wrapper 自体が存在せず、既往 merge を遡って全部 `bypass_merge` 扱い
-にすると偽陽性で埋まるため。baseline の具体値 (定数 or receipt 初行 anchor) は実装 PR で確定し、
-確定後にこの節へ追記する。
+にすると偽陽性で埋まるため。**baseline の正本は tracked source 内の唯一の定数** (D 実装
+module 内に export する ISO UTC 時刻定数 1 個) とし、receipt 初行 anchor 等の untracked 値を
+正本にしない (clean checkout / 別 machine で ratchet を再構成できないため。cross-review FLAG
+2026-08-13 指摘 1 の是正)。定数の具体値は D 実装 PR の merge 時刻で確定し、値の根拠
+(merge commit SHA / mergedAt) を実装 PR の review_evidence citation に固定した上で、確定後に
+この節へ追記する。
 
-**検知の入力**: `gh api` による直近 merged PR 一覧 (merge commit SHA / mergedAt / PR 番号 /
-head SHA)。`gh api` が到達不能な場合、検知を無音で skip せず「検知不能」を digest / event へ
-明示する (fail-close 表示の一種。判定不能を green へ丸めない D3c 既定の踏襲)。
+**検知の入力**: `gh api` による merged PR 一覧 (merge commit SHA / mergedAt / PR 番号 /
+head SHA)。取得は「直近一覧」ではなく **baseline 以降の merged PR を pagination 終端まで
+全ページ走査**する契約とする (per_page 上限に依存した窓を作らない。mergedAt が baseline より
+古い PR に到達した時点での早期終了は可、ただし sort 順に依存する早期終了はその sort が API
+契約で保証される場合に限る)。**途中の page 取得失敗・欠落がある場合、部分結果を「検知 0 件 =
+green」として扱わず「検知不能」を明示する** (cross-review FLAG 2026-08-13 指摘 2 の是正 —
+検知停止中の merge burst が窓外へ落ちて永久未検知になる経路を塞ぐ)。`gh api` が全体として
+到達不能な場合も同様に、検知を無音で skip せず「検知不能」を digest / event へ明示する
+(fail-close 表示の一種。判定不能を green へ丸めない D3c 既定の踏襲)。
 
 **表示配線**: session-start digest (`src/handover/session-start-digest.ts`、`SessionStartDigest`
 の既存 fail-close 段の並びに追加) に bypass/merged_without_verdict の件数 + PR 番号を出す。
@@ -689,11 +699,20 @@ DB テーブルは作らない。検知は可視化のみであり、自動 reve
 
 **oracle 対**: `U-RVMG-*` の続番で以下を宣言し、実装 PR で test-design と 1:1 にする。
 
-1. receipt ありの正常 merge (deny 経路を通った merge) が誤検知されない。
+1. receipt ありの正常 merge (wrapper の `merge_result` decision=merge receipt を持つ merge) が
+   誤検知されない (B の実装定義どおり deny は merge しないため、正常経路は decision=merge のみ。
+   cross-review important 指摘の是正 — 旧文言「deny 経路を通った merge」は B と矛盾するため削除)。
 2. receipt 無し merge が `bypass_merge` として検知される。
-3. cutoff baseline より前の merge が検知対象に含まれない。
+3. cutoff baseline より前の merge が検知対象に含まれない (baseline は tracked 定数から読む)。
 4. `merged_without_verdict` の PR が検知される。
 5. `gh api` 不能時に「検知不能」が digest / event へ明示される (無音 skip の禁止)。
+6. merged PR 一覧の pagination 途中失敗 (2 ページ目以降の取得失敗) で、部分結果が green に
+   ならず「検知不能」が明示される。
+
+**Reverse 合流**: 本 D2-D 追加契約 (bypass_merge / merged_without_verdict / cutoff baseline /
+pagination 全走査 / 検知不能表示) は `PLAN-REVERSE-465` の上流合流 (R1〜R4) 対象に含める。
+D 実装の接地後、R1 で L6/L7 設計への back-fill を検証する (形式的 parent/pair だけに依存せず、
+新契約の upstream closure を Reverse 側 AC で再検証する。cross-review important 指摘の是正)。
 
 **advisor 諮問記録 (2026-08-13)**: `ut-tdd advisor --decision design --current-model
 claude-fable-5 --plan PLAN-L7-465 --execute` を実行し、provider=claude / model=claude-fable-5 /
