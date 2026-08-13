@@ -668,6 +668,36 @@ dependencies:
     }
   });
 
+  it("U-PLANLINT-002: path-form default lint resolves cross-record refs from the full PLAN corpus", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-path-context-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      const parent = planDoc("PLAN-L6-97-parent", {
+        kind: "design",
+        layer: "L6",
+        status: "confirmed",
+        subDoc: "function-spec",
+      });
+      const child = planDoc("PLAN-L7-97-child", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        dependencies: "  parent: PLAN-L6-97-parent\n  requires: [PLAN-L6-97-parent]\n  blocks: []",
+      });
+      writeFileSync(join(root, parent.file), parent.content, "utf8");
+      writeFileSync(join(root, child.file), child.content, "utf8");
+
+      const result = lintPlanWithGate(child.file, root);
+
+      expect(result.ok).toBe(true);
+      expect(result.messages.some((message) => message.includes("parent_missing"))).toBe(false);
+      expect(result.messages.some((message) => message.includes("requires_missing"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PLANGOV-007: progress color DB projection requires Reverse and upstream design backprop", () => {
     const docs = [
       dbProgressPlanDoc("PLAN-L7-98-progress-leak", [

@@ -767,6 +767,7 @@ function schemaIssueSummary(issue: {
 export function analyzePlanGovernance(
   docs: PlanGovernanceDoc[],
   repoRoot?: string,
+  contextDocs: PlanGovernanceDoc[] = docs,
 ): PlanGovernanceResult {
   const violations: PlanGovernanceViolation[] = [];
   const parsed = new Map<
@@ -776,7 +777,12 @@ export function analyzePlanGovernance(
   const byPlanId = new Map<string, string[]>();
   const byPlanIdentity = new Map<string, { file: string; planId: string }[]>();
 
-  for (const doc of docs) {
+  // A path-form lint evaluates only the requested PLAN, but cross-record
+  // references (parent/requires and duplicate identity checks) need the full
+  // PLAN corpus as lookup context.  Keep the evaluation scope separate from
+  // the context scope so a single-file lint neither reports false missing
+  // references nor leaks unrelated corpus violations to the caller.
+  for (const doc of contextDocs) {
     const raw = parsePlanFrontmatter(doc);
     if (!raw) {
       violations.push({ file: doc.file, reason: "missing_frontmatter" });
@@ -1072,7 +1078,15 @@ export function analyzePlanGovernance(
     }
   }
 
-  return { violations, checked: docs.length, ok: violations.length === 0 };
+  const scopedViolations =
+    contextDocs === docs
+      ? violations
+      : violations.filter((violation) => docs.some((doc) => doc.file === violation.file));
+  return {
+    violations: scopedViolations,
+    checked: docs.length,
+    ok: scopedViolations.length === 0,
+  };
 }
 
 export function planGovernanceMessages(result: PlanGovernanceResult): string[] {
@@ -1116,7 +1130,8 @@ export function lintPlan(path?: string, repoRoot: string = process.cwd()): LintR
 export function lintPlanDefault(path?: string, repoRoot: string = process.cwd()): LintResult {
   const docs = loadPlanScheduleDocs(repoRoot, path);
   const schedule = analyzePlanSchedule(docs);
-  const governance = analyzePlanGovernance(docs, repoRoot);
+  const governanceContext = path ? loadPlanScheduleDocs(repoRoot) : docs;
+  const governance = analyzePlanGovernance(docs, repoRoot, governanceContext);
   return {
     ok: schedule.ok && governance.ok,
     messages: [...planScheduleMessages(schedule), ...planGovernanceMessages(governance)],
@@ -1132,7 +1147,9 @@ export function lintPlanGate(
   if (gate === "schedule") return lintPlan(path, repoRoot);
 
   if (gate === "governance" || gate === "frontmatter") {
-    const result = analyzePlanGovernance(loadPlanGovernanceDocs(repoRoot, path), repoRoot);
+    const docs = loadPlanGovernanceDocs(repoRoot, path);
+    const context = path ? loadPlanGovernanceDocs(repoRoot) : docs;
+    const result = analyzePlanGovernance(docs, repoRoot, context);
     return { ok: result.ok, messages: planGovernanceMessages(result) };
   }
 
