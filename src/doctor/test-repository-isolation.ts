@@ -76,8 +76,9 @@ repositoryReadContracts["tests/support/doctor-envelope.ts"] = {
 };
 repositoryReadContracts["tests/doctor-result-file.test.ts"] = {
   mode: "head_snapshot",
-  calls: 2,
-  reason: "doctor envelope oracles build fixtures from the detached HEAD observation surface",
+  calls: 4,
+  reason:
+    "doctor envelope oracles build fixtures and measured writer inputs from the detached HEAD observation surface",
 };
 
 repositoryReadContracts["tests/doctor.test.ts"] = {
