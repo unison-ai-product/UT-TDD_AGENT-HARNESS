@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { isAbsolute, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace.ts";
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace.ts";
@@ -118,7 +118,7 @@ export function loadPlanScheduleDocs(
   target?: string,
 ): PlanScheduleDoc[] {
   if (target) {
-    const p = join(repoRoot, target);
+    const p = isAbsolute(target) ? target : join(repoRoot, target);
     return [{ file: target, content: readFileSync(p, "utf8") }];
   }
   const plansDir = join(repoRoot, "docs", "plans");
@@ -169,6 +169,18 @@ function normalizePlanRef(ref: string): string {
   const normalized = ref.replaceAll("\\", "/");
   const basename = normalized.split("/").at(-1) ?? normalized;
   return basename.endsWith(".md") ? basename.slice(0, -3) : basename;
+}
+
+function canonicalPlanPath(repoRoot: string | undefined, ref: string): string {
+  const absolute = isAbsolute(ref) ? resolve(ref) : resolve(repoRoot ?? process.cwd(), ref);
+  let canonical = absolute;
+  try {
+    canonical = realpathSync.native(absolute);
+  } catch {
+    // Synthetic test docs and missing targets still use normalized absolute identity.
+  }
+  const normalized = canonical.replaceAll("\\", "/");
+  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 
 function normalizeArtifactPath(ref: string): string {
@@ -767,6 +779,7 @@ function schemaIssueSummary(issue: {
 export function analyzePlanGovernance(
   docs: PlanGovernanceDoc[],
   repoRoot?: string,
+  contextDocs: PlanGovernanceDoc[] = docs,
 ): PlanGovernanceResult {
   const violations: PlanGovernanceViolation[] = [];
   const parsed = new Map<
@@ -776,7 +789,12 @@ export function analyzePlanGovernance(
   const byPlanId = new Map<string, string[]>();
   const byPlanIdentity = new Map<string, { file: string; planId: string }[]>();
 
-  for (const doc of docs) {
+  // A path-form lint evaluates only the requested PLAN, but cross-record
+  // references (parent/requires and duplicate identity checks) need the full
+  // PLAN corpus as lookup context.  Keep the evaluation scope separate from
+  // the context scope so a single-file lint neither reports false missing
+  // references nor leaks unrelated corpus violations to the caller.
+  for (const doc of contextDocs) {
     const raw = parsePlanFrontmatter(doc);
     if (!raw) {
       violations.push({ file: doc.file, reason: "missing_frontmatter" });
@@ -1072,7 +1090,33 @@ export function analyzePlanGovernance(
     }
   }
 
-  return { violations, checked: docs.length, ok: violations.length === 0 };
+  const scopedViolations =
+    contextDocs === docs
+      ? violations
+      : (() => {
+          const targetFiles = new Set(docs.map((doc) => canonicalPlanPath(repoRoot, doc.file)));
+          const contextFiles = new Set(
+            contextDocs.map((doc) => canonicalPlanPath(repoRoot, doc.file)),
+          );
+          const selected = violations.filter((violation) =>
+            targetFiles.has(canonicalPlanPath(repoRoot, violation.file)),
+          );
+          for (const doc of docs) {
+            if (!contextFiles.has(canonicalPlanPath(repoRoot, doc.file))) {
+              selected.push({
+                file: doc.file,
+                reason: "target_context_missing",
+                detail: "target PLAN is outside the loaded governance context",
+              });
+            }
+          }
+          return selected;
+        })();
+  return {
+    violations: scopedViolations,
+    checked: docs.length,
+    ok: scopedViolations.length === 0,
+  };
 }
 
 export function planGovernanceMessages(result: PlanGovernanceResult): string[] {
@@ -1107,15 +1151,35 @@ export function lintPlan(path?: string, repoRoot: string = process.cwd()): LintR
   return { ok: result.ok, messages: planScheduleMessages(result) };
 }
 
+/**
+ * The default CLI lint is the pre-push safety surface: schedule structure and
+ * PLAN frontmatter/cross-record governance must be checked together.  Keep
+ * `lintPlan` schedule-only for the doctor sub-gate, which exposes the two
+ * checks as separate named rows.
+ */
+export function lintPlanDefault(path?: string, repoRoot: string = process.cwd()): LintResult {
+  const docs = loadPlanScheduleDocs(repoRoot, path);
+  const schedule = analyzePlanSchedule(docs);
+  const governanceContext = path ? loadPlanScheduleDocs(repoRoot) : docs;
+  const governance = analyzePlanGovernance(docs, repoRoot, governanceContext);
+  return {
+    ok: schedule.ok && governance.ok,
+    messages: [...planScheduleMessages(schedule), ...planGovernanceMessages(governance)],
+  };
+}
+
 export function lintPlanGate(
   gate: string | undefined,
   path?: string,
   repoRoot: string = process.cwd(),
 ): LintResult {
-  if (!gate || gate === "schedule") return lintPlan(path, repoRoot);
+  if (!gate) return lintPlanDefault(path, repoRoot);
+  if (gate === "schedule") return lintPlan(path, repoRoot);
 
   if (gate === "governance" || gate === "frontmatter") {
-    const result = analyzePlanGovernance(loadPlanGovernanceDocs(repoRoot, path), repoRoot);
+    const docs = loadPlanGovernanceDocs(repoRoot, path);
+    const context = path ? loadPlanGovernanceDocs(repoRoot) : docs;
+    const result = analyzePlanGovernance(docs, repoRoot, context);
     return { ok: result.ok, messages: planGovernanceMessages(result) };
   }
 

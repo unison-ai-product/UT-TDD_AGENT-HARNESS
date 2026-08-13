@@ -77,7 +77,7 @@ FR → `ut-tdd` サブコマンドの対応 (architecture.md cli module に集�
 | コマンド (将来形) | 実現 FR | 現状 | 操作 |
 |---|---|---|---|
 | `ut-tdd status` | FR-13 | **実装済** (scaffold) | mode 検出表示 |
-| `ut-tdd plan draft/lint/delete` | FR-01 / FR-04 / FR-24 | 実装済み (段階拡張) | `plan lint` は schedule 最小強制 + `--gate governance/frontmatter` の PLAN frontmatter/cross-record 厳格検査 + `--gate G1-trace/G3-trace` の trace gate を提供。doctor は governance debt を warning-first で件数 surface |
+| `ut-tdd plan draft/lint/delete` | FR-01 / FR-04 / FR-24 | 実装済み (段階拡張) | `plan lint` は schedule と PLAN frontmatter/cross-record 厳格検査を既定で同時実行し、`--gate schedule` / `--gate governance/frontmatter` で個別実行も提供する。`--gate G1-trace/G3-trace` は trace gate。doctor は schedule/governance を個別 hard gate として件数 surface |
 | `ut-tdd sprint start/check` | FR-02 | 未 | TDD 強制 (Red→Green→refactor 順序、本体実装前 Red 必須 fail-close) |
 | `ut-tdd gate <G-ID>` | FR-05 / FR-13 | 実装済み (段階拡張) | execution mode 別 review-tier 判定 + deterministic static gate 合成。G1/G3 trace、G2/G4/G5/G6 layer pair、G7 4 artifact evidence + coverage summary を JSON 証跡化 |
 | `ut-tdd trace check` | FR-03 | (vmodel lint で部分) | 4 artifact 双方向 trace |

@@ -642,6 +642,129 @@ dependencies:
     }
   });
 
+  it("U-PLANLINT-001: default plan lint includes frontmatter governance", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-default-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      const fixture = planDoc("PLAN-L4-96-default-lint", {
+        extra: 'github_issue_id: "bad"\n',
+      });
+      const content = fixture.content.replace(
+        "## body",
+        "## §3 工程表 (Step + 進捗)\n\n### Step 1: [直列] review\n直列理由: downstream_dependency\n\n## §3.1 実装計画\n\n## body",
+      );
+      writeFileSync(join(plansDir, "PLAN-L4-96-default-lint.md"), content, "utf8");
+
+      const r = lintPlanWithGate(undefined, root);
+
+      expect(r.ok).toBe(false);
+      expect(r.messages.some((message) => message.includes("plan-schedule — OK"))).toBe(true);
+      expect(r.messages.some((message) => message.includes("plan-governance - violation"))).toBe(
+        true,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PLANLINT-002: path-form default lint resolves cross-record refs from the full PLAN corpus", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-path-context-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      const parent = planDoc("PLAN-L6-97-parent", {
+        kind: "design",
+        layer: "L6",
+        status: "confirmed",
+        subDoc: "function-spec",
+      });
+      const child = planDoc("PLAN-L7-97-child", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        dependencies: "  parent: PLAN-L6-97-parent\n  requires: [PLAN-L6-97-parent]\n  blocks: []",
+      });
+      writeFileSync(join(root, parent.file), parent.content, "utf8");
+      writeFileSync(join(root, child.file), child.content, "utf8");
+
+      const result = lintPlanWithGate(child.file, root);
+
+      expect(result.ok).toBe(true);
+      expect(result.messages.some((message) => message.includes("parent_missing"))).toBe(false);
+      expect(result.messages.some((message) => message.includes("requires_missing"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PLANLINT-003: path-form governance violations survive slash normalization", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-path-scope-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      mkdirSync(plansDir, { recursive: true });
+      const fixture = planDoc("PLAN-L4-98-path-scope", {
+        extra: 'github_issue_id: "bad"\n',
+      });
+      writeFileSync(join(root, fixture.file), fixture.content, "utf8");
+
+      const forward = lintPlanWithGate(fixture.file, root);
+      expect(forward.ok).toBe(false);
+      expect(forward.messages.some((message) => message.includes("invalid_frontmatter"))).toBe(
+        true,
+      );
+
+      if (process.platform === "win32") {
+        const windowsPath = fixture.file.replaceAll("/", "\\");
+        const backslash = lintPlanWithGate(windowsPath, root);
+        expect(backslash.ok).toBe(false);
+        expect(backslash.messages.some((message) => message.includes("invalid_frontmatter"))).toBe(
+          true,
+        );
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-PLANLINT-004: path scope uses canonical identity and fails closed outside corpus", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-lint-path-identity-"));
+    try {
+      const plansDir = join(root, "docs", "plans");
+      const draftsDir = join(root, "docs", "drafts");
+      const nestedDir = join(plansDir, "sub");
+      mkdirSync(draftsDir, { recursive: true });
+      mkdirSync(nestedDir, { recursive: true });
+
+      const corpus = planDoc("PLAN-L4-99-path-identity", {
+        extra: 'github_issue_id: "bad"\n',
+      });
+      writeFileSync(join(root, corpus.file), corpus.content, "utf8");
+      const clean = planDoc("PLAN-L4-99-path-identity").content;
+      const targets = [
+        [join(draftsDir, "PLAN-L4-99-path-identity.md"), clean],
+        [join(nestedDir, "PLAN-L4-99-path-identity.md"), clean],
+        // Keep the lowercase basename on a distinct directory: Windows treats
+        // a case-only spelling of the corpus path as the same physical file.
+        [join(nestedDir, "plan-l4-99-path-identity.md"), clean],
+      ] as const;
+
+      for (const [target, content] of targets) {
+        writeFileSync(target, content, "utf8");
+        const result = lintPlanWithGate(target, root);
+        expect(result.ok).toBe(false);
+        expect(result.messages.some((message) => message.includes("target_context_missing"))).toBe(
+          true,
+        );
+        expect(result.messages.some((message) => message.includes("invalid_frontmatter"))).toBe(
+          false,
+        );
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PLANGOV-007: progress color DB projection requires Reverse and upstream design backprop", () => {
     const docs = [
       dbProgressPlanDoc("PLAN-L7-98-progress-leak", [

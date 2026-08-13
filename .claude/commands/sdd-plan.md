@@ -24,5 +24,5 @@ Produce:
    falsifiable check naming the `ut-tdd` command that verifies it.
 4. **Dependencies** — `requires` / `parent`, each pointing at an existing doc.
 
-Validate with `ut-tdd plan lint` (schedule + dependency existence) and confirm
+Validate with `ut-tdd plan lint` (schedule + frontmatter/governance + dependency existence) and confirm
 `ut-tdd doctor` exits 0. Author per the schema in `.claude/CLAUDE.md` PLAN Rules.
