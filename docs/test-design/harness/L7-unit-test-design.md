@@ -2270,3 +2270,12 @@ oracle-test-trace 自身の既存 test はこの表へ自己宣言する。
 | `U-OIDGATE-013` | baseline 外の新規 label ID | `analyzeOracleTestTrace` | 新規 citation のみ fail-close、既存 debt は許容 |
 | `U-OIDGATE-014` | 引用符を含む regex literal の直後に static test label | `collectOracleCitationSites` | regex 内の引用符を文字列開始と誤認せず、後続 label を収集 |
 | `U-OIDGATE-015` | `it.skip` / `describe.only` / `test.todo` の static label | `collectOracleCitationSites` | modifier 呼び出し自身の最初の label を収集 |
+
+## doctor result envelope 実測面 (Issue #193 / PLAN-L7-484)
+
+| test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
+|---|---|---|---|
+| `U-DOCTORENV-012` | setup-smoke の measured execution | `runDoctorMeasured` | resolved profile は `consumer-setup-smoke`、実測 check ID は `setup-smoke` だけ |
+| `U-DOCTORENV-013` | narrowed check IDs を持つ measurement | `writeDoctorResultEnvelopeFile` | writer は full registry を再計算せず、渡された実測集合を保存 |
+| `U-DOCTORENV-014` | strict telemetry だけが異なる envelope / expectation | `doctorResultEnvelopeUsability` | `options-mismatch` で拒否し自走へ落ちる |
+| `U-DOCTORENV-015` | `--setup-smoke --result-file` 相当の起動面 | envelope surface projection | `scope=setup-smoke` / profile設定済みとなり full consumer に拒否される |

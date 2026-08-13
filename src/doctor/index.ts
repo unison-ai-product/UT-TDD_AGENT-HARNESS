@@ -11,6 +11,7 @@ import {
   resolveDoctorRunProfile,
 } from "./check-registry.ts";
 import { checkPlanReferenceFreshnessAdvisory } from "./plan-governance.ts";
+import type { DoctorRunProfile } from "./profiles.ts";
 import { buildDoctorResult, type DoctorResult } from "./result.ts";
 import {
   checkAgentSlots,
@@ -143,12 +144,20 @@ export {
   checkRightLungDocGovernance,
 } from "./workflow-quality.ts";
 
-export function runDoctor(
+export interface DoctorMeasurement {
+  result: DoctorResult;
+  checkIds: string[];
+  profile: DoctorRunProfile;
+}
+
+export function runDoctorMeasured(
   deps: DoctorDeps = nodeDoctorDeps(process.cwd()),
   options: DoctorOptions = {},
-): DoctorResult {
+): DoctorMeasurement {
   const profile = resolveDoctorRunProfile(options);
-  if (profile.invocation === "setup-smoke") return checkSetupSmoke(deps);
+  if (profile.invocation === "setup-smoke") {
+    return { result: checkSetupSmoke(deps), checkIds: ["setup-smoke"], profile };
+  }
 
   const d = detectMode();
   // handover / agent-slots are warning surfaces. Verification profile is a hard gate.
@@ -159,11 +168,22 @@ export function runDoctor(
     checkAgentSlots(doctorSlotsDeps(deps)),
     ...checkPlanReferenceFreshnessAdvisory(deps.repoRoot),
   ];
-  const { checks, timings } = collectDoctorCheckRun(deps, options);
+  const { checks, checkIds, timings } = collectDoctorCheckRun(deps, options);
 
-  return buildDoctorResult({
-    leadingMessages,
-    checks,
-    timings: options.timing === true ? timings : undefined,
-  });
+  return {
+    result: buildDoctorResult({
+      leadingMessages,
+      checks,
+      timings: options.timing === true ? timings : undefined,
+    }),
+    checkIds,
+    profile,
+  };
+}
+
+export function runDoctor(
+  deps: DoctorDeps = nodeDoctorDeps(process.cwd()),
+  options: DoctorOptions = {},
+): DoctorResult {
+  return runDoctorMeasured(deps, options).result;
 }

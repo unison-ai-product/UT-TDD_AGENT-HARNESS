@@ -652,6 +652,7 @@ describe("runDoctor", () => {
       scope: "toolchain",
       timing: true,
     });
+    expect(run.checkIds).toEqual(selected.map((definition) => definition.id));
 
     expect(resolveDoctorRunProfile()).toEqual(DOCTOR_RUN_PROFILES["source-full"]);
     expect(doctorRunProfilesForAudience("source").map((profile) => profile.id)).toEqual([
@@ -1602,7 +1603,7 @@ describe("runDoctor", () => {
     expect(indexSource).toContain("const profile = resolveDoctorRunProfile(options)");
     expect(indexSource).toContain('if (profile.invocation === "setup-smoke")');
     expect(indexSource).toContain(
-      "const { checks, timings } = collectDoctorCheckRun(deps, options)",
+      "const { checks, checkIds, timings } = collectDoctorCheckRun(deps, options)",
     );
     expect(registrySource).toContain('} from "./runner.ts"');
     expect(registrySource).toContain('} from "./check-definitions.ts"');

@@ -21,6 +21,8 @@ export interface DoctorOptions {
 
 export interface DoctorCheckRun {
   checks: LintResult[];
+  /** 実際に呼び出した definition ID。envelope producer は再計算せずこの実測値を使う。 */
+  checkIds: string[];
   timings: DoctorTiming[];
 }
 
@@ -65,10 +67,11 @@ export function collectDoctorCheckRun(
   };
 
   const resultsById = new Map<string, LintResult>();
-  for (const definition of selectDoctorCheckDefinitions(
+  const selectedDefinitions = selectDoctorCheckDefinitions(
     buildFullDoctorCheckDefinitions(deps, options),
     scope,
-  )) {
+  );
+  for (const definition of selectedDefinitions) {
     resultsById.set(definition.id, record(definition.id, definition.run));
   }
   const checks = doctorOutputIdsForScope(scope).map((id) => {
@@ -82,7 +85,7 @@ export function collectDoctorCheckRun(
     return result;
   });
 
-  return { checks, timings };
+  return { checks, checkIds: selectedDefinitions.map((definition) => definition.id), timings };
 }
 
 export function collectDoctorChecks(deps: DoctorDeps, options: DoctorOptions = {}): LintResult[] {

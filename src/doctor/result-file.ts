@@ -33,11 +33,9 @@ import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { defaultBranchRefMap, headSha } from "../git/default-branch.ts";
 import { ensureDir } from "../shared/fs.ts";
-import { buildFullDoctorCheckDefinitions } from "./check-definitions.ts";
 import type { DoctorResult } from "./result.ts";
-import { nodeDoctorDeps } from "./runtime-state.ts";
 
-export const DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION = "v3";
+export const DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION = "v4";
 
 /** artifact のパスを渡す環境変数 (CI の doctor step が書き、vitest が読む)。 */
 export const DOCTOR_RESULT_FILE_ENV = "UT_TDD_DOCTOR_RESULT_FILE";
@@ -45,6 +43,7 @@ export const DOCTOR_RESULT_FILE_ENV = "UT_TDD_DOCTOR_RESULT_FILE";
 /** producer が実際に適用した option 集合。既定値も明示的に持つ (省略を「偽」と推測しない)。 */
 export interface DoctorRunOptions {
   strict_green_command_digest: boolean;
+  strict_telemetry_provenance: boolean;
   timing: boolean;
 }
 
@@ -197,8 +196,13 @@ export function parseDoctorResultEnvelope(raw: string): DoctorResultEnvelope | n
   if (typeof c.producer_root !== "string" || c.producer_root.trim() === "") return null;
   if (!isStringRecord(c.ref_map)) return null;
   if (
-    !hasExactKeys(options, ["strict_green_command_digest", "timing"]) ||
-    typeof options.strict_green_command_digest !== "boolean"
+    !hasExactKeys(options, [
+      "strict_green_command_digest",
+      "strict_telemetry_provenance",
+      "timing",
+    ]) ||
+    typeof options.strict_green_command_digest !== "boolean" ||
+    typeof options.strict_telemetry_provenance !== "boolean"
   ) {
     return null;
   }
@@ -232,6 +236,7 @@ export function parseDoctorResultEnvelope(raw: string): DoctorResultEnvelope | n
     ref_map: c.ref_map,
     options: {
       strict_green_command_digest: options.strict_green_command_digest,
+      strict_telemetry_provenance: options.strict_telemetry_provenance,
       timing: options.timing,
     },
     check_ids: c.check_ids as string[],
@@ -300,6 +305,8 @@ export function doctorResultEnvelopeUsability(input: {
   if (
     envelope.options.strict_green_command_digest !==
       input.expectedOptions.strict_green_command_digest ||
+    envelope.options.strict_telemetry_provenance !==
+      input.expectedOptions.strict_telemetry_provenance ||
     envelope.options.timing !== input.expectedOptions.timing
   ) {
     return { usable: false, reason: "options-mismatch" };
@@ -336,14 +343,12 @@ export function writeDoctorResultEnvelopeFile(
     scope: string;
     profile: string | null;
     options: DoctorRunOptions;
+    checkIds: readonly string[];
     result: DoctorResult;
   },
 ): void {
   const sha = headSha(repoRoot);
   if (!sha) throw new Error("doctor result envelope requires a resolvable HEAD");
-  const checkIds = buildFullDoctorCheckDefinitions(nodeDoctorDeps(repoRoot)).map(
-    (definition) => definition.id,
-  );
   const envelope = buildDoctorResultEnvelope({
     headSha: sha,
     scope: input.scope,
@@ -351,7 +356,7 @@ export function writeDoctorResultEnvelopeFile(
     producerRoot: canonicalRepoRoot(repoRoot),
     refMap: defaultBranchRefMap(repoRoot),
     options: input.options,
-    checkIds,
+    checkIds: input.checkIds,
     producer: doctorResultProducerIdentity(repoRoot),
     result: input.result,
   });
