@@ -207,9 +207,35 @@ function loadAdminRecords(commonDir: string, observations: TopologyFinding[]): A
   const worktreesDir = join(commonDir, "worktrees");
   if (!existsSync(worktreesDir)) return [];
   const records: AdminRecord[] = [];
-  for (const entry of readdirSync(worktreesDir)) {
+  let entries: string[];
+  try {
+    entries = readdirSync(worktreesDir);
+  } catch {
+    observations.push(
+      finding({
+        kind: "collector_parse_error",
+        operation: "worktree-admin-scan",
+        evidenceCode: "readdir_unavailable",
+      }),
+    );
+    return records;
+  }
+  for (const entry of entries) {
     const adminPath = join(worktreesDir, entry);
-    if (!statSync(adminPath).isDirectory()) continue;
+    let directory: boolean;
+    try {
+      directory = statSync(adminPath).isDirectory();
+    } catch {
+      observations.push(
+        finding({
+          kind: "collector_parse_error",
+          operation: "worktree-admin-scan",
+          evidenceCode: "stat_unavailable",
+        }),
+      );
+      continue;
+    }
+    if (!directory) continue;
     const observed = observePath(adminPath, "admin-realpath");
     if (!observed.pathKey) {
       if (observed.finding) observations.push(observed.finding);

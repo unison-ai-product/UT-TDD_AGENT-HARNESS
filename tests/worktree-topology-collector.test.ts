@@ -133,21 +133,28 @@ describe("worktree topology PF2 OS collector", () => {
 
   it("U-WTTOPO-014/017: malformed porcelain、command failure、root escape を typed finding にする", () => {
     const root = tempRoot();
+    mkdirSync(join(root, ".git"));
     const cases: Array<{
       label: string;
       runGit: (command: GitCommand) => GitCommandResult;
       kind: string;
+      operation: string;
+      evidenceCode: string;
     }> = [
       {
         label: "malformed",
         runGit: (command) =>
           command.args[0] === "worktree" ? result("HEAD missing-worktree\n") : result(".git\n"),
         kind: "collector_parse_error",
+        operation: "worktree-porcelain",
+        evidenceCode: "malformed",
       },
       {
         label: "command failure",
         runGit: (command) => (command.args[0] === "worktree" ? result("", 128) : result(".git\n")),
         kind: "collector_command_error",
+        operation: "worktree-list",
+        evidenceCode: "command_failed",
       },
       {
         label: "path escape",
@@ -156,13 +163,19 @@ describe("worktree topology PF2 OS collector", () => {
             ? result(`worktree ../outside\nHEAD ${oid}\ndetached\n\n`)
             : result("../outside-git\n"),
         kind: "path_escape",
+        operation: "resolve-path",
+        evidenceCode: "root_escape",
       },
     ];
 
     for (const item of cases) {
       const collection = collectWorktreeTopology({ repoRoot: root, runGit: item.runGit });
       expect(collection.observations, item.label).toContainEqual(
-        expect.objectContaining({ kind: item.kind }),
+        expect.objectContaining({
+          kind: item.kind,
+          operation: item.operation,
+          evidenceCode: item.evidenceCode,
+        }),
       );
     }
   });
@@ -172,17 +185,23 @@ describe("worktree topology PF2 OS collector", () => {
     const target = join(root, "target");
     const alias = join(root, "alias");
     mkdirSync(target);
-    if (process.platform !== "win32") {
-      expect("OS_CAPABILITY_UNAVAILABLE: junction/reparse evidence requires Windows").toMatch(
-        /^OS_CAPABILITY_UNAVAILABLE:/,
+    const expectJunctionCapabilityFinding = (): void => {
+      expect(observeTopologyPath(alias).finding).toEqual(
+        expect.objectContaining({
+          kind: "collector_parse_error",
+          operation: "realpath",
+          evidenceCode: "realpath_unavailable",
+        }),
       );
+    };
+    if (process.platform !== "win32") {
+      expectJunctionCapabilityFinding();
       return;
     }
     try {
       symlinkSync(target, alias, "junction");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : "unknown junction error";
-      expect(`OS_CAPABILITY_UNAVAILABLE: ${detail}`).toMatch(/^OS_CAPABILITY_UNAVAILABLE:/);
+    } catch {
+      expectJunctionCapabilityFinding();
       return;
     }
     const targetObserved = observeTopologyPath(target);
