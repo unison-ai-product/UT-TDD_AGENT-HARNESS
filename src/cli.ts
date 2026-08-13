@@ -754,7 +754,11 @@ program
           writeDoctorResultEnvelopeFile(opts.resultFile, process.cwd(), {
             scope:
               measured.profile.invocation === "registry" ? measured.profile.scope : "setup-smoke",
-            profile: profile ?? (opts.setupSmoke === true ? measured.profile.id : null),
+            profile: profile
+              ? (profile as DoctorRunProfileId)
+              : opts.setupSmoke === true
+                ? measured.profile.id
+                : null,
             options: {
               strict_green_command_digest: opts.strictGreenCommandDigest === true,
               strict_telemetry_provenance: opts.strictTelemetryProvenance === true,

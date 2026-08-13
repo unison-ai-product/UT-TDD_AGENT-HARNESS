@@ -46,8 +46,8 @@ review_evidence: []
 | 層 | 正本 | 検証対 |
 |---|---|---|
 | L6 | `doctor-result-envelope-measurement.md` | 実測面の pre/post/invariant |
-| L7 | `runDoctorMeasured` と envelope writer | `U-DOCTORENV-012..015` |
-| L8 | CLI `doctor --result-file` 配線 | targeted unit / CLI regression |
+| L7 | `runDoctorMeasured` と envelope writer | `U-DOCTORENV-012..016` |
+| L8 | CLI `doctor --result-file` 配線 | `U-DOCTORENV-016` の実発火CLI回帰 |
 
 ## 工程
 
@@ -55,6 +55,9 @@ review_evidence: []
 2. [直列] doctor result と実行 check IDs / resolved profile を同じ measured object で返す。
 3. [直列] writer は measured surface だけを直列化し、schema と consumer 照合へ strict telemetry を追加する。
 4. [直列] exact-head CI と非author closing review を取得する。
+
+回帰防止として、CLIの `--result-file` 投影式を実プロセスで起動する `U-DOCTORENV-016` を
+実装と同じPRに含める。手組み envelope の consumer 判定だけではCLI投影の旧実装復帰を検出できないためである。
 
 ## 完了条件
 

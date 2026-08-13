@@ -2281,3 +2281,4 @@ L6設計正本: `docs/design/harness/L6-function-design/doctor-result-envelope-m
 | `U-DOCTORENV-013` | narrowed check IDs を持つ measurement | `writeDoctorResultEnvelopeFile` | writer は full registry を再計算せず、渡された実測集合を保存 |
 | `U-DOCTORENV-014` | strict telemetry だけが異なる envelope / expectation | `doctorResultEnvelopeUsability` | `options-mismatch` で拒否し自走へ落ちる |
 | `U-DOCTORENV-015` | `--setup-smoke --result-file` 相当の起動面 | envelope surface projection | `scope=setup-smoke` / profile設定済みとなり full consumer に拒否される |
+| `U-DOCTORENV-016` | 実リポジトリで `doctor --setup-smoke --result-file <path> --json` を起動 | CLI result-file projection | 実発火で生成された envelope が `scope=setup-smoke`、`profile=consumer-setup-smoke`、`check_ids=[setup-smoke]`、全 strict options を持つ |

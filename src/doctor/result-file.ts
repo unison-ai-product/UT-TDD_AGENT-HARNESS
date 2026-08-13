@@ -33,12 +33,15 @@ import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { defaultBranchRefMap, headSha } from "../git/default-branch.ts";
 import { ensureDir } from "../shared/fs.ts";
+import type { DoctorRunProfileId, DoctorScope } from "./profiles.ts";
 import type { DoctorResult } from "./result.ts";
 
 export const DOCTOR_RESULT_ENVELOPE_SCHEMA_VERSION = "v4";
 
 /** artifact のパスを渡す環境変数 (CI の doctor step が書き、vitest が読む)。 */
 export const DOCTOR_RESULT_FILE_ENV = "UT_TDD_DOCTOR_RESULT_FILE";
+
+export type DoctorResultEnvelopeScope = DoctorScope | "setup-smoke";
 
 /** producer が実際に適用した option 集合。既定値も明示的に持つ (省略を「偽」と推測しない)。 */
 export interface DoctorRunOptions {
@@ -88,8 +91,8 @@ export function doctorResultPayloadDigest(result: DoctorResult): string {
 
 export function buildDoctorResultEnvelope(input: {
   headSha: string;
-  scope: string;
-  profile?: string | null;
+  scope: DoctorResultEnvelopeScope;
+  profile?: DoctorRunProfileId | null;
   producerRoot: string;
   refMap: Record<string, string>;
   options: DoctorRunOptions;
@@ -340,8 +343,8 @@ export function writeDoctorResultEnvelopeFile(
   filePath: string,
   repoRoot: string,
   input: {
-    scope: string;
-    profile: string | null;
+    scope: DoctorResultEnvelopeScope;
+    profile: DoctorRunProfileId | null;
     options: DoctorRunOptions;
     checkIds: readonly string[];
     result: DoctorResult;

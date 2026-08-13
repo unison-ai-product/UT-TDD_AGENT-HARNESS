@@ -381,6 +381,39 @@ describe("L7 CLI surface closure", () => {
     }
   }, 15_000);
 
+  it("U-DOCTORENV-016: binds a real setup-smoke CLI result file to the executed surface", () => {
+    const dir = mkdtempSync(join(tmpdir(), "ut-tdd-cli-doctor-envelope-"));
+    const resultFile = join(dir, "doctor-result.json");
+    try {
+      const run = runCli(["doctor", "--setup-smoke", "--result-file", resultFile, "--json"]);
+
+      // setup-smoke は環境依存の検査結果を返すため、検査本体の 0/1 は許容する。
+      // lock blocked (2) は envelope を生成しないため、ここでは受け付けない。
+      expect(run.status).toBeLessThan(2);
+      const envelope = JSON.parse(readFileSync(resultFile, "utf8")) as {
+        schema_version: string;
+        scope: string;
+        profile: string | null;
+        options: Record<string, unknown>;
+        check_ids: string[];
+      };
+
+      expect(envelope).toMatchObject({
+        schema_version: "v4",
+        scope: "setup-smoke",
+        profile: "consumer-setup-smoke",
+      });
+      expect(envelope.check_ids).toEqual(["setup-smoke"]);
+      expect(Object.keys(envelope.options).sort()).toEqual([
+        "strict_green_command_digest",
+        "strict_telemetry_provenance",
+        "timing",
+      ]);
+    } finally {
+      removeTestTree(dir);
+    }
+  }, 30_000);
+
   it("U-DOCLOCK-009: blocks a competing doctor CLI before it starts verification", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-doctor-lock-"));
     try {

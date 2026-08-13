@@ -32,7 +32,7 @@ envelope writer はこの measurement と実際に適用した strict options �
 
 ### `runDoctorMeasured`
 
-`runDoctorMeasured(options) => DoctorMeasurement`
+`runDoctorMeasured(deps, options) => DoctorMeasurement`
 
 - pre: options は CLI が受理した値である。
 - post: registry 実行では `checkIds` が実際に呼び出した definition と一致する。
@@ -52,7 +52,8 @@ envelope writer はこの measurement と実際に適用した strict options �
 L7 の検証正本は `docs/test-design/harness/L7-unit-test-design.md` にある。`U-DOCTORENV-012` は
 setup-smoke の実測profile/check IDs、`U-DOCTORENV-013` はwriterの実測集合保持、
 `U-DOCTORENV-014` はstrict telemetry差の拒否、`U-DOCTORENV-015` は縮小面をfull consumerが
-拒否することをそれぞれ検証する。
+拒否すること、`U-DOCTORENV-016` は `doctor --setup-smoke --result-file` のCLI実発火が
+同じ実行の `scope` / `profile` / `check_ids` / options を書き出すことをそれぞれ検証する。
 
 ## 5. 失敗契約
 
