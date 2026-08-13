@@ -1531,7 +1531,7 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | U-ID | mutation / fixture | expected |
 |---|---|---|
 | `U-RVMG-001` | isolated fixture の exact HEAD + 非author family PASS | merge と intent/result receipt を同じ HEAD・authorized entry で記録 |
-| `U-RVMG-002` | 同一 HEAD の PASS と FLAG entry を file order と異なる判定順で投入 | deny、判定 entry の `FLAG` を receipt に記録、`authorizedEntry` は null |
+| `U-RVMG-002` | 同一 HEAD の PASS と FLAG entry を投入 | deny、単一 deny entry の `FLAG` と reviewer identity を receipt に記録 |
 | `U-RVMG-003` | verdict なし request を isolated fixture に投入 | deny、verdict は null、receipt を残す |
 | `U-RVMG-004` | 第一観測と第二観測の exact HEAD を変異 | `head_mismatch` で breach 側へ倒し merge 0 |
 | `U-RVMG-005` | PR facts 取得 port を例外化 | `gh_fetch_failed` の deny receipt、merge 0 |
@@ -1542,6 +1542,8 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVMG-010` | statusCheckRollup を空、または conclusion 欠落へ変異 | `checksGreen=false` |
 | `U-RVMG-011` | 第二観測 HEAD と `gh merge --match-head-commit` 引数を検査 | 第二観測を `evaluatedHeadSha` へ束縛し、merge は判定済み exact HEAD を渡す |
 | `U-RVMG-012` | intent receipt / result receipt の書込先をファイル・ディレクトリ衝突へ変異 | intent は fail-close、result は警告付き failure 相当、fixture 外書込 0 |
+| `U-RVMG-013` | result receipt の書込を失敗させる | 警告付き failure 相当となり、result receipt の書込失敗を surface |
+| `U-RVMG-014` | 同一 HEAD の FLAG / pending deny 候補を `[FLAG, pending]` と `[pending, FLAG]` に反転 | 両順序の receipt が同一で、`verdict: null` かつ `authorizedEntry: null` |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 

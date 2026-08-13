@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   analyzeReviewDispatch,
   type PrObservation,
+  type ReviewDispatchEntry,
   type ReviewReceipt,
   type ReviewRequest,
   type ReviewVerdict,
@@ -144,17 +145,23 @@ export function evaluateMergeGate(input: {
     (candidate) => candidate.pr === input.pr && candidate.exactHead === headSha,
   );
   const entry = entriesForHead[0];
-  const denyingEntry = entriesForHead.find(
+  const denyingEntries = entriesForHead.filter(
     (candidate) => candidate.state !== "merge_ready" || candidate.verdict === "FLAG",
   );
-  const authorizedEntry =
-    result.ok && entry?.reviewerFamily
+  const denyingEntry = denyingEntries.length === 1 ? denyingEntries[0] : undefined;
+  const authorizedEntryFrom = (
+    candidate: ReviewDispatchEntry | undefined,
+  ): AuthorizedReviewEntry | null =>
+    candidate?.reviewerFamily
       ? {
-          memoryId: entry.memoryId,
-          reviewRevision: entry.reviewRevision,
-          reviewerFamily: entry.reviewerFamily,
+          memoryId: candidate.memoryId,
+          reviewRevision: candidate.reviewRevision,
+          reviewerFamily: candidate.reviewerFamily,
         }
       : null;
+  const authorizedEntry = result.ok
+    ? authorizedEntryFrom(entry)
+    : authorizedEntryFrom(denyingEntry);
   const verdict = result.ok ? (entry?.verdict ?? null) : (denyingEntry?.verdict ?? null);
   const reasons = [...result.diagnostics];
   if (entriesForHead.length === 0) {

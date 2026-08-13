@@ -625,6 +625,7 @@ D3 の live 結合試験はこれで閉じる。`unverified_family` を先へ進
 観測、intent/result receipt、`--match-head-commit` を同じ HEAD へ束縛し、review input と receipt
 は isolated fixture から読む。実装成果物は `src/feedback/review-merge-gate.ts`、
 `src/cli/pr-merge.ts`、テスト成果物は `tests/review-merge-gate.test.ts` である。
+実テストは `it()` 14 件である。
 
 ### A-5 裁定
 
@@ -633,10 +634,11 @@ B 面の deny 対象に custody を含めない。custody は A 面の最終 AND
 
 ### B-3 deny receipt の束縛
 
-複数 entry が同一 HEAD に存在する場合、deny の `verdict` は blocking / pending 判定に使った
-entry へ束縛する。判定 entry を一意に定められない deny では `verdict: null` とし、先頭 entry
-由来の誤導的な「PASS だが deny」証跡を残さない。`U-RVMG-002` / `U-RVMG-003` がこの境界を
-固定する。
+複数 entry が同一 HEAD に存在する場合、deny 候補が exactly 1 件のときだけ、deny の
+`verdict` と reviewer identity をその entry へ束縛する。判定 entry を一意に定められない
+(deny 候補が 0 件または 2 件以上の) deny では `verdict: null` / `authorizedEntry: null` とし、
+先頭 entry 由来の誤導的な証跡を残さない。`U-RVMG-002` / `U-RVMG-003` / `U-RVMG-014` が
+この境界を固定する。
 
 ### 実装時 review evidence
 

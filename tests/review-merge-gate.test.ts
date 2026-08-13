@@ -225,11 +225,49 @@ describe("D2-B PR merge gate", () => {
         headSha: head,
         verdict: "FLAG",
         decision: "deny",
-        authorizedEntry: null,
+        authorizedEntry: {
+          memoryId: "review:465:head:b",
+          reviewRevision: "review-rb",
+          reviewerFamily: "codex",
+        },
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("U-RVMG-014: FLAG と pending の deny 候補順序を反転しても receipt は同一になる", () => {
+    const cases = ["review:465:head:a", "review:465:head:b"] as const;
+    const receipts = cases.map((flagMemoryId) => {
+      const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+      try {
+        for (const memoryId of cases) {
+          writeRequest(root, {
+            file: `${memoryId.endsWith(":a") ? "a" : "b"}-request.json`,
+            memoryId,
+            reviewRevision: `review-r${memoryId.endsWith(":a") ? "a" : "b"}`,
+          });
+        }
+        writeVerdict(root, {
+          file: "verdict.json",
+          memoryId: flagMemoryId,
+          reviewRevision: `review-r${flagMemoryId.endsWith(":a") ? "a" : "b"}`,
+          verdict: "FLAG",
+        });
+        const result = runPrMerge({ repoRoot: root, pr: 465, now: () => now, ports: ports() });
+        expect(result.ok).toBe(false);
+        return receipt(root);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+
+    expect(receipts[0]).toEqual(receipts[1]);
+    expect(receipts[0]).toMatchObject({
+      verdict: null,
+      decision: "deny",
+      authorizedEntry: null,
+    });
   });
 
   it("U-RVMG-003: verdict 無しは fail-close で receipt を残す", () => {
@@ -454,7 +492,7 @@ describe("D2-B PR merge gate", () => {
     }
   });
 
-  it("result receipt が書けない場合は警告付きで exit failure 相当になる", () => {
+  it("U-RVMG-013: result receipt が書けない場合は警告付きで exit failure 相当になる", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
     try {
       seedReview(root, "PASS");
