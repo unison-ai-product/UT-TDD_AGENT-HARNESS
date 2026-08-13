@@ -2273,6 +2273,8 @@ oracle-test-trace 自身の既存 test はこの表へ自己宣言する。
 
 ## doctor result envelope 実測面 (Issue #193 / PLAN-L7-484)
 
+L6設計正本: `docs/design/harness/L6-function-design/doctor-result-envelope-measurement.md`
+
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|
 | `U-DOCTORENV-012` | setup-smoke の measured execution | `runDoctorMeasured` | resolved profile は `consumer-setup-smoke`、実測 check ID は `setup-smoke` だけ |

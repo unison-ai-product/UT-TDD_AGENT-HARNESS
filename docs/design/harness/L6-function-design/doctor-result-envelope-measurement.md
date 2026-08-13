@@ -32,6 +32,8 @@ envelope writer はこの measurement と実際に適用した strict options �
 
 ### `runDoctorMeasured`
 
+`runDoctorMeasured(options) => DoctorMeasurement`
+
 - pre: options は CLI が受理した値である。
 - post: registry 実行では `checkIds` が実際に呼び出した definition と一致する。
 - post: setup-smoke では `profile=consumer-setup-smoke`、`scope=setup-smoke`、
@@ -45,13 +47,20 @@ envelope writer はこの measurement と実際に適用した strict options �
 - post: `strict_green_command_digest` / `strict_telemetry_provenance` / `timing` を全て明示する。
 - invariant: 不明・縮小・option不一致の envelope は consumer が自走へ落とす。
 
-## 4. 失敗契約
+## 4. 検証対
+
+L7 の検証正本は `docs/test-design/harness/L7-unit-test-design.md` にある。`U-DOCTORENV-012` は
+setup-smoke の実測profile/check IDs、`U-DOCTORENV-013` はwriterの実測集合保持、
+`U-DOCTORENV-014` はstrict telemetry差の拒否、`U-DOCTORENV-015` は縮小面をfull consumerが
+拒否することをそれぞれ検証する。
+
+## 5. 失敗契約
 
 - `--setup-smoke --result-file` を full / profile null / full check IDs として書かない。
 - named profile と `scope=toolchain` を full として書かない。
 - strict telemetry の差を省略で同一視しない。
 - envelope 書き出し不能は従来どおり測定自体を覆さず、consumer を自走へ落とす。
 
-## 5. 非対象
+## 6. 非対象
 
 doctor profile 自体の検査集合再設計、CI job構成、暗号署名、別job間artifact共有は変更しない。
