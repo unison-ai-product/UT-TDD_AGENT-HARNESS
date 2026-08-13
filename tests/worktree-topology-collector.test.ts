@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { analyzeWorktreeTopology } from "../src/runtime/worktree-topology.ts";
@@ -15,13 +16,9 @@ const cleanups: Array<() => void> = [];
 const oid = "a".repeat(40);
 
 function tempRoot(): string {
-  const root = mkdtempSync(join(requireTempDir(), "ut-tdd-wttopo-pf2-"));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "ut-tdd-wttopo-pf2-")));
   roots.push(root);
   return root;
-}
-
-function requireTempDir(): string {
-  return process.env.TEMP ?? process.env.TMP ?? ".";
 }
 
 function git(root: string, args: string[]): string {
