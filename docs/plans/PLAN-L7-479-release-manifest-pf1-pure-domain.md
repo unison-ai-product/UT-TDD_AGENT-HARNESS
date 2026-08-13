@@ -20,6 +20,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-479-release-manifest-pf1-pure-domain.md
     artifact_type: markdown_doc
+  - artifact_path: src/schema/release-manifest.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-manifest.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
   requires: []
@@ -58,6 +62,15 @@ PF-1が所有するのは以下のcandidateだけである。
 commitで追加し、上記5件を`U-RELMAN-*`へ昇格する。parse成功値はimmutable release identityを返す。
 `CANDIDATE-RELMAN-014`〜`017`、特にinvalid/unknown channel時のresolver/materializer/copy/write 0と
 fault injectionはPF-5のままREDを維持する。PF-1のpure返値を副作用証明の代替にしてはならない。
+
+## 実装
+
+- `src/schema/release-manifest.ts` は `schema_version=v1` のstrict parse、release identity導出式、
+  `channels` と `channelOrder` のown-key完全列挙、immutableな成功値、own-propertyだけを使う
+  channel resolverを提供するpure domain moduleとする。
+- `tests/release-manifest.test.ts` は `U-RELMAN-001`、`002`、`007`、`009`、`013` を各 `it()` と
+  1:1に対応させる。Git/FS/CLI adapter、materializer、resolver I/O、copy/write、feature lifecycleは
+  追加しない。`014`〜`017`はPF-5のRED oracleとして変更しない。
 
 ## Exit
 
