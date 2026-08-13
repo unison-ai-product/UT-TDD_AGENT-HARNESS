@@ -33,6 +33,8 @@ dependencies:
     - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/247
+backprop_decision: not_required
+backprop_decision_reason: "PLAN-L7-473 の PF-1 partition として freeze 済みの pure domain 追加であり、L0-L6 要件・設計・外部仕様を変更しない。上流への逆伝播は不要 (副作用契約は PF-5 の RED が保持)。"
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
