@@ -20,6 +20,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-476-worktree-topology-pf2-os-collector.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/worktree-topology-collector.ts
+    artifact_type: source_module
+  - artifact_path: tests/worktree-topology-collector.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-474-worktree-topology-detector.md
   requires: []

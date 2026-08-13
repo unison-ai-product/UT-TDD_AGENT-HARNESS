@@ -2137,17 +2137,17 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `U-WTTOPO-004` | PF1 / `PLAN-L7-475` | 登録worktree directoryが不在 | `dir_missing`を検出。`tests/worktree-topology.test.ts` |
 | `U-WTTOPO-005` | PF1 / `PLAN-L7-475` | 登録されていないadmin entry | `orphan_admin`を検出。`tests/worktree-topology.test.ts` |
 | `U-WTTOPO-006` | PF1 / `PLAN-L7-475` | dirty worktreeが同時にmerged/detached条件を満たす | `dirty`を最優先として他分類と排他。`tests/worktree-topology.test.ts` |
-| `CANDIDATE-WTTOPO-007` | PF2 / `PLAN-L7-476` | findingなしのclean merged、保持refから到達可能なclean detached、activeが混在 | mergedと到達可能detachedだけを`retirable`へ、activeは除外 |
+| `U-WTTOPO-007` | PF2 / `PLAN-L7-476` | findingなしのclean merged、保持refから到達可能なclean detached、activeが混在 | mergedと到達可能detachedだけを`retirable`へ、activeは除外。`tests/worktree-topology-collector.test.ts` |
 | `U-WTTOPO-008` | PF1 / `PLAN-L7-475` | findingなしのmain root worktree | `healthy`/identity集合/`mainCount=1`へ含め、liveness/`retirable`から除外。`tests/worktree-topology.test.ts` |
 | `U-WTTOPO-009` | PF1 / `PLAN-L7-475` | 同じfacts・admin entries・observationsを個別に全順列化 | findings本体と順序、全count bucket、`retirable`、`healthy`、identity集合、digestがすべて入力順に依存せず一致。`tests/worktree-topology.test.ts` |
 | `U-WTTOPO-010` | PF1 / `PLAN-L7-475` | link/dir findingを持つworktreeと正常worktreeの混在 | finding面を`healthy`に数えない。`tests/worktree-topology.test.ts` |
 | `U-WTTOPO-011` | PF1 / `PLAN-L7-475` | link/dir findingでdirty/merged観測が既定値へ倒れるworktree | 分類は表示しても`retirable`へ混入させない（fail-safe）。`tests/worktree-topology.test.ts` |
-| `CANDIDATE-WTTOPO-012` | PF2 / `PLAN-L7-476` | clean detached HEADがmain/保持対象refのどこからも到達不能、または到達可能性を観測不能 | review-requiredとして`retirable`から除外 |
+| `U-WTTOPO-012` | PF2 / `PLAN-L7-476` | clean detached HEADがmain/保持対象refのどこからも到達不能、または到達可能性を観測不能 | review-requiredとして`retirable`から除外。`tests/worktree-topology-collector.test.ts` |
 | `CANDIDATE-WTTOPO-013` | PF4 / `PLAN-L7-478` | before/afterでhealthy件数は同じだがworktree Aが壊れ別worktree Cが追加 | normalized path/admin/HEAD identity集合digest不一致で移設acceptance拒否 |
-| `CANDIDATE-WTTOPO-014` | PF2 / `PLAN-L7-476` | malformed porcelain、root外へ解決する相対gitdir、Git command失敗を各入力 | collectorは正常factsへ丸めずtyped observation findingを返す |
+| `U-WTTOPO-014` | PF2 / `PLAN-L7-476` | malformed porcelain、root外へ解決する相対gitdir、Git command失敗を各入力 | collectorは正常factsへ丸めずtyped observation findingを返す。`tests/worktree-topology-collector.test.ts` |
 | `CANDIDATE-WTTOPO-015` | PF3 / `PLAN-L7-477` | empty factsとadvisory finding factsをdoctor consumerへ個別入力 | emptyは出力なし。findingは表示するがhard-gate/CI成功判定を変更しない |
-| `CANDIDATE-WTTOPO-016` | PF2 / `PLAN-L7-476` | Windows上に実在するjunction/reparse point（権限があればsymlinkも）と実体pathを作り、drive小文字・backslash・末尾separator経由で収集 | `realpath.native`の実測結果を証跡化し、同一実体はdrive uppercase + `/` + root以外末尾除去へ収束。文字列だけのfakeは禁止。case-only pathはrealpathが別identityを返す場合だけ別物として保持 |
-| `CANDIDATE-WTTOPO-017` | PF2 / `PLAN-L7-476` | malformed porcelain、Git exit nonzero、root外path、reachability失敗を各1件入力 | `collector_parse_error` / `collector_command_error` / `path_escape` / `reachability_unavailable`を区別し必須fieldを保持、raw command/stdoutは保持しない |
+| `U-WTTOPO-016` | PF2 / `PLAN-L7-476` | Windows上に実在するjunction/reparse point（権限があればsymlinkも）と実体pathを作り、drive小文字・backslash・末尾separator経由で収集 | `realpath.native`の実測結果を証跡化し、同一実体はdrive uppercase + `/` + root以外末尾除去へ収束。文字列だけのfakeは禁止。case-only pathはrealpathが別identityを返す場合だけ別物として保持。`tests/worktree-topology-collector.test.ts` |
+| `U-WTTOPO-017` | PF2 / `PLAN-L7-476` | malformed porcelain、Git exit nonzero、root外path、reachability失敗を各1件入力 | `collector_parse_error` / `collector_command_error` / `path_escape` / `reachability_unavailable`を区別し必須fieldを保持、raw command/stdoutは保持しない。`tests/worktree-topology-collector.test.ts` |
 | `CANDIDATE-WTTOPO-018` | PF4 / `PLAN-L7-478` | identity入力順反転、合法remap、重複from、変換後collision、root外escapeを各mutation。既知vectorはfields=`/repo`, `/repo/.git`, `0000000000000000000000000000000000000000`, `1` | `topology-v1:` + 各UTF-8 fieldのuint32be長 + field bytesというpreimage hex=`746f706f6c6f67792d76313a000000052f7265706f0000000a2f7265706f2f2e67697400000028303030303030303030303030303030303030303030303030303030303030303030303030303030300000000131` のSHA-256は既知値`73dd51f0db31880e84c9135c1f02558837ec85b95fa186372d4d358008db6758`。期待値を実装自身で生成しない。合法入力は同一digest、ambiguous/unsafe remapは比較前に拒否 |
 
 ## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
