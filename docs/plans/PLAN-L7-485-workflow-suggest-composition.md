@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-484-workflow-suggest-composition
-title: "PLAN-L7-484 (add-impl): workflow suggest — 既存分類/route/skill 機構の合成による駆動別 workflow 生成器"
+plan_id: PLAN-L7-485-workflow-suggest-composition
+title: "PLAN-L7-485 (add-impl): workflow suggest — 既存分類/route/skill 機構の合成による駆動別 workflow 生成器"
 kind: add-impl
 layer: L7
 drive: agent
@@ -18,9 +18,9 @@ agent_slots:
   - role: qa
     slot_label: "QA - drive×kind による checklist 差分と team YAML schema 適合の検証"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-484-workflow-suggest-composition.md
+  - artifact_path: docs/plans/PLAN-L7-485-workflow-suggest-composition.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-REVERSE-484-workflow-suggest-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-485-workflow-suggest-backfill.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-72-task-classify-cli.md
@@ -28,7 +28,7 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-L7-72-task-classify-cli.md
-    - docs/plans/PLAN-REVERSE-484-workflow-suggest-backfill.md
+    - docs/plans/PLAN-REVERSE-485-workflow-suggest-backfill.md
     - docs/design/harness/L6-function-design/function-spec.md
     - docs/design/harness/L6-function-design/skill-index.md
     - src/task/classify.ts
@@ -44,14 +44,14 @@ backprop_decision_reason: "既存の classifyTask / routeFiling / proposal-docum
 review_evidence: []
 ---
 
-# PLAN-L7-484: workflow suggest 生成器 (S1)
+# PLAN-L7-485: workflow suggest 生成器 (S1)
 
 ## §0 位置づけ
 
 Issue #304 (親 #303) の S1 slice。issue 文面 / PLAN を入力に、**既存機構の合成だけ**で駆動モデル別
 workflow を advisory 出力する CLI を追加する。S2 (#305 の FLAG 還流) はスコープ外。
 
-本 PLAN は `kind=add-impl` であり、Reverse 対 `PLAN-REVERSE-484-workflow-suggest-backfill` を持つ。
+本 PLAN は `kind=add-impl` であり、Reverse 対 `PLAN-REVERSE-485-workflow-suggest-backfill` を持つ。
 `parent_design` は宣言しない: workflow suggest 合成器を宣言している L1-L6 設計 doc は現時点で存在せず、
 存在しない降下元を詐称しないためである。代わりに `backprop_decision: not_required` + 理由を置き、
 forward-convergence 上は local-impl-only 分類で扱う (PLAN-L7-482 と同型)。設計 back-fill の要否は
@@ -175,5 +175,5 @@ closing review が対象を固定できない。PASS verdict 受領前に merge 
 ## §5 Exit
 
 上記 DoD 全項目が実測で満たされ、closing review PASS 後に merge した時点で confirmed へ遷移する。
-Reverse 対 `PLAN-REVERSE-484` の R3/R4 で設計 back-fill の要否を確定するまで、本 PLAN の
+Reverse 対 `PLAN-REVERSE-485` の R3/R4 で設計 back-fill の要否を確定するまで、本 PLAN の
 `backprop_decision: not_required` は暫定判断として扱う。

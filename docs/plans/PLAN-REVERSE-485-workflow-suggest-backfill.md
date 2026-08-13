@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-REVERSE-484-workflow-suggest-backfill
-title: "PLAN-REVERSE-484: workflow suggest 生成器 設計backfill"
+plan_id: PLAN-REVERSE-485-workflow-suggest-backfill
+title: "PLAN-REVERSE-485: workflow suggest 生成器 設計backfill"
 kind: reverse
 layer: cross
 drive: agent
@@ -12,7 +12,7 @@ status: draft
 created: 2026-08-13
 updated: 2026-08-13
 owner: PM / TL
-parent_design: docs/plans/PLAN-L7-484-workflow-suggest-composition.md
+parent_design: docs/plans/PLAN-L7-485-workflow-suggest-composition.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: se
@@ -20,14 +20,14 @@ agent_slots:
   - role: qa
     slot_label: "QA - 合成のみ (二重実装なし) と advisory only を検証"
 generates:
-  - artifact_path: docs/plans/PLAN-REVERSE-484-workflow-suggest-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-485-workflow-suggest-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L7-484-workflow-suggest-composition.md
+  parent: docs/plans/PLAN-L7-485-workflow-suggest-composition.md
   requires: []
   blocks: []
   references:
-    - docs/plans/PLAN-L7-484-workflow-suggest-composition.md
+    - docs/plans/PLAN-L7-485-workflow-suggest-composition.md
     - docs/plans/PLAN-L7-72-task-classify-cli.md
     - docs/design/harness/L6-function-design/function-spec.md
     - docs/design/harness/L6-function-design/skill-index.md
@@ -39,9 +39,9 @@ dependencies:
 review_evidence: []
 ---
 
-# PLAN-REVERSE-484: workflow suggest 生成器 設計backfill
+# PLAN-REVERSE-485: workflow suggest 生成器 設計backfill
 
-本 PLAN は `PLAN-L7-484-workflow-suggest-composition` (add-impl) の Reverse 対である
+本 PLAN は `PLAN-L7-485-workflow-suggest-composition` (add-impl) の Reverse 対である
 (`kind=add-impl` は Reverse 対必須)。Forward 側は L1-L6 に降下元 doc を持たない local-impl-only
 合成であり、本 Reverse 対が「既存部品の契約と composer の責務境界を観測し、設計 back-fill の
 要否を確定する」責務を負う。実装を R1 完了証拠の代替にしない。
