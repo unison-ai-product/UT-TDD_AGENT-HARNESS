@@ -6,9 +6,9 @@ layer: L7
 drive: be
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-13
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -32,7 +32,35 @@ dependencies:
     - docs/plans/PLAN-L7-475-worktree-topology-pf1-pure-analyzer.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/254
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-13T12:23:37Z"
+    tests_green_at: "2026-08-13T11:49:26Z"
+    verdict: approve
+    scope: >-
+      PR #308 の blind closing review 2 周。初回 FLAG (blocking 3) は U-WTTOPO-016 の恒真アサート、
+      U-WTTOPO-014 oracle の pin 不足 (mutant M4 生存)、loadAdminRecords の unguarded readdir/stat
+      (dangling reparse で uncaught throw)。是正 726db0b0 で M4 は KILL、恒真アサートは実 finding
+      照合へ置換 (mutant 複合で RED 実証)、admin scan は typed finding 化 (probe 2 種で実測)。
+      delta 再レビューで PASS (blocking 0)。subject は exact HEAD
+      726db0b0c5d0dadeabf0085f482bf5f8353262e2。main (#310 merge 後 8f89bf22) への
+      rebase で成果物 diff 空を確認し PASS 維持 (subject 36af138f、2026-08-13T12:23:37Z)。
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/308#issuecomment-5279398289"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/308#issuecomment-5279883631"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/worktree-topology-collector.test.ts"
+        runner: bash
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-13T11:49:26Z"
+        evidence_path: tests/worktree-topology-collector.test.ts
+        output_digest: "sha256:de8435e0bdf2031823f92f4f0c573781ef37ff0a62ffa50dd0072b0440130247"
+        anchor_commit: 726db0b0c5d0dadeabf0085f482bf5f8353262e2
 ---
 
 # PF2: OS collector・realpath/reparse・retained refs
