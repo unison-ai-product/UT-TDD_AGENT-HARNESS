@@ -1522,6 +1522,27 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
 
+## PLAN-L7-465 D2-B PR merge gate oracle (2026-08-13)
+
+対象 = `src/feedback/review-merge-gate.ts`、`src/cli/pr-merge.ts`。実テスト =
+`tests/review-merge-gate.test.ts`。D1 `merge_ready` の exact HEAD 判定を B 面の正規 merge 経路へ
+束縛し、deny receipt の verdict は判定 entry へ束縛するか、特定不能時は null とする。
+
+| U-ID | mutation / fixture | expected |
+|---|---|---|
+| `U-RVMG-001` | isolated fixture の exact HEAD + 非author family PASS | merge と intent/result receipt を同じ HEAD・authorized entry で記録 |
+| `U-RVMG-002` | 同一 HEAD の PASS と FLAG entry を file order と異なる判定順で投入 | deny、判定 entry の `FLAG` を receipt に記録、`authorizedEntry` は null |
+| `U-RVMG-003` | verdict なし request を isolated fixture に投入 | deny、verdict は null、receipt を残す |
+| `U-RVMG-004` | 第一観測と第二観測の exact HEAD を変異 | `head_mismatch` で breach 側へ倒し merge 0 |
+| `U-RVMG-005` | PR facts 取得 port を例外化 | `gh_fetch_failed` の deny receipt、merge 0 |
+| `U-RVMG-006` | merge port を例外化 | `merge_failed` の result receipt を記録 |
+| `U-RVMG-007` | 同一 exact HEAD に pending request を追加し時刻を SLA 前後へ変異 | 両時刻とも pending deny、merge 0 |
+| `U-RVMG-008` | CLI の PR 引数を非数値へ変異 | `invalid_pr` と exit 1、出力・receipt の root は isolated fixture |
+| `U-RVMG-009` | CLI の valid PR を deny になる fixture へ投入 | exit 1、live cwd/chdir なしで deny |
+| `U-RVMG-010` | statusCheckRollup を空、または conclusion 欠落へ変異 | `checksGreen=false` |
+| `U-RVMG-011` | 第二観測 HEAD と `gh merge --match-head-commit` 引数を検査 | 第二観測を `evaluatedHeadSha` へ束縛し、merge は判定済み exact HEAD を渡す |
+| `U-RVMG-012` | intent receipt / result receipt の書込先をファイル・ディレクトリ衝突へ変異 | intent は fail-close、result は警告付き failure 相当、fixture 外書込 0 |
+
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 
 対象 = `src/runtime/claude-memory-wake.ts`、`src/cli.ts`、Claude Stop hook、consumer setup

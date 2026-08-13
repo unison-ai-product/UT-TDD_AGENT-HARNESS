@@ -7,7 +7,7 @@ import {
 
 export function registerPrMergeCommands(
   program: Command,
-  dependencies: { ports?: GhPrMergePorts; now?: () => string } = {},
+  dependencies: { ports?: GhPrMergePorts; now?: () => string; repoRoot?: string } = {},
 ): void {
   const pr = program.command("pr").description("PR operations with the UT-TDD review gate");
   pr.command("merge")
@@ -16,7 +16,7 @@ export function registerPrMergeCommands(
     .option("--json", "JSON output")
     .action((options: { pr: string; json?: boolean }) => {
       const result = runPrMerge({
-        repoRoot: process.cwd(),
+        repoRoot: dependencies.repoRoot ?? process.cwd(),
         pr: Number(options.pr),
         ports: dependencies.ports ?? createGhPrMergePorts(),
         now: dependencies.now,

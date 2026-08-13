@@ -8,7 +8,7 @@ status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-31
-updated: 2026-07-31
+updated: 2026-08-13
 owner: PM / PO
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-465に定義済みのD1 dispatch lifecycleと実装の意味論は変更せず、draft設計PLANと完成済み出荷物のライフサイクルを分離してgenerates所有を確定する。"
@@ -168,6 +168,11 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 - AC-3: identity/FSM/replay/diagnosticを独立監査し、未反証attackがない。
 - AC-4: `impl-plan-trace` / `deliverable-plan-trace` で上記2出荷物の孤児が0。
 - AC-5: `PLAN-L7-465` はdraftを維持し、未実装のsession attestationを偽完了にしない。
+
+### D2-B 追補ノート (2026-08-13、PR #299)
+
+`ReviewDispatchEntry.verdict` の追加 (+2 行、純追加) は D2-B の deny receipt 修正で消費される
+判定情報だが、`review-dispatch.ts` の所有は本 PLAN にあるため、この追補で実装上の利用関係を記録する。
 
 ## レビュー状態
 

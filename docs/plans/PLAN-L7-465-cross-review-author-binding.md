@@ -9,7 +9,7 @@ route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 status: confirmed
 created: 2026-07-28
-updated: 2026-08-07
+updated: 2026-08-13
 owner: PM / PO
 agent_slots:
   - role: tl
@@ -19,6 +19,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-465-cross-review-author-binding.md
     artifact_type: markdown_doc
+  - artifact_path: src/feedback/review-merge-gate.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/pr-merge.ts
+    artifact_type: source_module
+  - artifact_path: tests/review-merge-gate.test.ts
+    artifact_type: test_code
   - artifact_path: src/feedback/review-custody.ts
     artifact_type: source_module
   - artifact_path: src/feedback/review-custody-canonical.ts
@@ -48,6 +54,27 @@ dependencies:
     - src/team/delegation-routing.ts
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence:
+  - reviewer: claude-pr299-blind-re-review
+    review_kind: cross_agent
+    reviewed_at: "2026-08-07T13:55:53Z"
+    tests_green_at: "2026-08-07T13:55:53Z"
+    verdict: "blind re-review blocking 0"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    scope: "PR #299 コメント (subject 021cb536) の blind re-review。B-3、oracle 宣言、generates 所有、PLAN-L7-470 追補を残債として特定したうえで blocking 0。rebase 後 HEAD 5215bc23 の closing review は本 slice の検証後に再取得予定。"
+    lane: claim-blind
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/299#issuecomment-5217956975"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/review-merge-gate.test.ts"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-07T13:55:53Z"
+        evidence_path: tests/review-merge-gate.test.ts
+        output_digest: "sha256:23754e2ad74b4a617922363349c8bde8bea925f9dffc3d13b6c27aa01d9b387a"
+        anchor_commit: 021cb536
   - reviewer: codex-closing-285
     review_kind: cross_agent
     reviewed_at: "2026-08-07T07:26:50Z"
@@ -519,10 +546,10 @@ receipt kind バグの是正 (`#287`、merge commit `c211ff92f7743766ff116fa49db
 着地させたうえで、default branch の `review-attestation.yml` を `workflow_dispatch` で 2 本走らせ、
 post-merge closure 経路が終端まで通ることを実測した。両 run とも conclusion は success である。
 
-| run | dispatch 元 | artifactDigest | 終端 |
+| run | 入力に供給した author/reviewer family | artifactDigest | 終端 |
 | --- | --- | --- | --- |
-| 31163323673 | Codex family | `fd08ae362f1d358d41b38ecaad60ab027e5ee0232ec63155977e9c3121fa01d9` | `unverified_family` |
-| 31163381133 | Claude family | `6bd96f9441af19277874e6b857ef2a372df5a63ed220d3d501077bb402205c58` | `unverified_family` |
+| 31163323673 | author=codex / reviewer=claude | `fd08ae362f1d358d41b38ecaad60ab027e5ee0232ec63155977e9c3121fa01d9` | `unverified_family` |
+| 31163381133 | author=codex / reviewer=claude | `6bd96f9441af19277874e6b857ef2a372df5a63ed220d3d501077bb402205c58` | `unverified_family` |
 
 admit step の出力は両 run で同一である。
 
@@ -547,6 +574,10 @@ review-custody admit - OK (mechanical custody verified; terminal state unverifie
 D3 の live 結合試験はこれで閉じる。`unverified_family` を先へ進めるには provider family authority の
 信頼根が要り、それは authentication / authorization を変える高影響境界として D2 着工時の PO 承認事案に
 残る。
+
+入力の replay / mutation 拒否の一次証拠は `tests/review-custody.test.ts` の
+`U-RVGHA-D3C-002` / `U-RVGHA-D3C-012` であり、上記 live 2-run は issue → attest → admit の
+実環境整合性を補助的に実測したものへ位置付ける。
 
 ### 誠実に明記する未達
 
@@ -584,3 +615,32 @@ D3 の live 結合試験はこれで閉じる。`unverified_family` を先へ進
   根拠: D3c freeze slice は PLAN と L7 oracle のみを変更した。実装・workflow は後続の D3d
   (PR #285) で入れ、CLI 配線と外部権限変更は D2 以降として未着手のまま
   (`src/cli.ts` / `.github/workflows/harness-check.yml` は D3 レーンで未変更)。
+
+## D2-B 実装 (2026-08-13、PR #299)
+
+### 実装範囲と成果物
+
+`ut-tdd pr merge --pr <N>` の正規経路に `evaluateMergeGate` を接続し、D1 の
+`merge_ready` 以外を exact HEAD 単位で deny する wrapper を実装した。判定前後の GitHub
+観測、intent/result receipt、`--match-head-commit` を同じ HEAD へ束縛し、review input と receipt
+は isolated fixture から読む。実装成果物は `src/feedback/review-merge-gate.ts`、
+`src/cli/pr-merge.ts`、テスト成果物は `tests/review-merge-gate.test.ts` である。
+
+### A-5 裁定
+
+B 面の deny 対象に custody を含めない。custody は A 面の最終 AND に属する。現状の D3d は
+`unverified_family` 固定であるため、B 面へ custody を含めると全 merge が拒否されるためである。
+
+### B-3 deny receipt の束縛
+
+複数 entry が同一 HEAD に存在する場合、deny の `verdict` は blocking / pending 判定に使った
+entry へ束縛する。判定 entry を一意に定められない deny では `verdict: null` とし、先頭 entry
+由来の誤導的な「PASS だが deny」証跡を残さない。`U-RVMG-002` / `U-RVMG-003` がこの境界を
+固定する。
+
+### 実装時 review evidence
+
+PR #299 の Claude family blind re-review (subject `021cb536`) は `blocking 0` だった。これは
+前回 subject に対する証跡であり、rebase 後 HEAD `5215bc23` に対する closing review は本 slice
+の定量検証後に再取得する予定である。frontmatter の `review_evidence` に
+`worker_model: gpt-5.6-luna` / `reviewer_model: claude-opus-5` として append した。
