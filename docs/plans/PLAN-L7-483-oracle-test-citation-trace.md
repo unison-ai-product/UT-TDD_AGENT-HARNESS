@@ -11,7 +11,7 @@ status: confirmed
 created: 2026-08-13
 updated: 2026-08-13
 owner: PO / TL
-parent_design: docs/plans/PLAN-L7-244-right-arm-citation-gate.md
+parent_design: docs/design/harness/L6-function-design/oracle-test-citation-trace.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
