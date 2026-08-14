@@ -51,6 +51,8 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/live-review-projection.test.ts
     artifact_type: test_code
+  - artifact_path: tests/review-live-cli.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
   requires:
