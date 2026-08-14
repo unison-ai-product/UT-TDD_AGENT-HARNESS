@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { MemoryEntry } from "../memory/index.ts";
+import { isCanonicalMemorySourcePath } from "../memory/service.ts";
 import { ensureDir } from "../shared/fs.ts";
 
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
@@ -238,16 +239,11 @@ function isValidReviewIdentity(value: {
   authorFamily: "codex" | "claude";
 }): boolean {
   const normalizedRequestPath = value.requestPath.replaceAll("\\", "/");
-  const memorySegments = value.memoryPath.split("/");
   return (
     /^[a-f0-9]{16,64}$/.test(value.requestDigest) &&
     (normalizedRequestPath.endsWith(`/.ut-tdd/review/requests/${value.requestDigest}.json`) ||
       normalizedRequestPath === `.ut-tdd/review/requests/${value.requestDigest}.json`) &&
-    value.memoryPath.length > 0 &&
-    !value.memoryPath.includes("\\") &&
-    !value.memoryPath.startsWith("/") &&
-    !/^[A-Za-z]:/.test(value.memoryPath) &&
-    memorySegments.every((segment) => segment !== "" && segment !== "." && segment !== "..") &&
+    isCanonicalMemorySourcePath(value.memoryPath) &&
     Number.isInteger(value.pr) &&
     value.pr > 0 &&
     /^[a-f0-9]{40}$/.test(value.exactHead) &&

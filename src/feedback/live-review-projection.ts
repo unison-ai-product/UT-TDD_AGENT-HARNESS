@@ -101,7 +101,8 @@ export function loadCanonicalLiveReviewRequest(input: {
     : resolve(input.repoRoot, input.envelope.requestPath);
   if (normalize(supplied) !== normalize(canonical)) return null;
   try {
-    if (!lstatSync(canonical).isFile() || lstatSync(canonical).isSymbolicLink()) return null;
+    const requestFile = lstatSync(canonical);
+    if (!requestFile.isFile() || requestFile.isSymbolicLink()) return null;
     const parsed = JSON.parse(readFileSync(canonical, "utf8")) as Record<string, unknown>;
     if (
       !parsed ||

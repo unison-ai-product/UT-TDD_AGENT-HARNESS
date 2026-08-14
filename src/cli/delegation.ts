@@ -325,6 +325,11 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
+        if (opts.reviewMemoryId !== undefined && !opts.reviewMemoryId.trim()) {
+          process.stderr.write("review_memory_id_required: --review-memory-id must not be blank\n");
+          process.exitCode = 1;
+          return;
+        }
         // 識別子を渡した = receipt を作る宣言。review lane でない role では receipt を作れないので、
         // 宣言済み入力を黙って捨てず fail-close する (silent undefined の禁止)。
         if (reviewIdentityRequested && !routing.review_lane) {

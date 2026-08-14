@@ -1,7 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { resolveLiveReviewTaskFile } from "../src/cli/review-live.ts";
 import {
   consumeLiveReview,
   dispatchLiveReview,
@@ -90,6 +91,46 @@ function verdictPorts(overrides: Partial<LiveReviewVerdictPorts> = {}): LiveRevi
 }
 
 describe("live review projection (U-RVATT-023..026)", () => {
+  it("U-RVATT-024 resolves only an identity-matched regular file in canonical memory storage", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-live-review-task-"));
+    const outside = mkdtempSync(join(tmpdir(), "ut-live-review-outside-"));
+    try {
+      const memoryDirectory = join(root, ".ut-tdd", "memory");
+      mkdirSync(memoryDirectory, { recursive: true });
+      const sourcePath = ".ut-tdd/memory/feedback-d3a.md";
+      const content = [
+        "---",
+        "memory_id: memory:d3a",
+        "kind: feedback",
+        'title: "D3a"',
+        "tags: []",
+        "updated_at: 2026-08-14T00:00:00.000Z",
+        "---",
+        "review task",
+      ].join("\n");
+      writeFileSync(join(root, sourcePath), content, "utf8");
+      expect(
+        resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
+      ).toBe(join(root, sourcePath));
+      expect(
+        resolveLiveReviewTaskFile(root, { memoryId: "memory:wrong", memoryPath: sourcePath }),
+      ).toBeNull();
+      const outsidePath = join(outside, "outside.md");
+      writeFileSync(outsidePath, content, "utf8");
+      expect(
+        resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: outsidePath }),
+      ).toBeNull();
+
+      rmSync(memoryDirectory, { recursive: true, force: true });
+      symlinkSync(outside, memoryDirectory, process.platform === "win32" ? "junction" : "dir");
+      expect(
+        resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
+      ).toBeNull();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
   it("U-RVATT-023 persists the canonical request before publishing one typed wake", () => {
     const order: string[] = [];
     const ports = requestPorts({
@@ -302,6 +343,21 @@ describe("live review projection (U-RVATT-023..026)", () => {
             runReview: () => ({
               ...projection,
               receipt: { ...projection.receipt, reviewerFamily: "codex" },
+            }),
+            publishReceipt,
+          },
+        }),
+      ).toEqual({ ok: false, reason: "review_identity_mismatch" });
+      expect(
+        consumeLiveReview({
+          repoRoot: root,
+          envelope,
+          ports: {
+            providerAvailable: () => true,
+            resolveTaskFile: () => memoryPath,
+            runReview: () => ({
+              ...projection,
+              receipt: { ...projection.receipt, head: "b".repeat(40) },
             }),
             publishReceipt,
           },

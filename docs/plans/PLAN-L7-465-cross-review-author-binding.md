@@ -474,7 +474,7 @@ consumerはv3 review envelopeをcanonical requestのpath/digest/exact HEAD/revis
 
 - `U-RVATT-024`: 反対族routing、実spawn attestation、receipt前の派生出力0。
 - `U-RVATT-026`: HEAD更新後の旧request/receipt拒否と再dispatch要求。
-- `U-RVATT-027`: 実repo上のdispatch→receipt→wrapper allow→backstopで`bypass_merge` 0、3負例deny。
+- `U-RVATT-027`: `tests/review-live-cli.test.ts`で実CLI compositionとprovider stubを通し、spawn facts由来receiptを生成する。実repo上のdispatch→receipt→wrapper allow→backstopで`bypass_merge` 0、3負例deny。
 - `U-RVATT-028`: 既存dependency analyzerでmemory/comment readerからD1/D2判定器への逆流edge 0。
 - exact HEAD `ce0216ef`: `tests/live-review-projection.test.ts` 12/12、
   `tests/cli-delegation.test.ts` 3/3、`tests/dependency-drift.test.ts` 14/14 green。

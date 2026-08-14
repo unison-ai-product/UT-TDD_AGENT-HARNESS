@@ -151,6 +151,27 @@ describe("Claude HARNESS memory async wake", () => {
     }
   });
 
+  it.each([
+    "docs/plans/evil.md",
+    "src/cli.ts",
+    ".git/config",
+    "../outside.md",
+  ])("U-RVATT-024: review envelopeのmemoryPath %s はcanonical memory外として拒否する", (memoryPath) => {
+    expect(() =>
+      buildClaudeReviewInboxEntry({
+        memory: { ...memory, source_path: memoryPath },
+        operationId: "review-path-boundary",
+        workspaceId: "a".repeat(64),
+        requestDigest: "d".repeat(16),
+        requestPath: `.ut-tdd/review/requests/${"d".repeat(16)}.json`,
+        pr: 218,
+        exactHead: "e".repeat(40),
+        reviewRevision: "review-path-r1",
+        authorFamily: "codex",
+      }),
+    ).toThrow("claude_inbox_review_identity_invalid");
+  });
+
   it("U-MEMWAKE-006: VS Code extension entrypointだけをpositiveにwake対象化する", () => {
     expect(isClaudeMemoryWakeTarget({ CLAUDE_CODE_ENTRYPOINT: "claude-vscode" })).toBe(true);
     expect(isClaudeMemoryWakeTarget({})).toBe(false);
