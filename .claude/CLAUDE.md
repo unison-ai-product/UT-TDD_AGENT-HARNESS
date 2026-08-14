@@ -22,13 +22,16 @@ Claude Code read priority is `../CLAUDE.md` -> this file ->
 Active hooks in `.claude/settings.json` must call package-local UT-TDD commands
 only. Do not enable hooks that depend on personal legacy runtime paths.
 
-- `PreToolUse(Agent|Task)`: `node "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"`
-- `PreToolUse(Edit|Write|MultiEdit)`: `node "${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"`
-- `SessionStart`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" session start`
-- `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" hook post-tool-use`
-- `Stop`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" session summary`
-- `Stop`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" hook claude-memory-wake`
-- `SubagentStop`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" hook subagent-stop`
+- `PreToolUse(Agent|Task)`: `node ${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts`
+- `PreToolUse(Edit|Write|MultiEdit)`: `node ${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts`
+- `SessionStart`: `node ${CLAUDE_PROJECT_DIR}/src/cli.ts session start`
+- `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)`: `node ${CLAUDE_PROJECT_DIR}/src/cli.ts hook post-tool-use`
+- `Stop`: `node ${CLAUDE_PROJECT_DIR}/src/cli.ts session summary`
+- `Stop`: `node ${CLAUDE_PROJECT_DIR}/src/cli.ts hook claude-memory-wake`
+- `SubagentStop`: `node ${CLAUDE_PROJECT_DIR}/src/cli.ts hook subagent-stop`
+
+この一覧は `.claude/settings.json` と機械照合される (`U-RDRIFT-007`)。片側だけを書き換えると
+fail-close するので、hook を足す・変える場合は両方を同時に更新すること。
 
 実行系は **node** である (`package.json` の `utTdd.nodeToolchain.nodeAuthority`)。Bun は
 `bunAuthority: legacy_migration_debt` であり、hook / CLI / 検査のいずれの起動形にも使わない

@@ -23,7 +23,6 @@
     "ut-tdd": "./src/cli.ts"
   },
   "engines": {
-    "bun": ">=1.3",
     "node": "24.13.0",
     "npm": "11.6.2"
   },

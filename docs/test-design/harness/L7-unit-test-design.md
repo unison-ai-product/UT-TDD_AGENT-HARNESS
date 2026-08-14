@@ -782,6 +782,8 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | --- | --- | --- |
 | U-RDRIFT-005 | adapter doc 3 件が指示する Bun 起動形 (`bun -e` / `bun "$CLAUDE_PROJECT_DIR/..."` / `bun src/...`) | 3 doc それぞれで `bun execution form` を forbidden marker として報告し `ok=false`。検出器の marker block を外すと本行が RED になる (load-bearing)。#134 の permanent ban に反する実行指示が doc に残ると、指示どおりの実行が廃止ランタイム固有の失敗を生む (2026-08-14 実害: `ut-tdd pr merge` の receipt 書込失敗を D2-B の欠陥と誤認し、存在しない欠陥の issue #321 を起票した) |
 | U-RDRIFT-006 | 過去 incident の散文 (`bun runaway ×2`、`bunAuthority: legacy_migration_debt` 等) | forbidden marker 0 件で `ok=true`。実行指示でない記述まで拾う実装は RED。事実の記録を消す方向へ検査が圧力を掛けないことを固定する |
+| U-RDRIFT-007 | `.claude/CLAUDE.md` の Hooks 節と `.claude/settings.json` の実 command + args を (event, command) 集合として照合。実 repo に加え、引数欠落 / event 取り違え / doc 行削除 / 壊れた JSON の 4 変異を投入 | 実 repo は `documentedOnly=[]` かつ `configuredOnly=[]` で `ok=true`。片側だけの改変は差集合を伴って `ok=false`、壊れた JSON は `parseError` 付きで fail-close し判定不能を green へ丸めない。文字列 marker の禁止だけでは「node と書いてあるが引数や event が実体と違う」drift を拾えないため、実体との等価性そのものを検査対象にする (Issue #322 AC) |
+| U-RDRIFT-008 | `bun.cmd` / `bun.exe` / 単独 `bun` / `bunx` / pipe 後の `bun` を含む 6 形の実行指示 | すべて `bun execution form` として検出する。「`bun` + 空白 + 限定 token」だけを見る実装は取りこぼして RED (cross-review 2026-08-14 blocking 4 の是正) |
 
 ### 2026-06-29 L14 Close Audit Oracle Addendum
 

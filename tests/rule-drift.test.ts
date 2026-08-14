@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  analyzeHookParity,
   analyzeRuleDrift,
+  hookParityMessages,
+  loadClaudeHookSettings,
   loadRuleAdapterDocs,
   type RuleAdapterDocs,
   ruleDriftMessages,
@@ -109,6 +112,74 @@ describe("rule-drift lint", () => {
 
     expect(result.forbiddenMarkers).toEqual([]);
     expect(result.ok).toBe(true);
+  });
+
+  it("U-RDRIFT-008: catches bare / .cmd / .exe / bunx execution instructions", () => {
+    // 「bun + 空白 + 限定 token」だけを見ると bun.cmd / bun.exe / 単独 bun を取りこぼす
+    // (cross-review 2026-08-14 blocking 4)。実行語として書かれた形は取りこぼさない。
+    for (const line of [
+      "bun.cmd src/cli.ts doctor",
+      "bun.exe -e \"1\"",
+      "`bun`",
+      "bunx vitest run",
+      "実行は bun",
+      "| bun src/cli.ts status",
+    ]) {
+      const docs = completeDocs();
+      docs.claudeRuntime += `\n${line}`;
+      const result = analyzeRuleDrift(docs);
+      expect(result.forbiddenMarkers, `must flag: ${line}`).toEqual([
+        { file: ".claude/CLAUDE.md", marker: "bun execution form" },
+      ]);
+    }
+  });
+
+  it("U-RDRIFT-007: .claude/CLAUDE.md の Hooks 節は settings.json の実 command/args と一致する", () => {
+    // 文字列 marker の禁止だけでは「node と書いてあるが引数や event が実体と違う」drift を
+    // 拾えない。実体との等価性そのものを検査対象にする (Issue #322 AC)。
+    const root = process.cwd();
+    const docs = loadRuleAdapterDocs(root);
+    const settingsJson = loadClaudeHookSettings(root);
+    const real = analyzeHookParity({ claudeRuntimeDoc: docs.claudeRuntime, settingsJson });
+    expect(real.parseError).toBeNull();
+    expect(real.documentedOnly).toEqual([]);
+    expect(real.configuredOnly).toEqual([]);
+    expect(real.ok).toBe(true);
+    expect(hookParityMessages(real)[0]).toContain("OK");
+
+    // 片側だけの改変は fail-close する (引数の欠落 / event の取り違え / doc 行の削除)。
+    const dropArg = analyzeHookParity({
+      claudeRuntimeDoc: docs.claudeRuntime.replace(
+        "src/cli.ts session start",
+        "src/cli.ts session",
+      ),
+      settingsJson,
+    });
+    expect(dropArg.ok).toBe(false);
+    expect(dropArg.documentedOnly).toHaveLength(1);
+    expect(dropArg.configuredOnly).toHaveLength(1);
+
+    const wrongEvent = analyzeHookParity({
+      claudeRuntimeDoc: docs.claudeRuntime.replace("- `SubagentStop`:", "- `Stop`:"),
+      settingsJson,
+    });
+    expect(wrongEvent.ok).toBe(false);
+
+    const droppedLine = analyzeHookParity({
+      claudeRuntimeDoc: docs.claudeRuntime.replace(
+        /^- `Stop`: `node \$\{CLAUDE_PROJECT_DIR\}\/src\/cli\.ts hook claude-memory-wake`$/m,
+        "",
+      ),
+      settingsJson,
+    });
+    expect(droppedLine.ok).toBe(false);
+    expect(droppedLine.configuredOnly).toHaveLength(1);
+
+    // 壊れた settings.json は判定不能を green へ丸めず fail-close する。
+    const broken = analyzeHookParity({ claudeRuntimeDoc: docs.claudeRuntime, settingsJson: "{" });
+    expect(broken.ok).toBe(false);
+    expect(broken.parseError).not.toBeNull();
+    expect(hookParityMessages(broken)[0]).toContain("parse failed");
   });
 
   it("guards the real repo adapter docs against rule marker drift", () => {

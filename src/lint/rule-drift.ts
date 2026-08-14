@@ -13,6 +13,18 @@ export interface RuleDriftResult {
   ok: boolean;
 }
 
+export interface DocumentedHookCommand {
+  event: string;
+  command: string;
+}
+
+export interface HookParityResult {
+  documentedOnly: DocumentedHookCommand[];
+  configuredOnly: DocumentedHookCommand[];
+  ok: boolean;
+  parseError: string | null;
+}
+
 const SHARED_MARKERS = [
   "ut-tdd status",
   "ut-tdd doctor",
@@ -69,9 +81,80 @@ const FORBIDDEN_ADAPTER_MARKERS = [
   // 過去 incident の記述 (「bun runaway ×2」等) は実行指示ではないので巻き込まない。
   {
     marker: "bun execution form",
-    pattern: /\bbunx?\s+(?:-|"|'|run\b|src\/|scripts\/|\$\{?[A-Z_]|\.\/)/,
+    // `bun` / `bunx` / `bun.cmd` / `bun.exe` を実行語として書いた形を拾う。直後が引数・path・
+    // 実行子・行末のいずれかであることを条件にし、`bun runaway` のような散文は拾わない。
+    pattern:
+      /(?:^|[\s`("'|>])bun(?:x|\.cmd|\.exe)?(?=$|[\s`)"']|\s*$)(?:\s+(?:-|"|'|run\b|src\/|scripts\/|node_modules\/|\$\{?[A-Z_]|\.{1,2}\/|[\w.-]+\.(?:ts|js|mjs|cjs)\b))?/m,
   },
 ] as const;
+
+/** `.claude/CLAUDE.md` の Hooks 行に書かれた hook 起動形を (event, command) で取り出す。 */
+export function parseDocumentedHookCommands(claudeRuntimeDoc: string): DocumentedHookCommand[] {
+  const commands: DocumentedHookCommand[] = [];
+  for (const line of claudeRuntimeDoc.split(/\r?\n/)) {
+    const match = /^- `([^`]+)`:\s*`([^`]+)`\s*$/.exec(line.trim());
+    if (!match) continue;
+    const [, event, command] = match;
+    if (!/^(?:PreToolUse|PostToolUse|SessionStart|Stop|SubagentStop|SessionEnd|Notification)\b/.test(event)) {
+      continue;
+    }
+    commands.push({ event, command });
+  }
+  return commands;
+}
+
+/** `.claude/settings.json` の hook 定義を doc と同じ `command "arg" ...` 形へ正規化する。 */
+export function parseConfiguredHookCommands(settingsJson: string): DocumentedHookCommand[] {
+  const parsed = JSON.parse(settingsJson) as {
+    hooks?: Record<string, { matcher?: string; hooks?: { command?: string; args?: string[] }[] }[]>;
+  };
+  const commands: DocumentedHookCommand[] = [];
+  for (const [event, groups] of Object.entries(parsed.hooks ?? {})) {
+    for (const group of groups ?? []) {
+      const label = group.matcher ? `${event}(${group.matcher})` : event;
+      for (const hook of group.hooks ?? []) {
+        if (!hook.command) continue;
+        const args = (hook.args ?? []).map((arg) => (/\s/.test(arg) ? `"${arg}"` : arg));
+        commands.push({ event: label, command: [hook.command, ...args].join(" ") });
+      }
+    }
+  }
+  return commands;
+}
+
+/**
+ * doc の Hooks 節と settings.json の実体が (event, command) 集合として一致するかを見る。
+ * 文字列 marker の禁止だけでは「node と書いてあるが引数や event が実体と違う」drift を拾えない
+ * ため、実体との等価性そのものを検査対象にする (Issue #322 AC)。
+ */
+export function analyzeHookParity(input: {
+  claudeRuntimeDoc: string;
+  settingsJson: string;
+}): HookParityResult {
+  const key = (entry: DocumentedHookCommand) => `${entry.event}\t${entry.command}`;
+  let configured: DocumentedHookCommand[];
+  try {
+    configured = parseConfiguredHookCommands(input.settingsJson);
+  } catch (error) {
+    return {
+      documentedOnly: [],
+      configuredOnly: [],
+      ok: false,
+      parseError: error instanceof Error ? error.message : String(error),
+    };
+  }
+  const documented = parseDocumentedHookCommands(input.claudeRuntimeDoc);
+  const documentedKeys = new Set(documented.map(key));
+  const configuredKeys = new Set(configured.map(key));
+  const documentedOnly = documented.filter((entry) => !configuredKeys.has(key(entry)));
+  const configuredOnly = configured.filter((entry) => !documentedKeys.has(key(entry)));
+  return {
+    documentedOnly,
+    configuredOnly,
+    ok: documentedOnly.length === 0 && configuredOnly.length === 0 && configured.length > 0,
+    parseError: null,
+  };
+}
 
 export function analyzeRuleDrift(docs: RuleAdapterDocs): RuleDriftResult {
   const files = {
@@ -117,6 +200,26 @@ export function loadRuleAdapterDocs(repoRoot: string): RuleAdapterDocs {
     claudeProject: read("CLAUDE.md"),
     claudeRuntime: read(join(".claude", "CLAUDE.md")),
   };
+}
+
+export function loadClaudeHookSettings(repoRoot: string): string {
+  const full = join(repoRoot, ".claude", "settings.json");
+  if (!existsSync(full)) throw new Error("missing claude hook settings: .claude/settings.json");
+  return readFileSync(full, "utf8");
+}
+
+export function hookParityMessages(result: HookParityResult): string[] {
+  if (result.parseError) {
+    return [`rule-drift - violation: .claude/settings.json parse failed (${result.parseError})`];
+  }
+  if (result.ok) return ["rule-drift - OK (.claude/CLAUDE.md Hooks == .claude/settings.json)"];
+  const sample = [...result.documentedOnly, ...result.configuredOnly]
+    .slice(0, 8)
+    .map((entry) => `${entry.event}:${entry.command}`)
+    .join(", ");
+  return [
+    `rule-drift - violation: hook doc/settings drift ${result.documentedOnly.length + result.configuredOnly.length} (${sample})`,
+  ];
 }
 
 export function ruleDriftMessages(result: RuleDriftResult): string[] {
