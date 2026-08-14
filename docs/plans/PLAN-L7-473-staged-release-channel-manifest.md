@@ -107,10 +107,13 @@ L6-63 は Pack repository の運用設計を所有するため、上下流の相
    を保持し、各 release record は immutable な release ID、`artifactSourceCommit` (40桁 SHA)、
    `artifactSetDigest` を持つ。`channels.<name>` は release ID だけを指す。`sync-pack --channel
    <name>` は現在の manifest を読んだまま、選択 record の `artifactSourceCommit` を local Git object
-   database から isolated temporary tree/archive へ解決し、その revision の clean Pack artifact setを
+   database からworktree非依存のobject-only reader（または同等に隔離されたtemporary tree/archive）へ
+   解決し、その revision の clean Pack artifact setを
    生成・照合して 1 つの Pack checkout へ materialize する。control checkout の HEAD と
    `artifactSourceCommit` の一致は要求しない。object 不在時に network fetch や現在treeからの再構成を
-   行わず `unavailable` でfail-closeする。これにより manifest を更新した commit が自身のSHAを含む
+   行わず `unavailable` でfail-closeする。object-only readerを使う場合も全Git childへ
+   `GIT_NO_LAZY_FETCH=1`を固定し、partial cloneのpromisor lazy fetchを禁止する。これにより manifestを
+   更新した commit が自身のSHAを含む
    自己参照を避け、`stable=v1 / canary=v2` と rollback pointer を同じcontrol HEADで解決できる。
    Packへcopyする現在manifestはcontrol metadataでありartifact-set digest対象外とする。tag/Release
    auditor は外部配送証跡であり、このlocatorの正本にはしない。
