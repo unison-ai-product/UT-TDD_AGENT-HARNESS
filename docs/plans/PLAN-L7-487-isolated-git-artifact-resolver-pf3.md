@@ -40,14 +40,15 @@ dependencies:
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-473でfreeze済みのPF-3 partitionを実装可能なlocal Git resolverへ限定する。L0-L6要件や外部仕様は変更せず、上流合流はPLAN-REVERSE-473が所有する。"
 review_evidence:
-  - reviewer: codex-implementation-subagent
+  - reviewer: codex-blind-reviewer
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-14T07:54:41Z"
-    tests_green_at: "2026-08-14T07:53:41Z"
-    verdict: targeted_verification_green_closing_review_pending
+    reviewed_at: "2026-08-14T08:24:51Z"
+    tests_green_at: "2026-08-14T08:20:42Z"
+    verdict: pass_blocking_0_closing_review_pending
     scope: >-
       `U-RELMAN-012`の8群を実装し、独立攻撃で検出したcaller Git env/replace refs、
-      到達可能promisor remote、batch framing/chunk境界の空振りを是正した。
+      到達可能promisor remote、batch framing/chunk境界の空振り、production runnerの
+      batch stdout全量複製を是正した。claim-blind/spec-blind delta reviewはblocking 0。
       exact-HEAD CIとnon-author closing reviewは未実施であり、本entryはその判定を代替しない。
     worker_model: gpt-5.6-terra
     reviewer_model: gpt-5.6-sol
@@ -57,9 +58,9 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-14T07:53:41Z"
+        completed_at: "2026-08-14T08:20:42Z"
         evidence_path: tests/release-artifact-resolver.test.ts
-        output_digest: "sha256:717698eafc8a2f6addc2f83d0ee7bc2afab3e28e0472eabf7a82a334a5a66364"
+        output_digest: "sha256:b3a175a52d6d1d052fdf2a746f22b054f837fceeb5a6603c7efda94b93e52c70"
 ---
 
 # PF-3: isolated Git artifact resolver pair-freeze
