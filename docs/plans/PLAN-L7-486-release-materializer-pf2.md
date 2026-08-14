@@ -42,11 +42,13 @@ backprop_decision_reason: "PLAN-L7-473 のPF-2 partitionとして既にfreeze済
 review_evidence:
   - reviewer: codex-implementation-subagent
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-14T02:37:10Z"
-    tests_green_at: "2026-08-14T02:36:10Z"
+    reviewed_at: "2026-08-14T03:15:25Z"
+    tests_green_at: "2026-08-14T03:14:15Z"
     verdict: targeted_verification_green_closing_review_pending
     scope: >-
-      `tests/release-materializer.test.ts` の25 mutationを実行し25件成功を観測した。
+      `tests/release-materializer.test.ts` の28境界を実行し28件成功を観測した。
+      blind review FLAGの出力immutability、drive-relative symlink、mode単独mutationを是正し、
+      framingはliteral golden digestでも固定した。
       exact-HEAD CIとnon-author closing reviewは未実施であり、本entryはその判定を代替しない。
     worker_model: gpt-5.6-terra
     reviewer_model: gpt-5.6-terra
@@ -58,7 +60,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-14T02:36:10Z"
         evidence_path: tests/release-materializer.test.ts
-        output_digest: "sha256:31355b3f8ed7ba13280f34cc5ef55eddbaa9a029af88de8ebe457e3e01996629"
+        output_digest: "sha256:f0101d14fad4ff26ebe24ba3a1ab8b93736cf5d88c41ae2f2c5c37791f2ebc0b"
 ---
 
 # PF-2: versioned release materializer pair-freeze
