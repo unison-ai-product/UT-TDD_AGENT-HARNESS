@@ -198,9 +198,13 @@ describe("D2-D post-merge bypass backstop", () => {
 
   it("U-RVMG-019: default gh adapter は timeout を固定し page 1 失敗を検知不能にする", () => {
     const repoRoot = root();
-    const calls: Array<{ command: string; options: Record<string, unknown> }> = [];
-    const run = ((command: string, _args: readonly string[], options: Record<string, unknown>) => {
-      calls.push({ command, options });
+    const calls: Array<{
+      command: string;
+      args: readonly string[];
+      options: Record<string, unknown>;
+    }> = [];
+    const run = ((command: string, args: readonly string[], options: Record<string, unknown>) => {
+      calls.push({ command, args, options });
       if (command === "git") return "https://github.com/example/harness.git\n";
       throw new Error("ETIMEDOUT");
     }) as unknown as typeof execFileSync;
@@ -208,6 +212,10 @@ describe("D2-D post-merge bypass backstop", () => {
     const result = scanPostMergeBackstop({ repoRoot, now: NOW, execFileSync: run });
 
     expect(calls.map((call) => call.command)).toEqual(["git", "gh"]);
+    expect(calls[1]?.args).toEqual([
+      "api",
+      "repos/example/harness/pulls?state=closed&base=main&sort=created&direction=asc&per_page=100&page=1",
+    ]);
     expect(calls.every((call) => call.options.timeout === POST_MERGE_COMMAND_TIMEOUT_MS)).toBe(true);
     expect(result).toMatchObject({ ok: false, pagesScanned: 0 });
     expect(result.unavailableReason).toContain("page_1_fetch_failed:ETIMEDOUT");
