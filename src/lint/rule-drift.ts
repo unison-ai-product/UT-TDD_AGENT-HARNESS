@@ -95,7 +95,11 @@ export function parseDocumentedHookCommands(claudeRuntimeDoc: string): Documente
     const match = /^- `([^`]+)`:\s*`([^`]+)`\s*$/.exec(line.trim());
     if (!match) continue;
     const [, event, command] = match;
-    if (!/^(?:PreToolUse|PostToolUse|SessionStart|Stop|SubagentStop|SessionEnd|Notification)\b/.test(event)) {
+    if (
+      !/^(?:PreToolUse|PostToolUse|SessionStart|Stop|SubagentStop|SessionEnd|Notification)\b/.test(
+        event,
+      )
+    ) {
       continue;
     }
     commands.push({ event, command });

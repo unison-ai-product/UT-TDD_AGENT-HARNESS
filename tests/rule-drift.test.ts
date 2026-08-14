@@ -119,7 +119,7 @@ describe("rule-drift lint", () => {
     // (cross-review 2026-08-14 blocking 4)。実行語として書かれた形は取りこぼさない。
     for (const line of [
       "bun.cmd src/cli.ts doctor",
-      "bun.exe -e \"1\"",
+      'bun.exe -e "1"',
       "`bun`",
       "bunx vitest run",
       "実行は bun",
