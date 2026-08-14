@@ -1564,6 +1564,7 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVMG-021` | 先頭 page は正常、2 ページ目だけに receipt 無し merge を置く | pagination 全走査で 2 ページ目の `bypass_merge` を検知する |
 | `U-RVMG-022` | 同一 page の反復と `MAX_MERGED_PR_PAGES` 個の full page を投入 | 無限 loop を起こさず、上限到達を「検知不能」にする |
 | `U-RVMG-023` | HTTP 成功 page の merge commit SHA / mergedAt / PR 番号等を欠落・不正化 | 必須 field 欠落・malformed は部分結果を green に丸めず「検知不能」にする |
+| `U-RVMG-024` | `.ut-tdd/logs` を先に作成し、receipt directory 作成を direct `mkdirSync` へ変異 | intent/result receipt を記録でき、production composition は Windows/Bun 対応 `ensureDir` を経由する |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 

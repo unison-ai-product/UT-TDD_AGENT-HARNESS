@@ -140,6 +140,7 @@ describe("D2-B PR merge gate", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
     let merged = false;
     try {
+      mkdirSync(join(root, ".ut-tdd", "logs"), { recursive: true });
       seedReview(root, "PASS");
       const result = runPrMerge({
         repoRoot: root,
@@ -179,6 +180,16 @@ describe("D2-B PR merge gate", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("U-RVMG-024: receipt directory 作成は Windows/Bun 対応 ensureDir を経由する", () => {
+    const source = readFileSync(
+      join(process.cwd(), "src", "feedback", "review-merge-gate.ts"),
+      "utf8",
+    );
+    expect(source).toContain('import { ensureDir } from "../shared/fs.ts";');
+    expect(source).toContain("ensureDir(directory, { recursive: true });");
+    expect(source).not.toMatch(/\bmkdirSync\s*\(/u);
   });
 
   it("U-RVMG-002: FLAG は fail-close で判定 entry の verdict を receipt に束縛する", () => {

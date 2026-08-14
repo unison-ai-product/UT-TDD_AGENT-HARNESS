@@ -840,3 +840,12 @@ escalate する条件付き将来案」として明記、の 3 点。差分の�
 (複数機械運用の実在) を上記案 b 却下段落の再検討条件として採用する。advisor の
 「severity = advisory」は表示が session を block しない意味であり、本節の「fail-close 表示
 (無音 skip 禁止)」と矛盾しない (検知は可視化のみ・破壊的動作なしの既定と同義)。
+
+### D2-B receipt directory 互換修理 (2026-08-14、issue #321)
+
+D2-B の receipt 契約は変更せず、Windows/Bun で既存 directory に対する
+`mkdirSync(..., { recursive: true })` が `EEXIST` を返す runtime 差のみを修理する。
+`writeReceipt` は既存の共有 `ensureDir` 境界を再利用し、既存 `.ut-tdd/logs` でも
+intent/result receipt を記録する。directory 以外の衝突や receipt 本体の書込不能は
+従来どおり fail-close とする。新規契約はないため Reverse backprop は
+`not_required` (既存 D2-B spec の純修理) とする。対になる oracle は `U-RVMG-024`。

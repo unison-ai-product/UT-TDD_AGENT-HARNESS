@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { ensureDir } from "../shared/fs.ts";
 import {
   analyzeReviewDispatch,
   type PrObservation,
@@ -214,7 +215,7 @@ export function evaluateMergeGate(input: {
 
 function writeReceipt(repoRoot: string, receipt: MergeReceipt): string {
   const directory = join(repoRoot, ".ut-tdd", "logs");
-  mkdirSync(directory, { recursive: true });
+  ensureDir(directory, { recursive: true });
   const path = join(repoRoot, REVIEW_LOG_PATH);
   appendFileSync(path, `${JSON.stringify(receipt)}\n`, "utf8");
   return path;
