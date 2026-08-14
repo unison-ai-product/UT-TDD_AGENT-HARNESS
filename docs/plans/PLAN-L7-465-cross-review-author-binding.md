@@ -41,6 +41,10 @@ generates:
     artifact_type: test_code
   - artifact_path: .github/workflows/review-attestation.yml
     artifact_type: yaml_config
+  - artifact_path: src/feedback/post-merge-backstop.ts
+    artifact_type: source_module
+  - artifact_path: tests/post-merge-backstop.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
   requires:

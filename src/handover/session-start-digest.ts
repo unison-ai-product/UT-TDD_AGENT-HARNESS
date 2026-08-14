@@ -1,3 +1,9 @@
+import { dirname, resolve } from "node:path";
+import {
+  formatPostMergeBackstop,
+  type PostMergeBackstopResult,
+  scanPostMergeBackstop,
+} from "../feedback/post-merge-backstop.ts";
 import type { SurfacedFeedback, TakeoverFeedbackResult } from "../feedback/surface.ts";
 import { selectTakeoverFeedback } from "../feedback/surface.ts";
 import type { MemoryEntry } from "../memory/index.ts";
@@ -63,6 +69,7 @@ export interface SessionStartDigest {
   head_commits: string[];
   memory: MemoryEntry[];
   escalation_lines: string[];
+  post_merge_backstop?: PostMergeBackstopResult;
   unclaimed_inbox?: ClaudeInboxBacklogSummary;
 }
 
@@ -291,11 +298,19 @@ export function selectSessionStartDigest(
   input: {
     escalationLines?: string[];
     memory?: MemoryEntry[];
+    postMergeBackstop?: PostMergeBackstopResult;
     unclaimedInbox?: ClaudeInboxBacklogSummary;
   } = {},
 ): SessionStartDigest {
   const escalationLines = input.escalationLines ?? [];
   const memory = input.memory ?? [];
+  const postMergeBackstop =
+    input.postMergeBackstop ??
+    (db.path === ":memory:"
+      ? undefined
+      : scanPostMergeBackstop({
+          repoRoot: resolve(dirname(resolve(db.path)), ".."),
+        }));
   db.exec("BEGIN");
   try {
     const gateRuns = selectLatestGateRuns(db);
@@ -306,6 +321,7 @@ export function selectSessionStartDigest(
       head_commits: headCommits.slice(0, 5),
       memory,
       escalation_lines: escalationLines.filter(Boolean),
+      post_merge_backstop: postMergeBackstop,
       unclaimed_inbox: input.unclaimedInbox,
     };
     db.exec("COMMIT");
@@ -342,6 +358,9 @@ export function renderSessionStartDigest(digest: SessionStartDigest): string {
     lines.push(`  gate: ${gate.gate_id}=${gate.status}${plan}`);
   }
   for (const line of digest.escalation_lines) lines.push(`  escalation: ${line}`);
+  if (digest.post_merge_backstop) {
+    lines.push(`  ${formatPostMergeBackstop(digest.post_merge_backstop)}`);
+  }
   const gateFeedback = digest.feedback.items.filter((item) => item.bucket === "gate");
   for (const item of gateFeedback) lines.push(feedbackLine(item));
 

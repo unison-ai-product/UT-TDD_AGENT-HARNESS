@@ -1,8 +1,15 @@
+import { dirname, resolve } from "node:path";
 import { stableId } from "../stable-id.ts";
 import type { HarnessDb } from "../state-db/index.ts";
 import { upsertRow } from "../state-db/index.ts";
 import { detectorRouteCandidateAction } from "../state-db/route-candidate-review.ts";
 import { RUNTIME_SKILL_SOURCE_PREFIX } from "../state-db/skill-projections.ts";
+import {
+  formatPostMergeBackstop,
+  type PostMergeBackstopReason,
+  type PostMergeBackstopResult,
+  scanPostMergeBackstop,
+} from "./post-merge-backstop.ts";
 
 export interface SkillMetric {
   plan_id: string;
@@ -140,7 +147,10 @@ function signalSeverity(status: unknown): string {
   return "info";
 }
 
-export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
+export function emitFeedbackEvents(
+  db: HarnessDb,
+  options: { postMergeBackstop?: PostMergeBackstopResult } = {},
+): FeedbackEvent[] {
   const detectorCandidates = db
     .prepare(
       `SELECT route_candidate_id, source_table, source_id, finding_kind, severity, subject_id,
@@ -162,6 +172,14 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
     .all();
   const createdAt = nowIso();
   const events: FeedbackEvent[] = [];
+
+  const postMergeBackstop =
+    options.postMergeBackstop ??
+    (db.path === ":memory:"
+      ? undefined
+      : scanPostMergeBackstop({
+          repoRoot: resolve(dirname(resolve(db.path)), ".."),
+        }));
 
   for (const finding of openFindings) {
     const findingId = String(finding.finding_id ?? "");
@@ -262,6 +280,62 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
     };
     upsertRow(db, { table: "feedback_events", primaryKey: "feedback_event_id", row: { ...event } });
     events.push(event);
+  }
+
+  if (postMergeBackstop) {
+    const reasons: PostMergeBackstopReason[] = ["bypass_merge", "merged_without_verdict"];
+    for (const reason of reasons) {
+      const findings = postMergeBackstop.detections.filter((finding) => finding.reason === reason);
+      if (findings.length === 0) continue;
+      const event: FeedbackEvent = {
+        feedback_event_id: feedbackId("feedback:post-merge-backstop", reason),
+        finding_id: "",
+        plan_id: "",
+        source_table: "post_merge_backstop",
+        source_id: reason,
+        source_generation: feedbackId(
+          "feedback-generation",
+          `${reason}:${findings.map((finding) => `${finding.pr}:${finding.headSha}`).join(",")}`,
+        ),
+        source_color: postMergeBackstop.ok ? "" : "detection_unavailable",
+        signal_type: `post_merge_backstop:${reason}`,
+        severity: "warn",
+        status: "open",
+        next_action: formatPostMergeBackstop(postMergeBackstop),
+        created_at: createdAt,
+      };
+      upsertRow(db, {
+        table: "feedback_events",
+        primaryKey: "feedback_event_id",
+        row: { ...event },
+      });
+      events.push(event);
+    }
+    if (!postMergeBackstop.ok) {
+      const event: FeedbackEvent = {
+        feedback_event_id: feedbackId("feedback:post-merge-backstop", "detection-unavailable"),
+        finding_id: "",
+        plan_id: "",
+        source_table: "post_merge_backstop",
+        source_id: "detection-unavailable",
+        source_generation: feedbackId(
+          "feedback-generation",
+          `detection-unavailable:${postMergeBackstop.unavailableReason ?? "unknown"}:${postMergeBackstop.detections.map((finding) => `${finding.reason}:${finding.pr}`).join(",")}`,
+        ),
+        source_color: "detection_unavailable",
+        signal_type: "post_merge_backstop:detection_unavailable",
+        severity: "warn",
+        status: "open",
+        next_action: formatPostMergeBackstop(postMergeBackstop),
+        created_at: createdAt,
+      };
+      upsertRow(db, {
+        table: "feedback_events",
+        primaryKey: "feedback_event_id",
+        row: { ...event },
+      });
+      events.push(event);
+    }
   }
   return events.sort((a, b) => a.feedback_event_id.localeCompare(b.feedback_event_id));
 }

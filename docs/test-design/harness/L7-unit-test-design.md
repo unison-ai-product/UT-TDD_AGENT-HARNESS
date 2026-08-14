@@ -1555,6 +1555,15 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVMG-012` | intent receipt / result receipt の書込先をファイル・ディレクトリ衝突へ変異 | intent は fail-close、result は警告付き failure 相当、fixture 外書込 0 |
 | `U-RVMG-013` | result receipt の書込を失敗させる | 警告付き failure 相当となり、result receipt の書込失敗を surface |
 | `U-RVMG-014` | 同一 HEAD の FLAG / pending、PASS / pending、複数 `state:verdict`、orphan receipt の deny 経路を順序・入力形ごとに変異 | deny receipt は判定不能な候補を束縛せず、`verdict: null` かつ `authorizedEntry: null`（FLAG / pending の両順序も同一） |
+| `U-RVMG-015` | wrapper の `merge_result` `decision=merge` receipt を持つ merged PR | 正常 merge は `bypass_merge` として誤検知しない |
+| `U-RVMG-016` | merged PR に対応する wrapper receipt を除外 | receipt 無し merge を `bypass_merge` として検知する |
+| `U-RVMG-017` | `D2D_CUTOFF_BASELINE` より前の merged PR | tracked source の cutoff より前の merge は検知対象に含めない |
+| `U-RVMG-018` | D1 `analyzeReviewDispatch` が `merged_without_verdict` を返す exact HEAD | `merged_without_verdict` の PR を検知する |
+| `U-RVMG-019` | `gh api` page fetch を失敗させ、digest / `feedback_events` を投影 | API 不能を無音 skip せず「検知不能」と明示する |
+| `U-RVMG-020` | 2 ページ目の page fetch を失敗させ、1 ページ目に部分結果を置く | 部分結果を green に丸めず「検知不能」と明示する |
+| `U-RVMG-021` | 先頭 page は正常、2 ページ目だけに receipt 無し merge を置く | pagination 全走査で 2 ページ目の `bypass_merge` を検知する |
+| `U-RVMG-022` | 同一 page の反復と `MAX_MERGED_PR_PAGES` 個の full page を投入 | 無限 loop を起こさず、上限到達を「検知不能」にする |
+| `U-RVMG-023` | HTTP 成功 page の merge commit SHA / mergedAt / PR 番号等を欠落・不正化 | 必須 field 欠落・malformed は部分結果を green に丸めず「検知不能」にする |
 
 ## Claude HARNESS memory async wake oracle (2026-08-03)
 
