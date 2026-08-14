@@ -646,3 +646,102 @@ PR #299 の Claude family blind re-review (subject `021cb536`) は `blocking 0` 
 前回 subject に対する証跡であり、rebase 後 HEAD `5215bc23` に対する closing review は本 slice
 の定量検証後に再取得する予定である。frontmatter の `review_evidence` に
 `worker_model: gpt-5.6-luna` / `reviewer_model: claude-opus-5` として append した。
+
+#### D2-D 実装契約 freeze (2026-08-13)
+
+D2 scope 改訂 (2026-08-03) §2 の backstop を、B 面 (D2-B、PR #299 merge 済) に対で実装する
+契約として本節に freeze する。B は「wrapper 経由の merge を fail-close で deny する」一次防壁
+であり、D は「wrapper を迂回した merge を post-merge に検知して可視化する」backstop である。
+D 無しの B は迂回が静かに通る fail-open の看板替えになるため対必須 (D2 scope 改訂 §2 既定)。
+
+**検知対象 (2 種、いずれも main への merge を対象)**
+
+1. `bypass_merge`: merge commit を B の wrapper receipt (`.ut-tdd/logs/review-merge-gate.jsonl`
+   の `merge_result` 行、decision=merge) と突合できない merge (= `gh` 直叩き等の wrapper 迂回)。
+2. `merged_without_verdict`: D1 analyzer (`analyzeReviewDispatch`、
+   `src/feedback/review-dispatch.ts:464` の既存 reason) を merge commit の PR exact HEAD で
+   評価した結果、この reason を含むもの。
+
+**突合先の正本 = ローカル wrapper receipt JSONL のまま (案 a 採用)**。検知 surface
+(session-start digest / `feedback_events`) はローカル実行であり、両ランタイム (Claude /
+Codex) は同一機械・同一 repo checkout を共有するため、receipt はどちらの merge でも見える。
+receipt を追跡ファイルへ昇格する案 (案 b) は不採用とする — Safety Boundaries が定める
+「非追跡 runtime artifact を track しない」境界の例外を増やすだけで、検知精度は上がらず
+最小実装原則に反する。trade-off として、**検知は wrapper を実行した機械と同一機械上でのみ
+完全**であることをここに明記する。機械横断の検知強化 (receipt の共有ストレージ化等) は
+本 freeze の範囲外とし、必要になった時点で別 PLAN を起票する。
+
+**cutoff baseline (ratchet)**: D 実装 commit の merge 時刻より前の merge は検知対象外とする。
+B 着地 (PR #299) 以前は wrapper 自体が存在せず、既往 merge を遡って全部 `bypass_merge` 扱い
+にすると偽陽性で埋まるため。**baseline の正本は tracked source 内の唯一の定数** (D 実装
+module 内に export する ISO UTC 時刻定数 1 個) とし、receipt 初行 anchor 等の untracked 値を
+正本にしない (clean checkout / 別 machine で ratchet を再構成できないため。cross-review FLAG
+2026-08-13 指摘 1 の是正)。**定数の具体値は「D 実装 branch と origin/main の merge-base commit
+の committer date (UTC)」とする** — `git log -1 --format=%cI $(git merge-base HEAD origin/main)`
+で branch 作成時点に確定する値であり、source へ書き込んでも変化しない (source 更新で HEAD が
+進んでも merge-base は不変。delta FLAG 3 回目 blocking 1 の是正: 「HEAD 日時を HEAD 内容へ
+埋める」自己参照の固定点不在を、source 更新で変化しない既知 anchor に置換)。branch を
+main へ rebase した場合のみ merge-base が進むため、その際は定数も同じ式で再導出して更新する
+(式が固定手続であり実装時発明の余地はない)。merge-base 以降・D 実装 merge 以前の main への
+merge は、wrapper 経由 (decision=merge receipt あり) なら偽陽性にならず、receipt 無しなら
+`bypass_merge` として検知される — B (PR #299) は既に拘束中のため、これは正しい検知である。
+値の根拠 (merge-base SHA + 導出コマンド) を実装 PR の review_evidence citation に固定した上で、
+確定後にこの節へ追記する。
+
+**検知の入力**: `gh api` による merged PR 一覧 (merge commit SHA / mergedAt / PR 番号 /
+head SHA)。取得は「直近一覧」ではなく **baseline 以降の merged PR を pagination 終端まで
+全ページ走査**する契約とする (per_page 上限に依存した窓を作らない。mergedAt が baseline より
+古い PR に到達した時点での早期終了は可、ただし sort 順に依存する早期終了はその sort が API
+契約で保証される場合に限る)。**途中の page 取得失敗・欠落がある場合、部分結果を「検知 0 件 =
+green」として扱わず「検知不能」を明示する** (cross-review FLAG 2026-08-13 指摘 2 の是正 —
+検知停止中の merge burst が窓外へ落ちて永久未検知になる経路を塞ぐ)。`gh api` が全体として
+到達不能な場合も同様に、検知を無音で skip せず「検知不能」を digest / event へ明示する
+(fail-close 表示の一種。判定不能を green へ丸めない D3c 既定の踏襲)。
+
+**表示配線**: session-start digest (`src/handover/session-start-digest.ts`、`SessionStartDigest`
+の既存 fail-close 段の並びに追加) に bypass/merged_without_verdict の件数 + PR 番号を出す。
+`feedback_events` (`src/feedback/engine.ts` の `emitFeedbackEvents(db)`、`FeedbackEvent` 既存
+schema — `signal_type` / `severity` / `next_action` 等の既存 field に従う) へ同内容のイベント行を
+投影する。surface は `src/feedback/surface.ts` の既存 selection 経路に乗せ、新しい層・新しい
+DB テーブルは作らない。検知は可視化のみであり、自動 revert 等の破壊的動作はしない。
+
+**oracle 対**: `U-RVMG-*` の続番で以下を宣言し、実装 PR で test-design と 1:1 にする。
+
+1. receipt ありの正常 merge (wrapper の `merge_result` decision=merge receipt を持つ merge) が
+   誤検知されない (B の実装定義どおり deny は merge しないため、正常経路は decision=merge のみ。
+   cross-review important 指摘の是正 — 旧文言「deny 経路を通った merge」は B と矛盾するため削除)。
+2. receipt 無し merge が `bypass_merge` として検知される。
+3. cutoff baseline より前の merge が検知対象に含まれない (baseline は tracked 定数から読む)。
+4. `merged_without_verdict` の PR が検知される。
+5. `gh api` 不能時に「検知不能」が digest / event へ明示される (無音 skip の禁止)。
+6. merged PR 一覧の pagination 途中失敗 (2 ページ目以降の取得失敗) で、部分結果が green に
+   ならず「検知不能」が明示される。
+7. 対象 (receipt 無し merge) が **2 ページ目以降にのみ存在する正常 multi-page 系**で検知される
+   (先頭 page 固定の実装は RED)。
+8. pagination の終端判定: 同一 cursor / 同一 page が反復する応答で無限 loop せず、走査上限
+   到達時は結果を green に丸めず「検知不能」へ倒す (bounded traversal)。**上限は定数
+   `MAX_MERGED_PR_PAGES = 50` (per_page=100、最大 5,000 PR) とし、D 実装 module 内に export
+   する** (本 repo の PR 総数は 2026-08-14 時点で約 320 であり一桁以上の余裕。到達し得るのは
+   API 異常のみで、その場合に「検知不能」へ倒すのが正しい)。oracle は「51 ページ目相当の
+   応答が続く fixture で上限到達 → 検知不能」を pin する (delta FLAG 3 回目 blocking 2 の是正:
+   bound の具体値と導出根拠を freeze し、1 page 打ち切りも実質無限待機も適合実装になり得ない
+   ようにする)。
+9. HTTP 成功だが必須 field (merge commit SHA / mergedAt / PR 番号) が欠落・malformed な
+   partial response は、当該 page 以降を「検知不能」として扱い、部分結果を green に丸めない。
+
+**Reverse 合流**: 本 D2-D 追加契約 (bypass_merge / merged_without_verdict / cutoff baseline /
+pagination 全走査 / 検知不能表示) は `PLAN-REVERSE-465` の上流合流 (R1〜R4) 対象に含める。
+D 実装の接地後、R1 で L6/L7 設計への back-fill を検証する (形式的 parent/pair だけに依存せず、
+新契約の upstream closure を Reverse 側 AC で再検証する。cross-review important 指摘の是正)。
+
+**advisor 諮問記録 (2026-08-13)**: `ut-tdd advisor --decision design --current-model
+claude-fable-5 --plan PLAN-L7-465 --execute` を実行し、provider=claude / model=claude-fable-5 /
+exit=0 で応答を得た (2026-08-07 の provider 無応答 —
+`.ut-tdd/memory/reference-ut-tdd-advisor-execute-provider-2026-08-07-dry-run.md` — からの回復を
+実測)。推奨は案 a 採用で本 freeze と一致: 突合式 = 「baseline 以降の merge commit ∖ receipt」、
+baseline は tracked に記録、案 b は「複数機械運用が実在した時点で GitHub merge イベント突合へ
+escalate する条件付き将来案」として明記、の 3 点。差分の取り込み: baseline は「tracked な定数
+(実装 source 内 anchor)」とし cutoff 節の実装 PR 確定条項に反映、案 b の escalate 条件
+(複数機械運用の実在) を上記案 b 却下段落の再検討条件として採用する。advisor の
+「severity = advisory」は表示が session を block しない意味であり、本節の「fail-close 表示
+(無音 skip 禁止)」と矛盾しない (検知は可視化のみ・破壊的動作なしの既定と同義)。
