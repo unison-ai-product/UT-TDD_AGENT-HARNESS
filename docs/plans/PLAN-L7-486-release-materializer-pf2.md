@@ -46,7 +46,7 @@ review_evidence:
     tests_green_at: "2026-08-14T03:14:15Z"
     verdict: targeted_verification_green_closing_review_pending
     scope: >-
-      `tests/release-materializer.test.ts` の28境界を実行し28件成功を観測した。
+      `tests/release-materializer.test.ts` の30境界を実行し30件成功を観測した。
       blind review FLAGの出力immutability、drive-relative symlink、mode単独mutationを是正し、
       framingはliteral golden digestでも固定した。
       exact-HEAD CIとnon-author closing reviewは未実施であり、本entryはその判定を代替しない。
@@ -60,7 +60,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-14T02:36:10Z"
         evidence_path: tests/release-materializer.test.ts
-        output_digest: "sha256:f0101d14fad4ff26ebe24ba3a1ab8b93736cf5d88c41ae2f2c5c37791f2ebc0b"
+        output_digest: "sha256:c8b1e9c6335b5343354a2e990805f8a2e92467291a8c96d5cd534fe85182adf4"
 ---
 
 # PF-2: versioned release materializer pair-freeze
