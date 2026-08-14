@@ -22,12 +22,17 @@ Claude Code read priority is `../CLAUDE.md` -> this file ->
 Active hooks in `.claude/settings.json` must call package-local UT-TDD commands
 only. Do not enable hooks that depend on personal legacy runtime paths.
 
-- `PreToolUse(Agent|Task)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`
-- `PreToolUse(Edit|Write|MultiEdit)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"`
-- `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`
-- `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`
-- `Stop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary`
-- `SubagentStop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook subagent-stop`
+- `PreToolUse(Agent|Task)`: `node "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"`
+- `PreToolUse(Edit|Write|MultiEdit)`: `node "${CLAUDE_PROJECT_DIR}/.claude/hooks/work-guard.ts"`
+- `SessionStart`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" session start`
+- `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" hook post-tool-use`
+- `Stop`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" session summary`
+- `Stop`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" hook claude-memory-wake`
+- `SubagentStop`: `node "${CLAUDE_PROJECT_DIR}/src/cli.ts" hook subagent-stop`
+
+実行系は **node** である (`package.json` の `utTdd.nodeToolchain.nodeAuthority`)。Bun は
+`bunAuthority: legacy_migration_debt` であり、hook / CLI / 検査のいずれの起動形にも使わない
+(#134 Bun permanent ban)。
 
 Historical behavior may be referenced for migration, but implementation must
 live in UT-TDD-owned paths.
@@ -38,7 +43,7 @@ live in UT-TDD-owned paths.
 concurrent run fail-fasts with exit 2 and the holder's pid. Rules:
 
 - exit 2 (already running) means **wait for the running doctor**; do not retry,
-  do not re-launch with a different invocation form (`bun -e`, `--json`, direct
+  do not re-launch with a different invocation form (`node -e`, `--json`, direct
   `runDoctor`). Retry storms starve the machine (2026-07-16 incident: 16
   concurrent doctors, 31MB free RAM).
 - Prefer scoped/targeted checks (`--scope toolchain`, direct check functions in
@@ -132,7 +137,7 @@ harness.db の `hook_events` へ投影する。session_id は `advisor-` prefix)
 
 ```bash
 # 直近の advisor 発火を PLAN 別に数える (EOD close-out で 1 本流す)
-bun -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0,by={};for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(!l.trim())continue;const o=JSON.parse(l);if(o.event_type==='tool_use'){n++;by[o.plan_id]=(by[o.plan_id]||0)+1}}console.log(n,by)"
+node -e "const fs=require('fs'),d='.ut-tdd/logs/session';let n=0,by={};for(const f of fs.readdirSync(d).filter(x=>x.startsWith('advisor-')))for(const l of fs.readFileSync(d+'/'+f,'utf8').split(/\r?\n/)){if(!l.trim())continue;const o=JSON.parse(l);if(o.event_type==='tool_use'){n++;by[o.plan_id]=(by[o.plan_id]||0)+1}}console.log(n,by)"
 ```
 
 **機構化 (telemetry + 不在検知) の起票条件**: 対象は、設計判断節に 2 案以上の方式と
@@ -190,7 +195,7 @@ plain fenced command for a human to run if the native tool is unavailable.
 `PreToolUse(Agent|Task)` uses:
 
 ```bash
-bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"
+node "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.ts"
 ```
 
 Rules:
@@ -303,7 +308,7 @@ Current cutover evidence:
 
 ## Local Preconditions
 
-- `bun` is available on PATH.
+- `node` (see `package.json` `engines.node`) is available on PATH.
 - `CLAUDE_PROJECT_DIR` points to the repository root during hook execution.
 - `.ut-tdd/` is writable generated runtime state.
 - `.claude/settings.json` uses package-local commands only.

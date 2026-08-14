@@ -60,6 +60,17 @@ const FORBIDDEN_ADAPTER_MARKERS = [
     marker: "legacy runtime agent name",
     pattern: new RegExp(String.raw`\bpmo-${LEGACY_RUNTIME_NAME}-`, "i"),
   },
+  // Bun は #134 (PO 決定 2026-07-22) で permanent ban、package.json も
+  // bunAuthority: legacy_migration_debt を宣言している。それでも adapter doc の Hooks 節は
+  // `bun "$CLAUDE_PROJECT_DIR/..."` を指示したままで、.claude/settings.json (全 hook が node)
+  // と正面から矛盾していた。指示に従った実行が廃止ランタイム固有の失敗を生み、存在しない
+  // 欠陥の修理 issue #321 が起票された (2026-08-14)。marker 節しか見ない既存の drift 検査は
+  // これを素通ししたので、実行指示としての Bun 起動形を forbidden marker に加える。
+  // 過去 incident の記述 (「bun runaway ×2」等) は実行指示ではないので巻き込まない。
+  {
+    marker: "bun execution form",
+    pattern: /\bbunx?\s+(?:-|"|'|run\b|src\/|scripts\/|\$\{?[A-Z_]|\.\/)/,
+  },
 ] as const;
 
 export function analyzeRuleDrift(docs: RuleAdapterDocs): RuleDriftResult {

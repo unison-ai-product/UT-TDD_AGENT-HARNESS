@@ -78,6 +78,39 @@ describe("rule-drift lint", () => {
     expect(ruleDriftMessages(result)[0]).toContain("forbidden adapter legacy marker");
   });
 
+  it("U-RDRIFT-005: reports Bun execution forms instructed by adapter docs", () => {
+    // #134 で Bun は permanent ban。それでも adapter doc が実行形を指示し続け、指示どおりの
+    // 実行が廃止ランタイム固有の失敗を生んで存在しない欠陥の起票 (#321) に至った (2026-08-14)。
+    const docs = completeDocs();
+    docs.agents += '\nRun `bun -e "console.log(1)"` for the spot-check';
+    docs.claudeProject +=
+      '\n- `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`';
+    docs.claudeRuntime += "\nbun src/cli.ts doctor";
+
+    const result = analyzeRuleDrift(docs);
+
+    expect(result.ok).toBe(false);
+    expect(result.missingMarkers).toEqual([]);
+    expect(result.forbiddenMarkers).toEqual([
+      { file: "AGENTS.md", marker: "bun execution form" },
+      { file: "CLAUDE.md", marker: "bun execution form" },
+      { file: ".claude/CLAUDE.md", marker: "bun execution form" },
+    ]);
+  });
+
+  it("U-RDRIFT-006: keeps historical Bun incident prose out of the execution-form marker", () => {
+    // 過去 incident の記録 (CLAUDE.md の「bun runaway ×2」) は実行指示ではない。
+    // これを拾うと、事実の記録を消す方向へ圧力が掛かる。
+    const docs = completeDocs();
+    docs.claudeProject += "\ndoctor 16 並行、bun runaway ×2、手書き memory PR #167";
+    docs.agents += "\nBun は legacy_migration_debt であり bunAuthority を宣言している";
+
+    const result = analyzeRuleDrift(docs);
+
+    expect(result.forbiddenMarkers).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
   it("guards the real repo adapter docs against rule marker drift", () => {
     const result = analyzeRuleDrift(loadRuleAdapterDocs(process.cwd()));
     expect(result.missingMarkers).toEqual([]);

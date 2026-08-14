@@ -384,7 +384,7 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
 片側のアダプタにしか無かった 3 件を集約した)。
 
 - **doctor は singleton** (PLAN-L7-442)。二重起動は exit 2 + holder pid で fail-fast する。
-  exit 2 を見たら**待つ**。retry も別形式 (`bun -e` / `--json` / 直接 `runDoctor`) での
+  exit 2 を見たら**待つ**。retry も別形式 (`node -e` / `--json` / 直接 `runDoctor`) での
   再起動もしない (2026-07-16 実害: doctor 16 並行、空きメモリ 31MB)。一部だけ要るなら
   `--scope` や check 関数の直接呼び出しを使う。
 - **並列 subagent は既定上限 8** (`DEFAULT_MAX_PARALLEL`、`src/runtime/agent-slots.ts`)。
