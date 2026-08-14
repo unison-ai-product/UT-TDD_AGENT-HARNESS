@@ -389,19 +389,26 @@ memory wake / PR commentだけで完結する**配線欠落**である。
 5. current PR HEADが進んだ場合、旧request/receiptを更新・別HEADへ流用せず、新identityで再dispatch
    する。移行時点のopen PRはcurrent exact HEADへ1回だけ再dispatchし、過去HEADのPASSを採用しない。
 6. live Claude VS Code sessionは配送・進行のcoordinatorであり、reviewer familyの事実源にはしない。
-   canonical verdictを生成できるreviewerは、同sessionが起動する既存の正規delegation
-   (`ut-tdd claude --role reviewer|blind-reviewer --review-* --execute`) のchildだけとする。
+   canonical verdictを生成できるreviewerは、同sessionが起動する既存の正規delegationのchildだけとする。
+   requestの`authorFamily`がCodexなら`ut-tdd claude --role reviewer|blind-reviewer --review-* --execute`、
+   Claudeなら`ut-tdd codex --role reviewer|blind-reviewer --review-* --execute`を選び、同族providerへ
+   fallbackしない。未知familyまたは反対族runtime不在はdelegation 0 / receipt 0でdenyする。
    `src/cli/delegation.ts`が実spawnしたprovider/model/role/startedAt/completedAt/exitCodeから組み立てた
    attestationだけを`projectReviewVerdict()`へ渡す。interactive session、CLI option、memory本文、tag、
    PR commentからprovider/model/exitCodeを自己申告してreceiptへ投影する経路は作らない。childを起動
    しないlive手動reviewは派生comment/memoryを残せてもcanonical receiptは0で、D1/D2はdenyを維持する。
    このspawn factは既存D1のoperational family factに限り、D3cの強いprovider-family証明へ昇格しない。
    D3c/D3dは従来どおり承認済み外部authority不在なら`unverified_family`を返す。
-7. claude inbox envelopeをtyped purpose (`memory` / `review`) へ拡張する。既存
+7. claude inbox envelopeは新規producerが`ut-tdd.claude-inbox/v3`を発行し、必須typed purpose
+   (`memory` / `review`) を持つ。既存in-flight `ut-tdd.claude-inbox/v2`は書換えず、consumerが
+   `purpose=memory`としてだけ互換読出しする。v2は構造化review identityを持たないため、本文/tagに
+   review文言があってもreview delegationへ昇格できない。unknown schemaは従来どおりfail-closeする。既存
    `memory add --notify-claude`は常に`purpose=memory`で、PR番号やreview文言をbody/tagへ書いても
    review dispatch、delegation、receipt projectionを一切起動できない。`purpose=review`は本live
    projection actionだけが、永続化済みrequestのdigest/path/identityを構造化fieldへ束縛してpublish
-   できる。consumerはfree-form本文を分類せず、`purpose=review`かつcanonical request照合成功時だけ
+   できる。v3 review envelopeはcanonical requestのdigest/path/identityを必須fieldとして持ち、欠落・
+   不一致をmemoryへdowngradeせずinvalidとして拒否する。consumerはfree-form本文を分類せず、
+   `purpose=review`かつcanonical request照合成功時だけ
    正規delegationを起動する。旧wakeを削除せずgeneric通知として維持しながら、review用途への逆流を
    機械的に封鎖する。
 
@@ -424,10 +431,12 @@ verdict側はそのchildが生成した同一request identity・verdict file・s
 
 `CANDIDATE-RVATT-023`〜`028`を先にRED化し、実装PRで`U-RVATT-023`〜`028`へ昇格する。
 
-1. request永続化失敗時は`purpose=review` wake publish 0、成功時だけrequest 1→review wake 1の順になる。
-   `memory add --notify-claude`の`purpose=memory`へPR review本文/tagを与えてもreview delegation/receiptは0。
+1. request永続化失敗時はv3 `purpose=review` wake publish 0、成功時だけrequest 1→review wake 1の順になる。
+   `memory add --notify-claude`のv3 `purpose=memory`とin-flight v2へPR review本文/tagを与えてもreview
+   delegation/receiptは0。v3 review identity欠落・不一致とunknown schemaもdelegation/receipt 0。
 2. interactive自己申告attestation、verdict/identity/receipt失敗時はreceipt・PR comment・feedback memory
-   0。既存delegation childのspawn factsに束縛したattestationだけがreceipt 1→派生表示へ進む。
+   0。Codex著者→Claude child、Claude著者→Codex childのspawn factsに束縛したattestationだけが
+   receipt 1→派生表示へ進む。同族fallback、未知author family、反対族runtime不在はreceipt 0。
 3. 同一identity retryはrequest/receipt各1へ収束し、wake replayも既存operation identityへ収束する。
 4. HEAD更新は新requestを作り、旧HEAD receiptではD1/D2が`merge_ready`にならない。
 5. repository snapshot上の実application compositionを、既存merge-gate portsへGitHub fixtureを注入して
