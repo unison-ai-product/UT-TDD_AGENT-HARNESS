@@ -1613,7 +1613,7 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `CANDIDATE-RVATT-028` | SSoT非逆流 | memory reader / PR comment parserからD1/D2判定器へのimport・call edgeを注入 | edge 0だけGreen。memory/commentを判定入力にする変異をfail-close |
 
 実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)。
-`CANDIDATE-RVATT-023`〜`028`はD3a live projection実装PRで同testと実repo lifecycle testへ
+上記6候補はD3a live projection実装PRで同testと実repo lifecycle testへ
 1:1に昇格する。既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
