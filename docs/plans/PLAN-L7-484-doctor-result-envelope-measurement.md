@@ -7,7 +7,7 @@ sub_doc: function-spec
 drive: agent
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-13
 updated: 2026-08-13
 owner: PO / TL
@@ -36,7 +36,31 @@ backprop_decision: not_required
 backprop_decision_reason: >-
   既存 envelope producer の実測値投影を修正する内部 fail-close 強化であり、L0-L6 の要求・
   外部CLI機能は変更しない。L6 契約は本実装の pair として同じ PR で固定する。
-review_evidence: []
+review_evidence:
+  - reviewer: claude-pr310-closing-delta
+    review_kind: cross_agent
+    reviewed_at: "2026-08-13T12:15:00Z"
+    tests_green_at: "2026-08-13T11:29:58Z"
+    verdict: pass-weak
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    scope: "PR #310 exact HEAD e064a6605fd44ae50087f3927862c4143deb04ef。U-DOCTORENV-016 が doctor CLI を実発火して measured envelope projection を固定し、旧投影 mutation を殺すことを Claude non-author reviewer が確認。CI run 31694626856 は同 HEAD で全 required job SUCCESS。"
+    lane: claim-blind
+    subject_head: "e064a6605fd44ae50087f3927862c4143deb04ef"
+    attack_trials: 4
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/310#issuecomment-5280288483"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/31694626856"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/cli-surface.test.ts -t U-DOCTORENV-016"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-13T11:22:48Z"
+        evidence_path: tests/cli-surface.test.ts
+        output_digest: "sha256:181ab4f9befec61fe37921f1fe1bc6fee5f5e1c70647fbf7ca2dd079017b4c3f"
+        anchor_commit: e064a6605fd44ae50087f3927862c4143deb04ef
 ---
 
 # PLAN-L7-484: doctor result envelope の実測面投影
@@ -61,7 +85,7 @@ review_evidence: []
 
 ## 完了条件
 
-- [ ] setup-smoke / named profile / toolchain の envelope が full consumer に拒否される。
-- [ ] default full 実行だけが実測 check IDs と全 strict options を持つ再利用候補になる。
-- [ ] 既存 CI の doctor single-run envelope 消費を維持する。
-- [ ] Linux / Windows / aggregate CI と非author review が揃うまで merge しない。
+- [x] setup-smoke / named profile / toolchain の envelope が full consumer に拒否される。
+- [x] default full 実行だけが実測 check IDs と全 strict options を持つ再利用候補になる。
+- [x] 既存 CI の doctor single-run envelope 消費を維持する。
+- [x] Linux / Windows / aggregate CI と非author review が揃うまで merge しない。
