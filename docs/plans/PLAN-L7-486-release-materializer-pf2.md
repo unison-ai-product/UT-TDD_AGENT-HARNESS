@@ -65,7 +65,8 @@ PF-3〜PF-5のRED oracleを維持する。
   未知tokenはtyped `unavailable`を返して`"1"`へfallbackしない。将来version追加時も`"1"`を
   削除・上書きせず、release ID導出へ渡すtokenとregistry lookup tokenを同じbyte列に保つ。
 - 写像は**artifact空間起点**に一意化する。全source pathを既存`buildCleanDistributionPlan()`へ渡し、
-  成功planの`artifactPaths`をdestination集合とする。各destinationは
+  成功planの`artifactPaths`から後述のcontrol manifestを明示除外したものをdestination集合とする。
+  各destinationは
   `cleanDistributionSourcePath(destination, sourcePaths)`でsource entryを逆引きする。そのため
   `.github/workflows/harness-check.yml`のcontentとmodeは同名source entryではなく
   `docs/templates/github/common/pack-harness-check.yml` entry由来となる。`docs/skills/* -> skills/*`は
@@ -73,6 +74,9 @@ PF-3〜PF-5のRED oracleを維持する。
   package変換を複製しない。
 - `buildCleanDistributionPlan().ok=false`、missing source、またはsourceが異なるのに同じdestinationへ
   写る衝突はPF-2のtyped `invalid_distribution_plan`としてfail-closeし、entry/digest成功値を返さない。
+  衝突は`artifactPaths`の`Set`化後には失われるため、入力source pathsからplanの`excludedPaths`を除いた
+  included source列を作り、各pathへ既存`cleanDistributionArtifactPath()`を適用した**dedupe前**の
+  destinationを比較して検知する。PF-2はこの合成だけを所有し、allow/deny判定を再実装しない。
   先勝ち・後勝ち・silent dedupeはしない。PF-5はaggregate admission前にPF-2を呼ばない責務を別途
   持つが、PF-2自身もinvalid planを成功へ丸めない。
 - 通常fileのcontentは**逆引き後source entryのraw bytes**、modeは同entryの`100644`または`100755`
@@ -97,8 +101,10 @@ uint64be(contentBytes.length) || contentBytes`
 `pathBytes`はdestination POSIX pathのUTF-8、`modeBytes`はASCII、`contentBytes`は上記変換後bytesである。
 長さはbyte長であり文字数ではない。JavaScriptの実在値ではcontent長がuint64範囲を超えないため、
 到達不能な範囲外分岐やoracleは作らない。重複destination、0件のartifact setはtyped invalidとし、
-digest成功値を返さない。current control manifest (`release/manifest.yaml`) はclean distribution planの
-artifact集合から除外され、入力sourceに存在しても出力entry/digestへ影響させない。
+digest成功値を返さない。current control manifest (`release/manifest.yaml`) はPF-2がdestination集合から
+**明示的に除外する**。将来clean distribution allowlistへ追加されplanの`artifactPaths`に到達しても、
+materializerの出力entry/digestへ含めない。Packへのcontrol copyはPF-5が別に所有し、artifact digestの
+自己参照を作らない。
 
 ## TDD oracle
 
@@ -113,11 +119,15 @@ RED→Green化する。
 4. UTF-8 byte順とpath/mode/contentのuint32be/uint64be framingをgolden bytesで固定し、文字数・LE・
    delimiter連結・locale sort mutantをkillする。
 5. destination衝突、invalid distribution plan、missing source、unsupported mode、空/絶対/`.`/`..`/
-   backslash/NUL/UTF-8不正path、root外/absolute/NUL symlink、0件artifact setを個別にtyped invalidへ倒す。
+   backslash/NUL/UTF-8不正path、root外/absolute/NUL symlink、0件artifact set、package.jsonのUTF-8
+   decode/JSON parse失敗を個別にtyped invalidへ倒す。衝突fixtureはdedupe前のincluded source 2件を
+   同じdestinationへ写し、`artifactPaths`が1件に畳まれてもinvalidとなることをpinする。
 6. token `"1"`はGreen、number `1` / `"v1"` / `" 1"` / 未知tokenは`unavailable`。coerce/trim/
    fallback mutantをkillする。
 7. 入力entry順を反転しても同一結果となり、入力配列と各content byte列が不変。control manifestだけを
-   変異してもentry列/digestが不変で、出力集合にも含まれない。
+   変異してもentry列/digestが不変で、出力集合にも含まれない。synthetic clean planの
+   `artifactPaths`へcontrol manifestを明示的に含めたfixtureでも同じ不変条件を満たし、現allowlistの
+   偶然に依存しない。
 
 ## Schedule / Exit
 
