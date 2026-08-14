@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-14
 updated: 2026-08-14
 owner: PM / PO
@@ -20,6 +20,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-487-isolated-git-artifact-resolver-pf3.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/release-artifact-resolver.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-artifact-resolver.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
   requires:
@@ -35,7 +39,27 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/249
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-473でfreeze済みのPF-3 partitionを実装可能なlocal Git resolverへ限定する。L0-L6要件や外部仕様は変更せず、上流合流はPLAN-REVERSE-473が所有する。"
-review_evidence: []
+review_evidence:
+  - reviewer: codex-implementation-subagent
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-14T07:54:41Z"
+    tests_green_at: "2026-08-14T07:53:41Z"
+    verdict: targeted_verification_green_closing_review_pending
+    scope: >-
+      `U-RELMAN-012`の8群を実装し、独立攻撃で検出したcaller Git env/replace refs、
+      到達可能promisor remote、batch framing/chunk境界の空振りを是正した。
+      exact-HEAD CIとnon-author closing reviewは未実施であり、本entryはその判定を代替しない。
+    worker_model: gpt-5.6-terra
+    reviewer_model: gpt-5.6-sol
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/release-artifact-resolver.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-14T07:53:41Z"
+        evidence_path: tests/release-artifact-resolver.test.ts
+        output_digest: "sha256:717698eafc8a2f6addc2f83d0ee7bc2afab3e28e0472eabf7a82a334a5a66364"
 ---
 
 # PF-3: isolated Git artifact resolver pair-freeze
@@ -167,7 +191,7 @@ RED→Green化する。
 4. [直列 / review] exact-HEAD CIとnon-author closing reviewを通し、Issue #249をcloseする。
 5. [直列] PF-4 #250をReadyへ移す。PF-3が未mergeの間はPF-4を開始しない。
 
-- [ ] docs-only pair-freezeがmainへmerge済み。
-- [ ] `U-RELMAN-012`が上記8群を実測し、revision/object/副作用mutationをkillする。
-- [ ] PF-3 source/test以外のmanifest/channel/Pack copy/write差分が0。
+- [x] docs-only pair-freezeがmainへmerge済み。
+- [x] `U-RELMAN-012`が上記8群を実測し、revision/object/副作用mutationをkillする。
+- [x] PF-3 source/test以外のmanifest/channel/Pack copy/write差分が0。
 - [ ] exact-HEAD CI greenとnon-author closing PASS。
