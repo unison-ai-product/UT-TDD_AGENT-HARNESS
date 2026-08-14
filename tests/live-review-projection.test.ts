@@ -203,7 +203,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
     expect(failed.publishFeedbackMemory).not.toHaveBeenCalled();
   });
 
-  it("U-RVATT-026 delegates retry convergence to canonical content identities", () => {
+  it("U-RVATT-025 delegates retry convergence to canonical content identities", () => {
     const ports = requestPorts();
     dispatchLiveReview({ repoRoot: "repo", request: liveRequest, ports });
     dispatchLiveReview({ repoRoot: "repo", request: liveRequest, ports });

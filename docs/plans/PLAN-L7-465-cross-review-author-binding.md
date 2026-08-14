@@ -45,6 +45,12 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/post-merge-backstop.test.ts
     artifact_type: test_code
+  - artifact_path: src/feedback/live-review-projection.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/review-live.ts
+    artifact_type: source_module
+  - artifact_path: tests/live-review-projection.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
   requires:
@@ -448,6 +454,22 @@ verdict側はそのchildが生成した同一request identity・verdict file・s
 
 本sliceはdocs-only pair-freezeであり、source、CLI、hook、memory schema、GitHub設定を変更しない。
 実装はこのfreezeの非author cross-review完了後、Issue #218のD3a単独PRとして行う。
+
+### D3a producer実装（2026-08-14）
+
+実装の第一原子sliceとして、canonical requestを先に永続化してからtyped review wakeを発行する
+producerを`src/feedback/live-review-projection.ts`へ合成し、`review live-dispatch`へ最小配線した。
+claude inboxはv3 `purpose=memory|review`へ更新し、v2はmemory限定で互換読出しする。unknown schema、
+review identity欠落・不一致、memory本文中のreview文言はdelegationへ昇格しない。
+
+- `U-RVATT-023`: request成功→typed wakeの順序、失敗時wake 0、v2/v3 memoryとinvalid reviewの非昇格。
+- `U-RVATT-025`: 同一request/operationのcontent identity収束とv3 publish冪等性。
+- exact HEAD `4f1f32a7` snapshot: `tests/live-review-projection.test.ts` 9/9 green。
+- 同一source差分で`tests/claude-memory-wake.test.ts` 14/14、`tsc --noEmit`、Biome、diff checkがgreen。
+
+未完のconsumer側`U-RVATT-024` / `026`〜`028`はcandidateのまま維持する。live sessionが構造化requestを
+照合して反対族childを起動し、spawn factsからreceiptを投影する配線とrepository lifecycle E2Eを次の
+原子commitで閉じる。producer greenだけをD3a完了またはmerge gate allowの根拠にしない。
 
 provider-family authority が PO 未承認または未実装の間、D3d は `unverified_family` を返し、
 `custody_admitted` を生成しない。この trusted-custody 経路に accepting state はなく、既存 D2 の
