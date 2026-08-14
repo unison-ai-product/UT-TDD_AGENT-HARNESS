@@ -676,13 +676,17 @@ B 着地 (PR #299) 以前は wrapper 自体が存在せず、既往 merge を遡
 にすると偽陽性で埋まるため。**baseline の正本は tracked source 内の唯一の定数** (D 実装
 module 内に export する ISO UTC 時刻定数 1 個) とし、receipt 初行 anchor 等の untracked 値を
 正本にしない (clean checkout / 別 machine で ratchet を再構成できないため。cross-review FLAG
-2026-08-13 指摘 1 の是正)。**定数の具体値は「D 実装 PR の HEAD commit の committer date (UTC)」
-とする** — merge 前に `git log -1 --format=%cI` で確定でき、merge 時刻のように merge 後まで
-存在しない値を merge 対象 source へ書く循環を持たない (delta FLAG 2026-08-13 blocking 1 の是正。
-実装時発明の余地を残さない固定手続)。是正 commit を積むたびに HEAD commit の値へ更新して
-merge する。baseline と実 merge の間隙は D 実装 PR 自身の merge だけであり、それは B wrapper
-経由 (decision=merge receipt あり) で行うため偽陽性を生まない。値の根拠 (HEAD commit SHA) を
-実装 PR の review_evidence citation に固定した上で、確定後にこの節へ追記する。
+2026-08-13 指摘 1 の是正)。**定数の具体値は「D 実装 branch と origin/main の merge-base commit
+の committer date (UTC)」とする** — `git log -1 --format=%cI $(git merge-base HEAD origin/main)`
+で branch 作成時点に確定する値であり、source へ書き込んでも変化しない (source 更新で HEAD が
+進んでも merge-base は不変。delta FLAG 3 回目 blocking 1 の是正: 「HEAD 日時を HEAD 内容へ
+埋める」自己参照の固定点不在を、source 更新で変化しない既知 anchor に置換)。branch を
+main へ rebase した場合のみ merge-base が進むため、その際は定数も同じ式で再導出して更新する
+(式が固定手続であり実装時発明の余地はない)。merge-base 以降・D 実装 merge 以前の main への
+merge は、wrapper 経由 (decision=merge receipt あり) なら偽陽性にならず、receipt 無しなら
+`bypass_merge` として検知される — B (PR #299) は既に拘束中のため、これは正しい検知である。
+値の根拠 (merge-base SHA + 導出コマンド) を実装 PR の review_evidence citation に固定した上で、
+確定後にこの節へ追記する。
 
 **検知の入力**: `gh api` による merged PR 一覧 (merge commit SHA / mergedAt / PR 番号 /
 head SHA)。取得は「直近一覧」ではなく **baseline 以降の merged PR を pagination 終端まで
@@ -715,7 +719,13 @@ DB テーブルは作らない。検知は可視化のみであり、自動 reve
 7. 対象 (receipt 無し merge) が **2 ページ目以降にのみ存在する正常 multi-page 系**で検知される
    (先頭 page 固定の実装は RED)。
 8. pagination の終端判定: 同一 cursor / 同一 page が反復する応答で無限 loop せず、走査上限
-   到達時は結果を green に丸めず「検知不能」へ倒す (bounded traversal)。
+   到達時は結果を green に丸めず「検知不能」へ倒す (bounded traversal)。**上限は定数
+   `MAX_MERGED_PR_PAGES = 50` (per_page=100、最大 5,000 PR) とし、D 実装 module 内に export
+   する** (本 repo の PR 総数は 2026-08-14 時点で約 320 であり一桁以上の余裕。到達し得るのは
+   API 異常のみで、その場合に「検知不能」へ倒すのが正しい)。oracle は「51 ページ目相当の
+   応答が続く fixture で上限到達 → 検知不能」を pin する (delta FLAG 3 回目 blocking 2 の是正:
+   bound の具体値と導出根拠を freeze し、1 page 打ち切りも実質無限待機も適合実装になり得ない
+   ようにする)。
 9. HTTP 成功だが必須 field (merge commit SHA / mergedAt / PR 番号) が欠落・malformed な
    partial response は、当該 page 以降を「検知不能」として扱い、部分結果を green に丸めない。
 
