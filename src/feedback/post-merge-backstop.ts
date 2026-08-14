@@ -14,6 +14,7 @@ export const D2D_CUTOFF_BASELINE = "2026-08-14T01:20:05.000Z";
 export const MAX_MERGED_PR_PAGES = 50;
 export const MERGED_PR_PAGE_SIZE = 100;
 export const POST_MERGE_COMMAND_TIMEOUT_MS = 10_000;
+export const POST_MERGE_GH_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
 export type PostMergeBackstopReason = "bypass_merge" | "merged_without_verdict";
 
@@ -135,6 +136,7 @@ function defaultFetchMergedPrPage(
     const output = run("gh", ["api", endpoint], {
       encoding: "utf8",
       timeout: POST_MERGE_COMMAND_TIMEOUT_MS,
+      maxBuffer: POST_MERGE_GH_MAX_BUFFER_BYTES,
       windowsHide: true,
     });
     return JSON.parse(String(output));

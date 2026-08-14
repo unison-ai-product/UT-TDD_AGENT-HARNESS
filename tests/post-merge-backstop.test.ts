@@ -10,6 +10,7 @@ import {
   MAX_MERGED_PR_PAGES,
   MERGED_PR_PAGE_SIZE,
   POST_MERGE_COMMAND_TIMEOUT_MS,
+  POST_MERGE_GH_MAX_BUFFER_BYTES,
   type PostMergeBackstopResult,
   scanPostMergeBackstop,
 } from "../src/feedback/post-merge-backstop.ts";
@@ -221,6 +222,20 @@ describe("D2-D post-merge bypass backstop", () => {
     );
     expect(result).toMatchObject({ ok: false, pagesScanned: 0 });
     expect(result.unavailableReason).toContain("page_1_fetch_failed:ETIMEDOUT");
+  });
+  it("U-RVMG-019: default gh adapter は 1 MiB 超の成功応答を受け取れる", () => {
+    const repoRoot = root();
+    const largeResponse = `${" ".repeat(1024 * 1024 + 1)}[]`;
+    const run = ((command: string, _args: readonly string[], options: Record<string, unknown>) => {
+      if (command === "git") return "https://github.com/example/harness.git\n";
+      expect(options.maxBuffer).toBe(POST_MERGE_GH_MAX_BUFFER_BYTES);
+      return largeResponse;
+    }) as unknown as typeof execFileSync;
+
+    const result = scanPostMergeBackstop({ repoRoot, now: NOW, execFileSync: run });
+
+    expect(Buffer.byteLength(largeResponse)).toBeGreaterThan(1024 * 1024);
+    expect(result).toMatchObject({ ok: true, detections: [], pagesScanned: 1 });
   });
 
   it("U-RVMG-020: pagination 2 ページ目の失敗は部分結果を green に丸めない", () => {
