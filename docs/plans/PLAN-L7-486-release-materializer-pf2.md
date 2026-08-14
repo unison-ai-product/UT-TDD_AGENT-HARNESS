@@ -60,14 +60,25 @@ PF-3〜PF-5のRED oracleを維持する。
 - 入力は`materializerVersion`と、source revisionから読み出し済みのtracked entry列である。各entryは
   repo相対POSIX source path、Git mode (`100644` / `100755` / `120000`)とraw `Uint8Array`を持つ。
   入力配列・byte列を変更しない。
-- version dispatchはregistryで行い、`1`だけを実装する。未知versionはtyped `unavailable`を返し、
-  version 1へfallbackしない。将来version追加時もversion 1を削除・上書きしない。
-- clean artifact選択、`docs/skills/* -> skills/*`、workflow template source mapping、`package.json`
-  変換は`src/setup/distribution.ts`の既存規則を唯一の正本として再利用する。PF-2内へallow/deny表や
-  package変換を複製しない。sourceが異なるのに同じdestinationへ写る衝突はtyped invalidとして
-  fail-closeし、先勝ち・後勝ち・silent dedupeをしない。
-- 通常fileのcontentは変換後raw bytes、modeは入力の`100644`または`100755`を保持する。
-  `package.json`だけUTF-8 decode、既存transform、UTF-8 encodeを行う。decode/parse不能はtyped invalid。
+- `materializerVersion`はPF-1 schemaと同じ**文字列token**であり、version 1のregistry keyは文字列
+  `"1"`とする。完全一致だけを受理し、number `1`、`"v1"`、空白付きtokenをtrim/coerce/aliasしない。
+  未知tokenはtyped `unavailable`を返して`"1"`へfallbackしない。将来version追加時も`"1"`を
+  削除・上書きせず、release ID導出へ渡すtokenとregistry lookup tokenを同じbyte列に保つ。
+- 写像は**artifact空間起点**に一意化する。全source pathを既存`buildCleanDistributionPlan()`へ渡し、
+  成功planの`artifactPaths`をdestination集合とする。各destinationは
+  `cleanDistributionSourcePath(destination, sourcePaths)`でsource entryを逆引きする。そのため
+  `.github/workflows/harness-check.yml`のcontentとmodeは同名source entryではなく
+  `docs/templates/github/common/pack-harness-check.yml` entry由来となる。`docs/skills/* -> skills/*`は
+  `cleanDistributionArtifactPath`を含む同planが決める。PF-2内へallow/deny表、path mapping、
+  package変換を複製しない。
+- `buildCleanDistributionPlan().ok=false`、missing source、またはsourceが異なるのに同じdestinationへ
+  写る衝突はPF-2のtyped `invalid_distribution_plan`としてfail-closeし、entry/digest成功値を返さない。
+  先勝ち・後勝ち・silent dedupeはしない。PF-5はaggregate admission前にPF-2を呼ばない責務を別途
+  持つが、PF-2自身もinvalid planを成功へ丸めない。
+- 通常fileのcontentは**逆引き後source entryのraw bytes**、modeは同entryの`100644`または`100755`
+  を保持する。destinationが`package.json`の場合だけUTF-8 decode、既存transform、UTF-8 encodeを
+  行う。workflow destinationはtemplate sourceのraw bytesを使い、package変換はしない。
+  decode/parse不能はtyped invalid。
 - symlinkはmode `120000`、contentはlink targetのraw UTF-8 bytesとする。NUL、絶対path、drive/UNC、
   またはdestination parentから解決してPack root外へ出るtargetをtyped invalidで拒否する。
   symlink先をdereferenceせず、target filesystemの存在も調べない。
@@ -84,8 +95,10 @@ PF-3〜PF-5のRED oracleを維持する。
 uint64be(contentBytes.length) || contentBytes`
 
 `pathBytes`はdestination POSIX pathのUTF-8、`modeBytes`はASCII、`contentBytes`は上記変換後bytesである。
-長さはbyte長であり文字数ではない。uint32/uint64の範囲外、重複destination、0件のartifact setは
-typed invalidとし、digest成功値を返さない。current control manifestはartifact setへ入力しない。
+長さはbyte長であり文字数ではない。JavaScriptの実在値ではcontent長がuint64範囲を超えないため、
+到達不能な範囲外分岐やoracleは作らない。重複destination、0件のartifact setはtyped invalidとし、
+digest成功値を返さない。current control manifest (`release/manifest.yaml`) はclean distribution planの
+artifact集合から除外され、入力sourceに存在しても出力entry/digestへ影響させない。
 
 ## TDD oracle
 
@@ -93,14 +106,18 @@ typed invalidとし、digest成功値を返さない。current control manifest�
 RED→Green化する。
 
 1. 同じsource entry集合をdry-run/apply相当の2呼出しへ渡し、entry列とdigestがbyte同一。
-2. skills remap、workflow source mapping、package変換を各1点変異するとdigest mismatch。
+2. skills remap、artifact空間からのworkflow source逆引き、package変換を各1点変異するとdigest
+   mismatch。workflowのcontent/modeはtemplate source由来であることを直接pinする。
 3. destination path、`100644`/`100755`、content 1 byte、symlink target/`120000`を各1点変異すると
    digest mismatch。source blobが同じでもPack出力が違えば一致させない。
 4. UTF-8 byte順とpath/mode/contentのuint32be/uint64be framingをgolden bytesで固定し、文字数・LE・
    delimiter連結・locale sort mutantをkillする。
-5. destination衝突、unsupported mode、root外/absolute/NUL symlinkを個別にtyped invalidへ倒す。
-6. 未知versionは`unavailable`、version 1は同じfixtureで引き続きGreen。fallback mutantをkillする。
-7. 入力entry順を反転しても同一結果となり、入力配列と各content byte列が不変。
+5. destination衝突、invalid distribution plan、missing source、unsupported mode、空/絶対/`.`/`..`/
+   backslash/NUL/UTF-8不正path、root外/absolute/NUL symlink、0件artifact setを個別にtyped invalidへ倒す。
+6. token `"1"`はGreen、number `1` / `"v1"` / `" 1"` / 未知tokenは`unavailable`。coerce/trim/
+   fallback mutantをkillする。
+7. 入力entry順を反転しても同一結果となり、入力配列と各content byte列が不変。control manifestだけを
+   変異してもentry列/digestが不変で、出力集合にも含まれない。
 
 ## Schedule / Exit
 
