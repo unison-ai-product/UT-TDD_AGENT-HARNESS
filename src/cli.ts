@@ -36,6 +36,7 @@ import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
+import { registerLiveReviewCommands } from "./cli/review-live.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
@@ -2048,7 +2049,7 @@ skill
     },
   );
 
-program
+const review = program
   .command("review")
   .description("prepare a deterministic review packet for the current worktree")
   .option("--uncommitted", "review uncommitted git changes")
@@ -2163,6 +2164,8 @@ program
     }
     process.exitCode = doctor.ok ? 0 : 1;
   });
+
+registerLiveReviewCommands(review);
 
 program
   .command("cutover")
