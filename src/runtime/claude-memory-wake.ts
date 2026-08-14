@@ -251,7 +251,7 @@ function isValidReviewIdentity(value: {
   );
 }
 
-function decodeEntry(value: string): ClaudeInboxEntry | undefined {
+export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefined {
   try {
     const parsed = JSON.parse(value) as Record<string, unknown>;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
@@ -361,7 +361,7 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
     .filter((name) => name.endsWith(".json"))
     .map((name) => {
       try {
-        return decodeEntry(readFileSync(join(directory, name), "utf8"));
+        return decodeClaudeInboxEntry(readFileSync(join(directory, name), "utf8"));
       } catch {
         return undefined;
       }

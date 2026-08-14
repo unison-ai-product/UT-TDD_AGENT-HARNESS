@@ -252,6 +252,7 @@ function runtimeCommand(
     .option("--review-head <sha>", "exact reviewed HEAD SHA")
     .option("--review-revision <id>", "review revision identity")
     .option("--review-author-family <family>", "author family under review (codex|claude)")
+    .option("--review-memory-id <id>", "canonical review request memory identity")
     .option("--execute", "execute provider CLI instead of dry-run")
     .option("--json", "JSON output")
     .action(
@@ -266,6 +267,7 @@ function runtimeCommand(
         reviewHead?: string;
         reviewRevision?: string;
         reviewAuthorFamily?: string;
+        reviewMemoryId?: string;
         execute?: boolean;
         json?: boolean;
       }) => {
@@ -307,7 +309,11 @@ function runtimeCommand(
         // author-family 単独指定が「識別子なし委譲」として素通りし、値が黙って捨てられる
         // (silent discard、PR #214 precheck FLAG)。宣言 = 4 flag のいずれかを渡したこと。
         const reviewIdentityRequested = Boolean(
-          opts.reviewPr || opts.reviewHead || opts.reviewRevision || opts.reviewAuthorFamily,
+          opts.reviewPr ||
+            opts.reviewHead ||
+            opts.reviewRevision ||
+            opts.reviewAuthorFamily ||
+            opts.reviewMemoryId,
         );
         if (
           reviewIdentityRequested &&
@@ -415,7 +421,9 @@ function runtimeCommand(
           reviewHead &&
           reviewRevision
             ? {
-                memoryId: `review:${reviewPr}:${reviewHead}:${reviewRevision}`,
+                memoryId:
+                  opts.reviewMemoryId?.trim() ||
+                  `review:${reviewPr}:${reviewHead}:${reviewRevision}`,
                 pr: Number(reviewPr),
                 exactHead: reviewHead,
                 reviewRevision,

@@ -146,6 +146,55 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
     expect(scope.changedModules).toEqual(["skill-engine"]);
   });
 
+  it("U-RVATT-028: memory transport has no reverse edge into D1/D2 decisions", () => {
+    const result = analyzeDependencyDrift(loadDependencyDriftInput(process.cwd()));
+    const transportSources = new Set(["src/memory/index.ts", "src/runtime/claude-memory-wake.ts"]);
+    const decisionSinks = new Set([
+      "src/feedback/review-dispatch.ts",
+      "src/feedback/review-merge-gate.ts",
+      "src/feedback/post-merge-backstop.ts",
+    ]);
+
+    expect(
+      result.sourceFileEdges.filter(
+        (edge) => transportSources.has(edge.from) && decisionSinks.has(edge.to),
+      ),
+    ).toEqual([]);
+  });
+
+  it("U-RVATT-028: existing dependency analyzer rejects memory/comment readers importing decisions", () => {
+    const result = analyzeDependencyDrift({
+      sourceDocs: [
+        {
+          path: "src/memory/reader.ts",
+          text: 'import "../feedback/review-dispatch";',
+        },
+        {
+          path: "src/github/pr-comment-reader.ts",
+          text: 'import "../feedback/review-merge-gate";',
+        },
+      ],
+      testDocs: [],
+      allowed: { memory: [], github: [], feedback: ["feedback"] },
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "disallowed-module-dependency",
+          fromModule: "memory",
+          toModule: "feedback",
+        }),
+        expect.objectContaining({
+          code: "disallowed-module-dependency",
+          fromModule: "github",
+          toModule: "feedback",
+        }),
+      ]),
+    );
+  });
+
   it("IT-ASSET-03: runtime may import the roster boundary through agent-slots only", () => {
     const result = analyzeDependencyDrift({
       sourceDocs: [
