@@ -9,7 +9,7 @@ route_mode: add-feature
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 status: confirmed
 created: 2026-07-28
-updated: 2026-08-13
+updated: 2026-08-14
 owner: PM / PO
 agent_slots:
   - role: tl
@@ -56,6 +56,7 @@ dependencies:
     - src/lint/review-evidence.ts
     - src/state-db/projection-writer.ts
     - src/team/delegation-routing.ts
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/218
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence:
   - reviewer: claude-pr299-blind-re-review
@@ -357,6 +358,60 @@ provider receipt -> 実 GitHub green/red -> D2 consumer -> D4` とし、D3d が�
 `D3a` は review request/response の配送、`D3b` は judgment payload の schema・digest 検証、
 `D3c` は本契約 freeze、`D3d` は GitHub provenance と provider-family authority を検証する
 adapter 実装を指す。D3b は payload の意味と family の外部真正性までは証明しない。
+
+## D3a live review canonical projection 契約 freeze（2026-08-14）
+
+### 実測した運用gap
+
+PR #309 の merge 前実走では、`.ut-tdd/review/requests` は旧PR #300の1件だけ、
+`receipts` は0件だった。そのため、Codexの `ut-tdd memory add --notify-claude` からlive Claude
+VS Code sessionへ依頼し、PR commentとHARNESS Memoryへverdictを返す現行運用では、
+`ut-tdd pr merge --pr 309` が `no_request_for_current_head` / `orphan_pr_observation` でdenyした。
+wrapperを迂回したmergeはD2-Dがすべて`bypass_merge`として検知する。
+
+producer未実装が原因ではない。既存`src/feedback/review-attestation.ts`には
+`issueReviewRequest()` / `projectReviewVerdict()`があり、正規delegationのreview identity flag
+経路ではcanonical request/receiptを作れる。gapは、live VS Code配送がこの既存writerを通らず、
+memory wake / PR commentだけで完結する**配線欠落**である。
+
+### 正本と派生表示
+
+1. D1/D2が判定入力として読む唯一の正本は`.ut-tdd/review/requests` / `receipts`とする。
+   HARNESS Memory、claude-memory-wake inbox、PR commentは配送・可視化の派生物であり、
+   `analyzeReviewDispatch()` / `evaluateMergeGate()`の入力へ逆流させない。
+2. schema、validation、content-addressed identityは既存`issueReviewRequest()` /
+   `projectReviewVerdict()`を再利用する。別writer、別request/receipt schema、DB先行正本を作らない。
+3. live review dispatchはcanonical request永続化の成功後にだけmemory wakeをpublishする。
+   requestがinvalid、書込み不能、identity不全ならwakeを0件とし、「通知済みだが判定不能」を作らない。
+4. live verdict返却は既存verdict contractを検証し、canonical receipt永続化の成功後にだけ
+   PR comment / feedback memoryをpublishする。FLAGを含むinvalid/欠落verdict、identity不一致、
+   receipt書込み失敗では派生表示だけを成功させない。
+5. current PR HEADが進んだ場合、旧request/receiptを更新・別HEADへ流用せず、新identityで再dispatch
+   する。移行時点のopen PRはcurrent exact HEADへ1回だけ再dispatchし、過去HEADのPASSを採用しない。
+
+### 最小application境界
+
+既存`review` CLI surfaceへlive projection actionを追加し、request側は
+`memoryId / pr / exactHead / reviewRevision / authorFamily / memoryPath`を明示入力として
+`issueReviewRequest()`成功→既存claude-memory-wake publishの順に実行する。verdict側は同じrequest
+identityと既存verdict file / provider attestationを入力として`projectReviewVerdict()`成功→派生表示の
+順に実行する。free-form memory本文やtagからidentity/verdictを抽出しない。`memory add`自体を
+request/receipt正本へ昇格させず、既存writerを呼ぶcomposition adapterだけを追加する。
+
+### TDD / E2E oracle
+
+`CANDIDATE-RVATT-023`〜`028`を先にRED化し、実装PRで`U-RVATT-023`〜`028`へ昇格する。
+
+1. request永続化失敗時はwake publish 0、成功時だけrequest 1→wake 1の順になる。
+2. verdict/identity/receipt失敗時はPR comment・feedback memory 0、成功時だけreceipt 1→派生表示。
+3. 同一identity retryはrequest/receipt各1へ収束し、wake replayも既存operation identityへ収束する。
+4. HEAD更新は新requestを作り、旧HEAD receiptではD1/D2が`merge_ready`にならない。
+5. 実repo E2Eはdispatch→request→verdict→receipt→同一HEAD wrapper allowを通し、request欠落・
+   receipt欠落・別HEADはdenyする。wrapper成功receiptをD2-Dへ渡した後の`bypass_merge`は0。
+6. source import / call graph検査でmemory/comment readerからD1/D2への判定edgeが0であることを固定する。
+
+本sliceはdocs-only pair-freezeであり、source、CLI、hook、memory schema、GitHub設定を変更しない。
+実装はこのfreezeの非author cross-review完了後、Issue #218のD3a単独PRとして行う。
 
 provider-family authority が PO 未承認または未実装の間、D3d は `unverified_family` を返し、
 `custody_admitted` を生成しない。この trusted-custody 経路に accepting state はなく、既存 D2 の

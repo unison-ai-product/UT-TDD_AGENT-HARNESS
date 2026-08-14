@@ -1605,8 +1605,16 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-RVATT-007` | verdict file 未出力 | file 不在で完了 attestation を投影 | `verdict_file_missing`、receipt 0、D1 breach=`verdict` |
 | `U-RVATT-008` | echo 耐性輸送 | file に `REVIEW_OUTPUT_CONTRACT` echo と実 PASS | `extractVerdict` と同じ実 PASS を receipt に採用、契約は verdict file 書込を要求 |
 | `U-RVATT-009` | request 発行 / 照合 | review request と verdict receipt を同じ identity で投影 | request/receipt の memoryId・pr・exactHead/head・reviewRevision が突合可能、request file 1 |
+| `CANDIDATE-RVATT-023` | canonical-before-wake | live dispatchのrequest writerをinvalid / write failureへ変異 | request 0、claude-memory-wake publish 0。成功時だけrequest 1→wake 1の順 |
+| `CANDIDATE-RVATT-024` | receipt-before-display | verdict欠落・identity mismatch・receipt write failureを各1点変異 | receipt 0、PR comment / feedback memory 0。成功時だけreceipt 1→派生表示 |
+| `CANDIDATE-RVATT-025` | retry収束 | 同一identity / operationを2回dispatchし、同じverdictを2回返却 | request/receipt/wakeは各content-addressed identityへ1件で収束し、conflict 0 |
+| `CANDIDATE-RVATT-026` | exact HEAD再dispatch | HEAD Aのrequest/PASS後にPR HEADをBへ更新し、A receiptを入力 | Bの新requestが必要。A receiptで`merge_ready`にせず、B receipt到達までwrapper deny |
+| `CANDIDATE-RVATT-027` | 実repo lifecycle | dispatch→request→verdict→receipt→同一HEAD wrapper、request/receipt/HEADを各1点欠落・変異 | 正常系だけallow。3負例はdenyし、wrapper成功receipt後のD2-D `bypass_merge`は0 |
+| `CANDIDATE-RVATT-028` | SSoT非逆流 | memory reader / PR comment parserからD1/D2判定器へのimport・call edgeを注入 | edge 0だけGreen。memory/commentを判定入力にする変異をfail-close |
 
 実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)。
+`CANDIDATE-RVATT-023`〜`028`はD3a live projection実装PRで同testと実repo lifecycle testへ
+1:1に昇格する。既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 
