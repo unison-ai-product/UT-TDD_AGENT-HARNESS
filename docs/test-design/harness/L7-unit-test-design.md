@@ -775,8 +775,13 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - U-RDRIFT-002: `analyzeRuleDrift` reports missing adapter markers with file and marker identity.
 - U-RDRIFT-003: real repo AGENTS / CLAUDE adapter docs have no required marker drift.
 - U-RDRIFT-004: `analyzeRuleDrift` reports forbidden legacy adapter markers for old runtime command routing, env prefixes, local state paths, and agent names; real repo AGENTS / CLAUDE adapter docs have zero forbidden markers.
-- U-RDRIFT-005: `analyzeRuleDrift` は adapter doc が指示する Bun 起動形 (`bun -e` / `bun "$CLAUDE_PROJECT_DIR/..."` / `bun src/...`) を 3 doc それぞれで forbidden marker として報告する。#134 の permanent ban に反する実行指示が doc に残ると、指示に従った実行が廃止ランタイム固有の失敗を生む (2026-08-14 実害: `ut-tdd pr merge` の receipt 書込失敗を D2-B の欠陥と誤認し、存在しない欠陥の issue #321 を起票した)。検出器の block を外すと本行が RED になる。
-- U-RDRIFT-006: 過去 incident の散文 (`bun runaway ×2`、`bunAuthority: legacy_migration_debt` 等) は実行指示ではないため U-RDRIFT-005 の marker に巻き込まれず `ok=true` を保つ。事実の記録を消す方向へ検査が圧力を掛けないことを固定する。
+
+### 2026-08-14 Bun 実行形の instruction drift 検査 (Issue #322 / #134)
+
+| oracle | 対象 | 期待 (falsifier) |
+| --- | --- | --- |
+| U-RDRIFT-005 | adapter doc 3 件が指示する Bun 起動形 (`bun -e` / `bun "$CLAUDE_PROJECT_DIR/..."` / `bun src/...`) | 3 doc それぞれで `bun execution form` を forbidden marker として報告し `ok=false`。検出器の marker block を外すと本行が RED になる (load-bearing)。#134 の permanent ban に反する実行指示が doc に残ると、指示どおりの実行が廃止ランタイム固有の失敗を生む (2026-08-14 実害: `ut-tdd pr merge` の receipt 書込失敗を D2-B の欠陥と誤認し、存在しない欠陥の issue #321 を起票した) |
+| U-RDRIFT-006 | 過去 incident の散文 (`bun runaway ×2`、`bunAuthority: legacy_migration_debt` 等) | forbidden marker 0 件で `ok=true`。実行指示でない記述まで拾う実装は RED。事実の記録を消す方向へ検査が圧力を掛けないことを固定する |
 
 ### 2026-06-29 L14 Close Audit Oracle Addendum
 
