@@ -73,8 +73,8 @@ copy/write、staging、promotion、rollback、network取得は所有しない。
 
 - local revisionまたは列挙済みblob objectが存在しない、Git command失敗、未知materializer version:
   `{ ok: false, error: "unavailable" }`
-- tree entryの形式・type・mode・pathが不正、またはPF-2が`invalid_distribution_plan` / `invalid_artifact`:
-  そのPF-2 errorを保持する。
+- tree entryの形式・type・mode・pathが不正なら`invalid_artifact`。PF-2が返した
+  `invalid_distribution_plan` / `invalid_artifact`は同じerrorを保持する。
 
 control checkoutのHEAD、branch、tag、working tree statusは入力にも判定条件にも含めない。同じcontrol HEAD
 から`stable=v1`と`canary=v2`の異なる`ReleaseIdentity`を個別に渡した場合、各呼出しは各recordの
@@ -83,11 +83,14 @@ control checkoutのHEAD、branch、tag、working tree statusは入力にも判�
 ## local Git object adapter契約
 
 既定`LocalGitObjectReader` adapterはshell文字列を組み立てず、`git`へargv配列と明示cwdを渡す。
+全Git childのenvironmentへ`GIT_NO_LAZY_FETCH=1`と`GIT_TERMINAL_PROMPT=0`を強制し、呼出元envで
+上書きさせない。partial cloneのpromisor remoteが設定されていてもmissing objectを暗黙取得しない。
 許可するread-only plumbingは次の3形だけである。
 
 1. `git cat-file -e <40-lower-hex>^{commit}`でlocal commit存在を確認する。
 2. `git ls-tree -r -z --full-tree <revision>`でそのrevisionのtracked treeをNUL区切り列挙する。
-3. 列挙結果に含まれるblob OIDだけを`git cat-file blob <oid>`でraw bytesとして読む。
+3. `git cat-file --batch`を1 processだけ起動し、列挙結果に含まれる一意なblob OIDだけをstdinへ渡す。
+   headerのdeclared byte sizeどおりにstdoutをstreamで読み、raw bytesを得る。
 
 revisionはtrim/coerceせず`[a-f0-9]{40}`完全一致だけを受理する。`ls-tree` recordは
 `<mode> SP <type> SP <oid> TAB <path> NUL`としてbyte境界でparseし、typeは`blob`、modeは
@@ -101,6 +104,12 @@ remote名を使わない。`node:fs`からcurrent treeを読み直さず、tempo
 commitまたはblob欠落時は直ちに`unavailable`を返し、remote lookup、現在treeからの再構成、別revisionへの
 fallback、materializer、copy/writeを呼ばない。これは「isolated temporary tree」を作る方式より狭い
 worktree非依存のobject-only解決であり、masterのisolation条件を満たす。
+
+`cat-file --batch`はtext decodeせずstdoutをbinary streamとして扱う。各responseの
+`<oid> blob <size>\n<exact size bytes>\n`または`<oid> missing\n`を状態機械でparseし、declared size未満、
+余剰byte、OID/type不一致、途中exitはpartial contentを返さず`unavailable`とする。`execFileSync`等の
+既定`maxBuffer`へ依存せず、chunkをdeclared sizeまで収集する。allocation不能も`unavailable`であり、
+切詰めたbytesをmaterializerへ渡さない。
 
 ## 合成とcall-count契約
 
@@ -129,10 +138,12 @@ RED→Green化する。
    control HEADを作る。stable record(v1)とcanary record(v2)を個別入力し、materializer spyが各revisionの
    path/mode/raw bytesだけを1回受けることをpinする。HEAD equality check、current tree read、他方revision
    混入mutantをkillする。
-2. missing commitを指定し`unavailable`、materializer 0、許可外Git argv 0を確認する。fetch/current-tree
-   reconstruction/fallback mutantをcommand logとimport-boundary検査でkillする。
-3. `ls-tree`後に対象blobを欠落させるinjected readerで`unavailable`となり、materializer 0を確認する。
-   tree存在だけを成功根拠にするmutantをkillする。
+2. missing commitを指定し`unavailable`、materializer 0、許可外Git argv 0を確認する。加えて実
+   `--filter=blob:none` partial clone fixtureでcommit/treeだけをlocalに持ちblobを欠落させ、promisor
+   remoteが到達可能でも`unavailable`、remote側request 0、materializer 0を確認する。
+   `GIT_NO_LAZY_FETCH`削除、fetch/current-tree reconstruction/fallback mutantをkillする。
+3. `ls-tree`後に対象blobを欠落させるinjected readerでも`unavailable`となり、materializer 0を確認する。
+   synthetic portだけでpartial clone oracleを代替せず、tree存在だけを成功根拠にするmutantをkillする。
 4. regular executableとsymlinkを含むfixtureで`100644 / 100755 / 120000`、raw bytes、pathを保持する。
    symlink dereference、mode正規化、text decode/re-encode mutantをkillする。
 5. malformed/NUL未終端record、duplicate path、tree/submodule type、unsupported mode、invalid UTF-8 pathを
@@ -142,7 +153,9 @@ RED→Green化する。
 7. PF-2の`unavailable` / `invalid_distribution_plan` / `invalid_artifact`を各返し、PF-3がerrorを保持して
    成功や別errorへ丸めないことをpinする。PF-4のdigest照合はここへ前倒ししない。
 8. production moduleの静的importとGit argvを検査し、network client、`node:fs`、distribution
-   sync/apply、`fetch/pull/clone/checkout/worktree/archive/show`が0であることをpinする。
+   sync/apply、`fetch/pull/clone/checkout/worktree/archive/show`が0であることをpinする。2 MiB超かつ
+   NULを含むblobを`cat-file --batch`からbyte同一でmaterializerへ渡し、default maxBuffer、text変換、
+   declared-size切詰めmutantをkillする。
 
 ## Schedule / Exit
 
