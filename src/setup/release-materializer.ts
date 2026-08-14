@@ -71,6 +71,7 @@ function validSymlink(destination: string, content: Uint8Array): boolean {
   if (
     target.length === 0 ||
     target.includes("\0") ||
+    target.includes("\\") ||
     target.startsWith("/") ||
     target.startsWith("//") ||
     /^[A-Za-z]:/.test(target) ||

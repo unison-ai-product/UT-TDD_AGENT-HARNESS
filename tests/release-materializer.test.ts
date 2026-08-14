@@ -246,6 +246,8 @@ describe("U-RELMAN-011 versioned release materializer", () => {
     "//server/share",
     "../../outside",
     "a/../../../outside",
+    "..\\..\\outside",
+    "\\x",
     "bad\0target",
   ])("root外・absolute・NUL symlink %jを拒否する", (target) => {
     expect(
