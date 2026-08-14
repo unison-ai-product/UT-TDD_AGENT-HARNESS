@@ -102,6 +102,11 @@ describe("U-RELMAN-011 versioned release materializer", () => {
       fixture([{ path: "src/link", mode: "120000", content: bytes("b.ts") }]),
     ];
     expect(new Set(variants.map((entries) => ok(entries).digest)).size).toBe(variants.length);
+
+    const regular = ok(fixture([{ path: "src/link", mode: "100644", content: bytes("a.ts") }]));
+    const symlink = ok(fixture([{ path: "src/link", mode: "120000", content: bytes("a.ts") }]));
+    expect(symlink.entries.find((entry) => entry.path === "src/link")?.mode).toBe("120000");
+    expect(symlink.digest).not.toBe(regular.digest);
   });
 
   it("UTF-8 byte順とuint32be/uint64be framingをgolden digestで固定する", () => {
@@ -123,6 +128,32 @@ describe("U-RELMAN-011 versioned release materializer", () => {
       )
       .digest("hex")}`;
     expect(result.digest).not.toBe(delimiterMutant);
+  });
+
+  it("UTF-8 byte順とbig-endian framingをliteral golden digestで固定する", () => {
+    const entries: ReleaseSourceEntry[] = [
+      { path: "src/é.ts", mode: "100644", content: bytes("é") },
+      { path: "src/z.ts", mode: "100644", content: bytes("z") },
+    ];
+    const base = buildCleanDistributionPlan({ paths: required });
+    const result = materializeReleaseArtifacts(
+      { materializerVersion: "1", entries },
+      {
+        buildPlan: () => ({
+          ...base,
+          artifactPaths: entries.map((entry) => entry.path),
+          excludedPaths: [],
+        }),
+      },
+    );
+
+    expect(result.ok && result.entries.map((entry) => entry.path)).toEqual([
+      "src/z.ts",
+      "src/é.ts",
+    ]);
+    expect(result.ok && result.digest).toBe(
+      "sha256:a38393406acf58f8f4b08e4d2dcf189d4688ada3539a552eb74f919752a336d6",
+    );
   });
 
   it("dedupe前に異なるsourceから同じdestinationへの衝突を拒否する", () => {
@@ -211,6 +242,7 @@ describe("U-RELMAN-011 versioned release materializer", () => {
   it.each([
     "/root",
     "C:/root",
+    "C:relative",
     "//server/share",
     "../../outside",
     "a/../../../outside",
@@ -268,5 +300,19 @@ describe("U-RELMAN-011 versioned release materializer", () => {
     expect(first).toEqual(changed);
     expect(first.ok && first.entries.some((entry) => entry.path === control.path)).toBe(false);
     expect(input.map((entry) => ({ ...entry, content: [...entry.content] }))).toEqual(original);
+  });
+
+  it("返却contentを書き換えてもimmutable snapshotとdigestは変わらない", () => {
+    const result = ok(fixture([{ path: "src/a.ts", mode: "100644", content: bytes("abc") }]));
+    const entry = result.entries.find((candidate) => candidate.path === "src/a.ts");
+    if (!entry) throw new Error("missing materialized entry");
+    const originalContent = [...entry.content];
+    const originalDigest = result.digest;
+
+    entry.content[0] = 0;
+
+    expect([...entry.content]).toEqual(originalContent);
+    expect(result.digest).toBe(originalDigest);
+    expect(result.digest).toBe(digest(result.entries));
   });
 });

@@ -73,7 +73,7 @@ function validSymlink(destination: string, content: Uint8Array): boolean {
     target.includes("\0") ||
     target.startsWith("/") ||
     target.startsWith("//") ||
-    /^[A-Za-z]:[\\/]/.test(target) ||
+    /^[A-Za-z]:/.test(target) ||
     target.startsWith("\\\\")
   )
     return false;
@@ -95,6 +95,21 @@ function frame(entries: readonly MaterializedReleaseEntry[]): Uint8Array {
     chunks.push(pathLength, path, modeLength, mode, contentLength, Buffer.from(entry.content));
   }
   return Buffer.concat(chunks);
+}
+
+function immutableEntry(
+  path: string,
+  mode: ReleaseEntryMode,
+  content: Uint8Array,
+): MaterializedReleaseEntry {
+  const snapshot = new Uint8Array(content);
+  return Object.freeze({
+    path,
+    mode,
+    get content(): Uint8Array {
+      return new Uint8Array(snapshot);
+    },
+  });
 }
 
 export function materializeReleaseArtifacts(
@@ -149,7 +164,7 @@ export function materializeReleaseArtifacts(
         return { ok: false, error: "invalid_artifact" };
       }
     }
-    output.push(Object.freeze({ path: destination, mode: source.mode, content }));
+    output.push(immutableEntry(destination, source.mode, content));
   }
 
   output.sort((a, b) => Buffer.compare(Buffer.from(a.path, "utf8"), Buffer.from(b.path, "utf8")));
