@@ -104,26 +104,38 @@ describe("rule-drift lint", () => {
   it("U-RDRIFT-006: keeps historical Bun incident prose out of the execution-form marker", () => {
     // 過去 incident の記録 (CLAUDE.md の「bun runaway ×2」) は実行指示ではない。
     // これを拾うと、事実の記録を消す方向へ圧力が掛かる。
-    const docs = completeDocs();
-    docs.claudeProject += "\ndoctor 16 並行、bun runaway ×2、手書き memory PR #167";
-    docs.agents += "\nBun は legacy_migration_debt であり bunAuthority を宣言している";
-
-    const result = analyzeRuleDrift(docs);
-
-    expect(result.forbiddenMarkers).toEqual([]);
-    expect(result.ok).toBe(true);
+    // 直前の文字に依存せず散文が素通りすることを見る。旧版は「、bun」の読点に助けられて
+    // 通っていただけで、空白区切りの散文 (`use bun runtime`) を forbidden にしていた
+    // (cross-review 2026-08-14 blocking 2)。
+    for (const prose of [
+      "doctor 16 並行、bun runaway ×2、手書き memory PR #167",
+      "doctor 16 並行 bun runaway ×2",
+      "use bun runtime only for Pack acceptance fixtures",
+      "Bun は legacy_migration_debt であり bunAuthority を宣言している",
+      "bun runaway が 2 回起きた",
+      "engines.bun は #134 の残存宣言として任意",
+    ]) {
+      const docs = completeDocs();
+      docs.claudeProject += `\n${prose}`;
+      const result = analyzeRuleDrift(docs);
+      expect(result.forbiddenMarkers, `must not flag prose: ${prose}`).toEqual([]);
+      expect(result.ok).toBe(true);
+    }
   });
 
-  it("U-RDRIFT-008: catches bare / .cmd / .exe / bunx execution instructions", () => {
-    // 「bun + 空白 + 限定 token」だけを見ると bun.cmd / bun.exe / 単独 bun を取りこぼす
+  it("U-RDRIFT-008: catches code-span / argument / .cmd / .exe / bunx execution instructions", () => {
+    // 「bun + 空白 + 限定 token」だけを見ると bun.cmd / bun.exe / code span 形を取りこぼす
     // (cross-review 2026-08-14 blocking 4)。実行語として書かれた形は取りこぼさない。
     for (const line of [
       "bun.cmd src/cli.ts doctor",
       'bun.exe -e "1"',
       "`bun`",
+      "`bun run test`",
       "bunx vitest run",
-      "実行は bun",
       "| bun src/cli.ts status",
+      'bun -e "console.log(1)"',
+      "bun ./scripts/x.ts",
+      `bun ${"$"}{CLAUDE_PROJECT_DIR}/src/cli.ts session start`,
     ]) {
       const docs = completeDocs();
       docs.claudeRuntime += `\n${line}`;

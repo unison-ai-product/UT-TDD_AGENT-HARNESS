@@ -38,7 +38,14 @@ import {
   readabilityMessages,
   runtimeReadabilityMessages,
 } from "../lint/readability.ts";
-import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift.ts";
+import {
+  analyzeHookParity,
+  analyzeRuleDrift,
+  hookParityMessages,
+  loadClaudeHookSettings,
+  loadRuleAdapterDocs,
+  ruleDriftMessages,
+} from "../lint/rule-drift.ts";
 import {
   analyzeRuntimePortability,
   loadRuntimePortabilityDocs,
@@ -98,8 +105,18 @@ export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: bool
     return { messages: ["rule-drift - violation: repo root could not be read"], ok: false };
   }
   try {
-    const r = analyzeRuleDrift(loadRuleAdapterDocs(repoRoot));
-    return { messages: ruleDriftMessages(r), ok: r.ok };
+    const docs = loadRuleAdapterDocs(repoRoot);
+    const r = analyzeRuleDrift(docs);
+    // marker の有無だけでは「node と書いてあるが引数や event が実体と違う」drift を拾えない。
+    // hook 記載と settings.json の等価性そのものを doctor の判定へ含める (Issue #322)。
+    const parity = analyzeHookParity({
+      claudeRuntimeDoc: docs.claudeRuntime,
+      settingsJson: loadClaudeHookSettings(repoRoot),
+    });
+    return {
+      messages: [...ruleDriftMessages(r), ...hookParityMessages(parity)],
+      ok: r.ok && parity.ok,
+    };
   } catch {
     return { messages: ["rule-drift - violation: adapter rule docs could not be read"], ok: false };
   }

@@ -81,10 +81,15 @@ const FORBIDDEN_ADAPTER_MARKERS = [
   // 過去 incident の記述 (「bun runaway ×2」等) は実行指示ではないので巻き込まない。
   {
     marker: "bun execution form",
-    // `bun` / `bunx` / `bun.cmd` / `bun.exe` を実行語として書いた形を拾う。直後が引数・path・
-    // 実行子・行末のいずれかであることを条件にし、`bun runaway` のような散文は拾わない。
+    // 実行指示だけを拾い、散文は拾わない。判別は次の 3 形に限る:
+    //   (a) `bun` / `bunx` を丸ごと code span にした形 (`` `bun run x` `` 等)
+    //   (b) bun/bunx の直後に引数らしき token (flag / 引用符 / path / 変数 / *.ts) が続く形
+    //   (c) bun.cmd / bun.exe (実行ファイル名そのもので、散文には現れない)
+    // 「bare bun + 空白」を実行形と見なすと `use bun runtime` や `bun runaway ×2` まで
+    // forbidden になり U-RDRIFT-006 と自己矛盾するため、その条件は採らない
+    // (cross-review 2026-08-14 blocking 2 の是正)。
     pattern:
-      /(?:^|[\s`("'|>])bun(?:x|\.cmd|\.exe)?(?=$|[\s`)"']|\s*$)(?:\s+(?:-|"|'|run\b|src\/|scripts\/|node_modules\/|\$\{?[A-Z_]|\.{1,2}\/|[\w.-]+\.(?:ts|js|mjs|cjs)\b))?/m,
+      /`bunx?(?:\s[^`]*)?`|\bbunx\s+[\w@.-]|\bbun\s+(?:-|"|'|run\b|src\/|scripts\/|node_modules\/|\$\{?[A-Z_]|\.{1,2}\/|[\w.-]+\.(?:ts|js|mjs|cjs)\b)|\bbun\.(?:cmd|exe)\b/,
   },
 ] as const;
 
