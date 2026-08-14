@@ -110,13 +110,18 @@ const processRunner: GitProcessRunner = {
       };
       child.stdout.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
       child.on("error", () => finish({ exitCode: -1, stdout: new Uint8Array() }));
-      child.on("close", (code) =>
-        finish({
-          exitCode: code ?? -1,
-          stdout: Buffer.concat(chunks),
-          stdoutChunks: chunks,
-        }),
-      );
+      child.on("close", (code) => {
+        try {
+          const batch = request.args[0] === "cat-file" && request.args[1] === "--batch";
+          finish({
+            exitCode: code ?? -1,
+            stdout: batch ? new Uint8Array() : Buffer.concat(chunks),
+            stdoutChunks: batch ? chunks : undefined,
+          });
+        } catch {
+          finish({ exitCode: -1, stdout: new Uint8Array() });
+        }
+      });
       child.stdin.on("error", () => finish({ exitCode: -1, stdout: new Uint8Array() }));
       child.stdin.end(request.stdin);
     });

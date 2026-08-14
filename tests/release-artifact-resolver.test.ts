@@ -438,4 +438,24 @@ describe("U-RELMAN-012", () => {
     expect(source).not.toMatch(/from ["'][^"']*(?:network|distribution|sync|apply)/);
     expect(source).toContain('child.stdin.on("error"');
   });
+
+  it("default Git process runnerも2MiB超binaryを全量stdout複製せず解決する", async () => {
+    const repo = repository();
+    const large = Buffer.alloc(2 * 1024 * 1024 + 17, 0x62);
+    large[1024] = 0;
+    writeFileSync(join(repo.root, "large.bin"), large);
+    git(repo.root, "add", "large.bin");
+    git(repo.root, "commit", "-qm", "large binary");
+    const revision = git(repo.root, "rev-parse", "HEAD");
+    const materialize = materializerSpy();
+
+    const result = await resolveReleaseArtifacts(
+      { repository: repo.root, release: release(revision) },
+      { git: createLocalGitObjectReader(), materialize },
+    );
+
+    expect(result.ok).toBe(true);
+    const entry = materialize.mock.calls[0][0].entries.find(({ path }) => path === "large.bin");
+    expect(Buffer.from(entry?.content ?? [])).toEqual(large);
+  });
 });
