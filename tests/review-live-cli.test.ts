@@ -142,8 +142,8 @@ describe("review live CLI composition", () => {
     writeFileSync(
       stub,
       process.platform === "win32"
-        ? '@echo off\r\n> "%UT_TDD_REVIEW_VERDICT_FILE%" echo VERDICT: PASS\r\nexit /b 0\r\n'
-        : '#!/bin/sh\nprintf "VERDICT: PASS\\n" > "$UT_TDD_REVIEW_VERDICT_FILE"\n',
+        ? '@echo off\r\nif "%~1"=="--version" (echo claude 0.0.0-stub& exit /b 0)\r\n> "%UT_TDD_REVIEW_VERDICT_FILE%" echo VERDICT: PASS\r\nexit /b 0\r\n'
+        : '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "claude 0.0.0-stub"; exit 0; fi\nprintf "VERDICT: PASS\\n" > "$UT_TDD_REVIEW_VERDICT_FILE"\n',
       "utf8",
     );
     if (process.platform !== "win32") chmodSync(stub, 0o755);
@@ -173,7 +173,7 @@ describe("review live CLI composition", () => {
           "--json",
         ],
       });
-      expect(result).toMatchObject({
+      expect(result, JSON.stringify(result)).toMatchObject({
         ok: true,
         receipt: {
           memoryId: "memory:d3a",
