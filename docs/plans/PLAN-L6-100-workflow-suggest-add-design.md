@@ -17,8 +17,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L6-100-workflow-suggest-add-design.md
     artifact_type: markdown_doc
-  - artifact_path: docs/design/harness/L6-function-design/workflow-suggest.md
-    artifact_type: design_doc
 dependencies:
   parent: docs/design/harness/L6-function-design/function-spec.md
   requires: []
@@ -45,7 +43,9 @@ Issue #304 (S1) の add-feature 経路 B (`add-design → add-impl`) の設計�
 L6 doc 実体 `docs/design/harness/L6-function-design/workflow-suggest.md` は、`U-WFSUG-*` の
 test-design 行・テスト実体と同一 PR で合流する (test-design 行を先行させると
 `oracle-test-trace` の citation 断線 orphan になるため。PF 分割と同じ「PLAN で freeze →
-実装 PR で昇格」順序)。
+実装 PR で昇格」順序)。draft の `generates` は本 PLAN doc のみを所有し、`workflow-suggest.md`
+の所有宣言は**その実装/confirm PR が同時に追加する** (draft PLAN が未存在ファイルを宣言しない
+filing 規律。cross-review FLAG 2026-08-14 blocking 2 の是正)。
 
 ## §1 設計判断 freeze
 
@@ -77,22 +77,30 @@ checklist 7 項目 (正方向 / 逆方向 / 不在ケース / 配送・可視性
 寿命・堆積) の選択は **data asset 内の静的 matrix** で決める。composer は matrix を評価する
 だけで、項目の取捨をロジックで発明しない。
 
-- 選択キーは (drive 群, kind 群) の 2 軸。drive 群 = `code` (be / db / fe / fullstack) と
-  `agent`。kind 群 = `impl 系` (impl / add-impl / refactor / troubleshoot) と `docs 系`
-  (design / add-design / reverse / verify)。
+- 選択キーは (drive 群, kind 群) の 2 軸。**両軸とも `classifyTask()` の公開出力語彙をそのまま
+  使い、PLAN frontmatter の `kind` 語彙 (impl / add-impl / add-design / verify 等) と混同しない**
+  (cross-review FLAG 2026-08-14 blocking 3 の是正: 混同すると到達不能 token と未定義 token が
+  同時に生じ、翻訳ロジックの発明が必要になる)。
+  - drive 群 = `code` (`classifyDrive` の be / db / fe / fullstack) と `agent`。
+  - kind 群は `TaskKind` (`src/task/classify.ts:43-50` = design / add-feature / refactor /
+    troubleshoot / poc / reverse / unknown) を次の 2 群へ写す:
+    **`実行系`** = `add-feature` / `refactor` / `troubleshoot` / `poc`、
+    **`文書系`** = `design` / `reverse`。`unknown` は下記の fail-safe で全項目へ倒す。
+  - この 7 token は `TaskKind` union を余さず被覆する (到達不能 token 0 / 未定義 token 0)。
 - 初期 matrix:
 
-| | impl 系 | docs 系 |
+| | 実行系 (`add-feature` / `refactor` / `troubleshoot` / `poc`) | 文書系 (`design` / `reverse`) |
 | --- | --- | --- |
-| code | 全 7 項目 | 正方向・逆方向・不在ケース・寿命堆積 (4) |
+| code (be / db / fe / fullstack) | 全 7 項目 | 正方向・逆方向・不在ケース・寿命堆積 (4) |
 | agent | 全 7 項目 | 正方向・逆方向・不在ケース・寿命堆積 (4) |
 
 - 差分の実在 (DoD の「最低 2 組」) は次の 2 組で pin する:
-  (code, impl 系) = 7 項目 vs (code, docs 系) = 4 項目、
-  (agent, impl 系) = 7 項目 vs (agent, docs 系) = 4 項目。
-  docs 系で落ちる 3 項目 (配送・可視性 / 両 OS・両 slash / 順序・並行) は実行系成果物のみが
+  (code, 実行系) = 7 項目 vs (code, 文書系) = 4 項目、
+  (agent, 実行系) = 7 項目 vs (agent, 文書系) = 4 項目。
+  文書系で落ちる 3 項目 (配送・可視性 / 両 OS・両 slash / 順序・並行) は実行系成果物のみが
   持つ失敗類型であることが根拠 (#227 / PR #300 / PR #299 BL-1 はいずれも実行系)。
-- 未知の drive / kind が入力された場合は **全 7 項目** を返す (落とす方向へ倒さない fail-safe)。
+- `kind=unknown`、および `classifyDrive` が返す未知 drive の場合は **全 7 項目** を返す
+  (落とす方向へ倒さない fail-safe)。
 - matrix の追補・細分化は S2 (#305) の還流経路から行う。
 
 ### 1.3 exit semantics (advisory と operational error の分離)

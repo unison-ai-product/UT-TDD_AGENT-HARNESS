@@ -71,7 +71,9 @@ ut-tdd workflow suggest --text "..." | --issue <N> | --plan <id>
 - `--issue <N>` は `gh` 読みの**薄い adapter のみ**とする。Issue の harness.db inbound projection
   (PLAN-L7-437) には依存せず、これをブロッカー化しない。projection が将来入っても composer 側の
   契約は変えない (入力正規化の差し替えで吸収する)。
-- 出力は advisory であり、exit code で作業を止めない。
+- **提案内容**は advisory であり、提案が出た/出ないことで作業を止めない (exit 0)。これは
+  提案の non-blocking 性のみを指し、usage error / operational failure は上記の 2 / 1 で
+  fail-close する (cross-review non-blocking 指摘 2026-08-14 の是正)。
 
 ### 1.2 合成する既存部品 (二重実装禁止)
 
@@ -132,7 +134,7 @@ candidate として freeze する。各行が入力・期待出力・失敗境�
 | `CANDIDATE-WFSUG-001` | 生成 team YAML | `src/schema/team.ts` の schema parse を通り、`delegation-routing` 未登録 role を含まない。未登録 role を含む合成入力では serialization failure (exit 1) |
 | `CANDIDATE-WFSUG-002` | `--text` と `--issue` の同時指定 | usage error: exit 2 + stderr。advisory 出力を出さない |
 | `CANDIDATE-WFSUG-003` | `gh` fetch 失敗 (`--issue` で到達不能) | exit 1 + stderr。exit 0 / 空提案へ丸めない |
-| `CANDIDATE-WFSUG-004` | (code, impl 系) と (code, docs 系) の 2 入力 | checklist が 7 項目 vs 4 項目 (L6-100 §1.2 matrix と要素一致)。matrix を無視した実装では差分が出ず RED |
+| `CANDIDATE-WFSUG-004` | (code, 実行系 `add-feature`) と (code, 文書系 `design`) の 2 入力 | checklist が 7 項目 vs 4 項目 (L6-100 §1.2 matrix と要素一致)。matrix を無視した実装では差分が出ず RED |
 | `CANDIDATE-WFSUG-005` | family-map 一致 keyword / 全不一致テキスト | 一致 → 表の先勝ち family 候補、不一致 → 候補なし (空)。推測で埋める実装は RED |
 | `CANDIDATE-WFSUG-006` | 4 部品の出力 stub 差し替え | composer 出力が部品出力へ追随する (再実装していれば追随せず RED)。import 実測で部品 module 以外の分類・route・scoring 実装が composer に無い |
 | `CANDIDATE-WFSUG-007` | 正常 `--text` 入力 (提案 0 件ケースを含む) | exit 0 + stdout に advisory (0 件でも exit 0) |
@@ -181,8 +183,9 @@ closing review が対象を固定できない。PASS verdict 受領前に merge 
 
 - [ ] 実 issue 3 件 (うち absence-blindness 類型 1 件以上) で生成試走し、生成 YAML が
       `ut-tdd team run` の schema validation を通る。
-- [ ] checklist が drive×kind で内容を変える (L6-100 §1.2 で pin した 2 組 — (code, impl 系) 7 項目
-      vs (code, docs 系) 4 項目、(agent, impl 系) vs (agent, docs 系) — で要素差分を実証する)。
+- [ ] checklist が drive×kind で内容を変える (L6-100 §1.2 で pin した 2 組 — (code, 実行系) 7 項目
+      vs (code, 文書系) 4 項目、(agent, 実行系) vs (agent, 文書系) — で要素差分を実証する。
+      kind は `classifyTask()` の `TaskKind` 語彙で入力する)。
 - [ ] §1.6 の candidate 8 件が `U-WFSUG-*` へ昇格し、test-design と 1:1 で対応する。
 - [ ] composer が既存 4 部品の再実装を含まない (import 実測で確認する)。
 - [ ] fail-close gate を追加していない (doctor / CI の gate 数が不変であることを確認する)。
