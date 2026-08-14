@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-14
 updated: 2026-08-14
 owner: PM / PO
@@ -20,6 +20,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-486-release-materializer-pf2.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/release-materializer.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-materializer.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
   requires:
@@ -35,7 +39,26 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/248
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-473 のPF-2 partitionとして既にfreeze済みのbyte-level materializerを実装可能な単位へ限定する。L0-L6要件・設計・外部仕様は変更せず、上流合流はPLAN-REVERSE-473が所有する。"
-review_evidence: []
+review_evidence:
+  - reviewer: codex-implementation-subagent
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-14T02:37:10Z"
+    tests_green_at: "2026-08-14T02:36:10Z"
+    verdict: targeted_verification_green_closing_review_pending
+    scope: >-
+      `tests/release-materializer.test.ts` の25 mutationを実行し25件成功を観測した。
+      exact-HEAD CIとnon-author closing reviewは未実施であり、本entryはその判定を代替しない。
+    worker_model: gpt-5.6-terra
+    reviewer_model: gpt-5.6-terra
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/release-materializer.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-14T02:36:10Z"
+        evidence_path: tests/release-materializer.test.ts
+        output_digest: "sha256:31355b3f8ed7ba13280f34cc5ef55eddbaa9a029af88de8ebe457e3e01996629"
 ---
 
 # PF-2: versioned release materializer pair-freeze
@@ -46,7 +69,7 @@ exact-HEAD CIとnon-author closing reviewを通ってmainへmergeするまで実
 
 ## 所有境界
 
-PF-2が所有するのは`CANDIDATE-RELMAN-011`だけである。実装PRでは
+PF-2が所有するのは`U-RELMAN-011`だけである。実装PRでは
 `src/setup/release-materializer.ts`と`tests/release-materializer.test.ts`を同じcommitで追加し、
 candidateを`U-RELMAN-011`へ昇格する。そのcommitで本PLANの`generates`とstatus、test citationを
 更新する。draft時点では未来のsource/testを`generates`へ宣言しない。
@@ -137,7 +160,7 @@ RED→Green化する。
 4. [直列 / review] exact-HEAD CIとnon-author closing reviewを通し、Issue #248をcloseする。
 5. [直列] PF-3 #249をReadyへ移す。PF-2が未mergeの間はPF-3を開始しない。
 
-- [ ] docs-only pair-freezeがmainへmerge済み。
-- [ ] `U-RELMAN-011`が上記7群を1:1に実測し、mutationをkillする。
-- [ ] source/test以外のGit/FS/CLI/publish差分が0。
+- [x] docs-only pair-freezeがmainへmerge済み。
+- [x] `U-RELMAN-011`が上記7群を1:1に実測し、mutationをkillする。
+- [x] source/test以外のGit/FS/CLI/publish差分が0。
 - [ ] exact-HEAD CI greenとnon-author closing PASS。
