@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { Command } from "commander";
 import { consumeLiveReview, dispatchLiveReview } from "../feedback/live-review-projection.ts";
 import type { ReviewVerdictProjectionResult } from "../feedback/review-attestation.ts";
@@ -108,6 +108,14 @@ export function registerLiveReviewCommands(review: Command): void {
           envelope,
           ports: {
             providerAvailable: (provider) => detectMode()[provider],
+            resolveTaskFile: ({ memoryId, memoryPath }) => {
+              try {
+                const memory = parseMemoryFile(repoRoot, memoryPath);
+                return memory.memory_id === memoryId ? resolve(repoRoot, memory.source_path) : null;
+              } catch {
+                return null;
+              }
+            },
             runReview: ({ provider, args }) => {
               const child = spawnSync(
                 process.execPath,

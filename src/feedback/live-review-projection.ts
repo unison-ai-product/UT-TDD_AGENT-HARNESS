@@ -1,5 +1,5 @@
 import { lstatSync, readFileSync } from "node:fs";
-import { isAbsolute, normalize, relative, resolve } from "node:path";
+import { isAbsolute, normalize, resolve } from "node:path";
 import type { ClaudeReviewInboxEntry } from "../runtime/claude-memory-wake.ts";
 import type {
   ReviewAttestation,
@@ -64,6 +64,7 @@ export type LiveReviewVerdictResult =
 
 export interface LiveReviewConsumerPorts {
   readonly providerAvailable: (provider: ReviewProvider) => boolean;
+  readonly resolveTaskFile: (input: { memoryId: string; memoryPath: string }) => string | null;
   readonly runReview: (input: {
     provider: ReviewProvider;
     args: readonly string[];
@@ -144,19 +145,11 @@ export function consumeLiveReview(input: {
   if (!input.ports.providerAvailable(reviewer)) {
     return { ok: false, reason: "opposite_provider_unavailable" };
   }
-  const memoryPath = resolve(input.repoRoot, input.envelope.memoryPath);
-  const memoryRoot = resolve(input.repoRoot, ".ut-tdd", "memory");
-  if (relative(memoryRoot, memoryPath).startsWith("..")) {
-    return { ok: false, reason: "invalid_review_envelope" };
-  }
-  try {
-    const taskFile = lstatSync(memoryPath);
-    if (!taskFile.isFile() || taskFile.isSymbolicLink()) {
-      return { ok: false, reason: "invalid_review_envelope" };
-    }
-  } catch {
-    return { ok: false, reason: "invalid_review_envelope" };
-  }
+  const memoryPath = input.ports.resolveTaskFile({
+    memoryId: request.memoryId,
+    memoryPath: input.envelope.memoryPath,
+  });
+  if (!memoryPath) return { ok: false, reason: "invalid_review_envelope" };
   const projection = input.ports.runReview({
     provider: reviewer,
     args: [

@@ -194,6 +194,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
           envelope,
           ports: {
             providerAvailable: vi.fn(() => true),
+            resolveTaskFile: vi.fn(() => memoryPath),
             runReview,
             publishReceipt: vi.fn(() => order.push("publish")),
           },
@@ -260,6 +261,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
           envelope: { ...envelope, pr: 219 },
           ports: {
             providerAvailable: () => true,
+            resolveTaskFile: () => memoryPath,
             runReview,
             publishReceipt,
           },
@@ -271,7 +273,20 @@ describe("live review projection (U-RVATT-023..026)", () => {
           repoRoot: root,
           envelope,
           ports: {
+            providerAvailable: () => true,
+            resolveTaskFile: () => null,
+            runReview,
+            publishReceipt,
+          },
+        }),
+      ).toEqual({ ok: false, reason: "invalid_review_envelope" });
+      expect(
+        consumeLiveReview({
+          repoRoot: root,
+          envelope,
+          ports: {
             providerAvailable: () => false,
+            resolveTaskFile: () => memoryPath,
             runReview,
             publishReceipt,
           },
@@ -283,6 +298,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
           envelope,
           ports: {
             providerAvailable: () => true,
+            resolveTaskFile: () => memoryPath,
             runReview: () => ({
               ...projection,
               receipt: { ...projection.receipt, reviewerFamily: "codex" },
@@ -297,6 +313,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
           envelope,
           ports: {
             providerAvailable: () => true,
+            resolveTaskFile: () => memoryPath,
             runReview: () => ({ ok: false, reason: "review_receipt_missing" }),
             publishReceipt,
           },
