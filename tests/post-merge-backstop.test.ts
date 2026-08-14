@@ -1,3 +1,4 @@
+import type { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,6 +9,7 @@ import {
   formatPostMergeBackstop,
   MAX_MERGED_PR_PAGES,
   MERGED_PR_PAGE_SIZE,
+  POST_MERGE_COMMAND_TIMEOUT_MS,
   type PostMergeBackstopResult,
   scanPostMergeBackstop,
 } from "../src/feedback/post-merge-backstop.ts";
@@ -51,7 +53,15 @@ function receipt(rootPath: string, pr: number): void {
       receiptKind: "merge_result",
       pr,
       headSha: sha(pr),
+      verdict: "PASS",
       decision: "merge",
+      reason: "merge_ready",
+      timestamp: NOW,
+      authorizedEntry: {
+        memoryId: `memory-${pr}`,
+        reviewRevision: `revision-${pr}`,
+        reviewerFamily: "codex",
+      },
     })}\n`,
     "utf8",
   );
@@ -113,6 +123,28 @@ describe("D2-D post-merge bypass backstop", () => {
     expect(result).toMatchObject({ ok: true, detections: [] });
   });
 
+  it("U-RVMG-015: 必須 custody field が欠けた forged receipt は bypass を隠さない", () => {
+    const repoRoot = root();
+    const directory = join(repoRoot, ".ut-tdd", "logs");
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(
+      join(directory, "review-merge-gate.jsonl"),
+      `${JSON.stringify({
+        receiptKind: "merge_result",
+        pr: 501,
+        headSha: sha(501),
+        decision: "merge",
+      })}\n`,
+      "utf8",
+    );
+
+    const result = scan(repoRoot, [[merged(501)]]);
+
+    expect(result.detections).toContainEqual(
+      expect.objectContaining({ reason: "bypass_merge", pr: 501 }),
+    );
+  });
+
   it("U-RVMG-016: receipt 無し merge は bypass_merge として検知される", () => {
     const repoRoot = root();
 
@@ -162,6 +194,23 @@ describe("D2-D post-merge bypass backstop", () => {
         status: "open",
       }),
     );
+  });
+
+  it("U-RVMG-019: default gh adapter は timeout を固定し page 1 失敗を検知不能にする", () => {
+    const repoRoot = root();
+    const calls: Array<{ command: string; options: Record<string, unknown> }> = [];
+    const run = ((command: string, _args: readonly string[], options: Record<string, unknown>) => {
+      calls.push({ command, options });
+      if (command === "git") return "https://github.com/example/harness.git\n";
+      throw new Error("ETIMEDOUT");
+    }) as unknown as typeof execFileSync;
+
+    const result = scanPostMergeBackstop({ repoRoot, now: NOW, execFileSync: run });
+
+    expect(calls.map((call) => call.command)).toEqual(["git", "gh"]);
+    expect(calls.every((call) => call.options.timeout === POST_MERGE_COMMAND_TIMEOUT_MS)).toBe(true);
+    expect(result).toMatchObject({ ok: false, pagesScanned: 0 });
+    expect(result.unavailableReason).toContain("page_1_fetch_failed:ETIMEDOUT");
   });
 
   it("U-RVMG-020: pagination 2 ページ目の失敗は部分結果を green に丸めない", () => {

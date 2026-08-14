@@ -13,6 +13,7 @@ import type { MergeExecutionReceipt } from "./review-merge-gate.ts";
 export const D2D_CUTOFF_BASELINE = "2026-08-14T01:20:05.000Z";
 export const MAX_MERGED_PR_PAGES = 50;
 export const MERGED_PR_PAGE_SIZE = 100;
+export const POST_MERGE_COMMAND_TIMEOUT_MS = 10_000;
 
 export type PostMergeBackstopReason = "bypass_merge" | "merged_without_verdict";
 
@@ -59,6 +60,35 @@ function isPr(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
+function isAuthorizedEntry(value: unknown): value is MergeExecutionReceipt["authorizedEntry"] {
+  return (
+    isRecord(value) &&
+    typeof value.memoryId === "string" &&
+    value.memoryId.length > 0 &&
+    typeof value.reviewRevision === "string" &&
+    value.reviewRevision.length > 0 &&
+    (value.reviewerFamily === "claude" || value.reviewerFamily === "codex")
+  );
+}
+
+function parseSuccessfulMergeReceipt(value: unknown): MergeExecutionReceipt | undefined {
+  if (!isRecord(value)) return undefined;
+  if (
+    value.receiptKind !== "merge_result" ||
+    value.decision !== "merge" ||
+    value.reason !== "merge_ready" ||
+    !isPr(value.pr) ||
+    !isSha(value.headSha) ||
+    (value.verdict !== "PASS" && value.verdict !== "PASS-WEAK") ||
+    typeof value.timestamp !== "string" ||
+    !Number.isFinite(Date.parse(value.timestamp)) ||
+    !isAuthorizedEntry(value.authorizedEntry)
+  ) {
+    return undefined;
+  }
+  return value as unknown as MergeExecutionReceipt;
+}
+
 function parseMergedPullRequest(value: unknown): MergedPullRequest | null | undefined {
   if (!isRecord(value)) return undefined;
   const pr = value.number;
@@ -82,7 +112,11 @@ function parseMergedPullRequest(value: unknown): MergedPullRequest | null | unde
 
 function repositorySlug(repoRoot: string, run: typeof execFileSync): string {
   const remote = String(
-    run("git", ["-C", repoRoot, "remote", "get-url", "origin"], { encoding: "utf8" }),
+    run("git", ["-C", repoRoot, "remote", "get-url", "origin"], {
+      encoding: "utf8",
+      timeout: POST_MERGE_COMMAND_TIMEOUT_MS,
+      windowsHide: true,
+    }),
   ).trim();
   const match = remote.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/i);
   if (!match) throw new Error("origin remote is not a GitHub repository");
@@ -98,7 +132,11 @@ function defaultFetchMergedPrPage(
     const endpoint =
       `repos/${slug}/pulls?state=closed&base=main&sort=created&direction=asc` +
       `&per_page=${perPage}&page=${page}`;
-    const output = run("gh", ["api", endpoint], { encoding: "utf8" });
+    const output = run("gh", ["api", endpoint], {
+      encoding: "utf8",
+      timeout: POST_MERGE_COMMAND_TIMEOUT_MS,
+      windowsHide: true,
+    });
     return JSON.parse(String(output));
   };
 }
@@ -129,15 +167,8 @@ function readMergeReceipts(repoRoot: string): MergeExecutionReceipt[] {
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     if (!line.trim()) continue;
     try {
-      const value = JSON.parse(line) as JsonRecord;
-      if (
-        value.receiptKind === "merge_result" &&
-        value.decision === "merge" &&
-        isPr(value.pr) &&
-        isSha(value.headSha)
-      ) {
-        receipts.push(value as unknown as MergeExecutionReceipt);
-      }
+      const receipt = parseSuccessfulMergeReceipt(JSON.parse(line));
+      if (receipt) receipts.push(receipt);
     } catch {
       // A malformed receipt cannot prove wrapper custody; it is not a reason to hide a bypass.
     }
