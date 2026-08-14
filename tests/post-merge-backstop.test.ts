@@ -216,7 +216,9 @@ describe("D2-D post-merge bypass backstop", () => {
       "api",
       "repos/example/harness/pulls?state=closed&base=main&sort=created&direction=asc&per_page=100&page=1",
     ]);
-    expect(calls.every((call) => call.options.timeout === POST_MERGE_COMMAND_TIMEOUT_MS)).toBe(true);
+    expect(calls.every((call) => call.options.timeout === POST_MERGE_COMMAND_TIMEOUT_MS)).toBe(
+      true,
+    );
     expect(result).toMatchObject({ ok: false, pagesScanned: 0 });
     expect(result.unavailableReason).toContain("page_1_fetch_failed:ETIMEDOUT");
   });
