@@ -41,7 +41,17 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/251
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/224
 github_issue_id: 250
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-17T11:40:42Z"
+    tests_green_at: "2026-08-17T11:40:42Z"
+    verdict: pass
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    scope: "PR #329 のdocs-only pair-freeze契約レビュー。実装コードの挙動・U-RELMAN-006の実装検証は本entryの対象外で、#330のclosing reviewで別途判定する。"
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/329"
+    anchor_commit: 8bfaf23f857ec8c098d3b5aeb5c61afe39ef14e1
 ---
 
 # PLAN-L7-489: PF-4 sync-pack channel adapter 内部結線 pair-freeze
