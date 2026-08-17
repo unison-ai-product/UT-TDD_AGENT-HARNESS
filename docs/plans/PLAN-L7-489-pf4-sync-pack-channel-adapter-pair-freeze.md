@@ -52,6 +52,15 @@ review_evidence:
     scope: "PR #329 のdocs-only pair-freeze契約レビュー。実装コードの挙動・U-RELMAN-006の実装検証は本entryの対象外で、#330のclosing reviewで別途判定する。"
     evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/329"
     anchor_commit: 8bfaf23f857ec8c098d3b5aeb5c61afe39ef14e1
+    green_commands:
+      - kind: lint
+        command: "node src/cli.ts plan lint"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        evidence_path: docs/plans/PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze.md
+        output_digest: "sha256:e2833a9a2c7c0f78d3dbfeb8e625d09434a20420fe673246d8a2e1e3e8dda131"
+        anchor_commit: e2c008219483da92849effed03eca497664ced74
 ---
 
 # PLAN-L7-489: PF-4 sync-pack channel adapter 内部結線 pair-freeze
