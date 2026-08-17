@@ -62,6 +62,7 @@ review_evidence:
         output_digest: "sha256:e2833a9a2c7c0f78d3dbfeb8e625d09434a20420fe673246d8a2e1e3e8dda131"
         anchor_commit: e2c008219483da92849effed03eca497664ced74
         completed_at: "2026-08-17T12:07:57Z"
+        completed_after_tests_green_at: "2026-08-17T12:11:42Z"
 ---
 
 # PLAN-L7-489: PF-4 sync-pack channel adapter 内部結線 pair-freeze
