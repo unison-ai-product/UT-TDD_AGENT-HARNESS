@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: incident
 route_mode: incident
-status: confirmed
+status: draft
 created: 2026-08-17
 updated: 2026-08-17
 backprop_decision: not_required
@@ -22,22 +22,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-491-instruction-surface-bun-residual-followup.md
     artifact_type: markdown_doc
-  - artifact_path: .claude/commands/build.md
-    artifact_type: markdown_doc
-  - artifact_path: .claude/commands/code-simplify.md
-    artifact_type: markdown_doc
-  - artifact_path: .claude/commands/test.md
-    artifact_type: markdown_doc
-  - artifact_path: .claude/commands/ut-tdd-test.md
-    artifact_type: markdown_doc
-  - artifact_path: .github/PULL_REQUEST_TEMPLATE.md
-    artifact_type: markdown_doc
-  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
-    artifact_type: test_design
-  - artifact_path: src/lint/rule-drift.ts
-    artifact_type: source_module
-  - artifact_path: tests/rule-drift.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
   requires:
