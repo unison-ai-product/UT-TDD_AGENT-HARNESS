@@ -22,7 +22,7 @@ Quality baseline before trace-freeze:
 Gate sequence:
 
 ```
-implement → bun run typecheck → bun run lint → bun run test
+implement → npm run typecheck → npm run lint → npm run test
 → ut-tdd doctor → ut-tdd review --uncommitted → record evidence in .ut-tdd/audit/
 → trace-freeze → review → accept
 ```
