@@ -8,6 +8,7 @@ import { analyzeReviewDispatch, type ReviewReceipt } from "../src/feedback/revie
 import {
   extractVerdict,
   REVIEW_OUTPUT_CONTRACT,
+  REVIEW_VERDICT_FILE_ENV,
   reviewOutputContractExample,
   type VerdictExtraction,
 } from "../src/feedback/review-verdict-contract.ts";
@@ -252,8 +253,16 @@ describe("review verdict contract (U-RVCON)", () => {
   });
 
   it("U-RVCON-016: 判断ゲート role だけに output contract を注入する", async () => {
-    await expect(dryRunTask("codex", "blind-reviewer")).resolves.toContain(REVIEW_OUTPUT_CONTRACT);
-    await expect(dryRunTask("codex", "be-api")).resolves.not.toContain(REVIEW_OUTPUT_CONTRACT);
+    // identity 宣言のある review lane では書き出し先が literal path で埋め込まれるため、
+    // 契約全文の定数一致では比較できない (U-RVATT-029)。role による注入の有無という
+    // 本来の不変条件は、path に依存しない契約冒頭行で見る。
+    const invariant = REVIEW_OUTPUT_CONTRACT.split("\n")[0];
+    const gate = await dryRunTask("codex", "blind-reviewer");
+    expect(gate).toContain(invariant);
+    // env を読めない reviewer のために literal path が入っていること。
+    expect(gate).toContain(`環境変数 ${REVIEW_VERDICT_FILE_ENV} と同値です`);
+    expect(gate).toMatch(/verdict\.txt/);
+    await expect(dryRunTask("codex", "be-api")).resolves.not.toContain(invariant);
   });
 
   // 委譲した task text は provider の captured log へ**行頭のまま echo される** (2026-07-31 実測)。

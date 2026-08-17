@@ -537,7 +537,9 @@ describe("review attestation (U-RVATT)", () => {
     const env = JSON.parse(delegated.stdout).env as Record<string, string> | undefined;
     expect(env?.[REVIEW_VERDICT_FILE_ENV]).toBeUndefined();
     const after = readdirSync(tmpdir()).filter((name) => name.startsWith("ut-tdd-review-"));
-    expect(after).toEqual(before);
+    // Parallel review suites may remove their own temp dir between these observations.
+    // This oracle owns only the no-new-leak direction; foreign cleanup is not a regression.
+    expect(after.filter((name) => !before.includes(name))).toEqual([]);
   });
 
   // --review-author-family も宣言入力。三識別子だけを宣言と数えると author-family 単独指定が
@@ -558,6 +560,35 @@ describe("review attestation (U-RVATT)", () => {
       ]);
       expect(result.stdout).toBe("");
       expect(result.stderr).toContain("review_head_required");
+      expect(process.exitCode).toBe(1);
+    } finally {
+      process.exitCode = priorExitCode;
+    }
+  });
+
+  it("U-RVATT-024: blank --review-memory-idを既定identityへsilent coercionしない", async () => {
+    const priorExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      const result = await runDelegation([
+        "codex",
+        "--role",
+        "blind-reviewer",
+        "--task",
+        "review slice",
+        "--review-pr",
+        "731",
+        "--review-head",
+        head,
+        "--review-revision",
+        "review-rvatt-1",
+        "--review-author-family",
+        "claude",
+        "--review-memory-id",
+        "   ",
+      ]);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("review_memory_id_required");
       expect(process.exitCode).toBe(1);
     } finally {
       process.exitCode = priorExitCode;

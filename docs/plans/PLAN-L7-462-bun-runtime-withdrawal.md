@@ -391,3 +391,16 @@ step 3 の blind review 証跡 (FLAG 原文 4 ラウンド分) は
 `.ut-tdd/review/plan-l7-462-step3-blind-review-flags.md`。process note: PR #284 の merge
 実行は delta 追認 verdict の受領と近接しており、merge 操作は Codex 側で行われた
 (verdict 自体は同 HEAD cc3ed37f で PASS、CI run 31154290456 success を独立確認済み)。
+
+## 後続 (完了後に発見された残件、2026-08-14)
+
+本 PLAN の完了記録は上記のまま確定しており、AC の追加・改訂は行わない。完了後に発見された
+残件は後続 PLAN が所有する:
+
+- `PLAN-L7-488-instruction-surface-bun-residual` (Issue #322): 機械設定
+  (`.claude/settings.json` = 全 hook が node) と instruction surface (`CLAUDE.md` /
+  `.claude/CLAUDE.md` / `AGENTS.md`) の不整合。本 PLAN は hooks / scripts / CI /
+  snapshot runner の Node swap を閉じたが、AI ランタイムが読む規約文書に Bun 実行形の
+  **指示**が残った。設計判断 (検査の置き場所 = 既存 `rule-drift` 拡張 / 検査範囲 =
+  実行指示のみで過去記録は対象外 / `engines.bun` = 削除) と trace は後続 PLAN の
+  §2・§4 が所有する。

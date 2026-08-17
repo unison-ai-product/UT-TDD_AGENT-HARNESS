@@ -30,19 +30,37 @@ const VERDICTS: readonly ReviewVerdictName[] = ["PASS", "PASS-WEAK", "FLAG"];
  */
 const EXAMPLE_INDENT = "    ";
 
-/** reviewer に注入する、構造化 verdict の出力契約。 */
-export const REVIEW_OUTPUT_CONTRACT = [
-  "レビュー完了時は、行頭の verdict 行を必ず 1 件出力してください。再掲する場合も値を一致させてください。",
-  "使用できる verdict は `VERDICT: PASS`、`VERDICT: PASS-WEAK`、`VERDICT: FLAG` の 3 種だけです。",
-  "FLAG の場合は、行頭 `FINDING:` に blocking finding を 1 件以上、1 行ずつ出力してください。",
-  "PASS または PASS-WEAK の場合は `FINDING:` を出力しないでください。",
-  `同じ verdict ブロックを ${REVIEW_VERDICT_FILE_ENV} が指す path にも書いてください。`,
-  "下記は書式の例です。**実際の出力は行頭に置くこと** (下の例は説明用に字下げしてあります)。",
-  EXAMPLE_START,
-  `${EXAMPLE_INDENT}VERDICT: FLAG`,
-  `${EXAMPLE_INDENT}FINDING: blocking finding summary`,
-  EXAMPLE_END,
-].join("\n");
+/**
+ * reviewer に注入する、構造化 verdict の出力契約。
+ *
+ * `verdictFilePath` を渡すと、書き出し先を**literal absolute path として本文へ埋め込む**。
+ * env 変数名だけを渡す形は、子 runtime が環境変数を参照できない構成 (Claude Code の
+ * permission 設定が `env` / `printenv` / `echo $VAR` を拒否する等) で履行不能になり、
+ * verdict は stdout に出ているのに verdict file が 0 件 → receipt 0 件 → wrapper deny という
+ * 恒久 fail が起きる (2026-08-14 実測: PR #319 の self-bootstrap で delegated Claude が
+ * `VERDICT: PASS` を返しながら path を解決できず `reviewer_execution_failed`)。
+ * env 名も併記して従来経路との互換を保つ。
+ */
+export function reviewOutputContract(verdictFilePath?: string): string {
+  const destination = verdictFilePath
+    ? `同じ verdict ブロックを次の path にも書いてください: ${verdictFilePath} (環境変数 ${REVIEW_VERDICT_FILE_ENV} と同値です。環境変数を読めない場合はこの path をそのまま使ってください)。`
+    : `同じ verdict ブロックを ${REVIEW_VERDICT_FILE_ENV} が指す path にも書いてください。`;
+  return [
+    "レビュー完了時は、行頭の verdict 行を必ず 1 件出力してください。再掲する場合も値を一致させてください。",
+    "使用できる verdict は `VERDICT: PASS`、`VERDICT: PASS-WEAK`、`VERDICT: FLAG` の 3 種だけです。",
+    "FLAG の場合は、行頭 `FINDING:` に blocking finding を 1 件以上、1 行ずつ出力してください。",
+    "PASS または PASS-WEAK の場合は `FINDING:` を出力しないでください。",
+    destination,
+    "下記は書式の例です。**実際の出力は行頭に置くこと** (下の例は説明用に字下げしてあります)。",
+    EXAMPLE_START,
+    `${EXAMPLE_INDENT}VERDICT: FLAG`,
+    `${EXAMPLE_INDENT}FINDING: blocking finding summary`,
+    EXAMPLE_END,
+  ].join("\n");
+}
+
+/** path 不明時の既定契約 (identity 宣言のない review lane はこちらを使う)。 */
+export const REVIEW_OUTPUT_CONTRACT = reviewOutputContract();
 
 /**
  * contract 内の parser 検証用模範出力を、行頭形へ dedent して返す。

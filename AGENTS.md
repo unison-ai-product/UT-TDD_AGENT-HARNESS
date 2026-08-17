@@ -370,7 +370,7 @@ Verify with `ut-tdd plan lint` plus the targeted doctor checks
 (保持者 pid 付き) で fail-fast する。規律:
 
 - exit 2 (already running) は **実行中 doctor の完了を待つ**。再試行しない。
-  起動形を変えた再実行 (`bun -e` / `--json` / `runDoctor` 直呼び) もしない。
+  起動形を変えた再実行 (`node -e` / `--json` / `runDoctor` 直呼び) もしない。
   再試行嵐はマシンを飢餓させる (2026-07-16 incident: doctor 16 本並列、
   物理メモリ残 31MB)。
 - 一部だけ要るなら scoped 実行 (`--scope toolchain`、テスト内の check 関数直呼び)

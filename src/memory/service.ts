@@ -12,8 +12,15 @@
  * 旧経路 (`selectMemoryEntries(db)`) は DB 側 body を読む read model だった。本 service が
  * 読み路を引き継ぐため、呼び元は service を通す (境界は tests/memory-service.test.ts が固定)。
  */
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { isSecretLike } from "../secret.ts";
 import { ensureDir } from "../shared/fs.ts";
 import {
@@ -53,6 +60,47 @@ export interface MemoryReadResult extends MemoryCorpus {
 export interface MemoryQueryOptions {
   query?: string;
   limit?: number;
+}
+
+const MEMORY_SOURCE_ROOT = join(".ut-tdd", "memory");
+
+/** decoderが使うpure namespace判定。正本literalはMemoryServiceだけが所有する。 */
+export function isCanonicalMemorySourcePath(sourcePath: string): boolean {
+  if (!sourcePath.trim() || isAbsolute(sourcePath)) return false;
+  const normalized = sourcePath.replaceAll("\\", "/");
+  const root = MEMORY_SOURCE_ROOT.replaceAll("\\", "/");
+  const name = normalized.slice(root.length + 1);
+  return (
+    sourcePath === normalized &&
+    normalized.startsWith(`${root}/`) &&
+    dirname(normalized) === root &&
+    name !== "" &&
+    name !== "." &&
+    name !== ".."
+  );
+}
+
+/** canonical root内のregular fileだけを解決し、frontmatter identityまで同時に束縛する。 */
+export function resolveMemoryTaskFile(input: {
+  repoRoot: string;
+  memoryId: string;
+  memoryPath: string;
+}): string | null {
+  if (!isCanonicalMemorySourcePath(input.memoryPath)) return null;
+  const root = resolve(input.repoRoot, MEMORY_SOURCE_ROOT);
+  const candidate = resolve(input.repoRoot, input.memoryPath);
+  try {
+    const rootStat = lstatSync(root);
+    const fileStat = lstatSync(candidate);
+    if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) return null;
+    if (!fileStat.isFile() || fileStat.isSymbolicLink()) return null;
+    const rel = relative(realpathSync(root), realpathSync(candidate));
+    if (!rel || rel.startsWith("..") || isAbsolute(rel)) return null;
+    const memory = parseMemoryFile(input.repoRoot, input.memoryPath);
+    return memory.memory_id === input.memoryId ? candidate : null;
+  } catch {
+    return null;
+  }
 }
 
 /** 正本への書き込みを含む memory storage の単一入口。 */
