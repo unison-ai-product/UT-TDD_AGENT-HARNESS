@@ -10,7 +10,7 @@ import {
   type ReviewAttestationRequest,
   resolveReviewAuthorFamily,
 } from "../feedback/review-attestation.ts";
-import { REVIEW_OUTPUT_CONTRACT } from "../feedback/review-verdict-contract.ts";
+import { reviewOutputContract } from "../feedback/review-verdict-contract.ts";
 import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
@@ -349,7 +349,15 @@ function runtimeCommand(
           (routing.review_lane ? ` lane=${routing.review_lane}` : "") +
           (routing.task_intent ? ` intent=${routing.task_intent}` : "");
         const contextInjection = deps.resolveSkillContextInjection(opts.plan);
-        const taskForAdapter = routing.review_lane ? `${task}\n\n${REVIEW_OUTPUT_CONTRACT}` : task;
+        // verdict file は契約本文へ literal path として埋め込むため、契約を組む前に確定させる
+        // (env 名だけでは env を読めない子 runtime が履行できない。§reviewOutputContract)。
+        let reviewVerdictFile: string | undefined;
+        if (routing.review_lane && reviewIdentityRequested) {
+          reviewVerdictFile = reviewVerdictPath(process.cwd());
+        }
+        const taskForAdapter = routing.review_lane
+          ? `${task}\n\n${reviewOutputContract(reviewVerdictFile)}`
+          : task;
         const plan = buildAdapterPlan(
           {
             provider,
@@ -394,9 +402,7 @@ function runtimeCommand(
         // 作ると temp dir が委譲のたびに leak する (PR #214 Codex FLAG、U-RVATT-020)。
         // reviewRequest 生成 (下) と同じ reviewIdentityRequested を述語にする — 二重実装に
         // すると生成条件と輸送条件が再び drift する。
-        let reviewVerdictFile: string | undefined;
-        if (routing.review_lane && reviewIdentityRequested) {
-          reviewVerdictFile = reviewVerdictPath(process.cwd());
+        if (reviewVerdictFile) {
           plan.env = { ...(plan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: reviewVerdictFile };
         }
         // verdict file の temp dir は execute 経路 (`executeAdapterPlanForCli`) が後始末する。

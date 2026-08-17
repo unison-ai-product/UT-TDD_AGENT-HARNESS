@@ -189,4 +189,80 @@ describe("review live CLI composition", () => {
       else process.env.UT_TDD_CLAUDE_BIN = previous;
     }
   }, 30_000);
+
+  it("U-RVATT-029 lets a reviewer that never reads env write the verdict file from the injected literal path", () => {
+    // 2026-08-14 実測: delegated Claude が `VERDICT: PASS` を stdout へ返しながら
+    // UT_TDD_REVIEW_VERDICT_FILE の値を解決できず (permission が env / printenv / echo $VAR を
+    // 拒否)、verdict file 0 → receipt 0 → wrapper deny という恒久 fail が起きた。
+    // この stub は env を一切参照せず、契約本文へ埋め込まれた literal path だけで書く。
+    // 契約が env 名しか渡さない実装へ戻ると path を抽出できず receipt が立たない (RED)。
+    const { root, memoryPath } = fixture();
+    const binRoot = mkdtempSync(join(tmpdir(), "ut-review-provider-noenv-"));
+    roots.push(binRoot);
+    const helper = join(binRoot, "write-verdict.cjs");
+    writeFileSync(
+      helper,
+      String.raw`const fs = require("node:fs");
+let prompt = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  prompt += chunk;
+});
+process.stdin.on("end", () => {
+  // 環境変数は一切参照しない。契約本文に埋め込まれた literal path だけを使う。
+  const match = prompt.match(/([A-Za-z]:[\\/][^\s"'()]*verdict\.txt|\/[^\s"'()]*verdict\.txt)/);
+  if (!match) {
+    process.stdout.write("no literal verdict path in contract\n");
+    process.exit(0);
+  }
+  fs.writeFileSync(match[1], "VERDICT: PASS\n", "utf8");
+  process.stdout.write("VERDICT: PASS\n");
+});
+`,
+      "utf8",
+    );
+    const stub = join(binRoot, process.platform === "win32" ? "claude.cmd" : "claude");
+    writeFileSync(
+      stub,
+      process.platform === "win32"
+        ? `@echo off\r\nif "%~1"=="--version" (echo claude 0.0.0-stub& exit /b 0)\r\nnode "${helper}"\r\nexit /b 0\r\n`
+        : `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "claude 0.0.0-stub"; exit 0; fi\nexec node "${helper}"\n`,
+      "utf8",
+    );
+    if (process.platform !== "win32") chmodSync(stub, 0o755);
+    const previous = process.env.UT_TDD_CLAUDE_BIN;
+    process.env.UT_TDD_CLAUDE_BIN = stub;
+    try {
+      const result = executeLiveReviewDelegation({
+        repoRoot: root,
+        cliPath: join(process.cwd(), "src", "cli.ts"),
+        provider: "claude",
+        args: [
+          "--role",
+          "blind-reviewer",
+          "--task-file",
+          memoryPath,
+          "--review-pr",
+          "319",
+          "--review-head",
+          head,
+          "--review-revision",
+          "review-d3a-noenv",
+          "--review-author-family",
+          "codex",
+          "--review-memory-id",
+          "memory:d3a",
+          "--execute",
+          "--json",
+        ],
+      });
+      expect(result, JSON.stringify(result)).toMatchObject({
+        ok: true,
+        receipt: { pr: 319, head, reviewerFamily: "claude", verdict: "PASS" },
+      });
+    } finally {
+      if (previous === undefined) delete process.env.UT_TDD_CLAUDE_BIN;
+      else process.env.UT_TDD_CLAUDE_BIN = previous;
+    }
+  }, 30_000);
 });
