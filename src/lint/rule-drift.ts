@@ -52,6 +52,59 @@ const ADAPTER_MARKERS = {
 
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_RUNTIME_ENV_PREFIX = LEGACY_RUNTIME_NAME.toUpperCase();
+
+function normalizeBunToken(token: string): string {
+  return token
+    .trim()
+    .replace(/^[`'"[(|]*/, "")
+    .replace(/[`'"\])|]*$/, "")
+    .trim();
+}
+
+function isBunExecutionArgument(token: string): boolean {
+  if (!token) return false;
+  const trimmed = normalizeBunToken(token);
+  if (!trimmed) return false;
+  if (/^(?:-[^\s`"]+|--[^\s`"]+)$/.test(trimmed)) return true;
+  if (/^(?:run|test|install|build|status)$/.test(trimmed)) return true;
+  if (/^(?:\.{1,2}[\\/]|[A-Za-z]:[\\/])/.test(trimmed)) return true;
+  if (/\$\{?[A-Za-z_][A-Za-z0-9_]*\}?/.test(trimmed)) return true;
+  if (/^(?:src|scripts|node_modules)\//i.test(trimmed)) return true;
+  if (/^(?:src|scripts|node_modules)[\\/]/i.test(trimmed)) return true;
+  if (/^[\\w.-]+\.(?:ts|tsx|js|mjs|cjs|json|md)$/.test(trimmed)) return true;
+  if (/[\\/]/.test(trimmed)) return true;
+  return false;
+}
+
+function containsBunExecutionInstruction(text: string): boolean {
+  for (const line of text.split(/\r?\n/)) {
+    for (const match of line.matchAll(/`([^`]+)`/g)) {
+      const contents = match[1].trim();
+      const [token] = contents.split(/\s+/);
+      if (token && /^bunx?$/i.test(token)) return true;
+      if (/^bun\.(?:cmd|exe)$/i.test(token)) return true;
+    }
+
+    const tokens = line.split(/\s+/).filter(Boolean);
+    for (let i = 0; i < tokens.length; i++) {
+      const token = normalizeBunToken(tokens[i]);
+      if (!token) continue;
+      const lower = token.toLowerCase();
+      if (lower === "bunx") {
+        if (tokens[i + 1]) return true;
+        continue;
+      }
+      if (lower === "bun") {
+        if (isBunExecutionArgument(tokens[i + 1])) return true;
+        continue;
+      }
+      if (/^bun\.(?:cmd|exe)$/i.test(lower)) return true;
+    }
+  }
+
+  return false;
+}
+
 const FORBIDDEN_ADAPTER_MARKERS = [
   {
     marker: "legacy runtime command routing",
@@ -88,8 +141,7 @@ const FORBIDDEN_ADAPTER_MARKERS = [
     // 「bare bun + 空白」を実行形と見なすと `use bun runtime` や `bun runaway ×2` まで
     // forbidden になり U-RDRIFT-006 と自己矛盾するため、その条件は採らない
     // (cross-review 2026-08-14 blocking 2 の是正)。
-    pattern:
-      /`bunx?(?:\s[^`]*)?`|\bbun(?:\.cmd|\.exe)\b|\bbunx\s+\S+|\bbun\s+(?:-[^\s`"]+|--[^\s`"]+|"[^"]*"|'[^']*'|run\b|test\b|install\b|build\b|status\b|src\/|scripts\/|node_modules\/|\.{1,2}[\\\/]|[A-Za-z]:[\\\/]|\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|[\w.-]+\.(?:ts|tsx|js|mjs|cjs|json|md)|[\w.-]+[\\\/])(?=\s|$|[`'"])/i,
+    pattern: /$^/,
   },
 ] as const;
 
@@ -187,7 +239,12 @@ export function analyzeRuleDrift(docs: RuleAdapterDocs): RuleDriftResult {
   }
   for (const [file, text] of Object.entries(files)) {
     for (const marker of FORBIDDEN_ADAPTER_MARKERS) {
-      if (marker.pattern.test(text)) forbiddenMarkers.push({ file, marker: marker.marker });
+      if (
+        marker.pattern.test(text) ||
+        (marker.marker === "bun execution form" && containsBunExecutionInstruction(text))
+      ) {
+        forbiddenMarkers.push({ file, marker: marker.marker });
+      }
     }
   }
 
