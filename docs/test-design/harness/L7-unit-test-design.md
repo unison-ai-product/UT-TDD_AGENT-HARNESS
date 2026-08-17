@@ -1614,16 +1614,19 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-RVATT-007` | verdict file 未出力 | file 不在で完了 attestation を投影 | `verdict_file_missing`、receipt 0、D1 breach=`verdict` |
 | `U-RVATT-008` | echo 耐性輸送 | file に `REVIEW_OUTPUT_CONTRACT` echo と実 PASS | `extractVerdict` と同じ実 PASS を receipt に採用、契約は verdict file 書込を要求 |
 | `U-RVATT-009` | request 発行 / 照合 | review request と verdict receipt を同じ identity で投影 | request/receipt の memoryId・pr・exactHead/head・reviewRevision が突合可能、request file 1 |
-| `CANDIDATE-RVATT-023` | canonical-before-typed-review-wake | live dispatchのrequest writerをinvalid / write failureへ変異。v3 `purpose=memory`とin-flight v2の本文/tagをPR review依頼へ変異し、v3 review identity欠落・不一致、unknown schemaも入力 | request失敗時v3 review wake 0。成功時だけrequest 1→review wake 1。v2とv3 memory、invalid v3 review、unknown schemaはreview delegation/receipt 0 |
-| `CANDIDATE-RVATT-024` | delegated-attestation-before-display | interactive session/CLI optionのprovider自己申告、verdict欠落、identity mismatch、receipt write failureに加え、Codex/Claude著者を同族childへroute、未知family、反対族runtime不在を各1点変異 | 負例はreceipt/comment/memory 0。Codex著者→Claude child、Claude著者→Codex childのspawn provider/model/role/time/exitCodeに束縛したattestationだけreceipt 1→派生表示 |
-| `CANDIDATE-RVATT-025` | retry収束 | 同一identity / operationを2回dispatchし、同じverdictを2回返却 | request/receipt/wakeは各content-addressed identityへ1件で収束し、conflict 0 |
-| `CANDIDATE-RVATT-026` | exact HEAD再dispatch | HEAD Aのrequest/PASS後にPR HEADをBへ更新し、A receiptを入力 | Bの新requestが必要。A receiptで`merge_ready`にせず、B receipt到達までwrapper deny |
-| `CANDIDATE-RVATT-027` | repository snapshot lifecycle | 実application compositionへ既存merge-gate GitHub ports fixtureを注入し、dispatch→request→delegated verdict→receipt→同一HEAD wrapperを実行。request/receipt/HEADを各1点欠落・変異 | network 0で正常系だけallow。3負例はdenyし、wrapper成功receipt後のD2-D `bypass_merge`は0 |
-| `CANDIDATE-RVATT-028` | SSoT非逆流 | repo既存import-boundary fixtureへmemory reader / PR comment parserからD1/D2判定器へのimport edgeを注入 | edge 0だけGreen。memory/commentを判定入力にする変異をfail-closeし、新規call graph解析器は要求しない |
+| `U-RVATT-023` | canonical-before-typed-review-wake | `tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts`。live dispatchのrequest writerをinvalid / write failureへ変異。v3 `purpose=memory`とin-flight v2の本文/tagをPR review依頼へ変異し、v3 review identity欠落・不一致、unknown schemaも入力 | request失敗時v3 review wake 0。成功時だけrequest 1→review wake 1。v2とv3 memory、invalid v3 review、unknown schemaはreview delegation/receipt 0 |
+| `U-RVATT-024` | delegated-attestation-before-display | `tests/live-review-projection.test.ts` / `tests/cli-delegation.test.ts`。interactive session/CLI optionのprovider自己申告、verdict欠落、identity mismatch、receipt write failureに加え、Codex/Claude著者を同族childへroute、未知family、反対族runtime不在を各1点変異 | 負例はreceipt/comment/memory 0。Codex著者→Claude child、Claude著者→Codex childのspawn provider/model/role/time/exitCodeに束縛したattestationだけreceipt 1→派生表示 |
+| `U-RVATT-025` | retry収束 | `tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts`。同一identity / operationを2回dispatchし、同じverdictを2回返却 | request/receipt/wakeは各content-addressed identityへ1件で収束し、conflict 0 |
+| `U-RVATT-026` | exact HEAD再dispatch | `tests/live-review-projection.test.ts`。HEAD Aのrequest/PASS後にPR HEADをBへ更新し、A receiptを入力 | Bの新requestが必要。A receiptで`merge_ready`にせず、B receipt到達までwrapper deny |
+| `U-RVATT-027` | repository snapshot lifecycle | `tests/review-live-cli.test.ts` / `tests/live-review-projection.test.ts`。実CLI compositionを起動し、provider stubへ正規delegationしてprovider/model/role/time/exitCode由来receiptを生成後、既存merge-gate GitHub ports fixtureへ接続する。request/receipt/HEADを各1点欠落・変異 | canonical task resolverを実行し、正常系だけreceipt→同一HEAD wrapper allow。wrong-head receiptを含む3負例はdenyし、wrapper成功receipt後のD2-D `bypass_merge`は0 |
+| `U-RVATT-029` | verdict file path の伝達 | `tests/review-live-cli.test.ts`。環境変数を一切参照せず、契約本文から literal path を抽出して verdict file を書く provider stub を実 delegation CLI へ通す。契約が env 変数名だけを渡す実装へ戻す変異を投入 | env を読めない reviewer でも verdict file が生成され receipt が成立する。env 名のみを渡す実装では path を抽出できず `reviewer_execution_failed` で RED (2026-08-14 実測: delegated Claude が `VERDICT: PASS` を stdout へ返しながら permission により env を解決できず receipt 0 → wrapper deny)。契約文の綴りを見る source-text assertion では代替しない |
+| `U-RVATT-028` | SSoT非逆流 | `tests/dependency-drift.test.ts`。repo既存import-boundary fixtureへmemory reader / PR comment parserからD1/D2判定器へのimport edgeを注入 | edge 0だけGreen。memory/commentを判定入力にする変異をfail-closeし、新規call graph解析器は要求しない |
+| `U-RVWAKE-010` | 長い identity の inbox 衝突防止 | `tests/claude-memory-wake.test.ts`。legacy の安全化 stem が同じになる長い `memory_id` へ異なる `operationId` を与え、publish/claim/GC の全経路を実行 | operationId の hash suffix を含む別ファイルへ分離され、両 payload が保持される。長さ制限だけで suffix を落とす変異は同一path衝突またはpayload消失で RED |
 
-実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)。
-上記6候補はD3a live projection実装PRで同testと実repo lifecycle testへ
-1:1に昇格する。既存`U-RVATT-001`〜`022`の検出集合を縮めない。
+実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)、
+`tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts` / `tests/cli-delegation.test.ts` /
+`tests/dependency-drift.test.ts` (`U-RVATT-023`〜`028`)。
+既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
 

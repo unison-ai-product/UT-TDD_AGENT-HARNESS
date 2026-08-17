@@ -13,13 +13,14 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { MemoryEntry } from "../memory/index.ts";
+import { isCanonicalMemorySourcePath } from "../memory/service.ts";
 import { ensureDir } from "../shared/fs.ts";
 
-export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
+export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
+export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 
-export interface ClaudeInboxEntry {
-  readonly schemaVersion: typeof CLAUDE_INBOX_SCHEMA;
+interface ClaudeInboxBase {
   readonly id: string;
   readonly memoryId: string;
   readonly body: string;
@@ -28,6 +29,33 @@ export interface ClaudeInboxEntry {
   readonly targetWorkspaceId: string;
   readonly createdAt: string;
 }
+
+export interface ClaudeMemoryInboxEntry extends ClaudeInboxBase {
+  readonly schemaVersion: typeof CLAUDE_INBOX_SCHEMA;
+  readonly purpose: "memory";
+}
+
+export interface ClaudeReviewInboxEntry extends ClaudeInboxBase {
+  readonly schemaVersion: typeof CLAUDE_INBOX_SCHEMA;
+  readonly purpose: "review";
+  readonly requestDigest: string;
+  readonly requestPath: string;
+  readonly memoryPath: string;
+  readonly pr: number;
+  readonly exactHead: string;
+  readonly reviewRevision: string;
+  readonly authorFamily: "codex" | "claude";
+}
+
+export interface ClaudeLegacyInboxEntry extends ClaudeInboxBase {
+  readonly schemaVersion: typeof CLAUDE_INBOX_LEGACY_SCHEMA;
+  readonly purpose: "memory";
+}
+
+export type ClaudeInboxEntry =
+  | ClaudeMemoryInboxEntry
+  | ClaudeReviewInboxEntry
+  | ClaudeLegacyInboxEntry;
 
 export interface ClaudeMemoryWakeResult {
   readonly kind: "delivered" | "timeout" | "superseded";
@@ -72,6 +100,12 @@ function safeFilePart(value: string): string {
   return value.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160);
 }
 
+function inboxFileStem(entryId: string): string {
+  const stableHash = createHash("sha256").update(entryId).digest("hex").slice(0, 12);
+  const safeId = safeFilePart(entryId);
+  return `${safeId.slice(0, 147)}_${stableHash}`;
+}
+
 function runtimeRoot(repoRoot: string): string {
   try {
     const commonDir = execFileSync(
@@ -109,13 +143,14 @@ export function buildClaudeInboxEntry(input: {
   workspaceId: string;
   originRuntime?: "codex" | "system";
   now?: string;
-}): ClaudeInboxEntry {
+}): ClaudeMemoryInboxEntry {
   if (!input.operationId.trim()) throw new Error("claude_inbox_operation_id_required");
   if (!/^[a-f0-9]{64}$/.test(input.workspaceId)) {
     throw new Error("claude_inbox_workspace_id_invalid");
   }
   return {
     schemaVersion: CLAUDE_INBOX_SCHEMA,
+    purpose: "memory",
     id: `${input.memory.memory_id}:workspace:${input.workspaceId}:op:${input.operationId}`,
     memoryId: input.memory.memory_id,
     body: input.memory.body,
@@ -126,10 +161,37 @@ export function buildClaudeInboxEntry(input: {
   };
 }
 
+export function buildClaudeReviewInboxEntry(input: {
+  memory: MemoryEntry;
+  operationId: string;
+  workspaceId: string;
+  requestDigest: string;
+  requestPath: string;
+  pr: number;
+  exactHead: string;
+  reviewRevision: string;
+  authorFamily: "codex" | "claude";
+  originRuntime?: "codex" | "system";
+  now?: string;
+}): ClaudeReviewInboxEntry {
+  const memoryEntry = buildClaudeInboxEntry(input);
+  const review = {
+    requestDigest: input.requestDigest,
+    requestPath: input.requestPath,
+    memoryPath: input.memory.source_path,
+    pr: input.pr,
+    exactHead: input.exactHead,
+    reviewRevision: input.reviewRevision,
+    authorFamily: input.authorFamily,
+  };
+  if (!isValidReviewIdentity(review)) throw new Error("claude_inbox_review_identity_invalid");
+  return { ...memoryEntry, purpose: "review", ...review };
+}
+
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
   const directory = join(runtimeRoot(repoRoot), "inbox");
   ensureDir(directory, { recursive: true });
-  const target = join(directory, `${safeFilePart(entry.id)}.json`);
+  const target = join(directory, `${inboxFileStem(entry.id)}.json`);
   const serialized = JSON.stringify(entry);
   if (existsSync(target)) {
     if (readFileSync(target, "utf8").trim() === serialized) {
@@ -164,11 +226,75 @@ export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntr
   return target;
 }
 
-function decodeEntry(value: string): ClaudeInboxEntry | undefined {
+function hasExactKeys(value: object, expected: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  const orderedExpected = [...expected].sort();
+  return (
+    actual.length === orderedExpected.length &&
+    actual.every((key, index) => key === orderedExpected[index])
+  );
+}
+
+function isValidReviewIdentity(value: {
+  requestDigest: string;
+  requestPath: string;
+  memoryPath: string;
+  pr: number;
+  exactHead: string;
+  reviewRevision: string;
+  authorFamily: "codex" | "claude";
+}): boolean {
+  const normalizedRequestPath = value.requestPath.replaceAll("\\", "/");
+  return (
+    /^[a-f0-9]{16,64}$/.test(value.requestDigest) &&
+    (normalizedRequestPath.endsWith(`/.ut-tdd/review/requests/${value.requestDigest}.json`) ||
+      normalizedRequestPath === `.ut-tdd/review/requests/${value.requestDigest}.json`) &&
+    isCanonicalMemorySourcePath(value.memoryPath) &&
+    Number.isInteger(value.pr) &&
+    value.pr > 0 &&
+    /^[a-f0-9]{40}$/.test(value.exactHead) &&
+    value.reviewRevision.trim().length > 0 &&
+    ["codex", "claude"].includes(value.authorFamily)
+  );
+}
+
+export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefined {
   try {
-    const entry = JSON.parse(value) as ClaudeInboxEntry;
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+    const legacy = parsed.schemaVersion === CLAUDE_INBOX_LEGACY_SCHEMA;
+    const purpose = legacy ? "memory" : parsed.purpose;
+    const baseKeys = [
+      "schemaVersion",
+      "id",
+      "memoryId",
+      "body",
+      "originRuntime",
+      "operationId",
+      "targetWorkspaceId",
+      "createdAt",
+    ];
+    const expectedKeys = legacy
+      ? baseKeys
+      : purpose === "memory"
+        ? [...baseKeys, "purpose"]
+        : purpose === "review"
+          ? [
+              ...baseKeys,
+              "purpose",
+              "requestDigest",
+              "requestPath",
+              "memoryPath",
+              "pr",
+              "exactHead",
+              "reviewRevision",
+              "authorFamily",
+            ]
+          : [];
+    if (!hasExactKeys(parsed, expectedKeys)) return undefined;
+    const entry = parsed as unknown as ClaudeInboxEntry;
     if (
-      entry.schemaVersion !== CLAUDE_INBOX_SCHEMA ||
+      (!legacy && entry.schemaVersion !== CLAUDE_INBOX_SCHEMA) ||
       !entry.id ||
       !entry.memoryId.startsWith("memory:") ||
       !entry.body.trim() ||
@@ -179,6 +305,9 @@ function decodeEntry(value: string): ClaudeInboxEntry | undefined {
     ) {
       return undefined;
     }
+    if (legacy) return { ...entry, purpose: "memory" } as ClaudeLegacyInboxEntry;
+    if (entry.purpose === "memory") return entry;
+    if (entry.purpose !== "review" || !isValidReviewIdentity(entry)) return undefined;
     return entry;
   } catch {
     return undefined;
@@ -239,7 +368,7 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
     .filter((name) => name.endsWith(".json"))
     .map((name) => {
       try {
-        return decodeEntry(readFileSync(join(directory, name), "utf8"));
+        return decodeClaudeInboxEntry(readFileSync(join(directory, name), "utf8"));
       } catch {
         return undefined;
       }
@@ -295,7 +424,7 @@ function claim(input: {
 }): boolean {
   const root = runtimeRoot(input.repoRoot);
   ensureDir(root, { recursive: true });
-  const path = join(root, `${safeFilePart(input.entry.id)}.claim`);
+  const path = join(root, `${inboxFileStem(input.entry.id)}.claim`);
   let descriptor: number;
   try {
     descriptor = openSync(path, "wx", 0o600);
@@ -322,6 +451,18 @@ export function renderClaudeWakeMessage(entry: ClaudeInboxEntry): string {
   const notification = JSON.stringify({
     memory_id: entry.memoryId,
     operation_id: entry.operationId,
+    purpose: entry.purpose,
+    ...(entry.purpose === "review"
+      ? {
+          request_digest: entry.requestDigest,
+          request_path: entry.requestPath,
+          memory_path: entry.memoryPath,
+          pr: entry.pr,
+          exact_head: entry.exactHead,
+          review_revision: entry.reviewRevision,
+          author_family: entry.authorFamily,
+        }
+      : {}),
     body,
   })
     .replaceAll("[", "\\u005b")
@@ -408,7 +549,7 @@ export async function waitForClaudeMemory(input: {
           sessionId: input.sessionId,
         });
         try {
-          unlinkSync(join(root, "inbox", `${safeFilePart(entry.id)}.json`));
+          unlinkSync(join(root, "inbox", `${inboxFileStem(entry.id)}.json`));
         } catch {
           // claim が配送の正本。inbox GC は次回へ委ねる。
         }

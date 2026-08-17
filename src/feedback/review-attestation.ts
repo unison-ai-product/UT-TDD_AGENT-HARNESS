@@ -53,7 +53,7 @@ function isTimestamp(value: unknown): value is string {
   );
 }
 
-function isValidRequest(value: ReviewAttestationRequest): boolean {
+export function isValidReviewRequest(value: ReviewAttestationRequest): boolean {
   return (
     isNonEmptyString(value.memoryId) &&
     Number.isInteger(value.pr) &&
@@ -95,6 +95,16 @@ function normalizedJson(value: unknown): string {
 
 function digest(value: unknown): string {
   return createHash("sha256").update(normalizedJson(value), "utf8").digest("hex").slice(0, 16);
+}
+
+export function reviewRequestDigest(request: ReviewAttestationRequest): string {
+  return digest({
+    memoryId: request.memoryId,
+    pr: request.pr,
+    exactHead: request.exactHead,
+    reviewRevision: request.reviewRevision,
+    authorFamily: request.authorFamily,
+  });
 }
 
 function persist(input: {
@@ -154,7 +164,7 @@ export function issueReviewRequest(input: {
   repoRoot: string;
   request: ReviewAttestationRequest;
 }): ReviewRequestResult {
-  if (!isValidRequest(input.request)) return { ok: false, reason: "invalid_review_request" };
+  if (!isValidReviewRequest(input.request)) return { ok: false, reason: "invalid_review_request" };
   // request digest は安定識別子 (pr / exactHead / reviewRevision / authorFamily / memoryId)
   // のみで構成する。`requestedAt` を digest に入れると、同一レビュー要求の retry が別 request
   // ファイルとして併存し、D1 (`review-dispatch.ts`) の duplicate_request_conflict を偶発させる。
@@ -186,7 +196,7 @@ export function projectReviewVerdict(input: {
   if (!existsSync(input.verdictFile)) {
     return { ok: false, reason: "verdict_file_missing" };
   }
-  if (!isValidRequest(input.request) || !isValidAttestation(input.attestation)) {
+  if (!isValidReviewRequest(input.request) || !isValidAttestation(input.attestation)) {
     return { ok: false, reason: "invalid_review_attestation" };
   }
   if (!identityMatches(input.request, input.attestation)) {

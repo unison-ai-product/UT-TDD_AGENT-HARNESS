@@ -10,7 +10,7 @@ import {
   type ReviewAttestationRequest,
   resolveReviewAuthorFamily,
 } from "../feedback/review-attestation.ts";
-import { REVIEW_OUTPUT_CONTRACT } from "../feedback/review-verdict-contract.ts";
+import { reviewOutputContract } from "../feedback/review-verdict-contract.ts";
 import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
@@ -252,6 +252,7 @@ function runtimeCommand(
     .option("--review-head <sha>", "exact reviewed HEAD SHA")
     .option("--review-revision <id>", "review revision identity")
     .option("--review-author-family <family>", "author family under review (codex|claude)")
+    .option("--review-memory-id <id>", "canonical review request memory identity")
     .option("--execute", "execute provider CLI instead of dry-run")
     .option("--json", "JSON output")
     .action(
@@ -266,6 +267,7 @@ function runtimeCommand(
         reviewHead?: string;
         reviewRevision?: string;
         reviewAuthorFamily?: string;
+        reviewMemoryId?: string;
         execute?: boolean;
         json?: boolean;
       }) => {
@@ -307,7 +309,11 @@ function runtimeCommand(
         // author-family 単独指定が「識別子なし委譲」として素通りし、値が黙って捨てられる
         // (silent discard、PR #214 precheck FLAG)。宣言 = 4 flag のいずれかを渡したこと。
         const reviewIdentityRequested = Boolean(
-          opts.reviewPr || opts.reviewHead || opts.reviewRevision || opts.reviewAuthorFamily,
+          opts.reviewPr ||
+            opts.reviewHead ||
+            opts.reviewRevision ||
+            opts.reviewAuthorFamily ||
+            opts.reviewMemoryId,
         );
         if (
           reviewIdentityRequested &&
@@ -316,6 +322,11 @@ function runtimeCommand(
           process.stderr.write(
             "review_head_required: review identity requires --review-pr, --review-head, and --review-revision together\n",
           );
+          process.exitCode = 1;
+          return;
+        }
+        if (opts.reviewMemoryId !== undefined && !opts.reviewMemoryId.trim()) {
+          process.stderr.write("review_memory_id_required: --review-memory-id must not be blank\n");
           process.exitCode = 1;
           return;
         }
@@ -338,7 +349,15 @@ function runtimeCommand(
           (routing.review_lane ? ` lane=${routing.review_lane}` : "") +
           (routing.task_intent ? ` intent=${routing.task_intent}` : "");
         const contextInjection = deps.resolveSkillContextInjection(opts.plan);
-        const taskForAdapter = routing.review_lane ? `${task}\n\n${REVIEW_OUTPUT_CONTRACT}` : task;
+        // verdict file は契約本文へ literal path として埋め込むため、契約を組む前に確定させる
+        // (env 名だけでは env を読めない子 runtime が履行できない。§reviewOutputContract)。
+        let reviewVerdictFile: string | undefined;
+        if (routing.review_lane && reviewIdentityRequested) {
+          reviewVerdictFile = reviewVerdictPath(process.cwd());
+        }
+        const taskForAdapter = routing.review_lane
+          ? `${task}\n\n${reviewOutputContract(reviewVerdictFile)}`
+          : task;
         const plan = buildAdapterPlan(
           {
             provider,
@@ -383,9 +402,7 @@ function runtimeCommand(
         // 作ると temp dir が委譲のたびに leak する (PR #214 Codex FLAG、U-RVATT-020)。
         // reviewRequest 生成 (下) と同じ reviewIdentityRequested を述語にする — 二重実装に
         // すると生成条件と輸送条件が再び drift する。
-        let reviewVerdictFile: string | undefined;
-        if (routing.review_lane && reviewIdentityRequested) {
-          reviewVerdictFile = reviewVerdictPath(process.cwd());
+        if (reviewVerdictFile) {
           plan.env = { ...(plan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: reviewVerdictFile };
         }
         // verdict file の temp dir は execute 経路 (`executeAdapterPlanForCli`) が後始末する。
@@ -415,7 +432,9 @@ function runtimeCommand(
           reviewHead &&
           reviewRevision
             ? {
-                memoryId: `review:${reviewPr}:${reviewHead}:${reviewRevision}`,
+                memoryId:
+                  opts.reviewMemoryId?.trim() ||
+                  `review:${reviewPr}:${reviewHead}:${reviewRevision}`,
                 pr: Number(reviewPr),
                 exactHead: reviewHead,
                 reviewRevision,

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
+  buildClaudeReviewInboxEntry,
   claudeWorkspaceId,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
@@ -26,6 +28,11 @@ const memory: MemoryEntry = {
   content_hash: "a".repeat(64),
 };
 
+function inboxFileStem(entryId: string): string {
+  const safeId = entryId.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160);
+  return `${safeId.slice(0, 147)}_${createHash("sha256").update(entryId).digest("hex").slice(0, 12)}`;
+}
+
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-"));
   execFileSync("git", ["init", "-q"], { cwd: root });
@@ -33,6 +40,144 @@ function fixture(): string {
 }
 
 describe("Claude HARNESS memory async wake", () => {
+  it("U-RVATT-023: producerはv3 memoryを発行し、review文言をtyped reviewへ昇格しない", () => {
+    const entry = buildClaudeInboxEntry({
+      memory: { ...memory, body: "PR #218 review request", tags: ["review", "claude"] },
+      operationId: "memory-review-text",
+      workspaceId: "a".repeat(64),
+    });
+    expect(entry).toMatchObject({ schemaVersion: "ut-tdd.claude-inbox/v3", purpose: "memory" });
+    expect(entry).not.toHaveProperty("requestDigest");
+  });
+
+  it("U-RVATT-023: typed reviewはcanonical request identityを必須fieldへ束縛する", () => {
+    const entry = buildClaudeReviewInboxEntry({
+      memory,
+      operationId: "review-218-head",
+      workspaceId: "a".repeat(64),
+      requestDigest: "b".repeat(16),
+      requestPath: `.ut-tdd/review/requests/${"b".repeat(16)}.json`,
+      pr: 218,
+      exactHead: "c".repeat(40),
+      reviewRevision: "review-218-r1",
+      authorFamily: "codex",
+    });
+    expect(entry).toMatchObject({
+      schemaVersion: "ut-tdd.claude-inbox/v3",
+      purpose: "review",
+      memoryPath: memory.source_path,
+      pr: 218,
+      exactHead: "c".repeat(40),
+      authorFamily: "codex",
+    });
+    expect(renderClaudeWakeMessage(entry)).toContain('"purpose":"review"');
+  });
+
+  it("U-RVATT-023: invalid review identityはmemoryへdowngradeせず拒否する", () => {
+    expect(() =>
+      buildClaudeReviewInboxEntry({
+        memory,
+        operationId: "invalid-review",
+        workspaceId: "a".repeat(64),
+        requestDigest: "not-a-digest",
+        requestPath: "request.json",
+        pr: 218,
+        exactHead: "c".repeat(40),
+        reviewRevision: "review-218-r1",
+        authorFamily: "codex",
+      }),
+    ).toThrow("claude_inbox_review_identity_invalid");
+  });
+
+  it("U-RVATT-025: v2はmemory互換だけ、unknown/invalid v3はfail-closeする", async () => {
+    const root = fixture();
+    try {
+      const workspaceId = claudeWorkspaceId(root);
+      const v3 = buildClaudeInboxEntry({ memory, operationId: "schema-seed", workspaceId });
+      const inbox = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox");
+      publishClaudeInboxEntry(root, v3);
+      rmSync(join(inbox, `${inboxFileStem(v3.id)}.json`));
+      const legacy = { ...v3, schemaVersion: "ut-tdd.claude-inbox/v2" } as Record<string, unknown>;
+      delete legacy.purpose;
+      writeFileSync(join(inbox, "legacy.json"), `${JSON.stringify(legacy)}\n`, "utf8");
+      writeFileSync(
+        join(inbox, "unknown.json"),
+        `${JSON.stringify({ ...v3, schemaVersion: "ut-tdd.claude-inbox/v99" })}\n`,
+        "utf8",
+      );
+      writeFileSync(
+        join(inbox, "invalid-review.json"),
+        `${JSON.stringify({ ...v3, purpose: "review" })}\n`,
+        "utf8",
+      );
+      const result = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "legacy-only",
+        pollIntervalMs: 10,
+        maxWaitMs: 30,
+      });
+      expect(result.kind).toBe("delivered");
+      expect(result.entry).toMatchObject({
+        schemaVersion: "ut-tdd.claude-inbox/v2",
+        purpose: "memory",
+      });
+      const noInvalidFallback = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "invalid-not-memory",
+        pollIntervalMs: 10,
+        maxWaitMs: 20,
+      });
+      expect(noInvalidFallback.kind).toBe("timeout");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-025: retryは同じpurpose別operation identityへ収束する", () => {
+    const root = fixture();
+    try {
+      const input = {
+        memory,
+        operationId: "review-idempotent",
+        workspaceId: claudeWorkspaceId(root),
+        requestDigest: "d".repeat(16),
+        requestPath: `.ut-tdd/review/requests/${"d".repeat(16)}.json`,
+        pr: 218,
+        exactHead: "e".repeat(40),
+        reviewRevision: "review-idempotent-r1",
+        authorFamily: "codex" as const,
+        now: "2026-08-14T00:00:00.000Z",
+      };
+      const first = buildClaudeReviewInboxEntry(input);
+      const second = buildClaudeReviewInboxEntry(input);
+      expect(first.id).toBe(second.id);
+      expect(publishClaudeInboxEntry(root, first)).toBe(publishClaudeInboxEntry(root, second));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    "docs/plans/evil.md",
+    "src/cli.ts",
+    ".git/config",
+    "../outside.md",
+  ])("U-RVATT-024: review envelopeのmemoryPath %s はcanonical memory外として拒否する", (memoryPath) => {
+    expect(() =>
+      buildClaudeReviewInboxEntry({
+        memory: { ...memory, source_path: memoryPath },
+        operationId: "review-path-boundary",
+        workspaceId: "a".repeat(64),
+        requestDigest: "d".repeat(16),
+        requestPath: `.ut-tdd/review/requests/${"d".repeat(16)}.json`,
+        pr: 218,
+        exactHead: "e".repeat(40),
+        reviewRevision: "review-path-r1",
+        authorFamily: "codex",
+      }),
+    ).toThrow("claude_inbox_review_identity_invalid");
+  });
+
   it("U-MEMWAKE-006: VS Code extension entrypointだけをpositiveにwake対象化する", () => {
     expect(isClaudeMemoryWakeTarget({ CLAUDE_CODE_ENTRYPOINT: "claude-vscode" })).toBe(true);
     expect(isClaudeMemoryWakeTarget({})).toBe(false);
@@ -128,6 +273,40 @@ describe("Claude HARNESS memory async wake", () => {
         "claude_inbox_projection_conflict",
       );
       expect(JSON.parse(readFileSync(path, "utf8"))).toEqual(entry);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVWAKE-010: 長い memory_id でも operationId 差異が別inboxファイルへ反映される", () => {
+    const root = fixture();
+    try {
+      const workspaceId = claudeWorkspaceId(root);
+      const longMemory: MemoryEntry = {
+        ...memory,
+        memory_id: `memory:project:${"l".repeat(180)}`,
+      };
+      const operationA = "op-a".repeat(24);
+      const operationB = "op-b".repeat(24);
+      const entryA = buildClaudeInboxEntry({
+        memory: longMemory,
+        operationId: operationA,
+        workspaceId,
+      });
+      const entryB = buildClaudeInboxEntry({
+        memory: longMemory,
+        operationId: operationB,
+        workspaceId,
+      });
+      const legacyStemA = `${entryA.id.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160)}.json`;
+      const legacyStemB = `${entryB.id.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160)}.json`;
+      expect(legacyStemA).toBe(legacyStemB);
+      const pathA = publishClaudeInboxEntry(root, entryA);
+      const pathB = publishClaudeInboxEntry(root, entryB);
+      expect(pathA).not.toBe(pathB);
+      expect(inboxFileStem(entryA.id)).not.toBe(inboxFileStem(entryB.id));
+      expect(readFileSync(pathA, "utf8")).toContain(operationA);
+      expect(readFileSync(pathB, "utf8")).toContain(operationB);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
