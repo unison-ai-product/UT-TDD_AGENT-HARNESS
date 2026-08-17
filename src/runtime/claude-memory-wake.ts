@@ -100,6 +100,12 @@ function safeFilePart(value: string): string {
   return value.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 160);
 }
 
+function inboxFileStem(entryId: string): string {
+  const stableHash = createHash("sha256").update(entryId).digest("hex").slice(0, 12);
+  const safeId = safeFilePart(entryId);
+  return `${safeId.slice(0, 147)}_${stableHash}`;
+}
+
 function runtimeRoot(repoRoot: string): string {
   try {
     const commonDir = execFileSync(
@@ -185,7 +191,7 @@ export function buildClaudeReviewInboxEntry(input: {
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
   const directory = join(runtimeRoot(repoRoot), "inbox");
   ensureDir(directory, { recursive: true });
-  const target = join(directory, `${safeFilePart(entry.id)}.json`);
+  const target = join(directory, `${inboxFileStem(entry.id)}.json`);
   const serialized = JSON.stringify(entry);
   if (existsSync(target)) {
     if (readFileSync(target, "utf8").trim() === serialized) {
@@ -418,7 +424,7 @@ function claim(input: {
 }): boolean {
   const root = runtimeRoot(input.repoRoot);
   ensureDir(root, { recursive: true });
-  const path = join(root, `${safeFilePart(input.entry.id)}.claim`);
+  const path = join(root, `${inboxFileStem(input.entry.id)}.claim`);
   let descriptor: number;
   try {
     descriptor = openSync(path, "wx", 0o600);
@@ -543,7 +549,7 @@ export async function waitForClaudeMemory(input: {
           sessionId: input.sessionId,
         });
         try {
-          unlinkSync(join(root, "inbox", `${safeFilePart(entry.id)}.json`));
+          unlinkSync(join(root, "inbox", `${inboxFileStem(entry.id)}.json`));
         } catch {
           // claim が配送の正本。inbox GC は次回へ委ねる。
         }
