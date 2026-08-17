@@ -71,7 +71,7 @@ function isBunExecutionArgument(token: string): boolean {
   if (/\$\{?[A-Za-z_][A-Za-z0-9_]*\}?/.test(trimmed)) return true;
   if (/^(?:src|scripts|node_modules)\//i.test(trimmed)) return true;
   if (/^(?:src|scripts|node_modules)[\\/]/i.test(trimmed)) return true;
-  if (/^[\\w.-]+\.(?:ts|tsx|js|mjs|cjs|json|md)$/.test(trimmed)) return true;
+  if (/^[\w.-]+\.(?:ts|tsx|js|mjs|cjs|json|md)$/.test(trimmed)) return true;
   if (/[\\/]/.test(trimmed)) return true;
   return false;
 }

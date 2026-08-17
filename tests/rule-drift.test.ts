@@ -137,6 +137,8 @@ describe("rule-drift lint", () => {
       "bun build",
       "bun src/cli.ts status",
       "bun src\\cli.ts status",
+      "bun cli.ts",
+      "bun index.js",
       "bun C:\\repo\\src\\cli.ts",
       "bun C:/repo/src/cli.ts",
       "BUN src/cli.ts",
