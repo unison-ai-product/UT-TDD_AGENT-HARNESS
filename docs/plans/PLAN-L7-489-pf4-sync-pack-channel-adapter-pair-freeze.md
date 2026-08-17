@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-17
 updated: 2026-08-17
 owner: PM / Codex
