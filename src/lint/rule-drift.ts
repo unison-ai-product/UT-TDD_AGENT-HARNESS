@@ -89,7 +89,7 @@ const FORBIDDEN_ADAPTER_MARKERS = [
     // forbidden になり U-RDRIFT-006 と自己矛盾するため、その条件は採らない
     // (cross-review 2026-08-14 blocking 2 の是正)。
     pattern:
-      /`bunx?(?:\s[^`]*)?`|\bbunx\s+[\w@.-]|\bbun\s+(?:-|"|'|run\b|src\/|scripts\/|node_modules\/|\$\{?[A-Z_]|\.{1,2}\/|[\w.-]+\.(?:ts|js|mjs|cjs)\b)|\bbun\.(?:cmd|exe)\b/,
+      /`bunx?(?:\s[^`]*)?`|\bbun(?:\.cmd|\.exe)\b|\bbunx\s+\S+|\bbun\s+(?:-[^\s`"]+|--[^\s`"]+|"[^"]*"|'[^']*'|run\b|test\b|install\b|build\b|status\b|src\/|scripts\/|node_modules\/|\.{1,2}[\\\/]|[A-Za-z]:[\\\/]|\$\{?[A-Za-z_][A-Za-z0-9_]*\}?|[\w.-]+\.(?:ts|tsx|js|mjs|cjs|json|md)|[\w.-]+[\\\/])(?=\s|$|[`'"])/i,
   },
 ] as const;
 

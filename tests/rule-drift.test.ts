@@ -124,14 +124,22 @@ describe("rule-drift lint", () => {
   });
 
   it("U-RDRIFT-008: catches code-span / argument / .cmd / .exe / bunx execution instructions", () => {
-    // 「bun + 空白 + 限定 token」だけを見ると bun.cmd / bun.exe / code span 形を取りこぼす
-    // (cross-review 2026-08-14 blocking 4)。実行語として書かれた形は取りこぼさない。
+    // 「bun + 空白 + 限定 token」だけでは bun.cmd / bun.exe / code span 形や命令 token test/install/build を取りこぼす
+    // (cross-review 2026-08-14 blocking 2)。実行語として書かれた形は取りこぼさない。
     for (const line of [
       "bun.cmd src/cli.ts doctor",
       'bun.exe -e "1"',
       "`bun`",
       "`bun run test`",
       "bunx vitest run",
+      "bun test",
+      "bun install",
+      "bun build",
+      "bun src/cli.ts status",
+      "bun src\\cli.ts status",
+      "bun C:\\repo\\src\\cli.ts",
+      "bun C:/repo/src/cli.ts",
+      "BUN src/cli.ts",
       "| bun src/cli.ts status",
       'bun -e "console.log(1)"',
       "bun ./scripts/x.ts",
