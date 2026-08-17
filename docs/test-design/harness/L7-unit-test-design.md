@@ -784,6 +784,8 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 | U-RDRIFT-006 | 過去 incident・説明文の散文 6 形 (`bun runaway ×2` の読点前置版と空白前置版、`use bun runtime ...`、`bunAuthority: legacy_migration_debt`、`engines.bun は ...` 等) | forbidden marker 0 件で `ok=true`。実行指示でない記述まで拾う実装は RED。直前文字に依存せず散文が素通りすることを見る (旧版は読点前置に助けられて通っていた)。事実の記録を消す方向へ検査が圧力を掛けないことを固定する |
 | U-RDRIFT-007 | `.claude/CLAUDE.md` の Hooks 節と `.claude/settings.json` の実 command + args を (event, command) 集合として照合。production の `checkRuleDrift` (doctor rule-drift) へ配線し、実 repo に加え引数欠落 / event 取り違え / doc 行削除 / 壊れた JSON の 4 変異を投入 | 実 repo は `documentedOnly=[]` かつ `configuredOnly=[]` で `ok=true`。片側だけの改変は差集合を伴って `ok=false`、壊れた JSON は `parseError` 付きで fail-close し判定不能を green へ丸めない。文字列 marker の禁止だけでは「node と書いてあるが引数や event が実体と違う」drift を拾えないため、実体との等価性そのものを検査対象にする (Issue #322 AC) |
 | U-RDRIFT-008 | code span (```bun``` / ```bun run test```) / 引数付き (`-e` / path / `${VAR}` / `./scripts`) / `bun.cmd` / `bun.exe` / `bunx <pkg>` / pipe 後の `bun` を含む 9 形 | すべて `bun execution form` として検出する。「`bun` + 空白 + 限定 token」だけを見る実装は取りこぼして RED。逆に「bare `bun` + 空白」を実行形と見なす実装は U-RDRIFT-006 の散文 6 形で RED になり、両側から挟んで判別境界を固定する (cross-review 2026-08-14 blocking 2/4 の是正) |
+| U-RDRIFT-009 | `.claude/commands/*.md` と `.github/PULL_REQUEST_TEMPLATE.md` へ Bun 実行形を注入する | 既存 `rule-drift` の instruction-surface loader が全対象を読み、各ファイルを `bun execution form` として報告して `ok=false`。adapter 3枚だけを読む実装や対象面を1枚落とす実装は RED |
+| U-RDRIFT-010 | 実 repo の `.claude/commands/*.md` と PR template のファイル集合を確認し、Bun 指示を検出する | loader が実在する全対象を列挙し、Node/npm 是正後は `forbiddenMarkers=[]` かつ `ok=true`。ファイル集合を固定リストから削除・空集合へ変異すると集合 assertion が RED |
 
 ### 2026-06-29 L14 Close Audit Oracle Addendum
 

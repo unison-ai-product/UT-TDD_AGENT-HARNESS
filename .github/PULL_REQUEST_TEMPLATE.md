@@ -1,6 +1,6 @@
 <!-- PLAN-L7-451 W4: typed PR trace contract。trace block は手書きせず
-     `bun src/cli.ts github pr render --plan <PLAN-ID> --route-mode <mode> --issue-number <n>` の出力を貼る。
-     検証: `bun src/cli.ts github pr validate --body-file <body.md>` -->
+     `node src/cli.ts github pr render --plan <PLAN-ID> --route-mode <mode> --issue-number <n>` の出力を貼る。
+     検証: `node src/cli.ts github pr validate --body-file <body.md>` -->
 
 ## 概要
 

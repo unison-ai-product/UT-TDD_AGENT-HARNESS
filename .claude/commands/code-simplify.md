@@ -16,8 +16,8 @@ verified by regression, not by judgement.
    any structural change.
 2. **One structural change per commit** — extract, rename, inline, or dedupe in
    isolation. Do not mix a refactor with a feature change or a bug fix.
-3. **Verify after each step** — `bun run typecheck`, `bun run lint`,
-   `bun run test` all green; `ut-tdd doctor` exit 0.
+3. **Verify after each step** — `npm run typecheck`, `npm run lint`,
+   `npm run test` all green; `ut-tdd doctor` exit 0.
 4. **No new behavior, no new tests of new behavior** during the refactor step —
    the existing net must stay green unchanged.
 

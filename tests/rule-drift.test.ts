@@ -156,6 +156,40 @@ describe("rule-drift lint", () => {
     }
   });
 
+  it("U-RDRIFT-009: applies the Bun execution-form detector to every instruction surface", () => {
+    const docs = completeDocs();
+    docs.instructionSurfaces = {
+      ".claude/commands/test.md": "Run `bun run test` before review.",
+      ".github/PULL_REQUEST_TEMPLATE.md": "bun src/cli.ts github pr validate --body-file <body.md>",
+    };
+
+    const result = analyzeRuleDrift(docs);
+
+    expect(result.ok).toBe(false);
+    expect(result.forbiddenMarkers).toEqual([
+      { file: ".claude/commands/test.md", marker: "bun execution form" },
+      { file: ".github/PULL_REQUEST_TEMPLATE.md", marker: "bun execution form" },
+    ]);
+  });
+
+  it("U-RDRIFT-010: loads the real command and PR-template surfaces and keeps them Bun-free", () => {
+    const docs = loadRuleAdapterDocs(process.cwd());
+    const surfaces = docs.instructionSurfaces ?? {};
+    expect(Object.keys(surfaces)).toEqual(
+      expect.arrayContaining([
+        ".claude/commands/build.md",
+        ".claude/commands/code-simplify.md",
+        ".claude/commands/test.md",
+        ".claude/commands/ut-tdd-test.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+      ]),
+    );
+    expect(Object.keys(surfaces).length).toBeGreaterThanOrEqual(5);
+    const result = analyzeRuleDrift(docs);
+    expect(result.forbiddenMarkers).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
   it("U-RDRIFT-007: .claude/CLAUDE.md の Hooks 節は settings.json の実 command/args と一致する", () => {
     // 文字列 marker の禁止だけでは「node と書いてあるが引数や event が実体と違う」drift を
     // 拾えない。実体との等価性そのものを検査対象にする (Issue #322 AC)。

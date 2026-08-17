@@ -1,10 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export interface RuleAdapterDocs {
   agents: string;
   claudeProject: string;
   claudeRuntime: string;
+  /** AI が直接読む instruction surface。adapter 間の必須 marker とは分離して検査する。 */
+  instructionSurfaces?: Readonly<Record<string, string>>;
 }
 
 export interface RuleDriftResult {
@@ -218,21 +220,22 @@ export function analyzeHookParity(input: {
 }
 
 export function analyzeRuleDrift(docs: RuleAdapterDocs): RuleDriftResult {
-  const files = {
+  const adapterFiles = {
     "AGENTS.md": docs.agents,
     "CLAUDE.md": docs.claudeProject,
     ".claude/CLAUDE.md": docs.claudeRuntime,
   };
+  const files = { ...adapterFiles, ...(docs.instructionSurfaces ?? {}) };
   const forbiddenMarkers: { file: string; marker: string }[] = [];
   const missingMarkers: { file: string; marker: string }[] = [];
 
   for (const marker of SHARED_MARKERS) {
-    for (const [file, text] of Object.entries(files)) {
+    for (const [file, text] of Object.entries(adapterFiles)) {
       if (!text.includes(marker)) missingMarkers.push({ file, marker });
     }
   }
   for (const [file, markers] of Object.entries(ADAPTER_MARKERS)) {
-    const text = files[file as keyof typeof files];
+    const text = adapterFiles[file as keyof typeof adapterFiles];
     for (const marker of markers) {
       if (!text.includes(marker)) missingMarkers.push({ file, marker });
     }
@@ -261,10 +264,24 @@ export function loadRuleAdapterDocs(repoRoot: string): RuleAdapterDocs {
     if (!existsSync(full)) throw new Error(`missing rule adapter doc: ${path}`);
     return readFileSync(full, "utf8");
   };
+  const commandDirectory = join(repoRoot, ".claude", "commands");
+  if (!existsSync(commandDirectory))
+    throw new Error("missing instruction surface: .claude/commands");
+  const instructionSurfaces: Record<string, string> = {};
+  for (const entry of readdirSync(commandDirectory, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
+    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+    const relativePath = join(".claude", "commands", entry.name).replaceAll("\\", "/");
+    instructionSurfaces[relativePath] = read(relativePath);
+  }
+  const pullRequestTemplate = ".github/PULL_REQUEST_TEMPLATE.md";
+  instructionSurfaces[pullRequestTemplate] = read(pullRequestTemplate);
   return {
     agents: read("AGENTS.md"),
     claudeProject: read("CLAUDE.md"),
     claudeRuntime: read(join(".claude", "CLAUDE.md")),
+    instructionSurfaces,
   };
 }
 
