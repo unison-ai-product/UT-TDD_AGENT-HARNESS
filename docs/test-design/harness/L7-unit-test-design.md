@@ -1885,7 +1885,7 @@ S1では以下を未実装のcandidate RED oracleとして登録する。各cand
 | `CANDIDATE-RELMAN-003` | S3 promotion | harness-check / QA Go / cross-review receiptを各1件欠落 | promotion拒否、pointer不変 |
 | `CANDIDATE-RELMAN-004` | S3 rollback | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束 |
 | `CANDIDATE-RELMAN-005` | S3 rollback | rollback実行計画を生成 | force push / tag付替え / commit / push command 0 |
-| `CANDIDATE-RELMAN-006` | PF-4 adapter / #250 | object不在、digest不一致、完全一致を個別入力 | 順に`unavailable` / `mismatch` / `attested`、三値を二値へ丸めない |
+| `U-RELMAN-006` | PF-4 adapter / `PLAN-L7-489` / #250 | `tests/release-channel-adapter.test.ts` の三値adapter composition | selected channelのobject不在・resolver失敗、materialized digest不一致、完全一致を個別入力し、順に`unavailable` / `mismatch` / `attested`。三値を二値へ丸めず、外部copy/write portを呼ばない |
 | `U-RELMAN-007` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-007` | canary/stable以外のchannelを追加し、`channelOrder`の欠落・重複・余剰・unknown名を各mutationして、own channel keyをちょうど1回列挙するorderだけ受理し、未登録release参照も拒否。promotion可否はS3まで推測しない |
 | `CANDIDATE-RELMAN-008` | S3 promotion | no-go未解除のままstableへpromotion | dependency不足で拒否、canary pointerも不変 |
 | `U-RELMAN-009` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-009` | release ID key、source commit、artifact digestのhexをそれぞれ単独で1 nibble変異し、各mutationが独立に導出式不一致となる。artifact digest mutationをsource commit mutationで代替しない |
