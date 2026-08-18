@@ -162,6 +162,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-MEMORY-005 | `evaluateMemoryPromotion(events)` / Stop summary | commitまたはplan_switchがありmemory write成功が無いsessionだけ`memory_promotion_missed` telemetry候補へ進める。本文・prompt・git diffを読まず、memory書込みを強制しない。 |
 | U-MEMORY-006 | feedback lifecycle projection | telemetryだけがTTL後ack対象で、gate/actionableはsource解消まで残る。消化済telemetryは同一sourceの再投影でopenへ戻らず、新観測だけが新generationを作る。DB書込失敗はfail-open。 |
 | U-MEMORY-019 | MemoryService write boundary negative test | `src/**` の全production TypeScriptを走査し、MemoryService外でstorage primitiveを直接参照・import・export・re-exportするsourceが1件でもあればfail-closeする。primitiveはpublic exportに存在せず、CLIを含むconsumerは`writeMemory`だけを使う。 |
+| U-MEMORY-020 | `memoryIdFor` / `MemoryService.writeMemory` | ASCII safe titleは既存slugを維持し、非ASCII・句読点など正規化で情報を失うtitleはsha256 12桁suffixを付ける。同一kindの異なるlossy title 2件は異なるmemory_id/source_pathへ保存され、source file 2件を保持する。既存のlegacy無suffix pathが同じkind/titleなら再利用し、新旧duplicateを作らない。 |
+| U-MEMORY-021 | `MemoryService.writeMemory` | 既存pathのkind/title/body/tags/memory_idが異なる再書込みは副作用前にfail-closeし既存bytesを不変に保つ。同一内容の再試行だけは冪等に既存entryを返し、symlink・非regular・破損frontmatterも上書きしない。 |
 
 ### §1.9 U-SLOT (agent-slots 由来、PLAN-L7-08 / IMP-050)
 

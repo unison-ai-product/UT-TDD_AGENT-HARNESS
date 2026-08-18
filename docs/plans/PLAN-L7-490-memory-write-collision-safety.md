@@ -51,6 +51,8 @@ Issue #325 は、共有 HARNESS memory の唯一の書き込み経路がタイ�
 
 - ASCIIで安全な既存slugは後方互換に保つ。正規化で情報を失うタイトル（日本語、句読点など）は
   安定したsha256短縮suffixを付け、異なるタイトルを異なるsource pathへ写像する。
+- suffix付きidentityが新規で、旧来の無suffix `<kind>-<slug>.md` が同じkind/titleで存在する場合は、
+  旧ファイルを正本として再利用し、既存corpusに新旧2件を増やさない。既存memoryの一括renameは行わない。
 - 同じsource pathが既に存在する場合、既存ファイルを正本として先に読み、kind/title/body/tags/
   memory_idが同一の完全再試行だけを冪等に受理する。
 - 既存ファイルのidentityまたは内容が異なる場合、明示的な上書き契約がない限り副作用前に
@@ -59,9 +61,8 @@ Issue #325 は、共有 HARNESS memory の唯一の書き込み経路がタイ�
 
 ## 2. 対応oracle
 
-実装PRで `CANDIDATE-MEMORY-020`（日本語/句読点の安定suffixとASCII互換）と
-`CANDIDATE-MEMORY-021`（collision fail-close / idempotent retry）を、それぞれ
-`U-MEMORY-020` / `U-MEMORY-021`へ1:1昇格する。
+`U-MEMORY-020`（日本語/句読点の安定suffixとASCII互換）と
+`U-MEMORY-021`（collision fail-close / idempotent retry）を、実装テストと1:1で固定する。
 
 ## 3. 工程と出口
 
@@ -73,4 +74,5 @@ Issue #325 は、共有 HARNESS memory の唯一の書き込み経路がタイ�
 ## 4. スコープ境界
 
 既存ファイルの復旧、過去memoryの一括rename、DB write-through、`--force` CLI追加、#236/#242の
-共有配送判定は本PLANへ混ぜない。Issue #325は同一PRの実装・検証・レビューが完了するまでcloseしない。
+共有配送判定は本PLANへ混ぜない。legacy無suffix pathの再利用は互換防護として本PLANに含める。
+Issue #325は同一PRの実装・検証・レビューが完了するまでcloseしない。

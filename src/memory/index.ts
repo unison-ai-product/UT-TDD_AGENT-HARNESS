@@ -41,6 +41,12 @@ function slugify(value: string): string {
   return slug || "memory";
 }
 
+function slugLosesTitleInformation(value: string): boolean {
+  // Spaces and hyphens are the existing human-readable separators. Anything
+  // else (including non-ASCII and punctuation) needs an identity suffix.
+  return !/^[a-z0-9]+(?:[ -]+[a-z0-9]+)*$/i.test(value);
+}
+
 function stableHash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -66,7 +72,15 @@ function memoryRoot(repoRoot: string): string {
 }
 
 export function memoryIdFor(input: { kind: MemoryKind; title: string }): string {
-  return `memory:${input.kind}:${slugify(input.title)}`;
+  const slug = memorySlugFor(input.title);
+  const suffix = slugLosesTitleInformation(input.title)
+    ? `--${stableHash(input.title).slice(0, 12)}`
+    : "";
+  return `memory:${input.kind}:${slug}${suffix}`;
+}
+
+export function memorySlugFor(title: string): string {
+  return slugify(title);
 }
 
 export function parseMemoryFile(
