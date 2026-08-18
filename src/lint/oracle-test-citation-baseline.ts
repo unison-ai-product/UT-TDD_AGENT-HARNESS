@@ -191,6 +191,7 @@ export const ORACLE_TEST_CITATION_BASELINE: ReadonlySet<string> = new Set([
   "U-GREENDEF-005",
   "U-GREENDEF-006",
   "U-GREENDEF-007",
+  "U-GREENDEF-008",
   "U-HOVER-016",
   "U-HOVER-017",
   "U-IPT-001",
