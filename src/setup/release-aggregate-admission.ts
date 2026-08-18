@@ -90,7 +90,12 @@ export interface ReleaseAggregateApplyDependencies<TStage> {
 
 export type ReleaseAggregateApplyResult =
   | { readonly ok: true; readonly applied: 1 }
-  | { readonly ok: false; readonly error: "unavailable"; readonly applied: 0 };
+  | { readonly ok: false; readonly error: "unavailable"; readonly applied: 0 }
+  | {
+      readonly ok: false;
+      readonly error: "rollback_failed";
+      readonly applied: "indeterminate";
+    };
 
 function validRelativePath(path: string): boolean {
   return (
@@ -224,28 +229,34 @@ export async function applySealedReleaseAggregate<TStage>(
 ): Promise<ReleaseAggregateApplyResult> {
   let snapshot: readonly MaterializedReleaseEntry[] | undefined;
   let stage: TStage | undefined;
+  let stagingCreated = false;
   let discarded = false;
   try {
     snapshot = immutableSnapshot(await dependencies.snapshotDestination());
     stage = await dependencies.writeStaging(plan);
+    stagingCreated = true;
     await dependencies.applyDestination(stage, plan);
     await dependencies.discardStaging(stage);
     discarded = true;
     return { ok: true, applied: 1 };
   } catch {
-    if (stage !== undefined && !discarded) {
+    if (stagingCreated && !discarded) {
       try {
-        await dependencies.discardStaging(stage);
+        await dependencies.discardStaging(stage as TStage);
       } catch {
         // The destination restore below remains the authoritative rollback.
       }
     }
+    let rollbackFailed = false;
     if (snapshot !== undefined) {
       try {
         await dependencies.restoreDestination(snapshot);
       } catch {
-        // The operation is still fail-closed; callers must not treat it as applied.
+        rollbackFailed = true;
       }
+    }
+    if (rollbackFailed) {
+      return { ok: false, error: "rollback_failed", applied: "indeterminate" };
     }
     return { ok: false, error: "unavailable", applied: 0 };
   }

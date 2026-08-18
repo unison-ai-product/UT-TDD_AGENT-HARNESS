@@ -94,7 +94,116 @@ describe("PF-5 release aggregate admission", () => {
         { cleanPackAllowlist: [destinationPath] },
         "invalid_allowlist",
       ],
-      ["selected revision copy mapping", { channelMappings: [] }, "missing_channel_mapping"],
+      [
+        "selected revision copy mapping cardinality",
+        { channelMappings: [] },
+        "missing_channel_mapping",
+      ],
+      [
+        "selected revision release identity",
+        {
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId: `rel-sha256:${"c".repeat(64)}`,
+              sourceRevision: revision,
+              sourcePath,
+              destinationPath,
+            },
+          ],
+        },
+        "missing_channel_mapping",
+      ],
+      [
+        "selected revision source commit",
+        {
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId: releaseId(),
+              sourceRevision: "c".repeat(40),
+              sourcePath,
+              destinationPath,
+            },
+          ],
+        },
+        "missing_channel_mapping",
+      ],
+      [
+        "selected revision format",
+        {
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId: releaseId(),
+              sourceRevision: "not-a-revision",
+              sourcePath,
+              destinationPath,
+            },
+          ],
+        },
+        "missing_channel_mapping",
+      ],
+      [
+        "selected revision source path",
+        {
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId: releaseId(),
+              sourceRevision: revision,
+              sourcePath: "releases/stable/missing.ts",
+              destinationPath,
+            },
+          ],
+        },
+        "missing_channel_mapping",
+      ],
+      [
+        "selected revision source path format",
+        {
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId: releaseId(),
+              sourceRevision: revision,
+              sourcePath: "../outside.ts",
+              destinationPath,
+            },
+          ],
+        },
+        "missing_channel_mapping",
+      ],
+      [
+        "selected revision destination allowlist",
+        {
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId: releaseId(),
+              sourceRevision: revision,
+              sourcePath,
+              destinationPath: "src/not-allowed.ts",
+            },
+          ],
+        },
+        "missing_channel_mapping",
+      ],
+      [
+        "selected revision destination path format",
+        {
+          channelMappings: [
+            {
+              channel: "stable",
+              releaseId: releaseId(),
+              sourceRevision: revision,
+              sourcePath,
+              destinationPath: "../outside.ts",
+            },
+          ],
+        },
+        "missing_channel_mapping",
+      ],
     ];
 
     for (const [, mutation, error] of cases) {
@@ -217,6 +326,47 @@ describe("PF-5 release aggregate admission", () => {
       expect(restoreCalls).toBe(1);
       expect(destination).toEqual(prior);
     }
+
+    const publishedDestination = new Map([[destinationPath, "prior"]]);
+    const rollbackFailed = await applySealedReleaseAggregate(await admittedPlan(), {
+      snapshotDestination: () => [],
+      writeStaging: () => ({ staged: true }),
+      applyDestination: () => {
+        publishedDestination.set(destinationPath, "published");
+        throw new Error("apply-after");
+      },
+      discardStaging: () => undefined,
+      restoreDestination: () => {
+        throw new Error("restore-failed");
+      },
+    });
+    expect(rollbackFailed).toEqual({
+      ok: false,
+      error: "rollback_failed",
+      applied: "indeterminate",
+    });
+    expect(publishedDestination.get(destinationPath)).toBe("published");
+
+    const discardFailureDestination = new Map([[destinationPath, "prior"]]);
+    const discardRollbackFailed = await applySealedReleaseAggregate(await admittedPlan(), {
+      snapshotDestination: () => [],
+      writeStaging: () => ({ staged: true }),
+      applyDestination: () => {
+        discardFailureDestination.set(destinationPath, "published");
+      },
+      discardStaging: () => {
+        throw new Error("discard-failed");
+      },
+      restoreDestination: () => {
+        throw new Error("restore-failed");
+      },
+    });
+    expect(discardRollbackFailed).toEqual({
+      ok: false,
+      error: "rollback_failed",
+      applied: "indeterminate",
+    });
+    expect(discardFailureDestination.get(destinationPath)).toBe("published");
 
     const destination = new Map([[destinationPath, "prior"]]);
     let applyCalls = 0;

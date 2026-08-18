@@ -97,7 +97,8 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 - sealed planのapplyはisolated stagingへ行い、staging write/copyおよびdestination commit/apply
   の各境界へ1..N faultを注入する。全faultでstagingを破棄し、destination/control manifest/
   allowlist/copy inputのprior bytes・mode・pathを不変に保ち、partial publishを0にする。
-  faultなしの成功時だけdestination applyをexactly 1回許可する。
+  restore自体が失敗してprior状態を証明できない場合は`rollback_failed`/`applied=indeterminate`
+  を返し、未公開(`applied=0`)とは報告しない。faultなしの成功時だけdestination applyをexactly 1回許可する。
 - manifest schema invalid、unknown channel、selected revision/object unavailableはtyped finding
   を保持したままfail-closeする。`unavailable`を`mismatch`や成功へ丸めない。
 - application coreは既存PF-1〜PF-4のpure domain/resolver/materializer/adapter portを注入し、
@@ -111,7 +112,7 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 2. `CANDIDATE-RELMAN-015`: schema invalid manifestをtyped invalidとして拒否し、副作用0件。
 3. `CANDIDATE-RELMAN-016`: unknown channelを`unknown_channel`として保持し、副作用0件。
 4. `CANDIDATE-RELMAN-017`: staging/apply各境界の1..N faultでprior state不変・partial publish 0、
-   成功時のみapply exactly 1回。
+   restore失敗時は`rollback_failed`/`applied=indeterminate`、成功時のみapply exactly 1回。
 
 ## 3. 工程と出口
 
