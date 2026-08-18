@@ -28,8 +28,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-11-snapshot-fence-foreign-activity.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-REVERSE-77-snapshot-fence-foreign-activity-backfill.md
-    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires: []
