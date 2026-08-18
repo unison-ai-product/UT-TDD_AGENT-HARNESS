@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { type MemoryEntry, selectMemoryEntries } from "../src/memory/index.ts";
+import { type MemoryEntry, memoryIdFor, selectMemoryEntries } from "../src/memory/index.ts";
 import {
   compareIndexToCorpus,
   loadMemoryCorpus,
@@ -282,6 +282,129 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
     const entries: MemoryEntry[] = [];
     expect(compareIndexToCorpus(entries, []).fresh).toBe(true);
     expect(renderMemoryHealth({ entries: [], findings: [], freshness: "fresh" })).toBe("");
+  });
+
+  // U-MEMORY-020: 日本語/句読点で slug が縮退しても identity と source path を分離する。
+  it("keeps lossy titles distinct while preserving ASCII-safe ids", () => {
+    const japaneseA = "差し戻しと自力修正は排他";
+    const japaneseB = "レビュー依頼を取り下げて修正する";
+    const idA = memoryIdFor({ kind: "feedback", title: japaneseA });
+    const idB = memoryIdFor({ kind: "feedback", title: japaneseB });
+    expect(idA).toMatch(/^memory:feedback:memory--[a-f0-9]{12}$/);
+    expect(idB).toMatch(/^memory:feedback:memory--[a-f0-9]{12}$/);
+    expect(idA).not.toBe(idB);
+    expect(memoryIdFor({ kind: "feedback", title: "PR #319 review" })).not.toBe(
+      memoryIdFor({ kind: "feedback", title: "PR 319: review" }),
+    );
+    expect(memoryIdFor({ kind: "project", title: "Service-owned write" })).toBe(
+      "memory:project:service-owned-write",
+    );
+
+    const repo = tempRepo();
+    try {
+      const first = writeMemory({
+        repoRoot: repo,
+        input: {
+          kind: "feedback",
+          title: japaneseA,
+          body: "first",
+          now: "2026-08-18T00:00:00.000Z",
+        },
+      });
+      const second = writeMemory({
+        repoRoot: repo,
+        input: {
+          kind: "feedback",
+          title: japaneseB,
+          body: "second",
+          now: "2026-08-18T00:00:01.000Z",
+        },
+      });
+      expect(first.source_path).not.toBe(second.source_path);
+      expect(loadMemoryCorpus(repo).entries).toHaveLength(2);
+
+      const legacyPath = join(repo, ".ut-tdd", "memory", "feedback-pr-319-review.md");
+      writeFileSync(
+        legacyPath,
+        [
+          "---",
+          "memory_id: memory:feedback:pr-319-review",
+          "kind: feedback",
+          'title: "PR #319 review"',
+          "tags: []",
+          "updated_at: 2026-08-18T00:00:02.000Z",
+          "---",
+          "",
+          "legacy body",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const reusedLegacy = writeMemory({
+        repoRoot: repo,
+        input: {
+          kind: "feedback",
+          title: "PR #319 review",
+          body: "legacy body",
+          now: "2026-08-18T00:00:03.000Z",
+        },
+      });
+      expect(reusedLegacy.source_path).toBe(".ut-tdd/memory/feedback-pr-319-review.md");
+      expect(
+        readdirSync(join(repo, ".ut-tdd", "memory")).some((name) =>
+          name.startsWith("feedback-pr-319-review--"),
+        ),
+      ).toBe(false);
+    } finally {
+      removeTestTree(repo);
+    }
+  });
+
+  // U-MEMORY-021: 同一pathの異なる内容は fail-close、同一内容の再試行だけ冪等。
+  it("refuses destructive collisions and accepts an identical retry", () => {
+    const repo = tempRepo();
+    try {
+      const first = writeMemory({
+        repoRoot: repo,
+        input: {
+          kind: "feedback",
+          title: "Repeated review request",
+          body: "retain the first body",
+          tags: ["review"],
+          now: "2026-08-18T00:00:00.000Z",
+        },
+      });
+      const target = join(repo, first.source_path);
+      const before = readFileSync(target, "utf8");
+      expect(() =>
+        writeMemory({
+          repoRoot: repo,
+          input: {
+            kind: "feedback",
+            title: "Repeated review request",
+            body: "a replacement body",
+            tags: ["review"],
+            now: "2026-08-18T00:00:01.000Z",
+          },
+        }),
+      ).toThrow(/refusing to overwrite/);
+      expect(readFileSync(target, "utf8")).toBe(before);
+
+      const retry = writeMemory({
+        repoRoot: repo,
+        input: {
+          kind: "feedback",
+          title: "Repeated review request",
+          body: "retain the first body",
+          tags: ["review"],
+          now: "2026-08-18T00:00:02.000Z",
+        },
+      });
+      expect(retry.content_hash).toBe(first.content_hash);
+      expect(readFileSync(target, "utf8")).toBe(before);
+    } finally {
+      removeTestTree(repo);
+    }
   });
 
   // U-MEMORY-018: AC-4 (静的側) — 直アクセスの混入を依存方向で止める

@@ -28,6 +28,7 @@ import {
   type MemoryKind,
   type MemoryWriteInput,
   memoryIdFor,
+  memorySlugFor,
   parseMemoryFile,
 } from "./index.ts";
 
@@ -127,6 +128,12 @@ function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntr
   const memoryId = memoryIdFor({ kind: input.kind, title });
   const slug = memoryId.slice(`memory:${input.kind}:`.length);
   const sourcePath = join(".ut-tdd", "memory", `${input.kind}-${slug}.md`).replaceAll("\\", "/");
+  const legacySlug = memorySlugFor(title);
+  const legacyMemoryId = `memory:${input.kind}:${legacySlug}`;
+  const legacySourcePath = join(".ut-tdd", "memory", `${input.kind}-${legacySlug}.md`).replaceAll(
+    "\\",
+    "/",
+  );
   const updatedAt = input.now ?? new Date().toISOString();
   const content = [
     "---",
@@ -140,9 +147,79 @@ function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntr
     body,
     "",
   ].join("\n");
+  let writeSourcePath = sourcePath;
+  let targetPath = join(repoRoot, sourcePath);
+  let targetIsLegacy = false;
+  const isSameEntry = (existing: MemoryEntry): boolean =>
+    (existing.memory_id === memoryId ||
+      (targetIsLegacy && existing.memory_id === legacyMemoryId)) &&
+    existing.kind === input.kind &&
+    existing.title === title &&
+    existing.body === body &&
+    existing.tags.length === tags.length &&
+    existing.tags.every((tag, index) => tag === tags[index]);
+  const readExisting = (): MemoryEntry => {
+    try {
+      return parseMemoryFile(repoRoot, writeSourcePath);
+    } catch (error) {
+      throw new Error(`refusing to overwrite existing memory ${sourcePath}: ${String(error)}`);
+    }
+  };
+  let targetExists = false;
+  try {
+    const stat = lstatSync(targetPath);
+    targetExists = true;
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw new Error("target is not a regular file");
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw new Error(`refusing to overwrite existing memory ${sourcePath}: ${String(error)}`);
+    }
+  }
+
+  // Existing pre-suffix files are still authoritative. Re-adding a title must
+  // not fork the corpus merely because the new identity is collision-safe.
+  if (!targetExists && sourcePath !== legacySourcePath) {
+    const legacyPath = join(repoRoot, legacySourcePath);
+    try {
+      const stat = lstatSync(legacyPath);
+      if (!stat.isFile() || stat.isSymbolicLink()) {
+        throw new Error("legacy target is not a regular file");
+      }
+      targetPath = legacyPath;
+      writeSourcePath = legacySourcePath;
+      targetIsLegacy = true;
+      targetExists = true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw new Error(
+          `refusing to overwrite existing memory ${legacySourcePath}: ${String(error)}`,
+        );
+      }
+    }
+  }
+
+  if (targetExists) {
+    const existing = readExisting();
+    if (!isSameEntry(existing)) {
+      throw new Error(`refusing to overwrite existing memory ${sourcePath}`);
+    }
+    return existing;
+  }
+
   ensureDir(join(repoRoot, ".ut-tdd", "memory"), { recursive: true });
-  writeFileSync(join(repoRoot, sourcePath), content, "utf8");
-  return parseMemoryFile(repoRoot, sourcePath, content);
+  try {
+    // The preflight above gives a useful error for an existing path; wx closes
+    // the check-then-write race between concurrent Claude/Codex notifications.
+    writeFileSync(targetPath, content, { encoding: "utf8", flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    const existing = readExisting();
+    if (isSameEntry(existing)) return existing;
+    throw new Error(`refusing to overwrite existing memory ${sourcePath}`);
+  }
+  return parseMemoryFile(repoRoot, writeSourcePath, content);
 }
 
 interface MemoryIndexDb {
