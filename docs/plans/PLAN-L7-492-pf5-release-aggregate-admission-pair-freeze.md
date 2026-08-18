@@ -40,6 +40,7 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/251
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/250
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/330
+backprop_decision: required
 github_issue_id: 251
 review_evidence:
   - reviewer: claude-opus-5
@@ -115,7 +116,8 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 ## 3. 工程と出口
 
 1. 本docs-only pair-freezeはPR #333でcross-family review、exact HEAD、CI 3 job greenを確認してmainへmerge済み。
-2. 本実装PRでPF-4 confirmed PLAN-L7-489を`requires`へ束縛し、aggregate application core、
+2. 本実装PRでPF-4 confirmed PLAN-L7-489を`requires`へ束縛し、Reverse-473のR3/R4 backfill対象として
+   aggregate application core、
    isolated staging/apply port、U-RELMAN-014〜017を実装する。candidate以外の後段oracleを先行昇格しない。
 3. implementation PRのclosing reviewで三predicate、typed failure、副作用count、fault rollback、
    success exactly-onceを実測する。PASS後にのみPLAN-REVERSE-473 R3/R4へ進む。

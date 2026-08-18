@@ -24,10 +24,12 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
-  requires: []
+  requires:
+    - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
   blocks: []
   references:
     - docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
+    - docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
     - docs/plans/PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze.md
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
     - docs/design/harness/L6-function-design/setup-solo-team.md
