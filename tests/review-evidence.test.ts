@@ -174,6 +174,40 @@ describe("green command evidence (IMP-108)", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("U-GREENDEF-008: completed_at after tests_green_at は violation", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-NEW-GREEN-AFTER",
+        updated: "2026-06-23",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-24",
+            tests_green_at: "2026-06-23",
+            green_commands: [
+              {
+                kind: "unit_test",
+                command: "bun test tests/review-evidence.test.ts",
+                runner: "bun",
+                scope: "targeted",
+                exit_code: 0,
+                evidence_path: "tests/review-evidence.test.ts",
+                output_digest: "sha256:0123456789abcdef",
+                completed_at: "2026-06-24",
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
+
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-NEW-GREEN-AFTER", reason: "completed_after_tests_green_at" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
   it("U-GREENDEF-004: nonzero green command exit code fails", () => {
     const r = analyzeReviewEvidence([
       plan({

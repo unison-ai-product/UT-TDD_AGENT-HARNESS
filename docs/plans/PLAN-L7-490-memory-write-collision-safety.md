@@ -55,7 +55,7 @@ review_evidence:
         runner: ci
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-18T03:41:48Z"
+        completed_at: "2026-08-18T02:34:34Z"
         evidence_path: tests/memory-service.test.ts
         output_digest: "sha256:6473abe462935eec499dee5a9d4d77e4b77453a291f94f8fce60ca4bef0f6a17"
         anchor_commit: bd2760a09d72e78fb0c916ee53b6a753f8eeea0d
