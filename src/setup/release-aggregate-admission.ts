@@ -109,24 +109,24 @@ function firstManifestEntry(
   return candidates.length === 1 ? candidates[0] : null;
 }
 
-function selectedMapping(
-  mappings: readonly ReleaseChannelMapping[],
-  channel: string,
-  release: ReleaseIdentity,
-  sourcePaths: readonly string[],
-  allowlist: ReadonlySet<string>,
-): ReleaseChannelMapping | null {
-  const candidates = mappings.filter((mapping) => mapping.channel === channel);
+function selectedMapping(input: {
+  readonly mappings: readonly ReleaseChannelMapping[];
+  readonly channel: string;
+  readonly release: ReleaseIdentity;
+  readonly sourcePaths: readonly string[];
+  readonly allowlist: ReadonlySet<string>;
+}): ReleaseChannelMapping | null {
+  const candidates = input.mappings.filter((mapping) => mapping.channel === input.channel);
   if (candidates.length !== 1) return null;
   const mapping = candidates[0];
   if (
-    mapping.releaseId !== release.releaseId ||
-    mapping.sourceRevision !== release.artifactSourceCommit ||
+    mapping.releaseId !== input.release.releaseId ||
+    mapping.sourceRevision !== input.release.artifactSourceCommit ||
     !REVISION.test(mapping.sourceRevision) ||
     !validRelativePath(mapping.sourcePath) ||
     !validRelativePath(mapping.destinationPath) ||
-    !sourcePaths.includes(mapping.sourcePath) ||
-    !allowlist.has(mapping.destinationPath)
+    !input.sourcePaths.includes(mapping.sourcePath) ||
+    !input.allowlist.has(mapping.destinationPath)
   )
     return null;
   return mapping;
@@ -149,21 +149,21 @@ function immutableSnapshot(
   return Object.freeze(entries.map(immutableEntry));
 }
 
-function sealPlan(
-  input: ReleaseAggregateAdmissionInput,
-  release: ReleaseIdentity,
-  mapping: ReleaseChannelMapping,
-  attestation: Extract<ReleaseChannelAttestation, { status: "attested" }>,
-): SealedReleaseAggregatePlan {
+function sealPlan(input: {
+  readonly request: ReleaseAggregateAdmissionInput;
+  readonly release: ReleaseIdentity;
+  readonly mapping: ReleaseChannelMapping;
+  readonly attestation: Extract<ReleaseChannelAttestation, { status: "attested" }>;
+}): SealedReleaseAggregatePlan {
   return Object.freeze({
     kind: "release-aggregate" as const,
-    channel: input.channel,
-    releaseId: release.releaseId,
-    sourceRevision: release.artifactSourceCommit,
-    destinationPath: mapping.destinationPath,
-    expectedDigest: attestation.expectedDigest,
-    actualDigest: attestation.actualDigest,
-    entries: immutableSnapshot(attestation.entries),
+    channel: input.request.channel,
+    releaseId: input.release.releaseId,
+    sourceRevision: input.release.artifactSourceCommit,
+    destinationPath: input.mapping.destinationPath,
+    expectedDigest: input.attestation.expectedDigest,
+    actualDigest: input.attestation.actualDigest,
+    entries: immutableSnapshot(input.attestation.entries),
   });
 }
 
@@ -186,13 +186,13 @@ export async function admitReleaseAggregate(
 
   const selected = resolveReleaseChannel(manifest.value, input.channel);
   if (!selected.ok) return { ok: false, phase: "preflight", error: selected.error };
-  const mapping = selectedMapping(
-    input.finalTree.channelMappings,
-    input.channel,
-    selected.release,
-    input.finalTree.sourcePaths,
+  const mapping = selectedMapping({
+    mappings: input.finalTree.channelMappings,
+    channel: input.channel,
+    release: selected.release,
+    sourcePaths: input.finalTree.sourcePaths,
     allowlist,
-  );
+  });
   if (!mapping) return { ok: false, phase: "preflight", error: "missing_channel_mapping" };
 
   let attestation: ReleaseChannelAttestation;
@@ -212,7 +212,10 @@ export async function admitReleaseAggregate(
       error: attestation.status === "mismatch" ? "mismatch" : attestation.reason,
     };
   }
-  return { ok: true, plan: sealPlan(input, selected.release, mapping, attestation) };
+  return {
+    ok: true,
+    plan: sealPlan({ request: input, release: selected.release, mapping, attestation }),
+  };
 }
 
 export async function applySealedReleaseAggregate<TStage>(
