@@ -83,8 +83,13 @@ Fable の推奨と、Issue #328 の実 provider sandbox 失敗を合わせ、A �
   `requestedAt`、raw task 本文、provider/model、`invocation_nonce` は retry で変化し得る metadata のため除外する。
 - `reviewRevision` はこの identity の `rv1-<requestDigest>` と一致しなければならない。任意文字列の revision や
   既存の16桁 digestを新契約へ持ち込まず、consumer は pattern/一致を検証してから path を導出する。
-- verdict path は `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/verdict.txt` のみとする。reviewer の引数、stdout、環境変数から path を採用しない。
-- `<requestDigest>` は path-safe な lowercase hexadecimal とし、別 exact HEAD は別 digest / 別 directory になる。request の同一 retry は同一 path へ収束する。
+- verdict の custody root は `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/` とする。各 attempt は
+  consumer が単調に割り当てる正の safe integer (`attempt-1`, `attempt-2`, …) の下に
+  `attempts/<attempt>/verdict.txt` として保存し、reviewer の引数、stdout、環境変数から path や attempt を採用しない。
+  最初の試行は `attempt-1`、同一 digest の再試行は次の未使用番号へ進む。attempt directory と verdict file は
+  一度作成したら上書きせず、receipt 前の失敗を次の attempt で安全に supersede できる構造とする。
+- `<requestDigest>` は path-safe な lowercase hexadecimal とし、別 exact HEAD は別 digest / 別 custody root になる。
+  request の同一 retry は同じ digest rootへ収束するが、attempt は別の不変ファイルへ分離する。
 - `repoRoot` は起動時に一度解決し、親 directory と final file の symlink / junction escape、absolute path override、`..`、NUL、backslash を拒否する。実体が repository 内に containment しない場合は `unavailable` で終了する。
 - `.ut-tdd/review/verdicts/` は gitignored runtime state とする。この前提を実装で成立させるため、implementation PR は
   `.gitignore` に **verdicts directoryだけ**の rule と必要な `.gitkeep` を追加し、tracked の
@@ -98,6 +103,7 @@ verdict file は、既存の行頭 `VERDICT:` / `FINDING:` 契約を維持した
 ```text
 schema_version: ut-tdd.review-verdict/v1
 request_digest: <requestDigest>
+attempt: <positive safe integer>
 pr: <positive integer>
 exact_head: <40 lowercase hex>
 review_revision: rv1-<requestDigest>
@@ -108,14 +114,23 @@ VERDICT: PASS|PASS-WEAK|FLAG
 ```
 
 - consumer は request、実 child の provider/model/role/exit code、対象 HEAD、review revision、invocation nonce を receipt projection へ渡す。
-- `request_digest`、`pr`、`exact_head`、`review_revision`、`reviewer_provider`、`reviewer_model`、`invocation_nonce` のいずれかが欠落・不一致・未知値なら receipt 0、merge gate 0 とする。
+- `attempt` は consumer が割り当てた path と一致しなければならず、reviewer の自己申告で採番・選択できない。
+- `request_digest`、`attempt`、`pr`、`exact_head`、`review_revision`、`reviewer_provider`、`reviewer_model`、`invocation_nonce` のいずれかが欠落・不一致・未知値なら receipt 0、merge gate 0 とする。
 - reviewer が envelope の identity または path を自己申告しても、consumer が保持する canonical request と実 spawn facts を上書きできない。
 - `PASS` / `PASS-WEAK` は blocking finding 0、`FLAG` は1件以上の blocking findingを要求する。既存の verdict parser の fail-close を弱めない。
 
 ### 3.3 retry、stale、cleanup
 
-- `invocation_nonce` は request writer が生成して request に保存し、同一 digest の retry では再利用する。別 HEAD、別 revision、別 reviewer family は別 request / 別 digest とする。
-- 同一 digest・同一 envelope の再投影は content-addressed receipt へ冪等に収束する。異なる nonce、provider、model、HEAD、本文を同じ digest directoryへ置く試みは `verdict_identity_conflict` として拒否する。
+- `invocation_nonce` は request writer が生成して request に保存し、同一 digest の全 attempt で再利用する。別 HEAD、別 revision、別 reviewer family は別 request / 別 digest とする。
+- 同一 digest・同一 attempt・同一 envelope の再投影は content-addressed receipt へ冪等に収束する。同じ attempt の nonce、canonical identity、provider/model、本文を変える試みは
+  `verdict_identity_conflict` として拒否する。
+- receipt がまだ無い間は、consumer が割り当てた次の attempt に限り provider/model/effort が異なる再試行を許可する。
+  新 attempt を受理する前に、旧 attempt の digest、番号、provider/model、exact HEAD、理由を raw verdict なしの
+  `superseded_attempt` typed event として `.ut-tdd/audit/review-custody.jsonl` へ append する。監査書込みに失敗したら
+  新 attempt と旧 attempt のどちらも receipt へ投影せず fail-close とする。選択可能な attempt は consumer が検証した
+  最新の未supersede attempt ただ1つに限定し、reviewer の自己申告で選べない。
+- receipt 成功後は新しい attempt の作成・supersede・上書きをすべて拒否する。これにより model escalation は digest を
+  変更せずに収束でき、receipt は常に1件だけとなる。
 - receipt の canonical write が成功した後にだけ verdict scratch を削除する。削除不能は `cleanup_pending` として記録するが、既に検証済みの receipt を成功から失敗へ反転させない。receipt 前の削除・上書きは許可しない。
 - 古い HEAD の verdict は current request / current HEAD へ再利用せず、consumer は `stale_head` または `verdict_identity_mismatch` で fail-close する。
 
@@ -151,9 +166,9 @@ VERDICT: PASS|PASS-WEAK|FLAG
 | --- | --- | --- |
 | `U-RVATT-030` | digestからの path導出、containment、symlink/junction、path override | `unavailable`、write 0 |
 | `U-RVATT-031` | repo-local sandbox write と repo外 write拒否の実 provider / constrained stub | local 成功、外部拒否、receipt 0 |
-| `U-RVATT-032` | envelope の7 identity fieldsを1点ずつ mutation | `verdict_identity_mismatch`、receipt 0 |
+| `U-RVATT-032` | envelope の8 custody fieldsを1点ずつ mutation（canonical identity 7 fields + consumer attempt） | `verdict_identity_mismatch`、receipt 0 |
 | `U-RVATT-033` | nonce混線、stale HEAD、別revision、別provider | canonical request以外を拒否、merge 0 |
-| `U-RVATT-034` | 同一 digest retry と別 HEAD retry | 同一 receipt 1件、別 HEADは別 digest |
+| `U-RVATT-034` | 同一 digest・同一 attempt retry、receipt前の別 model escalation、別 HEAD retry | 同一 attempt は冪等、別 model は `superseded_attempt` 後に最新 attemptだけを1 receiptへ投影、別 HEADは別 digest |
 | `U-RVATT-035` | receipt成功後cleanup、cleanup failure、receipt前cleanup | receipt前は0、成功後はreceipt保持 + `cleanup_pending` |
 | `U-RVATT-036` | 実 providerを通す dispatch→consume→receipt→wrapper の一回の実repo E2E | current exact HEADだけ allow、外部/欠落は deny |
 
