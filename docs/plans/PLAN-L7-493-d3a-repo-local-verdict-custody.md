@@ -1,0 +1,148 @@
+---
+plan_id: PLAN-L7-493-d3a-repo-local-verdict-custody
+title: "PLAN-L7-493 (add-impl): D3a repo-local digest-bound verdict custody 契約 freeze"
+kind: add-impl
+layer: L7
+drive: be
+route_signal: feature_addition
+route_mode: add-feature
+status: draft
+created: 2026-08-18
+updated: 2026-08-18
+owner: PM / PO / Codex
+parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+next_pair_freeze: L7
+agent_slots:
+  - role: tl
+    slot_label: "TL - verdict custody の信頼境界、request digest、sandbox 書込許可の独立レビュー"
+  - role: se
+    slot_label: "SE - 既存 D3a attestation / delegation / review guard への最小降下設計"
+  - role: qa
+    slot_label: "QA - repo-local write、外部拒否、identity mutation、retry、cleanup の Red oracle"
+generates:
+  - artifact_path: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
+  requires:
+    - docs/plans/PLAN-L7-465-cross-review-author-binding.md
+  blocks: []
+  references:
+    - docs/plans/PLAN-L6-94-cross-review-session-attestation.md
+    - docs/plans/PLAN-L7-465-cross-review-author-binding.md
+    - docs/plans/PLAN-REVERSE-465-cross-review-author-binding-backfill.md
+    - docs/plans/PLAN-REVERSE-493-d3a-repo-local-verdict-custody-backfill.md
+    - docs/test-design/harness/L7-unit-test-design.md
+    - src/feedback/review-attestation.ts
+    - src/feedback/review-verdict-contract.ts
+    - src/cli/delegation.ts
+    - src/runtime/review-guard.ts
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/328
+github_issue_id: 328
+backprop_decision: required
+backprop_decision_reason: "delegated verdict の信頼境界と再合流時のreceipt入力を変更するため、既存Forwardの証跡へReverse検証を戻す。"
+review_evidence: []
+---
+
+# PLAN-L7-493: D3a repo-local digest-bound verdict custody 契約 freeze
+
+## 1. 目的と起点
+
+Issue #328 は、PR #320 の canonical self-bootstrap で delegated reviewer が正しい verdict を返したにもかかわらず、verdict file の置き場所が repository 外へ固定されていたため、Claude Code の repository sandbox から書き込めず、receipt が生成されなかった欠陥を扱う。これは D3a の custody を閉じない release blocker であり、D2 merge gate の判定ロジックを緩める修理ではない。
+
+既存の `PLAN-L7-465` が request / attestation / receipt の identity と author family を所有している。本 PLAN はその契約を置き換えず、verdict evidence の物理配置、内容束縛、sandbox 境界、retry と cleanup の追加契約だけを freeze する。実装 source、CLI、test-design の昇格は、本 PLAN の cross-review が PASS になった後の別の降下で行う。
+
+## 2. 設計判断（Fable advisor 済み）
+
+### 2.1 採択
+
+`claude-fable-5`（`decision=design`, effort `low`）へ相談済み。採択は **repo-local gitignored runtime 領域**である。
+
+| 案 | 内容 | 得るもの | 失うもの |
+| --- | --- | --- | --- |
+| A（採択） | `.ut-tdd/review/verdicts/<requestDigest>/verdict.txt`へ書く | provider allowlist の拡張なし、sandbox と同じ repository 境界、既存 text verdict parser を活用 | `.ut-tdd` の runtime cleanup と path admission が必要 |
+| B | provider 起動時に repository 外の verdict directory を allowlist へ追加する | 既存の外部一時領域を維持できる | provider ごとの権限 drift と信頼面が増え、consumer 間の再現性が落ちる |
+| C | stdout の verdict 行だけを正本にする | file write が不要で実装は短い | identity binding、retry、encoding、truncation、prompt echo の証明が弱くなり、既存 fail-close 契約を後退させる |
+
+Fable の推奨と、Issue #328 の実 provider sandbox 失敗を合わせ、A を正本とする。`verdict.txt` は既存の `extractVerdict` と互換な本文形式を保持し、identity envelope を同じ file に付加する。provider が path を申告・変更する方式は採用しない。
+
+## 3. 凍結する契約
+
+### 3.1 物理配置と path admission
+
+- consumer が canonical request の正規化 preimageから lowercase SHA-256 の `requestDigest` を一意に導出する。
+- verdict path は `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/verdict.txt` のみとする。reviewer の引数、stdout、環境変数から path を採用しない。
+- `<requestDigest>` は path-safe な lowercase hexadecimal とし、別 exact HEAD は別 digest / 別 directory になる。request の同一 retry は同一 path へ収束する。
+- `repoRoot` は起動時に一度解決し、親 directory と final file の symlink / junction escape、absolute path override、`..`、NUL、backslash を拒否する。実体が repository 内に containment しない場合は `unavailable` で終了する。
+- `.ut-tdd/review/verdicts/` は gitignored runtime state とする。source、PLAN、test、tracked config の変更を delegated reviewer の成功条件に含めない。
+
+### 3.2 verdict envelope と identity binding
+
+verdict file は、既存の行頭 `VERDICT:` / `FINDING:` 契約を維持したうえで、次の identity fields を canonical な順序で持つ。
+
+```text
+schema_version: ut-tdd.review-verdict/v1
+request_digest: <requestDigest>
+pr: <positive integer>
+exact_head: <40 lowercase hex>
+review_revision: <non-empty string>
+reviewer_provider: codex|claude
+reviewer_model: <non-empty string>
+invocation_nonce: <stable request nonce>
+VERDICT: PASS|PASS-WEAK|FLAG
+```
+
+- consumer は request、実 child の provider/model/role/exit code、対象 HEAD、review revision、invocation nonce を receipt projection へ渡す。
+- `request_digest`、`pr`、`exact_head`、`review_revision`、`reviewer_provider`、`reviewer_model`、`invocation_nonce` のいずれかが欠落・不一致・未知値なら receipt 0、merge gate 0 とする。
+- reviewer が envelope の identity または path を自己申告しても、consumer が保持する canonical request と実 spawn facts を上書きできない。
+- `PASS` / `PASS-WEAK` は blocking finding 0、`FLAG` は1件以上の blocking findingを要求する。既存の verdict parser の fail-close を弱めない。
+
+### 3.3 retry、stale、cleanup
+
+- `invocation_nonce` は request writer が生成して request に保存し、同一 digest の retry では再利用する。別 HEAD、別 revision、別 reviewer family は別 request / 別 digest とする。
+- 同一 digest・同一 envelope の再投影は content-addressed receipt へ冪等に収束する。異なる nonce、provider、model、HEAD、本文を同じ digest directoryへ置く試みは `verdict_identity_conflict` として拒否する。
+- receipt の canonical write が成功した後にだけ verdict scratch を削除する。削除不能は `cleanup_pending` として記録するが、既に検証済みの receipt を成功から失敗へ反転させない。receipt 前の削除・上書きは許可しない。
+- 古い HEAD の verdict は current request / current HEAD へ再利用せず、consumer は `stale_head` または `verdict_identity_mismatch` で fail-close する。
+
+### 3.4 sandbox 実測境界
+
+- 実 provider が repository root 配下の gitignored verdict path へ書けることを実測する。
+- 同一 provider が repository 外、別 workspace、親 directory、symlink escape 先へ書けないことを実測する。
+- test stub は単なる `writeFileSync` ではなく、repository-local allow と外部拒否を再現する制約を持つ。stub の成功だけを実 provider の証拠にしない。
+- stdout に verdict が出ても file が欠落または identity 不一致なら receipt を作らない。
+
+## 4. V-model 対応と実装境界
+
+この docs-only slice の対は `docs/test-design/harness/L7-unit-test-design.md` である。PLAN confirm 時に、次の候補を `U-RVATT-030`〜`U-RVATT-036` として1:1宣言し、実装 PR の source/test と同時に generates を昇格する。
+
+| 候補 | 対象 | 失敗時の期待 |
+| --- | --- | --- |
+| `U-RVATT-030` | digestからの path導出、containment、symlink/junction、path override | `unavailable`、write 0 |
+| `U-RVATT-031` | repo-local sandbox write と repo外 write拒否の実 provider / constrained stub | local 成功、外部拒否、receipt 0 |
+| `U-RVATT-032` | envelope の7 identity fieldsを1点ずつ mutation | `verdict_identity_mismatch`、receipt 0 |
+| `U-RVATT-033` | nonce混線、stale HEAD、別revision、別provider | canonical request以外を拒否、merge 0 |
+| `U-RVATT-034` | 同一 digest retry と別 HEAD retry | 同一 receipt 1件、別 HEADは別 digest |
+| `U-RVATT-035` | receipt成功後cleanup、cleanup failure、receipt前cleanup | receipt前は0、成功後はreceipt保持 + `cleanup_pending` |
+| `U-RVATT-036` | 実 providerを通す dispatch→consume→receipt→wrapper の一回の実repo E2E | current exact HEADだけ allow、外部/欠落は deny |
+
+実装時の最小責務は、既存 `review-attestation.ts` の identity projection、`review-verdict-contract.ts` の envelope/parser、`cli/delegation.ts` の path注入、`review-guard.ts` の gitignored runtime除外、および対応する tests に限定する。新しい判定器、GitHub API、merge bypass、stdout-only経路、別の memory store は追加しない。
+
+## 5. 実装前の検証と順序
+
+1. 実 provider sandbox で §3.4 の local write / outside reject を測定し、OS別の実測結果を evidence に保存する。
+2. 本 PLAN の claim-blind / spec-blind cross-review を exact HEAD で実施する。FLAG は設計へ戻し、実装へ進まない。
+3. PASS 後に `U-RVATT-030`〜`036` を test-design の正規表へ昇格し、実装 PLAN の `requires` へ本 PLAN を束縛する。
+4. 実装 PRでは、request→delegated child→repo-local verdict→receipt→same-head wrapper の順序を変更せず、Linux / Windows の full CI と実 provider E2Eを取得する。
+5. receipt / Memory / PR comment の全てに、同一 PLAN revision、exact HEAD、request digest、残存 `cleanup_pending` を記録する。D2 merge gateの恒久 bypassは作らない。
+
+## 6. 非対象
+
+- provider allowlist を repository 外へ拡張すること。
+- verdict file を stdout のみへ置換すること。
+- merge wrapper の例外、PO手動merge、D1/D2判定入力の新設。
+- #335 PF-5 aggregate admission の実装・レビュー・merge。
+- Pack配布や複数consumer E2Eの実装。D3a custodyが閉じた後、Forward依存順に別PLANで扱う。
+
+本 PLAN は設計 freeze であり、source / test / `.gitignore` の変更を含まない。`status: confirmed` への昇格と implementation PLAN の起票は、cross-review と sandbox 実測が揃った後に行う。
