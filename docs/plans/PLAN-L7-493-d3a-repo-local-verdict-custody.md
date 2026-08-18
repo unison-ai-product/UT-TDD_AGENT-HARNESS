@@ -125,6 +125,9 @@ VERDICT: PASS|PASS-WEAK|FLAG
 - 同一 digest・同一 attempt・同一 envelope の再投影は content-addressed receipt へ冪等に収束する。同じ attempt の nonce、canonical identity、provider/model、本文を変える試みは
   `verdict_identity_conflict` として拒否する。
 - receipt がまだ無い間は、consumer が割り当てた次の attempt に限り provider/model/effort が異なる再試行を許可する。
+  ただし `reviewer_provider` の family は `authorFamily` の反対側から導出した値で不変とし、変更できるのは同じ
+  reviewer family 内の concrete model / effort（必要な provider binary metadata を含む）だけである。family変更は
+  `verdict_identity_mismatch` として拒否する。
   新 attempt を受理する前に、旧 attempt の digest、番号、provider/model、exact HEAD、理由を raw verdict なしの
   `superseded_attempt` typed event として `.ut-tdd/audit/review-custody.jsonl` へ append する。監査書込みに失敗したら
   新 attempt と旧 attempt のどちらも receipt へ投影せず fail-close とする。選択可能な attempt は consumer が検証した
