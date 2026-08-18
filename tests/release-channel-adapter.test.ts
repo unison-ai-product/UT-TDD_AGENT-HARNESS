@@ -106,4 +106,39 @@ describe("U-RELMAN-006 PF-4 channel adapter", () => {
     });
     expect(resolveArtifacts).toHaveBeenCalledOnce();
   });
+
+  it("U-RELMAN-018: rejects resolver identity drift as invalid_artifact", async () => {
+    const resolveArtifacts = vi.fn(async () => ({ ...resolved(), releaseId: "rel-drift" }));
+
+    await expect(attestReleaseChannel(input(), { resolveArtifacts })).resolves.toEqual({
+      status: "unavailable",
+      releaseId: releaseId(),
+      reason: "invalid_artifact",
+    });
+  });
+
+  it("U-RELMAN-018: converts a throwing resolver port to unavailable", async () => {
+    const resolveArtifacts = vi.fn(async () => {
+      throw new Error("resolver port failure");
+    });
+
+    await expect(attestReleaseChannel(input(), { resolveArtifacts })).resolves.toEqual({
+      status: "unavailable",
+      releaseId: releaseId(),
+      reason: "unavailable",
+    });
+  });
+
+  it.each([
+    "invalid_distribution_plan",
+    "invalid_artifact",
+  ] as const)("U-RELMAN-018: preserves typed resolver reason %s", async (error) => {
+    const resolveArtifacts = vi.fn(async () => ({ ok: false as const, error }));
+
+    await expect(attestReleaseChannel(input(), { resolveArtifacts })).resolves.toEqual({
+      status: "unavailable",
+      releaseId: releaseId(),
+      reason: error,
+    });
+  });
 });
