@@ -10,7 +10,10 @@ route_mode: recovery
 created: 2026-07-16
 updated: 2026-07-16
 owner: PM / PO
+github_issue_id: 77
 parent_design: docs/design/harness/L6-function-design/function-spec.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+next_pair_freeze: L7
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-421 で導入済みのテスト衛生 fence の hybrid 運用欠陥の収束であり、新規 L0/L1 要件ではない。判別機構は L6 機能契約と L7 テスト設計への generates 反映で追跡する。"
 agent_slots:
@@ -86,6 +89,27 @@ deliverable の宣言は confirm 時)。実装対象は `tests/support/git-works
 ### Step 3: [直列] 回帰確認
 - 直列理由 = **verification_gate**。full suite green + doctor green +
   fence 真陽性 (残留検出) の既存回帰が退行しないことを確認。
+
+## pair-freeze 境界 (Issue #77)
+
+この recovery slice は、既存の `PLAN-L7-421` fence を置き換えず、before/after
+差分の**帰責結果だけ**を追加する。foreign activity を検出した場合に成功へ丸めず、
+`fence_indeterminate_foreign_activity` と再実行指示を返す。テスト自身の残留は従来どおり
+fail-close とし、foreign path を許可リストへ追加して隠す方式は採らない。
+
+実装着手時に、次の候補を `docs/test-design/harness/L7-unit-test-design.md` へ
+1:1 で昇格し、同じ commit で `generates` へ実装成果物を追加する。
+
+| candidate | Red入力 | 期待結果 |
+|---|---|---|
+| `CANDIDATE-R11-001` | HEAD が before/after で移動 | foreign 判定不能、再実行指示、テスト残留扱いにしない |
+| `CANDIDATE-R11-002` | 非対象 path の編集または untracked 生成 | foreign 判定不能、silent pass 0 |
+| `CANDIDATE-R11-003` | 対象 path のテスト残留 | 従来どおり fail-close |
+| `CANDIDATE-R11-004` | foreign activity とテスト残留の同時発生 | foreign と残留を混同せず、再実行可能な明示結果 |
+
+対象外は、snapshot runner のI/O scheduler・clone/cache再設計、CI workflowの変更、
+他ランタイムの停止・排他制御である。本PRでは source/test-design の変更を行わず、
+この境界と実装順序だけをpair-freezeする。
 
 ## AC
 
