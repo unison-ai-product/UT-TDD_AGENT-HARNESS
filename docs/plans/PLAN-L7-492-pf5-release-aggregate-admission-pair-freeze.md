@@ -55,9 +55,12 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 
 - exact HEADのfinal treeから、(A) canonical `release/manifest.yaml`の一意性・schema妥当性、
   (B) clean Pack distribution allowlistがcontrol manifestを含むこと、(C) channel-selected
-  artifact revisionがresolver→materializer→Pack destinationへ到達することを、side effect前に
-  AND判定する。1 predicateでも欠ければsealed planを生成せず、resolver/materializer/copy/write
-  countは0とする。
+  artifact revisionがmanifestのsource revision/object identityからPack destinationへ写像でき、
+  そのdestinationがallowlistで許可されることを、side effect前に静的にAND判定する。ここでの
+  (C)はresolver/materializerを実行する到達実績ではなく、final tree上のchannel→revision→destination
+  対応関係の存在を指す。1 predicateでも欠ければsealed planを生成せず、resolver/materializer/
+  copy/write countは0とする。実装時のread-only resolver/materializerがselected revision/object
+  unavailableを返した場合も、typed findingを保持してsealed plan/applyを0件でfail-closeする。
 - preflight成功値は、適用対象・expected digest・source revisionを束縛したimmutable sealed
   planだけとする。Git commit/merge方式、current worktree、ネットワーク取得を判定入力にしない。
 - sealed planのapplyはisolated stagingへ行い、staging write/copyおよびdestination commit/apply
@@ -82,8 +85,8 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 ## 3. 工程と出口
 
 1. 本docs-only pair-freezeをcross-family reviewし、exact HEADとCI 3 job greenを確認してmainへmergeする。
-2. merge後に別PRでaggregate application core、isolate staging/apply port、U-RELMAN-014〜017を
-   実装し、candidate以外の後段oracleを先行昇格しない。
+2. merge後にPF-4 confirmed PLAN-L7-489を`requires`へ昇格した実装PRで、aggregate application core、
+   isolate staging/apply port、U-RELMAN-014〜017を実装し、candidate以外の後段oracleを先行昇格しない。
 3. implementation PRのclosing reviewで三predicate、typed failure、副作用count、fault rollback、
    success exactly-onceを実測する。PASS後にのみPLAN-REVERSE-473 R3/R4へ進む。
 
