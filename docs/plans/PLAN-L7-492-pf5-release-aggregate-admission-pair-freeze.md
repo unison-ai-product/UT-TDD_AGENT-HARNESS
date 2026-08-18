@@ -1,9 +1,9 @@
 ---
-plan_id: PLAN-L7-491-pf5-release-aggregate-admission-pair-freeze
-title: "PLAN-L7-491 (impl): PF-5 release aggregate admission pair-freeze"
+plan_id: PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
+title: "PLAN-L7-492 (impl): PF-5 release aggregate admission pair-freeze"
 kind: impl
 layer: L7
-drive: be
+drive: agent
 route_signal: forward
 route_mode: forward
 status: draft
@@ -22,7 +22,7 @@ agent_slots:
   - role: qa
     slot_label: "QA - CANDIDATE-RELMAN-014〜017のmutation/fault oracleを固定する"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-491-pf5-release-aggregate-admission-pair-freeze.md
+  - artifact_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
@@ -39,7 +39,7 @@ github_issue_id: 251
 review_evidence: []
 ---
 
-# PLAN-L7-491: PF-5 release aggregate admission pair-freeze
+# PLAN-L7-492: PF-5 release aggregate admission pair-freeze
 
 ## 0. 位置づけ
 
