@@ -28,6 +28,7 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
+    - docs/plans/PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze.md
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
     - docs/design/harness/L6-function-design/setup-solo-team.md
     - src/setup/distribution.ts
@@ -67,7 +68,8 @@ mergeされた時点で完了する。実装をR1完了証拠の代替にしな�
   AC-6のmanifest SSoT + allowlist + selected-revision copyはPF-5までpublishせず、exact HEAD final treeを
   読む単一admission transactionで全predicate成立時だけsealed planをapplyする。
 - R2: Forward test-designの`CANDIDATE-RELMAN-001`〜`017`を、#247→#248→#249→#250→#251の
-  直列順にGreen化する。各PFは「当該docs-only pair-freeze merge → implementation+test citation同一commit
+  直列順にGreen化する。PF-4の実装PLANは
+  `PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze` とし、各PFは「当該docs-only pair-freeze merge → implementation+test citation同一commit
   → exact-HEAD CI/review → merge」を1遷移とする。候補IDは所有PF以外で昇格しない。
 - R3: PF-5 aggregate acceptance後、cross-family reviewで正本選択、control/artifact分離、digest、
   非破壊性、AC-6原子性を再導出する。単体Greenの合算をaggregate PASSの代替にしない。

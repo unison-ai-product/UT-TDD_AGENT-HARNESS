@@ -6,9 +6,9 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-17
-updated: 2026-08-17
+updated: 2026-08-18
 owner: PM / Codex
 parent_design: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -20,10 +20,14 @@ agent_slots:
   - role: se
     slot_label: "SE - adapter application seam と既存resolver/materializer再利用境界を設計する"
   - role: qa
-    slot_label: "QA - CANDIDATE-RELMAN-006 の attested/mismatch/unavailable oracle を固定する"
+    slot_label: "QA - U-RELMAN-006 の attested/mismatch/unavailable oracle を検証する"
 generates:
   - artifact_path: docs/plans/PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/release-channel-adapter.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-channel-adapter.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
   requires:
@@ -37,7 +41,27 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/251
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/224
 github_issue_id: 250
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-17T11:40:42Z"
+    tests_green_at: "2026-08-17T11:40:00Z"
+    verdict: pass
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    scope: "PR #329 のdocs-only pair-freeze契約レビュー。実装コードの挙動・U-RELMAN-006の実装検証は本entryの対象外で、#330のclosing reviewで別途判定する。"
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/329"
+    anchor_commit: 8bfaf23f857ec8c098d3b5aeb5c61afe39ef14e1
+    green_commands:
+      - kind: lint
+        command: "node src/cli.ts plan lint"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        evidence_path: docs/plans/PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze.md
+        output_digest: "sha256:cb750b2cdeb49ad7c90db955fe6f153c139d772af58a6716a3f943e20df599c4"
+        anchor_commit: 8bfaf23f857ec8c098d3b5aeb5c61afe39ef14e1
+        completed_at: "2026-08-17T11:40:00Z"
 ---
 
 # PLAN-L7-489: PF-4 sync-pack channel adapter 内部結線 pair-freeze
@@ -50,10 +74,9 @@ Issue #250 のPF-4は、PF-3のisolated Git resolverがmainへ到達した後に
 `PLAN-L7-487` が所有する。本PLANはそれらを上書きせず、PF-4の内部結線境界だけを
 docs-only pair-freezeとして固定する。
 
-本PRは実装を含めない。`src/setup/release-channel-adapter.ts` と
-`tests/release-channel-adapter.test.ts` は、pair-freeze merge後の実装PRで初めて
-`generates`へ追加する。既存の `CANDIDATE-RELMAN-006` はpair artifact上の正本であり、
-本PRでは共通test-design台帳を変更しない。
+pair-freeze merge後の実装PRで、`src/setup/release-channel-adapter.ts` と
+`tests/release-channel-adapter.test.ts` を同じcommitで追加し、pair artifact上の
+`CANDIDATE-RELMAN-006`を`U-RELMAN-006`へ昇格する。
 
 ## 1. 契約
 
@@ -71,7 +94,7 @@ docs-only pair-freezeとして固定する。
 
 ## 2. 対応oracle
 
-`CANDIDATE-RELMAN-006` を唯一のPF-4候補とし、実装PRで次を1:1に昇格する。
+`U-RELMAN-006` はPF-4唯一の候補から昇格した実装oracleであり、次を1:1に固定する。
 
 1. manifest/channelがrelease recordとdigestに一致する場合は`attested`。
 2. bytesまたはdigestが一致しない場合は`mismatch`。
