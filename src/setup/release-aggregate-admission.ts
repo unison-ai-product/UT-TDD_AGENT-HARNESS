@@ -217,6 +217,13 @@ export async function admitReleaseAggregate(
       error: attestation.status === "mismatch" ? "mismatch" : attestation.reason,
     };
   }
+  if (
+    attestation.releaseId !== selected.release.releaseId ||
+    attestation.artifactSourceCommit !== selected.release.artifactSourceCommit ||
+    attestation.expectedDigest !== selected.release.artifactSetDigest
+  ) {
+    return { ok: false, phase: "resolve", error: "invalid_artifact" };
+  }
   return {
     ok: true,
     plan: sealPlan({ request: input, release: selected.release, mapping, attestation }),

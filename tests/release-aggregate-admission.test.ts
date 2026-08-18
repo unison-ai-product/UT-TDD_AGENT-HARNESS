@@ -63,7 +63,11 @@ function input(overrides: Partial<ReleaseAggregateFinalTree> = {}): ReleaseAggre
   return { repository: "fixture-repository", channel: "stable", finalTree: finalTree(overrides) };
 }
 
-function attested(): Extract<ReleaseChannelAttestation, { status: "attested" }> {
+function attested(
+  overrides: Partial<
+    Omit<Extract<ReleaseChannelAttestation, { status: "attested" }>, "status">
+  > = {},
+): Extract<ReleaseChannelAttestation, { status: "attested" }> {
   return {
     status: "attested",
     releaseId: releaseId(),
@@ -73,6 +77,7 @@ function attested(): Extract<ReleaseChannelAttestation, { status: "attested" }> 
     entries: Object.freeze([
       Object.freeze({ path: destinationPath, mode: "100644", content: new Uint8Array([1, 2, 3]) }),
     ]),
+    ...overrides,
   };
 }
 
@@ -279,6 +284,33 @@ describe("PF-5 release aggregate admission", () => {
     expect([...entry.content]).toEqual(bytes);
     expect(plan.expectedDigest).toBe(expectedDigest);
     expect(plan.actualDigest).toBe(expectedDigest);
+    expect(plan.releaseId).toBe(releaseId());
+    expect(plan.sourceRevision).toBe(revision);
+    expect(plan.destinationPath).toBe(destinationPath);
+
+    const invalidIdentity = await admitReleaseAggregate(input(), {
+      attestChannel: vi.fn(async () => attested({ artifactSourceCommit: "c".repeat(40) })),
+    });
+    expect(invalidIdentity).toEqual({ ok: false, phase: "resolve", error: "invalid_artifact" });
+
+    const alternateDestination = "src/alternate.ts";
+    const alternate = await admitReleaseAggregate(
+      input({
+        cleanPackAllowlist: ["release/manifest.yaml", alternateDestination],
+        channelMappings: [
+          {
+            channel: "stable",
+            releaseId: releaseId(),
+            sourceRevision: revision,
+            sourcePath,
+            destinationPath: alternateDestination,
+          },
+        ],
+      }),
+      { attestChannel: vi.fn(async () => attested()) },
+    );
+    if (!alternate.ok) throw new Error(alternate.error);
+    expect(alternate.plan.destinationPath).toBe(alternateDestination);
   });
 
   it("U-RELMAN-017: every staging/apply fault restores prior state and publishes zero", async () => {
