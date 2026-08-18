@@ -107,8 +107,12 @@ describe("U-RELMAN-006 PF-4 channel adapter", () => {
     expect(resolveArtifacts).toHaveBeenCalledOnce();
   });
 
-  it("U-RELMAN-018: rejects resolver identity drift as invalid_artifact", async () => {
-    const resolveArtifacts = vi.fn(async () => ({ ...resolved(), releaseId: "rel-drift" }));
+  it.each([
+    ["releaseId", { releaseId: "rel-drift" }],
+    ["artifactSourceCommit", { artifactSourceCommit: "c".repeat(40) }],
+    ["artifactSetDigest", { artifactSetDigest: `sha256:${"c".repeat(64)}` }],
+  ] as const)("U-RELMAN-018: rejects resolver %s identity drift as invalid_artifact", async (_field, mutation) => {
+    const resolveArtifacts = vi.fn(async () => ({ ...resolved(), ...mutation }));
 
     await expect(attestReleaseChannel(input(), { resolveArtifacts })).resolves.toEqual({
       status: "unavailable",
