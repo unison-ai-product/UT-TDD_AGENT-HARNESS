@@ -45,10 +45,16 @@ PLAN-L7-493 は、既存の D3a request / attestation / receipt 契約を変更�
 
 実装完了後に、次の差分だけを `PLAN-L6-94-cross-review-session-attestation.md` と必要な上流設計へ戻す。
 
-- canonical request digest から consumer が verdict path を導出し、reviewer の path 自己申告を受けないこと。
-- repo-local gitignored runtime path を sandbox の唯一の書込先とし、外部 path / symlink escape を拒否すること。
+- RFC 8785相当の canonical identity (`review-request/v1` / `memoryId` / `pr` / `exactHead` /
+  `authorFamily`) から64桁 lowercase `requestDigest`を導出し、`reviewRevision=rv1-<requestDigest>`へ束縛すること。
+- consumer が canonical request から verdict path を導出し、reviewer の path 自己申告を受けないこと。
+- repo-local gitignored runtime pathをsandboxの唯一の書込先とし、`.gitignore`のverdicts限定rule、review-guardの
+  projection、volatile fence境界、外部path / symlink escape拒否を一体で戻すこと。
 - verdict envelope の request digest、exact HEAD、review revision、provider/model、nonce と実 spawn facts の照合。
-- receipt 前の削除を拒否し、receipt 後 cleanup failure を `cleanup_pending` として扱うこと。
+- 既存 `U-RVATT-010` のrepo外 assertionを同じIDのrepo-local契約へ改訂し、`isOutsideRepo`を外部拒否predicateへ
+  転用した correction note を残すこと。
+- receipt 前の削除を拒否し、receipt 後 cleanup failure を `.ut-tdd/audit/review-custody.jsonl` の
+  `cleanup_pending` typed event として扱うこと。
 
 R1 以降は、実装 PR の exact HEAD、U-RVATT-030〜036、Linux / Windows provider実測、receipt / wrapper E2Eを根拠に、既存 L6 契約へ戻す必要がある差分だけを記録する。未実測の方式、実装予定、PASS claimをこの Reverse PLANへ先に書かない。
 

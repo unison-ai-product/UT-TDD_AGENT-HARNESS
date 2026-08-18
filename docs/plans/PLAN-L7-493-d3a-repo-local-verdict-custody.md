@@ -72,11 +72,24 @@ Fable の推奨と、Issue #328 の実 provider sandbox 失敗を合わせ、A �
 
 ### 3.1 物理配置と path admission
 
-- consumer が canonical request の正規化 preimageから lowercase SHA-256 の `requestDigest` を一意に導出する。
+- consumer は、既存の RFC 8785 相当 `canonicalize` / UTF-8 SHA-256 を使い、次の **identity object** を
+  canonical JSON 化した bytes から `requestDigest` (64桁 lowercase hex、切り詰めなし) として導出する。
+  key の順序は実装言語の locale ではなく canonicalizer の UTF-16 code-unit 順に固定する。
+  `schemaVersion` は `review-request/v1` とし、identity の field 集合は
+  `schemaVersion`, `memoryId`, `pr`, `exactHead`, `authorFamily` の5つだけとする。
+  `exactHead` は既存 strict decoder の lowercase 40-hex、`pr` は正の safe integer、
+  `memoryId` は canonical task/memory artifact identity、`authorFamily` は request author の族である。
+  reviewer の族は `authorFamily` の反対側から導出し、自己申告の reviewer role は preimage に入れない。
+  `requestedAt`、raw task 本文、provider/model、`invocation_nonce` は retry で変化し得る metadata のため除外する。
+- `reviewRevision` はこの identity の `rv1-<requestDigest>` と一致しなければならない。任意文字列の revision や
+  既存の16桁 digestを新契約へ持ち込まず、consumer は pattern/一致を検証してから path を導出する。
 - verdict path は `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/verdict.txt` のみとする。reviewer の引数、stdout、環境変数から path を採用しない。
 - `<requestDigest>` は path-safe な lowercase hexadecimal とし、別 exact HEAD は別 digest / 別 directory になる。request の同一 retry は同一 path へ収束する。
 - `repoRoot` は起動時に一度解決し、親 directory と final file の symlink / junction escape、absolute path override、`..`、NUL、backslash を拒否する。実体が repository 内に containment しない場合は `unavailable` で終了する。
-- `.ut-tdd/review/verdicts/` は gitignored runtime state とする。source、PLAN、test、tracked config の変更を delegated reviewer の成功条件に含めない。
+- `.ut-tdd/review/verdicts/` は gitignored runtime state とする。この前提を実装で成立させるため、implementation PR は
+  `.gitignore` に **verdicts directoryだけ**の rule と必要な `.gitkeep` を追加し、tracked の
+  `.ut-tdd/review/*.md`、`requests/`、`receipts/` を誤って除外しない `git check-ignore` regression を持つ。
+  source、PLAN、test、tracked config の変更を delegated reviewer の成功条件に含めない。
 
 ### 3.2 verdict envelope と identity binding
 
@@ -87,7 +100,7 @@ schema_version: ut-tdd.review-verdict/v1
 request_digest: <requestDigest>
 pr: <positive integer>
 exact_head: <40 lowercase hex>
-review_revision: <non-empty string>
+review_revision: rv1-<requestDigest>
 reviewer_provider: codex|claude
 reviewer_model: <non-empty string>
 invocation_nonce: <stable request nonce>
@@ -106,7 +119,24 @@ VERDICT: PASS|PASS-WEAK|FLAG
 - receipt の canonical write が成功した後にだけ verdict scratch を削除する。削除不能は `cleanup_pending` として記録するが、既に検証済みの receipt を成功から失敗へ反転させない。receipt 前の削除・上書きは許可しない。
 - 古い HEAD の verdict は current request / current HEAD へ再利用せず、consumer は `stale_head` または `verdict_identity_mismatch` で fail-close する。
 
-### 3.4 sandbox 実測境界
+### 3.4 legacy oracle と review fence の移行境界
+
+- 既存 `U-RVATT-010` は削除して履歴を隠すのではなく、同じ test ID の契約を「review lane が
+  consumer-derived repo-local verdict pathを受け取る」に改訂する。旧 `tmpdir()` 固定 assertion は同じ
+  implementation commit で退役し、test-design の correction note と citation を残す。
+- `isOutsideRepo` は廃止しない。verdict を常に外部へ置く policy から切り離し、repo-local containment の
+  汎用 negative predicate（外部 path / symlink escape は true）として `U-RVATT-017` の外部拒否ケースへ転用する。
+- `src/runtime/review-guard.ts` の custody projection regex は
+  `^\\.ut-tdd/review/(?:requests|receipts|verdicts)/` へ拡張する。verdicts を追加せずに review lane の
+  repo-local write を違反扱いする実装は契約不成立とする。
+- `cleanup_pending` は receipt 本文へ未定義 fieldを足さず、既存 ignored runtime の
+  `.ut-tdd/audit/review-custody.jsonl` へ typed event (`kind`, `requestDigest`, `receiptDigest`,
+  `exactHead`, `verdictPath`, `recordedAt`, `reason`) を1行 appendする。raw prompt/verdict/stack/secretは保存しない。
+- `tests/global-setup.ts` の fenceとの相互作用は、verdicts 配下の全 descendantを
+  `volatileRuntimeIndex` として content hash対象から除外する実装契約とし、fixture repoで「repo-local verdict
+  writeではfenceが変わらない」「通常の tracked/test残留は従来どおり赤」を1:1検証する。
+
+### 3.5 sandbox 実測境界
 
 - 実 provider が repository root 配下の gitignored verdict path へ書けることを実測する。
 - 同一 provider が repository 外、別 workspace、親 directory、symlink escape 先へ書けないことを実測する。
@@ -127,11 +157,17 @@ VERDICT: PASS|PASS-WEAK|FLAG
 | `U-RVATT-035` | receipt成功後cleanup、cleanup failure、receipt前cleanup | receipt前は0、成功後はreceipt保持 + `cleanup_pending` |
 | `U-RVATT-036` | 実 providerを通す dispatch→consume→receipt→wrapper の一回の実repo E2E | current exact HEADだけ allow、外部/欠落は deny |
 
-実装時の最小責務は、既存 `review-attestation.ts` の identity projection、`review-verdict-contract.ts` の envelope/parser、`cli/delegation.ts` の path注入、`review-guard.ts` の gitignored runtime除外、および対応する tests に限定する。新しい判定器、GitHub API、merge bypass、stdout-only経路、別の memory store は追加しない。
+実装時の最小責務は、既存 `review-attestation.ts` / `review-custody-canonical.ts` の identity projection、
+`review-verdict-contract.ts` の envelope/parser、`cli/delegation.ts` の path注入、`review-guard.ts` の
+gitignored runtime除外、`.gitignore` / `tests/support/git-workspace-fingerprint.ts` の runtime境界、
+audit event writer、および対応する tests に限定する。新しい判定器、GitHub API、merge bypass、stdout-only経路、
+別の memory store は追加しない。
 
 ## 5. 実装前の検証と順序
 
-1. 実 provider sandbox で §3.4 の local write / outside reject を測定し、OS別の実測結果を evidence に保存する。
+1. 実 provider sandbox で §3.5 の local write / outside reject を測定し、少なくとも1 OSの結果を
+   `.ut-tdd/audit/review-custody-sandbox-v1.jsonl` へ secret-free に保存する。provider実測が無い間は
+   実装へ進めず、CIの constrained stub greenを実provider証拠と扱わない。
 2. 本 PLAN の claim-blind / spec-blind cross-review を exact HEAD で実施する。FLAG は設計へ戻し、実装へ進まない。
 3. PASS 後に `U-RVATT-030`〜`036` を test-design の正規表へ昇格し、実装 PLAN の `requires` へ本 PLAN を束縛する。
 4. 実装 PRでは、request→delegated child→repo-local verdict→receipt→same-head wrapper の順序を変更せず、Linux / Windows の full CI と実 provider E2Eを取得する。
@@ -145,4 +181,6 @@ VERDICT: PASS|PASS-WEAK|FLAG
 - #335 PF-5 aggregate admission の実装・レビュー・merge。
 - Pack配布や複数consumer E2Eの実装。D3a custodyが閉じた後、Forward依存順に別PLANで扱う。
 
-本 PLAN は設計 freeze であり、source / test / `.gitignore` の変更を含まない。`status: confirmed` への昇格と implementation PLAN の起票は、cross-review と sandbox 実測が揃った後に行う。
+本 PLAN は設計 freeze であり、source / test / `.gitignore` の変更を含まない。`.gitignore`、review-guard、
+volatile fence、legacy oracle migrationは implementation PR の必須成果物として予約する。`status: confirmed` への
+昇格と implementation PLAN の起票は、cross-review と sandbox 実測が揃った後に行う。
