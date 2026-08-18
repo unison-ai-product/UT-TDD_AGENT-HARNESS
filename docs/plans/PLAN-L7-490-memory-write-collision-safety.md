@@ -54,11 +54,11 @@ review_evidence:
       - kind: unit_test
         command: "GitHub Actions run 32092053010: memory-service suite / Linux+Windows+aggregate"
         runner: ci
-        scope: full
+        scope: targeted
         exit_code: 0
         completed_at: "2026-08-18T03:41:48Z"
-        evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/32092053010"
-        output_digest: "sha256:2c71e57d0cf1b6be773945526e1cbbcf697ec64419987d32a924ed9896c0a12"
+        evidence_path: tests/memory-service.test.ts
+        output_digest: "sha256:6473abe462935eec499dee5a9d4d77e4b77453a291f94f8fce60ca4bef0f6a17"
         anchor_commit: bd2760a09d72e78fb0c916ee53b6a753f8eeea0d
 ---
 
