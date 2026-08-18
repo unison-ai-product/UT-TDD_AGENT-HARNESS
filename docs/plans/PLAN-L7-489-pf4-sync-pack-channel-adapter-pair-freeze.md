@@ -8,7 +8,7 @@ route_signal: forward
 route_mode: forward
 status: confirmed
 created: 2026-08-17
-updated: 2026-08-17
+updated: 2026-08-18
 owner: PM / Codex
 parent_design: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -45,7 +45,7 @@ review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
     reviewed_at: "2026-08-17T11:40:42Z"
-    tests_green_at: "2026-08-17T11:40:42Z"
+    tests_green_at: "2026-08-17T11:40:00Z"
     verdict: pass
     worker_model: codex
     reviewer_model: claude-opus-5
@@ -59,10 +59,9 @@ review_evidence:
         scope: targeted
         exit_code: 0
         evidence_path: docs/plans/PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze.md
-        output_digest: "sha256:e2833a9a2c7c0f78d3dbfeb8e625d09434a20420fe673246d8a2e1e3e8dda131"
-        anchor_commit: e2c008219483da92849effed03eca497664ced74
-        completed_at: "2026-08-17T12:07:57Z"
-        completed_after_tests_green_at: "2026-08-17T12:11:42Z"
+        output_digest: "sha256:cb750b2cdeb49ad7c90db955fe6f153c139d772af58a6716a3f943e20df599c4"
+        anchor_commit: 8bfaf23f857ec8c098d3b5aeb5c61afe39ef14e1
+        completed_at: "2026-08-17T11:40:00Z"
 ---
 
 # PLAN-L7-489: PF-4 sync-pack channel adapter 内部結線 pair-freeze
