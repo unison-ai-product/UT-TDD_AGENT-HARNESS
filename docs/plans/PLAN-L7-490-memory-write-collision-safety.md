@@ -38,8 +38,8 @@ github_issue_id: 325
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
-    reviewed_at: "2026-08-18T04:39:51Z"
-    tests_green_at: "2026-08-18T04:38:47Z"
+    reviewed_at: "2026-08-18T04:33:59Z"
+    tests_green_at: "2026-08-18T02:34:34Z"
     verdict: pass
     scope: "U-MEMORY-020/021、legacy無suffix path再利用、collision fail-close/idempotent retry。非著者closing reviewのblocking 1件を除くコード論点は解消済み。"
     worker_model: codex
@@ -47,8 +47,8 @@ review_evidence:
     plan_revision: 70c234d867cd07a5020b759738f928ee03b3506b
     subject_head: 70c234d867cd07a5020b759738f928ee03b3506b
     citations:
-      - "PR #332 exact HEAD 70c234d8 non-author delta review (2026-08-18T04:33:59Z)"
-      - "GitHub Actions run 32099302219 (Linux/Windows/aggregate success, completed 2026-08-18T04:38:47Z)"
+      - "PR #332 exact HEAD 70c234d8 non-author closing review (2026-08-18T04:33:59Z)"
+      - "GitHub Actions run 32092053010 (Linux/Windows/aggregate success, completed 2026-08-18T02:34:23Z)"
     green_commands:
       - kind: unit_test
         command: "GitHub Actions run 32092053010: memory-service suite / Linux+Windows+aggregate"
