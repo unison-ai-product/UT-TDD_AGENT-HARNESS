@@ -36,8 +36,9 @@ review_evidence: []
 
 ## R0 予約
 
-実装前のため、上流契約へ反映済みとは主張しない。実装後に、`testOwnedPaths` と
-`foreignActivityEvidence` の入力境界、分類不能時の fail-close、残留優先の同時発生規則、
+実装前のため、上流契約へ反映済みとは主張しない。実装後に、fence外sidecarの
+`foreignActivityEvidence` schema / producer-session境界、`testOwnedPaths` との交差判定、
+分類不能時の fail-close、残留優先の同時発生規則、
 `fence_indeterminate_foreign_activity` (exit code 2) の意味だけを、既存の
 `PLAN-L7-421` と L7 test-designへbackfillする。
 

@@ -66,27 +66,36 @@ worktree の HEAD / status / worktree diff / index diff / untracked 内容の
 
 draft 段階の generates は本 PLAN doc のみとする (merged-plan-status: 既 merge 済み
 deliverable の宣言は confirm 時)。実装対象は `tests/support/git-workspace-fingerprint.ts`、
-`tests/global-setup.ts`、`docs/test-design/harness/L7-unit-test-design.md` であり、
-実装 slice 着手時に generates へ追加して confirm と対で閉じる。
+`tests/global-setup.ts`、既存 session coordinator / runtime hook の sidecar producer adapter、
+`docs/test-design/harness/L7-unit-test-design.md` であり、producer adapterは実在する source path を
+実装PRの `generates` へ昇格して、test processがevidenceを書けない権限境界を実測する。
 
 ## 是正方針 (Step 案)
 
 ### Step 1: [直列] 差分の帰責分類
 - 直列理由 = **downstream_dependency** (分類設計が後続の fail 挙動を決める)。
 - fence の before/after 比較は、runnerが明示的に渡す相対pathの `testOwnedPaths`（既定は空集合）と、
-  独立した `foreignActivityEvidence`（HEAD移動または管理されたfixtureが発行した活動証跡）を入力に取る。
-  「テスト非対象」という暗黙の全path集合は作らない。
-- **分類不能な差分は残留候補として fail-close** とする。pathが `testOwnedPaths` の外にあることだけでは
-  foreignとは認定しない。HEAD移動、または検証可能な `foreignActivityEvidence` と一致する差分だけを
-  `foreign_activity` として分類する。
+  独立した `foreignActivityEvidence` を入力に取る。「テスト非対象」という暗黙の全path集合は作らない。
+- `foreignActivityEvidence` は任意のテスト出力ではない。session coordinator / runtime hook が
+  `fenceRoot` の**外側**に用意した sidecar を、runnerの明示 port (`evidencePath`) 経由で読み取る。
+  各 event は `schema_version=snapshot-fence-foreign/v1`、`event_id`、`producer_session_id`、
+  `runner_session_id`、`before_head`、`after_head`、`changed_paths`、変更後 inventory の digest、
+  `observed_at`、canonical body の `event_digest` を持つ。managed fixture は同じ schema を注入して
+  実運用の producer を決定論的に再現する。test code自身は sidecarを書けない境界とする。
+- event は run の開始・終了時刻内で、before/after の HEAD、変更path、inventory digestが実測差分と完全一致し、
+  `producer_session_id != runner_session_id` である場合だけ検証済みとする。commitの changed path が
+  `testOwnedPaths` と交差する場合、または sidecarが欠落・不正・期限外・一致不能の場合は foreign と認定しない。
+- **分類不能な差分は残留候補として fail-close** とする。HEAD移動だけでは foreign にならず、検証済みの
+  `foreignActivityEvidence` と一致する差分だけを `foreign_activity` として分類する。これにより、テスト自身が
+  commitしてstatusをcleanに戻す経路も、証跡が無い限り従来どおり fail-close になる。
 - foreign activityだけでテスト残留が無い場合は、テスト失敗とは別の
   `fence_indeterminate_foreign_activity`（exit code 2、再実行指示付き）として報告する。
   一方、テスト残留候補が1件でもあれば、foreignの有無に関係なく従来どおり fail-close とし、
   indeterminateへ降格しない。
 
 ### Step 2: [並列] 決定論的再現 oracle
-- 走行中の foreign commit / untracked 生成 / 編集を模す決定論的 fixture を追加し、
-  「foreign activity → 判定不能 (テスト失敗でない)」「テスト残留 → fail」の両方向を
+- sidecar eventを発行する coordinator fixtureと、走行中の foreign commit / untracked 生成 / 編集を模す
+  決定論的 fixture を追加し、「検証済み foreign activity → 判定不能 (テスト失敗でない)」「証跡なし / テスト残留 → fail」の両方向を
   real-repo regression test で実証する (prose 主張の禁止、coding ≠ substance)。
 
 ### Step 3: [直列] 回帰確認
@@ -105,13 +114,17 @@ fail-close とし、foreign path を許可リストへ追加して隠す方式�
 
 | candidate | Red入力 | 期待結果 |
 |---|---|---|
-| `CANDIDATE-R11-001` | HEAD が before/after で移動 | foreign 判定不能、再実行指示、テスト残留扱いにしない |
-| `CANDIDATE-R11-002` | 明示された `foreignActivityEvidence` と一致する編集または untracked 生成 | foreign 判定不能、silent pass 0 |
+| `CANDIDATE-R11-001` | coordinator sidecarと完全一致するforeign HEAD移動 | foreign 判定不能、再実行指示、テスト残留扱いにしない |
+| `CANDIDATE-R11-002` | coordinator sidecarとpath/digestが完全一致するforeign編集またはuntracked生成 | foreign 判定不能、silent pass 0 |
 | `CANDIDATE-R11-003` | 対象 path のテスト残留 | 従来どおり fail-close |
 | `CANDIDATE-R11-004` | foreign activity とテスト残留の同時発生 | 残留を優先して fail-close、indeterminateへ降格しない |
 
-`foreignActivityEvidence` が無い非対象pathの編集・untracked生成は `unknown` として残留候補に倒す。
-これにより、検証不能を理由にテスト残留を見逃すfail-openを許さない。
+`foreignActivityEvidence` が無い非対象pathの編集・untracked生成、またはHEADだけが移動したケースは
+`unknown` として残留候補に倒す。これにより、検証不能を理由にテスト残留を見逃すfail-openを許さない。
+
+Issue #77 の番号をReverse PLANのnumeric coreへ保持する必要があるため、既存の
+`PLAN-L6-77` / `PLAN-L7-77` とnumeric coreが衝突する点は issue #128 のrekey debtとして明記して維持する。
+このpairではrekeyを行わず、`PLAN-REVERSE-77` のIssue対応関係を優先する。
 
 対象外は、snapshot runner のI/O scheduler・clone/cache再設計、CI workflowの変更、
 他ランタイムの停止・排他制御である。本PRでは source/test-design の変更を行わず、
@@ -119,9 +132,9 @@ fail-close とし、foreign path を許可リストへ追加して隠す方式�
 
 ## AC
 
-- [ ] 走行中の foreign commit / 編集 / untracked 生成だけでは full suite が
-      「テスト失敗」として Red にならない (判定不能の明示エラー or 分類上の除外、
-      real-repo regression test で実証)。
+- [ ] coordinatorが発行した検証済み sidecar eventと完全一致する foreign commit / 編集 / untracked 生成だけでは
+      full suite が「テスト失敗」として Red にならない (判定不能の明示エラー、real-repo regression testで実証)。
+      sidecarが無い・不正・一致しない場合は、HEAD移動を含めて従来どおり残留としてRedにする。
 - [ ] テスト自身の起動元 worktree 残留は従来どおり fail-close (既存真陽性回帰の維持)。
 - [ ] 判定不能ケースは silent pass ではなく、再実行指示を含む明示メッセージを出す。
 - [ ] doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
