@@ -8,14 +8,14 @@ status: draft
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-08-18
 owner: PM / PO
 github_issue_id: 77
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
-backprop_decision: not_required
-backprop_decision_reason: "PLAN-L7-421 で導入済みのテスト衛生 fence の hybrid 運用欠陥の収束であり、新規 L0/L1 要件ではない。判別機構は L6 機能契約と L7 テスト設計への generates 反映で追跡する。"
+backprop_decision: required
+backprop_decision_reason: "foreign activity とテスト残留を区別する新しい判定結果と exit reason を導入するため、PLAN-REVERSE-77 で上流契約へ戻す。"
 agent_slots:
   - role: aim
     slot_label: "AIM — 偽陽性判別の設計判断 (foreign activity 検知 vs テスト残留の分離、fail-close 境界)"
@@ -28,12 +28,15 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-11-snapshot-fence-foreign-activity.md
     artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-REVERSE-77-snapshot-fence-foreign-activity-backfill.md
+    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
+    - docs/plans/PLAN-REVERSE-77-snapshot-fence-foreign-activity-backfill.md
 review_evidence: []
 ---
 
@@ -72,14 +75,16 @@ deliverable の宣言は confirm 時)。実装対象は `tests/support/git-works
 
 ### Step 1: [直列] 差分の帰責分類
 - 直列理由 = **downstream_dependency** (分類設計が後続の fail 挙動を決める)。
-- fence の before/after 比較に帰責分類を追加する:
-  (a) **HEAD 移動** (`before.head != after.head`) = foreign commit 活動、
-  (b) **テスト非対象 path の差分** = foreign 編集の可能性、
-  (c) それ以外 = テスト残留候補。
-- 分類 (a)(b) は「foreign activity により fence 判定不能」という**独立した結果**
-  (テスト失敗と区別された exit reason) として報告し、テスト残留 (c) のみを
-  従来どおり fail-close とする。判定不能を silent pass にしない (fail-open 禁止:
-  再実行指示付きの明示エラーとする)。
+- fence の before/after 比較は、runnerが明示的に渡す相対pathの `testOwnedPaths`（既定は空集合）と、
+  独立した `foreignActivityEvidence`（HEAD移動または管理されたfixtureが発行した活動証跡）を入力に取る。
+  「テスト非対象」という暗黙の全path集合は作らない。
+- **分類不能な差分は残留候補として fail-close** とする。pathが `testOwnedPaths` の外にあることだけでは
+  foreignとは認定しない。HEAD移動、または検証可能な `foreignActivityEvidence` と一致する差分だけを
+  `foreign_activity` として分類する。
+- foreign activityだけでテスト残留が無い場合は、テスト失敗とは別の
+  `fence_indeterminate_foreign_activity`（exit code 2、再実行指示付き）として報告する。
+  一方、テスト残留候補が1件でもあれば、foreignの有無に関係なく従来どおり fail-close とし、
+  indeterminateへ降格しない。
 
 ### Step 2: [並列] 決定論的再現 oracle
 - 走行中の foreign commit / untracked 生成 / 編集を模す決定論的 fixture を追加し、
@@ -103,9 +108,12 @@ fail-close とし、foreign path を許可リストへ追加して隠す方式�
 | candidate | Red入力 | 期待結果 |
 |---|---|---|
 | `CANDIDATE-R11-001` | HEAD が before/after で移動 | foreign 判定不能、再実行指示、テスト残留扱いにしない |
-| `CANDIDATE-R11-002` | 非対象 path の編集または untracked 生成 | foreign 判定不能、silent pass 0 |
+| `CANDIDATE-R11-002` | 明示された `foreignActivityEvidence` と一致する編集または untracked 生成 | foreign 判定不能、silent pass 0 |
 | `CANDIDATE-R11-003` | 対象 path のテスト残留 | 従来どおり fail-close |
-| `CANDIDATE-R11-004` | foreign activity とテスト残留の同時発生 | foreign と残留を混同せず、再実行可能な明示結果 |
+| `CANDIDATE-R11-004` | foreign activity とテスト残留の同時発生 | 残留を優先して fail-close、indeterminateへ降格しない |
+
+`foreignActivityEvidence` が無い非対象pathの編集・untracked生成は `unknown` として残留候補に倒す。
+これにより、検証不能を理由にテスト残留を見逃すfail-openを許さない。
 
 対象外は、snapshot runner のI/O scheduler・clone/cache再設計、CI workflowの変更、
 他ランタイムの停止・排他制御である。本PRでは source/test-design の変更を行わず、
