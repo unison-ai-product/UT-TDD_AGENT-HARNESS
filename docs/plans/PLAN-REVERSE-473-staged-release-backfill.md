@@ -80,8 +80,8 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-08-19T09:35:00+09:00"
-        evidence_path: docs/design/harness/L6-function-design/release-channel-manifest.md
-        output_digest: "sha256:46aec5a9a366db1e9b139784138e108ff868f444cb25fa7be26900a1e40b0b96"
+        evidence_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
+        output_digest: "sha256:b935b237f83b9887fef591468c0bf60f3739f910e3e92722cdacd4ad81661e55"
 ---
 
 # PLAN-REVERSE-473: 段階リリース管理 設計backfill
