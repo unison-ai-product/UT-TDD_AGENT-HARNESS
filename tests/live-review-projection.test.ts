@@ -497,7 +497,8 @@ describe("live review projection (U-RVATT-023..026)", () => {
         repoRoot: root,
         request: liveRequest,
         ports: {
-          issueRequest: (input) => issueReviewRequest({ repoRoot: input.repoRoot, request: input.request }),
+          issueRequest: (input) =>
+            issueReviewRequest({ repoRoot: input.repoRoot, request: input.request }),
           providerAvailable: () => true,
           publishReviewWake: vi.fn(),
         },
