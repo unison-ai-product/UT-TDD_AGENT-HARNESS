@@ -1912,6 +1912,15 @@ S1では以下を未実装のcandidate RED oracleとして登録する。各cand
 | `U-RELMAN-016` | PF-5 aggregate / #251 | `src/setup/release-aggregate-admission.ts` へunknown channelを入力 | `unknown_channel`を保持しresolver/materializer/copy/write count 0。PF-1のpure `002`とは別に実測する |
 | `U-RELMAN-017` | PF-5 aggregate / #251 | `applySealedReleaseAggregate` のsealed aggregate apply | **3 predicate全成立後の staging write/copy および destination commit/apply の各境界へ1..N faultを総当たり注入する。rollbackが成功するfaultではstagingを破棄し、destination/control manifest/allowlist/copy inputのprior bytes/mode/pathを不変に保ち、partial publish 0とする。restore失敗時は`rollback_failed`/`applied=indeterminate`へfail-closeし、成功時のみcommit/apply exactly 1とする。** |
 
+### R4 backfill（PLAN-REVERSE-473、2026-08-19）
+
+R3のcross-family再検収（exact main `427e07beb39700fc590097e7688b3231f3fe999a`、Claude
+non-author PASS、blocking 0）を受け、L6関数契約を
+`docs/design/harness/L6-function-design/release-channel-manifest.md`へbackfillした。
+既存U-RELMAN群の対応は維持し、新しいS2実装を先行させない。R3 advisory A-1（attested後の
+identity再照合）、A-2（cleanup/restore失敗時の`indeterminate`）、A-3（snapshot destination
+境界）はPF-5実装の追加mutationとしてGreen化するまで未完了とする。
+
 digest oracleはmaterializer version、destination path UTF-8 byte昇順、length-prefix framing、Pack output
 mode/contentを固定し、path連結曖昧性・package変換・remap・symlink・Windows executable bit観測差・
 manifest自己参照のmutationを個別にkillする。
