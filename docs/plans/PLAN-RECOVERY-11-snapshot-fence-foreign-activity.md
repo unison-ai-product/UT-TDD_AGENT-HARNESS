@@ -66,10 +66,16 @@ worktree の HEAD / status / worktree diff / index diff / untracked 内容の
 
 draft 段階の generates は本 PLAN doc のみとする (merged-plan-status: 既 merge 済み
 deliverable の宣言は confirm 時)。実装対象は `tests/support/git-workspace-fingerprint.ts`、
-`tests/global-setup.ts`、既存 session coordinator / runtime hook の sidecar producer adapter
-（想定 surface は CLI/IDE 実行面。`apply_patch` 等の外部 API 呼び出し面は本 slice の観測対象外）、
-`docs/test-design/harness/L7-unit-test-design.md` であり、producer adapter は実在する
-source path を実装PRの `generates` へ昇格して、test process が evidence を直接書けない権限境界を実測する。
+`tests/global-setup.ts`、新設する `src/runtime/foreign-activity-sidecar.ts` の producer adapter、
+`docs/test-design/harness/L7-unit-test-design.md` である。現時点で session coordinator /
+foreign-activity producer adapter は `src/` に存在しないため、実装 PR がこの新規 source を追加し、
+同じ commit で実装 PR の `generates` へ昇格する。adapter は既存の共通 CLI session surface
+（`src/cli.ts session start|summary` と `hook post-tool-use`。Claude hook は
+`.claude/hooks/session-log.ts` からこの CLI へ転送）へ接続する。`apply_patch` 等の外部 API
+呼び出し面は本 slice の観測対象外であり、`src/state-db/stop-refresh-coordinator.ts` は DB refresh
+専用で、この producer の実装・代替ではない。test process が evidence を直接書けない境界は、
+実装 PR で adapter の producer session と runner session の分離、および fenceRoot 外の sidecar
+write/read を実測して固定する。
 
 ## 是正方針 (Step 案)
 
@@ -77,7 +83,8 @@ source path を実装PRの `generates` へ昇格して、test process が eviden
 * 直列理由 = **downstream_dependency** (分類設計が後続の fail 挙動を決める)。
 * fence の before/after 比較は、runner が明示的に渡す相対 path の `testOwnedPaths`（既定は空集合）と、
   独立した `foreignActivityEvidence` を入力に取る。「テスト非対象」という暗黙の全パス集合は作らない。
-* `foreignActivityEvidence` は任意のテスト出力ではない。session coordinator / runtime hook が
+* `foreignActivityEvidence` は任意のテスト出力ではない。新設する
+  `src/runtime/foreign-activity-sidecar.ts` producer adapter が既存の共通 CLI session / runtime hook
   `fenceRoot` の**外側**に用意した sidecar を、runner の明示 port (`evidencePath`) 経由で読み取る。
   各 event は `schema_version=snapshot-fence-foreign/v1`、`event_id`、`producer_session_id`、
   `runner_session_id`、`before_head`、`after_head`、`changed_paths`、`observed_at`、`event_signature` を持つ。
@@ -101,7 +108,7 @@ source path を実装PRの `generates` へ昇格して、test process が eviden
   indeterminateへ降格しない。
 
 ### Step 2: [並列] 決定論的再現 oracle
-- sidecar eventを発行する coordinator fixtureと、走行中の foreign commit / untracked 生成 / 編集を模す
+- sidecar eventを発行する producer adapter fixtureと、走行中の foreign commit / untracked 生成 / 編集を模す
   決定論的 fixture を追加し、「検証済み foreign activity → 判定不能 (テスト失敗でない)」「証跡なし / テスト残留 → fail」の両方向を
   real-repo regression test で実証する (prose 主張の禁止、coding ≠ substance)。
 
@@ -121,8 +128,8 @@ fail-close とし、foreign path を許可リストへ追加して隠す方式�
 
 | candidate | Red入力 | 期待結果 |
 |---|---|---|
-| `CANDIDATE-R11-001` | coordinator sidecarと完全一致するforeign HEAD移動 | foreign 判定不能、再実行指示、テスト残留扱いにしない |
-| `CANDIDATE-R11-002` | coordinator sidecarとhead/changed_paths/event_signatureが完全一致する foreign 編集または untracked 生成 | foreign 判定不能、silent pass 0 |
+| `CANDIDATE-R11-001` | producer adapter sidecarと完全一致するforeign HEAD移動 | foreign 判定不能、再実行指示、テスト残留扱いにしない |
+| `CANDIDATE-R11-002` | producer adapter sidecarとhead/changed_paths/event_signatureが完全一致する foreign 編集または untracked 生成 | foreign 判定不能、silent pass 0 |
 | `CANDIDATE-R11-003` | 対象 path のテスト残留 | 従来どおり fail-close |
 | `CANDIDATE-R11-004` | foreign activity とテスト残留の同時発生 | 残留を優先して fail-close、indeterminateへ降格しない |
 
