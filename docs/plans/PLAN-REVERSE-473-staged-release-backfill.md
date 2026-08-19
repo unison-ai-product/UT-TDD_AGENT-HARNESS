@@ -46,8 +46,6 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
-  - artifact_path: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
-    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
   requires:
@@ -70,10 +68,20 @@ review_evidence:
   - reviewer: Claude
     review_kind: cross_agent
     reviewed_at: "2026-08-19T09:35:53+09:00"
+    tests_green_at: "2026-08-19T09:35:00+09:00"
     verdict: approve
-    worker_model: claude-opus-5
+    worker_model: gpt-5.6-sol
     reviewer_model: claude-opus-5
     scope: "R3 aggregate再検収、PF1-PF5の正本選択・digest・原子性・rollback境界"
+    green_commands:
+      - kind: lint
+        command: "node src/cli.ts plan lint"
+        runner: powershell
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-19T09:35:00+09:00"
+        evidence_path: docs/design/harness/L6-function-design/release-channel-manifest.md
+        output_digest: "sha256:7f60335af7c447364feb3c42d7a0970209a9ab3184a4fad0394897d931d7065b"
 ---
 
 # PLAN-REVERSE-473: 段階リリース管理 設計backfill

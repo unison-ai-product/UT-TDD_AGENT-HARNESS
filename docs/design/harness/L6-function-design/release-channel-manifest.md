@@ -21,6 +21,14 @@ staging/applyは既存のportを介して副作用境界を明示する。
 R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/restoreの状態、snapshot境界）は
 実装前にL7 oracleへ追加して閉じる。
 
+| Function(s) | Signature | pre | post | invariant | oracle |
+| --- | --- | --- | --- | --- | --- |
+| `parseCanonicalReleaseManifest` | `parseCanonicalReleaseManifest(input) => Result` | canonical bytes、schema・型・own propertyが妥当 | freeze済みmanifestまたはtyped error | 入力不変、未知field拒否 | `U-RELMAN-001`, `U-RELMAN-009`, `U-RELMAN-013` |
+| `resolveReleaseChannel` | `resolveReleaseChannel(manifest, channel) => ReleaseRecord` | 登録済みown channel | 選択recordまたは`unknown_channel` | manifest/order/write不変 | `U-RELMAN-002`, `U-RELMAN-007` |
+| `materializeReleaseArtifacts` | `materializeReleaseArtifacts(record, reader, materializer) => ArtifactSet` | object・versionが利用可能 | framed digest付きartifact set | worktree/network/write非依存 | `U-RELMAN-011`, `U-RELMAN-012` |
+| `buildCleanDistributionPlan` | `buildCleanDistributionPlan(manifest, artifacts, allowlist) => SealedPlan` | 3 predicateが成立 | sealed planまたはtyped failure | side effect前にAND判定 | `U-RELMAN-014`, `U-RELMAN-015`, `U-RELMAN-016` |
+| `applySealedReleaseAggregate` | `applySealedReleaseAggregate(plan, ports) => ApplyResult` | exact final treeとattestation | `not_applied` / `applied` / `indeterminate` | prior state不変、partial publish 0 | `U-RELMAN-017`, `U-RELMAN-018` |
+
 ## 2. canonical manifest
 
 ### `parseCanonicalReleaseManifest(input)`
