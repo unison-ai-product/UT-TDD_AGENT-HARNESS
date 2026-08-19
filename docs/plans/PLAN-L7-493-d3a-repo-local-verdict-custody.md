@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -95,8 +95,10 @@ Fable の推奨と、Issue #328 の実 provider sandbox 失敗を合わせ、A �
 - `repoRoot` は起動時に一度解決し、親 directory と final file の symlink / junction escape、absolute path override、`..`、NUL、backslash を拒否する。実体が repository 内に containment しない場合は `unavailable` で終了する。
 - `.ut-tdd/review/verdicts/` は gitignored runtime state とする。この前提を実装で成立させるため、implementation PR は
   `.gitignore` に **verdicts directoryだけ**の rule と必要な `.gitkeep` を追加し、`*.md` が tracked として残ること、
-  `requests/`・`receipts/` が tracked 外だが `untracked` として認識されることを含む `git check-ignore` regression を持つ。
-  source、PLAN、test、tracked config の変更を delegated reviewer の成功条件に含めない。
+  `verdicts/` が `git check-ignore` で ignored になること、実際に作成した `requests/<request>.json` が
+  `untracked` として認識されることを regression で固定する。空の `receipts/` directory は Git が追跡も
+  `untracked` 報告もしないため、存在・untracked 判定の対象にしない。receipt は実ファイルを生成した fixture
+  で内容と cleanup を検証する。source、PLAN、test、tracked config の変更を delegated reviewer の成功条件に含めない。
 
 ### 3.2 verdict envelope と identity binding
 
@@ -135,14 +137,16 @@ VERDICT: PASS|PASS-WEAK|FLAG
   reviewer family 内の model / effort（必要な provider binary metadata を含む）だけである。family 変更は
   `verdict_identity_mismatch` として拒否する。
   新 attempt を受理する前に、旧 attempt の digest、番号、provider/model、exact HEAD、理由を raw verdict なしの
-  `superseded_attempt` typed event として `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/audit/review-custody.jsonl` へ append する。旧 attempt の verdict が欠落する場合は
-  `oldAttemptDigest` に `verdict_absent` を書く。監査 sink は `tests/global-setup.ts` の content hash 比較から除外対象として扱う (`volatileRuntimeIndex` の子孫含む)。
+  `superseded_attempt` typed event として `<git-common-dir>/ut-tdd-runtime/review-custody/review-custody.jsonl` へ
+  append する。旧 attempt の verdict が欠落する場合は `oldAttemptDigest` に `verdict_absent` を書く。監査 sink は
+  worktree の fenceRoot と receipt 後 cleanup の対象外であり、`volatileRuntimeIndex` へ追加する必要はない。
   監査書込みに失敗したら
   新 attempt と旧 attempt のどちらも receipt へ投影せず fail-close とする。選択可能な attempt は consumer が検証した
   最新の未supersede attempt ただ1つに限定し、reviewer の自己申告で選べない。旧 attempt の digest 不在時は sentinel を許容する。
 - receipt 成功後は新しい attempt の作成・supersede・上書きをすべて拒否する。これにより model escalation は digest を
   変更せずに収束でき、receipt は常に1件だけとなる。
-- receipt の canonical write が成功した後にだけ verdict scratch を削除する。削除不能は `cleanup_pending` として記録するが、既に検証済みの receipt を成功から失敗へ反転させない。receipt 前の削除・上書きは許可しない。
+- receipt の canonical write が成功した後にだけ verdict scratch を削除する。削除不能は `<git-common-dir>/ut-tdd-runtime/review-custody/review-custody.jsonl` へ
+   `cleanup_pending` として記録するが、既に検証済みの receipt を成功から失敗へ反転させない。receipt 前の削除・上書きは許可しない。
 - 古い HEAD の verdict は current request / current HEAD へ再利用せず、consumer は `stale_head` または `verdict_identity_mismatch` で fail-close する。
 
 ### 3.4 legacy oracle と review fence の移行境界
@@ -155,12 +159,13 @@ VERDICT: PASS|PASS-WEAK|FLAG
 - `src/runtime/review-guard.ts` の custody projection regex は
   `^\\.ut-tdd/review/(?:requests|receipts|verdicts)/` へ拡張する。verdicts を追加せずに review lane の
   repo-local write を違反扱いする実装は契約不成立とする。
-- `cleanup_pending` は receipt 本文へ未定義 fieldを足さず、既存 ignored runtime の
-  `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/audit/review-custody.jsonl` へ typed event (`kind`, `requestDigest`, `receiptDigest`,
+- `cleanup_pending` は receipt 本文へ未定義 fieldを足さず、既存の git-common-dir runtime の
+  `<git-common-dir>/ut-tdd-runtime/review-custody/review-custody.jsonl` へ typed event (`kind`, `requestDigest`, `receiptDigest`,
   `exactHead`, `verdictPath`, `recordedAt`, `reason`) を1行 appendする。raw prompt/verdict/stack/secretは保存しない。
-- `tests/global-setup.ts` の fenceとの相互作用は、verdicts 配下の全 descendantを
-  `volatileRuntimeIndex` として content hash対象から除外する実装契約とし、fixture repoで「repo-local verdict
-  writeではfenceが変わらない」「通常の tracked/test残留は従来どおり赤」を1:1検証する。
+- `tests/global-setup.ts` の fenceとの相互作用は、repo-local verdicts 配下の全 descendantを
+  `volatileRuntimeIndex` として content hash対象から除外する実装契約とする。git-common-dir の review-custody
+  sink は fenceRoot 外なので除外登録を要求しない。fixture repoで「repo-local verdict writeではfenceが変わらない」
+  「通常の tracked/test残留は従来どおり赤」を1:1検証する。
 
 ### 3.5 sandbox 実測境界
 
@@ -192,7 +197,7 @@ audit event writer、および対応する tests に限定する。新しい判�
 ## 5. 実装前の検証と順序
 
 1. 実 provider sandbox で §3.5 の local write / outside reject を測定し、少なくとも1 OSの結果を
-   `.ut-tdd/audit/review-custody-sandbox-v1.jsonl` へ secret-free に保存する。provider実測が無い間は
+   `<git-common-dir>/ut-tdd-runtime/review-custody/sandbox-v1.jsonl` へ secret-free に保存する。provider実測が無い間は
    実装へ進めず、CIの constrained stub greenを実provider証拠と扱わない。
 2. 本 PLAN の claim-blind / spec-blind cross-review を exact HEAD で実施する。FLAG は設計へ戻し、実装へ進まない。
 3. PASS 後に `U-RVATT-030`〜`036` を test-design の正規表へ昇格し、実装 PLAN の `requires` へ本 PLAN を束縛する。

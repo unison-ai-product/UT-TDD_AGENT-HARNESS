@@ -10,7 +10,7 @@ route_signal: reverse
 route_mode: reverse
 status: draft
 created: 2026-08-18
-updated: 2026-08-18
+updated: 2026-08-19
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -53,7 +53,7 @@ PLAN-L7-493 は、既存の D3a request / attestation / receipt 契約を変更�
 - verdict envelope の request digest、exact HEAD、review revision、provider/model、nonce と実 spawn facts の照合。
 - 既存 `U-RVATT-010` のrepo外 assertionを同じIDのrepo-local契約へ改訂し、`isOutsideRepo`を外部拒否predicateへ
   転用した correction note を残すこと。
-- receipt 前の削除を拒否し、receipt 後 cleanup failure を `.ut-tdd/audit/review-custody.jsonl` の
+- receipt 前の削除を拒否し、receipt 後 cleanup failure を `<git-common-dir>/ut-tdd-runtime/review-custody/review-custody.jsonl` の
   `cleanup_pending` typed event として扱うこと。
 - receipt 前の model / effort escalation は digest を変えず、consumer 採番の次 attemptへ分離すること。
   `superseded_attempt` の監査記録、最新 attempt の単一選択、receipt 後の attempt 作成拒否を上流の retry 契約へ戻すこと。
