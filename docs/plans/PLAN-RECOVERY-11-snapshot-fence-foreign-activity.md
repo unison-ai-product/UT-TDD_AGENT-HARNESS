@@ -66,16 +66,17 @@ worktree の HEAD / status / worktree diff / index diff / untracked 内容の
 
 draft 段階の generates は本 PLAN doc のみとする (merged-plan-status: 既 merge 済み
 deliverable の宣言は confirm 時)。実装対象は `tests/support/git-workspace-fingerprint.ts`、
-`tests/global-setup.ts`、新設する `src/runtime/foreign-activity-sidecar.ts` の producer adapter、
-`docs/test-design/harness/L7-unit-test-design.md` である。現時点で session coordinator /
-foreign-activity producer adapter は `src/` に存在しないため、実装 PR がこの新規 source を追加し、
-同じ commit で実装 PR の `generates` へ昇格する。adapter は既存の共通 CLI session surface
+`tests/global-setup.ts`、既存 `src/runtime/session-log.ts` の foreign-activity sidecar producer 拡張、
+`docs/test-design/harness/L7-unit-test-design.md` である。既存の session coordinator という名前の
+source は存在しないため、実装 PR はこの `session-log.ts` を既存の共通 producer 面として拡張し、
+同じ commit で実装 PR の `generates` へ昇格する。producer は既存の共通 CLI session surface
 （`src/cli.ts session start|summary` と `hook post-tool-use`。Claude hook は
 `.claude/hooks/session-log.ts` からこの CLI へ転送）へ接続する。`apply_patch` 等の外部 API
-呼び出し面は本 slice の観測対象外であり、`src/state-db/stop-refresh-coordinator.ts` は DB refresh
-専用で、この producer の実装・代替ではない。test process が evidence を直接書けない境界は、
-実装 PR で adapter の producer session と runner session の分離、および fenceRoot 外の sidecar
-write/read を実測して固定する。
+呼び出し面は本 slice の観測対象外であり、sidecar は `<git-common-dir>/ut-tdd-runtime/snapshot-fence/`
+へ書く（worktree 内の `.ut-tdd/logs/session/` は fence 内なので使用しない）。
+`src/state-db/stop-refresh-coordinator.ts` は DB refresh 専用で、この producer の実装・代替ではない。
+test process が evidence を直接書けない境界は、実装 PR で producer session と runner session の分離、
+および fenceRoot 外の sidecar write/read を実測して固定する。
 
 ## 是正方針 (Step 案)
 
@@ -83,9 +84,9 @@ write/read を実測して固定する。
 * 直列理由 = **downstream_dependency** (分類設計が後続の fail 挙動を決める)。
 * fence の before/after 比較は、runner が明示的に渡す相対 path の `testOwnedPaths`（既定は空集合）と、
   独立した `foreignActivityEvidence` を入力に取る。「テスト非対象」という暗黙の全パス集合は作らない。
-* `foreignActivityEvidence` は任意のテスト出力ではない。新設する
-  `src/runtime/foreign-activity-sidecar.ts` producer adapter が既存の共通 CLI session / runtime hook
-  `fenceRoot` の**外側**に用意した sidecar を、runner の明示 port (`evidencePath`) 経由で読み取る。
+* `foreignActivityEvidence` は任意のテスト出力ではない。既存 `src/runtime/session-log.ts` の producer
+  拡張が `<git-common-dir>/ut-tdd-runtime/snapshot-fence/`（`fenceRoot` の**外側**）に用意した sidecar を、
+  runner の明示 port (`evidencePath`) 経由で読み取る。
   各 event は `schema_version=snapshot-fence-foreign/v1`、`event_id`、`producer_session_id`、
   `runner_session_id`、`before_head`、`after_head`、`changed_paths`、`observed_at`、`event_signature` を持つ。
   `event_signature = sha256(canonical(changed_paths_sorted|before_head|after_head))` とし、`changed_paths` は

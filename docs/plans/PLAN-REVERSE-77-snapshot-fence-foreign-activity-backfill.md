@@ -36,8 +36,8 @@ review_evidence: []
 
 ## R0 予約
 
-実装前のため、上流契約へ反映済みとは主張しない。実装後に、新設する
-`src/runtime/foreign-activity-sidecar.ts` が発行する fence外sidecarの
+実装前のため、上流契約へ反映済みとは主張しない。実装後に、既存
+`src/runtime/session-log.ts` の producer 拡張が発行する fence外sidecarの
 `foreignActivityEvidence` schema / producer-session境界、`testOwnedPaths` との交差判定、
 分類不能時の fail-close、残留優先の同時発生規則、
 `fence_indeterminate_foreign_activity` (exit code 2) の意味だけを、既存の
@@ -45,7 +45,7 @@ review_evidence: []
 
 ## R1-R4 条件
 
-- R1: exact implementation HEAD（`src/runtime/foreign-activity-sidecar.ts` と既存
+- R1: exact implementation HEAD（`src/runtime/session-log.ts` の producer 拡張と既存
   `src/cli.ts` session / hook surface の接続を含む）、U-FENCE-001..004、real-repo regressionの
   存在を確認する。
 - R2: foreign-only / residual-only / simultaneous の結果型・exit reason・再実行指示を照合する。
