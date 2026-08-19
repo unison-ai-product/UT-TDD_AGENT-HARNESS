@@ -4,7 +4,8 @@ artifact_type: design_doc
 status: confirmed
 sub_doc: function-spec
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-plan: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
+plan: docs/plans/PLAN-L6-01-function-spec.md
+forward_plan: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
 reverse_plan: docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
 ---
 
@@ -21,7 +22,7 @@ staging/applyは既存のportを介して副作用境界を明示する。
 R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/restoreの状態、snapshot境界）は
 実装前にL7 oracleへ追加して閉じる。
 
-| Function(s) | Signature | pre | post | invariant | oracle |
+| 関数 | 署名 | 事前条件 (pre) | 事後条件 (post) | 不変条件 (invariant) | 検証oracle |
 | --- | --- | --- | --- | --- | --- |
 | `parseCanonicalReleaseManifest` | `parseCanonicalReleaseManifest(input) => Result` | canonical bytes、schema・型・own propertyが妥当 | freeze済みmanifestまたはtyped error | 入力不変、未知field拒否 | `U-RELMAN-001`, `U-RELMAN-009`, `U-RELMAN-013` |
 | `resolveReleaseChannel` | `resolveReleaseChannel(manifest, channel) => ReleaseRecord` | 登録済みown channel | 選択recordまたは`unknown_channel` | manifest/order/write不変 | `U-RELMAN-002`, `U-RELMAN-007` |
@@ -29,7 +30,7 @@ R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/rest
 | `buildCleanDistributionPlan` | `buildCleanDistributionPlan(manifest, artifacts, allowlist) => SealedPlan` | 3 predicateが成立 | sealed planまたはtyped failure | side effect前にAND判定 | `U-RELMAN-014`, `U-RELMAN-015`, `U-RELMAN-016` |
 | `applySealedReleaseAggregate` | `applySealedReleaseAggregate(plan, ports) => ApplyResult` | exact final treeとattestation | `not_applied` / `applied` / `indeterminate` | prior state不変、partial publish 0 | `U-RELMAN-017`, `U-RELMAN-018` |
 
-## 2. canonical manifest
+## 2. 正規manifestの契約
 
 ### `parseCanonicalReleaseManifest(input)`
 
@@ -58,7 +59,7 @@ R3で確認されたPF5のadvisory（attestation再照合、apply後cleanup/rest
 - **Invariant**: control manifest自身をartifact digestへ混入させず、入力・source objectを変更しない。
   symlink、mode、path衝突、root外参照、unsupported kindはtyped failureで閉じる。
 
-## 4. clean distribution plan
+## 4. 許可済み配布計画の契約
 
 ### `buildCleanDistributionPlan(manifest, artifactSet, allowlist)`
 
