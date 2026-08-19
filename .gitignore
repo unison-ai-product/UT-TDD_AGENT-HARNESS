@@ -24,6 +24,7 @@ credentials.json
 # historical handover docs stay tracked (gitignore never untracks). PLAN-L7-144 follow-up.
 docs/handover/session-handover-*.md
 .ut-tdd/logs/
+.ut-tdd/review/verdicts/
 # gate 実行証跡 JSON (機械生成 runtime evidence、harness.db projection が正本。
 # tests/gate-static.test.ts U-GATE-006 等の live-tree 書き込み残渣も混入するため未 track。
 # live tree への test 書き込み自体は PLAN-L7-421 (test-hygiene-live-tree-fence) が塞ぐ)

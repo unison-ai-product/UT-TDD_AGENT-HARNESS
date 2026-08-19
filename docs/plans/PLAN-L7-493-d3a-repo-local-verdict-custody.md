@@ -6,7 +6,7 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-18
 updated: 2026-08-19
 owner: PM / PO / Codex
@@ -24,6 +24,36 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
     artifact_type: markdown_doc
+  - artifact_path: src/feedback/review-verdict-custody.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/review-attestation.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/review-verdict-contract.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/live-review-projection.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/delegation.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/review-guard.ts
+    artifact_type: source_module
+  - artifact_path: tests/support/git-workspace-fingerprint.ts
+    artifact_type: test_code
+  - artifact_path: tests/review-verdict-custody.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/review-live-cli.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/review-attestation.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/review-guard.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/live-review-projection.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/review-verdict-contract.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: .gitignore
+    artifact_type: other
 dependencies:
   parent: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
   requires:
@@ -43,7 +73,38 @@ dependencies:
 github_issue_id: 328
 backprop_decision: required
 backprop_decision_reason: "delegated verdict の信頼境界と再合流時のreceipt入力を変更するため、既存Forwardの証跡へReverse検証を戻す。"
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-19T08:25:25.1454025Z"
+    tests_green_at: "2026-08-19T08:25:25.1454025Z"
+    verdict: "preflight green; non-author exact-head closing review pending"
+    scope: "#328 repo-local custody implementation preflight; Claude non-author claim-blind/spec-blind review remains required before merge."
+    green_commands:
+      - kind: unit_test
+        command: "node node_modules/vitest/vitest.mjs run tests/review-verdict-custody.test.ts tests/review-live-cli.test.ts tests/review-attestation.test.ts tests/review-guard.test.ts tests/live-review-projection.test.ts tests/review-verdict-contract.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-19T08:25:25.1454025Z"
+        evidence_path: tests/review-verdict-custody.test.ts
+        output_digest: "sha256:5086747eb3f3abf2ac3191cf116be494c7023dc25692232ebae6c621286922c0"
+      - kind: typecheck
+        command: "node_modules/.bin/tsc.cmd --noEmit --pretty false"
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-19T08:25:25.1454025Z"
+        evidence_path: src/feedback/review-verdict-custody.ts
+        output_digest: "sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84"
+      - kind: lint
+        command: "node_modules/.bin/biome.cmd check src/feedback/review-verdict-custody.ts src/feedback/review-attestation.ts src/feedback/review-verdict-contract.ts src/cli/delegation.ts src/feedback/live-review-projection.ts src/runtime/review-guard.ts tests/support/git-workspace-fingerprint.ts tests/review-verdict-custody.test.ts tests/review-live-cli.test.ts tests/review-attestation.test.ts tests/review-guard.test.ts"
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-19T08:25:25.1454025Z"
+        evidence_path: src/feedback/review-verdict-custody.ts
+        output_digest: "sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84"
 ---
 
 # PLAN-L7-493: D3a repo-local digest-bound verdict custody 契約 freeze

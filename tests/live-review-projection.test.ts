@@ -443,10 +443,12 @@ describe("live review projection (U-RVATT-023..026)", () => {
     expect(ports.issueRequest).toHaveBeenNthCalledWith(1, {
       repoRoot: "repo",
       request: canonicalRequest,
+      strict: true,
     });
     expect(ports.issueRequest).toHaveBeenNthCalledWith(2, {
       repoRoot: "repo",
       request: canonicalRequest,
+      strict: true,
     });
     expect(ports.publishReviewWake).toHaveBeenNthCalledWith(
       1,
@@ -495,7 +497,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
         repoRoot: root,
         request: liveRequest,
         ports: {
-          issueRequest: issueReviewRequest,
+          issueRequest: (input) => issueReviewRequest({ repoRoot: input.repoRoot, request: input.request }),
           providerAvailable: () => true,
           publishReviewWake: vi.fn(),
         },

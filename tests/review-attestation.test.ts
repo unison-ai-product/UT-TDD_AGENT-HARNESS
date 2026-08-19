@@ -340,7 +340,7 @@ describe("review attestation (U-RVATT)", () => {
   // 同一である保証がどこにも無い。別名の env を注入しても全件緑になってしまう。
   // これは D3a で踏んだ producer/consumer 乖離と同型なので、単一の定数を根拠にした
   // round-trip フェンスを張る。
-  it("U-RVATT-010: review_lane 委譲だけが verdict file env を repo 外 path で子へ渡す", async () => {
+  it("U-RVATT-010: review_lane 委譲は consumer-derived repo-local path だけを子へ渡す", async () => {
     const reviewer = await runDelegation([
       "codex",
       "--role",
@@ -361,12 +361,8 @@ describe("review attestation (U-RVATT)", () => {
     expect(worker.stdout, "worker の dry-run が stdout へ何も出していない").not.toBe("");
     const injected = JSON.parse(reviewer.stdout).env?.[REVIEW_VERDICT_FILE_ENV];
     expect(typeof injected).toBe("string");
-    // read-only reviewer guard を壊さないため、書き込み先は repo の外でなければならない。
-    // 「repo の外」を `process.cwd()` との比較で書くと実 repo 読みになり、
-    // `test-repository-isolation` ゲートが契約未登録として fail-close する
-    // (2026-07-31 の CI で実測)。読む必要が無いので OS temp 配下であることを直接固定する。
-    // 述語そのもの (repo 内かどうか) は U-RVATT-017 が合成 path で検証する。
-    expect(injected.startsWith(tmpdir())).toBe(true);
+    expect(injected.replaceAll("\\", "/")).toContain("/.ut-tdd/review/verdicts/");
+    expect(injected.replaceAll("\\", "/")).toContain("/attempts/attempt-1/verdict.txt");
     expect(JSON.parse(worker.stdout).env?.[REVIEW_VERDICT_FILE_ENV]).toBeUndefined();
   });
 
@@ -517,9 +513,10 @@ describe("review attestation (U-RVATT)", () => {
     ]);
     expect(delegated.stdout, "review_lane の dry-run が stdout へ何も出していない").not.toBe("");
     const injected = JSON.parse(delegated.stdout).env[REVIEW_VERDICT_FILE_ENV] as string;
-    // execute 経路は子の実行中だけ dir を保持して後始末する。dry-run は子を起動しないので、
-    // 作った dir をその場で捨てなければ委譲のたびに temp が積み上がる。
-    expect(existsSync(dirname(injected))).toBe(false);
+    // dry-run は attempt directory や verdict fileを作らない。既存の同一digest rootが
+    // 別テストから残っていても、consumer-derived path自体へ新規書込みしないことを固定する。
+    expect(existsSync(injected)).toBe(false);
+    expect(injected.replaceAll("\\", "/")).toContain("/.ut-tdd/review/verdicts/");
   });
 
   // 識別子なしの review lane では verdict の読み手 (receipt 投影) が存在しない。この経路で
