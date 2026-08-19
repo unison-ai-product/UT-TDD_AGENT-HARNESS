@@ -135,7 +135,7 @@ describe("review live CLI composition", () => {
     expect(publishReceipt).toHaveBeenCalledWith(root, projection);
   });
 
-  it("U-RVATT-027 obtains receipt provider/model/role/time/exit facts through the real delegation CLI", () => {
+  it("U-RVATT-036 obtains receipt provider/model/role/time/exit facts through the real delegation CLI", () => {
     const { root, memoryPath } = fixture();
     const binRoot = mkdtempSync(join(tmpdir(), "ut-review-provider-"));
     roots.push(binRoot);
