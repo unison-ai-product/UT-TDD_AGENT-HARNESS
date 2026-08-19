@@ -34,6 +34,8 @@ generates:
     artifact_type: test_code
   - artifact_path: src/doctor/profiles.ts
     artifact_type: source_module
+  - artifact_path: src/doctor/runner.ts
+    artifact_type: source_module
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: tests/cli-surface.test.ts
