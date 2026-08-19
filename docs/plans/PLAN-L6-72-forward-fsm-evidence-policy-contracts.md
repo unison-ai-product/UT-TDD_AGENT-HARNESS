@@ -94,12 +94,15 @@ SSoT として具体化するものである。state 集合、admission rule、t
 | `accept` | `reviewed` | `accepted` | `independent-review`, `gate-run` |
 | `archive` | `accepted` | `archived` | `acceptance-decision`, `retention-decision` |
 | `block` | 13 正規 state のうち `archived` / `accepted` 以外 | `blocked` | `exception-context.action=block`、reason、subject revision |
-| `supersede` | 13 正規 state のうち `archived` / `accepted` 以外 | `superseded` | `exception-context.action=supersede`、reason、replacement subject |
+| `supersede` | 13 正規 state のうち `archived` 以外 | `superseded` | `exception-context.action=supersede`、reason、replacement subject |
 | `reject` | `review_ready` または `reviewed` | `rejected` | `exception-context.action=reject`、reason、subject revision |
 | `reopen` | `blocked`、`superseded`、`rejected` | `reopened` | `exception-context.action=reopen`、reason、new revision |
 | `resume` | `reopened` | `planned` | `exception-context.action=resume`、reason、new revision |
 
-`archived` は唯一の terminal state であり、追加 event は全て拒否する。`superseded` と
+`archived` は唯一の terminal state であり、追加 event は全て拒否する。`accepted` は
+受入済みだが archival 前なので、replacement subject と exception context を持つ明示的な
+`supersede` だけを許可する。これは PLAN frontmatter の supersession と同じ意味ではなく、
+accepted artifact を新 revision へ置換する Forward ledger 操作である。`superseded` と
 `rejected` は通常の実行を止める exception state だが、replacement / re-entry の audit
 context を伴う `reopen` だけを許可する。`blocked` は `reopen` を経由しない直接復帰を
 許可しない。イベントは append-only ledger に一度だけ記録し、同一 command ID と同一
@@ -116,6 +119,19 @@ state (`proposed`, `planned`, `pair_freeze_ready`, `pair_frozen`, `red_frozen`,
 これが許可表・禁止表を一つにした closed-world の完全表であり、実装側の追加 event や
 暗黙の逆行を許可しない。例外 event は必ず `subjectRevision`、`sourceCommit`、reason、
 typed `exception-context` を同一 transaction に束縛する。
+
+### 2.1 frontmatter status との境界
+
+Forward FSM state は append-only Forward ledger の state だけを正本とし、既存 PLAN
+frontmatter の `status: draft|confirmed|completed` とは独立した軸である。`plan lint`、
+`plan-dod`、`review-evidence`、`merged-plan-status` など既存の PLAN governance は
+frontmatter status を従来どおり検査するが、`workflow status|transition|explain` は
+frontmatter を読まず、ledger の state を status へ推測変換しない。対象 subject に ledger
+entry が無い、または projection が再構築できない場合、workflow query は
+`forward-ledger-unavailable` / exit 3 とし、draft・confirmed・completed のいずれかを
+補完値にしない。したがって二つの status が黙って乖離することはなく、PLAN supersession
+(`supersedes` / `doctor plan-supersession`) と Forward の `supersede` はそれぞれの正本で
+独立に監査される。
 
 ### 3. typed evidence policy
 
@@ -135,7 +151,7 @@ record を二重計上しない。
 | `trace` | `trace-materialization` | exactly 1 | revision-bound | `codex`, `claude`, `ci` | exact | `exact(0)` |
 | `trace-closure` | `trace-closure` | exactly 1 | max age 24h + revision-bound | `codex`, `claude`, `ci` | exact | `exact(0)` |
 | `green` | `green-test-run` | exactly 1 | max age 24h + revision-bound | `ci` | exact | `exact(0)` |
-| `review` | `independent-review` | exactly 1 | revision-bound | `codex`, `claude` | exact | `exact(0)` |
+| `review` | `independent-review` | exactly 1 | revision-bound | `non-author-family` (`codex` または `claude`, authorFamily と異なる) | exact | `exact(0)` |
 | `gate` | `gate-run` | exactly 1 | max age 24h + revision-bound | `ci` | exact | `exact(0)` |
 | `acceptance` | `acceptance-decision` | exactly 1 | revision-bound | `po`, `human` | exact | `exact(0)` |
 | `retention` | `retention-decision` | exactly 1 | revision-bound | `po`, `human` | exact | `exact(0)` |
@@ -146,6 +162,11 @@ implement は `forward-red-evidence-missing` で拒否する。`independent-revi
 family と異なる producer を要求する。minimum / maximum cardinality、claims rule、
 attestation、supersession の検証は `EvidencePolicy` の既存 contract を再利用し、Forward
 専用の evidence 型や reservation を追加しない。
+
+表の cardinality は全て `subjectId + subjectRevision` ごとの active frontier 単位である。
+ただし `exception` 行だけは一つの exception event ごとに exactly 1 件と数える。`resume`
+は意図的に `reopened → planned` へ戻す保守的な再入であり、pair/red/trace の evidence を
+暗黙に引き継がず、再度必要な gate を成立させる。
 
 ### 4. CLI JSON envelope と exit 対応
 
@@ -178,9 +199,10 @@ ledger projection の不一致は success に補完せず exit 3 へ閉じる。
 | `3` | ledger / transaction / projection / parser unavailable | DB failure、rebuild digest mismatch、unknown envelope version |
 
 exit code と `ruleId` は envelope と stderr の両方で同じ値を返し、散文から verdict を
-推測しない。`status` / `explain` の valid read-only 結果は exit 0、拒否理由を説明する
-read-only 結果も exit 1 または2（拒否理由の分類に従う）であり、state/event/outboxの
-副作用は0件とする。
+推測しない。`transition` は上表の exit mapping を使う。一方、`status` / `explain` は
+query の説明・取得に成功したかで終了コードを決め、`verdict: allow|deny|explain` の
+内容にかかわらず valid read-only envelope は exit 0 とする。query の入力不正、ledger
+欠落、projection 不一致だけが exit 3 となる。query は常に state/event/outbox を変更しない。
 
 この追補により、#344 の実装 admission は表を参照して一意に判定できる。L6-72 の
 既存契約を変更するものではなく、宣言済みの「tableとして固定」を実体化した correction
