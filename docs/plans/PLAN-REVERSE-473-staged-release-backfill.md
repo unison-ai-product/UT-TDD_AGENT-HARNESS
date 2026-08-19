@@ -82,6 +82,23 @@ review_evidence:
         completed_at: "2026-08-19T09:35:00+09:00"
         evidence_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
         output_digest: "sha256:b935b237f83b9887fef591468c0bf60f3739f910e3e92722cdacd4ad81661e55"
+  - reviewer: Claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-19T19:28:31+09:00"
+    tests_green_at: "2026-08-19T19:26:02+09:00"
+    verdict: approve
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-5
+    scope: "PR #341 R4 backfill (L6 release-channel-manifest 関数契約 / L7 backfill 節 / REVERSE-473 R4 confirm) の non-author closing review。exact HEAD 7fbe432a50941e1d1786d089712b50bc5c42d817、CI run 32241648580 (headSha 照合済、linux/windows/aggregate SUCCESS)。R3で挙げたL6合流単位5件の着地とadvisory A-1〜A-3の未完保持を再導出して確認。"
+    green_commands:
+      - kind: integration_test
+        command: "harness-check (linux / windows / aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-19T19:26:02+09:00"
+        evidence_path: docs/design/harness/L6-function-design/release-channel-manifest.md
+        output_digest: "sha256:46aec5a9a366db1e9b139784138e108ff868f444cb25fa7be26900a1e40b0b96"
 ---
 
 # PLAN-REVERSE-473: 段階リリース管理 設計backfill
