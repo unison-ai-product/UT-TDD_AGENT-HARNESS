@@ -26,34 +26,12 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/feedback/review-verdict-custody.ts
     artifact_type: source_module
-  - artifact_path: src/feedback/review-attestation.ts
-    artifact_type: source_module
-  - artifact_path: src/feedback/review-verdict-contract.ts
-    artifact_type: source_module
-  - artifact_path: src/feedback/live-review-projection.ts
-    artifact_type: source_module
   - artifact_path: src/cli/delegation.ts
     artifact_type: source_module
-  - artifact_path: src/runtime/review-guard.ts
-    artifact_type: source_module
-  - artifact_path: tests/support/git-workspace-fingerprint.ts
-    artifact_type: test_code
   - artifact_path: tests/review-verdict-custody.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/review-live-cli.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/review-attestation.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/review-guard.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/live-review-projection.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/review-verdict-contract.test.ts
     artifact_type: test_code
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
-  - artifact_path: .gitignore
-    artifact_type: other
 dependencies:
   parent: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
   requires:
