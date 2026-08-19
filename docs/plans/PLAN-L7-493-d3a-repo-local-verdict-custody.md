@@ -124,9 +124,12 @@ VERDICT: PASS|PASS-WEAK|FLAG
 - `invocation_nonce` は request writer が生成して request に保存し、同一 digest の全 attempt で再利用する。別 HEAD、別 revision、別 reviewer family は別 request / 別 digest とする。
 - 同一 digest・同一 attempt・同一 envelope の再投影は content-addressed receipt へ冪等に収束する。同じ attempt の nonce、canonical identity、provider/model、本文を変える試みは
   `verdict_identity_conflict` として拒否する。
-- receipt がまだ無い間は、consumer が割り当てた次の attempt に限り provider/model/effort が異なる再試行を許可する。
-  ただし `reviewer_provider` の family は `authorFamily` の反対側から導出した値で不変とし、変更できるのは同じ
-  reviewer family 内の concrete model / effort（必要な provider binary metadata を含む）だけである。family変更は
+- receipt がまだ無い間は、consumer が割り当てた次の attempt へ再試行を許可する。再試行先は
+  family 外へは移らず、同一 `reviewer_provider` / `reviewer_family` の範囲で `reviewer_model` の変更も許可する
+  (`superseded_attempt` を経由)。
+  ただし同一 attempt を再書きしない。
+  `reviewer_provider` の family は `authorFamily` の反対側から導出した値で不変であり、変更できるのは同じ
+  reviewer family 内の model / effort（必要な provider binary metadata を含む）だけである。family 変更は
   `verdict_identity_mismatch` として拒否する。
   新 attempt を受理する前に、旧 attempt の digest、番号、provider/model、exact HEAD、理由を raw verdict なしの
   `superseded_attempt` typed event として `.ut-tdd/audit/review-custody.jsonl` へ append する。監査書込みに失敗したら
@@ -171,7 +174,7 @@ VERDICT: PASS|PASS-WEAK|FLAG
 | `U-RVATT-031` | repo-local sandbox write と repo外 write拒否の実 provider / constrained stub | local 成功、外部拒否、receipt 0 |
 | `U-RVATT-032` | envelope の8 custody fieldsを1点ずつ mutation（canonical identity 7 fields + consumer attempt） | `verdict_identity_mismatch`、receipt 0 |
 | `U-RVATT-033` | nonce混線、stale HEAD、別revision、別provider | canonical request以外を拒否、merge 0 |
-| `U-RVATT-034` | 同一 digest・同一 attempt retry、receipt前の別 model escalation、別 HEAD retry | 同一 attempt は冪等、別 model は `superseded_attempt` 後に最新 attemptだけを1 receiptへ投影、別 HEADは別 digest |
+| `U-RVATT-034` | 同一 digest・同一 attempt retry、receipt前の別 model escalation（同一 model を含む）、別 HEAD retry | 同一 attempt は冪等、別 attempt は `superseded_attempt` 後に最新 attempt だけを 1 receipt へ投影、別 HEAD は別 digest |
 | `U-RVATT-035` | receipt成功後cleanup、cleanup failure、receipt前cleanup | receipt前は0、成功後はreceipt保持 + `cleanup_pending` |
 | `U-RVATT-036` | 実 providerを通す dispatch→consume→receipt→wrapper の一回の実repo E2E | current exact HEADだけ allow、外部/欠落は deny |
 
