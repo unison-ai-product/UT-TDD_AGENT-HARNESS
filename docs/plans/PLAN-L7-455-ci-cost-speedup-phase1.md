@@ -34,6 +34,8 @@ generates:
     artifact_type: test_code
   - artifact_path: src/doctor/profiles.ts
     artifact_type: source_module
+  - artifact_path: src/doctor/runner.ts
+    artifact_type: source_module
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: tests/cli-surface.test.ts
@@ -229,6 +231,14 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。
 
+### Issue #314 の profile 実行面束縛 (2026-08-19)
+
+`source-doc-lane` の `outputIds` を宣言だけにせず、doctor registry の選択・実行・
+envelope `checkIds`/`checks` の集合と順序へ直接束縛する。profile の4件を `scope=full`
+の全検査へ拡張する経路、または registry 定義順と profile 宣言順がずれる経路を
+`U-CIPOL-027` (tests/doctor.test.ts) で fail-close に固定する。実装所有は
+`src/doctor/runner.ts`、既存 profile 宣言は `src/doctor/profiles.ts` とする。
+
 ## AC
 
 - [x] doc-only 変更で重い step が skip され、code 変更で full が走る分岐が
@@ -256,3 +266,8 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
       confirmed 前に記録。 — 実施記録 #1〜#6 (green)。review evidence は本 PLAN が
       `status: draft` のまま (confirmed gate 前) のため未記録。confirmed へ進める
       前に cross-runtime review を実施し `review_evidence` へ追記する。
+- [x] Issue #314: source doc lane の宣言面と実行面が集合・順序とも一致する。 —
+      exact HEAD `1c3f662ff418aa53780f6148144cdfbac05c59b8` で
+      `node scripts/run-vitest-snapshot.ts tests/doctor.test.ts -t "U-CIPOL-027" --reporter=dot`
+      を実行し、1 file / 1 test Green。profile の4件だけが `checkIds`/`checks` に現れ、
+      registry 定義順の差異が残らないことを実測した。

@@ -36,11 +36,20 @@ export interface DoctorCheckDefinition {
 export function selectDoctorCheckDefinitions(
   definitions: readonly DoctorCheckDefinition[],
   scope: DoctorScope,
+  outputIds: readonly string[] = doctorOutputIdsForScope(scope),
 ): DoctorCheckDefinition[] {
-  const outputIds = new Set(doctorOutputIdsForScope(scope));
-  return definitions.filter(
-    (definition) => definition.profiles.includes(scope) && outputIds.has(definition.id),
+  const selectedOutputIds = new Set(outputIds);
+  const byId = new Map(
+    definitions
+      .filter(
+        (definition) => definition.profiles.includes(scope) && selectedOutputIds.has(definition.id),
+      )
+      .map((definition) => [definition.id, definition] as const),
   );
+  return outputIds.flatMap((id) => {
+    const definition = byId.get(id);
+    return definition ? [definition] : [];
+  });
 }
 
 export function collectDoctorCheckRun(
@@ -49,6 +58,8 @@ export function collectDoctorCheckRun(
 ): DoctorCheckRun {
   const profile = resolveDoctorRunProfile(options);
   const scope = profile.invocation === "registry" ? profile.scope : (options.scope ?? "full");
+  const outputIds =
+    profile.invocation === "registry" ? profile.outputIds : doctorOutputIdsForScope(scope);
   const timings: DoctorTiming[] = [];
   const record = <T extends LintResult>(id: string, run: () => T): T => {
     if (options.timing !== true) return run();
@@ -70,16 +81,17 @@ export function collectDoctorCheckRun(
   const selectedDefinitions = selectDoctorCheckDefinitions(
     buildFullDoctorCheckDefinitions(deps, options),
     scope,
+    outputIds,
   );
   for (const definition of selectedDefinitions) {
     resultsById.set(definition.id, record(definition.id, definition.run));
   }
-  const checks = doctorOutputIdsForScope(scope).map((id) => {
+  const checks = outputIds.map((id) => {
     const result = resultsById.get(id);
     if (!result) {
       return {
         ok: false,
-        messages: [`doctor registry - violation: missing full doctor check result (${id})`],
+        messages: [`doctor registry - violation: missing doctor check result (${id})`],
       };
     }
     return result;
