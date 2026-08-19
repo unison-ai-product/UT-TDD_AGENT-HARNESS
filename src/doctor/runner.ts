@@ -63,6 +63,7 @@ export function collectDoctorCheckRun(
   const scope = profile.invocation === "registry" ? profile.scope : (options.scope ?? "full");
   const outputIds =
     profile.invocation === "registry" ? profile.outputIds : doctorOutputIdsForScope(scope);
+  const outputIdSet = new Set<string>(outputIds);
   const timings: DoctorTiming[] = [];
   const record = <T extends LintResult>(id: string, run: () => T): T => {
     if (options.timing !== true) return run();
@@ -84,7 +85,7 @@ export function collectDoctorCheckRun(
   const selectedDefinitions = selectDoctorCheckDefinitions(
     buildFullDoctorCheckDefinitions(deps, options),
     scope,
-  );
+  ).filter((definition) => outputIdSet.has(definition.id));
   for (const definition of selectedDefinitions) {
     resultsById.set(definition.id, record(definition.id, definition.run));
   }
