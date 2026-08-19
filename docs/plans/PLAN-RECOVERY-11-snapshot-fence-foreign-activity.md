@@ -8,11 +8,14 @@ status: draft
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-08-18
 owner: PM / PO
+github_issue_id: 77
 parent_design: docs/design/harness/L6-function-design/function-spec.md
-backprop_decision: not_required
-backprop_decision_reason: "PLAN-L7-421 で導入済みのテスト衛生 fence の hybrid 運用欠陥の収束であり、新規 L0/L1 要件ではない。判別機構は L6 機能契約と L7 テスト設計への generates 反映で追跡する。"
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+next_pair_freeze: L7
+backprop_decision: required
+backprop_decision_reason: "foreign activity とテスト残留を区別する新しい判定結果と exit reason を導入するため、PLAN-REVERSE-77 で上流契約へ戻す。"
 agent_slots:
   - role: aim
     slot_label: "AIM — 偽陽性判別の設計判断 (foreign activity 検知 vs テスト残留の分離、fail-close 境界)"
@@ -31,6 +34,7 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
+    - docs/plans/PLAN-REVERSE-77-snapshot-fence-foreign-activity-backfill.md
 review_evidence: []
 ---
 
@@ -62,36 +66,93 @@ worktree の HEAD / status / worktree diff / index diff / untracked 内容の
 
 draft 段階の generates は本 PLAN doc のみとする (merged-plan-status: 既 merge 済み
 deliverable の宣言は confirm 時)。実装対象は `tests/support/git-workspace-fingerprint.ts`、
-`tests/global-setup.ts`、`docs/test-design/harness/L7-unit-test-design.md` であり、
-実装 slice 着手時に generates へ追加して confirm と対で閉じる。
+`tests/global-setup.ts`、既存 `src/runtime/session-log.ts` の foreign-activity sidecar producer 拡張、
+`docs/test-design/harness/L7-unit-test-design.md` である。既存の session coordinator という名前の
+source は存在しないため、実装 PR はこの `session-log.ts` を既存の共通 producer 面として拡張し、
+同じ commit で実装 PR の `generates` へ昇格する。producer は既存の共通 CLI session surface
+（`src/cli.ts session start|summary` と `hook post-tool-use`。Claude hook は
+`.claude/hooks/session-log.ts` からこの CLI へ転送）へ接続する。`apply_patch` 等の外部 API
+呼び出し面は本 slice の観測対象外であり、sidecar は `<git-common-dir>/ut-tdd-runtime/snapshot-fence/`
+へ書く（worktree 内の `.ut-tdd/logs/session/` は fence 内なので使用しない）。
+`src/state-db/stop-refresh-coordinator.ts` は DB refresh 専用で、この producer の実装・代替ではない。
+test process が evidence を直接書けない境界は、実装 PR で producer session と runner session の分離、
+および fenceRoot 外の sidecar write/read を実測して固定する。
 
 ## 是正方針 (Step 案)
 
 ### Step 1: [直列] 差分の帰責分類
-- 直列理由 = **downstream_dependency** (分類設計が後続の fail 挙動を決める)。
-- fence の before/after 比較に帰責分類を追加する:
-  (a) **HEAD 移動** (`before.head != after.head`) = foreign commit 活動、
-  (b) **テスト非対象 path の差分** = foreign 編集の可能性、
-  (c) それ以外 = テスト残留候補。
-- 分類 (a)(b) は「foreign activity により fence 判定不能」という**独立した結果**
-  (テスト失敗と区別された exit reason) として報告し、テスト残留 (c) のみを
-  従来どおり fail-close とする。判定不能を silent pass にしない (fail-open 禁止:
-  再実行指示付きの明示エラーとする)。
+* 直列理由 = **downstream_dependency** (分類設計が後続の fail 挙動を決める)。
+* fence の before/after 比較は、runner が明示的に渡す相対 path の `testOwnedPaths`（既定は空集合）と、
+  独立した `foreignActivityEvidence` を入力に取る。「テスト非対象」という暗黙の全パス集合は作らない。
+* `foreignActivityEvidence` は任意のテスト出力ではない。既存 `src/runtime/session-log.ts` の producer
+  拡張が `<git-common-dir>/ut-tdd-runtime/snapshot-fence/`（`fenceRoot` の**外側**）に用意した sidecar を、
+  runner の明示 port (`evidencePath`) 経由で読み取る。
+  各 event は `schema_version=snapshot-fence-foreign/v1`、`event_id`、`producer_session_id`、
+  `runner_session_id`、`before_head`、`after_head`、`changed_paths`、`observed_at`、`event_signature` を持つ。
+  `event_signature = sha256(canonical(changed_paths_sorted|before_head|after_head))` とし、`changed_paths` は
+  `testOwnedPaths` 外での相対 path 差分を収集する最小コスト入力とする。  
+  managed fixture は同じ schema を注入して実運用の producer を決定論的に再現する。test code 自体は
+  sidecar を書けない境界を前提とする。
+- event は run の開始・終了時刻内で、`before_head` / `after_head` / `changed_paths`（集合一致）/`event_signature`
+  が実測差分と一致し、`producer_session_id != runner_session_id` のときだけ検証済みとする。  
+  commit の changed path が `testOwnedPaths` と交差する場合、または sidecar が欠落・不正・期限外・一致不能の場合は
+  foreign と認定しない。
+- 複数 event がある場合は `observed_at` 順で時系列に集約して判定する。集約結果は
+  `before_head = 先頭.event.before_head`、`after_head = 最後.event.after_head`、`changed_paths = 和集合` とする。
+  集約中の時系列不連続（`prev.after_head != next.before_head`）は `unknown` 扱いで検証不能とし、残留扱いへ倒す。
+- **分類不能な差分は残留候補として fail-close** とする。HEAD移動だけでは foreign にならず、検証済みの
+  `foreignActivityEvidence` と一致する差分だけを `foreign_activity` として分類する。これにより、テスト自身が
+  commitしてstatusをcleanに戻す経路も、証跡が無い限り従来どおり fail-close になる。
+- foreign activityだけでテスト残留が無い場合は、テスト失敗とは別の
+  `fence_indeterminate_foreign_activity`（exit code 2、再実行指示付き）として報告する。
+  一方、テスト残留候補が1件でもあれば、foreignの有無に関係なく従来どおり fail-close とし、
+  indeterminateへ降格しない。
 
 ### Step 2: [並列] 決定論的再現 oracle
-- 走行中の foreign commit / untracked 生成 / 編集を模す決定論的 fixture を追加し、
-  「foreign activity → 判定不能 (テスト失敗でない)」「テスト残留 → fail」の両方向を
+- sidecar eventを発行する producer adapter fixtureと、走行中の foreign commit / untracked 生成 / 編集を模す
+  決定論的 fixture を追加し、「検証済み foreign activity → 判定不能 (テスト失敗でない)」「証跡なし / テスト残留 → fail」の両方向を
   real-repo regression test で実証する (prose 主張の禁止、coding ≠ substance)。
 
 ### Step 3: [直列] 回帰確認
 - 直列理由 = **verification_gate**。full suite green + doctor green +
   fence 真陽性 (残留検出) の既存回帰が退行しないことを確認。
 
+## pair-freeze 境界 (Issue #77)
+
+この recovery slice は、既存の `PLAN-L7-421` fence を置き換えず、before/after
+差分の**帰責結果だけ**を追加する。foreign activity を検出した場合に成功へ丸めず、
+`fence_indeterminate_foreign_activity` と再実行指示を返す。テスト自身の残留は従来どおり
+fail-close とし、foreign path を許可リストへ追加して隠す方式は採らない。
+
+実装着手時に、次の候補を `docs/test-design/harness/L7-unit-test-design.md` へ
+1:1 で昇格し、同じ commit で `generates` へ実装成果物を追加する。
+
+| candidate | Red入力 | 期待結果 |
+|---|---|---|
+| `CANDIDATE-R11-001` | producer adapter sidecarと完全一致するforeign HEAD移動 | foreign 判定不能、再実行指示、テスト残留扱いにしない |
+| `CANDIDATE-R11-002` | producer adapter sidecarとhead/changed_paths/event_signatureが完全一致する foreign 編集または untracked 生成 | foreign 判定不能、silent pass 0 |
+| `CANDIDATE-R11-003` | 対象 path のテスト残留 | 従来どおり fail-close |
+| `CANDIDATE-R11-004` | foreign activity とテスト残留の同時発生 | 残留を優先して fail-close、indeterminateへ降格しない |
+
+`foreignActivityEvidence` が無い非対象pathの編集・untracked生成、またはHEADだけが移動したケースは
+`unknown` として残留候補に倒す。これにより、検証不能を理由にテスト残留を見逃すfail-openを許さない。
+
+Issue #77 の番号をReverse PLANのnumeric coreへ保持する必要があるため、既存の
+`PLAN-L6-77` / `PLAN-L7-77` とnumeric coreが衝突する点は issue #128 のrekey debtとして明記して維持する。
+このpairではrekeyを行わず、`PLAN-REVERSE-77` のIssue対応関係を優先する。
+
+対象外は、snapshot runner のI/O scheduler・clone/cache再設計、CI workflowの変更、
+他ランタイムの停止・排他制御である。本PRでは source/test-design の変更を行わず、
+この境界と実装順序だけをpair-freezeする。
+
 ## AC
 
-- [ ] 走行中の foreign commit / 編集 / untracked 生成だけでは full suite が
-      「テスト失敗」として Red にならない (判定不能の明示エラー or 分類上の除外、
-      real-repo regression test で実証)。
+- [ ] coordinator が発行した検証済み sidecar event と一致する foreign commit / 編集 / untracked 生成だけでは
+      full suite が「テスト失敗」として Red にならない (判定不能の明示エラー、real-repo regression testで実証)。
+  - ただし対象 surface は CLI / IDE の sidecar（fixture と実装される既定 producer）に限定し、
+    当該 surface 外（例: API 経由の外部 tool 呼び出し）で発生した差分は観測不能として `unknown` 扱いにし、
+    従来どおり残留として Red 扱いを維持する。
+  - sidecar が無い・不正・一致しない場合は、HEAD 移動を含めて従来どおり残留として Red にする。
 - [ ] テスト自身の起動元 worktree 残留は従来どおり fail-close (既存真陽性回帰の維持)。
 - [ ] 判定不能ケースは silent pass ではなく、再実行指示を含む明示メッセージを出す。
 - [ ] doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
