@@ -120,6 +120,18 @@ state (`proposed`, `planned`, `pair_freeze_ready`, `pair_frozen`, `red_frozen`,
 暗黙の逆行を許可しない。例外 event は必ず `subjectRevision`、`sourceCommit`、reason、
 typed `exception-context` を同一 transaction に束縛する。
 
+既知 event の必須 evidence が欠けている場合は、closed-world の一般エラーより先に
+event 固有の fail-close を返す。`begin-implementation` が `proposed`、`planned`、
+`pair_freeze_ready`、`pair_frozen` から呼ばれ、pair または Red evidence が無い場合は
+`forward-red-evidence-missing` / exit 2、`prepare-review` が
+`implementation_complete` または `trace_freeze_ready` から呼ばれ、trace freeze evidence
+が無い場合は `forward-trace-freeze-missing` / exit 2、`accept` が `review_ready` から
+呼ばれ review/test evidence が無い場合は `forward-accept-evidence-missing` / exit 2 と
+する。exception event の reason・revision・typed context 欠落は
+`forward-exception-context-missing` / exit 2 とする。これらの前置条件が満たされている
+のに表にない state/event を指定した場合だけ `forward-transition-illegal` / exit 1 とし、
+candidate の missing-evidence と illegal-transition を一意に分離する。
+
 ### 2.1 frontmatter status との境界
 
 Forward FSM state は append-only Forward ledger の state だけを正本とし、既存 PLAN
