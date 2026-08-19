@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: draft
 created: 2026-08-04
-updated: 2026-08-05
+updated: 2026-08-19
 owner: PO / Claude
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -29,6 +29,7 @@ dependencies:
   references:
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
     - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
+    - docs/design/harness/L6-function-design/release-channel-manifest.md
     - docs/governance/vmodel-refactor-qa-release-gates.md
     - docs/design/harness/L6-function-design/setup-solo-team.md
     - src/setup/distribution.ts
