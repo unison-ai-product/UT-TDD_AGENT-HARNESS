@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-18
 updated: 2026-08-18
 owner: PM / Codex
@@ -24,9 +24,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/release-aggregate-admission.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-aggregate-admission.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
-  requires: []
+  requires:
+    - PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze
   blocks: []
   references:
     - docs/plans/PLAN-L7-489-pf4-sync-pack-channel-adapter-pair-freeze.md
@@ -35,8 +40,34 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/251
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/250
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/330
+backprop_decision: required
 github_issue_id: 251
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-18T05:24:18Z"
+    tests_green_at: "2026-08-18T05:24:18Z"
+    verdict: pass
+    scope: "PR #333 PF-5 pair-freezeのclaim-blind/spec-blind再レビュー。predicate Cの静的化、PF-4 requires、docs-only境界を確認。"
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    plan_revision: 15e76078ec216655e4c1896717771966a864d227
+    subject_head: 15e76078ec216655e4c1896717771966a864d227
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/333"
+    anchor_commit: 15e76078ec216655e4c1896717771966a864d227
+    citations:
+      - "PR #333 exact HEAD 15e76078 non-author closing review (PASS, 2026-08-18T05:24:18Z)"
+      - "GitHub Actions run 32099499128 (Linux/Windows/aggregate success)"
+    green_commands:
+      - kind: lint
+        command: "GitHub Actions run 32099499128: harness-check Linux/Windows/aggregate"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-18T05:24:18Z"
+        evidence_path: docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
+        output_digest: "sha256:52ba651e439bd066d94c50256be8df2c4ff7f5cb0e8380127c1d54dc36072d4e"
+        anchor_commit: 15e76078ec216655e4c1896717771966a864d227
 ---
 
 # PLAN-L7-492: PF-5 release aggregate admission pair-freeze
@@ -66,7 +97,8 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 - sealed planのapplyはisolated stagingへ行い、staging write/copyおよびdestination commit/apply
   の各境界へ1..N faultを注入する。全faultでstagingを破棄し、destination/control manifest/
   allowlist/copy inputのprior bytes・mode・pathを不変に保ち、partial publishを0にする。
-  faultなしの成功時だけdestination applyをexactly 1回許可する。
+  restore自体が失敗してprior状態を証明できない場合は`rollback_failed`/`applied=indeterminate`
+  を返し、未公開(`applied=0`)とは報告しない。faultなしの成功時だけdestination applyをexactly 1回許可する。
 - manifest schema invalid、unknown channel、selected revision/object unavailableはtyped finding
   を保持したままfail-closeする。`unavailable`を`mismatch`や成功へ丸めない。
 - application coreは既存PF-1〜PF-4のpure domain/resolver/materializer/adapter portを注入し、
@@ -80,13 +112,14 @@ candidate昇格を含めない。candidate `CANDIDATE-RELMAN-014`〜`017`は実�
 2. `CANDIDATE-RELMAN-015`: schema invalid manifestをtyped invalidとして拒否し、副作用0件。
 3. `CANDIDATE-RELMAN-016`: unknown channelを`unknown_channel`として保持し、副作用0件。
 4. `CANDIDATE-RELMAN-017`: staging/apply各境界の1..N faultでprior state不変・partial publish 0、
-   成功時のみapply exactly 1回。
+   restore失敗時は`rollback_failed`/`applied=indeterminate`、成功時のみapply exactly 1回。
 
 ## 3. 工程と出口
 
-1. 本docs-only pair-freezeをcross-family reviewし、exact HEADとCI 3 job greenを確認してmainへmergeする。
-2. merge後にPF-4 confirmed PLAN-L7-489を`requires`へ昇格した実装PRで、aggregate application core、
-   isolate staging/apply port、U-RELMAN-014〜017を実装し、candidate以外の後段oracleを先行昇格しない。
+1. 本docs-only pair-freezeはPR #333でcross-family review、exact HEAD、CI 3 job greenを確認してmainへmerge済み。
+2. 本実装PRでPF-4 confirmed PLAN-L7-489を`requires`へ束縛し、Reverse-473のR3/R4 backfill対象として
+   aggregate application core、
+   isolated staging/apply port、U-RELMAN-014〜017を実装する。candidate以外の後段oracleを先行昇格しない。
 3. implementation PRのclosing reviewで三predicate、typed failure、副作用count、fault rollback、
    success exactly-onceを実測する。PASS後にのみPLAN-REVERSE-473 R3/R4へ進む。
 

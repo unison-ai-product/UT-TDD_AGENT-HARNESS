@@ -35,6 +35,20 @@ export {
   PACK_SAFE_TEST_SCRIPT,
   transformCleanDistributionArtifact,
 } from "./distribution.ts";
+export {
+  admitReleaseAggregate,
+  applySealedReleaseAggregate,
+  type ReleaseAggregateAdmissionDependencies,
+  type ReleaseAggregateAdmissionInput,
+  type ReleaseAggregateAdmissionResult,
+  type ReleaseAggregateApplyDependencies,
+  type ReleaseAggregateApplyResult,
+  type ReleaseAggregateFinalTree,
+  type ReleaseAggregateFinding,
+  type ReleaseChannelMapping,
+  type ReleaseManifestTreeEntry,
+  type SealedReleaseAggregatePlan,
+} from "./release-aggregate-admission.ts";
 
 import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 
