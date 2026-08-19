@@ -85,7 +85,8 @@ Fable の推奨と、Issue #328 の実 provider sandbox 失敗を合わせ、A �
   既存の16桁 digestを新契約へ持ち込まず、consumer は pattern/一致を検証してから path を導出する。
 - verdict の custody root は `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/` とする。各 attempt は
   consumer が単調に割り当てる正の safe integer (`attempt-1`, `attempt-2`, …) の下に
-  `attempts/<attempt>/verdict.txt` として保存し、reviewer の引数、stdout、環境変数から path や attempt を採用しない。
+  `attempts/attempt-<N>/verdict.txt` として保存し、attempt field は `N`（整数部）で保存する。
+  reviewer の引数、stdout、環境変数から path や attempt を採用しない。
   最初の試行は `attempt-1`、同一 digest の再試行は次の未使用番号へ進む。attempt directory と verdict file は
   一度作成したら上書きせず、receipt 前の失敗を次の attempt で安全に supersede できる構造とする。
 - `<requestDigest>` は path-safe な lowercase hexadecimal とし、別 exact HEAD は別 digest / 別 custody root になる。
@@ -125,14 +126,14 @@ VERDICT: PASS|PASS-WEAK|FLAG
 - 同一 digest・同一 attempt・同一 envelope の再投影は content-addressed receipt へ冪等に収束する。同じ attempt の nonce、canonical identity、provider/model、本文を変える試みは
   `verdict_identity_conflict` として拒否する。
 - receipt がまだ無い間は、consumer が割り当てた次の attempt へ再試行を許可する。再試行先は
-  family 外へは移らず、同一 `reviewer_provider` / `reviewer_family` の範囲で `reviewer_model` の変更も許可する
+  family 外へは移らず、同一 `reviewer_provider` / `reviewer_family` の範囲で `reviewer_model` 変更を許可する（同一 model でも可）。
   (`superseded_attempt` を経由)。
   ただし同一 attempt を再書きしない。
   `reviewer_provider` の family は `authorFamily` の反対側から導出した値で不変であり、変更できるのは同じ
   reviewer family 内の model / effort（必要な provider binary metadata を含む）だけである。family 変更は
   `verdict_identity_mismatch` として拒否する。
   新 attempt を受理する前に、旧 attempt の digest、番号、provider/model、exact HEAD、理由を raw verdict なしの
-  `superseded_attempt` typed event として `.ut-tdd/audit/review-custody.jsonl` へ append する。監査書込みに失敗したら
+  `superseded_attempt` typed event として `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/audit/review-custody.jsonl` へ append する。監査書込みに失敗したら
   新 attempt と旧 attempt のどちらも receipt へ投影せず fail-close とする。選択可能な attempt は consumer が検証した
   最新の未supersede attempt ただ1つに限定し、reviewer の自己申告で選べない。
 - receipt 成功後は新しい attempt の作成・supersede・上書きをすべて拒否する。これにより model escalation は digest を
@@ -151,7 +152,7 @@ VERDICT: PASS|PASS-WEAK|FLAG
   `^\\.ut-tdd/review/(?:requests|receipts|verdicts)/` へ拡張する。verdicts を追加せずに review lane の
   repo-local write を違反扱いする実装は契約不成立とする。
 - `cleanup_pending` は receipt 本文へ未定義 fieldを足さず、既存 ignored runtime の
-  `.ut-tdd/audit/review-custody.jsonl` へ typed event (`kind`, `requestDigest`, `receiptDigest`,
+  `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/audit/review-custody.jsonl` へ typed event (`kind`, `requestDigest`, `receiptDigest`,
   `exactHead`, `verdictPath`, `recordedAt`, `reason`) を1行 appendする。raw prompt/verdict/stack/secretは保存しない。
 - `tests/global-setup.ts` の fenceとの相互作用は、verdicts 配下の全 descendantを
   `volatileRuntimeIndex` として content hash対象から除外する実装契約とし、fixture repoで「repo-local verdict
