@@ -86,6 +86,7 @@ Fable の推奨と、Issue #328 の実 provider sandbox 失敗を合わせ、A �
 - verdict の custody root は `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/` とする。各 attempt は
   consumer が単調に割り当てる正の safe integer (`attempt-1`, `attempt-2`, …) の下に
   `attempts/attempt-<N>/verdict.txt` として保存し、attempt field は `N`（整数部）で保存する。
+  ここで path の `attempt-<N>` と envelope field の `attempt: N` は一対一対応し、`N=1` は `attempt-1` を意味する。
   reviewer の引数、stdout、環境変数から path や attempt を採用しない。
   最初の試行は `attempt-1`、同一 digest の再試行は次の未使用番号へ進む。attempt directory と verdict file は
   一度作成したら上書きせず、receipt 前の失敗を次の attempt で安全に supersede できる構造とする。
@@ -93,8 +94,8 @@ Fable の推奨と、Issue #328 の実 provider sandbox 失敗を合わせ、A �
   request の同一 retry は同じ digest rootへ収束するが、attempt は別の不変ファイルへ分離する。
 - `repoRoot` は起動時に一度解決し、親 directory と final file の symlink / junction escape、absolute path override、`..`、NUL、backslash を拒否する。実体が repository 内に containment しない場合は `unavailable` で終了する。
 - `.ut-tdd/review/verdicts/` は gitignored runtime state とする。この前提を実装で成立させるため、implementation PR は
-  `.gitignore` に **verdicts directoryだけ**の rule と必要な `.gitkeep` を追加し、tracked の
-  `.ut-tdd/review/*.md`、`requests/`、`receipts/` を誤って除外しない `git check-ignore` regression を持つ。
+  `.gitignore` に **verdicts directoryだけ**の rule と必要な `.gitkeep` を追加し、`*.md` が tracked として残ること、
+  `requests/`・`receipts/` が tracked 外だが `untracked` として認識されることを含む `git check-ignore` regression を持つ。
   source、PLAN、test、tracked config の変更を delegated reviewer の成功条件に含めない。
 
 ### 3.2 verdict envelope と identity binding
@@ -127,15 +128,18 @@ VERDICT: PASS|PASS-WEAK|FLAG
   `verdict_identity_conflict` として拒否する。
 - receipt がまだ無い間は、consumer が割り当てた次の attempt へ再試行を許可する。再試行先は
   family 外へは移らず、同一 `reviewer_provider` / `reviewer_family` の範囲で `reviewer_model` 変更を許可する（同一 model でも可）。
+  provider/model/effort の変化有無に関わらず、同一 attempt の再試行は許可しない。
   (`superseded_attempt` を経由)。
   ただし同一 attempt を再書きしない。
   `reviewer_provider` の family は `authorFamily` の反対側から導出した値で不変であり、変更できるのは同じ
   reviewer family 内の model / effort（必要な provider binary metadata を含む）だけである。family 変更は
   `verdict_identity_mismatch` として拒否する。
   新 attempt を受理する前に、旧 attempt の digest、番号、provider/model、exact HEAD、理由を raw verdict なしの
-  `superseded_attempt` typed event として `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/audit/review-custody.jsonl` へ append する。監査書込みに失敗したら
+  `superseded_attempt` typed event として `repoRoot/.ut-tdd/review/verdicts/<requestDigest>/audit/review-custody.jsonl` へ append する。旧 attempt の verdict が欠落する場合は
+  `oldAttemptDigest` に `verdict_absent` を書く。監査 sink は `tests/global-setup.ts` の content hash 比較から除外対象として扱う (`volatileRuntimeIndex` の子孫含む)。
+  監査書込みに失敗したら
   新 attempt と旧 attempt のどちらも receipt へ投影せず fail-close とする。選択可能な attempt は consumer が検証した
-  最新の未supersede attempt ただ1つに限定し、reviewer の自己申告で選べない。
+  最新の未supersede attempt ただ1つに限定し、reviewer の自己申告で選べない。旧 attempt の digest 不在時は sentinel を許容する。
 - receipt 成功後は新しい attempt の作成・supersede・上書きをすべて拒否する。これにより model escalation は digest を
   変更せずに収束でき、receipt は常に1件だけとなる。
 - receipt の canonical write が成功した後にだけ verdict scratch を削除する。削除不能は `cleanup_pending` として記録するが、既に検証済みの receipt を成功から失敗へ反転させない。receipt 前の削除・上書きは許可しない。
