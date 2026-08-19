@@ -30,6 +30,14 @@ const volatileRuntimeFiles = new Set([
   ".ut-tdd/harness.db-shm",
 ]);
 
+const volatileRuntimeDirectories = [".ut-tdd/review/verdicts"];
+
+function isVolatileRuntimePath(relativePath: string): boolean {
+  return volatileRuntimeDirectories.some(
+    (prefix) => relativePath === prefix || relativePath.startsWith(`${prefix}/`),
+  );
+}
+
 export function captureWorkspaceInventory(
   root: string,
   options?: WorkspaceInventoryOptions,
@@ -40,6 +48,7 @@ export function captureWorkspaceInventory(
       if (!relativePath && (entry === ".git" || entry === "node_modules")) continue;
       const path = join(directory, entry);
       const relativeEntry = relativePath ? `${relativePath}/${entry}` : entry;
+      if (options?.volatileRuntimeIndex && isVolatileRuntimePath(relativeEntry)) continue;
       const stat = lstatSync(path);
       if (stat.isSymbolicLink()) {
         entries.push(`l:${relativeEntry}:${readlinkSync(path)}`);
@@ -112,6 +121,8 @@ export function captureGitWorkspaceFingerprint(
   // 単一の Hash インスタンスへ逐次 update する (array へ全文字列/Buffer を蓄積しない)。
   const untrackedHash = createHash("sha256");
   for (const path of untrackedPaths) {
+    if (options?.volatileRuntimeIndex && isVolatileRuntimePath(path.replaceAll("\\", "/")))
+      continue;
     const absolutePath = join(repoRoot, path);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) {

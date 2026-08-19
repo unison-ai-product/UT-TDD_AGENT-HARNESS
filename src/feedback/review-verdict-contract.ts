@@ -10,6 +10,18 @@ export type Outcome<T> = { ok: true; value: T } | { ok: false; reasons: string[]
 /** reviewer が verdict file を書くための単一の環境変数名。 */
 export const REVIEW_VERDICT_FILE_ENV = "UT_TDD_REVIEW_VERDICT_FILE";
 
+export interface ReviewVerdictContractMetadata {
+  schemaVersion: string;
+  requestDigest: string;
+  attempt: number;
+  pr: number;
+  exactHead: string;
+  reviewRevision: string;
+  reviewerProvider: "codex" | "claude";
+  reviewerModel: string;
+  invocationNonce: string;
+}
+
 const EXAMPLE_START = "<!-- review-output-example:start -->";
 const EXAMPLE_END = "<!-- review-output-example:end -->";
 const VERDICTS: readonly ReviewVerdictName[] = ["PASS", "PASS-WEAK", "FLAG"];
@@ -41,16 +53,34 @@ const EXAMPLE_INDENT = "    ";
  * `VERDICT: PASS` を返しながら path を解決できず `reviewer_execution_failed`)。
  * env 名も併記して従来経路との互換を保つ。
  */
-export function reviewOutputContract(verdictFilePath?: string): string {
+export function reviewOutputContract(
+  verdictFilePath?: string,
+  metadata?: ReviewVerdictContractMetadata,
+): string {
   const destination = verdictFilePath
     ? `同じ verdict ブロックを次の path にも書いてください: ${verdictFilePath} (環境変数 ${REVIEW_VERDICT_FILE_ENV} と同値です。環境変数を読めない場合はこの path をそのまま使ってください)。`
     : `同じ verdict ブロックを ${REVIEW_VERDICT_FILE_ENV} が指す path にも書いてください。`;
+  const envelope = metadata
+    ? [
+        "verdict file の VERDICT 行より前に、次の custody envelope を値を変えずに書いてください:",
+        `schema_version: ${metadata.schemaVersion}`,
+        `request_digest: ${metadata.requestDigest}`,
+        `attempt: ${metadata.attempt}`,
+        `pr: ${metadata.pr}`,
+        `exact_head: ${metadata.exactHead}`,
+        `review_revision: ${metadata.reviewRevision}`,
+        `reviewer_provider: ${metadata.reviewerProvider}`,
+        `reviewer_model: ${metadata.reviewerModel}`,
+        `invocation_nonce: ${metadata.invocationNonce}`,
+      ]
+    : [];
   return [
     "レビュー完了時は、行頭の verdict 行を必ず 1 件出力してください。再掲する場合も値を一致させてください。",
     "使用できる verdict は `VERDICT: PASS`、`VERDICT: PASS-WEAK`、`VERDICT: FLAG` の 3 種だけです。",
     "FLAG の場合は、行頭 `FINDING:` に blocking finding を 1 件以上、1 行ずつ出力してください。",
     "PASS または PASS-WEAK の場合は `FINDING:` を出力しないでください。",
     destination,
+    ...envelope,
     "下記は書式の例です。**実際の出力は行頭に置くこと** (下の例は説明用に字下げしてあります)。",
     EXAMPLE_START,
     `${EXAMPLE_INDENT}VERDICT: FLAG`,

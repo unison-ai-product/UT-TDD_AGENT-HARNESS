@@ -27,6 +27,7 @@ export interface LiveReviewProjectionPorts {
   readonly issueRequest: (input: {
     repoRoot: string;
     request: ReviewAttestationRequest;
+    strict?: boolean;
   }) => ReviewRequestResult;
   readonly publishReviewWake: (wake: CanonicalReviewWake) => void;
   readonly providerAvailable: (provider: ReviewProvider) => boolean;
@@ -114,11 +115,12 @@ export function loadCanonicalLiveReviewRequest(input: {
         "reviewRevision",
         "authorFamily",
         "requestedAt",
+        "invocationNonce",
       ])
     )
       return null;
     const request = parsed as unknown as ReviewAttestationRequest;
-    if (!isValidReviewRequest(request)) return null;
+    if (!isValidReviewRequest(request) || !request.invocationNonce) return null;
     if (reviewRequestDigest(request) !== input.envelope.requestDigest) return null;
     if (
       request.memoryId !== input.envelope.memoryId ||
@@ -202,7 +204,7 @@ export function dispatchLiveReview(input: {
   }
 
   const { memoryPath, ...request } = input.request;
-  const issued = input.ports.issueRequest({ repoRoot: input.repoRoot, request });
+  const issued = input.ports.issueRequest({ repoRoot: input.repoRoot, request, strict: true });
   if (!issued.ok) return issued;
 
   try {

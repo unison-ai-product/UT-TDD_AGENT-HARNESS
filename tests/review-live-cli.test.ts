@@ -48,23 +48,24 @@ function fixture(): {
   };
   const issued = issueReviewRequest({ repoRoot: root, request });
   if (!issued.ok) throw new Error("fixture request failed");
+  const canonicalRequest = issued.request;
   const envelope: ClaudeReviewInboxEntry = {
     schemaVersion: "ut-tdd.claude-inbox/v3",
     purpose: "review",
     id: "memory:d3a:review",
-    memoryId: request.memoryId,
+    memoryId: canonicalRequest.memoryId,
     body: "identity must not be read from this prose",
     originRuntime: "codex",
     operationId: "review-d3a-cli",
     targetWorkspaceId: "b".repeat(64),
-    createdAt: request.requestedAt,
+    createdAt: canonicalRequest.requestedAt,
     requestDigest: issued.digest,
     requestPath: relative(root, issued.path).replaceAll("\\", "/"),
     memoryPath: relative(root, memoryPath).replaceAll("\\", "/"),
-    pr: request.pr,
-    exactHead: request.exactHead,
-    reviewRevision: request.reviewRevision,
-    authorFamily: request.authorFamily,
+    pr: canonicalRequest.pr,
+    exactHead: canonicalRequest.exactHead,
+    reviewRevision: canonicalRequest.reviewRevision,
+    authorFamily: canonicalRequest.authorFamily,
   };
   const envelopePath = join(root, "envelope.json");
   writeFileSync(envelopePath, JSON.stringify(envelope), "utf8");
@@ -77,7 +78,7 @@ afterEach(() => {
 
 describe("review live CLI composition", () => {
   it("U-RVATT-027 executes canonical task resolution and delegated-review argv before publishing", async () => {
-    const { root, envelopePath, memoryPath } = fixture();
+    const { root, envelopePath, memoryPath, envelope } = fixture();
     const projection: Extract<ReviewVerdictProjectionResult, { ok: true }> = {
       ok: true,
       path: join(root, ".ut-tdd", "review", "receipts", "receipt.json"),
@@ -86,7 +87,7 @@ describe("review live CLI composition", () => {
         memoryId: "memory:d3a",
         pr: 319,
         head,
-        reviewRevision: "review-d3a-cli",
+        reviewRevision: envelope.reviewRevision,
         reviewerFamily: "claude",
         kind: "verdict",
         verdict: "PASS",
@@ -134,16 +135,37 @@ describe("review live CLI composition", () => {
     expect(publishReceipt).toHaveBeenCalledWith(root, projection);
   });
 
-  it("U-RVATT-027 obtains receipt provider/model/role/time/exit facts through the real delegation CLI", () => {
+  it("U-RVATT-036 obtains receipt provider/model/role/time/exit facts through the real delegation CLI", () => {
     const { root, memoryPath } = fixture();
     const binRoot = mkdtempSync(join(tmpdir(), "ut-review-provider-"));
     roots.push(binRoot);
+    const helper = join(binRoot, "write-verdict.cjs");
+    writeFileSync(
+      helper,
+      String.raw`const fs = require("node:fs");
+let prompt = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { prompt += chunk; });
+process.stdin.on("end", () => {
+  const fields = [
+    "schema_version", "request_digest", "attempt", "pr", "exact_head",
+    "review_revision", "reviewer_provider", "reviewer_model", "invocation_nonce",
+  ].map((key) => {
+    const match = prompt.match(new RegExp("^" + key + ":\\s*(.*)$", "m"));
+    return key + ": " + (match ? match[1].trim() : "");
+  }).join("\n");
+  fs.writeFileSync(process.env.UT_TDD_REVIEW_VERDICT_FILE, fields + "\nVERDICT: PASS\n", "utf8");
+  process.stdout.write("VERDICT: PASS\n");
+});
+`,
+      "utf8",
+    );
     const stub = join(binRoot, process.platform === "win32" ? "claude.cmd" : "claude");
     writeFileSync(
       stub,
       process.platform === "win32"
-        ? '@echo off\r\nif "%~1"=="--version" (echo claude 0.0.0-stub& exit /b 0)\r\n> "%UT_TDD_REVIEW_VERDICT_FILE%" echo VERDICT: PASS\r\nexit /b 0\r\n'
-        : '#!/bin/sh\nif [ "$1" = "--version" ]; then echo "claude 0.0.0-stub"; exit 0; fi\nprintf "VERDICT: PASS\\n" > "$UT_TDD_REVIEW_VERDICT_FILE"\n',
+        ? `@echo off\r\nif "%~1"=="--version" (echo claude 0.0.0-stub& exit /b 0)\r\nnode "${helper}"\r\nexit /b 0\r\n`
+        : `#!/bin/sh\nif [ "$1" = "--version" ]; then echo "claude 0.0.0-stub"; exit 0; fi\nexec node "${helper}"\n`,
       "utf8",
     );
     if (process.platform !== "win32") chmodSync(stub, 0o755);
@@ -179,7 +201,7 @@ describe("review live CLI composition", () => {
           memoryId: "memory:d3a",
           pr: 319,
           head,
-          reviewRevision: "review-d3a-cli",
+          reviewRevision: expect.stringMatching(/^rv1-[a-f0-9]{64}$/),
           reviewerFamily: "claude",
           verdict: "PASS",
         },
@@ -215,7 +237,14 @@ process.stdin.on("end", () => {
     process.stdout.write("no literal verdict path in contract\n");
     process.exit(0);
   }
-  fs.writeFileSync(match[1], "VERDICT: PASS\n", "utf8");
+  const fields = [
+    "schema_version", "request_digest", "attempt", "pr", "exact_head",
+    "review_revision", "reviewer_provider", "reviewer_model", "invocation_nonce",
+  ].map((key) => {
+    const field = prompt.match(new RegExp("^" + key + ":\\s*(.*)$", "m"));
+    return key + ": " + (field ? field[1].trim() : "");
+  }).join("\n");
+  fs.writeFileSync(match[1], fields + "\nVERDICT: PASS\n", "utf8");
   process.stdout.write("VERDICT: PASS\n");
 });
 `,

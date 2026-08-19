@@ -4,6 +4,15 @@ import { join } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 import type { ReviewReceipt } from "./review-dispatch.ts";
 import { extractVerdict, type ReviewVerdictName } from "./review-verdict-contract.ts";
+import {
+  assertReviewVerdictPath,
+  canonicalJson,
+  canonicalReviewRevision,
+  isStrictReviewRequest,
+  REVIEW_VERDICT_SCHEMA_VERSION,
+  type ReviewVerdictEnvelope,
+  reviewIdentityDigest,
+} from "./review-verdict-custody.ts";
 
 export { REVIEW_VERDICT_FILE_ENV } from "./review-verdict-contract.ts";
 
@@ -17,6 +26,8 @@ export interface ReviewAttestation {
   startedAt: string;
   completedAt: string;
   exitCode: number;
+  attempt?: number;
+  invocationNonce?: string;
 }
 
 export interface ReviewAttestationRequest {
@@ -26,6 +37,7 @@ export interface ReviewAttestationRequest {
   reviewRevision: string;
   authorFamily: "codex" | "claude";
   requestedAt: string;
+  invocationNonce?: string;
 }
 
 export type ReviewRequestResult =
@@ -56,7 +68,7 @@ function isTimestamp(value: unknown): value is string {
 export function isValidReviewRequest(value: ReviewAttestationRequest): boolean {
   return (
     isNonEmptyString(value.memoryId) &&
-    Number.isInteger(value.pr) &&
+    Number.isSafeInteger(value.pr) &&
     value.pr > 0 &&
     HEAD_PATTERN.test(value.exactHead) &&
     isNonEmptyString(value.reviewRevision) &&
@@ -70,7 +82,7 @@ function isValidAttestation(value: ReviewAttestation): boolean {
     PROVIDERS.includes(value.provider) &&
     isNonEmptyString(value.role) &&
     isNonEmptyString(value.model) &&
-    Number.isInteger(value.pr) &&
+    Number.isSafeInteger(value.pr) &&
     value.pr > 0 &&
     HEAD_PATTERN.test(value.head) &&
     isNonEmptyString(value.reviewRevision) &&
@@ -80,31 +92,20 @@ function isValidAttestation(value: ReviewAttestation): boolean {
   );
 }
 
-/** admission receipt と同じ、キーを再帰的に整列した JSON preimage を作る。 */
-function normalizedJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(normalizedJson).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.entries(value as Record<string, unknown>)
-      .filter(([, entry]) => entry !== undefined)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => `${JSON.stringify(key)}:${normalizedJson(entry)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value) ?? "null";
-}
-
-function digest(value: unknown): string {
-  return createHash("sha256").update(normalizedJson(value), "utf8").digest("hex").slice(0, 16);
-}
-
 export function reviewRequestDigest(request: ReviewAttestationRequest): string {
-  return digest({
-    memoryId: request.memoryId,
-    pr: request.pr,
-    exactHead: request.exactHead,
-    reviewRevision: request.reviewRevision,
-    authorFamily: request.authorFamily,
-  });
+  return reviewIdentityDigest(request);
+}
+
+export function canonicalizeReviewRequest(
+  request: ReviewAttestationRequest,
+): ReviewAttestationRequest {
+  const revision = request.reviewRevision.startsWith("rv1-")
+    ? request.reviewRevision
+    : canonicalReviewRevision(request);
+  const invocationNonce =
+    request.invocationNonce ??
+    `nonce-${reviewIdentityDigest({ ...request, reviewRevision: revision }).slice(0, 32)}`;
+  return { ...request, reviewRevision: revision, invocationNonce };
 }
 
 function persist(input: {
@@ -117,7 +118,12 @@ function persist(input: {
   digest: string;
 } {
   const { repoRoot, category, value } = input;
-  const valueDigest = digest(input.digestSource ?? value);
+  const valueDigest =
+    input.category === "requests"
+      ? reviewRequestDigest((input.digestSource ?? value) as ReviewAttestationRequest)
+      : createHash("sha256")
+          .update(canonicalJson(input.digestSource ?? value), "utf8")
+          .digest("hex");
   const directory = join(repoRoot, ".ut-tdd", "review", category);
   ensureDir(directory, { recursive: true });
   const path = join(directory, `${valueDigest}.json`);
@@ -163,8 +169,21 @@ export function resolveReviewAuthorFamily(input: {
 export function issueReviewRequest(input: {
   repoRoot: string;
   request: ReviewAttestationRequest;
+  /** legacy D1 fixtures may retain arbitrary revision ids; live custody always opts into v1. */
+  strict?: boolean;
 }): ReviewRequestResult {
   if (!isValidReviewRequest(input.request)) return { ok: false, reason: "invalid_review_request" };
+  const request = input.strict
+    ? canonicalizeReviewRequest(input.request)
+    : input.request.invocationNonce
+      ? input.request
+      : {
+          ...input.request,
+          invocationNonce: `nonce-${reviewIdentityDigest(input.request).slice(0, 32)}`,
+        };
+  if (request.reviewRevision.startsWith("rv1-") && !isStrictReviewRequest(request)) {
+    return { ok: false, reason: "invalid_review_revision" };
+  }
   // request digest は安定識別子 (pr / exactHead / reviewRevision / authorFamily / memoryId)
   // のみで構成する。`requestedAt` を digest に入れると、同一レビュー要求の retry が別 request
   // ファイルとして併存し、D1 (`review-dispatch.ts`) の duplicate_request_conflict を偶発させる。
@@ -172,16 +191,16 @@ export function issueReviewRequest(input: {
   const persisted = persist({
     repoRoot: input.repoRoot,
     category: "requests",
-    value: input.request,
+    value: request,
     digestSource: {
-      memoryId: input.request.memoryId,
-      pr: input.request.pr,
-      exactHead: input.request.exactHead,
-      reviewRevision: input.request.reviewRevision,
-      authorFamily: input.request.authorFamily,
-    },
+      memoryId: request.memoryId,
+      pr: request.pr,
+      exactHead: request.exactHead,
+      reviewRevision: request.reviewRevision,
+      authorFamily: request.authorFamily,
+    } as ReviewAttestationRequest,
   });
-  return { ok: true, request: input.request, ...persisted };
+  return { ok: true, request, ...persisted };
 }
 
 export function projectReviewVerdict(input: {
@@ -203,11 +222,57 @@ export function projectReviewVerdict(input: {
     return { ok: false, reason: "review_identity_mismatch" };
   }
 
+  const strictCustody = input.request.reviewRevision.startsWith("rv1-");
+  if (strictCustody && !isStrictReviewRequest(input.request)) {
+    return { ok: false, reason: "verdict_identity_mismatch" };
+  }
+  const expectedProvider = input.request.authorFamily === "codex" ? "claude" : "codex";
+  if (strictCustody && input.attestation.provider !== expectedProvider) {
+    return { ok: false, reason: "same_family_reviewer_denied" };
+  }
+  let expectedAttempt: number | undefined;
+  if (strictCustody) {
+    const match = /[\\/]attempt-([1-9][0-9]*)[\\/]verdict\.txt$/.exec(input.verdictFile);
+    expectedAttempt = match ? Number(match[1]) : undefined;
+    if (!expectedAttempt || !Number.isSafeInteger(expectedAttempt)) {
+      return { ok: false, reason: "verdict_path_identity_mismatch" };
+    }
+    try {
+      assertReviewVerdictPath({
+        repoRoot: input.repoRoot,
+        requestDigest: reviewRequestDigest(input.request),
+        attempt: expectedAttempt,
+        verdictPath: input.verdictFile,
+      });
+    } catch {
+      return { ok: false, reason: "verdict_path_identity_mismatch" };
+    }
+  }
+
   let verdictText: string;
   try {
     verdictText = readFileSync(input.verdictFile, "utf8");
   } catch {
     return { ok: false, reason: "verdict_file_unreadable" };
+  }
+  if (strictCustody) {
+    const envelope = parseReviewVerdictEnvelope(verdictText);
+    if (!envelope.ok) return envelope;
+    const expected: ReviewVerdictEnvelope = {
+      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
+      requestDigest: reviewRequestDigest(input.request),
+      attempt: expectedAttempt as number,
+      pr: input.request.pr,
+      exactHead: input.request.exactHead,
+      reviewRevision: input.request.reviewRevision,
+      reviewerProvider: input.attestation.provider,
+      reviewerModel: input.attestation.model,
+      invocationNonce: input.request.invocationNonce ?? "",
+    };
+    for (const key of Object.keys(expected) as Array<keyof ReviewVerdictEnvelope>) {
+      if (envelope.value[key] !== expected[key])
+        return { ok: false, reason: "verdict_identity_mismatch" };
+    }
   }
   const extracted = extractVerdict(verdictText);
   if (!extracted.ok) return { ok: false, reason: extracted.reasons[0] ?? "verdict_invalid" };
@@ -223,6 +288,72 @@ export function projectReviewVerdict(input: {
     blockingFindings: extracted.value.blockingFindings,
     at: input.attestation.completedAt,
   };
+  if (strictCustody) {
+    const directory = join(input.repoRoot, ".ut-tdd", "review", "receipts");
+    ensureDir(directory, { recursive: true });
+    const path = join(directory, `${reviewRequestDigest(input.request)}.json`);
+    if (existsSync(path)) {
+      try {
+        const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
+        if (canonicalJson(existing) !== canonicalJson(receipt)) {
+          return { ok: false, reason: "verdict_identity_conflict" };
+        }
+      } catch {
+        return { ok: false, reason: "receipt_unreadable" };
+      }
+    } else {
+      writeFileSync(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+    }
+    return { ok: true, receipt, path, digest: reviewRequestDigest(input.request) };
+  }
   const persisted = persist({ repoRoot: input.repoRoot, category: "receipts", value: receipt });
   return { ok: true, receipt, ...persisted };
+}
+
+function parseReviewVerdictEnvelope(
+  text: string,
+): { ok: true; value: ReviewVerdictEnvelope } | { ok: false; reason: string } {
+  const values = new Map<string, string>();
+  const fields = [
+    "schema_version",
+    "request_digest",
+    "attempt",
+    "pr",
+    "exact_head",
+    "review_revision",
+    "reviewer_provider",
+    "reviewer_model",
+    "invocation_nonce",
+  ];
+  for (const line of text.split(/\r?\n/)) {
+    const match = /^([a-z_]+):[ \t]*(.*)$/.exec(line);
+    if (!match) continue;
+    if (!fields.includes(match[1])) return { ok: false, reason: "verdict_identity_mismatch" };
+    if (values.has(match[1])) return { ok: false, reason: "verdict_identity_mismatch" };
+    values.set(match[1], match[2].trim());
+  }
+  if (fields.some((field) => !values.has(field)))
+    return { ok: false, reason: "verdict_identity_mismatch" };
+  const attempt = Number(values.get("attempt"));
+  const pr = Number(values.get("pr"));
+  if (!Number.isSafeInteger(attempt) || attempt < 1 || !Number.isSafeInteger(pr) || pr < 1) {
+    return { ok: false, reason: "verdict_identity_mismatch" };
+  }
+  const provider = values.get("reviewer_provider");
+  if (provider !== "codex" && provider !== "claude")
+    return { ok: false, reason: "verdict_identity_mismatch" };
+  return {
+    ok: true,
+    value: {
+      schemaVersion: values.get("schema_version") as typeof REVIEW_VERDICT_SCHEMA_VERSION,
+      requestDigest: values.get("request_digest") as string,
+      attempt,
+      pr,
+      exactHead: values.get("exact_head") as string,
+      reviewRevision: values.get("review_revision") as string,
+      reviewerProvider: provider,
+      reviewerModel: values.get("reviewer_model") as string,
+      invocationNonce: values.get("invocation_nonce") as string,
+    },
+  };
 }

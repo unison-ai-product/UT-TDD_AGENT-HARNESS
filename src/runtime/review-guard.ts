@@ -64,7 +64,7 @@ export function detectWorkingTreeMutation(before: string[], after: string[]): st
 /** 委譲機構が管理する review custody 投影。reviewer 本人の編集ではない。 */
 export function isReviewCustodyProjection(path: string): boolean {
   const normalized = path.replaceAll("\\", "/");
-  return /^\.ut-tdd\/review\/(?:requests|receipts)\//.test(normalized);
+  return /^\.ut-tdd\/review\/(?:requests|receipts|verdicts)\//.test(normalized);
 }
 
 export interface ReviewSessionInput {

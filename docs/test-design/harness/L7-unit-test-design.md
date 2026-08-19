@@ -1626,11 +1626,20 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-RVATT-027` | repository snapshot lifecycle | `tests/review-live-cli.test.ts` / `tests/live-review-projection.test.ts`。実CLI compositionを起動し、provider stubへ正規delegationしてprovider/model/role/time/exitCode由来receiptを生成後、既存merge-gate GitHub ports fixtureへ接続する。request/receipt/HEADを各1点欠落・変異 | canonical task resolverを実行し、正常系だけreceipt→同一HEAD wrapper allow。wrong-head receiptを含む3負例はdenyし、wrapper成功receipt後のD2-D `bypass_merge`は0 |
 | `U-RVATT-029` | verdict file path の伝達 | `tests/review-live-cli.test.ts`。環境変数を一切参照せず、契約本文から literal path を抽出して verdict file を書く provider stub を実 delegation CLI へ通す。契約が env 変数名だけを渡す実装へ戻す変異を投入 | env を読めない reviewer でも verdict file が生成され receipt が成立する。env 名のみを渡す実装では path を抽出できず `reviewer_execution_failed` で RED (2026-08-14 実測: delegated Claude が `VERDICT: PASS` を stdout へ返しながら permission により env を解決できず receipt 0 → wrapper deny)。契約文の綴りを見る source-text assertion では代替しない |
 | `U-RVATT-028` | SSoT非逆流 | `tests/dependency-drift.test.ts`。repo既存import-boundary fixtureへmemory reader / PR comment parserからD1/D2判定器へのimport edgeを注入 | edge 0だけGreen。memory/commentを判定入力にする変異をfail-closeし、新規call graph解析器は要求しない |
+| `U-RVATT-030` | repo-local custody path | `tests/review-verdict-custody.test.ts`。64桁 identity digest、attempt番号、外部/absolute/`..`/symlink pathを変異 | consumer-derived `verdicts/<digest>/attempt-N/verdict.txt`だけを許可し、外部・path escapeは `unavailable`/write 0 |
+| `U-RVATT-031` | sandbox write boundary | `tests/review-verdict-custody.test.ts` と constrained provider。repo-local writeを成功、repo外 writeを拒否へ変異 | local write成功、外部write拒否、外部pathからreceipt 0。stub greenを実provider証拠と混同しない |
+| `U-RVATT-032` | envelope identity mutation | request digest、attempt、PR、HEAD、revision、provider、model、nonceを1点ずつ変異 | `verdict_identity_mismatch`、receipt 0。consumerが保持するidentity以外を採用しない |
+| `U-RVATT-033` | stale / family fail-close | stale HEAD、別revision、同族provider、wrong nonceを入力 | `stale_head`/identity mismatch、同族receipt 0、merge 0 |
+| `U-RVATT-034` | retry / supersede | 同一digestのattempt-1後に同族model変更でattempt-2、receipt後のattempt追加、別family変異 | `superseded_attempt`監査後に最新attemptだけを1 receiptへ投影。receipt後とfamily変更は拒否 |
+| `U-RVATT-035` | receipt後cleanup | receipt前cleanup、receipt後scratch削除、cleanup失敗を注入 | receipt前は0、receipt後receipt保持。失敗はcommon-dir `cleanup_pending` typed eventへ記録 |
+| `U-RVATT-036` | real composition closure | `tests/review-live-cli.test.ts` と実repo fixtureでdispatch→consume→repo-local verdict→receipt | current exact HEADだけallow、欠落/外部/wrong-headはdeny。stdout-onlyやmerge bypass 0 |
 | `U-RVWAKE-010` | 長い identity の inbox 衝突防止 | `tests/claude-memory-wake.test.ts`。legacy の安全化 stem が同じになる長い `memory_id` へ異なる `operationId` を与え、publish/claim/GC の全経路を実行 | operationId の hash suffix を含む別ファイルへ分離され、両 payload が保持される。長さ制限だけで suffix を落とす変異は同一path衝突またはpayload消失で RED |
 
 実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)、
 `tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts` / `tests/cli-delegation.test.ts` /
 `tests/dependency-drift.test.ts` (`U-RVATT-023`〜`028`)。
+`tests/review-verdict-custody.test.ts` (`U-RVATT-030`〜`035`)、
+`tests/review-live-cli.test.ts` (`U-RVATT-036`)。
 既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)

@@ -1,9 +1,8 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import type { Command } from "commander";
 import {
+  canonicalizeReviewRequest,
   issueReviewRequest,
   projectReviewVerdict,
   REVIEW_VERDICT_FILE_ENV,
@@ -11,6 +10,13 @@ import {
   resolveReviewAuthorFamily,
 } from "../feedback/review-attestation.ts";
 import { reviewOutputContract } from "../feedback/review-verdict-contract.ts";
+import {
+  beginReviewAttempt,
+  cleanupReviewAttempt,
+  isStrictReviewRequest,
+  reviewIdentityDigest,
+  reviewVerdictPath,
+} from "../feedback/review-verdict-custody.ts";
 import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
@@ -50,6 +56,7 @@ export interface AdapterExecutionInput {
   review?: {
     request: ReviewAttestationRequest;
     verdictFile: string;
+    attempt: number;
     startedAt: string;
   };
 }
@@ -118,15 +125,6 @@ export function isOutsideRepo(repoRoot: string, candidate: string): boolean {
   return rel !== "" && rel !== "." && rel.startsWith("..");
 }
 
-function reviewVerdictPath(repoRoot: string): string {
-  let directory = mkdtempSync(join(tmpdir(), "ut-tdd-review-"));
-  if (!isOutsideRepo(repoRoot, directory)) {
-    rmSync(directory, { recursive: true, force: true });
-    directory = mkdtempSync(join(dirname(resolve(repoRoot)), "ut-tdd-review-"));
-  }
-  return join(directory, "verdict.txt");
-}
-
 export function executeAdapterPlanForCli(
   plan: AdapterPlan,
   input: AdapterExecutionInput,
@@ -185,11 +183,24 @@ export function executeAdapterPlanForCli(
           startedAt: input.review.startedAt,
           completedAt: now(),
           exitCode: child.status ?? 1,
+          attempt: input.review.attempt,
+          invocationNonce: input.review.request.invocationNonce,
         },
         verdictFile: input.review.verdictFile,
       });
-    } finally {
-      rmSync(dirname(input.review.verdictFile), { recursive: true, force: true });
+      if (reviewResult.ok && isStrictReviewRequest(input.review.request)) {
+        cleanupReviewAttempt({
+          repoRoot,
+          requestDigest: reviewIdentityDigest(input.review.request),
+          attempt: input.review.attempt,
+          verdictPath: input.review.verdictFile,
+          receiptDigest: reviewResult.digest,
+          exactHead: input.review.request.exactHead,
+          now: now(),
+        });
+      }
+    } catch {
+      reviewResult = { ok: false, reason: "review_custody_cleanup_failed" };
     }
   }
   if (child.error) {
@@ -343,42 +354,14 @@ function runtimeCommand(
         const reviewPr = opts.reviewPr;
         const reviewHead = opts.reviewHead;
         const reviewRevision = opts.reviewRevision;
+        const startedAt = deps.now?.() ?? nowIso();
+        const jsonOut = Boolean(opts.json);
         const routingAudit =
           `delegation-routing: model=${routing.model} (${routing.model_source}) ` +
           `effort=${routing.effort} (${routing.effort_source})` +
           (routing.review_lane ? ` lane=${routing.review_lane}` : "") +
           (routing.task_intent ? ` intent=${routing.task_intent}` : "");
         const contextInjection = deps.resolveSkillContextInjection(opts.plan);
-        // verdict file は契約本文へ literal path として埋め込むため、契約を組む前に確定させる
-        // (env 名だけでは env を読めない子 runtime が履行できない。§reviewOutputContract)。
-        let reviewVerdictFile: string | undefined;
-        if (routing.review_lane && reviewIdentityRequested) {
-          reviewVerdictFile = reviewVerdictPath(process.cwd());
-        }
-        const taskForAdapter = routing.review_lane
-          ? `${task}\n\n${reviewOutputContract(reviewVerdictFile)}`
-          : task;
-        const plan = buildAdapterPlan(
-          {
-            provider,
-            role: opts.role,
-            task: taskForAdapter,
-            planId: opts.plan,
-            model: routing.model,
-            effort: routing.effort,
-            execute: Boolean(opts.execute),
-            contextInjection,
-          },
-          mode,
-        );
-        // どの routing が効いたかを plan 出力 (dry-run JSON / execute ログ) へ監査記録する
-        // (PLAN-L7-255 スコープ 4。DB 投影は telemetry 側 follow-up)。
-        plan.messages.push(routingAudit);
-        if (!plan.available) {
-          process.stderr.write(`${plan.messages.join("\n")}\n`);
-          process.exitCode = 1;
-          return;
-        }
         // 著者族は provider から独立した事実 (委譲を実行している runtime) から取る。
         // provider の反対と定義すると D1 の同族レビュー検出が恒偽になり fail-open する
         // (`resolveReviewAuthorFamily` の doc を参照)。判別できなければ推測せず落とす。
@@ -396,42 +379,9 @@ function runtimeCommand(
           process.exitCode = 1;
           return;
         }
-        // verdict の輸送先は「receipt に投影される review (= 識別子宣言あり)」に限って作る。
-        // 識別子なし review lane (qa / tl / uiux 等) では verdict の読み手 (receipt 投影) が
-        // 存在せず、execute 経路の後始末 (`input.review` 経由) にも到達しないため、無条件に
-        // 作ると temp dir が委譲のたびに leak する (PR #214 Codex FLAG、U-RVATT-020)。
-        // reviewRequest 生成 (下) と同じ reviewIdentityRequested を述語にする — 二重実装に
-        // すると生成条件と輸送条件が再び drift する。
-        if (reviewVerdictFile) {
-          plan.env = { ...(plan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: reviewVerdictFile };
-        }
-        // verdict file の temp dir は execute 経路 (`executeAdapterPlanForCli`) が後始末する。
-        // dry-run と早期 return はそこへ到達しないので、ここで確実に捨てる (leak 防止)。
-        const discardVerdictDir = (): void => {
-          if (reviewVerdictFile) {
-            rmSync(dirname(reviewVerdictFile), { recursive: true, force: true });
-          }
-        };
-        if (!opts.execute) {
-          process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
-          discardVerdictDir();
-          return;
-        }
-        const jsonOut = Boolean(opts.json);
-        const startedAt = deps.now?.() ?? nowIso();
-        // 宣言 (= 識別子あり) なら上流の guard で review_lane / authorFamily / verdictFile /
-        // 3 識別子が揃うことが保証済みなので、この条件が偽になるのは「宣言なし」の場合だけ。
-        // 残りの連言は型の絞り込み用であって、宣言済み入力を黙って落とす経路ではない。
-        // (防御的な到達不能分岐は足さない — D1 の `!hasFlagVerdict &&` を死に分岐として
-        //  削除したのと同じ理由。)
-        const reviewRequest =
-          reviewIdentityRequested &&
-          authorFamily &&
-          reviewVerdictFile &&
-          reviewPr &&
-          reviewHead &&
-          reviewRevision
-            ? {
+        let reviewRequest: ReviewAttestationRequest | undefined =
+          reviewIdentityRequested && authorFamily && reviewPr && reviewHead && reviewRevision
+            ? canonicalizeReviewRequest({
                 memoryId:
                   opts.reviewMemoryId?.trim() ||
                   `review:${reviewPr}:${reviewHead}:${reviewRevision}`,
@@ -440,20 +390,95 @@ function runtimeCommand(
                 reviewRevision,
                 authorFamily,
                 requestedAt: startedAt,
-              }
+              })
             : undefined;
         if (reviewRequest && !Number.isInteger(reviewRequest.pr)) {
           process.stderr.write("review_pr_required: --review-pr must be an integer\n");
           process.exitCode = 1;
-          discardVerdictDir();
+          return;
+        }
+        let reviewAttempt = 1;
+        let reviewVerdictFile =
+          reviewRequest && routing.review_lane
+            ? reviewVerdictPath(process.cwd(), reviewIdentityDigest(reviewRequest), reviewAttempt)
+            : undefined;
+        const buildPlan = (verdictFile: string | undefined) => {
+          const metadata =
+            reviewRequest && verdictFile
+              ? {
+                  schemaVersion: "ut-tdd.review-verdict/v1",
+                  requestDigest: reviewIdentityDigest(reviewRequest),
+                  attempt: reviewAttempt,
+                  pr: reviewRequest.pr,
+                  exactHead: reviewRequest.exactHead,
+                  reviewRevision: reviewRequest.reviewRevision,
+                  reviewerProvider: provider,
+                  reviewerModel: routing.model,
+                  invocationNonce: reviewRequest.invocationNonce ?? "",
+                }
+              : undefined;
+          const taskForAdapter = routing.review_lane
+            ? `${task}\n\n${reviewOutputContract(verdictFile, metadata)}`
+            : task;
+          const nextPlan = buildAdapterPlan(
+            {
+              provider,
+              role: opts.role,
+              task: taskForAdapter,
+              planId: opts.plan,
+              model: routing.model,
+              effort: routing.effort,
+              execute: Boolean(opts.execute),
+              contextInjection,
+            },
+            mode,
+          );
+          nextPlan.messages.push(routingAudit);
+          if (verdictFile) {
+            nextPlan.env = { ...(nextPlan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: verdictFile };
+          }
+          return nextPlan;
+        };
+        let plan = buildPlan(reviewVerdictFile);
+        if (!plan.available) {
+          process.stderr.write(`${plan.messages.join("\n")}\n`);
+          process.exitCode = 1;
+          return;
+        }
+        if (!opts.execute) {
+          process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
           return;
         }
         if (reviewRequest) {
-          const issued = issueReviewRequest({ repoRoot: process.cwd(), request: reviewRequest });
+          const issued = issueReviewRequest({
+            repoRoot: process.cwd(),
+            request: reviewRequest,
+            strict: true,
+          });
           if (!issued.ok) {
             process.stderr.write(`${issued.reason}\n`);
             process.exitCode = 1;
-            discardVerdictDir();
+            return;
+          }
+          reviewRequest = issued.request;
+          const attempt = beginReviewAttempt({
+            repoRoot: process.cwd(),
+            request: reviewRequest,
+            provider,
+            model: routing.model,
+            now: startedAt,
+          });
+          if (!attempt.ok) {
+            process.stderr.write(`${attempt.reason}\n`);
+            process.exitCode = 1;
+            return;
+          }
+          reviewAttempt = attempt.attempt;
+          reviewVerdictFile = attempt.path;
+          plan = buildPlan(reviewVerdictFile);
+          if (!plan.available) {
+            process.stderr.write(`${plan.messages.join("\n")}\n`);
+            process.exitCode = 1;
             return;
           }
         }
@@ -466,7 +491,14 @@ function runtimeCommand(
             jsonOut,
             reviewRole: opts.role,
             ...(reviewRequest && reviewVerdictFile
-              ? { review: { request: reviewRequest, verdictFile: reviewVerdictFile, startedAt } }
+              ? {
+                  review: {
+                    request: reviewRequest,
+                    verdictFile: reviewVerdictFile,
+                    attempt: reviewAttempt,
+                    startedAt,
+                  },
+                }
               : {}),
           },
           deps,
