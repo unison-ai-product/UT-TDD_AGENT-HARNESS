@@ -88,7 +88,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-19T08:25:25.1454025Z"
         evidence_path: tests/review-verdict-custody.test.ts
-        output_digest: "sha256:5086747eb3f3abf2ac3191cf116be494c7023dc25692232ebae6c621286922c0"
+        output_digest: "sha256:afe6356826df1cc08d888bfd2b1139db1a163a3d14d6a943a25dcd6e16557449"
       - kind: typecheck
         command: "node_modules/.bin/tsc.cmd --noEmit --pretty false"
         runner: node
