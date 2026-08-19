@@ -36,11 +36,23 @@ export interface DoctorCheckDefinition {
 export function selectDoctorCheckDefinitions(
   definitions: readonly DoctorCheckDefinition[],
   scope: DoctorScope,
+  outputIds?: readonly string[],
 ): DoctorCheckDefinition[] {
-  const outputIds = new Set(doctorOutputIdsForScope(scope));
-  return definitions.filter(
-    (definition) => definition.profiles.includes(scope) && outputIds.has(definition.id),
+  const targetOutputIds = outputIds ?? doctorOutputIdsForScope(scope);
+  const targetOutputIdSet = new Set(targetOutputIds);
+  const filtered = definitions.filter(
+    (definition) => definition.profiles.includes(scope) && targetOutputIdSet.has(definition.id),
   );
+
+  if (outputIds === undefined) {
+    return filtered;
+  }
+
+  const byId = new Map(filtered.map((definition) => [definition.id, definition] as const));
+  return outputIds.flatMap((id) => {
+    const definition = byId.get(id);
+    return definition ? [definition] : [];
+  });
 }
 
 export function collectDoctorCheckRun(
@@ -49,6 +61,9 @@ export function collectDoctorCheckRun(
 ): DoctorCheckRun {
   const profile = resolveDoctorRunProfile(options);
   const scope = profile.invocation === "registry" ? profile.scope : (options.scope ?? "full");
+  const outputIds =
+    profile.invocation === "registry" ? profile.outputIds : doctorOutputIdsForScope(scope);
+  const outputIdSet = new Set<string>(outputIds);
   const timings: DoctorTiming[] = [];
   const record = <T extends LintResult>(id: string, run: () => T): T => {
     if (options.timing !== true) return run();
@@ -70,22 +85,22 @@ export function collectDoctorCheckRun(
   const selectedDefinitions = selectDoctorCheckDefinitions(
     buildFullDoctorCheckDefinitions(deps, options),
     scope,
-  );
+  ).filter((definition) => outputIdSet.has(definition.id));
   for (const definition of selectedDefinitions) {
     resultsById.set(definition.id, record(definition.id, definition.run));
   }
-  const checks = doctorOutputIdsForScope(scope).map((id) => {
+  const checks = outputIds.map((id) => {
     const result = resultsById.get(id);
     if (!result) {
       return {
         ok: false,
-        messages: [`doctor registry - violation: missing full doctor check result (${id})`],
+        messages: [`doctor registry - violation: missing doctor check result (${id})`],
       };
     }
     return result;
   });
 
-  return { checks, checkIds: selectedDefinitions.map((definition) => definition.id), timings };
+  return { checks, checkIds: [...outputIds], timings };
 }
 
 export function collectDoctorChecks(deps: DoctorDeps, options: DoctorOptions = {}): LintResult[] {

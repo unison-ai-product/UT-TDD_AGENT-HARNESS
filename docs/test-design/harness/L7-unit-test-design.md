@@ -1685,6 +1685,7 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-CIPOL-010` | workflow構造のtotal fail-close | YAML root/on/job/stepsの不正型、空step、空concurrency、mainもcancelする式、role/profile不整合を各mutation | throwせず`malformed_workflow_shape` / `missing_concurrency` / `invalid_workflow_profile`、`ok=false`。concurrencyは§6.9.3のcanonical式と完全一致 |
 | `U-CIPOL-011` | 権限の完全一致 | 4 artifactそれぞれを`issues: read`へ変異。`contents: write` / scalar `read-all` / `issues: write`追加 | `permissions: {contents: read}`完全一致以外は`missing_permission` |
 | `U-CIPOL-012` | runtime profile独立性 | source profileへPack本文を置換、package artifact profileをsource/packへ変異 | 本文markerで再分類せずsource policyの`missing_step`。`package.json.utTdd.artifactProfile`を正本とする |
+| `U-CIPOL-027` | source doc profile実行面の束縛 | `source-doc-lane` の `outputIds` と registry definitions の順序・集合を各1点変異 | 選択対象はprofile宣言の4件、実行はregistry定義順、envelopeの `checkIds`/`checks` はprofile宣言順と完全一致し、scope=`full` の全102件へ拡張しない |
 | `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
 
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、

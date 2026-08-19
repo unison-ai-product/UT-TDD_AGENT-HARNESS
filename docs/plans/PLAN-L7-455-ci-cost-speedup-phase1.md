@@ -44,6 +44,7 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-L7-221-github-ci-policy-gate.md
+    - docs/plans/PLAN-L7-374-doctor-runner-definition-modules.md
     - docs/plans/PLAN-RECOVERY-15-cross-os-ci-aggregate-gate.md
     - docs/plans/PLAN-L7-420-ci-strict-evidence-gates.md
 review_evidence:
@@ -229,6 +230,16 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 - source-only doctor profile `source-doc-lane` を追加し、readability/runtime-readability/
   rule-drift/secret-scanをdoc laneでも必須実行する。workflowとdetectorの両側で固定する。
 
+### Issue #314 の profile 実行面束縛 (2026-08-19)
+
+`source-doc-lane` の `outputIds` を宣言だけにせず、doctor registryの選択・実行・
+envelope `checkIds`/`checks`へ直接束縛する。実行は既存registry定義順を維持し、
+envelopeの集合・順序だけをprofile宣言へ合わせる。profileの4件を`scope=full`の全検査へ
+拡張する経路、未解決IDによる集合欠落、registry定義順とprofile宣言順のずれを
+`U-CIPOL-027` (tests/doctor.test.ts)でfail-closeに固定する。`src/doctor/runner.ts`の
+所有は既存の`PLAN-L7-374-doctor-runner-definition-modules`に残し、profile宣言は
+`src/doctor/profiles.ts`とする。#455は同じsource artifactを再所有しない。
+
 ## AC
 
 - [x] doc-only 変更で重い step が skip され、code 変更で full が走る分岐が
@@ -256,3 +267,6 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
       confirmed 前に記録。 — 実施記録 #1〜#6 (green)。review evidence は本 PLAN が
       `status: draft` のまま (confirmed gate 前) のため未記録。confirmed へ進める
       前に cross-runtime review を実施し `review_evidence` へ追記する。
+- [ ] Issue #314: source doc lane のprofile 4件だけが選択され、registry定義順で実行され、
+      envelopeの`checkIds`/`checks`は宣言順へ揃う。実装後に同じexact HEADの
+      `U-CIPOL-027` snapshot evidenceを取得して確認する。
