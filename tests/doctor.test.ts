@@ -724,15 +724,25 @@ describe("runDoctor", () => {
 
   it("U-CIPOL-027: runs exactly the checks declared by the source doc lane profile", () => {
     const profile = DOCTOR_RUN_PROFILES["source-doc-lane"];
+    const profileOutputIds = new Set<string>(profile.outputIds);
     const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
     const selected = selectDoctorCheckDefinitions(definitions, profile.scope, profile.outputIds);
     const run = collectDoctorCheckRun(nodeDoctorDeps(headSnapshotRoot()), {
       profile: "source-doc-lane",
+      timing: true,
     });
 
     expect(selected.map((definition) => definition.id)).toEqual([...profile.outputIds]);
     expect(run.checkIds).toEqual([...profile.outputIds]);
     expect(run.checks).toHaveLength(profile.outputIds.length);
+    expect(run.timings.map((timing) => timing.id)).toEqual(
+      definitions
+        .filter(
+          (definition) =>
+            definition.profiles.includes(profile.scope) && profileOutputIds.has(definition.id),
+        )
+        .map((definition) => definition.id),
+    );
   });
 
   it("includes asset-drift hard gate in doctor output", () => {
@@ -1616,7 +1626,7 @@ describe("runDoctor", () => {
     expect(indexSource).toContain("const profile = resolveDoctorRunProfile(options)");
     expect(indexSource).toContain('if (profile.invocation === "setup-smoke")');
     expect(indexSource).toContain(
-      "const { checks, checkIds, timings } = collectDoctorCheckRun(deps, options)",
+      "const { checks, timings } = collectDoctorCheckRun(deps, options)",
     );
     expect(registrySource).toContain('} from "./runner.ts"');
     expect(registrySource).toContain('} from "./check-definitions.ts"');

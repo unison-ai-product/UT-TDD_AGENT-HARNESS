@@ -36,16 +36,19 @@ export interface DoctorCheckDefinition {
 export function selectDoctorCheckDefinitions(
   definitions: readonly DoctorCheckDefinition[],
   scope: DoctorScope,
-  outputIds: readonly string[] = doctorOutputIdsForScope(scope),
+  outputIds?: readonly string[],
 ): DoctorCheckDefinition[] {
-  const selectedOutputIds = new Set(outputIds);
-  const byId = new Map(
-    definitions
-      .filter(
-        (definition) => definition.profiles.includes(scope) && selectedOutputIds.has(definition.id),
-      )
-      .map((definition) => [definition.id, definition] as const),
+  const targetOutputIds = outputIds ?? doctorOutputIdsForScope(scope);
+  const targetOutputIdSet = new Set(targetOutputIds);
+  const filtered = definitions.filter(
+    (definition) => definition.profiles.includes(scope) && targetOutputIdSet.has(definition.id),
   );
+
+  if (outputIds === undefined) {
+    return filtered;
+  }
+
+  const byId = new Map(filtered.map((definition) => [definition.id, definition] as const));
   return outputIds.flatMap((id) => {
     const definition = byId.get(id);
     return definition ? [definition] : [];
@@ -81,7 +84,6 @@ export function collectDoctorCheckRun(
   const selectedDefinitions = selectDoctorCheckDefinitions(
     buildFullDoctorCheckDefinitions(deps, options),
     scope,
-    outputIds,
   );
   for (const definition of selectedDefinitions) {
     resultsById.set(definition.id, record(definition.id, definition.run));
@@ -97,7 +99,7 @@ export function collectDoctorCheckRun(
     return result;
   });
 
-  return { checks, checkIds: selectedDefinitions.map((definition) => definition.id), timings };
+  return { checks, checkIds: [...outputIds], timings };
 }
 
 export function collectDoctorChecks(deps: DoctorDeps, options: DoctorOptions = {}): LintResult[] {

@@ -34,8 +34,6 @@ generates:
     artifact_type: test_code
   - artifact_path: src/doctor/profiles.ts
     artifact_type: source_module
-  - artifact_path: src/doctor/runner.ts
-    artifact_type: source_module
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: tests/cli-surface.test.ts
@@ -234,13 +232,13 @@ GitHub issue: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/1
 
 ### Issue #314 の profile 実行面束縛 (2026-08-19)
 
-`source-doc-lane` の `outputIds` を宣言だけにせず、doctor registry の選択・実行・
-envelope `checkIds`/`checks` の集合と順序へ直接束縛する。profile の4件を `scope=full`
-の全検査へ拡張する経路、または registry 定義順と profile 宣言順がずれる経路を
-`U-CIPOL-027` (tests/doctor.test.ts) で fail-close に固定する。実装所有は
-既存の `PLAN-L7-374-doctor-runner-definition-modules` とその
-`src/doctor/runner.ts` ownership を引き継ぎ、profile 宣言は `src/doctor/profiles.ts`
-とする。#455 は同じ source artifact を再所有しない。
+`source-doc-lane` の `outputIds` を宣言だけにせず、doctor registryの選択・実行・
+envelope `checkIds`/`checks`へ直接束縛する。実行は既存registry定義順を維持し、
+envelopeの集合・順序だけをprofile宣言へ合わせる。profileの4件を`scope=full`の全検査へ
+拡張する経路、未解決IDによる集合欠落、registry定義順とprofile宣言順のずれを
+`U-CIPOL-027` (tests/doctor.test.ts)でfail-closeに固定する。`src/doctor/runner.ts`の
+所有は既存の`PLAN-L7-374-doctor-runner-definition-modules`に残し、profile宣言は
+`src/doctor/profiles.ts`とする。#455は同じsource artifactを再所有しない。
 
 ## AC
 
@@ -269,8 +267,6 @@ envelope `checkIds`/`checks` の集合と順序へ直接束縛する。profile �
       confirmed 前に記録。 — 実施記録 #1〜#6 (green)。review evidence は本 PLAN が
       `status: draft` のまま (confirmed gate 前) のため未記録。confirmed へ進める
       前に cross-runtime review を実施し `review_evidence` へ追記する。
-- [x] Issue #314: source doc lane の宣言面と実行面が集合・順序とも一致する。 —
-      exact HEAD `1c3f662ff418aa53780f6148144cdfbac05c59b8` で
-      `node scripts/run-vitest-snapshot.ts tests/doctor.test.ts -t "U-CIPOL-027" --reporter=dot`
-      を実行し、1 file / 1 test Green。profile の4件だけが `checkIds`/`checks` に現れ、
-      registry 定義順の差異が残らないことを実測した。
+- [ ] Issue #314: source doc lane のprofile 4件だけが選択され、registry定義順で実行され、
+      envelopeの`checkIds`/`checks`は宣言順へ揃う。実装後に同じexact HEADの
+      `U-CIPOL-027` snapshot evidenceを取得して確認する。
