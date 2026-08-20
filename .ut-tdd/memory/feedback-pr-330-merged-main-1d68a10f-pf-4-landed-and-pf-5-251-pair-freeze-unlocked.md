@@ -14,4 +14,4 @@ closing review PASS (blocking 0 / advisory 2、exact HEAD f75798ab) + CI 3 job g
 - Issue #250 は close していない (`Refs #250`)。PF-5 (#251) の aggregate admission が残るため。
 - `PLAN-L7-489` §3 の出口条件 (三値・digest・port count・外部結線 0 の実測) は closing review で充足済み。次は PF-5 の docs-only pair-freeze から入る。
 - 残 advisory: adapter の identity drift / port throw / typed reason 透過の 3 分岐がテスト 0 件 (凍結 oracle の要求外)。fake port 2 件の小 PR で閉じる。証跡時刻の手丸めは今後行わない (実行実時刻を記録し、不等式が壊れるならコマンドを流し直す)。
-- local branch `feat/issue250-pf4-channel-adapter` は worktree `C:/Users/micro/ut-issue250-pf4-impl` が掴んでいるため未削除。remote branch は削除済み。
+- local branch `feat/issue250-pf4-channel-adapter` は worktree `~/ut-issue250-pf4-impl` が掴んでいるため未削除。remote branch は削除済み。

@@ -13,4 +13,4 @@ H4 effort-crossover 実測 (2026-07-10、PLAN-DISCOVERY-10 後続、bench = D1 �
 - 交差: Sol low (66.8k) は Terra high (73.9k) を品質同等以上・低コストで上回る。Terra medium とはほぼ等価。
 
 **運用指針 (PO 裁定 2026-07-10): 型にはめない。傾向として扱い、計測を継続する。**
-固定ルール化 (frontier lane effort=low の機械 pin 等) はしない。エスカレーション/判断系で Sol を使うとき low から始めるのは妥当な傾向だが、タスクごとに実測で更新する。Claude 側 (Sonnet xhigh vs Opus high) の tier×effort 交差は未計測の残課題。bench 資材は /tmp/bench (out-h4/, prompts-h4/) と C:\Users\micro\AppData\Local\Temp\bench に保存。
+固定ルール化 (frontier lane effort=low の機械 pin 等) はしない。エスカレーション/判断系で Sol を使うとき low から始めるのは妥当な傾向だが、タスクごとに実測で更新する。Claude 側 (Sonnet xhigh vs Opus high) の tier×effort 交差は未計測の残課題。bench 資材は /tmp/bench (out-h4/, prompts-h4/) と ~\AppData\Local\Temp\bench に保存。

@@ -12,10 +12,10 @@ PO 指示を受領し、Claude は新規編集・commit・push・PR 作成・ver
 
 (2) Issue #218 / PLAN-L7-465 D3a の live review→canonical writer 契約改訂: Claude は未着手 (契約文の追記も PR 起票もしていない)。freeze すべき最小契約 5 点は Codex 提示のものをそのまま引き継ぐ — issueReviewRequest() 先行成功と memory wake の派生化 / projectReviewVerdict() 経由の receipt 化 / exact HEAD 更新時の再 dispatch / dispatch→request→verdict→receipt→wrapper allow の実 repo E2E oracle / memory・comment を判定入力に読まない。関連実測は既存メモリ feedback-d2-review-dispatch-wrapper-deny-merge-bypass (requests=1 / receipts=0 で wrapper が常時 deny) を参照。
 
-(3) root worktree (c:/Users/micro/OneDrive/Desktop/UT-TDD-agent-harness、branch feat/plan-l7-465-d3-trusted-custody、HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2): 未 commit の変更 3 件が残存 — src/cli.ts / src/cli/delegation.ts / tests/cli-surface.test.ts。Claude はこれらを作成しておらず内容も未検証であるため、削除も commit もしていない。Codex が内容を確認して扱いを決めること。
+(3) root worktree (~/OneDrive/Desktop/UT-TDD-agent-harness、branch feat/plan-l7-465-d3-trusted-custody、HEAD 9dff55704b1c22b1c22272502006a2c24035e0c2): 未 commit の変更 3 件が残存 — src/cli.ts / src/cli/delegation.ts / tests/cli-surface.test.ts。Claude はこれらを作成しておらず内容も未検証であるため、削除も commit もしていない。Codex が内容を確認して扱いを決めること。
 
 (4) 参考: 保全済み stash が 3 件ある。stash@{0} = feat/plan-l7-465-d2d-impl 上の『luna worker partial remediation (stopped for Codex handoff)』(D2-D 是正の未完部分、その後 Codex が別途是正し #313 として merge 済みのため不要の可能性が高い)。stash@{1} = feat/plan-l7-465-d3-trusted-custody の wip。stash@{2} = fix/223-memory-wake-followup-clean の一時保存。いずれも Claude は破棄していない。
 
-(5) worktree C:/Users/micro/ut-d2d-impl は branch feat/plan-l7-465-d2d-impl (HEAD a21ce820、clean) のまま残置。#313 は Codex の 49a01579 で merge 済みのため、この worktree は不要なら Codex 側で撤去してよい。
+(5) worktree ~/ut-d2d-impl は branch feat/plan-l7-465-d2d-impl (HEAD a21ce820、clean) のまま残置。#313 は Codex の 49a01579 で merge 済みのため、この worktree は不要なら Codex 側で撤去してよい。
 
 本日 Claude が merge 済みの PR: #302 / #308 / #309 / #311 / #312 / #313 (すべて exact HEAD 束縛 + 非作者 PASS + CI green を確認済み、各完了通知は送信済み)。以後の owner は Codex。Claude は merge しない。

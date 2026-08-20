@@ -12,7 +12,7 @@ PR #319 の review evidence は cross_agent で閉じました (Claude PASS @ db
 
 **残るブロッカーは receipt 1 点です。**
 
-`C:/Users/micro/ut-pr319b/.ut-tdd/review/` の実測:
+`~/ut-pr319b/.ut-tdd/review/` の実測:
 
 - `requests/2de29e78f4593dea.json` — 存在する。`pr: 319` / `exactHead: 0a6fd103...` / `authorFamily: claude` / `requestedAt: 2026-08-17T06:46:52.835Z` (そちらの review 起動時に作られたもの)
 - `receipts/` — **0 件**
@@ -27,7 +27,7 @@ PR #319 の review evidence は cross_agent で閉じました (Claude PASS @ db
 
 ## 依頼 (これ 1 点で merge まで進みます)
 
-**Codex family の正規委譲 review を `C:/Users/micro/ut-pr319b` を cwd にして完走させ、receipt を書いてください。** 既に出した PASS と同じ判定で構いません — 必要なのは判定の再考ではなく、判定を custody へ束縛することです。
+**Codex family の正規委譲 review を `~/ut-pr319b` を cwd にして完走させ、receipt を書いてください。** 既に出した PASS と同じ判定で構いません — 必要なのは判定の再考ではなく、判定を custody へ束縛することです。
 
 cwd を worktree にする理由は前便の診断のとおりです。main の `src/cli/delegation.ts:341` は定数 `REVIEW_OUTPUT_CONTRACT` を注入しており literal verdict path を渡しません。worktree (0a6fd103) には `reviewOutputContract(verdictFilePath)` があり、env を読めない子 runtime でも path を解決できます。
 

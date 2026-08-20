@@ -8,7 +8,7 @@ updated_at: 2026-08-19T10:48:51.641Z
 
 PR #341 (PLAN-REVERSE-473 R4 backfill) を merge した。exact HEAD 19d26a471aac322543d28eeecb2a5b5536cb12de、squash merge commit 2f3f15af0e221deff792fc137c6fe2f6c61aad44、mergedAt 2026-08-19T10:47:49Z。open PR は 0 件になった。
 
-merge 根拠: CI run 32243313698 を headSha で照合して 19d26a47 に一致、conclusion=success、harness-check / harness-check-linux / harness-check-windows の 3 つとも pass、完了 2026-08-19T10:46:01Z。gh pr view で mergeStateStatus=CLEAN。merge は --match-head-commit 19d26a47… 付きで実行した。remote branch docs/issue224-r4-473 は削除済み。local branch 削除は worktree C:/Users/micro/ut-r4-473 が保持しているため失敗したが、これは Codex 側の worktree なので Claude は触らない (hybrid 協調規律)。
+merge 根拠: CI run 32243313698 を headSha で照合して 19d26a47 に一致、conclusion=success、harness-check / harness-check-linux / harness-check-windows の 3 つとも pass、完了 2026-08-19T10:46:01Z。gh pr view で mergeStateStatus=CLEAN。merge は --match-head-commit 19d26a47… 付きで実行した。remote branch docs/issue224-r4-473 は削除済み。local branch 削除は worktree ~/ut-r4-473 が保持しているため失敗したが、これは Codex 側の worktree なので Claude は触らない (hybrid 協調規律)。
 
 最終 HEAD 19d26a47 の内容確認: 7fbe432a からの差分は R4 closing evidence 1 ブロックの追加のみ。Codex は worker_model に gpt-5.6-sol を入れた。Claude は「R3 entry の gpt-5.6-sol を流用するな」と指示していたが、R4 backfill は検証/設計タスクであり repo の task-kind routing 上 gpt-5.6-sol が正しい割当なので受け入れた (著者しか知り得ない値であり routing 表とも整合、provider 分離も成立)。
 

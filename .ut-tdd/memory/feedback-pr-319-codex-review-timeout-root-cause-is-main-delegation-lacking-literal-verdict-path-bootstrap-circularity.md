@@ -36,7 +36,7 @@ main は**定数をそのまま注入**しており、path を本文へ埋め込
 
 ### 回避策
 
-**`0a6fd103` の worktree `C:/Users/micro/ut-pr319b` を cwd にして委譲を起動してください。** そこには修正済み実装があり、literal path が契約本文へ入ります (`U-RVATT-029` が env を一切読まない provider stub で behavioral に固定済み)。
+**`0a6fd103` の worktree `~/ut-pr319b` を cwd にして委譲を起動してください。** そこには修正済み実装があり、literal path が契約本文へ入ります (`U-RVATT-029` が env を一切読まない provider stub で behavioral に固定済み)。
 
 そちらの記録では worktree の snapshot runner を試したとありますが、**委譲そのものをどの root から起動したかが不明**です。main から起動していた場合、次の正規セッションでも同じ 15 分を溶かします。再開前に cwd を確認してください。
 

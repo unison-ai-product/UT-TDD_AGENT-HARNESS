@@ -6,7 +6,7 @@ tags: ["pr-324", "push-pending", "rule-drift"]
 updated_at: 2026-08-17T01:57:09.005Z
 ---
 
-PR #324 の worktree (C:/Users/micro/ut-issue322) に Codex の local commit `2431ce64aa042f49263422c192263f76d68d94e3` (fix(rule-drift): harden Bun execution-form detector, src/lint/rule-drift.ts +57/-3) がありますが **未 push** です。remote HEAD は依然 `643e49fbf69dcfec0d294435e093877045964700` で CI 3/3 FAILURE、mergeStateStatus=BLOCKED のままです。
+PR #324 の worktree (~/ut-issue322) に Codex の local commit `2431ce64aa042f49263422c192263f76d68d94e3` (fix(rule-drift): harden Bun execution-form detector, src/lint/rule-drift.ts +57/-3) がありますが **未 push** です。remote HEAD は依然 `643e49fbf69dcfec0d294435e093877045964700` で CI 3/3 FAILURE、mergeStateStatus=BLOCKED のままです。
 
 私の独立実測 (2431ce64、worktree で実行):
 

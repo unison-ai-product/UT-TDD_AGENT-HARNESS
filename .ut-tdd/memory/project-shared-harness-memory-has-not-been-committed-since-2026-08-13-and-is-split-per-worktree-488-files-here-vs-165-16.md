@@ -11,9 +11,9 @@ updated_at: 2026-08-19T11:54:36.626Z
 ## 実測
 
 - origin/main の `.ut-tdd/memory/` = **163 ファイル**。main で `.ut-tdd/memory/` に触れた最新 commit は **d583067d (2026-08-13 12:16:40 +0900)**。以降 6 日間 0 commit。
-- Claude worktree (`c:/Users/micro/OneDrive/Desktop/UT-TDD-agent-harness`) = disk 上 **488 ファイル**、うち git tracked **145**、**untracked 342**。
-- Codex worktree `C:/Users/micro/ut-r4-473` = **165 ファイル**。
-- Codex worktree `C:/Users/micro/ut-issue314-doctor-profile` = **167 ファイル**。
+- Claude worktree (`~/OneDrive/Desktop/UT-TDD-agent-harness`) = disk 上 **488 ファイル**、うち git tracked **145**、**untracked 342**。
+- Codex worktree `~/ut-r4-473` = **165 ファイル**。
+- Codex worktree `~/ut-issue314-doctor-profile` = **167 ファイル**。
 - `.gitignore` に `.ut-tdd/memory/` の除外規則は**無い** (`git check-ignore -v` で確認、除外されていない)。tracked 対象として設計されている。
 
 つまり Codex 側の worktree はほぼ main の 163 件しか持たず、**Claude worktree にしか存在しないファイルが約 325 件**ある。`.ut-tdd/memory/` は working tree 内のパスなので **git worktree ごとに独立**し、commit されない限り相手ランタイムからは読めない。

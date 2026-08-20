@@ -86,7 +86,7 @@ kill された変異 (M4 digest 不一致 / M5 exactHead 一致比較 / M6 同�
 
 ## 実測サマリ
 
-対象 worktree `C:/Users/micro/ut-pr319` (detached HEAD 7529419a、review 後 clean)。
+対象 worktree `~/ut-pr319` (detached HEAD 7529419a、review 後 clean)。
 
 - テスト実走 7 suite **105 passed** (live-review-projection 12 / claude-memory-wake 19 / cli-delegation 3 / dependency-drift 14 / memory-service 11 / review-attestation 22 / review-custody 24)
 - `tsc --noEmit` exit 0 / biome 8 ファイル diagnostics 0
