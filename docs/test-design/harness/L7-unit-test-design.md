@@ -1942,9 +1942,9 @@ Green根拠にしてはならない。PF-1〜PF-5のsource-side artifact admissi
 | `CANDIDATE-PACKISO-001` | source repo、source worktree、local Pack checkoutを全て不在にしたfresh Product A/B fixture | sealed Pack artifactだけで両productを個別初期化でき、development pathのread/process 0 |
 | `CANDIDATE-PACKISO-002` | A/BのDB、Memory、PLAN projection、lock、hook state、receipt/evidenceのrootを一要素ずつ相互参照へ変異 | canonical consumer/runtime root外を拒否し、cross-consumer read/write/process 0 |
 | `CANDIDATE-PACKISO-003` | A=v1、B=v2のversion/digest/revisionを単独変異、または片方のidentityを他方のreceiptへ再利用 | 各consumerのartifact identityを独立に束縛し、同OS userでもreceipt/evidenceの横流しを拒否 |
-| `CANDIDATE-PACKISO-004` | Aだけをv1→v2へupgradeし、Aのstaging/apply境界へ1..N faultを注入 | Aの成功はatomic、失敗はA prior state不変または`rollback_failed`/`indeterminate`。Bのbytes/mode/path/version/history/processは全て不変 |
-| `CANDIDATE-PACKISO-005` | Aだけを直前attested artifactへrollbackし、Bのartifact/lock/receiptを同時に観測 | Aだけが決定論的に旧identityへ戻り、Bはread/write/process要求0で継続可能 |
-| `CANDIDATE-PACKISO-006` | Aのartifact unavailable、digest mismatch、unknown version、namespace/symlink/junction escape、receipt不一致を各1点変異 | Aは導入前fail-closeでwrite 0。Bのruntime stateと実行可能性は影響を受けない |
+| `CANDIDATE-PACKISO-004` | Bのruntime commandを実行中に保ったままAだけをv1→v2へupgradeし、Aのstaging/apply境界へ1..N faultを注入 | Aの成功はatomic、失敗はA prior state不変または`rollback_failed`/`indeterminate`。Bの実行は停止せず、bytes/mode/path/version/history/process identityは全て不変 |
+| `CANDIDATE-PACKISO-005` | Bのruntime commandを実行中に保ったままAだけを直前attested artifactへrollbackし、Bのartifact/lock/receiptを同時に観測 | Aだけが決定論的に旧identityへ戻り、Bは停止・再起動・read/writeを要求されず継続可能 |
+| `CANDIDATE-PACKISO-006` | Aのartifact unavailable、artifact bytesに対する独立再計算digest mismatch、unknown version、namespace/symlink/junction escape、receipt不一致を各1点変異 | receipt/manifestの申告digestだけでは成功せず、Aは導入前fail-closeでwrite 0。Bのruntime stateと実行可能性は影響を受けない |
 
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 

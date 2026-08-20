@@ -24,11 +24,11 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
-  requires: []
+  requires:
+    - PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze
   blocks: []
   references:
     - docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
-    - docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
     - docs/design/harness/L6-function-design/setup-solo-team.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/224
@@ -65,7 +65,9 @@ aggregate admission、D1/D2/D3が所有するreview/merge authorityは変更し�
    filesystem、process、receiptを書き換えない。
 4. 受入入力はPF-5が成功として返したsealed release artifactだけである。manifest/digest/revisionの
    mismatch、artifact unavailable、namespace/path escape、unknown versionは、consumer導入前にtyped failure
-   とし、対象consumerを含む全writeを0にする。
+   とし、対象consumerを含む全writeを0にする。consumerはmanifestのmaterializer versionに従い、受領した
+   artifactのdestination path、mode、content bytesからartifact set digestを独立に再計算する。PF-5 receiptや
+   manifestの申告digestを計算入力として信用せず、再計算値がreceipt・manifestの両方と一致した場合だけ受理する。
 
 ## 2. 二consumer受入シナリオ
 
@@ -73,14 +75,14 @@ fixtureは互いに別のtemporary rootを持つProduct A/Bとし、source repos
 local Pack checkoutをfixtureから除外する。Pack artifact以外の開発元pathを環境変数、current directory、
 config、symlink、junctionで注入しても成功へfallbackしない。
 
-| シナリオ | 操作 | 必須観測 |
-| --- | --- | --- |
-| 独立導入 | A/Bを同じPack versionから個別に初期化 | 各runtime rootだけにstateが生成され、cross-root read/write 0 |
-| 異version共存 | Aをv1、Bをv2 artifactへ束縛 | version/digest/revision・hook/lock/DB/receiptが互いに不変 |
-| 片系upgrade | Aだけv1→v2へ進める | Aの切替はatomic、Bの全状態と実行可能性が不変 |
-| 片系rollback | Aだけ直前のattested artifactへ戻す | Aは決定論的に旧identityへ戻り、Bのversion/historyは不変 |
-| 局所障害 | Aのartifact/receipt/lockを不正化する | Aはfail-close、Bはread/write/processを要求されず継続可能 |
-| source不在 | development repo/worktree/local Pack checkoutを物理的に存在させない | Pack artifactだけから上記の正常系を再現する |
+| シナリオ | 操作 | 必須観測 | 対応oracle |
+| --- | --- | --- | --- |
+| 独立導入 | A/Bを同じPack versionから個別に初期化 | 各runtime rootだけにstateが生成され、cross-root read/write 0 | `CANDIDATE-PACKISO-002` |
+| 異version共存 | Aをv1、Bをv2 artifactへ束縛 | version/digest/revision・hook/lock/DB/receiptが互いに不変 | `CANDIDATE-PACKISO-003` |
+| 片系upgrade | Bを実行したままAだけv1→v2へ進める | Aの切替はatomic、Bの実行と全状態が不変 | `CANDIDATE-PACKISO-004` |
+| 片系rollback | Bを実行したままAだけ直前のattested artifactへ戻す | Aは決定論的に旧identityへ戻り、Bの実行・version/historyは不変 | `CANDIDATE-PACKISO-005` |
+| 局所障害 | Aのartifact/receipt/lockを不正化する | Aはfail-close、Bはread/write/processを要求されず継続可能 | `CANDIDATE-PACKISO-006` |
+| source不在 | development repo/worktree/local Pack checkoutを物理的に存在させない | Pack artifactだけから独立導入を再現する | `CANDIDATE-PACKISO-001` |
 
 ## 3. fail-closeと原子性
 
