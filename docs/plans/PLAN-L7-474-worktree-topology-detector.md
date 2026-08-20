@@ -6,9 +6,9 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-20
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -35,7 +35,33 @@ dependencies:
     - docs/plans/PLAN-REVERSE-474-worktree-topology-detector-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/232
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-20T09:21:10Z"
+    tests_green_at: "2026-08-20T09:19:52Z"
+    verdict: pass
+    scope: "PR #359 worktree topology master R4のclaim-blind/spec-blind delta closing review。PF1〜PF4 main到達証跡、R3 oracle昇格、R4再合流判定を確認。"
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    plan_revision: 25109ce903d97be7de262a380af99473499823ac
+    subject_head: 25109ce903d97be7de262a380af99473499823ac
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/359#issuecomment-5353950466"
+    anchor_commit: 25109ce903d97be7de262a380af99473499823ac
+    citations:
+      - "PR #359 exact HEAD 25109ce9 non-author delta closing review (PASS, blocking 0)"
+      - "Claude Opus post-CI Green confirmation: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/359#issuecomment-5353950466"
+      - "GitHub Actions run 32352315001 (Linux/Windows/aggregate success)"
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions run 32352315001 (harness-check-linux/windows/aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-20T09:19:52Z"
+        evidence_path: docs/plans/PLAN-L7-474-worktree-topology-detector.md
+        output_digest: "sha256:77af24d212c464f4c6fc226421a9f954d889602174990d6e5744cb70e760fd39"
+        anchor_commit: 25109ce903d97be7de262a380af99473499823ac
 ---
 
 # PLAN-L7-474: worktree topology 健全性・寿命検出の契約 freeze
@@ -130,10 +156,26 @@ Blockedであり、後続は直前sliceのmergeとclosing PASSの両方でだけ
 
 ## Schedule
 
-1. [進行中] PF-0: master/Reverse/test-design/子PLANとGitHub順序をcorrection freezeする。
-2. [阻害中] PF1: PF-0 merge後にpure analyzerを実装する。
-3. [直列] PF2 → PF3 → PF4を各closing PASS後に解放する。
-4. [直列] PF4でReverse R4とaggregate acceptanceを完了する。
-5. [直列・post-PF4 master step] PF4 merge後に全子landedとR4完了をmaster側から確認し、PF4とは別の
-   master exact HEAD closing PASSを取得する。その後だけmasterをconfirmedへ遷移し#232をcloseする。
-   このmaster stepをPF4のmerge条件へ戻して自己参照cycleを作らない。
+1. [完了] PF-0: master/Reverse/test-design/子PLANとGitHub順序をcorrection freezeした。
+2. [完了] PF1: pure analyzerとfail-safe retirableを実装し、PR #261 / merge `ee76dd27`でmainへ到達した。
+3. [完了] PF2 → PF3 → PF4を順に実装し、PR #308 / #351 / #354でmainへ到達した。
+4. [完了] PF4でaggregate acceptanceとbyte vectorをGreen化し、Reverse R4再合流条件を満たした。
+5. [進行中・post-PF4 master step] 全子landedとR4完了をmaster側から確認済み。PF4とは別のmaster
+   exact HEAD closing PASSを取得し、そのPASSをreview evidenceへ束縛した後だけmasterをconfirmedへ
+   遷移して#232をcloseする。このmaster stepをPF4のmerge条件へ戻して自己参照cycleを作らない。
+
+## post-PF4 master integration evidence（2026-08-20）
+
+| slice | exact reviewed HEAD | main merge | closing evidence |
+| --- | --- | --- | --- |
+| PF1 / #253 | `d9dfa8512609b59439272f55665e84bb2c66ca1d` | `445c710fea2e16e584f6b76a3e4db1ca82329c90` | PR #261 post-merge Claude content PASS。PR merge `ee76dd27`は現mainから到達不能、成果物の現main到達anchorは`445c710f` |
+| PF2 / #254 | `a4db3f8c6ef2b8b98a67fdbd0c52e02af3df7efb` | `722c336b77b3e7d37a6719afeba7c45388a0c740` | PR #308 Claude closing PASS、CI 3/3 Green |
+| PF3 / #255 | `ade47dc0b0530a8f7071798264c34ed6758e324f` | `5b78676b0a4d6288a5f38e8d671a522147c9e809` | PR #351 Claude closing PASS、CI 3/3 Green |
+| PF4 / #256 | `8fa5e7d9d9ec8351e6d88bf7a5f2e6e253dd6086` | `5604874bb73905967b19f2e6cbc048101f807e39` | PR #354 Claude closing PASS、CI 3/3 Green |
+
+master確認のbaselineはPF4 merge後のmain `5604874bb73905967b19f2e6cbc048101f807e39`。PF1のPR #261
+merge commit `ee76dd2732848bc613388f6ce7e0dde029e8a32e` はmain履歴の書換え後、現在のmainから到達不能である。
+PF1成果物の現在mainへの導入は、`src/runtime/worktree-topology.ts`の到達可能な追加anchor
+`445c710fea2e16e584f6b76a3e4db1ca82329c90`で確認した。reviewがmerge後だった手続き違反と履歴書換えを
+隠さず、内容PASSと後続PF2〜PF4の非著者closing PASSをmasterの機能成立証拠と区別して保持する。
+本節だけではmasterのclosing PASSを代替しない。
