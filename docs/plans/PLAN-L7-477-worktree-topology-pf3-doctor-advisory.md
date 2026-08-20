@@ -22,8 +22,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/doctor/worktree-topology-advisory.ts
     artifact_type: source_module
-  - artifact_path: src/doctor/runtime-state.ts
-    artifact_type: source_module
   - artifact_path: src/doctor/index.ts
     artifact_type: source_module
   - artifact_path: tests/worktree-topology-doctor.test.ts
@@ -57,8 +55,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T14:42:27+09:00"
         evidence_path: tests/worktree-topology-doctor.test.ts
-        output_digest: "sha256:e36c0e5af51d5d93314f26d4eddff875c8d634ca31ca7bfe294e124d38dcd5cc"
-        anchor_commit: efef7f54e1bfd72d6d9290fc18ea123aeee3947c
+        output_digest: "sha256:88c5cd941c1c00d9405f021d05d337e7bd1b7207541385cf43614bdca3772b4c"
+        anchor_commit: cd6d7f145a560e42030710f6e0ff22ee30efc710
       - kind: typecheck
         command: "npm run typecheck"
         runner: node
@@ -66,8 +64,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T14:35:51+09:00"
         evidence_path: src/doctor/worktree-topology-advisory.ts
-        output_digest: "sha256:ba4e06489994328a4657ccae4fc09d73f962f140c4d07b4c9b1db1bf03a3c5a0"
-        anchor_commit: ce2ed7f2402242cc44eb85988a27dc94ebdf87cb
+        output_digest: "sha256:bdcc224ded42e10234845f7bf2d842d9e4fff32d981c9a6c8fadb3817381e77e"
+        anchor_commit: cd6d7f145a560e42030710f6e0ff22ee30efc710
 ---
 
 # PF3: doctor advisory wiring
