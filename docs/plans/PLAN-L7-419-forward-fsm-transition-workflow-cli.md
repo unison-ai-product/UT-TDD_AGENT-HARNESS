@@ -61,12 +61,23 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/344
 github_issue_id: 344
 review_evidence:
-  - reviewer: codex-luna-worker
+  - reviewer: codex-integration-precheck
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-20T11:14:12+09:00"
+    reviewed_at: "2026-08-20T11:57:10+09:00"
+    tests_green_at: "2026-08-20T11:57:03+09:00"
     verdict: implementation_ready_for_ci
     worker_model: gpt-5.6-luna
     worker_revision: 34286cbf
+    green_commands:
+      - kind: unit_test
+        command: "node_modules/.bin/vitest run tests/forward/fsm.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T11:57:03+09:00"
+        evidence_path: tests/forward/fsm.test.ts
+        output_digest: "sha256:41920ab1b98f6f788f5112c8e76667084f2d0789a63859c61a590b698b9946e4"
+        anchor_commit: 029e8fb7fd240d1b7d5ff9111c217ab95d174104
     scope: >-
       Issue #344 bounded implementation。Lunaがtransition policy、append-only reducer、
       EvidenceRecord policy、ledger/projection port、workflow status/transition/explain CLIを実装。
