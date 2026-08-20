@@ -38,7 +38,7 @@ dependencies:
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
-    reviewed_at: "2026-08-20T09:11:21Z"
+    reviewed_at: "2026-08-20T09:21:10Z"
     tests_green_at: "2026-08-20T09:19:52Z"
     verdict: pass
     scope: "PR #359 worktree topology master R4のclaim-blind/spec-blind delta closing review。PF1〜PF4 main到達証跡、R3 oracle昇格、R4再合流判定を確認。"
@@ -46,11 +46,22 @@ review_evidence:
     reviewer_model: claude-opus-5
     plan_revision: 25109ce903d97be7de262a380af99473499823ac
     subject_head: 25109ce903d97be7de262a380af99473499823ac
-    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/359#issuecomment-5353839005"
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/359#issuecomment-5353950466"
     anchor_commit: 25109ce903d97be7de262a380af99473499823ac
     citations:
       - "PR #359 exact HEAD 25109ce9 non-author delta closing review (PASS, blocking 0)"
+      - "Claude Opus post-CI Green confirmation: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/359#issuecomment-5353950466"
       - "GitHub Actions run 32352315001 (Linux/Windows/aggregate success)"
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions run 32352315001 (harness-check-linux/windows/aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-20T09:19:52Z"
+        evidence_path: docs/plans/PLAN-L7-474-worktree-topology-detector.md
+        output_digest: "sha256:77af24d212c464f4c6fc226421a9f954d889602174990d6e5744cb70e760fd39"
+        anchor_commit: 25109ce903d97be7de262a380af99473499823ac
 ---
 
 # PLAN-L7-474: worktree topology 健全性・寿命検出の契約 freeze
