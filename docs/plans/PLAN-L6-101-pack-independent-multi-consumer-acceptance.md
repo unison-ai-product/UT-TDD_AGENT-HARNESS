@@ -37,7 +37,7 @@ github_issue_id: 357
 review_evidence:
   - reviewer: claude-opus-5
     review_kind: cross_agent
-    reviewed_at: "2026-08-20T09:09:53Z"
+    reviewed_at: "2026-08-20T09:17:49Z"
     tests_green_at: "2026-08-20T09:15:54Z"
     verdict: pass
     scope: >-
@@ -48,11 +48,22 @@ review_evidence:
     reviewer_model: claude-opus-5
     plan_revision: 040a9f85955db39286b46f093db2627dba4513f5
     subject_head: 040a9f85955db39286b46f093db2627dba4513f5
-    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/358#issuecomment-5353821558"
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/358#issuecomment-5353912183"
     anchor_commit: 040a9f85955db39286b46f093db2627dba4513f5
     citations:
       - "Claude Opus PASS comment: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/358#issuecomment-5353821558"
+      - "Claude Opus post-CI Green confirmation: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/358#issuecomment-5353912183"
       - "GitHub Actions run 32352029860 (Linux/Windows/aggregate success): https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/32352029860"
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions run 32352029860 (harness-check-linux/windows/aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-20T09:15:54Z"
+        evidence_path: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
+        output_digest: "sha256:9b8fe1bffac688618eeb46b14298737f574c6b1f8d08b05754e47ffe144cf43e"
+        anchor_commit: 040a9f85955db39286b46f093db2627dba4513f5
 ---
 
 # PLAN-L6-101: Pack単独・2 consumer隔離受入契約
