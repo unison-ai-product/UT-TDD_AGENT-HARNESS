@@ -22,6 +22,7 @@ import {
   nodeDoctorDeps,
 } from "./runtime-state.ts";
 import { checkSetupSmoke } from "./setup-smoke.ts";
+import { checkWorktreeTopologyAdvisory } from "./worktree-topology-advisory.ts";
 
 export { checkErasableSyntax } from "../lint/erasable-syntax.ts";
 export { checkImportSpecifiers } from "../lint/import-specifier.ts";
@@ -143,6 +144,10 @@ export {
   checkRightArmGatePlanning,
   checkRightLungDocGovernance,
 } from "./workflow-quality.ts";
+export {
+  checkWorktreeTopologyAdvisory,
+  worktreeTopologyAdvisoryMessages,
+} from "./worktree-topology-advisory.ts";
 
 export interface DoctorMeasurement {
   result: DoctorResult;
@@ -167,6 +172,9 @@ export function runDoctorMeasured(
     ...checkHandoverDisciplineMessages(deps).map((m) => `doctor: handover-discipline — ${m}`),
     checkAgentSlots(doctorSlotsDeps(deps)),
     ...checkPlanReferenceFreshnessAdvisory(deps.repoRoot),
+    ...checkWorktreeTopologyAdvisory(
+      deps.worktreeTopology ?? { facts: [], adminEntries: [] },
+    ).messages.map((m) => `doctor: ${m}`),
   ];
   const { checks, checkIds, timings } = collectDoctorCheckRun(deps, options);
 

@@ -6,9 +6,9 @@ layer: L7
 drive: be
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-20
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -20,6 +20,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-477-worktree-topology-pf3-doctor-advisory.md
     artifact_type: markdown_doc
+  - artifact_path: src/doctor/worktree-topology-advisory.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/runtime-state.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/worktree-topology-doctor.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-474-worktree-topology-detector.md
   requires: []
@@ -28,7 +36,37 @@ dependencies:
     - docs/plans/PLAN-L7-476-worktree-topology-pf2-os-collector.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/255
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-20T00:00:00Z"
+    tests_green_at: "2026-08-20T00:00:00Z"
+    verdict: pending
+    scope: >-
+      PF3 bounded slice。U-WTTOPO-015 を CANDIDATE から 1:1 昇格し、empty facts は no-op、
+      findings は advisory 表示のみとした。collector/analyzer は削除・prune・repairへ拡張せず、
+      doctor hard-gate / CI exit code へ接続していない。実装 worker は gpt-5.6-luna、effort=high。
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/worktree-topology-doctor.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T00:00:00Z"
+        evidence_path: tests/worktree-topology-doctor.test.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        anchor_commit: pending
+      - kind: typecheck
+        command: "npm run typecheck"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T00:00:00Z"
+        evidence_path: src/doctor/worktree-topology-advisory.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        anchor_commit: pending
 ---
 
 # PF3: doctor advisory wiring
