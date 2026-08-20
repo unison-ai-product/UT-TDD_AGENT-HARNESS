@@ -7,6 +7,8 @@ drive: be
 route_signal: drift
 route_mode: reverse
 confirmed_reverse_type: design
+forward_routing: L4
+promotion_strategy: reuse-with-hardening
 created: 2026-08-05
 updated: 2026-08-20
 owner: PM / PO
@@ -32,7 +34,7 @@ dependencies:
     - docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
     - docs/design/harness/L6-function-design/governance-enforcement.md
     - docs/test-design/harness/L7-unit-test-design.md
-workflow_phase: R0
+workflow_phase: R4
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 status: draft
 review_evidence: []
@@ -91,17 +93,22 @@ PF1〜PF3のmain到達後、PF4はaggregate acceptanceをGreenにした。R1/R2�
 L6への重複backfillは不要と判定したため、**PF4のexact HEAD closing PASSとmerge後に限り**、masterの
 post-R4 stepへ再合流可能とする。この判定はmaster confirm、Issue #232 close、配置cutoverを先取りしない。
 
+2026-08-20、PF4 exact HEAD `8fa5e7d9d9ec8351e6d88bf7a5f2e6e253dd6086` はClaude non-author
+closing PASS（blocking 0）とLinux/Windows/aggregate 3/3 Greenを取得し、merge commit
+`5604874bb73905967b19f2e6cbc048101f807e39`としてmainへ到達した。これによりR4の再合流条件は成立した。
+master confirmとIssue #232 closeは、別exact HEADのmaster closing PASS後まで未完として維持する。
+
 ## Schedule
 
 - R0 [完了]: Issue #232 と pair-freeze から上流差分候補を記録した。
-- R1 [直列・PF1/PF2 landed後]: add-impl の実装事実と L4/L6既存契約を照合し、各問いを
+- R1 [完了]: add-impl の実装事実と L4/L6既存契約を照合し、各問いを
   `backfill_required` または `not_impacted` と理由付きで判定する。
-- R2 [直列・PF3 landed後]: R1で必要と判定された面だけを上流へ gap-only 追記する。
-- R3 [直列・PF1〜PF4]: 各ownerの`CANDIDATE-WTTOPO-*`を実装test citationと同じcommitで
+- R2 [完了]: R1で必要と判定された面だけを上流へ gap-only 追記した。
+- R3 [完了]: 各ownerの`CANDIDATE-WTTOPO-*`を実装test citationと同じcommitで
   対応する確定 `U-*` IDへ昇格し、実装とのトレースを照合する。
-- R4 [直列・PF4のみ]: aggregate移設acceptanceとbyte vector Green後にForward再合流を判定する。
-  PF1〜PF3やmasterから先行完了してはならない。
-- post-R4 [直列・master所有]: PF4 merge後に全子landedとR4完了を確認し、master専用exact HEAD closing
+- R4 [完了]: PF4 aggregate移設acceptanceとbyte vector Green、exact HEAD closing PASS、main merge後に
+  Forward再合流を判定した。PF1〜PF3やmasterから先行完了していない。
+- post-R4 [進行中・master所有]: PF4 merge後に全子landedとR4完了を確認し、master専用exact HEAD closing
   PASS後だけ`PLAN-L7-474`をconfirmedへ遷移してIssue #232をcloseする。これはPF4 exitではない。
 
 ## AC

@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: draft
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-20
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -130,10 +130,23 @@ Blockedであり、後続は直前sliceのmergeとclosing PASSの両方でだけ
 
 ## Schedule
 
-1. [進行中] PF-0: master/Reverse/test-design/子PLANとGitHub順序をcorrection freezeする。
-2. [阻害中] PF1: PF-0 merge後にpure analyzerを実装する。
-3. [直列] PF2 → PF3 → PF4を各closing PASS後に解放する。
-4. [直列] PF4でReverse R4とaggregate acceptanceを完了する。
-5. [直列・post-PF4 master step] PF4 merge後に全子landedとR4完了をmaster側から確認し、PF4とは別の
-   master exact HEAD closing PASSを取得する。その後だけmasterをconfirmedへ遷移し#232をcloseする。
-   このmaster stepをPF4のmerge条件へ戻して自己参照cycleを作らない。
+1. [完了] PF-0: master/Reverse/test-design/子PLANとGitHub順序をcorrection freezeした。
+2. [完了] PF1: pure analyzerとfail-safe retirableを実装し、PR #261 / merge `ee76dd27`でmainへ到達した。
+3. [完了] PF2 → PF3 → PF4を順に実装し、PR #308 / #351 / #354でmainへ到達した。
+4. [完了] PF4でaggregate acceptanceとbyte vectorをGreen化し、Reverse R4再合流条件を満たした。
+5. [進行中・post-PF4 master step] 全子landedとR4完了をmaster側から確認済み。PF4とは別のmaster
+   exact HEAD closing PASSを取得し、そのPASSをreview evidenceへ束縛した後だけmasterをconfirmedへ
+   遷移して#232をcloseする。このmaster stepをPF4のmerge条件へ戻して自己参照cycleを作らない。
+
+## post-PF4 master integration evidence（2026-08-20）
+
+| slice | exact reviewed HEAD | main merge | closing evidence |
+| --- | --- | --- | --- |
+| PF1 / #253 | `d9dfa8512609b59439272f55665e84bb2c66ca1d` | `ee76dd2732848bc613388f6ce7e0dde029e8a32e` | PR #261 post-merge Claude content PASS。手続き違反はPLAN evidenceに残す |
+| PF2 / #254 | `a4db3f8c6ef2b8b98a67fdbd0c52e02af3df7efb` | `722c336b77b3e7d37a6719afeba7c45388a0c740` | PR #308 Claude closing PASS、CI 3/3 Green |
+| PF3 / #255 | `ade47dc0b0530a8f7071798264c34ed6758e324f` | `5b78676b0a4d6288a5f38e8d671a522147c9e809` | PR #351 Claude closing PASS、CI 3/3 Green |
+| PF4 / #256 | `8fa5e7d9d9ec8351e6d88bf7a5f2e6e253dd6086` | `5604874bb73905967b19f2e6cbc048101f807e39` | PR #354 Claude closing PASS、CI 3/3 Green |
+
+master確認のbaselineはPF4 merge後のmain `5604874bb73905967b19f2e6cbc048101f807e39`。PF1のreviewが
+merge後だった手続き違反を隠さない一方、内容PASSと後続PF2〜PF4の非著者closing PASSを、masterの
+機能成立証拠として区別して保持する。本節だけではmasterのclosing PASSを代替しない。
