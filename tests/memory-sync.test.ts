@@ -125,6 +125,42 @@ describe("memory-sync (PLAN-L7-468 PR-B)", () => {
     }
   });
 
+  // U-MEMSYNC-006 (issue #187): 既存 memory の更新は push するまで shared にならない
+  it("does not call an updated memory shared until the new content reaches origin", () => {
+    const origin = mkdtempSync(join(tmpdir(), "ut-tdd-memory-origin-"));
+    const repo = fixtureRepo();
+    try {
+      execFileSync("git", ["init", "--bare", "--initial-branch=main", origin], { stdio: "pipe" });
+      git(repo, ["remote", "add", "origin", origin]);
+      const rel = writeMemory(repo, "project-updated.md", "初版");
+      git(repo, ["add", rel]);
+      git(repo, ["commit", "-m", "add memory"]);
+      git(repo, ["push", "origin", "main"]);
+      expect(analyzeMemorySync(loadMemorySyncInput(repo)).shared).toBe(1);
+
+      // 既存ファイルを更新して commit するが push しない。パスは origin に存在したまま。
+      writeMemory(repo, "project-updated.md", "今日の引き継ぎへ更新した");
+      git(repo, ["add", rel]);
+      git(repo, ["commit", "-m", "update memory"]);
+
+      const updated = analyzeMemorySync(loadMemorySyncInput(repo));
+      expect(updated.shared).toBe(0);
+      expect(updated.warnings.map((f) => f.source_path)).toEqual([rel]);
+      expect(updated.warnings[0]?.state).toBe("not-on-origin");
+      expect(memorySyncMessages(updated).join("\n")).not.toContain("memory-sync — OK");
+
+      // push して初めて内容が届く。
+      git(repo, ["push", "origin", "main"]);
+      const pushed = analyzeMemorySync(loadMemorySyncInput(repo));
+      expect(pushed.shared).toBe(1);
+      expect(pushed.warnings).toHaveLength(0);
+      expect(memorySyncMessages(pushed).join("\n")).toContain("memory-sync — OK");
+    } finally {
+      removeTestTree(repo);
+      removeTestTree(origin);
+    }
+  });
+
   // U-MEMSYNC-005: 判定は純粋関数側で固定 (git を介さない境界)
   it("keeps the severity split in pure analysis: untracked errors, not-on-origin warns", () => {
     const result = analyzeMemorySync({
