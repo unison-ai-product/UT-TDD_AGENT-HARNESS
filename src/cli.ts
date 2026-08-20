@@ -49,6 +49,7 @@ import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context.ts";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record.ts";
 import { computeSkillMetrics } from "./feedback/engine.ts";
+import { registerForwardWorkflowCommands } from "./forward/adapters/cli-registrar.ts";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier.ts";
 import { writeGateRunEvidence } from "./gate/run-evidence.ts";
 import { evaluateStaticGate } from "./gate/static.ts";
@@ -3835,6 +3836,7 @@ githubPolicy
 
 registerFeedbackCommands(program);
 registerPrMergeCommands(program);
+registerForwardWorkflowCommands(program);
 
 program
   .command("setup")

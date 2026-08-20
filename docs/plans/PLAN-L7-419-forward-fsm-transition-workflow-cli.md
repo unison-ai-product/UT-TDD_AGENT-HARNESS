@@ -23,6 +23,30 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-419-forward-fsm-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/forward/adapters/cli-registrar.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/adapters/in-memory-forward-ledger.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/adapters/in-memory-forward-projection.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/application/forward-evidence-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/application/forward-workflow.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/reducer.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/transition-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/types.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/workflow.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/ports/forward-ledger.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/ports/forward-projection.ts
+    artifact_type: source_module
+  - artifact_path: tests/forward/fsm.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-72-forward-fsm-evidence-policy-contracts.md
   requires:
@@ -36,7 +60,31 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/342
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/344
 github_issue_id: 344
-review_evidence: []
+review_evidence:
+  - reviewer: codex-integration-precheck
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-20T12:22:10+09:00"
+    tests_green_at: "2026-08-20T12:21:39+09:00"
+    verdict: implementation_ready_for_ci
+    worker_model: gpt-5.6-luna
+    worker_revision: fc2c4c10df040ab3f8ea000841f217e92c2f1baa
+    green_commands:
+      - kind: unit_test
+        command: "node_modules/.bin/vitest run tests/forward/fsm.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T12:21:39+09:00"
+        evidence_path: tests/forward/fsm.test.ts
+        output_digest: "sha256:7608eba85a8fdce86dfda4aa77e1f8c5539c93606c7281c1ba5a7e54fbd565d5"
+        anchor_commit: 986a296c579fa881640049160f393ad2f68eceaf
+    scope: >-
+      Issue #344 bounded implementation。Lunaがtransition policy、append-only reducer、
+      EvidenceRecord policy、ledger/projection port、workflow status/transition/explain CLIを実装。
+      projection state/digest mismatchをU-FSM-008で、projection write failure後のreplay recoveryを
+      U-FSM-007でRed→Green化し、直接targeted testは12/12、
+      tsc/Biome/plan lint/coding-rulesはGreen。non-author closing review、CI、Reverseは
+      未完了のためDoDを未チェックのまま保持する。Opus pre-gate PASSはHARNESS Memoryへ記録済み。
 ---
 
 # PLAN-L7-419: Forward FSM transition engine / workflow CLI
@@ -49,9 +97,10 @@ Related として参照するが、本PLANの実装所有者ではない。#341�
 PLAN-L7-418のidentity・EvidenceRecord・reservation portを前提に、Forward状態機械の実装
 入場条件だけを凍結する。
 
-本PRは **docs-only pair-freeze** である。`src/forward/**`、CLI、実行可能なFSM test、
-Episode、Pack結線を生成・変更しない。draft PLANの`generates`は本PLANとReverse PLANだけに
-限定し、実装source/testの所有権は後続のbounded implementation Issue/PRで初めて宣言する。
+pair-freezeは#342/#348で完了している。本実装PRは、その境界を越えないbounded implementation
+として `src/forward/**`、workflow CLI registrar、実行可能なFSM testだけを生成する。Episode、
+Pack結線、review custodyはこのPLANのスコープ外であり、既存のL7-418 EvidenceRecord契約を
+再利用する。
 
 main実査では、PLAN-L7-418のU-PA-043/U-PA-044がreservation token、EvidenceRecord境界、
 3表transaction rollbackを既に固定している。旧IMP-156の未解消記録はその証跡へ更新し、
@@ -92,26 +141,27 @@ event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-fre
 - `CANDIDATE-U-FSM-004`: trace freeze欠落のreviewを拒否し、review stateを昇格しない。
 - `CANDIDATE-U-FSM-005`: review/test evidence不足のacceptを拒否し、acceptedへ遷移しない。
 - `CANDIDATE-U-FSM-006`: blocked/reopenedのreasonまたはtyped evidence欠落を拒否し、reentry/rollback intentを発行しない。
-- `CANDIDATE-U-FSM-007`: 同一event列のreplayでstate/verdict/digestを一致させ、projection/outboxを二重生成しない。
-- `CANDIDATE-U-FSM-008`: ledger entry不在・projection再構築不能を`forward-ledger-unavailable` / exit 3へ閉じ、PLAN frontmatterからstateを補完せず副作用0件にする。
+- `CANDIDATE-U-FSM-007`: 同一event列のreplayでstate/verdict/digestを一致させ、projection/outboxを二重生成しない。projection書込み失敗後の同一command再送はappendを増やさず、欠落したderived projectionだけを1回再構築する。
+- `CANDIDATE-U-FSM-008`: ledger entry不在・projection再構築不能・append-only ledgerとのprojection digest/state不一致を`forward-ledger-unavailable` / exit 3へ閉じ、transition/queryのいずれもPLAN frontmatterからstateを補完せず副作用0件にする。
 - `CANDIDATE-U-FSM-009`: 12 lifecycle eventの必須evidence欠落・期限切れを表のspecialized ruleまたは`forward-evidence-missing` / exit 2へ閉じ、eligible frontier・state・outboxを変更しない。
 
 ## 3. Acceptance criteria / DoD
 
-- [ ] `CANDIDATE-U-FSM-001..009`と`CANDIDATE-P-FSM-001`がtest-design台帳に登録される。
-- [ ] transition table、EvidenceRecord port、reservation境界、禁止遷移を設計判断として固定する。
-- [ ] `requires`がconfirmedなPLAN-L7-418を指し、IMP-156はU-PA-043/U-PA-044へ解決、IMP-167はReverseへ送られる。
-- [ ] Schedule、AC/DoD、実装時のbounded surface、Reverse-419 R0→R4が相互参照される。
-- [ ] draftの`generates`はPLAN文書だけで、`src/forward/**`や実装testを先取りしない。
+- [x] `U-FSM-001..009`と`P-FSM-001`がtest-design台帳に登録される。
+- [x] transition table、EvidenceRecord port、reservation境界、禁止遷移を設計判断として固定する。
+- [x] `requires`がconfirmedなPLAN-L7-418を指し、IMP-156はU-PA-043/U-PA-044へ解決、IMP-167はReverseへ送られる。
+- [x] Schedule、AC/DoD、実装時のbounded surface、Reverse-419 R0→R4が相互参照される。
+- [x] 実装PRの`generates`へsource/test所有権を昇格し、exact HEADへ束縛する。
 - [ ] exact HEADでplan lint、candidate/trace/backfill doctorがGreenになる。
+- [x] pair-freeze merge後にのみ、別Issue/PRでLuna実装を開始する。
 - [ ] 非作者Claudeによるclaim-blind/spec-blind closing reviewが同一revisionでPASSする。
-- [ ] pair-freeze merge後にのみ、別Issue/PRでLuna実装を開始する。
+- [ ] Linux / Windows / aggregate CI と Reverse-419 R0→R4 を同一revisionの証跡へ束縛する。
 
 ## 4. 工程と出口
 
 1. **[直列/docs] pair-freeze** — #342で本PLAN、Reverse PLAN、候補9件、依存と境界を確定する。#347でevidence ruleと所有Issueの補正を行う。
 2. **[直列/review] cross-review** — exact HEAD、plan lint、doctor、Claude closing PASSを揃える。
-3. **[直列/implementation] bounded implementation** — pair-freeze merge後、別Issue/PRでLunaが
+3. **[直列/implementation] bounded implementation** — #344でLunaが
    `src/forward/**`とU/P-FSMを実装し、Opusがpre/post gateを行う。
 4. **[直列/reverse] R0→R4** — 実装のsignature/storage/evidence差分、replay/fault、全surface
    verdictを検証し、必要なL6 backfill後にForwardへ戻す。
