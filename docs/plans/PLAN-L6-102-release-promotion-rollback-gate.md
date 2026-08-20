@@ -127,12 +127,12 @@ interface ReviewGateEvidence {
 }
 
 type PromotionGateReason =
-  | "invalid_input" | "identity_mismatch" | "ci_missing" | "qa_no_go"
+  | "invalid_input" | "identity_mismatch" | "ci_missing" | "qa_missing" | "qa_no_go"
   | "review_missing" | "channel_transition_invalid" | "attestation_unavailable";
 type RollbackGateReason =
   | "invalid_input" | "candidate_missing" | "candidate_ambiguous"
   | "identity_mismatch" | "attestation_missing" | "artifact_unavailable"
-  | "restore_indeterminate";
+  | "rollback_failed";
 ```
 
 `ReviewGateEvidence` は架空のreview artifactではなく、既存の
@@ -147,6 +147,11 @@ typed adapterである。`d1.blocking` は既存entryの`blocking`配列が空�
 `PromotionGateResult` は `allow` または上記 `PromotionGateReason` の `deny` だけを返し、
 `RollbackGateResult` は `allow` / `deny` / `indeterminate` を返す。両者とも decision gate自身の
 `sideEffects` は常に`"none"`であり、apply/restoreの実行結果は既存portの別receiptとして入力される。
+
+`sideEffects: "none"`は出力型による意図であり、pure predicate単体を呼んだ回数を「副作用0」の
+証跡とは扱わない。実装テストでは、既存PF5のpointer write / publish / apply / restore等のinjected
+portをcomposition harnessへ渡し、deny・indeterminate各経路のspy countとprior stateを観測する。
+pure gateはportを直接import・呼出しせず、composition側だけがこの観測を所有する。
 
 promotion は次の全条件のANDが成立した場合だけ `allow` とする。
 
@@ -173,6 +178,17 @@ exact一致、(c) CI / QA / reviewのdigest・timestamp順序・verdict、(d) pr
 `allow`以外に副作用可能な出力を定義しない。成功時も返すのはidentityと束縛済みevidence digestを
 含むsealed decisionだけで、publish/applyは呼び出し側の後段portに委ねる。
 
+reasonの分類は、staleまたは別subject（HEAD、PLAN revision、release identity、artifact digest、
+evidence digest、channel）の不一致を常に`identity_mismatch`とする。`*_missing`は該当入力または
+判定結果そのものが欠落している場合にだけ使い、staleをmissingへ丸めない。優先順位は
+`invalid_input` → `identity_mismatch` → `ci_missing` / `qa_missing` / `qa_no_go` / `review_missing` →
+`channel_transition_invalid` → `attestation_unavailable` → `allow`で固定する。
+
+欠落reasonは入力境界ごとに固定し、canonical CI absentは`ci_missing`、QA evidence absentは
+`qa_missing`、QA evidenceが存在するがG01〜G08のいずれかが`go`でない場合は`qa_no_go`、D1/D2または
+claim-blind/spec-blind lane absentは`review_missing`、attestation absent/unavailableは
+`attestation_unavailable`とする。
+
 ## 2. Rollback admission 契約
 
 rollback対象は、現在releaseに対して直前にattest済みで、identity（releaseId、sourceRevision、
@@ -189,12 +205,23 @@ reason: <typed reason>; sideEffects: "none" }`を返す。candidate選択はpure
   fail-closeする。
 - rollback対象外のrelease、最新化による暗黙upgrade、source repositoryへのfallbackを許可しない。
 
+rollbackのreason precedenceは、`invalid_input` → `candidate_missing` / `candidate_ambiguous` →
+`identity_mismatch`（stale・別subject・非隣接targetを含む）→ `attestation_missing` →
+`artifact_unavailable` → apply結果の分類、の順とする。既存`ReleaseAggregateApplyResult`は
+`{ ok: true, applied: 1 }`をallow、`{ ok: false, error: "unavailable", applied: 0 }`を
+`decision: "deny", reason: "artifact_unavailable"`、`{ ok: false, error: "rollback_failed",
+applied: "indeterminate" }`を`decision: "indeterminate", reason: "rollback_failed"`へ写像する。
+既存PF5入力では`rollback_failed`がindeterminate decisionの唯一のreasonであり、別のrestore-unknown
+reasonを導入しない。
+
 PF5の既存 aggregate admission/apply port（snapshot、staging、apply、discard、restore）を正本として、
 S3はその結果とreceiptのgate判定だけを所有する。
 
 ## 3. QA Go/No-Go と mutation oracle
 
-最小oracleは以下とする。各mutationは一つずつ注入し、deny時のwrite/publish=0を観測する。
+最小oracleは以下とする。各mutationは一つずつ注入し、pure predicateの戻り値だけでなく、既存PF5
+portを注入したcomposition harnessのpointer write / publish / apply / restore spy countとprior
+stateを観測する。pure predicate単体の「副作用0」は証跡として数えない。
 
 | oracle | RED mutation | Green条件 |
 |---|---|---|
@@ -203,10 +230,10 @@ S3はその結果とreceiptのgate判定だけを所有する。
 | `CANDIDATE-RELMAN-005` | rollback実行計画を生成 | force push/tag付替え/commit/push command 0 |
 | `CANDIDATE-RELMAN-008` | No-Go未解除のままstableへpromotion | dependency不足で拒否、channel pointer不変、write/publish 0 |
 | `CANDIDATE-RELMAN-010` | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write/publish 0 |
-| `CANDIDATE-RELMAN-019` | `releaseId`、`sourceRevision`、`artifactDigest`、materializer version、channelの各identityを1要素ずつ変異 | exact artifact identity不一致として拒否、channel pointer不変、write/publish 0 |
+| `CANDIDATE-RELMAN-019` | `releaseId`、`sourceRevision`、`artifactDigest`、materializer version、channelの各identityを1要素ずつ変異 | すべて`identity_mismatch`として拒否、channel pointer不変、composition harnessのwrite/publish spy 0 |
 | `CANDIDATE-RELMAN-020` | manifest、PF4 `ReleaseChannelAttestation`、PF5 `SealedReleaseAggregatePlan`、CI、QA、review evidenceを各1点ずつunavailable、staleなexact head/PLAN revision/evidence digest、別revisionへ変異。`observedAt`単独の経過時間は変異対象にしない | promotion拒否、evidence再利用・source fallback・write/publish 0 |
 | `CANDIDATE-RELMAN-021` | 直前attested rollback候補を0件、2件、attestation欠落、identity不一致へ各1点変異 | rollback拒否、現行pointer・artifact bytes不変、apply/write 0 |
-| `CANDIDATE-RELMAN-022` | 既存restore portの各境界へfaultを注入し、復元不能を観測 | `rollback_failed`または`indeterminate`へfail-closeし、成功扱い・partial publish 0 |
+| `CANDIDATE-RELMAN-022` | 既存restore portの各境界へfaultを注入し、復元不能を観測 | `decision=indeterminate, reason=rollback_failed`へfail-closeし、成功扱い・partial publish 0 |
 | `CANDIDATE-RELMAN-023` | product-defined channel順序の次段でないtarget、channel pointerの旧revision、unknown targetを各1点変異 | promotion拒否、channel pointer不変、write/publish 0 |
 
 artifact identity単独変異、直前attested以外のrollback候補、PF5 restore不能の合成境界は、既存candidateとの
