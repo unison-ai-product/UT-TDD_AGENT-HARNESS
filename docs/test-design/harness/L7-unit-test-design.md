@@ -1903,12 +1903,17 @@ staleをmissingへ丸めない。既存PF5 apply結果は`unavailable`→`artifa
 欠落reasonはCI absent=`ci_missing`、QA absent=`qa_missing`、QA presentだがG01〜G08非go=`qa_no_go`、
 reviewまたは片lane absent=`review_missing`、attestation absent/unavailable=`attestation_unavailable`
 で固定する。
+Review input mappingは既存sourceと1:1で固定する。D1の`exactHeadSha`/`state`/`verdict`/`blocking`は
+同一`ReviewDispatchEntry`から、D2の`ok`/`state`/`reasons`/`headSha`は`MergeGateDecision`から、
+`evaluatedHeadSha`は同一evaluate呼出しの`MergeGateFacts`から構成する。facts/head/decision/D1の
+HEAD一致、claim-blind/spec-blind各laneのsubject/PLAN revision一致を各軸で変異し、003/020でdenyと
+composition side-effect spy 0を確認する。
 
 | candidate ID | 所有slice | mutation / 入力 | oracle |
 |---|---|---|---|
 | `U-RELMAN-001` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-001` | `releases` / `channelOrder`の必須field欠落、object/array/string/number/nullを各fieldへ型違いで入力、未知schema version・root / nested recordの未知field、`schema_version` / source commit / artifact digest / release IDの形式違反を各1件入力し、pure parseが全mutationをtyped errorでfail-closeする。I/O副作用はこのoracleの主張外 |
 | `U-RELMAN-002` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-002` | manifestに存在しないchannelをpure resolverへ指定し、`unknown_channel`を返してrelease成功値を返さない。aggregate side-effect 0はこのoracleの主張外 |
-| `CANDIDATE-RELMAN-003` | S3 promotion / `PLAN-L6-102` / #360 | canonical Linux/Windows/aggregate CI、QA Go、cross-family closing receiptを各1件ずつ欠落・stale・別subjectへ変異 | CI absent=`ci_missing`、QA absent=`qa_missing`、QA non-go=`qa_no_go`、review/lane absent=`review_missing`。stale/別subjectは`identity_mismatch`で拒否。composition harnessのchannel pointer/write/publish spy 0、prior state不変 |
+| `CANDIDATE-RELMAN-003` | S3 promotion / `PLAN-L6-102` / #360 | canonical Linux/Windows/aggregate CI、QA Go、cross-family closing receipt、およびD1 exactHead/state/verdict/blocking・D2 ok/state/reasons/head/evaluatedHead・facts/D1/claim/spec laneの各mapping/equalityを1軸ずつ欠落・stale・別subjectへ変異 | CI absent=`ci_missing`、QA absent=`qa_missing`、QA non-go=`qa_no_go`、review/lane absent=`review_missing`。stale/別subjectまたはmapping/equality不一致は`identity_mismatch`でpromotion拒否。composition harnessのchannel pointer/write/publish spy 0、prior state不変 |
 | `CANDIDATE-RELMAN-004` | S3 rollback / `PLAN-L6-102` / #360 | 同じmanifest・prior release・targetを2回rollback評価 | 同一pointer deltaとdigestへ収束し、二重apply 0 |
 | `CANDIDATE-RELMAN-005` | S3 rollback / `PLAN-L6-102` / #360 | rollback実行計画を生成 | force push / tag付替え / commit / push command 0 |
 | `U-RELMAN-006` | PF-4 adapter / `PLAN-L7-489` / #250 | `tests/release-channel-adapter.test.ts` の三値adapter composition | selected channelのobject不在・resolver失敗、materialized digest不一致、完全一致を個別入力し、順に`unavailable` / `mismatch` / `attested`。三値を二値へ丸めず、外部copy/write portを呼ばない |
@@ -1918,7 +1923,7 @@ reviewまたは片lane absent=`review_missing`、attestation absent/unavailable=
 | `U-RELMAN-009` | PF-1 / `PLAN-L7-479` / #247 | `tests/release-manifest.test.ts` の `U-RELMAN-009` | release ID key、source commit、artifact digestのhexをそれぞれ単独で1 nibble変異し、各mutationが独立に導出式不一致となる。artifact digest mutationをsource commit mutationで代替しない |
 | `CANDIDATE-RELMAN-010` | S3 promotion / rollback / `PLAN-L6-102` / #360 | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write/publish 0 |
 | `CANDIDATE-RELMAN-019` | S3 promotion / `PLAN-L6-102` / #360 | `releaseId`、`sourceRevision`、`artifactDigest`、materializer version、channelの各identityを1要素ずつ変異 | すべて`identity_mismatch`として拒否、channel pointer不変、composition harnessのwrite/publish spy 0 |
-| `CANDIDATE-RELMAN-020` | S3 promotion / `PLAN-L6-102` / #360 | manifest、PF4 `ReleaseChannelAttestation`、PF5 `SealedReleaseAggregatePlan`、CI、QA、review evidenceを各1点ずつunavailable、staleなexact head/PLAN revision/evidence digest、別revisionへ変異。`observedAt`単独の経過時間は変異対象にしない | CI absent=`ci_missing`、QA absent=`qa_missing`、QA non-go=`qa_no_go`、review/lane absent=`review_missing`、attestation absent/unavailable=`attestation_unavailable`。stale/別subjectは`identity_mismatch`で拒否。composition harnessのevidence再利用/source fallback/write/publish spy 0 |
+| `CANDIDATE-RELMAN-020` | S3 promotion / `PLAN-L6-102` / #360 | manifest、PF4 `ReleaseChannelAttestation`、PF5 `SealedReleaseAggregatePlan`、CI、QA、review evidence、およびD1/D2/facts/claim/spec laneの1:1 mapping/equalityを各1点ずつunavailable、staleなexact head/PLAN revision/evidence digest、別revisionへ変異。`observedAt`単独の経過時間は変異対象にしない | CI absent=`ci_missing`、QA absent=`qa_missing`、QA non-go=`qa_no_go`、review/lane absent=`review_missing`、attestation absent/unavailable=`attestation_unavailable`。stale/別subjectまたはmapping/equality不一致は`identity_mismatch`で拒否。composition harnessのevidence再利用/source fallback/write/publish spy 0 |
 | `CANDIDATE-RELMAN-021` | S3 rollback / `PLAN-L6-102` / #360 | 直前attested rollback候補を0件、2件、attestation欠落、identity不一致へ各1点変異 | rollback拒否、現行pointer・artifact bytes不変、apply/write 0 |
 | `CANDIDATE-RELMAN-022` | S3 rollback / `PLAN-L6-102` / #360 | 既存restore portの各境界へfaultを注入し、復元不能を観測 | `error=rollback_failed, applied=indeterminate`は`decision=indeterminate, reason=rollback_failed`へfail-close。成功扱い・partial publish 0、composition harnessのrestore/apply spyとprior stateを観測 |
 | `CANDIDATE-RELMAN-023` | S3 promotion / `PLAN-L6-102` / #360 | product-defined channel順序の次段でないtarget、channel pointerの旧revision、unknown targetを各1点変異 | promotion拒否、channel pointer不変、write/publish 0 |

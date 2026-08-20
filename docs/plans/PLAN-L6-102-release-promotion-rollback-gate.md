@@ -117,8 +117,9 @@ interface ReviewGateEvidence {
     readonly blocking: readonly [];
   };
   readonly d2: {
-    readonly decision: "allow";
-    readonly reason: "merge_ready";
+    readonly ok: true;
+    readonly state: "merge_ready";
+    readonly reasons: readonly [];
     readonly headSha: string;
     readonly evaluatedHeadSha: string;
   };
@@ -137,12 +138,16 @@ type RollbackGateReason =
 
 `ReviewGateEvidence` は架空のreview artifactではなく、既存の
 `ReviewDispatchEntry`（D1）・`MergeGateDecision`（D2）・`ReviewReceiptSource`をS3入力境界で束ねる
-typed adapterである。`d1.blocking` は既存entryの`blocking`配列が空である場合だけ空tupleとして構成し、
-`d2` は既存merge gateの`ok=true`、`reason="merge_ready"`相当、`headSha===evaluatedHeadSha`を
-再照合して構成する。`claimBlind` / `specBlind` はそれぞれlaneが一致し、両方が
+typed adapterである。`d1.exactHeadSha`は既存`ReviewDispatchEntry.exactHead`から、`d1.state`・
+`d1.verdict`・`d1.blocking`は同一entryから1:1で構成する。`d2.ok`・`d2.state`・`d2.reasons`・
+`d2.headSha`は既存`MergeGateDecision`から、`d2.evaluatedHeadSha`は同一evaluate呼出しへ渡した
+`MergeGateFacts.evaluatedHeadSha`から1:1で構成し、人工的なdecision/reason値を生成しない。
+`claimBlind` / `specBlind` はそれぞれlaneが一致し、両方が
 `validCrossReviewSource`を通過し、同一`exactHeadSha`・`planRevision`、cross-family、`PASS`または
 `PASS-WEAK`でなければならない。片lane欠落、lane混線、D1のblocking残存、D2のsubject不一致は
 `CANDIDATE-RELMAN-003` / `020`のdeny対象であり、`ReviewReceiptSource`単体をD1/D2の代用にしない。
+`facts.headSha === facts.evaluatedHeadSha === d2.headSha === d1.exactHeadSha`、および全laneの
+subject/PLAN revision一致を必須とする。
 
 `PromotionGateResult` は `allow` または上記 `PromotionGateReason` の `deny` だけを返し、
 `RollbackGateResult` は `allow` / `deny` / `indeterminate` を返す。両者とも decision gate自身の
