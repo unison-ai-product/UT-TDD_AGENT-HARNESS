@@ -47,13 +47,28 @@ review_evidence:
     citations:
       - "U-RELMAN-003/004/005/008/010/019..023: 10 passed"
       - "PF5 injected apply/restore fault: rollback_failed/applied=indeterminate"
+  - reviewer: codex-primary-flag-closure
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-20T12:03:14Z"
+    tests_green_at: "2026-08-20T12:01:20Z"
+    verdict: "R2 B1-B5 delta green; R3 non-author rereview pending"
+    scope: "exact implementation revisionでreview bindingとPF5 compositionのFLAG closureを再検収。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: ae28531757e60db279f53dc72987e62fb9ca80ca
+    subject_head: ae28531757e60db279f53dc72987e62fb9ca80ca
+    evidence_path: tests/release-promotion-rollback-gate.test.ts
+    anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
+    citations:
+      - "B1/B2: rollback D2 gateとreview source splicing拒否"
+      - "B3/B4/B5: PF5実composition、non-attested identity、runtime shape fail-close"
 ---
 
 # PLAN-REVERSE-494: S3 promotion / rollback gateの上流合流
 
 ## 1. R1/R2実測
 
-exact implementation HEAD `c1a3a67a2614b3bc755c8dfe4b30d20a6a613159`でsource/test/traceを固定した。
+FLAG是正後のexact implementation HEAD `ae28531757e60db279f53dc72987e62fb9ca80ca`でsource/test/traceを固定した。
 R2ではU-RELMAN 10件を各1 testとして実行し、10/10 Green、TypeScript、Biome、PLAN lintを確認した。
 canonical detached snapshot、Linux / Windows / aggregate CI、非著者reviewは未完であり、R3完了とはしない。
 

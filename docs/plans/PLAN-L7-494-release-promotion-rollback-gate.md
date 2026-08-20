@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T11:37:24Z"
         evidence_path: tests/release-promotion-rollback-gate.test.ts
-        output_digest: "sha256:81162111bae7cc38860e69f9a83cfbf41c838400b54b14c17713ce267fe39017"
+        output_digest: "sha256:b93cd4290ebe0880b7e91626f160faf740a247dbdeab8efa1637f6c76bfd508e"
         anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
       - kind: typecheck
         command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
@@ -79,8 +79,43 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T11:35:01Z"
         evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:609aa6cad5a6cdf553b95ee9d7ffb69a542520d35326a367b1ffb1643c4114ff"
+        output_digest: "sha256:f3fe31c90401e08fce4a5f4f3a6dab35b9ba7ea087c30a0af8a572d0d4038022"
         anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+  - reviewer: codex-primary-flag-closure
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-20T12:03:14Z"
+    tests_green_at: "2026-08-20T12:01:20Z"
+    verdict: "Claude FLAG B1-B5 local closure green; non-author exact-head rereview pending"
+    scope: "rollback review gate、source splicing、PF5 real composition、non-attested identity、runtime invalid shapeの是正。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: ae28531757e60db279f53dc72987e62fb9ca80ca
+    subject_head: ae28531757e60db279f53dc72987e62fb9ca80ca
+    evidence_path: tests/release-promotion-rollback-gate.test.ts
+    anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
+    citations:
+      - "U-RELMAN-010: rollback D2 absent deny、PF5 ports 0"
+      - "U-RELMAN-020: PR/auth/PLAN/family splicingとreason precedence"
+      - "U-RELMAN-021/022: runtime invalid/non-attested identity/PF5 indeterminate composition"
+    green_commands:
+      - kind: unit_test
+        command: "node node_modules/vitest/vitest.mjs run tests/release-promotion-rollback-gate.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1 (workspace-fence diagnostic)"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T12:01:20Z"
+        evidence_path: tests/release-promotion-rollback-gate.test.ts
+        output_digest: "sha256:81162111bae7cc38860e69f9a83cfbf41c838400b54b14c17713ce267fe39017"
+        anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
+      - kind: typecheck
+        command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-20T12:02:40Z"
+        evidence_path: src/setup/release-promotion-rollback-gate.ts
+        output_digest: "sha256:609aa6cad5a6cdf553b95ee9d7ffb69a542520d35326a367b1ffb1643c4114ff"
+        anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
 ---
 
 # PLAN-L7-494: S3 release promotion / rollback pure gate
