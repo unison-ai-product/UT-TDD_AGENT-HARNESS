@@ -57,8 +57,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T14:42:27+09:00"
         evidence_path: tests/worktree-topology-doctor.test.ts
-        output_digest: "sha256:88c5cd941c1c00d9405f021d05d337e7bd1b7207541385cf43614bdca3772b4c"
-        anchor_commit: 102ab2a3f44031dd6377dda8a7b88dc32eefa674
+        output_digest: "sha256:cb659673fdd36650e84e36ffa055a1cd376bb3321aac2c0806da268bb53e52e8"
+        anchor_commit: d72f28f975d7140cf221f23c229815d69f9954c3
       - kind: typecheck
         command: "npm run typecheck"
         runner: node
@@ -67,7 +67,7 @@ review_evidence:
         completed_at: "2026-08-20T14:35:51+09:00"
         evidence_path: src/doctor/worktree-topology-advisory.ts
         output_digest: "sha256:bdcc224ded42e10234845f7bf2d842d9e4fff32d981c9a6c8fadb3817381e77e"
-        anchor_commit: 102ab2a3f44031dd6377dda8a7b88dc32eefa674
+        anchor_commit: d72f28f975d7140cf221f23c229815d69f9954c3
 ---
 
 # PF3: doctor advisory wiring
