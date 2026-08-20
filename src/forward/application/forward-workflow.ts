@@ -81,6 +81,16 @@ export class ForwardWorkflowApplication {
     if (!reduced.ok) return this.errorEnvelope("status", subject, reduced);
     const projection = this.deps.projection.read(subject);
     if (!projection.ok) return this.errorEnvelope("status", subject, projection);
+    if (
+      projection.state !== reduced.state ||
+      projection.digest !== reduced.digest ||
+      projection.stateDigest !== reduced.stateDigest
+    )
+      return this.errorEnvelope("status", subject, {
+        ok: false,
+        ruleId: "forward-ledger-unavailable",
+        exitCode: 3,
+      });
     return this.envelope("status", subject, reduced, "allow", "forward-status", null, null, 0);
   }
 

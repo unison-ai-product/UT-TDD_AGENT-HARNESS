@@ -14,6 +14,7 @@ import {
   type ForwardState,
 } from "../../src/forward/domain/transition-policy.ts";
 import type { ForwardEvent } from "../../src/forward/domain/types.ts";
+import type { ForwardProjectionPort } from "../../src/forward/ports/forward-projection.ts";
 import { HmacEvidenceAttestationIssuer } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.ts";
 import {
   createRedactedCommandArgs,
@@ -139,6 +140,29 @@ describe("Forward FSM", () => {
       ruleId: "forward-ledger-unavailable",
     });
     expect(app.explain(subject, { event: "plan", evidence: [] })).toMatchObject({
+      exitCode: 3,
+      ruleId: "forward-ledger-unavailable",
+    });
+  });
+
+  it("U-FSM-008: a projection that disagrees with the append-only ledger is unavailable", () => {
+    const ledger = new InMemoryForwardLedger();
+    const projection: ForwardProjectionPort = {
+      isAvailable: () => true,
+      project: () => ({ ok: true, replayed: false }),
+      read: () => {
+        const reduced = reduceForward(ledger.appended);
+        if (!reduced.ok) return reduced;
+        return { ...reduced, state: "proposed" as const };
+      },
+    };
+    const app = new ForwardWorkflowApplication({
+      ledger,
+      projection,
+      evidencePolicy: new ForwardEvidencePolicy(verifier),
+    });
+    expect(app.transition({ ...request("plan"), evidence: evidenceFor("plan") }).exitCode).toBe(0);
+    expect(app.status(subject)).toMatchObject({
       exitCode: 3,
       ruleId: "forward-ledger-unavailable",
     });
