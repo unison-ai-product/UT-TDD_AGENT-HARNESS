@@ -173,7 +173,9 @@ export function runDoctorMeasured(
     checkAgentSlots(doctorSlotsDeps(deps)),
     ...checkPlanReferenceFreshnessAdvisory(deps.repoRoot),
     ...checkWorktreeTopologyAdvisory(
-      deps.worktreeTopology ?? { facts: [], adminEntries: [] },
+      typeof deps.worktreeTopology === "function"
+        ? deps.worktreeTopology()
+        : (deps.worktreeTopology ?? { facts: [], adminEntries: [] }),
     ).messages.map((m) => `doctor: ${m}`),
   ];
   const { checks, checkIds, timings } = collectDoctorCheckRun(deps, options);

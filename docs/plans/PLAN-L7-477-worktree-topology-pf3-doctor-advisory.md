@@ -45,6 +45,8 @@ review_evidence:
       empty facts は no-op、findings は advisory 表示のみとした。collector/analyzer は削除・prune・
       repairへ拡張せず、doctor hard-gate / CI exit code へ接続していない。実装 worker は
       gpt-5.6-luna、effort=high。non-author Claude closing review は別途 HARNESS Memory 経由で依頼する。
+      collector は DoctorDeps の lazy provider とし、check 定義列挙では起動せず、1 doctor run の advisory
+      評価時に一度だけ呼び出す。
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-luna
     green_commands:

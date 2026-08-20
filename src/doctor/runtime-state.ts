@@ -19,6 +19,10 @@ import {
 import type { WorktreeTopologyInput } from "../runtime/worktree-topology.ts";
 import { collectWorktreeTopology } from "../runtime/worktree-topology-collector.ts";
 
+export type WorktreeTopologyProvider =
+  | WorktreeTopologyInput
+  | (() => WorktreeTopologyInput);
+
 /** I/O・clock 注入 (test 可能、handover staleness 検査用)。 */
 export interface DoctorDeps {
   repoRoot: string;
@@ -26,7 +30,7 @@ export interface DoctorDeps {
   readText: (path: string) => string | null;
   listDir: (dir: string) => string[];
   /** Optional PF3 input; node deps populate it, tests may provide facts directly. */
-  worktreeTopology?: WorktreeTopologyInput;
+  worktreeTopology?: WorktreeTopologyProvider;
 }
 
 export function handoverDeps(deps: DoctorDeps): HandoverDeps {
@@ -102,6 +106,6 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
     now: new Date().toISOString(),
     readText: (path) => (existsSync(path) ? readFileSync(path, "utf8") : null),
     listDir: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
-    worktreeTopology: collectWorktreeTopology({ repoRoot }),
+    worktreeTopology: () => collectWorktreeTopology({ repoRoot }),
   };
 }

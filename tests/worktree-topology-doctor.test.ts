@@ -4,6 +4,7 @@ import {
   worktreeTopologyAdvisoryMessages,
 } from "../src/doctor/worktree-topology-advisory.ts";
 import type { WorktreeTopologyInput } from "../src/runtime/worktree-topology.ts";
+import { nodeDoctorDeps, type DoctorDeps } from "../src/doctor/runtime-state.ts";
 
 describe("worktree topology doctor advisory", () => {
   it("U-WTTOPO-015: empty facts are a complete no-op", () => {
@@ -37,5 +38,30 @@ describe("worktree topology doctor advisory", () => {
     expect(result.ok).toBe(true);
     expect(result.messages.join("\n")).toContain("worktree-topology");
     expect(result.messages.join("\n")).toContain("dir_missing");
+  });
+
+  it("U-WTTOPO-015: node doctor deps keep collection lazy until advisory evaluation", () => {
+    const deps = nodeDoctorDeps("C:/repo");
+    expect(typeof deps.worktreeTopology).toBe("function");
+    const input = deps.worktreeTopology as () => WorktreeTopologyInput;
+    expect(input).toBeTypeOf("function");
+  });
+
+  it("U-WTTOPO-015: a provider is evaluated once when the consumer reads it", () => {
+    let calls = 0;
+    const deps: DoctorDeps = {
+      repoRoot: "/repo",
+      now: "2026-08-20T00:00:00.000Z",
+      readText: () => null,
+      listDir: () => [],
+      worktreeTopology: () => {
+        calls += 1;
+        return { facts: [], adminEntries: [] };
+      },
+    };
+    expect(calls).toBe(0);
+    const provider = deps.worktreeTopology as () => WorktreeTopologyInput;
+    checkWorktreeTopologyAdvisory(provider());
+    expect(calls).toBe(1);
   });
 });
