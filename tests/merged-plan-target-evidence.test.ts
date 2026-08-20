@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { createSnapshot } from "../scripts/run-vitest-snapshot.ts";
 import {
   analyzeMergedPlanStatus,
   loadMergedPlanStatusInput,
@@ -205,6 +206,15 @@ function git(root: string, args: string[]): void {
   execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
 }
 
+function gitStatus(root: string, args: string[]): number | null {
+  try {
+    execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
+    return 0;
+  } catch {
+    return 1;
+  }
+}
+
 function gitText(root: string, args: string[]): string {
   return execFileSync("git", ["-C", root, ...args], { encoding: "utf8" }).trim();
 }
@@ -235,3 +245,129 @@ function writePlan(root: string, name: string, artifactPath: string): void {
     "utf8",
   );
 }
+
+/**
+ * issue #186 の end-to-end 回帰フェンス。
+ *
+ * 欠陥は「stacked PR (base ≠ default branch) では canonical target の入力そのものが得られず、
+ * `merged-plan-status` が内容と無関係に throw する」だった。原因は 2 つの面の合成である:
+ * (a) doctor の実行面が snapshot clone で、CI checkout に local branch が無いため
+ *     default branch の ref が生えない、(b) 候補列挙の第 1 候補 (event の base SHA) が
+ *     `base ref == default branch` のときしか使われない。
+ *
+ * `PLAN-L7-461` の ref 注入 (`createSnapshot` → `injectDefaultBranchRef`) が (a) を塞いだが、
+ * **両方の面を合成した回帰は無かった** — 注入側は `U-TESTHYGIENE-053/054` が、候補列挙側は
+ * 上の stacked-base ケースが、それぞれ**別々に**固定しているだけだった。どちらか一方の変更で
+ * 静かに再発しうるので、合成面をここで固定する。
+ */
+describe("stacked PR canonical target inside a snapshot (issue #186)", () => {
+  /** CI checkout と同型の面 (detached + local branch なし) を作り、その snapshot を返す。 */
+  const stackedSnapshot = (): {
+    snapshot: string;
+    mainSha: string;
+    childSha: string;
+    cleanup: () => void;
+  } => {
+    const origin = mkdtempSync(join(tmpdir(), "ut-tdd-186-origin-"));
+    const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-186-checkout-"));
+    rmSync(checkout, { recursive: true, force: true });
+    const snapshot = `${checkout}-snapshot`;
+    git(origin, ["init", "-b", "main"]);
+    git(origin, ["config", "user.email", "test@example.invalid"]);
+    git(origin, ["config", "user.name", "UT-TDD test"]);
+    mkdirSync(join(origin, "src"), { recursive: true });
+    writeFileSync(join(origin, "src", "main.ts"), "export const main = true;\n", "utf8");
+    git(origin, ["add", "."]);
+    git(origin, ["commit", "-m", "main"]);
+    const mainSha = gitText(origin, ["rev-parse", "HEAD"]);
+
+    git(tmpdir(), ["clone", "--no-tags", origin, checkout]);
+    git(checkout, ["config", "user.email", "test@example.invalid"]);
+    git(checkout, ["config", "user.name", "UT-TDD test"]);
+    writeFileSync(join(checkout, "src", "child.ts"), "export const child = true;\n", "utf8");
+    git(checkout, ["add", "."]);
+    git(checkout, ["commit", "-m", "child"]);
+    const childSha = gitText(checkout, ["rev-parse", "HEAD"]);
+    git(checkout, ["checkout", "--detach", childSha]);
+    git(checkout, ["branch", "-D", "main"]);
+
+    return {
+      snapshot,
+      mainSha,
+      childSha,
+      cleanup: () => {
+        rmSync(origin, { recursive: true, force: true });
+        rmSync(checkout, { recursive: true, force: true });
+        rmSync(snapshot, { recursive: true, force: true });
+      },
+    };
+  };
+
+  const withStackedEvent = (dir: string, run: () => void): void => {
+    const eventPath = join(dir, "stacked-event.json");
+    const previous = process.env.GITHUB_EVENT_PATH;
+    writeFileSync(
+      eventPath,
+      JSON.stringify({
+        repository: { default_branch: "main" },
+        // stacked: 直近 base は default branch ではない
+        pull_request: { base: { ref: "work/parent", sha: "b".repeat(40) } },
+      }),
+      "utf8",
+    );
+    process.env.GITHUB_EVENT_PATH = eventPath;
+    try {
+      run();
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_EVENT_PATH;
+      else process.env.GITHUB_EVENT_PATH = previous;
+    }
+  };
+
+  it("resolves the canonical target even though the immediate base is not the default branch", () => {
+    const { snapshot, mainSha, childSha, cleanup } = stackedSnapshot();
+    try {
+      const checkout = snapshot.replace(/-snapshot$/, "");
+      // 前提: 素の面には default branch の ref が無い (これが #186 の入口)。
+      expect(gitStatus(checkout, ["rev-parse", "--verify", "refs/heads/main^{commit}"])).not.toBe(
+        0,
+      );
+      createSnapshot(checkout, snapshot);
+
+      withStackedEvent(snapshot, () => {
+        const evidence = resolveMergedPlanTargetEvidence(snapshot);
+        expect(evidence).toMatchObject({
+          decision: "canonical_target",
+          targetRef: "origin/main",
+          targetSha: mainSha,
+          subjectHeadSha: childSha,
+          // 直近 base は evidence に残るが target には採らない (#138 の countermeasure は不変)。
+          immediateBaseRef: "work/parent",
+          source: "remote_default",
+        });
+      });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it("stays fail-closed when the source face has no resolvable default branch", () => {
+    const { snapshot, cleanup } = stackedSnapshot();
+    try {
+      const checkout = snapshot.replace(/-snapshot$/, "");
+      // default branch の痕跡を全て落とす = 注入元が無い面。
+      git(checkout, ["remote", "remove", "origin"]);
+      createSnapshot(checkout, snapshot);
+
+      withStackedEvent(snapshot, () => {
+        expect(resolveMergedPlanTargetEvidence(snapshot)).toMatchObject({
+          decision: "no_verified_target",
+          targetRef: null,
+          targetSha: null,
+        });
+      });
+    } finally {
+      cleanup();
+    }
+  });
+});
