@@ -74,9 +74,11 @@ S3は存在しない「PF1〜PF5 receipt」を前提にしない。各段の既�
 | QA Go/No-Go | `docs/governance/vmodel-refactor-qa-release-gates.md` §3.2、`PLAN-L6-49` / `PLAN-L7-394` | 現行runtimeにS3専用QA receipt型は存在しないため、実装時に`QaReleaseGateEvidence` typed inputを導入する。G01〜G08の判定、対象release identity、source revision、artifact digest、channel、evidence digestを必須化する |
 
 `CanonicalCiEvidence` と `QaReleaseGateEvidence` はS3実装の入力型であり、外部ファイルを正本に
-昇格させるものではない。いずれも不正な形、対象外revision、期限切れ、判定不能を入力時点で
-`deny`へ落とす。S3のpure gateは上記入力を読むだけで、GitHub、Pack、filesystem、DB、apply portを
-直接呼び出さない。
+昇格させるものではない。いずれも不正な形、対象外revision、判定不能を入力時点で`deny`へ落とす。
+`observedAt` は監査・同一入力内の順序確認にだけ使い、暗黙のTTLやwall-clock依存の「期限切れ」判定は
+導入しない。freshness は exact subject/head/PLAN revision/evidence digest の一致と、既存契約が要求する
+timestamp の形式・順序で決定する。S3のpure gateは上記入力を読むだけで、GitHub、Pack、filesystem、DB、
+apply portを直接呼び出さない。
 
 実装者が境界を推測しないよう、最小のtyped shapeを次で固定する。`success` / `go`以外の値は
 成功へcoerceせず、unknown field・欠落・重複はtyped denyとする。
@@ -104,6 +106,26 @@ interface QaReleaseGateEvidence {
   readonly observedAt: string;
 }
 
+interface ReviewGateEvidence {
+  readonly exactHeadSha: string;
+  readonly planRevision: string;
+  readonly d1: {
+    readonly state: "merge_ready";
+    readonly exactHeadSha: string;
+    readonly reviewRevision: string;
+    readonly verdict: "PASS" | "PASS-WEAK";
+    readonly blocking: readonly [];
+  };
+  readonly d2: {
+    readonly decision: "allow";
+    readonly reason: "merge_ready";
+    readonly headSha: string;
+    readonly evaluatedHeadSha: string;
+  };
+  readonly claimBlind: ReviewReceiptSource;
+  readonly specBlind: ReviewReceiptSource;
+}
+
 type PromotionGateReason =
   | "invalid_input" | "identity_mismatch" | "ci_missing" | "qa_no_go"
   | "review_missing" | "channel_transition_invalid" | "attestation_unavailable";
@@ -112,6 +134,15 @@ type RollbackGateReason =
   | "identity_mismatch" | "attestation_missing" | "artifact_unavailable"
   | "restore_indeterminate";
 ```
+
+`ReviewGateEvidence` は架空のreview artifactではなく、既存の
+`ReviewDispatchEntry`（D1）・`MergeGateDecision`（D2）・`ReviewReceiptSource`をS3入力境界で束ねる
+typed adapterである。`d1.blocking` は既存entryの`blocking`配列が空である場合だけ空tupleとして構成し、
+`d2` は既存merge gateの`ok=true`、`reason="merge_ready"`相当、`headSha===evaluatedHeadSha`を
+再照合して構成する。`claimBlind` / `specBlind` はそれぞれlaneが一致し、両方が
+`validCrossReviewSource`を通過し、同一`exactHeadSha`・`planRevision`、cross-family、`PASS`または
+`PASS-WEAK`でなければならない。片lane欠落、lane混線、D1のblocking残存、D2のsubject不一致は
+`CANDIDATE-RELMAN-003` / `020`のdeny対象であり、`ReviewReceiptSource`単体をD1/D2の代用にしない。
 
 `PromotionGateResult` は `allow` または上記 `PromotionGateReason` の `deny` だけを返し、
 `RollbackGateResult` は `allow` / `deny` / `indeterminate` を返す。両者とも decision gate自身の
@@ -131,12 +162,12 @@ promotion は次の全条件のANDが成立した場合だけ `allow` とする�
 5. manifest、materialized artifact、resolver結果、channel mapping、PF5 sealed aggregateの
    `releaseId` / `sourceRevision` / `artifactDigest` が一致する。
 
-いずれか一つでも欠落・不一致・期限切れ・別subjectなら `deny` とし、promotion先への write、publish、
+いずれか一つでも欠落・不一致・stale subject（head、PLAN revision、evidence digestの不一致）・別subjectなら `deny` とし、promotion先への write、publish、
 tag変更、commit、pushを全て0にする。receiptを別releaseから再利用するfallbackや、CI/QAの一部成功を
 promotion成功へ丸めるfallbackは持たない。
 
 判定順序は固定する。(a) typed input shape / required field、(b) subject・revision・identityの
-exact一致、(c) CI / QA / reviewの有効期限とverdict、(d) product-defined channelの隣接遷移、
+exact一致、(c) CI / QA / reviewのdigest・timestamp順序・verdict、(d) product-defined channelの隣接遷移、
 (e) `attested`状態、(f) `allow`の順で評価する。(a)〜(e)のどこか一つでも失敗した結果は
 `PromotionGateResult = { decision: "deny", reason: <typed reason>, sideEffects: "none" }`とし、
 `allow`以外に副作用可能な出力を定義しない。成功時も返すのはidentityと束縛済みevidence digestを
@@ -173,7 +204,7 @@ S3はその結果とreceiptのgate判定だけを所有する。
 | `CANDIDATE-RELMAN-008` | No-Go未解除のままstableへpromotion | dependency不足で拒否、channel pointer不変、write/publish 0 |
 | `CANDIDATE-RELMAN-010` | valid manifest deltaをD2 `merge_ready`なしで適用 | promotion/rollback write/publish 0 |
 | `CANDIDATE-RELMAN-019` | `releaseId`、`sourceRevision`、`artifactDigest`、materializer version、channelの各identityを1要素ずつ変異 | exact artifact identity不一致として拒否、channel pointer不変、write/publish 0 |
-| `CANDIDATE-RELMAN-020` | manifest、PF4 `ReleaseChannelAttestation`、PF5 `SealedReleaseAggregatePlan`、CI、QA、review evidenceを各1点ずつunavailable、期限切れ、別revisionへ変異 | promotion拒否、evidence再利用・source fallback・write/publish 0 |
+| `CANDIDATE-RELMAN-020` | manifest、PF4 `ReleaseChannelAttestation`、PF5 `SealedReleaseAggregatePlan`、CI、QA、review evidenceを各1点ずつunavailable、staleなexact head/PLAN revision/evidence digest、別revisionへ変異。`observedAt`単独の経過時間は変異対象にしない | promotion拒否、evidence再利用・source fallback・write/publish 0 |
 | `CANDIDATE-RELMAN-021` | 直前attested rollback候補を0件、2件、attestation欠落、identity不一致へ各1点変異 | rollback拒否、現行pointer・artifact bytes不変、apply/write 0 |
 | `CANDIDATE-RELMAN-022` | 既存restore portの各境界へfaultを注入し、復元不能を観測 | `rollback_failed`または`indeterminate`へfail-closeし、成功扱い・partial publish 0 |
 | `CANDIDATE-RELMAN-023` | product-defined channel順序の次段でないtarget、channel pointerの旧revision、unknown targetを各1点変異 | promotion拒否、channel pointer不変、write/publish 0 |
