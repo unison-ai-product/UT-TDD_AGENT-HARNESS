@@ -76,7 +76,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T12:21:39+09:00"
         evidence_path: tests/forward/fsm.test.ts
-        output_digest: "sha256:dd9509cad71646ae0c494b0ac93bdccabe965d4134fb333e2ed1afcc099ed12d"
+        output_digest: "sha256:c314342888329a11ceef665689e59daac9feda92cd6bf5c555fd56110b54e786"
         anchor_commit: fc2c4c10df040ab3f8ea000841f217e92c2f1baa
     scope: >-
       Issue #344 bounded implementation。Lunaがtransition policy、append-only reducer、
