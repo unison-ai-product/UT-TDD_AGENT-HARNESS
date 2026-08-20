@@ -173,6 +173,12 @@ Windows name、canonicalization 不能は migration を開始しない。診断�
 - **検証方法**: 移設後、rebuildable な state は「re-build して一致」を検証条件とし、durable な
   state は「hash/count が一致」を検証条件とする。両者を混同しない (rebuildable を hash 一致で
   縛らない、durable を re-build で代替しない)。
+- **topology acceptance input**: cutover 前後の worktree health は件数だけで等価としない。#232 の
+  `U-WTTOPO-013` により、findings 0と、許可されたpath remap後の normalized
+  `{worktreePathKey, adminPathKey, headOid, isMain}` 集合digest一致を同時に要求する。同数の別worktree
+  への置換、link/admin finding、曖昧又はroot外remapは開始前に拒否する。これはS2の
+  `worktree-inventory` portが消費するread-only acceptance inputであり、cutover、prune、repairを
+  許可する機構ではない。
 
 ## 5. 段階化と将来 dependency edge (S1/S2/S3)
 

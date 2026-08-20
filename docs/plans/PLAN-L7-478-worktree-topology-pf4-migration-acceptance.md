@@ -6,9 +6,9 @@ layer: L7
 drive: be
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-20
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -22,6 +22,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-478-worktree-topology-pf4-migration-acceptance.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/worktree-topology-migration.ts
+    artifact_type: source_module
+  - artifact_path: tests/worktree-topology-migration.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-474-worktree-topology-detector.md
   requires: []
@@ -30,7 +34,38 @@ dependencies:
     - docs/plans/PLAN-L7-477-worktree-topology-pf3-doctor-advisory.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/256
-review_evidence: []
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-20T17:05:09+09:00"
+    tests_green_at: "2026-08-20T16:56:19+09:00"
+    verdict: pass
+    scope: >-
+      PF4 bounded implementation preflight。worktree収集・doctor・削除・prune・repairを追加せず、
+      findings 0と許可remap後identity集合の一致だけを純粋に判定する。U-WTTOPO-013は同数でも
+      別identityへの置換を拒否し、U-WTTOPO-018は文書のliteral preimage/SHA-256を独立計算で固定する。
+      実装workerはgpt-5.6-luna effort=high。non-author Claude closing reviewとReverse R4は後続gateである。
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-luna
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/worktree-topology-migration.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T16:56:19+09:00"
+        evidence_path: tests/worktree-topology-migration.test.ts
+        output_digest: "sha256:88187f3d5ee4f00481c5a0a800a345d50d3ee283729310617a60495c88cca9ce"
+        anchor_commit: 5d4d3c604794aa0a14121cb8ab1cb7020d2e4746
+      - kind: typecheck
+        command: "npm run typecheck"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T16:42:55+09:00"
+        evidence_path: src/runtime/worktree-topology-migration.ts
+        output_digest: "sha256:f8dfe2d05fa9b1396b04c21b876a91a03ca9a68181bae252d0ad883e665f7bdf"
+        anchor_commit: 5d4d3c604794aa0a14121cb8ab1cb7020d2e4746
 ---
 
 # PF4: aggregate migration acceptance・byte vector・Reverse R4
