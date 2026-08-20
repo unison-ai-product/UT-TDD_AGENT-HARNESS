@@ -93,9 +93,9 @@ Related として参照するが、本PLANの実装所有者ではない。#341�
 PLAN-L7-418のidentity・EvidenceRecord・reservation portを前提に、Forward状態機械の実装
 入場条件だけを凍結する。
 
-本PRは **docs-only pair-freeze** である。`src/forward/**`、CLI、実行可能なFSM test、
-Episode、Pack結線を生成・変更しない。draft PLANの`generates`は本PLANとReverse PLANだけに
-限定し、実装source/testの所有権は後続のbounded implementation Issue/PRで初めて宣言する。
+pair-freezeは完了済みであり、PR #349で bounded implementation が着地した。
+`src/forward/**` と実行可能なFSM testの所有権は本PLANへ確定し、Episode、Pack結線、review
+custodyは後続ゲートとして本PLANへ混ぜない。
 
 main実査では、PLAN-L7-418のU-PA-043/U-PA-044がreservation token、EvidenceRecord境界、
 3表transaction rollbackを既に固定している。旧IMP-156の未解消記録はその証跡へ更新し、
@@ -121,9 +121,8 @@ EvidenceRecord、reservation、migration ledgerのidentityとtransaction境界�
 PLAN-L7-418を注入portとして再利用する。Forward固有の新型を先に作らず、実装PRで
 adapter/application seamを追加する。
 
-実装時に候補となるbounded surfaceは `src/forward/{domain,application,ports,adapters}`,
-event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-freezeでは
-ファイルを作成しない。
+実装済みbounded surfaceは `src/forward/{domain,application,ports,adapters}`、
+event/evidence projection、CLI registrar、`tests/forward/**` である。
 
 ## 2. Red freeze と oracle 対
 
@@ -142,23 +141,31 @@ event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-fre
 
 ## 3. Acceptance criteria / DoD
 
-- [ ] `CANDIDATE-U-FSM-001..009`と`CANDIDATE-P-FSM-001`がtest-design台帳に登録される。
-- [ ] transition table、EvidenceRecord port、reservation境界、禁止遷移を設計判断として固定する。
-- [ ] `requires`がconfirmedなPLAN-L7-418を指し、IMP-156はU-PA-043/U-PA-044へ解決、IMP-167はReverseへ送られる。
-- [ ] Schedule、AC/DoD、実装時のbounded surface、Reverse-419 R0→R4が相互参照される。
-- [ ] draftの`generates`はPLAN文書だけで、`src/forward/**`や実装testを先取りしない。
-- [ ] exact HEADでplan lint、candidate/trace/backfill doctorがGreenになる。
+- [x] `U-FSM-001..009`と`P-FSM-001`がtest-design台帳に登録される。
+- [x] transition table、EvidenceRecord port、reservation境界、禁止遷移を設計判断として固定する。
+- [x] `requires`がconfirmedなPLAN-L7-418を指し、IMP-156はU-PA-043/U-PA-044へ解決、IMP-167はReverseへ送られる。
+- [x] Schedule、AC/DoD、実装bounded surface、Reverse-419 R0→R4が相互参照される。
+- [x] 実装source/testの所有権を`generates`へ昇格し、#349 merge後のexact HEAD evidenceへ束縛する。
+- [x] exact HEADでtargeted test、tsc、Biome、plan lintの実測 evidence を記録する。
 - [ ] 非作者Claudeによるclaim-blind/spec-blind closing reviewが同一revisionでPASSする。
-- [ ] pair-freeze merge後にのみ、別Issue/PRでLuna実装を開始する。
+
+## 後続Reverseゲート
+
+以下は実装完了DoDとは分離した後続作業であり、未完了のまま保持する。
+
+- [ ] Reverse-419 R0: 実装signature/storage/evidence差分を棚卸しする。
+- [ ] Reverse-419 R1: replay/fault と projection recovery を検証する。
+- [ ] Reverse-419 R2: 全surface verdict と backfill 要否を判定する。
+- [ ] Reverse-419 R3: 必要なL6 backfillを反映する。
+- [ ] Reverse-419 R4: Reverse gate を閉じて Forwardへ戻す。
 
 ## 4. 工程と出口
 
 1. **[直列/docs] pair-freeze** — #342で本PLAN、Reverse PLAN、候補9件、依存と境界を確定する。#347でevidence ruleと所有Issueの補正を行う。
 2. **[直列/review] cross-review** — exact HEAD、plan lint、doctor、Claude closing PASSを揃える。
-3. **[直列/implementation] bounded implementation** — pair-freeze merge後、別Issue/PRでLunaが
-   `src/forward/**`とU/P-FSMを実装し、Opusがpre/post gateを行う。
-4. **[直列/reverse] R0→R4** — 実装のsignature/storage/evidence差分、replay/fault、全surface
-   verdictを検証し、必要なL6 backfill後にForwardへ戻す。
+3. **[直列/implementation] bounded implementation** — #349でLuna実装とpre-gate evidenceを着地済み。
+4. **[直列/reverse] R0→R4** — 後続Reverseゲートとして実装のsignature/storage/evidence差分、
+   replay/fault、全surface verdictを検証し、必要なL6 backfill後にForwardへ戻す。
 
 ## 5. スコープ境界
 
