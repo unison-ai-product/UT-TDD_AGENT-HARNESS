@@ -1931,6 +1931,21 @@ PF-0〜PF-5の実装順序自体も検証対象とする。各実装PRは当該s
 PR metadata / PLAN referenceに持ち、存在しない、未merge、または後続sliceを指す場合は
 implementation-firstとしてadmission/closing reviewで拒否する。
 
+## Pack単独・2 consumer隔離受入候補（Issue #357 / PLAN-L6-101）
+
+以下はL6 freeze時点の候補である。実装PRが同じ番号の`U-PACKISO-*`をtest codeとともに追加するまで
+Green根拠にしてはならない。PF-1〜PF-5のsource-side artifact admissionを、consumer runtime隔離の
+代替証拠として用いない。
+
+| 候補ID | Red入力 | Green oracle |
+| --- | --- | --- |
+| `CANDIDATE-PACKISO-001` | source repo、source worktree、local Pack checkoutを全て不在にしたfresh Product A/B fixture | sealed Pack artifactだけで両productを個別初期化でき、development pathのread/process 0 |
+| `CANDIDATE-PACKISO-002` | A/BのDB、Memory、PLAN projection、lock、hook state、receipt/evidenceのrootを一要素ずつ相互参照へ変異 | canonical consumer/runtime root外を拒否し、cross-consumer read/write/process 0 |
+| `CANDIDATE-PACKISO-003` | A=v1、B=v2のversion/digest/revisionを単独変異、または片方のidentityを他方のreceiptへ再利用 | 各consumerのartifact identityを独立に束縛し、同OS userでもreceipt/evidenceの横流しを拒否 |
+| `CANDIDATE-PACKISO-004` | Aだけをv1→v2へupgradeし、Aのstaging/apply境界へ1..N faultを注入 | Aの成功はatomic、失敗はA prior state不変または`rollback_failed`/`indeterminate`。Bのbytes/mode/path/version/history/processは全て不変 |
+| `CANDIDATE-PACKISO-005` | Aだけを直前attested artifactへrollbackし、Bのartifact/lock/receiptを同時に観測 | Aだけが決定論的に旧identityへ戻り、Bはread/write/process要求0で継続可能 |
+| `CANDIDATE-PACKISO-006` | Aのartifact unavailable、digest mismatch、unknown version、namespace/symlink/junction escape、receipt不一致を各1点変異 | Aは導入前fail-closeでwrite 0。Bのruntime stateと実行可能性は影響を受けない |
+
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 
 以下はD0時点では全て設計候補である。対応test codeと実装をF0の同一commitへ追加し、Red実測を記録した
