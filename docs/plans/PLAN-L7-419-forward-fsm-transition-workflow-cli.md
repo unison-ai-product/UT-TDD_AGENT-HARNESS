@@ -4,7 +4,7 @@ title: "PLAN-L7-419 (add-impl): Forward FSM transition engine / workflow CLI"
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
@@ -23,6 +23,30 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-419-forward-fsm-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/forward/adapters/cli-registrar.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/adapters/in-memory-forward-ledger.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/adapters/in-memory-forward-projection.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/application/forward-evidence-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/application/forward-workflow.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/reducer.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/transition-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/types.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/domain/workflow.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/ports/forward-ledger.ts
+    artifact_type: source_module
+  - artifact_path: src/forward/ports/forward-projection.ts
+    artifact_type: source_module
+  - artifact_path: tests/forward/fsm.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-72-forward-fsm-evidence-policy-contracts.md
   requires:
@@ -36,7 +60,27 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/342
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/344
 github_issue_id: 344
-review_evidence: []
+review_evidence:
+  - reviewer: codex-integration-precheck
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-20T12:22:10+09:00"
+    tests_green_at: "2026-08-20T12:21:39+09:00"
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    green_commands:
+      - kind: unit_test
+        command: "node_modules/.bin/vitest run tests/forward/fsm.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T12:21:39+09:00"
+        evidence_path: tests/forward/fsm.test.ts
+        output_digest: "sha256:7608eba85a8fdce86dfda4aa77e1f8c5539c93606c7281c1ba5a7e54fbd565d5"
+        anchor_commit: 986a296c579fa881640049160f393ad2f68eceaf
+    scope: >-
+      Issue #344 bounded implementation。PR #349 (merge commit 62a159ef) で src/forward と FSM test を実装し、
+      Opus pre-gate と targeted test evidence を記録済み。非作者 closing review / CI / Reverse は後続 gate として残す。
 ---
 
 # PLAN-L7-419: Forward FSM transition engine / workflow CLI
