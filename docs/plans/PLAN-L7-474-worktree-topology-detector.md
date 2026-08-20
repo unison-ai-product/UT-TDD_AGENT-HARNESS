@@ -6,7 +6,7 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-05
 updated: 2026-08-20
 owner: PM / PO
@@ -35,7 +35,22 @@ dependencies:
     - docs/plans/PLAN-REVERSE-474-worktree-topology-detector-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/232
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-20T09:11:21Z"
+    tests_green_at: "2026-08-20T09:19:52Z"
+    verdict: pass
+    scope: "PR #359 worktree topology master R4のclaim-blind/spec-blind delta closing review。PF1〜PF4 main到達証跡、R3 oracle昇格、R4再合流判定を確認。"
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    plan_revision: 25109ce903d97be7de262a380af99473499823ac
+    subject_head: 25109ce903d97be7de262a380af99473499823ac
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/359#issuecomment-5353839005"
+    anchor_commit: 25109ce903d97be7de262a380af99473499823ac
+    citations:
+      - "PR #359 exact HEAD 25109ce9 non-author delta closing review (PASS, blocking 0)"
+      - "GitHub Actions run 32352315001 (Linux/Windows/aggregate success)"
 ---
 
 # PLAN-L7-474: worktree topology 健全性・寿命検出の契約 freeze
