@@ -76,8 +76,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T12:21:39+09:00"
         evidence_path: tests/forward/fsm.test.ts
-        output_digest: "sha256:7608eba85a8fdce86dfda4aa77e1f8c5539c93606c7281c1ba5a7e54fbd565d5"
-        anchor_commit: 986a296c579fa881640049160f393ad2f68eceaf
+        output_digest: "sha256:2c7539d5b8c48a29e453fe7562631425c00614ae0bc05f416c1185098efecaa6"
+        anchor_commit: fa6e8661
     scope: >-
       Issue #344 bounded implementation。PR #349 (merge commit 62a159ef) で src/forward と FSM test を実装し、
       Opus pre-gate と targeted test evidence を記録済み。非作者 closing review / CI / Reverse は後続 gate として残す。
