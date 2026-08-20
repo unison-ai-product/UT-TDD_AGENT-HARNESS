@@ -105,6 +105,24 @@ export const GREEN_COMMAND_KINDS = new Set([
 export const GREEN_COMMAND_RUNNERS = new Set(["bun", "node", "powershell", "bash", "ci"]);
 export const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files", "gate"]);
 
+/** anchor_commit は short/full の git object name のみ。人間可読な別表記を anchor と認めない。 */
+const GREEN_COMMAND_ANCHOR_PATTERN = /^[0-9a-f]{7,40}$/i;
+
+/**
+ * `anchor_commit` 必須化の発効時刻 (issue #191)。
+ *
+ * anchor 無しの `output_digest` は working tree の現在値と比較されるため、**無関係な PR が
+ * 同じ evidence ファイルへ触れた瞬間に不一致**になり `green-command-digest` が落ちる。証跡の
+ * 内容は正しいのに落ちるので「digest を現在値へ書き換える」という誤った直し方を誘発し、
+ * 証跡が測定時点ではなく現在の状態を指すようになる (2026-07-29 に 3 件連続発火)。
+ *
+ * 既存 entry は grandfather する。実測 (2026-08-20, main `5604874b`): green_command 980 件中
+ * **972 件が既に anchor 付き**で、anchor 無しは 8 件・最新でも 2026-08-19T19:26:02+09:00。
+ * 発効を 2026-08-20T00:00:00Z に置けば既存 8 件は全て閾値より前に収まり、新規流入だけが
+ * fail-close になる (baseline 集合を別に持たずに済む)。
+ */
+export const GREEN_COMMAND_ANCHOR_ENFORCED_FROM = Date.parse("2026-08-20T00:00:00Z");
+
 function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
   if (issue === "same_provider") return "same_provider";
   if (issue === "unknown_provider") return "unknown_provider";
@@ -209,6 +227,17 @@ function greenCommandViolationReason(entry: ReviewEntry): string | null {
     if (!command.completed_at?.trim()) return "missing_completed_at";
     if (!command.evidence_path.trim()) return "missing_evidence_path";
     if (!/^sha256:[a-f0-9]{16,64}$/i.test(command.output_digest)) return "invalid_output_digest";
+    const anchor = command.anchor_commit?.trim();
+    if (anchor) {
+      if (!GREEN_COMMAND_ANCHOR_PATTERN.test(anchor)) return "invalid_anchor_commit";
+    } else {
+      // anchor 無し digest は working tree の現在値と比較されるため、無関係な PR が同じ
+      // evidence ファイルへ触れた瞬間に不一致になる (issue #191)。発効時刻より後に記録された
+      // entry では必須。時刻を解釈できない entry も fail-close 側へ倒す。
+      const completedAt = Date.parse(command.completed_at);
+      if (Number.isNaN(completedAt) || completedAt >= GREEN_COMMAND_ANCHOR_ENFORCED_FROM)
+        return "missing_anchor_commit";
+    }
     if (
       entry.tests_green_at &&
       command.completed_at &&
@@ -352,7 +381,7 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
   if (result.greenCommandViolations.length > 0) {
     const ids = result.greenCommandViolations.map((v) => `${v.plan_id}:${v.reason}`).join(", ");
     out.push(
-      `review-evidence — ⚠ green command evidence 欠落/不正 ${result.greenCommandViolations.length} 件 (${ids}): 2026-06-23 以降の confirmed review_evidence は green_commands に kind/command/runner/scope/exit_code/evidence_path/output_digest を記録 (IMP-108)`,
+      `review-evidence — ⚠ green command evidence 欠落/不正 ${result.greenCommandViolations.length} 件 (${ids}): 2026-06-23 以降の confirmed review_evidence は green_commands に kind/command/runner/scope/exit_code/evidence_path/output_digest を記録 (IMP-108)。2026-08-20 以降に記録した entry は anchor_commit も必須 (anchor 無し digest は working tree と比較され、無関係な PR の merge で赤化する / issue #191)`,
     );
   }
   if (result.staleApprovalViolations.length > 0) {

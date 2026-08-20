@@ -276,6 +276,86 @@ describe("green command evidence (IMP-108)", () => {
   });
 });
 
+/**
+ * issue #191: anchor 無しの output_digest は working tree の現在値と比較されるため、
+ * 無関係な PR が同じ evidence ファイルへ触れただけで赤化する。新規 entry だけを fail-close にし、
+ * 既存は発効時刻で grandfather する。
+ */
+describe("green command anchor_commit 必須化 (issue #191)", () => {
+  const withCommand = (plan_id: string, command: Record<string, unknown>) =>
+    analyzeReviewEvidence([
+      plan({
+        plan_id,
+        updated: "2026-08-20",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-08-21T00:00:00Z",
+            tests_green_at: "2026-08-20T00:00:00Z",
+            green_commands: [
+              {
+                kind: "unit_test",
+                command: "npx vitest run tests/review-evidence.test.ts",
+                runner: "node",
+                scope: "targeted",
+                exit_code: 0,
+                evidence_path: "tests/review-evidence.test.ts",
+                output_digest: "sha256:0123456789abcdef",
+                ...command,
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
+
+  it("grandfathers an entry recorded before the enforcement instant", () => {
+    const r = withCommand("PLAN-ANCHOR-GRANDFATHERED", {
+      completed_at: "2026-08-19T19:26:02+09:00",
+    });
+    expect(r.greenCommandViolations).toEqual([]);
+  });
+
+  it("rejects an entry recorded at or after the enforcement instant without an anchor", () => {
+    const r = withCommand("PLAN-ANCHOR-MISSING", { completed_at: "2026-08-20T00:00:00Z" });
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-ANCHOR-MISSING", reason: "missing_anchor_commit" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("accepts a post-enforcement entry that carries an anchor", () => {
+    const r = withCommand("PLAN-ANCHOR-OK", {
+      completed_at: "2026-08-20T00:00:00Z",
+      anchor_commit: "5604874bb73905967b19f2e6cbc048101f807e39",
+    });
+    expect(r.greenCommandViolations).toEqual([]);
+  });
+
+  it("fails closed when completed_at cannot be read as an instant", () => {
+    const r = withCommand("PLAN-ANCHOR-UNPARSABLE", { completed_at: "green のとき" });
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-ANCHOR-UNPARSABLE", reason: "missing_anchor_commit" },
+    ]);
+  });
+
+  it("rejects an anchor that is not a git object name", () => {
+    const r = withCommand("PLAN-ANCHOR-INVALID", {
+      completed_at: "2026-08-20T00:00:00Z",
+      anchor_commit: "main",
+    });
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-ANCHOR-INVALID", reason: "invalid_anchor_commit" },
+    ]);
+  });
+
+  it("holds the shipped corpus free of anchor violations", () => {
+    const violations = analyzeReviewEvidence(loadReviewPlans(process.cwd())).greenCommandViolations;
+    expect(violations.filter((v) => v.reason.includes("anchor"))).toEqual([]);
+  });
+});
+
 describe("green command vocabulary pin (schema ↔ lint SSoT)", () => {
   // PR #293 review 申し送り: schema (frontmatter.ts) と lint (review-evidence.ts) の
   // green_commands 語彙は 2 箇所に重複しており、片側だけの変更が無音で通る。
