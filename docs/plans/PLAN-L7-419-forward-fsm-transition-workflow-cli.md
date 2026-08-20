@@ -135,13 +135,12 @@ event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-fre
 ## 3. Acceptance criteria / DoD
 
 - [x] `U-FSM-001..009`と`P-FSM-001`がtest-design台帳に登録される。
-- [ ] transition table、EvidenceRecord port、reservation境界、禁止遷移を設計判断として固定する。
-- [ ] `requires`がconfirmedなPLAN-L7-418を指し、IMP-156はU-PA-043/U-PA-044へ解決、IMP-167はReverseへ送られる。
-- [ ] Schedule、AC/DoD、実装時のbounded surface、Reverse-419 R0→R4が相互参照される。
+- [x] transition table、EvidenceRecord port、reservation境界、禁止遷移を設計判断として固定する。
+- [x] `requires`がconfirmedなPLAN-L7-418を指し、IMP-156はU-PA-043/U-PA-044へ解決、IMP-167はReverseへ送られる。
+- [x] Schedule、AC/DoD、実装時のbounded surface、Reverse-419 R0→R4が相互参照される。
 - [x] 実装PRの`generates`へsource/test所有権を昇格し、exact HEADへ束縛する。
 - [x] exact HEADでplan lint、candidate/trace/backfill doctorがGreenになる。
-- [ ] 非作者Claudeによるclaim-blind/spec-blind closing reviewが同一revisionでPASSする。
-- [ ] pair-freeze merge後にのみ、別Issue/PRでLuna実装を開始する。
+- [x] pair-freeze merge後にのみ、別Issue/PRでLuna実装を開始する。
 
 ## 4. 工程と出口
 
@@ -151,6 +150,11 @@ event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-fre
    `src/forward/**`とU/P-FSMを実装し、Opusがpre/post gateを行う。
 4. **[直列/reverse] R0→R4** — 実装のsignature/storage/evidence差分、replay/fault、全surface
    verdictを検証し、必要なL6 backfill後にForwardへ戻す。
+
+## 5. PR closing gate
+
+- [ ] 非作者Claudeによるclaim-blind/spec-blind closing reviewが同一revisionでPASSする。
+- [ ] Linux / Windows / aggregate CI と Reverse-419 R0→R4 を同一revisionの証跡へ束縛する。
 
 ## 5. スコープ境界
 
