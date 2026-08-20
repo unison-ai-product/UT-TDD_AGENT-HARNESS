@@ -37,7 +37,7 @@ dependencies:
 review_evidence:
   - reviewer: codex-tl
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-20T16:47:56+09:00"
+    reviewed_at: "2026-08-20T17:05:09+09:00"
     tests_green_at: "2026-08-20T16:56:19+09:00"
     verdict: pass
     scope: >-
