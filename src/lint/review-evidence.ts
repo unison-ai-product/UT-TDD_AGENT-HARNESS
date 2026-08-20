@@ -108,17 +108,6 @@ export const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files"
 /** anchor_commit は short/full の git object name のみ。人間可読な別表記を anchor と認めない。 */
 const GREEN_COMMAND_ANCHOR_PATTERN = /^[0-9a-f]{7,40}$/i;
 
-/**
- * `analyzeReviewEvidence` の観測面依存 (issue #191)。
- *
- * anchor の **実在**は git 履歴を引かないと判定できないが、shallow clone や非 git 面では引けない。
- * 判定できる面でだけ注入し、注入されない面では形式検査に留める (推測で fail させない)。
- */
-export interface ReviewEvidenceOptions {
-  /** anchor_commit が実在 commit か。full-history な面でのみ注入する。 */
-  anchorCommitExists?: (sha: string) => boolean;
-}
-
 function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
   if (issue === "same_provider") return "same_provider";
   if (issue === "unknown_provider") return "unknown_provider";
@@ -211,10 +200,7 @@ function requiresGreenCommands(plan: ParsedReviewPlan): boolean {
   );
 }
 
-function greenCommandViolationReason(
-  entry: ReviewEntry,
-  options: ReviewEvidenceOptions,
-): string | null {
+function greenCommandViolationReason(entry: ReviewEntry): string | null {
   const commands = entry.green_commands ?? [];
   if (commands.length === 0) return "missing_green_commands";
   for (const command of commands) {
@@ -240,10 +226,6 @@ function greenCommandViolationReason(
     const anchor = command.anchor_commit?.trim();
     if (!anchor) return "missing_anchor_commit";
     if (!GREEN_COMMAND_ANCHOR_PATTERN.test(anchor)) return "invalid_anchor_commit";
-    // 字面が hex でも実在しない SHA なら anchor として無意味 (PR #361 Codex FLAG B-2)。
-    // 実在を判定できる面でだけ検査する。
-    if (options.anchorCommitExists && !options.anchorCommitExists(anchor))
-      return "unknown_anchor_commit";
   }
   return null;
 }
@@ -255,10 +237,7 @@ function greenCommandViolationReason(
  *   単体 runtime は相異 model を供給できないため cross_agent を僭称できない (concept §2.1.2.1 核心ルール 1/2 を静的担保)。
  * @param plans 全 PLAN (archived は内部で除外)
  */
-export function analyzeReviewEvidence(
-  plans: ParsedReviewPlan[],
-  options: ReviewEvidenceOptions = {},
-): ReviewEvidenceResult {
+export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidenceResult {
   const missing: { plan_id: string; kind: string }[] = [];
   const crossReviewViolations: { plan_id: string; reason: string }[] = [];
   const testBeforeReviewViolations: { plan_id: string; reason: string }[] = [];
@@ -310,7 +289,7 @@ export function analyzeReviewEvidence(
     }
     if (requiresGreenCommands(p)) {
       for (const e of p.crossEntries ?? []) {
-        const reason = greenCommandViolationReason(e, options);
+        const reason = greenCommandViolationReason(e);
         if (reason) {
           greenCommandViolations.push({ plan_id: p.plan_id, reason });
           break;

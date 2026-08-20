@@ -285,46 +285,40 @@ describe("green command evidence (IMP-108)", () => {
  * 「新規 entry だけ必須」を `completed_at` で判定する初版は、その値が **書き手の自己申告** なので
  * 過去日時を書くだけで迂回できた (PR #361 Codex FLAG B-1)。時間軸を判定から外し、**全 entry で
  * anchor を必須**にする。既存の anchor 無し 8 件は `plan digest-migrate --execute` で実 anchor を
- * backfill 済みなので grandfather 集合そのものが不要になった。
+ * backfill 済みなので、grandfather 集合そのものが不要になった。
  *
- * 字面が hex なだけの実在しない SHA も anchor として通っていた (同 FLAG B-2)。実在を判定できる面
- * では `anchorCommitExists` を注入して fail-close する。
+ * anchor の **実在**検査は本 gate では行わない。squash merge 運用では PR head で記録した正当な
+ * anchor が merge 後の main から到達不能になり (実測: CI で 29 件が false positive)、捏造と
+ * 区別できないため。詳細は PR #361 のコメントと follow-up issue を参照。
  */
 describe("green command anchor_commit 必須化 (issue #191)", () => {
-  const withCommand = (
-    plan_id: string,
-    command: Record<string, unknown>,
-    options?: Parameters<typeof analyzeReviewEvidence>[1],
-  ) =>
-    analyzeReviewEvidence(
-      [
-        plan({
-          plan_id,
-          updated: "2026-08-20",
-          hasEvidence: true,
-          crossEntries: [
-            {
-              review_kind: "intra_runtime_subagent",
-              reviewed_at: "2026-08-21T00:00:00Z",
-              tests_green_at: "2026-08-20T00:00:00Z",
-              green_commands: [
-                {
-                  kind: "unit_test",
-                  command: "npx vitest run tests/review-evidence.test.ts",
-                  runner: "node",
-                  scope: "targeted",
-                  exit_code: 0,
-                  evidence_path: "tests/review-evidence.test.ts",
-                  output_digest: "sha256:0123456789abcdef",
-                  ...command,
-                },
-              ],
-            },
-          ],
-        }),
-      ],
-      options,
-    );
+  const withCommand = (plan_id: string, command: Record<string, unknown>) =>
+    analyzeReviewEvidence([
+      plan({
+        plan_id,
+        updated: "2026-08-20",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-08-21T00:00:00Z",
+            tests_green_at: "2026-08-20T00:00:00Z",
+            green_commands: [
+              {
+                kind: "unit_test",
+                command: "npx vitest run tests/review-evidence.test.ts",
+                runner: "node",
+                scope: "targeted",
+                exit_code: 0,
+                evidence_path: "tests/review-evidence.test.ts",
+                output_digest: "sha256:0123456789abcdef",
+                ...command,
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
 
   it("requires an anchor regardless of the self-declared completed_at", () => {
     // 旧実装では発効時刻より前として grandfather された入力。自己申告で迂回できない。
@@ -360,27 +354,6 @@ describe("green command anchor_commit 必須化 (issue #191)", () => {
     expect(r.greenCommandViolations).toEqual([
       { plan_id: "PLAN-ANCHOR-INVALID", reason: "invalid_anchor_commit" },
     ]);
-  });
-
-  it("rejects a well-formed anchor that does not exist in history", () => {
-    const r = withCommand(
-      "PLAN-ANCHOR-FABRICATED",
-      { completed_at: "2026-08-20T00:00:00Z", anchor_commit: "0".repeat(40) },
-      { anchorCommitExists: (sha) => sha !== "0".repeat(40) },
-    );
-    expect(r.greenCommandViolations).toEqual([
-      { plan_id: "PLAN-ANCHOR-FABRICATED", reason: "unknown_anchor_commit" },
-    ]);
-    expect(r.ok).toBe(false);
-  });
-
-  it("keeps existence unchecked where it cannot be observed", () => {
-    // shallow clone / 非 git 面では GC 済みと捏造を区別できない。推測で fail させない。
-    const r = withCommand("PLAN-ANCHOR-UNOBSERVABLE", {
-      completed_at: "2026-08-20T00:00:00Z",
-      anchor_commit: "0".repeat(40),
-    });
-    expect(r.greenCommandViolations).toEqual([]);
   });
 
   it("holds the shipped corpus free of anchor violations", () => {

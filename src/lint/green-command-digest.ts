@@ -153,30 +153,6 @@ function commitExists(repoRoot: string, sha: string): boolean {
   }
 }
 
-/**
- * anchor_commit の実在を判定する関数を返す (issue #191、PR #361 Codex FLAG B-2)。
- *
- * 字面が hex でも実在しない SHA を anchor に書けば、`readBlobAtCommit` は `unverifiable` を返し
- * digest 監査が黙って skip する = anchor 必須化が形式だけの gate になる。full-history な面では
- * 「実在しない = 捏造」と断定できるので実在検査を提供する。
- *
- * shallow clone / 非 git 面では GC 済み commit と捏造を区別できないため **undefined を返す**
- * (推測で fail させない)。
- */
-export function anchorCommitExistsFor(repoRoot: string): ((sha: string) => boolean) | undefined {
-  let shallow: string;
-  try {
-    shallow = execFileSync("git", ["-C", repoRoot, "rev-parse", "--is-shallow-repository"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  } catch {
-    return undefined; // git を引けない面
-  }
-  if (shallow !== "false") return undefined; // shallow: 不在の理由を切り分けられない
-  return (sha) => commitExists(repoRoot, sha);
-}
-
 /** Node I/O 実装 (repoRoot 基準で evidence_path を読み、sha256 を計算、anchor blob を git show で引く)。 */
 export function nodeDigestAuditDeps(repoRoot: string): DigestAuditDeps {
   return {

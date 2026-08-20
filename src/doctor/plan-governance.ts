@@ -7,7 +7,6 @@ import {
   loadConvergenceDocs,
   loadLegacyAuditDrift,
 } from "../lint/forward-convergence.ts";
-import { anchorCommitExistsFor } from "../lint/green-command-digest.ts";
 import {
   analyzePlanBodySubstance,
   loadPlanBodySubstanceInput,
@@ -229,12 +228,7 @@ export function checkReviewEvidence(repoRoot: string): { messages: string[]; ok:
     return { messages: ["review-evidence - violation: repo root could not be read"], ok: false };
   }
   try {
-    // anchor の実在は full-history な面でだけ判定できる (issue #191)。
-    const anchorCommitExists = anchorCommitExistsFor(repoRoot);
-    const r = analyzeReviewEvidence(
-      loadReviewPlans(repoRoot),
-      anchorCommitExists ? { anchorCommitExists } : {},
-    );
+    const r = analyzeReviewEvidence(loadReviewPlans(repoRoot));
     return { messages: reviewEvidenceMessages(r), ok: r.ok };
   } catch {
     return { messages: ["review-evidence - violation: PLAN could not be read"], ok: false };
