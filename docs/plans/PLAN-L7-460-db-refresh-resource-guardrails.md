@@ -9,7 +9,7 @@ route_mode: incident
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: draft
 created: 2026-07-27
-updated: 2026-07-28
+updated: 2026-08-20
 owner: PM / PO
 agent_slots:
   - role: aim
@@ -29,6 +29,8 @@ dependencies:
     - .ut-tdd/memory/project-incident-bun-session-db-refresh-runaway-on-2026-07-27.md
     - src/state-db/stop-refresh-coordinator.ts
     - src/state-db/projection-writer.ts
+    - src/state-db/token-tracker.ts
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/178
     - src/state-db/index.ts
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
@@ -161,3 +163,66 @@ DB は正本ではなく「安く捨てて作り直せる派生 index」であ�
 - AC-6 (スコープ 3、再発検知): harness.db の size / 行数が閾値を超えたとき doctor が
   fail する回帰テストが green (人間の気付きに依存しない)。閾値の根拠は append テーブルの
   増加速度実測を引用する (未計測のまま定数を置かない)。
+
+## 2026-08-20 実測: 肥大の主因は per-turn token-run projection (issue #178 の機構化正本)
+
+本 PLAN は #178 (`harness.db の定義と検出器境界: 太らせているのはファイル本文でなく
+派生イベント`) の機構化正本を兼ねる。#178 は起票時点で owning PLAN を持たなかった。
+
+exact main `7dbfa4fd491c6783f8f46fcde930553b6299ae83` 時点のローカル `.ut-tdd/harness.db`
+実測 (`PRAGMA` と `COUNT(*)` の直接読み):
+
+| 測定項目 | 値 |
+| --- | --- |
+| 物理サイズ | 4.41GB (`page_size`=4096 / `page_count`=1,155,780) |
+| `freelist_count` | **0 (freelist 比率 0.0%)** |
+| 最大テーブル | `model_runs` 7,985,466 行 (次点 `feedback_lifecycle` 98,279 行) |
+| うち `token-run:<runtime>:<sessionId>:<turnIndex>` | **7,984,539 行 = 99.99%** |
+| PLAN 紐付きの `model-run:<plan>:<n>:<role>:<model>` | 927 行 |
+
+### 確定事項 1: VACUUM は本件の対策にならない
+
+PLAN-L7-457 (status=confirmed、issue #118) は freelist 81% / 2.5GB を根拠に rebuild 後の
+条件付き自動 VACUUM を実装し 3.07GB→534MB を達成した。その契約は現在も有効に機能して
+おり、**`freelist_count`=0 がその実測証拠**である。それでも 4.41GB へ再肥大している以上、
+残量は全て live data であり VACUUM で回収できる余地は 0 である。したがって #169 の
+「incident 残置」という framing では本件は閉じず、L7-457 の再実行・閾値強化は効果を持たない。
+AC-5 が引用する「行数 43 分の 1 でもサイズ不変」という 2026-07-28 の観測も、削除対象が
+`model_runs` ではなかったことで説明が付く。
+
+### 確定事項 2: 真因は projection の粒度契約の不在
+
+書き込み点は `src/state-db/projection-writer.ts:702` の
+`stableId("token-run", ${u.runtime}:${u.sessionId}:${u.turnIndex})` であり、
+**1 セッション 1 ターンあたり 1 行**を PRIMARY KEY 付きで永続化する。retention も
+cardinality 上限も存在しない。`model_runs` は本来 PLAN 紐付きの model 実行記録
+(927 行) を保持する表であり、per-turn telemetry の集積先として設計されていない。
+`runtime`/`model` 別内訳は codex/gpt-5.6-sol 6,143,430、codex/gpt-5.6-terra 1,453,005、
+codex/gpt-5.6-luna 283,479 で、外部 Codex セッション履歴の取り込みが支配的である。
+
+### 修正契約 (U-1)
+
+- `projectTokenUsage` の粒度を **(runtime, sessionId, model)** 単位へ集約し、run_id を
+  `token-run:<runtime>:<sessionId>:<model>` とする。turnIndex を id に含めない。
+- 変更対象 source は `src/state-db/projection-writer.ts` と
+  `src/state-db/token-tracker.ts` の 2 本に限定する。
+- 不変条件:
+  - INV-1: 既存の turn 粒度行は rebuild 時に消滅する (残置しない)。
+  - INV-2: 集約後も runtime/model 別の token 合算値 (`input_tokens` /
+    `output_tokens` / `cached_input_tokens` / `reasoning_tokens` / `cost_usd`) が
+    集約前と一致する。
+  - INV-3: PLAN 紐付き `model-run:` 行 927 件の内容と件数に影響しない。
+
+### AC (本節ぶん)
+
+- AC-7: 同一 (runtime, sessionId, model) の複数ターン入力を projection させたとき、
+  `model_runs` の行数が **turn 数によらず 1 行**であることを固定する回帰テストが green。
+- AC-8: 集約前後で runtime/model 別 token 合算値が一致することを固定するテストが green
+  (INV-2。合算の保存を prose ではなくテストで裏取る)。
+- AC-9: turn 粒度の既存行を含む fixture DB を rebuild したとき、turn 粒度行が 0 件になり
+  かつ `model-run:` 行が不変であることを固定するテストが green (INV-1 / INV-3)。
+
+### スコープ外 (本節)
+
+U-2 (行数上限と typed error)、U-3 (既存 4.41GB DB の退避と rebuild 手順)、#340 の
+snapshot 固定費、#203 の workspace fence 境界、Forward FSM / R3 / R4 は本節に混ぜない。
