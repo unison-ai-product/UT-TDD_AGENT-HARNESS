@@ -19,9 +19,7 @@ import {
 import type { WorktreeTopologyInput } from "../runtime/worktree-topology.ts";
 import { collectWorktreeTopology } from "../runtime/worktree-topology-collector.ts";
 
-export type WorktreeTopologyProvider =
-  | WorktreeTopologyInput
-  | (() => WorktreeTopologyInput);
+export type WorktreeTopologyProvider = WorktreeTopologyInput | (() => WorktreeTopologyInput);
 
 /** I/O・clock 注入 (test 可能、handover staleness 検査用)。 */
 export interface DoctorDeps {

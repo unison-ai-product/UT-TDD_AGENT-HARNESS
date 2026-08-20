@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { type DoctorDeps, nodeDoctorDeps } from "../src/doctor/runtime-state.ts";
 import {
   checkWorktreeTopologyAdvisory,
   worktreeTopologyAdvisoryMessages,
 } from "../src/doctor/worktree-topology-advisory.ts";
 import type { WorktreeTopologyInput } from "../src/runtime/worktree-topology.ts";
-import { nodeDoctorDeps, type DoctorDeps } from "../src/doctor/runtime-state.ts";
 
 describe("worktree topology doctor advisory", () => {
   it("U-WTTOPO-015: empty facts are a complete no-op", () => {
