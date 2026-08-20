@@ -277,9 +277,14 @@ describe("S3 promotion / rollback pure gate", () => {
         specBlindReceiptDigest: reviewReceiptDigest(shiftedSpec),
       },
     };
-    const run = deniedComposition(stale);
-    expect(run.result).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
-    expectNoEffects(run);
+    expect(evaluatePromotionGate(stale).decision).toBe("allow");
+
+    const drift = deniedComposition({
+      ...promotionInput(),
+      ci: { ...ci, headSha: shiftedHead },
+    });
+    expect(drift.result).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    expectNoEffects(drift);
   });
 
   it("U-RELMAN-004: 同じrollback入力は同一pointer delta/digestへ収束しapply 0", () => {

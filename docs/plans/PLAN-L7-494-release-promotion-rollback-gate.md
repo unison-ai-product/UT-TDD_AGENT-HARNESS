@@ -56,8 +56,10 @@ D1/D2/D3変更を導入しない。
 
 - `ReviewGateEvidence`は派生した独自shapeを作らず、`ReviewDispatchEntry`、`MergeGateDecision`、
   `MergeGateFacts`、`ReviewReceiptSource`をそのまま束縛する。
-- exact HEADはpromotion対象の`artifactSourceCommit`と一致させる。manifestのcurrent pointerも
-  `currentRelease`へ束縛し、HEADやpointerを全証拠と一緒に差し替えても別subjectを受理しない。
+- control exact HEAD / PLAN revisionはCI・D1・D2・claim-blind/spec-blind receiptのsubjectとして
+  相互照合する。PF3が分離したartifact revisionとは等値を要求しない。release source identityはmanifest、
+  QA、PF4 attestation、PF5 sealed planの間だけで相互照合する。manifestのcurrent pointerは
+  `currentRelease`へ束縛する。
 - evidence digestはcallerが保持するexpected bindingと照合する。`observedAt`は形式と順序だけに用い、
   経過時間だけでstaleと判定しない。
 - reason precedenceは`invalid_input`、`identity_mismatch`、evidence欠落/No-Go、channel transition、

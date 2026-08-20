@@ -44,7 +44,8 @@ R1以降はexact implementation HEAD、U-RELMAN 10件、Linux / Windows / aggreg
 
 ## 2. backfill対象
 
-- exact HEADを対象releaseの`artifactSourceCommit`へ束縛するsource identity。
+- control exact HEAD / PLAN revisionをCI・D1・D2・claim/spec receipt間で束縛し、PF3 artifact revisionとは
+  分離する二軸identity。
 - manifest current pointerと`currentRelease`の照合、およびevidence digest expected binding。
 - D1=`ReviewDispatchEntry`、D2=`MergeGateDecision`、評価facts=`MergeGateFacts`という1:1 source mapping。
 - `invalid_input`からallowまでのpromotion reason precedence。

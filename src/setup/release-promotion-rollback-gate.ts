@@ -360,7 +360,6 @@ function aggregateIdentityMatches(input: PromotionGateInput): boolean {
     current.ok &&
     sameIdentity(selected.release, input.release) &&
     sameIdentity(current.release, input.currentRelease) &&
-    input.exactHeadSha === input.release.artifactSourceCommit &&
     input.mapping.channel === input.targetChannel &&
     input.mapping.releaseId === input.release.releaseId &&
     input.mapping.sourceRevision === input.release.artifactSourceCommit &&
