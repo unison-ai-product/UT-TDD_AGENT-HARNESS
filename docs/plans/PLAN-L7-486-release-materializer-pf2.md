@@ -62,6 +62,7 @@ review_evidence:
         completed_at: "2026-08-14T04:05:55Z"
         evidence_path: tests/release-materializer.test.ts
         output_digest: "sha256:c8b1e9c6335b5343354a2e990805f8a2e92467291a8c96d5cd534fe85182adf4"
+        anchor_commit: 658a22f373e08b5597d40d48fb25d735f5151866
 ---
 
 # PF-2: versioned release materializer pair-freeze

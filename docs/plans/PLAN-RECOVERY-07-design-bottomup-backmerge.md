@@ -100,6 +100,7 @@ review_evidence:
         completed_at: "2026-07-02T22:19:00+09:00"
         evidence_path: tests/drive-model-passage.test.ts
         output_digest: "sha256:42c265d9f7940db88a6d2ed973ba0078ff55768315f74fb49efe3060e20af222"
+        anchor_commit: 445c710fea2e16e584f6b76a3e4db1ca82329c90
 ---
 
 # PLAN-RECOVERY-07: design-bottomup mode 正本 back-merge

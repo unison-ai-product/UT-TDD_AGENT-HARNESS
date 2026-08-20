@@ -109,19 +109,15 @@ export const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files"
 const GREEN_COMMAND_ANCHOR_PATTERN = /^[0-9a-f]{7,40}$/i;
 
 /**
- * `anchor_commit` 必須化の発効時刻 (issue #191)。
+ * `analyzeReviewEvidence` の観測面依存 (issue #191)。
  *
- * anchor 無しの `output_digest` は working tree の現在値と比較されるため、**無関係な PR が
- * 同じ evidence ファイルへ触れた瞬間に不一致**になり `green-command-digest` が落ちる。証跡の
- * 内容は正しいのに落ちるので「digest を現在値へ書き換える」という誤った直し方を誘発し、
- * 証跡が測定時点ではなく現在の状態を指すようになる (2026-07-29 に 3 件連続発火)。
- *
- * 既存 entry は grandfather する。実測 (2026-08-20, main `5604874b`): green_command 980 件中
- * **972 件が既に anchor 付き**で、anchor 無しは 8 件・最新でも 2026-08-19T19:26:02+09:00。
- * 発効を 2026-08-20T00:00:00Z に置けば既存 8 件は全て閾値より前に収まり、新規流入だけが
- * fail-close になる (baseline 集合を別に持たずに済む)。
+ * anchor の **実在**は git 履歴を引かないと判定できないが、shallow clone や非 git 面では引けない。
+ * 判定できる面でだけ注入し、注入されない面では形式検査に留める (推測で fail させない)。
  */
-export const GREEN_COMMAND_ANCHOR_ENFORCED_FROM = Date.parse("2026-08-20T00:00:00Z");
+export interface ReviewEvidenceOptions {
+  /** anchor_commit が実在 commit か。full-history な面でのみ注入する。 */
+  anchorCommitExists?: (sha: string) => boolean;
+}
 
 function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
   if (issue === "same_provider") return "same_provider";
@@ -215,7 +211,10 @@ function requiresGreenCommands(plan: ParsedReviewPlan): boolean {
   );
 }
 
-function greenCommandViolationReason(entry: ReviewEntry): string | null {
+function greenCommandViolationReason(
+  entry: ReviewEntry,
+  options: ReviewEvidenceOptions,
+): string | null {
   const commands = entry.green_commands ?? [];
   if (commands.length === 0) return "missing_green_commands";
   for (const command of commands) {
@@ -227,17 +226,6 @@ function greenCommandViolationReason(entry: ReviewEntry): string | null {
     if (!command.completed_at?.trim()) return "missing_completed_at";
     if (!command.evidence_path.trim()) return "missing_evidence_path";
     if (!/^sha256:[a-f0-9]{16,64}$/i.test(command.output_digest)) return "invalid_output_digest";
-    const anchor = command.anchor_commit?.trim();
-    if (anchor) {
-      if (!GREEN_COMMAND_ANCHOR_PATTERN.test(anchor)) return "invalid_anchor_commit";
-    } else {
-      // anchor 無し digest は working tree の現在値と比較されるため、無関係な PR が同じ
-      // evidence ファイルへ触れた瞬間に不一致になる (issue #191)。発効時刻より後に記録された
-      // entry では必須。時刻を解釈できない entry も fail-close 側へ倒す。
-      const completedAt = Date.parse(command.completed_at);
-      if (Number.isNaN(completedAt) || completedAt >= GREEN_COMMAND_ANCHOR_ENFORCED_FROM)
-        return "missing_anchor_commit";
-    }
     if (
       entry.tests_green_at &&
       command.completed_at &&
@@ -245,6 +233,17 @@ function greenCommandViolationReason(entry: ReviewEntry): string | null {
     ) {
       return "completed_after_tests_green_at";
     }
+    // anchor 無し digest は working tree の現在値と比較されるため、無関係な PR が同じ evidence
+    // ファイルへ触れた瞬間に不一致になる (issue #191)。全 entry で必須にする — 「新規だけ必須」を
+    // `completed_at` で判定すると、その値が **書き手の自己申告** なので過去日時を書くだけで迂回
+    // できる (PR #361 Codex FLAG B-1)。
+    const anchor = command.anchor_commit?.trim();
+    if (!anchor) return "missing_anchor_commit";
+    if (!GREEN_COMMAND_ANCHOR_PATTERN.test(anchor)) return "invalid_anchor_commit";
+    // 字面が hex でも実在しない SHA なら anchor として無意味 (PR #361 Codex FLAG B-2)。
+    // 実在を判定できる面でだけ検査する。
+    if (options.anchorCommitExists && !options.anchorCommitExists(anchor))
+      return "unknown_anchor_commit";
   }
   return null;
 }
@@ -256,7 +255,10 @@ function greenCommandViolationReason(entry: ReviewEntry): string | null {
  *   単体 runtime は相異 model を供給できないため cross_agent を僭称できない (concept §2.1.2.1 核心ルール 1/2 を静的担保)。
  * @param plans 全 PLAN (archived は内部で除外)
  */
-export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidenceResult {
+export function analyzeReviewEvidence(
+  plans: ParsedReviewPlan[],
+  options: ReviewEvidenceOptions = {},
+): ReviewEvidenceResult {
   const missing: { plan_id: string; kind: string }[] = [];
   const crossReviewViolations: { plan_id: string; reason: string }[] = [];
   const testBeforeReviewViolations: { plan_id: string; reason: string }[] = [];
@@ -308,7 +310,7 @@ export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidence
     }
     if (requiresGreenCommands(p)) {
       for (const e of p.crossEntries ?? []) {
-        const reason = greenCommandViolationReason(e);
+        const reason = greenCommandViolationReason(e, options);
         if (reason) {
           greenCommandViolations.push({ plan_id: p.plan_id, reason });
           break;
