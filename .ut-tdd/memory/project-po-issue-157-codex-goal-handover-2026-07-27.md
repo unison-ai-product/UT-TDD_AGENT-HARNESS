@@ -63,7 +63,7 @@ updated_at: 2026-07-27T13:30:00.000Z
 - **#112**: Codex が収束作業中で持ち越し (github-ci-policy 15件 Red = mutation fixture の旧断片置換を
   replaceRequired fail-fast 化して同期済み、production detector 無変更、再 snapshot 段階)。
   PLAN-L7-455 は confirmed 済み (post-merge 罠なし)。Claude 側に未 push の main merge commit
-  53eb506e あり (worktree C:/Users/micro/AppData/Local/Temp/claude-pr112-wt、不要なら worktree ごと破棄)。
+  53eb506e あり (worktree ~/AppData/Local/Temp/claude-pr112-wt、不要なら worktree ごと破棄)。
 - 残: #113 (未診断、重い候補)、#125 (Codex 対応中)、#146/#147/#156 救済 (案A確定、#166=step1 済み)、
   CI speedup phase2 要否、PLAN-L7-460 実装、#162-165 の機構化。
 
