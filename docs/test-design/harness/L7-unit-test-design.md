@@ -1345,6 +1345,8 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `CANDIDATE-U-FSM-005` | review/test evidence不足のaccept command | acceptance policy | `forward-accept-evidence-missing` でfail-closeし、acceptedへ遷移せず副作用0件 |
 | `CANDIDATE-U-FSM-006` | blocked/reopenedでreasonまたはtyped evidence欠落 | exception/reentry policy | `forward-exception-context-missing` で拒否し、reentry/rollback intentを発行しない |
 | `CANDIDATE-U-FSM-007` | 同一sequence付きevent列を2回replay | `reduceForward` | state/verdict/digestが完全一致し、projection/outboxを二重生成しない |
+| `CANDIDATE-U-FSM-008` | ledger entry不在、projection再構築不能、frontmatter statusのみ存在 | workflow query / ledger projection | `forward-ledger-unavailable`、exit 3、frontmatterからstateを補完せずevent/outbox/外部intent 0件 |
+| `CANDIDATE-U-FSM-009` | 12 lifecycle eventの必須evidence欠落・期限切れ、およびspecialized rule境界 | evidence policy / transition admission | specialized ruleまたは`forward-evidence-missing`、exit 2、期限切れをeligibleに数えずstate/event/outbox 0件 |
 | `CANDIDATE-P-FSM-001` | generatorが作る任意event列 | `reduceForward` | 非許可状態到達0、sequence違反は必ずexit 1 |
 | `U-VMC-001` | L0-L14各1件 | `VModelContract.create` | layer count 15、exit 0 |
 | `U-VMC-002` | G0.5/G1-G14各1件 | `VModelContract.create` | gate count 15、exit 0 |

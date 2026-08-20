@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-08-19
+updated: 2026-08-20
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-72-forward-fsm-evidence-policy-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -34,7 +34,8 @@ dependencies:
     - docs/plans/PLAN-REVERSE-419-forward-fsm-backfill.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/108
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/342
-github_issue_id: 342
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/344
+github_issue_id: 344
 review_evidence: []
 ---
 
@@ -42,8 +43,9 @@ review_evidence: []
 
 ## 0. 位置づけと pair-freeze 境界
 
-Issue #342 は、L層検証契約の正本である Issue #108 の正式な子Issueである。Issue #224
-（段階リリース全体）は Related として参照するが、本PLANの親ではない。#341でmainへ到達した
+Issue #344 は、L層検証契約の正本である Issue #108 の正式な bounded implementation child
+である。#342はdocs-only pair-freezeのpredecessor/reference、Issue #224（段階リリース全体）は
+Related として参照するが、本PLANの実装所有者ではない。#341でmainへ到達した
 PLAN-L7-418のidentity・EvidenceRecord・reservation portを前提に、Forward状態機械の実装
 入場条件だけを凍結する。
 
@@ -91,10 +93,12 @@ event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-fre
 - `CANDIDATE-U-FSM-005`: review/test evidence不足のacceptを拒否し、acceptedへ遷移しない。
 - `CANDIDATE-U-FSM-006`: blocked/reopenedのreasonまたはtyped evidence欠落を拒否し、reentry/rollback intentを発行しない。
 - `CANDIDATE-U-FSM-007`: 同一event列のreplayでstate/verdict/digestを一致させ、projection/outboxを二重生成しない。
+- `CANDIDATE-U-FSM-008`: ledger entry不在・projection再構築不能を`forward-ledger-unavailable` / exit 3へ閉じ、PLAN frontmatterからstateを補完せず副作用0件にする。
+- `CANDIDATE-U-FSM-009`: 12 lifecycle eventの必須evidence欠落・期限切れを表のspecialized ruleまたは`forward-evidence-missing` / exit 2へ閉じ、eligible frontier・state・outboxを変更しない。
 
 ## 3. Acceptance criteria / DoD
 
-- [ ] `CANDIDATE-U-FSM-001..007`と`CANDIDATE-P-FSM-001`がtest-design台帳に登録される。
+- [ ] `CANDIDATE-U-FSM-001..009`と`CANDIDATE-P-FSM-001`がtest-design台帳に登録される。
 - [ ] transition table、EvidenceRecord port、reservation境界、禁止遷移を設計判断として固定する。
 - [ ] `requires`がconfirmedなPLAN-L7-418を指し、IMP-156はU-PA-043/U-PA-044へ解決、IMP-167はReverseへ送られる。
 - [ ] Schedule、AC/DoD、実装時のbounded surface、Reverse-419 R0→R4が相互参照される。
@@ -105,7 +109,7 @@ event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-fre
 
 ## 4. 工程と出口
 
-1. **[直列/docs] pair-freeze** — Issue #342で本PLAN、Reverse PLAN、候補7件、依存と境界を確定する。
+1. **[直列/docs] pair-freeze** — #342で本PLAN、Reverse PLAN、候補9件、依存と境界を確定する。#347でevidence ruleと所有Issueの補正を行う。
 2. **[直列/review] cross-review** — exact HEAD、plan lint、doctor、Claude closing PASSを揃える。
 3. **[直列/implementation] bounded implementation** — pair-freeze merge後、別Issue/PRでLunaが
    `src/forward/**`とU/P-FSMを実装し、Opusがpre/post gateを行う。
