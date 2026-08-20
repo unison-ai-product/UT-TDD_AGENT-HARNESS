@@ -70,84 +70,121 @@ const day = 24 * 60 * 60 * 1000;
 const normalStates = FORWARD_STATES.slice(0, 13);
 
 export const TRANSITION_POLICY: readonly TransitionSpec[] = Object.freeze([
-  spec("plan", ["proposed"], "planned", [
-    requirement("scope", "scope-approval", ["po", "human"], { kind: "recorded" }),
-  ]),
-  spec("prepare-pair-freeze", ["planned"], "pair_freeze_ready", [
-    pair("pair-artifact"),
-    review("design-pair-review"),
-  ]),
-  spec("freeze-pair", ["pair_freeze_ready"], "pair_frozen", [
-    pair("pair-artifact"),
-    review("design-pair-review"),
-  ]),
-  spec("freeze-red", ["pair_frozen"], "red_frozen", [red("red")]),
-  spec(
-    "begin-implementation",
-    ["red_frozen"],
-    "implementing",
-    [pair("pair-artifact"), red("red")],
-    "forward-red-evidence-missing",
-  ),
-  spec("complete-implementation", ["implementing"], "implementation_complete", [
-    implementation("implementation"),
-    test("targeted", "targeted-test-run"),
-  ]),
-  spec("prepare-trace-freeze", ["implementation_complete"], "trace_freeze_ready", [
-    trace("trace-materialization"),
-  ]),
-  spec("freeze-trace", ["trace_freeze_ready"], "trace_frozen", [
-    trace("trace-closure"),
-    test("green", "green-test-run"),
-  ]),
-  spec(
-    "prepare-review",
-    ["trace_frozen"],
-    "review_ready",
-    [trace("trace-closure"), test("green", "green-test-run")],
-    "forward-trace-freeze-missing",
-  ),
-  spec("submit-review", ["review_ready"], "reviewed", [review("independent-review")]),
-  spec(
-    "accept",
-    ["reviewed"],
-    "accepted",
-    [review("independent-review"), test("gate", "gate-run")],
-    "forward-accept-evidence-missing",
-  ),
-  spec("archive", ["accepted"], "archived", [
-    decision("acceptance", "acceptance-decision"),
-    decision("retention", "retention-decision"),
-  ]),
-  spec(
-    "block",
-    normalStates.filter((state) => state !== "accepted" && state !== "archived"),
-    "blocked",
-    [exception()],
-    "forward-exception-context-missing",
-  ),
-  spec(
-    "supersede",
-    normalStates.filter((state) => state !== "archived"),
-    "superseded",
-    [exception()],
-    "forward-exception-context-missing",
-  ),
-  spec(
-    "reject",
-    ["review_ready", "reviewed"],
-    "rejected",
-    [exception()],
-    "forward-exception-context-missing",
-  ),
-  spec(
-    "reopen",
-    ["blocked", "superseded", "rejected"],
-    "reopened",
-    [exception()],
-    "forward-exception-context-missing",
-  ),
-  spec("resume", ["reopened"], "planned", [exception()], "forward-exception-context-missing"),
+  spec({
+    event: "plan",
+    from: ["proposed"],
+    to: "planned",
+    evidence: [
+      requirement({
+        requirementId: "scope",
+        requiredKind: "scope-approval",
+        acceptedProducers: ["po", "human"],
+        claimsRule: { kind: "recorded" },
+      }),
+    ],
+  }),
+  spec({
+    event: "prepare-pair-freeze",
+    from: ["planned"],
+    to: "pair_freeze_ready",
+    evidence: [pair("pair-artifact"), review("design-pair-review")],
+  }),
+  spec({
+    event: "freeze-pair",
+    from: ["pair_freeze_ready"],
+    to: "pair_frozen",
+    evidence: [pair("pair-artifact"), review("design-pair-review")],
+  }),
+  spec({ event: "freeze-red", from: ["pair_frozen"], to: "red_frozen", evidence: [red("red")] }),
+  spec({
+    event: "begin-implementation",
+    from: ["red_frozen"],
+    to: "implementing",
+    evidence: [pair("pair-artifact"), red("red")],
+    missingRule: "forward-red-evidence-missing",
+  }),
+  spec({
+    event: "complete-implementation",
+    from: ["implementing"],
+    to: "implementation_complete",
+    evidence: [implementation("implementation"), test("targeted", "targeted-test-run")],
+  }),
+  spec({
+    event: "prepare-trace-freeze",
+    from: ["implementation_complete"],
+    to: "trace_freeze_ready",
+    evidence: [trace("trace-materialization")],
+  }),
+  spec({
+    event: "freeze-trace",
+    from: ["trace_freeze_ready"],
+    to: "trace_frozen",
+    evidence: [trace("trace-closure"), test("green", "green-test-run")],
+  }),
+  spec({
+    event: "prepare-review",
+    from: ["trace_frozen"],
+    to: "review_ready",
+    evidence: [trace("trace-closure"), test("green", "green-test-run")],
+    missingRule: "forward-trace-freeze-missing",
+  }),
+  spec({
+    event: "submit-review",
+    from: ["review_ready"],
+    to: "reviewed",
+    evidence: [review("independent-review")],
+  }),
+  spec({
+    event: "accept",
+    from: ["reviewed"],
+    to: "accepted",
+    evidence: [review("independent-review"), test("gate", "gate-run")],
+    missingRule: "forward-accept-evidence-missing",
+  }),
+  spec({
+    event: "archive",
+    from: ["accepted"],
+    to: "archived",
+    evidence: [
+      decision("acceptance", "acceptance-decision"),
+      decision("retention", "retention-decision"),
+    ],
+  }),
+  spec({
+    event: "block",
+    from: normalStates.filter((state) => state !== "accepted" && state !== "archived"),
+    to: "blocked",
+    evidence: [exception()],
+    missingRule: "forward-exception-context-missing",
+  }),
+  spec({
+    event: "supersede",
+    from: normalStates.filter((state) => state !== "archived"),
+    to: "superseded",
+    evidence: [exception()],
+    missingRule: "forward-exception-context-missing",
+  }),
+  spec({
+    event: "reject",
+    from: ["review_ready", "reviewed"],
+    to: "rejected",
+    evidence: [exception()],
+    missingRule: "forward-exception-context-missing",
+  }),
+  spec({
+    event: "reopen",
+    from: ["blocked", "superseded", "rejected"],
+    to: "reopened",
+    evidence: [exception()],
+    missingRule: "forward-exception-context-missing",
+  }),
+  spec({
+    event: "resume",
+    from: ["reopened"],
+    to: "planned",
+    evidence: [exception()],
+    missingRule: "forward-exception-context-missing",
+  }),
 ]);
 
 export function transitionFor(event: ForwardEventName): TransitionSpec | undefined {
@@ -159,93 +196,119 @@ export function edgeFor(state: ForwardState, event: ForwardEventName): Transitio
   return candidate?.from.includes(state) ? candidate : undefined;
 }
 
-function spec(
-  event: ForwardEventName,
-  from: readonly ForwardState[],
-  to: ForwardState,
-  evidence: readonly EvidenceRequirementSpec[],
-  missingRule = "forward-evidence-missing",
-): TransitionSpec {
+function spec(input: {
+  readonly event: ForwardEventName;
+  readonly from: readonly ForwardState[];
+  readonly to: ForwardState;
+  readonly evidence: readonly EvidenceRequirementSpec[];
+  readonly missingRule?: string;
+}): TransitionSpec {
   return Object.freeze({
-    event,
-    from: Object.freeze([...from]),
-    to,
-    evidence: Object.freeze([...evidence]),
-    missingRule,
+    event: input.event,
+    from: Object.freeze([...input.from]),
+    to: input.to,
+    evidence: Object.freeze([...input.evidence]),
+    missingRule: input.missingRule ?? "forward-evidence-missing",
   });
 }
-function requirement(
-  requirementId: string,
-  requiredKind: EvidenceKind,
-  acceptedProducers: readonly EvidenceProducer[],
-  claimsRule: EvidenceClaimsRule,
-  exitRule: EvidenceExitRule = exactZero,
-  maxAgeMs?: number,
-): EvidenceRequirementSpec {
+function requirement(input: {
+  readonly requirementId: string;
+  readonly requiredKind: EvidenceKind;
+  readonly acceptedProducers: readonly EvidenceProducer[];
+  readonly claimsRule: EvidenceClaimsRule;
+  readonly exitRule?: EvidenceExitRule;
+  readonly maxAgeMs?: number;
+}): EvidenceRequirementSpec {
   return {
-    requirementId,
-    requiredKind,
-    acceptedProducers,
-    claimsRule,
-    exitRule,
-    ...(maxAgeMs ? { maxAgeMs } : {}),
+    requirementId: input.requirementId,
+    requiredKind: input.requiredKind,
+    acceptedProducers: input.acceptedProducers,
+    claimsRule: input.claimsRule,
+    exitRule: input.exitRule ?? exactZero,
+    ...(input.maxAgeMs ? { maxAgeMs: input.maxAgeMs } : {}),
   };
 }
 function pair(id: string): EvidenceRequirementSpec {
-  return requirement(id, "pair-artifact-declaration", ["codex", "claude", "human"], {
-    kind: "recorded",
+  return requirement({
+    requirementId: id,
+    requiredKind: "pair-artifact-declaration",
+    acceptedProducers: ["codex", "claude", "human"],
+    claimsRule: {
+      kind: "recorded",
+    },
   });
 }
 function review(kind: "design-pair-review" | "independent-review"): EvidenceRequirementSpec {
-  return requirement(kind, kind, ["codex", "claude"], { kind: "review-approved" });
+  return requirement({
+    requirementId: kind,
+    requiredKind: kind,
+    acceptedProducers: ["codex", "claude"],
+    claimsRule: { kind: "review-approved" },
+  });
 }
 function red(id: string): EvidenceRequirementSpec {
-  return requirement(
-    id,
-    "red-test-run",
-    ["codex", "claude", "ci"],
-    { kind: "red-observed" },
-    redExit,
-    day,
-  );
+  return requirement({
+    requirementId: id,
+    requiredKind: "red-test-run",
+    acceptedProducers: ["codex", "claude", "ci"],
+    claimsRule: { kind: "red-observed" },
+    exitRule: redExit,
+    maxAgeMs: day,
+  });
 }
 function test(
   id: string,
   kind: "targeted-test-run" | "green-test-run" | "gate-run",
 ): EvidenceRequirementSpec {
-  return requirement(
-    id,
-    kind,
-    kind === "gate-run" || kind === "green-test-run" ? ["ci"] : ["codex", "claude", "ci"],
-    kind === "gate-run" ? { kind: "gate-passed" } : { kind: "recorded" },
-    exactZero,
-    day,
-  );
+  return requirement({
+    requirementId: id,
+    requiredKind: kind,
+    acceptedProducers:
+      kind === "gate-run" || kind === "green-test-run" ? ["ci"] : ["codex", "claude", "ci"],
+    claimsRule: kind === "gate-run" ? { kind: "gate-passed" } : { kind: "recorded" },
+    exitRule: exactZero,
+    maxAgeMs: day,
+  });
 }
 function implementation(id: string): EvidenceRequirementSpec {
-  return requirement(id, "implementation-digest", ["codex", "claude"], { kind: "recorded" });
+  return requirement({
+    requirementId: id,
+    requiredKind: "implementation-digest",
+    acceptedProducers: ["codex", "claude"],
+    claimsRule: { kind: "recorded" },
+  });
 }
 function trace(kind: "trace-materialization" | "trace-closure"): EvidenceRequirementSpec {
-  return requirement(
-    kind,
-    kind,
-    ["codex", "claude", "ci"],
-    kind === "trace-closure" ? { kind: "trace-clean" } : { kind: "recorded" },
-    exactZero,
-    kind === "trace-closure" ? day : undefined,
-  );
+  return requirement({
+    requirementId: kind,
+    requiredKind: kind,
+    acceptedProducers: ["codex", "claude", "ci"],
+    claimsRule: kind === "trace-closure" ? { kind: "trace-clean" } : { kind: "recorded" },
+    exitRule: exactZero,
+    maxAgeMs: kind === "trace-closure" ? day : undefined,
+  });
 }
 function decision(
   id: string,
   kind: "acceptance-decision" | "retention-decision",
 ): EvidenceRequirementSpec {
-  return requirement(id, kind, ["po", "human"], {
-    kind: "decision",
-    expected: kind === "acceptance-decision" ? "accepted" : "archive",
+  return requirement({
+    requirementId: id,
+    requiredKind: kind,
+    acceptedProducers: ["po", "human"],
+    claimsRule: {
+      kind: "decision",
+      expected: kind === "acceptance-decision" ? "accepted" : "archive",
+    },
   });
 }
 function exception(): EvidenceRequirementSpec {
-  return requirement("exception", "exception-context", ["po", "human", "codex", "claude"], {
-    kind: "recorded",
+  return requirement({
+    requirementId: "exception",
+    requiredKind: "exception-context",
+    acceptedProducers: ["po", "human", "codex", "claude"],
+    claimsRule: {
+      kind: "recorded",
+    },
   });
 }

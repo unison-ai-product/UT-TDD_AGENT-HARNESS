@@ -87,7 +87,16 @@ export class ForwardWorkflowApplication {
         ruleId: "forward-ledger-unavailable",
         exitCode: 3,
       });
-    return this.envelope("status", subject, reduced, "allow", "forward-status", null, null, 0);
+    return this.envelope({
+      command: "status",
+      subject,
+      reduced,
+      verdict: "allow",
+      ruleId: "forward-status",
+      event: null,
+      nextState: null,
+      exitCode: 0,
+    });
   }
 
   explain(
@@ -107,17 +116,17 @@ export class ForwardWorkflowApplication {
     const verdict = workflow.value.explain(request, request);
     const reduced = reduceForward(loaded.events);
     if (!reduced.ok) return this.errorEnvelope("explain", subject, reduced);
-    return this.envelope(
-      "explain",
+    return this.envelope({
+      command: "explain",
       subject,
       reduced,
-      "explain",
-      verdict.ruleId,
-      null,
-      null,
-      verdict.exitCode,
-      verdict,
-    );
+      verdict: "explain",
+      ruleId: verdict.ruleId,
+      event: null,
+      nextState: null,
+      exitCode: verdict.exitCode,
+      evidence: verdict,
+    });
   }
 
   transition(request: ForwardTransitionRequest): ForwardCliEnvelope {
@@ -142,7 +151,12 @@ export class ForwardWorkflowApplication {
     if (existing) {
       const spec = transitionFor(request.event);
       const evidence = spec
-        ? this.deps.evidencePolicy.evaluate(spec, subject, request.evidence ?? [], request)
+        ? this.deps.evidencePolicy.evaluate({
+            spec,
+            subject,
+            evidence: request.evidence ?? [],
+            context: request,
+          })
         : null;
       const expectedPayloadDigest =
         evidence?.usable && request.commandId
@@ -179,32 +193,32 @@ export class ForwardWorkflowApplication {
             exitCode: 3,
           });
       }
-      return this.envelope(
-        "transition",
+      return this.envelope({
+        command: "transition",
         subject,
         reduced,
-        "allow",
-        "forward-transition-replayed",
-        existing.event,
-        existing.toState,
-        0,
-      );
+        verdict: "allow",
+        ruleId: "forward-transition-replayed",
+        event: existing.event,
+        nextState: existing.toState,
+        exitCode: 0,
+      });
     }
     const verdict = workflow.value.explain(request, request);
     const reduced = reduceForward(loaded.events);
     if (!reduced.ok) return this.errorEnvelope("transition", subject, reduced);
     if (verdict.verdict === "deny")
-      return this.envelope(
-        "transition",
+      return this.envelope({
+        command: "transition",
         subject,
         reduced,
-        "deny",
-        verdict.ruleId,
-        null,
-        null,
-        verdict.exitCode,
-        verdict,
-      );
+        verdict: "deny",
+        ruleId: verdict.ruleId,
+        event: null,
+        nextState: null,
+        exitCode: verdict.exitCode,
+        evidence: verdict,
+      });
     const next = workflow.value.transition(request, request);
     if (!next.ok) return this.errorEnvelope("transition", subject, next);
     const appended = this.deps.ledger.append(next.value.event);
@@ -222,17 +236,17 @@ export class ForwardWorkflowApplication {
           exitCode: 3,
         });
     }
-    return this.envelope(
-      "transition",
+    return this.envelope({
+      command: "transition",
       subject,
-      after,
-      "allow",
-      "forward-transition-allowed",
-      appended.event.event,
-      appended.event.toState,
-      0,
-      verdict,
-    );
+      reduced: after,
+      verdict: "allow",
+      ruleId: "forward-transition-allowed",
+      event: appended.event.event,
+      nextState: appended.event.toState,
+      exitCode: 0,
+      evidence: verdict,
+    });
   }
 
   private load(
@@ -246,10 +260,10 @@ export class ForwardWorkflowApplication {
     subject: ForwardSubject,
     error: ForwardError,
   ): ForwardCliEnvelope {
-    return this.envelope(
+    return this.envelope({
       command,
       subject,
-      {
+      reduced: {
         ok: true,
         state: "proposed",
         digest: "0".repeat(64),
@@ -257,48 +271,48 @@ export class ForwardWorkflowApplication {
         events: [],
         eventDigests: [],
       },
-      "deny",
-      error.ruleId,
-      null,
-      null,
-      error.exitCode,
-    );
+      verdict: "deny",
+      ruleId: error.ruleId,
+      event: null,
+      nextState: null,
+      exitCode: error.exitCode,
+    });
   }
 
-  private envelope(
-    command: "status" | "transition" | "explain",
-    subject: ForwardSubject,
-    reduced: ForwardReduction,
-    verdict: "allow" | "deny" | "explain",
-    ruleId: string,
-    event: ForwardEventName | null,
-    nextState: ForwardState | null,
-    exitCode: 0 | 1 | 2 | 3,
-    evidence?: Partial<{
+  private envelope(input: {
+    readonly command: "status" | "transition" | "explain";
+    readonly subject: ForwardSubject;
+    readonly reduced: ForwardReduction;
+    readonly verdict: "allow" | "deny" | "explain";
+    readonly ruleId: string;
+    readonly event: ForwardEventName | null;
+    readonly nextState: ForwardState | null;
+    readonly exitCode: 0 | 1 | 2 | 3;
+    readonly evidence?: Partial<{
       required: readonly string[];
       accepted: readonly string[];
       rejected: readonly string[];
-    }>,
-  ): ForwardCliEnvelope {
+    }>;
+  }): ForwardCliEnvelope {
     return {
       schemaVersion: "forward-cli/v1",
-      command,
-      planId: subject.subjectId,
-      subjectId: subject.subjectId,
-      subjectRevision: subject.subjectRevision,
-      state: reduced.state,
-      currentState: reduced.state,
-      event,
-      nextState,
-      verdict,
-      ruleId,
+      command: input.command,
+      planId: input.subject.subjectId,
+      subjectId: input.subject.subjectId,
+      subjectRevision: input.subject.subjectRevision,
+      state: input.reduced.state,
+      currentState: input.reduced.state,
+      event: input.event,
+      nextState: input.nextState,
+      verdict: input.verdict,
+      ruleId: input.ruleId,
       evidence: {
-        required: evidence?.required ?? [],
-        accepted: evidence?.accepted ?? [],
-        rejected: evidence?.rejected ?? [],
+        required: input.evidence?.required ?? [],
+        accepted: input.evidence?.accepted ?? [],
+        rejected: input.evidence?.rejected ?? [],
       },
-      digest: reduced.digest,
-      exitCode,
+      digest: input.reduced.digest,
+      exitCode: input.exitCode,
     };
   }
 

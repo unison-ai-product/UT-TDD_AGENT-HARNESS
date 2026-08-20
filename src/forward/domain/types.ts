@@ -53,13 +53,15 @@ export interface ForwardEvidenceResult {
   readonly rejected: readonly string[];
 }
 
+export interface ForwardEvidenceEvaluationInput {
+  readonly spec: TransitionSpec;
+  readonly subject: ForwardSubject;
+  readonly evidence: readonly EvidenceRecord[];
+  readonly context: ForwardEvidenceContext;
+}
+
 export interface ForwardEvidenceEvaluator {
-  evaluate(
-    spec: TransitionSpec,
-    subject: ForwardSubject,
-    evidence: readonly EvidenceRecord[],
-    context: ForwardEvidenceContext,
-  ): ForwardEvidenceResult;
+  evaluate(input: ForwardEvidenceEvaluationInput): ForwardEvidenceResult;
 }
 
 export interface ForwardGuardVerdict extends ForwardEvidenceResult {

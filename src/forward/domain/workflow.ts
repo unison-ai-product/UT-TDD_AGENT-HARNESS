@@ -21,18 +21,18 @@ export class ForwardWorkflow {
   readonly state: ForwardState;
   readonly digest: string;
   private readonly evidencePolicy?: ForwardEvidenceContext["evidencePolicy"];
-  private constructor(
-    subject: ForwardSubject,
-    events: readonly ForwardEvent[],
-    state: ForwardState,
-    digest: string,
-    evidencePolicy?: ForwardEvidenceContext["evidencePolicy"],
-  ) {
-    this.subject = subject;
-    this.events = events;
-    this.state = state;
-    this.digest = digest;
-    this.evidencePolicy = evidencePolicy;
+  private constructor(input: {
+    readonly subject: ForwardSubject;
+    readonly events: readonly ForwardEvent[];
+    readonly state: ForwardState;
+    readonly digest: string;
+    readonly evidencePolicy?: ForwardEvidenceContext["evidencePolicy"];
+  }) {
+    this.subject = input.subject;
+    this.events = input.events;
+    this.state = input.state;
+    this.digest = input.digest;
+    this.evidencePolicy = input.evidencePolicy;
   }
 
   static reconstruct(
@@ -55,31 +55,57 @@ export class ForwardWorkflow {
     }
     return {
       ok: true,
-      value: new ForwardWorkflow(
+      value: new ForwardWorkflow({
         subject,
-        Object.freeze([...events]),
-        reduced.state,
-        reduced.digest,
+        events: Object.freeze([...events]),
+        state: reduced.state,
+        digest: reduced.digest,
         evidencePolicy,
-      ),
+      }),
     };
   }
 
   explain(command: ForwardCommand, context: ForwardEvidenceContext = {}): ForwardGuardVerdict {
     const spec = transitionFor(command.event);
-    if (!spec) return deny("forward-transition-illegal", 1, this.state, command.event, null);
+    if (!spec)
+      return deny({
+        ruleId: "forward-transition-illegal",
+        exitCode: 1,
+        state: this.state,
+        event: command.event,
+        nextState: null,
+      });
     const evaluator = context.evidencePolicy ?? this.evidencePolicy;
-    const evidence = evaluator?.evaluate(spec, this.subject, context.evidence ?? [], context) ?? {
+    const evidence = evaluator?.evaluate({
+      spec,
+      subject: this.subject,
+      evidence: context.evidence ?? [],
+      context,
+    }) ?? {
       usable: spec.evidence.length === 0,
       required: spec.evidence.map((item) => item.requirementId),
       accepted: [],
       rejected: [],
     };
     if (!evidence.usable)
-      return deny(spec.missingRule, 2, this.state, command.event, null, evidence);
+      return deny({
+        ruleId: spec.missingRule,
+        exitCode: 2,
+        state: this.state,
+        event: command.event,
+        nextState: null,
+        evidence,
+      });
     const edge = edgeFor(this.state, command.event);
     if (!edge || (command.expectedFrom !== undefined && command.expectedFrom !== this.state)) {
-      return deny("forward-transition-illegal", 1, this.state, command.event, null, evidence);
+      return deny({
+        ruleId: "forward-transition-illegal",
+        exitCode: 1,
+        state: this.state,
+        event: command.event,
+        nextState: null,
+        evidence,
+      });
     }
     if (
       command.event === "block" ||
@@ -89,14 +115,14 @@ export class ForwardWorkflow {
       command.event === "resume"
     ) {
       if (!validException(command, this.subject))
-        return deny(
-          "forward-exception-context-missing",
-          2,
-          this.state,
-          command.event,
-          null,
+        return deny({
+          ruleId: "forward-exception-context-missing",
+          exitCode: 2,
+          state: this.state,
+          event: command.event,
+          nextState: null,
           evidence,
-        );
+        });
     }
     return {
       verdict: "allow",
@@ -171,26 +197,26 @@ function validException(command: ForwardCommand, subject: ForwardSubject): boole
   );
 }
 
-function deny(
-  ruleId: string,
-  exitCode: 1 | 2 | 3,
-  state: ForwardState,
-  event: ForwardEventName,
-  nextState: ForwardState | null,
-  evidence: Partial<ForwardGuardVerdict> = {},
-): ForwardGuardVerdict {
+function deny(input: {
+  readonly ruleId: string;
+  readonly exitCode: 1 | 2 | 3;
+  readonly state: ForwardState;
+  readonly event: ForwardEventName;
+  readonly nextState: ForwardState | null;
+  readonly evidence?: Partial<ForwardGuardVerdict>;
+}): ForwardGuardVerdict {
   return {
     verdict: "deny",
-    ruleId,
-    exitCode,
-    state,
-    event,
-    nextState,
+    ruleId: input.ruleId,
+    exitCode: input.exitCode,
+    state: input.state,
+    event: input.event,
+    nextState: input.nextState,
     required: [],
     accepted: [],
     rejected: [],
     usable: false,
-    ...evidence,
+    ...input.evidence,
   };
 }
 

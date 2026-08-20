@@ -1,9 +1,10 @@
 import { EvidencePolicy } from "../../plan-asset/domain/evidence-policy.ts";
 import type { EvidenceRecord } from "../../plan-asset/domain/evidence-record.ts";
 import type { EvidenceAttestationVerifierPort } from "../../plan-asset/ports/evidence-attestation.ts";
-import type { EvidenceRequirementSpec, TransitionSpec } from "../domain/transition-policy.ts";
+import type { EvidenceRequirementSpec } from "../domain/transition-policy.ts";
 import type {
   ForwardEvidenceContext,
+  ForwardEvidenceEvaluationInput,
   ForwardEvidenceEvaluator,
   ForwardEvidenceResult,
   ForwardSubject,
@@ -15,17 +16,13 @@ export class ForwardEvidencePolicy implements ForwardEvidenceEvaluator {
     this.verifier = verifier;
   }
 
-  evaluate(
-    spec: TransitionSpec,
-    subject: ForwardSubject,
-    evidence: readonly EvidenceRecord[],
-    context: ForwardEvidenceContext,
-  ): ForwardEvidenceResult {
+  evaluate(input: ForwardEvidenceEvaluationInput): ForwardEvidenceResult {
+    const { spec, subject, evidence, context } = input;
     const accepted: string[] = [];
     const rejected: string[] = [];
     const required: string[] = [];
     for (const requirement of spec.evidence) {
-      const result = this.evaluateRequirement(requirement, subject, evidence, context);
+      const result = this.evaluateRequirement({ requirement, subject, records: evidence, context });
       required.push(requirement.requirementId);
       accepted.push(...result.accepted);
       rejected.push(...result.rejected);
@@ -39,12 +36,13 @@ export class ForwardEvidencePolicy implements ForwardEvidenceEvaluator {
     };
   }
 
-  private evaluateRequirement(
-    requirement: EvidenceRequirementSpec,
-    subject: ForwardSubject,
-    records: readonly EvidenceRecord[],
-    context: ForwardEvidenceContext,
-  ): ForwardEvidenceResult {
+  private evaluateRequirement(input: {
+    readonly requirement: EvidenceRequirementSpec;
+    readonly subject: ForwardSubject;
+    readonly records: readonly EvidenceRecord[];
+    readonly context: ForwardEvidenceContext;
+  }): ForwardEvidenceResult {
+    const { requirement, subject, records, context } = input;
     const acceptedProducers =
       requirement.requiredKind !== "independent-review"
         ? requirement.acceptedProducers
