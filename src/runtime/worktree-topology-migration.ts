@@ -30,7 +30,7 @@ export interface TopologyMigrationResult {
  */
 export function evaluateTopologyMigration(input: TopologyMigrationInput): TopologyMigrationResult {
   const beforeDigest = input.before.digest;
-  const afterDigest = input.after.digest;
+  const afterDigest = topologyDigest(input.after.identities);
   if (input.before.findings.length > 0 || input.after.findings.length > 0)
     return { accepted: false, reason: "findings_present", beforeDigest, afterDigest };
   try {

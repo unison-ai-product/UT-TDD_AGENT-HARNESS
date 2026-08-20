@@ -52,6 +52,13 @@ describe("worktree topology PF4 migration acceptance", () => {
         remaps: [{ fromPrefix: "/before", toPrefix: "/after" }],
       }),
     ).toMatchObject({ accepted: false, reason: "identity_mismatch" });
+    expect(
+      evaluateTopologyMigration({
+        before,
+        after: { ...after, digest: topologyDigest(before.identities) },
+        remaps: [{ fromPrefix: "/before", toPrefix: "/after" }],
+      }),
+    ).toMatchObject({ accepted: false, reason: "identity_mismatch" });
   });
 
   it("U-WTTOPO-013: findings 0かつ許可remap後の集合一致だけを受理する", () => {
@@ -118,6 +125,16 @@ describe("worktree topology PF4 migration acceptance", () => {
         before: same,
         after: same,
         remaps: [{ fromPrefix: "../before", toPrefix: "/after" }],
+      }),
+    ).toMatchObject({ accepted: false, reason: "invalid_remap" });
+    expect(
+      evaluateTopologyMigration({
+        before: same,
+        after: same,
+        remaps: [
+          { fromPrefix: "/before", toPrefix: "/after" },
+          { fromPrefix: "/before", toPrefix: "/other" },
+        ],
       }),
     ).toMatchObject({ accepted: false, reason: "invalid_remap" });
   });
