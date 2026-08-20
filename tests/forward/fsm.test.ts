@@ -36,7 +36,7 @@ const now = "2026-08-20T12:00:00.000Z";
 const keyMaterial = [
   {
     version: "v1",
-    secret: Buffer.alloc(32, 7),
+    secret: Buffer.alloc(32, 7), // test-only deterministic fixture
     producers: ["human", "po", "codex", "claude", "ci"],
   },
 ] as const;
