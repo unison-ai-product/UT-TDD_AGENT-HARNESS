@@ -63,8 +63,8 @@ github_issue_id: 344
 review_evidence:
   - reviewer: codex-integration-precheck
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-20T12:04:10+09:00"
-    tests_green_at: "2026-08-20T12:04:03+09:00"
+    reviewed_at: "2026-08-20T12:11:35+09:00"
+    tests_green_at: "2026-08-20T12:11:30+09:00"
     verdict: implementation_ready_for_ci
     worker_model: gpt-5.6-luna
     worker_revision: 34286cbf
@@ -74,14 +74,15 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-20T12:04:03+09:00"
+        completed_at: "2026-08-20T12:11:30+09:00"
         evidence_path: tests/forward/fsm.test.ts
-        output_digest: "sha256:40d229347ede5c375c0107cc265f5a11ae289f185cc26cb3793d608c1bb21025"
-        anchor_commit: cfdb099131c45013145e8b72dbcd75fef4db1356
+        output_digest: "sha256:c314342888329a11ceef665689e59daac9feda92cd6bf5c555fd56110b54e786"
+        anchor_commit: 3deacfdc172262d4000bf5cc9136f212db5732f3
     scope: >-
       Issue #344 bounded implementation。Lunaがtransition policy、append-only reducer、
       EvidenceRecord policy、ledger/projection port、workflow status/transition/explain CLIを実装。
-      projection state/digest mismatchをU-FSM-008でRed→Green化し、直接targeted testは11/11、
+      projection state/digest mismatchをU-FSM-008で、projection write failure後のreplay recoveryを
+      U-FSM-007でRed→Green化し、直接targeted testは12/12、
       tsc/Biome/plan lintはGreen。正規snapshot runnerは同一HEADで
       resource timeoutとなり、件数の根拠には使用しない。Opus pre-gate PASSはHARNESS Memoryへ記録済み。
 ---
