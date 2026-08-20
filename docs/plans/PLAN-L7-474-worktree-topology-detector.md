@@ -142,11 +142,14 @@ Blockedであり、後続は直前sliceのmergeとclosing PASSの両方でだけ
 
 | slice | exact reviewed HEAD | main merge | closing evidence |
 | --- | --- | --- | --- |
-| PF1 / #253 | `d9dfa8512609b59439272f55665e84bb2c66ca1d` | `ee76dd2732848bc613388f6ce7e0dde029e8a32e` | PR #261 post-merge Claude content PASS。手続き違反はPLAN evidenceに残す |
+| PF1 / #253 | `d9dfa8512609b59439272f55665e84bb2c66ca1d` | `445c710fea2e16e584f6b76a3e4db1ca82329c90` | PR #261 post-merge Claude content PASS。PR merge `ee76dd27`は現mainから到達不能、成果物の現main到達anchorは`445c710f` |
 | PF2 / #254 | `a4db3f8c6ef2b8b98a67fdbd0c52e02af3df7efb` | `722c336b77b3e7d37a6719afeba7c45388a0c740` | PR #308 Claude closing PASS、CI 3/3 Green |
 | PF3 / #255 | `ade47dc0b0530a8f7071798264c34ed6758e324f` | `5b78676b0a4d6288a5f38e8d671a522147c9e809` | PR #351 Claude closing PASS、CI 3/3 Green |
 | PF4 / #256 | `8fa5e7d9d9ec8351e6d88bf7a5f2e6e253dd6086` | `5604874bb73905967b19f2e6cbc048101f807e39` | PR #354 Claude closing PASS、CI 3/3 Green |
 
-master確認のbaselineはPF4 merge後のmain `5604874bb73905967b19f2e6cbc048101f807e39`。PF1のreviewが
-merge後だった手続き違反を隠さない一方、内容PASSと後続PF2〜PF4の非著者closing PASSを、masterの
-機能成立証拠として区別して保持する。本節だけではmasterのclosing PASSを代替しない。
+master確認のbaselineはPF4 merge後のmain `5604874bb73905967b19f2e6cbc048101f807e39`。PF1のPR #261
+merge commit `ee76dd2732848bc613388f6ce7e0dde029e8a32e` はmain履歴の書換え後、現在のmainから到達不能である。
+PF1成果物の現在mainへの導入は、`src/runtime/worktree-topology.ts`の到達可能な追加anchor
+`445c710fea2e16e584f6b76a3e4db1ca82329c90`で確認した。reviewがmerge後だった手続き違反と履歴書換えを
+隠さず、内容PASSと後続PF2〜PF4の非著者closing PASSをmasterの機能成立証拠と区別して保持する。
+本節だけではmasterのclosing PASSを代替しない。
