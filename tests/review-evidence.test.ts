@@ -351,7 +351,7 @@ describe("green command anchor_commit 必須化 (issue #191)", () => {
   });
 
   it("holds the shipped corpus free of anchor violations", () => {
-    const violations = analyzeReviewEvidence(loadReviewPlans(process.cwd())).greenCommandViolations;
+    const violations = analyzeReviewEvidence(loadReviewPlans()).greenCommandViolations;
     expect(violations.filter((v) => v.reason.includes("anchor"))).toEqual([]);
   });
 });
