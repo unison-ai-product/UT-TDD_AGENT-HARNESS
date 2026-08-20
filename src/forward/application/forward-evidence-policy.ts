@@ -49,6 +49,10 @@ export class ForwardEvidencePolicy implements ForwardEvidenceEvaluator {
         : context.authorFamily
           ? requirement.acceptedProducers.filter((producer) => producer !== context.authorFamily)
           : [];
+    const cardinality =
+      requirement.requiredKind === "targeted-test-run"
+        ? { minCount: 1 }
+        : { minCount: 1, maxCount: 1 };
     const created = EvidencePolicy.create(
       {
         policyId: `forward/${requirement.requirementId}`,
@@ -57,8 +61,7 @@ export class ForwardEvidencePolicy implements ForwardEvidenceEvaluator {
           {
             requirementId: requirement.requirementId,
             requiredKind: requirement.requiredKind,
-            minCount: 1,
-            maxCount: 1,
+            ...cardinality,
             acceptedProducers,
             exitRule: requirement.exitRule,
             claimsRule: requirement.claimsRule,

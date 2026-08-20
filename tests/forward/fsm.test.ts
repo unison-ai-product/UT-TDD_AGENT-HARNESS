@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { Command } from "commander";
+import { describe, expect, it, vi } from "vitest";
+import { registerForwardWorkflowCommands } from "../../src/forward/adapters/cli-registrar.ts";
 import { InMemoryForwardLedger } from "../../src/forward/adapters/in-memory-forward-ledger.ts";
 import { InMemoryForwardProjection } from "../../src/forward/adapters/in-memory-forward-projection.ts";
 import { ForwardEvidencePolicy } from "../../src/forward/application/forward-evidence-policy.ts";
@@ -8,12 +10,15 @@ import {
 } from "../../src/forward/application/forward-workflow.ts";
 import { eventDigest, reduceForward } from "../../src/forward/domain/reducer.ts";
 import {
+  edgeFor,
   FORWARD_EVENTS,
   FORWARD_STATES,
   type ForwardEventName,
   type ForwardState,
+  TRANSITION_POLICY,
 } from "../../src/forward/domain/transition-policy.ts";
 import type { ForwardEvent, ForwardReduction } from "../../src/forward/domain/types.ts";
+import { ForwardWorkflow } from "../../src/forward/domain/workflow.ts";
 import type { ForwardProjectionPort } from "../../src/forward/ports/forward-projection.ts";
 import { HmacEvidenceAttestationIssuer } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.ts";
 import {
@@ -58,6 +63,29 @@ describe("Forward FSM", () => {
     });
     expect(illegal).toMatchObject({ exitCode: 1, ruleId: "forward-transition-illegal" });
     expect((app.ledger as InMemoryForwardLedger).appended).toHaveLength(12);
+  });
+
+  it("U-FSM-001: evaluates the complete 17 state by 17 event closed world", () => {
+    const evidencePolicy = new ForwardEvidencePolicy(verifier);
+    for (const state of FORWARD_STATES) {
+      const workflow = ForwardWorkflow.reconstruct(subject, eventsForState(state), evidencePolicy);
+      expect(workflow.ok, state).toBe(true);
+      if (!workflow.ok) continue;
+      for (const eventName of FORWARD_EVENTS) {
+        const verdict = workflow.value.explain(
+          {
+            event: eventName,
+            commandId: `matrix:${state}:${eventName}`,
+            exceptionContext: exceptionContext(eventName),
+          },
+          { evidence: evidenceFor(eventName), now, authorFamily: "codex" },
+        );
+        expect(verdict.verdict, `${state}:${eventName}`).toBe(
+          edgeFor(state, eventName) ? "allow" : "deny",
+        );
+        if (!edgeFor(state, eventName)) expect(verdict.exitCode).toBe(1);
+      }
+    }
   });
 
   it("U-FSM-002: refuses skip, reverse, and terminal commands without changing state", () => {
@@ -109,6 +137,22 @@ describe("Forward FSM", () => {
     expect(result).toMatchObject({ exitCode: 2, ruleId: "forward-exception-context-missing" });
     expect((app.ledger as InMemoryForwardLedger).appended).toHaveLength(0);
     expect(app.externalIntents).toHaveLength(0);
+  });
+
+  it("U-FSM-006: missing exception context wins over an illegal from-state", () => {
+    const workflow = ForwardWorkflow.reconstruct(
+      subject,
+      eventsForState("archived"),
+      new ForwardEvidencePolicy(verifier),
+    );
+    expect(workflow.ok).toBe(true);
+    if (!workflow.ok) return;
+    expect(
+      workflow.value.explain(
+        { event: "block", commandId: "command:block:archived" },
+        { evidence: evidenceFor("block"), now },
+      ),
+    ).toMatchObject({ exitCode: 2, ruleId: "forward-exception-context-missing" });
   });
 
   it("U-FSM-007: replay is deterministic and projection is exactly once", () => {
@@ -197,10 +241,49 @@ describe("Forward FSM", () => {
       exitCode: 3,
       ruleId: "forward-ledger-unavailable",
     });
+    expect(ledger.appended).toHaveLength(0);
     expect(app.status(subject)).toMatchObject({
       exitCode: 3,
       ruleId: "forward-ledger-unavailable",
     });
+  });
+
+  it("U-FSM-008: explain rejects a projection mismatch without mutating either store", () => {
+    const ledger = new InMemoryForwardLedger();
+    const planEvent = event("planned", "plan", 1, "proposed");
+    expect(ledger.append(planEvent).ok).toBe(true);
+    const projection = new InMemoryForwardProjection();
+    const reduced = reduceForward([planEvent]);
+    expect(reduced.ok).toBe(true);
+    if (!reduced.ok) return;
+    projection.project(subject, planEvent, { ...reduced, state: "proposed" });
+    const app = new ForwardWorkflowApplication({
+      ledger,
+      projection,
+      evidencePolicy: new ForwardEvidencePolicy(verifier),
+    });
+    expect(
+      app.explain(subject, {
+        event: "prepare-pair-freeze",
+        evidence: evidenceFor("prepare-pair-freeze"),
+        now,
+      }),
+    ).toMatchObject({ exitCode: 3, ruleId: "forward-ledger-unavailable" });
+    expect(ledger.appended).toHaveLength(1);
+    expect(projection.writes).toHaveLength(1);
+  });
+
+  it("U-FSM-008: a valid explain query returns exit 0 even when policy denies the transition", () => {
+    const app = createApp();
+    expect(app.transition({ ...request("plan"), evidence: evidenceFor("plan") }).exitCode).toBe(0);
+    expect(app.explain(subject, { event: "prepare-pair-freeze", evidence: [], now })).toMatchObject(
+      {
+        exitCode: 0,
+        verdict: "explain",
+        ruleId: "forward-evidence-missing",
+        state: "planned",
+      },
+    );
   });
 
   it("U-FSM-009: generic evidence uses one typed rule and expired evidence is not eligible", () => {
@@ -213,12 +296,87 @@ describe("Forward FSM", () => {
     expect((app.ledger as InMemoryForwardLedger).appended).toHaveLength(3);
   });
 
+  it("U-FSM-009: every normal lifecycle event maps missing evidence to its frozen rule", () => {
+    for (const spec of TRANSITION_POLICY.slice(0, 12)) {
+      const workflow = ForwardWorkflow.reconstruct(
+        subject,
+        eventsForState(spec.from[0]),
+        new ForwardEvidencePolicy(verifier),
+      );
+      expect(workflow.ok, spec.event).toBe(true);
+      if (!workflow.ok) continue;
+      expect(
+        workflow.value.explain({ event: spec.event }, { evidence: [], now }),
+        spec.event,
+      ).toMatchObject({ exitCode: 2, ruleId: spec.missingRule });
+    }
+  });
+
+  it("U-FSM-009: targeted test evidence has at-least-one rather than exactly-one cardinality", () => {
+    const app = createApp();
+    seedTo(app, "implementing");
+    const evidence = [
+      ...evidenceFor("complete-implementation"),
+      ...evidenceFor("complete-implementation", now, ":second").filter(
+        (record) => record.evidenceKind === "targeted-test-run",
+      ),
+    ];
+    expect(app.transition({ ...request("complete-implementation"), evidence })).toMatchObject({
+      exitCode: 0,
+      nextState: "implementation_complete",
+    });
+  });
+
+  it("U-FSM-008: public CLI emits the shared JSON envelope when the ledger is unavailable", async () => {
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const previousExitCode = process.exitCode;
+    process.exitCode = 0;
+    try {
+      const program = new Command().exitOverride();
+      registerForwardWorkflowCommands(program);
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "workflow",
+        "status",
+        "--plan",
+        subject.subjectId,
+        "--revision",
+        String(subject.subjectRevision),
+        "--source-commit",
+        subject.sourceCommit,
+      ]);
+      const envelope = JSON.parse(String(stdout.mock.calls[0]?.[0] ?? ""));
+      expect(envelope).toMatchObject({
+        schemaVersion: "forward-cli/v1",
+        command: "status",
+        state: null,
+        verdict: "deny",
+        ruleId: "forward-ledger-unavailable",
+        exitCode: 3,
+      });
+      expect(envelope.digest).toBe(`sha256:${"0".repeat(64)}`);
+      expect(process.exitCode).toBe(3);
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+      process.exitCode = previousExitCode;
+    }
+  });
+
   it("P-FSM-001: generated sequences never reach an undeclared state and sequence faults fail closed", () => {
-    for (let seed = 0; seed < 128; seed += 1) {
+    for (let seed = 0; seed < 10_000; seed += 1) {
       const events = generatedSequence(seed);
+      expect(events.length).toBe(seed % 65);
       const result = reduceForward(events);
       if (result.ok) expect(FORWARD_STATES).toContain(result.state);
-      else expect(result.exitCode).toBe(1);
+      else {
+        expect(result.exitCode).toBe(1);
+        const shrunk = shrinkInvalidSequence(events);
+        expect(shrinkInvalidSequence(events)).toEqual(shrunk);
+        expect(reduceForward(shrunk).ok).toBe(false);
+      }
     }
     expect(reduceForward([event("planned", "plan", 2)])).toMatchObject({
       ok: false,
@@ -285,7 +443,7 @@ function seedTo(app: ForwardWorkflowApplication, target: ForwardState): void {
   throw new Error(`fixture did not reach ${target}`);
 }
 
-function evidenceFor(eventName: ForwardEventName, producedAt = now) {
+function evidenceFor(eventName: ForwardEventName, producedAt = now, idSuffix = "") {
   const kinds =
     {
       plan: ["scope-approval"],
@@ -310,7 +468,7 @@ function evidenceFor(eventName: ForwardEventName, producedAt = now) {
     const claims = claimsFor(kind, eventName);
     const created = EvidenceRecord.create(
       {
-        evidenceId: `evidence:${eventName}:${index}`,
+        evidenceId: `evidence:${eventName}:${index}${idSuffix}`,
         evidenceKind: kind as never,
         subjectId: subject.subjectId,
         subjectRevision: subject.subjectRevision,
@@ -373,7 +531,13 @@ function claimsFor(kind: string, eventName: ForwardEventName): unknown {
     case "retention-decision":
       return { decision: "archive", decidedBy: "po" };
     case "exception-context":
-      return { action: eventName, actor: "po", reason: "fixture reason", resumeState: "planned" };
+      return {
+        action: eventName,
+        actor: "po",
+        reason: "fixture reason",
+        resumeState: "planned",
+        ...(eventName === "supersede" ? { replacementSubjectId: "asset:replacement" } : {}),
+      };
     default:
       return {};
   }
@@ -427,9 +591,70 @@ function terminalEvents(): ForwardEvent[] {
 }
 
 function generatedSequence(seed: number): ForwardEvent[] {
-  const names = FORWARD_EVENTS;
-  const count = seed % 8;
-  return Array.from({ length: count }, (_, index) =>
-    event("proposed", names[(seed + index) % names.length], index + 1),
-  );
+  const count = seed % 65;
+  let state: ForwardState = "proposed";
+  let value = (seed + 1) >>> 0;
+  const events: ForwardEvent[] = [];
+  for (let index = 0; index < count; index += 1) {
+    value = (Math.imul(value, 1_664_525) + 1_013_904_223) >>> 0;
+    const eventName = FORWARD_EVENTS[value % FORWARD_EVENTS.length];
+    const edge = edgeFor(state, eventName);
+    const toState = edge?.to ?? FORWARD_STATES[(value >>> 8) % FORWARD_STATES.length];
+    events.push(event(toState, eventName, index + 1, state));
+    state = toState;
+  }
+  return events;
+}
+
+function shrinkInvalidSequence(events: readonly ForwardEvent[]): ForwardEvent[] {
+  let shortest = [...events];
+  for (let length = 1; length <= events.length; length += 1) {
+    const candidate = events.slice(0, length);
+    if (!reduceForward(candidate).ok) {
+      shortest = [...candidate];
+      break;
+    }
+  }
+  return shortest;
+}
+
+function eventsForState(target: ForwardState): ForwardEvent[] {
+  if (target === "proposed") return [];
+  const queue: { readonly state: ForwardState; readonly path: readonly ForwardEventName[] }[] = [
+    { state: "proposed", path: [] },
+  ];
+  const seen = new Set<ForwardState>(["proposed"]);
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+    for (const spec of TRANSITION_POLICY) {
+      if (!spec.from.includes(current.state) || seen.has(spec.to)) continue;
+      const path = [...current.path, spec.event];
+      if (spec.to === target) {
+        let state: ForwardState = "proposed";
+        return path.map((eventName, index) => {
+          const nextState = edgeFor(state, eventName)?.to;
+          if (!nextState) throw new Error(`fixture edge missing: ${state}:${eventName}`);
+          const next = event(nextState, eventName, index + 1, state);
+          state = nextState;
+          return next;
+        });
+      }
+      seen.add(spec.to);
+      queue.push({ state: spec.to, path });
+    }
+  }
+  throw new Error(`fixture state is unreachable: ${target}`);
+}
+
+function exceptionContext(eventName: ForwardEventName) {
+  if (!["block", "supersede", "reject", "reopen", "resume"].includes(eventName)) return undefined;
+  return {
+    action: eventName as "block" | "supersede" | "reject" | "reopen" | "resume",
+    actor: "po",
+    reason: "matrix fixture",
+    subjectRevision: subject.subjectRevision,
+    sourceCommit: subject.sourceCommit,
+    replacementSubjectId: "asset:replacement",
+  };
 }

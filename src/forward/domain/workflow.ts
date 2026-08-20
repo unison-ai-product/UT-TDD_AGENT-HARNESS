@@ -75,6 +75,14 @@ export class ForwardWorkflow {
         event: command.event,
         nextState: null,
       });
+    if (isExceptionEvent(command.event) && !validException(command, this.subject))
+      return deny({
+        ruleId: "forward-exception-context-missing",
+        exitCode: 2,
+        state: this.state,
+        event: command.event,
+        nextState: null,
+      });
     const evaluator = context.evidencePolicy ?? this.evidencePolicy;
     const evidence = evaluator?.evaluate({
       spec,
@@ -106,23 +114,6 @@ export class ForwardWorkflow {
         nextState: null,
         evidence,
       });
-    }
-    if (
-      command.event === "block" ||
-      command.event === "supersede" ||
-      command.event === "reject" ||
-      command.event === "reopen" ||
-      command.event === "resume"
-    ) {
-      if (!validException(command, this.subject))
-        return deny({
-          ruleId: "forward-exception-context-missing",
-          exitCode: 2,
-          state: this.state,
-          event: command.event,
-          nextState: null,
-          evidence,
-        });
     }
     return {
       verdict: "allow",
@@ -173,6 +164,10 @@ export class ForwardWorkflow {
     });
     return { ok: true, value: { event, nextState: event.toState, digest: nextDigest } };
   }
+}
+
+function isExceptionEvent(event: ForwardEventName): boolean {
+  return ["block", "supersede", "reject", "reopen", "resume"].includes(event);
 }
 
 function validSubject(subject: ForwardSubject): boolean {

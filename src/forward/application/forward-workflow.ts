@@ -113,9 +113,16 @@ export class ForwardWorkflowApplication {
       });
     const workflow = ForwardWorkflow.reconstruct(subject, loaded.events, this.deps.evidencePolicy);
     if (!workflow.ok) return this.errorEnvelope("explain", subject, workflow);
-    const verdict = workflow.value.explain(request, request);
     const reduced = reduceForward(loaded.events);
     if (!reduced.ok) return this.errorEnvelope("explain", subject, reduced);
+    const projection = this.deps.projection.read(subject);
+    if (!projection.ok || !this.projectionMatches(reduced, projection))
+      return this.errorEnvelope("explain", subject, {
+        ok: false,
+        ruleId: "forward-ledger-unavailable",
+        exitCode: 3,
+      });
+    const verdict = workflow.value.explain(request, request);
     return this.envelope({
       command: "explain",
       subject,
@@ -124,7 +131,7 @@ export class ForwardWorkflowApplication {
       ruleId: verdict.ruleId,
       event: null,
       nextState: null,
-      exitCode: verdict.exitCode,
+      exitCode: 0,
       evidence: verdict,
     });
   }
@@ -207,6 +214,16 @@ export class ForwardWorkflowApplication {
     const verdict = workflow.value.explain(request, request);
     const reduced = reduceForward(loaded.events);
     if (!reduced.ok) return this.errorEnvelope("transition", subject, reduced);
+    const projection = this.deps.projection.read(subject);
+    if (
+      (loaded.events.length === 0 && projection.ok) ||
+      (loaded.events.length > 0 && (!projection.ok || !this.projectionMatches(reduced, projection)))
+    )
+      return this.errorEnvelope("transition", subject, {
+        ok: false,
+        ruleId: "forward-ledger-unavailable",
+        exitCode: 3,
+      });
     if (verdict.verdict === "deny")
       return this.envelope({
         command: "transition",
@@ -263,14 +280,7 @@ export class ForwardWorkflowApplication {
     return this.envelope({
       command,
       subject,
-      reduced: {
-        ok: true,
-        state: "proposed",
-        digest: "0".repeat(64),
-        stateDigest: "0".repeat(64),
-        events: [],
-        eventDigests: [],
-      },
+      reduced: null,
       verdict: "deny",
       ruleId: error.ruleId,
       event: null,
@@ -282,7 +292,7 @@ export class ForwardWorkflowApplication {
   private envelope(input: {
     readonly command: "status" | "transition" | "explain";
     readonly subject: ForwardSubject;
-    readonly reduced: ForwardReduction;
+    readonly reduced: ForwardReduction | null;
     readonly verdict: "allow" | "deny" | "explain";
     readonly ruleId: string;
     readonly event: ForwardEventName | null;
@@ -300,8 +310,8 @@ export class ForwardWorkflowApplication {
       planId: input.subject.subjectId,
       subjectId: input.subject.subjectId,
       subjectRevision: input.subject.subjectRevision,
-      state: input.reduced.state,
-      currentState: input.reduced.state,
+      state: input.reduced?.state ?? null,
+      currentState: input.reduced?.state ?? null,
       event: input.event,
       nextState: input.nextState,
       verdict: input.verdict,
@@ -311,7 +321,7 @@ export class ForwardWorkflowApplication {
         accepted: input.evidence?.accepted ?? [],
         rejected: input.evidence?.rejected ?? [],
       },
-      digest: input.reduced.digest,
+      digest: input.reduced ? `sha256:${input.reduced.digest}` : `sha256:${"0".repeat(64)}`,
       exitCode: input.exitCode,
     };
   }

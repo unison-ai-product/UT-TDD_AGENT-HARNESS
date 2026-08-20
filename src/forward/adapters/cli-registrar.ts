@@ -1,5 +1,8 @@
 import type { Command } from "commander";
-import { ForwardWorkflowApplication } from "../application/forward-workflow.ts";
+import {
+  type ForwardCliEnvelope,
+  ForwardWorkflowApplication,
+} from "../application/forward-workflow.ts";
 import type { ForwardEventName } from "../domain/transition-policy.ts";
 import type { ForwardEvidenceEvaluator, ForwardSubject } from "../domain/types.ts";
 import type { ForwardLedgerPort } from "../ports/forward-ledger.ts";
@@ -76,6 +79,8 @@ function render(
 ): void {
   const application = deps.application ?? deps.createApplication?.();
   if (!application) {
+    const unavailable = forwardUnavailableEnvelope(command, input);
+    process.stdout.write(`${JSON.stringify(unavailable)}\n`);
     process.stderr.write("workflow: forward-ledger-unavailable\n");
     process.exitCode = 3;
     return;
@@ -89,6 +94,28 @@ function render(
   process.stdout.write(`${JSON.stringify(result)}\n`);
   if (result.exitCode !== 0) process.stderr.write(`workflow ${command}: ${result.ruleId}\n`);
   process.exitCode = result.exitCode;
+}
+
+function forwardUnavailableEnvelope(
+  command: "status" | "transition" | "explain",
+  input: ForwardSubject,
+): ForwardCliEnvelope {
+  return {
+    schemaVersion: "forward-cli/v1",
+    command,
+    planId: input.subjectId,
+    subjectId: input.subjectId,
+    subjectRevision: input.subjectRevision,
+    state: null,
+    currentState: null,
+    event: null,
+    nextState: null,
+    verdict: "deny",
+    ruleId: "forward-ledger-unavailable",
+    evidence: { required: [], accepted: [], rejected: [] },
+    digest: `sha256:${"0".repeat(64)}`,
+    exitCode: 3,
+  };
 }
 
 interface CliOptions {
