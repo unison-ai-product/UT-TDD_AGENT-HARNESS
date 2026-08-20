@@ -1344,8 +1344,8 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-FSM-004` | Forward trace未freezeのreview command | trace/review admission | `forward-trace-freeze-missing` でfail-closeし、review stateを昇格せず副作用0件 |
 | `U-FSM-005` | review/test evidence不足のaccept command | acceptance policy | `forward-accept-evidence-missing` でfail-closeし、acceptedへ遷移せず副作用0件 |
 | `U-FSM-006` | blocked/reopenedでreasonまたはtyped evidence欠落 | exception/reentry policy | `forward-exception-context-missing` で拒否し、reentry/rollback intentを発行しない |
-| `U-FSM-007` | 同一sequence付きevent列を2回replay | `reduceForward` | state/verdict/digestが完全一致し、projection/outboxを二重生成しない |
-| `U-FSM-008` | ledger entry不在、projection再構築不能、append-only ledgerとprojectionのstate/digest不一致、frontmatter statusのみ存在 | workflow query / ledger projection | `forward-ledger-unavailable`、exit 3、frontmatterからstateを補完せずevent/outbox/外部intent 0件 |
+| `U-FSM-007` | 同一sequence付きevent列を2回replay、初回projection書込み失敗後の同一command再送 | `reduceForward` / derived projection | state/verdict/digestが完全一致し、event/outboxを二重生成しない。欠落derived projectionだけを1回再構築し、append数は増えない |
+| `U-FSM-008` | ledger entry不在、projection再構築不能、append-only ledgerとprojectionのstate/digest不一致、frontmatter statusのみ存在 | workflow transition/query / ledger projection | `forward-ledger-unavailable`、exit 3、transition/queryともfrontmatterからstateを補完せずevent/outbox/外部intent 0件 |
 | `U-FSM-009` | 12 lifecycle eventの必須evidence欠落・期限切れ、およびspecialized rule境界 | evidence policy / transition admission | specialized ruleまたは`forward-evidence-missing`、exit 2、期限切れをeligibleに数えずstate/event/outbox 0件 |
 | `P-FSM-001` | generatorが作る任意event列 | `reduceForward` | 非許可状態到達0、sequence違反は必ずexit 1 |
 | `U-VMC-001` | L0-L14各1件 | `VModelContract.create` | layer count 15、exit 0 |

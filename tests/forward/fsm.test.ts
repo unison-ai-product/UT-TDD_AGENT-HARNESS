@@ -13,7 +13,7 @@ import {
   type ForwardEventName,
   type ForwardState,
 } from "../../src/forward/domain/transition-policy.ts";
-import type { ForwardEvent } from "../../src/forward/domain/types.ts";
+import type { ForwardEvent, ForwardReduction } from "../../src/forward/domain/types.ts";
 import type { ForwardProjectionPort } from "../../src/forward/ports/forward-projection.ts";
 import { HmacEvidenceAttestationIssuer } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.ts";
 import {
@@ -128,6 +128,38 @@ describe("Forward FSM", () => {
     expect((app.ledger as InMemoryForwardLedger).appended).toHaveLength(1);
   });
 
+  it("U-FSM-007: replay repairs a missing derived projection without appending a second event", () => {
+    const ledger = new InMemoryForwardLedger();
+    let failFirstProjection = true;
+    let writes = 0;
+    let stored: ForwardReduction | null = null;
+    const projection: ForwardProjectionPort = {
+      isAvailable: () => true,
+      project: (_subject, _event, reduction) => {
+        if (failFirstProjection) {
+          failFirstProjection = false;
+          return { ok: false, ruleId: "forward-ledger-unavailable", exitCode: 3 };
+        }
+        stored = reduction;
+        writes += 1;
+        return { ok: true, replayed: false };
+      },
+      read: () => stored ?? { ok: false, ruleId: "forward-ledger-unavailable", exitCode: 3 },
+    };
+    const app = new ForwardWorkflowApplication({
+      ledger,
+      projection,
+      evidencePolicy: new ForwardEvidencePolicy(verifier),
+    });
+    const first = app.transition({ ...request("plan"), evidence: evidenceFor("plan") });
+    expect(first).toMatchObject({ exitCode: 3, ruleId: "forward-ledger-unavailable" });
+    const replay = app.transition({ ...request("plan"), evidence: evidenceFor("plan") });
+    expect(replay).toMatchObject({ exitCode: 0, ruleId: "forward-transition-replayed" });
+    expect(app.status(subject)).toMatchObject({ exitCode: 0, state: "planned" });
+    expect(ledger.appended).toHaveLength(1);
+    expect(writes).toBe(1);
+  });
+
   it("U-FSM-008: missing ledger/projection is unavailable and never falls back to frontmatter", () => {
     const app = new ForwardWorkflowApplication({
       ledger: new InMemoryForwardLedger({ unavailable: true }),
@@ -161,7 +193,10 @@ describe("Forward FSM", () => {
       projection,
       evidencePolicy: new ForwardEvidencePolicy(verifier),
     });
-    expect(app.transition({ ...request("plan"), evidence: evidenceFor("plan") }).exitCode).toBe(0);
+    expect(app.transition({ ...request("plan"), evidence: evidenceFor("plan") })).toMatchObject({
+      exitCode: 3,
+      ruleId: "forward-ledger-unavailable",
+    });
     expect(app.status(subject)).toMatchObject({
       exitCode: 3,
       ruleId: "forward-ledger-unavailable",

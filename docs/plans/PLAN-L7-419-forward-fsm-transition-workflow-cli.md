@@ -140,8 +140,8 @@ event/evidence projection、CLI registrar、`tests/forward/**` だが、pair-fre
 - `CANDIDATE-U-FSM-004`: trace freeze欠落のreviewを拒否し、review stateを昇格しない。
 - `CANDIDATE-U-FSM-005`: review/test evidence不足のacceptを拒否し、acceptedへ遷移しない。
 - `CANDIDATE-U-FSM-006`: blocked/reopenedのreasonまたはtyped evidence欠落を拒否し、reentry/rollback intentを発行しない。
-- `CANDIDATE-U-FSM-007`: 同一event列のreplayでstate/verdict/digestを一致させ、projection/outboxを二重生成しない。
-- `CANDIDATE-U-FSM-008`: ledger entry不在・projection再構築不能・append-only ledgerとのprojection digest/state不一致を`forward-ledger-unavailable` / exit 3へ閉じ、PLAN frontmatterからstateを補完せず副作用0件にする。
+- `CANDIDATE-U-FSM-007`: 同一event列のreplayでstate/verdict/digestを一致させ、projection/outboxを二重生成しない。projection書込み失敗後の同一command再送はappendを増やさず、欠落したderived projectionだけを1回再構築する。
+- `CANDIDATE-U-FSM-008`: ledger entry不在・projection再構築不能・append-only ledgerとのprojection digest/state不一致を`forward-ledger-unavailable` / exit 3へ閉じ、transition/queryのいずれもPLAN frontmatterからstateを補完せず副作用0件にする。
 - `CANDIDATE-U-FSM-009`: 12 lifecycle eventの必須evidence欠落・期限切れを表のspecialized ruleまたは`forward-evidence-missing` / exit 2へ閉じ、eligible frontier・state・outboxを変更しない。
 
 ## 3. Acceptance criteria / DoD

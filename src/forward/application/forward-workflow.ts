@@ -81,11 +81,7 @@ export class ForwardWorkflowApplication {
     if (!reduced.ok) return this.errorEnvelope("status", subject, reduced);
     const projection = this.deps.projection.read(subject);
     if (!projection.ok) return this.errorEnvelope("status", subject, projection);
-    if (
-      projection.state !== reduced.state ||
-      projection.digest !== reduced.digest ||
-      projection.stateDigest !== reduced.stateDigest
-    )
+    if (!this.projectionMatches(reduced, projection))
       return this.errorEnvelope("status", subject, {
         ok: false,
         ruleId: "forward-ledger-unavailable",
@@ -171,6 +167,18 @@ export class ForwardWorkflowApplication {
         });
       const reduced = reduceForward(loaded.events);
       if (!reduced.ok) return this.errorEnvelope("transition", subject, reduced);
+      const projected = this.deps.projection.read(subject);
+      if (!projected.ok || !this.projectionMatches(reduced, projected)) {
+        const repaired = this.deps.projection.project(subject, existing, reduced);
+        if (!repaired.ok) return this.errorEnvelope("transition", subject, repaired);
+        const rebuilt = this.deps.projection.read(subject);
+        if (!rebuilt.ok || !this.projectionMatches(reduced, rebuilt))
+          return this.errorEnvelope("transition", subject, {
+            ok: false,
+            ruleId: "forward-ledger-unavailable",
+            exitCode: 3,
+          });
+      }
       return this.envelope(
         "transition",
         subject,
@@ -206,6 +214,13 @@ export class ForwardWorkflowApplication {
     if (!appended.replayed) {
       const projected = this.deps.projection.project(subject, appended.event, after);
       if (!projected.ok) return this.errorEnvelope("transition", subject, projected);
+      const rebuilt = this.deps.projection.read(subject);
+      if (!rebuilt.ok || !this.projectionMatches(after, rebuilt))
+        return this.errorEnvelope("transition", subject, {
+          ok: false,
+          ruleId: "forward-ledger-unavailable",
+          exitCode: 3,
+        });
     }
     return this.envelope(
       "transition",
@@ -285,6 +300,14 @@ export class ForwardWorkflowApplication {
       digest: reduced.digest,
       exitCode,
     };
+  }
+
+  private projectionMatches(reduced: ForwardReduction, projection: ForwardReduction): boolean {
+    return (
+      projection.state === reduced.state &&
+      projection.digest === reduced.digest &&
+      projection.stateDigest === reduced.stateDigest
+    );
   }
 }
 
