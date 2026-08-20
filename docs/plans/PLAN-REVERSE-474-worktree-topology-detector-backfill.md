@@ -8,7 +8,7 @@ route_signal: drift
 route_mode: reverse
 confirmed_reverse_type: design
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-08-20
 owner: PM / PO
 parent_design: docs/plans/PLAN-L7-474-worktree-topology-detector.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -59,6 +59,37 @@ landed事実を順に観測してからR1〜R3を進め、PF4がaggregate accept
    安全条件へ反映すべきか。
 3. stable topology identity集合とdigestを `PLAN-L4-34` の移設前後 acceptance comparator として
    参照させるべきか。
+
+## R1〜R4 判定（PF4 aggregate acceptance）
+
+### R1: 上流impact判定
+
+1. **L6 governance-enforcement: not_impacted**。双方向linkの検査はrepository配置とmigration inputの
+   責務であり、実行時governance enforcementへ新しいhard gateを導入しない。PF3のdoctor surfaceも
+   advisoryのままなので、L6へ同一契約を複製しない。
+2. **L4 placement safety: backfill_required**。dirty優先、retirable除外、detached保持ref到達可能性は
+   cutover前に観測する安全入力として必要である。削除権限へ変換せず、#232のread-only reportをS2の
+   `worktree-inventory` portへ渡す前提だけをL4へ記録する。
+3. **L4 migration comparator: backfill_required**。healthy件数一致だけでは別worktreeへの置換を検出
+   できない。許可remap後identity集合digestとfindings 0のANDをL4へ明記する。
+
+### R2: gap-only backfill
+
+`PLAN-L4-34` §4へtopology acceptance inputを追記した。新しいcutover runner、state writer、doctor
+hard gate、cleanup/prune/repairは追加していない。L6は上記R1-1のnot_impactedにより変更しない。
+
+### R3: 実装oracle照合
+
+- `U-WTTOPO-013`は`tests/worktree-topology-migration.test.ts`で、同じhealthy件数でもidentity集合が
+  異なるbefore/afterを`identity_mismatch`として拒否し、合法remap後の一致だけを受理する。
+- `U-WTTOPO-018`は文書に固定したliteral preimage hexとSHA-256を独立に計算し、byte/length変異と
+  不正remapを拒否する。期待値はproduction helperで再計算していない。
+
+### R4: Forward再合流判定
+
+PF1〜PF3のmain到達後、PF4はaggregate acceptanceをGreenにした。R1/R2で必要なL4差分だけを反映し、
+L6への重複backfillは不要と判定したため、**PF4のexact HEAD closing PASSとmerge後に限り**、masterの
+post-R4 stepへ再合流可能とする。この判定はmaster confirm、Issue #232 close、配置cutoverを先取りしない。
 
 ## Schedule
 
