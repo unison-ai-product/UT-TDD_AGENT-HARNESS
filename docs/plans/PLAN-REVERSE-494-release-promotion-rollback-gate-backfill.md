@@ -4,7 +4,7 @@ title: "PLAN-REVERSE-494: S3 promotion / rollback gateの上流合流"
 kind: reverse
 layer: cross
 drive: agent
-workflow_phase: R0
+workflow_phase: R2
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
@@ -31,16 +31,31 @@ dependencies:
     - docs/plans/PLAN-L7-494-release-promotion-rollback-gate.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/363
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-20T11:38:59Z"
+    tests_green_at: "2026-08-20T11:37:24Z"
+    verdict: "R1/R2 preflight green; R3 non-author review pending"
+    scope: "exact implementation revisionのsource/test traceと10 oracleを再検収。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+    subject_head: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+    evidence_path: tests/release-promotion-rollback-gate.test.ts
+    anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+    citations:
+      - "U-RELMAN-003/004/005/008/010/019..023: 10 passed"
+      - "PF5 injected apply/restore fault: rollback_failed/applied=indeterminate"
 ---
 
 # PLAN-REVERSE-494: S3 promotion / rollback gateの上流合流
 
-## 1. R0予約
+## 1. R1/R2実測
 
-L7実装で初めて確定する物理型・照合順序を、実測前にL6の完成事実として書かないためのReverse予約である。
-R1以降はexact implementation HEAD、U-RELMAN 10件、Linux / Windows / aggregate CI、非著者reviewを
-根拠に進める。
+exact implementation HEAD `c1a3a67a2614b3bc755c8dfe4b30d20a6a613159`でsource/test/traceを固定した。
+R2ではU-RELMAN 10件を各1 testとして実行し、10/10 Green、TypeScript、Biome、PLAN lintを確認した。
+canonical detached snapshot、Linux / Windows / aggregate CI、非著者reviewは未完であり、R3完了とはしない。
 
 ## 2. backfill対象
 
@@ -54,8 +69,8 @@ R1以降はexact implementation HEAD、U-RELMAN 10件、Linux / Windows / aggreg
 
 ## 3. R1からR4
 
-- R1: source/test/trace差分をexact HEADへ固定する。
-- R2: 10 oracleの独立mutation、composition spy、prior state不変を再実行する。
+- R1: source/test/trace差分を上記exact HEADへ固定済み。
+- R2: 10 oracleの独立mutation、composition spy、prior state不変を再実行済み。
 - R3: Claude Opus 5が非著者でidentityとfault境界を攻撃し、未反証blockingを0にする。
 - R4: 実測で必要と判明した差分だけを`PLAN-L6-102`とL7 test-designへ戻す。
 

@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: forward
 route_mode: forward
-status: draft
+status: confirmed
 created: 2026-08-20
 updated: 2026-08-20
 owner: PM / Codex
@@ -22,6 +22,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-494-release-promotion-rollback-gate.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/release-promotion-rollback-gate.ts
+    artifact_type: source_module
+  - artifact_path: tests/release-promotion-rollback-gate.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-102-release-promotion-rollback-gate.md
   requires:
@@ -40,7 +46,41 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/363
 github_issue_id: 363
 backprop_decision: required
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-20T11:38:59Z"
+    tests_green_at: "2026-08-20T11:37:24Z"
+    verdict: "preflight green; Claude Opus 5 non-author closing review pending"
+    scope: "Issue #363 pure promotion/rollback gate、10件の1:1 oracle、PF5 fault compositionのpreflight。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+    subject_head: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+    evidence_path: tests/release-promotion-rollback-gate.test.ts
+    anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+    citations:
+      - "tests/release-promotion-rollback-gate.test.ts: U-RELMAN-003/004/005/008/010/019..023"
+      - "src/setup/release-promotion-rollback-gate.ts: evaluatePromotionGate/selectRollbackCandidate/classifyRollbackApply"
+    green_commands:
+      - kind: unit_test
+        command: "node node_modules/vitest/vitest.mjs run tests/release-promotion-rollback-gate.test.ts --reporter=verbose --maxWorkers=1 --minWorkers=1 (workspace-fence diagnostic)"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-20T11:37:24Z"
+        evidence_path: tests/release-promotion-rollback-gate.test.ts
+        output_digest: "sha256:17d515f6c09a182084926fe29cf2be7f80a0de1d0c723f5117ad8f07e7fc5bf5"
+        anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
+      - kind: typecheck
+        command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-20T11:35:01Z"
+        evidence_path: src/setup/release-promotion-rollback-gate.ts
+        output_digest: "sha256:4bd37d3408b3783a04211a6f2918b9b7729bbf6e94407f94e72ec00ea8bd10d7"
+        anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
 ---
 
 # PLAN-L7-494: S3 release promotion / rollback pure gate
@@ -84,5 +124,5 @@ deny系はcomposition harnessのwrite/publish/apply spy 0とprior state不変を
 4. Claude Opus 5の非著者claim-blind/spec-blind closing reviewがblocking 0。
 5. `PLAN-REVERSE-494`をR1からR4へ進め、正規receipt gateでmergeする。
 
-実装とclosing reviewが未完の間、本PLANはdraftを維持する。closing PASS時に`generates`へsource、test、
-test-designを追加し、confirmedへ更新する。
+L7実装とR2 preflightはexact implementation revisionへ固定済みである。Claude Opus 5のclosing PASS、
+canonical snapshot、Linux / Windows / aggregate CIはmerge前の残存gateとして保持する。
