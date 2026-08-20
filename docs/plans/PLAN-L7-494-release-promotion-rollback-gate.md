@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T11:37:24Z"
         evidence_path: tests/release-promotion-rollback-gate.test.ts
-        output_digest: "sha256:17d515f6c09a182084926fe29cf2be7f80a0de1d0c723f5117ad8f07e7fc5bf5"
+        output_digest: "sha256:81162111bae7cc38860e69f9a83cfbf41c838400b54b14c17713ce267fe39017"
         anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
       - kind: typecheck
         command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
@@ -79,7 +79,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T11:35:01Z"
         evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:4bd37d3408b3783a04211a6f2918b9b7729bbf6e94407f94e72ec00ea8bd10d7"
+        output_digest: "sha256:609aa6cad5a6cdf553b95ee9d7ffb69a542520d35326a367b1ffb1643c4114ff"
         anchor_commit: c1a3a67a2614b3bc755c8dfe4b30d20a6a613159
 ---
 
@@ -102,10 +102,17 @@ D1/D2/D3変更を導入しない。
   `currentRelease`へ束縛する。
 - evidence digestはcallerが保持するexpected bindingと照合する。`observedAt`は形式と順序だけに用い、
   経過時間だけでstaleと判定しない。
+- review expected bindingはPR、memory ID、PLAN ID、author/reviewer familyを持つ。D1/D2/factsのPR、
+  D2 authorized entryのmemory/revision/family、claim/specのPLAN IDとmodel providerを各anchorへ照合し、
+  別PR・別memory・別PLANを組み合わせたreceipt splicingを拒否する。
 - reason precedenceは`invalid_input`、`identity_mismatch`、evidence欠落/No-Go、channel transition、
   attestation unavailable、allowの順とする。
-- rollbackは直前channelのattested candidateを1件だけ選び、同じ入力から同じpointer deltaとdigestを返す。
+- rollbackも同じD1/D2/facts/claim/spec bindingを通過した場合だけ、直前channelのattested candidateを
+  1件だけ選び、同じ入力から同じpointer deltaとdigestを返す。D2欠落・非readyではPF5へ到達しない。
   `artifactAvailable`のfalseまたは欠落は`artifact_unavailable`へfail-closeする。
+- attestationはstatus判定より先に存在するidentity fieldを照合する。`mismatch` / `unavailable`でも
+  別release subjectなら`identity_mismatch`とし、availability reasonへ丸めない。候補のruntime shapeが
+  `null`等ならthrowせず`invalid_input`へfail-closeする。
 - rollback applyの実行は既存PF5 portを再利用し、`rollback_failed/applied=indeterminate`を成功や
   `applied=0`へ丸めない。
 
@@ -113,8 +120,10 @@ D1/D2/D3変更を導入しない。
 
 `CANDIDATE-RELMAN-003/004/005/008/010/019..023`は、
 `tests/release-promotion-rollback-gate.test.ts`の同番号`U-RELMAN` 10件へ1:1で昇格する。
-deny系はcomposition harnessのwrite/publish/apply spy 0とprior state不変を観測する。`U-RELMAN-022`
-だけは既存`applySealedReleaseAggregate`へfaultを注入し、apply/restore境界とindeterminateを実測する。
+test-only compositionはallow decisionから既存`applySealedReleaseAggregate`へ実接続する。allowでPF5
+applyからpointer/publish各1へ到達することを対照として確認し、denyではsnapshot/staging/apply/restore/
+pointer/publish 0とprior state不変を観測する。`U-RELMAN-022`はrollback allow後にapply/restore faultを
+注入し、indeterminate、pointer/publish 0、復元不能stateを実測する。
 
 ## 4. 完了条件
 

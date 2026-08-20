@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ReviewDispatchEntry } from "../feedback/review-dispatch.ts";
+import type { ReviewDispatchEntry, ReviewerFamily } from "../feedback/review-dispatch.ts";
 import type { MergeGateDecision, MergeGateFacts } from "../feedback/review-merge-gate.ts";
 import {
   REQUIRED_GITHUB_CHECK,
@@ -7,6 +7,7 @@ import {
   reviewReceiptDigest,
   validCrossReviewSource,
 } from "../kernel/github-closure-receipt.ts";
+import { modelProviderFromId } from "../schema/index.ts";
 import {
   type ReleaseIdentity,
   type ReleaseManifest,
@@ -54,11 +55,19 @@ export interface ReviewGateEvidence {
   readonly specBlind: ReviewReceiptSource;
 }
 
-export interface PromotionEvidenceBinding {
-  readonly ciEvidenceDigest: string;
-  readonly qaEvidenceDigest: string;
+export interface ReviewEvidenceBinding {
+  readonly pr: number;
+  readonly memoryId: string;
+  readonly planId: string;
+  readonly authorFamily: ReviewerFamily;
+  readonly reviewerFamily: ReviewerFamily;
   readonly claimBlindReceiptDigest: string;
   readonly specBlindReceiptDigest: string;
+}
+
+export interface PromotionEvidenceBinding extends ReviewEvidenceBinding {
+  readonly ciEvidenceDigest: string;
+  readonly qaEvidenceDigest: string;
 }
 
 export type PromotionGateReason =
@@ -127,6 +136,10 @@ export interface RollbackSelectionInput {
   readonly currentChannel: string;
   readonly current: ReleaseIdentity;
   readonly targetChannel: string;
+  readonly exactHeadSha: string;
+  readonly planRevision: string;
+  readonly expectedReview: ReviewEvidenceBinding;
+  readonly review?: ReviewGateEvidence;
   readonly candidates: readonly RollbackCandidate[];
 }
 
@@ -227,17 +240,31 @@ function attested(
   );
 }
 
-function validBinding(value: unknown): value is PromotionEvidenceBinding {
+function validReviewBinding(value: unknown): value is ReviewEvidenceBinding {
   return (
     isRecord(value) &&
-    typeof value.ciEvidenceDigest === "string" &&
-    DIGEST.test(value.ciEvidenceDigest) &&
-    typeof value.qaEvidenceDigest === "string" &&
-    DIGEST.test(value.qaEvidenceDigest) &&
+    Number.isSafeInteger(value.pr) &&
+    Number(value.pr) > 0 &&
+    isString(value.memoryId) &&
+    isString(value.planId) &&
+    (value.authorFamily === "claude" || value.authorFamily === "codex") &&
+    (value.reviewerFamily === "claude" || value.reviewerFamily === "codex") &&
+    value.authorFamily !== value.reviewerFamily &&
     typeof value.claimBlindReceiptDigest === "string" &&
     RECEIPT_DIGEST.test(value.claimBlindReceiptDigest) &&
     typeof value.specBlindReceiptDigest === "string" &&
     RECEIPT_DIGEST.test(value.specBlindReceiptDigest)
+  );
+}
+
+function validBinding(value: unknown): value is PromotionEvidenceBinding {
+  if (!validReviewBinding(value)) return false;
+  const record = value as unknown as Record<string, unknown>;
+  return (
+    typeof record.ciEvidenceDigest === "string" &&
+    DIGEST.test(record.ciEvidenceDigest) &&
+    typeof record.qaEvidenceDigest === "string" &&
+    DIGEST.test(record.qaEvidenceDigest)
   );
 }
 
@@ -291,24 +318,62 @@ function reviewPartsPresent(value: unknown): value is ReviewGateEvidence {
   );
 }
 
-function reviewIdentityMatches(review: ReviewGateEvidence, input: PromotionGateInput): boolean {
+interface ReviewSubject {
+  readonly exactHeadSha: string;
+  readonly planRevision: string;
+  readonly expectedReview: ReviewEvidenceBinding;
+}
+
+function reviewIdentityMatches(review: ReviewGateEvidence, subject: ReviewSubject): boolean {
   const { d1, d2, facts, claimBlind, specBlind } = review;
+  const expected = subject.expectedReview;
+  const authorized = d2.authorizedEntry;
   return (
-    review.exactHeadSha === input.exactHeadSha &&
-    review.planRevision === input.planRevision &&
-    d1.exactHead === input.exactHeadSha &&
-    d1.reviewRevision === input.planRevision &&
-    d2.headSha === input.exactHeadSha &&
-    facts.headSha === input.exactHeadSha &&
-    facts.evaluatedHeadSha === input.exactHeadSha &&
+    review.exactHeadSha === subject.exactHeadSha &&
+    review.planRevision === subject.planRevision &&
+    d1.exactHead === subject.exactHeadSha &&
+    d1.reviewRevision === subject.planRevision &&
+    d1.pr === expected.pr &&
+    d2.pr === expected.pr &&
+    facts.pr === expected.pr &&
+    d1.memoryId === expected.memoryId &&
+    d1.authorFamily === expected.authorFamily &&
+    d1.reviewerFamily === expected.reviewerFamily &&
+    authorized !== null &&
+    authorized.memoryId === expected.memoryId &&
+    authorized.reviewRevision === subject.planRevision &&
+    authorized.reviewerFamily === expected.reviewerFamily &&
+    d2.headSha === subject.exactHeadSha &&
+    facts.headSha === subject.exactHeadSha &&
+    facts.evaluatedHeadSha === subject.exactHeadSha &&
     claimBlind.lane === "claim-blind" &&
     specBlind.lane === "spec-blind" &&
-    claimBlind.headSha === input.exactHeadSha &&
-    specBlind.headSha === input.exactHeadSha &&
-    claimBlind.planRevision === input.planRevision &&
-    specBlind.planRevision === input.planRevision &&
-    reviewReceiptDigest(claimBlind) === input.expectedEvidence.claimBlindReceiptDigest &&
-    reviewReceiptDigest(specBlind) === input.expectedEvidence.specBlindReceiptDigest
+    claimBlind.planId === expected.planId &&
+    specBlind.planId === expected.planId &&
+    claimBlind.headSha === subject.exactHeadSha &&
+    specBlind.headSha === subject.exactHeadSha &&
+    claimBlind.planRevision === subject.planRevision &&
+    specBlind.planRevision === subject.planRevision &&
+    modelProviderFromId(claimBlind.workerModel) === expected.authorFamily &&
+    modelProviderFromId(specBlind.workerModel) === expected.authorFamily &&
+    modelProviderFromId(claimBlind.reviewerModel) === expected.reviewerFamily &&
+    modelProviderFromId(specBlind.reviewerModel) === expected.reviewerFamily &&
+    claimBlind.verdict === d1.verdict &&
+    specBlind.verdict === d1.verdict &&
+    d2.verdict === d1.verdict &&
+    reviewReceiptDigest(claimBlind) === expected.claimBlindReceiptDigest &&
+    reviewReceiptDigest(specBlind) === expected.specBlindReceiptDigest
+  );
+}
+
+function attestationIdentityMatches(value: unknown, release: ReleaseIdentity): boolean {
+  if (!isRecord(value)) return true;
+  return (
+    (value.releaseId === undefined || value.releaseId === release.releaseId) &&
+    (value.artifactSourceCommit === undefined ||
+      value.artifactSourceCommit === release.artifactSourceCommit) &&
+    (value.expectedDigest === undefined || value.expectedDigest === release.artifactSetDigest) &&
+    (value.actualDigest === undefined || value.actualDigest === release.artifactSetDigest)
   );
 }
 
@@ -392,22 +457,19 @@ function evidenceIdentityMatches(input: PromotionGateInput): boolean {
   if (
     input.review !== undefined &&
     reviewPartsPresent(input.review) &&
-    !reviewIdentityMatches(input.review, input)
+    !reviewIdentityMatches(input.review, {
+      exactHeadSha: input.exactHeadSha,
+      planRevision: input.planRevision,
+      expectedReview: input.expectedEvidence,
+    })
   )
     return false;
-  if (
-    attested(input.attestation) &&
-    (input.attestation.releaseId !== input.release.releaseId ||
-      input.attestation.artifactSourceCommit !== input.release.artifactSourceCommit ||
-      input.attestation.expectedDigest !== input.release.artifactSetDigest ||
-      input.attestation.actualDigest !== input.release.artifactSetDigest)
-  )
-    return false;
+  if (!attestationIdentityMatches(input.attestation, input.release)) return false;
   return true;
 }
 
 /** L6-102で固定したreason precedenceどおりにpure判定する。 */
-export function evaluatePromotionGate(input: PromotionGateInput): PromotionGateResult {
+export function evaluatePromotionGate(input: unknown): PromotionGateResult {
   if (!promotionShapeIsValid(input)) return promotionDeny("invalid_input");
   if (input.ci !== undefined && !validCiShape(input.ci)) return promotionDeny("invalid_input");
   if (input.qa !== undefined && !validQaShape(input.qa)) return promotionDeny("invalid_input");
@@ -447,7 +509,22 @@ function validRollbackShape(input: unknown): input is RollbackSelectionInput {
     validIdentity(input.current) &&
     isString(input.currentChannel) &&
     isString(input.targetChannel) &&
+    typeof input.exactHeadSha === "string" &&
+    COMMIT.test(input.exactHeadSha) &&
+    isString(input.planRevision) &&
+    validReviewBinding(input.expectedReview) &&
     Array.isArray(input.candidates)
+  );
+}
+
+function validRollbackCandidateShape(value: unknown): value is RollbackCandidate {
+  return (
+    isRecord(value) &&
+    validIdentity(value.release) &&
+    isRecord(value.plan) &&
+    isString(value.channel) &&
+    (value.attestation === undefined || isRecord(value.attestation)) &&
+    (value.artifactAvailable === undefined || typeof value.artifactAvailable === "boolean")
   );
 }
 
@@ -480,20 +557,27 @@ function rollbackIdentityMatches(
   );
 }
 
-export function selectRollbackCandidate(input: RollbackSelectionInput): RollbackSelectionResult {
+export function selectRollbackCandidate(input: unknown): RollbackSelectionResult {
   if (!validRollbackShape(input)) return rollbackDeny("invalid_input");
+  if (input.review === undefined || !reviewPartsPresent(input.review))
+    return rollbackDeny("invalid_input");
+  if (
+    !reviewIdentityMatches(input.review, {
+      exactHeadSha: input.exactHeadSha,
+      planRevision: input.planRevision,
+      expectedReview: input.expectedReview,
+    })
+  )
+    return rollbackDeny("identity_mismatch");
+  if (!reviewIsReady(input.review)) return rollbackDeny("invalid_input");
   if (input.candidates.length === 0) return rollbackDeny("candidate_missing");
   if (input.candidates.length > 1) return rollbackDeny("candidate_ambiguous");
   const candidate = input.candidates[0];
+  if (!validRollbackCandidateShape(candidate)) return rollbackDeny("invalid_input");
   if (!rollbackIdentityMatches(input, candidate)) return rollbackDeny("identity_mismatch");
-  if (!attested(candidate.attestation)) return rollbackDeny("attestation_missing");
-  if (
-    candidate.attestation.releaseId !== candidate.release.releaseId ||
-    candidate.attestation.artifactSourceCommit !== candidate.release.artifactSourceCommit ||
-    candidate.attestation.expectedDigest !== candidate.release.artifactSetDigest ||
-    candidate.attestation.actualDigest !== candidate.release.artifactSetDigest
-  )
+  if (!attestationIdentityMatches(candidate.attestation, candidate.release))
     return rollbackDeny("identity_mismatch");
+  if (!attested(candidate.attestation)) return rollbackDeny("attestation_missing");
   if (candidate.artifactAvailable !== true) return rollbackDeny("artifact_unavailable");
   const pointerDelta: RollbackPointerDelta = {
     channel: input.currentChannel,

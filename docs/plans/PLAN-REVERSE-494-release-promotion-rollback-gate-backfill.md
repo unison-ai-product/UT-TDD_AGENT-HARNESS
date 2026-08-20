@@ -63,8 +63,11 @@ canonical detached snapshot、Linux / Windows / aggregate CI、非著者review�
   分離する二軸identity。
 - manifest current pointerと`currentRelease`の照合、およびevidence digest expected binding。
 - D1=`ReviewDispatchEntry`、D2=`MergeGateDecision`、評価facts=`MergeGateFacts`という1:1 source mapping。
+- PR、memory ID、PLAN ID、author/reviewer family、authorized entryをexpected review subjectへ束縛し、
+  promotion/rollback双方でreceipt splicingを拒否すること。
 - `invalid_input`からallowまでのpromotion reason precedence。
 - rollback candidateのdeterministic pointer delta/digestと、availability欠落のfail-close。
+- non-attested evidenceの存在identityをstatusより先に照合し、runtime invalid candidateをthrowさせないこと。
 - PF5 restore失敗を`rollback_failed/applied=indeterminate`として保持するclassification。
 
 ## 3. R1からR4

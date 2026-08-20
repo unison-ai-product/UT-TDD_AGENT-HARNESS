@@ -60,6 +60,7 @@ export {
   type PromotionGateResult,
   type QaGateStatus,
   type QaReleaseGateEvidence,
+  type ReviewEvidenceBinding,
   type ReviewGateEvidence,
   type RollbackApplyResult,
   type RollbackCandidate,

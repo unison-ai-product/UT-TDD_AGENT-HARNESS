@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { reviewReceiptDigest } from "../src/kernel/github-closure-receipt.ts";
 import type { ReleaseIdentity, ReleaseManifest } from "../src/schema/release-manifest.ts";
-import { applySealedReleaseAggregate } from "../src/setup/release-aggregate-admission.ts";
+import {
+  applySealedReleaseAggregate,
+  type SealedReleaseAggregatePlan,
+} from "../src/setup/release-aggregate-admission.ts";
+import type { MaterializedReleaseEntry } from "../src/setup/release-materializer.ts";
 import {
   type CanonicalCiEvidence,
   classifyRollbackApply,
@@ -57,7 +61,7 @@ const mapping = {
   sourcePath: "release/current",
   destinationPath: "pack/current",
 };
-const plan = {
+const plan: SealedReleaseAggregatePlan = {
   kind: "release-aggregate" as const,
   channel: "stable",
   releaseId: current.releaseId,
@@ -114,6 +118,13 @@ function reviewSource(lane: "claim-blind" | "spec-blind"): ReviewGateEvidence["c
 
 const claimBlind = reviewSource("claim-blind");
 const specBlind = reviewSource("spec-blind");
+const reviewSubject = {
+  pr: 363,
+  memoryId: "MEM-REVIEW-363",
+  planId: "PLAN-L7-494",
+  authorFamily: "codex" as const,
+  reviewerFamily: "claude" as const,
+};
 const review: ReviewGateEvidence = {
   exactHeadSha: current.artifactSourceCommit,
   planRevision,
@@ -168,6 +179,7 @@ function promotionInput(): PromotionGateInput {
     exactHeadSha: current.artifactSourceCommit,
     planRevision,
     expectedEvidence: {
+      ...reviewSubject,
       ciEvidenceDigest: ci.evidenceDigest,
       qaEvidenceDigest: qa.evidenceDigest,
       claimBlindReceiptDigest: reviewReceiptDigest(claimBlind),
@@ -212,35 +224,110 @@ function rollbackCandidate(): RollbackCandidate {
 }
 
 function rollbackInput(candidates: readonly RollbackCandidate[]): RollbackSelectionInput {
-  return { manifest, currentChannel: "stable", current, targetChannel: "canary", candidates };
+  return {
+    manifest,
+    currentChannel: "stable",
+    current,
+    targetChannel: "canary",
+    candidates,
+    exactHeadSha: current.artifactSourceCommit,
+    planRevision,
+    expectedReview: {
+      ...reviewSubject,
+      claimBlindReceiptDigest: reviewReceiptDigest(claimBlind),
+      specBlindReceiptDigest: reviewReceiptDigest(specBlind),
+    },
+    review,
+  } as RollbackSelectionInput;
 }
 
-function deniedComposition(input: PromotionGateInput) {
-  const prior = { pointer: previous.releaseId, bytes: new Uint8Array([7, 8, 9]) };
-  const before = structuredClone(prior);
-  const write = vi.fn();
+function compositionHarness(options: { applyFault?: boolean; restoreFault?: boolean } = {}) {
+  const state: { pointer: string; entries: MaterializedReleaseEntry[] } = {
+    pointer: previous.releaseId,
+    entries: [{ path: "pack/current", mode: "100644" as const, content: new Uint8Array([9]) }],
+  };
+  const before = structuredClone(state);
+  const snapshotDestination = vi.fn(async () => structuredClone(state.entries));
+  const writeStaging = vi.fn(async (sealedPlan: SealedReleaseAggregatePlan) => sealedPlan);
+  const applyDestination = vi.fn(
+    async (_stage: SealedReleaseAggregatePlan, sealedPlan: SealedReleaseAggregatePlan) => {
+      state.entries = structuredClone([...sealedPlan.entries]);
+      if (options.applyFault) throw new Error("apply fault");
+    },
+  );
+  const discardStaging = vi.fn(async () => undefined);
+  const restoreDestination = vi.fn(async (snapshot: readonly MaterializedReleaseEntry[]) => {
+    if (options.restoreFault) throw new Error("restore fault");
+    state.entries = structuredClone([...snapshot]);
+  });
+  const pointerWrite = vi.fn((releaseId: string) => {
+    state.pointer = releaseId;
+  });
   const publish = vi.fn();
-  const apply = vi.fn();
-  const result = evaluatePromotionGate(input);
-  if (result.decision === "allow") {
-    write();
-    publish();
-    apply();
-  }
-  return { result, prior, before, write, publish, apply };
+  return {
+    state,
+    before,
+    pointerWrite,
+    publish,
+    dependencies: {
+      snapshotDestination,
+      writeStaging,
+      applyDestination,
+      discardStaging,
+      restoreDestination,
+    },
+  };
 }
 
-function expectNoEffects(run: ReturnType<typeof deniedComposition>): void {
+async function runPromotionComposition(input: PromotionGateInput, harness = compositionHarness()) {
+  const gate = evaluatePromotionGate(input);
+  if (gate.decision === "deny") return { result: gate, harness };
+  const applied = classifyRollbackApply(
+    await applySealedReleaseAggregate(input.sealedPlan, harness.dependencies),
+  );
+  if (applied.decision === "allow") {
+    harness.pointerWrite(gate.releaseId);
+    harness.publish(gate);
+  }
+  return { result: applied, harness };
+}
+
+async function runRollbackComposition(input: unknown, harness = compositionHarness()) {
+  const selected = selectRollbackCandidate(input);
+  if (selected.decision === "deny") return { result: selected, harness };
+  const applied = classifyRollbackApply(
+    await applySealedReleaseAggregate(selected.candidate.plan, harness.dependencies),
+  );
+  if (applied.decision === "allow") {
+    harness.pointerWrite(selected.candidate.release.releaseId);
+    harness.publish(selected);
+  }
+  return { result: applied, harness };
+}
+
+async function deniedComposition(input: PromotionGateInput) {
+  return runPromotionComposition(input);
+}
+
+function expectNoEffects(run: Awaited<ReturnType<typeof deniedComposition>>): void {
   expect(run.result.decision).toBe("deny");
-  expect(run.write).not.toHaveBeenCalled();
-  expect(run.publish).not.toHaveBeenCalled();
-  expect(run.apply).not.toHaveBeenCalled();
-  expect(run.prior).toEqual(run.before);
+  expect(run.harness.dependencies.snapshotDestination).not.toHaveBeenCalled();
+  expect(run.harness.dependencies.writeStaging).not.toHaveBeenCalled();
+  expect(run.harness.dependencies.applyDestination).not.toHaveBeenCalled();
+  expect(run.harness.dependencies.restoreDestination).not.toHaveBeenCalled();
+  expect(run.harness.pointerWrite).not.toHaveBeenCalled();
+  expect(run.harness.publish).not.toHaveBeenCalled();
+  expect(run.harness.state).toEqual(run.harness.before);
 }
 
 describe("S3 promotion / rollback pure gate", () => {
-  it("U-RELMAN-003: canonical CI/QA/review欠落・subject driftをtyped denyしside effect 0", () => {
+  it("U-RELMAN-003: canonical CI/QA/review欠落・subject driftをtyped denyしside effect 0", async () => {
     expect(evaluatePromotionGate(promotionInput()).decision).toBe("allow");
+    const allowed = await runPromotionComposition(promotionInput());
+    expect(allowed.result.decision).toBe("allow");
+    expect(allowed.harness.dependencies.applyDestination).toHaveBeenCalledOnce();
+    expect(allowed.harness.pointerWrite).toHaveBeenCalledOnce();
+    expect(allowed.harness.publish).toHaveBeenCalledOnce();
     expect(evaluatePromotionGate({ ...promotionInput(), ci: undefined })).toMatchObject({
       decision: "deny",
       reason: "ci_missing",
@@ -279,50 +366,88 @@ describe("S3 promotion / rollback pure gate", () => {
     };
     expect(evaluatePromotionGate(stale).decision).toBe("allow");
 
-    const drift = deniedComposition({
+    const drift = await deniedComposition({
       ...promotionInput(),
       ci: { ...ci, headSha: shiftedHead },
     });
     expect(drift.result).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
     expectNoEffects(drift);
+
+    const shiftedClaimOnly = { ...claimBlind, headSha: shiftedHead };
+    const shiftedSpecOnly = { ...specBlind, headSha: shiftedHead };
+    const subjectMutations: PromotionGateInput[] = [
+      { ...promotionInput(), review: { ...review, d1: { ...review.d1, exactHead: shiftedHead } } },
+      { ...promotionInput(), review: { ...review, d2: { ...review.d2, headSha: shiftedHead } } },
+      {
+        ...promotionInput(),
+        review: { ...review, facts: { ...review.facts, headSha: shiftedHead } },
+      },
+      {
+        ...promotionInput(),
+        review: { ...review, claimBlind: shiftedClaimOnly },
+        expectedEvidence: {
+          ...promotionInput().expectedEvidence,
+          claimBlindReceiptDigest: reviewReceiptDigest(shiftedClaimOnly),
+        },
+      },
+      {
+        ...promotionInput(),
+        review: { ...review, specBlind: shiftedSpecOnly },
+        expectedEvidence: {
+          ...promotionInput().expectedEvidence,
+          specBlindReceiptDigest: reviewReceiptDigest(shiftedSpecOnly),
+        },
+      },
+    ];
+    for (const mutation of subjectMutations) {
+      const subjectRun = await deniedComposition(mutation);
+      expect(subjectRun.result).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+      expectNoEffects(subjectRun);
+    }
   });
 
   it("U-RELMAN-004: 同じrollback入力は同一pointer delta/digestへ収束しapply 0", () => {
-    const apply = vi.fn();
     const input = rollbackInput([rollbackCandidate()]);
     const first = selectRollbackCandidate(input);
     const second = selectRollbackCandidate(input);
     expect(first).toEqual(second);
     expect(first).toMatchObject({ decision: "allow", pointerDelta: { channel: "stable" } });
-    expect(apply).not.toHaveBeenCalled();
+    expect(first).not.toHaveProperty("apply");
   });
 
   it("U-RELMAN-005: rollback選択結果はGit commandを生成・実行しない", () => {
-    const command = vi.fn();
     const result = selectRollbackCandidate(rollbackInput([rollbackCandidate()]));
     expect(result.decision).toBe("allow");
     expect(result).not.toHaveProperty("command");
-    expect(command).not.toHaveBeenCalled();
   });
 
-  it("U-RELMAN-008: runtime上のQA no-goをcastなしで拒否しprior stateを維持", () => {
+  it("U-RELMAN-008: runtime上のQA no-goをcastなしで拒否しprior stateを維持", async () => {
     const noGo: QaReleaseGateEvidence = { ...qa, checks: { ...qa.checks, G04: "no-go" } };
-    const run = deniedComposition({ ...promotionInput(), qa: noGo });
+    const run = await deniedComposition({ ...promotionInput(), qa: noGo });
     expect(run.result).toMatchObject({ decision: "deny", reason: "qa_no_go" });
     expectNoEffects(run);
   });
 
-  it("U-RELMAN-010: D2 merge_readyなしではpromotionを拒否しwrite/publish 0", () => {
-    const notReady: ReviewGateEvidence = {
-      ...review,
-      d2: { ...review.d2, ok: false, state: "in_review", reasons: ["review_pending"] },
-    };
-    const run = deniedComposition({ ...promotionInput(), review: notReady });
-    expect(run.result).toMatchObject({ decision: "deny", reason: "review_missing" });
-    expectNoEffects(run);
+  it("U-RELMAN-010: D2 merge_readyなしではpromotion/rollbackを拒否しPF5 port 0", async () => {
+    const d2Mutations: ReviewGateEvidence[] = [
+      { ...review, d2: { ...review.d2, ok: false } },
+      { ...review, d2: { ...review.d2, state: "in_review" } },
+      { ...review, d2: { ...review.d2, reasons: ["review_pending"] } },
+    ];
+    for (const notReady of d2Mutations) {
+      const run = await deniedComposition({ ...promotionInput(), review: notReady });
+      expect(run.result).toMatchObject({ decision: "deny", reason: "review_missing" });
+      expectNoEffects(run);
+    }
+    const rollbackRun = await runRollbackComposition({
+      ...rollbackInput([rollbackCandidate()]),
+      review: { ...review, d2: undefined },
+    });
+    expect(rollbackRun.result).toMatchObject({ decision: "deny", reason: "invalid_input" });
+    expectNoEffects(rollbackRun);
   });
 
-  it("U-RELMAN-019: release/source/digest/materializer/channelの各identity driftを拒否", () => {
+  it("U-RELMAN-019: release/source/digest/materializer/channelの各identity driftを拒否", async () => {
     const inputs: PromotionGateInput[] = [
       { ...promotionInput(), release: { ...current, releaseId: previous.releaseId } },
       {
@@ -334,13 +459,13 @@ describe("S3 promotion / rollback pure gate", () => {
       { ...promotionInput(), mapping: { ...mapping, channel: "canary" } },
     ];
     for (const input of inputs) {
-      const run = deniedComposition(input);
+      const run = await deniedComposition(input);
       expect(run.result).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
       expectNoEffects(run);
     }
   });
 
-  it("U-RELMAN-020: evidence unavailable/stale/digest driftをprecedenceどおりfail-close", () => {
+  it("U-RELMAN-020: evidence unavailable/stale/digest driftをprecedenceどおりfail-close", async () => {
     const cases: Array<[PromotionGateInput, string]> = [
       [{ ...promotionInput(), ci: { ...ci, evidenceDigest: digest("f") } }, "identity_mismatch"],
       [{ ...promotionInput(), qa: { ...qa, evidenceDigest: digest("f") } }, "identity_mismatch"],
@@ -361,9 +486,129 @@ describe("S3 promotion / rollback pure gate", () => {
       ],
     ];
     for (const [input, reason] of cases) {
-      const run = deniedComposition(input);
+      const run = await deniedComposition(input);
       expect(run.result).toMatchObject({ decision: "deny", reason });
       expectNoEffects(run);
+    }
+    const splicedReviews: ReviewGateEvidence[] = [
+      { ...review, d1: { ...review.d1, pr: 999 } },
+      { ...review, d2: { ...review.d2, pr: 888 } },
+      { ...review, facts: { ...review.facts, pr: 777 } },
+      {
+        ...review,
+        d2: {
+          ...review.d2,
+          authorizedEntry: {
+            memoryId: "MEM-OTHER",
+            reviewRevision: planRevision,
+            reviewerFamily: "claude",
+          },
+        },
+      },
+      {
+        ...review,
+        d2: {
+          ...review.d2,
+          authorizedEntry: {
+            memoryId: "MEM-REVIEW-363",
+            reviewRevision: commit("f"),
+            reviewerFamily: "claude",
+          },
+        },
+      },
+      {
+        ...review,
+        d2: {
+          ...review.d2,
+          authorizedEntry: {
+            memoryId: "MEM-REVIEW-363",
+            reviewRevision: planRevision,
+            reviewerFamily: "codex",
+          },
+        },
+      },
+      { ...review, d1: { ...review.d1, authorFamily: "claude" } },
+      { ...review, d1: { ...review.d1, reviewerFamily: "codex" } },
+    ];
+    for (const spliced of splicedReviews) {
+      expect(evaluatePromotionGate({ ...promotionInput(), review: spliced })).toMatchObject({
+        decision: "deny",
+        reason: "identity_mismatch",
+      });
+    }
+    const otherPlanClaim = { ...claimBlind, planId: "PLAN-OTHER" };
+    expect(
+      evaluatePromotionGate({
+        ...promotionInput(),
+        review: { ...review, claimBlind: otherPlanClaim },
+        expectedEvidence: {
+          ...promotionInput().expectedEvidence,
+          claimBlindReceiptDigest: reviewReceiptDigest(otherPlanClaim),
+        },
+      }),
+    ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    const wrongWorker = { ...claimBlind, workerModel: "claude-sonnet-5" };
+    const wrongReviewer = { ...specBlind, reviewerModel: "gpt-5.6-sol" };
+    for (const [changedReview, expectedEvidence] of [
+      [
+        { ...review, claimBlind: wrongWorker },
+        {
+          ...promotionInput().expectedEvidence,
+          claimBlindReceiptDigest: reviewReceiptDigest(wrongWorker),
+        },
+      ],
+      [
+        { ...review, specBlind: wrongReviewer },
+        {
+          ...promotionInput().expectedEvidence,
+          specBlindReceiptDigest: reviewReceiptDigest(wrongReviewer),
+        },
+      ],
+    ] as const) {
+      expect(
+        evaluatePromotionGate({ ...promotionInput(), review: changedReview, expectedEvidence }),
+      ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    }
+    const claimInWrongLane = { ...claimBlind, lane: "spec-blind" as const };
+    expect(
+      evaluatePromotionGate({
+        ...promotionInput(),
+        review: { ...review, claimBlind: claimInWrongLane },
+        expectedEvidence: {
+          ...promotionInput().expectedEvidence,
+          claimBlindReceiptDigest: reviewReceiptDigest(claimInWrongLane),
+        },
+      }),
+    ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    expect(
+      evaluatePromotionGate({
+        ...promotionInput(),
+        attestation: {
+          status: "mismatch",
+          releaseId: previous.releaseId,
+          artifactSourceCommit: previous.artifactSourceCommit,
+          expectedDigest: previous.artifactSetDigest,
+          actualDigest: previous.artifactSetDigest,
+        },
+      }),
+    ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    const precedenceCases: Array<[unknown, string]> = [
+      [{ ...promotionInput(), exactHeadSha: "bad", ci: undefined }, "invalid_input"],
+      [
+        {
+          ...promotionInput(),
+          ci: undefined,
+          mapping: { ...mapping, releaseId: previous.releaseId },
+        },
+        "identity_mismatch",
+      ],
+      [{ ...promotionInput(), ci: undefined, qa: undefined }, "ci_missing"],
+    ];
+    for (const [input, reason] of precedenceCases) {
+      expect(evaluatePromotionGate(input)).toMatchObject({
+        decision: "deny",
+        reason,
+      });
     }
     const oldObservation: PromotionGateInput = {
       ...promotionInput(),
@@ -373,7 +618,7 @@ describe("S3 promotion / rollback pure gate", () => {
     expect(evaluatePromotionGate(oldObservation).decision).toBe("allow");
   });
 
-  it("U-RELMAN-021: rollback候補の0/複数/attestation/identity/artifact可用性を拒否", () => {
+  it("U-RELMAN-021: rollback候補の0/複数/attestation/identity/artifact可用性を拒否", async () => {
     const candidate = rollbackCandidate();
     expect(selectRollbackCandidate(rollbackInput([]))).toMatchObject({
       decision: "deny",
@@ -392,43 +637,58 @@ describe("S3 promotion / rollback pure gate", () => {
     expect(
       selectRollbackCandidate(rollbackInput([{ ...candidate, artifactAvailable: undefined }])),
     ).toMatchObject({ decision: "deny", reason: "artifact_unavailable" });
-    const apply = vi.fn();
-    const write = vi.fn();
-    expect(apply).not.toHaveBeenCalled();
-    expect(write).not.toHaveBeenCalled();
+    expect(() =>
+      selectRollbackCandidate({
+        ...rollbackInput([]),
+        candidates: [null],
+      } as unknown as RollbackSelectionInput),
+    ).not.toThrow();
+    expect(
+      selectRollbackCandidate({
+        ...rollbackInput([]),
+        candidates: [null],
+      } as unknown as RollbackSelectionInput),
+    ).toMatchObject({ decision: "deny", reason: "invalid_input" });
+    expect(
+      selectRollbackCandidate(
+        rollbackInput([
+          {
+            ...candidate,
+            attestation: {
+              status: "mismatch",
+              releaseId: current.releaseId,
+              artifactSourceCommit: current.artifactSourceCommit,
+              expectedDigest: current.artifactSetDigest,
+              actualDigest: current.artifactSetDigest,
+            },
+          },
+        ]),
+      ),
+    ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    const invalidRun = await runRollbackComposition({
+      ...rollbackInput([]),
+      candidates: [null],
+    });
+    expect(invalidRun.result).toMatchObject({ decision: "deny", reason: "invalid_input" });
+    expectNoEffects(invalidRun);
   });
 
   it("U-RELMAN-022: PF5 injected restore faultをrollback_failed/indeterminateへ分類", async () => {
-    const prior = [{ path: "pack/current", mode: "100644" as const, content: new Uint8Array([9]) }];
-    const before = structuredClone(prior);
-    const apply = vi.fn(async () => {
-      throw new Error("apply fault");
-    });
-    const restore = vi.fn(async () => {
-      throw new Error("restore fault");
-    });
-    const publish = vi.fn();
-    const pointer = vi.fn();
-    const result = await applySealedReleaseAggregate(plan, {
-      snapshotDestination: vi.fn(async () => prior),
-      writeStaging: vi.fn(async () => "stage"),
-      applyDestination: apply,
-      discardStaging: vi.fn(async () => undefined),
-      restoreDestination: restore,
-    });
-    expect(classifyRollbackApply(result)).toEqual({
+    const harness = compositionHarness({ applyFault: true, restoreFault: true });
+    const run = await runRollbackComposition(rollbackInput([rollbackCandidate()]), harness);
+    expect(run.result).toEqual({
       decision: "indeterminate",
       reason: "rollback_failed",
       sideEffects: "none",
     });
-    expect(apply).toHaveBeenCalledOnce();
-    expect(restore).toHaveBeenCalledOnce();
-    expect(publish).not.toHaveBeenCalled();
-    expect(pointer).not.toHaveBeenCalled();
-    expect(prior).toEqual(before);
+    expect(harness.dependencies.applyDestination).toHaveBeenCalledOnce();
+    expect(harness.dependencies.restoreDestination).toHaveBeenCalledOnce();
+    expect(harness.publish).not.toHaveBeenCalled();
+    expect(harness.pointerWrite).not.toHaveBeenCalled();
+    expect(harness.state).not.toEqual(harness.before);
   });
 
-  it("U-RELMAN-023: 非隣接/旧pointer/unknown targetを拒否しwrite/publish 0", () => {
+  it("U-RELMAN-023: 非隣接/旧pointer/unknown targetを拒否しwrite/publish 0", async () => {
     const nonAdjacent: ReleaseManifest = {
       ...manifest,
       channels: { ...manifest.channels, beta: previous.releaseId },
@@ -440,7 +700,7 @@ describe("S3 promotion / rollback pure gate", () => {
       { ...promotionInput(), targetChannel: "unknown" },
     ];
     for (const input of cases) {
-      const run = deniedComposition(input);
+      const run = await deniedComposition(input);
       expect(run.result.decision).toBe("deny");
       expectNoEffects(run);
     }
