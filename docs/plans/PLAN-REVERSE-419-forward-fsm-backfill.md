@@ -12,7 +12,7 @@ route_mode: reverse
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 created: 2026-07-10
-updated: 2026-08-19
+updated: 2026-08-20
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -30,6 +30,7 @@ dependencies:
     - docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md
     - docs/plans/PLAN-L6-72-forward-fsm-evidence-policy-contracts.md
     - docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/344
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/342
 review_evidence: []
 ---

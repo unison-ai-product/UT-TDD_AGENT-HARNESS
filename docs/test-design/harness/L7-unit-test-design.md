@@ -1338,16 +1338,16 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
 | `U-PA-047` | v2 ledger（reservation 0件／hash-only reservationあり） | schema v3 migration | 空reservationはtransactionalにexact v3へ移行し、非空hash-onlyは明示manifestなしに変更せずfail-close。key version/event/current/reduction/reopen一致 |
 | `U-PA-048` | unsigned/正規署名/別鍵署名/producer変更/claims・digest変更/attestation replay、key rotation、runtime property列挙 | evidence attestation issuer/verifier + policy | trusted authorityの署名とproducer bindingを満たすrecordだけeligible。未署名・偽署名・改変・replayはfail-closeし、秘密鍵/current versionはruntime propertyへ露出しない |
-| `CANDIDATE-U-FSM-001` | 正規stateごとの許可された次event、および許可表にないstate/event | transition policy / transition table | 正例は許可表どおりのnext state/eventでexit 0、負例はtyped `forward-transition-illegal`でexit 1・event/外部intent 0件 |
-| `CANDIDATE-U-FSM-002` | proposed→implementingの飛越し、逆行、terminal後追加 | transition application | 不正な飛越し・逆行・terminal後commandを拒否し、stateを変更せず副作用0件 |
-| `CANDIDATE-U-FSM-003` | pair freezeまたはRed evidence欠落のimplement command | implementation admission | `forward-red-evidence-missing` でfail-closeし、event/外部intentを0件にする |
-| `CANDIDATE-U-FSM-004` | Forward trace未freezeのreview command | trace/review admission | `forward-trace-freeze-missing` でfail-closeし、review stateを昇格せず副作用0件 |
-| `CANDIDATE-U-FSM-005` | review/test evidence不足のaccept command | acceptance policy | `forward-accept-evidence-missing` でfail-closeし、acceptedへ遷移せず副作用0件 |
-| `CANDIDATE-U-FSM-006` | blocked/reopenedでreasonまたはtyped evidence欠落 | exception/reentry policy | `forward-exception-context-missing` で拒否し、reentry/rollback intentを発行しない |
-| `CANDIDATE-U-FSM-007` | 同一sequence付きevent列を2回replay | `reduceForward` | state/verdict/digestが完全一致し、projection/outboxを二重生成しない |
-| `CANDIDATE-U-FSM-008` | ledger entry不在、projection再構築不能、frontmatter statusのみ存在 | workflow query / ledger projection | `forward-ledger-unavailable`、exit 3、frontmatterからstateを補完せずevent/outbox/外部intent 0件 |
-| `CANDIDATE-U-FSM-009` | 12 lifecycle eventの必須evidence欠落・期限切れ、およびspecialized rule境界 | evidence policy / transition admission | specialized ruleまたは`forward-evidence-missing`、exit 2、期限切れをeligibleに数えずstate/event/outbox 0件 |
-| `CANDIDATE-P-FSM-001` | generatorが作る任意event列 | `reduceForward` | 非許可状態到達0、sequence違反は必ずexit 1 |
+| `U-FSM-001` | 正規stateごとの許可された次event、および許可表にないstate/event | transition policy / transition table | 正例は許可表どおりのnext state/eventでexit 0、負例はtyped `forward-transition-illegal`でexit 1・event/外部intent 0件 |
+| `U-FSM-002` | proposed→implementingの飛越し、逆行、terminal後追加 | transition application | 不正な飛越し・逆行・terminal後commandを拒否し、stateを変更せず副作用0件 |
+| `U-FSM-003` | pair freezeまたはRed evidence欠落のimplement command | implementation admission | `forward-red-evidence-missing` でfail-closeし、event/外部intentを0件にする |
+| `U-FSM-004` | Forward trace未freezeのreview command | trace/review admission | `forward-trace-freeze-missing` でfail-closeし、review stateを昇格せず副作用0件 |
+| `U-FSM-005` | review/test evidence不足のaccept command | acceptance policy | `forward-accept-evidence-missing` でfail-closeし、acceptedへ遷移せず副作用0件 |
+| `U-FSM-006` | blocked/reopenedでreasonまたはtyped evidence欠落 | exception/reentry policy | `forward-exception-context-missing` で拒否し、reentry/rollback intentを発行しない |
+| `U-FSM-007` | 同一sequence付きevent列を2回replay | `reduceForward` | state/verdict/digestが完全一致し、projection/outboxを二重生成しない |
+| `U-FSM-008` | ledger entry不在、projection再構築不能、frontmatter statusのみ存在 | workflow query / ledger projection | `forward-ledger-unavailable`、exit 3、frontmatterからstateを補完せずevent/outbox/外部intent 0件 |
+| `U-FSM-009` | 12 lifecycle eventの必須evidence欠落・期限切れ、およびspecialized rule境界 | evidence policy / transition admission | specialized ruleまたは`forward-evidence-missing`、exit 2、期限切れをeligibleに数えずstate/event/outbox 0件 |
+| `P-FSM-001` | generatorが作る任意event列 | `reduceForward` | 非許可状態到達0、sequence違反は必ずexit 1 |
 | `U-VMC-001` | L0-L14各1件 | `VModelContract.create` | layer count 15、exit 0 |
 | `U-VMC-002` | G0.5/G1-G14各1件 | `VModelContract.create` | gate count 15、exit 0 |
 | `U-VMC-003` | layer/gate欠落または重複 | `VModelContract.create` | `contract-cardinality-invalid`, exit 1 |
