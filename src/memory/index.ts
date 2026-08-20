@@ -83,6 +83,36 @@ export function memorySlugFor(title: string): string {
   return slugify(title);
 }
 
+/**
+ * filename の basename 上限 (拡張子込み)。
+ *
+ * `memory_id` は title 全長由来の slug なので、そのまま filename にすると Windows の
+ * MAX_PATH (260) を超えて **checkout 自体が失敗**する (issue #353、実測 repo 相対 265 文字)。
+ * 120 にすると repo 相対は `.ut-tdd/memory/` (16) + 120 = 136 で、CI の checkout root
+ * (GitHub runner の `D:/a/<repo>/<repo>/` 相当で ~48) を足しても ~184 と余裕がある。
+ */
+export const MEMORY_FILENAME_MAX = 120;
+
+/**
+ * `memory_id` から正本ファイル名を導く。
+ *
+ * 契約 (issue #353、advisor gpt-5.6-sol 合議):
+ * - `memory_id` は全長のまま。正本識別子であり projection / freshness / notification が鍵にする。
+ * - 上限内の名前は現行形式を完全維持 (既存 corpus を移行させない)。
+ * - 超過時だけ可読 prefix を切り詰め、切り詰め前の完全な `memory_id` の sha256 先頭 16 桁を
+ *   付す。短縮 hash は確率的なので、衝突は書き込み側が既存ファイルの `memory_id` 照合で
+ *   fail-close する (MemoryService の責務)。
+ */
+export function memoryFileNameFor(kind: MemoryKind, memoryId: string): string {
+  const slug = memoryId.slice(`memory:${kind}:`.length);
+  const plain = `${kind}-${slug}.md`;
+  if (plain.length <= MEMORY_FILENAME_MAX) return plain;
+  const digest = stableHash(memoryId).slice(0, 16);
+  const budget = MEMORY_FILENAME_MAX - `${kind}-`.length - 1 - digest.length - ".md".length;
+  const head = slug.slice(0, budget).replace(/-+$/, "");
+  return `${kind}-${head}-${digest}.md`;
+}
+
 export function parseMemoryFile(
   repoRoot: string,
   sourcePath: string,
