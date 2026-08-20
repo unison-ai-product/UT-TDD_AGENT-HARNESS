@@ -49,6 +49,26 @@ export {
   type ReleaseManifestTreeEntry,
   type SealedReleaseAggregatePlan,
 } from "./release-aggregate-admission.ts";
+export {
+  type CanonicalCiEvidence,
+  classifyRollbackApply,
+  evaluatePromotionGate,
+  type GateLegStatus,
+  type PromotionEvidenceBinding,
+  type PromotionGateInput,
+  type PromotionGateReason,
+  type PromotionGateResult,
+  type QaGateStatus,
+  type QaReleaseGateEvidence,
+  type ReviewGateEvidence,
+  type RollbackApplyResult,
+  type RollbackCandidate,
+  type RollbackGateReason,
+  type RollbackPointerDelta,
+  type RollbackSelectionInput,
+  type RollbackSelectionResult,
+  selectRollbackCandidate,
+} from "./release-promotion-rollback-gate.ts";
 
 import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 
