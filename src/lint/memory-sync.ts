@@ -8,7 +8,11 @@ import { execFileSync } from "node:child_process";
  * origin 追跡分が 32 件欠落し、逆にローカルのみの未コミットが 15 件あった。15 件はすべて
  * 引き継ぎ目的で書かれたもので、書いた側は「共有した」と認識していた。
  *
- * 「共有済み」の定義は **origin 到達**。同一 working tree を共有する構成ではファイル自体は
+ * 「共有済み」の定義は **その内容が origin へ到達**。パス存在ではなく HEAD と origin の
+ * blob oid 一致で判定する。パス存在だと、既存 memory を編集して commit したが push して
+ * いない場合に shared と誤判定し、更新経路の沈黙欠落を素通りさせる (issue #187)。
+ *
+ * 同一 working tree を共有する構成ではファイル自体は
  * 相手から見えるが、永続性・別 worktree・branch 切替に耐えるのは origin 到達のみであり、
  * これは「引き継ぎ・検証の基準点 = HEAD」規律と整合する。
  *
@@ -22,7 +26,7 @@ export type MemorySyncState =
   | "untracked"
   /** 追跡されているが working tree の変更が commit されていない。 */
   | "uncommitted-change"
-  /** commit 済みだが origin の基準 ref に到達していない。 */
+  /** commit 済みだが、その内容が origin の基準 ref に到達していない (未 push / 更新未 push)。 */
   | "not-on-origin"
   /** origin 到達済み。 */
   | "shared";
@@ -126,6 +130,39 @@ function gitLines(repoRoot: string, args: string[]): string[] | undefined {
   }
 }
 
+/**
+ * `<ref>` の tree から `path -> blob oid` を読む。
+ *
+ * パス存在ではなく **blob oid** を読むのが要点 (issue #187)。存在判定だと、既存 memory を
+ * 編集して commit したが push していない場合に「パスは origin にある」だけで shared と
+ * 誤判定し、更新経路の沈黙欠落を素通りさせる。
+ *
+ * `-z` で NUL 区切りの生パスを読む (`core.quotePath` によるエスケープを避ける)。
+ */
+function gitTreeBlobs(repoRoot: string, ref: string): Map<string, string> | undefined {
+  let raw: string;
+  try {
+    raw = execFileSync("git", ["ls-tree", "-r", "-z", ref, "--", MEMORY_PATHSPEC], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return undefined;
+  }
+  const blobs = new Map<string, string>();
+  for (const record of raw.split("\0")) {
+    if (!record) continue;
+    // `<mode> <type> <oid>\t<path>`
+    const tab = record.indexOf("\t");
+    if (tab < 0) continue;
+    const [, type, oid] = record.slice(0, tab).split(/\s+/);
+    if (type !== "blob" || !oid) continue;
+    blobs.set(record.slice(tab + 1), oid);
+  }
+  return blobs;
+}
+
 export function loadMemorySyncInput(repoRoot: string): MemorySyncInput {
   const tracked = gitLines(repoRoot, ["ls-files", "--", MEMORY_PATHSPEC]) ?? [];
   const untracked =
@@ -139,15 +176,17 @@ export function loadMemorySyncInput(repoRoot: string): MemorySyncInput {
   for (const path of staged) modified.add(path);
 
   let originRef = ORIGIN_REF_CANDIDATES[0] as string;
-  let onOrigin: Set<string> | undefined;
+  let onOrigin: Map<string, string> | undefined;
   for (const ref of ORIGIN_REF_CANDIDATES) {
-    const listed = gitLines(repoRoot, ["ls-tree", "-r", "--name-only", ref, "--", MEMORY_PATHSPEC]);
+    const listed = gitTreeBlobs(repoRoot, ref);
     if (listed) {
       originRef = ref;
-      onOrigin = new Set(listed);
+      onOrigin = listed;
       break;
     }
   }
+  // 手元の commit 済み内容。origin の blob と一致して初めて「その内容が届いた」と言える。
+  const onHead = gitTreeBlobs(repoRoot, "HEAD");
 
   const files: MemorySyncFile[] = [];
   for (const path of untracked) {
@@ -165,7 +204,12 @@ export function loadMemorySyncInput(repoRoot: string): MemorySyncInput {
       files.push({ source_path: path, state: "not-on-origin" });
       continue;
     }
-    files.push({ source_path: path, state: onOrigin.has(path) ? "shared" : "not-on-origin" });
+    // 内容一致で判定する。パス存在では更新経路 (既存 memory を編集 + commit、push 前) を
+    // shared と誤判定する (issue #187)。HEAD 側を読めない環境では到達を証明できない。
+    const headOid = onHead?.get(path);
+    const originOid = onOrigin.get(path);
+    const shared = headOid !== undefined && headOid === originOid;
+    files.push({ source_path: path, state: shared ? "shared" : "not-on-origin" });
   }
   files.sort((a, b) =>
     a.source_path < b.source_path ? -1 : a.source_path > b.source_path ? 1 : 0,
