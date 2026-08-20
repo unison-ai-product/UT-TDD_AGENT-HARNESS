@@ -76,8 +76,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T12:21:39+09:00"
         evidence_path: tests/forward/fsm.test.ts
-        output_digest: "sha256:c314342888329a11ceef665689e59daac9feda92cd6bf5c555fd56110b54e786"
-        anchor_commit: fc2c4c10df040ab3f8ea000841f217e92c2f1baa
+        output_digest: "sha256:7608eba85a8fdce86dfda4aa77e1f8c5539c93606c7281c1ba5a7e54fbd565d5"
+        anchor_commit: 986a296c579fa881640049160f393ad2f68eceaf
     scope: >-
       Issue #344 bounded implementation。Lunaがtransition policy、append-only reducer、
       EvidenceRecord policy、ledger/projection port、workflow status/transition/explain CLIを実装。
