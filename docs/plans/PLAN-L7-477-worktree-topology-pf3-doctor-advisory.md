@@ -39,8 +39,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-tl
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-20T14:35:51+09:00"
-    tests_green_at: "2026-08-20T14:35:51+09:00"
+    reviewed_at: "2026-08-20T14:42:27+09:00"
+    tests_green_at: "2026-08-20T14:42:27+09:00"
     verdict: pass
     scope: >-
       PF3 bounded slice の implementation verification。U-WTTOPO-015 を CANDIDATE から 1:1 昇格し、
@@ -51,23 +51,14 @@ review_evidence:
     reviewer_model: gpt-5.6-luna
     green_commands:
       - kind: unit_test
-        command: >-
-          node --input-type=module -e 'import { checkWorktreeTopologyAdvisory } from
-          "./src/doctor/worktree-topology-advisory.ts"; const empty={facts:[],adminEntries:[]};
-          if(JSON.stringify(checkWorktreeTopologyAdvisory(empty))!==JSON.stringify({ok:true,messages:[]}))
-          throw new Error("empty-no-op"); const input={facts:[{worktreePathKey:"C:/repo/worktree",
-          adminPathKey:"C:/repo/.git/worktrees/worktree",headOid:"0123456789012345678901234567890123456789",
-          isMain:false,directoryObserved:false,worktreeToAdminOk:true,adminToWorktreeOk:true,dirty:false,
-          branch:"refs/heads/feature",mergedIntoMain:false}],adminEntries:[]}; const result=
-          checkWorktreeTopologyAdvisory(input); if(!result.ok || !result.messages.join("\\n").includes("dir_missing"))
-          throw new Error("finding-advisory"); console.log("U-WTTOPO-015: 2 assertions passed; advisory ok=true");'
+        command: "npm exec -- vitest --config vitest.pf3.config.ts run tests/worktree-topology-doctor.test.ts --reporter=dot"
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-20T14:35:51+09:00"
+        completed_at: "2026-08-20T14:42:27+09:00"
         evidence_path: tests/worktree-topology-doctor.test.ts
-        output_digest: "sha256:4a3cfe61dcab160c4a58b7f866472b0f926502e02f412e8ed933bdaec8ec68d5"
-        anchor_commit: ce2ed7f2402242cc44eb85988a27dc94ebdf87cb
+        output_digest: "sha256:e36c0e5af51d5d93314f26d4eddff875c8d634ca31ca7bfe294e124d38dcd5cc"
+        anchor_commit: efef7f54e1bfd72d6d9290fc18ea123aeee3947c
       - kind: typecheck
         command: "npm run typecheck"
         runner: node
