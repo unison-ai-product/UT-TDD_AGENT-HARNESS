@@ -1,8 +1,14 @@
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { type MemoryEntry, memoryIdFor, selectMemoryEntries } from "../src/memory/index.ts";
+import {
+  MEMORY_FILENAME_MAX,
+  type MemoryEntry,
+  memoryFileNameFor,
+  memoryIdFor,
+  selectMemoryEntries,
+} from "../src/memory/index.ts";
 import {
   compareIndexToCorpus,
   loadMemoryCorpus,
@@ -506,5 +512,123 @@ describe("MemoryService (PLAN-L7-468 PR-A)", () => {
     };
     walk(root);
     expect(violations).toEqual([]);
+  });
+});
+
+/**
+ * issue #353: `memory_id` は title 全長由来なので、そのまま filename にすると Windows の
+ * MAX_PATH を超えて checkout 自体が失敗する。filename だけを上限で切り詰め、`memory_id` は
+ * 全長を維持するのが凍結した契約 (advisor gpt-5.6-sol)。
+ */
+describe("memory filename length bound (issue #353)", () => {
+  const longTitle = (tail: string): string =>
+    `${"forward fsm closing review flag blocking one exact head remediation and delta verdict ".repeat(3)}${tail}`;
+
+  it("keeps names within the bound unchanged", () => {
+    const memoryId = memoryIdFor({ kind: "feedback", title: "PR 353 short title" });
+    expect(memoryFileNameFor("feedback", memoryId)).toBe(
+      `feedback-${memoryId.slice("memory:feedback:".length)}.md`,
+    );
+  });
+
+  it("keeps a basename of exactly the bound unchanged", () => {
+    // `feedback-` (9) + slug + `.md` (3) = 120 になる slug を作る。
+    const slug = "a".repeat(MEMORY_FILENAME_MAX - "feedback-".length - ".md".length);
+    const name = memoryFileNameFor("feedback", `memory:feedback:${slug}`);
+    expect(name.length).toBe(MEMORY_FILENAME_MAX);
+    expect(name).toBe(`feedback-${slug}.md`);
+  });
+
+  it("truncates one character over the bound and stays within it", () => {
+    const slug = "a".repeat(MEMORY_FILENAME_MAX - "feedback-".length - ".md".length + 1);
+    const name = memoryFileNameFor("feedback", `memory:feedback:${slug}`);
+    expect(name.length).toBeLessThanOrEqual(MEMORY_FILENAME_MAX);
+    expect(name).not.toBe(`feedback-${slug}.md`);
+    expect(name).toMatch(/-[0-9a-f]{16}\.md$/);
+  });
+
+  it("separates two long titles that share a prefix", () => {
+    const first = memoryIdFor({ kind: "feedback", title: longTitle("alpha") });
+    const second = memoryIdFor({ kind: "feedback", title: longTitle("beta") });
+    expect(first).not.toBe(second);
+    const firstName = memoryFileNameFor("feedback", first);
+    const secondName = memoryFileNameFor("feedback", second);
+    expect(firstName).not.toBe(secondName);
+    expect(firstName.length).toBeLessThanOrEqual(MEMORY_FILENAME_MAX);
+    expect(secondName.length).toBeLessThanOrEqual(MEMORY_FILENAME_MAX);
+  });
+
+  it("writes a bounded path while keeping the full memory_id readable", () => {
+    const repo = tempRepo();
+    try {
+      const title = longTitle("gamma");
+      const written = writeMemory({
+        repoRoot: repo,
+        input: { kind: "feedback", title, body: "bounded filename", tags: ["issue-353"] },
+      });
+      expect(written.memory_id).toBe(memoryIdFor({ kind: "feedback", title }));
+      expect(written.source_path.length).toBeLessThanOrEqual(150);
+      const files = readdirSync(join(repo, ".ut-tdd", "memory"));
+      expect(files).toHaveLength(1);
+      expect(files[0].length).toBeLessThanOrEqual(MEMORY_FILENAME_MAX);
+
+      // 切り詰めた filename からでも完全な memory_id を読み戻せる。
+      const corpus = loadMemoryCorpus(repo);
+      expect(corpus.findings).toEqual([]);
+      expect(corpus.entries.map((entry) => entry.memory_id)).toEqual([written.memory_id]);
+    } finally {
+      removeTestTree(repo);
+    }
+  });
+
+  it("refuses to overwrite a bounded target that holds a different memory_id", () => {
+    const repo = tempRepo();
+    try {
+      const title = longTitle("delta");
+      const memoryId = memoryIdFor({ kind: "feedback", title });
+      const fileName = memoryFileNameFor("feedback", memoryId);
+      mkdirSync(join(repo, ".ut-tdd", "memory"), { recursive: true });
+      writeFileSync(
+        join(repo, ".ut-tdd", "memory", fileName),
+        [
+          "---",
+          "memory_id: memory:feedback:some-other-entry",
+          "kind: feedback",
+          'title: "Some other entry"',
+          "tags: []",
+          "updated_at: 2026-08-20T00:00:00.000Z",
+          "---",
+          "",
+          "other body",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      expect(() =>
+        writeMemory({
+          repoRoot: repo,
+          input: { kind: "feedback", title, body: "bounded filename", tags: [] },
+        }),
+      ).toThrow(/refusing to overwrite existing memory/);
+    } finally {
+      removeTestTree(repo);
+    }
+  });
+
+  it("holds the shipped corpus within the bound", () => {
+    const root = join(
+      workspaceRead({
+        id: "memory-filename-length-corpus",
+        mode: "head_snapshot",
+        reason:
+          "issue #353: 出荷済み corpus が Windows checkout 可能な長さかを HEAD 基準で検査する",
+      }),
+      ".ut-tdd",
+      "memory",
+    );
+    const overlong = readdirSync(root).filter(
+      (name) => join(".ut-tdd", "memory", name).replaceAll("\\", "/").length > 150,
+    );
+    expect(overlong).toEqual([]);
   });
 });

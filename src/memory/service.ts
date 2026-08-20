@@ -27,6 +27,7 @@ import {
   type MemoryEntry,
   type MemoryKind,
   type MemoryWriteInput,
+  memoryFileNameFor,
   memoryIdFor,
   memorySlugFor,
   parseMemoryFile,
@@ -126,8 +127,14 @@ function writeMemoryEntry(repoRoot: string, input: MemoryWriteInput): MemoryEntr
     throw new Error("memory must not contain secret-like values");
 
   const memoryId = memoryIdFor({ kind: input.kind, title });
-  const slug = memoryId.slice(`memory:${input.kind}:`.length);
-  const sourcePath = join(".ut-tdd", "memory", `${input.kind}-${slug}.md`).replaceAll("\\", "/");
+  // filename は memory_id から導くが上限で切り詰める。切り詰めても memory_id は全長のまま
+  // frontmatter に載るので識別は失われない (issue #353)。
+  const sourcePath = join(".ut-tdd", "memory", memoryFileNameFor(input.kind, memoryId)).replaceAll(
+    "\\",
+    "/",
+  );
+  // legacy 側は上限を掛けない。上限超過の legacy ファイルが既に disk 上にある場合、それを
+  // 見失うと同一 memory が二重化する。新規流入だけを止めるのが本 fix の範囲。
   const legacySlug = memorySlugFor(title);
   const legacyMemoryId = `memory:${input.kind}:${legacySlug}`;
   const legacySourcePath = join(".ut-tdd", "memory", `${input.kind}-${legacySlug}.md`).replaceAll(
