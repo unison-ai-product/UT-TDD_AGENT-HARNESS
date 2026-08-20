@@ -9,7 +9,7 @@ status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-08-19
+updated: 2026-08-20
 owner: PO / Codex
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -79,25 +79,25 @@ SSoT として具体化するものである。state 集合、admission rule、t
 
 ### 1. event 語彙と要求 evidence
 
-| event | 許可される from state | next state | 必須 evidence / 追加条件 |
-| --- | --- | --- | --- |
-| `plan` | `proposed` | `planned` | `scope-approval` |
-| `prepare-pair-freeze` | `planned` | `pair_freeze_ready` | `pair-artifact-declaration`, `design-pair-review` |
-| `freeze-pair` | `pair_freeze_ready` | `pair_frozen` | `pair-artifact-declaration`, `design-pair-review` |
-| `freeze-red` | `pair_frozen` | `red_frozen` | `red-test-run` (expected nonzero を含む) |
-| `begin-implementation` | `red_frozen` | `implementing` | `pair-artifact-declaration`, `red-test-run` |
-| `complete-implementation` | `implementing` | `implementation_complete` | `implementation-digest`, `targeted-test-run` |
-| `prepare-trace-freeze` | `implementation_complete` | `trace_freeze_ready` | `trace-materialization` |
-| `freeze-trace` | `trace_freeze_ready` | `trace_frozen` | `trace-closure`, `green-test-run` |
-| `prepare-review` | `trace_frozen` | `review_ready` | `trace-closure`, `green-test-run` |
-| `submit-review` | `review_ready` | `reviewed` | `independent-review` (非著者 producer) |
-| `accept` | `reviewed` | `accepted` | `independent-review`, `gate-run` |
-| `archive` | `accepted` | `archived` | `acceptance-decision`, `retention-decision` |
-| `block` | 13 正規 state のうち `archived` / `accepted` 以外 | `blocked` | `exception-context.action=block`、reason、subject revision |
-| `supersede` | 13 正規 state のうち `archived` 以外 | `superseded` | `exception-context.action=supersede`、reason、replacement subject |
-| `reject` | `review_ready` または `reviewed` | `rejected` | `exception-context.action=reject`、reason、subject revision |
-| `reopen` | `blocked`、`superseded`、`rejected` | `reopened` | `exception-context.action=reopen`、reason、new revision |
-| `resume` | `reopened` | `planned` | `exception-context.action=resume`、reason、new revision |
+| event | 許可される from state | next state | 必須 evidence / 追加条件 | 欠落・期限切れの typed rule |
+| --- | --- | --- | --- | --- |
+| `plan` | `proposed` | `planned` | `scope-approval` | `forward-evidence-missing` |
+| `prepare-pair-freeze` | `planned` | `pair_freeze_ready` | `pair-artifact-declaration`, `design-pair-review` | `forward-evidence-missing` |
+| `freeze-pair` | `pair_freeze_ready` | `pair_frozen` | `pair-artifact-declaration`, `design-pair-review` | `forward-evidence-missing` |
+| `freeze-red` | `pair_frozen` | `red_frozen` | `red-test-run` (expected nonzero を含む) | `forward-evidence-missing` |
+| `begin-implementation` | `red_frozen` | `implementing` | `pair-artifact-declaration`, `red-test-run` | `forward-red-evidence-missing` |
+| `complete-implementation` | `implementing` | `implementation_complete` | `implementation-digest`, `targeted-test-run` | `forward-evidence-missing` |
+| `prepare-trace-freeze` | `implementation_complete` | `trace_freeze_ready` | `trace-materialization` | `forward-evidence-missing` |
+| `freeze-trace` | `trace_freeze_ready` | `trace_frozen` | `trace-closure`, `green-test-run` | `forward-evidence-missing` |
+| `prepare-review` | `trace_frozen` | `review_ready` | `trace-closure`, `green-test-run` | `forward-trace-freeze-missing` |
+| `submit-review` | `review_ready` | `reviewed` | `independent-review` (非著者 producer) | `forward-evidence-missing` |
+| `accept` | `reviewed` | `accepted` | `independent-review`, `gate-run` | `forward-accept-evidence-missing` |
+| `archive` | `accepted` | `archived` | `acceptance-decision`, `retention-decision` | `forward-evidence-missing` |
+| `block` | 13 正規 state のうち `archived` / `accepted` 以外 | `blocked` | `exception-context.action=block`、reason、subject revision | `forward-exception-context-missing` |
+| `supersede` | 13 正規 state のうち `archived` 以外 | `superseded` | `exception-context.action=supersede`、reason、replacement subject | `forward-exception-context-missing` |
+| `reject` | `review_ready` または `reviewed` | `rejected` | `exception-context.action=reject`、reason、subject revision | `forward-exception-context-missing` |
+| `reopen` | `blocked`、`superseded`、`rejected` | `reopened` | `exception-context.action=reopen`、reason、new revision | `forward-exception-context-missing` |
+| `resume` | `reopened` | `planned` | `exception-context.action=resume`、reason、new revision | `forward-exception-context-missing` |
 
 `archived` は唯一の terminal state であり、追加 event は全て拒否する。`accepted` は
 受入済みだが archival 前なので、replacement subject と exception context を持つ明示的な
@@ -107,6 +107,14 @@ accepted artifact を新 revision へ置換する Forward ledger 操作である
 context を伴う `reopen` だけを許可する。`blocked` は `reopen` を経由しない直接復帰を
 許可しない。イベントは append-only ledger に一度だけ記録し、同一 command ID と同一
 payload の再送だけを同一結果へ還元する。
+
+正規 lifecycle event 12 件のうち、表の `欠落・期限切れの typed rule` が
+`forward-evidence-missing` の行は共通 rule を使用する。envelope の `evidence.required`
+と `evidence.rejected` に不足または期限切れになった policy row を stable 順で列挙し、
+特化 rule (`forward-red-evidence-missing`、`forward-trace-freeze-missing`、
+`forward-accept-evidence-missing`) を持つ行はそれを優先する。exception event は
+`forward-exception-context-missing` を優先する。これにより実装側が event ごとの新しい
+rule ID を発明する余地を残さず、全ての evidence 欠落・期限切れを exit 2 へ閉じる。
 
 ### 2. state × event の閉包規則
 
@@ -128,7 +136,9 @@ event 固有の fail-close を返す。`begin-implementation` が `proposed`、`
 が無い場合は `forward-trace-freeze-missing` / exit 2、`accept` が `review_ready` から
 呼ばれ review/test evidence が無い場合は `forward-accept-evidence-missing` / exit 2 と
 する。exception event の reason・revision・typed context 欠落は
-`forward-exception-context-missing` / exit 2 とする。これらの前置条件が満たされている
+`forward-exception-context-missing` / exit 2 とする。それ以外の lifecycle event で必須
+evidence が不足または期限切れの場合は `forward-evidence-missing` / exit 2 とする。
+期限切れ record は `eligible` に数えず、missing と同じ precedence で扱う。これらの前置条件が満たされている
 のに表にない state/event を指定した場合だけ `forward-transition-illegal` / exit 1 とし、
 candidate の missing-evidence と illegal-transition を一意に分離する。
 
@@ -207,7 +217,7 @@ ledger projection の不一致は success に補完せず exit 3 へ閉じる。
 | ---: | --- | --- |
 | `0` | allow または valid explain/status | 許可 edge、schema-valid state、reduction success |
 | `1` | caller が要求した遷移・入力の policy violation | `forward-transition-illegal`、alias ambiguity |
-| `2` | evidence / dependency が不足・stale・expired | `forward-red-evidence-missing`、`forward-trace-freeze-missing`、`forward-accept-evidence-missing`、`forward-exception-context-missing` |
+| `2` | evidence / dependency が不足・stale・expired | `forward-evidence-missing`、`forward-red-evidence-missing`、`forward-trace-freeze-missing`、`forward-accept-evidence-missing`、`forward-exception-context-missing` |
 | `3` | ledger / transaction / projection / parser unavailable | DB failure、rebuild digest mismatch、unknown envelope version |
 
 exit code と `ruleId` は envelope と stderr の両方で同じ値を返し、散文から verdict を
@@ -216,7 +226,18 @@ query の説明・取得に成功したかで終了コードを決め、`verdict
 内容にかかわらず valid read-only envelope は exit 0 とする。query の入力不正、ledger
 欠落、projection 不一致だけが exit 3 となる。query は常に state/event/outbox を変更しない。
 
-この追補により、#344 の実装 admission は表を参照して一意に判定できる。L6-72 の
-既存契約を変更するものではなく、宣言済みの「tableとして固定」を実体化した correction
-である。実装 PR が `src/forward/**` を生成するとき、PLAN-L7-419 はこの表と candidate
-IDを `requires` / `generates` / `review_evidence` で exact revision に束縛する。
+### 5. Issue #347 correction (2026-08-20)
+
+Issue #346 の再レビューで、12 lifecycle event の必須 evidence 欠落時の rule ID が
+9 event 分未定義だった。この追補では共通 `forward-evidence-missing` を追加し、表の
+specialized rule と共通 rule の precedence、期限切れ evidence の exit 2 mapping を
+固定する。`CANDIDATE-U-FSM-009` がこの mapping と期限切れ境界を1:1で検証する。
+
+また、実装所有者は docs-only pair-freeze の #342 ではなく bounded implementation の
+#344 であるため、PLAN-L7-419 の `github_issue_id` と references を #344 に更新する。
+#342 は predecessor/reference として残す。これらは既存の transition/evidence 契約を
+拡張する correction であり、Forward source 実装や新しい evidence 型を先取りしない。
+
+この追補により、#344 の実装 admission は表を参照して一意に判定できる。実装 PR が
+`src/forward/**` を生成するとき、PLAN-L7-419 はこの表と candidate IDを `requires` /
+`generates` / `review_evidence` で exact revision に束縛する。
