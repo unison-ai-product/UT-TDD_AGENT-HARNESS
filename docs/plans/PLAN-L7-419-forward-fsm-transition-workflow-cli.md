@@ -63,28 +63,28 @@ github_issue_id: 344
 review_evidence:
   - reviewer: codex-integration-precheck
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-20T12:11:35+09:00"
-    tests_green_at: "2026-08-20T12:11:30+09:00"
+    reviewed_at: "2026-08-20T12:22:10+09:00"
+    tests_green_at: "2026-08-20T12:21:39+09:00"
     verdict: implementation_ready_for_ci
     worker_model: gpt-5.6-luna
-    worker_revision: 34286cbf
+    worker_revision: fc2c4c10df040ab3f8ea000841f217e92c2f1baa
     green_commands:
       - kind: unit_test
         command: "node_modules/.bin/vitest run tests/forward/fsm.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1"
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-20T12:11:30+09:00"
+        completed_at: "2026-08-20T12:21:39+09:00"
         evidence_path: tests/forward/fsm.test.ts
-        output_digest: "sha256:c314342888329a11ceef665689e59daac9feda92cd6bf5c555fd56110b54e786"
-        anchor_commit: 3deacfdc172262d4000bf5cc9136f212db5732f3
+        output_digest: "sha256:dd9509cad71646ae0c494b0ac93bdccabe965d4134fb333e2ed1afcc099ed12d"
+        anchor_commit: fc2c4c10df040ab3f8ea000841f217e92c2f1baa
     scope: >-
       Issue #344 bounded implementation。Lunaがtransition policy、append-only reducer、
       EvidenceRecord policy、ledger/projection port、workflow status/transition/explain CLIを実装。
       projection state/digest mismatchをU-FSM-008で、projection write failure後のreplay recoveryを
       U-FSM-007でRed→Green化し、直接targeted testは12/12、
-      tsc/Biome/plan lintはGreen。正規snapshot runnerは同一HEADで
-      resource timeoutとなり、件数の根拠には使用しない。Opus pre-gate PASSはHARNESS Memoryへ記録済み。
+      tsc/Biome/plan lint/coding-rulesはGreen。non-author closing review、CI、Reverseは
+      未完了のためDoDを未チェックのまま保持する。Opus pre-gate PASSはHARNESS Memoryへ記録済み。
 ---
 
 # PLAN-L7-419: Forward FSM transition engine / workflow CLI
