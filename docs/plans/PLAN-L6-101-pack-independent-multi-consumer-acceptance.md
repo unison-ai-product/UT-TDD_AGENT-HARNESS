@@ -6,7 +6,7 @@ layer: L6
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-20
 updated: 2026-08-20
 owner: PM / Codex
@@ -34,7 +34,25 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/224
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/357
 github_issue_id: 357
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-20T09:09:53Z"
+    tests_green_at: "2026-08-20T09:15:54Z"
+    verdict: pass
+    scope: >-
+      PR #358 exact HEAD 040a9f85955db39286b46f093db2627dba4513f5 の
+      PLAN-L6-101 pair-freeze delta closing review。B-1/B-2/F-1/F-2、consumer
+      isolation、source非依存、異version、片系upgrade/rollback、digest再計算を確認。
+    worker_model: codex
+    reviewer_model: claude-opus-5
+    plan_revision: 040a9f85955db39286b46f093db2627dba4513f5
+    subject_head: 040a9f85955db39286b46f093db2627dba4513f5
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/358#issuecomment-5353821558"
+    anchor_commit: 040a9f85955db39286b46f093db2627dba4513f5
+    citations:
+      - "Claude Opus PASS comment: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/358#issuecomment-5353821558"
+      - "GitHub Actions run 32352029860 (Linux/Windows/aggregate success): https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/32352029860"
 ---
 
 # PLAN-L6-101: Pack単独・2 consumer隔離受入契約
