@@ -141,6 +141,15 @@ review_evidence:
         evidence_path: tests/release-promotion-rollback-gate.test.ts
         output_digest: "sha256:1ef02ee8aedf7d58315a0f3112b7fa9e9001b1d38b03e3241a2673feaa889406"
         anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
+      - kind: typecheck
+        command: "GitHub Actions run 32437438186: harness-check-linux typecheck"
+        runner: ci
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-21T01:46:20Z"
+        evidence_path: src/setup/release-promotion-rollback-gate.ts
+        output_digest: "sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a"
+        anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
   - reviewer: codex-primary-flag-closure-3
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-21T03:26:01Z"
@@ -176,15 +185,6 @@ review_evidence:
         evidence_path: src/setup/release-promotion-rollback-gate.ts
         output_digest: "sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a"
         anchor_commit: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
-      - kind: typecheck
-        command: "GitHub Actions run 32437438186: harness-check-linux typecheck"
-        runner: ci
-        scope: changed-files
-        exit_code: 0
-        completed_at: "2026-08-21T01:46:20Z"
-        evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a"
-        anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
 ---
 
 # PLAN-L7-494: S3 release promotion / rollback pure gate
