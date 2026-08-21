@@ -47,20 +47,20 @@ dependencies:
 github_issue_id: 362
 backprop_decision: required
 review_evidence:
-  - reviewer: codex-primary-preflight
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-21T17:05:25+09:00"
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-21T17:30:03+09:00"
     tests_green_at: "2026-08-21T17:05:25+09:00"
-    verdict: "preflight-pass; non-author closing review pending"
-    scope: "B1-B7是正後のexact implementation HEADをLinux/Windows/aggregate CI Greenへ束縛。dual consumer、component layout、v1/v2 identity、atomic upgrade/rollback、canonical releaseId、Windows 8.3 aliasを再検収。"
+    verdict: "PASS; blocking 0"
+    scope: "exact HEAD d919b581の非著者claim-blind/spec-blind closing review。source非依存、A/B隔離、canonical root、escape fail-close、digest再計算、layout凍結をmutation probe込みで再検収。"
     worker_model: gpt-5.6-luna
-    reviewer_model: gpt-5.6-sol
-    plan_revision: b69cca39742413693152d29314b00a85063338c2
-    subject_head: b69cca39742413693152d29314b00a85063338c2
+    reviewer_model: claude-opus-5
+    plan_revision: d919b581f77325ab704c0292a3467246f1ef0254
+    subject_head: d919b581f77325ab704c0292a3467246f1ef0254
     evidence_path: tests/consumer-local-runtime-admission.test.ts
     anchor_commit: b69cca39742413693152d29314b00a85063338c2
     citations:
-      - "tests/consumer-local-runtime-admission.test.ts: U-PACKISO-001..006 expanded 25 cases"
+      - "tests/consumer-local-runtime-admission.test.ts: U-PACKISO-001..006 expanded 26 cases"
       - "src/setup/consumer-local-runtime-admission.ts: canonical layout, releaseId derivation, PF5 install composition"
       - "src/schema/release-manifest.ts: deriveReleaseId"
     green_commands:
