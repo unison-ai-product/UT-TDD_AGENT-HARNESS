@@ -320,7 +320,7 @@ describe("green command anchor_commit 必須化 (issue #191)", () => {
       }),
     ]);
 
-  it("requires an anchor regardless of the self-declared completed_at", () => {
+  it("U-REVIEW-009: requires an anchor regardless of the self-declared completed_at", () => {
     // 旧実装では発効時刻より前として grandfather された入力。自己申告で迂回できない。
     const r = withCommand("PLAN-ANCHOR-BACKDATED", {
       completed_at: "2026-08-19T19:26:02+09:00",
@@ -331,14 +331,14 @@ describe("green command anchor_commit 必須化 (issue #191)", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("rejects an entry without an anchor", () => {
+  it("U-REVIEW-010: rejects an entry without an anchor", () => {
     const r = withCommand("PLAN-ANCHOR-MISSING", { completed_at: "2026-08-20T00:00:00Z" });
     expect(r.greenCommandViolations).toEqual([
       { plan_id: "PLAN-ANCHOR-MISSING", reason: "missing_anchor_commit" },
     ]);
   });
 
-  it("accepts an entry that carries an anchor", () => {
+  it("U-REVIEW-011: accepts an entry that carries an anchor", () => {
     const r = withCommand("PLAN-ANCHOR-OK", {
       completed_at: "2026-08-20T00:00:00Z",
       anchor_commit: "5604874bb73905967b19f2e6cbc048101f807e39",
@@ -346,7 +346,7 @@ describe("green command anchor_commit 必須化 (issue #191)", () => {
     expect(r.greenCommandViolations).toEqual([]);
   });
 
-  it("rejects an anchor that is not a git object name", () => {
+  it("U-REVIEW-012: rejects an anchor that is not a git object name", () => {
     const r = withCommand("PLAN-ANCHOR-INVALID", {
       completed_at: "2026-08-20T00:00:00Z",
       anchor_commit: "main",
@@ -356,7 +356,7 @@ describe("green command anchor_commit 必須化 (issue #191)", () => {
     ]);
   });
 
-  it("holds the shipped corpus free of anchor violations", () => {
+  it("U-REVIEW-013: holds the shipped corpus free of anchor violations", () => {
     const violations = analyzeReviewEvidence(loadReviewPlans()).greenCommandViolations;
     expect(violations.filter((v) => v.reason.includes("anchor"))).toEqual([]);
   });

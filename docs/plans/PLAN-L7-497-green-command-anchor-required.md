@@ -21,6 +21,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-497-green-command-anchor-required.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/review-evidence.ts
+    artifact_type: source_module
+  - artifact_path: tests/review-evidence.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-303-digest-commit-anchor.md
   requires:
@@ -31,8 +37,6 @@ dependencies:
     - docs/plans/PLAN-L7-132-green-command-digest-integrity.md
     - docs/plans/PLAN-L7-194-green-command-digest-hard-gate.md
     - docs/plans/PLAN-REVERSE-497-green-command-anchor-backfill.md
-    - src/lint/review-evidence.ts
-    - tests/review-evidence.test.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/191
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
@@ -108,7 +112,24 @@ consumer 契約面が動く。よって `kind=impl` の単純修理ではなく 
 3. **main の既存 entry 全件が本変更後も通過する** (実測で確認する。prose の claim で代替しない)。
 4. doctor の出力文言が実装の判定条件と一致する (段階導入を撤回したので「2026-08-20 以降」表記を残さない)。
 
-## 5. 実装先行の記録
+## 5. TDD と trace
+
+oracle は `docs/test-design/harness/L7-unit-test-design.md` §1.15 の **U-REVIEW-009〜013** として宣言し、
+`tests/review-evidence.test.ts` の同名 `it` が実体である (test-label 双方向 citation)。
+
+| U-ID | 何を殺すか |
+|---|---|
+| U-REVIEW-009 | 発効時刻より前の `completed_at` を自己申告して anchor 必須を迂回する経路 |
+| U-REVIEW-010 | `anchor_commit` 欠落 |
+| U-REVIEW-011 | 正常な git object name を誤検知しないこと (過検知回避) |
+| U-REVIEW-012 | `main` のような可変参照を anchor と認めてしまう経路 |
+| U-REVIEW-013 | 既存 corpus を壊す変更 (実 repo ガード) |
+
+```
+node node_modules/vitest/vitest.mjs run tests/review-evidence.test.ts
+```
+
+## 6. 実装先行の記録
 
 実装 (`src/lint/review-evidence.ts` / `tests/review-evidence.test.ts`) は本 PLAN 起票に先行して
 PR #361 で書かれた。通常の「事前 freeze 済み」ではない。非著者 closing review の FLAG を受けて

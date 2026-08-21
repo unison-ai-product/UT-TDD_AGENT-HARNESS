@@ -252,6 +252,11 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-REVIEW-006 | `loadReviewPlans`+`analyzeReviewEvidence` (実 repo CI fail-close ガード) | hard 化後 (IMP-071): 実 repo の confirmed design/impl PLAN は全件 review_evidence あり (`missing==[]`) + cross_agent 違反0 (`crossReviewViolations==[]`)。以後 review 証跡なし PLAN を足すと red |
 | U-REVIEW-007 | `analyzeReviewEvidence` (stale approval、IMP-080) | draft / 降格 PLAN に `verdict=approve` が残る → `staleApprovalViolations` + `ok=false` |
 | U-REVIEW-008 | `analyzeReviewEvidence` (stale approval ok) | confirmed + approve / draft + 証跡なし → stale approval ではない |
+| U-REVIEW-009 | `greenCommandViolationReason` (anchor 必須、issue #191) | 発効時刻より前の `completed_at` を自己申告しても anchor 無しは `missing_anchor_commit`。**判定入力に自己申告値を使わない** (段階導入は書き手が過去日時を書けば迂回できるため撤回) |
+| U-REVIEW-010 | `greenCommandViolationReason` (anchor 欠落) | `anchor_commit` 無し / 空白のみ → `missing_anchor_commit` + `ok=false` |
+| U-REVIEW-011 | `greenCommandViolationReason` (anchor 正常) | `^[0-9a-f]{7,40}$` の git object name → violation なし |
+| U-REVIEW-012 | `greenCommandViolationReason` (anchor 形式外) | `main` のような可変参照 → `invalid_anchor_commit`。可変参照では「測定時点の固定」を達成できないため anchor と認めない |
+| U-REVIEW-013 | `loadReviewPlans`+`analyzeReviewEvidence` (実 repo ガード) | 実 repo の全 green_command entry が anchor 違反 0。既存 corpus を壊さずに必須化できていることを実測で保つ (以後 anchor 無し entry を足すと red) |
 | U-XREVIEW-001 | `analyzeReviewEvidence` (cross_agent ok) | cross_agent で worker_model≠reviewer_model → `crossReviewViolations=[]` / `ok=true` (IMP-076) |
 | U-XREVIEW-002 | `analyzeReviewEvidence` (same_model) | cross_agent で worker≡reviewer の同一 model → violation / `ok=false` (same_model_approval、concept §2.1.2.1) |
 | U-XREVIEW-003 | `analyzeReviewEvidence` (model 欠落) | cross_agent で model 欠落 → violation (単体 runtime は相異 model 供給不可 = cross_agent 僭称を弾く) |
@@ -753,6 +758,7 @@ SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主
 - **vmodel-pair-freeze.md §1-§3 関数 (loadPairDocs/analyzePairFreeze/pairFreezeMessages/lintVmodel) → U-VPAIR-001〜006** (add-feature 差分、PLAN-L7-11/IMP-067。lintVmodel は loadPairDocs→analyzePairFreeze→pairFreezeMessages の orchestration で U-VPAIR-005 実 repo ガードに内包。孤児 0)
 - **vmodel-pair-freeze.md §7 関数 (analyzeVerificationGroups/verificationGroupMessages、loadPairDocs status 拡張) → U-VTRIG-001〜005** (add-feature 差分、PLAN-L7-12/IMP-068。doctor checkVerificationGroups は U-VTRIG-005 実 repo ガードに内包。孤児 0)
 - **review-evidence.md §2-§4 関数 (hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans/reviewEvidenceMessages、schema review_evidence、doctor checkReviewEvidence) → U-REVIEW-001〜006** (add-feature 差分、PLAN-L7-13/IMP-071。reviewEvidenceMessages は U-REVIEW-003/006 経路で被覆、checkReviewEvidence は doctor try-catch ラッパーで U-REVIEW-006 実 repo ガードに内包。孤児 0)
+- **review-evidence.md §2-§4 の green_command anchor 必須化 (`greenCommandViolationReason` の `missing_anchor_commit` / `invalid_anchor_commit`) → U-REVIEW-009〜013** (add-feature 差分、PLAN-L7-497/issue #191。anchor 実在検査は含まない — squash merge 運用では判定不能で実測 29 件の false positive を出したため撤回、実在検査は issue #367 の守備範囲。孤児 0)
 - **review-evidence-stale.md §2-§4 関数 (draft/降格 PLAN に残る stale approval の検出) → U-REVIEW-007〜008** (add-feature 差分、PLAN-L7-19/IMP-080。review-evidence 双方向性の逆向き検出。孤児 0)
 - **cross-review-enforcement.md §1-§2 関数 (extractReviewEntries/analyzeReviewEvidence の crossReviewViolations、schema worker_model/reviewer_model) → U-XREVIEW-001〜005** (add-feature 差分、PLAN-L7-14/IMP-076。doctor 連動は U-REVIEW-006 実 repo ガードの crossReviewViolations==[] に内包。孤児 0)
 - **test-before-review.md §2-§3 関数 (analyzeReviewEvidence の testBeforeReviewViolations、schema tests_green_at、reviewed_at/tests_green_at 抽出) → U-TORDER-001〜005** (add-feature 差分、PLAN-L7-15/IMP-077。doctor 連動は U-REVIEW-006 実 repo ガードの testBeforeReviewViolations==[] に内包。全駆動モデル普遍。孤児 0)
