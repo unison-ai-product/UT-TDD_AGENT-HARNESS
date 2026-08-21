@@ -66,8 +66,11 @@ PF-5 aggregate admission、`PLAN-L7-473`/`PLAN-REVERSE-473` は release channel 
 
 既存の `buildPackSyncPlan` / `sync-plan` / `sync-stage` は非破壊な local staging と
 human-approved command list を返す機構であり、remote mutation を実行しない。既存の
-`release-plan` も tag、tarball、checksum、GitHub Release のコマンドを emit-only で返す。
-これらの安全境界を迂回する自動 push、tag 操作、GitHub API 操作を追加しない。
+`release-plan` は公開手順の意図を示す参考面に留まり、現状はNode正規CLIではなくBunを含む
+commandと、package処理が生成しない`.sig` assetをemitするため、実行可能なpublication planの
+正本として再利用してはならない。後続publication sliceがNode正規CLIと実生成asset inventoryへ
+置換し、oracleで固定するまではread-onlyのknown gapとする。これらの安全境界を迂回する自動
+push、tag 操作、GitHub API 操作を追加しない。
 
 ## 2. 正本と artifact manifest 境界
 
@@ -100,15 +103,18 @@ human-approved command list を返す機構であり、remote mutation を実行
 
 | object | identity / 内容 | 可変範囲 |
 | --- | --- | --- |
-| immutable release record | `releaseId`、source commit、materializer version、artifact-set digest、manifest digest | 作成後の bytes、path、mode、provenance は不変 |
-| Git tag | release record を指す annotated tag | 既存 tag の付替え、削除、force push は禁止 |
+| immutable release record | `releaseId`、source commit、materializer version、artifact inventory digest、artifact-set digest、release-record digest | 作成後の bytes、path、mode、provenance は不変 |
+| control manifest snapshot | release recordsとchannel pointerを含むsnapshot digest | pointer変更ごとに新snapshotとしてappendし、過去snapshotを上書きしない |
+| Git tag | Pack commit/tree/object SHAとimmutable release-record digestを指す annotated tag | 既存 tag の付替え、削除、force push は禁止 |
 | GitHub Release | immutable release record に束縛された公開 record | notes の編集で identity、asset、digest を変更しない。asset差替えは禁止 |
 | artifact tarball / checksum | manifestの明示集合を materialize した bytes とその SHA-256 | 同一 release ID で再生成・差替えしない |
 | channel pointer | `canary` または `stable` から release ID への宣言 | 明示した宣言変更のみ。通常昇格は前進し、rollback は supersede-forward の例外として扱う。release recordそのものは変更しない |
 
-semver/tag は表示・取得 locator であり、release identity の代替ではない。tag、GitHub
-Release、manifest、tarball、checksum、receipt が同じ `releaseId`/digest/source revision を
-指さない場合は公開を成立させず、`mismatch` として監査する。
+semver/tag は表示・取得 locator であり、release identity の代替ではない。可変channelを含む
+control manifest snapshot digestをimmutable release identityへ含めない。receiptはimmutable
+release-record digestと、pointer変更前後のcontrol-manifest snapshot digestを別fieldで束縛する。
+tag、GitHub Release、manifest、tarball、checksum、receipt が同じ `releaseId`/digest/source
+revision/Pack object SHAを指さない場合は公開を成立させず、`mismatch` として監査する。
 
 ## 4. 段階公開と promotion gate
 
@@ -141,7 +147,11 @@ auditor は read-only/emit-only とし、適用側は人間の明示承認がな
 実行しない。承認対象は tag作成、Release作成、asset upload、channel pointer更新、promotion
 および rollback の各操作単位である。
 
-各適用には、少なくとも次の immutable receipt を残す。
+承認receiptと実行receiptを分離する。承認receiptはexact operation plan digest、repository、
+before-state digest、release ID、nonce、expiry、approver identityを束縛し、one-shotで消費する。
+期限切れ、nonce再利用、before-state drift、別repository/operationへの転用は副作用前に拒否する。
+実行者と承認者の分離要否はpublication policyで明示し、同一主体を許す場合も自己承認として
+receiptへ記録する。各適用には、少なくとも次の immutable execution receipt を残す。
 
 - `receiptId`、`releaseId`、channel、対象 repository/ref、before/after object digest
 - 実行者の human identity と承認時刻、承認対象コマンド/操作の canonical digest
@@ -154,10 +164,14 @@ receipt が欠落、対象 identity が異なる、または remote が取得で
 
 ## 6. partial publication と rollback
 
-公開処理は immutable release の作成、canary/stable pointer の更新、監査確認を別境界として
-扱う。各境界は isolated staging または remote precondition を検査し、失敗時は未検証の中間
-状態を成功として返さない。remote の一部だけが成功した場合、publication auditor は
-`partial_publication` として停止し、次の操作を自動で推測・再実行しない。
+公開処理は跨サービスでatomicにできないため、append-onlyなpublication state machineとして
+`planned -> tag_attested -> release_attested -> assets_attested -> canary_attested -> stable_attested`
+を正本化する。各遷移はbefore-state digestへのCAS、operation id/idempotency key、期待remote
+identityを要求する。同一identityのobjectが既に存在する場合だけ安全な再開として採用し、別identity、
+欠損asset、順序飛越、observed state不明は`partial_publication`/`mismatch`で停止する。
+再開はauditorがremoteを再観測して最後のattested stateから行い、commandの盲目的再実行や成功の
+推測をしない。各境界は isolated staging または remote precondition を検査し、失敗時は未検証の
+中間状態を成功として返さない。
 
 rollback は過去 object の破壊ではなく **supersede-forward** とする。
 
@@ -191,9 +205,10 @@ Pack公開前提と非依存境界のみを定義する。
   update は採用しない。
 - artifact set は明示 manifest で固定する。profile名や directory allowlist を追加して集合を
   暗黙に拡張する方式は採用しない。
-- `pack-docs/local/consumer/admin` profile と least-privilege capability model は今回の
-  scope外であり、後続 bounded slice の設計判断に送る。後続で採用する場合も、この manifest
-  境界を弱めてはならない。
+- `pack-docs/local/consumer/admin` profile と least-privilege capability model の実装は今回の
+  scope外であり、後続 bounded slice の設計判断に送る。ただし正式stable/L12受入の前に、広い
+  `src/**`/`tests/**`/`scripts/**`同梱を維持する根拠またはprofile/capability分離を、実artifact
+  inventoryとconsumer権限境界で検証する。このgateを未判定のまま正式製品完成とは扱わない。
 
 ## 9. 設計 freeze の受入条件と候補 oracle
 
@@ -225,10 +240,14 @@ Pack公開前提と非依存境界のみを定義する。
 
 1. [完了済み依存] PF-1〜PF-5のsource側 admission と `PLAN-REVERSE-473` のbackfillを利用する。
 2. [本 slice] 本 PLAN のL6契約を pair-freeze し、non-author cross-review後に実装許可を出す。
-3. [後続] publication adapter/auditor の最小実装、canary/stable promotion、Pack repository
-   の実測 receipt、Linux/Windows/aggregate検証を個別の implementation slice で行う。
-4. [後続] `PLAN-L6-101` のPack-only二 consumer E2Eを、publication gateと混ぜずに実施する。
-5. [禁止] PF-1〜PF-5、S3 gate、S4 consumer runtime、D1/D2/D3、Execution Episode、profile
+3. [後続] publication adapter/auditor の最小実装でimmutable releaseを公開し、canary pointerまでを
+   attestedにする。stable pointerはまだ変更しない。
+4. [後続] canary Pack checkoutだけから`PLAN-L6-101`の二consumer E2Eを実施し、同じrelease
+   identityへのLinux/Windows/aggregate証跡を固定する。
+5. [後続] canary証跡、non-author closing receipt、QA、human approval、least-privilege dispositionを
+   同一subjectへ束縛し、CASでstable pointerを更新する。これによりpublication→consumer検証→stable
+   の循環を作らない。
+6. [禁止] PF-1〜PF-5、S3 gate、S4 consumer runtime、D1/D2/D3、Execution Episode、profile
    一般化、force push/tag付替え、自動 remote mutation を本 PLAN に再実装・混在させない。
 
 ## 11. 現在の freeze 状態
