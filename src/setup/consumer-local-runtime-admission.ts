@@ -1,0 +1,292 @@
+import { existsSync, realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, posix, relative, resolve } from "node:path";
+import {
+  applySealedReleaseAggregate,
+  type ReleaseAggregateApplyDependencies,
+  type ReleaseAggregateApplyResult,
+  type SealedReleaseAggregatePlan,
+} from "./release-aggregate-admission.ts";
+import {
+  digestMaterializedReleaseEntries,
+  type MaterializedReleaseEntry,
+} from "./release-materializer.ts";
+
+const SHA256 = /^sha256:[a-f0-9]{64}$/;
+const RELEASE_ID = /^rel-sha256:[a-f0-9]{64}$/;
+const REVISION = /^[a-f0-9]{40}$/;
+const MODES = new Set(["100644", "100755", "120000"]);
+
+export interface ConsumerArtifactIdentity {
+  readonly materializerVersion: string;
+  readonly releaseId: string;
+  readonly sourceRevision: string;
+  readonly artifactSetDigest: string;
+}
+
+export interface ConsumerReceipt extends ConsumerArtifactIdentity {
+  readonly productId: string;
+  readonly consumerRoot: string;
+  readonly runtimeRoot: string;
+}
+
+export interface ConsumerLocalRuntimeAdmissionInput {
+  readonly productId: string;
+  readonly consumerRoot: string;
+  readonly runtimeRoot: string;
+  readonly plan: SealedReleaseAggregatePlan;
+  readonly manifest: ConsumerArtifactIdentity;
+  readonly receipt: ConsumerReceipt;
+}
+
+export interface ConsumerLocalRuntimeAdmission {
+  readonly productId: string;
+  readonly consumerRoot: string;
+  readonly runtimeRoot: string;
+  readonly identity: ConsumerArtifactIdentity;
+  readonly plan: SealedReleaseAggregatePlan;
+}
+
+export type ConsumerLocalRuntimeAdmissionError =
+  | "artifact_unavailable"
+  | "invalid_artifact"
+  | "identity_mismatch"
+  | "namespace_escape"
+  | "unknown_version"
+  | "receipt_mismatch";
+
+export type ConsumerLocalRuntimeAdmissionResult =
+  | { readonly ok: true; readonly admission: ConsumerLocalRuntimeAdmission }
+  | { readonly ok: false; readonly error: ConsumerLocalRuntimeAdmissionError };
+
+export type ConsumerLocalRuntimeInstallResult =
+  | {
+      readonly ok: true;
+      readonly admission: ConsumerLocalRuntimeAdmission;
+      readonly applied: 1;
+    }
+  | {
+      readonly ok: false;
+      readonly phase: "admission";
+      readonly error: ConsumerLocalRuntimeAdmissionError;
+    }
+  | {
+      readonly ok: false;
+      readonly phase: "apply";
+      readonly error: "unavailable" | "rollback_failed";
+      readonly applied: 0 | "indeterminate";
+    };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function validPath(path: string): boolean {
+  return (
+    path.length > 0 &&
+    !path.startsWith("/") &&
+    !path.includes("\\") &&
+    !path.includes("\0") &&
+    path.split("/").every((part) => part.length > 0 && part !== "." && part !== "..")
+  );
+}
+
+function validSymlink(destination: string, content: Uint8Array): boolean {
+  let target: string;
+  try {
+    target = new TextDecoder("utf-8", { fatal: true }).decode(content);
+  } catch {
+    return false;
+  }
+  if (
+    target.length === 0 ||
+    target.includes("\0") ||
+    target.includes("\\") ||
+    target.startsWith("/") ||
+    target.startsWith("//") ||
+    /^[A-Za-z]:/.test(target) ||
+    target.startsWith("\\\\")
+  )
+    return false;
+  const targetPath = posix.normalize(posix.join(posix.dirname(destination), target));
+  return targetPath !== ".." && !targetPath.startsWith("../") && !posix.isAbsolute(targetPath);
+}
+
+function samePath(left: string, right: string): boolean {
+  const a = canonicalPath(left);
+  const b = canonicalPath(right);
+  if (a === null || b === null) return false;
+
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+function within(parent: string, child: string): boolean {
+  const parentCanonical = canonicalPath(parent);
+  const childCanonical = canonicalPath(child);
+  if (parentCanonical === null || childCanonical === null) return false;
+  const rel = relative(parentCanonical, childCanonical);
+  return (
+    rel === "" ||
+    (rel !== ".." && !rel.startsWith(`..${requirementSeparator()}`) && !isAbsolute(rel))
+  );
+}
+
+/** Existing symlink/junction ancestors are resolved even when the final runtime directory is new. */
+function canonicalPath(path: string): string | null {
+  let current = resolve(path);
+  const suffix: string[] = [];
+  while (!existsSync(current)) {
+    const parent = dirname(current);
+    if (parent === current) return null;
+    suffix.unshift(basename(current));
+    current = parent;
+  }
+  try {
+    return resolve(realpathSync.native(current), ...suffix);
+  } catch {
+    return null;
+  }
+}
+
+function requirementSeparator(): string {
+  return process.platform === "win32" ? "\\" : "/";
+}
+
+function validIdentity(value: unknown): value is ConsumerArtifactIdentity {
+  return (
+    isRecord(value) &&
+    typeof value.materializerVersion === "string" &&
+    value.materializerVersion.length > 0 &&
+    typeof value.releaseId === "string" &&
+    RELEASE_ID.test(value.releaseId) &&
+    typeof value.sourceRevision === "string" &&
+    REVISION.test(value.sourceRevision) &&
+    typeof value.artifactSetDigest === "string" &&
+    SHA256.test(value.artifactSetDigest)
+  );
+}
+
+function validPlan(plan: unknown): plan is SealedReleaseAggregatePlan {
+  return (
+    isRecord(plan) &&
+    plan.kind === "release-aggregate" &&
+    typeof plan.channel === "string" &&
+    typeof plan.releaseId === "string" &&
+    RELEASE_ID.test(plan.releaseId) &&
+    typeof plan.sourceRevision === "string" &&
+    REVISION.test(plan.sourceRevision) &&
+    typeof plan.destinationPath === "string" &&
+    validPath(plan.destinationPath) &&
+    typeof plan.expectedDigest === "string" &&
+    SHA256.test(plan.expectedDigest) &&
+    typeof plan.actualDigest === "string" &&
+    SHA256.test(plan.actualDigest) &&
+    Array.isArray(plan.entries)
+  );
+}
+
+function copyEntries(plan: SealedReleaseAggregatePlan): readonly MaterializedReleaseEntry[] | null {
+  const entries: MaterializedReleaseEntry[] = [];
+  const paths = new Set<string>();
+  for (const candidate of plan.entries) {
+    if (!isRecord(candidate) || typeof candidate.path !== "string" || !validPath(candidate.path))
+      return null;
+    if (paths.has(candidate.path) || !MODES.has(candidate.mode)) return null;
+    if (!(candidate.content instanceof Uint8Array)) return null;
+    if (candidate.mode === "120000" && !validSymlink(candidate.path, candidate.content))
+      return null;
+    paths.add(candidate.path);
+    const snapshot = new Uint8Array(candidate.content);
+    entries.push(
+      Object.freeze({
+        path: candidate.path,
+        mode: candidate.mode,
+        get content(): Uint8Array {
+          return new Uint8Array(snapshot);
+        },
+      }),
+    );
+  }
+  if (entries.length === 0) return null;
+  entries.sort((left, right) =>
+    Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")),
+  );
+  return Object.freeze(entries);
+}
+
+export function admitConsumerLocalRuntime(
+  input: ConsumerLocalRuntimeAdmissionInput,
+): ConsumerLocalRuntimeAdmissionResult {
+  if (!isRecord(input) || typeof input.productId !== "string" || input.productId.length === 0) {
+    return { ok: false, error: "invalid_artifact" };
+  }
+  if (
+    !isAbsolute(input.consumerRoot) ||
+    !isAbsolute(input.runtimeRoot) ||
+    !within(input.consumerRoot, input.runtimeRoot)
+  ) {
+    return { ok: false, error: "namespace_escape" };
+  }
+  if (!validPlan(input.plan)) return { ok: false, error: "artifact_unavailable" };
+  if (!validIdentity(input.manifest) || !validIdentity(input.receipt))
+    return { ok: false, error: "identity_mismatch" };
+  if (input.manifest.materializerVersion !== "1" || input.receipt.materializerVersion !== "1") {
+    return { ok: false, error: "unknown_version" };
+  }
+  if (input.receipt.productId !== input.productId) {
+    return { ok: false, error: "identity_mismatch" };
+  }
+  if (
+    !samePath(input.receipt.consumerRoot, input.consumerRoot) ||
+    !samePath(input.receipt.runtimeRoot, input.runtimeRoot)
+  ) {
+    return { ok: false, error: "receipt_mismatch" };
+  }
+  if (input.plan.entries.length === 0) return { ok: false, error: "artifact_unavailable" };
+  const entries = copyEntries(input.plan);
+  if (!entries) return { ok: false, error: "namespace_escape" };
+  const computedDigest = digestMaterializedReleaseEntries(entries);
+  const planIdentityMatches =
+    input.plan.expectedDigest === input.plan.actualDigest &&
+    input.plan.releaseId === input.manifest.releaseId &&
+    input.plan.sourceRevision === input.manifest.sourceRevision &&
+    input.plan.expectedDigest === input.manifest.artifactSetDigest &&
+    input.plan.actualDigest === input.receipt.artifactSetDigest &&
+    computedDigest === input.manifest.artifactSetDigest &&
+    input.manifest.releaseId === input.receipt.releaseId &&
+    input.manifest.sourceRevision === input.receipt.sourceRevision;
+  if (!planIdentityMatches) return { ok: false, error: "identity_mismatch" };
+  const sealedPlan = Object.freeze({ ...input.plan, entries });
+  return {
+    ok: true,
+    admission: Object.freeze({
+      productId: input.productId,
+      consumerRoot: resolve(input.consumerRoot),
+      runtimeRoot: resolve(input.runtimeRoot),
+      identity: Object.freeze({ ...input.manifest }),
+      plan: sealedPlan,
+    }),
+  };
+}
+
+export async function applyConsumerLocalRuntime<TStage>(
+  admission: ConsumerLocalRuntimeAdmission,
+  dependencies: ReleaseAggregateApplyDependencies<TStage>,
+): Promise<ReleaseAggregateApplyResult> {
+  return applySealedReleaseAggregate(admission.plan, dependencies);
+}
+
+/** AdmissionとPF5 applyを結合する境界。deny時はportを一つも呼ばない。 */
+export async function installConsumerLocalRuntime<TStage>(
+  input: ConsumerLocalRuntimeAdmissionInput,
+  dependencies: ReleaseAggregateApplyDependencies<TStage>,
+): Promise<ConsumerLocalRuntimeInstallResult> {
+  const admission = admitConsumerLocalRuntime(input);
+  if (!admission.ok) return { ...admission, phase: "admission" };
+  const applied = await applyConsumerLocalRuntime(admission.admission, dependencies);
+  if (!applied.ok) return { ...applied, phase: "apply" };
+  return {
+    ok: true,
+    admission: admission.admission,
+    applied: 1,
+  };
+}

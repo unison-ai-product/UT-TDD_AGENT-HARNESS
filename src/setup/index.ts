@@ -23,6 +23,18 @@ import {
   type GhRunner,
 } from "./branch-protection.ts";
 
+export {
+  admitConsumerLocalRuntime,
+  applyConsumerLocalRuntime,
+  type ConsumerArtifactIdentity,
+  type ConsumerLocalRuntimeAdmission,
+  type ConsumerLocalRuntimeAdmissionError,
+  type ConsumerLocalRuntimeAdmissionInput,
+  type ConsumerLocalRuntimeAdmissionResult,
+  type ConsumerLocalRuntimeInstallResult,
+  type ConsumerReceipt,
+  installConsumerLocalRuntime,
+} from "./consumer-local-runtime-admission.ts";
 export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
   buildCleanDistributionPlan,

@@ -1954,9 +1954,8 @@ implementation-firstとしてadmission/closing reviewで拒否する。
 
 ## Pack単独・2 consumer隔離受入候補（Issue #357 / PLAN-L6-101）
 
-以下はL6 freeze時点の候補である。実装PRが同じ番号の`U-PACKISO-*`をtest codeとともに追加するまで
-Green根拠にしてはならない。PF-1〜PF-5のsource-side artifact admissionを、consumer runtime隔離の
-代替証拠として用いない。
+以下はL6 freeze時点の候補であり、Issue #362実装で同じ番号の`U-PACKISO-*`へ昇格した。PF-1〜PF-5の
+source-side artifact admissionを、consumer runtime隔離の代替証拠として用いない。
 
 | 候補ID | Red入力 | Green oracle |
 | --- | --- | --- |
@@ -1966,6 +1965,17 @@ Green根拠にしてはならない。PF-1〜PF-5のsource-side artifact admissi
 | `CANDIDATE-PACKISO-004` | Bのruntime commandを実行中に保ったままAだけをv1→v2へupgradeし、Aのstaging/apply境界へ1..N faultを注入 | Aの成功はatomic、失敗はA prior state不変または`rollback_failed`/`indeterminate`。Bの実行は停止せず、bytes/mode/path/version/history/process identityは全て不変 |
 | `CANDIDATE-PACKISO-005` | Bのruntime commandを実行中に保ったままAだけを直前attested artifactへrollbackし、Bのartifact/lock/receiptを同時に観測 | Aだけが決定論的に旧identityへ戻り、Bは停止・再起動・read/writeを要求されず継続可能 |
 | `CANDIDATE-PACKISO-006` | Aのartifact unavailable、artifact bytesに対する独立再計算digest mismatch、unknown version、namespace/symlink/junction escape、receipt不一致を各1点変異 | receipt/manifestの申告digestだけでは成功せず、Aは導入前fail-closeでwrite 0。Bのruntime stateと実行可能性は影響を受けない |
+
+実装昇格（`tests/consumer-local-runtime-admission.test.ts`）:
+
+| 昇格ID | 実測範囲 |
+| --- | --- |
+| `U-PACKISO-001` | source/worktree/local Pack checkoutへfallbackせず、sealed entriesだけでfresh consumerをadmit |
+| `U-PACKISO-002` | lexical escapeおよび既存parent symlink/junction escapeを拒否 |
+| `U-PACKISO-003` | product/rootとartifact identityをreceiptへ独立束縛 |
+| `U-PACKISO-004` | Bの実行中Node processのPID/exitとB root treeを保持したA upgrade composition |
+| `U-PACKISO-005` | Bの実行中Node processのPID/exitとB root treeを保持したA rollback composition |
+| `U-PACKISO-006` | artifact unavailable、digest mutation、unknown version、symlink escape、receipt mismatchを導入前拒否 |
 
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 
