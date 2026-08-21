@@ -631,6 +631,31 @@ describe("S3 promotion / rollback pure gate", () => {
         },
       }),
     ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+
+    // revision-only splice: every other review identity remains canonical.  This
+    // independent case must kill the source mutant that removes the direct
+    // request.reviewRevision -> subject.planRevision binding.
+    const revisionOnlyForeign = commit("e");
+    const revisionOnlySplice: ReviewGateEvidence = {
+      ...review,
+      request: { ...review.request, reviewRevision: revisionOnlyForeign },
+      d1: { ...review.d1, reviewRevision: revisionOnlyForeign },
+      d2: {
+        ...review.d2,
+        authorizedEntry: {
+          memoryId: reviewSubject.memoryId,
+          reviewRevision: revisionOnlyForeign,
+          reviewerFamily: reviewSubject.reviewerFamily,
+        },
+      },
+    };
+    const revisionOnlyInput = { ...promotionInput(), review: revisionOnlySplice };
+    expect(evaluatePromotionGate(revisionOnlyInput)).toMatchObject({
+      decision: "deny",
+      reason: "identity_mismatch",
+    });
+    expectNoEffects(await deniedComposition(revisionOnlyInput));
+
     const otherPlanClaim = { ...claimBlind, planId: "PLAN-OTHER" };
     expect(
       evaluatePromotionGate({
