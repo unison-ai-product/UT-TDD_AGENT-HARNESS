@@ -78,14 +78,6 @@ review_evidence:
         completed_at: "2026-08-21T03:20:00Z"
         evidence_path: tests/claude-memory-backlog.test.ts
         output_digest: "sha256:f24643cbbbcd3d9ce84763fd601249ea7f5172b5994c91cfc3872f51ceda286c"
-      - kind: lint
-        command: "node src/cli.ts plan lint docs/plans/PLAN-L7-495-memory-delivery-backlog-visibility.md"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-08-21T03:20:00Z"
-        evidence_path: docs/plans/PLAN-L7-495-memory-delivery-backlog-visibility.md
-        output_digest: "sha256:8df30e68f2900e085de5a2583266b1283ac067d0a9ca9da0fc17749d98345343"
     citations:
       - "PLAN-L7-472 / PLAN-REVERSE-472"
       - "PLAN-L7-422 draft gap audit"
@@ -137,7 +129,13 @@ PLAN-L7-422はdraftのまま変更せず、feedback saturationとは別のClaude
 
 ## 完了条件
 
-- [ ] 上記U oracleがTDD Red→Greenで1:1に実装される。
-- [ ] Node/TypeScript targeted tests、typecheck、Biome、plan lintがgreen。
-- [ ] SessionStart/statusでpublish成功をdelivery成功と誤認しない警告が実測できる。
-- [ ] exact HEAD、CI、非著者Claude closing review、Reverse traceを記録する。
+- [x] 上記U oracleがTDD Red→Greenで1:1に実装される。
+- [x] Node/TypeScript targeted tests、typecheck、Biome、plan lintがlocal preflightでgreen。
+- [x] SessionStartでpublish成功をdelivery成功と誤認しない警告が実測できる。
+- [x] pair-freeze契約、範囲外、既存PLANとの責務境界を本PLANへ記録する。
+
+## PR着地条件
+
+- [ ] exact HEADのrequired CIをGreenにする。
+- [ ] 非著者Claude closing reviewで未解決FLAGがないことを記録する。
+- [ ] Reverse traceとHARNESS Memory通知を新HEADへ結線する。
