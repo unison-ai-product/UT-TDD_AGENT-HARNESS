@@ -38,7 +38,7 @@ export type ReleaseChannelResolution =
   | { readonly ok: true; readonly release: ReleaseIdentity }
   | { readonly ok: false; readonly error: "unknown_channel" };
 
-function calculateReleaseId(
+export function deriveReleaseId(
   materializerVersion: string,
   artifactSourceCommit: string,
   artifactSetDigest: string,
@@ -117,7 +117,7 @@ function createImmutableManifest(raw: RawReleaseManifest): ReleaseManifest | nul
   const releases: Record<string, ReleaseIdentity> = {};
   for (const [releaseId, record] of Object.entries(raw.releases)) {
     if (
-      calculateReleaseId(
+      deriveReleaseId(
         record.materializerVersion,
         record.artifactSourceCommit,
         record.artifactSetDigest,

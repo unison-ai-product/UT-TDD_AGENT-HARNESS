@@ -26,6 +26,7 @@ import {
   cleanDistributionSourcePath,
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
+  releaseArtifactFileNames,
   transformCleanDistributionArtifact,
 } from "../setup/index.ts";
 import { ensureDir } from "../shared/fs.ts";
@@ -599,10 +600,10 @@ export function registerDistributionCommands(program: Command): void {
           ? opts.out
           : join(repoRoot, opts.out)
         : join(repoRoot, ".ut-tdd", "release");
-      const artifactStem = exportPlan.sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-");
-      const tarball = join(outDir, `${artifactStem}.tar.gz`);
-      const checksum = `${tarball}.sha256`;
-      const manifest = join(outDir, `${artifactStem}.manifest.json`);
+      const artifactNames = releaseArtifactFileNames(exportPlan.sourceTag);
+      const tarball = join(outDir, artifactNames.tarball);
+      const checksum = join(outDir, artifactNames.checksum);
+      const manifest = join(outDir, artifactNames.manifest);
       const stage = mkdtempSync(join(tmpdir(), "ut-tdd-clean-package-"));
       let tarResult: ReturnType<typeof spawnSync> | null = null;
       try {

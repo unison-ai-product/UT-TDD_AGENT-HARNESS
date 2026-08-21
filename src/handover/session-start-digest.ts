@@ -370,8 +370,11 @@ export function renderSessionStartDigest(digest: SessionStartDigest): string {
       lines.push("  inbox: no unclaimed Claude payload");
     } else {
       lines.push(
-        `  inbox: pending=${backlog.pending} oldest=${backlog.oldestEntryId} at=${backlog.oldestCreatedAt} age_ms=${backlog.oldestAgeMs}`,
+        `  inbox: pending=${backlog.pending} oldest=${backlog.oldestEntryId} at=${backlog.oldestCreatedAt} age_ms=${backlog.oldestAgeMs} target_mismatch=${backlog.targetMismatchPending ?? 0} sessions=${backlog.sessionStatus ?? "unknown"} hook=${backlog.hookConfigured === undefined ? "unknown" : backlog.hookConfigured ? "configured" : "missing"}`,
       );
+    }
+    for (const warning of backlog.warningCodes ?? []) {
+      lines.push(`  inbox warning: ${warning}`);
     }
   }
 

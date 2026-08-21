@@ -23,6 +23,19 @@ import {
   type GhRunner,
 } from "./branch-protection.ts";
 
+export {
+  admitConsumerLocalRuntime,
+  applyConsumerLocalRuntime,
+  type ConsumerArtifactIdentity,
+  type ConsumerLocalRuntimeAdmission,
+  type ConsumerLocalRuntimeAdmissionError,
+  type ConsumerLocalRuntimeAdmissionInput,
+  type ConsumerLocalRuntimeAdmissionResult,
+  type ConsumerLocalRuntimeInstallResult,
+  type ConsumerReceipt,
+  type ConsumerRuntimeLayout,
+  installConsumerLocalRuntime,
+} from "./consumer-local-runtime-admission.ts";
 export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
   buildCleanDistributionPlan,
@@ -33,6 +46,8 @@ export {
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
   PACK_SAFE_TEST_SCRIPT,
+  releaseArtifactFileNames,
+  releaseArtifactStem,
   transformCleanDistributionArtifact,
 } from "./distribution.ts";
 export {
@@ -49,6 +64,27 @@ export {
   type ReleaseManifestTreeEntry,
   type SealedReleaseAggregatePlan,
 } from "./release-aggregate-admission.ts";
+export {
+  type CanonicalCiEvidence,
+  classifyRollbackApply,
+  evaluatePromotionGate,
+  type GateLegStatus,
+  type PromotionEvidenceBinding,
+  type PromotionGateInput,
+  type PromotionGateReason,
+  type PromotionGateResult,
+  type QaGateStatus,
+  type QaReleaseGateEvidence,
+  type ReviewEvidenceBinding,
+  type ReviewGateEvidence,
+  type RollbackApplyResult,
+  type RollbackCandidate,
+  type RollbackGateReason,
+  type RollbackPointerDelta,
+  type RollbackSelectionInput,
+  type RollbackSelectionResult,
+  selectRollbackCandidate,
+} from "./release-promotion-rollback-gate.ts";
 
 import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 

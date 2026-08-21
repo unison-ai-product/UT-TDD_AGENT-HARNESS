@@ -35,10 +35,10 @@ function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.
     env,
     windowsHide: true,
     // maxBuffer は既定 1 MiB では足りない。plan migration-dry-run --json は HEAD の全 PLAN を
-    // 出すので PLAN が増えるほど伸び、issue #191 の PR 時点で 1,043,627 byte = 既定の 99.5%
-    // に達していた。超えると child が殺され status=null / stdout 切り捨てになり、失敗が
-    // 「expected null to be +0」としか見えない。PLAN を 2 本足しただけの PR が読めない理由で
-    // 赤くなるので余裕を持たせる。ENOBUFS 自体は parseCliJson が明示的に検出する。
+    // 出すので PLAN が増えるほど伸び、2026-08-21 時点で 1,043,627 byte = 既定の 99.5% に達して
+    // いた。超えると child が殺され status=null / stdout 切り捨てになり、失敗が
+    // 「expected null to be +0」としか見えない。PLAN を 1 本足しただけの merge が読めない理由で
+    // main を赤化させたので余裕を持たせる。ENOBUFS 自体は parseCliJson が明示的に検出する。
     maxBuffer: 64 * 1024 * 1024,
   });
 }
@@ -1156,6 +1156,12 @@ describe("L7 CLI surface closure", () => {
       repo: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
       externalPublishRequiresApproval: true,
     });
+    expect(payload.commands).toContain("node src/cli.ts distribution package --tag v0.1.0");
+    expect(payload.commands.join("\n")).not.toContain("bun ");
+    expect(payload.commands.join("\n")).not.toContain(".sig");
+    expect(payload.commands).toContain(
+      "gh release create v0.1.0 .ut-tdd/release/v0.1.0.tar.gz .ut-tdd/release/v0.1.0.tar.gz.sha256 .ut-tdd/release/v0.1.0.manifest.json --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --verify-tag --notes-file .ut-tdd/release/v0.1.0.manifest.json",
+    );
     expect(payload.commands).toEqual(
       expect.arrayContaining([
         expect.stringContaining("git tag -a v0.1.0"),
