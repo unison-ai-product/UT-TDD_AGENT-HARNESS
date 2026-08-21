@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-498-pack-publication-manifest-v2-pure-domain
-title: "PLAN-L7-498 (add-impl): Pack publication manifest v2 pure domain"
+plan_id: PLAN-L7-499-pack-publication-manifest-v2-pure-domain
+title: "PLAN-L7-499 (add-impl): Pack publication manifest v2 pure domain"
 kind: add-impl
 layer: L7
 drive: agent
@@ -20,7 +20,7 @@ agent_slots:
   - role: tl
     slot_label: "TL - Opus非著者reviewでpublication境界を検収する"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-498-pack-publication-manifest-v2-pure-domain.md
+  - artifact_path: docs/plans/PLAN-L7-499-pack-publication-manifest-v2-pure-domain.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
@@ -30,7 +30,7 @@ dependencies:
   references:
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
     - docs/plans/PLAN-L7-479-release-manifest-pf1-pure-domain.md
-    - docs/plans/PLAN-REVERSE-498-pack-publication-manifest-v2-backfill.md
+    - docs/plans/PLAN-REVERSE-499-pack-publication-manifest-v2-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - src/schema/release-manifest.ts
     - tests/release-manifest.test.ts

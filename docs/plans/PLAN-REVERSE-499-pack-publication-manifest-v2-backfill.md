@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-REVERSE-498-pack-publication-manifest-v2-backfill
-title: "PLAN-REVERSE-498: Pack publication manifest v2 pure domain backfill"
+plan_id: PLAN-REVERSE-499-pack-publication-manifest-v2-backfill
+title: "PLAN-REVERSE-499: Pack publication manifest v2 pure domain backfill"
 kind: reverse
 layer: cross
 drive: agent
@@ -12,7 +12,7 @@ status: draft
 created: 2026-08-21
 updated: 2026-08-21
 owner: PM / PO / Codex
-parent_design: docs/plans/PLAN-L7-498-pack-publication-manifest-v2-pure-domain.md
+parent_design: docs/plans/PLAN-L7-499-pack-publication-manifest-v2-pure-domain.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: tl
@@ -20,15 +20,15 @@ agent_slots:
   - role: qa
     slot_label: "QA - byte framingとUTF-8 canonicalityの独立mutation再検収"
 generates:
-  - artifact_path: docs/plans/PLAN-REVERSE-498-pack-publication-manifest-v2-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-499-pack-publication-manifest-v2-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L7-498-pack-publication-manifest-v2-pure-domain.md
+  parent: docs/plans/PLAN-L7-499-pack-publication-manifest-v2-pure-domain.md
   requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
-    - docs/plans/PLAN-L7-498-pack-publication-manifest-v2-pure-domain.md
+    - docs/plans/PLAN-L7-499-pack-publication-manifest-v2-pure-domain.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/380
 review_evidence:
@@ -49,7 +49,7 @@ review_evidence:
       - "coordinated inventory mutation / lone surrogate fail-close"
 ---
 
-# PLAN-REVERSE-498: manifest v2 pure domain backfill
+# PLAN-REVERSE-499: manifest v2 pure domain backfill
 
 ## R1 / R2
 
