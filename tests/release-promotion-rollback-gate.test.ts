@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import type { ReviewRequest } from "../src/feedback/review-dispatch.ts";
 import { reviewReceiptDigest } from "../src/kernel/github-closure-receipt.ts";
 import type { ReleaseIdentity, ReleaseManifest } from "../src/schema/release-manifest.ts";
 import {
@@ -125,9 +126,18 @@ const reviewSubject = {
   authorFamily: "codex" as const,
   reviewerFamily: "claude" as const,
 };
-const review: ReviewGateEvidence = {
+const request: ReviewRequest = {
+  memoryId: reviewSubject.memoryId,
+  pr: reviewSubject.pr,
+  exactHead: current.artifactSourceCommit,
+  reviewRevision: planRevision,
+  authorFamily: reviewSubject.authorFamily,
+  requestedAt: "2026-08-20T00:00:00Z",
+};
+const review = {
   exactHeadSha: current.artifactSourceCommit,
   planRevision,
+  request,
   d1: {
     memoryId: "MEM-REVIEW-363",
     pr: 363,
@@ -165,7 +175,7 @@ const review: ReviewGateEvidence = {
   },
   claimBlind,
   specBlind,
-};
+} as ReviewGateEvidence & { readonly request: ReviewRequest };
 
 function promotionInput(): PromotionGateInput {
   return {
@@ -328,6 +338,31 @@ describe("S3 promotion / rollback pure gate", () => {
     expect(allowed.harness.dependencies.applyDestination).toHaveBeenCalledOnce();
     expect(allowed.harness.pointerWrite).toHaveBeenCalledOnce();
     expect(allowed.harness.publish).toHaveBeenCalledOnce();
+    const passWeakClaim = { ...claimBlind, verdict: "PASS-WEAK", attackTrials: 3 };
+    const passWeakSpec = { ...specBlind, verdict: "PASS-WEAK", attackTrials: 3 };
+    const independentVerdicts: PromotionGateInput[] = [
+      { ...promotionInput(), review: { ...review, d1: { ...review.d1, verdict: "PASS-WEAK" } } },
+      { ...promotionInput(), review: { ...review, d2: { ...review.d2, verdict: "PASS-WEAK" } } },
+      {
+        ...promotionInput(),
+        review: { ...review, claimBlind: passWeakClaim },
+        expectedEvidence: {
+          ...promotionInput().expectedEvidence,
+          claimBlindReceiptDigest: reviewReceiptDigest(passWeakClaim),
+        },
+      },
+      {
+        ...promotionInput(),
+        review: { ...review, specBlind: passWeakSpec },
+        expectedEvidence: {
+          ...promotionInput().expectedEvidence,
+          specBlindReceiptDigest: reviewReceiptDigest(passWeakSpec),
+        },
+      },
+    ];
+    for (const independent of independentVerdicts) {
+      expect(evaluatePromotionGate(independent).decision).toBe("allow");
+    }
     expect(evaluatePromotionGate({ ...promotionInput(), ci: undefined })).toMatchObject({
       decision: "deny",
       reason: "ci_missing",
@@ -347,6 +382,7 @@ describe("S3 promotion / rollback pure gate", () => {
     const staleReview: ReviewGateEvidence = {
       ...review,
       exactHeadSha: shiftedHead,
+      request: { ...request, exactHead: shiftedHead },
       d1: { ...review.d1, exactHead: shiftedHead },
       d2: { ...review.d2, headSha: shiftedHead },
       facts: { ...review.facts, headSha: shiftedHead, evaluatedHeadSha: shiftedHead },
@@ -438,6 +474,12 @@ describe("S3 promotion / rollback pure gate", () => {
       const run = await deniedComposition({ ...promotionInput(), review: notReady });
       expect(run.result).toMatchObject({ decision: "deny", reason: "review_missing" });
       expectNoEffects(run);
+      const rollbackRun = await runRollbackComposition({
+        ...rollbackInput([rollbackCandidate()]),
+        review: notReady,
+      });
+      expect(rollbackRun.result).toMatchObject({ decision: "deny", reason: "invalid_input" });
+      expectNoEffects(rollbackRun);
     }
     const rollbackRun = await runRollbackComposition({
       ...rollbackInput([rollbackCandidate()]),
@@ -469,6 +511,20 @@ describe("S3 promotion / rollback pure gate", () => {
     const cases: Array<[PromotionGateInput, string]> = [
       [{ ...promotionInput(), ci: { ...ci, evidenceDigest: digest("f") } }, "identity_mismatch"],
       [{ ...promotionInput(), qa: { ...qa, evidenceDigest: digest("f") } }, "identity_mismatch"],
+      [
+        {
+          ...promotionInput(),
+          expectedEvidence: {
+            ...promotionInput().expectedEvidence,
+            claimBlindReceiptDigest: "0".repeat(64),
+          },
+        },
+        "identity_mismatch",
+      ],
+      [
+        { ...promotionInput(), qa: { ...qa, observedAt: "2026-08-19T23:59:59Z" } },
+        "identity_mismatch",
+      ],
       [
         { ...promotionInput(), sealedPlan: { ...plan, actualDigest: previous.artifactSetDigest } },
         "identity_mismatch",
@@ -536,6 +592,38 @@ describe("S3 promotion / rollback pure gate", () => {
         reason: "identity_mismatch",
       });
     }
+    const splicedClaim = { ...claimBlind, planId: "PLAN-OTHER" };
+    const splicedSpec = { ...specBlind, planId: "PLAN-OTHER" };
+    const coherentSplice: ReviewGateEvidence = {
+      ...review,
+      d1: { ...review.d1, pr: 999, memoryId: "MEM-OTHER" },
+      d2: {
+        ...review.d2,
+        pr: 999,
+        authorizedEntry: {
+          memoryId: "MEM-OTHER",
+          reviewRevision: planRevision,
+          reviewerFamily: "claude",
+        },
+      },
+      facts: { ...review.facts, pr: 999 },
+      claimBlind: splicedClaim,
+      specBlind: splicedSpec,
+    };
+    expect(
+      evaluatePromotionGate({
+        ...promotionInput(),
+        review: coherentSplice,
+        expectedEvidence: {
+          ...promotionInput().expectedEvidence,
+          pr: 999,
+          memoryId: "MEM-OTHER",
+          planId: "PLAN-OTHER",
+          claimBlindReceiptDigest: reviewReceiptDigest(splicedClaim),
+          specBlindReceiptDigest: reviewReceiptDigest(splicedSpec),
+        },
+      }),
+    ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
     const otherPlanClaim = { ...claimBlind, planId: "PLAN-OTHER" };
     expect(
       evaluatePromotionGate({
@@ -580,18 +668,25 @@ describe("S3 promotion / rollback pure gate", () => {
         },
       }),
     ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
-    expect(
-      evaluatePromotionGate({
-        ...promotionInput(),
-        attestation: {
-          status: "mismatch",
-          releaseId: previous.releaseId,
-          artifactSourceCommit: previous.artifactSourceCommit,
-          expectedDigest: previous.artifactSetDigest,
-          actualDigest: previous.artifactSetDigest,
-        },
-      }),
-    ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    const mismatchAttestation = {
+      status: "mismatch" as const,
+      releaseId: current.releaseId,
+      artifactSourceCommit: current.artifactSourceCommit,
+      expectedDigest: current.artifactSetDigest,
+      actualDigest: current.artifactSetDigest,
+    };
+    const nonAttestedIdentityMutations = [
+      { ...mismatchAttestation, releaseId: previous.releaseId },
+      { ...mismatchAttestation, artifactSourceCommit: previous.artifactSourceCommit },
+      { ...mismatchAttestation, expectedDigest: previous.artifactSetDigest },
+      { ...mismatchAttestation, actualDigest: previous.artifactSetDigest },
+    ];
+    for (const attestation of nonAttestedIdentityMutations) {
+      expect(evaluatePromotionGate({ ...promotionInput(), attestation })).toMatchObject({
+        decision: "deny",
+        reason: "identity_mismatch",
+      });
+    }
     const precedenceCases: Array<[unknown, string]> = [
       [{ ...promotionInput(), exactHeadSha: "bad", ci: undefined }, "invalid_input"],
       [
@@ -608,6 +703,52 @@ describe("S3 promotion / rollback pure gate", () => {
       expect(evaluatePromotionGate(input)).toMatchObject({
         decision: "deny",
         reason,
+      });
+    }
+    const malformedReviews: unknown[] = [
+      { ...review, request: null },
+      { ...review, request: { ...request, pr: "363" } },
+      { ...review, d1: { ...review.d1, blocking: null } },
+      { ...review, d1: { ...review.d1, breaches: null } },
+      { ...review, d1: { ...review.d1, reasons: null } },
+      { ...review, d1: { ...review.d1, progressDiagnostics: null } },
+      { ...review, d2: { ...review.d2, reasons: null } },
+      { ...review, facts: { ...review.facts, checksGreen: "true" } },
+      { ...review, claimBlind: { ...claimBlind, verdict: null } },
+      { ...review, claimBlind: { ...claimBlind, citations: null } },
+      { ...review, specBlind: { ...specBlind, citations: [null] } },
+      {
+        ...review,
+        d2: {
+          ...review.d2,
+          authorizedEntry: {
+            memoryId: reviewSubject.memoryId,
+            reviewRevision: planRevision,
+            reviewerFamily: null,
+          },
+        },
+      },
+    ];
+    for (const malformed of malformedReviews) {
+      const input = { ...promotionInput(), review: malformed };
+      expect(() => evaluatePromotionGate(input)).not.toThrow();
+      expect(evaluatePromotionGate(input)).toMatchObject({
+        decision: "deny",
+        reason: "invalid_input",
+      });
+    }
+    const malformedPlans: unknown[] = [
+      { ...plan, kind: "other" },
+      { ...plan, destinationPath: null },
+      { ...plan, entries: null },
+      { ...plan, entries: [{ ...entry, path: null }] },
+      { ...plan, entries: [{ ...entry, mode: "100600" }] },
+      { ...plan, entries: [{ ...entry, content: [1] }] },
+    ];
+    for (const sealedPlan of malformedPlans) {
+      expect(evaluatePromotionGate({ ...promotionInput(), sealedPlan })).toMatchObject({
+        decision: "deny",
+        reason: "invalid_input",
       });
     }
     const oldObservation: PromotionGateInput = {
@@ -665,6 +806,31 @@ describe("S3 promotion / rollback pure gate", () => {
         ]),
       ),
     ).toMatchObject({ decision: "deny", reason: "identity_mismatch" });
+    const deniedRollbackInputs: unknown[] = [
+      rollbackInput([]),
+      rollbackInput([candidate, candidate]),
+      rollbackInput([{ ...candidate, attestation: undefined }]),
+      rollbackInput([{ ...candidate, release: current }]),
+      rollbackInput([{ ...candidate, artifactAvailable: undefined }]),
+      { ...rollbackInput([]), candidates: [null] },
+      rollbackInput([
+        {
+          ...candidate,
+          attestation: {
+            status: "mismatch",
+            releaseId: current.releaseId,
+            artifactSourceCommit: current.artifactSourceCommit,
+            expectedDigest: current.artifactSetDigest,
+            actualDigest: current.artifactSetDigest,
+          },
+        },
+      ]),
+    ];
+    for (const deniedInput of deniedRollbackInputs) {
+      const denied = await runRollbackComposition(deniedInput);
+      expect(denied.result.decision).toBe("deny");
+      expectNoEffects(denied);
+    }
     const invalidRun = await runRollbackComposition({
       ...rollbackInput([]),
       candidates: [null],
