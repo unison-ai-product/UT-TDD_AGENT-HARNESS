@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { realpathSync } from "node:fs";
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deriveReleaseId } from "../src/schema/release-manifest.ts";
 import {
@@ -244,10 +244,11 @@ describe("consumer-local runtime admission", () => {
     }
     const shortRoot = execFileSync(
       process.env.ComSpec ?? "cmd.exe",
-      ["/d", "/s", "/c", `for %I in ("${input.consumerRoot}") do @echo %~sI`],
+      ["/d", "/c", `for %I in (${input.consumerRoot}) do @echo %~sI`],
       { encoding: "utf8" },
     ).trim();
     expect(shortRoot.length).toBeGreaterThan(0);
+    expect(isAbsolute(shortRoot)).toBe(true);
     const physicalRoot = realpathSync.native(input.consumerRoot);
     if (shortRoot.toLowerCase() === physicalRoot.toLowerCase()) skip();
     const result = admitConsumerLocalRuntime({
