@@ -11,7 +11,7 @@ created: 2026-08-21
 updated: 2026-08-21
 owner: Codex / TL
 parent_design: docs/design/harness/L6-function-design/memory.md
-pair_artifact: docs/test-design/harness/L7-memory-delivery-backlog.md
+pair_artifact: docs/test-design/harness/L7-memory-delivery-backlog-test-design.md
 backprop_decision: not_required
 backprop_decision_reason: "既存のClaude memory配送契約に観測と警告を追加する内部可視性修正であり、L0-L6要件の意味は変更しない。"
 agent_slots:
@@ -26,7 +26,7 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-495-memory-delivery-backlog-visibility.md
     artifact_type: markdown_doc
-  - artifact_path: docs/test-design/harness/L7-memory-delivery-backlog.md
+  - artifact_path: docs/test-design/harness/L7-memory-delivery-backlog-test-design.md
     artifact_type: test_design
   - artifact_path: tests/claude-memory-backlog.test.ts
     artifact_type: test_code
@@ -39,7 +39,7 @@ dependencies:
     - docs/plans/PLAN-L7-422-feedback-saturation-visibility.md
     - docs/plans/PLAN-REVERSE-472-claude-memory-async-wake-backfill.md
     - docs/design/harness/L6-function-design/memory.md
-    - docs/test-design/harness/L7-memory-delivery-backlog.md
+    - docs/test-design/harness/L7-memory-delivery-backlog-test-design.md
     - src/runtime/claude-memory-wake.ts
     - src/handover/session-start-digest.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/227
