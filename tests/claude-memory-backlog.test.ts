@@ -64,6 +64,7 @@ describe("Claude memory delivery backlog visibility", () => {
       );
 
       const summary = summarizeUnclaimedInbox(root, current);
+      // U-MEMBACKLOG-002: foreign target backlog is retained as an explicit mismatch.
       expect(summary.pending).toBe(1);
       expect(summary.targetMismatchPending).toBe(1);
       expect(summary.targetMismatchOldestAgeMs).toBeGreaterThan(0);
