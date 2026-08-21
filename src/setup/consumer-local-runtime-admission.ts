@@ -49,6 +49,7 @@ export interface ConsumerLocalRuntimeAdmission {
 }
 
 export interface ConsumerRuntimeLayout {
+  readonly configuration: string;
   readonly database: string;
   readonly memory: string;
   readonly planProjection: string;
@@ -56,6 +57,7 @@ export interface ConsumerRuntimeLayout {
   readonly hookState: string;
   readonly receipt: string;
   readonly evidence: string;
+  readonly history: string;
 }
 
 export type ConsumerLocalRuntimeAdmissionError =
@@ -165,6 +167,7 @@ function requirementSeparator(): string {
 
 function deriveLayout(runtimeRoot: string): ConsumerRuntimeLayout {
   return Object.freeze({
+    configuration: resolve(runtimeRoot, "config.json"),
     database: resolve(runtimeRoot, "harness.db"),
     memory: resolve(runtimeRoot, "memory"),
     planProjection: resolve(runtimeRoot, "plans"),
@@ -172,6 +175,7 @@ function deriveLayout(runtimeRoot: string): ConsumerRuntimeLayout {
     hookState: resolve(runtimeRoot, "hooks"),
     receipt: resolve(runtimeRoot, "receipt.json"),
     evidence: resolve(runtimeRoot, "evidence"),
+    history: resolve(runtimeRoot, "history"),
   });
 }
 

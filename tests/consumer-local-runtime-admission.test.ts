@@ -123,9 +123,30 @@ async function seedRuntime(root: string, version: string, history = version): Pr
 describe("consumer-local runtime admission", () => {
   it("U-PACKISO-001: sealed artifactだけでsource不在のfresh consumerをadmitできる", async () => {
     const [a, b] = await Promise.all([fixture("product-a", "v1"), fixture("product-b", "v2")]);
-    const [aResult, bResult] = [admitConsumerLocalRuntime(a), admitConsumerLocalRuntime(b)];
+    const writes: string[] = [];
+    const install = (input: ConsumerLocalRuntimeAdmissionInput) =>
+      installConsumerLocalRuntime(input, {
+        snapshotDestination: async () => [],
+        writeStaging: async () => ({}),
+        applyDestination: async () => {
+          writes.push(input.consumerRoot);
+          await mkdir(join(input.consumerRoot, "bin"), { recursive: true });
+          await writeFile(
+            join(input.consumerRoot, "bin", "runtime.js"),
+            input.plan.entries[0].content,
+            "utf8",
+          );
+          await mkdir(join(input.runtimeRoot, "history"), { recursive: true });
+          await writeFile(join(input.runtimeRoot, "config.json"), input.productId, "utf8");
+        },
+        discardStaging: async () => undefined,
+        restoreDestination: async () => undefined,
+      });
+    const [aResult, bResult] = await Promise.all([install(a), install(b)]);
     expect(aResult.ok).toBe(true);
     expect(bResult.ok).toBe(true);
+    expect(writes).toEqual(expect.arrayContaining([a.consumerRoot, b.consumerRoot]));
+    expect(new Set(writes).size).toBe(2);
     expect(aResult.ok && bResult.ok ? aResult.admission.runtimeRoot : null).not.toBe(
       bResult.ok && aResult.ok ? bResult.admission.runtimeRoot : null,
     );
@@ -135,6 +156,9 @@ describe("consumer-local runtime admission", () => {
       await expect(lstat(join(input.consumerRoot, "source-worktree"))).rejects.toThrow();
       await expect(lstat(join(input.consumerRoot, "local-pack-checkout"))).rejects.toThrow();
       expect(await tree(input.consumerRoot)).not.toContain("source-repo");
+      expect(await readFile(join(input.consumerRoot, "bin", "runtime.js"), "utf8")).toBe(
+        input.productId === "product-a" ? "v1" : "v2",
+      );
     }
     if (aResult.ok) {
       const before = aResult.admission.plan.entries[0].content;

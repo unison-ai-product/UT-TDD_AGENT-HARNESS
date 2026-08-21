@@ -71,6 +71,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: tests/consumer-local-runtime-admission.test.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000001"
         anchor_commit: db29bc73
       - kind: typecheck
         command: "npm run typecheck -- --pretty false"
@@ -79,6 +80,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: src/setup/consumer-local-runtime-admission.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000002"
         anchor_commit: db29bc73
       - kind: lint
         command: "npm run lint"
@@ -87,14 +89,16 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: src/setup/consumer-local-runtime-admission.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000003"
         anchor_commit: db29bc73
-      - kind: plan_lint
+      - kind: unit_test
         command: "node src/cli.ts plan lint docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md"
         runner: node
         scope: targeted
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000004"
         anchor_commit: db29bc73
 ---
 
@@ -114,7 +118,7 @@ PF1〜PF5、release promotion/rollback gate、Pack publish/copy、CLI、D1/D2/D3
 
 - consumer rootとruntime rootを絶対canonical pathとして検証し、runtime rootがconsumer root外へ解決される
   lexical path、symlink、junctionをfail-closeする。
-- DB、Memory、PLAN projection、lock、hook state、receipt、evidenceのlayoutはruntime rootからのみ導出し、
+- configuration、DB、Memory、PLAN projection、lock、hook state、receipt、evidence、historyのlayoutはruntime rootからのみ導出し、
   callerが任意rootを注入できない凍結layoutとして返す。
 - 受領したsealed planのentriesをpath/mode/contentから独立に再計算する。manifest、receipt、PF5 planの申告
   digestを計算入力にせず、再計算値が三者へ一致した場合だけadmitする。

@@ -43,7 +43,7 @@ review_evidence: []
 - canonical releaseId derivationをmaterializer version/source revision/artifact digestへ束縛し、coherent fake
   identity replayを拒否すること。
 - consumer/runtime rootのcanonical namespaceとsymlink/junction escape fail-close。
-- DB、Memory、PLAN、lock、hook、receipt、evidenceのlayoutをproduct-local runtime rootへ固定すること。
+- configuration、DB、Memory、PLAN、lock、hook、receipt、evidence、historyのlayoutをproduct-local runtime rootへ固定すること。
 - product identity、manifest、receipt、planの三者束縛と異version共存。
 - A prior stateを持つupgrade/rollback中にBの実process、bytes、mode、path、state/historyを不変にする観測。
 - artifact unavailable、unknown version、receipt mismatch、局所faultのwrite/process 0。
