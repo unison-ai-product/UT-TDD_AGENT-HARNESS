@@ -362,7 +362,7 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
   if (result.greenCommandViolations.length > 0) {
     const ids = result.greenCommandViolations.map((v) => `${v.plan_id}:${v.reason}`).join(", ");
     out.push(
-      `review-evidence — ⚠ green command evidence 欠落/不正 ${result.greenCommandViolations.length} 件 (${ids}): 2026-06-23 以降の confirmed review_evidence は green_commands に kind/command/runner/scope/exit_code/evidence_path/output_digest を記録 (IMP-108)。2026-08-20 以降に記録した entry は anchor_commit も必須 (anchor 無し digest は working tree と比較され、無関係な PR の merge で赤化する / issue #191)`,
+      `review-evidence — ⚠ green command evidence 欠落/不正 ${result.greenCommandViolations.length} 件 (${ids}): 2026-06-23 以降の confirmed review_evidence は green_commands に kind/command/runner/scope/exit_code/evidence_path/output_digest を記録 (IMP-108)。全 entry で anchor_commit も必須 (anchor 無し digest は working tree と比較され、無関係な PR の merge で赤化する / issue #191)`,
     );
   }
   if (result.staleApprovalViolations.length > 0) {
