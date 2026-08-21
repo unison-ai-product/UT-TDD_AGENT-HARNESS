@@ -46,6 +46,7 @@ export {
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
   PACK_SAFE_TEST_SCRIPT,
+  releaseArtifactStem,
   transformCleanDistributionArtifact,
 } from "./distribution.ts";
 export {

@@ -61,6 +61,12 @@ export interface PackSyncPlan {
 }
 
 export const DEFAULT_PACK_REPO = "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack";
+
+/** package/release-plan が共有する、release artifact の安全なファイル名変換。 */
+export function releaseArtifactStem(sourceTag: string): string {
+  return sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-");
+}
+
 const CLEAN_REQUIRED_PATHS = [
   "README.md",
   "LICENSE",

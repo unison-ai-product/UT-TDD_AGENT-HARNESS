@@ -1147,6 +1147,12 @@ describe("L7 CLI surface closure", () => {
       repo: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
       externalPublishRequiresApproval: true,
     });
+    expect(payload.commands).toContain("node src/cli.ts distribution package --tag v0.1.0");
+    expect(payload.commands.join("\n")).not.toContain("bun ");
+    expect(payload.commands.join("\n")).not.toContain(".sig");
+    expect(payload.commands).toContain(
+      "gh release create v0.1.0 .ut-tdd/release/v0.1.0.tar.gz .ut-tdd/release/v0.1.0.tar.gz.sha256 .ut-tdd/release/v0.1.0.manifest.json --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --verify-tag --notes-file .ut-tdd/release/v0.1.0.manifest.json",
+    );
     expect(payload.commands).toEqual(
       expect.arrayContaining([
         expect.stringContaining("git tag -a v0.1.0"),

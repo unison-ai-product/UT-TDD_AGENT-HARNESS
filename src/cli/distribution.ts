@@ -26,6 +26,7 @@ import {
   cleanDistributionSourcePath,
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
+  releaseArtifactStem,
   transformCleanDistributionArtifact,
 } from "../setup/index.ts";
 import { ensureDir } from "../shared/fs.ts";
@@ -599,7 +600,7 @@ export function registerDistributionCommands(program: Command): void {
           ? opts.out
           : join(repoRoot, opts.out)
         : join(repoRoot, ".ut-tdd", "release");
-      const artifactStem = exportPlan.sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-");
+      const artifactStem = releaseArtifactStem(exportPlan.sourceTag);
       const tarball = join(outDir, `${artifactStem}.tar.gz`);
       const checksum = `${tarball}.sha256`;
       const manifest = join(outDir, `${artifactStem}.manifest.json`);
