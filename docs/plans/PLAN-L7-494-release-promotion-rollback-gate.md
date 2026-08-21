@@ -144,7 +144,7 @@ review_evidence:
   - reviewer: codex-primary-flag-closure-3
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-21T03:25:43Z"
-    tests_green_at: "2026-08-21T03:25:43Z"
+    tests_green_at: "2026-08-21T03:26:00Z"
     verdict: "Claude FLAG B1 revision-only oracle isolated; source mutant killed; non-author rereview pending"
     scope: "request.reviewRevisionとsubject.planRevision以外を完全整合した独立revision-only splice、source 1行削除mutation、side-effect 0、targeted test/typecheck。"
     worker_model: gpt-5.6-luna
