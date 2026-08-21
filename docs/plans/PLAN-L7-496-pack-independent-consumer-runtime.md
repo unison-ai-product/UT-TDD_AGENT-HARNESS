@@ -46,7 +46,56 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/362
 github_issue_id: 362
 backprop_decision: required
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-21T15:55:00+09:00"
+    tests_green_at: "2026-08-21T15:49:00+09:00"
+    verdict: "preflight-pass; non-author closing review pending"
+    scope: "B1-B7 exact-head preflight是正。dual consumer、component layout、v1/v2 identity、atomic upgrade/rollback、canonical releaseId、symlink aliasを再検収。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: db29bc73
+    subject_head: db29bc73
+    evidence_path: tests/consumer-local-runtime-admission.test.ts
+    anchor_commit: db29bc73
+    citations:
+      - "tests/consumer-local-runtime-admission.test.ts: U-PACKISO-001..006 expanded 25 cases"
+      - "src/setup/consumer-local-runtime-admission.ts: canonical layout, releaseId derivation, PF5 install composition"
+      - "src/schema/release-manifest.ts: deriveReleaseId"
+    green_commands:
+      - kind: unit_test
+        command: "node node_modules/vitest/vitest.mjs run tests/consumer-local-runtime-admission.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1 (fenced diagnostic)"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-21T15:49:00+09:00"
+        evidence_path: tests/consumer-local-runtime-admission.test.ts
+        anchor_commit: db29bc73
+      - kind: typecheck
+        command: "npm run typecheck -- --pretty false"
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-21T15:49:00+09:00"
+        evidence_path: src/setup/consumer-local-runtime-admission.ts
+        anchor_commit: db29bc73
+      - kind: lint
+        command: "npm run lint"
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-21T15:49:00+09:00"
+        evidence_path: src/setup/consumer-local-runtime-admission.ts
+        anchor_commit: db29bc73
+      - kind: plan_lint
+        command: "node src/cli.ts plan lint docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-21T15:49:00+09:00"
+        evidence_path: docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
+        anchor_commit: db29bc73
 ---
 
 # PLAN-L7-496: Pack単独consumer-local runtime admission
