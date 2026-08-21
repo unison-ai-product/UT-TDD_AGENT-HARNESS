@@ -37,6 +37,7 @@ dependencies:
     - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
     - docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/376
     - .ut-tdd/audit/A-185-vmodel-docgen-reference-mining-2026-07-07.md
 ---
 
@@ -69,7 +70,8 @@ human-approved command list を返す機構であり、remote mutation を実行
 `release-plan` は公開手順の意図を示す参考面に留まり、現状はNode正規CLIではなくBunを含む
 commandと、package処理が生成しない`.sig` assetをemitするため、実行可能なpublication planの
 正本として再利用してはならない。後続publication sliceがNode正規CLIと実生成asset inventoryへ
-置換し、oracleで固定するまではread-onlyのknown gapとする。これらの安全境界を迂回する自動
+置換し、oracleで固定するまではread-onlyのknown gapとする。この修理はIssue #376で追跡し、
+closeされるまでpublication adapterのremote適用を許可しない。これらの安全境界を迂回する自動
 push、tag 操作、GitHub API 操作を追加しない。
 
 ## 2. 正本と artifact manifest 境界
@@ -95,7 +97,7 @@ push、tag 操作、GitHub API 操作を追加しない。
        artifacts:
          - sourcePath: <canonical relative POSIX path>
            destinationPath: <canonical relative POSIX path>
-           mode: <100644|100755|120000>
+           mode: <100644|100755>
            size: <non-negative safe integer>
            contentDigest: <sha256:64-lowerhex>
    channels:
@@ -121,11 +123,15 @@ push、tag 操作、GitHub API 操作を追加しない。
    各entryの`sourcePath`/`destinationPath`/`mode`/`contentDigest`を「u32be byte length + bytes」、
    `size`をu64beで連結したbyte列のSHA-256とする。`artifactSetDigest`はPF-2の既存canonical
    destination/mode/content framingを再利用し、inventory digestで置換しない。
+   mode `120000`（symlink）は本v2公開契約では拒否する。現在のPack出荷集合にsymlinkの実需が
+   ないため、target検証なしに攻撃面だけを開かない。将来必要になった場合は別bounded sliceで
+   `consumer-local-runtime-admission`の`validSymlink`（relative targetのみ、NUL/backslash/
+   drive/UNC/absolute禁止、destination root escape禁止）を再利用し、PACKPUB oracleを先に追加する。
    release assetはexactに`ut-tdd-pack-<release IDの64-lowerhex>.tar.gz`と、その
-   `.sha256`の2件だけとする。tarはPOSIX ustar regular/symlink entryだけをdestination path順に
-   格納し、directory entry、hardlink、PAX/GNU extensionを禁止する。path/linknameがustarで表現不能なら
-   fail-closeする。headerはmode=manifest値、uid/gid=0、size=regular content byte長（symlinkは0）、
-   mtime=0、typeflag=`0`/`2`、symlink linkname=UTF-8 target、uname/gname空、devmajor/devminor=0、
+   `.sha256`の2件だけとする。tarはPOSIX ustar regular entryだけをdestination path順に
+   格納し、directory entry、symlink、hardlink、PAX/GNU extensionを禁止する。pathがustarで表現不能なら
+   fail-closeする。headerはmode=manifest値、uid/gid=0、size=content byte長、
+   mtime=0、typeflag=`0`、uname/gname空、devmajor/devminor=0、
    padding=zeroとする。gzipはCM=8、FLG=0、MTIME=0、XFL=0、OS=255、extra/name/comment無し、
    DEFLATE stored block（BTYPE=00、入力を最大65535 byteで順序分割）、CRC32/ISIZE trailerとする。
    checksum file bytesは`<64-lowerhex>  <tarball-name>\n`とする。
@@ -305,7 +311,7 @@ Pack公開前提と非依存境界のみを定義する。
 
 | oracle | 証明対象 | 所有 slice |
 | --- | --- | --- |
-| `CANDIDATE-PACKPUB-001` | manifest v2明示集合とdigest/identityの単独変異拒否、v1の新規公開拒否 | release manifest/materializer |
+| `CANDIDATE-PACKPUB-001` | manifest v2明示集合とdigest/identityの単独変異拒否、v1の新規公開・mode 120000の拒否 | release manifest/materializer |
 | `CANDIDATE-PACKPUB-002` | canary/stable pointerのpromotion preconditionとtyped三値 | channel/promotion |
 | `CANDIDATE-PACKPUB-003` | remote mutation receipt、tag付替え/force push拒否 | publication adapter/auditor |
 | `CANDIDATE-PACKPUB-004` | partial publication、supersede-forward rollback、indeterminate保持 | publication aggregate |
@@ -315,7 +321,8 @@ Pack公開前提と非依存境界のみを定義する。
 
 1. [完了済み依存] PF-1〜PF-5のsource側 admission と `PLAN-REVERSE-473` のbackfillを利用する。
 2. [本 slice] 本 PLAN のL6契約を pair-freeze し、non-author cross-review後に実装許可を出す。
-3. [後続] manifest v2 schema/parser/migrationのL7 pairとReverseを先に閉じ、その後publication
+3. [後続] Issue #376のNode正規CLI/実asset inventory修理と、manifest v2 schema/parser/migrationの
+   L7 pair/Reverseを先に閉じ、その後publication
    adapter/auditor の最小実装でimmutable releaseを公開し、canary pointerまでを
    attestedにする。stable pointerはまだ変更しない。
 4. [後続] canary Pack checkoutだけから`PLAN-L6-101`の二consumer E2Eを実施し、同じrelease
