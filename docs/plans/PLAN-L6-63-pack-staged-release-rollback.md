@@ -112,18 +112,28 @@ push、tag 操作、GitHub API 操作を追加しない。
 3. `artifacts[]` が出荷集合の境界である。path、content digest、mode、size、destination を
    1件ずつ列挙し、glob、directory walk、current worktree、Pack checkout の残存ファイルを
    暗黙に追加しない。canonical digest の入力順、path normalization、framing、mode、
-   control manifest 自身の除外規則を byte-level 契約として固定する。control manifest は
-   allowlist の到達物として配布するが、自己参照を避けるため artifact-set digest の入力からは
-   除外する。
+   control manifest 自身の除外規則を byte-level 契約として固定する。payload tarballは
+   `artifacts[]`のdestinationだけを含み、control manifest、Release notes、checksum、signatureを
+   含めない。control manifestはPack commit内のsidecarとして配布するが、artifact-set digest、
+   payload tarball、release asset inventoryの全てから除外する。完全性は後段の
+   `controlManifestSnapshotDigest`とPack commit/tree SHAが別に束縛する。
    `artifactInventoryDigest`はASCII prefix `ut-tdd-pack-inventory-v2\0`、entry countのu32be、
    各entryの`sourcePath`/`destinationPath`/`mode`/`contentDigest`を「u32be byte length + bytes」、
    `size`をu64beで連結したbyte列のSHA-256とする。`artifactSetDigest`はPF-2の既存canonical
    destination/mode/content framingを再利用し、inventory digestで置換しない。
-   tarballはdestination path順、uid/gid=0、uname/gname空、mtime=0、manifest mode、固定gzip
-   headerで決定論生成する。checksum file bytesは`<64-lowerhex>  <tarball-name>\n`とする。
-   `releaseAssetInventoryDigest`はasset name順のname/size/content SHA-256 framingから導出する。
+   release assetはexactに`ut-tdd-pack-<release IDの64-lowerhex>.tar.gz`と、その
+   `.sha256`の2件だけとする。tarはPOSIX ustar regular/symlink entryだけをdestination path順に
+   格納し、directory entry、hardlink、PAX/GNU extensionを禁止する。path/linknameがustarで表現不能なら
+   fail-closeする。headerはmode=manifest値、uid/gid=0、size=regular content byte長（symlinkは0）、
+   mtime=0、typeflag=`0`/`2`、symlink linkname=UTF-8 target、uname/gname空、devmajor/devminor=0、
+   padding=zeroとする。gzipはCM=8、FLG=0、MTIME=0、XFL=0、OS=255、extra/name/comment無し、
+   DEFLATE stored block（BTYPE=00、入力を最大65535 byteで順序分割）、CRC32/ISIZE trailerとする。
+   checksum file bytesは`<64-lowerhex>  <tarball-name>\n`とする。
+   `releaseAssetInventoryDigest`はprefix `ut-tdd-pack-assets-v2\0`、asset count u32be、asset nameを
+   `u32be length + UTF-8 bytes`、sizeをu64be、content SHA-256をraw 32 bytesとしてname順に連結し
+   SHA-256を取る。
    `releaseRecordDigest`はASCII prefix `ut-tdd-pack-release-v2\0`に、materializerVersionの
-   length-prefix、40-byte source commit、artifact-set digest raw 32 bytes、inventory digest raw
+   u32be length-prefix、40-byte ASCII source commit、artifact-set digest raw 32 bytes、inventory digest raw
    32 bytes、release asset inventory digest raw 32 bytesを連結したSHA-256とする。`releaseId`は
    既存`deriveReleaseId`を維持し、record digestと両方が一致した場合だけ同一releaseとして扱う。
 4. `controlManifestSnapshotDigest`はYAML serializerの出力を信用せず、prefix
@@ -135,6 +145,12 @@ push、tag 操作、GitHub API 操作を追加しない。
    採用しない。least-privilege profile と capability manifest の一般化は、実際の利用境界を
    確認した後の別 bounded slice 候補とする。ただし profile を導入しなくても、今回の
    `artifacts[]` による明示集合境界と deny-by-default の検証は必須である。
+
+生成DAGは `artifact entries -> artifactSetDigest/artifactInventoryDigest -> deterministic payload
+tarball/checksum -> releaseAssetInventoryDigest -> releaseRecordDigest -> control manifest snapshot ->
+Pack commit/tree -> annotated tag/draft Release` の一方向とする。Pack commit/tree/tag、control manifest
+snapshotをrelease recordへ戻してはならない。これによりmanifest/tarball/asset digestの自己参照を
+構造的に作らない。
 
 ## 3. 公開物の identity と可変範囲
 
@@ -230,6 +246,16 @@ rollback は過去 object の破壊ではなく **supersede-forward** とする�
    `attested` になるまで stable/canary の完了を報告しない。
 4. pointer復旧または監査が失敗した場合は `rollback_failed` / `applied=indeterminate` とし、
    未公開・未変更と誤報しない。別 channel や別 consumer へ recovery を波及させない。
+
+rollbackはforward publication FSMの逆再生ではなく、独立したappend-only operationとして
+`rollback_planned -> rollback_approved -> pointer_cas_applied -> rollback_attested`を辿る。
+`rollback_planned`はchannel、current release ID、before control snapshot digest、L6-102 gateが一意に
+選んだprior attested release ID、operation idを束縛する。候補0件/複数件、current pointer drift、
+target attestation mismatchはwrite 0で拒否する。`rollback_approved`は同じplan digestに対する未使用の
+human approval nonce/expiryを消費する。pointer CAS後に応答を失った場合は`indeterminate`とし、auditorが
+remote snapshotを再観測する。同じtargetへのCAS成立だけを`pointer_cas_applied`としてresumeし、別target、
+未知snapshot、部分変更は`rollback_failed`で停止する。`rollback_attested`はpointer、manifest snapshot、
+target release/tag/Release/assetsの全identity再計算後だけ成立する。
 
 ## 7. Pack-only 二 consumer の公開後受入
 
