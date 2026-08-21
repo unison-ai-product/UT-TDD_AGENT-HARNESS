@@ -487,6 +487,7 @@ function reviewIdentityMatches(review: ReviewGateEvidence, subject: ReviewSubjec
     review.exactHeadSha === subject.exactHeadSha &&
     review.planRevision === subject.planRevision &&
     request.exactHead === subject.exactHeadSha &&
+    request.reviewRevision === subject.planRevision &&
     request.pr === expected.pr &&
     request.memoryId === expected.memoryId &&
     request.authorFamily === expected.authorFamily &&

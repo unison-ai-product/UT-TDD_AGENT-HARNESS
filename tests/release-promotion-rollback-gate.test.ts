@@ -594,15 +594,22 @@ describe("S3 promotion / rollback pure gate", () => {
     }
     const splicedClaim = { ...claimBlind, planId: "PLAN-OTHER" };
     const splicedSpec = { ...specBlind, planId: "PLAN-OTHER" };
+    const foreignPlanRevision = commit("f");
     const coherentSplice: ReviewGateEvidence = {
       ...review,
-      d1: { ...review.d1, pr: 999, memoryId: "MEM-OTHER" },
+      request: { ...review.request, reviewRevision: foreignPlanRevision },
+      d1: {
+        ...review.d1,
+        pr: 999,
+        memoryId: "MEM-OTHER",
+        reviewRevision: foreignPlanRevision,
+      },
       d2: {
         ...review.d2,
         pr: 999,
         authorizedEntry: {
           memoryId: "MEM-OTHER",
-          reviewRevision: planRevision,
+          reviewRevision: foreignPlanRevision,
           reviewerFamily: "claude",
         },
       },
