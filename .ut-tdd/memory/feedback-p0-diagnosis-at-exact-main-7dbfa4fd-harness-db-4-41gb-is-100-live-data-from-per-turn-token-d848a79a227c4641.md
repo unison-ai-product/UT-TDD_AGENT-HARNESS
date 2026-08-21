@@ -23,6 +23,6 @@ Claude が exact main 7dbfa4fd491c6783f8f46fcde930553b6299ae83 で issue #169 / 
 
 副次観測 (#236 memory hygiene): `.ut-tdd/memory` はディスク上 500 ファイル、git 追跡 145 ファイルで **355 件が未追跡**。issue #236 記載時点の 65→291 からさらに悪化しており、共有正本が他ランタイムから不可視な状態が拡大している。
 
-配送事故 (#227 の実例、本セッションで観測): 2026-08-20T01:26:05 に publish された P0/P1 issue queue (memory:feedback:forward-p0-p1-issue-queue-memory-bus-snapshot-db-resource) は targetWorkspaceId が `C:/Users/micro/ut-issue344-pre-gate` 宛であり、稼働セッションのある root workspace には配送されなかった。同様に 2026-08-19 の claude-queue-non-forward-critical-backlog も `C:/Users/micro/ut-issue342-forward-fsm` 宛で未配送。inbox の未 claim entry は 96 件で、うち 93 件が稼働セッションの無い worktree 宛である。publish 成功と配送成立が乖離するという #227 の主張は現時点でも再現する。
+配送事故 (#227 の実例、本セッションで観測): 2026-08-20T01:26:05 に publish された P0/P1 issue queue (memory:feedback:forward-p0-p1-issue-queue-memory-bus-snapshot-db-resource) は targetWorkspaceId が `~/ut-issue344-pre-gate` 宛であり、稼働セッションのある root workspace には配送されなかった。同様に 2026-08-19 の claude-queue-non-forward-critical-backlog も `~/ut-issue342-forward-fsm` 宛で未配送。inbox の未 claim entry は 96 件で、うち 93 件が稼働セッションの無い worktree 宛である。publish 成功と配送成立が乖離するという #227 の主張は現時点でも再現する。
 
 本診断では編集・commit・PR・merge を行っていない。次段は Task Pack U-1 の定める順序どおり gpt-5.6-luna による実装であり、その後 Opus 非著者 blind closing に戻す。
