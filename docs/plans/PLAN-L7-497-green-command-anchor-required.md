@@ -4,7 +4,7 @@ title: "PLAN-L7-497 (add-impl): green_command の anchor_commit を全 entry で
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-21
@@ -36,7 +36,52 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/191
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-21T19:35:00+09:00"
+    tests_green_at: "2026-08-21T19:30:00+09:00"
+    verdict: "preflight-pass; non-author closing review pending"
+    scope: "issue #191 の anchor 必須化。missing_anchor_commit / invalid_anchor_commit の 2 面、実 repo corpus 全件通過、oracle-test-trace の双方向 citation、cli-surface の maxBuffer 是正を exact HEAD 47697062 で再検収。"
+    worker_model: claude-opus-5
+    reviewer_model: claude-opus-5
+    plan_revision: 47697062d28e964120e2c426159ee0865b9c4793
+    subject_head: 47697062d28e964120e2c426159ee0865b9c4793
+    evidence_path: tests/review-evidence.test.ts
+    anchor_commit: 47697062d28e964120e2c426159ee0865b9c4793
+    citations:
+      - "src/lint/review-evidence.ts: greenCommandViolationReason の anchor 必須化と形式検査"
+      - "tests/review-evidence.test.ts: U-REVIEW-009〜013"
+      - "docs/test-design/harness/L7-unit-test-design.md §1.15: U-REVIEW-009〜013 の宣言"
+      - "docs/design/harness/L6-function-design/test-before-review.md §8: anchor 契約の上流 backfill"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub Actions run 32468018118: harness-check-linux / harness-check-windows / aggregate 3/3 SUCCESS"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-21T19:30:00+09:00"
+        evidence_path: tests/review-evidence.test.ts
+        output_digest: "sha256:a63fd72b746b7ed528831c80beeb06d20061b474a746730b9fa0280bda93c171"
+        anchor_commit: 47697062d28e964120e2c426159ee0865b9c4793
+      - kind: typecheck
+        command: "GitHub Actions run 32468018118: harness-check-linux typecheck (tsc --noEmit)"
+        runner: ci
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-21T19:30:00+09:00"
+        evidence_path: src/lint/review-evidence.ts
+        output_digest: "sha256:91feb4ef233f846fa175f316286cf957fc2df09573bae6d20cbdd636e8b5fa8e"
+        anchor_commit: 47697062d28e964120e2c426159ee0865b9c4793
+      - kind: lint
+        command: "GitHub Actions run 32468018118: harness-check-linux biome lint"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-21T19:30:00+09:00"
+        evidence_path: src/lint/review-evidence.ts
+        output_digest: "sha256:91feb4ef233f846fa175f316286cf957fc2df09573bae6d20cbdd636e8b5fa8e"
+        anchor_commit: 47697062d28e964120e2c426159ee0865b9c4793
 ---
 
 # PLAN-L7-497: green_command の anchor_commit 必須化

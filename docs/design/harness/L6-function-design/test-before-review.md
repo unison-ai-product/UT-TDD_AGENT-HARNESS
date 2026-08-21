@@ -75,6 +75,12 @@ type GreenCommandEvidence = {
   completed_at?: string;
   evidence_path: string;
   output_digest: string;
+  /**
+   * 測定時点の commit。**全 entry で必須** (PLAN-L7-497 / issue #191)。
+   * short/full の git object name (`^[0-9a-f]{7,40}$`) のみを認め、`main` のような可変参照は
+   * anchor と認めない — 可変参照では「測定時点の固定」という目的を達成できない。
+   */
+  anchor_commit: string;
 };
 
 type GreenDefinition = {
@@ -91,5 +97,6 @@ DbC:
 - Precondition: `profile` は changed artifact kind と Test Rules から選ばれる。Bun/TypeScript core change は少なくとも `typecheck`、`lint`、関連する `unit_test` を要求する。
 - Postcondition: `computed_green_at` は全 required command の `completed_at` 最大値であり、すべての required command は `exit_code=0` を持つ。
 - Current invariant: 2026-06-23 以降に confirmed/completed になった `review_evidence` entry は、allowed kind/runner/scope、`exit_code=0`、evidence path、`sha256:` output digest を持つ `green_commands[]` entry を 1 件以上持つ。
+- Current invariant (anchor、PLAN-L7-497 / issue #191): `green_commands[]` の**全 entry**が `anchor_commit` を持つ。発効時刻による段階導入は採らない — 判定入力になる `completed_at` は**書き手の自己申告値**であり、過去日時を書くだけで迂回できるため fail-close として成立しない。anchor 無し digest は working tree の現在値と照合されるので、無関係な PR が同じ `evidence_path` に触れた瞬間に不一致になり、正しい証跡が誤って赤化する。anchor の**実在検査は含まない** — squash merge 運用では判定不能で実測 29 件の false positive を出したため撤回した (実在検査の可否は issue #367 の守備範囲)。
 - Future invariant: `review_evidence` entry は、`green_definition_id` が解決し `computed_green_at <= reviewed_at` の場合だけ `confirmed` になれる。
 - Projection: `GreenCommandEvidence` は `physical-data.md` §9.4 の `test_runs` / `quality_signals` へ map する。missing evidence は warning ではなく finding にする。

@@ -4,11 +4,13 @@ title: "PLAN-REVERSE-497: anchor 必須化契約の上流合流"
 kind: reverse
 layer: cross
 drive: db
-workflow_phase: R1
+workflow_phase: R4
 confirmed_reverse_type: design
+forward_routing: gap-only
+promotion_strategy: reuse-as-is
 route_signal: reverse
 route_mode: reverse
-status: draft
+status: confirmed
 created: 2026-08-21
 updated: 2026-08-21
 owner: PO / Claude
@@ -22,6 +24,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-497-green-command-anchor-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/test-before-review.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/review-evidence.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-497-green-command-anchor-required.md
   requires: []
@@ -30,6 +38,7 @@ dependencies:
     - docs/plans/PLAN-L7-303-digest-commit-anchor.md
     - docs/plans/PLAN-L7-497-green-command-anchor-required.md
     - docs/design/harness/L6-function-design/review-evidence.md
+    - docs/design/harness/L6-function-design/test-before-review.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/191
 review_evidence: []
 ---
@@ -45,6 +54,35 @@ review_evidence: []
 - anchor の形式契約 (`^[0-9a-f]{7,40}$`、可変参照を認めない) の帰属先。
 - anchor の**実在検査は含まない**という境界 (squash merge 運用では判定不能、実測 29 件の false
   positive で撤回)。実在検査は issue #367 の守備範囲であることを明示する。
+
+## 1a. R2: 実装と上流契約の差分 (実測)
+
+上流 L6 (`docs/design/harness/L6-function-design/test-before-review.md` §8) の
+`GreenCommandEvidence` 型に **`anchor_commit` フィールドが存在しなかった**。一方 L7 実装
+(`src/lint/review-evidence.ts`) は全 entry で anchor を必須とする。**上流設計が任意ですらなく
+無記載、下流実装が必須**という差分であり、Reverse backfill の対象はこの 1 点である。
+
+| 面 | backfill 前 | backfill 後 |
+|---|---|---|
+| L6 型 | `anchor_commit` 無し | `anchor_commit: string` (必須) |
+| L6 invariant | anchor への言及なし | 全 entry 必須 + 段階導入不採用の理由 + 実在検査を含まない境界 |
+
+## 1b. R3: 非著者判定
+
+exact HEAD `47697062` に対する非著者 closing review が **FLAG (blocking 2)** を返し、
+B1 として本差分 (「L6 は anchor 任意・実装は全 entry 必須で上流設計と矛盾」) を指摘した。
+本 backfill はその是正である。R3 の指摘を受けて R4 を実施した順序であり、自己判定で
+R4 へ進んでいない。
+
+## 1c. R4: 戻した差分と、戻さなかったもの
+
+**戻した**: `anchor_commit` の必須化、形式契約 (`^[0-9a-f]{7,40}$`、可変参照を認めない)、
+段階導入を採らない理由 (`completed_at` は自己申告値で迂回可能)、実在検査を含まない境界。
+
+**戻していない (意図的)**: L6 の `runner` union は `"bun" | "powershell" | "bash" | "ci"` で、
+実装の `GREEN_COMMAND_RUNNERS` が持つ `"node"` を欠く。これは anchor とは独立した既存 drift で
+あり、本 Reverse の scope 外とした (scope 拡張禁止)。**別途 backfill が必要**であり、ここに
+記録して見失わないようにする。
 
 ## 2. R3〜R4
 
