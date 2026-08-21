@@ -8,7 +8,7 @@ route_signal: forward
 route_mode: forward
 status: confirmed
 created: 2026-08-20
-updated: 2026-08-20
+updated: 2026-08-21
 owner: PM / Codex
 parent_design: docs/plans/PLAN-L6-102-release-promotion-rollback-gate.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -141,6 +141,41 @@ review_evidence:
         evidence_path: tests/release-promotion-rollback-gate.test.ts
         output_digest: "sha256:1ef02ee8aedf7d58315a0f3112b7fa9e9001b1d38b03e3241a2673feaa889406"
         anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
+  - reviewer: codex-primary-flag-closure-3
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-21T03:25:43Z"
+    tests_green_at: "2026-08-21T03:25:43Z"
+    verdict: "Claude FLAG B1 revision-only oracle isolated; source mutant killed; non-author rereview pending"
+    scope: "request.reviewRevisionとsubject.planRevision以外を完全整合した独立revision-only splice、source 1行削除mutation、side-effect 0、targeted test/typecheck。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
+    subject_head: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
+    evidence_path: tests/release-promotion-rollback-gate.test.ts
+    anchor_commit: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
+    citations:
+      - "src/setup/release-promotion-rollback-gate.ts:488 request.reviewRevision === subject.planRevision"
+      - "tests/release-promotion-rollback-gate.test.ts:631-661 U-RELMAN-020 revision-only spliceとside-effect 0"
+      - "mutation probe: 対象1行削除でrevision-onlyケースがallowへ反転し9/10 Red"
+    green_commands:
+      - kind: unit_test
+        command: "node node_modules/vitest/vitest.mjs run tests/release-promotion-rollback-gate.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1 (direct targeted; snapshot runnerはsingleton/cleanup cutoff)"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-21T03:25:43Z"
+        evidence_path: tests/release-promotion-rollback-gate.test.ts
+        output_digest: "sha256:b1dd063e15d5394d297a6f1d50dd109eb0ceaf13358ef9ca6d79e2f41898dea7"
+        anchor_commit: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
+      - kind: typecheck
+        command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-21T03:26:00Z"
+        evidence_path: src/setup/release-promotion-rollback-gate.ts
+        output_digest: "sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a"
+        anchor_commit: 551a64bbcb9569d4e0206eacf5b6a7d856c5f070
       - kind: typecheck
         command: "GitHub Actions run 32437438186: harness-check-linux typecheck"
         runner: ci
