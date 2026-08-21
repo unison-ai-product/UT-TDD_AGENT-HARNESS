@@ -75,11 +75,14 @@ human-approved command list を返す機構であり、remote mutation を実行
    Pack checkout、GitHub Release本文、tag、tarball、checksum、consumer のローカル状態は
    正本ではなく、manifest と receipt から検証する派生公開物である。Pack側へ manifest を
    copy しても第二正本にはしない。
-2. manifest は少なくとも次を持つ: `releaseId`、`artifactSourceCommit`、
+2. 新規公開に使うmanifestはschema `v2`とし、少なくとも次を持つ: `releaseId`、`artifactSourceCommit`、
    `materializerVersion`、`artifactSetDigest`、明示的な `artifacts[]`、および
    `channels.canary` / `channels.stable` の release ID。`releaseId` は source revision と
    canonical artifact-set digest から決定論的に導出し、同じ release ID の bytes、mode、path
    または provenance の変更を拒否する。
+   現行schema `v1`は既存releaseを解決・監査するread-only互換として残すが、`artifacts[]`を
+   持たないため新規canary/stable公開の入力にはできない。`v1`からtracked treeやallowlistを
+   読んで集合を補完するfallbackは禁止し、`v2`への明示migrationを要求する。
 3. `artifacts[]` が出荷集合の境界である。path、content digest、mode、size、destination を
    1件ずつ列挙し、glob、directory walk、current worktree、Pack checkout の残存ファイルを
    暗黙に追加しない。canonical digest の入力順、path normalization、framing、mode、
@@ -212,10 +215,10 @@ Pack公開前提と非依存境界のみを定義する。
 
 | oracle | 証明対象 | 所有 slice |
 | --- | --- | --- |
-| `CANDIDATE-RELMAN-018` | manifest明示集合とdigest/identityの単独変異拒否 | release manifest/materializer |
-| `CANDIDATE-RELMAN-019` | canary/stable pointerのpromotion preconditionとtyped三値 | channel/promotion |
-| `CANDIDATE-RELMAN-020` | remote mutation receipt、tag付替え/force push拒否 | publication adapter/auditor |
-| `CANDIDATE-RELMAN-021` | partial publication、supersede-forward rollback、indeterminate保持 | publication aggregate |
+| `CANDIDATE-PACKPUB-001` | manifest v2明示集合とdigest/identityの単独変異拒否、v1の新規公開拒否 | release manifest/materializer |
+| `CANDIDATE-PACKPUB-002` | canary/stable pointerのpromotion preconditionとtyped三値 | channel/promotion |
+| `CANDIDATE-PACKPUB-003` | remote mutation receipt、tag付替え/force push拒否 | publication adapter/auditor |
+| `CANDIDATE-PACKPUB-004` | partial publication、supersede-forward rollback、indeterminate保持 | publication aggregate |
 | `CANDIDATE-PACKISO-001`〜`006` | Pack-only二 consumerのsource非依存・隔離・異version・片系rollback | PLAN-L6-101 implementation |
 
 ## 10. Schedule とスコープ境界
