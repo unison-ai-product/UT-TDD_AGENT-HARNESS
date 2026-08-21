@@ -234,7 +234,9 @@ describe("consumer-local runtime admission", () => {
     }
   });
 
-  it("U-PACKISO-002: Windows 8.3 short-name aliasもphysical canonical rootへ正規化する", async () => {
+  it("U-PACKISO-002: Windows 8.3 short-name aliasもphysical canonical rootへ正規化する", async ({
+    skip,
+  }) => {
     const input = await fixture("product-a");
     if (process.platform !== "win32") {
       expect(admitConsumerLocalRuntime(input).ok).toBe(true);
@@ -246,6 +248,8 @@ describe("consumer-local runtime admission", () => {
       { encoding: "utf8" },
     ).trim();
     expect(shortRoot.length).toBeGreaterThan(0);
+    const physicalRoot = realpathSync.native(input.consumerRoot);
+    if (shortRoot.toLowerCase() === physicalRoot.toLowerCase()) skip();
     const result = admitConsumerLocalRuntime({
       ...input,
       consumerRoot: shortRoot,
@@ -257,8 +261,7 @@ describe("consumer-local runtime admission", () => {
       },
     });
     expect(result.ok).toBe(true);
-    if (result.ok)
-      expect(result.admission.consumerRoot).toBe(realpathSync.native(input.consumerRoot));
+    if (result.ok) expect(result.admission.consumerRoot).toBe(physicalRoot);
   });
 
   it("U-PACKISO-003: A/Bのartifact identityとreceiptを独立に束縛する", async () => {
