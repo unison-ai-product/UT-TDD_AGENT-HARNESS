@@ -21,12 +21,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-497-green-command-anchor-required.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/review-evidence.ts
-    artifact_type: source_module
-  - artifact_path: tests/review-evidence.test.ts
-    artifact_type: test_code
-  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
-    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-303-digest-commit-anchor.md
   requires:
@@ -37,6 +31,9 @@ dependencies:
     - docs/plans/PLAN-L7-132-green-command-digest-integrity.md
     - docs/plans/PLAN-L7-194-green-command-digest-hard-gate.md
     - docs/plans/PLAN-REVERSE-497-green-command-anchor-backfill.md
+    - src/lint/review-evidence.ts
+    - tests/review-evidence.test.ts
+    - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/191
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
