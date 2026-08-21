@@ -100,6 +100,38 @@ describe("release manifest pure domain", () => {
     });
   });
 
+  it("CANDIDATE-PACKPUB-001: pins inventory and release framing to literal golden digests", () => {
+    const artifacts: PublicationArtifact[] = [
+      {
+        sourcePath: "src/alpha.ts",
+        destinationPath: "bin/a.js",
+        mode: "100644",
+        size: 1,
+        contentDigest: `sha256:${"01".repeat(32)}`,
+      },
+      {
+        sourcePath: "src/z.ts",
+        destinationPath: "bin/beta.js",
+        mode: "100755",
+        size: 65_537,
+        contentDigest: `sha256:${"ab".repeat(32)}`,
+      },
+    ];
+    const inventoryDigest = deriveArtifactInventoryDigest(artifacts);
+    expect(inventoryDigest).toBe(
+      "sha256:debb2862b9a1ffa3e3d6a4dfea3ed396d46353a5c6fbd6cf66fbae7665e1be8e",
+    );
+    expect(
+      deriveReleaseRecordDigest({
+        materializerVersion: "v2.7",
+        artifactSourceCommit: "0123456789abcdef0123456789abcdef01234567",
+        artifactSetDigest: `sha256:${"11".repeat(32)}`,
+        artifactInventoryDigest: inventoryDigest,
+        releaseAssetInventoryDigest: `sha256:${"22".repeat(32)}`,
+      }),
+    ).toBe("sha256:e66464147ddb66c203d86e1898dda43dc482af4d73b1c098223917900d1d269a");
+  });
+
   it("CANDIDATE-PACKPUB-001: v1 stays readable but is denied for new publication", () => {
     expect(parseReleaseManifest(manifest()).ok).toBe(true);
     expect(parsePublicationManifest(manifest())).toEqual({
@@ -130,6 +162,13 @@ describe("release manifest pure domain", () => {
     ];
     expect(parseReleaseManifest(reordered)).toEqual({ ok: false, error: "invalid_manifest" });
     expect(record.artifacts).toEqual([v2Artifact]);
+
+    const coordinated = structuredClone(source);
+    const coordinatedRecord = (coordinated.releases as Record<string, Record<string, unknown>>)[id];
+    const coordinatedArtifacts = coordinatedRecord.artifacts as PublicationArtifact[];
+    coordinatedArtifacts[0] = { ...coordinatedArtifacts[0], size: 13 };
+    coordinatedRecord.artifactInventoryDigest = deriveArtifactInventoryDigest(coordinatedArtifacts);
+    expect(parseReleaseManifest(coordinated)).toEqual({ ok: false, error: "invalid_manifest" });
   });
 
   it("CANDIDATE-PACKPUB-001: v2 strict-decodes every schema level", () => {
@@ -257,7 +296,16 @@ describe("release manifest pure domain", () => {
   });
 
   it("CANDIDATE-PACKPUB-001: v2 rejects unsafe paths, symlink mode, and inherited channels", () => {
-    const unsafe = ["../escape", "a/../b", "/absolute", "C:/drive", "\\\\unc", "a\\b"];
+    const unsafe = [
+      "../escape",
+      "a/../b",
+      "/absolute",
+      "C:/drive",
+      "\\\\unc",
+      "a\\b",
+      "bin/\ud800.js",
+      "bin/\udc00.js",
+    ];
     for (const destinationPath of unsafe) {
       const invalid = structuredClone(v2Manifest());
       const id = Object.keys(invalid.releases as object)[0];

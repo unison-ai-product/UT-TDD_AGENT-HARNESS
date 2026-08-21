@@ -196,8 +196,10 @@ function hasNoInheritedEnumerableKeys(record: Record<string, unknown>): boolean 
 }
 
 function validPublicationPath(value: string): boolean {
+  const utf8 = Buffer.from(value, "utf8");
   return (
     value.length > 0 &&
+    utf8.toString("utf8") === value &&
     !value.includes("\0") &&
     !value.includes("\\") &&
     !value.startsWith("/") &&
