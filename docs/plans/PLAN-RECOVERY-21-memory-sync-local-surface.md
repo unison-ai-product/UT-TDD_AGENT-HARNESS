@@ -3,7 +3,7 @@ plan_id: PLAN-RECOVERY-21-memory-sync-local-surface
 title: "PLAN-RECOVERY-21 (recovery): memory-sync を人が見る経路へ出す (issue #242 機構側)"
 kind: recovery
 layer: cross
-drive: agent
+drive: be
 status: draft
 route_signal: regression_dev
 route_mode: recovery
