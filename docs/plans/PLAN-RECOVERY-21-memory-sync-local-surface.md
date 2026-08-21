@@ -92,9 +92,43 @@ untracked は無いので、CI では常に 0 件 = 常に green。**「gate が
 | 観測期間 | Phase 1 着地後の **暦 14 日** |
 | 計測 sink | `.ut-tdd/logs/session/` の既存 jsonl (新しい sink を建てない) |
 | 計測 schema | `{ event: "memory_sync_backlog", unshared_count: number, oldest_age_days: number, at: string }` |
-| 判断期限 | 観測期間の満了日。**期限到来そのものが判断イベント**であり、誰かが気付くことを条件にしない |
+| 判断期限 | 観測期間の満了日。**Phase 1 の Stop summary 自身が期限を評価し、経過後は「観測窓が満了した。Phase 2 判断 PLAN を起票せよ」を表示する** (下記「期限を機械で発火させる」) |
 | 起票責任者 | 本 PLAN の owner (PO / Claude)。期限日に後続 PLAN を起票する |
-| 昇格判定 | 観測窓の **`unshared_count > 0` のセッション比率が 20% 未満**なら Phase 2 へ進む。20% 以上なら「通常運用で恒常的に出る」ということなので、fail-close ではなく**書き手側の運用 (memory add 後の commit 導線)** を先に直す |
+| 昇格判定 | **本 PLAN では閾値を凍結しない** (下記「閾値を今決めない理由」)。期限到来時に観測分布を添えた後続 PLAN を起票し、そこで閾値と昇格可否を決める |
+
+#### 閾値を今決めない理由 (非著者 FLAG B-2 の再是正)
+
+前版は昇格境界を「セッション比率 20% 未満」と凍結したが、これは誤りだった。**実測根拠・リスク
+根拠・母数下限のいずれも無く**、19% と 20% で fail-close 可否が反転する根拠が無い。少数セッション
+窓では偶然値で方式が決まる。
+
+さらに本 PLAN 自身が「Phase 1 の計測を **Phase 2 の閾値設計の入力**にする」と書いている。
+**入力を得る前に出力 (閾値) を凍結する**のは自己矛盾であり、計測を形式化するだけで実質的には
+決め打ちになる。これは本 PLAN が批判している「gate の形式だけ満たす」型そのものである。
+
+したがって凍結するのは**閾値ではなく決定手続き**とする:
+
+1. 期限到来時、観測窓の `unshared_count` / `oldest_age_days` の**分布**を集計する。
+2. その分布を証跡として添えた後続 PLAN を起票する。
+3. 閾値と昇格可否 (Phase 2a へ進む / 書き手側の運用を先に直す / Phase 1 のまま据え置く) は
+   **その PLAN の設計判断節で、実測を根拠に決める**。
+4. 本 PLAN は「期限に必ず判断が起票される」ことだけを保証し、判断の中身を先取りしない。
+
+#### 期限を機械で発火させる (非著者 FLAG B-3 系の指摘)
+
+前版は「期限到来そのものが判断イベントであり、誰かが気付くことを条件にしない」と書いたが、
+**それを発火させる経路を契約に持っていなかった**。scheduler も CLI check も workflow も無く、
+実態は「人が暦を見る」ままだった。本 issue の真因 (規律で解こうとして 2 週間漏れた) の再生産である。
+
+新しい機構は建てない。**Phase 1 が実装する Stop summary の advisory 自身に期限評価を含める**:
+
+- 観測窓の開始日を Phase 1 着地時に記録する。
+- 毎回のセッション終了時、Stop summary が現在日と窓満了日を比較する。
+- 満了前: 未配送件数と最古 age に加えて「観測窓 残り N 日」を表示する。
+- 満了後: **未配送が 0 件でも**「観測窓が満了した。Phase 2 判断 PLAN を起票せよ」を表示し続ける。
+
+未配送 0 件でも表示し続けるのが要点である。「未配送が出たときだけ何か表示される」設計だと、
+静かな窓ほど期限が見えなくなる。
 
 **Phase 1 は pre-push を実装しない**ので、「warn-only から昇格」の遷移元は Phase 1 には存在しない。
 Phase 2 の内部を 2 段に分ける: **Phase 2a = pre-push warn-only の新設**、**Phase 2b = fail-close へ昇格**。
@@ -131,28 +165,40 @@ env を消すだけで gate を無効化できてしまうため、その面に�
 「hook を迂回する」しか逃げ道が無くなる。同じ理由で「Phase 1 を飛ばして即 fail-close」も採らない。
 これは CLAUDE.md §Hybrid 多ランタイム commit 協調 の commit 規律と正面衝突する。
 
-### issue #236 との境界 (freeze、非著者 FLAG B-3)
+### issue #236 との境界 (freeze、非著者 FLAG B-3 の再是正)
 
-issue #236 の検出項目 `unshared_canonical` は、共有正本ディレクトリ配下の未追跡ファイルを
-件数と最古滞留日数つきで advisory surface するもので、`.ut-tdd/memory/` を含む。**本 PLAN の
-Phase 1 と同一判定である。** 両方を実装すると detector が 2 本になり閾値 drift の源になる。
+**前版の「同一判定である」は誤りだった。実測すると意味論が違う。**
 
-**凍結する境界: detector は `memory-sync` ただ 1 本とし、#236 はそれを再利用する。**
+| | 判定 | 結果 |
+|---|---|---|
+| 現行 `memory-sync` (`src/lint/memory-sync.ts`) | `untracked` / `uncommitted-change` | **hard violation** (`ok=false`) |
+| 同 | `not-on-origin` | warning |
+| #236 `unshared_canonical` | 未追跡かつ非 ignored かつ**滞留日数が閾値超過** | **advisory のみ** |
 
-- `memory-sync` の判定関数は **対象ディレクトリ集合を入力に取る**形へ一般化する。既定は
-  `.ut-tdd/memory/` のみ。
-- #236 が `unshared_canonical` を実装するとき、**新しい detector を建てず**、この関数へ
-  `docs/` `src/` `tests/` `scripts/` `skills/` `.ut-tdd/review/` を足した集合を渡す。
-- 閾値と出力書式も `memory-sync` 側が正本とし、#236 は surface (どこに出すか) だけを足す。
+前版はこの差を見ずに「detector を `memory-sync` 1 本に統合し、対象ディレクトリ集合を入力に取る形へ
+一般化する」と書いた。**そのまま `docs/` `src/` `tests/` へ一般化すると、通常の tracked 編集
+(`uncommitted-change`) まで hard violation になる。** 作業中の編集が常に gate を落とすので運用不能である。
+加えて「`loadMemorySyncInput` を一般化する」という指示は、本 PLAN の AC-5「検出層の差分 0」と
+両立しない。前版は矛盾した 2 つの要求を同時に置いていた。
 
-逆向き (#236 が新 detector を建て、`memory-sync` がそれを呼ぶ) を採らない理由は、
-`memory-sync` が既に hard gate として稼働しており実績があるためである。稼働中の gate を
-未実装の機構へ従属させると、#236 が止まった時点で既存 gate も止まる。
+**凍結し直す境界:**
 
-**本 PLAN の Phase 1 は #236 の最初の bounded slice**である。`.ut-tdd/memory/` を先に切り出す
-根拠は、**実害が実測されている唯一のディレクトリ**だから (2 週間 65 件 → 128 件まで滞留、
-回収は PR #372)。他の共有正本ディレクトリでの滞留は未計測であり、「未計測のまま機構を建てない」
-規律に従って対象へ含めない。
+1. **detector は統合しない。** `memory-sync` は `.ut-tdd/memory/` に対する既存の hard gate の
+   ままとし、意味論も変えない。`loadMemorySyncInput` は触らない (AC-5 と一致)。
+2. **本 PLAN が足すのは surface だけ**である。Stop summary へ「未配送件数 / 最古 age / 観測窓の
+   残り日数」を advisory 表示する。判定は既存 `memory-sync` の結果を読むだけで、新しい述語を
+   作らない。
+3. **#236 の `unshared_canonical` は別述語として実装してよい。** 対象範囲 (共有正本ディレクトリ全般)
+   も判定 (age 閾値つき advisory) も `memory-sync` と異なるためである。ただし
+   `.ut-tdd/memory/` について**二重に報告しない**よう、#236 側が同ディレクトリを対象から外すか、
+   本 PLAN の surface を置き換えるかを #236 の設計判断で決める。**本 PLAN はどちらでも壊れない**
+   (surface しか持たないため)。
+4. 共有するのは**計測データ**である。Phase 1 が `.ut-tdd/logs/session/` へ書く
+   `memory_sync_backlog` イベントは、#236 が滞留日数の分布を設計するときの実測入力として
+   そのまま使える。
+
+前版が「1 本に統合する」と書いた動機 (detector 2 本による閾値 drift の回避) は、**そもそも
+閾値を持つのが #236 側だけ**なので成立しない。本 PLAN は閾値を持たない。
 
 ### 相談記録
 
