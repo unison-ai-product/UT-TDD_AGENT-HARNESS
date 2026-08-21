@@ -98,6 +98,16 @@ function frame(entries: readonly MaterializedReleaseEntry[]): Uint8Array {
   return Buffer.concat(chunks);
 }
 
+/**
+ * Materialized artifact setのcanonical digest。consumer側がmanifest/receiptの申告値を
+ * 入力にせず、受領したpath/mode/contentから同じframeを再計算するためのport。
+ */
+export function digestMaterializedReleaseEntries(
+  entries: readonly MaterializedReleaseEntry[],
+): string {
+  return `sha256:${createHash("sha256").update(frame(entries)).digest("hex")}`;
+}
+
 function immutableEntry(
   path: string,
   mode: ReleaseEntryMode,
@@ -173,6 +183,6 @@ export function materializeReleaseArtifacts(
   return Object.freeze({
     ok: true,
     entries,
-    digest: `sha256:${createHash("sha256").update(frame(entries)).digest("hex")}`,
+    digest: digestMaterializedReleaseEntries(entries),
   });
 }
