@@ -28,7 +28,19 @@ export interface MergedPlanTargetEvidence {
 
 export interface ArtifactTargetDecision {
   path: string;
-  decision: "landed_on_target" | "absent_from_target";
+  /**
+   * - landed_on_target: canonical target (default branch) に既に存在する = merge 済み。
+   * - landing_in_subject: target に不在だが検査対象 (PR head) に存在し、かつ immediate base にも
+   *   不在 = **この PR が merge されたら target に載る** (issue #162 の pre-merge 検出)。
+   * - inherited_from_base: target に不在だが immediate base に既に存在 = stacked PR の親が
+   *   持ち込んだもの。この PR の責任ではないので landing とは区別する。
+   * - absent_from_target: どこにも無い。
+   */
+  decision:
+    | "landed_on_target"
+    | "landing_in_subject"
+    | "inherited_from_base"
+    | "absent_from_target";
 }
 
 export function selectCanonicalMergedTarget(input: {
@@ -51,16 +63,30 @@ export function selectCanonicalMergedTarget(input: {
   };
 }
 
+/**
+ * declared deliverable を **三点比較** (target / immediate base / subject) で分類する。
+ *
+ * 二点 (target のみ) だと、PR が新規に持ち込む deliverable が「target に無い」で終わり、merge 後の
+ * main で初めて検出される (issue #162 の post-merge 罠)。三点目に subject を足すと merge 前に
+ * 検出でき、immediate base も見ることで stacked PR の親が持ち込んだ分を誤帰責しない。
+ *
+ * `subjectPaths` 未指定なら従来どおり二値 (完全後方互換)。
+ */
 export function classifyTargetArtifacts(
   declaredPaths: readonly string[],
   targetPaths: ReadonlySet<string>,
+  subjectPaths?: ReadonlySet<string>,
+  immediateBasePaths?: ReadonlySet<string>,
 ): ArtifactTargetDecision[] {
   return declaredPaths.map((rawPath) => {
     const path = rawPath.replaceAll("\\", "/");
-    return {
-      path,
-      decision: targetPaths.has(path) ? "landed_on_target" : "absent_from_target",
-    };
+    if (targetPaths.has(path)) return { path, decision: "landed_on_target" as const };
+    if (subjectPaths?.has(path)) {
+      // 親 PR が持ち込んだものは landing に数えない (誤帰責の回避)。
+      if (immediateBasePaths?.has(path)) return { path, decision: "inherited_from_base" as const };
+      return { path, decision: "landing_in_subject" as const };
+    }
+    return { path, decision: "absent_from_target" as const };
   });
 }
 

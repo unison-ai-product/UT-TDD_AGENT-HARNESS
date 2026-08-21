@@ -67,6 +67,12 @@ export interface MergedPlanRow {
   kind: string;
   /** generates の deliverable (src/ tests/ scripts/ .claude/) のうち repo に実在する (= merged) パス集合。 */
   mergedArtifacts: string[];
+  /**
+   * target には未着だが検査対象 (PR head) が持ち込む deliverable (issue #162)。
+   * merge されれば `mergedArtifacts` になる = **merge 前に同じ違反を検出できる**面。
+   * 三点比較できない面では常に空 (従来の二点比較へ縮退)。
+   */
+  landingArtifacts?: string[];
   /** canonical targetに対する全declared deliverableの判定証拠。absentも捨てない。 */
   artifactDecisions?: ArtifactTargetDecision[];
 }
@@ -80,6 +86,12 @@ export interface MergedPlanStatusViolation {
   planId: string;
   status: string;
   artifacts: string[];
+  /**
+   * - merged: deliverable が既に target に載っている (従来の post-merge 検出)。
+   * - landing: この PR が merge されれば載る (issue #162 の pre-merge 検出)。
+   *   同じ不整合を **merge 前に**同じ gate で捕まえるための区分。
+   */
+  phase?: "merged" | "landing";
 }
 
 export interface MergedPlanStatusResult {
@@ -91,10 +103,27 @@ export interface MergedPlanStatusResult {
  * 未 confirm かつ merged deliverable 実在の PLAN を violation として返す (kind 非依存、deliverable-driven)。
  */
 export function analyzeMergedPlanStatus(input: MergedPlanStatusInput): MergedPlanStatusResult {
-  const violations = input.plans
-    .filter((p) => !CONFIRMED_STATUSES.has(p.status.toLowerCase()) && p.mergedArtifacts.length > 0)
-    .map((p) => ({ planId: p.planId, status: p.status, artifacts: p.mergedArtifacts }))
-    .sort((a, b) => a.planId.localeCompare(b.planId));
+  const unconfirmed = input.plans.filter((p) => !CONFIRMED_STATUSES.has(p.status.toLowerCase()));
+  const violations = [
+    ...unconfirmed
+      .filter((p) => p.mergedArtifacts.length > 0)
+      .map((p) => ({
+        planId: p.planId,
+        status: p.status,
+        artifacts: p.mergedArtifacts,
+        phase: "merged" as const,
+      })),
+    // merge 前に同じ不整合を捕まえる面 (issue #162)。merged 側と重複しないよう、既に merged で
+    // 挙がっている PLAN は landing では出さない (1 PLAN 1 violation)。
+    ...unconfirmed
+      .filter((p) => p.mergedArtifacts.length === 0 && (p.landingArtifacts?.length ?? 0) > 0)
+      .map((p) => ({
+        planId: p.planId,
+        status: p.status,
+        artifacts: p.landingArtifacts ?? [],
+        phase: "landing" as const,
+      })),
+  ].sort((a, b) => a.planId.localeCompare(b.planId));
   return { violations, ok: violations.length === 0 };
 }
 
@@ -142,6 +171,18 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
         ),
       )
     : null;
+  // 検査対象 (PR head) と immediate base の tree。三点比較で「この PR が merge されたら target に
+  // 載る deliverable」を merge 前に見分ける (issue #162)。解決できない面では undefined = 従来の
+  // 二点比較へ縮退する (推測で violation を作らない)。
+  const immediateBasePaths = treePathsOrNull(repoRoot, targetEvidence?.immediateBaseSha);
+  // stacked PR で immediate base が宣言されているのに、その object を解決できない場合 (親 branch が
+  // 消された / shallow fetch 等) は、親由来の deliverable と本 PR が持ち込む deliverable を区別
+  // できない。ここで subject だけを使うと親の成果物を landing と誤認し、RECOVERY-18 が塞いだ
+  // 「子 PR を永久 Red にする」誤検出を別経路で再発させる。三点目が欠けたら landing 検出ごと落とす。
+  const stackedBaseUnresolved = Boolean(targetEvidence?.immediateBaseSha) && !immediateBasePaths;
+  const subjectPaths = stackedBaseUnresolved
+    ? null
+    : treePathsOrNull(repoRoot, targetEvidence?.subjectHeadSha);
   for (const rp of reviewPlans) {
     if (rp.status === "archived") continue;
     let content = "";
@@ -157,7 +198,12 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
     }
     const declaredArtifacts = generatesMergedDeliverablePaths(content);
     const artifactDecisions = targetPaths
-      ? classifyTargetArtifacts(declaredArtifacts, targetPaths)
+      ? classifyTargetArtifacts(
+          declaredArtifacts,
+          targetPaths,
+          subjectPaths ?? undefined,
+          immediateBasePaths ?? undefined,
+        )
       : declaredArtifacts.map(
           (path): ArtifactTargetDecision => ({
             path,
@@ -167,16 +213,36 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
     const mergedArtifacts = artifactDecisions
       .filter((decision) => decision.decision === "landed_on_target")
       .map((decision) => decision.path);
+    const landingArtifacts = artifactDecisions
+      .filter((decision) => decision.decision === "landing_in_subject")
+      .map((decision) => decision.path);
     const baseStatus = frontmatterStatus(content) ?? rp.status;
     plans.push({
       planId: rp.plan_id,
       status: baseStatus,
       kind: rp.kind,
       mergedArtifacts,
+      landingArtifacts,
       artifactDecisions,
     });
   }
   return { plans, ...(targetEvidence ? { targetEvidence } : {}) };
+}
+
+/** ref の tree path 集合。解決できなければ null (推測で violation を作らない)。 */
+function treePathsOrNull(repoRoot: string, sha: string | null | undefined): Set<string> | null {
+  if (!sha) return null;
+  try {
+    return new Set(
+      execFileSync("git", ["-C", repoRoot, "ls-tree", "-r", "--name-only", sha], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        maxBuffer: 256 * 1024 * 1024,
+      }).split(/\r?\n/),
+    );
+  } catch {
+    return null;
+  }
 }
 
 function frontmatterStatus(content: string): string | null {
