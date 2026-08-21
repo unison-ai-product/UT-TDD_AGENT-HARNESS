@@ -116,6 +116,40 @@ review_evidence:
         evidence_path: src/setup/release-promotion-rollback-gate.ts
         output_digest: "sha256:225419423d10b4b4f1098a260e7125508c510b397d196caa3ff29617fe6b215d"
         anchor_commit: 24567f43a854f61dc73368d58c6821fda5ad7a07
+  - reviewer: codex-primary-flag-closure-2
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-21T01:58:47Z"
+    tests_green_at: "2026-08-21T01:58:09Z"
+    verdict: "Claude FLAG B1 revision binding corrected; exact CI 3/3 green; non-author rereview pending"
+    scope: "request.reviewRevisionとsubject.planRevisionの束縛、coherent splice回帰、Linux/Windows/aggregate exact-head CI。"
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
+    subject_head: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
+    evidence_path: tests/release-promotion-rollback-gate.test.ts
+    anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
+    citations:
+      - "src/setup/release-promotion-rollback-gate.ts:482-519 reviewIdentityMatchesのPLAN revision束縛"
+      - "tests/release-promotion-rollback-gate.test.ts:597-629 coherent splice回帰"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub Actions run 32437438186: harness-check-linux全回帰 / harness-check-windows scoped回帰・CLI hook実発火 / aggregate"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-21T01:58:09Z"
+        evidence_path: tests/release-promotion-rollback-gate.test.ts
+        output_digest: "sha256:1ef02ee8aedf7d58315a0f3112b7fa9e9001b1d38b03e3241a2673feaa889406"
+        anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
+      - kind: typecheck
+        command: "GitHub Actions run 32437438186: harness-check-linux typecheck"
+        runner: ci
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-21T01:46:20Z"
+        evidence_path: src/setup/release-promotion-rollback-gate.ts
+        output_digest: "sha256:85eb07f4ebb35da1694a7946a112e9814692d095860558ec9be10491907f3d2a"
+        anchor_commit: 1620f24d7b1b91cec2057f1c2224cf66db86e0c8
 ---
 
 # PLAN-L7-494: S3 release promotion / rollback pure gate
