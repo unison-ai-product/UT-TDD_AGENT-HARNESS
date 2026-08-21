@@ -107,7 +107,10 @@ describe("merged-plan canonical target evidence", () => {
       ).toEqual([]);
       expect(
         input.plans.find((plan) => plan.planId === "PLAN-TEST-stacked-parent")?.artifactDecisions,
-      ).toEqual([{ path: "src/parent.ts", decision: "absent_from_target" }]);
+        // issue #162: 三点比較の追加で、親 PR が持ち込んだ deliverable は absent ではなく
+        // inherited_from_base として区別される。RECOVERY-18 の不変条件 (immediate base を landed 判定に
+        // 使わない / 子 PR を violation にしない) は下の violations 検査がそのまま保っている。
+      ).toEqual([{ path: "src/parent.ts", decision: "inherited_from_base" }]);
       expect(
         analyzeMergedPlanStatus(input).violations.map((violation) => violation.planId),
       ).toEqual(["PLAN-TEST-main-debt"]);
