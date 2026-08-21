@@ -105,6 +105,9 @@ export const GREEN_COMMAND_KINDS = new Set([
 export const GREEN_COMMAND_RUNNERS = new Set(["bun", "node", "powershell", "bash", "ci"]);
 export const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files", "gate"]);
 
+/** anchor_commit は short/full の git object name のみ。人間可読な別表記を anchor と認めない。 */
+const GREEN_COMMAND_ANCHOR_PATTERN = /^[0-9a-f]{7,40}$/i;
+
 function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
   if (issue === "same_provider") return "same_provider";
   if (issue === "unknown_provider") return "unknown_provider";
@@ -216,6 +219,13 @@ function greenCommandViolationReason(entry: ReviewEntry): string | null {
     ) {
       return "completed_after_tests_green_at";
     }
+    // anchor 無し digest は working tree の現在値と比較されるため、無関係な PR が同じ evidence
+    // ファイルへ触れた瞬間に不一致になる (issue #191)。全 entry で必須にする — 「新規だけ必須」を
+    // `completed_at` で判定すると、その値が **書き手の自己申告** なので過去日時を書くだけで迂回
+    // できる (PR #361 Codex FLAG B-1)。
+    const anchor = command.anchor_commit?.trim();
+    if (!anchor) return "missing_anchor_commit";
+    if (!GREEN_COMMAND_ANCHOR_PATTERN.test(anchor)) return "invalid_anchor_commit";
   }
   return null;
 }
@@ -352,7 +362,7 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
   if (result.greenCommandViolations.length > 0) {
     const ids = result.greenCommandViolations.map((v) => `${v.plan_id}:${v.reason}`).join(", ");
     out.push(
-      `review-evidence — ⚠ green command evidence 欠落/不正 ${result.greenCommandViolations.length} 件 (${ids}): 2026-06-23 以降の confirmed review_evidence は green_commands に kind/command/runner/scope/exit_code/evidence_path/output_digest を記録 (IMP-108)`,
+      `review-evidence — ⚠ green command evidence 欠落/不正 ${result.greenCommandViolations.length} 件 (${ids}): 2026-06-23 以降の confirmed review_evidence は green_commands に kind/command/runner/scope/exit_code/evidence_path/output_digest を記録 (IMP-108)。全 entry で anchor_commit も必須 (anchor 無し digest は working tree と比較され、無関係な PR の merge で赤化する / issue #191)`,
     );
   }
   if (result.staleApprovalViolations.length > 0) {

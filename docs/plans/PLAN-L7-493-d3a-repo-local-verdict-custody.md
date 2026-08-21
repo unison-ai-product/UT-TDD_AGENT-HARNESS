@@ -67,6 +67,7 @@ review_evidence:
         completed_at: "2026-08-19T08:25:25.1454025Z"
         evidence_path: tests/review-verdict-custody.test.ts
         output_digest: "sha256:afe6356826df1cc08d888bfd2b1139db1a163a3d14d6a943a25dcd6e16557449"
+        anchor_commit: 39846e948bfd75570f95bd42e96237a50533833e
       - kind: typecheck
         command: "node_modules/.bin/tsc.cmd --noEmit --pretty false"
         runner: node
@@ -75,6 +76,7 @@ review_evidence:
         completed_at: "2026-08-19T08:25:25.1454025Z"
         evidence_path: src/feedback/review-verdict-custody.ts
         output_digest: "sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84"
+        anchor_commit: 39846e948bfd75570f95bd42e96237a50533833e
       - kind: lint
         command: "node_modules/.bin/biome.cmd check src/feedback/review-verdict-custody.ts src/feedback/review-attestation.ts src/feedback/review-verdict-contract.ts src/cli/delegation.ts src/feedback/live-review-projection.ts src/runtime/review-guard.ts tests/support/git-workspace-fingerprint.ts tests/review-verdict-custody.test.ts tests/review-live-cli.test.ts tests/review-attestation.test.ts tests/review-guard.test.ts"
         runner: node
@@ -83,6 +85,7 @@ review_evidence:
         completed_at: "2026-08-19T08:25:25.1454025Z"
         evidence_path: src/feedback/review-verdict-custody.ts
         output_digest: "sha256:2a3821be9e7c26dc0bbf5c633337d81580c098af94c0d71e603f5c3eb3dd5d84"
+        anchor_commit: 39846e948bfd75570f95bd42e96237a50533833e
 ---
 
 # PLAN-L7-493: D3a repo-local digest-bound verdict custody 契約 freeze

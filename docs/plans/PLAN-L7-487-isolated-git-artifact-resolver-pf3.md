@@ -61,6 +61,7 @@ review_evidence:
         completed_at: "2026-08-14T08:20:42Z"
         evidence_path: tests/release-artifact-resolver.test.ts
         output_digest: "sha256:b3a175a52d6d1d052fdf2a746f22b054f837fceeb5a6603c7efda94b93e52c70"
+        anchor_commit: 10b7b3c7cab31da6cb2916a19e00297af5899466
 ---
 
 # PF-3: isolated Git artifact resolver pair-freeze

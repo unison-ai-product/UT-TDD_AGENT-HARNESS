@@ -131,6 +131,7 @@ describe("green command evidence (IMP-108)", () => {
                 evidence_path: "tests/review-evidence.test.ts",
                 output_digest: "sha256:0123456789abcdef",
                 completed_at: "2026-06-23",
+                anchor_commit: "5604874bb73905967b19f2e6cbc048101f807e39",
               },
             ],
           },
@@ -163,6 +164,7 @@ describe("green command evidence (IMP-108)", () => {
                 evidence_path: "tests/review-evidence.test.ts",
                 output_digest: "sha256:0123456789abcdef",
                 completed_at: "2026-06-23",
+                anchor_commit: "5604874bb73905967b19f2e6cbc048101f807e39",
               },
             ],
           },
@@ -273,6 +275,90 @@ describe("green command evidence (IMP-108)", () => {
       { plan_id: "PLAN-NEW-GREEN-NO-COMPLETED-AT", reason: "missing_completed_at" },
     ]);
     expect(r.ok).toBe(false);
+  });
+});
+
+/**
+ * issue #191: anchor 無しの output_digest は working tree の現在値と比較されるため、無関係な PR が
+ * 同じ evidence ファイルへ触れただけで赤化する。
+ *
+ * 「新規 entry だけ必須」を `completed_at` で判定する初版は、その値が **書き手の自己申告** なので
+ * 過去日時を書くだけで迂回できた (PR #361 Codex FLAG B-1)。時間軸を判定から外し、**全 entry で
+ * anchor を必須**にする。既存の anchor 無し 8 件は `plan digest-migrate --execute` で実 anchor を
+ * backfill 済みなので、grandfather 集合そのものが不要になった。
+ *
+ * anchor の **実在**検査は本 gate では行わない。squash merge 運用では PR head で記録した正当な
+ * anchor が merge 後の main から到達不能になり (実測: CI で 29 件が false positive)、捏造と
+ * 区別できないため。詳細は PR #361 のコメントと follow-up issue を参照。
+ */
+describe("green command anchor_commit 必須化 (issue #191)", () => {
+  const withCommand = (plan_id: string, command: Record<string, unknown>) =>
+    analyzeReviewEvidence([
+      plan({
+        plan_id,
+        updated: "2026-08-20",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-08-21T00:00:00Z",
+            tests_green_at: "2026-08-20T00:00:00Z",
+            green_commands: [
+              {
+                kind: "unit_test",
+                command: "npx vitest run tests/review-evidence.test.ts",
+                runner: "node",
+                scope: "targeted",
+                exit_code: 0,
+                evidence_path: "tests/review-evidence.test.ts",
+                output_digest: "sha256:0123456789abcdef",
+                ...command,
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
+
+  it("U-REVIEW-009: requires an anchor regardless of the self-declared completed_at", () => {
+    // 旧実装では発効時刻より前として grandfather された入力。自己申告で迂回できない。
+    const r = withCommand("PLAN-ANCHOR-BACKDATED", {
+      completed_at: "2026-08-19T19:26:02+09:00",
+    });
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-ANCHOR-BACKDATED", reason: "missing_anchor_commit" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-REVIEW-010: rejects an entry without an anchor", () => {
+    const r = withCommand("PLAN-ANCHOR-MISSING", { completed_at: "2026-08-20T00:00:00Z" });
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-ANCHOR-MISSING", reason: "missing_anchor_commit" },
+    ]);
+  });
+
+  it("U-REVIEW-011: accepts an entry that carries an anchor", () => {
+    const r = withCommand("PLAN-ANCHOR-OK", {
+      completed_at: "2026-08-20T00:00:00Z",
+      anchor_commit: "5604874bb73905967b19f2e6cbc048101f807e39",
+    });
+    expect(r.greenCommandViolations).toEqual([]);
+  });
+
+  it("U-REVIEW-012: rejects an anchor that is not a git object name", () => {
+    const r = withCommand("PLAN-ANCHOR-INVALID", {
+      completed_at: "2026-08-20T00:00:00Z",
+      anchor_commit: "main",
+    });
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-ANCHOR-INVALID", reason: "invalid_anchor_commit" },
+    ]);
+  });
+
+  it("U-REVIEW-013: holds the shipped corpus free of anchor violations", () => {
+    const violations = analyzeReviewEvidence(loadReviewPlans()).greenCommandViolations;
+    expect(violations.filter((v) => v.reason.includes("anchor"))).toEqual([]);
   });
 });
 
