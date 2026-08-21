@@ -67,6 +67,20 @@ export function releaseArtifactStem(sourceTag: string): string {
   return sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-");
 }
 
+export function releaseArtifactFileNames(sourceTag: string): {
+  tarball: string;
+  checksum: string;
+  manifest: string;
+} {
+  const stem = releaseArtifactStem(sourceTag);
+  const tarball = `${stem}.tar.gz`;
+  return {
+    tarball,
+    checksum: `${tarball}.sha256`,
+    manifest: `${stem}.manifest.json`,
+  };
+}
+
 const CLEAN_REQUIRED_PATHS = [
   "README.md",
   "LICENSE",

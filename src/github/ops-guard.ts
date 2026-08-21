@@ -1,4 +1,4 @@
-import { releaseArtifactStem } from "../setup/distribution.ts";
+import { releaseArtifactFileNames } from "../setup/distribution.ts";
 
 export type GithubOpsGuardCode =
   | "poc-no-main-merge"
@@ -126,10 +126,10 @@ export function buildReleasePublicationPlan(input: {
   const tag = input.tag.trim();
   const repo = input.repo.trim();
   const dryRun = input.dryRun !== false;
-  const artifactStem = releaseArtifactStem(tag);
-  const tarball = `.ut-tdd/release/${artifactStem}.tar.gz`;
-  const checksum = `${tarball}.sha256`;
-  const manifest = `.ut-tdd/release/${artifactStem}.manifest.json`;
+  const artifactNames = releaseArtifactFileNames(tag);
+  const tarball = `.ut-tdd/release/${artifactNames.tarball}`;
+  const checksum = `.ut-tdd/release/${artifactNames.checksum}`;
+  const manifest = `.ut-tdd/release/${artifactNames.manifest}`;
   const packageAssets = [tarball, checksum, manifest];
   return {
     ok: /^v\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$/.test(tag) && repo.length > 0,
