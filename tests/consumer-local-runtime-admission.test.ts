@@ -5,6 +5,7 @@ import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { deriveReleaseId } from "../src/schema/release-manifest.ts";
 import {
   admitConsumerLocalRuntime,
   applyConsumerLocalRuntime,
@@ -58,11 +59,13 @@ async function fixture(
     { path: "bin/runtime.js", mode: "100644" as const, content: new TextEncoder().encode(version) },
   ];
   const artifactDigest = digest(entries);
+  const sourceRevision = version === "v2" ? "b".repeat(40) : "a".repeat(40);
+  const releaseId = deriveReleaseId("1", sourceRevision, artifactDigest);
   const plan = {
     kind: "release-aggregate" as const,
     channel: "stable",
-    releaseId: `rel-sha256:${"a".repeat(64)}`,
-    sourceRevision: "a".repeat(40),
+    releaseId,
+    sourceRevision,
     destinationPath: "bin",
     expectedDigest: artifactDigest,
     actualDigest: artifactDigest,
@@ -110,16 +113,34 @@ async function tree(root: string): Promise<string> {
   return rows.join("\n");
 }
 
+async function seedRuntime(root: string, version: string, history = version): Promise<void> {
+  await mkdir(join(root, "bin"), { recursive: true });
+  await writeFile(join(root, "bin", "runtime.js"), version, "utf8");
+  await mkdir(join(root, ".ut-tdd", "history"), { recursive: true });
+  await writeFile(join(root, ".ut-tdd", "history", "releases"), history, "utf8");
+}
+
 describe("consumer-local runtime admission", () => {
   it("U-PACKISO-001: sealed artifactだけでsource不在のfresh consumerをadmitできる", async () => {
-    const input = await fixture("product-a");
-    const result = admitConsumerLocalRuntime(input);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      const before = result.admission.plan.entries[0].content;
+    const [a, b] = await Promise.all([fixture("product-a", "v1"), fixture("product-b", "v2")]);
+    const [aResult, bResult] = [admitConsumerLocalRuntime(a), admitConsumerLocalRuntime(b)];
+    expect(aResult.ok).toBe(true);
+    expect(bResult.ok).toBe(true);
+    expect(aResult.ok && bResult.ok ? aResult.admission.runtimeRoot : null).not.toBe(
+      bResult.ok && aResult.ok ? bResult.admission.runtimeRoot : null,
+    );
+    expect(children).toHaveLength(0);
+    for (const input of [a, b]) {
+      await expect(lstat(join(input.consumerRoot, "source-repo"))).rejects.toThrow();
+      await expect(lstat(join(input.consumerRoot, "source-worktree"))).rejects.toThrow();
+      await expect(lstat(join(input.consumerRoot, "local-pack-checkout"))).rejects.toThrow();
+      expect(await tree(input.consumerRoot)).not.toContain("source-repo");
+    }
+    if (aResult.ok) {
+      const before = aResult.admission.plan.entries[0].content;
       before[0] ^= 0xff;
-      expect(result.admission.plan.entries[0].content).not.toEqual(before);
-      expect(new TextDecoder().decode(result.admission.plan.entries[0].content)).toBe("1");
+      expect(aResult.admission.plan.entries[0].content).not.toEqual(before);
+      expect(new TextDecoder().decode(aResult.admission.plan.entries[0].content)).toBe("v1");
     }
   });
 
@@ -130,6 +151,24 @@ describe("consumer-local runtime admission", () => {
       runtimeRoot: join(input.consumerRoot, "..", "outside"),
     });
     expect(result).toMatchObject({ ok: false, error: "namespace_escape" });
+  });
+
+  it("U-PACKISO-002: runtime component layoutをproduct root内へ固定する", async () => {
+    const input = await fixture("product-a");
+    const result = admitConsumerLocalRuntime(input);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const paths = Object.values(result.admission.layout);
+    expect(Object.isFrozen(result.admission.layout)).toBe(true);
+    expect(new Set(paths).size).toBe(paths.length);
+    expect(paths.every((path) => path.startsWith(result.admission.runtimeRoot))).toBe(true);
+    expect(paths.every((path) => path.startsWith(result.admission.consumerRoot))).toBe(true);
+    expect(() => {
+      (result.admission.layout as { database: string }).database = join(
+        input.consumerRoot,
+        "other",
+      );
+    }).toThrow();
   });
 
   it("U-PACKISO-002: existing parent symlink/junction escapeを拒否する", async () => {
@@ -146,17 +185,129 @@ describe("consumer-local runtime admission", () => {
     expect(result).toMatchObject({ ok: false, error: "namespace_escape" });
   });
 
-  it("U-PACKISO-003: A/Bのartifact identityとreceiptを独立に束縛する", async () => {
+  it("U-PACKISO-002: symlink aliasはphysical canonical rootへ正規化する", async () => {
     const input = await fixture("product-a");
+    const aliasParent = await mkdtemp(join(tmpdir(), "ut-tdd-packiso-alias-"));
+    roots.push(aliasParent);
+    const alias = join(aliasParent, "product-a-alias");
+    try {
+      await symlink(input.consumerRoot, alias, process.platform === "win32" ? "junction" : "dir");
+    } catch (error) {
+      throw new Error(`symlink/junction alias fixture unavailable: ${String(error)}`);
+    }
     const result = admitConsumerLocalRuntime({
       ...input,
-      receipt: { ...input.receipt, productId: "product-b" },
+      consumerRoot: alias,
+      runtimeRoot: join(alias, ".ut-tdd"),
+      receipt: { ...input.receipt, consumerRoot: alias, runtimeRoot: join(alias, ".ut-tdd") },
     });
-    expect(result).toMatchObject({ ok: false, error: "identity_mismatch" });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.admission.consumerRoot).toBe(input.consumerRoot);
+      expect(result.admission.runtimeRoot).toBe(join(input.consumerRoot, ".ut-tdd"));
+    }
+  });
+
+  it("U-PACKISO-003: A/Bのartifact identityとreceiptを独立に束縛する", async () => {
+    const a = await fixture("product-a", "v1");
+    const b = await fixture("product-b", "v2");
+    const aResult = admitConsumerLocalRuntime(a);
+    const bResult = admitConsumerLocalRuntime(b);
+    expect(aResult.ok).toBe(true);
+    expect(bResult.ok).toBe(true);
+    expect(a.plan.releaseId).not.toBe(b.plan.releaseId);
+    expect(a.plan.sourceRevision).not.toBe(b.plan.sourceRevision);
+    expect(a.plan.actualDigest).not.toBe(b.plan.actualDigest);
+  });
+
+  it.each([
+    [
+      "materializer version",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        manifest: { ...input.manifest, materializerVersion: "2" },
+      }),
+      "unknown_version",
+    ],
+    [
+      "artifact digest",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        manifest: { ...input.manifest, artifactSetDigest: `sha256:${"e".repeat(64)}` },
+      }),
+      "identity_mismatch",
+    ],
+    [
+      "source revision",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        manifest: { ...input.manifest, sourceRevision: "c".repeat(40) },
+      }),
+      "identity_mismatch",
+    ],
+    [
+      "release id only",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        plan: { ...input.plan, releaseId: `rel-sha256:${"f".repeat(64)}` },
+        manifest: { ...input.manifest, releaseId: `rel-sha256:${"f".repeat(64)}` },
+        receipt: { ...input.receipt, releaseId: `rel-sha256:${"f".repeat(64)}` },
+      }),
+      "identity_mismatch",
+    ],
+    [
+      "coherent fake digest identity",
+      (input: ConsumerLocalRuntimeAdmissionInput) => {
+        const fakeDigest = `sha256:${"f".repeat(64)}`;
+        const fakeSource = "c".repeat(40);
+        const fakeRelease = deriveReleaseId("1", fakeSource, fakeDigest);
+        return {
+          ...input,
+          plan: {
+            ...input.plan,
+            releaseId: fakeRelease,
+            sourceRevision: fakeSource,
+            expectedDigest: fakeDigest,
+            actualDigest: fakeDigest,
+          },
+          manifest: {
+            ...input.manifest,
+            releaseId: fakeRelease,
+            sourceRevision: fakeSource,
+            artifactSetDigest: fakeDigest,
+          },
+          receipt: {
+            ...input.receipt,
+            releaseId: fakeRelease,
+            sourceRevision: fakeSource,
+            artifactSetDigest: fakeDigest,
+          },
+        };
+      },
+      "identity_mismatch",
+    ],
+    [
+      "receipt reuse",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        receipt: {
+          ...input.receipt,
+          productId: "product-b",
+          consumerRoot: "C:\\outside-b",
+          runtimeRoot: "C:\\outside-b\\.ut-tdd",
+        },
+      }),
+      "identity_mismatch",
+    ],
+  ])("U-PACKISO-003: %s単独mutationを拒否する", async (_name, mutate, error) => {
+    const input = await fixture("product-a", "v1");
+    expect(admitConsumerLocalRuntime(mutate(input))).toMatchObject({ ok: false, error });
   });
 
   it("U-PACKISO-004: Aのupgrade中もBのruntime process identityを変更しない", async () => {
     const input = await fixture("product-a", "v2");
+    await seedRuntime(input.consumerRoot, "v1");
+    const aBefore = await tree(input.consumerRoot);
     const bInput = await fixture("product-b", "v1");
     await mkdir(join(bInput.runtimeRoot, "state"), { recursive: true });
     await writeFile(join(bInput.runtimeRoot, "state", "receipt"), "b-v1", "utf8");
@@ -176,7 +327,7 @@ describe("consumer-local runtime admission", () => {
       writeStaging: async (plan) => ({ root: input.runtimeRoot, plan }),
       applyDestination: async () => {
         await mkdir(input.runtimeRoot, { recursive: true });
-        await writeFile(join(input.runtimeRoot, "applied"), "v2", "utf8");
+        await writeFile(join(input.consumerRoot, "bin", "runtime.js"), "v2", "utf8");
       },
       discardStaging: async () => undefined,
       restoreDestination: async () => undefined,
@@ -187,10 +338,14 @@ describe("consumer-local runtime admission", () => {
     expect(pid).toBeDefined();
     expect(() => process.kill(pid as number, 0)).not.toThrow();
     expect(await tree(bInput.consumerRoot)).toBe(bBefore);
+    expect(await tree(input.consumerRoot)).not.toBe(aBefore);
+    expect(await readFile(join(input.consumerRoot, "bin", "runtime.js"), "utf8")).toBe("v2");
   });
 
   it("U-PACKISO-005: Aのrollback中もBを停止・再起動しない", async () => {
     const input = await fixture("product-a", "v1");
+    await seedRuntime(input.consumerRoot, "v2", "v2");
+    const aBefore = await tree(input.consumerRoot);
     const bInput = await fixture("product-b", "v2");
     await mkdir(join(bInput.runtimeRoot, "state"), { recursive: true });
     await writeFile(join(bInput.runtimeRoot, "state", "receipt"), "b-v2", "utf8");
@@ -208,7 +363,14 @@ describe("consumer-local runtime admission", () => {
     const result = await applyConsumerLocalRuntime(admitted.admission, {
       snapshotDestination: async () => [],
       writeStaging: async () => ({ root: input.runtimeRoot }),
-      applyDestination: async () => undefined,
+      applyDestination: async () => {
+        await writeFile(join(input.consumerRoot, "bin", "runtime.js"), "v1", "utf8");
+        await writeFile(
+          join(input.consumerRoot, ".ut-tdd", "history", "releases"),
+          "v2\nrollback->v1",
+          "utf8",
+        );
+      },
       discardStaging: async () => undefined,
       restoreDestination: async () => undefined,
     });
@@ -218,6 +380,11 @@ describe("consumer-local runtime admission", () => {
     expect(pid).toBeDefined();
     expect(() => process.kill(pid as number, 0)).not.toThrow();
     expect(await tree(bInput.consumerRoot)).toBe(bBefore);
+    expect(await tree(input.consumerRoot)).not.toBe(aBefore);
+    expect(await readFile(join(input.consumerRoot, "bin", "runtime.js"), "utf8")).toBe("v1");
+    expect(
+      await readFile(join(input.consumerRoot, ".ut-tdd", "history", "releases"), "utf8"),
+    ).toContain("rollback->v1");
   });
 
   it.each([
@@ -227,6 +394,8 @@ describe("consumer-local runtime admission", () => {
     ["restoreDestination", { ok: false, error: "rollback_failed", applied: "indeterminate" }],
   ])("U-PACKISO-004/005: %s faultでもBのprocess/treeを変更しない", async (fault, expected) => {
     const input = await fixture("product-a", "fault");
+    await seedRuntime(input.consumerRoot, "v1");
+    const aBefore = await tree(input.consumerRoot);
     const bInput = await fixture("product-b", "stable");
     await mkdir(join(bInput.runtimeRoot, "state"), { recursive: true });
     await writeFile(join(bInput.runtimeRoot, "state", "history"), "stable", "utf8");
@@ -248,6 +417,8 @@ describe("consumer-local runtime admission", () => {
       },
       applyDestination: async () => {
         if (fault === "applyDestination" || fault === "restoreDestination")
+          await writeFile(join(input.consumerRoot, "bin", "runtime.js"), "v2", "utf8");
+        if (fault === "applyDestination" || fault === "restoreDestination")
           throw new Error("fault");
       },
       discardStaging: async () => {
@@ -255,11 +426,17 @@ describe("consumer-local runtime admission", () => {
       },
       restoreDestination: async () => {
         if (fault === "restoreDestination") throw new Error("fault");
+        await writeFile(join(input.consumerRoot, "bin", "runtime.js"), "v1", "utf8");
       },
     });
     expect(applied).toMatchObject(expected);
     expect(() => process.kill(b.pid as number, 0)).not.toThrow();
     expect(await tree(bInput.consumerRoot)).toBe(bBefore);
+    if (fault === "restoreDestination") {
+      expect(await tree(input.consumerRoot)).not.toBe(aBefore);
+    } else {
+      expect(await tree(input.consumerRoot)).toBe(aBefore);
+    }
   });
 
   it.each([

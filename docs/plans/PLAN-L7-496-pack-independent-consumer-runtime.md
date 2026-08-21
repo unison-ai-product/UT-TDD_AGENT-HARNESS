@@ -42,6 +42,7 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
     - src/setup/release-aggregate-admission.ts
     - src/setup/release-materializer.ts
+    - src/schema/release-manifest.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/362
 github_issue_id: 362
 backprop_decision: required
@@ -64,6 +65,8 @@ PF1〜PF5、release promotion/rollback gate、Pack publish/copy、CLI、D1/D2/D3
 
 - consumer rootとruntime rootを絶対canonical pathとして検証し、runtime rootがconsumer root外へ解決される
   lexical path、symlink、junctionをfail-closeする。
+- DB、Memory、PLAN projection、lock、hook state、receipt、evidenceのlayoutはruntime rootからのみ導出し、
+  callerが任意rootを注入できない凍結layoutとして返す。
 - 受領したsealed planのentriesをpath/mode/contentから独立に再計算する。manifest、receipt、PF5 planの申告
   digestを計算入力にせず、再計算値が三者へ一致した場合だけadmitする。
 - materializer version、release identity、source revision、product namespace、consumer/runtime rootを

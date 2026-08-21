@@ -1,5 +1,6 @@
 import { existsSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, posix, relative, resolve } from "node:path";
+import { deriveReleaseId } from "../schema/release-manifest.ts";
 import {
   applySealedReleaseAggregate,
   type ReleaseAggregateApplyDependencies,
@@ -44,6 +45,17 @@ export interface ConsumerLocalRuntimeAdmission {
   readonly runtimeRoot: string;
   readonly identity: ConsumerArtifactIdentity;
   readonly plan: SealedReleaseAggregatePlan;
+  readonly layout: ConsumerRuntimeLayout;
+}
+
+export interface ConsumerRuntimeLayout {
+  readonly database: string;
+  readonly memory: string;
+  readonly planProjection: string;
+  readonly lock: string;
+  readonly hookState: string;
+  readonly receipt: string;
+  readonly evidence: string;
 }
 
 export type ConsumerLocalRuntimeAdmissionError =
@@ -151,6 +163,18 @@ function requirementSeparator(): string {
   return process.platform === "win32" ? "\\" : "/";
 }
 
+function deriveLayout(runtimeRoot: string): ConsumerRuntimeLayout {
+  return Object.freeze({
+    database: resolve(runtimeRoot, "harness.db"),
+    memory: resolve(runtimeRoot, "memory"),
+    planProjection: resolve(runtimeRoot, "plans"),
+    lock: resolve(runtimeRoot, "runtime.lock"),
+    hookState: resolve(runtimeRoot, "hooks"),
+    receipt: resolve(runtimeRoot, "receipt.json"),
+    evidence: resolve(runtimeRoot, "evidence"),
+  });
+}
+
 function validIdentity(value: unknown): value is ConsumerArtifactIdentity {
   return (
     isRecord(value) &&
@@ -226,6 +250,14 @@ export function admitConsumerLocalRuntime(
   ) {
     return { ok: false, error: "namespace_escape" };
   }
+  const canonicalConsumerRoot = canonicalPath(input.consumerRoot);
+  const canonicalRuntimeRoot = canonicalPath(input.runtimeRoot);
+  if (canonicalConsumerRoot === null || canonicalRuntimeRoot === null) {
+    return { ok: false, error: "namespace_escape" };
+  }
+  if (!within(canonicalConsumerRoot, canonicalRuntimeRoot)) {
+    return { ok: false, error: "namespace_escape" };
+  }
   if (!validPlan(input.plan)) return { ok: false, error: "artifact_unavailable" };
   if (!validIdentity(input.manifest) || !validIdentity(input.receipt))
     return { ok: false, error: "identity_mismatch" };
@@ -252,18 +284,30 @@ export function admitConsumerLocalRuntime(
     input.plan.expectedDigest === input.manifest.artifactSetDigest &&
     input.plan.actualDigest === input.receipt.artifactSetDigest &&
     computedDigest === input.manifest.artifactSetDigest &&
+    deriveReleaseId(
+      input.manifest.materializerVersion,
+      input.manifest.sourceRevision,
+      input.manifest.artifactSetDigest,
+    ) === input.manifest.releaseId &&
     input.manifest.releaseId === input.receipt.releaseId &&
     input.manifest.sourceRevision === input.receipt.sourceRevision;
   if (!planIdentityMatches) return { ok: false, error: "identity_mismatch" };
   const sealedPlan = Object.freeze({ ...input.plan, entries });
+  const consumerRoot = canonicalConsumerRoot;
+  const runtimeRoot = canonicalRuntimeRoot;
+  const layout = deriveLayout(runtimeRoot);
+  if (Object.values(layout).some((path) => !within(consumerRoot, path))) {
+    return { ok: false, error: "namespace_escape" };
+  }
   return {
     ok: true,
     admission: Object.freeze({
       productId: input.productId,
-      consumerRoot: resolve(input.consumerRoot),
-      runtimeRoot: resolve(input.runtimeRoot),
+      consumerRoot,
+      runtimeRoot,
       identity: Object.freeze({ ...input.manifest }),
       plan: sealedPlan,
+      layout,
     }),
   };
 }

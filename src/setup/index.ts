@@ -33,6 +33,7 @@ export {
   type ConsumerLocalRuntimeAdmissionResult,
   type ConsumerLocalRuntimeInstallResult,
   type ConsumerReceipt,
+  type ConsumerRuntimeLayout,
   installConsumerLocalRuntime,
 } from "./consumer-local-runtime-admission.ts";
 export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";

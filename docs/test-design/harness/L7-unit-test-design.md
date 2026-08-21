@@ -1970,12 +1970,12 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 
 | 昇格ID | 実測範囲 |
 | --- | --- |
-| `U-PACKISO-001` | source/worktree/local Pack checkoutへfallbackせず、sealed entriesだけでfresh consumerをadmit |
-| `U-PACKISO-002` | lexical escapeおよび既存parent symlink/junction escapeを拒否 |
-| `U-PACKISO-003` | product/rootとartifact identityをreceiptへ独立束縛 |
-| `U-PACKISO-004` | Bの実行中Node processのPID/exitとB root treeを保持したA upgrade composition |
-| `U-PACKISO-005` | Bの実行中Node processのPID/exitとB root treeを保持したA rollback composition |
-| `U-PACKISO-006` | artifact unavailable、digest mutation、unknown version、symlink escape、receipt mismatchを導入前拒否 |
+| `U-PACKISO-001` | source/worktree/local Pack checkout不在でsealed entriesだけからA/Bをfresh admitし、両rootを分離 |
+| `U-PACKISO-002` | lexical escape、parent symlink/junction escape、symlink aliasを拒否またはphysical canonical rootへ正規化し、DB/Memory/PLAN/lock/hook/receipt/evidence layoutを凍結 |
+| `U-PACKISO-003` | A=v1/B=v2のreleaseId/sourceRevision/digestを独立束縛し、version/digest/revision/releaseId/receipt reuse mutationを拒否 |
+| `U-PACKISO-004` | A prior v1→v2 upgradeの成功/各PF5 faultでA prior stateまたはindeterminateを観測し、Bの実行中Node processとroot treeを保持 |
+| `U-PACKISO-005` | A prior v2/history→attested v1 rollbackでA identity/history transitionを観測し、Bの実行中Node processとroot treeを保持 |
+| `U-PACKISO-006` | artifact unavailable、digest mutation、unknown version、symlink escape、receipt mismatchを導入前拒否しPF5 ports 0を観測 |
 
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 

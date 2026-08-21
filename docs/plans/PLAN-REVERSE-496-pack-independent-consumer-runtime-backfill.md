@@ -40,9 +40,12 @@ review_evidence: []
 ## 1. R1〜R2対象
 
 - PF5のsealed aggregateをconsumerへ受け渡す際の、path/mode/content独立digest再計算。
+- canonical releaseId derivationをmaterializer version/source revision/artifact digestへ束縛し、coherent fake
+  identity replayを拒否すること。
 - consumer/runtime rootのcanonical namespaceとsymlink/junction escape fail-close。
+- DB、Memory、PLAN、lock、hook、receipt、evidenceのlayoutをproduct-local runtime rootへ固定すること。
 - product identity、manifest、receipt、planの三者束縛と異version共存。
-- Aのupgrade/rollback中にBの実process、bytes、mode、path、state/historyを不変にする観測。
+- A prior stateを持つupgrade/rollback中にBの実process、bytes、mode、path、state/historyを不変にする観測。
 - artifact unavailable、unknown version、receipt mismatch、局所faultのwrite/process 0。
 
 ## 2. R3〜R4
