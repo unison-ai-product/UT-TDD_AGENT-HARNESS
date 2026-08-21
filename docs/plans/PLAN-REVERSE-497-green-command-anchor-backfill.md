@@ -26,8 +26,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L6-function-design/test-before-review.md
     artifact_type: design_doc
-  - artifact_path: docs/design/harness/L6-function-design/review-evidence.md
-    artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 dependencies:
@@ -37,7 +35,6 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-303-digest-commit-anchor.md
     - docs/plans/PLAN-L7-497-green-command-anchor-required.md
-    - docs/design/harness/L6-function-design/review-evidence.md
     - docs/design/harness/L6-function-design/test-before-review.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/191
 review_evidence: []
@@ -89,5 +86,5 @@ R4 へ進んでいない。
 R3 では非著者 reviewer が、(a) 自己申告値を判定入力にしていないか、(b) 既存 entry を壊していないか、
 (c) 実在検査を含まないという境界が文書と実装で一致しているか、を攻撃する。
 
-R4 では実測で必要と判明した差分だけを `docs/design/harness/L6-function-design/review-evidence.md` へ
-戻す。`green-command-digest` の二層照合契約 (`PLAN-L7-303`) は変更しない。
+R4 では実測で必要と判明した差分だけを `docs/design/harness/L6-function-design/test-before-review.md` へ
+戻す (green_command の契約は同 §8 が所有する)。`green-command-digest` の二層照合契約 (`PLAN-L7-303`) は変更しない。
