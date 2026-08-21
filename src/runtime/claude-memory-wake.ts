@@ -19,6 +19,14 @@ import { ensureDir } from "../shared/fs.ts";
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
 export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
+export const CLAUDE_INBOX_BACKLOG_WARN_AGE_MS = 15 * 60 * 1_000;
+export const CLAUDE_WAKE_GENERATION_SCHEMA = "ut-tdd.claude-wake-generation/v1" as const;
+export type ClaudeInboxWarningCode =
+  | "age"
+  | "target_mismatch"
+  | "session_absent"
+  | "session_unknown"
+  | "hook_missing";
 
 interface ClaudeInboxBase {
   readonly id: string;
@@ -69,6 +77,19 @@ export interface ClaudeInboxBacklogSummary {
   readonly oldestEntryId: string | null;
   readonly oldestCreatedAt: string | null;
   readonly oldestAgeMs: number | null;
+  /** 共通runtime上の別workspace宛て未claim entry。strict filterで捨てない。 */
+  readonly targetMismatchPending?: number;
+  readonly targetMismatchOldestAgeMs?: number | null;
+  /** workspace紐付けはmarkerに無い旧形式もあるため共有runtime単位の観測。 */
+  readonly activeSessionCount?: number;
+  readonly sessionStatus?: "active" | "absent" | "unknown";
+  readonly hookConfigured?: boolean;
+  readonly warningCodes?: readonly ClaudeInboxWarningCode[];
+}
+
+export interface ClaudeMemoryWakeHookStatus {
+  readonly configured: boolean;
+  readonly reason: "configured" | "settings_missing" | "settings_invalid" | "stop_hook_missing";
 }
 
 export function isClaudeMemoryWakeTarget(env: NodeJS.ProcessEnv): boolean {
@@ -122,6 +143,34 @@ function runtimeRoot(repoRoot: string): string {
 
 function logPath(repoRoot: string): string {
   return join(repoRoot, ".ut-tdd", "logs", "claude-memory-wake.jsonl");
+}
+
+/**
+ * Stop hookの配線はpublish成功からは導けない。settingsが壊れている場合も
+ * configured扱いにせず、受信側が永遠に現れない可能性を警告面へ返す。
+ */
+export function inspectClaudeMemoryWakeHook(repoRoot: string): ClaudeMemoryWakeHookStatus {
+  const settingsPath = join(repoRoot, ".claude", "settings.json");
+  if (!existsSync(settingsPath)) return { configured: false, reason: "settings_missing" };
+  try {
+    const parsed = JSON.parse(readFileSync(settingsPath, "utf8")) as {
+      hooks?: { Stop?: unknown };
+    };
+    const stop = parsed?.hooks?.Stop;
+    if (stop === undefined || !JSON.stringify(stop).includes("claude-memory-wake")) {
+      return { configured: false, reason: "stop_hook_missing" };
+    }
+    return { configured: true, reason: "configured" };
+  } catch {
+    return { configured: false, reason: "settings_invalid" };
+  }
+}
+
+function warnPublishIsNotDelivery(hook: ClaudeMemoryWakeHookStatus): void {
+  if (hook.configured) return;
+  process.stderr.write(
+    `claude-memory-wake warning: publish is pending, Stop hook unavailable (${hook.reason}); delivery is unconfirmed\n`,
+  );
 }
 
 function writeAuditLog(repoRoot: string, event: Record<string, unknown>): void {
@@ -195,11 +244,17 @@ export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntr
   const serialized = JSON.stringify(entry);
   if (existsSync(target)) {
     if (readFileSync(target, "utf8").trim() === serialized) {
+      const hook = inspectClaudeMemoryWakeHook(repoRoot);
+      warnPublishIsNotDelivery(hook);
       writeAuditLog(repoRoot, {
         event: "publish",
         status: "idempotent",
         entryId: entry.id,
         operationId: entry.operationId,
+        deliveryState: "pending",
+        deliveryConfirmed: false,
+        hookConfigured: hook.configured,
+        warningCodes: hook.configured ? [] : ["hook_missing"],
       });
       return target;
     }
@@ -217,11 +272,18 @@ export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntr
   } finally {
     closeSync(descriptor);
   }
+  const hook = inspectClaudeMemoryWakeHook(repoRoot);
+  warnPublishIsNotDelivery(hook);
   writeAuditLog(repoRoot, {
     event: "publish",
     status: "created",
     entryId: entry.id,
     operationId: entry.operationId,
+    // projection fileの作成は受信sessionへの配送確認ではない。
+    deliveryState: "pending",
+    deliveryConfirmed: false,
+    hookConfigured: hook.configured,
+    warningCodes: hook.configured ? [] : ["hook_missing"],
   });
   return target;
 }
@@ -387,6 +449,12 @@ function summarizeEntries(
       oldestEntryId: null,
       oldestCreatedAt: null,
       oldestAgeMs: null,
+      targetMismatchPending: 0,
+      targetMismatchOldestAgeMs: null,
+      activeSessionCount: 0,
+      sessionStatus: "absent",
+      hookConfigured: false,
+      warningCodes: [],
     };
   }
 
@@ -396,11 +464,66 @@ function summarizeEntries(
   );
   const oldest = ordered[0];
   return {
-    workspaceId: oldest.targetWorkspaceId,
+    workspaceId,
     pending: entries.length,
     oldestEntryId: oldest.id,
     oldestCreatedAt: oldest.createdAt,
     oldestAgeMs: Date.now() - Date.parse(oldest.createdAt),
+    targetMismatchPending: 0,
+    targetMismatchOldestAgeMs: null,
+    activeSessionCount: 0,
+    sessionStatus: "absent",
+    hookConfigured: false,
+    warningCodes: [],
+  };
+}
+
+interface ClaudeSessionObservation {
+  readonly activeSessionCount: number;
+  readonly sessionStatus: "active" | "absent" | "unknown";
+}
+
+function readGenerationMarker(path: string): { generation: string; workspaceId: string } | null {
+  try {
+    const value: unknown = JSON.parse(readFileSync(path, "utf8"));
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      (value as { schema?: unknown }).schema !== CLAUDE_WAKE_GENERATION_SCHEMA ||
+      typeof (value as { generation?: unknown }).generation !== "string" ||
+      typeof (value as { workspaceId?: unknown }).workspaceId !== "string"
+    )
+      return null;
+    return {
+      generation: (value as { generation: string }).generation,
+      workspaceId: (value as { workspaceId: string }).workspaceId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function observeClaudeSessions(
+  root: string,
+  workspaceId: string,
+  nowMs = Date.now(),
+): ClaudeSessionObservation {
+  if (!existsSync(root)) return { activeSessionCount: 0, sessionStatus: "absent" };
+  let freshMarkerCount = 0;
+  let activeSessionCount = 0;
+  for (const name of readdirSync(root).filter((entry) => entry.endsWith(".generation"))) {
+    try {
+      if (nowMs - statSync(join(root, name)).mtimeMs > CLAUDE_INBOX_BACKLOG_WARN_AGE_MS) continue;
+      freshMarkerCount += 1;
+      if (readGenerationMarker(join(root, name))?.workspaceId === workspaceId)
+        activeSessionCount += 1;
+    } catch {
+      freshMarkerCount += 1;
+    }
+  }
+  return {
+    activeSessionCount,
+    sessionStatus: activeSessionCount > 0 ? "active" : freshMarkerCount > 0 ? "unknown" : "absent",
   };
 }
 
@@ -410,10 +533,35 @@ export function summarizeUnclaimedInbox(
 ): ClaudeInboxBacklogSummary {
   const root = runtimeRoot(repoRoot);
   const claimed = new Set(claimedIds(root));
-  const entries = readInbox(repoRoot).filter(
-    (entry) => entry.targetWorkspaceId === workspaceId && !claimed.has(entry.id),
+  const all = readInbox(repoRoot).filter((entry) => !claimed.has(entry.id));
+  const entries = all.filter((entry) => entry.targetWorkspaceId === workspaceId);
+  const foreign = all.filter((entry) => entry.targetWorkspaceId !== workspaceId);
+  const own = summarizeEntries(entries, workspaceId);
+  const foreignOrdered = [...foreign].sort(
+    (left, right) =>
+      left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
   );
-  return summarizeEntries(entries, workspaceId);
+  const targetMismatchOldest = foreignOrdered[0];
+  const sessions = observeClaudeSessions(root, workspaceId);
+  const hook = inspectClaudeMemoryWakeHook(repoRoot);
+  const totalPending = all.length;
+  const warnings = new Set<ClaudeInboxWarningCode>();
+  if ((own.oldestAgeMs ?? 0) >= CLAUDE_INBOX_BACKLOG_WARN_AGE_MS) warnings.add("age");
+  if (foreign.length > 0) warnings.add("target_mismatch");
+  if (totalPending > 0 && sessions.sessionStatus === "absent") warnings.add("session_absent");
+  if (totalPending > 0 && sessions.sessionStatus === "unknown") warnings.add("session_unknown");
+  if (totalPending > 0 && !hook.configured) warnings.add("hook_missing");
+  return {
+    ...own,
+    targetMismatchPending: foreign.length,
+    targetMismatchOldestAgeMs: targetMismatchOldest
+      ? Date.now() - Date.parse(targetMismatchOldest.createdAt)
+      : null,
+    activeSessionCount: sessions.activeSessionCount,
+    sessionStatus: sessions.sessionStatus,
+    hookConfigured: hook.configured,
+    warningCodes: [...warnings],
+  };
 }
 
 function claim(input: {
@@ -502,7 +650,11 @@ export async function waitForClaudeMemory(input: {
   pruneRuntimeFiles(root, Date.now());
   const generationPath = join(root, `${safeFilePart(input.sessionId)}.generation`);
   const generation = `${process.pid}:${Date.now()}`;
-  writeFileSync(generationPath, `${generation}\n`, { encoding: "utf8", mode: 0o600 });
+  writeFileSync(
+    generationPath,
+    `${JSON.stringify({ schema: CLAUDE_WAKE_GENERATION_SCHEMA, generation, workspaceId })}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
   const started = Date.now();
   const unclaimable = new Set<string>();
   while (Date.now() - started < maxWaitMs) {
@@ -516,7 +668,7 @@ export async function waitForClaudeMemory(input: {
         });
         return { kind: "superseded" };
       }
-      currentGeneration = readFileSync(generationPath, "utf8").trim();
+      currentGeneration = readGenerationMarker(generationPath)?.generation ?? null;
     } catch {
       writeAuditLog(input.repoRoot, {
         event: "supersede",
