@@ -103,7 +103,7 @@ describe("release manifest pure domain", () => {
   it("CANDIDATE-PACKPUB-001: pins inventory and release framing to literal golden digests", () => {
     const artifacts: PublicationArtifact[] = [
       {
-        sourcePath: "src/alpha.ts",
+        sourcePath: "src/α.ts",
         destinationPath: "bin/a.js",
         mode: "100644",
         size: 1,
@@ -119,7 +119,7 @@ describe("release manifest pure domain", () => {
     ];
     const inventoryDigest = deriveArtifactInventoryDigest(artifacts);
     expect(inventoryDigest).toBe(
-      "sha256:debb2862b9a1ffa3e3d6a4dfea3ed396d46353a5c6fbd6cf66fbae7665e1be8e",
+      "sha256:258b6f2740525073ce8cefe2a75e25b83c5ba4c50bbc4621351b074d8bd1af0f",
     );
     expect(
       deriveReleaseRecordDigest({
@@ -129,7 +129,7 @@ describe("release manifest pure domain", () => {
         artifactInventoryDigest: inventoryDigest,
         releaseAssetInventoryDigest: `sha256:${"22".repeat(32)}`,
       }),
-    ).toBe("sha256:e66464147ddb66c203d86e1898dda43dc482af4d73b1c098223917900d1d269a");
+    ).toBe("sha256:706fc10f561283fccdf20eaa5dee345ffe8186dd8d909313bc8657eb4b409e27");
   });
 
   it("CANDIDATE-PACKPUB-001: v1 stays readable but is denied for new publication", () => {
@@ -317,6 +317,22 @@ describe("release manifest pure domain", () => {
       artifact.destinationPath = destinationPath;
       expect(parseReleaseManifest(invalid)).toEqual({ ok: false, error: "invalid_manifest" });
     }
+    const invalidSource = structuredClone(v2Manifest());
+    const sourceId = Object.keys(invalidSource.releases as object)[0];
+    const sourceRecord = (invalidSource.releases as Record<string, Record<string, unknown>>)[
+      sourceId
+    ];
+    const sourceArtifacts = sourceRecord.artifacts as PublicationArtifact[];
+    sourceArtifacts[0] = { ...sourceArtifacts[0], sourcePath: "src/\ud800.ts" };
+    sourceRecord.artifactInventoryDigest = deriveArtifactInventoryDigest(sourceArtifacts);
+    sourceRecord.releaseRecordDigest = deriveReleaseRecordDigest({
+      materializerVersion: sourceRecord.materializerVersion as string,
+      artifactSourceCommit: sourceRecord.artifactSourceCommit as string,
+      artifactSetDigest: sourceRecord.artifactSetDigest as string,
+      artifactInventoryDigest: sourceRecord.artifactInventoryDigest as string,
+      releaseAssetInventoryDigest: sourceRecord.releaseAssetInventoryDigest as string,
+    });
+    expect(parseReleaseManifest(invalidSource)).toEqual({ ok: false, error: "invalid_manifest" });
     const symlink = structuredClone(v2Manifest());
     const id = Object.keys(symlink.releases as object)[0];
     (
