@@ -1,6 +1,7 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
+import { realpathSync } from "node:fs";
 import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -227,9 +228,37 @@ describe("consumer-local runtime admission", () => {
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.admission.consumerRoot).toBe(input.consumerRoot);
-      expect(result.admission.runtimeRoot).toBe(join(input.consumerRoot, ".ut-tdd"));
+      const physicalRoot = realpathSync.native(input.consumerRoot);
+      expect(result.admission.consumerRoot).toBe(physicalRoot);
+      expect(result.admission.runtimeRoot).toBe(join(physicalRoot, ".ut-tdd"));
     }
+  });
+
+  it("U-PACKISO-002: Windows 8.3 short-name aliasもphysical canonical rootへ正規化する", async () => {
+    const input = await fixture("product-a");
+    if (process.platform !== "win32") {
+      expect(admitConsumerLocalRuntime(input).ok).toBe(true);
+      return;
+    }
+    const shortRoot = execFileSync(
+      process.env.ComSpec ?? "cmd.exe",
+      ["/d", "/s", "/c", `for %I in ("${input.consumerRoot}") do @echo %~sI`],
+      { encoding: "utf8" },
+    ).trim();
+    expect(shortRoot.length).toBeGreaterThan(0);
+    const result = admitConsumerLocalRuntime({
+      ...input,
+      consumerRoot: shortRoot,
+      runtimeRoot: join(shortRoot, ".ut-tdd"),
+      receipt: {
+        ...input.receipt,
+        consumerRoot: shortRoot,
+        runtimeRoot: join(shortRoot, ".ut-tdd"),
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok)
+      expect(result.admission.consumerRoot).toBe(realpathSync.native(input.consumerRoot));
   });
 
   it("U-PACKISO-003: A/Bのartifact identityとreceiptを独立に束縛する", async () => {

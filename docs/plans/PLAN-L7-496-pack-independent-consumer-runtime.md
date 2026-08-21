@@ -71,7 +71,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: tests/consumer-local-runtime-admission.test.ts
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000001"
+        output_digest: "sha256:7d5ad47c2c9208393989c520dbbc3f941f9f9bbf10e5ffcb765cfe19cb71fb8b"
         anchor_commit: db29bc73
       - kind: typecheck
         command: "npm run typecheck -- --pretty false"
@@ -80,7 +80,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: src/setup/consumer-local-runtime-admission.ts
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000002"
+        output_digest: "sha256:0e565da64070311af00fd3edfb22a09d4d977f6ddb72c8919b1f3a29549e7447"
         anchor_commit: db29bc73
       - kind: lint
         command: "npm run lint"
@@ -89,7 +89,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: src/setup/consumer-local-runtime-admission.ts
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000003"
+        output_digest: "sha256:0e565da64070311af00fd3edfb22a09d4d977f6ddb72c8919b1f3a29549e7447"
         anchor_commit: db29bc73
       - kind: unit_test
         command: "node src/cli.ts plan lint docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md"
@@ -98,7 +98,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T15:49:00+09:00"
         evidence_path: docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000004"
+        output_digest: "sha256:4d0725f74abb704ef7fd41a4753fff2c8f6f0bd0980433be28497dbbe06351db"
         anchor_commit: db29bc73
 ---
 

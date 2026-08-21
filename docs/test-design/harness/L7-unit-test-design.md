@@ -1971,7 +1971,7 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | 昇格ID | 実測範囲 |
 | --- | --- |
 | `U-PACKISO-001` | source/worktree/local Pack checkout不在でsealed entriesだけからA/Bをfresh admitし、両rootを分離 |
-| `U-PACKISO-002` | lexical escape、parent symlink/junction escape、symlink aliasを拒否またはphysical canonical rootへ正規化し、configuration/DB/Memory/PLAN/lock/hook/receipt/evidence/history layoutを凍結 |
+| `U-PACKISO-002` | lexical escape、parent symlink/junction、symlink alias、Windows 8.3 short-name aliasを拒否またはphysical canonical rootへ正規化し、configuration/DB/Memory/PLAN/lock/hook/receipt/evidence/history layoutを凍結 |
 | `U-PACKISO-003` | A=v1/B=v2のreleaseId/sourceRevision/digestを独立束縛し、version/digest/revision/releaseId/receipt reuse mutationを拒否 |
 | `U-PACKISO-004` | A prior v1→v2 upgradeの成功/各PF5 faultでA prior stateまたはindeterminateを観測し、Bの実行中Node processとroot treeを保持 |
 | `U-PACKISO-005` | A prior v2/history→attested v1 rollbackでA identity/history transitionを観測し、Bの実行中Node processとroot treeを保持 |
