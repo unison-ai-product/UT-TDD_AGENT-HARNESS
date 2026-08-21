@@ -61,7 +61,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T03:17:51Z"
         evidence_path: tests/claude-memory-backlog.test.ts
-        output_digest: "sha256:f24643cbbbcd3d9ce84763fd601249ea7f5172b5994c91cfc3872f51ceda286c"
+        output_digest: "sha256:c10872bf58774cdccff89194e97273ae8ef5f06e94d33cf7c576762bf690d1b9"
       - kind: typecheck
         command: "node node_modules/typescript/bin/tsc --noEmit"
         runner: node
@@ -77,7 +77,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T03:20:00Z"
         evidence_path: tests/claude-memory-backlog.test.ts
-        output_digest: "sha256:f24643cbbbcd3d9ce84763fd601249ea7f5172b5994c91cfc3872f51ceda286c"
+        output_digest: "sha256:c10872bf58774cdccff89194e97273ae8ef5f06e94d33cf7c576762bf690d1b9"
     citations:
       - "PLAN-L7-472 / PLAN-REVERSE-472"
       - "PLAN-L7-422 draft gap audit"
