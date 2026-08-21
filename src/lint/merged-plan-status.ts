@@ -198,12 +198,10 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
     }
     const declaredArtifacts = generatesMergedDeliverablePaths(content);
     const artifactDecisions = targetPaths
-      ? classifyTargetArtifacts(
-          declaredArtifacts,
-          targetPaths,
-          subjectPaths ?? undefined,
-          immediateBasePaths ?? undefined,
-        )
+      ? classifyTargetArtifacts(declaredArtifacts, targetPaths, {
+          ...(subjectPaths ? { subjectPaths } : {}),
+          ...(immediateBasePaths ? { immediateBasePaths } : {}),
+        })
       : declaredArtifacts.map(
           (path): ArtifactTargetDecision => ({
             path,

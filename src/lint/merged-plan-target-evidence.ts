@@ -43,6 +43,14 @@ export interface ArtifactTargetDecision {
     | "absent_from_target";
 }
 
+/** 三点比較の三点目。解決できない面は undefined にして二点比較へ縮退させる (issue #162)。 */
+export interface SubjectTrees {
+  /** 検査対象 (PR head) の tree path 集合。 */
+  readonly subjectPaths?: ReadonlySet<string>;
+  /** immediate base (stacked PR の親) の tree path 集合。 */
+  readonly immediateBasePaths?: ReadonlySet<string>;
+}
+
 export function selectCanonicalMergedTarget(input: {
   candidates: readonly TargetRefCandidate[];
   subjectHeadSha: string | null;
@@ -70,14 +78,15 @@ export function selectCanonicalMergedTarget(input: {
  * main で初めて検出される (issue #162 の post-merge 罠)。三点目に subject を足すと merge 前に
  * 検出でき、immediate base も見ることで stacked PR の親が持ち込んだ分を誤帰責しない。
  *
- * `subjectPaths` 未指定なら従来どおり二値 (完全後方互換)。
+ * `subject` 未指定なら従来どおり二値 (完全後方互換)。
  */
 export function classifyTargetArtifacts(
   declaredPaths: readonly string[],
   targetPaths: ReadonlySet<string>,
-  subjectPaths?: ReadonlySet<string>,
-  immediateBasePaths?: ReadonlySet<string>,
+  subject?: SubjectTrees,
 ): ArtifactTargetDecision[] {
+  const subjectPaths = subject?.subjectPaths;
+  const immediateBasePaths = subject?.immediateBasePaths;
   return declaredPaths.map((rawPath) => {
     const path = rawPath.replaceAll("\\", "/");
     if (targetPaths.has(path)) return { path, decision: "landed_on_target" as const };

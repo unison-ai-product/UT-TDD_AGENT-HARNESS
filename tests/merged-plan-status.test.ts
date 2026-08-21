@@ -119,6 +119,11 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
   // として挙がる。
   it("keeps a PR-branch artifact out of mergedArtifacts but reports it as a landing violation", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-pr-plan-"));
+    // CI 実行中は GITHUB_EVENT_PATH が実 PR の event を指しており、その immediate base SHA は
+    // この temp repo に存在しない。放置すると landing 抑止 (fail-close) が ambient env で発火し、
+    // 「event 無しの面」を検査できない。この面は event 無しを明示的に模す。
+    const previousEventPath = process.env.GITHUB_EVENT_PATH;
+    delete process.env.GITHUB_EVENT_PATH;
     try {
       mkdirSync(join(root, "docs", "plans"), { recursive: true });
       mkdirSync(join(root, "src"), { recursive: true });
@@ -145,6 +150,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       expect(violation?.phase).toBe("landing");
       expect(violation?.artifacts).toEqual(["src/feature.ts"]);
     } finally {
+      if (previousEventPath !== undefined) process.env.GITHUB_EVENT_PATH = previousEventPath;
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -426,8 +432,10 @@ describe("pre-merge landing detection (issue #162)", () => {
     const decisions = classifyTargetArtifacts(
       ["src/from-base.ts", "src/from-subject.ts"],
       new Set(),
-      new Set(["src/from-base.ts", "src/from-subject.ts"]),
-      new Set(["src/from-base.ts"]),
+      {
+        subjectPaths: new Set(["src/from-base.ts", "src/from-subject.ts"]),
+        immediateBasePaths: new Set(["src/from-base.ts"]),
+      },
     );
     expect(decisions).toEqual([
       { path: "src/from-base.ts", decision: "inherited_from_base" },
