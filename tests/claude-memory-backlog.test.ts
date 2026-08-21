@@ -10,10 +10,12 @@ import {
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
+  CLAUDE_WAKE_GENERATION_SCHEMA,
   claudeWorkspaceId,
   inspectClaudeMemoryWakeHook,
   publishClaudeInboxEntry,
   summarizeUnclaimedInbox,
+  waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
@@ -74,7 +76,7 @@ describe("Claude memory delivery backlog visibility", () => {
     }
   });
 
-  it("U-MEMBACKLOG-003: pendingなのにfresh generationが無ければsession_absentを出す", () => {
+  it("U-MEMBACKLOG-003: generation identity不明をactive扱いしない", async () => {
     const root = fixture();
     try {
       const workspaceId = claudeWorkspaceId(root);
@@ -92,11 +94,54 @@ describe("Claude memory delivery backlog visibility", () => {
       expect(absent.activeSessionCount).toBe(0);
       expect(absent.warningCodes).toContain("session_absent");
 
-      writeFileSync(generationPath(root, "live"), "123:now:workspace\n", "utf8");
-      const active = summarizeUnclaimedInbox(root, workspaceId);
-      expect(active.sessionStatus).toBe("active");
-      expect(active.activeSessionCount).toBe(1);
-      expect(active.warningCodes).not.toContain("session_absent");
+      const markerRoot = fixture();
+      try {
+        const markerWorkspaceId = claudeWorkspaceId(markerRoot);
+        publishClaudeInboxEntry(
+          markerRoot,
+          buildClaudeInboxEntry({
+            memory,
+            operationId: "marker-foreign",
+            workspaceId: "f".repeat(64),
+          }),
+        );
+        let active: ReturnType<typeof summarizeUnclaimedInbox> | undefined;
+        await waitForClaudeMemory({
+          repoRoot: markerRoot,
+          sessionId: "live",
+          pollIntervalMs: 10,
+          maxWaitMs: 100,
+          sleep: async () => {
+            active = summarizeUnclaimedInbox(markerRoot, markerWorkspaceId);
+          },
+        });
+        expect(active?.sessionStatus).toBe("active");
+        expect(active?.activeSessionCount).toBe(1);
+        expect(active?.warningCodes).not.toContain("session_absent");
+
+        writeFileSync(
+          generationPath(markerRoot, "live"),
+          `${JSON.stringify({
+            schema: CLAUDE_WAKE_GENERATION_SCHEMA,
+            generation: "foreign",
+            workspaceId: "f".repeat(64),
+          })}\n`,
+          "utf8",
+        );
+        const foreign = summarizeUnclaimedInbox(markerRoot, markerWorkspaceId);
+        expect(foreign.sessionStatus).toBe("unknown");
+        expect(foreign.activeSessionCount).toBe(0);
+        expect(foreign.warningCodes).toContain("session_unknown");
+        expect(foreign.warningCodes).not.toContain("session_absent");
+
+        writeFileSync(generationPath(markerRoot, "live"), "123:now:legacy\n", "utf8");
+        const legacy = summarizeUnclaimedInbox(markerRoot, markerWorkspaceId);
+        expect(legacy.sessionStatus).toBe("unknown");
+        expect(legacy.activeSessionCount).toBe(0);
+        expect(legacy.warningCodes).toContain("session_unknown");
+      } finally {
+        rmSync(markerRoot, { recursive: true, force: true });
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -61,7 +61,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T03:17:51Z"
         evidence_path: tests/claude-memory-backlog.test.ts
-        output_digest: "sha256:c10872bf58774cdccff89194e97273ae8ef5f06e94d33cf7c576762bf690d1b9"
+        output_digest: "sha256:02914649b2b7efb0b8ee9abce683a67f16b830f200dcd71e517af677ca0e430c"
       - kind: typecheck
         command: "node node_modules/typescript/bin/tsc --noEmit"
         runner: node
@@ -69,7 +69,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T03:20:00Z"
         evidence_path: src/runtime/claude-memory-wake.ts
-        output_digest: "sha256:02ebea1748131d8bcd3c3a0cd98b2f0da2253ba17bb492fe8c640f9304b46528"
+        output_digest: "sha256:a090dcbd405e35216c0c57b6e978ea225ab839dae3c3675d006add083310fe60"
       - kind: lint
         command: "node node_modules/@biomejs/biome/bin/biome check src/runtime/claude-memory-wake.ts src/handover/session-start-digest.ts tests/claude-memory-backlog.test.ts"
         runner: node
@@ -77,7 +77,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-21T03:20:00Z"
         evidence_path: tests/claude-memory-backlog.test.ts
-        output_digest: "sha256:c10872bf58774cdccff89194e97273ae8ef5f06e94d33cf7c576762bf690d1b9"
+        output_digest: "sha256:02914649b2b7efb0b8ee9abce683a67f16b830f200dcd71e517af677ca0e430c"
     citations:
       - "PLAN-L7-472 / PLAN-REVERSE-472"
       - "PLAN-L7-422 draft gap audit"
@@ -100,9 +100,10 @@ PLAN-L7-422はdraftのまま変更せず、feedback saturationとは別のClaude
 1. backlog summaryは、current workspaceの未claim件数と最古entry/ageを必ず返す。
 2. 同じGit共通runtimeにある未claim entryのうち、current workspace以外のtargetを
    `target_mismatch`として別集計する。厳格なworkspace filterで黙って捨てない。
-3. `.generation` markerの有効freshnessを共有runtime単位で集計し、fresh markerが0件で
-   pendingがある場合は`session_absent`警告を出す。target workspace固有のsession存在を
-   証明できない場合は`unknown`として扱い、存在を推測しない。
+3. `.generation` markerは`workspaceId`を含むv1 JSON markerとして発行し、fresh markerの
+   うちcurrent workspaceと一致するものだけをactiveとする。fresh markerが0件でpendingが
+   ある場合は`session_absent`、legacy/foreign/破損markerだけが残る場合は`session_unknown`
+   として警告し、target workspaceの存在を推測しない。
 4. `.claude/settings.json`のStop hookに`claude-memory-wake`が無い、壊れている、または
    読めない場合は`hook_missing`警告を出す。
 5. publishのreturn pathは「inbox projection created/idempotent」に限定し、delivery成立
@@ -132,6 +133,7 @@ PLAN-L7-422はdraftのまま変更せず、feedback saturationとは別のClaude
 - [x] 上記U oracleがTDD Red→Greenで1:1に実装される。
 - [x] Node/TypeScript targeted tests、typecheck、Biome、plan lintがlocal preflightでgreen。
 - [x] SessionStartでpublish成功をdelivery成功と誤認しない警告が実測できる。
+- [x] production generation markerのcurrent/foreign/legacyをactiveと誤認しない。
 - [x] pair-freeze契約、範囲外、既存PLANとの責務境界を本PLANへ記録する。
 
 ## PR着地条件

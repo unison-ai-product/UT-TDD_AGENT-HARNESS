@@ -16,7 +16,7 @@ plan_id: PLAN-L7-495-memory-delivery-backlog-visibility
 | --- | --- | --- |
 | U-MEMBACKLOG-001 | `summarizeUnclaimedInbox` current workspace | 未claim件数、最古entry、ageが返る |
 | U-MEMBACKLOG-002 | `summarizeUnclaimedInbox` target mismatch | foreign targetを別件数として保持し、strict filterで消さない |
-| U-MEMBACKLOG-003 | generation marker観測 | pendingかつfresh marker 0件は`session_absent`、marker有は`active` |
+| U-MEMBACKLOG-003 | production generation marker観測 | current workspaceのv1 markerだけ`active`、fresh marker 0件は`session_absent`、foreign/legacy/破損markerは`unknown` |
 | U-MEMBACKLOG-004 | `inspectClaudeMemoryWakeHook` | settings欠落/壊れ/Stop以外のみは`hook_missing`、Stop hookはconfigured |
 | U-MEMBACKLOG-005 | `publishClaudeInboxEntry` audit | projection作成後も`deliveryState=pending`、`deliveryConfirmed=false` |
 | U-MEMBACKLOG-006 | SessionStart rendering | age閾値超過を`inbox warning: age`として表示 |
