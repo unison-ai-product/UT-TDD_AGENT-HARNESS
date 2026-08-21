@@ -89,7 +89,7 @@ describe("release manifest pure domain", () => {
     };
   }
 
-  it("CANDIDATE-PACKPUB-001: v2 validates explicit inventory, identity, and digests", () => {
+  it("U-PACKPUB-001: v2 validates explicit inventory, identity, and digests", () => {
     const parsed = parseReleaseManifest(v2Manifest());
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -100,7 +100,7 @@ describe("release manifest pure domain", () => {
     });
   });
 
-  it("CANDIDATE-PACKPUB-001: pins inventory and release framing to literal golden digests", () => {
+  it("U-PACKPUB-001: pins inventory and release framing to literal golden digests", () => {
     const artifacts: PublicationArtifact[] = [
       {
         sourcePath: "src/α.ts",
@@ -132,7 +132,7 @@ describe("release manifest pure domain", () => {
     ).toBe("sha256:706fc10f561283fccdf20eaa5dee345ffe8186dd8d909313bc8657eb4b409e27");
   });
 
-  it("CANDIDATE-PACKPUB-001: v1 stays readable but is denied for new publication", () => {
+  it("U-PACKPUB-001: v1 stays readable but is denied for new publication", () => {
     expect(parseReleaseManifest(manifest()).ok).toBe(true);
     expect(parsePublicationManifest(manifest())).toEqual({
       ok: false,
@@ -140,7 +140,7 @@ describe("release manifest pure domain", () => {
     });
   });
 
-  it("CANDIDATE-PACKPUB-001: v2 rejects independent digest and artifact mutations", () => {
+  it("U-PACKPUB-001: v2 rejects independent digest and artifact mutations", () => {
     const source = v2Manifest();
     const id = Object.keys(source.releases as object)[0];
     const record = (source.releases as Record<string, Record<string, unknown>>)[id];
@@ -171,7 +171,7 @@ describe("release manifest pure domain", () => {
     expect(parseReleaseManifest(coordinated)).toEqual({ ok: false, error: "invalid_manifest" });
   });
 
-  it("CANDIDATE-PACKPUB-001: v2 strict-decodes every schema level", () => {
+  it("U-PACKPUB-001: v2 strict-decodes every schema level", () => {
     const rootUnknown = { ...v2Manifest(), unexpected: true };
     const releaseUnknown = structuredClone(v2Manifest());
     const releaseId = Object.keys(releaseUnknown.releases as object)[0];
@@ -207,7 +207,7 @@ describe("release manifest pure domain", () => {
     }
   });
 
-  it("CANDIDATE-PACKPUB-001: v2 binds every release identity axis independently", () => {
+  it("U-PACKPUB-001: v2 binds every release identity axis independently", () => {
     const source = v2Manifest();
     const id = Object.keys(source.releases as object)[0];
     const mutations: Array<(record: Record<string, unknown>) => void> = [
@@ -242,7 +242,7 @@ describe("release manifest pure domain", () => {
     expect(parseReleaseManifest(wrongId)).toEqual({ ok: false, error: "invalid_manifest" });
   });
 
-  it("CANDIDATE-PACKPUB-001: v2 rejects duplicate, unsorted, and unsafe artifact axes", () => {
+  it("U-PACKPUB-001: v2 rejects duplicate, unsorted, and unsafe artifact axes", () => {
     const cases: Array<(artifacts: Array<Record<string, unknown>>) => void> = [
       (artifacts) => {
         artifacts[0].sourcePath = "../source";
@@ -275,7 +275,7 @@ describe("release manifest pure domain", () => {
     }
   });
 
-  it("CANDIDATE-PACKPUB-001: v2 returns a deeply immutable snapshot", () => {
+  it("U-PACKPUB-001: v2 returns a deeply immutable snapshot", () => {
     const input = v2Manifest();
     const parsed = parsePublicationManifest(input);
     expect(parsed.ok).toBe(true);
@@ -295,7 +295,7 @@ describe("release manifest pure domain", () => {
     );
   });
 
-  it("CANDIDATE-PACKPUB-001: v2 rejects unsafe paths, symlink mode, and inherited channels", () => {
+  it("U-PACKPUB-001: v2 rejects unsafe paths, symlink mode, and inherited channels", () => {
     const unsafe = [
       "../escape",
       "a/../b",

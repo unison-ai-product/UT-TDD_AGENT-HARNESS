@@ -55,7 +55,7 @@ review_evidence:
     anchor_commit: 4a93ee5054d367d7700e81eb20baecd3911c0005
     citations:
       - "src/schema/release-manifest.ts: parsePublicationManifest / deriveArtifactInventoryDigest / deriveReleaseRecordDigest"
-      - "tests/release-manifest.test.ts: CANDIDATE-PACKPUB-001"
+      - "tests/release-manifest.test.ts: U-PACKPUB-001"
     green_commands:
       - kind: unit_test
         command: "node node_modules/vitest/vitest.mjs run tests/release-manifest.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1 (workspace-fence diagnostic)"
@@ -83,8 +83,8 @@ channel pointer CAS、promotion、rollback、Pack copy、複数consumer E2Eは�
 
 - 変更実体: `src/schema/release-manifest.ts`、`tests/release-manifest.test.ts`。
 - 両artifactの既存ownerは`PLAN-L7-479`であり、本PLANは重複`generates`を宣言しない。
-- 本PLANはv2 additive delta、Issue #380、`CANDIDATE-PACKPUB-001`の実装revisionをtraceする。
-- L7 test-designへのcandidate昇格は、PR #361が保持する共有path lease解放後に同じPRへ追加する。
+- 本PLANはv2 additive delta、Issue #380、`U-PACKPUB-001`の実装revisionをtraceする。
+- PR #361のmerge後、L7 test-designへ`U-PACKPUB-001`を同じ実装PRで登録した。
 
 ## 3. 実装契約
 
@@ -99,7 +99,7 @@ channel pointer CAS、promotion、rollback、Pack copy、複数consumer E2Eは�
 
 ## 4. TDD / Oracle
 
-`CANDIDATE-PACKPUB-001`は次を同一oracle群で殺す。
+`U-PACKPUB-001`は次を同一oracle群で殺す。
 
 - v1 publication、unknown/missing/type、unknown key。
 - absolute/drive/UNC/backslash/dot segment、mode 120000、重複、順序、unsafe size。
@@ -111,6 +111,6 @@ channel pointer CAS、promotion、rollback、Pack copy、複数consumer E2Eは�
 ## 5. Exit
 
 - targeted test、TypeScript、Biome、plan lint、Linux/Windows/aggregateをGreenにする。
-- L7 test-designで`CANDIDATE-PACKPUB-001`を`U-PACKPUB-001`へ昇格する。
+- L7 test-designの`U-PACKPUB-001`と実テストを1対1でtraceする。
 - Claude Opus 5のexact-head非著者closing PASSを得る。
 - Reverse-498をR3/R4へ進め、L6契約に追加backfillが不要かを明示してからmergeする。
