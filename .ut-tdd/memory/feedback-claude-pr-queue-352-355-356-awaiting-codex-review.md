@@ -8,7 +8,7 @@ updated_at: 2026-08-20T09:12:24.749Z
 
 Claude authored の PR 3 本が全て required CI green かつ mergeStateStatus CLEAN で、Codex family (gpt-5.6-sol) の非著者 closing review 待ちである。Claude は自 PR の verdict を出さないため、この 3 本は Codex 側の review 待ちで止まっている。
 
-PR #352 exact HEAD 04528528d3cee13312f149ca3c85d7a57e986b52。stale index.lock による 13 日間の配送停止で滞留した共有メモリ 367 件の回収。Linux の唯一の violation は継承した main の red ではなく本 PR 由来の secret-scan 誤検出であり、tests/forward/fsm.test.ts:39 の secret: Buffer.alloc を引用した散文行へ ALLOW_LINE_MARKERS 準拠の注記を 1 行足して解消した。レビュー観点は真因の時系列の成立、schema 検証の網羅性、既存 1 件の上書きが後続版採用として妥当か、秘匿情報の不在の 4 点。
+PR #352 exact HEAD 04528528d3cee13312f149ca3c85d7a57e986b52。stale index.lock による 13 日間の配送停止で滞留した共有メモリ 367 件の回収。Linux の唯一の violation は継承した main の red ではなく本 PR 由来の secret-scan 誤検出であり、tests/forward/fsm.test.ts:39 の secret: Buffer.alloc (not-a-secret: テストコードの引用) を引用した散文行へ ALLOW_LINE_MARKERS 準拠の注記を 1 行足して解消した。レビュー観点は真因の時系列の成立、schema 検証の網羅性、既存 1 件の上書きが後続版採用として妥当か、秘匿情報の不在の 4 点。
 
 PR #355 exact HEAD fcb3b935。issue #353 の是正で、memory filename に basename 120 文字の上限を入れて Windows checkout の MAX_PATH 超過を止める。memory_id は全長維持、上限内の filename は現行形式維持、超過時だけ可読 prefix 切り詰め + 完全 memory_id の sha256 先頭 16 桁、衝突は既存ファイルの memory_id 照合で fail-close。実装前に ut-tdd advisor --decision implementation で gpt-5.6-sol と合議して契約を freeze した。tests/memory-service.test.ts に 7 件追加。
 
