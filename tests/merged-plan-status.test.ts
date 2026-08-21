@@ -119,9 +119,10 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
   // として挙がる。
   it("keeps a PR-branch artifact out of mergedArtifacts but reports it as a landing violation", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-pr-plan-"));
-    // CI 実行中は GITHUB_EVENT_PATH が実 PR の event を指しており、その immediate base SHA は
-    // この temp repo に存在しない。放置すると landing 抑止 (fail-close) が ambient env で発火し、
-    // 「event 無しの面」を検査できない。この面は event 無しを明示的に模す。
+    // 三点比較は immediate base が解決できたときだけ有効なので、この面は main 直 PR の event を
+    // 明示的に与える (CI の実 PR run と同じ形)。ambient の GITHUB_EVENT_PATH は実 PR の event を
+    // 指していて base SHA が temp repo に無いため、放置すると検査したい面を測れない。
+    const eventPath = join(root, "event.json");
     const previousEventPath = process.env.GITHUB_EVENT_PATH;
     delete process.env.GITHUB_EVENT_PATH;
     try {
@@ -133,6 +134,18 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       writeFileSync(join(root, "src", "base.ts"), "export const base = true;\n", "utf8");
       git(root, ["add", "."]);
       git(root, ["commit", "-m", "base"]);
+      const mainSha = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      writeFileSync(
+        eventPath,
+        JSON.stringify({
+          repository: { default_branch: "main" },
+          pull_request: { base: { ref: "main", sha: mainSha } },
+        }),
+        "utf8",
+      );
+      process.env.GITHUB_EVENT_PATH = eventPath;
       git(root, ["checkout", "-b", "feature/pr-plan"]);
       writeFileSync(join(root, "src", "feature.ts"), "export const feature = true;\n", "utf8");
       writePlan(root, "PLAN-TEST-PR-branch.md", "draft", "src/feature.ts");
@@ -150,7 +163,8 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       expect(violation?.phase).toBe("landing");
       expect(violation?.artifacts).toEqual(["src/feature.ts"]);
     } finally {
-      if (previousEventPath !== undefined) process.env.GITHUB_EVENT_PATH = previousEventPath;
+      if (previousEventPath === undefined) delete process.env.GITHUB_EVENT_PATH;
+      else process.env.GITHUB_EVENT_PATH = previousEventPath;
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -441,6 +455,43 @@ describe("pre-merge landing detection (issue #162)", () => {
       { path: "src/from-base.ts", decision: "inherited_from_base" },
       { path: "src/from-subject.ts", decision: "landing_in_subject" },
     ]);
+  });
+
+  // Codex 非著者 FLAG (PR #369 @7ff171a4): event 自体が無い面 (非 PR 実行 / ローカル doctor) でも
+  // immediate base は分からない。object 未解決の面と区別できない以上、同じく landing 検出ごと落として
+  // 二点比較へ縮退させる。subject だけで分類すると stacked 構成の親由来 deliverable を landing と
+  // 誤認するため。三点比較は subject と immediate base の**両方**が解決できたときだけ有効。
+  it("suppresses landing detection when no pull_request event declares an immediate base", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-no-event-"));
+    const previousEventPath = process.env.GITHUB_EVENT_PATH;
+    delete process.env.GITHUB_EVENT_PATH;
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, "src"), { recursive: true });
+      git(root, ["init", "-b", "main"]);
+      git(root, ["config", "user.email", "test@example.invalid"]);
+      git(root, ["config", "user.name", "UT-TDD test"]);
+      writeFileSync(join(root, "src", "base.ts"), "export const base = true;\n", "utf8");
+      git(root, ["add", "src/base.ts"]);
+      git(root, ["commit", "-m", "main base"]);
+      git(root, ["checkout", "-b", "feature/no-event"]);
+      writeFileSync(join(root, "src", "stacked.ts"), "export const stacked = true;\n", "utf8");
+      writeLandingPlan(root, "PLAN-TEST-no-event.md", "draft", "src/stacked.ts");
+      git(root, ["add", "src/stacked.ts", "docs/plans/PLAN-TEST-no-event.md"]);
+      git(root, ["commit", "-m", "branch"]);
+
+      const input = loadMergedPlanStatusInput(root);
+      const plan = input.plans.find((item) => item.planId === "PLAN-TEST-no-event");
+      expect(plan?.landingArtifacts).toEqual([]);
+      expect(plan?.artifactDecisions).toEqual([
+        { path: "src/stacked.ts", decision: "absent_from_target" },
+      ]);
+      expect(analyzeMergedPlanStatus(input).violations).toEqual([]);
+    } finally {
+      if (previousEventPath === undefined) delete process.env.GITHUB_EVENT_PATH;
+      else process.env.GITHUB_EVENT_PATH = previousEventPath;
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   // advisor (gpt-5.6-sol) の反証: immediate base SHA が event にあってもローカルで解決できない面

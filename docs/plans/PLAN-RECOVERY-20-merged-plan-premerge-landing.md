@@ -77,9 +77,18 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 `merged` / `landing` の二 bucket を返し、同一 PLAN が両方に該当する場合は `merged` 側だけを出す
 (1 PLAN 1 violation)。
 
-**immediate base が宣言されているのに object を解決できない場合は landing 検出を無効化する。**
-親 branch 削除後や shallow fetch の CI では親由来 deliverable と本 PR 由来を区別できず、subject
-だけで分類すると親の成果物を `landing` と誤認するためである。
+**三点比較は subject と immediate base の両方が解決できたときだけ有効化する。**片方でも欠けたら
+landing 検出ごと落として二点比較へ縮退する。immediate base が分からないまま subject だけで分類すると、
+stacked 構成で親由来の deliverable を `landing` と誤認し、RECOVERY-18 が塞いだ「子 PR を永久 Red に
+する」誤検出を別経路で再発させるためである。
+
+欠け方は 2 通りあり、どちらも区別できないという点で同じなので同じ扱いにする:
+
+1. **event 自体が無い** (非 PR 実行 / ローカル doctor)。immediate base の概念が与えられない。
+2. **event に immediate base SHA はあるが object を解決できない** (親 branch 削除後 / shallow fetch)。
+
+CI の `pull_request` run では event が必ず base SHA を持つため、issue #162 が対象とする PR CI での
+fail-close は失われない。
 
 ## 3. TDD と trace
 
@@ -93,9 +102,10 @@ node node_modules/vitest/vitest.mjs run \
 ```
 
 - Red: source 2 file を stash した状態で `tests/merged-plan-status.test.ts` が **5 failed / 15 passed**。
-- Red (fail-close 面): `stackedBaseUnresolved` の分岐だけを外すと
-  `suppresses landing detection when a declared immediate base cannot be resolved` が単独で失敗。
-- Green: 両 file で **29 passed / 29**。
+- Red (fail-close 面): 三点比較の有効化条件 (`immediateBasePaths` が解決できたときだけ subject を
+  読む) を外すと、`suppresses landing detection when no pull_request event declares an immediate base`
+  と `suppresses landing detection when a declared immediate base cannot be resolved` の 2 件が失敗。
+- Green: 両 file で **30 passed / 30**。
 
 既存 assertion の更新 2 件:
 

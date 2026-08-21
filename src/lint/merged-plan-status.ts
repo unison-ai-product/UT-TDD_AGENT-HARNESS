@@ -172,17 +172,17 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
       )
     : null;
   // 検査対象 (PR head) と immediate base の tree。三点比較で「この PR が merge されたら target に
-  // 載る deliverable」を merge 前に見分ける (issue #162)。解決できない面では undefined = 従来の
-  // 二点比較へ縮退する (推測で violation を作らない)。
+  // 載る deliverable」を merge 前に見分ける (issue #162)。
+  //
+  // 三点比較は **subject と immediate base の両方が解決できたときだけ**有効化し、片方でも欠けたら
+  // landing 検出ごと落として従来の二点比較へ縮退する。immediate base が分からないまま subject だけで
+  // 分類すると、stacked 構成で親由来の deliverable を landing と誤認し、RECOVERY-18 が塞いだ
+  // 「子 PR を永久 Red にする」誤検出を別経路で再発させる。event の欠落 (非 PR 実行) も、親 branch
+  // 削除や shallow fetch による object 未解決も、区別できないという点では同じなので同じ扱いにする。
   const immediateBasePaths = treePathsOrNull(repoRoot, targetEvidence?.immediateBaseSha);
-  // stacked PR で immediate base が宣言されているのに、その object を解決できない場合 (親 branch が
-  // 消された / shallow fetch 等) は、親由来の deliverable と本 PR が持ち込む deliverable を区別
-  // できない。ここで subject だけを使うと親の成果物を landing と誤認し、RECOVERY-18 が塞いだ
-  // 「子 PR を永久 Red にする」誤検出を別経路で再発させる。三点目が欠けたら landing 検出ごと落とす。
-  const stackedBaseUnresolved = Boolean(targetEvidence?.immediateBaseSha) && !immediateBasePaths;
-  const subjectPaths = stackedBaseUnresolved
-    ? null
-    : treePathsOrNull(repoRoot, targetEvidence?.subjectHeadSha);
+  const subjectPaths = immediateBasePaths
+    ? treePathsOrNull(repoRoot, targetEvidence?.subjectHeadSha)
+    : null;
   for (const rp of reviewPlans) {
     if (rp.status === "archived") continue;
     let content = "";
