@@ -62,6 +62,7 @@ review_evidence:
         completed_at: "2026-08-21T03:17:51Z"
         evidence_path: tests/claude-memory-backlog.test.ts
         output_digest: "sha256:02914649b2b7efb0b8ee9abce683a67f16b830f200dcd71e517af677ca0e430c"
+        anchor_commit: 6eabc34913cd75f4fa56a6e6135e191863c55df3
       - kind: typecheck
         command: "node node_modules/typescript/bin/tsc --noEmit"
         runner: node
@@ -70,6 +71,7 @@ review_evidence:
         completed_at: "2026-08-21T03:20:00Z"
         evidence_path: src/runtime/claude-memory-wake.ts
         output_digest: "sha256:a090dcbd405e35216c0c57b6e978ea225ab839dae3c3675d006add083310fe60"
+        anchor_commit: 6eabc34913cd75f4fa56a6e6135e191863c55df3
       - kind: lint
         command: "node node_modules/@biomejs/biome/bin/biome check src/runtime/claude-memory-wake.ts src/handover/session-start-digest.ts tests/claude-memory-backlog.test.ts"
         runner: node
@@ -78,6 +80,44 @@ review_evidence:
         completed_at: "2026-08-21T03:20:00Z"
         evidence_path: tests/claude-memory-backlog.test.ts
         output_digest: "sha256:02914649b2b7efb0b8ee9abce683a67f16b830f200dcd71e517af677ca0e430c"
+        anchor_commit: 6eabc34913cd75f4fa56a6e6135e191863c55df3
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-21T05:58:24Z"
+    tests_green_at: "2026-08-21T05:55:50Z"
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    subject_head: 6eabc34913cd75f4fa56a6e6135e191863c55df3
+    scope: "PR #370 exact HEAD 6eabc349。Claude Opus 5 非著者 closing review。required CI run 32451588021 は Linux/Windows/aggregate 3/3 SUCCESS、mergeState CLEAN。B-1 workspace-bound generation marker、foreign/legacy/破損 marker の unknown fail-close、U-MEMBACKLOG-003 mutation probe を確認し blocking 0。"
+    green_commands:
+      - kind: unit_test
+        command: "PR #370 CI run 32451588021: vitest backlog/wake/session targeted regression"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-21T05:55:50Z"
+        evidence_path: tests/claude-memory-backlog.test.ts
+        output_digest: "sha256:02914649b2b7efb0b8ee9abce683a67f16b830f200dcd71e517af677ca0e430c"
+        anchor_commit: 6eabc34913cd75f4fa56a6e6135e191863c55df3
+      - kind: typecheck
+        command: "PR #370 CI run 32451588021: tsc --noEmit (Windows/Linux)"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-21T05:55:50Z"
+        evidence_path: src/runtime/claude-memory-wake.ts
+        output_digest: "sha256:a090dcbd405e35216c0c57b6e978ea225ab839dae3c3675d006add083310fe60"
+        anchor_commit: 6eabc34913cd75f4fa56a6e6135e191863c55df3
+      - kind: lint
+        command: "PR #370 CI run 32451588021: Biome/doctor aggregate"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-21T05:55:50Z"
+        evidence_path: tests/claude-memory-backlog.test.ts
+        output_digest: "sha256:02914649b2b7efb0b8ee9abce683a67f16b830f200dcd71e517af677ca0e430c"
+        anchor_commit: 6eabc34913cd75f4fa56a6e6135e191863c55df3
     citations:
       - "PLAN-L7-472 / PLAN-REVERSE-472"
       - "PLAN-L7-422 draft gap audit"
