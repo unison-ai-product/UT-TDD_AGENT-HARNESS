@@ -49,16 +49,16 @@ backprop_decision: required
 review_evidence:
   - reviewer: codex-primary-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-21T15:55:00+09:00"
-    tests_green_at: "2026-08-21T15:49:00+09:00"
+    reviewed_at: "2026-08-21T17:05:25+09:00"
+    tests_green_at: "2026-08-21T17:05:25+09:00"
     verdict: "preflight-pass; non-author closing review pending"
-    scope: "B1-B7 exact-head preflight是正。dual consumer、component layout、v1/v2 identity、atomic upgrade/rollback、canonical releaseId、symlink aliasを再検収。"
+    scope: "B1-B7是正後のexact implementation HEADをLinux/Windows/aggregate CI Greenへ束縛。dual consumer、component layout、v1/v2 identity、atomic upgrade/rollback、canonical releaseId、Windows 8.3 aliasを再検収。"
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
-    plan_revision: db29bc73
-    subject_head: db29bc73
+    plan_revision: b69cca39742413693152d29314b00a85063338c2
+    subject_head: b69cca39742413693152d29314b00a85063338c2
     evidence_path: tests/consumer-local-runtime-admission.test.ts
-    anchor_commit: db29bc73
+    anchor_commit: b69cca39742413693152d29314b00a85063338c2
     citations:
       - "tests/consumer-local-runtime-admission.test.ts: U-PACKISO-001..006 expanded 25 cases"
       - "src/setup/consumer-local-runtime-admission.ts: canonical layout, releaseId derivation, PF5 install composition"
@@ -69,37 +69,37 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-21T15:49:00+09:00"
+        completed_at: "2026-08-21T17:05:25+09:00"
         evidence_path: tests/consumer-local-runtime-admission.test.ts
-        output_digest: "sha256:7d5ad47c2c9208393989c520dbbc3f941f9f9bbf10e5ffcb765cfe19cb71fb8b"
-        anchor_commit: db29bc73
+        output_digest: "sha256:56a9c1ef30e4a778001bf6813917192b1c62cb1adaeabb91dde01672c987a3ec"
+        anchor_commit: b69cca39742413693152d29314b00a85063338c2
       - kind: typecheck
         command: "npm run typecheck -- --pretty false"
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-21T15:49:00+09:00"
+        completed_at: "2026-08-21T17:05:25+09:00"
         evidence_path: src/setup/consumer-local-runtime-admission.ts
-        output_digest: "sha256:0e565da64070311af00fd3edfb22a09d4d977f6ddb72c8919b1f3a29549e7447"
-        anchor_commit: db29bc73
+        output_digest: "sha256:7092b8bc767b8454f8ed501d5fa5b5dc23d0e25049ed279e14d40d6be3122aaa"
+        anchor_commit: b69cca39742413693152d29314b00a85063338c2
       - kind: lint
         command: "npm run lint"
         runner: node
         scope: full
         exit_code: 0
-        completed_at: "2026-08-21T15:49:00+09:00"
+        completed_at: "2026-08-21T17:05:25+09:00"
         evidence_path: src/setup/consumer-local-runtime-admission.ts
-        output_digest: "sha256:0e565da64070311af00fd3edfb22a09d4d977f6ddb72c8919b1f3a29549e7447"
-        anchor_commit: db29bc73
+        output_digest: "sha256:7092b8bc767b8454f8ed501d5fa5b5dc23d0e25049ed279e14d40d6be3122aaa"
+        anchor_commit: b69cca39742413693152d29314b00a85063338c2
       - kind: unit_test
         command: "node src/cli.ts plan lint docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md"
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-21T15:49:00+09:00"
+        completed_at: "2026-08-21T17:05:25+09:00"
         evidence_path: docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
-        output_digest: "sha256:4d0725f74abb704ef7fd41a4753fff2c8f6f0bd0980433be28497dbbe06351db"
-        anchor_commit: db29bc73
+        output_digest: "sha256:0a1141fd9195c3e3f9cde4222c911e7aad0d5580ca43bdac9143b7b4202f9ae8"
+        anchor_commit: b69cca39742413693152d29314b00a85063338c2
 ---
 
 # PLAN-L7-496: Pack単独consumer-local runtime admission
