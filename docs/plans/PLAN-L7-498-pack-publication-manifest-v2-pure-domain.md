@@ -40,19 +40,19 @@ backprop_decision: required
 review_evidence:
   - reviewer: codex-sol-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-21T11:23:00Z"
-    tests_green_at: "2026-08-21T11:25:11Z"
+    reviewed_at: "2026-08-21T11:42:30Z"
+    tests_green_at: "2026-08-21T11:41:10Z"
     verdict: "PASS blocking 0; Claude Opus non-author closing review pending"
     scope: >-
-      exact implementation HEAD 4a93ee5054d367d7700e81eb20baecd3911c0005 の
+      exact implementation HEAD 28cdb13858d20df26ca881cb8b73afed323c7974 の
       manifest v2 strict schema、literal UTF-8 golden framing、coordinated identity mutation、
-      lone-surrogate fail-closeをclaim-blind/spec-blindで検収した。
+      lone-surrogate fail-closeとU-PACKPUB-001昇格をclaim-blind/spec-blindで検収した。
     worker_model: "gpt-5.6-luna (Red scaffold) + codex-primary (Green/FLAG closure)"
     reviewer_model: gpt-5.6-sol
-    plan_revision: 4a93ee5054d367d7700e81eb20baecd3911c0005
-    subject_head: 4a93ee5054d367d7700e81eb20baecd3911c0005
+    plan_revision: 28cdb13858d20df26ca881cb8b73afed323c7974
+    subject_head: 28cdb13858d20df26ca881cb8b73afed323c7974
     evidence_path: tests/release-manifest.test.ts
-    anchor_commit: 4a93ee5054d367d7700e81eb20baecd3911c0005
+    anchor_commit: 28cdb13858d20df26ca881cb8b73afed323c7974
     citations:
       - "src/schema/release-manifest.ts: parsePublicationManifest / deriveArtifactInventoryDigest / deriveReleaseRecordDigest"
       - "tests/release-manifest.test.ts: U-PACKPUB-001"
@@ -62,10 +62,10 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-21T11:25:11Z"
+        completed_at: "2026-08-21T11:41:10Z"
         evidence_path: tests/release-manifest.test.ts
-        output_digest: "sha256:07f3fccf316c581128b1c7a6b99448310cf4f15998547e4fc63052586c17e3b6"
-        anchor_commit: 4a93ee5054d367d7700e81eb20baecd3911c0005
+        output_digest: "sha256:9dbad2eeded8f6d237b41c6e84dcbee93d59a92ca2559ff0abc3fab983f7ed59"
+        anchor_commit: 28cdb13858d20df26ca881cb8b73afed323c7974
 ---
 
 # Pack publication manifest v2 pure domain

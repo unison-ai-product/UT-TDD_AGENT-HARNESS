@@ -34,16 +34,16 @@ dependencies:
 review_evidence:
   - reviewer: codex-sol-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-21T11:23:00Z"
-    tests_green_at: "2026-08-21T11:25:11Z"
+    reviewed_at: "2026-08-21T11:42:30Z"
+    tests_green_at: "2026-08-21T11:41:10Z"
     verdict: "R2 PASS blocking 0; R3 Claude Opus review pending"
-    scope: "exact implementation HEAD 4a93ee5054d367d7700e81eb20baecd3911c0005のsource/testとPACKPUB-001を再検収。"
+    scope: "exact implementation HEAD 28cdb13858d20df26ca881cb8b73afed323c7974のsource/test、U-PACKPUB-001、test-design traceを再検収。"
     worker_model: "gpt-5.6-luna (Red scaffold) + codex-primary (Green/FLAG closure)"
     reviewer_model: gpt-5.6-sol
-    plan_revision: 4a93ee5054d367d7700e81eb20baecd3911c0005
-    subject_head: 4a93ee5054d367d7700e81eb20baecd3911c0005
+    plan_revision: 28cdb13858d20df26ca881cb8b73afed323c7974
+    subject_head: 28cdb13858d20df26ca881cb8b73afed323c7974
     evidence_path: tests/release-manifest.test.ts
-    anchor_commit: 4a93ee5054d367d7700e81eb20baecd3911c0005
+    anchor_commit: 28cdb13858d20df26ca881cb8b73afed323c7974
     citations:
       - "literal UTF-8 golden inventory/release digest"
       - "coordinated inventory mutation / lone surrogate fail-close"
@@ -53,10 +53,9 @@ review_evidence:
 
 ## R1 / R2
 
-- R1: exact implementation HEAD `4a93ee5054d367d7700e81eb20baecd3911c0005`でsource/testを固定した。
+- R1: exact implementation HEAD `28cdb13858d20df26ca881cb8b73afed323c7974`でsource/test/test-designを固定した。
 - R2: strict schema、identity各軸、literal byte framing、UTF-8 canonicality、deep freezeを再検収した。
-- canonical detached snapshotは5分timeoutで結果を得ていないためGreen件数に使わない。
-- workspace-fence diagnosticは14/14 Green、TypeScript、Biome、diff-checkはGreenである。
+- canonical detached snapshotはexact HEADで14/14 Green、TypeScript、Biome、diff-checkもGreenである。
 
 ## Backfill判定
 
