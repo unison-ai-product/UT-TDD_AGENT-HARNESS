@@ -50,15 +50,15 @@ review_evidence:
   - reviewer: codex-primary-flag-closure
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-20T12:03:14Z"
-    tests_green_at: "2026-08-20T12:01:20Z"
+    tests_green_at: "2026-08-20T12:02:40Z"
     verdict: "R2 B1-B5 delta green; R3 non-author rereview pending"
     scope: "exact implementation revisionでreview bindingとPF5 compositionのFLAG closureを再検収。"
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
-    plan_revision: ae28531757e60db279f53dc72987e62fb9ca80ca
-    subject_head: ae28531757e60db279f53dc72987e62fb9ca80ca
+    plan_revision: 24567f43a854f61dc73368d58c6821fda5ad7a07
+    subject_head: 24567f43a854f61dc73368d58c6821fda5ad7a07
     evidence_path: tests/release-promotion-rollback-gate.test.ts
-    anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
+    anchor_commit: 24567f43a854f61dc73368d58c6821fda5ad7a07
     citations:
       - "B1/B2: rollback D2 gateとreview source splicing拒否"
       - "B3/B4/B5: PF5実composition、non-attested identity、runtime shape fail-close"
@@ -77,12 +77,15 @@ canonical detached snapshot、Linux / Windows / aggregate CI、非著者review�
 - control exact HEAD / PLAN revisionをCI・D1・D2・claim/spec receipt間で束縛し、PF3 artifact revisionとは
   分離する二軸identity。
 - manifest current pointerと`currentRelease`の照合、およびevidence digest expected binding。
-- D1=`ReviewDispatchEntry`、D2=`MergeGateDecision`、評価facts=`MergeGateFacts`という1:1 source mapping。
+- canonical `ReviewRequest`をanchorとするD1=`ReviewDispatchEntry`、D2=`MergeGateDecision`、評価facts=
+  `MergeGateFacts`、claim/spec receiptの1:1 source mapping。expected bindingの共変異だけではanchorを変えない。
 - PR、memory ID、PLAN ID、author/reviewer family、authorized entryをexpected review subjectへ束縛し、
   promotion/rollback双方でreceipt splicingを拒否すること。
 - `invalid_input`からallowまでのpromotion reason precedence。
 - rollback candidateのdeterministic pointer delta/digestと、availability欠落のfail-close。
 - non-attested evidenceの存在identityをstatusより先に照合し、runtime invalid candidateをthrowさせないこと。
+- nested review / sealed plan shape、facts OPEN、D1 reasons/breaches空、CI→QA timestamp順をread-before-useで検証すること。
+- D1、D2、claim/spec各verdictの有効な`PASS` / `PASS-WEAK`混在を許容すること。
 - PF5 restore失敗を`rollback_failed/applied=indeterminate`として保持するclassification。
 
 ## 3. R1からR4

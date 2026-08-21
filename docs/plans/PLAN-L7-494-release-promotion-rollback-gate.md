@@ -84,15 +84,15 @@ review_evidence:
   - reviewer: codex-primary-flag-closure
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-20T12:03:14Z"
-    tests_green_at: "2026-08-20T12:01:20Z"
+    tests_green_at: "2026-08-20T12:02:40Z"
     verdict: "Claude FLAG B1-B5 local closure green; non-author exact-head rereview pending"
     scope: "rollback review gate、source splicing、PF5 real composition、non-attested identity、runtime invalid shapeの是正。"
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
-    plan_revision: ae28531757e60db279f53dc72987e62fb9ca80ca
-    subject_head: ae28531757e60db279f53dc72987e62fb9ca80ca
+    plan_revision: 24567f43a854f61dc73368d58c6821fda5ad7a07
+    subject_head: 24567f43a854f61dc73368d58c6821fda5ad7a07
     evidence_path: tests/release-promotion-rollback-gate.test.ts
-    anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
+    anchor_commit: 24567f43a854f61dc73368d58c6821fda5ad7a07
     citations:
       - "U-RELMAN-010: rollback D2 absent deny、PF5 ports 0"
       - "U-RELMAN-020: PR/auth/PLAN/family splicingとreason precedence"
@@ -105,8 +105,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T12:01:20Z"
         evidence_path: tests/release-promotion-rollback-gate.test.ts
-        output_digest: "sha256:81162111bae7cc38860e69f9a83cfbf41c838400b54b14c17713ce267fe39017"
-        anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
+        output_digest: "sha256:69b42358ebb879990012fa868a9f83b9e86b080e1ac78256a365c357e63b6324"
+        anchor_commit: 24567f43a854f61dc73368d58c6821fda5ad7a07
       - kind: typecheck
         command: "node node_modules/typescript/bin/tsc --noEmit --pretty false"
         runner: node
@@ -114,8 +114,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-20T12:02:40Z"
         evidence_path: src/setup/release-promotion-rollback-gate.ts
-        output_digest: "sha256:609aa6cad5a6cdf553b95ee9d7ffb69a542520d35326a367b1ffb1643c4114ff"
-        anchor_commit: ae28531757e60db279f53dc72987e62fb9ca80ca
+        output_digest: "sha256:225419423d10b4b4f1098a260e7125508c510b397d196caa3ff29617fe6b215d"
+        anchor_commit: 24567f43a854f61dc73368d58c6821fda5ad7a07
 ---
 
 # PLAN-L7-494: S3 release promotion / rollback pure gate
@@ -129,17 +129,20 @@ D1/D2/D3変更を導入しない。
 
 ## 2. 実装契約
 
-- `ReviewGateEvidence`は派生した独自shapeを作らず、`ReviewDispatchEntry`、`MergeGateDecision`、
-  `MergeGateFacts`、`ReviewReceiptSource`をそのまま束縛する。
+- `ReviewGateEvidence`はcanonical `ReviewRequest`をsource anchorとし、`ReviewDispatchEntry`、
+  `MergeGateDecision`、`MergeGateFacts`、`ReviewReceiptSource`を同じrequest identityへ束縛する。
 - control exact HEAD / PLAN revisionはCI・D1・D2・claim-blind/spec-blind receiptのsubjectとして
   相互照合する。PF3が分離したartifact revisionとは等値を要求しない。release source identityはmanifest、
   QA、PF4 attestation、PF5 sealed planの間だけで相互照合する。manifestのcurrent pointerは
   `currentRelease`へ束縛する。
 - evidence digestはcallerが保持するexpected bindingと照合する。`observedAt`は形式と順序だけに用い、
   経過時間だけでstaleと判定しない。
-- review expected bindingはPR、memory ID、PLAN ID、author/reviewer familyを持つ。D1/D2/factsのPR、
-  D2 authorized entryのmemory/revision/family、claim/specのPLAN IDとmodel providerを各anchorへ照合し、
-  別PR・別memory・別PLANを組み合わせたreceipt splicingを拒否する。
+- review expected bindingはdigest slotを保持するが、PR、memory ID、author familyの正本はcanonical
+  `ReviewRequest`とする。D1/D2/facts、authorized entry、claim/spec laneをrequestへ照合し、expected bindingを
+  一括共変異したcoherent spliceも拒否する。D1、D2、claim/specの`PASS` / `PASS-WEAK`は各producerで
+  独立に有効であり、相互のverdict全等値を要求しない。
+- review nested field/arrayとPF5 sealed planのkind/destination/entries/entryは読取前にstrict shape検証する。
+  factsはOPEN、D1 reasons/breachesは空、CI evidenceはQAより後刻にならないことを要求する。
 - reason precedenceは`invalid_input`、`identity_mismatch`、evidence欠落/No-Go、channel transition、
   attestation unavailable、allowの順とする。
 - rollbackも同じD1/D2/facts/claim/spec bindingを通過した場合だけ、直前channelのattested candidateを
