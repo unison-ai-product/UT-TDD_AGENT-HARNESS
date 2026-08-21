@@ -34,10 +34,19 @@ function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.
     encoding: "utf8",
     env,
     windowsHide: true,
+    // maxBuffer は既定 1 MiB では足りない。plan migration-dry-run --json は HEAD の全 PLAN を
+    // 出すので PLAN が増えるほど伸び、2026-08-21 時点で 1,043,627 byte = 既定の 99.5% に達して
+    // いた。超えると child が殺され status=null / stdout 切り捨てになり、失敗が
+    // 「expected null to be +0」としか見えない。PLAN を 1 本足しただけの merge が読めない理由で
+    // main を赤化させたので余裕を持たせる。ENOBUFS 自体は parseCliJson が明示的に検出する。
+    maxBuffer: 64 * 1024 * 1024,
   });
 }
 
 function parseCliJson(run: ReturnType<typeof runCliIn>) {
+  // maxBuffer 超過は status=null + error=ENOBUFS で現れる。status だけを見ると
+  // 「expected null to be +0」になり原因が読めないので、先に error を突く。
+  expect(run.error?.message ?? "", "spawn error").toBe("");
   expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
   expect(run.stdout.trim(), `stderr:\n${run.stderr}`).not.toBe("");
   return JSON.parse(run.stdout);
