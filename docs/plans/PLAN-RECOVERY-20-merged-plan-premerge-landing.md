@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-20 (recovery): merged-plan-status の post-merge 罠を三
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-08-21
@@ -35,6 +35,42 @@ dependencies:
     - docs/plans/PLAN-L7-54-merged-plan-status-gate.md
     - docs/plans/PLAN-L7-86-merged-plan-status-deliverable-scope.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+review_evidence:
+  - reviewer: codex non-author closing review
+    review_kind: cross_agent
+    reviewed_at: "2026-08-21T05:34:00Z"
+    tests_green_at: "2026-08-21T05:31:31Z"
+    verdict: "PASS (blocking 0)"
+    scope: "issue #162 の pre-merge landing 検出。三点比較 (canonical target / immediate base / subject)、landing / inherited_from_base の切り分け、三点目が欠けた面の二点比較縮退、GITHUB_EVENT_PATH 回帰。Codex FLAG B-1 (immediate base 未解決時の landing 誤判定) 是正後の exact HEAD を subject とする。著者は Claude、判定は Codex family。"
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 5816fc060f373a881a0c38a8d3020810feb46442
+    subject_head: 5816fc060f373a881a0c38a8d3020810feb46442
+    evidence_path: tests/merged-plan-status.test.ts
+    anchor_commit: 5816fc060f373a881a0c38a8d3020810feb46442
+    citations:
+      - "src/lint/merged-plan-status.ts: 三点比較の有効化条件 (subject と immediate base の両方が解決できたときのみ)"
+      - "src/lint/merged-plan-target-evidence.ts: classifyTargetArtifacts の四値判定"
+      - "tests/merged-plan-status.test.ts: landing 検出と fail-close 2 面 (no pull_request event / immediate base 未解決)"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub Actions run 32450002218: harness-check-linux 全回帰 / harness-check-windows scoped 回帰 / aggregate"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-21T05:31:31Z"
+        evidence_path: tests/merged-plan-status.test.ts
+        output_digest: "sha256:451ee61eefc1cd5bf1bca53a8686a5f2f68624e5c0ef240e8c8b4179ec72d8ec"
+        anchor_commit: 5816fc060f373a881a0c38a8d3020810feb46442
+      - kind: typecheck
+        command: "GitHub Actions run 32450002218: harness-check-linux typecheck (tsc --noEmit)"
+        runner: ci
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-21T05:31:31Z"
+        evidence_path: src/lint/merged-plan-status.ts
+        output_digest: "sha256:a472347dc6839e0327ed097b260ed54d59d9cbfb53c530ae7a86660972461b5b"
+        anchor_commit: 5816fc060f373a881a0c38a8d3020810feb46442
 ---
 
 # PLAN-RECOVERY-20: merged-plan-status pre-merge landing detection
