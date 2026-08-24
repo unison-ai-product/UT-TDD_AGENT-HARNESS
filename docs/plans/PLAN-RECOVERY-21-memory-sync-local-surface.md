@@ -135,6 +135,18 @@ workflow・env のいずれも動かさず、既存判定の出力先を 1 つ�
 表示は状態別の内訳 (例: `untracked 3 / uncommitted 1 / unpushed 2`) を出し、**detector が返した
 どの状態も黙って落とさない**。oldest age は untracked のみから導出し、その旨を表示に明記する
 (`oldest age (untracked): N days`)。
+
+**`not-on-origin` は常に「未 push」の証明ではない** (非著者 FLAG 4 巡目の是正)。既存 loader は
+origin/main と origin/HEAD の双方が解決不能なとき、全 tracked memory を `not-on-origin` に置き
+つつ `originResolved=false` を別に保持する。offline / origin 未設定の環境で全件を「unpushed」と
+誤報しないため、表示を `originResolved` で分岐する:
+
+| originResolved | `not-on-origin` の表示 |
+|---|---|
+| `true` | `unpushed N` (通常どおり数える) |
+| `false` | `origin unresolved: N 件は判定不能` — **unpushed とは名乗らない**。件数は出す (黙って落とさない) が「未 push の証明ではない」ことを label で明示する |
+
+判定契約は変更しない (`originResolved` は loader が既に返している値を読むだけ)。
 - 観測窓・期限の state はこの PLAN では持たない (分離済み)。したがって「窓 state 欠落時の挙動」は
   本 PLAN の凍結対象ではない。
 
@@ -175,6 +187,9 @@ hard violation になり運用不能である。凍結する境界:
    (`untracked` / `uncommitted-change` / `not-on-origin`) の状態別内訳つき件数**と、untracked のみ
    から導出した最古 age (mtime 起点) が表示される。detector が返したどの状態も表示から欠落しない
    (3 状態それぞれを fixture 化して実測する)。
+1b. `originResolved=false` の fixture (origin 不在 / 解決不能 repo) で、`not-on-origin` 件数が
+   `unpushed` と表示されず「origin unresolved (判定不能)」として表示される (missing-origin 回帰)。
+   `originResolved=true` では従来どおり `unpushed` と表示される (両面を実測する)。
 2. 表示は advisory であり、**セッションを失敗させない** (fail-open)。
 3. 未配送 0 件のときは何も出さない (常時ノイズにしない)。本 PLAN は期限表示を持たないため、
    この条件は本文のどの規則とも競合しない。
