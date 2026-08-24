@@ -28,24 +28,34 @@ const head = "a".repeat(40);
 const otherHead = "b".repeat(40);
 let stubBinDir: string | undefined;
 const originalCodexBin = process.env.UT_TDD_CODEX_BIN;
+const originalClaudeBin = process.env.UT_TDD_CLAUDE_BIN;
 
 beforeAll(() => {
   stubBinDir = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-bin-"));
   if (process.platform === "win32") {
-    const stub = join(stubBinDir, "codex.cmd");
-    writeFileSync(stub, "@echo off\r\necho codex 0.0.0-stub\r\nexit /b 0\r\n", "utf8");
-    process.env.UT_TDD_CODEX_BIN = stub;
+    const codexStub = join(stubBinDir, "codex.cmd");
+    const claudeStub = join(stubBinDir, "claude.cmd");
+    writeFileSync(codexStub, "@echo off\r\necho codex 0.0.0-stub\r\nexit /b 0\r\n", "utf8");
+    writeFileSync(claudeStub, "@echo off\r\necho claude 0.0.0-stub\r\nexit /b 0\r\n", "utf8");
+    process.env.UT_TDD_CODEX_BIN = codexStub;
+    process.env.UT_TDD_CLAUDE_BIN = claudeStub;
     return;
   }
-  const stub = join(stubBinDir, "codex");
-  writeFileSync(stub, "#!/bin/sh\necho codex 0.0.0-stub\nexit 0\n", "utf8");
-  chmodSync(stub, 0o755);
-  process.env.UT_TDD_CODEX_BIN = stub;
+  const codexStub = join(stubBinDir, "codex");
+  const claudeStub = join(stubBinDir, "claude");
+  writeFileSync(codexStub, "#!/bin/sh\necho codex 0.0.0-stub\nexit 0\n", "utf8");
+  writeFileSync(claudeStub, "#!/bin/sh\necho claude 0.0.0-stub\nexit 0\n", "utf8");
+  chmodSync(codexStub, 0o755);
+  chmodSync(claudeStub, 0o755);
+  process.env.UT_TDD_CODEX_BIN = codexStub;
+  process.env.UT_TDD_CLAUDE_BIN = claudeStub;
 });
 
 afterAll(() => {
   if (originalCodexBin === undefined) delete process.env.UT_TDD_CODEX_BIN;
   else process.env.UT_TDD_CODEX_BIN = originalCodexBin;
+  if (originalClaudeBin === undefined) delete process.env.UT_TDD_CLAUDE_BIN;
+  else process.env.UT_TDD_CLAUDE_BIN = originalClaudeBin;
   if (stubBinDir) rmSync(stubBinDir, { recursive: true, force: true });
 });
 
