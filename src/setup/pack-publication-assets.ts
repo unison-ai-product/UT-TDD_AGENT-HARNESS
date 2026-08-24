@@ -137,7 +137,13 @@ function splitUstarPath(path: string): { name: Buffer; prefix: Buffer } | null {
   return null;
 }
 
-function writeOctal(target: Buffer, offset: number, width: number, value: number): boolean {
+function writeOctal(input: {
+  target: Buffer;
+  offset: number;
+  width: number;
+  value: number;
+}): boolean {
+  const { target, offset, width, value } = input;
   if (!Number.isSafeInteger(value) || value < 0) return false;
   const octal = value.toString(8);
   if (octal.length > width - 1) return false;
@@ -152,17 +158,21 @@ function tarHeader(entry: SealedPublicationEntry): Buffer | null {
   path.name.copy(header, 0);
   Buffer.from(`0${entry.mode}\0`, "ascii").copy(header, 100);
   if (
-    !writeOctal(header, 108, 8, 0) ||
-    !writeOctal(header, 116, 8, 0) ||
-    !writeOctal(header, 124, 12, entry.content.length) ||
-    !writeOctal(header, 136, 12, 0)
+    !writeOctal({ target: header, offset: 108, width: 8, value: 0 }) ||
+    !writeOctal({ target: header, offset: 116, width: 8, value: 0 }) ||
+    !writeOctal({ target: header, offset: 124, width: 12, value: entry.content.length }) ||
+    !writeOctal({ target: header, offset: 136, width: 12, value: 0 })
   )
     return null;
   header.fill(0x20, 148, 156);
   header[156] = 0x30;
   Buffer.from("ustar\0", "ascii").copy(header, 257);
   Buffer.from("00", "ascii").copy(header, 263);
-  if (!writeOctal(header, 329, 8, 0) || !writeOctal(header, 337, 8, 0)) return null;
+  if (
+    !writeOctal({ target: header, offset: 329, width: 8, value: 0 }) ||
+    !writeOctal({ target: header, offset: 337, width: 8, value: 0 })
+  )
+    return null;
   path.prefix.copy(header, 345);
   let checksum = 0;
   for (const byte of header) checksum += byte;
