@@ -1508,6 +1508,22 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 | `U-TESTHYGIENE-049` | `vitest-snapshot-runner.test.ts` | root guard非対象 | `uid!=0`と`getuid`不在のWindowsはguardを素通りし、既存seal経路を維持する |
 | `U-TESTHYGIENE-050` | `vitest-snapshot-runner.test.ts` | entrypoint副作用境界 | `uid=0`はsnapshot一時領域を作る前に拒否され、seal前だけでなく全runner副作用前のfail-fastとなる |
 | `U-TESTHYGIENE-051` | `vitest-snapshot-runner.test.ts` | 非root entrypoint | `uid!=0`はguard後段へ到達し、root誤判定で処理を遮断しない |
+
+## PLAN-RECOVERY-11 / PLAN-REVERSE-77 snapshot fence attribution (Issue #77)
+
+producer session が fence 外 sidecar (`snapshot-fence-foreign/v1`) を発行し、
+runner が明示 `evidencePath` から読み込む。foreign の一致は exit code 2 の
+`fence_indeterminate_foreign_activity` と再実行指示へ分類し、証跡欠落・不一致や
+`testOwnedPaths` の残留は exit code 1 へ fail-close する。
+
+| ID | fixture / 実行 | expected |
+| --- | --- | --- |
+| `U-FENCE-001` | producer sidecar と before/after HEAD・changed_paths・signature が完全一致する foreign HEAD 移動 | foreign activity の indeterminate、exit 2、再実行指示 |
+| `U-FENCE-002` | sidecar と一致する foreign edit / untracked 生成 | foreign activity の indeterminate、exit 2、silent pass 0 |
+| `U-FENCE-003` | evidence のない `testOwnedPaths` 残留 | 従来どおり fail-close、exit 1 |
+| `U-FENCE-004` | foreign evidence と同時に `testOwnedPaths` の残留を生成 | 残留優先で fail-close、exit 1（indeterminate へ降格しない） |
+| `U-FENCE-005` | path/signature不一致、runner identity不一致、event replay | 残留候補として fail-close、exit 1 |
+| `U-FENCE-006` | managed producer fixture が git-common-dir sidecar へ実eventを発行 | schema / producer-runner 境界 / UTF-8 canonical signature が決定論的に一致し、tracked path追加0 |
 | `U-TESTHYGIENE-052` | `vitest-snapshot-runner.test.ts` | Windows ACL seal command | 対象identityへ継承付き`WD,AD` denyを再帰適用し、identity空値はfail-closeする。通常権限での実write拒否は036、Administratorによるtake-ownership等の明示bypass後の改変検出は042が担う |
 | `U-TESTHYGIENE-055` | `vitest-snapshot-runner.test.ts` | origin custody ref保全 | detached snapshotがsourceの`refs/remotes/origin/*`をHEADと**別revision**のまま引き継ぐ。source HEADと同一revisionを注入するだけの実装では落ちる (ref依存checkがsnapshotで誤ってOKになるのを防ぐ) |
 | `U-TESTHYGIENE-056` | `git-workspace-fingerprint.test.ts` | volatile DB内容変更 | live lane除外時、harness DB一族4パスの内容変更でinventory digestが変わらない (issue #203) |

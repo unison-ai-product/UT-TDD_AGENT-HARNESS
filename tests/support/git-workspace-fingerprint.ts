@@ -3,6 +3,12 @@ import { createHash } from "node:crypto";
 import { lstatSync, readdirSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
 import {
+  attributeSnapshotFence,
+  type ForeignActivityEvidence,
+  type SnapshotFenceAttributionInput,
+  type SnapshotFenceClassification,
+} from "../../src/runtime/snapshot-fence.ts";
+import {
   hashFileChunkedWithDiagnostics,
   updateHashWithFile,
   wrapFileReadError,
@@ -16,11 +22,14 @@ export interface GitWorkspaceFingerprint {
   untrackedDigest: string;
   inventoryDigest: string;
   inventoryEntries: string[];
+  changedPaths?: string[];
 }
 
 export interface WorkspaceInventoryOptions {
   /** live worktree lane 専用。daemon 所有の harness DB 一族を content 非読取りで entry 化する。 */
   volatileRuntimeIndex?: boolean;
+  /** include committed paths between this HEAD and the captured HEAD */
+  compareHead?: string;
 }
 
 const volatileRuntimeFiles = new Set([
@@ -82,6 +91,15 @@ function git(repoRoot: string, args: string[]): Buffer {
   return result.stdout;
 }
 
+function gitPaths(repoRoot: string, args: string[]): string[] {
+  return git(repoRoot, args)
+    .toString("utf8")
+    .split("\0")
+    .map((path) => path.trim())
+    .filter(Boolean)
+    .map((path) => path.replaceAll("\\", "/"));
+}
+
 function isGitRepository(repoRoot: string): boolean {
   return (
     spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd: repoRoot, stdio: "ignore" })
@@ -109,6 +127,7 @@ export function captureGitWorkspaceFingerprint(
       untrackedDigest: "non-git",
       inventoryDigest: inventory.digest,
       inventoryEntries: inventory.entries,
+      changedPaths: [],
     };
   }
   const untrackedPaths = git(repoRoot, ["ls-files", "--others", "--exclude-standard", "-z"])
@@ -116,6 +135,25 @@ export function captureGitWorkspaceFingerprint(
     .split("\0")
     .filter(Boolean)
     .sort();
+  const changedPaths = new Set<string>([
+    ...gitPaths(repoRoot, ["diff", "--name-only", "-z", "HEAD"]),
+    ...gitPaths(repoRoot, ["diff", "--cached", "--name-only", "-z", "HEAD"]),
+    ...untrackedPaths.map((path) => path.replaceAll("\\", "/")),
+  ]);
+  if (
+    options?.compareHead &&
+    options.compareHead !== git(repoRoot, ["rev-parse", "HEAD"]).toString("utf8").trim()
+  ) {
+    for (const path of gitPaths(repoRoot, [
+      "diff",
+      "--name-only",
+      "-z",
+      options.compareHead,
+      "HEAD",
+    ])) {
+      changedPaths.add(path);
+    }
+  }
   // untracked ファイル内容は readFileSync 丸読みでなく streaming で hash へ流し込む
   // (2GiB 超ファイル対応、issue #118)。digest(...chunks) と同じ update 順序を維持するため
   // 単一の Hash インスタンスへ逐次 update する (array へ全文字列/Buffer を蓄積しない)。
@@ -151,7 +189,26 @@ export function captureGitWorkspaceFingerprint(
     untrackedDigest: untrackedHash.digest("hex"),
     inventoryDigest: inventory.digest,
     inventoryEntries: inventory.entries,
+    changedPaths: [...changedPaths].sort(),
   };
+}
+
+export interface SnapshotFenceAttributionOptions
+  extends Omit<SnapshotFenceAttributionInput, "before" | "after"> {
+  evidence?: readonly ForeignActivityEvidence[];
+}
+
+export function classifyGitWorkspaceChange(
+  before: GitWorkspaceFingerprint,
+  after: GitWorkspaceFingerprint,
+  options: SnapshotFenceAttributionOptions = {},
+): SnapshotFenceClassification {
+  return attributeSnapshotFence({
+    before,
+    after,
+    ...options,
+    foreignActivityEvidence: options.evidence ?? options.foreignActivityEvidence,
+  });
 }
 
 export function assertGitWorkspaceUnchanged(

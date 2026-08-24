@@ -8,7 +8,7 @@ status: draft
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-16
-updated: 2026-08-18
+updated: 2026-08-24
 owner: PM / PO
 github_issue_id: 77
 parent_design: docs/design/harness/L6-function-design/function-spec.md
@@ -28,6 +28,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-11-snapshot-fence-foreign-activity.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/snapshot-fence.ts
+    artifact_type: source_module
+  - artifact_path: tests/snapshot-fence.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -35,6 +39,11 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
     - docs/plans/PLAN-REVERSE-77-snapshot-fence-foreign-activity-backfill.md
+    - src/runtime/session-log.ts
+    - scripts/run-vitest-snapshot.ts
+    - tests/global-setup.ts
+    - tests/support/git-workspace-fingerprint.ts
+    - docs/test-design/harness/L7-unit-test-design.md
 review_evidence: []
 ---
 

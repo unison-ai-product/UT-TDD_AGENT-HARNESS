@@ -20,6 +20,11 @@ import {
 import { dirname, join } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 import { evaluateMemoryPromotion } from "./memory-promotion.ts";
+import {
+  captureSnapshotFenceFingerprint,
+  createSnapshotFenceProducer,
+  type SnapshotFenceProducer,
+} from "./snapshot-fence.ts";
 import { classifyVerificationVerb } from "./verb-classify.ts";
 
 export type SessionEventType =
@@ -67,6 +72,7 @@ export interface SessionHookInput {
   tool_name?: string;
   tool_input?: Record<string, unknown>;
   tool_response?: unknown;
+  runner_session_id?: string;
 }
 
 /** I/O・clock・branch を注入 (compressPlanDigest 以外も test 可能、now 注入で決定論)。 */
@@ -85,6 +91,9 @@ export interface SessionLogDeps {
   headCommit?: () => string | null;
   /** Optional user-facing warning sink. Omitted in tests and non-interactive consumers. */
   warn?: (message: string) => void;
+  /** Producer-side snapshot fence evidence; writes outside the fenced worktree. */
+  snapshotFenceProducer?: SnapshotFenceProducer;
+  runnerSessionId?: () => string;
 }
 
 const BRANCH_PLAN_RE = /^(?:add|design|feature|reverse|hotfix|poc|refactor)\/(.+)$/;
@@ -411,6 +420,15 @@ export function compressPlanDigest(
 /** U-SLOG-005: session_start を append。常に 0 (fail-open)。 */
 export function onSessionStart(input: SessionHookInput, deps: SessionLogDeps): number {
   try {
+    deps.snapshotFenceProducer?.observe({
+      sessionId: input.session_id ?? "unknown",
+      runnerSessionId:
+        input.runner_session_id ??
+        deps.runnerSessionId?.() ??
+        process.env.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID ??
+        "snapshot-runner",
+      now: deps.now(),
+    });
     recordEvent(
       {
         ts: deps.now(),
@@ -444,6 +462,15 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
       const inferred = inferPlanFromCommit(cmd);
       if (inferred) setActivePlan(inferred, deps);
     }
+    deps.snapshotFenceProducer?.observe({
+      sessionId: input.session_id ?? "unknown",
+      runnerSessionId:
+        input.runner_session_id ??
+        deps.runnerSessionId?.() ??
+        process.env.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID ??
+        "snapshot-runner",
+      now: deps.now(),
+    });
     recordEvent(
       {
         ts: deps.now(),
@@ -550,6 +577,10 @@ export function nodeDeps(
   gitBranch: () => string | null,
   gitHead?: () => string | null,
 ): SessionLogDeps {
+  const snapshotFenceProducer = createSnapshotFenceProducer({
+    repoRoot,
+    capture: () => captureSnapshotFenceFingerprint(repoRoot),
+  });
   return {
     repoRoot,
     now: () => new Date().toISOString(),
@@ -568,6 +599,8 @@ export function nodeDeps(
       if (existsSync(path)) rmSync(path);
     },
     headCommit: gitHead,
+    snapshotFenceProducer,
+    runnerSessionId: () => process.env.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID ?? "snapshot-runner",
     warn: (message) => process.stdout.write(`${message}\n`),
   };
 }

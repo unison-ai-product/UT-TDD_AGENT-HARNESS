@@ -15,6 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, win32 } from "node:path";
 import { resolveDefaultBranchRef } from "../src/git/default-branch.ts";
+import { snapshotFenceEvidencePath } from "../src/runtime/snapshot-fence.ts";
 import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash.ts";
 
 function run(
@@ -25,9 +26,11 @@ function run(
 ): void {
   const result = spawnSync(command, args, { cwd, env, stdio: "inherit", windowsHide: true });
   if (result.status !== 0 || result.error) {
-    throw new Error(
+    const error = new Error(
       `${command} ${args.join(" ")} failed: ${result.error?.message ?? result.status}`,
-    );
+    ) as Error & { exitCode?: number };
+    error.exitCode = result.status ?? undefined;
+    throw error;
   }
 }
 
@@ -376,12 +379,16 @@ export function runSnapshotTests(
     );
     sealReference(referenceRoot);
     sealedReferenceFingerprint = snapshotContentFingerprint(referenceRoot);
+    const runnerSessionId = `snapshot-runner-${process.pid}-${Date.now()}`;
+    const evidencePath = snapshotFenceEvidencePath(repoRoot);
     run(node, [join("node_modules", "vitest", "vitest.mjs"), "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
       UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
       UT_TDD_TEST_FENCE_ROOT: repoRoot,
       UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
+      UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID: runnerSessionId,
+      ...(evidencePath ? { UT_TDD_SNAPSHOT_FENCE_EVIDENCE_PATH: evidencePath } : {}),
       UT_TDD_BUN_BINARY: bun,
       UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
       UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
@@ -411,7 +418,14 @@ export function runSnapshotTests(
         }),
     ]);
   }
-  if (primaryError) throw primaryError;
+  if (primaryError) {
+    const exitCode = (primaryError as { exitCode?: unknown })?.exitCode;
+    if (exitCode === 2) {
+      process.exitCode = 2;
+      return;
+    }
+    throw primaryError;
+  }
 }
 
 if ((import.meta as ImportMeta & { main?: boolean }).main) runSnapshotTests();
