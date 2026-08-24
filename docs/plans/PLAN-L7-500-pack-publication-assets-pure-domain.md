@@ -43,7 +43,7 @@ dependencies:
     - docs/test-design/harness/L7-unit-test-design.md
 review_evidence:
   - reviewer: codex-tl-integration
-    review_kind: cross_agent
+    review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-24T18:47:00+09:00"
     tests_green_at: "2026-08-24T18:46:30+09:00"
     verdict: "PASS blocking 0; Claude Opus non-author closing review pending"
