@@ -89,6 +89,18 @@ describe("release manifest pure domain", () => {
     };
   }
 
+  function refreshV2Digests(record: Record<string, unknown>): void {
+    const artifacts = record.artifacts as PublicationArtifact[];
+    record.artifactInventoryDigest = deriveArtifactInventoryDigest(artifacts);
+    record.releaseRecordDigest = deriveReleaseRecordDigest({
+      materializerVersion: record.materializerVersion as string,
+      artifactSourceCommit: record.artifactSourceCommit as string,
+      artifactSetDigest: record.artifactSetDigest as string,
+      artifactInventoryDigest: record.artifactInventoryDigest as string,
+      releaseAssetInventoryDigest: record.releaseAssetInventoryDigest as string,
+    });
+  }
+
   it("U-PACKPUB-001: v2 validates explicit inventory, identity, and digests", () => {
     const parsed = parseReleaseManifest(v2Manifest());
     expect(parsed.ok).toBe(true);
@@ -243,36 +255,58 @@ describe("release manifest pure domain", () => {
   });
 
   it("U-PACKPUB-001: v2 rejects duplicate, unsorted, and unsafe artifact axes", () => {
-    const cases: Array<(artifacts: Array<Record<string, unknown>>) => void> = [
-      (artifacts) => {
+    const cases: Array<{
+      mutate: (artifacts: Array<Record<string, unknown>>) => void;
+      digestable?: boolean;
+    }> = [
+      { mutate: (artifacts) => {
         artifacts[0].sourcePath = "../source";
-      },
-      (artifacts) => {
+      } },
+      { mutate: (artifacts) => {
         artifacts.push({ ...artifacts[0], destinationPath: "z.js" });
-      },
-      (artifacts) => {
+      } },
+      { mutate: (artifacts) => {
         artifacts.push({ ...artifacts[0], sourcePath: "src/other.ts" });
-      },
-      (artifacts) => {
+      } },
+      { mutate: (artifacts) => {
         artifacts.unshift({ ...artifacts[0], sourcePath: "src/a.ts", destinationPath: "z.js" });
-      },
-      (artifacts) => {
-        artifacts[0].mode = "100644";
-      },
-      (artifacts) => {
-        artifacts[0].size = 13;
-      },
+      } },
+      { mutate: (artifacts) => {
+        artifacts[0].mode = "120000";
+      } },
+      { mutate: (artifacts) => {
+        artifacts[0].size = 1.5;
+      }, digestable: false },
+      { mutate: (artifacts) => {
+        artifacts[0].size = -1;
+      }, digestable: false },
+      { mutate: (artifacts) => {
+        artifacts[0].size = Number.MAX_SAFE_INTEGER + 1;
+      } },
     ];
-    for (const mutate of cases) {
+    for (const { mutate, digestable = true } of cases) {
       const invalid = structuredClone(v2Manifest());
       const id = Object.keys(invalid.releases as object)[0];
-      mutate(
-        (invalid.releases as Record<string, Record<string, unknown>>)[id].artifacts as Array<
-          Record<string, unknown>
-        >,
-      );
+      const record = (invalid.releases as Record<string, Record<string, unknown>>)[id];
+      mutate(record.artifacts as Array<Record<string, unknown>>);
+      if (digestable) refreshV2Digests(record);
       expect(parseReleaseManifest(invalid)).toEqual({ ok: false, error: "invalid_manifest" });
     }
+  });
+
+  it("U-PACKPUB-001: v2 rejects non-ASCII materializer identity before byte framing", () => {
+    const invalid = structuredClone(v2Manifest());
+    const currentId = Object.keys(invalid.releases as object)[0];
+    const record = (invalid.releases as Record<string, Record<string, unknown>>)[currentId];
+    record.materializerVersion = "vé";
+    refreshV2Digests(record);
+
+    const aliasedId = releaseId(record.materializerVersion as string, record.artifactSetDigest as string);
+    delete (invalid.releases as Record<string, unknown>)[currentId];
+    (invalid.releases as Record<string, unknown>)[aliasedId] = record;
+    invalid.channels = { canary: aliasedId, stable: aliasedId };
+
+    expect(parseReleaseManifest(invalid)).toEqual({ ok: false, error: "invalid_manifest" });
   });
 
   it("U-PACKPUB-001: v2 returns a deeply immutable snapshot", () => {
@@ -324,22 +358,13 @@ describe("release manifest pure domain", () => {
     ];
     const sourceArtifacts = sourceRecord.artifacts as PublicationArtifact[];
     sourceArtifacts[0] = { ...sourceArtifacts[0], sourcePath: "src/\ud800.ts" };
-    sourceRecord.artifactInventoryDigest = deriveArtifactInventoryDigest(sourceArtifacts);
-    sourceRecord.releaseRecordDigest = deriveReleaseRecordDigest({
-      materializerVersion: sourceRecord.materializerVersion as string,
-      artifactSourceCommit: sourceRecord.artifactSourceCommit as string,
-      artifactSetDigest: sourceRecord.artifactSetDigest as string,
-      artifactInventoryDigest: sourceRecord.artifactInventoryDigest as string,
-      releaseAssetInventoryDigest: sourceRecord.releaseAssetInventoryDigest as string,
-    });
+    refreshV2Digests(sourceRecord);
     expect(parseReleaseManifest(invalidSource)).toEqual({ ok: false, error: "invalid_manifest" });
     const symlink = structuredClone(v2Manifest());
     const id = Object.keys(symlink.releases as object)[0];
-    (
-      (symlink.releases as Record<string, Record<string, unknown>>)[id].artifacts as Array<
-        Record<string, unknown>
-      >
-    )[0].mode = "120000";
+    const symlinkRecord = (symlink.releases as Record<string, Record<string, unknown>>)[id];
+    (symlinkRecord.artifacts as Array<Record<string, unknown>>)[0].mode = "120000";
+    refreshV2Digests(symlinkRecord);
     expect(parseReleaseManifest(symlink)).toEqual({ ok: false, error: "invalid_manifest" });
 
     const inherited = structuredClone(v2Manifest());
