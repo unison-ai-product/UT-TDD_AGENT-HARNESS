@@ -67,6 +67,16 @@ review_evidence:
       - "src/runtime/worktree-lifecycle/domain/store.ts"
       - "src/runtime/worktree-lifecycle/domain/reducer.ts"
       - "tests/worktree-lifecycle-domain.test.ts: U-WTLIFE-001/002/006/010"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/worktree-lifecycle-domain.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-24T20:28:00+09:00"
+        evidence_path: tests/worktree-lifecycle-domain.test.ts
+        output_digest: "sha256:81e9cdf2801d0a05a343f2f679b83405d65e2783bf7be84e90f1eed2166128bc"
+        anchor_commit: 181f88c2d6fc8db917afd98489485e1a429865cf
 ---
 
 # PLAN-L7-501: worktree lifecycle domain FSM
