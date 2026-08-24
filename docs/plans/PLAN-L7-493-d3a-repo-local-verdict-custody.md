@@ -268,10 +268,12 @@ review自体が完了しても Claude family の canonical receiptが0件にな�
 - consumerが導出・検証した
   `.ut-tdd/review/verdicts/<requestDigest>/attempts/attempt-<N>/verdict.txt` だけを、Claude strict reviewの
   `Edit(<repo-relative-path>)` capabilityとして渡す。repo外、別path、worker lane、Codex providerへは付与しない。
-- Claude childがnonzero exitかつverdict fileを生成できなかった場合は `verdict_file_unwritable` を返す。
-  zero exitでfileが欠落する一般ケースは従来どおり `verdict_file_missing` とし、原因を捏造しない。
-- review窓の全差分ではなく、childへ付与したmutation capabilityとの積集合だけをreviewer mutationへ帰責する。
-  capability外の同時HARNESS Memory更新は `concurrentPaths` として分離し、reviewer違反には数えない。
+- Claude childがnonzero exitかつverdict fileを生成できなかった場合は、原因を断定せず
+  `verdict_absent_after_provider_failure` を返す。zero exitでfileが欠落する一般ケースは従来どおり
+  `verdict_file_missing` とする。permission拒否を他のprovider failureから識別できる構造化信号が無いまま
+  `verdict_file_unwritable` と診断しない。
+- review窓の非custody差分は従来どおりfail-closeする。exact `Edit` allowは追加capabilityであり、継承toolを含む
+  全mutation経路の排他証明ではないため、同時HARNESS Memory更新をreviewer外と推定して除外しない。
 
 実Claude provider (`claude-sonnet-5`, effort `middle`) で、exact verdict pathへのwrite、identity検証、
 Claude-family receipt生成まで成功した。別のsource pathへのbuilt-in writeはpermission deniedとなり、対象fileが

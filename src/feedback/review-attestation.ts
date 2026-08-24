@@ -210,15 +210,14 @@ export function projectReviewVerdict(input: {
   verdictFile: string;
 }): ReviewVerdictProjectionResult {
   if (input.attestation.exitCode !== 0) {
-    // Claude strict reviewへ exact Edit permissionを渡しても file が0件のまま非ゼロ終了した場合、
-    // generic provider failureへ潰すと receipt gate の恒久denyを診断できない。valid fileを残して
-    // reviewer自身が失敗した経路は従来どおり reviewer_exit_nonzero を維持する。
+    // file欠落だけでは permission拒否、認証失敗、timeout、reviewer拒否を識別できない。
+    // 書込不能を捏造せず、provider failure後にverdictが無いという観測事実だけをtyped化する。
     if (
       input.attestation.provider === "claude" &&
       input.request.reviewRevision.startsWith("rv1-") &&
       !existsSync(input.verdictFile)
     ) {
-      return { ok: false, reason: "verdict_file_unwritable" };
+      return { ok: false, reason: "verdict_absent_after_provider_failure" };
     }
     return { ok: false, reason: "reviewer_exit_nonzero" };
   }

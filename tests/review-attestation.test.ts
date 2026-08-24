@@ -166,7 +166,7 @@ describe("review attestation (U-RVATT)", () => {
         }),
         verdictFile: join(root, "missing-verdict.txt"),
       });
-      expect(missing).toEqual({ ok: false, reason: "verdict_file_unwritable" });
+      expect(missing).toEqual({ ok: false, reason: "verdict_absent_after_provider_failure" });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

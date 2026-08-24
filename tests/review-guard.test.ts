@@ -66,7 +66,6 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
         ],
       });
       expect(a.mutatedPaths).toEqual([]);
-      expect(a.concurrentPaths).toEqual([]);
       expect(a.violation).toBe(false);
       expect(isReviewCustodyProjection(".ut-tdd/review/receipts/x.json")).toBe(true);
       expect(
@@ -84,26 +83,8 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
         role: "qa",
         readOnly: true,
         mutatedPaths: ["src/lint/coding-rules.ts"],
-        concurrentPaths: [],
         violation: true,
       });
-    });
-
-    it("capability外の並行HARNESS Memory書込をreviewerへ帰責しない", () => {
-      const a = assessReviewSession({
-        role: "blind-reviewer",
-        before: [],
-        after: [
-          ".ut-tdd/memory/feedback-concurrent.md",
-          ".ut-tdd/review/verdicts/digest/attempts/attempt-1/verdict.txt",
-        ],
-        attributedMutationPaths: [".ut-tdd/review/verdicts/digest/attempts/attempt-1/verdict.txt"],
-      });
-      expect(a.mutatedPaths).toEqual([]);
-      expect(a.concurrentPaths).toEqual([".ut-tdd/memory/feedback-concurrent.md"]);
-      expect(a.violation).toBe(false);
-      expect(reviewGuardMessages(a)[0]).toContain("concurrent");
-      expect(reviewGuardMessages(a)[0]).toContain("were not attributed");
     });
 
     it("U-RGUARD-007: worker role mutating the tree is NOT a violation", () => {
@@ -130,7 +111,6 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
         role: "qa",
         readOnly: true,
         mutatedPaths: ["src/x.ts", "docs/y.md"],
-        concurrentPaths: [],
         violation: true,
       });
       expect(msgs.length).toBe(2);
@@ -145,7 +125,6 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
           role: "se",
           readOnly: false,
           mutatedPaths: ["x"],
-          concurrentPaths: [],
           violation: false,
         }),
       ).toEqual([]);

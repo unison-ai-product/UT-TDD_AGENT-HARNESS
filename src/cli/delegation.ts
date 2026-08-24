@@ -237,9 +237,6 @@ export function executeAdapterPlanForCli(
       role: input.reviewRole,
       before: treeBefore,
       after: safeLoadChangedFiles(repoRoot),
-      ...(plan.provider === "claude" && input.review
-        ? { attributedMutationPaths: [relative(repoRoot, input.review.verdictFile)] }
-        : {}),
     });
     for (const message of reviewGuardMessages(assessment)) process.stderr.write(`${message}\n`);
   }

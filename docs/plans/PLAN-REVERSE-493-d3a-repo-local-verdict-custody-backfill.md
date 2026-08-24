@@ -76,9 +76,10 @@ commit `458d2c12` で、Claude strict reviewに限りconsumer-derived exact verd
 source path writeはpermission denied、file残留0だった。これにより、上流へ戻すべき差分は「repo-local custody」
 だけではなく「consumerが検証した単一verdict fileへのprovider限定capability」であると確定した。
 
-同時に、reviewer mutationの帰責はreview窓の全差分ではなく、付与済みcapabilityとの積集合へ限定する。
-capability外の並行HARNESS Memory更新は別主体のconcurrent activityとして保持し、reviewer violationへ混入させない。
-provider/modelに依存しない一般化、directory単位のwrite許可、worker laneへの権限追加は上流へ戻さない。
+exact `Edit` allowはchildの全mutation経路を排他的に制限する証明ではないため、review窓の非custody差分は
+従来どおりfail-closeする。並行HARNESS Memory更新を別主体へ帰責するにはproducer identityを持つ構造化eventが
+別途必要であり、時間窓やallowlistから推定しない。provider/modelに依存しない一般化、directory単位のwrite許可、
+worker laneへの権限追加は上流へ戻さない。
 
 このR1では実装・provider transport・39件のdetached snapshot testまでを確認した。PR exact HEADの
 Linux / Windows CI、Claude non-author closing review、canonical receipt、merge後main検証が未了のため、
