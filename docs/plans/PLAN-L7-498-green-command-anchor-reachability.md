@@ -185,7 +185,8 @@ squash 後 commit の tree が測定時の tree と一致するのは **依存 P
 
 | reason | 条件 |
 |---|---|
-| `unreachable_anchor_commit` | PR が新規追加した green_command entry の `anchor_commit` が PR head から到達不能 |
+| `unreachable_anchor_commit` | PR が新規追加した green_command entry の `anchor_commit` が評価 subject から到達不能 |
+| `anchor_baseline_unresolvable` | PR event が在るのに `mergeBaseSha` / `subjectHeadSha` のいずれかの object を解決できない (判断点 4 の (b)。fetch-depth drift / base object 欠落) |
 
 既存の `missing_anchor_commit` / `invalid_anchor_commit` (`PLAN-L7-497`) と
 `green-command-digest` の `unverifiable` fail-open は**変更しない**。本 PLAN は「新規 entry の
@@ -199,7 +200,9 @@ anchor が実在すること」だけを足す。
 1. 新規追加 entry が `0000...0` のような到達不能 anchor を持つとき fail-close する。
 2. **squash merge 済みで main から到達不能な既存 entry は落ちない** (実 repo の全 entry が通過する
    ことを実測で確認する。prose の claim で代替しない)。
-3. `mergeBaseSha` / `subjectHeadSha` のいずれかが解決できない面では検査ごと落ちる (2 面とも回帰化)。
+3. 基準 SHA が解決できない面は PR event の有無で分かれる (判断点 4): **PR event が無い**面では
+   検査ごと落ちる (skip)。**PR event が在る**のに `mergeBaseSha` / `subjectHeadSha` のいずれかを
+   解決できない面では `anchor_baseline_unresolvable` の violation になる (fail-close)。両面とも回帰化する。
 4. **CI の clone 形状を前提条件として明示的に確認する。** 「ローカルで通った」を根拠にしない
    (issue #367 の注意書き。PR #361 の実在検査がこれで 29 件の false positive を出した)。
 5. **merge commit checkout の fixture 回帰** (判断点 5): PR branch 上のみの anchor が通る /
