@@ -210,6 +210,16 @@ export function projectReviewVerdict(input: {
   verdictFile: string;
 }): ReviewVerdictProjectionResult {
   if (input.attestation.exitCode !== 0) {
+    // Claude strict reviewへ exact Edit permissionを渡しても file が0件のまま非ゼロ終了した場合、
+    // generic provider failureへ潰すと receipt gate の恒久denyを診断できない。valid fileを残して
+    // reviewer自身が失敗した経路は従来どおり reviewer_exit_nonzero を維持する。
+    if (
+      input.attestation.provider === "claude" &&
+      input.request.reviewRevision.startsWith("rv1-") &&
+      !existsSync(input.verdictFile)
+    ) {
+      return { ok: false, reason: "verdict_file_unwritable" };
+    }
     return { ok: false, reason: "reviewer_exit_nonzero" };
   }
   if (!existsSync(input.verdictFile)) {

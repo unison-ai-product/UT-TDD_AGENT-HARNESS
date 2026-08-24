@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { claudeReviewVerdictEditRule } from "../src/cli/delegation.ts";
 import { executeLiveReviewDelegation, registerLiveReviewCommands } from "../src/cli/review-live.ts";
 import {
   issueReviewRequest,
@@ -77,6 +78,27 @@ afterEach(() => {
 });
 
 describe("review live CLI composition", () => {
+  it("U-RVATT-031 grants Claude only the consumer-derived exact verdict path", () => {
+    const root = join(tmpdir(), "ut-review-permission-root");
+    const digest = "c".repeat(64);
+    const verdict = join(
+      root,
+      ".ut-tdd",
+      "review",
+      "verdicts",
+      digest,
+      "attempts",
+      "attempt-2",
+      "verdict.txt",
+    );
+
+    expect(claudeReviewVerdictEditRule(root, verdict)).toBe(
+      `Edit(.ut-tdd/review/verdicts/${digest}/attempts/attempt-2/verdict.txt)`,
+    );
+    expect(claudeReviewVerdictEditRule(root, join(root, "src", "cli.ts"))).toBeUndefined();
+    expect(claudeReviewVerdictEditRule(root, join(root, "..", "verdict.txt"))).toBeUndefined();
+  });
+
   it("U-RVATT-027 executes canonical task resolution and delegated-review argv before publishing", async () => {
     const { root, envelopePath, memoryPath, envelope } = fixture();
     const projection: Extract<ReviewVerdictProjectionResult, { ok: true }> = {

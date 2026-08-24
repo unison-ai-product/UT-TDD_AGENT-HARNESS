@@ -73,6 +73,11 @@ export interface ReviewSessionInput {
   before: string[];
   /** session 終了後の working-tree 変更パス。 */
   after: string[];
+  /**
+   * provider capability境界から、このchildへ実際に帰責できる path。
+   * 未指定は従来の時間窓差分、指定時は差分との積集合だけを reviewer mutation とする。
+   */
+  attributedMutationPaths?: string[];
 }
 
 export interface ReviewSessionAssessment {
@@ -81,6 +86,8 @@ export interface ReviewSessionAssessment {
   readOnly: boolean;
   /** session が新たに変更したパス。 */
   mutatedPaths: string[];
+  /** review窓では変化したが、childのmutation capability外なので帰責しない path。 */
+  concurrentPaths: string[];
   /** read-only 委譲が working tree を変更した = 違反 (要 inspect/隔離)。 */
   violation: boolean;
 }
@@ -91,13 +98,23 @@ export interface ReviewSessionAssessment {
  */
 export function assessReviewSession(input: ReviewSessionInput): ReviewSessionAssessment {
   const readOnly = isReadOnlyDelegationRole(input.role);
-  const mutatedPaths = detectWorkingTreeMutation(input.before, input.after).filter(
+  const observedPaths = detectWorkingTreeMutation(input.before, input.after).filter(
     (path) => !isReviewCustodyProjection(path),
   );
+  const attributed = input.attributedMutationPaths
+    ? new Set(input.attributedMutationPaths.map((path) => path.replaceAll("\\", "/")))
+    : undefined;
+  const mutatedPaths = attributed
+    ? observedPaths.filter((path) => attributed.has(path.replaceAll("\\", "/")))
+    : observedPaths;
+  const concurrentPaths = attributed
+    ? observedPaths.filter((path) => !attributed.has(path.replaceAll("\\", "/")))
+    : [];
   return {
     role: normalizeRole(input.role),
     readOnly,
     mutatedPaths,
+    concurrentPaths,
     violation: readOnly && mutatedPaths.length > 0,
   };
 }
@@ -107,9 +124,16 @@ export function assessReviewSession(input: ReviewSessionInput): ReviewSessionAss
  * IMP-137 の再発防止ガイダンス (staged へ混入する前に inspect/revert) を添える。
  */
 export function reviewGuardMessages(assessment: ReviewSessionAssessment): string[] {
-  if (!assessment.violation) return [];
+  const concurrent =
+    assessment.concurrentPaths.length > 0
+      ? [
+          `review-guard - concurrent: ${assessment.concurrentPaths.length} path(s) changed outside the delegated child capability and were not attributed: ${assessment.concurrentPaths.join(", ")}`,
+        ]
+      : [];
+  if (!assessment.violation) return concurrent;
   const paths = assessment.mutatedPaths.join(", ");
   return [
+    ...concurrent,
     `review-guard - violation: read-only role '${assessment.role}' mutated ${assessment.mutatedPaths.length} tracked path(s): ${paths}`,
     "review-guard - note: a review/consult delegation must stay non-destructive (IMP-137); inspect and revert off-task edits before 'git add' so they cannot leak into a commit.",
   ];

@@ -150,6 +150,23 @@ describe("review attestation (U-RVATT)", () => {
       });
       expect(result).toEqual({ ok: false, reason: "reviewer_exit_nonzero" });
       expect(receiptFiles(root)).toEqual([]);
+
+      const strictRequest = {
+        ...request(),
+        authorFamily: "codex" as const,
+        reviewRevision: `rv1-${"c".repeat(64)}`,
+      };
+      const missing = projectReviewVerdict({
+        repoRoot: root,
+        request: strictRequest,
+        attestation: attestation({
+          provider: "claude",
+          reviewRevision: strictRequest.reviewRevision,
+          exitCode: 17,
+        }),
+        verdictFile: join(root, "missing-verdict.txt"),
+      });
+      expect(missing).toEqual({ ok: false, reason: "verdict_file_unwritable" });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -357,6 +374,21 @@ describe("review attestation (U-RVATT)", () => {
       "claude",
     ]);
     const worker = await runDelegation(["codex", "--role", "be-api", "--task", "implement slice"]);
+    const claudeReviewer = await runDelegation([
+      "claude",
+      "--role",
+      "blind-reviewer",
+      "--task",
+      "review slice",
+      "--review-pr",
+      "731",
+      "--review-head",
+      head,
+      "--review-revision",
+      "review-rvatt-1",
+      "--review-author-family",
+      "codex",
+    ]);
     expect(reviewer.stdout, "review_lane の dry-run が stdout へ何も出していない").not.toBe("");
     expect(worker.stdout, "worker の dry-run が stdout へ何も出していない").not.toBe("");
     const injected = JSON.parse(reviewer.stdout).env?.[REVIEW_VERDICT_FILE_ENV];
@@ -364,6 +396,14 @@ describe("review attestation (U-RVATT)", () => {
     expect(injected.replaceAll("\\", "/")).toContain("/.ut-tdd/review/verdicts/");
     expect(injected.replaceAll("\\", "/")).toContain("/attempts/attempt-1/verdict.txt");
     expect(JSON.parse(worker.stdout).env?.[REVIEW_VERDICT_FILE_ENV]).toBeUndefined();
+    const claudePlan = JSON.parse(claudeReviewer.stdout);
+    const allowedToolsIndex = claudePlan.args.indexOf("--allowedTools");
+    expect(allowedToolsIndex).toBeGreaterThanOrEqual(0);
+    expect(claudePlan.args[allowedToolsIndex + 1]).toMatch(
+      /^Edit\(\.ut-tdd\/review\/verdicts\/[a-f0-9]{64}\/attempts\/attempt-1\/verdict\.txt\)$/,
+    );
+    expect(JSON.parse(reviewer.stdout).args).not.toContain("--allowedTools");
+    expect(JSON.parse(worker.stdout).args).not.toContain("--allowedTools");
   });
 
   // U-RVATT-013〜015 は **同族レビュー検出が発火可能であること**を守る。
