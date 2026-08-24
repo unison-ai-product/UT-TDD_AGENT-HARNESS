@@ -259,30 +259,48 @@ describe("release manifest pure domain", () => {
       mutate: (artifacts: Array<Record<string, unknown>>) => void;
       digestable?: boolean;
     }> = [
-      { mutate: (artifacts) => {
-        artifacts[0].sourcePath = "../source";
-      } },
-      { mutate: (artifacts) => {
-        artifacts.push({ ...artifacts[0], destinationPath: "z.js" });
-      } },
-      { mutate: (artifacts) => {
-        artifacts.push({ ...artifacts[0], sourcePath: "src/other.ts" });
-      } },
-      { mutate: (artifacts) => {
-        artifacts.unshift({ ...artifacts[0], sourcePath: "src/a.ts", destinationPath: "z.js" });
-      } },
-      { mutate: (artifacts) => {
-        artifacts[0].mode = "120000";
-      } },
-      { mutate: (artifacts) => {
-        artifacts[0].size = 1.5;
-      }, digestable: false },
-      { mutate: (artifacts) => {
-        artifacts[0].size = -1;
-      }, digestable: false },
-      { mutate: (artifacts) => {
-        artifacts[0].size = Number.MAX_SAFE_INTEGER + 1;
-      } },
+      {
+        mutate: (artifacts) => {
+          artifacts[0].sourcePath = "../source";
+        },
+      },
+      {
+        mutate: (artifacts) => {
+          artifacts.push({ ...artifacts[0], destinationPath: "z.js" });
+        },
+      },
+      {
+        mutate: (artifacts) => {
+          artifacts.push({ ...artifacts[0], sourcePath: "src/other.ts" });
+        },
+      },
+      {
+        mutate: (artifacts) => {
+          artifacts.unshift({ ...artifacts[0], sourcePath: "src/a.ts", destinationPath: "z.js" });
+        },
+      },
+      {
+        mutate: (artifacts) => {
+          artifacts[0].mode = "120000";
+        },
+      },
+      {
+        mutate: (artifacts) => {
+          artifacts[0].size = 1.5;
+        },
+        digestable: false,
+      },
+      {
+        mutate: (artifacts) => {
+          artifacts[0].size = -1;
+        },
+        digestable: false,
+      },
+      {
+        mutate: (artifacts) => {
+          artifacts[0].size = Number.MAX_SAFE_INTEGER + 1;
+        },
+      },
     ];
     for (const { mutate, digestable = true } of cases) {
       const invalid = structuredClone(v2Manifest());
@@ -301,7 +319,10 @@ describe("release manifest pure domain", () => {
     record.materializerVersion = "vé";
     refreshV2Digests(record);
 
-    const aliasedId = releaseId(record.materializerVersion as string, record.artifactSetDigest as string);
+    const aliasedId = releaseId(
+      record.materializerVersion as string,
+      record.artifactSetDigest as string,
+    );
     delete (invalid.releases as Record<string, unknown>)[currentId];
     (invalid.releases as Record<string, unknown>)[aliasedId] = record;
     invalid.channels = { canary: aliasedId, stable: aliasedId };
