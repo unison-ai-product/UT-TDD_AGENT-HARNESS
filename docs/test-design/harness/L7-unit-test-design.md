@@ -1565,12 +1565,12 @@ exact current HEADへ投影する境界を検証する。
 
 | ID | 設計境界 | fixture / mutation | expected |
 | --- | --- | --- | --- |
-| `U-RVMG-015` | old HEAD FLAGのcurrent HEAD supersession | old HEAD FLAG + newer exact-current-HEAD non-author PASS、両requestとreceiptを保持 | `runPrMerge`はmergeし、analyzer/audit側にはold FLAG entryとfindingが残る |
-| `U-RVMG-016` | same-head FLAG blocking | 同じ exact HEAD に FLAG と PASS を併存 | FLAGはblockingのままdenyし、authorized entryを発行しない |
-| `U-RVMG-017` | current receipt欠落 | HEADを旧receiptのHEADから変更し、current-head request/receiptを欠落 | old evidenceだけでは許可せず `no_request_for_current_head` または同等理由でdeny |
-| `U-RVMG-018` | root/worktree配置不変 | 同一入力を異なる repository root / worktree pathへ配置 | merge decision、verdict、reason、audit保持結果が同一 |
+| `U-RVHEAD-001` | old HEAD FLAGのcurrent HEAD supersession | old HEAD FLAG + newer exact-current-HEAD non-author PASS、両requestとreceiptを保持 | `runPrMerge`はmergeし、analyzer/audit側にはold FLAG entryとfindingが残る |
+| `U-RVHEAD-002` | same-head FLAG blocking | 同じ exact HEAD に FLAG と PASS を併存 | FLAGはblockingのままdenyし、authorized entryを発行しない |
+| `U-RVHEAD-003` | current receipt欠落 | HEADを旧receiptのHEADから変更し、current-head request/receiptを欠落 | old evidenceだけでは許可せず `no_request_for_current_head` または同等理由でdeny |
+| `U-RVHEAD-004` | root/worktree配置不変 | 同一入力を異なる repository root / worktree pathへ配置 | merge decision、verdict、reason、audit保持結果が同一 |
 
-実行対応: `tests/review-merge-gate.test.ts` (`U-RVMG-015`〜`018`)。
+実行対応: `tests/review-merge-gate.test.ts` (`U-RVHEAD-001`〜`004`)。
 
 ## PLAN-L7-465 D2-B PR merge gate oracle (2026-08-13)
 

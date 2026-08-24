@@ -159,7 +159,12 @@ export function evaluateMergeGate(input: {
           reviewerFamily: candidate.reviewerFamily,
         }
       : null;
-  const reasons = [...result.diagnostics];
+  // D1 の result は監査用に全 request/history を保持する。D2-B の merge eligibility は
+  // exact current HEAD の entry と、その HEAD に結び付く diagnostics だけへ投影する。
+  const currentHeadDiagnostics = result.diagnostics.filter((diagnostic) =>
+    diagnostic.includes(`@${input.pr}@${headSha}`),
+  );
+  const reasons = [...currentHeadDiagnostics];
   if (entriesForHead.length === 0) {
     reasons.push("no_request_for_current_head");
     return {
@@ -183,11 +188,8 @@ export function evaluateMergeGate(input: {
     );
     if (candidate.state !== "merge_ready") reasons.push(`state:${candidate.state}`);
   }
-  if (!result.ok) reasons.push("dispatch_analysis_failed");
   const denied =
-    !result.ok ||
-    reasons.length > 0 ||
-    entriesForHead.some((candidate) => candidate.state !== "merge_ready");
+    reasons.length > 0 || entriesForHead.some((candidate) => candidate.state !== "merge_ready");
   const authorizedEntry = denied ? authorizedEntryFrom(denyingEntry) : authorizedEntryFrom(entry);
   const verdict = denied ? (denyingEntry?.verdict ?? null) : (entry?.verdict ?? null);
   if (denied) {
