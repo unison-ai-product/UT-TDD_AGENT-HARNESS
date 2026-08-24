@@ -85,12 +85,17 @@ merge 後に到達不能になっても、その時点で検査済みなので�
 
 1. **比較は字面ではなく parse 後の値で行う。** `mergeBaseSha` 側と `subjectHeadSha` 側の
    `docs/plans/*.md` をそれぞれ parse し、`green_command` entry を取り出す。
-2. **意味的キーは `(plan file path, entry の anchor_commit 値)` の組**とする。検査対象は
-   **HEAD 側のキー集合から mergeBase 側のキー集合を差し引いた差**である。
+2. **意味的キーは `(plan file path, entry の anchor_commit 値)` の組**とし、**比較は集合ではなく
+   正規化 multiset (キーごとの出現数) の差**で行う (非著者 FLAG 2 巡目 B-2 の是正)。検査対象は
+   **HEAD 側の出現数が mergeBase 側の出現数を上回るキー**であり、上回った分の各出現を新規 entry と
+   みなす。
 3. 帰結として: **key 順・字下げ・整形・コメント・他 field (`command` / `completed_at` 等) の編集・
-   entry の並べ替えでは発火しない** (キーが不変のため)。**新しい anchor_commit 値の導入だけが発火する**。
-4. **同一 anchor_commit 値の重複 entry は 1 キーへ畳む。** mergeBase 側に同値が既にあれば新規では
-   ない (その anchor は既に検査済みか、既存 entry として非目標に該当する)。
+   entry の並べ替えでは発火しない** (キーと出現数が不変のため)。**新しい anchor_commit 値の導入と、
+   既存値の出現数増加だけが発火する**。
+4. **同値重複を 1 キーへ畳んではならない。** 集合差にすると、mergeBase 側に grandfathered な到達
+   不能 anchor A を持つ PLAN へ、PR が別 command の新 entry を同じ A で追加したとき差が 0 になり
+   検査を迂回できる (Codex 指摘の反例)。新しい主張 (entry) が既存 anchor 値を再利用する場合も、
+   その entry は新規であり到達可能性検査を受ける。
 5. **parse に失敗した面は検査ごと落とす** (判断点 4 の縮退と同じ規律。字面 fallback を持たない)。
 
 ### 判断点 3: 到達可能性の判定方法
@@ -103,16 +108,20 @@ merge 後に到達不能になっても、その時点で検査済みなので�
 
 ### 判断点 4: 基準点が解決できない面をどうするか
 
-**`mergeBaseSha` と `subjectHeadSha` の**両方**が解決できたときだけ検査を有効化し、片方でも
-欠けたら検査ごと落とす (縮退)。**推測で violation を作らない。
+**欠け方 2 通りを同じ扱いにしない (非著者 FLAG 2 巡目 B-1 の是正)。**
 
-これは `PLAN-RECOVERY-20` が `merged-plan-status` の三点比較で採ったのと同じ規律である。
-欠け方は (a) PR event が無い (ローカル doctor / 非 PR 実行)、(b) event はあるが object を解決
-できない (shallow / branch 削除後) の 2 通りで、どちらも「分からない」という点で同じなので同じ
-扱いにする。
+| 欠け方 | 意味 | 扱い |
+|---|---|---|
+| (a) PR event が無い (ローカル doctor / 非 PR 実行) | 本検査の対象面ではない | **skip** (検査ごと落とす縮退。推測で violation を作らない) |
+| (b) PR event は在るが `mergeBaseSha` / `subjectHeadSha` のいずれかの object を解決できない (fetch-depth drift / base object 欠落) | required gate が走るべき面で入力が壊れている | **fail-close** (violation `anchor_baseline_unresolvable`) |
 
-CI の `pull_request` run では両方が揃うため、本 issue が対象とする PR CI での fail-close は
-失われない。
+前版は (a)(b) を「どちらも分からないので同じ」として一律 skip にしたが、これは **workflow drift
+(例: checkout の fetch-depth が 0 から浅い値へ変わる) で required gate を無音で無効化できる**
+契約だった (Codex 指摘)。(b) は「分からない」ではなく「required 面の前提が壊れた」であり、壊れた
+前提は修理されるまで赤くあるべきである。(a) の skip は維持する — 非 PR 面には required の約束が
+そもそも無い。
+
+CI の `pull_request` run では正常時に両方が揃い、揃わない run は (b) として fail-close する。
 
 ### 判断点 5: 評価される subject commit の正体と checkout 契約 (非著者 FLAG B-3 の是正)
 
@@ -197,9 +206,16 @@ anchor が実在すること」だけを足す。
    base main 上のみの anchor が通る / どちらからも到達不能な anchor が落ちる、の 3 面を実測する。
    `subjectHeadSha` が `git rev-parse HEAD` 由来であることをテストで固定し、event payload 由来へ
    すり替わったら赤になるようにする。
+5b. **基準 SHA 欠落の 2 面回帰** (判断点 4): PR event あり + base object 解決不能 (shallow clone /
+   fetch-depth drift を模した fixture) で `anchor_baseline_unresolvable` の violation になる。
+   PR event なしでは skip する。**skip へ倒す実装 mutation (fail-close 分岐の削除) が RED になる**
+   oracle を必須とする (CI green では反証できない論理反例のため、mutation oracle で固定する)。
 6. **新規 entry 判定キーの回帰** (判断点 2): 整形・key 順・並べ替え・他 field 編集では発火せず、
-   新しい `anchor_commit` 値の導入だけが発火することを実測する。parse 失敗面で検査ごと落ちることも
-   固定する。
+   新しい `anchor_commit` 値の導入と既存値の出現数増加だけが発火することを実測する。**multiset
+   固有の 2 面を必須とする**: (a) mergeBase 側に同値 anchor を持つ PLAN へ同値の新 entry を追加した
+   fixture が検査対象になる (集合差実装なら GREEN のまま生き残る mutation を書き、multiset 実装で
+   RED になることを確認する)、(b) 出現数が減る編集 (entry 削除) では発火しない。parse 失敗面で
+   検査ごと落ちることも固定する。
 7. **依存 PR 引用の 2 ケース回帰** (判断点 6): pre-squash head anchor が落ち、squash 後 main commit
    anchor が通る。violation message に是正手順が含まれることも固定する。
 
