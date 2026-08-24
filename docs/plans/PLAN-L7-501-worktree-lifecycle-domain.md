@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-24
 updated: 2026-08-24
 owner: PM / PO / Codex
@@ -45,7 +45,28 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/384
 github_issue_id: 384
 backprop_decision: required
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-24T20:40:00+09:00"
+    tests_green_at: "2026-08-24T20:28:00+09:00"
+    verdict: "approve; blocking 0; Claude non-author closing review pending"
+    scope: >-
+      Luna実装を親Codexが差分検収し、複合identity、単調revision、sealed activation-abortと
+      path-lease release、authenticated parent-lossだけのterminal欠落、late receipt再評価、
+      terminal digest差替え拒否を確認した。返却recordと保存recordが別objectになるRedを検出して
+      appendを唯一のreducer適用点へ修正後、exact ba0fac98 detached target 6/6 Green、
+      181f88c2でPLAN artifact/impl/deliverable trace Greenを確認した。
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.5
+    plan_revision: 181f88c2d6fc8db917afd98489485e1a429865cf
+    subject_head: 181f88c2d6fc8db917afd98489485e1a429865cf
+    evidence_path: tests/worktree-lifecycle-domain.test.ts
+    anchor_commit: 181f88c2d6fc8db917afd98489485e1a429865cf
+    citations:
+      - "src/runtime/worktree-lifecycle/domain/store.ts"
+      - "src/runtime/worktree-lifecycle/domain/reducer.ts"
+      - "tests/worktree-lifecycle-domain.test.ts: U-WTLIFE-001/002/006/010"
 ---
 
 # PLAN-L7-501: worktree lifecycle domain FSM
