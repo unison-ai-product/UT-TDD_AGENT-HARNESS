@@ -59,7 +59,7 @@ untracked は無いので、CI では常に 0 件 = 常に green。**「gate が
 
 - **`memory-sync` の判定契約は変更しない。** 何を未配送とみなすかの定義に手を入れない。
 - **full doctor を「毎回回せ」という規律で解かない。** 規律で解こうとして 2 週間漏れたのが本件である。
-- **新規機構を建てない。** 既存の Stop summary / CI 出力へ 1 経路ずつ足すに留める。
+- **新規機構を建てない。** 本 slice が足すのは **Stop summary への 1 経路のみ**である (非著者 FLAG 3 巡目 B-2 の是正: CI 出力の文言訂正は §2 の案 C として別 slice へ分離済みであり、本 slice の Exit に CI 出力は含まれない)。
 - **計測なしに fail-close 化しない。** 未計測のままゲート化しない (CLAUDE.md の既存規律)。
 
 ## 2. 設計判断 (freeze)
@@ -122,6 +122,19 @@ workflow・env のいずれも動かさず、既存判定の出力先を 1 つ�
   潰れる** (本事故そのものを過小表示する) うえ、stale 化しうる state 層を新設することになるため採らない。
 - **mtime を取得できないファイルは件数にだけ数え、最古 age の計算から除外する** (fail-open)。
   表示が保守的になるだけで、件数の検出は従来どおり動く。
+
+**どの非共有状態を count / age に入れるかも凍結する** (非著者 FLAG 3 巡目 B-1 の是正)。
+`memory-sync` は `untracked` / `uncommitted-change` / `not-on-origin` の 3 状態を返す:
+
+| 状態 | count | age | 根拠 |
+|---|---|---|---|
+| `untracked` | **数える** | **mtime 起点で計算する** | 「書いたのに送っていない」の主型。本事故 (65→128 件) はこれ |
+| `uncommitted-change` | **数える** | **age 計算から除外する** (count のみ) | tracked file の作業中編集にも出る状態で、mtime は「最後に触った時刻」でしかなく滞留 age の意味を持たない。数えないと detector 結果を黙って欠落させる |
+| `not-on-origin` | **数える** | **age 計算から除外する** (count のみ) | commit 時刻は取れるが「push し忘れ」の滞留は commit age と一致しない (rebase / amend で動く)。count のみで可視化する |
+
+表示は状態別の内訳 (例: `untracked 3 / uncommitted 1 / unpushed 2`) を出し、**detector が返した
+どの状態も黙って落とさない**。oldest age は untracked のみから導出し、その旨を表示に明記する
+(`oldest age (untracked): N days`)。
 - 観測窓・期限の state はこの PLAN では持たない (分離済み)。したがって「窓 state 欠落時の挙動」は
   本 PLAN の凍結対象ではない。
 
@@ -158,12 +171,15 @@ hard violation になり運用不能である。凍結する境界:
 
 ## 3. 受入条件
 
-1. セッション終了時、未配送の `.ut-tdd/memory` エントリが 1 件以上あれば、件数と最古 age (mtime 起点)
-   が表示される。
+1. セッション終了時、未配送の `.ut-tdd/memory` エントリが 1 件以上あれば、**3 状態
+   (`untracked` / `uncommitted-change` / `not-on-origin`) の状態別内訳つき件数**と、untracked のみ
+   から導出した最古 age (mtime 起点) が表示される。detector が返したどの状態も表示から欠落しない
+   (3 状態それぞれを fixture 化して実測する)。
 2. 表示は advisory であり、**セッションを失敗させない** (fail-open)。
 3. 未配送 0 件のときは何も出さない (常時ノイズにしない)。本 PLAN は期限表示を持たないため、
    この条件は本文のどの規則とも競合しない。
-4. mtime を取得できないエントリは件数に数え、最古 age から除外する (両面を回帰で実測する)。
+4. mtime を取得できないエントリ、および `uncommitted-change` / `not-on-origin` のエントリは件数に
+   数え、最古 age から除外する (各面を回帰で実測する)。
 5. 検出層 (`loadMemorySyncInput` / `memory-sync` の判定) の差分が **0** であることをテストで固定する。
 6. 上記 1〜5 が、`.ut-tdd/memory` を fixture として持つ回帰テストで実測される
    (prose の claim で代替しない)。
