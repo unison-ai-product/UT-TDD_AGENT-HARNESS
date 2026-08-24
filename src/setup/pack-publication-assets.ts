@@ -71,6 +71,57 @@ function utf8Compare(left: string, right: string): number {
   return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
 }
 
+/**
+ * Keep this boundary defensive even though the normal caller supplies a
+ * parser-produced manifest.  This function is the publication byte boundary;
+ * accepting an independently-constructed identity here would otherwise let
+ * an invalid path/order reach the tar writer.
+ */
+function validPublicationPath(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0")) return false;
+  if (Buffer.from(value, "utf8").toString("utf8") !== value) return false;
+  if (value.includes("\\") || value.startsWith("/") || value.startsWith("//")) return false;
+  if (/^[A-Za-z]:/.test(value)) return false;
+  const segments = value.split("/");
+  return (
+    value !== "." &&
+    !segments.some((segment) => segment.length === 0 || segment === "." || segment === "..")
+  );
+}
+
+function validateManifestArtifacts(
+  artifacts:
+    | readonly SealedPublicationEntry[]
+    | readonly {
+        readonly sourcePath: string;
+        readonly destinationPath: string;
+        readonly mode: string;
+        readonly size: number;
+        readonly contentDigest: string;
+      }[],
+): PackPublicationAssetError | null {
+  const sources = new Set<string>();
+  const destinations = new Set<string>();
+  let previousDestination: Buffer | null = null;
+  for (const artifact of artifacts) {
+    if (
+      !validPublicationPath(artifact.sourcePath) ||
+      !validPublicationPath(artifact.destinationPath)
+    )
+      return "unsupported_path";
+    if (artifact.mode !== "100644" && artifact.mode !== "100755") return "unsupported_entry";
+    if (sources.has(artifact.sourcePath) || destinations.has(artifact.destinationPath))
+      return "artifact_mismatch";
+    const destination = Buffer.from(artifact.destinationPath, "utf8");
+    if (previousDestination && Buffer.compare(previousDestination, destination) >= 0)
+      return "artifact_mismatch";
+    sources.add(artifact.sourcePath);
+    destinations.add(artifact.destinationPath);
+    previousDestination = destination;
+  }
+  return null;
+}
+
 function splitUstarPath(path: string): { name: Buffer; prefix: Buffer } | null {
   const whole = Buffer.from(path, "utf8");
   if (whole.length <= 100) return { name: whole, prefix: Buffer.alloc(0) };
@@ -210,12 +261,8 @@ export function derivePackPublicationAssets(input: {
 }): PackPublicationAssetResult {
   const releaseMatch = RELEASE_ID.exec(input.release.releaseId);
   if (!releaseMatch) return { ok: false, error: "invalid_release" };
-  if (
-    input.release.artifacts.some(
-      (artifact) => artifact.mode !== "100644" && artifact.mode !== "100755",
-    )
-  )
-    return { ok: false, error: "unsupported_entry" };
+  const manifestError = validateManifestArtifacts(input.release.artifacts);
+  if (manifestError) return { ok: false, error: manifestError };
   if (!exactEntries(input.release, input.entries)) return { ok: false, error: "artifact_mismatch" };
   if (input.entries.some((entry) => splitUstarPath(entry.destinationPath) === null))
     return { ok: false, error: "unsupported_path" };

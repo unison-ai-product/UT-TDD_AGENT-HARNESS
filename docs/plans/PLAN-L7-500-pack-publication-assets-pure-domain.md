@@ -28,14 +28,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-500-pack-publication-assets-pure-domain.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-REVERSE-500-pack-publication-assets-backfill.md
-    artifact_type: markdown_doc
   - artifact_path: src/setup/pack-publication-assets.ts
     artifact_type: source_module
   - artifact_path: tests/pack-publication-assets.test.ts
     artifact_type: test_code
-  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
-    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
   requires:
@@ -43,6 +39,8 @@ dependencies:
   blocks: []
   references:
     - src/schema/release-manifest.ts
+    - docs/plans/PLAN-REVERSE-500-pack-publication-assets-backfill.md
+    - docs/test-design/harness/L7-unit-test-design.md
 review_evidence: []
 ---
 
@@ -67,6 +65,8 @@ manifest artifact inventory + sealed bytes
 tar header、padding、終端2 block、gzip header、stored block split、CRC32、ISIZE、checksum framing、
 asset inventory framingはPLAN-L6-63 §2のbyte contractをそのまま実装する。unsupported path/type、
 entry identity・mode・size・content digest不一致、余剰・欠落entryはtyped denyとし、artifact bytesを返さない。
+公開境界はparse済み入力を通常経路とするが、独立に構築されたrelease identityに対しても、canonical relative
+path、source/destination重複、destination UTF-8 byte順を再検証し、異常時はtar writerへ到達させない。
 
 ## Oracle
 

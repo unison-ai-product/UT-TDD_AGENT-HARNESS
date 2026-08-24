@@ -2397,7 +2397,7 @@ L6設計正本: `docs/design/harness/L6-function-design/doctor-result-envelope-m
 | --- | --- | --- |
 | `U-PACKASSET-001` | single regular entry literal golden | exact tar.gz/checksum/inventory digest |
 | `U-PACKASSET-002` | UTF-8 ustar split path + 65536-byte content | OS非依存の同一stored-block gzip bytes |
-| `U-PACKASSET-003` | path/mode/size/contentを各単独変異 | `artifact_mismatch`、asset bytes 0 |
+| `U-PACKASSET-003` | order/path/mode/size/content/duplicateを各単独変異 | `artifact_mismatch`、asset bytes 0 |
 | `U-PACKASSET-004` | ustar表現不能path / mode 120000 | typed deny、extension fallback 0 |
 | `U-PACKASSET-005` | gzip header / tar header / zero trailer | fixed byte fieldsを直接照合 |
 | `U-PACKASSET-006` | manifest entry欠落 / 余剰entry | `artifact_mismatch`、directory walk補完0 |

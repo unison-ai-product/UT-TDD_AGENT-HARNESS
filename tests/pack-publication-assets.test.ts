@@ -83,7 +83,7 @@ describe("Pack publication deterministic assets", () => {
     ]);
   });
 
-  it("U-PACKASSET-003: rejects independent identity, mode, size, and content mutations", () => {
+  it("U-PACKASSET-003: rejects identity, mode, size, content, order, and duplicate mutations", () => {
     const base = fixture();
     const mutations = [
       [{ ...base.entries[0], destinationPath: "b.txt" }],
@@ -97,6 +97,49 @@ describe("Pack publication deterministic assets", () => {
         error: "artifact_mismatch",
       });
     }
+    const first = fixture(Buffer.from("one\n"), "a.txt");
+    const secondArtifact: PublicationArtifact = {
+      sourcePath: "src/b.txt",
+      destinationPath: "b.txt",
+      mode: "100644",
+      size: 4,
+      contentDigest: digest(Buffer.from("two\n")),
+    };
+    const secondEntry = { ...secondArtifact, content: Buffer.from("two\n") };
+    const ordered = {
+      release: {
+        ...first.release,
+        artifacts: [first.release.artifacts[0], secondArtifact],
+      },
+      entries: [first.entries[0], secondEntry],
+    };
+    expect(derivePackPublicationAssets(ordered).ok).toBe(true);
+    expect(
+      derivePackPublicationAssets({
+        release: { ...ordered.release, artifacts: [secondArtifact, first.release.artifacts[0]] },
+        entries: [secondEntry, first.entries[0]],
+      }),
+    ).toEqual({ ok: false, error: "artifact_mismatch" });
+    expect(
+      derivePackPublicationAssets({
+        release: {
+          ...ordered.release,
+          artifacts: [first.release.artifacts[0], first.release.artifacts[0]],
+        },
+        entries: [first.entries[0], first.entries[0]],
+      }),
+    ).toEqual({ ok: false, error: "artifact_mismatch" });
+  });
+
+  it("U-PACKASSET-004: rejects unsafe paths even when the caller bypasses manifest parsing", () => {
+    const base = fixture();
+    const artifact = { ...base.release.artifacts[0], destinationPath: "../escape.txt" };
+    expect(
+      derivePackPublicationAssets({
+        release: { ...base.release, artifacts: [artifact] },
+        entries: [{ ...base.entries[0], destinationPath: "../escape.txt" }],
+      }),
+    ).toEqual({ ok: false, error: "unsupported_path" });
   });
 
   it("U-PACKASSET-004: rejects ustar-unrepresentable and unsupported publication entries", () => {
