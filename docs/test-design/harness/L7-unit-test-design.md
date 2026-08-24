@@ -1555,10 +1555,10 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
 
-## PLAN-L7-500 review履歴/current-HEAD eligibility oracle (2026-08-24)
+## PLAN-L7-502 review履歴/current-HEAD eligibility oracle (2026-08-24)
 
-設計正本は `docs/plans/PLAN-L7-500-review-head-eligibility-supersession.md`、Reverseは
-`docs/plans/PLAN-REVERSE-500-review-head-eligibility-supersession-backfill.md`。
+設計正本は `docs/plans/PLAN-L7-502-review-head-eligibility-supersession.md`、Reverseは
+`docs/plans/PLAN-REVERSE-502-review-head-eligibility-supersession-backfill.md`。
 実装対象は `src/feedback/review-merge-gate.ts`、実テストは
 `tests/review-merge-gate.test.ts`。D1 analyzerの全履歴監査を削らず、D2-Bのmerge判定だけを
 exact current HEADへ投影する境界を検証する。

@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-500-review-head-eligibility-supersession
-title: "PLAN-L7-500 (add-impl): review履歴と現HEAD merge eligibilityの分離"
+plan_id: PLAN-L7-502-review-head-eligibility-supersession
+title: "PLAN-L7-502 (add-impl): review履歴と現HEAD merge eligibilityの分離"
 kind: add-impl
 layer: L7
 drive: agent
@@ -21,7 +21,7 @@ agent_slots:
   - role: qa
     slot_label: "QA - old-head FLAG/current-head PASS、same-head FLAG、head change、root配置のRed oracle"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-500-review-head-eligibility-supersession.md
+  - artifact_path: docs/plans/PLAN-L7-502-review-head-eligibility-supersession.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-470-review-dispatch-analyzer-ownership.md
@@ -31,7 +31,7 @@ dependencies:
   references:
     - docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
     - docs/plans/PLAN-L7-470-review-dispatch-analyzer-ownership.md
-    - docs/plans/PLAN-REVERSE-500-review-head-eligibility-supersession-backfill.md
+    - docs/plans/PLAN-REVERSE-502-review-head-eligibility-supersession-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - src/feedback/review-dispatch.ts
     - src/feedback/review-merge-gate.ts
@@ -42,7 +42,7 @@ backprop_decision_reason: "現HEADだけをmerge許可対象にする新しい�
 review_evidence: []
 ---
 
-# PLAN-L7-500: review履歴と現HEAD merge eligibilityの分離
+# PLAN-L7-502: review履歴と現HEAD merge eligibilityの分離
 
 ## 1. 既存契約との境界
 

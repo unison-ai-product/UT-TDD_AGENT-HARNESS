@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-REVERSE-500-review-head-eligibility-supersession-backfill
-title: "PLAN-REVERSE-500: current-HEAD review eligibility契約の上流合流"
+plan_id: PLAN-REVERSE-502-review-head-eligibility-supersession-backfill
+title: "PLAN-REVERSE-502: current-HEAD review eligibility契約の上流合流"
 kind: reverse
 layer: cross
 drive: agent
@@ -12,7 +12,7 @@ status: draft
 created: 2026-08-24
 updated: 2026-08-24
 owner: PM / PO / Codex
-parent_design: docs/plans/PLAN-L7-500-review-head-eligibility-supersession.md
+parent_design: docs/plans/PLAN-L7-502-review-head-eligibility-supersession.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: tl
@@ -20,26 +20,26 @@ agent_slots:
   - role: qa
     slot_label: "QA - 履歴保持と現HEAD merge判定の分離を再検収"
 generates:
-  - artifact_path: docs/plans/PLAN-REVERSE-500-review-head-eligibility-supersession-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-502-review-head-eligibility-supersession-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L7-500-review-head-eligibility-supersession.md
+  parent: docs/plans/PLAN-L7-502-review-head-eligibility-supersession.md
   requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L6-85-automated-pr-cross-review-merge-contract.md
     - docs/plans/PLAN-L7-470-review-dispatch-analyzer-ownership.md
-    - docs/plans/PLAN-L7-500-review-head-eligibility-supersession.md
+    - docs/plans/PLAN-L7-502-review-head-eligibility-supersession.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/392
 review_evidence: []
 ---
 
-# PLAN-REVERSE-500: current-HEAD review eligibility契約の上流合流
+# PLAN-REVERSE-502: current-HEAD review eligibility契約の上流合流
 
 ## 1. R0予約
 
-PLAN-L7-500 は D1 analyzer の履歴監査を変更せず、D2-B merge gateの判定対象を exact
+PLAN-L7-502 は D1 analyzer の履歴監査を変更せず、D2-B merge gateの判定対象を exact
 current HEADへ限定する実装差分である。実装・Red/Green oracle・非著者レビューが未完了のため、
 上流契約へ合流済みとは主張しない。
 
