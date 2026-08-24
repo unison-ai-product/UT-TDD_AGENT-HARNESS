@@ -41,7 +41,27 @@ dependencies:
     - src/schema/release-manifest.ts
     - docs/plans/PLAN-REVERSE-500-pack-publication-assets-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-tl-integration
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-24T18:42:08+09:00"
+    tests_green_at: "2026-08-24T18:46:30+09:00"
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    reviewer_model: codex
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/pack-publication-assets.test.ts tests/plan-lint.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-24T18:46:30+09:00"
+        evidence_path: tests/pack-publication-assets.test.ts
+        anchor_commit: 84f0af0c
+    scope: >-
+      Issue #383 bounded pure-domain implementation。Lunaがcanonical path、duplicate、UTF-8 byte order、
+      modeをpublication byte boundaryでfail-closeする防御を監査・補強し、Codex TLがexact 84f0af0cを
+      detached snapshotで再検証した。Claude Opus 5 non-author closing reviewとCIは未実施。
 ---
 
 # PLAN-L7-500
