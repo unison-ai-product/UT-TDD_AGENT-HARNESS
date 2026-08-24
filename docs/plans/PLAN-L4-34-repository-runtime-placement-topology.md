@@ -173,22 +173,28 @@ projection である。本節の設計契約と L9 §10 の `CANDIDATE-ST-WTLIFE
 
 各 record は `(repository_lineage_id, lifecycle_id, canonical_worktree_realpath)` を一意キーとし、
 `admin_entry_realpath`、`owner/session`、`issue_id`、`plan_id` と `plan_revision`、`use` (`worker | review |
-snapshot | scratch`)、`branch`/`head_oid`、`created_at`、`ttl`/`expires_at`、`path_lease`、parent process/session、
-state、terminal receipt digest、retention disposition を同時に保持する。`path` や cwd だけを identity とせず、
+snapshot | scratch`)、`branch`/`head_oid`、`created_at`、`activation_deadline`、`ttl`/`expires_at`、`path_lease`、parent process/session、
+state、terminal receipt digest、retention policy id/revision・retain-until・disposition を同時に保持する。`path` や cwd だけを identity とせず、
 `realpath.native` 解決結果と 3.1 の lineage authority に再束縛する。
+
+record は managed worker の起動前に `planned` として原子的に登録する。worktree 作成、path lease 取得、
+record 登録、worker spawn の各 operation id を同じ attempt に束縛し、登録できなければ spawn 0 とする。
+起動成功 receipt を受理した場合だけ `planned -> active` とし、record 登録自体をこの遷移の副作用にしない。
 
 許可する遷移は次だけである。
 
 | 遷移 | 入力と後条件 |
 |---|---|
-| `planned -> active` | 必須 record が原子的に登録され、owner/Issue/PLAN revision/use/TTL/path lease と #232 inventory の link facts が一致する。欠落時は managed worker を起動しない。 |
-| `active -> terminal_pending` | #124 の typed terminal input (`success | failure | timeout | parent_loss | cancel`) を同一 `lifecycle_id`/attempt に束縛し、process/lease の終端観測を記録する。TTL 超過だけでは遷移しない。 |
+| `planned -> active` | 登録済み record、owner/Issue/PLAN revision/use/TTL/path lease、#232 inventory の link facts、worker start receipt が同一 attempt で一致する。欠落時は managed worker を起動しない。 |
+| `planned -> terminal_pending` | spawn 前後の `activation_failed` / `cancel_before_start` / `activation_timeout` / owner-session loss を lifecycle authority が観測し、process start 0 または観測結果、lease release 結果を sealed activation-abort receipt にする。TTL 超過だけではこの遷移を作らない。 |
+| `active -> terminal_pending` | #124 の typed terminal input (`success \| failure \| timeout \| parent_loss \| cancel`) または authenticated owner/session-loss observation を同一 `lifecycle_id`/attempt に束縛し、process/lease の終端観測を記録する。後者は terminal receipt を捏造せず `terminal_missing` を保持する。TTL 超過だけでは遷移しない。 |
 | `terminal_pending -> retained` | terminal receipt が欠落・不一致、dirty/unpushed/unmerged、active process/lease、owner不明、path/lineage不一致、または retention 中のため retire を拒否し、保全理由を typed deny として保存する。 |
 | `terminal_pending -> retired` | sealed terminal receipt、#232 の最新 inventory、canonical realpath/lineage、process 0、path lease 解放、retention 条件が同一 snapshot に束縛され、dry-run digest と apply 入力が一致する場合だけ許す。 |
+| `retained -> terminal_pending` | 同じ lifecycle/attempt への後着 #124 receipt、policy-authorized recovery receipt、または欠測していた inventory/process/lease factが到着した場合に、旧 deny 集合を上書きせず新 revision で再評価する。 |
 | `retained -> retired` | retention boundary 到達後に同じ再検証とpolicy-authorized applyを行う場合だけ許す。canonical/durable state は retained のままで、worktree-local cache/scratch だけを対象にできる。 |
 
 `retired` は終端であり、旧 receipt の replay、別 path からの再活性化、状態 row の上書きは許さない。各拒否は
-`dirty | unpushed | unmerged | active_process | active_path_lease | owner_unknown | terminal_missing |
+`activation_unresolved | dirty | unpushed | unmerged | active_process | active_path_lease | owner_unknown | terminal_missing |
 terminal_mismatch | realpath_mismatch | lineage_mismatch | admin_entry_mismatch | inventory_unavailable |
 retention_active | canonical_state | replay_conflict` の typed deny reason のいずれか（複合時は安定した全件集合）で返す。
 
@@ -204,6 +210,9 @@ retention_active | canonical_state | replay_conflict` の typed deny reason の�
   `ProcessLeaseProbePort` は active process/path lease を観測し、`WorktreeRetirePort` は sealed plan に対する
   dry-run/apply の side effect 境界を担う。`StatusDoctorMemoryProjectionPort` は deny reason と retention
   を read-only に投影する。
+- `RetentionPolicyPort` は repository governance が署名した policy id/revision、用途別 retain-until、clock
+  observation を read-only に返す。worker/session/cleanup adapter は retention 値や時刻を自己申告できず、
+  policy revision が欠落・driftした apply は `retention_active` で拒否する。
 
 retire は dry-run を既定とし、対象 realpath/admin entry/head/branch、保全理由、deny reason、state classification、
 receipt digest、expected operation id を immutable plan に記録する。apply は同じ canonical snapshot と plan digest を
@@ -323,16 +332,18 @@ draft `generates` に予告登録しない。
 - **AC-PLACE-09**: canonical authority、write fence、rollback trigger、old-clone restart conditions が
   immutable receipt と single-writer lease に束縛され、dual-canonical counterexample を拒否する。
 - **AC-PLACE-10 (#384)**: worktree lifecycle record が owner/Issue/PLAN revision/use/TTL/path lease と
-  canonical realpath/lineage に束縛され、`planned -> active -> terminal_pending -> retained|retired` の
-  許可遷移と #124 typed terminal input を定義する。#232 detector と #124 worker implementation を複製しない。
+  canonical realpath/lineage に束縛され、起動前planned登録、activation abort、active terminal/owner loss、
+  retained再評価を含む全域FSMと #124 typed terminal input を定義する。receipt欠落時はretainedへ保全し、
+  後着receiptなしにretireしない。#232 detector と #124 worker implementation を複製しない。
 - **AC-PLACE-11 (#384)**: dirty/unpushed/unmerged/active process/active path lease/owner不明/receipt欠落・不一致を
   typed deny reason として返し、dry-run が既定で apply 対象を固定し、fault/replay/idempotency で喪失・部分成功を
   fail-close する。canonical/durable state は retention boundary を越えても自動削除しない。
 - **AC-PLACE-12 (#384)**: lifecycle の active/retirable/blocked-retire と typed reason、receipt digest、retention
   を status/doctor/HARNESS Memory projection から再構築可能に取得できる。projection は authoring source や
   cleanup authority にならない。
-- **AC-PLACE-13 (#384 pair-freeze)**: L9 §10 の `CANDIDATE-ST-WTLIFE-001..016` が本節の record/FSM/port/deny/retire/
-  path/fault/projection 各契約へ双方向に 1:1 対応し、未実装 oracle は RED のまま保持する。既存 worktree の
+- **AC-PLACE-13 (#384 pair-freeze)**: L9 §10.3.1 の明示表で `CANDIDATE-U-WTLIFE-001..016` と
+  `CANDIDATE-ST-WTLIFE-001..016` が record/FSM/port/deny/retire/path/fault/projection 各契約へ双方向に
+  1:1 対応し、未実装 oracle は RED のまま保持する。既存 worktree の
   cleanup、L7 test-design の変更、実装 Green の主張は本 PLAN の scope 外である。
 
 ## 8. 設計と検証の対 (RED oracle 案、L9 pair-freeze 入力)
@@ -369,19 +380,19 @@ draft `generates` に予告登録しない。
 | oracle ID | 検証対象 | 種別 |
 |---|---|---|
 | `CANDIDATE-U-WTLIFE-001` | owner/Issue/PLAN revision/use/TTL/path lease と canonical realpath/lineage を一意に持つ record を原子的に登録し、欠落時の起動を 0 にする | positive |
-| `CANDIDATE-U-WTLIFE-002` | `planned -> active -> terminal_pending -> retained|retired` と terminal kind 5種を同一 lifecycle/attempt へ束縛する | positive |
+| `CANDIDATE-U-WTLIFE-002` | planned登録後の start、activation abort、active terminal/owner-loss、retained再評価を同一 lifecycle/attempt へ束縛し、孤児状態を作らない | positive |
 | `CANDIDATE-U-WTLIFE-003` | #232 inventory と record の link/dir/dirty/unmerged/unpushed/merged facts を照合し、detector 自体を再実装せず typed finding を消費する | positive |
-| `CANDIDATE-U-WTLIFE-004` | #124 terminal/lease-release receipt を消費し、parent-loss/timeout 等で process/lease が未収束または receipt 欠落なら retire を拒否する | negative |
-| `CANDIDATE-U-WTLIFE-005` | dirty、unpushed、unmerged、active process、active path lease を各1軸だけ変異し、実削除 0 と固有 deny reason を証明する | negative |
-| `CANDIDATE-U-WTLIFE-006` | owner不明、terminal mismatch、realpath/lineage/admin entry mismatch、inventory unavailable を推測で Green にせず拒否する | negative |
-| `CANDIDATE-U-WTLIFE-007` | dry-run が既定で mutation 0、sealed plan の対象と apply 対象が digest 一致する | positive |
-| `CANDIDATE-U-WTLIFE-008` | 実体のretention quarantine退避→admin entry解除→local cache整理の各境界 fault/retry を operation id で replayし、quarantineから復旧可能、partial loss 0、retained または retired へ冪等収束する | mixed |
-| `CANDIDATE-U-WTLIFE-009` | canonical/durable HARNESS state、retention 中の cache/scratch、retention 到達後の local cache を区別し、正本 state を削除しない | mixed |
-| `CANDIDATE-U-WTLIFE-010` | Linux の symlink/realpath、mount/device、空白 path、PATH_MAX と Windows の drive case、junction/reparse、空白/long path を canonical identity として検証する | mixed |
-| `CANDIDATE-U-WTLIFE-011` | unresolved link、root外 path、case-only collision、admin link mismatch、canonicalization不能を typed deny として fail-close する | negative |
-| `CANDIDATE-U-WTLIFE-012` | 同一 receipt/retire operation の再送を exactly-once とし、異なる receipt digest の replay を `replay_conflict` で拒否する | mixed |
-| `CANDIDATE-U-WTLIFE-013` | status/doctor/HARNESS Memory が active/retirable/blocked-retire、deny reason、receipt/retention を同一 record revision から再構築する | positive |
-| `CANDIDATE-U-WTLIFE-014` | projection/DB 欠損・再構築・write failure で authoring lifecycle record/receipt を source に逆昇格せず、判断を補完しない | negative |
+| `CANDIDATE-U-WTLIFE-004` | dirty、unpushed、unmergedを各1軸だけ変異し、固有 deny reason、retained保全、実削除0を証明する | negative |
+| `CANDIDATE-U-WTLIFE-005` | active process、active path leaseを各1軸だけ残し、推測停止・暗黙lease解放なしで拒否する | negative |
+| `CANDIDATE-U-WTLIFE-006` | owner不明、terminal欠落/不一致、inventory unavailableをTTLでGreenにせず固有reasonで拒否する | negative |
+| `CANDIDATE-U-WTLIFE-007` | realpath、admin entry、lineage、branch/HEADの各1軸driftを拒否し、root外/path差替えを受理しない | negative |
+| `CANDIDATE-U-WTLIFE-008` | eligible worktreeのdry-run mutation 0とsealed plan digest一致を証明し、quarantine→admin解除→cache整理をexactly onceでretiredへ収束する | positive |
+| `CANDIDATE-U-WTLIFE-009` | quarantine/admin/cache各境界のfault/retryをoperation idで再生し、partial loss 0でretainedまたはretiredへ冪等収束する | mixed |
+| `CANDIDATE-U-WTLIFE-010` | 同一receipt/operation再送をexactly once、異なるdigestを`replay_conflict`として拒否する | mixed |
+| `CANDIDATE-U-WTLIFE-011` | canonical/durable state、retention中cache/scratch、retention到達済local cacheを区別し、正本を削除しない | mixed |
+| `CANDIDATE-U-WTLIFE-012` | Linux/Windowsのrealpath、mount/device、symlink/junction、spaces、long pathをnative fixtureでcanonical identityへ収束させる | mixed |
+| `CANDIDATE-U-WTLIFE-013` | unresolved link、root外path、case-only collision、admin mismatch、canonicalization不能をtyped denyで拒否する | negative |
+| `CANDIDATE-U-WTLIFE-014` | status/doctor/Memoryを欠損・再構築・write failure後も同一record revisionから再現し、projectionから判断を補完しない | positive |
 | `CANDIDATE-U-WTLIFE-015` | detached/merged-clean/scratch/review の用途境界と owner/TTL を跨ぐ record を混同せず、terminal なし TTL 超過だけの retire を拒否する | negative |
 | `CANDIDATE-U-WTLIFE-016` | #384 scope外の #141 cutover、#232 detector implementation、#124 Stop/resource/cancellation、既存 worktree cleanup を呼び出さない | negative |
 
