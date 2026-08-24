@@ -89,7 +89,7 @@ describe("Pack publication deterministic assets", () => {
       [{ ...base.entries[0], destinationPath: "b.txt" }],
       [{ ...base.entries[0], mode: "100755" as const }],
       [{ ...base.entries[0], size: 4 }],
-      [{ ...base.entries[0], content: Buffer.from("bye\n") }],
+      [{ ...base.entries[0], content: Buffer.from("ho\n") }],
     ];
     for (const entries of mutations) {
       expect(derivePackPublicationAssets({ release: base.release, entries })).toEqual({
@@ -127,6 +127,19 @@ describe("Pack publication deterministic assets", () => {
           artifacts: [first.release.artifacts[0], first.release.artifacts[0]],
         },
         entries: [first.entries[0], first.entries[0]],
+      }),
+    ).toEqual({ ok: false, error: "artifact_mismatch" });
+    const sourceDuplicateArtifact = {
+      ...secondArtifact,
+      sourcePath: first.release.artifacts[0].sourcePath,
+    };
+    expect(
+      derivePackPublicationAssets({
+        release: {
+          ...ordered.release,
+          artifacts: [first.release.artifacts[0], sourceDuplicateArtifact],
+        },
+        entries: [first.entries[0], { ...sourceDuplicateArtifact, content: Buffer.from("two\n") }],
       }),
     ).toEqual({ ok: false, error: "artifact_mismatch" });
   });
