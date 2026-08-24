@@ -86,8 +86,7 @@ export class WorktreeLifecycleStore {
       revision: 1,
       record,
     };
-    this.append(key, undefined, event);
-    return record;
+    return this.append(key, undefined, event);
   }
 
   activate(identity: LifecycleIdentity, evidence: ActivationEvidence): WorktreeLifecycleRecord {
@@ -351,16 +350,14 @@ export class WorktreeLifecycleStore {
     record: WorktreeLifecycleRecord,
     event: LifecycleEvent,
   ): WorktreeLifecycleRecord {
-    const next = reduceLifecycle(record, event);
-    this.append(lifecycleKey(record.identity), record, event);
-    return next;
+    return this.append(lifecycleKey(record.identity), record, event);
   }
 
   private append(
     key: string,
     current: WorktreeLifecycleRecord | undefined,
     event: LifecycleEvent,
-  ): void {
+  ): WorktreeLifecycleRecord {
     const next = reduceLifecycle(current, event);
     this.eventLog.push(
       Object.freeze({
@@ -378,5 +375,6 @@ export class WorktreeLifecycleStore {
     );
     this.records.set(lifecycleKey(next.identity), next);
     this.keys.add(key);
+    return next;
   }
 }
