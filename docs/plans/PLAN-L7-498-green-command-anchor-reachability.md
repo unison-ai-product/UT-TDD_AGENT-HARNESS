@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-24
 owner: PO / Claude
 github_issue_id: 367
 parent_design: docs/design/harness/L6-function-design/test-before-review.md
@@ -78,6 +78,21 @@ merge 後に到達不能になっても、その時点で検査済みなので�
 なった。同じ轍を踏まない。diff は書き手が偽装できない (偽装するには実際にその内容を commit する
 必要があり、その時点で anchor も branch 上に存在することになる)。
 
+**凍結する比較キー (非著者 FLAG B-2 の是正)**: 前版は「PR diff から導出する」としか書いておらず、
+何を 1 entry の同一性とみなすかを定義していなかった。字面の追加行検出では YAML の字下げ・key 順・
+整形だけで「新規」と誤判定し、構造照合でも add / modify / reorder の扱いが実装者裁量になる。
+実装前に以下を凍結する。
+
+1. **比較は字面ではなく parse 後の値で行う。** `mergeBaseSha` 側と `subjectHeadSha` 側の
+   `docs/plans/*.md` をそれぞれ parse し、`green_command` entry を取り出す。
+2. **意味的キーは `(plan file path, entry の anchor_commit 値)` の組**とする。検査対象は
+   **HEAD 側のキー集合から mergeBase 側のキー集合を差し引いた差**である。
+3. 帰結として: **key 順・字下げ・整形・コメント・他 field (`command` / `completed_at` 等) の編集・
+   entry の並べ替えでは発火しない** (キーが不変のため)。**新しい anchor_commit 値の導入だけが発火する**。
+4. **同一 anchor_commit 値の重複 entry は 1 キーへ畳む。** mergeBase 側に同値が既にあれば新規では
+   ない (その anchor は既に検査済みか、既存 entry として非目標に該当する)。
+5. **parse に失敗した面は検査ごと落とす** (判断点 4 の縮退と同じ規律。字面 fallback を持たない)。
+
 ### 判断点 3: 到達可能性の判定方法
 
 **`git merge-base --is-ancestor <anchor> <PR head>` を使う。`git cat-file -e` を使わない。**
@@ -98,6 +113,62 @@ merge 後に到達不能になっても、その時点で検査済みなので�
 
 CI の `pull_request` run では両方が揃うため、本 issue が対象とする PR CI での fail-close は
 失われない。
+
+### 判断点 5: 評価される subject commit の正体と checkout 契約 (非著者 FLAG B-3 の是正)
+
+前版は AC-4 に「CI の clone 形状を確認する」と書いただけで、**どの commit が subject になるかを
+契約として凍結していなかった**。実測して凍結する。
+
+- `harness-check.yml` の checkout は `actions/checkout@v5` + `fetch-depth: 0` のみで、
+  **`ref:` を `pull_request.head.sha` へ固定していない** (実測: `.github/workflows/harness-check.yml`
+  の checkout step に `ref` が無い)。
+- `resolveMergedPlanTargetEvidence` の `subjectHeadSha` は **`git rev-parse HEAD`** である
+  (実測: `src/lint/merged-plan-target-evidence.ts:104`)。event payload の `head.sha` ではない。
+- したがって `pull_request` run で評価される subject は **PR head ではなく synthetic merge commit**
+  (`refs/pull/N/merge`) である。
+
+**凍結する契約**: 到達可能性は「PR head から」ではなく **「評価された subject commit から」** と定義
+する。`pull_request` run ではそれが merge commit であり、PR head は merge commit の親なので
+**PR branch 上の anchor は必ず通る** (検査したい捏造 anchor は落ちる)。同時に **base main 側から
+到達可能な anchor も通る**。これは検出力の弱化だが、main 上の commit は実在し永続するので
+「測定時点の固定」という `PLAN-L7-303` の目的は損なわれない。**この弱化を暗黙にせず契約として
+明示する**のが本判断点の要点である。
+
+AC で機械化する (prose の前提にしない): merge commit checkout を模した fixture
+(HEAD = base main と PR head を親に持つ merge commit) で、(a) PR branch 上のみに在る anchor が
+通ること、(b) base main 上のみに在る anchor が通ること、(c) どちらからも到達不能な anchor が
+落ちることを実測する。
+
+### 判断点 6: 依存 PR の evidence を引用する場合の anchor provenance (非著者 FLAG B-1 の是正)
+
+FLAG は「依存 PR の pre-squash head を引用した正当な cross-PR entry を false-reject する」と指摘した。
+実測すると **本 repo に pre-squash head を cross-PR で引用した entry は観測されない** (サンプル検査
+した anchor はいずれも導入 commit の祖先) ため、これは仮説だが、方式は凍結する必要がある。
+
+| 案 | 内容 | 判定 |
+|---|---|---|
+| A-dash | **現行の到達可能性を維持し、cross-PR 引用の記録規則を 1 つ足す** | **採択** |
+| B | 依存 PR の pre-squash head を GitHub API の存在/到達性検査で別途認証する | 不採択 |
+| C | anchor を `CI run id + head sha` の組へデータ形式変更する | 不採択 |
+
+- **B の不採択理由**: lint gate に外部 API という新しい信頼根とネットワーク依存を持ち込む
+  (最小実装原則違反)。「削除済み branch の dangling object を API から引ける」は GitHub の現行
+  挙動であって契約保証ではない。
+- **C の不採択理由**: `PLAN-L7-303` の二層 digest 契約と `PLAN-L7-497` の必須化を壊す。本 PLAN の
+  非目標 (既存契約を変更しない) と正面衝突する。
+
+**採択案で凍結する記録規則**: 依存 PR の green を引用する entry は、**依存 PR が merge された後の
+main commit (squash 後の sha) を anchor に書く**。この commit は subject から必ず到達可能である。
+squash 後 commit の tree が測定時の tree と一致するのは **依存 PR が main の先端から分岐していた
+場合に限る**ので、main が進んでいた場合は tree 同一性を主張してはならない — その場合は
+**引用元の run を `command` 側の記録に残したうえで、自分の head で green を測り直す**。
+
+到達不能な pre-squash head を書いた entry は **記録方法の誤り**として落とす。落ちたときの是正手順
+(上記 2 通り) を violation message に載せる。
+
+**AC で機械化する**: 依存 PR 由来の 2 ケース — (a) pre-squash head を anchor にした entry が
+`unreachable_anchor_commit` で落ちること、(b) squash 後 main commit を anchor にした同内容の entry が
+通ること — を実装前に回帰として書く。
 
 ## 3. 実装契約
 
@@ -122,6 +193,26 @@ anchor が実在すること」だけを足す。
 3. `mergeBaseSha` / `subjectHeadSha` のいずれかが解決できない面では検査ごと落ちる (2 面とも回帰化)。
 4. **CI の clone 形状を前提条件として明示的に確認する。** 「ローカルで通った」を根拠にしない
    (issue #367 の注意書き。PR #361 の実在検査がこれで 29 件の false positive を出した)。
+5. **merge commit checkout の fixture 回帰** (判断点 5): PR branch 上のみの anchor が通る /
+   base main 上のみの anchor が通る / どちらからも到達不能な anchor が落ちる、の 3 面を実測する。
+   `subjectHeadSha` が `git rev-parse HEAD` 由来であることをテストで固定し、event payload 由来へ
+   すり替わったら赤になるようにする。
+6. **新規 entry 判定キーの回帰** (判断点 2): 整形・key 順・並べ替え・他 field 編集では発火せず、
+   新しい `anchor_commit` 値の導入だけが発火することを実測する。parse 失敗面で検査ごと落ちることも
+   固定する。
+7. **依存 PR 引用の 2 ケース回帰** (判断点 6): pre-squash head anchor が落ち、squash 後 main commit
+   anchor が通る。violation message に是正手順が含まれることも固定する。
+
+## 4.1 相談記録 (2026-08-24、非著者 FLAG 3 件の是正時)
+
+- advisor: `--decision design --current-model claude-opus-5` (一次 `claude-fable-5`)。B-1 の
+  選択肢 B / C は refuted、到達可能性維持 + 記録規則の追記を採択。B-2 / B-3 は同一 PLAN 改訂に
+  含める判定 (slice 分割は pair-freeze を二度走らせるだけでコストが上回る)。
+- **advisor の前提を 1 点実測で訂正した**: advisor は「PLAN が入力に使う `subjectHeadSha` は event
+  payload 由来」としたが、実測では `src/lint/merged-plan-target-evidence.ts:104` の
+  `git rev-parse HEAD` である。したがって subject は merge commit であり、判断点 5 はこの実測に
+  基づいて凍結した (advisor の推奨より弱い検出力を明示する形へ倒した)。
+- override なし。実装は本改訂の cross-review 後に着手する (pair-freeze 順守)。
 
 ## 5. 非目標
 
