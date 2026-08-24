@@ -22,6 +22,18 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-501-worktree-lifecycle-domain.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/worktree-lifecycle/domain/errors.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/worktree-lifecycle/domain/index.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/worktree-lifecycle/domain/reducer.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/worktree-lifecycle/domain/store.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/worktree-lifecycle/domain/types.ts
+    artifact_type: source_module
+  - artifact_path: tests/worktree-lifecycle-domain.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
   requires: []
