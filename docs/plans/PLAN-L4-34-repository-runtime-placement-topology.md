@@ -384,12 +384,12 @@ draft `generates` に予告登録しない。
 | `CANDIDATE-U-WTLIFE-003` | #232 inventory と record の link/dir/dirty/unmerged/unpushed/merged facts を照合し、detector 自体を再実装せず typed finding を消費する | positive |
 | `CANDIDATE-U-WTLIFE-004` | dirty、unpushed、unmergedを各1軸だけ変異し、固有 deny reason、retained保全、実削除0を証明する | negative |
 | `CANDIDATE-U-WTLIFE-005` | active process、active path leaseを各1軸だけ残し、推測停止・暗黙lease解放なしで拒否する | negative |
-| `CANDIDATE-U-WTLIFE-006` | owner不明、terminal欠落/不一致、inventory unavailableをTTLでGreenにせず固有reasonで拒否する | negative |
+| `CANDIDATE-U-WTLIFE-006` | planned の activation 未解決を含む owner不明、terminal欠落/不一致、inventory unavailable の各1軸を、TTLでGreenにせず `activation_unresolved`/固有reasonで拒否する | negative |
 | `CANDIDATE-U-WTLIFE-007` | realpath、admin entry、lineage、branch/HEADの各1軸driftを拒否し、root外/path差替えを受理しない | negative |
 | `CANDIDATE-U-WTLIFE-008` | eligible worktreeのdry-run mutation 0とsealed plan digest一致を証明し、quarantine→admin解除→cache整理をexactly onceでretiredへ収束する | positive |
 | `CANDIDATE-U-WTLIFE-009` | quarantine/admin/cache各境界のfault/retryをoperation idで再生し、partial loss 0でretainedまたはretiredへ冪等収束する | mixed |
 | `CANDIDATE-U-WTLIFE-010` | 同一receipt/operation再送をexactly once、異なるdigestを`replay_conflict`として拒否する | mixed |
-| `CANDIDATE-U-WTLIFE-011` | canonical/durable state、retention中cache/scratch、retention到達済local cacheを区別し、正本を削除しない | mixed |
+| `CANDIDATE-U-WTLIFE-011` | canonical/durable state、retention中cache/scratch、retention到達済local cacheを区別し、正本を削除しない。`RetentionPolicyPort` の policy id/revision 欠落・drift と adapter の自己申告値/時刻を各1軸で拒否し、`retention_active` を返す | mixed |
 | `CANDIDATE-U-WTLIFE-012` | Linux/Windowsのrealpath、mount/device、symlink/junction、spaces、long pathをnative fixtureでcanonical identityへ収束させる | mixed |
 | `CANDIDATE-U-WTLIFE-013` | unresolved link、root外path、case-only collision、admin mismatch、canonicalization不能をtyped denyで拒否する | negative |
 | `CANDIDATE-U-WTLIFE-014` | status/doctor/Memoryを欠損・再構築・write failure後も同一record revisionから再現し、projectionから判断を補完しない | positive |
