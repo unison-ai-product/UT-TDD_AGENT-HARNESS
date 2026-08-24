@@ -4,7 +4,7 @@ title: "Pack publication deterministic tar/checksum/asset inventory pure domain"
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-24
@@ -46,9 +46,11 @@ review_evidence:
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-24T18:42:08+09:00"
     tests_green_at: "2026-08-24T18:46:30+09:00"
-    verdict: pass
+    verdict: "PASS blocking 0; Claude Opus non-author closing review pending"
     worker_model: gpt-5.6-luna
     reviewer_model: codex
+    plan_revision: 84f0af0c
+    subject_head: 84f0af0c
     green_commands:
       - kind: unit_test
         command: "node scripts/run-vitest-snapshot.ts tests/pack-publication-assets.test.ts tests/plan-lint.test.ts --reporter=dot"
