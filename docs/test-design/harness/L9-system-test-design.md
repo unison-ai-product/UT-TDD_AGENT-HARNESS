@@ -445,22 +445,22 @@ Green、`negative` は一見成功する実装を必ず Red にする条件で�
 
 | ST-ID | Given / When | 期待する system oracle | 種別 |
 |---|---|---|---|
-| ST-WTLIFE-001 | owner/Issue/PLAN revision/use/TTL/path lease と canonical realpath/lineage を揃えて planned record を登録する | 必須値が原子的に一意登録され、欠落 record では managed worker 起動 0 | positive |
-| ST-WTLIFE-002 | `planned -> active -> terminal_pending` を success/failure/timeout/parent-loss/cancel 各 terminal input で実行する | #124 receipt と process/lease 終端が同一 lifecycle/attempt に束縛され、許可遷移だけが生成される | positive |
-| ST-WTLIFE-003 | #232 inventory の link/dir/liveness facts を lifecycle record と照合する | detector の再実装なしに登録漏れ、owner不明、期限切れ、terminal未回収を typed finding で表す | positive |
-| ST-WTLIFE-004 | dirty、unpushed、unmerged を各1軸だけ変異して retire dry-run/apply を要求する | 各々 `dirty`/`unpushed`/`unmerged`、実削除 0、retained への保全を返す | negative |
-| ST-WTLIFE-005 | active process または active path lease を各1軸だけ残して apply を要求する | `active_process`/`active_path_lease` で fail-close し、process/lease を推測で解放しない | negative |
-| ST-WTLIFE-006 | owner不明、terminal欠落/不一致、inventory欠測を入力する | `owner_unknown`/`terminal_missing`/`terminal_mismatch`/`inventory_unavailable` を保持し、TTLで Green にしない | negative |
-| ST-WTLIFE-007 | canonical realpath、admin entry、repository lineage、branch/HEAD を各1要素変異する | `realpath_mismatch`/`admin_entry_mismatch`/`lineage_mismatch` を返し、path差し替え・root外を拒否する | negative |
-| ST-WTLIFE-008 | eligible scratch/review worktree の dry-run と faultなし apply を同じ sealed plan で実行する | dry-run mutation 0、対象集合/digest一致、実体のretention quarantine退避→admin entry解除→local cache整理が exactly once で retired へ収束し、terminal receipt seal前の物理削除0 | positive |
-| ST-WTLIFE-009 | quarantine退避、admin entry解除、local cache整理の各段階直後に crash/retry/再送する | operation id の replay が冪等で、quarantineから復旧可能、partial loss 0、retained または retired に収束する | mixed |
-| ST-WTLIFE-010 | 同一 receipt/operation を再送し、次に別 digest の receipt を同じ lifecycleへ再送する | 同一入力は exactly once、別 digest は `replay_conflict` で拒否し、terminal を上書きしない | mixed |
-| ST-WTLIFE-011 | canonical/durable HARNESS state、retention中の cache/scratch、retention到達後の local cache を混在させる | `canonical_state`/`retention_active` を返し、正本 state は削除せず、許可された local cache のみ apply する | mixed |
-| ST-WTLIFE-012 | Linux の symlink/realpath、mount/device、空白、PATH_MAX と Windows の drive case、junction/reparse、空白/long path を実体 fixture で入力する | 同一実体は canonical key へ収束し、OS固有の未解決/long path/予約名は typed deny、空白は argv contract で Green | mixed |
-| ST-WTLIFE-013 | unresolved link、root外 path、case-only collision、admin link mismatch、canonicalization不能を入力する | path/lineage deny で fail-close し、文字列比較や fake realpath に倒れない | negative |
-| ST-WTLIFE-014 | status/doctor/Memory projection を rebuild、欠損、write failure 後に取得する | 同一 record revision の active/retirable/blocked-retire、deny、receipt、retention を再現し、projectionから判断を補完しない | positive |
-| ST-WTLIFE-015 | TTL超過だが terminal receiptなし、または detached/merged-clean/review/scratch の use を跨ぐ入力を作る | terminalなしTTLは `terminal_missing`、use/owner/retentionの混同は fail-close、用途境界を保つ | negative |
-| ST-WTLIFE-016 | #384 adapter が #141 cutover、#232 detector implementation、#124 Stop/resource/cancellation、既存 worktree cleanup を呼ぶ fixture を与える | 外部責務への副作用 0。#232 facts と #124 receipt の read-only input だけを消費する | negative |
+| CANDIDATE-ST-WTLIFE-001 | owner/Issue/PLAN revision/use/TTL/path lease と canonical realpath/lineage を揃えて planned record を登録する | 必須値が原子的に一意登録され、欠落 record では managed worker 起動 0 | positive |
+| CANDIDATE-ST-WTLIFE-002 | `planned -> active -> terminal_pending` を success/failure/timeout/parent-loss/cancel 各 terminal input で実行する | #124 receipt と process/lease 終端が同一 lifecycle/attempt に束縛され、許可遷移だけが生成される | positive |
+| CANDIDATE-ST-WTLIFE-003 | #232 inventory の link/dir/liveness facts を lifecycle record と照合する | detector の再実装なしに登録漏れ、owner不明、期限切れ、terminal未回収を typed finding で表す | positive |
+| CANDIDATE-ST-WTLIFE-004 | dirty、unpushed、unmerged を各1軸だけ変異して retire dry-run/apply を要求する | 各々 `dirty`/`unpushed`/`unmerged`、実削除 0、retained への保全を返す | negative |
+| CANDIDATE-ST-WTLIFE-005 | active process または active path lease を各1軸だけ残して apply を要求する | `active_process`/`active_path_lease` で fail-close し、process/lease を推測で解放しない | negative |
+| CANDIDATE-ST-WTLIFE-006 | owner不明、terminal欠落/不一致、inventory欠測を入力する | `owner_unknown`/`terminal_missing`/`terminal_mismatch`/`inventory_unavailable` を保持し、TTLで Green にしない | negative |
+| CANDIDATE-ST-WTLIFE-007 | canonical realpath、admin entry、repository lineage、branch/HEAD を各1要素変異する | `realpath_mismatch`/`admin_entry_mismatch`/`lineage_mismatch` を返し、path差し替え・root外を拒否する | negative |
+| CANDIDATE-ST-WTLIFE-008 | eligible scratch/review worktree の dry-run と faultなし apply を同じ sealed plan で実行する | dry-run mutation 0、対象集合/digest一致、実体のretention quarantine退避→admin entry解除→local cache整理が exactly once で retired へ収束し、terminal receipt seal前の物理削除0 | positive |
+| CANDIDATE-ST-WTLIFE-009 | quarantine退避、admin entry解除、local cache整理の各段階直後に crash/retry/再送する | operation id の replay が冪等で、quarantineから復旧可能、partial loss 0、retained または retired に収束する | mixed |
+| CANDIDATE-ST-WTLIFE-010 | 同一 receipt/operation を再送し、次に別 digest の receipt を同じ lifecycleへ再送する | 同一入力は exactly once、別 digest は `replay_conflict` で拒否し、terminal を上書きしない | mixed |
+| CANDIDATE-ST-WTLIFE-011 | canonical/durable HARNESS state、retention中の cache/scratch、retention到達後の local cache を混在させる | `canonical_state`/`retention_active` を返し、正本 state は削除せず、許可された local cache のみ apply する | mixed |
+| CANDIDATE-ST-WTLIFE-012 | Linux の symlink/realpath、mount/device、空白、PATH_MAX と Windows の drive case、junction/reparse、空白/long path を実体 fixture で入力する | 同一実体は canonical key へ収束し、OS固有の未解決/long path/予約名は typed deny、空白は argv contract で Green | mixed |
+| CANDIDATE-ST-WTLIFE-013 | unresolved link、root外 path、case-only collision、admin link mismatch、canonicalization不能を入力する | path/lineage deny で fail-close し、文字列比較や fake realpath に倒れない | negative |
+| CANDIDATE-ST-WTLIFE-014 | status/doctor/Memory projection を rebuild、欠損、write failure 後に取得する | 同一 record revision の active/retirable/blocked-retire、deny、receipt、retention を再現し、projectionから判断を補完しない | positive |
+| CANDIDATE-ST-WTLIFE-015 | TTL超過だが terminal receiptなし、または detached/merged-clean/review/scratch の use を跨ぐ入力を作る | terminalなしTTLは `terminal_missing`、use/owner/retentionの混同は fail-close、用途境界を保つ | negative |
+| CANDIDATE-ST-WTLIFE-016 | #384 adapter が #141 cutover、#232 detector implementation、#124 Stop/resource/cancellation、既存 worktree cleanup を呼ぶ fixture を与える | 外部責務への副作用 0。#232 facts と #124 receipt の read-only input だけを消費する | negative |
 
 ### §10.4 platform / fault matrix と pair exit
 
@@ -470,7 +470,7 @@ OS capability、realpath、inventory、terminal input、process/lease probe、re
 注入し、観測不能を Green に丸めない。#232/#124 の既存証跡を同一 attempt に束縛できない場合は
 `inventory_unavailable` または terminal typed deny とする。
 
-L4↔L9 pair exit は `U-WTLIFE-001..016` と `ST-WTLIFE-001..016` の双方向 1:1 trace、全 positive/negative の
+L4↔L9 pair exit は `CANDIDATE-U-WTLIFE-001..016` と `CANDIDATE-ST-WTLIFE-001..016` の双方向 1:1 trace、全 positive/negative の
 Given/When/Then、Linux/Windows/path/fault 行、#141/#232/#124 dependency、scope exclusion が揃うこと。L4 PLAN
 の `status: draft` と空の `review_evidence` は、cross-family review と対象コマンドの実測 evidence がない状態を
 正しく示す。レビュー前に `confirmed`、実装 Green、cleanup 完了、Memory通知済みと記述してはならない。pair-freeze

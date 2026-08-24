@@ -166,7 +166,7 @@ Issue #384 は #141 の子契約であり、配置 cutover、canonical state roo
 #124 の worker 停止・resource/cancellation 実装を所有しない。#384 が所有するのは、repository lineage
 単位の worktree lifecycle record/state machine、owner/Issue/PLAN revision/use/TTL/path lease、terminal
 receipt の受理、retire の dry-run/apply、retention 境界、および status/doctor/HARNESS Memory への read-only
-projection である。本節の設計契約と L9 §10 の `ST-WTLIFE-*` は docs-only の L4↔L9 pair-freeze 入力であり、
+projection である。本節の設計契約と L9 §10 の `CANDIDATE-ST-WTLIFE-*` は docs-only の L4↔L9 pair-freeze 入力であり、
 実装・既存 worktree の cleanup・Memory への通知を行わない。
 
 #### 3.3.1 record と状態機械
@@ -331,7 +331,7 @@ draft `generates` に予告登録しない。
 - **AC-PLACE-12 (#384)**: lifecycle の active/retirable/blocked-retire と typed reason、receipt digest、retention
   を status/doctor/HARNESS Memory projection から再構築可能に取得できる。projection は authoring source や
   cleanup authority にならない。
-- **AC-PLACE-13 (#384 pair-freeze)**: L9 §10 の `ST-WTLIFE-001..016` が本節の record/FSM/port/deny/retire/
+- **AC-PLACE-13 (#384 pair-freeze)**: L9 §10 の `CANDIDATE-ST-WTLIFE-001..016` が本節の record/FSM/port/deny/retire/
   path/fault/projection 各契約へ双方向に 1:1 対応し、未実装 oracle は RED のまま保持する。既存 worktree の
   cleanup、L7 test-design の変更、実装 Green の主張は本 PLAN の scope 外である。
 
@@ -364,26 +364,26 @@ draft `generates` に予告登録しない。
 ### 8.1 Issue #384 lifecycle pair-freeze oracle
 
 `U-PLACE-010` は親の寿命要件を示すだけであり、Issue #384 の record/state/retire 契約を代替しない。
-以下の ID は L9 §10 の `ST-WTLIFE-*` と 1:1 で対になる実装前 RED oracle である。
+以下の ID は L9 §10 の `CANDIDATE-ST-WTLIFE-*` と 1:1 で対になる実装前 RED oracle である。
 
 | oracle ID | 検証対象 | 種別 |
 |---|---|---|
-| `U-WTLIFE-001` | owner/Issue/PLAN revision/use/TTL/path lease と canonical realpath/lineage を一意に持つ record を原子的に登録し、欠落時の起動を 0 にする | positive |
-| `U-WTLIFE-002` | `planned -> active -> terminal_pending -> retained|retired` と terminal kind 5種を同一 lifecycle/attempt へ束縛する | positive |
-| `U-WTLIFE-003` | #232 inventory と record の link/dir/dirty/unmerged/unpushed/merged facts を照合し、detector 自体を再実装せず typed finding を消費する | positive |
-| `U-WTLIFE-004` | #124 terminal/lease-release receipt を消費し、parent-loss/timeout 等で process/lease が未収束または receipt 欠落なら retire を拒否する | negative |
-| `U-WTLIFE-005` | dirty、unpushed、unmerged、active process、active path lease を各1軸だけ変異し、実削除 0 と固有 deny reason を証明する | negative |
-| `U-WTLIFE-006` | owner不明、terminal mismatch、realpath/lineage/admin entry mismatch、inventory unavailable を推測で Green にせず拒否する | negative |
-| `U-WTLIFE-007` | dry-run が既定で mutation 0、sealed plan の対象と apply 対象が digest 一致する | positive |
-| `U-WTLIFE-008` | admin entry→実体→local cache の各境界 fault/retry を operation id で replay し、partial loss 0、retained または retired へ冪等収束する | mixed |
-| `U-WTLIFE-009` | canonical/durable HARNESS state、retention 中の cache/scratch、retention 到達後の local cache を区別し、正本 state を削除しない | mixed |
-| `U-WTLIFE-010` | Linux の symlink/realpath、mount/device、空白 path、PATH_MAX と Windows の drive case、junction/reparse、空白/long path を canonical identity として検証する | mixed |
-| `U-WTLIFE-011` | unresolved link、root外 path、case-only collision、admin link mismatch、canonicalization不能を typed deny として fail-close する | negative |
-| `U-WTLIFE-012` | 同一 receipt/retire operation の再送を exactly-once とし、異なる receipt digest の replay を `replay_conflict` で拒否する | mixed |
-| `U-WTLIFE-013` | status/doctor/HARNESS Memory が active/retirable/blocked-retire、deny reason、receipt/retention を同一 record revision から再構築する | positive |
-| `U-WTLIFE-014` | projection/DB 欠損・再構築・write failure で authoring lifecycle record/receipt を source に逆昇格せず、判断を補完しない | negative |
-| `U-WTLIFE-015` | detached/merged-clean/scratch/review の用途境界と owner/TTL を跨ぐ record を混同せず、terminal なし TTL 超過だけの retire を拒否する | negative |
-| `U-WTLIFE-016` | #384 scope外の #141 cutover、#232 detector implementation、#124 Stop/resource/cancellation、既存 worktree cleanup を呼び出さない | negative |
+| `CANDIDATE-U-WTLIFE-001` | owner/Issue/PLAN revision/use/TTL/path lease と canonical realpath/lineage を一意に持つ record を原子的に登録し、欠落時の起動を 0 にする | positive |
+| `CANDIDATE-U-WTLIFE-002` | `planned -> active -> terminal_pending -> retained|retired` と terminal kind 5種を同一 lifecycle/attempt へ束縛する | positive |
+| `CANDIDATE-U-WTLIFE-003` | #232 inventory と record の link/dir/dirty/unmerged/unpushed/merged facts を照合し、detector 自体を再実装せず typed finding を消費する | positive |
+| `CANDIDATE-U-WTLIFE-004` | #124 terminal/lease-release receipt を消費し、parent-loss/timeout 等で process/lease が未収束または receipt 欠落なら retire を拒否する | negative |
+| `CANDIDATE-U-WTLIFE-005` | dirty、unpushed、unmerged、active process、active path lease を各1軸だけ変異し、実削除 0 と固有 deny reason を証明する | negative |
+| `CANDIDATE-U-WTLIFE-006` | owner不明、terminal mismatch、realpath/lineage/admin entry mismatch、inventory unavailable を推測で Green にせず拒否する | negative |
+| `CANDIDATE-U-WTLIFE-007` | dry-run が既定で mutation 0、sealed plan の対象と apply 対象が digest 一致する | positive |
+| `CANDIDATE-U-WTLIFE-008` | 実体のretention quarantine退避→admin entry解除→local cache整理の各境界 fault/retry を operation id で replayし、quarantineから復旧可能、partial loss 0、retained または retired へ冪等収束する | mixed |
+| `CANDIDATE-U-WTLIFE-009` | canonical/durable HARNESS state、retention 中の cache/scratch、retention 到達後の local cache を区別し、正本 state を削除しない | mixed |
+| `CANDIDATE-U-WTLIFE-010` | Linux の symlink/realpath、mount/device、空白 path、PATH_MAX と Windows の drive case、junction/reparse、空白/long path を canonical identity として検証する | mixed |
+| `CANDIDATE-U-WTLIFE-011` | unresolved link、root外 path、case-only collision、admin link mismatch、canonicalization不能を typed deny として fail-close する | negative |
+| `CANDIDATE-U-WTLIFE-012` | 同一 receipt/retire operation の再送を exactly-once とし、異なる receipt digest の replay を `replay_conflict` で拒否する | mixed |
+| `CANDIDATE-U-WTLIFE-013` | status/doctor/HARNESS Memory が active/retirable/blocked-retire、deny reason、receipt/retention を同一 record revision から再構築する | positive |
+| `CANDIDATE-U-WTLIFE-014` | projection/DB 欠損・再構築・write failure で authoring lifecycle record/receipt を source に逆昇格せず、判断を補完しない | negative |
+| `CANDIDATE-U-WTLIFE-015` | detached/merged-clean/scratch/review の用途境界と owner/TTL を跨ぐ record を混同せず、terminal なし TTL 超過だけの retire を拒否する | negative |
+| `CANDIDATE-U-WTLIFE-016` | #384 scope外の #141 cutover、#232 detector implementation、#124 Stop/resource/cancellation、既存 worktree cleanup を呼び出さない | negative |
 
 ## 9. Reverse 対の判定 (kind=add-design)
 
