@@ -159,12 +159,9 @@ export function evaluateMergeGate(input: {
           reviewerFamily: candidate.reviewerFamily,
         }
       : null;
-  // D1 の result は監査用に全 request/history を保持する。D2-B の merge eligibility は
-  // exact current HEAD の entry と、その HEAD に結び付く diagnostics だけへ投影する。
-  const currentHeadDiagnostics = result.diagnostics.filter((diagnostic) =>
-    diagnostic.includes(`@${input.pr}@${headSha}`),
-  );
-  const reasons = [...currentHeadDiagnostics];
+  // D1 の result/diagnostics は監査用に全履歴を保持する。D2-B は文字列diagnosticを
+  // 再解釈せず、exact current HEAD のtyped entryだけをauthorizationへ投影する。
+  const reasons: string[] = [];
   if (entriesForHead.length === 0) {
     reasons.push("no_request_for_current_head");
     return {
