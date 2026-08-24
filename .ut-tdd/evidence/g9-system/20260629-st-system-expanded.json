@@ -69,7 +69,23 @@
     "ST-EXT-06",
     "ST-FUNC-08",
     "ST-FUNC-09",
-    "ST-FUNC-10"
+    "ST-FUNC-10",
+    "ST-WTLIFE-001",
+    "ST-WTLIFE-002",
+    "ST-WTLIFE-003",
+    "ST-WTLIFE-004",
+    "ST-WTLIFE-005",
+    "ST-WTLIFE-006",
+    "ST-WTLIFE-007",
+    "ST-WTLIFE-008",
+    "ST-WTLIFE-009",
+    "ST-WTLIFE-010",
+    "ST-WTLIFE-011",
+    "ST-WTLIFE-012",
+    "ST-WTLIFE-013",
+    "ST-WTLIFE-014",
+    "ST-WTLIFE-015",
+    "ST-WTLIFE-016"
   ],
   "commands": [
     {
