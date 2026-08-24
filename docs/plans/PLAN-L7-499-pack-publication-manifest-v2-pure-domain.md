@@ -113,4 +113,4 @@ channel pointer CAS、promotion、rollback、Pack copy、複数consumer E2Eは�
 - targeted test、TypeScript、Biome、plan lint、Linux/Windows/aggregateをGreenにする。
 - L7 test-designの`U-PACKPUB-001`と実テストを1対1でtraceする。
 - Claude Opus 5のexact-head非著者closing PASSを得る。
-- Reverse-498をR3/R4へ進め、L6契約に追加backfillが不要かを明示してからmergeする。
+- Reverse-499をR3/R4へ進め、L6契約に追加backfillが不要かを明示してからmergeする。
