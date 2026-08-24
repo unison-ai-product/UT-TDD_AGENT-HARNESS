@@ -79,4 +79,3 @@ merge eligibilityへ流用しない境界だけを追加する。
 - `PLAN-L7-470` の U-RVDISP-047〜052 と audit出力を維持する。
 - typecheck、Biome、targeted tests、PLAN lint がGreen。draft PLANのgeneratesは本PLAN自身に
   限定し、実装成果物の所有は実装確認時に更新する。
-

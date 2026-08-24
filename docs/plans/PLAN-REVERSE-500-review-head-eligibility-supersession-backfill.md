@@ -55,4 +55,3 @@ current HEADへ限定する実装差分である。実装・Red/Green oracle・�
 
 R1以降は、U-RVMGのRed/Green実測と exact HEAD closing reviewを根拠に、上流へ戻す必要がある
 契約差分だけを記録する。#389/#384/#388の資産は本Reverseの対象外とする。
-
