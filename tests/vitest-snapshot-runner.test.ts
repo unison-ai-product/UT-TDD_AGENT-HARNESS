@@ -26,6 +26,7 @@ import {
   runSnapshotTests,
   sealReference,
   snapshotContentFingerprint,
+  snapshotFenceChildEnvironment,
   unsealReference,
   windowsSealCommands,
 } from "../scripts/run-vitest-snapshot.ts";
@@ -55,6 +56,26 @@ describe("vitest snapshot runner", () => {
     expect(() => assertBatchVitestArgs(["-w"])).toThrow("batch-only");
     expect(() => assertBatchVitestArgs(["--watch=false"])).toThrow("batch-only");
     expect(() => assertBatchVitestArgs(["tests/example.test.ts", "--reporter=dot"])).not.toThrow();
+  });
+
+  it("U-FENCE-010: keeps runner custody coordinates out of the test child environment", () => {
+    const env = snapshotFenceChildEnvironment(
+      {
+        UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID: "must-not-leak",
+        UT_TDD_SNAPSHOT_FENCE_EVIDENCE_PATH: "must-not-leak",
+        UT_TDD_SNAPSHOT_FENCE_TEST_OWNED_PATHS: "must-not-leak",
+      },
+      {
+        snapshotRoot: "C:/snapshot",
+        referenceRoot: "C:/reference",
+        cacheRoot: "C:/cache",
+        bun: "C:/node/bun.exe",
+      },
+    );
+    expect(env.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID).toBeUndefined();
+    expect(env.UT_TDD_SNAPSHOT_FENCE_EVIDENCE_PATH).toBeUndefined();
+    expect(env.UT_TDD_SNAPSHOT_FENCE_TEST_OWNED_PATHS).toBeUndefined();
+    expect(env.UT_TDD_TEST_FENCE_ROOT).toBeUndefined();
   });
 
   it("U-TESTHYGIENE-046: does not advertise a live-source watch script", () => {

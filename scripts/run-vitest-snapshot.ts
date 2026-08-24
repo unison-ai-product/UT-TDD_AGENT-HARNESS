@@ -15,8 +15,16 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, win32 } from "node:path";
 import { resolveDefaultBranchRef } from "../src/git/default-branch.ts";
-import { snapshotFenceEvidencePath } from "../src/runtime/snapshot-fence.ts";
+import {
+  createSnapshotFenceRun,
+  readForeignActivityEvidence,
+  resolveEvidencePath,
+} from "../src/runtime/snapshot-fence.ts";
 import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash.ts";
+import {
+  captureGitWorkspaceFingerprint,
+  classifyGitWorkspaceChange,
+} from "../tests/support/git-workspace-fingerprint.ts";
 
 function run(
   command: string,
@@ -256,6 +264,25 @@ export function finishSnapshotCleanup(
   throw new AggregateError(cleanupFailures, "vitest snapshot cleanup failed");
 }
 
+export function snapshotFenceChildEnvironment(
+  base: NodeJS.ProcessEnv,
+  input: { snapshotRoot: string; referenceRoot: string; cacheRoot: string; bun: string },
+): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = {
+    ...base,
+    INIT_CWD: input.snapshotRoot,
+    UT_TDD_TEST_EXECUTION_ROOT: input.snapshotRoot,
+    UT_TDD_HEAD_SNAPSHOT_ROOT: input.referenceRoot,
+    UT_TDD_BUN_BINARY: input.bun,
+    UT_TDD_UPDATE_CHECK_CACHE_DIR: input.cacheRoot,
+    UT_TDD_VITEST_CACHE_DIR: join(input.cacheRoot, "vite"),
+  };
+  delete childEnv.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID;
+  delete childEnv.UT_TDD_SNAPSHOT_FENCE_EVIDENCE_PATH;
+  delete childEnv.UT_TDD_SNAPSHOT_FENCE_TEST_OWNED_PATHS;
+  return childEnv;
+}
+
 export function copyReferenceRuntimeInputs(
   snapshotRoot: string,
   referenceRoot: string,
@@ -360,6 +387,8 @@ export function runSnapshotTests(
   );
   let primaryError: unknown;
   let sealedReferenceFingerprint: string | undefined;
+  let fenceBefore: ReturnType<typeof captureGitWorkspaceFingerprint> | undefined;
+  let fenceRun: ReturnType<typeof createSnapshotFenceRun> | undefined;
   try {
     const bun = resolveBunBinary();
     const node = resolveNodeBinary();
@@ -379,23 +408,62 @@ export function runSnapshotTests(
     );
     sealReference(referenceRoot);
     sealedReferenceFingerprint = snapshotContentFingerprint(referenceRoot);
-    const runnerSessionId = `snapshot-runner-${process.pid}-${Date.now()}`;
-    const evidencePath = snapshotFenceEvidencePath(repoRoot);
-    run(node, [join("node_modules", "vitest", "vitest.mjs"), "run", ...args], snapshotRoot, {
-      ...process.env,
-      INIT_CWD: snapshotRoot,
-      UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
-      UT_TDD_TEST_FENCE_ROOT: repoRoot,
-      UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
-      UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID: runnerSessionId,
-      ...(evidencePath ? { UT_TDD_SNAPSHOT_FENCE_EVIDENCE_PATH: evidencePath } : {}),
-      UT_TDD_BUN_BINARY: bun,
-      UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
-      UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
+    // The parent runner owns the fence lease and classifies the live worktree after
+    // the child exits. Sensitive custody coordinates are deliberately not passed to
+    // the child: global setup only protects the detached reference snapshot.
+    fenceBefore = captureGitWorkspaceFingerprint(repoRoot, { volatileRuntimeIndex: true });
+    fenceRun = createSnapshotFenceRun({ repoRoot });
+    const childEnv = snapshotFenceChildEnvironment(process.env, {
+      snapshotRoot,
+      referenceRoot,
+      cacheRoot,
+      bun,
     });
+    run(
+      node,
+      [join("node_modules", "vitest", "vitest.mjs"), "run", ...args],
+      snapshotRoot,
+      childEnv,
+    );
   } catch (error) {
     primaryError = error;
   } finally {
+    if (fenceRun && fenceBefore) {
+      try {
+        const fenceAfter = captureGitWorkspaceFingerprint(repoRoot, {
+          volatileRuntimeIndex: true,
+          compareHead: fenceBefore.head,
+        });
+        const evidencePath = resolveEvidencePath(repoRoot);
+        const attribution = classifyGitWorkspaceChange(fenceBefore, fenceAfter, {
+          evidence: evidencePath ? readForeignActivityEvidence(evidencePath) : [],
+          runStartedAt: fenceRun.lease.started_at,
+          runEndedAt: new Date().toISOString(),
+          runnerSessionId: fenceRun.lease.runner_session_id,
+          runId: fenceRun.lease.run_id,
+        });
+        if (attribution.kind !== "unchanged" && !primaryError) {
+          const error = new Error(attribution.message) as Error & { exitCode?: number };
+          error.exitCode = attribution.exitCode;
+          primaryError = error;
+        }
+      } catch (error) {
+        primaryError = primaryError
+          ? new AggregateError([primaryError, error], "snapshot fence classification failed")
+          : error;
+      } finally {
+        try {
+          // Keep custody until the after-fingerprint, evidence read, and
+          // attribution are complete. Closing earlier permits a subsequent
+          // runner/producer to publish against an unclassified interval.
+          fenceRun.close();
+        } catch (error) {
+          primaryError = primaryError
+            ? new AggregateError([primaryError, error], "snapshot fence lease close failed")
+            : error;
+        }
+      }
+    }
     if (sealedReferenceFingerprint) {
       try {
         assertSnapshotFingerprint(referenceRoot, sealedReferenceFingerprint);

@@ -84,8 +84,9 @@ source は存在しないため、実装 PR はこの `session-log.ts` を既存
 呼び出し面は本 slice の観測対象外であり、sidecar は `<git-common-dir>/ut-tdd-runtime/snapshot-fence/`
 へ書く（worktree 内の `.ut-tdd/logs/session/` は fence 内なので使用しない）。
 `src/state-db/stop-refresh-coordinator.ts` は DB refresh 専用で、この producer の実装・代替ではない。
-test process が evidence を直接書けない境界は、実装 PR で producer session と runner session の分離、
-および fenceRoot 外の sidecar write/read を実測して固定する。
+producer session と runner session の分離、および fenceRoot 外の sidecar write/read は実装で固定する。
+ただし同一ユーザーの child が snapshot clone の origin 絶対 path から sidecar を発見・偽造できる
+B2 は、認証済み IPC または capability 署名なしには解決済みとしない。
 
 ## 是正方針 (Step 案)
 
@@ -95,13 +96,27 @@ test process が evidence を直接書けない境界は、実装 PR で produce
   独立した `foreignActivityEvidence` を入力に取る。「テスト非対象」という暗黙の全パス集合は作らない。
 * `foreignActivityEvidence` は任意のテスト出力ではない。既存 `src/runtime/session-log.ts` の producer
   拡張が `<git-common-dir>/ut-tdd-runtime/snapshot-fence/`（`fenceRoot` の**外側**）に用意した sidecar を、
-  runner の明示 port (`evidencePath`) 経由で読み取る。
-  各 event は `schema_version=snapshot-fence-foreign/v1`、`event_id`、`producer_session_id`、
+  親 runner が active-run lease に束縛して読み取る。runner は child へ evidence path / runner identity を渡さず、
+  child 終了後にのみ before/after と sidecar を分類する。
+  各 event は `schema_version=snapshot-fence-foreign/v2`、`run_id`、`event_id`、`producer_session_id`、
   `runner_session_id`、`before_head`、`after_head`、`changed_paths`、`observed_at`、`event_signature` を持つ。
-  `event_signature = sha256(canonical(changed_paths_sorted|before_head|after_head))` とし、`changed_paths` は
-  `testOwnedPaths` 外での相対 path 差分を収集する最小コスト入力とする。  
-  managed fixture は同じ schema を注入して実運用の producer を決定論的に再現する。test code 自体は
-  sidecar を書けない境界を前提とする。
+  `event_signature = sha256(canonical(changed_paths_sorted|before_head|after_head|run_id))` とし、`changed_paths` は
+  path membership だけでなく inventory content state の差分も含める。
+  managed fixture は同じ schema を注入して実運用の producer を決定論的に再現する。これは認証を
+  代替するものではなく、同一ユーザー child による sidecar 書込みを防げることを意味しない。
+- active-run lease の発行は、既存確認後の通常 `rename` で置換してはならない。同一
+  `git-common-dir` volume の一意な temp を作成し、`linkSync(temp, active-run.json)` の
+  `EEXIST` を singleton claim として扱う。stale lease の回収は atomic quarantine rename
+  で移動した bytes の `run_id` を照合し、競合 contender が新しい live lease を発行済みなら
+  exclusive restore して再判定する。fresh lease の二重起動と stale 回収の二重起動は、exactly
+  one winner・lease 非上書きを実測する。
+- parent runner は child 終了後の after fingerprint、sidecar 読み取り、classification を
+  完了してから lease を close する。close を先行させ、次 runner が未分類 interval を取得する
+  race を許可しない。inventory entry は path を JSON tuple として保持し、Linux の `:` を含む
+  path を区切り文字で再解釈しない。file content hash は bounded streaming で算出する。
+- child が snapshot clone の origin 絶対 path を知り same-user sidecar を偽造できる問題は、
+  認証済み IPC または capability 署名が確定するまで custody 完了とは扱わない。共有 sidecar と
+  unkeyed event signatureだけでB2を解決済みと主張せず、設計 FLAG として残す。
 - event は run の開始・終了時刻内で、`before_head` / `after_head` / `changed_paths`（集合一致）/`event_signature`
   が実測差分と一致し、`producer_session_id != runner_session_id` のときだけ検証済みとする。  
   commit の changed path が `testOwnedPaths` と交差する場合、または sidecar が欠落・不正・期限外・一致不能の場合は

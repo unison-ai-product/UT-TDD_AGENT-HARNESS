@@ -23,6 +23,7 @@ import { evaluateMemoryPromotion } from "./memory-promotion.ts";
 import {
   captureSnapshotFenceFingerprint,
   createSnapshotFenceProducer,
+  resolveSnapshotFenceRunnerSession,
   type SnapshotFenceProducer,
 } from "./snapshot-fence.ts";
 import { classifyVerificationVerb } from "./verb-classify.ts";
@@ -93,7 +94,7 @@ export interface SessionLogDeps {
   warn?: (message: string) => void;
   /** Producer-side snapshot fence evidence; writes outside the fenced worktree. */
   snapshotFenceProducer?: SnapshotFenceProducer;
-  runnerSessionId?: () => string;
+  runnerSessionId?: () => string | undefined;
 }
 
 const BRANCH_PLAN_RE = /^(?:add|design|feature|reverse|hotfix|poc|refactor)\/(.+)$/;
@@ -425,8 +426,8 @@ export function onSessionStart(input: SessionHookInput, deps: SessionLogDeps): n
       runnerSessionId:
         input.runner_session_id ??
         deps.runnerSessionId?.() ??
-        process.env.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID ??
-        "snapshot-runner",
+        resolveSnapshotFenceRunnerSession(deps.repoRoot) ??
+        undefined,
       now: deps.now(),
     });
     recordEvent(
@@ -467,8 +468,8 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
       runnerSessionId:
         input.runner_session_id ??
         deps.runnerSessionId?.() ??
-        process.env.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID ??
-        "snapshot-runner",
+        resolveSnapshotFenceRunnerSession(deps.repoRoot) ??
+        undefined,
       now: deps.now(),
     });
     recordEvent(
@@ -600,7 +601,7 @@ export function nodeDeps(
     },
     headCommit: gitHead,
     snapshotFenceProducer,
-    runnerSessionId: () => process.env.UT_TDD_SNAPSHOT_FENCE_RUNNER_SESSION_ID ?? "snapshot-runner",
+    runnerSessionId: () => resolveSnapshotFenceRunnerSession(repoRoot) ?? undefined,
     warn: (message) => process.stdout.write(`${message}\n`),
   };
 }

@@ -1511,8 +1511,9 @@ debt routeを扱う後続5件は、後続sliceでIDを再採番してfreezeす�
 
 ## PLAN-RECOVERY-11 / PLAN-REVERSE-77 snapshot fence attribution (Issue #77)
 
-producer session が fence 外 sidecar (`snapshot-fence-foreign/v1`) を発行し、
-runner が明示 `evidencePath` から読み込む。foreign の一致は exit code 2 の
+producer session が fence 外 sidecar (`snapshot-fence-foreign/v2`) を発行し、
+親 runner が git-common-dir の active-run lease と内容差分を custody する。テスト child
+には evidence path / runner identity を渡さず、親 runner が終了後に分類する。foreign の一致は exit code 2 の
 `fence_indeterminate_foreign_activity` と再実行指示へ分類し、証跡欠落・不一致や
 `testOwnedPaths` の残留は exit code 1 へ fail-close する。
 
@@ -1524,10 +1525,18 @@ runner が明示 `evidencePath` から読み込む。foreign の一致は exit c
 | `U-FENCE-004` | foreign evidence と同時に `testOwnedPaths` の残留を生成 | 残留優先で fail-close、exit 1（indeterminate へ降格しない） |
 | `U-FENCE-005` | path/signature不一致、runner identity不一致、event replay | 残留候補として fail-close、exit 1 |
 | `U-FENCE-006` | managed producer fixture が git-common-dir sidecar へ実eventを発行 | schema / producer-runner 境界 / UTF-8 canonical signature が決定論的に一致し、tracked path追加0 |
+| `U-FENCE-007` | pre-existing dirty path の内容を追加変更し、path membership は不変 | inventory entry の内容差分から path を抽出し、foreign evidence と一致する場合だけ exit 2 |
+| `U-FENCE-008` | active-run lease の原子発行、stale owner 回収、二重起動 | 同時実行を拒否し、停止済み owner の lease だけ回収可能 |
+| `U-FENCE-009` | Windows linked-worktree の git-common-dir を primary worktree と比較 | sidecar root / evidence path が common-dir へ収束し、worktree 固有 `.git` へ分散しない |
+| `U-FENCE-013` | fresh lease を2 runnerから同時 claim | 同一 volume の exclusive hard-link publish により exactly one winner、敗者は勝者 lease を保持したまま拒否 |
+| `U-FENCE-014` | 同じ stale lease を2 runnerが同時回収 | atomic quarantine と run_id照合・exclusive restore により、新しい live lease を削除せず exactly one winner |
+| `U-FENCE-010` | child environment に custody coordinates を注入 | evidence path / runner identity / test-owned allowlist は child から除外し、execution root のみ供給 |
+| `U-FENCE-011` | managed foreign producer が実runner中に変更を発生させる | parent runner が silent pass せず `fence_indeterminate_foreign_activity` / exit 2 を返す |
+| `U-FENCE-012` | producer が active-run lease と異なる runner identity を指定 | event を発行せず、identity override を fail-close |
 | `U-TESTHYGIENE-052` | `vitest-snapshot-runner.test.ts` | Windows ACL seal command | 対象identityへ継承付き`WD,AD` denyを再帰適用し、identity空値はfail-closeする。通常権限での実write拒否は036、Administratorによるtake-ownership等の明示bypass後の改変検出は042が担う |
 | `U-TESTHYGIENE-055` | `vitest-snapshot-runner.test.ts` | origin custody ref保全 | detached snapshotがsourceの`refs/remotes/origin/*`をHEADと**別revision**のまま引き継ぐ。source HEADと同一revisionを注入するだけの実装では落ちる (ref依存checkがsnapshotで誤ってOKになるのを防ぐ) |
 | `U-TESTHYGIENE-056` | `git-workspace-fingerprint.test.ts` | volatile DB内容変更 | live lane除外時、harness DB一族4パスの内容変更でinventory digestが変わらない (issue #203) |
-| `U-TESTHYGIENE-057` | 同上 | volatile entryの形 | 除外entryがcontent hash (sha256 hex 64桁) を持たない = 読んでいない。既定 (option無し) では同じ4 entryがhashを持つ |
+| `U-TESTHYGIENE-057` | 同上 | volatile entryの形 | JSON tuple `[kind,path,value]` をparseし、除外entryは `kind=f` / `value=volatile-runtime` でcontent hash (sha256 hex 64桁) を持たない = 読んでいない。既定 (option無し) では同じ4 entryがhashを持つ |
 | `U-TESTHYGIENE-058` | 同上 | 既定の非破壊 | option無しの呼び出しは従来どおりharness DB内容変更を検知する |
 | `U-TESTHYGIENE-059` | 同上 | 漏洩検知の保持 | 除外option下でも`.ut-tdd/gate_runs/leak.json`と空directoryの新規作成を検知 (016の意図を保つ) |
 | `U-TESTHYGIENE-060` | 同上 | 存在の非免除 | 除外option下でもharness DBの作成・削除を検知する (中身だけ免除、存在は見る) |

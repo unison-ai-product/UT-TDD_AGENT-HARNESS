@@ -39,12 +39,16 @@ const volatileRuntimeFiles = new Set([
   ".ut-tdd/harness.db-shm",
 ]);
 
-const volatileRuntimeDirectories = [".ut-tdd/review/verdicts"];
+const volatileRuntimeDirectories = [".ut-tdd/review/verdicts", ".ut-tdd/state/doctor-lock"];
 
 function isVolatileRuntimePath(relativePath: string): boolean {
   return volatileRuntimeDirectories.some(
     (prefix) => relativePath === prefix || relativePath.startsWith(`${prefix}/`),
   );
+}
+
+function inventoryEntry(kind: string, path: string, value?: string): string {
+  return JSON.stringify(value === undefined ? [kind, path] : [kind, path, value]);
 }
 
 export function captureWorkspaceInventory(
@@ -60,17 +64,21 @@ export function captureWorkspaceInventory(
       if (options?.volatileRuntimeIndex && isVolatileRuntimePath(relativeEntry)) continue;
       const stat = lstatSync(path);
       if (stat.isSymbolicLink()) {
-        entries.push(`l:${relativeEntry}:${readlinkSync(path)}`);
+        entries.push(inventoryEntry("l", relativeEntry, readlinkSync(path)));
       } else if (stat.isDirectory()) {
-        entries.push(`d:${relativeEntry}`);
+        entries.push(inventoryEntry("d", relativeEntry));
         visit(path, relativeEntry);
       } else if (stat.isFile()) {
         const volatileRuntimeFile =
           options?.volatileRuntimeIndex && volatileRuntimeFiles.has(relativeEntry);
         entries.push(
           volatileRuntimeFile
-            ? `f:${relativeEntry}:volatile-runtime`
-            : `f:${relativeEntry}:${hashFileChunkedWithDiagnostics("workspace fence", path, relativeEntry, stat.size)}`,
+            ? inventoryEntry("f", relativeEntry, "volatile-runtime")
+            : inventoryEntry(
+                "f",
+                relativeEntry,
+                hashFileChunkedWithDiagnostics("workspace fence", path, relativeEntry, stat.size),
+              ),
         );
       } else {
         throw new Error(`workspace fence unsupported entry: ${relativeEntry}`);
@@ -136,9 +144,15 @@ export function captureGitWorkspaceFingerprint(
     .filter(Boolean)
     .sort();
   const changedPaths = new Set<string>([
-    ...gitPaths(repoRoot, ["diff", "--name-only", "-z", "HEAD"]),
-    ...gitPaths(repoRoot, ["diff", "--cached", "--name-only", "-z", "HEAD"]),
-    ...untrackedPaths.map((path) => path.replaceAll("\\", "/")),
+    ...gitPaths(repoRoot, ["diff", "--name-only", "-z", "HEAD"]).filter(
+      (path) => !(options?.volatileRuntimeIndex && isVolatileRuntimePath(path)),
+    ),
+    ...gitPaths(repoRoot, ["diff", "--cached", "--name-only", "-z", "HEAD"]).filter(
+      (path) => !(options?.volatileRuntimeIndex && isVolatileRuntimePath(path)),
+    ),
+    ...untrackedPaths
+      .map((path) => path.replaceAll("\\", "/"))
+      .filter((path) => !(options?.volatileRuntimeIndex && isVolatileRuntimePath(path))),
   ]);
   if (
     options?.compareHead &&

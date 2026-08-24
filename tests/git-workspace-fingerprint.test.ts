@@ -88,16 +88,25 @@ describe("git workspace fence", () => {
         writeFileSync(join(runtimeDirectory, file), "content\n");
       }
       const { entries } = captureWorkspaceInventory(root, { volatileRuntimeIndex: true });
-      const volatileEntries = entries.filter((e) => e.startsWith("f:.ut-tdd/harness.db"));
+      const volatileEntries = entries
+        .map((entry) => JSON.parse(entry) as [string, string, string])
+        .filter(([, path]) => path.startsWith(".ut-tdd/harness.db"));
       expect(volatileEntries).toHaveLength(4);
-      // content hash (sha256 hex 64 桁) を含まない = 読んでいない。
-      for (const entry of volatileEntries) expect(entry).not.toMatch(/:[0-9a-f]{64}$/);
+      // kind/path/valueをtupleとして確認し、volatile valueをcontent digestにしない。
+      for (const [kind, path, value] of volatileEntries) {
+        expect(kind).toBe("f");
+        expect(path).toMatch(/^\.ut-tdd\/harness\.db(?:-(?:journal|wal|shm))?$/);
+        expect(value).toBe("volatile-runtime");
+      }
       // 既定 (option 無し) では同じ 4 entry が content hash を持つ (検知力の非破壊)。
-      const defaultEntries = captureWorkspaceInventory(root).entries.filter((e) =>
-        e.startsWith("f:.ut-tdd/harness.db"),
-      );
+      const defaultEntries = captureWorkspaceInventory(root)
+        .entries.map((entry) => JSON.parse(entry) as [string, string, string])
+        .filter(([, path]) => path.startsWith(".ut-tdd/harness.db"));
       expect(defaultEntries).toHaveLength(4);
-      for (const entry of defaultEntries) expect(entry).toMatch(/:[0-9a-f]{64}$/);
+      for (const [kind, , value] of defaultEntries) {
+        expect(kind).toBe("f");
+        expect(value).toMatch(/^[0-9a-f]{64}$/);
+      }
     } finally {
       removeTestTree(root);
     }
