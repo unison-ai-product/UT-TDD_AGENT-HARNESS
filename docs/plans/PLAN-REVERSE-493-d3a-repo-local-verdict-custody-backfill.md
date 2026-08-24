@@ -4,13 +4,13 @@ title: "PLAN-REVERSE-493: D3a repo-local verdict custody の上流合流"
 kind: reverse
 layer: cross
 drive: be
-workflow_phase: R0
+workflow_phase: R1
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
 status: draft
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-24
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -32,6 +32,7 @@ dependencies:
     - docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/328
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/386
 review_evidence: []
 ---
 
@@ -67,3 +68,19 @@ R1 以降は、実装 PR の exact HEAD、U-RVATT-030〜036、Linux / Windows pr
 - provider family の再設計、GitHub API projection、別 memory store。
 
 本 PLAN は PLAN-L7-493 と対になる Reverse backfill 予約であり、R0の設計レビューと実装後のR1〜R4を混同しない。
+
+## 4. R1: Issue #386 provider capability 実測
+
+commit `458d2c12` で、Claude strict reviewに限りconsumer-derived exact verdict fileの `Edit` capabilityを
+付与した。実Claude providerでrepo-local verdict writeとClaude-family receipt生成が成功し、同じsessionからの
+source path writeはpermission denied、file残留0だった。これにより、上流へ戻すべき差分は「repo-local custody」
+だけではなく「consumerが検証した単一verdict fileへのprovider限定capability」であると確定した。
+
+exact `Edit` allowはchildの全mutation経路を排他的に制限する証明ではないため、review窓の非custody差分は
+従来どおりfail-closeする。並行HARNESS Memory更新を別主体へ帰責するにはproducer identityを持つ構造化eventが
+別途必要であり、時間窓やallowlistから推定しない。provider/modelに依存しない一般化、directory単位のwrite許可、
+worker laneへの権限追加は上流へ戻さない。
+
+このR1では実装・provider transport・39件のdetached snapshot testまでを確認した。PR exact HEADの
+Linux / Windows CI、Claude non-author closing review、canonical receipt、merge後main検証が未了のため、
+R2〜R4および上流backfill完了は主張しない。

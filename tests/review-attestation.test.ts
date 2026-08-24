@@ -28,24 +28,34 @@ const head = "a".repeat(40);
 const otherHead = "b".repeat(40);
 let stubBinDir: string | undefined;
 const originalCodexBin = process.env.UT_TDD_CODEX_BIN;
+const originalClaudeBin = process.env.UT_TDD_CLAUDE_BIN;
 
 beforeAll(() => {
   stubBinDir = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-bin-"));
   if (process.platform === "win32") {
-    const stub = join(stubBinDir, "codex.cmd");
-    writeFileSync(stub, "@echo off\r\necho codex 0.0.0-stub\r\nexit /b 0\r\n", "utf8");
-    process.env.UT_TDD_CODEX_BIN = stub;
+    const codexStub = join(stubBinDir, "codex.cmd");
+    const claudeStub = join(stubBinDir, "claude.cmd");
+    writeFileSync(codexStub, "@echo off\r\necho codex 0.0.0-stub\r\nexit /b 0\r\n", "utf8");
+    writeFileSync(claudeStub, "@echo off\r\necho claude 0.0.0-stub\r\nexit /b 0\r\n", "utf8");
+    process.env.UT_TDD_CODEX_BIN = codexStub;
+    process.env.UT_TDD_CLAUDE_BIN = claudeStub;
     return;
   }
-  const stub = join(stubBinDir, "codex");
-  writeFileSync(stub, "#!/bin/sh\necho codex 0.0.0-stub\nexit 0\n", "utf8");
-  chmodSync(stub, 0o755);
-  process.env.UT_TDD_CODEX_BIN = stub;
+  const codexStub = join(stubBinDir, "codex");
+  const claudeStub = join(stubBinDir, "claude");
+  writeFileSync(codexStub, "#!/bin/sh\necho codex 0.0.0-stub\nexit 0\n", "utf8");
+  writeFileSync(claudeStub, "#!/bin/sh\necho claude 0.0.0-stub\nexit 0\n", "utf8");
+  chmodSync(codexStub, 0o755);
+  chmodSync(claudeStub, 0o755);
+  process.env.UT_TDD_CODEX_BIN = codexStub;
+  process.env.UT_TDD_CLAUDE_BIN = claudeStub;
 });
 
 afterAll(() => {
   if (originalCodexBin === undefined) delete process.env.UT_TDD_CODEX_BIN;
   else process.env.UT_TDD_CODEX_BIN = originalCodexBin;
+  if (originalClaudeBin === undefined) delete process.env.UT_TDD_CLAUDE_BIN;
+  else process.env.UT_TDD_CLAUDE_BIN = originalClaudeBin;
   if (stubBinDir) rmSync(stubBinDir, { recursive: true, force: true });
 });
 
@@ -150,6 +160,23 @@ describe("review attestation (U-RVATT)", () => {
       });
       expect(result).toEqual({ ok: false, reason: "reviewer_exit_nonzero" });
       expect(receiptFiles(root)).toEqual([]);
+
+      const strictRequest = {
+        ...request(),
+        authorFamily: "codex" as const,
+        reviewRevision: `rv1-${"c".repeat(64)}`,
+      };
+      const missing = projectReviewVerdict({
+        repoRoot: root,
+        request: strictRequest,
+        attestation: attestation({
+          provider: "claude",
+          reviewRevision: strictRequest.reviewRevision,
+          exitCode: 17,
+        }),
+        verdictFile: join(root, "missing-verdict.txt"),
+      });
+      expect(missing).toEqual({ ok: false, reason: "verdict_absent_after_provider_failure" });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -357,6 +384,21 @@ describe("review attestation (U-RVATT)", () => {
       "claude",
     ]);
     const worker = await runDelegation(["codex", "--role", "be-api", "--task", "implement slice"]);
+    const claudeReviewer = await runDelegation([
+      "claude",
+      "--role",
+      "blind-reviewer",
+      "--task",
+      "review slice",
+      "--review-pr",
+      "731",
+      "--review-head",
+      head,
+      "--review-revision",
+      "review-rvatt-1",
+      "--review-author-family",
+      "codex",
+    ]);
     expect(reviewer.stdout, "review_lane の dry-run が stdout へ何も出していない").not.toBe("");
     expect(worker.stdout, "worker の dry-run が stdout へ何も出していない").not.toBe("");
     const injected = JSON.parse(reviewer.stdout).env?.[REVIEW_VERDICT_FILE_ENV];
@@ -364,6 +406,14 @@ describe("review attestation (U-RVATT)", () => {
     expect(injected.replaceAll("\\", "/")).toContain("/.ut-tdd/review/verdicts/");
     expect(injected.replaceAll("\\", "/")).toContain("/attempts/attempt-1/verdict.txt");
     expect(JSON.parse(worker.stdout).env?.[REVIEW_VERDICT_FILE_ENV]).toBeUndefined();
+    const claudePlan = JSON.parse(claudeReviewer.stdout);
+    const allowedToolsIndex = claudePlan.args.indexOf("--allowedTools");
+    expect(allowedToolsIndex).toBeGreaterThanOrEqual(0);
+    expect(claudePlan.args[allowedToolsIndex + 1]).toMatch(
+      /^Edit\(\.ut-tdd\/review\/verdicts\/[a-f0-9]{64}\/attempts\/attempt-1\/verdict\.txt\)$/,
+    );
+    expect(JSON.parse(reviewer.stdout).args).not.toContain("--allowedTools");
+    expect(JSON.parse(worker.stdout).args).not.toContain("--allowedTools");
   });
 
   // U-RVATT-013〜015 は **同族レビュー検出が発火可能であること**を守る。

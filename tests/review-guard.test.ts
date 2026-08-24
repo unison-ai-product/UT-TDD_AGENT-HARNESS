@@ -121,7 +121,12 @@ describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
 
     it("U-RGUARD-010: no violation -> no messages", () => {
       expect(
-        reviewGuardMessages({ role: "se", readOnly: false, mutatedPaths: ["x"], violation: false }),
+        reviewGuardMessages({
+          role: "se",
+          readOnly: false,
+          mutatedPaths: ["x"],
+          violation: false,
+        }),
       ).toEqual([]);
     });
   });

@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: confirmed
 created: 2026-08-18
-updated: 2026-08-19
+updated: 2026-08-24
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L6-94-cross-review-session-attestation.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -48,6 +48,7 @@ dependencies:
     - src/cli/delegation.ts
     - src/runtime/review-guard.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/328
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/386
 github_issue_id: 328
 backprop_decision: required
 backprop_decision_reason: "delegated verdict の信頼境界と再合流時のreceipt入力を変更するため、既存Forwardの証跡へReverse検証を戻す。"
@@ -257,3 +258,26 @@ audit event writer、および対応する tests に限定する。新しい判�
 本 PLAN は設計 freeze であり、source / test / `.gitignore` の変更を含まない。`.gitignore`、review-guard、
 volatile fence、legacy oracle migrationは implementation PR の必須成果物として予約する。`status: confirmed` への
 昇格と implementation PLAN の起票は、cross-review と sandbox 実測が揃った後に行う。
+
+## 7. Issue #386 correction: Claude reviewer の限定 write capability
+
+実運用で、repo-local custody pathへ移しただけでは Claude reviewer に write capability が付与されず、
+review自体が完了しても Claude family の canonical receiptが0件になることを確認した。これは §3.5 の
+「repo-local write成功」を満たしていなかったため、commit `458d2c12` で次の最小修正を行った。
+
+- consumerが導出・検証した
+  `.ut-tdd/review/verdicts/<requestDigest>/attempts/attempt-<N>/verdict.txt` だけを、Claude strict reviewの
+  `Edit(<repo-relative-path>)` capabilityとして渡す。repo外、別path、worker lane、Codex providerへは付与しない。
+- Claude childがnonzero exitかつverdict fileを生成できなかった場合は、原因を断定せず
+  `verdict_absent_after_provider_failure` を返す。zero exitでfileが欠落する一般ケースは従来どおり
+  `verdict_file_missing` とする。permission拒否を他のprovider failureから識別できる構造化信号が無いまま
+  `verdict_file_unwritable` と診断しない。
+- review窓の非custody差分は従来どおりfail-closeする。exact `Edit` allowは追加capabilityであり、継承toolを含む
+  全mutation経路の排他証明ではないため、同時HARNESS Memory更新をreviewer外と推定して除外しない。
+
+実Claude provider (`claude-sonnet-5`, effort `middle`) で、exact verdict pathへのwrite、identity検証、
+Claude-family receipt生成まで成功した。別のsource pathへのbuilt-in writeはpermission deniedとなり、対象fileが
+存在しないことを確認した。前者はtransport proofであり、対象コードのnon-author closing PASSとしては使用しない。
+detached snapshotでは `review-guard`、`review-attestation`、`review-live-cli` の39 testsがGreen、TypeScript、
+Biome、diff-checkもGreenである。provider実測とテスト証跡はこのcorrection revisionへ束縛し、closing reviewと
+Linux / Windows CIはPR exact HEADで別途取得する。

@@ -210,6 +210,15 @@ export function projectReviewVerdict(input: {
   verdictFile: string;
 }): ReviewVerdictProjectionResult {
   if (input.attestation.exitCode !== 0) {
+    // file欠落だけでは permission拒否、認証失敗、timeout、reviewer拒否を識別できない。
+    // 書込不能を捏造せず、provider failure後にverdictが無いという観測事実だけをtyped化する。
+    if (
+      input.attestation.provider === "claude" &&
+      input.request.reviewRevision.startsWith("rv1-") &&
+      !existsSync(input.verdictFile)
+    ) {
+      return { ok: false, reason: "verdict_absent_after_provider_failure" };
+    }
     return { ok: false, reason: "reviewer_exit_nonzero" };
   }
   if (!existsSync(input.verdictFile)) {

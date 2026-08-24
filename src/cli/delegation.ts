@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import {
   canonicalizeReviewRequest,
@@ -123,6 +123,32 @@ function nowIso(): string {
 export function isOutsideRepo(repoRoot: string, candidate: string): boolean {
   const rel = relative(resolve(repoRoot), resolve(candidate));
   return rel !== "" && rel !== "." && rel.startsWith("..");
+}
+
+/**
+ * Claude の delegated review にだけ渡す、verdict file 一本の編集許可。
+ *
+ * `acceptEdits` は repository 全体の編集を許して read-only reviewer 境界を壊すため使わない。
+ * custody が consumer-derived path を確定した後、その repo-relative exact path だけを
+ * Claude Code の `Edit(...)` permission rule として渡す。Edit rule は Write/Edit 系の
+ * built-in editing toolsへ共通適用される。
+ */
+export function claudeReviewVerdictEditRule(
+  repoRoot: string,
+  verdictFile: string,
+): string | undefined {
+  const rel = relative(resolve(repoRoot), resolve(verdictFile));
+  if (!rel || isAbsolute(rel) || rel === ".." || rel.startsWith(`..${sep}`)) return undefined;
+  const normalized = rel.replaceAll("\\", "/");
+  // Permission rule grammarを広げない。正規custody pathの構成文字だけを受理する。
+  if (
+    !/^\.ut-tdd\/review\/verdicts\/[a-f0-9]{64}\/attempts\/attempt-[1-9][0-9]*\/verdict\.txt$/.test(
+      normalized,
+    )
+  ) {
+    return undefined;
+  }
+  return `Edit(${normalized})`;
 }
 
 export function executeAdapterPlanForCli(
@@ -433,6 +459,17 @@ function runtimeCommand(
             },
             mode,
           );
+          if (provider === "claude" && verdictFile) {
+            const editRule = claudeReviewVerdictEditRule(process.cwd(), verdictFile);
+            if (!editRule) {
+              return {
+                ...nextPlan,
+                available: false,
+                messages: [...nextPlan.messages, "review_verdict_permission_path_invalid"],
+              };
+            }
+            nextPlan.args.push("--allowedTools", editRule);
+          }
           nextPlan.messages.push(routingAudit);
           if (verdictFile) {
             nextPlan.env = { ...(nextPlan.env ?? {}), [REVIEW_VERDICT_FILE_ENV]: verdictFile };
