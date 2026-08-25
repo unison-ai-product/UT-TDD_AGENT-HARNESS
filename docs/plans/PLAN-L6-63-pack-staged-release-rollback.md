@@ -46,24 +46,6 @@ review_evidence:
     citations:
       - "PR #404 exact-head closing review comment (2026-08-25T09:13:50Z)"
       - "GitHub Actions run 32827234834"
-  - reviewer: codex-tl-preflight
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-25T06:39:16Z"
-    tests_green_at: "2026-08-25T06:39:16Z"
-    verdict: "PRECHECK_ONLY; Claude Opus non-author closing review pending"
-    scope: >-
-      Issue #402 の B-1〜B-4 closure、explicit artifact inventory、channel pointer、append-only
-      publication FSM、supersede-forward rollback、fail-close、consumer boundary、および source/CLI/
-      Pack remote mutation 非スコープを exact origin/main 92df02a6 上で preflight 確認した。
-    worker_model: gpt-5.6-luna
-    effort: high
-    reviewer_model: gpt-5.6-sol
-    plan_revision: 92df02a6da7be284699513c4d6c13c543e4ef282
-    subject_head: 92df02a6da7be284699513c4d6c13c543e4ef282
-    evidence_path: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
-    citations:
-      - "Issue #402: B-1〜B-4 pre-gate と completion criteria"
-      - "docs/test-design/harness/L7-unit-test-design.md: CANDIDATE-PACKPUB-001〜004"
 agent_slots:
   - role: tl
     slot_label: "TL - Pack 配布の段階公開・ロールバック手順の設計"
