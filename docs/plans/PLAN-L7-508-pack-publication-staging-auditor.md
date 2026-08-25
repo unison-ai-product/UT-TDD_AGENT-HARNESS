@@ -45,21 +45,21 @@ dependencies:
 review_evidence:
   - reviewer: codex-primary-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-25T11:31:09Z"
-    tests_green_at: "2026-08-25T11:31:08Z"
+    reviewed_at: "2026-08-25T12:02:58Z"
+    tests_green_at: "2026-08-25T12:02:57Z"
     verdict: "preflight green; Claude Opus non-author exact-head closing review pending"
     scope: >-
       worker_model gpt-5.6-luna / effort high。CANDIDATE-PACKPUB-001/002のうち
       parsed v2、explicit inventory、deterministic assets、control snapshot、local
-      staging/apply/discard/restore、partial/indeterminate auditorだけを対象とする。
+      staging/apply/discard/restore（destination未存在snapshotを含む）、partial/indeterminate auditorだけを対象とする。
       remote mutation、approval/CAS、rollback、CLI、consumer E2Eは対象外。
     worker_model: gpt-5.6-luna
     effort: high
     reviewer_model: gpt-5.6-sol
-    plan_revision: 5af7de11f876e2f85704bfbfab5493d41f18006a
-    subject_head: 5af7de11f876e2f85704bfbfab5493d41f18006a
+    plan_revision: d888938eee480d65febf4b4d16fd9473c5f80d03
+    subject_head: d888938eee480d65febf4b4d16fd9473c5f80d03
     evidence_path: tests/pack-publication-staging.test.ts
-    anchor_commit: 5af7de11f876e2f85704bfbfab5493d41f18006a
+    anchor_commit: d888938eee480d65febf4b4d16fd9473c5f80d03
     citations:
       - "tests/pack-publication-staging.test.ts: U-PACKPUB-STAGE-001..010"
       - "docs/test-design/harness/L7-unit-test-design.md: U-PACKPUB-STAGE-001..010"
@@ -70,28 +70,28 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-25T11:29:00Z"
+        completed_at: "2026-08-25T12:02:57Z"
         evidence_path: tests/pack-publication-staging.test.ts
-        output_digest: "sha256:05880fdf91e03db15a269b6be29b125631f6a051ced404c48ad73931010500c2"
-        anchor_commit: 5af7de11f876e2f85704bfbfab5493d41f18006a
+        output_digest: "sha256:23c73a599765174931d1595b52de15cd76f05e39fc0a88cb903683bc7708ace8"
+        anchor_commit: d888938eee480d65febf4b4d16fd9473c5f80d03
       - kind: typecheck
         command: "npx tsc --noEmit --pretty false"
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-25T11:31:08Z"
+        completed_at: "2026-08-25T12:02:57Z"
         evidence_path: src/setup/pack-publication-staging.ts
-        output_digest: "sha256:5982d67f3284e7233f7b5baf764cc1fd876cbb02941889545b9668f366f378ab"
-        anchor_commit: 5af7de11f876e2f85704bfbfab5493d41f18006a
+        output_digest: "sha256:3e0361e097e0680dc671a2a11032909ba23400b1d6bb5ff62fe72740dac37d82"
+        anchor_commit: d888938eee480d65febf4b4d16fd9473c5f80d03
       - kind: lint
         command: "npx biome check src/setup/pack-publication-staging.ts tests/pack-publication-staging.test.ts"
         runner: node
         scope: changed-files
         exit_code: 0
-        completed_at: "2026-08-25T11:31:08Z"
+        completed_at: "2026-08-25T12:02:57Z"
         evidence_path: src/setup/pack-publication-staging.ts
-        output_digest: "sha256:5982d67f3284e7233f7b5baf764cc1fd876cbb02941889545b9668f366f378ab"
-        anchor_commit: 5af7de11f876e2f85704bfbfab5493d41f18006a
+        output_digest: "sha256:3e0361e097e0680dc671a2a11032909ba23400b1d6bb5ff62fe72740dac37d82"
+        anchor_commit: d888938eee480d65febf4b4d16fd9473c5f80d03
 ---
 
 # PLAN-L7-508

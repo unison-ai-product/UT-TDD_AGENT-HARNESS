@@ -2480,7 +2480,7 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `U-PACKPUB-STAGE-003` | entryの欠落・余剰・順序・path・mode・size・content digest drift | 各単独変異をpreflight denyし、暗黙補完0 |
 | `U-PACKPUB-STAGE-004` | sidecar semantic manifest drift | parsed semantic identityの不一致をdenyする |
 | `U-PACKPUB-STAGE-005` | sealed bytesの呼出し元mutation | plan内部のcommit entryとasset bytesは不変 |
-| `U-PACKPUB-STAGE-006` | write/apply/discard fault | prior stateを復元できる各faultは`applied: 0`を返す |
+| `U-PACKPUB-STAGE-006` | write/apply/discard fault、destination未存在snapshot | snapshot値が`undefined`でもcapture済みならrestoreを実行し、prior stateを復元できる各faultは`applied: 0`を返す |
 | `U-PACKPUB-STAGE-007` | 成功経路 | apply exactly onceで完了する |
 | `U-PACKPUB-STAGE-008` | snapshot failure | write/staging/apply/discard/restoreを全て0回にする |
 | `U-PACKPUB-STAGE-009` | restore failure | 復元不能を`indeterminate`として保持する |
