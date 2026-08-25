@@ -89,8 +89,8 @@ review_evidence:
         scope: changed-files
         exit_code: 0
         completed_at: "2026-08-25T11:31:08Z"
-        evidence_path: docs/test-design/harness/L7-unit-test-design.md
-        output_digest: "sha256:fd18ccb69f708d6f16fc38f9dc31605f7d50d3f935519faa06682b29d4701861"
+        evidence_path: src/setup/pack-publication-staging.ts
+        output_digest: "sha256:5982d67f3284e7233f7b5baf764cc1fd876cbb02941889545b9668f366f378ab"
         anchor_commit: 5af7de11f876e2f85704bfbfab5493d41f18006a
 ---
 
