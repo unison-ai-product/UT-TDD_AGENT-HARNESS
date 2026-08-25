@@ -2448,3 +2448,17 @@ diagnostic が operator に正規 workflow と既存 confirm-time evidence requi
 | `U-MPSTATUS-506-004` | non-landing violation へ landing guidance を混入する mutation | test が `phase=landing` / `(A) 分割` の混入を検出する |
 
 実行対応: `tests/merged-plan-status.test.ts` (`U-MPSTATUS-506-001`〜`004`)。
+
+## PLAN-L6-63 / PLAN-REVERSE-505 Pack staged publication and rollback (Issue #402, 2026-08-25)
+
+`PLAN-L6-63`でfreezeしたB-1〜B-4を、後続のpublication aggregate/auditorが独立にREDから
+実測へ昇格できるcandidateとして登録する。ここでのcandidateは設計oracleであり、Pack remote
+mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`と`U-PACKASSET-001`〜`006`
+は既存L7 sliceの所有であり、下表では再所有・再採番しない。
+
+| ID | 対応gap / fixture・mutation | expected |
+| --- | --- | --- |
+| `CANDIDATE-PACKPUB-001` | B-1。公開object、immutable identity、可変channel pointer、canary→stable order、append-only FSM、approval/execution receipt、supersede-forward rollback、consumer boundaryのいずれかを欠落または別契約へ差し替える | 契約crosswalkが欠落を検出し、publicationを成功扱いにしない。既存L7 parser/asset oracleとは独立したaggregate/auditor候補として残る |
+| `CANDIDATE-PACKPUB-002` | B-2。manifest `artifacts[]`を1件欠落・余剰・digest driftさせる、またはtree walk、allowlist、current worktree、Pack checkoutの残存ファイルを暗黙追加する | explicit inventory外のbytesを出荷集合に入れず、identity/tar/asset digest不一致をfail-close。fallback、publish、pointer write 0 |
+| `CANDIDATE-PACKPUB-003` | B-3。tag、GitHub Release、asset upload、channel pointer、promotion、rollbackの各操作からapproval receipt、before-state CAS、nonce/expiry、execution receipt、auditor観測を1項ずつ欠落させる | typed deny、remote write 0。local `sync-plan`/`sync-stage`のcommand listをremote承認の代用にしない |
+| `CANDIDATE-PACKPUB-004` | B-4。immutable tag/Releaseの削除・付替え、旧pointerの上書き、rollback CAS後の応答不明、target attestation不一致、部分公開を各1点変異する | supersede-forwardだけを許可し、partial/indeterminate/`rollback_failed`を保持。force push/tag reuse/成功への丸め 0 |
