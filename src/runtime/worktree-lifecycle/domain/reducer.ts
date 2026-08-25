@@ -14,7 +14,6 @@ function uniqueReasons(
 
 const RECEIPT_DERIVED_DENY_REASONS = new Set<WorktreeLifecycleRecord["denyReasons"][number]>([
   "terminal_missing",
-  "terminal_mismatch",
 ]);
 
 function preserveDomainDenyReasons(

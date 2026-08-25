@@ -345,6 +345,38 @@ describe("U-WTLIFE-006 typed activation and inventory denial", () => {
     ).toThrowError(expect.objectContaining({ code: "terminal_missing", reason: "dirty" }));
   });
 
+  it("keeps terminal_mismatch denied when the same receipt reevaluates retained state", () => {
+    const store = new WorktreeLifecycleStore();
+    store.plan(planned());
+    store.activate(identity1, {
+      attempt: 1,
+      workerStartReceiptDigest: "sha256:start",
+      inventoryAvailable: true,
+      ownerAuthenticated: true,
+    });
+    store.terminal(identity1, {
+      attempt: 1,
+      kind: "failure",
+      terminalReceiptDigest: "sha256:terminal",
+      denyReasons: ["terminal_mismatch"],
+    });
+    store.retain(identity1, {
+      attempt: 1,
+      denyReasons: ["terminal_mismatch"],
+    });
+
+    const reevaluated = store.reevaluateRetained(identity1, {
+      attempt: 1,
+      terminalKind: "failure",
+      terminalReceiptDigest: "sha256:terminal",
+    });
+
+    expect(reevaluated.denyReasons).toEqual(["terminal_mismatch"]);
+    expect(() => store.retire(identity1, { attempt: 1, inventoryAvailable: true })).toThrowError(
+      expect.objectContaining({ code: "terminal_missing", reason: "terminal_mismatch" }),
+    );
+  });
+
   it("preserves terminal_missing when owner loss supplies an empty deny list", () => {
     const store = new WorktreeLifecycleStore();
     store.plan(planned());
