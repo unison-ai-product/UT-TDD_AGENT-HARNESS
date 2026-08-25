@@ -2278,6 +2278,19 @@ mutation gateはdeadline再検査削除、strict unknown-field削除、attach前
 | `U-WTTOPO-017` | PF2 / `PLAN-L7-476` | malformed porcelain、Git exit nonzero、root外path、reachability失敗を各1件入力 | `collector_parse_error` / `collector_command_error` / `path_escape` / `reachability_unavailable`を区別し必須fieldを保持、raw command/stdoutは保持しない。`tests/worktree-topology-collector.test.ts` |
 | `U-WTTOPO-018` | PF4 / `PLAN-L7-478` | identity入力順反転、合法remap、重複from、変換後collision、root外escapeを各mutation。既知vectorはfields=`/repo`, `/repo/.git`, `0000000000000000000000000000000000000000`, `1` | `topology-v1:` + 各UTF-8 fieldのuint32be長 + field bytesというpreimage hex=`746f706f6c6f67792d76313a000000052f7265706f0000000a2f7265706f2f2e67697400000028303030303030303030303030303030303030303030303030303030303030303030303030303030300000000131` のSHA-256は既知値`73dd51f0db31880e84c9135c1f02558837ec85b95fa186372d4d358008db6758`。期待値を実装自身で生成しない。合法入力は同一digest、ambiguous/unsafe remapは比較前に拒否。`tests/worktree-topology-migration.test.ts` |
 
+> ## worktree lifecycle domain FSM（Issue #384 / PLAN-L7-501）
+
+> #385 の L4/L9 pair-freeze から、record/event/reducer の最初の実装 slice だけを降ろす。
+> DB、CLI、FS、Git、process stop、cleanup、topology adapter は対象外とする。実装 PR で
+> `CANDIDATE-U-WTLIFE-*` を正規 `U-WTLIFE-*` へ昇格し、同一テスト citation を固定する。
+
+| ID | Owner / PLAN | Given / When | Oracle | Test |
+| --- | --- | --- | --- | --- |
+| `U-WTLIFE-001` | `PLAN-L7-501` | owner/Issue/PLAN revision/use/TTL/path lease と canonical identity を揃えて planned record を登録し、同一入力を再送する | 必須値を含む revision 1 の immutable record を一度だけ作り、duplicate は fail-close。spawn/FS side effect は 0 | `tests/worktree-lifecycle-domain.test.ts` |
+| `U-WTLIFE-002` | `PLAN-L7-501` | planned→active、activation abort、active terminal/owner-loss、terminal_pending→retained/retired、retained への後着 receipt を各1軸で入力する | 許可遷移だけが同一 attempt の append-only event として revision 単調増加で適用され、後着 receipt は新 revision で再評価される | `tests/worktree-lifecycle-domain.test.ts` |
+| `U-WTLIFE-006` | `PLAN-L7-501` | activation receipt欠落、owner認証欠落、inventory欠測、terminal欠落、terminal denyを各1軸で入力する | `activation_unresolved`/`owner_unknown`/`inventory_unavailable`/`terminal_missing` を混同せず保持し、terminal receiptがあってもdeny reasonをretireで消さない | `tests/worktree-lifecycle-domain.test.ts` |
+| `U-WTLIFE-010` | `PLAN-L7-501` | 同一 receipt を再送し、異なる digest、attempt不一致、不正遷移を入力する | replay は旧状態を上書きせず、異なる digest は `replay_conflict`、不正遷移は fail-close、event revision に欠番がない | `tests/worktree-lifecycle-domain.test.ts` |
+
 ## PLAN-L7-465 D3c trusted custody 契約 oracle（2026-08-05）
 
 ### D2 component evidence / aggregate循環防止 candidate（Issue #231訂正）
