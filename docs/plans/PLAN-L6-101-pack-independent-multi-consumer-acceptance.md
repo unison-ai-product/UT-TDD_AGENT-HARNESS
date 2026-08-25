@@ -140,3 +140,21 @@ L7 planは、L6 cross-family PASS後に本PLANを`requires`へ束縛し、実装
    不在のA/B fixtureを実測する。
 3. 全candidate Green、cross-family closing PASS、Reverse R1〜R4でL6 backfillを確認した後だけ、
    #224親のS4受入を完了として扱う。PF-1〜PF-5のcloseだけではこの条件を満たさない。
+
+## 6. PLAN-REVERSE-496 R4 backfill（2026-08-25）
+
+PR #374の実装とU-PACKISO-001〜006をClaude OpusがR3でaggregate再検収した結果、次の2点を
+L6受入契約へ戻す。既存PF1〜PF5、promotion gate、Pack copyの責務は変更しない。
+
+1. consumer/runtime rootのcontainmentは、`realpath`でcanonical化した空間に対して**1回だけ**
+   判定する。lexical pathとcanonical pathに同じhelperを重ねて「二重防御」と見せてはならない。
+   二段判定を採る場合は、各段が別の入力・別の脅威を検出し、片方を除去するmutationをoracleが
+   殺すことを要求する。
+2. admissionが`namespace_escape`、identity/digest mismatch、artifact unavailable、unknown version、
+   invalid inputのいずれかでdenyした場合、PF5 apply/staging/restore/pointer/publish portの呼出しは
+   **すべて0**である。deny判定後にtelemetry以外の副作用を追加してはならない。
+
+2点目は`CANDIDATE-PACKISO-007`として、deny理由を1軸ずつ変異し、全apply系portのcall count 0と
+prior state不変を観測する。実装・test-designへの昇格は、共有L7 test-designのpath leaseを
+解消した後の原子的な後続PRで行う。本R4は未実装のtestをGreenと主張せず、契約とRED候補だけを
+上流へ固定する。

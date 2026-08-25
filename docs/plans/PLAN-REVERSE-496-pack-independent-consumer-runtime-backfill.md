@@ -4,16 +4,17 @@ title: "PLAN-REVERSE-496: consumer runtime隔離契約の上流合流"
 kind: reverse
 layer: cross
 drive: agent
-workflow_phase: R2
+workflow_phase: R4
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
-status: draft
+forward_routing: gap-only
+promotion_strategy: reuse-as-is
+status: confirmed
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-25
 owner: PM / Codex
 parent_design: docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: tl
     slot_label: "TL - S4実装差分のL6受入契約へのbackfill判定"
@@ -30,9 +31,35 @@ dependencies:
     - docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
     - docs/plans/PLAN-L6-102-release-promotion-rollback-gate.md
     - docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
-    - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/362
-review_evidence: []
+review_evidence:
+  - reviewer: Claude Opus
+    review_kind: cross_agent
+    reviewed_at: "2026-08-21T09:24:09Z"
+    tests_green_at: "2026-08-21T09:23:13Z"
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    scope: "PR #374 exact HEAD 6d1f61dc0d6dfc9c88f75020568840ae0169f4e8のR3 aggregate再検収。source fallback、A/B state隔離、digest再計算、escape、片系非干渉をmutation probe込みで攻撃しPASS blocking 0。"
+    plan_revision: 6d1f61dc0d6dfc9c88f75020568840ae0169f4e8
+    subject_head: 6d1f61dc0d6dfc9c88f75020568840ae0169f4e8
+    evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/374#issuecomment-5368042430"
+    citations:
+      - "GitHub Actions run 32467016151 job 96725647565 (harness-check-linux completed before the review)"
+      - "GitHub Actions run 32467016151 Windows and aggregate jobs completed after the review at 09:27:44Z and 09:27:51Z"
+      - "Mutation A: realpath canonicalization removal killed by alias and escape tests"
+      - "Mutation B: layout freeze removal killed by layout oracle"
+      - "Mutation C: digest equality removal killed by coherent fake identity oracle"
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions run 32467016151 job 96725647565 (harness-check-linux)"
+        runner: ci
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-21T09:23:13Z"
+        evidence_path: docs/plans/PLAN-REVERSE-496-pack-independent-consumer-runtime-backfill.md
+        output_digest: "sha256:c903422e782637f96518e3eca128ad4fcf511cd937f134586d656401dd8197e4"
+        anchor_commit: 6d1f61dc0d6dfc9c88f75020568840ae0169f4e8
 ---
 
 # PLAN-REVERSE-496: consumer runtime隔離契約の上流合流
@@ -57,10 +84,10 @@ PF5 staging/apply/rollback portのfail-closeに限定されており、PF1〜PF5
 promotion/rollback gate、Pack copy、D1/D2/D3を再実装していない。
 
 U-PACKISO-001〜006は`tests/consumer-local-runtime-admission.test.ts`へ昇格済みで、
-対応する候補oracleは`PLAN-L6-101` §2〜§5に存在する。#361が使用中の
-`docs/test-design/harness/L7-unit-test-design.md`はこのReverseで編集しない。
+対応する候補oracleは`PLAN-L6-101` §2〜§5に存在する。共有のL7 test-design artifactは
+このReverseで編集しない。
 
-### R2: 実装証跡とトレースの固定（完了・R3待ち）
+### R2: 実装証跡とトレースの固定（完了）
 
 実装成果物のsource baselineはmain merge commit
 `1f3355151a127fd517679eedf171ce144327da4c`である。closing review対象の実装revisionは
@@ -94,12 +121,11 @@ Claude Opus reviewerが次の攻撃面をclaim-blind/spec-blindで再検収す�
 - Aのupgrade／rollback中のB process、bytes、mode、path、state/history汚染。
 - artifact unavailable、unknown version、receipt mismatch、局所fault時のwrite/process 0。
 
-R3は実装者の自己PASSで完了させない。R3の依頼はこのPLANのexact HEAD、
-`PLAN-L7-496`、`PLAN-L6-101`、実装テスト、CI runを束ねたHARNESS Memoryの正規通知で行う。
-R3 PASSまたはFLAGが返るまで、R4のbackfillと`PLAN-L7-496`の最終acceptを行わない。
+R3は実装者の自己PASSで完了させない。PR #374 exact HEADに対するClaude Opusの
+非著者R3 reviewはPASS（blocking 0）であり、この条件を充足した。
 
 R4ではR3で実測・引用により必要と判明した差分だけを`PLAN-L6-101`へ戻す。
-`docs/test-design/harness/L7-unit-test-design.md`は#361のpath leaseが解放されるまで変更せず、
+共有のL7 test-design artifactは本PRで編集せず、
 追加差分が必要な場合は別の原子的PRとして扱う。PF1〜PF5、promotion gate、Pack copy、
 consumer実装の契約をReverseから再定義しない。
 
@@ -111,4 +137,20 @@ consumer実装の契約をReverseから再定義しない。
 - upstream PLAN: `PLAN-L6-101-pack-independent-multi-consumer-acceptance`
 - evidence: `tests/consumer-local-runtime-admission.test.ts` U-PACKISO-001〜006
 - CI: GitHub Actions `32464262419` (Linux／Windows／aggregate 3/3 Green)
-- required verdict: Claude Opus non-author claim-blind/spec-blind R3 review
+- required verdict: Claude Opus non-author claim-blind/spec-blind R3 review (PASS blocking 0)
+
+## 4. R3結果とR4 backfill
+
+PR #374 exact HEAD `6d1f61dc0d6dfc9c88f75020568840ae0169f4e8`に対し、Claude Opusの
+非著者R3 reviewはPASS（blocking 0）だった。realpath canonicalization、layout freeze、digest
+equalityの各mutationは既存oracleでkillされた。一方、canonical containmentの二重判定は片方を
+除去しても26/26 Greenであり、防御が二重であるという読み方は成立しない。またadmission deny時の
+apply系port 0を直接固定するoracleが存在しないことが確認された。
+
+R4ではこの2点だけを`PLAN-L6-101` §6へbackfillした。containmentはcanonical空間で1回と定義し、
+admission deny時はPF5 apply/staging/restore/pointer/publish port 0を要求する。後者は
+`CANDIDATE-PACKISO-007`としてRED候補を固定し、共有L7 test-design artifactは
+本PRでは変更しない。実装・test-design昇格はpath lease解消後の別の原子的PRへ送る。
+
+これ以外の上流要求、PF1〜PF5、promotion gate、Pack copy、consumer implementationを変更しない。
+以上によりR4の設計gapを閉じ、Forward routingを`gap-only`として既存L6契約へ戻す。
