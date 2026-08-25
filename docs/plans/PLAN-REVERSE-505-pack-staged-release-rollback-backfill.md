@@ -30,13 +30,15 @@ generates:
     artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-L7-507-pack-publication-staging-auditor.md
   blocks: []
   references:
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
     - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
+    - docs/plans/PLAN-L7-507-pack-publication-staging-auditor.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/402
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
 github_issue_id: 402

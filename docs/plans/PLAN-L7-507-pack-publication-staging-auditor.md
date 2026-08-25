@@ -35,6 +35,7 @@ dependencies:
   requires:
     - docs/plans/PLAN-L7-499-pack-publication-manifest-v2-pure-domain.md
     - docs/plans/PLAN-L7-500-pack-publication-assets-pure-domain.md
+    - docs/plans/PLAN-REVERSE-505-pack-staged-release-rollback-backfill.md
   blocks: []
   references:
     - docs/plans/PLAN-REVERSE-505-pack-staged-release-rollback-backfill.md

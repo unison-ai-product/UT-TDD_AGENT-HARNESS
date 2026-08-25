@@ -2475,8 +2475,15 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 
 | ID | fixture / mutation | expected |
 | --- | --- | --- |
-| `U-PACKPUB-STAGE-001〜005` | parsed manifest v2、semantic sidecar、明示inventory、entry drift、sealed bytes mutation | Pack commit entryはmanifest destination＋control sidecarだけ、Release assetはtar.gz＋checksumのexact 2件。欠落・余剰・path/mode/size/content/sidecar driftはpreflight deny、暗黙補完0、sealed bytes不変 |
-| `U-PACKPUB-STAGE-006〜009` | stage/apply/discard fault、成功、snapshot failure、restore failure | prior stateを復元できるfaultは`applied: 0`、成功時apply exactly once、snapshot失敗時write 0、復元不能は`indeterminate`を保持 |
+| `U-PACKPUB-STAGE-001` | parsed manifest v2、semantic sidecar、明示inventory | Pack commit entryはmanifest destination＋control sidecarだけ、Release assetはtar.gz＋checksumのexact 2件 |
+| `U-PACKPUB-STAGE-002` | YAML表現・map挿入順序の変異 | semantic snapshotが同じなら同一digestになり、文字列表現へ依存しない |
+| `U-PACKPUB-STAGE-003` | entryの欠落・余剰・順序・path・mode・size・content digest drift | 各単独変異をpreflight denyし、暗黙補完0 |
+| `U-PACKPUB-STAGE-004` | sidecar semantic manifest drift | parsed semantic identityの不一致をdenyする |
+| `U-PACKPUB-STAGE-005` | sealed bytesの呼出し元mutation | plan内部のcommit entryとasset bytesは不変 |
+| `U-PACKPUB-STAGE-006` | write/apply/discard fault | prior stateを復元できる各faultは`applied: 0`を返す |
+| `U-PACKPUB-STAGE-007` | 成功経路 | apply exactly onceで完了する |
+| `U-PACKPUB-STAGE-008` | snapshot failure | write/staging/apply/discard/restoreを全て0回にする |
+| `U-PACKPUB-STAGE-009` | restore failure | 復元不能を`indeterminate`として保持する |
 | `U-PACKPUB-STAGE-010` | exact observation、commit/asset/digest欠落・変異、observer failure | exact一致だけ`attested`、差分は`partial_publication`、観測不能は`indeterminate`。remote write 0 |
 
 実行対応: `tests/pack-publication-staging.test.ts` (`U-PACKPUB-STAGE-001〜010`)。
