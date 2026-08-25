@@ -4,7 +4,7 @@ title: "PLAN-REVERSE-505: Pack段階公開・rollback契約のL7 oracle backfill
 kind: reverse
 layer: cross
 drive: agent
-workflow_phase: R2
+workflow_phase: R1
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
@@ -30,15 +30,13 @@ generates:
     artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
-  requires:
-    - docs/plans/PLAN-L7-507-pack-publication-staging-auditor.md
+  requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
     - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
-    - docs/plans/PLAN-L7-507-pack-publication-staging-auditor.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/402
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
 github_issue_id: 402
@@ -123,15 +121,6 @@ L7所有であり、このReverseでは再採番・再所有しない。
 | `CANDIDATE-PACKPUB-004` | B-4 | 公開済みobjectを削除・付替えせず、supersede-forward pointer CASだけを許可し、partial/indeterminate/rollback_failedを成功へ丸めない。 |
 
 ## R2〜R4の出口
-
-### R2: local staging/auditor 実測 (#403)
-
-`PLAN-L7-507` は `CANDIDATE-PACKPUB-001/002` のうちremote操作を必要としない境界を
-`U-PACKPUB-STAGE-001〜010`へ降下した。parsed manifest v2、明示inventory、deterministic
-tar.gz/checksum、control manifest semantic digest、immutable staging plan、isolated apply ports、
-local auditorを実測対象とする。`CANDIDATE-PACKPUB-003/004`のapproval/CAS、remote publication、
-promotion、supersede-forward rollbackは未実装のまま保持するため、本ReverseをR3/R4または
-confirmedへ進めない。
 
 後続publication aggregate/auditor実装では、各candidateを対応する`U-PACKPUB-*`へ1:1で昇格し、
 独立したsource/test/CI citationを同じexact revisionへ束縛する。実装PRが行うのはpure decision、
