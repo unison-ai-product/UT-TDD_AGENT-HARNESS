@@ -273,8 +273,11 @@ export function mergedPlanStatusMessages(r: MergedPlanStatusResult): string[] {
       "merged-plan-status — OK (merged generated artifact を持つ全 PLAN が confirmed/completed)",
     ];
   }
-  return r.violations.map(
-    (v) =>
-      `merged-plan-status - violation: PLAN ${v.planId} は status=${v.status} (未 confirm) なのに generated deliverable が merge 済み: ${v.artifacts.join(", ")} → PLAN を confirm + review_evidence 記録せよ`,
-  );
+  return r.violations.map((v) => {
+    const base = `merged-plan-status - violation: PLAN ${v.planId} は status=${v.status} (未 confirm) なのに generated deliverable が ${v.phase === "landing" ? "landing" : "merge 済み"}: ${v.artifacts.join(", ")}`;
+    if (v.phase !== "landing") {
+      return `${base} → PLAN を confirm + review_evidence 記録せよ`;
+    }
+    return `${base} (phase=landing) → 是正手順: (A) 分割: PLAN filing PR は generates を PLAN doc のみにし、pair-freeze cross-review 後、preflight review_evidence で PLAN を implementation PR 前に confirmed として成立させてもよい。その後の実装 PR で generated artifact の generates 宣言を追加する; (B) 単一の実装 PR: preflight review_evidence を根拠に PLAN を confirmed にし、generates 宣言を追加する。非著者 closing review の PASS verdict と canonical receipt は、最終変更後の exact PR HEAD に対する PR comment / canonical review receipt に残す。これは merge 前に PLAN の review_evidence へ書き戻す要件ではない。close gate は exact PR HEAD の非著者 closing review PASS と canonical receipt を要求する。confirm 時の preflight review_evidence は tests_green_at <= reviewed_at、green_commands は kind/command/runner/scope/exit_code/completed_at/evidence_path/output_digest/anchor_commit を完備。正本: CLAUDE.md / docs/design/harness/L6-function-design/test-before-review.md`;
+  });
 }
