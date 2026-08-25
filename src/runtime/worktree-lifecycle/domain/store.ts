@@ -223,7 +223,11 @@ export class WorktreeLifecycleStore {
       lifecycleId: identity.lifecycleId,
       attempt: current.attempt,
       revision: current.revision + 1,
-      denyReasons: input.denyReasons,
+      // Retention is an observation of the current lifecycle, not a replacement
+      // for domain-owned denial state. A caller may add a typed reason, but it
+      // must not be able to erase an activation/terminal denial before the
+      // corresponding discharge transition has been observed.
+      denyReasons: [...new Set([...current.denyReasons, ...input.denyReasons])].sort(),
       ...(input.retention ? { retention: input.retention } : {}),
     });
   }

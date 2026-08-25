@@ -295,6 +295,30 @@ describe("U-WTLIFE-006 typed activation and inventory denial", () => {
     ).toThrowError(expect.objectContaining({ code: "activation_abort_unresolved" }));
   });
 
+  it("preserves activation denial when retention supplies a receipt-derived reason", () => {
+    const store = new WorktreeLifecycleStore();
+    store.plan(planned());
+
+    const pending = store.abortActivation(identity1, abortEvidence);
+    expect(pending.denyReasons).toEqual(["activation_unresolved"]);
+
+    const retained = store.retain(identity1, {
+      attempt: 1,
+      denyReasons: ["terminal_missing"],
+    });
+    expect(retained.denyReasons).toEqual(["activation_unresolved", "terminal_missing"]);
+
+    const reevaluated = store.reevaluateRetained(identity1, {
+      attempt: 1,
+      terminalKind: "failure",
+      terminalReceiptDigest: "sha256:late-terminal",
+    });
+    expect(reevaluated.denyReasons).toEqual(["activation_unresolved"]);
+    expect(() => store.retire(identity1, { attempt: 1, inventoryAvailable: true })).toThrowError(
+      expect.objectContaining({ code: "terminal_missing", reason: "activation_unresolved" }),
+    );
+  });
+
   it("keeps a terminal deny reason blocking retirement even with a terminal receipt", () => {
     const store = new WorktreeLifecycleStore();
     store.plan(planned());
