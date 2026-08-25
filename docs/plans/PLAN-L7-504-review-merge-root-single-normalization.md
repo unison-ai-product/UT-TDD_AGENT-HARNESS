@@ -12,7 +12,7 @@ updated: 2026-08-25
 owner: Codex / Luna
 github_issue_id: 397
 parent_design: docs/plans/PLAN-L7-465-cross-review-author-binding.md
-pair_artifact: docs/test-design/harness/review-merge-root-single-normalization-test-design.md
+pair_artifact: docs/test-design/harness/L7-review-merge-root-single-normalization-test-design.md
 next_pair_freeze: L8
 backprop_decision: required
 backprop_decision_reason: "review merge gateの二重root正規化を単一点へ収束させ、L6-101のcontainment契約へ戻す。"
@@ -28,7 +28,7 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-504-review-merge-root-single-normalization.md
     artifact_type: markdown_doc
-  - artifact_path: docs/test-design/harness/review-merge-root-single-normalization-test-design.md
+  - artifact_path: docs/test-design/harness/L7-review-merge-root-single-normalization-test-design.md
     artifact_type: test_design
   - artifact_path: tests/review-merge-root-single-normalization.test.ts
     artifact_type: test_code

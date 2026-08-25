@@ -15,7 +15,7 @@ created: 2026-08-25
 updated: 2026-08-25
 owner: Codex
 parent_design: docs/plans/PLAN-L7-504-review-merge-root-single-normalization.md
-pair_artifact: docs/test-design/harness/review-merge-root-single-normalization-test-design.md
+pair_artifact: docs/test-design/harness/L7-review-merge-root-single-normalization-test-design.md
 agent_slots:
   - role: tl
     slot_label: "TL - L6-101 containment backprop"

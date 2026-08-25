@@ -17,7 +17,7 @@ updated: 2026-08-25
 | Oracle ID | Input / mutation | Expected |
 | --- | --- | --- |
 | `U-RVROOT-MERGE-001` | nested Git directoryからrootにseedしたPASS request/receiptを用いてmerge gateを実行 | PASS、rootのgate receipt、nested側stateなし |
-| `U-RVROOT-MERGE-002` | `runPrMerge`側の`resolveRepositoryRoot`だけを除去 | nested inputではevidence欠落となりRed、root evidenceを黙って拾わない |
-| `U-RVROOT-MERGE-003` | rootとnestedから同一factsを入力 | 判定とreceipt identityが同一で入力位置に依存しない |
+| `CANDIDATE-U-RVROOT-MERGE-002` | `runPrMerge`側の`resolveRepositoryRoot`だけを除去 | nested inputではevidence欠落となりRed、root evidenceを黙って拾わない |
+| `CANDIDATE-U-RVROOT-MERGE-003` | rootとnestedから同一factsを入力 | 判定とreceipt identityが同一で入力位置に依存しない |
 
 Test codeは`tests/review-merge-root-single-normalization.test.ts`に限定し、既存共有L7台帳は変更しない。
