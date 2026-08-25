@@ -27,7 +27,7 @@ generates:
 dependencies:
   parent: docs/plans/PLAN-L7-504-review-merge-root-single-normalization.md
   requires:
-    - docs/plans/PLAN-L7-465-cross-review-author-binding.md
+    - docs/plans/PLAN-L7-504-review-merge-root-single-normalization.md
   blocks: []
 review_evidence: []
 ---
