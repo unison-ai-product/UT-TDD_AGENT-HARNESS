@@ -75,6 +75,7 @@ export interface WorktreeLifecycleRecord {
   readonly activationReceiptDigest?: string;
   readonly activationAbortReceiptDigest?: string;
   readonly pathLeaseReleaseReceiptDigest?: string;
+  readonly ownerLossEvidenceDigest?: string;
   readonly terminalKind?: TerminalKind;
   readonly terminalReceiptDigest?: string;
   readonly denyReasons: readonly LifecycleDenyReason[];
@@ -116,19 +117,21 @@ export interface ActivationAbortInput {
   };
 }
 
-export type TerminalInput =
-  | {
-      readonly attempt: number;
-      readonly kind: TerminalKind;
-      readonly terminalReceiptDigest: string;
-      readonly ownerLoss?: boolean;
-    }
-  | {
-      readonly attempt: number;
-      readonly kind: "parent_loss";
-      readonly ownerLoss: true;
-      readonly terminalReceiptDigest?: undefined;
-    };
+export interface AuthenticatedOwnerLossEvidence {
+  readonly kind: "authenticated_owner_loss";
+  readonly authenticated: true;
+  readonly sessionId: string;
+  readonly observedAt: string;
+  readonly evidenceDigest: string;
+}
+
+export type TerminalInput = {
+  readonly attempt: number;
+  readonly kind: TerminalKind;
+  readonly terminalReceiptDigest?: string;
+  readonly denyReasons?: readonly LifecycleDenyReason[];
+  readonly ownerLossEvidence?: AuthenticatedOwnerLossEvidence;
+};
 
 export interface RetainInput {
   readonly attempt: number;
@@ -183,6 +186,7 @@ export type LifecycleEvent =
       readonly revision: number;
       readonly terminalKind: TerminalKind;
       readonly terminalReceiptDigest?: string;
+      readonly ownerLossEvidenceDigest?: string;
       readonly denyReasons: readonly LifecycleDenyReason[];
     }
   | {

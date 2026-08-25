@@ -125,6 +125,9 @@ export function reduceLifecycle(
         ...(event.terminalReceiptDigest
           ? { terminalReceiptDigest: event.terminalReceiptDigest }
           : {}),
+        ...(event.ownerLossEvidenceDigest
+          ? { ownerLossEvidenceDigest: event.ownerLossEvidenceDigest }
+          : {}),
         denyReasons: Object.freeze([...event.denyReasons].sort()),
         denyHistory: uniqueReasons(state.denyHistory, event.denyReasons),
       });

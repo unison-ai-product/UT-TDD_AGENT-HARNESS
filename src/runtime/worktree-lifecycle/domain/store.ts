@@ -35,6 +35,23 @@ function sameIdentity(left: LifecycleIdentity, right: LifecycleIdentity): boolea
   );
 }
 
+function nonEmpty(value: string | undefined): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function authenticatedOwnerLoss(input: TerminalInput): boolean {
+  const evidence = input.ownerLossEvidence;
+  return (
+    input.kind === "parent_loss" &&
+    evidence?.kind === "authenticated_owner_loss" &&
+    evidence.authenticated === true &&
+    nonEmpty(evidence.sessionId) &&
+    nonEmpty(evidence.observedAt) &&
+    Number.isFinite(Date.parse(evidence.observedAt)) &&
+    nonEmpty(evidence.evidenceDigest)
+  );
+}
+
 export class WorktreeLifecycleStore {
   private readonly records = new Map<string, WorktreeLifecycleRecord>();
   private readonly keys = new Set<string>();
@@ -93,18 +110,25 @@ export class WorktreeLifecycleStore {
     const current = this.require(identity);
     this.assertAttempt(current, evidence.attempt);
     if (current.state !== "planned") return this.invalid(current, "active");
-    if (
-      current.activationStatus !== "unresolved" ||
-      !evidence.workerStartReceiptDigest ||
-      !evidence.inventoryAvailable ||
-      !evidence.ownerAuthenticated
-    ) {
+    let activationFailure:
+      | "activation_unresolved"
+      | "owner_unknown"
+      | "inventory_unavailable"
+      | undefined;
+    if (current.activationStatus !== "unresolved" || !evidence.workerStartReceiptDigest) {
+      activationFailure = "activation_unresolved";
+    } else if (!evidence.ownerAuthenticated) {
+      activationFailure = "owner_unknown";
+    } else if (!evidence.inventoryAvailable) {
+      activationFailure = "inventory_unavailable";
+    }
+    if (activationFailure) {
       throw new WorktreeLifecycleError(
-        "activation_unresolved",
-        "activation evidence is incomplete",
+        activationFailure,
+        `activation evidence is incomplete: ${activationFailure}`,
         {
           lifecycleId: identity.lifecycleId,
-          reason: "activation_unresolved",
+          reason: activationFailure,
         },
       );
     }
@@ -151,14 +175,19 @@ export class WorktreeLifecycleStore {
     const current = this.require(identity);
     this.assertAttempt(current, input.attempt);
     const hasReceipt = Boolean(input.terminalReceiptDigest);
-    if (!hasReceipt && !(input.kind === "parent_loss" && input.ownerLoss === true)) {
+    const hasOwnerLoss = authenticatedOwnerLoss(input);
+    if (!hasReceipt && !hasOwnerLoss) {
       throw new WorktreeLifecycleError(
         "terminal_missing",
         "terminal receipt is required unless authenticated parent loss is present",
         { lifecycleId: identity.lifecycleId, reason: "terminal_missing" },
       );
     }
-    const denyReasons = hasReceipt ? [] : ["terminal_missing" as const];
+    const denyReasons = input.denyReasons
+      ? [...input.denyReasons]
+      : hasReceipt
+        ? []
+        : ["terminal_missing" as const];
     return this.transition(current, {
       type: "terminal_pending",
       identity,
@@ -169,6 +198,7 @@ export class WorktreeLifecycleStore {
       ...(input.terminalReceiptDigest
         ? { terminalReceiptDigest: input.terminalReceiptDigest }
         : {}),
+      ...(hasOwnerLoss ? { ownerLossEvidenceDigest: input.ownerLossEvidence?.evidenceDigest } : {}),
       denyReasons,
     });
   }

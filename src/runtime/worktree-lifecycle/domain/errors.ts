@@ -7,6 +7,7 @@ export type LifecycleErrorCode =
   | "attempt_mismatch"
   | "activation_unresolved"
   | "activation_abort_unresolved"
+  | "owner_unknown"
   | "inventory_unavailable"
   | "terminal_missing"
   | "terminal_mismatch"

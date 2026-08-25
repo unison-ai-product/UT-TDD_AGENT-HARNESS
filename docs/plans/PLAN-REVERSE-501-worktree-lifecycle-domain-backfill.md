@@ -46,6 +46,10 @@ review_evidence: []
 だけを実装する。#232 inventory、#124 terminal、retention、projection、物理 cleanup の責務は
 backfill 対象に含めない。
 
+今回の実装で、activationの欠落理由（`activation_unresolved` / `owner_unknown` /
+`inventory_unavailable`）を混同せず、parent-lossはtyped authenticated observation、terminal
+deny reasonはreceiptの有無だけで消去しない、というL7境界を固定する。
+
 ## R1〜R4 判定条件
 
 - R1: `U-WTLIFE-001/002/006/010` が同じ PLAN revision と exact HEAD に束縛される。

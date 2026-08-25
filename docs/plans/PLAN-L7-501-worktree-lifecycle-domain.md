@@ -91,10 +91,14 @@ process stop、cleanup、topology adapter は本 PLAN の後続 slice とし、�
 
 - 起動前に必須 identity を持つ `planned` record を revision 1 で原子的に登録する。
 - `planned -> active` は同一 attempt の start receipt、inventory available、authenticated owner
-  が揃った場合だけ許可する。欠落は `activation_unresolved` で fail-close する。
+  が揃った場合だけ許可する。start receipt欠落は `activation_unresolved`、owner認証欠落は
+  `owner_unknown`、inventory欠測は `inventory_unavailable` として軸ごとにfail-closeする。
 - activation abort は `planned -> terminal_pending` の sealed domain event として記録する。
-- `active -> terminal_pending` は terminal input または owner loss を受け、receipt 欠落を
-  `terminal_missing` として保持する。
+- `active -> terminal_pending` は terminal input または、session ID・観測時刻・evidence digestを持つ
+  typed `authenticated_owner_loss` observationを受ける。rawな `ownerLoss: boolean` は認証根拠と
+  みなさず、receiptもtyped observationも欠落する場合は `terminal_missing` として保持する。
+- terminal receiptがあってもdeny reasonが残る場合、`retire`はそのdeny reasonで拒否し、guardを
+  digestの有無だけへ縮退させない。
 - `terminal_pending -> retained | retired` と `retained -> terminal_pending`（後着 receipt 再評価）を
   reducer の許可遷移として固定する。inventory 欠測は `inventory_unavailable` で拒否する。
 - revision は event ごとに単調増加し、attempt/identity不一致・不正遷移・replay conflict は例外で

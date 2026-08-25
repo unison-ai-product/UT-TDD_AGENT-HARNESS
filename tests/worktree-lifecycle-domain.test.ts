@@ -55,6 +55,14 @@ const abortEvidence = {
   pathLeaseRelease: { released: true as const, receiptDigest: "sha256:lease-release" },
 };
 
+const ownerLossEvidence = {
+  kind: "authenticated_owner_loss" as const,
+  authenticated: true as const,
+  sessionId: "session-001",
+  observedAt: "2026-08-24T00:10:00.000Z",
+  evidenceDigest: "sha256:owner-loss",
+};
+
 describe("U-WTLIFE-001 planned lifecycle record", () => {
   it("atomically registers the complete identity and refuses a duplicate", () => {
     const store = new WorktreeLifecycleStore();
@@ -143,9 +151,10 @@ describe("U-WTLIFE-002 lifecycle FSM", () => {
     const pending = store.terminal(identity2, {
       attempt: 1,
       kind: "parent_loss",
-      ownerLoss: true,
+      ownerLossEvidence,
     });
     expect(pending.denyReasons).toEqual(["terminal_missing"]);
+    expect(pending.ownerLossEvidenceDigest).toBe("sha256:owner-loss");
     const retained = store.retain(identity2, {
       attempt: 1,
       denyReasons: ["terminal_missing"],
@@ -179,16 +188,36 @@ describe("U-WTLIFE-006 typed activation and inventory denial", () => {
   it("fails closed for unresolved activation and unavailable inventory without mutating the record", () => {
     const store = new WorktreeLifecycleStore();
     store.plan(planned());
-    expect(() =>
-      store.activate(identity1, {
-        attempt: 1,
+    const activationFailures = [
+      {
         workerStartReceiptDigest: "",
+        inventoryAvailable: true,
+        ownerAuthenticated: true,
+        error: "activation_unresolved",
+      },
+      {
+        workerStartReceiptDigest: "sha256:start",
         inventoryAvailable: false,
+        ownerAuthenticated: true,
+        error: "inventory_unavailable",
+      },
+      {
+        workerStartReceiptDigest: "sha256:start",
+        inventoryAvailable: true,
         ownerAuthenticated: false,
-      }),
-    ).toThrowError(
-      expect.objectContaining({ code: "activation_unresolved", reason: "activation_unresolved" }),
-    );
+        error: "owner_unknown",
+      },
+    ] as const;
+    for (const failure of activationFailures) {
+      expect(() =>
+        store.activate(identity1, {
+          attempt: 1,
+          workerStartReceiptDigest: failure.workerStartReceiptDigest,
+          inventoryAvailable: failure.inventoryAvailable,
+          ownerAuthenticated: failure.ownerAuthenticated,
+        }),
+      ).toThrowError(expect.objectContaining({ code: failure.error, reason: failure.error }));
+    }
     expect(store.get(identity1)?.state).toBe("planned");
     expect(store.get(identity1)?.revision).toBe(1);
 
@@ -222,6 +251,32 @@ describe("U-WTLIFE-006 typed activation and inventory denial", () => {
         pathLeaseRelease: { released: true, receiptDigest: "" },
       }),
     ).toThrowError(expect.objectContaining({ code: "activation_abort_unresolved" }));
+  });
+
+  it("keeps a terminal deny reason blocking retirement even with a terminal receipt", () => {
+    const store = new WorktreeLifecycleStore();
+    store.plan(planned());
+    store.activate(identity1, {
+      attempt: 1,
+      workerStartReceiptDigest: "sha256:start",
+      inventoryAvailable: true,
+      ownerAuthenticated: true,
+    });
+    const pending = store.terminal(identity1, {
+      attempt: 1,
+      kind: "failure",
+      terminalReceiptDigest: "sha256:terminal",
+      denyReasons: ["dirty"],
+    });
+    expect(pending.state).toBe("terminal_pending");
+    expect(pending.terminalReceiptDigest).toBe("sha256:terminal");
+    expect(pending.denyReasons).toEqual(["dirty"]);
+    expect(() =>
+      store.retire(identity1, {
+        attempt: 1,
+        inventoryAvailable: true,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "terminal_missing", reason: "dirty" }));
   });
 });
 
@@ -307,7 +362,14 @@ describe("U-WTLIFE-010 replay and fail-close transitions", () => {
         attempt: 1,
         kind: "failure",
         terminalReceiptDigest: "",
-        ownerLoss: false,
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "terminal_missing", reason: "terminal_missing" }),
+    );
+    expect(() =>
+      terminalStore.terminal(identity1, {
+        attempt: 1,
+        kind: "parent_loss",
       }),
     ).toThrowError(
       expect.objectContaining({ code: "terminal_missing", reason: "terminal_missing" }),
