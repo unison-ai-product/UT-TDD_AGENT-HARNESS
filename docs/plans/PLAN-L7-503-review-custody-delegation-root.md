@@ -4,7 +4,7 @@ title: "review custody delegation の Git toplevel 固定"
 kind: add-impl
 layer: L7
 drive: be
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-25
@@ -42,7 +42,27 @@ dependencies:
     - src/feedback/repository-root.ts
     - docs/plans/PLAN-REVERSE-503-review-custody-delegation-root-backfill.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/396
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-25T04:10:47Z"
+    tests_green_at: "2026-08-25T04:09:50Z"
+    verdict: "preflight green; Claude Opus 5 non-author exact-head closing review pending"
+    worker_model: codex-primary
+    reviewer_model: codex
+    plan_revision: 8a43d918
+    subject_head: 8a43d918
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/review-delegation-root.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-25T04:09:50Z"
+        evidence_path: tests/review-delegation-root.test.ts
+        output_digest: "sha256:1f00c7584db0581a3b6543b85766ae84e7a62c974f7f1195d1e4ef0ad3d1a70e"
+        anchor_commit: 8a43d918
+    scope: "Issue #396 bounded delegation custody root normalization; source change is limited to repository-root resolution and nested Git strict-receipt oracle. Claude Opus 5 non-author closing review remains required."
 ---
 
 # PLAN-L7-503
