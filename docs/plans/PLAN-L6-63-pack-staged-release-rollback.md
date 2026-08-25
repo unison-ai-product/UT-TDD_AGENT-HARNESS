@@ -393,8 +393,8 @@ Pack公開前提と非依存境界のみを定義する。
 
 ## 11. 現在の freeze 状態
 
-本更新は Issue #402 の B-1〜B-4を閉じる design-only pair-freeze 候補であり、`status: draft` を維持する。
-`review_evidence`には exact origin/main `92df02a6` 上のCodex preflight、worker_model、effort、
-対象commandを記録したが、これは最終レビュー証跡ではない。Claude Opus non-author closing
-review、PR CI、R3/R4の最終receipt、Pack repositoryへの公開操作は後続条件として pending である。
-実装、Pack copy、GitHub remote mutation、consumer E2E、merge完了は主張しない。
+本更新は Issue #402 の B-1〜B-4を閉じる design-only pair-freezeであり、`status: confirmed` とする。
+`review_evidence`には PR #404 exact HEAD `1d310e78` に対するClaude Opus non-author closing
+PASS、canonical receipt、Linux/Windows/aggregate CIを同一revisionへ束縛した。これによりL6契約の
+freezeは完了したが、Reverse R2〜R4、publication実装、Pack repositoryへの公開操作は後続条件である。
+実装、Pack copy、GitHub remote mutation、consumer E2E、公開完了は本PLANでは主張しない。

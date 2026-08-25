@@ -127,5 +127,6 @@ L7所有であり、このReverseでは再採番・再所有しない。
 injected remote port、auditorの検証だけであり、Pack remoteへの実操作、source/CLI変更、consumer E2Eは
 このReverseの出口に含めない。
 
-本PR時点ではR1 pair evidenceを記録し、Claude Opus non-author closing reviewとCIの最終receiptを
-placeholderとして残す。review完了・実装Green・Pack公開完了・merge完了を先取りして主張しない。
+本PR時点ではR1 pair evidenceだけを記録する。親L6 pair-freezeのClaude Opus non-author closing
+PASSとCIは親PLANのexact revisionへ記録済みだが、本ReverseのR2〜R4、実装Green、Pack公開完了を
+先取りして主張しない。
