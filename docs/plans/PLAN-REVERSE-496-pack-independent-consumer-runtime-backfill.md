@@ -23,8 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-496-pack-independent-consumer-runtime-backfill.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
-    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
   requires: []
