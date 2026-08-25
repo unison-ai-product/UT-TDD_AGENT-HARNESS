@@ -30,11 +30,7 @@ generates:
     artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
-  requires:
-    - PLAN-L7-494-release-promotion-rollback-gate
-    - PLAN-L7-496-pack-independent-consumer-runtime
-    - PLAN-L7-499-pack-publication-manifest-v2-pure-domain
-    - PLAN-L7-500-pack-publication-assets-pure-domain
+  requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
