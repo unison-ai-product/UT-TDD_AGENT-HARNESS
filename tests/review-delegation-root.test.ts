@@ -40,7 +40,7 @@ function createClaudeStub(root: string): string {
 }
 
 describe("review delegation repository-root custody", () => {
-  it("writes the strict verdict and receipt at the Git toplevel when invoked from a nested worktree directory", () => {
+  it("U-RVROOT-001: writes the strict verdict and receipt at the Git toplevel when invoked from a nested worktree directory", () => {
     const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), "ut-review-root-"));
     try {
       mkdirSync(join(root, "nested", "task"), { recursive: true });
@@ -83,8 +83,9 @@ describe("review delegation repository-root custody", () => {
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
+      const gitRoot = resolve(git(root, ["rev-parse", "--show-toplevel"]));
       expect(result.path).toBe(
-        join(root, ".ut-tdd", "review", "receipts", `${result.digest}.json`),
+        join(gitRoot, ".ut-tdd", "review", "receipts", `${result.digest}.json`),
       );
       expect(existsSync(result.path)).toBe(true);
       expect(existsSync(join(root, "nested", "task", ".ut-tdd", "review"))).toBe(false);

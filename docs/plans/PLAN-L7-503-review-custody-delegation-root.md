@@ -12,7 +12,7 @@ updated: 2026-08-25
 owner: Codex / Luna
 github_issue_id: 396
 parent_design: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
-pair_artifact: docs/test-design/harness/review-custody-delegation-root-test-design.md
+pair_artifact: docs/test-design/harness/L7-review-custody-delegation-root-test-design.md
 next_pair_freeze: L8
 backprop_decision: required
 backprop_decision_reason: "呼出し元ディレクトリに依存しないreview custody rootをD3a運用契約へ戻す。"
@@ -28,7 +28,7 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
     artifact_type: markdown_doc
-  - artifact_path: docs/test-design/harness/review-custody-delegation-root-test-design.md
+  - artifact_path: docs/test-design/harness/L7-review-custody-delegation-root-test-design.md
     artifact_type: test_design
   - artifact_path: tests/review-delegation-root.test.ts
     artifact_type: test_code

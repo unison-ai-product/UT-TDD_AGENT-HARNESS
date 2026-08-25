@@ -18,8 +18,8 @@ updated: 2026-08-25
 | Oracle ID | Red input | Expected Green invariant | Test |
 | --- | --- | --- | --- |
 | `U-RVROOT-001` | Git root配下の`nested/task`をcwdにしてstrict Claude delegationを実行 | receipt pathがGit toplevelの`.ut-tdd/review/receipts/<digest>.json`で、nested側にreview stateが作られない | `tests/review-delegation-root.test.ts` |
-| `U-RVROOT-002` | root、nested directory、linked worktreeから同一requestを発行 | `resolveRepositoryRoot`後のrequest/attempt identityが同一で、root外permission ruleを生成しない | `tests/review-delegation-root.test.ts` |
-| `U-RVROOT-003` | Git markerだけ存在しtoplevel解決不能なfixture | `review_repository_root_unresolvable`でfail-closeし、fixture rootへ黙って縮退しない | `src/feedback/repository-root.ts` unit surface |
+| `CANDIDATE-U-RVROOT-002` | root、nested directory、linked worktreeから同一requestを発行 | `resolveRepositoryRoot`後のrequest/attempt identityが同一で、root外permission ruleを生成しない | `tests/review-delegation-root.test.ts` |
+| `CANDIDATE-U-RVROOT-003` | Git markerだけ存在しtoplevel解決不能なfixture | `review_repository_root_unresolvable`でfail-closeし、fixture rootへ黙って縮退しない | `src/feedback/repository-root.ts` unit surface |
 
 ## TDD sequence
 
