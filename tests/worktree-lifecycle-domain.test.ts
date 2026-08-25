@@ -374,5 +374,14 @@ describe("U-WTLIFE-010 replay and fail-close transitions", () => {
     ).toThrowError(
       expect.objectContaining({ code: "terminal_missing", reason: "terminal_missing" }),
     );
+    expect(() =>
+      terminalStore.terminal(identity1, {
+        attempt: 1,
+        kind: "parent_loss",
+        ownerLossEvidence: { ...ownerLossEvidence, sessionId: "foreign-session" },
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "terminal_missing", reason: "terminal_missing" }),
+    );
   });
 });

@@ -39,12 +39,13 @@ function nonEmpty(value: string | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function authenticatedOwnerLoss(input: TerminalInput): boolean {
+function authenticatedOwnerLoss(current: WorktreeLifecycleRecord, input: TerminalInput): boolean {
   const evidence = input.ownerLossEvidence;
   return (
     input.kind === "parent_loss" &&
     evidence?.kind === "authenticated_owner_loss" &&
     evidence.authenticated === true &&
+    evidence.sessionId === current.ownerSessionId &&
     nonEmpty(evidence.sessionId) &&
     nonEmpty(evidence.observedAt) &&
     Number.isFinite(Date.parse(evidence.observedAt)) &&
@@ -175,7 +176,7 @@ export class WorktreeLifecycleStore {
     const current = this.require(identity);
     this.assertAttempt(current, input.attempt);
     const hasReceipt = Boolean(input.terminalReceiptDigest);
-    const hasOwnerLoss = authenticatedOwnerLoss(input);
+    const hasOwnerLoss = authenticatedOwnerLoss(current, input);
     if (!hasReceipt && !hasOwnerLoss) {
       throw new WorktreeLifecycleError(
         "terminal_missing",
