@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { executeLiveReviewDelegation } from "../src/cli/review-live.ts";
@@ -41,7 +42,7 @@ function createClaudeStub(root: string): string {
 
 describe("review delegation repository-root custody", () => {
   it("U-RVROOT-001: writes the strict verdict and receipt at the Git toplevel when invoked from a nested worktree directory", () => {
-    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), "ut-review-root-"));
+    const root = mkdtempSync(join(tmpdir(), "ut-review-root-"));
     try {
       mkdirSync(join(root, "nested", "task"), { recursive: true });
       writeFileSync(join(root, "README.md"), "fixture\n", "utf8");

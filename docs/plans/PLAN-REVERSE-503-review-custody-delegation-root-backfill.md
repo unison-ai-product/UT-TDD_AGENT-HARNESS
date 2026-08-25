@@ -16,7 +16,7 @@ updated: 2026-08-25
 owner: Codex / Luna
 github_issue_id: 396
 parent_design: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
-pair_artifact: docs/test-design/harness/review-custody-delegation-root-test-design.md
+pair_artifact: docs/test-design/harness/L7-review-custody-delegation-root-test-design.md
 backprop_decision: required
 backprop_decision_reason: "D3a custodyの入力rootを実測されたGit toplevelへ固定する。"
 agent_slots:
@@ -30,7 +30,7 @@ generates:
 dependencies:
   parent: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
   requires:
-    - docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
+    - docs/plans/PLAN-L7-503-review-custody-delegation-root.md
   blocks: []
 review_evidence: []
 ---
