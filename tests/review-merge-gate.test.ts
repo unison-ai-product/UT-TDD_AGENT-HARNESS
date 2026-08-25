@@ -326,6 +326,23 @@ describe("D2-B PR merge gate", () => {
         ports: ports(),
       });
       expect(result).toMatchObject({ ok: true, decision: "merge", verdict: "PASS" });
+
+      // A same-head FLAG in the other checkout must remain blocking even
+      // when a PASS receipt exists in the first checkout.
+      writeVerdict(linkedWorktree, {
+        file: "same-head-flag.json",
+        memoryId: "review:465:head:1",
+        reviewRevision: "review-r1",
+        verdict: "FLAG",
+      });
+      const flagged = runPrMerge({
+        repoRoot: linkedWorktree,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(flagged).toMatchObject({ ok: false, decision: "deny", verdict: "FLAG" });
+      expect(flagged.reason).toContain("flagged");
     } finally {
       try {
         execFileSync("git", ["-C", repository, "worktree", "remove", "--force", linkedWorktree], {
