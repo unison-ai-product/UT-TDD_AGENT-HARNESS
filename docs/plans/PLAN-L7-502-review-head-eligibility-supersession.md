@@ -65,17 +65,21 @@ merge eligibilityへ流用しない境界だけを追加する。
 5. HEAD が変わったのに現 HEAD request/receipt が無い場合は denyする。旧 HEAD のPASSだけで
    新 HEADを承認してはならない。
 6. review input のroot/worktree配置だけを変えても、同じfactsと履歴から得る判定は同一である。
+   実行時はGit common directoryに属する全linked worktreeの`.ut-tdd/review/{requests,receipts}`を
+   deterministicに収集し、canonical JSON重複を除去する。Git管理下でworktree列挙に失敗した場合は
+   root-localへ黙って縮退せず、fail-closeする。非Gitのisolated fixtureだけはfixture rootを単独入力とする。
 
 ## 3. スコープ
 
 `src/feedback/review-merge-gate.ts` の current-head projection と、その U-RVMG 回帰を対象とする。
+linked worktree間のevidence収集を同じD2-B入力境界へ含める。
 `src/feedback/review-dispatch.ts` の全履歴監査モデル、receipt schema、custody path、#389/#384/#388
 の資産と経路は変更しない。
 
 ## 4. 完了条件
 
 - U-RVMG の旧 HEAD FLAG→現 HEAD PASS supersession、same-head FLAG blocking、HEAD変更時の
-  current receipt欠落 deny、root/worktree配置不変 oracle がGreen。
+  current receipt欠落 deny、root/worktree配置不変 oracle、linked worktree間のevidence共有 oracleがGreen。
 - `PLAN-L7-470` の U-RVDISP-047〜052 と audit出力を維持する。
 - typecheck、Biome、targeted tests、PLAN lint がGreen。draft PLANのgeneratesは本PLAN自身に
   限定し、実装成果物の所有は実装確認時に更新する。

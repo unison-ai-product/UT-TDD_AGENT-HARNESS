@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -293,6 +294,48 @@ describe("D2-B PR merge gate", () => {
       expect({ ...results[0], receiptPath: null }).toEqual({ ...results[1], receiptPath: null });
     } finally {
       for (const root of roots) rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVHEAD-005: linked worktree間のreview evidenceは配置に依存せず共有される", () => {
+    const repository = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-git-"));
+    const linkedWorktree = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-linked-"));
+    try {
+      writeFileSync(join(repository, "README.md"), "fixture\n", "utf8");
+      execFileSync("git", ["-C", repository, "init", "-q"]);
+      execFileSync("git", ["-C", repository, "config", "user.email", "fixture@example.test"]);
+      execFileSync("git", ["-C", repository, "config", "user.name", "fixture"]);
+      execFileSync("git", ["-C", repository, "add", "README.md"]);
+      execFileSync("git", ["-C", repository, "commit", "-q", "-m", "fixture"]);
+      rmSync(linkedWorktree, { recursive: true, force: true });
+      execFileSync(
+        "git",
+        ["-C", repository, "worktree", "add", "--detach", linkedWorktree, "HEAD"],
+        {
+          stdio: "ignore",
+        },
+      );
+
+      // The review request/receipt are produced in one checkout, while the
+      // merge command is intentionally run from its sibling checkout.
+      seedReview(repository, "PASS");
+      const result = runPrMerge({
+        repoRoot: linkedWorktree,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(result).toMatchObject({ ok: true, decision: "merge", verdict: "PASS" });
+    } finally {
+      try {
+        execFileSync("git", ["-C", repository, "worktree", "remove", "--force", linkedWorktree], {
+          stdio: "ignore",
+        });
+      } catch {
+        // Cleanup below still removes the isolated fixture if Git already did.
+      }
+      rmSync(linkedWorktree, { recursive: true, force: true });
+      rmSync(repository, { recursive: true, force: true });
     }
   });
 

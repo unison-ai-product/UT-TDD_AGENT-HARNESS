@@ -1569,6 +1569,7 @@ exact current HEADへ投影する境界を検証する。
 | `U-RVHEAD-002` | same-head FLAG blocking | 同じ exact HEAD に FLAG と PASS を併存 | FLAGはblockingのままdenyし、authorized entryを発行しない |
 | `U-RVHEAD-003` | current receipt欠落 | HEADを旧receiptのHEADから変更し、current-head request/receiptを欠落 | old evidenceだけでは許可せず `no_request_for_current_head` または同等理由でdeny |
 | `U-RVHEAD-004` | root/worktree配置不変 | 同一入力を異なる repository root / worktree pathへ配置 | merge decision、verdict、reason、audit保持結果が同一 |
+| `U-RVHEAD-005` | linked worktree evidence共有 | request/receiptを一方のlinked worktreeへ置き、別worktreeからmerge gateを実行 | Git common directory内の全evidenceを収集し、current-head PASSを正しく認可 |
 
 実行対応: `tests/review-merge-gate.test.ts` (`U-RVHEAD-001`〜`004`)。
 

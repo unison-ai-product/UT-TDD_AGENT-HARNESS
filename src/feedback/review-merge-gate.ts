@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
   analyzeReviewDispatch,
   type PrObservation,
@@ -9,6 +9,7 @@ import {
   type ReviewRequest,
   type ReviewVerdict,
 } from "./review-dispatch.ts";
+import { canonicalJson } from "./review-verdict-custody.ts";
 
 export interface MergeGateFacts extends PrObservation {
   /** 評価対象として取得した HEAD。adapter 内の二重観測がずれたら fail-close する。 */
@@ -77,25 +78,68 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * Review requests/receipts are runtime evidence, not worktree-local source.
+ * A linked worktree may receive the request while the merge command runs from
+ * another linked worktree, so the gate must inspect every worktree belonging
+ * to the same Git common directory. Non-Git fixture roots retain the old
+ * single-root behavior.
+ */
+function reviewInputRoots(repoRoot: string): string[] {
+  const roots = new Map<string, string>();
+  const add = (candidate: string): void => {
+    if (!existsSync(candidate)) return;
+    const resolved = resolve(candidate);
+    const key = process.platform === "win32" ? resolved.toLowerCase() : resolved;
+    if (!roots.has(key)) roots.set(key, resolved);
+  };
+  add(repoRoot);
+  // Vitest uses non-Git temporary roots for isolated fixtures. A real
+  // checkout must not silently fall back to a worktree-local evidence set if
+  // Git cannot enumerate its linked worktrees.
+  if (!existsSync(join(repoRoot, ".git"))) return [...roots.values()];
+  try {
+    const output = execFileSync("git", ["-C", repoRoot, "worktree", "list", "--porcelain"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    for (const line of String(output).split(/\r?\n/)) {
+      if (line.startsWith("worktree ")) add(line.slice("worktree ".length));
+    }
+  } catch {
+    throw new Error("review_input_worktree_enumeration_failed");
+  }
+  return [...roots.values()].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+}
+
 function readReviewFiles<T>(
-  repoRoot: string,
+  roots: readonly string[],
   category: (typeof REVIEW_INPUT_CATEGORIES)[number],
 ): T[] {
-  const directory = join(repoRoot, ".ut-tdd", "review", category);
-  if (!existsSync(directory)) return [];
-  return readdirSync(directory)
-    .filter((name) => name.endsWith(".json"))
-    .sort()
-    .map((name) => JSON.parse(readFileSync(join(directory, name), "utf8")) as T);
+  const values = new Map<string, T>();
+  for (const root of roots) {
+    const directory = join(root, ".ut-tdd", "review", category);
+    if (!existsSync(directory)) continue;
+    for (const name of readdirSync(directory)
+      .filter((entry) => entry.endsWith(".json"))
+      .sort()) {
+      const value = JSON.parse(readFileSync(join(directory, name), "utf8")) as T;
+      values.set(canonicalJson(value), value);
+    }
+  }
+  return [...values.entries()]
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([, value]) => value);
 }
 
 function loadReviewInputs(repoRoot: string): {
   requests: ReviewRequest[];
   receipts: ReviewReceipt[];
 } {
+  const roots = reviewInputRoots(repoRoot);
   return {
-    requests: readReviewFiles<ReviewRequest>(repoRoot, "requests"),
-    receipts: readReviewFiles<ReviewReceipt>(repoRoot, "receipts"),
+    requests: readReviewFiles<ReviewRequest>(roots, "requests"),
+    receipts: readReviewFiles<ReviewReceipt>(roots, "receipts"),
   };
 }
 
