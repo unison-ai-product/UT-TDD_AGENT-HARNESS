@@ -17,6 +17,7 @@ import {
   reviewIdentityDigest,
   reviewVerdictPath,
 } from "../feedback/review-verdict-custody.ts";
+import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
@@ -157,7 +158,7 @@ export function executeAdapterPlanForCli(
   depsInput: AdapterExecutionDeps,
 ): AdapterExecutionResult {
   const sessionId = `${input.sessionPrefix}-${Date.now()}`;
-  const repoRoot = process.cwd();
+  const repoRoot = resolveRepositoryRoot(process.cwd());
   const now = depsInput.now ?? nowIso;
   const deps = nodeDeps(repoRoot, depsInput.gitBranch, depsInput.gitHead);
   if (input.jsonOut) {
@@ -381,6 +382,7 @@ function runtimeCommand(
         const reviewHead = opts.reviewHead;
         const reviewRevision = opts.reviewRevision;
         const startedAt = deps.now?.() ?? nowIso();
+        const repoRoot = resolveRepositoryRoot(process.cwd());
         const jsonOut = Boolean(opts.json);
         const routingAudit =
           `delegation-routing: model=${routing.model} (${routing.model_source}) ` +
@@ -426,7 +428,7 @@ function runtimeCommand(
         let reviewAttempt = 1;
         let reviewVerdictFile =
           reviewRequest && routing.review_lane
-            ? reviewVerdictPath(process.cwd(), reviewIdentityDigest(reviewRequest), reviewAttempt)
+            ? reviewVerdictPath(repoRoot, reviewIdentityDigest(reviewRequest), reviewAttempt)
             : undefined;
         const buildPlan = (verdictFile: string | undefined) => {
           const metadata =
@@ -460,7 +462,7 @@ function runtimeCommand(
             mode,
           );
           if (provider === "claude" && verdictFile) {
-            const editRule = claudeReviewVerdictEditRule(process.cwd(), verdictFile);
+            const editRule = claudeReviewVerdictEditRule(repoRoot, verdictFile);
             if (!editRule) {
               return {
                 ...nextPlan,
@@ -488,7 +490,7 @@ function runtimeCommand(
         }
         if (reviewRequest) {
           const issued = issueReviewRequest({
-            repoRoot: process.cwd(),
+            repoRoot,
             request: reviewRequest,
             strict: true,
           });
@@ -499,7 +501,7 @@ function runtimeCommand(
           }
           reviewRequest = issued.request;
           const attempt = beginReviewAttempt({
-            repoRoot: process.cwd(),
+            repoRoot,
             request: reviewRequest,
             provider,
             model: routing.model,

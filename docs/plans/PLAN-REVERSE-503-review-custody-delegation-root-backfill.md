@@ -1,0 +1,42 @@
+plan_id: PLAN-REVERSE-503-review-custody-delegation-root-backfill
+title: "review custody delegation root normalization Reverse backfill"
+kind: reverse
+layer: L6
+drive: agent
+status: draft
+route_signal: defect_fix
+route_mode: fix
+created: 2026-08-25
+updated: 2026-08-25
+owner: Codex / Luna
+github_issue_id: 396
+parent_design: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
+pair_artifact: docs/test-design/harness/review-custody-delegation-root-test-design.md
+backprop_decision: required
+backprop_decision_reason: "D3a custodyの入力rootを実測されたGit toplevelへ固定する。"
+generates:
+  - artifact_path: docs/plans/PLAN-REVERSE-503-review-custody-delegation-root-backfill.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
+  requires:
+    - docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
+  blocks: []
+review_evidence: []
+---
+
+# PLAN-REVERSE-503
+
+## Backfill contract
+
+L7実装の実測で、delegation commandが`process.cwd()`を直接custody rootへ渡す経路を閉じる。
+レビューのrequest、attempt、verdict、receiptがGit toplevelへ集約されることをR1で記録し、
+R2でD3a契約へ反映し、R3でexact-head receiptとCIを再検収し、R4で`PLAN-L7-493`の
+repo-local custody運用へbackpropする。
+
+## R1→R4
+
+- R1: nested Git directoryからの実測receipt pathとroot外不存在を記録。
+- R2: D3a repo-local custodyの呼出しroot境界を更新。
+- R3: Linux/Windows/aggregateとnon-author reviewで再検証。
+- R4: reverse statusをconfirmedへ更新し、未修理のprovider permission問題を別Issueへ残す。
