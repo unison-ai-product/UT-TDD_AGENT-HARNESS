@@ -4,7 +4,7 @@ title: "PLAN-REVERSE-505: Pack段階公開・rollback契約のL7 oracle backfill
 kind: reverse
 layer: cross
 drive: agent
-workflow_phase: R1
+workflow_phase: R2
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
@@ -121,6 +121,15 @@ L7所有であり、このReverseでは再採番・再所有しない。
 | `CANDIDATE-PACKPUB-004` | B-4 | 公開済みobjectを削除・付替えせず、supersede-forward pointer CASだけを許可し、partial/indeterminate/rollback_failedを成功へ丸めない。 |
 
 ## R2〜R4の出口
+
+### R2: local staging/auditor 実測 (#403)
+
+`PLAN-L7-507` は `CANDIDATE-PACKPUB-001/002` のうちremote操作を必要としない境界を
+`U-PACKPUB-STAGE-001〜010`へ降下した。parsed manifest v2、明示inventory、deterministic
+tar.gz/checksum、control manifest semantic digest、immutable staging plan、isolated apply ports、
+local auditorを実測対象とする。`CANDIDATE-PACKPUB-003/004`のapproval/CAS、remote publication、
+promotion、supersede-forward rollbackは未実装のまま保持するため、本ReverseをR3/R4または
+confirmedへ進めない。
 
 後続publication aggregate/auditor実装では、各candidateを対応する`U-PACKPUB-*`へ1:1で昇格し、
 独立したsource/test/CI citationを同じexact revisionへ束縛する。実装PRが行うのはpure decision、

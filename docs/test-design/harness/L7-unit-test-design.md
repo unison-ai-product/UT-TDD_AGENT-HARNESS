@@ -2467,3 +2467,16 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `CANDIDATE-PACKPUB-002` | B-2。manifest `artifacts[]`を1件欠落・余剰・digest driftさせる、またはtree walk、allowlist、current worktree、Pack checkoutの残存ファイルを暗黙追加する | explicit inventory外のbytesを出荷集合に入れず、identity/tar/asset digest不一致をfail-close。fallback、publish、pointer write 0 |
 | `CANDIDATE-PACKPUB-003` | B-3。tag、GitHub Release、asset upload、channel pointer、promotion、rollbackの各操作からapproval receipt、before-state CAS、nonce/expiry、execution receipt、auditor観測を1項ずつ欠落させる | typed deny、remote write 0。local `sync-plan`/`sync-stage`のcommand listをremote承認の代用にしない |
 | `CANDIDATE-PACKPUB-004` | B-4。immutable tag/Releaseの削除・付替え、旧pointerの上書き、rollback CAS後の応答不明、target attestation不一致、部分公開を各1点変異する | supersede-forwardだけを許可し、partial/indeterminate/`rollback_failed`を保持。force push/tag reuse/成功への丸め 0 |
+
+### PLAN-L7-507 local staging/auditor oracle (Issue #403)
+
+`CANDIDATE-PACKPUB-001/002`のうちremote操作を必要としないlocal境界を次へ昇格する。
+`CANDIDATE-PACKPUB-003/004`はremote publication adapterまでcandidateのまま残す。
+
+| ID | fixture / mutation | expected |
+| --- | --- | --- |
+| `U-PACKPUB-STAGE-001〜005` | parsed manifest v2、semantic sidecar、明示inventory、entry drift、sealed bytes mutation | Pack commit entryはmanifest destination＋control sidecarだけ、Release assetはtar.gz＋checksumのexact 2件。欠落・余剰・path/mode/size/content/sidecar driftはpreflight deny、暗黙補完0、sealed bytes不変 |
+| `U-PACKPUB-STAGE-006〜009` | stage/apply/discard fault、成功、snapshot failure、restore failure | prior stateを復元できるfaultは`applied: 0`、成功時apply exactly once、snapshot失敗時write 0、復元不能は`indeterminate`を保持 |
+| `U-PACKPUB-STAGE-010` | exact observation、commit/asset/digest欠落・変異、observer failure | exact一致だけ`attested`、差分は`partial_publication`、観測不能は`indeterminate`。remote write 0 |
+
+実行対応: `tests/pack-publication-staging.test.ts` (`U-PACKPUB-STAGE-001〜010`)。
