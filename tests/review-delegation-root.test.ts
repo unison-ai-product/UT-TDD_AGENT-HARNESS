@@ -75,7 +75,7 @@ describe("review delegation repository-root custody", () => {
           "--review-head",
           head,
           "--review-revision",
-          `rv1-${"a".repeat(64)}`,
+          "review-396",
           "--review-author-family",
           "codex",
           "--review-memory-id",
