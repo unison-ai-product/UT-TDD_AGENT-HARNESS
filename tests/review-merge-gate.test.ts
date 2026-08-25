@@ -305,7 +305,7 @@ describe("D2-B PR merge gate", () => {
     }
   });
 
-  it("U-RVHEAD-005: linked worktree間のreview evidenceは配置に依存せず共有される", () => {
+  it("U-RVHEAD-005/U-RVHEAD-006: linked worktreeとnested checkoutのreview evidenceは配置に依存せず共有される", () => {
     const repository = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-git-"));
     const linkedWorktree = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-linked-"));
     try {
