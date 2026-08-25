@@ -1,11 +1,12 @@
+---
 plan_id: PLAN-L7-503-review-custody-delegation-root
 title: "review custody delegation の Git toplevel 固定"
 kind: add-impl
 layer: L7
-drive: agent
+drive: be
 status: draft
-route_signal: defect_fix
-route_mode: fix
+route_signal: feature_addition
+route_mode: add-feature
 created: 2026-08-25
 updated: 2026-08-25
 owner: Codex / Luna
@@ -28,13 +29,13 @@ generates:
   - artifact_path: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/review-custody-delegation-root-test-design.md
-    artifact_type: markdown_doc
+    artifact_type: test_design
   - artifact_path: tests/review-delegation-root.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
   requires:
-    - docs/plans/PLAN-L7-502-review-head-eligibility-supersession.md
+    - docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
   blocks: []
   references:
     - src/cli/delegation.ts

@@ -1,11 +1,16 @@
+---
 plan_id: PLAN-REVERSE-503-review-custody-delegation-root-backfill
 title: "review custody delegation root normalization Reverse backfill"
 kind: reverse
-layer: L6
-drive: agent
+layer: cross
+workflow_phase: R0
+confirmed_reverse_type: design
+drive: be
 status: draft
-route_signal: defect_fix
-route_mode: fix
+route_signal: drift
+route_mode: reverse
+forward_routing: gap-only
+promotion_strategy: reuse-as-is
 created: 2026-08-25
 updated: 2026-08-25
 owner: Codex / Luna
@@ -14,6 +19,11 @@ parent_design: docs/plans/PLAN-L7-503-review-custody-delegation-root.md
 pair_artifact: docs/test-design/harness/review-custody-delegation-root-test-design.md
 backprop_decision: required
 backprop_decision_reason: "D3a custodyの入力rootを実測されたGit toplevelへ固定する。"
+agent_slots:
+  - role: tl
+    slot_label: "TL - D3a custody root boundary backprop"
+  - role: qa
+    slot_label: "QA - nested repository evidence and exact-head receipt"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-503-review-custody-delegation-root-backfill.md
     artifact_type: markdown_doc
