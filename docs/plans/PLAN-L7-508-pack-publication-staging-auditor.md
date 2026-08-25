@@ -45,8 +45,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-primary-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-25T11:31:08Z"
-    tests_green_at: "2026-08-25T11:29:00Z"
+    reviewed_at: "2026-08-25T11:31:09Z"
+    tests_green_at: "2026-08-25T11:31:08Z"
     verdict: "preflight green; Claude Opus non-author exact-head closing review pending"
     scope: >-
       worker_model gpt-5.6-luna / effort high。CANDIDATE-PACKPUB-001/002のうち
