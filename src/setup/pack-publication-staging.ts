@@ -325,12 +325,14 @@ export async function applySealedPackPublication<TStage, TSnapshot>(
   plan: SealedPackPublicationPlan,
   ports: PackPublicationApplyPorts<TStage, TSnapshot>,
 ): Promise<PackPublicationApplyResult> {
-  let snapshot: TSnapshot | undefined;
+  let snapshot!: TSnapshot;
+  let snapshotCaptured = false;
   let stage: TStage | undefined;
   let stagingCreated = false;
   let discarded = false;
   try {
     snapshot = await ports.snapshotDestination();
+    snapshotCaptured = true;
     stage = await ports.writeStaging(plan);
     stagingCreated = true;
     await ports.applyDestination(stage, plan);
@@ -345,7 +347,7 @@ export async function applySealedPackPublication<TStage, TSnapshot>(
         // Restore remains authoritative when stage cleanup is uncertain.
       }
     }
-    if (snapshot === undefined) return { ok: false, error: "unavailable", applied: 0 };
+    if (!snapshotCaptured) return { ok: false, error: "unavailable", applied: 0 };
     try {
       await ports.restoreDestination(snapshot);
     } catch {
