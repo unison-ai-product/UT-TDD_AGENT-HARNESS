@@ -1,3 +1,0 @@
-fix(guidance): align merged-plan landing instructions with review custody
-
-Rename the guidance pair to unused 506 identifiers, distinguish preflight PLAN confirmation from exact-head closing receipts, and update the paired oracle. Keep merge-control semantics unchanged.
