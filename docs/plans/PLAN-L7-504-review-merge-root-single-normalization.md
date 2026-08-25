@@ -39,7 +39,7 @@ dependencies:
   blocks: []
   references:
     - src/feedback/review-merge-gate.ts
-    - docs/plans/PLAN-L6-101-pack-independent-consumer-runtime-backfill.md
+    - docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
     - docs/plans/PLAN-REVERSE-504-review-merge-root-single-normalization-backfill.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/397
 review_evidence:
