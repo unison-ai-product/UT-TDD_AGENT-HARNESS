@@ -66,9 +66,10 @@ interface RequiredProjectHook {
  * PLAN-RECOVERY-06: gate 要求と setup 生成物の黙った再乖離を防ぐ)。
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
-export const WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.ts";
 
-const wrapperCommand = (subcommand: string): string => `bun ${WRAPPER_CLI} ${subcommand}`;
+// PLAN-L7-508: run-bun 間接層 (findBun launcher) を削除し、hook は node で wrapper CLI を
+// 直起動する。ut-tdd.mjs は process.execPath で CLI を spawn するため runtime 非依存。
+const wrapperCommand = (subcommand: string): string => `node ${WRAPPER_CLI} ${subcommand}`;
 
 const args = (...values: string[]): readonly string[] => values;
 
@@ -199,7 +200,7 @@ function isWrapperForm(hook: HookCommand, required: RequiredProjectHook): boolea
     invocation !== null &&
     invocationEquals(invocation, {
       executable: "node",
-      args: [WRAPPER_HOOK_LAUNCHER, ...required.wrapperArgs],
+      args: [...required.wrapperArgs],
     })
   );
 }

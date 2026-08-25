@@ -105,22 +105,13 @@ const BUN_GLOBAL_PATTERN = new RegExp(
 // また quote lookbehind の副作用で `globalThis["Bun"]` / `process.versions["bun"]` の
 // 文字列 key 形は検出対象外 (検出語彙除外との trade-off、限界の明示)。
 const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
-  // step 2 freeze の fixture 例外: Pack/consumer toolchain 検出の posix probe。
-  ["src/cli/distribution.ts", 2],
-  // step 2 freeze の fixture 例外: consumer wrapper template (findBun launcher)。
-  ["src/setup/templates.ts", 2],
   // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
   ["scripts/run-vitest-snapshot.ts", 1],
-  // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
-  ["tests/distribution-acceptance.test.ts", 2],
-  // tests/setup.test.ts の bun fallback (U-SETUP-009b) は global 側で計上され、spawn クラスの
-  // 実サイトは 0 (blind review F: 空 pin 枠は置かない)。
+  // PLAN-L7-508: Pack/consumer 面 (templates / distribution / acceptance / setup-smoke) の
+  // 実発火 pin は Node 化で全て 0 になり収載を撤去した。
   // 検出語彙 (lint fixture 文字列 / consumer template fixture) であり実発火ではない。
   ["tests/dependency-drift.test.ts", 1],
   ["tests/runtime-portability.test.ts", 11],
-  ["tests/doctor-setup-smoke.test.ts", 1],
-  ["tests/doctor.test.ts", 1],
-  ["tests/hook-native-launcher.test.ts", 1],
   // 本 lint 自身 (pattern 定義とその注記 = 検出語彙)。
   ["src/lint/runtime-portability.ts", 4],
 ]);
@@ -139,8 +130,6 @@ const BUN_GLOBAL_DEBT_ALLOWLIST = new Map<string, number>([
   ["src/state-db/index.ts", 1],
   ["tests/state-db.test.ts", 1],
   ["tests/support/temp-tree.ts", 1],
-  // guard 済み Bun 判定 fixture (U-SETUP-009b)。
-  ["tests/setup.test.ts", 1],
   // 検出語彙 (lint fixture 文字列 / isolation 契約テストの Bun.write fixture / 本 lint 自身)。
   ["tests/runtime-portability.test.ts", 7],
   ["tests/doctor-test-repository-isolation.test.ts", 2],

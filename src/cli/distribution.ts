@@ -98,7 +98,7 @@ function runDistributionSecretScan(input: {
 
 /**
  * PLAN-L7-462 step 2: ut-tdd のグローバル CLI は .cmd shim 配布のため、node の
- * spawn では PATH 解決されない。bun probe と同様に win32 は ComSpec 経由で探す
+ * spawn では PATH 解決されない。win32 は ComSpec 経由で探す
  * (fail-soft は従来どおり)。単体テスト U-DIST-CLI-PROBE が「素の spawn に戻すと
  * ENOENT で status=null になる」ことを fail-close で固定する。
  */
@@ -135,25 +135,9 @@ export function registerDistributionCommands(program: Command): void {
     .action((opts: { tag?: string; cleanRepo?: string; packageRoot?: string; json?: boolean }) => {
       const repoRoot = process.cwd();
       const detection = detectMode();
-      let bunVersion: string | null = null;
-      try {
-        // PLAN-L7-462 step 2: node の spawn は Windows で npm 配布の bun.cmd shim を
-        // 解決しないため、win32 のみ ComSpec 経由で probe する (fail-soft は従来どおり)。
-        if (process.platform === "win32") {
-          const cmdExe =
-            process.env.ComSpec ??
-            join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-          const probe = spawnSync(cmdExe, ["/d", "/c", "bun", "--version"], {
-            encoding: "utf8",
-            windowsHide: true,
-          });
-          bunVersion = probe.status === 0 ? probe.stdout.trim() : null;
-        } else {
-          bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
-        }
-      } catch {
-        bunVersion = null;
-      }
+      // PLAN-L7-508: consumer runtime は Node。自プロセスの実測値が最強の証拠であり
+      // 子プロセス probe は不要 (Bun probe と ~/.bun 探索路は撤去した)。
+      const nodeVersion: string | null = process.versions.node ?? null;
       const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
       const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
       const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
@@ -172,21 +156,19 @@ export function registerDistributionCommands(program: Command): void {
       const utTddCliObserved =
         utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
       const utTddCliHints = [
-        join(homedir(), ".bun", "bin", "ut-tdd.exe"),
-        join(homedir(), ".bun", "bin", "ut-tdd"),
-        process.env.APPDATA ? join(process.env.APPDATA, "npm", "node_modules", "bun", "bin") : "",
+        process.env.APPDATA ? join(process.env.APPDATA, "npm", "node_modules", "ut-tdd") : "",
       ].filter((p) => p && existsSync(p));
       const utTddCliMessage = hasUtTddCli
         ? undefined
         : [
-            "Generated Claude/Codex hooks call the shell-free native Bun launcher so each project can use its own pinned UT-TDD package.",
+            "Generated Claude/Codex hooks launch the project-local wrapper with Node so each project can use its own pinned UT-TDD package.",
             `Expected wrapper: ${hookWrapperPath}`,
             `Expected package bin: ${packageBinPath}`,
             `Expected source setup entrypoint: ${sourceSetupEntrypoint}`,
             `Observed: ${utTddCliObserved}`,
             utTddCliHints.length > 0
               ? `Detected global candidate path(s): ${utTddCliHints.join(", ")}. Prefer the project-local wrapper when multiple projects on one PC pin different harness versions.`
-              : "Add UT-TDD as a project dependency, run setup to emit the wrapper, and ensure the native Bun executable can be resolved without a shell shim.",
+              : "Add UT-TDD as a project dependency and run setup to emit the wrapper (Node launches it directly).",
           ].join(" ");
       const exportPlan = buildCleanDistributionPlan({
         paths: collectDistributionCandidatePaths(repoRoot),
@@ -194,7 +176,7 @@ export function registerDistributionCommands(program: Command): void {
         cleanRepo: opts.cleanRepo,
       });
       const readiness = buildConsumerReadinessPlan({
-        bunVersion,
+        nodeVersion,
         hasGit,
         hasGh,
         hasUtTddCli,

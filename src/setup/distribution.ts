@@ -214,7 +214,7 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   const scripts = { ...(parsed.scripts ?? {}) };
   scripts["test:source"] ??= scripts.test ?? "vitest run";
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
-  scripts.test = "bun run test:pack";
+  scripts.test = "npm run test:pack";
   const utTdd = {
     ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
     artifactProfile: "pack",
@@ -248,7 +248,8 @@ export function gitAddPathspecCommands(
   return commands;
 }
 
-function hasMinimumBun(version: string, minimum = "1.3.0"): boolean {
+// PLAN-L7-508: consumer runtime は Node (>=24)。Bun preflight は撤去した。
+function hasMinimumNode(version: string, minimum = "24.0.0"): boolean {
   const parse = (v: string): number[] => {
     const match = v.match(/\d+(?:\.\d+){0,2}/)?.[0] ?? "0";
     return match.split(".").map((n) => Number.parseInt(n, 10));
@@ -304,7 +305,7 @@ export function buildCleanDistributionPlan(input: {
 }
 
 export function buildConsumerReadinessPlan(input: {
-  bunVersion: string | null;
+  nodeVersion: string | null;
   hasGit: boolean;
   hasGh: boolean;
   hasUtTddCli?: boolean;
@@ -316,7 +317,7 @@ export function buildConsumerReadinessPlan(input: {
   tag?: string;
   cleanRepo?: string;
 }): ConsumerReadinessPlan {
-  const bunOk = Boolean(input.bunVersion && hasMinimumBun(input.bunVersion));
+  const nodeOk = Boolean(input.nodeVersion && hasMinimumNode(input.nodeVersion));
   const mode =
     input.hasClaude && input.hasCodex
       ? "hybrid"
@@ -327,9 +328,9 @@ export function buildConsumerReadinessPlan(input: {
           : "standalone";
   const checks = [
     {
-      name: "bun>=1.3",
-      ok: bunOk,
-      message: bunOk ? `Bun ${input.bunVersion}` : "Install Bun 1.3 or newer before setup",
+      name: "node>=24",
+      ok: nodeOk,
+      message: nodeOk ? `Node ${input.nodeVersion}` : "Install Node.js 24 or newer before setup",
     },
     {
       name: "git",
@@ -351,10 +352,9 @@ export function buildConsumerReadinessPlan(input: {
           ? "project-local UT-TDD wrapper, package bin, or source setup entrypoint is available for projected hooks"
           : (input.utTddCliMessage ??
             [
-              "Generated Claude/Codex hooks call the shell-free native Bun launcher so each project can use its own pinned UT-TDD package.",
-              "Add UT-TDD as a project dependency before setup and verify `node_modules/.bin/ut-tdd --help` or `bun .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
-              "Do not rely on a global `bun link` when multiple projects on one PC may pin different harness versions.",
-              "Native Bun itself must still resolve without a PowerShell or cmd shim.",
+              "Generated Claude/Codex hooks launch the project-local wrapper with Node so each project can use its own pinned UT-TDD package.",
+              "Add UT-TDD as a project dependency before setup and verify `node_modules/.bin/ut-tdd --help` or `node .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
+              "Do not rely on a global link when multiple projects on one PC may pin different harness versions.",
             ].join(" ")),
     },
     {
@@ -370,7 +370,7 @@ export function buildConsumerReadinessPlan(input: {
   const tag = input.tag ?? "v0.1.0";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
   return {
-    ok: bunOk && input.hasGit && (input.hasUtTddCli ?? true),
+    ok: nodeOk && input.hasGit && (input.hasUtTddCli ?? true),
     checks,
     mode,
     workspace: {
@@ -383,10 +383,10 @@ export function buildConsumerReadinessPlan(input: {
       workflow: ".github/workflows/harness-check.yml",
       requires: [
         "actions/checkout@v4",
-        "oven-sh/setup-bun@v2",
-        "bun install --frozen-lockfile",
-        "bun run typecheck",
-        "bun run test",
+        "actions/setup-node@v4",
+        "npm ci --no-audit --no-fund",
+        "npm run typecheck",
+        "npm run test",
       ],
       forkPullRequestSecrets: "not-required",
     },
@@ -398,8 +398,8 @@ export function buildConsumerReadinessPlan(input: {
       backupRequired: true,
       commands: [
         `git switch ${tag}`,
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --solo",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --solo",
       ],
     },
     contracts: {

@@ -90,8 +90,7 @@ const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
 };
 
 const baseTemplates: TemplateSet = {
-  "common/run-bun.ts": "// shell-free native Bun launcher\n",
-  "common/ut-tdd.mjs": "#!/usr/bin/env bun\n",
+  "common/ut-tdd.mjs": "#!/usr/bin/env node\n",
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
     "# UT-TDD Agent Harness Adapter",
@@ -366,8 +365,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     const templates = loadTemplates(process.cwd());
     const workflow = templates["common/harness-check.yml"];
     expect(workflow).toContain("github guard");
-    expect(workflow).toContain("bun run typecheck");
-    expect(workflow).toContain("bun run test");
+    expect(workflow).toContain("npm run typecheck");
+    expect(workflow).toContain("npm run test");
     expect(workflow).toContain("audit quality --include-tests");
     expect(workflow).toContain("ut-tdd.mjs doctor --setup-smoke");
     expect(workflow).toMatch(/\n {2}pull_request:\n/);
@@ -407,7 +406,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -417,7 +416,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -426,11 +425,11 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       );
       expect(claude.hooks.SubagentStop[0].hooks[0]).toMatchObject({
         command: "node",
-        args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
+        args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
       });
       expect(claude.hooks.Stop[1].hooks[0]).toMatchObject({
         command: "node",
-        args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
+        args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
         timeout: 930,
         asyncRewake: true,
       });
@@ -441,7 +440,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -451,7 +450,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -567,27 +566,15 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     };
     const agentGuardInvocation = {
       command: "node",
-      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+      args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
     };
     expect(codexHooks.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
     expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
   });
 
-  // PLAN-L7-462 step 2 fixture 例外: consumer wrapper の bun fallback 実発火 oracle。
-  // node の spawn は Windows で .cmd shim (npm 配布の bun.cmd) を解決しないため、
-  // distribution-acceptance の runBun と同じ cmd.exe 経由で bun を起動する。
-  function runWrapperViaBun(cwd: string, args: string[]) {
-    const bunBinary =
-      process.env.UT_TDD_BUN_BINARY ?? (process.versions.bun ? process.execPath : "bun");
-    if (process.platform === "win32") {
-      const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-      return spawnSync(cmdExe, ["/d", "/c", bunBinary, ...args], {
-        cwd,
-        encoding: "utf8",
-        windowsHide: true,
-      });
-    }
-    return spawnSync(bunBinary, args, { cwd, encoding: "utf8" });
+  // PLAN-L7-508: consumer wrapper は Node で直起動する (run-bun 間接層は削除済み)。
+  function runWrapperViaNode(cwd: string, args: string[]) {
+    return spawnSync(process.execPath, args, { cwd, encoding: "utf8", windowsHide: true });
   }
 
   it("U-SETUP-009b2: generated wrapper prefers consumer local bin when local and setup fallback both exist", () => {
@@ -606,7 +593,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       writeFileSync(wrapperPath, wrapper ?? "");
       writeFileSync(localPackageCli, 'console.log("local-package", ...process.argv.slice(2));\n');
 
-      const result = runWrapperViaBun(repo, [wrapperPath, "status", "--json"]);
+      const result = runWrapperViaNode(repo, [wrapperPath, "status", "--json"]);
 
       expect(result.status).toBe(0);
       expect(result.stdout.trim()).toBe("local-package status --json");
@@ -615,7 +602,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     }
   });
 
-  it("U-SETUP-009b3: generated wrapper falls back to setup Pack CLI through bun when local bin is absent", () => {
+  it("U-SETUP-009b3: generated wrapper falls back to setup Pack CLI through node when local bin is absent", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-source-"));
     try {
       const deps = mockDeps({ repoRoot: repo });
@@ -628,7 +615,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
       writeFileSync(wrapperPath, wrapper ?? "");
 
-      const result = runWrapperViaBun(repo, [wrapperPath, "status"]);
+      const result = runWrapperViaNode(repo, [wrapperPath, "status"]);
 
       expect(result.status).toBe(0);
       expect(result.stdout).toContain("mode:");
@@ -894,7 +881,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
     expect(transformed.scripts["test:pack"]).toContain("tests/distribution-acceptance.test.ts");
     expect(transformed.scripts["test:pack"]).toContain("tests/readability.test.ts");
-    expect(transformed.scripts.test).toBe("bun run test:pack");
+    expect(transformed.scripts.test).toBe("npm run test:pack");
     expect(transformed.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
     expect(transformed.scripts["test:source"]).toBe("vitest run");
     expect(transformed.scripts.typecheck).toBe("tsc --noEmit");
@@ -924,7 +911,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ),
     );
 
-    expect(transformed).toContain("run: bun run test:pack");
+    expect(transformed).toContain("run: npm run test:pack");
     expect(transformed).not.toContain("tests/distribution-acceptance.test.ts");
   });
 
@@ -977,7 +964,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {
     const ready = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -993,7 +980,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.workspace.monorepo).toBe(true);
     expect(ready.checks.find((c) => c.name === "gh")).toMatchObject({ ok: false });
     expect(ready.checks.find((c) => c.name === "ut-tdd-cli")).toMatchObject({ ok: true });
-    expect(ready.ci.requires).toContain("bun run test");
+    expect(ready.ci.requires).toContain("npm run test");
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
     expect(ready.rollback.managedPaths).toContain(".ut-tdd/bin/ut-tdd.mjs");
@@ -1013,7 +1000,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const standaloneReady = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -1031,7 +1018,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const customRepo = buildConsumerReadinessPlan({
-      bunVersion: "1.3.0",
+      nodeVersion: "24.0.0",
       hasGit: true,
       hasGh: true,
       hasClaude: false,
@@ -1043,7 +1030,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(customRepo.contracts.tagPin).toBe("github:example/custom-pack#v9.9.9");
 
     const blocked = buildConsumerReadinessPlan({
-      bunVersion: "1.2.9",
+      nodeVersion: "22.11.0",
       hasGit: false,
       hasGh: false,
       hasUtTddCli: false,
@@ -1053,19 +1040,16 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     });
     expect(blocked.ok).toBe(false);
     expect(blocked.checks.filter((c) => !c.ok).map((c) => c.name)).toEqual([
-      "bun>=1.3",
+      "node>=24",
       "git",
       "gh",
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks call the shell-free native Bun launcher",
+      "Generated Claude/Codex hooks launch the project-local wrapper with Node",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Do not rely on a global `bun link`",
-    );
-    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Native Bun itself must still resolve",
+      "Do not rely on a global link",
     );
   });
 

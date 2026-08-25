@@ -42,17 +42,29 @@ function walkCandidatePaths(root: string): string[] {
   return out.sort();
 }
 
-function runBun(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+// PLAN-L7-508: consumer/Pack runtime は Node。CLI は node で直起動し、依存導入は npm ci。
+function runNode(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+  return spawnSync(process.execPath, args, {
+    cwd,
+    encoding: "utf8",
+    env,
+    timeout: 300_000,
+    windowsHide: true,
+  });
+}
+
+function runNpm(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
   if (process.platform === "win32") {
     const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-    return spawnSync(cmdExe, ["/d", "/c", "bun", ...args], {
+    return spawnSync(cmdExe, ["/d", "/c", "npm", ...args], {
       cwd,
       encoding: "utf8",
       env,
       timeout: 300_000,
+      windowsHide: true,
     });
   }
-  return spawnSync("bun", args, { cwd, encoding: "utf8", env, timeout: 300_000 });
+  return spawnSync("npm", args, { cwd, encoding: "utf8", env, timeout: 300_000 });
 }
 
 function runBareUtTdd(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
@@ -86,11 +98,11 @@ function writeLocalUtTddShim(root: string): string {
   mkdirSync(binDir, { recursive: true });
   if (process.platform === "win32") {
     const path = join(binDir, "ut-tdd.cmd");
-    writeFileSync(path, '@echo off\r\nbun "%~dp0..\\src\\cli.ts" %*\r\n', "utf8");
+    writeFileSync(path, '@echo off\r\nnode "%~dp0..\\src\\cli.ts" %*\r\n', "utf8");
     return path;
   }
   const path = join(binDir, "ut-tdd");
-  writeFileSync(path, '#!/bin/sh\nexec bun "$(dirname "$0")/../src/cli.ts" "$@"\n', {
+  writeFileSync(path, '#!/bin/sh\nexec node "$(dirname "$0")/../src/cli.ts" "$@"\n', {
     encoding: "utf8",
     mode: 0o755,
   });
@@ -132,9 +144,9 @@ describe("clean distribution local acceptance smoke", () => {
         stageDir,
         "--json",
       ];
-      const first = runBun(cleanRoot, args);
+      const first = runNode(cleanRoot, args);
       expect(first.status, first.stderr || first.stdout).toBe(0);
-      const second = runBun(cleanRoot, args);
+      const second = runNode(cleanRoot, args);
       expect(second.status, second.stderr || second.stdout).toBe(0);
       expect(JSON.parse(second.stdout).ok).toBe(true);
     } finally {
@@ -177,7 +189,7 @@ describe("clean distribution local acceptance smoke", () => {
       // blocked は missingRequired で誘発する (denied 入力は D-2 followup により通常除外で
       // あって blocked にならないため)。
       rmSync(join(cleanRoot, "LICENSE"), { force: true });
-      const result = runBun(cleanRoot, [
+      const result = runNode(cleanRoot, [
         join(repoRoot, "src", "cli.ts"),
         "distribution",
         "package",
@@ -195,7 +207,7 @@ describe("clean distribution local acceptance smoke", () => {
       mkdirSync(packDir, { recursive: true });
       const obsolete = join(packDir, "obsolete.txt");
       writeFileSync(obsolete, "must not be pruned\n", "utf8");
-      const pack = runBun(cleanRoot, [
+      const pack = runNode(cleanRoot, [
         join(repoRoot, "src", "cli.ts"),
         "distribution",
         "sync-pack",
@@ -250,19 +262,19 @@ describe("clean distribution local acceptance smoke", () => {
         PATH: `${join(cleanRoot, ".fake-bin")}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
       };
 
-      const install = runBun(cleanRoot, ["install", "--frozen-lockfile"], env);
+      const install = runNpm(cleanRoot, ["ci", "--no-audit", "--no-fund"], env);
       expect(install.status, install.stderr || install.stdout).toBe(0);
       const packPackageJson = JSON.parse(readFileSync(join(cleanRoot, "package.json"), "utf8")) as {
         scripts: Record<string, string>;
       };
-      expect(packPackageJson.scripts.test).toBe("bun run test:pack");
+      expect(packPackageJson.scripts.test).toBe("npm run test:pack");
       expect(packPackageJson.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
       expect(packPackageJson.scripts["test:pack"]).toContain(
         "tests/distribution-acceptance.test.ts",
       );
       expect(packPackageJson.scripts["test:source"]).toBe("npm run test:vitest-snapshot");
 
-      const status = runBun(cleanRoot, ["src/cli.ts", "status", "--json"], env);
+      const status = runNode(cleanRoot, ["src/cli.ts", "status", "--json"], env);
       expect(status.status, status.stderr || status.stdout).toBe(0);
       const statusJson = JSON.parse(status.stdout);
       expect(statusJson.availableRuntimes).toContain("codex");
@@ -289,7 +301,7 @@ describe("clean distribution local acceptance smoke", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -299,7 +311,7 @@ describe("clean distribution local acceptance smoke", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -307,7 +319,7 @@ describe("clean distribution local acceptance smoke", () => {
         ]),
       );
 
-      const distribution = runBun(
+      const distribution = runNode(
         cleanRoot,
         ["src/cli.ts", "distribution", "plan", "--tag", "v0.1.0", "--json"],
         env,
@@ -362,7 +374,7 @@ describe("clean distribution local acceptance smoke", () => {
       // PLAN-L7-361: package の tar は相対 -f + cwd 固定で bsdtar/GNU tar 両対応 (絶対
       // Windows パスは GNU tar が remote host 解釈)。実 tarball の生成と exit 契約を固定。
       const releaseDir = join(cleanRoot, ".ut-tdd", "release-accept");
-      const pkg = runBun(
+      const pkg = runNode(
         cleanRoot,
         [
           "src/cli.ts",
@@ -383,14 +395,14 @@ describe("clean distribution local acceptance smoke", () => {
       expect(existsSync(join(releaseDir, "v0.0.0-accept.tar.gz"))).toBe(true);
       expect(existsSync(join(releaseDir, "v0.0.0-accept.tar.gz.sha256"))).toBe(true);
 
-      const setup = runBun(cleanRoot, ["src/cli.ts", "setup", "--solo"], env);
+      const setup = runNode(cleanRoot, ["src/cli.ts", "setup", "--solo"], env);
       expect(setup.status, setup.stderr || setup.stdout).toBe(0);
 
-      const wrapperHelp = runBun(cleanRoot, [".ut-tdd/bin/ut-tdd.mjs", "--help"], env);
+      const wrapperHelp = runNode(cleanRoot, [".ut-tdd/bin/ut-tdd.mjs", "--help"], env);
       expect(wrapperHelp.status, wrapperHelp.stderr || wrapperHelp.stdout).toBe(0);
       expect(wrapperHelp.stdout).toContain("Usage: ut-tdd");
 
-      const setupSmoke = runBun(
+      const setupSmoke = runNode(
         cleanRoot,
         [".ut-tdd/bin/ut-tdd.mjs", "doctor", "--setup-smoke"],
         env,
@@ -398,7 +410,7 @@ describe("clean distribution local acceptance smoke", () => {
       expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);
       expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 
-      const typecheck = runBun(cleanRoot, ["run", "typecheck"], env);
+      const typecheck = runNode(cleanRoot, ["run", "typecheck"], env);
       expect(typecheck.status, typecheck.stderr || typecheck.stdout).toBe(0);
     } finally {
       removeCleanRoot(cleanRoot);
