@@ -72,6 +72,8 @@ merge eligibilityへ流用しない境界だけを追加する。
 ## 3. スコープ
 
 `src/feedback/review-merge-gate.ts` の current-head projection と、その U-RVMG 回帰を対象とする。
+`src/feedback/repository-root.ts` でGit toplevelを正規化し、`src/cli/review-live.ts` と
+merge gateのreview custodyを呼出し元のサブディレクトリから分離する。
 linked worktree間のevidence収集を同じD2-B入力境界へ含める。
 `src/feedback/review-dispatch.ts` の全履歴監査モデル、receipt schema、custody path、#389/#384/#388
 の資産と経路は変更しない。
@@ -79,7 +81,8 @@ linked worktree間のevidence収集を同じD2-B入力境界へ含める。
 ## 4. 完了条件
 
 - U-RVMG の旧 HEAD FLAG→現 HEAD PASS supersession、same-head FLAG blocking、HEAD変更時の
-  current receipt欠落 deny、root/worktree配置不変 oracle、linked worktree間のevidence共有 oracleがGreen。
+  current receipt欠落 deny、root/worktree配置不変 oracle、linked worktree間のevidence共有 oracle、
+  Gitサブディレクトリ起動時のtoplevel固定 oracleがGreen。
 - `PLAN-L7-470` の U-RVDISP-047〜052 と audit出力を維持する。
 - typecheck、Biome、targeted tests、PLAN lint がGreen。draft PLANのgeneratesは本PLAN自身に
   限定し、実装成果物の所有は実装確認時に更新する。

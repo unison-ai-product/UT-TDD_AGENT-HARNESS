@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
@@ -343,6 +351,22 @@ describe("D2-B PR merge gate", () => {
       });
       expect(flagged).toMatchObject({ ok: false, decision: "deny", verdict: "FLAG" });
       expect(flagged.reason).toContain("flagged");
+
+      // A caller may invoke the gate from a nested checkout directory. The
+      // same root evidence must still be visible and the result receipt must
+      // stay at the Git toplevel rather than under the nested path.
+      const nested = join(linkedWorktree, "nested");
+      mkdirSync(nested);
+      const fromNested = runPrMerge({
+        repoRoot: nested,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(fromNested).toMatchObject({ ok: false, decision: "deny", verdict: "FLAG" });
+      expect(existsSync(join(linkedWorktree, ".ut-tdd", "logs", "review-merge-gate.jsonl"))).toBe(
+        true,
+      );
     } finally {
       try {
         execFileSync("git", ["-C", repository, "worktree", "remove", "--force", linkedWorktree], {

@@ -53,6 +53,8 @@ current HEADへ限定する実装差分である。実装・Red/Green oracle・�
 - current HEAD に対応する receipt/request が無い場合は old-head evidence から推測せず denyすること。
 - runtime root / worktree の物理配置は判定入力ではなく、同一Git common directoryのlinked worktreeに
   分散した証拠を集約しても判定不変であること。Git列挙不能時はroot-localへ縮退せずfail-closeする。
+- merge/review dispatchをGit管理下のサブディレクトリから起動しても、`git rev-parse
+  --show-toplevel`で同じreview custodyへ正規化し、同一HEADのFLAGを見落とさないこと。
 
 R1以降は、U-RVMGのRed/Green実測と exact HEAD closing reviewを根拠に、上流へ戻す必要がある
 契約差分だけを記録する。#389/#384/#388の資産は本Reverseの対象外とする。

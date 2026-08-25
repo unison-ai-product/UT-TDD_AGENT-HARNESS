@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { resolveRepositoryRoot } from "./repository-root.ts";
 import {
   analyzeReviewDispatch,
   type PrObservation,
@@ -86,6 +87,7 @@ function errorMessage(error: unknown): string {
  * single-root behavior.
  */
 function reviewInputRoots(repoRoot: string): string[] {
+  repoRoot = resolveRepositoryRoot(repoRoot);
   const roots = new Map<string, string>();
   const add = (candidate: string): void => {
     if (!existsSync(candidate)) return;
@@ -302,6 +304,23 @@ export function runPrMerge(input: {
   now?: () => string;
 }): PrMergeResult {
   const timestamp = input.now?.() ?? new Date().toISOString();
+  let repoRoot = input.repoRoot;
+  try {
+    repoRoot = resolveRepositoryRoot(input.repoRoot);
+  } catch (error) {
+    return makeResult({
+      result: {
+        ok: false,
+        pr: input.pr,
+        headSha: null,
+        verdict: null,
+        decision: "deny",
+        reason: `review_input_failed:${errorMessage(error)}`,
+      },
+      repoRoot: input.repoRoot,
+      timestamp,
+    });
+  }
   if (!Number.isInteger(input.pr) || input.pr <= 0) {
     return makeResult({
       result: {
@@ -312,7 +331,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: "invalid_pr",
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
@@ -330,14 +349,14 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: `gh_fetch_failed:${errorMessage(error)}`,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
 
   let decision: MergeGateDecision;
   try {
-    const reviewInputs = loadReviewInputs(input.repoRoot);
+    const reviewInputs = loadReviewInputs(repoRoot);
     decision = evaluateMergeGate({ ...reviewInputs, pr: input.pr, facts, now: timestamp });
   } catch (error) {
     return makeResult({
@@ -349,7 +368,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: `review_input_failed:${errorMessage(error)}`,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
@@ -363,7 +382,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: decision.reasons.join(",") || "merge_not_ready",
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
       authorizedEntry: decision.authorizedEntry,
     });
@@ -379,13 +398,13 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: "merge_authorization_incomplete",
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
 
   try {
-    writeReceipt(input.repoRoot, {
+    writeReceipt(repoRoot, {
       receiptKind: "merge_intent",
       pr: input.pr,
       headSha: decision.headSha,
@@ -407,7 +426,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
@@ -424,7 +443,7 @@ export function runPrMerge(input: {
         decision: "merge_failed",
         reason: `gh_merge_failed:${errorMessage(error)}`,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
       authorizedEntry: decision.authorizedEntry,
     });
@@ -438,7 +457,7 @@ export function runPrMerge(input: {
       decision: "merge",
       reason: "merge_ready",
     },
-    repoRoot: input.repoRoot,
+    repoRoot,
     timestamp,
     authorizedEntry: decision.authorizedEntry,
   });
