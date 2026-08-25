@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
@@ -19,24 +19,33 @@ next_pair_freeze: L8
 backprop_decision: required
 backprop_decision_reason: "段階公開・rollbackの新しいfail-close境界をReverseでL7 oracleへ分解し、上流層への波及なしを記録する。"
 review_evidence:
-  - reviewer: codex-tl-preflight
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-25T06:39:16Z"
-    tests_green_at: "2026-08-25T06:39:16Z"
-    verdict: "PRECHECK_ONLY; Claude Opus non-author closing review pending"
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-25T09:13:50Z"
+    tests_green_at: "2026-08-25T08:46:19Z"
+    verdict: "PASS; blocking 0; canonical receipt rv1-d2f4cff5a2a46082ea8a1043c11aea441c09e2cbc3b7f343adf4711f2b7c4fba"
     scope: >-
-      Issue #402 の B-1〜B-4 closure、explicit artifact inventory、channel pointer、append-only
-      publication FSM、supersede-forward rollback、fail-close、consumer boundary、および source/CLI/
-      Pack remote mutation 非スコープを exact origin/main 92df02a6 上で preflight 確認した。
+      PR #404 exact HEAD 1d310e78 のB-1〜B-4契約、main同期差分、PLAN/Reverse/test-designの
+      byte identity、conflict marker不在、およびLinux/Windows/aggregate CIを非著者delta reviewした。
     worker_model: gpt-5.6-luna
     effort: high
-    reviewer_model: gpt-5.6-sol
-    plan_revision: 92df02a6da7be284699513c4d6c13c543e4ef282
-    subject_head: 92df02a6da7be284699513c4d6c13c543e4ef282
+    reviewer_model: claude-opus-5
+    plan_revision: 1d310e781de83a923a394e34582f7e5f9a22f3f3
+    subject_head: 1d310e781de83a923a394e34582f7e5f9a22f3f3
     evidence_path: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
+    green_commands:
+      - kind: integration_test
+        command: "GitHub Actions run 32827234834: harness-check-linux, harness-check-windows, harness-check"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-25T08:46:19Z"
+        evidence_path: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
+        output_digest: "sha256:368170d846abf24b78104af76d739351869b268843191664702baae7af634305"
+        anchor_commit: 1d310e781de83a923a394e34582f7e5f9a22f3f3
     citations:
-      - "Issue #402: B-1〜B-4 pre-gate と completion criteria"
-      - "docs/test-design/harness/L7-unit-test-design.md: CANDIDATE-PACKPUB-001〜004"
+      - "PR #404 exact-head closing review comment (2026-08-25T09:13:50Z)"
+      - "GitHub Actions run 32827234834"
 agent_slots:
   - role: tl
     slot_label: "TL - Pack 配布の段階公開・ロールバック手順の設計"
@@ -384,8 +393,8 @@ Pack公開前提と非依存境界のみを定義する。
 
 ## 11. 現在の freeze 状態
 
-本更新は Issue #402 の B-1〜B-4を閉じる design-only pair-freeze 候補であり、`status: draft` を維持する。
-`review_evidence`には exact origin/main `92df02a6` 上のCodex preflight、worker_model、effort、
-対象commandを記録したが、これは最終レビュー証跡ではない。Claude Opus non-author closing
-review、PR CI、R3/R4の最終receipt、Pack repositoryへの公開操作は後続条件として pending である。
-実装、Pack copy、GitHub remote mutation、consumer E2E、merge完了は主張しない。
+本更新は Issue #402 の B-1〜B-4を閉じる design-only pair-freezeであり、`status: confirmed` とする。
+`review_evidence`には PR #404 exact HEAD `1d310e78` に対するClaude Opus non-author closing
+PASS、canonical receipt、Linux/Windows/aggregate CIを同一revisionへ束縛した。これによりL6契約の
+freezeは完了したが、Reverse R2〜R4、publication実装、Pack repositoryへの公開操作は後続条件である。
+実装、Pack copy、GitHub remote mutation、consumer E2E、公開完了は本PLANでは主張しない。

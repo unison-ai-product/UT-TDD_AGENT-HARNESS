@@ -15,7 +15,7 @@ owner: PO / Codex
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 backprop_decision: not_required
-backprop_reason: "B-1〜B-4はPack公開のL6境界で完結し、requirements/L4/L5の既存契約を変更しないため。"
+backprop_decision_reason: "B-1〜B-4はPack公開のL6境界で完結し、requirements/L4/L5の既存契約を変更しないため。"
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
@@ -41,6 +41,33 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
 github_issue_id: 402
 review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-25T09:13:50Z"
+    tests_green_at: "2026-08-25T08:46:19Z"
+    verdict: "PASS; blocking 0; canonical receipt rv1-d2f4cff5a2a46082ea8a1043c11aea441c09e2cbc3b7f343adf4711f2b7c4fba"
+    scope: >-
+      PR #404 exact HEAD 1d310e78 のR1 candidate crosswalk、main同期差分、blob identity、
+      conflict marker不在、およびLinux/Windows/aggregate CIを非著者delta reviewした。
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: 1d310e781de83a923a394e34582f7e5f9a22f3f3
+    subject_head: 1d310e781de83a923a394e34582f7e5f9a22f3f3
+    evidence_path: docs/plans/PLAN-REVERSE-505-pack-staged-release-rollback-backfill.md
+    green_commands:
+      - kind: integration_test
+        command: "GitHub Actions run 32827234834: harness-check-linux, harness-check-windows, harness-check"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-25T08:46:19Z"
+        evidence_path: docs/plans/PLAN-REVERSE-505-pack-staged-release-rollback-backfill.md
+        output_digest: "sha256:d518c3fb51815f2c367f69e71863a2c3ed1a7fc7979a60c763e163d3a1b5d223"
+        anchor_commit: 1d310e781de83a923a394e34582f7e5f9a22f3f3
+    citations:
+      - "PR #404 exact-head closing review comment (2026-08-25T09:13:50Z)"
+      - "GitHub Actions run 32827234834"
   - reviewer: codex-tl-preflight
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-25T06:39:16Z"
@@ -100,5 +127,6 @@ L7所有であり、このReverseでは再採番・再所有しない。
 injected remote port、auditorの検証だけであり、Pack remoteへの実操作、source/CLI変更、consumer E2Eは
 このReverseの出口に含めない。
 
-本PR時点ではR1 pair evidenceを記録し、Claude Opus non-author closing reviewとCIの最終receiptを
-placeholderとして残す。review完了・実装Green・Pack公開完了・merge完了を先取りして主張しない。
+本PR時点ではR1 pair evidenceだけを記録する。親L6 pair-freezeのClaude Opus non-author closing
+PASSとCIは親PLANのexact revisionへ記録済みだが、本ReverseのR2〜R4、実装Green、Pack公開完了を
+先取りして主張しない。
