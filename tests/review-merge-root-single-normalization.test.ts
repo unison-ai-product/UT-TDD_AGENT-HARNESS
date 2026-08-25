@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { runPrMerge, type MergeGateFacts } from "../src/feedback/review-merge-gate.ts";
+import { type MergeGateFacts, runPrMerge } from "../src/feedback/review-merge-gate.ts";
 
 const head = "a".repeat(40);
 
