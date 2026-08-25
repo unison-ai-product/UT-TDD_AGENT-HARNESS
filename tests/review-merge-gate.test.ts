@@ -1,11 +1,22 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
 import { describe, expect, it } from "vitest";
 import { registerPrMergeCommands } from "../src/cli/pr-merge.ts";
+import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
 import {
   createGhPrMergePorts,
+  evaluateMergeGate,
   type GhPrMergePorts,
   type MergeGateFacts,
   runPrMerge,
@@ -95,6 +106,7 @@ function writeVerdict(
     memoryId: string;
     reviewRevision: string;
     verdict: "PASS" | "FLAG";
+    head?: string;
     reviewerFamily?: "claude" | "codex";
   },
 ): void {
@@ -105,7 +117,7 @@ function writeVerdict(
     JSON.stringify({
       memoryId: input.memoryId,
       pr: 465,
-      head,
+      head: input.head ?? head,
       reviewRevision: input.reviewRevision,
       reviewerFamily: input.reviewerFamily ?? "codex",
       kind: "verdict",
@@ -115,6 +127,34 @@ function writeVerdict(
     }),
     "utf8",
   );
+}
+
+function seedHistoricalReview(root: string): void {
+  writeRequest(root, {
+    file: "old-request.json",
+    memoryId: "review:465:old-head",
+    exactHead: otherHead,
+    reviewRevision: "review-old",
+  });
+  writeRequest(root, {
+    file: "current-request.json",
+    memoryId: "review:465:current-head",
+    exactHead: head,
+    reviewRevision: "review-current",
+  });
+  writeVerdict(root, {
+    file: "old-flag.json",
+    memoryId: "review:465:old-head",
+    reviewRevision: "review-old",
+    head: otherHead,
+    verdict: "FLAG",
+  });
+  writeVerdict(root, {
+    file: "current-pass.json",
+    memoryId: "review:465:current-head",
+    reviewRevision: "review-current",
+    verdict: "PASS",
+  });
 }
 
 function ports(
@@ -136,6 +176,210 @@ function receipt(root: string): Record<string, unknown> {
 }
 
 describe("D2-B PR merge gate", () => {
+  it("U-RVHEAD-001: old HEAD FLAG は現 HEAD PASSを妨げず、監査entryは保持する", () => {
+    const oldRequest = {
+      memoryId: "review:465:old-head",
+      pr: 465,
+      exactHead: otherHead,
+      reviewRevision: "review-old",
+      authorFamily: "claude" as const,
+      requestedAt: "2026-08-07T00:30:00.000Z",
+    };
+    const currentRequest = {
+      memoryId: "review:465:current-head",
+      pr: 465,
+      exactHead: head,
+      reviewRevision: "review-current",
+      authorFamily: "claude" as const,
+      requestedAt: "2026-08-07T00:40:00.000Z",
+    };
+    const oldFlag = {
+      ...oldRequest,
+      head: otherHead,
+      reviewerFamily: "codex" as const,
+      kind: "verdict" as const,
+      verdict: "FLAG" as const,
+      blockingFindings: ["old finding"],
+      at: "2026-08-07T00:45:00.000Z",
+    };
+    const currentPass = {
+      ...currentRequest,
+      head: head,
+      reviewerFamily: "codex" as const,
+      kind: "verdict" as const,
+      verdict: "PASS" as const,
+      at: "2026-08-07T00:50:00.000Z",
+    };
+    const currentFacts = facts();
+    const decision = evaluateMergeGate({
+      pr: 465,
+      requests: [oldRequest, currentRequest],
+      receipts: [oldFlag, currentPass],
+      facts: currentFacts,
+      now,
+    });
+    const audit = analyzeReviewDispatch({
+      requests: [oldRequest, currentRequest],
+      receipts: [oldFlag, currentPass],
+      prs: [currentFacts],
+      now,
+    });
+
+    expect(decision.ok).toBe(true);
+    expect(audit.entries).toHaveLength(2);
+    expect(audit.entries.find((entry) => entry.exactHead === otherHead)).toMatchObject({
+      verdict: "FLAG",
+      blocking: ["old finding"],
+      state: "stale_head",
+    });
+  });
+
+  it("U-RVHEAD-002: same HEAD FLAG はPASS併存でもblockingを維持する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      writeRequest(root, {
+        file: "current-request.json",
+        memoryId: "review:465:current-head",
+        exactHead: head,
+        reviewRevision: "review-current",
+      });
+      writeVerdict(root, {
+        file: "current-flag.json",
+        memoryId: "review:465:current-head",
+        reviewRevision: "review-current",
+        verdict: "FLAG",
+      });
+      writeVerdict(root, {
+        file: "current-pass.json",
+        memoryId: "review:465:current-head",
+        reviewRevision: "review-current",
+        verdict: "PASS",
+      });
+      const result = runPrMerge({ repoRoot: root, pr: 465, now: () => now, ports: ports() });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain("flagged");
+      expect(result.decision).toBe("deny");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVHEAD-003: HEAD変更後にcurrent receiptが無ければold evidenceだけでは許可しない", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
+    try {
+      writeRequest(root, {
+        file: "old-request.json",
+        memoryId: "review:465:old-head",
+        exactHead: otherHead,
+        reviewRevision: "review-old",
+      });
+      writeVerdict(root, {
+        file: "old-pass.json",
+        memoryId: "review:465:old-head",
+        reviewRevision: "review-old",
+        head: otherHead,
+        verdict: "PASS",
+      });
+      const result = runPrMerge({ repoRoot: root, pr: 465, now: () => now, ports: ports() });
+      expect(result.ok).toBe(false);
+      expect(result.reason).toContain("no_request_for_current_head");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVHEAD-004: repository root/worktree配置は同一evidenceの判定を変えない", () => {
+    const roots = [
+      mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-root-")),
+      mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-worktree-")),
+    ];
+    try {
+      const results = roots.map((root) => {
+        seedHistoricalReview(root);
+        return runPrMerge({ repoRoot: root, pr: 465, now: () => now, ports: ports() });
+      });
+      expect(results[0]).toMatchObject({ ok: true, decision: "merge", verdict: "PASS" });
+      expect({ ...results[0], receiptPath: null }).toEqual({ ...results[1], receiptPath: null });
+    } finally {
+      for (const root of roots) rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVHEAD-005/U-RVHEAD-006: linked worktreeとnested checkoutのreview evidenceは配置に依存せず共有される", () => {
+    const repository = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-git-"));
+    const linkedWorktree = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-linked-"));
+    try {
+      writeFileSync(join(repository, "README.md"), "fixture\n", "utf8");
+      execFileSync("git", ["-C", repository, "init", "-q"]);
+      execFileSync("git", ["-C", repository, "config", "user.email", "fixture@example.test"]);
+      execFileSync("git", ["-C", repository, "config", "user.name", "fixture"]);
+      execFileSync("git", ["-C", repository, "add", "README.md"]);
+      execFileSync("git", ["-C", repository, "commit", "-q", "-m", "fixture"]);
+      rmSync(linkedWorktree, { recursive: true, force: true });
+      execFileSync(
+        "git",
+        ["-C", repository, "worktree", "add", "--detach", linkedWorktree, "HEAD"],
+        {
+          stdio: "ignore",
+        },
+      );
+
+      // The review request/receipt are produced in one checkout, while the
+      // merge command is intentionally run from its sibling checkout.
+      seedReview(repository, "PASS");
+      const result = runPrMerge({
+        repoRoot: linkedWorktree,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(result).toMatchObject({ ok: true, decision: "merge", verdict: "PASS" });
+
+      // A same-head FLAG in the other checkout must remain blocking even
+      // when a PASS receipt exists in the first checkout.
+      writeVerdict(linkedWorktree, {
+        file: "same-head-flag.json",
+        memoryId: "review:465:head:1",
+        reviewRevision: "review-r1",
+        verdict: "FLAG",
+      });
+      const flagged = runPrMerge({
+        repoRoot: linkedWorktree,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(flagged).toMatchObject({ ok: false, decision: "deny", verdict: "FLAG" });
+      expect(flagged.reason).toContain("flagged");
+
+      // A caller may invoke the gate from a nested checkout directory. The
+      // same root evidence must still be visible and the result receipt must
+      // stay at the Git toplevel rather than under the nested path.
+      const nested = join(linkedWorktree, "nested");
+      mkdirSync(nested);
+      const fromNested = runPrMerge({
+        repoRoot: nested,
+        pr: 465,
+        now: () => now,
+        ports: ports(),
+      });
+      expect(fromNested).toMatchObject({ ok: false, decision: "deny", verdict: "FLAG" });
+      expect(existsSync(join(linkedWorktree, ".ut-tdd", "logs", "review-merge-gate.jsonl"))).toBe(
+        true,
+      );
+    } finally {
+      try {
+        execFileSync("git", ["-C", repository, "worktree", "remove", "--force", linkedWorktree], {
+          stdio: "ignore",
+        });
+      } catch {
+        // Cleanup below still removes the isolated fixture if Git already did.
+      }
+      rmSync(linkedWorktree, { recursive: true, force: true });
+      rmSync(repository, { recursive: true, force: true });
+    }
+  });
+
   it("U-RVMG-001: merge_ready の exact HEAD だけを merge し receipt を残す", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvmg-"));
     let merged = false;

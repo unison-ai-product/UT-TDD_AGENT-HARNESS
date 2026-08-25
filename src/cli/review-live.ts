@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
 import { consumeLiveReview, dispatchLiveReview } from "../feedback/live-review-projection.ts";
+import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import type { ReviewVerdictProjectionResult } from "../feedback/review-attestation.ts";
 import { issueReviewRequest } from "../feedback/review-attestation.ts";
 import { parseMemoryFile } from "../memory/index.ts";
@@ -81,7 +82,7 @@ export function registerLiveReviewCommands(
   overrides: Partial<LiveReviewCommandDeps> = {},
 ): void {
   const deps: LiveReviewCommandDeps = {
-    repoRoot: () => process.cwd(),
+    repoRoot: () => resolveRepositoryRoot(process.cwd()),
     providerAvailable: (provider) => detectMode()[provider],
     runReview: ({ repoRoot, provider, args }) =>
       executeLiveReviewDelegation({ repoRoot, provider, args }),
@@ -111,7 +112,7 @@ export function registerLiveReviewCommands(
         json?: boolean;
       }) => {
         try {
-          const repoRoot = deps.repoRoot();
+          const repoRoot = resolveRepositoryRoot(deps.repoRoot());
           const memory = parseMemoryFile(repoRoot, opts.memoryPath);
           if (memory.memory_id !== opts.memoryId)
             throw new Error("review_memory_identity_mismatch");
@@ -170,7 +171,7 @@ export function registerLiveReviewCommands(
     .option("--json", "JSON output")
     .action((opts: { envelope: string; json?: boolean }) => {
       try {
-        const repoRoot = deps.repoRoot();
+        const repoRoot = resolveRepositoryRoot(deps.repoRoot());
         const envelope = decodeClaudeInboxEntry(readFileSync(opts.envelope, "utf8"));
         if (!envelope || envelope.purpose !== "review") {
           throw new Error("invalid_review_envelope");

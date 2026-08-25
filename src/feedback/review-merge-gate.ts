@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { resolveRepositoryRoot } from "./repository-root.ts";
 import {
   analyzeReviewDispatch,
   type PrObservation,
@@ -9,6 +10,7 @@ import {
   type ReviewRequest,
   type ReviewVerdict,
 } from "./review-dispatch.ts";
+import { canonicalJson } from "./review-verdict-custody.ts";
 
 export interface MergeGateFacts extends PrObservation {
   /** 評価対象として取得した HEAD。adapter 内の二重観測がずれたら fail-close する。 */
@@ -77,25 +79,69 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * Review requests/receipts are runtime evidence, not worktree-local source.
+ * A linked worktree may receive the request while the merge command runs from
+ * another linked worktree, so the gate must inspect every worktree belonging
+ * to the same Git common directory. Non-Git fixture roots retain the old
+ * single-root behavior.
+ */
+function reviewInputRoots(repoRoot: string): string[] {
+  repoRoot = resolveRepositoryRoot(repoRoot);
+  const roots = new Map<string, string>();
+  const add = (candidate: string): void => {
+    if (!existsSync(candidate)) return;
+    const resolved = resolve(candidate);
+    const key = process.platform === "win32" ? resolved.toLowerCase() : resolved;
+    if (!roots.has(key)) roots.set(key, resolved);
+  };
+  add(repoRoot);
+  // Vitest uses non-Git temporary roots for isolated fixtures. A real
+  // checkout must not silently fall back to a worktree-local evidence set if
+  // Git cannot enumerate its linked worktrees.
+  if (!existsSync(join(repoRoot, ".git"))) return [...roots.values()];
+  try {
+    const output = execFileSync("git", ["-C", repoRoot, "worktree", "list", "--porcelain"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    for (const line of String(output).split(/\r?\n/)) {
+      if (line.startsWith("worktree ")) add(line.slice("worktree ".length));
+    }
+  } catch {
+    throw new Error("review_input_worktree_enumeration_failed");
+  }
+  return [...roots.values()].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
+}
+
 function readReviewFiles<T>(
-  repoRoot: string,
+  roots: readonly string[],
   category: (typeof REVIEW_INPUT_CATEGORIES)[number],
 ): T[] {
-  const directory = join(repoRoot, ".ut-tdd", "review", category);
-  if (!existsSync(directory)) return [];
-  return readdirSync(directory)
-    .filter((name) => name.endsWith(".json"))
-    .sort()
-    .map((name) => JSON.parse(readFileSync(join(directory, name), "utf8")) as T);
+  const values = new Map<string, T>();
+  for (const root of roots) {
+    const directory = join(root, ".ut-tdd", "review", category);
+    if (!existsSync(directory)) continue;
+    for (const name of readdirSync(directory)
+      .filter((entry) => entry.endsWith(".json"))
+      .sort()) {
+      const value = JSON.parse(readFileSync(join(directory, name), "utf8")) as T;
+      values.set(canonicalJson(value), value);
+    }
+  }
+  return [...values.entries()]
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([, value]) => value);
 }
 
 function loadReviewInputs(repoRoot: string): {
   requests: ReviewRequest[];
   receipts: ReviewReceipt[];
 } {
+  const roots = reviewInputRoots(repoRoot);
   return {
-    requests: readReviewFiles<ReviewRequest>(repoRoot, "requests"),
-    receipts: readReviewFiles<ReviewReceipt>(repoRoot, "receipts"),
+    requests: readReviewFiles<ReviewRequest>(roots, "requests"),
+    receipts: readReviewFiles<ReviewReceipt>(roots, "receipts"),
   };
 }
 
@@ -159,7 +205,14 @@ export function evaluateMergeGate(input: {
           reviewerFamily: candidate.reviewerFamily,
         }
       : null;
-  const reasons = [...result.diagnostics];
+  // D1 の result/diagnostics は監査用に全履歴を保持する。D2-B は exact current HEAD の
+  // typed entryに加え、identity形式が異なるorphan receipt / PR observationだけを投影する。
+  const receiptIdentity = `@${input.pr}@${headSha}@`;
+  const observationIdentity = `:${input.pr}@${headSha}`;
+  const reasons = result.diagnostics.filter(
+    (diagnostic) =>
+      diagnostic.includes(receiptIdentity) || diagnostic.endsWith(observationIdentity),
+  );
   if (entriesForHead.length === 0) {
     reasons.push("no_request_for_current_head");
     return {
@@ -183,11 +236,8 @@ export function evaluateMergeGate(input: {
     );
     if (candidate.state !== "merge_ready") reasons.push(`state:${candidate.state}`);
   }
-  if (!result.ok) reasons.push("dispatch_analysis_failed");
   const denied =
-    !result.ok ||
-    reasons.length > 0 ||
-    entriesForHead.some((candidate) => candidate.state !== "merge_ready");
+    reasons.length > 0 || entriesForHead.some((candidate) => candidate.state !== "merge_ready");
   const authorizedEntry = denied ? authorizedEntryFrom(denyingEntry) : authorizedEntryFrom(entry);
   const verdict = denied ? (denyingEntry?.verdict ?? null) : (entry?.verdict ?? null);
   if (denied) {
@@ -254,6 +304,23 @@ export function runPrMerge(input: {
   now?: () => string;
 }): PrMergeResult {
   const timestamp = input.now?.() ?? new Date().toISOString();
+  let repoRoot = input.repoRoot;
+  try {
+    repoRoot = resolveRepositoryRoot(input.repoRoot);
+  } catch (error) {
+    return makeResult({
+      result: {
+        ok: false,
+        pr: input.pr,
+        headSha: null,
+        verdict: null,
+        decision: "deny",
+        reason: `review_input_failed:${errorMessage(error)}`,
+      },
+      repoRoot: input.repoRoot,
+      timestamp,
+    });
+  }
   if (!Number.isInteger(input.pr) || input.pr <= 0) {
     return makeResult({
       result: {
@@ -264,7 +331,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: "invalid_pr",
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
@@ -282,14 +349,14 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: `gh_fetch_failed:${errorMessage(error)}`,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
 
   let decision: MergeGateDecision;
   try {
-    const reviewInputs = loadReviewInputs(input.repoRoot);
+    const reviewInputs = loadReviewInputs(repoRoot);
     decision = evaluateMergeGate({ ...reviewInputs, pr: input.pr, facts, now: timestamp });
   } catch (error) {
     return makeResult({
@@ -301,7 +368,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: `review_input_failed:${errorMessage(error)}`,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
@@ -315,7 +382,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: decision.reasons.join(",") || "merge_not_ready",
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
       authorizedEntry: decision.authorizedEntry,
     });
@@ -331,13 +398,13 @@ export function runPrMerge(input: {
         decision: "deny",
         reason: "merge_authorization_incomplete",
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
 
   try {
-    writeReceipt(input.repoRoot, {
+    writeReceipt(repoRoot, {
       receiptKind: "merge_intent",
       pr: input.pr,
       headSha: decision.headSha,
@@ -359,7 +426,7 @@ export function runPrMerge(input: {
         decision: "deny",
         reason,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
     });
   }
@@ -376,7 +443,7 @@ export function runPrMerge(input: {
         decision: "merge_failed",
         reason: `gh_merge_failed:${errorMessage(error)}`,
       },
-      repoRoot: input.repoRoot,
+      repoRoot,
       timestamp,
       authorizedEntry: decision.authorizedEntry,
     });
@@ -390,7 +457,7 @@ export function runPrMerge(input: {
       decision: "merge",
       reason: "merge_ready",
     },
-    repoRoot: input.repoRoot,
+    repoRoot,
     timestamp,
     authorizedEntry: decision.authorizedEntry,
   });
