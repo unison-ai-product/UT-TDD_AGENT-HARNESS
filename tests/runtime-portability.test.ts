@@ -208,12 +208,11 @@ describe("runtime-portability lint", () => {
 
   it("U-RPORT-018: allowlisted files fail-close when a new site exceeds the pinned debt count (blind review A-2')", () => {
     // 収載 path でも pin (現 debt 行数) を超えた行は違反になる — file 単位の素通しを作らない。
-    const twoProbes = 'execFileSync("bun", ["--version"]);\nspawnSync("bun", ["x"]);\n';
     const result = analyzeRuntimePortability([
-      // src/cli/distribution.ts の spawn pin は 2。pin 内 2 行 + 追加 1 行 → 追加行のみ違反。
+      // scripts/run-vitest-snapshot.ts の spawn pin は 1。pin 内 1 行 + 追加 1 行 → 追加行のみ違反。
       {
-        path: "src/cli/distribution.ts",
-        text: `${twoProbes}spawnSync("bun", ["brand-new-attack.ts"]);\n`,
+        path: "scripts/run-vitest-snapshot.ts",
+        text: 'execFileSync("bun", ["--version"]);\nspawnSync("bun", ["brand-new-attack.ts"]);\n',
       },
       // import pin 2 の src/state-db/index.ts へ 3 行目の bun: import → 違反。
       {
@@ -224,13 +223,13 @@ describe("runtime-portability lint", () => {
     const hits = result.violations.map((v) => [v.path, v.rule, v.line]);
     expect(hits).toEqual(
       expect.arrayContaining([
-        ["src/cli/distribution.ts", "bun-runtime-spawn", 3],
+        ["scripts/run-vitest-snapshot.ts", "bun-runtime-spawn", 2],
         ["src/state-db/index.ts", "bun-module-import", 4],
       ]),
     );
     // pin 内の既存 debt 行は違反にならない (burn-down の自由度は保つ)。
     expect(hits).not.toEqual(
-      expect.arrayContaining([["src/cli/distribution.ts", "bun-runtime-spawn", 1]]),
+      expect.arrayContaining([["scripts/run-vitest-snapshot.ts", "bun-runtime-spawn", 1]]),
     );
   });
 

@@ -38,9 +38,10 @@ writeFileSync(
 describe("Claude hook wrapper launch (issue #123 / PLAN-L7-508)", () => {
   it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged without Bun on PATH", () => {
     const directory = temporaryDirectory();
-    const localCli = join(directory, "node_modules", "ut-tdd", "src", "cli.ts");
+    const localCli = join(directory, "src", "cli.ts");
     const output = join(directory, "result.json");
-    mkdirSync(join(directory, "node_modules", "ut-tdd", "src"), { recursive: true });
+    mkdirSync(join(directory, "src", "setup"), { recursive: true });
+    writeFileSync(join(directory, "src", "setup", "index.ts"), "export {};");
     writeFileSync(
       localCli,
       [

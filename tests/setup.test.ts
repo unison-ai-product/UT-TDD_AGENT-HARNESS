@@ -546,9 +546,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(wrapper).toContain(
       "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
     );
-    expect(wrapper).toContain(
-      "const resolvedCli = existsSync(localPackageCli) ? localPackageCli : existsSync(sourceCli) ? sourceCli : null;",
-    );
+    expect(wrapper).toContain("const resolvedCli = existsSync(sourceCli) ? sourceCli : null;");
+    expect(wrapper).not.toContain("localPackageCli");
     expect(wrapper).toContain(
       "spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)]",
     );
@@ -577,7 +576,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     return spawnSync(process.execPath, args, { cwd, encoding: "utf8", windowsHide: true });
   }
 
-  it("U-SETUP-009b2: generated wrapper prefers consumer local bin when local and setup fallback both exist", () => {
+  it("U-SETUP-009b2: generated wrapper prefers the repo-local harness source over the setup fallback", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-local-"));
     try {
       const deps = mockDeps({ repoRoot: repo });
@@ -587,16 +586,17 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       expect(wrapper).toBeTruthy();
 
       const wrapperPath = join(repo, ".ut-tdd", "bin", "ut-tdd.mjs");
-      const localPackageCli = join(repo, "node_modules", "ut-tdd", "src", "cli.ts");
+      const repoLocalCli = join(repo, "src", "cli.ts");
       mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
-      mkdirSync(join(repo, "node_modules", "ut-tdd", "src"), { recursive: true });
+      mkdirSync(join(repo, "src", "setup"), { recursive: true });
       writeFileSync(wrapperPath, wrapper ?? "");
-      writeFileSync(localPackageCli, 'console.log("local-package", ...process.argv.slice(2));\n');
+      writeFileSync(repoLocalCli, `console.log("repo-local", ...process.argv.slice(2));`);
+      writeFileSync(join(repo, "src", "setup", "index.ts"), "export {};");
 
       const result = runWrapperViaNode(repo, [wrapperPath, "status", "--json"]);
 
       expect(result.status).toBe(0);
-      expect(result.stdout.trim()).toBe("local-package status --json");
+      expect(result.stdout.trim()).toBe("repo-local status --json");
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
