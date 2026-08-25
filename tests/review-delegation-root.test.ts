@@ -24,22 +24,18 @@ function createClaudeStub(root: string): string {
       'import { dirname } from "node:path";',
       'const input = readFileSync(0, "utf8");',
       'if (process.argv.includes("--version")) { console.log("claude-stub 1"); process.exit(0); }',
-      'const verdictPath = process.env.UT_TDD_REVIEW_VERDICT_FILE;',
-      'if (!verdictPath) process.exit(2);',
+      "const verdictPath = process.env.UT_TDD_REVIEW_VERDICT_FILE;",
+      "if (!verdictPath) process.exit(2);",
       'const fields = ["schema_version", "request_digest", "attempt", "pr", "exact_head", "review_revision", "reviewer_provider", "reviewer_model", "invocation_nonce"];',
-      'const envelope = fields.map((field) => { const match = input.match(new RegExp(`^${field}:\\\\s*(.+)$`, "m")); return `${field}: ${match?.[1] ?? ""}`; }).join("\\n");',
-      'mkdirSync(dirname(verdictPath), { recursive: true });',
-      'writeFileSync(verdictPath, `${envelope}\\nVERDICT: PASS\\n`);',
+      'const envelope = fields.map((field) => { const match = input.match(new RegExp("^" + field + ":\\\\s*(.+)$", "m")); return field + ": " + (match?.[1] ?? ""); }).join("\\n");',
+      "mkdirSync(dirname(verdictPath), { recursive: true });",
+      'writeFileSync(verdictPath, envelope + "\\nVERDICT: PASS\\n");',
       'console.log("VERDICT: PASS");',
     ].join("\n"),
     "utf8",
   );
   const command = join(root, "claude-stub.cmd");
-  writeFileSync(
-    command,
-    `@echo off\r\n"${process.execPath}" "${helper}" %*\r\n`,
-    "utf8",
-  );
+  writeFileSync(command, `@echo off\r\n"${process.execPath}" "${helper}" %*\r\n`, "utf8");
   return command;
 }
 
@@ -87,7 +83,9 @@ describe("review delegation repository-root custody", () => {
 
       expect(result.ok).toBe(true);
       if (!result.ok) return;
-      expect(result.path).toBe(join(root, ".ut-tdd", "review", "receipts", `${result.digest}.json`));
+      expect(result.path).toBe(
+        join(root, ".ut-tdd", "review", "receipts", `${result.digest}.json`),
+      );
       expect(existsSync(result.path)).toBe(true);
       expect(existsSync(join(root, "nested", "task", ".ut-tdd", "review"))).toBe(false);
     } finally {

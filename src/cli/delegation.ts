@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
+import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import {
   canonicalizeReviewRequest,
   issueReviewRequest,
@@ -17,7 +18,6 @@ import {
   reviewIdentityDigest,
   reviewVerdictPath,
 } from "../feedback/review-verdict-custody.ts";
-import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import { loadChangedFiles } from "../lint/change-impact.ts";
 import {
   type AdapterContextInjection,
