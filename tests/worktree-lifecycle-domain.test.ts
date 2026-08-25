@@ -182,6 +182,48 @@ describe("U-WTLIFE-002 lifecycle FSM", () => {
     });
     expect(retired.state).toBe("retired");
   });
+
+  it("keeps domain deny reasons when a retained record receives the same terminal receipt", () => {
+    const store = new WorktreeLifecycleStore();
+    store.plan(planned());
+    store.activate(identity1, {
+      attempt: 1,
+      workerStartReceiptDigest: "sha256:start-dirty",
+      inventoryAvailable: true,
+      ownerAuthenticated: true,
+    });
+    store.terminal(identity1, {
+      attempt: 1,
+      kind: "success",
+      terminalReceiptDigest: "sha256:dirty-terminal",
+      denyReasons: ["dirty"],
+    });
+    store.retain(identity1, {
+      attempt: 1,
+      denyReasons: ["dirty"],
+      retention: {
+        policyId: "policy-dirty",
+        policyRevision: "r1",
+        retainUntil: "2026-08-26T00:00:00.000Z",
+        disposition: "retain",
+      },
+    });
+
+    const reevaluated = store.reevaluateRetained(identity1, {
+      attempt: 1,
+      terminalKind: "success",
+      terminalReceiptDigest: "sha256:dirty-terminal",
+    });
+
+    expect(reevaluated.state).toBe("terminal_pending");
+    expect(reevaluated.denyReasons).toEqual(["dirty"]);
+    expect(() =>
+      store.retire(identity1, {
+        attempt: 1,
+        inventoryAvailable: true,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "terminal_missing", reason: "dirty" }));
+  });
 });
 
 describe("U-WTLIFE-006 typed activation and inventory denial", () => {

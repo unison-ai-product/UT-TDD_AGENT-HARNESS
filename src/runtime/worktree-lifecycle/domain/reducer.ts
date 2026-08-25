@@ -12,6 +12,17 @@ function uniqueReasons(
   return Object.freeze([...new Set([...current, ...incoming])].sort());
 }
 
+const RECEIPT_DERIVED_DENY_REASONS = new Set<WorktreeLifecycleRecord["denyReasons"][number]>([
+  "terminal_missing",
+  "terminal_mismatch",
+]);
+
+function preserveDomainDenyReasons(
+  reasons: readonly WorktreeLifecycleRecord["denyReasons"][number][],
+): WorktreeLifecycleRecord["denyReasons"] {
+  return Object.freeze(reasons.filter((reason) => !RECEIPT_DERIVED_DENY_REASONS.has(reason)));
+}
+
 function sameIdentity(left: LifecycleIdentity, right: LifecycleIdentity): boolean {
   return (
     left.repositoryLineageId === right.repositoryLineageId &&
@@ -158,7 +169,7 @@ export function reduceLifecycle(
         revision: event.revision,
         terminalKind: event.terminalKind,
         terminalReceiptDigest: event.terminalReceiptDigest,
-        denyReasons: Object.freeze([]),
+        denyReasons: preserveDomainDenyReasons(state.denyReasons),
       });
   }
 }
