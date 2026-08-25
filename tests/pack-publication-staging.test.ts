@@ -217,6 +217,20 @@ describe("local Pack publication staging/auditor", () => {
       expect(state.value).toBe("prior");
       expect(events).toContain("restore");
     }
+
+    const restoreAbsentDestination = vi.fn<(snapshot: undefined) => void>();
+    const absentResult = await applySealedPackPublication(built.plan, {
+      snapshotDestination: () => undefined,
+      writeStaging: () => ({ staged: true }),
+      applyDestination: () => {
+        throw new Error("apply-after-creating-destination");
+      },
+      discardStaging: vi.fn(),
+      restoreDestination: restoreAbsentDestination,
+    });
+    expect(absentResult).toEqual({ ok: false, error: "unavailable", applied: 0 });
+    expect(restoreAbsentDestination).toHaveBeenCalledOnce();
+    expect(restoreAbsentDestination).toHaveBeenCalledWith(undefined);
   });
 
   it("U-PACKPUB-STAGE-007: applies exactly once on success", async () => {
