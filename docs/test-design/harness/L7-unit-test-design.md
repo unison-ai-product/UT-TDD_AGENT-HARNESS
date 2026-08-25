@@ -2420,3 +2420,18 @@ L6設計正本: `docs/design/harness/L6-function-design/doctor-result-envelope-m
 | `U-PACKASSET-004` | ustar表現不能path / mode 120000 | typed deny、extension fallback 0 |
 | `U-PACKASSET-005` | gzip header / tar header / zero trailer | fixed byte fieldsを直接照合 |
 | `U-PACKASSET-006` | manifest entry欠落 / 余剰entry | `artifact_mismatch`、directory walk補完0 |
+
+## PLAN-L7-504 merged-plan-status landing guidance oracle (Issue #390)
+
+`merged-plan-status` の判定・fail-close・artifact ownership は変更せず、pre-merge landing violation の
+diagnostic が operator に正規 workflow と既存 confirm-time evidence requirements を示すことだけを検証する。
+未実装の候補は `CANDIDATE-*` とし、実装 PR で同じ 504 番号の `U-*` へ昇格する。
+
+| ID | fixture / mutation | expected |
+|---|---|---|
+| `U-MPSTATUS-504-001` | `phase=landing` の未 confirm PLAN violation | `(A) 分割` と `(B) 単一の実装 PR`、`PLAN filing PR`、`pair-freeze cross-review`、非著者 closing review の verdict + canonical receipt、`review_evidence`、`tests_green_at <= reviewed_at`、全 `green_commands` fields を案内する |
+| `U-MPSTATUS-504-002` | `phase=merged` の既存 violation | legacy message と完全一致し、landing guidance を含まない |
+| `U-MPSTATUS-504-003` | `ok=true` | 既存 OK message と完全一致 |
+| `U-MPSTATUS-504-004` | non-landing violation へ landing guidance を混入する mutation | test が `phase=landing` / `(A) 分割` の混入を検出する |
+
+実行対応: `tests/merged-plan-status.test.ts` (`U-MPSTATUS-504-001`〜`004`)。

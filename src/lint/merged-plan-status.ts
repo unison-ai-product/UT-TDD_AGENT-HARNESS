@@ -273,8 +273,11 @@ export function mergedPlanStatusMessages(r: MergedPlanStatusResult): string[] {
       "merged-plan-status — OK (merged generated artifact を持つ全 PLAN が confirmed/completed)",
     ];
   }
-  return r.violations.map(
-    (v) =>
-      `merged-plan-status - violation: PLAN ${v.planId} は status=${v.status} (未 confirm) なのに generated deliverable が merge 済み: ${v.artifacts.join(", ")} → PLAN を confirm + review_evidence 記録せよ`,
-  );
+  return r.violations.map((v) => {
+    const base = `merged-plan-status - violation: PLAN ${v.planId} は status=${v.status} (未 confirm) なのに generated deliverable が ${v.phase === "landing" ? "landing" : "merge 済み"}: ${v.artifacts.join(", ")}`;
+    if (v.phase !== "landing") {
+      return `${base} → PLAN を confirm + review_evidence 記録せよ`;
+    }
+    return `${base} (phase=landing) → 是正手順: (A) 分割: PLAN filing PR は draft のまま generates は PLAN doc のみにし、pair-freeze cross-review 後、実装 PR で generates 宣言と confirm + review_evidence を同時に記録する; (B) 単一の実装 PR: PLAN を confirmed にし、非著者 closing review の verdict + canonical receipt を review_evidence から引用する。confirm 時の review_evidence は tests_green_at <= reviewed_at、green_commands は kind/command/runner/scope/exit_code/completed_at/evidence_path/output_digest/anchor_commit を完備。正本: CLAUDE.md / docs/design/harness/L6-function-design/test-before-review.md`;
+  });
 }
