@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -78,7 +85,7 @@ describe("review merge custody root normalization", () => {
       });
 
       expect(result).toMatchObject({ ok: true, decision: "merge", verdict: "PASS" });
-      expect(result.receiptPath).toContain(join(root, ".ut-tdd", "logs"));
+      expect(result.receiptPath).toContain(join(realpathSync.native(root), ".ut-tdd", "logs"));
       expect(existsSync(join(nested, ".ut-tdd", "logs"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
