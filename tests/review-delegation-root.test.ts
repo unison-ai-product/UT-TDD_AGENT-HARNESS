@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -35,8 +35,14 @@ function createClaudeStub(root: string): string {
     ].join("\n"),
     "utf8",
   );
-  const command = join(root, "claude-stub.cmd");
-  writeFileSync(command, `@echo off\r\n"${process.execPath}" "${helper}" %*\r\n`, "utf8");
+  const command =
+    process.platform === "win32" ? join(root, "claude-stub.cmd") : join(root, "claude-stub.sh");
+  if (process.platform === "win32") {
+    writeFileSync(command, `@echo off\r\n"${process.execPath}" "${helper}" %*\r\n`, "utf8");
+  } else {
+    writeFileSync(command, `#!/bin/sh\nexec "${process.execPath}" "${helper}" "$@"\n`, "utf8");
+    chmodSync(command, 0o755);
+  }
   return command;
 }
 
