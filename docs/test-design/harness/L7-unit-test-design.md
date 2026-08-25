@@ -2468,7 +2468,7 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `CANDIDATE-PACKPUB-003` | B-3。tag、GitHub Release、asset upload、channel pointer、promotion、rollbackの各操作からapproval receipt、before-state CAS、nonce/expiry、execution receipt、auditor観測を1項ずつ欠落させる | typed deny、remote write 0。local `sync-plan`/`sync-stage`のcommand listをremote承認の代用にしない |
 | `CANDIDATE-PACKPUB-004` | B-4。immutable tag/Releaseの削除・付替え、旧pointerの上書き、rollback CAS後の応答不明、target attestation不一致、部分公開を各1点変異する | supersede-forwardだけを許可し、partial/indeterminate/`rollback_failed`を保持。force push/tag reuse/成功への丸め 0 |
 
-### PLAN-L7-507 local staging/auditor oracle (Issue #403)
+### PLAN-L7-508 local staging/auditor oracle (Issue #403)
 
 `CANDIDATE-PACKPUB-001/002`のうちremote操作を必要としないlocal境界を次へ昇格する。
 `CANDIDATE-PACKPUB-003/004`はremote publication adapterまでcandidateのまま残す。

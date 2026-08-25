@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-REVERSE-507-pack-publication-staging-auditor-backfill
-title: "PLAN-REVERSE-507: local Pack publication staging/auditor backfill"
+plan_id: PLAN-REVERSE-508-pack-publication-staging-auditor-backfill
+title: "PLAN-REVERSE-508: local Pack publication staging/auditor backfill"
 kind: reverse
 layer: cross
 drive: agent
@@ -16,7 +16,7 @@ forward_routing: gap-only
 promotion_strategy: reuse-as-is
 backprop_decision: not_required
 backprop_decision_reason: "local staging/auditorはconfirmed L6境界を変更せず、remote publication候補を未実装のまま保持するため。"
-parent_design: docs/plans/PLAN-L7-507-pack-publication-staging-auditor.md
+parent_design: docs/plans/PLAN-L7-508-pack-publication-staging-auditor.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 github_issue_id: 403
 agent_slots:
@@ -25,12 +25,12 @@ agent_slots:
   - role: qa
     slot_label: "QA - U-PACKPUB-STAGE-001..010の独立oracle検証"
 generates:
-  - artifact_path: docs/plans/PLAN-REVERSE-507-pack-publication-staging-auditor-backfill.md
+  - artifact_path: docs/plans/PLAN-REVERSE-508-pack-publication-staging-auditor-backfill.md
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 dependencies:
-  parent: docs/plans/PLAN-L7-507-pack-publication-staging-auditor.md
+  parent: docs/plans/PLAN-L7-508-pack-publication-staging-auditor.md
   requires: []
   blocks: []
   references:
@@ -43,12 +43,12 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/403
 ---
 
-# PLAN-REVERSE-507
+# PLAN-REVERSE-508
 
 ## R0 / R1: Forward契約の逆向き確認
 
 `PLAN-L6-63`と`PLAN-REVERSE-505`が固定したpublication境界のうち、remote writeを必要としない
-`CANDIDATE-PACKPUB-001/002`だけを`PLAN-L7-507`へ降下した。manifest v2とdeterministic assetsの
+`CANDIDATE-PACKPUB-001/002`だけを`PLAN-L7-508`へ降下した。manifest v2とdeterministic assetsの
 既存所有権を再実装せず、sealed local staging planとobserved result auditorへ合成する。
 
 ## R2: 実装・oracle実測

@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-507-pack-publication-staging-auditor
-title: "PLAN-L7-507 (add-impl): local deterministic Pack publication staging/auditor"
+plan_id: PLAN-L7-508-pack-publication-staging-auditor
+title: "PLAN-L7-508 (add-impl): local deterministic Pack publication staging/auditor"
 kind: add-impl
 layer: L7
 drive: agent
@@ -24,7 +24,7 @@ agent_slots:
   - role: tl
     slot_label: "TL - CANDIDATE-PACKPUB-001/002 local boundary review"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-507-pack-publication-staging-auditor.md
+  - artifact_path: docs/plans/PLAN-L7-508-pack-publication-staging-auditor.md
     artifact_type: markdown_doc
   - artifact_path: src/setup/pack-publication-staging.ts
     artifact_type: source_module
@@ -38,7 +38,7 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-REVERSE-505-pack-staged-release-rollback-backfill.md
-    - docs/plans/PLAN-REVERSE-507-pack-publication-staging-auditor-backfill.md
+    - docs/plans/PLAN-REVERSE-508-pack-publication-staging-auditor-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - src/schema/release-manifest.ts
     - src/setup/pack-publication-assets.ts
@@ -94,7 +94,7 @@ review_evidence:
         anchor_commit: 5af7de11f876e2f85704bfbfab5493d41f18006a
 ---
 
-# PLAN-L7-507
+# PLAN-L7-508
 
 ## 目的と境界
 
