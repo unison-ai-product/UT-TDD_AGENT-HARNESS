@@ -97,6 +97,9 @@ process stop、cleanup、topology adapter は本 PLAN の後続 slice とし、�
 - `active -> terminal_pending` は terminal input または、session ID・観測時刻・evidence digestを持つ
   typed `authenticated_owner_loss` observationを受ける。rawな `ownerLoss: boolean` は認証根拠と
   みなさず、receiptもtyped observationも欠落する場合は `terminal_missing` として保持する。
+  typed observationだけでreceipt欠落を許すterminal kindは `parent_loss` に限り、他のkindでは
+  同じowner-loss証跡があっても `terminal_missing` でfail-closeする。callerが空のdeny listを渡しても
+  domain由来のdeny reasonを消去できない。
 - terminal receiptがあってもdeny reasonが残る場合、`retire`はそのdeny reasonで拒否し、guardを
   digestの有無だけへ縮退させない。
 - `terminal_pending -> retained | retired` と `retained -> terminal_pending`（後着 receipt 再評価）を
@@ -107,7 +110,9 @@ process stop、cleanup、topology adapter は本 PLAN の後続 slice とし、�
 ## 3. 正規 oracle と成果物
 
 `CANDIDATE-U-WTLIFE-001/002/006/010` をそれぞれ `U-WTLIFE-001/002/006/010` へ昇格し、
-`tests/worktree-lifecycle-domain.test.ts` から実装契約を検証する。candidate 表記は設計参照へ
+`tests/worktree-lifecycle-domain.test.ts` から実装契約を検証する。`U-WTLIFE-006` では、
+activationの各deny軸、`parent_loss`限定のowner-loss例外、空deny listによる
+`terminal_missing`消去拒否を各1軸で検証する。candidate 表記は設計参照へ
 残し、実装 Green の証拠には使わない。
 
 ## 4. 後続境界

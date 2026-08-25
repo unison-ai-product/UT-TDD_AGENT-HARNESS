@@ -184,11 +184,12 @@ export class WorktreeLifecycleStore {
         { lifecycleId: identity.lifecycleId, reason: "terminal_missing" },
       );
     }
-    const denyReasons = input.denyReasons
-      ? [...input.denyReasons]
-      : hasReceipt
-        ? []
-        : ["terminal_missing" as const];
+    const denyReasons = [
+      ...new Set([
+        ...(input.denyReasons ?? []),
+        ...(hasReceipt ? [] : ["terminal_missing" as const]),
+      ]),
+    ];
     return this.transition(current, {
       type: "terminal_pending",
       identity,

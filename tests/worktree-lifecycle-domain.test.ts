@@ -278,6 +278,53 @@ describe("U-WTLIFE-006 typed activation and inventory denial", () => {
       }),
     ).toThrowError(expect.objectContaining({ code: "terminal_missing", reason: "dirty" }));
   });
+
+  it("preserves terminal_missing when owner loss supplies an empty deny list", () => {
+    const store = new WorktreeLifecycleStore();
+    store.plan(planned());
+    store.activate(identity1, {
+      attempt: 1,
+      workerStartReceiptDigest: "sha256:start",
+      inventoryAvailable: true,
+      ownerAuthenticated: true,
+    });
+    const pending = store.terminal(identity1, {
+      attempt: 1,
+      kind: "parent_loss",
+      ownerLossEvidence,
+      denyReasons: [],
+    });
+    expect(pending.denyReasons).toEqual(["terminal_missing"]);
+    expect(() =>
+      store.retire(identity1, {
+        attempt: 1,
+        inventoryAvailable: true,
+        terminalReceiptDigest: "sha256/late-receipt",
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "terminal_missing", reason: "terminal_missing" }),
+    );
+  });
+
+  it("requires parent_loss kind before authenticated owner-loss evidence can excuse a receipt", () => {
+    const store = new WorktreeLifecycleStore();
+    store.plan(planned());
+    store.activate(identity1, {
+      attempt: 1,
+      workerStartReceiptDigest: "sha256:start",
+      inventoryAvailable: true,
+      ownerAuthenticated: true,
+    });
+    expect(() =>
+      store.terminal(identity1, {
+        attempt: 1,
+        kind: "failure",
+        ownerLossEvidence,
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "terminal_missing", reason: "terminal_missing" }),
+    );
+  });
 });
 
 describe("U-WTLIFE-010 replay and fail-close transitions", () => {
