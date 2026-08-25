@@ -35,7 +35,11 @@ function createClaudeStub(root: string): string {
     "utf8",
   );
   const command = join(root, "claude-stub.cmd");
-  writeFileSync(command, `@echo off\r\nnode "${helper}"\r\n`, "utf8");
+  writeFileSync(
+    command,
+    `@echo off\r\n"${process.execPath}" "${helper}" %*\r\n`,
+    "utf8",
+  );
   return command;
 }
 
