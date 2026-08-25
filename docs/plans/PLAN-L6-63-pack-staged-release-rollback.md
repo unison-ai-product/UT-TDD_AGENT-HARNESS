@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: agent
-status: confirmed
+status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
@@ -384,7 +384,7 @@ Pack公開前提と非依存境界のみを定義する。
 
 ## 11. 現在の freeze 状態
 
-本更新は Issue #402 の B-1〜B-4を閉じる design-only pair-freeze であり、`status: confirmed` とする。
+本更新は Issue #402 の B-1〜B-4を閉じる design-only pair-freeze 候補であり、`status: draft` を維持する。
 `review_evidence`には exact origin/main `92df02a6` 上のCodex preflight、worker_model、effort、
 対象commandを記録したが、これは最終レビュー証跡ではない。Claude Opus non-author closing
 review、PR CI、R3/R4の最終receipt、Pack repositoryへの公開操作は後続条件として pending である。
