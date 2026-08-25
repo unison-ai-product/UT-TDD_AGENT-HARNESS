@@ -136,6 +136,7 @@ const CLEAN_ALLOW_FILES = new Set([
   "README.md",
   "biome.json",
   "bun.lock",
+  "package-lock.json",
   "docs/governance/README.md",
   "docs/governance/audit-framework.md",
   "docs/governance/coding-rules.md",
