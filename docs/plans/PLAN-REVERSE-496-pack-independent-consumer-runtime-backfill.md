@@ -36,7 +36,7 @@ review_evidence:
   - reviewer: Claude Opus
     review_kind: cross_agent
     reviewed_at: "2026-08-21T09:24:09Z"
-    tests_green_at: "2026-08-21T08:52:31Z"
+    tests_green_at: "2026-08-21T09:23:13Z"
     verdict: pass
     worker_model: gpt-5.6-luna
     reviewer_model: claude-opus-5
@@ -45,17 +45,18 @@ review_evidence:
     subject_head: 6d1f61dc0d6dfc9c88f75020568840ae0169f4e8
     evidence_path: "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/374#issuecomment-5368042430"
     citations:
-      - "GitHub Actions run 32467016151 (Linux/Windows/aggregate success)"
+      - "GitHub Actions run 32467016151 job 96725647565 (harness-check-linux completed before the review)"
+      - "GitHub Actions run 32467016151 Windows and aggregate jobs completed after the review at 09:27:44Z and 09:27:51Z"
       - "Mutation A: realpath canonicalization removal killed by alias and escape tests"
       - "Mutation B: layout freeze removal killed by layout oracle"
       - "Mutation C: digest equality removal killed by coherent fake identity oracle"
     green_commands:
       - kind: smoke
-        command: "GitHub Actions run 32467016151 (harness-check-linux/windows/aggregate)"
+        command: "GitHub Actions run 32467016151 job 96725647565 (harness-check-linux)"
         runner: ci
-        scope: full
+        scope: targeted
         exit_code: 0
-        completed_at: "2026-08-21T08:52:31Z"
+        completed_at: "2026-08-21T09:23:13Z"
         evidence_path: docs/plans/PLAN-REVERSE-496-pack-independent-consumer-runtime-backfill.md
         output_digest: "sha256:c903422e782637f96518e3eca128ad4fcf511cd937f134586d656401dd8197e4"
         anchor_commit: 6d1f61dc0d6dfc9c88f75020568840ae0169f4e8
