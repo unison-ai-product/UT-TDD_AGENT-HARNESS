@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
@@ -19,6 +19,33 @@ next_pair_freeze: L8
 backprop_decision: required
 backprop_decision_reason: "段階公開・rollbackの新しいfail-close境界をReverseでL7 oracleへ分解し、上流層への波及なしを記録する。"
 review_evidence:
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-08-25T09:13:50Z"
+    tests_green_at: "2026-08-25T08:46:19Z"
+    verdict: "PASS; blocking 0; canonical receipt rv1-d2f4cff5a2a46082ea8a1043c11aea441c09e2cbc3b7f343adf4711f2b7c4fba"
+    scope: >-
+      PR #404 exact HEAD 1d310e78 のB-1〜B-4契約、main同期差分、PLAN/Reverse/test-designの
+      byte identity、conflict marker不在、およびLinux/Windows/aggregate CIを非著者delta reviewした。
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: 1d310e781de83a923a394e34582f7e5f9a22f3f3
+    subject_head: 1d310e781de83a923a394e34582f7e5f9a22f3f3
+    evidence_path: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
+    green_commands:
+      - kind: integration_test
+        command: "GitHub Actions run 32827234834: harness-check-linux, harness-check-windows, harness-check"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-25T08:46:19Z"
+        evidence_path: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
+        output_digest: "sha256:368170d846abf24b78104af76d739351869b268843191664702baae7af634305"
+        anchor_commit: 1d310e781de83a923a394e34582f7e5f9a22f3f3
+    citations:
+      - "PR #404 exact-head closing review comment (2026-08-25T09:13:50Z)"
+      - "GitHub Actions run 32827234834"
   - reviewer: codex-tl-preflight
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-25T06:39:16Z"
