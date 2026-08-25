@@ -212,14 +212,9 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "Node runtime contract must declare the Node engine (PLAN-L7-462 step 3).",
     });
   }
-  if (!/\bbun\s+build\b.*--compile\b/.test(pkg.scripts?.build ?? "")) {
-    violations.push({
-      path,
-      line: 1,
-      rule: "package-missing-compiled-build",
-      message: "Build script must produce the compiled cross-platform core binary.",
-    });
-  }
+  // PLAN-L7-507: compiled 配布は ADR-001 が Node compiled ESM + sealed build receipt へ
+  // 確定済み (:38)。旧 `bun build --compile` を要求する規則は Bun 依存を lint 側から強制して
+  // いたため撤去した。sealed Node generation の build 契約は PLAN-L6-93 が所有する。
   const binPath = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.["ut-tdd"];
   if (binPath !== "./src/cli.ts") {
     violations.push({
@@ -411,16 +406,13 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
   }
   if (ALLOWED_SCRIPT_WRAPPERS.has(path) && path !== "scripts/run-vitest-snapshot.ts") {
     const lines = scriptNonCommentLines(doc.text);
-    if (
-      lines.length > 12 ||
-      !/src[\\/]cli\.ts/.test(doc.text) ||
-      !/dist[\\/]+ut-tdd/.test(doc.text)
-    ) {
+    // PLAN-L7-507: compiled 配布契約の撤去に伴い、wrapper へ dist/ut-tdd 分岐を要求しない。
+    if (lines.length > 12 || !/src[\\/]cli\.ts/.test(doc.text)) {
       violations.push({
         path,
         line: 1,
         rule: "script-wrapper-not-thin",
-        message: "Script wrappers must only dispatch to dist/ut-tdd or src/cli.ts.",
+        message: "Script wrappers must only dispatch to src/cli.ts.",
       });
     }
     if (/\bpython(?:3)?\b/.test(doc.text)) {

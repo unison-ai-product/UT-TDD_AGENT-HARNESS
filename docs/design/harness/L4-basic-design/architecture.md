@@ -32,7 +32,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | 対象リポジトリ言語非依存 | harness は対象コードを実行せず、doc/PLAN/state を検証する静的 + orchestration ツール |
 | Windows ネイティブ第一級 | path = Node `path`、改行 = `.gitattributes` 正規化、Codex sandbox 不安定を runtime adapter に隔離 |
 | ルール同一性 (concept §2.1.0) | Claude (hook) / Codex (AGENTS.md) が**同一 core**を呼ぶ。判定ロジックを 2 重実装しない |
-| 現行配布 = `bun build --compile`、target配布 = sealed Node generation | 旧配布をmigration debtとしてinventoryし、Node generationの同一性・rollback成立前に削除しない |
+| 配布 = sealed Node generation (ADR-001:38) | 旧`bun build --compile`記述は稼働する生成・配布経路を持たなかった (CI build 0件 / Pack sync除外 / release asset 0件 / runbook 0件) ため、rollback保全の対象外としてPLAN-L7-507で撤去した。sealed Node generationのbuild契約はPLAN-L6-93が所有し、未成立の間はwrapperがNodeでsourceを直接実行する |
 
 ## §2 主要技術決定 (arc42 §4 Solution Strategy)
 

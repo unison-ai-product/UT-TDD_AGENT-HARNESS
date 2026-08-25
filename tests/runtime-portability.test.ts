@@ -18,7 +18,6 @@ const validDocs: RuntimePortabilityDoc[] = [
       bin: { "ut-tdd": "./src/cli.ts" },
       engines: { node: "24.13.0", bun: ">=1.3" },
       scripts: {
-        build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
         test: "vitest run",
         "test:fast":
           "vitest run --exclude tests/cli-surface.test.ts --exclude tests/drive-db-registration.test.ts --exclude tests/projection-writer.test.ts",
@@ -42,11 +41,11 @@ const validDocs: RuntimePortabilityDoc[] = [
   { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
   {
     path: "scripts/ut-tdd",
-    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec node "$ROOT/src/cli.ts" "$@"\n',
+    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec node "$ROOT/src/cli.ts" "$@"\n',
   },
   {
     path: "scripts/ut-tdd.ps1",
-    text: '$root = "."\n& "$root\\dist\\ut-tdd.exe" @args\n& node (Join-Path $root "src\\cli.ts") @args\n',
+    text: '$root = "."\n& node (Join-Path $root "src\\cli.ts") @args\n',
   },
 ];
 
@@ -121,7 +120,6 @@ describe("runtime-portability lint", () => {
         "package-missing-esm",
         "package-missing-node-engine",
         "package-bin-not-source-cli",
-        "package-missing-compiled-build",
         "package-missing-node-fallback-smoke",
         "package-missing-typecheck",
         "tsconfig-not-strict",
@@ -266,7 +264,9 @@ describe("runtime-portability lint", () => {
       expect.stringContaining("POSIX entrypoint"),
       "set -e",
     ]);
-    expect(wrapper).toContain('exec "$ROOT/dist/ut-tdd" "$@"');
+    // PLAN-L7-507: compiled 配布契約撤去後、wrapper は Node 単一 dispatch であり
+    // dist/ut-tdd 分岐を持たない。
+    expect(wrapper).not.toContain("dist/ut-tdd");
     expect(wrapper).toContain('exec node "$ROOT/src/cli.ts" "$@"');
   });
 

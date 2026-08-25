@@ -1,8 +1,5 @@
 #!/usr/bin/env sh
-# UT-TDD thin POSIX entrypoint (ADR-001 / PLAN-L7-462 step 3). compiled binary first, fallback to node.
+# UT-TDD thin POSIX entrypoint (ADR-001 / PLAN-L7-507). Node runs the TypeScript CLI directly.
 set -e
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-if [ -x "$ROOT/dist/ut-tdd" ]; then
-  exec "$ROOT/dist/ut-tdd" "$@"
-fi
 exec node "$ROOT/src/cli.ts" "$@"

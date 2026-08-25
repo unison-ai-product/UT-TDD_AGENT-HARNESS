@@ -1580,13 +1580,13 @@ jobs:
 
 ```
 scripts/
-├── ut-tdd                    # POSIX / Git Bash ディスパッチャ (compiled core を呼ぶ)
-├── ut-tdd.ps1                # Windows PowerShell ディスパッチャ (compiled core を呼ぶ)
+├── ut-tdd                    # POSIX / Git Bash ディスパッチャ (Node で TypeScript core を呼ぶ)
+├── ut-tdd.ps1                # Windows PowerShell ディスパッチャ (Node で TypeScript core を呼ぶ)
 ├── install-hooks.sh
 └── install-hooks.ps1
 ```
 
-`plan lint` / `vmodel lint` / `doctor` / `gate` は個別 `.sh` ではなく compiled `ut-tdd` の **サブコマンド**として実装する。PowerShell と POSIX shell の entrypoint は同じ **TypeScript core** (開発時 `bun run`、配布時 `bun build --compile` の単一バイナリ) を呼び、検証結果と exit code を一致させる。`scripts/` 配下は薄い entrypoint / installer / CI helper に限定し、validator や runtime 判定などの実体は `src/` (TypeScript) に置く。OS 片系だけが通る状態は Phase 0 受入不可とする。
+`plan lint` / `vmodel lint` / `doctor` / `gate` は個別 `.sh` ではなく `ut-tdd` CLI の **サブコマンド**として実装する。PowerShell と POSIX shell の entrypoint は同じ **TypeScript core** を Node で呼び、検証結果と exit code を一致させる。配布形態は ADR-001 が定める「exact pin した Node/npm と lock graph から生成する compiled ESM + sealed build receipt」であり (`docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md:38`)、その build 契約は `PLAN-L6-93-node-bootstrap-contract` が所有する。旧 `bun build --compile` 単一バイナリは ADR-001 に supersede された記述であり、実運用の生成・配布経路を持たないまま残っていたため `PLAN-L7-507` で撤去した。`scripts/` 配下は薄い entrypoint / installer / CI helper に限定し、validator や runtime 判定などの実体は `src/` (TypeScript) に置く。OS 片系だけが通る状態は Phase 0 受入不可とする。
 
 ### 実行モード検出
 
@@ -2484,7 +2484,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
     └── *.yaml                                    # G
 ```
 
-> **scripts/ 整流 (ADR-001)**: `plan lint` / `vmodel lint` / `doctor` / `gate` / escalation / failure log の各機能は個別 `.sh` ではなく compiled `ut-tdd` の**サブコマンド** (TS core、§7.1) として実装する。`scripts/` には OS entrypoint (`ut-tdd` / `ut-tdd.ps1`) と installer / 一回限り ops のみを置く。TS 依存・config は **root の `package.json` / `tsconfig.json` に集約**し、`scripts/` 配下に重複させない (repository-structure.md §8)。
+> **scripts/ 整流 (ADR-001)**: `plan lint` / `vmodel lint` / `doctor` / `gate` / escalation / failure log の各機能は個別 `.sh` ではなく `ut-tdd` CLI の**サブコマンド** (TS core、§7.1) として実装する。`scripts/` には OS entrypoint (`ut-tdd` / `ut-tdd.ps1`) と installer / 一回限り ops のみを置く。TS 依存・config は **root の `package.json` / `tsconfig.json` に集約**し、`scripts/` 配下に重複させない (repository-structure.md §8)。
 
 ## 9.2 受入条件 (構造)
 

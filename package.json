@@ -28,7 +28,6 @@
   },
   "scripts": {
     "dev": "node src/cli.ts",
-    "build": "bun build src/cli.ts --compile --outfile dist/ut-tdd",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src tests",
     "format": "biome check --write src tests",
