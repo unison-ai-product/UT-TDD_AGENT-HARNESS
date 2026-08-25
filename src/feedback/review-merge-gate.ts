@@ -87,7 +87,9 @@ function errorMessage(error: unknown): string {
  * single-root behavior.
  */
 function reviewInputRoots(repoRoot: string): string[] {
-  repoRoot = resolveRepositoryRoot(repoRoot);
+  // Callers normalize the Git root at the public boundary before loading
+  // linked-worktree evidence. Keeping this helper single-purpose prevents a
+  // second idempotent root resolution from masquerading as a separate guard.
   const roots = new Map<string, string>();
   const add = (candidate: string): void => {
     if (!existsSync(candidate)) return;
