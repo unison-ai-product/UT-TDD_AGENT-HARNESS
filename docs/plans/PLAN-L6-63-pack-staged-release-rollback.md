@@ -9,14 +9,34 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
-updated: 2026-08-21
+updated: 2026-08-25
 owner: PO / Codex
-github_issue_id: 364
+github_issue_id: 402
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L8
-review_evidence: []
+backprop_decision: required
+backprop_decision_reason: "段階公開・rollbackの新しいfail-close境界をReverseでL7 oracleへ分解し、上流層への波及なしを記録する。"
+review_evidence:
+  - reviewer: codex-tl-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-25T06:39:16Z"
+    tests_green_at: "2026-08-25T06:39:16Z"
+    verdict: "PRECHECK_ONLY; Claude Opus non-author closing review pending"
+    scope: >-
+      Issue #402 の B-1〜B-4 closure、explicit artifact inventory、channel pointer、append-only
+      publication FSM、supersede-forward rollback、fail-close、consumer boundary、および source/CLI/
+      Pack remote mutation 非スコープを exact origin/main 92df02a6 上で preflight 確認した。
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 92df02a6da7be284699513c4d6c13c543e4ef282
+    subject_head: 92df02a6da7be284699513c4d6c13c543e4ef282
+    evidence_path: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
+    citations:
+      - "Issue #402: B-1〜B-4 pre-gate と completion criteria"
+      - "docs/test-design/harness/L7-unit-test-design.md: CANDIDATE-PACKPUB-001〜004"
 agent_slots:
   - role: tl
     slot_label: "TL - Pack 配布の段階公開・ロールバック手順の設計"
@@ -25,7 +45,14 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
-  requires: []
+  requires:
+    - PLAN-L7-494-release-promotion-rollback-gate
+    - PLAN-L7-496-pack-independent-consumer-runtime
+    - PLAN-L7-499-pack-publication-manifest-v2-pure-domain
+    - PLAN-L7-500-pack-publication-assets-pure-domain
+  blocks:
+    - PLAN-L7-473-staged-release-channel-manifest
+    - PLAN-L6-102-release-promotion-rollback-gate
   references:
     - docs/design/harness/L4-basic-design/architecture.md
     - docs/design/harness/L6-function-design/setup-solo-team.md
@@ -35,7 +62,14 @@ dependencies:
     - docs/plans/PLAN-L7-473-staged-release-channel-manifest.md
     - docs/plans/PLAN-L7-492-pf5-release-aggregate-admission-pair-freeze.md
     - docs/plans/PLAN-REVERSE-473-staged-release-backfill.md
+    - docs/plans/PLAN-REVERSE-505-pack-staged-release-rollback-backfill.md
     - docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
+    - docs/plans/PLAN-L7-494-release-promotion-rollback-gate.md
+    - docs/plans/PLAN-L7-496-pack-independent-consumer-runtime.md
+    - docs/plans/PLAN-L7-499-pack-publication-manifest-v2-pure-domain.md
+    - docs/plans/PLAN-L7-500-pack-publication-assets-pure-domain.md
+    - docs/test-design/harness/L7-unit-test-design.md
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/402
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/364
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/376
     - .ut-tdd/audit/A-185-vmodel-docgen-reference-mining-2026-07-07.md
@@ -58,7 +92,7 @@ human-approved command list** を持つ (裏取り済)。したがって「ロ�
 
 ## 1. 位置づけと責務境界
 
-本 PLAN は Issue #364 の最初の L6 design-freeze であり、Pack repository へ証明済み
+本 PLAN は Issue #402（親 Issue #364）の L6 design-freeze であり、Pack repository へ証明済み
 release artifact を段階公開する外部契約を所有する。`PLAN-L7-492` は source 側の
 PF-5 aggregate admission、`PLAN-L7-473`/`PLAN-REVERSE-473` は release channel manifest
 の L7/L6 backfill、`PLAN-L6-101` は Pack 導入後の二 consumer runtime 隔離を所有する。
@@ -73,6 +107,18 @@ commandと、package処理が生成しない`.sig` assetをemitするため、�
 置換し、oracleで固定するまではread-onlyのknown gapとする。この修理はIssue #376で追跡し、
 closeされるまでpublication adapterのremote適用を許可しない。これらの安全境界を迂回する自動
 push、tag 操作、GitHub API 操作を追加しない。
+
+## 1.1 B-1〜B-4 closure crosswalk
+
+Issue #364 の Opus pre-gate が指摘した blocking を、次の独立した契約面へ降下して閉じる。
+この表は実装完了の主張ではなく、L6 freeze から後続 oracle へ渡す境界である。
+
+| gap | freeze した解決 | 検証面 |
+| --- | --- | --- |
+| B-1: freeze対象が空 | §2〜§6で公開object、identity、channel、receipt、publication FSM、rollback runbookをtyped契約として固定し、§9でACとcandidateを束ねる | `CANDIDATE-PACKPUB-001` |
+| B-2: tree派生のartifact set | `releases.<releaseId>.artifacts[]`を出荷集合の唯一の列挙とし、tree/walk/allowlist/worktree/Pack checkoutからの補完を禁止する | `CANDIDATE-PACKPUB-002`、`U-PACKPUB-001`、`U-PACKASSET-001..006` |
+| B-3: remote mutationの承認面欠落 | tag、Release、asset、pointer、promotion、rollbackを操作単位で列挙し、approval/execution receipt、before-state CAS、nonce/expiry、auditor観測を要求する。local sync planはremote承認の代用にしない | `CANDIDATE-PACKPUB-003` |
+| B-4: revertの意味未定義 | 公開済みobjectを削除・付替えせず、新しいrollback intentとpointer宣言をappendするsupersede-forwardだけを許可し、応答不明・復旧失敗を`indeterminate`/`rollback_failed`として保持する | `CANDIDATE-PACKPUB-004` |
 
 ## 2. 正本と artifact manifest 境界
 
@@ -265,7 +311,7 @@ target release/tag/Release/assetsの全identity再計算後だけ成立する。
 
 ## 7. Pack-only 二 consumer の公開後受入
 
-Issue #364 の L12受入は、source repository、source worktree、開発用DB/PLAN/evidence、
+親 Issue #364 の L12受入は、source repository、source worktree、開発用DB/PLAN/evidence、
 local Pack checkout を fixture から除外した clean Pack artifact だけで Product A/B を導入する。
 各 product は固有の `consumerRoot` / `runtimeRoot` / version pin を持ち、DB、Memory、PLAN、
 lock、hook、receipt、evidence、history を相互に列挙・再利用しない。A/B は異なる release ID
@@ -319,23 +365,27 @@ Pack公開前提と非依存境界のみを定義する。
 
 ## 10. Schedule とスコープ境界
 
-1. [完了済み依存] PF-1〜PF-5のsource側 admission と `PLAN-REVERSE-473` のbackfillを利用する。
-2. [本 slice] 本 PLAN のL6契約を pair-freeze し、non-author cross-review後に実装許可を出す。
-3. [後続] Issue #376のNode正規CLI/実asset inventory修理と、manifest v2 schema/parser/migrationの
+1. [完了済み依存] `PLAN-L7-494`/`PLAN-L7-496`/`PLAN-L7-499`/`PLAN-L7-500`、PF-1〜PF-5のsource側
+   admission、および `PLAN-REVERSE-473` のbackfillを利用する。
+2. [本 slice] 本 PLAN のL6契約を pair-freeze し、B-1〜B-4を`CANDIDATE-PACKPUB-001〜004`へ
+   1:1で束ね、non-author cross-review後に実装許可を出す。
+3. [本 slice Reverse] `PLAN-REVERSE-505`でrequirements/L4/L5の非波及とL7 ledger更新を記録する。
+4. [後続] Issue #376のNode正規CLI/実asset inventory修理と、manifest v2 schema/parser/migrationの
    L7 pair/Reverseを先に閉じ、その後publication
    adapter/auditor の最小実装でimmutable releaseを公開し、canary pointerまでを
    attestedにする。stable pointerはまだ変更しない。
-4. [後続] canary Pack checkoutだけから`PLAN-L6-101`の二consumer E2Eを実施し、同じrelease
+5. [後続] canary Pack checkoutだけから`PLAN-L6-101`の二consumer E2Eを実施し、同じrelease
    identityへのLinux/Windows/aggregate証跡を固定する。
-5. [後続] canary証跡、non-author closing receipt、QA、human approval、least-privilege dispositionを
+6. [後続] canary証跡、non-author closing receipt、QA、human approval、least-privilege dispositionを
    同一subjectへ束縛し、CASでstable pointerを更新する。これによりpublication→consumer検証→stable
    の循環を作らない。
-6. [禁止] PF-1〜PF-5、S3 gate、S4 consumer runtime、D1/D2/D3、Execution Episode、profile
+7. [禁止] PF-1〜PF-5、S3 gate、S4 consumer runtime、D1/D2/D3、Execution Episode、profile
    一般化、force push/tag付替え、自動 remote mutation を本 PLAN に再実装・混在させない。
 
 ## 11. 現在の freeze 状態
 
-本更新は既存正本と Issue #364 の受入条件をもとにした design-only 差分である。Opus pre-gate の
-独立判定、R3/R4、実装証跡、CI、Pack repositoryへの公開操作はまだ完了していない。従って
-`status: draft`、`review_evidence: []`、`generates` の本 PLAN 単独を維持し、pre-gate PASSを
-受領するまで commit/PR/merge-ready を宣言しない。
+本更新は Issue #402 の B-1〜B-4を閉じる design-only pair-freeze 候補であり、`status: draft` を維持する。
+`review_evidence`には exact origin/main `92df02a6` 上のCodex preflight、worker_model、effort、
+対象commandを記録したが、これは最終レビュー証跡ではない。Claude Opus non-author closing
+review、PR CI、R3/R4の最終receipt、Pack repositoryへの公開操作は後続条件として pending である。
+実装、Pack copy、GitHub remote mutation、consumer E2E、merge完了は主張しない。
