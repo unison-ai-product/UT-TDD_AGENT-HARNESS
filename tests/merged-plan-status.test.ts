@@ -11,13 +11,13 @@ import {
 } from "../src/lint/merged-plan-status.ts";
 import { classifyTargetArtifacts } from "../src/lint/merged-plan-target-evidence.ts";
 
-describe("merged-plan-status diagnostics (Issue #390 / PLAN-L7-504)", () => {
-  it("U-MPSTATUS-504-001: landing violation explains both canonical workflows and confirm evidence", () => {
+describe("merged-plan-status diagnostics (Issue #390 / PLAN-L7-506)", () => {
+  it("U-MPSTATUS-506-001: landing violation separates preflight confirm from exact-head close evidence", () => {
     const [message] = mergedPlanStatusMessages({
       ok: false,
       violations: [
         {
-          planId: "PLAN-L7-504",
+          planId: "PLAN-L7-506",
           status: "draft",
           artifacts: ["src/feature.ts"],
           phase: "landing",
@@ -30,8 +30,15 @@ describe("merged-plan-status diagnostics (Issue #390 / PLAN-L7-504)", () => {
     expect(message).toContain("PLAN filing PR");
     expect(message).toContain("pair-freeze cross-review");
     expect(message).toContain("(B) 単一の実装 PR");
+    expect(message).toContain("preflight review_evidence");
+    expect(message).toContain("confirmed として成立");
     expect(message).toContain("非著者 closing review");
+    expect(message).toContain("PASS verdict");
     expect(message).toContain("canonical receipt");
+    expect(message).toContain("exact PR HEAD");
+    expect(message).toContain("PR comment / canonical review receipt");
+    expect(message).toContain("PLAN の review_evidence へ書き戻す要件ではない");
+    expect(message).toContain("close gate");
     expect(message).toContain("review_evidence");
     expect(message).toContain("tests_green_at <= reviewed_at");
     for (const field of [
@@ -50,7 +57,7 @@ describe("merged-plan-status diagnostics (Issue #390 / PLAN-L7-504)", () => {
     expect(message).toContain("docs/design/harness/L6-function-design/test-before-review.md");
   });
 
-  it("U-MPSTATUS-504-002: merged violation keeps the legacy diagnostic without landing guidance", () => {
+  it("U-MPSTATUS-506-002: merged violation keeps the legacy diagnostic without landing guidance", () => {
     const [message] = mergedPlanStatusMessages({
       ok: false,
       violations: [
@@ -70,13 +77,13 @@ describe("merged-plan-status diagnostics (Issue #390 / PLAN-L7-504)", () => {
     expect(message).not.toContain("phase=landing");
   });
 
-  it("U-MPSTATUS-504-003: OK diagnostic remains unchanged", () => {
+  it("U-MPSTATUS-506-003: OK diagnostic remains unchanged", () => {
     expect(mergedPlanStatusMessages({ ok: true, violations: [] })).toEqual([
       "merged-plan-status — OK (merged generated artifact を持つ全 PLAN が confirmed/completed)",
     ]);
   });
 
-  it("U-MPSTATUS-504-004: a non-landing violation cannot receive landing-only guidance", () => {
+  it("U-MPSTATUS-506-004: a non-landing violation cannot receive landing-only guidance", () => {
     const [message] = mergedPlanStatusMessages({
       ok: false,
       violations: [
