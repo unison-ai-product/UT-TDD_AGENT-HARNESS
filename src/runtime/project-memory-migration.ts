@@ -2,14 +2,20 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   closeSync,
+  copyFileSync,
   existsSync,
+  fsyncSync,
+  lstatSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { readMemory } from "../memory/service.ts";
 import { requireProjectMemoryRoot } from "./project-memory-root.ts";
 
@@ -32,6 +38,17 @@ export interface ProjectMemoryMigrationReceipt {
   readonly outcome: "ready" | "quarantine_required";
 }
 
+export interface ProjectMemoryMigrationCompletion {
+  readonly schema: "ut-tdd.project-memory-migration-completion/v1";
+  readonly projectId: string;
+  readonly inventoryDigest: string;
+  readonly corpusDigest: string;
+  readonly operationId: string;
+  readonly outcome: "applied" | "quarantined";
+  readonly sourceCount: number;
+  readonly destinationCount: number;
+}
+
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value && typeof value === "object") {
@@ -49,6 +66,69 @@ function valid(entry: ProjectMemoryInventoryEntry): boolean {
     /^[a-f0-9]{64}$/.test(entry.digest) &&
     entry.sourcePath.trim().length > 0
   );
+}
+
+function digest(value: string | Buffer): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function atomicWrite(target: string, content: string): void {
+  mkdirSync(dirname(target), { recursive: true });
+  const temporary = `${target}.tmp-${process.pid}-${Date.now()}`;
+  const descriptor = openSync(temporary, "wx", 0o600);
+  try {
+    writeFileSync(descriptor, content, "utf8");
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+  try {
+    renameSync(temporary, target);
+  } catch (error) {
+    rmSync(temporary, { force: true });
+    throw error;
+  }
+}
+
+function assertRegularContainedFile(path: string, allowedRoots: readonly string[]): Buffer {
+  const absolute = resolve(path);
+  const stat = lstatSync(absolute);
+  if (!stat.isFile() || stat.isSymbolicLink()) {
+    throw new Error("project_memory_migration_source_unsafe");
+  }
+  const real = realpathSync(absolute);
+  if (
+    !allowedRoots.some((root) => {
+      try {
+        const rel = relative(realpathSync(root), real);
+        return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+      } catch {
+        return false;
+      }
+    })
+  ) {
+    throw new Error("project_memory_migration_source_escape");
+  }
+  return readFileSync(real);
+}
+
+function directoryDigest(root: string): string {
+  const parts: string[] = [];
+  const visit = (directory: string): void => {
+    for (const name of readdirSync(directory).sort()) {
+      const path = join(directory, name);
+      const stat = lstatSync(path);
+      if (stat.isSymbolicLink()) throw new Error("project_memory_migration_corpus_unsafe");
+      if (stat.isDirectory()) {
+        visit(path);
+        continue;
+      }
+      if (!stat.isFile()) throw new Error("project_memory_migration_corpus_unsafe");
+      parts.push(`${relative(root, path).replaceAll("\\", "/")}\0${digest(readFileSync(path))}`);
+    }
+  };
+  if (existsSync(root)) visit(root);
+  return digest(parts.join("\n"));
 }
 
 /** Decide migration without writing either the canonical corpus or quarantine. */
@@ -149,11 +229,141 @@ export function persistProjectMemoryMigrationReceipt(
     if (readFileSync(target, "utf8") === serialized) return target;
     throw new Error("project_memory_migration_receipt_conflict");
   }
-  const descriptor = openSync(target, "wx", 0o600);
-  try {
-    writeFileSync(descriptor, serialized, "utf8");
-  } finally {
-    closeSync(descriptor);
-  }
+  atomicWrite(target, serialized);
   return target;
+}
+
+/** Apply a revalidated inventory as one corpus/quarantine directory transition. */
+export function applyProjectMemoryMigration(input: {
+  readonly repoRoot: string;
+  readonly receipt: ProjectMemoryMigrationReceipt;
+  readonly operationId: string;
+}): ProjectMemoryMigrationCompletion {
+  if (!input.operationId.trim()) {
+    throw new Error("project_memory_migration_operation_id_required");
+  }
+  const project = requireProjectMemoryRoot(input.repoRoot);
+  if (input.receipt.projectId !== project.projectId) {
+    throw new Error("project_memory_migration_receipt_project_mismatch");
+  }
+
+  const migrationRoot = join(project.runtimeBusRoot, "memory-migration");
+  const completionPath = join(migrationRoot, "completed", `${input.receipt.inventoryDigest}.json`);
+  if (existsSync(completionPath)) {
+    const existing = JSON.parse(
+      readFileSync(completionPath, "utf8"),
+    ) as ProjectMemoryMigrationCompletion;
+    if (
+      existing.projectId === project.projectId &&
+      existing.inventoryDigest === input.receipt.inventoryDigest &&
+      existing.operationId === input.operationId
+    ) {
+      return existing;
+    }
+    throw new Error("project_memory_migration_completion_conflict");
+  }
+
+  const fresh = inventoryProjectMemory(input.repoRoot);
+  if (
+    fresh.inventoryDigest !== input.receipt.inventoryDigest ||
+    canonicalJson(fresh) !== canonicalJson(input.receipt)
+  ) {
+    throw new Error("project_memory_migration_inventory_changed");
+  }
+
+  const roots = linkedWorktreeRoots(input.repoRoot).map((root) => join(root, ".ut-tdd", "memory"));
+  const selected =
+    input.receipt.outcome === "ready"
+      ? input.receipt.canonical
+      : input.receipt.conflicts.flatMap((conflict) => conflict.variants);
+  const bytes = new Map<string, Buffer>();
+  for (const entry of selected) {
+    const content = assertRegularContainedFile(entry.sourcePath, roots);
+    if (digest(content) !== entry.digest) {
+      throw new Error("project_memory_migration_inventory_changed");
+    }
+    bytes.set(`${entry.memoryId}\0${entry.digest}\0${entry.sourcePath}`, content);
+  }
+
+  const staging = join(migrationRoot, "staging", `${input.receipt.inventoryDigest}-${process.pid}`);
+  rmSync(staging, { recursive: true, force: true });
+  mkdirSync(staging, { recursive: true });
+  let destinationCount = 0;
+  let corpusDigest = "";
+  let target = "";
+  let backup = "";
+  let hadTarget = false;
+  try {
+    if (input.receipt.outcome === "ready") {
+      target = project.authoredMemoryRoot;
+      hadTarget = existsSync(target);
+      if (hadTarget) {
+        for (const name of readdirSync(target).sort()) {
+          const source = join(target, name);
+          const stat = lstatSync(source);
+          if (!stat.isFile() || stat.isSymbolicLink()) {
+            throw new Error("project_memory_migration_corpus_unsafe");
+          }
+          copyFileSync(source, join(staging, name));
+        }
+      }
+      for (const entry of input.receipt.canonical) {
+        const name = basename(entry.sourcePath);
+        const destination = join(staging, name);
+        const content = bytes.get(`${entry.memoryId}\0${entry.digest}\0${entry.sourcePath}`);
+        if (!content) throw new Error("project_memory_migration_inventory_changed");
+        if (existsSync(destination) && digest(readFileSync(destination)) !== entry.digest) {
+          throw new Error("project_memory_migration_destination_conflict");
+        }
+        if (!existsSync(destination))
+          writeFileSync(destination, content, { flag: "wx", mode: 0o600 });
+      }
+      destinationCount = readdirSync(staging).length;
+      corpusDigest = directoryDigest(staging);
+    } else {
+      target = join(migrationRoot, "quarantine", input.receipt.inventoryDigest);
+      hadTarget = existsSync(target);
+      for (const conflict of input.receipt.conflicts) {
+        const memoryDirectory = join(staging, digest(conflict.memoryId));
+        mkdirSync(memoryDirectory, { recursive: true });
+        for (const entry of conflict.variants) {
+          const content = bytes.get(`${entry.memoryId}\0${entry.digest}\0${entry.sourcePath}`);
+          if (!content) throw new Error("project_memory_migration_inventory_changed");
+          const destination = join(memoryDirectory, `${entry.digest}.md`);
+          if (!existsSync(destination))
+            writeFileSync(destination, content, { flag: "wx", mode: 0o600 });
+          destinationCount += 1;
+        }
+      }
+      corpusDigest = directoryDigest(staging);
+    }
+
+    mkdirSync(dirname(target), { recursive: true });
+    backup = `${target}.backup-${process.pid}`;
+    if (hadTarget) renameSync(target, backup);
+    renameSync(staging, target);
+
+    const completion: ProjectMemoryMigrationCompletion = {
+      schema: "ut-tdd.project-memory-migration-completion/v1",
+      projectId: project.projectId,
+      inventoryDigest: input.receipt.inventoryDigest,
+      corpusDigest,
+      operationId: input.operationId,
+      outcome: input.receipt.outcome === "ready" ? "applied" : "quarantined",
+      sourceCount: selected.length,
+      destinationCount,
+    };
+    try {
+      atomicWrite(completionPath, `${canonicalJson(completion)}\n`);
+    } catch (error) {
+      rmSync(target, { recursive: true, force: true });
+      if (hadTarget) renameSync(backup, target);
+      throw error;
+    }
+    if (hadTarget) rmSync(backup, { recursive: true, force: true });
+    return completion;
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+    if (backup && existsSync(backup) && !existsSync(target)) renameSync(backup, target);
+  }
 }

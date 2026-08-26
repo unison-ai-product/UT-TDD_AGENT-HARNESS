@@ -19,11 +19,13 @@ import {
   summarizeUnclaimedInbox,
 } from "../src/runtime/claude-memory-wake.ts";
 import {
+  applyProjectMemoryMigration,
   inventoryProjectMemory,
   persistProjectMemoryMigrationReceipt,
   planProjectMemoryMigration,
 } from "../src/runtime/project-memory-migration.ts";
 import {
+  requireProjectMemoryRoot,
   resolveProjectMemoryRoot,
   resolveProjectMemoryRootWithPorts,
 } from "../src/runtime/project-memory-root.ts";
@@ -330,6 +332,82 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
           projectId: "fixture/foreign",
         }),
       ).toThrow("project_memory_migration_receipt_project_mismatch");
+      const completion = applyProjectMemoryMigration({
+        repoRoot: worker,
+        receipt,
+        operationId: "quarantine-divergence",
+      });
+      expect(completion).toMatchObject({ outcome: "quarantined", sourceCount: 2 });
+      expect(
+        applyProjectMemoryMigration({
+          repoRoot: main,
+          receipt,
+          operationId: "quarantine-divergence",
+        }),
+      ).toEqual(completion);
+      const quarantine = join(
+        requireProjectMemoryRoot(main).runtimeBusRoot,
+        "memory-migration",
+        "quarantine",
+        receipt.inventoryDigest,
+      );
+      expect(existsSync(quarantine)).toBe(true);
+    } finally {
+      try {
+        execFileSync("git", ["worktree", "remove", "--force", worker], { cwd: main });
+      } catch {
+        // setup failure before worktree registration
+      }
+      rmSync(worker, { recursive: true, force: true });
+      rmSync(main, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-P-PMEMROOT-005: worker-only memoryをcanonical corpusへ原子的にapplyする", () => {
+    const main = mkdtempSync(join(tmpdir(), "ut-pmem-apply-main-"));
+    const worker = mkdtempSync(join(tmpdir(), "ut-pmem-apply-worker-"));
+    rmSync(worker, { recursive: true, force: true });
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: main });
+      execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: main });
+      execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: main });
+      writeFileSync(
+        join(main, "ut-tdd.project.json"),
+        `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: "fixture/apply" })}\n`,
+        "utf8",
+      );
+      execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: main });
+      execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: main });
+      execFileSync("git", ["worktree", "add", "-q", "-b", "worker", worker, "HEAD"], {
+        cwd: main,
+      });
+      const authored = writeMemory({
+        repoRoot: worker,
+        input: {
+          kind: "project",
+          title: "worker only",
+          body: "migrate me",
+          now: "2026-08-26T00:00:00.000Z",
+        },
+      });
+      const receipt = inventoryProjectMemory(worker);
+      expect(receipt.outcome).toBe("ready");
+      const completion = applyProjectMemoryMigration({
+        repoRoot: worker,
+        receipt,
+        operationId: "apply-worker-only",
+      });
+      expect(completion).toMatchObject({ outcome: "applied", sourceCount: 1 });
+      expect(readMemory({ repoRoot: main }).entries).toMatchObject([
+        { memory_id: authored.memory_id, content_hash: authored.content_hash },
+      ]);
+      expect(
+        applyProjectMemoryMigration({
+          repoRoot: main,
+          receipt,
+          operationId: "apply-worker-only",
+        }),
+      ).toEqual(completion);
     } finally {
       try {
         execFileSync("git", ["worktree", "remove", "--force", worker], { cwd: main });
