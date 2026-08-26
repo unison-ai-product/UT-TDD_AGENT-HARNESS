@@ -132,6 +132,15 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SETUP-012 | `buildConsumerReadinessPlan` | Bun>=1.3 / git / gh / project-local `ut-tdd` CLI / runtime CLI を preflight として診断し、gh は GitHub setup 用 warning、Bun/git/project-local `ut-tdd` は blocking。runtime CLI 不在は `mode=standalone` の advisory とし、judgment gate は人間レビュー必須として表示する。生成 adapter hooks は `.ut-tdd/bin/ut-tdd.mjs ...` を呼ぶため、project-local CLI 未解決なら consumer hook 自走性を満たさず readiness を fail-close する。rollback managed paths、tag-pin contract、CI self-sufficiency、monorepo package-root 判定、全 smoke scenario を返す。 |
 | U-SETUP-013 / AT-DIST-001 | `tests/distribution-acceptance.test.ts` | Local clean distribution acceptance smoke: planned clean artifacts を temp repo にコピーし、`bun install --frozen-lockfile`、`bun src/cli.ts status --json`、`bun src/cli.ts distribution plan --tag v0.1.0 --json`、`bun run typecheck` が fake provider CLI 付きで通ること。Pack `v0.1.0` tag / GitHub Release 後も、この local smoke は署名 tarball publish / UAT / post-release telemetry を実行しない。source repo 用 full `doctor` は dogfood PLAN/design/test-design/runtime artifact を除外する clean distribution の受け入れ条件には含めず、consumer doctor profile が必要なら別 PLAN とする。 |
 
+### §1.7b U-RPORT (runtime-portability lint 由来、PLAN-L7-462 / PLAN-L7-507)
+
+`U-RPORT-001`〜`U-RPORT-018` は `oracle-test-citation-baseline` の既存未宣言 debt として台帳に
+残っている (Issue #259)。**新規 ID は本節で宣言する** — debt baseline を増やさない。
+
+| U-ID | 検証対象 | oracle (DbC) |
+|---|---|---|
+| U-RPORT-019 | `analyzeRuntimePortability` (script wrapper 規則) | 撤去済み compiled 配布 (`dist/ut-tdd`) への wrapper dispatch 再流入を **OS 非依存に** fail-close する。POSIX `dist/ut-tdd` と PowerShell `dist\ut-tdd.exe` の双方を fixture で検出し (`script-wrapper-compiled-dispatch`)、現行 repo の両 wrapper では violation 0 件 (false positive なし)。`script-wrapper-not-thin` の判定 (非コメント 12 行以下 + `src/cli.ts` 参照) は dist 分岐の再追加を通過させるため、この規則が無いと Windows 側の AC-3 が fail-close しない。 |
+
 ### §1.8 U-HOVER (handover 記録機構由来、PLAN-L6-06 add-design / handover-mechanism.md §2-§3)
 | U-ID | 検証対象 | oracle (DbC) |
 |---|---|---|
