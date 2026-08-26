@@ -113,6 +113,21 @@ describe("managed worktree lifecycle", () => {
     ledger.append(events[1]);
     expect(ledger.read()).toHaveLength(2);
 
+    const replayPorts = ports();
+    const replayed = new ManagedWorktreeCoordinator(
+      replayPorts,
+      ledger.read().map((entry) => entry.event),
+    );
+    replayed.finish({
+      identity: events[0].identity,
+      attempt: 1,
+      kind: "success",
+      terminalReceiptDigest: "sha256:replayed-terminal",
+    });
+    expect(replayPorts.enqueueCleanup).toHaveBeenCalledWith(
+      expect.objectContaining({ terminalReceiptDigest: "sha256:replayed-terminal" }),
+    );
+
     const tampered = readFileSync(path, "utf8").replace(
       '"ownerSessionId":"session-1"',
       '"ownerSessionId":"forged"',

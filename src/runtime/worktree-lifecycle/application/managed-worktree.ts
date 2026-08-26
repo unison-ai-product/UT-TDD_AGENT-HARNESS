@@ -80,9 +80,14 @@ function assertDirectChild(root: string, candidate: string): void {
 }
 
 export class ManagedWorktreeCoordinator {
-  private readonly store = new WorktreeLifecycleStore();
+  private readonly store: WorktreeLifecycleStore;
 
-  constructor(private readonly ports: ManagedWorktreePorts) {}
+  constructor(
+    private readonly ports: ManagedWorktreePorts,
+    events: readonly LifecycleEvent[] = [],
+  ) {
+    this.store = new WorktreeLifecycleStore(events);
+  }
 
   create(input: ManagedWorktreeCreateInput): WorktreeLifecycleRecord {
     this.assertCreateInput(input);

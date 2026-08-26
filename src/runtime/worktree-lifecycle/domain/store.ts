@@ -58,6 +58,13 @@ export class WorktreeLifecycleStore {
   private readonly keys = new Set<string>();
   private readonly eventLog: LifecycleEvent[] = [];
 
+  constructor(events: readonly LifecycleEvent[] = []) {
+    for (const event of events) {
+      const key = lifecycleKey(event.identity);
+      this.append(key, this.records.get(key), event);
+    }
+  }
+
   plan(input: PlannedLifecycleInput): WorktreeLifecycleRecord {
     if (
       input.identity.repositoryLineageId !== input.repositoryLineageId ||
