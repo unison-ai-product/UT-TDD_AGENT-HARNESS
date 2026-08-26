@@ -1,8 +1,11 @@
 import { execFileSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -392,6 +395,44 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       });
       const receipt = inventoryProjectMemory(worker);
       expect(receipt.outcome).toBe("ready");
+      const source = join(worker, authored.source_path);
+      const original = readFileSync(source, "utf8");
+      writeFileSync(source, `${original}drift\n`, "utf8");
+      expect(() =>
+        applyProjectMemoryMigration({
+          repoRoot: worker,
+          receipt,
+          operationId: "apply-worker-only",
+        }),
+      ).toThrow("project_memory_migration_inventory_changed");
+      expect(readMemory({ repoRoot: main }).entries).toEqual([]);
+      writeFileSync(source, original, "utf8");
+      const project = requireProjectMemoryRoot(main);
+      const migrationRoot = join(project.runtimeBusRoot, "memory-migration");
+      const staging = join(migrationRoot, "staging", `${receipt.inventoryDigest}-crash`);
+      mkdirSync(staging, { recursive: true });
+      copyFileSync(source, join(staging, authored.source_path.split("/").at(-1) ?? "memory.md"));
+      mkdirSync(join(main, ".ut-tdd"), { recursive: true });
+      renameSync(staging, project.authoredMemoryRoot);
+      const transactionPath = join(
+        migrationRoot,
+        "transactions",
+        `${receipt.inventoryDigest}.json`,
+      );
+      mkdirSync(join(migrationRoot, "transactions"), { recursive: true });
+      writeFileSync(
+        transactionPath,
+        `${JSON.stringify({
+          schema: "ut-tdd.project-memory-migration-transaction/v1",
+          projectId: project.projectId,
+          inventoryDigest: receipt.inventoryDigest,
+          target: project.authoredMemoryRoot,
+          backup: `${project.authoredMemoryRoot}.backup-crash`,
+          staging,
+          hadTarget: false,
+        })}\n`,
+        "utf8",
+      );
       const completion = applyProjectMemoryMigration({
         repoRoot: worker,
         receipt,
@@ -408,6 +449,14 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
           operationId: "apply-worker-only",
         }),
       ).toEqual(completion);
+      writeFileSync(join(main, authored.source_path), `${original}tampered\n`, "utf8");
+      expect(() =>
+        applyProjectMemoryMigration({
+          repoRoot: main,
+          receipt,
+          operationId: "apply-worker-only",
+        }),
+      ).toThrow("project_memory_migration_completion_corrupt");
     } finally {
       try {
         execFileSync("git", ["worktree", "remove", "--force", worker], { cwd: main });
