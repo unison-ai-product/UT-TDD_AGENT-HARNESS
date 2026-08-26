@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   closeSync,
   constants,
@@ -15,6 +15,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -59,6 +60,7 @@ interface ProjectMemoryMigrationTransaction {
   readonly backup: string;
   readonly staging: string;
   readonly hadTarget: boolean;
+  readonly priorCorpusDigest: string | null;
 }
 
 function canonicalJson(value: unknown): string {
@@ -108,6 +110,10 @@ function assertRegularContainedFile(path: string, allowedRoots: readonly string[
   try {
     const before = fstatSync(descriptor);
     if (!before.isFile()) throw new Error("project_memory_migration_source_unsafe");
+    const named = lstatSync(absolute);
+    if (!named.isFile() || named.isSymbolicLink()) {
+      throw new Error("project_memory_migration_source_unsafe");
+    }
     const real = realpathSync(absolute);
     if (
       !allowedRoots.some((root) => {
@@ -120,6 +126,10 @@ function assertRegularContainedFile(path: string, allowedRoots: readonly string[
       })
     ) {
       throw new Error("project_memory_migration_source_escape");
+    }
+    const resolved = statSync(real);
+    if (before.dev !== resolved.dev || before.ino !== resolved.ino) {
+      throw new Error("project_memory_migration_source_changed");
     }
     const content = readFileSync(descriptor);
     const after = fstatSync(descriptor);
@@ -154,6 +164,13 @@ function directoryDigest(root: string): string {
   };
   if (existsSync(root)) visit(root);
   return digest(parts.join("\n"));
+}
+
+function assertDirectoryDigest(root: string, expected: string): void {
+  const stat = lstatSync(root);
+  if (!stat.isDirectory() || stat.isSymbolicLink() || directoryDigest(root) !== expected) {
+    throw new Error("project_memory_migration_backup_corrupt");
+  }
 }
 
 function migrationTarget(
@@ -206,6 +223,8 @@ function recoverProjectMemoryMigration(input: {
     transaction.schema !== "ut-tdd.project-memory-migration-transaction/v1" ||
     transaction.projectId !== input.projectId ||
     transaction.inventoryDigest !== input.receipt.inventoryDigest ||
+    (transaction.priorCorpusDigest !== null &&
+      !/^[a-f0-9]{64}$/.test(transaction.priorCorpusDigest)) ||
     resolve(transaction.target) !== resolve(input.expectedTarget) ||
     dirname(resolve(transaction.backup)) !== dirname(resolve(input.expectedTarget)) ||
     !basename(transaction.backup).startsWith(`${basename(input.expectedTarget)}.backup-`) ||
@@ -233,13 +252,82 @@ function recoverProjectMemoryMigration(input: {
     return;
   }
   if (existsSync(transaction.backup)) {
+    if (transaction.priorCorpusDigest === null) {
+      throw new Error("project_memory_migration_backup_corrupt");
+    }
+    assertDirectoryDigest(transaction.backup, transaction.priorCorpusDigest);
     rmSync(transaction.target, { recursive: true, force: true });
     renameSync(transaction.backup, transaction.target);
-  } else if (!transaction.hadTarget) {
+  } else if (transaction.hadTarget) {
+    if (
+      transaction.priorCorpusDigest === null ||
+      !existsSync(transaction.target) ||
+      directoryDigest(transaction.target) !== transaction.priorCorpusDigest
+    ) {
+      throw new Error("project_memory_migration_backup_missing");
+    }
+  } else {
     rmSync(transaction.target, { recursive: true, force: true });
   }
   rmSync(transaction.staging, { recursive: true, force: true });
   rmSync(input.transactionPath, { force: true });
+}
+
+function processAlive(pid: number): boolean {
+  if (!Number.isSafeInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+function acquireMigrationLock(lock: string): string {
+  const nonce = `${process.pid}-${Date.now()}-${randomUUID()}`;
+  mkdirSync(dirname(lock), { recursive: true });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      mkdirSync(lock);
+      atomicWrite(
+        join(lock, "owner.json"),
+        `${canonicalJson({ schema: "ut-tdd.project-memory-lock/v1", pid: process.pid, nonce })}\n`,
+      );
+      return nonce;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const ownerPath = join(lock, "owner.json");
+      if (!existsSync(ownerPath)) throw new Error("project_memory_migration_in_progress");
+      let owner: { schema?: string; pid?: number };
+      try {
+        owner = JSON.parse(readFileSync(ownerPath, "utf8")) as typeof owner;
+      } catch {
+        throw new Error("project_memory_migration_lock_corrupt");
+      }
+      if (owner.schema !== "ut-tdd.project-memory-lock/v1") {
+        throw new Error("project_memory_migration_lock_corrupt");
+      }
+      if (processAlive(Number(owner.pid))) {
+        throw new Error("project_memory_migration_in_progress");
+      }
+      const stale = `${lock}.stale-${nonce}`;
+      try {
+        renameSync(lock, stale);
+      } catch {
+        throw new Error("project_memory_migration_in_progress");
+      }
+      rmSync(stale, { recursive: true, force: true });
+    }
+  }
+  throw new Error("project_memory_migration_in_progress");
+}
+
+function releaseMigrationLock(lock: string, nonce: string): void {
+  const ownerPath = join(lock, "owner.json");
+  if (!existsSync(ownerPath)) return;
+  const owner = JSON.parse(readFileSync(ownerPath, "utf8")) as { nonce?: string };
+  if (owner.nonce !== nonce) throw new Error("project_memory_migration_lock_owner_mismatch");
+  rmSync(lock, { recursive: true, force: true });
 }
 
 /** Decide migration without writing either the canonical corpus or quarantine. */
@@ -418,6 +506,7 @@ function applyProjectMemoryMigrationUnlocked(input: {
   let corpusDigest = "";
   const backup = `${target}.backup-${process.pid}`;
   const hadTarget = existsSync(target);
+  const priorCorpusDigest = hadTarget ? directoryDigest(target) : null;
   try {
     if (input.receipt.outcome === "ready") {
       if (hadTarget) {
@@ -470,6 +559,7 @@ function applyProjectMemoryMigrationUnlocked(input: {
         backup,
         staging,
         hadTarget,
+        priorCorpusDigest,
       } satisfies ProjectMemoryMigrationTransaction)}\n`,
     );
     if (hadTarget) renameSync(target, backup);
@@ -517,18 +607,10 @@ export function applyProjectMemoryMigration(input: {
     "locks",
     input.receipt.inventoryDigest,
   );
-  mkdirSync(dirname(lock), { recursive: true });
-  try {
-    mkdirSync(lock);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new Error("project_memory_migration_in_progress");
-    }
-    throw error;
-  }
+  const nonce = acquireMigrationLock(lock);
   try {
     return applyProjectMemoryMigrationUnlocked(input);
   } finally {
-    rmSync(lock, { recursive: true, force: true });
+    releaseMigrationLock(lock, nonce);
   }
 }

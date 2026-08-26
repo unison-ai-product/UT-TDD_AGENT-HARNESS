@@ -430,6 +430,18 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
           backup: `${project.authoredMemoryRoot}.backup-crash`,
           staging,
           hadTarget: false,
+          priorCorpusDigest: null,
+        })}\n`,
+        "utf8",
+      );
+      const staleLock = join(migrationRoot, "locks", receipt.inventoryDigest);
+      mkdirSync(staleLock, { recursive: true });
+      writeFileSync(
+        join(staleLock, "owner.json"),
+        `${JSON.stringify({
+          schema: "ut-tdd.project-memory-lock/v1",
+          pid: 2_147_483_647,
+          nonce: "dead-owner",
         })}\n`,
         "utf8",
       );
