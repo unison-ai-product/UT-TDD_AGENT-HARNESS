@@ -79,6 +79,17 @@ function sessionTerminalReceipt(input: {
     .digest("hex")}`;
 }
 
+function processAlive(rawPid: string): boolean {
+  const pid = Number(rawPid);
+  if (!Number.isSafeInteger(pid) || pid < 1) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function finishManagedWorktreesForOwner(input: {
   repoRoot: string;
   ownerSessionId: string;
@@ -118,6 +129,70 @@ export function finishManagedWorktreesForOwner(input: {
   return { finished: active.length, skipped: coordinator.records().length - active.length };
 }
 
+export function reconcileManagedWorktrees(input: { repoRoot: string; now?: string }): {
+  activationAborted: number;
+  terminalized: number;
+} {
+  const lineage = repositoryIdentity(input.repoRoot);
+  const runtime = createNodeManagedWorktreePorts({
+    repoRoot: input.repoRoot,
+    repositoryLineageId: lineage,
+    allowedRoot: allowedRoot(input.repoRoot),
+  });
+  const coordinator = new ManagedWorktreeCoordinator(
+    runtime.ports,
+    lifecycleEvents(runtime.ledger.read()),
+  );
+  const now = input.now ?? new Date().toISOString();
+  let activationAborted = 0;
+  let terminalized = 0;
+  for (const record of coordinator.records()) {
+    const expired = Date.parse(record.expiresAt) <= Date.parse(now);
+    const parentLost = !processAlive(record.parentProcessId);
+    if (record.state === "planned" && (expired || parentLost)) {
+      coordinator.abortPlanned({
+        identity: record.identity,
+        attempt: record.attempt,
+        evidenceDigest: sessionTerminalReceipt({
+          repositoryIdentity: lineage,
+          lifecycleId: record.lifecycleId,
+          ownerSessionId: record.ownerSessionId,
+          kind: parentLost ? "parent_loss" : "timeout",
+        }),
+      });
+      activationAborted += 1;
+      continue;
+    }
+    if (record.state !== "active" || (!expired && !parentLost)) continue;
+    const kind: TerminalKind = parentLost ? "parent_loss" : "timeout";
+    const evidenceDigest = sessionTerminalReceipt({
+      repositoryIdentity: lineage,
+      lifecycleId: record.lifecycleId,
+      ownerSessionId: record.ownerSessionId,
+      kind,
+    });
+    coordinator.finish({
+      identity: record.identity,
+      attempt: record.attempt,
+      ownerSessionId: record.ownerSessionId,
+      kind,
+      ...(kind === "parent_loss"
+        ? {
+            ownerLossEvidence: {
+              kind: "authenticated_owner_loss",
+              authenticated: true,
+              sessionId: record.ownerSessionId,
+              observedAt: now,
+              evidenceDigest,
+            } as const,
+          }
+        : { terminalReceiptDigest: evidenceDigest }),
+    });
+    terminalized += 1;
+  }
+  return { activationAborted, terminalized };
+}
+
 export function registerWorktreeLifecycleCommands(program: Command): void {
   const worktree = program
     .command("worktree")
@@ -149,6 +224,17 @@ export function registerWorktreeLifecycleCommands(program: Command): void {
         ]),
       );
       process.stdout.write(`worktree-lifecycle: ${JSON.stringify(counts)}\n`);
+    });
+
+  worktree
+    .command("reconcile")
+    .description("recover expired or parent-lost managed worktrees into cleanup handoff")
+    .option("--json", "JSON output")
+    .action((opts: { json?: boolean }) => {
+      const result = reconcileManagedWorktrees({
+        repoRoot: resolveRepositoryRoot(process.cwd()),
+      });
+      process.stdout.write(`${JSON.stringify(result, null, opts.json ? 2 : 0)}\n`);
     });
 
   worktree

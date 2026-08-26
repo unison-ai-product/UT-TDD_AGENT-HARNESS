@@ -12,6 +12,7 @@ import {
   ManagedWorktreeCoordinator,
   type ManagedWorktreePorts,
 } from "../src/runtime/worktree-lifecycle/application/managed-worktree.ts";
+import { WorktreeLifecycleStore } from "../src/runtime/worktree-lifecycle/domain/store.ts";
 import type { LifecycleEvent } from "../src/runtime/worktree-lifecycle/domain/types.ts";
 
 function input() {
@@ -112,6 +113,39 @@ describe("managed worktree lifecycle", () => {
     expect(deps.createWorktree).not.toHaveBeenCalled();
     expect(deps.enqueueCleanup).toHaveBeenCalledWith(
       expect.objectContaining({ lifecycleId: "issue-425-worker-1", reason: "activation_aborted" }),
+    );
+  });
+
+  it("CANDIDATE-U-WTMAN-002 replays and aborts a planned orphan", () => {
+    const seed = new WorktreeLifecycleStore();
+    const candidate = input();
+    const identity = {
+      repositoryLineageId: candidate.repositoryLineageId,
+      lifecycleId: candidate.lifecycleId,
+      canonicalWorktreeRealpath: candidate.worktreePath,
+    };
+    seed.plan({
+      ...candidate,
+      identity,
+      canonicalWorktreeRealpath: candidate.worktreePath,
+      attempt: 1,
+      createdAt: "2026-08-26T00:00:00.000Z",
+      activationDeadline: "2026-08-26T00:01:00.000Z",
+      expiresAt: "2026-08-26T00:01:00.000Z",
+      pathLeaseId: "lease-1",
+    });
+    const deps = ports();
+    const coordinator = new ManagedWorktreeCoordinator(deps, seed.events());
+    const aborted = coordinator.abortPlanned({
+      identity,
+      attempt: 1,
+      evidenceDigest: "sha256:parent-lost",
+    });
+    expect(aborted.state).toBe("terminal_pending");
+    expect(aborted.activationStatus).toBe("aborted");
+    expect(deps.releasePath).toHaveBeenCalledWith("lease-1");
+    expect(deps.enqueueCleanup).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "activation_aborted" }),
     );
   });
 

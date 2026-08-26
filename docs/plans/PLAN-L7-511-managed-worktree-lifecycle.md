@@ -15,6 +15,16 @@ pair_artifact: docs/test-design/harness/L7-managed-worktree-lifecycle-test-desig
 generates:
   - artifact_path: docs/plans/PLAN-L7-511-managed-worktree-lifecycle.md
     artifact_type: markdown_doc
+  - artifact_path: src/cli/worktree-lifecycle.ts
+    artifact_type: source_file
+  - artifact_path: src/runtime/worktree-lifecycle/application/managed-worktree.ts
+    artifact_type: source_file
+  - artifact_path: src/runtime/worktree-lifecycle/adapters/jsonl-ledger.ts
+    artifact_type: source_file
+  - artifact_path: src/runtime/worktree-lifecycle/adapters/node-managed-worktree.ts
+    artifact_type: source_file
+  - artifact_path: tests/managed-worktree-lifecycle.test.ts
+    artifact_type: test_file
 dependencies:
   parent: docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
   requires:
@@ -48,6 +58,8 @@ cleanup handoffまで束縛し、AI session終了後に未所有worktreeが増�
    物理削除は#426が所有し、本PLANは推測削除を行わない。
 5. direct/unmanagedなworktreeはinventory上でtyped `owner_unknown`として可視化し、managed workerの
    起動経路では直接`git worktree add`を許可しない。
+6. Stop hookが届かないcrashは次のSessionStartまたは明示`worktree reconcile`で再生し、期限切れまたは
+   parent-lossのplanned/activeをactivation-abort/terminal handoffへ移す。
 
 ## 設計と検証の対
 

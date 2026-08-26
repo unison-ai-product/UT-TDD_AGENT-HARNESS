@@ -208,6 +208,31 @@ export class ManagedWorktreeCoordinator {
     return terminal;
   }
 
+  abortPlanned(input: {
+    identity: LifecycleIdentity;
+    attempt: number;
+    evidenceDigest: string;
+  }): WorktreeLifecycleRecord {
+    const current = this.store.get(input.identity);
+    if (!current) throw new Error("managed_worktree_lifecycle_unknown");
+    if (current.state !== "planned") throw new Error("managed_worktree_not_planned");
+    const releaseReceipt = this.ports.releasePath(current.pathLeaseId);
+    const terminal = this.store.abortActivation(input.identity, {
+      attempt: input.attempt,
+      reason: "activation_unresolved",
+      activationAbortReceiptDigest: input.evidenceDigest,
+      pathLeaseRelease: { released: true, receiptDigest: releaseReceipt },
+    });
+    this.appendLatest();
+    this.ports.enqueueCleanup({
+      lifecycleId: terminal.lifecycleId,
+      identity: terminal.identity,
+      reason: "activation_aborted",
+      pathLeaseReleaseReceiptDigest: releaseReceipt,
+    });
+    return terminal;
+  }
+
   records(): readonly WorktreeLifecycleRecord[] {
     return this.store.snapshots();
   }

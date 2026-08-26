@@ -39,6 +39,7 @@ import { registerPrMergeCommands } from "./cli/pr-merge.ts";
 import { registerLiveReviewCommands } from "./cli/review-live.ts";
 import {
   finishManagedWorktreesForOwner,
+  reconcileManagedWorktrees,
   registerWorktreeLifecycleCommands,
 } from "./cli/worktree-lifecycle.ts";
 import { contextSuggest } from "./context/doc-router.ts";
@@ -1135,6 +1136,18 @@ session
     const input = readHookInput(HOOK_EVENT_SESSION_START, opts.session);
     const repoRoot = requireRuntimeRepoRoot();
     const deps = nodeDeps(repoRoot, gitBranch, gitHead);
+    try {
+      const recovered = reconcileManagedWorktrees({ repoRoot });
+      if (recovered.activationAborted + recovered.terminalized > 0) {
+        process.stdout.write(
+          `worktree-lifecycle: recovered ${recovered.activationAborted + recovered.terminalized}\n`,
+        );
+      }
+    } catch (error) {
+      process.stderr.write(
+        `worktree-lifecycle: reconciliation deferred (${error instanceof Error ? error.message : String(error)})\n`,
+      );
+    }
     runSessionStartSideEffects({ repoRoot, input, deps });
     dispatch(input, deps, HOOK_EVENT_SESSION_START);
     process.stdout.write(`session-log: start ${input.session_id ?? "ut-tdd-cli"}\n`);
