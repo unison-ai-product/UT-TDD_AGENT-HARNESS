@@ -85,7 +85,8 @@ repositoryReadContracts["tests/doctor-result-file.test.ts"] = {
 };
 
 repositoryReadContracts["tests/doctor.test.ts"] = {
-  mode_calls: { head_snapshot: 20, isolated_fixture: 8 },
+  // PLAN-L7-509: run-bun.ts 撤去で hook fixture が 1 件減り isolated_fixture 8 → 7。
+  mode_calls: { head_snapshot: 20, isolated_fixture: 7 },
   reason: "doctor aggregate test exercises both detached HEAD and execution fixture",
 };
 

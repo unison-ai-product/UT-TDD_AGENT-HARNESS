@@ -6,7 +6,7 @@
 # that require docs/design or docs/plans.
 # Do not replace test:pack with raw `vitest run`; full source-regression tests
 # intentionally require source-only governance artifacts that Pack excludes.
-# PLAN-L7-508: consumer/Pack runtime is Node; Bun is not required or installed.
+# PLAN-L7-509: consumer/Pack runtime is Node; Bun is not required or installed.
 name: harness-check
 
 on:

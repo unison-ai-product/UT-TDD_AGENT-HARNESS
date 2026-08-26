@@ -121,13 +121,13 @@ jobs:
   harness-check:
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
-      - run: bun run test:pack
-      - run: bun run lint
-      - run: bun src/cli.ts setup --solo
-      - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
+      - uses: actions/setup-node@v4
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run test:pack
+      - run: npm run lint
+      - run: node src/cli.ts setup --solo
+      - run: node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
 const LEGACY_SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
@@ -916,8 +916,8 @@ describe("github-ci-policy lint", () => {
 
   it("requires Pack CI to use setup-smoke instead of source full doctor", () => {
     const pack = PACK_WORKFLOW.replace(
-      "bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke",
-      "bun .ut-tdd/bin/ut-tdd.mjs doctor",
+      "node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke",
+      "node .ut-tdd/bin/ut-tdd.mjs doctor",
     );
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
@@ -938,7 +938,7 @@ describe("github-ci-policy lint", () => {
   });
 
   it("rejects raw vitest run in Pack CI because source-only tests need governance docs", () => {
-    const pack = PACK_WORKFLOW.replace("bun run test:pack", "bun run vitest run");
+    const pack = PACK_WORKFLOW.replace("npm run test:pack", "npx vitest run");
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
     expect(result.ok).toBe(false);
@@ -952,12 +952,12 @@ describe("github-ci-policy lint", () => {
       file: "docs/templates/github/common/pack-harness-check.yml",
       profile: "pack",
       reason: "forbidden_raw_vitest",
-      detail: "Pack CI must use bun run test:pack instead of raw vitest run",
+      detail: "Pack CI must use npm run test:pack instead of raw vitest run",
     });
   });
 
-  it("rejects source full bun run test in Pack CI because Pack uses the safe smoke suite", () => {
-    const pack = PACK_WORKFLOW.replace("bun run test:pack", "bun run test");
+  it("rejects the source full test lane in Pack CI because Pack uses the safe smoke suite", () => {
+    const pack = PACK_WORKFLOW.replace("npm run test:pack", "npm run test");
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
     expect(result.ok).toBe(false);
@@ -971,7 +971,7 @@ describe("github-ci-policy lint", () => {
       file: "docs/templates/github/common/pack-harness-check.yml",
       profile: "pack",
       reason: "forbidden_source_full_tests",
-      detail: "Pack CI must use bun run test:pack instead of source full bun run test",
+      detail: "Pack CI must use npm run test:pack instead of the source full test lane",
     });
   });
 

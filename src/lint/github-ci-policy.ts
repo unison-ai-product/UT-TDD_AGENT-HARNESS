@@ -37,6 +37,7 @@ export interface GithubCiPolicyViolation {
     | "forbidden_full_doctor"
     | "forbidden_raw_vitest"
     | "forbidden_source_full_tests"
+    | "forbidden_bun_runtime"
     | "forbidden_job_level_lane_skip"
     | "forbidden_lane_skip_step"
     | "missing_lane_producer"
@@ -88,7 +89,10 @@ interface RequiredStepSpec {
 interface ForbiddenStepSpec {
   reason: Extract<
     GithubCiPolicyViolation["reason"],
-    "forbidden_full_doctor" | "forbidden_raw_vitest" | "forbidden_source_full_tests"
+    | "forbidden_full_doctor"
+    | "forbidden_raw_vitest"
+    | "forbidden_source_full_tests"
+    | "forbidden_bun_runtime"
   >;
   detail: string;
   matches: (step: WorkflowStep) => boolean;
@@ -151,13 +155,14 @@ const SOURCE_REQUIRED_STEPS = [
   { label: "full doctor", any: ["src/cli.ts doctor"] },
 ] as const;
 
+// PLAN-L7-509: Pack / consumer の実行 runtime は Node。Bun は要求も install もしない。
 const PACK_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
-  { label: "setup-bun@v2", any: ["oven-sh/setup-bun@v2"] },
-  { label: "frozen install", any: ["bun install --frozen-lockfile"] },
-  { label: "typecheck", any: ["bun run typecheck"] },
-  { label: "pack tests", any: ["bun run test:pack"] },
-  { label: "lint", any: ["bun run lint"] },
+  { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
+  { label: "frozen install", any: ["npm ci"] },
+  { label: "typecheck", any: ["npm run typecheck"] },
+  { label: "pack tests", any: ["npm run test:pack"] },
+  { label: "lint", any: ["npm run lint"] },
   { label: "setup projection", any: ["src/cli.ts setup --solo"] },
   { label: "setup smoke doctor", any: ["doctor --setup-smoke"] },
 ] as const;
@@ -181,13 +186,20 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
       },
       {
         reason: "forbidden_raw_vitest",
-        detail: "Pack CI must use bun run test:pack instead of raw vitest run",
+        detail: "Pack CI must use npm run test:pack instead of raw vitest run",
         matches: (step) => /\bvitest\s+run\b/.test(step.run ?? ""),
       },
       {
         reason: "forbidden_source_full_tests",
-        detail: "Pack CI must use bun run test:pack instead of source full bun run test",
-        matches: (step) => /\bbun\s+run\s+test\b(?!:)/.test(step.run ?? ""),
+        detail: "Pack CI must use npm run test:pack instead of the source full test lane",
+        // PLAN-L7-509: runtime が Node へ倒れたので bun 版だけでなく npm 版も塞ぐ。
+        matches: (step) => /\b(?:npm|bun)\s+run\s+test\b(?!:)/.test(step.run ?? ""),
+      },
+      {
+        reason: "forbidden_bun_runtime",
+        detail: "Pack CI must not install or invoke Bun (permanent ban, PLAN-L7-509)",
+        matches: (step) =>
+          /oven-sh\/setup-bun/.test(step.uses ?? "") || /\bbun\b/.test(step.run ?? ""),
       },
     ],
   },
