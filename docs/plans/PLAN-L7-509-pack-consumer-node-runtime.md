@@ -62,7 +62,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-26T02:20:00Z"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:5c9488817e22d39c2f9ec6ac437a476818684016a0b1b8d7839c30792a90fc66"
+        output_digest: "sha256:6e8a551607cdfe6d846a6b37dd4f9f70484311f055777d97a6505806d05d51c6"
         anchor_commit: 6f2c2f9224d1a52549f7e819eac5ac86efdd0fdc
 ---
 
