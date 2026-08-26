@@ -197,14 +197,18 @@ export function buildClaudeInboxEntry(input: {
   operationId: string;
   workspaceId: string;
   originRuntime?: "codex" | "system";
-  projectId?: string;
-  producerSessionId?: string;
+  projectId: string;
+  producerSessionId: string;
   targetSessionId?: string;
   now?: string;
 }): ClaudeMemoryInboxEntry {
   if (!input.operationId.trim()) throw new Error("claude_inbox_operation_id_required");
   if (!/^[a-f0-9]{64}$/.test(input.workspaceId)) {
     throw new Error("claude_inbox_workspace_id_invalid");
+  }
+  if (!input.projectId.trim()) throw new Error("claude_inbox_project_id_required");
+  if (!input.producerSessionId.trim()) {
+    throw new Error("claude_inbox_producer_session_required");
   }
   const originRuntime = input.originRuntime ?? "system";
   return {
@@ -216,9 +220,9 @@ export function buildClaudeInboxEntry(input: {
     originRuntime,
     operationId: input.operationId,
     targetWorkspaceId: input.workspaceId,
-    projectId: input.projectId ?? "fixture/project",
+    projectId: input.projectId,
     producerProvider: originRuntime,
-    producerSessionId: input.producerSessionId ?? input.operationId,
+    producerSessionId: input.producerSessionId,
     targetProvider: "claude",
     targetSessionId: input.targetSessionId ?? "project-broadcast",
     createdAt: input.now ?? new Date().toISOString(),
@@ -236,8 +240,8 @@ export function buildClaudeReviewInboxEntry(input: {
   reviewRevision: string;
   authorFamily: "codex" | "claude";
   originRuntime?: "codex" | "system";
-  projectId?: string;
-  producerSessionId?: string;
+  projectId: string;
+  producerSessionId: string;
   targetSessionId?: string;
   now?: string;
 }): ClaudeReviewInboxEntry {

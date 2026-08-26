@@ -14,8 +14,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
-  buildClaudeInboxEntry,
-  buildClaudeReviewInboxEntry,
+  buildClaudeInboxEntry as buildClaudeInboxEntryRaw,
+  buildClaudeReviewInboxEntry as buildClaudeReviewInboxEntryRaw,
   CLAUDE_INBOX_SCHEMA,
   CLAUDE_WAKE_GENERATION_SCHEMA,
   claudeWorkspaceId,
@@ -27,6 +27,35 @@ import {
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
+
+function buildClaudeInboxEntry(
+  input: Omit<Parameters<typeof buildClaudeInboxEntryRaw>[0], "projectId" | "producerSessionId"> &
+    Partial<
+      Pick<Parameters<typeof buildClaudeInboxEntryRaw>[0], "projectId" | "producerSessionId">
+    >,
+) {
+  return buildClaudeInboxEntryRaw({
+    projectId: "fixture/project",
+    producerSessionId: input.operationId,
+    ...input,
+  });
+}
+
+function buildClaudeReviewInboxEntry(
+  input: Omit<
+    Parameters<typeof buildClaudeReviewInboxEntryRaw>[0],
+    "projectId" | "producerSessionId"
+  > &
+    Partial<
+      Pick<Parameters<typeof buildClaudeReviewInboxEntryRaw>[0], "projectId" | "producerSessionId">
+    >,
+) {
+  return buildClaudeReviewInboxEntryRaw({
+    projectId: "fixture/project",
+    producerSessionId: input.operationId,
+    ...input,
+  });
+}
 
 const memory: MemoryEntry = {
   memory_id: "memory:project:review-218",
@@ -67,6 +96,22 @@ function runtimeRoot(root: string): string {
 }
 
 describe("Claude HARNESS memory async wake", () => {
+  it("requires explicit project and producer-session identity", () => {
+    const base = {
+      memory,
+      operationId: "explicit-identity",
+      workspaceId: "a".repeat(64),
+      projectId: "project/fixture",
+      producerSessionId: "codex-session-1",
+    };
+
+    expect(() => buildClaudeInboxEntryRaw({ ...base, projectId: "" })).toThrow(
+      "claude_inbox_project_id_required",
+    );
+    expect(() => buildClaudeInboxEntryRaw({ ...base, producerSessionId: "" })).toThrow(
+      "claude_inbox_producer_session_required",
+    );
+  });
   it("U-MEMWAKE-007: live-dispatch from a subject worktree resolves the active main workspace", () => {
     const main = fixture();
     const subject = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-subject-"));

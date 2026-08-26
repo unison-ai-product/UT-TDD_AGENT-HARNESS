@@ -9,7 +9,7 @@ import {
 } from "../src/handover/session-start-digest.ts";
 import type { MemoryEntry } from "../src/memory/index.ts";
 import {
-  buildClaudeInboxEntry,
+  buildClaudeInboxEntry as buildClaudeInboxEntryRaw,
   CLAUDE_WAKE_GENERATION_SCHEMA,
   claudeWorkspaceId,
   inspectClaudeMemoryWakeHook,
@@ -17,6 +17,17 @@ import {
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
+
+function buildClaudeInboxEntry(
+  input: Omit<Parameters<typeof buildClaudeInboxEntryRaw>[0], "projectId" | "producerSessionId">,
+) {
+  return buildClaudeInboxEntryRaw({
+    ...input,
+    projectId: "fixture/project",
+    producerSessionId: input.operationId,
+  });
+}
+
 import { openHarnessDb } from "../src/state-db/index.ts";
 import { migrate } from "../src/state-db/migration.ts";
 
@@ -34,6 +45,18 @@ const memory: MemoryEntry = {
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-memory-backlog-"));
   execFileSync("git", ["init", "-q"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
+  writeFileSync(
+    join(root, "ut-tdd.project.json"),
+    `${JSON.stringify({
+      schema_version: "ut-tdd.project/v1",
+      repository_identity: "fixture/project",
+    })}\n`,
+    "utf8",
+  );
+  execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
+  execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: root });
   return root;
 }
 
