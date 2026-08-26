@@ -366,6 +366,13 @@ describe("runtime-portability lint", () => {
       ["quoted ; mention", `node -e "console.log('x ; bun.exe y')"`, false],
       ["quoted pipe mention", `node -e "console.log('a | bunx b')"`, false],
       ["real bun after quoted text", `node -e "console.log('ok')" && bun run x`, true],
+      // r4 delta review 指摘: `\` escape を見ないと double quote が閉じたと誤読し、
+      // quote 内の `&&` で分割して bun 言及を起動語と誤検出する。
+      ["escaped quote inside double quote", `node -e "console.log(\\"x && bun run y\\")"`, false],
+      ["escaped quote with real bun after", `node -e "console.log(\\"x\\")" && bunx vitest`, true],
+      // 単独 `&` (background) は区切りであり、後続の bun を取りこぼしてはならない。
+      ["background separator", "npm run watch & bun run vitest", true],
+      ["escaped separator is literal", `node -e "console.log(1)" \\&\\& echo bun`, false],
     ] as const) {
       const mutated = {
         ...pkg,
