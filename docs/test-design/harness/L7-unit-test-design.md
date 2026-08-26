@@ -1533,7 +1533,7 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVDISP-001`〜`006` | 基本進捗とmerge準備 | requestedからverdictまでの表示、PASS系＋CI/PR状態 | 有効な終端verdictと全merge条件成立時だけ`merge_ready` |
 | `U-RVDISP-007`〜`012` | verdict単一SLA・自己承認・HEAD・決定論 | 60分境界、同family、旧HEAD、入力shuffle、verdictなしmerge | verdict未到達だけをbreachにし、理由と安定順を維持 |
 | `U-RVDISP-013`〜`020` | identityとreceipt妥当性 | memory/revision/head違い、不正時刻、future、family、進捗欠落 | 別identityへ混入せず、進捗欠落は非blocking診断にする |
-| `U-RVDISP-021` | request replay | 完全重複requestと同identity内容競合 | 完全重複は冪等、競合は`duplicate_request_conflict` |
+| `U-RVDISP-021` | request replay | 完全重複、`requestedAt`だけが異なるvalid replay、timezone offsetを含む時刻順、`authorFamily`競合、invalid/valid混在 | timestampだけのreplayは冪等で`merge_ready`、canonical ageはparse済み最古instantを維持、timestamp以外の競合とinvalid混在は`duplicate_request_conflict`等でfail-close |
 | `U-RVDISP-022` | old HEAD隔離 | 同reviewRevisionの旧HEAD receipt | 現HEAD requestの理由・状態を汚染しない |
 | `U-RVDISP-023` | PR観測欠落 | requestに対応するPR observationなし | retry可能な未確定状態としてfail-close |
 | `U-RVDISP-024` | reason付き非ready | verdict等が揃ってもvalidation reasonあり | `merge_ready`を返さない |
@@ -1554,6 +1554,11 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 | `U-RVDISP-051`〜`052` | 競合verdictの安全側集約・request以前receipt分離 | 先行PASS＋後発FLAG、request以前PASS＋有効後続PASS | blocking findingを失わず、無効先行receiptが有効後続receiptを隠さない |
 
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
+
+Issue #412 実測 (2026-08-26): Red `a5250930` で timestamp-only replay の旧競合挙動を再現し、
+Green `6e8e14bb` で U-RVDISP-021 を更新した。Node detached snapshotでreview-dispatch 52件と
+PLAN lint 78件（合計130 pass / 0 fail）を再検証した。valid timestamp の最古 instant、
+authorFamily競合、invalid/future timestamp混在を同じ oracle で検証する。
 
 ## PLAN-L7-502 review履歴/current-HEAD eligibility oracle (2026-08-24)
 

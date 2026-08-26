@@ -8,7 +8,7 @@ status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-31
-updated: 2026-08-13
+updated: 2026-08-26
 owner: PM / PO
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-465に定義済みのD1 dispatch lifecycleと実装の意味論は変更せず、draft設計PLANと完成済み出荷物のライフサイクルを分離してgenerates所有を確定する。"
@@ -129,6 +129,11 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
    verdict無しMERGEDは手順違反としてfail-closeし、旧requestの恒久redを作らない。
    MERGED観測のheadを全requestのexactHead集合へ横断照合し、旧HEAD requestだけで
    merge先HEADのrequest欠落を隠せない。
+10. 同一 identity の request replay は `requestedAt` だけが異なる場合に冪等とする。
+    canonical request は parse 済み instant が最も早い request を採用し、後発 replay で
+    review age / verdict SLA を更新できないようにする。`authorFamily` など timestamp 以外の
+    content 差分は `duplicate_request_conflict` として fail-close し、invalid timestamp を
+    含む replay も検証失敗を隠さない。
 
 ## 3. 設計と検証の対
 
@@ -136,7 +141,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | --- | --- |
 | 基本FSM、SLA、自己承認拒否、HEAD一致 | `U-RVDISP-001`〜`012` |
 | identity、時刻、family、verdict-anchorのfail-close | `U-RVDISP-013`〜`020` |
-| request replayの冪等・競合 | `U-RVDISP-021` |
+| request replayの冪等・競合・最古時刻固定 | `U-RVDISP-021` |
 | old HEAD隔離、PR観測欠落、reason付き非ready | `U-RVDISP-022`〜`024` |
 | unrelated/matching malformed artifactの診断分離 | `U-RVDISP-025`〜`026` |
 | PR観測の競合と冪等replay | `U-RVDISP-027`〜`028` |
@@ -173,6 +178,20 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 `ReviewDispatchEntry.verdict` の追加 (+2 行、純追加) は D2-B の deny receipt 修正で消費される
 判定情報だが、`review-dispatch.ts` の所有は本 PLAN にあるため、この追補で実装上の利用関係を記録する。
+
+### Issue #412 追補 (2026-08-26)
+
+同一 identity の request が別 worktree から再発行される実運用を対象に、`requestedAt` だけが
+異なる replay を content conflict から除外した。canonical request は parse 済み instant の
+最古を採用し、TTL refresh を防止する。`authorFamily` の不一致、invalid/future timestamp を
+含む replay は `duplicate_request_conflict` 等を保持して fail-close する。
+
+- Red: `a5250930` — U-RVDISP-021 の timestamp-only replay oracle が `verdict` となり失敗。
+- Green: `6e8e14bb` — 実装・oracle・設計対を更新。
+- targeted result: `node scripts/run-vitest-snapshot.ts tests/review-dispatch.test.ts tests/plan-lint.test.ts
+  --reporter=dot --maxWorkers=1 --minWorkers=1` 130 pass / 0 fail（review-dispatch 52、PLAN lint 78）、
+  Biome対象2ファイル Green、`npx tsc --noEmit --pretty false` Green。
+- 残存制約: CI exact-head と non-author closing review はPR側の検収で実施する。
 
 ## レビュー状態
 

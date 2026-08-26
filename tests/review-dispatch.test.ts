@@ -564,8 +564,19 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(entry(duplicated).state).toBe("merge_ready");
     expect(duplicated.ok).toBe(true);
 
-    const conflicting = analyzeReviewDispatch({
+    const replayedWithNewTimestamp = analyzeReviewDispatch({
       requests: [request(), request({ requestedAt: "2026-07-31T00:00:30.000Z" })],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(replayedWithNewTimestamp.entries).toHaveLength(1);
+    expect(entry(replayedWithNewTimestamp).state).toBe("merge_ready");
+    expect(entry(replayedWithNewTimestamp).reasons).not.toContain("duplicate_request_conflict");
+    expect(replayedWithNewTimestamp.ok).toBe(true);
+
+    const conflicting = analyzeReviewDispatch({
+      requests: [request(), request({ authorFamily: "codex" })],
       receipts: completeSequence(),
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
@@ -574,6 +585,40 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(entry(conflicting).reasons).toContain("duplicate_request_conflict");
     expect(entry(conflicting).state).not.toBe("merge_ready");
     expect(conflicting.ok).toBe(false);
+
+    const earliestRequest = analyzeReviewDispatch({
+      requests: [
+        request({ requestedAt: "2026-07-31T00:30:00.000+01:00" }),
+        request({ requestedAt: "2026-07-31T00:00:00.000Z" }),
+      ],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(earliestRequest).state).toBe("merge_ready");
+    expect(entry(earliestRequest).ageMinutes).toBe(40);
+    expect(earliestRequest.ok).toBe(true);
+
+    const invalidTimestampReplay = analyzeReviewDispatch({
+      requests: [request(), request({ requestedAt: "not-a-date" })],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(invalidTimestampReplay).reasons).toContain("duplicate_request_conflict");
+    expect(entry(invalidTimestampReplay).reasons).toContain("invalid_timestamp");
+    expect(entry(invalidTimestampReplay).state).not.toBe("merge_ready");
+    expect(invalidTimestampReplay.ok).toBe(false);
+
+    const futureTimestampReplay = analyzeReviewDispatch({
+      requests: [request(), request({ requestedAt: "2026-07-31T00:11:00.000Z" })],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(entry(futureTimestampReplay).reasons).toContain("duplicate_request_conflict");
+    expect(entry(futureTimestampReplay).state).not.toBe("merge_ready");
+    expect(futureTimestampReplay.ok).toBe(false);
   });
 
   it("U-RVDISP-022: old HEAD receipt は reviewRevision が同じでも new request を汚染しない", () => {

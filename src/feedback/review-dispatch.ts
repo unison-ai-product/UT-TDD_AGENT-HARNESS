@@ -185,7 +185,6 @@ function requestContentKey(request: ReviewRequest): string {
     request.exactHead,
     request.reviewRevision,
     request.authorFamily,
-    timestampContentKey(request.requestedAt),
   ]);
 }
 
@@ -212,25 +211,43 @@ function observationContentKey(observation: PrObservation): string {
   ]);
 }
 
-function uniqueRequests(requests: ReviewRequest[]): {
+function uniqueRequests(
+  requests: ReviewRequest[],
+  nowMs: number,
+): {
   requests: ReviewRequest[];
   conflictingIdentities: Set<string>;
 } {
-  const seen = new Map<string, string>();
+  const grouped = new Map<string, ReviewRequest[]>();
   const conflictingIdentities = new Set<string>();
   const result: ReviewRequest[] = [];
-  for (const request of [...requests].sort(compareRequests)) {
+  for (const request of requests) {
     const key = identityKey(request);
-    const contentKey = requestContentKey(request);
-    const previousContentKey = seen.get(key);
-    if (previousContentKey != null) {
-      if (previousContentKey !== contentKey) conflictingIdentities.add(key);
-      continue;
-    }
-    seen.set(key, contentKey);
-    result.push(request);
+    grouped.set(key, [...(grouped.get(key) ?? []), request]);
   }
-  return { requests: result, conflictingIdentities };
+  for (const [key, candidates] of grouped) {
+    const canonical = [...candidates].sort(compareCanonicalRequests)[0];
+    const canonicalContentKey = requestContentKey(canonical);
+    if (
+      candidates.some((candidate) => requestContentKey(candidate) !== canonicalContentKey) ||
+      candidates.some((candidate) => isValidTimestamp(candidate.requestedAt, nowMs) != null)
+    ) {
+      conflictingIdentities.add(key);
+    }
+    result.push(canonical);
+  }
+  return { requests: result.sort(compareRequests), conflictingIdentities };
+}
+
+function compareCanonicalRequests(left: ReviewRequest, right: ReviewRequest): number {
+  const leftTimestamp = parseExplicitZoneTimestamp(left.requestedAt);
+  const rightTimestamp = parseExplicitZoneTimestamp(right.requestedAt);
+  if (leftTimestamp == null && rightTimestamp != null) return -1;
+  if (leftTimestamp != null && rightTimestamp == null) return 1;
+  if (leftTimestamp != null && rightTimestamp != null && leftTimestamp !== rightTimestamp) {
+    return leftTimestamp - rightTimestamp;
+  }
+  return compareRequests(left, right);
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -575,7 +592,7 @@ export function analyzeReviewDispatch(input: {
     }
   }
 
-  const unique = uniqueRequests(input.requests);
+  const unique = uniqueRequests(input.requests, nowMs ?? Number.NaN);
   const analyses = unique.requests.map((request) =>
     analyzeRequest(request, {
       receipts: input.receipts,
