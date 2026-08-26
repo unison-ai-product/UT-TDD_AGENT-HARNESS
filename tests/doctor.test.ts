@@ -641,7 +641,9 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=24, failed=0)"]);
+    // PLAN-L7-509: run-bun.ts の撤去で必須ファイル検査が 1 件減り 24 → 23。
+    // (この test は scoped lane から除外されているため full 回帰でのみ surface した)
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=23, failed=0)"]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {
