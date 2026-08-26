@@ -42,7 +42,7 @@ review_evidence:
       confirmed PLAN-L6-101 §1.1 / §2 に違反) は advisor 諮問の上で選択肢 C (consumer 内で
       解決できなければ typed fail-close) を採択し §2.3-10 として freeze、U-HOOKEXEC-011 /
       U-SETUP-009b3 で oracle 化した。blocking 2 は forbidden_bun_runtime を起動語判定へ改め
-      U-CIPOL-027 (bun/bunx/bun.exe を拒否、bundle-check とコメント言及は通す 7 ケース) を追加。
+      U-CIPOL-028 (bun/bunx/bun.exe を拒否、bundle-check とコメント言及は通す 7 ケース) を追加。
       blocking 3 は PR body の green evidence を新 anchor で再生成。self-contained runtime の
       materialization 契約と upgrade atomicity は issue #420 の後続 PLAN が所有する。
     worker_model: claude-opus-5
@@ -51,7 +51,7 @@ review_evidence:
     citations:
       - "tests/setup.test.ts: U-SETUP-004b2 / 009b / 009b2 / 009b3"
       - "tests/hook-native-launcher.test.ts: U-HOOKEXEC-001 / 011"
-      - "tests/github-ci-policy.test.ts: U-CIPOL-027"
+      - "tests/github-ci-policy.test.ts: U-CIPOL-028"
       - "tests/model-id-ssot-drift.test.ts: (b) adapter mirror"
       - "tests/doctor-test-repository-isolation.test.ts: U-TESTHYGIENE-015"
     green_commands:

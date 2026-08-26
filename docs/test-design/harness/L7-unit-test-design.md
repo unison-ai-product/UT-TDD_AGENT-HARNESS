@@ -1727,6 +1727,7 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-CIPOL-011` | 権限の完全一致 | 4 artifactそれぞれを`issues: read`へ変異。`contents: write` / scalar `read-all` / `issues: write`追加 | `permissions: {contents: read}`完全一致以外は`missing_permission` |
 | `U-CIPOL-012` | runtime profile独立性 | source profileへPack本文を置換、package artifact profileをsource/packへ変異 | 本文markerで再分類せずsource policyの`missing_step`。`package.json.utTdd.artifactProfile`を正本とする |
 | `U-CIPOL-027` | source doc profile実行面の束縛 | `source-doc-lane` の `outputIds` と registry definitions の順序・集合を各1点変異 | 選択対象はprofile宣言の4件、実行はregistry定義順、envelopeの `checkIds`/`checks` はprofile宣言順と完全一致し、scope=`full` の全102件へ拡張しない |
+| `U-CIPOL-028` | Pack CI の Bun 起動禁止 (PLAN-L7-509) | `run:` block の起動語 (行頭 / `|` / `&&` / `||` / `;` 直後、コメント行は除外) と `uses:` を判定し、`bun` / `bunx` / `bun.exe` / `oven-sh/setup-bun` を `forbidden_bun_runtime` で fail-close する。`echo "do not use bun"` やコメント内の言及、`npm run bundle-check` のような部分一致は違反にしない (抜け穴と false positive の両方を回帰網で固定する) |
 | `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
 
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
@@ -1904,6 +1905,7 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | `U-HOOKEXEC-008` | Windows native smoke | hook host→Bun entrypoint の dispatch ancestry に `sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe` が無く、hook outcome は既存契約どおりである。 |
 | `U-HOOKEXEC-009` | Node TypeScript launcher floor | `package.json#engines.node` は無フラグ TypeScript execution が有効な `>=22.18` を要求し、22.6〜22.17を対応済みと宣言しない。 |
 | `U-HOOKEXEC-010` | Windows custody debt boundary | hook PLAN は `windowsHide` / shell-free Greenをprocess-tree custody証拠へ流用せず、Issue #134 / Windows Job Object / 未解消境界を明記する。 |
+| `U-HOOKEXEC-011` | consumer runtime の setup checkout 非依存 (PLAN-L7-509 §2.3-10) | 生成 wrapper は consumer 内 `<repo>/src/cli.ts` (+ `src/setup/index.ts`) だけを解決先とし、setup を実行したマシンの Pack checkout へ fallback しない。setup 元相当の harness source が到達可能な状態でも consumer 側が空なら `consumer_runtime_absent` で exit 127 とし、生成物に setup 元絶対パスを焼き込まない (confirmed PLAN-L6-101 §1.1 / §2 の Pack checkout 非依存契約) |
 
 実行対応は `tests/hook-native-launcher.test.ts`、`tests/project-hook.test.ts`、
 `tests/codex-hook-adapter.test.ts`、`tests/setup.test.ts` である。主検証となる

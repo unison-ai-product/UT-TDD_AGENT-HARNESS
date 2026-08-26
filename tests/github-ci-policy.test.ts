@@ -985,7 +985,7 @@ describe("github-ci-policy lint", () => {
     ["comment mention", "      - run: |\n          # bun is banned here\n          npm ci", false],
     ["echo mention", '      - run: echo "do not use bun"', false],
     ["substring bundle", "      - run: npm run bundle-check", false],
-  ])("U-CIPOL-027: forbidden_bun_runtime は起動語だけを拒否する: %s", (_label, injected, expected) => {
+  ])("U-CIPOL-028: forbidden_bun_runtime は起動語だけを拒否する: %s", (_label, injected, expected) => {
     const pack = PACK_WORKFLOW.replace(
       "      - run: npm run lint",
       `      - run: npm run lint\n${injected}`,
