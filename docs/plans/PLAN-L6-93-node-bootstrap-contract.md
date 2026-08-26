@@ -237,27 +237,34 @@ L4 §2 の「Node parity receipt前にcurrentを削除しない」が保護す�
 
 **方式はallowlistであり、禁止構文の列挙 (denylist) ではない。**
 lintは`scripts/ut-tdd` / `scripts/ut-tdd.ps1`の2ファイルのみを対象とし、
-comment行と空行を除いた残りの**実行文の列がallowlistと完全一致しない場合にfail-close**する。
-データフロー追跡も構文解析も要らない (行の正規化 + 完全一致で閉じる)。
+**ファイル全文がcanonical textと完全一致しない場合にfail-close**する。
+comment行・空行を含めて全文が固定であり、**自由記述の余地は無い**。正規化は改行コード
+(CRLF→LF) と末尾改行の有無に限る。データフロー追跡も構文解析も要らない。
 
-**POSIX `scripts/ut-tdd` の許容実行文 (この3行、この順序のみ)**
+**POSIX `scripts/ut-tdd` のcanonical text (全文)**
 
 ```sh
 #!/usr/bin/env sh
+# UT-TDD thin POSIX entrypoint (ADR-001). Node source CLI only; no compiled dispatch.
 set -e
 exec node "$(dirname -- "$0")/../src/cli.ts" "$@"
 ```
 
-**PowerShell `scripts/ut-tdd.ps1` の許容実行文 (この3行、この順序のみ)**
+**PowerShell `scripts/ut-tdd.ps1` のcanonical text (全文)**
 
 ```powershell
+# UT-TDD thin Windows PowerShell entrypoint (ADR-001). Node source CLI only; no compiled dispatch.
 $ErrorActionPreference = "Stop"
 & node (Join-Path (Split-Path -Parent $PSScriptRoot) "src\cli.ts") @args
 exit $LASTEXITCODE
 ```
 
-comment行 (`#`始まり) と空行は任意個数・任意位置で許容する。それ以外の行が1行でも存在するか、
-上記の行が欠ける・順序が変わる・字面が変わる場合はfail-close。
+**comment行を自由記述にしない理由** (r4 review 指摘): comment行は意味的に不活性ではない。
+POSIXではcanonical shebangより前に別の`#!`行を置けば別interpreterが選択され得るし、
+PowerShellの`#requires -Modules`は3行の実行文より前にmodule codeをloadして実行する。
+どちらも「comment行を除去してから照合する」規則を素通りする。加えてcomment自由記述は
+`CAND-NODEBOOT-021` (comment内を含む`dist`参照でfail-close) と正面から矛盾し、どの実装でも
+同時に満たせないoracleになっていた。全文固定にすることで両方が同時に閉じる。
 
 **denylistをやめた理由** (r3 review 指摘): 本契約は r1→r2→r3 で禁止構文を継ぎ足してきたが、
 そのたびに新しい迂回が見つかった。r3 が示した迂回は次で、r2 の「起動文集合」定義を
@@ -269,23 +276,51 @@ exec node ./src/cli.ts "$@"
 ```
 
 変数代入内の`$(./build/ut-tdd)`も同様に通過した。**禁止側を列挙する限り、列挙漏れが
-そのまま迂回路になる**。許容側が3行しかない対象に対して denylist を使っていたこと自体が
-誤りであり、allowlistなら迂回路の集合は空になる (許容3行以外はすべてfail-closeなので、
-`eval`も command substitution も`dist`参照も分岐も、個別に列挙せずに落ちる)。
+そのまま迂回路になる**。許容側が4行しかない対象に対して denylist を使っていたこと自体が
+誤りである。allowlistでは**wrapperのfile contentを経由する迂回路の集合が空になる**
+(canonical text以外はすべてfail-closeなので、`eval`も command substitution も`dist`参照も
+分岐も`#requires`も、個別に列挙せずに落ちる)。
+
+**ただし「迂回路の集合が空」はfile contentの範囲に限る** (r4 review 指摘)。canonical textは
+bare nameの`node`を起動するため、**PATH解決先の差し替え・`node`のsymlink付け替え・
+`NODE_OPTIONS` / `--import`によるpreload・`src/cli.ts`自体の改竄**は、file contentを一切
+変えずに別の実行体へ到達させ得る。本契約はこれらを閉じない。§5.2.2でscope外として明示する。
 
 **trade-off (意図的に受け入れる)**: allowlistは正当な変更にも脆い。wrapperへ`set -u`を足す、
-Node版数チェックを入れる、といった変更はすべて本契約の改訂を要する。3行のtrust rootに対しては
+Node版数チェックを入れる、commentを1語直す、といった変更はすべて本契約の改訂を要する
+(全文固定なのでcommentの字句修正も例外ではない)。4行のtrust rootに対しては
 その硬さが妥当であり、変更が必要になったら契約改訂を経る (実装PR内での方式発明を許さない、
 という§5.5の趣旨と一貫する)。
 
 **現行wrapperからの差分**: `origin/main`の`scripts/ut-tdd:4`は
 `ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"`でROOTを算出しているが、allowlistには
 この行が無いため実装PRはROOT算出を廃す。PowerShell側も`$root` / `$bin`の代入と`Test-Path`分岐が
-allowlist外となるため、上記3行へ倒す。
+canonical text外となるため、上記の全文へ倒す。現行wrapperの既存commentも
+canonical textのcomment行へ差し替える (字句を含めて固定である)。
 
 **前提の確認**: `node src/cli.ts`がNodeのtype-strippingで実行可能であることは本repoで実測済み
 (`node src/cli.ts plan lint` / `db rebuild` / `codex --role reviewer` が常用経路として成立している)。
 `package.json`の`bin.ut-tdd`も既に`./src/cli.ts`である。
+
+#### 5.2.2 allowlistのscope境界 (何を閉じ、何を閉じないか)
+
+**閉じるもの**: wrapper 2本のfile contentから到達し得る全ての起動。canonical textとの
+全文一致で判定するため、compiled binaryへの分岐・別interpreterの選択・preload指示・
+任意のcodeの混入は、形を問わずfail-closeする。
+
+**閉じないもの (scope外、意図的)**:
+
+| 面 | なぜ閉じないか |
+|---|---|
+| PATH上の`node`実体の差し替え / symlink | wrapper textでは制約できない。絶対pathを焼くとOS・環境ごとに壊れ、可搬性というADR-001の目的そのものを損なう |
+| `NODE_OPTIONS` / `--import` によるpreload | 呼び出し側プロセスのenvであり、file contentの外側にある |
+| `src/cli.ts`以降のsource改竄 | wrapperではなくrepo全体のintegrityの問題であり、review / CI / git historyが担う面 |
+
+これらは**wrapper契約の失効ではなく、別のtrust boundaryが担う残余リスク**である。
+本PLANは「wrapper textを信頼根とする」とだけ主張し、「wrapperを固定すればnodeの実行体まで
+一意に定まる」とは主張しない。ambient環境の信頼はrepo外の運用 (開発機・CI runnerの構成) に
+属し、本契約の検証対象ではない。実装PRの`runtime-portability` lintもこの範囲を実装しない
+(実装しないことをテストで固定する必要は無い — 検出規則が存在しないだけである)。
 
 ### 5.3 撤去の根拠 (実測、基準 = `origin/main` `1f347281`)
 
@@ -318,7 +353,7 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 
 実装PRが担うのは次の2点に限る:
 
-1. wrapper 2本を§5.2.1のallowlist形 (許容3行) へ倒すことと、L6 `function-spec.md` /
+1. wrapper 2本を§5.2.1のcanonical text (全文固定) へ倒すことと、L6 `function-spec.md` /
    requirements §7.1 の記述追随。
 2. `runtime-portability` lintへの再流入fail-close追加
    (`CAND-NODEBOOT-021/022/023/024`のGreen化)。
@@ -341,14 +376,14 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 
 | candidate | 対応する契約 | 判定 |
 |---|---|---|
-| `CAND-NODEBOOT-021` | §5.2.1 allowlist (`dist` 参照の再流入) | allowlist外の行として落ちる。形を問わない |
-| `CAND-NODEBOOT-022` | §5.2.1 allowlist (分岐・存在判定の再流入) | 同上。構文解析・データフロー追跡を要さない |
+| `CAND-NODEBOOT-021` | §5.2.1 全文一致 (`dist` 参照の再流入) | 全文不一致として落ちる。comment内を含め形を問わない |
+| `CAND-NODEBOOT-022` | §5.2.1 全文一致 (分岐・存在判定の再流入) | 同上。構文解析・データフロー追跡を要さない |
 | `CAND-NODEBOOT-023` | §5.4 (2 receiptの論理積) | 片側欠落でも撤去をfail-close |
-| `CAND-NODEBOOT-024` | §5.2.1 allowlist (canonical以外の起動) | `eval` / 代入内command substitution / backtick / source / 別`exec` 等を個別caseで固定 |
+| `CAND-NODEBOOT-024` | §5.2.1 全文一致 (canonical以外の起動 / 非不活性comment) | `eval` / 代入内command substitution / backtick / source / 別`exec` / 別shebang / `#requires` 等を個別caseで固定 |
 
-021 / 022 / 024 は**同一のallowlist規則に対する別々の攻撃case**であり、3つの独立した検出規則
+021 / 022 / 024 は**同一の全文一致規則に対する別々の攻撃case**であり、3つの独立した検出規則
 ではない。denylist時代は規則ごとに列挙漏れが迂回路になっていたが、allowlistでは
-「許容3行以外はすべて落ちる」1規則に収束する。
+「canonical text全文一致以外はすべて落ちる」1規則に収束する。
 
 実装先は`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
 candidate段階では正式oracle IDを宣言せず、各test実装とRed実測の同一commitで昇格する。

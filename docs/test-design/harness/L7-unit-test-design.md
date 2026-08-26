@@ -2035,10 +2035,10 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-018` | candidate F0b commitにF0a custody receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-019` | candidate F0c commitにF0b sealed build receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitにF0c aggregate receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
-| `CAND-NODEBOOT-021` | wrapper (`scripts/ut-tdd` / `scripts/ut-tdd.ps1`) へ `dist` 参照を再追加 (変数化・path分割・comment内を含む) | allowlist外の行としてfail-close (PLAN-L6-93 §5.2.1)。禁止token列挙ではなく許容3行との不一致で落ちる |
-| `CAND-NODEBOOT-022` | wrapperへ分岐・存在判定を再追加 (`if`/`case`/`[ -x ]`/`test`/`Test-Path`/`command -v`/`&&`/`\|\|` 等、形を問わない) | allowlist外の行としてfail-close。構文解析もデータフロー追跡も要さない |
+| `CAND-NODEBOOT-021` | wrapper (`scripts/ut-tdd` / `scripts/ut-tdd.ps1`) へ `dist` 参照を再追加 (変数化・path分割・comment内を含む) | canonical text全文不一致としてfail-close (PLAN-L6-93 §5.2.1)。禁止token列挙ではなく全文照合で落ちるため、comment内の`dist`も同じ規則で落ちる |
+| `CAND-NODEBOOT-022` | wrapperへ分岐・存在判定を再追加 (`if`/`case`/`[ -x ]`/`test`/`Test-Path`/`command -v`/`&&`/`\|\|` 等、形を問わない) | canonical text全文不一致としてfail-close。構文解析もデータフロー追跡も要さない |
 | `CAND-NODEBOOT-023` | sealed build receiptとNode parity receiptの**いずれか一方でも欠けた**状態で`package.json`の`build` scriptを削除 (§5.4) | 2 receiptの論理積でfail-close。片側成立のみの組み合わせも禁止側 |
-| `CAND-NODEBOOT-024` | wrapperへcanonical以外の起動を追加 — `eval ./build/ut-tdd`、変数代入内の `$(./build/ut-tdd)`、backtick、`.`/`source`、`Start-Process`、`Invoke-Expression`、到達不能canonical行を伴う別`exec`、canonical行の欠落・重複・字面変更・順序変更 | すべてallowlist外としてfail-close。**denylist列挙漏れによる迂回が原理的に生じない**ことを、上記の各形を個別caseとして固定する |
+| `CAND-NODEBOOT-024` | wrapperへcanonical以外の起動を追加 — `eval ./build/ut-tdd`、変数代入内の `$(./build/ut-tdd)`、backtick、`.`/`source`、`Start-Process`、`Invoke-Expression`、到達不能canonical行を伴う別`exec`、canonical行の欠落・重複・字面変更・順序変更、**canonical shebangより前に置いた別`#!`行**、**PowerShell `#requires -Modules`**、comment行の追加・削除・字句変更 | すべてcanonical text全文不一致としてfail-close。**denylist列挙漏れによる迂回が原理的に生じない**ことと、**comment行が意味的に不活性でない攻撃 (別shebang / `#requires`) も同じ規則で落ちる**ことを、上記の各形を個別caseとして固定する |
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
