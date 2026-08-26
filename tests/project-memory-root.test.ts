@@ -10,6 +10,7 @@ import {
   publishClaudeInboxEntry,
   summarizeUnclaimedInbox,
 } from "../src/runtime/claude-memory-wake.ts";
+import { planProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
 import {
   resolveProjectMemoryRoot,
   resolveProjectMemoryRootWithPorts,
@@ -143,5 +144,48 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       rmSync(worker, { recursive: true, force: true });
       rmSync(main, { recursive: true, force: true });
     }
+  });
+
+  it("CANDIDATE-U-PMEMROOT-005: 同一ID・同一digestだけを決定論的にdedupeする", () => {
+    const digest = "a".repeat(64);
+    const receipt = planProjectMemoryMigration({
+      projectId: "owner/product",
+      entries: [
+        { memoryId: "memory:project:same", digest, sourcePath: "worker/.ut-tdd/memory/a.md" },
+        { memoryId: "memory:project:same", digest, sourcePath: "main/.ut-tdd/memory/a.md" },
+      ],
+    });
+    expect(receipt).toMatchObject({ outcome: "ready", projectId: "owner/product" });
+    expect(receipt.canonical).toHaveLength(1);
+    expect(receipt.duplicates).toHaveLength(1);
+    expect(receipt.conflicts).toEqual([]);
+    expect(receipt.inventoryDigest).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("CANDIDATE-U-PMEMROOT-006: 同一ID・異digestを上書きせず全variant付きでquarantineする", () => {
+    const receipt = planProjectMemoryMigration({
+      projectId: "owner/product",
+      entries: [
+        {
+          memoryId: "memory:project:diverged",
+          digest: "a".repeat(64),
+          sourcePath: "main/.ut-tdd/memory/a.md",
+        },
+        {
+          memoryId: "memory:project:diverged",
+          digest: "b".repeat(64),
+          sourcePath: "worker/.ut-tdd/memory/a.md",
+        },
+      ],
+    });
+    expect(receipt.outcome).toBe("quarantine_required");
+    expect(receipt.canonical).toEqual([]);
+    expect(receipt.duplicates).toEqual([]);
+    expect(receipt.conflicts).toMatchObject([
+      {
+        memoryId: "memory:project:diverged",
+        variants: [{ digest: "a".repeat(64) }, { digest: "b".repeat(64) }],
+      },
+    ]);
   });
 });
