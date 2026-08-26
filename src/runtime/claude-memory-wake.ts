@@ -419,7 +419,7 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
       entry.producerProvider !== entry.originRuntime ||
       !entry.producerSessionId.trim() ||
       entry.targetProvider !== "claude" ||
-      entry.targetSessionId !== entry.targetWorkspaceId
+      !entry.targetSessionId.trim()
     )
       return undefined;
     if (entry.purpose === "memory") return entry;
