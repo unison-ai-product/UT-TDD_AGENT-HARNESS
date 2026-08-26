@@ -1,9 +1,13 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkWorktreeLifecycle } from "../src/doctor/runtime-state.ts";
-import { JsonlLifecycleLedger } from "../src/runtime/worktree-lifecycle/adapters/jsonl-ledger.ts";
+import {
+  JsonlLifecycleLedger,
+  resolveWorktreeLifecycleLedgerPath,
+} from "../src/runtime/worktree-lifecycle/adapters/jsonl-ledger.ts";
 import {
   ManagedWorktreeCoordinator,
   type ManagedWorktreePorts,
@@ -79,6 +83,22 @@ describe("managed worktree lifecycle", () => {
       "planned",
       "activation_aborted",
     ]);
+  });
+
+  it("CANDIDATE-U-WTMAN-002 compensates inventory and identity failures", () => {
+    for (const observation of [
+      { inventoryAvailable: false, identityMatches: false },
+      { inventoryAvailable: true, identityMatches: false },
+    ]) {
+      const deps = ports();
+      vi.mocked(deps.observeWorktree).mockReturnValue(observation);
+      const coordinator = new ManagedWorktreeCoordinator(deps);
+      expect(() => coordinator.create(input())).toThrow();
+      expect(deps.releasePath).toHaveBeenCalledTimes(1);
+      expect(deps.enqueueCleanup).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: "activation_aborted" }),
+      );
+    }
   });
 
   it("CANDIDATE-U-WTMAN-002 releases the lease when planned persistence fails", () => {
@@ -250,5 +270,36 @@ describe("managed worktree lifecycle", () => {
     expect(() => ledger.read()).toThrow("worktree_lifecycle_ledger_chain_mismatch");
     expect(() => ledger.append(events[1])).toThrow("worktree_lifecycle_ledger_chain_mismatch");
     expect(readFileSync(path, "utf8")).toBe(tampered);
+  });
+
+  it("CANDIDATE-P-WTMAN-001 shares a ledger only through the same Git common-dir", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-wt-common-"));
+    roots.push(root);
+    const repo = join(root, "repo");
+    const linked = join(root, "linked");
+    const other = join(root, "other");
+    execFileSync("git", ["init", repo]);
+    execFileSync("git", ["-C", repo, "config", "user.email", "test@example.invalid"]);
+    execFileSync("git", ["-C", repo, "config", "user.name", "UT Test"]);
+    writeFileSync(join(repo, "seed.txt"), "seed\n", "utf8");
+    execFileSync("git", ["-C", repo, "add", "seed.txt"]);
+    execFileSync("git", ["-C", repo, "commit", "-m", "seed"]);
+    execFileSync("git", ["-C", repo, "worktree", "add", "-b", "linked", linked, "HEAD"]);
+    execFileSync("git", ["init", other]);
+
+    const fromMain = resolveWorktreeLifecycleLedgerPath({
+      repoRoot: repo,
+      repositoryLineageId: "project-a",
+    });
+    const fromLinked = resolveWorktreeLifecycleLedgerPath({
+      repoRoot: linked,
+      repositoryLineageId: "project-a",
+    });
+    const fromOther = resolveWorktreeLifecycleLedgerPath({
+      repoRoot: other,
+      repositoryLineageId: "project-b",
+    });
+    expect(fromLinked).toBe(fromMain);
+    expect(fromOther).not.toBe(fromMain);
   });
 });

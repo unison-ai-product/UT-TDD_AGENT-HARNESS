@@ -57,6 +57,8 @@ cleanup handoffまで束縛し、AI session終了後に未所有worktreeが増�
 | create sagaの全faultと補償event | `CANDIDATE-U-WTMAN-002` |
 | ledger hash chain・競合・replay | `CANDIDATE-U-WTMAN-003` |
 | terminalとcleanup handoffの原子的記録 | `CANDIDATE-U-WTMAN-004` |
+| owner/status/Stop reconciliation | `CANDIDATE-U-WTMAN-005` |
+| doctorのexpired/unmanaged投影 | `CANDIDATE-U-WTMAN-006` |
 | 別worktreeから同じledgerを観測 | `CANDIDATE-P-WTMAN-001` |
 
 ## 非Scope
@@ -80,4 +82,3 @@ cleanup handoffまで束縛し、AI session終了後に未所有worktreeが増�
 - terminal後に人間の再指示なしでcleanup handoffが残る。
 - targeted test、TypeScript、Biome、PLAN lint、Linux/Windows/aggregate CIがGreen。
 - exact HEADのClaude Opus 5 non-author closing receiptを得る。
-
