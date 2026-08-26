@@ -52,6 +52,15 @@ YAML+JSON+SQLite / Bun単一バイナリでありmigration debtである。**tar
 Node / compiled ESM / sealed generationである。Node parity receipt前にcurrentを削除せず、target成立後に
 current Bun経路を残さない。
 
+> **削除禁止条項の限定 carve-out (PLAN-L7-507)**: 上記の「parity 前に current を削除せず」は
+> **稼働する生成・配布経路を rollback 保全する**ための条項である。したがって、稼働する生成も配布も
+> 実績を持たない**記述のみの旧経路**は、撤去前に監査 evidence (CI 実行実績・配布 asset・runbook 参照・
+> 実行経路の実測) を所管 PLAN へ記録することを条件に、parity 前でも撤去してよい。この carve-out は
+> §CI lint 行 (current local gate) と §cutover FSM の「旧Bun経路を削除せず」には**波及しない** —
+> そちらは現に稼働している経路を守る条項であり、「動いていないと思う」を口実にした稼働経路の撤去を
+> 許さない。適用例: `bun build --compile` の build script と wrapper の `dist/ut-tdd` 分岐
+> (PLAN-L7-507 §2.2 に監査 evidence を記録)。
+
 > **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
 
 ## §3 building block view 構成ビュー (arc42 §5)
@@ -199,7 +208,7 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 | ADR | 状態 | 扱い |
 |---|---|---|
-| **ADR-001** | accepted / migration中 | mainのTS/Bun実体をmigration debtとして明記し、targetをTypeScript/Node + compiled ESMへ更新。Node parity前の旧経路削除は禁止 |
+| **ADR-001** | accepted / migration中 | mainのTS/Bun実体をmigration debtとして明記し、targetをTypeScript/Node + compiled ESMへ更新。Node parity前の旧経路削除は禁止 (§2 の限定 carve-out — 稼働実績を持たない記述のみの経路は監査 evidence 記録を条件に撤去可 — のみ例外) |
 | **[ADR-002](../../../adr/ADR-002-dependency-direction-and-auto-map.md)** | **accepted** (2026-05-29) | 依存方向ルール (schema 安定核 + 循環禁止 + fs 隔離) + **依存マップ自動生成・構想 vs 実装 drift lint** (IMP-032)。§3 が設計根拠 |
 | **[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md)** | **accepted** (2026-05-29) | runtime adapter 境界 (Anti-Corruption Layer)、**契約プラン CLI/hook 前提・API key 非保持** (A-71 是正を反映)。§6 + external-if §6 が設計根拠 |
 | **[ADR-004](../../../adr/ADR-004-internal-asset-ts-control-boundary.md)** | **accepted** (2026-06-01) | 内部資産 (subagent/skill/command) の TS 統制境界 = **層1 資産の中身 markdown 正本 / 層2 管理機構 TS**。TS は生成でなく検証/注入/統制。FR-L1-46〜49 / BR-22 / Recovery PLAN-RECOVERY-01 の設計根拠。real Codex TL 確定 |

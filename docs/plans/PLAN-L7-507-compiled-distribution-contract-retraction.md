@@ -106,11 +106,26 @@ rollback 保全である。本件では保護対象が実在しないことを�
 | Release asset に入るか | `gh release list` (source repo) | **0 件** (リリース自体が無い) |
 | Release asset に入るか | `gh release view v0.1.0..v0.1.4 --repo ...-Pack` | 全 5 件とも asset は `.tar.gz` (約 1MB) / `.sha256` / `.manifest.json` のみ。`bun --compile` バイナリは数十 MB 規模であり混入し得ない |
 | 手動 runbook があるか | `git grep -Iln "npm run build" -- docs/ skills/ .github/` | **0 件** |
-| ローカルに実体があるか | `ls dist/` | 存在しない |
+| ローカルに実体があるか | `ls -la dist/` (main worktree) | **`dist/ut-tdd.exe` 107,570,176 bytes / 2026-06-19 生成 / untracked が実在**する (§3.3 訂正) |
 | バイナリ不在で CLI が動くか | `scripts/ut-tdd` | `dist/ut-tdd` 不在時は `exec node src/cli.ts` |
 
-結論: 正本の配布フロー・リリース資産・自動化・文書化された手順のいずれからも、compiled
-artifact は生成も配布も参照もされていない。
+結論 (訂正版): **配布**については、正本の配布フロー・リリース資産・自動化・文書化された手順の
+いずれからも compiled artifact は生成も配布もされていない。一方**生成 script と wrapper 参照は
+実在した** (`package.json` の `build: bun build src/cli.ts --compile`、`scripts/ut-tdd(.ps1)` の
+`dist/ut-tdd` 分岐)。したがって「生成も参照もされていない」という当初の記述は誤りであり、
+主張は「稼働する配布経路を持たない」に限定する。
+
+### 3.3 訂正: ローカル stale binary は実在し、これは撤去の緊急性を強める
+
+closing review (FLAG blocking 1) と advisor 検証を受けて再実測した結果、開発機の main worktree に
+`dist/ut-tdd.exe` (107MB、2026-06-19、untracked) が残存していた。当初の監査は dist/ を持たない
+PR worktree で `ls dist/` を実行しており、「存在しない」は**測定面の誤り**である。
+
+含意は撤去の反対根拠ではなく逆である: wrapper の `Test-Path dist\ut-tdd.exe` 分岐が生きている間、
+`scripts/ut-tdd.ps1` 経由の起動は **2 か月前の stale compiled binary を silent に実行しうる**
+(source の変更を一切反映しない)。分岐の撤去はこの現役ハザードを inert 化する。残存する
+untracked バイナリ自体は tracked artifact ではないため本 PLAN の変更対象外だが、分岐撤去後は
+どの経路からも参照されない死蔵ファイルになる。
 
 ### 3.2 advisor 前提の差し戻し
 
@@ -136,7 +151,9 @@ artifact は生成も配布も参照もされていない。
 | `scripts/ut-tdd.ps1` | `dist\ut-tdd.exe` 分岐の削除 |
 | `tests/runtime-portability.test.ts` | 上記に対応する fixture / assertion の更新 |
 | `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` | :1583 / :1584 / :1589 / :2487 を ADR-001 の配布契約へ追随 |
+| `src/lint/runtime-portability.ts` | 規則 `script-wrapper-compiled-dispatch` の追加 (撤去した dist 分岐の再流入を POSIX / PowerShell 両面で fail-close) |
 | `docs/design/harness/L4-basic-design/architecture.md:35` | 保護対象不在の監査結果を反映し削除禁止条項を訂正 |
+| `docs/design/harness/L4-basic-design/architecture.md` §2 / ADR-001 行 | 削除禁止条項の**限定 carve-out** を明記 (稼働実績を持たない記述のみの経路は監査 evidence 記録を条件に parity 前でも撤去可)。CI lint 行と cutover FSM 行には波及させない — 稼働中の Bun 経路を守る条項だから |
 | `docs/design/harness/L6-function-design/function-spec.md:784` | 実装との drift 是正 (`bun run` fallback → `node`、`TypeScript/Bun first` → Node) |
 
 `docs/adr/ADR-006:22` は oclif を却下した当時の理由記述であり、歴史記録として改訂しない。
@@ -155,6 +172,11 @@ artifact は生成も配布も参照もされていない。
 - AC-2: `runtime-portability` が `package-missing-compiled-build` を出さず、かつ
   `bun build --compile` を欠く `package.json` に対して violation 0 で通る。
 - AC-3: `scripts/ut-tdd` / `scripts/ut-tdd.ps1` が `dist` を参照しない。
+- AC-3b: 上記の**再流入が機械検出される** — wrapper に `dist/ut-tdd` (POSIX) または
+  `dist\ut-tdd.exe` (PowerShell) 分岐を戻した fixture が `script-wrapper-compiled-dispatch`
+  で fail-close し、現行 wrapper では false positive を出さない (`U-RPORT-019`)。
+  `script-wrapper-not-thin` の 12 行 + `src/cli.ts` 参照条件では検出できないことを red で確認する
+  (規則を無効化すると `U-RPORT-019` のみ落ちる)。
 - AC-4: requirements / L4 / L6 の該当行が ADR-001 の配布契約と矛盾しない。
 - AC-5: `harness-check` (typecheck / vitest / biome / doctor) が緑。
 
