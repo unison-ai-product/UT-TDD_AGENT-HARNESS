@@ -11,6 +11,22 @@ import { isValidReviewRequest, reviewRequestDigest } from "./review-attestation.
 
 export type ReviewProvider = "codex" | "claude";
 
+export type LiveReviewWakeRoutingFailure =
+  | "no_live_claude_workspace"
+  | "ambiguous_live_claude_workspace"
+  | "stale_claude_workspace"
+  | "incompatible_claude_workspace_schema";
+
+export class LiveReviewWakeError extends Error {
+  readonly reason: LiveReviewWakeRoutingFailure;
+
+  constructor(reason: LiveReviewWakeRoutingFailure) {
+    super(reason);
+    this.name = "LiveReviewWakeError";
+    this.reason = reason;
+  }
+}
+
 export interface LiveReviewRequestInput extends ReviewAttestationRequest {
   readonly memoryPath: string;
 }
@@ -39,7 +55,14 @@ export type LiveReviewDispatchResult =
       readonly reviewer: ReviewProvider;
       readonly request: Extract<ReviewRequestResult, { ok: true }>;
     }
-  | { readonly ok: false; readonly reason: string };
+  | {
+      readonly ok: false;
+      readonly reason: string;
+      readonly backlog?: {
+        readonly requestDigest: string;
+        readonly requestPath: string;
+      };
+    };
 
 export interface LiveReviewVerdictPorts {
   readonly projectVerdict: (input: {
@@ -215,7 +238,17 @@ export function dispatchLiveReview(input: {
       request: issued.request,
       memoryPath,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof LiveReviewWakeError) {
+      return {
+        ok: false,
+        reason: error.reason,
+        backlog: {
+          requestDigest: issued.digest,
+          requestPath: issued.path,
+        },
+      };
+    }
     return { ok: false, reason: "review_wake_publish_failed" };
   }
   return { ok: true, reviewer, request: issued };

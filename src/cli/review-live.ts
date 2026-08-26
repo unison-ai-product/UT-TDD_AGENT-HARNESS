@@ -2,7 +2,12 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
-import { consumeLiveReview, dispatchLiveReview } from "../feedback/live-review-projection.ts";
+import type { LiveReviewWakeRoutingFailure } from "../feedback/live-review-projection.ts";
+import {
+  consumeLiveReview,
+  dispatchLiveReview,
+  LiveReviewWakeError,
+} from "../feedback/live-review-projection.ts";
 import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import type { ReviewVerdictProjectionResult } from "../feedback/review-attestation.ts";
 import { issueReviewRequest } from "../feedback/review-attestation.ts";
@@ -10,9 +15,9 @@ import { parseMemoryFile } from "../memory/index.ts";
 import { resolveMemoryTaskFile, writeMemory } from "../memory/service.ts";
 import {
   buildClaudeReviewInboxEntry,
-  claudeWorkspaceId,
   decodeClaudeInboxEntry,
   publishClaudeInboxEntry,
+  resolveLiveClaudeWorkspace,
 } from "../runtime/claude-memory-wake.ts";
 import { detectMode } from "../runtime/detect.ts";
 
@@ -28,6 +33,11 @@ export interface LiveReviewCommandDeps {
     repoRoot: string,
     projection: Extract<ReviewVerdictProjectionResult, { ok: true }>,
   ) => void;
+  readonly resolveWakeTarget: (
+    repoRoot: string,
+  ) =>
+    | { readonly ok: true; readonly workspaceId: string }
+    | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
 }
 
 export function executeLiveReviewDelegation(input: {
@@ -87,6 +97,7 @@ export function registerLiveReviewCommands(
     runReview: ({ repoRoot, provider, args }) =>
       executeLiveReviewDelegation({ repoRoot, provider, args }),
     publishReceipt: publishLiveReviewReceipt,
+    resolveWakeTarget: resolveLiveClaudeWorkspace,
     ...overrides,
   };
   review
@@ -132,10 +143,12 @@ export function registerLiveReviewCommands(
               issueRequest: issueReviewRequest,
               providerAvailable: deps.providerAvailable,
               publishReviewWake: (wake) => {
+                const target = deps.resolveWakeTarget(repoRoot);
+                if (!target.ok) throw new LiveReviewWakeError(target.reason);
                 const notification = buildClaudeReviewInboxEntry({
                   memory,
                   operationId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
-                  workspaceId: claudeWorkspaceId(repoRoot),
+                  workspaceId: target.workspaceId,
                   originRuntime: "codex",
                   requestDigest: wake.requestDigest,
                   requestPath: wake.requestPath,

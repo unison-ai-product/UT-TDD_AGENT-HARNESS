@@ -1,6 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,11 +16,14 @@ import type { MemoryEntry } from "../src/memory/index.ts";
 import {
   buildClaudeInboxEntry,
   buildClaudeReviewInboxEntry,
+  CLAUDE_INBOX_SCHEMA,
+  CLAUDE_WAKE_GENERATION_SCHEMA,
   claudeWorkspaceId,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
   renderClaudeWakeMessage,
   resolveClaudeWakeDelay,
+  resolveLiveClaudeWorkspace,
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
@@ -40,6 +51,106 @@ function fixture(): string {
 }
 
 describe("Claude HARNESS memory async wake", () => {
+  it("U-MEMWAKE-007: live-dispatch from a subject worktree resolves the active main workspace", () => {
+    const main = fixture();
+    const subject = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-subject-"));
+    try {
+      writeFileSync(join(main, "README.md"), "fixture\n", "utf8");
+      execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: main });
+      execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: main });
+      execFileSync("git", ["add", "README.md"], { cwd: main });
+      execFileSync("git", ["commit", "-qm", "fixture"], { cwd: main });
+      execFileSync("git", ["worktree", "add", "-q", "-b", "subject", subject, "HEAD"], {
+        cwd: main,
+      });
+
+      const mainWorkspaceId = claudeWorkspaceId(main);
+      const runtime = join(main, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      mkdirSync(runtime, { recursive: true });
+      writeFileSync(
+        join(runtime, "main-vscode.generation"),
+        `${JSON.stringify({
+          schema: CLAUDE_WAKE_GENERATION_SCHEMA,
+          generation: "main-live",
+          workspaceId: mainWorkspaceId,
+          inboxSchema: CLAUDE_INBOX_SCHEMA,
+        })}\n`,
+        "utf8",
+      );
+
+      expect(resolveLiveClaudeWorkspace(subject)).toEqual({
+        ok: true,
+        workspaceId: mainWorkspaceId,
+      });
+    } finally {
+      execFileSync("git", ["worktree", "remove", "--force", subject], { cwd: main });
+      rmSync(subject, { recursive: true, force: true });
+      rmSync(main, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["no live workspace", "no_live_claude_workspace"],
+    ["stale workspace", "stale_claude_workspace"],
+    ["incompatible workspace schema", "incompatible_claude_workspace_schema"],
+  ] as const)("U-MEMWAKE-007: %s is typed fail-close", (_label, reason) => {
+    const root = fixture();
+    try {
+      const runtime = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      if (reason !== "no_live_claude_workspace") {
+        mkdirSync(runtime, { recursive: true });
+        writeFileSync(
+          join(runtime, "session.generation"),
+          `${JSON.stringify({
+            schema: CLAUDE_WAKE_GENERATION_SCHEMA,
+            generation: "session",
+            workspaceId: claudeWorkspaceId(root),
+            ...(reason === "incompatible_claude_workspace_schema"
+              ? { inboxSchema: "ut-tdd.claude-inbox/v2" }
+              : { inboxSchema: CLAUDE_INBOX_SCHEMA }),
+          })}\n`,
+          "utf8",
+        );
+        if (reason === "stale_claude_workspace") {
+          const old = new Date(Date.now() - 16 * 60 * 1_000);
+          utimesSync(join(runtime, "session.generation"), old, old);
+        }
+      }
+      expect(resolveLiveClaudeWorkspace(root)).toMatchObject({ ok: false, reason });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-MEMWAKE-007: multiple live workspace targets are typed ambiguous", () => {
+    const root = fixture();
+    try {
+      const runtime = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      mkdirSync(runtime, { recursive: true });
+      for (const [name, workspaceId] of [
+        ["main", "a".repeat(64)],
+        ["subject", "b".repeat(64)],
+      ] as const) {
+        writeFileSync(
+          join(runtime, `${name}.generation`),
+          `${JSON.stringify({
+            schema: CLAUDE_WAKE_GENERATION_SCHEMA,
+            generation: name,
+            workspaceId,
+            inboxSchema: CLAUDE_INBOX_SCHEMA,
+          })}\n`,
+          "utf8",
+        );
+      }
+      expect(resolveLiveClaudeWorkspace(root)).toEqual({
+        ok: false,
+        reason: "ambiguous_live_claude_workspace",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-RVATT-023: producerはv3 memoryを発行し、review文言をtyped reviewへ昇格しない", () => {
     const entry = buildClaudeInboxEntry({
       memory: { ...memory, body: "PR #218 review request", tags: ["review", "claude"] },

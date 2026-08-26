@@ -12,7 +12,7 @@ route_signal: reverse
 route_mode: reverse
 status: confirmed
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-26
 owner: Codex / TL
 parent_design: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -97,3 +97,10 @@ review_evidence:
 
 - [x] L6 memory設計とL7 oracleが同一配送契約を持つ。
 - [x] PLAN-L7-472の実装が上記契約へtraceされる。
+
+## Issue #416 delta backfill
+
+- R1: subject worktree identityとlive consumer workspace identityの混同を実測し、request正本と配送先を分離した。
+- R2: 既存U-MEMWAKE-007へactive main、target 0、multiple、stale、schema incompatibleの負系を追加した。
+- R3: exact-head CIとClaude非著者closing reviewをPRで取得する。完了前にmergeしない。
+- R4: `memory.md`とPLAN-L7-472へexact-one live workspace resolution、typed backlog、authority非昇格を戻した。
