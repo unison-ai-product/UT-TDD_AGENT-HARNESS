@@ -54,21 +54,14 @@ review_evidence:
       - "tests/doctor-test-repository-isolation.test.ts: U-TESTHYGIENE-015"
     green_commands:
       - kind: unit_test
-        command: "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/project-hook.test.ts tests/codex-hook-adapter.test.ts tests/doctor-setup-smoke.test.ts tests/hook-native-launcher.test.ts tests/runtime-portability.test.ts --reporter=dot"
+        command: "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/project-hook.test.ts tests/codex-hook-adapter.test.ts tests/doctor-setup-smoke.test.ts tests/hook-native-launcher.test.ts tests/runtime-portability.test.ts tests/github-ci-policy.test.ts tests/model-id-ssot-drift.test.ts tests/doctor-test-repository-isolation.test.ts --reporter=dot"
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-08-26T01:05:00Z"
+        completed_at: "2026-08-26T02:20:00Z"
         evidence_path: tests/setup.test.ts
-        anchor_commit: 7a7c0c9794f2dceced474e05bdda6c24dc606476
-      - kind: unit_test
-        command: "node scripts/run-vitest-snapshot.ts tests/github-ci-policy.test.ts --reporter=dot"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-08-26T02:05:00Z"
-        evidence_path: tests/github-ci-policy.test.ts
-        anchor_commit: 53ba43ff
+        output_digest: "sha256:5c9488817e22d39c2f9ec6ac437a476818684016a0b1b8d7839c30792a90fc66"
+        anchor_commit: 6f2c2f9224d1a52549f7e819eac5ac86efdd0fdc
 ---
 
 # PLAN-L7-509 (troubleshoot): Pack/consumer 配布契約の Node 化
