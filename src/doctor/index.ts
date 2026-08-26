@@ -17,6 +17,7 @@ import {
   checkAgentSlots,
   checkHandover,
   checkHandoverDisciplineMessages,
+  checkWorktreeLifecycle,
   type DoctorDeps,
   doctorSlotsDeps,
   nodeDoctorDeps,
@@ -171,6 +172,7 @@ export function runDoctorMeasured(
     checkHandover(deps),
     ...checkHandoverDisciplineMessages(deps).map((m) => `doctor: handover-discipline — ${m}`),
     checkAgentSlots(doctorSlotsDeps(deps)),
+    checkWorktreeLifecycle(deps),
     ...checkPlanReferenceFreshnessAdvisory(deps.repoRoot),
     ...checkWorktreeTopologyAdvisory(
       typeof deps.worktreeTopology === "function"

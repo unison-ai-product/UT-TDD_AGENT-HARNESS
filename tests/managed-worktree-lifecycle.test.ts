@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { checkWorktreeLifecycle } from "../src/doctor/runtime-state.ts";
 import { JsonlLifecycleLedger } from "../src/runtime/worktree-lifecycle/adapters/jsonl-ledger.ts";
 import {
   ManagedWorktreeCoordinator,
@@ -149,6 +150,21 @@ describe("managed worktree lifecycle", () => {
       }),
     ]);
     expect(Object.isFrozen(coordinator.records())).toBe(true);
+  });
+
+  it("CANDIDATE-U-WTMAN-006 surfaces expired managed ownership through doctor", () => {
+    const deps = ports();
+    const coordinator = new ManagedWorktreeCoordinator(deps);
+    coordinator.create(input());
+    expect(
+      checkWorktreeLifecycle({
+        repoRoot: "C:/dev/repo",
+        now: "2026-08-26T00:02:00.000Z",
+        readText: () => null,
+        listDir: () => [],
+        worktreeLifecycle: () => coordinator.records(),
+      }),
+    ).toContain("expired=1");
   });
 
   it("CANDIDATE-U-WTMAN-003 rejects a modified hash-chain without appending", () => {

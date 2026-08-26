@@ -8,6 +8,7 @@ import {
   type HandoverPointer,
   handoverStale,
 } from "../handover/index.ts";
+import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
 import {
   type AgentSlotsDeps,
   DEFAULT_STALE_MINUTES,
@@ -16,6 +17,12 @@ import {
   loadSlots,
   peakParallel,
 } from "../runtime/agent-slots.ts";
+import {
+  JsonlLifecycleLedger,
+  resolveWorktreeLifecycleLedgerPath,
+} from "../runtime/worktree-lifecycle/adapters/jsonl-ledger.ts";
+import { WorktreeLifecycleStore } from "../runtime/worktree-lifecycle/domain/store.ts";
+import type { WorktreeLifecycleRecord } from "../runtime/worktree-lifecycle/domain/types.ts";
 import type { WorktreeTopologyInput } from "../runtime/worktree-topology.ts";
 import { collectWorktreeTopology } from "../runtime/worktree-topology-collector.ts";
 
@@ -29,6 +36,7 @@ export interface DoctorDeps {
   listDir: (dir: string) => string[];
   /** Optional PF3 input; node deps populate it, tests may provide facts directly. */
   worktreeTopology?: WorktreeTopologyProvider;
+  worktreeLifecycle?: () => readonly WorktreeLifecycleRecord[];
 }
 
 export function handoverDeps(deps: DoctorDeps): HandoverDeps {
@@ -87,6 +95,26 @@ export function checkAgentSlots(deps: AgentSlotsDeps): string {
   return `doctor: agent-slots — OK (active=${active}, peak_parallel=${peak})`;
 }
 
+export function checkWorktreeLifecycle(deps: DoctorDeps): string {
+  if (!deps.worktreeLifecycle) return "doctor: worktree-lifecycle — provider unavailable";
+  try {
+    const records = deps.worktreeLifecycle();
+    const active = records.filter((record) => record.state === "active").length;
+    const pending = records.filter((record) => record.state === "terminal_pending").length;
+    const retained = records.filter((record) => record.state === "retained").length;
+    const unmanagedRisk = records.filter(
+      (record) =>
+        (record.state === "planned" || record.state === "active") &&
+        Date.parse(record.expiresAt) <= Date.parse(deps.now),
+    ).length;
+    return unmanagedRisk > 0
+      ? `doctor: worktree-lifecycle — ⚠ expired=${unmanagedRisk} active=${active} terminal_pending=${pending} retained=${retained}`
+      : `doctor: worktree-lifecycle — OK (active=${active}, terminal_pending=${pending}, retained=${retained})`;
+  } catch (error) {
+    return `doctor: worktree-lifecycle — ⚠ unreadable (${error instanceof Error ? error.message : String(error)})`;
+  }
+}
+
 /** doctor 用に agent-slots deps を node I/O で構築 (now 固定は test 注入)。 */
 export function doctorSlotsDeps(deps: DoctorDeps): AgentSlotsDeps {
   return {
@@ -105,5 +133,16 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
     readText: (path) => (existsSync(path) ? readFileSync(path, "utf8") : null),
     listDir: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
     worktreeTopology: () => collectWorktreeTopology({ repoRoot }),
+    worktreeLifecycle: () => {
+      const identity = loadProjectIdentityFromHead({ repoRoot });
+      if (!identity.ok) throw new Error(identity.error.ruleId);
+      const ledger = new JsonlLifecycleLedger(
+        resolveWorktreeLifecycleLedgerPath({
+          repoRoot,
+          repositoryLineageId: identity.value.repositoryIdentity,
+        }),
+      );
+      return new WorktreeLifecycleStore(ledger.read().map((entry) => entry.event)).snapshots();
+    },
   };
 }
