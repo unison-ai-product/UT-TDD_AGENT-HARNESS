@@ -188,8 +188,9 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 
 - Red: `a5250930` — U-RVDISP-021 の timestamp-only replay oracle が `verdict` となり失敗。
 - Green: `6e8e14bb` — 実装・oracle・設計対を更新。
-- targeted result: `bun test tests/review-dispatch.test.ts` 52 pass / 0 fail、Biome対象2ファイル
-  Green、`bun test tests/plan-lint.test.ts` 78 pass / 0 fail、`npm run typecheck` Green。
+- targeted result: `node scripts/run-vitest-snapshot.ts tests/review-dispatch.test.ts tests/plan-lint.test.ts
+  --reporter=dot --maxWorkers=1 --minWorkers=1` 130 pass / 0 fail（review-dispatch 52、PLAN lint 78）、
+  Biome対象2ファイル Green、`npx tsc --noEmit --pretty false` Green。
 - 残存制約: CI exact-head と non-author closing review はPR側の検収で実施する。
 
 ## レビュー状態

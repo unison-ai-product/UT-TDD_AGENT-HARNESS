@@ -1556,9 +1556,9 @@ identity は `(memoryId, pr, exactHead, reviewRevision)` とし、入力順・re
 実行対応: `tests/review-dispatch.test.ts` (`U-RVDISP-001`〜`052`)。
 
 Issue #412 実測 (2026-08-26): Red `a5250930` で timestamp-only replay の旧競合挙動を再現し、
-Green `6e8e14bb` で U-RVDISP-021 を更新した。`bun test tests/review-dispatch.test.ts` は
-52 pass / 0 fail。valid timestamp の最古 instant、authorFamily 競合、invalid/future timestamp
-混在を同じ oracle で検証する。
+Green `6e8e14bb` で U-RVDISP-021 を更新した。Node detached snapshotでreview-dispatch 52件と
+PLAN lint 78件（合計130 pass / 0 fail）を再検証した。valid timestamp の最古 instant、
+authorFamily競合、invalid/future timestamp混在を同じ oracle で検証する。
 
 ## PLAN-L7-502 review履歴/current-HEAD eligibility oracle (2026-08-24)
 
