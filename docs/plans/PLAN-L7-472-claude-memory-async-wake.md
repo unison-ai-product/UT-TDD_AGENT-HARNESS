@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: confirmed
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-26
 owner: Codex / TL
 parent_design: docs/plans/PLAN-L7-465-cross-review-author-binding.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -105,7 +105,11 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 8. `asyncRewake=true`をproject-hookで強制し、待機上限15分、claim/generation保持7日とする。
 9. VS Code拡張が設定する`CLAUDE_CODE_ENTRYPOINT=claude-vscode`だけをpositiveなwake対象とし、
    未知・欠落entrypointとUT-TDDの有限Claude委譲はpoll前に即時終了させる。
-10. inbox v2をauthoring worktreeのSHA-256 identityへ束縛し、別worktree sessionのclaimを拒否する。
+10. memory/reviewのsubject worktreeと通知先を分離する。git common dirのfresh generation markerから
+    inbox schema互換な生存Claude VS Code workspaceがexact 1件だけ得られた場合、そのSHA-256 identityへ
+    wakeを束縛する。別worktreeから発行してもcanonical request digest/path/HEAD/revisionを変更しない。
+11. 生存target 0件、複数workspace、stale marker、schema非互換はtyped non-successとしてcanonical
+    requestをbacklogに残す。authoring worktree宛てのfalse `published`、推測配送、request再発行を禁止する。
 
 ## 設計と検証の対
 
@@ -134,3 +138,14 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 - [x] typecheck/Biome/plan lintがgreen。
 - [x] 実HARNESSメモリ通知でClaude sessionが即時再開する。
 - [x] non-author familyのclosing reviewで未解決FLAGがない。
+
+## Issue #416 workspace routing追補 (2026-08-26)
+
+PR専用worktreeからのreview wakeが、実在しないsubject workspace IDへ固定され、main workspaceの
+Claude VS Code sessionに消費されない実測を受け、U-MEMWAKE-007の同一git-common-dir契約を
+producer側target resolutionまで拡張した。generation markerはconsumerのworkspace IDと対応inbox schemaを
+公開し、producerはfresh・compatible・exact-oneだけを選ぶ。失敗時もcanonical requestは永続化済みのまま
+保持し、配送成功とは報告しない。通知は引き続きreview verdictまたはmerge authorityではない。
+
+- Red `38310b9b`: active main / no target / stale / incompatible / ambiguous targetを追加し6件Red。
+- Green実装 `d070b586`: `resolveLiveClaudeWorkspace`とtyped backlog outcomeをCLI compositionへ結線。

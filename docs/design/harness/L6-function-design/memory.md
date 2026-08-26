@@ -46,6 +46,7 @@ git common dir配下のruntime inboxへexclusive createする。Claude CodeのSt
 | --- | --- | --- |
 | `buildClaudeInboxEntry` | parse済み`MemoryEntry`と非空operation IDから配送DTOを作る。本文の権威昇格は禁止 | U-MEMWAKE-001〜003 |
 | `publishClaudeInboxEntry` | git common dirへ`wx`で保存。解決不能rootはfail-closeし、同一内容retryは冪等、同一ID異内容は拒否 | U-MEMWAKE-001〜002 / 004 |
+| `resolveLiveClaudeWorkspace` | shared runtime generationからfresh・v3互換なworkspaceを列挙し、exact 1件だけを返す。0/複数/stale/schema非互換はtyped deny | U-MEMWAKE-007 |
 | `waitForClaudeMemory` | 正の有限待機値だけを受理し、未claim entryを選ぶ。generationで旧watcherを停止し、claim成功時だけ配送済みinboxを除去する | U-MEMWAKE-001 / 005 |
 | `renderClaudeWakeMessage` | 本文を長さ上限付きJSON dataとしてescapeし、閉じmarkerを一つに保つ | U-MEMWAKE-003 |
 
@@ -58,9 +59,11 @@ claim/generationは7日retentionでGCし、session数に比例した永久増加
 終了する。加えてUT-TDDが`claude --print`で起動する有限委譲processは
 `UT_TDD_DISABLE_CLAUDE_MEMORY_WAKE=1`を強制し、呼出側envで解除できない。これによりraw headless
 Claudeとclosing reviewが15分watcherに保持されることを防ぐ（U-MEMWAKE-006）。
-inbox v2 entryは通知をauthoringしたGit worktree rootの正規化SHA-256を`targetWorkspaceId`へ持つ。
-Stop hookは自身のworktree identityと一致するentryだけをclaimし、同じgit common dirを共有する
-別worktreeのClaude sessionによる先取り配送を拒否する（U-MEMWAKE-007）。絶対pathは保存しない。
+inbox v3 review entryはcanonical subject requestと通知先を分離する。producerはgit common dirのfresh
+generation markerからv3互換な生存Claude VS Code workspaceがexact 1件の場合だけ、その正規化
+SHA-256を`targetWorkspaceId`へ使う。Stop hookは自身のworkspace identityと一致するentryだけをclaimする。
+target 0件、複数件、stale、schema非互換ではrequestをbacklogに保持し、`published`へ丸めない
+（U-MEMWAKE-007）。request digest/path/HEAD/revisionを配送都合で変更せず、絶対workspace pathも保存しない。
 
 ## §3 失敗方針
 
