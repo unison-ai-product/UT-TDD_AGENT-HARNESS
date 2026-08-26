@@ -23,8 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-REVERSE-512-project-scoped-memory-root-backfill.md
-    artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
     artifact_type: test_design
   - artifact_path: src/runtime/project-memory-root.ts
