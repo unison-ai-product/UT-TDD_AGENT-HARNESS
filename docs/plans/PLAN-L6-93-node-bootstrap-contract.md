@@ -226,47 +226,21 @@ L4 §2 の「Node parity receipt前にcurrentを削除しない」が保護す�
 
 ### 5.2 freezeする処遇 (F0期間中)
 
-- **維持**: `package.json`の`build` script (`bun build --compile`)。§1 `buildNodeGeneration`の
-  sealed build receiptが成立するまでrollback手段として保持する。
+- **維持**: `package.json`の`build` script (`bun build --compile`)。**§5.4の2 receipt
+  (sealed build receipt と Node parity receipt) が双方とも成立するまで**rollback手段として
+  保持する。片側成立での撤去は禁止であり、撤去境界は§5.4が唯一の正本である。
 - **撤去**: `scripts/ut-tdd` / `scripts/ut-tdd.ps1`のcompiled-first分岐。wrapperは
   `node src/cli.ts`を無条件にexecするthin dispatcherとする。
 - **禁止の追加**: §5.2.1のwrapper検出契約を`runtime-portability` lintがfail-closeする。
 
-#### 5.2.1 wrapper検出契約 (3条、実装PRが方式を発明しないための確定仕様)
+#### 5.2.1 wrapper allowlist契約 (実装PRが方式を発明しないための確定仕様)
 
-lintは`scripts/ut-tdd` / `scripts/ut-tdd.ps1`の2ファイルのみを対象とし、次の3条**すべて**を
-満たさないファイルをfail-closeする。データフロー追跡は行わない (行わなくても閉じる設計にする)。
+**方式はallowlistであり、禁止構文の列挙 (denylist) ではない。**
+lintは`scripts/ut-tdd` / `scripts/ut-tdd.ps1`の2ファイルのみを対象とし、
+comment行と空行を除いた残りの**実行文の列がallowlistと完全一致しない場合にfail-close**する。
+データフロー追跡も構文解析も要らない (行の正規化 + 完全一致で閉じる)。
 
-1. **分岐・存在判定の不在** (負条件)。行のcomment除去後のtextに次が現れたらfail-close:
-   - 文の先頭tokenとしての `if` / `elif` / `case` / `esac` / `switch` / `else`
-   - 存在判定 `[` / `test` / `[[` / `Test-Path` / `command -v` / `which` / `Get-Command`
-   - 制御演算子 `&&` / `||` (command substitution内を含め例外なし)
-2. **`dist` tokenの不在** (負条件)。comment除去後のtextを`[^A-Za-z0-9_]`で区切ったtoken列に
-   `dist`が現れたらfail-close。**token境界で判定する**ので`distribution`等の語は誤検出しない。
-3. **起動文の集合が canonical 1 行ちょうどに一致する** (正条件)。comment除去後のtextから
-   **起動文**を全て抽出し、その集合が canonical 1 件のみであること。
-   - **起動文の定義** (これに該当する文が canonical 以外に1つでもあればfail-close):
-     POSIX = 行頭の `exec`、または `.`/`source`、またはコマンド位置の非組み込み語;
-     PowerShell = `&` 呼び出し演算子、`.` dot-source、`Start-Process`、`Invoke-Expression`。
-     組み込みの `set` / `exit` / 変数代入は起動文ではない。
-   - **canonical起動文**: POSIX `exec node <path> "$@"` (`<path>`は`src/cli.ts`で終わる非空token) /
-     PowerShell `& node <path> @args` (`<path>`は`src\cli.ts`で終わるexpression)。
-   - 起動文が0件、2件以上、または1件だがcanonicalに一致しない場合はfail-close。
-
-条3が本契約の要である。条1・2は負の契約にすぎず、`exec "$ROOT/build/ut-tdd" "$@"` のように
-分岐なし・`dist`なしでcompiled binaryへ再流入する経路を塞げない (advisor `claude-fable-5` の
-反証1、2026-08-26)。**「node以外を起動しない」を正のアサーションとして固定する**のは条3だけである。
-
-**条3を「canonical行が1行存在する」ではなく「起動文集合が canonical 1件に一致する」と
-定義する理由** (r2 review 指摘): 存在と個数だけを見る形だと、
-`exec ./build/ut-tdd "$@"` の直後に到達不能な `exec node ./src/cli.ts "$@"` を1行置くだけで
-条1〜3を全て満たしながらcompiled binaryへ入れる (`exec`は復帰しないため後続行は死にコード)。
-排他 (他の起動文が存在しないこと) まで含めて初めて正条件として機能する。
-
-**条1が要求するwrapper書き換え** (実測済みの偽陽性回避、advisor反証2): `origin/main`の
-`scripts/ut-tdd:4` は `ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"` であり、この`&&`は
-分岐ではなくpath正規化イディオムだが条1に抵触する。したがって実装PRはROOT算出を廃し、
-POSIX wrapperを次の形へ倒す (`$0`依存度は現行と同一であり退行しない):
+**POSIX `scripts/ut-tdd` の許容実行文 (この3行、この順序のみ)**
 
 ```sh
 #!/usr/bin/env sh
@@ -274,8 +248,40 @@ set -e
 exec node "$(dirname -- "$0")/../src/cli.ts" "$@"
 ```
 
-PowerShell側は`$LASTEXITCODE`の伝播が分岐を要さないため、`Test-Path`分岐の削除のみで条1を満たす
-(`exit $LASTEXITCODE` は代入・伝播であって分岐ではない)。
+**PowerShell `scripts/ut-tdd.ps1` の許容実行文 (この3行、この順序のみ)**
+
+```powershell
+$ErrorActionPreference = "Stop"
+& node (Join-Path (Split-Path -Parent $PSScriptRoot) "src\cli.ts") @args
+exit $LASTEXITCODE
+```
+
+comment行 (`#`始まり) と空行は任意個数・任意位置で許容する。それ以外の行が1行でも存在するか、
+上記の行が欠ける・順序が変わる・字面が変わる場合はfail-close。
+
+**denylistをやめた理由** (r3 review 指摘): 本契約は r1→r2→r3 で禁止構文を継ぎ足してきたが、
+そのたびに新しい迂回が見つかった。r3 が示した迂回は次で、r2 の「起動文集合」定義を
+`eval`がshell builtinであるために通過する:
+
+```sh
+eval ./build/ut-tdd
+exec node ./src/cli.ts "$@"
+```
+
+変数代入内の`$(./build/ut-tdd)`も同様に通過した。**禁止側を列挙する限り、列挙漏れが
+そのまま迂回路になる**。許容側が3行しかない対象に対して denylist を使っていたこと自体が
+誤りであり、allowlistなら迂回路の集合は空になる (許容3行以外はすべてfail-closeなので、
+`eval`も command substitution も`dist`参照も分岐も、個別に列挙せずに落ちる)。
+
+**trade-off (意図的に受け入れる)**: allowlistは正当な変更にも脆い。wrapperへ`set -u`を足す、
+Node版数チェックを入れる、といった変更はすべて本契約の改訂を要する。3行のtrust rootに対しては
+その硬さが妥当であり、変更が必要になったら契約改訂を経る (実装PR内での方式発明を許さない、
+という§5.5の趣旨と一貫する)。
+
+**現行wrapperからの差分**: `origin/main`の`scripts/ut-tdd:4`は
+`ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"`でROOTを算出しているが、allowlistには
+この行が無いため実装PRはROOT算出を廃す。PowerShell側も`$root` / `$bin`の代入と`Test-Path`分岐が
+allowlist外となるため、上記3行へ倒す。
 
 **前提の確認**: `node src/cli.ts`がNodeのtype-strippingで実行可能であることは本repoで実測済み
 (`node src/cli.ts plan lint` / `db rebuild` / `codex --role reviewer` が常用経路として成立している)。
@@ -312,7 +318,7 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 
 実装PRが担うのは次の2点に限る:
 
-1. wrapper 2本のcompiled-first分岐撤去 (§5.2.1の3条を満たす形へ)と、L6 `function-spec.md` /
+1. wrapper 2本を§5.2.1のallowlist形 (許容3行) へ倒すことと、L6 `function-spec.md` /
    requirements §7.1 の記述追随。
 2. `runtime-portability` lintへの再流入fail-close追加
    (`CAND-NODEBOOT-021/022/023/024`のGreen化)。
@@ -330,15 +336,19 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 
 ### 5.6 pair oracle
 
-§5.2.1の3条と§5.4の条件に1対1で対応するcandidateを
+§5.2.1のallowlist契約と§5.4の撤去条件に対応するcandidateを
 `docs/test-design/harness/L7-unit-test-design.md`へ追加した:
 
 | candidate | 対応する契約 | 判定 |
 |---|---|---|
-| `CAND-NODEBOOT-021` | §5.2.1 条2 (`dist` token不在) | token境界判定。`distribution`等は誤検出しない |
-| `CAND-NODEBOOT-022` | §5.2.1 条1 (分岐・存在判定の不在) | 列挙したtokenのみを見る。データフロー追跡なし |
+| `CAND-NODEBOOT-021` | §5.2.1 allowlist (`dist` 参照の再流入) | allowlist外の行として落ちる。形を問わない |
+| `CAND-NODEBOOT-022` | §5.2.1 allowlist (分岐・存在判定の再流入) | 同上。構文解析・データフロー追跡を要さない |
 | `CAND-NODEBOOT-023` | §5.4 (2 receiptの論理積) | 片側欠落でも撤去をfail-close |
-| `CAND-NODEBOOT-024` | §5.2.1 条3 (canonical起動行ちょうど1つ) | 0行/2行以上、およびnode以外の起動語をfail-close |
+| `CAND-NODEBOOT-024` | §5.2.1 allowlist (canonical以外の起動) | `eval` / 代入内command substitution / backtick / source / 別`exec` 等を個別caseで固定 |
+
+021 / 022 / 024 は**同一のallowlist規則に対する別々の攻撃case**であり、3つの独立した検出規則
+ではない。denylist時代は規則ごとに列挙漏れが迂回路になっていたが、allowlistでは
+「許容3行以外はすべて落ちる」1規則に収束する。
 
 実装先は`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
 candidate段階では正式oracle IDを宣言せず、各test実装とRed実測の同一commitで昇格する。

@@ -2035,10 +2035,10 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-018` | candidate F0b commitにF0a custody receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-019` | candidate F0c commitにF0b sealed build receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitにF0c aggregate receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
-| `CAND-NODEBOOT-021` | wrapper (`scripts/ut-tdd` / `scripts/ut-tdd.ps1`) のcomment除去後textに`dist`がtokenとして現れる (PLAN-L6-93 §5.2.1 条2) | fail-close。token境界 (`[^A-Za-z0-9_]`) で判定し`distribution`等は通す |
-| `CAND-NODEBOOT-022` | wrapperに文頭`if`/`elif`/`case`/`esac`/`switch`/`else`、存在判定`[`/`test`/`[[`/`Test-Path`/`command -v`/`which`/`Get-Command`、制御演算子`&&`/`\|\|`が現れる (§5.2.1 条1) | fail-close。列挙tokenのみを見る (データフロー追跡なし) |
+| `CAND-NODEBOOT-021` | wrapper (`scripts/ut-tdd` / `scripts/ut-tdd.ps1`) へ `dist` 参照を再追加 (変数化・path分割・comment内を含む) | allowlist外の行としてfail-close (PLAN-L6-93 §5.2.1)。禁止token列挙ではなく許容3行との不一致で落ちる |
+| `CAND-NODEBOOT-022` | wrapperへ分岐・存在判定を再追加 (`if`/`case`/`[ -x ]`/`test`/`Test-Path`/`command -v`/`&&`/`\|\|` 等、形を問わない) | allowlist外の行としてfail-close。構文解析もデータフロー追跡も要さない |
 | `CAND-NODEBOOT-023` | sealed build receiptとNode parity receiptの**いずれか一方でも欠けた**状態で`package.json`の`build` scriptを削除 (§5.4) | 2 receiptの論理積でfail-close。片側成立のみの組み合わせも禁止側 |
-| `CAND-NODEBOOT-024` | wrapperの起動文集合がcanonical 1件に一致しない — 0件、2件以上、canonical不一致、および**canonicalに加えて別の起動文が存在する**形 (例: `exec ./build/ut-tdd "$@"` の後に到達不能なcanonical行、§5.2.1 条3) | fail-close。到達不能canonical行による条1・2すり抜けを排他条件で塞ぐ |
+| `CAND-NODEBOOT-024` | wrapperへcanonical以外の起動を追加 — `eval ./build/ut-tdd`、変数代入内の `$(./build/ut-tdd)`、backtick、`.`/`source`、`Start-Process`、`Invoke-Expression`、到達不能canonical行を伴う別`exec`、canonical行の欠落・重複・字面変更・順序変更 | すべてallowlist外としてfail-close。**denylist列挙漏れによる迂回が原理的に生じない**ことを、上記の各形を個別caseとして固定する |
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
