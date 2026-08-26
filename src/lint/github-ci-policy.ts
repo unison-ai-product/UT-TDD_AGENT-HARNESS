@@ -155,6 +155,22 @@ const SOURCE_REQUIRED_STEPS = [
   { label: "full doctor", any: ["src/cli.ts doctor"] },
 ] as const;
 
+/**
+ * `run:` block から**起動語だけ**を抽出する (行頭 / `|` / `&&` / `||` / `;` の直後)。
+ *
+ * コメント行は除外する。これにより「コメントや echo の中の runtime 名」を誤検出せず、
+ * `bunx` のような接尾変種は語として拾える。
+ */
+function runCommandWords(run: string): string[] {
+  return run
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"))
+    .flatMap((line) => line.split(/\||&&|\|\||;/))
+    .map((segment) => segment.trim().split(/\s+/)[0] ?? "")
+    .filter((word) => word.length > 0);
+}
+
 // PLAN-L7-509: Pack / consumer の実行 runtime は Node。Bun は要求も install もしない。
 const PACK_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
@@ -198,8 +214,13 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
       {
         reason: "forbidden_bun_runtime",
         detail: "Pack CI must not install or invoke Bun (permanent ban, PLAN-L7-509)",
+        // delta review 指摘の是正: /\bbun\b/ は `bunx` を見逃し、コメントや echo の中の
+        // "bun" を誤検出した。**実行位置の起動語**だけを対象にする — 行頭または
+        // パイプ / 論理演算子 / セミコロンの直後の `bun` `bunx` `bun.exe`。
+        // コメント行 (`#` で始まる) は判定対象から除外する。
         matches: (step) =>
-          /oven-sh\/setup-bun/.test(step.uses ?? "") || /\bbun\b/.test(step.run ?? ""),
+          /oven-sh\/setup-bun/.test(step.uses ?? "") ||
+          runCommandWords(step.run ?? "").some((word) => /^bunx?(?:\.exe)?$/.test(word)),
       },
     ],
   },

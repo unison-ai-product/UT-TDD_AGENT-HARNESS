@@ -975,6 +975,29 @@ describe("github-ci-policy lint", () => {
     });
   });
 
+  // PLAN-L7-509 delta review: forbidden_bun_runtime は「起動語」だけを見る。
+  // /\bbun\b/ 版は bunx を見逃し、コメント / echo の "bun" を誤検出していた。
+  it.each([
+    ["bun install", "      - run: bun install --frozen-lockfile", true],
+    ["bunx", "      - run: bunx vitest --version", true],
+    ["bun after &&", "      - run: npm ci && bun run typecheck", true],
+    ["bun.exe", "      - run: bun.exe --version", true],
+    ["comment mention", "      - run: |\n          # bun is banned here\n          npm ci", false],
+    ["echo mention", '      - run: echo "do not use bun"', false],
+    ["substring bundle", "      - run: npm run bundle-check", false],
+  ])("U-CIPOL-027: forbidden_bun_runtime は起動語だけを拒否する: %s", (_label, injected, expected) => {
+    const pack = PACK_WORKFLOW.replace(
+      "      - run: npm run lint",
+      `      - run: npm run lint\n${injected}`,
+    );
+    const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
+    const hasBunViolation = result.violations.some(
+      (violation) => violation.reason === "forbidden_bun_runtime",
+    );
+
+    expect(hasBunViolation).toBe(expected);
+  });
+
   // PLAN-L7-455 (troubleshoot, issue #109): doc-only lane 絞り込みが検証弱化にならないことの
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
