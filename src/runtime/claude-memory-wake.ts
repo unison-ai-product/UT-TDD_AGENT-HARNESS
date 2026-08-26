@@ -570,9 +570,10 @@ export function resolveLiveClaudeWorkspace(repoRoot: string): ClaudeLiveWorkspac
   }
   return {
     ok: false,
-    reason: markerCount > 0 && staleMarkerCount === markerCount
-      ? "stale_claude_workspace"
-      : "no_live_claude_workspace",
+    reason:
+      markerCount > 0 && staleMarkerCount === markerCount
+        ? "stale_claude_workspace"
+        : "no_live_claude_workspace",
   };
 }
 

@@ -21,9 +21,9 @@ import {
   claudeWorkspaceId,
   isClaudeMemoryWakeTarget,
   publishClaudeInboxEntry,
-  resolveLiveClaudeWorkspace,
   renderClaudeWakeMessage,
   resolveClaudeWakeDelay,
+  resolveLiveClaudeWorkspace,
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";

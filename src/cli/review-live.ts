@@ -2,12 +2,12 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Command } from "commander";
+import type { LiveReviewWakeRoutingFailure } from "../feedback/live-review-projection.ts";
 import {
   consumeLiveReview,
   dispatchLiveReview,
   LiveReviewWakeError,
 } from "../feedback/live-review-projection.ts";
-import type { LiveReviewWakeRoutingFailure } from "../feedback/live-review-projection.ts";
 import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
 import type { ReviewVerdictProjectionResult } from "../feedback/review-attestation.ts";
 import { issueReviewRequest } from "../feedback/review-attestation.ts";
@@ -33,7 +33,9 @@ export interface LiveReviewCommandDeps {
     repoRoot: string,
     projection: Extract<ReviewVerdictProjectionResult, { ok: true }>,
   ) => void;
-  readonly resolveWakeTarget: (repoRoot: string) =>
+  readonly resolveWakeTarget: (
+    repoRoot: string,
+  ) =>
     | { readonly ok: true; readonly workspaceId: string }
     | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
 }

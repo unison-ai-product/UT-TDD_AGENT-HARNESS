@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   mkdirSync,
@@ -7,7 +8,6 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { Command } from "commander";
@@ -182,7 +182,9 @@ describe("review live CLI composition", () => {
     }
     const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
     expect(requests).toHaveLength(1);
-    expect(() => readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox"))).toThrow();
+    expect(() =>
+      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
+    ).toThrow();
   });
 
   it("U-RVATT-031 grants Claude only the consumer-derived exact verdict path", () => {
