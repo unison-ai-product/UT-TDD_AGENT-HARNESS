@@ -991,8 +991,16 @@ describe("github-ci-policy lint", () => {
     ["quoted ; mention", `      - run: echo "a ; bunx y"`, false],
     ["real bun after quoted text", `      - run: echo "ok" && bun run x`, true],
     // PR #411 の r4 delta review で `\` escape 未処理の誤検出が指摘されたため同じく先回りで固定する。
-    ["escaped quote inside double quote", `      - run: node -e "console.log(\\"a && bun b\\")"`, false],
-    ["escaped quote with real bun after", `      - run: node -e "console.log(\\"a\\")" && bunx v`, true],
+    [
+      "escaped quote inside double quote",
+      `      - run: node -e "console.log(\\"a && bun b\\")"`,
+      false,
+    ],
+    [
+      "escaped quote with real bun after",
+      `      - run: node -e "console.log(\\"a\\")" && bunx v`,
+      true,
+    ],
     ["background separator", "      - run: npm run watch & bun run vitest", true],
   ])("U-CIPOL-028: forbidden_bun_runtime は起動語だけを拒否する: %s", (_label, injected, expected) => {
     const pack = PACK_WORKFLOW.replace(
