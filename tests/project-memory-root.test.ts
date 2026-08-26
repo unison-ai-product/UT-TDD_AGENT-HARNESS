@@ -10,7 +10,10 @@ import {
   publishClaudeInboxEntry,
   summarizeUnclaimedInbox,
 } from "../src/runtime/claude-memory-wake.ts";
-import { planProjectMemoryMigration } from "../src/runtime/project-memory-migration.ts";
+import {
+  inventoryProjectMemory,
+  planProjectMemoryMigration,
+} from "../src/runtime/project-memory-migration.ts";
 import {
   resolveProjectMemoryRoot,
   resolveProjectMemoryRootWithPorts,
@@ -209,5 +212,61 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
         variants: [{ digest: "a".repeat(64) }, { digest: "b".repeat(64) }],
       },
     ]);
+  });
+
+  it("CANDIDATE-P-PMEMROOT-004: 全linked worktree corpusをinventoryしてdivergenceを検出する", () => {
+    const main = mkdtempSync(join(tmpdir(), "ut-pmem-inventory-main-"));
+    const worker = mkdtempSync(join(tmpdir(), "ut-pmem-inventory-worker-"));
+    rmSync(worker, { recursive: true, force: true });
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: main });
+      execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: main });
+      execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: main });
+      writeFileSync(
+        join(main, "ut-tdd.project.json"),
+        `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: "fixture/inventory" })}\n`,
+        "utf8",
+      );
+      execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: main });
+      execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: main });
+      execFileSync("git", ["worktree", "add", "-q", "-b", "worker", worker, "HEAD"], {
+        cwd: main,
+      });
+      for (const [root, body] of [
+        [main, "main variant"],
+        [worker, "worker variant"],
+      ] as const) {
+        writeMemory({
+          repoRoot: root,
+          input: {
+            kind: "project",
+            title: "diverged",
+            body,
+            now: "2026-08-26T00:00:00.000Z",
+          },
+        });
+      }
+      const receipt = inventoryProjectMemory(worker);
+      expect(receipt).toMatchObject({
+        projectId: "fixture/inventory",
+        outcome: "quarantine_required",
+        conflicts: [
+          {
+            variants: [
+              { sourcePath: expect.stringContaining(main) },
+              { sourcePath: expect.stringContaining(worker) },
+            ],
+          },
+        ],
+      });
+    } finally {
+      try {
+        execFileSync("git", ["worktree", "remove", "--force", worker], { cwd: main });
+      } catch {
+        // setup failure before worktree registration
+      }
+      rmSync(worker, { recursive: true, force: true });
+      rmSync(main, { recursive: true, force: true });
+    }
   });
 });

@@ -1,4 +1,9 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { realpathSync } from "node:fs";
+import { join } from "node:path";
+import { readMemory } from "../memory/service.ts";
+import { requireProjectMemoryRoot } from "./project-memory-root.ts";
 
 export interface ProjectMemoryInventoryEntry {
   readonly memoryId: string;
@@ -83,4 +88,39 @@ export function planProjectMemoryMigration(input: {
     conflicts,
     outcome: conflicts.length === 0 ? "ready" : "quarantine_required",
   };
+}
+
+function linkedWorktreeRoots(repoRoot: string): string[] {
+  const output = execFileSync("git", ["-C", repoRoot, "worktree", "list", "--porcelain"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  return output
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("worktree "))
+    .map((line) => realpathSync(line.slice("worktree ".length)));
+}
+
+/** Inventory every linked worktree before any migration write is admitted. */
+export function inventoryProjectMemory(repoRoot: string): ProjectMemoryMigrationReceipt {
+  const project = requireProjectMemoryRoot(repoRoot);
+  const entries: ProjectMemoryInventoryEntry[] = [];
+  for (const worktreeRoot of linkedWorktreeRoots(repoRoot)) {
+    const candidate = requireProjectMemoryRoot(worktreeRoot);
+    if (
+      candidate.projectId !== project.projectId ||
+      candidate.gitCommonDir !== project.gitCommonDir ||
+      candidate.canonicalProjectRoot !== project.canonicalProjectRoot
+    ) {
+      throw new Error("project_memory_migration_topology_drift");
+    }
+    for (const entry of readMemory({ repoRoot: worktreeRoot }).entries) {
+      entries.push({
+        memoryId: entry.memory_id,
+        digest: entry.content_hash,
+        sourcePath: join(worktreeRoot, entry.source_path),
+      });
+    }
+  }
+  return planProjectMemoryMigration({ projectId: project.projectId, entries });
 }
