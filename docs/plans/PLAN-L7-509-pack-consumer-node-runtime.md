@@ -35,7 +35,7 @@ review_evidence:
   - reviewer: codex-cross-agent
     review_kind: cross_agent
     reviewed_at: "2026-08-26T01:33:21Z"
-    tests_green_at: "2026-08-26T02:05:00Z"
+    tests_green_at: "2026-08-26T01:05:00Z"
     verdict: "FLAG (blocking 7) at a2c83fa2 → 是正 HEAD で delta review 依頼中。CI red 2 件 (U-MODELID-SSOT (b) / U-TESTHYGIENE-015) を含む"
     scope: >-
       Pack/consumer 実行 runtime の Node 化。指摘のうち adapter mirror 未同期、
@@ -62,6 +62,35 @@ review_evidence:
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:5c9488817e22d39c2f9ec6ac437a476818684016a0b1b8d7839c30792a90fc66"
         anchor_commit: 6f2c2f9224d1a52549f7e819eac5ac86efdd0fdc
+  - reviewer: codex-cross-agent-delta
+    review_kind: cross_agent
+    reviewed_at: "2026-08-26T03:06:26Z"
+    tests_green_at: "2026-08-26T02:20:00Z"
+    verdict: "FLAG (blocking 3) at 36382aac → 本 HEAD で全件是正。1) wrapper の setup checkout 依存を C 形 typed fail-close へ、2) forbidden_bun_runtime を起動語判定へ絞り U-CIPOL-027 を追加、3) PR body の green evidence を統一"
+    scope: >-
+      delta review。blocking 1 (PLAN-L6-101 §1.1 違反) は advisor 諮問の上で選択肢 C を採択し
+      §2.3-10 として freeze、U-HOOKEXEC-011 / U-SETUP-009b3 で oracle 化した。blocking 2 は
+      起動語抽出 (行頭 / パイプ / 論理演算子 / セミコロン直後、コメント除外) へ改め bun / bunx /
+      bun.exe を拒否、bundle-check とコメント言及は通す 7 ケースで固定。blocking 3 は PR body を
+      新 anchor で再生成。
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    evidence_path: tests/hook-native-launcher.test.ts
+    citations:
+      - "tests/hook-native-launcher.test.ts: U-HOOKEXEC-011"
+      - "tests/setup.test.ts: U-SETUP-009b3"
+      - "tests/github-ci-policy.test.ts: U-CIPOL-027"
+      - "docs/plans/PLAN-L7-509-pack-consumer-node-runtime.md: §2.3-10"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/project-hook.test.ts tests/codex-hook-adapter.test.ts tests/doctor-setup-smoke.test.ts tests/hook-native-launcher.test.ts tests/runtime-portability.test.ts tests/github-ci-policy.test.ts tests/model-id-ssot-drift.test.ts tests/doctor-test-repository-isolation.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-26T04:05:00Z"
+        evidence_path: tests/hook-native-launcher.test.ts
+        output_digest: "sha256:PENDING"
+        anchor_commit: PENDING
 ---
 
 # PLAN-L7-509 (troubleshoot): Pack/consumer 配布契約の Node 化
@@ -147,6 +176,32 @@ hook を `node .ut-tdd/bin/ut-tdd.mjs <sub>` へ直結する**。
    倒した結果この分岐は**構造的に実行不能な死路**になるため、置換ではなく削除する。
    consumer の解決経路は repo-local source (`src/cli.ts`) 1 本に縮約され、未解決時の
    エラーメッセージも「dependency を追加せよ」から「setup Pack checkout を保持せよ」へ改める。
+
+10. **consumer wrapper は setup 元 Pack checkout を解決先にしない (C 形、delta review 是正)**。
+   `{{UT_TDD_SOURCE_CLI_JSON}}` placeholder と `SETUP_SOURCE_CLI` 埋め込みを撤去し、解決先を
+   consumer 内 `<repo>/src/cli.ts` (+ `src/setup/index.ts` の同時存在) のみとする。不在なら
+   `consumer_runtime_absent` で exit 127 の typed fail-close。
+
+   **根拠**: confirmed `PLAN-L6-101` §1.1 は「source development repository、source worktree、
+   source `.ut-tdd`、ローカル Pack checkout は runtime discovery 入力にしてはならない」と定め、
+   §2 は development repo / worktree / local Pack checkout が物理的に存在しない状態での導入再現
+   (`CANDIDATE-PACKISO-001`) を要求する。setup 元絶対パスの埋め込みはこの confirmed 契約への
+   違反であり、issue への後送では解消できない。
+
+   **選択肢と判断** (advisor `claude-fable-5`、`--decision design`):
+   - A: harness source を consumer の runtime root へ materialize (node_modules 外なので
+     type strip 実行可能) → **方向としては終着形だが本 PR 内実装は却下**。配置形式・digest 束縛は
+     方式判断であり pair-freeze が必要で、かつ `PLAN-L6-93` の sealed compiled ESM と
+     「consumer 側 harness 実体の配置形式」の所有権が衝突する (interim か supersede かを契約側で
+     先に決めないと duplicate-artifact-ownership 型の drift になる)。
+   - B: 契約違反のまま merge して issue #420 へ後送 → **却下**。運用規律再締結 (2026-08-03) が
+     名指しで禁じたパターンであり、§2 の source 不在 oracle を最初から赤にする負債を作る。
+   - C: consumer 内で解決できなければ typed fail-close → **採択**。本 PR の論点 (Node 化 +
+     実行不能な死路の削除) に収まり、契約違反を silent に残さない。導入済み consumer は 0 件なので
+     壊す実行系が無い。
+   materialization 契約 (配置先 / artifact digest 束縛 / L6-93 との関係) の freeze は後続 PLAN
+   (issue #420) が所有する。初回 materialize + digest 束縛が 1 論点、upgrade atomicity は次の論点
+   (consumer 0 件の現時点では upgrade 経路が存在しない)。
 
 ### 2.4 対象外
 
