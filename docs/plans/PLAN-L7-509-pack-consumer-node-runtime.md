@@ -32,24 +32,26 @@ dependencies:
     - docs/plans/PLAN-L7-507-compiled-distribution-contract-retraction.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence:
-  - reviewer: codex-cross-agent
+  - reviewer: codex-cross-agent-delta
     review_kind: cross_agent
-    reviewed_at: "2026-08-26T01:33:21Z"
-    tests_green_at: "2026-08-26T01:05:00Z"
-    verdict: "FLAG (blocking 7) at a2c83fa2 → 是正 HEAD で delta review 依頼中。CI red 2 件 (U-MODELID-SSOT (b) / U-TESTHYGIENE-015) を含む"
+    reviewed_at: "2026-08-26T03:06:26Z"
+    tests_green_at: "2026-08-26T02:20:00Z"
+    verdict: "FLAG (blocking 3) at 36382aac → 本 HEAD で全件是正 (r3 delta review 依頼中)"
     scope: >-
-      Pack/consumer 実行 runtime の Node 化。指摘のうち adapter mirror 未同期、
-      github-ci-policy の Pack 側 Bun 強制、isolated_fixture pin、PLAN status /
-      test-design U-SETUP-012/013 の Bun 残置を本 HEAD で是正した。self-contained
-      installed runtime (setup Pack checkout 非依存化) と破壊的 E2E は別 PLAN 所管とし、
-      Issue #408 / #134 は本 PR では close しない。
+      Pack/consumer 実行 runtime の Node 化。blocking 1 (wrapper の setup Pack checkout 依存が
+      confirmed PLAN-L6-101 §1.1 / §2 に違反) は advisor 諮問の上で選択肢 C (consumer 内で
+      解決できなければ typed fail-close) を採択し §2.3-10 として freeze、U-HOOKEXEC-011 /
+      U-SETUP-009b3 で oracle 化した。blocking 2 は forbidden_bun_runtime を起動語判定へ改め
+      U-CIPOL-027 (bun/bunx/bun.exe を拒否、bundle-check とコメント言及は通す 7 ケース) を追加。
+      blocking 3 は PR body の green evidence を新 anchor で再生成。self-contained runtime の
+      materialization 契約と upgrade atomicity は issue #420 の後続 PLAN が所有する。
     worker_model: claude-opus-5
     reviewer_model: gpt-5.6-sol
     evidence_path: tests/setup.test.ts
     citations:
-      - "tests/setup.test.ts: U-SETUP-004b2 / 009b / 009b2"
-      - "tests/hook-native-launcher.test.ts: U-HOOKEXEC-001"
-      - "tests/github-ci-policy.test.ts: Pack profile 政策 (Node/npm)"
+      - "tests/setup.test.ts: U-SETUP-004b2 / 009b / 009b2 / 009b3"
+      - "tests/hook-native-launcher.test.ts: U-HOOKEXEC-001 / 011"
+      - "tests/github-ci-policy.test.ts: U-CIPOL-027"
       - "tests/model-id-ssot-drift.test.ts: (b) adapter mirror"
       - "tests/doctor-test-repository-isolation.test.ts: U-TESTHYGIENE-015"
     green_commands:
@@ -62,35 +64,6 @@ review_evidence:
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:5c9488817e22d39c2f9ec6ac437a476818684016a0b1b8d7839c30792a90fc66"
         anchor_commit: 6f2c2f9224d1a52549f7e819eac5ac86efdd0fdc
-  - reviewer: codex-cross-agent-delta
-    review_kind: cross_agent
-    reviewed_at: "2026-08-26T03:06:26Z"
-    tests_green_at: "2026-08-26T02:20:00Z"
-    verdict: "FLAG (blocking 3) at 36382aac → 本 HEAD で全件是正。1) wrapper の setup checkout 依存を C 形 typed fail-close へ、2) forbidden_bun_runtime を起動語判定へ絞り U-CIPOL-027 を追加、3) PR body の green evidence を統一"
-    scope: >-
-      delta review。blocking 1 (PLAN-L6-101 §1.1 違反) は advisor 諮問の上で選択肢 C を採択し
-      §2.3-10 として freeze、U-HOOKEXEC-011 / U-SETUP-009b3 で oracle 化した。blocking 2 は
-      起動語抽出 (行頭 / パイプ / 論理演算子 / セミコロン直後、コメント除外) へ改め bun / bunx /
-      bun.exe を拒否、bundle-check とコメント言及は通す 7 ケースで固定。blocking 3 は PR body を
-      新 anchor で再生成。
-    worker_model: claude-opus-5
-    reviewer_model: gpt-5.6-sol
-    evidence_path: tests/hook-native-launcher.test.ts
-    citations:
-      - "tests/hook-native-launcher.test.ts: U-HOOKEXEC-011"
-      - "tests/setup.test.ts: U-SETUP-009b3"
-      - "tests/github-ci-policy.test.ts: U-CIPOL-027"
-      - "docs/plans/PLAN-L7-509-pack-consumer-node-runtime.md: §2.3-10"
-    green_commands:
-      - kind: unit_test
-        command: "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/project-hook.test.ts tests/codex-hook-adapter.test.ts tests/doctor-setup-smoke.test.ts tests/hook-native-launcher.test.ts tests/runtime-portability.test.ts tests/github-ci-policy.test.ts tests/model-id-ssot-drift.test.ts tests/doctor-test-repository-isolation.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-08-26T04:05:00Z"
-        evidence_path: tests/hook-native-launcher.test.ts
-        output_digest: "sha256:e5ab515571f33425c9e22efb5e7f4282d62047e1a486f71f02ebd3bd0ca37ec4"
-        anchor_commit: 2a5f034b2bbfce4684cc60f2613d6586e17ca7cb
 ---
 
 # PLAN-L7-509 (troubleshoot): Pack/consumer 配布契約の Node 化
