@@ -89,8 +89,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-26T04:05:00Z"
         evidence_path: tests/hook-native-launcher.test.ts
-        output_digest: "sha256:PENDING"
-        anchor_commit: PENDING
+        output_digest: "sha256:e5ab515571f33425c9e22efb5e7f4282d62047e1a486f71f02ebd3bd0ca37ec4"
+        anchor_commit: 2a5f034b2bbfce4684cc60f2613d6586e17ca7cb
 ---
 
 # PLAN-L7-509 (troubleshoot): Pack/consumer 配布契約の Node 化
