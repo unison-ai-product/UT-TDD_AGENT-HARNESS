@@ -166,19 +166,19 @@ export function runDoctorMeasured(
   }
 
   const d = detectMode();
+  const worktreeTopology =
+    typeof deps.worktreeTopology === "function"
+      ? deps.worktreeTopology()
+      : (deps.worktreeTopology ?? { facts: [], adminEntries: [] });
   // handover / agent-slots are warning surfaces. Verification profile is a hard gate.
   const leadingMessages = [
     `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
     checkHandover(deps),
     ...checkHandoverDisciplineMessages(deps).map((m) => `doctor: handover-discipline — ${m}`),
     checkAgentSlots(doctorSlotsDeps(deps)),
-    checkWorktreeLifecycle(deps),
+    checkWorktreeLifecycle(deps, worktreeTopology),
     ...checkPlanReferenceFreshnessAdvisory(deps.repoRoot),
-    ...checkWorktreeTopologyAdvisory(
-      typeof deps.worktreeTopology === "function"
-        ? deps.worktreeTopology()
-        : (deps.worktreeTopology ?? { facts: [], adminEntries: [] }),
-    ).messages.map((m) => `doctor: ${m}`),
+    ...checkWorktreeTopologyAdvisory(worktreeTopology).messages.map((m) => `doctor: ${m}`),
   ];
   const { checks, checkIds, timings } = collectDoctorCheckRun(deps, options);
 

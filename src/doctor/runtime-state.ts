@@ -23,7 +23,7 @@ import {
 } from "../runtime/worktree-lifecycle/adapters/jsonl-ledger.ts";
 import { WorktreeLifecycleStore } from "../runtime/worktree-lifecycle/domain/store.ts";
 import type { WorktreeLifecycleRecord } from "../runtime/worktree-lifecycle/domain/types.ts";
-import type { WorktreeTopologyInput } from "../runtime/worktree-topology.ts";
+import { normalizeTopologyPath, type WorktreeTopologyInput } from "../runtime/worktree-topology.ts";
 import { collectWorktreeTopology } from "../runtime/worktree-topology-collector.ts";
 
 export type WorktreeTopologyProvider = WorktreeTopologyInput | (() => WorktreeTopologyInput);
@@ -95,7 +95,10 @@ export function checkAgentSlots(deps: AgentSlotsDeps): string {
   return `doctor: agent-slots — OK (active=${active}, peak_parallel=${peak})`;
 }
 
-export function checkWorktreeLifecycle(deps: DoctorDeps): string {
+export function checkWorktreeLifecycle(
+  deps: DoctorDeps,
+  topology: WorktreeTopologyInput = { facts: [], adminEntries: [] },
+): string {
   if (!deps.worktreeLifecycle) return "doctor: worktree-lifecycle — provider unavailable";
   try {
     const records = deps.worktreeLifecycle();
@@ -107,9 +110,17 @@ export function checkWorktreeLifecycle(deps: DoctorDeps): string {
         (record.state === "planned" || record.state === "active") &&
         Date.parse(record.expiresAt) <= Date.parse(deps.now),
     ).length;
-    return unmanagedRisk > 0
-      ? `doctor: worktree-lifecycle — ⚠ expired=${unmanagedRisk} active=${active} terminal_pending=${pending} retained=${retained}`
-      : `doctor: worktree-lifecycle — OK (active=${active}, terminal_pending=${pending}, retained=${retained})`;
+    const managedPaths = new Set(
+      records
+        .filter((record) => record.state !== "retired")
+        .map((record) => normalizeTopologyPath(record.canonicalWorktreeRealpath)),
+    );
+    const unmanaged = topology.facts.filter(
+      (fact) => !fact.isMain && !managedPaths.has(normalizeTopologyPath(fact.worktreePathKey)),
+    ).length;
+    return unmanagedRisk > 0 || unmanaged > 0
+      ? `doctor: worktree-lifecycle — ⚠ expired=${unmanagedRisk} unmanaged=${unmanaged} active=${active} terminal_pending=${pending} retained=${retained}`
+      : `doctor: worktree-lifecycle — OK (unmanaged=0, active=${active}, terminal_pending=${pending}, retained=${retained})`;
   } catch (error) {
     return `doctor: worktree-lifecycle — ⚠ unreadable (${error instanceof Error ? error.message : String(error)})`;
   }

@@ -157,14 +157,61 @@ describe("managed worktree lifecycle", () => {
     const coordinator = new ManagedWorktreeCoordinator(deps);
     coordinator.create(input());
     expect(
-      checkWorktreeLifecycle({
-        repoRoot: "C:/dev/repo",
-        now: "2026-08-26T00:02:00.000Z",
-        readText: () => null,
-        listDir: () => [],
-        worktreeLifecycle: () => coordinator.records(),
-      }),
+      checkWorktreeLifecycle(
+        {
+          repoRoot: "C:/dev/repo",
+          now: "2026-08-26T00:02:00.000Z",
+          readText: () => null,
+          listDir: () => [],
+          worktreeLifecycle: () => coordinator.records(),
+        },
+        {
+          facts: [
+            {
+              worktreePathKey: "C:/dev/unmanaged-worker",
+              adminPathKey: "C:/git/worktrees/unmanaged-worker",
+              branch: "feat/unmanaged",
+              headOid: "b".repeat(40),
+              isMain: false,
+              directoryObserved: true,
+              worktreeToAdminOk: true,
+              adminToWorktreeOk: true,
+              dirty: false,
+              mergedIntoMain: false,
+            },
+          ],
+          adminEntries: [],
+        },
+      ),
     ).toContain("expired=1");
+    expect(
+      checkWorktreeLifecycle(
+        {
+          repoRoot: "C:/dev/repo",
+          now: "2026-08-26T00:00:30.000Z",
+          readText: () => null,
+          listDir: () => [],
+          worktreeLifecycle: () => coordinator.records(),
+        },
+        {
+          facts: [
+            {
+              worktreePathKey: "C:/dev/unmanaged-worker",
+              adminPathKey: "C:/git/worktrees/unmanaged-worker",
+              branch: "feat/unmanaged",
+              headOid: "b".repeat(40),
+              isMain: false,
+              directoryObserved: true,
+              worktreeToAdminOk: true,
+              adminToWorktreeOk: true,
+              dirty: false,
+              mergedIntoMain: false,
+            },
+          ],
+          adminEntries: [],
+        },
+      ),
+    ).toContain("unmanaged=1");
   });
 
   it("CANDIDATE-U-WTMAN-003 rejects a modified hash-chain without appending", () => {
