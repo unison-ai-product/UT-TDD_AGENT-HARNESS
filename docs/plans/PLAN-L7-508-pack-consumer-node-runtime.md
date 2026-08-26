@@ -110,6 +110,13 @@ hook を `node .ut-tdd/bin/ut-tdd.mjs <sub>` へ直結する**。
    `native-bun-launcher-contract` チェックを撤去、期待 invocation から launcher を除去。
 8. **runtime-portability の Bun debt allowlist**: 撤去で実カウントが減る path の pin を
    実測値へ切り下げる (pin は上限であり超過のみ違反だが、stale pin は再流入の余地になる)。
+9. **`common/ut-tdd.mjs` の npm package 解決分岐 (`node_modules/ut-tdd/src/cli.ts`) を削除**
+   (実装中に判明した実バグの是正、freeze への追記)。Node は `node_modules/` 配下の
+   TypeScript を type stripping できず `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` で
+   失敗する (`--experimental-transform-types` でも不可、実測)。launcher を bun から node へ
+   倒した結果この分岐は**構造的に実行不能な死路**になるため、置換ではなく削除する。
+   consumer の解決経路は repo-local source (`src/cli.ts`) 1 本に縮約され、未解決時の
+   エラーメッセージも「dependency を追加せよ」から「setup Pack checkout を保持せよ」へ改める。
 
 ### 2.4 対象外
 
