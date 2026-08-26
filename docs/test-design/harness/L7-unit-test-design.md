@@ -2035,6 +2035,9 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-018` | candidate F0b commitにF0a custody receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-019` | candidate F0c commitにF0b sealed build receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitにF0c aggregate receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-021` | wrapper (`scripts/ut-tdd` / `scripts/ut-tdd.ps1`) へ `dist` 参照を再追加 | OS 非依存に fail-close (POSIX / PowerShell 両表記、変数化・path 分割形を含む) |
+| `CAND-NODEBOOT-022` | wrapper へ binary 存在分岐 (`[ -x ]` / `[ -f ]` / `Test-Path` / `command -v`) を再追加 | path 表記に依らず分岐構造そのものを fail-close |
+| `CAND-NODEBOOT-023` | `package.json` の `build` script を parity receipt 前に削除 | 削除を fail-close (再現可能な rollback 経路は保護対象、PLAN-L6-93 §5.1) |
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では

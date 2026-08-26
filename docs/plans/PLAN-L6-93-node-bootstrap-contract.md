@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-24
-updated: 2026-07-24
+updated: 2026-08-26
 owner: PO / TL
 agent_slots:
   - role: se
@@ -32,6 +32,7 @@ dependencies:
     - docs/plans/PLAN-L6-01-function-spec.md
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     - docs/test-design/harness/L7-unit-test-design.md
+    - docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
   blocks:
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
 review_evidence: []
@@ -208,3 +209,70 @@ head/version CAS、UNIQUE制約、commit/fsync barrierを使い、loser/crashは
 zod schema正本は`src/schema/cutover-transition.ts`と`src/schema/node-slice-admission.ts`、
 `admitNodeSlice` runtime/testは`src/runtime/node-slice-admission.ts` /
 `tests/node-slice-admission.test.ts`である。
+
+## 5. 旧Bun配布経路の処遇 (削除禁止条項の保護範囲)
+
+### 5.1 保護対象の定義
+
+L4 §2 の「Node parity receipt前にcurrentを削除しない」が保護するのは**再現可能なrollback
+成立性**である。したがって保護対象は次の2つに限る:
+
+1. **再現可能なbuild経路** = `package.json`の`build` script。同一revisionから同一手順で
+   配布物を再生成できること。
+2. **source実行経路** = `node src/cli.ts`。wrapperの既定経路。
+
+**保護対象外**: `dist/`に残置された任意のbinaryへの**silent dispatch**。これはrollbackの
+保全ではなく「HEADと無関係なcodeが`ut-tdd`として実行される」非決定性であり、条項の目的
+(安全な後退可能性) をむしろ損なう。rollbackは「明示build + 生成物の明示実行 (wrapper非経由)」
+で成立し、wrapperのcompiled-first分岐はrollback成立の必要条件ではない。
+
+### 5.2 freezeする処遇 (F0期間中)
+
+- **維持**: `package.json`の`build` script (`bun build --compile`)。§1 `buildNodeGeneration`の
+  sealed build receiptが成立するまでrollback手段として保持する。
+- **撤去**: `scripts/ut-tdd` / `scripts/ut-tdd.ps1`のcompiled-first分岐。wrapperは
+  `node src/cli.ts`を無条件にexecする5行のthin dispatcherとする。
+- **禁止の追加**: wrapperへの`dist`参照と binary存在分岐 (`[ -x ]` / `[ -f ]` / `Test-Path` /
+  `command -v`) の再追加。`runtime-portability` lintがOS非依存にfail-closeする。
+
+### 5.3 撤去の根拠 (実測、基準 = `origin/main` `1f347281`)
+
+wrapperのcompiled-first分岐が「保護すべき稼働経路」ではないことの実測:
+
+| 観測 | コマンド | 結果 |
+|---|---|---|
+| Pack配布が運ばない | `git grep -n dist -- src/distribution/` | 0件 |
+| consumer/README/templateが依存しない | `git grep -nE "bun run build\|dist/ut-tdd\|ut-tdd\.exe" -- README.md docs/templates/ src/setup/ .github/` | 0件 |
+| CIがbuildを実行しない | `git grep -nE "run build\|bun build\|dist" -- .github/workflows/` | build step 0件 |
+| bin参照が既にsource | `node -e "console.log(require('./package.json').bin)"` | `{"ut-tdd":"./src/cli.ts"}` |
+| dispatch対象が実際にstale | `stat dist/ut-tdd.exe` (開発機) | 107,570,176 bytes / mtime `2026-06-19` (HEADより約2か月古い) |
+
+tracked参照はwrapper 2本、`build` script 1件、lint/test fixtureのみである。すなわち
+compiled dispatchはどのconsumer経路からも到達されず、到達し得る唯一の面 (wrapper) が
+2か月前のbinaryを`ut-tdd`として実行する非決定性を持つ。
+
+### 5.4 `build` scriptの撤去条件
+
+§1 `buildNodeGeneration`のsealed build receiptとNode parity receiptが記録された時点で撤去する。
+それ以前の`build` script撤去は本条項が禁止する (`CAND-NODEBOOT-023`)。
+
+### 5.5 実装PRへの委任事項
+
+本節はcontractのfreezeであり、実装は別PRが行う。実装PRが担うのは次の3点に限る:
+
+1. L4 `architecture.md` §2への保護範囲追記 (§5.1と同義)。条項の**改訂**として明示し、
+   「もともと保護していなかった」という解釈操作にしない。
+2. wrapper 2本のcompiled-first分岐撤去と、L6 `function-spec.md` / requirements §7.1 の記述追随。
+3. `runtime-portability` lintへの再流入fail-close追加 (`CAND-NODEBOOT-021/022/023`のGreen化)。
+
+`package.json`の`build` script撤去、および`package-script-bun-runtime` (script起動語のBun禁止)
+の有効化は§5.4の条件を満たすまで実装PRのscope外とする — 後者は前者に機械的に依存する
+(現`build` scriptが`bun build`で始まるため、規則の有効化は`build`撤去を強制する)。
+
+### 5.6 pair oracle
+
+`CAND-NODEBOOT-021` (dist参照再追加) / `CAND-NODEBOOT-022` (binary存在分岐再追加) /
+`CAND-NODEBOOT-023` (parity前の`build`削除) を
+`docs/test-design/harness/L7-unit-test-design.md`へ追加した。実装先は
+`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
+candidate段階では正式oracle IDを宣言せず、各test実装とRed実測の同一commitで昇格する。
