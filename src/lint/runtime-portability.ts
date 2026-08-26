@@ -27,8 +27,21 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
   "scripts/run-vitest-snapshot.ts",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
-/** 撤去済み compiled 配布 (dist/ut-tdd) への wrapper dispatch 再流入検出 (PLAN-L7-507)。 */
-const COMPILED_WRAPPER_DISPATCH = /\bdist[\\/]+ut-tdd/;
+/**
+ * 撤去済み compiled 配布への wrapper dispatch 再流入検出 (PLAN-L7-507)。
+ *
+ * literal `dist/ut-tdd` だけを見る形では `dist/$BIN` や
+ * `Join-Path (Join-Path $root "dist") $name` で自明に回避できた (delta review FLAG)。
+ * よって **`dist` の参照そのもの**を禁止する。wrapper は node で `src/cli.ts` を
+ * 直接起動する 5 行の thin dispatcher であり、`dist` を参照する正当な理由が無い。
+ */
+const COMPILED_WRAPPER_DISPATCH = /\bdist\b/;
+/**
+ * compiled-first dispatch は「binary があれば先に実行する」条件分岐として現れる。
+ * path 表記を変数化しても分岐構造は残るため、分岐そのものを禁止して回避余地を閉じる。
+ * (POSIX `[ -x ... ]` / `[ -f ... ]` / `command -v`、PowerShell `Test-Path`)
+ */
+const CONDITIONAL_WRAPPER_DISPATCH = /Test-Path|\[\s+-[xfe]\s|\bcommand\s+-v\b/;
 
 function usesVitestEntrypoint(
   script: string | undefined,
@@ -420,13 +433,18 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
     // PLAN-L7-507: 撤去した compiled 配布契約の再流入を OS 非依存に fail-close する
     // (POSIX `dist/ut-tdd` / PowerShell `dist\ut-tdd.exe` の両方)。thin 判定 (12 行 +
     // src/cli.ts 参照) は dist 分岐の再追加を通してしまうため、専用規則が必要。
-    if (COMPILED_WRAPPER_DISPATCH.test(doc.text)) {
+    const compiledDispatchPattern = COMPILED_WRAPPER_DISPATCH.test(doc.text)
+      ? COMPILED_WRAPPER_DISPATCH
+      : CONDITIONAL_WRAPPER_DISPATCH.test(doc.text)
+        ? CONDITIONAL_WRAPPER_DISPATCH
+        : null;
+    if (compiledDispatchPattern) {
       violations.push({
         path,
-        line: lineOf(doc.text, COMPILED_WRAPPER_DISPATCH),
+        line: lineOf(doc.text, compiledDispatchPattern),
         rule: "script-wrapper-compiled-dispatch",
         message:
-          "Script wrappers must not dispatch to a compiled binary (dist/ut-tdd); Node runs src/cli.ts directly.",
+          "Script wrappers must not reference dist or branch on binary presence; Node runs src/cli.ts directly.",
       });
     }
     if (/\bpython(?:3)?\b/.test(doc.text)) {

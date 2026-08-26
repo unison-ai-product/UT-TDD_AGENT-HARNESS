@@ -289,9 +289,42 @@ describe("runtime-portability lint", () => {
       "exit $LASTEXITCODE",
     ].join("\n");
 
+    // delta review FLAG (blocking 1) の是正: literal `dist/ut-tdd` だけを見る oracle は
+    // path を変数化するだけで回避できた。reviewer が提示した bypass 2 形をそのまま固定する。
+    const posixVariableBypass = [
+      "#!/usr/bin/env sh",
+      "set -e",
+      'ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"',
+      'BIN="ut-tdd"',
+      'if [ -x "$ROOT/dist/$BIN" ]; then exec "$ROOT/dist/$BIN" "$@"; fi',
+      'exec node "$ROOT/src/cli.ts" "$@"',
+    ].join("\n");
+    const powershellVariableBypass = [
+      '$ErrorActionPreference = "Stop"',
+      "$root = Split-Path -Parent $PSScriptRoot",
+      '$name = "ut-tdd.exe"',
+      '$bin = Join-Path (Join-Path $root "dist") $name',
+      "if (Test-Path $bin) { & $bin @args; exit $LASTEXITCODE }",
+      '& node (Join-Path $root "src\\cli.ts") @args',
+      "exit $LASTEXITCODE",
+    ].join("\n");
+    // path 文字列を完全に隠しても、compiled-first dispatch は「binary があれば先に実行」
+    // という分岐構造として残る。分岐そのものも fail-close する。
+    const posixObfuscatedBypass = [
+      "#!/usr/bin/env sh",
+      "set -e",
+      'ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"',
+      'CANDIDATE="$ROOT/$(printf %s di; printf %s st)/ut"',
+      'if [ -x "$CANDIDATE" ]; then exec "$CANDIDATE" "$@"; fi',
+      'exec node "$ROOT/src/cli.ts" "$@"',
+    ].join("\n");
+
     for (const [path, text] of [
       ["scripts/ut-tdd", posixReintroduction],
       ["scripts/ut-tdd.ps1", powershellReintroduction],
+      ["scripts/ut-tdd", posixVariableBypass],
+      ["scripts/ut-tdd.ps1", powershellVariableBypass],
+      ["scripts/ut-tdd", posixObfuscatedBypass],
     ] as const) {
       const result = analyzeRuntimePortability([
         ...validDocs.filter((doc) => doc.path !== path),
