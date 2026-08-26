@@ -8,7 +8,7 @@ status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-31
-updated: 2026-08-13
+updated: 2026-08-26
 owner: PM / PO
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-L7-465に定義済みのD1 dispatch lifecycleと実装の意味論は変更せず、draft設計PLANと完成済み出荷物のライフサイクルを分離してgenerates所有を確定する。"
@@ -129,6 +129,11 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
    verdict無しMERGEDは手順違反としてfail-closeし、旧requestの恒久redを作らない。
    MERGED観測のheadを全requestのexactHead集合へ横断照合し、旧HEAD requestだけで
    merge先HEADのrequest欠落を隠せない。
+10. 同一 identity の request replay は `requestedAt` だけが異なる場合に冪等とする。
+    canonical request は parse 済み instant が最も早い request を採用し、後発 replay で
+    review age / verdict SLA を更新できないようにする。`authorFamily` など timestamp 以外の
+    content 差分は `duplicate_request_conflict` として fail-close し、invalid timestamp を
+    含む replay も検証失敗を隠さない。
 
 ## 3. 設計と検証の対
 
@@ -136,7 +141,7 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 | --- | --- |
 | 基本FSM、SLA、自己承認拒否、HEAD一致 | `U-RVDISP-001`〜`012` |
 | identity、時刻、family、verdict-anchorのfail-close | `U-RVDISP-013`〜`020` |
-| request replayの冪等・競合 | `U-RVDISP-021` |
+| request replayの冪等・競合・最古時刻固定 | `U-RVDISP-021` |
 | old HEAD隔離、PR観測欠落、reason付き非ready | `U-RVDISP-022`〜`024` |
 | unrelated/matching malformed artifactの診断分離 | `U-RVDISP-025`〜`026` |
 | PR観測の競合と冪等replay | `U-RVDISP-027`〜`028` |
