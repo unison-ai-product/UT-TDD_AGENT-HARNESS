@@ -129,6 +129,8 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
           memory: entry,
           operationId: "cross-worktree",
           workspaceId: targetWorkspaceId,
+          projectId: "fixture/shared",
+          producerSessionId: "cross-worktree",
           now: "2026-08-26T00:00:01.000Z",
         }),
       );

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
@@ -90,11 +91,25 @@ function verdictPorts(overrides: Partial<LiveReviewVerdictPorts> = {}): LiveRevi
   };
 }
 
+function initializeProject(root: string): void {
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
+  writeFileSync(
+    join(root, "ut-tdd.project.json"),
+    `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: "fixture/project" })}\n`,
+    "utf8",
+  );
+  execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
+  execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: root });
+}
+
 describe("live review projection (U-RVATT-023..026)", () => {
   it("U-RVATT-024 resolves only an identity-matched regular file in canonical memory storage", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-live-review-task-"));
     const outside = mkdtempSync(join(tmpdir(), "ut-live-review-outside-"));
     try {
+      initializeProject(root);
       const memoryDirectory = join(root, ".ut-tdd", "memory");
       mkdirSync(memoryDirectory, { recursive: true });
       const sourcePath = ".ut-tdd/memory/feedback-d3a.md";
@@ -200,6 +215,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
   it("U-RVATT-024 consumes strict canonical identity through the opposite provider CLI", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-live-review-"));
     try {
+      initializeProject(root);
       const memoryPath = join(root, ".ut-tdd", "memory", "feedback-d3a.md");
       mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
       writeFileSync(memoryPath, "review task", { encoding: "utf8", flag: "wx" });

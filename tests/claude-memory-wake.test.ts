@@ -226,6 +226,11 @@ describe("Claude HARNESS memory async wake", () => {
       rmSync(join(inbox, `${inboxFileStem(v3.id)}.json`));
       const legacy = { ...v3, schemaVersion: "ut-tdd.claude-inbox/v2" } as Record<string, unknown>;
       delete legacy.purpose;
+      delete legacy.projectId;
+      delete legacy.producerProvider;
+      delete legacy.producerSessionId;
+      delete legacy.targetProvider;
+      delete legacy.targetSessionId;
       writeFileSync(join(inbox, "legacy.json"), `${JSON.stringify(legacy)}\n`, "utf8");
       writeFileSync(
         join(inbox, "unknown.json"),
@@ -539,14 +544,7 @@ describe("Claude HARNESS memory async wake", () => {
         workspaceId: claudeWorkspaceId(root),
       });
       publishClaudeInboxEntry(root, entry);
-      const stale = join(
-        root,
-        ".git",
-        "ut-tdd-runtime",
-        "claude-memory-wake",
-        "inbox",
-        "stale.json",
-      );
+      const stale = join(runtimeRoot(root), "inbox", "stale.json");
       writeFileSync(stale, `${JSON.stringify({ invalid: true })}\n`, "utf8");
       utimesSync(stale, now, now);
 
@@ -567,13 +565,7 @@ describe("Claude HARNESS memory async wake", () => {
   it("U-MEMWAKE-006補遺: generation ファイル喪失は superseded として早期収束する", async () => {
     const root = fixture();
     try {
-      const generation = join(
-        root,
-        ".git",
-        "ut-tdd-runtime",
-        "claude-memory-wake",
-        "session-id.generation",
-      );
+      const generation = join(runtimeRoot(root), "session-id.generation");
       const result = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "session-id",
