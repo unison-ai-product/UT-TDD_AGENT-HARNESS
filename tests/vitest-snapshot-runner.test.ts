@@ -19,19 +19,42 @@ import {
   assertSnapshotFingerprint,
   copyReferenceRuntimeInputs,
   createSnapshot,
+  emitSnapshotTimings,
   finishSnapshotCleanup,
   removeSnapshot,
   resolveBunBinary,
   resolveSnapshotSource,
   runSnapshotTests,
   sealReference,
+  shouldEmitSnapshotTimings,
   snapshotContentFingerprint,
+  snapshotTimingLines,
   unsealReference,
   windowsSealCommands,
 } from "../scripts/run-vitest-snapshot.ts";
 import { removeTestTree } from "./support/temp-tree.ts";
 
 describe("vitest snapshot runner", () => {
+  it("CANDIDATE-SNAPSHOT-COST-001: emits stage timings only when explicitly enabled", () => {
+    const timings = [
+      { stage: "npm-ci", durationMs: 12.345 },
+      { stage: "cleanup", durationMs: 0 },
+    ];
+    expect(snapshotTimingLines(timings)).toEqual([
+      "snapshot-stage npm-ci 12.3ms",
+      "snapshot-stage cleanup 0.0ms",
+    ]);
+    const writes: string[] = [];
+    emitSnapshotTimings(timings, false, (text) => writes.push(text));
+    expect(writes).toEqual([]);
+    emitSnapshotTimings(timings, true, (text) => writes.push(text));
+    expect(writes).toEqual(["snapshot-stage npm-ci 12.3ms\nsnapshot-stage cleanup 0.0ms\n"]);
+    expect(shouldEmitSnapshotTimings({})).toBe(false);
+    expect(shouldEmitSnapshotTimings({ UT_TDD_SNAPSHOT_TIMING: "1" })).toBe(true);
+    expect(shouldEmitSnapshotTimings({ CI: "true" })).toBe(true);
+    expect(shouldEmitSnapshotTimings({ CI: "false" })).toBe(false);
+  });
+
   it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {
     expect(
       resolveBunBinary(

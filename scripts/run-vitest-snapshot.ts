@@ -13,6 +13,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
+import { performance } from "node:perf_hooks";
 import { dirname, join, relative, win32 } from "node:path";
 import { resolveDefaultBranchRef } from "../src/git/default-branch.ts";
 import { hashFileChunkedWithDiagnostics } from "../tests/support/chunked-hash.ts";
@@ -80,6 +81,50 @@ export function canonicalPath(path: string): string {
 
 export type SnapshotSource =
   { kind: "git"; revision: string } | { kind: "copy" };
+
+export interface SnapshotStageTiming {
+  readonly stage: string;
+  readonly durationMs: number;
+}
+
+export function snapshotTimingLines(timings: readonly SnapshotStageTiming[]): string[] {
+  return timings.map(({ stage, durationMs }) => `snapshot-stage ${stage} ${durationMs.toFixed(1)}ms`);
+}
+
+export function shouldEmitSnapshotTimings(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env.UT_TDD_SNAPSHOT_TIMING === "1" || env.CI === "true";
+}
+
+export function emitSnapshotTimings(
+  timings: readonly SnapshotStageTiming[],
+  enabled = shouldEmitSnapshotTimings(),
+  write: (text: string) => void = (text) => process.stderr.write(text),
+): void {
+  if (!enabled || timings.length === 0) return;
+  write(`${snapshotTimingLines(timings).join("\n")}\n`);
+}
+
+function measureSnapshotStage<T>(
+  timings: SnapshotStageTiming[],
+  stage: string,
+  action: () => T,
+): T {
+  const started = performance.now();
+  try {
+    return action();
+  } finally {
+    const timing = {
+      stage,
+      durationMs: Number((performance.now() - started).toFixed(1)),
+    };
+    timings.push(timing);
+    // Emit a completed stage immediately. A later stage can hang or be killed,
+    // and the measurements completed before that point must remain observable.
+    emitSnapshotTimings([timing]);
+  }
+}
 
 export function resolveSnapshotSource(repoRoot: string): SnapshotSource {
   const topLevel = output("git", ["rev-parse", "--show-toplevel"], repoRoot);
@@ -357,59 +402,85 @@ export function runSnapshotTests(
   );
   let primaryError: unknown;
   let sealedReferenceFingerprint: string | undefined;
+  const timings: SnapshotStageTiming[] = [];
   try {
-    const bun = resolveBunBinary();
-    const node = resolveNodeBinary();
-    const npmCli = resolveNpmCli(node);
-    const source = resolveSnapshotSource(repoRoot);
-    createSnapshot(repoRoot, snapshotRoot, source);
-    createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot));
-    if (source.kind === "copy") assertSnapshotContentMatch(snapshotRoot, referenceRoot);
-    run(node, [npmCli, "ci", "--no-audit", "--no-fund"], snapshotRoot);
-    run(node, ["src/cli.ts", "db", "rebuild"], snapshotRoot);
-    copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);
-    if (source.kind === "git")
-      run(
-        "git",
-        ["diff", "--exit-code", "--", ":(exclude).ut-tdd/harness.db"],
-        referenceRoot,
+    const bun = measureSnapshotStage(timings, "resolve-bun", () => resolveBunBinary());
+    const node = measureSnapshotStage(timings, "resolve-node", () => resolveNodeBinary());
+    const npmCli = measureSnapshotStage(timings, "resolve-npm", () => resolveNpmCli(node));
+    const source = measureSnapshotStage(timings, "resolve-source", () =>
+      resolveSnapshotSource(repoRoot),
     );
-    sealReference(referenceRoot);
-    sealedReferenceFingerprint = snapshotContentFingerprint(referenceRoot);
-    run(node, [join("node_modules", "vitest", "vitest.mjs"), "run", ...args], snapshotRoot, {
-      ...process.env,
-      INIT_CWD: snapshotRoot,
-      UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
-      UT_TDD_TEST_FENCE_ROOT: repoRoot,
-      UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
-      UT_TDD_BUN_BINARY: bun,
-      UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
-      UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
-    });
+    measureSnapshotStage(timings, "create-execution-snapshot", () =>
+      createSnapshot(repoRoot, snapshotRoot, source),
+    );
+    measureSnapshotStage(timings, "create-reference-snapshot", () =>
+      createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot)),
+    );
+    if (source.kind === "copy")
+      measureSnapshotStage(timings, "assert-copy-content", () =>
+        assertSnapshotContentMatch(snapshotRoot, referenceRoot),
+      );
+    measureSnapshotStage(timings, "npm-ci", () =>
+      run(node, [npmCli, "ci", "--no-audit", "--no-fund"], snapshotRoot),
+    );
+    measureSnapshotStage(timings, "db-rebuild", () =>
+      run(node, ["src/cli.ts", "db", "rebuild"], snapshotRoot),
+    );
+    measureSnapshotStage(timings, "copy-runtime-inputs", () =>
+      copyReferenceRuntimeInputs(snapshotRoot, referenceRoot),
+    );
+    if (source.kind === "git")
+      measureSnapshotStage(timings, "assert-reference-diff", () =>
+        run(
+          "git",
+          ["diff", "--exit-code", "--", ":(exclude).ut-tdd/harness.db"],
+          referenceRoot,
+        ),
+      );
+    measureSnapshotStage(timings, "seal-reference", () => sealReference(referenceRoot));
+    sealedReferenceFingerprint = measureSnapshotStage(timings, "fingerprint-reference", () =>
+      snapshotContentFingerprint(referenceRoot),
+    );
+    measureSnapshotStage(timings, "vitest", () =>
+      run(node, [join("node_modules", "vitest", "vitest.mjs"), "run", ...args], snapshotRoot, {
+        ...process.env,
+        INIT_CWD: snapshotRoot,
+        UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
+        UT_TDD_TEST_FENCE_ROOT: repoRoot,
+        UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
+        UT_TDD_BUN_BINARY: bun,
+        UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
+        UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
+      }),
+    );
   } catch (error) {
     primaryError = error;
   } finally {
     if (sealedReferenceFingerprint) {
       try {
-        assertSnapshotFingerprint(referenceRoot, sealedReferenceFingerprint);
+        measureSnapshotStage(timings, "verify-reference", () =>
+          assertSnapshotFingerprint(referenceRoot, sealedReferenceFingerprint!),
+        );
       } catch (error) {
         primaryError = primaryError
           ? new AggregateError([primaryError, error], "vitest execution and reference verification failed")
           : error;
       }
     }
-    finishSnapshotCleanup(primaryError, [
-      () => unsealReference(referenceRoot),
-      () => removeSnapshot(referenceRoot),
-      () => removeSnapshot(snapshotRoot),
-      () =>
-        rmSync(cacheRoot, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 50,
-        }),
-    ]);
+    measureSnapshotStage(timings, "cleanup", () =>
+      finishSnapshotCleanup(primaryError, [
+        () => unsealReference(referenceRoot),
+        () => removeSnapshot(referenceRoot),
+        () => removeSnapshot(snapshotRoot),
+        () =>
+          rmSync(cacheRoot, {
+            recursive: true,
+            force: true,
+            maxRetries: 10,
+            retryDelay: 50,
+          }),
+      ]),
+    );
   }
   if (primaryError) throw primaryError;
 }
