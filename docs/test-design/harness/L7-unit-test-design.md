@@ -140,6 +140,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ID | 検証対象 | oracle (DbC) |
 |---|---|---|
 | U-RPORT-019 | `analyzeRuntimePortability` (script wrapper 規則) | 撤去済み compiled 配布 (`dist/ut-tdd`) への wrapper dispatch 再流入を **OS 非依存に** fail-close する。POSIX `dist/ut-tdd` と PowerShell `dist\ut-tdd.exe` の双方を fixture で検出し (`script-wrapper-compiled-dispatch`)、現行 repo の両 wrapper では violation 0 件 (false positive なし)。`script-wrapper-not-thin` の判定 (非コメント 12 行以下 + `src/cli.ts` 参照) は dist 分岐の再追加を通過させるため、この規則が無いと Windows 側の AC-3 が fail-close しない。 |
+| U-RPORT-020 | `analyzeRuntimePortability` (package script 規則) | `package.json` の script が Bun を**起動**したら fail-close する (`package-script-bun-runtime`)。判定対象は起動語のみ (行頭 / `|` / `&&` / `||` / `;` の直後) で、`bun` / `bunx` / `bun.exe` を拒否し、文字列内の言及や `bundle-*` のような部分一致は通す。AC-1「package.json に bun を含む script が存在しない」は従来 prose 主張のみで機械強制が無く false-green だった (正常 fixture 自体が `test:db: bun run ...` を含んでいた)。現行 repo の `package.json` では violation 0 件。 |
 
 ### §1.8 U-HOVER (handover 記録機構由来、PLAN-L6-06 add-design / handover-mechanism.md §2-§3)
 | U-ID | 検証対象 | oracle (DbC) |
