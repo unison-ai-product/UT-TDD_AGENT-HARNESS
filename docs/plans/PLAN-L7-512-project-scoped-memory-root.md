@@ -65,6 +65,8 @@ transient notification busとして共有する。絶対pathはidentityに含め
 - 同一ID・同一digestだけをdedupeし、同一ID・異digestは全variantをquarantineへ保存する。
 - migrationはsource inventoryをfile handleへ再束縛し、durable transaction markerから中断renameをrollback/recoveryする。
 - completionは現物corpus digestと一致するときだけreplayし、欠落・改変・別operationを成功扱いしない。
+- transactionの保証境界は同一host上のprocess crash／強制終了までとする。Windowsでdirectory fsyncが提供されない面の
+  power-loss durabilityは本sliceの保証に含めず、未完了markerまたは現物不一致を次回起動時にfail-closeする。
 
 ## 3. Implementation slices
 

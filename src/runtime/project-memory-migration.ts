@@ -301,7 +301,9 @@ function recoverProjectMemoryMigration(input: {
       rmSync(recoveryCandidate, { recursive: true, force: true });
       fsyncParent(transaction.target);
     } catch (error) {
-      rmSync(transaction.target, { recursive: true, force: true });
+      if (existsSync(transaction.target)) {
+        renameSync(transaction.target, `${transaction.backup}.corrupt-${randomUUID()}`);
+      }
       if (existsSync(recoveryCandidate)) renameSync(recoveryCandidate, transaction.target);
       throw error;
     }
@@ -359,7 +361,7 @@ function acquireMigrationLock(lock: string): string {
       ) {
         throw new Error("project_memory_migration_lock_corrupt");
       }
-      if (processAlive(Number(owner.pid)) && Number(owner.expiresAt) > Date.now()) {
+      if (processAlive(Number(owner.pid))) {
         throw new Error("project_memory_migration_in_progress");
       }
       const stale = `${lock}.stale-${nonce}`;
