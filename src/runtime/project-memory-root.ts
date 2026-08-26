@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstatSync, realpathSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { existsSync, lstatSync, realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
 
 export type ProjectMemoryRootDenyReason =
@@ -9,6 +9,7 @@ export type ProjectMemoryRootDenyReason =
   | "project_identity_unavailable"
   | "project_identity_drift"
   | "canonical_root_invalid"
+  | "authored_memory_root_escape"
   | "runtime_root_escape";
 
 export type ProjectMemoryRootResult =
@@ -29,6 +30,7 @@ interface ProjectMemoryRootPorts {
   readonly gitCommonDir: (repoRoot: string) => string;
   readonly realpath: (path: string) => string;
   readonly isDirectory: (path: string) => boolean;
+  readonly isSafeDescendant: (root: string, candidate: string) => boolean;
   readonly projectIdentity: (repoRoot: string) => string | null;
 }
 
@@ -83,9 +85,17 @@ export function resolveProjectMemoryRootWithPorts(
   }
 
   const namespace = projectNamespace(currentProjectId);
+  const authoredMemoryRoot = join(canonicalProjectRoot, ".ut-tdd", "memory");
+  if (!ports.isSafeDescendant(canonicalProjectRoot, authoredMemoryRoot)) {
+    return { ok: false, reason: "authored_memory_root_escape" };
+  }
   const runtimeBase = join(gitCommonDir, "ut-tdd-runtime", "projects");
   const runtimeBusRoot = join(runtimeBase, namespace);
-  if (!contained(gitCommonDir, runtimeBase) || !contained(runtimeBase, runtimeBusRoot)) {
+  if (
+    !contained(gitCommonDir, runtimeBase) ||
+    !contained(runtimeBase, runtimeBusRoot) ||
+    !ports.isSafeDescendant(gitCommonDir, runtimeBusRoot)
+  ) {
     return { ok: false, reason: "runtime_root_escape" };
   }
   return {
@@ -95,7 +105,7 @@ export function resolveProjectMemoryRootWithPorts(
     currentWorktreeRoot,
     canonicalProjectRoot,
     gitCommonDir,
-    authoredMemoryRoot: join(canonicalProjectRoot, ".ut-tdd", "memory"),
+    authoredMemoryRoot,
     runtimeBusRoot,
   };
 }
@@ -105,6 +115,21 @@ function gitPath(repoRoot: string, args: string[]): string {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   }).trim();
+}
+
+function isSafeDirectoryChain(root: string, candidate: string): boolean {
+  const resolvedRoot = realpathSync(root);
+  if (!contained(resolvedRoot, candidate)) return false;
+  const rel = relative(resolve(root), resolve(candidate));
+  let cursor = resolve(root);
+  for (const part of rel.split(sep).filter(Boolean)) {
+    cursor = join(cursor, part);
+    if (!existsSync(cursor)) continue;
+    const stat = lstatSync(cursor);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) return false;
+    if (!contained(resolvedRoot, realpathSync(cursor))) return false;
+  }
+  return true;
 }
 
 export function resolveProjectMemoryRoot(repoRoot: string): ProjectMemoryRootResult {
@@ -121,6 +146,7 @@ export function resolveProjectMemoryRoot(repoRoot: string): ProjectMemoryRootRes
         return false;
       }
     },
+    isSafeDescendant: isSafeDirectoryChain,
     projectIdentity: (root) => {
       const result = loadProjectIdentityFromHead({ repoRoot: root });
       return result.ok ? result.value.repositoryIdentity : null;

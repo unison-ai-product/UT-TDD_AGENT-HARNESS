@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -31,6 +39,7 @@ function ports(over: Partial<Parameters<typeof resolveProjectMemoryRootWithPorts
     gitCommonDir: () => common,
     realpath: (path: string) => path,
     isDirectory: () => true,
+    isSafeDescendant: () => true,
     projectIdentity: () => "owner/product",
     ...over,
   };
@@ -85,6 +94,54 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
     if (!a.ok || !b.ok) throw new Error("unexpected deny");
     expect(a.projectNamespace).not.toBe(b.projectNamespace);
     expect(a.runtimeBusRoot).not.toBe(b.runtimeBusRoot);
+  });
+
+  it("CANDIDATE-U-PMEMROOT-008: path形project IDとaliasをcanonicalizeしてnamespace escapeを許さない", () => {
+    const result = resolveProjectMemoryRootWithPorts(
+      linked,
+      ports({ projectIdentity: () => "../../foreign/project" }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.projectNamespace).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.runtimeBusRoot).not.toContain(`..${win ? "\\" : "/"}`);
+
+    const main = mkdtempSync(join(tmpdir(), "ut-pmem-alias-main-"));
+    const alias = mkdtempSync(join(tmpdir(), "ut-pmem-alias-link-"));
+    rmSync(alias, { recursive: true, force: true });
+    const outside = mkdtempSync(join(tmpdir(), "ut-pmem-alias-outside-"));
+    try {
+      execFileSync("git", ["init", "-q"], { cwd: main });
+      execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: main });
+      execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: main });
+      writeFileSync(
+        join(main, "ut-tdd.project.json"),
+        `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: "fixture/alias" })}\n`,
+        "utf8",
+      );
+      execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: main });
+      execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: main });
+      symlinkSync(main, alias, win ? "junction" : "dir");
+      const direct = resolveProjectMemoryRoot(main);
+      const throughAlias = resolveProjectMemoryRoot(alias);
+      expect(direct.ok && throughAlias.ok).toBe(true);
+      if (!direct.ok || !throughAlias.ok) throw new Error("alias resolution failed");
+      expect(throughAlias.canonicalProjectRoot).toBe(direct.canonicalProjectRoot);
+      expect(throughAlias.runtimeBusRoot).toBe(direct.runtimeBusRoot);
+
+      const authoredRoot = join(main, ".ut-tdd");
+      symlinkSync(outside, authoredRoot, win ? "junction" : "dir");
+      expect(resolveProjectMemoryRoot(main)).toEqual({
+        ok: false,
+        reason: "authored_memory_root_escape",
+      });
+      unlinkSync(authoredRoot);
+    } finally {
+      if (existsSync(alias)) unlinkSync(alias);
+      if (existsSync(join(main, ".ut-tdd"))) unlinkSync(join(main, ".ut-tdd"));
+      rmSync(outside, { recursive: true, force: true });
+      rmSync(main, { recursive: true, force: true });
+    }
   });
 
   it("CANDIDATE-P-PMEMROOT-001: linked worktree間でauthored corpusと通知busを共有する", () => {
