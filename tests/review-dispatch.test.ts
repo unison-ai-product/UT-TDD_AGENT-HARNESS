@@ -564,8 +564,19 @@ describe("review dispatch analyzer (U-RVDISP)", () => {
     expect(entry(duplicated).state).toBe("merge_ready");
     expect(duplicated.ok).toBe(true);
 
-    const conflicting = analyzeReviewDispatch({
+    const replayedWithNewTimestamp = analyzeReviewDispatch({
       requests: [request(), request({ requestedAt: "2026-07-31T00:00:30.000Z" })],
+      receipts: completeSequence(),
+      prs: [pr()],
+      now: "2026-07-31T00:10:00.000Z",
+    });
+    expect(replayedWithNewTimestamp.entries).toHaveLength(1);
+    expect(entry(replayedWithNewTimestamp).state).toBe("merge_ready");
+    expect(entry(replayedWithNewTimestamp).reasons).not.toContain("duplicate_request_conflict");
+    expect(replayedWithNewTimestamp.ok).toBe(true);
+
+    const conflicting = analyzeReviewDispatch({
+      requests: [request(), request({ authorFamily: "codex" })],
       receipts: completeSequence(),
       prs: [pr()],
       now: "2026-07-31T00:10:00.000Z",
