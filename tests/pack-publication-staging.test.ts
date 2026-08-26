@@ -156,6 +156,27 @@ describe("local Pack publication staging/auditor", () => {
     );
   });
 
+  it("U-PACKPUB-STAGE-002: separates release and channel digest sections", () => {
+    const releaseOnly = {
+      schema_version: "v2",
+      releases: {
+        X: { releaseRecordDigest: "D" },
+      },
+      channels: {},
+      channelOrder: [],
+    } as unknown as PackPublicationManifest;
+    const channelOnly = {
+      schema_version: "v2",
+      releases: {},
+      channels: { X: "D" },
+      channelOrder: ["X"],
+    } as unknown as PackPublicationManifest;
+
+    expect(deriveControlManifestSnapshotDigest(releaseOnly)).not.toBe(
+      deriveControlManifestSnapshotDigest(channelOnly),
+    );
+  });
+
   it.each([
     ["missing", []],
     ["extra", [sealedEntry(), { ...sealedEntry(), destinationPath: "bin/extra.js" }]],
@@ -297,7 +318,7 @@ describe("local Pack publication staging/auditor", () => {
     expect(result).toEqual({ ok: false, error: "indeterminate", applied: "indeterminate" });
   });
 
-  it("U-PACKPUB-STAGE-010: audits exact local observation and preserves partial/indeterminate types", async () => {
+  it("U-PACKPUB-STAGE-010: audits each local observation drift with its typed reason", async () => {
     const built = buildPackPublicationStagingPlan(input());
     if (!built.ok) throw new Error(built.error);
     const plan = built.plan;
@@ -311,11 +332,68 @@ describe("local Pack publication staging/auditor", () => {
     ).resolves.toMatchObject({
       status: "attested",
     });
+
+    await expect(
+      auditPackPublication(plan, {
+        observe: () => ({ ...observation, releaseAssets: observation.releaseAssets.slice(0, 1) }),
+      }),
+    ).resolves.toEqual({
+      status: "partial_publication",
+      reason: "release_assets_mismatch",
+    });
+
+    await expect(
+      auditPackPublication(plan, {
+        observe: () => ({
+          ...observation,
+          releaseAssets: [
+            { ...observation.releaseAssets[0], contentDigest: `sha256:${"e".repeat(64)}` },
+            observation.releaseAssets[1],
+          ],
+        }),
+      }),
+    ).resolves.toEqual({
+      status: "partial_publication",
+      reason: "release_assets_mismatch",
+    });
+
+    const driftedAssetBytes = new Uint8Array(observation.releaseAssets[0].bytes);
+    driftedAssetBytes[0] ^= 0xff;
+    await expect(
+      auditPackPublication(plan, {
+        observe: () => ({
+          ...observation,
+          releaseAssets: [
+            { ...observation.releaseAssets[0], bytes: driftedAssetBytes },
+            observation.releaseAssets[1],
+          ],
+        }),
+      }),
+    ).resolves.toEqual({
+      status: "partial_publication",
+      reason: "release_assets_mismatch",
+    });
+
+    await expect(
+      auditPackPublication(plan, {
+        observe: () => ({
+          ...observation,
+          controlManifestSnapshotDigest: `sha256:${"f".repeat(64)}`,
+        }),
+      }),
+    ).resolves.toEqual({
+      status: "partial_publication",
+      reason: "control_manifest_mismatch",
+    });
+
     await expect(
       auditPackPublication(plan, {
         observe: () => ({ ...observation, commitEntries: observation.commitEntries.slice(0, 1) }),
       }),
-    ).resolves.toMatchObject({ status: "partial_publication" });
+    ).resolves.toEqual({
+      status: "partial_publication",
+      reason: "commit_entries_mismatch",
+    });
     await expect(
       auditPackPublication(plan, {
         observe: () => {
