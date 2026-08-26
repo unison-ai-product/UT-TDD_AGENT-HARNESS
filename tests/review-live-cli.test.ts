@@ -131,12 +131,16 @@ describe("review live CLI composition", () => {
       string,
       unknown
     >;
+    const requestFiles = readdirSync(join(root, ".ut-tdd", "review", "requests"));
+    expect(requestFiles).toHaveLength(1);
+    const requestPath = join(root, ".ut-tdd", "review", "requests", requestFiles[0]);
+    const request = JSON.parse(readFileSync(requestPath, "utf8")) as Record<string, unknown>;
     expect(envelope).toMatchObject({
       targetWorkspaceId,
-      requestPath: expect.stringContaining(".ut-tdd/review/requests/"),
+      requestPath,
       exactHead: head,
       pr: 319,
-      reviewRevision: "review-d3a-routing",
+      reviewRevision: request.reviewRevision,
     });
   });
 
