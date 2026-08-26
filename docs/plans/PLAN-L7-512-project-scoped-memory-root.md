@@ -62,14 +62,16 @@ transient notification busとして共有する。絶対pathはidentityに含め
 - notification envelopeはproject、memory、operation、producer provider/session、target provider/sessionを束縛する。
 - project mismatchはread/claimを0とし、別projectのentryを消費済みにしない。
 - legacy worktree corpusへ無音fallbackしない。全linked worktreeをinventoryしてから移行する。
-- 同一ID・同一digestだけをdedupeし、同一ID・異digestは全variantをquarantine receiptへ残す。
+- 同一ID・同一digestだけをdedupeし、同一ID・異digestは全variantをquarantineへ保存する。
+- migrationはsource inventoryをfile handleへ再束縛し、durable transaction markerから中断renameをrollback/recoveryする。
+- completionは現物corpus digestと一致するときだけreplayし、欠落・改変・別operationを成功扱いしない。
 
 ## 3. Implementation slices
 
 1. canonical root resolverとproject-namespaced transient bus。
 2. Memory CLI、live review、Claude wakeのcanonical root結線。
 3. project-bound provider envelopeとclaim guard。
-4. inventory、dedupe、conflict quarantine、migration receipt。
+4. inventory、dedupe、conflict quarantine、transaction recovery、completion fence。
 5. clean Pack setupからのCodex/Claude parityと別project isolation E2E。
 
 ## 4. Scope boundary
