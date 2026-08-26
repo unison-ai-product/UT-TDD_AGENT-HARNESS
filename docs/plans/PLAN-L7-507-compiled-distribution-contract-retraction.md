@@ -23,10 +23,11 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-507-compiled-distribution-contract-retraction.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/runtime-portability.ts
-    artifact_type: source_module
-  - artifact_path: tests/runtime-portability.test.ts
-    artifact_type: test_code
+# 実変更 artifact (src/lint/runtime-portability.ts / tests/runtime-portability.test.ts) の
+# 宣言は confirm と同時に行う。draft のまま既存 (merge 済み) ファイルを generates に書くと
+# merged-plan-status が「draft なのに generated deliverable が merge 済み」で fail-close する
+# (CLAUDE.md §PLAN Filing Rules)。delta review の指摘 (generates が自身のみ) と
+# この規約は同時に満たせないため、review verdict 受領 → confirm + generates 宣言の順序で閉じる。
 dependencies:
   parent: null
   requires: []
