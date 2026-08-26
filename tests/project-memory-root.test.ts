@@ -12,6 +12,7 @@ import {
 } from "../src/runtime/claude-memory-wake.ts";
 import {
   inventoryProjectMemory,
+  persistProjectMemoryMigrationReceipt,
   planProjectMemoryMigration,
 } from "../src/runtime/project-memory-migration.ts";
 import {
@@ -259,6 +260,19 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
           },
         ],
       });
+      const receiptPath = persistProjectMemoryMigrationReceipt(worker, receipt);
+      expect(persistProjectMemoryMigrationReceipt(main, receipt)).toBe(receiptPath);
+      expect(JSON.parse(readFileSync(receiptPath, "utf8"))).toMatchObject({
+        schema: "ut-tdd.project-memory-migration/v1",
+        outcome: "quarantine_required",
+        conflicts: [{ memoryId: expect.stringMatching(/^memory:project:/) }],
+      });
+      expect(() =>
+        persistProjectMemoryMigrationReceipt(main, {
+          ...receipt,
+          projectId: "fixture/foreign",
+        }),
+      ).toThrow("project_memory_migration_receipt_project_mismatch");
     } finally {
       try {
         execFileSync("git", ["worktree", "remove", "--force", worker], { cwd: main });

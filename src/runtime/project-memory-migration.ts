@@ -1,6 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { realpathSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { readMemory } from "../memory/service.ts";
 import { requireProjectMemoryRoot } from "./project-memory-root.ts";
@@ -123,4 +131,29 @@ export function inventoryProjectMemory(repoRoot: string): ProjectMemoryMigration
     }
   }
   return planProjectMemoryMigration({ projectId: project.projectId, entries });
+}
+
+export function persistProjectMemoryMigrationReceipt(
+  repoRoot: string,
+  receipt: ProjectMemoryMigrationReceipt,
+): string {
+  const project = requireProjectMemoryRoot(repoRoot);
+  if (receipt.projectId !== project.projectId) {
+    throw new Error("project_memory_migration_receipt_project_mismatch");
+  }
+  const directory = join(project.runtimeBusRoot, "memory-migration", "receipts");
+  mkdirSync(directory, { recursive: true });
+  const target = join(directory, `${receipt.inventoryDigest}.json`);
+  const serialized = `${canonicalJson(receipt)}\n`;
+  if (existsSync(target)) {
+    if (readFileSync(target, "utf8") === serialized) return target;
+    throw new Error("project_memory_migration_receipt_conflict");
+  }
+  const descriptor = openSync(target, "wx", 0o600);
+  try {
+    writeFileSync(descriptor, serialized, "utf8");
+  } finally {
+    closeSync(descriptor);
+  }
+  return target;
 }
