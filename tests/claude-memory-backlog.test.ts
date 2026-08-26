@@ -17,6 +17,7 @@ import {
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
 } from "../src/runtime/claude-memory-wake.ts";
+import { requireProjectMemoryRoot } from "../src/runtime/project-memory-root.ts";
 
 function buildClaudeInboxEntry(
   input: Omit<Parameters<typeof buildClaudeInboxEntryRaw>[0], "projectId" | "producerSessionId">,
@@ -61,7 +62,11 @@ function fixture(): string {
 }
 
 function generationPath(root: string, sessionId: string): string {
-  return join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", `${sessionId}.generation`);
+  return join(
+    requireProjectMemoryRoot(root).runtimeBusRoot,
+    "claude-memory-wake",
+    `${sessionId}.generation`,
+  );
 }
 
 describe("Claude memory delivery backlog visibility", () => {
