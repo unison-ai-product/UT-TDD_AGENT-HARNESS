@@ -27,6 +27,48 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
   "scripts/run-vitest-snapshot.ts",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
+
+/**
+ * shell command から**起動語だけ**を取り出す (quote-aware)。
+ *
+ * 素朴に `/\||&&|\|\||;/` で分割すると、引用符の中の区切り文字まで分割してしまい
+ * `node -e "console.log('x && bun run y')"` のような「文字列内の言及」を起動と誤判定する
+ * (r3 delta review 指摘)。ここでは引用状態を追跡し、**引用外の区切りだけ**でセグメントを
+ * 切り、各セグメント先頭語を起動語として返す。
+ */
+function shellLaunchers(command: string): string[] {
+  const launchers: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+  const flush = (): void => {
+    const first = current.trim().split(/\s+/)[0] ?? "";
+    if (first.length > 0) launchers.push(first);
+    current = "";
+  };
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    if (quote) {
+      if (char === quote) quote = null;
+      current += char;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ";" || char === "|" || char === "&") {
+      // `&&` / `||` は 2 文字なので次の 1 文字も読み飛ばす。
+      if ((char === "&" || char === "|") && command[index + 1] === char) index += 1;
+      else if (char === "&") continue; // 単独 `&` (background) は区切りだが語は継続しない
+      flush();
+      continue;
+    }
+    current += char;
+  }
+  flush();
+  return launchers;
+}
 /**
  * 撤去済み compiled 配布への wrapper dispatch 再流入検出 (PLAN-L7-507)。
  *
@@ -244,11 +286,7 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
   // 機械強制が無く false-green だった。script の**起動語**が bun 系なら fail-close する
   // (行頭 / パイプ / 論理演算子 / セミコロン直後。文字列内の言及は対象外)。
   for (const [name, command] of Object.entries(pkg.scripts ?? {})) {
-    const launchers = command
-      .split(/\||&&|\|\||;/)
-      .map((segment) => segment.trim().split(/\s+/)[0] ?? "")
-      .filter((word) => word.length > 0);
-    if (launchers.some((word) => /^bunx?(?:\.exe)?$/.test(word))) {
+    if (shellLaunchers(command).some((word) => /^bunx?(?:\.exe)?$/.test(word))) {
       violations.push({
         path,
         line: 1,

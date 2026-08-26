@@ -361,6 +361,11 @@ describe("runtime-portability lint", () => {
       ["after &&", "node src/cli.ts db rebuild && bun run vitest", true],
       ["node only", "node src/cli.ts db rebuild && vitest run", false],
       ["mention in string", 'node -e "console.log(1); // bun is banned"', false],
+      // r3 delta review 指摘: quote 内の区切り文字で分割すると誤検出する。
+      ["quoted && mention", `node -e "console.log('x && bun run foo')"`, false],
+      ["quoted ; mention", `node -e "console.log('x ; bun.exe y')"`, false],
+      ["quoted pipe mention", `node -e "console.log('a | bunx b')"`, false],
+      ["real bun after quoted text", `node -e "console.log('ok')" && bun run x`, true],
     ] as const) {
       const mutated = {
         ...pkg,
