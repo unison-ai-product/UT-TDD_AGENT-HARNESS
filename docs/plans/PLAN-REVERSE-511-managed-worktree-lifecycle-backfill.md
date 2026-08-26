@@ -16,6 +16,11 @@ updated: 2026-08-26
 owner: Codex / TL
 parent_design: docs/plans/PLAN-L7-511-managed-worktree-lifecycle.md
 pair_artifact: docs/test-design/harness/L7-managed-worktree-lifecycle-test-design.md
+agent_slots:
+  - role: tl
+    slot_label: "TL - managed lifecycle backfill boundary"
+  - role: qa
+    slot_label: "QA - Reverse R1-R4 evidence"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-511-managed-worktree-lifecycle-backfill.md
     artifact_type: markdown_doc
@@ -45,4 +50,3 @@ Git mutationは単一transactionではないため、planned/lease/activation-ab
 - R2: creator全入口とfault injectionの網羅性を検査する。
 - R3: non-author review、Linux/Windows/aggregate CIを確認する。
 - R4: L4 placementへmanaged creator責務をbackfillし、#426へ再合流する。
-

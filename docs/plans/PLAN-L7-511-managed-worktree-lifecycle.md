@@ -6,25 +6,32 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-26
 updated: 2026-08-26
 owner: Codex / TL
 parent_design: docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
 pair_artifact: docs/test-design/harness/L7-managed-worktree-lifecycle-test-design.md
+agent_slots:
+  - role: se
+    slot_label: "SE - managed worktree lifecycle application/adapter"
+  - role: qa
+    slot_label: "QA - WTMAN fault/replay/common-dir oracle"
+  - role: tl
+    slot_label: "TL - exact-head non-author closing review"
 generates:
   - artifact_path: docs/plans/PLAN-L7-511-managed-worktree-lifecycle.md
     artifact_type: markdown_doc
   - artifact_path: src/cli/worktree-lifecycle.ts
-    artifact_type: source_file
+    artifact_type: source_module
   - artifact_path: src/runtime/worktree-lifecycle/application/managed-worktree.ts
-    artifact_type: source_file
+    artifact_type: source_module
   - artifact_path: src/runtime/worktree-lifecycle/adapters/jsonl-ledger.ts
-    artifact_type: source_file
+    artifact_type: source_module
   - artifact_path: src/runtime/worktree-lifecycle/adapters/node-managed-worktree.ts
-    artifact_type: source_file
+    artifact_type: source_module
   - artifact_path: tests/managed-worktree-lifecycle.test.ts
-    artifact_type: test_file
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
   requires:
@@ -36,7 +43,37 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/425
 github_issue_id: 425
 backprop_decision: required
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: primary_preflight
+    reviewed_at: "2026-08-26T17:01:31+09:00"
+    tests_green_at: "2026-08-26T17:00:30+09:00"
+    verdict: "approve; blocking 0; Claude Opus 5 exact-head closing review pending"
+    scope: >-
+      Managed create/activate/terminal saga、Git common-dir ledger、retry-safe lease release、
+      Session Stop/Start recovery、expired/unmanaged doctor projection、real Git worktree isolationを確認した。
+      物理cleanupは#426のまま分離し、dirty/unpushed bytesを削除しない。
+    worker_model: gpt-5.6-sol
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 7dc0a246f01a38b15ded94f0817cf935893e76be
+    subject_head: 7dc0a246f01a38b15ded94f0817cf935893e76be
+    evidence_path: tests/managed-worktree-lifecycle.test.ts
+    anchor_commit: 7dc0a246f01a38b15ded94f0817cf935893e76be
+    citations:
+      - "src/runtime/worktree-lifecycle/application/managed-worktree.ts"
+      - "src/runtime/worktree-lifecycle/adapters/jsonl-ledger.ts"
+      - "src/runtime/worktree-lifecycle/adapters/node-managed-worktree.ts"
+      - "tests/managed-worktree-lifecycle.test.ts: CANDIDATE-U-WTMAN-001..006 / CANDIDATE-P-WTMAN-001"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/managed-worktree-lifecycle.test.ts tests/plan-lint.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-26T17:00:30+09:00"
+        evidence_path: tests/managed-worktree-lifecycle.test.ts
+        output_digest: "sha256:d75b466b39e07b830f05bb3069253753c2471f6fed0fa0b3dfb469991447d47d"
+        anchor_commit: 7dc0a246f01a38b15ded94f0817cf935893e76be
 ---
 
 # PLAN-L7-511: managed worktree lifecycle orchestration
