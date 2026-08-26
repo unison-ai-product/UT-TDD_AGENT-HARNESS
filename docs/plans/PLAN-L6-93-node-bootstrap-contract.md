@@ -23,8 +23,6 @@ implementation_target: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundatio
 generates:
   - artifact_path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     artifact_type: markdown_doc
-  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
-    artifact_type: design_doc
 dependencies:
   parent: docs/plans/PLAN-L5-26-node-generation-activation.md
   requires: []
@@ -245,14 +243,25 @@ lintは`scripts/ut-tdd` / `scripts/ut-tdd.ps1`の2ファイルのみを対象と
    - 制御演算子 `&&` / `||` (command substitution内を含め例外なし)
 2. **`dist` tokenの不在** (負条件)。comment除去後のtextを`[^A-Za-z0-9_]`で区切ったtoken列に
    `dist`が現れたらfail-close。**token境界で判定する**ので`distribution`等の語は誤検出しない。
-3. **canonical起動行がちょうど1つ** (正条件)。comment除去後に次のいずれかに完全一致する行が
-   **ちょうど1行**存在すること (0行または2行以上でfail-close):
-   - POSIX: `exec node <path> "$@"` (`<path>`は`src/cli.ts`で終わる非空token)
-   - PowerShell: `& node <path> @args` (`<path>`は`src\cli.ts`で終わるexpression)
+3. **起動文の集合が canonical 1 行ちょうどに一致する** (正条件)。comment除去後のtextから
+   **起動文**を全て抽出し、その集合が canonical 1 件のみであること。
+   - **起動文の定義** (これに該当する文が canonical 以外に1つでもあればfail-close):
+     POSIX = 行頭の `exec`、または `.`/`source`、またはコマンド位置の非組み込み語;
+     PowerShell = `&` 呼び出し演算子、`.` dot-source、`Start-Process`、`Invoke-Expression`。
+     組み込みの `set` / `exit` / 変数代入は起動文ではない。
+   - **canonical起動文**: POSIX `exec node <path> "$@"` (`<path>`は`src/cli.ts`で終わる非空token) /
+     PowerShell `& node <path> @args` (`<path>`は`src\cli.ts`で終わるexpression)。
+   - 起動文が0件、2件以上、または1件だがcanonicalに一致しない場合はfail-close。
 
 条3が本契約の要である。条1・2は負の契約にすぎず、`exec "$ROOT/build/ut-tdd" "$@"` のように
 分岐なし・`dist`なしでcompiled binaryへ再流入する経路を塞げない (advisor `claude-fable-5` の
 反証1、2026-08-26)。**「node以外を起動しない」を正のアサーションとして固定する**のは条3だけである。
+
+**条3を「canonical行が1行存在する」ではなく「起動文集合が canonical 1件に一致する」と
+定義する理由** (r2 review 指摘): 存在と個数だけを見る形だと、
+`exec ./build/ut-tdd "$@"` の直後に到達不能な `exec node ./src/cli.ts "$@"` を1行置くだけで
+条1〜3を全て満たしながらcompiled binaryへ入れる (`exec`は復帰しないため後続行は死にコード)。
+排他 (他の起動文が存在しないこと) まで含めて初めて正条件として機能する。
 
 **条1が要求するwrapper書き換え** (実測済みの偽陽性回避、advisor反証2): `origin/main`の
 `scripts/ut-tdd:4` は `ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"` であり、この`&&`は
@@ -297,12 +306,23 @@ compiled dispatchはどのconsumer経路からも到達されず、到達し得�
 
 ### 5.5 実装PRへの委任事項
 
-本節はcontractのfreezeであり、実装は別PRが行う。実装PRが担うのは次の3点に限る:
+L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行う** (r2 review 指摘: 親設計と
+矛盾するL6契約をfreezeしてはならない。条項改訂を実装PRへ遅延させると、その間L4は
+「parity前に旧Bun経路を撤去しない」と読めるままになる)。
 
-1. L4 `architecture.md` §2への保護範囲追記 (§5.1と同義)。条項の**改訂**として明示し、
-   「もともと保護していなかった」という解釈操作にしない。
-2. wrapper 2本のcompiled-first分岐撤去と、L6 `function-spec.md` / requirements §7.1 の記述追随。
-3. `runtime-portability` lintへの再流入fail-close追加 (`CAND-NODEBOOT-021/022/023`のGreen化)。
+実装PRが担うのは次の2点に限る:
+
+1. wrapper 2本のcompiled-first分岐撤去 (§5.2.1の3条を満たす形へ)と、L6 `function-spec.md` /
+   requirements §7.1 の記述追随。
+2. `runtime-portability` lintへの再流入fail-close追加
+   (`CAND-NODEBOOT-021/022/023/024`のGreen化)。
+
+**wrapper書き換えに伴う未検証点** (r2 review 指摘、実装PRのoracle対象): 現行の
+`ROOT="$(CDPATH= cd -- … && pwd)"` は絶対・正規化されたrootを得るのに対し、§5.2.1が要求する
+`exec node "$(dirname -- "$0")/../src/cli.ts" "$@"` は未正規化のpathをNodeへ渡す。
+通常の絶対/相対path起動では成立するが、**bare-name (PATH経由)・symlink・相対PATH entry**の
+3形について退行しないことをoracleで固定してから撤去すること。「退行しない」を根拠なく
+主張しない。
 
 `package.json`の`build` script撤去、および`package-script-bun-runtime` (script起動語のBun禁止)
 の有効化は§5.4の条件を満たすまで実装PRのscope外とする — 後者は前者に機械的に依存する

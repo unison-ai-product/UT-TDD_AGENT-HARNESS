@@ -52,6 +52,17 @@ YAML+JSON+SQLite / Bun単一バイナリでありmigration debtである。**tar
 Node / compiled ESM / sealed generationである。Node parity receipt前にcurrentを削除せず、target成立後に
 current Bun経路を残さない。
 
+**削除禁止条項の保護範囲 (改訂、PLAN-L6-93 §5.1)**: 上記「Node parity receipt前にcurrentを
+削除せず」が保護するのは**再現可能なrollback成立性**であり、保護対象は
+(1) 再現可能なbuild経路 = `package.json`の`build` script、(2) source実行経路 = `node src/cli.ts`
+の2つに限る。`dist/`残置物への**silent dispatch**は保護対象外とする — これはrollbackの保全ではなく
+「HEADと無関係なcodeが`ut-tdd`として実行される」非決定性であり、条項の目的 (安全な後退可能性) を
+むしろ損なうためである。rollbackは「明示build + 生成物の明示実行 (wrapper非経由)」で成立する。
+
+これは条項の**明示的改訂**であって「もともと保護していなかった」という解釈操作ではない。
+改訂の実測根拠と処遇はPLAN-L6-93 §5に置く。`build` scriptの撤去は同§5.4の条件
+(sealed build receiptとNode parity receiptの双方) を満たすまで引き続き禁止する。
+
 > **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
 
 ## §3 building block view 構成ビュー (arc42 §5)

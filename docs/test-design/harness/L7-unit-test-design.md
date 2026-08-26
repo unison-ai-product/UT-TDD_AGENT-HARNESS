@@ -2038,7 +2038,7 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-021` | wrapper (`scripts/ut-tdd` / `scripts/ut-tdd.ps1`) のcomment除去後textに`dist`がtokenとして現れる (PLAN-L6-93 §5.2.1 条2) | fail-close。token境界 (`[^A-Za-z0-9_]`) で判定し`distribution`等は通す |
 | `CAND-NODEBOOT-022` | wrapperに文頭`if`/`elif`/`case`/`esac`/`switch`/`else`、存在判定`[`/`test`/`[[`/`Test-Path`/`command -v`/`which`/`Get-Command`、制御演算子`&&`/`\|\|`が現れる (§5.2.1 条1) | fail-close。列挙tokenのみを見る (データフロー追跡なし) |
 | `CAND-NODEBOOT-023` | sealed build receiptとNode parity receiptの**いずれか一方でも欠けた**状態で`package.json`の`build` scriptを削除 (§5.4) | 2 receiptの論理積でfail-close。片側成立のみの組み合わせも禁止側 |
-| `CAND-NODEBOOT-024` | wrapperのcanonical起動行 (POSIX `exec node <…src/cli.ts> "$@"` / PowerShell `& node <…src\cli.ts> @args`) が0行または2行以上、あるいは起動語が`node`以外 (§5.2.1 条3) | fail-close。分岐なし・`dist`なしで別binaryをexecする再流入を条1・2でなくこの正条件で塞ぐ |
+| `CAND-NODEBOOT-024` | wrapperの起動文集合がcanonical 1件に一致しない — 0件、2件以上、canonical不一致、および**canonicalに加えて別の起動文が存在する**形 (例: `exec ./build/ut-tdd "$@"` の後に到達不能なcanonical行、§5.2.1 条3) | fail-close。到達不能canonical行による条1・2すり抜けを排他条件で塞ぐ |
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
