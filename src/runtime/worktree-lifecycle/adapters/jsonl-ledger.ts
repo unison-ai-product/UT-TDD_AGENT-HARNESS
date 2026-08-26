@@ -72,7 +72,11 @@ export function resolveWorktreeLifecycleLedgerPath(input: {
 }
 
 export class JsonlLifecycleLedger {
-  constructor(private readonly path: string) {}
+  private readonly path: string;
+
+  constructor(path: string) {
+    this.path = path;
+  }
 
   read(): readonly LifecycleLedgerEntry[] {
     if (!existsSync(this.path)) return Object.freeze([]);
