@@ -133,7 +133,7 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       );
       expect(inboxPath.startsWith(fromMain.runtimeBusRoot)).toBe(true);
       expect(summarizeUnclaimedInbox(main, targetWorkspaceId).pending).toBe(1);
-      expect(summarizeUnclaimedInbox(main, "f".repeat(64)).foreignPending).toBe(1);
+      expect(summarizeUnclaimedInbox(main, "f".repeat(64)).targetMismatchPending).toBe(1);
     } finally {
       try {
         execFileSync("git", ["worktree", "remove", "--force", worker], { cwd: main });
