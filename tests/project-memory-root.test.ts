@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -137,6 +137,26 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       expect(inboxPath.startsWith(fromMain.runtimeBusRoot)).toBe(true);
       expect(summarizeUnclaimedInbox(main, targetWorkspaceId).pending).toBe(1);
       expect(summarizeUnclaimedInbox(main, "f".repeat(64)).targetMismatchPending).toBe(1);
+
+      const foreign = {
+        ...JSON.parse(readFileSync(inboxPath, "utf8")),
+        projectId: "fixture/foreign",
+      };
+      writeFileSync(inboxPath, `${JSON.stringify(foreign)}\n`, "utf8");
+      expect(summarizeUnclaimedInbox(main, targetWorkspaceId).pending).toBe(0);
+      expect(existsSync(inboxPath)).toBe(true);
+      expect(() =>
+        publishClaudeInboxEntry(
+          worker,
+          buildClaudeInboxEntry({
+            memory: entry,
+            operationId: "cross-project",
+            workspaceId: targetWorkspaceId,
+            projectId: "fixture/foreign",
+            producerSessionId: "foreign-session",
+          }),
+        ),
+      ).toThrow("claude_inbox_project_mismatch");
     } finally {
       try {
         execFileSync("git", ["worktree", "remove", "--force", worker], { cwd: main });

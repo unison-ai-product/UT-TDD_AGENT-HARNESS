@@ -254,6 +254,10 @@ export function buildClaudeReviewInboxEntry(input: {
 }
 
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
+  const project = requireProjectMemoryRoot(repoRoot);
+  if (entry.projectId !== "legacy-unbound" && entry.projectId !== project.projectId) {
+    throw new Error("claude_inbox_project_mismatch");
+  }
   const directory = join(runtimeRoot(repoRoot), "inbox");
   ensureDir(directory, { recursive: true });
   const target = join(directory, `${inboxFileStem(entry.id)}.json`);
