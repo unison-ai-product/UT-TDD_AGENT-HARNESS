@@ -349,6 +349,10 @@ export class WorktreeLifecycleStore {
     return Object.freeze(this.eventLog.map((event) => Object.freeze(event)));
   }
 
+  snapshots(): readonly WorktreeLifecycleRecord[] {
+    return Object.freeze([...this.records.values()].map((record) => freezeRecord(record)));
+  }
+
   get(identity: LifecycleIdentity): WorktreeLifecycleRecord | undefined {
     return this.records.get(lifecycleKey(identity));
   }

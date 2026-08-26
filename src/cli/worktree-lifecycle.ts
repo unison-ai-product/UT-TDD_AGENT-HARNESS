@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { dirname } from "node:path";
 import type { Command } from "commander";
 import { resolveRepositoryRoot } from "../feedback/repository-root.ts";
@@ -10,6 +11,7 @@ import type {
   TerminalKind,
   WorktreeUse,
 } from "../runtime/worktree-lifecycle/domain/types.ts";
+import { LIFECYCLE_STATES } from "../runtime/worktree-lifecycle/domain/types.ts";
 
 const WORKTREE_USES = new Set<WorktreeUse>(["worker", "review", "snapshot", "scratch"]);
 const TERMINAL_KINDS = new Set<TerminalKind>([
@@ -66,10 +68,88 @@ function lifecycleEvents(entries: readonly { event: LifecycleEvent }[]): Lifecyc
   return entries.map((entry) => entry.event);
 }
 
+function sessionTerminalReceipt(input: {
+  repositoryIdentity: string;
+  lifecycleId: string;
+  ownerSessionId: string;
+  kind: TerminalKind;
+}): string {
+  return `sha256:${createHash("sha256")
+    .update(JSON.stringify({ schema: "ut-tdd.worktree-session-terminal/v1", ...input }))
+    .digest("hex")}`;
+}
+
+export function finishManagedWorktreesForOwner(input: {
+  repoRoot: string;
+  ownerSessionId: string;
+  kind?: TerminalKind;
+}): { finished: number; skipped: number } {
+  if (!input.ownerSessionId.trim()) return { finished: 0, skipped: 0 };
+  const lineage = repositoryIdentity(input.repoRoot);
+  const runtime = createNodeManagedWorktreePorts({
+    repoRoot: input.repoRoot,
+    repositoryLineageId: lineage,
+    allowedRoot: allowedRoot(input.repoRoot),
+  });
+  const coordinator = new ManagedWorktreeCoordinator(
+    runtime.ports,
+    lifecycleEvents(runtime.ledger.read()),
+  );
+  const active = coordinator
+    .records()
+    .filter(
+      (record) => record.ownerSessionId === input.ownerSessionId && record.state === "active",
+    );
+  const kind = input.kind ?? "success";
+  for (const record of active) {
+    coordinator.finish({
+      identity: record.identity,
+      attempt: record.attempt,
+      ownerSessionId: input.ownerSessionId,
+      kind,
+      terminalReceiptDigest: sessionTerminalReceipt({
+        repositoryIdentity: lineage,
+        lifecycleId: record.lifecycleId,
+        ownerSessionId: input.ownerSessionId,
+        kind,
+      }),
+    });
+  }
+  return { finished: active.length, skipped: coordinator.records().length - active.length };
+}
+
 export function registerWorktreeLifecycleCommands(program: Command): void {
   const worktree = program
     .command("worktree")
     .description("managed worktree creation and terminal cleanup handoff");
+
+  worktree
+    .command("list")
+    .option("--json", "JSON output")
+    .action((opts: { json?: boolean }) => {
+      const repoRoot = resolveRepositoryRoot(process.cwd());
+      const lineage = repositoryIdentity(repoRoot);
+      const runtime = createNodeManagedWorktreePorts({
+        repoRoot,
+        repositoryLineageId: lineage,
+        allowedRoot: allowedRoot(repoRoot),
+      });
+      const records = new ManagedWorktreeCoordinator(
+        runtime.ports,
+        lifecycleEvents(runtime.ledger.read()),
+      ).records();
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(records, null, 2)}\n`);
+        return;
+      }
+      const counts = Object.fromEntries(
+        LIFECYCLE_STATES.map((state) => [
+          state,
+          records.filter((record) => record.state === state).length,
+        ]),
+      );
+      process.stdout.write(`worktree-lifecycle: ${JSON.stringify(counts)}\n`);
+    });
 
   worktree
     .command("create")

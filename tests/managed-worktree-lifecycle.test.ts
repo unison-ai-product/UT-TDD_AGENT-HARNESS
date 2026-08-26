@@ -136,6 +136,21 @@ describe("managed worktree lifecycle", () => {
     expect(deps.enqueueCleanup).not.toHaveBeenCalled();
   });
 
+  it("CANDIDATE-U-WTMAN-005 projects active ownership for status and Stop reconciliation", () => {
+    const deps = ports();
+    const coordinator = new ManagedWorktreeCoordinator(deps);
+    const active = coordinator.create(input());
+    expect(coordinator.records()).toEqual([
+      expect.objectContaining({
+        identity: active.identity,
+        ownerSessionId: "session-1",
+        issueId: 425,
+        state: "active",
+      }),
+    ]);
+    expect(Object.isFrozen(coordinator.records())).toBe(true);
+  });
+
   it("CANDIDATE-U-WTMAN-003 rejects a modified hash-chain without appending", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-wt-ledger-"));
     roots.push(root);

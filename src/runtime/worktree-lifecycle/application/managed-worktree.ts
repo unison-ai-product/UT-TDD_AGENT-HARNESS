@@ -208,6 +208,10 @@ export class ManagedWorktreeCoordinator {
     return terminal;
   }
 
+  records(): readonly WorktreeLifecycleRecord[] {
+    return this.store.snapshots();
+  }
+
   private appendLatest(): void {
     const events = this.store.events();
     this.ports.append(events[events.length - 1]);

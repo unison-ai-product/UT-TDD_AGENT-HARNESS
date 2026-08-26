@@ -37,7 +37,10 @@ import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
 import { registerLiveReviewCommands } from "./cli/review-live.ts";
-import { registerWorktreeLifecycleCommands } from "./cli/worktree-lifecycle.ts";
+import {
+  finishManagedWorktreesForOwner,
+  registerWorktreeLifecycleCommands,
+} from "./cli/worktree-lifecycle.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
@@ -1145,6 +1148,19 @@ session
     const input = readHookInput("Stop", opts.session);
     const repoRoot = requireRuntimeRepoRoot();
     dispatch(input, nodeDeps(repoRoot, gitBranch, gitHead), "Stop");
+    try {
+      const result = finishManagedWorktreesForOwner({
+        repoRoot,
+        ownerSessionId: input.session_id ?? "",
+      });
+      if (result.finished > 0) {
+        process.stdout.write(`worktree-lifecycle: terminal handoff ${result.finished}\n`);
+      }
+    } catch (error) {
+      process.stderr.write(
+        `worktree-lifecycle: terminal handoff deferred (${error instanceof Error ? error.message : String(error)})\n`,
+      );
+    }
     writeHandoverWarnings();
     // PLAN-L7-365 Step 2 (issue #78): Stop 境界で on-disk harness.db を自動追従。
     // Stop hook の timeout 予算 (5s) を消費しないよう detached で fire-and-forget 起動し、
