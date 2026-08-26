@@ -231,9 +231,46 @@ L4 §2 の「Node parity receipt前にcurrentを削除しない」が保護す�
 - **維持**: `package.json`の`build` script (`bun build --compile`)。§1 `buildNodeGeneration`の
   sealed build receiptが成立するまでrollback手段として保持する。
 - **撤去**: `scripts/ut-tdd` / `scripts/ut-tdd.ps1`のcompiled-first分岐。wrapperは
-  `node src/cli.ts`を無条件にexecする5行のthin dispatcherとする。
-- **禁止の追加**: wrapperへの`dist`参照と binary存在分岐 (`[ -x ]` / `[ -f ]` / `Test-Path` /
-  `command -v`) の再追加。`runtime-portability` lintがOS非依存にfail-closeする。
+  `node src/cli.ts`を無条件にexecするthin dispatcherとする。
+- **禁止の追加**: §5.2.1のwrapper検出契約を`runtime-portability` lintがfail-closeする。
+
+#### 5.2.1 wrapper検出契約 (3条、実装PRが方式を発明しないための確定仕様)
+
+lintは`scripts/ut-tdd` / `scripts/ut-tdd.ps1`の2ファイルのみを対象とし、次の3条**すべて**を
+満たさないファイルをfail-closeする。データフロー追跡は行わない (行わなくても閉じる設計にする)。
+
+1. **分岐・存在判定の不在** (負条件)。行のcomment除去後のtextに次が現れたらfail-close:
+   - 文の先頭tokenとしての `if` / `elif` / `case` / `esac` / `switch` / `else`
+   - 存在判定 `[` / `test` / `[[` / `Test-Path` / `command -v` / `which` / `Get-Command`
+   - 制御演算子 `&&` / `||` (command substitution内を含め例外なし)
+2. **`dist` tokenの不在** (負条件)。comment除去後のtextを`[^A-Za-z0-9_]`で区切ったtoken列に
+   `dist`が現れたらfail-close。**token境界で判定する**ので`distribution`等の語は誤検出しない。
+3. **canonical起動行がちょうど1つ** (正条件)。comment除去後に次のいずれかに完全一致する行が
+   **ちょうど1行**存在すること (0行または2行以上でfail-close):
+   - POSIX: `exec node <path> "$@"` (`<path>`は`src/cli.ts`で終わる非空token)
+   - PowerShell: `& node <path> @args` (`<path>`は`src\cli.ts`で終わるexpression)
+
+条3が本契約の要である。条1・2は負の契約にすぎず、`exec "$ROOT/build/ut-tdd" "$@"` のように
+分岐なし・`dist`なしでcompiled binaryへ再流入する経路を塞げない (advisor `claude-fable-5` の
+反証1、2026-08-26)。**「node以外を起動しない」を正のアサーションとして固定する**のは条3だけである。
+
+**条1が要求するwrapper書き換え** (実測済みの偽陽性回避、advisor反証2): `origin/main`の
+`scripts/ut-tdd:4` は `ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"` であり、この`&&`は
+分岐ではなくpath正規化イディオムだが条1に抵触する。したがって実装PRはROOT算出を廃し、
+POSIX wrapperを次の形へ倒す (`$0`依存度は現行と同一であり退行しない):
+
+```sh
+#!/usr/bin/env sh
+set -e
+exec node "$(dirname -- "$0")/../src/cli.ts" "$@"
+```
+
+PowerShell側は`$LASTEXITCODE`の伝播が分岐を要さないため、`Test-Path`分岐の削除のみで条1を満たす
+(`exit $LASTEXITCODE` は代入・伝播であって分岐ではない)。
+
+**前提の確認**: `node src/cli.ts`がNodeのtype-strippingで実行可能であることは本repoで実測済み
+(`node src/cli.ts plan lint` / `db rebuild` / `codex --role reviewer` が常用経路として成立している)。
+`package.json`の`bin.ut-tdd`も既に`./src/cli.ts`である。
 
 ### 5.3 撤去の根拠 (実測、基準 = `origin/main` `1f347281`)
 
@@ -253,8 +290,10 @@ compiled dispatchはどのconsumer経路からも到達されず、到達し得�
 
 ### 5.4 `build` scriptの撤去条件
 
-§1 `buildNodeGeneration`のsealed build receiptとNode parity receiptが記録された時点で撤去する。
-それ以前の`build` script撤去は本条項が禁止する (`CAND-NODEBOOT-023`)。
+§1 `buildNodeGeneration`のsealed build receiptと Node parity receiptが**双方とも**記録された時点で
+撤去する。**いずれか一方でも欠けている状態での`build` script撤去を本条項が禁止する**
+(`CAND-NODEBOOT-023`)。片方成立・他方不成立の組み合わせも禁止側であり、oracleは
+2 receiptの論理積で判定する (片側だけを見るoracleは撤去を許してしまう)。
 
 ### 5.5 実装PRへの委任事項
 
@@ -271,8 +310,15 @@ compiled dispatchはどのconsumer経路からも到達されず、到達し得�
 
 ### 5.6 pair oracle
 
-`CAND-NODEBOOT-021` (dist参照再追加) / `CAND-NODEBOOT-022` (binary存在分岐再追加) /
-`CAND-NODEBOOT-023` (parity前の`build`削除) を
-`docs/test-design/harness/L7-unit-test-design.md`へ追加した。実装先は
-`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
+§5.2.1の3条と§5.4の条件に1対1で対応するcandidateを
+`docs/test-design/harness/L7-unit-test-design.md`へ追加した:
+
+| candidate | 対応する契約 | 判定 |
+|---|---|---|
+| `CAND-NODEBOOT-021` | §5.2.1 条2 (`dist` token不在) | token境界判定。`distribution`等は誤検出しない |
+| `CAND-NODEBOOT-022` | §5.2.1 条1 (分岐・存在判定の不在) | 列挙したtokenのみを見る。データフロー追跡なし |
+| `CAND-NODEBOOT-023` | §5.4 (2 receiptの論理積) | 片側欠落でも撤去をfail-close |
+| `CAND-NODEBOOT-024` | §5.2.1 条3 (canonical起動行ちょうど1つ) | 0行/2行以上、およびnode以外の起動語をfail-close |
+
+実装先は`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
 candidate段階では正式oracle IDを宣言せず、各test実装とRed実測の同一commitで昇格する。
