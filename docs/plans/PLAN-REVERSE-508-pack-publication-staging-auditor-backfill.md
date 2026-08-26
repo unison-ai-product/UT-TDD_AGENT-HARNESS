@@ -10,7 +10,7 @@ route_signal: reverse
 route_mode: reverse
 status: draft
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-26
 owner: Codex / Luna
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
@@ -55,8 +55,10 @@ dependencies:
 
 `U-PACKPUB-STAGE-001..010`は、semantic control snapshot、exact commit/asset inventory、immutable
 bytes、snapshot/apply/restore fault、apply exactly once、partial/indeterminate監査を独立に検出する。
-Luna worker実装をCodex preflightで検証し、detached HEAD snapshot 13/13 Green、TypeScript、Biomeを
-同じanchor revisionへ束縛した。
+Luna worker実装をCodex preflightで検証した。Claude closing FLAGでasset欠落・digest/bytes drift、
+control digest driftのreason oracle不足とrelease/channel節境界衝突を実測したため、Red 13/14を経て
+domain separatorと要素数prefixを追加した。detached HEAD snapshot 14/14 Green、TypeScript、Biomeを
+同じremediation revisionへ束縛し、commit/assets/control digestの各分岐を独立に検出する。
 
 ## Backprop scope
 

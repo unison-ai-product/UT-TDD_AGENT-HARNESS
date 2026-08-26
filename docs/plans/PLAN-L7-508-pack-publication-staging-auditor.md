@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: confirmed
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-26
 owner: Codex / Luna
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -112,12 +112,15 @@ channel pointer、consumer E2E は参照しない。
   mode・size・content digest drift を fail-close する。
 - commit entries は manifest artifact destinations と `release/manifest.yaml` sidecar のみ、release assets
   は deterministic builder の tarball と `.sha256` の 2 件のみとする。
-- `controlManifestSnapshotDigest` は `ut-tdd-pack-control-v2\0`、release ID UTF-8 順の
-  `releaseId/releaseRecordDigest`、`channelOrder` 順の `channel/releaseId` を semantic framing して再計算する。
+- `controlManifestSnapshotDigest` は `ut-tdd-pack-control-v2\0`、要素数付きの `releases` / `channels`
+  domain separator、release ID UTF-8 順の `releaseId/releaseRecordDigest`、`channelOrder` 順の
+  `channel/releaseId` を semantic framing して再計算する。release record と channel record が同じ
+  pair を持っても節境界を越えて同一 digest になってはならない。
 - plan と bytes は deep immutable snapshot とし、injected `snapshot/writeStaging/apply/discard/restore` ports
   の fault は prior destination を復元できる場合だけ typed unavailable、復元不能なら typed indeterminate とする。
-- auditor は exact observed commit/assets/control digest のみを attested とし、欠落・余剰・digest drift は
-  `partial_publication`、観測不能は `indeterminate` として成功へ丸めない。
+- auditor は exact observed commit/assets/control digest のみを attested とし、commit、asset欠落、asset
+  digest/bytes drift、control digest driftをそれぞれ typed reason付き `partial_publication`、観測不能を
+  `indeterminate` として成功へ丸めない。
 
 ## 非スコープ
 
