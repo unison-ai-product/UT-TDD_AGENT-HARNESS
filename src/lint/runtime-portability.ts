@@ -27,6 +27,8 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
   "scripts/run-vitest-snapshot.ts",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
+/** 撤去済み compiled 配布 (dist/ut-tdd) への wrapper dispatch 再流入検出 (PLAN-L7-507)。 */
+const COMPILED_WRAPPER_DISPATCH = /\bdist[\\/]+ut-tdd/;
 
 function usesVitestEntrypoint(
   script: string | undefined,
@@ -413,6 +415,18 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
         line: 1,
         rule: "script-wrapper-not-thin",
         message: "Script wrappers must only dispatch to src/cli.ts.",
+      });
+    }
+    // PLAN-L7-507: 撤去した compiled 配布契約の再流入を OS 非依存に fail-close する
+    // (POSIX `dist/ut-tdd` / PowerShell `dist\ut-tdd.exe` の両方)。thin 判定 (12 行 +
+    // src/cli.ts 参照) は dist 分岐の再追加を通してしまうため、専用規則が必要。
+    if (COMPILED_WRAPPER_DISPATCH.test(doc.text)) {
+      violations.push({
+        path,
+        line: lineOf(doc.text, COMPILED_WRAPPER_DISPATCH),
+        rule: "script-wrapper-compiled-dispatch",
+        message:
+          "Script wrappers must not dispatch to a compiled binary (dist/ut-tdd); Node runs src/cli.ts directly.",
       });
     }
     if (/\bpython(?:3)?\b/.test(doc.text)) {

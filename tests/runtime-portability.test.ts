@@ -270,6 +270,51 @@ describe("runtime-portability lint", () => {
     expect(wrapper).toContain('exec node "$ROOT/src/cli.ts" "$@"');
   });
 
+  it("U-RPORT-019: fail-closes a wrapper that re-dispatches to a compiled binary on both OS surfaces", () => {
+    // 撤去した compiled 配布契約の再流入 oracle。closing review FLAG (blocking 2) の
+    // 是正: 12 行以下 + src/cli.ts 参照だけでは dist 分岐の再追加を検出できなかった。
+    const posixReintroduction = [
+      "#!/usr/bin/env sh",
+      "set -e",
+      'ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"',
+      'if [ -x "$ROOT/dist/ut-tdd" ]; then exec "$ROOT/dist/ut-tdd" "$@"; fi',
+      'exec node "$ROOT/src/cli.ts" "$@"',
+    ].join("\n");
+    const powershellReintroduction = [
+      '$ErrorActionPreference = "Stop"',
+      "$root = Split-Path -Parent $PSScriptRoot",
+      '$bin = Join-Path $root "dist\\ut-tdd.exe"',
+      "if (Test-Path $bin) { & $bin @args; exit $LASTEXITCODE }",
+      '& node (Join-Path $root "src\\cli.ts") @args',
+      "exit $LASTEXITCODE",
+    ].join("\n");
+
+    for (const [path, text] of [
+      ["scripts/ut-tdd", posixReintroduction],
+      ["scripts/ut-tdd.ps1", powershellReintroduction],
+    ] as const) {
+      const result = analyzeRuntimePortability([
+        ...validDocs.filter((doc) => doc.path !== path),
+        { path, text },
+      ]);
+
+      expect(result.ok).toBe(false);
+      expect(
+        result.violations
+          .filter((violation) => violation.path === path)
+          .map((violation) => violation.rule),
+      ).toContain("script-wrapper-compiled-dispatch");
+    }
+
+    // 現行 repo の両 wrapper は違反しない (false positive を作らない)。
+    const current = analyzeRuntimePortability(loadRuntimePortabilityDocs(process.cwd()));
+    expect(
+      current.violations.filter(
+        (violation) => violation.rule === "script-wrapper-compiled-dispatch",
+      ),
+    ).toEqual([]);
+  });
+
   it("U-RPORT-005: scans untracked runtime files during active Windows setup work", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-rport-"));
     try {
