@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -137,11 +138,11 @@ describe("review live CLI composition", () => {
     const request = JSON.parse(readFileSync(requestPath, "utf8")) as Record<string, unknown>;
     expect(envelope).toMatchObject({
       targetWorkspaceId,
-      requestPath,
       exactHead: head,
       pr: 319,
       reviewRevision: request.reviewRevision,
     });
+    expect(realpathSync(envelope.requestPath as string)).toBe(realpathSync(requestPath));
   });
 
   it("U-MEMWAKE-007: keeps the canonical request as backlog when no live target exists", async () => {
