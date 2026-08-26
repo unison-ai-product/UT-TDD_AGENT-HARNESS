@@ -179,6 +179,19 @@ AC-1〜AC-5が未完了なので `draft` を維持する。一方、次の D1 �
 `ReviewDispatchEntry.verdict` の追加 (+2 行、純追加) は D2-B の deny receipt 修正で消費される
 判定情報だが、`review-dispatch.ts` の所有は本 PLAN にあるため、この追補で実装上の利用関係を記録する。
 
+### Issue #412 追補 (2026-08-26)
+
+同一 identity の request が別 worktree から再発行される実運用を対象に、`requestedAt` だけが
+異なる replay を content conflict から除外した。canonical request は parse 済み instant の
+最古を採用し、TTL refresh を防止する。`authorFamily` の不一致、invalid/future timestamp を
+含む replay は `duplicate_request_conflict` 等を保持して fail-close する。
+
+- Red: `a5250930` — U-RVDISP-021 の timestamp-only replay oracle が `verdict` となり失敗。
+- Green: `6e8e14bb` — 実装・oracle・設計対を更新。
+- targeted result: `bun test tests/review-dispatch.test.ts` 52 pass / 0 fail、Biome対象2ファイル
+  Green、`bun test tests/plan-lint.test.ts` 78 pass / 0 fail、`npm run typecheck` Green。
+- 残存制約: CI exact-head と non-author closing review はPR側の検収で実施する。
+
 ## レビュー状態
 
 本 PLAN は exact HEAD `329e1be7` に対する non-author providerのOpus closing reviewで
