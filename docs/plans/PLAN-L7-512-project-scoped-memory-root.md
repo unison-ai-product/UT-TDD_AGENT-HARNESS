@@ -29,6 +29,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/runtime/project-memory-migration.ts
     artifact_type: source_module
+  - artifact_path: src/kernel/project-identity-loader.ts
+    artifact_type: source_module
   - artifact_path: tests/project-memory-root.test.ts
     artifact_type: test_code
 dependencies:
@@ -41,6 +43,8 @@ dependencies:
     - src/runtime/claude-memory-wake.ts
     - src/memory/service.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/432
 review_evidence: []
 ---
 
@@ -78,3 +82,5 @@ transient notification busとして共有する。絶対pathはidentityに含め
 
 global領域にMemory本文は置かない。Issue #413のglobal lessons、semantic ranking、cloud memory serviceは扱わない。
 本PLANの全candidateとLinux/Windows/aggregate CI、非著者closing PASS、canonical receiptが揃うまでconfirmedにしない。
+clean Pack parityは、#420のconsumer-local sealed runtimeと#432のtracked identity bootstrapを
+機械的前提とする。両依存をfixtureの事前seedやsetup元Pack参照で代替しない。

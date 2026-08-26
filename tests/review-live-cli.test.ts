@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -15,7 +16,11 @@ import { join, relative } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claudeReviewVerdictEditRule } from "../src/cli/delegation.ts";
-import { executeLiveReviewDelegation, registerLiveReviewCommands } from "../src/cli/review-live.ts";
+import {
+  executeLiveReviewDelegation,
+  type LiveReviewCommandDeps,
+  registerLiveReviewCommands,
+} from "../src/cli/review-live.ts";
 import {
   issueReviewRequest,
   type ReviewVerdictProjectionResult,
@@ -256,7 +261,7 @@ describe("review live CLI composition", () => {
         at: "2026-08-14T00:01:00.000Z",
       },
     };
-    const runReview = vi.fn(() => projection);
+    const runReview = vi.fn((_: Parameters<LiveReviewCommandDeps["runReview"]>[0]) => projection);
     const publishReceipt = vi.fn();
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {
@@ -280,12 +285,12 @@ describe("review live CLI composition", () => {
     } finally {
       process.stdout.write = originalWrite;
     }
-    expect(runReview).toHaveBeenCalledWith({
-      repoRoot: root,
+    expect(runReview).toHaveBeenCalledOnce();
+    const reviewCall = runReview.mock.calls[0]?.[0];
+    expect(reviewCall).toMatchObject({
       provider: "claude",
       args: expect.arrayContaining([
         "--task-file",
-        memoryPath,
         "--review-head",
         head,
         "--review-author-family",
@@ -293,6 +298,13 @@ describe("review live CLI composition", () => {
         "--execute",
       ]),
     });
+    if (!reviewCall) throw new Error("delegated review was not called");
+    expect(realpathSync.native(reviewCall.repoRoot)).toBe(realpathSync.native(root));
+    const taskFileIndex = reviewCall.args.indexOf("--task-file");
+    expect(taskFileIndex).toBeGreaterThanOrEqual(0);
+    expect(realpathSync.native(reviewCall.args[taskFileIndex + 1] ?? "")).toBe(
+      realpathSync.native(memoryPath),
+    );
     expect(publishReceipt).toHaveBeenCalledWith(root, projection);
   });
 

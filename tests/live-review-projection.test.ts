@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -124,9 +124,13 @@ describe("live review projection (U-RVATT-023..026)", () => {
         "review task",
       ].join("\n");
       writeFileSync(join(root, sourcePath), content, "utf8");
-      expect(
-        resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
-      ).toBe(join(root, sourcePath));
+      const resolvedTask = resolveLiveReviewTaskFile(root, {
+        memoryId: "memory:d3a",
+        memoryPath: sourcePath,
+      });
+      expect(resolvedTask).not.toBeNull();
+      if (resolvedTask === null) throw new Error("canonical review task was not resolved");
+      expect(realpathSync.native(resolvedTask)).toBe(realpathSync.native(join(root, sourcePath)));
       expect(
         resolveLiveReviewTaskFile(root, { memoryId: "memory:wrong", memoryPath: sourcePath }),
       ).toBeNull();
@@ -138,9 +142,9 @@ describe("live review projection (U-RVATT-023..026)", () => {
 
       rmSync(memoryDirectory, { recursive: true, force: true });
       symlinkSync(outside, memoryDirectory, process.platform === "win32" ? "junction" : "dir");
-      expect(
+      expect(() =>
         resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
-      ).toBeNull();
+      ).toThrow("project_memory_root_authored_memory_root_escape");
     } finally {
       rmSync(root, { recursive: true, force: true });
       rmSync(outside, { recursive: true, force: true });

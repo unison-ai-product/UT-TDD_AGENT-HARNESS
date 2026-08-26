@@ -2,7 +2,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
+import { loadProjectIdentityFromHead } from "../kernel/project-identity-loader.ts";
+import { memoryStorageRoot } from "../memory/index.ts";
 
 export type ProjectMemoryRootDenyReason =
   | "git_topology_unavailable"
@@ -85,7 +86,7 @@ export function resolveProjectMemoryRootWithPorts(
   }
 
   const namespace = projectNamespace(currentProjectId);
-  const authoredMemoryRoot = join(canonicalProjectRoot, ".ut-tdd", "memory");
+  const authoredMemoryRoot = memoryStorageRoot(canonicalProjectRoot);
   if (!ports.isSafeDescendant(canonicalProjectRoot, authoredMemoryRoot)) {
     return { ok: false, reason: "authored_memory_root_escape" };
   }
@@ -118,10 +119,12 @@ function gitPath(repoRoot: string, args: string[]): string {
 }
 
 function isSafeDirectoryChain(root: string, candidate: string): boolean {
+  const requestedRoot = resolve(root);
+  const requestedCandidate = resolve(candidate);
+  if (!contained(requestedRoot, requestedCandidate)) return false;
   const resolvedRoot = realpathSync(root);
-  if (!contained(resolvedRoot, candidate)) return false;
-  const rel = relative(resolve(root), resolve(candidate));
-  let cursor = resolve(root);
+  const rel = relative(requestedRoot, requestedCandidate);
+  let cursor = resolvedRoot;
   for (const part of rel.split(sep).filter(Boolean)) {
     cursor = join(cursor, part);
     if (!existsSync(cursor)) continue;

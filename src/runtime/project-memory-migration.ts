@@ -21,6 +21,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { memoryStorageRoot } from "../memory/index.ts";
 import { readMemory } from "../memory/service.ts";
 import { requireProjectMemoryRoot } from "./project-memory-root.ts";
 
@@ -539,7 +540,7 @@ function applyProjectMemoryMigrationUnlocked(input: {
     throw new Error("project_memory_migration_inventory_changed");
   }
 
-  const roots = linkedWorktreeRoots(input.repoRoot).map((root) => join(root, ".ut-tdd", "memory"));
+  const roots = linkedWorktreeRoots(input.repoRoot).map(memoryStorageRoot);
   const selected =
     input.receipt.outcome === "ready"
       ? input.receipt.canonical

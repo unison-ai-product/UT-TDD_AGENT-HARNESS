@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -313,15 +314,16 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       expect(receipt).toMatchObject({
         projectId: "fixture/inventory",
         outcome: "quarantine_required",
-        conflicts: [
-          {
-            variants: [
-              { sourcePath: expect.stringContaining(main) },
-              { sourcePath: expect.stringContaining(worker) },
-            ],
-          },
-        ],
+        conflicts: [{ variants: [{}, {}] }],
       });
+      const sourcePaths = receipt.conflicts[0]?.variants.map((variant) => variant.sourcePath) ?? [];
+      const physicalSourcePaths = sourcePaths.map((path) => realpathSync.native(path));
+      expect(physicalSourcePaths).toContain(
+        realpathSync.native(join(main, ".ut-tdd", "memory", "project-diverged.md")),
+      );
+      expect(physicalSourcePaths).toContain(
+        realpathSync.native(join(worker, ".ut-tdd", "memory", "project-diverged.md")),
+      );
       const receiptPath = persistProjectMemoryMigrationReceipt(worker, receipt);
       expect(persistProjectMemoryMigrationReceipt(main, receipt)).toBe(receiptPath);
       expect(JSON.parse(readFileSync(receiptPath, "utf8"))).toMatchObject({

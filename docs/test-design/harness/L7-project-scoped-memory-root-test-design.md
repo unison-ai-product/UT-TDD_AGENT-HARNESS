@@ -1,6 +1,7 @@
 ---
 title: "L7 project-scoped Memory root test design"
 layer: L7
+executed_at_layer: L7
 status: draft
 plan_id: PLAN-L7-512-project-scoped-memory-root
 updated: 2026-08-26
