@@ -30,7 +30,7 @@ export type ClaudeLiveWorkspaceRoutingFailure =
   | "incompatible_claude_workspace_schema";
 
 export type ClaudeLiveWorkspaceResolution =
-  | { readonly ok: true; readonly workspaceId: string }
+  | { readonly ok: true; readonly workspaceId: string; readonly sessionId: string }
   | { readonly ok: false; readonly reason: ClaudeLiveWorkspaceRoutingFailure };
 export type ClaudeInboxWarningCode =
   | "age"
@@ -199,6 +199,7 @@ export function buildClaudeInboxEntry(input: {
   originRuntime?: "codex" | "system";
   projectId?: string;
   producerSessionId?: string;
+  targetSessionId?: string;
   now?: string;
 }): ClaudeMemoryInboxEntry {
   if (!input.operationId.trim()) throw new Error("claude_inbox_operation_id_required");
@@ -209,7 +210,7 @@ export function buildClaudeInboxEntry(input: {
   return {
     schemaVersion: CLAUDE_INBOX_SCHEMA,
     purpose: "memory",
-    id: `${input.memory.memory_id}:workspace:${input.workspaceId}:op:${input.operationId}`,
+    id: `${input.memory.memory_id}:workspace:${input.workspaceId}:session:${input.targetSessionId ?? "project-broadcast"}:op:${input.operationId}`,
     memoryId: input.memory.memory_id,
     body: input.memory.body,
     originRuntime,
@@ -219,7 +220,7 @@ export function buildClaudeInboxEntry(input: {
     producerProvider: originRuntime,
     producerSessionId: input.producerSessionId ?? input.operationId,
     targetProvider: "claude",
-    targetSessionId: input.workspaceId,
+    targetSessionId: input.targetSessionId ?? "project-broadcast",
     createdAt: input.now ?? new Date().toISOString(),
   };
 }
@@ -237,6 +238,7 @@ export function buildClaudeReviewInboxEntry(input: {
   originRuntime?: "codex" | "system";
   projectId?: string;
   producerSessionId?: string;
+  targetSessionId?: string;
   now?: string;
 }): ClaudeReviewInboxEntry {
   const memoryEntry = buildClaudeInboxEntry(input);
@@ -250,7 +252,12 @@ export function buildClaudeReviewInboxEntry(input: {
     authorFamily: input.authorFamily,
   };
   if (!isValidReviewIdentity(review)) throw new Error("claude_inbox_review_identity_invalid");
-  return { ...memoryEntry, purpose: "review", ...review };
+  return {
+    ...memoryEntry,
+    purpose: "review",
+    targetSessionId: input.targetSessionId ?? input.workspaceId,
+    ...review,
+  };
 }
 
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
@@ -484,9 +491,7 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
       }
     })
     .filter(
-      (entry): entry is ClaudeInboxEntry =>
-        entry !== undefined &&
-        (entry.projectId === projectId || entry.projectId === "legacy-unbound"),
+      (entry): entry is ClaudeInboxEntry => entry !== undefined && entry.projectId === projectId,
     );
 }
 
@@ -538,6 +543,7 @@ interface ClaudeSessionObservation {
 function readGenerationMarker(path: string): {
   generation: string;
   workspaceId: string;
+  sessionId: string;
   inboxSchema?: string;
 } | null {
   try {
@@ -547,13 +553,15 @@ function readGenerationMarker(path: string): {
       value === null ||
       (value as { schema?: unknown }).schema !== CLAUDE_WAKE_GENERATION_SCHEMA ||
       typeof (value as { generation?: unknown }).generation !== "string" ||
-      typeof (value as { workspaceId?: unknown }).workspaceId !== "string"
+      typeof (value as { workspaceId?: unknown }).workspaceId !== "string" ||
+      typeof (value as { sessionId?: unknown }).sessionId !== "string"
     )
       return null;
     const inboxSchema = (value as { inboxSchema?: unknown }).inboxSchema;
     return {
       generation: (value as { generation: string }).generation,
       workspaceId: (value as { workspaceId: string }).workspaceId,
+      sessionId: (value as { sessionId: string }).sessionId,
       ...(typeof inboxSchema === "string" ? { inboxSchema } : {}),
     };
   } catch {
@@ -572,7 +580,7 @@ export function resolveLiveClaudeWorkspace(repoRoot: string): ClaudeLiveWorkspac
   const root = runtimeRoot(repoRoot);
   if (!existsSync(root)) return { ok: false, reason: "no_live_claude_workspace" };
 
-  const workspaceIds = new Set<string>();
+  const targets = new Map<string, { workspaceId: string; sessionId: string }>();
   let markerCount = 0;
   let staleMarkerCount = 0;
   let incompatibleMarker = false;
@@ -599,17 +607,20 @@ export function resolveLiveClaudeWorkspace(repoRoot: string): ClaudeLiveWorkspac
       incompatibleMarker = true;
       continue;
     }
-    workspaceIds.add(marker.workspaceId);
+    targets.set(`${marker.workspaceId}\0${marker.sessionId}`, {
+      workspaceId: marker.workspaceId,
+      sessionId: marker.sessionId,
+    });
   }
 
   if (incompatibleMarker) {
     return { ok: false, reason: "incompatible_claude_workspace_schema" };
   }
-  if (workspaceIds.size > 1) {
+  if (targets.size > 1) {
     return { ok: false, reason: "ambiguous_live_claude_workspace" };
   }
-  if (workspaceIds.size === 1) {
-    return { ok: true, workspaceId: [...workspaceIds][0] };
+  if (targets.size === 1) {
+    return { ok: true, ...[...targets.values()][0] };
   }
   return {
     ok: false,
@@ -701,7 +712,13 @@ function claim(input: {
       descriptor,
       `${JSON.stringify({
         id: input.entry.id,
+        projectId: input.entry.projectId,
+        memoryId: input.entry.memoryId,
+        operationId: input.entry.operationId,
+        provider: "claude",
         sessionId: input.sessionId,
+        targetSessionId: input.entry.targetSessionId,
+        entryDigest: createHash("sha256").update(JSON.stringify(input.entry)).digest("hex"),
         deliveredAt: input.at,
       })}\n`,
     );
@@ -715,7 +732,12 @@ export function renderClaudeWakeMessage(entry: ClaudeInboxEntry): string {
   const body = [...entry.body].slice(0, CLAUDE_WAKE_BODY_MAX_CHARS).join("");
   const notification = JSON.stringify({
     memory_id: entry.memoryId,
+    project_id: entry.projectId,
     operation_id: entry.operationId,
+    producer_provider: entry.producerProvider,
+    producer_session_id: entry.producerSessionId,
+    target_provider: entry.targetProvider,
+    target_session_id: entry.targetSessionId,
     purpose: entry.purpose,
     ...(entry.purpose === "review"
       ? {
@@ -773,6 +795,7 @@ export async function waitForClaudeMemory(input: {
       schema: CLAUDE_WAKE_GENERATION_SCHEMA,
       generation,
       workspaceId,
+      sessionId: input.sessionId,
       inboxSchema: CLAUDE_INBOX_SCHEMA,
     })}\n`,
     { encoding: "utf8", mode: 0o600 },
@@ -813,7 +836,12 @@ export async function waitForClaudeMemory(input: {
     const unavailable = claimedIds(root);
     for (const id of unclaimable) unavailable.add(id);
     const entry = selectClaudeInboxEntry(
-      readInbox(input.repoRoot).filter((candidate) => candidate.targetWorkspaceId === workspaceId),
+      readInbox(input.repoRoot).filter(
+        (candidate) =>
+          candidate.targetWorkspaceId === workspaceId &&
+          (candidate.targetSessionId === "project-broadcast" ||
+            candidate.targetSessionId === input.sessionId),
+      ),
       unavailable,
     );
     if (entry) {

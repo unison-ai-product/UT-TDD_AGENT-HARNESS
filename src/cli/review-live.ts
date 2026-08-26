@@ -37,7 +37,7 @@ export interface LiveReviewCommandDeps {
   readonly resolveWakeTarget: (
     repoRoot: string,
   ) =>
-    | { readonly ok: true; readonly workspaceId: string }
+    | { readonly ok: true; readonly workspaceId: string; readonly sessionId: string }
     | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
 }
 
@@ -155,6 +155,7 @@ export function registerLiveReviewCommands(
                   originRuntime: "codex",
                   projectId: project.projectId,
                   producerSessionId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
+                  targetSessionId: target.sessionId,
                   requestDigest: wake.requestDigest,
                   requestPath: wake.requestPath,
                   pr: wake.request.pr,

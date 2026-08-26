@@ -89,6 +89,7 @@ describe("Claude HARNESS memory async wake", () => {
           schema: CLAUDE_WAKE_GENERATION_SCHEMA,
           generation: "main-live",
           workspaceId: mainWorkspaceId,
+          sessionId: "main-vscode",
           inboxSchema: CLAUDE_INBOX_SCHEMA,
         })}\n`,
         "utf8",
@@ -97,6 +98,7 @@ describe("Claude HARNESS memory async wake", () => {
       expect(resolveLiveClaudeWorkspace(subject)).toEqual({
         ok: true,
         workspaceId: mainWorkspaceId,
+        sessionId: "main-vscode",
       });
     } finally {
       execFileSync("git", ["worktree", "remove", "--force", subject], { cwd: main });
@@ -121,6 +123,7 @@ describe("Claude HARNESS memory async wake", () => {
             schema: CLAUDE_WAKE_GENERATION_SCHEMA,
             generation: "session",
             workspaceId: claudeWorkspaceId(root),
+            sessionId: "session",
             ...(reason === "incompatible_claude_workspace_schema"
               ? { inboxSchema: "ut-tdd.claude-inbox/v2" }
               : { inboxSchema: CLAUDE_INBOX_SCHEMA }),
@@ -153,6 +156,7 @@ describe("Claude HARNESS memory async wake", () => {
             schema: CLAUDE_WAKE_GENERATION_SCHEMA,
             generation: name,
             workspaceId,
+            sessionId: name,
             inboxSchema: CLAUDE_INBOX_SCHEMA,
           })}\n`,
           "utf8",
@@ -216,7 +220,7 @@ describe("Claude HARNESS memory async wake", () => {
     ).toThrow("claude_inbox_review_identity_invalid");
   });
 
-  it("U-RVATT-025: v2はmemory互換だけ、unknown/invalid v3はfail-closeする", async () => {
+  it("U-RVATT-025: project未束縛v2/v3とunknown schemaを無音claimしない", async () => {
     const root = fixture();
     try {
       const workspaceId = claudeWorkspaceId(root);
@@ -248,11 +252,7 @@ describe("Claude HARNESS memory async wake", () => {
         pollIntervalMs: 10,
         maxWaitMs: 30,
       });
-      expect(result.kind).toBe("delivered");
-      expect(result.entry).toMatchObject({
-        schemaVersion: "ut-tdd.claude-inbox/v2",
-        purpose: "memory",
-      });
+      expect(result.kind).toBe("timeout");
       const noInvalidFallback = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "invalid-not-memory",
@@ -490,6 +490,40 @@ describe("Claude HARNESS memory async wake", () => {
       expect(targeted.kind).toBe("delivered");
       expect(targeted.entry?.id).toBe(targetedEntry.id);
       expect(existsSync(path)).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("CANDIDATE-U-PMEMROOT-007: 同一workspaceでもtarget session以外はclaim 0", async () => {
+    const root = fixture();
+    try {
+      const entry = buildClaudeInboxEntry({
+        memory,
+        operationId: "session-target",
+        workspaceId: claudeWorkspaceId(root),
+        targetSessionId: "intended-session",
+      });
+      const path = publishClaudeInboxEntry(root, entry);
+      expect(
+        (
+          await waitForClaudeMemory({
+            repoRoot: root,
+            sessionId: "foreign-session",
+            pollIntervalMs: 10,
+            maxWaitMs: 20,
+          })
+        ).kind,
+      ).toBe("timeout");
+      expect(existsSync(path)).toBe(true);
+      const delivered = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "intended-session",
+        pollIntervalMs: 10,
+        maxWaitMs: 20,
+      });
+      expect(delivered.kind).toBe("delivered");
+      expect(delivered.entry?.targetSessionId).toBe("intended-session");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

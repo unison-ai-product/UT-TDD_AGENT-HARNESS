@@ -118,7 +118,11 @@ describe("review live CLI composition", () => {
     registerLiveReviewCommands(program.command("review"), {
       repoRoot: () => root,
       providerAvailable: () => true,
-      resolveWakeTarget: () => ({ ok: true, workspaceId: targetWorkspaceId }),
+      resolveWakeTarget: () => ({
+        ok: true,
+        workspaceId: targetWorkspaceId,
+        sessionId: "target-session",
+      }),
     });
     const originalWrite = process.stdout.write;
     const originalExitCode = process.exitCode;
