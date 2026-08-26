@@ -166,9 +166,47 @@ function runCommandWords(run: string): string[] {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("#"))
-    .flatMap((line) => line.split(/\||&&|\|\||;/))
-    .map((segment) => segment.trim().split(/\s+/)[0] ?? "")
-    .filter((word) => word.length > 0);
+    .flatMap((line) => shellLaunchers(line));
+}
+
+/**
+ * 1 行の shell command から**起動語だけ**を取り出す (quote-aware)。
+ *
+ * 素朴に `/\||&&|\|\||;/` で分割すると引用符内の区切り文字まで分割してしまい、
+ * `echo "a && bun run x"` のような文字列内の言及を起動と誤判定する。引用状態を
+ * 追跡し、引用外の区切りだけでセグメントを切って先頭語を返す。
+ */
+function shellLaunchers(line: string): string[] {
+  const launchers: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+  const flush = (): void => {
+    const first = current.trim().split(/\s+/)[0] ?? "";
+    if (first.length > 0) launchers.push(first);
+    current = "";
+  };
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (quote) {
+      if (char === quote) quote = null;
+      current += char;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ";" || char === "|" || char === "&") {
+      if ((char === "&" || char === "|") && line[index + 1] === char) index += 1;
+      else if (char === "&") continue;
+      flush();
+      continue;
+    }
+    current += char;
+  }
+  flush();
+  return launchers;
 }
 
 // PLAN-L7-509: Pack / consumer の実行 runtime は Node。Bun は要求も install もしない。

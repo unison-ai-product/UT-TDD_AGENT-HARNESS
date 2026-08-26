@@ -985,6 +985,11 @@ describe("github-ci-policy lint", () => {
     ["comment mention", "      - run: |\n          # bun is banned here\n          npm ci", false],
     ["echo mention", '      - run: echo "do not use bun"', false],
     ["substring bundle", "      - run: npm run bundle-check", false],
+    // PR #411 の r3 delta review で同型の欠陥が指摘されたため先回りで固定する:
+    // 引用符内の区切り文字で分割すると文字列内の言及を起動と誤判定する。
+    ["quoted && mention", `      - run: echo "a && bun run x"`, false],
+    ["quoted ; mention", `      - run: echo "a ; bunx y"`, false],
+    ["real bun after quoted text", `      - run: echo "ok" && bun run x`, true],
   ])("U-CIPOL-028: forbidden_bun_runtime は起動語だけを拒否する: %s", (_label, injected, expected) => {
     const pack = PACK_WORKFLOW.replace(
       "      - run: npm run lint",
