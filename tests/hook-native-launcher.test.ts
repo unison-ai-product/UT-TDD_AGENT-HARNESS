@@ -27,13 +27,7 @@ afterEach(() => {
 // Bun が PATH に存在しない環境で node 直起動が成立することを oracle にする (AC-6)。
 const wrapperDirectory = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wrapper-src-"));
 const wrapper = join(wrapperDirectory, "ut-tdd.mjs");
-writeFileSync(
-  wrapper,
-  BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"].replace(
-    "{{UT_TDD_SOURCE_CLI_JSON}}",
-    JSON.stringify(join(wrapperDirectory, "missing-setup-cli.ts")),
-  ),
-);
+writeFileSync(wrapper, BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"]);
 
 describe("Claude hook wrapper launch (issue #123 / PLAN-L7-509)", () => {
   it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged without Bun on PATH", () => {
@@ -76,7 +70,35 @@ describe("Claude hook wrapper launch (issue #123 / PLAN-L7-509)", () => {
     });
 
     expect(result.status).toBe(127);
-    expect(result.stderr).toContain("Project-local UT-TDD entrypoint was not found");
+    expect(result.stderr).toContain("consumer_runtime_absent");
+  });
+
+  it("U-HOOKEXEC-011: never falls back to the setup machine's Pack checkout (PLAN-L6-101 §1.1)", () => {
+    // CANDIDATE-PACKISO-001 系の oracle: setup 元 (development repo / worktree / Pack
+    // checkout) が consumer から到達可能であっても、wrapper はそれを解決先にしない。
+    // ここでは「setup 元に相当する実在の harness source」を用意した上で、consumer 側に
+    // harness が無ければ typed fail-close することを検査する。
+    const setupOrigin = temporaryDirectory();
+    mkdirSync(join(setupOrigin, "src", "setup"), { recursive: true });
+    writeFileSync(join(setupOrigin, "src", "setup", "index.ts"), "export {};");
+    writeFileSync(
+      join(setupOrigin, "src", "cli.ts"),
+      'console.log("setup-origin cli must not run");\n',
+    );
+
+    const consumer = temporaryDirectory();
+    const result = spawnSync(process.execPath, [wrapper, "status"], {
+      cwd: consumer,
+      env: { ...process.env, PATH: "", APPDATA: "" },
+      encoding: "utf8",
+      windowsHide: true,
+    });
+
+    expect(result.status).toBe(127);
+    expect(result.stderr).toContain("consumer_runtime_absent");
+    expect(result.stdout).not.toContain("setup-origin cli must not run");
+    // 生成物に setup 元の絶対パスが焼き込まれていないこと (静的側の fail-close)。
+    expect(readFileSync(wrapper, "utf8")).not.toContain(setupOrigin);
   });
 
   it("U-HOOKEXEC-008: uses direct executable spawning and never delegates to a shell host or Bun", () => {

@@ -410,7 +410,9 @@ describe("clean distribution local acceptance smoke", () => {
       expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);
       expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 
-      const typecheck = runNode(cleanRoot, ["run", "typecheck"], env);
+      // PLAN-L7-509: `bun run typecheck` の Node 版は `npm run typecheck`。
+      // node に "run" を渡すと module 解決になり必ず落ちる (この誤変換を修正した)。
+      const typecheck = runNpm(cleanRoot, ["run", "typecheck"], env);
       expect(typecheck.status, typecheck.stderr || typecheck.stdout).toBe(0);
     } finally {
       removeCleanRoot(cleanRoot);

@@ -539,14 +539,13 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     emitSetup(plan, {}, deps);
 
     const wrapper = deps.files.get(join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs"));
-    expect(wrapper).toContain('const setupSourceCli = "');
+    // PLAN-L7-509 §2.3-10: setup 実行マシンの絶対パスを埋め込まない (PLAN-L6-101 §1.1)。
+    expect(wrapper).not.toContain("setupSourceCli");
     expect(wrapper).toContain(
       'const repoLocalHarness = existsSync(repoLocalCli) && existsSync(join(repoRoot, "src", "setup", "index.ts"));',
     );
-    expect(wrapper).toContain(
-      "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
-    );
-    expect(wrapper).toContain("const resolvedCli = existsSync(sourceCli) ? sourceCli : null;");
+    expect(wrapper).toContain("const resolvedCli = repoLocalHarness ? repoLocalCli : null;");
+    expect(wrapper).toContain("consumer_runtime_absent");
     expect(wrapper).not.toContain("localPackageCli");
     expect(wrapper).toContain(
       "spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)]",
@@ -602,7 +601,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     }
   });
 
-  it("U-SETUP-009b3: generated wrapper falls back to setup Pack CLI through node when local bin is absent", () => {
+  it("U-SETUP-009b3: generated wrapper fail-closes instead of falling back to the setup Pack CLI", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-source-"));
     try {
       const deps = mockDeps({ repoRoot: repo });
@@ -617,8 +616,12 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
       const result = runWrapperViaNode(repo, [wrapperPath, "status"]);
 
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain("mode:");
+      // PLAN-L7-509 §2.3-10 / PLAN-L6-101 §1.1: setup 元の Pack checkout へ fallback しない。
+      // consumer 内に harness source が無ければ typed fail-close する。
+      expect(result.status).toBe(127);
+      expect(result.stderr).toContain("consumer_runtime_absent");
+      expect(result.stdout).not.toContain("mode:");
+      expect(wrapper).not.toContain(process.cwd());
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }

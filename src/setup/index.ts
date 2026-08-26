@@ -15,7 +15,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, readSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 import { ensureDir } from "../shared/fs.ts";
 import {
   applyBranchProtection as applyBranchProtectionImpl,
@@ -172,7 +171,7 @@ const STATE_PATH = join(".ut-tdd", "state", "setup.json");
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
 const MANAGED_START = "<!-- UT-TDD:managed:start -->";
 const MANAGED_END = "<!-- UT-TDD:managed:end -->";
-const SETUP_SOURCE_CLI = join(dirname(fileURLToPath(import.meta.url)), "..", "cli.ts");
+
 const MERGEABLE_ADAPTER_DOCS = new Set(["AGENTS.md", "CLAUDE.md", join(".claude", "CLAUDE.md")]);
 
 /**
@@ -288,7 +287,6 @@ function renderArtifacts(
   for (const f of plan.files) {
     const name = templateNameFor(f.path);
     let content = templates[name] ?? BUILTIN_GITHUB_TEMPLATES[name] ?? "";
-    content = content.replace(/\{\{UT_TDD_SOURCE_CLI_JSON\}\}/g, JSON.stringify(SETUP_SOURCE_CLI));
     if (f.path === CODEOWNERS_TARGET && plan.teams) {
       content = content
         .replace(/\{\{TL_TEAM\}\}/g, plan.teams.tl)
