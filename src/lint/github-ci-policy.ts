@@ -187,6 +187,14 @@ function shellLaunchers(line: string): string[] {
   };
   for (let index = 0; index < line.length; index += 1) {
     const char = line[index];
+    // POSIX sh では single quote の外側で `\` が次の 1 文字を literal 化する。
+    // 見ないと `node -e "console.log(\"a && bun b\")"` の `&&` を区切りと誤読し、
+    // quote 内の bun 言及を起動語として誤検出する (PR #411 r4 delta review 指摘)。
+    if (char === "\\" && quote !== "'" && index + 1 < line.length) {
+      current += char + line[index + 1];
+      index += 1;
+      continue;
+    }
     if (quote) {
       if (char === quote) quote = null;
       current += char;
@@ -197,9 +205,9 @@ function shellLaunchers(line: string): string[] {
       current += char;
       continue;
     }
+    // 単独 `&` (background) も区切りである。区切らないと `npm run a & bun b` を取りこぼす。
     if (char === ";" || char === "|" || char === "&") {
       if ((char === "&" || char === "|") && line[index + 1] === char) index += 1;
-      else if (char === "&") continue;
       flush();
       continue;
     }
