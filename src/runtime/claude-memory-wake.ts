@@ -21,6 +21,15 @@ export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 export const CLAUDE_INBOX_BACKLOG_WARN_AGE_MS = 15 * 60 * 1_000;
 export const CLAUDE_WAKE_GENERATION_SCHEMA = "ut-tdd.claude-wake-generation/v1" as const;
+export type ClaudeLiveWorkspaceRoutingFailure =
+  | "no_live_claude_workspace"
+  | "ambiguous_live_claude_workspace"
+  | "stale_claude_workspace"
+  | "incompatible_claude_workspace_schema";
+
+export type ClaudeLiveWorkspaceResolution =
+  | { readonly ok: true; readonly workspaceId: string }
+  | { readonly ok: false; readonly reason: ClaudeLiveWorkspaceRoutingFailure };
 export type ClaudeInboxWarningCode =
   | "age"
   | "target_mismatch"
@@ -483,7 +492,11 @@ interface ClaudeSessionObservation {
   readonly sessionStatus: "active" | "absent" | "unknown";
 }
 
-function readGenerationMarker(path: string): { generation: string; workspaceId: string } | null {
+function readGenerationMarker(path: string): {
+  generation: string;
+  workspaceId: string;
+  inboxSchema?: string;
+} | null {
   try {
     const value: unknown = JSON.parse(readFileSync(path, "utf8"));
     if (
@@ -494,13 +507,73 @@ function readGenerationMarker(path: string): { generation: string; workspaceId: 
       typeof (value as { workspaceId?: unknown }).workspaceId !== "string"
     )
       return null;
+    const inboxSchema = (value as { inboxSchema?: unknown }).inboxSchema;
     return {
       generation: (value as { generation: string }).generation,
       workspaceId: (value as { workspaceId: string }).workspaceId,
+      ...(typeof inboxSchema === "string" ? { inboxSchema } : {}),
     };
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolve a live Claude VS Code consumer independently from the subject
+ * worktree that authored the canonical review request.  Generation markers
+ * are runtime state in the shared git common dir; only one fresh, compatible
+ * workspace may be selected.  The caller keeps the canonical request intact
+ * when this returns a typed failure so it remains visible as backlog.
+ */
+export function resolveLiveClaudeWorkspace(repoRoot: string): ClaudeLiveWorkspaceResolution {
+  const root = runtimeRoot(repoRoot);
+  if (!existsSync(root)) return { ok: false, reason: "no_live_claude_workspace" };
+
+  const workspaceIds = new Set<string>();
+  let markerCount = 0;
+  let staleMarkerCount = 0;
+  let incompatibleMarker = false;
+  for (const name of readdirSync(root).filter((entry) => entry.endsWith(".generation"))) {
+    markerCount += 1;
+    const path = join(root, name);
+    let stat: ReturnType<typeof statSync>;
+    try {
+      stat = statSync(path);
+    } catch {
+      incompatibleMarker = true;
+      continue;
+    }
+    if (Date.now() - stat.mtimeMs > CLAUDE_INBOX_BACKLOG_WARN_AGE_MS) {
+      staleMarkerCount += 1;
+      continue;
+    }
+    const marker = readGenerationMarker(path);
+    if (
+      !marker ||
+      !/^[a-f0-9]{64}$/.test(marker.workspaceId) ||
+      marker.inboxSchema !== CLAUDE_INBOX_SCHEMA
+    ) {
+      incompatibleMarker = true;
+      continue;
+    }
+    workspaceIds.add(marker.workspaceId);
+  }
+
+  if (incompatibleMarker) {
+    return { ok: false, reason: "incompatible_claude_workspace_schema" };
+  }
+  if (workspaceIds.size > 1) {
+    return { ok: false, reason: "ambiguous_live_claude_workspace" };
+  }
+  if (workspaceIds.size === 1) {
+    return { ok: true, workspaceId: [...workspaceIds][0] };
+  }
+  return {
+    ok: false,
+    reason: markerCount > 0 && staleMarkerCount === markerCount
+      ? "stale_claude_workspace"
+      : "no_live_claude_workspace",
+  };
 }
 
 function observeClaudeSessions(
@@ -652,7 +725,12 @@ export async function waitForClaudeMemory(input: {
   const generation = `${process.pid}:${Date.now()}`;
   writeFileSync(
     generationPath,
-    `${JSON.stringify({ schema: CLAUDE_WAKE_GENERATION_SCHEMA, generation, workspaceId })}\n`,
+    `${JSON.stringify({
+      schema: CLAUDE_WAKE_GENERATION_SCHEMA,
+      generation,
+      workspaceId,
+      inboxSchema: CLAUDE_INBOX_SCHEMA,
+    })}\n`,
     { encoding: "utf8", mode: 0o600 },
   );
   const started = Date.now();

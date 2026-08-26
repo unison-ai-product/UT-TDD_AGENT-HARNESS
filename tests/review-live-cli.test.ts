@@ -98,6 +98,7 @@ describe("review live CLI composition", () => {
       resolveWakeTarget: () => ({ ok: true, workspaceId: targetWorkspaceId }),
     });
     const originalWrite = process.stdout.write;
+    const originalExitCode = process.exitCode;
     process.stdout.write = (() => true) as typeof process.stdout.write;
     try {
       await program.parseAsync([
@@ -108,7 +109,7 @@ describe("review live CLI composition", () => {
         "--memory-id",
         "memory:d3a",
         "--memory-path",
-        memoryPath,
+        relative(root, memoryPath).replaceAll("\\", "/"),
         "--pr",
         "319",
         "--head",
@@ -121,6 +122,7 @@ describe("review live CLI composition", () => {
       ]);
     } finally {
       process.stdout.write = originalWrite;
+      process.exitCode = originalExitCode;
     }
     const inbox = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox");
     const files = readdirSync(inbox).filter((name) => name.endsWith(".json"));
@@ -148,6 +150,7 @@ describe("review live CLI composition", () => {
       resolveWakeTarget: () => ({ ok: false, reason: "no_live_claude_workspace" }),
     });
     const originalWrite = process.stdout.write;
+    const originalExitCode = process.exitCode;
     process.stdout.write = (() => true) as typeof process.stdout.write;
     try {
       await program.parseAsync([
@@ -158,7 +161,7 @@ describe("review live CLI composition", () => {
         "--memory-id",
         "memory:d3a",
         "--memory-path",
-        memoryPath,
+        relative(root, memoryPath).replaceAll("\\", "/"),
         "--pr",
         "319",
         "--head",
@@ -171,6 +174,7 @@ describe("review live CLI composition", () => {
       ]);
     } finally {
       process.stdout.write = originalWrite;
+      process.exitCode = originalExitCode;
     }
     const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
     expect(requests).toHaveLength(1);
