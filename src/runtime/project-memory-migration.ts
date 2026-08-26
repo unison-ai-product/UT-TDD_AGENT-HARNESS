@@ -7,6 +7,7 @@ import {
   existsSync,
   fstatSync,
   fsyncSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -16,6 +17,7 @@ import {
   renameSync,
   rmSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -98,9 +100,43 @@ function atomicWrite(target: string, content: string): void {
   }
   try {
     renameSync(temporary, target);
+    fsyncParent(target);
   } catch (error) {
     rmSync(temporary, { force: true });
     throw error;
+  }
+}
+
+function fsyncParent(path: string): void {
+  let descriptor: number | null = null;
+  try {
+    descriptor = openSync(dirname(path), constants.O_RDONLY);
+    fsyncSync(descriptor);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (!new Set(["EACCES", "EINVAL", "EISDIR", "ENOTSUP", "EPERM"]).has(code ?? "")) {
+      throw error;
+    }
+  } finally {
+    if (descriptor !== null) closeSync(descriptor);
+  }
+}
+
+function atomicCreate(target: string, content: string): void {
+  mkdirSync(dirname(target), { recursive: true });
+  const temporary = `${target}.tmp-${process.pid}-${randomUUID()}`;
+  const descriptor = openSync(temporary, "wx", 0o600);
+  try {
+    writeFileSync(descriptor, content, "utf8");
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+  try {
+    linkSync(temporary, target);
+    fsyncParent(target);
+  } finally {
+    unlinkSync(temporary);
   }
 }
 
@@ -256,8 +292,19 @@ function recoverProjectMemoryMigration(input: {
       throw new Error("project_memory_migration_backup_corrupt");
     }
     assertDirectoryDigest(transaction.backup, transaction.priorCorpusDigest);
-    rmSync(transaction.target, { recursive: true, force: true });
-    renameSync(transaction.backup, transaction.target);
+    const recoveryCandidate = `${transaction.target}.incomplete-${process.pid}`;
+    rmSync(recoveryCandidate, { recursive: true, force: true });
+    if (existsSync(transaction.target)) renameSync(transaction.target, recoveryCandidate);
+    try {
+      renameSync(transaction.backup, transaction.target);
+      assertDirectoryDigest(transaction.target, transaction.priorCorpusDigest);
+      rmSync(recoveryCandidate, { recursive: true, force: true });
+      fsyncParent(transaction.target);
+    } catch (error) {
+      rmSync(transaction.target, { recursive: true, force: true });
+      if (existsSync(recoveryCandidate)) renameSync(recoveryCandidate, transaction.target);
+      throw error;
+    }
   } else if (transaction.hadTarget) {
     if (
       transaction.priorCorpusDigest === null ||
@@ -288,26 +335,31 @@ function acquireMigrationLock(lock: string): string {
   mkdirSync(dirname(lock), { recursive: true });
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      mkdirSync(lock);
-      atomicWrite(
-        join(lock, "owner.json"),
-        `${canonicalJson({ schema: "ut-tdd.project-memory-lock/v1", pid: process.pid, nonce })}\n`,
+      atomicCreate(
+        lock,
+        `${canonicalJson({
+          schema: "ut-tdd.project-memory-lock/v2",
+          pid: process.pid,
+          nonce,
+          expiresAt: Date.now() + 30 * 60 * 1000,
+        })}\n`,
       );
       return nonce;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const ownerPath = join(lock, "owner.json");
-      if (!existsSync(ownerPath)) throw new Error("project_memory_migration_in_progress");
-      let owner: { schema?: string; pid?: number };
+      let owner: { schema?: string; pid?: number; expiresAt?: number };
       try {
-        owner = JSON.parse(readFileSync(ownerPath, "utf8")) as typeof owner;
+        owner = JSON.parse(readFileSync(lock, "utf8")) as typeof owner;
       } catch {
         throw new Error("project_memory_migration_lock_corrupt");
       }
-      if (owner.schema !== "ut-tdd.project-memory-lock/v1") {
+      if (
+        owner.schema !== "ut-tdd.project-memory-lock/v2" ||
+        !Number.isSafeInteger(owner.expiresAt)
+      ) {
         throw new Error("project_memory_migration_lock_corrupt");
       }
-      if (processAlive(Number(owner.pid))) {
+      if (processAlive(Number(owner.pid)) && Number(owner.expiresAt) > Date.now()) {
         throw new Error("project_memory_migration_in_progress");
       }
       const stale = `${lock}.stale-${nonce}`;
@@ -323,11 +375,11 @@ function acquireMigrationLock(lock: string): string {
 }
 
 function releaseMigrationLock(lock: string, nonce: string): void {
-  const ownerPath = join(lock, "owner.json");
-  if (!existsSync(ownerPath)) return;
-  const owner = JSON.parse(readFileSync(ownerPath, "utf8")) as { nonce?: string };
+  if (!existsSync(lock)) return;
+  const owner = JSON.parse(readFileSync(lock, "utf8")) as { nonce?: string };
   if (owner.nonce !== nonce) throw new Error("project_memory_migration_lock_owner_mismatch");
-  rmSync(lock, { recursive: true, force: true });
+  unlinkSync(lock);
+  fsyncParent(lock);
 }
 
 /** Decide migration without writing either the canonical corpus or quarantine. */
@@ -564,6 +616,7 @@ function applyProjectMemoryMigrationUnlocked(input: {
     );
     if (hadTarget) renameSync(target, backup);
     renameSync(staging, target);
+    fsyncParent(target);
 
     const completion: ProjectMemoryMigrationCompletion = {
       schema: "ut-tdd.project-memory-migration-completion/v1",
@@ -578,6 +631,7 @@ function applyProjectMemoryMigrationUnlocked(input: {
     atomicWrite(completionPath, `${canonicalJson(completion)}\n`);
     if (hadTarget) rmSync(backup, { recursive: true, force: true });
     rmSync(transactionPath, { force: true });
+    fsyncParent(transactionPath);
     return completion;
   } catch (error) {
     recoverProjectMemoryMigration({

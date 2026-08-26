@@ -435,13 +435,14 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
         "utf8",
       );
       const staleLock = join(migrationRoot, "locks", receipt.inventoryDigest);
-      mkdirSync(staleLock, { recursive: true });
+      mkdirSync(join(migrationRoot, "locks"), { recursive: true });
       writeFileSync(
-        join(staleLock, "owner.json"),
+        staleLock,
         `${JSON.stringify({
-          schema: "ut-tdd.project-memory-lock/v1",
+          schema: "ut-tdd.project-memory-lock/v2",
           pid: 2_147_483_647,
           nonce: "dead-owner",
+          expiresAt: 0,
         })}\n`,
         "utf8",
       );
