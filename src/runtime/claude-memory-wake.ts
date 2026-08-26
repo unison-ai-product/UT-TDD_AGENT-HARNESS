@@ -775,7 +775,7 @@ export async function waitForClaudeMemory(input: {
   );
   const started = Date.now();
   const unclaimable = new Set<string>();
-  while (Date.now() - started < maxWaitMs) {
+  for (;;) {
     let currentGeneration: string | null = null;
     try {
       if (!existsSync(generationPath)) {
@@ -803,6 +803,9 @@ export async function waitForClaudeMemory(input: {
       });
       return { kind: "superseded" };
     }
+    // Deadline and supersession may become observable in the same poll.  The
+    // generation fence is authoritative, so inspect it before returning timeout.
+    if (Date.now() - started >= maxWaitMs) return { kind: "timeout" };
     const unavailable = claimedIds(root);
     for (const id of unclaimable) unavailable.add(id);
     const entry = selectClaudeInboxEntry(
@@ -838,5 +841,4 @@ export async function waitForClaudeMemory(input: {
     }
     await sleep(pollIntervalMs);
   }
-  return { kind: "timeout" };
 }
