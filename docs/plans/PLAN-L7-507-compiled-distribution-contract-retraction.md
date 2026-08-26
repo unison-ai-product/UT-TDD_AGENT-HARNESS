@@ -8,9 +8,9 @@ route_signal: incident
 route_mode: incident
 status: draft
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-26
 backprop_decision: not_required
-backprop_decision_reason: "ADR-001 が既に配布契約を『exact pin した Node/npm から生成する compiled ESM + sealed build receipt』へ確定済みであり、本 PLAN は下位正本に残った旧 `bun build --compile` 記述を ADR-001 へ追随させる stale 記述の是正である。新規の配布方式・契約を作らないため上流層への backprop は発生しない。"
+backprop_decision_reason: "ADR-001 が既に配布契約を『exact pin した Node/npm から生成する compiled ESM + sealed build receipt』へ確定済みであり、本 PLAN は下位正本に残った旧 `bun build --compile` 記述を ADR-001 へ追随させる stale 記述の是正である。新規の配布方式は作らない。delta review 指摘への回答: L4 §2 へ追記した削除禁止条項の限定 carve-out は上流契約の新設ではなく既存条項の適用範囲の明文化 (条項の目的 = 稼働経路の rollback 保全) であり、ADR-001:26 の段階撤去条件と同義である。sealed Node generation の build 契約 (parity receipt / identity / rollback / OS oracle) は PLAN-L6-93 が所有し、本 PLAN はそれを先行実装しない (pair-freeze 遵守)。"
 owner: PM / PO
 github_issue_id: 134
 agent_slots:
@@ -23,6 +23,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-507-compiled-distribution-contract-retraction.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/runtime-portability.ts
+    artifact_type: source_module
+  - artifact_path: tests/runtime-portability.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -33,6 +37,11 @@ dependencies:
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
+# confirm 保留の理由 (delta review 指摘 2 への回答): review-evidence gate は
+# green_command.completed_at <= tests_green_at <= reviewed_at を要求する。したがって
+# status を confirmed へ倒すには「本 HEAD を対象にした review verdict の時刻」が必要であり、
+# review 前に confirm すると必ず review_before_test / completed_after_tests_green_at で
+# fail-close する。r3 delta verdict の受領と同時に status=confirmed と evidence を記録する。
 ---
 
 # PLAN-L7-507 (troubleshoot): compiled 配布契約の ADR-001 追随

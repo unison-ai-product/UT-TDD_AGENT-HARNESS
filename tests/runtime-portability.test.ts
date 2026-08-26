@@ -21,8 +21,9 @@ const validDocs: RuntimePortabilityDoc[] = [
         test: "vitest run",
         "test:fast":
           "vitest run --exclude tests/cli-surface.test.ts --exclude tests/drive-db-registration.test.ts --exclude tests/projection-writer.test.ts",
+        // PLAN-L7-507 delta review: 正常 fixture は bun 起動を持たない (package-script-bun-runtime)。
         "test:db":
-          "bun run src/cli.ts db rebuild && vitest run tests/db-projection-ingestion.test.ts tests/drive-db-registration.test.ts tests/projection-writer.test.ts",
+          "node src/cli.ts db rebuild && vitest run tests/db-projection-ingestion.test.ts tests/drive-db-registration.test.ts tests/projection-writer.test.ts",
         "test:cli": "vitest run tests/cli-surface.test.ts tests/runtime-hook-entrypoints.test.ts",
         "test:node-fallback": "vitest run tests/state-db.test.ts tests/runtime-portability.test.ts",
         typecheck: "tsc --noEmit",
@@ -345,6 +346,41 @@ describe("runtime-portability lint", () => {
       current.violations.filter(
         (violation) => violation.rule === "script-wrapper-compiled-dispatch",
       ),
+    ).toEqual([]);
+  });
+
+  it("U-RPORT-020: fail-closes package scripts that invoke Bun (AC-1 の機械強制)", () => {
+    // delta review 指摘: AC-1「package.json に bun を含む script が存在しない」は
+    // 主張だけで oracle が無く false-green だった。起動語だけを見る規則で固定する。
+    const packageDoc = validDocs.find((doc) => doc.path === "package.json");
+    const pkg = JSON.parse(packageDoc?.text ?? "{}") as { scripts?: Record<string, string> };
+
+    for (const [label, command, expected] of [
+      ["bun run", "bun run src/cli.ts db rebuild", true],
+      ["bunx", "bunx vitest run", true],
+      ["after &&", "node src/cli.ts db rebuild && bun run vitest", true],
+      ["node only", "node src/cli.ts db rebuild && vitest run", false],
+      ["mention in string", 'node -e "console.log(1); // bun is banned"', false],
+    ] as const) {
+      const mutated = {
+        ...pkg,
+        scripts: { ...pkg.scripts, "test:db": command },
+      };
+      const result = analyzeRuntimePortability([
+        ...validDocs.filter((doc) => doc.path !== "package.json"),
+        { path: "package.json", text: JSON.stringify(mutated) },
+      ]);
+
+      expect(
+        result.violations.some((violation) => violation.rule === "package-script-bun-runtime"),
+        label,
+      ).toBe(expected);
+    }
+
+    // 現行 repo の package.json は違反しない。
+    const current = analyzeRuntimePortability(loadRuntimePortabilityDocs(process.cwd()));
+    expect(
+      current.violations.filter((violation) => violation.rule === "package-script-bun-runtime"),
     ).toEqual([]);
   });
 

@@ -240,6 +240,23 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
         "Package bin.ut-tdd must point at ./src/cli.ts so bun link exposes the CLI before a local dist build.",
     });
   }
+  // PLAN-L7-507 delta review: AC-1 (「package.json に bun を含む script が存在しない」) には
+  // 機械強制が無く false-green だった。script の**起動語**が bun 系なら fail-close する
+  // (行頭 / パイプ / 論理演算子 / セミコロン直後。文字列内の言及は対象外)。
+  for (const [name, command] of Object.entries(pkg.scripts ?? {})) {
+    const launchers = command
+      .split(/\||&&|\|\||;/)
+      .map((segment) => segment.trim().split(/\s+/)[0] ?? "")
+      .filter((word) => word.length > 0);
+    if (launchers.some((word) => /^bunx?(?:\.exe)?$/.test(word))) {
+      violations.push({
+        path,
+        line: 1,
+        rule: "package-script-bun-runtime",
+        message: `Package script "${name}" must not invoke Bun (permanent ban, PLAN-L7-507).`,
+      });
+    }
+  }
   if (!/\btsc\s+--noEmit\b/.test(pkg.scripts?.typecheck ?? "")) {
     violations.push({
       path,
