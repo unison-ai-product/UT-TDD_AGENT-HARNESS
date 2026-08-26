@@ -6,9 +6,9 @@ layer: L7
 drive: agent
 route_signal: incident
 route_mode: incident
-status: draft
+status: confirmed
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-08-26
 backprop_decision: not_required
 backprop_decision_reason: "consumer へ生成する adapter 配線の実行 runtime を Bun から Node へ差し替える。ADR-001 が既に Bun を『新規依存・fallback・検出器 runtime として禁止し、既存経路だけを期限付き migration debt として段階撤去する』と確定しており (ADR-001:26)、本 PLAN はその段階撤去の consumer 面である。導入済み consumer は 0 件 (PO 実確認 2026-08-25) のため外部互換の requirement 変更は発生しない。"
 owner: PM / PO
@@ -31,7 +31,44 @@ dependencies:
     - docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
     - docs/plans/PLAN-L7-507-compiled-distribution-contract-retraction.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-cross-agent
+    review_kind: cross_agent
+    reviewed_at: "2026-08-26T01:33:21Z"
+    tests_green_at: "2026-08-26T02:05:00Z"
+    verdict: "FLAG (blocking 7) at a2c83fa2 → 是正 HEAD で delta review 依頼中。CI red 2 件 (U-MODELID-SSOT (b) / U-TESTHYGIENE-015) を含む"
+    scope: >-
+      Pack/consumer 実行 runtime の Node 化。指摘のうち adapter mirror 未同期、
+      github-ci-policy の Pack 側 Bun 強制、isolated_fixture pin、PLAN status /
+      test-design U-SETUP-012/013 の Bun 残置を本 HEAD で是正した。self-contained
+      installed runtime (setup Pack checkout 非依存化) と破壊的 E2E は別 PLAN 所管とし、
+      Issue #408 / #134 は本 PR では close しない。
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    evidence_path: tests/setup.test.ts
+    citations:
+      - "tests/setup.test.ts: U-SETUP-004b2 / 009b / 009b2"
+      - "tests/hook-native-launcher.test.ts: U-HOOKEXEC-001"
+      - "tests/github-ci-policy.test.ts: Pack profile 政策 (Node/npm)"
+      - "tests/model-id-ssot-drift.test.ts: (b) adapter mirror"
+      - "tests/doctor-test-repository-isolation.test.ts: U-TESTHYGIENE-015"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/project-hook.test.ts tests/codex-hook-adapter.test.ts tests/doctor-setup-smoke.test.ts tests/hook-native-launcher.test.ts tests/runtime-portability.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-26T01:05:00Z"
+        evidence_path: tests/setup.test.ts
+        anchor_commit: 7a7c0c9794f2dceced474e05bdda6c24dc606476
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/github-ci-policy.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-26T02:05:00Z"
+        evidence_path: tests/github-ci-policy.test.ts
+        anchor_commit: 53ba43ff
 ---
 
 # PLAN-L7-509 (troubleshoot): Pack/consumer 配布契約の Node 化
