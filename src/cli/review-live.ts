@@ -153,6 +153,8 @@ export function registerLiveReviewCommands(
                   operationId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
                   workspaceId: target.workspaceId,
                   originRuntime: "codex",
+                  projectId: project.projectId,
+                  producerSessionId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
                   requestDigest: wake.requestDigest,
                   requestPath: wake.requestPath,
                   pr: wake.request.pr,

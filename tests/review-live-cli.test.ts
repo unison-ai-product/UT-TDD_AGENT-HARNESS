@@ -72,7 +72,7 @@ function fixture(): {
   if (!issued.ok) throw new Error("fixture request failed");
   const canonicalRequest = issued.request;
   const envelope: ClaudeReviewInboxEntry = {
-    schemaVersion: "ut-tdd.claude-inbox/v3",
+    schemaVersion: "ut-tdd.claude-inbox/v4",
     purpose: "review",
     id: "memory:d3a:review",
     memoryId: canonicalRequest.memoryId,
@@ -80,6 +80,11 @@ function fixture(): {
     originRuntime: "codex",
     operationId: "review-d3a-cli",
     targetWorkspaceId: "b".repeat(64),
+    projectId: "fixture/project",
+    producerProvider: "codex",
+    producerSessionId: "review-d3a-cli",
+    targetProvider: "claude",
+    targetSessionId: "b".repeat(64),
     createdAt: canonicalRequest.requestedAt,
     requestDigest: issued.digest,
     requestPath: relative(root, issued.path).replaceAll("\\", "/"),

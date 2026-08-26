@@ -3960,6 +3960,8 @@ memory
             operationId,
             workspaceId: claudeWorkspaceId(repoRoot),
             originRuntime,
+            projectId: project.projectId,
+            producerSessionId: operationId,
           });
           const deliveryPath = publishClaudeInboxEntry(repoRoot, notification);
           process.stdout.write(`memory: notified Claude via ${deliveryPath}\n`);

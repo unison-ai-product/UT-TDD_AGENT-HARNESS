@@ -207,7 +207,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
       expect(canonical.ok).toBe(true);
       if (!canonical.ok) return;
       const envelope: ClaudeReviewInboxEntry = {
-        schemaVersion: "ut-tdd.claude-inbox/v3",
+        schemaVersion: "ut-tdd.claude-inbox/v4",
         purpose: "review",
         id: "memory:d3a:review",
         memoryId: canonicalRequest.memoryId,
@@ -215,6 +215,11 @@ describe("live review projection (U-RVATT-023..026)", () => {
         originRuntime: "codex",
         operationId: "review-d3a",
         targetWorkspaceId: "a".repeat(64),
+        projectId: "fixture/project",
+        producerProvider: "codex",
+        producerSessionId: "review-d3a",
+        targetProvider: "claude",
+        targetSessionId: "a".repeat(64),
         createdAt: "2026-08-14T00:00:00.000Z",
         requestDigest: canonical.digest,
         requestPath: relative(root, canonical.path),
@@ -277,7 +282,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
       const canonical = issueReviewRequest({ repoRoot: root, request: canonicalRequest });
       if (!canonical.ok) throw new Error("fixture");
       const envelope: ClaudeReviewInboxEntry = {
-        schemaVersion: "ut-tdd.claude-inbox/v3",
+        schemaVersion: "ut-tdd.claude-inbox/v4",
         purpose: "review",
         id: "memory:d3a:review",
         memoryId: canonicalRequest.memoryId,
@@ -285,6 +290,11 @@ describe("live review projection (U-RVATT-023..026)", () => {
         originRuntime: "codex",
         operationId: "review-d3a",
         targetWorkspaceId: "a".repeat(64),
+        projectId: "fixture/project",
+        producerProvider: "codex",
+        producerSessionId: "review-d3a",
+        targetProvider: "claude",
+        targetSessionId: "a".repeat(64),
         createdAt: canonicalRequest.requestedAt,
         requestDigest: canonical.digest,
         requestPath: relative(root, canonical.path),

@@ -17,8 +17,9 @@ import { isCanonicalMemorySourcePath } from "../memory/service.ts";
 import { ensureDir } from "../shared/fs.ts";
 import { requireProjectMemoryRoot } from "./project-memory-root.ts";
 
-export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
-export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
+export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v4" as const;
+export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
+export const CLAUDE_INBOX_LEGACY_V2_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 export const CLAUDE_INBOX_BACKLOG_WARN_AGE_MS = 15 * 60 * 1_000;
 export const CLAUDE_WAKE_GENERATION_SCHEMA = "ut-tdd.claude-wake-generation/v1" as const;
@@ -45,6 +46,11 @@ interface ClaudeInboxBase {
   readonly originRuntime: "codex" | "system";
   readonly operationId: string;
   readonly targetWorkspaceId: string;
+  readonly projectId: string;
+  readonly producerProvider: "codex" | "system";
+  readonly producerSessionId: string;
+  readonly targetProvider: "claude";
+  readonly targetSessionId: string;
   readonly createdAt: string;
 }
 
@@ -66,7 +72,7 @@ export interface ClaudeReviewInboxEntry extends ClaudeInboxBase {
 }
 
 export interface ClaudeLegacyInboxEntry extends ClaudeInboxBase {
-  readonly schemaVersion: typeof CLAUDE_INBOX_LEGACY_SCHEMA;
+  readonly schemaVersion: typeof CLAUDE_INBOX_LEGACY_SCHEMA | typeof CLAUDE_INBOX_LEGACY_V2_SCHEMA;
   readonly purpose: "memory";
 }
 
@@ -191,21 +197,29 @@ export function buildClaudeInboxEntry(input: {
   operationId: string;
   workspaceId: string;
   originRuntime?: "codex" | "system";
+  projectId?: string;
+  producerSessionId?: string;
   now?: string;
 }): ClaudeMemoryInboxEntry {
   if (!input.operationId.trim()) throw new Error("claude_inbox_operation_id_required");
   if (!/^[a-f0-9]{64}$/.test(input.workspaceId)) {
     throw new Error("claude_inbox_workspace_id_invalid");
   }
+  const originRuntime = input.originRuntime ?? "system";
   return {
     schemaVersion: CLAUDE_INBOX_SCHEMA,
     purpose: "memory",
     id: `${input.memory.memory_id}:workspace:${input.workspaceId}:op:${input.operationId}`,
     memoryId: input.memory.memory_id,
     body: input.memory.body,
-    originRuntime: input.originRuntime ?? "system",
+    originRuntime,
     operationId: input.operationId,
     targetWorkspaceId: input.workspaceId,
+    projectId: input.projectId ?? "fixture/project",
+    producerProvider: originRuntime,
+    producerSessionId: input.producerSessionId ?? input.operationId,
+    targetProvider: "claude",
+    targetSessionId: input.workspaceId,
     createdAt: input.now ?? new Date().toISOString(),
   };
 }
@@ -221,6 +235,8 @@ export function buildClaudeReviewInboxEntry(input: {
   reviewRevision: string;
   authorFamily: "codex" | "claude";
   originRuntime?: "codex" | "system";
+  projectId?: string;
+  producerSessionId?: string;
   now?: string;
 }): ClaudeReviewInboxEntry {
   const memoryEntry = buildClaudeInboxEntry(input);
@@ -324,7 +340,9 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
   try {
     const parsed = JSON.parse(value) as Record<string, unknown>;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
-    const legacy = parsed.schemaVersion === CLAUDE_INBOX_LEGACY_SCHEMA;
+    const legacy =
+      parsed.schemaVersion === CLAUDE_INBOX_LEGACY_SCHEMA ||
+      parsed.schemaVersion === CLAUDE_INBOX_LEGACY_V2_SCHEMA;
     const purpose = legacy ? "memory" : parsed.purpose;
     const baseKeys = [
       "schemaVersion",
@@ -336,13 +354,21 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
       "targetWorkspaceId",
       "createdAt",
     ];
+    const projectKeys = [
+      "projectId",
+      "producerProvider",
+      "producerSessionId",
+      "targetProvider",
+      "targetSessionId",
+    ];
     const expectedKeys = legacy
       ? baseKeys
       : purpose === "memory"
-        ? [...baseKeys, "purpose"]
+        ? [...baseKeys, ...projectKeys, "purpose"]
         : purpose === "review"
           ? [
               ...baseKeys,
+              ...projectKeys,
               "purpose",
               "requestDigest",
               "requestPath",
@@ -367,7 +393,24 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
     ) {
       return undefined;
     }
-    if (legacy) return { ...entry, purpose: "memory" } as ClaudeLegacyInboxEntry;
+    if (legacy)
+      return {
+        ...entry,
+        purpose: "memory",
+        projectId: "legacy-unbound",
+        producerProvider: entry.originRuntime,
+        producerSessionId: entry.operationId,
+        targetProvider: "claude",
+        targetSessionId: entry.targetWorkspaceId,
+      } as ClaudeLegacyInboxEntry;
+    if (
+      !entry.projectId.trim() ||
+      entry.producerProvider !== entry.originRuntime ||
+      !entry.producerSessionId.trim() ||
+      entry.targetProvider !== "claude" ||
+      entry.targetSessionId !== entry.targetWorkspaceId
+    )
+      return undefined;
     if (entry.purpose === "memory") return entry;
     if (entry.purpose !== "review" || !isValidReviewIdentity(entry)) return undefined;
     return entry;
@@ -424,6 +467,7 @@ function pruneRuntimeFiles(root: string, nowMs: number): void {
 }
 
 function readInbox(repoRoot: string): ClaudeInboxEntry[] {
+  const projectId = requireProjectMemoryRoot(repoRoot).projectId;
   const directory = join(runtimeRoot(repoRoot), "inbox");
   if (!existsSync(directory)) return [];
   return readdirSync(directory)
@@ -435,7 +479,11 @@ function readInbox(repoRoot: string): ClaudeInboxEntry[] {
         return undefined;
       }
     })
-    .filter((entry): entry is ClaudeInboxEntry => entry !== undefined);
+    .filter(
+      (entry): entry is ClaudeInboxEntry =>
+        entry !== undefined &&
+        (entry.projectId === projectId || entry.projectId === "legacy-unbound"),
+    );
 }
 
 function summarizeEntries(

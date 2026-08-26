@@ -173,7 +173,7 @@ describe("Claude HARNESS memory async wake", () => {
       operationId: "memory-review-text",
       workspaceId: "a".repeat(64),
     });
-    expect(entry).toMatchObject({ schemaVersion: "ut-tdd.claude-inbox/v3", purpose: "memory" });
+    expect(entry).toMatchObject({ schemaVersion: "ut-tdd.claude-inbox/v4", purpose: "memory" });
     expect(entry).not.toHaveProperty("requestDigest");
   });
 
@@ -190,7 +190,7 @@ describe("Claude HARNESS memory async wake", () => {
       authorFamily: "codex",
     });
     expect(entry).toMatchObject({
-      schemaVersion: "ut-tdd.claude-inbox/v3",
+      schemaVersion: "ut-tdd.claude-inbox/v4",
       purpose: "review",
       memoryPath: memory.source_path,
       pr: 218,
