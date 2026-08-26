@@ -47,7 +47,23 @@ function inboxFileStem(entryId: string): string {
 function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wake-"));
   execFileSync("git", ["init", "-q"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
+  writeFileSync(
+    join(root, "ut-tdd.project.json"),
+    `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: "fixture/project" })}\n`,
+    "utf8",
+  );
+  execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
+  execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: root });
   return root;
+}
+
+function runtimeRoot(root: string): string {
+  const namespace = createHash("sha256")
+    .update("ut-tdd-project\0fixture/project", "utf8")
+    .digest("hex");
+  return join(root, ".git", "ut-tdd-runtime", "projects", namespace, "claude-memory-wake");
 }
 
 describe("Claude HARNESS memory async wake", () => {
@@ -65,7 +81,7 @@ describe("Claude HARNESS memory async wake", () => {
       });
 
       const mainWorkspaceId = claudeWorkspaceId(main);
-      const runtime = join(main, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = runtimeRoot(main);
       mkdirSync(runtime, { recursive: true });
       writeFileSync(
         join(runtime, "main-vscode.generation"),
@@ -96,7 +112,7 @@ describe("Claude HARNESS memory async wake", () => {
   ] as const)("U-MEMWAKE-007: %s is typed fail-close", (_label, reason) => {
     const root = fixture();
     try {
-      const runtime = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = runtimeRoot(root);
       if (reason !== "no_live_claude_workspace") {
         mkdirSync(runtime, { recursive: true });
         writeFileSync(
@@ -125,7 +141,7 @@ describe("Claude HARNESS memory async wake", () => {
   it("U-MEMWAKE-007: multiple live workspace targets are typed ambiguous", () => {
     const root = fixture();
     try {
-      const runtime = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake");
+      const runtime = runtimeRoot(root);
       mkdirSync(runtime, { recursive: true });
       for (const [name, workspaceId] of [
         ["main", "a".repeat(64)],
@@ -205,7 +221,7 @@ describe("Claude HARNESS memory async wake", () => {
     try {
       const workspaceId = claudeWorkspaceId(root);
       const v3 = buildClaudeInboxEntry({ memory, operationId: "schema-seed", workspaceId });
-      const inbox = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox");
+      const inbox = join(runtimeRoot(root), "inbox");
       publishClaudeInboxEntry(root, v3);
       rmSync(join(inbox, `${inboxFileStem(v3.id)}.json`));
       const legacy = { ...v3, schemaVersion: "ut-tdd.claude-inbox/v2" } as Record<string, unknown>;
@@ -310,7 +326,8 @@ describe("Claude HARNESS memory async wake", () => {
         workspaceId: claudeWorkspaceId(root),
       });
       const path = publishClaudeInboxEntry(root, entry);
-      expect(path).toContain(join(".git", "ut-tdd-runtime", "claude-memory-wake", "inbox"));
+      expect(path).toContain(join(".git", "ut-tdd-runtime", "projects"));
+      expect(path).toContain(join("claude-memory-wake", "inbox"));
       const first = await waitForClaudeMemory({
         repoRoot: root,
         sessionId: "claude-live",
@@ -340,7 +357,7 @@ describe("Claude HARNESS memory async wake", () => {
         workspaceId: "a".repeat(64),
       });
       expect(() => publishClaudeInboxEntry(root, entry)).toThrow(
-        "claude_inbox_git_common_dir_required",
+        "project_memory_root_git_topology_unavailable",
       );
     } finally {
       rmSync(root, { recursive: true, force: true });

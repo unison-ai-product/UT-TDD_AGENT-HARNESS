@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   mkdirSync,
@@ -32,6 +33,16 @@ function fixture(): {
 } {
   const root = mkdtempSync(join(tmpdir(), "ut-review-live-cli-"));
   roots.push(root);
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "UT-TDD test"], { cwd: root });
+  writeFileSync(
+    join(root, "ut-tdd.project.json"),
+    `${JSON.stringify({ schema_version: "ut-tdd.project/v1", repository_identity: "fixture/project" })}\n`,
+    "utf8",
+  );
+  execFileSync("git", ["add", "ut-tdd.project.json"], { cwd: root });
+  execFileSync("git", ["commit", "-qm", "fixture identity"], { cwd: root });
   const memoryDirectory = join(root, ".ut-tdd", "memory");
   mkdirSync(memoryDirectory, { recursive: true });
   const memoryPath = join(memoryDirectory, "feedback-d3a.md");
@@ -83,6 +94,13 @@ function fixture(): {
   return { root, envelopePath, memoryPath, envelope };
 }
 
+function runtimeRoot(root: string): string {
+  const namespace = createHash("sha256")
+    .update("ut-tdd-project\0fixture/project", "utf8")
+    .digest("hex");
+  return join(root, ".git", "ut-tdd-runtime", "projects", namespace, "claude-memory-wake");
+}
+
 afterEach(() => {
   while (roots.length > 0) rmSync(roots.pop() as string, { recursive: true, force: true });
 });
@@ -90,7 +108,6 @@ afterEach(() => {
 describe("review live CLI composition", () => {
   it("U-MEMWAKE-007: routes the derived wake to the live workspace while preserving request identity", async () => {
     const { root, memoryPath } = fixture();
-    execFileSync("git", ["init", "-q"], { cwd: root });
     const targetWorkspaceId = "f".repeat(64);
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {
@@ -125,7 +142,7 @@ describe("review live CLI composition", () => {
       process.stdout.write = originalWrite;
       process.exitCode = originalExitCode;
     }
-    const inbox = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox");
+    const inbox = join(runtimeRoot(root), "inbox");
     const files = readdirSync(inbox).filter((name) => name.endsWith(".json"));
     expect(files).toHaveLength(1);
     const envelope = JSON.parse(readFileSync(join(inbox, files[0]), "utf8")) as Record<
@@ -188,9 +205,7 @@ describe("review live CLI composition", () => {
     }
     const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
     expect(requests).toHaveLength(1);
-    expect(() =>
-      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
-    ).toThrow();
+    expect(() => readdirSync(join(runtimeRoot(root), "inbox"))).toThrow();
   });
 
   it("U-RVATT-031 grants Claude only the consumer-derived exact verdict path", () => {
