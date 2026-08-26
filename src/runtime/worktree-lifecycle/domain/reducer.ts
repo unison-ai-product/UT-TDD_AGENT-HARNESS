@@ -136,6 +136,9 @@ export function reduceLifecycle(
         ...(event.terminalReceiptDigest
           ? { terminalReceiptDigest: event.terminalReceiptDigest }
           : {}),
+        ...(event.pathLeaseReleaseReceiptDigest
+          ? { pathLeaseReleaseReceiptDigest: event.pathLeaseReleaseReceiptDigest }
+          : {}),
         ...(event.ownerLossEvidenceDigest
           ? { ownerLossEvidenceDigest: event.ownerLossEvidenceDigest }
           : {}),

@@ -80,6 +80,20 @@ describe("managed worktree lifecycle", () => {
     ]);
   });
 
+  it("CANDIDATE-U-WTMAN-002 releases the lease when planned persistence fails", () => {
+    const deps = ports();
+    vi.mocked(deps.append).mockImplementationOnce(() => {
+      throw new Error("ledger unavailable");
+    });
+    const coordinator = new ManagedWorktreeCoordinator(deps);
+    expect(() => coordinator.create(input())).toThrow("ledger unavailable");
+    expect(deps.releasePath).toHaveBeenCalledTimes(1);
+    expect(deps.createWorktree).not.toHaveBeenCalled();
+    expect(deps.enqueueCleanup).toHaveBeenCalledWith(
+      expect.objectContaining({ lifecycleId: "issue-425-worker-1", reason: "activation_aborted" }),
+    );
+  });
+
   it("CANDIDATE-U-WTMAN-004 records terminal and cleanup handoff together", () => {
     const deps = ports();
     const coordinator = new ManagedWorktreeCoordinator(deps);
@@ -88,6 +102,7 @@ describe("managed worktree lifecycle", () => {
     coordinator.finish({
       identity: active.identity,
       attempt: active.attempt,
+      ownerSessionId: "session-1",
       kind: "success",
       terminalReceiptDigest: "sha256:terminal",
     });
@@ -97,8 +112,28 @@ describe("managed worktree lifecycle", () => {
       "terminal_pending",
     ]);
     expect(deps.enqueueCleanup).toHaveBeenLastCalledWith(
-      expect.objectContaining({ terminalReceiptDigest: "sha256:terminal" }),
+      expect.objectContaining({
+        terminalReceiptDigest: "sha256:terminal",
+        pathLeaseReleaseReceiptDigest: "sha256:released",
+      }),
     );
+  });
+
+  it("CANDIDATE-U-WTMAN-004 denies a foreign owner before releasing the lease", () => {
+    const deps = ports();
+    const coordinator = new ManagedWorktreeCoordinator(deps);
+    const active = coordinator.create(input());
+    expect(() =>
+      coordinator.finish({
+        identity: active.identity,
+        attempt: active.attempt,
+        ownerSessionId: "foreign-session",
+        kind: "failure",
+        terminalReceiptDigest: "sha256:foreign",
+      }),
+    ).toThrow("managed_worktree_owner_mismatch");
+    expect(deps.releasePath).not.toHaveBeenCalled();
+    expect(deps.enqueueCleanup).not.toHaveBeenCalled();
   });
 
   it("CANDIDATE-U-WTMAN-003 rejects a modified hash-chain without appending", () => {
@@ -121,6 +156,7 @@ describe("managed worktree lifecycle", () => {
     replayed.finish({
       identity: events[0].identity,
       attempt: 1,
+      ownerSessionId: "session-1",
       kind: "success",
       terminalReceiptDigest: "sha256:replayed-terminal",
     });

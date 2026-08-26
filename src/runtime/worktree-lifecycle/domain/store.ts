@@ -213,6 +213,9 @@ export class WorktreeLifecycleStore {
       ...(input.terminalReceiptDigest
         ? { terminalReceiptDigest: input.terminalReceiptDigest }
         : {}),
+      ...(input.pathLeaseReleaseReceiptDigest
+        ? { pathLeaseReleaseReceiptDigest: input.pathLeaseReleaseReceiptDigest }
+        : {}),
       ...(hasOwnerLoss ? { ownerLossEvidenceDigest: input.ownerLossEvidence?.evidenceDigest } : {}),
       denyReasons,
     });

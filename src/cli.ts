@@ -37,6 +37,7 @@ import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
 import { registerPlanRevisionCommand } from "./cli/plan-revise.ts";
 import { registerPrMergeCommands } from "./cli/pr-merge.ts";
 import { registerLiveReviewCommands } from "./cli/review-live.ts";
+import { registerWorktreeLifecycleCommands } from "./cli/worktree-lifecycle.ts";
 import { contextSuggest } from "./context/doc-router.ts";
 import {
   DOCTOR_RUN_PROFILE_IDS,
@@ -4105,6 +4106,8 @@ context
       );
     }
   });
+
+registerWorktreeLifecycleCommands(program);
 
 program.parseAsync(process.argv).catch((e: unknown) => {
   process.stderr.write(`${String(e)}\n`);

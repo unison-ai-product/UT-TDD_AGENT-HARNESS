@@ -30,6 +30,7 @@ export interface CleanupHandoff {
   readonly identity: LifecycleIdentity;
   readonly reason: "activation_aborted" | "terminal_pending";
   readonly terminalReceiptDigest?: string;
+  readonly pathLeaseReleaseReceiptDigest?: string;
 }
 
 export interface ManagedWorktreePorts {
@@ -107,28 +108,29 @@ export class ManagedWorktreeCoordinator {
       lifecycleId: input.lifecycleId,
       canonicalWorktreeRealpath,
     });
-    const planned = this.store.plan({
-      identity,
-      lifecycleId: input.lifecycleId,
-      attempt: 1,
-      repositoryLineageId: input.repositoryLineageId,
-      canonicalWorktreeRealpath,
-      ownerSessionId: input.ownerSessionId,
-      issueId: input.issueId,
-      planId: input.planId,
-      planRevision: input.planRevision,
-      use: input.use,
-      branch: input.branch,
-      headOid: input.headOid,
-      createdAt: now,
-      activationDeadline: addMs(now, Math.min(input.ttlMs, 60_000)),
-      expiresAt: addMs(now, input.ttlMs),
-      pathLeaseId: lease.leaseId,
-      parentProcessId: input.parentProcessId,
-      parentSessionId: input.parentSessionId,
-    });
-    this.appendLatest();
+    let planned: WorktreeLifecycleRecord | undefined;
     try {
+      planned = this.store.plan({
+        identity,
+        lifecycleId: input.lifecycleId,
+        attempt: 1,
+        repositoryLineageId: input.repositoryLineageId,
+        canonicalWorktreeRealpath,
+        ownerSessionId: input.ownerSessionId,
+        issueId: input.issueId,
+        planId: input.planId,
+        planRevision: input.planRevision,
+        use: input.use,
+        branch: input.branch,
+        headOid: input.headOid,
+        createdAt: now,
+        activationDeadline: addMs(now, Math.min(input.ttlMs, 60_000)),
+        expiresAt: addMs(now, input.ttlMs),
+        pathLeaseId: lease.leaseId,
+        parentProcessId: input.parentProcessId,
+        parentSessionId: input.parentSessionId,
+      });
+      this.appendLatest();
       const created = this.ports.createWorktree({ ...input, leaseId: lease.leaseId });
       const observedAdmin = this.ports.canonicalizePath(created.adminEntryRealpath);
       const inventory = this.ports.observeWorktree({
@@ -150,16 +152,18 @@ export class ManagedWorktreeCoordinator {
       return active;
     } catch (error) {
       const releaseReceipt = this.ports.releasePath(lease.leaseId);
-      this.store.abortActivation(identity, {
-        attempt: planned.attempt,
-        reason: "activation_unresolved",
-        activationAbortReceiptDigest: digest({
-          identity,
-          error: error instanceof Error ? error.message : String(error),
-        }),
-        pathLeaseRelease: { released: true, receiptDigest: releaseReceipt },
-      });
-      this.appendLatest();
+      if (planned) {
+        this.store.abortActivation(identity, {
+          attempt: planned.attempt,
+          reason: "activation_unresolved",
+          activationAbortReceiptDigest: digest({
+            identity,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+          pathLeaseRelease: { released: true, receiptDigest: releaseReceipt },
+        });
+        this.appendLatest();
+      }
       this.ports.enqueueCleanup({
         lifecycleId: input.lifecycleId,
         identity,
@@ -172,16 +176,24 @@ export class ManagedWorktreeCoordinator {
   finish(input: {
     identity: LifecycleIdentity;
     attempt: number;
+    ownerSessionId: string;
     kind: TerminalInput["kind"];
     terminalReceiptDigest?: string;
     ownerLossEvidence?: TerminalInput["ownerLossEvidence"];
   }): WorktreeLifecycleRecord {
+    const current = this.store.get(input.identity);
+    if (!current) throw new Error("managed_worktree_lifecycle_unknown");
+    if (!input.ownerSessionId.trim() || current.ownerSessionId !== input.ownerSessionId) {
+      throw new Error("managed_worktree_owner_mismatch");
+    }
+    const pathLeaseReleaseReceiptDigest = this.ports.releasePath(current.pathLeaseId);
     const terminal = this.store.terminal(input.identity, {
       attempt: input.attempt,
       kind: input.kind,
       ...(input.terminalReceiptDigest
         ? { terminalReceiptDigest: input.terminalReceiptDigest }
         : {}),
+      pathLeaseReleaseReceiptDigest,
       ...(input.ownerLossEvidence ? { ownerLossEvidence: input.ownerLossEvidence } : {}),
     });
     this.appendLatest();
@@ -192,6 +204,7 @@ export class ManagedWorktreeCoordinator {
       ...(terminal.terminalReceiptDigest
         ? { terminalReceiptDigest: terminal.terminalReceiptDigest }
         : {}),
+      pathLeaseReleaseReceiptDigest,
     });
     return terminal;
   }

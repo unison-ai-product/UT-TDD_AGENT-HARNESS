@@ -130,6 +130,7 @@ export type TerminalInput = {
   readonly attempt: number;
   readonly kind: TerminalKind;
   readonly terminalReceiptDigest?: string;
+  readonly pathLeaseReleaseReceiptDigest?: string;
   readonly denyReasons?: readonly LifecycleDenyReason[];
   readonly ownerLossEvidence?: AuthenticatedOwnerLossEvidence;
 };
@@ -188,6 +189,7 @@ export type LifecycleEvent =
       readonly revision: number;
       readonly terminalKind: TerminalKind;
       readonly terminalReceiptDigest?: string;
+      readonly pathLeaseReleaseReceiptDigest?: string;
       readonly ownerLossEvidenceDigest?: string;
       readonly denyReasons: readonly LifecycleDenyReason[];
     }
