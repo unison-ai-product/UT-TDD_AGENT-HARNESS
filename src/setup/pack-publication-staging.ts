@@ -166,11 +166,17 @@ function immutableAsset(input: {
 }
 
 export function deriveControlManifestSnapshotDigest(manifest: PackPublicationManifest): string {
-  const payload: Buffer[] = [Buffer.from("ut-tdd-pack-control-v2\0", "ascii")];
-  for (const releaseId of Object.keys(manifest.releases).sort(utf8Compare)) {
+  const releaseIds = Object.keys(manifest.releases).sort(utf8Compare);
+  const payload: Buffer[] = [
+    Buffer.from("ut-tdd-pack-control-v2\0", "ascii"),
+    lengthPrefixed("releases"),
+    lengthPrefixed(String(releaseIds.length)),
+  ];
+  for (const releaseId of releaseIds) {
     const release = manifest.releases[releaseId];
     payload.push(lengthPrefixed(releaseId), lengthPrefixed(release.releaseRecordDigest));
   }
+  payload.push(lengthPrefixed("channels"), lengthPrefixed(String(manifest.channelOrder.length)));
   for (const channel of manifest.channelOrder) {
     payload.push(lengthPrefixed(channel), lengthPrefixed(manifest.channels[channel]));
   }
