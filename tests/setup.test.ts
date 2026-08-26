@@ -571,7 +571,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
   });
 
-  // PLAN-L7-508: consumer wrapper は Node で直起動する (run-bun 間接層は削除済み)。
+  // PLAN-L7-509: consumer wrapper は Node で直起動する (run-bun 間接層は削除済み)。
   function runWrapperViaNode(cwd: string, args: string[]) {
     return spawnSync(process.execPath, args, { cwd, encoding: "utf8", windowsHide: true });
   }

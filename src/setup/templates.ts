@@ -237,7 +237,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     'import { spawnSync } from "node:child_process";',
     "",
     "const repoRoot = process.cwd();",
-    "// PLAN-L7-508: node_modules 配下の TS entrypoint 解決分岐は削除した。Node は node_modules 配下の",
+    "// PLAN-L7-509: node_modules 配下の TS entrypoint 解決分岐は削除した。Node は node_modules 配下の",
     "// type stripping を拒否する (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING、",
     "// --experimental-transform-types でも不可) ため、npm package 経路は Node 下で実行不能。",
     "// Repo-local harness source (Pack checkout topology). Resolved relative to cwd so the",

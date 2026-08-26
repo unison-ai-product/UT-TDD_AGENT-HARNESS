@@ -248,7 +248,7 @@ export function gitAddPathspecCommands(
   return commands;
 }
 
-// PLAN-L7-508: consumer runtime は Node (>=24)。Bun preflight は撤去した。
+// PLAN-L7-509: consumer runtime は Node (>=24)。Bun preflight は撤去した。
 function hasMinimumNode(version: string, minimum = "24.0.0"): boolean {
   const parse = (v: string): number[] => {
     const match = v.match(/\d+(?:\.\d+){0,2}/)?.[0] ?? "0";

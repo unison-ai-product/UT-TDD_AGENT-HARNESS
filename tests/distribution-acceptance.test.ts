@@ -42,7 +42,7 @@ function walkCandidatePaths(root: string): string[] {
   return out.sort();
 }
 
-// PLAN-L7-508: consumer/Pack runtime は Node。CLI は node で直起動し、依存導入は npm ci。
+// PLAN-L7-509: consumer/Pack runtime は Node。CLI は node で直起動し、依存導入は npm ci。
 function runNode(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
   return spawnSync(process.execPath, args, {
     cwd,

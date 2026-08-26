@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-508-pack-consumer-node-runtime
-title: "PLAN-L7-508 (troubleshoot): Pack/consumer 配布契約の Node 化 — run-bun 間接層の削除と生成物の Bun 依存撤去"
+plan_id: PLAN-L7-509-pack-consumer-node-runtime
+title: "PLAN-L7-509 (troubleshoot): Pack/consumer 配布契約の Node 化 — run-bun 間接層の削除と生成物の Bun 依存撤去"
 kind: troubleshoot
 layer: L7
 drive: agent
@@ -21,7 +21,7 @@ agent_slots:
   - role: se
     slot_label: "SE - templates / project-hook / codex-hook-adapter / setup-smoke / distribution readiness の Node 化実装"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-508-pack-consumer-node-runtime.md
+  - artifact_path: docs/plans/PLAN-L7-509-pack-consumer-node-runtime.md
     artifact_type: markdown_doc
 dependencies:
   parent: null
@@ -34,7 +34,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 review_evidence: []
 ---
 
-# PLAN-L7-508 (troubleshoot): Pack/consumer 配布契約の Node 化
+# PLAN-L7-509 (troubleshoot): Pack/consumer 配布契約の Node 化
 
 ## 1. 背景と優先度
 

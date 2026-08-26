@@ -26,7 +26,7 @@ const SETUP_SMOKE_REQUIRED_FILES = [
   ".codex/hooks.json",
 ] as const;
 
-// PLAN-L7-508: run-bun 間接層は削除済み。hook は node で wrapper CLI を直起動する。
+// PLAN-L7-509: run-bun 間接層は削除済み。hook は node で wrapper CLI を直起動する。
 const nativeInvocation = (...suffix: string[]) => ({
   executable: "node",
   args: [".ut-tdd/bin/ut-tdd.mjs", ...suffix],
@@ -81,7 +81,7 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
     ok: wrapper !== null && !/UT_TDD_SOURCE_CLI_JSON|__UT_TDD|placeholder/i.test(wrapper),
     message: "project-local wrapper has no template placeholder residue",
   });
-  // PLAN-L7-508: wrapper は process.execPath で CLI を spawn する runtime 非依存契約。
+  // PLAN-L7-509: wrapper は process.execPath で CLI を spawn する runtime 非依存契約。
   // Bun launcher (run-bun.ts) の存在・内容チェックは撤去し、wrapper 自身の契約を検査する。
   checks.push({
     name: "wrapper-runtime-independent-contract",

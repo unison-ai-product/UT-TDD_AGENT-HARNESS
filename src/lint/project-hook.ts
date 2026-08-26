@@ -67,7 +67,7 @@ interface RequiredProjectHook {
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
 
-// PLAN-L7-508: run-bun 間接層 (findBun launcher) を削除し、hook は node で wrapper CLI を
+// PLAN-L7-509: run-bun 間接層 (findBun launcher) を削除し、hook は node で wrapper CLI を
 // 直起動する。ut-tdd.mjs は process.execPath で CLI を spawn するため runtime 非依存。
 const wrapperCommand = (subcommand: string): string => `node ${WRAPPER_CLI} ${subcommand}`;
 

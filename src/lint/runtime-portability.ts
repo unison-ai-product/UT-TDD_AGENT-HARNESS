@@ -107,7 +107,7 @@ const BUN_GLOBAL_PATTERN = new RegExp(
 const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
   ["scripts/run-vitest-snapshot.ts", 1],
-  // PLAN-L7-508: Pack/consumer 面 (templates / distribution / acceptance / setup-smoke) の
+  // PLAN-L7-509: Pack/consumer 面 (templates / distribution / acceptance / setup-smoke) の
   // 実発火 pin は Node 化で全て 0 になり収載を撤去した。
   // 検出語彙 (lint fixture 文字列 / consumer template fixture) であり実発火ではない。
   ["tests/dependency-drift.test.ts", 1],

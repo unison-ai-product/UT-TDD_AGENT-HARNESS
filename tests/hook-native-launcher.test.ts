@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 // module 寿命の実体化 (afterEach の cleanup 対象に載せない)。
-// PLAN-L7-508: run-bun 間接層は削除済み。生成 wrapper (ut-tdd.mjs) を実体化し、
+// PLAN-L7-509: run-bun 間接層は削除済み。生成 wrapper (ut-tdd.mjs) を実体化し、
 // Bun が PATH に存在しない環境で node 直起動が成立することを oracle にする (AC-6)。
 const wrapperDirectory = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wrapper-src-"));
 const wrapper = join(wrapperDirectory, "ut-tdd.mjs");
@@ -35,7 +35,7 @@ writeFileSync(
   ),
 );
 
-describe("Claude hook wrapper launch (issue #123 / PLAN-L7-508)", () => {
+describe("Claude hook wrapper launch (issue #123 / PLAN-L7-509)", () => {
   it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged without Bun on PATH", () => {
     const directory = temporaryDirectory();
     const localCli = join(directory, "src", "cli.ts");

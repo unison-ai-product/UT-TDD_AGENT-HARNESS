@@ -135,7 +135,7 @@ export function registerDistributionCommands(program: Command): void {
     .action((opts: { tag?: string; cleanRepo?: string; packageRoot?: string; json?: boolean }) => {
       const repoRoot = process.cwd();
       const detection = detectMode();
-      // PLAN-L7-508: consumer runtime は Node。自プロセスの実測値が最強の証拠であり
+      // PLAN-L7-509: consumer runtime は Node。自プロセスの実測値が最強の証拠であり
       // 子プロセス probe は不要 (Bun probe と ~/.bun 探索路は撤去した)。
       const nodeVersion: string | null = process.versions.node ?? null;
       const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
