@@ -1,4 +1,13 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { Command } from "commander";
@@ -78,6 +87,96 @@ afterEach(() => {
 });
 
 describe("review live CLI composition", () => {
+  it("U-MEMWAKE-007: routes the derived wake to the live workspace while preserving request identity", async () => {
+    const { root, memoryPath } = fixture();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const targetWorkspaceId = "f".repeat(64);
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => root,
+      providerAvailable: () => true,
+      resolveWakeTarget: () => ({ ok: true, workspaceId: targetWorkspaceId }),
+    });
+    const originalWrite = process.stdout.write;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-dispatch",
+        "--memory-id",
+        "memory:d3a",
+        "--memory-path",
+        memoryPath,
+        "--pr",
+        "319",
+        "--head",
+        head,
+        "--revision",
+        "review-d3a-routing",
+        "--author-family",
+        "codex",
+        "--json",
+      ]);
+    } finally {
+      process.stdout.write = originalWrite;
+    }
+    const inbox = join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox");
+    const files = readdirSync(inbox).filter((name) => name.endsWith(".json"));
+    expect(files).toHaveLength(1);
+    const envelope = JSON.parse(readFileSync(join(inbox, files[0]), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    expect(envelope).toMatchObject({
+      targetWorkspaceId,
+      requestPath: expect.stringContaining(".ut-tdd/review/requests/"),
+      exactHead: head,
+      pr: 319,
+      reviewRevision: "review-d3a-routing",
+    });
+  });
+
+  it("U-MEMWAKE-007: keeps the canonical request as backlog when no live target exists", async () => {
+    const { root, memoryPath } = fixture();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => root,
+      providerAvailable: () => true,
+      resolveWakeTarget: () => ({ ok: false, reason: "no_live_claude_workspace" }),
+    });
+    const originalWrite = process.stdout.write;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-dispatch",
+        "--memory-id",
+        "memory:d3a",
+        "--memory-path",
+        memoryPath,
+        "--pr",
+        "319",
+        "--head",
+        head,
+        "--revision",
+        "review-d3a-no-target",
+        "--author-family",
+        "codex",
+        "--json",
+      ]);
+    } finally {
+      process.stdout.write = originalWrite;
+    }
+    const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
+    expect(requests).toHaveLength(1);
+    expect(() => readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox"))).toThrow();
+  });
+
   it("U-RVATT-031 grants Claude only the consumer-derived exact verdict path", () => {
     const root = join(tmpdir(), "ut-review-permission-root");
     const digest = "c".repeat(64);
