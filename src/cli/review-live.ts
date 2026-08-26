@@ -20,6 +20,7 @@ import {
   resolveLiveClaudeWorkspace,
 } from "../runtime/claude-memory-wake.ts";
 import { detectMode } from "../runtime/detect.ts";
+import { requireProjectMemoryRoot } from "../runtime/project-memory-root.ts";
 
 export interface LiveReviewCommandDeps {
   readonly repoRoot: () => string;
@@ -64,6 +65,7 @@ function publishLiveReviewReceipt(
   repoRoot: string,
   projection: Extract<ReviewVerdictProjectionResult, { ok: true }>,
 ): void {
+  const project = requireProjectMemoryRoot(repoRoot);
   const receipt = projection.receipt;
   const body = [
     `PR #${receipt.pr} exact HEAD ${receipt.head} のcanonical review receipt。`,
@@ -73,7 +75,7 @@ function publishLiveReviewReceipt(
     `receiptDigest=${projection.digest}`,
   ].join("\n");
   writeMemory({
-    repoRoot,
+    repoRoot: project.canonicalProjectRoot,
     input: {
       kind: "feedback",
       title: `PR #${receipt.pr} canonical review receipt ${projection.digest}`,
@@ -124,7 +126,8 @@ export function registerLiveReviewCommands(
       }) => {
         try {
           const repoRoot = resolveRepositoryRoot(deps.repoRoot());
-          const memory = parseMemoryFile(repoRoot, opts.memoryPath);
+          const project = requireProjectMemoryRoot(repoRoot);
+          const memory = parseMemoryFile(project.canonicalProjectRoot, opts.memoryPath);
           if (memory.memory_id !== opts.memoryId)
             throw new Error("review_memory_identity_mismatch");
           const requestedAt = new Date().toISOString();
@@ -216,5 +219,6 @@ export function resolveLiveReviewTaskFile(
   repoRoot: string,
   input: { memoryId: string; memoryPath: string },
 ): string | null {
-  return resolveMemoryTaskFile({ repoRoot, ...input });
+  const project = requireProjectMemoryRoot(repoRoot);
+  return resolveMemoryTaskFile({ repoRoot: project.canonicalProjectRoot, ...input });
 }

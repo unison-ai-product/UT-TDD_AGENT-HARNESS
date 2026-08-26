@@ -15,6 +15,7 @@ import { join } from "node:path";
 import type { MemoryEntry } from "../memory/index.ts";
 import { isCanonicalMemorySourcePath } from "../memory/service.ts";
 import { ensureDir } from "../shared/fs.ts";
+import { requireProjectMemoryRoot } from "./project-memory-root.ts";
 
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
 export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
@@ -137,17 +138,7 @@ function inboxFileStem(entryId: string): string {
 }
 
 function runtimeRoot(repoRoot: string): string {
-  try {
-    const commonDir = execFileSync(
-      "git",
-      ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-      { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
-    ).trim();
-    if (commonDir) return join(commonDir, "ut-tdd-runtime", "claude-memory-wake");
-  } catch {
-    throw new Error("claude_inbox_git_common_dir_required");
-  }
-  throw new Error("claude_inbox_git_common_dir_required");
+  return join(requireProjectMemoryRoot(repoRoot).runtimeBusRoot, "claude-memory-wake");
 }
 
 function logPath(repoRoot: string): string {
