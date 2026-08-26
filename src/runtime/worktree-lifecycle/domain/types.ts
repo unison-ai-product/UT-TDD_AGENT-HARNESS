@@ -55,7 +55,7 @@ export interface WorktreeLifecycleRecord {
   readonly attempt: number;
   readonly repositoryLineageId: string;
   readonly canonicalWorktreeRealpath: string;
-  readonly adminEntryRealpath: string;
+  readonly adminEntryRealpath?: string;
   readonly ownerSessionId: string;
   readonly issueId: number;
   readonly planId: string;
@@ -103,6 +103,7 @@ export type PlannedLifecycleInput = Omit<
 export interface ActivationEvidence {
   readonly attempt: number;
   readonly workerStartReceiptDigest: string;
+  readonly adminEntryRealpath?: string;
   readonly inventoryAvailable: boolean;
   readonly ownerAuthenticated: boolean;
 }
@@ -167,6 +168,7 @@ export type LifecycleEvent =
       readonly attempt: number;
       readonly revision: number;
       readonly workerStartReceiptDigest: string;
+      readonly adminEntryRealpath: string;
     }
   | {
       readonly type: "activation_aborted";

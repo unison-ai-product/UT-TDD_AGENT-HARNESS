@@ -111,6 +111,7 @@ export function reduceLifecycle(
         revision: event.revision,
         activationStatus: "resolved",
         activationReceiptDigest: event.workerStartReceiptDigest,
+        adminEntryRealpath: event.adminEntryRealpath,
         denyReasons: Object.freeze([]),
       });
     case "activation_aborted":

@@ -32,7 +32,6 @@ function ports(): ManagedWorktreePorts {
     now: () => "2026-08-26T00:00:00.000Z",
     canonicalizePath: (path) => path.replaceAll("\\", "/"),
     allowedRoot: "C:/dev",
-    resolvePlannedAdminEntry: vi.fn(() => "C:/git/worktrees/worker"),
     reservePath: vi.fn(() => ({ leaseId: "lease-1", receiptDigest: "sha256:lease" })),
     releasePath: vi.fn(() => "sha256:released"),
     createWorktree: vi.fn(() => ({ adminEntryRealpath: "C:/git/worktrees/worker" })),
@@ -85,6 +84,7 @@ describe("managed worktree lifecycle", () => {
     const deps = ports();
     const coordinator = new ManagedWorktreeCoordinator(deps);
     const active = coordinator.create(input());
+    expect(active.adminEntryRealpath).toBe("C:/git/worktrees/worker");
     coordinator.finish({
       identity: active.identity,
       attempt: active.attempt,

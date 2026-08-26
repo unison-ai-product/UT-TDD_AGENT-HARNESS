@@ -36,7 +36,6 @@ export interface ManagedWorktreePorts {
   readonly now: () => string;
   readonly canonicalizePath: (path: string) => string;
   readonly allowedRoot: string;
-  readonly resolvePlannedAdminEntry: (input: ManagedWorktreeCreateInput) => string;
   readonly reservePath: (input: {
     lifecycleId: string;
     canonicalWorktreeRealpath: string;
@@ -90,10 +89,6 @@ export class ManagedWorktreeCoordinator {
     const canonicalWorktreeRealpath = this.ports.canonicalizePath(input.worktreePath);
     const allowedRoot = this.ports.canonicalizePath(this.ports.allowedRoot);
     assertDirectChild(allowedRoot, canonicalWorktreeRealpath);
-    const adminEntryRealpath = this.ports.canonicalizePath(
-      this.ports.resolvePlannedAdminEntry(input),
-    );
-    required(adminEntryRealpath, "admin_entry");
     const now = this.ports.now();
     const lease = this.ports.reservePath({
       lifecycleId: input.lifecycleId,
@@ -113,7 +108,6 @@ export class ManagedWorktreeCoordinator {
       attempt: 1,
       repositoryLineageId: input.repositoryLineageId,
       canonicalWorktreeRealpath,
-      adminEntryRealpath,
       ownerSessionId: input.ownerSessionId,
       issueId: input.issueId,
       planId: input.planId,
@@ -137,12 +131,13 @@ export class ManagedWorktreeCoordinator {
         adminEntryRealpath: observedAdmin,
       });
       if (!inventory.inventoryAvailable) throw new Error("managed_worktree_inventory_unavailable");
-      if (!inventory.identityMatches || observedAdmin !== adminEntryRealpath) {
+      if (!inventory.identityMatches) {
         throw new Error("managed_worktree_identity_mismatch");
       }
       const active = this.store.activate(identity, {
         attempt: planned.attempt,
         workerStartReceiptDigest: digest({ identity, lease: lease.receiptDigest, now }),
+        adminEntryRealpath: observedAdmin,
         inventoryAvailable: true,
         ownerAuthenticated: true,
       });

@@ -111,12 +111,17 @@ export class WorktreeLifecycleStore {
     const current = this.require(identity);
     this.assertAttempt(current, evidence.attempt);
     if (current.state !== "planned") return this.invalid(current, "active");
+    const adminEntryRealpath = evidence.adminEntryRealpath ?? current.adminEntryRealpath;
     let activationFailure:
       | "activation_unresolved"
       | "owner_unknown"
       | "inventory_unavailable"
       | undefined;
-    if (current.activationStatus !== "unresolved" || !evidence.workerStartReceiptDigest) {
+    if (
+      current.activationStatus !== "unresolved" ||
+      !evidence.workerStartReceiptDigest ||
+      !adminEntryRealpath?.trim()
+    ) {
       activationFailure = "activation_unresolved";
     } else if (!evidence.ownerAuthenticated) {
       activationFailure = "owner_unknown";
@@ -140,6 +145,7 @@ export class WorktreeLifecycleStore {
       attempt: current.attempt,
       revision: current.revision + 1,
       workerStartReceiptDigest: evidence.workerStartReceiptDigest,
+      adminEntryRealpath: adminEntryRealpath as string,
     });
   }
 
