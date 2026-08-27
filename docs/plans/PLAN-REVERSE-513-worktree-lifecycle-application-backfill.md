@@ -38,6 +38,7 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/391
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/384
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/425
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/428
 review_evidence: []
 ---
 
@@ -54,13 +55,13 @@ application sagaへ降ろす docs-only freezeである。実装、既存worktree
 実装後、次の差分だけを `PLAN-L4-34` の #384 placement / lifecycle境界へ戻す。
 
 - 必須 owner / Issue / PLAN revision / TTL / branch / parent / path の欠落は side effect 0であること。
-- applicationの正規順序が `reservePath → plan → spawn → start receipt → observe → activate` で、`repository_lineage_id`、`lifecycle_id`、owner、Issue、PLAN revision、`use`、`head_oid`、`activation_deadline`、`operation_id`、identity / attempt が全段階で一致すること。
-- record登録失敗時のspawn 0、同一attemptのstart receiptだけを受理しforeign receiptを拒否すること。
+- applicationの正規順序が `reservePath → plan → worktree create → observe → worker spawn → start receipt → activate` で、`repository_lineage_id`、`lifecycle_id`、owner、Issue、PLAN revision、`use`、`head_oid`、`activation_deadline`、`operation_id`、初期必須`attempt`、identityが全段階で一致すること。worktree createとworker spawnは別port / operationとすること。
+- `reservePath` は原子的portとし、throw時はreservation / lease 0、成功時だけrecoverable lease receiptを返すこと。record登録失敗時はworktree create / worker spawn 0、同一attemptのstart receiptだけを受理しforeign receiptを拒否すること。
 - pre-reserve / post-reserve-pre-plan / post-plan faultを分離し、存在しないrecordへの補償要求を出さず、可能なreceiptとprimary errorを保持すること。
 - post-plan fault時にactivation-abort、release、cleanup handoffを記録し、`releasePath` の throwをprimary errorへ置き換えないこと。
 - `finish` / `abort` が `terminal event → lease-release receipt → cleanup handoff` の順で同一lifecycle / `operation_id` / attemptへ束縛し、各throw時のauthoritative stateを保持すること。
 - Windows case-insensitive / Linux case-sensitive の direct-child比較、spaces許可、root/nested/junction/symlink/home/Temp/OneDrive、reserved name、unresolved link、canonicalization不能、Windows 240 UTF-16境界の単独fail-closeを、canonical実体のpath契約として戻すこと。
-- performance candidateの `N=100`、各port/event `1N+0`、port総数 `6N+0`、event総数 `2N+0`、handoff総数 `1N+0` の上限を実装測定へ束縛すること。
+- performance candidateの `N=100`、各port/event/handoff `1N+0`、port総数 `6N+0`、append event（plan + activate + terminal）総数 `3N+0`、handoff総数 `1N+0` の上限を実装測定へ束縛すること。
 
 adapter、CLI、doctor、hooks、JSONL、physical cleanup / #426 の責務はbackfill対象へ取り込まず、既存所有者へ残す。
 

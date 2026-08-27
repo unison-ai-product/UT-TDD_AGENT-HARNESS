@@ -37,6 +37,7 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/391
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/384
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/425
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/428
 github_issue_id: 425
 backprop_decision: required
 backprop_decision_reason: "application sagaの補償・terminal handoff・path境界を上流placement契約へ戻すため。"
@@ -60,7 +61,7 @@ Issue #425 は、Issue #384（PR #391でmergedされた `PLAN-L7-501` domain）�
 
 create は全入力を side effect 前に検証する。`repository_lineage_id`、`lifecycle_id`、owner、Issue、PLAN ID /
 PLAN revision、`use`、`head_oid`、TTL、`activation_deadline`、branch、parent (parent process/session)、path、
-`operation_id` のいずれかが欠落・空・不正なら、`reservePath` を含む全呼出しと worktree create を 0 にして typed
+`operation_id`、`attempt` のいずれかが欠落・空・不正なら、`reservePath` を含む全呼出しと worktree create / worker spawn を 0 にして typed
 deny を返す。これらは各々独立mutationで検証し、別fieldの存在から推測・補完しない。入力は文字列 shell command
 ではなく path object / argv 境界で受ける。
 
@@ -77,15 +78,16 @@ direct-child 比較は canonical 実体に対して行う。Windows は drive le
 
 正常系の唯一の順序は次のとおりで、段階の省略・並べ替え・暗黙 retry を許さない。
 
-`reservePath → plan → spawn → start receipt → observe → activate`
+`reservePath → plan → worktree create → observe → worker spawn → start receipt → activate`
 
 | 段階 | 固定する入力・後条件 |
 | --- | --- |
-| `reservePath` | canonical path、`repository_lineage_id`、`lifecycle_id`、owner、`operation_id`、同一 attempt を束縛した path lease を取得する。予約失敗時は後続を呼ばない。 |
-| `plan` | lease receipt を含む全 identity/input（`use`、`head_oid`、`activation_deadline` を含む）を同じ `operation_id` / attempt の `planned` record として append する。record登録失敗時は `spawn` 0。 |
-| `spawn` | `planned` record と lease がある場合だけ worktree spawn port を一度呼ぶ。直接 `git worktree add` をapplication内で行わない。post-plan faultはこのrecordを対象に補償する。 |
-| `start receipt` | spawn成功のworker start receiptを同じ `repository_lineage_id` / `lifecycle_id` / `operation_id` / attempt / ownerに束縛する。foreign receipt・別attempt receipt・欠落はactivate 0。 |
-| `observe` | 作成結果の canonical worktree/admin entry、inventory available、lineage / identity を同じ attempt で照合する。不一致・欠測は activate しない。 |
+| `reservePath` | canonical path、`repository_lineage_id`、`lifecycle_id`、owner、`operation_id`、同一 `attempt` を束縛したpath leaseを原子的に取得する。成功時は検証可能なlease receiptを返し、throw時はreservation / leaseを0として後続を呼ばない。 |
+| `plan` | lease receiptを含む全identity/input（`use`、`head_oid`、`activation_deadline`、`attempt`を含む）を同じ `operation_id` / attemptの`planned` recordとしてappendする。record登録失敗時はworktree create / worker spawn 0。 |
+| `worktree create` | `planned` recordとleaseがある場合だけ、worktree create port / operationを一度呼ぶ。worker spawn port / operationとは別であり、直接`git worktree add`をapplication内で行わない。post-plan faultはこのrecordを対象に補償する。 |
+| `observe` | 作成結果のcanonical worktree/admin entry、inventory available、lineage / identityを同じattemptで照合する。不一致・欠測はworker spawn / activateしない。 |
+| `worker spawn` | observe成功後だけ、worker spawn port / operationを一度呼ぶ。worktree create operationと混同せず、spawn成功前にstart receiptを発行しない。 |
+| `start receipt` | worker spawn成功のstart receiptを同じ `repository_lineage_id` / `lifecycle_id` / `operation_id` / attempt / ownerに束縛する。foreign receipt・別attempt receipt・欠落はactivate 0。 |
 | `activate` | start receipt、owner認証、inventory fact、lease、identity、attempt、`operation_id` が一致した場合だけ `planned → active` を domain reducerへ渡す。 |
 
 owner、identity、attempt、`operation_id` は全段階で同じ値を使う。別 owner、別 repository lineage、別 lifecycle、別
@@ -96,7 +98,7 @@ pointを一つに保つ。
 
 faultはrecordの存在で3区分する。pre-reserve（validationまたはreservePath前）はrecordもlease receiptも無いため、
 存在しないrecordへのactivation-abort / terminal / cleanup handoffを要求しない。post-reserve / pre-planはlease receiptが
-存在し得るがrecordは無いため、可能なreceiptだけrelease対象にする。post-plan（spawn / start receipt / observe / activate）は
+原子的reservePath成功の結果として存在するがrecordは無いため、可能なreceiptだけrelease対象にする。post-plan（worktree create / observe / worker spawn / start receipt / activate）は
 planned recordへ同じidentity / `operation_id` / attemptのactivation-abort、path lease release、cleanup handoffを記録する。
 いずれも最初のprimary errorを保持し、releasePath自体がthrowしてもrelease errorで置き換えず、release failureをtyped faultとして併記する。
 存在しないrecordへの補償要求は発行しない。abort / cleanup handoffの記録失敗も成功へ丸めず、未完了handoffをfail-closeで返す。
@@ -138,7 +140,7 @@ candidate を Green 実績、既存実装、既存worktree cleanupの証拠と�
 ## 5. Schedule と完了条件
 
 1. [直列] `PLAN-L7-501` domain の confirmed identity / attempt / transition 契約を入力として application port境界を固定する。
-2. [直列] reserve→plan→spawn→start receipt→observe→activate と fault compensation の Red oracle を pair-freeze する。
+2. [直列] reserve→plan→worktree create→observe→worker spawn→start receipt→activate と fault compensation の Red oracle を pair-freeze する。
 3. [並列] OS path boundary、finish/abort handoff、identity/replay、performance candidate を検証する。
 4. [直列] Reverse R1〜R4、targeted test、plan lint、非著者 exact-head reviewへ進む。
 
@@ -146,6 +148,6 @@ candidate を Green 実績、既存実装、既存worktree cleanupの証拠と�
 handoff、finish / abort の terminal handoff、Windows/Linux path規則、および candidateの1:1 traceを実装とテストで実測すること。
 docs-only freeze時点ではこれらの Greenを主張しない。
 
-性能candidateは `N=100` valid attemptsを固定し、各attemptの `reservePath / plan / spawn / start receipt / observe /
-activate / releasePath / terminal event / cleanup handoff` をそれぞれ `1N+0` 回以下（正常系は各々 exactly `N`）、application
-port総呼出しを `6N+0` 回以下、append eventを `2N+0` 件以下、cleanup handoffを `1N+0` 件以下にする。暗黙retryやNに対する二次増幅は許可しない。
+性能candidateは `N=100` valid attemptsを固定し、各port/event/handoffを `1N+0` 回以下（正常系は各々 exactly `N`）とする。
+portは `reservePath / worktree create / observe / worker spawn / start receipt / releasePath` の6種で総呼出し `6N+0` 以下、
+append eventは `plan / activate / terminal` の3種で総数 `3N+0` 以下、cleanup handoffは `1N+0` 以下にする。暗黙retryやNに対する二次増幅は許可しない。
