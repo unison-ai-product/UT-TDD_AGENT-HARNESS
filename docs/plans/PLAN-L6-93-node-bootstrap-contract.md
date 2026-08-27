@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-24
-updated: 2026-08-26
+updated: 2026-08-27
 owner: PO / TL
 agent_slots:
   - role: se
@@ -33,7 +33,52 @@ dependencies:
     - docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
   blocks:
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-08-27T03:30:12Z"
+    tests_green_at: "2026-08-27T03:17:17Z"
+    verdict: "§5 旧 Bun 配布経路の処遇契約 freeze に対する非著者 closing review 成立 (PASS / blocking 0)。PLAN 全体の confirm ではないため status は draft"
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    effort: low
+    plan_revision: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
+    subject_head: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
+    evidence_path: docs/test-design/harness/L7-unit-test-design.md
+    anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
+    scope: >-
+      PR #430 exact HEAD 2cd9640c に対する非著者 closing review。著者 family は claude、
+      reviewer family は codex。canonical request
+      rv1-8aa6ba19798e516c67fd771cec70ea9eb2214dbdf0bd9bf215c549283ec0626b の receipt が
+      verdict=PASS / blocking 0 / reviewerFamily=codex を記録している。対象は §5 の
+      wrapper 検出契約と CANDIDATE-NODEBOOT-021..030 の r1〜r8 FLAG 是正の閉塞のみで、
+      PLAN-L6-93 全体の confirm、Bun retirement の完了、Issue #134/#411 の完了は主張しない。
+      先行して mint された rv1-55b815ea… は author_family を codex と誤申告しており無効。
+      当該 request は自己 review を強制する構造だったため使用せず、正しい author_family=claude で
+      再 mint した上記 identity のみを正本とする (Issue #437 / Issue #439)。
+    citations:
+      - ".ut-tdd/review/receipts/8aa6ba19798e516c67fd771cec70ea9eb2214dbdf0bd9bf215c549283ec0626b.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33035309149"
+      - "docs/test-design/harness/L7-unit-test-design.md: CANDIDATE-NODEBOOT-021..030"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub harness-check run 33035309149 (harness-check-linux / harness-check-windows / harness-check aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-27T03:17:17Z"
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: "sha256:bab243e124dec46e8be98ef149482f0bcbbcd05bf59f01f78f41a6ff84a87c6f"
+        anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
+      - kind: vmodel_lint
+        command: "node src/cli.ts plan lint docs/plans/PLAN-L6-93-node-bootstrap-contract.md"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-27T03:17:17Z"
+        evidence_path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
+        output_digest: "sha256:edc5d7c882bfa3e78ce485e6264893da2b35e6ab78ec83b2ee5334e326934976"
+        anchor_commit: 2cd9640c9388bd7624e921b18a8702e9ec9e61c0
 status: draft
 sub_doc: function-spec
 github_issue_id: 152
