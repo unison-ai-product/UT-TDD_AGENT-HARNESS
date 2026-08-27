@@ -2500,7 +2500,7 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 
 ### PLAN-L7-519 bounded remote publication adapter (Issue #414)
 
-`CANDIDATE-PACKPUB-003` のうち、human approval、immutable release identity、before/late CAS、nonce、
+the remote-publication candidate slice のうち、human approval、immutable release identity、before/late CAS、nonce、
 append-only journal、partial/indeterminate fail-close を専用 adapter で実測する。PR #438 /
 `PLAN-L7-515` は draft/unmerged の並行候補であり、この slice はそのファイルや未確定実装を継承しない。
 Pack/GitHub の実 remote mutation、stable promotion、consumer E2E は実行しない。

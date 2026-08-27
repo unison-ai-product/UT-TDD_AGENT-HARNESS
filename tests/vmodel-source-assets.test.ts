@@ -248,6 +248,18 @@ describe("checked Vモデル source assets", () => {
     expect(unitDesign).toContain("| `I-DISP-001` |");
     expect(candidateIds).toContain("CANDIDATE-I-SP-001");
     expect(candidateIds).toContain("CANDIDATE-M-SP-001");
+
+    const canonicalRemoteIds = [
+      ...new Set(
+        [...unitDesign.matchAll(/`(U-PACKPUB-REMOTE-[0-9]{3})`/g)].map((match) => match[1]),
+      ),
+    ];
+    expect(canonicalRemoteIds).toEqual(
+      Array.from(
+        { length: 9 },
+        (_, index) => `U-PACKPUB-REMOTE-${String(index + 1).padStart(3, "0")}`,
+      ),
+    );
   });
 
   it("U-VMSRC-010: all 163 semantic items have an explicit non-inferred target decision record", () => {
