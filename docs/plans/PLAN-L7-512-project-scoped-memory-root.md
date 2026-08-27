@@ -6,9 +6,9 @@ layer: L7
 drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-08-27
 owner: PO / TL
 github_issue_id: 424
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -37,7 +37,59 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/420
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/432
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-27T03:16:10Z"
+    tests_green_at: "2026-08-27T02:00:02Z"
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: 086714e6992ed05b1af57e01e23551b75f9bb737
+    subject_head: 086714e6992ed05b1af57e01e23551b75f9bb737
+    evidence_path: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
+    anchor_commit: 086714e6992ed05b1af57e01e23551b75f9bb737
+    scope: >-
+      PR #431 docs-only pair-freeze の非著者 closing review。canonical request
+      rv1-54611aa61710ade721e40f50d29800b0c070aa1abd4ea289f8acde1f7d432205 を
+      `ut-tdd review live-consume` で消費し、receipt は verdict=PASS / blocking 0 /
+      reviewerFamily=claude を exact HEAD 086714e6 に対して記録している。対象は本 PLAN・
+      PLAN-REVERSE-512・対の L7 test-design の 3 doc のみで、実装 candidate の Green、
+      Reverse R4、Issue #424 の完了、Pack 受入完了は主張しない。非 blocking 指摘
+      (U-PMEMROOT-007 が §2 の束縛 5 軸のうち memory / operation を変異させていない) は
+      本 commit で test-design を是正して解消した。
+      worker_model / effort は receipt・request・commit 086714e6 (trailer 無し)・PR 本文の
+      いずれにも記録が無く、Codex session corpus の実測から確定した。2026-08-26/27 の
+      Codex session で PLAN-L7-512 に触れた turn_context は authoring 窓
+      (01:16Z / 01:57Z / 02:05Z / 02:07Z / 02:18Z / 02:26Z / 02:29Z) が全て
+      gpt-5.6-luna / effort high であり、gpt-5.6-sol / low は 03:08Z 以降の
+      review・verdict 相でのみ出現する。PLAN-L7-508 が同 family・同作業種別に対して
+      記録している値 (gpt-5.6-luna / high) とも一致する。Codex から実値の申告があれば
+      本欄を訂正する。Issue #429 が本欄の手書き運用そのものを所有する。
+    citations:
+      - ".ut-tdd/review/receipts/54611aa61710ade721e40f50d29800b0c070aa1abd4ea289f8acde1f7d432205.json"
+      - "docs/test-design/harness/L7-project-scoped-memory-root-test-design.md: CANDIDATE-U-PMEMROOT-001..009 / CANDIDATE-P-PMEMROOT-001..005"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33031193910"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub harness-check run 33031193910 (harness-check-linux / harness-check-windows / harness-check aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-27T02:00:02Z"
+        evidence_path: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
+        output_digest: "sha256:9915a36da94c09fce865175a865ce008e21a90f965b143f9b9b99843b97d8cef"
+        anchor_commit: 086714e6992ed05b1af57e01e23551b75f9bb737
+      - kind: vmodel_lint
+        command: "node src/cli.ts plan lint docs/plans/PLAN-L7-512-project-scoped-memory-root.md"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-27T02:00:02Z"
+        evidence_path: docs/plans/PLAN-L7-512-project-scoped-memory-root.md
+        output_digest: "sha256:58fa0495e096315c0e67d7d9050497b51fcca04640d419b54aed88a8387ad90b"
+        anchor_commit: 086714e6992ed05b1af57e01e23551b75f9bb737
 ---
 
 # PLAN-L7-512: project-scoped canonical Memory and notification root

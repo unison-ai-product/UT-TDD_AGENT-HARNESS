@@ -17,7 +17,7 @@ updated: 2026-08-26
 | CANDIDATE-U-PMEMROOT-004 | 異project identity | namespace不一致 |
 | CANDIDATE-U-PMEMROOT-005 | 同一ID・同一digest複製 | 一件canonical、残りdedupe |
 | CANDIDATE-U-PMEMROOT-006 | 同一ID・異digest | 上書き0、全variant quarantine |
-| CANDIDATE-U-PMEMROOT-007 | envelope project/provider/session変異 | read/claim 0、entry保持 |
+| CANDIDATE-U-PMEMROOT-007 | envelope が束縛する project / memory_id / operation_id / producer provider・session / target provider・session を、それぞれ独立に変異させる | 各変異で read/claim 0、entry は消費されず保持 |
 | CANDIDATE-U-PMEMROOT-008 | symlink/junction/8.3 root escape | typed deny |
 | CANDIDATE-U-PMEMROOT-009 | linked worktreeからDB rebuild／Memory projectionを実行し、current worktreeだけにlegacy corpusを置く | projection readerもprimary canonical corpusだけを読み、legacy fallback 0。current/primaryを入れ替えてもidentity集合とdigestが一致 |
 | CANDIDATE-P-PMEMROOT-001 | mainとlinked worktree間のMemory/Claude通知 | 同一corpus/busを観測 |
