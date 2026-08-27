@@ -2,7 +2,7 @@
 title: "L7 Claude hook generation schema rolling upgrade test design"
 layer: L7
 executed_at_layer: L7
-status: draft
+status: confirmed
 plan_id: PLAN-L7-514-claude-hook-schema-rolling-upgrade
 pair_artifact: docs/plans/PLAN-L7-514-claude-hook-schema-rolling-upgrade.md
 parent_doc: docs/plans/PLAN-L7-472-claude-memory-async-wake.md

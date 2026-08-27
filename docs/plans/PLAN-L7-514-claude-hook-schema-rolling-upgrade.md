@@ -4,7 +4,7 @@ title: "Claude VS Code hook generation schema の rolling upgrade"
 kind: add-impl
 layer: L7
 drive: be
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-08-27
@@ -44,7 +44,19 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/433
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/416
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/422
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-pr436-pair-freeze
+    review_kind: cross_agent
+    reviewed_at: "2026-08-27T04:09:25.989Z"
+    tests_green_at: "2026-08-27T03:50:00Z"
+    verdict: "PASS-WEAK; blocking 0"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    subject_head: "801c727cf320762e815e3a9c8a098fb456456f91"
+    scope: "PR #436 docs-only pair-freeze。rolling-upgrade実装、Reverse R4、Issue #433完了を意味しない。"
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/436#issuecomment-5434258746"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33036935365"
 ---
 
 # PLAN-L7-514: Claude VS Code hook generation schema の rolling upgrade
