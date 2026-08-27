@@ -150,7 +150,8 @@ symlink/junction、unknown version、digest mutation、receipt mismatchを含み
 
 PLAN-REVERSE-496 R4で固定したdeny時副作用0契約を、既存consumer-local compositionへ接続する。
 namespace escape、release/artifact/receipt identity mismatch、独立再計算digest mismatch、artifact unavailable、
-unknown version、invalid inputを個別に生成し、各caseでadmissionが`phase: "admission"`を返すこと、
-PF5 snapshot/staging/apply/discard/restore、pointer、publishのcall countが0であること、さらに
-consumer prior bytes/mode/path/version/history treeが不変であることを測定する。remote publication、channel CAS、
-PF5内部契約の再実装は行わない。
+unknown version、invalid inputを個別に生成し、各caseで実装本体の`installConsumerLocalRuntime`が
+`phase: "admission"`を返すこと、PF5 snapshot/staging/apply/discard/restoreのcall countが0であること、さらに
+consumer prior bytes/mode/path/version/history treeが不変であることを測定する。U006はadmission predicateの
+matrix、U007は実compositionへ直接渡す独立oracleであり、receipt `consumerRoot`/`runtimeRoot` 非stringは
+typed `identity_mismatch`としてU007に含める。remote publication、channel CAS、PF5内部契約の再実装は行わない。

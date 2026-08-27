@@ -2007,8 +2007,8 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `U-PACKISO-003` | A=v1/B=v2のreleaseId/sourceRevision/digestを独立束縛し、version/digest/revision/releaseId/receipt reuse mutationを拒否 |
 | `U-PACKISO-004` | A prior v1→v2 upgradeの成功/各PF5 faultでA prior stateまたはindeterminateを観測し、Bの実行中Node processとroot treeを保持 |
 | `U-PACKISO-005` | A prior v2/history→attested v1 rollbackでA identity/history transitionを観測し、Bの実行中Node processとroot treeを保持 |
-| `U-PACKISO-006` | artifact unavailable、digest mutation、unknown version、symlink escape、receipt mismatchを導入前拒否しPF5 ports 0を観測 |
-| `U-PACKISO-007` | CANDIDATE-PACKISO-007の8独立deny軸を実測し、既存PF5 composition harnessへ直接接続 |
+| `U-PACKISO-006` | admission predicateのartifact unavailable、digest mutation、unknown version、symlink escape、receipt mismatchを各1軸で導入前拒否し、PF5 ports 0を観測する（predicate matrix） |
+| `U-PACKISO-007` | CANDIDATE-PACKISO-007の8独立deny軸を実装本体の`installConsumerLocalRuntime`へ直接渡し、admission phase、PF5 ports 0、consumer prior tree不変を同時観測する（composition oracle）。receipt `consumerRoot`/`runtimeRoot` の非stringもtyped `identity_mismatch`として含む |
 
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 

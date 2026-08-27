@@ -121,32 +121,6 @@ async function seedRuntime(root: string, version: string, history = version): Pr
   await writeFile(join(root, ".ut-tdd", "history", "releases"), history, "utf8");
 }
 
-function consumerCompositionHarness(input: ConsumerLocalRuntimeAdmissionInput) {
-  const ports = {
-    snapshotDestination: vi.fn(async () => []),
-    writeStaging: vi.fn(async () => ({})),
-    applyDestination: vi.fn(async () => undefined),
-    discardStaging: vi.fn(async () => undefined),
-    restoreDestination: vi.fn(async () => undefined),
-  };
-  const pointerWrite = vi.fn();
-  const publish = vi.fn();
-  return {
-    ports,
-    pointerWrite,
-    publish,
-    run: async (candidate: ConsumerLocalRuntimeAdmissionInput) => {
-      const result = await installConsumerLocalRuntime(candidate, ports);
-      if (result.ok) {
-        pointerWrite(result.admission.identity.releaseId);
-        publish(result.admission.identity);
-      }
-      return result;
-    },
-    input,
-  };
-}
-
 describe("consumer-local runtime admission", () => {
   it("U-PACKISO-001: sealed artifactだけでsource不在のfresh consumerをadmitできる", async () => {
     const [a, b] = await Promise.all([fixture("product-a", "v1"), fixture("product-b", "v2")]);
@@ -678,18 +652,52 @@ describe("consumer-local runtime admission", () => {
     const input = await fixture("product-a", "v1");
     await seedRuntime(input.consumerRoot, "prior-v1", "prior-v1");
     const before = await tree(input.consumerRoot);
-    const harness = consumerCompositionHarness(input);
-    const result = await harness.run(mutate(input) as ConsumerLocalRuntimeAdmissionInput);
+    const ports = {
+      snapshotDestination: vi.fn(async () => []),
+      writeStaging: vi.fn(async () => ({})),
+      applyDestination: vi.fn(async () => undefined),
+      discardStaging: vi.fn(async () => undefined),
+      restoreDestination: vi.fn(async () => undefined),
+    };
+    const result = await installConsumerLocalRuntime(
+      mutate(input) as ConsumerLocalRuntimeAdmissionInput,
+      ports,
+    );
 
     expect(result).toMatchObject({ ok: false, phase: "admission", error });
-    expect(harness.ports.snapshotDestination).toHaveBeenCalledTimes(0);
-    expect(harness.ports.writeStaging).toHaveBeenCalledTimes(0);
-    expect(harness.ports.applyDestination).toHaveBeenCalledTimes(0);
-    expect(harness.ports.discardStaging).toHaveBeenCalledTimes(0);
-    expect(harness.ports.restoreDestination).toHaveBeenCalledTimes(0);
-    expect(harness.pointerWrite).toHaveBeenCalledTimes(0);
-    expect(harness.publish).toHaveBeenCalledTimes(0);
+    expect(ports.snapshotDestination).toHaveBeenCalledTimes(0);
+    expect(ports.writeStaging).toHaveBeenCalledTimes(0);
+    expect(ports.applyDestination).toHaveBeenCalledTimes(0);
+    expect(ports.discardStaging).toHaveBeenCalledTimes(0);
+    expect(ports.restoreDestination).toHaveBeenCalledTimes(0);
     expect(await tree(input.consumerRoot)).toBe(before);
+  });
+
+  it("U-PACKISO-007: non-string receipt roots are typed identity mismatches before composition", async () => {
+    for (const key of ["consumerRoot", "runtimeRoot"] as const) {
+      const input = await fixture("product-a", "v1");
+      await seedRuntime(input.consumerRoot, "prior-v1", "prior-v1");
+      const before = await tree(input.consumerRoot);
+      const ports = {
+        snapshotDestination: vi.fn(async () => []),
+        writeStaging: vi.fn(async () => ({})),
+        applyDestination: vi.fn(async () => undefined),
+        discardStaging: vi.fn(async () => undefined),
+        restoreDestination: vi.fn(async () => undefined),
+      };
+      const candidate = {
+        ...input,
+        receipt: { ...input.receipt, [key]: null },
+      } as unknown as ConsumerLocalRuntimeAdmissionInput;
+      const result = await installConsumerLocalRuntime(candidate, ports);
+      expect(result).toMatchObject({ ok: false, phase: "admission", error: "identity_mismatch" });
+      expect(ports.snapshotDestination).toHaveBeenCalledTimes(0);
+      expect(ports.writeStaging).toHaveBeenCalledTimes(0);
+      expect(ports.applyDestination).toHaveBeenCalledTimes(0);
+      expect(ports.discardStaging).toHaveBeenCalledTimes(0);
+      expect(ports.restoreDestination).toHaveBeenCalledTimes(0);
+      expect(await tree(input.consumerRoot)).toBe(before);
+    }
   });
 
   it("U-PACKISO-004/005: PF5 apply failureはtop-level fail-closeへflattenする", async () => {
