@@ -1,19 +1,18 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   buildConsumerNodeRuntimeBundle,
   bundlePathFor,
+  type ConsumerNodeRuntimeBundle,
+  type ConsumerNodeRuntimeIdentity,
+  type ConsumerNodeRuntimePorts,
   digestConsumerRuntimeBytes,
   digestConsumerRuntimeValue,
   installConsumerNodeRuntime,
   renderConsumerNodeWrapper,
   stagingPathFor,
-  validateConsumerReadiness,
-  type ConsumerNodeRuntimeBundle,
-  type ConsumerNodeRuntimeIdentity,
-  type ConsumerNodeRuntimePorts,
 } from "../src/setup/consumer-node-runtime.ts";
 import { buildConsumerReadinessPlan } from "../src/setup/distribution.ts";
 
@@ -57,7 +56,11 @@ function bundleFor(id = identity()): ConsumerNodeRuntimeBundle {
   });
 }
 
-function ports(events: string[], fault?: string, reconcile: "committed" | "uncommitted" | "unknown" | "partial" = "committed"): ConsumerNodeRuntimePorts {
+function ports(
+  events: string[],
+  fault?: string,
+  reconcile: "committed" | "uncommitted" | "unknown" | "partial" = "committed",
+): ConsumerNodeRuntimePorts {
   const step = (name: string) => () => {
     events.push(name);
     if (fault === name) throw new Error(name);
@@ -68,24 +71,57 @@ function ports(events: string[], fault?: string, reconcile: "committed" | "uncom
     verifyNodeGeneration: step("verifyNodeGeneration"),
     acquireConsumerLock: step("acquireConsumerLock"),
     snapshotPriorActivePointer: step("snapshotPriorActivePointer"),
-    createPrivateStaging: (path) => { events.push(`createPrivateStaging:${path}`); if (fault === "createPrivateStaging") throw new Error(fault); },
-    writeGenerationAndReceipt: (path) => { events.push(`writeGenerationAndReceipt:${path}`); if (fault === "writeGenerationAndReceipt") throw new Error(fault); },
-    fsyncStaging: (path) => { events.push(`fsyncStaging:${path}`); if (fault === "fsyncStaging") throw new Error(fault); },
-    sealActivationBundle: (_path) => { events.push("sealActivationBundle"); if (fault === "sealActivationBundle") throw new Error(fault); },
-    atomicRenameActivePointerCAS: () => { events.push("atomicRenameActivePointerCAS"); if (fault === "atomicRenameActivePointerCAS") throw new Error(fault); },
-    verifyActiveBundle: () => { events.push("verifyActiveBundle"); if (fault === "verifyActiveBundle") throw new Error(fault); },
-    reconcileDurableOperation: () => { events.push("reconcileDurableOperation"); if (fault === "reconcileDurableOperation") throw new Error(fault); return reconcile; },
+    createPrivateStaging: (path) => {
+      events.push(`createPrivateStaging:${path}`);
+      if (fault === "createPrivateStaging") throw new Error(fault);
+    },
+    writeGenerationAndReceipt: (path) => {
+      events.push(`writeGenerationAndReceipt:${path}`);
+      if (fault === "writeGenerationAndReceipt") throw new Error(fault);
+    },
+    fsyncStaging: (path) => {
+      events.push(`fsyncStaging:${path}`);
+      if (fault === "fsyncStaging") throw new Error(fault);
+    },
+    sealActivationBundle: (_path) => {
+      events.push("sealActivationBundle");
+      if (fault === "sealActivationBundle") throw new Error(fault);
+    },
+    atomicRenameActivePointerCAS: () => {
+      events.push("atomicRenameActivePointerCAS");
+      if (fault === "atomicRenameActivePointerCAS") throw new Error(fault);
+    },
+    verifyActiveBundle: () => {
+      events.push("verifyActiveBundle");
+      if (fault === "verifyActiveBundle") throw new Error(fault);
+    },
+    reconcileDurableOperation: () => {
+      events.push("reconcileDurableOperation");
+      if (fault === "reconcileDurableOperation") throw new Error(fault);
+      return reconcile;
+    },
     releaseConsumerLock: step("releaseConsumerLock"),
-    destroyPrivateStaging: (path) => { events.push(`destroyPrivateStaging:${path}`); },
+    destroyPrivateStaging: (path) => {
+      events.push(`destroyPrivateStaging:${path}`);
+    },
   };
 }
 
 describe("sealed self-contained consumer Node runtime", () => {
   it("U-PACKNODE-001: rejects every identity tuple mutation before any port call", () => {
     const fields: (keyof ConsumerNodeRuntimeIdentity)[] = [
-      "subject_revision", "artifact_digest", "node_executable_identity",
-      "package_lock_digest", "source_graph_digest", "compiled_esm_digest", "release_id",
-      "artifact_set_digest", "control_manifest_digest", "consumer_root", "runtime_root", "attempt",
+      "subject_revision",
+      "artifact_digest",
+      "node_executable_identity",
+      "package_lock_digest",
+      "source_graph_digest",
+      "compiled_esm_digest",
+      "release_id",
+      "artifact_set_digest",
+      "control_manifest_digest",
+      "consumer_root",
+      "runtime_root",
+      "attempt",
     ];
     for (const field of fields) {
       const id = identity();
@@ -107,7 +143,9 @@ describe("sealed self-contained consumer Node runtime", () => {
 
   it("U-PACKNODE-003: wrapper resolution is a single consumer-local active pointer", () => {
     const wrapper = renderConsumerNodeWrapper();
-    expect(wrapper).toContain('resolve(consumerRoot, ".ut-tdd", "runtime", "activation", "active.json")');
+    expect(wrapper).toContain(
+      'resolve(consumerRoot, ".ut-tdd", "runtime", "activation", "active.json")',
+    );
     expect(wrapper).toContain("consumer_runtime_resolution_denied");
     expect(wrapper).not.toContain("process.env.PATH");
     expect(wrapper).not.toContain("cwd()");
@@ -115,19 +153,36 @@ describe("sealed self-contained consumer Node runtime", () => {
 
   it("U-PACKNODE-004: normal port order is exactly once and admission failure has no lock", async () => {
     const events: string[] = [];
-    const result = await installConsumerNodeRuntime({ identity: identity(), bundle: bundleFor(), ports: ports(events) });
+    const result = await installConsumerNodeRuntime({
+      identity: identity(),
+      bundle: bundleFor(),
+      ports: ports(events),
+    });
     expect(result).toMatchObject({ ok: true, status: "committed" });
     expect(events.map((event) => event.split(":")[0])).toEqual([
-      "readConsumerIdentity", "verifySealedAggregate", "verifyNodeGeneration", "acquireConsumerLock",
-      "snapshotPriorActivePointer", "createPrivateStaging", "writeGenerationAndReceipt", "fsyncStaging",
-      "sealActivationBundle", "atomicRenameActivePointerCAS", "verifyActiveBundle", "reconcileDurableOperation",
+      "readConsumerIdentity",
+      "verifySealedAggregate",
+      "verifyNodeGeneration",
+      "acquireConsumerLock",
+      "snapshotPriorActivePointer",
+      "createPrivateStaging",
+      "writeGenerationAndReceipt",
+      "fsyncStaging",
+      "sealActivationBundle",
+      "atomicRenameActivePointerCAS",
+      "verifyActiveBundle",
+      "reconcileDurableOperation",
       "releaseConsumerLock",
     ]);
   });
 
   it("U-PACKNODE-005: preactivation fault destroys private staging and never publishes", async () => {
     const events: string[] = [];
-    const result = await installConsumerNodeRuntime({ identity: identity(), bundle: bundleFor(), ports: ports(events, "fsyncStaging") });
+    const result = await installConsumerNodeRuntime({
+      identity: identity(),
+      bundle: bundleFor(),
+      ports: ports(events, "fsyncStaging"),
+    });
     expect(result).toMatchObject({ ok: false, status: "failed" });
     expect(events.some((event) => event.startsWith("destroyPrivateStaging:"))).toBe(true);
     expect(events).not.toContain("atomicRenameActivePointerCAS");
@@ -141,14 +196,17 @@ describe("sealed self-contained consumer Node runtime", () => {
   });
 
   it("U-PACKNODE-007: deleting setup checkout leaves only the consumer-local compiled entry", async () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-consumer-") );
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-consumer-"));
     temporaryRoots.push(root);
-    const setupCheckout = mkdtempSync(join(tmpdir(), "ut-tdd-setup-") );
+    const setupCheckout = mkdtempSync(join(tmpdir(), "ut-tdd-setup-"));
     temporaryRoots.push(setupCheckout);
     mkdirSync(join(root, ".ut-tdd", "runtime", "activation"), { recursive: true });
     const entry = join(root, ".ut-tdd", "runtime", "bundled-entry.mjs");
     writeFileSync(entry, 'process.stdout.write("consumer-local-ok")\n');
-    writeFileSync(join(root, ".ut-tdd", "runtime", "activation", "active.json"), JSON.stringify({ bundle_path: resolve(entry, ".."), entry_path: entry }));
+    writeFileSync(
+      join(root, ".ut-tdd", "runtime", "activation", "active.json"),
+      JSON.stringify({ bundle_path: resolve(entry, ".."), entry_path: entry }),
+    );
     writeFileSync(join(setupCheckout, "src-cli-sentinel"), "must-not-be-read");
     rmSync(setupCheckout, { recursive: true, force: true });
     const wrapper = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
@@ -169,12 +227,17 @@ describe("sealed self-contained consumer Node runtime", () => {
 
   it("U-PACKNODE-009: digest/compiled entry drift fails before activation", () => {
     const id = identity();
-    expect(() => buildConsumerNodeRuntimeBundle({
-      identity: id,
-      compiled_esm: Buffer.from("different"),
-      node_bootstrap_receipt: Buffer.from("b"), marker: Buffer.from("m"),
-      consumer_receipt: Buffer.from("r"), history: Buffer.from("h"), operation_state: Buffer.from("o"),
-    })).toThrow("compiled ESM digest mismatch");
+    expect(() =>
+      buildConsumerNodeRuntimeBundle({
+        identity: id,
+        compiled_esm: Buffer.from("different"),
+        node_bootstrap_receipt: Buffer.from("b"),
+        marker: Buffer.from("m"),
+        consumer_receipt: Buffer.from("r"),
+        history: Buffer.from("h"),
+        operation_state: Buffer.from("o"),
+      }),
+    ).toThrow("compiled ESM digest mismatch");
   });
 
   it("U-PACKNODE-010: only compiled-esm-only Node identity is accepted", () => {
@@ -184,21 +247,38 @@ describe("sealed self-contained consumer Node runtime", () => {
   });
 
   it("U-PACKNODE-011: hasUtTddCli cannot make missing sealed runtime ready", () => {
-    const plan = buildConsumerReadinessPlan({ bunVersion: null, hasGit: true, hasGh: false, hasUtTddCli: true, hasClaude: false, hasCodex: false, repoRoot: "/consumer", consumerRuntime: { status: "blocked", reason: "consumer_runtime_absent" } });
+    const plan = buildConsumerReadinessPlan({
+      bunVersion: null,
+      hasGit: true,
+      hasGh: false,
+      hasUtTddCli: true,
+      hasClaude: false,
+      hasCodex: false,
+      repoRoot: "/consumer",
+      consumerRuntime: { status: "blocked", reason: "consumer_runtime_absent" },
+    });
     expect(plan.ok).toBe(false);
     expect(plan.consumerRuntime).toEqual({ ok: false, reason: "consumer_runtime_absent" });
   });
 
   it("U-PACKNODE-012: post-commit acknowledgement loss is read-only reconcile and fail-closed", async () => {
     const events: string[] = [];
-    const result = await installConsumerNodeRuntime({ identity: identity(), bundle: bundleFor(), ports: ports(events, "verifyActiveBundle", "committed") });
+    const result = await installConsumerNodeRuntime({
+      identity: identity(),
+      bundle: bundleFor(),
+      ports: ports(events, "verifyActiveBundle", "committed"),
+    });
     expect(result).toMatchObject({ ok: false, status: "indeterminate" });
     expect(events.filter((event) => event === "reconcileDurableOperation")).toHaveLength(1);
   });
 
   it("U-PACKNODE-013: lock release is exactly once, including a fault", async () => {
     const events: string[] = [];
-    const result = await installConsumerNodeRuntime({ identity: identity(), bundle: bundleFor(), ports: ports(events, "writeGenerationAndReceipt") });
+    const result = await installConsumerNodeRuntime({
+      identity: identity(),
+      bundle: bundleFor(),
+      ports: ports(events, "writeGenerationAndReceipt"),
+    });
     expect(result.ok).toBe(false);
     expect(events.filter((event) => event === "releaseConsumerLock")).toHaveLength(1);
   });
@@ -207,13 +287,26 @@ describe("sealed self-contained consumer Node runtime", () => {
     const genesis = bundleFor();
     expect(genesis.history_sequence).toBe(0);
     expect(genesis.prior_bundle_digest).toBe("genesis");
-    expect(() => buildConsumerNodeRuntimeBundle({ identity: identity(), compiled_esm: Buffer.from('console.log("consumer-local");\n'), node_bootstrap_receipt: Buffer.from("b"), marker: Buffer.from("m"), consumer_receipt: Buffer.from("r"), history: Buffer.from("h"), operation_state: Buffer.from("o"), history_sequence: 1 })).toThrow();
+    expect(() =>
+      buildConsumerNodeRuntimeBundle({
+        identity: identity(),
+        compiled_esm: Buffer.from('console.log("consumer-local");\n'),
+        node_bootstrap_receipt: Buffer.from("b"),
+        marker: Buffer.from("m"),
+        consumer_receipt: Buffer.from("r"),
+        history: Buffer.from("h"),
+        operation_state: Buffer.from("o"),
+        history_sequence: 1,
+      }),
+    ).toThrow();
   });
 
   it("U-PACKNODE-015: path identity uses attempt and digest, preventing no-clobber reuse", () => {
     const first = bundleFor();
     const retry = bundleFor({ ...identity(), attempt: 1 });
     expect(first.bundle_path).not.toBe(retry.bundle_path);
-    expect(digestConsumerRuntimeValue(first.identity)).not.toBe(digestConsumerRuntimeValue(retry.identity));
+    expect(digestConsumerRuntimeValue(first.identity)).not.toBe(
+      digestConsumerRuntimeValue(retry.identity),
+    );
   });
 });

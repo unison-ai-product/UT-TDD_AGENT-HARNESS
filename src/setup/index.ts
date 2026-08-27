@@ -36,17 +36,9 @@ export {
   type ConsumerRuntimeLayout,
   installConsumerLocalRuntime,
 } from "./consumer-local-runtime-admission.ts";
-export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
   buildConsumerNodeRuntimeBundle,
   bundlePathFor,
-  digestConsumerRuntimeBytes,
-  digestConsumerRuntimeValue,
-  installConsumerNodeRuntime,
-  renderConsumerNodeWrapper,
-  stagingPathFor,
-  validateConsumerNodeRuntimeBundle,
-  validateConsumerReadiness,
   type ConsumerNodeRuntimeBundle,
   type ConsumerNodeRuntimeBundleInput,
   type ConsumerNodeRuntimeIdentity,
@@ -54,7 +46,15 @@ export {
   type ConsumerNodeRuntimePorts,
   type ConsumerNodeRuntimeReadinessInput,
   type ConsumerRuntimeDenyReason,
+  digestConsumerRuntimeBytes,
+  digestConsumerRuntimeValue,
+  installConsumerNodeRuntime,
+  renderConsumerNodeWrapper,
+  stagingPathFor,
+  validateConsumerNodeRuntimeBundle,
+  validateConsumerReadiness,
 } from "./consumer-node-runtime.ts";
+export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,

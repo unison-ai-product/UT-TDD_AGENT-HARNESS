@@ -1,8 +1,8 @@
-import { COMMON_FILES } from "./templates.ts";
 import {
-  validateConsumerReadiness,
   type ConsumerNodeRuntimeReadinessInput,
+  validateConsumerReadiness,
 } from "./consumer-node-runtime.ts";
+import { COMMON_FILES } from "./templates.ts";
 
 export interface CleanDistributionPlan {
   ok: boolean;
@@ -449,7 +449,12 @@ export function buildConsumerReadinessPlan(input: {
       "monorepo package root -> adapter paths remain repo-root scoped",
     ],
     ...(hasSealedRuntime
-      ? { consumerRuntime: { ok: runtimeReadiness.ok, ...(runtimeReadiness.reason ? { reason: runtimeReadiness.reason } : {}) } }
+      ? {
+          consumerRuntime: {
+            ok: runtimeReadiness.ok,
+            ...(runtimeReadiness.reason ? { reason: runtimeReadiness.reason } : {}),
+          },
+        }
       : {}),
   };
 }
