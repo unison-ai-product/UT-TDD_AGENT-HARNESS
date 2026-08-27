@@ -50,6 +50,59 @@ updated: 2026-08-27
 | CANDIDATE-U-AUTHPROV-017 | 新 schema で mint した request の digest | 新 schemaVersion を入力に含み、同一 (memoryId, pr, exactHead, authorFamily) でも旧 digest と一致しない |
 | CANDIDATE-U-AUTHPROV-018 | 既存 receipt を新 schema で再検証 | 対応が壊れない。receipt の無効化 0 |
 
+## 発行権限の分離 (§3.2)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-AUTHPROV-019 | 当該 commit を書いた worker family 自身が自分の provenance record を write | typed deny。record 0 件 |
+| CANDIDATE-U-AUTHPROV-020 | dispatch identity を持たない record を受理点へ入力 | typed deny。信頼根として使わない |
+| CANDIDATE-U-AUTHPROV-021 | dispatch 開始時 record の宣言 family と、完了時 commit-set binding の family が食い違う | `unknown` へ倒す。開始時宣言を採用しない |
+| CANDIDATE-U-AUTHPROV-022 | unknown 解消の backfill を、当該 commit を書いた worker family が実行 | typed deny |
+| CANDIDATE-U-AUTHPROV-023 | 同じ backfill を dispatch 側または人手 (out-of-band) が実行 | 受理 |
+
+## model / provider 対応 (§3.2.1)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-AUTHPROV-024 | dispatch provider が codex、`worker_model` が claude 系 | alias 正規化後も不一致 → `unknown`。推論で辻褄を合わせない |
+| CANDIDATE-U-AUTHPROV-025 | 正規化表に無い未知 model 名 | `unknown`。既知 family へ丸めない |
+| CANDIDATE-U-AUTHPROV-026 | alias 表記の既知 model | 正規化して family を解決。同一 family に落ちる |
+| CANDIDATE-U-AUTHPROV-027 | human / manual commit | typed `human`。`codex` / `claude` のいずれにも丸めない |
+| CANDIDATE-U-AUTHPROV-028 | subagent の record を親 dispatch identity 無しで受理点へ入力 | typed deny |
+| CANDIDATE-U-AUTHPROV-029 | 1 commit を複数 worker が生成 | multi-contributor として記録。単一 family へ丸めない |
+
+## collision / replay / mutation / TOCTOU (§3.3.1)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-AUTHPROV-030 | 同一 repo・同一 commit に異 family の record が 2 件 | `conflict` として保持。先勝ちで片方を捨てない。受理点は `unknown` 同様に deny |
+| CANDIDATE-U-AUTHPROV-031 | 別 repository identity の record を同一 commit sha で流用 | typed deny (cross-repo replay) |
+| CANDIDATE-U-AUTHPROV-032 | 既存 record の overwrite / delete を要求 | 支援されない操作として deny。訂正は追記 + supersede でのみ成立 |
+| CANDIDATE-U-AUTHPROV-033 | issuer または内容を改変した record | 受理点の digest 再計算で不一致を検出し deny |
+| CANDIDATE-U-AUTHPROV-034 | receipt 発行後・merge 前に provenance snapshot を差し替え | merge gate が snapshot 不一致を typed deny。「review 時は正しかった」を merge 根拠にしない |
+| CANDIDATE-U-AUTHPROV-035 | request / receipt / merge gate が同一 snapshot を参照する正常系 | `merge_ready` へ到達 |
+
+## legacy 移行の非 grandfather (§3.4)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-AUTHPROV-036 | 旧 schema の in-flight request を、provenance 照合なしで close | typed deny。旧 schema は照合免除にならない |
+| CANDIDATE-U-AUTHPROV-037 | 旧 schema request で provenance が照合できない | 旧規則で close させず、#439 の typed retraction 経路へ倒す |
+| CANDIDATE-U-AUTHPROV-038 | 旧 schema request で provenance が照合でき一致する | close 可。旧 digest は再計算されない |
+| CANDIDATE-U-AUTHPROV-039 | PR #430 型の誤 `authorFamily` 旧 request を移行期間中に close しようとする | typed deny。grandfather 条項が存在しない |
+
+## contributor family set (§3.5)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-AUTHPROV-040 | set = `{codex, claude}` の PR に codex reviewer が attempt | typed deny |
+| CANDIDATE-U-AUTHPROV-041 | set = `{codex, claude}` の PR に claude reviewer が attempt | typed deny (040 と対称。どの reviewer でも受理しない) |
+| CANDIDATE-U-AUTHPROV-042 | set に unknown contributor を 1 件含む | typed deny。部分的既知では通さない |
+| CANDIDATE-U-AUTHPROV-043 | set = `{human}` のみ | codex / claude いずれの reviewer も非著者として受理 |
+| CANDIDATE-U-AUTHPROV-044 | set = `{codex, human}` に claude reviewer が attempt | 受理。claude は set に含まれない |
+| CANDIDATE-U-AUTHPROV-045 | 混在 set を多数派 family へ丸める経路の探索 | 丸め込み経路が存在しない (緩和の不在を測る負例) |
+| CANDIDATE-U-AUTHPROV-046 | single-commit mixed を含む PR | その commit の複数 family が PR の set へ合流する |
+
 ## 実 repo 回帰 (prose ではなく実測で claim を裏付ける)
 
 | Candidate | Stimulus | Oracle |
