@@ -58,12 +58,57 @@ updated: 2026-08-27
 | CANDIDATE-U-RETRACT-020 | §3.1 の 4 条件を満たさない不正な retraction receipt が存在する状態で merge gate を評価 | deny。gate が独立に再評価し、発行側の判定を再利用しない |
 | CANDIDATE-U-RETRACT-021 | retracted 1 本と FLAG receipt 付き 1 本 | deny。FLAG は retraction では消えない |
 
-## 手動削除の検知 (§3.5)
+## mint ledger と手動削除 (§3.5)
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-RETRACT-022 | retraction receipt 無しで request ファイルが消えた状態 | 検知して報告する。fail-close にはしない |
-| CANDIDATE-U-RETRACT-023 | retraction receipt を伴って request が終端した状態 | 手動削除として報告しない (偽陽性 0) |
+| CANDIDATE-U-RETRACT-022 | ledger に未終端 entry があるのに request ファイルが存在しない | `orphaned_mint` として **fail-close**。gate 集合から外れない |
+| CANDIDATE-U-RETRACT-023 | pending request ファイルを削除して merge を試みる | deny。削除しても ledger 由来の entry が集合に残るため gate が緩まない |
+| CANDIDATE-U-RETRACT-024 | 正規 retraction で終端した request | `orphaned_mint` として報告しない (偽陽性 0) |
+| CANDIDATE-U-RETRACT-025 | ledger 自体が存在しない | `ledger_unavailable` として fail-close。ledger を消して gate を緩める経路が無い |
+| CANDIDATE-U-RETRACT-026 | ledger entry の削除・改変を要求 | 支援されない操作として deny |
+| CANDIDATE-U-RETRACT-027 | 削除された request ファイルを復元 | `orphaned_mint` が解消し、通常の未終端 entry として扱われる |
+
+## terminal 直列化 (§3.3)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-RETRACT-028 | 同一 `reviewRevision` に verdict receipt と retraction receipt を両方作る | 2 件目が UNIQUE 制約で typed deny。両立状態を作れない |
+| CANDIDATE-U-RETRACT-029 | verdict 発行と retraction を並行実行 | CAS により片方のみ成立。先着を上書きしない |
+| CANDIDATE-U-RETRACT-030 | 競合する 2 つの retraction を並行実行 | CAS により片方のみ成立。他方は typed deny |
+| CANDIDATE-U-RETRACT-031 | lease 未取得で終端手続きを開始 | typed deny |
+| CANDIDATE-U-RETRACT-032 | lease 保持中に別 actor が終端を試みる | typed deny。lease 失効後は再取得可能で無期限ロックにならない |
+| CANDIDATE-U-RETRACT-033 | receipt 書き込みの完了確認が取れない (ack-loss) | `indeterminate` として fail-close。成功扱いにしない |
+| CANDIDATE-U-RETRACT-034 | `indeterminate` の次回起動 | 現物 receipt との照合で `committed` / `uncommitted` へ解決する |
+
+## superseded replacement graph (§3.2.1)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-RETRACT-035 | 自分自身を replacement に指定 | typed deny (self) |
+| CANDIDATE-U-RETRACT-036 | replacement 関係が閉路を作る | typed deny (cycle) |
+| CANDIDATE-U-RETRACT-037 | A→B→C の chain | leaf C を実効 replacement として解決する |
+| CANDIDATE-U-RETRACT-038 | chain の leaf が retracted | typed deny。chain 全体が無効 |
+| CANDIDATE-U-RETRACT-039 | leaf の `expectedProvider` が著者本人になる (正規に閉じられない) | typed deny。dead-end の先送りを許さない |
+| CANDIDATE-U-RETRACT-040 | leaf の provenance が `unknown` / `conflict` | typed deny |
+| CANDIDATE-U-RETRACT-041 | tracked artifact 外 (memory / PR 本文) の記述のみを replacement の根拠にする | typed deny。canonical custody を要求する |
+| CANDIDATE-U-RETRACT-042 | 任意の retraction graph に対し gate が再評価 | 実効 replacement が一意に定まるか typed deny のいずれか。発行側の判定を使わず決定論的 |
+
+## unclosable の provenance 束縛 (§3.2 / §3.6)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-RETRACT-043 | provenance が `unknown` / `conflict` の状態で `unclosable` を主張 | typed deny |
+| CANDIDATE-U-RETRACT-044 | `unclosable` retraction 後、merge 前に provenance snapshot を差し替え | merge gate が snapshot 不一致を typed deny |
+| CANDIDATE-U-RETRACT-045 | PLAN-L7-517 の信頼根が未着地の状態で `unclosable` 経路を実行 | 経路が存在しない (先行実装の不在を測る負例) |
+
+## legacy 移行 (§3.6.1)
+
+| Candidate | Stimulus | Oracle |
+|---|---|---|
+| CANDIDATE-U-RETRACT-046 | ledger 導入境界より前の mint に対応する request が存在しない | `orphaned_mint` にしない。既に merge 済みの PR を巻き込まない |
+| CANDIDATE-U-RETRACT-047 | 境界以降の mint の request を手動削除 | `orphaned_mint` として fail-close。例外が無い |
+| CANDIDATE-U-RETRACT-048 | PR #430 の `rv1-55b815ea…` を historical record として参照 | fail-close の入力にならず、証跡としてのみ列挙される |
 
 ## 実 repo 回帰 (prose ではなく実測で claim を裏付ける)
 
@@ -71,4 +116,5 @@ updated: 2026-08-27
 |---|---|---|
 | CANDIDATE-P-RETRACT-001 | PR #430 の `rv1-55b815ea…` (申告 codex / 実著者 claude、receipt 無し) を fixture として再現し、merge gate を評価 | 現行実装では deny。本実装では `unclosable` retraction 後に replacement の PASS だけで `merge_ready` へ到達 |
 | CANDIDATE-P-RETRACT-002 | PR #441 の競合 2 本 (両方 authorFamily=claude、片方のみ receipt) を fixture として再現 | `superseded` retraction、または 2 本目への receipt 発行のいずれでも `merge_ready` へ到達し、手動削除を要さない |
-| CANDIDATE-P-RETRACT-003 | 実 repo の全 request / receipt に対し手動削除検知を実行 | retraction 無しで消えた request を列挙する。検知が既存の正常終端を偽陽性にしない |
+| CANDIDATE-P-RETRACT-004 | 実 repo の全 request / receipt / ledger に対し `orphaned_mint` 判定を実行 | 境界以前の不在を偽陽性にしない。境界以降の消失のみ fail-close する |
+| CANDIDATE-P-RETRACT-003 | 実 repo の全 request / receipt に対し retraction 無しで消えた request を列挙 | 既存の正常終端を偽陽性にしない |
