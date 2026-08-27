@@ -2467,3 +2467,23 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `CANDIDATE-PACKPUB-002` | B-2。manifest `artifacts[]`を1件欠落・余剰・digest driftさせる、またはtree walk、allowlist、current worktree、Pack checkoutの残存ファイルを暗黙追加する | explicit inventory外のbytesを出荷集合に入れず、identity/tar/asset digest不一致をfail-close。fallback、publish、pointer write 0 |
 | `CANDIDATE-PACKPUB-003` | B-3。tag、GitHub Release、asset upload、channel pointer、promotion、rollbackの各操作からapproval receipt、before-state CAS、nonce/expiry、execution receipt、auditor観測を1項ずつ欠落させる | typed deny、remote write 0。local `sync-plan`/`sync-stage`のcommand listをremote承認の代用にしない |
 | `CANDIDATE-PACKPUB-004` | B-4。immutable tag/Releaseの削除・付替え、旧pointerの上書き、rollback CAS後の応答不明、target attestation不一致、部分公開を各1点変異する | supersede-forwardだけを許可し、partial/indeterminate/`rollback_failed`を保持。force push/tag reuse/成功への丸め 0 |
+
+### PLAN-L7-508 local staging/auditor oracle (Issue #403)
+
+`CANDIDATE-PACKPUB-001/002`のうちremote操作を必要としないlocal境界を次へ昇格する。
+`CANDIDATE-PACKPUB-003/004`はremote publication adapterまでcandidateのまま残す。
+
+| ID | fixture / mutation | expected |
+| --- | --- | --- |
+| `U-PACKPUB-STAGE-001` | parsed manifest v2、semantic sidecar、明示inventory | Pack commit entryはmanifest destination＋control sidecarだけ、Release assetはtar.gz＋checksumのexact 2件 |
+| `U-PACKPUB-STAGE-002` | YAML表現・map挿入順序の変異 | semantic snapshotが同じなら同一digestになり、文字列表現へ依存しない |
+| `U-PACKPUB-STAGE-003` | entryの欠落・余剰・順序・path・mode・size・content digest drift | 各単独変異をpreflight denyし、暗黙補完0 |
+| `U-PACKPUB-STAGE-004` | sidecar semantic manifest drift | parsed semantic identityの不一致をdenyする |
+| `U-PACKPUB-STAGE-005` | sealed bytesの呼出し元mutation | plan内部のcommit entryとasset bytesは不変 |
+| `U-PACKPUB-STAGE-006` | write/apply/discard fault、destination未存在snapshot | snapshot値が`undefined`でもcapture済みならrestoreを実行し、prior stateを復元できる各faultは`applied: 0`を返す |
+| `U-PACKPUB-STAGE-007` | 成功経路 | apply exactly onceで完了する |
+| `U-PACKPUB-STAGE-008` | snapshot failure | write/staging/apply/discard/restoreを全て0回にする |
+| `U-PACKPUB-STAGE-009` | restore failure | 復元不能を`indeterminate`として保持する |
+| `U-PACKPUB-STAGE-010` | exact observation、commit/asset/digest欠落・変異、observer failure | exact一致だけ`attested`、差分は`partial_publication`、観測不能は`indeterminate`。remote write 0 |
+
+実行対応: `tests/pack-publication-staging.test.ts` (`U-PACKPUB-STAGE-001〜010`)。
