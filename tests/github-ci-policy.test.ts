@@ -34,8 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
+      - uses: actions/setup-node@v4
+      - run: npm ci
       - name: classify changed files
         id: classify
         run: |
@@ -45,13 +45,13 @@ jobs:
             --base-sha "\${{ github.event.pull_request.base.sha }}" \
             --before-sha "\${{ github.event.before }}" \
             --github-output "$GITHUB_OUTPUT"
-      - run: bun src/cli.ts github guard
-      - run: bun run typecheck
-      - run: bun src/cli.ts db rebuild --json
-      - run: bun run test
-      - run: bun run lint
-      - run: bun src/cli.ts audit quality --include-tests
-      - run: bun src/cli.ts doctor
+      - run: node src/cli.ts github guard
+      - run: npm run typecheck
+      - run: node src/cli.ts db rebuild --json
+      - run: npm run test
+      - run: npm run lint
+      - run: node src/cli.ts audit quality --include-tests
+      - run: node src/cli.ts doctor
       - name: doc lane source doctor
         if: ${LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane
@@ -76,8 +76,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
+      - uses: actions/setup-node@v4
+      - run: npm ci
       - name: classify changed files
         id: classify
         run: |
@@ -87,23 +87,23 @@ jobs:
             --base-sha "\${{ github.event.pull_request.base.sha }}" \
             --before-sha "\${{ github.event.before }}" \
             --github-output "$GITHUB_OUTPUT"
-      - run: bun src/cli.ts github guard
+      - run: node src/cli.ts github guard
       - if: ${LANE_FULL_IF}
-        run: bun run typecheck
+        run: npm run typecheck
       - if: ${LANE_FULL_IF}
-        run: bun src/cli.ts db rebuild --json
+        run: node src/cli.ts db rebuild --json
       - if: ${LANE_FULL_IF}
-        run: bun run test
+        run: npm run test
       - if: ${LANE_DOC_IF}
-        run: bun run test:doc-lane
+        run: npm run test:doc-lane
       - name: doc lane source doctor
         if: ${LANE_DOC_IF}
         run: node src/cli.ts doctor --profile source-doc-lane
-      - run: bun run lint
+      - run: npm run lint
       - if: ${LANE_FULL_IF}
-        run: bun src/cli.ts audit quality --include-tests
+        run: node src/cli.ts audit quality --include-tests
       - if: ${LANE_FULL_IF}
-        run: bun src/cli.ts doctor
+        run: node src/cli.ts doctor
 `;
 
 const PACK_WORKFLOW = `
@@ -121,13 +121,13 @@ jobs:
   harness-check:
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run typecheck
-      - run: bun run test:pack
-      - run: bun run lint
-      - run: bun src/cli.ts setup --solo
-      - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:pack
+      - run: npm run lint
+      - run: node src/cli.ts setup --solo
+      - run: node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
 const LEGACY_SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
