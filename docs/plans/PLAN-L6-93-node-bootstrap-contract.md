@@ -472,11 +472,11 @@ bare-name形と相対PATH entry形については等価性を主張しない。�
 | `CAND-NODEBOOT-022` | §5.2.1 全文一致 (分岐・存在判定の再流入) | 同上。構文解析・データフロー追跡を要さない |
 | `CAND-NODEBOOT-023` | §5.4 (2 receiptの論理積) | 片側欠落でも撤去をfail-close |
 | `CAND-NODEBOOT-024` | §5.2.1 全文一致 (canonical以外の起動 / 非不活性comment) | `eval` / 代入内command substitution / backtick / source / 別`exec` / 別shebang / `#requires` 等を個別caseで固定 |
-| `CAND-NODEBOOT-025` | §5.2.1 比較手順 (受理4集合の外) | BOM / lone CR / NUL / 末尾追加空行 / trailing whitespace / NFD / homoglyph / zero-width / 不正UTF-8 をbyte列不一致で落とす |
+| `CAND-NODEBOOT-025` | §5.2.1 比較手順 (file別受理4集合の外) | lone CR / NUL / 末尾追加空行 / trailing whitespace / NFD / homoglyph / zero-width / 不正UTF-8 をbyte列不一致で落とす (BOMは029/030が持つ) |
 | `CAND-NODEBOOT-026` | §5.5 起動形の等価性 | symlink形はcanonical == 現行main形 (等価oracle)。bare-name / 相対PATH entry は実測値を固定 |
 | `CAND-NODEBOOT-027` | §5.4 receipt束縛tuple | stale / wrong-revision / wrong-generation / wrong-artifact の4caseを独立に落とす |
 | `CAND-NODEBOOT-028` | §5.4 `retirement_subject` | 過去成立receiptの別commitへの流用をfail-close |
-| `CAND-NODEBOOT-029` | §5.2.1 `C_ps1` (BOM必須) | BOM欠落 / BOM重複 / 別encodingを落とす |
+| `CAND-NODEBOOT-029` | §5.2.1 `C_ps1` (BOM必須) | BOM欠落 / BOM重複 / **BOM 1個だがbyte相違 (`EF BB BE`等)** / 別encodingを独立caseで落とす |
 | `CAND-NODEBOOT-030` | §5.2.1 `C_posix` (BOM禁止) | 先頭BOM混入を落とす (shebang破壊) |
 
 021 / 022 / 024 / 025 / 029 / 030 は**同一の全文一致規則に対する別々の攻撃case**であり、
