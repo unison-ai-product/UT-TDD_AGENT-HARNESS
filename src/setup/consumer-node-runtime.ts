@@ -3,6 +3,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const REVISION = /^[a-f0-9]{40}$/;
+const RELEASE_ID = /^rel-sha256:[a-f0-9]{64}$/;
 const GENESIS = "genesis";
 
 export type ConsumerRuntimeDenyReason =
@@ -147,7 +148,7 @@ function validIdentity(identity: ConsumerNodeRuntimeIdentity): boolean {
     DIGEST.test(identity.package_lock_digest) &&
     DIGEST.test(identity.source_graph_digest) &&
     DIGEST.test(identity.compiled_esm_digest) &&
-    identity.release_id.length > 0 &&
+    RELEASE_ID.test(identity.release_id) &&
     identity.materializer_version.length > 0 &&
     DIGEST.test(identity.artifact_set_digest) &&
     DIGEST.test(identity.control_manifest_digest) &&

@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-27
 updated: 2026-08-27
 owner: PM / PO / Codex
@@ -57,6 +57,10 @@ Issue #420 は、PR #415 で明らかになった「setup元Pack checkoutの`src
 断線を、consumer内だけで完結するNode runtimeへ置き換える実装前のpair-freezeである。
 `PLAN-L6-101`のconsumer隔離、`PLAN-L7-496`のconsumer-local namespace・digest admission・PF5
 port再利用を前提とし、sealed Node generationをconsumerのruntime rootへ原子的に配置する。
+
+実装開始時点でPR #430（PLAN-L6-93 §5のNode/bootstrap契約）はmainへmerge済みであり、同契約を
+入力として継承する。L6-93のfrontmatter状態やschemaはこのPLANで変更せず、#432 identity bootstrap
+や#414 publicationを依存解消の根拠にしない。
 
 本PLANは、配置・identity・receipt・hook解決・原子更新・rollback・負系oracleを凍結する。
 実装、#432のtracked project identity bootstrap、#414のremote publication、source側の残余Bun

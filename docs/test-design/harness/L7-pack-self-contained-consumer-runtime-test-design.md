@@ -2,21 +2,26 @@
 layer: L7
 executed_at_layer: L7
 artifact: test-design
-status: draft
+status: confirmed
 plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
 ---
 
 # Sealed self-contained consumer Node runtime test design
 
 `PLAN-L6-101`のconsumer隔離、`PLAN-L7-496`のadmission再利用、`PLAN-L6-93 §5`のsealed Node
-generation tupleを、consumer-local runtimeの実装と対になるRED oracleへ固定する。readiness判定の
-変更所有は`src/setup/distribution.ts#buildConsumerReadinessPlan`であり、candidateは
-docs-only freeze時点では未実装であり、既存の`CANDIDATE-PACKISO-*` / `CAND-NODEBOOT-*`の代替や
-Green証跡ではない。各mutationは他の入力が整合した状態で単独に変える。
+generation tupleを、consumer-local runtimeの実装と対になるoracleへ固定する。readiness判定の
+変更所有は`src/setup/distribution.ts#buildConsumerReadinessPlan`である。既存の
+`CANDIDATE-PACKISO-*` / `CAND-NODEBOOT-*`は再宣言せず、各mutationは他の入力が整合した状態で
+単独に変える。#430 merge済みのL6-93 §5を継承し、schema自体は変更しない。
+
+Implementation promotion (this revision): the frozen `CANDIDATE-U-PACKNODE-001..015` rows are
+promoted one-to-one to the executable `U-PACKNODE-001..015` cases in
+`tests/consumer-node-runtime.test.ts`; the performance row is `P-PACKNODE-001`. The candidate
+prefix remains here as design provenance, while the executable IDs are the implementation trace.
 
 | Oracle | 変異軸 / Given・When | 期待結果 |
 | --- | --- | --- |
-| `CANDIDATE-U-PACKNODE-001` | generation ID、subject revision、artifact digest、Node/npm identity、package-lock digest、compiled ESM digest、release identity、materializer version、consumer namespace、consumer/runtime root、operation、attemptを各1軸で欠落・変異する | sealed receipt chainを再計算して単独変異を拒否し、generation write、activation、receipt append、process launchを全て0。別receiptの存在だけで補完しない |
+| `U-PACKNODE-001` | generation ID、subject revision、artifact digest、Node/npm identity、package-lock digest、compiled ESM digest、release identity、materializer version、consumer namespace、consumer/runtime root、operation、attemptを各1軸で欠落・変異する | sealed receipt chainを再計算して単独変異を拒否し、generation write、activation、receipt append、process launchを全て0。別receiptの存在だけで補完しない |
 | `CANDIDATE-U-PACKNODE-002` | consumerにsentinel付き`src/cli.ts`、`src/setup/index.ts`、`node_modules/ut-tdd/src/cli.ts`を置き、identity/receipt無し・generic path有り・sealed consumer generation有りを各1軸で実行する | generic source、setup checkout、node_modules TypeScriptを一度も起動しない。identity無しは`consumer_runtime_absent`、sealed generation有りだけがconsumer-local compiled ESMを起動する |
 | `CANDIDATE-U-PACKNODE-003` | wrapper/hookへsetup元絶対path、`UT_TDD_SOURCE_CLI`、`SETUP_SOURCE_CLI`、cwd変更、PATH差替え、global cache pathを各1軸で注入する |解決先はconsumerの固定`runtime/activation/active.json` single active pointerからsealed bundleへだけ。外部pathをread/open/statせず、process launch 0または正規bundleだけを起動する |
 | `CANDIDATE-U-PACKNODE-004` | `readConsumerIdentity`、`verifySealedAggregate`、`verifyNodeGeneration`、lock取得、prior pointer snapshot、staging、generation/receipt write、fsync、atomic publish bundle、active verify、outbox reconcile、lock releaseを各1段階でthrow・順序反転・二重呼出しする | 正常系のport順序を一度ずつ実行し、先行失敗では後続port 0。activation前はstagingだけを補償し、bundle publish後のverify/ack faultはread-only reconcileを高々1回行う。一次エラーを保持し、unknown/partialまたはrelease失敗は`indeterminate`/fail-close、成功扱い・launch 0 |

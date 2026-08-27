@@ -91,7 +91,7 @@ describe("sealed self-contained consumer Node runtime", () => {
       const id = identity();
       (id as unknown as Record<string, unknown>)[field] = field === "attempt" ? -1 : "mutated";
       const events: string[] = [];
-      expect(() => bundleFor(id)).toThrow();
+      expect(() => bundleFor(id), field).toThrow();
       expect(events).toEqual([]);
     }
   });
