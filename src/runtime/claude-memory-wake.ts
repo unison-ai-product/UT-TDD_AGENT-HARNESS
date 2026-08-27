@@ -690,7 +690,27 @@ function pruneRuntimeFiles(root: string, nowMs: number): void {
   for (const directory of [root, join(root, "inbox")]) {
     if (!existsSync(directory)) continue;
     for (const name of readdirSync(directory)) {
-      if (name.endsWith(".terminal.json")) continue;
+      if (name.endsWith(".terminal.json")) {
+        const path = join(directory, name);
+        try {
+          const stat = statSync(path);
+          const marker = readTerminalMarker(path);
+          const evidencePath = marker
+            ? join(root, "inbox", `${inboxFileStem(marker.entryId)}.json`)
+            : null;
+          // A marker suppresses delivery while its inbox JSON is retained as
+          // evidence. Only an old orphan marker is eligible for cleanup.
+          if (
+            stat.isFile() &&
+            nowMs - stat.mtimeMs > RETENTION_MS &&
+            (evidencePath === null || !existsSync(evidencePath))
+          )
+            unlinkSync(path);
+        } catch {
+          // 競合削除は次回GCへ委ねる。
+        }
+        continue;
+      }
       if (!name.endsWith(".claim") && !name.endsWith(".generation") && !name.endsWith(".json"))
         continue;
       const path = join(directory, name);
@@ -1013,6 +1033,16 @@ export async function waitForClaudeMemory(input: {
   );
   const started = Date.now();
   const unclaimable = new Set<string>();
+  // PR observation is an external synchronous port (normally `gh`). Cache both
+  // facts and missing facts for this wake cycle so a long poll never repeats
+  // the same network observation for the same PR.
+  const pullRequestStateCache = new Map<number, ClaudeInboxPullRequestObservation | undefined>();
+  const observePullRequestOnce = (pr: number) => {
+    if (!pullRequestStateCache.has(pr)) {
+      pullRequestStateCache.set(pr, input.pullRequestState?.(pr));
+    }
+    return pullRequestStateCache.get(pr);
+  };
   while (Date.now() - started < maxWaitMs) {
     let currentGeneration: string | null = null;
     try {
@@ -1052,7 +1082,7 @@ export async function waitForClaudeMemory(input: {
         candidate.purpose !== "review"
       )
         continue;
-      const observation = input.pullRequestState(candidate.pr);
+      const observation = observePullRequestOnce(candidate.pr);
       const replacementExists = inbox.some(
         (replacement) =>
           replacement.purpose === "review" &&
