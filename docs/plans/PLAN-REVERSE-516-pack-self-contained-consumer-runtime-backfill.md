@@ -63,9 +63,14 @@ generation、wrapper解決、原子install/update/rollback、source/Pack checkou
   解決は許さず、欠落・identity mismatch・digest drift・外部解決をtyped `blocked`で返すこと。
 - install/update/rollbackのport順序、private staging、atomic activation、prior state保持、deny時
   apply/write/process 0を実測すること。
-- `atomicActivateMarker`後のactive verify/receipt append faultでは、activation前に取得したprior
-  marker snapshotへ新generation/attemptを期待値とするCAS restoreを行うこと。restore failureまたは
-  CAS不一致は`indeterminate`/fail-closeとし、成功へ丸めないこと。
+- `atomicPublishActivationBundle`後のactive verify/receipt/history ack faultでは、markerだけをrestore
+  せず、durable outbox operation stateをread-only reconcileすること。commit成否不明、partial commit、
+  unknown/new stateは`indeterminate`/fail-closeとし、成功へ丸めないこと。
+- marker、receipt、historyは同一consumer-local durable outbox operationのatomic publish単位へ束縛し、
+  ack-loss/commit成否不明はread-only reconcileで判定すること。部分commit、unknown/new state、
+  prior state不変性を確定できない状態を成功扱いせず、新write 0とすること。
+- acquireConsumerLock後の全経路は`finally`で`releaseConsumerLock`をexactly once呼び、release throwは
+  typed `indeterminate`としてprimary errorを保持すること。
 - Linux/Windowsのcanonical path、symlink/junction/reparse、8.3 alias、権限不足、未解決path、
   reserved nameを同じconsumer identity境界へ戻すこと。
 - setup元checkout/source worktree削除後もconsumer-local compiled ESMとreceiptだけで再現できること。
@@ -75,11 +80,12 @@ remote publication、#418 canaryは本Reverseで再定義しない。
 
 ## R2〜R4 判定条件
 
-- **R2**: `CANDIDATE-U-PACKNODE-001..011` / `CANDIDATE-P-PACKNODE-001` が同一PLAN revision・
+- **R2**: `CANDIDATE-U-PACKNODE-001..013` / `CANDIDATE-P-PACKNODE-001` が同一PLAN revision・
   exact HEAD・実装成果物へ1:1 traceし、Linux/Windowsの実測証跡とreceipt identityを持つ。
 - **R3**: 非著者reviewが`hasUtTddCli`だけの偽ready、generic source誤起動、申告digest信用、fallback、
-  partial activation、activation後faultでのprior marker復元、alias/permission escape、checkout
-  削除後の起動をclaim-blind/spec-blindで攻撃し、全blockingをcitation付きで閉じる。
+  partial activation、activation/receipt/history ack-loss、unknown outbox state、lock release throw、
+  activation後faultでのprior state復元、alias/permission escape、checkout削除後の起動をclaim-blind/
+  spec-blindで攻撃し、全blockingをcitation付きで閉じる。
 - **R4**: 不足が実証された場合だけ`PLAN-L6-101` §1〜§5へbackfillし、既存`CANDIDATE-PACKISO`
   契約を重複宣言せず、Forwardへ`gap-only`で再合流する。実装側のsource path、Pack remote、
   Bun retirement、#432を変更しない。

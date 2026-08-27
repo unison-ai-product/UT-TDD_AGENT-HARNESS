@@ -15,7 +15,7 @@ pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-
 next_pair_freeze: L7
 transition_direction: design_to_implementation
 implementation_disposition: none
-implementation_target: src/setup/distribution.ts#buildConsumerReadinessPlan
+implementation_target: src/setup/consumer-node-runtime.ts
 agent_slots:
   - role: se
     slot_label: "SE - sealed generationのconsumer-local materializeとidentity束縛を実装する"
@@ -117,8 +117,9 @@ source worktree、global `node_modules`を解決候補にしない。active mark
 
 ### 2.3 readiness判定の変更所有 (#420)
 
-Issue #420で変更するreadiness判定の唯一の所有者は、既存の
-`src/setup/distribution.ts#buildConsumerReadinessPlan`である。wrapper、Claude/Codex hook、
+Issue #420で変更するruntime本体の主targetは`src/setup/consumer-node-runtime.ts`である。readiness
+判定の追加owned implementation surfaceは既存の`src/setup/distribution.ts#buildConsumerReadinessPlan`
+であり、両者を同一PLAN revisionへ束縛する。wrapper、Claude/Codex hook、
 setup callerはこの関数が返すplanを消費するだけで、`hasUtTddCli`、package binの存在、source
 checkoutの存在、任意pathの解決結果から独自にreadyを導出しない。PF5/L6-93はsealed aggregate
 とNode receiptを検証する正本であり、consumer readinessの判定を代行しない。
@@ -176,9 +177,8 @@ readConsumerIdentity
 → createPrivateStaging
 → writeGenerationAndReceipt
 → fsyncStaging
-→ atomicActivateMarker
+→ atomicPublishActivationBundle
 → verifyActiveGeneration
-→ appendConsumerReceipt
 → releaseConsumerLock
 ```
 
@@ -189,15 +189,13 @@ markerの存在しない状態を含むbyte-for-byte snapshot、canonical marker
 `generation_id`/`attempt`を固定する。activation markerの更新は正常系で一回だけで、既存active
 markerを上書き編集せず、新しいimmutable generationを指すatomic replaceとして行う。
 
-activation後の`verifyActiveGeneration`または`appendConsumerReceipt`のfaultは、まず新たに公開
-した`generation_id`/`attempt`をCAS期待値として`compareAndSwapRestorePriorActiveMarker`を一度
-だけ実行する。CASが一致した場合だけ、snapshotしたprior marker（不存在も含む）を正確に復元し、
-新generationはimmutableな非active artifactとして残す。復元後もprocess launchは0である。
-CAS不一致、restore error、復元後の再検証失敗はprior markerを強制上書きせず
-`indeterminate`（fail-close）とし、一次faultを保持する。restore port自体の暗黙retryは持たせない。
-`appendConsumerReceipt`はprivate staged bytesを検証してからatomic replaceするため、commit前の
-faultではprior receipt/historyを変更しない。commit成否が不明なfaultも同じCAS restoreを試み、
-成功扱い・launch・外部fallbackを禁止して`indeterminate`を返す。
+activation後の`verifyActiveGeneration`またはpublish ackのfaultは、marker・receipt・historyを
+同じconsumer-local outbox operationへ束縛する`atomicPublishActivationBundle`で扱う。bundleは
+active marker、consumer receipt、append-only history、operation stateを同一atomic publish単位で
+記録し、markerだけをrestoreしてreceipt/historyを残す補償を禁止する。ack-loss/commit成否不明は
+durable operation stateをread-only reconcileして、bundleの全体commitまたは全体未commitだけを確定
+する。reconcileで新writeを行わず、unknown/new state、bundleの部分commit、CAS不一致、reverify
+失敗は`indeterminate`（fail-close）として一次faultを保持し、process launchを0にする。
 
 updateはprior generationを削除せず、新generationのreceiptが検証済みになってからactive markerを
 一度だけ切り替える。rollbackは同一consumer namespaceに既に記録されたprior attested generation
@@ -205,10 +203,14 @@ updateはprior generationを削除せず、新generationのreceiptが検証済�
 未記録generation、別consumer、digest変異、異なるNode generation tupleは拒否する。L6-93の
 cutover chainを巻き戻す操作、cross-revision cutover、force pointer mutationは行わない。
 
-上記の補償はactivationを成功とみなすためのretryではない。正常系はactivation一回、fault時は
-activation後の検証とreceipt publishを含めてrestore CASを高々一回とし、restore成功時に限って
-prior active markerのbytes、mode、path、generation、attemptを不変と判定できる。restore不能時は
-active stateの確定を拒否し、`indeterminate`/fail-closeを証跡へ残す。
+上記のpublish/reconcileはactivationを成功とみなすためのretryではない。正常系はbundle publish
+一回、fault時のreconcileはread-only一回とし、全体未commitを確認できた場合だけprior marker、
+receipt、historyのbytes/mode/pathを不変と判定できる。全体commitまたはprior stateの不変性を確定
+できない場合はactive stateを成功扱いせず、`indeterminate`/fail-closeを証跡へ残す。
+
+lock取得後の全分岐（正常終了、activation前fault、bundle publish後fault、primary error、
+indeterminateを含む）は`finally`で`releaseConsumerLock`をexactly once呼ぶ。releaseがthrowした
+場合はtyped `indeterminate`を返し、先行したprimary errorを置換せず保持する。
 
 ## 5. path・権限・OS境界
 
@@ -240,7 +242,7 @@ receipt・historyが不変であることである。generation/receiptを一つ
 
 ## 7. TDD / trace / Reverse
 
-pair artifactの`CANDIDATE-U-PACKNODE-001..011`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
+pair artifactの`CANDIDATE-U-PACKNODE-001..013`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
 `U-PACKNODE-*` / `P-PACKNODE-*`へ昇格する。各候補は一つの契約軸、実測command、exact PLAN
 revision、exact HEAD、Linux/Windows結果へ1:1 traceし、既存`CANDIDATE-PACKISO-001..007`と
 `CAND-NODEBOOT-021..030`を再宣言しない。
