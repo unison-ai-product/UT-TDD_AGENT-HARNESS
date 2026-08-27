@@ -84,7 +84,12 @@ export type LiveReviewVerdictResult =
       readonly ok: true;
       readonly projection: Extract<ReviewVerdictProjectionResult, { ok: true }>;
     }
-  | { readonly ok: false; readonly reason: string };
+  | {
+      readonly ok: false;
+      readonly reason: string;
+      /** Preserve a verified verdict for audit even when execution failed. */
+      readonly projection?: Extract<ReviewVerdictProjectionResult, { ok: true }>;
+    };
 
 export interface LiveReviewConsumerPorts {
   readonly providerAvailable: (provider: ReviewProvider) => boolean;
@@ -210,6 +215,13 @@ export function consumeLiveReview(input: {
     input.ports.publishReceipt(projection);
   } catch {
     return { ok: false, reason: "derived_verdict_publish_failed" };
+  }
+  if (projection.receipt.executionOutcome?.status === "failed") {
+    return {
+      ok: false,
+      reason: projection.receipt.executionOutcome.reason,
+      projection,
+    };
   }
   return { ok: true, projection };
 }

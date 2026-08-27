@@ -51,13 +51,49 @@ export function executeLiveReviewDelegation(input: {
     [input.cliPath ?? join(input.repoRoot, "src", "cli.ts"), input.provider, ...input.args],
     { cwd: input.repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
   );
-  if (child.status !== 0) return { ok: false, reason: "reviewer_execution_failed" };
   try {
     const execution = JSON.parse(child.stdout) as { review?: ReviewVerdictProjectionResult };
-    return execution.review ?? { ok: false, reason: "review_receipt_missing" };
+    const review = execution.review;
+    if (!review) return { ok: false, reason: "reviewer_execution_failed" };
+    // The delegated CLI already ran custody projection.  Preserve its typed
+    // failure (missing file, invalid identity, etc.) instead of replacing it
+    // with the transport-level process failure.
+    if (!review.ok) return review;
+    if (child.status !== 0) {
+      // Only accept a non-zero child exit when the child returned the custody
+      // projection produced by the verifier.  A typed outcome is retained for
+      // audit, while review-dispatch rejects it as merge-ready.
+      if (
+        review.receipt.executionOutcome?.status !== "failed" ||
+        review.receipt.executionOutcome.exitCode !== child.status
+      ) {
+        return { ok: false, reason: "reviewer_execution_failed" };
+      }
+    }
+    return review;
   } catch {
-    return { ok: false, reason: "review_receipt_invalid" };
+    return {
+      ok: false,
+      reason: child.status === 0 ? "review_receipt_invalid" : "reviewer_execution_failed",
+    };
   }
+}
+
+export function formatLiveReviewReceipt(
+  projection: Extract<ReviewVerdictProjectionResult, { ok: true }>,
+): string {
+  const receipt = projection.receipt;
+  const execution = receipt.executionOutcome;
+  return [
+    `PR #${receipt.pr} exact HEAD ${receipt.head} のcanonical review receipt。`,
+    `verdict=${receipt.verdict ?? "none"} blocking=${receipt.blockingFindings?.length ?? 0}`,
+    `reviewRevision=${receipt.reviewRevision}`,
+    `reviewerFamily=${receipt.reviewerFamily}`,
+    execution
+      ? `executionOutcome=${execution.status} exitCode=${execution.exitCode} reason=${execution.reason}`
+      : "executionOutcome=none",
+    `receiptDigest=${projection.digest}`,
+  ].join("\n");
 }
 
 function publishLiveReviewReceipt(
@@ -65,13 +101,7 @@ function publishLiveReviewReceipt(
   projection: Extract<ReviewVerdictProjectionResult, { ok: true }>,
 ): void {
   const receipt = projection.receipt;
-  const body = [
-    `PR #${receipt.pr} exact HEAD ${receipt.head} のcanonical review receipt。`,
-    `verdict=${receipt.verdict ?? "none"} blocking=${receipt.blockingFindings?.length ?? 0}`,
-    `reviewRevision=${receipt.reviewRevision}`,
-    `reviewerFamily=${receipt.reviewerFamily}`,
-    `receiptDigest=${projection.digest}`,
-  ].join("\n");
+  const body = formatLiveReviewReceipt(projection);
   writeMemory({
     repoRoot,
     input: {

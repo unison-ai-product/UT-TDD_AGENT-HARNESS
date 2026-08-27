@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -14,6 +15,7 @@ import { Command } from "commander";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { isOutsideRepo, registerDelegationCommands } from "../src/cli/delegation.ts";
 import {
+  canonicalizeReviewRequest,
   issueReviewRequest,
   projectReviewVerdict,
   REVIEW_VERDICT_FILE_ENV,
@@ -23,6 +25,11 @@ import {
 } from "../src/feedback/review-attestation.ts";
 import { analyzeReviewDispatch } from "../src/feedback/review-dispatch.ts";
 import { REVIEW_OUTPUT_CONTRACT } from "../src/feedback/review-verdict-contract.ts";
+import {
+  beginReviewAttempt,
+  reviewIdentityDigest,
+  reviewVerdictPath,
+} from "../src/feedback/review-verdict-custody.ts";
 
 const head = "a".repeat(40);
 const otherHead = "b".repeat(40);
@@ -147,7 +154,7 @@ describe("review attestation (U-RVATT)", () => {
     }
   });
 
-  it("U-RVATT-002: 非ゼロ終了の attestation は reviewer_exit_nonzero で receipt を作らない", () => {
+  it("U-RVATT-002: 有効 verdict は非ゼロ終了でも typed outcome 付きで保持し、gate は拒否する", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-exit-"));
     const verdictFile = join(root, "reviewer.verdict");
     try {
@@ -158,8 +165,30 @@ describe("review attestation (U-RVATT)", () => {
         attestation: attestation({ exitCode: 17 }),
         verdictFile,
       });
-      expect(result).toEqual({ ok: false, reason: "reviewer_exit_nonzero" });
-      expect(receiptFiles(root)).toEqual([]);
+      expect(result).toMatchObject({
+        ok: true,
+        receipt: {
+          verdict: "PASS",
+          executionOutcome: {
+            status: "failed",
+            exitCode: 17,
+            reason: "reviewer_exit_nonzero",
+          },
+        },
+      });
+      expect(receiptFiles(root)).toHaveLength(1);
+      if (!result.ok) return;
+      const issued = issueReviewRequest({ repoRoot: root, request: request() });
+      expect(issued).toMatchObject({ ok: true });
+      if (!issued.ok) return;
+      const dispatch = analyzeReviewDispatch({
+        requests: [issued.request],
+        receipts: [result.receipt],
+        prs: [{ pr: 731, headSha: head, state: "OPEN", checksGreen: true }],
+        now: "2026-07-31T02:00:00.000Z",
+      });
+      expect(dispatch.entries[0].state).not.toBe("merge_ready");
+      expect(dispatch.entries[0].reasons).toContain("reviewer_execution_failed");
 
       const strictRequest = {
         ...request(),
@@ -202,6 +231,94 @@ describe("review attestation (U-RVATT)", () => {
       expect(first).toMatchObject({ ok: true });
       expect(replay).toMatchObject({ ok: true });
       expect(receiptFiles(root)).toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-040: failed outcome receipt permits a new attempt and successful replacement", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-retry-"));
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const canonical = canonicalizeReviewRequest({
+      ...request(),
+      authorFamily: "codex",
+      reviewRevision: "review-rvatt-retry",
+    });
+    const digest = reviewIdentityDigest(canonical);
+    const writeVerdict = (attempt: number) => {
+      const verdictFile = reviewVerdictPath(root, digest, attempt);
+      mkdirSync(dirname(verdictFile), { recursive: true });
+      writeFileSync(
+        verdictFile,
+        [
+          "schema_version: ut-tdd.review-verdict/v1",
+          `request_digest: ${digest}`,
+          `attempt: ${attempt}`,
+          `pr: ${canonical.pr}`,
+          `exact_head: ${canonical.exactHead}`,
+          `review_revision: ${canonical.reviewRevision}`,
+          "reviewer_provider: claude",
+          "reviewer_model: claude-opus-5",
+          `invocation_nonce: ${canonical.invocationNonce}`,
+          "VERDICT: PASS",
+        ].join("\n"),
+        "utf8",
+      );
+      return verdictFile;
+    };
+    try {
+      const first = beginReviewAttempt({
+        repoRoot: root,
+        request: canonical,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      expect(first).toMatchObject({ ok: true, attempt: 1 });
+      if (!first.ok) return;
+      const firstVerdict = writeVerdict(1);
+      const failed = projectReviewVerdict({
+        repoRoot: root,
+        request: canonical,
+        attestation: attestation({
+          provider: "claude",
+          model: "claude-opus-5",
+          pr: canonical.pr,
+          head: canonical.exactHead,
+          reviewRevision: canonical.reviewRevision,
+          exitCode: 17,
+        }),
+        verdictFile: firstVerdict,
+      });
+      expect(failed).toMatchObject({
+        ok: true,
+        receipt: { executionOutcome: { status: "failed", exitCode: 17 } },
+      });
+
+      const second = beginReviewAttempt({
+        repoRoot: root,
+        request: canonical,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      expect(second).toMatchObject({ ok: true, attempt: 2 });
+      if (!second.ok) return;
+      const secondVerdict = writeVerdict(2);
+      const recovered = projectReviewVerdict({
+        repoRoot: root,
+        request: canonical,
+        attestation: attestation({
+          provider: "claude",
+          model: "claude-opus-5",
+          pr: canonical.pr,
+          head: canonical.exactHead,
+          reviewRevision: canonical.reviewRevision,
+          completedAt: "2026-07-31T01:06:00.000Z",
+          exitCode: 0,
+        }),
+        verdictFile: secondVerdict,
+      });
+      expect(recovered).toMatchObject({ ok: true, receipt: { verdict: "PASS" } });
+      if (recovered.ok) expect(recovered.receipt.executionOutcome).toBeUndefined();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -305,6 +422,30 @@ describe("review attestation (U-RVATT)", () => {
         now: "2026-07-31T02:01:00.000Z",
       });
       expect(dispatch.entries[0].breaches).toEqual(["verdict"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-RVATT-039: non-zero missing verdict remains distinct from a valid projection", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rvatt-nonzero-missing-"));
+    try {
+      const result = projectReviewVerdict({
+        repoRoot: root,
+        request: {
+          ...request(),
+          authorFamily: "codex",
+          reviewRevision: `rv1-${"d".repeat(64)}`,
+        },
+        attestation: attestation({
+          provider: "claude",
+          reviewRevision: `rv1-${"d".repeat(64)}`,
+          exitCode: 7,
+        }),
+        verdictFile: join(root, "missing.verdict"),
+      });
+      expect(result).toEqual({ ok: false, reason: "verdict_absent_after_provider_failure" });
+      expect(receiptFiles(root)).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

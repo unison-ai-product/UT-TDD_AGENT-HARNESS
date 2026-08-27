@@ -2,9 +2,10 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
-import type { ReviewReceipt } from "./review-dispatch.ts";
+import type { ReviewExecutionOutcome, ReviewReceipt } from "./review-dispatch.ts";
 import { extractVerdict, type ReviewVerdictName } from "./review-verdict-contract.ts";
 import {
+  appendReviewCustodyAudit,
   assertReviewVerdictPath,
   canonicalJson,
   canonicalReviewRevision,
@@ -209,6 +210,14 @@ export function projectReviewVerdict(input: {
   attestation: ReviewAttestation;
   verdictFile: string;
 }): ReviewVerdictProjectionResult {
+  const executionOutcome: ReviewExecutionOutcome | undefined =
+    input.attestation.exitCode === 0
+      ? undefined
+      : {
+          status: "failed",
+          exitCode: input.attestation.exitCode,
+          reason: "reviewer_exit_nonzero",
+        };
   if (input.attestation.exitCode !== 0) {
     // file欠落だけでは permission拒否、認証失敗、timeout、reviewer拒否を識別できない。
     // 書込不能を捏造せず、provider failure後にverdictが無いという観測事実だけをtyped化する。
@@ -219,7 +228,10 @@ export function projectReviewVerdict(input: {
     ) {
       return { ok: false, reason: "verdict_absent_after_provider_failure" };
     }
-    return { ok: false, reason: "reviewer_exit_nonzero" };
+    // A non-zero provider exit is not itself a reason to discard an otherwise
+    // valid, identity-bound verdict.  Continue through the same custody path
+    // and retain the typed outcome on the derived receipt.  The dispatch gate
+    // rejects that outcome, so this never turns a failed execution into PASS.
   }
   if (!existsSync(input.verdictFile)) {
     return { ok: false, reason: "verdict_file_missing" };
@@ -296,6 +308,7 @@ export function projectReviewVerdict(input: {
     verdict: extracted.value.verdict as ReviewVerdictName,
     blockingFindings: extracted.value.blockingFindings,
     at: input.attestation.completedAt,
+    ...(executionOutcome ? { executionOutcome } : {}),
   };
   if (strictCustody) {
     const directory = join(input.repoRoot, ".ut-tdd", "review", "receipts");
@@ -305,7 +318,40 @@ export function projectReviewVerdict(input: {
       try {
         const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
         if (canonicalJson(existing) !== canonicalJson(receipt)) {
-          return { ok: false, reason: "verdict_identity_conflict" };
+          const existingRecord =
+            existing !== null && typeof existing === "object"
+              ? (existing as Record<string, unknown>)
+              : undefined;
+          const outcome = existingRecord?.executionOutcome;
+          const retryable =
+            existingRecord?.memoryId === receipt.memoryId &&
+            existingRecord?.pr === receipt.pr &&
+            existingRecord?.head === receipt.head &&
+            existingRecord?.reviewRevision === receipt.reviewRevision &&
+            existingRecord?.reviewerFamily === receipt.reviewerFamily &&
+            existingRecord?.kind === "verdict" &&
+            outcome !== null &&
+            typeof outcome === "object" &&
+            (outcome as Record<string, unknown>).status === "failed" &&
+            (outcome as Record<string, unknown>).reason === "reviewer_exit_nonzero" &&
+            Number.isSafeInteger((outcome as Record<string, unknown>).exitCode) &&
+            ((outcome as Record<string, unknown>).exitCode as number) > 0;
+          if (!retryable) return { ok: false, reason: "verdict_identity_conflict" };
+          appendReviewCustodyAudit(input.repoRoot, {
+            kind: "superseded_receipt",
+            requestDigest: reviewRequestDigest(input.request),
+            attempt: expectedAttempt as number,
+            exactHead: input.request.exactHead,
+            verdictPath: input.verdictFile,
+            recordedAt: input.attestation.completedAt,
+            reason: "retry_failed_receipt",
+            provider: input.attestation.provider,
+            model: input.attestation.model,
+            receiptDigest: createHash("sha256")
+              .update(canonicalJson(existing), "utf8")
+              .digest("hex"),
+          });
+          writeFileSync(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
         }
       } catch {
         return { ok: false, reason: "receipt_unreadable" };

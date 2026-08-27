@@ -381,6 +381,65 @@ describe("live review projection (U-RVATT-023..026)", () => {
     }
   });
 
+  it("U-RVATT-038 publishes a non-zero outcome but does not report review completion", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-live-review-nonzero-"));
+    try {
+      const memoryPath = join(root, ".ut-tdd", "memory", "feedback-d3a.md");
+      mkdirSync(join(root, ".ut-tdd", "memory"), { recursive: true });
+      writeFileSync(memoryPath, "review task", "utf8");
+      const canonical = issueReviewRequest({ repoRoot: root, request: canonicalRequest });
+      if (!canonical.ok) throw new Error("fixture");
+      const envelope: ClaudeReviewInboxEntry = {
+        schemaVersion: "ut-tdd.claude-inbox/v3",
+        purpose: "review",
+        id: "memory:d3a:review",
+        memoryId: canonicalRequest.memoryId,
+        body: "task",
+        originRuntime: "codex",
+        operationId: "review-d3a-nonzero",
+        targetWorkspaceId: "a".repeat(64),
+        createdAt: canonicalRequest.requestedAt,
+        requestDigest: canonical.digest,
+        requestPath: relative(root, canonical.path),
+        memoryPath: relative(root, memoryPath),
+        pr: canonicalRequest.pr,
+        exactHead: canonicalRequest.exactHead,
+        reviewRevision: canonicalRequest.reviewRevision,
+        authorFamily: canonicalRequest.authorFamily,
+      };
+      const nonZeroProjection = {
+        ...projection,
+        receipt: {
+          ...projection.receipt,
+          executionOutcome: {
+            status: "failed" as const,
+            exitCode: 7,
+            reason: "reviewer_exit_nonzero" as const,
+          },
+        },
+      };
+      const publishReceipt = vi.fn();
+      const result = consumeLiveReview({
+        repoRoot: root,
+        envelope,
+        ports: {
+          providerAvailable: vi.fn(() => true),
+          resolveTaskFile: vi.fn(() => memoryPath),
+          runReview: vi.fn(() => nonZeroProjection),
+          publishReceipt,
+        },
+      });
+      expect(result).toEqual({
+        ok: false,
+        reason: "reviewer_exit_nonzero",
+        projection: nonZeroProjection,
+      });
+      expect(publishReceipt).toHaveBeenCalledWith(nonZeroProjection);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-RVATT-025 persists the receipt before derived publishers", () => {
     const order: string[] = [];
     const ports = verdictPorts({

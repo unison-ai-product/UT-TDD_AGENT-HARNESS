@@ -1643,7 +1643,7 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | ID | 設計境界 | fixture / mutation | expected |
 | --- | --- | --- | --- |
 | `U-RVATT-001` | family 証明 | caller が `reviewerFamily=claude` を混入、attestation.provider=`codex` | receipt family は `codex`、`at=completedAt`。自己申告で上書き不可 |
-| `U-RVATT-002` | exit fail-close | exitCode=17 と有効 verdict file | `reviewer_exit_nonzero`、receipt file 0 |
+| `U-RVATT-002` | exit outcome custody | exitCode=17 と有効 identity-bound verdict file | typed `executionOutcome` 付き receipt を保持するが、`reviewer_execution_failed` で merge-ready にしない |
 | `U-RVATT-003` | receipt replay | 同一 request / attestation / verdict を2回投影 | receipt file 1、同一digestへ収束 |
 | `U-RVATT-004` | digest 実効性 | `completedAt` の末尾ミリ秒を `000` から `001` へ1 byte変更 | receipt file 2、digest collision を許さない |
 | `U-RVATT-005` | CLI identity fail-close | review_lane role で `--review-head` を欠落 | stdout空、`review_head_required`、exit 1 |
@@ -1665,13 +1665,17 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-RVATT-034` | retry / supersede | 同一digestのattempt-1後に同族model変更でattempt-2、receipt後のattempt追加、別family変異 | `superseded_attempt`監査後に最新attemptだけを1 receiptへ投影。receipt後とfamily変更は拒否 |
 | `U-RVATT-035` | receipt後cleanup | receipt前cleanup、receipt後scratch削除、cleanup失敗を注入 | receipt前は0、receipt後receipt保持。失敗はcommon-dir `cleanup_pending` typed eventへ記録 |
 | `U-RVATT-036` | real composition closure | `tests/review-live-cli.test.ts` と実repo fixtureでdispatch→consume→repo-local verdict→receipt | current exact HEADだけallow、欠落/外部/wrong-headはdeny。stdout-onlyやmerge bypass 0 |
+| `U-RVATT-037` | non-zero verdict preservation | `tests/review-live-cli.test.ts`。valid identity-bound verdict fileを書いた provider が exit 7 | child JSON の typed projection を保持し、verdictを捏造せず `executionOutcome.exitCode=7` を記録 |
+| `U-RVATT-038` | non-zero merge fail-close | `tests/review-attestation.test.ts`。outcome付き PASS/PASS-WEAK receiptを current-head/green PRへ投入 | D1 reason=`reviewer_execution_failed`、state は `merge_ready` 以外 |
+| `U-RVATT-039` | non-zero missing/invalid separation | non-zero + verdict欠落、wrong envelope、外部 path | `verdict_absent_after_provider_failure` / identity/path reason、valid receipt 0。provider failureから verdictを補完しない |
 | `U-RVWAKE-010` | 長い identity の inbox 衝突防止 | `tests/claude-memory-wake.test.ts`。legacy の安全化 stem が同じになる長い `memory_id` へ異なる `operationId` を与え、publish/claim/GC の全経路を実行 | operationId の hash suffix を含む別ファイルへ分離され、両 payload が保持される。長さ制限だけで suffix を落とす変異は同一path衝突またはpayload消失で RED |
 
 実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)、
 `tests/live-review-projection.test.ts` / `tests/claude-memory-wake.test.ts` / `tests/cli-delegation.test.ts` /
 `tests/dependency-drift.test.ts` (`U-RVATT-023`〜`028`)。
 `tests/review-verdict-custody.test.ts` (`U-RVATT-030`〜`035`)、
-`tests/review-live-cli.test.ts` (`U-RVATT-036`)。
+`tests/review-live-cli.test.ts` (`U-RVATT-036`〜`037`)、
+`tests/live-review-projection.test.ts` / `tests/review-attestation.test.ts` (`U-RVATT-038`〜`039`)。
 既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)

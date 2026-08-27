@@ -14,7 +14,11 @@ import { join, relative } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claudeReviewVerdictEditRule } from "../src/cli/delegation.ts";
-import { executeLiveReviewDelegation, registerLiveReviewCommands } from "../src/cli/review-live.ts";
+import {
+  executeLiveReviewDelegation,
+  formatLiveReviewReceipt,
+  registerLiveReviewCommands,
+} from "../src/cli/review-live.ts";
 import {
   issueReviewRequest,
   type ReviewVerdictProjectionResult,
@@ -431,4 +435,105 @@ process.stdin.on("end", () => {
       else process.env.UT_TDD_CLAUDE_BIN = previous;
     }
   }, 30_000);
+
+  it("U-RVATT-037 preserves a valid verdict when the provider exits non-zero", () => {
+    const { root, memoryPath } = fixture();
+    const binRoot = mkdtempSync(join(tmpdir(), "ut-review-provider-nonzero-"));
+    roots.push(binRoot);
+    const helper = join(binRoot, "write-verdict.cjs");
+    writeFileSync(
+      helper,
+      String.raw`const fs = require("node:fs");
+let prompt = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => { prompt += chunk; });
+process.stdin.on("end", () => {
+  const fields = [
+    "schema_version", "request_digest", "attempt", "pr", "exact_head",
+    "review_revision", "reviewer_provider", "reviewer_model", "invocation_nonce",
+  ].map((key) => {
+    const match = prompt.match(new RegExp("^" + key + ":\\s*(.*)$", "m"));
+    return key + ": " + (match ? match[1].trim() : "");
+  }).join("\n");
+  fs.writeFileSync(process.env.UT_TDD_REVIEW_VERDICT_FILE, fields + "\nVERDICT: PASS-WEAK\n", "utf8");
+  process.exit(7);
+});
+`,
+      "utf8",
+    );
+    const stub = join(binRoot, process.platform === "win32" ? "claude.cmd" : "claude");
+    writeFileSync(
+      stub,
+      process.platform === "win32"
+        ? `@echo off\r\nif "%~1"=="--version" exit /b 0\r\nnode "${helper}"\r\nexit /b %errorlevel%\r\n`
+        : `#!/bin/sh\nif [ "$1" = "--version" ]; then exit 0; fi\nexec node "${helper}"\n`,
+      "utf8",
+    );
+    if (process.platform !== "win32") chmodSync(stub, 0o755);
+    const previous = process.env.UT_TDD_CLAUDE_BIN;
+    process.env.UT_TDD_CLAUDE_BIN = stub;
+    try {
+      const result = executeLiveReviewDelegation({
+        repoRoot: root,
+        provider: "claude",
+        cliPath: join(process.cwd(), "src", "cli.ts"),
+        args: [
+          "--role",
+          "blind-reviewer",
+          "--task-file",
+          memoryPath,
+          "--review-pr",
+          "319",
+          "--review-head",
+          head,
+          "--review-revision",
+          "review-d3a-nonzero",
+          "--review-author-family",
+          "codex",
+          "--review-memory-id",
+          "memory:d3a",
+          "--execute",
+          "--json",
+        ],
+      });
+      expect(result, JSON.stringify(result)).toMatchObject({
+        ok: true,
+        receipt: {
+          pr: 319,
+          head,
+          reviewerFamily: "claude",
+          verdict: "PASS-WEAK",
+          executionOutcome: { status: "failed", exitCode: 7 },
+        },
+      });
+    } finally {
+      if (previous === undefined) delete process.env.UT_TDD_CLAUDE_BIN;
+      else process.env.UT_TDD_CLAUDE_BIN = previous;
+    }
+  }, 30_000);
+
+  it("U-RVATT-041 exposes non-zero execution outcome in human-facing receipt text", () => {
+    const body = formatLiveReviewReceipt({
+      ok: true,
+      path: "receipt.json",
+      digest: "d".repeat(64),
+      receipt: {
+        memoryId: "memory:d3a",
+        pr: 448,
+        head,
+        reviewRevision: "rv1-test",
+        reviewerFamily: "claude",
+        kind: "verdict",
+        verdict: "PASS-WEAK",
+        blockingFindings: [],
+        executionOutcome: {
+          status: "failed",
+          exitCode: 7,
+          reason: "reviewer_exit_nonzero",
+        },
+        at: "2026-08-27T10:00:00.000Z",
+      },
+    });
+    expect(body).toContain("executionOutcome=failed exitCode=7 reason=reviewer_exit_nonzero");
+  });
 });

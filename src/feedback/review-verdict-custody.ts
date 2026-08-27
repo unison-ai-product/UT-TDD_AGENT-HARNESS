@@ -174,7 +174,7 @@ export function reviewCustodyAuditPath(repoRoot: string): string {
 }
 
 export interface ReviewCustodyAuditEvent {
-  readonly kind: "superseded_attempt" | "cleanup_pending";
+  readonly kind: "superseded_attempt" | "superseded_receipt" | "cleanup_pending";
   readonly requestDigest: string;
   readonly attempt: number;
   readonly exactHead: string;
@@ -212,6 +212,30 @@ function attemptNumbers(repoRoot: string, requestDigest: string): number[] {
   return values.sort((left, right) => left - right);
 }
 
+function isRetryableFailedReceipt(
+  value: unknown,
+  request: ReviewCustodyRequest,
+  provider: "codex" | "claude",
+): boolean {
+  if (value === null || typeof value !== "object") return false;
+  const receipt = value as Record<string, unknown>;
+  const outcome = receipt.executionOutcome;
+  return (
+    receipt.memoryId === request.memoryId &&
+    receipt.pr === request.pr &&
+    receipt.head === request.exactHead &&
+    receipt.reviewRevision === request.reviewRevision &&
+    receipt.reviewerFamily === provider &&
+    receipt.kind === "verdict" &&
+    outcome !== null &&
+    typeof outcome === "object" &&
+    (outcome as Record<string, unknown>).status === "failed" &&
+    (outcome as Record<string, unknown>).reason === "reviewer_exit_nonzero" &&
+    Number.isSafeInteger((outcome as Record<string, unknown>).exitCode) &&
+    ((outcome as Record<string, unknown>).exitCode as number) > 0
+  );
+}
+
 export type ReviewAttemptResult =
   | { readonly ok: true; readonly attempt: number; readonly path: string }
   | { readonly ok: false; readonly reason: string };
@@ -236,7 +260,15 @@ export function beginReviewAttempt(input: {
     "receipts",
     `${digest}.json`,
   );
-  if (existsSync(receiptPath)) return { ok: false, reason: "review_receipt_already_exists" };
+  if (existsSync(receiptPath)) {
+    try {
+      const existing = JSON.parse(readFileSync(receiptPath, "utf8")) as unknown;
+      if (!isRetryableFailedReceipt(existing, input.request, input.provider))
+        return { ok: false, reason: "review_receipt_already_exists" };
+    } catch {
+      return { ok: false, reason: "review_receipt_unreadable" };
+    }
+  }
   const used = attemptNumbers(input.repoRoot, digest);
   const attempt = (used.at(-1) ?? 0) + 1;
   if (used.length > 0) {

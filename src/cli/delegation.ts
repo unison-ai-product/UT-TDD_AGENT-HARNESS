@@ -215,7 +215,11 @@ export function executeAdapterPlanForCli(
         },
         verdictFile: input.review.verdictFile,
       });
-      if (reviewResult.ok && isStrictReviewRequest(input.review.request)) {
+      if (
+        reviewResult.ok &&
+        !reviewResult.receipt.executionOutcome &&
+        isStrictReviewRequest(input.review.request)
+      ) {
         cleanupReviewAttempt({
           repoRoot,
           requestDigest: reviewIdentityDigest(input.review.request),

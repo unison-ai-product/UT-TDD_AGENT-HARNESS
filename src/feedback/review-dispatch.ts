@@ -18,6 +18,17 @@ export type ReviewVerdict = "PASS" | "PASS-WEAK" | "FLAG";
 export type SlaBreach = "verdict";
 export type ReviewReceiptKind = "acknowledged" | "in_review" | "verdict";
 
+/**
+ * A reviewer may emit an identity-bound verdict and still terminate non-zero
+ * (for example when a read-only verification command is denied).  Keep that
+ * observation on the receipt, but never treat it as a green review.
+ */
+export interface ReviewExecutionOutcome {
+  status: "failed";
+  exitCode: number;
+  reason: "reviewer_exit_nonzero";
+}
+
 export interface ReviewRequest {
   memoryId: string;
   pr: number;
@@ -36,6 +47,7 @@ export interface ReviewReceipt {
   kind: ReviewReceiptKind;
   verdict?: ReviewVerdict;
   blockingFindings?: string[];
+  executionOutcome?: ReviewExecutionOutcome;
   at: string;
 }
 
@@ -160,6 +172,10 @@ function compareReceipts(left: ReviewReceipt, right: ReviewReceipt): number {
     compareText(
       (left.blockingFindings ?? []).join("\u0000"),
       (right.blockingFindings ?? []).join("\u0000"),
+    ) ||
+    compareText(
+      JSON.stringify(left.executionOutcome ?? null),
+      JSON.stringify(right.executionOutcome ?? null),
     )
   );
 }
@@ -198,6 +214,7 @@ function receiptContentKey(receipt: ReviewReceipt): string {
     receipt.kind,
     receipt.verdict ?? null,
     receipt.blockingFindings ?? null,
+    receipt.executionOutcome ?? null,
     timestampContentKey(receipt.at),
   ]);
 }
@@ -318,6 +335,21 @@ function validateReceipt(receipt: ReviewReceipt, nowMs: number): string[] {
       (!Array.isArray(receipt.blockingFindings) || receipt.blockingFindings.length > 0)
     ) {
       reasons.add("blocking_findings_on_pass");
+    }
+  }
+  if (hasOwn(receipt, "executionOutcome")) {
+    const outcome = receipt.executionOutcome;
+    if (
+      receipt.kind !== "verdict" ||
+      outcome == null ||
+      outcome.status !== "failed" ||
+      outcome.reason !== "reviewer_exit_nonzero" ||
+      !Number.isSafeInteger(outcome.exitCode) ||
+      outcome.exitCode <= 0
+    ) {
+      reasons.add("invalid_execution_outcome");
+    } else {
+      reasons.add("reviewer_execution_failed");
     }
   }
   return [...reasons];
