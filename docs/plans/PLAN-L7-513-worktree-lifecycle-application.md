@@ -54,6 +54,16 @@ review_evidence:
     citations:
       - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/435#issuecomment-5434212084"
       - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33036697995"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/test-design-naming.test.ts tests/plan-lint.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-27T03:44:31Z"
+        evidence_path: tests/test-design-naming.test.ts
+        output_digest: "sha256:40ead295773959b04ee240f555696fa028f33973009deaf172ee1b7b370e7a4a"
+        anchor_commit: 2eff2dcbe3e16e367e5dbebdca84d649fd9dee1e
 ---
 
 # PLAN-L7-513: worktree lifecycle application saga
