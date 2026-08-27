@@ -60,6 +60,10 @@ release draft は作成時に `draft=true` を要求するが、`release_visible
 成功観測であり、非draftを一律denyする逆契約は採用しない。canary は可視化前に公開せず、
 pointer before/after snapshot と、release用およびpointer append用の Pack commit/tree identityを
 それぞれ一意に監査する。
+root intentは expected Pack tree/entries/digests、allowed merge mode、deterministic derivation rule
+だけをsealし、未生成のremote commit SHA/tree SHAを事前計算しない。merge read-back後に観測した
+release commit/treeを次のtag transition intentへappendし、新しいoperation approval（pre-transition
+state digest）でtag targetへ束縛する。pointer commit/treeはpost-observation receiptだけに記録する。
 各transitionの `planned + nonce consumed`、`mutation intent`、`read-back observation` は
 `DurableExecutionStatePort` の append-only journalへ永続化する。draft/assets/tag/pointer各操作単位の
 approval receipt/nonceを要求し、write成功、response loss、state persist failure、crash/restartを
@@ -79,7 +83,7 @@ approval receipt/nonceを要求し、write成功、response loss、state persist
 
 | candidate | 対応境界 | 独立 oracle |
 | --- | --- | --- |
-| `CANDIDATE-PACKPUB-003` | 正本FSMとremote mutation | `planned→pack_commit→release_draft→assets→tag→release_visible→canary` の順序、draft作成/visible遷移のapprovalとfault、snapshot内pointer object、before/after snapshot、protected main PR/CAS append、release/pointer Pack commit/tree identity、auditor前canary write 0。tag preflight H1はmutation前deny/write 0、tag fault H2はdraft/assets保持・visibility/pointer後続write 0、pointer M1はbefore drift/append 0、M2はCAS response loss/read-back mismatchをapplied unknown/indeterminate・重複write 0として分離する。 |
+| `CANDIDATE-PACKPUB-003` | 正本FSMとremote mutation | `planned→pack_commit→release_draft→assets→tag→release_visible→canary` の順序、draft作成/visible遷移のapprovalとfault、snapshot内pointer object、before/after snapshot、protected main PR/CAS append、release/pointer Pack commit/tree identity、auditor前canary write 0。tag preflight H1はmutation前deny/write 0、tag fault H2はdraft/assets保持・visibility/pointer後続write 0、pointer M1はinitial drift/remote write 0、M-lateは第二PR/CAS直前driftでappend/write 0・既存immutable objects partial保持・new approval、M2はCAS response loss/read-back mismatchをapplied unknown/indeterminate・重複write 0として分離する。commit SHA/tree SHA単独mutationはSで検証する。 |
 | `CANDIDATE-PACKPUB-004` | rollback | 本PLANでは再所有しない。既存L6-63のsupersede-forwardと後続aggregateへ参照だけを渡す。 |
 
 ## R2〜R4 出口
