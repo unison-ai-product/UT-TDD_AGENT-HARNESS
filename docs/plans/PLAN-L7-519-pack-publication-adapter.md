@@ -70,6 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-27T08:10:00Z"
         evidence_path: tests/pack-publication-adapter.test.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         anchor_commit: 36be04bf
       - kind: typecheck
         command: "npm run typecheck"
@@ -78,6 +79,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-27T08:10:00Z"
         evidence_path: src/setup/pack-publication-adapter.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         anchor_commit: 36be04bf
 ---
 
