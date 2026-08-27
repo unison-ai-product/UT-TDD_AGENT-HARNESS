@@ -21,6 +21,7 @@ export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 export const CLAUDE_INBOX_BACKLOG_WARN_AGE_MS = 15 * 60 * 1_000;
 export const CLAUDE_WAKE_GENERATION_SCHEMA = "ut-tdd.claude-wake-generation/v1" as const;
+export const CLAUDE_INBOX_TERMINAL_SCHEMA = "ut-tdd.claude-inbox-terminal/v1" as const;
 export type ClaudeLiveWorkspaceRoutingFailure =
   | "no_live_claude_workspace"
   | "ambiguous_live_claude_workspace"
@@ -36,6 +37,52 @@ export type ClaudeInboxWarningCode =
   | "session_absent"
   | "session_unknown"
   | "hook_missing";
+
+/** Pull request facts are an observation, never an inferred lifecycle state. */
+export interface ClaudeInboxPullRequestObservation {
+  readonly pr: number;
+  readonly state: "OPEN" | "MERGED" | "CLOSED";
+  readonly headSha: string;
+}
+
+export type ClaudeInboxTerminalReason =
+  | "claimed"
+  | "pr_merged"
+  | "pr_closed"
+  | "stale_head_replaced";
+
+export interface ClaudeInboxReviewReceiptIdentity {
+  readonly requestDigest: string;
+  readonly requestPath: string;
+  readonly memoryPath: string;
+  readonly pr: number;
+  readonly exactHead: string;
+  readonly reviewRevision: string;
+  readonly authorFamily: "codex" | "claude";
+}
+
+export interface ClaudeInboxTerminalMarker {
+  readonly schema: typeof CLAUDE_INBOX_TERMINAL_SCHEMA;
+  readonly entryId: string;
+  readonly reason: ClaudeInboxTerminalReason;
+  readonly terminalAt: string;
+  readonly purpose: "memory" | "review";
+  readonly requestDigest?: string;
+  readonly requestPath?: string;
+  readonly memoryPath?: string;
+  readonly pr?: number;
+  readonly exactHead?: string;
+  readonly reviewRevision?: string;
+  readonly authorFamily?: "codex" | "claude";
+}
+
+export type ClaudeInboxTerminalDecision =
+  | { readonly terminal: false }
+  | {
+      readonly terminal: true;
+      readonly reason: ClaudeInboxTerminalReason;
+      readonly receipt?: ClaudeInboxReviewReceiptIdentity;
+    };
 
 interface ClaudeInboxBase {
   readonly id: string;
@@ -94,6 +141,8 @@ export interface ClaudeInboxBacklogSummary {
   readonly sessionStatus?: "active" | "absent" | "unknown";
   readonly hookConfigured?: boolean;
   readonly warningCodes?: readonly ClaudeInboxWarningCode[];
+  /** terminal markerで再配信対象から除外したentry数（証跡は保持される）。 */
+  readonly terminalized?: number;
 }
 
 export interface ClaudeMemoryWakeHookStatus {
@@ -385,6 +434,202 @@ export function decodeClaudeInboxEntry(value: string): ClaudeInboxEntry | undefi
   }
 }
 
+function reviewReceiptIdentity(entry: ClaudeReviewInboxEntry): ClaudeInboxReviewReceiptIdentity {
+  return {
+    requestDigest: entry.requestDigest,
+    requestPath: entry.requestPath,
+    memoryPath: entry.memoryPath,
+    pr: entry.pr,
+    exactHead: entry.exactHead,
+    reviewRevision: entry.reviewRevision,
+    authorFamily: entry.authorFamily,
+  };
+}
+
+/**
+ * Decide terminality from authenticated observations only.  Memory envelopes do not
+ * acquire PR semantics from their prose, and malformed/unknown observations remain live.
+ */
+export function evaluateClaudeInboxTerminal(input: {
+  entry: ClaudeInboxEntry;
+  claimed?: boolean;
+  pullRequest?: ClaudeInboxPullRequestObservation;
+  replacementExists?: boolean;
+}): ClaudeInboxTerminalDecision {
+  if (input.claimed === true) return { terminal: true, reason: "claimed" };
+  if (input.entry.purpose !== "review" || input.entry.schemaVersion !== CLAUDE_INBOX_SCHEMA) {
+    return { terminal: false };
+  }
+  const observation = input.pullRequest;
+  if (
+    !observation ||
+    observation.pr !== input.entry.pr ||
+    !Number.isInteger(observation.pr) ||
+    observation.pr <= 0 ||
+    !/^[a-f0-9]{40}$/.test(observation.headSha)
+  ) {
+    return { terminal: false };
+  }
+  const receipt = reviewReceiptIdentity(input.entry);
+  if (observation.state === "MERGED") {
+    return { terminal: true, reason: "pr_merged", receipt };
+  }
+  if (observation.state === "CLOSED") {
+    return { terminal: true, reason: "pr_closed", receipt };
+  }
+  if (observation.headSha !== input.entry.exactHead && input.replacementExists === true) {
+    return { terminal: true, reason: "stale_head_replaced", receipt };
+  }
+  return { terminal: false };
+}
+
+function terminalMarkerPath(root: string, entryId: string): string {
+  return join(root, `${inboxFileStem(entryId)}.terminal.json`);
+}
+
+function terminalMarkerFor(
+  entry: ClaudeInboxEntry,
+  decision: Extract<ClaudeInboxTerminalDecision, { terminal: true }>,
+  at: string,
+): ClaudeInboxTerminalMarker {
+  const base = {
+    schema: CLAUDE_INBOX_TERMINAL_SCHEMA,
+    entryId: entry.id,
+    reason: decision.reason,
+    terminalAt: at,
+    purpose: entry.purpose,
+  } as ClaudeInboxTerminalMarker;
+  return decision.receipt ? { ...base, ...decision.receipt } : base;
+}
+
+function readTerminalMarker(path: string): ClaudeInboxTerminalMarker | undefined {
+  try {
+    const value = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+    if (
+      !value ||
+      Array.isArray(value) ||
+      value.schema !== CLAUDE_INBOX_TERMINAL_SCHEMA ||
+      typeof value.entryId !== "string" ||
+      typeof value.reason !== "string" ||
+      !["claimed", "pr_merged", "pr_closed", "stale_head_replaced"].includes(value.reason) ||
+      typeof value.terminalAt !== "string" ||
+      !Number.isFinite(Date.parse(value.terminalAt)) ||
+      !["memory", "review"].includes(value.purpose as string)
+    ) {
+      return undefined;
+    }
+    if (value.purpose === "review") {
+      const identity = {
+        requestDigest: value.requestDigest,
+        requestPath: value.requestPath,
+        memoryPath: value.memoryPath,
+        pr: value.pr,
+        exactHead: value.exactHead,
+        reviewRevision: value.reviewRevision,
+        authorFamily: value.authorFamily,
+      };
+      if (
+        typeof identity.requestDigest !== "string" ||
+        typeof identity.requestPath !== "string" ||
+        typeof identity.memoryPath !== "string" ||
+        typeof identity.pr !== "number" ||
+        typeof identity.exactHead !== "string" ||
+        typeof identity.reviewRevision !== "string" ||
+        (identity.authorFamily !== "codex" && identity.authorFamily !== "claude") ||
+        !isValidReviewIdentity(identity as ClaudeInboxReviewReceiptIdentity)
+      ) {
+        return undefined;
+      }
+    }
+    return value as unknown as ClaudeInboxTerminalMarker;
+  } catch {
+    return undefined;
+  }
+}
+
+function terminalIds(root: string): Set<string> {
+  const ids = new Set<string>();
+  if (!existsSync(root)) return ids;
+  for (const name of readdirSync(root).filter((candidate) =>
+    candidate.endsWith(".terminal.json"),
+  )) {
+    const marker = readTerminalMarker(join(root, name));
+    if (marker) ids.add(marker.entryId);
+  }
+  return ids;
+}
+
+export interface ClaudeInboxRecoveryEntry {
+  readonly entryId: string;
+  readonly reason: ClaudeInboxTerminalReason;
+  readonly markerPath?: string;
+}
+
+export interface ClaudeInboxRecoveryResult {
+  readonly dryRun: boolean;
+  readonly inspected: number;
+  readonly terminalized: number;
+  readonly entries: ClaudeInboxRecoveryEntry[];
+}
+
+/** Sweep inbox backlog.  Dry-run has no filesystem writes; apply retains inbox JSON as evidence. */
+export function recoverClaudeInboxBacklog(input: {
+  repoRoot: string;
+  pullRequests?: readonly ClaudeInboxPullRequestObservation[];
+  pullRequestState?: (pr: number) => ClaudeInboxPullRequestObservation | undefined;
+  dryRun?: boolean;
+  now?: string;
+}): ClaudeInboxRecoveryResult {
+  const root = runtimeRoot(input.repoRoot);
+  const dryRun = input.dryRun ?? true;
+  const now = input.now ?? new Date().toISOString();
+  const entries = readInbox(input.repoRoot);
+  const existingTerminals = terminalIds(root);
+  const claimed = claimedIds(root);
+  const observations = new Map((input.pullRequests ?? []).map((value) => [value.pr, value]));
+  const getObservation = (pr: number) => input.pullRequestState?.(pr) ?? observations.get(pr);
+  const results: ClaudeInboxRecoveryEntry[] = [];
+  for (const entry of entries) {
+    if (existingTerminals.has(entry.id)) continue;
+    const observation = entry.purpose === "review" ? getObservation(entry.pr) : undefined;
+    const replacementExists =
+      entry.purpose === "review" &&
+      entries.some(
+        (candidate) =>
+          candidate.purpose === "review" &&
+          candidate.id !== entry.id &&
+          candidate.pr === entry.pr &&
+          observation?.state === "OPEN" &&
+          candidate.exactHead === observation.headSha &&
+          !existingTerminals.has(candidate.id),
+      );
+    const decision = evaluateClaudeInboxTerminal({
+      entry,
+      claimed: claimed.has(entry.id),
+      pullRequest: observation,
+      replacementExists,
+    });
+    if (!decision.terminal) continue;
+    const result: ClaudeInboxRecoveryEntry = {
+      entryId: entry.id,
+      reason: decision.reason,
+      ...(dryRun ? {} : { markerPath: terminalMarkerPath(root, entry.id) }),
+    };
+    results.push(result);
+    if (!dryRun) {
+      ensureDir(root, { recursive: true });
+      const path = terminalMarkerPath(root, entry.id);
+      if (!existsSync(path))
+        writeFileSync(path, `${JSON.stringify(terminalMarkerFor(entry, decision, now))}\n`, {
+          encoding: "utf8",
+          mode: 0o600,
+        });
+      existingTerminals.add(entry.id);
+    }
+  }
+  return { dryRun, inspected: entries.length, terminalized: results.length, entries: results };
+}
+
 function claimedIds(root: string): Set<string> {
   const ids = new Set<string>();
   if (!existsSync(root)) return ids;
@@ -419,6 +664,7 @@ function pruneRuntimeFiles(root: string, nowMs: number): void {
   for (const directory of [root, join(root, "inbox")]) {
     if (!existsSync(directory)) continue;
     for (const name of readdirSync(directory)) {
+      if (name.endsWith(".terminal.json")) continue;
       if (!name.endsWith(".claim") && !name.endsWith(".generation") && !name.endsWith(".json"))
         continue;
       const path = join(directory, name);
@@ -464,6 +710,7 @@ function summarizeEntries(
       sessionStatus: "absent",
       hookConfigured: false,
       warningCodes: [],
+      terminalized: 0,
     };
   }
 
@@ -607,7 +854,9 @@ export function summarizeUnclaimedInbox(
 ): ClaudeInboxBacklogSummary {
   const root = runtimeRoot(repoRoot);
   const claimed = new Set(claimedIds(root));
-  const all = readInbox(repoRoot).filter((entry) => !claimed.has(entry.id));
+  const terminal = terminalIds(root);
+  const allEntries = readInbox(repoRoot);
+  const all = allEntries.filter((entry) => !claimed.has(entry.id) && !terminal.has(entry.id));
   const entries = all.filter((entry) => entry.targetWorkspaceId === workspaceId);
   const foreign = all.filter((entry) => entry.targetWorkspaceId !== workspaceId);
   const own = summarizeEntries(entries, workspaceId);
@@ -635,6 +884,7 @@ export function summarizeUnclaimedInbox(
     sessionStatus: sessions.sessionStatus,
     hookConfigured: hook.configured,
     warningCodes: [...warnings],
+    terminalized: allEntries.filter((entry) => terminal.has(entry.id)).length,
   };
 }
 
@@ -704,6 +954,7 @@ export async function waitForClaudeMemory(input: {
   maxWaitMs?: number;
   now?: () => string;
   sleep?: (ms: number) => Promise<void>;
+  pullRequestState?: (pr: number) => ClaudeInboxPullRequestObservation | undefined;
 }): Promise<ClaudeMemoryWakeResult> {
   const requestedPollMs = input.pollIntervalMs ?? 2_000;
   const requestedMaxMs = input.maxWaitMs ?? 900_000;
@@ -765,9 +1016,46 @@ export async function waitForClaudeMemory(input: {
       return { kind: "superseded" };
     }
     const unavailable = claimedIds(root);
+    for (const id of terminalIds(root)) unavailable.add(id);
     for (const id of unclaimable) unavailable.add(id);
+    const inbox = readInbox(input.repoRoot);
+    for (const candidate of inbox) {
+      if (
+        unavailable.has(candidate.id) ||
+        !input.pullRequestState ||
+        candidate.purpose !== "review"
+      )
+        continue;
+      const observation = input.pullRequestState(candidate.pr);
+      const replacementExists = inbox.some(
+        (replacement) =>
+          replacement.purpose === "review" &&
+          replacement.id !== candidate.id &&
+          replacement.pr === candidate.pr &&
+          observation?.state === "OPEN" &&
+          replacement.exactHead === observation.headSha &&
+          !unavailable.has(replacement.id),
+      );
+      const decision = evaluateClaudeInboxTerminal({
+        entry: candidate,
+        pullRequest: observation,
+        replacementExists,
+      });
+      if (decision.terminal) {
+        ensureDir(root, { recursive: true });
+        const markerPath = terminalMarkerPath(root, candidate.id);
+        if (!existsSync(markerPath)) {
+          writeFileSync(
+            markerPath,
+            `${JSON.stringify(terminalMarkerFor(candidate, decision, now()))}\n`,
+            { encoding: "utf8", mode: 0o600 },
+          );
+        }
+        unavailable.add(candidate.id);
+      }
+    }
     const entry = selectClaudeInboxEntry(
-      readInbox(input.repoRoot).filter((candidate) => candidate.targetWorkspaceId === workspaceId),
+      inbox.filter((candidate) => candidate.targetWorkspaceId === workspaceId),
       unavailable,
     );
     if (entry) {
@@ -779,6 +1067,14 @@ export async function waitForClaudeMemory(input: {
           operationId: entry.operationId,
           sessionId: input.sessionId,
         });
+        const markerPath = terminalMarkerPath(root, entry.id);
+        if (!existsSync(markerPath)) {
+          writeFileSync(
+            markerPath,
+            `${JSON.stringify(terminalMarkerFor(entry, { terminal: true, reason: "claimed" }, now()))}\n`,
+            { encoding: "utf8", mode: 0o600 },
+          );
+        }
         try {
           unlinkSync(join(root, "inbox", `${inboxFileStem(entry.id)}.json`));
         } catch {
