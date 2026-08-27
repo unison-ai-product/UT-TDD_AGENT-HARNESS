@@ -30,7 +30,8 @@ updated: 2026-08-27
 | CANDIDATE-U-AUTHPROV-007 | provenance 記録が存在しない PR に対し request を mint | mint 成功。unknown として記録される |
 | CANDIDATE-U-AUTHPROV-008 | unknown の request に対し attempt | typed deny。`unknown` 固有の reason を返し、申告値へ fallback しない |
 | CANDIDATE-U-AUTHPROV-009 | unknown の request に対し merge gate を評価 | `merge_ready` へ到達しない |
-| CANDIDATE-U-AUTHPROV-010 | unknown 解消経路で provenance を後付け記録し、同一 identity で再 attempt | 受理。新規 identity の mint を要求しない |
+| CANDIDATE-U-AUTHPROV-010 | **verdict receipt が未発行の** unknown request に対し provenance を後付け記録し、同一 identity で再 attempt | 受理。新規 identity の mint を要求しない。snapshot は再 attempt 時点の値へ束縛し直される |
+| CANDIDATE-U-AUTHPROV-047 | **verdict receipt 発行後に** provenance を後付け記録・変更 | typed deny。receipt が束縛した snapshot は不変 (034 と同一規則。束縛の起点が verdict 発行であることを測る) |
 | CANDIDATE-U-AUTHPROV-011 | provenance 記録の書き込みが失敗する | unknown として扱う。成功扱いにする経路が無い |
 
 ## 混在 family と多 commit (§4)
@@ -45,8 +46,8 @@ updated: 2026-08-27
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-AUTHPROV-015 | 旧 `REVIEW_REQUEST_SCHEMA_VERSION` の request を新実装で読む | 旧規則で解釈される。digest 再計算 0 |
-| CANDIDATE-U-AUTHPROV-016 | 旧 schema の in-flight request を close | 旧規則のまま close でき、既存 receipt との対応が保たれる |
+| CANDIDATE-U-AUTHPROV-015 | 旧 `REVIEW_REQUEST_SCHEMA_VERSION` の request を新実装で読む | **digest は旧規則で保存され再計算 0**。ただし受理判定は §3.4 の照合を経由する (保存側と受理側を分離。036-039 と同一規則) |
+| CANDIDATE-U-AUTHPROV-016 | 旧 schema の in-flight request を、provenance が照合でき一致する状態で close | close 可。既存 receipt との対応が保たれ、digest は再計算されない。**「旧規則のまま無条件に close できる」ことは主張しない** (038 と同一事象を保存側の観点から測る) |
 | CANDIDATE-U-AUTHPROV-017 | 新 schema で mint した request の digest | 新 schemaVersion を入力に含み、同一 (memoryId, pr, exactHead, authorFamily) でも旧 digest と一致しない |
 | CANDIDATE-U-AUTHPROV-018 | 既存 receipt を新 schema で再検証 | 対応が壊れない。receipt の無効化 0 |
 
@@ -102,6 +103,11 @@ updated: 2026-08-27
 | CANDIDATE-U-AUTHPROV-044 | set = `{codex, human}` に claude reviewer が attempt | 受理。claude は set に含まれない |
 | CANDIDATE-U-AUTHPROV-045 | 混在 set を多数派 family へ丸める経路の探索 | 丸め込み経路が存在しない (緩和の不在を測る負例) |
 | CANDIDATE-U-AUTHPROV-046 | single-commit mixed を含む PR | その commit の複数 family が PR の set へ合流する |
+
+> **015/016 と 036-039 の関係**: 015/016 は *digest 保存側* の不変条件 (再計算 0、receipt 対応の維持) を測り、
+> 036-039 は *受理側* の不変条件 (照合免除の不在) を測る。PLAN §3.4 が両者を別の関心事として分離しているため、
+> 「旧 schema は照合を免除される」と読める oracle は存在しない。016 は照合が成立した場合の保存側挙動のみを
+> 主張し、照合できない場合は 037 が支配する。
 
 ## 実 repo 回帰 (prose ではなく実測で claim を裏付ける)
 

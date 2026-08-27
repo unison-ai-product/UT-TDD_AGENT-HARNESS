@@ -168,6 +168,11 @@ provenance record が「書かれた後は正しい」と仮定しない。次�
   **同一の provenance digest・provenance schema version・commit-set snapshot** へ束縛する。
   receipt が参照した provenance snapshot と merge 時点の snapshot が一致しない場合は
   typed deny する。「review 時は正しかった」を merge の根拠にしない。
+- **束縛の起点は verdict receipt の発行時点とする。** §3.3 の unknown 解消 backfill は
+  **verdict receipt が未発行の間のみ許す**。backfill 後の再 attempt は snapshot を当該時点の値へ
+  束縛し直す。verdict receipt 発行後の provenance 追記・変更は typed deny する。これにより
+  「unknown を解消して再 attempt できる」ことと「snapshot は不変である」ことが両立する
+  (前者は receipt 前、後者は receipt 後の規則である)。
 
 ### 3.4 identity digest の互換と legacy 移行 — 旧 digest 保存と安全 gate を分離する (採択)
 
@@ -185,6 +190,8 @@ request をそのまま閉じられるなら、PR #430 型の誤 `authorFamily` 
   digest は**再計算しない**。遡って digest を振り直せば既存 receipt との対応が全滅する。
 - **gate 安全 (受理側)**: 旧 schema であることは受理点の照合を免除しない。旧 schema の in-flight
   request も、close する前に **trusted provenance との照合を要求する**。
+- **保存側と受理側を分離する。** digest 保存の不変条件 (再計算 0、既存 receipt との対応維持) は
+  受理側の照合免除を意味しない。両者を同一の oracle で測らない。
 - **照合できない旧 request の扱い**: provenance が `unknown` で照合できない旧 request は、
   旧規則で close させない。**Issue #439 の typed retraction で終端し、新 schema で再 mint する**
   経路へ倒す。これが #437 (発生防止) と #439 (回復経路) を接続する唯一の正規経路である。
