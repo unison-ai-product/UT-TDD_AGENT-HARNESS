@@ -99,7 +99,7 @@ Pack checkout、worktree、global cacheを差し込む入力は持たせない�
 <consumerRoot>/.ut-tdd/
   bin/ut-tdd.mjs                         # Nodeで起動する薄い解決wrapper
   runtime/
-    bundles/<generation_id>-<operation_id>/
+    bundles/<operation_id>/attempt-<attempt>-<bundle_digest>/
       ut-tdd.mjs                         # sealed compiled ESM本体
       node-bootstrap-receipt.json        # L6-93 receiptの検証済み写像
       marker.json                         # bundle内のconsumer active marker projection
@@ -108,8 +108,15 @@ Pack checkout、worktree、global cacheを差し込む入力は持たせない�
       operation-state.json                # durable operation state
       bundle-manifest.json                # 全bytes/digest/identityのmanifest
     activation/active.json               # bundleを指すconsumer-local single active pointer
-  staging/<operation_id>/              # install/update中だけ存在するprivate staging
+    staging/<operation_id>/attempt-<attempt>/ # private staging（attempt identity付き）
+    quarantine/<operation_id>/attempt-<attempt>-<bundle_digest>/ # fault/orphan隔離（no-clobber）
 ```
+
+bundle、staging、quarantineのpathはcanonical consumer namespace、operation_id、monotonic attempt、
+およびsealed bundle digest（確定前のstagingはattempt）から決定し、同一operation_idの次attemptと
+既存orphan/stale quarantineが衝突しないidentityとする。既存pathはno-clobberで、同じattemptや
+digestを再利用せずtyped denyする。sealed orphan bundle/quarantineはactive pointerから解決せず、
+cleanup/reconcile ownerだけが読み取り、再利用・上書き・暗黙retryを行わない。
 
 ### 2.2.1 bundle history chain
 
@@ -266,7 +273,7 @@ receipt・historyが不変であることである。generation/receiptを一つ
 
 ## 7. TDD / trace / Reverse
 
-pair artifactの`CANDIDATE-U-PACKNODE-001..014`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
+pair artifactの`CANDIDATE-U-PACKNODE-001..015`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
 `U-PACKNODE-*` / `P-PACKNODE-*`へ昇格する。各候補は一つの契約軸、実測command、exact PLAN
 revision、exact HEAD、Linux/Windows結果へ1:1 traceし、既存`CANDIDATE-PACKISO-001..007`と
 `CAND-NODEBOOT-021..030`を再宣言しない。
