@@ -178,6 +178,11 @@ export class WorktreeLifecycleApplication {
         headOid: input.headOid,
       });
       this.assertBinding(result, identity, input.operationId, input.attempt);
+      if (result.created !== true)
+        throw new WorktreeLifecycleApplicationError(
+          "worktree_create_failed",
+          "worktree create was not acknowledged",
+        );
       return result;
     });
     if (!created.ok) return created;
@@ -190,7 +195,7 @@ export class WorktreeLifecycleApplication {
       });
       this.assertBinding(result, identity, input.operationId, input.attempt);
       if (
-        result.adminEntryRealpath !== canonical.adminEntryRealpath ||
+        !samePath(result.adminEntryRealpath, canonical.adminEntryRealpath, this.platform) ||
         !result.inventoryAvailable
       ) {
         throw new WorktreeLifecycleApplicationError(
@@ -432,6 +437,12 @@ export class WorktreeLifecycleApplication {
     } catch (error) {
       return this.failure("path_invalid", "worktree path cannot be canonicalized", error);
     }
+    if (
+      typeof canonical.canonicalWorktreeRealpath !== "string" ||
+      typeof canonical.adminEntryRealpath !== "string" ||
+      !isCanonicalRoot(input.canonicalRoot, this.platform)
+    )
+      return this.failure("path_invalid", "canonical root or resolved path is invalid");
     if (!validDirectChild(canonical.canonicalWorktreeRealpath, input.canonicalRoot, this.platform))
       return this.failure(
         "path_invalid",
@@ -568,6 +579,13 @@ function isAbsoluteFor(value: string, platform: "win32" | "linux"): boolean {
   return platform === "win32" ? win32.isAbsolute(value) : isAbsolute(value);
 }
 
+function isCanonicalRoot(value: string, platform: "win32" | "linux"): boolean {
+  const pathApi = platform === "win32" ? win32 : posix;
+  const normalized = pathApi.normalize(value).replace(/[\\/]$/, "");
+  const expected = platform === "win32" ? "C:/dev" : "/dev";
+  return (platform === "win32" ? normalized.toLowerCase() : normalized) === expected.toLowerCase();
+}
+
 function joinRoot(root: string, ...parts: string[]): string {
   return (root.match(/^[A-Za-z]:[\\/]/) ? win32 : posix).join(root, ...parts);
 }
@@ -588,11 +606,19 @@ function validDirectChild(candidate: string, root: string, platform: "win32" | "
   );
 }
 
+function samePath(left: string, right: string, platform: "win32" | "linux"): boolean {
+  const pathApi = platform === "win32" ? win32 : posix;
+  const normalize = (value: string) => pathApi.normalize(value).replace(/[\\/]$/, "");
+  const lhs = normalize(left);
+  const rhs = normalize(right);
+  return platform === "win32" ? lhs.toLowerCase() === rhs.toLowerCase() : lhs === rhs;
+}
+
 function reservedName(value: string, platform: "win32" | "linux"): boolean {
   if (platform !== "win32") return false;
   const name = win32
     .basename(value)
     .replace(/[ .]+$/, "")
     .toUpperCase();
-  return /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/.test(name);
+  return /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$/.test(name);
 }
