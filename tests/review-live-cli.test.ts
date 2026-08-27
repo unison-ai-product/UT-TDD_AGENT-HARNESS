@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -287,7 +288,7 @@ describe("review live CLI composition", () => {
     }
     expect(resolveWakeTarget).not.toHaveBeenCalled();
     expect(publishCodexReviewWake).toHaveBeenCalledWith(
-      root,
+      realpathSync.native(root),
       expect.objectContaining({ purpose: "review", reviewer: "codex" }),
     );
     expect(() =>
