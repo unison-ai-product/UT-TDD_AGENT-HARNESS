@@ -31,18 +31,18 @@ updated: 2026-08-27
 | `CANDIDATE-U-CHSCHEMA-011` | claimが旧epoch/tokenを検証後、commit直前にsupervisorがauthorityを失効 | claim CASが負け、claim write 0、envelope保持 | claim transaction / TOCTOU |
 | `CANDIDATE-U-CHSCHEMA-012` | PLAN §4.1の#423 claimを保持したまま同じidentity/claimed operationを再配送 | new inbox/claim/delivery 0、既存claim bytes/digest/session不変 | gitignored production idempotency |
 | `CANDIDATE-U-CHSCHEMA-013` | PLAN §4.1の#410 claimを保持したまま同じidentity/operationを再配送 | 対応inboxを再生成せずnew delivery 0、既存claim不変 | gitignored production idempotency |
-| `CANDIDATE-U-CHSCHEMA-014` | fixture固有未claim pairのproject、Memory ID、operation、producer/consumer provider、session、HEAD、revisionを一軸ずつ独立変異 | 各軸固有のtyped deny、claim/consume write 0 | immutable fixture identity |
-| `CANDIDATE-U-CHSCHEMA-015` | fixture固有未claim envelopeをisolated runtimeへ一度配送し、同じ入力をreplay | 初回claim exactly once、replay delivery 0 | isolated consume fixture |
-| `CANDIDATE-U-CHSCHEMA-016` | #423 old `7afb…` envelopeとnew `a499…` claimを対応済みpairとして結合 | operation/workspace不一致でfixture relation deny、偽対応0 | captured observation relation |
-| `CANDIDATE-P-CHSCHEMA-001` | fixture固有未claim pairをWindows/Linuxでcrash→restart→replay | OS差なくexact-one active、handoff replay fence、fixture identity保全 | cross-platform fixture integration |
+| `CANDIDATE-U-CHSCHEMA-014` | 新規synthetic fixture固有未claim pairのproject、Memory ID、operation、producer/consumer provider、session、HEAD、revisionを一軸ずつ独立変異 | 各軸固有のtyped deny、claim/consume write 0 | immutable fixture identity |
+| `CANDIDATE-U-CHSCHEMA-015` | fixture固有synthetic未claim envelopeをisolated runtimeへ一度配送し、同じ入力をreplay | 初回claim exactly once、replay delivery 0 | isolated consume fixture |
+| `CANDIDATE-U-CHSCHEMA-016` | inventoryへpayload不在の#423 old `7afb…`を`pr-423-envelope.json`として追加 | `historical_payload_unavailable`でfixture admission deny、復元/偽capture 0 | captured observation inventory |
+| `CANDIDATE-P-CHSCHEMA-001` | fixture固有synthetic未claim pairをWindows/Linuxでcrash→restart→replay | OS差なくexact-one active、handoff replay fence、fixture identity保全 | cross-platform fixture integration |
 
 ## TDD順序
 
 1. closed v1、capability profile、policy/minimum resolver、legacy、foreign、stale、multipleをRedとして固定する。
 2. upgrade supervisorによるtyped `restart_required` handoffと互換性resolverを実装してGreenにする。
 3. authority epoch/lease token付きclaim CASとexact-one active projectionを追加し、TOCTOUとcrash/replayをGreenにする。
-4. PLAN §4.1のclaim済みproduction idempotencyとfixture固有未claim consumeを別々に実行し、production
-   identity再発行0、各fixture identity軸の独立mutation、old envelope/new claimの非対応を検査する。
+4. PLAN §4.1のclaim済みproduction idempotencyとfixture固有synthetic未claim consumeを別々に実行し、production
+   identity再発行0、各fixture identity軸の独立mutation、old unavailable observationのfixture除外を検査する。
 5. typecheck、Biome、targeted snapshot、PLAN lint、Linux/Windows/aggregate CIへ昇格する。
 
 ## 証跡要件
@@ -55,9 +55,10 @@ updated: 2026-08-27
 - superseded markerを監査面に残し、active projectionが一件になることを実物inventoryで検証する。
 - revocation前後のbarrierで旧epoch/tokenのclaimを意図的に遅延させ、CAS loserのwrite 0を検証する。
 - PLAN §4.1の#423/#410 claim identityとsource artifact SHA-256を再配送前後で比較し、変更またはnew deliveryが
-  あればRedとする。fixture一覧には`pr-423-claim.json`を必ず含める。
-- #423 old `7afb…` envelopeとnew `a499…` claimはoperation/workspaceが異なる別observationとして記録する。
-- operational idempotencyのhost-local path/session、production capture、fixture固有unclaimed pairを別evidenceとして
+  あればRedとする。fixture一覧には現存bytes由来の`pr-423-claim.json`を必ず含める。
+- #423 old `7afb…`はfilename/hash-onlyのunavailable historical observationとして記録し、fixture一覧へ
+  `pr-423-envelope.json`を作らない。new `a499…` claimとの対応関係も主張しない。
+- operational idempotencyのhost-local path/session、production capture、fixture固有synthetic unclaimed pairを別evidenceとして
   記録し、fixtureだけでlive restart成功を主張しない。
 - Windows/Linux各run、process crash位置、再起動回数、replay回数、exit reasonを記録する。
 

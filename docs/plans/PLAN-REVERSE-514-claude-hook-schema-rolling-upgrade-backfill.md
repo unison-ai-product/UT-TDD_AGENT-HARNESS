@@ -59,11 +59,12 @@ upgrade supervisorをauthorityとする再起動境界をL7でfreezeする。
   handoff replay fenceを反映する。
 - **R3:** PLAN-L7-514 §4.1のclaim済みproduction artifactは同一identity/operation再配送0とclaim保持だけを
   operational検収する。未claim consumeはfixture固有identityのisolated runtimeへ分離し、production identityを
-  再発行・偽造しない。#423 old `7afb…` envelopeとnew `a499…` claimのoperation不一致、#410対応inbox不存在を
-  fixture metadataへ残す。fixture固有project、Memory ID、operation、provider、session、HEAD、revisionの各単独
+  再発行・偽造しない。#423 old `7afb…`はpayloadのないmetadata/hash-only historical observationとしてfixture
+  inventoryから外し、new `a499…` claim等の現存artifactだけをread-only captureする。#410対応inbox不存在も
+  metadataへ残す。新規synthetic fixture固有project、Memory ID、operation、provider、session、HEAD、revisionの各単独
   mutation、revocation前後の遅着claim、Linux/Windows/aggregate、非著者reviewを同一revisionへ束縛する。
 - **R4:** 上位契約へのbackprop、Forwardへの再合流、未解決のprovider permissionやPack publicationは別Issueの
  まま保持し、#433のschema upgradeだけをconfirmedへ閉じる。
 
-Reverse R4は、旧requestの再mint、manual receipt、merge bypass、v1 wireへのfield追加、未freeze schemaの導入を
-成功条件に含めない。将来のwire/profile schema bumpは別PLANのpair-freezeへ送る。
+Reverse R4は、旧requestの再mint、manual receipt、merge bypass、v1 wireへのfield追加、未freeze schemaの導入、
+unavailable production payloadの復元を成功条件に含めない。将来のwire/profile schema bumpは別PLANのpair-freezeへ送る。
