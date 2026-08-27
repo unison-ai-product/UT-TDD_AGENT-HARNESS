@@ -263,4 +263,45 @@ describe("worktree lifecycle application saga", () => {
     expect(fixture.calls).toEqual(["reserve", "create", "observe", "spawn", "release", "handoff"]);
     expect(app.get(identity)?.state).toBe("terminal_pending");
   });
+
+  it("CANDIDATE-U-WTAPP-005: finish reports a failed cleanup handoff without silent success", () => {
+    const fixture = ports({
+      cleanup: {
+        record: () => {
+          fixture.calls.push("handoff");
+          throw new Error("handoff failed");
+        },
+      },
+    });
+    const app = new WorktreeLifecycleApplication(fixture.ports, undefined, "win32");
+    expect(app.create(input()).ok).toBe(true);
+
+    const finished = app.finish({
+      identity,
+      ownerSessionId: "session-001",
+      operationId: "operation-001",
+      lease: {
+        identity,
+        ownerSessionId: "session-001",
+        operationId: "operation-001",
+        attempt: 1,
+        leaseId: "lease-001",
+        receiptDigest: "sha256:lease",
+      },
+      terminal: { attempt: 1, kind: "success", terminalReceiptDigest: "sha256:terminal" },
+    });
+
+    expect(finished).toMatchObject({
+      ok: false,
+      error: {
+        code: "terminal_failed",
+        compensation: {
+          pathLeaseReleased: true,
+          cleanupHandoffRecorded: false,
+          errors: ["handoff failed"],
+        },
+      },
+    });
+    expect(fixture.calls).toEqual(["reserve", "create", "observe", "spawn", "release", "handoff"]);
+  });
 });

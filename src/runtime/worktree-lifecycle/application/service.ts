@@ -286,6 +286,7 @@ export class WorktreeLifecycleApplication {
       });
     }
     let release: PathLeaseReleaseReceipt | undefined;
+    let cleanupHandoffRecorded = false;
     const errors: string[] = [];
     try {
       release = this.ports.lease.releasePath({ lease: input.lease, reason: "terminal" });
@@ -301,6 +302,7 @@ export class WorktreeLifecycleApplication {
         ...(release ? { pathLeaseReleaseReceiptDigest: release.receiptDigest } : {}),
         primaryError: errors[0] ?? "",
       });
+      cleanupHandoffRecorded = true;
     } catch (error) {
       errors.push(errorMessage(error));
     }
@@ -313,7 +315,7 @@ export class WorktreeLifecycleApplication {
           compensation: {
             pathLeaseReleased: Boolean(release),
             activationAborted: false,
-            cleanupHandoffRecorded: errors.length < 2,
+            cleanupHandoffRecorded,
             errors,
           },
           record,
