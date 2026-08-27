@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-27
 updated: 2026-08-27
 owner: PM / PO / Codex
@@ -41,7 +41,19 @@ dependencies:
 github_issue_id: 425
 backprop_decision: required
 backprop_decision_reason: "application sagaの補償・terminal handoff・path境界を上流placement契約へ戻すため。"
-review_evidence: []
+review_evidence:
+  - reviewer: claude-opus-pr435-pair-freeze
+    review_kind: cross_agent
+    reviewed_at: "2026-08-27T04:02:47.016Z"
+    tests_green_at: "2026-08-27T03:44:31Z"
+    verdict: "PASS-WEAK; blocking 0"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    subject_head: "2eff2dcbe3e16e367e5dbebdca84d649fd9dee1e"
+    scope: "PR #435 docs-only pair-freeze。application実装、adapter、物理cleanupは未完であり、本evidenceは実装完了を意味しない。"
+    citations:
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/435#issuecomment-5434212084"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33036697995"
 ---
 
 # PLAN-L7-513: worktree lifecycle application saga

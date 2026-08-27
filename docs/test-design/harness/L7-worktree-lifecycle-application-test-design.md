@@ -2,7 +2,7 @@
 layer: L7
 executed_at_layer: L7
 artifact: test-design
-status: draft
+status: confirmed
 plan_id: PLAN-L7-513-worktree-lifecycle-application
 ---
 
