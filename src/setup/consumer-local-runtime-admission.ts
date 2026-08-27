@@ -193,6 +193,16 @@ function validIdentity(value: unknown): value is ConsumerArtifactIdentity {
   );
 }
 
+function validReceipt(value: unknown): value is ConsumerReceipt {
+  return (
+    isRecord(value) &&
+    validIdentity(value) &&
+    typeof value.productId === "string" &&
+    typeof value.consumerRoot === "string" &&
+    typeof value.runtimeRoot === "string"
+  );
+}
+
 function validPlan(plan: unknown): plan is SealedReleaseAggregatePlan {
   return (
     isRecord(plan) &&
@@ -244,7 +254,13 @@ function copyEntries(plan: SealedReleaseAggregatePlan): readonly MaterializedRel
 export function admitConsumerLocalRuntime(
   input: ConsumerLocalRuntimeAdmissionInput,
 ): ConsumerLocalRuntimeAdmissionResult {
-  if (!isRecord(input) || typeof input.productId !== "string" || input.productId.length === 0) {
+  if (
+    !isRecord(input) ||
+    typeof input.productId !== "string" ||
+    input.productId.length === 0 ||
+    typeof input.consumerRoot !== "string" ||
+    typeof input.runtimeRoot !== "string"
+  ) {
     return { ok: false, error: "invalid_artifact" };
   }
   if (
@@ -263,7 +279,7 @@ export function admitConsumerLocalRuntime(
     return { ok: false, error: "namespace_escape" };
   }
   if (!validPlan(input.plan)) return { ok: false, error: "artifact_unavailable" };
-  if (!validIdentity(input.manifest) || !validIdentity(input.receipt))
+  if (!validIdentity(input.manifest) || !validReceipt(input.receipt))
     return { ok: false, error: "identity_mismatch" };
   if (input.manifest.materializerVersion !== "1" || input.receipt.materializerVersion !== "1") {
     return { ok: false, error: "unknown_version" };

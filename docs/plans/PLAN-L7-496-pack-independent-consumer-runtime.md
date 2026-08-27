@@ -8,7 +8,7 @@ route_signal: forward
 route_mode: forward
 status: confirmed
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-27
 owner: PM / Codex
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -16,7 +16,7 @@ agent_slots:
   - role: se
     slot_label: "SE - consumer-local namespace、receipt束縛、PF5 port再利用を実装する"
   - role: qa
-    slot_label: "QA - U-PACKISO-001..006、実process、局所faultとescapeを実測する"
+    slot_label: "QA - U-PACKISO-001..007、実process、局所faultとescapeを実測する"
   - role: tl
     slot_label: "TL - source非依存、A/B隔離、Reverse backfillを非著者で検収する"
 generates:
@@ -126,13 +126,18 @@ PF1〜PF5、release promotion/rollback gate、Pack publish/copy、CLI、D1/D2/D3
   receiptへ束縛し、A/B間の横流しを拒否する。
 - staging/apply/restoreの失敗分類は既存PF5の`unavailable`または`rollback_failed/indeterminate`を保持し、
   deny時はconsumer write/process portへ到達させない。
+- admissionが`namespace_escape`、release/artifact/receipt identity mismatch、独立再計算digest mismatch、
+  artifact unavailable、unknown version、invalid inputでdenyした場合、既存PF5 compositionの
+  snapshot/staging/apply/discard/restoreとpointer/publishは全て0回で、consumerのprior bytes/mode/path/version/history
+  treeは不変とする。
 
 ## 3. TDD/trace
 
-`CANDIDATE-PACKISO-001..006`を`tests/consumer-local-runtime-admission.test.ts`の同番号
-`U-PACKISO-001..006`へ昇格する。U004/U005はBのruntime commandを実processとして稼働させ、PID/exitと
+`CANDIDATE-PACKISO-001..007`を`tests/consumer-local-runtime-admission.test.ts`の同番号
+`U-PACKISO-001..007`へ昇格する。U004/U005はBのruntime commandを実processとして稼働させ、PID/exitと
 bytes/mode/path/state treeをAのupgrade/rollback前後で比較する。U002/U006はreal filesystemの
-symlink/junction、unknown version、digest mutation、receipt mismatchを含む。
+symlink/junction、unknown version、digest mutation、receipt mismatchを含み、U007はdeny軸を一度に一つだけ
+変異してadmission branchと全composition port count 0を直接観測する。
 
 ## 4. 完了条件
 
@@ -140,3 +145,12 @@ symlink/junction、unknown version、digest mutation、receipt mismatchを含む
 2. Linux/Windowsでsource不在、A/B隔離、異version、片系upgrade/rollback、局所faultを実測する。
 3. Reverse R1〜R4で必要差分をL6/test-designへbackfillする。
 4. 非著者のclosing reviewと正規receipt gateを通過する。mergeは親runtimeが実施し、自分では行わない。
+
+## 5. Issue #419: CANDIDATE-PACKISO-007昇格
+
+PLAN-REVERSE-496 R4で固定したdeny時副作用0契約を、既存consumer-local compositionへ接続する。
+namespace escape、release/artifact/receipt identity mismatch、独立再計算digest mismatch、artifact unavailable、
+unknown version、invalid inputを個別に生成し、各caseでadmissionが`phase: "admission"`を返すこと、
+PF5 snapshot/staging/apply/discard/restore、pointer、publishのcall countが0であること、さらに
+consumer prior bytes/mode/path/version/history treeが不変であることを測定する。remote publication、channel CAS、
+PF5内部契約の再実装は行わない。
