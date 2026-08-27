@@ -85,37 +85,6 @@ export {
   type RollbackSelectionResult,
   selectRollbackCandidate,
 } from "./release-promotion-rollback-gate.ts";
-export {
-  derivePackPublicationStagingPlanDigest,
-  derivePackPublicationTreeDigest,
-  derivePackPublicationIntentDigest,
-  executePackPublication,
-  publishPackCanary,
-  sealPackPublicationIntent,
-  type CanaryObservation,
-  type CanaryPointerPort,
-  type DraftReleaseObservation,
-  type DurableExecutionStatePort,
-  type PackCommitObservation,
-  type PackMainObservation,
-  type PackPublicationApproval,
-  type PackPublicationIntent,
-  type PackPublicationIntentInput,
-  type PackPublicationIntentResult,
-  type PackPublicationPortResult,
-  type PackPublicationPorts,
-  type PackPublicationReceipt,
-  type PackPublicationRemoteIdentity,
-  type PackPublicationResult,
-  type PublicationAuditorPort,
-  type PublicationJournalEvent,
-  type PublicationPortResult,
-  type ReleaseAssetObservation,
-  type ReleasePort,
-  type ReleaseVisibilityPort,
-  type TagObservation,
-  type TagPort,
-} from "./pack-publication-adapter.ts";
 
 import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates.ts";
 
