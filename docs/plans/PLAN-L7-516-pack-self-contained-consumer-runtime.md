@@ -15,7 +15,7 @@ pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-
 next_pair_freeze: L7
 transition_direction: design_to_implementation
 implementation_disposition: none
-implementation_target: src/setup/consumer-node-runtime.ts
+implementation_target: src/setup/distribution.ts#buildConsumerReadinessPlan
 agent_slots:
   - role: se
     slot_label: "SE - sealed generationのconsumer-local materializeとidentity束縛を実装する"
@@ -115,6 +115,32 @@ source worktree、global `node_modules`を解決候補にしない。active mark
 いずれかが欠落・不一致なら、processを起動せずtyped `consumer_runtime_absent`または
 `consumer_runtime_identity_mismatch`を返す。
 
+### 2.3 readiness判定の変更所有 (#420)
+
+Issue #420で変更するreadiness判定の唯一の所有者は、既存の
+`src/setup/distribution.ts#buildConsumerReadinessPlan`である。wrapper、Claude/Codex hook、
+setup callerはこの関数が返すplanを消費するだけで、`hasUtTddCli`、package binの存在、source
+checkoutの存在、任意pathの解決結果から独自にreadyを導出しない。PF5/L6-93はsealed aggregate
+とNode receiptを検証する正本であり、consumer readinessの判定を代行しない。
+
+consumerのruntime readinessは、次の三つがconsumer-local空間で読み取れ、同一のsealed
+generation identityとcanonical digestでreceipt chainまで一致した場合だけ`ready`（既存DTOでは
+`ok=true`）とする。
+
+1. immutableなconsumer-local sealed generationとcompiled ESM
+2. consumer identityに束縛された`runtime/activation/active.json`
+3. generation、active marker、Node/bootstrap、consumer operationを連鎖検証できるreceipt
+
+欠落は`consumer_runtime_absent`、identity tupleの不一致は
+`consumer_runtime_identity_mismatch`、generation/marker/receiptの再計算digest driftは
+`consumer_runtime_digest_mismatch`としてtyped `blocked`を返す。setup元Pack checkout、source
+repository/worktree、global cache、genericな`src/cli.ts` / `src/setup/index.ts` / 任意の
+`node_modules` TypeScriptへ解決しようとした場合も`consumer_runtime_external_path`または
+`consumer_runtime_resolution_denied`としてblockedにし、read/open/stat、write、process launchを
+行わない。`hasUtTddCli`は観測用の非権威フィールドであり、`true`だけではreadyにならず、sealed
+runtimeが整合するかどうかを迂回しない。逆にこのlegacyフラグの単独値からblocked/readyを
+決めない。
+
 ## 3. hook解決とhostile consumer境界
 
 setupが生成するClaude/Codex hookの正規起動先は、consumer内の`node .ut-tdd/bin/ut-tdd.mjs`
@@ -146,6 +172,7 @@ readConsumerIdentity
 → verifySealedAggregate
 → verifyNodeGeneration
 → acquireConsumerLock
+→ snapshotPriorActiveMarker
 → createPrivateStaging
 → writeGenerationAndReceipt
 → fsyncStaging
@@ -156,16 +183,32 @@ readConsumerIdentity
 ```
 
 各read/verifyが失敗した場合、lock、staging、generation write、activation、receipt append、
-process launchは0とする。lock取得後の全faultは、private stagingだけを破棄し、primary errorを
-保持する。activation markerの更新は一回だけで、既存active markerを上書き編集せず、新しい
-immutable generationを指すatomic replaceとして行う。`verifyActiveGeneration`が失敗した場合は
-成功へ丸めず、`rollback_failed`または`indeterminate`を返す。
+process launchは0とする。lock取得後、activation前のfaultはprivate stagingだけを破棄し、
+primary errorを保持してprior stateを変更しない。`snapshotPriorActiveMarker`はactivation前に
+markerの存在しない状態を含むbyte-for-byte snapshot、canonical marker digest、prior
+`generation_id`/`attempt`を固定する。activation markerの更新は正常系で一回だけで、既存active
+markerを上書き編集せず、新しいimmutable generationを指すatomic replaceとして行う。
+
+activation後の`verifyActiveGeneration`または`appendConsumerReceipt`のfaultは、まず新たに公開
+した`generation_id`/`attempt`をCAS期待値として`compareAndSwapRestorePriorActiveMarker`を一度
+だけ実行する。CASが一致した場合だけ、snapshotしたprior marker（不存在も含む）を正確に復元し、
+新generationはimmutableな非active artifactとして残す。復元後もprocess launchは0である。
+CAS不一致、restore error、復元後の再検証失敗はprior markerを強制上書きせず
+`indeterminate`（fail-close）とし、一次faultを保持する。restore port自体の暗黙retryは持たせない。
+`appendConsumerReceipt`はprivate staged bytesを検証してからatomic replaceするため、commit前の
+faultではprior receipt/historyを変更しない。commit成否が不明なfaultも同じCAS restoreを試み、
+成功扱い・launch・外部fallbackを禁止して`indeterminate`を返す。
 
 updateはprior generationを削除せず、新generationのreceiptが検証済みになってからactive markerを
 一度だけ切り替える。rollbackは同一consumer namespaceに既に記録されたprior attested generation
 だけを選び、generation bytesを変更せず新しいactive markerとconsumer receiptを原子的に記録する。
 未記録generation、別consumer、digest変異、異なるNode generation tupleは拒否する。L6-93の
 cutover chainを巻き戻す操作、cross-revision cutover、force pointer mutationは行わない。
+
+上記の補償はactivationを成功とみなすためのretryではない。正常系はactivation一回、fault時は
+activation後の検証とreceipt publishを含めてrestore CASを高々一回とし、restore成功時に限って
+prior active markerのbytes、mode、path、generation、attemptを不変と判定できる。restore不能時は
+active stateの確定を拒否し、`indeterminate`/fail-closeを証跡へ残す。
 
 ## 5. path・権限・OS境界
 
@@ -197,7 +240,7 @@ receipt・historyが不変であることである。generation/receiptを一つ
 
 ## 7. TDD / trace / Reverse
 
-pair artifactの`CANDIDATE-U-PACKNODE-001..010`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
+pair artifactの`CANDIDATE-U-PACKNODE-001..011`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
 `U-PACKNODE-*` / `P-PACKNODE-*`へ昇格する。各候補は一つの契約軸、実測command、exact PLAN
 revision、exact HEAD、Linux/Windows結果へ1:1 traceし、既存`CANDIDATE-PACKISO-001..007`と
 `CAND-NODEBOOT-021..030`を再宣言しない。
