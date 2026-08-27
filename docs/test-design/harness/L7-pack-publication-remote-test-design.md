@@ -57,7 +57,7 @@ protected Pack `main` へのPR/CAS appendで初めて公開する。
 
 ```text
 planned / sealed re-attestation + before snapshot observe + operation approval/nonce consume + tag preflight
-  → pack_commit / publication branch commit + PR create/observe + protected main CAS merge
+  → pack_commit / publication branch commit + PR create/observe + protected main CAS merge + independent tree/commit/sidecar/identity/mode attest + journal read-back
   → release_draft / draft prerelease create/observe (`draft=true`)
   → assets / tar.gz + checksum upload/observe
   → tag / annotated tag create/observe at release Pack commit
@@ -76,7 +76,7 @@ planned / sealed re-attestation + before snapshot observe + operation approval/n
 | `CANDIDATE-PACKPUB-003-D` | commit entry、sidecar、assetの欠落・余剰・順序・bytes・size・digest変異 | typed deny、最初の remote write 0 |
 | `CANDIDATE-PACKPUB-003-E` | source/worktree/DB/PLAN/local Pack checkoutからの暗黙補完を注入 | fallback拒否、最初の remote write 0 |
 | `CANDIDATE-PACKPUB-003-F` | Pack branch/PR作成の拒否、timeout、unknown、別PR identity | `partial_publication`/`indeterminate`、後続 write 0 |
-| `CANDIDATE-PACKPUB-003-G` | approved merge観測の拒否・timeout・unknown・別commit/tree | typed partial/indeterminate、tag以降 write 0 |
+| `CANDIDATE-PACKPUB-003-G` | approved merge観測の拒否・timeout・unknown・別commit/tree、またはpack_commit read-back未確定 | typed partial/indeterminate、`release_draft`以降のRelease/assets/tag/visibility/pointer write 0 |
 | `CANDIDATE-PACKPUB-003-H1` | `planned` tag preflightでduplicate/retarget/force push要求または既存tag identity drift | mutation前deny、**全 remote write 0**（tag/Release/assets/visibility/canaryを含む） |
 | `CANDIDATE-PACKPUB-003-H2` | tag mutation後の拒否、timeout、response loss、観測不能、別target/identity | 既存draft/assetsは保持、`partial_publication`/`indeterminate`、visibility/pointer後続write 0、tag重複write 0 |
 | `CANDIDATE-PACKPUB-003-I` | release_draftでRelease identity drift、`draft=true`でないRelease、または作成拒否/timeout | typed deny/indeterminate、assets/tag/visibility/canary write 0。可視化後の `draft=false` はこの行のdeny対象外 |
@@ -91,7 +91,8 @@ planned / sealed re-attestation + before snapshot observe + operation approval/n
 | `CANDIDATE-PACKPUB-003-P` | 別release、別nonce、別operation/遷移/state/key、別Pack tree、順序飛越のretry | `nonce_replay`/typed mismatch、後続の新規write 0 |
 | `CANDIDATE-PACKPUB-003-Q` | pointer before/after snapshotを上書き、pointerをsnapshot外へ置く、protected mainへdirect push、release/pointer Pack commit/tree identityを混同 | typed deny、早期canary公開 0、PR/CAS append順序と一意identityを保持 |
 | `CANDIDATE-PACKPUB-003-R` | draft/assets/tag/pointer各操作単位のapproval receiptまたはnonce欠落、journalのplanned+nonce consumed/mutation intent/read-back observation欠落、write成功後のstate persist failure、response loss、crash/restart | 欠落receipt/nonceは当該mutation前deny・remote write 0。persist failure/response loss/restartは未観測成功を推測せず`indeterminate`、同一operationのreconciliationだけを許可 |
-| `CANDIDATE-PACKPUB-003-S` | merge read-back後に観測したrelease Pack commit SHAまたはtree SHAを単独変異、またはtag targetへ事前計算SHAを注入 | `mismatch`、tag/visibility/pointer write 0。release commit/treeはmerge後の次transition intentへappendし、pointer commit/treeはpost-observation receiptだけに残す |
+| `CANDIDATE-PACKPUB-003-S1` | initial linkageでroot intentのexpected Pack tree/entries/digests、sidecar、release identity、allowed merge mode/derivation ruleとpack_commit read-backのtree/sidecar/identityを単独変異、またはobserved commitがそのtreeを指さない | `mismatch`、`release_draft`以降のRelease/assets/tag/visibility/pointer write 0。observed commit SHAはjournal確定せず、tag targetへ事前計算SHAを注入しない |
+| `CANDIDATE-PACKPUB-003-S2` | journal確定後にobserved release commit/tree、release_draftのidentity/`target_commitish`、asset、またはtag approval targetを単独差替え | `mismatch`、該当transition以降のwrite 0。release commit/treeはmerge後の次transition intentへappendし、pointer commit/treeはpost-observation receiptだけに残す |
 
 各行は単独 mutationとして実測する。複数のguardが同時に発火して「別の理由で落ちた」
 状態をGreenとしない。operation logの順序と各 port countを直接 oracleにし、prose claimや
@@ -144,7 +145,7 @@ pair-freezeを成立させない。
 
 ## 6. 昇格と非スコープ
 
-実装PRが `CANDIDATE-PACKPUB-003-A..S`（`H1/H2` と `M1/M-late/M2` を含む）を1対1の `U-PACKPUB-REMOTE-*` へ昇格し、各
+実装PRが `CANDIDATE-PACKPUB-003-A..S2`（`H1/H2` と `M1/M-late/M2`、`S1/S2` を含む）を1対1の `U-PACKPUB-REMOTE-*` へ昇格し、各
 operation の spy count と typed reason を記録する。実装・CI・Reverse R1〜R4・Claude
 non-author closing receiptが揃うまで候補を confirmed としない。
 

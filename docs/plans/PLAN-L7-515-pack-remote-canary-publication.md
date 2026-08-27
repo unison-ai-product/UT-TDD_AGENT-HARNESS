@@ -115,24 +115,33 @@ production adapter は GitHub/Pack の SDK や CLI に直接依存せず、次�
    snapshot を専用 publication branch に commit し、PRを作成・観測する。各 mutation 前に
    operation approval receipt/nonceと`mutation_intent`をjournalへappendする。protected Pack `main`
    へは approval 済み PR の CAS merge のみを行い、merge後に生成された **release Pack commit/tree
-   SHA** と sidecar digest を再観測して `read_back_observation` をappendする。observed commit/tree
-   を次の `tag` transition intentへappendし、新しい operation approval receipt/nonce と pre-transition
-   approval state digest で tag targetへ束縛する。未生成SHAの事前sealやdeterministic precomputed commitは
-   採用しない。direct push は禁止する。
+   SHA** と sidecar digest を観測する。raw observed commit/treeは3 predicate成立前にjournalへ確定
+   しない。(a) observed treeがroot intentのexpected tree（sealed
+   entries/digestsからのdeterministic derivation）と一致、(b) observed commitがそのtreeを指す、
+   (c) sidecar、release identity、allowed merge mode/derivation ruleが一致する。不一致またはunknown
+   は `release_draft` 以降のRelease/assets/tag/visibility/pointer全writeを0とし、成功を推測しない。
+   observed commit SHAは事前比較せず、この3 predicate成立後にだけ `read_back_observation` として
+   journalへ確定する。確定した
+   observed commit/treeを次の `tag` transition intentへappendし、新しい operation approval receipt/nonce
+   と pre-transition approval state digest で tag targetへ束縛する。未生成SHAの事前sealやdeterministic
+   precomputed commitは採用しない。direct push は禁止する。
 3. `release_draft`: release identity/tag locator に束縛した GitHub Release を `draft=true` で
    作成・観測する。Release作成単位の approval receipt/nonceと`mutation_intent`を先にjournalへ
    appendする。ここで `draft=false` または別 identity を返す場合は typed deny とし、assets
-   以降の write を 0 とする。write成功、response loss、state persist failure、crash/restart は
+   以降の write を 0 とする。release identity と `target_commitish` が確定した observed release
+   commit/tree と一致することを再照合する。write成功、response loss、state persist failure、crash/restart は
    `read_back_observation` の有無で分岐し、同一operationのreconciliation以外を許可しない。
 4. `assets`: tar.gz と checksum の exact 2 assets を upload し、name、bytes、size、digest を
    各々再観測する。asset操作単位の approval receipt/nonceと`mutation_intent`を各upload前にjournalへ
-   appendし、read-back observationを各々永続化する。欠落・余剰・差替えは deny/indeterminate とする。
+   appendし、read-back observationを各々永続化する。各assetが同じ observed release commit/tree と
+   release identityへ束縛されることを再照合する。欠落・余剰・差替えは deny/indeterminate とする。
 5. `tag`: assets attested 後にだけ immutable annotated tag を **release Pack commit SHA** へ
    CAS 作成・観測する。merge read-back済みの release Pack commit/treeだけをtag targetとし、tag操作単位の
    新しい approval receipt/nonceと`mutation_intent`をjournalへappend
    する。tag duplicate/retargetはplanned preflightで全 remote write 0にdenyし、tag mutation後の
    response loss/観測不能は既存draft/assetsを保持したまま `partial_publication`/`indeterminate` とし、
-   visibility/pointer以降のwriteを0にする。tag retarget/force push は禁止する。
+   visibility/pointer以降のwriteを0にする。tag targetとtag approvalが同じ observed release commit/tree
+   を指すことを再照合する。tag retarget/force push は禁止する。
 6. `release_visible`: tag、Release、assets、control snapshot、Pack commit/tree、source revision
    の全 identity を auditor が再計算し、release visibility transition単位の approval receipt/nonce
    と`mutation_intent`をjournalへappendしてから draft Release の visibility transition を一度だけ実行
@@ -223,6 +232,9 @@ nonce、partial/indeterminate 規則だけを `L7-pack-publication-remote-test-d
 降下する。`U-PACKPUB-001`（manifest）、`U-PACKASSET-*`（asset bytes）、
 `U-PACKPUB-STAGE-*`（local staging）および `CANDIDATE-PACKPUB-004`（rollback）は既存
 PLANの所有であり、再採番・再実装しない。
+pack_commitのtree/commit/sidecar/release identity/allowed merge modeは独立attestし、Gの
+不一致・unknownは`release_draft`以降のwrite 0、S1のinitial linkage driftとS2のjournal確定後の
+差替えを別oracleとして降下する。
 
 実装時は Terra が Red oracle を先に作り、Luna が注入 port を最小実装し、Sol または
 Claude Opus の非著者 review が exact HEAD を検収する。Linux/Windows/aggregate CI、

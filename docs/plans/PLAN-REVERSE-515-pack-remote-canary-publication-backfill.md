@@ -83,7 +83,7 @@ approval receipt/nonceを要求し、write成功、response loss、state persist
 
 | candidate | 対応境界 | 独立 oracle |
 | --- | --- | --- |
-| `CANDIDATE-PACKPUB-003` | 正本FSMとremote mutation | `planned→pack_commit→release_draft→assets→tag→release_visible→canary` の順序、draft作成/visible遷移のapprovalとfault、snapshot内pointer object、before/after snapshot、protected main PR/CAS append、release/pointer Pack commit/tree identity、auditor前canary write 0。tag preflight H1はmutation前deny/write 0、tag fault H2はdraft/assets保持・visibility/pointer後続write 0、pointer M1はinitial drift/remote write 0、M-lateは第二PR/CAS直前driftでappend/write 0・既存immutable objects partial保持・new approval、M2はCAS response loss/read-back mismatchをapplied unknown/indeterminate・重複write 0として分離する。commit SHA/tree SHA単独mutationはSで検証する。 |
+| `CANDIDATE-PACKPUB-003` | 正本FSMとremote mutation | `planned→pack_commit→release_draft→assets→tag→release_visible→canary` の順序、draft作成/visible遷移のapprovalとfault、snapshot内pointer object、before/after snapshot、protected main PR/CAS append、release/pointer Pack commit/tree identity、auditor前canary write 0。tag preflight H1はmutation前deny/write 0、tag fault H2はdraft/assets保持・visibility/pointer後続write 0、pointer M1はinitial drift/remote write 0、M-lateは第二PR/CAS直前driftでappend/write 0・既存immutable objects partial保持・new approval、M2はCAS response loss/read-back mismatchをapplied unknown/indeterminate・重複write 0として分離する。pack_commitのtree/commit/sidecar/identity/mode独立attest不一致はGでrelease_draft以降write 0、S1/S2でinitial linkage driftとjournal確定後差替えおよびcommit/tree単独mutationを検証する。 |
 | `CANDIDATE-PACKPUB-004` | rollback | 本PLANでは再所有しない。既存L6-63のsupersede-forwardと後続aggregateへ参照だけを渡す。 |
 
 ## R2〜R4 出口
