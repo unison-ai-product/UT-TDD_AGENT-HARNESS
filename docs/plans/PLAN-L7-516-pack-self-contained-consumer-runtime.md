@@ -108,8 +108,18 @@ Pack checkout、worktree、global cacheを差し込む入力は持たせない�
       operation-state.json                # durable operation state
       bundle-manifest.json                # 全bytes/digest/identityのmanifest
     activation/active.json               # bundleを指すconsumer-local single active pointer
-    staging/<operation_id>/              # install/update中だけ存在するprivate staging
+  staging/<operation_id>/              # install/update中だけ存在するprivate staging
 ```
+
+### 2.2.1 bundle history chain
+
+各sealed bundleの`bundle-manifest.json`とconsumer receiptは、`prior_bundle_digest`、
+`prior_history_tip_digest`、単調増加する`history_sequence`を同一consumer namespaceで束縛する。
+genesis bundleは`history_sequence=0`、prior digestは明示的なgenesis sentinel、history tipはその
+canonical genesis recordのdigestとする。genesis以降のinstall/update/rollback/retryは、直前bundleの
+bytesを変更せず、new historyがprior history bytesの完全prefixにちょうど一つのoperation recordを
+追加したものになる場合だけ受理する。truncate、reorder、fork、replay、sequence gap、duplicate、
+prior digest/tip driftはtyped denyとし、active pointerの切替やlaunchを行わない。
 
 `bin/ut-tdd.mjs`はsingle active pointerを読み、そのpointerが指すsealed immutable activation
 bundleのmanifest、marker/receipt/history projection、generation ID、consumer namespace、Node
@@ -192,7 +202,8 @@ readConsumerIdentity
 ```
 
 各read/verifyが失敗した場合、lock、staging、generation write、bundle publish、
-process launchは0とする。lock取得後、activation前のfaultはprivate stagingだけを破棄し、
+process launchは0とする。lock取得後、activation前のfaultではprivate stagingへのwriteは許可するが、
+fault時にdestroyまたはconsumer-local quarantineし、
 primary errorを保持してprior stateを変更しない。`snapshotPriorActivePointer`はactivation前に
 pointerの存在しない状態を含むbyte-for-byte snapshot、canonical pointer digest、prior
 `generation_id`/`attempt`を固定する。single active pointerの更新は正常系で一回だけで、既存active
@@ -215,8 +226,9 @@ updateはprior bundleを削除せず、新bundleを完全fsync/sealしてreceipt
 cutover chainを巻き戻す操作、cross-revision cutover、force pointer mutationは行わない。
 
 上記のpublish/reconcileはactivationを成功とみなすためのretryではない。正常系はbundle sealと
-active pointer切替一回、fault時のreconcileはread-only一回とする。pre-commit deny/faultはwrite、
-apply、launchを0にしてprior stateを不変とし、commit済みack-lossはsingle committed bundleと
+active pointer切替一回、fault時のreconcileはread-only一回とする。pre-commit deny/faultはpublic
+active-pointer publish write、apply、launchを0にし、private staging writeだけを許可してfault時に
+destroy/quarantineし、active pointer、launch、history-visible stateを不変とする。commit済みack-lossはsingle committed bundleと
 pointerをread-only reconcileで確定して新write 0とする。commitまたはprior state不変性を確定
 できないunknown/partial stateは`indeterminate`/fail-close、成功扱い・launch 0とする。
 
@@ -254,7 +266,7 @@ receipt・historyが不変であることである。generation/receiptを一つ
 
 ## 7. TDD / trace / Reverse
 
-pair artifactの`CANDIDATE-U-PACKNODE-001..013`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
+pair artifactの`CANDIDATE-U-PACKNODE-001..014`と`CANDIDATE-P-PACKNODE-001`を、実装PRで同番号の
 `U-PACKNODE-*` / `P-PACKNODE-*`へ昇格する。各候補は一つの契約軸、実測command、exact PLAN
 revision、exact HEAD、Linux/Windows結果へ1:1 traceし、既存`CANDIDATE-PACKISO-001..007`と
 `CAND-NODEBOOT-021..030`を再宣言しない。
@@ -292,7 +304,8 @@ PF5、#432、#414、Pack remote publicationを重複所有しない。
    `node_modules` TypeScript/Bun/shell fallbackを持たない。
 3. install/update/rollbackの物理commit pointが、完全fsync/seal済みの単一immutable activation
    bundleとconsumer-local single active pointerを同一filesystemのatomic rename/CAS一回で束縛する。
-   pre-commit deny/faultはapply・write・launchが0でprior state不変、commit済みack-lossはsingle
+   pre-commit deny/faultはpublic active-pointer publish write・apply・launchが0で、private staging
+   writeは許可してfault時にdestroy/quarantineし、active pointer・launch・history-visible stateを不変とする。commit済みack-lossはsingle
    committed bundle/pointerをread-only reconcileして新write 0、unknown/partialまたはprior state
    不変性を確定できない状態は`indeterminate`/fail-close、成功扱い・launch 0とする。全lock経路の
    releaseはexactly onceで、release faultはprimary error保持のtyped `indeterminate`とする。

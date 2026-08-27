@@ -72,6 +72,9 @@ generation、wrapper解決、原子install/update/rollback、source/Pack checkou
 - sealed activation bundleを完全fsync/sealした後、consumer-local single active pointerを同一filesystem
   のatomic rename/CAS一回で切り替える物理commit point、pointerからbundleだけを解決するreadiness/wrapper、
   orphan bundleのcleanup/reconcileをLinux/Windows双方で検証すること。
+- bundle manifest/receiptへ`prior_bundle_digest`、`prior_history_tip_digest`、monotonic
+  `history_sequence`を束縛し、genesisと「prior history完全prefix + exactly one operation record」を固定すること。
+  truncate/reorder/fork/replay/sequence gap/duplicateはdenyする。
 - acquireConsumerLock後の全経路は`finally`で`releaseConsumerLock`をexactly once呼び、release throwは
   typed `indeterminate`としてprimary errorを保持すること。
 - Linux/Windowsのcanonical path、symlink/junction/reparse、8.3 alias、権限不足、未解決path、
@@ -83,7 +86,7 @@ remote publication、#418 canaryは本Reverseで再定義しない。
 
 ## R2〜R4 判定条件
 
-- **R2**: `CANDIDATE-U-PACKNODE-001..013` / `CANDIDATE-P-PACKNODE-001` が同一PLAN revision・
+- **R2**: `CANDIDATE-U-PACKNODE-001..014` / `CANDIDATE-P-PACKNODE-001` が同一PLAN revision・
   exact HEAD・実装成果物へ1:1 traceし、Linux/Windowsの実測証跡とreceipt identityを持つ。
 - **R3**: 非著者reviewが`hasUtTddCli`だけの偽ready、generic source誤起動、申告digest信用、fallback、
   partial activation、activation/receipt/history ack-loss、unknown outbox state、lock release throw、
