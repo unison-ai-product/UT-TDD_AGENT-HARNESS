@@ -60,15 +60,6 @@ jobs:
           node-version: "24.13.0"
           cache: npm
 
-      # PLAN-L7-462 step 2 (案A): bun は harness 実行系ではなく Pack/consumer acceptance
-      # テスト (tests/distribution-acceptance.test.ts / tests/setup.test.ts U-SETUP-009b 系)
-      # の fixture 依存としてのみ残置する。撤去条件は PLAN-L7-462 の exit criteria
-      # (Issue #134 migration debt) を参照。
-      - name: setup bun (Pack/consumer acceptance fixture のみ)
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3"
-
       - name: install deps (frozen)
         run: npm ci --no-audit --no-fund
 
@@ -180,15 +171,6 @@ jobs:
         with:
           node-version: "24.13.0"
           cache: npm
-
-      # PLAN-L7-462 step 2 (案A): bun は harness 実行系ではなく Pack/consumer acceptance
-      # テスト (tests/distribution-acceptance.test.ts / tests/setup.test.ts U-SETUP-009b 系)
-      # の fixture 依存としてのみ残置する。撤去条件は PLAN-L7-462 の exit criteria
-      # (Issue #134 migration debt) を参照。
-      - name: setup bun (Pack/consumer acceptance fixture のみ)
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3"
 
       - name: install deps (frozen)
         run: npm ci --no-audit --no-fund
