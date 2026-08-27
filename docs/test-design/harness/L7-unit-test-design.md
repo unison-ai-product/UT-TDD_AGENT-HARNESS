@@ -1996,6 +1996,7 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CANDIDATE-PACKISO-004` | Bのruntime commandを実行中に保ったままAだけをv1→v2へupgradeし、Aのstaging/apply境界へ1..N faultを注入 | Aの成功はatomic、失敗はA prior state不変または`rollback_failed`/`indeterminate`。Bの実行は停止せず、bytes/mode/path/version/history/process identityは全て不変 |
 | `CANDIDATE-PACKISO-005` | Bのruntime commandを実行中に保ったままAだけを直前attested artifactへrollbackし、Bのartifact/lock/receiptを同時に観測 | Aだけが決定論的に旧identityへ戻り、Bは停止・再起動・read/writeを要求されず継続可能 |
 | `CANDIDATE-PACKISO-006` | Aのartifact unavailable、artifact bytesに対する独立再計算digest mismatch、unknown version、namespace/symlink/junction escape、receipt不一致を各1点変異 | receipt/manifestの申告digestだけでは成功せず、Aは導入前fail-closeでwrite 0。Bのruntime stateと実行可能性は影響を受けない |
+| `CANDIDATE-PACKISO-007` | namespace escape、release/artifact/receipt identity mismatch、独立再計算digest mismatch、artifact unavailable、unknown version、invalid inputを各1軸だけ変異し、既存consumer compositionへ渡す | 各deny branchをtyped `phase: admission`で返し、PF5 snapshot/staging/apply/discard/restoreとpointer/publishを全て0回、consumer prior bytes/mode/path/version/history treeを不変にする。port countとdeny branchを同時に検査し、admission bypass mutationを検出する |
 
 実装昇格（`tests/consumer-local-runtime-admission.test.ts`）:
 
@@ -2006,7 +2007,8 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `U-PACKISO-003` | A=v1/B=v2のreleaseId/sourceRevision/digestを独立束縛し、version/digest/revision/releaseId/receipt reuse mutationを拒否 |
 | `U-PACKISO-004` | A prior v1→v2 upgradeの成功/各PF5 faultでA prior stateまたはindeterminateを観測し、Bの実行中Node processとroot treeを保持 |
 | `U-PACKISO-005` | A prior v2/history→attested v1 rollbackでA identity/history transitionを観測し、Bの実行中Node processとroot treeを保持 |
-| `U-PACKISO-006` | artifact unavailable、digest mutation、unknown version、symlink escape、receipt mismatchを導入前拒否しPF5 ports 0を観測 |
+| `U-PACKISO-006` | admission predicateのartifact unavailable、digest mutation、unknown version、symlink escape、receipt mismatchを各1軸で導入前拒否し、PF5 ports 0を観測する（predicate matrix） |
+| `U-PACKISO-007` | CANDIDATE-PACKISO-007の8独立deny軸を実装本体の`installConsumerLocalRuntime`へ直接渡し、admission phase、PF5 ports 0、consumer prior tree不変を同時観測する（composition oracle）。receipt `consumerRoot`/`runtimeRoot` の非stringもtyped `identity_mismatch`として含む |
 
 ## Node self-host bootstrap候補unit pair（Issue #152 D0-N）
 

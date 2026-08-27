@@ -578,6 +578,128 @@ describe("consumer-local runtime admission", () => {
     expect(ports.restoreDestination).toHaveBeenCalledTimes(0);
   });
 
+  it.each([
+    [
+      "namespace escape",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        runtimeRoot: join(input.consumerRoot, "..", "outside"),
+      }),
+      "namespace_escape",
+    ],
+    [
+      "release identity mismatch",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        plan: { ...input.plan, releaseId: `rel-sha256:${"f".repeat(64)}` },
+      }),
+      "identity_mismatch",
+    ],
+    [
+      "artifact identity mismatch",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        manifest: { ...input.manifest, artifactSetDigest: `sha256:${"e".repeat(64)}` },
+      }),
+      "identity_mismatch",
+    ],
+    [
+      "receipt identity mismatch",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        receipt: { ...input.receipt, sourceRevision: "b".repeat(40) },
+      }),
+      "identity_mismatch",
+    ],
+    [
+      "independently recomputed digest mismatch",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        plan: {
+          ...input.plan,
+          entries: [
+            {
+              ...input.plan.entries[0],
+              content: new TextEncoder().encode("mutated-artifact"),
+            },
+          ],
+        },
+      }),
+      "identity_mismatch",
+    ],
+    [
+      "artifact unavailable",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        plan: { ...input.plan, entries: [] },
+      }),
+      "artifact_unavailable",
+    ],
+    [
+      "unknown version",
+      (input: ConsumerLocalRuntimeAdmissionInput) => ({
+        ...input,
+        manifest: { ...input.manifest, materializerVersion: "2" },
+      }),
+      "unknown_version",
+    ],
+    [
+      "invalid input",
+      () => ({ productId: "product-a", consumerRoot: null, runtimeRoot: null }),
+      "invalid_artifact",
+    ],
+  ])("U-PACKISO-007: %sはdeny branchで全composition portを0回にする", async (_name, mutate, error) => {
+    const input = await fixture("product-a", "v1");
+    await seedRuntime(input.consumerRoot, "prior-v1", "prior-v1");
+    const before = await tree(input.consumerRoot);
+    const ports = {
+      snapshotDestination: vi.fn(async () => []),
+      writeStaging: vi.fn(async () => ({})),
+      applyDestination: vi.fn(async () => undefined),
+      discardStaging: vi.fn(async () => undefined),
+      restoreDestination: vi.fn(async () => undefined),
+    };
+    const result = await installConsumerLocalRuntime(
+      mutate(input) as ConsumerLocalRuntimeAdmissionInput,
+      ports,
+    );
+
+    expect(result).toMatchObject({ ok: false, phase: "admission", error });
+    expect(ports.snapshotDestination).toHaveBeenCalledTimes(0);
+    expect(ports.writeStaging).toHaveBeenCalledTimes(0);
+    expect(ports.applyDestination).toHaveBeenCalledTimes(0);
+    expect(ports.discardStaging).toHaveBeenCalledTimes(0);
+    expect(ports.restoreDestination).toHaveBeenCalledTimes(0);
+    expect(await tree(input.consumerRoot)).toBe(before);
+  });
+
+  it("U-PACKISO-007: non-string receipt roots are typed identity mismatches before composition", async () => {
+    for (const key of ["consumerRoot", "runtimeRoot"] as const) {
+      const input = await fixture("product-a", "v1");
+      await seedRuntime(input.consumerRoot, "prior-v1", "prior-v1");
+      const before = await tree(input.consumerRoot);
+      const ports = {
+        snapshotDestination: vi.fn(async () => []),
+        writeStaging: vi.fn(async () => ({})),
+        applyDestination: vi.fn(async () => undefined),
+        discardStaging: vi.fn(async () => undefined),
+        restoreDestination: vi.fn(async () => undefined),
+      };
+      const candidate = {
+        ...input,
+        receipt: { ...input.receipt, [key]: null },
+      } as unknown as ConsumerLocalRuntimeAdmissionInput;
+      const result = await installConsumerLocalRuntime(candidate, ports);
+      expect(result).toMatchObject({ ok: false, phase: "admission", error: "identity_mismatch" });
+      expect(ports.snapshotDestination).toHaveBeenCalledTimes(0);
+      expect(ports.writeStaging).toHaveBeenCalledTimes(0);
+      expect(ports.applyDestination).toHaveBeenCalledTimes(0);
+      expect(ports.discardStaging).toHaveBeenCalledTimes(0);
+      expect(ports.restoreDestination).toHaveBeenCalledTimes(0);
+      expect(await tree(input.consumerRoot)).toBe(before);
+    }
+  });
+
   it("U-PACKISO-004/005: PF5 apply failureはtop-level fail-closeへflattenする", async () => {
     const input = await fixture("product-a");
     const result = await installConsumerLocalRuntime(input, {

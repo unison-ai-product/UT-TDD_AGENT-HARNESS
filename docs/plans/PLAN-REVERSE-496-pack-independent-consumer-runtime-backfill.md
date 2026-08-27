@@ -154,3 +154,15 @@ admission deny時はPF5 apply/staging/restore/pointer/publish port 0を要求す
 
 これ以外の上流要求、PF1〜PF5、promotion gate、Pack copy、consumer implementationを変更しない。
 以上によりR4の設計gapを閉じ、Forward routingを`gap-only`として既存L6契約へ戻す。
+
+## 5. Issue #419 follow-on実装トレース（2026-08-27）
+
+Issue #419では、R4でRED候補として固定した`CANDIDATE-PACKISO-007`を、
+`tests/consumer-local-runtime-admission.test.ts`の`U-PACKISO-007`へ昇格した。
+既存PF5の`applySealedReleaseAggregate`と実装本体の`installConsumerLocalRuntime`を再利用し、
+namespace escape、release/artifact/receipt identity mismatch、独立再計算digest mismatch、
+artifact unavailable、unknown version、invalid inputを一軸ずつ変異する。U006のpredicate matrixとは
+別に、U007は実compositionへ直接入力し、各caseでtyped `phase: admission` deny、PF5
+snapshot/staging/apply/discard/restore 0、prior bytes/mode/path/version/history tree不変を同時に観測する。
+receipt `consumerRoot`/`runtimeRoot` の非stringも例外へ丸めずtyped `identity_mismatch`でfail-closeする。
+remote publication、channel CAS、PF5内部契約、Pack copyは変更しない。
