@@ -22,6 +22,16 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-513-worktree-lifecycle-application.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/worktree-lifecycle/application/index.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/worktree-lifecycle/application/ports.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/worktree-lifecycle/application/service.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/worktree-lifecycle/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/worktree-lifecycle-application.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-501-worktree-lifecycle-domain.md
   requires:

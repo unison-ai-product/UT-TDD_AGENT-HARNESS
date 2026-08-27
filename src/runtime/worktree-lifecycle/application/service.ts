@@ -97,11 +97,19 @@ export function createSystemClock(): LifecycleClockPort {
 }
 
 export class WorktreeLifecycleApplication {
+  private readonly ports: WorktreeLifecycleApplicationPorts;
+  private readonly store: WorktreeLifecycleStore;
+  private readonly platform: "win32" | "linux";
+
   constructor(
-    private readonly ports: WorktreeLifecycleApplicationPorts,
-    private readonly store: WorktreeLifecycleStore = new WorktreeLifecycleStore(),
-    private readonly platform: "win32" | "linux" = process.platform === "win32" ? "win32" : "linux",
-  ) {}
+    ports: WorktreeLifecycleApplicationPorts,
+    store: WorktreeLifecycleStore = new WorktreeLifecycleStore(),
+    platform: "win32" | "linux" = process.platform === "win32" ? "win32" : "linux",
+  ) {
+    this.ports = ports;
+    this.store = store;
+    this.platform = platform;
+  }
 
   create(input: WorktreeLifecycleCreateInput): LifecycleCreateResult {
     const validated = this.validateInput(input);
@@ -120,15 +128,15 @@ export class WorktreeLifecycleApplication {
         operationId: input.operationId,
         attempt: input.attempt,
       });
-      this.assertLeaseBinding(
+      this.assertLeaseBinding({
         lease,
         identity,
-        input.ownerSessionId,
-        input.operationId,
-        input.attempt,
-      );
+        ownerSessionId: input.ownerSessionId,
+        operationId: input.operationId,
+        attempt: input.attempt,
+      });
     } catch (error) {
-      return this.failure("reserve_failed", "path reservation failed", error);
+      return this.failure("reserve_failed", "path reservation failed", { primaryError: error });
     }
 
     let record: WorktreeLifecycleRecord;
@@ -142,7 +150,10 @@ export class WorktreeLifecycleApplication {
         primaryError: error,
         record: undefined,
       });
-      return this.failure("plan_failed", "lifecycle plan append failed", error, compensation);
+      return this.failure("plan_failed", "lifecycle plan append failed", {
+        primaryError: error,
+        compensation,
+      });
     }
 
     const run = <T>(
@@ -159,13 +170,11 @@ export class WorktreeLifecycleApplication {
           primaryError: error,
           record,
         });
-        return this.failure(
-          code,
-          `${code.replaceAll("_", " ")} failed`,
-          error,
+        return this.failure(code, `${code.replaceAll("_", " ")} failed`, {
+          primaryError: error,
           compensation,
           record,
-        );
+        });
       }
     };
 
@@ -177,7 +186,12 @@ export class WorktreeLifecycleApplication {
         branch: input.branch,
         headOid: input.headOid,
       });
-      this.assertBinding(result, identity, input.operationId, input.attempt);
+      this.assertBinding({
+        value: result,
+        identity,
+        operationId: input.operationId,
+        attempt: input.attempt,
+      });
       if (result.created !== true)
         throw new WorktreeLifecycleApplicationError(
           "worktree_create_failed",
@@ -193,7 +207,12 @@ export class WorktreeLifecycleApplication {
         operationId: input.operationId,
         attempt: input.attempt,
       });
-      this.assertBinding(result, identity, input.operationId, input.attempt);
+      this.assertBinding({
+        value: result,
+        identity,
+        operationId: input.operationId,
+        attempt: input.attempt,
+      });
       if (
         !samePath(result.adminEntryRealpath, canonical.adminEntryRealpath, this.platform) ||
         !result.inventoryAvailable
@@ -244,33 +263,27 @@ export class WorktreeLifecycleApplication {
     if (current.ownerSessionId !== input.ownerSessionId)
       return this.failure("terminal_failed", "owner mismatch");
     try {
-      this.assertLeaseBinding(
-        input.lease,
-        input.identity,
-        input.ownerSessionId,
-        input.operationId,
-        input.terminal.attempt,
-      );
+      this.assertLeaseBinding({
+        lease: input.lease,
+        identity: input.identity,
+        ownerSessionId: input.ownerSessionId,
+        operationId: input.operationId,
+        attempt: input.terminal.attempt,
+      });
     } catch (error) {
-      return this.failure(
-        "terminal_failed",
-        "path lease identity is invalid",
-        error,
-        undefined,
-        current,
-      );
+      return this.failure("terminal_failed", "path lease identity is invalid", {
+        primaryError: error,
+        record: current,
+      });
     }
     let record: WorktreeLifecycleRecord;
     try {
       record = this.store.terminal(input.identity, input.terminal);
     } catch (error) {
-      return this.failure(
-        "terminal_failed",
-        "terminal event append failed",
-        error,
-        undefined,
-        current,
-      );
+      return this.failure("terminal_failed", "terminal event append failed", {
+        primaryError: error,
+        record: current,
+      });
     }
     let release: PathLeaseReleaseReceipt | undefined;
     const errors: string[] = [];
@@ -295,14 +308,16 @@ export class WorktreeLifecycleApplication {
       return this.failure(
         "terminal_failed",
         "terminal handoff completed with compensation faults",
-        new Error(errors.join("; ")),
         {
-          pathLeaseReleased: Boolean(release),
-          activationAborted: false,
-          cleanupHandoffRecorded: errors.length < 2,
-          errors,
+          primaryError: new Error(errors.join("; ")),
+          compensation: {
+            pathLeaseReleased: Boolean(release),
+            activationAborted: false,
+            cleanupHandoffRecorded: errors.length < 2,
+            errors,
+          },
+          record,
         },
-        record,
       );
     }
     return { ok: true, record };
@@ -435,7 +450,9 @@ export class WorktreeLifecycleApplication {
         platform: this.platform,
       });
     } catch (error) {
-      return this.failure("path_invalid", "worktree path cannot be canonicalized", error);
+      return this.failure("path_invalid", "worktree path cannot be canonicalized", {
+        primaryError: error,
+      });
     }
     if (
       typeof canonical.canonicalWorktreeRealpath !== "string" ||
@@ -486,13 +503,14 @@ export class WorktreeLifecycleApplication {
     return { ok: true, value: { canonical, planned } };
   }
 
-  private assertLeaseBinding(
-    lease: PathLeaseReceipt,
-    identity: LifecycleIdentity,
-    ownerSessionId: string,
-    operationId: string,
-    attempt: number,
-  ): void {
+  private assertLeaseBinding(input: {
+    readonly lease: PathLeaseReceipt;
+    readonly identity: LifecycleIdentity;
+    readonly ownerSessionId: string;
+    readonly operationId: string;
+    readonly attempt: number;
+  }): void {
+    const { lease, identity, ownerSessionId, operationId, attempt } = input;
     if (
       lease.identity.repositoryLineageId !== identity.repositoryLineageId ||
       lease.identity.lifecycleId !== identity.lifecycleId ||
@@ -509,12 +527,13 @@ export class WorktreeLifecycleApplication {
       );
   }
 
-  private assertBinding(
-    value: { identity: LifecycleIdentity; operationId: string; attempt: number },
-    identity: LifecycleIdentity,
-    operationId: string,
-    attempt: number,
-  ): void {
+  private assertBinding(input: {
+    readonly value: { identity: LifecycleIdentity; operationId: string; attempt: number };
+    readonly identity: LifecycleIdentity;
+    readonly operationId: string;
+    readonly attempt: number;
+  }): void {
+    const { value, identity, operationId, attempt } = input;
     if (
       !sameIdentity(value.identity, identity) ||
       value.operationId !== operationId ||
@@ -547,10 +566,13 @@ export class WorktreeLifecycleApplication {
   private failure(
     code: LifecycleApplicationFailureCode,
     message: string,
-    primaryError?: unknown,
-    compensation?: LifecycleCompensationReport,
-    record?: WorktreeLifecycleRecord,
+    details: {
+      readonly primaryError?: unknown;
+      readonly compensation?: LifecycleCompensationReport;
+      readonly record?: WorktreeLifecycleRecord;
+    } = {},
   ): LifecycleFailure {
+    const { primaryError, compensation, record } = details;
     return {
       ok: false,
       error: new WorktreeLifecycleApplicationError(code, message, { compensation, primaryError }),
