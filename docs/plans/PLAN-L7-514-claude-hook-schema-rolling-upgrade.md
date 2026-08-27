@@ -57,6 +57,16 @@ review_evidence:
     citations:
       - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/436#issuecomment-5434258746"
       - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33036935365"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/test-design-naming.test.ts tests/plan-lint.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-27T03:50:00Z"
+        evidence_path: tests/test-design-naming.test.ts
+        output_digest: "sha256:40ead295773959b04ee240f555696fa028f33973009deaf172ee1b7b370e7a4a"
+        anchor_commit: 801c727cf320762e815e3a9c8a098fb456456f91
 ---
 
 # PLAN-L7-514: Claude VS Code hook generation schema の rolling upgrade
