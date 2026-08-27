@@ -1626,6 +1626,15 @@ template。永続memoryと即時配送runtime stateを分離し、通知をrevie
 | `U-MEMWAKE-006` | entrypoint欠落・未知値・`claude-vscode`、およびUT-TDD有限委譲からの抑止解除を個別投入 | `claude-vscode`だけをpositive受理し、それ以外はpoll前にexit 0。有限委譲は抑止値を強制 |
 | `U-MEMWAKE-007` | 同一git common dir上のtarget一致・不一致workspace、およびCLI publish→Stop hook配送 | 不一致watcherはclaim 0でentryを保持。一致workspaceだけが本文をstderrへ返しexit 2 |
 
+### Issue #444 terminal GC backfill (PLAN-REVERSE-600)
+
+| ID | 攻撃・入力 | oracle |
+| --- | --- | --- |
+| `U-MEMTERM-001` | `evaluateClaudeInboxTerminal` の claim / PR lifecycle / replacement head | claim済み、MERGED、CLOSED、exact HEAD不一致かつ置換entry存在を各 typed reasonへ分類する |
+| `U-MEMTERM-002` | `evaluateClaudeInboxTerminal` の memory / legacy fail-safe | `purpose=memory` と v2 はPR/本文推測で終端せず、未知観測を live のまま保持する |
+| `U-MEMTERM-003` | `recoverClaudeInboxBacklog` dry-run/apply と marker、retention | dry-run は無書込、apply は canonical review identity付きterminal markerだけを追加し、inbox JSONを保持する。証跡確認後に期限超過した孤児markerはruntime pruneでbounded cleanupされる |
+| `U-MEMTERM-004` | `waitForClaudeMemory({ pullRequestState })` と配信filter | 注入された MERGED observation は wakeせず、同一wake cycle内のPR observationはPRごと1回、実markerへcanonical receipt identityを保持し、summaryのpendingから除外する |
+
 `tests/runtime-hook-entrypoints.test.ts`はsource Stop hookの`asyncRewake=true`、
 `tests/setup.test.ts`はconsumer templateの同一配線、`tests/project-hook.test.ts`は
 `asyncRewake`欠落を機械的に拒否することを検証する。`tests/cli-delegation.test.ts`と

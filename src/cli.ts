@@ -140,9 +140,12 @@ import {
 } from "./runtime/attempt-escalation.ts";
 import {
   buildClaudeInboxEntry,
+  type ClaudeInboxPullRequestObservation,
   claudeWorkspaceId,
   isClaudeMemoryWakeTarget,
+  parseClaudeInboxPullRequestObservation,
   publishClaudeInboxEntry,
+  recoverClaudeInboxBacklog,
   resolveClaudeWakeDelay,
   summarizeUnclaimedInbox,
   waitForClaudeMemory,
@@ -533,6 +536,42 @@ function readMemoryThroughService(
   }
 }
 
+/**
+ * Read-only PR lifecycle observation at the CLI boundary.
+ *
+ * The inbox core accepts an observation port so it never owns GitHub/network
+ * policy.  `gh pr view` is deliberately invoked without a shell and every
+ * parse/network failure returns `undefined`; callers then leave the entry
+ * live.  A missing observation must never become a terminal decision.
+ */
+function observeClaudeInboxPullRequest(
+  repoRoot: string,
+  pr: number,
+): ClaudeInboxPullRequestObservation | undefined {
+  try {
+    const raw = execFileSync(
+      "gh",
+      ["pr", "view", String(pr), "--json", "state,mergedAt,headRefOid"],
+      { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+    return parseClaudeInboxPullRequestObservation(pr, raw);
+  } catch {
+    return undefined;
+  }
+}
+
+function recoverClaudeInboxForSessionStart(repoRoot: string): void {
+  try {
+    recoverClaudeInboxBacklog({
+      repoRoot,
+      dryRun: false,
+      pullRequestState: (pr) => observeClaudeInboxPullRequest(repoRoot, pr),
+    });
+  } catch {
+    // SessionStart remains fail-open; unknown PR state keeps entries live.
+  }
+}
+
 function surfaceSessionStartDigestToStdout(
   repoRoot: string,
   escalationBlock = "",
@@ -549,6 +588,7 @@ function surfaceSessionStartDigestToStdout(
   const memory = readMemoryThroughService(repoRoot, { limit: 5 });
   let unclaimedInbox: ReturnType<typeof summarizeUnclaimedInbox> | undefined;
   try {
+    recoverClaudeInboxForSessionStart(repoRoot);
     const workspaceId = claudeWorkspaceId(repoRoot);
     unclaimedInbox = summarizeUnclaimedInbox(repoRoot, workspaceId);
   } catch {
@@ -1207,6 +1247,7 @@ hook
       sessionId: input.session_id ?? "ut-tdd-cli",
       pollIntervalMs: resolveClaudeWakeDelay(process.env.UT_TDD_CLAUDE_WAKE_POLL_MS, 2_000),
       maxWaitMs: resolveClaudeWakeDelay(process.env.UT_TDD_CLAUDE_WAKE_MAX_MS, 900_000),
+      pullRequestState: (pr) => observeClaudeInboxPullRequest(repoRoot, pr),
     });
     if (result.kind === "delivered" && result.message) {
       process.stderr.write(`${result.message}\n`);

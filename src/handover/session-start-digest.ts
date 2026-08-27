@@ -373,6 +373,9 @@ export function renderSessionStartDigest(digest: SessionStartDigest): string {
         `  inbox: pending=${backlog.pending} oldest=${backlog.oldestEntryId} at=${backlog.oldestCreatedAt} age_ms=${backlog.oldestAgeMs} target_mismatch=${backlog.targetMismatchPending ?? 0} sessions=${backlog.sessionStatus ?? "unknown"} hook=${backlog.hookConfigured === undefined ? "unknown" : backlog.hookConfigured ? "configured" : "missing"}`,
       );
     }
+    if ((backlog.terminalized ?? 0) > 0) {
+      lines.push(`  inbox: terminalized=${backlog.terminalized} (evidence retained)`);
+    }
     for (const warning of backlog.warningCodes ?? []) {
       lines.push(`  inbox warning: ${warning}`);
     }
