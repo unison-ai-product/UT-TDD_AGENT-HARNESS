@@ -9,9 +9,11 @@ import {
   derivePackPublicationIntentDigest,
   derivePackPublicationTreeDigest,
   type PackPublicationApproval,
+  type PackPublicationIntent,
   type PackPublicationIntentInput,
   type PackPublicationPorts,
   publishPackCanary,
+  type ReleaseAssetObservation,
   sealPackPublicationIntent,
 } from "../src/setup/pack-publication-adapter.ts";
 import {
@@ -318,4 +320,210 @@ describe("Pack publication adapter pure domain and fail-close", () => {
     expect(result).toMatchObject({ status: "partial_publication", stage: "pack_commit" });
     expect(createDraft).not.toHaveBeenCalled();
   });
+
+  it("U-PACKPUB-REMOTE-007: late pointer CAS drift preserves prior publication and writes no pointer", async () => {
+    const sealed = sealPackPublicationIntent(intentInput());
+    if (!sealed.ok) throw new Error(sealed.error);
+    const base = ports();
+    const appendCas = vi.fn();
+    let reads = 0;
+    const result = await publishPackCanary(
+      sealed.intent,
+      successfulPorts(sealed.intent, {
+        canary: {
+          ...base.canary,
+          observeBefore: async () => ({
+            status: "attested",
+            value: {
+              pointerObjectDigest:
+                reads++ === 0
+                  ? sealed.intent.remote.expectedPointerObjectDigest
+                  : `sha256:${"9".repeat(64)}`,
+              controlManifestSnapshotDigest: sealed.intent.controlManifestSnapshotDigest,
+              mainSha: reads === 1 ? sealed.intent.remote.expectedMainSha : "2".repeat(40),
+              mainStateDigest: `sha256:${"2".repeat(64)}`,
+            },
+          }),
+          appendCas,
+        },
+      }),
+    );
+    expect(result).toMatchObject({ status: "partial_publication", stage: "canary" });
+    expect(appendCas).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-008: journal failure is indeterminate and receipt failure never claims success", async () => {
+    const sealed = sealPackPublicationIntent(intentInput());
+    if (!sealed.ok) throw new Error(sealed.error);
+    const commit = vi.fn();
+    const journalFailure = await publishPackCanary(
+      sealed.intent,
+      ports({
+        durableState: {
+          append: async () => {
+            throw new Error("persist");
+          },
+          digest: () => "never",
+        },
+        pack: { ...ports().pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(journalFailure).toMatchObject({
+      status: "indeterminate",
+      stage: "planned",
+      remoteWrites: 0,
+    });
+    expect(commit).not.toHaveBeenCalled();
+
+    const receiptFailure = await publishPackCanary(
+      sealed.intent,
+      successfulPorts(sealed.intent, {
+        receipt: {
+          persist: async () => {
+            throw new Error("receipt");
+          },
+        },
+      }),
+    );
+    expect(receiptFailure).toMatchObject({ status: "indeterminate", stage: "canary" });
+  });
+
+  it("U-PACKPUB-REMOTE-009: happy path emits one receipt bound to both commit/tree identities", async () => {
+    const sealed = sealPackPublicationIntent(intentInput());
+    if (!sealed.ok) throw new Error(sealed.error);
+    const persist = vi.fn();
+    const result = await publishPackCanary(
+      sealed.intent,
+      successfulPorts(sealed.intent, {
+        receipt: { persist },
+      }),
+    );
+    expect(result.status).toBe("published");
+    if (result.status !== "published") return;
+    expect(result.receipt.releasePackCommit).toBe("2".repeat(40));
+    expect(result.receipt.pointerPackCommit).toBe("2".repeat(40));
+    expect(result.receipt.releasePackTreeDigest).toBe(sealed.intent.expectedTreeDigest);
+    expect(result.receipt.intentDigest).toBe(sealed.intent.intentDigest);
+    expect(result.receipt.assets).toHaveLength(2);
+    expect(persist).toHaveBeenCalledOnce();
+  });
 });
+
+function successfulPorts(
+  intent: PackPublicationIntent,
+  overrides: Partial<PackPublicationPorts> = {},
+): PackPublicationPorts {
+  const base = ports();
+  const commit = {
+    commitSha: "2".repeat(40),
+    treeDigest: intent.expectedTreeDigest,
+    controlManifestSnapshotDigest: intent.controlManifestSnapshotDigest,
+    releaseId: intent.releaseId,
+    sourceRevision: intent.sourceRevision,
+    materializerVersion: intent.materializerVersion,
+    mergeMode: "pull_request_cas" as const,
+  };
+  const release = {
+    releaseId: intent.releaseId,
+    tagName: intent.tagName,
+    targetCommit: commit.commitSha,
+    draft: true,
+  };
+  const uploaded = new Map<string, ReleaseAssetObservation>();
+  let tagCreated = false;
+  let visible = false;
+  let canaryReads = 0;
+  const canary = {
+    pointerObjectDigest: `sha256:${"8".repeat(64)}`,
+    controlManifestSnapshotDigest: intent.controlManifestSnapshotDigest,
+    mainSha: commit.commitSha,
+    mainStateDigest: `sha256:${"2".repeat(64)}`,
+  };
+  return ports({
+    pack: {
+      ...base.pack,
+      commitPublicationBranch: async () => ({
+        status: "attested",
+        value: { branchCommit: commit.commitSha },
+      }),
+      createPullRequest: async () => ({ status: "attested", value: { pullRequest: "pr-1" } }),
+      mergePullRequestCas: async () => ({
+        status: "attested",
+        value: { mainSha: commit.commitSha },
+      }),
+      observeReleaseCommit: async () => ({ status: "attested", value: commit }),
+    },
+    release: {
+      ...base.release,
+      createDraft: async () => ({ status: "attested", value: release }),
+      observeDraft: async () => ({ status: "attested", value: release }),
+      uploadAsset: async ({ asset }) => {
+        const observation = {
+          name: asset.name,
+          size: asset.size,
+          contentDigest: asset.contentDigest,
+        };
+        uploaded.set(asset.name, observation);
+        return { status: "attested", value: observation };
+      },
+      observeAsset: async ({ name }) => {
+        const observation = uploaded.get(name);
+        return observation
+          ? { status: "attested", value: observation }
+          : { status: "mismatch", reason: "missing" };
+      },
+    },
+    tag: {
+      ...base.tag,
+      observe: async () =>
+        tagCreated
+          ? {
+              status: "attested",
+              value: { name: intent.tagName, targetCommit: commit.commitSha, annotated: true },
+            }
+          : { status: "mismatch", reason: "not_found" },
+      createAnnotatedCas: async () => {
+        tagCreated = true;
+        return {
+          status: "attested",
+          value: { name: intent.tagName, targetCommit: commit.commitSha, annotated: true },
+        };
+      },
+    },
+    visibility: {
+      ...base.visibility,
+      makeVisible: async () => {
+        visible = true;
+        return { status: "attested", value: { releaseId: intent.releaseId, draft: false } };
+      },
+      observe: async () => ({
+        status: "attested",
+        value: { releaseId: intent.releaseId, draft: !visible },
+      }),
+    },
+    canary: {
+      ...base.canary,
+      observeBefore: async () => ({
+        status: "attested",
+        value:
+          canaryReads++ === 0
+            ? {
+                ...canary,
+                pointerObjectDigest: intent.remote.expectedPointerObjectDigest,
+                mainSha: intent.remote.expectedMainSha,
+              }
+            : canary,
+      }),
+      appendCas: async ({ afterControlManifestSnapshotDigest }) => ({
+        status: "attested",
+        value: {
+          ...canary,
+          pointerObjectDigest: `sha256:${"9".repeat(64)}`,
+          controlManifestSnapshotDigest: afterControlManifestSnapshotDigest,
+        },
+      }),
+    },
+    auditor: { attest: async () => ({ status: "attested", value: { attested: true } }) },
+    ...overrides,
+  });
+}
