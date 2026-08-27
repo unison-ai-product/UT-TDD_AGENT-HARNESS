@@ -30,6 +30,36 @@ function runCli(cwd: string, args: string[], input?: unknown, env?: NodeJS.Proce
   });
 }
 
+function initializeTrackedProject(root: string): void {
+  const commands = [
+    ["init", "-q"],
+    ["config", "user.email", "runtime-hook@example.invalid"],
+    ["config", "user.name", "Runtime Hook Test"],
+  ] as const;
+  for (const args of commands) {
+    const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(result.stderr || `git ${args.join(" ")} failed`);
+  }
+  writeFileSync(
+    join(root, "ut-tdd.project.json"),
+    `${JSON.stringify(
+      {
+        schema_version: "ut-tdd.project/v1",
+        repository_identity: "tests/runtime-hook-entrypoints",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  for (const args of [
+    ["add", "--", "ut-tdd.project.json"],
+    ["commit", "-q", "-m", "seed tracked project identity"],
+  ]) {
+    const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(result.stderr || `git ${args.join(" ")} failed`);
+  }
+}
+
 function writeFakeCodex(binDir: string): string {
   mkdirSync(binDir, { recursive: true });
   const rawEnv = [legacyEnvPrefix, "ALLOW", "RAW", "CODEX"].join("_");
@@ -100,7 +130,7 @@ describe("runtime hook entrypoints", () => {
   it("shared CLI session/hook commands record a PLAN digest in a temp repo", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-"));
     try {
-      writeFileSync(join(cwd, "ut-tdd.project.json"), "{}\n");
+      initializeTrackedProject(cwd);
       const start = runCli(cwd, ["plan", "use", "PLAN-L4-13"]);
       expect(start.status).toBe(0);
 
@@ -164,7 +194,7 @@ describe("runtime hook entrypoints", () => {
   it("U-MEMWAKE-007: CLI hook delivers a targeted workspace inbox and exits 2", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-wake-delivery-"));
     try {
-      spawnSync("git", ["init", "-q"], { cwd });
+      initializeTrackedProject(cwd);
       const publish = runCli(cwd, [
         "memory",
         "add",
@@ -203,7 +233,7 @@ describe("runtime hook entrypoints", () => {
     try {
       const nested = join(root, "docs", "plans");
       mkdirSync(nested, { recursive: true });
-      writeFileSync(join(root, "ut-tdd.project.json"), "{}\n");
+      initializeTrackedProject(root);
       const run = runCli(
         nested,
         ["session", "start"],
@@ -240,6 +270,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-wrapper-"));
     const binDir = join(cwd, "bin");
     try {
+      initializeTrackedProject(cwd);
       const fakeCodex = writeFakeCodex(binDir);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
@@ -275,6 +306,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-task-file-"));
     const binDir = join(cwd, "bin");
     try {
+      initializeTrackedProject(cwd);
       const fakeCodex = writeFakeCodex(binDir);
       writeFileSync(join(cwd, "task.md"), "implement from task file");
       const env = {
@@ -313,6 +345,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-plan-"));
     const binDir = join(cwd, "bin");
     try {
+      initializeTrackedProject(cwd);
       const fakeCodex = writeFakeCodex(binDir);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
@@ -362,6 +395,7 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wrapper-"));
     const binDir = join(cwd, "bin");
     try {
+      initializeTrackedProject(cwd);
       const fakeClaude = writeFakeClaude(binDir);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
