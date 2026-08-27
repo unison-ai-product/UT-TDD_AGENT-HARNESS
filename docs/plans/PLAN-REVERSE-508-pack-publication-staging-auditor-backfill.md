@@ -8,9 +8,36 @@ workflow_phase: R2
 confirmed_reverse_type: design
 route_signal: reverse
 route_mode: reverse
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-27T03:15:16Z"
+    tests_green_at: "2026-08-26T08:20:48Z"
+    verdict: "R2 時点の非著者 closing review 成立 (PASS / blocking 0)。R4 再合流は未了のため status は draft"
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    subject_head: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
+    evidence_path: tests/pack-publication-staging.test.ts
+    anchor_commit: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
+    scope: >-
+      Forward 対の PLAN-L7-508 と同一 exact HEAD 8143ce40 に対する非著者 closing review の
+      Reverse 側記録。receipt は
+      rv1-6945ce76a9e1c90246e2a61a1a50058ffb46664b494480e08b8c2c4f8036755b。
+      本 entry は R2 までの検証が非著者 PASS を得たことのみを主張し、R3/R4 の完了、
+      remote publication candidate の実装、Issue #403 の完了は主張しない。
+      worker_model / effort は receipt・request・commit trailer・PR record の
+      いずれにも記録が無く、Codex session corpus (~/.codex/sessions) の turn_context 実測から
+      確定した。2026-08-26/27 の Codex 実行系は gpt-5.6-luna (effort high) と
+      gpt-5.6-sol (effort low) の 2 つだけで、創出レーンが luna/high、review・verdict レーンが
+      sol/low に分かれている。実値の申告があれば本欄を訂正する。Issue #429 が本欄の
+      手書き運用そのものを所有する。
+    citations:
+      - ".ut-tdd/review/receipts/6945ce76a9e1c90246e2a61a1a50058ffb46664b494480e08b8c2c4f8036755b.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/32946157460"
 status: draft
 created: 2026-08-25
-updated: 2026-08-26
+updated: 2026-08-27
 owner: Codex / Luna
 forward_routing: gap-only
 promotion_strategy: reuse-as-is

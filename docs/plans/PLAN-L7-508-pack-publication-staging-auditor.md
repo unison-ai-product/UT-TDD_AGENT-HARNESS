@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: confirmed
 created: 2026-08-25
-updated: 2026-08-26
+updated: 2026-08-27
 owner: Codex / Luna
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -92,6 +92,56 @@ review_evidence:
         evidence_path: src/setup/pack-publication-staging.ts
         output_digest: "sha256:3e0361e097e0680dc671a2a11032909ba23400b1d6bb5ff62fe72740dac37d82"
         anchor_commit: d888938eee480d65febf4b4d16fd9473c5f80d03
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-27T03:15:16Z"
+    tests_green_at: "2026-08-26T08:20:48Z"
+    verdict: pass
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
+    subject_head: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
+    evidence_path: tests/pack-publication-staging.test.ts
+    anchor_commit: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
+    scope: >-
+      PR #410 exact HEAD 8143ce40 に対する非著者 closing review。canonical request
+      rv1-6945ce76a9e1c90246e2a61a1a50058ffb46664b494480e08b8c2c4f8036755b の receipt が
+      verdict=PASS / blocking 0 / reviewerFamily=claude を記録している。本 entry は
+      直前の codex-primary-preflight entry が「Claude Opus non-author exact-head closing
+      review pending」と述べた状態の解消を記録するものであり、preflight entry は当時の
+      記述のまま残す (confirmed PLAN の記述を遡及改変しない)。PR は 2026-08-27T03:16:24Z に
+      merge 済み。本 entry は closing review の成立のみを主張し、Issue #403 の完了や
+      Pack 受入完了は主張しない。
+      worker_model / effort は receipt・request・commit trailer・PR record の
+      いずれにも記録が無く、Codex session corpus (~/.codex/sessions) の turn_context 実測から
+      確定した。2026-08-26/27 の Codex 実行系は gpt-5.6-luna (effort high) と
+      gpt-5.6-sol (effort low) の 2 つだけで、創出レーンが luna/high、review・verdict レーンが
+      sol/low に分かれている。実値の申告があれば本欄を訂正する。Issue #429 が本欄の
+      手書き運用そのものを所有する。
+    citations:
+      - ".ut-tdd/review/receipts/6945ce76a9e1c90246e2a61a1a50058ffb46664b494480e08b8c2c4f8036755b.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/32946157460"
+      - "tests/pack-publication-staging.test.ts: U-PACKPUB-STAGE-001..010"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub harness-check run 32946157460 (harness-check-linux / harness-check-windows / harness-check aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-26T08:20:48Z"
+        evidence_path: tests/pack-publication-staging.test.ts
+        output_digest: "sha256:4221e846816dce13f1d6581eab3042dc43e552f8075e122690eb533b73567c46"
+        anchor_commit: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
+      - kind: vmodel_lint
+        command: "node src/cli.ts plan lint docs/plans/PLAN-L7-508-pack-publication-staging-auditor.md"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-26T08:20:48Z"
+        evidence_path: docs/plans/PLAN-L7-508-pack-publication-staging-auditor.md
+        output_digest: "sha256:46467ffe80c7b25150ffda5bb44ee6d5eacad9212e9bd5ab314f788d2594e37e"
+        anchor_commit: 8143ce40f6df3f56ebcee9d745d6f38422e1912f
 ---
 
 # PLAN-L7-508

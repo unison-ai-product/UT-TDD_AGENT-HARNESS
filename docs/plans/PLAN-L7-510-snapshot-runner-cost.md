@@ -8,7 +8,7 @@ route_signal: code_smell
 route_mode: refactor
 status: draft
 created: 2026-08-26
-updated: 2026-08-26
+updated: 2026-08-27
 owner: Codex / Luna
 github_issue_id: 409
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -40,7 +40,44 @@ generates:
     artifact_type: test_design
 backprop_decision: not_required
 backprop_decision_reason: "This slice adds opt-in diagnostics only; it does not change the verification-lane contract or snapshot custody semantics."
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-27T03:17:05Z"
+    tests_green_at: "2026-08-27T01:37:47Z"
+    verdict: "measurement slice の非著者 closing review 成立 (PASS / blocking 0)。Issue #409 の最適化完了は未主張のため status は draft"
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: claude-opus-5
+    plan_revision: f829e9414d0f14aa67d3e62364865d3c291ca995
+    subject_head: f829e9414d0f14aa67d3e62364865d3c291ca995
+    evidence_path: docs/test-design/harness/L7-snapshot-runner-cost-test-design.md
+    anchor_commit: f829e9414d0f14aa67d3e62364865d3c291ca995
+    scope: >-
+      PR #423 exact HEAD f829e941 に対する非著者 closing delta review。canonical request
+      rv1-89b41293dbf4c9843dc9d769e03aecf6efd5b4898832ce58bd099065042d5ade の receipt が
+      verdict=PASS / blocking 0 / reviewerFamily=claude を記録している。先行 FLAG
+      (immediate stage emission oracle) は同 HEAD で是正済み。PR は 2026-08-27T03:18:15Z に
+      merge 済み。scope は計測のみで、Issue #409 の最適化完了は主張しない。
+      worker_model / effort は receipt・request・commit trailer・PR record の
+      いずれにも記録が無く、Codex session corpus (~/.codex/sessions) の turn_context 実測から
+      確定した。2026-08-26/27 の Codex 実行系は gpt-5.6-luna (effort high) と
+      gpt-5.6-sol (effort low) の 2 つだけで、創出レーンが luna/high、review・verdict レーンが
+      sol/low に分かれている。実値の申告があれば本欄を訂正する。Issue #429 が本欄の
+      手書き運用そのものを所有する。
+    citations:
+      - ".ut-tdd/review/receipts/89b41293dbf4c9843dc9d769e03aecf6efd5b4898832ce58bd099065042d5ade.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33030014480"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub harness-check run 33030014480 (harness-check-linux / harness-check-windows / harness-check aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-27T01:37:47Z"
+        evidence_path: docs/test-design/harness/L7-snapshot-runner-cost-test-design.md
+        output_digest: "sha256:4d3b45484fd53a3d816133101b3ff746eb80f6e47821288cea38996690c16db6"
+        anchor_commit: f829e9414d0f14aa67d3e62364865d3c291ca995
 ---
 
 # PLAN-L7-510 Snapshot runner fixed-cost measurement and reduction
