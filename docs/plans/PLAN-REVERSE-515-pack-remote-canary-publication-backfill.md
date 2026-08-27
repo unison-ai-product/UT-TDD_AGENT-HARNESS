@@ -60,6 +60,10 @@ release draft は作成時に `draft=true` を要求するが、`release_visible
 成功観測であり、非draftを一律denyする逆契約は採用しない。canary は可視化前に公開せず、
 pointer before/after snapshot と、release用およびpointer append用の Pack commit/tree identityを
 それぞれ一意に監査する。
+各transitionの `planned + nonce consumed`、`mutation intent`、`read-back observation` は
+`DurableExecutionStatePort` の append-only journalへ永続化する。draft/assets/tag/pointer各操作単位の
+approval receipt/nonceを要求し、write成功、response loss、state persist failure、crash/restartを
+同一operation reconciliationと新規write denyへ分離する。
 
 ## Backprop scope
 
@@ -75,14 +79,16 @@ pointer before/after snapshot と、release用およびpointer append用の Pack
 
 | candidate | 対応境界 | 独立 oracle |
 | --- | --- | --- |
-| `CANDIDATE-PACKPUB-003` | 正本FSMとremote mutation | `planned→pack_commit→release_draft→assets→tag→release_visible→canary` の順序、draft作成/visible遷移のapprovalとfault、snapshot内pointer object、before/after snapshot、protected main PR/CAS append、release/pointer Pack commit/tree identity、auditor前canary write 0 |
+| `CANDIDATE-PACKPUB-003` | 正本FSMとremote mutation | `planned→pack_commit→release_draft→assets→tag→release_visible→canary` の順序、draft作成/visible遷移のapprovalとfault、snapshot内pointer object、before/after snapshot、protected main PR/CAS append、release/pointer Pack commit/tree identity、auditor前canary write 0。tag preflight H1はmutation前deny/write 0、tag fault H2はdraft/assets保持・visibility/pointer後続write 0、pointer M1はbefore drift/append 0、M2はCAS response loss/read-back mismatchをapplied unknown/indeterminate・重複write 0として分離する。 |
 | `CANDIDATE-PACKPUB-004` | rollback | 本PLANでは再所有しない。既存L6-63のsupersede-forwardと後続aggregateへ参照だけを渡す。 |
 
 ## R2〜R4 出口
 
 後続実装では、`CANDIDATE-PACKPUB-003`を同名系統の `U-PACKPUB-REMOTE-*` として昇格し、
 各 deny と各 fault boundary を注入 portのspy/count、identity digest、before/after snapshot、
-durable execution stateで独立に測る。未使用 nonce は新規 operation 開始時だけ consume し、
+`DurableExecutionStatePort` の append-only journal（planned+nonce consumed→mutation intent→read-back observation）と
+durable execution stateで独立に測る。draft/assets/tag/pointer各操作単位のapproval receipt/nonceを要求し、
+未使用 nonce は新規 operation 開始時だけ consume し、
 consume済みnonceの同一 operation/遷移/intent/state/key は新規writeなしのreconciliation、別
 operation/遷移/identity/state/keyはnonce replay denyとして分離する。実Pack/GitHub remoteのcredentialや外部書込みを単体・統合テストへ
 持ち込まず、Linux/Windows/aggregate の CI 証跡を同じ exact HEAD へ束縛する。

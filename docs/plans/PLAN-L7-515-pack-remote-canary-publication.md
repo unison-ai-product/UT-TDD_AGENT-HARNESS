@@ -76,6 +76,8 @@ adapter は remote mutation の前に、次の値を一つの immutable intent �
 - annotated tag 名と tag が指す **release Pack commit/tree SHA**、draft prerelease の identity
 - operation ID、遷移名ごとの human approval nonce、expiry、approver identity、intent digest、
   durable execution state digest、idempotency key
+- 各 mutation（draft Release、asset upload、tag、canary pointer append）単位の approval receipt と
+  nonce、ならびに `DurableExecutionStatePort` が保持する append-only execution journal の digest
 
 intent の seal 後は entry、bytes、identity、順序、nonce、対象 repository を変更できない。
 nonce は operation ID・遷移名・intent digest・durable execution state・idempotency key に
@@ -89,6 +91,10 @@ nonce は operation ID・遷移名・intent digest・durable execution state・i
 production adapter は GitHub/Pack の SDK や CLI に直接依存せず、次の注入 port だけを
 受け取る。port の返却値は `attested`、`mismatch`、`unavailable`、`partial_publication`
 または `indeterminate` の typed observation とし、例外を成功へ丸めない。
+`DurableExecutionStatePort` は durable state と append-only journal の唯一の書込み口であり、
+各 transition について `planned + nonce_consumed` → `mutation_intent` → mutation →
+`read_back_observation` を順に永続化する。journal の state persist failure または crash/restart
+後は、最後の永続化済み observation までを reconciliation し、未永続化 mutationを成功と推測しない。
 
 呼出順序は、親 `PLAN-L6-63` の正本 FSM
 `planned -> pack_commit -> release_draft -> assets -> tag -> release_visible -> canary`
@@ -99,28 +105,41 @@ production adapter は GitHub/Pack の SDK や CLI に直接依存せず、次�
 1. `planned`: sealed staging result、control-manifest before snapshot（canary pointerを含む）、
    commit entry、sidecar、asset 2件、全 digest と release identity を再検証する。transition
    approval receipt を operation/遷移名/nonce/idempotency key と durable state に束縛して consume
-   し、before-state drift があれば remote port は一切呼ばない。
+   し、journalへ `planned + nonce_consumed` をappendする。tag duplicate/retargetを含む全 preflight
+   と before-state drift があれば、最初の remote write より前に deny し全 remote write countを0にする。
 2. `pack_commit`: sealed entries、release record、**pointerを変更しない** control-manifest
-   snapshot を専用 publication branch に commit し、PRを作成・観測する。protected Pack `main`
+   snapshot を専用 publication branch に commit し、PRを作成・観測する。各 mutation 前に
+   operation approval receipt/nonceと`mutation_intent`をjournalへappendする。protected Pack `main`
    へは approval 済み PR の CAS merge のみを行い、merge後の **release Pack commit/tree SHA** と
-   sidecar digest を再観測する。direct push は禁止する。
+   sidecar digest を再観測して `read_back_observation` をappendする。direct push は禁止する。
 3. `release_draft`: release identity/tag locator に束縛した GitHub Release を `draft=true` で
-   作成・観測する。ここで `draft=false` または別 identity を返す場合は typed deny とし、assets
-   以降の write を 0 とする。
+   作成・観測する。Release作成単位の approval receipt/nonceと`mutation_intent`を先にjournalへ
+   appendする。ここで `draft=false` または別 identity を返す場合は typed deny とし、assets
+   以降の write を 0 とする。write成功、response loss、state persist failure、crash/restart は
+   `read_back_observation` の有無で分岐し、同一operationのreconciliation以外を許可しない。
 4. `assets`: tar.gz と checksum の exact 2 assets を upload し、name、bytes、size、digest を
-   各々再観測する。欠落・余剰・差替えは deny/indeterminate とする。
+   各々再観測する。asset操作単位の approval receipt/nonceと`mutation_intent`を各upload前にjournalへ
+   appendし、read-back observationを各々永続化する。欠落・余剰・差替えは deny/indeterminate とする。
 5. `tag`: assets attested 後にだけ immutable annotated tag を **release Pack commit SHA** へ
-   CAS 作成・観測する。tag retarget/force push は禁止する。
+   CAS 作成・観測する。tag操作単位の approval receipt/nonceと`mutation_intent`をjournalへappend
+   する。tag duplicate/retargetはplanned preflightで全 remote write 0にdenyし、tag mutation後の
+   response loss/観測不能は既存draft/assetsを保持したまま `partial_publication`/`indeterminate` とし、
+   visibility/pointer以降のwriteを0にする。tag retarget/force push は禁止する。
 6. `release_visible`: tag、Release、assets、control snapshot、Pack commit/tree、source revision
-   の全 identity を auditor が再計算し、transition approval receipt を検証してから draft Release
-   の visibility transition を一度だけ実行する。transition 後は `draft=false` が期待値であり、
-   未可視・別 identity・応答不明は `mismatch`/`indeterminate` として停止する。
+   の全 identity を auditor が再計算し、release visibility transition単位の approval receipt/nonce
+   と`mutation_intent`をjournalへappendしてから draft Release の visibility transition を一度だけ実行
+   する。transition後の`read_back_observation`まで永続化する。transition 後は `draft=false` が期待値で
+   あり、未可視・別 identity・応答不明は `mismatch`/`indeterminate` として停止する。
 7. `canary`: release visible attestation 後にだけ、candidate canary pointer を含む **after
    control-manifest snapshot** を生成し、before snapshot の CAS を付けた別の publication PR と
-   して protected Pack `main` へ append/merge する。pointer object、before/after snapshot digest、
-   **pointer Pack commit/tree SHA** を read-back し、これを `canary` の唯一の成功境界とする。
+   して protected Pack `main` へ append/merge する。pointer操作単位の approval receipt/nonce と
+   `mutation_intent`をjournalへappendしてからCASする。pointer object、before/after snapshot digest、
+   **pointer Pack commit/tree SHA** を `read_back_observation` として永続化し、これを `canary` の唯一の
+   成功境界とする。before-state/object driftはappend 0、CAS response loss/read-back mismatchは
+   `applied=unknown`/`indeterminate` とし、重複append 0・success 0とする。
 8. 全操作の順序、remote response、observer 結果、approval、実行者、CI/QA/review receipt を、
-   durable execution state と idempotency key を含む append-only publication receipt/auditor result
+   durable execution state と idempotency key、append-only execution journal
+   （各transitionのplanned/nonce consumed、mutation intent、read-back observation）を含む publication receipt/auditor result
    に束縛する。release Pack commit/tree と pointer Pack commit/tree は役割ごとに一意であり、
    tag は前者、after snapshot は後者だけを指す。
 
@@ -143,7 +162,8 @@ reconciliation は既存 object の再観測であり新規 write replay では�
 - release ID、source revision、materializer、control snapshot の不一致
 - Pack repository、expected main SHA、canary pointer object または before control-manifest snapshot
   digest の drift
-- duplicate tag/release/asset、tag retarget、force push、既存 asset overwrite の要求
+- duplicate tag/release/asset、tag retarget、force push、既存 asset overwrite の要求（tag duplicate/retarget
+  preflight は最初の remote write より前に denyし全 remote write count 0）
 - Pack main への直接 push、保護 branch 迂回、source/worktree/DB/PLAN fallback の検出
 
 ### 4.2 最初の write より後
@@ -159,6 +179,9 @@ consume 済み nonce について、同一 immutable identity・operation・遷�
 同じ PR/tag/Release/asset/pointer の write を再発行しない。異なる release ID、別 source revision、
 別 Pack tree、別 pointer、別 operation/遷移/state/key への nonce 再利用、operation 順序飛越は
 `mismatch`/`nonce_replay` で停止する。未使用 nonce は新規開始以外に使わない。
+DurableExecutionStatePort の state persist failure または crash/restart で journal の
+`mutation_intent` に対応する `read_back_observation` が無い場合は、write成功を推測せず
+`indeterminate` として reconciliation を要求する。
 
 ### 4.3 rollback 境界
 
@@ -172,7 +195,8 @@ commit を削除・付け替えず、障害後の回復は L6-63 が定義する
 成功 receipt は `releaseId`、source revision、release Pack commit/tree、pointer Pack commit/tree、
 annotated tag、Release（draft/visible transition）、2 assets の name/size/digest、control-manifest
 before/after snapshot digest、canary pointer object、approval identity、遷移ごとの nonce、operation ID、
-durable execution state digest、idempotency key、各観測結果を保持する。receipt 自身の digest と
+各操作単位のapproval receipt、durable execution state digest、idempotency key、append-only journal digest、
+各mutationのread-back observationを保持する。receipt 自身の digest と
 intent digest は変更後の remote object から逆算せず、同一 sealed intent に束縛する。
 
 tag/Release/assets の全監査と release visibility transition が完了するまで canary pointer
