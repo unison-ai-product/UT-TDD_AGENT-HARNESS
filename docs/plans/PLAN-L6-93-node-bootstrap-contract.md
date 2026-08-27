@@ -276,6 +276,12 @@ Unicode正規化差異 (NFC/NFD)、homoglyph、zero-width文字、UTF-8として
 「末尾改行の有無」という曖昧な文言は使わない — 終端LFは0個か1個のいずれかであり、
 2個以上は受理しない。
 
+**canonical byte列`C`の信頼源** (r6 review 指摘): `C`は**lint source内のimmutable byte literal**
+を唯一の正本とする。外部fixtureファイルを読んで期待値とすることを禁止する — fixtureを正本にすると、
+wrapperとfixtureを同一PRで同時に書き換えることでfail-openでき、「実装PRが方式を発明しない」という
+本節のfreezeが成立しないためである。同じ理由で、`C`をwrapper自身や生成物から導出してはならない
+(期待値が対象に追随すると検出が恒真になる)。`C`の変更は本PLANの改訂を要する。
+
 **comment行を自由記述にしない理由** (r4 review 指摘): comment行は意味的に不活性ではない。
 POSIXではcanonical shebangより前に別の`#!`行を置けば別interpreterが選択され得るし、
 PowerShellの`#requires -Modules`は3行の実行文より前にmodule codeをloadして実行する。
@@ -374,7 +380,10 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 1. wrapper 2本を§5.2.1のcanonical text (全文固定) へ倒すことと、L6 `function-spec.md` /
    requirements §7.1 の記述追随。
 2. `runtime-portability` lintへの再流入fail-close追加
-   (`CAND-NODEBOOT-021/022/023/024`のGreen化)。
+   (`CAND-NODEBOOT-021/022/023/024/025/026`のGreen化)。025は受理4集合外のbyte列rejection、
+   026は起動形oracle (symlink形はcanonical == 現行main形の等価oracle、bare-name形と
+   相対PATH entry形は実測値の固定) である。**この6件全てが実装PRの必須gateであり、
+   一部のGreen化で撤去を進めない。**
 
 **wrapper書き換えに伴う起動形の検証** (r2 / r5 review 指摘): 現行の
 `ROOT="$(CDPATH= cd -- … && pwd)"` は絶対・正規化されたrootを得るのに対し、§5.2.1のcanonical textは
