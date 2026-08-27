@@ -15,7 +15,8 @@ export type LiveReviewWakeRoutingFailure =
   | "no_live_claude_workspace"
   | "ambiguous_live_claude_workspace"
   | "stale_claude_workspace"
-  | "incompatible_claude_workspace_schema";
+  | "incompatible_claude_workspace_schema"
+  | "codex_review_wake_unavailable";
 
 export class LiveReviewWakeError extends Error {
   readonly reason: LiveReviewWakeRoutingFailure;
@@ -33,6 +34,7 @@ export interface LiveReviewRequestInput extends ReviewAttestationRequest {
 
 export interface CanonicalReviewWake {
   readonly purpose: "review";
+  readonly reviewer: ReviewProvider;
   readonly requestDigest: string;
   readonly requestPath: string;
   readonly request: ReviewAttestationRequest;
@@ -233,6 +235,7 @@ export function dispatchLiveReview(input: {
   try {
     input.ports.publishReviewWake({
       purpose: "review",
+      reviewer,
       requestDigest: issued.digest,
       requestPath: issued.path,
       request: issued.request,

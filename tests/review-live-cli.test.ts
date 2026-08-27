@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -188,6 +189,108 @@ describe("review live CLI composition", () => {
     }
     const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
     expect(requests).toHaveLength(1);
+    expect(() =>
+      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
+    ).toThrow();
+  });
+
+  it("U-RVATT-024: does not resolve Claude workspace for a Codex reviewer", async () => {
+    const { root, memoryPath } = fixture();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const resolveWakeTarget = vi.fn(() => ({ ok: true as const, workspaceId: "f".repeat(64) }));
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => root,
+      providerAvailable: () => true,
+      resolveWakeTarget,
+    });
+    const originalWrite = process.stdout.write;
+    const originalExitCode = process.exitCode;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-dispatch",
+        "--memory-id",
+        "memory:d3a",
+        "--memory-path",
+        relative(root, memoryPath).replaceAll("\\", "/"),
+        "--pr",
+        "319",
+        "--head",
+        head,
+        "--revision",
+        "review-d3a-codex-target",
+        "--author-family",
+        "claude",
+        "--json",
+      ]);
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = originalExitCode;
+    }
+    expect(resolveWakeTarget).not.toHaveBeenCalled();
+    expect(() =>
+      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
+    ).toThrow();
+    const requests = readdirSync(join(root, ".ut-tdd", "review", "requests"));
+    expect(requests).toHaveLength(2);
+    expect(
+      requests.filter((name) => {
+        const request = JSON.parse(
+          readFileSync(join(root, ".ut-tdd", "review", "requests", name), "utf8"),
+        ) as { authorFamily?: string };
+        return request.authorFamily === "claude";
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("U-RVATT-024: uses an injected Codex wake surface without touching Claude workspace", async () => {
+    const { root, memoryPath } = fixture();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const resolveWakeTarget = vi.fn(() => ({ ok: true as const, workspaceId: "f".repeat(64) }));
+    const publishCodexReviewWake = vi.fn();
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => root,
+      providerAvailable: () => true,
+      resolveWakeTarget,
+      publishCodexReviewWake,
+    });
+    const originalWrite = process.stdout.write;
+    const originalExitCode = process.exitCode;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-dispatch",
+        "--memory-id",
+        "memory:d3a",
+        "--memory-path",
+        relative(root, memoryPath).replaceAll("\\", "/"),
+        "--pr",
+        "319",
+        "--head",
+        head,
+        "--revision",
+        "review-d3a-codex-surface",
+        "--author-family",
+        "claude",
+        "--json",
+      ]);
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = originalExitCode;
+    }
+    expect(resolveWakeTarget).not.toHaveBeenCalled();
+    expect(publishCodexReviewWake).toHaveBeenCalledWith(
+      realpathSync.native(root),
+      expect.objectContaining({ purpose: "review", reviewer: "codex" }),
+    );
     expect(() =>
       readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
     ).toThrow();

@@ -142,6 +142,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
         order.push("wake");
         expect(wake).toEqual({
           purpose: "review",
+          reviewer: "claude",
           requestDigest: issued.digest,
           requestPath: issued.path,
           request: canonicalRequest,
@@ -195,6 +196,20 @@ describe("live review projection (U-RVATT-023..026)", () => {
       }),
     ).toEqual({ ok: false, reason: "unknown_author_family" });
     expect(unknown.issueRequest).not.toHaveBeenCalled();
+  });
+
+  it("U-RVATT-024 carries the opposite reviewer into wake routing", () => {
+    const request = { ...liveRequest, authorFamily: "claude" as const };
+    const publishReviewWake = vi.fn();
+    const ports = requestPorts({ publishReviewWake });
+
+    expect(dispatchLiveReview({ repoRoot: "repo", request, ports })).toMatchObject({
+      ok: true,
+      reviewer: "codex",
+    });
+    expect(publishReviewWake).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose: "review", reviewer: "codex" }),
+    );
   });
 
   it("U-RVATT-024 consumes strict canonical identity through the opposite provider CLI", () => {

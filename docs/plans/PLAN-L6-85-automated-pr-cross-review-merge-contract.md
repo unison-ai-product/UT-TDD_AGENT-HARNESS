@@ -100,6 +100,7 @@ PR bodyは説明用projectionであり、accept判定はExecution Ledgerのtyped
 ## 3. Cross review契約
 
 - author/workerと異なるprovider familyをreviewerに割り当てる。別model名でも同一providerならcross reviewではない。
+- live wakeはreviewer providerごとの受信面へ配送する。Claude reviewerだけがClaude inbox/workspaceを解決し、Codex reviewerではCodex受信面を明示的に解決する。未実装・利用不能な受信面はtyped unavailableで停止し、無関係なClaude workspaceを解決してはならない。
 - claim-blind laneはartifact + spec/AC + reviewer自身が取得したtest/CIを判定する。
 - spec-blind laneはartifact単体の矛盾、dead path、境界欠落、危険な権限・副作用を攻撃する。
 - reviewはCI green後に開始し、verdictは`PASS | PASS-WEAK | FLAG`とattack/refutation citationを持つ。
