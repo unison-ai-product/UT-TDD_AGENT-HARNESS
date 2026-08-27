@@ -101,6 +101,10 @@ provider family を束縛し、request の外側に置く。
   write / backfill できない。** worker が書けるなら申告値と同じ強度しか持たない。
 - **dispatch custody を束縛する。** record は「どの dispatch が」「どの worker を」「どの role /
   provider / model で」起動したかを持つ。dispatch identity は request identity とは独立に採番する。
+  ただし record の issuer 欄や通常の content digest は worker が同じ値を自己生成できるため、信頼根には
+  しない。dispatch custody は worker が書けない append-only の issuer attestation (dispatch identity、
+  repository、commit-set、provider、完了時刻を束縛した署名/検証可能な custody envelope) として発行し、
+  受理点はその attestation を独立に検証する。
 - **completion binding を要求する。** dispatch 開始時点の宣言だけでは、起動後に別 provider が
   commit を作った場合を排除できない。record は dispatch の**完了時**に、その dispatch が実際に
   生成した commit 集合と結び付けて確定する。開始時 record と完了時 binding が一致しないものは
@@ -163,7 +167,8 @@ provenance record が「書かれた後は正しい」と仮定しない。次�
 - **overwrite / delete を許さない。** record は append-only とし、訂正は新 record の追記と
   supersede 関係で表す。既存 record の書き換え・削除を支援された操作にしない。
 - **issuer / digest の mutation を検出する。** record は issuer と内容の digest を持ち、
-  受理点で再計算して照合する。
+  受理点で再計算して照合する。issuer attestation も同じ dispatch custody root で検証し、
+  worker が issuer と record digest を同時に forge しても受理しない。
 - **attempt 後・merge 前の差し替え (TOCTOU) を塞ぐ。** request / receipt / merge gate を
   **同一の provenance digest・provenance schema version・commit-set snapshot** へ束縛する。
   receipt が参照した provenance snapshot と merge 時点の snapshot が一致しない場合は
@@ -193,8 +198,10 @@ request をそのまま閉じられるなら、PR #430 型の誤 `authorFamily` 
 - **保存側と受理側を分離する。** digest 保存の不変条件 (再計算 0、既存 receipt との対応維持) は
   受理側の照合免除を意味しない。両者を同一の oracle で測らない。
 - **照合できない旧 request の扱い**: provenance が `unknown` で照合できない旧 request は、
-  旧規則で close させない。**Issue #439 の typed retraction で終端し、新 schema で再 mint する**
-  経路へ倒す。これが #437 (発生防止) と #439 (回復経路) を接続する唯一の正規経路である。
+  旧規則で close させない。`unknown_provenance_unresolved` の typed non-terminal として保持し、
+  merge gate を blocking のままにする。#439 の `unclosable` retraction は独立 provenance が確定し、
+  #439 §3.2 の機械述語を満たした場合だけ発行できる。unknown のまま自動 retraction/終端や新 schema
+  再 mintへ遷移させない (不可能な terminal transition を契約に書かない)。
 - **grandfather 条項を作らない。** 「移行期間中は旧 request を無条件に通す」という例外を置かない。
   例外を置けば、その期間は Issue #437 の脆弱性がそのまま残る。
 
@@ -243,7 +250,8 @@ Issue #437 の「逆向きの同型ケース」を契約に含める。`claude` 
 - request の `authorFamily` が authoring provenance と一致しない場合、`beginReviewAttempt` を
   typed deny する。deny は reviewer provider の当否より先に評価する。
 - provenance が `unknown` または `conflict` の場合、`beginReviewAttempt` を typed deny する。
-  申告値へ fallback しない。
+  申告値へ fallback しない。旧 request も `unknown_provenance_unresolved` の non-terminal として
+  merge-blocking に保持し、独立 provenance 無しの retraction/close を発行しない。
 - merge gate は、受理点と同じ照合を独立に再実行する。review 側だけで判定を完結させない。
 
 **発行権限 (§3.2)**
@@ -265,7 +273,8 @@ Issue #437 の「逆向きの同型ケース」を契約に含める。`claude` 
 - 同一 repo・同一 commit に対する異 family の二重記録を `conflict` として保持し、先勝ちで捨てない。
 - repository identity が一致しない record を受理しない (cross-repo replay 禁止)。
 - record の overwrite / delete を支援された操作にしない。訂正は追記と supersede で表す。
-- issuer と内容 digest を受理点で再計算して照合する。
+- issuer attestation の dispatch custody root と record の issuer/content digest を受理点で独立に
+  検証し、issuer と内容 digest を同時に forge した record を deny する。
 - request / receipt / merge gate を同一の provenance digest・schema version・commit-set snapshot へ
   束縛する。receipt 参照時と merge 時で snapshot が異なる場合は typed deny する。
 
@@ -273,8 +282,9 @@ Issue #437 の「逆向きの同型ケース」を契約に含める。`claude` 
 
 - 旧 schemaVersion の request に新規則を遡及適用して digest を再計算しない。
 - 旧 schema であることを理由に受理点の照合を免除しない。
-- provenance が照合できない旧 request を旧規則で close させない。#439 の typed retraction で
-  終端し、新 schema で再 mint する。
+- provenance が照合できない旧 request を旧規則で close させない。`unknown_provenance_unresolved`
+  として live/merge-blocking に保持し、#439 の typed retraction は provenance 確定後に機械述語を
+  満たす場合だけ許可する。unknown のまま終端・自動再 mintへ進めない。
 - 移行期間の無条件通過 (grandfather) 条項を置かない。
 
 **mixed family (§3.5)**

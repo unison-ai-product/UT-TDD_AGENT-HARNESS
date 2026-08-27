@@ -44,9 +44,11 @@ R2 で必ず攻撃側から検証する項目:
 - provenance 書き込み失敗が成功扱いにならないこと。
 - 旧 schema request の遡及再解釈が起きないこと。
 - **worker 自身が自分の provenance を書ける経路が残っていないこと** (信頼根の分離が実効であること)。
+- **worker 自身が issuer attestation と provenance digest を同時に forge しても受理されないこと** (独立 custody root と mutation oracle)。
 - **dispatch 開始時宣言だけで family が確定してしまわないこと** (完了時 commit-set binding の必須性)。
 - **receipt 発行後・merge 前の provenance 差し替えが通らないこと** (TOCTOU)。
 - **旧 schema であることが照合免除として使えないこと** (grandfather 条項の不在)。
+- **provenance unknown の旧 request が不可能な retraction/closeへ遷移しないこと** (`unknown_provenance_unresolved` としてlive/merge-blockingに保持する)。
 - **混在 contributor family set が多数派へ丸められないこと**。
 
 R3 では #430 型の誤申告 request を fixture として再現し、移行期間中でも自己 review / merge へ

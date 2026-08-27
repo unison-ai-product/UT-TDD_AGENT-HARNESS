@@ -55,7 +55,7 @@ updated: 2026-08-27
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-AUTHPROV-019 | 当該 commit を書いた worker family 自身が自分の provenance record を write | typed deny。record 0 件 |
+| CANDIDATE-U-AUTHPROV-019 | 当該 commit を書いた worker family 自身が issuer attestation と provenance record を同時に write/forge | typed deny。独立 custody 検証に失敗し、record 0 件 |
 | CANDIDATE-U-AUTHPROV-020 | dispatch identity を持たない record を受理点へ入力 | typed deny。信頼根として使わない |
 | CANDIDATE-U-AUTHPROV-021 | dispatch 開始時 record の宣言 family と、完了時 commit-set binding の family が食い違う | `unknown` へ倒す。開始時宣言を採用しない |
 | CANDIDATE-U-AUTHPROV-022 | unknown 解消の backfill を、当該 commit を書いた worker family が実行 | typed deny |
@@ -79,7 +79,7 @@ updated: 2026-08-27
 | CANDIDATE-U-AUTHPROV-030 | 同一 repo・同一 commit に異 family の record が 2 件 | `conflict` として保持。先勝ちで片方を捨てない。受理点は `unknown` 同様に deny |
 | CANDIDATE-U-AUTHPROV-031 | 別 repository identity の record を同一 commit sha で流用 | typed deny (cross-repo replay) |
 | CANDIDATE-U-AUTHPROV-032 | 既存 record の overwrite / delete を要求 | 支援されない操作として deny。訂正は追記 + supersede でのみ成立 |
-| CANDIDATE-U-AUTHPROV-033 | issuer または内容を改変した record | 受理点の digest 再計算で不一致を検出し deny |
+| CANDIDATE-U-AUTHPROV-033 | issuer attestation と内容 digest を同時に改変/forge した record | 受理点の独立 custody 検証と digest 再計算で不一致を検出し deny。record 側の自己申告だけでGreenにならない |
 | CANDIDATE-U-AUTHPROV-034 | receipt 発行後・merge 前に provenance snapshot を差し替え | merge gate が snapshot 不一致を typed deny。「review 時は正しかった」を merge 根拠にしない |
 | CANDIDATE-U-AUTHPROV-035 | request / receipt / merge gate が同一 snapshot を参照する正常系 | `merge_ready` へ到達 |
 
@@ -88,7 +88,7 @@ updated: 2026-08-27
 | Candidate | Stimulus | Oracle |
 |---|---|---|
 | CANDIDATE-U-AUTHPROV-036 | 旧 schema の in-flight request を、provenance 照合なしで close | typed deny。旧 schema は照合免除にならない |
-| CANDIDATE-U-AUTHPROV-037 | 旧 schema request で provenance が照合できない | 旧規則で close させず、#439 の typed retraction 経路へ倒す |
+| CANDIDATE-U-AUTHPROV-037 | 旧 schema request で provenance が照合できない | `unknown_provenance_unresolved` の typed non-terminal としてlive/merge-blockingに保持。#439 retractionや再mintへ自動遷移せず、unknownのままcloseできない |
 | CANDIDATE-U-AUTHPROV-038 | 旧 schema request で provenance が照合でき一致する | close 可。旧 digest は再計算されない |
 | CANDIDATE-U-AUTHPROV-039 | PR #430 型の誤 `authorFamily` 旧 request を移行期間中に close しようとする | typed deny。grandfather 条項が存在しない |
 
