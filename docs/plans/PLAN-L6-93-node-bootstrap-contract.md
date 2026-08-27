@@ -261,18 +261,40 @@ exit $LASTEXITCODE
 ```
 
 **比較手順 (byte単位、r5 review 指摘)**: lintは対象ファイルを**raw bytesとして読む**
-(text decodeもUnicode正規化も行わない)。canonical byte列 `C` は上記全文をUTF-8・LF改行・
-**末尾に終端LFをちょうど1個**持つ形とする。`C0` を `C` から終端LFを除いた列、
-`CRLF(x)` を `x` の全LFをCRLFへ置換した列とすると、**受理するbyte列は次の4つだけ**である:
+(text decodeもUnicode正規化も行わない)。ファイルごとにcanonical byte列を定義し、
+そこから受理集合を導く。
+
+**BOMの扱いは2ファイルで非対称である** (r7 review 指摘)。同一規則を当てると誤る:
+
+| file | 先頭BOM | 理由 |
+|---|---|---|
+| `scripts/ut-tdd` | **禁止** (BOM無しがcanonical) | `EF BB BF`が`#!`より前に来るとshebangが成立せず、kernelがinterpreterを解決できない。技術的にBOMは置けない |
+| `scripts/ut-tdd.ps1` | **必須、ちょうど1個** (`EF BB BF`) | Windows PowerShell 5.1はBOM無しをANSIとして誤読する。`.ps1`はUTF-8 BOM必須という既存の運用規約に従う |
+
+`.ps1`のBOMは**現状と異なる**: `origin/main`の`scripts/ut-tdd.ps1`は先頭が`23 20 55` (`# U`) で
+BOMを持たない。実装PRはBOMを付与する。canonical textがASCIIのみなので現状でも実害は出ていないが、
+全文固定の契約下では「たまたまASCIIだから安全」という暗黙の前提を残さず、規約側へ寄せる。
+
+canonical byte列を次のとおり定義する。`T_posix` / `T_ps1` は§5.2.1のcanonical text (全文) を
+UTF-8・LF改行・**末尾に終端LFをちょうど1個**持つ形でencodeした列とする:
+
+```
+C_posix = T_posix                     (BOM無し)
+C_ps1   = EF BB BF || T_ps1           (BOM 1個を前置)
+```
+
+各fileについて、`C0` を `C` から終端LFを除いた列、`CRLF(x)` を `x` の**BOMを除く部分**の
+全LFをCRLFへ置換した列とすると、**受理するbyte列は次の4つだけ**である:
 
 ```
 C, C0, CRLF(C), CRLF(C0)
 ```
 
 file bytesがこの4つのいずれとも一致しなければfail-close。これにより
-BOM (`EF BB BF`)、lone CR、NUL、末尾の追加空行、行末trailing whitespace、
-Unicode正規化差異 (NFC/NFD)、homoglyph、zero-width文字、UTF-8として不正なbyte列は、
-**個別規則を書かずに**すべて不一致として落ちる (どれもこの4列のいずれでもないため)。
+lone CR、NUL、末尾の追加空行、行末trailing whitespace、Unicode正規化差異 (NFC/NFD)、
+homoglyph、zero-width文字、UTF-8として不正なbyte列、**および`.ps1`のBOM欠落・BOM重複・
+`scripts/ut-tdd`へのBOM混入・別encoding (UTF-16 LE/BE等) への差し替え**は、
+**個別規則を書かずに**すべて不一致として落ちる (どれもそのfileの4列のいずれでもないため)。
 「末尾改行の有無」という曖昧な文言は使わない — 終端LFは0個か1個のいずれかであり、
 2個以上は受理しない。
 
@@ -364,10 +386,27 @@ compiled dispatchはどのconsumer経路からも到達されず、到達し得�
 
 ### 5.4 `build` scriptの撤去条件
 
-§1 `buildNodeGeneration`のsealed build receiptと Node parity receiptが**双方とも**記録された時点で
-撤去する。**いずれか一方でも欠けている状態での`build` script撤去を本条項が禁止する**
+§1 `buildNodeGeneration`のsealed build receiptと Node parity receiptが**双方とも**記録され、
+かつ**両receiptが下記の閉じたtupleでexact一致する**時点で撤去する。
+**いずれか一方でも欠けている状態での`build` script撤去を本条項が禁止する**
 (`CAND-NODEBOOT-023`)。片方成立・他方不成立の組み合わせも禁止側であり、oracleは
 2 receiptの論理積で判定する (片側だけを見るoracleは撤去を許してしまう)。
+
+**receipt束縛tuple (r7 review 指摘、存在確認だけでは不足)**: 「2 receiptが存在する」ことは
+撤去条件として不十分である。別revisionでbuildしたreceiptと別revisionで取ったparity receiptが
+並んでいても存在条件は満たされ、どちらも現在の撤去対象を保証しない。したがって両receiptは
+次の4要素からなる閉じたtupleを持ち、**両者のtupleが完全一致し、かつ撤去commitのsubjectと
+一致する**ことを要求する:
+
+| 要素 | 意味 |
+|---|---|
+| `subject_revision` | algorithm prefix付きGitObjectId (§4と同じ形)。build対象とparity計測対象が同一commitであること |
+| `generation_id` | §1 `buildNodeGeneration`が生成したimmutable generationの識別子。同一revisionでも別generationのreceiptを混ぜない |
+| `artifact_digest` | 封印されたbuild成果物のdigest。generationが同じでも成果物が異なるreceiptを混ぜない |
+| `retirement_subject` | 撤去 (= `package.json`の`build` script削除) を行うcommitのsubject revision。過去の成立を現在の撤去へ流用させない |
+
+4要素のいずれか1つでも不一致なら撤去をfail-closeする。**部分一致による撤去は禁止側**であり、
+oracleは論理積 (2 receiptの存在 ∧ tuple完全一致) で判定する。
 
 ### 5.5 実装PRへの委任事項
 
@@ -380,10 +419,13 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 1. wrapper 2本を§5.2.1のcanonical text (全文固定) へ倒すことと、L6 `function-spec.md` /
    requirements §7.1 の記述追随。
 2. `runtime-portability` lintへの再流入fail-close追加
-   (`CAND-NODEBOOT-021/022/023/024/025/026`のGreen化)。025は受理4集合外のbyte列rejection、
+   (`CAND-NODEBOOT-021`〜`030`のGreen化)。025は受理4集合外のbyte列rejection、
    026は起動形oracle (symlink形はcanonical == 現行main形の等価oracle、bare-name形と
-   相対PATH entry形は実測値の固定) である。**この6件全てが実装PRの必須gateであり、
-   一部のGreen化で撤去を進めない。**
+   相対PATH entry形は実測値の固定)、027/028は§5.4のreceipt束縛tuple不一致の4+1 case、
+   029/030はfile別canonical byte列のBOM非対称 (`.ps1`はBOM必須、POSIXはBOM禁止) である。
+   **この10件全てが実装PRの必須gateであり、一部のGreen化で撤去を進めない。**
+3. `scripts/ut-tdd.ps1`への先頭BOM (`EF BB BF`) 付与。現状はBOM無しであり、
+   §5.2.1の`C_ps1`と一致しない。
 
 **wrapper書き換えに伴う起動形の検証** (r2 / r5 review 指摘): 現行の
 `ROOT="$(CDPATH= cd -- … && pwd)"` は絶対・正規化されたrootを得るのに対し、§5.2.1のcanonical textは
@@ -432,9 +474,13 @@ bare-name形と相対PATH entry形については等価性を主張しない。�
 | `CAND-NODEBOOT-024` | §5.2.1 全文一致 (canonical以外の起動 / 非不活性comment) | `eval` / 代入内command substitution / backtick / source / 別`exec` / 別shebang / `#requires` 等を個別caseで固定 |
 | `CAND-NODEBOOT-025` | §5.2.1 比較手順 (受理4集合の外) | BOM / lone CR / NUL / 末尾追加空行 / trailing whitespace / NFD / homoglyph / zero-width / 不正UTF-8 をbyte列不一致で落とす |
 | `CAND-NODEBOOT-026` | §5.5 起動形の等価性 | symlink形はcanonical == 現行main形 (等価oracle)。bare-name / 相対PATH entry は実測値を固定 |
+| `CAND-NODEBOOT-027` | §5.4 receipt束縛tuple | stale / wrong-revision / wrong-generation / wrong-artifact の4caseを独立に落とす |
+| `CAND-NODEBOOT-028` | §5.4 `retirement_subject` | 過去成立receiptの別commitへの流用をfail-close |
+| `CAND-NODEBOOT-029` | §5.2.1 `C_ps1` (BOM必須) | BOM欠落 / BOM重複 / 別encodingを落とす |
+| `CAND-NODEBOOT-030` | §5.2.1 `C_posix` (BOM禁止) | 先頭BOM混入を落とす (shebang破壊) |
 
-021 / 022 / 024 は**同一の全文一致規則に対する別々の攻撃case**であり、3つの独立した検出規則
-ではない。denylist時代は規則ごとに列挙漏れが迂回路になっていたが、allowlistでは
+021 / 022 / 024 / 025 / 029 / 030 は**同一の全文一致規則に対する別々の攻撃case**であり、
+独立した検出規則ではない (029 / 030 はcanonical byte列がfile別であることを固定する)。denylist時代は規則ごとに列挙漏れが迂回路になっていたが、allowlistでは
 「canonical text全文一致以外はすべて落ちる」1規則に収束する。
 
 実装先は`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
