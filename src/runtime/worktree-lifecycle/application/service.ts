@@ -581,7 +581,10 @@ function isAbsoluteFor(value: string, platform: "win32" | "linux"): boolean {
 
 function isCanonicalRoot(value: string, platform: "win32" | "linux"): boolean {
   const pathApi = platform === "win32" ? win32 : posix;
-  const normalized = pathApi.normalize(value).replace(/[\\/]$/, "");
+  const normalized = pathApi
+    .normalize(value)
+    .replace(/[\\/]$/, "")
+    .replaceAll("\\", "/");
   const expected = platform === "win32" ? "C:/dev" : "/dev";
   return (platform === "win32" ? normalized.toLowerCase() : normalized) === expected.toLowerCase();
 }
