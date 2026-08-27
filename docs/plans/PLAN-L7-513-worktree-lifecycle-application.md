@@ -1,0 +1,136 @@
+---
+plan_id: PLAN-L7-513-worktree-lifecycle-application
+title: "PLAN-L7-513 (add-impl): worktree lifecycle application saga"
+kind: add-impl
+layer: L7
+drive: agent
+route_signal: feature_addition
+route_mode: add-feature
+status: draft
+created: 2026-08-27
+updated: 2026-08-27
+owner: PM / PO / Codex
+parent_design: docs/plans/PLAN-L7-501-worktree-lifecycle-domain.md
+pair_artifact: docs/test-design/harness/L7-worktree-lifecycle-application-test-design.md
+agent_slots:
+  - role: se
+    slot_label: "SE - lifecycle application reserve/create/observe/activate saga"
+  - role: qa
+    slot_label: "QA - U-WTAPP fault, identity, path, terminal handoff oracle"
+  - role: tl
+    slot_label: "TL - #384/#391 domain reuse and application boundary review"
+generates:
+  - artifact_path: docs/plans/PLAN-L7-513-worktree-lifecycle-application.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-L7-501-worktree-lifecycle-domain.md
+  requires:
+    - PLAN-L7-501-worktree-lifecycle-domain
+  blocks: []
+  references:
+    - docs/plans/PLAN-REVERSE-513-worktree-lifecycle-application-backfill.md
+    - docs/plans/PLAN-L4-34-repository-runtime-placement-topology.md
+    - docs/plans/PLAN-L7-501-worktree-lifecycle-domain.md
+    - docs/plans/PLAN-REVERSE-501-worktree-lifecycle-domain-backfill.md
+    - docs/test-design/harness/L7-worktree-lifecycle-application-test-design.md
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/385
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/391
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/384
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/425
+github_issue_id: 425
+backprop_decision: required
+backprop_decision_reason: "application sagaの補償・terminal handoff・path境界を上流placement契約へ戻すため。"
+review_evidence: []
+---
+
+# PLAN-L7-513: worktree lifecycle application saga
+
+## 1. 位置づけと目的
+
+Issue #425 は、Issue #384（PR #391でmergedされた `PLAN-L7-501` domain）の immutable record / FSM / reducerを
+呼び出す application 境界を固定する。worktree の作成と終了を、owner・Issue・PLAN revision・TTL・branch・parent・path
+の同一 identity / attempt に束縛し、途中失敗を成功や無音孤児へ丸めない。
+
+これは #385 の L4/L9 pair-freeze と `PLAN-L7-501` の domain 契約を再利用する docs-only pair-freeze である。
+本 PLAN は application の順序、補償、handoff、path入力の意味だけを凍結し、adapterや物理操作の実装を追加しない。
+
+## 2. 固定する application 契約
+
+### 2.1 create の入力と side effect 0
+
+create は全入力を side effect 前に検証する。owner、Issue、PLAN ID / PLAN revision、TTL、branch、parent
+(parent process/session)、path のいずれかが欠落・空・不正なら、`reservePath` を含む全呼出しと worktree create を 0
+にして typed deny を返す。入力は文字列 shell command ではなく path object / argv 境界で受ける。
+
+作成対象は canonical `C:\dev\` 配下の direct child だけとする。root 自身、nested child、root 外、canonicalize 不能、
+junction / reparse point / symlink によって実体が root 外へ解決する path、home、Temp、OneDrive、OS の long-path
+上限超過は fail-close とし、worktree create を 0 にする。spaces を含む path は拒否理由にせず、同じ argv contract
+で扱う。
+
+direct-child 比較は canonical 実体に対して行う。Windows は drive letter と各 path component を case-insensitive
+に比較し、Linux は case-sensitive に比較する。path の字面だけ、cwd、worktree 名、symlink の入口を identity としない。
+
+### 2.2 create saga の順序
+
+正常系の唯一の順序は次のとおりで、段階の省略・並べ替え・暗黙 retry を許さない。
+
+`reservePath → plan → create → observe → activate`
+
+| 段階 | 固定する入力・後条件 |
+| --- | --- |
+| `reservePath` | canonical path、lifecycle identity、owner、同一 operation / attempt を束縛した path lease を取得する。予約失敗時は後続を呼ばない。 |
+| `plan` | lease receipt を含む owner / Issue / PLAN revision / TTL / branch / parent / canonical identity を同じ attempt の `planned` record として append する。plan前にcreateしない。 |
+| `create` | `planned` record と lease がある場合だけ worktree create port を一度呼ぶ。直接 `git worktree add` をapplication内で行わない。 |
+| `observe` | 作成結果の canonical worktree/admin entry、inventory available、lineage / identity を同じ attempt で照合する。不一致・欠測は activate しない。 |
+| `activate` | start receipt、owner認証、inventory fact、lease、identity、attempt が一致した場合だけ `planned → active` を domain reducerへ渡す。 |
+
+owner、identity、attempt は全段階で同じ値を使う。別 owner、別 repository lineage、別 lifecycle、別 attempt の receipt
+や observation を補完に使わない。application は domain の許可遷移を再実装せず、domain append point を一つに保つ。
+
+### 2.3 fault と補償
+
+`reservePath` 後の `plan` / `create` / `observe` / `activate` のいずれかが失敗した場合、元の primary error を保持した
+まま、同じ identity / attempt の activation-abort、path lease release、cleanup handoff を記録する。releasePath 自体が
+throw しても release error で primary error を置き換えず、release failure は補償の typed fault として併記する。
+abort / cleanup handoff の記録が失敗した場合も成功へ丸めず、recorded state と未完了 handoff を fail-close で返す。
+
+activation-abort は `planned → terminal_pending` の sealed domain event とし、#124 の terminal receiptを捏造しない。
+補償は物理削除ではなく、後続の cleanup authority が再開できる handoff である。
+
+### 2.4 finish / abort の terminal handoff
+
+- `finish` は typed terminal input または authenticated owner/session-loss observation を、同じ lifecycle / attempt に
+  束縛して domainへ渡し、terminal event の append 後に terminal cleanup handoff を一度だけ記録する。
+- `abort` は activation fault、起動前 cancel、timeout、owner loss を activation-abort として sealed にし、同じ
+  identity / attempt の cleanup handoffを残す。active recordへ成功terminalを推測で付与しない。
+- terminal receipt 欠落・不一致、owner 認証欠落、inventory 欠測は domain の typed deny（`terminal_missing`、
+  `terminal_mismatch`、`owner_unknown`、`inventory_unavailable` 等）を保持し、TTL超過だけで retire / cleanup success
+ へ遷移させない。
+- finish / abort の再送は同一 receipt なら冪等、異なる digest・identity・attempt なら `replay_conflict` とし、terminal
+  stateや既存 handoff を上書きしない。
+
+## 3. 非Scope
+
+この docs-only slice は次を実装・変更しない。
+
+- adapter（Node/Git/FS/process/OS）と `reservePath` / `releasePath` の物理実装
+- CLI、doctor、hooks、session start/stop、JSONL ledger / durable ledger
+- worktree bytes の physical cleanup、quarantine、branch削除、既存worktree回収（#426）
+- #232 inventory detector、#124 Stop worker/resource/cancellation、`PLAN-L7-501` domain FSM の再実装
+- #141 placement cutover、canonical state root 移設、OneDrive からの実移動
+
+## 4. 設計と検証の対
+
+pair artifact の `CANDIDATE-U-WTAPP-001..007` と `CANDIDATE-P-WTAPP-001` は、実装前の RED oracle として保持する。
+candidate を Green 実績、既存実装、既存worktree cleanupの証拠とはみなさない。
+
+## 5. Schedule と完了条件
+
+1. [直列] `PLAN-L7-501` domain の confirmed identity / attempt / transition 契約を入力として application port境界を固定する。
+2. [直列] reserve→plan→create→observe→activate と fault compensation の Red oracle を pair-freeze する。
+3. [並列] OS path boundary、finish/abort handoff、identity/replay、performance candidate を検証する。
+4. [直列] Reverse R1〜R4、targeted test、plan lint、非著者 exact-head reviewへ進む。
+
+完了条件は、全必須入力欠落時の create 0、順序違反の検出、primary error 保持、releasePath fault時の abort / cleanup
+handoff、finish / abort の terminal handoff、Windows/Linux path規則、および candidateの1:1 traceを実装とテストで実測すること。
+docs-only freeze時点ではこれらの Greenを主張しない。
