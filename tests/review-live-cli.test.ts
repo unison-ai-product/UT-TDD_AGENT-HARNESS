@@ -193,6 +193,54 @@ describe("review live CLI composition", () => {
     ).toThrow();
   });
 
+  it("U-RVATT-024: does not resolve Claude workspace for a Codex reviewer", async () => {
+    const { root, memoryPath } = fixture();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    const resolveWakeTarget = vi.fn(() => ({
+      ok: false as const,
+      reason: "codex_review_wake_unavailable" as const,
+    }));
+    const program = new Command().exitOverride();
+    registerLiveReviewCommands(program.command("review"), {
+      repoRoot: () => root,
+      providerAvailable: () => true,
+      resolveWakeTarget,
+    });
+    const originalWrite = process.stdout.write;
+    const originalExitCode = process.exitCode;
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      await program.parseAsync([
+        "node",
+        "ut-tdd",
+        "review",
+        "live-dispatch",
+        "--memory-id",
+        "memory:d3a",
+        "--memory-path",
+        relative(root, memoryPath).replaceAll("\\", "/"),
+        "--pr",
+        "319",
+        "--head",
+        head,
+        "--revision",
+        "review-d3a-codex-target",
+        "--author-family",
+        "claude",
+        "--json",
+      ]);
+    } finally {
+      process.stdout.write = originalWrite;
+      process.exitCode = originalExitCode;
+    }
+    expect(resolveWakeTarget).toHaveBeenCalledWith(root, "codex");
+    expect(resolveWakeTarget).not.toHaveBeenCalledWith(root, "claude");
+    expect(() =>
+      readdirSync(join(root, ".git", "ut-tdd-runtime", "claude-memory-wake", "inbox")),
+    ).toThrow();
+    expect(readdirSync(join(root, ".ut-tdd", "review", "requests"))).toHaveLength(1);
+  });
+
   it("U-RVATT-031 grants Claude only the consumer-derived exact verdict path", () => {
     const root = join(tmpdir(), "ut-review-permission-root");
     const digest = "c".repeat(64);

@@ -35,6 +35,7 @@ export interface LiveReviewCommandDeps {
   ) => void;
   readonly resolveWakeTarget: (
     repoRoot: string,
+    provider: "codex" | "claude",
   ) =>
     | { readonly ok: true; readonly workspaceId: string }
     | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
@@ -97,7 +98,10 @@ export function registerLiveReviewCommands(
     runReview: ({ repoRoot, provider, args }) =>
       executeLiveReviewDelegation({ repoRoot, provider, args }),
     publishReceipt: publishLiveReviewReceipt,
-    resolveWakeTarget: resolveLiveClaudeWorkspace,
+    resolveWakeTarget: (repoRoot, provider) =>
+      provider === "claude"
+        ? resolveLiveClaudeWorkspace(repoRoot)
+        : { ok: false, reason: "codex_review_wake_unavailable" },
     ...overrides,
   };
   review
@@ -143,8 +147,11 @@ export function registerLiveReviewCommands(
               issueRequest: issueReviewRequest,
               providerAvailable: deps.providerAvailable,
               publishReviewWake: (wake) => {
-                const target = deps.resolveWakeTarget(repoRoot);
+                const target = deps.resolveWakeTarget(repoRoot, wake.reviewer);
                 if (!target.ok) throw new LiveReviewWakeError(target.reason);
+                if (wake.reviewer !== "claude") {
+                  throw new LiveReviewWakeError("codex_review_wake_unavailable");
+                }
                 const notification = buildClaudeReviewInboxEntry({
                   memory,
                   operationId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
