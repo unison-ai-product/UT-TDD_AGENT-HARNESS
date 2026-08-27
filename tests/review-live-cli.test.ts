@@ -262,7 +262,12 @@ describe("review live CLI composition", () => {
       },
     };
     const runReview = vi.fn((_: Parameters<LiveReviewCommandDeps["runReview"]>[0]) => projection);
-    const publishReceipt = vi.fn();
+    const publishReceipt = vi.fn(
+      (
+        _: Parameters<LiveReviewCommandDeps["publishReceipt"]>[0],
+        __: Parameters<LiveReviewCommandDeps["publishReceipt"]>[1],
+      ) => {},
+    );
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {
       repoRoot: () => root,
@@ -305,7 +310,11 @@ describe("review live CLI composition", () => {
     expect(realpathSync.native(reviewCall.args[taskFileIndex + 1] ?? "")).toBe(
       realpathSync.native(memoryPath),
     );
-    expect(publishReceipt).toHaveBeenCalledWith(root, projection);
+    expect(publishReceipt).toHaveBeenCalledOnce();
+    const receiptCall = publishReceipt.mock.calls[0];
+    if (!receiptCall) throw new Error("review receipt was not published");
+    expect(realpathSync.native(receiptCall[0])).toBe(realpathSync.native(root));
+    expect(receiptCall[1]).toBe(projection);
   });
 
   it("U-RVATT-036 obtains receipt provider/model/role/time/exit facts through the real delegation CLI", () => {
