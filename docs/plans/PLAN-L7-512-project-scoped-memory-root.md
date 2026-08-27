@@ -25,14 +25,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
     artifact_type: test_design
-  - artifact_path: src/runtime/project-memory-root.ts
-    artifact_type: source_module
-  - artifact_path: src/runtime/project-memory-migration.ts
-    artifact_type: source_module
-  - artifact_path: src/kernel/project-identity-loader.ts
-    artifact_type: source_module
-  - artifact_path: tests/project-memory-root.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
   requires: []
@@ -72,6 +64,9 @@ transient notification busとして共有する。絶対pathはidentityに含め
 
 ## 3. Implementation slices
 
+本PRは契約と対になるcandidateだけをfreezeする。次の成果物はpair-freeze後の原子的な実装PRが所有し、
+本PRの`generates`へ先行登録しない。
+
 1. canonical root resolverとproject-namespaced transient bus。
 2. Memory CLI、live review、Claude wakeのcanonical root結線。
 3. project-bound provider envelopeとclaim guard。
@@ -81,6 +76,9 @@ transient notification busとして共有する。絶対pathはidentityに含め
 ## 4. Scope boundary
 
 global領域にMemory本文は置かない。Issue #413のglobal lessons、semantic ranking、cloud memory serviceは扱わない。
-本PLANの全candidateとLinux/Windows/aggregate CI、非著者closing PASS、canonical receiptが揃うまでconfirmedにしない。
+本PLANの`confirmed`は、本文と対になるtest-designが非著者pair-freeze review、docs CI、canonical receiptを
+満たし、実装開始条件として固定されたことだけを表す。実装candidateのGreen、Reverse R4、Issue #424の完了、
+またはPack受入完了を意味しない。これらの完了主張は、後続実装PRのexact HEADで全candidate、
+Linux/Windows/aggregate CI、非著者closing PASS、canonical receiptが揃うまで禁止する。
 clean Pack parityは、#420のconsumer-local sealed runtimeと#432のtracked identity bootstrapを
 機械的前提とする。両依存をfixtureの事前seedやsetup元Pack参照で代替しない。

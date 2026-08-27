@@ -34,5 +34,5 @@ review_evidence: []
 
 ## R0
 
-Forward実装中。R1ではcandidateを正式oracleへ昇格し、R2でproject/root/envelope/migrationを独立変異、
+Forward契約のpair-freeze中。freeze後の実装PRでR1へ移りcandidateを正式oracleへ昇格し、R2でproject/root/envelope/migrationを独立変異、
 R3でclean Pack・二worktree・二provider・別projectをaggregate検収し、R4で上位契約へ再合流する。
