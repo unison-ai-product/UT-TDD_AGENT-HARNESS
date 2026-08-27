@@ -248,4 +248,74 @@ describe("Pack publication adapter pure domain and fail-close", () => {
       error: "approval_binding_mismatch",
     });
   });
+
+  it("U-PACKPUB-REMOTE-004: approval denial is fail-closed before the first write", async () => {
+    const sealed = sealPackPublicationIntent(intentInput());
+    if (!sealed.ok) throw new Error(sealed.error);
+    const commit = vi.fn();
+    const result = await publishPackCanary(
+      sealed.intent,
+      ports({
+        approval: { consume: async () => ({ status: "mismatch", reason: "expired" }) },
+        pack: { ...ports().pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(result).toMatchObject({ status: "denied", stage: "planned", remoteWrites: 0 });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-005: duplicate tag is denied during planned preflight", async () => {
+    const sealed = sealPackPublicationIntent(intentInput());
+    if (!sealed.ok) throw new Error(sealed.error);
+    const commit = vi.fn();
+    const existing = { name: sealed.intent.tagName, targetCommit: "9".repeat(40), annotated: true };
+    const result = await publishPackCanary(
+      sealed.intent,
+      ports({
+        pack: { ...ports().pack, commitPublicationBranch: commit },
+        tag: { ...ports().tag, observe: async () => ({ status: "attested", value: existing }) },
+      }),
+    );
+    expect(result).toMatchObject({ status: "denied", stage: "preflight", remoteWrites: 0 });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-006: independent pack commit attestation stops release writes", async () => {
+    const sealed = sealPackPublicationIntent(intentInput());
+    if (!sealed.ok) throw new Error(sealed.error);
+    const createDraft = vi.fn();
+    const base = ports();
+    const result = await publishPackCanary(
+      sealed.intent,
+      ports({
+        pack: {
+          ...base.pack,
+          commitPublicationBranch: async () => ({
+            status: "attested",
+            value: { branchCommit: "2".repeat(40) },
+          }),
+          createPullRequest: async () => ({ status: "attested", value: { pullRequest: "pr-1" } }),
+          mergePullRequestCas: async () => ({
+            status: "attested",
+            value: { mainSha: "2".repeat(40) },
+          }),
+          observeReleaseCommit: async () => ({
+            status: "attested",
+            value: {
+              commitSha: "2".repeat(40),
+              treeDigest: `sha256:${"f".repeat(64)}`,
+              controlManifestSnapshotDigest: sealed.intent.controlManifestSnapshotDigest,
+              releaseId: sealed.intent.releaseId,
+              sourceRevision: sealed.intent.sourceRevision,
+              materializerVersion: sealed.intent.materializerVersion,
+              mergeMode: "pull_request_cas",
+            },
+          }),
+        },
+        release: { ...base.release, createDraft },
+      }),
+    );
+    expect(result).toMatchObject({ status: "partial_publication", stage: "pack_commit" });
+    expect(createDraft).not.toHaveBeenCalled();
+  });
 });
