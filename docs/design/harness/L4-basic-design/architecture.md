@@ -52,7 +52,18 @@ YAML+JSON+SQLite / Bun単一バイナリでありmigration debtである。**tar
 Node / compiled ESM / sealed generationである。Node parity receipt前にcurrentを削除せず、target成立後に
 current Bun経路を残さない。
 
-> **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
+**削除禁止条項の保護範囲 (改訂、PLAN-L6-93 §5.1)**: 上記「Node parity receipt前にcurrentを
+削除せず」が保護するのは**再現可能なrollback成立性**であり、保護対象は
+(1) 再現可能なbuild経路 = `package.json`の`build` script、(2) source実行経路 = `node src/cli.ts`
+の2つに限る。`dist/`残置物への**silent dispatch**は保護対象外とする — これはrollbackの保全ではなく
+「HEADと無関係なcodeが`ut-tdd`として実行される」非決定性であり、条項の目的 (安全な後退可能性) を
+むしろ損なうためである。rollbackは「明示build + 生成物の明示実行 (wrapper非経由)」で成立する。
+
+これは条項の**明示的改訂**であって「もともと保護していなかった」という解釈操作ではない。
+改訂の実測根拠と処遇はPLAN-L6-93 §5に置く。`build` scriptの撤去は同§5.4の条件
+(sealed build receiptとNode parity receiptの双方) を満たすまで引き続き禁止する。
+
+> **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。なお「薄い entrypoint」は wrapper が **`node src/cli.ts` を無条件に起動する** ことを指し、compiled binary への分岐 dispatch を含まない (§2 削除禁止条項の保護範囲を参照)。
 
 ## §3 building block view 構成ビュー (arc42 §5)
 
@@ -178,7 +189,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | **orchestrator-rule parity (Codex)** | Claude Code の hook 強制面 (agent-guard / work-guard / session-lifecycle) を **Codex 側 repo-local `.codex/hooks.json`** へ materialize し、両 orchestrator が同一 guard を機械強制する (PLAN-DISCOVERY-06 spike が ADOPT 判定 → PLAN-L7-139 で実装)。判定本体 = `src/lint/codex-hook-adapter.ts` + work-guard の `src/runtime/work-guard.ts#extractEditTargets` + agent-guard の `src/runtime/agent-guard.ts` (runtime 非依存 pure fn)。**偽パリティ caveat** (literal copy では発火しない): ① Codex `apply_patch` は freeform で `tool_input.file_path` 不在 (パスは patch 本文 → `extractEditTargets` で抽出)、② matcher tool 名差 (`spawn_agent\|spawn_agents_on_csv` / `apply_patch\|write_file` / `exec_command\|local_shell`)、③ `subagent-stop` のみ真の N/A。scope = direct Codex CLI/IDE の repo-local hook (hosted/API runtime の apply_patch は intercept 対象外) | **有効** (repo-local、global `~/.codex/` 書込みなし) |
 | その他 hook | PreToolUse(Write/Bash/WebSearch) 等 → package-local `ut-tdd` command | **未有効** (CLI 整備後、目標形は .claude/CLAUDE.md「Target UT-TDD Hooks」) |
 | **CI lint** | g1/g3-trace、pair-freeze、plan/vmodel、doctor hard gates を fail-close 実行 | current local gateは既存Bun commandで稼働するmigration debt。targetはsealed Node CLIへ同じ判定を移し、Node parity前に旧gateを削除せず、移行後にBun fallbackを残さない |
-| entrypoint | `scripts/ut-tdd` (POSIX) / `ut-tdd.ps1` (Windows) は薄く compiled core を呼ぶだけ (bash ロジック禁止) | ADR-001 §3 |
+| entrypoint | `scripts/ut-tdd` (POSIX) / `ut-tdd.ps1` (Windows) は薄く core を呼ぶだけ (bash ロジック禁止)。**呼び先は `node src/cli.ts` であり、compiled binary への分岐 dispatch は持たない** (§2 削除禁止条項の保護範囲、PLAN-L6-93 §5.2.1 の allowlist 契約) | ADR-001 §3 |
 | 依存隔離 | 外部 service (Claude/Codex/GitHub/Sentry) 起動は **runtime adapter** に隔離、core は正規化 intent のみ発行 | external-if (PLAN-L4-04) で境界契約化 |
 
 ## §7 ADR 仕組み (arc42 §9、IMP-023)
@@ -199,7 +210,7 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 | ADR | 状態 | 扱い |
 |---|---|---|
-| **ADR-001** | accepted / migration中 | mainのTS/Bun実体をmigration debtとして明記し、targetをTypeScript/Node + compiled ESMへ更新。Node parity前の旧経路削除は禁止 |
+| **ADR-001** | accepted / migration中 | mainのTS/Bun実体をmigration debtとして明記し、targetをTypeScript/Node + compiled ESMへ更新。Node parity前の旧経路削除は禁止 (**ただし§2で保護対象外と限定した`dist/`残置物へのsilent dispatchを除く**) |
 | **[ADR-002](../../../adr/ADR-002-dependency-direction-and-auto-map.md)** | **accepted** (2026-05-29) | 依存方向ルール (schema 安定核 + 循環禁止 + fs 隔離) + **依存マップ自動生成・構想 vs 実装 drift lint** (IMP-032)。§3 が設計根拠 |
 | **[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md)** | **accepted** (2026-05-29) | runtime adapter 境界 (Anti-Corruption Layer)、**契約プラン CLI/hook 前提・API key 非保持** (A-71 是正を反映)。§6 + external-if §6 が設計根拠 |
 | **[ADR-004](../../../adr/ADR-004-internal-asset-ts-control-boundary.md)** | **accepted** (2026-06-01) | 内部資産 (subagent/skill/command) の TS 統制境界 = **層1 資産の中身 markdown 正本 / 層2 管理機構 TS**。TS は生成でなく検証/注入/統制。FR-L1-46〜49 / BR-22 / Recovery PLAN-RECOVERY-01 の設計根拠。real Codex TL 確定 |
@@ -283,7 +294,8 @@ production activation、hook/runtime switch、Bun final deletion、cutoverはcon
 zod SSoTは`src/schema/cutover-transition.ts` / `src/schema/node-slice-admission.ts`、runtimeは
 `src/runtime/cutover-transition.ts` / `src/runtime/node-slice-admission.ts`、pair testは
 `tests/cutover-transition.test.ts` / `tests/node-slice-admission.test.ts`へ固定する。
-Node parity前に旧Bun経路を削除せず、
+Node parity前に旧Bun経路を削除せず (保護対象は§2が限定する2つ = `build` scriptと
+`node src/cli.ts`。`dist/`残置物へのsilent dispatchは保護対象外)、
 `node_primary`後にBun、bunx、tsx、TS直実行、shellへfallbackしない。
 
 build imageはexact Node/npm pin、review済みlock graph、external dependency closure、compiled digestを
