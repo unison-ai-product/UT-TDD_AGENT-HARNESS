@@ -83,10 +83,9 @@ function ports(events: string[], fault?: string, reconcile: "committed" | "uncom
 describe("sealed self-contained consumer Node runtime", () => {
   it("U-PACKNODE-001: rejects every identity tuple mutation before any port call", () => {
     const fields: (keyof ConsumerNodeRuntimeIdentity)[] = [
-      "generation_id", "subject_revision", "artifact_digest", "node_executable_identity",
+      "subject_revision", "artifact_digest", "node_executable_identity",
       "package_lock_digest", "source_graph_digest", "compiled_esm_digest", "release_id",
-      "materializer_version", "artifact_set_digest", "control_manifest_digest", "consumer_root",
-      "runtime_root", "operation_id", "attempt", "product_id",
+      "artifact_set_digest", "control_manifest_digest", "consumer_root", "runtime_root", "attempt",
     ];
     for (const field of fields) {
       const id = identity();

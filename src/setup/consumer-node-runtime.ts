@@ -286,16 +286,17 @@ export async function installConsumerNodeRuntime(input: {
       }
       result = { ok: false, status: "indeterminate", reason: "consumer_runtime_indeterminate", phase: "reconcile", error: primaryError };
       // final return is below the finally so a release failure can fail-close success too.
-    }
-    try {
+    } else {
+      try {
       if (ports.destroyPrivateStaging) await ports.destroyPrivateStaging(stage);
       else if (ports.quarantinePrivateStaging) await ports.quarantinePrivateStaging(stage);
     } catch (cleanupError) {
       primaryError = { primary: error, cleanup: cleanupError };
       result = { ok: false, status: "indeterminate", reason: "consumer_runtime_indeterminate", phase: "staging", error: primaryError };
       // final return is below the finally so a release failure can fail-close the operation.
+      }
+      result ??= { ok: false, status: "failed", reason: "consumer_runtime_permission", phase, error: primaryError };
     }
-    result = { ok: false, status: "failed", reason: "consumer_runtime_permission", phase, error: primaryError };
     // final return is below the finally so cleanup/release errors remain observable.
   } finally {
     if (locked) {
