@@ -2497,3 +2497,26 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `U-PACKPUB-STAGE-010` | exact observation、commit/asset/digest欠落・変異、observer failure | exact一致だけ`attested`、差分は`partial_publication`、観測不能は`indeterminate`。remote write 0 |
 
 実行対応: `tests/pack-publication-staging.test.ts` (`U-PACKPUB-STAGE-001〜010`)。
+
+### PLAN-L7-519 bounded remote publication adapter (Issue #414)
+
+`CANDIDATE-PACKPUB-003` のうち、human approval、immutable release identity、before/late CAS、nonce、
+append-only journal、partial/indeterminate fail-close を専用 adapter で実測する。PR #438 /
+`PLAN-L7-515` は draft/unmerged の並行候補であり、この slice はそのファイルや未確定実装を継承しない。
+Pack/GitHub の実 remote mutation、stable promotion、consumer E2E は実行しない。
+
+| ID | fixture / mutation | expected |
+| --- | --- | --- |
+| `U-PACKPUB-REMOTE-001` | sealed entries/sidecar/assets、release/source/tree/mode identity drift | seal/read-back mismatch、後続 Release write 0 |
+| `U-PACKPUB-REMOTE-002` | approval欠落/期限切れ、wrong approver、nonce/operation/state/key replay | typed deny、最初の remote write 0 |
+| `U-PACKPUB-REMOTE-003` | initial main/pointer drift、duplicate tag、direct push/retarget | planned preflight deny、remote write 0 |
+| `U-PACKPUB-REMOTE-004` | branch/PR/merge refusal、unknown、別 commit/tree/sidecar | partial/indeterminate、release_draft以降 write 0 |
+| `U-PACKPUB-REMOTE-005` | draft identity、asset 0/1/3、bytes/size/digest drift | asset/tag/visibility/pointer write 0 |
+| `U-PACKPUB-REMOTE-006` | tag refusal/unknown、visibility refusal、attestation前 pointer | immutable objects保持、後続 write 0 |
+| `U-PACKPUB-REMOTE-007` | late pointer CAS drift/response loss/read-back mismatch | pointer append 0 or unknown、success 0 |
+| `U-PACKPUB-REMOTE-008` | journal/crash/restart/receipt persist failure | successを推測せず indeterminate、replay write 0 |
+| `U-PACKPUB-REMOTE-009` | happy path | receiptがintent、approval/nonces、release/pointer commit-tree、snapshot/assets/journalを束縛 |
+
+実行対応: `tests/pack-publication-adapter.test.ts` (`U-PACKPUB-REMOTE-001〜009`)。専用 test-design と
+この canonical registry は1対1で対応し、PLAN-L7-519 の exact HEAD evidence が pending の間は
+confirmed を merge-ready と解釈しない。

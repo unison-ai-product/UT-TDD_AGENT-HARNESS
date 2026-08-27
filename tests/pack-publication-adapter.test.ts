@@ -434,7 +434,7 @@ function successfulPorts(
   let visible = false;
   let canaryReads = 0;
   const canary = {
-    pointerObjectDigest: `sha256:${"8".repeat(64)}`,
+    pointerObjectDigest: intent.remote.expectedPointerObjectDigest,
     controlManifestSnapshotDigest: intent.controlManifestSnapshotDigest,
     mainSha: commit.commitSha,
     mainStateDigest: `sha256:${"2".repeat(64)}`,
