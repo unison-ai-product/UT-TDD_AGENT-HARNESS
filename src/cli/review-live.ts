@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { Command } from "commander";
 import type { LiveReviewWakeRoutingFailure } from "../feedback/live-review-projection.ts";
 import {
+  type CanonicalReviewWake,
   consumeLiveReview,
   dispatchLiveReview,
   LiveReviewWakeError,
@@ -39,6 +40,8 @@ export interface LiveReviewCommandDeps {
   ) =>
     | { readonly ok: true; readonly workspaceId: string }
     | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
+  /** Optional provider-native wake surface. Absent Codex surfaces fail closed. */
+  readonly publishCodexReviewWake?: (repoRoot: string, wake: CanonicalReviewWake) => void;
 }
 
 export function executeLiveReviewDelegation(input: {
@@ -98,10 +101,7 @@ export function registerLiveReviewCommands(
     runReview: ({ repoRoot, provider, args }) =>
       executeLiveReviewDelegation({ repoRoot, provider, args }),
     publishReceipt: publishLiveReviewReceipt,
-    resolveWakeTarget: (repoRoot, provider) =>
-      provider === "claude"
-        ? resolveLiveClaudeWorkspace(repoRoot)
-        : { ok: false, reason: "codex_review_wake_unavailable" },
+    resolveWakeTarget: (repoRoot) => resolveLiveClaudeWorkspace(repoRoot),
     ...overrides,
   };
   review
@@ -147,11 +147,15 @@ export function registerLiveReviewCommands(
               issueRequest: issueReviewRequest,
               providerAvailable: deps.providerAvailable,
               publishReviewWake: (wake) => {
-                const target = deps.resolveWakeTarget(repoRoot, wake.reviewer);
-                if (!target.ok) throw new LiveReviewWakeError(target.reason);
-                if (wake.reviewer !== "claude") {
-                  throw new LiveReviewWakeError("codex_review_wake_unavailable");
+                if (wake.reviewer === "codex") {
+                  if (!deps.publishCodexReviewWake) {
+                    throw new LiveReviewWakeError("codex_review_wake_unavailable");
+                  }
+                  deps.publishCodexReviewWake(repoRoot, wake);
+                  return;
                 }
+                const target = deps.resolveWakeTarget(repoRoot, "claude");
+                if (!target.ok) throw new LiveReviewWakeError(target.reason);
                 const notification = buildClaudeReviewInboxEntry({
                   memory,
                   operationId: opts.operationId?.trim() || `review-${wake.requestDigest}`,
