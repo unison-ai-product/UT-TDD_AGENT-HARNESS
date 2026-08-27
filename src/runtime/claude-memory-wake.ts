@@ -45,6 +45,32 @@ export interface ClaudeInboxPullRequestObservation {
   readonly headSha: string;
 }
 
+/** Parse one `gh pr view --json state,mergedAt,headRefOid` observation fail-closed. */
+export function parseClaudeInboxPullRequestObservation(
+  pr: number,
+  raw: string,
+): ClaudeInboxPullRequestObservation | undefined {
+  try {
+    const value = JSON.parse(raw) as {
+      state?: unknown;
+      mergedAt?: unknown;
+      headRefOid?: unknown;
+    };
+    if (typeof value.headRefOid !== "string" || !/^[a-f0-9]{40}$/i.test(value.headRefOid)) {
+      return undefined;
+    }
+    const state =
+      typeof value.mergedAt === "string" && value.mergedAt.trim()
+        ? "MERGED"
+        : value.state === "OPEN" || value.state === "CLOSED"
+          ? value.state
+          : undefined;
+    return state ? { pr, state, headSha: value.headRefOid } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export type ClaudeInboxTerminalReason =
   | "claimed"
   | "pr_merged"

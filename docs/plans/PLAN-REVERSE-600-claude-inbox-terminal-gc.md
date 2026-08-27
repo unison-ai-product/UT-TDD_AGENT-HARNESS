@@ -3,10 +3,10 @@ plan_id: PLAN-REVERSE-600-claude-inbox-terminal-gc
 title: "PLAN-REVERSE-600: Issue #444 Claude inbox terminal GC backfill"
 kind: reverse
 layer: cross
-workflow_phase: R2
+workflow_phase: R3
 confirmed_reverse_type: fullback
 drive: be
-status: draft
+status: confirmed
 route_signal: reverse
 route_mode: reverse
 forward_routing: gap-only
@@ -21,11 +21,15 @@ agent_slots:
     slot_label: "SE - inbox終端規則と配信filterを実装する"
   - role: qa
     slot_label: "QA - Red/Green、mutation、legacy fail-safeを再検収する"
+  - role: po
+    slot_label: "PO - R3 intent確認と非著者Claude canonical reviewを判定する"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-600-claude-inbox-terminal-gc.md
     artifact_type: markdown_doc
   - artifact_path: tests/claude-memory-terminal-gc.test.ts
     artifact_type: test_code
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
   requires: []
@@ -55,4 +59,4 @@ Issue #444 の観測では、claim済み、merge/close済みPR、古いHEADの r
 
 ## R3 検証・R4 再合流
 
-`tests/claude-memory-terminal-gc.test.ts` の U-MEMTERM-001〜004 が4 reason、review identity、memory/legacy fail-safe、dry-run、marker保持、wake filter、注入PR observation portの適用を確認する。Node の typecheck/lint/targeted Vitest と mutation相当の負 oracleを実行し、CI draft PR と HARNESS Memory/Claude canonical review依頼を発行する。現行CLI hookは既存の公開境界を維持したまま、`waitForClaudeMemory({ pullRequestState })` / `recoverClaudeInboxBacklog({ pullRequestState })` を正規の適用入口として利用する（CLI/SessionStart adapter が observation port を渡す）。実装差分は対象2 source・専用test・本PLANに閉じ、#414/#419/#442/#443のファイル、公開処理、CLI/外部GitHub mutationは変更しない。mergeは人間の判断へ委ねる。
+`tests/claude-memory-terminal-gc.test.ts` の U-MEMTERM-001〜004 が4 reason、review identity、memory/legacy fail-safe、dry-run、marker保持、wake filter、注入PR observation portの適用を確認する。Node の typecheck/lint/targeted Vitest と mutation相当の負 oracleを実行し、CI draft PR と HARNESS Memory/Claude canonical review依頼を発行する。`waitForClaudeMemory({ pullRequestState })` / `recoverClaudeInboxBacklog({ pullRequestState })` が正規の適用入口であり、CLI hook/SessionStart adapter は read-only `gh pr view` port を渡す。gh/network/parse失敗時は observation を返さず未終端のまま保持する。実装差分は `src/runtime/claude-memory-wake.ts`、`src/handover/session-start-digest.ts`、およびこの境界を配線する `src/cli.ts`、専用test、本PLANに閉じ、#414/#419/#442/#443のファイル、公開処理は変更しない。mergeは人間の判断へ委ねる。

@@ -9,6 +9,7 @@ import {
   buildClaudeReviewInboxEntry,
   claudeWorkspaceId,
   evaluateClaudeInboxTerminal,
+  parseClaudeInboxPullRequestObservation,
   publishClaudeInboxEntry,
   recoverClaudeInboxBacklog,
   summarizeUnclaimedInbox,
@@ -92,6 +93,19 @@ describe("Claude inbox terminal GC", () => {
         pullRequest: { pr: 444, state: "MERGED", headSha: "d".repeat(40) },
       }),
     ).toEqual({ terminal: false });
+    expect(parseClaudeInboxPullRequestObservation(444, "{not-json")).toBeUndefined();
+    expect(
+      parseClaudeInboxPullRequestObservation(
+        444,
+        JSON.stringify({ state: "OPEN", headRefOid: "not-a-sha" }),
+      ),
+    ).toBeUndefined();
+    expect(
+      parseClaudeInboxPullRequestObservation(
+        444,
+        JSON.stringify({ state: "CLOSED", headRefOid: "d".repeat(40) }),
+      ),
+    ).toMatchObject({ pr: 444, state: "CLOSED", headSha: "d".repeat(40) });
     const legacy = { ...entry, schemaVersion: "ut-tdd.claude-inbox/v2" } as unknown as typeof entry;
     expect(
       evaluateClaudeInboxTerminal({
@@ -141,6 +155,11 @@ describe("Claude inbox terminal GC", () => {
   });
 
   it("U-MEMTERM-004: terminal markers prevent wake without destroying the receipt", async () => {
+    const cliSource = readFileSync(join(process.cwd(), "src", "cli.ts"), "utf8");
+    expect(cliSource).toMatch(/recoverClaudeInboxForSessionStart\(repoRoot\)/);
+    expect(cliSource).toMatch(
+      /pullRequestState: \(pr\) => observeClaudeInboxPullRequest\(repoRoot, pr\)/,
+    );
     const root = fixture();
     try {
       const entry = review(root);
