@@ -2039,6 +2039,8 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-022` | wrapperへ分岐・存在判定を再追加 (`if`/`case`/`[ -x ]`/`test`/`Test-Path`/`command -v`/`&&`/`\|\|` 等、形を問わない) | canonical text全文不一致としてfail-close。構文解析もデータフロー追跡も要さない |
 | `CAND-NODEBOOT-023` | sealed build receiptとNode parity receiptの**いずれか一方でも欠けた**状態で`package.json`の`build` scriptを削除 (§5.4) | 2 receiptの論理積でfail-close。片側成立のみの組み合わせも禁止側 |
 | `CAND-NODEBOOT-024` | wrapperへcanonical以外の起動を追加 — `eval ./build/ut-tdd`、変数代入内の `$(./build/ut-tdd)`、backtick、`.`/`source`、`Start-Process`、`Invoke-Expression`、到達不能canonical行を伴う別`exec`、canonical行の欠落・重複・字面変更・順序変更、**canonical shebangより前に置いた別`#!`行**、**PowerShell `#requires -Modules`**、comment行の追加・削除・字句変更 | すべてcanonical text全文不一致としてfail-close。**denylist列挙漏れによる迂回が原理的に生じない**ことと、**comment行が意味的に不活性でない攻撃 (別shebang / `#requires`) も同じ規則で落ちる**ことを、上記の各形を個別caseとして固定する |
+| `CAND-NODEBOOT-025` | wrapperのbyte列を受理4集合 (`C` / `C0` / `CRLF(C)` / `CRLF(C0)`) の外へ出す — 先頭BOM (`EF BB BF`)、lone CR、NUL、末尾の追加空行、行末trailing whitespace、Unicode正規化差異 (NFC/NFD)、homoglyph、zero-width文字、UTF-8として不正なbyte列 | すべてbyte列不一致としてfail-close (PLAN-L6-93 §5.2.1 比較手順)。**個別規則を持たず4集合への帰属だけで判定する**ことと、終端LFが2個以上を受理しないことを固定する |
+| `CAND-NODEBOOT-026` | canonical wrapperと現行main形wrapperを、bare-name (PATH経由)・symlink・相対PATH entry・絶対path・相対pathの各起動形で実行し、Nodeへ渡る`src/cli.ts` pathを比較 | symlink形は両者が**同一path**を選ぶ (等価oracle、PLAN-L6-93 §5.5 実測)。bare-name形・相対PATH entry形は等価性を主張せず、実測値そのものをoracleに固定する |
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では

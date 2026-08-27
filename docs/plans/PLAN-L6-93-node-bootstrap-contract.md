@@ -238,8 +238,9 @@ L4 §2 の「Node parity receipt前にcurrentを削除しない」が保護す�
 **方式はallowlistであり、禁止構文の列挙 (denylist) ではない。**
 lintは`scripts/ut-tdd` / `scripts/ut-tdd.ps1`の2ファイルのみを対象とし、
 **ファイル全文がcanonical textと完全一致しない場合にfail-close**する。
-comment行・空行を含めて全文が固定であり、**自由記述の余地は無い**。正規化は改行コード
-(CRLF→LF) と末尾改行の有無に限る。データフロー追跡も構文解析も要らない。
+comment行・空行を含めて全文が固定であり、**自由記述の余地は無い**。
+判定はテキスト解釈を一切伴わない**byte列の集合帰属**である (下記「比較手順」)。
+データフロー追跡も構文解析も要らない。
 
 **POSIX `scripts/ut-tdd` のcanonical text (全文)**
 
@@ -258,6 +259,22 @@ $ErrorActionPreference = "Stop"
 & node (Join-Path (Split-Path -Parent $PSScriptRoot) "src\cli.ts") @args
 exit $LASTEXITCODE
 ```
+
+**比較手順 (byte単位、r5 review 指摘)**: lintは対象ファイルを**raw bytesとして読む**
+(text decodeもUnicode正規化も行わない)。canonical byte列 `C` は上記全文をUTF-8・LF改行・
+**末尾に終端LFをちょうど1個**持つ形とする。`C0` を `C` から終端LFを除いた列、
+`CRLF(x)` を `x` の全LFをCRLFへ置換した列とすると、**受理するbyte列は次の4つだけ**である:
+
+```
+C, C0, CRLF(C), CRLF(C0)
+```
+
+file bytesがこの4つのいずれとも一致しなければfail-close。これにより
+BOM (`EF BB BF`)、lone CR、NUL、末尾の追加空行、行末trailing whitespace、
+Unicode正規化差異 (NFC/NFD)、homoglyph、zero-width文字、UTF-8として不正なbyte列は、
+**個別規則を書かずに**すべて不一致として落ちる (どれもこの4列のいずれでもないため)。
+「末尾改行の有無」という曖昧な文言は使わない — 終端LFは0個か1個のいずれかであり、
+2個以上は受理しない。
 
 **comment行を自由記述にしない理由** (r4 review 指摘): comment行は意味的に不活性ではない。
 POSIXではcanonical shebangより前に別の`#!`行を置けば別interpreterが選択され得るし、
@@ -315,6 +332,7 @@ canonical textのcomment行へ差し替える (字句を含めて固定である
 | PATH上の`node`実体の差し替え / symlink | wrapper textでは制約できない。絶対pathを焼くとOS・環境ごとに壊れ、可搬性というADR-001の目的そのものを損なう |
 | `NODE_OPTIONS` / `--import` によるpreload | 呼び出し側プロセスのenvであり、file contentの外側にある |
 | `src/cli.ts`以降のsource改竄 | wrapperではなくrepo全体のintegrityの問題であり、review / CI / git historyが担う面 |
+| repo外に置いたsymlink経由の起動 | POSIX shが`$0`のsymlinkを追跡しないため解決先はsymlinkの所在に従う。**現行mainと同一の挙動**であり本PLANが導入する性質ではない (§5.5に実測)。修正はportableなsymlink解決を要し、4行のtrust rootの範囲を超える |
 
 これらは**wrapper契約の失効ではなく、別のtrust boundaryが担う残余リスク**である。
 本PLANは「wrapper textを信頼根とする」とだけ主張し、「wrapperを固定すればnodeの実行体まで
@@ -358,12 +376,35 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 2. `runtime-portability` lintへの再流入fail-close追加
    (`CAND-NODEBOOT-021/022/023/024`のGreen化)。
 
-**wrapper書き換えに伴う未検証点** (r2 review 指摘、実装PRのoracle対象): 現行の
-`ROOT="$(CDPATH= cd -- … && pwd)"` は絶対・正規化されたrootを得るのに対し、§5.2.1が要求する
-`exec node "$(dirname -- "$0")/../src/cli.ts" "$@"` は未正規化のpathをNodeへ渡す。
-通常の絶対/相対path起動では成立するが、**bare-name (PATH経由)・symlink・相対PATH entry**の
-3形について退行しないことをoracleで固定してから撤去すること。「退行しない」を根拠なく
-主張しない。
+**wrapper書き換えに伴う起動形の検証** (r2 / r5 review 指摘): 現行の
+`ROOT="$(CDPATH= cd -- … && pwd)"` は絶対・正規化されたrootを得るのに対し、§5.2.1のcanonical textは
+未正規化のpathをNodeへ渡す。**bare-name (PATH経由)・symlink・相対PATH entry**の3形について
+実装PRのoracleで固定する。
+
+ただしsymlink形について、r5 review は「canonical textはsymlink自体の所在から`../src/cli.ts`を
+解決するためrepo外のsymlinkからはrepo sourceを実行しない」と指摘し、これが§5.5の
+「退行しない」要求とcanonical text固定を両立不能にするとした。**実測で決着した**:
+
+```
+$ sh outside/link-main    # 現行main形 (ROOT="$(CDPATH= cd -- … && pwd)")
+main-form -> /tmp/symtest/src/cli.ts
+$ sh outside/link-canon   # canonical形
+canonical -> outside/../src/cli.ts       # = /tmp/symtest/src/cli.ts
+```
+
+POSIX shは`$0`のsymlinkを追跡しないため、**両形は同一の (repo外を指す) pathを選ぶ**。
+symlink起動でrepo sourceに到達しない性質は**現行mainに既に存在し、canonical textが新たに
+導入するものではない**。したがって:
+
+- §5.5がsymlink形に要求するoracleは**等価oracle** (canonical形の解決先 == 現行main形の解決先)
+  であり、絶対的な正しさ (「必ずrepo sourceを実行する」) のoracleではない。等価oracleは
+  canonical textを変えずに成立するため、契約と委任oracleは両立する。
+- symlink起動でrepo sourceへ到達させること自体は本PLANのscope外とし、§5.2.2の表に記載する。
+  POSIX portableなsymlink解決は`readlink -f`がBSD/macOS既定で使えずloop実装を要するため、
+  4行のtrust rootに載せる変更ではない。必要になれば別PLANで扱う。
+
+bare-name形と相対PATH entry形については等価性を主張しない。実装PRで実測oracleを張ってから
+撤去すること。
 
 `package.json`の`build` script撤去、および`package-script-bun-runtime` (script起動語のBun禁止)
 の有効化は§5.4の条件を満たすまで実装PRのscope外とする — 後者は前者に機械的に依存する
@@ -380,6 +421,8 @@ L4 `architecture.md` §2 の削除禁止条項の改訂は**本PRで同時に行
 | `CAND-NODEBOOT-022` | §5.2.1 全文一致 (分岐・存在判定の再流入) | 同上。構文解析・データフロー追跡を要さない |
 | `CAND-NODEBOOT-023` | §5.4 (2 receiptの論理積) | 片側欠落でも撤去をfail-close |
 | `CAND-NODEBOOT-024` | §5.2.1 全文一致 (canonical以外の起動 / 非不活性comment) | `eval` / 代入内command substitution / backtick / source / 別`exec` / 別shebang / `#requires` 等を個別caseで固定 |
+| `CAND-NODEBOOT-025` | §5.2.1 比較手順 (受理4集合の外) | BOM / lone CR / NUL / 末尾追加空行 / trailing whitespace / NFD / homoglyph / zero-width / 不正UTF-8 をbyte列不一致で落とす |
+| `CAND-NODEBOOT-026` | §5.5 起動形の等価性 | symlink形はcanonical == 現行main形 (等価oracle)。bare-name / 相対PATH entry は実測値を固定 |
 
 021 / 022 / 024 は**同一の全文一致規則に対する別々の攻撃case**であり、3つの独立した検出規則
 ではない。denylist時代は規則ごとに列挙漏れが迂回路になっていたが、allowlistでは
