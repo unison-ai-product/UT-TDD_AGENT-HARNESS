@@ -168,24 +168,41 @@ old marker digest、process/session、workspace、required/current capability、
 
 | PR | project | Memory ID | operation | provider/session | exact HEAD | review revision | 保存artifact |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| #423 | `unison-ai-product/UT-TDD_AGENT-HARNESS` | `memory:project:pr-423-canonical-delta-request-exact-f829e941--61f2bbb92c29` | existing envelope `pr423-live-dispatch-f829e941` / observed claim `pr423-current-main-redispatch-after434-v3` | producer `codex` / consumer `claude` / captured authorized session `a78e55c2-5ee4-4f4c-97dc-6f5ddafe4809` | `f829e9414d0f14aa67d3e62364865d3c291ca995` | `rv1-89b41293dbf4c9843dc9d769e03aecf6efd5b4898832ce58bd099065042d5ade` | request `.ut-tdd/review/requests/89b41293dbf4c9843dc9d769e03aecf6efd5b4898832ce58bd099065042d5ade.json` (`sha256:7003aaf749833abfff8de71768e47939fea4284c98fb498767e772c371f49b18`)、inbox capture `memory_project_pr-423-canonical-delta-request-exact-f829e941--61f2bbb92c29_workspace_7afb1c8e925d4c39da2d7420fc8365237d9be85f7fa034870e951cec704367_241955f71d0d.json` (`sha256:85d394797a61f40be3a4cd88be9b9613c743d0036add56742ac07830879538ef`)、observed claim `memory_project_pr-423-canonical-delta-request-exact-f829e941--61f2bbb92c29_workspace_a499d29b294a9f210e69612cb85e1094c692b29c0c56ddaed4ac250fd3d924_9aa9077f933e.claim` (`sha256:9a8e832a5c14b41651e62c9789512eaed4f98dd38e147a3f8b2ed3254605a392`) |
+| #423 | `unison-ai-product/UT-TDD_AGENT-HARNESS` | `memory:project:pr-423-canonical-delta-request-exact-f829e941--61f2bbb92c29` | old `7afb…` envelope: `pr423-live-dispatch-f829e941` / new `a499…` claim: `pr423-current-main-redispatch-after434-v3` | producer `codex` / consumer `claude` / claimed session `a78e55c2-5ee4-4f4c-97dc-6f5ddafe4809` | `f829e9414d0f14aa67d3e62364865d3c291ca995` | `rv1-89b41293dbf4c9843dc9d769e03aecf6efd5b4898832ce58bd099065042d5ade` | request `.ut-tdd/review/requests/89b41293dbf4c9843dc9d769e03aecf6efd5b4898832ce58bd099065042d5ade.json` (`sha256:7003aaf749833abfff8de71768e47939fea4284c98fb498767e772c371f49b18`)、old envelope capture `memory_project_pr-423-canonical-delta-request-exact-f829e941--61f2bbb92c29_workspace_7afb1c8e925d4c39da2d7420fc8365237d9be85f7fa034870e951cec704367_241955f71d0d.json` (`sha256:85d394797a61f40be3a4cd88be9b9613c743d0036add56742ac07830879538ef`)、new claim `memory_project_pr-423-canonical-delta-request-exact-f829e941--61f2bbb92c29_workspace_a499d29b294a9f210e69612cb85e1094c692b29c0c56ddaed4ac250fd3d924_9aa9077f933e.claim` (`sha256:9a8e832a5c14b41651e62c9789512eaed4f98dd38e147a3f8b2ed3254605a392`) |
 | #410 | `unison-ai-product/UT-TDD_AGENT-HARNESS` | `memory:project:pr-410-exact-head-closing-review-request-at-8143ce40--a48ed94cd3fe` | `pr410-existing-8143ce40` | producer `codex` / consumer `claude` / observed session `a78e55c2-5ee4-4f4c-97dc-6f5ddafe4809` | `8143ce40f6df3f56ebcee9d745d6f38422e1912f` | `rv1-6945ce76a9e1c90246e2a61a1a50058ffb46664b494480e08b8c2c4f8036755b` | request `.ut-tdd/review/requests/6945ce76a9e1c90246e2a61a1a50058ffb46664b494480e08b8c2c4f8036755b.json` (`sha256:75defbd585e1328cf25c4638ce6fb7d49c7e819a0d951e6a9b00dfebba41d47f`)、observed claim `memory_project_pr-410-exact-head-closing-review-request-at-8143ce40--a48ed94cd3fe_workspace_a499d29b294a9f210e69612cb85e1094c692b29c0c56ddaed4ac250_0f839a03fd05.claim` (`sha256:d9e936a6b1b0486ac40b084ab2b8bda175ff55e6324acaf50f62ba28da264210`) |
 
-### 4.2 operational E2E とcross-platform fixtureの分離
+### 4.2 lane A: claimed production identity のidempotency
 
-operational E2Eは上表のgitignored request、Git common-dir inbox/claim、実Claude VS Code restartをその場で使う。
-絶対path、timestamp、新しいsession IDはhost-local evidenceとして記録するが、tracked fixtureへ混ぜない。#423は
-保存済みenvelopeを再発行せずconsumeし、#410は保存済みrequestを同じreview revisionのままredispatchする。
+closure対象の#410/#423 operationはすでにclaim済みで、各claimに対応するinbox JSONを再consumeできる状態ではない。
+表中のold `7afb…` envelopeは別operationの未claim observationであり、closure対象claimの対応inboxではない。
+このlaneは既存claim bytes/digest/sessionを保持し、**同じproduction identityと同じclaimed operationを再配送しても新しい
+inbox/claim/deliveryが0**であることだけを証明する。既存requestの再mint、claim削除、同一ID envelopeの再生成、
+既存claimを未claimへ巻き戻す操作を禁止する。
 
-cross-platform testは、後続実装PRが上表のSHA-256で検証したpayloadを
-`tests/fixtures/claude-hook-schema-rolling-upgrade/{pr-423-envelope,pr-423-request,pr-410-request,pr-410-claim}.json`
-へimmutable captureとして置く。absolute pathとtimestampはfixture metadataへ正規化するが、project、Memory ID、
-operation、provider、session、exact HEAD、review revision、request digestは変更しない。fixture Greenはlive restart
-成功の代替証拠にせず、operational E2Eと両方を必須とする。
+#423のold `7afb…` envelopeはoperation=`pr423-live-dispatch-f829e941`、new `a499…` claimは
+operation=`pr423-current-main-redispatch-after434-v3`であり、同一Memory/requestを参照していても直接のenvelope→claim
+対応ではない。両artifactを対応済みと見なさず、それぞれ別operationのimmutable observationとして保存する。
+#410もclaim済みで対応inbox JSONは存在しないため、同じoperation=`pr410-existing-8143ce40`の再配送0を検証する。
 
-各fixtureではproject、Memory ID、operation、producer/consumer provider、session、exact HEAD、review revisionを
-一軸ずつ独立変異し、他軸とdigestを整合させたままでもclaim/consume/redispatchがtyped deny、write 0になることを
-検証する。複数軸を同時に壊して最初のguardだけで落ちる偽oracleを禁止する。
+### 4.3 lane B: fixture固有identityのisolated consume
+
+未claim→claimのconsume回帰はproduction #410/#423 identityを使わない。後続実装PRが
+`tests/fixtures/claude-hook-schema-rolling-upgrade/`へ次のimmutable captureを置く。
+
+- `pr-423-envelope.json`、`pr-423-request.json`、`pr-423-claim.json`: 上表の実物bytesとSHA-256を監査する
+  read-only observation。old envelopeとnew claimのoperation/workspace不一致をmetadataで明示し、対応関係を捏造しない。
+- `pr-410-request.json`、`pr-410-claim.json`: claim済みproduction observation。対応inbox不存在をmetadataへ記録する。
+- `fixture-unclaimed-envelope.json`、`fixture-unclaimed-request.json`: project=`fixture/claude-hook-schema-rolling-upgrade`、
+  Memory ID=`memory:fixture:claude-hook-schema-unclaimed-v1`、operation=`fixture-unclaimed-consume-v1`、provider=
+  `codex→claude`、session=`fixture-claude-session-v1`、fixture固有HEAD/revisionを持つ正規未claim入力。
+
+isolated runtimeは最後のfixture固有pairだけをconsumeし、claim exactly onceを検証する。production Memory ID、operation、
+HEAD、review revisionをfixture未claim状態へ複製・偽造してはならない。cross-platform fixture Greenはlive restart成功の
+代替証拠にせず、lane Aのgitignored operational idempotencyと両方を必須とする。
+
+fixture固有pairではproject、Memory ID、operation、producer/consumer provider、session、exact HEAD、review revisionを
+一軸ずつ独立変異し、他軸とdigestを整合させたままでもclaim/consumeがtyped deny、write 0になることを検証する。
+複数軸を同時に壊して最初のguardだけで落ちる偽oracleを禁止する。
 
 restart前に各identityとartifact digestを記録してからupgrade supervisorによる旧markerのdrift検出を実走し、
 次の順序を証明する。
@@ -197,22 +214,22 @@ upgrade supervisor / updated bootstrap
   → 旧hook authority revoke・superseded・終了/再起動要求
 現行v1 JSON hook activation
   → active generation exactly 1
-既存 #423 envelope
-  → 同一identityで live-consume
-既存 #410 request
-  → 同一identityで live-redispatch
+既存 #423/#410 claim
+  → 同一identity/operationの再配送0（claim保持）
+fixture固有の未claim envelope
+  → isolated runtimeでclaim exactly once
 ```
 
 restart後の成功だけでなく、handoff replay、旧processの遅着claim、foreign workspaceのmarker混入、
-同一requestの再送、activation crash後の再起動を負例にする。成功条件はcanonical receiptの手生成やmerge
-bypassではなく、既存request identityを維持した通常のlive経路で観測する。
+同一production identity/operationの再送、activation crash後の再起動を負例にする。成功条件はcanonical receiptの
+手生成やmerge bypassではなく、production claimのidempotencyとfixture固有未claim consumeを別々に観測する。
 
 ## 5. 実装スライス（後続PRへ移管）
 
 1. [直列] closed v1 wire parser、capability profile、required policy resolver、legacy判定。
 2. [直列] typed `restart_required` handoff、authority epoch/lease token/CAS、handoff replay fence。
 3. [直列] activation CAS、旧generation supersession、exact-one active projection。
-4. [並列] immutable cross-platform fixtureとgitignored operational #423/#410 E2E。
+4. [並列] claimed production idempotency laneとfixture固有unclaimed consume lane。
 5. [直列] Linux/Windows/aggregate CI、Reverse R1–R4、非著者closing receipt。
 
 ## 6. 非対象
@@ -228,6 +245,7 @@ bypassではなく、既存request identityを維持した通常のlive経路で
 - 旧hookの`pid:timestamp`継続書込み、legacy text/旧v1/fake/foreign/stale/multiple markerとcrash/restart/replayを
   supervisor経由でtyped fail-closeする。旧hook自身の自動upgradeは成功扱いにしない。
 - revocation直前/直後のclaim競合で旧epoch/tokenの遅着claimが0、envelope保持になることを実測する。
-- restart_required handoff後も上表の#423 envelopeと#410 requestを同じidentityでconsume/redispatchできる。
+- restart_required handoff後も上表の#423/#410 claimを保持し、同じidentity/operationの再配送が0である。
+- fixture固有未claim envelopeだけがisolated runtimeでexactly once consumeされ、production identityを複製しない。
 - Windows/Linux/aggregate CI、PLAN lint、targeted test、非著者Claude Opus 5 closing receiptを同一revisionへ束縛する。
 - PLAN-REVERSE-514をR1→R4へ進め、#416/#422の既存契約へbackpropする。

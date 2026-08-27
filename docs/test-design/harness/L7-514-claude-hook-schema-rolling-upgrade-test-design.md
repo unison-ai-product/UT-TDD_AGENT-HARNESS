@@ -29,18 +29,20 @@ updated: 2026-08-27
 | `CANDIDATE-U-CHSCHEMA-009` | marker/handoff書込み中のkill、再起動、同一handoff replay | activation journalと現物digestが一致する場合だけ再開し、二重claim 0 | recovery/replay |
 | `CANDIDATE-U-CHSCHEMA-010` | 旧hookが`pid:timestamp`を書き続け、将来source/schema driftを自力検出・更新しようとする | 旧hookは自動upgradeできず、upgrade supervisorがauthorityを失効して`restart_required`、claim 0 | old-hook/supervisor boundary |
 | `CANDIDATE-U-CHSCHEMA-011` | claimが旧epoch/tokenを検証後、commit直前にsupervisorがauthorityを失効 | claim CASが負け、claim write 0、envelope保持 | claim transaction / TOCTOU |
-| `CANDIDATE-U-CHSCHEMA-012` | PLAN §4.1の#423 envelopeを再発行せず、旧hook終了/再起動後にconsume | Memory ID、operation、HEAD、review revision、request digest不変のままlive-consume成功 | gitignored operational #423 E2E |
-| `CANDIDATE-U-CHSCHEMA-013` | PLAN §4.1の#410 requestを再発行せず、旧hook終了/再起動後にredispatch | Memory ID、operation、HEAD、review revision、request digest不変のままredispatch成功 | gitignored operational #410 E2E |
-| `CANDIDATE-U-CHSCHEMA-014` | captured fixtureのproject、Memory ID、operation、producer/consumer provider、session、HEAD、revisionを一軸ずつ独立変異 | 各軸固有のtyped deny、claim/consume/redispatch write 0 | immutable identity fixture |
-| `CANDIDATE-P-CHSCHEMA-001` | immutable captureをWindows/Linuxでcrash→restart→replay | OS差なくexact-one active、handoff replay fence、既存identity保全 | cross-platform fixture integration |
+| `CANDIDATE-U-CHSCHEMA-012` | PLAN §4.1の#423 claimを保持したまま同じidentity/claimed operationを再配送 | new inbox/claim/delivery 0、既存claim bytes/digest/session不変 | gitignored production idempotency |
+| `CANDIDATE-U-CHSCHEMA-013` | PLAN §4.1の#410 claimを保持したまま同じidentity/operationを再配送 | 対応inboxを再生成せずnew delivery 0、既存claim不変 | gitignored production idempotency |
+| `CANDIDATE-U-CHSCHEMA-014` | fixture固有未claim pairのproject、Memory ID、operation、producer/consumer provider、session、HEAD、revisionを一軸ずつ独立変異 | 各軸固有のtyped deny、claim/consume write 0 | immutable fixture identity |
+| `CANDIDATE-U-CHSCHEMA-015` | fixture固有未claim envelopeをisolated runtimeへ一度配送し、同じ入力をreplay | 初回claim exactly once、replay delivery 0 | isolated consume fixture |
+| `CANDIDATE-U-CHSCHEMA-016` | #423 old `7afb…` envelopeとnew `a499…` claimを対応済みpairとして結合 | operation/workspace不一致でfixture relation deny、偽対応0 | captured observation relation |
+| `CANDIDATE-P-CHSCHEMA-001` | fixture固有未claim pairをWindows/Linuxでcrash→restart→replay | OS差なくexact-one active、handoff replay fence、fixture identity保全 | cross-platform fixture integration |
 
 ## TDD順序
 
 1. closed v1、capability profile、policy/minimum resolver、legacy、foreign、stale、multipleをRedとして固定する。
 2. upgrade supervisorによるtyped `restart_required` handoffと互換性resolverを実装してGreenにする。
 3. authority epoch/lease token付きclaim CASとexact-one active projectionを追加し、TOCTOUとcrash/replayをGreenにする。
-4. PLAN §4.1のgitignored operational E2Eとimmutable captured fixtureを別々に実行し、request/envelope再mintが
-   ないことと各identity軸の独立mutationを検査する。
+4. PLAN §4.1のclaim済みproduction idempotencyとfixture固有未claim consumeを別々に実行し、production
+   identity再発行0、各fixture identity軸の独立mutation、old envelope/new claimの非対応を検査する。
 5. typecheck、Biome、targeted snapshot、PLAN lint、Linux/Windows/aggregate CIへ昇格する。
 
 ## 証跡要件
@@ -52,9 +54,11 @@ updated: 2026-08-27
 - `restart_required` handoffはold marker digest、reason、target workspace、required schemaを含むことを検証する。
 - superseded markerを監査面に残し、active projectionが一件になることを実物inventoryで検証する。
 - revocation前後のbarrierで旧epoch/tokenのclaimを意図的に遅延させ、CAS loserのwrite 0を検証する。
-- PLAN §4.1の#423/#410 identityとsource artifact SHA-256を実行前後で比較し、変更があればRedとする。
-- operational E2Eのhost-local path/sessionとtracked immutable fixtureを別evidenceとして記録し、fixtureだけで
-  live restart成功を主張しない。
+- PLAN §4.1の#423/#410 claim identityとsource artifact SHA-256を再配送前後で比較し、変更またはnew deliveryが
+  あればRedとする。fixture一覧には`pr-423-claim.json`を必ず含める。
+- #423 old `7afb…` envelopeとnew `a499…` claimはoperation/workspaceが異なる別observationとして記録する。
+- operational idempotencyのhost-local path/session、production capture、fixture固有unclaimed pairを別evidenceとして
+  記録し、fixtureだけでlive restart成功を主張しない。
 - Windows/Linux各run、process crash位置、再起動回数、replay回数、exit reasonを記録する。
 
 ## 非対象

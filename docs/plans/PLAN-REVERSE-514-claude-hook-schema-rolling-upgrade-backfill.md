@@ -57,10 +57,11 @@ upgrade supervisorをauthorityとする再起動境界をL7でfreezeする。
 - **R2:** #416/#422のlive workspace routingおよびasync wake契約へ、closed v1 wire marker、capability/policy
   resolver、minimum compatible revision、authority epoch/lease token/CAS、exact-one active generation、
   handoff replay fenceを反映する。
-- **R3:** PLAN-L7-514 §4.1に固定した#423 existing envelopeと#410 existing requestをidentity再発行なしで
-  consume/redispatchするgitignored operational E2Eと、同じpayload digestから作るimmutable cross-platform fixtureを
-  分離して再検収する。project、Memory ID、operation、provider、session、HEAD、revisionの各単独mutation、
-  revocation前後の遅着claim、Linux/Windows/aggregate、非著者reviewを同一revisionへ束縛する。
+- **R3:** PLAN-L7-514 §4.1のclaim済みproduction artifactは同一identity/operation再配送0とclaim保持だけを
+  operational検収する。未claim consumeはfixture固有identityのisolated runtimeへ分離し、production identityを
+  再発行・偽造しない。#423 old `7afb…` envelopeとnew `a499…` claimのoperation不一致、#410対応inbox不存在を
+  fixture metadataへ残す。fixture固有project、Memory ID、operation、provider、session、HEAD、revisionの各単独
+  mutation、revocation前後の遅着claim、Linux/Windows/aggregate、非著者reviewを同一revisionへ束縛する。
 - **R4:** 上位契約へのbackprop、Forwardへの再合流、未解決のprovider permissionやPack publicationは別Issueの
  まま保持し、#433のschema upgradeだけをconfirmedへ閉じる。
 
