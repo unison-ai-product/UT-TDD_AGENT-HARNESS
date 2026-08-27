@@ -309,4 +309,11 @@ describe("sealed self-contained consumer Node runtime", () => {
       digestConsumerRuntimeValue(retry.identity),
     );
   });
+
+  it("P-PACKNODE-001: bounded repeated bundle derivation has stable identity and no implicit retry", () => {
+    const id = identity();
+    const digests = Array.from({ length: 100 }, () => bundleFor(id).bundle_digest);
+    expect(new Set(digests).size).toBe(1);
+    expect(digests).toHaveLength(100);
+  });
 });

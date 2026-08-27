@@ -26,6 +26,26 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/consumer-node-runtime.ts
+    artifact_type: source
+  - artifact_path: scripts/build-consumer-runtime.mjs
+    artifact_type: source
+  - artifact_path: tests/consumer-node-runtime.test.ts
+    artifact_type: test
+  - artifact_path: src/setup/distribution.ts
+    artifact_type: source
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source
+  - artifact_path: src/setup/index.ts
+    artifact_type: source
+  - artifact_path: src/lint/project-hook.ts
+    artifact_type: source
+  - artifact_path: src/doctor/setup-smoke.ts
+    artifact_type: source
+  - artifact_path: tests/setup.test.ts
+    artifact_type: test
+  - artifact_path: tests/distribution-acceptance.test.ts
+    artifact_type: test
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:

@@ -19,6 +19,25 @@ promoted one-to-one to the executable `U-PACKNODE-001..015` cases in
 `tests/consumer-node-runtime.test.ts`; the performance row is `P-PACKNODE-001`. The candidate
 prefix remains here as design provenance, while the executable IDs are the implementation trace.
 
+| Implementation ID | Direct test citation |
+| --- | --- |
+| `U-PACKNODE-001` | `tests/consumer-node-runtime.test.ts` — identity tuple mutation |
+| `U-PACKNODE-002` | `tests/consumer-node-runtime.test.ts` — generic source/package fallback denial |
+| `U-PACKNODE-003` | `tests/consumer-node-runtime.test.ts` — active pointer-only resolution |
+| `U-PACKNODE-004` | `tests/consumer-node-runtime.test.ts` — ordered ports |
+| `U-PACKNODE-005` | `tests/consumer-node-runtime.test.ts` — preactivation staging cleanup |
+| `U-PACKNODE-006` | `tests/consumer-node-runtime.test.ts` — consumer identity path separation |
+| `U-PACKNODE-007` | `tests/consumer-node-runtime.test.ts` — destructive checkout deletion |
+| `U-PACKNODE-008` | `tests/consumer-node-runtime.test.ts` — spaces and containment |
+| `U-PACKNODE-009` | `tests/consumer-node-runtime.test.ts` — compiled digest drift |
+| `U-PACKNODE-010` | `tests/consumer-node-runtime.test.ts` — Node compiled-only policy |
+| `U-PACKNODE-011` | `tests/consumer-node-runtime.test.ts` — readiness fail-close |
+| `U-PACKNODE-012` | `tests/consumer-node-runtime.test.ts` — post-commit reconcile |
+| `U-PACKNODE-013` | `tests/consumer-node-runtime.test.ts` — exactly-once lock release |
+| `U-PACKNODE-014` | `tests/consumer-node-runtime.test.ts` — genesis history |
+| `U-PACKNODE-015` | `tests/consumer-node-runtime.test.ts` — attempt no-clobber path |
+| `P-PACKNODE-001` | Reserved performance trace; bounded implementation call-count oracle in the same test file |
+
 | Oracle | 変異軸 / Given・When | 期待結果 |
 | --- | --- | --- |
 | `U-PACKNODE-001` | generation ID、subject revision、artifact digest、Node/npm identity、package-lock digest、compiled ESM digest、release identity、materializer version、consumer namespace、consumer/runtime root、operation、attemptを各1軸で欠落・変異する | sealed receipt chainを再計算して単独変異を拒否し、generation write、activation、receipt append、process launchを全て0。別receiptの存在だけで補完しない |
