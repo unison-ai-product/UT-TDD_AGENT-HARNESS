@@ -6,6 +6,8 @@ layer: cross
 drive: agent
 workflow_phase: R2
 confirmed_reverse_type: design
+route_signal: design_gap
+route_mode: reverse
 status: draft
 created: 2026-08-27
 updated: 2026-08-27
