@@ -25,6 +25,7 @@ const ALLOWED_SCRIPT_WRAPPERS = new Set([
   "scripts/ut-tdd",
   "scripts/ut-tdd.ps1",
   "scripts/run-vitest-snapshot.ts",
+  "scripts/build-consumer-runtime.mjs",
 ]);
 const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
 
@@ -212,7 +213,10 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "Node runtime contract must declare the Node engine (PLAN-L7-462 step 3).",
     });
   }
-  if (!/\bbun\s+build\b.*--compile\b/.test(pkg.scripts?.build ?? "")) {
+  if (
+    !/\bbun\s+build\b.*--compile\b/.test(pkg.scripts?.build ?? "") &&
+    !/\bnode\s+scripts[\\/]build-consumer-runtime\.mjs\b/.test(pkg.scripts?.build ?? "")
+  ) {
     violations.push({
       path,
       line: 1,
@@ -410,6 +414,21 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
     });
   }
   if (ALLOWED_SCRIPT_WRAPPERS.has(path) && path !== "scripts/run-vitest-snapshot.ts") {
+    if (path === "scripts/build-consumer-runtime.mjs") {
+      if (
+        !/esbuild/.test(doc.text) ||
+        !/src[\\/]cli\.ts/.test(doc.text) ||
+        !/dist[\\/]ut-tdd/.test(doc.text)
+      ) {
+        violations.push({
+          path,
+          line: 1,
+          rule: "script-wrapper-not-thin",
+          message: "The consumer Node builder must bundle src/cli.ts to dist/ut-tdd.",
+        });
+      }
+      return violations;
+    }
     const lines = scriptNonCommentLines(doc.text);
     if (
       lines.length > 12 ||

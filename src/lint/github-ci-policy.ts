@@ -140,7 +140,6 @@ const SOURCE_REQUIRED_STEPS = [
   // PLAN-L7-462 step 2: node が harness 実行系の正式 runtime。setup-bun は
   // Pack/consumer acceptance テストの fixture 依存としてのみ残置 (Issue #134 debt)。
   { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
-  { label: "setup-bun@v2 (fixture)", any: ["oven-sh/setup-bun@v2"] },
   { label: "frozen install", any: ["npm ci"] },
   { label: "github guard", any: ["github guard"] },
   { label: "typecheck", any: ["npm run typecheck"] },
@@ -153,11 +152,11 @@ const SOURCE_REQUIRED_STEPS = [
 
 const PACK_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
-  { label: "setup-bun@v2", any: ["oven-sh/setup-bun@v2"] },
-  { label: "frozen install", any: ["bun install --frozen-lockfile"] },
-  { label: "typecheck", any: ["bun run typecheck"] },
-  { label: "pack tests", any: ["bun run test:pack"] },
-  { label: "lint", any: ["bun run lint"] },
+  { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
+  { label: "frozen install", any: ["npm ci"] },
+  { label: "typecheck", any: ["npm run typecheck"] },
+  { label: "pack tests", any: ["npm run test:pack"] },
+  { label: "lint", any: ["npm run lint"] },
   { label: "setup projection", any: ["src/cli.ts setup --solo"] },
   { label: "setup smoke doctor", any: ["doctor --setup-smoke"] },
 ] as const;
@@ -329,10 +328,6 @@ const commonRuntimeSteps = [
   step("setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)", {
     uses: "actions/setup-node@v4",
     with: { "node-version": "24.13.0", cache: "npm" },
-  }),
-  step("setup bun (Pack/consumer acceptance fixture のみ)", {
-    uses: "oven-sh/setup-bun@v2",
-    with: { "bun-version": "1.3" },
   }),
   run("install deps (frozen)", "npm ci --no-audit --no-fund"),
 ] as const;
