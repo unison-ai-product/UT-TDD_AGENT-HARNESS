@@ -31,3 +31,6 @@ before snapshot を上書きしない。
 
 Node/npm の targeted test、typecheck、Biome、PLAN lint を同一 exact HEAD で実行する。Bun と実 remote は
 検証経路に含めない。
+
+PR #438 / PLAN-L7-515 は draft/unmerged の並行候補であり、本 test-design は #438 のファイルや
+未確定実装を参照しない。#438 が merge されるまで、この slice の合格は merge-ready を意味しない。

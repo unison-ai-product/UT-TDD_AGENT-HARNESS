@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-27
 updated: 2026-08-27
 owner: Codex / Luna
@@ -42,7 +42,43 @@ dependencies:
     - src/setup/pack-publication-staging.ts
     - src/schema/release-manifest.ts
     - tests/pack-publication-adapter.test.ts
-review_evidence: []
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-27T08:10:00Z"
+    tests_green_at: "2026-08-27T08:10:00Z"
+    verdict: "targeted Node/npm and relevant local domain tests green; Claude non-author closing review and CI pending"
+    worker_model: gpt-5.6-luna
+    effort: high
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 36be04bf
+    subject_head: 36be04bf
+    evidence_path: tests/pack-publication-adapter.test.ts
+    anchor_commit: 36be04bf
+    scope: >-
+      U-PACKPUB-REMOTE-001..009 direct approval, identity, nonce, initial/late CAS,
+      journal/receipt, pack read-back and happy-path oracles. No Pack remote mutation.
+    citations:
+      - "tests/pack-publication-adapter.test.ts: U-PACKPUB-REMOTE-001..009"
+      - "src/setup/pack-publication-adapter.ts"
+      - "docs/test-design/harness/L7-pack-publication-remote-adapter-test-design.md"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/pack-publication-adapter.test.ts --reporter=dot --maxWorkers=1 --minWorkers=1"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-27T08:10:00Z"
+        evidence_path: tests/pack-publication-adapter.test.ts
+        anchor_commit: 36be04bf
+      - kind: typecheck
+        command: "npm run typecheck"
+        runner: node
+        scope: changed-files
+        exit_code: 0
+        completed_at: "2026-08-27T08:10:00Z"
+        evidence_path: src/setup/pack-publication-adapter.ts
+        anchor_commit: 36be04bf
 ---
 
 # PLAN-L7-519: Pack publication adapter
@@ -62,6 +98,11 @@ pointer drift は fail-close し、最初の write 前は `remoteWrites: 0`、�
 の typed result を返す。tag/Release/assets/visibility の完全 attestation 前に canary pointer を書かない。
 成功時は release/pointer commit-tree、before/after snapshot、asset identity、approval、nonce、journal と
 intent を束ねた publication receipt を保存する。実 remote mutation はこの PRでもテストでも実行しない。
+
+PR #438 の PLAN-L7-515 remote-canary contract は draft/unmerged の predecessor candidate であり、
+本 slice はその未確定実装を import/cherry-pick せず、`PLAN-L6-63` と merged local staging 契約だけを
+継承する。#438 が確定するまで本 PR を merge-ready、Pack remote execution-ready、または stable-ready
+とは判定しない。
 
 ## TDD / verification
 
