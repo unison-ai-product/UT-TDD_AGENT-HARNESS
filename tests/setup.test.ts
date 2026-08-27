@@ -366,7 +366,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     const templates = loadTemplates(process.cwd());
     const workflow = templates["common/harness-check.yml"];
     expect(workflow).toContain("github guard");
-    expect(workflow).toContain("bun run typecheck");
+    expect(workflow).toContain("npm run typecheck");
     expect(workflow).toContain("npm test");
     expect(workflow).toContain("audit quality --include-tests");
     expect(workflow).toContain("ut-tdd.mjs doctor --setup-smoke");
@@ -545,7 +545,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(wrapper).not.toContain("src/cli.ts");
     expect(wrapper).not.toContain("node_modules");
     expect(wrapper).toContain(
-      "spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)]",
+      "spawnSync(process.execPath, [pointer.entry_path, ...process.argv.slice(2)]",
     );
     expect(wrapper).toContain("windowsHide: true");
     expect(wrapper).not.toContain("shell:");
