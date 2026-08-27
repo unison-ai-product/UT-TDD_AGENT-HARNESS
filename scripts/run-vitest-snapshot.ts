@@ -87,6 +87,12 @@ export interface SnapshotStageTiming {
   readonly durationMs: number;
 }
 
+export interface SnapshotStageMeasurementOptions {
+  readonly now?: () => number;
+  readonly enabled?: boolean;
+  readonly write?: (text: string) => void;
+}
+
 export function snapshotTimingLines(timings: readonly SnapshotStageTiming[]): string[] {
   return timings.map(({ stage, durationMs }) => `snapshot-stage ${stage} ${durationMs.toFixed(1)}ms`);
 }
@@ -106,23 +112,27 @@ export function emitSnapshotTimings(
   write(`${snapshotTimingLines(timings).join("\n")}\n`);
 }
 
-function measureSnapshotStage<T>(
-  timings: SnapshotStageTiming[],
+export function measureSnapshotStage<T>(
   stage: string,
   action: () => T,
+  options: SnapshotStageMeasurementOptions = {},
 ): T {
-  const started = performance.now();
+  const now = options.now ?? (() => performance.now());
+  const started = now();
   try {
     return action();
   } finally {
     const timing = {
       stage,
-      durationMs: Number((performance.now() - started).toFixed(1)),
+      durationMs: now() - started,
     };
-    timings.push(timing);
     // Emit a completed stage immediately. A later stage can hang or be killed,
     // and the measurements completed before that point must remain observable.
-    emitSnapshotTimings([timing]);
+    emitSnapshotTimings(
+      [timing],
+      options.enabled ?? shouldEmitSnapshotTimings(),
+      options.write,
+    );
   }
 }
 
@@ -402,46 +412,45 @@ export function runSnapshotTests(
   );
   let primaryError: unknown;
   let sealedReferenceFingerprint: string | undefined;
-  const timings: SnapshotStageTiming[] = [];
   try {
-    const bun = measureSnapshotStage(timings, "resolve-bun", () => resolveBunBinary());
-    const node = measureSnapshotStage(timings, "resolve-node", () => resolveNodeBinary());
-    const npmCli = measureSnapshotStage(timings, "resolve-npm", () => resolveNpmCli(node));
-    const source = measureSnapshotStage(timings, "resolve-source", () =>
+    const bun = measureSnapshotStage("resolve-bun", () => resolveBunBinary());
+    const node = measureSnapshotStage("resolve-node", () => resolveNodeBinary());
+    const npmCli = measureSnapshotStage("resolve-npm", () => resolveNpmCli(node));
+    const source = measureSnapshotStage("resolve-source", () =>
       resolveSnapshotSource(repoRoot),
     );
-    measureSnapshotStage(timings, "create-execution-snapshot", () =>
+    measureSnapshotStage("create-execution-snapshot", () =>
       createSnapshot(repoRoot, snapshotRoot, source),
     );
-    measureSnapshotStage(timings, "create-reference-snapshot", () =>
+    measureSnapshotStage("create-reference-snapshot", () =>
       createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot)),
     );
     if (source.kind === "copy")
-      measureSnapshotStage(timings, "assert-copy-content", () =>
+      measureSnapshotStage("assert-copy-content", () =>
         assertSnapshotContentMatch(snapshotRoot, referenceRoot),
       );
-    measureSnapshotStage(timings, "npm-ci", () =>
+    measureSnapshotStage("npm-ci", () =>
       run(node, [npmCli, "ci", "--no-audit", "--no-fund"], snapshotRoot),
     );
-    measureSnapshotStage(timings, "db-rebuild", () =>
+    measureSnapshotStage("db-rebuild", () =>
       run(node, ["src/cli.ts", "db", "rebuild"], snapshotRoot),
     );
-    measureSnapshotStage(timings, "copy-runtime-inputs", () =>
+    measureSnapshotStage("copy-runtime-inputs", () =>
       copyReferenceRuntimeInputs(snapshotRoot, referenceRoot),
     );
     if (source.kind === "git")
-      measureSnapshotStage(timings, "assert-reference-diff", () =>
+      measureSnapshotStage("assert-reference-diff", () =>
         run(
           "git",
           ["diff", "--exit-code", "--", ":(exclude).ut-tdd/harness.db"],
           referenceRoot,
         ),
       );
-    measureSnapshotStage(timings, "seal-reference", () => sealReference(referenceRoot));
-    sealedReferenceFingerprint = measureSnapshotStage(timings, "fingerprint-reference", () =>
+    measureSnapshotStage("seal-reference", () => sealReference(referenceRoot));
+    sealedReferenceFingerprint = measureSnapshotStage("fingerprint-reference", () =>
       snapshotContentFingerprint(referenceRoot),
     );
-    measureSnapshotStage(timings, "vitest", () =>
+    measureSnapshotStage("vitest", () =>
       run(node, [join("node_modules", "vitest", "vitest.mjs"), "run", ...args], snapshotRoot, {
         ...process.env,
         INIT_CWD: snapshotRoot,
@@ -458,7 +467,7 @@ export function runSnapshotTests(
   } finally {
     if (sealedReferenceFingerprint) {
       try {
-        measureSnapshotStage(timings, "verify-reference", () =>
+        measureSnapshotStage("verify-reference", () =>
           assertSnapshotFingerprint(referenceRoot, sealedReferenceFingerprint!),
         );
       } catch (error) {
@@ -467,7 +476,7 @@ export function runSnapshotTests(
           : error;
       }
     }
-    measureSnapshotStage(timings, "cleanup", () =>
+    measureSnapshotStage("cleanup", () =>
       finishSnapshotCleanup(primaryError, [
         () => unsealReference(referenceRoot),
         () => removeSnapshot(referenceRoot),

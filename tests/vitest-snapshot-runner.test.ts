@@ -21,6 +21,7 @@ import {
   createSnapshot,
   emitSnapshotTimings,
   finishSnapshotCleanup,
+  measureSnapshotStage,
   removeSnapshot,
   resolveBunBinary,
   resolveSnapshotSource,
@@ -53,6 +54,41 @@ describe("vitest snapshot runner", () => {
     expect(shouldEmitSnapshotTimings({ UT_TDD_SNAPSHOT_TIMING: "1" })).toBe(true);
     expect(shouldEmitSnapshotTimings({ CI: "true" })).toBe(true);
     expect(shouldEmitSnapshotTimings({ CI: "false" })).toBe(false);
+  });
+
+  it("CANDIDATE-SNAPSHOT-COST-002: emits each completed stage before the next stage", () => {
+    const writes: string[] = [];
+    let tick = 100;
+    const now = () => {
+      const current = tick;
+      tick += 12.345;
+      return current;
+    };
+    const measurement = { now, enabled: true, write: (text: string) => writes.push(text) };
+
+    expect(
+      measureSnapshotStage(
+        "first",
+        () => {
+          expect(writes).toEqual([]);
+          return "ok";
+        },
+        measurement,
+      ),
+    ).toBe("ok");
+    expect(writes).toEqual(["snapshot-stage first 12.3ms\n"]);
+
+    expect(() =>
+      measureSnapshotStage(
+        "second",
+        () => {
+          expect(writes).toEqual(["snapshot-stage first 12.3ms\n"]);
+          throw new Error("stage failed");
+        },
+        measurement,
+      ),
+    ).toThrow("stage failed");
+    expect(writes).toEqual(["snapshot-stage first 12.3ms\n", "snapshot-stage second 12.3ms\n"]);
   });
 
   it("U-TESTHYGIENE-047: resolves the Bun executable rather than inheriting a Vitest worker Node binary", () => {

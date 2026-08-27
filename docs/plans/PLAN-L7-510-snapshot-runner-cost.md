@@ -52,7 +52,8 @@ fail-close 契約を維持したまま、重複する `npm ci` と全量コピ�
 
 ## Scope
 
-最初に `UT_TDD_SNAPSHOT_TIMING=1` で完了した各stageの所要時間を即時にstderrへ出す。後続stageが
+最初に `UT_TDD_SNAPSHOT_TIMING=1` で完了した各stageの所要時間を即時にstderrへ出す。CI (`CI=true`)
+では同じ診断を既定で有効にする。後続stageが
 停止・強制終了しても、それ以前の測定値を失わない。計測値を
 Windows local、Linux CI、Windows CIで取得した後にのみ削減方式と目標値を確定する。
 
@@ -73,8 +74,8 @@ Instrumentation Red→Green。削減実装および完了判定はbaseline取得
 
 ## Windows local baseline
 
-Baseline revision: `fb8f3701c3f7e521c8b384e8532449c0fe020e0e` plus the instrumentation
-working diff. Command:
+Baseline revision: exact HEAD `23120b59b0dab43a738f9d510baf208c8c42a390` (the
+instrumentation is included in this commit). Command:
 
 `UT_TDD_SNAPSHOT_TIMING=1 node scripts/run-vitest-snapshot.ts tests/vitest-snapshot-runner.test.ts --reporter=dot`
 
