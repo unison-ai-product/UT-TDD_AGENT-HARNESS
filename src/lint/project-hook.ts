@@ -66,9 +66,9 @@ interface RequiredProjectHook {
  * PLAN-RECOVERY-06: gate 要求と setup 生成物の黙った再乖離を防ぐ)。
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
-export const WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.ts";
+export const WRAPPER_HOOK_LAUNCHER = WRAPPER_CLI;
 
-const wrapperCommand = (subcommand: string): string => `bun ${WRAPPER_CLI} ${subcommand}`;
+const wrapperCommand = (subcommand: string): string => `node ${WRAPPER_CLI} ${subcommand}`;
 
 const args = (...values: string[]): readonly string[] => values;
 
@@ -150,7 +150,7 @@ export function wrapperHookCommand(id: RequiredProjectHookId): string {
 export function wrapperHookArgs(id: RequiredProjectHookId): readonly string[] {
   const entry = REQUIRED.find((required) => required.id === id);
   if (!entry) throw new Error(`unknown required project hook id: ${id}`);
-  return entry.wrapperArgs;
+  return entry.wrapperArgs.slice(1);
 }
 
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");

@@ -17,7 +17,6 @@ interface SetupSmokeCheck {
 }
 
 const SETUP_SMOKE_REQUIRED_FILES = [
-  ".ut-tdd/bin/run-bun.ts",
   ".ut-tdd/bin/ut-tdd.mjs",
   "AGENTS.md",
   "CLAUDE.md",
@@ -29,7 +28,7 @@ const SETUP_SMOKE_REQUIRED_FILES = [
 
 const nativeInvocation = (...suffix: string[]) => ({
   executable: "node",
-  args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...suffix],
+  args: [".ut-tdd/bin/ut-tdd.mjs", ...suffix],
 });
 const SETUP_SMOKE_SHARED_INVOCATIONS = [
   nativeInvocation("hook", "agent-guard"),
@@ -76,20 +75,19 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
   }
 
   const wrapper = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/ut-tdd.mjs"));
-  const launcher = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/run-bun.ts"));
   checks.push({
     name: "wrapper-placeholder-free",
     ok: wrapper !== null && !/UT_TDD_SOURCE_CLI_JSON|__UT_TDD|placeholder/i.test(wrapper),
     message: "project-local wrapper has no template placeholder residue",
   });
   checks.push({
-    name: "native-bun-launcher-contract",
+    name: "consumer-node-wrapper-contract",
     ok:
-      !!launcher?.includes("windowsHide: true") &&
-      launcher.includes("realpathSync") &&
-      !launcher.includes("shell: true") &&
-      !launcher.includes("spawnSync"),
-    message: "native Bun launcher is shell-free, canonical-path checked, and signal-aware",
+      !!wrapper?.includes("process.execPath") &&
+      wrapper.includes("active.json") &&
+      !wrapper.includes("src/cli.ts") &&
+      !wrapper.includes("run-bun"),
+    message: "consumer Node wrapper resolves only the sealed active bundle",
   });
 
   const claudeInvocations = collectHookInvocations(
