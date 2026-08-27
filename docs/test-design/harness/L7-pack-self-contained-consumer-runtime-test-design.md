@@ -21,7 +21,6 @@ prefix remains here as design provenance, while the executable IDs are the imple
 
 | Implementation ID | Direct test citation |
 | --- | --- |
-| `U-PACKNODE-001` | `tests/consumer-node-runtime.test.ts` — identity tuple mutation |
 | `U-PACKNODE-002` | `tests/consumer-node-runtime.test.ts` — generic source/package fallback denial |
 | `U-PACKNODE-003` | `tests/consumer-node-runtime.test.ts` — active pointer-only resolution |
 | `U-PACKNODE-004` | `tests/consumer-node-runtime.test.ts` — ordered ports |
