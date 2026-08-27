@@ -99,17 +99,23 @@ Pack checkout、worktree、global cacheを差し込む入力は持たせない�
 <consumerRoot>/.ut-tdd/
   bin/ut-tdd.mjs                         # Nodeで起動する薄い解決wrapper
   runtime/
-    generations/<generation_id>/
+    bundles/<generation_id>-<operation_id>/
       ut-tdd.mjs                         # sealed compiled ESM本体
       node-bootstrap-receipt.json        # L6-93 receiptの検証済み写像
-    activation/active.json               # consumer identityに束縛されたactive marker
+      marker.json                         # bundle内のconsumer active marker projection
+      consumer-receipt.json               # bundle内のreceipt projection
+      history.jsonl                       # bundle内のhistory projection
+      operation-state.json                # durable operation state
+      bundle-manifest.json                # 全bytes/digest/identityのmanifest
+    activation/active.json               # bundleを指すconsumer-local single active pointer
     staging/<operation_id>/              # install/update中だけ存在するprivate staging
-  receipts/consumer-runtime.json         # install/update/rollback receipt
-  history/consumer-runtime.jsonl         # append-only consumer履歴
 ```
 
-`bin/ut-tdd.mjs`はactive markerを読み、consumer-local generationのdigest、generation ID、
-consumer namespace、Node authorityを検証してから、`process.execPath`でcompiled ESMを起動する。
+`bin/ut-tdd.mjs`はsingle active pointerを読み、そのpointerが指すsealed immutable activation
+bundleのmanifest、marker/receipt/history projection、generation ID、consumer namespace、Node
+authorityを検証してから、`process.execPath`でcompiled ESMを起動する。active pointer以外の
+generation/bundle、staging、履歴を解決候補にせず、orphan sealed bundleは非activeとしてcleanup/
+reconcile対象にする。
 current working directory、`PATH`、環境変数の絶対path、setup元checkout、source repository、
 source worktree、global `node_modules`を解決候補にしない。active marker・generation・receiptの
 いずれかが欠落・不一致なら、processを起動せずtyped `consumer_runtime_absent`または
@@ -129,8 +135,9 @@ generation identityとcanonical digestでreceipt chainまで一致した場合�
 `ok=true`）とする。
 
 1. immutableなconsumer-local sealed generationとcompiled ESM
-2. consumer identityに束縛された`runtime/activation/active.json`
-3. generation、active marker、Node/bootstrap、consumer operationを連鎖検証できるreceipt
+2. consumer identityに束縛された`runtime/activation/active.json` single active pointer
+3. pointerが指すbundle内でgeneration、active marker、Node/bootstrap、consumer operationを連鎖検証
+   できるreceipt/history projectionとoperation state
 
 欠落は`consumer_runtime_absent`、identity tupleの不一致は
 `consumer_runtime_identity_mismatch`、generation/marker/receiptの再計算digest driftは
@@ -173,40 +180,45 @@ readConsumerIdentity
 → verifySealedAggregate
 → verifyNodeGeneration
 → acquireConsumerLock
-→ snapshotPriorActiveMarker
+→ snapshotPriorActivePointer
 → createPrivateStaging
 → writeGenerationAndReceipt
 → fsyncStaging
-→ atomicPublishActivationBundle
-→ verifyActiveGeneration
+→ sealActivationBundle
+→ atomicRenameActivePointerCAS
+→ verifyActiveBundle
+→ reconcileDurableOperation
 → releaseConsumerLock
 ```
 
-各read/verifyが失敗した場合、lock、staging、generation write、activation、receipt append、
+各read/verifyが失敗した場合、lock、staging、generation write、bundle publish、
 process launchは0とする。lock取得後、activation前のfaultはprivate stagingだけを破棄し、
-primary errorを保持してprior stateを変更しない。`snapshotPriorActiveMarker`はactivation前に
-markerの存在しない状態を含むbyte-for-byte snapshot、canonical marker digest、prior
-`generation_id`/`attempt`を固定する。activation markerの更新は正常系で一回だけで、既存active
-markerを上書き編集せず、新しいimmutable generationを指すatomic replaceとして行う。
+primary errorを保持してprior stateを変更しない。`snapshotPriorActivePointer`はactivation前に
+pointerの存在しない状態を含むbyte-for-byte snapshot、canonical pointer digest、prior
+`generation_id`/`attempt`を固定する。single active pointerの更新は正常系で一回だけで、既存active
+pointerを上書き編集せず、sealed bundleを同一filesystemへ完全fsync/sealしてから新pointerを指す
+atomic rename/CASとして一回だけ切り替える。これを物理commit pointとする。
 
-activation後の`verifyActiveGeneration`またはpublish ackのfaultは、marker・receipt・historyを
-同じconsumer-local outbox operationへ束縛する`atomicPublishActivationBundle`で扱う。bundleは
-active marker、consumer receipt、append-only history、operation stateを同一atomic publish単位で
-記録し、markerだけをrestoreしてreceipt/historyを残す補償を禁止する。ack-loss/commit成否不明は
-durable operation stateをread-only reconcileして、bundleの全体commitまたは全体未commitだけを確定
-する。reconcileで新writeを行わず、unknown/new state、bundleの部分commit、CAS不一致、reverify
-失敗は`indeterminate`（fail-close）として一次faultを保持し、process launchを0にする。
+activation後の`verifyActiveBundle`またはpointer rename ackのfaultは、marker・receipt・historyを
+含むsealed immutable bundleとdurable operation stateを同一publish単位として扱う。pointerだけを
+restoreしてreceipt/historyを残す補償、別directoryの3-fileを個別atomicにする主張は禁止する。
+ack-loss/commit成否不明はoperation stateをread-only reconcileして、single committed bundleと
+single active pointerの組、または全体未commitだけを確定する。reconcileで新writeを行わず、
+unknown/new state、bundleの部分commit、CAS不一致、reverify失敗は`indeterminate`（fail-close）
+として一次faultを保持し、process launchを0にする。
 
-updateはprior generationを削除せず、新generationのreceiptが検証済みになってからactive markerを
+updateはprior bundleを削除せず、新bundleを完全fsync/sealしてreceipt/history projectionが検証済み
+になってからsingle active pointerを
 一度だけ切り替える。rollbackは同一consumer namespaceに既に記録されたprior attested generation
-だけを選び、generation bytesを変更せず新しいactive markerとconsumer receiptを原子的に記録する。
+だけを選び、generation bytesを変更せず新しいsealed bundleとactive pointerを原子的に記録する。
 未記録generation、別consumer、digest変異、異なるNode generation tupleは拒否する。L6-93の
 cutover chainを巻き戻す操作、cross-revision cutover、force pointer mutationは行わない。
 
-上記のpublish/reconcileはactivationを成功とみなすためのretryではない。正常系はbundle publish
-一回、fault時のreconcileはread-only一回とし、全体未commitを確認できた場合だけprior marker、
-receipt、historyのbytes/mode/pathを不変と判定できる。全体commitまたはprior stateの不変性を確定
-できない場合はactive stateを成功扱いせず、`indeterminate`/fail-closeを証跡へ残す。
+上記のpublish/reconcileはactivationを成功とみなすためのretryではない。正常系はbundle sealと
+active pointer切替一回、fault時のreconcileはread-only一回とする。pre-commit deny/faultはwrite、
+apply、launchを0にしてprior stateを不変とし、commit済みack-lossはsingle committed bundleと
+pointerをread-only reconcileで確定して新write 0とする。commitまたはprior state不変性を確定
+できないunknown/partial stateは`indeterminate`/fail-close、成功扱い・launch 0とする。
 
 lock取得後の全分岐（正常終了、activation前fault、bundle publish後fault、primary error、
 indeterminateを含む）は`finally`で`releaseConsumerLock`をexactly once呼ぶ。releaseがthrowした
@@ -278,8 +290,12 @@ PF5、#432、#414、Pack remote publicationを重複所有しない。
    検証可能なreceipt chainへ束縛される。
 2. wrapper/hookがconsumer-local active generationだけを解決し、source/Pack/worktree/
    `node_modules` TypeScript/Bun/shell fallbackを持たない。
-3. install/update/rollbackがprivate stagingと一回のatomic activationで完了し、deny/fault時に
-   apply・write・launchが0、prior stateが不変である。
+3. install/update/rollbackの物理commit pointが、完全fsync/seal済みの単一immutable activation
+   bundleとconsumer-local single active pointerを同一filesystemのatomic rename/CAS一回で束縛する。
+   pre-commit deny/faultはapply・write・launchが0でprior state不変、commit済みack-lossはsingle
+   committed bundle/pointerをread-only reconcileして新write 0、unknown/partialまたはprior state
+   不変性を確定できない状態は`indeterminate`/fail-close、成功扱い・launch 0とする。全lock経路の
+   releaseはexactly onceで、release faultはprimary error保持のtyped `indeterminate`とする。
 4. generic `src/cli.ts` hostile fixture、Pack checkout削除、A/B隔離、異version、Linux/Windowsの
    symlink/junction/8.3/permission/path boundaryが実測される。
 5. TypeScript、Biome、専用unit/system test、PLAN lint、scoped doctor、Linux/Windows/aggregate CI、

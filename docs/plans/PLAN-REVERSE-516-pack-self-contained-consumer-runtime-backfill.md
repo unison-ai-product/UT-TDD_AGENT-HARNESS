@@ -69,6 +69,9 @@ generation、wrapper解決、原子install/update/rollback、source/Pack checkou
 - marker、receipt、historyは同一consumer-local durable outbox operationのatomic publish単位へ束縛し、
   ack-loss/commit成否不明はread-only reconcileで判定すること。部分commit、unknown/new state、
   prior state不変性を確定できない状態を成功扱いせず、新write 0とすること。
+- sealed activation bundleを完全fsync/sealした後、consumer-local single active pointerを同一filesystem
+  のatomic rename/CAS一回で切り替える物理commit point、pointerからbundleだけを解決するreadiness/wrapper、
+  orphan bundleのcleanup/reconcileをLinux/Windows双方で検証すること。
 - acquireConsumerLock後の全経路は`finally`で`releaseConsumerLock`をexactly once呼び、release throwは
   typed `indeterminate`としてprimary errorを保持すること。
 - Linux/Windowsのcanonical path、symlink/junction/reparse、8.3 alias、権限不足、未解決path、
