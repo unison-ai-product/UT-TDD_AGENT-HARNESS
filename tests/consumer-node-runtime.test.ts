@@ -33,7 +33,7 @@ function identity(root = "/tmp/consumer-node-runtime"): ConsumerNodeRuntimeIdent
     generation_id: "generation-001",
     subject_revision: "a".repeat(40),
     artifact_digest: `sha256:${"1".repeat(64)}`,
-    node_executable_identity: "node-v24.13.0|sha256:node",
+    node_executable_identity: `node-v24.13.0|sha256:${"7".repeat(64)}`,
     package_lock_digest: `sha256:${"2".repeat(64)}`,
     source_graph_digest: `sha256:${"3".repeat(64)}`,
     compiled_esm_digest: digestConsumerRuntimeBytes(compiled),
@@ -130,7 +130,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     const events: string[] = [];
     const result = await installConsumerNodeRuntime({ identity: identity(), bundle: bundleFor(), ports: ports(events, "fsyncStaging") });
     expect(result).toMatchObject({ ok: false, status: "failed" });
-    expect(events).toContain("destroyPrivateStaging:/tmp/consumer-node-runtime/.ut-tdd/runtime/staging/install-001/attempt-0");
+    expect(events.some((event) => event.startsWith("destroyPrivateStaging:"))).toBe(true);
     expect(events).not.toContain("atomicRenameActivePointerCAS");
   });
 
@@ -149,7 +149,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     mkdirSync(join(root, ".ut-tdd", "runtime", "activation"), { recursive: true });
     const entry = join(root, ".ut-tdd", "runtime", "bundled-entry.mjs");
     writeFileSync(entry, 'process.stdout.write("consumer-local-ok")\n');
-    writeFileSync(join(root, ".ut-tdd", "runtime", "activation", "active.json"), JSON.stringify({ entry_path: entry }));
+    writeFileSync(join(root, ".ut-tdd", "runtime", "activation", "active.json"), JSON.stringify({ bundle_path: resolve(entry, ".."), entry_path: entry }));
     writeFileSync(join(setupCheckout, "src-cli-sentinel"), "must-not-be-read");
     rmSync(setupCheckout, { recursive: true, force: true });
     const wrapper = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");

@@ -143,7 +143,7 @@ function validIdentity(identity: ConsumerNodeRuntimeIdentity): boolean {
     REVISION.test(identity.subject_revision) &&
     DIGEST.test(identity.artifact_digest) &&
     typeof identity.node_executable_identity === "string" &&
-    identity.node_executable_identity.length > 0 &&
+    /^node-[^|]+\|sha256:[a-f0-9]{64}$/.test(identity.node_executable_identity) &&
     DIGEST.test(identity.package_lock_digest) &&
     DIGEST.test(identity.source_graph_digest) &&
     DIGEST.test(identity.compiled_esm_digest) &&
