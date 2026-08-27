@@ -1,4 +1,8 @@
 import { COMMON_FILES } from "./templates.ts";
+import {
+  validateConsumerReadiness,
+  type ConsumerNodeRuntimeReadinessInput,
+} from "./consumer-node-runtime.ts";
 
 export interface CleanDistributionPlan {
   ok: boolean;
@@ -40,6 +44,10 @@ export interface ConsumerReadinessPlan {
     stable: string[];
   };
   smokeScenarios: string[];
+  consumerRuntime?: {
+    ok: boolean;
+    reason?: string;
+  };
 }
 
 export interface PackSyncPlan {
@@ -214,7 +222,7 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   const scripts = { ...(parsed.scripts ?? {}) };
   scripts["test:source"] ??= scripts.test ?? "vitest run";
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
-  scripts.test = "bun run test:pack";
+  scripts.test = "npm run test:pack";
   const utTdd = {
     ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
     artifactProfile: "pack",
@@ -315,6 +323,7 @@ export function buildConsumerReadinessPlan(input: {
   packageRoot?: string;
   tag?: string;
   cleanRepo?: string;
+  consumerRuntime?: ConsumerNodeRuntimeReadinessInput;
 }): ConsumerReadinessPlan {
   const bunOk = Boolean(input.bunVersion && hasMinimumBun(input.bunVersion));
   const mode =
@@ -327,9 +336,11 @@ export function buildConsumerReadinessPlan(input: {
           : "standalone";
   const checks = [
     {
-      name: "bun>=1.3",
-      ok: bunOk,
-      message: bunOk ? `Bun ${input.bunVersion}` : "Install Bun 1.3 or newer before setup",
+      name: "node-runtime",
+      ok: true,
+      message: bunOk
+        ? `Node consumer runtime ready (legacy Bun observation: ${input.bunVersion})`
+        : "Node consumer runtime is authoritative; Bun is not required",
     },
     {
       name: "git",
@@ -351,10 +362,8 @@ export function buildConsumerReadinessPlan(input: {
           ? "project-local UT-TDD wrapper, package bin, or source setup entrypoint is available for projected hooks"
           : (input.utTddCliMessage ??
             [
-              "Generated Claude/Codex hooks call the shell-free native Bun launcher so each project can use its own pinned UT-TDD package.",
-              "Add UT-TDD as a project dependency before setup and verify `node_modules/.bin/ut-tdd --help` or `bun .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
-              "Do not rely on a global `bun link` when multiple projects on one PC may pin different harness versions.",
-              "Native Bun itself must still resolve without a PowerShell or cmd shim.",
+              "Generated Claude/Codex hooks resolve only the consumer-local sealed Node runtime.",
+              "Install or update the consumer runtime before invoking hooks; source checkouts and TypeScript package paths are not fallback candidates.",
             ].join(" ")),
     },
     {
@@ -369,8 +378,24 @@ export function buildConsumerReadinessPlan(input: {
   const packageRoot = input.packageRoot ?? input.repoRoot;
   const tag = input.tag ?? "v0.1.0";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
+  const runtimeReadiness = validateConsumerReadiness(input.consumerRuntime);
+  const hasSealedRuntime = input.consumerRuntime !== undefined;
+  const runtimeCheck = hasSealedRuntime
+    ? {
+        name: "consumer-node-runtime",
+        ok: runtimeReadiness.ok,
+        message: runtimeReadiness.ok
+          ? "consumer-local sealed Node generation is ready"
+          : (runtimeReadiness.reason ?? "consumer runtime is blocked (fail-closed)"),
+      }
+    : null;
+  if (runtimeCheck) checks.push(runtimeCheck);
   return {
-    ok: bunOk && input.hasGit && (input.hasUtTddCli ?? true),
+    // A sealed consumer runtime is the authority for a consumer. Bun is retained as an
+    // observation for legacy source repositories, never as a readiness prerequisite.
+    ok: hasSealedRuntime
+      ? runtimeReadiness.ok && input.hasGit
+      : input.hasGit && (input.hasUtTddCli ?? true),
     checks,
     mode,
     workspace: {
@@ -383,10 +408,10 @@ export function buildConsumerReadinessPlan(input: {
       workflow: ".github/workflows/harness-check.yml",
       requires: [
         "actions/checkout@v4",
-        "oven-sh/setup-bun@v2",
-        "bun install --frozen-lockfile",
-        "bun run typecheck",
-        "bun run test",
+        "actions/setup-node@v4 (Node 24)",
+        "npm ci",
+        "npm run typecheck",
+        "npm test",
       ],
       forkPullRequestSecrets: "not-required",
     },
@@ -398,8 +423,8 @@ export function buildConsumerReadinessPlan(input: {
       backupRequired: true,
       commands: [
         `git switch ${tag}`,
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --solo",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --solo",
       ],
     },
     contracts: {
@@ -423,6 +448,9 @@ export function buildConsumerReadinessPlan(input: {
       "consumer CI -> harness-check green without repository secrets",
       "monorepo package root -> adapter paths remain repo-root scoped",
     ],
+    ...(hasSealedRuntime
+      ? { consumerRuntime: { ok: runtimeReadiness.ok, ...(runtimeReadiness.reason ? { reason: runtimeReadiness.reason } : {}) } }
+      : {}),
   };
 }
 
