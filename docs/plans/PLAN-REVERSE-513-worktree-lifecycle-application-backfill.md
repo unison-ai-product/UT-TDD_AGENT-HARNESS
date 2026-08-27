@@ -54,11 +54,13 @@ application sagaへ降ろす docs-only freezeである。実装、既存worktree
 実装後、次の差分だけを `PLAN-L4-34` の #384 placement / lifecycle境界へ戻す。
 
 - 必須 owner / Issue / PLAN revision / TTL / branch / parent / path の欠落は side effect 0であること。
-- applicationの正規順序が `reservePath → plan → create → observe → activate` で、owner / identity / attempt が全段階で一致すること。
-- `create`、`observe`、`activate` の fault時に、primary errorを保持しながら同じattemptのactivation-abort、release、cleanup handoffを記録すること。
-- `releasePath` の throwをprimary errorへ置き換えず、補償失敗をtyped faultとして保持すること。
-- `finish` / `abort` がterminal eventとcleanup handoffを同一lifecycle / attemptへ束縛し、欠測receiptを成功へ丸めないこと。
-- Windows case-insensitive / Linux case-sensitive の direct-child比較、spaces許可、root/nested/junction/symlink/home/Temp/OneDrive/long path fail-closeを、canonical実体のpath契約として戻すこと。
+- applicationの正規順序が `reservePath → plan → spawn → start receipt → observe → activate` で、`repository_lineage_id`、`lifecycle_id`、owner、Issue、PLAN revision、`use`、`head_oid`、`activation_deadline`、`operation_id`、identity / attempt が全段階で一致すること。
+- record登録失敗時のspawn 0、同一attemptのstart receiptだけを受理しforeign receiptを拒否すること。
+- pre-reserve / post-reserve-pre-plan / post-plan faultを分離し、存在しないrecordへの補償要求を出さず、可能なreceiptとprimary errorを保持すること。
+- post-plan fault時にactivation-abort、release、cleanup handoffを記録し、`releasePath` の throwをprimary errorへ置き換えないこと。
+- `finish` / `abort` が `terminal event → lease-release receipt → cleanup handoff` の順で同一lifecycle / `operation_id` / attemptへ束縛し、各throw時のauthoritative stateを保持すること。
+- Windows case-insensitive / Linux case-sensitive の direct-child比較、spaces許可、root/nested/junction/symlink/home/Temp/OneDrive、reserved name、unresolved link、canonicalization不能、Windows 240 UTF-16境界の単独fail-closeを、canonical実体のpath契約として戻すこと。
+- performance candidateの `N=100`、各port/event `1N+0`、port総数 `6N+0`、event総数 `2N+0`、handoff総数 `1N+0` の上限を実装測定へ束縛すること。
 
 adapter、CLI、doctor、hooks、JSONL、physical cleanup / #426 の責務はbackfill対象へ取り込まず、既存所有者へ残す。
 
