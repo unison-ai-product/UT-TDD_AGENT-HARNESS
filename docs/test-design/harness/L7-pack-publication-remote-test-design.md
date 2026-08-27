@@ -1,3 +1,11 @@
+---
+artifact_type: test_design
+layer: L7
+executed_at_layer: L7
+status: draft
+plan_id: PLAN-L7-515-pack-remote-canary-publication
+---
+
 # L7 Pack remote canary publication test design
 
 ## 1. 位置付け
