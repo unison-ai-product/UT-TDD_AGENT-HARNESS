@@ -329,6 +329,18 @@ export function buildClaudeReviewInboxEntry(input: {
 }
 
 export function publishClaudeInboxEntry(repoRoot: string, entry: ClaudeInboxEntry): string {
+  const claimedPath = join(runtimeRoot(repoRoot), `${inboxFileStem(entry.id)}.claim`);
+  if (existsSync(claimedPath)) {
+    writeAuditLog(repoRoot, {
+      event: "publish",
+      status: "idempotent_claimed",
+      entryId: entry.id,
+      operationId: entry.operationId,
+      deliveryState: "claimed",
+      deliveryConfirmed: true,
+    });
+    return claimedPath;
+  }
   const directory = join(runtimeRoot(repoRoot), "inbox");
   ensureDir(directory, { recursive: true });
   const target = join(directory, `${inboxFileStem(entry.id)}.json`);

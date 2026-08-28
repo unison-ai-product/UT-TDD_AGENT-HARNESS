@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -11,6 +12,13 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import type { MemoryEntry } from "../src/memory/index.ts";
+import {
+  buildClaudeInboxEntry,
+  claudeWorkspaceId,
+  publishClaudeInboxEntry,
+  waitForClaudeMemory,
+} from "../src/runtime/claude-memory-wake.ts";
 import {
   activateClaudeWakeGeneration,
   CLAUDE_WAKE_CAPABILITY_SCHEMA,
@@ -27,6 +35,12 @@ const runtimeSourceRevision = "1".repeat(40);
 
 function fixture(): string {
   return mkdtempSync(join(tmpdir(), "ut-tdd-claude-generation-upgrade-"));
+}
+
+function gitFixture(): string {
+  const root = fixture();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  return root;
 }
 
 function digest(bytes: string): string {
@@ -245,6 +259,66 @@ describe("Claude wake generation rolling upgrade", () => {
         JSON.parse(readFileSync(join(root, "activation-journal", name), "utf8")),
       );
       expect(journals.map((entry) => entry.state)).toEqual(["active", "rolled_back", "active"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-CHSCHEMA-012/013/015: captured claims remain immutable and claimed replay creates no inbox", async () => {
+    const captureRoot = join(
+      process.cwd(),
+      "tests",
+      "fixtures",
+      "claude-hook-schema-rolling-upgrade",
+    );
+    const inventory = JSON.parse(readFileSync(join(captureRoot, "inventory.json"), "utf8"));
+    expect(existsSync(join(captureRoot, "pr-423-envelope.json"))).toBe(false);
+    for (const observation of inventory.observations) {
+      for (const kind of ["request", "claim"] as const) {
+        expect(digest(readFileSync(join(captureRoot, observation[kind]), "utf8"))).toBe(
+          `sha256:${observation[`${kind}Sha256`]}`,
+        );
+      }
+    }
+
+    const root = gitFixture();
+    try {
+      const memory: MemoryEntry = {
+        memory_id: "memory:fixture:claude-hook-schema-unclaimed-v1",
+        kind: "project",
+        title: "fixture-only unclaimed envelope",
+        body: "fixture identity does not copy production payload",
+        tags: ["fixture"],
+        source_path: ".ut-tdd/memory/fixture-claude-hook-schema.md",
+        updated_at: "2026-08-28T00:00:00.000Z",
+        content_hash: "c".repeat(64),
+      };
+      const entry = buildClaudeInboxEntry({
+        memory,
+        operationId: "fixture-unclaimed-consume-v1",
+        workspaceId: claudeWorkspaceId(root),
+      });
+      publishClaudeInboxEntry(root, entry);
+      expect(
+        await waitForClaudeMemory({
+          repoRoot: root,
+          sessionId: "fixture-claude-session-v1",
+          pollIntervalMs: 10,
+          maxWaitMs: 100,
+        }),
+      ).toMatchObject({ kind: "delivered", entry: { id: entry.id } });
+
+      const common = execFileSync(
+        "git",
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        { cwd: root, encoding: "utf8" },
+      ).trim();
+      const runtime = join(common, "ut-tdd-runtime", "claude-memory-wake");
+      const inbox = join(runtime, "inbox");
+      const before = existsSync(inbox) ? readdirSync(inbox) : [];
+      const replayPath = publishClaudeInboxEntry(root, entry);
+      expect(replayPath.endsWith(".claim")).toBe(true);
+      expect(existsSync(inbox) ? readdirSync(inbox) : []).toEqual(before);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
