@@ -142,7 +142,7 @@ Issue #450 の受入条件 3 は次のとおり:
 **A を採る。** AC3 は「`bun build` を削除する」ではなく
 「Node-only の sealed generation 経路を `buildNodeGeneration` として実装し、§5.4 の 2 receipt +
 tuple 一致を成立させる」と読む。`package.json` の実削除は条件成立後の別 commit とする。
-よって **AC3 は本 PLAN の Scope 外** (Issue #450 の Slice 2) である。
+よって **AC3 は本 PLAN の Scope 外** (Issue #450 の Slice 2 = child Issue #473) である。
 
 根拠: §5.4 が「撤去境界は §5.4 が唯一の正本である」と自ら宣言しており、既存の責務境界から
 一意に決まる。PO 判断を要さない。
@@ -185,6 +185,21 @@ canonical receipt `5b16bfc6d1921ac1e83712f10b39716c0410a24baa57be79e6430da2a81cc
 ### 5.2 共通
 
 各 slice は 1 PR = 1 論点とし、exact-head CI と非著者 review receipt を個別に閉じる。
+
+### 5.3 slice ↔ child Issue 束縛
+
+`#450` は親 Epic として維持し、各 slice を GitHub の正式な sub-issue として所有する
+(`docs/governance/github-issue-hierarchy.md` §3。本文の `Parent: #N` は親子関係の代替にしない)。
+
+| slice | child Issue | owner | requires | blocks |
+| --- | --- | --- | --- | --- |
+| S1-b (生成成果物) | #470 | Claude lane | なし | #472 |
+| S1-a (readiness) | #471 | Claude lane | なし (順序自由、§5.0) | PR #463 の rebase (§S1-a) |
+| S1-c (source CI) | #472 | Claude lane | #470 | なし |
+| Slice 2 (Node producer / `build` script 撤去) | #473 | 未定 (`PLAN-L6-93` pair-freeze 後に確定) | `PLAN-L6-93` §5.4 tuple 成立 | なし |
+
+`#450` は上記 4 child が全て close し、かつ親固有 AC (AC1〜AC4 の統合証跡) が揃うまで close しない。
+Slice 2 (#473) は本 PLAN の対象外であり (§4.3)、`PLAN-L6-93` → `PLAN-L7-458` 系列が契約と実装を所有する。
 
 ### S1-b: 生成成果物から Bun を撤去
 

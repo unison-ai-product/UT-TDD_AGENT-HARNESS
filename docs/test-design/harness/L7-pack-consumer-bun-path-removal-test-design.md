@@ -35,12 +35,12 @@ prefix `U-PACKBUN` は既存 registry と衝突しない
 
 ## 3. slice との対応
 
-| slice | 昇格対象 |
-| --- | --- |
-| S1-b (生成成果物) | `CANDIDATE-U-PACKBUN-003` / `004` |
-| S1-a (readiness) | `CANDIDATE-U-PACKBUN-001` / `002` |
-| S1-c (source CI) | `CANDIDATE-U-PACKBUN-005` |
-| 全 slice 共通 | `CANDIDATE-U-PACKBUN-006` |
+| slice | child Issue | 昇格対象 |
+| --- | --- | --- |
+| S1-b (生成成果物) | #470 | `CANDIDATE-U-PACKBUN-003` / `004` |
+| S1-a (readiness) | #471 | `CANDIDATE-U-PACKBUN-001` / `002` |
+| S1-c (source CI) | #472 | `CANDIDATE-U-PACKBUN-005` |
+| 全 slice 共通 | #470 / #471 / #472 | `CANDIDATE-U-PACKBUN-006` |
 
 `006` は各 slice の PR で個別に評価する (最後にまとめて 1 回ではない)。
 `build` script や BAN 検出側 lint への混入は、混入した PR で検出されなければ意味がないためである。
