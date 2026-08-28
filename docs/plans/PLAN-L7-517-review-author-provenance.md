@@ -47,7 +47,10 @@ review_evidence: []
 
 review の attacker/defender 分離が、request の**自己申告 1 field** ではなく、request の外側にある
 authoring provenance 記録との照合で成立する。誤申告された author family で著者本人が自分の PR の
-canonical receipt を mint することが機械的に不可能になる。provenance が得られない対象は素通りも
+canonical receipt を mint することが、**通常の作業経路では起こらなくなる** — record は dispatch 親が
+発行した MAC で検証され、worker が偶発的に (hallucination や近道で) valid な record を作ることは
+できない。**「機械的に不可能」とは書かない**: 実行環境は単一 OS ユーザーであり、鍵材を読める worker が
+forge する経路は原理的に残る (保証水準の正本は §3.2.2)。provenance が得られない対象は素通りも
 全停止もせず、typed unknown として受理点で fail-close する。
 
 ## 2. 起点の実測 (2026-08-27、origin/main 6b5b1d9c)
@@ -159,9 +162,28 @@ Issue #437 の脅威モデルは外部 attacker ではなく **AI worker の誤�
   本 record 形状に合うかは未検証である。転用可能と断定せず、実装 slice が実測して決める。**
 - **権限隔離**: 鍵 path と鍵材を **worker の環境変数へ伝播させない**。Node の `child_process` は
   既定で env を継承するため、dispatch は worker 起動時に鍵関連 env を明示的に除去する。
-  **この非伝播は oracle で固定する** (§3.2.2 の実証責務、`CANDIDATE-U-AUTHPROV-047`)。
+  **この非伝播は oracle で固定する** (§3.2.2 の実証責務、`CANDIDATE-U-AUTHPROV-050`)。
 - **非対称鍵を採らない理由**: 署名鍵も同一ユーザープロファイル内に置かれ、上記の保証水準は
   対称鍵と変わらない。鍵管理と検証配線のコストだけが増える (最小実装原則)。
+
+**境界は MAC 検証であり、write 権限の authorization ではない (r3 review blocking 1 の是正)。**
+上の実測 (同一 OS ユーザー / ACL 分離なし) から、「正規でない writer が record 置き場へ書くこと」を
+機械的に拒否する手段はこの環境に存在しない。env scrub は**発行 capability も write authorization も
+強制しない** — 鍵 path を知る worker は env を経由せずに直接読める。したがって:
+
+- 本 PLAN は **write authorization の claim を撤回する**。信頼境界は「受理時に MAC を検証する」1 点に
+  限定する。record 置き場への到達可否を security boundary として主張しない。
+- `CANDIDATE-U-AUTHPROV-019` を **authorization oracle から audit oracle へ格下げする**。観測対象は
+  「dispatch 親以外が書いた record を受理点が検出して deny できるか」ではなく、
+  **「dispatch が発行していない record は MAC が付かないため受理点で deny される」**である。
+  すなわち 019 は 033 と**同じ検証系の失敗**であり、r2 で分けた「authorization 系 / verification 系」の
+  2 分類は実行環境の実測と両立しないため撤回する。019 は「worker が自力で record を置いた」場合に
+  **MAC 欠落として** deny されることを測る負例、033 は「MAC はあるが不一致」を測る負例とし、
+  両者は同一の検証系の中の別入力である。**writer 身元を record の自己申告から読む oracle にしない**
+  (自己申告を観測点にすれば oracle 自体が申告値へ退化する)。
+- この格下げにより、§3.2 の「worker が書けない attestation」は
+  「**worker が valid な MAC を付けられない** attestation」と読む。record file を書けるかどうかは
+  保証の対象外である。
 
 ### 3.2.3 human backfill の認証 — `human_attested` として区別する (採択)
 
@@ -177,8 +199,25 @@ Issue #437 の脅威モデルは外部 attacker ではなく **AI worker の誤�
   この環境では機械的に検証できない。よって human backfill の provenance は
   **`human_attested` (未検証申告) として保持し、`verified` と同一視しない。**
   「検証済み」と称する契約を書けば、実装で必ず falsify される。
-  `human_attested` を受理点でどう扱うか (受理するが監査対象にする / 別 gate を課す) は
-  実装 slice が §3.3 の unknown 既定と整合させて決める。
+- **受理規則を実装 slice へ委ねない (r3 review blocking 2 の是正)。** 次を契約として固定する。
+
+  1. **受理する。** `human_attested` は `unknown` を解消し、`beginReviewAttempt` を通す。
+     通さない設計にすると wrapper 外で作られた過去 commit を含む PR が恒久的に review 不能になり、
+     §3.3 が用意した解消経路が空振りする。
+  2. **`verified` へ昇格しない。** record / attempt / receipt / merge decision のすべてが
+     `provenance_grade` を持ち、`human_attested` は `verified` と別値のまま伝播する。
+     grade を比較する経路は `human_attested < verified` として扱う。
+     どこかで `verified` に丸める実装は Red とする。
+  3. **自己 review は grade に関わらず deny する。** human backfill が申告した author family が、
+     当該 request の reviewer family と一致する場合は typed deny とする。両値は record 内に
+     揃っているのでこの deny は実測可能であり、本 PLAN の存在理由そのものを守る。
+  4. **監査 ledger へ追記する。** `human_attested` での受理は必ず ledger 行を残す。
+     残らない受理経路を作らない。
+
+  正例 / 負例の oracle は `CANDIDATE-U-AUTHPROV-049` (正例: 受理され grade が `human_attested`)、
+  `CANDIDATE-U-AUTHPROV-051` (負例: 申告 author family == reviewer family で typed deny)、
+  `CANDIDATE-U-AUTHPROV-052` (負例: grade が `verified` として伝播したら Red) が持つ。
+  **persistence 成功だけを合格条件にしない。**
 
 ### 3.2.1 worker_model / dispatch provider / author family の対応 (採択)
 
@@ -358,7 +397,10 @@ Issue #437 の「逆向きの同型ケース」を契約に含める。`claude` 
 
 1. authoring provenance record の schema (commit sha / repository identity / provider family /
    issuer / dispatch identity / digest / schema version) と append-only 書き込み経路。
-2. dispatch 側 issuer の結線と、worker 自身による write / backfill の禁止。
+2. dispatch 側 issuer の結線と、worker 自身による backfill の禁止。
+   **worker による record file の write 自体は禁止できない** (§3.2.2: 同一 OS ユーザー)。
+   実装が担うのは「dispatch 発行の MAC が無い record を受理点が deny すること」であって、
+   write path への到達拒否ではない。
 3. dispatch 完了時の commit-set binding と、開始時 record との一致判定。
 4. `beginReviewAttempt` での受理時照合と typed deny。
 5. merge gate 側の独立再照合と、provenance snapshot 束縛による TOCTOU 遮断。

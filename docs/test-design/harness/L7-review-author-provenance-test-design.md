@@ -55,14 +55,16 @@ updated: 2026-08-27
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-AUTHPROV-019 (**write 権限境界**) | 当該 commit を書いた worker family 自身が provenance record の write path へ到達する | **authorization 系**の typed deny。record 0 件。MAC の妥当性は問わない — 「MAC は valid だが writer が不正」でも deny になることを測る |
+| CANDIDATE-U-AUTHPROV-019 (**MAC 欠落**) | 当該 commit を書いた worker family 自身が provenance record を自力で書き置く (dispatch を経由しない) | 受理点で typed deny。理由は **MAC 欠落**であり write 権限の判定ではない。**writer 身元を record の自己申告から読まない** — 観測点は「dispatch 発行の MAC が付いているか」だけ。033 と同一検証系の別入力である (PLAN §3.2.2、r3 review blocking 1 により authorization oracle から格下げ) |
 | CANDIDATE-U-AUTHPROV-020 | dispatch identity を持たない record を受理点へ入力 | typed deny。信頼根として使わない |
 | CANDIDATE-U-AUTHPROV-021 | dispatch 開始時 record の宣言 family と、完了時 commit-set binding の family が食い違う | `unknown` へ倒す。開始時宣言を採用しない |
 | CANDIDATE-U-AUTHPROV-022 | unknown 解消の backfill を、当該 commit を書いた worker family が実行 | typed deny |
 | CANDIDATE-U-AUTHPROV-023 | 同じ backfill を dispatch 側が実行 | 受理。`actor_kind=dispatch` として記録 |
-| CANDIDATE-U-AUTHPROV-047 (§3.2.2) | dispatch が起動した worker の環境変数を観測する | MAC 鍵 path も鍵材も worker env に存在しない。Node の `child_process` は既定で env を継承するため、明示 scrub が無ければ Red |
+| CANDIDATE-U-AUTHPROV-050 (§3.2.2) | dispatch が起動した worker の環境変数を観測する | MAC 鍵 path も鍵材も worker env に存在しない。Node の `child_process` は既定で env を継承するため、明示 scrub が無ければ Red |
 | CANDIDATE-U-AUTHPROV-048 (§3.2.3) | worker 子プロセスから human backfill の対話コマンドを起動する | typed deny。dispatch が自分の child 集合を照合して拒否する。worker が human を名乗る自己 backfill を塞ぐ負例 |
-| CANDIDATE-U-AUTHPROV-049 (§3.2.3) | dispatch CLI の対話コマンド経由で human backfill を実行する | 受理。ただし `actor_kind=human` かつ provenance は **`human_attested` (未検証申告)** として保持され、`verified` と同一視されない。`verified` になる実装は Red |
+| CANDIDATE-U-AUTHPROV-049 (§3.2.3、**正例**) | dispatch CLI の対話コマンド経由で human backfill を実行し、その request で `beginReviewAttempt` を行う | 受理される (`unknown` が解消する)。`actor_kind=human` / `provenance_grade=human_attested` が attempt・receipt・merge decision まで伝播し、監査 ledger 行が残る。**persistence 成功だけでは合格としない — 受理まで測る** |
+| CANDIDATE-U-AUTHPROV-051 (§3.2.3、**負例**) | `human_attested` の申告 author family が、当該 request の reviewer family と一致する | typed deny。grade に関わらず自己 review を通さない |
+| CANDIDATE-U-AUTHPROV-052 (§3.2.3、**負例**) | `human_attested` の record を経由した attempt / receipt / merge decision のいずれかで grade が `verified` として観測される | Red。`human_attested` は `verified` へ昇格しない |
 
 ## model / provider 対応 (§3.2.1)
 
@@ -82,7 +84,7 @@ updated: 2026-08-27
 | CANDIDATE-U-AUTHPROV-030 | 同一 repo・同一 commit に異 family の record が 2 件 | `conflict` として保持。先勝ちで片方を捨てない。受理点は `unknown` 同様に deny |
 | CANDIDATE-U-AUTHPROV-031 | 別 repository identity の record を同一 commit sha で流用 | typed deny (cross-repo replay) |
 | CANDIDATE-U-AUTHPROV-032 | 既存 record の overwrite / delete を要求 | 支援されない操作として deny。訂正は追記 + supersede でのみ成立 |
-| CANDIDATE-U-AUTHPROV-033 (**受理時 MAC 検証**) | record は正規 path 経由で置かれているが、issuer attestation の MAC が欠落または不一致 | **verification 系**の typed deny。writer の正当性は問わない — 「writer は正規だが MAC 破損」でも deny になることを測る。019 と**別の失敗原因**として一意に測ること (両者を同一 error code へ丸めない) |
+| CANDIDATE-U-AUTHPROV-033 (**受理時 MAC 検証**) | record は正規 path 経由で置かれているが、issuer attestation の MAC が欠落または不一致 | typed deny。019 (MAC 欠落) と 033 (MAC 不一致) は同一検証系の**別入力**であり、reason code を別値にして一意に測る。ただし「authorization 系 / verification 系」の 2 分類は撤回した (PLAN §3.2.2) |
 | CANDIDATE-U-AUTHPROV-034 | receipt 発行後・merge 前に provenance snapshot を差し替え | merge gate が snapshot 不一致を typed deny。「review 時は正しかった」を merge 根拠にしない |
 | CANDIDATE-U-AUTHPROV-035 | request / receipt / merge gate が同一 snapshot を参照する正常系 | `merge_ready` へ到達 |
 
