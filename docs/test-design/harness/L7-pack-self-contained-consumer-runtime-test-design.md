@@ -51,7 +51,7 @@ Pack canary/stable、shared L7 test-designへの追記である。これらを�
 
 ## 実装昇格の初回記録（2026-08-28, partial）
 
-`tests/consumer-node-runtime.test.ts` は、実装成果物の最初の昇格テストとして U-PACKNODE-001〜015
+`tests/consumer-node-runtime.test.ts` は、実装成果物の最初の部分測定として CANDIDATE-U-PACKNODE-001〜015
 の契約軸を一部束ねて14 testsへ実装した。`4f92ba8c36439078f8a8a375e3a71a2b91a9f94d`のrebase後
 コードと`7c91772814baf1bda94b2f830efbb391be3ede5d`のfilesystem producer laneを対象に、専用target
 14/14 Greenを確認した。
