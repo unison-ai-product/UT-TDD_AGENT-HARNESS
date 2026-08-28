@@ -45,13 +45,13 @@ const packWorkflow = (step: string): string =>
   ["name: pack", "on: [push]", "jobs:", "  t:", "    steps:", `      - run: ${step}`].join("\n");
 
 describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
-  it.each(PORTABILITY_SAMPLES)(
-    "sample $id still fail-closes as $rule in runtime-portability",
-    ({ rule, text }) => {
-      const result = analyzeRuntimePortability([{ path: PROBE, text }]);
-      expect(result.violations.map((violation) => violation.rule)).toContain(rule);
-    },
-  );
+  it.each(PORTABILITY_SAMPLES)("sample $id still fail-closes as $rule in runtime-portability", ({
+    rule,
+    text,
+  }) => {
+    const result = analyzeRuntimePortability([{ path: PROBE, text }]);
+    expect(result.violations.map((violation) => violation.rule)).toContain(rule);
+  });
 
   // サンプル 13 / 13b は github-ci-policy の別 rule であり、片方では他方を刺激できない。
   it("sample 13 still fail-closes as forbidden_raw_vitest", () => {
@@ -118,5 +118,52 @@ describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
       scripts: Record<string, string>;
     };
     expect(parsed.scripts.build).toBe(`${B} build src/cli.ts --compile --outfile dist/ut-tdd`);
+  });
+});
+
+// §3.3 の構造的補助 (behavioral 検査の代替ではない):
+// deny rule の本数 / debt allowlist の path 集合 / pin 値を凍結する。protected file を
+// 変更せずに測るため、lint の source text を読んで数える。
+describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
+  const lintSource = (file: string): string =>
+    readFileSync(join(process.cwd(), "src", "lint", file), "utf8");
+
+  it("freezes the github-ci-policy Pack deny rule set", () => {
+    const source = lintSource("github-ci-policy.ts");
+    const reasons = [...source.matchAll(/reason: "(forbidden_[a-z_]+)"/g)].map((m) => m[1]);
+    expect(new Set(reasons)).toEqual(
+      new Set([
+        "forbidden_raw_vitest",
+        "forbidden_source_full_tests",
+        "forbidden_full_doctor",
+        "forbidden_source_only_step",
+      ]),
+    );
+  });
+
+  it("freezes the runtime-portability Bun debt allowlist paths and pins", () => {
+    const source = lintSource("runtime-portability.ts");
+    const block = (name: string): ReadonlyArray<readonly [string, number]> => {
+      const start = source.indexOf(`const ${name} = new Map<string, number>([`);
+      expect(start).toBeGreaterThan(-1);
+      const end = source.indexOf("]);", start);
+      return [...source.slice(start, end).matchAll(/\["([^"]+)",\s*(\d+)\]/g)].map(
+        (m) => [m[1], Number(m[2])] as const,
+      );
+    };
+    expect(Object.fromEntries(block(`${BU.toUpperCase()}_SPAWN_DEBT_ALLOWLIST`))).toEqual({
+      "src/cli/distribution.ts": 2,
+      "scripts/run-vitest-snapshot.ts": 1,
+      "tests/distribution-acceptance.test.ts": 2,
+      "tests/dependency-drift.test.ts": 1,
+      "tests/runtime-portability.test.ts": 11,
+      "tests/doctor-setup-smoke.test.ts": 1,
+      "tests/doctor.test.ts": 1,
+      "src/lint/runtime-portability.ts": 4,
+    });
+    expect(Object.fromEntries(block(`${BU.toUpperCase()}_IMPORT_DEBT_ALLOWLIST`))).toEqual({
+      "src/state-db/index.ts": 2,
+      "tests/runtime-portability.test.ts": 5,
+    });
   });
 });

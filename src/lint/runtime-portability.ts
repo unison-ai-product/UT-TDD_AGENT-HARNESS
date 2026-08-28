@@ -107,8 +107,9 @@ const BUN_GLOBAL_PATTERN = new RegExp(
 const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   // step 2 freeze の fixture 例外: Pack/consumer toolchain 検出の posix probe。
   ["src/cli/distribution.ts", 2],
-  // step 2 freeze の fixture 例外: consumer wrapper template (findBun launcher)。
-  ["src/setup/templates.ts", 2],
+  // PLAN-L7-522 S1-b (Issue #470): consumer wrapper template から findBun launcher を撤去した。
+  // 実サイトは 0 になったので pin ごと外す。pin を 2 のまま残すと Bun spawn 2 サイトの
+  // 再流入を黙って許す穴になる (pin の緩みは検出能力の低下である)。
   // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
   ["scripts/run-vitest-snapshot.ts", 1],
   // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
