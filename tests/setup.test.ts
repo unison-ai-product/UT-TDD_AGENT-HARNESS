@@ -575,6 +575,23 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(claudeSettings.hooks.PreToolUse[0]?.hooks[0]).toMatchObject(agentGuardInvocation);
   });
 
+  // PLAN-L7-462 step 2 fixture 例外: consumer wrapper の bun fallback 実発火 oracle。
+  // node の spawn は Windows で .cmd shim (npm 配布の bun.cmd) を解決しないため、
+  // distribution-acceptance の runBun と同じ cmd.exe 経由で bun を起動する。
+  function runWrapperViaBun(cwd: string, args: string[]) {
+    const bunBinary =
+      process.env.UT_TDD_BUN_BINARY ?? (process.versions.bun ? process.execPath : "bun");
+    if (process.platform === "win32") {
+      const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+      return spawnSync(cmdExe, ["/d", "/c", bunBinary, ...args], {
+        cwd,
+        encoding: "utf8",
+        windowsHide: true,
+      });
+    }
+    return spawnSync(bunBinary, args, { cwd, encoding: "utf8" });
+  }
+
   it("U-SETUP-009b2: generated wrapper prefers consumer local bin when local and setup fallback both exist", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-local-"));
     try {
@@ -591,11 +608,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       writeFileSync(wrapperPath, wrapper ?? "");
       writeFileSync(localPackageCli, 'console.log("local-package", ...process.argv.slice(2));\n');
 
-      const result = spawnSync(process.execPath, [wrapperPath, "status", "--json"], {
-        cwd: repo,
-        encoding: "utf8",
-        windowsHide: true,
-      });
+      const result = runWrapperViaBun(repo, [wrapperPath, "status", "--json"]);
 
       expect(result.status).toBe(0);
       expect(result.stdout.trim()).toBe("local-package status --json");
@@ -604,7 +617,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     }
   });
 
-  it("U-SETUP-009b3: generated wrapper falls back to setup Pack CLI through node when local bin is absent", () => {
+  it("U-SETUP-009b3: generated wrapper falls back to setup Pack CLI through bun when local bin is absent", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-source-"));
     try {
       const deps = mockDeps({ repoRoot: repo });
@@ -617,11 +630,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
       writeFileSync(wrapperPath, wrapper ?? "");
 
-      const result = spawnSync(process.execPath, [wrapperPath, "status"], {
-        cwd: repo,
-        encoding: "utf8",
-        windowsHide: true,
-      });
+      const result = runWrapperViaBun(repo, [wrapperPath, "status"]);
 
       expect(result.status).toBe(0);
       expect(result.stdout).toContain("mode:");
