@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -217,6 +217,84 @@ describe("sealed self-contained consumer Node runtime", () => {
     const run = spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
     expect(run.status).toBe(0);
     expect(run.stdout).toBe("consumer-local-ok");
+  });
+
+  it("U-PACKNODE-005/012: real Node filesystem producer seals one bundle and one pointer", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-runtime-producer-"));
+    roots.push(root);
+    const id = identity(root);
+    const bundle = bundleFor(id);
+    const entry = join(bundle.bundle_path, "ut-tdd.mjs");
+    const events: string[] = [];
+    const ports: ConsumerNodeRuntimePorts = {
+      readConsumerIdentity: () => events.push("identity"),
+      verifySealedAggregate: () => events.push("aggregate"),
+      verifyNodeGeneration: () => events.push("generation"),
+      acquireConsumerLock: () => events.push("lock"),
+      snapshotPriorActivePointer: () => events.push("snapshot"),
+      createPrivateStaging: (path) => {
+        events.push("stage");
+        mkdirSync(path, { recursive: true });
+      },
+      writeGenerationAndReceipt: (path) => {
+        events.push("write");
+        mkdirSync(path, { recursive: true });
+        writeFileSync(join(path, "ut-tdd.mjs"), 'process.stdout.write("filesystem-producer-ok")\n');
+        writeFileSync(join(path, "bundle-manifest.json"), JSON.stringify(bundle));
+      },
+      fsyncStaging: () => events.push("fsync"),
+      sealActivationBundle: (path) => {
+        events.push("seal");
+        mkdirSync(resolve(bundle.bundle_path, ".."), { recursive: true });
+        renameSync(path, bundle.bundle_path);
+      },
+      atomicRenameActivePointerCAS: () => {
+        events.push("publish");
+        const pointer = join(id.runtime_root, "activation", "active.json");
+        mkdirSync(resolve(pointer, ".."), { recursive: true });
+        writeFileSync(
+          pointer,
+          JSON.stringify({ bundle_path: bundle.bundle_path, entry_path: entry }),
+        );
+      },
+      verifyActiveBundle: () => {
+        events.push("verify");
+        if (!existsSync(entry)) throw new Error("sealed entry absent");
+      },
+      reconcileDurableOperation: () => {
+        events.push("reconcile");
+        return "committed";
+      },
+      releaseConsumerLock: () => events.push("release"),
+      destroyPrivateStaging: (path) => {
+        if (existsSync(path)) rmSync(path, { recursive: true, force: true });
+      },
+    };
+    const result = await installConsumerNodeRuntime({ identity: id, bundle, ports });
+    expect(result).toMatchObject({ ok: true, status: "committed" });
+    expect(existsSync(bundle.bundle_path)).toBe(true);
+    expect(existsSync(join(id.runtime_root, "activation", "active.json"))).toBe(true);
+    expect(events).toEqual([
+      "identity",
+      "aggregate",
+      "generation",
+      "lock",
+      "snapshot",
+      "stage",
+      "write",
+      "fsync",
+      "seal",
+      "publish",
+      "verify",
+      "reconcile",
+      "release",
+    ]);
+    const wrapper = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
+    mkdirSync(resolve(wrapper, ".."), { recursive: true });
+    writeFileSync(wrapper, renderConsumerNodeWrapper());
+    const run = spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
+    expect(run.status).toBe(0);
+    expect(run.stdout).toBe("filesystem-producer-ok");
   });
 
   it("U-PACKNODE-008/009: spaces work while external runtime escapes fail", () => {
