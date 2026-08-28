@@ -19,8 +19,13 @@ Red/Greenの実測後に正式oracleへ昇格する。
 | --- | --- | --- |
 | case A | non-zero attemptで `attempt_execution_failed` appendを削除 | audit現物が0件となりRed。project関数の戻り値はoracleに使わない |
 | case B | 既存canonical receiptを置いた後、成功retryのwriteをcreate-exclusiveからoverwriteへ変更 | 既存bytes/digest不変とtyped conflictを直接検査しRed。audit検査に依存しない |
-| case C | 成功retry後に旧attempt fileまたはfailed/superseded eventを削除 | 各path/event identityの残存検査がRed。canonical receipt件数だけでは通らない |
+| case C | 成功retry後に旧attempt fileまたはfailed/superseded eventを削除 | 各path/event identityの残存検査がRed。canonical receipt件数だけでは通らない。cleanup後も旧attemptのfailure digestとsuperseded targetを再読する |
 | case D | failed attemptのoutcome appendを失敗/欠落させたまま次attemptを開始可能にする | `attempt_outcome_indeterminate` と新attempt write 0の検査がRed。成功receipt生成には到達させない |
+
+複数 retry chain は attempt-1 failure → attempt-2 failure → attempt-3 success を実走し、
+attempt-2 が attempt-1 を supersede した履歴を attempt-3 開始時に誤って拒否しないことを検査する。
+同一 attempt の異なる exit code を再投影した場合は `attempt_outcome_conflict` をそのまま返し、
+次 attempt と receipt の write を 0 件にする。
 
 ## composition fixture
 

@@ -253,7 +253,7 @@ export function projectReviewVerdict(input: {
           verdictPath: input.verdictFile,
           now: input.attestation.completedAt,
         });
-        if (!outcome.ok && outcome.reason === "attempt_outcome_indeterminate") return outcome;
+        if (!outcome.ok) return outcome;
       }
     }
     // file欠落だけでは permission拒否、認証失敗、timeout、reviewer拒否を識別できない。

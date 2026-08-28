@@ -399,7 +399,11 @@ export function beginReviewAttempt(input: {
     if (
       requestEvents
         .slice(0, failureIndex)
-        .some((event) => event.kind === "superseded_attempt" && event.attempt >= previousAttempt)
+        .some(
+          (event) =>
+            event.kind === "superseded_attempt" &&
+            (event.supersededAttempt === undefined || event.supersededAttempt >= previousAttempt),
+        )
     ) {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
