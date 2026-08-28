@@ -20,7 +20,7 @@ asset bytes/naming、remote publication FSMは既存oracleを再所有しない�
 
 | Candidate | 独立変異・入力 | 期待結果 |
 | --- | --- | --- |
-| `CANDIDATE-U-RELVER-001` | root `package.json`と`package-lock.json` root packageを読む | 両方`0.2.0-canary.1`、CLI `--version`もexact一致。version定数の別実装0 |
+| `CANDIDATE-U-RELVER-001` | root `package.json.version`、`package-lock.json` top-level `.version`、同 `.packages[""].version` を別々に読む | 三者が`0.2.0-canary.1`でexact一致し、CLI `--version`もexact一致。lockfileの各versionを単独で旧値へ戻す2 mutationがそれぞれRed。version定数の別実装0 |
 | `CANDIDATE-U-RELVER-002` | 新package parserへ`0.2.0-canary.1`、numeric/non-numeric prerelease、stableを個別入力 | canonical package prereleaseをparseしSemVer precedenceどおり。stableは同core prereleaseより高い |
 | `CANDIDATE-U-RELVER-003` | package parserへleading `v`、空identifier、空白、欠落core、不正leading zero、non-string version | parse失敗をtyped/fail-open advisoryとして保持し、trim/coerceしない。既存stable tag parserは変更しない |
 | `CANDIDATE-U-RELVER-004` | sealed entriesのpackage欠落/重複、invalid JSON、version欠落/non-string | seal前typed deny、全remote write 0 |
