@@ -123,7 +123,7 @@ describe("update-check semver primitives", () => {
     expect(compareSemver([1, 0, 0], [0, 9, 9])).toBeGreaterThan(0);
   });
 
-  it("U-RELVER-002/003: package parser keeps prerelease identity and strict input", () => {
+  it("U-RELVER-002 / U-RELVER-003: package parser keeps prerelease identity and strict input", () => {
     const canary = parsePackageSemver("0.2.0-canary.1");
     const stable = parsePackageSemver("0.2.0");
     expect(canary).toMatchObject({ major: 0, minor: 2, patch: 0, prerelease: ["canary", "1"] });
