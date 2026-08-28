@@ -162,10 +162,27 @@ tuple 一致を成立させる」と読む。`package.json` の実削除は条�
 
 ## 5. 実装順序契約
 
-**S1-b → S1-a → S1-c**。前提が閉じる前に下流を着工しない。
+### 5.0 拘束する順序: **S1-b → S1-c** のみ
 
-理由: 生成物から Bun が消えて初めて readiness の Bun 要求が無意味になり、
-Pack/consumer acceptance fixture が Bun 非依存になって初めて CI の `setup-bun` を落とせる。
+`S1-c` は「`setup-bun` を除いても Pack/consumer acceptance fixture が Green」(AC4) を要求するので、
+fixture が Bun 非依存になっている必要がある。それを与えるのが `S1-b` である。
+**これが唯一の実在する依存**であり、契約として拘束する。
+
+**`S1-a` は順序自由である。** `S1-a` の readiness 契約 (`bunOk` 撤去 → Node 検査) は生成 tree の
+状態を前提にせず、`S1-a → S1-b → S1-c` でも AC1 / AC2 / AC4 と全 oracle が成立する。
+実在しない依存を順序契約にしない (本 PLAN の初版はここを過剰拘束していた。PR #469 の非著者 review、
+canonical receipt `5b16bfc6d1921ac1e83712f10b39716c0410a24baa57be79e6430da2a81cc70e` の指摘により是正)。
+
+### 5.1 推奨順序 (拘束しない): S1-b を S1-a より先に置く
+
+`S1-a` を単独で先に landing させると、**readiness が `ok: true` を返すのに生成された hook は
+まだ Bun を要求する**中間状態が発生する。Bun 未導入の consumer から見ると
+「setup は通ったのに hook が動かない」という形になり、readiness の主張が実態とずれる。
+
+これは oracle の成否ではなく利用者から見た整合性の問題なので、**推奨に留め契約にはしない**。
+`S1-a` を先に出す場合は、この中間状態が存在することを PR に明記すること。
+
+### 5.2 共通
 
 各 slice は 1 PR = 1 論点とし、exact-head CI と非著者 review receipt を個別に閉じる。
 
