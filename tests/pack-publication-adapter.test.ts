@@ -401,6 +401,38 @@ describe("remote Pack canary publication", () => {
         error: "invalid_inventory",
       });
     }
+    const packageLock = plan.commitEntries.find((entry) => entry.path === "package-lock.json");
+    if (!packageLock) throw new Error("expected package-lock entry");
+    expect(
+      sealPackPublicationIntent(
+        input({
+          ...plan,
+          commitEntries: [...plan.commitEntries, packageLock],
+        }),
+      ),
+    ).toEqual({ ok: false, error: "invalid_inventory" });
+    for (const [path, bytes] of [
+      ["package.json", Buffer.from("{")],
+      ["package.json", Buffer.from('{"version":1}')],
+      ["package-lock.json", Buffer.from('{"version":"0.2.0-canary.1","packages":{}}')],
+      [
+        "package-lock.json",
+        Buffer.from('{"version":1,"packages":{"":{"version":"0.2.0-canary.1"}}}'),
+      ],
+    ] as const) {
+      const mutated = {
+        ...plan,
+        commitEntries: plan.commitEntries.map((entry) =>
+          entry.path === path
+            ? { ...entry, size: bytes.length, contentDigest: sha(bytes), bytes }
+            : entry,
+        ),
+      };
+      expect(sealPackPublicationIntent(input(mutated))).toEqual({
+        ok: false,
+        error: "invalid_inventory",
+      });
+    }
   });
 
   it("AUX-PACKPUB-REMOTE-010: seals an immutable mutation-specific approval set", () => {

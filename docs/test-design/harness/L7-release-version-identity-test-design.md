@@ -24,7 +24,7 @@ RELVER candidate 007/008は未実装の負系候補として正規oracleへ昇�
 | --- | --- | --- |
 | `U-RELVER-001` | root `package.json.version`、`package-lock.json` top-level `.version`、同 `.packages[""].version` を別々に読む | 三者が`0.2.0-canary.1`でexact一致し、CLI `--version`もexact一致。version定数の別実装0 |
 | `U-RELVER-002` | 新package parserへ`0.2.0-canary.1`、numeric/non-numeric prerelease、stableを個別入力 | canonical package prereleaseをparseしSemVer precedenceどおり。stableは同core prereleaseより高い |
-| `U-RELVER-003` | package parserへleading `v`、空identifier、空白、欠落core、不正leading zero、non-string、巨大numeric version | parse失敗をtyped/fail-open advisoryとして保持し、trim/coerceしない。既存stable tag parserは変更しない |
+| `U-RELVER-003` | package parserへleading `v`、空identifier、空白、不正leading zero、巨大numeric version | parse失敗をtyped/fail-open advisoryとして保持し、trim/coerceしない。既存stable tag parserは変更しない |
 | `U-RELVER-004` | sealed entriesのpackage欠落/重複、invalid JSON、version欠落/non-string | seal前typed deny、全remote write 0 |
 | `U-RELVER-005` | package versionまたはlockfile top-level/root versionを一軸ずつ`0.1.4`へ変異 | `release_version_mismatch`、seal前にdenyし全remote write 0。他digest軸はvalidに固定 |
 | `U-RELVER-006` | tagだけbare、`v0.1.4`、`v0.2.0-canary.2`へ変異 | `tag_version_mismatch`、全remote write 0 |

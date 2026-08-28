@@ -20,14 +20,4 @@ describe("canary release version identity", () => {
     expect(cli.status, cli.stderr).toBe(0);
     expect(cli.stdout.trim()).toBe(packageJson.version);
   });
-
-  it("U-RELVER-001: either lockfile identity independently detects stale version", () => {
-    const topLevelStale = { ...packageLock, version: "0.1.4" };
-    const rootStale = {
-      ...packageLock,
-      packages: { ...packageLock.packages, "": { version: "0.1.4" } },
-    };
-    expect(topLevelStale.version).not.toBe(packageJson.version);
-    expect(rootStale.packages?.[""].version).not.toBe(packageJson.version);
-  });
 });
