@@ -11,7 +11,8 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { MemoryEntry } from "../memory/index.ts";
 import { isCanonicalMemorySourcePath } from "../memory/service.ts";
 import { ensureDir } from "../shared/fs.ts";
@@ -29,6 +30,24 @@ export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 export const CLAUDE_INBOX_BACKLOG_WARN_AGE_MS = 15 * 60 * 1_000;
 export { CLAUDE_WAKE_GENERATION_SCHEMA };
 export const CLAUDE_INBOX_TERMINAL_SCHEMA = "ut-tdd.claude-inbox-terminal/v1" as const;
+
+function runtimeSourceRevision(): string {
+  const override = process.env.UT_TDD_RUNTIME_SOURCE_REVISION?.trim();
+  if (override) return override;
+  const moduleRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+  for (const cwd of [moduleRoot, process.cwd()]) {
+    try {
+      return execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+    } catch {
+      // A sealed consumer supplies the revision through the runtime receipt override.
+    }
+  }
+  throw new Error("claude_wake_runtime_revision_required");
+}
 export type ClaudeLiveWorkspaceRoutingFailure =
   | "no_live_claude_workspace"
   | "ambiguous_live_claude_workspace"
@@ -1043,24 +1062,13 @@ export async function waitForClaudeMemory(input: {
   const generationPath = join(root, `${safeFilePart(input.sessionId)}.generation`);
   const generation = `${process.pid}:${Date.now()}`;
   const leaseToken = randomBytes(32).toString("hex");
-  let runtimeSourceRevision: string;
-  try {
-    runtimeSourceRevision =
-      process.env.UT_TDD_RUNTIME_SOURCE_REVISION?.trim() ??
-      execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: process.cwd(),
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      }).trim();
-  } catch {
-    throw new Error("claude_wake_runtime_revision_required");
-  }
+  const sourceRevision = runtimeSourceRevision();
   const activation = activateClaudeWakeGeneration({
     root,
     sessionId: input.sessionId,
     workspaceId,
     generation,
-    runtimeSourceRevision,
+    runtimeSourceRevision: sourceRevision,
     leaseToken,
   });
   if (!activation.ok) {
