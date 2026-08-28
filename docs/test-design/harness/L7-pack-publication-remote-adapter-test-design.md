@@ -62,3 +62,34 @@ partial/indeterminate保持を変更しない。同じmutationを別candidateと
 Node/npm targeted test、typecheck、Biome、PLAN lint、Linux/Windows/aggregate CIを同じPLAN revisionと
 exact HEADへ束縛する。Bun、source worktree、開発DB/PLAN/evidence、local Pack checkoutからの補完は
 fixtureにもproduction compositionにも許可しない。
+
+## 4. 実装ID対応
+
+上位candidateの順序を保持し、次の一対一対応で昇格する。各IDは
+`tests/pack-publication-adapter.test.ts`内の独立caseとして実行する。
+
+| candidate → canonical registry ID |
+| --- |
+| `003-A → U-PACKPUB-REMOTE-010` |
+| `003-B → U-PACKPUB-REMOTE-011` |
+| `003-C → U-PACKPUB-REMOTE-012` |
+| `003-D → U-PACKPUB-REMOTE-013` |
+| `003-E → U-PACKPUB-REMOTE-014` |
+| `003-F → U-PACKPUB-REMOTE-015` |
+| `003-G → U-PACKPUB-REMOTE-016` |
+| `003-H1 → U-PACKPUB-REMOTE-017` |
+| `003-H2 → U-PACKPUB-REMOTE-018` |
+| `003-I → U-PACKPUB-REMOTE-019` |
+| `003-J → U-PACKPUB-REMOTE-020` |
+| `003-K → U-PACKPUB-REMOTE-021` |
+| `003-L → U-PACKPUB-REMOTE-022` |
+| `003-M1 → U-PACKPUB-REMOTE-023` |
+| `003-M-late → U-PACKPUB-REMOTE-024` |
+| `003-M2 → U-PACKPUB-REMOTE-025` |
+| `003-N → U-PACKPUB-REMOTE-026` |
+| `003-O → U-PACKPUB-REMOTE-027` |
+| `003-P → U-PACKPUB-REMOTE-028` |
+| `003-Q → U-PACKPUB-REMOTE-029` |
+| `003-R → U-PACKPUB-REMOTE-030` |
+| `003-S1 → U-PACKPUB-REMOTE-031` |
+| `003-S2 → U-PACKPUB-REMOTE-032` |

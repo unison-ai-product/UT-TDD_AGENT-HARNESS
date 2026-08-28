@@ -2509,3 +2509,37 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `U-PACKPUB-STAGE-010` | exact observation、commit/asset/digest欠落・変異、observer failure | exact一致だけ`attested`、差分は`partial_publication`、観測不能は`indeterminate`。remote write 0 |
 
 実行対応: `tests/pack-publication-staging.test.ts` (`U-PACKPUB-STAGE-001〜010`)。
+
+### PLAN-L7-519 remote canary publication adapter oracle (Issue #414)
+
+`CANDIDATE-PACKPUB-003-A..S2`を順序どおり`U-PACKPUB-REMOTE-010..032`へ一対一昇格する。
+mutation固有approval/nonce、prewrite identity、journal、実port call由来write count、各read-back、
+auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと後続write 0を直接検査する。
+
+| ID | candidate / mutation | expected |
+| --- | --- | --- |
+| `U-PACKPUB-REMOTE-010` | 003-A approval否定 | missing/duplicate/binding/expiredを個別typed deny |
+| `U-PACKPUB-REMOTE-011` | 003-B nonce/rebinding | replay/binding mismatch、write 0 |
+| `U-PACKPUB-REMOTE-012` | 003-C initial identity | initial driftとsealed driftを別reasonでdeny |
+| `U-PACKPUB-REMOTE-013` | 003-D inventory | 単独size/digest変異を`invalid_inventory` |
+| `U-PACKPUB-REMOTE-014` | 003-E composition entry | invalid inventoryをremote compositionへ渡さず`invalid_inventory` |
+| `U-PACKPUB-REMOTE-015` | 003-F branch/PR | response loss後のwrite 0 |
+| `U-PACKPUB-REMOTE-016` | 003-G merge read-back | release以降write 0 |
+| `U-PACKPUB-REMOTE-017` | 003-H1 tag preflight | duplicate/retargetを全write前deny |
+| `U-PACKPUB-REMOTE-018` | 003-H2 tag mutation | indeterminate後visibility/pointer 0 |
+| `U-PACKPUB-REMOTE-019` | 003-I draft | identity drift後asset/tag 0 |
+| `U-PACKPUB-REMOTE-020` | 003-J asset | bytes/size/digest drift後tag 0 |
+| `U-PACKPUB-REMOTE-021` | 003-K commit/sidecar | read-back drift後release 0 |
+| `U-PACKPUB-REMOTE-022` | 003-L visibility | write後approval denyをpartial保持 |
+| `U-PACKPUB-REMOTE-023` | 003-M1 initial pointer | driftをwrite 0 deny |
+| `U-PACKPUB-REMOTE-024` | 003-M-late late CAS | append 0、immutable object保持 |
+| `U-PACKPUB-REMOTE-025` | 003-M2 pointer response | indeterminate、重複CAS 0 |
+| `U-PACKPUB-REMOTE-026` | 003-N cleanup | publication receiptと独立failure |
+| `U-PACKPUB-REMOTE-027` | 003-O reconciliation | valid receipt再観測、write 0 |
+| `U-PACKPUB-REMOTE-028` | 003-P foreign retry | identity mismatch、write 0 |
+| `U-PACKPUB-REMOTE-029` | 003-Q protected ordering | production mutation ledgerがbranch commit→PR create→CAS mergeだけ |
+| `U-PACKPUB-REMOTE-030` | 003-R journal | persist失敗時mutation 0 |
+| `U-PACKPUB-REMOTE-031` | 003-S1 root linkage | sealed identity driftをwrite前deny |
+| `U-PACKPUB-REMOTE-032` | 003-S2 post-journal identity | target差替え後のtransition 0 |
+
+実行対応: `tests/pack-publication-adapter.test.ts` (`U-PACKPUB-REMOTE-010〜032`)。

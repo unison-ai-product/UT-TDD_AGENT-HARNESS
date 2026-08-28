@@ -74,3 +74,10 @@ R2以降は別実装PRで、候補oracleのRed→Green、production source、Lin
 exact HEADへ束縛する。R3はremote write ledger、mutation単位nonce、identity一軸mutationを非著者が
 攻撃し、R4は`PLAN-L7-515`へのbackpropが不要であることを確認する。実装・CI・canonical closing
 receiptが揃う前にR4やpublication-readyを宣言しない。
+
+## R2 implementation evidence (pending closing review)
+
+`src/setup/pack-publication-adapter.ts`はsealed stagingだけを入力とし、mutation別approval/nonces、
+write前journal、invoke前の保守的`remoteWrites`加算、全read-back例外のtyped `indeterminate`化、
+後続write停止、receipt/cleanup分離を実装する。`U-PACKPUB-REMOTE-010..032`は上位23 candidateへ
+一対一対応する。R3/R4はexact-head非著者reviewとrequired CI完了後にだけ更新する。
