@@ -136,6 +136,32 @@ file ごとに扱いが異なるので分けて契約する。
 (PR #469 の delta review、canonical receipt
 `d7f287eef4f52be8e5fa917ccefd28c78a894ea4687692853a9b48001efb8f5f` の指摘により追加)。
 
+**サンプル集合は実装時判断に流さず、ここで freeze する** (同 review 2 巡目、canonical receipt
+`e421a78ac7e43088…` の指摘)。未収載の matcher 分岐が残れば、その分岐の同数弱体化は Green のまま通るためである。
+
+| # | sample (Bun 到達形) | lint | rule | 由来 |
+|---|---|---|---|---|
+| 1 | `spawnSync("bun", args)` (`bun.exe` / `bun.cmd` 各形を含む) | `runtime-portability.ts` | `bun-runtime-spawn` | `BUN_SPAWN_PATTERN` 分岐 1 |
+| 2 | `findBun(` | 同 | 同 | 分岐 2 (撤去する `run-bun.ts` の中核) |
+| 3 | `?? "bun"` | 同 | 同 | 分岐 3 |
+| 4 | `"/c", "bun"` | 同 | 同 | 分岐 4 (win32 ComSpec 経路) |
+| 5 | `["bun", [` | 同 | 同 | 分岐 5 |
+| 6 | `exec bun` | 同 | 同 | 分岐 6 |
+| 7 | `"bun:sqlite"` | 同 | `bun-module-import` | `BUN_IMPORT_PATTERN` |
+| 8 | `Bun.write(` | 同 | `bun-global-reference` | `BUN_GLOBAL_PATTERN` 分岐 1 |
+| 9 | `typeof Bun` | 同 | 同 | 分岐 2 |
+| 10 | `).Bun` | 同 | 同 | 分岐 3 |
+| 11 | `globalThis.Bun` | 同 | 同 | 分岐 4 |
+| 12 | `process.versions.bun` | 同 | 同 | 分岐 5 |
+| 13 | Pack CI が `bun run test:pack` ではなく raw vitest を使う workflow | `github-ci-policy.ts` | Pack CI deny (`:184` / `:189`) | 検出側 (S1-c で触らない) |
+| 14 | adapter doc の Hooks 節が `bun` / `bunx` / `bun.cmd` / `bun.exe` を実行指示する | `rule-drift.ts` | `bun execution form` marker | |
+| 15 | `package.json` と `bun.lock` の direct graph 不一致 | `toolchain-pin.ts` | `bun-direct-parity-drift` | |
+
+**網羅性を機械で強制する。** oracle は上表を hard-code した表として持つのではなく、**各 lint が公開する
+Bun 関連 rule id を列挙し、表がその全てを覆っていることを assert する**。新しい Bun rule / matcher 分岐が
+追加されたのにサンプルが無い場合は **006 自体が Red になる**。これが無ければ「未収載分岐の同数弱体化」を
+再び見逃す。
+
 ## 4. 設計判断: Issue #450 受入条件 3 の読み替え
 
 ### 4.1 前提
