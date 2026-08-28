@@ -23,7 +23,7 @@ release-artifact-resolver:1
 right-arm-gate-planning:1 right-lung-doc-governance:1 roadmap:1 rule-automation-closure:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:2
 review-delegation-root:1
-runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-detection-power:1 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1
+runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 ban-lint-detection-power:3 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1

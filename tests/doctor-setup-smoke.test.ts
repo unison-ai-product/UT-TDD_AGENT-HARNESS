@@ -50,8 +50,7 @@ function setupSmokeDeps(overrides: Record<string, string | null> = {}): SetupSmo
   const root = "/repo";
   const files = new Map<string, string>(
     Object.entries({
-      ".ut-tdd/bin/run-bun.ts": "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
-      ".ut-tdd/bin/ut-tdd.mjs": "#!/usr/bin/env bun\nconsole.log('ut-tdd');\n",
+      ".ut-tdd/bin/ut-tdd.mjs": "#!/usr/bin/env node\nspawnSync(process.execPath, args);\n",
       "AGENTS.md": "# Agents\n",
       "CLAUDE.md": "# Claude\n",
       ".claude/CLAUDE.md": "# Claude runtime\n",

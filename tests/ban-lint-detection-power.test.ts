@@ -5,7 +5,6 @@ import { analyzeGithubCiPolicy } from "../src/lint/github-ci-policy.ts";
 import { analyzeRuleDrift } from "../src/lint/rule-drift.ts";
 import { analyzeRuntimePortability } from "../src/lint/runtime-portability.ts";
 import { analyzeToolchainPin } from "../src/lint/toolchain-pin.ts";
-import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 // U-PACKBUN-006 (PLAN-L7-522 §3.3): BAN 検出側 lint の「検出能力」を behavioral に測る。
 // 条文の逐語一致では測らない。§3.3 が freeze した 16 サンプルを各 lint へ入力し、
@@ -45,7 +44,10 @@ const PORTABILITY_SAMPLES: readonly PortabilitySample[] = [
 // 実 Pack template に違反 step を 1 本挿す。合成 yaml だと workflow shape 検査が
 // `malformed_workflow_shape` で先に落ちて deny rule まで到達しない。
 const packWorkflow = (step: string): string => {
-  const template = BUILTIN_GITHUB_TEMPLATES["common/pack-harness-check.yml"];
+  const template = readFileSync(
+    join(process.cwd(), "docs", "templates", "github", "common", "pack-harness-check.yml"),
+    "utf8",
+  );
   const marker = "    steps:\n";
   const at = template.indexOf(marker);
   expect(at).toBeGreaterThan(-1);
