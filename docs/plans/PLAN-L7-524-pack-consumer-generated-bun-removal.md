@@ -91,6 +91,24 @@ review_evidence:
 契約の正本は `PLAN-L7-522` であり、本 PLAN は契約を改訂しない。方式判断が必要になったら
 実装を止めて `PLAN-L7-522` の改訂へ戻る (PR スコープ規律 2)。
 
+### 1.1 #469 freeze への束縛 (新規規範を持たないことの明示)
+
+本 PLAN は **所有 / trace PLAN** であり、PR #469 exact HEAD
+`58f88f14a2f938a287240caaa949dcdf4bdb7ca6` で非著者 closing review PASS を得た
+`PLAN-L7-522` の S1-b 契約を具体化するだけである。新規の規範・oracle・受入条件を追加しない。
+対応は次のとおりで、いずれも #469 で freeze 済みの条項の再述である。
+
+| 本 PLAN | 束縛先 (#469 freeze 済み) |
+|---|---|
+| §2 所有境界 | `PLAN-L7-522` §2.1 撤去対象 inventory と §5.3 slice ↔ 子 Issue 束縛表 |
+| §3.1 生成物の script は保護対象でない | `PLAN-L7-522` §2.1.1 設計判断 |
+| §3.2 hook launcher は node 直接起動 | `PLAN-L7-522` §2.1 (launcher 契約の consumer である `src/lint/project-hook.ts` / `src/doctor/setup-smoke.ts` を同一 PR で追随させる条項) |
+| §3.3 BAN lint の検出能力不変 | `PLAN-L7-522` §3.3 と §6 不変条件 4 |
+| §4 DoD の oracle | 対の test-design が宣言する `CANDIDATE-U-PACKBUN-003` / `004` / `006`。正規 ID への昇格は test-design 自身が定める「各 test 実装と Red 実測の同一 commit で昇格する」手順に従う |
+
+新規の規範を追加する必要が生じた場合は、本 PLAN へ書き足さず `PLAN-L7-522` の改訂として
+docs-only の delta review を先行させる。
+
 ## 2. 所有境界
 
 本 PLAN が所有するのは次に限る。
