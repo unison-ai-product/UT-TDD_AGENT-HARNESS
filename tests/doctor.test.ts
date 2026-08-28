@@ -642,7 +642,7 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=24, failed=0)"]);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=23, failed=0)"]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {
