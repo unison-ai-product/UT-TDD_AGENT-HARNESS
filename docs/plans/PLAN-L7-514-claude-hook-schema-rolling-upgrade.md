@@ -29,8 +29,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/runtime/claude-wake-generation-upgrade.ts
     artifact_type: source_module
-  - artifact_path: src/runtime/claude-memory-wake.ts
-    artifact_type: source_module
   - artifact_path: tests/claude-wake-generation-upgrade.test.ts
     artifact_type: test_code
   - artifact_path: tests/fixtures/claude-hook-schema-rolling-upgrade/inventory.json

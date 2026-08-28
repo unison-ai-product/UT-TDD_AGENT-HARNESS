@@ -61,7 +61,7 @@ function generation(generationId = "generation-1") {
 }
 
 describe("Claude wake generation rolling upgrade", () => {
-  it("U-CHSCHEMA-001/002: generation/profile are closed records", () => {
+  it("U-CHSCHEMA-001 U-CHSCHEMA-002: generation/profile are closed records", () => {
     const marker = generation();
     expect(parseClaudeWakeGeneration(JSON.stringify(marker))).toEqual(marker);
     expect(parseClaudeWakeGeneration(JSON.stringify({ ...marker, unknown: true }))).toBeUndefined();
@@ -88,7 +88,7 @@ describe("Claude wake generation rolling upgrade", () => {
     ).toBeUndefined();
   });
 
-  it("U-CHSCHEMA-004/007: legacy marker is preserved as typed handoff and one generation becomes active", () => {
+  it("U-CHSCHEMA-004 U-CHSCHEMA-007 U-CHSCHEMA-010: legacy marker is preserved as typed handoff and one generation becomes active", () => {
     const root = fixture();
     try {
       writeFileSync(join(root, "old.generation"), "8992:1787797435601\n", "utf8");
@@ -122,7 +122,7 @@ describe("Claude wake generation rolling upgrade", () => {
     }
   });
 
-  it("U-CHSCHEMA-006/008: multiple or foreign active generations fail closed before mutation", () => {
+  it("U-CHSCHEMA-003 U-CHSCHEMA-006 U-CHSCHEMA-008: multiple or foreign active generations fail closed before mutation", () => {
     const root = fixture();
     try {
       for (const id of ["one", "two"]) {
@@ -168,7 +168,7 @@ describe("Claude wake generation rolling upgrade", () => {
     }
   });
 
-  it("U-CHSCHEMA-005/011: policy compatibility and current epoch/token are an AND gate", () => {
+  it("U-CHSCHEMA-005 U-CHSCHEMA-011: policy compatibility and current epoch/token are an AND gate", () => {
     const root = fixture();
     try {
       const first = activateClaudeWakeGeneration({
@@ -268,7 +268,7 @@ describe("Claude wake generation rolling upgrade", () => {
     }
   });
 
-  it("U-CHSCHEMA-012/013/015: captured claims remain immutable and claimed replay creates no inbox", async () => {
+  it("U-CHSCHEMA-012 U-CHSCHEMA-013 U-CHSCHEMA-015 U-CHSCHEMA-016: captured claims remain immutable and claimed replay creates no inbox", async () => {
     const captureRoot = join(
       process.cwd(),
       "tests",
