@@ -5,6 +5,7 @@ import { analyzeGithubCiPolicy } from "../src/lint/github-ci-policy.ts";
 import { analyzeRuleDrift } from "../src/lint/rule-drift.ts";
 import { analyzeRuntimePortability } from "../src/lint/runtime-portability.ts";
 import { analyzeToolchainPin } from "../src/lint/toolchain-pin.ts";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 // U-PACKBUN-006 (PLAN-L7-522 §3.3): BAN 検出側 lint の「検出能力」を behavioral に測る。
 // 条文の逐語一致では測らない。§3.3 が freeze した 16 サンプルを各 lint へ入力し、
@@ -41,8 +42,16 @@ const PORTABILITY_SAMPLES: readonly PortabilitySample[] = [
   { id: "12", rule: `${B}-global-reference`, text: `if (process.versions.${B}) return 1;` },
 ];
 
-const packWorkflow = (step: string): string =>
-  ["name: pack", "on: [push]", "jobs:", "  t:", "    steps:", `      - run: ${step}`].join("\n");
+// 実 Pack template に違反 step を 1 本挿す。合成 yaml だと workflow shape 検査が
+// `malformed_workflow_shape` で先に落ちて deny rule まで到達しない。
+const packWorkflow = (step: string): string => {
+  const template = BUILTIN_GITHUB_TEMPLATES["common/pack-harness-check.yml"];
+  const marker = "    steps:\n";
+  const at = template.indexOf(marker);
+  expect(at).toBeGreaterThan(-1);
+  const cut = at + marker.length;
+  return `${template.slice(0, cut)}      - run: ${step}\n${template.slice(cut)}`;
+};
 
 describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
   it.each(PORTABILITY_SAMPLES)("sample $id still fail-closes as $rule in runtime-portability", ({
@@ -133,10 +142,12 @@ describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
     const reasons = [...source.matchAll(/reason: "(forbidden_[a-z_]+)"/g)].map((m) => m[1]);
     expect(new Set(reasons)).toEqual(
       new Set([
+        "forbidden_full_doctor",
+        "forbidden_job_level_lane_skip",
+        "forbidden_lane_skip_step",
+        "forbidden_pull_request_input_execution",
         "forbidden_raw_vitest",
         "forbidden_source_full_tests",
-        "forbidden_full_doctor",
-        "forbidden_source_only_step",
       ]),
     );
   });

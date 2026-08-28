@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -26,15 +26,20 @@ afterEach(() => {
 
 const WRAPPER_TEMPLATE = BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"];
 
-/** wrapper を実体化し、解決先 CLI を recorder に差し替えた consumer root を返す。 */
+/**
+ * wrapper を実体化する。`node_modules` 配下の `.ts` は Node が type-stripping を拒否するため
+ * (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING)、解決先は setup source CLI 経路へ `.mjs` を注入する。
+ */
 function materializeWrapper(cliBody: string | null): { root: string; wrapper: string } {
   const root = temporaryDirectory();
   const wrapper = join(root, "ut-tdd.mjs");
-  writeFileSync(wrapper, WRAPPER_TEMPLATE.replace("{{UT_TDD_SOURCE_CLI_JSON}}", '""'), "utf8");
-  if (cliBody !== null) {
-    mkdirSync(join(root, "node_modules", "ut-tdd", "src"), { recursive: true });
-    writeFileSync(join(root, "node_modules", "ut-tdd", "src", "cli.ts"), cliBody, "utf8");
-  }
+  const cli = join(root, "recorder.mjs");
+  if (cliBody !== null) writeFileSync(cli, cliBody, "utf8");
+  writeFileSync(
+    wrapper,
+    WRAPPER_TEMPLATE.replace("{{UT_TDD_SOURCE_CLI_JSON}}", JSON.stringify(cli)),
+    "utf8",
+  );
   return { root, wrapper };
 }
 
