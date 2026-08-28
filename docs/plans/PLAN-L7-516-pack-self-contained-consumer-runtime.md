@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: draft
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-08-28
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
@@ -66,6 +66,12 @@ cleanupはこのsliceに含めない。Bunを起動する経路、Bun API、Bun 
 `PLAN-L6-93`の現行§5にあるsealed build receipt／Node parity receiptのtupleを入力契約として
 再利用する。L6-93がconfirmedになり、実装開始に必要なNode generation receiptが利用可能になる
 までは本PLANの実装PRを起動しない。L6-93のreceipt schemaやcutover chainを本PLANで再定義しない。
+
+L6-93全体の`status: draft`を、§5だけのfreeze完了と読み替えてはならない。PR #430 exact HEAD
+`2cd9640c`のcanonical receiptが証明するのは§5と`CANDIDATE-NODEBOOT-021..030`だけである。
+本pair-freezeの非著者PASSと、L6-93側で本PLANが消費するsealed generation tupleの利用可能性が
+同じrevisionへ機械的に束縛されるまで、production source、build script、source workflow、
+`bun.lock`を変更しない。
 
 ## 2. 正本とsealed runtime identity
 
@@ -302,6 +308,9 @@ PF5、#432、#414、Pack remote publicationを重複所有しない。
    canonical evidenceとして利用可能であること。
 3. #432のidentity bootstrapを前提にせず、consumer identity入力が既存契約で供給できること。
 4. pair-freezeの非著者PASS、CI Green、Reverse R0が揃うまでproduction sourceを変更しないこと。
+5. build producerを本PLANで新設・変更せず、L6-93が所有する実行可能なproducerと、その出力を
+   実bytesから検証したreceiptを入力として取得できること。script本文の文字列検査だけを
+   producer可用性の証拠にしないこと。
 
 ## 9. 完了条件
 
