@@ -109,11 +109,25 @@ Issue #418 (Pack-only internal canary smoke) の HARD predecessor に当たる�
 `buildNodeGeneration` / `publishActivation` / `loadNodeGeneration` は `PLAN-L6-93` が所有し、
 `implementation_target` は `PLAN-L7-458` である。本 PLAN では実装しない。
 
-### 3.3 BAN 検出側 lint
+### 3.3 BAN 検出側 lint — 保護対象は「検出能力」であり、条文の逐語不変ではない
 
 `src/lint/runtime-portability.ts` / `src/lint/github-ci-policy.ts` / `src/lint/rule-drift.ts` /
 `src/lint/toolchain-pin.ts` の Bun 参照は **BAN を検出し fail-close する側**である。
-撤去すると gate が消える。本 PLAN では不変とする。
+撤去すると gate が消える。
+
+**ただし「これら 4 file の Bun 参照を一切変更しない」は過剰であり、S1-c の正しい実装を Red にする。**
+本 PLAN の初版はここを誤っていた (PR #469 の非著者 review、canonical receipt
+`47144e188043136d08552df64a8147b32069af8a7885b5d26b2ffa553b58c52f` の指摘により是正)。
+file ごとに扱いが異なるので分けて契約する。
+
+| file | 現状 (2026-08-28 実測) | 本 slice での扱い |
+|---|---|---|
+| `github-ci-policy.ts` | `:143` / `:156-160` / `:334` が `oven-sh/setup-bun@v2` / `bun install --frozen-lockfile` / `bun run typecheck` / `bun run test:pack` / `bun run lint` を **required step として要求**している | **S1-c で追随変更する。** `setup-bun` を撤去すれば required step 側は必ず Red になる。要求側だけを Node 経路へ差し替え、**検出側 (Pack CI が raw vitest を使うことの deny 等) は減らさない** |
+| `runtime-portability.ts` | `:478-485` の debt allowlist は `seen > pinned` で違反にする **上限 pin** であり、Bun 参照が減る方向は自由 (`:100` が明示) | **追随変更不要。** S1-b が debt を減らしても Red にならない |
+| `rule-drift.ts` / `toolchain-pin.ts` | 生成物・readiness・source CI のいずれも参照していない | **不変** |
+
+**保護する不変条件は「Bun を検出して fail-close する能力が減らないこと」**であり、条文の逐語一致ではない。
+検出能力を落とす変更 (deny rule の削除、allowlist への新規 path 追加、pin 値の引き上げ) は本 slice の全 PR で禁止する。
 
 ## 4. 設計判断: Issue #450 受入条件 3 の読み替え
 
@@ -219,12 +233,17 @@ Slice 2 (#473) は本 PLAN の対象外であり (§4.3)、`PLAN-L6-93` → `PLA
 
 §2.3 の 2 箇所を撤去する。`package.json` の `build` script は §3.1 により不変。
 
+**`src/lint/github-ci-policy.ts` の required step を同一 PR で追随変更する** (§3.3)。
+`setup-bun` を workflow から消しながら lint が `setup-bun` を要求したままにすると必ず Red になるため、
+撤去と追随は分離できない。追随は required step 側に限り、検出側の deny rule には触れない。
+
 ## 6. 不変条件
 
 1. consumer readiness は Bun の有無に依存しない。
 2. setup が生成した consumer tree に Bun 実行子への到達経路が存在しない。
 3. source repo の `build` script は本 PLAN では不変である。
-4. BAN 検出側 lint の Bun 参照は本 PLAN では不変である。
+4. BAN 検出側 lint の **Bun 検出能力**は減らない (§3.3)。`github-ci-policy.ts` の required step は
+   S1-c で Node 経路へ追随変更するが、deny rule の削除・allowlist への path 追加・pin 引き上げは行わない。
 
 ## 7. 完了条件
 

@@ -26,12 +26,12 @@ prefix `U-PACKBUN` は既存 registry と衝突しない
 
 | Candidate | Stimulus | Oracle |
 | --- | --- | --- |
-| `CANDIDATE-U-PACKBUN-001` | Bun 未導入 (PATH にも `~/.bun` にも Bun が無い) の clean consumer で `ut-tdd setup` の readiness を評価する | readiness が `ok: true`。現行 `src/setup/distribution.ts:373` の `ok: bunOk && …` を残すと必ず Red |
+| `CANDIDATE-U-PACKBUN-001` | Bun 未導入 (PATH にも `~/.bun` にも Bun が無い) の clean consumer fixture で **`ut-tdd setup` を実際に実行する** (readiness 関数を単体で呼ぶのではない) | setup が完了し readiness が `ok: true`。現行 `src/setup/distribution.ts:373` の `ok: bunOk && …` を残すと必ず Red。Issue #450 AC1 は「`ut-tdd setup` を実行し、readiness が `ok: true`」であり、readiness 計算の単体評価では AC1 を満たさない (PR #469 review、receipt `47144e18…` の指摘により是正) |
 | `CANDIDATE-U-PACKBUN-002` | 同上の環境で readiness の check 一覧を取得する | check 名 `bun>=1.3` が存在せず、`Install Bun 1.3 or newer before setup` が出力に現れない。代わりに `engines.node` 準拠の node バージョン check と git check が存在する |
 | `CANDIDATE-U-PACKBUN-003` | `ut-tdd setup` が生成した consumer tree 全体を再帰走査する | `bun` 実行子 / `#!/usr/bin/env bun` / `oven-sh/setup-bun` / `run-bun.ts` の出現が **0 件** |
 | `CANDIDATE-U-PACKBUN-004` (negative control) | `PLAN-L7-522` §2.1 が列挙する**生成経路ごと**に、撤去済みの Bun 出力を 1 つずつ復活させて 003 を再実行する。最低限の軸は (a) `templates.ts` の `#!/usr/bin/env bun` shebang、(b) `templates.ts` の `common/run-bun.ts` / `findBun()`、(c) `templates.ts` の生成 consumer CI (`oven-sh/setup-bun@v2` / `bun install` / `bun run *`)、(d) `templates.ts` の案内文、(e) **`distribution.ts` が生成 `package.json` へ書く `"test": "bun run test:pack"`** | **復活させた各軸について 003 が必ず Red になる**。003 が恒真でないことを証明する。**軸ごとに独立の case とし、1 軸でも Red にならなければ 004 自体を Red とする**。特に (e) は生成元 module が `templates.ts` ではないため、`templates.ts` だけを走査する 003 実装では検出できない。003 の走査対象が生成 tree 全体であることを (e) が担保する |
 | `CANDIDATE-U-PACKBUN-005` | `.github/workflows/harness-check.yml` から `oven-sh/setup-bun@v2` を除去した状態で Pack/consumer acceptance fixture を実行する | fixture が Green。Bun の install / download / invocation trace が 0 |
-| `CANDIDATE-U-PACKBUN-006` (不変条件保護) | 本 slice の全 PR の diff を対象に、`package.json` の `build` script と `src/lint/runtime-portability.ts` / `github-ci-policy.ts` / `rule-drift.ts` / `toolchain-pin.ts` の Bun 参照を観測する | いずれも変化していない。`build` script の削除、または BAN 検出側 lint の Bun 参照の削除が混入すると Red |
+| `CANDIDATE-U-PACKBUN-006` (不変条件保護) | 本 slice の全 PR の diff を対象に、(i) `package.json` の `build` script、(ii) BAN 検出側 lint の**検出能力**を観測する。検出能力は「deny rule の本数」「debt allowlist の path 集合」「pin 値」で測る (条文の逐語一致では測らない) | (i) `build` script が不変。(ii) deny rule の削除、allowlist への新規 path 追加、pin 値の引き上げが 1 件でもあれば Red。**`github-ci-policy.ts` の required step を `setup-bun` から Node 経路へ差し替える変更は Red にしない** — S1-c がそれを必要とするため (`PLAN-L7-522` §3.3)。逐語不変で測る初版は S1-c の正しい実装を Red にしていた (PR #469 review、receipt `47144e18…` の指摘により是正) |
 
 ## 3. slice との対応
 
