@@ -42,6 +42,15 @@ export interface CanonicalReviewWake {
 }
 
 export interface LiveReviewProjectionPorts {
+  readonly validateSubject: (input: { repoRoot: string; pr: number; exactHead: string }) =>
+    | { readonly ok: true }
+    | {
+        readonly ok: false;
+        readonly reason:
+          | "exact_head_not_found"
+          | "pull_request_head_unavailable"
+          | "pull_request_head_mismatch";
+      };
   readonly issueRequest: (input: {
     repoRoot: string;
     request: ReviewAttestationRequest;
@@ -227,6 +236,13 @@ export function dispatchLiveReview(input: {
   if (!input.ports.providerAvailable(reviewer)) {
     return { ok: false, reason: "opposite_provider_unavailable" };
   }
+
+  const subject = input.ports.validateSubject({
+    repoRoot: input.repoRoot,
+    pr: input.request.pr,
+    exactHead: input.request.exactHead,
+  });
+  if (!subject.ok) return subject;
 
   const { memoryPath, ...request } = input.request;
   const issued = input.ports.issueRequest({ repoRoot: input.repoRoot, request, strict: true });
