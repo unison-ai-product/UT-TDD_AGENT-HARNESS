@@ -579,7 +579,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "      - uses: actions/checkout@v4",
     "      - uses: actions/setup-node@v4",
     "        with:",
-    "          node-version: \"24.13.0\"",
+    '          node-version: "24.13.0"',
     "          cache: npm",
     "      - run: npm ci --no-audit --no-fund",
     "      - name: branch-type guard",

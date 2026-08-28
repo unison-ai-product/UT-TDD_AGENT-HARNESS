@@ -16,7 +16,7 @@ type BunRemovalCase = {
 };
 
 const forbiddenGeneratedPatterns: readonly [string, RegExp][] = [
-  ["bun executable", /(?:^|[\s\"'`])bun(?:\.exe)?(?=$|[\s\"'`])/i],
+  ["bun executable", /(?:^|[\s"'`])bun(?:\.exe)?(?=$|[\s"'`])/i],
   ["Bun shebang", /#!\/usr\/bin\/env bun\b/i],
   ["setup-bun action", /oven-sh\/setup-bun\b/i],
   ["run-bun path", /\brun-bun\.ts\b/i],
@@ -78,7 +78,7 @@ const negativeCases: readonly BunRemovalCase[] = [
     mutate: (root) => {
       writeFileSync(
         join(root, ".ut-tdd", "bin", "run-bun.ts"),
-        "function findBun(): string { throw new Error(\"bun\"); }\n",
+        'function findBun(): string { throw new Error("bun"); }\n',
         "utf8",
       );
     },
