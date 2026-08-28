@@ -29,6 +29,7 @@ dependencies:
   parent: docs/plans/PLAN-L7-465-cross-review-author-binding.md
   requires:
     - PLAN-L7-465-cross-review-author-binding
+    - PLAN-L7-520-review-receipt-supersession-contract
   blocks: []
   references:
     - docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
@@ -68,6 +69,7 @@ tracked bytesを検査しない。
 
 - review開始直前のsubject snapshot検査
 - reviewer終了後かつcanonical receipt確定前のsubject snapshot再検査
+- delegation childのreview execution resultと親consumerのcanonical receipt projectionの分離
 - HEAD mismatchとdirty treeのtyped reason
 - 許容するuntracked `.ut-tdd/**` runtime stateの境界
 - deny時のreview execution、canonical receipt、PR comment、feedback Memoryの副作用契約
@@ -76,7 +78,7 @@ tracked bytesを検査しない。
 ## 4. Non-goals
 
 - Issue #439 / `PLAN-L7-518`のrequest retraction、mint ledger、滞留request回収
-- `PLAN-L7-520`のattempt retry、audit event、create-exclusive receipt実装
+- `PLAN-L7-520`のattempt retry、audit event、create-exclusive custody semanticsの再定義
 - reviewer用worktreeの作成・lease・cleanup
 - tree SHA一致を旧verdict再利用の根拠にすること
 - dispatch側のPR HEAD検査（Issue #456で実装済み）
@@ -108,9 +110,22 @@ consumerは次の順序を守る。
 4. reviewerが終了した後、canonical receipt writeより前に`before_receipt` snapshotを再取得する。
 5. 両snapshotが同じ`exactHead`を示し、両方のdirty集合が空の場合だけreceipt projectionを確定する。
 
-post検査を`publishReceipt`（PR comment / feedback Memory派生投影）だけの前へ置く実装は禁止する。現行
-delegationはreview execution内でcanonical receiptを生成し得るため、実装sliceは**canonical receiptの
-create-exclusive writeより前**にpost検査が入るcomposition boundaryを明示しなければならない。
+`consumeLiveReview`をauthoritative fence ownerとする。`before_review`成功後だけdelegation childを起動し、
+delegation childはprovider reviewerを実行してverdict artifact、spawn由来attestation、result identityだけを返す。
+delegation childは`projectReviewVerdict`を呼ばず、canonical receiptを一件も書かない。
+
+親`consumeLiveReview`は`runReview`がexecution resultを返した直後に`before_receipt` snapshotを取得する。
+post fence成功後だけ、親consumerが所有するprojection portを通じて`projectReviewVerdict`を呼び、
+`PLAN-L7-520`のcreate-exclusive custody semanticsを再利用してcanonical receiptをexactly once確定する。
+post denyではprojection port呼出0、canonical receipt write 0とする。
+
+このseam移動は`src/cli/delegation.ts`（childのreceipt projection除去とexecution result DTO）、
+`src/feedback/live-review-projection.ts`（pre/post fenceと親projection順序）、`src/cli/review-live.ts`（port配線）、
+`src/feedback/review-attestation.ts`（親から呼べるprojection/persist境界）を本PLANのimplementation scopeとして
+明示所有する。result DTOまたはport型は同責務の専用moduleへ分離してよい。
+
+post検査を`publishReceipt`（PR comment / feedback Memory派生投影）だけの前へ置く実装は禁止する。
+delegation childがcanonical receiptを生成したままouter consumerへpost検査だけを追加する実装も禁止する。
 post検査失敗後に既存receiptを削除・上書きして帳尻を合わせることも禁止する。
 
 ### 5.3 Typed deny
@@ -131,6 +146,8 @@ reasonはCLI exit 1とJSON resultへ同じ値で貫通する。phaseは診断情
 | `before_receipt` deny | 1 | 0 | 0 |
 | 全条件成立 | exactly 1 | create-exclusive exactly 1 | receipt成功後だけ各1 |
 
+本表のreviewer executionはprovider reviewer processのspawn回数を指す。`runReview`正常返却時点でも
+canonical receiptは0件でなければならない。
 review中の変化はreviewer起動後にしか観測できないため、`before_receipt` denyでreviewer execution 0を主張しない。
 ただしcanonical receiptと全派生投影は0を厳守する。失敗attemptのretry/audit/retractionは本PLANで再定義せず、
 `PLAN-L7-520`と`PLAN-L7-518`の所有境界へ送る。
@@ -148,13 +165,20 @@ reviewerが読んだclean tracked snapshotである。
 3. untracked `.ut-tdd/**`だけの差は許可され、正常reviewを阻害しない。
 4. review中のHEAD移動またはtracked変更はpost検査でtyped denyとなり、canonical receiptと派生投影が0になる。
 5. post検査を削除、またはcanonical receipt write後へ移動するmutationは専用oracleでRedになる。
-6. `PLAN-L7-520`のattempt custody実装とpath/責務を混ぜず、両sliceを独立に検証できる。
-7. Linux / Windows / aggregate CIと非著者closing reviewがexact implementation HEADでGreen/PASSになる。
+6. delegation childはexecution resultだけを返し、`runReview`返却時点のcanonical receiptが0件になる。
+7. 親consumerはpost fence成功後だけ`projectReviewVerdict`を呼び、pass時はcreate-exclusive persist exactly once、
+   post deny時はpersist 0になる。
+8. `PLAN-L7-520`のattempt custodyとcreate-exclusive semanticsを再定義せず、確定済み契約として再利用する。
+9. Linux / Windows / aggregate CIと非著者closing reviewがexact implementation HEADでGreen/PASSになる。
+
+`src/feedback/review-attestation.ts`は`PLAN-L7-520` implementationとpathが重なるため、#521 implementationは
+同レーンのmain着地後に開始する。docs-only pair-freezeは並行できるが、production path leaseを並行取得しない。
 
 ## 9. Schedule
 
 1. [並列] 本PLAN、Reverse R0、対test-designでpre/post snapshot契約をpair-freezeする。
 2. [直列] 非著者reviewでcanonical receipt commit前のpost fenceを検収する。
-3. [直列] 別implementation PRでsubject observation port、composition、Red→Greenを実装する。
+3. [直列] `PLAN-L7-520` implementationのmain着地後、別PRでchild execution result、親pre/post fence、
+   親receipt projectionをRed→Greenする。
 4. [直列] Reverse R1→R3でmutationと実repository churnをaggregate検収する。
 5. [直列] Reverse R4で`PLAN-L7-465` / `PLAN-L7-493`へgap-only backfillしてmerge gateへ戻す。

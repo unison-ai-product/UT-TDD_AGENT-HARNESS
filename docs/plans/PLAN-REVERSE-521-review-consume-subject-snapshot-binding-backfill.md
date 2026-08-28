@@ -41,8 +41,10 @@ candidate oracle昇格をexact HEADへ束縛する。
 
 ## R1
 
-実装差分を、subject observation、review execution、canonical receipt commit、派生投影の4境界へ分解する。
-`PLAN-L7-520`のattempt custody差分を混ぜず、同PLANの実装HEADを参照する場合も責務を再所有しない。
+実装差分を、subject observation、delegation childのprovider execution/result DTO、親consumerのpost fence、
+親consumerのcanonical receipt projection、派生投影へ分解する。#521はchildからreceipt writeを除去して親へ
+projection portを移すseamを所有する。`PLAN-L7-520`のattempt custody / create-exclusive semanticsは再利用し、
+同PLANの意味を再所有しない。
 
 ## R2
 
@@ -54,13 +56,15 @@ candidate oracle昇格をexact HEADへ束縛する。
 4. untracked `.ut-tdd/**`を一律denyする。
 5. post HEAD比較を削除する。
 6. post dirty比較を削除する。
-7. post fenceをcanonical receipt write後へ移動する。
+7. delegation child内のcanonical receipt writeを残す。
+8. post fenceをcanonical receipt write後へ移動する。
 
 ## R3
 
 一時Git repositoryの実compositionで、clean exact HEAD、pre mismatch、pre dirty、review中HEAD移動、review中
 tracked変更、untracked `.ut-tdd/**`を実走する。各負例でcanonical receipt path、PR comment port、feedback
-Memory portの現物deltaが0であることを確認し、戻り値だけを証拠にしない。
+Memory portの現物deltaが0であることを確認する。`runReview`返却直後のreceipt 0、post deny時の
+projection port呼出0、pass時のcreate-exclusive persist exactly onceも確認し、戻り値だけを証拠にしない。
 
 ## R4
 
