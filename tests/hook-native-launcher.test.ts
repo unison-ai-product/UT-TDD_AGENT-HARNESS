@@ -163,22 +163,16 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
 
     expect(actual).toEqual({
       PreToolUse: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
       ],
-      SessionStart: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "start"],
-      ],
-      PostToolUse: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"],
-      ],
+      SessionStart: [["node", ".ut-tdd/bin/ut-tdd.mjs", "session", "start"]],
+      PostToolUse: [["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"]],
       Stop: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"],
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
       ],
-      SubagentStop: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
-      ],
+      SubagentStop: [["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"]],
     });
     const wrapper = BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"];
     const codexHooks = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]) as {
@@ -189,10 +183,7 @@ describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)
     );
     expect(
       codexCommands.every(
-        (hook) =>
-          hook.command === "node" &&
-          hook.args?.[0] === ".ut-tdd/bin/run-bun.ts" &&
-          hook.args?.[1] === ".ut-tdd/bin/ut-tdd.mjs",
+        (hook) => hook.command === "node" && hook.args?.[0] === ".ut-tdd/bin/ut-tdd.mjs",
       ),
     ).toBe(true);
     expect(wrapper).toContain("spawnSync(process.execPath");
