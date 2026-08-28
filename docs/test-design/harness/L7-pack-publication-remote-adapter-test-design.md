@@ -2,7 +2,7 @@
 artifact_type: test_design
 layer: L7
 executed_at_layer: L7
-status: draft
+status: confirmed
 plan_id: PLAN-L7-519-pack-publication-adapter
 ---
 

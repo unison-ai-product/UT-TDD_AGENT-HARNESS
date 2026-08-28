@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-28
 updated: 2026-08-28
 owner: Codex / Luna
@@ -39,10 +39,47 @@ dependencies:
     - docs/test-design/harness/L7-pack-publication-remote-adapter-test-design.md
     - src/setup/pack-publication-staging.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/414
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-28T03:42:30.729Z"
+    tests_green_at: "2026-08-28T03:38:26.536Z"
+    verdict: "PASS-WEAK / blocking 0"
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-5
+    effort: low
+    plan_revision: b1fa5c2a6690187bc95fe2ebb317786ca9ffdb85
+    subject_head: b1fa5c2a6690187bc95fe2ebb317786ca9ffdb85
+    scope: >-
+      PR #464のdocs-only pair-freezeを非著者review。上位003-A..S2全23行の
+      ID非変更・1対1実装束縛と、旧519別registryの撤去を確認した。
+      production実装、remote mutation、R2-R4、Pack canary実行は証明しない。
+    citations:
+      - ".ut-tdd/review/receipts/e52da9af2215884b700b5ed1937c893594ab401452d55ecaca8bf488609b0e42.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/464#issuecomment-5448119489"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33139471330"
+    green_commands:
+      - kind: lint
+        command: "node --experimental-strip-types src/cli.ts plan lint"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-28T03:38:26.536Z"
+        evidence_path: docs/test-design/harness/L7-pack-publication-remote-adapter-test-design.md
+        output_digest: "sha256:8aeaa864a263f7920917da8e55309eee7efbe20b03976d0fc7e0aff0eeaaf8f4"
+        anchor_commit: b1fa5c2a6690187bc95fe2ebb317786ca9ffdb85
 ---
 
 # PLAN-L7-519: Pack canary publication adapter 実装契約
+
+## Closure evidence
+
+PR #464 reviewed HEAD `b1fa5c2a6690187bc95fe2ebb317786ca9ffdb85` はcanonical Claude receipt
+`e52da9af2215884b700b5ed1937c893594ab401452d55ecaca8bf488609b0e42`で
+`PASS-WEAK / blocking 0`。CI run `33139471330` はLinux／Windows／aggregate Greenである。
+ここで確定するのは、上位`CANDIDATE-PACKPUB-003-A..S2`を再採番せず後続実装へ束縛する
+pair-freezeだけであり、publication adapter実装、remote mutation、Reverse R2-R4、Pack canary完了を
+意味しない。
 
 ## 1. 目的と既存正本
 
