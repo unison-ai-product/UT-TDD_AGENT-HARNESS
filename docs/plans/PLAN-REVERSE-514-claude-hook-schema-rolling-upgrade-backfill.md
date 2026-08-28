@@ -3,7 +3,7 @@ plan_id: PLAN-REVERSE-514-claude-hook-schema-rolling-upgrade-backfill
 title: "PLAN-REVERSE-514: Claude hook generation schema rolling upgrade backfill"
 kind: reverse
 layer: cross
-workflow_phase: R0
+workflow_phase: R1
 confirmed_reverse_type: design
 drive: be
 status: draft
@@ -68,3 +68,14 @@ upgrade supervisorをauthorityとする再起動境界をL7でfreezeする。
 
 Reverse R4は、旧requestの再mint、manual receipt、merge bypass、v1 wireへのfield追加、未freeze schemaの導入、
 unavailable production payloadの復元を成功条件に含めない。将来のwire/profile schema bumpは別PLANのpair-freezeへ送る。
+
+## R1 実測（実装PR）
+
+- legacy `pid:timestamp`を現行markerとして受理せず、supervisorが`restart_required` handoffを残して旧bytesを
+  `superseded/`へ保全する。
+- marker/profile/policy/workspaceの不一致とmultiple activeを、activation mutation前にtyped denyする。
+- activation途中faultはplanned journalから旧marker/profile/authorityへrollbackし、epochを再利用せずreplayする。
+- claim検証後・commit直前のauthority revokeでは旧epoch/tokenが負け、空claimを除去してinboxを保持する。
+- #410/#423 captureは正本記載digestと一致し、missing historical payloadを生成していない。
+
+R2以降はLinux/Windows/aggregateと非著者closing review後に進める。現時点でR4やIssue #433完了は未確定である。

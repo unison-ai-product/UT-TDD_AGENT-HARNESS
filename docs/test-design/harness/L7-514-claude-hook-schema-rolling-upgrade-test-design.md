@@ -12,28 +12,28 @@ updated: 2026-08-27
 
 # Claude hook generation schema rolling upgrade — L7 test design
 
-このtest-designは、#416/#422の既存routing資産を呼び出す後続実装PRの専用oracleである。現在はpair-freeze
-だけを行い、テストコードやsourceを生成しない。全oracleは同一PLAN revision・exact HEADへ束縛し、文章上の
-「Green」主張だけでは完了としない。
+このtest-designは、#416/#422の既存routing資産を呼び出す後続実装PRの専用oracleである。`U-`へ昇格した
+項目は専用testからproduction compositionへ到達する。`CANDIDATE-`は未昇格であり、文章上の「Green」主張だけでは
+完了としない。全oracleは同一PLAN revision・exact HEADへ束縛する。
 
 | Candidate | Red stimulus | Expected Green invariant | 実行境界 |
 | --- | --- | --- | --- |
-| `CANDIDATE-U-CHSCHEMA-001` | closed v1 markerへ未知fieldを一つ追加、または必須fieldを一つ欠落 | unknown/missing fieldをtyped denyし、v1拡張として黙認しない | marker parser |
-| `CANDIDATE-U-CHSCHEMA-002` | wire schema、inbox schema、capability profile schemaを各単独変更 | 変更した軸のschema mismatch、wake/claim 0 | supervisor / profile parser |
-| `CANDIDATE-U-CHSCHEMA-003` | workspaceIdを別projectまたは別worktreeの値へ変更 | foreign workspaceをfail-closeし、既存entryを消費済みにしない | canonical workspace resolver |
-| `CANDIDATE-U-CHSCHEMA-004` | 旧text、fake JSON、marker/profile digest不一致 | `legacy_generation_marker`等の`restart_required`、wake/claim 0 | supervisor / marker reader |
-| `CANDIDATE-U-CHSCHEMA-005` | subject/liveが別Git commitだが同じpolicy digestかつminimum compatible revision以上 | exact commit不一致だけでは拒否せずcompatible。policy digestまたはminimum revisionの単独変異はtyped deny | compatibility resolver |
-| `CANDIDATE-U-CHSCHEMA-006` | 同一workspaceにactive markerを2件置く | `multiple_active_generations`でfail-closeし、推測選択 0 | activation projection |
-| `CANDIDATE-U-CHSCHEMA-007` | updated supervisor/bootstrapが正当な旧generationを明示supersedeして起動 | CAS成功時だけ旧markerをsuperseded、新activeはexactly one | upgrade authority / activation CAS |
-| `CANDIDATE-U-CHSCHEMA-008` | foreign/stale/未知generationをsupersede対象に指定 | supersessionを拒否し、旧markerと新markerをactive成功扱いしない | activation CAS |
-| `CANDIDATE-U-CHSCHEMA-009` | marker/handoff書込み中のkill、再起動、同一handoff replay | activation journalと現物digestが一致する場合だけ再開し、二重claim 0 | recovery/replay |
-| `CANDIDATE-U-CHSCHEMA-010` | 旧hookが`pid:timestamp`を書き続け、将来source/schema driftを自力検出・更新しようとする | 旧hookは自動upgradeできず、upgrade supervisorがauthorityを失効して`restart_required`、claim 0 | old-hook/supervisor boundary |
-| `CANDIDATE-U-CHSCHEMA-011` | claimが旧epoch/tokenを検証後、commit直前にsupervisorがauthorityを失効 | claim CASが負け、claim write 0、envelope保持 | claim transaction / TOCTOU |
-| `CANDIDATE-U-CHSCHEMA-012` | PLAN §4.1の#423 claimを保持したまま同じidentity/claimed operationを再配送 | new inbox/claim/delivery 0、既存claim bytes/digest/session不変 | gitignored production idempotency |
-| `CANDIDATE-U-CHSCHEMA-013` | PLAN §4.1の#410 claimを保持したまま同じidentity/operationを再配送 | 対応inboxを再生成せずnew delivery 0、既存claim不変 | gitignored production idempotency |
-| `CANDIDATE-U-CHSCHEMA-014` | 新規synthetic fixture固有未claim pairのproject、Memory ID、operation、producer/consumer provider、session、HEAD、revisionを一軸ずつ独立変異 | 各軸固有のtyped deny、claim/consume write 0 | immutable fixture identity |
-| `CANDIDATE-U-CHSCHEMA-015` | fixture固有synthetic未claim envelopeをisolated runtimeへ一度配送し、同じ入力をreplay | 初回claim exactly once、replay delivery 0 | isolated consume fixture |
-| `CANDIDATE-U-CHSCHEMA-016` | inventoryへpayload不在の#423 old `7afb…`を`pr-423-envelope.json`として追加 | `historical_payload_unavailable`でfixture admission deny、復元/偽capture 0 | captured observation inventory |
+| `U-CHSCHEMA-001` | closed v1 markerへ未知fieldを一つ追加、または必須fieldを一つ欠落 | unknown/missing fieldをtyped denyし、v1拡張として黙認しない | marker parser |
+| `U-CHSCHEMA-002` | wire schema、inbox schema、capability profile schemaを各単独変更 | 変更した軸のschema mismatch、wake/claim 0 | supervisor / profile parser |
+| `U-CHSCHEMA-003` | workspaceIdを別projectまたは別worktreeの値へ変更 | foreign workspaceをfail-closeし、既存entryを消費済みにしない | canonical workspace resolver |
+| `U-CHSCHEMA-004` | 旧text、fake JSON、marker/profile digest不一致 | `legacy_generation_marker`等の`restart_required`、wake/claim 0 | supervisor / marker reader |
+| `U-CHSCHEMA-005` | subject/liveが別Git commitだが同じpolicy digestかつminimum compatible revision以上 | exact commit不一致だけでは拒否せずcompatible。policy digestまたはminimum revisionの単独変異はtyped deny | compatibility resolver |
+| `U-CHSCHEMA-006` | 同一workspaceにactive markerを2件置く | `multiple_active_generations`でfail-closeし、推測選択 0 | activation projection |
+| `U-CHSCHEMA-007` | updated supervisor/bootstrapが正当な旧generationを明示supersedeして起動 | CAS成功時だけ旧markerをsuperseded、新activeはexactly one | upgrade authority / activation CAS |
+| `U-CHSCHEMA-008` | foreign/stale/未知generationをsupersede対象に指定 | supersessionを拒否し、旧markerと新markerをactive成功扱いしない | activation CAS |
+| `U-CHSCHEMA-009` | marker/handoff書込み中のkill、再起動、同一handoff replay | activation journalと現物digestが一致する場合だけ再開し、二重claim 0 | recovery/replay |
+| `U-CHSCHEMA-010` | 旧hookが`pid:timestamp`を書き続け、将来source/schema driftを自力検出・更新しようとする | 旧hookは自動upgradeできず、upgrade supervisorがauthorityを失効して`restart_required`、claim 0 | old-hook/supervisor boundary |
+| `U-CHSCHEMA-011` | claimが旧epoch/tokenを検証後、commit直前にsupervisorがauthorityを失効 | claim CASが負け、claim write 0、envelope保持 | claim transaction / TOCTOU |
+| `U-CHSCHEMA-012` | PLAN §4.1の#423 claimを保持したまま同じidentity/claimed operationを再配送 | new inbox/claim/delivery 0、既存claim bytes/digest/session不変 | gitignored production idempotency |
+| `U-CHSCHEMA-013` | PLAN §4.1の#410 claimを保持したまま同じidentity/operationを再配送 | 対応inboxを再生成せずnew delivery 0、既存claim不変 | gitignored production idempotency |
+| `U-CHSCHEMA-014` | 新規synthetic fixture固有未claim pairのproject、Memory ID、operation、producer/consumer provider、session、HEAD、revisionを一軸ずつ独立変異 | 各軸固有のtyped deny、claim/consume write 0 | immutable fixture identity |
+| `U-CHSCHEMA-015` | fixture固有synthetic未claim envelopeをisolated runtimeへ一度配送し、同じ入力をreplay | 初回claim exactly once、replay delivery 0 | isolated consume fixture |
+| `U-CHSCHEMA-016` | inventoryへpayload不在の#423 old `7afb…`を`pr-423-envelope.json`として追加 | `historical_payload_unavailable`でfixture admission deny、復元/偽capture 0 | captured observation inventory |
 | `CANDIDATE-P-CHSCHEMA-001` | fixture固有synthetic未claim pairをWindows/Linuxでcrash→restart→replay | OS差なくexact-one active、handoff replay fence、fixture identity保全 | cross-platform fixture integration |
 
 ## TDD順序

@@ -29,6 +29,10 @@ import {
   resolveRequiredClaudeWakeCapability,
   validateClaudeWakeClaimAuthority,
 } from "../src/runtime/claude-wake-generation-upgrade.ts";
+import {
+  type ClaudeWakeUpgradeFixtureIdentity,
+  fixtureIdentityMatches,
+} from "./support/claude-wake-upgrade-fixture.ts";
 
 const workspaceId = "a".repeat(64);
 const runtimeSourceRevision = "1".repeat(40);
@@ -378,6 +382,41 @@ describe("Claude wake generation rolling upgrade", () => {
       expect(readdirSync(join(runtime, "inbox"))).toHaveLength(1);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-CHSCHEMA-014: every fixture identity axis is independently bound", () => {
+    const expected = JSON.parse(
+      readFileSync(
+        join(
+          process.cwd(),
+          "tests",
+          "fixtures",
+          "claude-hook-schema-rolling-upgrade",
+          "fixture-unclaimed-request.json",
+        ),
+        "utf8",
+      ),
+    ) as ClaudeWakeUpgradeFixtureIdentity;
+    expect(fixtureIdentityMatches(expected, expected)).toBe(true);
+    const mutations: Record<keyof ClaudeWakeUpgradeFixtureIdentity, string> = {
+      projectId: "fixture/foreign",
+      memoryId: "memory:fixture:foreign",
+      operationId: "foreign-operation",
+      producerProvider: "foreign",
+      consumerProvider: "foreign",
+      sessionId: "foreign-session",
+      exactHead: "5".repeat(40),
+      reviewRevision: `rv1-${"6".repeat(64)}`,
+    };
+    for (const [axis, value] of Object.entries(mutations)) {
+      expect(
+        fixtureIdentityMatches(
+          { ...expected, [axis]: value } as ClaudeWakeUpgradeFixtureIdentity,
+          expected,
+        ),
+        axis,
+      ).toBe(false);
     }
   });
 });
