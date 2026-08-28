@@ -285,6 +285,8 @@ export function validateConsumerNodeRuntimeBundle(
     Object.values(bundle.files).some((value) => typeof value !== "string" || !DIGEST.test(value))
   )
     return "consumer_runtime_digest_mismatch";
+  if (bundle.files["ut-tdd.mjs"] !== bundle.identity.compiled_esm_digest)
+    return "consumer_runtime_digest_mismatch";
   try {
     assertHistory(
       bundle.history_sequence as number,
@@ -324,8 +326,8 @@ export function validateConsumerReadiness(input: ConsumerNodeRuntimeReadinessInp
 
 /** A generated wrapper has one resolution source: the consumer-local active pointer. */
 export function renderConsumerNodeWrapper(): string {
-  return `import { readFileSync } from "node:fs";
-import { realpathSync } from "node:fs";
+  return `import { readFileSync, realpathSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -334,15 +336,30 @@ const pointerPath = resolve(consumerRoot, ".ut-tdd", "runtime", "activation", "a
 const deny = (reason) => { console.error(reason); process.exit(78); };
 let pointer;
 try { pointer = JSON.parse(readFileSync(pointerPath, "utf8")); } catch { deny("consumer_runtime_absent"); }
-if (!pointer || typeof pointer.bundle_path !== "string" || typeof pointer.entry_path !== "string") deny("consumer_runtime_resolution_denied");
+if (!pointer || typeof pointer.bundle_path !== "string" || typeof pointer.entry_path !== "string" || typeof pointer.bundle_digest !== "string") deny("consumer_runtime_resolution_denied");
+if (Object.keys(pointer).sort().join("\\0") !== "bundle_digest\\0bundle_path\\0entry_path") deny("consumer_runtime_resolution_denied");
 if (pointer.bundle_path !== resolve(pointer.bundle_path) || pointer.entry_path !== resolve(pointer.entry_path)) deny("consumer_runtime_resolution_denied");
 const bundle = resolve(pointer.bundle_path), entry = resolve(pointer.entry_path);
+const runtimeRoot = resolve(consumerRoot, ".ut-tdd", "runtime");
+const runtimeRel = relative(runtimeRoot, bundle);
 const rel = relative(bundle, entry);
-if (bundle !== resolve(bundle) || rel === "" || rel === ".." || rel.startsWith("..")) deny("consumer_runtime_external_path");
-let bundleReal, entryReal;
-try { bundleReal = realpathSync.native(bundle); entryReal = realpathSync.native(entry); } catch { deny("consumer_runtime_absent"); }
+if (runtimeRel === "" || runtimeRel === ".." || runtimeRel.startsWith("..") || rel === "" || rel === ".." || rel.startsWith("..")) deny("consumer_runtime_external_path");
+let runtimeReal, bundleReal, entryReal;
+try { runtimeReal = realpathSync.native(runtimeRoot); bundleReal = realpathSync.native(bundle); entryReal = realpathSync.native(entry); } catch { deny("consumer_runtime_absent"); }
+const runtimePhysicalRel = relative(runtimeReal, bundleReal);
+if (runtimePhysicalRel === "" || runtimePhysicalRel === ".." || runtimePhysicalRel.startsWith("..")) deny("consumer_runtime_external_path");
 const physicalRel = relative(bundleReal, entryReal);
 if (physicalRel === "" || physicalRel === ".." || physicalRel.startsWith("..")) deny("consumer_runtime_external_path");
+const sha256 = (bytes) => "sha256:" + createHash("sha256").update(bytes).digest("hex");
+const canonical = (value) => value === null || typeof value !== "object" ? JSON.stringify(value) : Array.isArray(value) ? "[" + value.map(canonical).join(",") + "]" : "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
+let manifest;
+try { manifest = JSON.parse(readFileSync(resolve(bundle, "bundle-manifest.json"), "utf8")); } catch { deny("consumer_runtime_absent"); }
+const required = ["consumer-receipt.json", "history.jsonl", "marker.json", "node-bootstrap-receipt.json", "operation-state.json", "ut-tdd.mjs"];
+if (!manifest || typeof manifest.bundle_digest !== "string" || manifest.bundle_digest !== pointer.bundle_digest || manifest.bundle_path !== bundle || !manifest.identity || manifest.identity.consumer_root !== consumerRoot || manifest.identity.runtime_root !== runtimeRoot || manifest.identity.sealed_policy !== "compiled-esm-only" || typeof manifest.identity.node_executable_identity !== "string" || !/^node-[^|]+\\|sha256:[a-f0-9]{64}$/.test(manifest.identity.node_executable_identity) || !manifest.files || Object.keys(manifest.files).sort().join("\\0") !== required.slice().sort().join("\\0")) deny("consumer_runtime_identity_mismatch");
+if (!Number.isSafeInteger(manifest.history_sequence) || manifest.history_sequence < 0 || (manifest.history_sequence === 0 && (manifest.prior_bundle_digest !== "genesis" || manifest.prior_history_tip_digest !== "genesis")) || (manifest.history_sequence > 0 && (typeof manifest.prior_bundle_digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(manifest.prior_bundle_digest) || typeof manifest.prior_history_tip_digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(manifest.prior_history_tip_digest)))) deny("consumer_runtime_identity_mismatch");
+if (sha256(Buffer.from(canonical({ identity: manifest.identity, files: manifest.files, history_sequence: manifest.history_sequence, prior_bundle_digest: manifest.prior_bundle_digest, prior_history_tip_digest: manifest.prior_history_tip_digest }), "utf8")) !== manifest.bundle_digest) deny("consumer_runtime_digest_mismatch");
+for (const name of required) { let bytes; try { bytes = readFileSync(resolve(bundle, name)); } catch { deny("consumer_runtime_absent"); } if (sha256(bytes) !== manifest.files[name]) deny("consumer_runtime_digest_mismatch"); }
+if (manifest.files["ut-tdd.mjs"] !== manifest.identity.compiled_esm_digest) deny("consumer_runtime_digest_mismatch");
 const result = spawnSync(process.execPath, [entry, ...process.argv.slice(2)], { cwd: consumerRoot, stdio: "inherit", windowsHide: true });
 if (result.error) deny("consumer_runtime_resolution_denied");
 process.exit(result.status ?? 1);

@@ -14,16 +14,24 @@ import {
   installConsumerNodeRuntime,
   renderConsumerNodeWrapper,
   stagingPathFor,
+  validateConsumerNodeRuntimeBundle,
 } from "../src/setup/consumer-node-runtime.ts";
 import { buildConsumerReadinessPlan } from "../src/setup/distribution.ts";
 
 const roots: string[] = [];
+const PAYLOADS = {
+  "ut-tdd.mjs": Buffer.from('process.stdout.write("consumer-local-ok")\n'),
+  "node-bootstrap-receipt.json": Buffer.from("bootstrap"),
+  "marker.json": Buffer.from("marker"),
+  "consumer-receipt.json": Buffer.from("receipt"),
+  "history.jsonl": Buffer.from("{}\n"),
+  "operation-state.json": Buffer.from("committed"),
+} as const;
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 function identity(root = "/tmp/consumer-node-runtime"): ConsumerNodeRuntimeIdentity {
-  const compiled = Buffer.from('process.stdout.write("consumer-local-ok")\n');
   return {
     product_id: "ut-tdd",
     consumer_root: root,
@@ -36,7 +44,7 @@ function identity(root = "/tmp/consumer-node-runtime"): ConsumerNodeRuntimeIdent
     node_executable_identity: `node-v24.13.0|sha256:${"2".repeat(64)}`,
     package_lock_digest: `sha256:${"3".repeat(64)}`,
     source_graph_digest: `sha256:${"4".repeat(64)}`,
-    compiled_esm_digest: digestConsumerRuntimeBytes(compiled),
+    compiled_esm_digest: digestConsumerRuntimeBytes(PAYLOADS["ut-tdd.mjs"]),
     release_id: `rel-sha256:${"5".repeat(64)}`,
     materializer_version: "1",
     artifact_set_digest: `sha256:${"6".repeat(64)}`,
@@ -48,12 +56,12 @@ function identity(root = "/tmp/consumer-node-runtime"): ConsumerNodeRuntimeIdent
 function bundleFor(id = identity()): ConsumerNodeRuntimeBundle {
   return buildConsumerNodeRuntimeBundle({
     identity: id,
-    compiled_esm: Buffer.from('process.stdout.write("consumer-local-ok")\n'),
-    node_bootstrap_receipt: Buffer.from("bootstrap"),
-    marker: Buffer.from("marker"),
-    consumer_receipt: Buffer.from("receipt"),
-    history: Buffer.from("{}\n"),
-    operation_state: Buffer.from("committed"),
+    compiled_esm: PAYLOADS["ut-tdd.mjs"],
+    node_bootstrap_receipt: PAYLOADS["node-bootstrap-receipt.json"],
+    marker: PAYLOADS["marker.json"],
+    consumer_receipt: PAYLOADS["consumer-receipt.json"],
+    history: PAYLOADS["history.jsonl"],
+    operation_state: PAYLOADS["operation-state.json"],
   });
 }
 
@@ -199,15 +207,21 @@ describe("sealed self-contained consumer Node runtime", () => {
     roots.push(root);
     const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-setup-"));
     roots.push(checkout);
-    const runtime = join(root, ".ut-tdd", "runtime");
-    const activation = join(runtime, "activation");
+    const bundle = bundleFor(identity(root));
+    const activation = join(root, ".ut-tdd", "runtime", "activation");
+    mkdirSync(bundle.bundle_path, { recursive: true });
+    for (const [name, bytes] of Object.entries(PAYLOADS))
+      writeFileSync(join(bundle.bundle_path, name), bytes);
+    writeFileSync(join(bundle.bundle_path, "bundle-manifest.json"), JSON.stringify(bundle));
     mkdirSync(activation, { recursive: true });
-    const entry = join(runtime, "bundle", "ut-tdd.mjs");
-    mkdirSync(resolve(entry, ".."), { recursive: true });
-    writeFileSync(entry, 'process.stdout.write("consumer-local-ok")\n');
+    const entry = join(bundle.bundle_path, "ut-tdd.mjs");
     writeFileSync(
       join(activation, "active.json"),
-      JSON.stringify({ bundle_path: resolve(entry, ".."), entry_path: entry }),
+      JSON.stringify({
+        bundle_path: bundle.bundle_path,
+        entry_path: entry,
+        bundle_digest: bundle.bundle_digest,
+      }),
     );
     writeFileSync(join(checkout, "src-cli-sentinel"), "must-not-run");
     rmSync(checkout, { recursive: true, force: true });
@@ -217,6 +231,32 @@ describe("sealed self-contained consumer Node runtime", () => {
     const run = spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
     expect(run.status).toBe(0);
     expect(run.stdout).toBe("consumer-local-ok");
+  });
+
+  it("U-PACKNODE-003/007: external active bundle is denied before process launch", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-consumer-external-"));
+    roots.push(root);
+    const external = mkdtempSync(join(tmpdir(), "ut-tdd-external-bundle-"));
+    roots.push(external);
+    const marker = join(external, "spawned");
+    const entry = join(external, "ut-tdd.mjs");
+    writeFileSync(entry, `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "bad")\n`);
+    const activation = join(root, ".ut-tdd", "runtime", "activation");
+    mkdirSync(activation, { recursive: true });
+    writeFileSync(
+      join(activation, "active.json"),
+      JSON.stringify({
+        bundle_path: external,
+        entry_path: entry,
+        bundle_digest: `sha256:${"a".repeat(64)}`,
+      }),
+    );
+    const wrapper = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
+    mkdirSync(resolve(wrapper, ".."), { recursive: true });
+    writeFileSync(wrapper, renderConsumerNodeWrapper());
+    const run = spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
+    expect(run.status).toBe(78);
+    expect(existsSync(marker)).toBe(false);
   });
 
   it("U-PACKNODE-005/012: real Node filesystem producer seals one bundle and one pointer", async () => {
@@ -249,7 +289,8 @@ describe("sealed self-contained consumer Node runtime", () => {
       writeGenerationAndReceipt: (path) => {
         events.push("write");
         mkdirSync(path, { recursive: true });
-        writeFileSync(join(path, "ut-tdd.mjs"), 'process.stdout.write("filesystem-producer-ok")\n');
+        for (const [name, bytes] of Object.entries(PAYLOADS))
+          writeFileSync(join(path, name), bytes);
         writeFileSync(join(path, "bundle-manifest.json"), JSON.stringify(bundle));
       },
       fsyncStaging: () => {
@@ -266,7 +307,11 @@ describe("sealed self-contained consumer Node runtime", () => {
         mkdirSync(resolve(pointer, ".."), { recursive: true });
         writeFileSync(
           pointer,
-          JSON.stringify({ bundle_path: bundle.bundle_path, entry_path: entry }),
+          JSON.stringify({
+            bundle_path: bundle.bundle_path,
+            entry_path: entry,
+            bundle_digest: bundle.bundle_digest,
+          }),
         );
       },
       verifyActiveBundle: () => {
@@ -308,7 +353,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     writeFileSync(wrapper, renderConsumerNodeWrapper());
     const run = spawnSync(process.execPath, [wrapper], { cwd: tmpdir(), encoding: "utf8" });
     expect(run.status).toBe(0);
-    expect(run.stdout).toBe("filesystem-producer-ok");
+    expect(run.stdout).toBe("consumer-local-ok");
   });
 
   it("U-PACKNODE-008/009: spaces work while external runtime escapes fail", () => {
@@ -346,6 +391,40 @@ describe("sealed self-contained consumer Node runtime", () => {
     });
     expect(plan.ok).toBe(false);
     expect(plan.consumerRuntime).toEqual({ ok: false, reason: "consumer_runtime_absent" });
+  });
+
+  it("U-PACKNODE-011: valid sealed Node runtime is ready without Bun", () => {
+    const id = identity("/consumer");
+    const plan = buildConsumerReadinessPlan({
+      bunVersion: null,
+      hasGit: true,
+      hasGh: false,
+      hasUtTddCli: false,
+      hasClaude: false,
+      hasCodex: true,
+      repoRoot: "/consumer",
+      consumerRuntime: { status: "ready", identity: id, bundle: bundleFor(id) },
+    });
+    expect(plan.ok).toBe(true);
+    expect(plan.checks.find((check) => check.name === "bun>=1.3")?.ok).toBe(false);
+    expect(plan.consumerRuntime).toEqual({ ok: true });
+  });
+
+  it("U-PACKNODE-001/010: manifest compiled entry digest cannot be re-declared", () => {
+    const bundle = bundleFor();
+    const files = { ...bundle.files, "ut-tdd.mjs": `sha256:${"f".repeat(64)}` };
+    const forged = {
+      ...bundle,
+      files,
+      bundle_digest: digestConsumerRuntimeValue({
+        identity: bundle.identity,
+        files,
+        history_sequence: bundle.history_sequence,
+        prior_bundle_digest: bundle.prior_bundle_digest,
+        prior_history_tip_digest: bundle.prior_history_tip_digest,
+      }),
+    };
+    expect(validateConsumerNodeRuntimeBundle(forged)).toBe("consumer_runtime_digest_mismatch");
   });
 
   it("U-PACKNODE-012/013: post-commit fault reconciles once and release remains once", async () => {
