@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   renameSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { basename, join } from "node:path";
@@ -68,6 +69,7 @@ export type ClaudeWakeGenerationFailure =
   | "authority_record_missing"
   | "authority_record_invalid"
   | "authority_identity_mismatch"
+  | "activation_recovery_failed"
   | "claim_authority_revoked"
   | "claim_lease_token_mismatch";
 
@@ -213,11 +215,101 @@ function atomicWrite(path: string, bytes: string): void {
   renameSync(temporary, path);
 }
 
+type ActivationStep =
+  | "journal_planned"
+  | "previous_superseded"
+  | "marker_written"
+  | "profile_written"
+  | "authority_written"
+  | "journal_committed";
+
+interface ActivationJournal {
+  readonly state: "planned" | "active" | "rolled_back";
+  readonly workspaceId: string;
+  readonly sessionId: string;
+  readonly generation: string;
+  readonly authorityEpoch: number;
+  readonly previousMarkerName: string | null;
+  readonly previousAuthorityBytes: string | null;
+}
+
+function removeIfPresent(path: string): void {
+  if (existsSync(path)) unlinkSync(path);
+}
+
+function reconcileActivationJournals(root: string): Result<Record<never, never>> {
+  const journalRoot = join(root, "activation-journal");
+  if (!existsSync(journalRoot)) return { ok: true };
+  for (const name of readdirSync(journalRoot).filter((entry) => entry.endsWith(".json"))) {
+    const path = join(journalRoot, name);
+    const value = parseRecord(readFileSync(path, "utf8")) as Partial<ActivationJournal> | undefined;
+    if (!value || value.state !== "planned") continue;
+    if (
+      typeof value.workspaceId !== "string" ||
+      typeof value.sessionId !== "string" ||
+      typeof value.generation !== "string" ||
+      !Number.isSafeInteger(value.authorityEpoch)
+    ) {
+      return { ok: false, reason: "activation_recovery_failed" };
+    }
+    const current = inspectClaudeWakeGeneration(root, value.workspaceId);
+    if (
+      current.ok &&
+      current.authority.sessionId === value.sessionId &&
+      current.authority.generation === value.generation &&
+      current.authority.authorityEpoch === value.authorityEpoch
+    ) {
+      atomicWrite(path, stableJson({ ...value, state: "active" }));
+      continue;
+    }
+
+    removeIfPresent(join(root, `${value.sessionId}.generation`));
+    removeIfPresent(capabilityPath(root, value.sessionId));
+    const recordPath = authorityPath(root, value.workspaceId);
+    if (typeof value.previousAuthorityBytes === "string") {
+      atomicWrite(recordPath, value.previousAuthorityBytes);
+    } else {
+      removeIfPresent(recordPath);
+    }
+    if (typeof value.previousMarkerName === "string" && value.previousMarkerName) {
+      const savedMarker = join(
+        root,
+        "superseded",
+        `${value.authorityEpoch}-${value.previousMarkerName}`,
+      );
+      if (!existsSync(savedMarker)) return { ok: false, reason: "activation_recovery_failed" };
+      renameSync(savedMarker, join(root, value.previousMarkerName));
+      const previousSession = basename(value.previousMarkerName, ".generation");
+      const savedProfile = join(
+        root,
+        "superseded",
+        `${value.authorityEpoch}-${previousSession}.capability.json`,
+      );
+      if (existsSync(savedProfile)) renameSync(savedProfile, capabilityPath(root, previousSession));
+    }
+    atomicWrite(path, stableJson({ ...value, state: "rolled_back" }));
+  }
+  return { ok: true };
+}
+
 function nextEpoch(root: string, workspaceId: string): number {
   const path = authorityPath(root, workspaceId);
-  if (!existsSync(path)) return 1;
-  const authority = parseAuthority(readFileSync(path, "utf8"));
-  return authority ? authority.authorityEpoch + 1 : 1;
+  const authority = existsSync(path) ? parseAuthority(readFileSync(path, "utf8")) : undefined;
+  let highest = authority?.authorityEpoch ?? 0;
+  const journalRoot = join(root, "activation-journal");
+  if (existsSync(journalRoot)) {
+    for (const name of readdirSync(journalRoot).filter((entry) => entry.endsWith(".json"))) {
+      const value = parseRecord(readFileSync(join(journalRoot, name), "utf8"));
+      if (
+        value?.workspaceId === workspaceId &&
+        Number.isSafeInteger(value.authorityEpoch) &&
+        Number(value.authorityEpoch) > highest
+      ) {
+        highest = Number(value.authorityEpoch);
+      }
+    }
+  }
+  return highest + 1;
 }
 
 export function inspectClaudeWakeGeneration(
@@ -295,11 +387,14 @@ export function activateClaudeWakeGeneration(input: {
   readonly generation: string;
   readonly runtimeSourceRevision: string;
   readonly leaseToken: string;
+  readonly beforeStep?: (step: ActivationStep) => void;
 }): Result<{ readonly authority: ClaudeWakeAuthority }> {
   if (!WORKSPACE_ID.test(input.workspaceId) || !SHA40.test(input.runtimeSourceRevision)) {
     return { ok: false, reason: "generation_marker_invalid" };
   }
   mkdirSync(input.root, { recursive: true });
+  const recovery = reconcileActivationJournals(input.root);
+  if (!recovery.ok) return recovery;
   const markerNames = readdirSync(input.root).filter((name) => name.endsWith(".generation"));
   if (markerNames.length > 1) return { ok: false, reason: "multiple_active_generations" };
 
@@ -346,14 +441,35 @@ export function activateClaudeWakeGeneration(input: {
     leaseTokenDigest: sha256(input.leaseToken),
     runtimeSourceRevision: input.runtimeSourceRevision,
   };
+  const recordPath = authorityPath(input.root, input.workspaceId);
+  const previousAuthorityBytes = existsSync(recordPath) ? readFileSync(recordPath, "utf8") : null;
+  const journalPath = join(
+    input.root,
+    "activation-journal",
+    `${epoch}-${authority.sessionId}.json`,
+  );
+  const journal: ActivationJournal = {
+    state: "planned",
+    workspaceId: input.workspaceId,
+    sessionId: authority.sessionId,
+    generation: input.generation,
+    authorityEpoch: epoch,
+    previousMarkerName: previous ?? null,
+    previousAuthorityBytes,
+  };
+  atomicWrite(journalPath, stableJson(journal));
+  input.beforeStep?.("journal_planned");
 
   if (previous) {
     mkdirSync(join(input.root, "superseded"), { recursive: true });
-    renameSync(join(input.root, previous), join(input.root, "superseded", previous));
+    renameSync(join(input.root, previous), join(input.root, "superseded", `${epoch}-${previous}`));
     const previousSession = basename(previous, ".generation");
     const previousProfile = capabilityPath(input.root, previousSession);
     if (existsSync(previousProfile)) {
-      renameSync(previousProfile, join(input.root, "superseded", basename(previousProfile)));
+      renameSync(
+        previousProfile,
+        join(input.root, "superseded", `${epoch}-${basename(previousProfile)}`),
+      );
     }
     const handoff = {
       schema: CLAUDE_WAKE_RESTART_HANDOFF_SCHEMA,
@@ -368,15 +484,17 @@ export function activateClaudeWakeGeneration(input: {
       join(input.root, "handoffs", `${epoch}-${safeName(previousSession)}.restart.json`),
       stableJson(handoff),
     );
+    input.beforeStep?.("previous_superseded");
   }
 
   atomicWrite(join(input.root, `${authority.sessionId}.generation`), markerBytes);
+  input.beforeStep?.("marker_written");
   atomicWrite(capabilityPath(input.root, authority.sessionId), profileBytes);
-  atomicWrite(authorityPath(input.root, input.workspaceId), stableJson(authority));
-  atomicWrite(
-    join(input.root, "activation-journal", `${epoch}-${authority.sessionId}.json`),
-    stableJson({ state: "active", ...authority }),
-  );
+  input.beforeStep?.("profile_written");
+  atomicWrite(recordPath, stableJson(authority));
+  input.beforeStep?.("authority_written");
+  atomicWrite(journalPath, stableJson({ ...journal, state: "active" }));
+  input.beforeStep?.("journal_committed");
   return { ok: true, authority };
 }
 

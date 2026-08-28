@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -39,7 +47,9 @@ describe("Claude wake generation rolling upgrade", () => {
     const marker = generation();
     expect(parseClaudeWakeGeneration(JSON.stringify(marker))).toEqual(marker);
     expect(parseClaudeWakeGeneration(JSON.stringify({ ...marker, unknown: true }))).toBeUndefined();
-    expect(parseClaudeWakeGeneration(JSON.stringify({ ...marker, workspaceId: undefined }))).toBeUndefined();
+    expect(
+      parseClaudeWakeGeneration(JSON.stringify({ ...marker, workspaceId: undefined })),
+    ).toBeUndefined();
 
     const markerBytes = `${JSON.stringify(marker)}\n`;
     const required = resolveRequiredClaudeWakeCapability();
@@ -55,7 +65,9 @@ describe("Claude wake generation rolling upgrade", () => {
     };
     expect(parseClaudeWakeCapability(JSON.stringify(profile))).toEqual(profile);
     expect(parseClaudeWakeCapability(JSON.stringify({ ...profile, extra: 1 }))).toBeUndefined();
-    expect(parseClaudeWakeCapability(JSON.stringify({ ...profile, authorityEpoch: 0 }))).toBeUndefined();
+    expect(
+      parseClaudeWakeCapability(JSON.stringify({ ...profile, authorityEpoch: 0 })),
+    ).toBeUndefined();
   });
 
   it("U-CHSCHEMA-004/007: legacy marker is preserved as typed handoff and one generation becomes active", () => {
@@ -74,7 +86,7 @@ describe("Claude wake generation rolling upgrade", () => {
       expect(readdirSync(root).filter((name) => name.endsWith(".generation"))).toEqual([
         "current.generation",
       ]);
-      expect(existsSync(join(root, "superseded", "old.generation"))).toBe(true);
+      expect(existsSync(join(root, "superseded", "1-old.generation"))).toBe(true);
       const handoffs = readdirSync(join(root, "handoffs"));
       expect(handoffs).toHaveLength(1);
       expect(JSON.parse(readFileSync(join(root, "handoffs", handoffs[0]), "utf8"))).toMatchObject({
@@ -96,7 +108,11 @@ describe("Claude wake generation rolling upgrade", () => {
     const root = fixture();
     try {
       for (const id of ["one", "two"]) {
-        writeFileSync(join(root, `${id}.generation`), `${JSON.stringify(generation(id))}\n`, "utf8");
+        writeFileSync(
+          join(root, `${id}.generation`),
+          `${JSON.stringify(generation(id))}\n`,
+          "utf8",
+        );
       }
       const before = readdirSync(root).sort();
       expect(
@@ -172,11 +188,63 @@ describe("Claude wake generation rolling upgrade", () => {
 
       const profilePath = join(root, "capabilities", "two.capability.json");
       const profile = JSON.parse(readFileSync(profilePath, "utf8"));
-      writeFileSync(profilePath, `${JSON.stringify({ ...profile, policyDigest: `sha256:${"0".repeat(64)}` })}\n`);
+      writeFileSync(
+        profilePath,
+        `${JSON.stringify({ ...profile, policyDigest: `sha256:${"0".repeat(64)}` })}\n`,
+      );
       expect(inspectClaudeWakeGeneration(root, workspaceId)).toEqual({
         ok: false,
         reason: "capability_policy_mismatch",
       });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-CHSCHEMA-009: interrupted activation rolls back before replay", () => {
+    const root = fixture();
+    try {
+      const first = activateClaudeWakeGeneration({
+        root,
+        sessionId: "one",
+        workspaceId,
+        generation: "generation-1",
+        runtimeSourceRevision,
+        leaseToken: "lease-one",
+      });
+      expect(first.ok).toBe(true);
+      expect(() =>
+        activateClaudeWakeGeneration({
+          root,
+          sessionId: "two",
+          workspaceId,
+          generation: "generation-2",
+          runtimeSourceRevision,
+          leaseToken: "lease-two",
+          beforeStep: (step) => {
+            if (step === "marker_written") throw new Error("injected_crash");
+          },
+        }),
+      ).toThrow("injected_crash");
+
+      const replay = activateClaudeWakeGeneration({
+        root,
+        sessionId: "two",
+        workspaceId,
+        generation: "generation-2",
+        runtimeSourceRevision,
+        leaseToken: "lease-two",
+      });
+      expect(replay.ok).toBe(true);
+      expect(inspectClaudeWakeGeneration(root, workspaceId)).toMatchObject({
+        ok: true,
+        generation: "generation-2",
+        authorityEpoch: 3,
+      });
+      const journals = readdirSync(join(root, "activation-journal")).map((name) =>
+        JSON.parse(readFileSync(join(root, "activation-journal", name), "utf8")),
+      );
+      expect(journals.map((entry) => entry.state)).toEqual(["active", "rolled_back", "active"]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
