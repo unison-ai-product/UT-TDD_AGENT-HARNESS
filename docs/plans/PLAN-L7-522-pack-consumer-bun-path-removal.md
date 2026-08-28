@@ -304,7 +304,7 @@ canonical receipt `5b16bfc6d1921ac1e83712f10b39716c0410a24baa57be79e6430da2a81cc
 | S1-b (生成成果物) | #470 | Claude lane | なし | #472 |
 | S1-a (readiness) | #471 | Claude lane | なし (順序自由、§5.0) | PR #463 の rebase (§S1-a) |
 | S1-c (source CI) | #472 | Claude lane | #470 | なし |
-| Slice 2 (Node producer / `build` script 撤去) | #473 | 未定 (`PLAN-L6-93` pair-freeze 後に確定) | `PLAN-L6-93` §5.4 tuple 成立 | なし |
+| Slice 2 (Node producer / `build` script 撤去) | #473 | Claude lane (Opus contract gate; bounded workerは規定router) | `PLAN-L6-93` §5.4 tuple 成立 | なし |
 
 `#450` は上記 4 child が全て close し、かつ親固有 AC (AC1〜AC4 の統合証跡) が揃うまで close しない。
 Slice 2 (#473) は本 PLAN の対象外であり (§4.3)、`PLAN-L6-93` → `PLAN-L7-458` 系列が契約と実装を所有する。
