@@ -323,4 +323,61 @@ describe("Claude wake generation rolling upgrade", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("U-CHSCHEMA-011: authority revocation between validation and claim commit writes no claim", async () => {
+    const root = gitFixture();
+    try {
+      const memory: MemoryEntry = {
+        memory_id: "memory:fixture:claim-cas-revocation",
+        kind: "project",
+        title: "claim CAS revocation",
+        body: "revocation must win",
+        tags: ["fixture"],
+        source_path: ".ut-tdd/memory/fixture-claim-cas-revocation.md",
+        updated_at: "2026-08-28T00:00:00.000Z",
+        content_hash: "d".repeat(64),
+      };
+      const entry = buildClaudeInboxEntry({
+        memory,
+        operationId: "claim-cas-revocation",
+        workspaceId: claudeWorkspaceId(root),
+      });
+      publishClaudeInboxEntry(root, entry);
+      let revoked = false;
+      const result = await waitForClaudeMemory({
+        repoRoot: root,
+        sessionId: "old-session",
+        pollIntervalMs: 10,
+        maxWaitMs: 100,
+        beforeClaimCommit: () => {
+          if (revoked) return;
+          revoked = true;
+          const common = execFileSync(
+            "git",
+            ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+            { cwd: root, encoding: "utf8" },
+          ).trim();
+          activateClaudeWakeGeneration({
+            root: join(common, "ut-tdd-runtime", "claude-memory-wake"),
+            sessionId: "replacement-session",
+            workspaceId: claudeWorkspaceId(root),
+            generation: "replacement-generation",
+            runtimeSourceRevision,
+            leaseToken: "replacement-lease",
+          });
+        },
+      });
+      expect(result).toEqual({ kind: "superseded" });
+      const common = execFileSync(
+        "git",
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        { cwd: root, encoding: "utf8" },
+      ).trim();
+      const runtime = join(common, "ut-tdd-runtime", "claude-memory-wake");
+      expect(readdirSync(runtime).filter((name) => name.endsWith(".claim"))).toEqual([]);
+      expect(readdirSync(join(runtime, "inbox"))).toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -946,6 +946,7 @@ function claim(input: {
   at: string;
   authority: ClaudeWakeAuthority;
   leaseToken: string;
+  beforeCommit?: () => void;
 }): boolean {
   const root = runtimeRoot(input.repoRoot);
   ensureDir(root, { recursive: true });
@@ -958,6 +959,7 @@ function claim(input: {
     return false;
   }
   try {
+    input.beforeCommit?.();
     if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok) {
       closeSync(descriptor);
       unlinkSync(path);
@@ -1018,6 +1020,8 @@ export async function waitForClaudeMemory(input: {
   now?: () => string;
   sleep?: (ms: number) => Promise<void>;
   pullRequestState?: (pr: number) => ClaudeInboxPullRequestObservation | undefined;
+  /** Fault-injection/adapter barrier immediately before the claim CAS commit. */
+  beforeClaimCommit?: () => void;
 }): Promise<ClaudeMemoryWakeResult> {
   const requestedPollMs = input.pollIntervalMs ?? 2_000;
   const requestedMaxMs = input.maxWaitMs ?? 900_000;
@@ -1160,6 +1164,7 @@ export async function waitForClaudeMemory(input: {
           at: now(),
           authority: activation.authority,
           leaseToken,
+          beforeCommit: input.beforeClaimCommit,
         })
       ) {
         writeAuditLog(input.repoRoot, {
