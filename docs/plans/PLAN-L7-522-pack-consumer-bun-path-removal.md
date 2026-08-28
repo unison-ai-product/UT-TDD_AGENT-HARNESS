@@ -71,6 +71,41 @@ Issue #418 (Pack-only internal canary smoke) の HARD predecessor に当たる�
 | `src/setup/templates.ts:604` | 案内文の `bun run typecheck` / `bun run lint` |
 | `src/setup/distribution.ts:217` | 生成 `package.json` の `"test": "bun run test:pack"` |
 
+**初版のインベントリは不完全だった** (Issue #450 §A をそのまま写したため)。#470 の実装が
+`CANDIDATE-U-PACKBUN-003` を実走したところ、生成 tree に 4 件の Bun 到達が残った
+(2026-08-28 実測、`.claude/commands/ut-tdd-test.md` / `.claude/settings.json` /
+`.codex/hooks.json` / `package.json`)。**contract freeze の目的どおり実装前に検出された**ので、
+インベントリを次で補完する。
+
+| 位置 | 内容 |
+|---|---|
+| `docs/templates/adapter/.claude/settings.json` | hook launcher 引数 `".ut-tdd/bin/run-bun.ts"` ×7 |
+| `docs/templates/adapter/.codex/hooks.json` | 同 ×5 |
+| `docs/templates/adapter/.claude/commands/ut-tdd-test.md:8` | 案内文の `bun run typecheck` / `bun run lint` |
+| `src/setup/distribution.ts:207-223` | `transformCleanDistributionArtifact` が source の `scripts.build` (`bun build src/cli.ts --compile`) を生成 `package.json` へ**素通し**している |
+
+`templates.ts` の文字列表だけを撤去しても、**生成された hook は存在しない launcher を指したまま**に
+なる。したがって launcher 契約の consumer である次の 2 つも同一 PR で追随する
+(これは BAN 検出側 lint ではなく hook launcher 契約であり、§3.3 の保護対象ではない):
+
+- `src/lint/project-hook.ts:69` `WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.ts"`
+- `src/doctor/setup-smoke.ts:20, 32, 79` — 同 launcher の存在と起動形を検査している
+
+### 2.1.1 設計判断: 生成 `package.json` の `build` script は**生成時に落とす** (採択)
+
+`transformCleanDistributionArtifact` は source の `package.json` を写して consumer 用へ変換するため、
+`PLAN-L6-93` §5.2 が source repo で維持を義務づけている `"build": "bun build src/cli.ts --compile"` が
+生成 tree へそのまま流れ込む。これは #450 AC2 (生成 tree の Bun reachable path 0) に反する。
+
+**source の `build` script は不変のまま、`transformCleanDistributionArtifact` が生成成果物から
+`scripts.build` を除去する。** これで L6-93 §5.2 の削除禁止 (source 側) と #450 AC2 (生成側) は
+両立し、どちらの契約も改訂を要さない。両者が衝突して見えたのは、保護対象が source の script であり
+生成物の script ではないことを区別していなかったためである。
+
+consumer は Pack から配布された成果物を使うのであって `bun build` で自作しないので、
+生成 tree に `build` script が存在する必然性は無い (`PLAN-L6-93` §5.3 の実測:
+「Pack 配布は `dist/` を運ばず、consumer 経路は `bun build` に一切到達しない」と整合する)。
+
 ### 2.2 setup の readiness gate
 
 | 位置 | 内容 |
