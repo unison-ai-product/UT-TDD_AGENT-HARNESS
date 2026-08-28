@@ -26,6 +26,9 @@ const sourceRevision = "a".repeat(40);
 const artifactSetDigest = `sha256:${"b".repeat(64)}`;
 const content = Buffer.from("abc");
 const packageContent = Buffer.from('{"name":"ut-tdd","version":"0.2.0-canary.1"}');
+const packageLockContent = Buffer.from(
+  '{"name":"ut-tdd","version":"0.2.0-canary.1","lockfileVersion":3,"packages":{"":{"name":"ut-tdd","version":"0.2.0-canary.1"}}}',
+);
 const packageEntry: SealedPublicationEntry = {
   sourcePath: "package.json",
   destinationPath: "package.json",
@@ -33,6 +36,14 @@ const packageEntry: SealedPublicationEntry = {
   size: packageContent.length,
   contentDigest: sha(packageContent),
   content: packageContent,
+};
+const packageLockEntry: SealedPublicationEntry = {
+  sourcePath: "package-lock.json",
+  destinationPath: "package-lock.json",
+  mode: "100644",
+  size: packageLockContent.length,
+  contentDigest: sha(packageLockContent),
+  content: packageLockContent,
 };
 const entry: SealedPublicationEntry = {
   sourcePath: "src/cli.ts",
@@ -62,6 +73,13 @@ function rawManifest(): Record<string, unknown> {
     size: packageEntry.size,
     contentDigest: packageEntry.contentDigest,
   };
+  const packageLockArtifact = {
+    sourcePath: packageLockEntry.sourcePath,
+    destinationPath: packageLockEntry.destinationPath,
+    mode: packageLockEntry.mode,
+    size: packageLockEntry.size,
+    contentDigest: packageLockEntry.contentDigest,
+  };
   const artifact = {
     sourcePath: entry.sourcePath,
     destinationPath: entry.destinationPath,
@@ -69,7 +87,11 @@ function rawManifest(): Record<string, unknown> {
     size: entry.size,
     contentDigest: entry.contentDigest,
   };
-  const artifactInventoryDigest = deriveArtifactInventoryDigest([artifact, packageArtifact]);
+  const artifactInventoryDigest = deriveArtifactInventoryDigest([
+    artifact,
+    packageLockArtifact,
+    packageArtifact,
+  ]);
   const provisional = {
     releaseId: releaseId(),
     materializerVersion: "v2",
@@ -78,11 +100,11 @@ function rawManifest(): Record<string, unknown> {
     artifactInventoryDigest,
     releaseAssetInventoryDigest: `sha256:${"c".repeat(64)}`,
     releaseRecordDigest: `sha256:${"d".repeat(64)}`,
-    artifacts: [artifact, packageArtifact],
+    artifacts: [artifact, packageLockArtifact, packageArtifact],
   };
   const assets = derivePackPublicationAssets({
     release: provisional,
-    entries: [entry, packageEntry],
+    entries: [entry, packageLockEntry, packageEntry],
   });
   if (!assets.ok) throw new Error(assets.error);
   const releaseAssetInventoryDigest = assets.value.releaseAssetInventoryDigest;
@@ -117,7 +139,7 @@ function stagingPlan() {
     manifestInput: manifest,
     releaseId: releaseId(),
     controlManifestBytes: Buffer.from(stringify(manifest), "utf8"),
-    entries: [entry, packageEntry],
+    entries: [entry, packageLockEntry, packageEntry],
   });
   if (!result.ok) throw new Error(result.error);
   return result.plan;
@@ -313,34 +335,72 @@ function withOperationLedger(value: PackPublicationPorts, ledger: string[]): Pac
 }
 
 describe("remote Pack canary publication", () => {
-  it("U-RELVER-001 / U-RELVER-005 / U-RELVER-006 / P-RELVER-001: seals package version and its canonical tag separately from releaseId", () => {
+  it("U-RELVER-001 / P-RELVER-001: seals package and lockfile versions with canonical tag separately from releaseId", () => {
     const sealed = sealPackPublicationIntent(input());
     expect(sealed).toMatchObject({ ok: true });
     if (!sealed.ok) return;
     expect(sealed.intent.releaseVersion).toBe("0.2.0-canary.1");
     expect(sealed.intent.tagName).toBe("v0.2.0-canary.1");
     expect(sealed.intent.releaseId).toMatch(/^rel-sha256:[a-f0-9]{64}$/);
+  });
 
+  it("U-RELVER-005: stale package version is denied before remote writes", () => {
     expect(sealPackPublicationIntent({ ...input(), releaseVersion: "0.2.0-canary.2" })).toEqual({
       ok: false,
       error: "release_version_mismatch",
     });
+  });
+
+  it("U-RELVER-006: non-canonical tag is denied before remote writes", () => {
     expect(sealPackPublicationIntent({ ...input(), tagName: "0.2.0-canary.1" })).toEqual({
       ok: false,
       error: "tag_version_mismatch",
     });
   });
 
+  it("U-RELVER-005: each lockfile version identity is denied independently when stale", () => {
+    for (const key of ["version", "root"] as const) {
+      const staleLock =
+        key === "version"
+          ? Buffer.from(
+              '{"name":"ut-tdd","version":"0.1.4","lockfileVersion":3,"packages":{"":{"name":"ut-tdd","version":"0.2.0-canary.1"}}}',
+            )
+          : Buffer.from(
+              '{"name":"ut-tdd","version":"0.2.0-canary.1","lockfileVersion":3,"packages":{"":{"name":"ut-tdd","version":"0.1.4"}}}',
+            );
+      const baseline = stagingPlan();
+      const stalePlan = {
+        ...baseline,
+        commitEntries: baseline.commitEntries.map((entry) =>
+          entry.path === "package-lock.json"
+            ? {
+                ...entry,
+                size: staleLock.length,
+                contentDigest: sha(staleLock),
+                bytes: staleLock,
+              }
+            : entry,
+        ),
+      };
+      expect(sealPackPublicationIntent(input(stalePlan))).toEqual({
+        ok: false,
+        error: "release_version_mismatch",
+      });
+    }
+  });
+
   it("U-RELVER-004: missing sealed root package entry is denied before approvals", () => {
     const plan = stagingPlan();
-    const withoutPackage = {
-      ...plan,
-      commitEntries: plan.commitEntries.filter((entry) => entry.path !== "package.json"),
-    };
-    expect(sealPackPublicationIntent(input(withoutPackage))).toEqual({
-      ok: false,
-      error: "invalid_inventory",
-    });
+    for (const path of ["package.json", "package-lock.json"]) {
+      const withoutEntry = {
+        ...plan,
+        commitEntries: plan.commitEntries.filter((entry) => entry.path !== path),
+      };
+      expect(sealPackPublicationIntent(input(withoutEntry))).toEqual({
+        ok: false,
+        error: "invalid_inventory",
+      });
+    }
   });
 
   it("AUX-PACKPUB-REMOTE-010: seals an immutable mutation-specific approval set", () => {

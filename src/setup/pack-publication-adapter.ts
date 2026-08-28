@@ -332,6 +332,7 @@ const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const SHA1 = /^[a-f0-9]{40}$/;
 const CONTROL_MANIFEST_PATH = "release/manifest.yaml";
 const PACKAGE_JSON_PATH = "package.json";
+const PACKAGE_LOCK_JSON_PATH = "package-lock.json";
 
 function sha256(input: Uint8Array | string): string {
   return `sha256:${createHash("sha256").update(input).digest("hex")}`;
@@ -369,18 +370,55 @@ function digestEntry(entry: PackPublicationCommitEntry): string {
   );
 }
 
-function sealedPackageVersion(entries: readonly PackPublicationCommitEntry[]): string | null {
-  const packageEntries = entries.filter((entry) => entry.path === PACKAGE_JSON_PATH);
-  if (packageEntries.length !== 1) return null;
+interface SealedPackageVersionIdentity {
+  readonly packageVersion: string;
+  readonly lockfileVersion: string;
+  readonly lockfileRootVersion: string;
+}
+
+function parseJsonEntry(
+  entries: readonly PackPublicationCommitEntry[],
+  path: string,
+): Record<string, unknown> | null {
+  const matching = entries.filter((entry) => entry.path === path);
+  if (matching.length !== 1) return null;
   try {
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(packageEntries[0].bytes);
-    const parsed = JSON.parse(text) as { version?: unknown };
-    return typeof parsed.version === "string" && parsePackageSemver(parsed.version)
-      ? parsed.version
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(matching[0].bytes);
+    const parsed: unknown = JSON.parse(text);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
       : null;
   } catch {
     return null;
   }
+}
+
+function sealedPackageVersionIdentity(
+  entries: readonly PackPublicationCommitEntry[],
+): SealedPackageVersionIdentity | null {
+  const packageJson = parseJsonEntry(entries, PACKAGE_JSON_PATH);
+  const packageLock = parseJsonEntry(entries, PACKAGE_LOCK_JSON_PATH);
+  if (!packageJson || !packageLock) return null;
+  const rootPackages = packageLock.packages;
+  const rootPackage =
+    typeof rootPackages === "object" && rootPackages !== null && !Array.isArray(rootPackages)
+      ? (rootPackages as Record<string, unknown>)[""]
+      : null;
+  if (typeof rootPackage !== "object" || rootPackage === null || Array.isArray(rootPackage))
+    return null;
+  const packageVersion = packageJson.version;
+  const lockfileVersion = packageLock.version;
+  const lockfileRootVersion = (rootPackage as Record<string, unknown>).version;
+  if (
+    typeof packageVersion !== "string" ||
+    typeof lockfileVersion !== "string" ||
+    typeof lockfileRootVersion !== "string" ||
+    !parsePackageSemver(packageVersion) ||
+    !parsePackageSemver(lockfileVersion) ||
+    !parsePackageSemver(lockfileRootVersion)
+  )
+    return null;
+  return { packageVersion, lockfileVersion, lockfileRootVersion };
 }
 
 export function derivePackPublicationTreeDigest(plan: {
@@ -496,7 +534,14 @@ function validInventory(intent: Omit<PackPublicationIntent, "approvals">): boole
     assets.every(
       (asset) => asset.size === asset.bytes.length && asset.contentDigest === sha256(asset.bytes),
     ) &&
-    sealedPackageVersion(entries) !== null
+    (() => {
+      const versions = sealedPackageVersionIdentity(entries);
+      return (
+        versions !== null &&
+        versions.packageVersion === versions.lockfileVersion &&
+        versions.packageVersion === versions.lockfileRootVersion
+      );
+    })()
   );
 }
 
@@ -532,9 +577,13 @@ export function sealPackPublicationIntent(
     input.remote.derivationRule !== "entries-and-sidecar-v2"
   )
     return { ok: false, error: "invalid_remote_identity" };
-  const packageVersion = sealedPackageVersion(input.plan.commitEntries);
-  if (packageVersion === null) return { ok: false, error: "invalid_inventory" };
-  if (packageVersion !== input.releaseVersion)
+  const packageVersions = sealedPackageVersionIdentity(input.plan.commitEntries);
+  if (packageVersions === null) return { ok: false, error: "invalid_inventory" };
+  if (
+    packageVersions.packageVersion !== packageVersions.lockfileVersion ||
+    packageVersions.packageVersion !== packageVersions.lockfileRootVersion ||
+    packageVersions.packageVersion !== input.releaseVersion
+  )
     return { ok: false, error: "release_version_mismatch" };
   if (input.tagName !== `v${input.releaseVersion}`)
     return { ok: false, error: "tag_version_mismatch" };

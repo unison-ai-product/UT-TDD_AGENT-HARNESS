@@ -26,14 +26,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-523-release-version-identity.md
     artifact_type: markdown_doc
-  - artifact_path: src/setup/update-check.ts
-    artifact_type: source_module
-  - artifact_path: src/setup/pack-publication-adapter.ts
-    artifact_type: source_module
-  - artifact_path: tests/update-check.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/pack-publication-adapter.test.ts
-    artifact_type: test_code
   - artifact_path: tests/release-version-identity.test.ts
     artifact_type: test_code
 dependencies:
