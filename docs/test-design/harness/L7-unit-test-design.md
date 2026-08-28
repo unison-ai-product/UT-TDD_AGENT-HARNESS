@@ -1668,6 +1668,8 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 | `U-RVATT-037` | non-zero verdict preservation | `tests/review-live-cli.test.ts`。valid identity-bound verdict fileを書いた provider が exit 7 | child JSON の typed projection を保持し、verdictを捏造せず `executionOutcome.exitCode=7` を記録 |
 | `U-RVATT-038` | non-zero merge fail-close | `tests/review-attestation.test.ts`。outcome付き PASS/PASS-WEAK receiptを current-head/green PRへ投入 | D1 reason=`reviewer_execution_failed`、state は `merge_ready` 以外 |
 | `U-RVATT-039` | non-zero missing/invalid separation | non-zero + verdict欠落、wrong envelope、外部 path | `verdict_absent_after_provider_failure` / identity/path reason、valid receipt 0。provider failureから verdictを補完しない |
+| `U-RVATT-040` | failed outcome retry convergence | failed outcome receipt後、同一requestで次attemptを成功させる | attemptを進め、旧failed receiptを監査ログへ保持し、成功receiptへ置換して恒久blockを残さない |
+| `U-RVATT-041` | execution outcome human projection | non-zero receiptをMemory/PR向け本文へ投影 | `executionOutcome`・exit code・typed reasonを明示し、一般化された失敗理由へ情報を落とさない |
 | `U-RVWAKE-010` | 長い identity の inbox 衝突防止 | `tests/claude-memory-wake.test.ts`。legacy の安全化 stem が同じになる長い `memory_id` へ異なる `operationId` を与え、publish/claim/GC の全経路を実行 | operationId の hash suffix を含む別ファイルへ分離され、両 payload が保持される。長さ制限だけで suffix を落とす変異は同一path衝突またはpayload消失で RED |
 
 実行対応: `tests/review-attestation.test.ts` (`U-RVATT-001`〜`009`)、
@@ -1675,7 +1677,8 @@ content-addressed に投影する。D1 analyzer には投影済み artifact だ�
 `tests/dependency-drift.test.ts` (`U-RVATT-023`〜`028`)。
 `tests/review-verdict-custody.test.ts` (`U-RVATT-030`〜`035`)、
 `tests/review-live-cli.test.ts` (`U-RVATT-036`〜`037`)、
-`tests/live-review-projection.test.ts` / `tests/review-attestation.test.ts` (`U-RVATT-038`〜`039`)。
+`tests/live-review-projection.test.ts` / `tests/review-attestation.test.ts` (`U-RVATT-038`〜`040`)、
+`tests/review-live-cli.test.ts` (`U-RVATT-041`)。
 既存`U-RVATT-001`〜`022`の検出集合を縮めない。
 
 ## PLAN-L7-457 fence streaming hash / harness.db VACUUM oracle (issue #118、2026-07-22)
