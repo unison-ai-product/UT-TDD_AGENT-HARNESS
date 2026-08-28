@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
+status: draft
 created: 2026-08-28
 updated: 2026-08-28
 owner: PM / PO / Claude
@@ -26,10 +26,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
     artifact_type: markdown_doc
-  - artifact_path: tests/setup-bun-removal.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/ban-lint-detection-power.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -43,39 +39,9 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/134
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
-review_evidence:
-  - reviewer: codex
-    review_kind: cross_agent
-    reviewed_at: "2026-08-28T08:51:37Z"
-    tests_green_at: "2026-08-28T08:42:01Z"
-    verdict: "PR #469 exact HEAD 58f88f14 に対する非著者 closing review が PASS / blocking 0。§2.1 inventory の完全性、§3.3 の検出能力 oracle 契約、§5.0 順序契約 (S1-b -> S1-c のみ拘束)、§5.3 slice↔子 Issue 束縛表が freeze された"
-    worker_model: claude-opus-5
-    reviewer_model: gpt-5.6-sol
-    effort: low
-    plan_revision: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
-    subject_head: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
-    evidence_path: docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
-    anchor_commit: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
-    scope: >-
-      PR #469 exact HEAD 58f88f14 に対する非著者 closing review。著者 family は claude、
-      reviewer family は codex。canonical receipt
-      rv1-f5ce95056ebcb93c481110f6212b9550dcb77210abbf91eb845f784d5df87abc が
-      verdict=PASS / blockingFindings=[] / reviewerFamily=codex を記録している。
-      対象は本 PLAN の契約 freeze (inventory / 検出能力 oracle / 順序契約 / slice 束縛表) のみであり、
-      S1-a (#471) / S1-c (#472) / Slice 2 (#473) の実装完了や Issue #450 の完了は主張しない。
-    citations:
-      - ".ut-tdd/review/receipts/f5ce95056ebcb93c481110f6212b9550dcb77210abbf91eb845f784d5df87abc.json"
-      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33155496785"
-    green_commands:
-      - kind: unit_test
-        command: "GitHub harness-check run 33155496785 (harness-check-linux / harness-check-windows / harness-check aggregate)"
-        runner: ci
-        scope: full
-        exit_code: 0
-        completed_at: "2026-08-28T08:42:01Z"
-        evidence_path: docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
-        output_digest: "sha256:89f3fdf8ee382f71557e31fb0a62131d470bbb447bd3f20a6640a9c86addcd44"
-        anchor_commit: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
+    - docs/plans/PLAN-L7-524-pack-consumer-generated-bun-removal.md
+    - docs/plans/PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill.md
+review_evidence: []
 ---
 
 # PLAN-L7-522: Pack/consumer 実行面の Bun 到達経路撤去
