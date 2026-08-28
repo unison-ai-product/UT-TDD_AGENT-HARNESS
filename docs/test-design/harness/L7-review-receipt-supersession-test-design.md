@@ -22,6 +22,11 @@ Red/Greenの実測後に正式oracleへ昇格する。
 | case C | 成功retry後に旧attempt fileまたはfailed/superseded eventを削除 | 各path/event identityの残存検査がRed。canonical receipt件数だけでは通らない。cleanup後も旧attemptのfailure digestとsuperseded targetを再読する |
 | case D | failed attemptのoutcome appendを失敗/欠落させたまま次attemptを開始可能にする | `attempt_outcome_indeterminate` と新attempt write 0の検査がRed。成功receipt生成には到達させない |
 
+exit 0 の verdict 拒否（file欠落、envelope/identity/parser rejection、同族reviewer）は、
+`attempt_verdict_rejected`（`exitCode: 0`、typed reason）として append-only に記録する。
+この terminal outcome が一意なら次 attempt を許可し、canonical receiptは生成しない。
+attestation自体がeventを安全に構成できない場合は、元のtyped reasonを保持して retry authorityを捏造しない。
+
 複数 retry chain は attempt-1 failure → attempt-2 failure → attempt-3 success を実走し、
 attempt-2 が attempt-1 を supersede した履歴を attempt-3 開始時に誤って拒否しないことを検査する。
 同一 attempt の異なる exit code を再投影した場合は `attempt_outcome_conflict` をそのまま返し、
@@ -31,7 +36,7 @@ append-only conflict marker を残し、次 attempt と receipt の write を 0 
 
 1. attempt-1へidentity-bound verdictを書き、provider exit 7を入力する。
 2. canonical receiptが0、failed outcome eventが1、attempt-1 fileが残ることを現物で検査する。
-3. terminal outcomeを照合してattempt-2を開始し、`superseded_attempt` eventを1件生成する。
+3. terminal outcome（`attempt_execution_failed` または `attempt_verdict_rejected`）を照合してattempt-2を開始し、`superseded_attempt` eventを1件生成する。
 4. attempt-2をexit 0で成功させ、canonical receiptをcreate-exclusiveで1件生成する。
 5. receipt後cleanupを実行し、過去のattempt-1 file、failed outcome、superseded eventは残る一方、
    成功attempt-2のscratch directoryだけが削除され、canonical receiptが成功内容から不変であることを再読する。
@@ -46,12 +51,13 @@ append-only conflict marker を残し、次 attempt と receipt の write を 0 
 | `CANDIDATE-U-RVATT-045` | canonical receipt存在後に同一/次attemptを開始 | `review_receipt_already_exists`、attempt/audit delta 0 |
 | `CANDIDATE-U-RVATT-043` | canonical receipt pathへ異payloadを再投影 | `verdict_identity_conflict`、既存bytes/digest不変 |
 | `CANDIDATE-U-RVATT-044` | audit event重複、順序逆転、request/attempt digest改竄 | typed deny、次attempt/receipt write 0 |
+| `CANDIDATE-U-RVATT-046` | exit 0 の verdict file欠落、envelope/identity/parser rejection、同族reviewer | `attempt_verdict_rejected`の現物を残し、次attemptで回復。eventを構成不能な不正attestationは元のtyped reasonを保持 |
 
 ## 実装時の接地
 
 `CANDIDATE-U-RVATT-040` は composition fixture と case A〜D の独立変異を同一の
 review custody APIへ接続する。case A/D は audit event の欠落・重複を現物で検査し、
 case B は canonical receipt bytes の不変性と conflict を直接検査する。成功後の cleanup
-では旧 attempt file と `attempt_execution_failed` / `superseded_attempt` を保持し、
+では旧 attempt file と `attempt_execution_failed` / `attempt_verdict_rejected` / `superseded_attempt` を保持し、
 成功 attempt の scratch だけを削除する。戻り値・件数だけを oracle とせず、audit JSONL、
 attempt path、receipt bytes を再読する。

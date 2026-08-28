@@ -20,6 +20,7 @@ import {
 } from "../src/feedback/review-verdict-custody.ts";
 
 const head = "a".repeat(40);
+const otherHead = "b".repeat(40);
 
 function fixture(): { root: string; request: ReviewAttestationRequest; digest: string } {
   const root = mkdtempSync(join(tmpdir(), "ut-rv-supersession-"));
@@ -56,7 +57,12 @@ function attestation(
   };
 }
 
-function verdictText(request: ReviewAttestationRequest, attempt: number, model = "claude-opus-5") {
+function verdictText(
+  request: ReviewAttestationRequest,
+  attempt: number,
+  model = "claude-opus-5",
+  provider: "codex" | "claude" = "claude",
+) {
   return [
     "schema_version: ut-tdd.review-verdict/v1",
     `request_digest: ${reviewIdentityDigest(request)}`,
@@ -64,7 +70,7 @@ function verdictText(request: ReviewAttestationRequest, attempt: number, model =
     `pr: ${request.pr}`,
     `exact_head: ${request.exactHead}`,
     `review_revision: ${request.reviewRevision}`,
-    "reviewer_provider: claude",
+    `reviewer_provider: ${provider}`,
     `reviewer_model: ${model}`,
     `invocation_nonce: ${request.invocationNonce}`,
     "VERDICT: PASS",
@@ -224,6 +230,116 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
           verdictFile: third.path,
         }),
       ).toMatchObject({ ok: true });
+    } finally {
+      cleanup(root);
+    }
+  });
+
+  for (const testCase of [
+    { name: "missing verdict", reason: "verdict_file_missing" },
+    { name: "missing custody envelope", reason: "verdict_identity_mismatch" },
+    { name: "identity mismatch", reason: "review_identity_mismatch" },
+    { name: "invalid attestation", reason: "invalid_review_attestation" },
+    { name: "same-family reviewer", reason: "same_family_reviewer_denied" },
+  ] as const) {
+    it(`CANDIDATE-U-RVATT-046: exit 0 ${testCase.name} records a retryable terminal outcome`, () => {
+      const { root, request: baseRequest } = fixture();
+      const request =
+        testCase.reason === "same_family_reviewer_denied"
+          ? canonicalizeReviewRequest({
+              ...baseRequest,
+              authorFamily: "claude",
+              reviewRevision: "legacy-revision",
+            })
+          : baseRequest;
+      const expectedProvider = request.authorFamily === "codex" ? "claude" : "codex";
+      try {
+        const first = beginReviewAttempt({
+          repoRoot: root,
+          request,
+          provider: testCase.reason === "same_family_reviewer_denied" ? expectedProvider : "claude",
+          model: "claude-opus-5",
+        });
+        if (!first.ok) throw new Error(first.reason);
+        if (testCase.name === "missing custody envelope") {
+          writeFileSync(first.path, "VERDICT: PASS\n", "utf8");
+        } else if (testCase.reason !== "verdict_file_missing") {
+          writeFileSync(first.path, verdictText(request, 1, "claude-opus-5", "claude"), "utf8");
+        }
+        const firstAttestation = attestation(request, 1, 0, "claude-opus-5");
+        if (testCase.reason === "review_identity_mismatch") firstAttestation.head = otherHead;
+        if (testCase.reason === "invalid_review_attestation") firstAttestation.role = "";
+        if (testCase.reason === "same_family_reviewer_denied") firstAttestation.provider = "claude";
+        const rejected = projectReviewVerdict({
+          repoRoot: root,
+          request,
+          attestation: firstAttestation,
+          verdictFile: first.path,
+        });
+        expect(rejected).toEqual({ ok: false, reason: testCase.reason });
+        expect(readReviewCustodyAudit(root)).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              kind: "attempt_verdict_rejected",
+              attempt: 1,
+              exitCode: 0,
+              reason: testCase.reason,
+            }),
+          ]),
+        );
+
+        const second = beginReviewAttempt({
+          repoRoot: root,
+          request,
+          provider: expectedProvider,
+          model: "claude-sonnet-5",
+        });
+        expect(second).toMatchObject({ ok: true, attempt: 2 });
+        if (!second.ok) return;
+        writeFileSync(
+          second.path,
+          verdictText(request, 2, "claude-sonnet-5", expectedProvider),
+          "utf8",
+        );
+        const secondAttestation = attestation(request, 2, 0, "claude-sonnet-5");
+        secondAttestation.provider = expectedProvider;
+        expect(
+          projectReviewVerdict({
+            repoRoot: root,
+            request,
+            attestation: secondAttestation,
+            verdictFile: second.path,
+          }),
+        ).toMatchObject({ ok: true });
+      } finally {
+        cleanup(root);
+      }
+    });
+  }
+
+  it("CANDIDATE-U-RVATT-046: malformed attestation keeps its typed reason when custody cannot record it", () => {
+    const { root, request } = fixture();
+    try {
+      const first = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (!first.ok) throw new Error(first.reason);
+      writeFileSync(first.path, verdictText(request, 1), "utf8");
+      const rejected = projectReviewVerdict({
+        repoRoot: root,
+        request,
+        attestation: attestation(request, 1, 0, ""),
+        verdictFile: first.path,
+      });
+      expect(rejected).toEqual({ ok: false, reason: "invalid_review_attestation" });
+      expect(readReviewCustodyAudit(root)).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "attempt_verdict_rejected", attempt: 1 }),
+        ]),
+      );
     } finally {
       cleanup(root);
     }

@@ -138,9 +138,13 @@ PR #448 は merge せず close し、branch を監査用に保存した。本 PL
 2. consumer は attempt 番号、request digest、exact HEAD、provider/model、exit code、typed reason、
    verdict file digest（存在する場合。raw本文は保存しない）を `attempt_execution_failed` event として
   既存 git-common-dir review custody audit へ append する。
-3. outcome append に失敗した場合は `attempt_outcome_indeterminate` で fail-close し、次 attempt を開始しない。
-   次回は現物 audit と attempt file を照合してからだけ再開できる。
-4. verdict scratch は既存 attempt path に不変のまま残す。failed outcome の記録や次 attempt 開始を理由に
+3. provider が exit 0 でも verdict file 欠落、envelope 欠落/不正、identity不一致、同族reviewer、
+   verdict parser拒否などで投影を拒否した場合、canonical receipt は0件とし、同じ識別情報を
+   `attempt_verdict_rejected` event（`exitCode: 0`、拒否理由はtyped reason）として append する。
+   この event は成功receiptではなく、次 attempt を開始するための terminal outcome だけを表す。
+4. outcome append に失敗した場合、または入力自体が custody event を安全に構成できないほど不正な場合は、
+   元のtyped rejection reasonを呼出元へ保持したまま次 attempt を許可しない。推測でoutcomeを補完しない。
+5. verdict scratch は既存 attempt path に不変のまま残す。failed/rejected outcome の記録や次 attempt 開始を理由に
    削除・上書きしない。
 
 ### 4.2 retry と論理 supersession
@@ -163,7 +167,7 @@ PR #448 は merge せず close し、branch を監査用に保存した。本 PL
 
 ### 4.4 audit preservation
 
-- `attempt_execution_failed` と `superseded_attempt` は request digest と attempt の一対一関係を持つ。
+- `attempt_execution_failed` / `attempt_verdict_rejected` と `superseded_attempt` は request digest と attempt の一対一関係を持つ。
 - 同一 event の replay は同一 canonical payloadへ冪等、同一 identityの異payloadは conflict とする。
 - audit reader は欠落、重複、順序逆転、digest不一致を typed deny し、成功 receipt や次 attempt で補完しない。
 - audit event を消しても canonical receipt の受理条件が緩まない。未receipt retryでは監査欠落により止まり、
@@ -178,6 +182,10 @@ PR #448 は merge せず close し、branch を監査用に保存した。本 PL
 - B: canonical receipt write を create-exclusive から overwrite へ変える。
 - C: success後に旧 attempt file または audit event を削除する。
 - D: unresolved / audit欠落の failed attempt から次 attempt を許可する。
+
+実装sliceでは、exit 0 の `verdict_file_missing`、envelope/identity/parser rejection、同族reviewerを
+`attempt_verdict_rejected`へappendして次 attemptで回復できることも検証する。入力attestationが
+eventを安全に構成できない場合は、元のtyped reasonを保持し、retry authorityを捏造しない。
 
 一つのassertion失敗が他の mutation を偶然覆う構造を禁止する。各caseは対象 side effect の現物を読み、
 戻り値だけをoracleにしない。

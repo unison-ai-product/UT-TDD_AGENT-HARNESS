@@ -176,6 +176,7 @@ export function reviewCustodyAuditPath(repoRoot: string): string {
 export interface ReviewCustodyAuditEvent {
   readonly kind:
     | "attempt_execution_failed"
+    | "attempt_verdict_rejected"
     | "attempt_outcome_conflict"
     | "superseded_attempt"
     | "cleanup_pending";
@@ -236,17 +237,20 @@ function isAttemptFailureEvent(input: {
   const { repoRoot, event, request, attempt } = input;
   const expectedProvider = request.authorFamily === "codex" ? "claude" : "codex";
   return (
-    event.kind === "attempt_execution_failed" &&
+    (event.kind === "attempt_execution_failed" || event.kind === "attempt_verdict_rejected") &&
     event.requestDigest === reviewIdentityDigest(request) &&
     event.attempt === attempt &&
     event.exactHead === request.exactHead &&
     event.verdictPath === reviewVerdictPath(repoRoot, event.requestDigest, attempt) &&
-    event.provider === expectedProvider &&
+    event.provider !== undefined &&
     isReviewProvider(event.provider) &&
     typeof event.model === "string" &&
     event.model.trim().length > 0 &&
     Number.isSafeInteger(event.exitCode) &&
-    (event.exitCode as number) !== 0 &&
+    ((event.kind === "attempt_execution_failed" &&
+      event.provider === expectedProvider &&
+      (event.exitCode as number) !== 0) ||
+      (event.kind === "attempt_verdict_rejected" && (event.exitCode as number) === 0)) &&
     typeof event.reason === "string" &&
     event.reason.trim().length > 0 &&
     (event.verdictDigest === undefined || DIGEST_PATTERN.test(event.verdictDigest)) &&
@@ -274,12 +278,58 @@ export function recordReviewAttemptFailure(input: {
   reason?: string;
   now?: string;
 }): ReviewAttemptOutcomeResult {
+  return recordAttemptOutcome({ ...input, kind: "attempt_execution_failed" });
+}
+
+/**
+ * Record a terminal verdict rejection after a provider exited successfully.
+ *
+ * A reviewer can exit 0 while producing a missing, malformed, or identity-
+ * invalid verdict.  That is a terminal outcome for this attempt, not a
+ * successful review and not an execution failure.  Keeping it as its own
+ * append-only event lets the next attempt recover without allowing the
+ * rejected verdict to become a canonical receipt.
+ */
+export function recordReviewAttemptVerdictRejection(input: {
+  repoRoot: string;
+  request: ReviewCustodyRequest;
+  attempt: number;
+  provider: "codex" | "claude";
+  model: string;
+  verdictPath: string;
+  reason: string;
+  now?: string;
+}): ReviewAttemptOutcomeResult {
+  return recordAttemptOutcome({ ...input, exitCode: 0, kind: "attempt_verdict_rejected" });
+}
+
+function recordAttemptOutcome(input: {
+  repoRoot: string;
+  request: ReviewCustodyRequest;
+  attempt: number;
+  provider: "codex" | "claude";
+  model: string;
+  exitCode: number;
+  verdictPath: string;
+  reason?: string;
+  now?: string;
+  kind: "attempt_execution_failed" | "attempt_verdict_rejected";
+}): ReviewAttemptOutcomeResult {
   if (!isStrictReviewRequest(input.request))
     return { ok: false, reason: "invalid_review_revision" };
-  if (!Number.isSafeInteger(input.attempt) || input.attempt < 1 || input.exitCode === 0)
+  if (
+    !Number.isSafeInteger(input.attempt) ||
+    input.attempt < 1 ||
+    (input.kind === "attempt_execution_failed" && input.exitCode === 0) ||
+    (input.kind === "attempt_verdict_rejected" && input.exitCode !== 0)
+  )
+    return { ok: false, reason: "invalid_attempt_outcome" };
+  if (!isReviewProvider(input.provider) || typeof input.model !== "string" || !input.model.trim())
+    return { ok: false, reason: "invalid_attempt_outcome" };
+  if (typeof input.reason === "string" && !input.reason.trim())
     return { ok: false, reason: "invalid_attempt_outcome" };
   const expectedProvider = input.request.authorFamily === "codex" ? "claude" : "codex";
-  if (input.provider !== expectedProvider)
+  if (input.kind === "attempt_execution_failed" && input.provider !== expectedProvider)
     return { ok: false, reason: "same_family_reviewer_denied" };
   const digest = reviewIdentityDigest(input.request);
   try {
@@ -294,13 +344,15 @@ export function recordReviewAttemptFailure(input: {
   }
   const verdictDigest = digestFile(input.verdictPath);
   const event: ReviewCustodyAuditEvent = {
-    kind: "attempt_execution_failed",
+    kind: input.kind,
     requestDigest: digest,
     attempt: input.attempt,
     exactHead: input.request.exactHead,
     verdictPath: reviewVerdictPath(input.repoRoot, digest, input.attempt),
     recordedAt: input.now ?? new Date().toISOString(),
-    reason: input.reason ?? "reviewer_exit_nonzero",
+    reason:
+      input.reason ??
+      (input.kind === "attempt_execution_failed" ? "reviewer_exit_nonzero" : "verdict_rejected"),
     provider: input.provider,
     model: input.model,
     exitCode: input.exitCode,
@@ -314,7 +366,9 @@ export function recordReviewAttemptFailure(input: {
   }
   const existing = requestEvents.filter(
     (candidate) =>
-      candidate.kind === "attempt_execution_failed" && candidate.attempt === input.attempt,
+      (candidate.kind === "attempt_execution_failed" ||
+        candidate.kind === "attempt_verdict_rejected") &&
+      candidate.attempt === input.attempt,
   );
   if (existing.length > 1) return { ok: false, reason: "attempt_outcome_indeterminate" };
   if (existing.length === 1) {
@@ -407,7 +461,9 @@ export function beginReviewAttempt(input: {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
     const outcomes = requestEvents.filter(
-      (event) => event.kind === "attempt_execution_failed" && event.attempt === previousAttempt,
+      (event) =>
+        (event.kind === "attempt_execution_failed" || event.kind === "attempt_verdict_rejected") &&
+        event.attempt === previousAttempt,
     );
     if (
       requestEvents.some(
