@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -339,6 +340,15 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
           verdictFile: first.path,
         }),
       ).toEqual({ ok: false, reason: "reviewer_exit_nonzero" });
+      const auditPath = reviewCustodyAuditPath(root);
+      const firstFailure = readReviewCustodyAudit(root).find(
+        (event) => event.kind === "attempt_execution_failed" && event.attempt === 1,
+      );
+      if (!firstFailure?.verdictDigest) throw new Error("missing first failure digest");
+      writeFileSync(first.path, `${verdictText(request, 1)}\nmutated-after-failure`, "utf8");
+      const mutatedVerdictDigest = createHash("sha256")
+        .update(readFileSync(first.path))
+        .digest("hex");
 
       const conflict = projectReviewVerdict({
         repoRoot: root,
@@ -347,27 +357,65 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
         verdictFile: first.path,
       });
       expect(conflict).toEqual({ ok: false, reason: "attempt_outcome_conflict" });
-      expect(readReviewCustodyAudit(root)).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            kind: "attempt_outcome_conflict",
-            requestDigest: reviewIdentityDigest(request),
-            attempt: 1,
-            exactHead: request.exactHead,
-            verdictPath: first.path,
-            reason: "attempt_outcome_conflict",
-          }),
-        ]),
+      const auditAfterConflict = readReviewCustodyAudit(root);
+      const conflictEvent = auditAfterConflict.find(
+        (event) => event.kind === "attempt_outcome_conflict" && event.attempt === 1,
       );
-      expect(existsSync(join(root, ".ut-tdd", "review", "receipts"))).toBe(false);
+      if (!conflictEvent?.verdictDigest) throw new Error("missing conflict digest");
+      expect(firstFailure).toMatchObject({
+        kind: "attempt_execution_failed",
+        requestDigest: reviewIdentityDigest(request),
+        attempt: 1,
+        exactHead: request.exactHead,
+        verdictPath: first.path,
+        provider: "claude",
+        model: "claude-opus-5",
+        exitCode: 7,
+        reason: "reviewer_exit_nonzero",
+      });
+      expect(conflictEvent).toMatchObject({
+        kind: "attempt_outcome_conflict",
+        requestDigest: reviewIdentityDigest(request),
+        attempt: 1,
+        exactHead: request.exactHead,
+        verdictPath: first.path,
+        provider: "claude",
+        model: "claude-opus-5",
+        exitCode: 9,
+        reason: "attempt_outcome_conflict",
+        oldAttemptDigest: firstFailure.verdictDigest,
+        verdictDigest: mutatedVerdictDigest,
+      });
+      expect(conflictEvent.verdictDigest).not.toBe(firstFailure.verdictDigest);
+      const auditAfterConflictBytes = readFileSync(auditPath);
+      const replay = projectReviewVerdict({
+        repoRoot: root,
+        request,
+        attestation: attestation(request, 1, 9),
+        verdictFile: first.path,
+      });
+      expect(replay).toEqual(conflict);
+      expect(readFileSync(auditPath)).toEqual(auditAfterConflictBytes);
       expect(
-        beginReviewAttempt({
-          repoRoot: root,
-          request,
-          provider: "claude",
-          model: "claude-sonnet-5",
-        }),
-      ).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
+        readReviewCustodyAudit(root).filter(
+          (event) => event.kind === "attempt_outcome_conflict" && event.attempt === 1,
+        ),
+      ).toHaveLength(1);
+      const auditBeforeBegin = readFileSync(auditPath);
+      const eventCountBeforeBegin = readReviewCustodyAudit(root).length;
+      expect(existsSync(join(root, ".ut-tdd", "review", "receipts"))).toBe(false);
+      const blocked = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-sonnet-5",
+      });
+      expect(blocked).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
+      expect(readFileSync(auditPath)).toEqual(auditBeforeBegin);
+      expect(readReviewCustodyAudit(root)).toHaveLength(eventCountBeforeBegin);
+      expect(
+        readReviewCustodyAudit(root).filter((event) => event.kind === "superseded_attempt"),
+      ).toHaveLength(0);
       expect(
         existsSync(
           join(
