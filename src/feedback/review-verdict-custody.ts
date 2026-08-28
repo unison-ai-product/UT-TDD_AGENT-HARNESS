@@ -174,7 +174,11 @@ export function reviewCustodyAuditPath(repoRoot: string): string {
 }
 
 export interface ReviewCustodyAuditEvent {
-  readonly kind: "attempt_execution_failed" | "superseded_attempt" | "cleanup_pending";
+  readonly kind:
+    | "attempt_execution_failed"
+    | "attempt_outcome_conflict"
+    | "superseded_attempt"
+    | "cleanup_pending";
   readonly requestDigest: string;
   readonly attempt: number;
   readonly exactHead: string;
@@ -302,20 +306,41 @@ export function recordReviewAttemptFailure(input: {
     exitCode: input.exitCode,
     ...(verdictDigest ? { verdictDigest } : {}),
   };
-  let existing: ReviewCustodyAuditEvent[];
+  let requestEvents: ReviewCustodyAuditEvent[];
   try {
-    existing = auditEventsFor(input.repoRoot, digest).filter(
-      (candidate) =>
-        candidate.kind === "attempt_execution_failed" && candidate.attempt === input.attempt,
-    );
+    requestEvents = auditEventsFor(input.repoRoot, digest);
   } catch {
     return { ok: false, reason: "attempt_outcome_indeterminate" };
   }
+  const existing = requestEvents.filter(
+    (candidate) =>
+      candidate.kind === "attempt_execution_failed" && candidate.attempt === input.attempt,
+  );
   if (existing.length > 1) return { ok: false, reason: "attempt_outcome_indeterminate" };
   if (existing.length === 1) {
-    return sameAttemptOutcome(existing[0], event)
-      ? { ok: true, event: existing[0] }
-      : { ok: false, reason: "attempt_outcome_conflict" };
+    if (sameAttemptOutcome(existing[0], event)) return { ok: true, event: existing[0] };
+    const conflictEvent: ReviewCustodyAuditEvent = {
+      ...event,
+      kind: "attempt_outcome_conflict",
+      reason: "attempt_outcome_conflict",
+      oldAttemptDigest: existing[0].verdictDigest ?? "verdict_absent",
+    };
+    const conflicts = requestEvents.filter(
+      (candidate) =>
+        candidate.kind === "attempt_outcome_conflict" && candidate.attempt === input.attempt,
+    );
+    if (conflicts.length > 1) return { ok: false, reason: "attempt_outcome_indeterminate" };
+    if (conflicts.length === 1) {
+      return sameAttemptOutcome(conflicts[0], conflictEvent)
+        ? { ok: false, reason: "attempt_outcome_conflict" }
+        : { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    try {
+      appendReviewCustodyAudit(input.repoRoot, conflictEvent);
+    } catch {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    return { ok: false, reason: "attempt_outcome_conflict" };
   }
   try {
     appendReviewCustodyAudit(input.repoRoot, event);
@@ -384,6 +409,13 @@ export function beginReviewAttempt(input: {
     const outcomes = requestEvents.filter(
       (event) => event.kind === "attempt_execution_failed" && event.attempt === previousAttempt,
     );
+    if (
+      requestEvents.some(
+        (event) => event.kind === "attempt_outcome_conflict" && event.attempt === previousAttempt,
+      )
+    ) {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
     if (
       outcomes.length !== 1 ||
       !isAttemptFailureEvent({

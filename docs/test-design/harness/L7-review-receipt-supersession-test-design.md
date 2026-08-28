@@ -25,7 +25,7 @@ Red/Greenの実測後に正式oracleへ昇格する。
 複数 retry chain は attempt-1 failure → attempt-2 failure → attempt-3 success を実走し、
 attempt-2 が attempt-1 を supersede した履歴を attempt-3 開始時に誤って拒否しないことを検査する。
 同一 attempt の異なる exit code を再投影した場合は `attempt_outcome_conflict` をそのまま返し、
-次 attempt と receipt の write を 0 件にする。
+append-only conflict marker を残し、次 attempt と receipt の write を 0 件にする。
 
 ## composition fixture
 

@@ -347,6 +347,18 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
         verdictFile: first.path,
       });
       expect(conflict).toEqual({ ok: false, reason: "attempt_outcome_conflict" });
+      expect(readReviewCustodyAudit(root)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "attempt_outcome_conflict",
+            requestDigest: reviewIdentityDigest(request),
+            attempt: 1,
+            exactHead: request.exactHead,
+            verdictPath: first.path,
+            reason: "attempt_outcome_conflict",
+          }),
+        ]),
+      );
       expect(existsSync(join(root, ".ut-tdd", "review", "receipts"))).toBe(false);
       expect(
         beginReviewAttempt({
