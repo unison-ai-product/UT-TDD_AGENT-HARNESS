@@ -366,13 +366,19 @@ process.exit(result.status ?? 1);
 `;
 }
 
-function failure(
-  status: "denied" | "failed" | "indeterminate",
-  reason: ConsumerRuntimeDenyReason,
-  phase: Phase,
-  error?: unknown,
-): ConsumerNodeRuntimeInstallResult {
-  return { ok: false, status, reason, phase, ...(error === undefined ? {} : { error }) };
+function failure(input: {
+  status: "denied" | "failed" | "indeterminate";
+  reason: ConsumerRuntimeDenyReason;
+  phase: Phase;
+  error?: unknown;
+}): ConsumerNodeRuntimeInstallResult {
+  return {
+    ok: false,
+    status: input.status,
+    reason: input.reason,
+    phase: input.phase,
+    ...(input.error === undefined ? {} : { error: input.error }),
+  };
 }
 
 function reasonFromError(error: unknown): ConsumerRuntimeDenyReason | undefined {
@@ -396,13 +402,21 @@ export async function installConsumerNodeRuntime(input: {
 }): Promise<ConsumerNodeRuntimeInstallResult> {
   const { identity, bundle, ports } = input;
   if (!validIdentity(identity))
-    return failure("denied", "consumer_runtime_identity_mismatch", "admission");
+    return failure({
+      status: "denied",
+      reason: "consumer_runtime_identity_mismatch",
+      phase: "admission",
+    });
   const bundleReason = validateConsumerNodeRuntimeBundle(bundle);
   if (
     bundleReason ||
     digestConsumerRuntimeValue(identity) !== digestConsumerRuntimeValue(bundle.identity)
   )
-    return failure("denied", bundleReason ?? "consumer_runtime_identity_mismatch", "admission");
+    return failure({
+      status: "denied",
+      reason: bundleReason ?? "consumer_runtime_identity_mismatch",
+      phase: "admission",
+    });
   const stage = stagingPathFor(identity);
   let locked = false,
     staged = false,
@@ -437,7 +451,11 @@ export async function installConsumerNodeRuntime(input: {
     await ports.verifyActiveBundle(bundle);
     const state = await reconcileOnce();
     if (state !== "committed") {
-      result = failure("indeterminate", "consumer_runtime_indeterminate", "reconcile");
+      result = failure({
+        status: "indeterminate",
+        reason: "consumer_runtime_indeterminate",
+        phase: "reconcile",
+      });
     } else {
       result = { ok: true, status: "committed", bundle };
     }
@@ -450,12 +468,12 @@ export async function installConsumerNodeRuntime(input: {
       } catch (reconcileError) {
         primaryError = { primary: error, reconcile: reconcileError };
       }
-      result = failure(
-        "indeterminate",
-        "consumer_runtime_indeterminate",
-        "reconcile",
-        primaryError,
-      );
+      result = failure({
+        status: "indeterminate",
+        reason: "consumer_runtime_indeterminate",
+        phase: "reconcile",
+        error: primaryError,
+      });
     } else {
       phase = phase === "admission" ? "admission" : "staging";
       if (staged) {
@@ -463,34 +481,45 @@ export async function installConsumerNodeRuntime(input: {
           if (ports.destroyPrivateStaging) await ports.destroyPrivateStaging(stage);
           else if (ports.quarantinePrivateStaging) await ports.quarantinePrivateStaging(stage);
         } catch (cleanupError) {
-          result = failure("indeterminate", "consumer_runtime_indeterminate", "staging", {
-            primary: error,
-            cleanup: cleanupError,
+          result = failure({
+            status: "indeterminate",
+            reason: "consumer_runtime_indeterminate",
+            phase: "staging",
+            error: { primary: error, cleanup: cleanupError },
           });
         }
       }
-      result ??= failure(
-        phase === "admission" ? "denied" : "failed",
-        phase === "admission"
-          ? (reasonFromError(error) ?? "consumer_runtime_identity_mismatch")
-          : (reasonFromError(error) ?? "consumer_runtime_permission"),
+      result ??= failure({
+        status: phase === "admission" ? "denied" : "failed",
+        reason:
+          phase === "admission"
+            ? (reasonFromError(error) ?? "consumer_runtime_identity_mismatch")
+            : (reasonFromError(error) ?? "consumer_runtime_permission"),
         phase,
-        primaryError,
-      );
+        error: primaryError,
+      });
     }
   } finally {
     if (locked) {
       try {
         await ports.releaseConsumerLock();
       } catch (releaseError) {
-        result = failure(
-          "indeterminate",
-          "consumer_runtime_indeterminate",
-          "release",
-          primaryError ? { primary: primaryError, release: releaseError } : releaseError,
-        );
+        result = failure({
+          status: "indeterminate",
+          reason: "consumer_runtime_indeterminate",
+          phase: "release",
+          error: primaryError ? { primary: primaryError, release: releaseError } : releaseError,
+        });
       }
     }
   }
-  return result ?? failure("indeterminate", "consumer_runtime_indeterminate", phase, primaryError);
+  return (
+    result ??
+    failure({
+      status: "indeterminate",
+      reason: "consumer_runtime_indeterminate",
+      phase,
+      error: primaryError,
+    })
+  );
 }
