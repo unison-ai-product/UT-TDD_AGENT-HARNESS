@@ -25,6 +25,15 @@ const sha = (value: Uint8Array | string) =>
 const sourceRevision = "a".repeat(40);
 const artifactSetDigest = `sha256:${"b".repeat(64)}`;
 const content = Buffer.from("abc");
+const packageContent = Buffer.from('{"name":"ut-tdd","version":"0.2.0-canary.1"}');
+const packageEntry: SealedPublicationEntry = {
+  sourcePath: "package.json",
+  destinationPath: "package.json",
+  mode: "100644",
+  size: packageContent.length,
+  contentDigest: sha(packageContent),
+  content: packageContent,
+};
 const entry: SealedPublicationEntry = {
   sourcePath: "src/cli.ts",
   destinationPath: "bin/ut-tdd.js",
@@ -46,6 +55,13 @@ const releaseId = () =>
     .digest("hex")}`;
 
 function rawManifest(): Record<string, unknown> {
+  const packageArtifact = {
+    sourcePath: packageEntry.sourcePath,
+    destinationPath: packageEntry.destinationPath,
+    mode: packageEntry.mode,
+    size: packageEntry.size,
+    contentDigest: packageEntry.contentDigest,
+  };
   const artifact = {
     sourcePath: entry.sourcePath,
     destinationPath: entry.destinationPath,
@@ -53,7 +69,7 @@ function rawManifest(): Record<string, unknown> {
     size: entry.size,
     contentDigest: entry.contentDigest,
   };
-  const artifactInventoryDigest = deriveArtifactInventoryDigest([artifact]);
+  const artifactInventoryDigest = deriveArtifactInventoryDigest([artifact, packageArtifact]);
   const provisional = {
     releaseId: releaseId(),
     materializerVersion: "v2",
@@ -62,9 +78,12 @@ function rawManifest(): Record<string, unknown> {
     artifactInventoryDigest,
     releaseAssetInventoryDigest: `sha256:${"c".repeat(64)}`,
     releaseRecordDigest: `sha256:${"d".repeat(64)}`,
-    artifacts: [artifact],
+    artifacts: [artifact, packageArtifact],
   };
-  const assets = derivePackPublicationAssets({ release: provisional, entries: [entry] });
+  const assets = derivePackPublicationAssets({
+    release: provisional,
+    entries: [entry, packageEntry],
+  });
   if (!assets.ok) throw new Error(assets.error);
   const releaseAssetInventoryDigest = assets.value.releaseAssetInventoryDigest;
   const releaseRecordDigest = deriveReleaseRecordDigest({
@@ -98,7 +117,7 @@ function stagingPlan() {
     manifestInput: manifest,
     releaseId: releaseId(),
     controlManifestBytes: Buffer.from(stringify(manifest), "utf8"),
-    entries: [entry],
+    entries: [entry, packageEntry],
   });
   if (!result.ok) throw new Error(result.error);
   return result.plan;
@@ -109,6 +128,7 @@ function input(plan = stagingPlan()): PackPublicationIntentInput {
     plan,
     operationId: "op-1",
     idempotencyKey: "idem-1",
+    releaseVersion: "0.2.0-canary.1",
     tagName: "v0.2.0-canary.1",
     remote: {
       repository: "RetryYN/UT-TDD_AGENT-HARNESS-Pack",
@@ -208,13 +228,13 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
       }),
     },
     release: {
-      createDraft: async ({ releaseId, tagName, targetCommit }) => ({
+      createDraft: async ({ releaseId, releaseVersion, tagName, targetCommit }) => ({
         status: "attested",
-        value: { releaseId, tagName, targetCommit, draft: true },
+        value: { releaseId, releaseVersion, tagName, targetCommit, draft: true },
       }),
-      observeDraft: async ({ releaseId, tagName }) => ({
+      observeDraft: async ({ releaseId, releaseVersion, tagName }) => ({
         status: "attested",
-        value: { releaseId, tagName, targetCommit: mainSha, draft: true },
+        value: { releaseId, releaseVersion, tagName, targetCommit: mainSha, draft: true },
       }),
       uploadAsset: async ({ asset }) => ({
         status: "attested",
@@ -293,6 +313,36 @@ function withOperationLedger(value: PackPublicationPorts, ledger: string[]): Pac
 }
 
 describe("remote Pack canary publication", () => {
+  it("U-RELVER-001/005/006: seals package version and its canonical tag separately from releaseId", () => {
+    const sealed = sealPackPublicationIntent(input());
+    expect(sealed).toMatchObject({ ok: true });
+    if (!sealed.ok) return;
+    expect(sealed.intent.releaseVersion).toBe("0.2.0-canary.1");
+    expect(sealed.intent.tagName).toBe("v0.2.0-canary.1");
+    expect(sealed.intent.releaseId).toMatch(/^rel-sha256:[a-f0-9]{64}$/);
+
+    expect(sealPackPublicationIntent({ ...input(), releaseVersion: "0.2.0-canary.2" })).toEqual({
+      ok: false,
+      error: "release_version_mismatch",
+    });
+    expect(sealPackPublicationIntent({ ...input(), tagName: "0.2.0-canary.1" })).toEqual({
+      ok: false,
+      error: "tag_version_mismatch",
+    });
+  });
+
+  it("U-RELVER-004: missing sealed root package entry is denied before approvals", () => {
+    const plan = stagingPlan();
+    const withoutPackage = {
+      ...plan,
+      commitEntries: plan.commitEntries.filter((entry) => entry.path !== "package.json"),
+    };
+    expect(sealPackPublicationIntent(input(withoutPackage))).toEqual({
+      ok: false,
+      error: "invalid_inventory",
+    });
+  });
+
   it("AUX-PACKPUB-REMOTE-010: seals an immutable mutation-specific approval set", () => {
     const result = sealPackPublicationIntent(input());
     expect(result.ok).toBe(true);
@@ -532,6 +582,7 @@ describe("remote Pack canary publication", () => {
             status: "attested",
             value: {
               releaseId: "wrong",
+              releaseVersion: sealed.intent.releaseVersion,
               tagName: sealed.intent.tagName,
               targetCommit: "6".repeat(40),
               draft: true,
@@ -638,7 +689,11 @@ describe("remote Pack canary publication", () => {
           ...base.visibility,
           observe: async () => ({
             status: "attested",
-            value: { releaseId: sealed.intent.releaseId, draft: true },
+            value: {
+              releaseId: sealed.intent.releaseId,
+              releaseVersion: sealed.intent.releaseVersion,
+              draft: true,
+            },
           }),
         },
         auditor: { attest: audit },
@@ -1014,6 +1069,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             status: "attested",
             value: {
               releaseId: "foreign",
+              releaseVersion: intent.releaseVersion,
               tagName: intent.tagName,
               targetCommit: "6".repeat(40),
               draft: true,
@@ -1387,6 +1443,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
             status: "attested",
             value: {
               releaseId: intent.releaseId,
+              releaseVersion: intent.releaseVersion,
               tagName: intent.tagName,
               targetCommit: "f".repeat(40),
               draft: true,

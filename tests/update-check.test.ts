@@ -5,10 +5,12 @@ import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   checkForUpdate,
+  comparePackageSemver,
   compareSemver,
   gitLsRemoteInvocation,
   latestReleaseTag,
   normalizeRepositoryUrl,
+  parsePackageSemver,
   parseSemver,
   renderUpdateLine,
   UPDATE_CHECK_CACHE_PATH,
@@ -121,6 +123,21 @@ describe("update-check semver primitives", () => {
     expect(compareSemver([1, 0, 0], [0, 9, 9])).toBeGreaterThan(0);
   });
 
+  it("U-RELVER-002/003: package parser keeps prerelease identity and strict input", () => {
+    const canary = parsePackageSemver("0.2.0-canary.1");
+    const stable = parsePackageSemver("0.2.0");
+    expect(canary).toMatchObject({ major: 0, minor: 2, patch: 0, prerelease: ["canary", "1"] });
+    expect(stable).not.toBeNull();
+    if (!canary || !stable) throw new Error("expected valid package versions");
+    expect(comparePackageSemver(canary, stable)).toBeLessThan(0);
+    const buildOne = parsePackageSemver("1.0.0+build.1");
+    const buildTwo = parsePackageSemver("1.0.0+build.2");
+    if (!buildOne || !buildTwo) throw new Error("expected valid build metadata");
+    expect(comparePackageSemver(buildOne, buildTwo)).toBe(0);
+    for (const invalid of ["v0.2.0-canary.1", " 0.2.0-canary.1", "0.2.0-", "0.2.0-01"])
+      expect(parsePackageSemver(invalid)).toBeNull();
+  });
+
   it("U-UPDCHK-017: normalizeRepositoryUrl accepts string / object forms and strips git+", () => {
     expect(normalizeRepositoryUrl("https://example.com/pack.git")).toBe(
       "https://example.com/pack.git",
@@ -231,6 +248,13 @@ describe("checkForUpdate", () => {
   it("U-UPDCHK-010: remote with no release tags is checked but silent", () => {
     const r = checkForUpdate(mockDeps({ version: "0.1.4", tags: ["nightly"] }));
     expect(r).toMatchObject({ checked: true, latestVersion: null, updateAvailable: false });
+  });
+
+  it("U-RELVER-009: canary tags do not become stable update advisories", () => {
+    const result = checkForUpdate(
+      mockDeps({ version: "0.2.0-canary.1", tags: ["v0.2.0-canary.2", "v0.1.9", "nightly"] }),
+    );
+    expect(result).toMatchObject({ latestVersion: "v0.1.9", updateAvailable: false });
   });
 
   it("U-UPDCHK-012: package.json repository.url is preferred over the origin fallback", () => {

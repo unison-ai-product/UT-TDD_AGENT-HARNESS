@@ -94,6 +94,15 @@ export interface UpdateCheckResult {
   detail: string | null;
 }
 
+/** Canonical package.json SemVer, including prerelease/build identifiers. */
+export interface PackageSemver {
+  readonly major: number;
+  readonly minor: number;
+  readonly patch: number;
+  readonly prerelease: readonly string[];
+  readonly build: readonly string[];
+}
+
 interface UpdateCheckCache {
   checkedAtMs: number;
   latestVersion: string | null;
@@ -111,6 +120,56 @@ export function parseSemver(tag: string): [number, number, number] | null {
   const m = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(tag.trim());
   if (!m) return null;
   return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+const PACKAGE_SEMVER =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
+
+/** Parse a package.json version without accepting tag prefixes or whitespace coercion. */
+export function parsePackageSemver(value: unknown): PackageSemver | null {
+  if (typeof value !== "string") return null;
+  const match = PACKAGE_SEMVER.exec(value);
+  if (!match) return null;
+  const prerelease = match[4]?.split(".") ?? [];
+  if (
+    prerelease.some(
+      (identifier) =>
+        /^\d+$/.test(identifier) && identifier.length > 1 && identifier.startsWith("0"),
+    )
+  )
+    return null;
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+    prerelease,
+    build: match[5]?.split(".") ?? [],
+  };
+}
+
+/** Compare canonical package SemVer values; build metadata has no precedence. */
+export function comparePackageSemver(a: PackageSemver, b: PackageSemver): number {
+  for (const key of ["major", "minor", "patch"] as const) {
+    if (a[key] !== b[key]) return a[key] - b[key];
+  }
+  if (a.prerelease.length === 0 || b.prerelease.length === 0) {
+    if (a.prerelease.length === b.prerelease.length) return 0;
+    return a.prerelease.length === 0 ? 1 : -1;
+  }
+  const length = Math.max(a.prerelease.length, b.prerelease.length);
+  for (let i = 0; i < length; i++) {
+    const left = a.prerelease[i];
+    const right = b.prerelease[i];
+    if (left === undefined) return -1;
+    if (right === undefined) return 1;
+    if (left === right) continue;
+    const leftNumeric = /^\d+$/.test(left);
+    const rightNumeric = /^\d+$/.test(right);
+    if (leftNumeric && rightNumeric) return Number(left) - Number(right);
+    if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
+    return left < right ? -1 : 1;
+  }
+  return 0;
 }
 
 /** Semver compare. Numeric comparison keeps 0.1.10 > 0.1.9. */
@@ -155,7 +214,9 @@ function readManifest(deps: UpdateCheckDeps): HarnessManifest {
   try {
     const parsed = JSON.parse(raw) as { version?: unknown; repository?: unknown };
     const version =
-      typeof parsed.version === "string" && parseSemver(parsed.version) ? parsed.version : null;
+      typeof parsed.version === "string" && parsePackageSemver(parsed.version)
+        ? parsed.version
+        : null;
     return { version, repositoryUrl: normalizeRepositoryUrl(parsed.repository), readable: true };
   } catch {
     return { version: null, repositoryUrl: null, readable: false };
@@ -251,13 +312,22 @@ export function checkForUpdate(deps: UpdateCheckDeps): UpdateCheckResult {
       }
     }
 
-    const local = parseSemver(localVersion);
-    const latest = latestVersion ? parseSemver(latestVersion) : null;
+    const local = parsePackageSemver(localVersion);
+    const latestStable = latestVersion ? parseSemver(latestVersion) : null;
+    const latest = latestStable
+      ? {
+          major: latestStable[0],
+          minor: latestStable[1],
+          patch: latestStable[2],
+          prerelease: [],
+          build: [],
+        }
+      : null;
     return {
       checked: true,
       localVersion,
       latestVersion,
-      updateAvailable: Boolean(local && latest && compareSemver(latest, local) > 0),
+      updateAvailable: Boolean(local && latest && comparePackageSemver(latest, local) > 0),
       source,
       detail: null,
     };
