@@ -68,7 +68,9 @@ digestから導出する。semverとtagは表示・取得locatorであり、`rel
 | release ID | `rel-sha256:*` | manifest v2の既存content/provenance identity |
 | Release assets | tar.gz + checksumのexact 2件 | asset名は既存どおりrelease ID hash由来 |
 
-`package-lock.json` root package versionは`package.json`と同時に更新する。CLIへversion定数を複製せず、
+`package-lock.json` は top-level `.version` と root package entry `.packages[""].version` の
+**2 箇所を独立に** `package.json.version` と同時更新し、三者のexact一致を要求する。
+片方だけが旧versionのまま残る状態はfail-closeする。CLIへversion定数を複製せず、
 consumer productの`package.json`、current working directory、環境変数、tag文字列からversionを補完しない。
 
 ## 3. prerelease semver契約
