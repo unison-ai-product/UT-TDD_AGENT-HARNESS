@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, rmSync, writeFileSync, mkdtempSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -53,7 +53,10 @@ function generateConsumerTree(): string {
   const consumerRoot = mkdtempSync(join(tmpdir(), "ut-tdd-packbun-"));
   const templates = loadTemplates(process.cwd());
   emitSetup(planSetup("0-A", { dryRun: false }), templates, nodeSetupDeps(consumerRoot));
-  const sourcePackage = readFileSync(join(process.cwd(), "package.json"), "utf8");
+  const sourcePackage = JSON.stringify({
+    name: "consumer-fixture",
+    scripts: { test: "vitest run", typecheck: "tsc --noEmit" },
+  });
   writeFileSync(
     join(consumerRoot, "package.json"),
     transformCleanDistributionArtifact("package.json", sourcePackage),
