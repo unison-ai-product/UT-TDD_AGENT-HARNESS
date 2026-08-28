@@ -7,6 +7,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -301,6 +302,63 @@ describe("Claude wake generation rolling upgrade", () => {
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-CHSCHEMA-009: retention does not orphan a planned activation rollback", async () => {
+    const repoRoot = gitFixture();
+    try {
+      const common = execFileSync(
+        "git",
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        { cwd: repoRoot, encoding: "utf8" },
+      ).trim();
+      const root = join(common, "ut-tdd-runtime", "claude-memory-wake");
+      mkdirSync(root, { recursive: true });
+      expect(
+        activateClaudeWakeGeneration({
+          root,
+          sessionId: "retained",
+          workspaceId: claudeWorkspaceId(repoRoot),
+          generation: "retained-generation",
+          runtimeSourceRevision,
+          leaseToken: "retained-lease",
+        }).ok,
+      ).toBe(true);
+      expect(() =>
+        activateClaudeWakeGeneration({
+          root,
+          sessionId: "interrupted",
+          workspaceId: claudeWorkspaceId(repoRoot),
+          generation: "interrupted-generation",
+          runtimeSourceRevision,
+          leaseToken: "interrupted-lease",
+          beforeStep: (step) => {
+            if (step === "journal_planned") throw new Error("injected_planned_crash");
+          },
+        }),
+      ).toThrow("injected_planned_crash");
+
+      const expired = new Date(Date.now() - 8 * 24 * 60 * 60 * 1_000);
+      utimesSync(join(root, "retained.generation"), expired, expired);
+      const result = await waitForClaudeMemory({
+        repoRoot,
+        sessionId: "replacement",
+        pollIntervalMs: 10,
+        maxWaitMs: 20,
+      });
+
+      expect(result.kind).toBe("timeout");
+      expect(inspectClaudeWakeGeneration(root, claudeWorkspaceId(repoRoot))).toMatchObject({
+        ok: true,
+        authority: { sessionId: "replacement" },
+      });
+      const journals = readdirSync(join(root, "activation-journal")).map((name) =>
+        JSON.parse(readFileSync(join(root, "activation-journal", name), "utf8")),
+      );
+      expect(journals.some((entry) => entry.state === "rolled_back")).toBe(true);
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 

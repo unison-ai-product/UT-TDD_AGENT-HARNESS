@@ -723,8 +723,33 @@ export function selectClaudeInboxEntry(
 
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1_000;
 
+function activationRollbackMarkers(root: string): ReadonlySet<string> {
+  const journalRoot = join(root, "activation-journal");
+  if (!existsSync(journalRoot)) return new Set();
+  const markers = new Set<string>();
+  for (const name of readdirSync(journalRoot).filter((entry) => entry.endsWith(".json"))) {
+    try {
+      const journal = JSON.parse(readFileSync(join(journalRoot, name), "utf8")) as {
+        state?: unknown;
+        previousMarkerName?: unknown;
+      };
+      if (
+        journal.state === "planned" &&
+        typeof journal.previousMarkerName === "string" &&
+        journal.previousMarkerName.endsWith(".generation")
+      ) {
+        markers.add(journal.previousMarkerName);
+      }
+    } catch {
+      // Invalid journals fail closed during activation reconciliation.
+    }
+  }
+  return markers;
+}
+
 function pruneRuntimeFiles(root: string, nowMs: number): void {
   if (!existsSync(root)) return;
+  const rollbackMarkers = activationRollbackMarkers(root);
   for (const directory of [root, join(root, "inbox")]) {
     if (!existsSync(directory)) continue;
     for (const name of readdirSync(directory)) {
@@ -751,6 +776,7 @@ function pruneRuntimeFiles(root: string, nowMs: number): void {
       }
       if (!name.endsWith(".claim") && !name.endsWith(".generation") && !name.endsWith(".json"))
         continue;
+      if (directory === root && rollbackMarkers.has(name)) continue;
       const path = join(directory, name);
       try {
         const stat = statSync(path);
