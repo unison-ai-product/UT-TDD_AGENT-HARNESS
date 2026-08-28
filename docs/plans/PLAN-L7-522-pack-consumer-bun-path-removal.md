@@ -129,6 +129,13 @@ file ごとに扱いが異なるので分けて契約する。
 **保護する不変条件は「Bun を検出して fail-close する能力が減らないこと」**であり、条文の逐語一致ではない。
 検出能力を落とす変更 (deny rule の削除、allowlist への新規 path 追加、pin 値の引き上げ) は本 slice の全 PR で禁止する。
 
+**ただし件数・集合・数値だけでは「同数のまま matcher を弱める」変更を検出できない** (例: deny rule の
+本数を保ったまま正規表現を緩める)。したがって検出能力は **behavioral に測る**: 既知の Bun 到達
+サンプル集合を lint へ入力し、**各サンプルが依然として fail-close されること**を要求する。
+件数・集合・pin の比較はこの behavioral 検査の補助であって代替ではない
+(PR #469 の delta review、canonical receipt
+`d7f287eef4f52be8e5fa917ccefd28c78a894ea4687692853a9b48001efb8f5f` の指摘により追加)。
+
 ## 4. 設計判断: Issue #450 受入条件 3 の読み替え
 
 ### 4.1 前提
