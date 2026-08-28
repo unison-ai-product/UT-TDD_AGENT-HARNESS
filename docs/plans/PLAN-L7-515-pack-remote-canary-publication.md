@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
+status: draft
 created: 2026-08-27
 updated: 2026-08-28
 owner: Codex / Luna
@@ -41,25 +41,20 @@ dependencies:
     - src/setup/pack-publication-staging.ts
     - src/setup/pack-publication-assets.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/414
-review_evidence:
-  - reviewer: claude-opus-5
-    review_kind: cross_agent
-    reviewed_at: "2026-08-27T09:11:24.890Z"
-    tests_green_at: "2026-08-27T08:53:38Z"
-    verdict: "PASS-WEAK / blocking 0"
-    plan_revision: 2923c66e7431fffe6c41567fd8da7cf5acd7a158
-    subject_head: 2923c66e7431fffe6c41567fd8da7cf5acd7a158
-    scope: >-
-      PR #438のdocs-only pair-freeze（PLAN-L7-515、PLAN-REVERSE-515、専用test-design）を
-      exact HEADで非著者検収。canonical receiptはclaude familyのPASS-WEAK、blocking 0。
-    citations:
-      - "canonical receipt digest: aa5de895296cdde17526af2604645d52c8c468940784fcac402be3a7e5fe82c0"
-      - "review revision: rv1-aa5de895296cdde17526af2604645d52c8c468940784fcac402be3a7e5fe82c0"
-      - "GitHub PR #438 review receipt comment: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/438#issuecomment-5436880777"
-      - "GitHub Actions run 33055119867: Linux/Windows/aggregate success"
+review_evidence: []
 ---
 
 # PLAN-L7-515: human-approved Pack remote canary publication adapter
+
+## Closure evidence candidate
+
+PR #438 exact HEAD `2923c66e7431fffe6c41567fd8da7cf5acd7a158`には、canonical receipt
+`aa5de895296cdde17526af2604645d52c8c468940784fcac402be3a7e5fe82c0`
+（Claude family、`PASS-WEAK`、blocking 0、2026-08-27T09:11:24.890Z）と、GitHub Actions
+run `33055119867`のLinux／Windows／aggregate Greenが存在する。本PRの非著者reviewが
+このevidence fidelityとlifecycle整合を確認するまでは、frontmatterへ転記せず`status: draft`を
+維持する。review後のconfirmed化は、実reviewが返したworker/reviewer model、exact HEAD、
+green command digestを用い、推測値を記録しない。
 
 ## 1. 目的と前提
 

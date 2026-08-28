@@ -40,21 +40,7 @@ dependencies:
     - docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
     - docs/test-design/harness/L7-pack-publication-remote-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/414
-review_evidence:
-  - reviewer: claude-opus-5
-    review_kind: cross_agent
-    reviewed_at: "2026-08-27T09:11:24.890Z"
-    tests_green_at: "2026-08-27T08:53:38Z"
-    verdict: "pair-freeze PASS-WEAK / blocking 0; implementation R2-R4 pending"
-    plan_revision: 2923c66e7431fffe6c41567fd8da7cf5acd7a158
-    subject_head: 2923c66e7431fffe6c41567fd8da7cf5acd7a158
-    scope: >-
-      PR #438 exact HEADのPLAN/Reverse/test-design整合を非著者検収。R1の設計backfillだけを
-      確認し、後続実装、実remote publication、R2-R4完了は証明していない。
-    citations:
-      - "canonical receipt digest: aa5de895296cdde17526af2604645d52c8c468940784fcac402be3a7e5fe82c0"
-      - "GitHub PR #438 review receipt comment: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/438#issuecomment-5436880777"
-      - "GitHub Actions run 33055119867: Linux/Windows/aggregate success"
+review_evidence: []
 ---
 
 # PLAN-REVERSE-515: Pack remote canary publication の逆向き確認
