@@ -84,13 +84,19 @@ approval receiptとsingle-use nonceを発行する**。
 
 ## 4. TDD / oracle 契約
 
-実装PRは専用test-designの `CANDIDATE-PACKPUB-519-*` をRedから開始し、成立したものだけを
-`U-PACKPUB-REMOTE-*`へ昇格する。各oracleはtyped reasonだけでなく、該当境界のport call countを
-直接観測する。特に次を独立に殺す。
+実装PRは上位pair artifact
+`docs/test-design/harness/L7-pack-publication-remote-test-design.md` §3/§6 が所有する
+`CANDIDATE-PACKPUB-003-A..S2`をID変更・再採番・再定義せず、その全行をRedから開始する。
+対象集合は `A, B, C, D, E, F, G, H1, H2, I, J, K, L, M1, M-late, M2, N, O, P, Q, R,
+S1, S2` の23行であり、成立した行だけを1対1の`U-PACKPUB-REMOTE-*`へ昇格する。専用test-designは
+この集合への実装束縛だけを所有し、新しいcandidate registryを作らない。各oracleはtyped reason
+だけでなく、該当境界のport call countを直接観測する。特に次を独立に殺す。
 
 - 実write後の結果で`remoteWrites: 0`を返す誤報告。
 - mutation単位nonceを複数operationへ再利用するcomposition。
-- draft/asset/tag/visibility/pointerのregistry行が実テストを持たないover-claim。
+- approval、initial drift、inventory、暗黙補完、branch/merge、tag pre/post、Release、asset、sidecar、
+  visibility、pointer initial/late/CAS、cleanup、reconciliation、nonce、protected main、journal、
+  linkageのいずれかのregistry行が実テストを持たないover-claim。
 - commit/tree/sidecar/release identityの一軸だけを変えたread-back drift。
 - response loss、journal persist failure、crash/restart後の盲目的write replay。
 

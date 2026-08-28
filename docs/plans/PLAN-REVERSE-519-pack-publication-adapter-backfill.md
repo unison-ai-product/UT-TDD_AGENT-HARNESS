@@ -55,7 +55,8 @@ mutation単位single-use nonceに反して一個のnonceを複数mutationへ再�
 1. remote mutationごとにapproval receiptとsingle-use nonceを一つずつ割り当てる。
 2. consume済みnonceの再利用は新規write 0のsame-operation reconciliationだけに限定する。
 3. deny/partial/indeterminate resultの`remoteWrites`は実際のport call ledgerから導出する。
-4. candidate registryと実装testを1対1にし、未実装行をGreenとして主張しない。
+4. 上位が所有する`CANDIDATE-PACKPUB-003-A..S2`全23行をID変更なしで実装testへ1対1にし、
+   別registryへの再採番や未実装行のGreen主張を行わない。
 
 ## Backprop scope
 
@@ -65,7 +66,7 @@ mutation単位single-use nonceに反して一個のnonceを複数mutationへ再�
 | L4/L5 | not_impacted | 新しい外部SDK、永続schema、CLI、共有状態を追加しない。 |
 | L6/L7-515 | not_impacted | 正本FSM、authority、CAS、nonce、journal、partial境界をそのまま再利用する。 |
 | L7-519 | updated | 実装sliceの所有範囲と旧PRからの是正境界を固定する。 |
-| L7 test design | updated | single-use nonce、write ledger、未実装oracleの独立candidateを追加する。 |
+| L7 test design | updated | 上位`003-A..S2`全行を再定義せず、実装sliceへの1対1束縛を追加する。 |
 
 ## R2〜R4出口
 

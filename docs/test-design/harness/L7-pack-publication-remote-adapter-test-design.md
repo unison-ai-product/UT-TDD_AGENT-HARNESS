@@ -17,24 +17,46 @@ remote mutation、stable promotionは実行せず、in-memory spy/fault portのc
 このpair-freezeでは候補だけを宣言する。production sourceとtest codeを追加せず、共有
 `L7-unit-test-design.md`への`U-*`登録も実装PRまで行わない。
 
-## 2. Candidate oracle matrix
+## 2. 上位candidate集合の実装束縛
 
-| Candidate | 単独変異 / fault | 期待oracle |
-| --- | --- | --- |
-| `CANDIDATE-PACKPUB-519-001` | branch commit、PR作成、PR CAS mergeのいずれかで同じapproval nonceを再利用する | 2個目のmutation前に`nonce_replay`、そのmutation以降write 0。各mutationへ別nonceを与えた正常系だけ進行する。 |
-| `CANDIDATE-PACKPUB-519-002` | draft Release、asset A、asset B、tag、visibility、pointerの隣接2操作でnonceを共有する | 共有をtyped denyし、各操作単位のsingle-use nonceなら正本FSM順に進む。 |
-| `CANDIDATE-PACKPUB-519-003` | branch/PR等の実write後に後続faultを返し、resultの`remoteWrites`を定数0へ変異する | port ledgerの実call数とresultが一致せずRed。write前denyだけ0を返す。 |
-| `CANDIDATE-PACKPUB-519-004` | draft Release identity/draft stateを単独変異する | asset/tag/visibility/pointer write 0、期待typed reasonを単独検出する。 |
-| `CANDIDATE-PACKPUB-519-005` | assetを0/1/3件、重複name、bytes/size/digestの各一軸へ変異する | tag/visibility/pointer write 0。digest以外のguardを除去しても各oracleがRedになる。 |
-| `CANDIDATE-PACKPUB-519-006` | tag refusal/response loss/target driftまたはvisibility refusal/unknownを単独注入する | 既存immutable objectを保持して後続write 0、`partial_publication`/`indeterminate`を成功へ丸めない。 |
-| `CANDIDATE-PACKPUB-519-007` | commit/tree/sidecar/release identity/merge modeのうち一軸だけをread-backで差し替える | `release_draft`以降write 0。未生成commit/treeを事前値で通さない。 |
-| `CANDIDATE-PACKPUB-519-008` | mutation intent後のpersist failure、response loss、crash/restartを注入する | success推測とwrite replay 0。同一operation/transition/state/keyのread-only reconciliationだけを許可する。 |
-| `CANDIDATE-PACKPUB-519-009` | late main/pointer driftまたはpointer CAS response loss/read-back mismatch | pointer append 0またはapplied unknown、重複CAS 0、canary success 0。 |
+candidateの意味とIDの唯一ownerは、confirmedな上位pair artifact
+`L7-pack-publication-remote-test-design.md` §3/§6である。本artifactは別IDを発行せず、実装PRへ次の
+**全23行**をそのまま束縛する。
+
+```text
+CANDIDATE-PACKPUB-003-A
+CANDIDATE-PACKPUB-003-B
+CANDIDATE-PACKPUB-003-C
+CANDIDATE-PACKPUB-003-D
+CANDIDATE-PACKPUB-003-E
+CANDIDATE-PACKPUB-003-F
+CANDIDATE-PACKPUB-003-G
+CANDIDATE-PACKPUB-003-H1
+CANDIDATE-PACKPUB-003-H2
+CANDIDATE-PACKPUB-003-I
+CANDIDATE-PACKPUB-003-J
+CANDIDATE-PACKPUB-003-K
+CANDIDATE-PACKPUB-003-L
+CANDIDATE-PACKPUB-003-M1
+CANDIDATE-PACKPUB-003-M-late
+CANDIDATE-PACKPUB-003-M2
+CANDIDATE-PACKPUB-003-N
+CANDIDATE-PACKPUB-003-O
+CANDIDATE-PACKPUB-003-P
+CANDIDATE-PACKPUB-003-Q
+CANDIDATE-PACKPUB-003-R
+CANDIDATE-PACKPUB-003-S1
+CANDIDATE-PACKPUB-003-S2
+```
+
+実装PRは各行につき独立testを1件以上持ち、上位§3の単独mutation、typed reason、後続port 0、
+partial/indeterminate保持を変更しない。同じmutationを別candidateとして複製せず、23行のいずれかを
+未実装のまま`U-PACKPUB-REMOTE-*`完了と主張しない。
 
 ## 3. 検証規則
 
-各候補は他guardを成立させたfixtureで一軸だけを変異する。typed reason、port名、call順、各port count、
-全remote write countを直接検査し、別理由で落ちたケースを合格にしない。実装PRで各candidateと実testを
+上位23候補は他guardを成立させたfixtureで一軸だけを変異する。typed reason、port名、call順、各port count、
+全remote write countを直接検査し、別理由で落ちたケースを合格にしない。実装PRで上位candidateと実testを
 1対1にした後だけ`U-PACKPUB-REMOTE-*`へ昇格し、共有registryへ登録する。
 
 Node/npm targeted test、typecheck、Biome、PLAN lint、Linux/Windows/aggregate CIを同じPLAN revisionと
