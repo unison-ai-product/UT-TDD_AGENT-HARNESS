@@ -8,7 +8,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": [".ut-tdd/bin/run-bun.ts",".ut-tdd/bin/ut-tdd.mjs","hook","agent-guard"],
+            "args": [".ut-tdd/bin/ut-tdd.mjs","hook","agent-guard"],
             "timeout": 5,
             "blockOnFailure": true,
             "statusMessage": "agent-guard: Codex subagent allowlist/model enforcement"
@@ -21,7 +21,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": [".ut-tdd/bin/run-bun.ts",".ut-tdd/bin/ut-tdd.mjs","hook","work-guard"],
+            "args": [".ut-tdd/bin/ut-tdd.mjs","hook","work-guard"],
             "timeout": 5,
             "blockOnFailure": true,
             "statusMessage": "work-guard: foreign edit protection"
@@ -35,7 +35,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": [".ut-tdd/bin/run-bun.ts",".ut-tdd/bin/ut-tdd.mjs","session","start"],
+            "args": [".ut-tdd/bin/ut-tdd.mjs","session","start"],
             "timeout": 5,
             "statusMessage": "session-log: session start (fail-open)"
           }
@@ -49,7 +49,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": [".ut-tdd/bin/run-bun.ts",".ut-tdd/bin/ut-tdd.mjs","hook","post-tool-use"],
+            "args": [".ut-tdd/bin/ut-tdd.mjs","hook","post-tool-use"],
             "timeout": 5,
             "statusMessage": "session-log: post tool use (fail-open)"
           }
@@ -62,7 +62,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": [".ut-tdd/bin/run-bun.ts",".ut-tdd/bin/ut-tdd.mjs","session","summary"],
+            "args": [".ut-tdd/bin/ut-tdd.mjs","session","summary"],
             "timeout": 5,
             "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }

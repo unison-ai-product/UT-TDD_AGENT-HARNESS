@@ -938,7 +938,7 @@ describe("github-ci-policy lint", () => {
   });
 
   it("rejects raw vitest run in Pack CI because source-only tests need governance docs", () => {
-    const pack = PACK_WORKFLOW.replace("bun run test:pack", "bun run vitest run");
+    const pack = PACK_WORKFLOW.replace("npm run test:pack", "npm exec vitest -- run");
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
     expect(result.ok).toBe(false);
@@ -952,12 +952,12 @@ describe("github-ci-policy lint", () => {
       file: "docs/templates/github/common/pack-harness-check.yml",
       profile: "pack",
       reason: "forbidden_raw_vitest",
-      detail: "Pack CI must use bun run test:pack instead of raw vitest run",
+      detail: "Pack CI must use npm run test:pack instead of raw vitest run",
     });
   });
 
-  it("rejects source full bun run test in Pack CI because Pack uses the safe smoke suite", () => {
-    const pack = PACK_WORKFLOW.replace("bun run test:pack", "bun run test");
+  it("rejects source full npm test in Pack CI because Pack uses the safe smoke suite", () => {
+    const pack = PACK_WORKFLOW.replace("npm run test:pack", "npm test");
     const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, pack));
 
     expect(result.ok).toBe(false);
@@ -971,7 +971,7 @@ describe("github-ci-policy lint", () => {
       file: "docs/templates/github/common/pack-harness-check.yml",
       profile: "pack",
       reason: "forbidden_source_full_tests",
-      detail: "Pack CI must use bun run test:pack instead of source full bun run test",
+      detail: "Pack CI must use npm run test:pack instead of source full npm test",
     });
   });
 
@@ -987,7 +987,7 @@ describe("github-ci-policy lint", () => {
         "run: npm ci --no-audit --no-fund && echo extra",
       ],
       ["doc-check mutation", "npm run test:doc-lane", "npm run test:doc-lane --changed"],
-      ["with value mutation", 'bun-version: "1.3"', 'bun-version: "latest"'],
+      ["with value mutation", 'node-version: "24.13.0"', 'node-version: "latest"'],
     ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
       expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");

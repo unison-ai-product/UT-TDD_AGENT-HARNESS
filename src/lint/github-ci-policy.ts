@@ -180,13 +180,13 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
       },
       {
         reason: "forbidden_raw_vitest",
-        detail: "Pack CI must use bun run test:pack instead of raw vitest run",
-        matches: (step) => /\bvitest\s+run\b/.test(step.run ?? ""),
+        detail: "Pack CI must use npm run test:pack instead of raw vitest run",
+        matches: (step) => /\bvitest(?:\s+--)?\s+run\b/.test(step.run ?? ""),
       },
       {
         reason: "forbidden_source_full_tests",
-        detail: "Pack CI must use bun run test:pack instead of source full bun run test",
-        matches: (step) => /\bbun\s+run\s+test\b(?!:)/.test(step.run ?? ""),
+        detail: "Pack CI must use npm run test:pack instead of source full npm test",
+        matches: (step) => /\bnpm(?:\s+run)?\s+test\b(?!:)/.test(step.run ?? ""),
       },
     ],
   },
