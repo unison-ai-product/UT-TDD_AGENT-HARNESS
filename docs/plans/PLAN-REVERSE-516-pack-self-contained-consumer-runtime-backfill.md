@@ -98,3 +98,16 @@ remote publication、#418 canaryは本Reverseで再定義しない。
 - **R4**: 不足が実証された場合だけ`PLAN-L6-101` §1〜§5へbackfillし、既存`CANDIDATE-PACKISO`
   契約を重複宣言せず、Forwardへ`gap-only`で再合流する。実装側のsource path、Pack remote、
   Bun retirement、#432を変更しない。
+
+## 実装時点のR0 evidence（partial, 2026-08-28）
+
+`PLAN-L7-516`の実装成果物は、rebase後のcode commit
+`4f92ba8c36439078f8a8a375e3a71a2b91a9f94d`と、実filesystem producer testを追加した
+`7c91772814baf1bda94b2f830efbb391be3ede5d`である。専用targetは14/14 Green、typecheckとBiomeも
+成功した。filesystem laneはconsumer-local stagingをsealed bundleへrenameし、single active
+pointerを作成し、別cwdからNode wrapperでcompiled entryを起動する。
+
+R1〜R4の完了、全15 U候補/P候補の1:1 trace、Linux/Windows全境界、receipt-backed L6-93 producer、
+rollback/history chain、external read/open/stat/process counter、非著者review、aggregate CIはまだ
+証明していない。したがって本Reverseは`status: draft`/R0予約を維持し、未測定差分をbackfill対象として
+残す。上記の実測は既存PACKISO/NODEBOOT候補の代替や全候補Greenの主張ではない。

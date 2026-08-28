@@ -26,6 +26,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/consumer-node-runtime.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/distribution.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/consumer-node-runtime.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -357,4 +365,26 @@ PF5、#432、#414、Pack remote publicationを重複所有しない。
 5. TypeScript、Biome、専用unit/system test、PLAN lint、scoped doctor、Linux/Windows/aggregate CI、
    非著者closing review、Reverse R1〜R4、正規receipt gateが同一PLAN revision/exact HEADへ束縛される。
 
-docs-only pair-freeze時点では、上記の実装・Green・独立配布を主張しない。
+（pair-freeze記録）docs-only pair-freeze時点では、上記の実装・Green・独立配布を主張しない。
+
+## 10. 実装実測（2026-08-28, scoped / partial）
+
+pair-freeze後の実装成果物は `4f92ba8c36439078f8a8a375e3a71a2b91a9f94d`（rebase後）と
+`7c91772814baf1bda94b2f830efbb391be3ede5d`（filesystem producer test追加）である。対象testは
+`tests/consumer-node-runtime.test.ts` の14 testsで、identity/digest/path、Node-only wrapper、port順序、
+pre/post activation fault、read-only reconcile once、lock release、A/B path隔離、setup checkout削除後の
+consumer起動、実filesystemでのstaging→sealed bundle→active pointer→wrapper起動、readiness bypass、
+genesis、P=100 bounded derivationを実測した。
+
+実行証跡:
+
+- `node scripts/run-vitest-snapshot.ts tests/consumer-node-runtime.test.ts --reporter=dot` は
+  rebase後コードcommit `4f92ba8c...` のsnapshotで13/13 Green（`7c917728...` より前のため、producer testは未収録）。
+- detached snapshot外の専用targetでは同一testが14/14 Green。
+- `npx tsc --noEmit --pretty false` exit 0、Biome対象4 files clean、`git diff --check` clean。
+
+これは全候補の完了証跡ではない。Windows junction/reparse・8.3 alias・DAC permission、historyの
+完全prefix/truncate/reorder/fork/replay、attested prior generation rollback selection、外部
+read/open/stat/process counter、Claude/Codex hook実fixture、aggregate CI、非著者closing review、
+Reverse R1〜R4、実producerのL6-93 receipt入力は未実測であり、実装完了・独立配布・全15 oracle Greenを
+主張しない。これらは次のQA/Reverse evidenceで追加測定する。

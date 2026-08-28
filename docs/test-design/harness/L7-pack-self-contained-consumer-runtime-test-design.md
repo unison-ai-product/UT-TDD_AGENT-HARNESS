@@ -48,3 +48,21 @@ worktreeを物理削除したfixture、hostile consumer-local source、read/open
 
 実装対象外は#432 identity bootstrap、#414 remote publication、source側Bun residual cleanup、
 Pack canary/stable、shared L7 test-designへの追記である。これらをこのpairのGreen根拠へ混ぜない。
+
+## 実装昇格の初回記録（2026-08-28, partial）
+
+`tests/consumer-node-runtime.test.ts` は、実装成果物の最初の昇格テストとして U-PACKNODE-001〜015
+の契約軸を一部束ねて14 testsへ実装した。`4f92ba8c36439078f8a8a375e3a71a2b91a9f94d`のrebase後
+コードと`7c91772814baf1bda94b2f830efbb391be3ede5d`のfilesystem producer laneを対象に、専用target
+14/14 Greenを確認した。
+
+実装が直接測定した範囲は、identity/digest/path、Node-only active-pointer wrapper、port順序、
+pre/post activation fault、reconcile once、finally release、A/B path隔離、setup checkout削除後の
+起動、実filesystem staging→sealed bundle→pointer→wrapper起動、readiness bypass、genesis、P=100
+bounded derivationである。これは各候補の全mutation軸を独立に殺した証跡ではない。
+
+Windows junction/reparse・8.3 alias・permission、history prefix/replay/sequence、attested rollback、
+外部read/open/stat/process counter、Claude/Codex hook実fixture、L6-93 receipt-backed producer、
+Linux/Windows/aggregate CI、非著者closing review、Reverse R1〜R4は未昇格・未実測である。従って
+`CANDIDATE-*`のdocs-only freezeと既存PACKISO/NODEBOOT候補は保持し、全15 U/P候補Greenや独立配布を
+この記録から主張しない。
