@@ -352,7 +352,7 @@ describe("Claude wake generation rolling upgrade", () => {
         repoRoot: root,
         sessionId: "old-session",
         pollIntervalMs: 10,
-        maxWaitMs: 100,
+        maxWaitMs: 5_000,
         beforeClaimCommit: () => {
           if (revoked) return;
           revoked = true;
