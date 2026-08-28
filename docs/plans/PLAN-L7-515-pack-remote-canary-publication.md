@@ -69,7 +69,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-28T02:04:40Z"
         evidence_path: docs/test-design/harness/L7-pack-publication-remote-test-design.md
-        output_digest: "sha256:34cd8bf52334b8bab1d6a835af6b6f6fc95450ef88998dbcd8fd7d163a6b6afe"
+        output_digest: "sha256:d2ae4a8cf48c21f4a402d679a73b993ca511f03fbab4b6a8b8703583695c1722"
         anchor_commit: 92d16905e85d2550b28b27b9f86874f07c4a0151
 ---
 
