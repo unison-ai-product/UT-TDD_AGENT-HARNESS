@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-28
 updated: 2026-08-28
 owner: PM / PO / Claude
@@ -41,7 +41,39 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
     - docs/plans/PLAN-L7-524-pack-consumer-generated-bun-removal.md
     - docs/plans/PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-08-28T08:51:37Z"
+    tests_green_at: "2026-08-28T08:42:01Z"
+    verdict: "PR #469 exact HEAD 58f88f14 に対する非著者 closing review が PASS / blocking 0。§2.1 inventory の完全性、§3.3 の検出能力 oracle 契約、§5.0 順序契約 (S1-b -> S1-c のみ拘束)、§5.3 slice↔子 Issue 束縛表が freeze された"
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    effort: low
+    plan_revision: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
+    subject_head: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
+    evidence_path: docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
+    anchor_commit: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
+    scope: >-
+      PR #469 exact HEAD 58f88f14 に対する非著者 closing review。著者 family は claude、
+      reviewer family は codex。canonical receipt
+      rv1-f5ce95056ebcb93c481110f6212b9550dcb77210abbf91eb845f784d5df87abc が
+      verdict=PASS / blockingFindings=[] / reviewerFamily=codex を記録している。
+      対象は本 PLAN の契約 freeze (inventory / 検出能力 oracle / 順序契約 / slice 束縛表) のみであり、
+      S1-a (#471) / S1-c (#472) / Slice 2 (#473) の実装完了や Issue #450 の完了は主張しない。
+    citations:
+      - ".ut-tdd/review/receipts/f5ce95056ebcb93c481110f6212b9550dcb77210abbf91eb845f784d5df87abc.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33155496785"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub harness-check run 33155496785 (harness-check-linux / harness-check-windows / harness-check aggregate)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-28T08:42:01Z"
+        evidence_path: docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
+        output_digest: "sha256:89f3fdf8ee382f71557e31fb0a62131d470bbb447bd3f20a6640a9c86addcd44"
+        anchor_commit: 58f88f14a2f938a287240caaa949dcdf4bdb7ca6
 ---
 
 # PLAN-L7-522: Pack/consumer 実行面の Bun 到達経路撤去
@@ -341,12 +373,27 @@ Slice 2 (#473) は本 PLAN の対象外であり (§4.3)、`PLAN-L6-93` → `PLA
 4. BAN 検出側 lint の **Bun 検出能力**は減らない (§3.3)。`github-ci-policy.ts` の required step は
    S1-c で Node 経路へ追随変更するが、deny rule の削除・allowlist への path 追加・pin 引き上げは行わない。
 
-## 7. 完了条件
+## 7. 完了条件 (= pair-freeze の確定条件)
 
-- [ ] S1-b / S1-a / S1-c の 3 PR がいずれも exact-head CI Green と非著者 canonical receipt を持つ
-- [ ] 対の test-design の候補 oracle が正規 ID へ昇格し、`oracle-test-trace` が Green
-- [ ] 不変条件 1〜4 が §8 の oracle で機械実測されている
-- [ ] Issue #418 の HARD 条件との突き合わせ結果が記録されている
+§9 のとおり本 PLAN の confirm は **pair-freeze の確定のみ**を意味する。したがって DoD は
+#469 で実際に証明された契約 freeze 条件に限る。将来 slice の完了を DoD に置くと §9 と矛盾し、
+かつ未達を checked と偽らない限り confirm できなくなる (2026-08-28 errata)。
+
+- [x] §2.1 の撤去対象 inventory が生成経路ごとに列挙され、非著者 review で完全性が確認されている
+- [x] §3.3 の BAN 検出 lint 不変条件が behavioral な検出能力 oracle として freeze されている
+- [x] §5.0 の順序契約 (拘束は S1-b → S1-c のみ、S1-a は順序自由) が freeze されている
+- [x] §5.3 の slice ↔ 子 Issue 束縛表が freeze されている
+- [x] 対の test-design が `CANDIDATE-U-PACKBUN-001..006` を候補として宣言している
+
+## 7.1 program closure criteria (DoD ではない)
+
+次は Issue #450 の program 閉塞条件であり、本 PLAN の confirm 条件ではない。未達のまま保持する。
+
+- S1-b (#470) / S1-a (#471) / S1-c (#472) の 3 PR がいずれも exact-head CI Green と
+  非著者 canonical receipt を持つ
+- 候補 oracle が正規 ID へ昇格し、`oracle-test-trace` が Green
+- 不変条件 1〜4 が §8 の oracle で機械実測されている
+- Issue #418 の HARD 条件との突き合わせ結果が記録されている
 
 ## 8. 検証
 

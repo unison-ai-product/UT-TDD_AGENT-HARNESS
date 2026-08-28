@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-28
 updated: 2026-08-28
 owner: PM / PO / Claude
@@ -43,7 +43,42 @@ dependencies:
     - src/doctor/setup-smoke.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/470
-review_evidence: []
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-08-28T11:56:22Z"
+    tests_green_at: "2026-08-28T11:56:11Z"
+    verdict: "preflight。S1-b deliverable を slice-scoped PLAN 対へ分離する方向が非著者 lane に確認され、同時に Windows stale oracle (distribution-acceptance の run-bun 期待) が blocking として指摘された"
+    worker_model: claude-opus-5
+    reviewer_model: gpt-5.6-sol
+    effort: low
+    plan_revision: 9a85b0b7368cbf13ecab8635fb940913751d69d1
+    subject_head: 9a85b0b7368cbf13ecab8635fb940913751d69d1
+    evidence_path: docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
+    anchor_commit: 9a85b0b7368cbf13ecab8635fb940913751d69d1
+    scope: >-
+      preflight review_evidence である (merged-plan-status 是正手順 (B))。著者 family は claude、
+      非著者 family は codex。対象は local HEAD 9a85b0b7 における PLAN 分離の方向確認と、
+      exact remote HEAD caf61e20 の CI 実測に基づく指摘 2 件 (Linux: PLAN-L7-522 の DoD 未達、
+      Windows: distribution-acceptance の run-bun 期待残存) である。
+      **exact PR HEAD に対する非著者 closing review はこの時点では未取得**であり、
+      close gate はそれを別途要求する。本 evidence は confirm の前提を満たすためのものであって
+      closing verdict の代替ではない。契約は #469 で freeze 済みの PLAN-L7-522 S1-b であり、
+      本 PLAN は新規の規範・oracle・受入条件を追加しない所有/trace PLAN である。
+    citations:
+      - "docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md"
+      - ".ut-tdd/memory/feedback-pr-478-final-governance-clarification-preserve-469-freeze-child-owns-s1-b--db5b8212cf8a.md"
+      - ".ut-tdd/memory/feedback-pr-478-exact-head-ci-feedback-child-plan-stale-windows-oracle--3e4658c89a6c.md"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/setup-bun-removal.test.ts tests/ban-lint-detection-power.test.ts tests/hook-native-launcher.test.ts tests/doctor-setup-smoke.test.ts tests/doctor-test-repository-isolation.test.ts tests/oracle-test-trace.test.ts tests/setup.test.ts tests/codex-hook-adapter.test.ts"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-28T11:56:11Z"
+        evidence_path: docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
+        output_digest: "sha256:8e55139673d23aba879a07dfa04fca18b493e35915e0f50844645166330774e7"
+        anchor_commit: 9a85b0b7368cbf13ecab8635fb940913751d69d1
 ---
 
 # PLAN-L7-524: setup 生成成果物から Bun 到達経路を撤去する (S1-b)
