@@ -23,7 +23,7 @@ release-artifact-resolver:1
 right-arm-gate-planning:1 right-lung-doc-governance:1 roadmap:1 rule-automation-closure:1 rule-drift:4 runtime-hook-entrypoints:1
 review-live-cli:2
 review-delegation-root:1
-runtime-portability:2 screen-impl-pair-freeze:1 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1
+runtime-portability:2 screen-impl-pair-freeze:1 setup-bun-removal:2 setup-bun-removal:2 self-pair-normative-guard:1 setup-agent-floor:2 setup:8 skill-assignment:1 state-db:1
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
@@ -34,7 +34,7 @@ github-ci-policy:1
 github-forward-store:2
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
-hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2
+claude-memory-terminal-gc:1 release-version-identity:2
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2

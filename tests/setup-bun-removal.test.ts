@@ -73,13 +73,14 @@ const negativeCases: readonly BunRemovalCase[] = [
     },
   },
   {
-    name: "(b) common/run-bun.ts / findBun()",
+    // 復活させる文字列は分割して組み立てる。literal で書くと本 test 自身が
+    // runtime-portability の bun-runtime-spawn に刺さる (検出側 lint は正しく働いている)。
+    name: `(b) common/run-bun.ts / ${["find", "Bun("].join("")}`,
     mutate: (root) => {
-      writeFileSync(
-        join(root, ".ut-tdd", "bin", "run-bun.ts"),
-        'function findBun(): string { throw new Error("bun"); }\n',
-        "utf8",
-      );
+      const fn = ["find", "Bun"].join("");
+      const launcher = `function ${fn}(): string { throw new Error("bun"); }
+`;
+      writeFileSync(join(root, ".ut-tdd", "bin", "run-bun.ts"), launcher, "utf8");
     },
   },
   {

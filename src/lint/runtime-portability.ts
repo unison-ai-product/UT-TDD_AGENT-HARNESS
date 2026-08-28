@@ -120,7 +120,6 @@ const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   ["tests/runtime-portability.test.ts", 11],
   ["tests/doctor-setup-smoke.test.ts", 1],
   ["tests/doctor.test.ts", 1],
-  ["tests/hook-native-launcher.test.ts", 1],
   // 本 lint 自身 (pattern 定義とその注記 = 検出語彙)。
   ["src/lint/runtime-portability.ts", 4],
 ]);

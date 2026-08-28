@@ -13,10 +13,7 @@ import {
   CODEX_REQUIRED as CODEX_REQUIRED_POLICY,
 } from "../src/lint/codex-hook-adapter-policy.ts";
 import { parseHookInvocation } from "../src/lint/hook-invocation.ts";
-import {
-  REQUIRED as CLAUDE_REQUIRED,
-  wrapperHookArgs,
-} from "../src/lint/project-hook.ts";
+import { REQUIRED as CLAUDE_REQUIRED, wrapperHookArgs } from "../src/lint/project-hook.ts";
 import { analyzeReadability } from "../src/lint/readability.ts";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard.ts";
 import { evaluateWorkGuard } from "../src/runtime/work-guard.ts";

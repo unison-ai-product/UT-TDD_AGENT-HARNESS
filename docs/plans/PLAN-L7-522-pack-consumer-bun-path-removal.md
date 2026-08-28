@@ -26,6 +26,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
     artifact_type: markdown_doc
+  - artifact_path: tests/setup-bun-removal.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
