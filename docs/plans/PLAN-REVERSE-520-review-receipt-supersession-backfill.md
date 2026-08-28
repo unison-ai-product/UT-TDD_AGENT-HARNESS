@@ -37,7 +37,7 @@ review_evidence: []
 
 Forward契約のpair-freeze中。実装PRでR1へ移り、Red→Greenとoracle registry昇格を束縛する。
 
-R2では `U-RVATT-040` の各mutationを一つずつ適用し、次を独立に検証する。
+R2では `CANDIDATE-U-RVATT-040` の各caseへmutationを一つずつ適用し、次を独立に検証する。
 
 1. failed outcome append削除で040-AだけがRedになる。
 2. canonical receipt overwrite許可で040-BだけがRedになる。
@@ -50,4 +50,3 @@ failed outcome 1件、superseded attempt 1件、過去attempt file残存を実�
 
 R4では `PLAN-L7-493` の「receipt成功後は上書き・retry拒否」と、`PLAN-L7-518` のappend-only terminalへ
 再合流する。canonical receipt replacementや `superseded_receipt` eventが残る場合はR4に進めない。
-

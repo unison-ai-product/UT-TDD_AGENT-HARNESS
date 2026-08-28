@@ -64,7 +64,8 @@ PR #448 exact HEAD `db2712ddf62bc88060eb0ae55028816b44ceb8df` は、実行失敗
 方式を実装した。Claude closing review receipt `c526f3ab…` は、次を blocking とした。
 
 1. canonical receipt の上書きという方式判断が、既存 `PLAN-L7-493` の契約 freeze 無しに実装された。
-2. `U-RVATT-040` が戻り値だけを検査し、receipt write と `superseded_receipt` audit の削除を検出しない。
+2. 旧PRが正規登録したoracle 040は戻り値だけを検査し、receipt writeと
+   `superseded_receipt` auditの削除を検出しない。
 
 PR #448 は merge せず close し、branch を監査用に保存した。本 PLAN は同実装を追認しない。
 
@@ -130,9 +131,9 @@ PR #448 は merge せず close し、branch を監査用に保存した。本 PL
 - audit event を消しても canonical receipt の受理条件が緩まない。未receipt retryでは監査欠落により止まり、
   receipt後は既存 receipt を変更できない。
 
-## 5. U-RVATT-040 の独立 mutation 契約
+## 5. candidate 040 の独立 mutation 契約
 
-`U-RVATT-040` は単一の happy-path assertion で閉じない。対になるtest-designの 040-A〜040-Dを
+`CANDIDATE-U-RVATT-040` は単一のhappy-path assertionで閉じない。対になるtest-designのcase A〜Dを
 別 fixture / 別 mutation として実装し、各 mutation を単独で Red にする。
 
 - A: failed attempt outcome append を削除する。
@@ -158,6 +159,5 @@ PR #448 は merge せず close し、branch を監査用に保存した。本 PL
 ## 7. 完了条件
 
 - 本PLAN、Reverse、test-designの構造・trace・UTF-8/LFがGreen。
-- exact HEADの非著者Claude reviewが、append-only選択と U-RVATT-040 の独立性を検収する。
+- exact HEADの非著者Claude reviewが、append-only選択とcandidate 040の独立性を検収する。
 - PASS後にのみstatusをconfirmedへ更新し、実装sliceを別PRで開始する。
-
