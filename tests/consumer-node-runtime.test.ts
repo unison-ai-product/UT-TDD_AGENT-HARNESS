@@ -227,11 +227,21 @@ describe("sealed self-contained consumer Node runtime", () => {
     const entry = join(bundle.bundle_path, "ut-tdd.mjs");
     const events: string[] = [];
     const ports: ConsumerNodeRuntimePorts = {
-      readConsumerIdentity: () => events.push("identity"),
-      verifySealedAggregate: () => events.push("aggregate"),
-      verifyNodeGeneration: () => events.push("generation"),
-      acquireConsumerLock: () => events.push("lock"),
-      snapshotPriorActivePointer: () => events.push("snapshot"),
+      readConsumerIdentity: () => {
+        events.push("identity");
+      },
+      verifySealedAggregate: () => {
+        events.push("aggregate");
+      },
+      verifyNodeGeneration: () => {
+        events.push("generation");
+      },
+      acquireConsumerLock: () => {
+        events.push("lock");
+      },
+      snapshotPriorActivePointer: () => {
+        events.push("snapshot");
+      },
       createPrivateStaging: (path) => {
         events.push("stage");
         mkdirSync(path, { recursive: true });
@@ -242,7 +252,9 @@ describe("sealed self-contained consumer Node runtime", () => {
         writeFileSync(join(path, "ut-tdd.mjs"), 'process.stdout.write("filesystem-producer-ok")\n');
         writeFileSync(join(path, "bundle-manifest.json"), JSON.stringify(bundle));
       },
-      fsyncStaging: () => events.push("fsync"),
+      fsyncStaging: () => {
+        events.push("fsync");
+      },
       sealActivationBundle: (path) => {
         events.push("seal");
         mkdirSync(resolve(bundle.bundle_path, ".."), { recursive: true });
@@ -265,7 +277,9 @@ describe("sealed self-contained consumer Node runtime", () => {
         events.push("reconcile");
         return "committed";
       },
-      releaseConsumerLock: () => events.push("release"),
+      releaseConsumerLock: () => {
+        events.push("release");
+      },
       destroyPrivateStaging: (path) => {
         if (existsSync(path)) rmSync(path, { recursive: true, force: true });
       },
