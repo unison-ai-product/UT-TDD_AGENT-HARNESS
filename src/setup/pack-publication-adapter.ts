@@ -474,6 +474,22 @@ function validInventory(intent: Omit<PackPublicationIntent, "approvals">): boole
   );
 }
 
+function validStagingPlan(plan: SealedPackPublicationPlan): boolean {
+  const release = plan.manifest.releases[plan.releaseId];
+  if (!release) return false;
+  const payloadEntries = plan.commitEntries.filter((entry) => entry.path !== CONTROL_MANIFEST_PATH);
+  if (payloadEntries.length !== release.artifacts.length) return false;
+  return release.artifacts.every((artifact, index) => {
+    const entry = payloadEntries[index];
+    return (
+      entry?.path === artifact.destinationPath &&
+      entry.mode === artifact.mode &&
+      entry.size === artifact.size &&
+      entry.contentDigest === artifact.contentDigest
+    );
+  });
+}
+
 export function sealPackPublicationIntent(
   input: PackPublicationIntentInput,
 ): PackPublicationIntentResult {
@@ -491,7 +507,8 @@ export function sealPackPublicationIntent(
   )
     return { ok: false, error: "invalid_remote_identity" };
   const identity = intentIdentity(input);
-  if (!validInventory(identity)) return { ok: false, error: "invalid_inventory" };
+  if (!validStagingPlan(input.plan) || !validInventory(identity))
+    return { ok: false, error: "invalid_inventory" };
   const required = mutationsFor(input.plan);
   const approvals: Record<string, PackPublicationApproval> = {};
   const nonces = new Set<string>();
