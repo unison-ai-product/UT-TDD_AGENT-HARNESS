@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-27
 updated: 2026-08-28
 owner: PM / PO / Codex
@@ -46,7 +46,34 @@ dependencies:
 github_issue_id: 420
 backprop_decision: required
 backprop_decision_reason: "consumer-local sealed runtimeのidentity・原子更新・checkout非依存をL6受入へ戻すため。"
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-28T01:46:56.324Z"
+    tests_green_at: "2026-08-28T01:32:00Z"
+    verdict: "PASS-WEAK / blocking 0"
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: 2b531830de9f40ffcb09b81d19c97802072b76ec
+    subject_head: 2b531830de9f40ffcb09b81d19c97802072b76ec
+    scope: >-
+      PR #455 exact HEADのdocs-only pair-freezeを非著者review。L6-93 §5の限定evidence境界、
+      hostile pathと実producerの実行oracle、独立mutation、production source/source Bun残余の
+      非Scopeを確認した。実装、Green化、Pack publication、canaryは証明しない。
+    citations:
+      - ".ut-tdd/review/receipts/01ef7b5981c4e30ddc8d37bf3c9285378480b91535444106846430024ae5552c.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/455#issuecomment-5447372097"
+    green_commands:
+      - kind: unit_test
+        command: "npm run test:doc-lane"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-28T01:32:00Z"
+        evidence_path: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
+        output_digest: "sha256:94ad3c7e2dfa3edf826a2e645a1ab083876da8aef5797af01b78879c03edbc73"
+        anchor_commit: 2b531830de9f40ffcb09b81d19c97802072b76ec
 ---
 
 # PLAN-L7-516: sealed self-contained consumer Node runtime
