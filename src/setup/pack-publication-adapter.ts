@@ -534,12 +534,15 @@ function eventDigest(value: unknown): string {
   return sha256(stable(value));
 }
 
-function failure(
-  result: Exclude<PublicationPortResult<unknown>, { status: "attested" }>,
-  stage: "preflight" | PublicationTransition,
-  remoteWrites: number,
-  prewrite = false,
-): PackPublicationResult {
+interface FailureContext {
+  readonly result: Exclude<PublicationPortResult<unknown>, { status: "attested" }>;
+  readonly stage: "preflight" | PublicationTransition;
+  readonly remoteWrites: number;
+  readonly prewrite?: boolean;
+}
+
+function failure(context: FailureContext): PackPublicationResult {
+  const { result, stage, remoteWrites, prewrite = false } = context;
   return {
     status:
       result.status === "mismatch" && prewrite
@@ -567,11 +570,13 @@ function validReceipt(receipt: PackPublicationReceipt, intent: PackPublicationIn
 
 class PublicationRun {
   private remoteWrites = 0;
+  private readonly intent: PackPublicationIntent;
+  private readonly ports: PackPublicationPorts;
 
-  constructor(
-    private readonly intent: PackPublicationIntent,
-    private readonly ports: PackPublicationPorts,
-  ) {}
+  constructor(intent: PackPublicationIntent, ports: PackPublicationPorts) {
+    this.intent = intent;
+    this.ports = ports;
+  }
 
   count(): number {
     return this.remoteWrites;
@@ -620,7 +625,12 @@ class PublicationRun {
       };
     }
     if (result.status !== "attested")
-      return failure(result, approval.transition, this.remoteWrites, true);
+      return failure({
+        result,
+        stage: approval.transition,
+        remoteWrites: this.remoteWrites,
+        prewrite: true,
+      });
     if (
       !(await this.journal(approval, "planned_nonce_consumed", {
         mode: result.value.mode,
@@ -669,7 +679,9 @@ class PublicationRun {
       };
     }
     if (result.status !== "attested")
-      return { failure: failure(result, approval.transition, this.remoteWrites) };
+      return {
+        failure: failure({ result, stage: approval.transition, remoteWrites: this.remoteWrites }),
+      };
     if (!(await this.journal(approval, "read_back_observation", result.value)))
       return {
         failure: {
@@ -699,7 +711,8 @@ async function reconcile(
       remoteWrites,
     };
   }
-  if (observed.status !== "attested") return failure(observed, "preflight", remoteWrites);
+  if (observed.status !== "attested")
+    return failure({ result: observed, stage: "preflight", remoteWrites });
   if (!validReceipt(observed.value, intent))
     return {
       status: "indeterminate",
@@ -721,12 +734,17 @@ function sameAsset(
   );
 }
 
+interface ObservationRequest<T> {
+  readonly stage: "preflight" | PublicationTransition;
+  readonly remoteWrites: number;
+  readonly invoke: () => PublicationPortResult<T> | Promise<PublicationPortResult<T>>;
+  readonly prewrite?: boolean;
+}
+
 async function observeAttested<T>(
-  stage: "preflight" | PublicationTransition,
-  remoteWrites: number,
-  invoke: () => PublicationPortResult<T> | Promise<PublicationPortResult<T>>,
-  prewrite = false,
+  request: ObservationRequest<T>,
 ): Promise<{ readonly value: T } | { readonly failure: PackPublicationResult }> {
+  const { stage, remoteWrites, invoke, prewrite = false } = request;
   let observed: PublicationPortResult<T>;
   try {
     observed = await invoke();
@@ -741,7 +759,7 @@ async function observeAttested<T>(
     };
   }
   if (observed.status !== "attested") {
-    return { failure: failure(observed, stage, remoteWrites, prewrite) };
+    return { failure: failure({ result: observed, stage, remoteWrites, prewrite }) };
   }
   return { value: observed.value };
 }
@@ -759,9 +777,24 @@ export async function publishPackCanary(
     };
   const run = new PublicationRun(intent, ports);
   const [before, pointerBefore, tagBefore] = await Promise.all([
-    observeAttested("preflight", 0, () => ports.pack.observeBefore(), true),
-    observeAttested("preflight", 0, () => ports.canary.observeBefore(), true),
-    observeAttested("preflight", 0, () => ports.tag.observe(intent.tagName), true),
+    observeAttested({
+      stage: "preflight",
+      remoteWrites: 0,
+      invoke: () => ports.pack.observeBefore(),
+      prewrite: true,
+    }),
+    observeAttested({
+      stage: "preflight",
+      remoteWrites: 0,
+      invoke: () => ports.canary.observeBefore(),
+      prewrite: true,
+    }),
+    observeAttested({
+      stage: "preflight",
+      remoteWrites: 0,
+      invoke: () => ports.tag.observe(intent.tagName),
+      prewrite: true,
+    }),
   ]);
   if ("failure" in before) return before.failure;
   if ("failure" in pointerBefore) return pointerBefore.failure;
@@ -824,12 +857,15 @@ export async function publishPackCanary(
   if ("failure" in merged) return merged.failure;
   if ("reconcile" in merged) return reconcile(intent, ports, run.count());
 
-  const commit = await observeAttested("pack_commit", run.count(), () =>
-    ports.pack.observeReleaseCommit({
-      repository: intent.remote.repository,
-      mainSha: merged.value.mainSha,
-    }),
-  );
+  const commit = await observeAttested({
+    stage: "pack_commit",
+    remoteWrites: run.count(),
+    invoke: () =>
+      ports.pack.observeReleaseCommit({
+        repository: intent.remote.repository,
+        mainSha: merged.value.mainSha,
+      }),
+  });
   if ("failure" in commit) return commit.failure;
   if (
     commit.value.commitSha !== merged.value.mainSha ||
@@ -856,9 +892,12 @@ export async function publishPackCanary(
   );
   if ("failure" in draft) return draft.failure;
   if ("reconcile" in draft) return reconcile(intent, ports, run.count());
-  const draftObserved = await observeAttested("release_draft", run.count(), () =>
-    ports.release.observeDraft({ releaseId: intent.releaseId, tagName: intent.tagName }),
-  );
+  const draftObserved = await observeAttested({
+    stage: "release_draft",
+    remoteWrites: run.count(),
+    invoke: () =>
+      ports.release.observeDraft({ releaseId: intent.releaseId, tagName: intent.tagName }),
+  });
   if ("failure" in draftObserved) return draftObserved.failure;
   if (
     !draftObserved.value.draft ||
@@ -880,9 +919,11 @@ export async function publishPackCanary(
     );
     if ("failure" in uploaded) return uploaded.failure;
     if ("reconcile" in uploaded) return reconcile(intent, ports, run.count());
-    const observed = await observeAttested("assets", run.count(), () =>
-      ports.release.observeAsset({ releaseId: intent.releaseId, name: asset.name }),
-    );
+    const observed = await observeAttested({
+      stage: "assets",
+      remoteWrites: run.count(),
+      invoke: () => ports.release.observeAsset({ releaseId: intent.releaseId, name: asset.name }),
+    });
     if ("failure" in observed) return observed.failure;
     if (!sameAsset(asset, observed.value))
       return {
@@ -899,9 +940,11 @@ export async function publishPackCanary(
   );
   if ("failure" in tag) return tag.failure;
   if ("reconcile" in tag) return reconcile(intent, ports, run.count());
-  const tagObserved = await observeAttested("tag", run.count(), () =>
-    ports.tag.observe(intent.tagName),
-  );
+  const tagObserved = await observeAttested({
+    stage: "tag",
+    remoteWrites: run.count(),
+    invoke: () => ports.tag.observe(intent.tagName),
+  });
   if ("failure" in tagObserved) return tagObserved.failure;
   if (tagObserved.value === null)
     return {
@@ -928,9 +971,11 @@ export async function publishPackCanary(
   );
   if ("failure" in visible) return visible.failure;
   if ("reconcile" in visible) return reconcile(intent, ports, run.count());
-  const visibleObserved = await observeAttested("release_visible", run.count(), () =>
-    ports.visibility.observe(intent.releaseId),
-  );
+  const visibleObserved = await observeAttested({
+    stage: "release_visible",
+    remoteWrites: run.count(),
+    invoke: () => ports.visibility.observe(intent.releaseId),
+  });
   if ("failure" in visibleObserved) return visibleObserved.failure;
   if (visibleObserved.value.draft || visibleObserved.value.releaseId !== intent.releaseId)
     return {
@@ -939,21 +984,26 @@ export async function publishPackCanary(
       reason: "visibility_identity_mismatch",
       remoteWrites: run.count(),
     };
-  const audit = await observeAttested("release_visible", run.count(), () =>
-    ports.auditor.attest({
-      intent,
-      commit: commit.value,
-      draft: draftObserved.value,
-      assets,
-      tag: observedTag,
-      visibility: visibleObserved.value,
-    }),
-  );
+  const audit = await observeAttested({
+    stage: "release_visible",
+    remoteWrites: run.count(),
+    invoke: () =>
+      ports.auditor.attest({
+        intent,
+        commit: commit.value,
+        draft: draftObserved.value,
+        assets,
+        tag: observedTag,
+        visibility: visibleObserved.value,
+      }),
+  });
   if ("failure" in audit) return audit.failure;
 
-  const lateBefore = await observeAttested("canary", run.count(), () =>
-    ports.canary.observeBefore(),
-  );
+  const lateBefore = await observeAttested({
+    stage: "canary",
+    remoteWrites: run.count(),
+    invoke: () => ports.canary.observeBefore(),
+  });
   if ("failure" in lateBefore) return lateBefore.failure;
   if (
     lateBefore.value.mainSha !== commit.value.commitSha ||
