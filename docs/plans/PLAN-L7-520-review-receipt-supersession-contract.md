@@ -13,9 +13,6 @@ owner: PM / PO / Codex
 github_issue_id: 386
 parent_design: docs/plans/PLAN-L7-493-d3a-repo-local-verdict-custody.md
 pair_artifact: docs/test-design/harness/L7-review-receipt-supersession-test-design.md
-transition_direction: implementation_to_reverse
-implementation_disposition: none
-implementation_target: src/feedback/review-attestation.ts
 agent_slots:
   - role: tl
     slot_label: "TL - canonical receipt immutability と retry custody の独立検収"
@@ -51,7 +48,8 @@ backprop_decision_reason: "canonical receipt の不変性と retry 終端を変�
 ## 1. Outcome
 
 同じ canonical review request の試行が実行失敗した後でも、失敗証跡を消さずに次 attempt へ進み、
-成功した review だけを canonical receipt として一度だけ確定できるようにする。
+正常終了したreview executionだけを（verdictがPASS系かFLAGかを問わず）canonical receiptとして
+一度だけ確定できるようにする。
 
 本契約では **canonical receipt の supersession、置換、in-place 更新を禁止する**。supersede できるのは
 attempt の選択状態だけであり、過去 attempt とその outcome は append-only custody に残る。この区別により、
@@ -79,13 +77,15 @@ PR #448 は merge せず close し、branch を監査用に保存した。本 PL
 | B | failed receipt を canonical path に書き、成功時に in-place 置換する | audit sink が唯一の過去証拠となり、receipt custody の上書きを許すため不採択 |
 | C | attempt ごとに複数 canonical receipt を置き、gate が winner を選ぶ | winner selection と重複終端を新設し、既存 single receipt 契約を壊すため不採択 |
 
-`PLAN-L7-493` §3.3 の「receipt がまだ無い間だけ次 attempt を許す」「receipt 成功後は新 attempt と
-上書きを拒否する」を維持する。`PLAN-L7-518` の append-only terminal / CAS 方針とも矛盾しない。
+`PLAN-L7-493` §3.3 のうち「receiptがまだ無い間だけ次attemptを許す」「receipt成功後は新attemptと
+上書きを拒否する」というretry/custody境界だけを維持する。493全体を本sliceで再freezeする主張ではない。
+`PLAN-L7-518` のappend-only terminal / CAS方針とも矛盾しない。
 
 ### 3.2 用語の固定
 
-- **canonical receipt**: `.ut-tdd/review/receipts/<requestDigest>.json` に create-exclusive で確定する
-  成功 review の終端証拠。生成後は内容を問わず変更・削除・置換しない。
+- **canonical receipt**: `.ut-tdd/review/receipts/<requestDigest>.json` にcreate-exclusiveで確定する
+  正常終了review executionの終端証拠。verdictはPASS、PASS-WEAK、FLAGを取り得る。生成後は
+  内容を問わず変更・削除・置換しない。
 - **attempt outcome**: review attempt の実行結果を git-common-dir の review custody audit へ追記した
   非終端証拠。canonical receipt ではなく、単独で merge authority を持たない。
 - **attempt supersession**: 次 attempt の開始により旧 attempt が選択対象から外れる論理遷移。
