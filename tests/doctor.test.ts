@@ -528,7 +528,7 @@ describe("runDoctor", () => {
     const codexHook = (...args: string[]) => ({
       type: "command",
       command: "node",
-      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+      args: [".ut-tdd/bin/ut-tdd.mjs", ...args],
     });
     const codexHookJson = JSON.stringify({
       hooks: {
@@ -556,7 +556,7 @@ describe("runDoctor", () => {
     const claudeHook = (...args: string[]) => ({
       type: "command",
       command: "node",
-      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+      args: [".ut-tdd/bin/ut-tdd.mjs", ...args],
     });
     const claudeHookJson = JSON.stringify({
       hooks: {
@@ -572,11 +572,11 @@ describe("runDoctor", () => {
     });
     const file = (path: string) => join("/repo", ...path.split("/"));
     const files = new Map<string, string>([
+      // PLAN-L7-524 S1-b: run-bun.ts は撤去済み。shell-free 契約は wrapper 自身で測る。
       [
-        file(".ut-tdd/bin/run-bun.ts"),
-        "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
+        file(".ut-tdd/bin/ut-tdd.mjs"),
+        "const localBin = '.ut-tdd/bin/ut-tdd.mjs';\nspawnSync(process.execPath, args);\n",
       ],
-      [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
       [file("AGENTS.md"), "UT-TDD adapter"],
       [file("CLAUDE.md"), "UT-TDD adapter"],
       [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
