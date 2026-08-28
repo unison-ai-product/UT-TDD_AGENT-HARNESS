@@ -100,6 +100,10 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
           expect.objectContaining({ kind: "attempt_execution_failed", attempt: 1, exitCode: 7 }),
         ]),
       );
+      const firstFailure = readReviewCustodyAudit(root).find(
+        (event) => event.kind === "attempt_execution_failed" && event.attempt === 1,
+      );
+      if (!firstFailure) throw new Error("missing first failure event");
 
       const second = beginReviewAttempt({
         repoRoot: root,
@@ -139,6 +143,86 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
       });
       expect(existsSync(first.path)).toBe(true);
       expect(existsSync(second.path)).toBe(false);
+      expect(readReviewCustodyAudit(root)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "attempt_execution_failed",
+            attempt: 1,
+            requestDigest: digest,
+            exactHead: request.exactHead,
+            verdictPath: first.path,
+            verdictDigest: firstFailure.verdictDigest,
+          }),
+          expect.objectContaining({
+            kind: "superseded_attempt",
+            attempt: 2,
+            supersededAttempt: 1,
+            requestDigest: digest,
+            exactHead: request.exactHead,
+            verdictPath: first.path,
+            oldAttemptDigest: firstFailure.verdictDigest,
+          }),
+        ]),
+      );
+    } finally {
+      cleanup(root);
+    }
+  });
+
+  it("CANDIDATE-U-RVATT-040: multiple retry chain keeps prior supersession history valid", () => {
+    const { root, request } = fixture();
+    try {
+      const first = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (!first.ok) throw new Error(first.reason);
+      writeFileSync(first.path, verdictText(request, 1), "utf8");
+      expect(
+        projectReviewVerdict({
+          repoRoot: root,
+          request,
+          attestation: attestation(request, 1, 7),
+          verdictFile: first.path,
+        }),
+      ).toEqual({ ok: false, reason: "reviewer_exit_nonzero" });
+
+      const second = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-sonnet-5",
+      });
+      if (!second.ok) throw new Error(second.reason);
+      writeFileSync(second.path, verdictText(request, 2, "claude-sonnet-5"), "utf8");
+      expect(
+        projectReviewVerdict({
+          repoRoot: root,
+          request,
+          attestation: attestation(request, 2, 8, "claude-sonnet-5"),
+          verdictFile: second.path,
+        }),
+      ).toEqual({ ok: false, reason: "reviewer_exit_nonzero" });
+
+      const third = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      expect(third).toMatchObject({ ok: true, attempt: 3 });
+      if (!third.ok) return;
+      writeFileSync(third.path, verdictText(request, 3), "utf8");
+      expect(
+        projectReviewVerdict({
+          repoRoot: root,
+          request,
+          attestation: attestation(request, 3, 0),
+          verdictFile: third.path,
+        }),
+      ).toMatchObject({ ok: true });
     } finally {
       cleanup(root);
     }
@@ -231,6 +315,60 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
         ok: false,
         reason: "attempt_outcome_indeterminate",
       });
+    } finally {
+      cleanup(root);
+    }
+  });
+
+  it("CANDIDATE-U-RVATT-040: outcome conflict is typed and blocks a new attempt", () => {
+    const { root, request } = fixture();
+    try {
+      const first = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (!first.ok) throw new Error(first.reason);
+      writeFileSync(first.path, verdictText(request, 1), "utf8");
+      expect(
+        projectReviewVerdict({
+          repoRoot: root,
+          request,
+          attestation: attestation(request, 1, 7),
+          verdictFile: first.path,
+        }),
+      ).toEqual({ ok: false, reason: "reviewer_exit_nonzero" });
+
+      const conflict = projectReviewVerdict({
+        repoRoot: root,
+        request,
+        attestation: attestation(request, 1, 9),
+        verdictFile: first.path,
+      });
+      expect(conflict).toEqual({ ok: false, reason: "attempt_outcome_conflict" });
+      expect(existsSync(join(root, ".ut-tdd", "review", "receipts"))).toBe(false);
+      expect(
+        beginReviewAttempt({
+          repoRoot: root,
+          request,
+          provider: "claude",
+          model: "claude-sonnet-5",
+        }),
+      ).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
+      expect(
+        existsSync(
+          join(
+            root,
+            ".ut-tdd",
+            "review",
+            "verdicts",
+            reviewIdentityDigest(request),
+            "attempts",
+            "attempt-2",
+          ),
+        ),
+      ).toBe(false);
     } finally {
       cleanup(root);
     }
