@@ -11,6 +11,7 @@ import {
   type PackPublicationApproval,
   type PackPublicationIntentInput,
   type PackPublicationPorts,
+  parseSealedPackageVersionIdentity,
   publishPackCanary,
   sealPackPublicationIntent,
 } from "../src/setup/pack-publication-adapter.ts";
@@ -400,6 +401,7 @@ describe("remote Pack canary publication", () => {
         ok: false,
         error: "invalid_inventory",
       });
+      expect(parseSealedPackageVersionIdentity(withoutEntry.commitEntries)).toBeNull();
     }
     const packageLock = plan.commitEntries.find((entry) => entry.path === "package-lock.json");
     if (!packageLock) throw new Error("expected package-lock entry");
@@ -411,6 +413,7 @@ describe("remote Pack canary publication", () => {
         }),
       ),
     ).toEqual({ ok: false, error: "invalid_inventory" });
+    expect(parseSealedPackageVersionIdentity([...plan.commitEntries, packageLock])).toBeNull();
     for (const [path, bytes] of [
       ["package.json", Buffer.from("{")],
       ["package.json", Buffer.from('{"version":1}')],
@@ -432,6 +435,7 @@ describe("remote Pack canary publication", () => {
         ok: false,
         error: "invalid_inventory",
       });
+      expect(parseSealedPackageVersionIdentity(mutated.commitEntries)).toBeNull();
     }
   });
 

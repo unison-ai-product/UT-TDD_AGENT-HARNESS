@@ -370,7 +370,7 @@ function digestEntry(entry: PackPublicationCommitEntry): string {
   );
 }
 
-interface SealedPackageVersionIdentity {
+export interface SealedPackageVersionIdentity {
   readonly packageVersion: string;
   readonly lockfileVersion: string;
   readonly lockfileRootVersion: string;
@@ -393,7 +393,7 @@ function parseJsonEntry(
   }
 }
 
-function sealedPackageVersionIdentity(
+export function parseSealedPackageVersionIdentity(
   entries: readonly PackPublicationCommitEntry[],
 ): SealedPackageVersionIdentity | null {
   const packageJson = parseJsonEntry(entries, PACKAGE_JSON_PATH);
@@ -420,6 +420,8 @@ function sealedPackageVersionIdentity(
     return null;
   return { packageVersion, lockfileVersion, lockfileRootVersion };
 }
+
+const sealedPackageVersionIdentity = parseSealedPackageVersionIdentity;
 
 export function derivePackPublicationTreeDigest(plan: {
   readonly commitEntries: readonly PackPublicationCommitEntry[];
