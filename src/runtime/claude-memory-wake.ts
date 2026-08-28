@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   appendFileSync,
   closeSync,
@@ -15,12 +15,19 @@ import { join } from "node:path";
 import type { MemoryEntry } from "../memory/index.ts";
 import { isCanonicalMemorySourcePath } from "../memory/service.ts";
 import { ensureDir } from "../shared/fs.ts";
+import {
+  activateClaudeWakeGeneration,
+  CLAUDE_WAKE_GENERATION_SCHEMA,
+  type ClaudeWakeAuthority,
+  parseClaudeWakeGeneration,
+  validateClaudeWakeClaimAuthority,
+} from "./claude-wake-generation-upgrade.ts";
 
 export const CLAUDE_INBOX_SCHEMA = "ut-tdd.claude-inbox/v3" as const;
 export const CLAUDE_INBOX_LEGACY_SCHEMA = "ut-tdd.claude-inbox/v2" as const;
 export const CLAUDE_WAKE_BODY_MAX_CHARS = 8_000;
 export const CLAUDE_INBOX_BACKLOG_WARN_AGE_MS = 15 * 60 * 1_000;
-export const CLAUDE_WAKE_GENERATION_SCHEMA = "ut-tdd.claude-wake-generation/v1" as const;
+export { CLAUDE_WAKE_GENERATION_SCHEMA };
 export const CLAUDE_INBOX_TERMINAL_SCHEMA = "ut-tdd.claude-inbox-terminal/v1" as const;
 export type ClaudeLiveWorkspaceRoutingFailure =
   | "no_live_claude_workspace"
@@ -791,21 +798,7 @@ function readGenerationMarker(path: string): {
   inboxSchema?: string;
 } | null {
   try {
-    const value: unknown = JSON.parse(readFileSync(path, "utf8"));
-    if (
-      typeof value !== "object" ||
-      value === null ||
-      (value as { schema?: unknown }).schema !== CLAUDE_WAKE_GENERATION_SCHEMA ||
-      typeof (value as { generation?: unknown }).generation !== "string" ||
-      typeof (value as { workspaceId?: unknown }).workspaceId !== "string"
-    )
-      return null;
-    const inboxSchema = (value as { inboxSchema?: unknown }).inboxSchema;
-    return {
-      generation: (value as { generation: string }).generation,
-      workspaceId: (value as { workspaceId: string }).workspaceId,
-      ...(typeof inboxSchema === "string" ? { inboxSchema } : {}),
-    };
+    return parseClaudeWakeGeneration(readFileSync(path, "utf8")) ?? null;
   } catch {
     return null;
   }
@@ -939,9 +932,12 @@ function claim(input: {
   entry: ClaudeInboxEntry;
   sessionId: string;
   at: string;
+  authority: ClaudeWakeAuthority;
+  leaseToken: string;
 }): boolean {
   const root = runtimeRoot(input.repoRoot);
   ensureDir(root, { recursive: true });
+  if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok) return false;
   const path = join(root, `${inboxFileStem(input.entry.id)}.claim`);
   let descriptor: number;
   try {
@@ -950,6 +946,11 @@ function claim(input: {
     return false;
   }
   try {
+    if (!validateClaudeWakeClaimAuthority(root, input.authority, input.leaseToken).ok) {
+      closeSync(descriptor);
+      unlinkSync(path);
+      return false;
+    }
     writeFileSync(
       descriptor,
       `${JSON.stringify({
@@ -959,7 +960,11 @@ function claim(input: {
       })}\n`,
     );
   } finally {
-    closeSync(descriptor);
+    try {
+      closeSync(descriptor);
+    } catch {
+      // authority-loss path already closed the descriptor before removing the empty claim.
+    }
   }
   return true;
 }
@@ -1021,16 +1026,36 @@ export async function waitForClaudeMemory(input: {
   pruneRuntimeFiles(root, Date.now());
   const generationPath = join(root, `${safeFilePart(input.sessionId)}.generation`);
   const generation = `${process.pid}:${Date.now()}`;
-  writeFileSync(
-    generationPath,
-    `${JSON.stringify({
-      schema: CLAUDE_WAKE_GENERATION_SCHEMA,
-      generation,
-      workspaceId,
-      inboxSchema: CLAUDE_INBOX_SCHEMA,
-    })}\n`,
-    { encoding: "utf8", mode: 0o600 },
-  );
+  const leaseToken = randomBytes(32).toString("hex");
+  let runtimeSourceRevision: string;
+  try {
+    runtimeSourceRevision =
+      process.env.UT_TDD_RUNTIME_SOURCE_REVISION?.trim() ??
+      execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+  } catch {
+    throw new Error("claude_wake_runtime_revision_required");
+  }
+  const activation = activateClaudeWakeGeneration({
+    root,
+    sessionId: input.sessionId,
+    workspaceId,
+    generation,
+    runtimeSourceRevision,
+    leaseToken,
+  });
+  if (!activation.ok) {
+    writeAuditLog(input.repoRoot, {
+      event: "activation",
+      status: "deny",
+      reason: activation.reason,
+      sessionId: input.sessionId,
+    });
+    return { kind: "superseded" };
+  }
   const started = Date.now();
   const unclaimable = new Set<string>();
   // PR observation is an external synchronous port (normally `gh`). Cache both
@@ -1115,7 +1140,16 @@ export async function waitForClaudeMemory(input: {
       unavailable,
     );
     if (entry) {
-      if (claim({ repoRoot: input.repoRoot, entry, sessionId: input.sessionId, at: now() })) {
+      if (
+        claim({
+          repoRoot: input.repoRoot,
+          entry,
+          sessionId: input.sessionId,
+          at: now(),
+          authority: activation.authority,
+          leaseToken,
+        })
+      ) {
         writeAuditLog(input.repoRoot, {
           event: "claim",
           status: "ok",
