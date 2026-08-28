@@ -111,3 +111,13 @@ R1〜R4の完了、全15 U候補/P候補の1:1 trace、Linux/Windows全境界、
 rollback/history chain、external read/open/stat/process counter、非著者review、aggregate CIはまだ
 証明していない。したがって本Reverseは`status: draft`/R0予約を維持し、未測定差分をbackfill対象として
 残す。上記の実測は既存PACKISO/NODEBOOT候補の代替や全候補Greenの主張ではない。
+
+## R0追加実測（2026-08-28, partial）
+
+`ac9cd0f1`の17 testsとdetached canonical snapshot 17/17 Greenを確認した。manifest canonical
+digest、compiled ESM digest binding、consumer runtime root/realpath containment、Bunなしreadiness、
+active pointerのexternal escape denyを追加測定した。一方、実bytesを供給するL6-93-owned
+NodeBootstrapReceipt producerは現branchにも`src/tests`にも無く、`PLAN-L6-93`はdraftでREADYな
+producer owner Issue/PRを確認できない。従ってR1〜R4、receipt-backed producer、Linux/Windows全境界、
+rollback/history prefix、external read/open/stat counter、closing review、aggregate CIは未完了で、
+本Reverseはdraft/Hard blockedを維持する。#420ではL6-93 producerを新設しない。

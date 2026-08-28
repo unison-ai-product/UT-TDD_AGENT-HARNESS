@@ -388,3 +388,23 @@ genesis、P=100 bounded derivationを実測した。
 read/open/stat/process counter、Claude/Codex hook実fixture、aggregate CI、非著者closing review、
 Reverse R1〜R4、実producerのL6-93 receipt入力は未実測であり、実装完了・独立配布・全15 oracle Greenを
 主張しない。これらは次のQA/Reverse evidenceで追加測定する。
+
+## 10.1 追加hardening実測（2026-08-28）
+
+`ac9cd0f1`（`fix(runtime): enforce sealed consumer pointer admission`）で、consumer-local
+Node wrapperのadmissionを強化した。active pointerのexact keys、canonical bundle digest、manifestの
+identity/Node authority、6 payload digest、compiled ESM digest binding、history genesis/prior、
+runtime rootおよびrealpath containmentをspawn前に検証し、distribution readinessはsealed consumer
+runtimeが供給された場合にBunを要求しない。compiled ESM digest drift、manifest digest forgery、
+external bundle pointer、valid sealed runtime without Bunの各one-axis oracleを追加した。
+
+`tests/consumer-node-runtime.test.ts` は17 testsで専用target 17/17 Green、detached canonical
+snapshotも`ac9cd0f1`の同一treeで17/17 Greenだった。これは実bytesから起動するconsumer-local
+filesystem producer laneを含むが、L6-93所有の実行可能NodeBootstrapReceipt producerではない。
+
+完了条件1および実producer gateは未充足である。`PLAN-L6-93`はdraftのままで、現branchの
+`src/`/`tests/`にNodeBootstrapReceipt producerは存在せず、代替するREADY Issue/PR ownerも確認
+できなかった。#420でproducerを新設せず、L6-93が実bytes receipt producerをREADY化するまで
+このPRはdraft/Hard blockedとして扱う。Windows junction/reparse・8.3 alias・permission、
+history prefix/replay、attested rollback、external read/open/stat counter、hooks、aggregate CI、
+非著者closing review、Reverse R1〜R4も未実測であり、全15 oracle Greenは主張しない。

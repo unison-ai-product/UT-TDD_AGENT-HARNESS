@@ -66,3 +66,14 @@ Windows junction/reparse・8.3 alias・permission、history prefix/replay/sequen
 Linux/Windows/aggregate CI、非著者closing review、Reverse R1〜R4は未昇格・未実測である。従って
 `CANDIDATE-*`のdocs-only freezeと既存PACKISO/NODEBOOT候補は保持し、全15 U/P候補Greenや独立配布を
 この記録から主張しない。
+
+## 追加実装昇格（2026-08-28, partial）
+
+`ac9cd0f1`で17 testsへ更新し、専用targetおよびdetached canonical snapshotを17/17 Greenで
+実測した。追加軸はBunなしのsealed readiness、compiled ESM digest binding、manifest digest
+forgery、external bundle pointerであり、wrapperはspawn前にpointer/manifest/identity/Node
+authority、6 payload digest、history genesis/prior、lexical/realpath containmentを検証する。
+これは実bytes fixtureのconsumer-local producer laneを含むが、L6-93の実行可能receipt producer、
+Windows境界、history prefix/replay、rollback、external read/open/stat counter、hooks、aggregate
+CI、closing reviewを含まない。`PLAN-L6-93`はdraftでproducer ownerのREADY Issue/PRを確認できない
+ため、全候補Greenや完了条件1は主張せず、#420はHard blockedのまま保持する。
