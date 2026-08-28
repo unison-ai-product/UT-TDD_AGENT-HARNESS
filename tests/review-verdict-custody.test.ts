@@ -24,6 +24,7 @@ import {
   beginReviewAttempt,
   cleanupReviewAttempt,
   readReviewCustodyAudit,
+  recordReviewAttemptFailure,
   reviewCustodyAuditPath,
   reviewIdentityDigest,
   reviewVerdictPath,
@@ -255,6 +256,18 @@ describe("repo-local review verdict custody (U-RVATT-030..035)", () => {
         provider: "claude",
         model: "claude-opus-5",
       });
+      if (!first.ok) throw new Error(first.reason);
+      expect(
+        recordReviewAttemptFailure({
+          repoRoot: root,
+          request: issued.request,
+          attempt: first.attempt,
+          provider: "claude",
+          model: "claude-opus-5",
+          exitCode: 7,
+          verdictPath: first.path,
+        }),
+      ).toMatchObject({ ok: true });
       const second = beginReviewAttempt({
         repoRoot: root,
         request: issued.request,

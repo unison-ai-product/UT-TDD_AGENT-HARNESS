@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 import type { ReviewReceipt } from "./review-dispatch.ts";
@@ -11,6 +11,8 @@ import {
   isStrictReviewRequest,
   REVIEW_VERDICT_SCHEMA_VERSION,
   type ReviewVerdictEnvelope,
+  recordReviewAttemptFailure,
+  recordReviewAttemptVerdictRejection,
   reviewIdentityDigest,
 } from "./review-verdict-custody.ts";
 
@@ -131,6 +133,35 @@ function persist(input: {
   return { path, digest: valueDigest };
 }
 
+function writeReceiptCreateExclusive(
+  path: string,
+  receipt: ReviewReceipt,
+):
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: "verdict_identity_conflict" | "receipt_unreadable" } {
+  const serialized = `${JSON.stringify(receipt, null, 2)}\n`;
+  try {
+    const fd = openSync(path, "wx", 0o600);
+    try {
+      writeSync(fd, serialized, undefined, "utf8");
+    } finally {
+      closeSync(fd);
+    }
+    return { ok: true };
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
+      return { ok: false, reason: "receipt_unreadable" };
+    try {
+      const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      return canonicalJson(existing) === canonicalJson(receipt)
+        ? { ok: true }
+        : { ok: false, reason: "verdict_identity_conflict" };
+    } catch {
+      return { ok: false, reason: "receipt_unreadable" };
+    }
+  }
+}
+
 function identityMatches(
   request: ReviewAttestationRequest,
   attestation: ReviewAttestation,
@@ -140,6 +171,59 @@ function identityMatches(
     request.exactHead === attestation.head &&
     request.reviewRevision === attestation.reviewRevision
   );
+}
+
+/**
+ * Exit 0 is not sufficient evidence of a successful review. If a strict
+ * attempt reaches a terminal verdict rejection, preserve that rejection as an
+ * append-only custody outcome so the next attempt can recover. Only the
+ * canonical attempt path is eligible; an arbitrary path must not mint retry
+ * authority.
+ */
+function recordStrictVerdictRejection(input: {
+  repoRoot: string;
+  request: ReviewAttestationRequest;
+  attestation: ReviewAttestation;
+  verdictFile: string;
+  reason: string;
+}): ReviewVerdictProjectionResult | undefined {
+  if (!input.request.reviewRevision.startsWith("rv1-")) return undefined;
+  const match = /[\\/]attempt-([1-9][0-9]*)[\\/]verdict\.txt$/.exec(input.verdictFile);
+  if (!match) return undefined;
+  const attempt = Number(match[1]);
+  try {
+    assertReviewVerdictPath({
+      repoRoot: input.repoRoot,
+      requestDigest: reviewRequestDigest(input.request),
+      attempt,
+      verdictPath: input.verdictFile,
+    });
+  } catch {
+    return undefined;
+  }
+  recordReviewAttemptVerdictRejection({
+    repoRoot: input.repoRoot,
+    request: input.request,
+    attempt,
+    provider: input.attestation.provider,
+    model: input.attestation.model,
+    verdictPath: input.verdictFile,
+    reason: input.reason,
+    now: input.attestation.completedAt,
+  });
+  // Preserve the projection's original typed verdict reason when the
+  // attestation itself is too malformed to record a custody outcome. A
+  // rejected/invalid attempt must not be relabelled as an internal custody
+  // error merely because its audit event was not eligible for recording.
+  return undefined;
+}
+
+function rejectedVerdict(
+  input: Parameters<typeof projectReviewVerdict>[0],
+  reason: string,
+): ReviewVerdictProjectionResult {
+  const recorded = recordStrictVerdictRejection({ ...input, reason });
+  return recorded ?? { ok: false, reason };
 }
 
 /**
@@ -210,6 +294,22 @@ export function projectReviewVerdict(input: {
   verdictFile: string;
 }): ReviewVerdictProjectionResult {
   if (input.attestation.exitCode !== 0) {
+    if (input.request.reviewRevision.startsWith("rv1-")) {
+      const match = /[\\/]attempt-([1-9][0-9]*)[\\/]verdict\.txt$/.exec(input.verdictFile);
+      if (match) {
+        const outcome = recordReviewAttemptFailure({
+          repoRoot: input.repoRoot,
+          request: input.request,
+          attempt: Number(match[1]),
+          provider: input.attestation.provider,
+          model: input.attestation.model,
+          exitCode: input.attestation.exitCode,
+          verdictPath: input.verdictFile,
+          now: input.attestation.completedAt,
+        });
+        if (!outcome.ok) return outcome;
+      }
+    }
     // file欠落だけでは permission拒否、認証失敗、timeout、reviewer拒否を識別できない。
     // 書込不能を捏造せず、provider failure後にverdictが無いという観測事実だけをtyped化する。
     if (
@@ -222,29 +322,29 @@ export function projectReviewVerdict(input: {
     return { ok: false, reason: "reviewer_exit_nonzero" };
   }
   if (!existsSync(input.verdictFile)) {
-    return { ok: false, reason: "verdict_file_missing" };
+    return rejectedVerdict(input, "verdict_file_missing");
   }
   if (!isValidReviewRequest(input.request) || !isValidAttestation(input.attestation)) {
-    return { ok: false, reason: "invalid_review_attestation" };
+    return rejectedVerdict(input, "invalid_review_attestation");
   }
   if (!identityMatches(input.request, input.attestation)) {
-    return { ok: false, reason: "review_identity_mismatch" };
+    return rejectedVerdict(input, "review_identity_mismatch");
   }
 
   const strictCustody = input.request.reviewRevision.startsWith("rv1-");
   if (strictCustody && !isStrictReviewRequest(input.request)) {
-    return { ok: false, reason: "verdict_identity_mismatch" };
+    return rejectedVerdict(input, "verdict_identity_mismatch");
   }
   const expectedProvider = input.request.authorFamily === "codex" ? "claude" : "codex";
   if (strictCustody && input.attestation.provider !== expectedProvider) {
-    return { ok: false, reason: "same_family_reviewer_denied" };
+    return rejectedVerdict(input, "same_family_reviewer_denied");
   }
   let expectedAttempt: number | undefined;
   if (strictCustody) {
     const match = /[\\/]attempt-([1-9][0-9]*)[\\/]verdict\.txt$/.exec(input.verdictFile);
     expectedAttempt = match ? Number(match[1]) : undefined;
     if (!expectedAttempt || !Number.isSafeInteger(expectedAttempt)) {
-      return { ok: false, reason: "verdict_path_identity_mismatch" };
+      return rejectedVerdict(input, "verdict_path_identity_mismatch");
     }
     try {
       assertReviewVerdictPath({
@@ -254,7 +354,7 @@ export function projectReviewVerdict(input: {
         verdictPath: input.verdictFile,
       });
     } catch {
-      return { ok: false, reason: "verdict_path_identity_mismatch" };
+      return rejectedVerdict(input, "verdict_path_identity_mismatch");
     }
   }
 
@@ -262,11 +362,11 @@ export function projectReviewVerdict(input: {
   try {
     verdictText = readFileSync(input.verdictFile, "utf8");
   } catch {
-    return { ok: false, reason: "verdict_file_unreadable" };
+    return rejectedVerdict(input, "verdict_file_unreadable");
   }
   if (strictCustody) {
     const envelope = parseReviewVerdictEnvelope(verdictText);
-    if (!envelope.ok) return envelope;
+    if (!envelope.ok) return rejectedVerdict(input, envelope.reason);
     const expected: ReviewVerdictEnvelope = {
       schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
       requestDigest: reviewRequestDigest(input.request),
@@ -280,11 +380,11 @@ export function projectReviewVerdict(input: {
     };
     for (const key of Object.keys(expected) as Array<keyof ReviewVerdictEnvelope>) {
       if (envelope.value[key] !== expected[key])
-        return { ok: false, reason: "verdict_identity_mismatch" };
+        return rejectedVerdict(input, "verdict_identity_mismatch");
     }
   }
   const extracted = extractVerdict(verdictText);
-  if (!extracted.ok) return { ok: false, reason: extracted.reasons[0] ?? "verdict_invalid" };
+  if (!extracted.ok) return rejectedVerdict(input, extracted.reasons[0] ?? "verdict_invalid");
 
   const receipt: ReviewReceipt = {
     memoryId: input.request.memoryId,
@@ -301,18 +401,12 @@ export function projectReviewVerdict(input: {
     const directory = join(input.repoRoot, ".ut-tdd", "review", "receipts");
     ensureDir(directory, { recursive: true });
     const path = join(directory, `${reviewRequestDigest(input.request)}.json`);
-    if (existsSync(path)) {
-      try {
-        const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
-        if (canonicalJson(existing) !== canonicalJson(receipt)) {
-          return { ok: false, reason: "verdict_identity_conflict" };
-        }
-      } catch {
-        return { ok: false, reason: "receipt_unreadable" };
-      }
-    } else {
-      writeFileSync(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-    }
+    // Always enter the create-exclusive writer.  The path may become occupied
+    // after any prior observation (for example by a competing runtime), so an
+    // existence pre-check cannot establish custody.  The writer's EEXIST path
+    // performs the same-content/id-conflict decision without overwriting it.
+    const persisted = writeReceiptCreateExclusive(path, receipt);
+    if (!persisted.ok) return persisted;
     return { ok: true, receipt, path, digest: reviewRequestDigest(input.request) };
   }
   const persisted = persist({ repoRoot: input.repoRoot, category: "receipts", value: receipt });

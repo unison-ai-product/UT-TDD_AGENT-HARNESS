@@ -174,7 +174,12 @@ export function reviewCustodyAuditPath(repoRoot: string): string {
 }
 
 export interface ReviewCustodyAuditEvent {
-  readonly kind: "superseded_attempt" | "cleanup_pending";
+  readonly kind:
+    | "attempt_execution_failed"
+    | "attempt_verdict_rejected"
+    | "attempt_outcome_conflict"
+    | "superseded_attempt"
+    | "cleanup_pending";
   readonly requestDigest: string;
   readonly attempt: number;
   readonly exactHead: string;
@@ -184,6 +189,10 @@ export interface ReviewCustodyAuditEvent {
   readonly provider?: "codex" | "claude";
   readonly model?: string;
   readonly receiptDigest?: string;
+  readonly exitCode?: number;
+  readonly verdictDigest?: string;
+  readonly oldAttemptDigest?: string;
+  readonly supersededAttempt?: number;
 }
 
 export function appendReviewCustodyAudit(repoRoot: string, event: ReviewCustodyAuditEvent): void {
@@ -192,6 +201,210 @@ export function appendReviewCustodyAudit(repoRoot: string, event: ReviewCustodyA
   // O_APPEND + 単一JSON行で、linked worktree間の監査イベントを混線させない。
   appendFileSync(path, `${canonicalJson(event)}\n`, { encoding: "utf8", mode: 0o600 });
 }
+
+function digestFile(path: string): string | undefined {
+  if (!existsSync(path)) return undefined;
+  try {
+    return createHash("sha256").update(readFileSync(path)).digest("hex");
+  } catch {
+    return undefined;
+  }
+}
+
+function auditEventsFor(repoRoot: string, requestDigest: string): ReviewCustodyAuditEvent[] {
+  return readReviewCustodyAudit(repoRoot).filter((event) => event.requestDigest === requestDigest);
+}
+
+function sameAttemptOutcome(
+  left: ReviewCustodyAuditEvent,
+  right: ReviewCustodyAuditEvent,
+): boolean {
+  const withoutTime = (
+    event: ReviewCustodyAuditEvent,
+  ): Omit<ReviewCustodyAuditEvent, "recordedAt"> => {
+    const { recordedAt: _recordedAt, ...identity } = event;
+    return identity;
+  };
+  return canonicalJson(withoutTime(left)) === canonicalJson(withoutTime(right));
+}
+
+function isAttemptFailureEvent(input: {
+  repoRoot: string;
+  event: ReviewCustodyAuditEvent;
+  request: ReviewCustodyRequest;
+  attempt: number;
+}): boolean {
+  const { repoRoot, event, request, attempt } = input;
+  const expectedProvider = request.authorFamily === "codex" ? "claude" : "codex";
+  return (
+    (event.kind === "attempt_execution_failed" || event.kind === "attempt_verdict_rejected") &&
+    event.requestDigest === reviewIdentityDigest(request) &&
+    event.attempt === attempt &&
+    event.exactHead === request.exactHead &&
+    event.verdictPath === reviewVerdictPath(repoRoot, event.requestDigest, attempt) &&
+    event.provider !== undefined &&
+    isReviewProvider(event.provider) &&
+    typeof event.model === "string" &&
+    event.model.trim().length > 0 &&
+    Number.isSafeInteger(event.exitCode) &&
+    ((event.kind === "attempt_execution_failed" &&
+      event.provider === expectedProvider &&
+      (event.exitCode as number) !== 0) ||
+      (event.kind === "attempt_verdict_rejected" && (event.exitCode as number) === 0)) &&
+    typeof event.reason === "string" &&
+    event.reason.trim().length > 0 &&
+    (event.verdictDigest === undefined || DIGEST_PATTERN.test(event.verdictDigest)) &&
+    digestFile(event.verdictPath) === event.verdictDigest
+  );
+}
+
+export type ReviewAttemptOutcomeResult =
+  | { readonly ok: true; readonly event: ReviewCustodyAuditEvent }
+  | { readonly ok: false; readonly reason: string };
+
+/**
+ * Record a failed provider execution without promoting it to canonical receipt.
+ * The event is content-addressed by request/attempt and replaying the same event
+ * is idempotent; a mutation of an existing event fails closed.
+ */
+export function recordReviewAttemptFailure(input: {
+  repoRoot: string;
+  request: ReviewCustodyRequest;
+  attempt: number;
+  provider: "codex" | "claude";
+  model: string;
+  exitCode: number;
+  verdictPath: string;
+  reason?: string;
+  now?: string;
+}): ReviewAttemptOutcomeResult {
+  return recordAttemptOutcome({ ...input, kind: "attempt_execution_failed" });
+}
+
+/**
+ * Record a terminal verdict rejection after a provider exited successfully.
+ *
+ * A reviewer can exit 0 while producing a missing, malformed, or identity-
+ * invalid verdict.  That is a terminal outcome for this attempt, not a
+ * successful review and not an execution failure.  Keeping it as its own
+ * append-only event lets the next attempt recover without allowing the
+ * rejected verdict to become a canonical receipt.
+ */
+export function recordReviewAttemptVerdictRejection(input: {
+  repoRoot: string;
+  request: ReviewCustodyRequest;
+  attempt: number;
+  provider: "codex" | "claude";
+  model: string;
+  verdictPath: string;
+  reason: string;
+  now?: string;
+}): ReviewAttemptOutcomeResult {
+  return recordAttemptOutcome({ ...input, exitCode: 0, kind: "attempt_verdict_rejected" });
+}
+
+function recordAttemptOutcome(input: {
+  repoRoot: string;
+  request: ReviewCustodyRequest;
+  attempt: number;
+  provider: "codex" | "claude";
+  model: string;
+  exitCode: number;
+  verdictPath: string;
+  reason?: string;
+  now?: string;
+  kind: "attempt_execution_failed" | "attempt_verdict_rejected";
+}): ReviewAttemptOutcomeResult {
+  if (!isStrictReviewRequest(input.request))
+    return { ok: false, reason: "invalid_review_revision" };
+  if (
+    !Number.isSafeInteger(input.attempt) ||
+    input.attempt < 1 ||
+    (input.kind === "attempt_execution_failed" && input.exitCode === 0) ||
+    (input.kind === "attempt_verdict_rejected" && input.exitCode !== 0)
+  )
+    return { ok: false, reason: "invalid_attempt_outcome" };
+  if (!isReviewProvider(input.provider) || typeof input.model !== "string" || !input.model.trim())
+    return { ok: false, reason: "invalid_attempt_outcome" };
+  if (typeof input.reason === "string" && !input.reason.trim())
+    return { ok: false, reason: "invalid_attempt_outcome" };
+  const expectedProvider = input.request.authorFamily === "codex" ? "claude" : "codex";
+  if (input.kind === "attempt_execution_failed" && input.provider !== expectedProvider)
+    return { ok: false, reason: "same_family_reviewer_denied" };
+  const digest = reviewIdentityDigest(input.request);
+  try {
+    assertReviewVerdictPath({
+      repoRoot: input.repoRoot,
+      requestDigest: digest,
+      attempt: input.attempt,
+      verdictPath: input.verdictPath,
+    });
+  } catch {
+    return { ok: false, reason: "verdict_path_identity_mismatch" };
+  }
+  const verdictDigest = digestFile(input.verdictPath);
+  const event: ReviewCustodyAuditEvent = {
+    kind: input.kind,
+    requestDigest: digest,
+    attempt: input.attempt,
+    exactHead: input.request.exactHead,
+    verdictPath: reviewVerdictPath(input.repoRoot, digest, input.attempt),
+    recordedAt: input.now ?? new Date().toISOString(),
+    reason:
+      input.reason ??
+      (input.kind === "attempt_execution_failed" ? "reviewer_exit_nonzero" : "verdict_rejected"),
+    provider: input.provider,
+    model: input.model,
+    exitCode: input.exitCode,
+    ...(verdictDigest ? { verdictDigest } : {}),
+  };
+  let requestEvents: ReviewCustodyAuditEvent[];
+  try {
+    requestEvents = auditEventsFor(input.repoRoot, digest);
+  } catch {
+    return { ok: false, reason: "attempt_outcome_indeterminate" };
+  }
+  const existing = requestEvents.filter(
+    (candidate) =>
+      (candidate.kind === "attempt_execution_failed" ||
+        candidate.kind === "attempt_verdict_rejected") &&
+      candidate.attempt === input.attempt,
+  );
+  if (existing.length > 1) return { ok: false, reason: "attempt_outcome_indeterminate" };
+  if (existing.length === 1) {
+    if (sameAttemptOutcome(existing[0], event)) return { ok: true, event: existing[0] };
+    const conflictEvent: ReviewCustodyAuditEvent = {
+      ...event,
+      kind: "attempt_outcome_conflict",
+      reason: "attempt_outcome_conflict",
+      oldAttemptDigest: existing[0].verdictDigest ?? "verdict_absent",
+    };
+    const conflicts = requestEvents.filter(
+      (candidate) =>
+        candidate.kind === "attempt_outcome_conflict" && candidate.attempt === input.attempt,
+    );
+    if (conflicts.length > 1) return { ok: false, reason: "attempt_outcome_indeterminate" };
+    if (conflicts.length === 1) {
+      return sameAttemptOutcome(conflicts[0], conflictEvent)
+        ? { ok: false, reason: "attempt_outcome_conflict" }
+        : { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    try {
+      appendReviewCustodyAudit(input.repoRoot, conflictEvent);
+    } catch {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    return { ok: false, reason: "attempt_outcome_conflict" };
+  }
+  try {
+    appendReviewCustodyAudit(input.repoRoot, event);
+    return { ok: true, event };
+  } catch {
+    return { ok: false, reason: "attempt_outcome_indeterminate" };
+  }
+}
+
+export const recordReviewAttemptOutcome = recordReviewAttemptFailure;
 
 function attemptNumbers(repoRoot: string, requestDigest: string): number[] {
   const directory = join(
@@ -240,19 +453,68 @@ export function beginReviewAttempt(input: {
   const used = attemptNumbers(input.repoRoot, digest);
   const attempt = (used.at(-1) ?? 0) + 1;
   if (used.length > 0) {
+    const previousAttempt = used.at(-1) as number;
+    let requestEvents: ReviewCustodyAuditEvent[];
+    try {
+      requestEvents = auditEventsFor(input.repoRoot, digest);
+    } catch {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    const outcomes = requestEvents.filter(
+      (event) =>
+        (event.kind === "attempt_execution_failed" || event.kind === "attempt_verdict_rejected") &&
+        event.attempt === previousAttempt,
+    );
+    if (
+      requestEvents.some(
+        (event) => event.kind === "attempt_outcome_conflict" && event.attempt === previousAttempt,
+      )
+    ) {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    if (
+      outcomes.length !== 1 ||
+      !isAttemptFailureEvent({
+        repoRoot: input.repoRoot,
+        event: outcomes[0],
+        request: input.request,
+        attempt: previousAttempt,
+      })
+    ) {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    const failureIndex = requestEvents.indexOf(outcomes[0]);
+    if (
+      requestEvents
+        .slice(0, failureIndex)
+        .some(
+          (event) =>
+            event.kind === "superseded_attempt" &&
+            (event.supersededAttempt === undefined || event.supersededAttempt >= previousAttempt),
+        )
+    ) {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    const existingSupersession = requestEvents.filter(
+      (event) => event.kind === "superseded_attempt" && event.attempt === attempt,
+    );
+    if (existingSupersession.length > 0) {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
     try {
       appendReviewCustodyAudit(input.repoRoot, {
         kind: "superseded_attempt",
         requestDigest: digest,
         attempt,
         exactHead: input.request.exactHead,
-        verdictPath: reviewVerdictPath(input.repoRoot, digest, used.at(-1) ?? attempt - 1),
+        verdictPath: reviewVerdictPath(input.repoRoot, digest, previousAttempt),
         recordedAt: input.now ?? new Date().toISOString(),
-        reason: existsSync(reviewVerdictPath(input.repoRoot, digest, used.at(-1) ?? attempt - 1))
-          ? "retry"
-          : "verdict_absent",
+        reason: "retry",
         provider: input.provider,
         model: input.model,
+        supersededAttempt: previousAttempt,
+        oldAttemptDigest: outcomes[0].verdictDigest ?? "verdict_absent",
+        ...(outcomes[0].verdictDigest ? { verdictDigest: outcomes[0].verdictDigest } : {}),
       });
     } catch {
       return { ok: false, reason: "review_custody_audit_unavailable" };
