@@ -25,10 +25,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-review-receipt-supersession-test-design.md
     artifact_type: test_design
-  - artifact_path: src/feedback/review-verdict-custody.ts
-    artifact_type: source_module
-  - artifact_path: src/feedback/review-attestation.ts
-    artifact_type: source_module
   - artifact_path: tests/review-receipt-supersession.test.ts
     artifact_type: test_code
 dependencies:
