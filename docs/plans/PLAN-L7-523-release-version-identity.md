@@ -100,8 +100,9 @@ packageをcanary versionへ更新するだけでは`readManifest`が`not a relea
 `PLAN-L7-519`実装がmainへ到達した後、sealed Pack entryからroot `package.json`を一意に解決し、
 versionをpublication intentへ追加する。seal前に次をAND判定する。
 
-1. root `package.json`がexactly oneで、JSON objectかつversionがcanonical prerelease semverである。
-2. package versionがoperationの`releaseVersion`と一致する。
+1. root `package.json`と`package-lock.json`がそれぞれexactly oneで、JSON objectかつcanonical
+   prerelease semverである。lockfileのtop-level `version`と`.packages[""].version`も必須とする。
+2. package versionとlockfileの両versionが相互にexact一致し、operationの`releaseVersion`とも一致する。
 3. `tagName === "v" + releaseVersion`である。
 4. intent/receipt/tagが同じcontent-derived `releaseId`、source revision、release Pack commit/treeを指す。
 
