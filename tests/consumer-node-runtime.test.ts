@@ -117,7 +117,7 @@ function testPorts(
 }
 
 describe("sealed self-contained consumer Node runtime", () => {
-  it("U-PACKNODE-001: every identity mutation is rejected before ports", () => {
+  it("CANDIDATE-U-PACKNODE-001: every identity mutation is rejected before ports", () => {
     const fields: (keyof ConsumerNodeRuntimeIdentity)[] = [
       "subject_revision",
       "artifact_digest",
@@ -141,7 +141,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     }
   });
 
-  it("U-PACKNODE-002/003/010: wrapper has one Node active-pointer path and no fallback", () => {
+  it("CANDIDATE-U-PACKNODE-002/003/010: wrapper has one Node active-pointer path and no fallback", () => {
     const wrapper = renderConsumerNodeWrapper();
     expect(wrapper).toContain("active.json");
     expect(wrapper).toContain("process.execPath");
@@ -151,7 +151,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(wrapper).not.toContain("process.env.PATH");
   });
 
-  it("U-PACKNODE-004/013: normal order and release exactly once", async () => {
+  it("CANDIDATE-U-PACKNODE-004/013: normal order and release exactly once", async () => {
     const events: string[] = [];
     const result = await installConsumerNodeRuntime({
       identity: identity(),
@@ -176,7 +176,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     ]);
   });
 
-  it("U-PACKNODE-005: pre-commit fault destroys staging and does not publish", async () => {
+  it("CANDIDATE-U-PACKNODE-005: pre-commit fault destroys staging and does not publish", async () => {
     const events: string[] = [];
     const result = await installConsumerNodeRuntime({
       identity: identity(),
@@ -189,7 +189,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(events).toContain("releaseConsumerLock");
   });
 
-  it("U-PACKNODE-006/015: consumer, operation, attempt, and digest bind paths", () => {
+  it("CANDIDATE-U-PACKNODE-006/015: consumer, operation, attempt, and digest bind paths", () => {
     const first = bundleFor();
     const retry = bundleFor({ ...identity(), attempt: 1 });
     const other = bundleFor(identity("/tmp/other-consumer"));
@@ -202,7 +202,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(stagingPathFor(first.identity)).toContain("staging");
   });
 
-  it("U-PACKNODE-007: wrapper runs compiled consumer entry after setup checkout deletion", () => {
+  it("CANDIDATE-U-PACKNODE-007: wrapper runs compiled consumer entry after setup checkout deletion", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-consumer-"));
     roots.push(root);
     const checkout = mkdtempSync(join(tmpdir(), "ut-tdd-setup-"));
@@ -233,7 +233,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(run.stdout).toBe("consumer-local-ok");
   });
 
-  it("U-PACKNODE-003/007: external active bundle is denied before process launch", () => {
+  it("CANDIDATE-U-PACKNODE-003/007: external active bundle is denied before process launch", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-consumer-external-"));
     roots.push(root);
     const external = mkdtempSync(join(tmpdir(), "ut-tdd-external-bundle-"));
@@ -259,7 +259,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(existsSync(marker)).toBe(false);
   });
 
-  it("U-PACKNODE-005/012: real Node filesystem producer seals one bundle and one pointer", async () => {
+  it("CANDIDATE-U-PACKNODE-005/012: real Node filesystem producer seals one bundle and one pointer", async () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-runtime-producer-"));
     roots.push(root);
     const id = identity(root);
@@ -356,7 +356,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(run.stdout).toBe("consumer-local-ok");
   });
 
-  it("U-PACKNODE-008/009: spaces work while external runtime escapes fail", () => {
+  it("CANDIDATE-U-PACKNODE-008/009: spaces work while external runtime escapes fail", () => {
     const spaced = identity(join(tmpdir(), "consumer with spaces"));
     expect(() => stagingPathFor(spaced)).not.toThrow();
     expect(() =>
@@ -364,7 +364,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     ).toThrow();
   });
 
-  it("U-PACKNODE-009: compiled ESM digest drift is rejected", () => {
+  it("CANDIDATE-U-PACKNODE-009: compiled ESM digest drift is rejected", () => {
     expect(() =>
       buildConsumerNodeRuntimeBundle({
         identity: identity(),
@@ -378,7 +378,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     ).toThrow("compiled ESM digest mismatch");
   });
 
-  it("U-PACKNODE-011: hasUtTddCli cannot bypass absent sealed runtime", () => {
+  it("CANDIDATE-U-PACKNODE-011: hasUtTddCli cannot bypass absent sealed runtime", () => {
     const plan = buildConsumerReadinessPlan({
       bunVersion: null,
       hasGit: true,
@@ -393,7 +393,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(plan.consumerRuntime).toEqual({ ok: false, reason: "consumer_runtime_absent" });
   });
 
-  it("U-PACKNODE-011: valid sealed Node runtime is ready without Bun", () => {
+  it("CANDIDATE-U-PACKNODE-011: valid sealed Node runtime is ready without Bun", () => {
     const id = identity("/consumer");
     const plan = buildConsumerReadinessPlan({
       bunVersion: null,
@@ -410,7 +410,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(plan.consumerRuntime).toEqual({ ok: true });
   });
 
-  it("U-PACKNODE-001/010: manifest compiled entry digest cannot be re-declared", () => {
+  it("CANDIDATE-U-PACKNODE-001/010: manifest compiled entry digest cannot be re-declared", () => {
     const bundle = bundleFor();
     const files = { ...bundle.files, "ut-tdd.mjs": `sha256:${"f".repeat(64)}` };
     const forged = {
@@ -427,7 +427,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(validateConsumerNodeRuntimeBundle(forged)).toBe("consumer_runtime_digest_mismatch");
   });
 
-  it("U-PACKNODE-012/013: post-commit fault reconciles once and release remains once", async () => {
+  it("CANDIDATE-U-PACKNODE-012/013: post-commit fault reconciles once and release remains once", async () => {
     const events: string[] = [];
     const result = await installConsumerNodeRuntime({
       identity: identity(),
@@ -439,7 +439,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     expect(events.filter((event) => event === "releaseConsumerLock")).toHaveLength(1);
   });
 
-  it("U-PACKNODE-014: genesis requires explicit genesis history identity", () => {
+  it("CANDIDATE-U-PACKNODE-014: genesis requires explicit genesis history identity", () => {
     expect(bundleFor().history_sequence).toBe(0);
     expect(() =>
       buildConsumerNodeRuntimeBundle({
@@ -455,7 +455,7 @@ describe("sealed self-contained consumer Node runtime", () => {
     ).toThrow();
   });
 
-  it("P-PACKNODE-001: repeated derivation is stable with bounded calls", () => {
+  it("CANDIDATE-P-PACKNODE-001: repeated derivation is stable with bounded calls", () => {
     const id = identity();
     const digests = Array.from({ length: 100 }, () => bundleFor(id).bundle_digest);
     expect(new Set(digests).size).toBe(1);

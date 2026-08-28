@@ -69,7 +69,7 @@ Linux/Windows/aggregate CI、非著者closing review、Reverse R1〜R4は未昇�
 
 ## 追加実装昇格（2026-08-28, partial）
 
-`ac9cd0f1`で17 testsへ更新し、専用targetおよびdetached canonical snapshotを17/17 Greenで
+`00753263`で17 testsへ更新し、専用targetおよびdetached canonical snapshotを17/17 Greenで
 実測した。追加軸はBunなしのsealed readiness、compiled ESM digest binding、manifest digest
 forgery、external bundle pointerであり、wrapperはspawn前にpointer/manifest/identity/Node
 authority、6 payload digest、history genesis/prior、lexical/realpath containmentを検証する。
@@ -77,3 +77,7 @@ authority、6 payload digest、history genesis/prior、lexical/realpath containm
 Windows境界、history prefix/replay、rollback、external read/open/stat counter、hooks、aggregate
 CI、closing reviewを含まない。`PLAN-L6-93`はdraftでproducer ownerのREADY Issue/PRを確認できない
 ため、全候補Greenや完了条件1は主張せず、#420はHard blockedのまま保持する。
+
+実装testのlabelsはdocs-only freezeとのalignmentを保つため、`CANDIDATE-U-PACKNODE-*`/
+`CANDIDATE-P-PACKNODE-*`を使用する。各テストは対応候補の一部軸だけを測定し、候補全mutation
+matrixの完了やU/P oracleへの昇格を意味しない。
