@@ -6,7 +6,7 @@ layer: L7
 drive: be
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-28
 updated: 2026-08-28
 owner: PM / PO / Codex
@@ -38,12 +38,48 @@ dependencies:
     - src/feedback/review-attestation.ts
     - src/feedback/review-verdict-custody.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/386
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-28T03:49:55.518Z"
+    tests_green_at: "2026-08-28T03:43:45.336Z"
+    verdict: "PASS / blocking 0"
+    worker_model: gpt-5.6-sol
+    reviewer_model: claude-opus-5
+    effort: low
+    plan_revision: 0f5a5e4448adf6072e1020489b8fc82f0cef4a72
+    subject_head: 0f5a5e4448adf6072e1020489b8fc82f0cef4a72
+    scope: >-
+      PR #458のdocs-only pair-freezeを非著者review。append-only attempt custody、
+      create-exclusive canonical receipt、retry terminal vocabulary、candidate ID非衝突を確認した。
+      production実装、canonical receipt retryの実走、Reverse R2-R4は証明しない。
+    citations:
+      - ".ut-tdd/review/receipts/f207341d75a9dc20c33634a14437c7383f51c2541fcc5ac9a42fcc96ed4ccc6e.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/458#issuecomment-5448165567"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33139729035"
+    green_commands:
+      - kind: lint
+        command: "node --experimental-strip-types src/cli.ts plan lint"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-28T03:43:45.336Z"
+        evidence_path: docs/test-design/harness/L7-review-receipt-supersession-test-design.md
+        output_digest: "sha256:6e7ec8ce403a263ab68ee70b465ab9931201b2e44a6a1f272390bb361ddb370c"
+        anchor_commit: 0f5a5e4448adf6072e1020489b8fc82f0cef4a72
 backprop_decision: required
 backprop_decision_reason: "canonical receipt の不変性と retry 終端を変更するため、D3a custody と merge gate へ Reverse 検証を戻す。"
 ---
 
 # PLAN-L7-520: review receipt supersession contract
+
+## Closure evidence
+
+PR #458 reviewed HEAD `0f5a5e4448adf6072e1020489b8fc82f0cef4a72` はcanonical Claude receipt
+`f207341d75a9dc20c33634a14437c7383f51c2541fcc5ac9a42fcc96ed4ccc6e`で
+`PASS / blocking 0`。CI run `33139729035` はLinux／Windows／aggregate Greenである。
+ここで確定するのはappend-only attempt custodyのpair-freezeだけであり、production実装、retry実走、
+canonical receiptの新規発行、Reverse R2-R4完了を意味しない。
 
 ## 1. Outcome
 

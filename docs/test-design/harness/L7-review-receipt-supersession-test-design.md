@@ -2,7 +2,7 @@
 title: "L7 review receipt supersession test design"
 layer: L7
 executed_at_layer: L7
-status: draft
+status: confirmed
 plan_id: PLAN-L7-520-review-receipt-supersession-contract
 updated: 2026-08-28
 ---
