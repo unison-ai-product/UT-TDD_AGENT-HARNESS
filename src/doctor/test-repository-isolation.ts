@@ -93,6 +93,10 @@ repositoryReadContracts["tests/workspace-roots.test.ts"] = {
   mode_calls: { isolated_fixture: 1 },
   reason: "root capability test exercises the writable execution fixture",
 };
+repositoryReadContracts["tests/claude-wake-generation-upgrade.test.ts"] = {
+  mode_calls: { isolated_fixture: 2 },
+  reason: "rolling-upgrade oracles read immutable captures from the detached execution fixture",
+};
 repositoryReadContracts["tests/support/workspace-roots.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
   reason: "root capability implementation validates both provenance modes",

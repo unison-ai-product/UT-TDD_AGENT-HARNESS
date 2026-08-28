@@ -27,6 +27,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-514-claude-hook-schema-rolling-upgrade.md
     artifact_type: markdown_doc
+  - artifact_path: src/runtime/claude-wake-generation-upgrade.ts
+    artifact_type: source_module
+  - artifact_path: tests/claude-wake-generation-upgrade.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/fixtures/claude-hook-schema-rolling-upgrade/inventory.json
+    artifact_type: json_config
 dependencies:
   parent: docs/plans/PLAN-L7-472-claude-memory-async-wake.md
   requires:
@@ -273,4 +279,17 @@ restart後の成功だけでなく、handoff replay、旧processの遅着claim�
 - fixture固有synthetic未claim envelopeだけがisolated runtimeでexactly once consumeされ、production identity/contentを
   複製しない。old `7afb…` metadataをpayload fixtureへ昇格しない。
 - Windows/Linux/aggregate CI、PLAN lint、targeted test、非著者Claude Opus 5 closing receiptを同一revisionへ束縛する。
+
+## 8. 実装trace（Issue #433）
+
+後続実装PRは、既存のlive routingを変更せず、`claude-wake-generation-upgrade.ts`へclosed parser、
+capability policy、activation journal、authority epoch / lease token、restart handoffを凝集した。
+`waitForClaudeMemory`は起動時にsupervisorを通り、claim commit直前にもauthorityを再検証する。
+
+実在する#410/#423 request/claimはread-only captureとしてfixture化し、正本記載のSHA-256と一致させた。
+対応inboxが存在しないclaimed operationを未claimへ戻さず、同一identityの再publishは既存claimへ収束して
+new inboxを生成しない。payloadが存在しない#423 old `7afb…` envelopeは作成していない。
+
+実装完了の判定は、専用test、既存wake/backlog/terminal回帰、typecheck、Biome、PLAN lint、Linux/Windows CI、
+非著者closing receiptが同一exact HEADへ揃った後に行う。この節単独ではReverse R4やIssue完了を主張しない。
 - PLAN-REVERSE-514をR1→R4へ進め、#416/#422の既存契約へbackpropする。
