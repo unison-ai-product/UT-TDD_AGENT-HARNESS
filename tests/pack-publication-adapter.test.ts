@@ -274,6 +274,24 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
   return { ...base, ...overrides } as PackPublicationPorts;
 }
 
+function withOperationLedger(value: PackPublicationPorts, ledger: string[]): PackPublicationPorts {
+  const wrap = (candidate: unknown, path: string): unknown => {
+    if (typeof candidate === "function") {
+      return (...args: unknown[]) => {
+        ledger.push(path);
+        return candidate(...args);
+      };
+    }
+    if (candidate !== null && typeof candidate === "object") {
+      return Object.fromEntries(
+        Object.entries(candidate).map(([key, nested]) => [key, wrap(nested, `${path}.${key}`)]),
+      );
+    }
+    return candidate;
+  };
+  return wrap(value, "ports") as PackPublicationPorts;
+}
+
 describe("remote Pack canary publication", () => {
   it("AUX-PACKPUB-REMOTE-010: seals an immutable mutation-specific approval set", () => {
     const result = sealPackPublicationIntent(input());
@@ -857,28 +875,21 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       error: "invalid_inventory",
     });
     const intent = sealedIntent();
-    const observePack = vi.fn();
-    const observePointer = vi.fn();
-    const observeTag = vi.fn();
-    const approval = vi.fn();
-    const commit = vi.fn();
+    const operationLedger: string[] = [];
+    const instrumentedPorts = withOperationLedger(
+      ports({ cleanup: { run: vi.fn() } }),
+      operationLedger,
+    );
     const result = await publishPackCanary(
       { ...intent, commitEntries: intent.commitEntries.slice(1) },
-      ports({
-        approval: { consume: approval },
-        pack: { ...ports().pack, observeBefore: observePack, commitPublicationBranch: commit },
-        canary: { ...ports().canary, observeBefore: observePointer },
-        tag: { ...ports().tag, observe: observeTag },
-      }),
+      instrumentedPorts,
     );
     expect(result).toMatchObject({
       status: "denied",
       reason: "sealed_intent_mismatch",
       remoteWrites: 0,
     });
-    for (const spy of [observePack, observePointer, observeTag, approval, commit]) {
-      expect(spy).not.toHaveBeenCalled();
-    }
+    expect(operationLedger).toEqual([]);
   });
 
   it("U-PACKPUB-REMOTE-015: 003-F preserves branch response loss and stops PR/release writes", async () => {
