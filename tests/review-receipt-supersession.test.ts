@@ -236,6 +236,50 @@ describe("PLAN-L7-520 append-only receipt supersession", () => {
     }
   });
 
+  it("CANDIDATE-U-RVATT-044: mutated attempt outcome identity blocks retry", () => {
+    const { root, request } = fixture();
+    try {
+      const first = beginReviewAttempt({
+        repoRoot: root,
+        request,
+        provider: "claude",
+        model: "claude-opus-5",
+      });
+      if (!first.ok) throw new Error(first.reason);
+      const recorded = recordReviewAttemptFailure({
+        repoRoot: root,
+        request,
+        attempt: 1,
+        provider: "claude",
+        model: "claude-opus-5",
+        exitCode: 7,
+        verdictPath: first.path,
+        now: "2026-08-28T00:01:00.000Z",
+      });
+      expect(recorded.ok).toBe(true);
+      const auditPath = reviewCustodyAuditPath(root);
+      const event = readReviewCustodyAudit(root).find(
+        (entry) => entry.kind === "attempt_execution_failed",
+      );
+      if (!event) throw new Error("missing event");
+      writeFileSync(
+        auditPath,
+        `${JSON.stringify({ ...event, exactHead: "b".repeat(40) })}\n`,
+        "utf8",
+      );
+      expect(
+        beginReviewAttempt({
+          repoRoot: root,
+          request,
+          provider: "claude",
+          model: "claude-sonnet-5",
+        }),
+      ).toEqual({ ok: false, reason: "attempt_outcome_indeterminate" });
+    } finally {
+      cleanup(root);
+    }
+  });
+
   it("CANDIDATE-U-RVATT-040 case B / negative 043/045: canonical receipt is create-exclusive", () => {
     const { root, request, digest } = fixture();
     try {

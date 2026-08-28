@@ -223,6 +223,31 @@ function sameAttemptOutcome(
   return canonicalJson(withoutTime(left)) === canonicalJson(withoutTime(right));
 }
 
+function isAttemptFailureEvent(
+  repoRoot: string,
+  event: ReviewCustodyAuditEvent,
+  request: ReviewCustodyRequest,
+  attempt: number,
+): boolean {
+  const expectedProvider = request.authorFamily === "codex" ? "claude" : "codex";
+  return (
+    event.kind === "attempt_execution_failed" &&
+    event.requestDigest === reviewIdentityDigest(request) &&
+    event.attempt === attempt &&
+    event.exactHead === request.exactHead &&
+    event.verdictPath === reviewVerdictPath(repoRoot, event.requestDigest, attempt) &&
+    event.provider === expectedProvider &&
+    isReviewProvider(event.provider) &&
+    typeof event.model === "string" &&
+    event.model.trim().length > 0 &&
+    Number.isSafeInteger(event.exitCode) &&
+    (event.exitCode as number) !== 0 &&
+    typeof event.reason === "string" &&
+    event.reason.trim().length > 0 &&
+    (event.verdictDigest === undefined || DIGEST_PATTERN.test(event.verdictDigest))
+  );
+}
+
 export type ReviewAttemptOutcomeResult =
   | { readonly ok: true; readonly event: ReviewCustodyAuditEvent }
   | { readonly ok: false; readonly reason: string };
@@ -348,15 +373,33 @@ export function beginReviewAttempt(input: {
   const attempt = (used.at(-1) ?? 0) + 1;
   if (used.length > 0) {
     const previousAttempt = used.at(-1) as number;
-    let outcomes: ReviewCustodyAuditEvent[];
+    let requestEvents: ReviewCustodyAuditEvent[];
     try {
-      outcomes = auditEventsFor(input.repoRoot, digest).filter(
-        (event) => event.kind === "attempt_execution_failed" && event.attempt === previousAttempt,
-      );
+      requestEvents = auditEventsFor(input.repoRoot, digest);
     } catch {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
-    if (outcomes.length !== 1) {
+    const outcomes = requestEvents.filter(
+      (event) => event.kind === "attempt_execution_failed" && event.attempt === previousAttempt,
+    );
+    if (
+      outcomes.length !== 1 ||
+      !isAttemptFailureEvent(input.repoRoot, outcomes[0], input.request, previousAttempt)
+    ) {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    const failureIndex = requestEvents.indexOf(outcomes[0]);
+    if (
+      requestEvents
+        .slice(0, failureIndex)
+        .some((event) => event.kind === "superseded_attempt" && event.attempt >= previousAttempt)
+    ) {
+      return { ok: false, reason: "attempt_outcome_indeterminate" };
+    }
+    const existingSupersession = requestEvents.filter(
+      (event) => event.kind === "superseded_attempt" && event.attempt === attempt,
+    );
+    if (existingSupersession.length > 0) {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
     try {
