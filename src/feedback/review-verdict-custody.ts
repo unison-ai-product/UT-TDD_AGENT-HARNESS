@@ -223,12 +223,13 @@ function sameAttemptOutcome(
   return canonicalJson(withoutTime(left)) === canonicalJson(withoutTime(right));
 }
 
-function isAttemptFailureEvent(
-  repoRoot: string,
-  event: ReviewCustodyAuditEvent,
-  request: ReviewCustodyRequest,
-  attempt: number,
-): boolean {
+function isAttemptFailureEvent(input: {
+  repoRoot: string;
+  event: ReviewCustodyAuditEvent;
+  request: ReviewCustodyRequest;
+  attempt: number;
+}): boolean {
+  const { repoRoot, event, request, attempt } = input;
   const expectedProvider = request.authorFamily === "codex" ? "claude" : "codex";
   return (
     event.kind === "attempt_execution_failed" &&
@@ -244,7 +245,8 @@ function isAttemptFailureEvent(
     (event.exitCode as number) !== 0 &&
     typeof event.reason === "string" &&
     event.reason.trim().length > 0 &&
-    (event.verdictDigest === undefined || DIGEST_PATTERN.test(event.verdictDigest))
+    (event.verdictDigest === undefined || DIGEST_PATTERN.test(event.verdictDigest)) &&
+    digestFile(event.verdictPath) === event.verdictDigest
   );
 }
 
@@ -384,7 +386,12 @@ export function beginReviewAttempt(input: {
     );
     if (
       outcomes.length !== 1 ||
-      !isAttemptFailureEvent(input.repoRoot, outcomes[0], input.request, previousAttempt)
+      !isAttemptFailureEvent({
+        repoRoot: input.repoRoot,
+        event: outcomes[0],
+        request: input.request,
+        attempt: previousAttempt,
+      })
     ) {
       return { ok: false, reason: "attempt_outcome_indeterminate" };
     }
