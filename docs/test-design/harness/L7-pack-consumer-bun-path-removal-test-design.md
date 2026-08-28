@@ -40,7 +40,7 @@ prefix `U-PACKBUN` は既存 registry と衝突しない
 | S1-b (生成成果物) | #470 | `U-PACKBUN-003` / `004` |
 | S1-a (readiness) | #471 | `CANDIDATE-U-PACKBUN-001` / `002` |
 | S1-c (source CI) | #472 | `CANDIDATE-U-PACKBUN-005` |
-| 全 slice 共通 | #470 / #471 / #472 | `U-PACKBUN-006` |
+| 全 slice 共通 | #470 / #471 / #472 | `U-PACKBUN-006` (不変条件保護) |
 
 `006` は各 slice の PR で個別に評価する (最後にまとめて 1 回ではない)。
 `build` script や BAN 検出側 lint への混入は、混入した PR で検出されなければ意味がないためである。
