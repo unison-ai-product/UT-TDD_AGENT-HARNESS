@@ -34,7 +34,7 @@ github-ci-policy:1
 github-forward-store:2
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
-hook-native-launcher:1 claude-memory-terminal-gc:1
+hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2
 profile/tracked-loader:2
 plan-asset/ledger-schema:4 plan-asset/legacy-inventory:5 plan-asset/legacy-migration-dry-run:13 plan-asset/project-identity-loader:1
 disposition/git-authoring-provenance:3 disposition/projection:6 disposition/tracked-target-registry:2

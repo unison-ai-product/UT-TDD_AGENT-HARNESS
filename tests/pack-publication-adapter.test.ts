@@ -313,7 +313,7 @@ function withOperationLedger(value: PackPublicationPorts, ledger: string[]): Pac
 }
 
 describe("remote Pack canary publication", () => {
-  it("U-RELVER-001/005/006: seals package version and its canonical tag separately from releaseId", () => {
+  it("U-RELVER-001/005/006, P-RELVER-001: seals package version and its canonical tag separately from releaseId", () => {
     const sealed = sealPackPublicationIntent(input());
     expect(sealed).toMatchObject({ ok: true });
     if (!sealed.ok) return;

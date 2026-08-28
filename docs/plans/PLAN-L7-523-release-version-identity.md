@@ -26,6 +26,16 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-523-release-version-identity.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/update-check.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/pack-publication-adapter.ts
+    artifact_type: source_module
+  - artifact_path: tests/update-check.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/pack-publication-adapter.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/release-version-identity.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
   requires:
@@ -114,8 +124,9 @@ reconciliationと最終publication receiptにも`releaseVersion`と`tagName`を�
 ## 5. TDD / oracle契約
 
 paired test designの`CANDIDATE-U-RELVER-001..009`と`CANDIDATE-P-RELVER-001`をRedから開始し、
-実装PRで成立したものだけを同番号`U-RELVER-*` / `P-RELVER-*`へ昇格する。各負系は他のdigest軸を
-正しく保った単軸fixtureとし、別理由RedをGreen証拠にしない。
+実装PRで成立した`U-RELVER-001..006/009` / `P-RELVER-001`だけを同番号の正規oracleへ昇格する。
+RELVER candidate 007/008は未実装候補として保留し、各負系は他のdigest軸を正しく保った単軸fixtureとする。
+別理由RedをGreen証拠にしない。
 
 ## 6. 順序と所有path
 

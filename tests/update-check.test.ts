@@ -134,7 +134,17 @@ describe("update-check semver primitives", () => {
     const buildTwo = parsePackageSemver("1.0.0+build.2");
     if (!buildOne || !buildTwo) throw new Error("expected valid build metadata");
     expect(comparePackageSemver(buildOne, buildTwo)).toBe(0);
-    for (const invalid of ["v0.2.0-canary.1", " 0.2.0-canary.1", "0.2.0-", "0.2.0-01"])
+    const largePrerelease = parsePackageSemver("1.0.0-9007199254740993");
+    const largerPrerelease = parsePackageSemver("1.0.0-9007199254740994");
+    if (!largePrerelease || !largerPrerelease) throw new Error("expected valid large prereleases");
+    expect(comparePackageSemver(largePrerelease, largerPrerelease)).toBeLessThan(0);
+    for (const invalid of [
+      "v0.2.0-canary.1",
+      " 0.2.0-canary.1",
+      "0.2.0-",
+      "0.2.0-01",
+      "9007199254740992.0.0",
+    ])
       expect(parsePackageSemver(invalid)).toBeNull();
   });
 

@@ -138,10 +138,14 @@ export function parsePackageSemver(value: unknown): PackageSemver | null {
     )
   )
     return null;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  const patch = Number(match[3]);
+  if (![major, minor, patch].every(Number.isSafeInteger)) return null;
   return {
-    major: Number(match[1]),
-    minor: Number(match[2]),
-    patch: Number(match[3]),
+    major,
+    minor,
+    patch,
     prerelease,
     build: match[5]?.split(".") ?? [],
   };
@@ -165,7 +169,10 @@ export function comparePackageSemver(a: PackageSemver, b: PackageSemver): number
     if (left === right) continue;
     const leftNumeric = /^\d+$/.test(left);
     const rightNumeric = /^\d+$/.test(right);
-    if (leftNumeric && rightNumeric) return Number(left) - Number(right);
+    if (leftNumeric && rightNumeric) {
+      if (left.length !== right.length) return left.length - right.length;
+      return left < right ? -1 : 1;
+    }
     if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
     return left < right ? -1 : 1;
   }
