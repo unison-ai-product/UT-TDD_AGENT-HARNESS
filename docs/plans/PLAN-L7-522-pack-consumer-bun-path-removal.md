@@ -153,14 +153,25 @@ file ごとに扱いが異なるので分けて契約する。
 | 10 | `).Bun` | 同 | 同 | 分岐 3 |
 | 11 | `globalThis.Bun` | 同 | 同 | 分岐 4 |
 | 12 | `process.versions.bun` | 同 | 同 | 分岐 5 |
-| 13 | Pack CI が `bun run test:pack` ではなく raw vitest を使う workflow | `github-ci-policy.ts` | Pack CI deny (`:184` / `:189`) | 検出側 (S1-c で触らない) |
+| 13 | Pack CI step が `vitest run` を直接呼ぶ workflow | `github-ci-policy.ts` | `forbidden_raw_vitest` (`:182-185`) | 検出側 (S1-c で触らない) |
+| 13b | Pack CI step が `bun run test` (`test:pack` ではない) を呼ぶ workflow | `github-ci-policy.ts` | `forbidden_source_full_tests` (`:186-190`) | 同上。`13` とは別 rule なので別サンプルが要る |
 | 14 | adapter doc の Hooks 節が `bun` / `bunx` / `bun.cmd` / `bun.exe` を実行指示する | `rule-drift.ts` | `bun execution form` marker | |
 | 15 | `package.json` と `bun.lock` の direct graph 不一致 | `toolchain-pin.ts` | `bun-direct-parity-drift` | |
 
-**網羅性を機械で強制する。** oracle は上表を hard-code した表として持つのではなく、**各 lint が公開する
-Bun 関連 rule id を列挙し、表がその全てを覆っていることを assert する**。新しい Bun rule / matcher 分岐が
-追加されたのにサンプルが無い場合は **006 自体が Red になる**。これが無ければ「未収載分岐の同数弱体化」を
-再び見逃す。
+**網羅性を rule 単位ではなく matcher 分岐単位で機械強制する。** rule id の列挙だけでは、**既存 rule の
+内部に分岐が足された場合**を検出できない (rule 数は変わらないため)。したがって次を要求する
+(PR #469 delta review 3 巡目、canonical receipt `99b1e8a0f24beaed…` の指摘)。
+
+- 対象 lint は Bun matcher の正規表現 (`BUN_SPAWN_PATTERN` / `BUN_IMPORT_PATTERN` /
+  `BUN_GLOBAL_PATTERN`) と述語 rule の reason 一覧を **export する** (検出能力を増やしも減らしもしない
+  加算的変更であり、§3.3 の保護に反しない)。
+- oracle は各 pattern の `source` を alternation で分解し、**各分岐が上表のサンプル 1 件以上に
+  マッチすることを assert する**。述語 rule (`github-ci-policy.ts` / `rule-drift.ts` /
+  `toolchain-pin.ts`) は reason 単位で同じ assert を行う。
+- 分岐または reason がサンプルに覆われていなければ **006 自体を Red とする**。
+
+これにより「新しい分岐を既存 rule に足してサンプルを書かない」経路と「同数のまま matcher を緩める」経路の
+両方が閉じる。
 
 ## 4. 設計判断: Issue #450 受入条件 3 の読み替え
 
