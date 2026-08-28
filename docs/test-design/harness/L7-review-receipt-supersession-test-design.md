@@ -37,6 +37,6 @@ updated: 2026-08-28
 
 | Candidate | Stimulus | Oracle |
 | --- | --- | --- |
-| `CANDIDATE-U-RVATT-042` | canonical receipt存在後に同一/次attemptを開始 | `review_receipt_already_exists`、attempt/audit delta 0 |
+| `CANDIDATE-U-RVATT-045` | canonical receipt存在後に同一/次attemptを開始 | `review_receipt_already_exists`、attempt/audit delta 0 |
 | `CANDIDATE-U-RVATT-043` | canonical receipt pathへ異payloadを再投影 | `verdict_identity_conflict`、既存bytes/digest不変 |
 | `CANDIDATE-U-RVATT-044` | audit event重複、順序逆転、request/attempt digest改竄 | typed deny、次attempt/receipt write 0 |
