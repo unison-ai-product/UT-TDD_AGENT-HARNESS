@@ -30,6 +30,7 @@ import {
   validateClaudeWakeClaimAuthority,
 } from "../src/runtime/claude-wake-generation-upgrade.ts";
 import {
+  admitHistoricalFixturePayload,
   type ClaudeWakeUpgradeFixtureIdentity,
   fixtureIdentityMatches,
 } from "./support/claude-wake-upgrade-fixture.ts";
@@ -259,10 +260,45 @@ describe("Claude wake generation rolling upgrade", () => {
         generation: "generation-2",
         authorityEpoch: 3,
       });
+
+      expect(() =>
+        activateClaudeWakeGeneration({
+          root,
+          sessionId: "three",
+          workspaceId,
+          generation: "generation-3",
+          runtimeSourceRevision,
+          leaseToken: "lease-three",
+          beforeStep: (step) => {
+            if (step === "journal_planned") throw new Error("injected_pre_supersede_crash");
+          },
+        }),
+      ).toThrow("injected_pre_supersede_crash");
+      expect(inspectClaudeWakeGeneration(root, workspaceId)).toMatchObject({
+        ok: true,
+        generation: "generation-2",
+        authorityEpoch: 3,
+      });
+      expect(
+        activateClaudeWakeGeneration({
+          root,
+          sessionId: "three",
+          workspaceId,
+          generation: "generation-3",
+          runtimeSourceRevision,
+          leaseToken: "lease-three",
+        }).ok,
+      ).toBe(true);
       const journals = readdirSync(join(root, "activation-journal")).map((name) =>
         JSON.parse(readFileSync(join(root, "activation-journal", name), "utf8")),
       );
-      expect(journals.map((entry) => entry.state)).toEqual(["active", "rolled_back", "active"]);
+      expect(journals.map((entry) => entry.state)).toEqual([
+        "active",
+        "rolled_back",
+        "active",
+        "rolled_back",
+        "active",
+      ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -277,6 +313,12 @@ describe("Claude wake generation rolling upgrade", () => {
     );
     const inventory = JSON.parse(readFileSync(join(captureRoot, "inventory.json"), "utf8"));
     expect(existsSync(join(captureRoot, "pr-423-envelope.json"))).toBe(false);
+    expect(
+      admitHistoricalFixturePayload({
+        ...inventory.observations.find((observation: { pr: number }) => observation.pr === 423),
+        requestedEnvelope: "pr-423-envelope.json",
+      }),
+    ).toEqual({ ok: false, reason: "historical_payload_unavailable" });
     for (const observation of inventory.observations) {
       for (const kind of ["request", "claim"] as const) {
         expect(digest(readFileSync(join(captureRoot, observation[kind]), "utf8"))).toBe(

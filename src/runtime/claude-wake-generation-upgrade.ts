@@ -263,8 +263,24 @@ function reconcileActivationJournals(root: string): Result<Record<never, never>>
       continue;
     }
 
-    removeIfPresent(join(root, `${value.sessionId}.generation`));
-    removeIfPresent(capabilityPath(root, value.sessionId));
+    const previousMarkerPath =
+      typeof value.previousMarkerName === "string" && value.previousMarkerName
+        ? join(root, value.previousMarkerName)
+        : undefined;
+    const savedMarker = previousMarkerPath
+      ? join(root, "superseded", `${value.authorityEpoch}-${value.previousMarkerName}`)
+      : undefined;
+    // A crash at journal_planned happens before supersession. In that window the previous
+    // marker is still canonical, and removing a same-session marker would destroy it.
+    const supersessionStarted = savedMarker ? existsSync(savedMarker) : false;
+    if (
+      !previousMarkerPath ||
+      supersessionStarted ||
+      value.previousMarkerName !== `${value.sessionId}.generation`
+    ) {
+      removeIfPresent(join(root, `${value.sessionId}.generation`));
+      removeIfPresent(capabilityPath(root, value.sessionId));
+    }
     const recordPath = authorityPath(root, value.workspaceId);
     if (typeof value.previousAuthorityBytes === "string") {
       atomicWrite(recordPath, value.previousAuthorityBytes);
@@ -272,20 +288,19 @@ function reconcileActivationJournals(root: string): Result<Record<never, never>>
       removeIfPresent(recordPath);
     }
     if (typeof value.previousMarkerName === "string" && value.previousMarkerName) {
-      const savedMarker = join(
-        root,
-        "superseded",
-        `${value.authorityEpoch}-${value.previousMarkerName}`,
-      );
-      if (!existsSync(savedMarker)) return { ok: false, reason: "activation_recovery_failed" };
-      renameSync(savedMarker, join(root, value.previousMarkerName));
-      const previousSession = basename(value.previousMarkerName, ".generation");
-      const savedProfile = join(
-        root,
-        "superseded",
-        `${value.authorityEpoch}-${previousSession}.capability.json`,
-      );
-      if (existsSync(savedProfile)) renameSync(savedProfile, capabilityPath(root, previousSession));
+      if (savedMarker && existsSync(savedMarker)) {
+        renameSync(savedMarker, previousMarkerPath as string);
+        const previousSession = basename(value.previousMarkerName, ".generation");
+        const savedProfile = join(
+          root,
+          "superseded",
+          `${value.authorityEpoch}-${previousSession}.capability.json`,
+        );
+        if (existsSync(savedProfile))
+          renameSync(savedProfile, capabilityPath(root, previousSession));
+      } else if (!previousMarkerPath || !existsSync(previousMarkerPath)) {
+        return { ok: false, reason: "activation_recovery_failed" };
+      }
     }
     atomicWrite(path, stableJson({ ...value, state: "rolled_back" }));
   }
