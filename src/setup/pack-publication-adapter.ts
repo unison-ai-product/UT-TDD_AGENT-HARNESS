@@ -561,6 +561,7 @@ function validateSealedIntent(intent: PackPublicationIntent): boolean {
   const approvalsValid =
     approvals.length === required.length &&
     approvalKeys.every((mutation) => required.includes(mutation as PublicationMutation)) &&
+    approvalKeys.every((mutation) => intent.approvals[mutation]?.mutation === mutation) &&
     required.every((mutation) => intent.approvals[mutation] !== undefined) &&
     nonces.size === approvals.length &&
     approvals.every(

@@ -846,7 +846,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     });
   });
 
-  it("U-PACKPUB-REMOTE-014: 003-E invalid inventory never enters remote composition", () => {
+  it("U-PACKPUB-REMOTE-014: 003-E invalid inventory never enters remote composition", async () => {
     const plan = stagingPlan();
     const mutated = {
       ...plan,
@@ -856,6 +856,29 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       ok: false,
       error: "invalid_inventory",
     });
+    const intent = sealedIntent();
+    const observePack = vi.fn();
+    const observePointer = vi.fn();
+    const observeTag = vi.fn();
+    const approval = vi.fn();
+    const commit = vi.fn();
+    const result = await publishPackCanary(
+      { ...intent, commitEntries: intent.commitEntries.slice(1) },
+      ports({
+        approval: { consume: approval },
+        pack: { ...ports().pack, observeBefore: observePack, commitPublicationBranch: commit },
+        canary: { ...ports().canary, observeBefore: observePointer },
+        tag: { ...ports().tag, observe: observeTag },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "denied",
+      reason: "sealed_intent_mismatch",
+      remoteWrites: 0,
+    });
+    for (const spy of [observePack, observePointer, observeTag, approval, commit]) {
+      expect(spy).not.toHaveBeenCalled();
+    }
   });
 
   it("U-PACKPUB-REMOTE-015: 003-F preserves branch response loss and stops PR/release writes", async () => {
@@ -1320,6 +1343,11 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       Object.fromEntries(
         Object.entries(intent.approvals).filter(([mutation]) => mutation !== "planned"),
       ),
+      {
+        ...intent.approvals,
+        planned: intent.approvals.pack_branch_commit,
+        pack_branch_commit: intent.approvals.planned,
+      },
     ];
     for (const approvals of approvalVariants) {
       const approvalDrift = await publishPackCanary(
