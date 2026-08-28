@@ -629,7 +629,7 @@ class PublicationRun {
         result,
         stage: approval.transition,
         remoteWrites: this.remoteWrites,
-        prewrite: true,
+        prewrite: this.remoteWrites === 0,
       });
     if (
       !(await this.journal(approval, "planned_nonce_consumed", {

@@ -2516,11 +2516,30 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 mutation固有approval/nonce、prewrite identity、journal、実port call由来write count、各read-back、
 auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと後続write 0を直接検査する。
 
-| ID range | fixture / mutation | expected |
+| ID | candidate / mutation | expected |
 | --- | --- | --- |
-| `U-PACKPUB-REMOTE-010〜016` | seal、nonce replay、initial drift、response loss、journal/read-back | invalid/deny/partial/indeterminateを区別し、実mutation callを過少報告しない |
-| `U-PACKPUB-REMOTE-017〜022` | main/pointer/tag preflight、duplicate tag、approval、journal | prewrite write 0、後続port 0 |
-| `U-PACKPUB-REMOTE-023〜029` | draft、asset、tag、visibility、auditor、late pointer CAS | 最初の不一致・観測不能後のwrite 0 |
-| `U-PACKPUB-REMOTE-030〜032` | pointer response loss、receipt persist、cleanup | remoteWrites 9を保持し、receipt失敗とcleanup失敗を成功へ丸めない |
+| `U-PACKPUB-REMOTE-010` | 003-A approval否定 | missing/duplicate/binding/expiredを個別typed deny |
+| `U-PACKPUB-REMOTE-011` | 003-B nonce/rebinding | replay/binding mismatch、write 0 |
+| `U-PACKPUB-REMOTE-012` | 003-C initial identity | initial driftとsealed driftを別reasonでdeny |
+| `U-PACKPUB-REMOTE-013` | 003-D inventory | 単独size/digest変異を`invalid_inventory` |
+| `U-PACKPUB-REMOTE-014` | 003-E fallback | 暗黙補完せず`invalid_inventory` |
+| `U-PACKPUB-REMOTE-015` | 003-F branch/PR | response loss後のwrite 0 |
+| `U-PACKPUB-REMOTE-016` | 003-G merge read-back | release以降write 0 |
+| `U-PACKPUB-REMOTE-017` | 003-H1 tag preflight | duplicate/retargetを全write前deny |
+| `U-PACKPUB-REMOTE-018` | 003-H2 tag mutation | indeterminate後visibility/pointer 0 |
+| `U-PACKPUB-REMOTE-019` | 003-I draft | identity drift後asset/tag 0 |
+| `U-PACKPUB-REMOTE-020` | 003-J asset | bytes/size/digest drift後tag 0 |
+| `U-PACKPUB-REMOTE-021` | 003-K commit/sidecar | read-back drift後release 0 |
+| `U-PACKPUB-REMOTE-022` | 003-L visibility | write後approval denyをpartial保持 |
+| `U-PACKPUB-REMOTE-023` | 003-M1 initial pointer | driftをwrite 0 deny |
+| `U-PACKPUB-REMOTE-024` | 003-M-late late CAS | append 0、immutable object保持 |
+| `U-PACKPUB-REMOTE-025` | 003-M2 pointer response | indeterminate、重複CAS 0 |
+| `U-PACKPUB-REMOTE-026` | 003-N cleanup | publication receiptと独立failure |
+| `U-PACKPUB-REMOTE-027` | 003-O reconciliation | valid receipt再観測、write 0 |
+| `U-PACKPUB-REMOTE-028` | 003-P foreign retry | identity mismatch、write 0 |
+| `U-PACKPUB-REMOTE-029` | 003-Q protected ordering | PR/CAS順、direct push surface 0 |
+| `U-PACKPUB-REMOTE-030` | 003-R journal | persist失敗時mutation 0 |
+| `U-PACKPUB-REMOTE-031` | 003-S1 root linkage | sealed identity driftをwrite前deny |
+| `U-PACKPUB-REMOTE-032` | 003-S2 post-journal identity | target差替え後のtransition 0 |
 
 実行対応: `tests/pack-publication-adapter.test.ts` (`U-PACKPUB-REMOTE-010〜032`)。

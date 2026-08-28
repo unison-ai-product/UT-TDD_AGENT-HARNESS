@@ -104,8 +104,7 @@ function stagingPlan() {
   return result.plan;
 }
 
-function input(): PackPublicationIntentInput {
-  const plan = stagingPlan();
+function input(plan = stagingPlan()): PackPublicationIntentInput {
   const seed = {
     plan,
     operationId: "op-1",
@@ -161,6 +160,12 @@ function input(): PackPublicationIntentInput {
     idempotencyKey: seed.idempotencyKey,
   }));
   return { ...seed, approvals };
+}
+
+function sealedIntent() {
+  const result = sealPackPublicationIntent(input());
+  if (!result.ok) throw new Error(result.error);
+  return result.intent;
 }
 
 function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPorts {
@@ -270,7 +275,7 @@ function ports(overrides: Partial<PackPublicationPorts> = {}): PackPublicationPo
 }
 
 describe("remote Pack canary publication", () => {
-  it("U-PACKPUB-REMOTE-010: seals an immutable mutation-specific approval set", () => {
+  it("AUX-PACKPUB-REMOTE-010: seals an immutable mutation-specific approval set", () => {
     const result = sealPackPublicationIntent(input());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -280,7 +285,7 @@ describe("remote Pack canary publication", () => {
     ).toBe(10);
   });
 
-  it("U-PACKPUB-REMOTE-011: rejects nonce reuse before remote writes", () => {
+  it("AUX-PACKPUB-REMOTE-011: rejects nonce reuse before remote writes", () => {
     const candidate = input();
     const approvals = candidate.approvals?.map((approval, index, all) =>
       index === 1 ? { ...approval, nonce: all[0].nonce } : approval,
@@ -291,7 +296,7 @@ describe("remote Pack canary publication", () => {
     });
   });
 
-  it("U-PACKPUB-REMOTE-012: denies initial identity drift with zero writes", async () => {
+  it("AUX-PACKPUB-REMOTE-012: denies initial identity drift with zero writes", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const commit = vi.fn();
@@ -310,7 +315,7 @@ describe("remote Pack canary publication", () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-013: records an attempted mutation when its response is lost", async () => {
+  it("AUX-PACKPUB-REMOTE-013: records an attempted mutation when its response is lost", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -332,7 +337,7 @@ describe("remote Pack canary publication", () => {
     });
   });
 
-  it("U-PACKPUB-REMOTE-014: journals before every successful mutation", async () => {
+  it("AUX-PACKPUB-REMOTE-014: journals before every successful mutation", async () => {
     const append = vi.fn();
     const result = sealPackPublicationIntent(input());
     if (!result.ok) throw new Error(result.error);
@@ -345,7 +350,7 @@ describe("remote Pack canary publication", () => {
     expect(append.mock.calls.map(([event]) => event.kind)).toContain("mutation_intent");
   });
 
-  it("U-PACKPUB-REMOTE-015: stops after a post-write read-back mismatch", async () => {
+  it("AUX-PACKPUB-REMOTE-015: stops after a post-write read-back mismatch", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -368,7 +373,7 @@ describe("remote Pack canary publication", () => {
     expect(draft).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-016: converts a read-back exception to typed indeterminate and stops", async () => {
+  it("AUX-PACKPUB-REMOTE-016: converts a read-back exception to typed indeterminate and stops", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -395,9 +400,9 @@ describe("remote Pack canary publication", () => {
   });
 
   it.each([
-    ["U-PACKPUB-REMOTE-017", "pack", "main_unavailable"],
-    ["U-PACKPUB-REMOTE-018", "pointer", "pointer_unavailable"],
-    ["U-PACKPUB-REMOTE-019", "tag", "tag_unavailable"],
+    ["AUX-PACKPUB-REMOTE-017", "pack", "main_unavailable"],
+    ["AUX-PACKPUB-REMOTE-018", "pointer", "pointer_unavailable"],
+    ["AUX-PACKPUB-REMOTE-019", "tag", "tag_unavailable"],
   ] as const)("%s: preflight observation failure preserves write-zero (%s)", async (_id, surface, reason) => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
@@ -430,7 +435,7 @@ describe("remote Pack canary publication", () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-020: rejects an already-bound tag before approval consumption", async () => {
+  it("AUX-PACKPUB-REMOTE-020: rejects an already-bound tag before approval consumption", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -456,7 +461,7 @@ describe("remote Pack canary publication", () => {
     expect(consume).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-021: an expired approval denies before its mutation", async () => {
+  it("AUX-PACKPUB-REMOTE-021: an expired approval denies before its mutation", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const commit = vi.fn();
@@ -471,7 +476,7 @@ describe("remote Pack canary publication", () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-022: journal failure prevents the associated mutation", async () => {
+  it("AUX-PACKPUB-REMOTE-022: journal failure prevents the associated mutation", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const commit = vi.fn();
@@ -495,7 +500,7 @@ describe("remote Pack canary publication", () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-023: draft mismatch stops before asset upload", async () => {
+  it("AUX-PACKPUB-REMOTE-023: draft mismatch stops before asset upload", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -526,7 +531,7 @@ describe("remote Pack canary publication", () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-024: asset read-back mismatch stops before the second upload", async () => {
+  it("AUX-PACKPUB-REMOTE-024: asset read-back mismatch stops before the second upload", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -552,7 +557,7 @@ describe("remote Pack canary publication", () => {
     expect(upload).toHaveBeenCalledTimes(1);
   });
 
-  it("U-PACKPUB-REMOTE-025: tag response loss is indeterminate and blocks visibility", async () => {
+  it("AUX-PACKPUB-REMOTE-025: tag response loss is indeterminate and blocks visibility", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -573,7 +578,7 @@ describe("remote Pack canary publication", () => {
     expect(visible).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-026: tag read-back exception blocks visibility", async () => {
+  it("AUX-PACKPUB-REMOTE-026: tag read-back exception blocks visibility", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -602,7 +607,7 @@ describe("remote Pack canary publication", () => {
     expect(visible).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-027: visibility mismatch blocks auditor and pointer", async () => {
+  it("AUX-PACKPUB-REMOTE-027: visibility mismatch blocks auditor and pointer", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -631,7 +636,7 @@ describe("remote Pack canary publication", () => {
     expect(pointer).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-028: auditor denial blocks pointer mutation", async () => {
+  it("AUX-PACKPUB-REMOTE-028: auditor denial blocks pointer mutation", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -651,7 +656,7 @@ describe("remote Pack canary publication", () => {
     expect(pointer).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-029: late pointer drift blocks CAS append", async () => {
+  it("AUX-PACKPUB-REMOTE-029: late pointer drift blocks CAS append", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -683,7 +688,7 @@ describe("remote Pack canary publication", () => {
     expect(pointer).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-030: pointer response loss counts the attempted write", async () => {
+  it("AUX-PACKPUB-REMOTE-030: pointer response loss counts the attempted write", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const base = ports();
@@ -701,7 +706,7 @@ describe("remote Pack canary publication", () => {
     expect(result).toMatchObject({ status: "indeterminate", stage: "canary", remoteWrites: 9 });
   });
 
-  it("U-PACKPUB-REMOTE-031: receipt persistence failure is typed after publication writes", async () => {
+  it("AUX-PACKPUB-REMOTE-031: receipt persistence failure is typed after publication writes", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const result = await publishPackCanary(
@@ -721,7 +726,7 @@ describe("remote Pack canary publication", () => {
     });
   });
 
-  it("U-PACKPUB-REMOTE-032: cleanup failure is separate from an immutable successful receipt", async () => {
+  it("AUX-PACKPUB-REMOTE-032: cleanup failure is separate from an immutable successful receipt", async () => {
     const sealed = sealPackPublicationIntent(input());
     if (!sealed.ok) throw new Error(sealed.error);
     const result = await publishPackCanary(
@@ -736,5 +741,568 @@ describe("remote Pack canary publication", () => {
     );
     expect(result).toMatchObject({ status: "published", cleanup: "failed", remoteWrites: 9 });
     if (result.status === "published") expect(Object.isFrozen(result.receipt)).toBe(true);
+  });
+});
+
+describe("PLAN-L7-519 candidate-to-oracle contract", () => {
+  it("U-PACKPUB-REMOTE-010: 003-A rejects missing, duplicate, wrong-bound and expired approval", async () => {
+    const candidate = input();
+    const approvals = [...(candidate.approvals ?? [])];
+    expect(sealPackPublicationIntent({ ...candidate, approvals: approvals.slice(1) })).toEqual({
+      ok: false,
+      error: "approval_missing",
+    });
+    expect(
+      sealPackPublicationIntent({ ...candidate, approvals: [...approvals, approvals[0]] }),
+    ).toEqual({ ok: false, error: "approval_duplicate" });
+    expect(
+      sealPackPublicationIntent({
+        ...candidate,
+        approvals: approvals.map((value, index) =>
+          index === 0 ? { ...value, approver: "" } : value,
+        ),
+      }),
+    ).toEqual({ ok: false, error: "approval_binding_mismatch" });
+    const commit = vi.fn();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        approval: { consume: async () => ({ status: "mismatch", reason: "approval_expired" }) },
+        pack: { ...ports().pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(result).toMatchObject({ status: "denied", reason: "approval_expired", remoteWrites: 0 });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-011: 003-B rejects nonce replay and identity rebinding", () => {
+    const candidate = input();
+    const approvals = [...(candidate.approvals ?? [])];
+    expect(
+      sealPackPublicationIntent({
+        ...candidate,
+        approvals: approvals.map((value, index) =>
+          index === 1 ? { ...value, nonce: approvals[0].nonce } : value,
+        ),
+      }),
+    ).toEqual({ ok: false, error: "nonce_replay" });
+    expect(
+      sealPackPublicationIntent({
+        ...candidate,
+        approvals: approvals.map((value, index) =>
+          index === 0 ? { ...value, operationId: "foreign" } : value,
+        ),
+      }),
+    ).toEqual({ ok: false, error: "approval_binding_mismatch" });
+  });
+
+  it("U-PACKPUB-REMOTE-012: 003-C distinguishes initial identity drift from sealed-intent drift", async () => {
+    const intent = sealedIntent();
+    const base = ports();
+    const drift = await publishPackCanary(
+      intent,
+      ports({
+        pack: {
+          ...base.pack,
+          observeBefore: async () => ({
+            status: "attested",
+            value: {
+              mainSha: "f".repeat(40),
+              mainStateDigest: intent.remote.expectedMainStateDigest,
+              pointerObjectDigest: intent.remote.expectedPointerObjectDigest,
+              controlManifestSnapshotDigest: intent.remote.beforeControlManifestSnapshotDigest,
+            },
+          }),
+        },
+      }),
+    );
+    expect(drift).toMatchObject({
+      status: "denied",
+      reason: "initial_identity_drift",
+      remoteWrites: 0,
+    });
+    const tampered = { ...intent, expectedTreeDigest: sha("tampered") };
+    const sealedDrift = await publishPackCanary(tampered, ports());
+    expect(sealedDrift).toMatchObject({
+      status: "denied",
+      reason: "sealed_intent_mismatch",
+      remoteWrites: 0,
+    });
+  });
+
+  it("U-PACKPUB-REMOTE-013: 003-D rejects a single inventory digest/bytes mutation", () => {
+    const plan = stagingPlan();
+    const asset = plan.releaseAssets[0];
+    const mutated = {
+      ...plan,
+      releaseAssets: [
+        { ...asset, size: asset.size + 1 },
+        plan.releaseAssets[1],
+      ] as typeof plan.releaseAssets,
+    };
+    expect(sealPackPublicationIntent(input(mutated))).toEqual({
+      ok: false,
+      error: "invalid_inventory",
+    });
+  });
+
+  it("U-PACKPUB-REMOTE-014: 003-E has no fallback port and does not repair invalid inventory", () => {
+    const fallback = vi.fn();
+    const plan = stagingPlan();
+    const mutated = {
+      ...plan,
+      commitEntries: plan.commitEntries.slice(1) as typeof plan.commitEntries,
+    };
+    const candidate = { ...input(mutated), fallback };
+    expect(sealPackPublicationIntent(candidate)).toEqual({ ok: false, error: "invalid_inventory" });
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-015: 003-F preserves branch response loss and stops PR/release writes", async () => {
+    const base = ports();
+    const createPr = vi.fn();
+    const draft = vi.fn();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        pack: {
+          ...base.pack,
+          commitPublicationBranch: async () => {
+            throw new Error("lost");
+          },
+          createPullRequest: createPr,
+        },
+        release: { ...base.release, createDraft: draft },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "indeterminate",
+      stage: "pack_commit",
+      reason: "remote_response_lost",
+      remoteWrites: 1,
+    });
+    expect(createPr).not.toHaveBeenCalled();
+    expect(draft).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-016: 003-G rejects observed release commit identity and stops release writes", async () => {
+    const base = ports();
+    const draft = vi.fn();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        pack: {
+          ...base.pack,
+          observeReleaseCommit: async () => ({
+            status: "attested",
+            value: {
+              commitSha: "6".repeat(40),
+              mainSha: "6".repeat(40),
+              treeDigest: sha("foreign"),
+              pointerObjectDigest: sha("p"),
+              controlManifestSnapshotDigest: stagingPlan().controlManifestSnapshotDigest,
+              releaseId: releaseId(),
+              sourceRevision,
+              materializerVersion: "v2",
+              mergeMode: "pull_request_cas",
+            },
+          }),
+        },
+        release: { ...base.release, createDraft: draft },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      reason: "release_commit_attestation_mismatch",
+      remoteWrites: 3,
+    });
+    expect(draft).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-017: 003-H1 duplicate tag preflight denies all writes", async () => {
+    const base = ports();
+    const commit = vi.fn();
+    const intent = sealedIntent();
+    const result = await publishPackCanary(
+      intent,
+      ports({
+        tag: {
+          ...base.tag,
+          observe: async () => ({
+            status: "attested",
+            value: { name: intent.tagName, targetCommit: "f".repeat(40), annotated: true },
+          }),
+        },
+        pack: { ...base.pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "denied",
+      reason: "duplicate_or_retargeted_tag",
+      remoteWrites: 0,
+    });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-018: 003-H2 tag response loss stops visibility and pointer writes", async () => {
+    const base = ports();
+    const visible = vi.fn();
+    const pointer = vi.fn();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        tag: {
+          ...base.tag,
+          createAnnotatedCas: async () => {
+            throw new Error("lost");
+          },
+        },
+        visibility: { ...base.visibility, makeVisible: visible },
+        canary: { ...base.canary, appendCas: pointer },
+      }),
+    );
+    expect(result).toMatchObject({ status: "indeterminate", stage: "tag", remoteWrites: 7 });
+    expect(visible).not.toHaveBeenCalled();
+    expect(pointer).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-019: 003-I draft identity mismatch stops assets and tag", async () => {
+    const base = ports();
+    const upload = vi.fn();
+    const tag = vi.fn();
+    const intent = sealedIntent();
+    const result = await publishPackCanary(
+      intent,
+      ports({
+        release: {
+          ...base.release,
+          observeDraft: async () => ({
+            status: "attested",
+            value: {
+              releaseId: "foreign",
+              tagName: intent.tagName,
+              targetCommit: "6".repeat(40),
+              draft: true,
+            },
+          }),
+          uploadAsset: upload,
+        },
+        tag: { ...base.tag, createAnnotatedCas: tag },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      reason: "draft_identity_mismatch",
+      remoteWrites: 4,
+    });
+    expect(upload).not.toHaveBeenCalled();
+    expect(tag).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-020: 003-J asset identity mismatch stops the second asset and tag", async () => {
+    const base = ports();
+    const upload = vi.fn(base.release.uploadAsset);
+    const tag = vi.fn();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        release: {
+          ...base.release,
+          uploadAsset: upload,
+          observeAsset: async ({ name }) => ({
+            status: "attested",
+            value: { name, size: 0, contentDigest: sha("") },
+          }),
+        },
+        tag: { ...base.tag, createAnnotatedCas: tag },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      reason: "asset_identity_mismatch",
+      remoteWrites: 5,
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(tag).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-021: 003-K source/sidecar/tree read-back drift blocks release", async () => {
+    const base = ports();
+    const draft = vi.fn();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        pack: {
+          ...base.pack,
+          observeReleaseCommit: async () => ({
+            status: "mismatch",
+            reason: "control_snapshot_drift",
+          }),
+        },
+        release: { ...base.release, createDraft: draft },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      reason: "control_snapshot_drift",
+      remoteWrites: 3,
+    });
+    expect(draft).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-022: 003-L visibility approval denial is partial after prior writes", async () => {
+    const pointer = vi.fn();
+    const base = ports();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        approval: {
+          consume: async (approval) =>
+            approval.mutation === "release_visibility"
+              ? { status: "mismatch", reason: "approval_expired" }
+              : { status: "attested", value: { mode: "new" } },
+        },
+        canary: { ...base.canary, appendCas: pointer },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      stage: "release_visible",
+      reason: "approval_expired",
+      remoteWrites: 7,
+    });
+    expect(pointer).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-023: 003-M1 initial pointer snapshot drift denies write-zero", async () => {
+    const base = ports();
+    const commit = vi.fn();
+    const intent = sealedIntent();
+    const result = await publishPackCanary(
+      intent,
+      ports({
+        canary: {
+          ...base.canary,
+          observeBefore: async () => ({
+            status: "attested",
+            value: {
+              mainSha: intent.remote.expectedMainSha,
+              mainStateDigest: intent.remote.expectedMainStateDigest,
+              pointerObjectDigest: sha("foreign"),
+              controlManifestSnapshotDigest: intent.remote.beforeControlManifestSnapshotDigest,
+            },
+          }),
+        },
+        pack: { ...base.pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "denied",
+      reason: "initial_identity_drift",
+      remoteWrites: 0,
+    });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-024: 003-M-late pointer drift preserves immutable objects and blocks append", async () => {
+    const base = ports();
+    let count = 0;
+    const append = vi.fn();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        canary: {
+          ...base.canary,
+          observeBefore: async () => {
+            count += 1;
+            const observed = await base.canary.observeBefore();
+            if (observed.status !== "attested" || count === 1) return observed;
+            return {
+              status: "attested",
+              value: { ...observed.value, pointerObjectDigest: sha("foreign") },
+            };
+          },
+          appendCas: append,
+        },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      reason: "late_pointer_cas_drift",
+      remoteWrites: 8,
+    });
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-025: 003-M2 pointer response loss is indeterminate without duplicate CAS", async () => {
+    const base = ports();
+    const append = vi.fn(async () => {
+      throw new Error("lost");
+    });
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({ canary: { ...base.canary, appendCas: append } }),
+    );
+    expect(result).toMatchObject({
+      status: "indeterminate",
+      stage: "canary",
+      reason: "remote_response_lost",
+      remoteWrites: 9,
+    });
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
+  it("U-PACKPUB-REMOTE-026: 003-N cleanup failure does not overwrite publication receipt", async () => {
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        cleanup: {
+          run: async () => {
+            throw new Error("cleanup");
+          },
+        },
+      }),
+    );
+    expect(result).toMatchObject({ status: "published", cleanup: "failed", remoteWrites: 9 });
+  });
+
+  it("U-PACKPUB-REMOTE-027: 003-O same-operation reconciliation returns the existing valid receipt with write-zero", async () => {
+    const intent = sealedIntent();
+    const first = await publishPackCanary(intent, ports());
+    if (first.status !== "published") throw new Error(first.reason);
+    const base = ports();
+    const commit = vi.fn();
+    const result = await publishPackCanary(
+      intent,
+      ports({
+        approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+        reconcile: { observe: async () => ({ status: "attested", value: first.receipt }) },
+        pack: { ...base.pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(result).toMatchObject({ status: "published", remoteWrites: 0 });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-028: 003-P foreign reconciliation receipt is rejected without new writes", async () => {
+    const intent = sealedIntent();
+    const first = await publishPackCanary(intent, ports());
+    if (first.status !== "published") throw new Error(first.reason);
+    const foreign = { ...first.receipt, operationId: "foreign" };
+    const base = ports();
+    const commit = vi.fn();
+    const result = await publishPackCanary(
+      intent,
+      ports({
+        approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+        reconcile: { observe: async () => ({ status: "attested", value: foreign }) },
+        pack: { ...base.pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "indeterminate",
+      reason: "reconciliation_identity_mismatch",
+      remoteWrites: 0,
+    });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-029: 003-Q mutation order uses PR/CAS and never exposes direct push", async () => {
+    const consumed: string[] = [];
+    const base = ports();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        approval: {
+          consume: async (approval) => {
+            consumed.push(approval.mutation);
+            return { status: "attested", value: { mode: "new" } };
+          },
+        },
+      }),
+    );
+    expect(result.status).toBe("published");
+    expect(consumed).toEqual([
+      "planned",
+      "pack_branch_commit",
+      "pack_pr_create",
+      "pack_pr_merge",
+      "release_draft_create",
+      expect.stringMatching(/^asset_upload:/),
+      expect.stringMatching(/^asset_upload:/),
+      "tag_create",
+      "release_visibility",
+      "canary_pointer_append",
+    ]);
+    expect(base.pack).not.toHaveProperty("directPush");
+  });
+
+  it("U-PACKPUB-REMOTE-030: 003-R journal persistence failure prevents its mutation", async () => {
+    const commit = vi.fn();
+    const base = ports();
+    const result = await publishPackCanary(
+      sealedIntent(),
+      ports({
+        durableState: {
+          append: async () => {
+            throw new Error("disk");
+          },
+          digest: () => sha("state"),
+        },
+        pack: { ...base.pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "indeterminate",
+      reason: "journal_persist_failed",
+      remoteWrites: 0,
+    });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-031: 003-S1 root intent linkage mutation is sealed-intent mismatch", async () => {
+    const intent = sealedIntent();
+    const commit = vi.fn();
+    const base = ports();
+    const result = await publishPackCanary(
+      { ...intent, expectedTreeDigest: sha("foreign-tree") },
+      ports({ pack: { ...base.pack, commitPublicationBranch: commit } }),
+    );
+    expect(result).toMatchObject({
+      status: "denied",
+      reason: "sealed_intent_mismatch",
+      remoteWrites: 0,
+    });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("U-PACKPUB-REMOTE-032: 003-S2 post-journal draft target substitution stops later transitions", async () => {
+    const intent = sealedIntent();
+    const base = ports();
+    const upload = vi.fn();
+    const result = await publishPackCanary(
+      intent,
+      ports({
+        release: {
+          ...base.release,
+          observeDraft: async () => ({
+            status: "attested",
+            value: {
+              releaseId: intent.releaseId,
+              tagName: intent.tagName,
+              targetCommit: "f".repeat(40),
+              draft: true,
+            },
+          }),
+          uploadAsset: upload,
+        },
+      }),
+    );
+    expect(result).toMatchObject({
+      status: "partial_publication",
+      reason: "draft_identity_mismatch",
+      remoteWrites: 4,
+    });
+    expect(upload).not.toHaveBeenCalled();
   });
 });
