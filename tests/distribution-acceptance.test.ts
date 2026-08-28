@@ -283,6 +283,7 @@ describe("clean distribution local acceptance smoke", () => {
           }[]
         >;
       };
+      // PLAN-L7-524 S1-b: run-bun.ts は撤去済み。hook は wrapper CLI を node で直接起動する。
       expect(codexHooks.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -290,7 +291,7 @@ describe("clean distribution local acceptance smoke", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -300,7 +301,7 @@ describe("clean distribution local acceptance smoke", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],
