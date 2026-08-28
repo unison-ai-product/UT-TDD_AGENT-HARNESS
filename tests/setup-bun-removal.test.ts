@@ -53,10 +53,9 @@ function generateConsumerTree(): string {
   const consumerRoot = mkdtempSync(join(tmpdir(), "ut-tdd-packbun-"));
   const templates = loadTemplates(process.cwd());
   emitSetup(planSetup("0-A", { dryRun: false }), templates, nodeSetupDeps(consumerRoot));
-  const sourcePackage = JSON.stringify({
-    name: "consumer-fixture",
-    scripts: { test: "vitest run", typecheck: "tsc --noEmit" },
-  });
+  // 実 source の package.json を通す。合成 fixture に差し替えると `build: bun build …` の
+  // 素通しを見逃す (PLAN-L7-522 §2.1.1)。
+  const sourcePackage = readFileSync(join(process.cwd(), "package.json"), "utf8");
   writeFileSync(
     join(consumerRoot, "package.json"),
     transformCleanDistributionArtifact("package.json", sourcePackage),

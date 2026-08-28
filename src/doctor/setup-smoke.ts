@@ -17,7 +17,6 @@ interface SetupSmokeCheck {
 }
 
 const SETUP_SMOKE_REQUIRED_FILES = [
-  ".ut-tdd/bin/run-bun.ts",
   ".ut-tdd/bin/ut-tdd.mjs",
   "AGENTS.md",
   "CLAUDE.md",
@@ -29,7 +28,7 @@ const SETUP_SMOKE_REQUIRED_FILES = [
 
 const nativeInvocation = (...suffix: string[]) => ({
   executable: "node",
-  args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...suffix],
+  args: [".ut-tdd/bin/ut-tdd.mjs", ...suffix],
 });
 const SETUP_SMOKE_SHARED_INVOCATIONS = [
   nativeInvocation("hook", "agent-guard"),
@@ -76,20 +75,17 @@ export function checkSetupSmoke(deps: SetupSmokeDeps): { ok: boolean; messages: 
   }
 
   const wrapper = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/ut-tdd.mjs"));
-  const launcher = deps.readText(join(deps.repoRoot, ".ut-tdd/bin/run-bun.ts"));
   checks.push({
     name: "wrapper-placeholder-free",
     ok: wrapper !== null && !/UT_TDD_SOURCE_CLI_JSON|__UT_TDD|placeholder/i.test(wrapper),
     message: "project-local wrapper has no template placeholder residue",
   });
+  // PLAN-L7-522 §2.1 (S1-b): `run-bun.ts` は撤去された。hook は wrapper CLI を node で直接
+  // 起動するので、shell-free / canonical-path の契約は wrapper 自身に対して測る。
   checks.push({
-    name: "native-bun-launcher-contract",
-    ok:
-      !!launcher?.includes("windowsHide: true") &&
-      launcher.includes("realpathSync") &&
-      !launcher.includes("shell: true") &&
-      !launcher.includes("spawnSync"),
-    message: "native Bun launcher is shell-free, canonical-path checked, and signal-aware",
+    name: "wrapper-launcher-contract",
+    ok: !!wrapper?.includes("spawnSync") && !wrapper.includes("shell: true"),
+    message: "project-local wrapper launches without a shell",
   });
 
   const claudeInvocations = collectHookInvocations(

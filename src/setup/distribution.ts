@@ -215,6 +215,11 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   scripts["test:source"] ??= scripts.test ?? "vitest run";
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
   scripts.test = "npm run test:pack";
+  // PLAN-L7-522 §2.1.1: source の `build` (`bun build --compile`) は PLAN-L6-93 §5.2 が
+  // rollback 手段として維持を義務づけるが、保護対象は source の script であって生成物の
+  // script ではない。consumer は Pack 配布物を使うのであって自分で build しないため、
+  // 生成 tree から落とす (Issue #450 AC2: 生成 tree の Bun reachable path 0)。
+  delete scripts.build;
   const utTdd = {
     ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
     artifactProfile: "pack",

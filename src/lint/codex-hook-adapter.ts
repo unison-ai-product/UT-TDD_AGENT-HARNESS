@@ -27,7 +27,6 @@ import { invocationEquals, parseHookInvocation } from "./hook-invocation.ts";
 import {
   REQUIRED as CLAUDE_REQUIRED,
   FORBIDDEN_PATH_RE,
-  WRAPPER_HOOK_LAUNCHER,
 } from "./project-hook.ts";
 
 export { CODEX_REQUIRED };
@@ -191,7 +190,7 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
           }) ||
             invocationEquals(invocation, {
               executable: "node",
-              args: [WRAPPER_HOOK_LAUNCHER, ...required.wrapperArgs],
+              args: [...required.wrapperArgs],
             }))
         );
       });

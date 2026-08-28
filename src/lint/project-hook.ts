@@ -66,9 +66,8 @@ interface RequiredProjectHook {
  * PLAN-RECOVERY-06: gate 要求と setup 生成物の黙った再乖離を防ぐ)。
  */
 export const WRAPPER_CLI = ".ut-tdd/bin/ut-tdd.mjs";
-export const WRAPPER_HOOK_LAUNCHER = ".ut-tdd/bin/run-bun.ts";
 
-const wrapperCommand = (subcommand: string): string => `bun ${WRAPPER_CLI} ${subcommand}`;
+const wrapperCommand = (subcommand: string): string => `node ${WRAPPER_CLI} ${subcommand}`;
 
 const args = (...values: string[]): readonly string[] => values;
 
@@ -199,7 +198,7 @@ function isWrapperForm(hook: HookCommand, required: RequiredProjectHook): boolea
     invocation !== null &&
     invocationEquals(invocation, {
       executable: "node",
-      args: [WRAPPER_HOOK_LAUNCHER, ...required.wrapperArgs],
+      args: [...required.wrapperArgs],
     })
   );
 }
