@@ -2,7 +2,7 @@
 layer: L7
 executed_at_layer: L7
 artifact: test-design
-status: draft
+status: confirmed
 plan_id: PLAN-L7-516-pack-self-contained-consumer-runtime
 ---
 
@@ -39,6 +39,12 @@ Green証跡ではない。各mutationは他の入力が整合した状態で単�
 Linux/Windows/aggregate CI、非著者review receiptを束ねる。破壊的E2Eは一時fixtureを使い、実開発
 repository、OneDrive、共有`harness.db`、実ユーザーデータを削除対象にしない。deny時の0件主張は
 call counterとprocess観測で証明し、テストが別digest mismatchだけで落ちる構造を避ける。
+
+候補IDの昇格は、表に列挙した全変異軸を他軸整合済みfixtureで独立に殺せる場合だけ許可する。
+render済みsource文字列の包含確認、観測portへ接続されていないlocal配列の空判定、hostile pathを
+生成しないpath deny、producer scriptのregex検査は、実行oracleの代替にならない。source/Pack/
+worktreeを物理削除したfixture、hostile consumer-local source、read/open/stat/process/port counterを
+同じtest revisionに持ち、削除・変異したguardごとにRedを実測する。
 
 実装対象外は#432 identity bootstrap、#414 remote publication、source側Bun residual cleanup、
 Pack canary/stable、shared L7 test-designへの追記である。これらをこのpairのGreen根拠へ混ぜない。
