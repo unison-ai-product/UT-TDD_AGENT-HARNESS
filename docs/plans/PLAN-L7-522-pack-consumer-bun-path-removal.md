@@ -158,20 +158,35 @@ file ごとに扱いが異なるので分けて契約する。
 | 14 | adapter doc の Hooks 節が `bun` / `bunx` / `bun.cmd` / `bun.exe` を実行指示する | `rule-drift.ts` | `bun execution form` marker | |
 | 15 | `package.json` と `bun.lock` の direct graph 不一致 | `toolchain-pin.ts` | `bun-direct-parity-drift` | |
 
-**網羅性を rule 単位ではなく matcher 分岐単位で機械強制する。** rule id の列挙だけでは、**既存 rule の
-内部に分岐が足された場合**を検出できない (rule 数は変わらないため)。したがって次を要求する
-(PR #469 delta review 3 巡目、canonical receipt `99b1e8a0f24beaed…` の指摘)。
+**網羅性は「期待 violation の凍結」で測る。分岐の機械列挙は要求しない。**
 
-- 対象 lint は Bun matcher の正規表現 (`BUN_SPAWN_PATTERN` / `BUN_IMPORT_PATTERN` /
-  `BUN_GLOBAL_PATTERN`) と述語 rule の reason 一覧を **export する** (検出能力を増やしも減らしもしない
-  加算的変更であり、§3.3 の保護に反しない)。
-- oracle は各 pattern の `source` を alternation で分解し、**各分岐が上表のサンプル 1 件以上に
-  マッチすることを assert する**。述語 rule (`github-ci-policy.ts` / `rule-drift.ts` /
-  `toolchain-pin.ts`) は reason 単位で同じ assert を行う。
-- 分岐または reason がサンプルに覆われていなければ **006 自体を Red とする**。
+006 の目的は **検出能力の低下 (weakening) を検出すること**であって、将来追加される分岐まで覆うことでは
+ない。両者を混同すると機構が肥大する。上表の 16 サンプルは **期待 violation (lint / rule / 件数) ごと
+凍結**し、oracle は実行結果が凍結値と一致することを要求する。
 
-これにより「新しい分岐を既存 rule に足してサンプルを書かない」経路と「同数のまま matcher を緩める」経路の
-両方が閉じる。
+この形で閉じる経路:
+
+- **分岐の削除** — 対応サンプルが violation を出さなくなり Red。
+- **同数のままの matcher 緩和** — 同上。件数が変わらなくても、その分岐を刺激するサンプルが
+  落ちるので Red。
+- **rule の削除 / allowlist への path 追加 / pin 引き上げ** — 同上。
+
+**既存 rule への分岐追加は weakening ではない** (検出が増えるだけ) ので、006 が Red になる必要はない。
+新分岐がサンプル未収載でも、その分岐は本 slice が依拠していないものであり、保護対象ではない。
+
+したがって PR #469 delta review 3 巡目 (canonical receipt `99b1e8a0f24beaed…`) が求めた
+「lint に matcher を export させ、`source` を alternation 分解して分岐単位の網羅を assert する」は
+**採らない**。理由は 2 つある。
+
+1. **目的に対して過剰である。** weakening 検出には期待 violation の凍結で十分であり、export 追加と
+   正規表現の構文解析は `docs/governance/coding-rules.md` の最小実装原則に反する。
+2. **保護対象の lint を触る要求になる。** §3.3 は BAN 検出側 lint を本 slice で変更しない前提であり、
+   oracle の都合で protected file に export を足すのは順序が逆である。
+
+**現時点の分岐網羅は上表の「由来」列が担保する。** `BUN_SPAWN_PATTERN` の 6 分岐、
+`BUN_GLOBAL_PATTERN` の 5 分岐、`BUN_IMPORT_PATTERN`、および述語 rule の各 reason を
+`src/lint/` から実測して 1 対 1 で対応付けた (2026-08-28)。これは一度きりの導出であり、
+将来 lint 側に分岐が増えた場合の追随は本 slice の責務ではない (増加は weakening ではないため)。
 
 ## 4. 設計判断: Issue #450 受入条件 3 の読み替え
 
