@@ -15,7 +15,11 @@ import { join, relative } from "node:path";
 import { Command } from "commander";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claudeReviewVerdictEditRule } from "../src/cli/delegation.ts";
-import { executeLiveReviewDelegation, registerLiveReviewCommands } from "../src/cli/review-live.ts";
+import {
+  executeLiveReviewDelegation,
+  registerLiveReviewCommands,
+  validateLiveReviewSubject,
+} from "../src/cli/review-live.ts";
 import {
   issueReviewRequest,
   type ReviewVerdictProjectionResult,
@@ -89,6 +93,39 @@ afterEach(() => {
 });
 
 describe("review live CLI composition", () => {
+  it("U-RVATT-042 validates a real commit and exact PR HEAD before dispatch", () => {
+    const calls: Array<{ command: string; args: readonly string[] }> = [];
+    const run = (command: string, args: readonly string[]) => {
+      calls.push({ command, args });
+      if (command === "git") return { status: 0, stdout: "" };
+      return { status: 0, stdout: `${head}\n` };
+    };
+
+    expect(validateLiveReviewSubject({ repoRoot: "repo", pr: 319, head, run })).toEqual({
+      ok: true,
+    });
+    expect(calls).toEqual([
+      { command: "git", args: ["cat-file", "-e", `${head}^{commit}`] },
+      { command: "gh", args: ["pr", "view", "319", "--json", "headRefOid", "--jq", ".headRefOid"] },
+    ]);
+  });
+
+  it.each([
+    [{ status: 1, stdout: "" }, { status: 0, stdout: `${head}\n` }, "exact_head_not_found"],
+    [{ status: 0, stdout: "" }, { status: 1, stdout: "" }, "pull_request_head_unavailable"],
+    [
+      { status: 0, stdout: "" },
+      { status: 0, stdout: `${"b".repeat(40)}\n` },
+      "pull_request_head_mismatch",
+    ],
+  ] as const)("U-RVATT-042 fails closed as %s", (gitResult, ghResult, reason) => {
+    const run = vi.fn().mockReturnValueOnce(gitResult).mockReturnValueOnce(ghResult);
+    expect(validateLiveReviewSubject({ repoRoot: "repo", pr: 319, head, run })).toEqual({
+      ok: false,
+      reason,
+    });
+  });
+
   it("U-MEMWAKE-007: routes the derived wake to the live workspace while preserving request identity", async () => {
     const { root, memoryPath } = fixture();
     execFileSync("git", ["init", "-q"], { cwd: root });
@@ -97,6 +134,7 @@ describe("review live CLI composition", () => {
     registerLiveReviewCommands(program.command("review"), {
       repoRoot: () => root,
       providerAvailable: () => true,
+      validateReviewSubject: () => ({ ok: true }),
       resolveWakeTarget: () => ({ ok: true, workspaceId: targetWorkspaceId }),
     });
     const originalWrite = process.stdout.write;
@@ -158,6 +196,7 @@ describe("review live CLI composition", () => {
     registerLiveReviewCommands(program.command("review"), {
       repoRoot: () => root,
       providerAvailable: () => true,
+      validateReviewSubject: () => ({ ok: true }),
       resolveWakeTarget: () => ({ ok: false, reason: "no_live_claude_workspace" }),
     });
     const originalWrite = process.stdout.write;
@@ -202,6 +241,7 @@ describe("review live CLI composition", () => {
     registerLiveReviewCommands(program.command("review"), {
       repoRoot: () => root,
       providerAvailable: () => true,
+      validateReviewSubject: () => ({ ok: true }),
       resolveWakeTarget,
     });
     const originalWrite = process.stdout.write;
@@ -256,6 +296,7 @@ describe("review live CLI composition", () => {
     registerLiveReviewCommands(program.command("review"), {
       repoRoot: () => root,
       providerAvailable: () => true,
+      validateReviewSubject: () => ({ ok: true }),
       resolveWakeTarget,
       publishCodexReviewWake,
     });

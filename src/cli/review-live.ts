@@ -25,6 +25,11 @@ import { detectMode } from "../runtime/detect.ts";
 export interface LiveReviewCommandDeps {
   readonly repoRoot: () => string;
   readonly providerAvailable: (provider: "codex" | "claude") => boolean;
+  readonly validateReviewSubject: (
+    repoRoot: string,
+    pr: number,
+    exactHead: string,
+  ) => LiveReviewSubjectValidationResult;
   readonly runReview: (input: {
     repoRoot: string;
     provider: "codex" | "claude";
@@ -42,6 +47,60 @@ export interface LiveReviewCommandDeps {
     | { readonly ok: false; readonly reason: LiveReviewWakeRoutingFailure };
   /** Optional provider-native wake surface. Absent Codex surfaces fail closed. */
   readonly publishCodexReviewWake?: (repoRoot: string, wake: CanonicalReviewWake) => void;
+}
+
+export type LiveReviewSubjectValidationResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly reason:
+        | "exact_head_not_found"
+        | "pull_request_head_unavailable"
+        | "pull_request_head_mismatch";
+    };
+
+interface ReviewSubjectCommandResult {
+  readonly status: number | null;
+  readonly stdout: string;
+}
+
+/** Resolve the review subject from Git and GitHub before any canonical request is written. */
+export function validateLiveReviewSubject(input: {
+  readonly repoRoot: string;
+  readonly pr: number;
+  readonly head: string;
+  readonly run?: (
+    command: string,
+    args: readonly string[],
+    cwd: string,
+  ) => ReviewSubjectCommandResult;
+}): LiveReviewSubjectValidationResult {
+  const run =
+    input.run ??
+    ((command: string, args: readonly string[], cwd: string) => {
+      const result = spawnSync(command, args, {
+        cwd,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      return { status: result.status, stdout: result.stdout ?? "" };
+    });
+  const object = run("git", ["cat-file", "-e", `${input.head}^{commit}`], input.repoRoot);
+  if (object.status !== 0) return { ok: false, reason: "exact_head_not_found" };
+
+  const pullRequest = run(
+    "gh",
+    ["pr", "view", String(input.pr), "--json", "headRefOid", "--jq", ".headRefOid"],
+    input.repoRoot,
+  );
+  const observedHead = pullRequest.stdout.trim().toLowerCase();
+  if (pullRequest.status !== 0 || !/^[0-9a-f]{40}$/.test(observedHead)) {
+    return { ok: false, reason: "pull_request_head_unavailable" };
+  }
+  if (observedHead !== input.head.toLowerCase()) {
+    return { ok: false, reason: "pull_request_head_mismatch" };
+  }
+  return { ok: true };
 }
 
 export function executeLiveReviewDelegation(input: {
@@ -98,6 +157,8 @@ export function registerLiveReviewCommands(
   const deps: LiveReviewCommandDeps = {
     repoRoot: () => resolveRepositoryRoot(process.cwd()),
     providerAvailable: (provider) => detectMode()[provider],
+    validateReviewSubject: (repoRoot, pr, exactHead) =>
+      validateLiveReviewSubject({ repoRoot, pr, head: exactHead }),
     runReview: ({ repoRoot, provider, args }) =>
       executeLiveReviewDelegation({ repoRoot, provider, args }),
     publishReceipt: publishLiveReviewReceipt,
@@ -144,6 +205,8 @@ export function registerLiveReviewCommands(
               requestedAt,
             },
             ports: {
+              validateSubject: ({ repoRoot, pr, exactHead }) =>
+                deps.validateReviewSubject(repoRoot, pr, exactHead),
               issueRequest: issueReviewRequest,
               providerAvailable: deps.providerAvailable,
               publishReviewWake: (wake) => {

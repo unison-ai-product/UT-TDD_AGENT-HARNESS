@@ -74,6 +74,7 @@ function requestPorts(
   overrides: Partial<LiveReviewProjectionPorts> = {},
 ): LiveReviewProjectionPorts {
   return {
+    validateSubject: vi.fn(() => ({ ok: true as const })),
     issueRequest: vi.fn(() => issued),
     publishReviewWake: vi.fn(),
     providerAvailable: vi.fn(() => true),
@@ -166,6 +167,23 @@ describe("live review projection (U-RVATT-023..026)", () => {
       ok: false,
       reason: "invalid_review_request",
     });
+    expect(ports.publishReviewWake).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "exact_head_not_found",
+    "pull_request_head_unavailable",
+    "pull_request_head_mismatch",
+  ] as const)("U-RVATT-042 denies %s before canonical persistence", (reason) => {
+    const ports = requestPorts({
+      validateSubject: vi.fn(() => ({ ok: false as const, reason })),
+    });
+
+    expect(dispatchLiveReview({ repoRoot: "repo", request: liveRequest, ports })).toEqual({
+      ok: false,
+      reason,
+    });
+    expect(ports.issueRequest).not.toHaveBeenCalled();
     expect(ports.publishReviewWake).not.toHaveBeenCalled();
   });
 
@@ -512,6 +530,7 @@ describe("live review projection (U-RVATT-023..026)", () => {
         repoRoot: root,
         request: liveRequest,
         ports: {
+          validateSubject: () => ({ ok: true }),
           issueRequest: (input) =>
             issueReviewRequest({ repoRoot: input.repoRoot, request: input.request }),
           providerAvailable: () => true,
