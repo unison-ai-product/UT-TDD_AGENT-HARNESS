@@ -255,7 +255,8 @@ describe("clean distribution local acceptance smoke", () => {
       const packPackageJson = JSON.parse(readFileSync(join(cleanRoot, "package.json"), "utf8")) as {
         scripts: Record<string, string>;
       };
-      expect(packPackageJson.scripts.test).toBe("bun run test:pack");
+      // PLAN-L7-522 S1-b: 生成 tree の script 起動語は Node/npm へ倒す (Issue #450 AC2)。
+      expect(packPackageJson.scripts.test).toBe("npm run test:pack");
       expect(packPackageJson.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
       expect(packPackageJson.scripts["test:pack"]).toContain(
         "tests/distribution-acceptance.test.ts",
