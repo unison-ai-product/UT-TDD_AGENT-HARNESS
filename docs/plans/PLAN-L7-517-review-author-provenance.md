@@ -102,9 +102,9 @@ provider family を束縛し、request の外側に置く。
 - **dispatch custody を束縛する。** record は「どの dispatch が」「どの worker を」「どの role /
   provider / model で」起動したかを持つ。dispatch identity は request identity とは独立に採番する。
   ただし record の issuer 欄や通常の content digest は worker が同じ値を自己生成できるため、信頼根には
-  しない。dispatch custody は worker が書けない append-only の issuer attestation (dispatch identity、
-  repository、commit-set、provider、完了時刻を束縛した署名/検証可能な custody envelope) として発行し、
-  受理点はその attestation を独立に検証する。
+  しない。dispatch custody は append-only の issuer attestation (dispatch identity、repository、
+  commit-set、provider、完了時刻を束縛した MAC 付き custody envelope) として発行し、
+  受理点はその attestation を独立に検証する。**custody root の具体は §3.2.2 で freeze する。**
 - **completion binding を要求する。** dispatch 開始時点の宣言だけでは、起動後に別 provider が
   commit を作った場合を排除できない。record は dispatch の**完了時**に、その dispatch が実際に
   生成した commit 集合と結び付けて確定する。開始時 record と完了時 binding が一致しないものは
@@ -122,6 +122,63 @@ provider family を束縛し、request の外側に置く。
   複数ランタイム並行時に一意にならない。**推定を信頼根にしない**。
 - worker 自身に provenance を書かせる案 — 上記のとおり自己申告と同値であり、Issue #437 の脆弱性を
   記録先を変えて再現するだけである。
+
+### 3.2.2 custody root の具体 — MAC 鍵は repo 外、worker env へ非伝播 (採択)
+
+§3.2 の「worker が書けない attestation」は、**保持主体・発行 capability・検証鍵・権限隔離を
+具体で freeze しない限り実装時判断が残る**。PR #442 の非著者 review (canonical receipt
+`ac4d25f16abeb832ba160dceb0df015f21080a28a164a493379e661695468ea7`、blocking 1) の指摘であり、
+妥当なので次を契約として固定する。
+
+**保証水準を先に定義する (達成できない claim を freeze しない)。** 実行環境の実測は次のとおり:
+
+- worker は `ut-tdd codex|claude` の**子プロセス**であり、dispatch と**同一 OS ユーザー**で動く。
+- 実行環境は Windows 単一ユーザーであり、uid 分離や ACL による worker 隔離は現実的でない。
+- したがって worker は原理的に filesystem 上の任意の path を読める。**鍵を「worker が読めない場所」に
+  置くことはこの環境では不可能である。**
+
+よって本 PLAN が freeze する保証は「forge 不可能」**ではない**。
+
+> **worker が偶発的に (hallucination や近道で) valid な provenance record を生成することはできない。
+> forge するには repo 外の鍵 path を明示的に読み取るという、通常の作業経路に現れない
+> 監査可能な逸脱行為を要する。**
+
+Issue #437 の脅威モデルは外部 attacker ではなく **AI worker の誤申告**であり、この水準が過不足ない。
+「forge 不可能」と書けば実装で必ず falsify されるので書かない
+(advisor 相談記録は §7)。
+
+**具体の契約**:
+
+- **保持主体**: MAC 鍵は **repository 外** (`%LOCALAPPDATA%` 相当のユーザー scoped state root) に置く。
+  repo 内、`.ut-tdd/` 配下、tracked file のいずれにも置かない。
+- **発行 capability**: attestation を発行できるのは dispatch 親プロセスのみとする。
+- **検証鍵**: 対称鍵 (HMAC-SHA256) とし、versioned key ring を持つ。既存の
+  `src/plan-asset/adapters/hmac-lease-token-key-ring.ts` /
+  `hmac-evidence-attestation-authority.ts` / `kernel/hmac-evidence-attestation-verifier.ts` を
+  転用候補とする。**ただし現状これらは production 構築点も鍵供給元も 0 件 (休眠) であり、
+  本 record 形状に合うかは未検証である。転用可能と断定せず、実装 slice が実測して決める。**
+- **権限隔離**: 鍵 path と鍵材を **worker の環境変数へ伝播させない**。Node の `child_process` は
+  既定で env を継承するため、dispatch は worker 起動時に鍵関連 env を明示的に除去する。
+  **この非伝播は oracle で固定する** (§3.2.2 の実証責務、`CANDIDATE-U-AUTHPROV-047`)。
+- **非対称鍵を採らない理由**: 署名鍵も同一ユーザープロファイル内に置かれ、上記の保証水準は
+  対称鍵と変わらない。鍵管理と検証配線のコストだけが増える (最小実装原則)。
+
+### 3.2.3 human backfill の認証 — `human_attested` として区別する (採択)
+
+§3.3 の unknown 解消 backfill を「人手 (out-of-band)」に無条件で許すと、**worker が human を名乗る
+自己 backfill を拒否できない** (同 review の blocking 2)。次を契約として固定する。
+
+- **経路を限定する。** human backfill は dispatch CLI の対話コマンド経由のみとする。
+  dispatch は自分の child プロセス集合を照合し、**worker 子プロセスからの起動を拒否する**。
+- **attestation は同じ custody root で発行する。** human backfill record も §3.2.2 の MAC authority が
+  発行し、監査 ledger へ追記する。record 単体で成立させない。
+- **actor を typed に区別する。** record は `actor_kind` を持ち、`dispatch` と `human` を区別する。
+- **できない検証を装わない。** human actor の身元と、commit author family との非同一性は、
+  この環境では機械的に検証できない。よって human backfill の provenance は
+  **`human_attested` (未検証申告) として保持し、`verified` と同一視しない。**
+  「検証済み」と称する契約を書けば、実装で必ず falsify される。
+  `human_attested` を受理点でどう扱うか (受理するが監査対象にする / 別 gate を課す) は
+  実装 slice が §3.3 の unknown 既定と整合させて決める。
 
 ### 3.2.1 worker_model / dispatch provider / author family の対応 (採択)
 
@@ -321,3 +378,35 @@ Reverse R4、Issue #437 の完了は意味しない。
 
 現行 release Forward の PR (#431 #435 #436 #438 #440 #441) を巻き戻さない。本 PLAN の実装は
 新規 mint から適用され、既に close した review の receipt を無効化しない。
+
+## 7. advisor 相談記録 (§3.2.2 / §3.2.3 の方式判断)
+
+`ut-tdd advisor --decision design --current-model claude-opus-5 --execute --plan PLAN-L7-517-review-author-provenance`
+(provider=claude / model=`claude-fable-5`、2026-08-28)。
+
+**相談した選択肢**: (A) 鍵を repo 外に置き dispatch 親のみが読む HMAC custody /
+(B) 非暗号の append-only ledger + worker 実行期間と commit 時刻の包含関係 /
+(C) git 署名 (SSH/GPG) を dispatch が行い commit-set への署名を trust root にする。
+
+**advisor の判定**: (A) を「worker 到達不能」と主張する形では **refuted**。worker は dispatch と
+同一 OS ユーザーの子プロセスで filesystem full read を持つため、`%LOCALAPPDATA%` は cwd の外という
+だけで読取を妨げない。同じ理由で (C) も破れる (署名鍵が同一プロファイル内)。よって
+「forge を不可能にする独立 trust root」は**この実行環境では A/B/C のどれでも達成不能**であり、
+達成不能な claim を freeze すると次の review で再び falsify される。
+
+(B) は **refuted**。`CLAUDE.md` が定めるとおり Codex と Claude は常時並行で作業・コミットするため、
+複数 worker の実行 window が重なり、commit がどの family の window に属すか一意に決まらない。
+author family の曖昧性解消こそが本契約の目的なので、目的の中心事例で機能しない。
+
+**採択**: **A' = A の claim 格下げ版** (§3.2.2)。保証水準を「forge 不可能」から
+「worker が偶発・近道で valid な record を生成することはできない。forge には repo 外の鍵 path の
+明示的読取という監査可能な逸脱行為を要する」へ下げる。Issue #437 の脅威モデルが外部 attacker では
+なく AI worker の誤申告である以上、これが過不足のない水準であり、既存の休眠 HMAC 資産の転用は
+最小実装原則にも合う。
+
+**advisor が指摘した未検証前提** (実装 slice が実測する責務として §3.2.2 に反映済み):
+
+- Node の `child_process` は既定で env を継承するため、鍵 path / 鍵材の worker env 非伝播は
+  テストで実証されるまで仮定にすぎない → `CANDIDATE-U-AUTHPROV-047` として oracle 化した。
+- 休眠中の HMAC 3 モジュールは lease-token 向け設計であり、本 record 形状に合うかは未検証 →
+  「転用可能と断定せず、実装 slice が実測して決める」と明記した。
