@@ -73,14 +73,22 @@ consumer productの`package.json`、current working directory、環境変数、t
 
 ## 3. prerelease semver契約
 
-既存`src/setup/update-check.ts`の`parseSemver`は三要素stableだけを受理し、prereleaseを拒否する。
-packageをcanary versionへ更新するだけではupdate-checkが`not a release version`へ縮退するため、実装sliceは
-SemVer precedenceに従うprerelease parse/compareを追加する。
+既存`src/setup/update-check.ts`の`parseSemver`はstable release tag用であり、leading `v`またはbare
+三要素stableだけを受理する。`latestReleaseTag`もこのparserを使い、prerelease tagをstable consumerへ
+広告しない。この既存契約と`U-UPDCHK-001/002`は変更しない。
 
-- `0.2.0-canary.1`をvalidとして保持し、CLI表示からsuffixを落とさない。
+packageをcanary versionへ更新するだけでは`readManifest`が`not a release version`へ縮退するため、実装sliceは
+**package version専用**の`parsePackageSemver`と`comparePackageSemver`を追加する。tag parserと共有しない。
+
+- `parsePackageSemver("0.2.0-canary.1")`をvalidとして保持し、CLI表示からsuffixを落とさない。
+- package parserはleading `v`を拒否する。stable tag parserは従来どおりleading `v`を受理する。
 - 同じcore versionではprereleaseをstableより低く扱う。
 - prerelease identifierはdot区切りで比較し、numeric identifierを数値、non-numericをASCII字句で比較する。
-- leading `v`、空identifier、空白、欠落core、build metadataだけによる誤昇格を受理しない。
+- 空identifier、空白、欠落core、不正なleading zeroをtrim/coerceしない。build metadataはprecedenceから除外する。
+- `readManifest`はpackage parser、`latestReleaseTag`は既存stable tag parserを使う。
+- `checkForUpdate`の比較時だけstable tag tupleをstable package tupleへ明示変換する。mixed tag listに
+  `v0.2.0-canary.1`があってもstable候補へ選ばず、明示locatorで導入するinternal canaryとstable update
+  advisoryを混ぜない。
 - update-checkはadvisoryのfail-open性を維持し、parse失敗をrelease identityへ変換しない。
 
 ## 4. publication束縛
@@ -103,7 +111,7 @@ reconciliationと最終publication receiptにも`releaseVersion`と`tagName`を�
 
 ## 5. TDD / oracle契約
 
-paired test designの`CANDIDATE-U-RELVER-001..008`と`CANDIDATE-P-RELVER-001`をRedから開始し、
+paired test designの`CANDIDATE-U-RELVER-001..009`と`CANDIDATE-P-RELVER-001`をRedから開始し、
 実装PRで成立したものだけを同番号`U-RELVER-*` / `P-RELVER-*`へ昇格する。各負系は他のdigest軸を
 正しく保った単軸fixtureとし、別理由RedをGreen証拠にしない。
 
@@ -119,7 +127,8 @@ Product A/Bは別Issueの所有を維持する。
 
 ## 7. 完了条件
 
-- package/lock/CLIが`0.2.0-canary.1`で一致し、prerelease update-checkが縮退しない。
+- package/lock/CLIが`0.2.0-canary.1`で一致し、package prerelease parseでupdate-checkが縮退しない。
+- stable tag selectionはprereleaseを広告せず、既存`U-UPDCHK-001/002`を変更しない。
 - tag locatorが`v0.2.0-canary.1`で、content-derived release IDとrelease Pack commit/treeへ束縛される。
 - 全負系でremote write 0、staging seal後のversion mutationを成功扱いしない。
 - Red→Green、Node/npm targeted test、typecheck、Biome、PLAN lint、Linux/Windows/aggregate CI、

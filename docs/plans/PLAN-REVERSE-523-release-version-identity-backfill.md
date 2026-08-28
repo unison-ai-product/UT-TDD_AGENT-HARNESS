@@ -47,14 +47,14 @@ review_evidence: []
 ## R0 / R1
 
 初回canary locatorは`v0.2.0-canary.1`だが、current mainのpackage/lock/CLIは`0.1.4`である。
-さらにupdate-checkのstable-only parserはprerelease package versionをinvalid扱いする。remote publication
+さらにupdate-checkはstable tag parserをpackage version検証にも共有し、prerelease package versionをinvalid扱いする。remote publication
 contractはtagとrelease identityを束縛するが、sealed package versionとtag locatorの一致は未所有である。
 
 本pairはこのgapだけを補い、次を固定する。
 
 1. package/lock/CLI versionは一つのpackage正本から`0.2.0-canary.1`へ一致する。
 2. tag locatorは`v${releaseVersion}`であり、content-derived `releaseId`を代替しない。
-3. prerelease SemVer precedenceをupdate-checkで正しく扱い、advisory fail-openは維持する。
+3. package prerelease parserをstable tag parserから分離し、stable tag selectionとadvisory fail-openを維持する。
 4. sealed package entry、intent、receipt、tagのversion/identity一軸driftはremote write前に拒否する。
 
 ## Backprop scope
@@ -64,7 +64,7 @@ contractはtagとrelease identityを束縛するが、sealed package versionとt
 | requirements | not_impacted | 独立Packと段階公開の既存要求を変更しない。 |
 | L4/L5 | not_impacted | 新しい外部port、永続schema、credentialを追加しない。 |
 | L6-63 | not_impacted | semver/tagはlocator、releaseIdはcontent-derivedという既存判断を維持する。 |
-| L7-362 | updated | update-checkへprerelease SemVerを加えるがadvisory境界は変えない。 |
+| L7-362 | updated | package parserだけにprerelease SemVerを加える。stable tag parserと`latestReleaseTag`はprereleaseを広告しない。 |
 | L7-515/519 | updated | package versionとtag locatorのseal前照合をadditiveに接続する。 |
 | L7-523 | new | 欠落していたversion locator束縛と実装所有を固定する。 |
 
@@ -72,5 +72,6 @@ contractはtagとrelease identityを束縛するが、sealed package versionとt
 
 R2は各candidateのRed、R3はpackage/tag/receipt/releaseIdを一軸ずつ攻撃しremote write ledger 0を
 確認する。R4は`releaseId`導出式、manifest schema、asset namingへのbackpropが不要であることを確認する。
+mixed stable/prerelease tag listで既存stable選択が不変であることもR3の必須証跡とする。
 package version更新、production実装、CI、canonical closing receiptが揃う前にR4またはcanary-readyを
 宣言しない。
