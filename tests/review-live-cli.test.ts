@@ -113,7 +113,11 @@ describe("review live CLI composition", () => {
   it.each([
     [{ status: 1, stdout: "" }, { status: 0, stdout: `${head}\n` }, "exact_head_not_found"],
     [{ status: 0, stdout: "" }, { status: 1, stdout: "" }, "pull_request_head_unavailable"],
-    [{ status: 0, stdout: "" }, { status: 0, stdout: "not-a-sha\n" }, "pull_request_head_unavailable"],
+    [
+      { status: 0, stdout: "" },
+      { status: 0, stdout: "not-a-sha\n" },
+      "pull_request_head_unavailable",
+    ],
     [
       { status: 0, stdout: "" },
       { status: 0, stdout: `${"b".repeat(40)}\n` },
