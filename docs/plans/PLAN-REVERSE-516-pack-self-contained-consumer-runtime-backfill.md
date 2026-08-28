@@ -114,7 +114,7 @@ rollback/history chain、external read/open/stat/process counter、非著者revi
 
 ## R0追加実測（2026-08-28, partial）
 
-`ac9cd0f1`の17 testsとdetached canonical snapshot 17/17 Greenを確認した。manifest canonical
+`00753263`の17 testsとdetached canonical snapshot 17/17 Greenを確認した。manifest canonical
 digest、compiled ESM digest binding、consumer runtime root/realpath containment、Bunなしreadiness、
 active pointerのexternal escape denyを追加測定した。一方、実bytesを供給するL6-93-owned
 NodeBootstrapReceipt producerは現branchにも`src/tests`にも無く、`PLAN-L6-93`はdraftでREADYな

@@ -391,7 +391,7 @@ Reverse R1〜R4、実producerのL6-93 receipt入力は未実測であり、実�
 
 ## 10.1 追加hardening実測（2026-08-28）
 
-`ac9cd0f1`（`fix(runtime): enforce sealed consumer pointer admission`）で、consumer-local
+`00753263`（`fix(runtime): satisfy source parameter guard`、sealed pointer admissionを含む）で、consumer-local
 Node wrapperのadmissionを強化した。active pointerのexact keys、canonical bundle digest、manifestの
 identity/Node authority、6 payload digest、compiled ESM digest binding、history genesis/prior、
 runtime rootおよびrealpath containmentをspawn前に検証し、distribution readinessはsealed consumer
@@ -399,7 +399,7 @@ runtimeが供給された場合にBunを要求しない。compiled ESM digest dr
 external bundle pointer、valid sealed runtime without Bunの各one-axis oracleを追加した。
 
 `tests/consumer-node-runtime.test.ts` は17 testsで専用target 17/17 Green、detached canonical
-snapshotも`ac9cd0f1`の同一treeで17/17 Greenだった。これは実bytesから起動するconsumer-local
+snapshotも`00753263`の同一treeで17/17 Greenだった。これは実bytesから起動するconsumer-local
 filesystem producer laneを含むが、L6-93所有の実行可能NodeBootstrapReceipt producerではない。
 
 完了条件1および実producer gateは未充足である。`PLAN-L6-93`はdraftのままで、現branchの
