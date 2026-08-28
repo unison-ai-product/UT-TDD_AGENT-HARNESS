@@ -2522,7 +2522,7 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | `U-PACKPUB-REMOTE-011` | 003-B nonce/rebinding | replay/binding mismatch、write 0 |
 | `U-PACKPUB-REMOTE-012` | 003-C initial identity | initial driftとsealed driftを別reasonでdeny |
 | `U-PACKPUB-REMOTE-013` | 003-D inventory | 単独size/digest変異を`invalid_inventory` |
-| `U-PACKPUB-REMOTE-014` | 003-E fallback | 暗黙補完せず`invalid_inventory` |
+| `U-PACKPUB-REMOTE-014` | 003-E composition entry | invalid inventoryをremote compositionへ渡さず`invalid_inventory` |
 | `U-PACKPUB-REMOTE-015` | 003-F branch/PR | response loss後のwrite 0 |
 | `U-PACKPUB-REMOTE-016` | 003-G merge read-back | release以降write 0 |
 | `U-PACKPUB-REMOTE-017` | 003-H1 tag preflight | duplicate/retargetを全write前deny |
@@ -2537,7 +2537,7 @@ auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと
 | `U-PACKPUB-REMOTE-026` | 003-N cleanup | publication receiptと独立failure |
 | `U-PACKPUB-REMOTE-027` | 003-O reconciliation | valid receipt再観測、write 0 |
 | `U-PACKPUB-REMOTE-028` | 003-P foreign retry | identity mismatch、write 0 |
-| `U-PACKPUB-REMOTE-029` | 003-Q protected ordering | PR/CAS順、direct push surface 0 |
+| `U-PACKPUB-REMOTE-029` | 003-Q protected ordering | production mutation ledgerがbranch commit→PR create→CAS mergeだけ |
 | `U-PACKPUB-REMOTE-030` | 003-R journal | persist失敗時mutation 0 |
 | `U-PACKPUB-REMOTE-031` | 003-S1 root linkage | sealed identity driftをwrite前deny |
 | `U-PACKPUB-REMOTE-032` | 003-S2 post-journal identity | target差替え後のtransition 0 |

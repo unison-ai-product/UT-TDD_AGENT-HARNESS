@@ -544,7 +544,37 @@ export function sealPackPublicationIntent(
 function validateSealedIntent(intent: PackPublicationIntent): boolean {
   const bare = { ...intent, approvals: undefined, intentDigest: "" };
   delete (bare as { approvals?: unknown }).approvals;
-  return intent.intentDigest === sha256(stable(bare)) && validInventory(intent);
+  const required = [
+    "planned",
+    "pack_branch_commit",
+    "pack_pr_create",
+    "pack_pr_merge",
+    "release_draft_create",
+    ...intent.releaseAssets.map((asset) => `asset_upload:${asset.name}` as const),
+    "tag_create",
+    "release_visibility",
+    "canary_pointer_append",
+  ] satisfies readonly PublicationMutation[];
+  const approvals = Object.values(intent.approvals);
+  const nonces = new Set(approvals.map((approval) => approval.nonce));
+  const approvalKeys = Object.keys(intent.approvals);
+  const approvalsValid =
+    approvals.length === required.length &&
+    approvalKeys.every((mutation) => required.includes(mutation as PublicationMutation)) &&
+    required.every((mutation) => intent.approvals[mutation] !== undefined) &&
+    nonces.size === approvals.length &&
+    approvals.every(
+      (approval) =>
+        approval.transition === transitionFor(approval.mutation) &&
+        approval.operationId === intent.operationId &&
+        approval.idempotencyKey === intent.idempotencyKey &&
+        approval.intentDigest === intent.intentDigest &&
+        Boolean(approval.nonce) &&
+        Boolean(approval.approver) &&
+        Boolean(approval.expiresAt) &&
+        SHA256.test(approval.approvalStateDigest),
+    );
+  return intent.intentDigest === sha256(stable(bare)) && validInventory(intent) && approvalsValid;
 }
 
 function eventDigest(value: unknown): string {
@@ -729,7 +759,12 @@ async function reconcile(
     };
   }
   if (observed.status !== "attested")
-    return failure({ result: observed, stage: "preflight", remoteWrites });
+    return failure({
+      result: observed,
+      stage: "preflight",
+      remoteWrites,
+      prewrite: remoteWrites === 0,
+    });
   if (!validReceipt(observed.value, intent))
     return {
       status: "indeterminate",

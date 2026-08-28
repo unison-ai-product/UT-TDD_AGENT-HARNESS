@@ -846,16 +846,16 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     });
   });
 
-  it("U-PACKPUB-REMOTE-014: 003-E has no fallback port and does not repair invalid inventory", () => {
-    const fallback = vi.fn();
+  it("U-PACKPUB-REMOTE-014: 003-E invalid inventory never enters remote composition", () => {
     const plan = stagingPlan();
     const mutated = {
       ...plan,
       commitEntries: plan.commitEntries.slice(1) as typeof plan.commitEntries,
     };
-    const candidate = { ...input(mutated), fallback };
-    expect(sealPackPublicationIntent(candidate)).toEqual({ ok: false, error: "invalid_inventory" });
-    expect(fallback).not.toHaveBeenCalled();
+    expect(sealPackPublicationIntent(input(mutated))).toEqual({
+      ok: false,
+      error: "invalid_inventory",
+    });
   });
 
   it("U-PACKPUB-REMOTE-015: 003-F preserves branch response loss and stops PR/release writes", async () => {
@@ -1182,6 +1182,21 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     );
     expect(result).toMatchObject({ status: "published", remoteWrites: 0 });
     expect(commit).not.toHaveBeenCalled();
+
+    const unavailable = await publishPackCanary(
+      intent,
+      ports({
+        approval: { consume: async () => ({ status: "attested", value: { mode: "reconcile" } }) },
+        reconcile: { observe: async () => ({ status: "mismatch", reason: "receipt_absent" }) },
+        pack: { ...base.pack, commitPublicationBranch: commit },
+      }),
+    );
+    expect(unavailable).toMatchObject({
+      status: "denied",
+      reason: "receipt_absent",
+      remoteWrites: 0,
+    });
+    expect(commit).not.toHaveBeenCalled();
   });
 
   it("U-PACKPUB-REMOTE-028: 003-P foreign reconciliation receipt is rejected without new writes", async () => {
@@ -1207,9 +1222,10 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
-  it("U-PACKPUB-REMOTE-029: 003-Q mutation order uses PR/CAS and never exposes direct push", async () => {
+  it("U-PACKPUB-REMOTE-029: 003-Q production Pack writes are branch commit then PR then CAS merge", async () => {
     const consumed: string[] = [];
     const base = ports();
+    const writes: string[] = [];
     const result = await publishPackCanary(
       sealedIntent(),
       ports({
@@ -1217,6 +1233,21 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
           consume: async (approval) => {
             consumed.push(approval.mutation);
             return { status: "attested", value: { mode: "new" } };
+          },
+        },
+        pack: {
+          ...base.pack,
+          commitPublicationBranch: async (value) => {
+            writes.push("branch_commit");
+            return base.pack.commitPublicationBranch(value);
+          },
+          createPullRequest: async (value) => {
+            writes.push("pr_create");
+            return base.pack.createPullRequest(value);
+          },
+          mergePullRequestCas: async (value) => {
+            writes.push("pr_merge_cas");
+            return base.pack.mergePullRequestCas(value);
           },
         },
       }),
@@ -1234,7 +1265,7 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       "release_visibility",
       "canary_pointer_append",
     ]);
-    expect(base.pack).not.toHaveProperty("directPush");
+    expect(writes).toEqual(["branch_commit", "pr_create", "pr_merge_cas"]);
   });
 
   it("U-PACKPUB-REMOTE-030: 003-R journal persistence failure prevents its mutation", async () => {
@@ -1273,6 +1304,34 @@ describe("PLAN-L7-519 candidate-to-oracle contract", () => {
       reason: "sealed_intent_mismatch",
       remoteWrites: 0,
     });
+    expect(commit).not.toHaveBeenCalled();
+
+    const approvalVariants = [
+      {
+        ...intent.approvals,
+        planned: { ...intent.approvals.planned, intentDigest: sha("foreign") },
+      },
+      { ...intent.approvals, planned: { ...intent.approvals.planned, operationId: "foreign" } },
+      { ...intent.approvals, planned: { ...intent.approvals.planned, idempotencyKey: "foreign" } },
+      {
+        ...intent.approvals,
+        planned: { ...intent.approvals.planned, transition: "canary" as const },
+      },
+      Object.fromEntries(
+        Object.entries(intent.approvals).filter(([mutation]) => mutation !== "planned"),
+      ),
+    ];
+    for (const approvals of approvalVariants) {
+      const approvalDrift = await publishPackCanary(
+        { ...intent, approvals },
+        ports({ pack: { ...base.pack, commitPublicationBranch: commit } }),
+      );
+      expect(approvalDrift).toMatchObject({
+        status: "denied",
+        reason: "sealed_intent_mismatch",
+        remoteWrites: 0,
+      });
+    }
     expect(commit).not.toHaveBeenCalled();
   });
 
