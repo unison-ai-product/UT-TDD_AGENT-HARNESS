@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { ensureDir } from "../shared/fs.ts";
 import type { ReviewReceipt } from "./review-dispatch.ts";
@@ -11,6 +11,7 @@ import {
   isStrictReviewRequest,
   REVIEW_VERDICT_SCHEMA_VERSION,
   type ReviewVerdictEnvelope,
+  recordReviewAttemptFailure,
   reviewIdentityDigest,
 } from "./review-verdict-custody.ts";
 
@@ -131,6 +132,35 @@ function persist(input: {
   return { path, digest: valueDigest };
 }
 
+function writeReceiptCreateExclusive(
+  path: string,
+  receipt: ReviewReceipt,
+):
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: "verdict_identity_conflict" | "receipt_unreadable" } {
+  const serialized = `${JSON.stringify(receipt, null, 2)}\n`;
+  try {
+    const fd = openSync(path, "wx", 0o600);
+    try {
+      writeSync(fd, serialized, undefined, "utf8");
+    } finally {
+      closeSync(fd);
+    }
+    return { ok: true };
+  } catch (error) {
+    if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST")
+      return { ok: false, reason: "receipt_unreadable" };
+    try {
+      const existing = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      return canonicalJson(existing) === canonicalJson(receipt)
+        ? { ok: true }
+        : { ok: false, reason: "verdict_identity_conflict" };
+    } catch {
+      return { ok: false, reason: "receipt_unreadable" };
+    }
+  }
+}
+
 function identityMatches(
   request: ReviewAttestationRequest,
   attestation: ReviewAttestation,
@@ -210,6 +240,22 @@ export function projectReviewVerdict(input: {
   verdictFile: string;
 }): ReviewVerdictProjectionResult {
   if (input.attestation.exitCode !== 0) {
+    if (input.request.reviewRevision.startsWith("rv1-")) {
+      const match = /[\\/]attempt-([1-9][0-9]*)[\\/]verdict\.txt$/.exec(input.verdictFile);
+      if (match) {
+        const outcome = recordReviewAttemptFailure({
+          repoRoot: input.repoRoot,
+          request: input.request,
+          attempt: Number(match[1]),
+          provider: input.attestation.provider,
+          model: input.attestation.model,
+          exitCode: input.attestation.exitCode,
+          verdictPath: input.verdictFile,
+          now: input.attestation.completedAt,
+        });
+        if (!outcome.ok && outcome.reason === "attempt_outcome_indeterminate") return outcome;
+      }
+    }
     // file欠落だけでは permission拒否、認証失敗、timeout、reviewer拒否を識別できない。
     // 書込不能を捏造せず、provider failure後にverdictが無いという観測事実だけをtyped化する。
     if (
@@ -311,7 +357,8 @@ export function projectReviewVerdict(input: {
         return { ok: false, reason: "receipt_unreadable" };
       }
     } else {
-      writeFileSync(path, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
+      const persisted = writeReceiptCreateExclusive(path, receipt);
+      if (!persisted.ok) return persisted;
     }
     return { ok: true, receipt, path, digest: reviewRequestDigest(input.request) };
   }

@@ -10,7 +10,8 @@ updated: 2026-08-28
 # Review receipt supersession test design
 
 対になる契約は `docs/plans/PLAN-L7-520-review-receipt-supersession-contract.md`。
-本PRではcandidateのfreezeだけを行い、実装とRed実測を同一commitへ束縛するまで正式oracleへ昇格しない。
+実装PRではcandidateを `tests/review-receipt-supersession.test.ts` の現物検査へ束縛し、
+Red/Greenの実測後に正式oracleへ昇格する。
 
 ## `CANDIDATE-U-RVATT-040` independent mutation matrix
 
@@ -40,3 +41,12 @@ updated: 2026-08-28
 | `CANDIDATE-U-RVATT-045` | canonical receipt存在後に同一/次attemptを開始 | `review_receipt_already_exists`、attempt/audit delta 0 |
 | `CANDIDATE-U-RVATT-043` | canonical receipt pathへ異payloadを再投影 | `verdict_identity_conflict`、既存bytes/digest不変 |
 | `CANDIDATE-U-RVATT-044` | audit event重複、順序逆転、request/attempt digest改竄 | typed deny、次attempt/receipt write 0 |
+
+## 実装時の接地
+
+`CANDIDATE-U-RVATT-040` は composition fixture と case A〜D の独立変異を同一の
+review custody APIへ接続する。case A/D は audit event の欠落・重複を現物で検査し、
+case B は canonical receipt bytes の不変性と conflict を直接検査する。成功後の cleanup
+では旧 attempt file と `attempt_execution_failed` / `superseded_attempt` を保持し、
+成功 attempt の scratch だけを削除する。戻り値・件数だけを oracle とせず、audit JSONL、
+attempt path、receipt bytes を再読する。
