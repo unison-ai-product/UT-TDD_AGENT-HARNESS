@@ -2509,3 +2509,18 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `U-PACKPUB-STAGE-010` | exact observation、commit/asset/digest欠落・変異、observer failure | exact一致だけ`attested`、差分は`partial_publication`、観測不能は`indeterminate`。remote write 0 |
 
 実行対応: `tests/pack-publication-staging.test.ts` (`U-PACKPUB-STAGE-001〜010`)。
+
+### PLAN-L7-519 remote canary publication adapter oracle (Issue #414)
+
+`CANDIDATE-PACKPUB-003-A..S2`を順序どおり`U-PACKPUB-REMOTE-010..032`へ一対一昇格する。
+mutation固有approval/nonce、prewrite identity、journal、実port call由来write count、各read-back、
+auditor、late CAS、receipt、cleanupを一軸ずつ変異し、typed resultと後続write 0を直接検査する。
+
+| ID range | fixture / mutation | expected |
+| --- | --- | --- |
+| `U-PACKPUB-REMOTE-010〜016` | seal、nonce replay、initial drift、response loss、journal/read-back | invalid/deny/partial/indeterminateを区別し、実mutation callを過少報告しない |
+| `U-PACKPUB-REMOTE-017〜022` | main/pointer/tag preflight、duplicate tag、approval、journal | prewrite write 0、後続port 0 |
+| `U-PACKPUB-REMOTE-023〜029` | draft、asset、tag、visibility、auditor、late pointer CAS | 最初の不一致・観測不能後のwrite 0 |
+| `U-PACKPUB-REMOTE-030〜032` | pointer response loss、receipt persist、cleanup | remoteWrites 9を保持し、receipt失敗とcleanup失敗を成功へ丸めない |
+
+実行対応: `tests/pack-publication-adapter.test.ts` (`U-PACKPUB-REMOTE-010〜032`)。

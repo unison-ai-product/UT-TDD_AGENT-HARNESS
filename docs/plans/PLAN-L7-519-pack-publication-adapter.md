@@ -26,6 +26,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-519-pack-publication-adapter.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/pack-publication-adapter.ts
+    artifact_type: source_module
+  - artifact_path: tests/pack-publication-adapter.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-515-pack-remote-canary-publication.md
   requires:
@@ -80,6 +84,11 @@ PR #464 reviewed HEAD `b1fa5c2a6690187bc95fe2ebb317786ca9ffdb85` はcanonical Cl
 ここで確定するのは、上位`CANDIDATE-PACKPUB-003-A..S2`を再採番せず後続実装へ束縛する
 pair-freezeだけであり、publication adapter実装、remote mutation、Reverse R2-R4、Pack canary完了を
 意味しない。
+
+実装sliceは`src/setup/pack-publication-adapter.ts`へ、sealed intent、mutation単位approval、durable
+journal、remote mutation count、read-back観測、immutable receiptを閉じ込める。remote portは注入し、
+実credentialや実Pack repositoryをtargeted testで操作しない。実装証跡とReverse R2-R4はclosing
+reviewとrequired CIが揃うまで未確定とする。
 
 ## 1. 目的と既存正本
 
