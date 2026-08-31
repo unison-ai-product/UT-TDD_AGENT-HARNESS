@@ -316,8 +316,9 @@ describe("clean distribution local acceptance smoke", () => {
         ]),
       );
 
-      // Readiness must observe the real Node runtime; running this command through Bun
-      // would keep the retired Bun path on the acceptance route.
+      // S1-a readiness must observe the real Node runtime. Running this command
+      // through Bun would expose Bun's compatibility value as process.versions.node
+      // and would keep the retired Bun launcher on the acceptance path.
       const distribution = runNode(
         cleanRoot,
         ["src/cli.ts", "distribution", "plan", "--tag", "v0.1.0", "--json"],

@@ -8,7 +8,7 @@ import { buildConsumerReadinessPlan } from "../src/setup/distribution.ts";
 const temporaryDirectories: string[] = [];
 
 function temporaryDirectory(): string {
-  const directory = mkdtempSync(join(tmpdir(), "ut-tdd-node-readiness-"));
+  const directory = mkdtempSync(join(tmpdir(), "ut-tdd-bun-free-home-"));
   temporaryDirectories.push(directory);
   return directory;
 }
@@ -19,8 +19,12 @@ afterEach(() => {
   }
 });
 
-// U-PACKBUN-001 / 002 (PLAN-L7-522 §2.2, S1-a): Bun 未導入 consumer で readiness が成立することを、
-// readiness 関数の単体呼び出しではなく実 CLI の実行で測る。
+// U-PACKBUN-001 / 002 (PLAN-L7-522 §2.2, S1-a):
+// Bun 未導入 consumer で readiness が成立することを、readiness 関数の単体呼び出しではなく
+// **実 CLI の実行**で測る (test-design §2: 単体評価では Issue #450 AC1 を満たさない)。
+//
+// Bun 不在の作り方: PATH から Bun を含み得る entry を全部落とし、HOME / USERPROFILE を
+// 空の temp dir へ向けて `~/.bun` を不在にする。node 自身の dir だけを PATH に残す。
 const REPO_ROOT = process.cwd();
 const CLI = join(REPO_ROOT, "src", "cli.ts");
 const LEGACY = ["b", "un"].join("");
@@ -97,7 +101,8 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     setupConsumer(consumer, env);
     const readiness = readinessOf(consumer, env);
 
-    const probe = spawnSync(LEGACY, ["--version"], { env, shell: false });
+    // Bun が本当に到達不能であることを先に固定する (環境が緩いと恒真テストになる)。
+    const probe = spawnSync(LEGACY, ["--version"], { env: bunFreeEnv(home), shell: false });
     expect(probe.status).not.toBe(0);
     expect(readiness.ok).toBe(true);
   });
@@ -112,6 +117,7 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     const serializedChecks = JSON.stringify(readiness.checks);
 
     expect(names).not.toContain(`${LEGACY}>=1.3`);
+    expect(serializedChecks).not.toContain("Install Bun 1.3 or newer before setup");
     expect(serializedChecks.toLowerCase()).not.toContain(LEGACY);
     expect(names).toContain("node@24.13.0");
     expect(names).toContain("git");
@@ -129,6 +135,8 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
         repoRoot: consumer,
       }).checks.find((check) => check.name === `node@${requiredNodeVersion}`)?.ok;
 
+    // npm semver grammar is authoritative. These cases independently kill the
+    // former local evaluator's tilde and partial-hyphen upper-bound defects.
     expect(nodeReady("24.13.0", "~24")).toBe(true);
     expect(nodeReady("25.0.0", "~24")).toBe(false);
     expect(nodeReady("24.14.9", "24.13 - 24.14")).toBe(true);

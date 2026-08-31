@@ -1074,7 +1074,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "Node.js 22.18 or newer must be available",
     );
-    // engines.node follows npm range semantics rather than a numeric minimum.
+    // engines.node follows npm range semantics rather than a numeric minimum:
+    // a compatible patch is accepted, while a new major outside ^24 is not.
     expect(
       buildConsumerReadinessPlan({
         nodeVersion: "24.13.5",
