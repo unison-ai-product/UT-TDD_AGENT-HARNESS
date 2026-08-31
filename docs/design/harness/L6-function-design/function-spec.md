@@ -2246,6 +2246,8 @@ wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c
 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の`legacy.d0-admission`と`legacy.f0a-custody`を順にexact照合する。
 Git固定された`LegacyD0TrackedReceiptSetV1`をattested wrapperだと見なさず、L5固定tupleから
 `LegacyD0AdmissionBackfillReceiptV1`と`LegacyF0aCustodyBackfillReceiptV1`の二receiptをatomicにmintする。
+F0a行は`docs/governance/node-toolchain-provenance.json`のfresh retrospective non-author review recordと、F0a source HEADの
+8 pathをpath昇順に並べたGit blob/content digest閉包を再構成し、L5固定の二digestへexact一致させる。
 command authorityと各rowの`d0-design-owner` / `f0a-toolchain-owner` producerを混同してはならない。
 通常D0 eligibility判定へこのlegacy setを渡してはならず、固定履歴を再構成不能なら
 `legacy_evidence_unavailable`、partial/double mint又は再利用はtyped rejectとする。

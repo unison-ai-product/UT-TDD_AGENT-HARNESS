@@ -297,7 +297,9 @@ D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord e
   canonical predecessorを含まないstale HEAD、wrong edge/producer、同一target+HEADの二重admissionを拒否し、
   predecessor subjectとcandidate HEADのexact equalityは要求しない。PR #154/#192の既存mergeだけは
   L5 legacy registryの`legacy.d0-admission` / `legacy.f0a-custody`からD0/F0a二receiptをatomic・exactly onceに
-  backfillし、通常routeへ一般化しない。
+  backfillし、通常routeへ一般化しない。F0a rowは本PLANが所有する`docs/governance/node-toolchain-provenance.json`へ
+  fresh retrospective Sol non-author review recordとF0a source HEAD/treeの固定8 path custody rowsを格納し、
+  PLAN-L6-93のcanonical JSON手順でL5固定digestへ再構成できる場合だけmintする。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
 - 現D0-N candidate自身もreview+admission receiptをmerge前に修復する。PLAN-L6-93 confirmedは将来の
   production activation/cutover gateであり、draft設計を着地させる#154 D0設計merge gateには要求しない。

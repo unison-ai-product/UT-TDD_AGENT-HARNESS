@@ -2061,7 +2061,8 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 `CAND-NODEBOOT-018`の固定tupleはL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
 `legacy.d0-admission` / `legacy.f0a-custody`を正本とする。前者から
 `LegacyD0AdmissionBackfillReceiptV1`、後者から`LegacyF0aCustodyBackfillReceiptV1`をmintし、
-下位test designで独自のtrust root又はbundle tupleを追加しない。
+下位test designで独自のtrust root又はbundle tupleを追加しない。後者のfresh retrospective review/custody digestは
+`node-toolchain-provenance.json`とF0a source HEAD/treeの固定8 pathから再構成し、L5の固定値へexact一致させる。
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
@@ -2133,11 +2134,13 @@ content/path binding driftを個別negativeにする。legacy backfill caseはat
 unsigned/self-hash/forgedを主張せず、固定source/merge SHA、4 command ID、4 path、Git blob/content digest、
 record/receipt digest、command authority、receipt producerの各mutationを個別negativeにする。F0a/F0b/F0c/Q0は
 predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
-PR #154/#192のlegacy positiveは`LegacyF0aBackfillBundleV1`だけを使い、D0 source HEAD
+PR #154/#192のlegacy positiveはL5の`legacy.d0-admission` / `legacy.f0a-custody`だけを使い、D0 source HEAD
 `8b339ec75dffd72ef4701431305065986e01b2ea`/merge `f38974da31eb243f53c7cae392a3108a1db765dd`と
 F0a source HEAD `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`/merge
-`12aadde9ff56e8b39c0813b988384e2e5eed00ab`、two-lane review、exact 4 plan admission、
-toolchain/lock evidenceを照合する。bundle片側だけのpublish、固定tupleの一要素mutation、再mint、削除後再発行は0とする。
+`12aadde9ff56e8b39c0813b988384e2e5eed00ab`、fresh retrospective Sol non-author review record、
+exact 4 plan admission、F0a source HEAD/treeの固定8 path toolchain/lock evidenceを照合する。historical commentを
+receiptへ昇格せず、row片側だけのpublish、
+review/custody digest又は固定tupleの一要素mutation、再mint、削除後再発行は0とする。
 F0b compile custodyでは`tsconfig.node.json`の欠落、別path、内容digest drift、receipt field省略を独立mutationし、
 いずれもcompile/process生成0で拒否する。
 `CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested

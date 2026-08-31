@@ -176,16 +176,29 @@ kernelはreceipt producerを兼務せず、各L5 rowの正規producerを検証�
    attested wrapperが存在したとは主張せず、Git固定されたこのlegacy setだけを一回限りのbackfill evidenceとする。
 2. `legacy.f0a-custody` → `LegacyF0aCustodyBackfillReceiptV1`: F0a source HEAD
    `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、merge commit
-   `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、上記D0 backfill receipt digest、PR #192の
-   non-author PASS receipt、toolchain/lock custody evidence digestを封印する。
+   `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、上記D0 backfill receipt digest、
+   source tree `1b63e413ad4f6500cc02e8df36391d0de0571b92`、`docs/governance/node-toolchain-provenance.json`の
+   fresh retrospective non-author PASS record digest `sha256:a7e5417ffb2e6f9eb1b2df679e1676db6633b9fae902cb478472d0dfb591d474`、
+   toolchain/lock custody evidence digest `sha256:2213afcc98863c1883255c24576800fcced77cfbd27e7eec9f89424614dc445c`を封印する。
 
 両source HEADが各merge commitのparent closureにあり、F0a merge commitがD0 merge commitをancestorに持ち、
 F0b candidate HEADが両merge commitをancestorに持つことを、完全履歴を確認した後に検証する。自己申告SHA、GitHub本文、
-merge済みという事実だけでevidenceを補完しない。上記JSONから4行を決定的に再構成するコマンドは、
+merge済みという事実だけでevidenceを補完しない。D0 JSONから4行を決定的に再構成するコマンドは、
 `git show f38974da31eb243f53c7cae392a3108a1db765dd:docs/governance/plan-admission-receipts.json` の出力を
 JSONとして読み、`records` を `command_id` の4つの固定値へ完全一致・順序固定で抽出し、各 `binding.path` を同じ
 commitから `git cat-file -p <commit>:<binding.path>` で読み、blob OIDとcontent digestを再計算する処理である。
-この再構成が4行、4 distinct path、4 distinct record/receipt digest、全blob実在を満たさない場合は typed
+F0aのrepository-resident provenance artifactは#484が同じcandidate commitに生成する。historical PR commentは
+canonical receiptとして使わず、immutable source HEAD/treeと次の8 pathを対象に2026-08-31T07:44:58ZにSolが行った
+fresh retrospective non-author reviewだけを固定する。review recordのRFC 8785 preimageは
+`{artifact_set_digest,blocking_count,ci,review_kind,reviewed_at,reviewer_family,reviewer_model,schema_version,subject_revision,subject_tree,verdict}`、
+`review_kind="retrospective_non_author"`、`reviewer_family="codex"`、`reviewer_model="gpt-5.6-sol"`、
+`verdict="PASS"`、`blocking_count=0`、CI run `30448849258` successとする。このrecordはhistorical commentでも
+`AttestedReceiptEnvelope`でもなく、immutable Git subject/custody閉包へのfresh retrospective integrity reviewである。
+8 pathは`.node-version`、`bun.lock`、`docs/governance/repository-structure.md`、`package-lock.json`、`package.json`、
+`src/lint/toolchain-pin.ts`、`tests/hook-native-launcher.test.ts`、`tests/toolchain-pin.test.ts`である。path昇順の
+`{path,blob_oid,content_digest}` canonical JSONをsource HEADから再計算し、そのSHA-256をcustody evidence digestとする。
+artifact内値、再計算値、L5の二固定digestがexact一致しなければならず、historical comment、GitHub API又はcurrent
+worktreeから動的補完しない。この再構成がD0 4行、4 distinct path、4 distinct record/receipt digest、F0a 8 distinct path、全blob実在を満たさない場合は typed
 `legacy_evidence_unavailable` として停止し、attested recordを推測・生成しない。registry ID、row ID、二receipt digest、
 command authority、receipt producer、source/merge SHAのいずれかが既存記録と異なる再発行、partial一件だけの生成、
 別F0aへの一般化、削除後の再mintは拒否する。通常のF0a以降はこのbackfill routeを持たず、`admitNodeSlice`の

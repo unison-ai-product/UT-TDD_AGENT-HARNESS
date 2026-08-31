@@ -94,5 +94,6 @@ Issue #152のD0-Nで確定したNode control plane設計をForwardへ合流し�
 
 最初のF0b candidateに限るbackfillは、L5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
 `legacy.d0-admission`と`legacy.f0a-custody`を唯一の正本とする。D0/F0a二receiptの片側mint、
-row固定tupleの一要素mutation、wrong command authority/receipt producer、double mint、削除後remintをRedにし、
+row固定tuple、fresh retrospective review record digest、固定8 path custody digestの一要素mutation、wrong command authority/
+receipt producer、double mint、削除後remintをRedにし、
 二rowをatomicかつexactly once mintした場合だけGreenとする。通常D0/F0a admissionへlegacy rowを一般化しない。
