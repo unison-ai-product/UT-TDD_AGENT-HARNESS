@@ -94,6 +94,8 @@ Issue #152のD0-Nで確定したNode control plane設計をForwardへ合流し�
 
 最初のF0b candidateに限るbackfillは、L5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
 `legacy.d0-admission`と`legacy.f0a-custody`を唯一の正本とする。D0/F0a二receiptの片側mint、
-row固定tuple、fresh retrospective review record digest、固定8 path custody digestの一要素mutation、wrong command authority/
-receipt producer、double mint、削除後remintをRedにし、
-二rowをatomicかつexactly once mintした場合だけGreenとする。通常D0/F0a admissionへlegacy rowを一般化しない。
+row固定tuple、D0 4-rowまたはF0a 8-row Git closureの一要素mutation、wrong command authority/receipt producer、
+reviewerFamily/model/PASS注入、double mint、削除後remintをRedにし、二rowを#484だけがatomicかつexactly once
+mintした場合だけGreenとする。両rowは`family_status=unverified_family`、`review_authority=none`であり、過去の
+review/custody admittedを証明せず、通常D0/F0a admissionへlegacy rowを一般化しない。欠落・不一致は
+`legacy_evidence_unavailable`とする。

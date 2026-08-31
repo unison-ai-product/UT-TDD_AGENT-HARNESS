@@ -2246,8 +2246,12 @@ wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c
 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の`legacy.d0-admission`と`legacy.f0a-custody`を順にexact照合する。
 Git固定された`LegacyD0TrackedReceiptSetV1`をattested wrapperだと見なさず、L5固定tupleから
 `LegacyD0AdmissionBackfillReceiptV1`と`LegacyF0aCustodyBackfillReceiptV1`の二receiptをatomicにmintする。
-F0a行は`docs/governance/node-toolchain-provenance.json`のfresh retrospective non-author review recordと、F0a source HEADの
-8 pathをpath昇順に並べたGit blob/content digest閉包を再構成し、L5固定の二digestへexact一致させる。
+legacy D0行のcanonical preimageはL5 internal-processing §`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`が定義する
+RFC 8785/JCS bare array（固定command順のexact 4 full record object、exact record/binding field、UTF-8 BOMなし・末尾改行なし）を
+唯一の正本として参照する。F0a行はF0a source HEAD/tree/merge SHAと、path昇順のexact 8 Git row（`blob_oid`, `content_digest`, `path`）だけを
+RFC 8785/JCS bare arrayとして再構成し、L5固定digestへexact一致させる。reviewer family/model、verdict、
+retrospective review record又はcustody admittedは入力にせず、`family_status=unverified_family`、
+`review_authority=none`とする。注入された`reviewerFamily`/`reviewerModel`/`PASS`も判定結果を変えない。
 command authorityと各rowの`d0-design-owner` / `f0a-toolchain-owner` producerを混同してはならない。
 通常D0 eligibility判定へこのlegacy setを渡してはならず、固定履歴を再構成不能なら
 `legacy_evidence_unavailable`、partial/double mint又は再利用はtyped rejectとする。
@@ -2374,3 +2378,14 @@ Bun依存またはdirect spawn fallbackを追加する実装は入力条件に�
 bundle rollbackは過去artifactを直接再activationせず、現在floorより厳密に大きいsequenceの新revisionとしてmanifestを再署名し、
 通常のtrust・component・target検証を再通過させる。D0はtrust/activationを抽象portに留め、
 rotation、revocation transport、secure clock、re-anchor、物理log schemaを後続implementation revisionへ送る。
+
+## 2026-08-31 legacy slice receipt 境界
+
+`LegacyD0AdmissionBackfillReceiptV1` と `LegacyF0aCustodyBackfillReceiptV1` は、PR #154/#192以前に
+存在しなかったreceipt producerを一度だけ移行するための **integrity-only** 証拠である。関数契約上、両receiptが
+証明するのは、#484 admission kernelが immutable Git source/tree/merge と固定行集合を現在再構成し、migration
+decisionを発行できたことだけである。過去のreview実施、custody admitted、provider family、verdictを証明せず、
+`family_status=unverified_family`、`review_authority=none`として通常のD0 eligibilityへ入力してはならない。
+入力に注入された`reviewerFamily`、`reviewerModel`、`PASS`その他の自己申告は、receiptの判定結果を変えない。
+固定行・Git blob・chain・digestの欠落または不一致は`legacy_evidence_unavailable`で停止し、歴史的reviewを推測して
+補完しない。二receiptの発行は#484だけが同一atomic operationでexactly once実施し、通常registryへ一般化しない。

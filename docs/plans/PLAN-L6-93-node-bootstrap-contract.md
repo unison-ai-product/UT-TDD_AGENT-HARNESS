@@ -167,19 +167,25 @@ kernelはreceipt producerを兼務せず、各L5 rowの正規producerを検証�
 
 1. `legacy.d0-admission` → `LegacyD0AdmissionBackfillReceiptV1`: D0 source HEAD
    `8b339ec75dffd72ef4701431305065986e01b2ea`、merge commit
-   `f38974da31eb243f53c7cae392a3108a1db765dd`、canonical two-lane ReviewBundle outer digest、
-   PLAN-L4-33/L5-26/L6-93/L7-458の既存tracked receipt row exact 4とset digestを封印する。これらの
-   legacy rowは `docs/governance/plan-admission-receipts.json` の source commit
-   `f38974da31eb243f53c7cae392a3108a1db765dd` にある `command_id=pr154-d0-admission-l4-20260724` から
-   `...-l7-20260724` までの4行であり、各 `binding.path` のGit blob/content digestを同じsource commitから
-   再計算する。独立した `AttestedTrackedReceiptRecord` wrapper artifactはこの履歴に存在しないため、ここで
-   attested wrapperが存在したとは主張せず、Git固定されたこのlegacy setだけを一回限りのbackfill evidenceとする。
+   `f38974da31eb243f53c7cae392a3108a1db765dd`、および同commitの
+   `docs/governance/plan-admission-receipts.json`からcommand ID
+   `pr154-d0-admission-l4-20260724`〜`...-l7-20260724`をこの順に抽出した**exact 4行**を封印する。
+   D0 JCS preimageはwrapper objectを持たないbare JSON arrayで、array要素は上記4行、各record objectの
+   fieldは`sequence`, `previous_record_digest`, `record_digest`, `command_id`, `receipt_id`,
+   `receipt_digest`, `decision_digest`, `binding`だけ、`binding`のfieldは`path`, `plan_id`, `asset_id`,
+   `revision`, `content_digest`だけとする（schema/records wrapper、outer digest、Git派生行は含めない）。
+   RFC 8785/JCSを再帰適用し、UTF-8（BOMなし、末尾改行なし）でSHA-256化する。4行集合のJCS digestは
+   `sha256:d883335e37dc6595b5fcd47dd69bbcf8d89969338a109af0c2e5514049b07807`であり、
+   各`binding.path`は同じsource commitのGit blobへ別途束縛する。独立した
+   `AttestedTrackedReceiptRecord` wrapper artifactはこの履歴に存在しないため、存在したとは主張せず、
+   このGit固定setだけを一回限りのbackfill evidenceとする。
 2. `legacy.f0a-custody` → `LegacyF0aCustodyBackfillReceiptV1`: F0a source HEAD
-   `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、merge commit
-   `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、上記D0 backfill receipt digest、
-   source tree `1b63e413ad4f6500cc02e8df36391d0de0571b92`、`docs/governance/node-toolchain-provenance.json`の
-   fresh retrospective non-author PASS record digest `sha256:a7e5417ffb2e6f9eb1b2df679e1676db6633b9fae902cb478472d0dfb591d474`、
-   toolchain/lock custody evidence digest `sha256:2213afcc98863c1883255c24576800fcced77cfbd27e7eec9f89424614dc445c`を封印する。
+   `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、tree
+   `1b63e413ad4f6500cc02e8df36391d0de0571b92`、merge commit
+   `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、predecessor `legacy.d0-admission` integrity digest
+   `sha256:d883335e37dc6595b5fcd47dd69bbcf8d89969338a109af0c2e5514049b07807`、および
+   下記8 pathのGit rowだけを封印する。reviewer family/model、verdict、review record、custody admitted
+   をtupleへ含めず、F0aの閉包digestはこの8 rowから決定的に再計算する。
 
 両source HEADが各merge commitのparent closureにあり、F0a merge commitがD0 merge commitをancestorに持ち、
 F0b candidate HEADが両merge commitをancestorに持つことを、完全履歴を確認した後に検証する。自己申告SHA、GitHub本文、
@@ -187,24 +193,18 @@ merge済みという事実だけでevidenceを補完しない。D0 JSONから4�
 `git show f38974da31eb243f53c7cae392a3108a1db765dd:docs/governance/plan-admission-receipts.json` の出力を
 JSONとして読み、`records` を `command_id` の4つの固定値へ完全一致・順序固定で抽出し、各 `binding.path` を同じ
 commitから `git cat-file -p <commit>:<binding.path>` で読み、blob OIDとcontent digestを再計算する処理である。
-F0aのrepository-resident provenance artifactは#484が同じcandidate commitに生成する。historical PR commentは
-canonical receiptとして使わず、immutable source HEAD/treeと次の8 pathを対象に2026-08-31T07:44:58ZにSolが行った
-fresh retrospective non-author reviewだけを固定する。review recordのRFC 8785 preimageは、次のUTF-8 JSON literal
-（末尾改行なし）exact 1であり、key追加・省略・並べ替え・型変換を許さない。
-
-```json
-{"artifact_set_digest":"sha256:2213afcc98863c1883255c24576800fcced77cfbd27e7eec9f89424614dc445c","blocking_count":0,"ci":{"conclusion":"success","head_sha":"76d0f9c7219a8290fc809b5036d6d02f9b05fb88","run_id":30448849258},"review_kind":"retrospective_non_author","reviewed_at":"2026-08-31T07:44:58Z","reviewer_family":"codex","reviewer_model":"gpt-5.6-sol","schema_version":"legacy-f0a-retrospective-review.v1","subject_revision":"76d0f9c7219a8290fc809b5036d6d02f9b05fb88","subject_tree":"1b63e413ad4f6500cc02e8df36391d0de0571b92","verdict":"PASS"}
-```
-
-このbyte列のSHA-256は`a7e5417ffb2e6f9eb1b2df679e1676db6633b9fae902cb478472d0dfb591d474`でなければならない。
-`artifact_set_digest`は直後の8 path閉包から再計算した値だけを受理する。このrecordはhistorical commentでも
-`AttestedReceiptEnvelope`でもなく、immutable Git subject/custody閉包へのfresh retrospective integrity reviewである。
-8 pathは`.node-version`、`bun.lock`、`docs/governance/repository-structure.md`、`package-lock.json`、`package.json`、
-`src/lint/toolchain-pin.ts`、`tests/hook-native-launcher.test.ts`、`tests/toolchain-pin.test.ts`である。path昇順の
-`{path,blob_oid,content_digest}` canonical JSONをsource HEADから再計算し、そのSHA-256をcustody evidence digestとする。
-artifact内値、再計算値、L5の二固定digestがexact一致しなければならず、historical comment、GitHub API又はcurrent
-worktreeから動的補完しない。この再構成がD0 4行、4 distinct path、4 distinct record/receipt digest、F0a 8 distinct path、全blob実在を満たさない場合は typed
-`legacy_evidence_unavailable` として停止し、attested recordを推測・生成しない。registry ID、row ID、二receipt digest、
+F0aのrepository-resident evidenceは、immutable source HEAD/treeの次の8 Git rowだけから再構成する。
+canonical preimageはRFC 8785/JCSの**bare array**（wrapper objectなし）であり、array要素は`path`のUnicode
+code-point昇順、各rowのkey順は`blob_oid`, `content_digest`, `path`に固定する。`blob_oid`は40桁lowercase
+hex、`content_digest`は`sha256:` + 64桁lowercase hex、canonical bytesはUTF-8（BOMなし・末尾改行なし）とする。
+source HEADから再計算したdigestは`sha256:96e326f3e5b88aede486da9f363fd03c06a7c1297a55c58ff92706ae8cfd6ff7`であり、
+この値はPR #192のimmutable Git objectsから独立検証済みである。対象pathは`.node-version`、`bun.lock`、
+`docs/governance/repository-structure.md`、`package-lock.json`、`package.json`、`src/lint/toolchain-pin.ts`、
+`tests/hook-native-launcher.test.ts`、`tests/toolchain-pin.test.ts`のexact 8件だけである。行の追加・欠落・順序、
+path/blob/content digestの一要素変異、別source/tree/merge、Git blob不在は全て再構成不能としてtyped
+`legacy_evidence_unavailable`で停止し、review recordやattested recordを推測・生成しない。D0についても4行、
+4 distinct path、4 distinct record/receipt digest、全blob実在を同じimmutable source commitから確認する。
+registry ID、row ID、二receipt digest、
 command authority、receipt producer、source/merge SHAのいずれかが既存記録と異なる再発行、partial一件だけの生成、
 別F0aへの一般化、削除後の再mintは拒否する。通常のF0a以降はこのbackfill routeを持たず、`admitNodeSlice`の
 通常receiptだけを使う。backfill schema/kernel/testはF0b owner #484がproduct changeより先にTDDし、同じcandidate
