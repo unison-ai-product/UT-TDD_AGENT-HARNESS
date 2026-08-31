@@ -85,7 +85,7 @@ repositoryReadContracts["tests/doctor-result-file.test.ts"] = {
 };
 
 repositoryReadContracts["tests/doctor.test.ts"] = {
-  mode_calls: { head_snapshot: 20, isolated_fixture: 8 },
+  mode_calls: { head_snapshot: 20, isolated_fixture: 7 },
   reason: "doctor aggregate test exercises both detached HEAD and execution fixture",
 };
 
