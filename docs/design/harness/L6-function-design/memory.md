@@ -111,7 +111,7 @@ RFC 8785/JCSとする。
 | `operationId` | 空でない文字列 |
 | `targetWorkspaceId` | lower-case hex 64桁 |
 | `targetGeneration` | 検証済み marker の generation、空でない文字列 |
-| `createdAt` / `eligibleAfter` | RFC 3339、`eligibleAfter >= createdAt` |
+| `createdAt` / `eligibleAfter` | RFC 3339。初回durable `createdAt`がauthoritative、`eligibleAfter=createdAt+PT0S`を固定しretryでは再mintしない |
 
 promotion marker は queue と別の exact JSON object とし、path は上記 `promoted/` 配下に固定する。
 
@@ -122,11 +122,14 @@ promotion marker は queue と別の exact JSON object とし、path は上記 `
 | `requestDigest` | queue item と同一の lower-case hex 16〜64桁 |
 | `targetWorkspaceId` | queue item と同一の lower-case hex 64桁 |
 | `inboxEntryId` | queue item から導出された非空文字列 |
-| `promotedAt` | RFC 3339 timestamp |
+| `promotedAt` | durable inbox entry の `createdAt` と byte-for-byte 同じ RFC 3339 timestamp |
 
 producer は canonical request の存在を確認してから、stale exact-one group に限り queue を exclusive-create
 する。同一 bytes は idempotent、同一 key の異なる bytes は `claude_deferred_projection_conflict` として
-拒否し既存 bytesを変えない。
+拒否し既存 bytesを変えない。初回create候補だけが注入clockから`createdAt`を採り、固定
+`deferredEligibilityDelay=PT0S`で`eligibleAfter`を算出する。既存検出、並列敗者、後刻retryはclosed-schemaで
+durable queueを読み、identity検証後に既存の両timestampを再利用してbytesを照合する。retry wall clockでの再mintは
+禁止し、時刻形式または固定差分が不正な既存queueは上書きせずconflictにする。
 
 consumer は、自身の fresh Claude VS Code generation identity を検証した SessionStart/Stop wake boundary
 でだけ対象 workspace の deferred を走査する。request path/digest、schema、key、queue保存時の
@@ -135,7 +138,9 @@ consumer は、自身の fresh Claude VS Code generation identity を検証し�
 であることを別途検証し、まず `inbox/<entry-stem>.json`へ同じ canonical entryとして exclusive-createし、
 次に `deferred/promoted/<idempotencyKey>.json`を exclusive-createする。既存 inbox/promoted marker の同一 bytes
 は retry 成功、異なる bytes は conflict。queue は監査用に保持し削除・上書きしない。promotion markerが欠けた
-場合は inbox identity を再検証して補完できる。破損、identity mismatch、replay、duplicate、期限外は inbox
+場合は inbox identity を再検証して補完できる。最初のdurable inbox entryの`createdAt`を論理promotion timestamp
+として`promotedAt`へ複製し、inbox-first recovery/並列敗者は既存inboxのidentityと`createdAt`を検証して再利用する。
+retry時刻から`promotedAt`を再mintしない。破損、identity mismatch、replay、duplicate、期限外は inbox
 write 0で fail-closeし、別 workspaceへ再配送しない。
 
 queue item と promotion marker は既存 runtime と同じ7日 retentionとする。GC は `deferred/` と

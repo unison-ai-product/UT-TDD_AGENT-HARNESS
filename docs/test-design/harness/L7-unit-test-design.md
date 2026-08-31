@@ -1661,13 +1661,15 @@ canonical request writer、live publish/deferred queue の composition である
 | `CANDIDATE-MEMWAKE-LIVENESS-006` | canonical request writer を失敗させたまま live/deferred publish を呼ぶ | request persists before publish が成立し、publish/queue write は0。request再mintやPR-comment fallbackは RED |
 | `CANDIDATE-MEMWAKE-LIVENESS-007` | 同一 workspace に fresh/stale marker、または別 workspace に fresh/stale markerを混在 | 同一 workspace は fresh wins=`live`、別 workspace は `ambiguous`。incompatible 混在は typed incompatible deny |
 | `CANDIDATE-MEMWAKE-LIVENESS-008` | deferred queue の key/path/schema/target を一軸ずつ変異し、fresh session で promotion/retry | `runtimeRoot/deferred/<idempotencyKey>.json` の exact schema/identity の一件だけ inboxへ昇格。duplicate/replay/conflict/期限切れは inbox write 0、queue は保持 |
+| `CANDIDATE-MEMWAKE-LIVENESS-009` | queue初回作成後、およびinbox作成済み/promoted marker未作成の停止後にfake clockを進め、同一identityをretryする。対照mutationはretry時刻で各timestampを再mintする | durable queueの`createdAt`を再利用し`eligibleAfter=createdAt+PT0S`、durable inboxの`createdAt`を`promotedAt`へ再利用するため、queue/marker canonical bytesは不変で各一件へ収束。後刻timestampでconflictするmutationはRED |
 
 deferred queue は `runtimeRoot=<git-common-dir>/ut-tdd-runtime/claude-memory-wake`、schema
 `ut-tdd.claude-deferred/v1`、purpose=`review`、idempotency key
 `sha256(JCS([requestDigest,targetWorkspaceId]))`、`deferred/promoted/` の
 `ut-tdd.claude-deferred-promotion/v1` marker、SessionStart/Stop の fresh session promotion、7日 retention/GC を
 固定契約とする。`targetGeneration` は stale観測の証拠であり新sessionのgenerationとの一致条件ではない。
-inboxの既存globへ混ぜない。
+inboxの既存globへ混ぜない。時刻identityは初回durable queueの`createdAt`と固定`PT0S`導出の`eligibleAfter`、
+および初回durable inboxの`createdAt`を再利用する`promotedAt`に限定する。retry clockからの再mintは許可しない。
 
 実装 PR では各 candidate にテスト path、時計注入、spy の write count、対象 HEAD/revision と digest を citation し、
 反証可能な実測を得たものだけ `U-*` へ昇格する。#424 root migration、#493 custody、#494 frontmatter reader、#444

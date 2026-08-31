@@ -175,6 +175,9 @@ deferred queue の正本は `<git-common-dir>/ut-tdd-runtime/claude-memory-wake/
 昇格監査は同階層の`promoted/<idempotencyKey>.json`とする。schema、key、producer/consumer、retention/GC、
 replay/duplicate、marker計数と混在状態は `PLAN-L6-103 §1.2.1〜1.2.2` および
 `docs/design/harness/L6-function-design/memory.md` の同名節を参照し、実装PRで再発明しない。
+queueの時刻は初回durable `createdAt`とそこから固定`PT0S`で導出する`eligibleAfter`を正本とし、後刻retryは
+既存bytesから両値を再利用する。promotionの`promotedAt`は最初のdurable inbox entryの`createdAt`と同値に固定し、
+inbox-first recoveryも既存inboxから再利用する。wall clockをretryごとに再mintして同一keyをconflictさせてはならない。
 
 ## Issue #416 workspace routing追補 (2026-08-26)
 

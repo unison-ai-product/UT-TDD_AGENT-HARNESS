@@ -157,8 +157,8 @@ root の既存 GC に混ぜたりしない。deferred entry は次の exact JSON
 | `operationId` | 空でない文字列 |
 | `targetWorkspaceId` | lower-case hex 64 桁 |
 | `targetGeneration` | 検証済み marker の generation、空でない文字列 |
-| `createdAt` | RFC 3339 timestamp |
-| `eligibleAfter` | RFC 3339 timestamp（初回は `createdAt` 以上） |
+| `createdAt` | RFC 3339 timestamp。最初に durable create へ勝った queue bytes の値が authoritative |
+| `eligibleAfter` | `createdAt + PT0S`。固定 `deferredEligibilityDelay=PT0S` から算出し、retry 時刻から再計算しない |
 
 promotion marker は queue と別の exact JSON object とし、path は上記 `promoted/` 配下に固定する。
 
@@ -169,12 +169,18 @@ promotion marker は queue と別の exact JSON object とし、path は上記 `
 | `requestDigest` | queue item と同一の lower-case hex 16〜64 桁 |
 | `targetWorkspaceId` | queue item と同一の lower-case hex 64 桁 |
 | `inboxEntryId` | queue item から導出された非空文字列 |
-| `promotedAt` | RFC 3339 timestamp |
+| `promotedAt` | durable inbox entry の `createdAt` と byte-for-byte 同じ RFC 3339 timestamp |
 
 queue item の identity は `(requestDigest, targetWorkspaceId)` であり、`operationId` や marker の mtime を key に
 しない。producer は canonical request の存在を検証した後、stale exact-one group に限り `deferred/<key>.json` を
 exclusive-create する。同一 canonical bytes は成功扱い、同一 key の異なる bytes は
 `claude_deferred_projection_conflict` として既存 bytes を変更しない。
+
+時刻は retry ごとの wall clock を canonical identityへ混ぜない。queue の初回 create 候補だけが注入 clock から
+`createdAt`を採り、`eligibleAfter=createdAt+PT0S`を算出する。exclusive-create の既存検出または並列敗者は、既存
+queueをclosed-schemaで読み、request/workspace/keyを検証して、その durable `createdAt` / `eligibleAfter` を必ず
+再利用して canonical bytesを照合する。後刻retryが新しい時刻をmintして conflictにすることは禁止する。既存queueの
+時刻形式または固定差分が不正なら、上書きせず `claude_deferred_projection_conflict` とする。
 
 consumer は、対象 `workspaceId` の generation identity を検証して fresh になった Claude VS Code session の
 SessionStart/Stop wake boundary だけで deferred directory を読む。`targetWorkspaceId` が自身と一致し、request
@@ -183,6 +189,9 @@ path/digest、schema、key、queueの保存時に記録した `targetGeneration`
 現 session の fresh marker が同じ workspace IDであることを別途検証し、まず `inbox/<entry-stem>.json` を
 同一 canonical entry として exclusive-create し、次に `deferred/promoted/<key>.json` を exclusive-create する。
 既存 inbox または promoted marker が同一 bytes なら retry は成功扱いとし、異なる bytes は conflict にする。
+最初に durable createされた inbox entryの`createdAt`を論理 promotion timestamp とし、promotion markerの
+`promotedAt`へその値を複製する。inbox-first後に停止した recovery と並列敗者は既存inboxをclosed-schemaで読み、
+identityを検証して同じ`createdAt`を再利用する。retry時のwall clockから`promotedAt`を再mintしてはならない。
 queue item は監査用に保持し、promotion 後に削除・上書きしない。promotion marker が無い場合も inbox の同一
 identity を再検証して idempotently marker を補完できる。identity 不一致、破損、replay、duplicate、期限外 item は
 inbox を作らず fail-close とし、broadcast や別 workspace への再配送をしない。
@@ -255,6 +264,7 @@ L6 正本は `docs/design/harness/L6-function-design/memory.md`、L7 の検証�
 | `CANDIDATE-MEMWAKE-LIVENESS-006` | canonical request writer を失敗させてから publish を試みる | request 未永続化時の publish/queue は 0（request persists before publish） |
 | `CANDIDATE-MEMWAKE-LIVENESS-007` | 同一 workspace に fresh/stale marker、または別 workspace に fresh/stale markerを混在 | 同一 workspace は fresh wins=`live`、別 workspace は `ambiguous`。incompatible 混在は typed incompatible deny |
 | `CANDIDATE-MEMWAKE-LIVENESS-008` | deferred queue の key/path/schema/target を一軸ずつ変異し、fresh session で promotion/retry | exact schema/identity の一件だけ inboxへ昇格し、duplicate/replay/conflict/期限切れは inbox write 0 |
+| `CANDIDATE-MEMWAKE-LIVENESS-009` | queue作成またはinbox-first後にclockを進めて同じidentityをretryし、retry実装だけを「現在時刻で再mint」へ変異 | queueは初回durable `createdAt`と`eligibleAfter=createdAt+PT0S`を再利用しbytes不変。promotionはdurable inbox `createdAt`を`promotedAt`へ再利用しmarker bytes不変。後刻値でconflictする変異はRED |
 
 ## 4. Schedule と出口
 
