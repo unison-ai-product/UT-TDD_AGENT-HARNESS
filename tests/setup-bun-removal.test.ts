@@ -78,7 +78,7 @@ function generateConsumerTree(): string {
 const negativeCases: readonly BunRemovalCase[] = [
   {
     name: "(a) common/ut-tdd.mjs の Bun shebang",
-    expected: [".ut-tdd/bin/ut-tdd.mjs: Bun shebang"],
+    expected: [".ut-tdd/bin/ut-tdd.mjs: Bun shebang", ".ut-tdd/bin/ut-tdd.mjs: bun executable"],
     mutate: (root) => {
       const path = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
       writeFileSync(path, `#!/usr/bin/env bun\n${readFileSync(path, "utf8")}`, "utf8");
@@ -88,7 +88,11 @@ const negativeCases: readonly BunRemovalCase[] = [
     // 復活させる文字列は分割して組み立てる。literal で書くと本 test 自身が
     // runtime-portability の bun-runtime-spawn に刺さる (検出側 lint は正しく働いている)。
     name: `(b) common/run-bun.ts / ${["find", "Bun("].join("")}`,
-    expected: [".ut-tdd/bin/run-bun.ts: findBun function", ".ut-tdd/bin/run-bun.ts: run-bun path"],
+    expected: [
+      ".ut-tdd/bin/run-bun.ts: bun executable",
+      ".ut-tdd/bin/run-bun.ts: findBun function",
+      ".ut-tdd/bin/run-bun.ts: run-bun path",
+    ],
     mutate: (root) => {
       const fn = ["find", "Bun"].join("");
       const launcher = `function ${fn}(): string { throw new Error("bun"); }
