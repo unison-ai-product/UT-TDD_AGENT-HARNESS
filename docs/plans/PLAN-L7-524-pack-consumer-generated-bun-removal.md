@@ -44,7 +44,40 @@ dependencies:
     - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/470
-review_evidence: []
+review_evidence:
+  - reviewer: sol
+    review_kind: cross_agent
+    reviewed_at: "2026-08-31T06:51:40Z"
+    tests_green_at: "2026-08-31T06:50:30Z"
+    verdict: >-
+      non-author preflight PASS / blocking 0。生成consumerのBun到達0、source rollback buildの維持、
+      U-PACKBUN-003/004/006と独立mutation、#471/#472/#473/#463との非干渉を確認した。
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    effort: low
+    plan_revision: 3ee19e6d35d47eb11408d0c8f29df883d8771065
+    subject_head: 3ee19e6d35d47eb11408d0c8f29df883d8771065
+    evidence_path: tests/setup-bun-removal.test.ts
+    anchor_commit: 3ee19e6d35d47eb11408d0c8f29df883d8771065
+    scope: >-
+      PLAN-L7-522/L7-524、REVERSE-524、対test-design、setup/distribution/template/hook、
+      U-PACKBUN-003/004/006、spawn/import/global/allowlist/pinの検出力を対象とした。
+    citations:
+      - "src/setup/distribution.ts"
+      - "src/lint/project-hook.ts"
+      - "tests/setup-bun-removal.test.ts"
+      - "tests/ban-lint-detection-power.test.ts"
+      - "docs/plans/PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill.md"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/oracle-test-trace.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-31T06:50:30Z"
+        evidence_path: tests/setup-bun-removal.test.ts
+        output_digest: "sha256:0009cc3b3234d667f70915c3ea54c0b3a30611b0bcd5773e0227818b19bd7585"
+        anchor_commit: 3ee19e6d35d47eb11408d0c8f29df883d8771065
 ---
 
 # PLAN-L7-524: setup 生成成果物から Bun 到達経路を撤去する (S1-b)
