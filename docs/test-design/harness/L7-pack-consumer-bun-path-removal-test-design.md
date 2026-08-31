@@ -46,6 +46,8 @@ prefix `U-PACKBUN` は既存 registry と衝突しない
 | 全 slice 共通 | #470 / #471 / #472 | 参照: `U-PACKBUN-006` |
 
 `006` は各 slice の PR で個別に評価する (最後にまとめて 1 回ではない)。
+`U-PACKBUN-007` の実装 oracle は `tests/github-ci-policy.test.ts`、既存 deny-set の
+非弱体化証明は `tests/ban-lint-detection-power.test.ts` が所有する。
 `build` script や BAN 検出側 lint への混入は、混入した PR で検出されなければ意味がないためである。
 
 ## 4. Issue #450 受入条件との対応
