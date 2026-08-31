@@ -2,6 +2,7 @@
 title: "L7 Node toolchain provenance pair-freeze"
 plan: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 pair_kind: unit-test-design
+executed_at_layer: L7
 status: draft
 ---
 
