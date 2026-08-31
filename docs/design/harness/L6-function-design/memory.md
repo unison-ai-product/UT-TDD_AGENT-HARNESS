@@ -46,7 +46,7 @@ git common dir配下のruntime inboxへexclusive createする。Claude CodeのSt
 | --- | --- | --- |
 | `buildClaudeInboxEntry` | parse済み`MemoryEntry`と非空operation IDから配送DTOを作る。本文の権威昇格は禁止 | U-MEMWAKE-001〜003 |
 | `publishClaudeInboxEntry` | git common dirへ`wx`で保存。解決不能rootはfail-closeし、同一内容retryは冪等、同一ID異内容は拒否 | U-MEMWAKE-001〜002 / 004 |
-| `resolveLiveClaudeWorkspace` | shared runtime generationからschema-compatibleなworkspaceを列挙する。exact 1件がfreshなら`live`、exact 1件がstaleなら同じworkspace IDの`deferred`、0/複数/schema非互換/破損はtyped deny | U-MEMWAKE-007 / CANDIDATE-MEMWAKE-LIVENESS-002〜004 |
+| `resolveLiveClaudeWorkspace` | **現行互換API**。shared runtime generationからschema-compatibleなworkspaceを列挙し、fresh exact-oneだけ`ok:true`、stale/0/複数/schema非互換/破損は既存4値のtyped denyを返す。staleを`deferred`へ変えるのは後続の新route compositionであり、この関数と`U-MEMWAKE-007`を再定義しない | `U-MEMWAKE-007` |
 | `waitForClaudeMemory` | 正の有限待機値だけを受理し、未claim entryを選ぶ。generation identity検証後だけmarkerをrenewし、generationで旧watcherを停止し、claim成功時だけ配送済みinboxを除去する | U-MEMWAKE-001 / 005 / CANDIDATE-MEMWAKE-LIVENESS-001 |
 | `renderClaudeWakeMessage` | 本文を長さ上限付きJSON dataとしてescapeし、閉じmarkerを一つに保つ | U-MEMWAKE-003 |
 
@@ -62,9 +62,12 @@ Claudeとclosing reviewが15分watcherに保持されることを防ぐ（U-MEMW
 inbox v3 review entryはcanonical subject requestと通知先を分離する。producerはgit common dirのfresh
 generation markerからv3互換な生存Claude VS Code workspaceがexact 1件の場合だけ、その正規化
 SHA-256を`targetWorkspaceId`へ使う。Stop hookは自身のworkspace identityと一致するentryだけをclaimする。
-target 0件、複数件、schema非互換、破損では typed deny とし、request、publish、deferred queue の write を 0 にする。
-schema-compatible target が exact 1件で fresh なら `live`、stale なら canonical request 永続化後に同じ
-workspace ID の `deferred` queue を一度だけ作る（U-MEMWAKE-007 / CANDIDATE-MEMWAKE-LIVENESS-002〜004）。
+target 0件、複数件、schema非互換、破損では typed deny とする。denyでも canonical request は先に
+永続化して backlog として保持し、0にするのは live wake / inbox publish / deferred queue の downstream
+write だけである（request persistence 自体が失敗した場合だけ全 downstream write を0にする）。
+schema-compatible target が新しい route composition 上で logical workspace として exact 1件なら、fresh は
+`live`、全 marker stale は canonical request 永続化後に同じ workspace ID の `deferred` queue を一度だけ作る。
+これは新 candidate の意図的な差分であり、既存 `U-MEMWAKE-007`（現行APIの stale deny）を無宣言で反転させない。
 request digest/path/HEAD/revisionを配送都合で変更せず、絶対workspace pathも保存しない。
 
 ### Issue #454 稼働判定と遅延配送の差分 (PLAN-L6-103)
@@ -77,12 +80,78 @@ request digest/path/HEAD/revisionを配送都合で変更せず、絶対workspac
 | --- | --- | --- | --- |
 | schema-compatible + fresh | `live` | marker から検証した同一 `workspaceId` | canonical request → live publish |
 | schema-compatible + stale | `deferred` | **同じ** `workspaceId`（別候補へ再解決しない） | canonical request → deferred queue 一件 |
-| 0 / 複数 / incompatible / corrupt | typed deny | なし | request / publish / queue すべて 0 |
+| 0 / 複数 / incompatible / corrupt | typed deny | なし | canonical request は保持、publish / queue は0 |
 
 deferred queue の idempotency key は canonical request identity と target `workspaceId` から決定し、同一
 operation/content の retry は exclusive-create により一件へ収束する。同一 operation の異なる content は
 conflict として拒否し、既存 bytes を変更しない。stale 一件を `published` と報告したり wildcard/global broadcast
 へ広げたりしてはならない。
+
+#### deferred queue の保存・昇格契約
+
+queue は既存 `inbox` と同じ namespaceへ混ぜない。`runtimeRoot` を
+`<git-common-dir>/ut-tdd-runtime/claude-memory-wake` とした場合の正本は次だけである。
+
+```text
+runtimeRoot/deferred/<idempotencyKey>.json
+runtimeRoot/deferred/promoted/<idempotencyKey>.json
+```
+
+`readInbox` は `runtimeRoot/inbox/*.json` のみを読み、deferred fileを inbox entry として解釈しない。
+deferred entry は exact JSON object（追加キー、絶対 path、path traversal 不可）で、canonical bytes は
+RFC 8785/JCSとする。
+
+| key | 型 / 固定値 |
+| --- | --- |
+| `schemaVersion` | literal `ut-tdd.claude-deferred/v1` |
+| `purpose` | literal `review`（この deferred queue は canonical review request 専用。通常 memory inbox は対象外） |
+| `idempotencyKey` | `sha256(JCS([requestDigest, targetWorkspaceId]))` の lower-case hex 64桁 |
+| `requestDigest` | lower-case hex 16〜64桁 |
+| `requestPath` | `.ut-tdd/review/requests/<requestDigest>.json` |
+| `operationId` | 空でない文字列 |
+| `targetWorkspaceId` | lower-case hex 64桁 |
+| `targetGeneration` | 検証済み marker の generation、空でない文字列 |
+| `createdAt` / `eligibleAfter` | RFC 3339、`eligibleAfter >= createdAt` |
+
+promotion marker は queue と別の exact JSON object とし、path は上記 `promoted/` 配下に固定する。
+
+| key | 型 / 固定値 |
+| --- | --- |
+| `schemaVersion` | literal `ut-tdd.claude-deferred-promotion/v1` |
+| `idempotencyKey` | queue item と同一の lower-case hex 64桁 |
+| `requestDigest` | queue item と同一の lower-case hex 16〜64桁 |
+| `targetWorkspaceId` | queue item と同一の lower-case hex 64桁 |
+| `inboxEntryId` | queue item から導出された非空文字列 |
+| `promotedAt` | RFC 3339 timestamp |
+
+producer は canonical request の存在を確認してから、stale exact-one group に限り queue を exclusive-create
+する。同一 bytes は idempotent、同一 key の異なる bytes は `claude_deferred_projection_conflict` として
+拒否し既存 bytesを変えない。
+
+consumer は、自身の fresh Claude VS Code generation identity を検証した SessionStart/Stop wake boundary
+でだけ対象 workspace の deferred を走査する。request path/digest、schema、key、queue保存時の
+`targetGeneration` が検証できる itemだけを対象にする。`targetGeneration` は stale 判定時の証拠であり、
+再起動後の新しい generation と一致することは要求しない。現 session の fresh marker が同じ workspace ID
+であることを別途検証し、まず `inbox/<entry-stem>.json`へ同じ canonical entryとして exclusive-createし、
+次に `deferred/promoted/<idempotencyKey>.json`を exclusive-createする。既存 inbox/promoted marker の同一 bytes
+は retry 成功、異なる bytes は conflict。queue は監査用に保持し削除・上書きしない。promotion markerが欠けた
+場合は inbox identity を再検証して補完できる。破損、identity mismatch、replay、duplicate、期限外は inbox
+write 0で fail-closeし、別 workspaceへ再配送しない。
+
+queue item と promotion marker は既存 runtime と同じ7日 retentionとする。GC は `deferred/` と
+`deferred/promoted/` を明示走査し、`createdAt`/`promotedAt`から7日超のみを削除する。`inbox`の既存 glob GCへ
+混ぜない。promotion とGCの競合はatomic claim/single-flightで処理し、勝者不明なら削除せず次回へ回す。
+
+#### marker の計数と混在状態
+
+raw `.generation` marker 数は診断値であり、routeの exact-one は schema-compatible marker を canonical
+`workspaceId` で group 化した logical workspace 数で数える。group 内は fresh marker が1件でもあれば
+`fresh`（fresh wins）、freshがなく有効 markerが1件以上なら `stale`。incompatible/corrupt/identity検証不能
+が1件でもあれば全体を `incompatible_claude_workspace_schema` deny とする。
+
+同一 workspace の複数 stale markerは logical count 1なので `deferred`、fresh+stale は `live`。別 workspaceの
+fresh+stale、または複数 stale workspaceは `ambiguous_live_claude_workspace`。stale/fresh と incompatible の
+混在は `incompatible_claude_workspace_schema`。この aggregation を route、test oracle、診断表示の共通正本とする。
 
 `waitForClaudeMemory` の heartbeat は polling 中に更新できるが、closed marker schema、generation、canonical
 workspace ID、session identity の検証が成功した後だけ marker を renew する。検証前・検証失敗・別 generation・

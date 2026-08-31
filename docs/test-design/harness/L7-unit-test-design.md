@@ -1645,17 +1645,29 @@ CLI実配送（publish→hook stderr→exit 2）を固定する。
 ### Issue #454 liveness / deferred routing candidate oracle (PLAN-L6-103)
 
 これは docs-only pair-freeze の候補台帳であり、実装前のため `CANDIDATE-*` を正規 `U-*` として扱わない。
-対象は `resolveLiveClaudeWorkspace`、`waitForClaudeMemory`、canonical request writer、live publish/deferred
-queue の composition である。各負例は一軸ずつ変異し、別の guard が先に落ちる偽の網羅を避ける。
+対象は現行 `resolveLiveClaudeWorkspace` の4値互換API、後続 route composition、`waitForClaudeMemory`、
+canonical request writer、live publish/deferred queue の composition である。現行 U-MEMWAKE-007 の stale deny
+は維持し、stale→deferred は新しい candidate のみで検証する。各負例は一軸ずつ変異し、別の guard が先に落ちる
+偽の網羅を避ける。routing deny では canonical request を一件保持し、0件を期待するのは downstream write
+(live wake / inbox / deferred queue) だけとする。
 
 | ID | fixture / mutation | falsifiable oracle |
 | --- | --- | --- |
 | `CANDIDATE-MEMWAKE-LIVENESS-001` | generation、workspace ID、session identity、schema を検証済み markerへ固定し、fake/monotonic clock を15分超進めて heartbeat を反復する。heartbeat を止めた対照も実行する | 検証済み marker の renew 後は route=`live` のまま、停止対照だけが stale になる。未検証 markerをtouchして live にする変異は RED |
-| `CANDIDATE-MEMWAKE-LIVENESS-002` | schema-compatible な marker を一つだけ stale にし、canonical request persistence を成功させる | route は `deferred`、target は元 marker と同じ `workspaceId`、deferred queue は一件。別 IDへの再解決、`published`丸めは RED |
-| `CANDIDATE-MEMWAKE-LIVENESS-003` | stale marker を二つ配置する（workspace ID は別々） | ambiguous typed deny、canonical request/live publish/deferred queue の write は全て0 |
-| `CANDIDATE-MEMWAKE-LIVENESS-004` | marker JSONを破損、または inbox schemaを非互換にする（各一軸） | typed deny、全 write 0。wildcard/global broadcast、PID/current-worktree inference は観測されない |
-| `CANDIDATE-MEMWAKE-LIVENESS-005` | 同じ canonical request の operation/content を直列と並列で retry する | exclusive-create により request と live/deferred delivery は各一件へ収束し、異内容同一 operation は conflict・既存 bytes 不変 |
+| `CANDIDATE-MEMWAKE-LIVENESS-002` | schema-compatible な marker を一つだけ stale にし、canonical request persistence を成功させる | route は `deferred`、target は元 marker と同じ `workspaceId`、canonical request は一件保持、固定 queue は一件。別 IDへの再解決、`published`丸めは RED |
+| `CANDIDATE-MEMWAKE-LIVENESS-003` | stale marker を二つ配置する（workspace ID は別々） | ambiguous typed deny、canonical request は一件保持、live/inbox/deferred の downstream write は全て0 |
+| `CANDIDATE-MEMWAKE-LIVENESS-004` | marker JSONを破損、または inbox schemaを非互換にする（各一軸） | typed deny、canonical request は一件保持、live/inbox/deferred の downstream write は0。wildcard/global broadcast、PID/current-worktree inference は観測されない |
+| `CANDIDATE-MEMWAKE-LIVENESS-005` | 同じ canonical request の operation/content を直列と並列で retry する | exclusive-create により request は一件、同一 key の live/deferred delivery は各一件へ収束し、異内容同一 operation は conflict・既存 bytes 不変 |
 | `CANDIDATE-MEMWAKE-LIVENESS-006` | canonical request writer を失敗させたまま live/deferred publish を呼ぶ | request persists before publish が成立し、publish/queue write は0。request再mintやPR-comment fallbackは RED |
+| `CANDIDATE-MEMWAKE-LIVENESS-007` | 同一 workspace に fresh/stale marker、または別 workspace に fresh/stale markerを混在 | 同一 workspace は fresh wins=`live`、別 workspace は `ambiguous`。incompatible 混在は typed incompatible deny |
+| `CANDIDATE-MEMWAKE-LIVENESS-008` | deferred queue の key/path/schema/target を一軸ずつ変異し、fresh session で promotion/retry | `runtimeRoot/deferred/<idempotencyKey>.json` の exact schema/identity の一件だけ inboxへ昇格。duplicate/replay/conflict/期限切れは inbox write 0、queue は保持 |
+
+deferred queue は `runtimeRoot=<git-common-dir>/ut-tdd-runtime/claude-memory-wake`、schema
+`ut-tdd.claude-deferred/v1`、purpose=`review`、idempotency key
+`sha256(JCS([requestDigest,targetWorkspaceId]))`、`deferred/promoted/` の
+`ut-tdd.claude-deferred-promotion/v1` marker、SessionStart/Stop の fresh session promotion、7日 retention/GC を
+固定契約とする。`targetGeneration` は stale観測の証拠であり新sessionのgenerationとの一致条件ではない。
+inboxの既存globへ混ぜない。
 
 実装 PR では各 candidate にテスト path、時計注入、spy の write count、対象 HEAD/revision と digest を citation し、
 反証可能な実測を得たものだけ `U-*` へ昇格する。#424 root migration、#493 custody、#494 frontmatter reader、#444
