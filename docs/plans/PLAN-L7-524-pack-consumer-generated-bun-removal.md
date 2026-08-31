@@ -60,6 +60,13 @@ Node producer (Slice 2) は所有しない。source の `build: bun build ...` �
 `PLAN-L6-93` §5.2 の rollback 条件として不変であり、生成 consumer の `build` script は
 配布物で到達する必要がないため生成時に除去する。
 
+### 1.1 親契約への束縛
+
+この PLAN は `PLAN-L7-522` の S1-b 所有 / trace PLAN であり、新しい規範・oracle・受入条件を
+追加しない。所有境界は親 §2.1 の生成 inventory、§3.3 の検出能力不変条件、§5.3 の
+slice ↔ 子 Issue 束縛に限る。方式判断が必要になった場合は実装を止め、親 PLAN の
+docs-only delta review へ戻す。
+
 ## 2. 実装対象
 
 - `src/setup/templates.ts` の Node wrapper、生成 hook、生成 CI、案内文、および `run-bun.ts` の撤去
@@ -76,9 +83,26 @@ Node producer (Slice 2) は所有しない。source の `build: bun build ...` �
 - source `package.json` の `build` script が不変である。
 - exact-head CI、非著者レビュー、Reverse-524 R4 は merge gate で確認する。
 
+## 3.1 正規 oracle の束縛
+
+`U-PACKBUN-003` は生成 consumer tree 全体の再帰走査、`U-PACKBUN-004` は shebang、
+launcher、consumer CI、案内文、生成 package script の5軸を独立に復活させる negative
+control である。各 case は期待 finding 集合と完全一致し、非空判定で別軸を隠してはならない。
+`U-PACKBUN-006` は親 §3.3 の凍結サンプルに対する behavioral 検査であり、deny rule の
+削除、allowlist path の追加、pin 引き上げ、matcher 弱体化を fail-close する。source の
+`package.json` build script と S1-a / S1-c / Slice 2 の責務は変更しない。
+
 ## 4. 方針
 
 契約の正本は `PLAN-L7-522` であり、この子 PLAN は実装所有と trace を定義するだけである。
 新しい規範が必要になった場合は本 PLAN に追加せず、親 PLAN の docs-only delta review へ戻す。
 negative control は `not.toEqual([])` ではなく case ごとの finding 集合を固定し、別軸の検出で
 変異の生存を隠さない。検出側 lint の変更は行わず、behavioral oracle で能力低下を監視する。
+
+## 5. 検証対と運用境界
+
+対の test-design は `docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md`、
+slice-scoped Reverse は `PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill.md`。
+本実装は `PLAN-L7-522` の confirm や Issue #450 の program closure を単独では主張しない。
+S1-a (#471)、S1-c (#472)、Node producer / source build (#473)、Pack publication は別の
+正本と Issue が所有する。
