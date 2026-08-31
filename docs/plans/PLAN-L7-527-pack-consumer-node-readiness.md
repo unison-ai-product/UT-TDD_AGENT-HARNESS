@@ -38,7 +38,7 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/471
 review_evidence:
   - reviewer: codex
-    review_kind: cross_agent
+    review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-31T02:55:01Z"
     tests_green_at: "2026-08-31T02:54:30Z"
     verdict: >-
