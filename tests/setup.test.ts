@@ -1062,13 +1062,13 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks call the shell-free native Bun launcher",
+      "Generated Claude/Codex hooks invoke the project-local Node wrapper directly",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "Do not rely on a global `bun link`",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Native Bun itself must still resolve",
+      "Node.js 22.18 or newer must be available",
     );
   });
 
