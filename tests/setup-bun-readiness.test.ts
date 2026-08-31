@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -40,9 +40,13 @@ function createCleanConsumer(): string {
     mkdirSync(dirname(destination), { recursive: true });
     cpSync(join(REPO_ROOT, file), destination);
   }
-  cpSync(join(REPO_ROOT, "docs", "templates", "adapter"), join(consumer, "docs", "templates", "adapter"), {
-    recursive: true,
-  });
+  cpSync(
+    join(REPO_ROOT, "docs", "templates", "adapter"),
+    join(consumer, "docs", "templates", "adapter"),
+    {
+      recursive: true,
+    },
+  );
   return consumer;
 }
 
@@ -121,8 +125,8 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     expect(serializedChecks.toLowerCase()).not.toContain(LEGACY);
 
     // 代わりに engines.node 準拠の node check と git check が居ること。
-    expect(names).toContain("node>=24.13.0");
+    expect(names).toContain("node@24.13.0");
     expect(names).toContain("git");
-    expect(readiness.checks.find((check) => check.name === "node>=24.13.0")?.ok).toBe(true);
+    expect(readiness.checks.find((check) => check.name === "node@24.13.0")?.ok).toBe(true);
   });
 });

@@ -1057,7 +1057,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     });
     expect(blocked.ok).toBe(false);
     expect(blocked.checks.filter((c) => !c.ok).map((c) => c.name)).toEqual([
-      "node>=24.13.0",
+      "node@24.13.0",
       "git",
       "gh",
       "ut-tdd-cli",

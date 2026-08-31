@@ -318,9 +318,10 @@ function satisfiesRequiredNode(version: string | null, required: string | null):
     if (!partial) return comparison === 0;
 
     // A bare partial/x-range is the corresponding bounded minor/major range.
-    const boundary = wildcardIndex === 0 || parts.length === 1
-      ? { major: lower.major + 1, minor: 0, patch: 0 }
-      : { major: lower.major, minor: lower.minor + 1, patch: 0 };
+    const boundary =
+      wildcardIndex === 0 || parts.length === 1
+        ? { major: lower.major + 1, minor: 0, patch: 0 }
+        : { major: lower.major, minor: lower.minor + 1, patch: 0 };
     return comparison >= 0 && compareNodeVersions(observed, boundary) < 0;
   };
 
@@ -330,7 +331,8 @@ function satisfiesRequiredNode(version: string | null, required: string | null):
       const lower = parseNodeVersion(hyphen[1]);
       const upper = parseNodeVersion(hyphen[2]);
       return Boolean(
-        lower && upper &&
+        lower &&
+          upper &&
           compareNodeVersions(observed, lower) >= 0 &&
           compareNodeVersions(observed, upper) <= 0,
       );
@@ -402,10 +404,11 @@ export function buildConsumerReadinessPlan(input: {
         : input.hasCodex
           ? "codex-only"
           : "standalone";
-  const nodeCheckName =
-    input.requiredNodeVersion && /^v?\d+\.\d+\.\d+(?:[-+].*)?$/.test(input.requiredNodeVersion)
-      ? `node>=${input.requiredNodeVersion}`
-      : `node engines.node (${input.requiredNodeVersion ?? "missing"})`;
+  // check 名は評価の意味論と一致させる。bare version の `engines.node` は npm 意味論で
+  // **厳密一致**なので `node>=x` と表示してはならない (24.14.0 が落ちる理由が読めなくなる)。
+  const nodeCheckName = input.requiredNodeVersion
+    ? `node@${input.requiredNodeVersion}`
+    : "node engines.node (missing)";
   const checks = [
     {
       name: nodeCheckName,
