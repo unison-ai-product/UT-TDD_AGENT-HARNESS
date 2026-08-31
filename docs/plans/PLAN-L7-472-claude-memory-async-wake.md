@@ -108,8 +108,14 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 10. memory/reviewのsubject worktreeと通知先を分離する。git common dirのfresh generation markerから
     inbox schema互換な生存Claude VS Code workspaceがexact 1件だけ得られた場合、そのSHA-256 identityへ
     wakeを束縛する。別worktreeから発行してもcanonical request digest/path/HEAD/revisionを変更しない。
-11. 生存target 0件、複数workspace、stale marker、schema非互換はtyped non-successとしてcanonical
-    requestをbacklogに残す。authoring worktree宛てのfalse `published`、推測配送、request再発行を禁止する。
+11. 生存target 0件、複数workspace、schema非互換、破損markerはtyped denyとする。denyでも canonical request は
+    先に永続化して backlog として保持し、0にするのは live wake / inbox publish / deferred queue の downstream
+    write だけである。schema-compatible targetが新しい route composition 上で logical workspace としてexact 1件、
+    全 marker が stale の場合だけ、canonical request永続化後に **同じworkspace ID**のtyped `deferred` queueを一度だけ
+    作る。authoring worktree宛てのfalse `published`、推測配送、wildcard/global broadcast、request再発行を禁止する。
+12. `waitForClaudeMemory`のheartbeatはgeneration identity（closed schema、generation、canonical workspace ID、
+    session identity）を検証した後だけmarkerをrenewする。未検証・別generation・別workspace・破損markerをtouchして
+    stale判定を延命してはならない。heartbeatは注入可能なfake/monotonic clockで検証する。
 
 ## 設計と検証の対
 
@@ -138,6 +144,40 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 - [x] typecheck/Biome/plan lintがgreen。
 - [x] 実HARNESSメモリ通知でClaude sessionが即時再開する。
 - [x] non-author familyのclosing reviewで未解決FLAGがない。
+
+## Issue #454 liveness / deferred routing pair-freeze delta (2026-08-31)
+
+> **Correction note (2026-08-31)**: 初版のこの delta が routing deny 時の canonical request まで write 0 と
+> 記載していた点、および既存 `U-MEMWAKE-007` と stale の意味を混在させていた点を訂正する。親 PLAN の
+> 既存 request backlog 契約と U-MEMWAKE-007 は維持し、訂正の正本は
+> `PLAN-L6-103-claude-wake-liveness-deferred-routing` §1.2〜§1.2.2 とする。
+
+Issue #454 は既存の Issue #416 workspace identity 契約の下に、stale marker の扱いと heartbeat の検証境界を追加する。
+この delta は後続実装の方式を発明せず、L6 `memory.md` と L7 unit-test design の candidate oracle を同時に更新する。
+正本は `PLAN-L6-103-claude-wake-liveness-deferred-routing` であり、source/test code、hook、CLI、#424 root migration、
+#493/#494 は本 PLAN の変更対象外である。
+
+| 境界 | 凍結値 |
+| --- | --- |
+| routing type | `live | deferred` の typed result。fresh exact-one は `live`、stale exact-one は同じ `workspaceId` の `deferred` |
+| deny | 0件、複数件、incompatible、corrupt は typed deny。canonical request は先に保持し、live wake/inbox/deferred queue の downstream write は0 |
+| ordering | canonical request の exclusive-create 成功 → identity/schema/freshness 検証 → live publish または deferred queue |
+| retry | 同一 operation/content は exclusive-create idempotent。異内容は conflict、既存 bytes 不変 |
+| heartbeat | generation identity 検証後だけ renew。fake/monotonic clock の 15分超 heartbeat を fresh として反証可能にする |
+
+この delta は既存 `U-MEMWAKE-007` を再定義しない。現行 `resolveLiveClaudeWorkspace` は
+`no_live_claude_workspace`、`ambiguous_live_claude_workspace`、`stale_claude_workspace`、
+`incompatible_claude_workspace_schema` の4値を返す互換APIとして維持し、stale deny はそのまま残す。
+staleを`deferred`へ写像するのは PLAN-L6-103 が新設する明示的な route composition の責務であり、
+実装PRで既存 U-* の期待値を無宣言で反転させてはならない。
+
+deferred queue の正本は `<git-common-dir>/ut-tdd-runtime/claude-memory-wake/deferred/<idempotencyKey>.json`、
+昇格監査は同階層の`promoted/<idempotencyKey>.json`とする。schema、key、producer/consumer、retention/GC、
+replay/duplicate、marker計数と混在状態は `PLAN-L6-103 §1.2.1〜1.2.2` および
+`docs/design/harness/L6-function-design/memory.md` の同名節を参照し、実装PRで再発明しない。
+queueの時刻は初回durable `createdAt`とそこから固定`PT0S`で導出する`eligibleAfter`を正本とし、後刻retryは
+既存bytesから両値を再利用する。promotionの`promotedAt`は最初のdurable inbox entryの`createdAt`と同値に固定し、
+inbox-first recoveryも既存inboxから再利用する。wall clockをretryごとに再mintして同一keyをconflictさせてはならない。
 
 ## Issue #416 workspace routing追補 (2026-08-26)
 
