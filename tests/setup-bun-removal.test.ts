@@ -13,10 +13,21 @@ import {
 type BunRemovalCase = {
   name: string;
   mutate: (consumerRoot: string) => void;
+  /**
+   * 変異が生む finding を **case ごとに固定**する。`not.toEqual([])` の非空 assertion では
+   * 別軸の finding で通ってしまい、宣言した変異が生き残っても Red にならない
+   * (PR #478 Codex/Sol closing review blocking 2)。
+   */
+  expected: readonly string[];
 };
 
 const forbiddenGeneratedPatterns: readonly [string, RegExp][] = [
-  ["bun executable", /(?:^|[\s"'`])bun(?:\.exe)?(?=$|[\s"'`])/i],
+  // 実行子は変種ごとに独立ラベルで測る。1 本の正規表現へ畳むと、どの到達形が
+  // 残っているか判別できず、変種の取りこぼしも見えない (同 review blocking 1)。
+  ["bun executable", /(?:^|[\s"'`])bun(?=$|[\s"'`])/i],
+  ["bunx executable", /(?:^|[\s"'`])bunx(?=$|[\s"'`])/i],
+  ["bun.exe executable", /(?:^|[\s"'`])bun\.exe(?=$|[\s"'`])/i],
+  ["bun.cmd executable", /(?:^|[\s"'`])bun\.cmd(?=$|[\s"'`])/i],
   ["Bun shebang", /#!\/usr\/bin\/env bun\b/i],
   ["setup-bun action", /oven-sh\/setup-bun\b/i],
   ["run-bun path", /\brun-bun\.ts\b/i],
@@ -67,6 +78,7 @@ function generateConsumerTree(): string {
 const negativeCases: readonly BunRemovalCase[] = [
   {
     name: "(a) common/ut-tdd.mjs の Bun shebang",
+    expected: [".ut-tdd/bin/ut-tdd.mjs: Bun shebang"],
     mutate: (root) => {
       const path = join(root, ".ut-tdd", "bin", "ut-tdd.mjs");
       writeFileSync(path, `#!/usr/bin/env bun\n${readFileSync(path, "utf8")}`, "utf8");
@@ -76,6 +88,7 @@ const negativeCases: readonly BunRemovalCase[] = [
     // 復活させる文字列は分割して組み立てる。literal で書くと本 test 自身が
     // runtime-portability の bun-runtime-spawn に刺さる (検出側 lint は正しく働いている)。
     name: `(b) common/run-bun.ts / ${["find", "Bun("].join("")}`,
+    expected: [".ut-tdd/bin/run-bun.ts: findBun function", ".ut-tdd/bin/run-bun.ts: run-bun path"],
     mutate: (root) => {
       const fn = ["find", "Bun"].join("");
       const launcher = `function ${fn}(): string { throw new Error("bun"); }
@@ -85,6 +98,10 @@ const negativeCases: readonly BunRemovalCase[] = [
   },
   {
     name: "(c) consumer CI の setup-bun / bun install / bun run",
+    expected: [
+      ".github/workflows/harness-check.yml: bun executable",
+      ".github/workflows/harness-check.yml: setup-bun action",
+    ],
     mutate: (root) => {
       const path = join(root, ".github", "workflows", "harness-check.yml");
       writeFileSync(
@@ -96,6 +113,7 @@ const negativeCases: readonly BunRemovalCase[] = [
   },
   {
     name: "(d) adapter の案内文",
+    expected: [".claude/commands/ut-tdd-test.md: bun executable"],
     mutate: (root) => {
       const path = join(root, ".claude", "commands", "ut-tdd-test.md");
       writeFileSync(path, `${readFileSync(path, "utf8")}\nRun bun run lint.\n`, "utf8");
@@ -103,6 +121,7 @@ const negativeCases: readonly BunRemovalCase[] = [
   },
   {
     name: "(e) distribution.ts の package.json test script",
+    expected: ["package.json: bun executable"],
     mutate: (root) => {
       const path = join(root, "package.json");
       const packageJson = JSON.parse(readFileSync(path, "utf8")) as {
@@ -124,11 +143,15 @@ describe("Issue #470 S1-b setup generated Bun removal", () => {
     }
   });
 
-  it.each(negativeCases)("U-PACKBUN-004 $name: the oracle turns Red", ({ mutate }) => {
+  it.each(negativeCases)("U-PACKBUN-004 $name: the oracle turns Red", ({ mutate, expected }) => {
     const consumerRoot = generateConsumerTree();
     try {
+      // baseline は 003 と同じく空でなければならない。ここが空でなければ以降の delta が
+      // 意味を失うので先に固定する。
+      expect(scanGeneratedConsumerTree(consumerRoot)).toEqual([]);
       mutate(consumerRoot);
-      expect(scanGeneratedConsumerTree(consumerRoot)).not.toEqual([]);
+      // 非空ではなく **この変異が生む finding 集合そのもの**を要求する。
+      expect(scanGeneratedConsumerTree(consumerRoot)).toEqual([...expected].sort());
     } finally {
       rmSync(consumerRoot, { recursive: true, force: true });
     }
