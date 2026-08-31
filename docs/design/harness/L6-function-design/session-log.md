@@ -112,7 +112,7 @@ compressPlanDigest(events, planId, prev):
 
 - 生: `.ut-tdd/logs/session/<session_id>.jsonl` (gitignored)
 - 圧縮: `.ut-tdd/logs/plan/<plan_id>.digest.json` (gitignored、durable)
-- hook 実体: `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (bun, 環境非依存)。**variant 分岐 = stdin JSON の `hook_event_name` を正 (SessionStart / PostToolUse / Stop) とし、CLI command (`session start` / `hook post-tool-use` / `session summary`) を fallback** に持つ (m-2)。settings.json は 3 event に対応する UT-TDD CLI command を登録し、Claude Code が渡す `hook_event_name` で handler を選ぶ。
+- hook 実体: `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (project-local Node wrapper 経由、環境非依存)。**variant 分岐 = stdin JSON の `hook_event_name` を正 (SessionStart / PostToolUse / Stop) とし、CLI command (`session start` / `hook post-tool-use` / `session summary`) を fallback** に持つ (m-2)。settings.json は 3 event に対応する UT-TDD CLI command を登録し、Claude Code が渡す `hook_event_name` で handler を選ぶ。
 - `.gitignore` に `.ut-tdd/logs/` を追加。
 - `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash|PowerShell)` / `Stop` に登録。**`blockOnFailure` を付けない (fail-open)**。Windows ネイティブ Claude Code の主シェルツール `PowerShell` を matcher に含める (PLAN-RECOVERY-13 / issue #86: 除外時は Windows セッションのシェル操作が session log / hook_events から構造的に欠落する)。
 
@@ -133,13 +133,14 @@ compressPlanDigest(events, planId, prev):
 ## 2026-07-22 shell-free hook invocation 追加設計 (Issue #123)
 
 session lifecycle hook の意味論は command line 文字列ではなく、`HookInvocation { executable, args }`
-で表す。Claude serializer は `executable: "node"` と、native Bun launcher・entrypoint・subcommandを
+で表す。Claude serializer は `executable: "node"` と、project-local `.ut-tdd/bin/ut-tdd.mjs`・subcommand を
 token 化した `argv` を公式 exec form の `command` / `args` へ別々に写像し、`session start`、`hook post-tool-use`、`session summary` の
 event 意味論と fail-open 方針を温存する。空白結合、quote 再構築、shell operator、shell executable
 による再解釈は禁止する。
 
-Windows の oracle は hook host から Bun entrypoint までの dispatch ancestry を観測し、その区間に
-`sh.exe`、`bash.exe`、`cmd.exe`、`powershell.exe`、`pwsh.exe` または hook dispatch 用
-`conhost.exe` が存在しないことを要求する。Bun entrypoint より後で session handler が明示的に起動する
-子プロセスは別責務であり、この oracle の通過根拠に混同しない。対応する L7 oracle は
+Windows の oracle は process-tree ancestry の実測を主張せず、project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) の
+直接 executable spawn、`windowsHide: true`、shell host token 不在を wrapper source で検査する。entrypoint 不在時は
+exit 127 で fail-close する。対応する実測 fixture (`tests/hook-native-launcher.test.ts`) はこの source 契約と欠落 entrypoint の
+exit code を検証する。wrapper より後で session handler が明示的に起動する子プロセスは別責務であり、この oracle の通過根拠に混同しない。
+対応する L7 oracle は
 `U-HOOKEXEC-001..008` とする。

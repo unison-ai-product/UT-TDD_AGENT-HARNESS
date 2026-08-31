@@ -41,7 +41,7 @@ dependencies:
   references:
     - docs/plans/PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill.md
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
-    - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
+    - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md # parent/oracle source only; not this PLAN's pair
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/470
 review_evidence:
@@ -134,8 +134,11 @@ negative control は `not.toEqual([])` ではなく case ごとの finding 集�
 
 ## 5. 検証対と運用境界
 
-対の test-design は `docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md`、
+対の test-design は frontmatter の `pair_artifact` が指す
+`docs/test-design/harness/L7-pack-consumer-generated-bun-removal-backfill-test-design.md`、
 slice-scoped Reverse は `PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill.md`。
+`docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md` は親
+`PLAN-L7-522` の oracle source / scope reference であり、この PLAN の pair ではない。
 本実装は `PLAN-L7-522` の confirm や Issue #450 の program closure を単独では主張しない。
 S1-a (#471)、S1-c (#472)、Node producer / source build (#473)、Pack publication は別の
 正本と Issue が所有する。
