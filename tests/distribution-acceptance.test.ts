@@ -55,6 +55,15 @@ function runBun(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.en
   return spawnSync("bun", args, { cwd, encoding: "utf8", env, timeout: 300_000 });
 }
 
+function runNode(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+  return spawnSync(process.execPath, args, {
+    cwd,
+    encoding: "utf8",
+    env,
+    timeout: 300_000,
+  });
+}
+
 function runBareUtTdd(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
   if (process.platform === "win32") {
     const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
@@ -307,7 +316,9 @@ describe("clean distribution local acceptance smoke", () => {
         ]),
       );
 
-      const distribution = runBun(
+      // Readiness must observe the real Node runtime; running this command through Bun
+      // would keep the retired Bun path on the acceptance route.
+      const distribution = runNode(
         cleanRoot,
         ["src/cli.ts", "distribution", "plan", "--tag", "v0.1.0", "--json"],
         env,

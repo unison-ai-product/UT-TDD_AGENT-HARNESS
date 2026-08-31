@@ -1,3 +1,4 @@
+import { satisfies, valid, validRange } from "semver";
 import { COMMON_FILES } from "./templates.ts";
 
 export interface CleanDistributionPlan {
@@ -251,19 +252,17 @@ export function gitAddPathspecCommands(
   return commands;
 }
 
-function hasMinimumBun(version: string, minimum = "1.3.0"): boolean {
-  const parse = (v: string): number[] => {
-    const match = v.match(/\d+(?:\.\d+){0,2}/)?.[0] ?? "0";
-    return match.split(".").map((n) => Number.parseInt(n, 10));
-  };
-  const a = parse(version);
-  const b = parse(minimum);
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const av = a[i] ?? 0;
-    const bv = b[i] ?? 0;
-    if (av !== bv) return av > bv;
-  }
-  return true;
+/**
+ * PLAN-L7-522 §2.2 (S1-a): readiness の runtime 検査は Bun ではなく Node を見る。
+ * 判定基準は consumer package root の `engines.node` であり、ここで別の pin を持たない
+ * (第二の正本を作らない)。`required` が空なら fail-close する。
+ */
+function satisfiesRequiredNode(version: string | null, required: string | null): boolean {
+  const observed = version?.trim();
+  const range = required?.trim();
+  return Boolean(
+    observed && range && valid(observed) && validRange(range) && satisfies(observed, range),
+  );
 }
 
 export function buildCleanDistributionPlan(input: {
@@ -307,7 +306,8 @@ export function buildCleanDistributionPlan(input: {
 }
 
 export function buildConsumerReadinessPlan(input: {
-  bunVersion: string | null;
+  nodeVersion: string | null;
+  requiredNodeVersion: string | null;
   hasGit: boolean;
   hasGh: boolean;
   hasUtTddCli?: boolean;
@@ -319,7 +319,7 @@ export function buildConsumerReadinessPlan(input: {
   tag?: string;
   cleanRepo?: string;
 }): ConsumerReadinessPlan {
-  const bunOk = Boolean(input.bunVersion && hasMinimumBun(input.bunVersion));
+  const nodeOk = satisfiesRequiredNode(input.nodeVersion, input.requiredNodeVersion);
   const mode =
     input.hasClaude && input.hasCodex
       ? "hybrid"
@@ -328,11 +328,20 @@ export function buildConsumerReadinessPlan(input: {
         : input.hasCodex
           ? "codex-only"
           : "standalone";
+  // check 名は評価の意味論と一致させる。bare version の `engines.node` は npm 意味論で
+  // 厳密一致なので `node>=x` と表示してはならない。
+  const nodeCheckName = input.requiredNodeVersion
+    ? `node@${input.requiredNodeVersion}`
+    : "node engines.node (missing)";
   const checks = [
     {
-      name: "bun>=1.3",
-      ok: bunOk,
-      message: bunOk ? `Bun ${input.bunVersion}` : "Install Bun 1.3 or newer before setup",
+      name: nodeCheckName,
+      ok: nodeOk,
+      message: nodeOk
+        ? `Node ${input.nodeVersion}`
+        : input.requiredNodeVersion
+          ? `Install Node ${input.requiredNodeVersion} or newer before setup (observed ${input.nodeVersion ?? "none"})`
+          : "package.json engines.node is missing; cannot verify the Node runtime",
     },
     {
       name: "git",
@@ -373,7 +382,7 @@ export function buildConsumerReadinessPlan(input: {
   const tag = input.tag ?? "v0.1.0";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
   return {
-    ok: bunOk && input.hasGit && (input.hasUtTddCli ?? true),
+    ok: nodeOk && input.hasGit && (input.hasUtTddCli ?? true),
     checks,
     mode,
     workspace: {
