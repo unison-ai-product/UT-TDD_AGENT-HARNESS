@@ -1071,6 +1071,32 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "The node executable must resolve without a PowerShell or cmd shim",
     );
+    // engines.node follows npm range semantics rather than a numeric minimum:
+    // a compatible patch is accepted, while a new major outside ^24 is not.
+    expect(
+      buildConsumerReadinessPlan({
+        nodeVersion: "24.13.5",
+        requiredNodeVersion: ">=24.13.0 <25",
+        hasGit: true,
+        hasGh: false,
+        hasUtTddCli: true,
+        hasClaude: false,
+        hasCodex: false,
+        repoRoot: "/consumer",
+      }).ok,
+    ).toBe(true);
+    expect(
+      buildConsumerReadinessPlan({
+        nodeVersion: "25.0.0",
+        requiredNodeVersion: "^24.13.0",
+        hasGit: true,
+        hasGh: false,
+        hasUtTddCli: true,
+        hasClaude: false,
+        hasCodex: false,
+        repoRoot: "/consumer",
+      }).ok,
+    ).toBe(false);
   });
 
   it("U-SETUP-005: recordSetupState signals 4 フィールド strip / 上書き / token 非含", () => {

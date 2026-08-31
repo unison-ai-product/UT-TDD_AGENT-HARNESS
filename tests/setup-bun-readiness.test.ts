@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const temporaryDirectories: string[] = [];
@@ -27,6 +27,24 @@ afterEach(() => {
 const REPO_ROOT = process.cwd();
 const CLI = join(REPO_ROOT, "src", "cli.ts");
 const LEGACY = ["b", "un"].join("");
+
+function createCleanConsumer(): string {
+  const consumer = temporaryDirectory();
+  // Keep the fixture small while satisfying the distribution plan's required
+  // paths. The setup command itself must run against this consumer root.
+  for (const file of ["README.md", "LICENSE", "package.json"]) {
+    cpSync(join(REPO_ROOT, file), join(consumer, file));
+  }
+  for (const file of ["src/cli.ts", "src/setup/index.ts"]) {
+    const destination = join(consumer, file);
+    mkdirSync(dirname(destination), { recursive: true });
+    cpSync(join(REPO_ROOT, file), destination);
+  }
+  cpSync(join(REPO_ROOT, "docs", "templates", "adapter"), join(consumer, "docs", "templates", "adapter"), {
+    recursive: true,
+  });
+  return consumer;
+}
 
 function bunFreeEnv(home: string): NodeJS.ProcessEnv {
   const nodeDir = join(process.execPath, "..");
@@ -63,10 +81,24 @@ function readinessOf(cwd: string, env: NodeJS.ProcessEnv) {
   ).readiness;
 }
 
+function setupConsumer(cwd: string, env: NodeJS.ProcessEnv): void {
+  const run = spawnSync(process.execPath, [CLI, "setup", "--solo"], {
+    cwd,
+    env,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  expect(run.status, run.stderr || run.stdout).toBe(0);
+  expect(existsSync(join(cwd, ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(true);
+}
+
 describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
   it("U-PACKBUN-001: readiness is ok in a Bun-free environment", () => {
     const home = temporaryDirectory();
-    const readiness = readinessOf(REPO_ROOT, bunFreeEnv(home));
+    const consumer = createCleanConsumer();
+    const env = bunFreeEnv(home);
+    setupConsumer(consumer, env);
+    const readiness = readinessOf(consumer, env);
 
     // Bun が本当に到達不能であることを先に固定する (環境が緩いと恒真テストになる)。
     const probe = spawnSync(LEGACY, ["--version"], { env: bunFreeEnv(home), shell: false });
@@ -77,13 +109,16 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
 
   it("U-PACKBUN-002: no Bun check or Bun guidance remains in the readiness surface", () => {
     const home = temporaryDirectory();
-    const readiness = readinessOf(REPO_ROOT, bunFreeEnv(home));
+    const consumer = createCleanConsumer();
+    const env = bunFreeEnv(home);
+    setupConsumer(consumer, env);
+    const readiness = readinessOf(consumer, env);
     const names = readiness.checks.map((check) => check.name);
-    const serialized = JSON.stringify(readiness);
+    const serializedChecks = JSON.stringify(readiness.checks);
 
     expect(names).not.toContain(`${LEGACY}>=1.3`);
-    expect(serialized).not.toContain("Install Bun 1.3 or newer before setup");
-    expect(serialized.toLowerCase()).not.toContain(LEGACY);
+    expect(serializedChecks).not.toContain("Install Bun 1.3 or newer before setup");
+    expect(serializedChecks.toLowerCase()).not.toContain(LEGACY);
 
     // 代わりに engines.node 準拠の node check と git check が居ること。
     expect(names).toContain("node>=24.13.0");
