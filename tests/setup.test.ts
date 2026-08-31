@@ -977,7 +977,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {
     const ready = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -1013,7 +1014,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const standaloneReady = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -1031,7 +1033,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const customRepo = buildConsumerReadinessPlan({
-      bunVersion: "1.3.0",
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: true,
       hasClaude: false,
@@ -1043,7 +1046,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(customRepo.contracts.tagPin).toBe("github:example/custom-pack#v9.9.9");
 
     const blocked = buildConsumerReadinessPlan({
-      bunVersion: "1.2.9",
+      nodeVersion: "22.0.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: false,
       hasGh: false,
       hasUtTddCli: false,
@@ -1053,19 +1057,19 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     });
     expect(blocked.ok).toBe(false);
     expect(blocked.checks.filter((c) => !c.ok).map((c) => c.name)).toEqual([
-      "bun>=1.3",
+      "node>=24.13.0",
       "git",
       "gh",
       "ut-tdd-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Generated Claude/Codex hooks call the shell-free native Bun launcher",
+      "Generated Claude/Codex hooks call the project-local wrapper with node",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Do not rely on a global `bun link`",
+      "Do not rely on a global install",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Native Bun itself must still resolve",
+      "The node executable must resolve without a PowerShell or cmd shim",
     );
   });
 
