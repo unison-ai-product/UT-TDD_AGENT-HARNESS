@@ -78,10 +78,10 @@ L6-101 へ昇格すべきものを抽出する。現時点の候補は `PLAN-L7-
 ## R3. 検証 (未着手)
 
 Forward oracleのうち、S1-bで正規IDへ昇格した`U-PACKBUN-003` / `004` / `006`と、未実装候補
-`CANDIDATE-U-PACKBUN-001` / `002` / `005` / `007`から、L6層で再検収すべき軸を選定する。特に
+`CANDIDATE-U-PACKBUN-001` / `002` / `005`と`U-PACKBUN-007`から、L6層で再検収すべき軸を選定する。特に
 **negative control の有効性** (既存 template を復活させると
 必ず Red になること) は、恒真 oracle による偽の充足を防ぐ要であり R3 の主対象とする。
-Pack policy については `CANDIDATE-U-PACKBUN-007` の Node/npm 正例と独立 Bun mutation の
+Pack policy については `U-PACKBUN-007` の Node/npm 正例と独立 Bun mutation の
 fail-close を再検収し、source workflow (#472) や generated consumer (#470) の変更を要求しない。
 
 ## R4. Forward 合流 (未着手)

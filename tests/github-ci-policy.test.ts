@@ -980,6 +980,7 @@ describe("github-ci-policy lint", () => {
 
   it.each([
     ["setup-bun action", "actions/setup-node@v4", "oven-sh/setup-bun@v2"],
+    ["setup-bun future action", "actions/setup-node@v4", "oven-sh/setup-bun@v3"],
     ["bun install", "npm ci --no-audit --no-fund", "bun install --frozen-lockfile"],
     ["bun run typecheck", "npm run typecheck", "bun run typecheck"],
     ["bun run test:pack", "npm run test:pack", "bun run test:pack"],
@@ -994,7 +995,7 @@ describe("github-ci-policy lint", () => {
       file: "docs/templates/github/common/pack-harness-check.yml",
       profile: "pack",
       reason: "forbidden_bun_execution",
-      detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun@v2",
+      detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun",
     });
   });
 

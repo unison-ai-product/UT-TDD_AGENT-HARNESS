@@ -355,7 +355,7 @@ required step は次の Node/npm 経路に固定する:
 - `npm run lint`
 - `node src/cli.ts setup --solo` と `node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke`
 
-Pack profile の各 workflow step は `oven-sh/setup-bun@v2`、`bun`、`bunx` の実行到達を拒否する。
+Pack profile の各 workflow step は version に依存せず `oven-sh/setup-bun@*`、`bun`、`bunx` の実行到達を拒否する。
 mutation oracle は required Node/npm step を残したまま各 Bun 形を一つずつ復活させ、必ず
 `forbidden_bun_execution` を返すことを確認する。source runtime manifest、source template、generated
 consumer template、readiness、Node producer、`package.json` の `build` script はこの slice の対象外である。

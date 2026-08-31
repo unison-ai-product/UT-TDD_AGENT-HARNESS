@@ -178,9 +178,9 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
     forbiddenSteps: [
       {
         reason: "forbidden_bun_execution",
-        detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun@v2",
+        detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun",
         matches: (step) =>
-          (step.uses ?? "").includes("oven-sh/setup-bun@v2") ||
+          (step.uses ?? "").includes("oven-sh/setup-bun@") ||
           BUN_EXECUTION_PATTERN.test(step.run ?? ""),
       },
       {
