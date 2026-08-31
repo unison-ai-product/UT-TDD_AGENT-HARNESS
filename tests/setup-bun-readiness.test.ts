@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -77,7 +77,12 @@ function readinessOf(cwd: string, env: NodeJS.ProcessEnv) {
   expect(run.status, run.stderr || run.stdout).toBe(0);
   return (
     JSON.parse(run.stdout) as {
-      readiness: { ok: boolean; checks: { name: string; ok: boolean; message: string }[] };
+      readiness: {
+        ok: boolean;
+        checks: { name: string; ok: boolean; message: string }[];
+        ci: { requires: string[] };
+        rollback: { commands: string[] };
+      };
     }
   ).readiness;
 }
@@ -114,14 +119,33 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     setupConsumer(consumer, env);
     const readiness = readinessOf(consumer, env);
     const names = readiness.checks.map((check) => check.name);
-    const serializedChecks = JSON.stringify(readiness.checks);
+    const serializedReadiness = JSON.stringify(readiness);
+    const requiredNodeVersion = (
+      JSON.parse(readFileSync(join(consumer, "package.json"), "utf8")) as {
+        engines: { node: string };
+      }
+    ).engines.node;
 
     expect(names).not.toContain(`${LEGACY}>=1.3`);
-    expect(serializedChecks).not.toContain("Install Bun 1.3 or newer before setup");
-    expect(serializedChecks.toLowerCase()).not.toContain(LEGACY);
-    expect(names).toContain("node@24.13.0");
+    expect(serializedReadiness).not.toContain("Install Bun 1.3 or newer before setup");
+    expect(serializedReadiness.toLowerCase()).not.toContain(LEGACY);
+    expect(readiness.ci.requires).toEqual([
+      "actions/checkout@v4",
+      "actions/setup-node@v4",
+      "npm ci --no-audit --no-fund",
+      "npm run typecheck",
+      "npm test",
+    ]);
+    expect(readiness.rollback.commands).toEqual([
+      "git switch v0.1.0",
+      "node .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
+      "node .ut-tdd/bin/ut-tdd.mjs setup --solo",
+    ]);
+    expect(names).toContain(`node@${requiredNodeVersion}`);
     expect(names).toContain("git");
-    expect(readiness.checks.find((check) => check.name === "node@24.13.0")?.ok).toBe(true);
+    expect(readiness.checks.find((check) => check.name === `node@${requiredNodeVersion}`)?.ok).toBe(
+      true,
+    );
 
     const nodeReady = (nodeVersion: string, requiredNodeVersion: string) =>
       buildConsumerReadinessPlan({

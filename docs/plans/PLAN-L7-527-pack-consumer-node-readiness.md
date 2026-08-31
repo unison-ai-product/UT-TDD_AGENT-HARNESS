@@ -51,7 +51,8 @@ readiness から Bun probe と `bunOk` を除去し、consumer `package.json` �
 ## 2. 不変条件
 
 1. Bun が PATH と既知 home path のどちらにも無くても、対応 Node と Git があれば setup は成功する。
-2. readiness 出力に Bun check や Bun 導入案内を残さない。
+2. readiness の全出力 (`checks`、`ci.requires`、`rollback.commands`) にBun check、導入案内、
+   実行コマンドを残さず、Node/npm経路だけを提示する。
 3. Node version は `engines.node` の npm semver range を満たさない場合に fail-close する。
 4. source `package.json` の build script、生成 template、source workflowは変更しない。
 5. parentがdual-lockを保持する期間は `package-lock.json` と `bun.lock` の direct graph parity を維持する。
@@ -59,7 +60,8 @@ readiness から Bun probe と `bunOk` を除去し、consumer `package.json` �
 ## 3. 完了条件
 
 - `U-PACKBUN-001`: Bun 到達不能な隔離consumerで実setupが成功する。
-- `U-PACKBUN-002`: Bun checkが消え、Node rangeの正負境界とGit checkが観測できる。
+- `U-PACKBUN-002`: readiness全体からBun文字列が消え、Node/npmのCI・rollback command、
+  Node rangeの正負境界、Git checkが観測できる。
 - 実 CLI acceptance は `process.execPath` でNodeを直接起動する。
 - Linux / Windows / aggregate CIがexact HEADでGreenになる。
 - Reverse-527が実測証跡をR4へ戻す。

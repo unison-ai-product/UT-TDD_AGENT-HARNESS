@@ -44,5 +44,7 @@ Forward実装と対でR1へ移り、Red→Greenを束縛する。
 1. readinessへ `bunOk` のANDを戻すと `U-PACKBUN-001` がRedになる。
 2. Node range判定を常時trueへ変えると `U-PACKBUN-002` のunsupported fixtureがRedになる。
 3. Bun checkまたは導入案内を戻すと `U-PACKBUN-002` がRedになる。
+4. `ci.requires`または`rollback.commands`へBun実行形を1件戻すと、readiness全体を走査する
+   `U-PACKBUN-002` がRedになる。
 
 R3で親PLANのS1-a境界と照合し、R4でForwardへ戻す。

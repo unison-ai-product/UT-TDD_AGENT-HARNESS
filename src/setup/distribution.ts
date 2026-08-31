@@ -340,7 +340,7 @@ export function buildConsumerReadinessPlan(input: {
       message: nodeOk
         ? `Node ${input.nodeVersion}`
         : input.requiredNodeVersion
-          ? `Install Node ${input.requiredNodeVersion} or newer before setup (observed ${input.nodeVersion ?? "none"})`
+          ? `Install a Node version satisfying ${input.requiredNodeVersion} before setup (observed ${input.nodeVersion ?? "none"})`
           : "package.json engines.node is missing; cannot verify the Node runtime",
     },
     {
@@ -395,10 +395,10 @@ export function buildConsumerReadinessPlan(input: {
       workflow: ".github/workflows/harness-check.yml",
       requires: [
         "actions/checkout@v4",
-        "oven-sh/setup-bun@v2",
-        "bun install --frozen-lockfile",
-        "bun run typecheck",
-        "bun run test",
+        "actions/setup-node@v4",
+        "npm ci --no-audit --no-fund",
+        "npm run typecheck",
+        "npm test",
       ],
       forkPullRequestSecrets: "not-required",
     },
@@ -410,8 +410,8 @@ export function buildConsumerReadinessPlan(input: {
       backupRequired: true,
       commands: [
         `git switch ${tag}`,
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
-        "bun .ut-tdd/bin/ut-tdd.mjs setup --solo",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
+        "node .ut-tdd/bin/ut-tdd.mjs setup --solo",
       ],
     },
     contracts: {
