@@ -2069,7 +2069,7 @@ contextは`harness-check`一件へ固定し、`harness-ci-aggregate`をrequired�
 | `invocationEquals` | `(actual: HookInvocation, expected: { executable: string; args: readonly string[] }) => boolean` | 両 invocation は正規化済み。 | executable と argv の長さ・順序・値が完全一致するときだけ true。 | 部分文字列、追加 token、近似 path を受理しない。 | U-HOOKEXEC-003..004 |
 | `wrapperHookArgs` | `(id: RequiredProjectHookId) => readonly string[]` | id は REQUIRED に存在する。 | consumer wrapper entrypoint と hook subcommand を token 配列で返す。 | source/built-in/docs template の argv 正本を分岐させない。 | U-HOOKEXEC-005..006 |
 | `analyzeProjectHooks` | `(docs: ProjectHookDoc[]) => ProjectHookResult` | setup/source の Claude hook config を与える。 | 6 hook の executable、argv、policy、個数を照合し、shell-form command、欠落 token、追加 token、argv spoofing を fail-close finding にする。 | detector の都合で設計を shell form に戻さない。 | U-HOOKEXEC-006..007 |
-| `observeWindowsHookDispatch` | `(run: HookSmokeRun, deps: ProcessTraceDeps) => HookDispatchObservation` | Windows native runner で hook を 1 回起動し process ancestry を捕捉できる。 | hook host→Bun entrypoint 間の intermediary image と exit/outcome を返す。 | dispatch 区間に shell host または dispatch 用 conhost があれば不合格。 | U-HOOKEXEC-008 |
+| `observeWindowsHookDispatch` | `(run: HookSmokeRun, deps: ProcessTraceDeps) => HookDispatchObservation` | project-local `.ut-tdd/bin/ut-tdd.mjs` wrapper の source と実行結果を観測できる。 | `spawnSync(process.execPath, argv, { shell: false, windowsHide: true })` の静的/source 契約、shell host token 不在、正常実行 outcome、entrypoint 欠落時 exit 127 を返す。 | process-tree ancestry の観測は主張しない。shell 経由または期待外 executable/exit を受理しない。 | U-HOOKEXEC-008 |
 
 `HookInvocation` は `{ executable: string; args: readonly string[] }` (`args` は意味上の argv)。Claude / Codex の config JSON は
 runtime 固有 projection であり、意味論正本ではない。これにより project-hook、doctor、setup、Pack
