@@ -6,7 +6,7 @@ layer: cross
 drive: agent
 route_signal: design_gap
 route_mode: reverse
-status: draft
+status: confirmed
 workflow_phase: R4
 confirmed_reverse_type: design
 created: 2026-08-28
@@ -32,7 +32,41 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
     - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-31T04:03:54Z"
+    tests_green_at: "2026-08-31T03:05:54Z"
+    verdict: >-
+      preflight PASS / blocking 0。旧exact-head 24d5a1cdのCI Greenとcurrent 4d02d6d7を
+      range-diff/blobで照合し、U004/U006、Reverse/test-design、全S1-b sourceが同一であることを確認。
+      本証跡はpair/backfill confirmedだけを意味し、PR merge-readyやIssue closeを意味しない。
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    effort: low
+    plan_revision: 4d02d6d725a3b4648e38e13d77b2212afaca74aa
+    subject_head: 4d02d6d725a3b4648e38e13d77b2212afaca74aa
+    evidence_path: docs/test-design/harness/L7-pack-consumer-generated-bun-removal-backfill-test-design.md
+    anchor_commit: 4d02d6d725a3b4648e38e13d77b2212afaca74aa
+    scope: >-
+      targeted suiteはcurrent HEADで再実行したとは主張しない。run 33352024134のGreen HEAD
+      24d5a1cdとcurrent HEADの対象blob/patch-id equivalence、およびcurrent typecheck/Biome/PLAN lint
+      Greenを根拠にpair-freezeを確定する。cross-family closing receiptはfinal HEADへ別途要求する。
+    citations:
+      - "docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md"
+      - "docs/plans/PLAN-L7-524-pack-consumer-generated-bun-removal.md"
+      - "tests/setup-bun-removal.test.ts"
+      - "tests/ban-lint-detection-power.test.ts"
+    green_commands:
+      - kind: unit_test
+        command: "GitHub Actions harness-check run 33352024134 (Linux / Windows / aggregate)"
+        runner: github-actions
+        scope: full
+        exit_code: 0
+        completed_at: "2026-08-31T03:05:54Z"
+        evidence_path: docs/test-design/harness/L7-pack-consumer-generated-bun-removal-backfill-test-design.md
+        output_digest: "sha256:0307cc8a95c7218ec2d478986acae8f4dfd715a016bd5586078d6b1080afe7e7"
+        anchor_commit: 24d5a1cd8bf809f6f803b405220e3b15c39df341
 ---
 
 # PLAN-REVERSE-524

@@ -2,7 +2,7 @@
 artifact_type: test_design
 layer: cross
 executed_at_layer: L7
-status: draft
+status: confirmed
 plan_id: PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill
 ---
 
