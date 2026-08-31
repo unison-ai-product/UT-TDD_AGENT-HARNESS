@@ -1,13 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates.ts";
 
 const repoRoot = process.cwd();
-// PLAN-L7-462 PR-C: repo 自身の hooks は node 直起動になり shim は撤去済み。
-// launcher の挙動検証は consumer 向け template (setup が生成する wrapper) を実体化して行う。
+// PLAN-L7-522 S1-b: common/run-bun.ts is retired. The generated wrapper is
+// launched directly by Node, so the execution contract is tested on it.
 const temporaryDirectories: string[] = [];
 
 function temporaryDirectory(): string {
@@ -22,33 +22,36 @@ afterEach(() => {
   }
 });
 
-// module 寿命の実体化 (afterEach の cleanup 対象に載せない)。
-const launcherDirectory = mkdtempSync(join(tmpdir(), "ut-tdd-hook-launcher-src-"));
-const launcher = join(launcherDirectory, "run-bun.ts");
-writeFileSync(launcher, BUILTIN_GITHUB_TEMPLATES["common/run-bun.ts"]);
+const WRAPPER_TEMPLATE = BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"];
 
-describe("Claude native Bun hook launcher (issue #123)", () => {
-  it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged to a native Bun executable", () => {
-    const directory = temporaryDirectory();
-    const nativeBun = join(directory, process.platform === "win32" ? "bun.exe" : "bun");
-    copyFileSync(process.execPath, nativeBun);
+function materializeWrapper(cliBody: string | null): { root: string; wrapper: string } {
+  const root = temporaryDirectory();
+  const wrapper = join(root, "ut-tdd.mjs");
+  const cli = join(root, "recorder.mjs");
+  if (cliBody !== null) writeFileSync(cli, cliBody, "utf8");
+  writeFileSync(
+    wrapper,
+    WRAPPER_TEMPLATE.replace("{{UT_TDD_SOURCE_CLI_JSON}}", JSON.stringify(cli)),
+    "utf8",
+  );
+  return { root, wrapper };
+}
 
-    const recorder = join(directory, "record.mjs");
-    const output = join(directory, "result.json");
-    writeFileSync(
-      recorder,
-      [
-        'import { readFileSync, writeFileSync } from "node:fs";',
-        "const [output, ...forwarded] = process.argv.slice(2);",
-        'writeFileSync(output, JSON.stringify({ forwarded, stdin: readFileSync(0, "utf8") }));',
-      ].join("\n"),
-    );
+const RECORDER = [
+  'import { readFileSync, writeFileSync } from "node:fs";',
+  "const [output, ...forwarded] = process.argv.slice(2);",
+  'writeFileSync(output, JSON.stringify({ forwarded, stdin: readFileSync(0, "utf8") }));',
+].join("\n");
+
+describe("Claude hook wrapper execution contract (issue #123 / PLAN-L7-522 S1-b)", () => {
+  it("U-HOOKEXEC-001: forwards stdin and every argv token unchanged to the resolved CLI", () => {
+    const output = join(temporaryDirectory(), "result.json");
+    const { root, wrapper } = materializeWrapper(RECORDER);
     const forwarded = ["plain", "contains spaces", 'quote"inside', "a&b", "日本語"];
     const stdin = '{"hook_event_name":"SessionStart","value":"a & b"}';
 
-    const result = spawnSync(process.execPath, [launcher, recorder, output, ...forwarded], {
-      cwd: repoRoot,
-      env: { ...process.env, PATH: directory, APPDATA: "" },
+    const result = spawnSync(process.execPath, [wrapper, output, ...forwarded], {
+      cwd: root,
       input: stdin,
       encoding: "utf8",
       windowsHide: true,
@@ -58,31 +61,27 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     expect(JSON.parse(readFileSync(output, "utf8"))).toEqual({ forwarded, stdin });
   });
 
-  it("U-HOOKEXEC-008: fails closed when no native Bun executable can be resolved", () => {
-    const directory = temporaryDirectory();
-    const result = spawnSync(process.execPath, [launcher, "should-not-run.ts"], {
-      cwd: repoRoot,
-      env: { ...process.env, PATH: directory, APPDATA: "" },
+  it("U-HOOKEXEC-008: fails closed when no project-local entrypoint can be resolved", () => {
+    const { root, wrapper } = materializeWrapper(null);
+    const result = spawnSync(process.execPath, [wrapper, "should-not-run"], {
+      cwd: root,
       encoding: "utf8",
       windowsHide: true,
     });
 
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("native Bun executable not found");
+    expect(result.status).toBe(127);
+    expect(result.stderr).toContain("Project-local UT-TDD entrypoint was not found");
   });
 
   it("U-HOOKEXEC-008: uses direct executable spawning and never delegates to a shell host", () => {
-    const source = readFileSync(launcher, "utf8");
-
-    expect(source).toContain("spawn(findBun(), process.argv.slice(2)");
-    expect(source).toContain("windowsHide: true");
-    expect(source).toContain("process.stdin.pipe(child.stdin)");
-    expect(source).toMatch(
-      /for \(const signal of \["SIGINT", "SIGTERM", "SIGHUP"\](?: as const)?\)/,
+    expect(WRAPPER_TEMPLATE).toContain(
+      "spawnSync(process.execPath, [resolvedCli, ...process.argv.slice(2)]",
     );
-    expect(source).toContain("child.kill(signal)");
-    expect(source).not.toMatch(/\b(?:cmd(?:\.exe)?|powershell(?:\.exe)?|pwsh|sh(?:\.exe)?)\b/i);
-    expect(source).not.toContain("shell: true");
+    expect(WRAPPER_TEMPLATE).toContain("windowsHide: true");
+    expect(WRAPPER_TEMPLATE).not.toMatch(
+      /\b(?:cmd(?:\.exe)?|powershell(?:\.exe)?|pwsh|sh(?:\.exe)?)\b/i,
+    );
+    expect(WRAPPER_TEMPLATE).not.toContain("shell: true");
   });
 
   it("U-HOOKEXEC-009: requires the first Node release line with unflagged TypeScript execution", () => {
@@ -163,22 +162,16 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
 
     expect(actual).toEqual({
       PreToolUse: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
       ],
-      SessionStart: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "start"],
-      ],
-      PostToolUse: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"],
-      ],
+      SessionStart: [["node", ".ut-tdd/bin/ut-tdd.mjs", "session", "start"]],
+      PostToolUse: [["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "post-tool-use"]],
       Stop: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"],
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "session", "summary"],
+        ["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "claude-memory-wake"],
       ],
-      SubagentStop: [
-        ["node", ".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"],
-      ],
+      SubagentStop: [["node", ".ut-tdd/bin/ut-tdd.mjs", "hook", "subagent-stop"]],
     });
     const wrapper = BUILTIN_GITHUB_TEMPLATES["common/ut-tdd.mjs"];
     const codexHooks = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]) as {
@@ -189,10 +182,7 @@ describe("Claude native Bun hook launcher (issue #123)", () => {
     );
     expect(
       codexCommands.every(
-        (hook) =>
-          hook.command === "node" &&
-          hook.args?.[0] === ".ut-tdd/bin/run-bun.ts" &&
-          hook.args?.[1] === ".ut-tdd/bin/ut-tdd.mjs",
+        (hook) => hook.command === "node" && hook.args?.[0] === ".ut-tdd/bin/ut-tdd.mjs",
       ),
     ).toBe(true);
     expect(wrapper).toContain("spawnSync(process.execPath");

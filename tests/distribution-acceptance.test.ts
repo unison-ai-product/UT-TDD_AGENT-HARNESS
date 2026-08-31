@@ -255,7 +255,7 @@ describe("clean distribution local acceptance smoke", () => {
       const packPackageJson = JSON.parse(readFileSync(join(cleanRoot, "package.json"), "utf8")) as {
         scripts: Record<string, string>;
       };
-      expect(packPackageJson.scripts.test).toBe("bun run test:pack");
+      expect(packPackageJson.scripts.test).toBe("npm run test:pack");
       expect(packPackageJson.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
       expect(packPackageJson.scripts["test:pack"]).toContain(
         "tests/distribution-acceptance.test.ts",
@@ -289,7 +289,7 @@ describe("clean distribution local acceptance smoke", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "agent-guard"],
                 blockOnFailure: true,
               }),
             ],
@@ -299,7 +299,7 @@ describe("clean distribution local acceptance smoke", () => {
             hooks: [
               expect.objectContaining({
                 command: "node",
-                args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
+                args: [".ut-tdd/bin/ut-tdd.mjs", "hook", "work-guard"],
                 blockOnFailure: true,
               }),
             ],

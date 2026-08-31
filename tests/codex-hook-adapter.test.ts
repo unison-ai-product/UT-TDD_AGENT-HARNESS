@@ -13,11 +13,7 @@ import {
   CODEX_REQUIRED as CODEX_REQUIRED_POLICY,
 } from "../src/lint/codex-hook-adapter-policy.ts";
 import { parseHookInvocation } from "../src/lint/hook-invocation.ts";
-import {
-  REQUIRED as CLAUDE_REQUIRED,
-  WRAPPER_HOOK_LAUNCHER,
-  wrapperHookArgs,
-} from "../src/lint/project-hook.ts";
+import { REQUIRED as CLAUDE_REQUIRED, wrapperHookArgs } from "../src/lint/project-hook.ts";
 import { analyzeReadability } from "../src/lint/readability.ts";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard.ts";
 import { evaluateWorkGuard } from "../src/runtime/work-guard.ts";
@@ -34,7 +30,7 @@ function validCodexHooks(): Record<string, unknown> {
             {
               type: "command",
               command: "node",
-              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("work-guard")],
+              args: [...wrapperHookArgs("work-guard")],
               blockOnFailure: true,
             },
           ],
@@ -45,7 +41,7 @@ function validCodexHooks(): Record<string, unknown> {
             {
               type: "command",
               command: "node",
-              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("agent-guard")],
+              args: [...wrapperHookArgs("agent-guard")],
               blockOnFailure: true,
             },
           ],
@@ -57,7 +53,7 @@ function validCodexHooks(): Record<string, unknown> {
             {
               type: "command",
               command: "node",
-              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("session-start")],
+              args: [...wrapperHookArgs("session-start")],
             },
           ],
         },
@@ -69,7 +65,7 @@ function validCodexHooks(): Record<string, unknown> {
             {
               type: "command",
               command: "node",
-              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("post-tool-use")],
+              args: [...wrapperHookArgs("post-tool-use")],
             },
           ],
         },
@@ -80,7 +76,7 @@ function validCodexHooks(): Record<string, unknown> {
             {
               type: "command",
               command: "node",
-              args: [WRAPPER_HOOK_LAUNCHER, ...wrapperHookArgs("session-summary")],
+              args: [...wrapperHookArgs("session-summary")],
             },
           ],
         },

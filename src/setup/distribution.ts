@@ -214,7 +214,10 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   const scripts = { ...(parsed.scripts ?? {}) };
   scripts["test:source"] ??= scripts.test ?? "vitest run";
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
-  scripts.test = "bun run test:pack";
+  scripts.test = "npm run test:pack";
+  // PLAN-L7-522 §2.1.1: source の build script remains the rollback route, but
+  // generated consumers must not retain a reachable Bun build path.
+  delete scripts.build;
   const utTdd = {
     ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
     artifactProfile: "pack",
