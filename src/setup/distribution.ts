@@ -365,7 +365,7 @@ export function buildConsumerReadinessPlan(input: {
             [
               "Generated Claude/Codex hooks invoke the project-local Node wrapper directly so each project can use its own pinned UT-TDD package.",
               "Add UT-TDD as a project dependency before setup and verify `node .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
-              "Do not rely on a global `bun link` when multiple projects on one PC may pin different harness versions.",
+              "Do not rely on a global install when multiple projects on one PC may pin different harness versions.",
               "Node.js 22.18 or newer must be available for the wrapper's unflagged TypeScript execution.",
             ].join(" ")),
     },

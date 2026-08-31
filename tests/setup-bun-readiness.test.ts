@@ -205,6 +205,7 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
   it("missing engines.node is a typed blocking readiness check", () => {
     const readiness = readinessForNodeConstraint("24.13.0", null);
 
+    expect(readiness.ok).toBe(false);
     expectNodeConstraintBlocked(
       readiness,
       "node engines.node (missing)",
@@ -215,6 +216,7 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
   it("invalid engines.node is a typed blocking readiness check", () => {
     const readiness = readinessForNodeConstraint("24.13.0", "not a semver range");
 
+    expect(readiness.ok).toBe(false);
     expectNodeConstraintBlocked(
       readiness,
       "node@not a semver range",
@@ -225,6 +227,7 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
   it("missing nodeVersion is a typed blocking readiness check", () => {
     const readiness = readinessForNodeConstraint(null, "^24.13.0");
 
+    expect(readiness.ok).toBe(false);
     expectNodeConstraintBlocked(
       readiness,
       "node@^24.13.0",
@@ -235,6 +238,7 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
   it("range guard rejects an observed Node version outside engines.node", () => {
     const readiness = readinessForNodeConstraint("25.0.0", "^24.13.0");
 
+    expect(readiness.ok).toBe(false);
     expectNodeConstraintBlocked(
       readiness,
       "node@^24.13.0",

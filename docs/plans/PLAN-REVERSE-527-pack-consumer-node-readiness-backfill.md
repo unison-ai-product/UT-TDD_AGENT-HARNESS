@@ -41,37 +41,7 @@ dependencies:
     - docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md
 backprop_decision: required
 backprop_decision_reason: "readiness の Bun 到達不能と engines.node 判定を親の Pack/consumer 契約へ戻すため。"
-review_evidence:
-  - reviewer: sol
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-31T08:21:55Z"
-    tests_green_at: "2026-08-31T08:20:40Z"
-    verdict: >-
-      PASS / blocking 0。R3でL6/global L7/paired test designの契約一致を確認し、
-      R4で実証済みgapだけをbackpropした。
-    worker_model: gpt-5.6-luna
-    reviewer_model: gpt-5.6-sol
-    plan_revision: 28787e4b93a90fa7d9899309ff037a2aa1439610
-    subject_head: 28787e4b93a90fa7d9899309ff037a2aa1439610
-    scope: >-
-      U-SETUP-012、U-SETUP-013/AT-DIST-001、PLAN-L7-527、paired test design、
-      transitional Bun fixture と Node readiness の分離。
-    citations:
-      - "docs/design/harness/L6-function-design/setup-solo-team.md"
-      - "docs/test-design/harness/L7-unit-test-design.md"
-      - "docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md"
-      - "tests/setup-bun-readiness.test.ts"
-      - "tests/setup.test.ts"
-    green_commands:
-      - kind: unit_test
-        command: "node scripts/run-vitest-snapshot.ts tests/setup-bun-readiness.test.ts tests/setup.test.ts --reporter=dot"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-08-31T08:20:40Z"
-        evidence_path: tests/setup-bun-readiness.test.ts
-        output_digest: "sha256:811bf3b2b31ce099a3b7ae6c840267ea111f5eb0e700424026a6a6b55bfc463a"
-        anchor_commit: 28787e4b93a90fa7d9899309ff037a2aa1439610
+review_evidence: []
 ---
 
 # PLAN-REVERSE-527
@@ -101,5 +71,6 @@ U-SETUP-012/U-SETUP-013/AT-DIST-001、および paired test design を照合す�
 
 不足が実証された場合だけ、上記 L6/global L7 backprop targets と paired test design、ならびに
 `PLAN-L6-93-node-bootstrap-contract.md` へ差分を戻し、Forwardへ `gap-only` で再合流する。
-S1-a の intermediate readiness を #496 の generated-hook Bun 撤去、Bun-free、または releasable
-完了の証拠として扱わない。
+S1-b (#496) は current main `f38b78d8` に landing 済みであり、generated-hook の Node化を
+S1-aの実装前提として扱う。ただしS1-aのreadiness証跡だけをBun BANまたはreleasable完了の
+証拠にはせず、#472/#473の別スライスを引き続き要求する。
