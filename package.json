@@ -1,6 +1,6 @@
 {
   "name": "ut-tdd",
-  "version": "0.1.4",
+  "version": "0.2.0-canary.1",
   "description": "UT-TDD Agent Harness - AI agent workflow, verification, and distribution foundation (TypeScript core, ADR-001)",
   "repository": {
     "type": "git",

@@ -4,6 +4,7 @@ import type {
   PackPublicationReleaseAsset,
   SealedPackPublicationPlan,
 } from "./pack-publication-staging.ts";
+import { parsePackageSemver } from "./update-check.ts";
 
 export type PublicationPortResult<T> =
   | { readonly status: "attested"; readonly value: T }
@@ -68,6 +69,7 @@ export interface PackPublicationIntent {
   readonly releaseAssets: readonly [PackPublicationReleaseAsset, PackPublicationReleaseAsset];
   readonly remote: PackPublicationRemoteIdentity;
   readonly expectedTreeDigest: string;
+  readonly releaseVersion: string;
   readonly tagName: string;
   readonly approvals: Readonly<Record<string, PackPublicationApproval>>;
   readonly intentDigest: string;
@@ -78,6 +80,7 @@ export interface PackPublicationIntentInput {
   readonly operationId: string;
   readonly idempotencyKey: string;
   readonly remote: PackPublicationRemoteIdentity;
+  readonly releaseVersion: string;
   readonly tagName: string;
   readonly approvals?: readonly PackPublicationApproval[];
 }
@@ -90,6 +93,8 @@ export type PackPublicationIntentResult =
         | "invalid_operation"
         | "invalid_remote_identity"
         | "invalid_inventory"
+        | "release_version_mismatch"
+        | "tag_version_mismatch"
         | "approval_missing"
         | "approval_duplicate"
         | "approval_binding_mismatch"
@@ -115,6 +120,7 @@ export interface PackCommitObservation {
 
 export interface DraftReleaseObservation {
   readonly releaseId: string;
+  readonly releaseVersion: string;
   readonly tagName: string;
   readonly targetCommit: string;
   readonly draft: boolean;
@@ -160,6 +166,7 @@ export interface PackPublicationReceipt {
   readonly intentDigest: string;
   readonly releaseId: string;
   readonly sourceRevision: string;
+  readonly releaseVersion: string;
   readonly releasePackCommit: string;
   readonly releasePackTreeDigest: string;
   readonly pointerPackCommit: string;
@@ -222,6 +229,7 @@ export interface PackPublicationPorts {
   readonly release: {
     readonly createDraft: (input: {
       readonly releaseId: string;
+      readonly releaseVersion: string;
       readonly tagName: string;
       readonly targetCommit: string;
     }) =>
@@ -229,6 +237,7 @@ export interface PackPublicationPorts {
       | Promise<PublicationPortResult<DraftReleaseObservation>>;
     readonly observeDraft: (input: {
       readonly releaseId: string;
+      readonly releaseVersion: string;
       readonly tagName: string;
     }) =>
       | PublicationPortResult<DraftReleaseObservation>
@@ -322,6 +331,8 @@ export type PackPublicationResult =
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const SHA1 = /^[a-f0-9]{40}$/;
 const CONTROL_MANIFEST_PATH = "release/manifest.yaml";
+const PACKAGE_JSON_PATH = "package.json";
+const PACKAGE_LOCK_JSON_PATH = "package-lock.json";
 
 function sha256(input: Uint8Array | string): string {
   return `sha256:${createHash("sha256").update(input).digest("hex")}`;
@@ -358,6 +369,59 @@ function digestEntry(entry: PackPublicationCommitEntry): string {
     }),
   );
 }
+
+export interface SealedPackageVersionIdentity {
+  readonly packageVersion: string;
+  readonly lockfileVersion: string;
+  readonly lockfileRootVersion: string;
+}
+
+function parseJsonEntry(
+  entries: readonly PackPublicationCommitEntry[],
+  path: string,
+): Record<string, unknown> | null {
+  const matching = entries.filter((entry) => entry.path === path);
+  if (matching.length !== 1) return null;
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(matching[0].bytes);
+    const parsed: unknown = JSON.parse(text);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseSealedPackageVersionIdentity(
+  entries: readonly PackPublicationCommitEntry[],
+): SealedPackageVersionIdentity | null {
+  const packageJson = parseJsonEntry(entries, PACKAGE_JSON_PATH);
+  const packageLock = parseJsonEntry(entries, PACKAGE_LOCK_JSON_PATH);
+  if (!packageJson || !packageLock) return null;
+  const rootPackages = packageLock.packages;
+  const rootPackage =
+    typeof rootPackages === "object" && rootPackages !== null && !Array.isArray(rootPackages)
+      ? (rootPackages as Record<string, unknown>)[""]
+      : null;
+  if (typeof rootPackage !== "object" || rootPackage === null || Array.isArray(rootPackage))
+    return null;
+  const packageVersion = packageJson.version;
+  const lockfileVersion = packageLock.version;
+  const lockfileRootVersion = (rootPackage as Record<string, unknown>).version;
+  if (
+    typeof packageVersion !== "string" ||
+    typeof lockfileVersion !== "string" ||
+    typeof lockfileRootVersion !== "string" ||
+    !parsePackageSemver(packageVersion) ||
+    !parsePackageSemver(lockfileVersion) ||
+    !parsePackageSemver(lockfileRootVersion)
+  )
+    return null;
+  return { packageVersion, lockfileVersion, lockfileRootVersion };
+}
+
+const sealedPackageVersionIdentity = parseSealedPackageVersionIdentity;
 
 export function derivePackPublicationTreeDigest(plan: {
   readonly commitEntries: readonly PackPublicationCommitEntry[];
@@ -442,6 +506,7 @@ function intentIdentity(
     ],
     remote: Object.freeze({ ...input.remote }),
     expectedTreeDigest: derivePackPublicationTreeDigest(input.plan),
+    releaseVersion: input.releaseVersion,
     tagName: input.tagName,
     intentDigest: "",
   };
@@ -470,7 +535,15 @@ function validInventory(intent: Omit<PackPublicationIntent, "approvals">): boole
     new Set(assets.map((asset) => asset.name)).size === 2 &&
     assets.every(
       (asset) => asset.size === asset.bytes.length && asset.contentDigest === sha256(asset.bytes),
-    )
+    ) &&
+    (() => {
+      const versions = sealedPackageVersionIdentity(entries);
+      return (
+        versions !== null &&
+        versions.packageVersion === versions.lockfileVersion &&
+        versions.packageVersion === versions.lockfileRootVersion
+      );
+    })()
   );
 }
 
@@ -493,7 +566,7 @@ function validStagingPlan(plan: SealedPackPublicationPlan): boolean {
 export function sealPackPublicationIntent(
   input: PackPublicationIntentInput,
 ): PackPublicationIntentResult {
-  if (!input.operationId || !input.idempotencyKey || !input.tagName)
+  if (!input.operationId || !input.idempotencyKey || !input.releaseVersion || !input.tagName)
     return { ok: false, error: "invalid_operation" };
   if (
     !input.remote.repository ||
@@ -506,6 +579,16 @@ export function sealPackPublicationIntent(
     input.remote.derivationRule !== "entries-and-sidecar-v2"
   )
     return { ok: false, error: "invalid_remote_identity" };
+  const packageVersions = sealedPackageVersionIdentity(input.plan.commitEntries);
+  if (packageVersions === null) return { ok: false, error: "invalid_inventory" };
+  if (
+    packageVersions.packageVersion !== packageVersions.lockfileVersion ||
+    packageVersions.packageVersion !== packageVersions.lockfileRootVersion ||
+    packageVersions.packageVersion !== input.releaseVersion
+  )
+    return { ok: false, error: "release_version_mismatch" };
+  if (input.tagName !== `v${input.releaseVersion}`)
+    return { ok: false, error: "tag_version_mismatch" };
   const identity = intentIdentity(input);
   if (!validStagingPlan(input.plan) || !validInventory(identity))
     return { ok: false, error: "invalid_inventory" };
@@ -612,6 +695,8 @@ function validReceipt(receipt: PackPublicationReceipt, intent: PackPublicationIn
     receipt.intentDigest === intent.intentDigest &&
     receipt.releaseId === intent.releaseId &&
     receipt.sourceRevision === intent.sourceRevision &&
+    receipt.releaseVersion === intent.releaseVersion &&
+    receipt.tagName === intent.tagName &&
     receipt.receiptDigest === sha256(stable(unsigned))
   );
 }
@@ -939,6 +1024,7 @@ export async function publishPackCanary(
   const draft = await run.mutate("release_draft_create", commit.value, () =>
     ports.release.createDraft({
       releaseId: intent.releaseId,
+      releaseVersion: intent.releaseVersion,
       tagName: intent.tagName,
       targetCommit: commit.value.commitSha,
     }),
@@ -949,12 +1035,17 @@ export async function publishPackCanary(
     stage: "release_draft",
     remoteWrites: run.count(),
     invoke: () =>
-      ports.release.observeDraft({ releaseId: intent.releaseId, tagName: intent.tagName }),
+      ports.release.observeDraft({
+        releaseId: intent.releaseId,
+        releaseVersion: intent.releaseVersion,
+        tagName: intent.tagName,
+      }),
   });
   if ("failure" in draftObserved) return draftObserved.failure;
   if (
     !draftObserved.value.draft ||
     draftObserved.value.releaseId !== intent.releaseId ||
+    draftObserved.value.releaseVersion !== intent.releaseVersion ||
     draftObserved.value.tagName !== intent.tagName ||
     draftObserved.value.targetCommit !== commit.value.commitSha
   )
@@ -1104,6 +1195,7 @@ export async function publishPackCanary(
     intentDigest: intent.intentDigest,
     releaseId: intent.releaseId,
     sourceRevision: intent.sourceRevision,
+    releaseVersion: intent.releaseVersion,
     releasePackCommit: commit.value.commitSha,
     releasePackTreeDigest: commit.value.treeDigest,
     pointerPackCommit: pointer.value.mainSha,
