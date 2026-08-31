@@ -20,7 +20,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-AUTHPROV-001 | verified Git facts と別 reviewer identity の request | 受理。family claim は判定入力にしない |
+| CANDIDATE-U-AUTHPROV-001 | Git object facts が再取得結果と一致する request | facts integrity を受理。reviewer との非同一性はこの slice で証明せず、family claim は判定入力にしない |
 | CANDIDATE-U-AUTHPROV-002 | `authorFamily=codex` を `claude` に反転するが Git facts は同一 | facts の判定は変わらない。claim 不一致だけで authority を得ない |
 | CANDIDATE-U-AUTHPROV-003 | 002 の逆向き反転 | 002 と同じ。family の双方向 claim は authority にならない |
 | CANDIDATE-U-AUTHPROV-004 | facts conflict/欠落と family/provider claim mismatch が同時成立 | facts の `unknown`/deny を先に返し、claim で補完しない |
@@ -41,7 +41,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-AUTHPROV-012 | 1 PR に複数の verified Git author facts | exact multi-author facts として保持し family に丸めない |
+| CANDIDATE-U-AUTHPROV-012 | 1 PR に複数の Git-recorded author facts | exact multi-author facts として保持し family に丸めない |
 | CANDIDATE-U-AUTHPROV-013 | mixed family claim を追加 | Git facts の判定は変わらない |
 | CANDIDATE-U-AUTHPROV-014 | commit 群の一部だけ facts あり | unknown/deny。部分的既知で通さない |
 | CANDIDATE-U-AUTHPROV-015 | 旧 schema request を読む | 旧 digest を保存し再計算しない |
@@ -89,11 +89,11 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
-| CANDIDATE-U-AUTHPROV-040 | reviewer が verified author identity と同一 | self-review deny。family set は使わない |
-| CANDIDATE-U-AUTHPROV-041 | 別の verified author identity と同一 | 040 と対称に self-review deny |
+| CANDIDATE-U-AUTHPROV-040 | reviewer claim が Git-recorded author 文字列と同一 | 文字列一致だけで self-review authority を作らず、既存 review gate の判定を変えない |
+| CANDIDATE-U-AUTHPROV-041 | reviewer claim が別の Git-recorded author 文字列と同一 | 040 と対称に、文字列だけで non-author も self-review も確定しない |
 | CANDIDATE-U-AUTHPROV-042 | contributor facts に unknown 1件 | typed deny。部分既知で通さない |
 | CANDIDATE-U-AUTHPROV-043 | human family claim のみ | identity を作れず unknown/deny |
-| CANDIDATE-U-AUTHPROV-044 | verified author identities と別 reviewer | 受理。family claim は無関係 |
+| CANDIDATE-U-AUTHPROV-044 | reviewer claim が全 Git-recorded author 文字列と異なる | 差異だけで non-author authority を付与せず、family claim も判定に使わない |
 | CANDIDATE-U-AUTHPROV-045 | family 多数派へ丸める経路を探索 | 丸め込み経路なし |
 | CANDIDATE-U-AUTHPROV-046 | single commit に複数 family claim | claim conflict として保持し Git facts を変更しない |
 
@@ -105,7 +105,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | CANDIDATE-U-AUTHPROV-048 | worker 子から human backfill を申告 | actor claim は認証されず facts unknown のまま deny |
 | CANDIDATE-U-AUTHPROV-049 | human backfill を append し attempt | `human_attested` を伝播するが facts unknown の attempt/merge は deny |
 | CANDIDATE-U-AUTHPROV-050 | runtime env/key custody を観測 | trust root にせず、観測だけで authority を与えない |
-| CANDIDATE-U-AUTHPROV-051 | human/reviewer family claim が一致 | claim だけで self-review を判定せず exact facts 規則を適用 |
+| CANDIDATE-U-AUTHPROV-051 | human/reviewer family claim が一致 | claim だけで self-review を判定せず、既存の独立 review gate の結果を変えない |
 | CANDIDATE-U-AUTHPROV-052 | `human_attested` が `verified` として伝播 | Red。昇格禁止 |
 
 ## 実 repo regression
@@ -113,7 +113,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | Candidate | Stimulus | Oracle |
 |---|---|---|
 | CANDIDATE-P-AUTHPROV-001 | 実 repo の commit 群を解決 | author 文字列から family を導出せず、canonical Git fields のみを記録 |
-| CANDIDATE-P-AUTHPROV-002 | PR #430 型の誤 family claim fixture | claim は authority にならず、exact facts が self-review なら deny |
+| CANDIDATE-P-AUTHPROV-002 | PR #430 型の誤 family claim fixture | claim は authority にならず、Git-recorded facts だけで self-review/non-author を決めない |
 | CANDIDATE-P-AUTHPROV-003 | wrapper 内外の commit を混在 | provider claim は無視し、Git facts verified/unknown を適用 |
 
 ## canonical digest/Git blob mutation design

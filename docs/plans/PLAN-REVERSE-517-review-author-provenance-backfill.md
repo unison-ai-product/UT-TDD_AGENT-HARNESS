@@ -47,7 +47,7 @@ canonical digest mutation、receipt 後の snapshot 差し替えは `unknown`/ty
 
 | Candidate | Oracle |
 |---|---|
-| 001 | verified Git facts と別 reviewer identity なら受理。family claim は判定入力にしない |
+| 001 | Git object facts が再取得結果と一致すれば integrity を受理。reviewer との非同一性は証明しない |
 | 002–003 | family claim を反転しても Git facts の判定は変わらない。claim 不一致だけで authority を得ない |
 | 004 | facts conflict/欠落を family/provider claim より先に `unknown`/deny |
 | 005 | attempt deny 後も merge gate が独立再照合して deny |
@@ -56,7 +56,7 @@ canonical digest mutation、receipt 後の snapshot 差し替えは `unknown`/ty
 | 008–009 | unknown attempt/merge は deny、申告 fallback なし |
 | 010 | human backfill は `human_attested` claim を追記するだけ。facts unknown の attempt は deny |
 | 011 | record write failure は成功扱いせず unknown |
-| 012 | 複数 verified Git authors は exact multi-author facts として保持し family に丸めない |
+| 012 | 複数の Git-recorded author facts は exact multi-author facts として保持し family に丸めない |
 | 013 | mixed family claim の追加は Git facts の判定を変えない |
 | 014 | commit 群の一部 facts 欠落は unknown/deny |
 | 015 | 旧 schema の digest は保存し再計算しない |
@@ -81,20 +81,20 @@ canonical digest mutation、receipt 後の snapshot 差し替えは `unknown`/ty
 | 037 | facts unknown は `unknown_provenance_unresolved` の live/merge-blocking のまま |
 | 038 | 旧 digest を再計算せず、verified facts なら close 可 |
 | 039 | 旧 `authorFamily` claim だけで grandfather/deny を決めず、exact facts 規則を適用 |
-| 040–041 | reviewer が verified author identity と同一なら self-review deny。family 集合は使わない |
+| 040–041 | reviewer claim と Git-recorded author 文字列の一致/不一致だけで self-review/non-author を決めず、既存 review gate を変えない |
 | 042 | contributor facts の一部 unknown は deny |
 | 043 | human family claim だけでは contributor identity を作れず unknown/deny |
-| 044 | verified author identities と別 reviewer なら受理。family claim は無関係 |
+| 044 | reviewer claim が Git-recorded author 文字列と異なっても non-author authority を付与しない |
 | 045 | family 多数派への丸め込み経路を持たない |
 | 046 | single-commit の複数 family claim は conflict/claim として保持し、facts を変更しない |
 | 047 | receipt 発行後の backfill/snapshot mutation は deny |
 | 048 | worker 子からの human claim も認証されず、facts unknown のまま deny |
 | 049 | human backfill の append は成功し `human_attested` を伝播するが、facts unknown の attempt/merge は deny |
 | 050 | runtime env/key custody は trust root でなく、観測して authority を付与しない |
-| 051 | human family claim と reviewer family claim の一致は機械的 self-review 根拠にならず、exact facts 規則を適用 |
+| 051 | human family claim と reviewer family claim の一致は self-review 根拠にならず、既存 review gate を変えない |
 | 052 | `human_attested` を `verified` として伝播したら Red |
 | P-001 | 実 repo で author 文字列から family を導出せず、canonical Git fields を記録 |
-| P-002 | PR #430 型の誤 family claim は authority にならず、exact facts が self-review なら deny |
+| P-002 | PR #430 型の誤 family claim は authority にならず、Git-recorded facts だけで self-review/non-author を決めない |
 | P-003 | wrapper 内外の provider claim は無視し、Git facts verified/unknown をそのまま適用 |
 
 Candidate ID inventory (Forward/test-design と同一):

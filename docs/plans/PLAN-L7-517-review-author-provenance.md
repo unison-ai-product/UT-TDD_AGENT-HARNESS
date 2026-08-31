@@ -121,11 +121,12 @@ trust root ではない。
 
 ### 3.5 contributor facts と双方向性
 
-contributor set は provider family ではなく対象 commit 群の verified Git author/committer facts である。一部
-unknown、facts conflict、複数 claim は多数派・先勝ち・trailer で丸めず deny する。`unverified_family` を
-set に入れない。codex/claude/human claim を forward/reverse のどちらから追加・削除しても Git facts 判定や
-authority は変わらない。verified author identity と reviewer identity が同一の場合だけ exact facts 規則で
-self-review を deny する。
+contributor facts は provider family ではなく、対象 commit 群の Git object に記録された
+author/committer 文字列と timestamp である。これらは object との一致を検証できるが、人物・provider・
+family の認証を意味しない。一部 unknown、facts conflict、複数 claim は多数派・先勝ち・trailer で
+丸めず deny し、`unverified_family` を contributor set に入れない。codex/claude/human claim を追加・
+削除しても Git facts 判定や authority は変わらない。Git author 文字列と reviewer claim の一致・不一致だけで
+self-review も non-author も判定せず、その authority は既存の独立 review admission/gate に留める。
 
 ## 4. Fail-close contract
 
