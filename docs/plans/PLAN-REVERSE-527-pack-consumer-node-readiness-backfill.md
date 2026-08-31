@@ -27,6 +27,9 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
+    - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
+    - docs/design/harness/L6-function-design/setup-solo-team.md
+    - docs/test-design/harness/L7-unit-test-design.md
     - docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md
 backprop_decision: required
 backprop_decision_reason: "readiness の Bun 到達不能と engines.node 判定を親の Pack/consumer 契約へ戻すため。"
@@ -47,4 +50,16 @@ Forward実装と対でR1へ移り、Red→Greenを束縛する。
 4. `ci.requires`または`rollback.commands`へBun実行形を1件戻すと、readiness全体を走査する
    `U-PACKBUN-002` がRedになる。
 
-R3で親PLANのS1-a境界と照合し、R4でForwardへ戻す。
+## R3
+
+親PLANのS1-a境界と、backprop targetである L6 `docs/design/harness/L6-function-design/setup-solo-team.md`
+の U-SETUP-012/U-SETUP-013、global L7 `docs/test-design/harness/L7-unit-test-design.md` の
+U-SETUP-012/U-SETUP-013/AT-DIST-001、および paired test design を照合する。`PLAN-L6-93-node-bootstrap-contract.md`
+との Node bootstrap 境界も併せて確認し、Bun readiness と Bun transitional fixture を混同しない。
+
+## R4
+
+不足が実証された場合だけ、上記 L6/global L7 backprop targets と paired test design、ならびに
+`PLAN-L6-93-node-bootstrap-contract.md` へ差分を戻し、Forwardへ `gap-only` で再合流する。
+S1-a の intermediate readiness を #496 の generated-hook Bun 撤去、Bun-free、または releasable
+完了の証拠として扱わない。

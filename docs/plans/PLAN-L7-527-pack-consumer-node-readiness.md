@@ -36,6 +36,9 @@ dependencies:
     - docs/plans/PLAN-REVERSE-527-pack-consumer-node-readiness-backfill.md
     - docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md
     - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
+    - docs/design/harness/L6-function-design/setup-solo-team.md
+    - docs/test-design/harness/L7-unit-test-design.md
+    - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     - src/setup/distribution.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/471
 review_evidence:
@@ -58,6 +61,8 @@ review_evidence:
       - "tests/setup-bun-readiness.test.ts"
       - "tests/setup.test.ts"
       - "docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md"
+      - "docs/design/harness/L6-function-design/setup-solo-team.md"
+      - "docs/test-design/harness/L7-unit-test-design.md"
       - "docs/plans/PLAN-REVERSE-527-pack-consumer-node-readiness-backfill.md"
     green_commands:
       - kind: unit_test
@@ -95,5 +100,10 @@ readiness から Bun probe と `bunOk` を除去し、consumer `package.json` �
 - `U-PACKBUN-002`: readiness全体からBun文字列が消え、Node/npmのCI・rollback command、
   Node rangeの正負境界、Git checkが観測できる。
 - 実 CLI acceptance は `process.execPath` でNodeを直接起動する。
+- L6 `setup-solo-team.md` と global L7 `L7-unit-test-design.md` の U-SETUP-012/
+  U-SETUP-013/AT-DIST-001 が本PLANおよび paired test designと同じ契約を記載する。
+- **中間状態の警告**: #496 が landing するまでは readiness が ok でも generated hook が
+  Bun を要求し得る。これは S1-a の intermediate result であり、Bun-free または
+  releasable の主張ではない。
 - Linux / Windows / aggregate CIがexact HEADでGreenになる。
 - Reverse-527が実測証跡をR4へ戻す。

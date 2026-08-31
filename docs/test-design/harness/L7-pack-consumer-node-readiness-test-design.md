@@ -14,7 +14,9 @@ Forwardは `docs/plans/PLAN-L7-527-pack-consumer-node-readiness.md`、Reverseは
 | Oracle | Stimulus | Expected |
 | --- | --- | --- |
 | `U-PACKBUN-001` | Bun executableとBun homeを到達不能にしたclean consumer fixtureで実setupを実行 | 対応NodeとGitがあればsetupとreadinessが成功する。`bunOk`をANDへ戻す単軸変異でRed |
-| `U-PACKBUN-002` | readiness全体を取得し、supported / below-range / above-range Node fixtureを個別評価 | `checks`、`ci.requires`、`rollback.commands`のBun文字列は0。CI・rollbackはNode/npm経路だけを提示し、Node rangeとGitのtyped checkが存在する。range guard削除、Bun check復活、CI/rollbackへのBun command再導入の各単軸変異でRed |
+| `U-PACKBUN-002` | readiness全体を取得し、supported / below-range / above-range / missing / invalid `engines.node` fixtureを個別評価 | `checks`、`ci.requires`、`rollback.commands`のBun文字列は0。Node missing、missing/invalid/out-of-range (`below-range` / `above-range`) は blocking、CI・rollbackはNode/npm経路だけを提示し、Node rangeとGitのtyped checkが存在する。range guard削除、Bun check復活、CI/rollbackへのBun command再導入の各単軸変異でRed |
 
-実装oracleは `tests/setup-bun-readiness.test.ts` が所有する。source workflow、生成template、
-sealed runtime producerはこのtest designの証明範囲外とする。
+実装oracleは `tests/setup-bun-readiness.test.ts` が所有する。受入 fixture は移行中のため
+install/status/setup/typecheck に Bun を使うが、distribution plan の実行側は `process.execPath` で
+Node を直接起動する。source workflow、生成template、sealed runtime producerはこのtest designの
+証明範囲外とする。
