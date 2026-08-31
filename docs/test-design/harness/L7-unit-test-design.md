@@ -2044,7 +2044,7 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-015` | cross-revisionを通常rollbackへ注入 | cross-revision API 0/fail-close、git revert新revision buildへroute |
 | `CAND-NODEBOOT-016` | Windows receiptへpower-loss durable=trueを注入 | claim拒否、process-crash atomicityだけを記録 |
 | `CAND-NODEBOOT-017` | candidate F0a commitにreview+admission済みD0 receiptなし | merge admission拒否+rejected receipt |
-| `CAND-NODEBOOT-018` | candidate F0b commitにF0a custody receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
+| `CAND-NODEBOOT-018` | F0b candidateへF0a receiptなし/失敗、legacy D0/F0a row片側欠落、wrong command authority、wrong receipt producer、D0 4-rowまたはF0a 8-row Git closureの一要素mutation、reviewerFamily/model/PASS注入、partial publish、二重mint、又はF0a merge commitを含まないfork/stale HEADを一要素ずつ注入。shallow/truncated/promisor historyを、完全履歴を装った入力として別に注入する。positiveはPR #154/#192のimmutable Git objectsと、そのmerge commitをancestorに持つ別subject F0b candidate | 各negativeはprocess/receipt write 0のtyped reject。履歴不完全はancestor判定前に`history_incomplete`、完全履歴後の非祖先は`not_ancestor`とする。positiveは`docs/governance/plan-admission-receipts.json`のsource commit `f38974da31eb243f53c7cae392a3108a1db765dd`から固定command ID 4行と各`binding.path`のGit blob/content digestを決定的に再構成し、F0a source HEAD/treeからexact 8 Git rowをRFC 8785/JCS bare arrayで再構成して、D0→F0a backfill二receiptを#484だけがatomic・exactly onceで生成してF0bを受理する。reviewerFamily/model/PASSはadmissionへ影響せず、legacy rowsは`family_status=unverified_family`/`review_authority=none`。独立AttestedTrackedReceiptRecord wrapperや過去review/custody admittedを主張せず、再構成不能・欠落・不一致は`legacy_evidence_unavailable`。predecessor/candidateのexact equalityを要求せずancestor closureを検証し、同じimmutable predecessorを別の正当なdescendantが参照できる。別edgeへの流用と同一target+HEAD再admissionだけをreplay拒否 |
 | `CAND-NODEBOOT-019` | candidate F0c commitにF0b sealed build receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitにF0c aggregate receiptなし/失敗/別revision | merge admission拒否+rejected receipt |
 | `CAND-NODEBOOT-021` | wrapper (`scripts/ut-tdd` / `scripts/ut-tdd.ps1`) へ `dist` 参照を再追加 (変数化・path分割・comment内を含む) | canonical text全文不一致としてfail-close (PLAN-L6-93 §5.2.1)。禁止token列挙ではなく全文照合で落ちるため、comment内の`dist`も同じ規則で落ちる |
@@ -2057,6 +2057,13 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-028` | `retirement_subject`が撤去commitのsubject revisionと不一致 (過去に成立した2 receiptを別commitでの撤去へ流用) | 撤去をfail-close。tuple 3要素一致でも4要素目の不一致で落ちることを固定する |
 | `CAND-NODEBOOT-029` | `scripts/ut-tdd.ps1`のBOM変異 — 独立4case: (a) BOM欠落、(b) BOM 2個以上、(c) **BOM 1個だが byte が異なる** (`EF BB BE` / `EF BF BF` 等)、(d) UTF-16 LE/BEへのencoding差し替え | いずれも`C_ps1`由来の受理4集合外としてfail-close (PLAN-L6-93 §5.2.1)。**POSIX側と同一規則を当てる実装は (a) を通す**ため file別canonical byte列であることを固定し、**BOM個数とencoding familyだけを見る実装は (c) を通す**ため byte等価で判定していることを固定する |
 | `CAND-NODEBOOT-030` | `scripts/ut-tdd`へ先頭BOM (`EF BB BF`) を混入 | `C_posix`由来の受理4集合外としてfail-close。shebang破壊を検出規則として固定する (BOM必須を両fileへ一律適用する実装を落とす) |
+
+`CAND-NODEBOOT-018`の固定tupleはL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
+`legacy.d0-admission` / `legacy.f0a-custody`を正本とする。前者から
+`LegacyD0AdmissionBackfillReceiptV1`、後者から`LegacyF0aCustodyBackfillReceiptV1`をmintし、
+下位test designで独自のtrust root又はbundle tupleを追加しない。D0はsource/merge SHA、exact 4 rows、bound Git
+blobs、F0aはsource/tree/merge SHA、predecessor integrity digest、exact 8 Git rowsだけを再構成する。
+reviewer family/model/verdictは入力にしてもadmissionへ影響せず、欠落・不一致は`legacy_evidence_unavailable`とする。
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では
@@ -2102,24 +2109,49 @@ failure/cancelled/skippedをtyped fieldsから再導出して拒否する。
 SliceAdmissionとL6ConfirmationReceiptをdirect参照し、独自`issuer_key_id`を拒否する。attestationは
 schemaVersion/algorithm/authorityId/keyVersion/signatureのnested exact shape、producer+recordDigestはverifier
 inputとして検証する。flat field、schemaVersion/algorithm欠落、forged/unknown authority又はversionを拒否する。
-SliceAdmission保存graphはpredecessor/required input refsとD0から既存ReviewBundleへのrefを必須とし、
-Q0→F0c→F0b→F0a→D0 closure欠落を拒否する。
+通常D0のSliceAdmission保存graphはpredecessor/required input refsとD0から既存ReviewBundleへのouter refを必須とし、
+Q0→F0c→F0b→F0a→D0 closure欠落を拒否する。legacy backfill graphはこのReviewBundle/outer refを持たず、
+固定D0 4-rowとF0a 8-row Git closureだけをintegrity inputとする。
 
 slice admission candidate `CAND-NODEBOOT-017..020`はD0→F0a→F0b→F0c→Q0をpairとし、各target sliceを
-直前receiptなし/失敗/別revisionでmerge admissionしてapproved 0を確認する。edit-start自己gateではなく、
+直前receiptなし/失敗/非ancestor revisionでmerge admissionしてapproved 0を確認する。revision oracleは先に
+完全履歴を検証し、shallow boundary、truncated object graph、promisor/filtered object、又は
+`git rev-list --objects --missing=print` の欠落を `history_incomplete` として個別に拒否する。完全履歴の後にだけ
+prerequisiteのcanonical merge commitがcandidate HEADのancestorであることをGit object graphから検証し、非祖先を
+`not_ancestor`とする。unrelated fork、canonical predecessorを含まないstale HEAD、wrong edge/producer、同一target+HEAD
+replayを個別negativeにする。
+predecessorとcandidateのexact equalityは要求せず、同じimmutable predecessorを複数の正当なdescendantが参照するcaseを
+positiveへ置く。edit-start自己gateではなく、
 gate test/schema/kernelをproduct changeより先にTDDし、同じcandidate commitのacceptanceを検証する。
-positiveはL5 registry順の全inputでdigestとapproved receiptを再現する。D0は2 lane ReviewBundle、PLAN-L4-33/
-L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4だけを要求する。canonical
-tracked record全fieldとrecordDigest/attestation bindingを照合し、integrity-only、unsigned/self-hash、forged/untrusted、
-欠落、重複、wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
+通常positiveはL5 registry順の全inputでdigestとapproved receiptを再現する。legacy positiveはReviewBundleを含めず、
+`docs/governance/plan-admission-receipts.json` のsource commit `f38974da31eb243f53c7cae392a3108a1db765dd` にある
+`pr154-d0-admission-l4-20260724`〜`...-l7-20260724`のtracked receipt row exact 4を固定入力とする。各rowの
+`binding.path`は同じsource commitのGit blob/content digestへ束縛し、4固定command ID、4 distinct path、4 distinct
+record/receipt digest、全blob実在を決定的な再構成commandで確認する。独立したAttestedTrackedReceiptRecord wrapperは
+この履歴に存在しないため、legacy positiveは既存Git固定行集合を`LegacyD0TrackedReceiptSetV1`として封印し、
+attested wrapperが存在したとは主張しない。再構成不能・path/row欠落は`legacy_evidence_unavailable`で停止する。
+通常D0のAttestedTrackedReceiptRecord caseではcanonical tracked record全field、recordDigest、attestation bindingを
+照合し、integrity-only、unsigned/self-hash、forged/untrusted、欠落、重複、wrong plan、stale revision/head、
+content/path binding driftを個別negativeにする。legacy backfill caseはattestation fieldを持たないため、
+unsigned/self-hash/forgedを主張せず、固定source/merge SHA、4 command ID、4 path、Git blob/content digest、
+record/receipt digest、command authority、receipt producerの各mutationを個別negativeにする。F0a/F0b/F0c/Q0は
 predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
+PR #154/#192のlegacy positiveはL5の`legacy.d0-admission` / `legacy.f0a-custody`だけを使い、D0 source HEAD
+`8b339ec75dffd72ef4701431305065986e01b2ea`/merge `f38974da31eb243f53c7cae392a3108a1db765dd`と
+F0a source HEAD `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`/tree `1b63e413ad4f6500cc02e8df36391d0de0571b92`/merge
+`12aadde9ff56e8b39c0813b988384e2e5eed00ab`、exact 4 plan admission rows + bound Git blobs、exact 8 Git rowsを照合する。
+reviewerFamily/model/PASS注入、historical commentのreceipt昇格、row片側だけのpublish、固定tuple/closureの一要素mutation、
+再mint、削除後再発行は0とする。
+F0b compile custodyでは`tsconfig.node.json`の欠落、別path、内容digest drift、receipt field省略を独立mutationし、
+いずれもcompile/process生成0で拒否する。
 `CAND-CUTOVER-009`はPLAN-L6-93 exact revision/status confirmed/content/head bindingのattested
 L6ConfirmationReceiptをpositiveとし、draft/unconfirmed/wrong-plan/stale-head/unsigned/forgedを個別negativeにする。
 AttestedTracked wrapperとL6Confirmationの全field順、record/receipt二段digest、nested attestation mutationを検証する。
-ReviewBundle coreのexact 8 fields/self除外7-field ordered preimage、各coreを包むexact 7-field
+通常D0/CutoverのReviewBundle coreのexact 8 fields/self除外7-field ordered preimage、各coreを包むexact 7-field
 `AttestedReceiptEnvelope`、ReviewBundle/lane/CutoverAdmission/actual admission execution modeのmixed/mismatchを拒否する。
-SliceAdmission coreも同じenvelopeで検証しraw core保存を拒否する。ReviewBundle→lane、SliceEvidence→bundle、
-D0→ReviewBundle、Q0 predecessorはouter envelope digestだけでlookupし、core digest/alias参照を拒否する。
+通常D0のSliceAdmission coreも同じenvelopeで検証しraw core保存を拒否する。通常経路のReviewBundle→lane、
+SliceEvidence→bundle、D0→ReviewBundle、Q0 predecessorはouter envelope digestだけでlookupし、core digest/alias参照を拒否する。
+legacy D0/F0a backfillはReviewBundleおよびouter envelopeを参照せず、固定行とGit closureだけで再構成する。
 SliceAdmission core/outer producer owner差、CutoverAdmission 5 authorityのwrong
 EvidenceProducer又は`authority_id != attestation.authorityId`を各negative pairにする。
 edge別allowed authority ID/keyVersion外と、別trusted CI authorityによる署名replayもnegative pairにする。

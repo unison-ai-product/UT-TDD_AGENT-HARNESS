@@ -170,6 +170,21 @@ F0aはtoolchain/lock、F0bはbootstrap/generation、F0cはworkflowを生成す�
 Node-only Bun detector/ban auditのtest、implementation、実行結果とqualification evidenceを所有する。
 repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisionまで未生成である。
 
+F0b #484のartifact/path custodyは次のexact集合に限定する。
+
+- `docs/governance/node-toolchain-provenance.json`
+- `src/runtime/node-bootstrap.ts`
+- `src/schema/node-slice-admission.ts`
+- `src/runtime/node-slice-admission.ts`
+- `scripts/build-node.mjs`
+- `tsconfig.node.json`
+- `tests/node-self-host-bootstrap.test.ts`
+- `tests/node-slice-admission.test.ts`
+
+`tsconfig.node.json`はcompiled ESMの入力正本であり、`NodeBootstrapReceipt`のbuild-policy/input digestへ
+独立fieldとして封印する。欠落、別path、内容drift、receiptからの省略はcompile/process生成前に拒否する。
+`package.json`、`package-lock.json`、CI workflow、consumer placement、Bun final deletionはこの集合へ含めない。
+
 ### 4.1 Node bootstrap候補トレース（設計Red）
 
 現mainには`tests/node-self-host-bootstrap.test.ts`、`src/runtime/node-bootstrap.ts`、
@@ -196,7 +211,7 @@ repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisio
 | `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
 | `CAND-NODEBOOT-017` | candidate F0a commitへreview+admission済みD0 receiptなし | merge admission拒否、rejected receipt。gate test/kernelをproduct changeより先にTDDし同一commitを検証 |
-| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
+| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗、L5 legacy registryの`legacy.d0-admission` / `legacy.f0a-custody`片側欠落・wrong command authority・wrong receipt producer・固定tuple drift・D0 4-rowまたはF0a 8-row Git closureの一要素mutation・二重発行、reviewerFamily/model/PASS注入、又はF0a merge commitがcandidate HEADのancestorでないfork/stale入力。shallow/truncated/promisor historyも別case化する | process/receipt write 0でmerge admission拒否、typed rejected receipt。二rowからD0/F0a二receiptを#484だけがatomic・exactly onceでmintする。reviewerFamily/model/PASSはadmission結果を変えない。closure欠落・不一致は`legacy_evidence_unavailable`、完全履歴欠落は`history_incomplete`、完全履歴後の非祖先だけ`not_ancestor`とする。exact HEAD equalityは要求せずcanonical ancestor closureを受理し、同じimmutable predecessorの正当なdescendant参照はreplay扱いしない |
 | `CAND-NODEBOOT-019` | candidate F0c commitへF0b sealed build receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitへF0c aggregate receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 
@@ -229,7 +244,7 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-103` | evidence/receipt append各barrierでcrash | atomic transactionにより両方存在又は両方0、partial chain 0 |
 | `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
-| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
+| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chainと最初のF0b legacy backfill | 通常D0は5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）を維持する。legacy caseではReviewBundle/outer envelopeを入力にせず、#484だけがL5 legacy registryのGit固定`LegacyD0TrackedReceiptSetV1` exact 1からD0/F0a二receiptをatomic・exactly once生成し、D0 4-row/F0a 8-row Git closureの欠落・一要素mutation、reviewerFamily/model/PASS注入、通常D0への流用・固定tuple mutation・片側mint・再利用を拒否する。legacy rowsは`family_status=unverified_family`/`review_authority=none`であり、過去review/custody admittedを表さない |
 | `CAND-CUTOVER-107` | payload mutation、session count/outer/edge、v1 ID/revision/window mismatch、wrong authority/key、forgery、provider binding、Candidate/path/head/WorkEvent mutation | Session exact10/self9+combined payload+outer二段+edge exact1、immutable v1/rev1、Candidate11/self10、WorkEvent12/self11、paths/head契約を要求 |
 | `CAND-CUTOVER-108` | NULL PK/check、DB subject spoof、migration rebuild failure、Receipt/Content prefix混同、q0 kind typo、source preimage曖昧、marker/field/digest/partial-index/edge/core mutation | strict generated subject DB、transactional rebuild、digest型exact、q0.runtime-no-fallback literal、single JSON preimage、partial UNIQUE、edge exact 1を要求 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db`並行online backup | 単一時点のhead、refs、objectsで一貫 |
@@ -241,9 +256,10 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 canonical cutover DBは`.ut-tdd/ledger/cutover-ledger.db`、PLAN ledgerは
 `.ut-tdd/ledger/harness-ledger.db`、rebuildable projectionは`.ut-tdd/harness.db`へ分離する。
 physical ownership正本は`docs/design/harness/L5-detailed-design/physical-data.md` §2.7.1とする。
-`CAND-CUTOVER-106`はL5 `NODE-SLICE-INPUT-REGISTRY-v1`を用い、D0のReviewBundle 1、
-AttestedTrackedReceiptRecord exact 4と、後続sliceのpredecessor/owned evidenceを
-registry順で検証する。missing/duplicate/wrong plan/stale content bindingはapproved 0とする。
+`CAND-CUTOVER-106`は通常caseでL5 `NODE-SLICE-INPUT-REGISTRY-v1`を用い、D0のReviewBundle 1、
+AttestedTrackedReceiptRecord exact 4と、後続sliceのpredecessor/owned evidenceをregistry順で検証する。
+別のlegacy caseだけが`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の固定二rowを使い、通常D0へlegacy setを渡さない。
+missing/duplicate/wrong plan/stale content binding、legacy固定tuple drift、partial/double mintはapproved 0とする。
 
 pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。
 
@@ -266,6 +282,8 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 
 Issue #153は継承main負債2件の記録であり、waiver、receipt又はtrust rootではない。
 D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4だけで判定する。
+固定`LegacyD0TrackedReceiptSetV1`はD0 design mergeの入力ではなく、#484が最初のF0b admission時に
+`LegacyD0AdmissionBackfillReceiptV1`を一回だけ生成するための履歴再構成入力である。
 
 - **D0-N**: candidate IDだけを持ち、plan/frontmatter/readability/traceがGreen。current Bunとtarget Nodeを区別し、実装Greenを主張しない。
 - **F0a (toolchain)**: static exact Node/npm pin、clean `npm ci`、lock graph reproducibilityだけをRed→Green化する。
@@ -275,7 +293,14 @@ D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord e
   Bun/bunx/tsx/TS/shell process 0とcoverage欠測0を独立観測する。
 - **slice admission**: F0aはreview+admission済みD0、F0bはF0a custody、F0cはF0b sealed build、Q0はF0c aggregateを
   typed prerequisiteとして要求する。CAND-017..020はedit-start gateではなくcandidate commit acceptanceであり、
-  早期slice、別revision、失敗receiptをmerge admissionで拒否する。
+  prerequisiteのcanonical merge commitがcandidate HEADのancestorであることを要求する。unrelated fork、
+  canonical predecessorを含まないstale HEAD、wrong edge/producer、同一target+HEADの二重admissionを拒否し、
+  predecessor subjectとcandidate HEADのexact equalityは要求しない。PR #154/#192の既存mergeだけは
+  L5 legacy registryの`legacy.d0-admission` / `legacy.f0a-custody`からD0/F0a二receiptをatomic・exactly onceに
+  backfillし、通常routeへ一般化しない。D0はsource/merge SHA、exact 4 plan-admission rows、bound Git blobs、
+  F0aはsource/tree/merge SHA、predecessor integrity digest、exact 8 Git rowsだけを対象とする。
+  reviewer family/model/verdictは入力にしてもadmissionへ影響せず、欠落・不一致は`legacy_evidence_unavailable`として
+  停止する。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
 - 現D0-N candidate自身もreview+admission receiptをmerge前に修復する。PLAN-L6-93 confirmedは将来の
   production activation/cutover gateであり、draft設計を着地させる#154 D0設計merge gateには要求しない。
@@ -312,6 +337,11 @@ schema/admission kernel/test artifact boundaryも本PLAN ownership表を正本�
 target `slice_id`のproducerと一致しなければならず、owner代行又は曖昧な共有ownerを拒否する。
 実装ではdomain owner IDをrecord preimageへ残し、canonical mapping後の既存EvidenceProducer enumだけを
 `verify({producer,recordDigest},attestation)`へ渡す。ReviewBundle execution modeは両laneとactual admissionへ一致させる。
+legacy backfillもproducer registryを迂回せず、`LegacyD0AdmissionBackfillReceiptV1`は`d0-design-owner`、
+`LegacyF0aCustodyBackfillReceiptV1`は`f0a-toolchain-owner`へ固定する。L5固定二rowから二receiptを発行・atomicに
+admitできるcommand authorityはF0b owner #484のadmission kernelだけであり、kernelはproducerを名乗らない。
+入力identityはPLAN-L6-93 §3の固定SHA/evidence集合とexact一致させる。従ってcommand authority（#484）と
+receipt producer（D0/F0a）は異なる閉集合であり、いずれか一方の差替えはwrong-authority/wrong-producerとして拒否する。
 
 `CAND-BUNBAN-*`はD0-Nでは定義もfreezeもしない。Node self-hostが動作した後、既存のBun禁止PLANを
 別revisionで更新して候補IDとoracleを定義する。それ以前に未定義IDのGreenまたは予約済みを主張しない。

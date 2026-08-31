@@ -148,7 +148,69 @@ D0文書だけでは正式test IDまたはGreenを主張しない。
 slice admissionは`admitNodeSlice(input)`で`d0_admitted → f0a_complete → f0b_complete →
 f0c_complete → q0_complete`だけを進める。F0aはreview+admission済みD0 draft receipt、F0bはF0a custody receipt、
 F0cはF0b sealed build receipt、Q0はF0c aggregate receiptをexactly one要求する。typed dependencyの
-欠落、失敗、別revision、skip/replayはcandidate commitのmerge admissionで拒否する。gate test/schema/runtimeは
+欠落、失敗、別revision、skip/replayはcandidate commitのmerge admissionで拒否する。prerequisite receiptの
+`subject_revision`はtarget candidate HEADとのexact equalityを要求せず、当該receiptが束縛するcanonical merge commitが
+candidate HEADのancestorであることをGit object graphだけから検証する。ただしancestor判定の前に、verifierは
+対象canonical merge commit（D0/F0a）からcandidate HEADまでの**完全な履歴**を確認しなければならない。
+`git rev-parse --is-shallow-repository` が `false`、shallow boundary が空、promisor/filtered object が無く、
+`git rev-list --objects --missing=print <d0-merge> <f0a-merge> <candidate-head>` に欠落オブジェクトが無いことを
+全て満たさない場合は、ancestor判定を実行せず typed reject `history_incomplete` とする。完全履歴を確認した後の
+非祖先は `not_ancestor` とし、canonical merge commitを含まないfork、canonical predecessorを含まないstale
+HEAD、別edge/別producerへのreceipt流用、同一target slice・同一candidate HEADの二重admission、canonical
+predecessorを置換しようとするstale receiptはそれぞれ固有のtyped rejectとして、process生成とreceipt書込みの
+前にfail-closeする。後続candidateが同じimmutable predecessor receiptを参照すること自体はreplayではない。
+
+PR #154以前にはslice admission runtimeが存在せず、merged F0a PR #192にも`f0a_complete` receiptがないため、
+F0bの最初のcandidateに限りL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の固定2行から次の二receiptを
+atomicかつexactly once生成してよい。発行・admitの**command authority**はF0b owner #484のadmission kernelだけである。
+kernelはreceipt producerを兼務せず、各L5 rowの正規producerを検証する。
+
+1. `legacy.d0-admission` → `LegacyD0AdmissionBackfillReceiptV1`: D0 source HEAD
+   `8b339ec75dffd72ef4701431305065986e01b2ea`、merge commit
+   `f38974da31eb243f53c7cae392a3108a1db765dd`、および同commitの
+   `docs/governance/plan-admission-receipts.json`からcommand ID
+   `pr154-d0-admission-l4-20260724`〜`...-l7-20260724`をこの順に抽出した**exact 4行**を封印する。
+   D0 JCS preimageはwrapper objectを持たないbare JSON arrayで、array要素は上記4行、各record objectの
+   fieldは`sequence`, `previous_record_digest`, `record_digest`, `command_id`, `receipt_id`,
+   `receipt_digest`, `decision_digest`, `binding`だけ、`binding`のfieldは`path`, `plan_id`, `asset_id`,
+   `revision`, `content_digest`だけとする（schema/records wrapper、outer digest、Git派生行は含めない）。
+   RFC 8785/JCSを再帰適用し、UTF-8（BOMなし、末尾改行なし）でSHA-256化する。4行集合のJCS digestは
+   `sha256:d883335e37dc6595b5fcd47dd69bbcf8d89969338a109af0c2e5514049b07807`であり、
+   各`binding.path`は同じsource commitのGit blobへ別途束縛する。独立した
+   `AttestedTrackedReceiptRecord` wrapper artifactはこの履歴に存在しないため、存在したとは主張せず、
+   このGit固定setだけを一回限りのbackfill evidenceとする。
+2. `legacy.f0a-custody` → `LegacyF0aCustodyBackfillReceiptV1`: F0a source HEAD
+   `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、tree
+   `1b63e413ad4f6500cc02e8df36391d0de0571b92`、merge commit
+   `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、predecessor `legacy.d0-admission` integrity digest
+   `sha256:d883335e37dc6595b5fcd47dd69bbcf8d89969338a109af0c2e5514049b07807`、および
+   下記8 pathのGit rowだけを封印する。reviewer family/model、verdict、review record、custody admitted
+   をtupleへ含めず、F0aの閉包digestはこの8 rowから決定的に再計算する。
+
+両source HEADが各merge commitのparent closureにあり、F0a merge commitがD0 merge commitをancestorに持ち、
+F0b candidate HEADが両merge commitをancestorに持つことを、完全履歴を確認した後に検証する。自己申告SHA、GitHub本文、
+merge済みという事実だけでevidenceを補完しない。D0 JSONから4行を決定的に再構成するコマンドは、
+`git show f38974da31eb243f53c7cae392a3108a1db765dd:docs/governance/plan-admission-receipts.json` の出力を
+JSONとして読み、`records` を `command_id` の4つの固定値へ完全一致・順序固定で抽出し、各 `binding.path` を同じ
+commitから `git cat-file -p <commit>:<binding.path>` で読み、blob OIDとcontent digestを再計算する処理である。
+F0aのrepository-resident evidenceは、immutable source HEAD/treeの次の8 Git rowだけから再構成する。
+canonical preimageはRFC 8785/JCSの**bare array**（wrapper objectなし）であり、array要素は`path`のUnicode
+code-point昇順、各rowのkey順は`blob_oid`, `content_digest`, `path`に固定する。`blob_oid`は40桁lowercase
+hex、`content_digest`は`sha256:` + 64桁lowercase hex、canonical bytesはUTF-8（BOMなし・末尾改行なし）とする。
+source HEADから再計算したdigestは`sha256:96e326f3e5b88aede486da9f363fd03c06a7c1297a55c58ff92706ae8cfd6ff7`であり、
+この値はPR #192のimmutable Git objectsから独立検証済みである。対象pathは`.node-version`、`bun.lock`、
+`docs/governance/repository-structure.md`、`package-lock.json`、`package.json`、`src/lint/toolchain-pin.ts`、
+`tests/hook-native-launcher.test.ts`、`tests/toolchain-pin.test.ts`のexact 8件だけである。行の追加・欠落・順序、
+path/blob/content digestの一要素変異、別source/tree/merge、Git blob不在は全て再構成不能としてtyped
+`legacy_evidence_unavailable`で停止し、review recordやattested recordを推測・生成しない。D0についても4行、
+4 distinct path、4 distinct record/receipt digest、全blob実在を同じimmutable source commitから確認する。
+registry ID、row ID、二receipt digest、
+command authority、receipt producer、source/merge SHAのいずれかが既存記録と異なる再発行、partial一件だけの生成、
+別F0aへの一般化、削除後の再mintは拒否する。通常のF0a以降はこのbackfill routeを持たず、`admitNodeSlice`の
+通常receiptだけを使う。backfill schema/kernel/testはF0b owner #484がproduct changeより先にTDDし、同じcandidate
+commitへ含める。
+
+gate test/schema/runtimeは
 product changeより先にTDDし同一commitへ含める。Issue #153 envelopeが許可するのは
 順序内の非activation build/verifyとQ0 fixture/detector workだけであり、production activation、
 hook/runtime switch、Bun final deletion、cutoverはL6 confirmed+D0 admissionまで禁止する。

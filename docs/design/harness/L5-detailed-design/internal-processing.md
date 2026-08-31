@@ -470,10 +470,62 @@ record_digest,attestation,receipt_digest}`のexact wrapperである。`tracked_r
 `{ schemaVersion:"evidence-attestation/v1", algorithm:"hmac-sha256", authorityId, keyVersion, signature }`
 へ束縛する正式wrapperである。producerとrecordDigestはattestation内fieldではなく、
 `EvidenceAttestationVerifierPort.verify({ producer, recordDigest }, attestation)`のinputとして渡す。
+
+上記は通常D0 admissionの唯一のregistry rowであり、integrity-only recordを一般入力として許可しない。
 `tracked_record_digest`はembedded `tracked_record.recordDigest`とexact一致しなければならず、
 wrapper側だけを再計算したdigest、別recordのdigest又はaliasを拒否する。
 D0 graphへ4 wrapperをtyped object/refとして格納し、unsigned/self-hash-only/forged/untrusted、欠落、重複、wrong plan、非latest revision、
 candidate artifactとのcontent/path binding driftをadmission前に拒否する。
+
+ただし最初のF0b candidateを所有するIssue #484 admission kernelだけは、PR #154/#192以前にruntime
+receipt producerが存在しなかった履歴を閉じるため、通常registryとは別の
+`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`をexactly once使用してよい。固定tupleの正本は次の2行だけである。
+
+| row ID | mint対象 | 固定入力tuple | receipt producer |
+|---|---|---|---|
+| `legacy.d0-admission` | `LegacyD0AdmissionBackfillReceiptV1` | D0 source HEAD `8b339ec75dffd72ef4701431305065986e01b2ea`、merge commit `f38974da31eb243f53c7cae392a3108a1db765dd`、同merge commitの`plan-admission-receipts.json`からcommand ID `pr154-d0-admission-l4-20260724`〜`...-l7-20260724`の**exact 4行**、および各`binding.path`のGit blob束縛（下記） | `d0-design-owner` |
+| `legacy.f0a-custody` | `LegacyF0aCustodyBackfillReceiptV1` | F0a source HEAD `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、tree `1b63e413ad4f6500cc02e8df36391d0de0571b92`、merge commit `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、predecessor `legacy.d0-admission` integrity digest `sha256:d883335e37dc6595b5fcd47dd69bbcf8d89969338a109af0c2e5514049b07807`、下記**exact 8 Git rowsのみ** | `f0a-toolchain-owner` |
+
+`legacy.d0-admission`の4行集合は、固定command ID・source commit・4 distinct path・既存record/receipt digestを含む。
+そのcanonical preimageは **RFC 8785/JCSのbare JSON array**（`{"records":...}`等のwrapperなし）であり、array要素は
+`pr154-d0-admission-l4-20260724`〜`...-l7-20260724`のsource JSON `records`から抽出したexact 4 full record objectを
+この順序で置く。各recordは`sequence`, `previous_record_digest`, `record_digest`, `command_id`, `receipt_id`,
+`receipt_digest`, `decision_digest`, `binding`のexact 8 fieldだけ、各`binding`は`path`, `plan_id`, `asset_id`,
+`revision`, `content_digest`のexact 5 fieldだけを含める（source JSONの`schema_version`、ReviewBundle/outer envelope、
+Git派生row、追加metadataはpreimageへ含めない）。RFC 8785/JCSを再帰適用し、canonical bytesはUTF-8 BOMなし・末尾
+改行なしでSHA-256化する。digestは
+`sha256:d883335e37dc6595b5fcd47dd69bbcf8d89969338a109af0c2e5514049b07807`である。各行の
+`binding.content_digest`は既存のplan-content verifierでrecord/receipt/previous chainとともに検証し、Git blobの
+SHA-256とは混同しない。Git側の束縛は別名`git_blob_content_digest`として次の4行を持つ。
+
+| path | blob_oid | git_blob_content_digest |
+|---|---|---|
+| `docs/plans/PLAN-L4-33-node-control-plane-redesign.md` | `f4ea2ae1f014d9643ed0ed0795be94283bc4ba0a` | `sha256:84e90801e17de89de530fb717dba50426ad5c9d051e8e65108f7c810cae4c0ea` |
+| `docs/plans/PLAN-L5-26-node-generation-activation.md` | `fc8f716f6e231fbd76e8e4e65263169993c73ef5` | `sha256:eee16d3545ffbc47e19c71b4c8cd5a2c4ece2024af395e1362ae7756cae12e29` |
+| `docs/plans/PLAN-L6-93-node-bootstrap-contract.md` | `0f90a9f34094f5a709aef6abdaeb1c250a7bc368` | `sha256:b63c50fa7d2505ad9a6a32473e335fb6503faa7e5651b440a91fda84902fb770` |
+| `docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md` | `9a3ec263f52f4416cec25a1635d47564a8ea9cd1` | `sha256:9e8c9f837c34aaebe7ce129d4ab926a8ed31c21c2db8b035961b9f1088baa1fb` |
+
+F0aのexact 8 Git rowsは次の通りである。
+
+| path | blob_oid | content_digest |
+|---|---|---|
+| `.node-version` | `3fe3b1570a5187e1f51cb2467a99647b2ba3ea54` | `sha256:55ce66383dffcaf804e6d3b03993b0d332cb5d7c38e26e9f92fb78ab040dc70c` |
+| `bun.lock` | `0094ddf84b84ba2dfb1b6523ddc6b4772735d58d` | `sha256:de95274175f588a95f91bb0e9bb7492c0abc5d833b29791926c49ac97a22f04d` |
+| `docs/governance/repository-structure.md` | `c1942b0b76f734d44c2beba60ca3bcea3f62b031` | `sha256:62453b2b3a5592f23499d032b380fbecd46b140d44d05b8cc2cad6f2ddd67052` |
+| `package-lock.json` | `779dab80cd3246f4baf0e9a36716c0e6912ce5e0` | `sha256:d3e5b50a79989ad9a237276c3fedd046f2c9ac5f3f51a45482c250d3292d6d27` |
+| `package.json` | `67effe80d7bead8892edbc9b6707f858696dfb57` | `sha256:2225baafca86dcf942ec2f482a2f15d3dc2ecb2b61cb22bb7ad6287150eea3ea` |
+| `src/lint/toolchain-pin.ts` | `bb82e637b62167ed656d3c4f429926735aa53a36` | `sha256:be0d7443bfa88696d37dfc4894f5bcfd4c0fea281f88fe97885e294ee8cc8311` |
+| `tests/hook-native-launcher.test.ts` | `1841c944a0339d3b948650fb17d04a03cf2e3904` | `sha256:6a3a6632049882252e1d04671367ddd3892616a90fd987d76698f8fe4e85f060` |
+| `tests/toolchain-pin.test.ts` | `67d3c84e5870b2b226d97843a3df3d267390ba0a` | `sha256:4d8b6aade2879d54d9f36574462a4d164d5348b91a3cdddc8db1b92e8a4f3211` |
+
+F0aの8行は`PLAN-L6-93` §3のbare JCS array（pathのUnicode code-point昇順、row keysは`blob_oid`,
+`content_digest`, `path`）だけで構成し、Git固定値から再計算したcustody digestは
+`sha256:96e326f3e5b88aede486da9f363fd03c06a7c1297a55c58ff92706ae8cfd6ff7`である。
+reviewer family/model、review verdict、historical review/custody admitted はこのlegacy evidenceに含めない。
+両行の`family_status`は`unverified_family`、`review_authority`は`none`であり、通常D0 eligibilityへ入力しない。
+command authorityは両行とも#484 admission kernelでreceipt producerとは分離する。二receiptは同一atomic operationで
+mintし、片側だけのmintを許さない。固定tupleの欠落・mutation・partial/double mint・削除後remintを拒否し、
+backfill後の全D0/F0a admissionは通常registryへ戻り、このlegacy registryを受理しない。
 
 `CAND-NODEBOOT-017..020`は編集開始前の自己gateではない。各sliceのcandidate testとadmission
 schema/runtimeをTDD順で当該slice product changeより先に作り、同じcandidate commitへ含める。
