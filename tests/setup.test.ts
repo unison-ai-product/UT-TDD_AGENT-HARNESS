@@ -927,7 +927,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ),
     );
 
-    expect(transformed).toContain("run: bun run test:pack");
+    expect(transformed).toContain("run: npm run test:pack");
     expect(transformed).not.toContain("tests/distribution-acceptance.test.ts");
   });
 
