@@ -150,30 +150,47 @@ f0c_complete → q0_complete`だけを進める。F0aはreview+admission済みD0
 F0cはF0b sealed build receipt、Q0はF0c aggregate receiptをexactly one要求する。typed dependencyの
 欠落、失敗、別revision、skip/replayはcandidate commitのmerge admissionで拒否する。prerequisite receiptの
 `subject_revision`はtarget candidate HEADとのexact equalityを要求せず、当該receiptが束縛するcanonical merge commitが
-candidate HEADのancestorであることをGit object graphだけから検証する。canonical merge commitを含まないfork、
-別edge/別producerへのreceipt流用、同一target slice・同一candidate HEADの二重admission、canonical predecessorを
-置換しようとするstale receiptは、process生成とreceipt書込みの前にfail-closeする。後続candidateが同じimmutable
-predecessor receiptを参照すること自体はreplayではない。
+candidate HEADのancestorであることをGit object graphだけから検証する。ただしancestor判定の前に、verifierは
+対象canonical merge commit（D0/F0a）からcandidate HEADまでの**完全な履歴**を確認しなければならない。
+`git rev-parse --is-shallow-repository` が `false`、shallow boundary が空、promisor/filtered object が無く、
+`git rev-list --objects --missing=print <d0-merge> <f0a-merge> <candidate-head>` に欠落オブジェクトが無いことを
+全て満たさない場合は、ancestor判定を実行せず typed reject `history_incomplete` とする。完全履歴を確認した後の
+非祖先は `not_ancestor` とし、canonical merge commitを含まないfork、canonical predecessorを含まないstale
+HEAD、別edge/別producerへのreceipt流用、同一target slice・同一candidate HEADの二重admission、canonical
+predecessorを置換しようとするstale receiptはそれぞれ固有のtyped rejectとして、process生成とreceipt書込みの
+前にfail-closeする。後続candidateが同じimmutable predecessor receiptを参照すること自体はreplayではない。
 
 PR #154以前にはslice admission runtimeが存在せず、merged F0a PR #192にも`f0a_complete` receiptがないため、
-F0bの最初のcandidateに限り`LegacyF0aBackfillBundleV1`をexactly once生成してよい。authorityは
-`f0a-toolchain-owner`だけで、bundleは次の二receiptを一つのatomic admissionとして生成する。
+F0bの最初のcandidateに限り`LegacyF0aBackfillBundleV1`をexactly once生成してよい。bundleを発行・atomicに
+admitする**command authority**はF0b owner #484のadmission kernelだけである。ただしkernelはreceipt producerを
+兼務せず、L7 producer registryの正規producerを検証した上で束ねる。
 
 1. `LegacyD0AdmissionBackfillReceiptV1`: D0 source HEAD
    `8b339ec75dffd72ef4701431305065986e01b2ea`、merge commit
    `f38974da31eb243f53c7cae392a3108a1db765dd`、canonical two-lane ReviewBundle outer digest、
-   PLAN-L4-33/L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4とset digestを封印する。
+   PLAN-L4-33/L5-26/L6-93/L7-458の既存tracked receipt row exact 4とset digestを封印する。これらの
+   legacy rowは `docs/governance/plan-admission-receipts.json` の source commit
+   `f38974da31eb243f53c7cae392a3108a1db765dd` にある `command_id=pr154-d0-admission-l4-20260724` から
+   `...-l7-20260724` までの4行であり、各 `binding.path` のGit blob/content digestを同じsource commitから
+   再計算する。独立した `AttestedTrackedReceiptRecord` wrapper artifactはこの履歴に存在しないため、ここで
+   attested wrapperが存在したとは主張せず、Git固定されたこのlegacy setだけを一回限りのbackfill evidenceとする。
 2. `LegacyF0aCustodyBackfillReceiptV1`: F0a source HEAD
    `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、merge commit
    `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、上記D0 backfill receipt digest、PR #192の
    non-author PASS receipt、toolchain/lock custody evidence digestを封印する。
 
 両source HEADが各merge commitのparent closureにあり、F0a merge commitがD0 merge commitをancestorに持ち、
-F0b candidate HEADが両merge commitをancestorに持つことを検証する。自己申告SHA、GitHub本文、merge済みという事実だけで
-evidenceを補完しない。bundle ID、二receipt digest、authority、source/merge SHAのいずれかが既存記録と異なる再発行、
-partial一件だけの生成、別F0aへの一般化、削除後の再mintは拒否する。通常のF0a以降はこのbackfill routeを持たず、
-`admitNodeSlice`の通常receiptだけを使う。backfill schema/kernel/testはF0b owner #484がproduct changeより先にTDDし、
-同じcandidate commitへ含める。
+F0b candidate HEADが両merge commitをancestorに持つことを、完全履歴を確認した後に検証する。自己申告SHA、GitHub本文、
+merge済みという事実だけでevidenceを補完しない。上記JSONから4行を決定的に再構成するコマンドは、
+`git show f38974da31eb243f53c7cae392a3108a1db765dd:docs/governance/plan-admission-receipts.json` の出力を
+JSONとして読み、`records` を `command_id` の4つの固定値へ完全一致・順序固定で抽出し、各 `binding.path` を同じ
+commitから `git cat-file -p <commit>:<binding.path>` で読み、blob OIDとcontent digestを再計算する処理である。
+この再構成が4行、4 distinct path、4 distinct record/receipt digest、全blob実在を満たさない場合は typed
+`legacy_evidence_unavailable` として停止し、attested recordを推測・生成しない。bundle ID、二receipt digest、
+command authority、receipt producer、source/merge SHAのいずれかが既存記録と異なる再発行、partial一件だけの生成、
+別F0aへの一般化、削除後の再mintは拒否する。通常のF0a以降はこのbackfill routeを持たず、`admitNodeSlice`の
+通常receiptだけを使う。backfill schema/kernel/testはF0b owner #484がproduct changeより先にTDDし、同じcandidate
+commitへ含める。
 
 gate test/schema/runtimeは
 product changeより先にTDDし同一commitへ含める。Issue #153 envelopeが許可するのは

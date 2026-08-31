@@ -211,7 +211,7 @@ F0b #484のartifact/path custodyは次のexact集合に限定する。
 | `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
 | `CAND-NODEBOOT-017` | candidate F0a commitへreview+admission済みD0 receiptなし | merge admission拒否、rejected receipt。gate test/kernelをproduct changeより先にTDDし同一commitを検証 |
-| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗、D0/F0a legacy backfill bundleの片側欠落・wrong authority・source/merge SHA drift・二重発行、又はF0a merge commitがcandidate HEADのancestorでないfork/stale入力 | process/receipt write 0でmerge admission拒否、typed rejected receipt。exact HEAD equalityは要求せずcanonical ancestor closureを受理し、同じimmutable predecessorを後続descendantが参照することはreplay扱いしない |
+| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗、D0/F0a legacy backfill bundleの片側欠落・wrong command authority・wrong receipt producer・source/merge SHA drift・二重発行、固定4行のpath/record/receipt digest mutation、又はF0a merge commitがcandidate HEADのancestorでないfork/stale入力。shallow/truncated/promisor historyも、完全履歴を装った入力として別case化する | process/receipt write 0でmerge admission拒否、typed rejected receipt。完全履歴を先に確認し、欠落時は `history_incomplete`、完全履歴後の非祖先だけ `not_ancestor` とする。exact HEAD equalityは要求せずcanonical ancestor closureを受理し、同じimmutable predecessorを後続descendantが参照することはreplay扱いしない |
 | `CAND-NODEBOOT-019` | candidate F0c commitへF0b sealed build receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitへF0c aggregate receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 
@@ -331,8 +331,10 @@ target `slice_id`のproducerと一致しなければならず、owner代行又�
 実装ではdomain owner IDをrecord preimageへ残し、canonical mapping後の既存EvidenceProducer enumだけを
 `verify({producer,recordDigest},attestation)`へ渡す。ReviewBundle execution modeは両laneとactual admissionへ一致させる。
 legacy backfillもproducer registryを迂回せず、`LegacyD0AdmissionBackfillReceiptV1`は`d0-design-owner`、
-`LegacyF0aCustodyBackfillReceiptV1`は`f0a-toolchain-owner`へ固定する。bundleを発行できるcommand authorityは
-F0b owner #484のadmission kernelだけで、入力identityはPLAN-L6-93 §3の固定SHA/evidence集合とexact一致させる。
+`LegacyF0aCustodyBackfillReceiptV1`は`f0a-toolchain-owner`へ固定する。二receiptを束ねてbundleを発行・atomicに
+admitできるcommand authorityはF0b owner #484のadmission kernelだけであり、kernelはproducerを名乗らない。
+入力identityはPLAN-L6-93 §3の固定SHA/evidence集合とexact一致させる。従ってcommand authority（#484）と
+receipt producer（D0/F0a）は異なる閉集合であり、いずれか一方の差替えはwrong-authority/wrong-producerとして拒否する。
 
 `CAND-BUNBAN-*`はD0-Nでは定義もfreezeもしない。Node self-hostが動作した後、既存のBun禁止PLANを
 別revisionで更新して候補IDとoracleを定義する。それ以前に未定義IDのGreenまたは予約済みを主張しない。
