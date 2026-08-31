@@ -46,8 +46,8 @@ git common dir配下のruntime inboxへexclusive createする。Claude CodeのSt
 | --- | --- | --- |
 | `buildClaudeInboxEntry` | parse済み`MemoryEntry`と非空operation IDから配送DTOを作る。本文の権威昇格は禁止 | U-MEMWAKE-001〜003 |
 | `publishClaudeInboxEntry` | git common dirへ`wx`で保存。解決不能rootはfail-closeし、同一内容retryは冪等、同一ID異内容は拒否 | U-MEMWAKE-001〜002 / 004 |
-| `resolveLiveClaudeWorkspace` | shared runtime generationからfresh・v3互換なworkspaceを列挙し、exact 1件だけを返す。0/複数/stale/schema非互換はtyped deny | U-MEMWAKE-007 |
-| `waitForClaudeMemory` | 正の有限待機値だけを受理し、未claim entryを選ぶ。generationで旧watcherを停止し、claim成功時だけ配送済みinboxを除去する | U-MEMWAKE-001 / 005 |
+| `resolveLiveClaudeWorkspace` | shared runtime generationからschema-compatibleなworkspaceを列挙する。exact 1件がfreshなら`live`、exact 1件がstaleなら同じworkspace IDの`deferred`、0/複数/schema非互換/破損はtyped deny | U-MEMWAKE-007 / CANDIDATE-MEMWAKE-LIVENESS-002〜004 |
+| `waitForClaudeMemory` | 正の有限待機値だけを受理し、未claim entryを選ぶ。generation identity検証後だけmarkerをrenewし、generationで旧watcherを停止し、claim成功時だけ配送済みinboxを除去する | U-MEMWAKE-001 / 005 / CANDIDATE-MEMWAKE-LIVENESS-001 |
 | `renderClaudeWakeMessage` | 本文を長さ上限付きJSON dataとしてescapeし、閉じmarkerを一つに保つ | U-MEMWAKE-003 |
 
 runtime inboxは通知キューであり、review verdict、provider family、PR HEAD、署名の信頼根ではない。
@@ -62,8 +62,32 @@ Claudeとclosing reviewが15分watcherに保持されることを防ぐ（U-MEMW
 inbox v3 review entryはcanonical subject requestと通知先を分離する。producerはgit common dirのfresh
 generation markerからv3互換な生存Claude VS Code workspaceがexact 1件の場合だけ、その正規化
 SHA-256を`targetWorkspaceId`へ使う。Stop hookは自身のworkspace identityと一致するentryだけをclaimする。
-target 0件、複数件、stale、schema非互換ではrequestをbacklogに保持し、`published`へ丸めない
-（U-MEMWAKE-007）。request digest/path/HEAD/revisionを配送都合で変更せず、絶対workspace pathも保存しない。
+target 0件、複数件、schema非互換、破損では typed deny とし、request、publish、deferred queue の write を 0 にする。
+schema-compatible target が exact 1件で fresh なら `live`、stale なら canonical request 永続化後に同じ
+workspace ID の `deferred` queue を一度だけ作る（U-MEMWAKE-007 / CANDIDATE-MEMWAKE-LIVENESS-002〜004）。
+request digest/path/HEAD/revisionを配送都合で変更せず、絶対workspace pathも保存しない。
+
+### Issue #454 liveness / deferred routing delta (PLAN-L6-103)
+
+既存の `PLAN-L7-472` が定義する exact-one workspace routing を、`live | deferred` の typed union として
+明示する。canonical request の exclusive-create が成功する前に、live publish や deferred queue を行ってはならない。
+候補が一つだけの場合の分岐は次の通りである。
+
+| generation marker | route | target identity | 副作用の順序 |
+| --- | --- | --- | --- |
+| schema-compatible + fresh | `live` | marker から検証した同一 `workspaceId` | canonical request → live publish |
+| schema-compatible + stale | `deferred` | **同じ** `workspaceId`（別候補へ再解決しない） | canonical request → deferred queue 一件 |
+| 0 / 複数 / incompatible / corrupt | typed deny | なし | request / publish / queue すべて 0 |
+
+deferred queue の idempotency key は canonical request identity と target `workspaceId` から決定し、同一
+operation/content の retry は exclusive-create により一件へ収束する。同一 operation の異なる content は
+conflict として拒否し、既存 bytes を変更しない。stale 一件を `published` と報告したり wildcard/global broadcast
+へ広げたりしてはならない。
+
+`waitForClaudeMemory` の heartbeat は polling 中に更新できるが、closed marker schema、generation、canonical
+workspace ID、session identity の検証が成功した後だけ marker を renew する。検証前・検証失敗・別 generation・
+別 workspace・未知 schema・破損 marker は touch しない。fake/monotonic clock を注入したテストで、検証済み
+heartbeat は 15 分超でも fresh を保ち、heartbeat を止めれば stale になる対照を固定する。
 
 ## §3 失敗方針
 

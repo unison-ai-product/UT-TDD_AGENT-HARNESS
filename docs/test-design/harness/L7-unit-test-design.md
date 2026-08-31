@@ -1642,6 +1642,25 @@ template。永続memoryと即時配送runtime stateを分離し、通知をrevie
 CLI実配送（publish→hook stderr→exit 2）を固定する。
 `U-MEMWAKE-001`は配送後inbox除去も固定する。
 
+### Issue #454 liveness / deferred routing candidate oracle (PLAN-L6-103)
+
+これは docs-only pair-freeze の候補台帳であり、実装前のため `CANDIDATE-*` を正規 `U-*` として扱わない。
+対象は `resolveLiveClaudeWorkspace`、`waitForClaudeMemory`、canonical request writer、live publish/deferred
+queue の composition である。各負例は一軸ずつ変異し、別の guard が先に落ちる偽の網羅を避ける。
+
+| ID | fixture / mutation | falsifiable oracle |
+| --- | --- | --- |
+| `CANDIDATE-MEMWAKE-LIVENESS-001` | generation、workspace ID、session identity、schema を検証済み markerへ固定し、fake/monotonic clock を15分超進めて heartbeat を反復する。heartbeat を止めた対照も実行する | 検証済み marker の renew 後は route=`live` のまま、停止対照だけが stale になる。未検証 markerをtouchして live にする変異は RED |
+| `CANDIDATE-MEMWAKE-LIVENESS-002` | schema-compatible な marker を一つだけ stale にし、canonical request persistence を成功させる | route は `deferred`、target は元 marker と同じ `workspaceId`、deferred queue は一件。別 IDへの再解決、`published`丸めは RED |
+| `CANDIDATE-MEMWAKE-LIVENESS-003` | stale marker を二つ配置する（workspace ID は別々） | ambiguous typed deny、canonical request/live publish/deferred queue の write は全て0 |
+| `CANDIDATE-MEMWAKE-LIVENESS-004` | marker JSONを破損、または inbox schemaを非互換にする（各一軸） | typed deny、全 write 0。wildcard/global broadcast、PID/current-worktree inference は観測されない |
+| `CANDIDATE-MEMWAKE-LIVENESS-005` | 同じ canonical request の operation/content を直列と並列で retry する | exclusive-create により request と live/deferred delivery は各一件へ収束し、異内容同一 operation は conflict・既存 bytes 不変 |
+| `CANDIDATE-MEMWAKE-LIVENESS-006` | canonical request writer を失敗させたまま live/deferred publish を呼ぶ | request persists before publish が成立し、publish/queue write は0。request再mintやPR-comment fallbackは RED |
+
+実装 PR では各 candidate にテスト path、時計注入、spy の write count、対象 HEAD/revision と digest を citation し、
+反証可能な実測を得たものだけ `U-*` へ昇格する。#424 root migration、#493 custody、#494 frontmatter reader、#444
+terminal GC はこの candidate 集合へ追加しない。
+
 ## D3b review attestation / verdict transport oracle (2026-07-31)
 
 対象 = `src/feedback/review-attestation.ts`、`src/cli/delegation.ts`、

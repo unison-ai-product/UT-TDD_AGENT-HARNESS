@@ -108,8 +108,13 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 10. memory/reviewのsubject worktreeと通知先を分離する。git common dirのfresh generation markerから
     inbox schema互換な生存Claude VS Code workspaceがexact 1件だけ得られた場合、そのSHA-256 identityへ
     wakeを束縛する。別worktreeから発行してもcanonical request digest/path/HEAD/revisionを変更しない。
-11. 生存target 0件、複数workspace、stale marker、schema非互換はtyped non-successとしてcanonical
-    requestをbacklogに残す。authoring worktree宛てのfalse `published`、推測配送、request再発行を禁止する。
+11. 生存target 0件、複数workspace、schema非互換、破損markerはtyped denyとしてcanonical request、publish、
+    queueのwriteを0にする。schema-compatible targetがexact 1件でstaleの場合だけ、canonical request永続化後に
+    **同じworkspace ID**のtyped `deferred` queueを一度だけ作る。authoring worktree宛てのfalse `published`、推測配送、
+    wildcard/global broadcast、request再発行を禁止する。
+12. `waitForClaudeMemory`のheartbeatはgeneration identity（closed schema、generation、canonical workspace ID、
+    session identity）を検証した後だけmarkerをrenewする。未検証・別generation・別workspace・破損markerをtouchして
+    stale判定を延命してはならない。heartbeatは注入可能なfake/monotonic clockで検証する。
 
 ## 設計と検証の対
 
@@ -138,6 +143,21 @@ Git共通dir inboxは配送専用runtime stateとし、通知本文をreview ver
 - [x] typecheck/Biome/plan lintがgreen。
 - [x] 実HARNESSメモリ通知でClaude sessionが即時再開する。
 - [x] non-author familyのclosing reviewで未解決FLAGがない。
+
+## Issue #454 liveness / deferred routing pair-freeze delta (2026-08-31)
+
+Issue #454 は既存の Issue #416 workspace identity 契約の下に、stale marker の扱いと heartbeat の検証境界を追加する。
+この delta は後続実装の方式を発明せず、L6 `memory.md` と L7 unit-test design の candidate oracle を同時に更新する。
+正本は `PLAN-L6-103-claude-wake-liveness-deferred-routing` であり、source/test code、hook、CLI、#424 root migration、
+#493/#494 は本 PLAN の変更対象外である。
+
+| 境界 | 凍結値 |
+| --- | --- |
+| routing type | `live | deferred` の typed result。fresh exact-one は `live`、stale exact-one は同じ `workspaceId` の `deferred` |
+| deny | 0件、複数件、incompatible、corrupt は typed deny、request/publish/queue write 0 |
+| ordering | canonical request の exclusive-create 成功 → identity/schema/freshness 検証 → live publish または deferred queue |
+| retry | 同一 operation/content は exclusive-create idempotent。異内容は conflict、既存 bytes 不変 |
+| heartbeat | generation identity 検証後だけ renew。fake/monotonic clock の 15分超 heartbeat を fresh として反証可能にする |
 
 ## Issue #416 workspace routing追補 (2026-08-26)
 
