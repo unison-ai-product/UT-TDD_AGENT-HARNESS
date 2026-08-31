@@ -39,7 +39,7 @@ dependencies:
 review_evidence:
   - reviewer: codex
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-08-31T02:55:01Z"
+    reviewed_at: "2026-08-31T03:56:01Z"
     tests_green_at: "2026-08-31T02:54:30Z"
     verdict: >-
       preflight PASS / blocking 0。S1-a は npm semver grammar を runtime dependency で評価し、
@@ -48,13 +48,15 @@ review_evidence:
     worker_model: gpt-5.6-luna
     reviewer_model: gpt-5.6-sol
     effort: low
-    plan_revision: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
-    subject_head: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
+    plan_revision: f2134dc93e16ecc675006b35b988cc20fd9bc33d
+    subject_head: f2134dc93e16ecc675006b35b988cc20fd9bc33d
     evidence_path: tests/setup-bun-readiness.test.ts
-    anchor_commit: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
+    anchor_commit: f2134dc93e16ecc675006b35b988cc20fd9bc33d
     scope: >-
       PLAN-L7-527 S1-a preflight。生成template、source workflow、sealed Node producerは対象外。
-      output_digestはrunner stdout全体ではなく正規化test summaryのsha256である。
+      f2134dc9 は再検証済み 00ae92b9 から #491 docs-only 2 filesだけが増え、S1-a anchor
+      11 filesのblob SHAが全件同一であるためtree-equivalent evidenceを継承する。
+      output_digestはrunner stdout全体ではなくhead/base/test summaryを含む正規化証跡のsha256である。
     citations:
       - "docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md"
       - "docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md"
@@ -68,8 +70,8 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-31T02:54:30Z"
         evidence_path: tests/setup-bun-readiness.test.ts
-        output_digest: "sha256:eaac67613c7a3c25298d7dc285f027d1c3bacbc2677725889897b6cd6f5196a2"
-        anchor_commit: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
+        output_digest: "sha256:1b9ce28a0bf2b9e582dd8feb46da00516b578ef1b8c44f091820c200fc08d409"
+        anchor_commit: f2134dc93e16ecc675006b35b988cc20fd9bc33d
 ---
 
 # PLAN-L7-527: Bun 非依存の consumer Node readiness (S1-a)
