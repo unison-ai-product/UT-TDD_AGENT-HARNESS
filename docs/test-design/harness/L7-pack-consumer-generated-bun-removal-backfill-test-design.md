@@ -16,9 +16,9 @@ plan_id: PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill
 
 ## R1: observed contract
 
-- `U-PACKBUN-003` / `U-PACKBUN-004` は生成 consumer tree の到達経路と、その検出 oracle の
+- 生成 consumer tree の到達経路と、その検出 oracle の
   negative control を所有する。
-- `U-PACKBUN-006` は source `package.json` の `build` script と BAN 検出側 lint の能力を
+- source `package.json` の `build` script と BAN 検出側 lint の能力を
   保護する。source の build script は不変であり、生成 `package.json` の build script
   除去とは別軸である。
 - `PLAN-L7-522` §3.3 の behavioral sample は、検出結果の存在だけでなく、対応 rule と
@@ -33,14 +33,14 @@ plan_id: PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill
 
 | Oracle | 独立変異 | 期待結果 |
 | --- | --- | --- |
-| `U-PACKBUN-004` | `ut-tdd.mjs` に Bun shebang を追加 | `ut-tdd.mjs` の `Bun shebang` と `bun executable` の 2 件 |
-| `U-PACKBUN-004` | `run-bun.ts` と `findBun()` を生成 | `run-bun.ts` の `run-bun path` / `findBun function` / `bun executable` の 3 件 |
-| `U-PACKBUN-004` | consumer workflow に `setup-bun` / install / run を追加 | `harness-check.yml` の `setup-bun action` と `bun executable` の 2 件 |
-| `U-PACKBUN-004` | adapter 文書へ Bun 実行形を追加 | `ut-tdd-test.md` の `bun executable` 1 件 |
-| `U-PACKBUN-004` | 生成 `package.json` の test script を `bun run` に変異 | `package.json` の `bun executable` 1 件 |
-| `U-PACKBUN-006` | runtime-portability の `spawnSync("bun", ...)` / `.cmd` / `.exe` を各一軸で入力 | 各入力が `bun-runtime-spawn` 1 件 |
-| `U-PACKBUN-006` | rule-drift の command を `bun` / `bunx` / `.cmd` / `.exe` で各一軸で入力 | 各入力が `bun execution form` 1 件 |
-| `U-PACKBUN-006` | `package.json` と `bun.lock` の direct graph を不一致化 | `bun-direct-parity-drift` 1 件 |
+| existing negative-control oracle | `ut-tdd.mjs` に Bun shebang を追加 | `ut-tdd.mjs` の `Bun shebang` と `bun executable` の 2 件 |
+| existing negative-control oracle | `run-bun.ts` と `findBun()` を生成 | `run-bun.ts` の `run-bun path` / `findBun function` / `bun executable` の 3 件 |
+| existing negative-control oracle | consumer workflow に `setup-bun` / install / run を追加 | `harness-check.yml` の `setup-bun action` と `bun executable` の 2 件 |
+| existing negative-control oracle | adapter 文書へ Bun 実行形を追加 | `ut-tdd-test.md` の `bun executable` 1 件 |
+| existing negative-control oracle | 生成 `package.json` の test script を `bun run` に変異 | `package.json` の `bun executable` 1 件 |
+| existing detection-power oracle | runtime-portability の `spawnSync("bun", ...)` / `.cmd` / `.exe` を各一軸で入力 | 各入力が `bun-runtime-spawn` 1 件 |
+| existing detection-power oracle | rule-drift の command を `bun` / `bunx` / `.cmd` / `.exe` で各一軸で入力 | 各入力が `bun execution form` 1 件 |
+| existing detection-power oracle | `package.json` と `bun.lock` の direct graph を不一致化 | `bun-direct-parity-drift` 1 件 |
 
 この matrix の入力は `tests/setup-bun-removal.test.ts` と
 `tests/ban-lint-detection-power.test.ts` が実際に生成・変異・評価する。テスト宣言だけを
@@ -58,7 +58,7 @@ node src/cli.ts plan lint docs/plans/PLAN-REVERSE-524-pack-consumer-generated-bu
 ```
 
 各 command の exit code、実行時刻、output digest、anchor commit は
-`PLAN-REVERSE-524` の `review_evidence.green_commands` に束縛する。U004 は 5 件の
+`PLAN-REVERSE-524` の `review_evidence.green_commands` に束縛する。negative-control oracle は 5 件の
 実生成 tree mutation、U006 は spawn 3 件 + command 4 件を含む全 mutation が実走し、
 survivor 0 であることを要求する。
 
