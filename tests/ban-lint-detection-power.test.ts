@@ -66,10 +66,14 @@ describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
     text,
   }) => {
     const result = analyzeRuntimePortability([{ path: PROBE, text }]);
-    // The probe is intentionally isolated from the allowlist, but platform
-    // parsing may add shape findings (notably on Windows). The protected
-    // Bun-specific rule must be present independently of those findings.
-    expect(result.violations.map((violation) => violation.rule)).toContain(rule);
+    // Other repository-shape findings are outside this isolated probe. The
+    // protected Bun axis itself must produce exactly one targeted violation so
+    // an overlapping rule cannot mask deletion or weakening of this branch.
+    expect(
+      result.violations
+        .map((violation) => violation.rule)
+        .filter((candidate) => candidate.startsWith(`${B}-`)),
+    ).toEqual([rule]);
   });
 
   // サンプル 13 / 13b は github-ci-policy の別 rule であり、片方では他方を刺激できない。
@@ -187,6 +191,16 @@ describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
     expect(Object.fromEntries(block(`${BU.toUpperCase()}_IMPORT_DEBT_ALLOWLIST`))).toEqual({
       "src/state-db/index.ts": 2,
       "tests/runtime-portability.test.ts": 5,
+    });
+    expect(Object.fromEntries(block(`${BU.toUpperCase()}_GLOBAL_DEBT_ALLOWLIST`))).toEqual({
+      "scripts/run-vitest-snapshot.ts": 5,
+      "src/state-db/index.ts": 1,
+      "tests/state-db.test.ts": 1,
+      "tests/support/temp-tree.ts": 1,
+      "tests/setup.test.ts": 1,
+      "tests/runtime-portability.test.ts": 7,
+      "tests/doctor-test-repository-isolation.test.ts": 2,
+      "src/lint/runtime-portability.ts": 3,
     });
   });
 });
