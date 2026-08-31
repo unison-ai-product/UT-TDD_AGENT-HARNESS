@@ -67,7 +67,7 @@ schema-compatible target が exact 1件で fresh なら `live`、stale なら ca
 workspace ID の `deferred` queue を一度だけ作る（U-MEMWAKE-007 / CANDIDATE-MEMWAKE-LIVENESS-002〜004）。
 request digest/path/HEAD/revisionを配送都合で変更せず、絶対workspace pathも保存しない。
 
-### Issue #454 liveness / deferred routing delta (PLAN-L6-103)
+### Issue #454 稼働判定と遅延配送の差分 (PLAN-L6-103)
 
 既存の `PLAN-L7-472` が定義する exact-one workspace routing を、`live | deferred` の typed union として
 明示する。canonical request の exclusive-create が成功する前に、live publish や deferred queue を行ってはならない。
