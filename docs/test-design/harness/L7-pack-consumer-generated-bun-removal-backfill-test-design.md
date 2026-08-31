@@ -19,9 +19,9 @@ Node producer、Pack publication の oracle を取り込まない。
 
 | 正規 ID | 実測 | 所有テスト |
 |---|---|---|
-| U-PACKBUN-003 | setup が生成した consumer tree 全体を再帰走査し Bun 到達 0 件 | `tests/setup-bun-removal.test.ts` |
-| U-PACKBUN-004 | 生成経路5軸の単独復活が期待 finding 集合と完全一致して Red | `tests/setup-bun-removal.test.ts` |
-| U-PACKBUN-006 | BAN lint の凍結サンプルを rule 単位で fail-close、source build を保持 | `tests/ban-lint-detection-power.test.ts` |
+| 既存の生成 tree oracle | setup が生成した consumer tree 全体を再帰走査し Bun 到達 0 件 | `tests/setup-bun-removal.test.ts` |
+| 既存の negative-control oracle | 生成経路5軸の単独復活が期待 finding 集合と完全一致して Red | `tests/setup-bun-removal.test.ts` |
+| 既存の detection-power oracle | BAN lint の凍結サンプルを rule 単位で fail-close、source build を保持 | `tests/ban-lint-detection-power.test.ts` |
 
 ## 2. 変異と期待値
 
@@ -35,7 +35,8 @@ consumer workflow、adapter guidance、generated package script を個別に変�
 
 ## 3. Issue #450 AC 対応
 
-S1-b が所有する AC2 は `U-PACKBUN-003` / `004`、および全 slice 共通の `006` である。
+S1-b が所有する AC2 は親 test-design の生成 tree / negative-control oracle、および全 slice 共通の
+detection-power oracle である。
 AC1 / `001` / `002` は #471、AC4 / `005` は #472、AC3 / Node-only sealed runtime は
 #473 系列が所有する。
 
