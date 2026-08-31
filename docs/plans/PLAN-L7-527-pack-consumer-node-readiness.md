@@ -56,7 +56,7 @@ review_evidence:
       PLAN-L7-527 S1-a preflight。生成template、source workflow、sealed Node producerは対象外。
       f2134dc9 は再検証済み 00ae92b9 から #491 docs-only 2 filesだけが増え、S1-a anchor
       11 filesのblob SHAが全件同一であるためtree-equivalent evidenceを継承する。
-      output_digestはrunner stdout全体ではなくhead/base/test summaryを含む正規化証跡のsha256である。
+      output_digestはgreen-command-digest契約に従い evidence_path 実ファイルのsha256である。
     citations:
       - "docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md"
       - "docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md"
@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-08-31T02:54:30Z"
         evidence_path: tests/setup-bun-readiness.test.ts
-        output_digest: "sha256:1b9ce28a0bf2b9e582dd8feb46da00516b578ef1b8c44f091820c200fc08d409"
+        output_digest: "sha256:441fac504d37ae2d275201494bf9579bda07ece2b10ee5d9b1629ba730bd9cbe"
         anchor_commit: f2134dc93e16ecc675006b35b988cc20fd9bc33d
 ---
 
