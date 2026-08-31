@@ -13,8 +13,9 @@ Reverse 対は `docs/plans/PLAN-REVERSE-522-pack-consumer-bun-path-removal-backf
 
 ## 1. 方針
 
-候補 oracle は `CANDIDATE-U-PACKBUN-001..006` として宣言する。未実装の oracle を正規 ID にしない。
-正規 ID への昇格は各 slice の実装 PR が Red test と同時に行う。
+S1-bの`U-PACKBUN-003` / `004` / `006`は正規IDへ昇格済みであり、未実装候補は
+`CANDIDATE-U-PACKBUN-001` / `002` / `005`である。未実装oracleを正規IDにせず、各sliceの実装PRが
+Red testと同時に昇格する。
 
 prefix `U-PACKBUN` は既存 registry と衝突しない
 (`grep -o "U-PACKBUN-[0-9]*" docs/test-design/harness/L7-unit-test-design.md` = 0 件、2026-08-28 実測)。
@@ -22,9 +23,9 @@ prefix `U-PACKBUN` は既存 registry と衝突しない
 各 oracle は**単軸 mutation で独立に Red になる**こと。複数の是正をまとめて 1 本の oracle で
 観測する形にしない。
 
-## 2. 候補 oracle
+## 2. oracle
 
-| Candidate | Stimulus | Oracle |
+| ID | Stimulus | Oracle |
 | --- | --- | --- |
 | `CANDIDATE-U-PACKBUN-001` | Bun 未導入 (PATH にも `~/.bun` にも Bun が無い) の clean consumer fixture で **`ut-tdd setup` を実際に実行する** (readiness 関数を単体で呼ぶのではない) | setup が完了し readiness が `ok: true`。現行 `src/setup/distribution.ts:373` の `ok: bunOk && …` を残すと必ず Red。Issue #450 AC1 は「`ut-tdd setup` を実行し、readiness が `ok: true`」であり、readiness 計算の単体評価では AC1 を満たさない (PR #469 review、receipt `47144e18…` の指摘により是正) |
 | `CANDIDATE-U-PACKBUN-002` | 同上の環境で readiness の check 一覧を取得する | check 名 `bun>=1.3` が存在せず、`Install Bun 1.3 or newer before setup` が出力に現れない。代わりに `engines.node` 準拠の node バージョン check と git check が存在する |
@@ -56,7 +57,6 @@ prefix `U-PACKBUN` は既存 registry と衝突しない
 
 ## 5. 非証明事項
 
-本 test design は候補 oracle の宣言であり、実装、Red 化、Green 化、
-`oracle-test-trace` の充足、Issue #418 の受入のいずれも証明しない。
-`U-PACKBUN-004` の negative control が実際に Red を出すことも、
-実装 PR が実測するまで主張しない。
+本test designは未実装候補とS1-bで昇格済みの正規oracleの状態を記録する。S1-bの実測証跡は
+`PLAN-L7-524`とその対test-design / Reverseが所有し、本書単独ではS1-a / S1-cの実装又は
+Issue #418の受入を証明しない。

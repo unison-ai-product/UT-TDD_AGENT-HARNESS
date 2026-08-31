@@ -349,7 +349,8 @@ Slice 2 (#473) は本 PLAN の対象外であり (§4.3)、`PLAN-L6-93` → `PLA
 ## 8. 検証
 
 対の test-design は `docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md`。
-候補 oracle は `CANDIDATE-U-PACKBUN-001..006` を宣言する。
+S1-bの`U-PACKBUN-003` / `004` / `006`は正規IDへ昇格済みであり、未実装候補は
+`CANDIDATE-U-PACKBUN-001` / `002` / `005`である。
 prefix `U-PACKBUN` が既存 registry と衝突しないことは
 `grep -o "U-PACKBUN-[0-9]*" docs/test-design/harness/L7-unit-test-design.md` が 0 件であることで
 確認した (2026-08-28 実測)。
