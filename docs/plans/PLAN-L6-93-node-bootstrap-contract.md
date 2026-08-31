@@ -161,11 +161,11 @@ predecessorを置換しようとするstale receiptはそれぞれ固有のtyped
 前にfail-closeする。後続candidateが同じimmutable predecessor receiptを参照すること自体はreplayではない。
 
 PR #154以前にはslice admission runtimeが存在せず、merged F0a PR #192にも`f0a_complete` receiptがないため、
-F0bの最初のcandidateに限り`LegacyF0aBackfillBundleV1`をexactly once生成してよい。bundleを発行・atomicに
-admitする**command authority**はF0b owner #484のadmission kernelだけである。ただしkernelはreceipt producerを
-兼務せず、L7 producer registryの正規producerを検証した上で束ねる。
+F0bの最初のcandidateに限りL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の固定2行から次の二receiptを
+atomicかつexactly once生成してよい。発行・admitの**command authority**はF0b owner #484のadmission kernelだけである。
+kernelはreceipt producerを兼務せず、各L5 rowの正規producerを検証する。
 
-1. `LegacyD0AdmissionBackfillReceiptV1`: D0 source HEAD
+1. `legacy.d0-admission` → `LegacyD0AdmissionBackfillReceiptV1`: D0 source HEAD
    `8b339ec75dffd72ef4701431305065986e01b2ea`、merge commit
    `f38974da31eb243f53c7cae392a3108a1db765dd`、canonical two-lane ReviewBundle outer digest、
    PLAN-L4-33/L5-26/L6-93/L7-458の既存tracked receipt row exact 4とset digestを封印する。これらの
@@ -174,7 +174,7 @@ admitする**command authority**はF0b owner #484のadmission kernelだけであ
    `...-l7-20260724` までの4行であり、各 `binding.path` のGit blob/content digestを同じsource commitから
    再計算する。独立した `AttestedTrackedReceiptRecord` wrapper artifactはこの履歴に存在しないため、ここで
    attested wrapperが存在したとは主張せず、Git固定されたこのlegacy setだけを一回限りのbackfill evidenceとする。
-2. `LegacyF0aCustodyBackfillReceiptV1`: F0a source HEAD
+2. `legacy.f0a-custody` → `LegacyF0aCustodyBackfillReceiptV1`: F0a source HEAD
    `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、merge commit
    `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、上記D0 backfill receipt digest、PR #192の
    non-author PASS receipt、toolchain/lock custody evidence digestを封印する。
@@ -186,7 +186,7 @@ merge済みという事実だけでevidenceを補完しない。上記JSONから
 JSONとして読み、`records` を `command_id` の4つの固定値へ完全一致・順序固定で抽出し、各 `binding.path` を同じ
 commitから `git cat-file -p <commit>:<binding.path>` で読み、blob OIDとcontent digestを再計算する処理である。
 この再構成が4行、4 distinct path、4 distinct record/receipt digest、全blob実在を満たさない場合は typed
-`legacy_evidence_unavailable` として停止し、attested recordを推測・生成しない。bundle ID、二receipt digest、
+`legacy_evidence_unavailable` として停止し、attested recordを推測・生成しない。registry ID、row ID、二receipt digest、
 command authority、receipt producer、source/merge SHAのいずれかが既存記録と異なる再発行、partial一件だけの生成、
 別F0aへの一般化、削除後の再mintは拒否する。通常のF0a以降はこのbackfill routeを持たず、`admitNodeSlice`の
 通常receiptだけを使う。backfill schema/kernel/testはF0b owner #484がproduct changeより先にTDDし、同じcandidate

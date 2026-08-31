@@ -211,7 +211,7 @@ F0b #484のartifact/path custodyは次のexact集合に限定する。
 | `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
 | `CAND-NODEBOOT-017` | candidate F0a commitへreview+admission済みD0 receiptなし | merge admission拒否、rejected receipt。gate test/kernelをproduct changeより先にTDDし同一commitを検証 |
-| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗、D0/F0a legacy backfill bundleの片側欠落・wrong command authority・wrong receipt producer・source/merge SHA drift・二重発行、固定4行のpath/record/receipt digest mutation、又はF0a merge commitがcandidate HEADのancestorでないfork/stale入力。shallow/truncated/promisor historyも、完全履歴を装った入力として別case化する | process/receipt write 0でmerge admission拒否、typed rejected receipt。完全履歴を先に確認し、欠落時は `history_incomplete`、完全履歴後の非祖先だけ `not_ancestor` とする。exact HEAD equalityは要求せずcanonical ancestor closureを受理し、同じimmutable predecessorを後続descendantが参照することはreplay扱いしない |
+| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗、L5 legacy registryの`legacy.d0-admission` / `legacy.f0a-custody`片側欠落・wrong command authority・wrong receipt producer・固定tuple drift・二重発行、又はF0a merge commitがcandidate HEADのancestorでないfork/stale入力。shallow/truncated/promisor historyも別case化する | process/receipt write 0でmerge admission拒否、typed rejected receipt。二rowからD0/F0a二receiptをatomic・exactly onceでmintする。完全履歴欠落は`history_incomplete`、完全履歴後の非祖先だけ`not_ancestor`とする。exact HEAD equalityは要求せずcanonical ancestor closureを受理し、同じimmutable predecessorの正当なdescendant参照はreplay扱いしない |
 | `CAND-NODEBOOT-019` | candidate F0c commitへF0b sealed build receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitへF0c aggregate receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 
@@ -258,7 +258,7 @@ canonical cutover DBは`.ut-tdd/ledger/cutover-ledger.db`、PLAN ledgerは
 physical ownership正本は`docs/design/harness/L5-detailed-design/physical-data.md` §2.7.1とする。
 `CAND-CUTOVER-106`は通常caseでL5 `NODE-SLICE-INPUT-REGISTRY-v1`を用い、D0のReviewBundle 1、
 AttestedTrackedReceiptRecord exact 4と、後続sliceのpredecessor/owned evidenceをregistry順で検証する。
-別のlegacy caseだけが`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`を使い、通常D0へlegacy setを渡さない。
+別のlegacy caseだけが`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の固定二rowを使い、通常D0へlegacy setを渡さない。
 missing/duplicate/wrong plan/stale content binding、legacy固定tuple drift、partial/double mintはapproved 0とする。
 
 pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。
@@ -296,7 +296,8 @@ D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord e
   prerequisiteのcanonical merge commitがcandidate HEADのancestorであることを要求する。unrelated fork、
   canonical predecessorを含まないstale HEAD、wrong edge/producer、同一target+HEADの二重admissionを拒否し、
   predecessor subjectとcandidate HEADのexact equalityは要求しない。PR #154/#192の既存mergeだけは
-  `LegacyF0aBackfillBundleV1`でD0/F0a二receiptをatomic・exactly onceにbackfillし、通常routeへ一般化しない。
+  L5 legacy registryの`legacy.d0-admission` / `legacy.f0a-custody`からD0/F0a二receiptをatomic・exactly onceに
+  backfillし、通常routeへ一般化しない。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
 - 現D0-N candidate自身もreview+admission receiptをmerge前に修復する。PLAN-L6-93 confirmedは将来の
   production activation/cutover gateであり、draft設計を着地させる#154 D0設計merge gateには要求しない。
@@ -334,7 +335,7 @@ target `slice_id`のproducerと一致しなければならず、owner代行又�
 実装ではdomain owner IDをrecord preimageへ残し、canonical mapping後の既存EvidenceProducer enumだけを
 `verify({producer,recordDigest},attestation)`へ渡す。ReviewBundle execution modeは両laneとactual admissionへ一致させる。
 legacy backfillもproducer registryを迂回せず、`LegacyD0AdmissionBackfillReceiptV1`は`d0-design-owner`、
-`LegacyF0aCustodyBackfillReceiptV1`は`f0a-toolchain-owner`へ固定する。二receiptを束ねてbundleを発行・atomicに
+`LegacyF0aCustodyBackfillReceiptV1`は`f0a-toolchain-owner`へ固定する。L5固定二rowから二receiptを発行・atomicに
 admitできるcommand authorityはF0b owner #484のadmission kernelだけであり、kernelはproducerを名乗らない。
 入力identityはPLAN-L6-93 §3の固定SHA/evidence集合とexact一致させる。従ってcommand authority（#484）と
 receipt producer（D0/F0a）は異なる閉集合であり、いずれか一方の差替えはwrong-authority/wrong-producerとして拒否する。

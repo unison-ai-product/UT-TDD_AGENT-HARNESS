@@ -2243,9 +2243,10 @@ record digestとfull bindingを束縛したwrapperだけをeligibleにする。u
 wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c/Q0もregistryをexact照合する。
 
 例外は最初のF0b candidateに対するIssue #484の一回限りbackfillだけである。ここではL5
-`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`に従い、Git固定された`LegacyD0TrackedReceiptSetV1`を
-attested wrapperだと見なさず、固定source/merge SHA、4 command ID、path/blob/content/record/receipt digest、
-command authorityと`d0-design-owner` producerをexact照合して`LegacyD0AdmissionBackfillReceiptV1`をmintする。
+`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の`legacy.d0-admission`と`legacy.f0a-custody`を順にexact照合する。
+Git固定された`LegacyD0TrackedReceiptSetV1`をattested wrapperだと見なさず、L5固定tupleから
+`LegacyD0AdmissionBackfillReceiptV1`と`LegacyF0aCustodyBackfillReceiptV1`の二receiptをatomicにmintする。
+command authorityと各rowの`d0-design-owner` / `f0a-toolchain-owner` producerを混同してはならない。
 通常D0 eligibility判定へこのlegacy setを渡してはならず、固定履歴を再構成不能なら
 `legacy_evidence_unavailable`、partial/double mint又は再利用はtyped rejectとする。
 

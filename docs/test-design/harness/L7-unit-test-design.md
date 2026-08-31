@@ -2057,6 +2057,11 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-028` | `retirement_subject`が撤去commitのsubject revisionと不一致 (過去に成立した2 receiptを別commitでの撤去へ流用) | 撤去をfail-close。tuple 3要素一致でも4要素目の不一致で落ちることを固定する |
 | `CAND-NODEBOOT-029` | `scripts/ut-tdd.ps1`のBOM変異 — 独立4case: (a) BOM欠落、(b) BOM 2個以上、(c) **BOM 1個だが byte が異なる** (`EF BB BE` / `EF BF BF` 等)、(d) UTF-16 LE/BEへのencoding差し替え | いずれも`C_ps1`由来の受理4集合外としてfail-close (PLAN-L6-93 §5.2.1)。**POSIX側と同一規則を当てる実装は (a) を通す**ため file別canonical byte列であることを固定し、**BOM個数とencoding familyだけを見る実装は (c) を通す**ため byte等価で判定していることを固定する |
 | `CAND-NODEBOOT-030` | `scripts/ut-tdd`へ先頭BOM (`EF BB BF`) を混入 | `C_posix`由来の受理4集合外としてfail-close。shebang破壊を検出規則として固定する (BOM必須を両fileへ一律適用する実装を落とす) |
+
+`CAND-NODEBOOT-018`の固定tupleはL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
+`legacy.d0-admission` / `legacy.f0a-custody`を正本とする。前者から
+`LegacyD0AdmissionBackfillReceiptV1`、後者から`LegacyF0aCustodyBackfillReceiptV1`をmintし、
+下位test designで独自のtrust root又はbundle tupleを追加しない。
 cutover unit pairはPLAN-L7-458 `CAND-CUTOVER-001..009`を正本とし、genesis、reducer、edge guard、
 wrong evidence、replay、skip/reverse、digest mutation、projection直接更新、production activation admissionを
 `tests/cutover-transition.test.ts`の正式ID family `U-CUTOVER-{001–009}`へ固定する。candidate段階では

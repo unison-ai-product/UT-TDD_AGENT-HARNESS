@@ -89,3 +89,10 @@ Issue #152のD0-Nで確定したNode control plane設計をForwardへ合流し�
 - PoC実装を捨てて設計から再降下した経路はRedesign、採用実装から設計を追従させる本工程はReverseとして混同しない。
 - Bun依存をallowlistでGreen化しない。既存負債は`NonCompliant`、観測不能は`Indeterminate`として保持する。
 - 実装結果でL4-L6を自動改訂せず、差分採択後にのみ設計を更新する。
+
+## 4. F0a legacy custody backfill
+
+最初のF0b candidateに限るbackfillは、L5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
+`legacy.d0-admission`と`legacy.f0a-custody`を唯一の正本とする。D0/F0a二receiptの片側mint、
+row固定tupleの一要素mutation、wrong command authority/receipt producer、double mint、削除後remintをRedにし、
+二rowをatomicかつexactly once mintした場合だけGreenとする。通常D0/F0a admissionへlegacy rowを一般化しない。
