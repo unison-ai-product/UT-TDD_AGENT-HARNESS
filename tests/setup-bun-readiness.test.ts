@@ -98,6 +98,35 @@ function setupConsumer(cwd: string, env: NodeJS.ProcessEnv): void {
   expect(existsSync(join(cwd, ".ut-tdd", "bin", "ut-tdd.mjs"))).toBe(true);
 }
 
+function readinessForNodeConstraint(
+  nodeVersion: string | null,
+  requiredNodeVersion: string | null,
+) {
+  return buildConsumerReadinessPlan({
+    nodeVersion,
+    requiredNodeVersion,
+    hasGit: true,
+    hasGh: false,
+    hasUtTddCli: true,
+    hasClaude: false,
+    hasCodex: false,
+    repoRoot: "/consumer",
+  });
+}
+
+function expectNodeConstraintBlocked(
+  readiness: ReturnType<typeof readinessForNodeConstraint>,
+  name: string,
+  message: string,
+): void {
+  expect(readiness.ok).toBe(false);
+  expect(readiness.checks.find((check) => check.name === name)).toEqual({
+    name,
+    ok: false,
+    message,
+  });
+}
+
 describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
   it("U-PACKBUN-001: readiness is ok in a Bun-free environment", () => {
     const home = temporaryDirectory();
@@ -171,5 +200,45 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     expect(nodeReady("24.15.0", "24.13 - 24.14")).toBe(false);
     expect(nodeReady("24.12.9", ">=24.13 <25")).toBe(false);
     expect(nodeReady("24.13.0", ">=24.13 <25")).toBe(true);
+  });
+
+  it("missing engines.node is a typed blocking readiness check", () => {
+    const readiness = readinessForNodeConstraint("24.13.0", null);
+
+    expectNodeConstraintBlocked(
+      readiness,
+      "node engines.node (missing)",
+      "package.json engines.node is missing; cannot verify the Node runtime",
+    );
+  });
+
+  it("invalid engines.node is a typed blocking readiness check", () => {
+    const readiness = readinessForNodeConstraint("24.13.0", "not a semver range");
+
+    expectNodeConstraintBlocked(
+      readiness,
+      "node@not a semver range",
+      "Install a Node version satisfying not a semver range before setup (observed 24.13.0)",
+    );
+  });
+
+  it("missing nodeVersion is a typed blocking readiness check", () => {
+    const readiness = readinessForNodeConstraint(null, "^24.13.0");
+
+    expectNodeConstraintBlocked(
+      readiness,
+      "node@^24.13.0",
+      "Install a Node version satisfying ^24.13.0 before setup (observed none)",
+    );
+  });
+
+  it("range guard rejects an observed Node version outside engines.node", () => {
+    const readiness = readinessForNodeConstraint("25.0.0", "^24.13.0");
+
+    expectNodeConstraintBlocked(
+      readiness,
+      "node@^24.13.0",
+      "Install a Node version satisfying ^24.13.0 before setup (observed 25.0.0)",
+    );
   });
 });

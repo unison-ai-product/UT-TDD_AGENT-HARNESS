@@ -83,7 +83,9 @@ Forward実装と対でR1へ移り、Red→Greenを束縛する。
 ## R2 mutation
 
 1. readinessへ `bunOk` のANDを戻すと `U-PACKBUN-001` がRedになる。
-2. Node range判定を常時trueへ変えると `U-PACKBUN-002` のunsupported fixtureがRedになる。
+2. Node constraint guard (missing/invalid `engines.node`、missing `nodeVersion`、および
+   below/above-range) を常時trueへ変えると、`U-PACKBUN-002` の各負系 fixtureが typed
+   blocking check の name/message と `readiness.ok=false` を個別に検証してRedになる。
 3. Bun checkまたは導入案内を戻すと `U-PACKBUN-002` がRedになる。
 4. `ci.requires`または`rollback.commands`へBun実行形を1件戻すと、readiness全体を走査する
    `U-PACKBUN-002` がRedになる。
