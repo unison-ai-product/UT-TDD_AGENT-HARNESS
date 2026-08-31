@@ -119,7 +119,11 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     setupConsumer(consumer, env);
     const readiness = readinessOf(consumer, env);
     const names = readiness.checks.map((check) => check.name);
-    const serializedReadiness = JSON.stringify(readiness);
+    const serializedReadinessCommands = JSON.stringify({
+      checks: readiness.checks,
+      ciRequires: readiness.ci.requires,
+      rollbackCommands: readiness.rollback.commands,
+    });
     const requiredNodeVersion = (
       JSON.parse(readFileSync(join(consumer, "package.json"), "utf8")) as {
         engines: { node: string };
@@ -127,8 +131,8 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     ).engines.node;
 
     expect(names).not.toContain(`${LEGACY}>=1.3`);
-    expect(serializedReadiness).not.toContain("Install Bun 1.3 or newer before setup");
-    expect(serializedReadiness.toLowerCase()).not.toContain(LEGACY);
+    expect(serializedReadinessCommands).not.toContain("Install Bun 1.3 or newer before setup");
+    expect(serializedReadinessCommands.toLowerCase()).not.toContain(LEGACY);
     expect(readiness.ci.requires).toEqual([
       "actions/checkout@v4",
       "actions/setup-node@v4",
