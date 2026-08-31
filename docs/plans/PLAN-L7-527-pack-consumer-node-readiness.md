@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-31
 updated: 2026-08-31
 owner: Codex / Luna
@@ -36,7 +36,40 @@ dependencies:
     - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
     - src/setup/distribution.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/471
-review_evidence: []
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-08-31T02:55:01Z"
+    tests_green_at: "2026-08-31T02:54:30Z"
+    verdict: >-
+      preflight PASS / blocking 0。S1-a は npm semver grammar を runtime dependency で評価し、
+      Bun-free 実CLIと supported/below/above の独立range oracleを備える。exact PR HEADに
+      対する非著者closing reviewとcanonical receiptは別途要求する。
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    effort: low
+    plan_revision: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
+    subject_head: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
+    evidence_path: tests/setup-bun-readiness.test.ts
+    anchor_commit: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
+    scope: >-
+      PLAN-L7-527 S1-a preflight。生成template、source workflow、sealed Node producerは対象外。
+      output_digestはrunner stdout全体ではなく正規化test summaryのsha256である。
+    citations:
+      - "docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md"
+      - "docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md"
+      - "src/setup/distribution.ts"
+      - "package-lock.json"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/setup-bun-readiness.test.ts tests/setup.test.ts tests/doctor-test-repository-isolation.test.ts tests/oracle-test-trace.test.ts tests/impl-plan-trace.test.ts tests/plan-lint.test.ts"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-31T02:54:30Z"
+        evidence_path: tests/setup-bun-readiness.test.ts
+        output_digest: "sha256:eaac67613c7a3c25298d7dc285f027d1c3bacbc2677725889897b6cd6f5196a2"
+        anchor_commit: cedba9ce9d41e62aabe47d5de79ac3ece42073e7
 ---
 
 # PLAN-L7-527: Bun 非依存の consumer Node readiness (S1-a)
