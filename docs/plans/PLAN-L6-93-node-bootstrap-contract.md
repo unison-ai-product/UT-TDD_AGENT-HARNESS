@@ -189,10 +189,15 @@ JSONとして読み、`records` を `command_id` の4つの固定値へ完全一
 commitから `git cat-file -p <commit>:<binding.path>` で読み、blob OIDとcontent digestを再計算する処理である。
 F0aのrepository-resident provenance artifactは#484が同じcandidate commitに生成する。historical PR commentは
 canonical receiptとして使わず、immutable source HEAD/treeと次の8 pathを対象に2026-08-31T07:44:58ZにSolが行った
-fresh retrospective non-author reviewだけを固定する。review recordのRFC 8785 preimageは
-`{artifact_set_digest,blocking_count,ci,review_kind,reviewed_at,reviewer_family,reviewer_model,schema_version,subject_revision,subject_tree,verdict}`、
-`review_kind="retrospective_non_author"`、`reviewer_family="codex"`、`reviewer_model="gpt-5.6-sol"`、
-`verdict="PASS"`、`blocking_count=0`、CI run `30448849258` successとする。このrecordはhistorical commentでも
+fresh retrospective non-author reviewだけを固定する。review recordのRFC 8785 preimageは、次のUTF-8 JSON literal
+（末尾改行なし）exact 1であり、key追加・省略・並べ替え・型変換を許さない。
+
+```json
+{"artifact_set_digest":"sha256:2213afcc98863c1883255c24576800fcced77cfbd27e7eec9f89424614dc445c","blocking_count":0,"ci":{"conclusion":"success","head_sha":"76d0f9c7219a8290fc809b5036d6d02f9b05fb88","run_id":30448849258},"review_kind":"retrospective_non_author","reviewed_at":"2026-08-31T07:44:58Z","reviewer_family":"codex","reviewer_model":"gpt-5.6-sol","schema_version":"legacy-f0a-retrospective-review.v1","subject_revision":"76d0f9c7219a8290fc809b5036d6d02f9b05fb88","subject_tree":"1b63e413ad4f6500cc02e8df36391d0de0571b92","verdict":"PASS"}
+```
+
+このbyte列のSHA-256は`a7e5417ffb2e6f9eb1b2df679e1676db6633b9fae902cb478472d0dfb591d474`でなければならない。
+`artifact_set_digest`は直後の8 path閉包から再計算した値だけを受理する。このrecordはhistorical commentでも
 `AttestedReceiptEnvelope`でもなく、immutable Git subject/custody閉包へのfresh retrospective integrity reviewである。
 8 pathは`.node-version`、`bun.lock`、`docs/governance/repository-structure.md`、`package-lock.json`、`package.json`、
 `src/lint/toolchain-pin.ts`、`tests/hook-native-launcher.test.ts`、`tests/toolchain-pin.test.ts`である。path昇順の
