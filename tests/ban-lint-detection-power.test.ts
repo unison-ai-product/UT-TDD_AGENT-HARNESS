@@ -16,6 +16,9 @@ import { analyzeToolchainPin } from "../src/lint/toolchain-pin.ts";
 // 分割して組み立てる (repo 既存の LEGACY_RUNTIME_NAME と同じ手法)。
 const B = ["b", "un"].join("");
 const BU = ["B", "un"].join("");
+const BX = ["b", "un", "x"].join("");
+const BC = ["b", "un", ".cmd"].join("");
+const BE = ["b", "un", ".exe"].join("");
 
 // allowlist 非収載 path を使う。収載 path は pin により debt が許容されてしまう。
 const PROBE = "src/__packbun_probe__.ts";
@@ -23,7 +26,9 @@ const PROBE = "src/__packbun_probe__.ts";
 type PortabilitySample = { readonly id: string; readonly rule: string; readonly text: string };
 
 const PORTABILITY_SAMPLES: readonly PortabilitySample[] = [
-  { id: "1", rule: `${B}-runtime-spawn`, text: `spawnSync("${B}", args);` },
+  { id: "1-bun", rule: `${B}-runtime-spawn`, text: `spawnSync("${B}", args);` },
+  { id: "1-bun.cmd", rule: `${B}-runtime-spawn`, text: `spawnSync("${BC}", args);` },
+  { id: "1-bun.exe", rule: `${B}-runtime-spawn`, text: `spawnSync("${BE}", args);` },
   { id: "2", rule: `${B}-runtime-spawn`, text: `const p = find${BU}();` },
   { id: "3", rule: `${B}-runtime-spawn`, text: `const exe = env.EXE ?? "${B}";` },
   { id: "4", rule: `${B}-runtime-spawn`, text: `spawn(comspec, ["/c", "${B}", "x"]);` },
@@ -61,7 +66,7 @@ describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
     text,
   }) => {
     const result = analyzeRuntimePortability([{ path: PROBE, text }]);
-    expect(result.violations.map((violation) => violation.rule)).toContain(rule);
+    expect(result.violations.map((violation) => violation.rule)).toEqual([rule]);
   });
 
   // サンプル 13 / 13b は github-ci-policy の別 rule であり、片方では他方を刺激できない。
@@ -101,14 +106,16 @@ describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
       claudeProject: adapter("- `node .ut-tdd/bin/ut-tdd.mjs hook work-guard`"),
       claudeRuntime: adapter("- `node .ut-tdd/bin/ut-tdd.mjs hook work-guard`"),
     });
-    const dirty = analyzeRuleDrift({
-      agents: adapter(`- run \`${B} .ut-tdd/bin/ut-tdd.mjs hook work-guard\``),
-      claudeProject: adapter("- `node .ut-tdd/bin/ut-tdd.mjs hook work-guard`"),
-      claudeRuntime: adapter("- `node .ut-tdd/bin/ut-tdd.mjs hook work-guard`"),
-    });
-    // 実行指示の Bun 形が増えたぶんだけ forbidden marker が増えることを要求する。
-    expect(dirty.forbiddenMarkers.length).toBeGreaterThan(clean.forbiddenMarkers.length);
-    expect(dirty.forbiddenMarkers.map((entry) => entry.marker)).toContain(`${B} execution form`);
+    for (const executable of [B, BX, BC, BE]) {
+      const dirty = analyzeRuleDrift({
+        agents: adapter(`- run \`${executable} .ut-tdd/bin/ut-tdd.mjs hook work-guard\``),
+        claudeProject: adapter("- `node .ut-tdd/bin/ut-tdd.mjs hook work-guard`"),
+        claudeRuntime: adapter("- `node .ut-tdd/bin/ut-tdd.mjs hook work-guard`"),
+      });
+      // 実行指示の各 Bun 形を独立に注入し、別形の検出で取りこぼしを隠さない。
+      expect(dirty.forbiddenMarkers).toHaveLength(clean.forbiddenMarkers.length + 1);
+      expect(dirty.forbiddenMarkers.map((entry) => entry.marker)).toEqual([`${B} execution form`]);
+    }
   });
 
   it("sample 15 still fail-closes as bun-direct-parity-drift", () => {
