@@ -39,6 +39,7 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/134
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/418
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
 review_evidence: []
 ---
 
@@ -123,6 +124,16 @@ consumer は Pack から配布された成果物を使うのであって `bun bu
 |---|---|
 | `.github/workflows/harness-check.yml:68, 189` | `oven-sh/setup-bun@v2` ×2 (コメントは「Pack/consumer acceptance fixture のみ」) |
 
+### 2.4 Pack repository の CI policy
+
+| 位置 | 内容 |
+|---|---|
+| `src/lint/github-ci-policy.ts:154-162` | Pack template の required step が `setup-bun` / `bun install` / `bun run *` を要求している |
+| `docs/templates/github/common/pack-harness-check.yml` | Pack 自身の workflow が上記 required step を実際に使用している |
+
+Issue #500 (S1-d) はこの Pack-owned surface を対象とする。source workflow (#472)、生成 consumer
+tree (#470)、readiness (#471)、Node producer (#484)、consumer runtime (#463) の責務は変更しない。
+
 ## 3. 非 Scope (撤去してはならないもの)
 
 ### 3.1 `package.json` の `build` script
@@ -157,7 +168,7 @@ file ごとに扱いが異なるので分けて契約する。
 
 | file | 現状 (2026-08-28 実測) | 本 slice での扱い |
 |---|---|---|
-| `github-ci-policy.ts` | `:143` / `:156-160` / `:334` が `oven-sh/setup-bun@v2` / `bun install --frozen-lockfile` / `bun run typecheck` / `bun run test:pack` / `bun run lint` を **required step として要求**している | **S1-c で追随変更する。** `setup-bun` を撤去すれば required step 側は必ず Red になる。要求側だけを Node 経路へ差し替え、**検出側 (Pack CI が raw vitest を使うことの deny 等) は減らさない** |
+| `github-ci-policy.ts` | `:154-162` が `oven-sh/setup-bun@v2` / `bun install --frozen-lockfile` / `bun run typecheck` / `bun run test:pack` / `bun run lint` を **required step として要求**している | **S1-d (#500) で追随変更する。** Pack-owned required step を Node/npm の frozen route (`setup-node@v4`, `npm ci --no-audit --no-fund`, `npm run typecheck`, `npm run test:pack`, `npm run lint`, `node ...`) へ差し替え、Pack steps の Bun/bunx/setup-bun 到達を独立 oracle で fail-close する。source profile と Pack の既存 deny rule は変更しない |
 | `runtime-portability.ts` | `:478-485` の debt allowlist は `seen > pinned` で違反にする **上限 pin** であり、Bun 参照が減る方向は自由 (`:100` が明示) | **追随変更不要。** S1-b が debt を減らしても Red にならない |
 | `rule-drift.ts` / `toolchain-pin.ts` | 生成物・readiness・source CI のいずれも参照していない | **不変** |
 
@@ -304,9 +315,10 @@ canonical receipt `5b16bfc6d1921ac1e83712f10b39716c0410a24baa57be79e6430da2a81cc
 | S1-b (生成成果物) | #470 | Claude lane | なし | #472 |
 | S1-a (readiness) | #471 | Claude lane | なし (順序自由、§5.0) | PR #463 の rebase (§S1-a) |
 | S1-c (source CI) | #472 | Claude lane | #470 | なし |
+| S1-d (Pack CI policy) | #500 | Codex lane | #470 | #450 Pack CI closure |
 | Slice 2 (Node producer / `build` script 撤去) | #473 | Claude lane (Opus contract gate; bounded workerは規定router) | `PLAN-L6-93` §5.4 tuple 成立 | なし |
 
-`#450` は上記 4 child が全て close し、かつ親固有 AC (AC1〜AC4 の統合証跡) が揃うまで close しない。
+`#450` は上記 5 child が全て close し、かつ親固有 AC (AC1〜AC4 の統合証跡) が揃うまで close しない。
 Slice 2 (#473) は本 PLAN の対象外であり (§4.3)、`PLAN-L6-93` → `PLAN-L7-458` 系列が契約と実装を所有する。
 
 ### S1-b: 生成成果物から Bun を撤去
@@ -331,18 +343,36 @@ Slice 2 (#473) は本 PLAN の対象外であり (§4.3)、`PLAN-L6-93` → `PLA
 `setup-bun` を workflow から消しながら lint が `setup-bun` を要求したままにすると必ず Red になるため、
 撤去と追随は分離できない。追随は required step 側に限り、検出側の deny rule には触れない。
 
+### S1-d: Pack repository CI policy から Bun を撤去
+
+Issue #500 が所有する `pack_template` profile の required step と workflow template を対象とする。
+required step は次の Node/npm 経路に固定する:
+
+- `actions/setup-node@v4` (`node-version: 24.13.0`, `cache: npm`)
+- `npm ci --no-audit --no-fund`
+- `npm run typecheck`
+- `npm run test:pack`
+- `npm run lint`
+- `node src/cli.ts setup --solo` と `node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke`
+
+Pack profile の各 workflow step は `oven-sh/setup-bun@v2`、`bun`、`bunx` の実行到達を拒否する。
+mutation oracle は required Node/npm step を残したまま各 Bun 形を一つずつ復活させ、必ず
+`forbidden_bun_execution` を返すことを確認する。source runtime manifest、source template、generated
+consumer template、readiness、Node producer、`package.json` の `build` script はこの slice の対象外である。
+
 ## 6. 不変条件
 
 1. consumer readiness は Bun の有無に依存しない。
 2. setup が生成した consumer tree に Bun 実行子への到達経路が存在しない。
 3. source repo の `build` script は本 PLAN では不変である。
 4. BAN 検出側 lint の **Bun 検出能力**は減らない (§3.3)。`github-ci-policy.ts` の required step は
-   S1-c で Node 経路へ追随変更するが、deny rule の削除・allowlist への path 追加・pin 引き上げは行わない。
+   S1-c/S1-d で Node 経路へ追随変更するが、deny rule の削除・allowlist への path 追加・pin 引き上げは行わない。
 
 ## 7. 完了条件
 
 - [ ] S1-b / S1-a / S1-c の 3 PR がいずれも exact-head CI Green と非著者 canonical receipt を持つ
 - [ ] 対の test-design の候補 oracle が正規 ID へ昇格し、`oracle-test-trace` が Green
+- [ ] S1-d (#500) の Pack policy oracle が正規 ID へ昇格し、各 Bun mutation が Red になる
 - [ ] 不変条件 1〜4 が §8 の oracle で機械実測されている
 - [ ] Issue #418 の HARD 条件との突き合わせ結果が記録されている
 
