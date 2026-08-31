@@ -1,3 +1,4 @@
+import { satisfies, valid, validRange } from "semver";
 import { COMMON_FILES } from "./templates.ts";
 
 export interface CleanDistributionPlan {
@@ -253,92 +254,16 @@ export function gitAddPathspecCommands(
  * 判定基準は consumer package root の `engines.node` であり、ここで別の pin を持たない
  * (第二の正本を作らない)。`required` が空なら fail-close する。
  */
-type NodeVersion = { major: number; minor: number; patch: number };
-
-function parseNodeVersion(value: string): NodeVersion | null {
-  const match = value.trim().match(/^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[-+].*)?$/);
-  if (!match) return null;
-  return {
-    major: Number.parseInt(match[1], 10),
-    minor: Number.parseInt(match[2] ?? "0", 10),
-    patch: Number.parseInt(match[3] ?? "0", 10),
-  };
-}
-
-function compareNodeVersions(left: NodeVersion, right: NodeVersion): number {
-  for (const key of ["major", "minor", "patch"] as const) {
-    if (left[key] !== right[key]) return left[key] > right[key] ? 1 : -1;
-  }
-  return 0;
-}
-
 /**
- * Evaluate the npm `engines.node` range without creating a second runtime pin.
- * The supported forms cover npm's normal engine declarations: exact/partial
- * versions, x-ranges, comparator sets, caret/tilde ranges, and `||` unions.
+ * Evaluate `engines.node` with npm's semver grammar rather than a local subset.
+ * Invalid/missing versions and ranges fail closed.
  */
 function satisfiesRequiredNode(version: string | null, required: string | null): boolean {
-  const observed = version ? parseNodeVersion(version) : null;
-  if (!observed || !required?.trim()) return false;
-
-  const satisfiesComparator = (comparator: string): boolean => {
-    const token = comparator.trim();
-    if (!token || token === "*" || /^x(?:\.x)?(?:\.x)?$/i.test(token)) return true;
-
-    const operator = token.match(/^(<=|>=|<|>|=|\^|~)?\s*(.*)$/)?.[1] ?? "=";
-    const value = token.replace(/^(<=|>=|<|>|=|\^|~)\s*/, "");
-    const parts = value.replace(/^v/i, "").split(".");
-    if (parts.length > 3 || parts.some((part) => !/^\d+$|^[xX*]$/.test(part))) return false;
-    const wildcardIndex = parts.findIndex((part) => /^[xX*]$/.test(part));
-    const partial = wildcardIndex >= 0 || parts.length < 3;
-    const lower: NodeVersion = {
-      major: Number.parseInt(parts[0] ?? "0", 10),
-      minor: Number.parseInt(parts[1] ?? "0", 10),
-      patch: Number.parseInt(parts[2] ?? "0", 10),
-    };
-    const comparison = compareNodeVersions(observed, lower);
-
-    if (operator === "^") {
-      const upper: NodeVersion =
-        lower.major > 0
-          ? { major: lower.major + 1, minor: 0, patch: 0 }
-          : lower.minor > 0
-            ? { major: 0, minor: lower.minor + 1, patch: 0 }
-            : { major: 0, minor: 0, patch: lower.patch + 1 };
-      return comparison >= 0 && compareNodeVersions(observed, upper) < 0;
-    }
-    if (operator === "~") {
-      const upper: NodeVersion = { major: lower.major, minor: lower.minor + 1, patch: 0 };
-      return comparison >= 0 && compareNodeVersions(observed, upper) < 0;
-    }
-    if (operator === ">=") return comparison >= 0;
-    if (operator === ">") return comparison > 0;
-    if (operator === "<=") return comparison <= 0;
-    if (operator === "<") return comparison < 0;
-    if (!partial) return comparison === 0;
-
-    // A bare partial/x-range is the corresponding bounded minor/major range.
-    const boundary =
-      wildcardIndex === 0 || parts.length === 1
-        ? { major: lower.major + 1, minor: 0, patch: 0 }
-        : { major: lower.major, minor: lower.minor + 1, patch: 0 };
-    return comparison >= 0 && compareNodeVersions(observed, boundary) < 0;
-  };
-
-  return required.split("||").some((alternative) => {
-    const hyphen = alternative.trim().match(/^(.+?)\s+-\s+(.+)$/);
-    if (hyphen) {
-      const lower = parseNodeVersion(hyphen[1]);
-      const upper = parseNodeVersion(hyphen[2]);
-      return Boolean(
-        lower &&
-          upper &&
-          compareNodeVersions(observed, lower) >= 0 &&
-          compareNodeVersions(observed, upper) <= 0,
-      );
-    }
-    return alternative.trim().split(/\s+/).every(satisfiesComparator);
-  });
+  const observed = version?.trim();
+  const range = required?.trim();
+  return Boolean(
+    observed && range && valid(observed) && validRange(range) && satisfies(observed, range),
+  );
 }
 
 export function buildCleanDistributionPlan(input: {

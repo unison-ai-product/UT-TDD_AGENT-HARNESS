@@ -3,6 +3,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { buildConsumerReadinessPlan } from "../src/setup/distribution.ts";
 
 const temporaryDirectories: string[] = [];
 
@@ -128,5 +129,26 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     expect(names).toContain("node@24.13.0");
     expect(names).toContain("git");
     expect(readiness.checks.find((check) => check.name === "node@24.13.0")?.ok).toBe(true);
+
+    const nodeReady = (nodeVersion: string, requiredNodeVersion: string) =>
+      buildConsumerReadinessPlan({
+        nodeVersion,
+        requiredNodeVersion,
+        hasGit: true,
+        hasGh: false,
+        hasUtTddCli: true,
+        hasClaude: false,
+        hasCodex: false,
+        repoRoot: consumer,
+      }).checks.find((check) => check.name === `node@${requiredNodeVersion}`)?.ok;
+
+    // npm semver grammar is authoritative. These cases independently kill the
+    // former local evaluator's tilde and partial-hyphen upper-bound defects.
+    expect(nodeReady("24.13.0", "~24")).toBe(true);
+    expect(nodeReady("25.0.0", "~24")).toBe(false);
+    expect(nodeReady("24.14.9", "24.13 - 24.14")).toBe(true);
+    expect(nodeReady("24.15.0", "24.13 - 24.14")).toBe(false);
+    expect(nodeReady("24.12.9", ">=24.13 <25")).toBe(false);
+    expect(nodeReady("24.13.0", ">=24.13 <25")).toBe(true);
   });
 });
