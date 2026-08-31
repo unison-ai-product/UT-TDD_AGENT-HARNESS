@@ -25,13 +25,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-524-pack-consumer-generated-bun-removal-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/test-design/harness/L7-pack-consumer-generated-bun-removal-backfill-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-524-pack-consumer-generated-bun-removal.md
   requires: []
   blocks: []
   references:
     - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
-    - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
 review_evidence:
   - reviewer: codex
     review_kind: intra_runtime_subagent
@@ -60,7 +61,7 @@ review_evidence:
     green_commands:
       - kind: unit_test
         command: "GitHub Actions harness-check run 33352024134 (Linux / Windows / aggregate)"
-        runner: github-actions
+        runner: node
         scope: full
         exit_code: 0
         completed_at: "2026-08-31T03:05:54Z"
