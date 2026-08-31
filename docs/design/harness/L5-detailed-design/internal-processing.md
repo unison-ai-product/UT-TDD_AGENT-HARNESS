@@ -470,6 +470,18 @@ record_digest,attestation,receipt_digest}`のexact wrapperである。`tracked_r
 `{ schemaVersion:"evidence-attestation/v1", algorithm:"hmac-sha256", authorityId, keyVersion, signature }`
 へ束縛する正式wrapperである。producerとrecordDigestはattestation内fieldではなく、
 `EvidenceAttestationVerifierPort.verify({ producer, recordDigest }, attestation)`のinputとして渡す。
+
+上記は通常D0 admissionの唯一のregistry rowであり、integrity-only recordを一般入力として許可しない。
+ただし最初のF0b candidateを所有するIssue #484 admission kernelだけは、PR #154/#192以前にruntime
+receipt producerが存在しなかった履歴を閉じるため、通常registryとは別の
+`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`をexactly once使用してよい。このregistryのD0入力は
+`LegacyD0TrackedReceiptSetV1` exact 1であり、source commit
+`f38974da31eb243f53c7cae392a3108a1db765dd`上のcommand ID
+`pr154-d0-admission-l4-20260724`〜`...-l7-20260724`の4行、4 distinct path、各Git blob/content digest、
+record/receipt digestをexact照合する。これは`AttestedTrackedReceiptRecord`の代替一般trust rootではなく、
+固定履歴から`LegacyD0AdmissionBackfillReceiptV1`をmintする一回限りの入力である。command authorityは
+#484 admission kernel、receipt producerは`d0-design-owner`で分離し、欠落・mutation・partial/double mint・
+削除後remintを拒否する。backfill後の全D0 admissionは通常registryへ戻り、このlegacy rowを受理しない。
 `tracked_record_digest`はembedded `tracked_record.recordDigest`とexact一致しなければならず、
 wrapper側だけを再計算したdigest、別recordのdigest又はaliasを拒否する。
 D0 graphへ4 wrapperをtyped object/refとして格納し、unsigned/self-hash-only/forged/untrusted、欠落、重複、wrong plan、非latest revision、

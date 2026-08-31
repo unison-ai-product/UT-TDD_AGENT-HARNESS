@@ -2242,6 +2242,13 @@ integrity-only recordをformal plan admission-checkには使えてもD0 genesis 
 record digestとfull bindingを束縛したwrapperだけをeligibleにする。unsigned/self-hash/forged/untrusted/
 wrong/missing/duplicate/stale/content binding driftを拒否する。F0a/F0b/F0c/Q0もregistryをexact照合する。
 
+例外は最初のF0b candidateに対するIssue #484の一回限りbackfillだけである。ここではL5
+`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`に従い、Git固定された`LegacyD0TrackedReceiptSetV1`を
+attested wrapperだと見なさず、固定source/merge SHA、4 command ID、path/blob/content/record/receipt digest、
+command authorityと`d0-design-owner` producerをexact照合して`LegacyD0AdmissionBackfillReceiptV1`をmintする。
+通常D0 eligibility判定へこのlegacy setを渡してはならず、固定履歴を再構成不能なら
+`legacy_evidence_unavailable`、partial/double mint又は再利用はtyped rejectとする。
+
 production cutover genesisは`L6ConfirmationReceipt` exact 1を要求する。PLAN-L6-93のexact plan/revision、
 status confirmed、content digest、candidate HEADとtrusted nested attestationをchain-onlyで再検証し、
 CutoverAdmissionの`l6_confirmation_receipt_digest` direct refと一致させる。

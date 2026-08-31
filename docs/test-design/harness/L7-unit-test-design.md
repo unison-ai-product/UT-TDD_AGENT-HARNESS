@@ -2122,8 +2122,11 @@ positiveはL5 registry順の全inputでdigestとapproved receiptを再現する�
 record/receipt digest、全blob実在を決定的な再構成commandで確認する。独立したAttestedTrackedReceiptRecord wrapperは
 この履歴に存在しないため、legacy positiveは既存Git固定行集合を`LegacyD0TrackedReceiptSetV1`として封印し、
 attested wrapperが存在したとは主張しない。再構成不能・path/row欠落は`legacy_evidence_unavailable`で停止する。
-canonical tracked record全fieldとrecordDigest bindingを照合し、integrity-only、unsigned/self-hash、forged/untrusted、
-欠落、重複、wrong plan、stale revision/head、content/path binding driftを個別negativeにする。F0a/F0b/F0c/Q0は
+通常D0のAttestedTrackedReceiptRecord caseではcanonical tracked record全field、recordDigest、attestation bindingを
+照合し、integrity-only、unsigned/self-hash、forged/untrusted、欠落、重複、wrong plan、stale revision/head、
+content/path binding driftを個別negativeにする。legacy backfill caseはattestation fieldを持たないため、
+unsigned/self-hash/forgedを主張せず、固定source/merge SHA、4 command ID、4 path、Git blob/content digest、
+record/receipt digest、command authority、receipt producerの各mutationを個別negativeにする。F0a/F0b/F0c/Q0は
 predecessorとowned evidenceのkind/count/producer/revision rule入替を拒否する。
 PR #154/#192のlegacy positiveは`LegacyF0aBackfillBundleV1`だけを使い、D0 source HEAD
 `8b339ec75dffd72ef4701431305065986e01b2ea`/merge `f38974da31eb243f53c7cae392a3108a1db765dd`と

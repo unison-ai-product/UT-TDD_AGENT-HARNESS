@@ -244,7 +244,7 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 | `CAND-CUTOVER-103` | evidence/receipt append各barrierでcrash | atomic transactionにより両方存在又は両方0、partial chain 0 |
 | `CAND-CUTOVER-104` | reverse/rollbackを通常appendへ注入 | transition 0、既存chain不変 |
 | `CAND-CUTOVER-105` | receipt/evidence GC又は直接削除 | API 0又はchain-only verification Red |
-| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chain | D0通常5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）、後続predecessor+owned evidenceだけ連結 |
+| `CAND-CUTOVER-106` | registry順D0→F0a→F0b→F0c→Q0 acceptance chainと最初のF0b legacy backfill | 通常D0は5 inputs（ReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4）を維持する。別caseで#484だけがL5 legacy registryのGit固定`LegacyD0TrackedReceiptSetV1` exact 1からD0/F0a二receiptをatomic・exactly once生成し、通常D0への流用・固定tuple mutation・片側mint・再利用を拒否する |
 | `CAND-CUTOVER-107` | payload mutation、session count/outer/edge、v1 ID/revision/window mismatch、wrong authority/key、forgery、provider binding、Candidate/path/head/WorkEvent mutation | Session exact10/self9+combined payload+outer二段+edge exact1、immutable v1/rev1、Candidate11/self10、WorkEvent12/self11、paths/head契約を要求 |
 | `CAND-CUTOVER-108` | NULL PK/check、DB subject spoof、migration rebuild failure、Receipt/Content prefix混同、q0 kind typo、source preimage曖昧、marker/field/digest/partial-index/edge/core mutation | strict generated subject DB、transactional rebuild、digest型exact、q0.runtime-no-fallback literal、single JSON preimage、partial UNIQUE、edge exact 1を要求 |
 | `CAND-CUTOVER-109` | `.ut-tdd/ledger/cutover-ledger.db`並行online backup | 単一時点のhead、refs、objectsで一貫 |
@@ -256,9 +256,10 @@ candidate HEADが全commitのdescendantであることを検証する。同一su
 canonical cutover DBは`.ut-tdd/ledger/cutover-ledger.db`、PLAN ledgerは
 `.ut-tdd/ledger/harness-ledger.db`、rebuildable projectionは`.ut-tdd/harness.db`へ分離する。
 physical ownership正本は`docs/design/harness/L5-detailed-design/physical-data.md` §2.7.1とする。
-`CAND-CUTOVER-106`はL5 `NODE-SLICE-INPUT-REGISTRY-v1`を用い、D0のReviewBundle 1、
-AttestedTrackedReceiptRecord exact 4と、後続sliceのpredecessor/owned evidenceを
-registry順で検証する。missing/duplicate/wrong plan/stale content bindingはapproved 0とする。
+`CAND-CUTOVER-106`は通常caseでL5 `NODE-SLICE-INPUT-REGISTRY-v1`を用い、D0のReviewBundle 1、
+AttestedTrackedReceiptRecord exact 4と、後続sliceのpredecessor/owned evidenceをregistry順で検証する。
+別のlegacy caseだけが`NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`を使い、通常D0へlegacy setを渡さない。
+missing/duplicate/wrong plan/stale content binding、legacy固定tuple drift、partial/double mintはapproved 0とする。
 
 pair正本はL8の同IDであり、`CAND-NODEBOOT-101..106`をcutover concurrencyへ流用しない。
 
@@ -281,6 +282,8 @@ PR #154/F0の完了はBun-ban final完了を意味しない。
 
 Issue #153は継承main負債2件の記録であり、waiver、receipt又はtrust rootではない。
 D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord exact 4だけで判定する。
+固定`LegacyD0TrackedReceiptSetV1`はD0 design mergeの入力ではなく、#484が最初のF0b admission時に
+`LegacyD0AdmissionBackfillReceiptV1`を一回だけ生成するための履歴再構成入力である。
 
 - **D0-N**: candidate IDだけを持ち、plan/frontmatter/readability/traceがGreen。current Bunとtarget Nodeを区別し、実装Greenを主張しない。
 - **F0a (toolchain)**: static exact Node/npm pin、clean `npm ci`、lock graph reproducibilityだけをRed→Green化する。
