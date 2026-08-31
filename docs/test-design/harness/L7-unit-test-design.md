@@ -1922,8 +1922,10 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 `isolated_fixture` 分類とする。live checkout の検証に切り替えたり、root 参照を
 追加した場合は `test-repository-isolation` の `callsite-drift` で fail-close する。
 
-Windows smoke は単なる exit code green では代替できない。process ancestry の捕捉結果を test artifact
-として残し、「Bun が起動した」ことと「shell/conhost を介さず Bun を起動した」ことを別 assertion にする。
+Windows smoke は単なる exit code green では代替できない。本 slice の実測対象は
+`tests/hook-native-launcher.test.ts` が検査する project-local Node wrapper の直接 executable spawn、
+`windowsHide: true`、shell host token 不在、および欠落 entrypoint の exit 127 である。process-tree
+ancestry の捕捉や Bun の起動はこの test artifact／oracle の主張に含めない。
 
 ## 段階リリース channel manifest RED oracle (PLAN-L7-473、2026-08-05)
 
