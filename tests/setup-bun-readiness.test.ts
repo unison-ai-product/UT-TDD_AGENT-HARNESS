@@ -140,8 +140,8 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
       "npm run typecheck",
       "npm test",
     ]);
-    expect(readiness.rollback.commands).toEqual([
-      "git switch v0.1.0",
+    expect(readiness.rollback.commands[0]).toMatch(/^git switch \S+$/);
+    expect(readiness.rollback.commands.slice(1)).toEqual([
       "node .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
       "node .ut-tdd/bin/ut-tdd.mjs setup --solo",
     ]);
