@@ -479,7 +479,7 @@ receipt producerが存在しなかった履歴を閉じるため、通常registr
 | row ID | mint対象 | 固定入力tuple | receipt producer |
 |---|---|---|---|
 | `legacy.d0-admission` | `LegacyD0AdmissionBackfillReceiptV1` | D0 source HEAD `8b339ec75dffd72ef4701431305065986e01b2ea`、merge commit `f38974da31eb243f53c7cae392a3108a1db765dd`、canonical two-lane ReviewBundle outer digest、同merge commit上のcommand ID `pr154-d0-admission-l4-20260724`〜`...-l7-20260724`のtracked receipt exact 4、4 distinct path、各Git blob/content/record/receipt digest | `d0-design-owner` |
-| `legacy.f0a-custody` | `LegacyF0aCustodyBackfillReceiptV1` | F0a source HEAD `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、merge commit `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、`legacy.d0-admission` receipt digest、PR #192 non-author PASS receipt digest、toolchain/lock custody evidence digest | `f0a-toolchain-owner` |
+| `legacy.f0a-custody` | `LegacyF0aCustodyBackfillReceiptV1` | F0a元HEAD `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、統合commit `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、`legacy.d0-admission`のreceipt digest、PR #192の非著者PASS receipt digest、toolchain/lock custodyのevidence digest | `f0a-toolchain-owner` |
 
 command authorityは両行とも#484 admission kernelであり、receipt producerとは分離する。二receiptは同一atomic
 operationでmintし、片側だけのmintを許さない。D0の4行は`LegacyD0TrackedReceiptSetV1` exact 1として封印するが、
