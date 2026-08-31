@@ -1905,13 +1905,13 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 | U-ID | 対象 | oracle |
 |---|---|---|
 | `U-HOOKEXEC-001` | semantic invocation | executable と argv が別 field で保持され、空白・quote を含む token も join/split されない。 |
-| `U-HOOKEXEC-002` | Claude serializer | `command` は `node`、`args` は shell-free native Bun launcher、entrypoint、subcommand の token 配列になる。 |
+| `U-HOOKEXEC-002` | Claude serializer | `command` は `node`、`args` は `.ut-tdd/bin/ut-tdd.mjs` と hook 固有 subcommand の shell-free token 配列になる。旧 `run-bun.ts` や Bun launcher は含めない。 |
 | `U-HOOKEXEC-003` | source Claude hooks | agent/work guards、session start/post-tool-use/summary、subagent-stop の全 6 hook が exec form である。 |
 | `U-HOOKEXEC-004` | policy preservation | guard は `blockOnFailure:true`、観測/session hook は既存 fail-open policy を保持する。 |
 | `U-HOOKEXEC-005` | Codex separation | Claude exec serializer の変更が Codex JSON shape を暗黙変更せず、両者は semantic invocation で等価比較される。 |
 | `U-HOOKEXEC-006` | setup / Pack parity | source、built-in、docs template、fresh consumer materialization の executable+argv が一致する。 |
 | `U-HOOKEXEC-007` | doctor fail-close | shell-form command、argv 欠落/追加/並替え、command spoofing、argv の shell operator を個別に検出する。 |
-| `U-HOOKEXEC-008` | Windows native smoke | hook host→Bun entrypoint の dispatch ancestry に `sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe` が無く、hook outcome は既存契約どおりである。 |
+| `U-HOOKEXEC-008` | Windows native smoke | project-local Node wrapper (`.ut-tdd/bin/ut-tdd.mjs`) が `spawnSync(process.execPath, ...)` の直接 executable spawn と `windowsHide: true` を使い、shell host token (`sh.exe` / `bash.exe` / `cmd.exe` / `powershell.exe` / `pwsh.exe` / dispatch 用 `conhost.exe`) を含まない。process-tree ancestry の実測はこの oracle の主張に含めない。entrypoint 欠落時は exit 127 で fail-close し、hook outcome は既存契約どおりである。 |
 | `U-HOOKEXEC-009` | Node TypeScript launcher floor | `package.json#engines.node` は無フラグ TypeScript execution が有効な `>=22.18` を要求し、22.6〜22.17を対応済みと宣言しない。 |
 | `U-HOOKEXEC-010` | Windows custody debt boundary | hook PLAN は `windowsHide` / shell-free Greenをprocess-tree custody証拠へ流用せず、Issue #134 / Windows Job Object / 未解消境界を明記する。 |
 
@@ -1922,8 +1922,10 @@ cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする�
 `isolated_fixture` 分類とする。live checkout の検証に切り替えたり、root 参照を
 追加した場合は `test-repository-isolation` の `callsite-drift` で fail-close する。
 
-Windows smoke は単なる exit code green では代替できない。process ancestry の捕捉結果を test artifact
-として残し、「Bun が起動した」ことと「shell/conhost を介さず Bun を起動した」ことを別 assertion にする。
+Windows smoke は単なる exit code green では代替できない。本 slice の実測対象は
+`tests/hook-native-launcher.test.ts` が検査する project-local Node wrapper の直接 executable spawn、
+`windowsHide: true`、shell host token 不在、および欠落 entrypoint の exit 127 である。process-tree
+ancestry の捕捉や Bun の起動はこの test artifact／oracle の主張に含めない。
 
 ## 段階リリース channel manifest RED oracle (PLAN-L7-473、2026-08-05)
 

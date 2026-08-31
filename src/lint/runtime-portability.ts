@@ -107,8 +107,8 @@ const BUN_GLOBAL_PATTERN = new RegExp(
 const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   // step 2 freeze の fixture 例外: Pack/consumer toolchain 検出の posix probe。
   ["src/cli/distribution.ts", 2],
-  // step 2 freeze の fixture 例外: consumer wrapper template (findBun launcher)。
-  ["src/setup/templates.ts", 2],
+  // PLAN-L7-522 S1-b (Issue #470): generated consumer templates no longer
+  // launch the removed findBun/run-bun wrapper, so this source has no spawn pin.
   // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
   ["scripts/run-vitest-snapshot.ts", 1],
   // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
@@ -120,7 +120,6 @@ const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   ["tests/runtime-portability.test.ts", 11],
   ["tests/doctor-setup-smoke.test.ts", 1],
   ["tests/doctor.test.ts", 1],
-  ["tests/hook-native-launcher.test.ts", 1],
   // 本 lint 自身 (pattern 定義とその注記 = 検出語彙)。
   ["src/lint/runtime-portability.ts", 4],
 ]);

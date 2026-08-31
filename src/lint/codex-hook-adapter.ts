@@ -24,11 +24,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CODEX_REQUIRED } from "./codex-hook-adapter-policy.ts";
 import { invocationEquals, parseHookInvocation } from "./hook-invocation.ts";
-import {
-  REQUIRED as CLAUDE_REQUIRED,
-  FORBIDDEN_PATH_RE,
-  WRAPPER_HOOK_LAUNCHER,
-} from "./project-hook.ts";
+import { REQUIRED as CLAUDE_REQUIRED, FORBIDDEN_PATH_RE } from "./project-hook.ts";
 
 export { CODEX_REQUIRED };
 
@@ -191,7 +187,7 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
           }) ||
             invocationEquals(invocation, {
               executable: "node",
-              args: [WRAPPER_HOOK_LAUNCHER, ...required.wrapperArgs],
+              args: [...required.wrapperArgs],
             }))
         );
       });

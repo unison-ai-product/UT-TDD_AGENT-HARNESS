@@ -74,8 +74,9 @@ L6-101 へ昇格すべきものを抽出する。現時点の候補は `PLAN-L7-
 
 ## R3. 検証 (未着手)
 
-Forward の候補 oracle `CANDIDATE-U-PACKBUN-001..006` のうち、
-L6 層で再検収すべき軸を選定する。特に **negative control の有効性** (既存 template を復活させると
+Forward oracleのうち、S1-bで正規IDへ昇格した`U-PACKBUN-003` / `004` / `006`と、未実装候補
+`CANDIDATE-U-PACKBUN-001` / `002` / `005`から、L6層で再検収すべき軸を選定する。特に
+**negative control の有効性** (既存 template を復活させると
 必ず Red になること) は、恒真 oracle による偽の充足を防ぐ要であり R3 の主対象とする。
 
 ## R4. Forward 合流 (未着手)

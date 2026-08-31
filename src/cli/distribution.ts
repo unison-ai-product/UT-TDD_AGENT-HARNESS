@@ -179,14 +179,14 @@ export function registerDistributionCommands(program: Command): void {
       const utTddCliMessage = hasUtTddCli
         ? undefined
         : [
-            "Generated Claude/Codex hooks call the shell-free native Bun launcher so each project can use its own pinned UT-TDD package.",
+            "Generated Claude/Codex hooks invoke the project-local Node wrapper directly so each project can use its own pinned UT-TDD package.",
             `Expected wrapper: ${hookWrapperPath}`,
             `Expected package bin: ${packageBinPath}`,
             `Expected source setup entrypoint: ${sourceSetupEntrypoint}`,
             `Observed: ${utTddCliObserved}`,
             utTddCliHints.length > 0
               ? `Detected global candidate path(s): ${utTddCliHints.join(", ")}. Prefer the project-local wrapper when multiple projects on one PC pin different harness versions.`
-              : "Add UT-TDD as a project dependency, run setup to emit the wrapper, and ensure the native Bun executable can be resolved without a shell shim.",
+              : "Add UT-TDD as a project dependency, run setup to emit the project-local Node wrapper, and ensure its Node entrypoint can be resolved without a shell shim.",
           ].join(" ");
       const exportPlan = buildCleanDistributionPlan({
         paths: collectDistributionCandidatePaths(repoRoot),

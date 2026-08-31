@@ -528,7 +528,7 @@ describe("runDoctor", () => {
     const codexHook = (...args: string[]) => ({
       type: "command",
       command: "node",
-      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+      args: [".ut-tdd/bin/ut-tdd.mjs", ...args],
     });
     const codexHookJson = JSON.stringify({
       hooks: {
@@ -556,7 +556,7 @@ describe("runDoctor", () => {
     const claudeHook = (...args: string[]) => ({
       type: "command",
       command: "node",
-      args: [".ut-tdd/bin/run-bun.ts", ".ut-tdd/bin/ut-tdd.mjs", ...args],
+      args: [".ut-tdd/bin/ut-tdd.mjs", ...args],
     });
     const claudeHookJson = JSON.stringify({
       hooks: {
@@ -573,10 +573,9 @@ describe("runDoctor", () => {
     const file = (path: string) => join("/repo", ...path.split("/"));
     const files = new Map<string, string>([
       [
-        file(".ut-tdd/bin/run-bun.ts"),
-        "realpathSync\nspawn(findBun(), args, { windowsHide: true })\n",
+        file(".ut-tdd/bin/ut-tdd.mjs"),
+        "const localBin = '.ut-tdd/bin/ut-tdd.mjs';\nspawnSync(process.execPath, args);\n",
       ],
-      [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
       [file("AGENTS.md"), "UT-TDD adapter"],
       [file("CLAUDE.md"), "UT-TDD adapter"],
       [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
@@ -642,7 +641,7 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=24, failed=0)"]);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=23, failed=0)"]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {
