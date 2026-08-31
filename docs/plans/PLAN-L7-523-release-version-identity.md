@@ -6,9 +6,9 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-28
-updated: 2026-08-28
+updated: 2026-08-31
 owner: Codex / Luna
 parent_design: docs/plans/PLAN-L6-63-pack-staged-release-rollback.md
 pair_artifact: docs/test-design/harness/L7-release-version-identity-test-design.md
@@ -44,7 +44,35 @@ dependencies:
     - src/setup/update-check.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/474
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/466
-review_evidence: []
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-08-31T01:26:42.955Z"
+    tests_green_at: "2026-08-28T12:32:09.000Z"
+    verdict: "PASS-WEAK / blocking 0"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: a3a435b636beef9b6ab1fad4ee4c0c7173ddb47c
+    subject_head: a3a435b636beef9b6ab1fad4ee4c0c7173ddb47c
+    scope: >-
+      PR #483の実装HEADを非著者review。package/lock/CLI version、stable tagとの分離、
+      publication intent/receipt束縛、およびproduction seamを直接通る単軸negative oracleを確認した。
+      Reverse R2-R4、clean Pack canary、remote publication実走は証明しない。
+    citations:
+      - ".ut-tdd/review/receipts/356ea4bb2327456cba24e87db6cc8697bde41935a0af60020966f6828b9c5085.json"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/483#issuecomment-5472575867"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/33170604660"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/pack-publication-adapter.test.ts tests/release-version-identity.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-28T12:32:09.000Z"
+        evidence_path: tests/release-version-identity.test.ts
+        output_digest: "sha256:ab59f466a8941f331df0ec574a7b3f8d4165a21f0971f64f6dc7a9eddaa008aa"
+        anchor_commit: a3a435b636beef9b6ab1fad4ee4c0c7173ddb47c
 ---
 
 # PLAN-L7-523: 初回canary version locatorとrelease identityの束縛
