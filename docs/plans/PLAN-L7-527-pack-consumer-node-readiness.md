@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
+status: draft
 created: 2026-08-31
 updated: 2026-08-31
 owner: Codex / Luna
