@@ -148,7 +148,34 @@ D0文書だけでは正式test IDまたはGreenを主張しない。
 slice admissionは`admitNodeSlice(input)`で`d0_admitted → f0a_complete → f0b_complete →
 f0c_complete → q0_complete`だけを進める。F0aはreview+admission済みD0 draft receipt、F0bはF0a custody receipt、
 F0cはF0b sealed build receipt、Q0はF0c aggregate receiptをexactly one要求する。typed dependencyの
-欠落、失敗、別revision、skip/replayはcandidate commitのmerge admissionで拒否する。gate test/schema/runtimeは
+欠落、失敗、別revision、skip/replayはcandidate commitのmerge admissionで拒否する。prerequisite receiptの
+`subject_revision`はtarget candidate HEADとのexact equalityを要求せず、当該receiptが束縛するcanonical merge commitが
+candidate HEADのancestorであることをGit object graphだけから検証する。canonical merge commitを含まないfork、
+別edge/別producerへのreceipt流用、同一target slice・同一candidate HEADの二重admission、canonical predecessorを
+置換しようとするstale receiptは、process生成とreceipt書込みの前にfail-closeする。後続candidateが同じimmutable
+predecessor receiptを参照すること自体はreplayではない。
+
+PR #154以前にはslice admission runtimeが存在せず、merged F0a PR #192にも`f0a_complete` receiptがないため、
+F0bの最初のcandidateに限り`LegacyF0aBackfillBundleV1`をexactly once生成してよい。authorityは
+`f0a-toolchain-owner`だけで、bundleは次の二receiptを一つのatomic admissionとして生成する。
+
+1. `LegacyD0AdmissionBackfillReceiptV1`: D0 source HEAD
+   `8b339ec75dffd72ef4701431305065986e01b2ea`、merge commit
+   `f38974da31eb243f53c7cae392a3108a1db765dd`、canonical two-lane ReviewBundle outer digest、
+   PLAN-L4-33/L5-26/L6-93/L7-458のAttestedTrackedReceiptRecord exact 4とset digestを封印する。
+2. `LegacyF0aCustodyBackfillReceiptV1`: F0a source HEAD
+   `76d0f9c7219a8290fc809b5036d6d02f9b05fb88`、merge commit
+   `12aadde9ff56e8b39c0813b988384e2e5eed00ab`、上記D0 backfill receipt digest、PR #192の
+   non-author PASS receipt、toolchain/lock custody evidence digestを封印する。
+
+両source HEADが各merge commitのparent closureにあり、F0a merge commitがD0 merge commitをancestorに持ち、
+F0b candidate HEADが両merge commitをancestorに持つことを検証する。自己申告SHA、GitHub本文、merge済みという事実だけで
+evidenceを補完しない。bundle ID、二receipt digest、authority、source/merge SHAのいずれかが既存記録と異なる再発行、
+partial一件だけの生成、別F0aへの一般化、削除後の再mintは拒否する。通常のF0a以降はこのbackfill routeを持たず、
+`admitNodeSlice`の通常receiptだけを使う。backfill schema/kernel/testはF0b owner #484がproduct changeより先にTDDし、
+同じcandidate commitへ含める。
+
+gate test/schema/runtimeは
 product changeより先にTDDし同一commitへ含める。Issue #153 envelopeが許可するのは
 順序内の非activation build/verifyとQ0 fixture/detector workだけであり、production activation、
 hook/runtime switch、Bun final deletion、cutoverはL6 confirmed+D0 admissionまで禁止する。

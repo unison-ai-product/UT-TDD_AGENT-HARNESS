@@ -170,6 +170,21 @@ F0aはtoolchain/lock、F0bはbootstrap/generation、F0cはworkflowを生成す�
 Node-only Bun detector/ban auditのtest、implementation、実行結果とqualification evidenceを所有する。
 repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisionまで未生成である。
 
+F0b #484のartifact/path custodyは次のexact集合に限定する。
+
+- `docs/governance/node-toolchain-provenance.json`
+- `src/runtime/node-bootstrap.ts`
+- `src/schema/node-slice-admission.ts`
+- `src/runtime/node-slice-admission.ts`
+- `scripts/build-node.mjs`
+- `tsconfig.node.json`
+- `tests/node-self-host-bootstrap.test.ts`
+- `tests/node-slice-admission.test.ts`
+
+`tsconfig.node.json`はcompiled ESMの入力正本であり、`NodeBootstrapReceipt`のbuild-policy/input digestへ
+独立fieldとして封印する。欠落、別path、内容drift、receiptからの省略はcompile/process生成前に拒否する。
+`package.json`、`package-lock.json`、CI workflow、consumer placement、Bun final deletionはこの集合へ含めない。
+
 ### 4.1 Node bootstrap候補トレース（設計Red）
 
 現mainには`tests/node-self-host-bootstrap.test.ts`、`src/runtime/node-bootstrap.ts`、
@@ -196,7 +211,7 @@ repo-wide物理削除とそのfinal deletion evidenceだけはQ0後の別revisio
 | `CAND-NODEBOOT-015` | same-revision rollbackとcross-revision rollbackを混線する | 同一revisionだけ新marker、cross-revision API 0/fail-close、git revert新revisionへroute |
 | `CAND-NODEBOOT-016` | Windows F0 receiptへpower-loss durable claimを注入する | unsupported claimを拒否し、Resource Kernel trust floorへのdeferを保持 |
 | `CAND-NODEBOOT-017` | candidate F0a commitへreview+admission済みD0 receiptなし | merge admission拒否、rejected receipt。gate test/kernelをproduct changeより先にTDDし同一commitを検証 |
-| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
+| `CAND-NODEBOOT-018` | candidate F0b commitへF0a custody receiptなし/失敗、D0/F0a legacy backfill bundleの片側欠落・wrong authority・source/merge SHA drift・二重発行、又はF0a merge commitがcandidate HEADのancestorでないfork/stale入力 | process/receipt write 0でmerge admission拒否、typed rejected receipt。exact HEAD equalityは要求せずcanonical ancestor closureを受理し、同じimmutable predecessorを後続descendantが参照することはreplay扱いしない |
 | `CAND-NODEBOOT-019` | candidate F0c commitへF0b sealed build receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 | `CAND-NODEBOOT-020` | candidate Q0 commitへF0c aggregate receiptなし/失敗/別revision | merge admission拒否、rejected receipt |
 
@@ -275,7 +290,10 @@ D0 design mergeは通常のReviewBundle outer 1 + AttestedTrackedReceiptRecord e
   Bun/bunx/tsx/TS/shell process 0とcoverage欠測0を独立観測する。
 - **slice admission**: F0aはreview+admission済みD0、F0bはF0a custody、F0cはF0b sealed build、Q0はF0c aggregateを
   typed prerequisiteとして要求する。CAND-017..020はedit-start gateではなくcandidate commit acceptanceであり、
-  早期slice、別revision、失敗receiptをmerge admissionで拒否する。
+  prerequisiteのcanonical merge commitがcandidate HEADのancestorであることを要求する。unrelated fork、
+  canonical predecessorを含まないstale HEAD、wrong edge/producer、同一target+HEADの二重admissionを拒否し、
+  predecessor subjectとcandidate HEADのexact equalityは要求しない。PR #154/#192の既存mergeだけは
+  `LegacyF0aBackfillBundleV1`でD0/F0a二receiptをatomic・exactly onceにbackfillし、通常routeへ一般化しない。
 - 全sliceでcandidate-owned CI Redは0とする。Issue #153が許容できるのは継承main負債`PLAN-RECOVERY-16` / `PLAN-L7-452`だけであり、上記gate、detector、receipt、reviewをwaiveしない。
 - 現D0-N candidate自身もreview+admission receiptをmerge前に修復する。PLAN-L6-93 confirmedは将来の
   production activation/cutover gateであり、draft設計を着地させる#154 D0設計merge gateには要求しない。
@@ -312,6 +330,9 @@ schema/admission kernel/test artifact boundaryも本PLAN ownership表を正本�
 target `slice_id`のproducerと一致しなければならず、owner代行又は曖昧な共有ownerを拒否する。
 実装ではdomain owner IDをrecord preimageへ残し、canonical mapping後の既存EvidenceProducer enumだけを
 `verify({producer,recordDigest},attestation)`へ渡す。ReviewBundle execution modeは両laneとactual admissionへ一致させる。
+legacy backfillもproducer registryを迂回せず、`LegacyD0AdmissionBackfillReceiptV1`は`d0-design-owner`、
+`LegacyF0aCustodyBackfillReceiptV1`は`f0a-toolchain-owner`へ固定する。bundleを発行できるcommand authorityは
+F0b owner #484のadmission kernelだけで、入力identityはPLAN-L6-93 §3の固定SHA/evidence集合とexact一致させる。
 
 `CAND-BUNBAN-*`はD0-Nでは定義もfreezeもしない。Node self-hostが動作した後、既存のBun禁止PLANを
 別revisionで更新して候補IDとoracleを定義する。それ以前に未定義IDのGreenまたは予約済みを主張しない。
