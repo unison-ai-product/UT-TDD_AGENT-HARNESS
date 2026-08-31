@@ -27,8 +27,8 @@ Node producer、Pack publication の oracle を取り込まない。
 
 同じ clean tree を毎回生成し、まず baseline が空であることを確認する。shebang、run-bun path、
 consumer workflow、adapter guidance、generated package script を個別に変異させ、各変異で
-期待される path / rule / 件数の集合と完全一致させる。U-PACKBUN-004 の5 case は相互に
-混ぜず、1 case でも期待集合から外れたら Red とする。U-PACKBUN-006 は Bun / Bunx / `.cmd` /
+期待される path / rule / 件数の集合と完全一致させる。negative-control の5 case は相互に
+混ぜず、1 case でも期待集合から外れたら Red とする。detection-power 検査は Bun / Bunx / `.cmd` /
 `.exe` の実行形、module import、global reference、Pack CI deny rule、direct graph parity を
 独立入力として実行する。単なる非空 assertion は使用しない。behavioral 検査を、deny rule
 本数・allowlist path・pin の構造比較で代替してはならない。
