@@ -6,12 +6,14 @@ layer: cross
 drive: agent
 route_signal: design_gap
 route_mode: reverse
-status: draft
-workflow_phase: R0
+status: confirmed
+workflow_phase: R4
 confirmed_reverse_type: design
 created: 2026-08-31
 updated: 2026-08-31
 owner: Codex / Luna
+forward_routing: gap-only
+promotion_strategy: reuse-as-is
 github_issue_id: 471
 parent_design: docs/plans/PLAN-L7-527-pack-consumer-node-readiness.md
 pair_artifact: docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md
@@ -21,6 +23,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-527-pack-consumer-node-readiness-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/setup-solo-team.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-527-pack-consumer-node-readiness.md
   requires: []
@@ -33,7 +41,37 @@ dependencies:
     - docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md
 backprop_decision: required
 backprop_decision_reason: "readiness の Bun 到達不能と engines.node 判定を親の Pack/consumer 契約へ戻すため。"
-review_evidence: []
+review_evidence:
+  - reviewer: sol
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-08-31T08:21:55Z"
+    tests_green_at: "2026-08-31T08:20:40Z"
+    verdict: >-
+      PASS / blocking 0。R3でL6/global L7/paired test designの契約一致を確認し、
+      R4で実証済みgapだけをbackpropした。
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    plan_revision: 28787e4b93a90fa7d9899309ff037a2aa1439610
+    subject_head: 28787e4b93a90fa7d9899309ff037a2aa1439610
+    scope: >-
+      U-SETUP-012、U-SETUP-013/AT-DIST-001、PLAN-L7-527、paired test design、
+      transitional Bun fixture と Node readiness の分離。
+    citations:
+      - "docs/design/harness/L6-function-design/setup-solo-team.md"
+      - "docs/test-design/harness/L7-unit-test-design.md"
+      - "docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md"
+      - "tests/setup-bun-readiness.test.ts"
+      - "tests/setup.test.ts"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/setup-bun-readiness.test.ts tests/setup.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-08-31T08:20:40Z"
+        evidence_path: tests/setup-bun-readiness.test.ts
+        output_digest: "sha256:811bf3b2b31ce099a3b7ae6c840267ea111f5eb0e700424026a6a6b55bfc463a"
+        anchor_commit: 28787e4b93a90fa7d9899309ff037a2aa1439610
 ---
 
 # PLAN-REVERSE-527
