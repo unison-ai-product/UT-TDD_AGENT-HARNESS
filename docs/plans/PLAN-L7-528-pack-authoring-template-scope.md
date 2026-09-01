@@ -70,7 +70,7 @@ module split を所有し、本 slice は clean distribution の出荷集合だ�
 
 ## 2. 基準点と worker 固定
 
-契約の入力 source revision は `a2a359f6`（current main）に固定する。worker は
+契約の入力 source revision は `3cc0cffd`（current main）に固定する。worker は
 `worker_model=gpt-5.6-luna` とし、実装開始時にこの PLAN の pair artifact と同じ exact revisionへ
 再束縛する。pair-freeze は implementation、Green、publication、canary 完了を主張しない。
 

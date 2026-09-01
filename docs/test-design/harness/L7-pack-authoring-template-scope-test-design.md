@@ -13,7 +13,7 @@ plan_id: PLAN-L7-528-pack-authoring-template-scope
 `PLAN-L7-528-pack-authoring-template-scope` の pair artifactとして、clean distributionの authoring
 template scopeだけを検証する。docs-only pair-freeze時点では production source、test code、shared
 `L7-unit-test-design.md` registry、Pack remote mutationを追加・変更しない。基準点は
-`a2a359f6`、workerは `gpt-5.6-luna` である。
+`3cc0cffd`、workerは `gpt-5.6-luna` である。
 
 ## 2. 単一 inventory
 
