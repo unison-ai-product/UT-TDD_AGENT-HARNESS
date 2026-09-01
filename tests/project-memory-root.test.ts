@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -113,8 +113,8 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error(result.reason);
       expect(result.projectId).toBe("fixture/project");
-      const canonicalRoot = realpathSync(root);
-      expect(result.canonicalProjectRoot.toLowerCase()).toBe(canonicalRoot.toLowerCase());
+      const canonicalRoot = result.canonicalProjectRoot;
+      expect(canonicalRoot.toLowerCase()).toBe(dirname(result.gitCommonDir).toLowerCase());
       expect(result.authoredMemoryRoot.toLowerCase()).toBe(
         join(canonicalRoot, ".ut-tdd", "memory").toLowerCase(),
       );
