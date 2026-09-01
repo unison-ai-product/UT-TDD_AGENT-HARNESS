@@ -29,6 +29,12 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md
     artifact_type: test_design
+  - artifact_path: src/setup/authoring-template-inventory.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/pack-authoring-smoke.ts
+    artifact_type: source_module
+  - artifact_path: tests/pack-authoring-template-scope.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:

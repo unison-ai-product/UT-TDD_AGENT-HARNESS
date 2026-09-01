@@ -54,6 +54,15 @@ function mockDeps(
 const codeownersPath = join("/repo", ".github", "CODEOWNERS");
 const statePath = join("/repo", ".ut-tdd", "state", "setup.json");
 
+const AUTHORING_TEMPLATE_SOURCES = [
+  "docs/templates/plan/design/template.md",
+  "docs/templates/plan/impl/template.md",
+  "docs/templates/design/L6-function-spec-template.md",
+  "docs/templates/state/vmodel.json",
+  "docs/templates/prompts/effort-classify.md",
+  ".ut-tdd/teams/example-review-team.yaml",
+] as const;
+
 function walkRepoCandidatePaths(root: string): string[] {
   const ignored = new Set([".git", "node_modules", "dist"]);
   const out: string[] = [];
@@ -687,6 +696,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
         "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
         "skills/SKILL_MAP.md",
+        ...AUTHORING_TEMPLATE_SOURCES,
         "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
         "docs/governance/forward-convergence-legacy-debt-audit.md",
         "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
@@ -780,6 +790,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
       "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
       "docs/skills/SKILL_MAP.md",
+      ...AUTHORING_TEMPLATE_SOURCES,
       "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
       ".ut-tdd/harness.db",
     ];
@@ -840,6 +851,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         !path.startsWith("docs/test-design/") &&
         !path.startsWith("docs/handover/"),
     );
+    filteredSourcePaths.push(".ut-tdd/teams/example-review-team.yaml");
 
     const withSourceOnlyDocs = buildCleanDistributionPlan({
       sourceTag: "source-with-audit-docs",
@@ -968,7 +980,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(
       plan.artifactPaths.filter(
         (path) =>
-          nonPackPrefixes.some((prefix) => path.startsWith(prefix)) || nonPackDbFiles.test(path),
+          (nonPackPrefixes.some((prefix) => path.startsWith(prefix)) &&
+            !path.startsWith("docs/templates/")) ||
+          nonPackDbFiles.test(path),
       ),
     ).toEqual([]);
 

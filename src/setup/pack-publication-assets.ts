@@ -275,10 +275,7 @@ export function derivePackPublicationAssets(input: {
   const authoringSet = validateAuthoringArtifactSet(
     input.entries.map((entry) => entry.destinationPath),
   );
-  if (
-    !authoringSet.ok ||
-    input.entries.some((entry) => entry.sourcePath.startsWith(".ut-tdd/"))
-  )
+  if (!authoringSet.ok || input.entries.some((entry) => entry.sourcePath.startsWith(".ut-tdd/")))
     return { ok: false, error: "artifact_mismatch" };
   const manifestError = validateManifestArtifacts(input.release.artifacts);
   if (manifestError) return { ok: false, error: manifestError };

@@ -2586,6 +2586,18 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 | `U-CI490-002` | fast/cli script欠落・空化・runner差替え | いずれもfail-close、既存scriptの意味論を縮めない |
 | `U-CI490-003` | Windows exclude欠落・未知path・重複・二重runner | 正規化集合不一致または二重起動をRed |
 
+## PLAN-L7-528 Pack authoring template scope (Issue #482)
+
+| ID | fixture / mutation | expected |
+| --- | --- | --- |
+| `U-PACKTPL-001` | tracked authoring sourceを同一inventoryへ渡す | required 6 artifactが各 exactly once、skills baseline不変 |
+| `U-PACKTPL-002` | explicit team blob projection、欠落・path・bytes・mode drift | 固定destinationへのprojectionだけを許可し、source `.ut-tdd` pathを出力しない |
+| `U-PACKTPL-003` | materializer／deterministic tarへ集合を渡す | artifact path・mode・size・digestの不一致をtyped deny |
+| `U-PACKTPL-004` | clean Packだけでauthoring smokeを実行 | PLAN/design/state/prompt読込とteam schema parseが成功、source fallback 0 |
+| `U-PACKTPL-005` | required familyを各1件除去 | 対応するplan/materializer/tar/smokeをfail-close |
+| `U-PACKTPL-006` | docs/templates全体または`.ut-tdd`全体を許可へ変異 | source-only/runtime stateの混入をdeny |
+| `U-PACKTPL-007` | personal path、Bun、legacy runtimeを各1軸注入 | 注入軸だけtyped deny、正常templateは保持 |
+
 ### PLAN-L7-519 remote canary publication adapter oracle (Issue #414)
 
 `CANDIDATE-PACKPUB-003-A..S2`を順序どおり`U-PACKPUB-REMOTE-010..032`へ一対一昇格する。
