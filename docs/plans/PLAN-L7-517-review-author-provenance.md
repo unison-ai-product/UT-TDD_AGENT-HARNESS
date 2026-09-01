@@ -132,22 +132,50 @@ self-review も non-author も判定せず、その authority は既存の独立
 
 ### 3.6 PLAN-L7-465 の supersede 範囲
 
-本 PLAN は `PLAN-L7-465-cross-review-author-binding` (status: confirmed) の以下 2 規定を supersede する。
-両契約が同時に生きていると、片方が「Git author 文字列から provider family を導出する」と述べ、もう片方が
-「それは authority ではない」と述べる状態になり、review gate の挙動が契約から一意に決まらない。
+本 PLAN が supersede するのは `PLAN-L7-465-cross-review-author-binding` (status: confirmed) の
+**§実装スコープ 2「author 導出元の確定」1 規定のみ**である。465 の family 依存規定を広く撤回する
+ものではない。
 
 | 465 の規定 | 本 PLAN による置換 |
 |---|---|
-| §実装スコープ 2「**author 導出元の確定**: 実装では **commit author / `Co-Authored-By` trailer** を一次の author 導出元とし、自己申告のみに依存しない」 | §3.2.1 / §3.5 — commit author 文字列と `Co-Authored-By` trailer は **Git object に記録された事実**であって認証された identity ではない。provider family の導出元にしない。値は `unverified_family` のまま監査に残し、reviewer 適格性・merge authority に使わない |
-| §機械化する不変条件 1「**同一 family の自己承認を verdict として受理しない** (`same_family_reviewer`)」 | §3.5 — Git author 文字列と reviewer claim の一致・不一致だけで self-review も non-author も判定しない。family 由来の deny は撤回し、review の適格性判定は既存の独立 review admission / gate に留める |
+| §実装スコープ 2「**author 導出元の確定**: 実装では **commit author / `Co-Authored-By` trailer** を一次の author 導出元とし、自己申告のみに依存しない」 | §3.2.1 / §3.5 — commit author 文字列と `Co-Authored-By` trailer は **Git object に記録された事実**であって認証された identity ではない。provider family の導出元にしない |
 
-**撤回の根拠 (465 起点の実測、§2 に再掲)**: origin/main 6b5b1d9c 時点で git author 名が provider family を
-示す割合は **0% (166/166 が `unison-ai-product`)** であり、`Co-Authored-By` trailer は 24.7% (41/166) の
-自由記載 claim である。commit sha と provider を結ぶ harness.db 列は存在しない。したがって 465 が一次
-authority に据えた導出元は、実装可能な形では存在しない。
+**撤回の根拠 (2 つ)**:
 
-**supersede しない範囲**: 465 の exact HEAD 限定 (§機械化する不変条件 2)、session log 再利用、
-未応答 SLA、`stale_head` 終端は family 導出に依存しないため、そのまま有効である。
+1. **測定**: 465 起点の実測 (§2 に再掲) で、git author 名が provider family を示す割合は
+   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.7% (41/166) の自由記載
+   claim であり、commit sha と provider を結ぶ harness.db 列は存在しない。
+2. **実装が既にこの規定に従っていない**: `src/feedback/review-attestation.ts` の
+   `resolveReviewAuthorFamily` は `explicit` (`--review-author-family` フラグ) と
+   `currentRuntime` (委譲を実行している runtime) だけを入力とし、**commit author も trailer も
+   参照しない**。同関数の doc は「著者族は provider から独立した事実、すなわち委譲を実行している
+   runtime から取る。判別できない場合は `null` を返し、呼び出し側で fail-close させる (推測しない)」
+   と述べる。465 §実装スコープ 2 は**文書に残ったまま実装されなかった規定**であり、本 PLAN は
+   その乖離を正す。
+
+### 3.6.1 supersede **しない**範囲 (誤って撤回しないための明示)
+
+以下は 465 の記述のまま**有効である**。いずれも `authorFamily` に依存するが、その `authorFamily`
+は Git 文字列由来ではないため、本 PLAN の撤回対象ではない。
+
+| 465 の規定 | 存続する理由 |
+|---|---|
+| §機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」 | 本 PLAN §3.5 が「その authority は**既存の独立 review admission / gate に留める**」と述べており、撤回ではなく温存である。attacker/defender 分離の PO 原則も撤回されていない。実装 (`review-verdict-custody.ts` / `review-attestation.ts` の `same_family_reviewer_denied`) は `resolveReviewAuthorFamily` 由来の値で判定しており Git 文字列非依存 |
+| D1 dispatch の反対族 routing (同族 fallback 禁止、未知 family / 反対族 runtime 不在は delegation 0 / receipt 0) | 入力は request の `authorFamily` であり Git 文字列非依存 |
+| consumer の反対族 provider 起動と `U-RVATT-024` | 同上 |
+| `provider-family-authority.ts` port と `unverified_family` 終端 | 465 §D3c が「commit trailer・自己申告・PR marker を family authority として受理してはならない」と既に freeze しており、**本 PLAN と同じ立場**である。受理側実装は authentication / authorization を変える外部権限設計として **PO の明示承認**を要し、本 PLAN では触れない |
+| exact HEAD 限定、session log 再利用、未応答 SLA、`stale_head` 終端 | family 導出に依存しない |
+
+### 3.6.2 実装との関係
+
+本 PLAN の撤回は**既存 gate の撤去を要求しない**。`same_family_reviewer_denied` を返す
+`review-verdict-custody.ts` / `review-attestation.ts`、および `review-evidence.ts` の
+`checkCrossAgentModelPair` (PLAN の `review_evidence` に**宣言された** worker/reviewer model を
+検査するもので Git trailer とは無関係) は、いずれも本 PLAN と矛盾せず、そのまま有効である。
+
+本 PLAN が導入するのは authoring provenance の**記録**であって、family gating の廃止ではない
+(`PLAN-L7-518` §3.6 が本 PLAN を「導入する authoring provenance を前提とする」「信頼根が着地する
+まで」と依存宣言しているのと同じ理解である)。
 
 ## 4. Fail-close contract
 

@@ -124,32 +124,39 @@ review_evidence:
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
 
-## 訂正注記 (2026-09-01): 本 PLAN の author 導出規定は PLAN-L7-517 が supersede した
+## 訂正注記 (2026-09-01): §実装スコープ 2 の author 導出元は PLAN-L7-517 が supersede した
 
-`PLAN-L7-517-review-author-provenance` が本 PLAN を `supersedes` に宣言している。supersede された
-のは以下 2 規定であり、**これらは実装の根拠にしてはならない**。
+`PLAN-L7-517-review-author-provenance` が本 PLAN を `supersedes` に宣言している。**supersede されたのは
+下記 1 規定のみ**であり、本 PLAN の他の family 依存規定は有効である。
 
-1. **§実装スコープ 2「author 導出元の確定」** — 「実装では **commit author / `Co-Authored-By` trailer**
-   を一次の author 導出元とし、自己申告のみに依存しない」(本ファイル :159 付近)。
-   PLAN-L7-517 §3.2.1 / §3.5 により、commit author 文字列と `Co-Authored-By` trailer は
-   **Git object に記録された事実**であって認証された identity ではないと確定した。provider family の
-   導出元にしない。値は `unverified_family` のまま監査に残すだけで authority へ昇格させない。
-2. **§機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」**
-   (本ファイル :239 付近)。PLAN-L7-517 §3.5 により、Git author 文字列と reviewer claim の一致・不一致
-   だけで self-review も non-author も判定しないと確定した。family 由来の deny は撤回し、review の
-   適格性判定は既存の独立 review admission / gate に留める。
+### supersede された規定
 
-**撤回の根拠**: origin/main 6b5b1d9c 時点で git author 名が provider family を示す割合は
-**0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.7% (41/166) の自由記載 claim で
-あり、commit sha と provider を結ぶ harness.db 列は存在しない (PLAN-L7-517 §2 の実測)。本 PLAN が一次
-authority に据えた導出元は、実装可能な形では存在しなかった。
+**§実装スコープ 2「author 導出元の確定」** — 「実装では **commit author / `Co-Authored-By` trailer**
+を一次の author 導出元とし、自己申告のみに依存しない」(本ファイル :159 付近)。
 
-**引き続き有効な範囲**: exact HEAD 限定 (§機械化する不変条件 2)、session log の再利用、未応答 SLA、
-`stale_head` 終端は family 導出に依存しないため、本 PLAN の記述がそのまま有効である。
+撤回の根拠は 2 つある:
 
-**本 PLAN は `PLAN-L6-94-cross-review-session-attestation` (issue #131) の L7 実装**である
-(L6-94 §6「降下先」が要求する add-impl + Reverse 対)。照合契約そのもの (4 検査 + 不変条件
-4 件) は L6-94 §2 が正本であり、**ここで再定義しない**。
+1. **測定**: origin/main 6b5b1d9c 時点で git author 名が provider family を示す割合は
+   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.7% (41/166) の自由記載
+   claim であり、commit sha と provider を結ぶ harness.db 列は存在しない (PLAN-L7-517 §2)。
+2. **この規定は実装されなかった**: `src/feedback/review-attestation.ts` の
+   `resolveReviewAuthorFamily` は `explicit` (`--review-author-family`) と `currentRuntime`
+   (委譲を実行している runtime) だけを入力とし、commit author も trailer も参照しない。
+   本規定は文書に残ったまま実装と乖離していた。
+
+### supersede されていない規定 (有効)
+
+- **§機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」**
+  (本ファイル :239 付近)。PLAN-L7-517 §3.5 は「その authority は**既存の独立 review admission / gate
+  に留める**」と述べており、これは温存である。判定に使う `authorFamily` は上記のとおり Git 文字列
+  由来ではないため、supersede された規定の影響を受けない。
+- **D1 dispatch の反対族 routing** (同族 fallback 禁止、未知 family / 反対族 runtime 不在は
+  delegation 0 / receipt 0 で deny)、**consumer の反対族 provider 起動**と `U-RVATT-024`。
+- **§D3c の `provider-family-authority.ts` port と `unverified_family` 終端**。本 PLAN が既に
+  「commit trailer・自己申告・PR marker を family authority として受理してはならない」と freeze
+  しており、PLAN-L7-517 と同じ立場である。受理側実装は authentication / authorization を変える
+  外部権限設計として **PO の明示承認**を要する。
+- **exact HEAD 限定** (§機械化する不変条件 2)、session log の再利用、未応答 SLA、`stale_head` 終端。
 
 ## 重複解消の記録 (2026-07-28)
 
