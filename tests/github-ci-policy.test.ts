@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import {
   ATTESTATION_WORKFLOW_FILE,
   aggregateHarnessResultsPass,
@@ -1011,7 +1012,7 @@ describe("github-ci-policy lint", () => {
         "run: npm ci --no-audit --no-fund && echo extra",
       ],
       ["doc-check mutation", "npm run test:doc-lane", "npm run test:doc-lane --changed"],
-      ["with value mutation", 'bun-version: "1.3"', 'bun-version: "latest"'],
+      ["with value mutation", "cache: npm", "cache: yarn"],
     ])("U-CIPOL-019a: rejects runtime step manifest mutation: %s", (_label, from, to) => {
       const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW_WITH_LANE.replace(from, to)));
       expect(result.violations.map((v) => v.reason)).toContain("missing_runtime_leg");
@@ -1510,5 +1511,29 @@ describe("github-ci-policy lint", () => {
       const packDocs = loadGithubCiPolicyDocs({ repoRoot: REPO_ROOT, runtimeProfile: "pack" });
       expect(packDocs.some((doc) => doc.role === "attestation_runtime")).toBe(false);
     });
+  });
+});
+
+// Issue #472 S1-c (PLAN-L7-522 §5.3 slice S1-c): source CI から setup-bun を撤去する。
+// CANDIDATE-U-PACKBUN-005 (docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md):
+// 実 source workflow (`.github/workflows/harness-check.yml`) の各 job step から
+// `oven-sh/setup-bun` 到達と bun/bunx 実行子への trace が 0 件であることを構造的に検査する。
+describe("Issue #472 S1-c: source CI Bun removal", () => {
+  const BUN_EXECUTABLE_PATTERN = /\b(?:bun|bunx)(?:\.(?:cmd|exe))?\b/i;
+
+  it("U-PACKBUN-005: real source workflow has no setup-bun install and no bun/bunx invocation trace", () => {
+    const parsed = parseYaml(SOURCE_WORKFLOW) as {
+      jobs: Record<string, { steps?: { uses?: string; run?: string; name?: string }[] }>;
+    };
+    const legs = ["harness-check-linux", "harness-check-windows"] as const;
+    for (const leg of legs) {
+      const steps = parsed.jobs[leg]?.steps ?? [];
+      expect(steps.length).toBeGreaterThan(0);
+      for (const step of steps) {
+        expect(step.uses ?? "").not.toMatch(/oven-sh\/setup-bun@/i);
+        expect(step.run ?? "").not.toMatch(BUN_EXECUTABLE_PATTERN);
+        expect(step.name ?? "").not.toMatch(/\bbun\b/i);
+      }
+    }
   });
 });

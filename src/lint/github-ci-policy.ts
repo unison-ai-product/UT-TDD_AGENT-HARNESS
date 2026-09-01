@@ -141,10 +141,11 @@ const PULL_REQUEST_ACTIVITY_TYPES = new Set([
 
 const SOURCE_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
-  // PLAN-L7-462 step 2: node が harness 実行系の正式 runtime。setup-bun は
-  // Pack/consumer acceptance テストの fixture 依存としてのみ残置 (Issue #134 debt)。
+  // Issue #472 (S1-c, PLAN-L7-522): source CI の harness 実行系は node/npm route のみを
+  // required step とする。setup-bun は撤去済み。tests 側の実 bun spawn は Issue #506 /
+  // PR #508 で退役済みで、残存 debt は src/cli/distribution.ts の 2 件のみ
+  // (Issue #134 / PLAN-L7-462 の別 exit criteria に帰属する)。
   { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
-  { label: "setup-bun@v2 (fixture)", any: ["oven-sh/setup-bun@v2"] },
   { label: "frozen install", any: ["npm ci"] },
   { label: "github guard", any: ["github guard"] },
   { label: "typecheck", any: ["npm run typecheck"] },
@@ -337,15 +338,10 @@ const run = (name: string, command: string, condition?: string): Record<string, 
   step(name, { ...(condition ? { if: condition } : {}), run: command });
 const commonRuntimeSteps = [
   step("checkout", { uses: "actions/checkout@v5", with: { "fetch-depth": 0 } }),
-  // PLAN-L7-462 step 2: node が harness 実行系の正式 runtime。setup-bun は
-  // Pack/consumer acceptance テストの fixture 依存としてのみ残置 (Issue #134 debt)。
+  // Issue #472 (S1-c, PLAN-L7-522): node が harness 実行系の正式 runtime。setup-bun は撤去済み。
   step("setup node (harness 実行系の正式 runtime、PLAN-L7-462 step 2)", {
     uses: "actions/setup-node@v4",
     with: { "node-version": "24.13.0", cache: "npm" },
-  }),
-  step("setup bun (Pack/consumer acceptance fixture のみ)", {
-    uses: "oven-sh/setup-bun@v2",
-    with: { "bun-version": "1.3" },
   }),
   run("install deps (frozen)", "npm ci --no-audit --no-fund"),
 ] as const;
