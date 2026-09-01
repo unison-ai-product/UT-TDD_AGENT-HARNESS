@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-22
-updated: 2026-07-23
+updated: 2026-09-01
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -18,6 +18,51 @@ agent_slots:
     slot_label: SE - scanner object、debt baseline、Node build/bootstrap、SQLite adapter
   - role: qa
     slot_label: QA - detector self-host、delta/compliance分離、Bun process 0、mutation oracle
+review_evidence:
+  - reviewer: codex-primary-preflight
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-09-01T05:57:01Z"
+    tests_green_at: "2026-09-01T05:54:00Z"
+    verdict: approve_after_fixes
+    scope: "F0b #484 bounded preflight after governance guard corrections; sealed Node generation, immutable receipt, slice admission, portability, repository-isolation, and tracked-canonical checks."
+    worker_model: gpt-5.6-luna
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/coding-rules.test.ts tests/runtime-portability.test.ts tests/doctor-test-repository-isolation.test.ts tests/node-slice-admission.test.ts tests/tracked-canonical.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-09-01T05:54:00Z"
+        evidence_path: tests/node-slice-admission.test.ts
+        output_digest: "sha256:4c1f8e45c8e107fcfb488affd96c03a584d705a9ccec54fd377963a69b50878f"
+        anchor_commit: e6958f23
+      - kind: typecheck
+        command: "npx --no-install tsc --noEmit --pretty false"
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: "2026-09-01T05:57:00Z"
+        evidence_path: src/runtime/node-slice-admission.ts
+        output_digest: "sha256:b497380730bada3d0c70aad65ac2cd8ca197e10adbadef7efff5ce3d17bc9b85"
+        anchor_commit: e6958f23
+      - kind: lint
+        command: "npx --no-install biome check src/runtime/node-slice-admission.ts src/lint/runtime-portability.ts src/doctor/test-repository-isolation.ts tests/node-slice-admission.test.ts"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-09-01T05:57:00Z"
+        evidence_path: src/lint/runtime-portability.ts
+        output_digest: "sha256:bc9fccad0e6e8f87d7ecdcc507a711e13bdc719d3eaa4acff97a9f1abffc387e"
+        anchor_commit: e6958f23
+      - kind: smoke
+        command: "node src/cli.ts plan lint"
+        runner: node
+        scope: full
+        exit_code: 0
+        completed_at: "2026-09-01T05:57:00Z"
+        evidence_path: src/runtime/node-bootstrap.ts
+        output_digest: "sha256:05c2053f103ede35534b493cb3d1e3ea7d81c28c3f1e2c03396bc7bad3daea05"
+        anchor_commit: e6958f23
 generates:
   - artifact_path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     artifact_type: markdown_doc
@@ -72,8 +117,7 @@ dependencies:
     - src/cli.ts
     - src/state-db/index.ts
     - scripts/run-vitest-snapshot.ts
-review_evidence: []
-status: draft
+status: confirmed
 github_issue_id: 152
 admission_receipt:
   schema_version: v2
