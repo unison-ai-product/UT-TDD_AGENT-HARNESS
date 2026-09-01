@@ -1,10 +1,40 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  chmodSync,
+  existsSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as bootstrap from "../src/runtime/node-bootstrap.ts";
 
 const root = process.cwd();
+
+// chmodTree が seal した generation は read-only (dirs 0555 / files 0444) のため、
+// テスト後始末の rmSync が Linux で EACCES になる。掃除前に書込権を戻す test-only helper。
+// production の immutability (chmodTree) には触れない。
+function rmTestDist(path: string): void {
+  const restoreWritable = (target: string): void => {
+    let stat: ReturnType<typeof statSync>;
+    try {
+      stat = statSync(target);
+    } catch {
+      return;
+    }
+    if (stat.isDirectory()) {
+      chmodSync(target, 0o755);
+      for (const entry of readdirSync(target)) restoreWritable(join(target, entry));
+    } else {
+      chmodSync(target, 0o644);
+    }
+  };
+  restoreWritable(path);
+  rmSync(path, { recursive: true, force: true });
+}
 const candidate = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 let generation: bootstrap.NodeGeneration;
 const build = (
@@ -29,11 +59,11 @@ const build = (
 
 describe("F0b sealed Node producer candidate oracles", () => {
   beforeAll(async () => {
-    rmSync(resolve(root, "dist"), { recursive: true, force: true });
+    rmTestDist(resolve(root, "dist"));
     generation = await build();
   });
   afterAll(() => {
-    rmSync(resolve(root, "dist"), { recursive: true, force: true });
+    rmTestDist(resolve(root, "dist"));
   });
 
   it("CAND-NODEBOOT-001/102 seals and reloads one immutable receipt", () => {
@@ -89,7 +119,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     await expect(build({ nodePath: generation.compiledCliPath })).rejects.toThrow(/runtime/);
   });
   it("CAND-NODEBOOT-012/013 lease crash residue blocks the next publisher", async () => {
-    rmSync(resolve(root, "dist"), { recursive: true, force: true });
+    rmTestDist(resolve(root, "dist"));
     await expect(
       build({
         fault: (barrier) => {
@@ -99,7 +129,7 @@ describe("F0b sealed Node producer candidate oracles", () => {
     ).rejects.toThrow("crash");
     expect(existsSync(resolve(root, bootstrap.NODE_LEASE))).toBe(true);
     await expect(build()).rejects.toThrow(/publish-lease-busy/);
-    rmSync(resolve(root, "dist"), { recursive: true, force: true });
+    rmTestDist(resolve(root, "dist"));
     generation = await build();
   });
   it("CAND-NODEBOOT-016 does not claim unsupported power-loss durability", () => {
