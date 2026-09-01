@@ -129,7 +129,7 @@ UT-TDD-agent-harness/
 ## 5. tracked / gitignored の境界
 
 - **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked（F0a移行時点）**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `package-lock.json` `.node-version` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/`。`package-lock.json`と`.node-version`はNode candidate custody正本、`bun.lock`は現在の実体を示すmigration debtである。Node parity前に削除せず、target sealed時に撤去する。
+- **tracked（F0a移行時点）**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `package-lock.json` `.node-version` `tsconfig.json` `tsconfig.node.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/`。`package-lock.json`と`.node-version`はNode candidate custody正本、`tsconfig.node.json`はF0b compiled ESM入力正本、`bun.lock`は現在の実体を示すmigration debtである。Node parity前に削除せず、target sealed時に撤去する。
 
 ## 6. 境界
 
@@ -152,13 +152,13 @@ UT-TDD-agent-harness/
 
 JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜まりやすい。**フォルダに隠す**のはツールが root を探すため不可（壊れる）。代わりに **ツールを減らす + package.json に集約** で抑える。
 
-- **root config の下限（F0a移行時点）**: `package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `bun.lock` / `.editorconfig`。`package-lock.json`と`.node-version`はNode candidate custody正本であり、任意のツール設定ではない。`bun.lock`はtarget Node generationがsealedになるまでのmigration debtとして残す。
+- **root config の下限（F0a移行時点）**: `package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `tsconfig.node.json` / `bun.lock` / `.editorconfig`。`package-lock.json`と`.node-version`はNode candidate custody正本であり、任意のツール設定ではない。`tsconfig.node.json`はF0bのcompiled ESM入力正本であり、`bun.lock`はtarget Node generationがsealedになるまでのmigration debtとして残す。
 - **lint + format = Biome 1枚 (`biome.json`)**。current invocationの`bun run lint/format`はmigration debt、target invocationはsealed Node CLI/package scriptとする。eslint + prettierを別々に足さない。
 - **test = vitest**。`vitest.config.ts` は G7 coverage-summary evidence (`json-summary`) を生成するための tracked exception とする。
 - commitlint 等 **config-in-package.json 対応**のツールは package.json のキーに入れ、新規 dotfile を作らない。
 - **新ツール導入時の判断順**: ① targetのBiome / Node / tscで代替できるか → ② package.jsonに同居できるか → ③どうしても単独configが要るか。Bunを新規選択肢へ戻さない。
 
-→ F0a移行時点のroot configは **`package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts`**。二重lockをmigration debtとして可視化し、Node cutover完了後の`bun.lock`除去は別PRで行う。同一PRでcandidate custody正本まで失わない。
+→ F0a移行時点のroot configは **`package.json` / `package-lock.json` / `.node-version` / `tsconfig.json` / `tsconfig.node.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts`**。二重lockをmigration debtとして可視化し、Node cutover完了後の`bun.lock`除去は別PRで行う。同一PRでcandidate custody正本まで失わない。
 
 ## 9. 配布 3 層モデル (ADR-005)
 

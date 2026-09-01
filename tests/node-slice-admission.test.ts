@@ -13,6 +13,7 @@ import { sliceAdmissionPreimage } from "../src/schema/node-slice-admission.ts";
 
 const subject = "git-sha1:0123456789abcdef0123456789abcdef01234567" as const;
 const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const priorHead = execFileSync("git", ["rev-parse", "HEAD^"], { encoding: "utf8" }).trim();
 const receiptDigest = (
   slice: string,
   predecessorValue: string | null,
@@ -224,6 +225,8 @@ describe("F0b slice admission kernel", () => {
   });
 
   it("CAND-NODEBOOT-018 rejects a complete-history non-ancestor", () => {
-    expect(() => assertAncestorClosure(process.cwd(), [head], "8bac71d")).toThrow("not_ancestor");
+    // The immediate parent is guaranteed to exist in the CI checkout while
+    // remaining a valid complete-history non-ancestor of the current HEAD.
+    expect(() => assertAncestorClosure(process.cwd(), [head], priorHead)).toThrow("not_ancestor");
   });
 });

@@ -86,22 +86,24 @@ function normalizedDigest(value: string): string {
   return value;
 }
 
-function makeReceipt(
-  slice: SliceId,
-  subjectRevision: GitObjectId,
-  predecessor: string | null,
-  required: readonly string[],
-  decision: "approved" | "rejected",
-  producer: SliceProducer,
-): SliceAdmissionReceipt {
+interface ReceiptInput {
+  readonly slice: SliceId;
+  readonly subjectRevision: GitObjectId;
+  readonly predecessor: string | null;
+  readonly required: readonly string[];
+  readonly decision: "approved" | "rejected";
+  readonly producer: SliceProducer;
+}
+
+function makeReceipt(input: ReceiptInput): SliceAdmissionReceipt {
   const unsigned = {
     schema_version: "node-slice-admission.v1" as const,
-    slice_id: slice,
-    predecessor_receipt_digest: predecessor,
-    subject_revision: subjectRevision,
-    required_input_receipt_digests: [...required],
-    decision,
-    producer,
+    slice_id: input.slice,
+    predecessor_receipt_digest: input.predecessor,
+    subject_revision: input.subjectRevision,
+    required_input_receipt_digests: [...input.required],
+    decision: input.decision,
+    producer: input.producer,
   };
   return sliceAdmissionReceiptSchema.parse({
     ...unsigned,
@@ -109,24 +111,37 @@ function makeReceipt(
   });
 }
 
+interface RejectionInput {
+  readonly producer: SliceProducer;
+  readonly reason: string;
+  readonly predecessor?: string | null;
+  readonly required?: readonly string[];
+}
+
 function reject(
   slice: SliceId,
   subject: GitObjectId,
-  producer: SliceProducer,
-  reason: string,
-  predecessor: string | null = null,
-  required: readonly string[] = [],
+  input: RejectionInput,
 ): NodeSliceAdmissionResult {
   // Rejection receipts must remain schema-valid even when the rejected input
   // contains duplicate or malformed digests. Approved receipts preserve the
   // exact set; only the audit receipt is canonicalized for safe serialization.
   const safeRequired = [
-    ...new Set(required.filter((value) => receiptDigestSchema.safeParse(value).success)),
+    ...new Set(
+      (input.required ?? []).filter((value) => receiptDigestSchema.safeParse(value).success),
+    ),
   ];
   return {
     ok: false,
-    reason,
-    receipt: makeReceipt(slice, subject, predecessor, safeRequired, "rejected", producer),
+    reason: input.reason,
+    receipt: makeReceipt({
+      slice,
+      subjectRevision: subject,
+      predecessor: input.predecessor ?? null,
+      required: safeRequired,
+      decision: "rejected",
+      producer: input.producer,
+    }),
   };
 }
 
@@ -207,16 +222,22 @@ function validateTransition(
 ): NodeSliceAdmissionResult | null {
   const producer = input.producer;
   if (!sliceProducerSchema.safeParse(producer).success || producer !== expectedProducer(slice)) {
-    return reject(slice, subject, expectedProducer(slice), "wrong-producer");
+    return reject(slice, subject, { producer: expectedProducer(slice), reason: "wrong-producer" });
   }
   const history = input.history ?? [];
   for (const item of history) {
     try {
       sliceAdmissionReceiptSchema.parse(item);
       if (digest(sliceAdmissionPreimage(item)) !== item.receipt_digest)
-        return reject(slice, subject, expectedProducer(slice), "history-receipt-invalid");
+        return reject(slice, subject, {
+          producer: expectedProducer(slice),
+          reason: "history-receipt-invalid",
+        });
     } catch {
-      return reject(slice, subject, expectedProducer(slice), "history-receipt-invalid");
+      return reject(slice, subject, {
+        producer: expectedProducer(slice),
+        reason: "history-receipt-invalid",
+      });
     }
   }
   const approved = history.filter((item) => item.decision === "approved");
@@ -224,24 +245,30 @@ function validateTransition(
     (item) => item.slice_id === slice && item.subject_revision === subject,
   );
   if (duplicate)
-    return reject(
-      slice,
-      subject,
-      expectedProducer(slice),
-      "replay",
-      duplicate.predecessor_receipt_digest,
-    );
+    return reject(slice, subject, {
+      producer: expectedProducer(slice),
+      reason: "replay",
+      predecessor: duplicate.predecessor_receipt_digest,
+    });
   const predecessorSlice = NODE_SLICE_INPUT_REGISTRY[slice].predecessor;
   const predecessor = input.predecessor_receipt_digest ?? input.predecessorReceiptDigest ?? null;
   if (predecessorSlice === null) {
     if (predecessor !== null)
-      return reject(slice, subject, expectedProducer(slice), "unexpected-predecessor", predecessor);
+      return reject(slice, subject, {
+        producer: expectedProducer(slice),
+        reason: "unexpected-predecessor",
+        predecessor,
+      });
   } else {
     const prior = approved.find(
       (item) => item.slice_id === predecessorSlice && item.receipt_digest === predecessor,
     );
     if (!prior)
-      return reject(slice, subject, expectedProducer(slice), "missing-prerequisite", predecessor);
+      return reject(slice, subject, {
+        producer: expectedProducer(slice),
+        reason: "missing-prerequisite",
+        predecessor,
+      });
     if (prior.subject_revision !== subject && input.repoRoot && input.canonicalPredecessorCommits) {
       assertAncestorClosure(
         input.repoRoot,
@@ -254,45 +281,37 @@ function validateTransition(
   try {
     required.forEach(normalizedDigest);
   } catch (error) {
-    return reject(
-      slice,
-      subject,
-      expectedProducer(slice),
-      error instanceof Error ? error.message : "invalid-input",
+    return reject(slice, subject, {
+      producer: expectedProducer(slice),
+      reason: error instanceof Error ? error.message : "invalid-input",
       predecessor,
-      [],
-    );
+      required: [],
+    });
   }
   if (required.length !== requiredCount(slice)) {
-    return reject(
-      slice,
-      subject,
-      expectedProducer(slice),
-      "required-input-set-mismatch",
+    return reject(slice, subject, {
+      producer: expectedProducer(slice),
+      reason: "required-input-set-mismatch",
       predecessor,
       required,
-    );
+    });
   }
   if (new Set(required).size !== required.length) {
-    return reject(
-      slice,
-      subject,
-      expectedProducer(slice),
-      "required-input-set-mismatch",
+    return reject(slice, subject, {
+      producer: expectedProducer(slice),
+      reason: "required-input-set-mismatch",
       predecessor,
       required,
-    );
+    });
   }
   const evidence = input.requiredInputs ?? [];
   if (evidence.length !== required.length) {
-    return reject(
-      slice,
-      subject,
-      expectedProducer(slice),
-      "required-input-evidence-mismatch",
+    return reject(slice, subject, {
+      producer: expectedProducer(slice),
+      reason: "required-input-evidence-mismatch",
       predecessor,
       required,
-    );
+    });
   }
   const expectedKinds: readonly string[] = NODE_SLICE_INPUT_REGISTRY[slice].requiredKinds;
   const expectedEvidenceProducer = expectedProducer(slice);
@@ -306,24 +325,20 @@ function validateTransition(
         !required.includes(item.digest),
     )
   ) {
-    return reject(
-      slice,
-      subject,
-      expectedProducer(slice),
-      "required-input-evidence-mismatch",
+    return reject(slice, subject, {
+      producer: expectedProducer(slice),
+      reason: "required-input-evidence-mismatch",
       predecessor,
       required,
-    );
+    });
   }
   if (evidence.some((item) => item.decision === "rejected")) {
-    return reject(
-      slice,
-      subject,
-      expectedProducer(slice),
-      "rejected-prerequisite",
+    return reject(slice, subject, {
+      producer: expectedProducer(slice),
+      reason: "rejected-prerequisite",
       predecessor,
       required,
-    );
+    });
   }
   return null;
 }
@@ -340,7 +355,14 @@ export function admitNodeSlice(input: NodeSliceAdmissionInput): NodeSliceAdmissi
   const predecessor = input.predecessor_receipt_digest ?? input.predecessorReceiptDigest ?? null;
   const required = input.required_input_receipt_digests ?? input.requiredInputReceiptDigests ?? [];
   const producer = input.producer as SliceProducer;
-  const receipt = makeReceipt(slice, subject, predecessor, required, "approved", producer);
+  const receipt = makeReceipt({
+    slice,
+    subjectRevision: subject,
+    predecessor,
+    required,
+    decision: "approved",
+    producer,
+  });
   return { ok: true, receipt };
 }
 

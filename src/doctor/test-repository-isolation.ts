@@ -32,6 +32,7 @@ feedback-log:2
 github-repository-policy:3
 github-ci-policy:1
 github-forward-store:2
+node-self-host-bootstrap:1 node-slice-admission:3
 global-setup.ts:1 support/workspace-roots.ts:3
 global-setup-fence:1 vitest-snapshot-runner:3
 hook-native-launcher:1 claude-memory-terminal-gc:1 release-version-identity:2
