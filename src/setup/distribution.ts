@@ -1,13 +1,13 @@
 import { satisfies, valid, validRange } from "semver";
-import { COMMON_FILES } from "./templates.ts";
 import {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
   AUTHORING_TEMPLATE_INVENTORY,
+  type AuthoringTemplateInventoryEntry,
   authoringArtifactPath,
   authoringSourcePath,
-  type AuthoringTemplateInventoryEntry,
   validateAuthoringTemplateInventory,
 } from "./authoring-template-inventory.ts";
+import { COMMON_FILES } from "./templates.ts";
 
 export interface CleanDistributionPlan {
   ok: boolean;
@@ -331,10 +331,9 @@ export function buildCleanDistributionPlan(input: {
   // 側の fence は tests/distribution-acceptance.test.ts の D-2 テストが固定する。
   const denylistViolations = artifactPaths.filter(isDeniedCleanPath);
   const artifactSet = new Set(artifactPaths);
-  const missingRequired = [
-    ...CLEAN_REQUIRED_PATHS,
-    ...AUTHORING_TEMPLATE_ARTIFACT_PATHS,
-  ].filter((path, index, required) => required.indexOf(path) === index && !artifactSet.has(path));
+  const missingRequired = [...CLEAN_REQUIRED_PATHS, ...AUTHORING_TEMPLATE_ARTIFACT_PATHS].filter(
+    (path, index, required) => required.indexOf(path) === index && !artifactSet.has(path),
+  );
   const includedSourceSet = new Set(includedSourcePaths);
   const excludedPaths = normalized.filter((path) => !includedSourceSet.has(path));
   const authoringInventory = {
@@ -346,10 +345,7 @@ export function buildCleanDistributionPlan(input: {
     missingArtifactPaths: [...inventoryResult.missingArtifactPaths],
   };
   return {
-    ok:
-      inventoryResult.ok &&
-      missingRequired.length === 0 &&
-      denylistViolations.length === 0,
+    ok: inventoryResult.ok && missingRequired.length === 0 && denylistViolations.length === 0,
     channel: "clean-repo-plus-tarball",
     sourceTag,
     cleanRepo,

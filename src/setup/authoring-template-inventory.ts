@@ -104,9 +104,7 @@ export function validateAuthoringTemplateInventory(
     .filter(([, count]) => count > 1)
     .map(([family]) => family)
     .sort();
-  const unknownFamilies = [...presentFamilies]
-    .filter((family) => !FAMILY_NAMES.has(family))
-    .sort();
+  const unknownFamilies = [...presentFamilies].filter((family) => !FAMILY_NAMES.has(family)).sort();
   const missingFamilies = expectedFamilies.filter((family) => !presentFamilies.has(family)).sort();
   const duplicateArtifactPaths = [...artifactCounts]
     .filter(([, count]) => count > 1)
@@ -117,9 +115,10 @@ export function validateAuthoringTemplateInventory(
     .filter((path) => (artifactCounts.get(path) ?? 0) !== 1)
     .sort();
   const malformed = inventory.some((entry) =>
-    [...entry.requiredArtifactPaths, "sourcePath" in entry ? entry.sourcePath : entry.sourcePrefix].some(
-      (path) => !validRelativePath(path),
-    ),
+    [
+      ...entry.requiredArtifactPaths,
+      "sourcePath" in entry ? entry.sourcePath : entry.sourcePrefix,
+    ].some((path) => !validRelativePath(path)),
   );
   return Object.freeze({
     ok:
@@ -217,17 +216,24 @@ export function validateAuthoringArtifactSet(
   inventory: readonly AuthoringTemplateInventoryEntry[] = AUTHORING_TEMPLATE_INVENTORY,
 ): AuthoringArtifactSetValidation {
   const normalizedPaths = paths.map(normalized);
-  const authoringPaths = normalizedPaths.filter((path) =>
-    isInAuthoringFamilyPath(path, inventory),
-  );
+  const authoringPaths = normalizedPaths.filter((path) => isInAuthoringFamilyPath(path, inventory));
   const sourcePaths = normalizedPaths.filter((path) =>
     inventory.some((entry) => "sourcePath" in entry && path === normalized(entry.sourcePath)),
   );
   if (authoringPaths.length === 0 && sourcePaths.length === 0)
-    return { ok: true, missingArtifactPaths: [], duplicateArtifactPaths: [], sourcePaths: [], unknownArtifactPaths: [] };
+    return {
+      ok: true,
+      missingArtifactPaths: [],
+      duplicateArtifactPaths: [],
+      sourcePaths: [],
+      unknownArtifactPaths: [],
+    };
   const counts = new Map<string, number>();
   for (const path of authoringPaths) counts.set(path, (counts.get(path) ?? 0) + 1);
-  const duplicateArtifactPaths = [...counts].filter(([, count]) => count > 1).map(([path]) => path).sort();
+  const duplicateArtifactPaths = [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([path]) => path)
+    .sort();
   const required = AUTHORING_TEMPLATE_ARTIFACT_PATHS.filter((path) =>
     inventory.some((entry) => entry.requiredArtifactPaths.includes(path)),
   );

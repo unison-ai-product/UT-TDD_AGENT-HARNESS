@@ -12,21 +12,29 @@ import {
   inspectPackAuthoringEntries,
   materializeReleaseArtifacts,
   projectTrackedTeamBlob,
-  validateAuthoringArtifactSet,
-  validateAuthoringTemplateInventory,
   type ReleaseSourceEntry,
   type TrackedGitBlob,
+  validateAuthoringArtifactSet,
+  validateAuthoringTemplateInventory,
 } from "../src/setup/index.ts";
 
 const teamSource = ".ut-tdd/teams/example-review-team.yaml";
 const teamArtifact = "docs/templates/team/example-review-team.yaml";
-const teamBytes = execFileSync("git", ["cat-file", "blob", "0c5e267a46b97699bd5ce7956eba41b3b6138fbf"]);
+const teamBytes = execFileSync("git", [
+  "cat-file",
+  "blob",
+  "0c5e267a46b97699bd5ce7956eba41b3b6138fbf",
+]);
 const teamBlob: TrackedGitBlob = {
   path: teamSource,
   mode: "100644",
   objectId: "0c5e267a46b97699bd5ce7956eba41b3b6138fbf",
   bytes: teamBytes,
 };
+
+function trackedSourcePaths(): string[] {
+  return execFileSync("git", ["ls-files", "-z"]).toString("utf8").split("\0").filter(Boolean);
+}
 
 describe("Issue #482 canonical Pack authoring inventory", () => {
   it("U-PACKTPL-001: has six required artifacts and one canonical family inventory", () => {
@@ -60,14 +68,12 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
   });
 
   it("U-PACKTPL-002: resolves the tracked blob before the output deny fence", () => {
-    const sourcePaths = [
-      ...AUTHORING_TEMPLATE_ARTIFACT_PATHS.filter((path) => path !== teamArtifact),
-      teamSource,
-      ".ut-tdd/harness.db",
-    ];
+    const sourcePaths = [...trackedSourcePaths(), teamSource, ".ut-tdd/harness.db"];
     const plan = buildCleanDistributionPlan({ paths: sourcePaths });
     expect(plan.ok).toBe(true);
-    expect(plan.artifactPaths).toEqual(expect.arrayContaining([...AUTHORING_TEMPLATE_ARTIFACT_PATHS]));
+    expect(plan.artifactPaths).toEqual(
+      expect.arrayContaining([...AUTHORING_TEMPLATE_ARTIFACT_PATHS]),
+    );
     expect(plan.artifactPaths).not.toContain(teamSource);
     expect(plan.artifactPaths).not.toContain(".ut-tdd/harness.db");
     expect(plan.authoringInventory.ok).toBe(true);
@@ -101,12 +107,38 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
   });
 
   it("U-PACKTPL-003: materializer preserves explicit projection bytes and rejects drift", () => {
-    const sourceEntries: ReleaseSourceEntry[] = buildCleanDistributionPlan({ paths: [] }).missingRequired.map((path) => ({
+    const materializerPlan = {
+      ok: true,
+      channel: "clean-repo-plus-tarball" as const,
+      sourceTag: "test",
+      cleanRepo: "test",
+      artifactPaths: [...AUTHORING_TEMPLATE_ARTIFACT_PATHS],
+      excludedPaths: [],
+      missingRequired: [],
+      denylistViolations: [],
+      authoringInventory: {
+        ok: true,
+        missingFamilies: [],
+        duplicateFamilies: [],
+        unknownFamilies: [],
+        duplicateArtifactPaths: [],
+        missingArtifactPaths: [],
+      },
+      releaseIntegrity: { required: true, artifacts: [] },
+    };
+    const sourceEntries: ReleaseSourceEntry[] = AUTHORING_TEMPLATE_ARTIFACT_PATHS.map((path) => ({
       path: path === teamArtifact ? teamSource : path,
       mode: "100644",
-      content: path === teamArtifact ? teamBytes : Buffer.from(`${path}\n`),
+      content:
+        path === teamArtifact ? teamBytes : readFileSync(join(process.cwd(), ...path.split("/"))),
     }));
-    const result = materializeReleaseArtifacts({ materializerVersion: "1", entries: sourceEntries });
+    const result = materializeReleaseArtifacts(
+      { materializerVersion: "1", entries: sourceEntries },
+      {
+        buildPlan: () => materializerPlan,
+        sourcePath: (artifactPath) => (artifactPath === teamArtifact ? teamSource : artifactPath),
+      },
+    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const projected = result.entries.find((entry) => entry.path === teamArtifact);
@@ -116,7 +148,15 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     const drifted = sourceEntries.map((entry) =>
       entry.path === teamSource ? { ...entry, content: Buffer.from("drift\n") } : entry,
     );
-    expect(materializeReleaseArtifacts({ materializerVersion: "1", entries: drifted })).toEqual({
+    expect(
+      materializeReleaseArtifacts(
+        { materializerVersion: "1", entries: drifted },
+        {
+          buildPlan: () => materializerPlan,
+          sourcePath: (artifactPath) => (artifactPath === teamArtifact ? teamSource : artifactPath),
+        },
+      ),
+    ).toEqual({
       ok: false,
       error: "invalid_artifact",
     });
@@ -127,9 +167,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
       path,
       mode: "100644" as const,
       content:
-        path === teamArtifact
-          ? teamBytes
-          : readFileSync(join(process.cwd(), ...path.split("/"))),
+        path === teamArtifact ? teamBytes : readFileSync(join(process.cwd(), ...path.split("/"))),
     }));
     expect(inspectPackAuthoringEntries(entries)).toEqual({
       ok: true,

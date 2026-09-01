@@ -26,12 +26,12 @@ import {
   cleanDistributionSourcePath,
   DEFAULT_PACK_REPO,
   gitAddPathspecCommands,
-  releaseArtifactFileNames,
-  transformCleanDistributionArtifact,
-  projectTrackedTeamBlob,
-  runPackAuthoringSmoke,
   type PackAuthoringSmokeResult,
+  projectTrackedTeamBlob,
+  releaseArtifactFileNames,
+  runPackAuthoringSmoke,
   type TrackedGitBlob,
+  transformCleanDistributionArtifact,
 } from "../setup/index.ts";
 import { ensureDir } from "../shared/fs.ts";
 

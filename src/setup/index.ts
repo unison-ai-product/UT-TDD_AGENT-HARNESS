@@ -24,6 +24,24 @@ import {
 } from "./branch-protection.ts";
 
 export {
+  AUTHORING_TEMPLATE_ARTIFACT_PATHS,
+  AUTHORING_TEMPLATE_INVENTORY,
+  type AuthoringArtifactSetValidation,
+  type AuthoringInventoryValidation,
+  type AuthoringProjectionError,
+  type AuthoringProjectionResult,
+  type AuthoringTemplateFamily,
+  type AuthoringTemplateInventoryEntry,
+  authoringArtifactPath,
+  authoringInventoryRequiredPaths,
+  authoringSourcePath,
+  isAuthoringArtifactPath,
+  projectTrackedTeamBlob,
+  type TrackedGitBlob,
+  validateAuthoringArtifactSet,
+  validateAuthoringTemplateInventory,
+} from "./authoring-template-inventory.ts";
+export {
   admitConsumerLocalRuntime,
   applyConsumerLocalRuntime,
   type ConsumerArtifactIdentity,
@@ -38,39 +56,6 @@ export {
 } from "./consumer-local-runtime-admission.ts";
 export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
-  AUTHORING_TEMPLATE_ARTIFACT_PATHS,
-  AUTHORING_TEMPLATE_INVENTORY,
-  authoringArtifactPath,
-  authoringInventoryRequiredPaths,
-  authoringSourcePath,
-  isAuthoringArtifactPath,
-  projectTrackedTeamBlob,
-  validateAuthoringArtifactSet,
-  validateAuthoringTemplateInventory,
-  type AuthoringArtifactSetValidation,
-  type AuthoringInventoryValidation,
-  type AuthoringProjectionError,
-  type AuthoringProjectionResult,
-  type AuthoringTemplateFamily,
-  type AuthoringTemplateInventoryEntry,
-  type TrackedGitBlob,
-} from "./authoring-template-inventory.ts";
-export {
-  inspectPackAuthoringEntries,
-  runPackAuthoringSmoke,
-  type PackAuthoringSmokeEntry,
-  type PackAuthoringSmokeResult,
-} from "./pack-authoring-smoke.ts";
-export {
-  digestMaterializedReleaseEntries,
-  materializeReleaseArtifacts,
-  type MaterializedReleaseEntry,
-  type ReleaseEntryMode,
-  type ReleaseMaterializationResult,
-  type ReleaseMaterializerDependencies,
-  type ReleaseSourceEntry,
-} from "./release-materializer.ts";
-export {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
   buildPackSyncPlan,
@@ -83,6 +68,12 @@ export {
   releaseArtifactStem,
   transformCleanDistributionArtifact,
 } from "./distribution.ts";
+export {
+  inspectPackAuthoringEntries,
+  type PackAuthoringSmokeEntry,
+  type PackAuthoringSmokeResult,
+  runPackAuthoringSmoke,
+} from "./pack-authoring-smoke.ts";
 export {
   admitReleaseAggregate,
   applySealedReleaseAggregate,
@@ -97,6 +88,15 @@ export {
   type ReleaseManifestTreeEntry,
   type SealedReleaseAggregatePlan,
 } from "./release-aggregate-admission.ts";
+export {
+  digestMaterializedReleaseEntries,
+  type MaterializedReleaseEntry,
+  materializeReleaseArtifacts,
+  type ReleaseEntryMode,
+  type ReleaseMaterializationResult,
+  type ReleaseMaterializerDependencies,
+  type ReleaseSourceEntry,
+} from "./release-materializer.ts";
 export {
   type CanonicalCiEvidence,
   classifyRollbackApply,

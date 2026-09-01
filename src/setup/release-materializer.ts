@@ -1,13 +1,16 @@
 import { createHash } from "node:crypto";
 import { posix } from "node:path";
 import {
+  projectTrackedTeamBlob,
+  validateAuthoringArtifactSet,
+} from "./authoring-template-inventory.ts";
+import {
   buildCleanDistributionPlan,
   type CleanDistributionPlan,
   cleanDistributionArtifactPath,
   cleanDistributionSourcePath,
   transformCleanDistributionArtifact,
 } from "./distribution.ts";
-import { projectTrackedTeamBlob, validateAuthoringArtifactSet } from "./authoring-template-inventory.ts";
 
 export type ReleaseEntryMode = "100644" | "100755" | "120000";
 
