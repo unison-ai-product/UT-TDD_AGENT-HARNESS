@@ -23,13 +23,13 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-517-review-author-provenance.md
     artifact_type: markdown_doc
-  - artifact_path: docs/test-design/harness/L7-review-author-provenance-test-design.md
-    artifact_type: test_design
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
   requires: []
   blocks: []
   references:
+    - docs/test-design/harness/L7-review-author-provenance-test-design.md
+    - docs/plans/PLAN-L7-465-cross-review-author-binding.md
     - src/feedback/review-verdict-custody.ts
     - src/feedback/review-attestation.ts
     - src/feedback/review-merge-gate.ts
@@ -38,6 +38,8 @@ dependencies:
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/439
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/421
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/429
+supersedes:
+  - PLAN-L7-465-cross-review-author-binding
 review_evidence: []
 ---
 
@@ -127,6 +129,25 @@ family の認証を意味しない。一部 unknown、facts conflict、複数 cl
 丸めず deny し、`unverified_family` を contributor set に入れない。codex/claude/human claim を追加・
 削除しても Git facts 判定や authority は変わらない。Git author 文字列と reviewer claim の一致・不一致だけで
 self-review も non-author も判定せず、その authority は既存の独立 review admission/gate に留める。
+
+### 3.6 PLAN-L7-465 の supersede 範囲
+
+本 PLAN は `PLAN-L7-465-cross-review-author-binding` (status: confirmed) の以下 2 規定を supersede する。
+両契約が同時に生きていると、片方が「Git author 文字列から provider family を導出する」と述べ、もう片方が
+「それは authority ではない」と述べる状態になり、review gate の挙動が契約から一意に決まらない。
+
+| 465 の規定 | 本 PLAN による置換 |
+|---|---|
+| §実装スコープ 2「**author 導出元の確定**: 実装では **commit author / `Co-Authored-By` trailer** を一次の author 導出元とし、自己申告のみに依存しない」 | §3.2.1 / §3.5 — commit author 文字列と `Co-Authored-By` trailer は **Git object に記録された事実**であって認証された identity ではない。provider family の導出元にしない。値は `unverified_family` のまま監査に残し、reviewer 適格性・merge authority に使わない |
+| §機械化する不変条件 1「**同一 family の自己承認を verdict として受理しない** (`same_family_reviewer`)」 | §3.5 — Git author 文字列と reviewer claim の一致・不一致だけで self-review も non-author も判定しない。family 由来の deny は撤回し、review の適格性判定は既存の独立 review admission / gate に留める |
+
+**撤回の根拠 (465 起点の実測、§2 に再掲)**: origin/main 6b5b1d9c 時点で git author 名が provider family を
+示す割合は **0% (166/166 が `unison-ai-product`)** であり、`Co-Authored-By` trailer は 24.7% (41/166) の
+自由記載 claim である。commit sha と provider を結ぶ harness.db 列は存在しない。したがって 465 が一次
+authority に据えた導出元は、実装可能な形では存在しない。
+
+**supersede しない範囲**: 465 の exact HEAD 限定 (§機械化する不変条件 2)、session log 再利用、
+未応答 SLA、`stale_head` 終端は family 導出に依存しないため、そのまま有効である。
 
 ## 4. Fail-close contract
 

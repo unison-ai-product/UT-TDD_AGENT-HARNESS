@@ -124,6 +124,29 @@ review_evidence:
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
 
+## 訂正注記 (2026-09-01): 本 PLAN の author 導出規定は PLAN-L7-517 が supersede した
+
+`PLAN-L7-517-review-author-provenance` が本 PLAN を `supersedes` に宣言している。supersede された
+のは以下 2 規定であり、**これらは実装の根拠にしてはならない**。
+
+1. **§実装スコープ 2「author 導出元の確定」** — 「実装では **commit author / `Co-Authored-By` trailer**
+   を一次の author 導出元とし、自己申告のみに依存しない」(本ファイル :159 付近)。
+   PLAN-L7-517 §3.2.1 / §3.5 により、commit author 文字列と `Co-Authored-By` trailer は
+   **Git object に記録された事実**であって認証された identity ではないと確定した。provider family の
+   導出元にしない。値は `unverified_family` のまま監査に残すだけで authority へ昇格させない。
+2. **§機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」**
+   (本ファイル :239 付近)。PLAN-L7-517 §3.5 により、Git author 文字列と reviewer claim の一致・不一致
+   だけで self-review も non-author も判定しないと確定した。family 由来の deny は撤回し、review の
+   適格性判定は既存の独立 review admission / gate に留める。
+
+**撤回の根拠**: origin/main 6b5b1d9c 時点で git author 名が provider family を示す割合は
+**0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.7% (41/166) の自由記載 claim で
+あり、commit sha と provider を結ぶ harness.db 列は存在しない (PLAN-L7-517 §2 の実測)。本 PLAN が一次
+authority に据えた導出元は、実装可能な形では存在しなかった。
+
+**引き続き有効な範囲**: exact HEAD 限定 (§機械化する不変条件 2)、session log の再利用、未応答 SLA、
+`stale_head` 終端は family 導出に依存しないため、本 PLAN の記述がそのまま有効である。
+
 **本 PLAN は `PLAN-L6-94-cross-review-session-attestation` (issue #131) の L7 実装**である
 (L6-94 §6「降下先」が要求する add-impl + Reverse 対)。照合契約そのもの (4 検査 + 不変条件
 4 件) は L6-94 §2 が正本であり、**ここで再定義しない**。
