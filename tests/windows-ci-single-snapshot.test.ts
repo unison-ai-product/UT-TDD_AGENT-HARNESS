@@ -32,7 +32,11 @@ function runnerArguments(command: unknown, scriptName: string): string[] {
   if (typeof command !== "string" || !command.startsWith(`${RUNNER} `)) {
     throw new Error(`${scriptName} must invoke the sealed snapshot runner`);
   }
-  return command.slice(RUNNER.length + 1).trim().split(/\s+/).filter(Boolean);
+  return command
+    .slice(RUNNER.length + 1)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
 }
 
 function assertWindowsSnapshotContract(document: PackageDocument): void {
@@ -40,17 +44,13 @@ function assertWindowsSnapshotContract(document: PackageDocument): void {
   if (!scripts) throw new Error("package.json scripts must be present");
 
   const fastArguments = runnerArguments(scripts["test:fast"], "test:fast");
-  expect(fastArguments).toEqual(
-    FAST_EXCLUDES.flatMap((file) => ["--exclude", file]),
-  );
+  expect(fastArguments).toEqual(FAST_EXCLUDES.flatMap((file) => ["--exclude", file]));
 
   const cliArguments = runnerArguments(scripts["test:cli"], "test:cli");
   expect(cliArguments).toEqual([...CLI_FILES]);
 
   const windowsArguments = runnerArguments(scripts["test:windows"], "test:windows");
-  expect(windowsArguments).toEqual(
-    WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]),
-  );
+  expect(windowsArguments).toEqual(WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]));
 }
 
 function mutatedPackage(mutator: (scripts: Record<string, unknown>) => void): PackageDocument {
@@ -76,7 +76,8 @@ describe("Issue #490 Windows single sealed snapshot contract", () => {
     ["empty test:cli", (scripts: Record<string, unknown>) => (scripts["test:cli"] = "")],
     [
       "wrong test:cli runner",
-      (scripts: Record<string, unknown>) => (scripts["test:cli"] = "vitest run tests/cli-surface.test.ts"),
+      (scripts: Record<string, unknown>) =>
+        (scripts["test:cli"] = "vitest run tests/cli-surface.test.ts"),
     ],
   ])("U-CI490-002: rejects %s", (_label, mutator) => {
     expect(() => assertWindowsSnapshotContract(mutatedPackage(mutator))).toThrow();
@@ -86,31 +87,34 @@ describe("Issue #490 Windows single sealed snapshot contract", () => {
     [
       "missing exclusion",
       (scripts: Record<string, unknown>) =>
-        (scripts["test:windows"] = `${RUNNER} ${WINDOWS_EXCLUDES.slice(1).flatMap((file) => ["--exclude", file]).join(" ")}`),
+        (scripts["test:windows"] = `${RUNNER} ${WINDOWS_EXCLUDES.slice(1)
+          .flatMap((file) => ["--exclude", file])
+          .join(" ")}`),
     ],
     [
       "unknown path",
       (scripts: Record<string, unknown>) =>
-        (scripts["test:windows"] = `${RUNNER} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")} --exclude tests/unknown.test.ts`),
+        (scripts["test:windows"] =
+          `${RUNNER} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")} --exclude tests/unknown.test.ts`),
     ],
     [
       "CLI path excluded again",
       (scripts: Record<string, unknown>) =>
-        (scripts["test:windows"] = `${RUNNER} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")} --exclude ${CLI_FILES[0]}`),
+        (scripts["test:windows"] =
+          `${RUNNER} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")} --exclude ${CLI_FILES[0]}`),
     ],
     [
       "duplicate exclusion",
       (scripts: Record<string, unknown>) =>
-        (scripts["test:windows"] = `${RUNNER} --exclude ${WINDOWS_EXCLUDES[0]} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")}`),
+        (scripts["test:windows"] =
+          `${RUNNER} --exclude ${WINDOWS_EXCLUDES[0]} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")}`),
     ],
-    [
-      "raw vitest",
-      (scripts: Record<string, unknown>) => (scripts["test:windows"] = "vitest run"),
-    ],
+    ["raw vitest", (scripts: Record<string, unknown>) => (scripts["test:windows"] = "vitest run")],
     [
       "second snapshot invocation",
       (scripts: Record<string, unknown>) =>
-        (scripts["test:windows"] = `${RUNNER} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")} && ${RUNNER}`),
+        (scripts["test:windows"] =
+          `${RUNNER} ${WINDOWS_EXCLUDES.flatMap((file) => ["--exclude", file]).join(" ")} && ${RUNNER}`),
     ],
   ])("U-CI490-003: rejects test:windows mutation %s", (_label, mutator) => {
     expect(() => assertWindowsSnapshotContract(mutatedPackage(mutator))).toThrow();

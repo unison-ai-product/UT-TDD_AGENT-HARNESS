@@ -429,7 +429,11 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       "node src/cli.ts db rebuild --json",
       LANE_FULL_ONLY_IF,
     ),
-    run("test — Windows full 回帰 (vitest run, windows leg)", "npm run test:windows", LANE_FULL_ONLY_IF),
+    run(
+      "test — Windows full 回帰 (vitest run, windows leg)",
+      "npm run test:windows",
+      LANE_FULL_ONLY_IF,
+    ),
     run(
       "doc lane source checks",
       "node src/cli.ts doctor --profile source-doc-lane",
