@@ -42,7 +42,7 @@ prefix `U-PACKBUN` は既存 registry と衝突しない
 | S1-b (生成成果物) | #470 | 参照: `U-PACKBUN-003` / `004` |
 | S1-a (readiness) | #471 | `CANDIDATE-U-PACKBUN-001` / `002` |
 | S1-c (source CI) | #472 | `CANDIDATE-U-PACKBUN-005` |
-| S1-d (Pack CI policy) | #500 | `U-PACKBUN-007` |
+| S1-d (Pack CI policy) | #500 | 参照: `U-PACKBUN-007` |
 | 全 slice 共通 | #470 / #471 / #472 | 参照: `U-PACKBUN-006` |
 
 `006` は各 slice の PR で個別に評価する (最後にまとめて 1 回ではない)。
