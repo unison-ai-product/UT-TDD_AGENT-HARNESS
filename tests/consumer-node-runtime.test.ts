@@ -380,7 +380,8 @@ describe("sealed self-contained consumer Node runtime", () => {
 
   it("CANDIDATE-U-PACKNODE-011: hasUtTddCli cannot bypass absent sealed runtime", () => {
     const plan = buildConsumerReadinessPlan({
-      bunVersion: null,
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -396,7 +397,8 @@ describe("sealed self-contained consumer Node runtime", () => {
   it("CANDIDATE-U-PACKNODE-011: valid sealed Node runtime is ready without Bun", () => {
     const id = identity("/consumer");
     const plan = buildConsumerReadinessPlan({
-      bunVersion: null,
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: false,

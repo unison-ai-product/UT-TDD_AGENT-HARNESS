@@ -1,9 +1,9 @@
+import { satisfies, valid, validRange } from "semver";
 import {
   type ConsumerNodeRuntimeReadinessInput,
   type ConsumerRuntimeDenyReason,
   validateConsumerReadiness,
 } from "./consumer-node-runtime.ts";
-import { satisfies, valid, validRange } from "semver";
 import {
   AUTHORING_TEMPLATE_ARTIFACT_PATHS,
   AUTHORING_TEMPLATE_INVENTORY,
