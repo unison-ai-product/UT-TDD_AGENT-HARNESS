@@ -66,23 +66,13 @@ review_evidence:
 generates:
   - artifact_path: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     artifact_type: markdown_doc
-  - artifact_path: docs/governance/bun-migration-debt.yaml
-    artifact_type: config
   - artifact_path: docs/governance/node-toolchain-provenance.json
     artifact_type: json_config
-  - artifact_path: src/lint/bun-permanent-ban.ts
-    artifact_type: source_module
-  - artifact_path: src/schema/cutover-transition.ts
-    artifact_type: source_module
   - artifact_path: src/schema/node-slice-admission.ts
     artifact_type: source_module
   - artifact_path: src/runtime/node-bootstrap.ts
     artifact_type: source_module
-  - artifact_path: src/runtime/cutover-transition.ts
-    artifact_type: source_module
   - artifact_path: src/runtime/node-slice-admission.ts
-    artifact_type: source_module
-  - artifact_path: src/runtime/runtime-image-observer.ts
     artifact_type: source_module
   - artifact_path: scripts/build-node.mjs
     artifact_type: script
@@ -90,15 +80,9 @@ generates:
     artifact_type: config
   - artifact_path: tsconfig.node.json
     artifact_type: json_config
-  - artifact_path: tests/bun-permanent-ban.test.ts
-    artifact_type: test_code
   - artifact_path: tests/node-self-host-bootstrap.test.ts
     artifact_type: test_code
-  - artifact_path: tests/cutover-transition.test.ts
-    artifact_type: test_code
   - artifact_path: tests/node-slice-admission.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/runtime-image-observer.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
