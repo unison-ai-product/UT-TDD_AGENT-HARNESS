@@ -263,12 +263,33 @@ function validateTransition(
     const prior = approved.find(
       (item) => item.slice_id === predecessorSlice && item.receipt_digest === predecessor,
     );
-    if (!prior)
+    if (!prior) {
+      const rejectedPrior = history.find(
+        (item) =>
+          item.slice_id === predecessorSlice &&
+          item.receipt_digest === predecessor &&
+          item.decision === "rejected",
+      );
+      if (rejectedPrior) {
+        return reject(slice, subject, {
+          producer: expectedProducer(slice),
+          reason: "rejected-prerequisite",
+          predecessor,
+        });
+      }
       return reject(slice, subject, {
         producer: expectedProducer(slice),
         reason: "missing-prerequisite",
         predecessor,
       });
+    }
+    if (slice === "f0c" && prior.subject_revision !== subject) {
+      return reject(slice, subject, {
+        producer: expectedProducer(slice),
+        reason: "predecessor-subject-mismatch",
+        predecessor,
+      });
+    }
     if (prior.subject_revision !== subject && input.repoRoot && input.canonicalPredecessorCommits) {
       assertAncestorClosure(
         input.repoRoot,

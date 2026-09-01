@@ -208,14 +208,102 @@ jobs:
         if: ${{ steps.classify.outputs.lane == 'full' }}
         run: node src/cli.ts doctor --scope toolchain
 
+  # Issue #485 F0c: F0b's existing sealed Node generation producer is executed
+  # on both supported OSes. These jobs are separate from the harness legs so a
+  # harness-only success cannot masquerade as Node generation evidence.
+  node-generation-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: setup node (sealed generation runtime)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+          cache: npm
+
+      - name: install deps (frozen)
+        run: npm ci --no-audit --no-fund
+
+      - name: build and verify sealed Node generation (linux)
+        env:
+          NODE_GENERATION_LANE: linux
+          NODE_GENERATION_EVIDENCE_FILE: ${{ runner.temp }}/node-generation-evidence.json
+        run: node scripts/node-generation-ci.mjs
+
+      - name: upload sealed Node generation evidence (node-generation-linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-generation-linux
+          path: |-
+            ${{ runner.temp }}/node-generation-evidence.json
+            dist/node-generations
+          if-no-files-found: error
+
+  node-generation-windows:
+    runs-on: windows-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: setup node (sealed generation runtime)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+          cache: npm
+
+      - name: install deps (frozen)
+        run: npm ci --no-audit --no-fund
+
+      - name: build and verify sealed Node generation (windows)
+        env:
+          NODE_GENERATION_LANE: windows
+          NODE_GENERATION_EVIDENCE_FILE: ${{ runner.temp }}/node-generation-evidence.json
+        run: node scripts/node-generation-ci.mjs
+
+      - name: upload sealed Node generation evidence (node-generation-windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-generation-windows
+          path: |-
+            ${{ runner.temp }}/node-generation-evidence.json
+            dist/node-generations
+          if-no-files-found: error
+
   # PLAN-RECOVERY-15 / issue #97: Branch Protection が参照する唯一の Required
   # Status Check。片脚が failure / cancelled / skipped の場合も必ず起動して Red にする。
   # doc lane で個別 step が skip されても、この aggregate job 自体は変更種別に依らず常に
   # 生成される (PLAN-L7-455 の必須制約)。
   harness-check:
-    needs: [harness-check-linux, harness-check-windows]
+    needs: [harness-check-linux, harness-check-windows, node-generation-linux, node-generation-windows]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: require Linux and Windows success
-        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success"
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: setup node (aggregate admission runtime)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.13.0"
+
+      - name: download Node generation evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: node-generation-*
+          path: node-generation-evidence
+
+      - name: require harness and Node generation success
+        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success" && test "${{ needs.node-generation-linux.result }}" = "success" && test "${{ needs.node-generation-windows.result }}" = "success"
+
+      - name: admit exact Node generation run
+        run: node scripts/node-generation-ci-aggregate.mjs
+        env:
+          NODE_GENERATION_EVIDENCE_DIR: node-generation-evidence
