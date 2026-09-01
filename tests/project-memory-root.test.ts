@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -111,9 +111,14 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       const result = resolveProjectMemoryRoot(root);
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error(result.reason);
-      expect(result.canonicalProjectRoot).toBe(root);
-      expect(result.authoredMemoryRoot).toBe(join(root, ".ut-tdd", "memory"));
-      expect(result.runtimeBusRoot).toContain(join(root, ".git", "ut-tdd-runtime", "projects"));
+      const canonicalRoot = realpathSync(root);
+      expect(result.canonicalProjectRoot.toLowerCase()).toBe(canonicalRoot.toLowerCase());
+      expect(result.authoredMemoryRoot.toLowerCase()).toBe(
+        join(canonicalRoot, ".ut-tdd", "memory").toLowerCase(),
+      );
+      expect(result.runtimeBusRoot.toLowerCase()).toContain(
+        join(canonicalRoot, ".git", "ut-tdd-runtime", "projects").toLowerCase(),
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

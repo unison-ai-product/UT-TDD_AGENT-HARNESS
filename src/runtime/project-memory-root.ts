@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { memoryStorageRoot } from "../memory/index.ts";
-import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.ts";
 
 export type ProjectMemoryRootDenyReason =
   | "git_topology_unavailable"
@@ -154,10 +153,7 @@ export function resolveProjectMemoryRoot(repoRoot: string): ProjectMemoryRootRes
       }
     },
     isSafeDescendant: isSafeDirectoryChain,
-    projectIdentity: (root) => {
-      const result = loadProjectIdentityFromHead({ repoRoot: root });
-      return result.ok ? result.value.repositoryIdentity : null;
-    },
+    projectIdentity: projectIdentityFromHead,
   });
 }
 
@@ -167,4 +163,46 @@ export function requireProjectMemoryRoot(
   const result = resolveProjectMemoryRoot(repoRoot);
   if (!result.ok) throw new Error(`project_memory_root_${result.reason}`);
   return result;
+}
+
+const PROJECT_MARKER = "ut-tdd.project.json";
+
+function projectIdentityFromHead(repoRoot: string): string | null {
+  try {
+    const bytes = execFileSync("git", ["-C", repoRoot, "show", `HEAD:${PROJECT_MARKER}`]);
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (
+      occurrences(text, "schema_version") !== 1 ||
+      occurrences(text, "repository_identity") !== 1
+    ) {
+      return null;
+    }
+    const value: unknown = JSON.parse(text);
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const config = value as Record<string, unknown>;
+    if (
+      Object.keys(config).sort().join(",") !== "repository_identity,schema_version" ||
+      config.schema_version !== "ut-tdd.project/v1" ||
+      typeof config.repository_identity !== "string" ||
+      !validRepositoryIdentity(config.repository_identity)
+    ) {
+      return null;
+    }
+    return config.repository_identity;
+  } catch {
+    return null;
+  }
+}
+
+function occurrences(text: string, key: string): number {
+  return text.match(new RegExp(`"${key}"\\s*:`, "g"))?.length ?? 0;
+}
+
+function validRepositoryIdentity(value: string): boolean {
+  return (
+    value === value.trim() &&
+    value === value.normalize("NFC") &&
+    !value.endsWith(".git") &&
+    /^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,38})\/[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,99})$/.test(value)
+  );
 }

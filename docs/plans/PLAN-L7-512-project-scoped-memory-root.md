@@ -32,6 +32,7 @@ dependencies:
     - PLAN-L6-101-pack-independent-multi-consumer-acceptance
   references:
     - ut-tdd.project.json
+    - src/runtime/project-memory-root.ts
     - src/runtime/claude-memory-wake.ts
     - src/memory/service.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/424
