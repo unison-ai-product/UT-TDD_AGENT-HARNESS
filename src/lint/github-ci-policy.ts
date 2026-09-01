@@ -288,8 +288,7 @@ const LANE_SKIPPABLE_FULL_ONLY_STEP_MATCHERS: readonly ((text: string) => boolea
   (text) => text.includes("npm run typecheck"),
   (text) => text.includes("db rebuild"),
   (text) => /\bnpm\s+run\s+test\b(?!:)/.test(text),
-  (text) => text.includes("npm run test:fast"),
-  (text) => text.includes("npm run test:cli"),
+  (text) => text.includes("npm run test:windows"),
   (text) => text.includes("audit quality"),
   (text) => text.includes("src/cli.ts doctor") && !text.includes("--profile source-doc-lane"),
 ];
@@ -430,12 +429,7 @@ node src/cli.ts github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-
       "node src/cli.ts db rebuild --json",
       LANE_FULL_ONLY_IF,
     ),
-    run("test — scoped 回帰 (vitest run, windows leg)", "npm run test:fast", LANE_FULL_ONLY_IF),
-    run(
-      "test — CLI/hook 実発火 (vitest run test:cli, windows leg)",
-      "npm run test:cli",
-      LANE_FULL_ONLY_IF,
-    ),
+    run("test — Windows full 回帰 (vitest run, windows leg)", "npm run test:windows", LANE_FULL_ONLY_IF),
     run(
       "doc lane source checks",
       "node src/cli.ts doctor --profile source-doc-lane",

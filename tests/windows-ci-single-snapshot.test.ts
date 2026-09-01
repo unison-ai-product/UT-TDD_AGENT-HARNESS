@@ -17,7 +17,8 @@ const CLI_FILES = [
   "tests/distribution-acceptance.test.ts",
   "tests/runtime-hook-entrypoints.test.ts",
 ] as const;
-const WINDOWS_EXCLUDES = FAST_EXCLUDES.filter((file) => !CLI_FILES.includes(file));
+const CLI_FILE_SET = new Set<string>(CLI_FILES);
+const WINDOWS_EXCLUDES = FAST_EXCLUDES.filter((file) => !CLI_FILE_SET.has(file));
 
 interface PackageDocument {
   scripts?: Record<string, unknown>;
