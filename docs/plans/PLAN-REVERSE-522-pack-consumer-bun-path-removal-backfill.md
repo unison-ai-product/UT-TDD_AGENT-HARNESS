@@ -39,6 +39,7 @@ dependencies:
     - docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/134
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
 review_evidence: []
 ---
 
@@ -52,6 +53,8 @@ Forward の `PLAN-L7-522` (`kind: add-impl`) に対する Reverse 対である�
 backfill 対象は `PLAN-L6-101-pack-independent-multi-consumer-acceptance` である。
 Forward が確定させる「consumer 実行面の toolchain 前提から Bun を外す」という差分が、
 L6 の independent multi-consumer acceptance 契約へ反映されていないためである。
+S1-d (#500) が検出した Pack-owned CI policy の required-step 側 Bun 前提も、Pack artifact を
+consumer acceptance の唯一の入口とする L6 契約へ持ち込まない境界として同じ backfill 対象に含める。
 
 ## R1. 設計 gap の仮説 (Forward pair-freeze 後に確定)
 
@@ -75,9 +78,11 @@ L6-101 へ昇格すべきものを抽出する。現時点の候補は `PLAN-L7-
 ## R3. 検証 (未着手)
 
 Forward oracleのうち、S1-bで正規IDへ昇格した`U-PACKBUN-003` / `004` / `006`と、未実装候補
-`CANDIDATE-U-PACKBUN-001` / `002` / `005`から、L6層で再検収すべき軸を選定する。特に
+`CANDIDATE-U-PACKBUN-001` / `002` / `005`と`U-PACKBUN-007`から、L6層で再検収すべき軸を選定する。特に
 **negative control の有効性** (既存 template を復活させると
 必ず Red になること) は、恒真 oracle による偽の充足を防ぐ要であり R3 の主対象とする。
+Pack policy については `U-PACKBUN-007` の Node/npm 正例と独立 Bun mutation の
+fail-close を再検収し、source workflow (#472) や generated consumer (#470) の変更を要求しない。
 
 ## R4. Forward 合流 (未着手)
 

@@ -37,6 +37,7 @@ export interface GithubCiPolicyViolation {
     | "forbidden_full_doctor"
     | "forbidden_raw_vitest"
     | "forbidden_source_full_tests"
+    | "forbidden_bun_execution"
     | "forbidden_job_level_lane_skip"
     | "forbidden_lane_skip_step"
     | "missing_lane_producer"
@@ -88,7 +89,10 @@ interface RequiredStepSpec {
 interface ForbiddenStepSpec {
   reason: Extract<
     GithubCiPolicyViolation["reason"],
-    "forbidden_full_doctor" | "forbidden_raw_vitest" | "forbidden_source_full_tests"
+    | "forbidden_full_doctor"
+    | "forbidden_raw_vitest"
+    | "forbidden_source_full_tests"
+    | "forbidden_bun_execution"
   >;
   detail: string;
   matches: (step: WorkflowStep) => boolean;
@@ -153,14 +157,16 @@ const SOURCE_REQUIRED_STEPS = [
 
 const PACK_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
-  { label: "setup-bun@v2", any: ["oven-sh/setup-bun@v2"] },
-  { label: "frozen install", any: ["bun install --frozen-lockfile"] },
-  { label: "typecheck", any: ["bun run typecheck"] },
-  { label: "pack tests", any: ["bun run test:pack"] },
-  { label: "lint", any: ["bun run lint"] },
-  { label: "setup projection", any: ["src/cli.ts setup --solo"] },
-  { label: "setup smoke doctor", any: ["doctor --setup-smoke"] },
+  { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
+  { label: "frozen install", any: ["npm ci --no-audit --no-fund"] },
+  { label: "typecheck", any: ["npm run typecheck"] },
+  { label: "pack tests", any: ["npm run test:pack"] },
+  { label: "lint", any: ["npm run lint"] },
+  { label: "setup projection", any: ["node src/cli.ts setup --solo"] },
+  { label: "setup smoke doctor", any: ["node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke"] },
 ] as const;
+
+const BUN_EXECUTION_PATTERN = /\b(?:bun|bunx)(?:\.(?:cmd|exe))?(?=\s|$|["'`])/i;
 
 const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProfileSpec> = {
   source: {
@@ -170,6 +176,13 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
   pack: {
     requiredSteps: PACK_REQUIRED_STEPS,
     forbiddenSteps: [
+      {
+        reason: "forbidden_bun_execution",
+        detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun",
+        matches: (step) =>
+          (step.uses ?? "").includes("oven-sh/setup-bun@") ||
+          BUN_EXECUTION_PATTERN.test(step.run ?? ""),
+      },
       {
         reason: "forbidden_full_doctor",
         detail:
@@ -181,13 +194,13 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
       },
       {
         reason: "forbidden_raw_vitest",
-        detail: "Pack CI must use bun run test:pack instead of raw vitest run",
+        detail: "Pack CI must use npm run test:pack instead of raw vitest run",
         matches: (step) => /\bvitest\s+run\b/.test(step.run ?? ""),
       },
       {
         reason: "forbidden_source_full_tests",
-        detail: "Pack CI must use bun run test:pack instead of source full bun run test",
-        matches: (step) => /\bbun\s+run\s+test\b(?!:)/.test(step.run ?? ""),
+        detail: "Pack CI must use npm run test:pack instead of source full npm run test",
+        matches: (step) => /\b(?:bun|npm)\s+run\s+test\b(?!:)/.test(step.run ?? ""),
       },
     ],
   },

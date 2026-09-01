@@ -133,6 +133,7 @@ describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
     const reasons = [...source.matchAll(/reason: "(forbidden_[a-z_]+)"/g)].map((m) => m[1]);
     expect(new Set(reasons)).toEqual(
       new Set([
+        "forbidden_bun_execution",
         "forbidden_full_doctor",
         "forbidden_job_level_lane_skip",
         "forbidden_lane_skip_step",
