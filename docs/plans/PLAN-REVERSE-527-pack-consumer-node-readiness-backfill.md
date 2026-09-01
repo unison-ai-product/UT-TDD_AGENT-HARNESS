@@ -41,8 +41,8 @@ dependencies:
     - docs/test-design/harness/L7-pack-consumer-node-readiness-test-design.md
 backprop_decision: required
 backprop_decision_reason: "readiness の Bun 到達不能と engines.node 判定を親の Pack/consumer 契約へ戻すため。"
+# Genuine preflight record; exact-head closing review is required after rebase.
 review_evidence:
-  # Genuine preflight record; exact-head closing review is required after rebase.
   - reviewer: sol
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-31T08:21:55Z"

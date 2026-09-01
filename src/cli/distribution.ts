@@ -98,7 +98,7 @@ function runDistributionSecretScan(input: {
 
 /**
  * PLAN-L7-462 step 2: ut-tdd のグローバル CLI は .cmd shim 配布のため、node の
- * spawn では PATH 解決されない。bun probe と同様に win32 は ComSpec 経由で探す
+ * spawn では PATH 解決されない。win32 は ComSpec 経由で CLI shim を探す
  * (fail-soft は従来どおり)。単体テスト U-DIST-CLI-PROBE が「素の spawn に戻すと
  * ENOENT で status=null になる」ことを fail-close で固定する。
  */

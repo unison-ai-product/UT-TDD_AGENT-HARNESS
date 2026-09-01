@@ -23,11 +23,24 @@ afterEach(() => {
 // Bun 未導入 consumer で readiness が成立することを、readiness 関数の単体呼び出しではなく
 // **実 CLI の実行**で測る (test-design §2: 単体評価では Issue #450 AC1 を満たさない)。
 //
-// Bun 不在の作り方: PATH から Bun を含み得る entry を全部落とし、HOME / USERPROFILE を
-// 空の temp dir へ向けて `~/.bun` を不在にする。node 自身の dir だけを PATH に残す。
+// Bun 不在の作り方: 必要な実行子の dir だけを PATH に allowlist し、HOME / USERPROFILE を
+// 空の temp dir へ向けて `~/.bun` を不在にする。
 const REPO_ROOT = process.cwd();
 const CLI = join(REPO_ROOT, "src", "cli.ts");
 const LEGACY = ["b", "un"].join("");
+
+function resolveGitDir(): string | null {
+  const gitLaunchers = process.platform === "win32" ? ["git.exe", "git.cmd", "git"] : ["git"];
+  const pathEntries = (process.env.PATH ?? process.env.Path ?? "")
+    .split(delimiter)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== "");
+  return (
+    pathEntries.find((entry) =>
+      gitLaunchers.some((launcher) => existsSync(join(entry, launcher))),
+    ) ?? null
+  );
+}
 
 function createCleanConsumer(): string {
   const consumer = temporaryDirectory();
@@ -55,16 +68,30 @@ function bunFreeEnv(home: string): NodeJS.ProcessEnv {
   for (const key of Object.keys(env)) {
     if (/^BUN_/i.test(key)) delete env[key];
   }
-  const kept = (process.env.PATH ?? process.env.Path ?? "")
-    .split(delimiter)
-    .filter((entry) => entry.trim() !== "" && !new RegExp(LEGACY, "i").test(entry));
-  const path = [nodeDir, ...kept].join(delimiter);
+  const gitDir = resolveGitDir();
+  const system32 =
+    process.platform === "win32" ? join(process.env.SystemRoot ?? "C:\\Windows", "System32") : null;
+  const path = [
+    ...new Set([nodeDir, gitDir, system32].filter((entry): entry is string => Boolean(entry))),
+  ].join(delimiter);
   env.PATH = path;
   env.Path = path;
   env.HOME = home;
   env.USERPROFILE = home;
   env.UT_TDD_SKIP_UPDATE_CHECK = "1";
   return env;
+}
+
+function probeBun(env: NodeJS.ProcessEnv) {
+  if (process.platform === "win32") {
+    const cmdExe = env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+    return spawnSync(cmdExe, ["/d", "/c", LEGACY, "--version"], {
+      env,
+      encoding: "utf8",
+      windowsHide: true,
+    });
+  }
+  return spawnSync(LEGACY, ["--version"], { env, encoding: "utf8" });
 }
 
 function readinessOf(cwd: string, env: NodeJS.ProcessEnv) {
@@ -136,7 +163,7 @@ describe("consumer readiness without Bun (PLAN-L7-522 §2.2)", () => {
     const readiness = readinessOf(consumer, env);
 
     // Bun が本当に到達不能であることを先に固定する (環境が緩いと恒真テストになる)。
-    const probe = spawnSync(LEGACY, ["--version"], { env: bunFreeEnv(home), shell: false });
+    const probe = probeBun(bunFreeEnv(home));
     expect(probe.status).not.toBe(0);
     expect(readiness.ok).toBe(true);
   });
