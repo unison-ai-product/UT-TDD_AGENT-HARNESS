@@ -82,6 +82,14 @@ sliceの inventory外であり、直接 allow へ変異させた場合は deny f
 保持する設計判断である。runtime state全体を配布するのではなく、source path／destination pathを一対一で
 固定した read-only projection とし、implementation PRに新しい投影方式や任意 catalogを持ち込まない。
 
+advisor合意形成は `claude-fable-5` / effort `low` / decision `design` で
+`2026-09-01T10:32:35Z` に実行した（session log:
+`.ut-tdd/logs/session/advisor-claude-1788258711530.jsonl`）。推奨は案B（選択revisionのtracked
+blob一件から固定destinationへ投影）で、案A（`.ut-tdd/**`全体allow）は却下、案C（sample非採用）は
+案Bをfreezeできない場合のfallbackとされた。本設計は案Bを採用し、明示map、pinned blob、source解決
+→output deny、content scan、drift検知を実装前提として固定する。採用blobの実測は mode `100644`、
+UTF-8 bytes `977`、secret-like／個人path／OneDrive／Bun／legacy-HELIX／email marker 0である。
+
 ## 6. 実装後の検証接続
 
 実装 PR では各 candidateを `U-PACKTPL-*` へ同番号で昇格し、実テストの証拠 path、exact PLAN revision、

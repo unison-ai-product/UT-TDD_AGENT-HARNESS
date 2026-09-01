@@ -187,5 +187,15 @@ Greenと主張しない。familyごとの削除、全体過剰許可、source/ru
   6 artifact、projection bytes／schema／identity、source path 非出力を含む。
 - この decision は設計契約の追加であり、実装 PRで新たな projection方式を発明することを許可しない。
   後続実装は §3.1 の固定 map と fail-close 条件だけを実装する。任意 team catalog は別 Issue へ送る。
+- advisor 合意形成: `claude-fable-5` / effort `low` / decision `design` を
+  `2026-09-01T10:32:35Z` に実行し、session log
+  `.ut-tdd/logs/session/advisor-claude-1788258711530.jsonl` へ記録した。案A（`.ut-tdd/**`
+  全体 allow）は blast radius が大きいため却下、案B（選択 revision の tracked blob 一件を
+  固定 destination へ投影）を推奨し、pinned blob、明示列挙、source解決→output deny、content
+  scan、HEAD drift検知を条件とした。本 PLAN は既存の #482 要求と runtime source ownershipを
+  保持するため案Bを採用し、drift warning と任意 catalog は後続実装へ送る。
+- 採用 revision `3cc0cffd` の blob `0c5e267a46b97699bd5ce7956eba41b3b6138fbf` を実測し、
+  mode `100644`、UTF-8 bytes `977`、secret-like／Windows・POSIX personal path／OneDrive／Bun／
+  legacy-HELIX／email marker は全て検出 0。実装側は同じ content precondition を fail-close で再検証する。
 
 用語更新なし。機能要求更新なし。
