@@ -38,6 +38,39 @@ export {
 } from "./consumer-local-runtime-admission.ts";
 export type { CleanDistributionPlan, ConsumerReadinessPlan, PackSyncPlan } from "./distribution.ts";
 export {
+  AUTHORING_TEMPLATE_ARTIFACT_PATHS,
+  AUTHORING_TEMPLATE_INVENTORY,
+  authoringArtifactPath,
+  authoringInventoryRequiredPaths,
+  authoringSourcePath,
+  isAuthoringArtifactPath,
+  projectTrackedTeamBlob,
+  validateAuthoringArtifactSet,
+  validateAuthoringTemplateInventory,
+  type AuthoringArtifactSetValidation,
+  type AuthoringInventoryValidation,
+  type AuthoringProjectionError,
+  type AuthoringProjectionResult,
+  type AuthoringTemplateFamily,
+  type AuthoringTemplateInventoryEntry,
+  type TrackedGitBlob,
+} from "./authoring-template-inventory.ts";
+export {
+  inspectPackAuthoringEntries,
+  runPackAuthoringSmoke,
+  type PackAuthoringSmokeEntry,
+  type PackAuthoringSmokeResult,
+} from "./pack-authoring-smoke.ts";
+export {
+  digestMaterializedReleaseEntries,
+  materializeReleaseArtifacts,
+  type MaterializedReleaseEntry,
+  type ReleaseEntryMode,
+  type ReleaseMaterializationResult,
+  type ReleaseMaterializerDependencies,
+  type ReleaseSourceEntry,
+} from "./release-materializer.ts";
+export {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
   buildPackSyncPlan,

@@ -28,6 +28,10 @@ import {
   gitAddPathspecCommands,
   releaseArtifactFileNames,
   transformCleanDistributionArtifact,
+  projectTrackedTeamBlob,
+  runPackAuthoringSmoke,
+  type PackAuthoringSmokeResult,
+  type TrackedGitBlob,
 } from "../setup/index.ts";
 import { ensureDir } from "../shared/fs.ts";
 
@@ -71,6 +75,17 @@ function copyCleanDistributionArtifact(input: {
   targetRoot: string;
   artifactPath: string;
 }): void {
+  if (
+    input.sourcePath === ".ut-tdd/teams/example-review-team.yaml" &&
+    input.artifactPath === "docs/templates/team/example-review-team.yaml"
+  ) {
+    const projection = readTrackedTeamBlob(input.sourceRoot);
+    if (!projection.ok) throw new Error(`authoring projection denied: ${projection.error}`);
+    const to = join(input.targetRoot, ...input.artifactPath.split("/"));
+    ensureDir(dirname(to), { recursive: true });
+    writeFileSync(to, projection.bytes, { encoding: "utf8", mode: 0o644 });
+    return;
+  }
   const from = join(input.sourceRoot, ...input.sourcePath.split("/"));
   const to = join(input.targetRoot, ...input.artifactPath.split("/"));
   ensureDir(dirname(to), { recursive: true });
@@ -85,6 +100,36 @@ function copyCleanDistributionArtifact(input: {
   cpSync(from, to, { recursive: true });
 }
 
+function readTrackedTeamBlob(repoRoot: string) {
+  const tree = spawnSync(
+    "git",
+    ["ls-tree", "-r", "-z", "--full-tree", "HEAD", "--", ".ut-tdd/teams/example-review-team.yaml"],
+    { cwd: repoRoot, encoding: "buffer", stdio: ["ignore", "pipe", "ignore"] },
+  );
+  const records = Buffer.from(tree.stdout ?? new Uint8Array())
+    .toString("utf8")
+    .split("\0")
+    .filter(Boolean);
+  const blobs: TrackedGitBlob[] = [];
+  for (const record of records) {
+    const match = /^(\d{6}) blob ([a-f0-9]{40})\t(.+)$/.exec(record);
+    if (!match) continue;
+    const blob = spawnSync("git", ["cat-file", "blob", match[2]], {
+      cwd: repoRoot,
+      encoding: "buffer",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    if (blob.status !== 0) continue;
+    blobs.push({
+      path: match[3],
+      mode: match[1] === "100644" ? "100644" : match[1],
+      objectId: match[2],
+      bytes: new Uint8Array(blob.stdout ?? new Uint8Array()),
+    });
+  }
+  return projectTrackedTeamBlob({ blobs });
+}
+
 function runDistributionSecretScan(input: {
   repoRoot: string;
   sourcePaths: readonly string[];
@@ -93,7 +138,43 @@ function runDistributionSecretScan(input: {
   const sourceArtifactPaths = input.artifactPaths.map((rel) =>
     cleanDistributionSourcePath(rel, input.sourcePaths),
   );
-  return analyzeSecretScan(loadSecretScanArtifactsForPaths(input.repoRoot, sourceArtifactPaths));
+  const artifacts = loadSecretScanArtifactsForPaths(input.repoRoot, sourceArtifactPaths).filter(
+    (artifact) => artifact.path !== ".ut-tdd/teams/example-review-team.yaml",
+  );
+  if (sourceArtifactPaths.includes(".ut-tdd/teams/example-review-team.yaml")) {
+    const projection = readTrackedTeamBlob(input.repoRoot);
+    if (!projection.ok)
+      return {
+        checked: artifacts.length,
+        violations: [
+          {
+            path: ".ut-tdd/teams/example-review-team.yaml",
+            line: 1,
+            marker: `authoring-projection-${projection.error}`,
+          },
+        ],
+        ok: false,
+      };
+    try {
+      artifacts.push({
+        path: ".ut-tdd/teams/example-review-team.yaml",
+        text: new TextDecoder("utf-8", { fatal: true }).decode(projection.bytes),
+      });
+    } catch {
+      return {
+        checked: artifacts.length,
+        violations: [
+          {
+            path: ".ut-tdd/teams/example-review-team.yaml",
+            line: 1,
+            marker: "authoring-projection-invalid-utf8",
+          },
+        ],
+        ok: false,
+      };
+    }
+  }
+  return analyzeSecretScan(artifacts);
 }
 
 /**
@@ -124,6 +205,31 @@ export function utTddCliProbe(
 
 export function registerDistributionCommands(program: Command): void {
   const distribution = program.command("distribution").description("clean distribution planning");
+
+  distribution
+    .command("authoring-smoke")
+    .alias("smoke")
+    .description("verify authoring templates from a Pack tree without source dependencies")
+    .option("--root <dir>", "Pack tree root", ".")
+    .option("--json", "JSON output")
+    .action((opts: { root?: string; json?: boolean }) => {
+      const root = opts.root
+        ? isAbsolute(opts.root)
+          ? opts.root
+          : join(process.cwd(), opts.root)
+        : process.cwd();
+      const smoke = runPackAuthoringSmoke(root);
+      const output = { ok: smoke.ok, root, smoke };
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        process.exitCode = smoke.ok ? 0 : 1;
+        return;
+      }
+      process.stdout.write(`distribution authoring-smoke: ${smoke.ok ? "ok" : "blocked"}\n`);
+      process.stdout.write(`  checked: ${smoke.checked.length}\n`);
+      for (const error of smoke.errors) process.stdout.write(`  ${error}\n`);
+      process.exitCode = smoke.ok ? 0 : 1;
+    });
 
   distribution
     .command("plan")
@@ -335,6 +441,11 @@ export function registerDistributionCommands(program: Command): void {
             !plannedArtifacts.has(path) && !path.startsWith(".git/") && path !== PACK_SYNC_MANIFEST,
         );
         let copyError: string | null = null;
+        let authoringSmoke: PackAuthoringSmokeResult = {
+          ok: false,
+          checked: [],
+          errors: ["not-run"],
+        };
         if (exportPlan.ok && secretScan.ok) {
           try {
             for (const rel of exportPlan.artifactPaths) {
@@ -349,6 +460,7 @@ export function registerDistributionCommands(program: Command): void {
           } catch (error) {
             copyError = error instanceof Error ? error.message : String(error);
           }
+          if (copyError === null) authoringSmoke = runPackAuthoringSmoke(outDir);
         }
         const manifest = join(outDir, PACK_SYNC_MANIFEST);
         const output = {
@@ -356,6 +468,7 @@ export function registerDistributionCommands(program: Command): void {
             exportPlan.ok &&
             secretScan.ok &&
             copyError === null &&
+            authoringSmoke.ok &&
             unmanagedExistingPaths.length === 0,
           export: exportPlan,
           secretScan: {
@@ -363,6 +476,7 @@ export function registerDistributionCommands(program: Command): void {
             checked: secretScan.checked,
             violations: secretScan.violations,
           },
+          authoringSmoke,
           sync,
           stage: {
             outDir,
@@ -446,6 +560,11 @@ export function registerDistributionCommands(program: Command): void {
         const prunedPaths: string[] = [];
         let copyError: string | null = null;
         let pruneError: string | null = null;
+        let authoringSmoke: PackAuthoringSmokeResult = {
+          ok: false,
+          checked: [],
+          errors: ["not-run"],
+        };
 
         if (repoExists && opts.pruneLocal && exportPlan.ok && secretScan.ok) {
           try {
@@ -472,6 +591,7 @@ export function registerDistributionCommands(program: Command): void {
           } catch (error) {
             copyError = error instanceof Error ? error.message : String(error);
           }
+          if (copyError === null) authoringSmoke = runPackAuthoringSmoke(repoDir);
         }
 
         const unmanagedExistingPaths =
@@ -493,6 +613,7 @@ export function registerDistributionCommands(program: Command): void {
             secretScan.ok &&
             pruneError === null &&
             copyError === null &&
+            authoringSmoke.ok &&
             unmanagedExistingPaths.length === 0,
           export: exportPlan,
           secretScan: {
@@ -500,6 +621,7 @@ export function registerDistributionCommands(program: Command): void {
             checked: secretScan.checked,
             violations: secretScan.violations,
           },
+          authoringSmoke,
           sync,
           pack: {
             repoDir,
