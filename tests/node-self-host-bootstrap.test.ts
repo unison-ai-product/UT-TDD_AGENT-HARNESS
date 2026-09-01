@@ -39,6 +39,7 @@ function rmTestDist(path: string): void {
 }
 const candidate = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 let generation: bootstrap.NodeGeneration;
+let realGeneration: bootstrap.NodeGeneration | undefined;
 const build = (
   options: {
     nodePath?: string;
@@ -59,11 +60,13 @@ const build = (
     },
   });
 
-const buildReal = () =>
-  bootstrap.buildNodeGeneration({
+const buildReal = async () => {
+  realGeneration ??= await bootstrap.buildNodeGeneration({
     repoRoot: root,
     candidateRevision: candidate,
   });
+  return realGeneration;
+};
 
 describe("F0b sealed Node producer candidate oracles", () => {
   beforeAll(async () => {
@@ -200,13 +203,15 @@ describe("F0b sealed Node producer candidate oracles", () => {
   });
 
   it("CAND-NODEBOOT-B2 builder digest mutation fails closed", () => {
-    const builderPath = resolve(root, generation.receipt.builder.path);
+    const real = realGeneration;
+    if (!real) throw new Error("real builder generation was not created");
+    const builderPath = resolve(root, real.receipt.builder.path);
     const original = readFileSync(builderPath);
     try {
       writeFileSync(builderPath, Buffer.concat([original, Buffer.from("\nmutation\n")]));
-      expect(() =>
-        bootstrap.verifyNodeGeneration(root, generation.generationPath, candidate),
-      ).toThrow(/builder-digest-mismatch/);
+      expect(() => bootstrap.verifyNodeGeneration(root, real.generationPath, candidate)).toThrow(
+        /builder-digest-mismatch/,
+      );
     } finally {
       writeFileSync(builderPath, original);
     }
