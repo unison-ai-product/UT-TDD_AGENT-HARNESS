@@ -393,8 +393,20 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 
 ## Node build generation内部処理（Issue #152 D0-N）
 
-1. Node build generation receiptの`subject_revision`は当該sliceのcandidate HEADへ固定する。review済みtoolchain provenanceはNode公式distribution archive SHA-256（OS/arch別）、同梱npm `11.6.2`のCLI relative path・expected SHA-256、`packageManager`/`engines`/lockfile identityを結ぶ。実Node/npm executableを絶対pathで解決し、version文字列だけでなくexpected digest/provenanceへ照合する。
-2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。
+1. Node build generation receiptの`subject_revision`は当該sliceのcandidate HEADへ固定する。pair-freezeした provenance は
+   `NODE-TOOLCHAIN-PROVENANCE-REGISTRY-v1`（`docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json`）
+   を唯一の正本とする。registry は Node公式distribution archive filename/SHA-256（観測済み `linux-x64` /
+   `windows-x64`）、同梱npm `11.6.2`の archive-root-relative CLI path・expected file SHA-256、
+   `packageManager`/`engines`/lockfile identity、source revision/Git blob custody を結ぶ。非著者レビュー完了前の
+   status は `pair_frozen_pending_review` とし、`darwin-*` は typed `unsupported_os` とする。公式 archive が存在しても
+   macOS を supported と推論しない。実Node/npm executableを絶対pathで解決し、version文字列だけでなく expected
+   digest/provenanceへ照合する。
+2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。`package.json` の engines authority は `node` と `npm` に限定し、`engines.bun` は PLAN-L7-488 §2.3 で削除済みであり、Node toolchain の support/activation authority でもない。
+   registry digest は RFC 8785 JCS/UTF-8（`canonical_digest.registry_sha256` 自身を除外）で再計算し、宣言 source revision の各 tracked Git blob OID と
+   raw-byte SHA-256 を照合する。不在・改竄・未追跡fixtureによる補完は `provenance_unavailable` で generation 前に
+   fail-close する。registry 自身の Git blob は `source_revision` から解決せず、consumer receipt の
+   `subject_revision`（registry landing commit）と receipt の
+   `registry_blob.blob_oid` / `registry_blob.content_sha256`へouter custodyとして束縛して検証する。
 3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
 4. generation内fileをflushし、POSIXでは可能な場合parent directoryも同期した後、immutable generation名へrenameする。activation markerはtemporary write→file sync→close後、存在しない一意final名へ同一filesystem renameする。Windows Node-onlyではprocess-crash atomicityを保証するが、power-loss後の最新marker persistenceを保証済みと主張しない。
 5. writerはexact path `dist/node-publish.lock/`をNode標準のatomic `mkdir`だけで取得する。`open("wx")`、別path、OS helper等の代替backendは禁止する。取得後にvalidated markerのmax sequenceを読み、`N+1`を割り当ててpublishし、最後に自分が正常完了した同一process内だけでleaseをreleaseする。同時writerはretryせずfail-closeする。

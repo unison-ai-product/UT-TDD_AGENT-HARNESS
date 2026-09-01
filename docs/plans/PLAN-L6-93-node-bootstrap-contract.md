@@ -7,7 +7,7 @@ drive: fullstack
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-24
-updated: 2026-08-27
+updated: 2026-08-31
 owner: PO / TL
 agent_slots:
   - role: se
@@ -15,7 +15,7 @@ agent_slots:
   - role: qa
     slot_label: QA - CAND-NODEBOOT Red/Green昇格境界
 parent_design: docs/plans/PLAN-L5-26-node-generation-activation.md
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+pair_artifact: docs/test-design/harness/L7-node-toolchain-provenance-test-design.md
 next_pair_freeze: L7
 transition_direction: design_to_implementation
 implementation_disposition: none
@@ -23,6 +23,10 @@ implementation_target: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundatio
 generates:
   - artifact_path: docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-node-toolchain-provenance-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L5-26-node-generation-activation.md
   requires: []
@@ -30,6 +34,8 @@ dependencies:
     - docs/plans/PLAN-L6-01-function-spec.md
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
     - docs/test-design/harness/L7-unit-test-design.md
+    - docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json
+    - docs/test-design/harness/L7-node-toolchain-provenance-test-design.md
     - docs/plans/PLAN-L7-462-bun-runtime-withdrawal.md
   blocks:
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
@@ -128,6 +134,21 @@ admission_receipt:
 `buildNodeGeneration`はreview済みtoolchain provenance、lock/dependency/source graph、subject revisionから
 immutable generationとreceiptを生成する。`publishActivation`はglobal exclusive lease取得後にmax sequence
 `N+1`のappend-only markerを追加する。`loadNodeGeneration`はvalidated markerの最大complete sequenceを選ぶ。
+
+Issue #499 の provenance 入力は、L5 の
+`NODE-TOOLCHAIN-PROVENANCE-REGISTRY-v1`
+(`docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json`) を唯一の閉じた正本とする。
+registry は pair-freeze 時点で観測した `linux-x64` / `windows-x64` の公式 Node v24.13.0 archive、archive 内の
+Node/npm CLI relative path と file SHA-256、Node/npm version、`packageManager`/`engines`/lock identity、Git blob custody を
+固定する。非著者レビュー完了までは `pair_frozen_pending_review` とし、`darwin-*` は typed `unsupported_os` である。
+公式 archive の存在だけから macOS 対応を推論しない。canonical digest は RFC 8785 JCS の registry object
+(self digest field を除外) とし、tracked source は宣言 revision の Git blob OID と raw-byte SHA-256を両方検証する。
+registry 自身の outer blob は宣言した source revision から解決せず、consumer receipt の
+`subject_revision`（registry landing commit）と `registry_blob.blob_oid` / `registry_blob.content_sha256`
+のtupleへ束縛して検証する。
+registry と pair の mutation oracle は `docs/test-design/harness/L7-node-toolchain-provenance-test-design.md` に固定し、
+runtime verifier の設計・実装へ先行して方式を追加しない。`package.json` の engines identity custody は `node` と `npm` に限定する。`engines.bun` は
+`PLAN-L7-488` §2.3 で削除済みであり、registry には収録せず (captured ではなく)、Node toolchain の support/activation authority でもない。
 
 ## 2. Fail-close
 
@@ -590,5 +611,17 @@ bare-name形と相対PATH entry形については等価性を主張しない。�
 独立した検出規則ではない (029 / 030 はcanonical byte列がfile別であることを固定する)。denylist時代は規則ごとに列挙漏れが迂回路になっていたが、allowlistでは
 「canonical text全文一致以外はすべて落ちる」1規則に収束する。
 
-実装先は`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
+ 実装先は`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
 candidate段階では正式oracle IDを宣言せず、各test実装とRed実測の同一commitで昇格する。
+
+### 5.7 Issue #499 provenance pair-freeze
+
+Node/npm の provenance 入力は L5 の `NODE-TOOLCHAIN-PROVENANCE-REGISTRY-v1` に固定し、
+runtime registry への materialization はこの registry digest からのみ許可する。データの役割は
+`design_input_registry` であり、L7 runtime verifier の実装や governance registry の生成を本 PLAN で行わない。
+公式 archive filename/SHA-256、archive-root-relative Node/npm CLI member path/file SHA-256、version、
+`packageManager`/`engines`/lock identity、closed OS/arch union (`darwin-*` は `unsupported_os`)、
+canonical JCS digest、Git blob custody の mutation oracle は、対になった
+`docs/test-design/harness/L7-node-toolchain-provenance-test-design.md` の
+`CAND-NODEPROV-001..011` を正本とする。`CAND-NODEBOOT-006` / `009` は同表を参照し、
+後続実装で Red 実測されるまで正式 `U-*` や Green を主張しない。

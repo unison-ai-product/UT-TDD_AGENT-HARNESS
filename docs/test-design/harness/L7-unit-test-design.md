@@ -2067,10 +2067,10 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 | `CAND-NODEBOOT-003` | Node/npm/lock/dependency/source/compiledを一要素ずつmutation | 対応digest mismatchでfail-close |
 | `CAND-NODEBOOT-004` | `../`、absolute path、symlink escape | repository/generation外を拒否 |
 | `CAND-NODEBOOT-005` | marker publish各barrierでcrash、二reader競合 | validated最高complete markerが指す旧または新generationだけを観測 |
-| `CAND-NODEBOOT-006` | npm env identityだけを正規値へspoof | 実npm executable/version/digest不一致で拒否 |
+| `CAND-NODEBOOT-006` | npm env identityだけを正規値へspoof | `NODE-TOOLCHAIN-PROVENANCE-REGISTRY-v1` の実npm executable/version/file digest不一致を `CAND-NODEPROV-003/004/011` として検証し、process生成前に拒否 |
 | `CAND-NODEBOOT-007` | Node欠落・破損・version drift | Bun/bunx/tsx/TS/shell spawn 0 |
 | `CAND-NODEBOOT-008` | Windows sealed invocation | `shell=false`、`windowsHide=true`、receipt内absolute executable/entrypointだけを使用 |
-| `CAND-NODEBOOT-009` | version文字列が同じ別npm CLIへ差替え | reviewed provenanceのexpected npm CLI digest不一致で拒否 |
+| `CAND-NODEBOOT-009` | version文字列が同じ別npm CLIへ差替え | registry の archive-root-relative npm CLI path/file digest不一致を `CAND-NODEPROV-003/011` として検証し、pair-frozen provenance へ再bindしない |
 | `CAND-NODEBOOT-010` | POSIX marker各barrierのprocess crash | parent sync可能時に実施し、旧または新completeだけを観測 |
 | `CAND-NODEBOOT-011` | Windows process crash / power lossを分離注入 | crashは旧/新complete、power loss後はcomplete 1件以上なら最大、0件ならfail-close |
 | `CAND-NODEBOOT-012` | 二writerを逆順完了させるbarrier | global lease winnerだけN+1、loser retry 0、distinct sequence逆順0 |

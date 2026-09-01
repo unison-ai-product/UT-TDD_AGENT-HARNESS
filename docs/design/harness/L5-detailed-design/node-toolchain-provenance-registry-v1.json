@@ -1,0 +1,149 @@
+{
+  "schema_version": "node-toolchain-provenance.v1",
+  "registry_id": "NODE-TOOLCHAIN-PROVENANCE-REGISTRY-v1",
+  "status": "pair_frozen_pending_review",
+  "artifact_role": "design_input_registry",
+  "materialization_boundary": "PLAN-L7-458 may materialize a runtime governance registry from this exact digest; it must not become a second source of provenance values.",
+  "review_scope": "F0b Node generation input only; runtime generation and verification remain owned by PLAN-L7-458",
+  "source_authority": {
+    "archive_index": "https://nodejs.org/download/release/v24.13.0/",
+    "checksums": "https://nodejs.org/download/release/v24.13.0/SHASUMS256.txt",
+    "release_archive": "https://nodejs.org/en/download/archive/v24.13.0",
+    "observed_on": "2026-08-31"
+  },
+  "toolchain": {
+    "node_version": "24.13.0",
+    "npm_version": "11.6.2",
+    "package_manager": "npm@11.6.2+sha512-7iKzNfy8lWYs3zq4oFPa8EXZz5xt9gQNKJZau3B1ErLBb6bF7sBJ00x09485DOvRT2l5Gerbl3VlZNT57MxJVA==",
+    "engines": {
+      "node": "24.13.0",
+      "npm": "11.6.2"
+    },
+    "engine_authority": "Only package.json.engines.node and package.json.engines.npm are toolchain authority for this registry; package.json.engines.bun was removed under PLAN-L7-488 §2.3. package-lock.json may retain the mirrored engines.bun declaration from npm regeneration as a known residual owned by #134 / PLAN-L7-462; it is neither captured authority nor support or activation authority.",
+    "lock_identity": {
+      "path": "package-lock.json",
+      "lockfile_version": 3,
+      "name": "ut-tdd",
+      "version": "0.2.0-canary.1",
+      "content_sha256": "sha256:eadef8598421e7b8adeec0d2667cf629c31cf8728f5efd1032160bb955f38a6c"
+    },
+    "package_json_identity": {
+      "path": "package.json",
+      "content_sha256": "sha256:dc20d31633c54c54f860676da5d5915cc3710c019e784de39156c82853592a3f"
+    },
+    "node_version_file": {
+      "path": ".node-version",
+      "value": "24.13.0",
+      "content_sha256": "sha256:55ce66383dffcaf804e6d3b03993b0d332cb5d7c38e26e9f92fb78ab040dc70c"
+    }
+  },
+  "supported_platforms": [
+    {
+      "platform_id": "linux-x64",
+      "os": "linux",
+      "arch": "x64",
+      "node_version": "24.13.0",
+      "npm_version": "11.6.2",
+      "archive": {
+        "filename": "node-v24.13.0-linux-x64.tar.xz",
+        "sha256": "sha256:e798599612f4bb71333a3397ab0d095fd62214e115aea45aa858a145fc72d67e"
+      },
+      "members": {
+        "node": {
+          "relative_path": "node-v24.13.0-linux-x64/bin/node",
+          "sha256": "sha256:53fb205ae78805130177e24bcb459a69a1518c8d98f8965f31d85aae7ea840fc"
+        },
+        "npm_cli": {
+          "relative_path": "node-v24.13.0-linux-x64/lib/node_modules/npm/bin/npm-cli.js",
+          "sha256": "sha256:8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7"
+        }
+      }
+    },
+    {
+      "platform_id": "windows-x64",
+      "os": "windows",
+      "arch": "x64",
+      "node_version": "24.13.0",
+      "npm_version": "11.6.2",
+      "archive": {
+        "filename": "node-v24.13.0-win-x64.zip",
+        "sha256": "sha256:ca2742695be8de44027d71b3f53a4bdb36009b95575fe1ae6f7f0b5ce091cb88"
+      },
+      "members": {
+        "node": {
+          "relative_path": "node-v24.13.0-win-x64/node.exe",
+          "sha256": "sha256:d14ba95cdce1ef7dc9ad3ac74949ca5db38b27378ee30f30a23cf26f9e875a11"
+        },
+        "npm_cli": {
+          "relative_path": "node-v24.13.0-win-x64/node_modules/npm/bin/npm-cli.js",
+          "sha256": "sha256:3ce7cba6f5128dd5f54c98b6a5036b0f850496878cc2e21044b675fe3c594e3e"
+        }
+      }
+    }
+  ],
+  "unsupported_platforms": [
+    {
+      "platform_id": "darwin-x64",
+      "os": "darwin",
+      "arch": "x64",
+      "reason_code": "unsupported_os",
+      "message": "macOS is outside the reviewed F0b provenance set; do not infer support from the official archive list."
+    },
+    {
+      "platform_id": "darwin-arm64",
+      "os": "darwin",
+      "arch": "arm64",
+      "reason_code": "unsupported_os",
+      "message": "macOS is outside the reviewed F0b provenance set; do not infer support from the official archive list."
+    },
+    {
+      "platform_id": "linux-arm64",
+      "os": "linux",
+      "arch": "arm64",
+      "reason_code": "unreviewed_architecture",
+      "message": "The archive exists, but this registry does not claim its inner-file provenance."
+    },
+    {
+      "platform_id": "windows-arm64",
+      "os": "windows",
+      "arch": "arm64",
+      "reason_code": "unreviewed_architecture",
+      "message": "The archive exists, but this registry does not claim its inner-file provenance."
+    }
+  ],
+  "canonical_digest": {
+    "algorithm": "SHA-256",
+    "canonicalization": "RFC 8785 JCS",
+    "encoding": "UTF-8 without BOM",
+    "preimage": "the registry JSON object with canonical_digest.registry_sha256 omitted",
+    "registry_sha256": "sha256:086478f439a9a68b9b62eaeccaa166992e1d8f36f5fd2c4ef328de803cd9c2d2"
+  },
+  "git_blob_custody": {
+    "source_revision": "git-sha1:f38b78d874e21777f184437211a5d2fee6b587bd",
+    "tracked_sources": [
+      {
+        "path": ".node-version",
+        "blob_oid": "3fe3b1570a5187e1f51cb2467a99647b2ba3ea54",
+        "content_sha256": "sha256:55ce66383dffcaf804e6d3b03993b0d332cb5d7c38e26e9f92fb78ab040dc70c"
+      },
+      {
+        "path": "package-lock.json",
+        "blob_oid": "7e82570590ab33cb7b32fa8a8501dc494270b5a2",
+        "content_sha256": "sha256:eadef8598421e7b8adeec0d2667cf629c31cf8728f5efd1032160bb955f38a6c"
+      },
+      {
+        "path": "package.json",
+        "blob_oid": "400926bffd500bbbfd47d983889c8c6fe32d9622",
+        "content_sha256": "sha256:dc20d31633c54c54f860676da5d5915cc3710c019e784de39156c82853592a3f"
+      }
+    ],
+    "registry_blob": {
+      "path": "docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json",
+      "landing_binding": "consumer_receipt.subject_revision",
+      "expected_blob_oid": "consumer_receipt.registry_blob.blob_oid",
+      "expected_content_sha256": "consumer_receipt.registry_blob.content_sha256",
+      "verification": "resolve this path from the exact landing commit recorded as consumer_receipt.subject_revision, then compare its tracked blob OID and raw-byte content SHA-256 with consumer_receipt.registry_blob.blob_oid and consumer_receipt.registry_blob.content_sha256; source_revision is not a lookup target for this self-reference, and the self-reference remains excluded from registry_sha256"
+    },
+    "fail_close": "missing blob, changed blob OID, changed content SHA-256, source revision mismatch, or registry digest mismatch is typed provenance_unavailable before generation"
+  }
+}
