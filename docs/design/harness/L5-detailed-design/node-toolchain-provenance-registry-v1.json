@@ -19,7 +19,7 @@
       "node": "24.13.0",
       "npm": "11.6.2"
     },
-    "engine_authority": "Only node and npm are toolchain authority for this registry; engines.bun was removed under PLAN-L7-488 §2.3 and is neither captured nor a support or activation authority.",
+    "engine_authority": "Only package.json.engines.node and package.json.engines.npm are toolchain authority for this registry; package.json.engines.bun was removed under PLAN-L7-488 §2.3. package-lock.json may retain the mirrored engines.bun declaration from npm regeneration as a known residual owned by #134 / PLAN-L7-462; it is neither captured authority nor support or activation authority.",
     "lock_identity": {
       "path": "package-lock.json",
       "lockfile_version": 3,
@@ -116,7 +116,7 @@
     "canonicalization": "RFC 8785 JCS",
     "encoding": "UTF-8 without BOM",
     "preimage": "the registry JSON object with canonical_digest.registry_sha256 omitted",
-    "registry_sha256": "sha256:fe7e06d06e3e98a899b6f5eb8c407f4219b79049f2f8713269b4c283ed6c832e"
+    "registry_sha256": "sha256:d4f0129a02d938dc7cf262c4d4ce6b21567dbf8d272cd5facbaecbbf1167c11c"
   },
   "git_blob_custody": {
     "source_revision": "git-sha1:f38b78d874e21777f184437211a5d2fee6b587bd",
@@ -139,7 +139,7 @@
     ],
     "registry_blob": {
       "path": "docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json",
-      "verification": "after commit, verify the tracked blob OID and content SHA-256 from the declared commit; do not include this self-reference in registry_sha256"
+      "verification": "after commit, verify the tracked blob OID and content SHA-256 from the commit that lands this registry, recorded by the consuming receipt's subject_revision; do not include this self-reference in registry_sha256. The external commit binding is required because registry_sha256 alone is self-referential and cannot detect coordinated tampering."
     },
     "fail_close": "missing blob, changed blob OID, changed content SHA-256, source revision mismatch, or registry digest mismatch is typed provenance_unavailable before generation"
   }
