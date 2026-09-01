@@ -6,10 +6,11 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: confirmed
+status: draft
 created: 2026-09-01
 updated: 2026-09-01
 owner: Codex / Luna
+worker_model: gpt-5.6-luna
 parent_design: docs/design/harness/L6-function-design/setup-solo-team.md
 pair_artifact: docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md
 next_pair_freeze: L7
@@ -49,39 +50,7 @@ dependencies:
     - tests/distribution-acceptance.test.ts
     - tests/distribution-scratch-ignore.test.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/482
-review_evidence:
-  - reviewer: codex-blind-reviewer
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-09-01T08:26:07Z"
-    tests_green_at: "2026-09-01T08:24:00Z"
-    verdict: "PASS"
-    scope: >-
-      claim-blind/spec-blindの二車線で、Issue #482のinventory、source/runtime deny、
-      materializer/tar/Pack-only smoke、Reverse双方向pairing、PLAN-L7-166非干渉を検収した。
-      実装、test code、publication、canaryは検収対象外とした。
-    worker_model: gpt-5.6-luna
-    reviewer_model: gpt-5.6-sol
-    lane: claim-blind
-    plan_revision: b17a8ec7ca8ff971c1c1bd78a0c926d026f18772
-    subject_head: b17a8ec7ca8ff971c1c1bd78a0c926d026f18772
-    attack_trials: 4
-    citations:
-      - docs/plans/PLAN-L7-528-pack-authoring-template-scope.md
-      - docs/plans/PLAN-REVERSE-528-pack-authoring-template-scope-backfill.md
-      - docs/test-design/harness/L7-pack-authoring-template-scope-test-design.md
-      - src/setup/distribution.ts
-      - src/setup/release-materializer.ts
-      - src/setup/pack-publication-assets.ts
-    green_commands:
-      - kind: lint
-        command: "node --experimental-strip-types src/cli.ts plan lint docs/plans/PLAN-L7-528-pack-authoring-template-scope.md --gate governance"
-        runner: node
-        scope: targeted
-        exit_code: 0
-        completed_at: "2026-09-01T08:24:00Z"
-        evidence_path: docs/plans/PLAN-L7-528-pack-authoring-template-scope.md
-        output_digest: "sha256:85868ca8ffcf46d686966fb2a263025f134b6c374d132926b6c235c5ba119b15"
-        anchor_commit: b17a8ec7ca8ff971c1c1bd78a0c926d026f18772
+review_evidence: []
 backprop_decision: required
 backprop_decision_reason: "Pack-only authoring assetsのallowlistとsource/runtime deny境界をL6-101のconsumer独立受入へReverseで戻す。"
 ---
