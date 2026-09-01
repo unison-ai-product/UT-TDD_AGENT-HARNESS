@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 route_signal: feature_addition
 route_mode: add-feature
-status: draft
+status: confirmed
 created: 2026-08-31
 updated: 2026-08-31
 owner: Codex / Luna
@@ -41,9 +41,9 @@ dependencies:
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     - src/setup/distribution.ts
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/471
+# These are genuine preflight records from the implementation's earlier exact
+# heads. A fresh exact-head closing review is still required after rebase.
 review_evidence:
-  # These are genuine preflight records from the implementation's earlier exact
-  # heads. A fresh exact-head closing review is still required after rebase.
   - reviewer: sol
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-08-31T07:26:56Z"
