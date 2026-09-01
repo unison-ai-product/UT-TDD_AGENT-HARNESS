@@ -122,6 +122,11 @@ readiness から Bun probe と `bunOk` を除去し、consumer `package.json` �
 正本として判定する。生成成果物の Bun 撤去 (#470)、source CI (#472)、sealed Node producer
 (#473) は所有しない。
 
+S1-a は S1-b (#470) より先に landing できるが、その場合は移行中の中間状態が発生する。
+readiness が `ok: true` でも、#470 が未着地の間は既存の生成 hook/template が Bun を要求し得るため、
+この組合せは releasable とは扱わない。#470 の完了を consumer canary の前提として維持し、
+本 PLAN は readiness 判定だけを Node/npm 正本へ切り替える。
+
 ## 2. 不変条件
 
 1. Bun が PATH と既知 home path のどちらにも無くても、対応 Node と Git があれば setup は成功する。
