@@ -202,9 +202,8 @@ describe("F0b sealed Node producer candidate oracles", () => {
     }
   });
 
-  it("CAND-NODEBOOT-B2 builder digest mutation fails closed", () => {
-    const real = realGeneration;
-    if (!real) throw new Error("real builder generation was not created");
+  it("CAND-NODEBOOT-B2 builder digest mutation fails closed", async () => {
+    const real = await buildReal();
     const builderPath = resolve(root, real.receipt.builder.path);
     const original = readFileSync(builderPath);
     try {

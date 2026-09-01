@@ -500,12 +500,13 @@ function dependencyClosure(dependencies: readonly ExternalDependencyIdentity[]):
       .join("\n"),
   );
 }
-function runAuthoritativeBuilder(
-  nodePath: string,
-  builder: string,
-  outfile: string,
-  root: string,
-): BuildMetadata {
+function runAuthoritativeBuilder(input: {
+  nodePath: string;
+  builder: string;
+  outfile: string;
+  root: string;
+}): BuildMetadata {
+  const { nodePath, builder, outfile, root } = input;
   const metafile = `${outfile}.metafile.json`;
   try {
     execFileSync(nodePath, [builder, outfile, metafile], {
@@ -612,7 +613,7 @@ export async function buildNodeGeneration(
     const compiled = resolve(staging, "ut-tdd.mjs");
     const meta: BuildMetadata = request.compile
       ? await request.compile(compiled, root)
-      : runAuthoritativeBuilder(nodePath, builder, compiled, root);
+      : runAuthoritativeBuilder({ nodePath, builder, outfile: compiled, root });
     assertReviewedExternalImports(externalImports(meta));
     if (!existsSync(compiled) || statSync(compiled).size === 0)
       throw new NodeBootstrapError("node-bootstrap-compiled-cli-missing");
