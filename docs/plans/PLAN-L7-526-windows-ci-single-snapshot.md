@@ -25,6 +25,14 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-windows-ci-single-snapshot-test-design.md
     artifact_type: test_design
+  - artifact_path: package.json
+    artifact_type: config
+  - artifact_path: .github/workflows/harness-check.yml
+    artifact_type: workflow
+  - artifact_path: src/lint/github-ci-policy.ts
+    artifact_type: source_module
+  - artifact_path: tests/windows-ci-single-snapshot.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-510-snapshot-runner-cost.md
   requires: []

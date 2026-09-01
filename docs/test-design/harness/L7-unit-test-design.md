@@ -2578,6 +2578,14 @@ mutation、source/CLI変更、consumer E2Eを実行しない。`U-PACKPUB-001`�
 
 実行対応: `tests/pack-publication-staging.test.ts` (`U-PACKPUB-STAGE-001〜010`)。
 
+## PLAN-L7-526 Windows single sealed snapshot (Issue #490)
+
+| ID | fixture / mutation | expected |
+| --- | --- | --- |
+| `U-CI490-001` | test:fast・test:cli・test:windowsの正規集合 | F/Cを独立算出し、W=F∪Cを一回のsealed snapshotで実行 |
+| `U-CI490-002` | fast/cli script欠落・空化・runner差替え | いずれもfail-close、既存scriptの意味論を縮めない |
+| `U-CI490-003` | Windows exclude欠落・未知path・重複・二重runner | 正規化集合不一致または二重起動をRed |
+
 ### PLAN-L7-519 remote canary publication adapter oracle (Issue #414)
 
 `CANDIDATE-PACKPUB-003-A..S2`を順序どおり`U-PACKPUB-REMOTE-010..032`へ一対一昇格する。
