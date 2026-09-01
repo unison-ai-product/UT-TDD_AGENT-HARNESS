@@ -17,8 +17,6 @@ import {
 } from "node:fs";
 import { builtinModules } from "node:module";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { build as esbuild } from "esbuild";
-
 export const REVIEWED_NODE_VERSION = "v24.13.0";
 export const REVIEWED_NPM_VERSION = "11.6.2";
 export const NODE_GENERATIONS = "dist/node-generations";
@@ -36,6 +34,7 @@ export interface ExternalDependencyIdentity {
   package_version: string;
   package_json_path: string;
   package_json_sha256: string;
+  bundle_files: Array<{ path: string; sha256: string }>;
 }
 export interface NodeBootstrapReceipt {
   schema_version: 2;
@@ -71,11 +70,12 @@ export interface NodeGenerationBuildInput {
   readonly candidateRevision: string;
   readonly nodePath?: string;
   readonly npmCliPath?: string;
-  readonly compile?: (
-    outfile: string,
-    root: string,
-  ) => Promise<{ inputs?: Record<string, unknown>; externalImports?: string[] }>;
+  readonly compile?: (outfile: string, root: string) => Promise<BuildMetadata>;
   readonly fault?: (barrier: string) => void;
+}
+interface BuildMetadata {
+  inputs?: Record<string, unknown>;
+  outputs?: Record<string, { imports?: Array<{ path: string; external?: boolean }> }>;
 }
 export class NodeBootstrapError extends Error {
   readonly code: string;
@@ -126,6 +126,32 @@ function contained(root: string, value: string, code: string): string {
 function digest(value: unknown, code = "node-bootstrap-receipt-invalid"): string {
   if (typeof value !== "string" || !HEX.test(value)) throw new NodeBootstrapError(code);
   return value;
+}
+function assertBundleFile(value: unknown): asserts value is { path: string; sha256: string } {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    typeof (value as { path?: unknown }).path !== "string" ||
+    typeof (value as { sha256?: unknown }).sha256 !== "string" ||
+    !HEX.test((value as { sha256: string }).sha256)
+  )
+    throw new NodeBootstrapError("node-bootstrap-dependency-invalid");
+}
+function assertExternalDependency(value: unknown): asserts value is ExternalDependencyIdentity {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    typeof (value as { package_name?: unknown }).package_name !== "string" ||
+    typeof (value as { package_version?: unknown }).package_version !== "string" ||
+    typeof (value as { package_json_path?: unknown }).package_json_path !== "string" ||
+    typeof (value as { package_json_sha256?: unknown }).package_json_sha256 !== "string" ||
+    !HEX.test((value as { package_json_sha256: string }).package_json_sha256) ||
+    !Array.isArray((value as { bundle_files?: unknown }).bundle_files)
+  )
+    throw new NodeBootstrapError("node-bootstrap-dependency-invalid");
+  for (const file of (value as { bundle_files: unknown[] }).bundle_files) assertBundleFile(file);
 }
 function assertToolchainProvenance(path: string, nodeDigest: string, npmDigest: string): void {
   let value: unknown;
@@ -235,6 +261,7 @@ function parseReceipt(path: string): NodeBootstrapReceipt {
     !Array.isArray(receipt.external_dependencies)
   )
     throw new NodeBootstrapError("node-bootstrap-receipt-invalid");
+  for (const dependency of receipt.external_dependencies) assertExternalDependency(dependency);
   for (const key of [
     "toolchain_provenance_sha256",
     "package_lock_sha256",
@@ -348,26 +375,154 @@ export function verifyNodeGeneration(
   if (new Set(deps.map((item) => item.package_name)).size !== deps.length)
     throw new NodeBootstrapError("node-bootstrap-dependency-duplicate");
   for (const dep of deps) {
-    const p = contained(
-      generationPath,
-      dep.package_json_path,
-      "node-bootstrap-dependency-path-escape",
-    );
+    const p = contained(repoRoot, dep.package_json_path, "node-bootstrap-dependency-path-escape");
     if (hashFile(p) !== dep.package_json_sha256)
       throw new NodeBootstrapError("node-bootstrap-dependency-digest-mismatch");
     const identity = JSON.parse(readFileSync(p, "utf8")) as { name?: unknown; version?: unknown };
     if (identity.name !== dep.package_name || identity.version !== dep.package_version)
       throw new NodeBootstrapError("node-bootstrap-dependency-identity-mismatch");
+    const packageRoot = dirname(p);
+    for (const file of dep.bundle_files) {
+      const input = contained(repoRoot, file.path, "node-bootstrap-dependency-path-escape");
+      const packageRelative = relative(packageRoot, input);
+      if (
+        !packageRelative ||
+        packageRelative === ".." ||
+        packageRelative.startsWith(`..${sep}`) ||
+        isAbsolute(packageRelative)
+      )
+        throw new NodeBootstrapError("node-bootstrap-dependency-path-escape");
+      if (hashFile(input) !== file.sha256)
+        throw new NodeBootstrapError("node-bootstrap-dependency-digest-mismatch");
+    }
   }
   if (
     hash(
       deps
-        .map((item) => `${item.package_name}\0${item.package_version}\0${item.package_json_sha256}`)
+        .flatMap((item) => [
+          `${item.package_name}\0${item.package_version}\0${item.package_json_sha256}`,
+          ...item.bundle_files
+            .slice()
+            .sort((a, b) => a.path.localeCompare(b.path))
+            .map((file) => `${file.path}\0${file.sha256}`),
+        ])
         .join("\n"),
     ) !== receipt.external_dependency_closure_sha256
   )
     throw new NodeBootstrapError("node-bootstrap-dependency-closure-mismatch");
   return { nodePath, compiledCliPath: cli, generationPath, receipt: deepFreeze(receipt) };
+}
+
+function inputPath(
+  root: string,
+  input: string,
+  code: string,
+): { absolute: string; relative: string } {
+  const absolute = resolve(root, input);
+  const relativePath = slash(relative(root, absolute));
+  if (
+    !relativePath ||
+    relativePath === ".." ||
+    relativePath.startsWith("../") ||
+    isAbsolute(relativePath)
+  )
+    throw new NodeBootstrapError(code);
+  return { absolute, relative: relativePath };
+}
+function isNodeModulesInput(path: string): boolean {
+  return path.split("/").includes("node_modules");
+}
+function packageJsonForInput(root: string, input: string): string {
+  let current = dirname(input);
+  const rootReal = realpathSync(root);
+  while (true) {
+    const packageJson = resolve(current, "package.json");
+    if (existsSync(packageJson)) return realpathSync(packageJson);
+    if (current === rootReal) break;
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  throw new NodeBootstrapError("node-bootstrap-dependency-package-missing");
+}
+function externalImports(meta: BuildMetadata): string[] {
+  return Object.values(meta.outputs ?? {}).flatMap((output) =>
+    (output.imports ?? []).filter((item) => item.external).map((item) => item.path),
+  );
+}
+function externalDependencies(root: string, meta: BuildMetadata): ExternalDependencyIdentity[] {
+  const byPackage = new Map<string, ExternalDependencyIdentity>();
+  for (const input of Object.keys(meta.inputs ?? {})) {
+    const resolvedInput = inputPath(root, input, "node-bootstrap-dependency-path-escape");
+    if (!isNodeModulesInput(resolvedInput.relative)) continue;
+    const packageJson = packageJsonForInput(root, resolvedInput.absolute);
+    const packageJsonPath = slash(relative(root, packageJson));
+    const identity = JSON.parse(readFileSync(packageJson, "utf8")) as {
+      name?: unknown;
+      version?: unknown;
+    };
+    if (typeof identity.name !== "string" || typeof identity.version !== "string")
+      throw new NodeBootstrapError("node-bootstrap-dependency-invalid");
+    const existing = byPackage.get(identity.name);
+    const bundleFile = { path: resolvedInput.relative, sha256: hashFile(resolvedInput.absolute) };
+    if (existing) {
+      if (
+        existing.package_json_path !== packageJsonPath ||
+        existing.package_version !== identity.version
+      )
+        throw new NodeBootstrapError("node-bootstrap-dependency-identity-mismatch");
+      if (!existing.bundle_files.some((file) => file.path === bundleFile.path))
+        existing.bundle_files.push(bundleFile);
+      continue;
+    }
+    byPackage.set(identity.name, {
+      package_name: identity.name,
+      package_version: identity.version,
+      package_json_path: packageJsonPath,
+      package_json_sha256: hashFile(packageJson),
+      bundle_files: [bundleFile],
+    });
+  }
+  return [...byPackage.values()]
+    .map((dependency) => ({
+      ...dependency,
+      bundle_files: dependency.bundle_files.sort((a, b) => a.path.localeCompare(b.path)),
+    }))
+    .sort((a, b) => a.package_name.localeCompare(b.package_name));
+}
+function dependencyClosure(dependencies: readonly ExternalDependencyIdentity[]): string {
+  return hash(
+    dependencies
+      .flatMap((item) => [
+        `${item.package_name}\0${item.package_version}\0${item.package_json_sha256}`,
+        ...item.bundle_files.map((file) => `${file.path}\0${file.sha256}`),
+      ])
+      .join("\n"),
+  );
+}
+function runAuthoritativeBuilder(
+  nodePath: string,
+  builder: string,
+  outfile: string,
+  root: string,
+): BuildMetadata {
+  const metafile = `${outfile}.metafile.json`;
+  try {
+    execFileSync(nodePath, [builder, outfile, metafile], {
+      cwd: root,
+      env: { ...process.env, UT_TDD_REPO_ROOT: root },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    const metadata = JSON.parse(readFileSync(metafile, "utf8")) as BuildMetadata;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata))
+      throw new Error("invalid builder metafile");
+    return metadata;
+  } catch {
+    throw new NodeBootstrapError("node-bootstrap-builder-failed");
+  } finally {
+    rmSync(metafile, { force: true });
+  }
 }
 function syncWrite(path: string, text: string): void {
   const fd = openSync(path, "wx");
@@ -455,34 +610,16 @@ export async function buildNodeGeneration(
   try {
     mkdirSync(staging, { recursive: false });
     const compiled = resolve(staging, "ut-tdd.mjs");
-    const meta: { inputs?: Record<string, unknown>; externalImports?: string[] } = request.compile
+    const meta: BuildMetadata = request.compile
       ? await request.compile(compiled, root)
-      : await esbuild({
-          absWorkingDir: root,
-          entryPoints: [resolve(root, "src/cli.ts")],
-          outfile: compiled,
-          bundle: true,
-          platform: "node",
-          format: "esm",
-          target: "node24",
-          metafile: true,
-          sourcemap: false,
-        }).then((result) => ({ inputs: result.metafile?.inputs }));
-    assertReviewedExternalImports(meta?.externalImports ?? []);
+      : runAuthoritativeBuilder(nodePath, builder, compiled, root);
+    assertReviewedExternalImports(externalImports(meta));
     if (!existsSync(compiled) || statSync(compiled).size === 0)
       throw new NodeBootstrapError("node-bootstrap-compiled-cli-missing");
-    const sourcePaths = Object.keys(meta?.inputs ?? {})
-      .filter((path) => !path.includes(`${sep}node_modules${sep}`))
-      .map((path) => {
-        const source = resolve(root, path);
-        const relativePath = slash(relative(root, source));
-        if (
-          !relativePath ||
-          relativePath === ".." ||
-          relativePath.startsWith("../") ||
-          isAbsolute(relativePath)
-        )
-          throw new NodeBootstrapError("node-bootstrap-source-path-escape");
+    const sourcePaths = Object.keys(meta.inputs ?? {})
+      .map((path) => inputPath(root, path, "node-bootstrap-source-path-escape"))
+      .filter(({ relative: relativePath }) => !isNodeModulesInput(relativePath))
+      .map(({ absolute: source, relative: relativePath }) => {
         try {
           execFileSync("git", ["-C", root, "ls-files", "--error-unmatch", "--", relativePath], {
             stdio: "ignore",
@@ -497,6 +634,7 @@ export async function buildNodeGeneration(
       .map((path) => ({ path: slash(relative(root, path)), sha256: hashFile(path) }))
       .sort((a, b) => a.path.localeCompare(b.path));
     const sourceGraph = hash(sources.map((item) => `${item.path}\0${item.sha256}`).join("\n"));
+    const dependencies = externalDependencies(root, meta);
     const manifest = JSON.parse(
       readFileSync(contained(root, "package.json", "node-bootstrap-package-path-escape"), "utf8"),
     ) as { version?: string };
@@ -522,8 +660,8 @@ export async function buildNodeGeneration(
       },
       source_graph_sha256: sourceGraph,
       source_files: sources,
-      external_dependencies: [] as ExternalDependencyIdentity[],
-      external_dependency_closure_sha256: hash(""),
+      external_dependencies: dependencies,
+      external_dependency_closure_sha256: dependencyClosure(dependencies),
     };
     const generationId = `node-${hash(canonical(base)).slice(0, 32)}`;
     const unsigned = { ...base, generation_id: generationId };
