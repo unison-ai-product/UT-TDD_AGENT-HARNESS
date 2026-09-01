@@ -54,14 +54,65 @@ authoring provenance は、対象 repository の Git object から機械的に�
 ないため、保存しても `unverified_family`/claim として監査に残すだけで authority に昇格させない。facts が
 取得不能・不一致・衝突した対象は typed `unknown` として受理点と merge gate を fail-close する。
 
-## 2. 起点の実測 (2026-08-27、origin/main 6b5b1d9c)
+## 2. 起点の実測 (再現コマンド付き、基準 ref = `6b5b1d9c6b381edc64f6e2dea158a05c5237d4d0`)
 
-| 観測 | 実測値 | 含意 |
-|---|---|---|
-| git author 名が provider family を示す割合 | 0% (166/166 が `unison-ai-product`) | author 文字列から family を導出しない |
-| `Co-Authored-By` trailer | 24.7% (41/166) | 自由記載 claim であり authority ではない |
-| commit sha と provider を結ぶ harness.db 列 | 存在しない | runtime/model 時刻から authorship を推定しない |
-| authoring attestation | 存在しない | review attestation を authoring root に遡及しない |
+母集団は **`6b5b1d9c` から辿れる非 merge commit の直近 166 件**と定義する (merge commit は
+author 文字列が GitHub 由来で authoring provenance を表さないため除外する)。以下のコマンドは
+基準 ref を固定しており、そのまま再実行して値を突き合わせられる。
+
+### 2.1 git author 名は provider family を示さない — **0% (166/166)**
+
+```bash
+git log --no-merges -n 166 --format="%an" 6b5b1d9c | sort | uniq -c
+#   166 unison-ai-product
+```
+
+author 名は 1 種類しかなく、`codex` / `claude` を区別しない。**author 文字列から family を
+導出できない。**
+
+### 2.2 `Co-Authored-By` trailer は自由記載 claim — **24.1% (40/166)**
+
+```bash
+git log --no-merges -n 166 --format="%H" 6b5b1d9c   | while read h; do git log -1 --format="%B" "$h" | grep -qi "Co-Authored-By:" && echo x; done   | wc -l
+#   40
+```
+
+trailer を持つのは 4 分の 1 未満であり、値は commit 作成者が自由に書ける文字列である。
+**存在も内容も authority にならない。**
+
+> **訂正 (2026-09-01)**: 本節の初版は 24.7% (41/166) と記載していたが、母集団の定義が
+> 書かれておらず再現できなかった。上記の定義と コマンドで再測した値は **40/166 = 24.1%** である。
+> 差は 1 commit であり結論 (「4 分の 1 未満の自由記載 claim」) は変わらないが、再現不能な値を
+> 残さないため実測値へ置き換えた。
+
+### 2.3 commit sha と provider を結ぶ authoring provenance 列は harness.db に存在しない
+
+```bash
+node --experimental-strip-types -e '
+const {DatabaseSync}=require("node:sqlite");
+const db=new DatabaseSync(".ut-tdd/harness.db",{readOnly:true});
+const tables=db.prepare("SELECT name FROM sqlite_master WHERE type=?").all("table");
+for (const t of tables) {
+  const cols=db.prepare(`PRAGMA table_info(${JSON.stringify(t.name)})`).all().map((c)=>c.name);
+  if (cols.some((c)=>/commit|sha|oid|head/i.test(c)) && cols.some((c)=>/provider|family|runtime|model/i.test(c)))
+    console.log(t.name, cols.join(","));
+}
+db.close();'
+#   github_review_lane_receipts  ... subject_head, worker_model, reviewer_model ...
+```
+
+85 table のうち、commit/sha 系の列と provider/family/model 系の列を**同時に持つ**のは
+`github_review_lane_receipts` 1 件のみである。しかもこれは **review lane の receipt** であり、
+`worker_model` / `reviewer_model` は PLAN の `review_evidence` に**自己申告された**値である。
+**authoring provenance ではなく、commit の作成者を機械的に特定する列は存在しない。**
+したがって runtime / model の時刻相関から authorship を推定してはならない。
+
+### 2.4 authoring attestation は存在しない
+
+review attestation (`.ut-tdd/review/receipts/`) は**レビュー行為**の custody であり、
+成果物を誰が書いたかの証明ではない。review attestation を authoring root へ遡及適用しない。
+
+---
 
 従って provider-family、HMAC/MAC、dispatch issuer、worker custody、human actor authentication を trust
 authority として凍結しない。残す層は Git facts と未検証 claim の二層だけである。
@@ -144,7 +195,7 @@ self-review も non-author も判定せず、その authority は既存の独立
 **撤回の根拠 (2 つ)**:
 
 1. **測定**: 465 起点の実測 (§2 に再掲) で、git author 名が provider family を示す割合は
-   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.7% (41/166) の自由記載
+   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.1% (40/166) の自由記載
    claim であり、commit sha と provider を結ぶ harness.db 列は存在しない。
 2. **実装が既にこの規定に従っていない**: `src/feedback/review-attestation.ts` の
    `resolveReviewAuthorFamily` は `explicit` (`--review-author-family` フラグ) と

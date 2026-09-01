@@ -137,7 +137,7 @@ review_evidence:
 撤回の根拠は 2 つある:
 
 1. **測定**: origin/main 6b5b1d9c 時点で git author 名が provider family を示す割合は
-   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.7% (41/166) の自由記載
+   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.1% (40/166) の自由記載
    claim であり、commit sha と provider を結ぶ harness.db 列は存在しない (PLAN-L7-517 §2)。
 2. **この規定は実装されなかった**: `src/feedback/review-attestation.ts` の
    `resolveReviewAuthorFamily` は `explicit` (`--review-author-family`) と `currentRuntime`
