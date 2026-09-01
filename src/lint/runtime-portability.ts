@@ -111,8 +111,11 @@ const BUN_SPAWN_DEBT_ALLOWLIST = new Map<string, number>([
   // launch the removed findBun/run-bun wrapper, so this source has no spawn pin.
   // UT_TDD_BUN_BINARY fixture 契約の解決元 (`?? "bun"` fallback、guard 済み)。
   ["scripts/run-vitest-snapshot.ts", 1],
-  // step 2 freeze の fixture 例外: Pack/consumer acceptance oracle (runBun + shim)。
-  ["tests/distribution-acceptance.test.ts", 2],
+  // Issue #506: the local bun-launcher helper that this file previously used is retired;
+  // all 10 call sites now run through Node/npm launchers, so this source has no spawn pin
+  // (PLAN-L7-462 exit-criteria progress, does not itself close the criterion — the
+  // separate consumer-template PATH-resolution contract in scripts/run-vitest-snapshot.ts
+  // is out of this issue's scope).
   // tests/setup.test.ts の bun fallback (U-SETUP-009b) は global 側で計上され、spawn クラスの
   // 実サイトは 0 (blind review F: 空 pin 枠は置かない)。
   // 検出語彙 (lint fixture 文字列 / consumer template fixture) であり実発火ではない。
@@ -138,8 +141,8 @@ const BUN_GLOBAL_DEBT_ALLOWLIST = new Map<string, number>([
   ["src/state-db/index.ts", 1],
   ["tests/state-db.test.ts", 1],
   ["tests/support/temp-tree.ts", 1],
-  // guard 済み Bun 判定 fixture (U-SETUP-009b)。
-  ["tests/setup.test.ts", 1],
+  // Issue #506: the U-SETUP-009b wrapper-launch helper's runtime-version probe is retired
+  // in favor of a Node-only launcher, so this source has no global pin.
   // 検出語彙 (lint fixture 文字列 / isolation 契約テストの Bun.write fixture / 本 lint 自身)。
   ["tests/runtime-portability.test.ts", 7],
   ["tests/doctor-test-repository-isolation.test.ts", 2],

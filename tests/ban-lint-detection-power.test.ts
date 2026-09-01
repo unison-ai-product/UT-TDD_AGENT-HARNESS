@@ -157,7 +157,6 @@ describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
     expect(Object.fromEntries(block(`${BU.toUpperCase()}_SPAWN_DEBT_ALLOWLIST`))).toEqual({
       "src/cli/distribution.ts": 2,
       "scripts/run-vitest-snapshot.ts": 1,
-      "tests/distribution-acceptance.test.ts": 2,
       "tests/dependency-drift.test.ts": 1,
       "tests/runtime-portability.test.ts": 11,
       "tests/doctor-setup-smoke.test.ts": 1,
@@ -173,7 +172,6 @@ describe("U-PACKBUN-006 structural supplements (PLAN-L7-522 §3.3)", () => {
       "src/state-db/index.ts": 1,
       "tests/state-db.test.ts": 1,
       "tests/support/temp-tree.ts": 1,
-      "tests/setup.test.ts": 1,
       "tests/runtime-portability.test.ts": 7,
       "tests/doctor-test-repository-isolation.test.ts": 2,
       "src/lint/runtime-portability.ts": 3,
