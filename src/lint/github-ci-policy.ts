@@ -167,7 +167,17 @@ const PACK_REQUIRED_STEPS = [
   { label: "setup smoke doctor", any: ["node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke"] },
 ] as const;
 
-const BUN_EXECUTION_PATTERN = /\b(?:bun|bunx)(?:\.(?:cmd|exe))?(?=\s|$|["'`])/i;
+const BUN_EXECUTION_PATTERN = /\b(?:bun|bunx)(?:\.(?:cmd|exe))?(?=\s|$|["'`]|@)/i;
+
+// Issue #504: `npx bun@1.3 run build` 型は EVA-1 で、`bun` 直後に version pin `@` が続く
+// ため上記の execution pattern (lookahead が空白/引用符/行末限定) を素通りしていた。`@` を
+// lookahead に追加して塞ぐ。
+//
+// EVA-4 は `curl|wget` で `bun.sh`/`bun.com` の installer を取得し、shell へパイプする経路
+// (`curl -fsSL https://bun.sh/install | bash`)。ドキュメント中の `bun.sh` 単純言及
+// (例: コメント) を誤検出しないよう、curl/wget との共起と shell へのパイプを両方要求する。
+const BUN_INSTALLER_PATTERN =
+  /\b(?:curl|wget)\b[^\n|]*\bbun\.(?:sh|com)\/install(?:\.\w+)?\b[^\n]*\|\s*(?:bash|sh|zsh)\b/i;
 
 const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProfileSpec> = {
   source: {
@@ -182,7 +192,8 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
         detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun",
         matches: (step) =>
           (step.uses ?? "").includes("oven-sh/setup-bun@") ||
-          BUN_EXECUTION_PATTERN.test(step.run ?? ""),
+          BUN_EXECUTION_PATTERN.test(step.run ?? "") ||
+          BUN_INSTALLER_PATTERN.test(step.run ?? ""),
       },
       {
         reason: "forbidden_full_doctor",

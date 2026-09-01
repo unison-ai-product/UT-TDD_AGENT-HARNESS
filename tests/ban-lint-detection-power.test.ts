@@ -88,6 +88,38 @@ describe("U-PACKBUN-006: BAN lint detection power (PLAN-L7-522 §3.3)", () => {
     );
   });
 
+  // Issue #504: EVA-1 (`npx bun@<version>`) / EVA-4 (`bun.sh/install` installer 経路) の
+  // false negative repair. これらは既存 forbidden_bun_execution rule への分岐追加であり、
+  // PLAN-L7-522 §3.3 の定義上 weakening ではないので新規サンプルとして凍結する
+  // (strengthening 方向、既存サンプルの変更・削除ではない)。
+  it("sample 13c still fail-closes as forbidden_bun_execution for npx bun@<version>", () => {
+    const result = analyzeGithubCiPolicy([
+      {
+        file: ".github/workflows/pack-harness-check.yml",
+        content: packWorkflow(`npx ${B}@1.3 run build`),
+        profile: "pack",
+        role: "pack_template",
+      },
+    ]);
+    expect(result.violations.map((violation) => violation.reason)).toContain(
+      "forbidden_bun_execution",
+    );
+  });
+
+  it("sample 13d still fail-closes as forbidden_bun_execution for bun.sh install pipe", () => {
+    const result = analyzeGithubCiPolicy([
+      {
+        file: ".github/workflows/pack-harness-check.yml",
+        content: packWorkflow(`curl -fsSL https://${B}.sh/install | bash`),
+        profile: "pack",
+        role: "pack_template",
+      },
+    ]);
+    expect(result.violations.map((violation) => violation.reason)).toContain(
+      "forbidden_bun_execution",
+    );
+  });
+
   it("sample 14 still fail-closes the rule-drift bun execution form marker", () => {
     const adapter = (extra: string): string =>
       ["# Adapter", "", "## Hooks", "", extra, ""].join("\n");
