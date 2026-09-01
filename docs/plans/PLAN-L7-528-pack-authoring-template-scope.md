@@ -61,6 +61,7 @@ backprop_decision_reason: "Pack-only authoring assetsのallowlistとsource/runti
 
 Issue #482 の bounded slice として、clean Pack から source repository なしで PLAN、L6 design、
 V-model state、effort prompt、team definition の authoring を開始できる配布範囲を凍結する。
+team definition は Issue #482 の scope-audit で追加された一件の再利用可能な sample として含める。
 本書は実装前の契約であり、`src/setup/distribution.ts`、materializer、tar writer、Pack repository、
 version、publication、runtime の変更や test code の追加を行わない。
 
@@ -69,7 +70,7 @@ module split を所有し、本 slice は clean distribution の出荷集合だ�
 
 ## 2. 基準点と worker 固定
 
-契約の入力 source revision は `b17a8ec7`（current main）に固定する。worker は
+契約の入力 source revision は `a2a359f6`（current main）に固定する。worker は
 `worker_model=gpt-5.6-luna` とし、実装開始時にこの PLAN の pair artifact と同じ exact revisionへ
 再束縛する。pair-freeze は implementation、Green、publication、canary 完了を主張しない。
 
@@ -90,12 +91,31 @@ required artifact、source-to-artifact projection、materializer/tar の検証�
 | design | `docs/templates/design/**` | 同じ `docs/templates/design/**` | `L6-function-spec-template.md` |
 | state | `docs/templates/state/**` | 同じ `docs/templates/state/**` | `vmodel.json` |
 | prompt | `docs/templates/prompts/**` | 同じ `docs/templates/prompts/**` | `effort-classify.md` |
-| team projection | `.ut-tdd/teams/example-review-team.yaml` | `docs/templates/team/example-review-team.yaml` | 1 file |
+| team projection (explicit) | `.ut-tdd/teams/example-review-team.yaml` | `docs/templates/team/example-review-team.yaml` | 1 file |
 
 `docs/templates/plan/**`、`docs/templates/design/**`、`docs/templates/state/**`、
 `docs/templates/prompts/**` は明示した family prefix のみを許可する。team は
 `.ut-tdd/**` の例外 allow ではなく、上記一件の明示的 projection として扱う。`.ut-tdd/teams/.gitkeep`
 は artifact ではない。
+
+### 3.1 明示 projection の境界
+
+team sample を残す判断は `DD-PACKTPL-001` として固定する。これは `.ut-tdd/**` を clean Pack の
+allowlist に追加する判断ではなく、選択 revision の Git blob 一件を配布用 template へ変換する
+read-only input adapter である。後続実装は次の順序と不変条件を満たす。
+
+1. inventory の当該 entry に記載した source path を、選択 revision の `git ls-files` と blob から
+   exact に解決する。作業ツリー、別 worktree、DB、Memory、環境変数から補完しない。
+2. source blob が存在し、通常ファイルで、entry の一意な source と一致することを確認してから、
+   `docs/templates/team/example-review-team.yaml` へ bytes を read-only projection する。
+3. projection を解決した後に、通常の clean path allow/deny 検査を**出力 artifact path**へ適用する。
+   `.ut-tdd/teams/example-review-team.yaml` は input として記録されるが、artifact set、manifest、tar、
+   Pack tree には一切現れてはならない。
+4. source の欠落、複数候補、symlink／path escape、destination の重複、bytes または mode の変化は
+   typed deny とし、暗黙の別 source fallback や `.ut-tdd/**` wildcard を認めない。
+
+この順序を契約に含めることで、runtime-state deny と一件の再利用 sample projection を同時に成立させる。
+任意の team 定義、追加の `.ut-tdd` state、team catalog の移行は本 slice 外の後続 Issue とする。
 
 既存の curated skills はこの inventory に吸収しない。現行 `skills/**`（`SKILL_MAP.md`、
 `review-checklist.yaml`、curated skill documents を含む 81 tracked files）は既存の clean Pack
@@ -106,8 +126,8 @@ required artifact、source-to-artifact projection、materializer/tar の検証�
 同じ inventory 集合を次の全てで検査する。
 
 1. **clean plan**: `buildCleanDistributionPlan(git ls-files)` は required 6 artifactを各 exactly once
-   出力し、source-only と denied output を除外する。inventory entry の欠落・重複・unknown extra は
-   `ok=false` とする。
+   出力し、明示 projection の source path を artifact として出力せず、source-only と denied output を
+   除外する。inventory entry の欠落・重複・unknown extra は `ok=false` とする。
 2. **materializer**: `distribution sync-stage --json` と
    `materializeReleaseArtifacts` は source path と artifact path の対応を一つの inventory から
    解決する。materialized path、mode、UTF-8 bytes、LF を検証し、source checkout / local Pack
@@ -127,9 +147,10 @@ required artifact、source-to-artifact projection、materializer/tar の検証�
 - source-only: `docs/plans/**`、`docs/design/harness/**`、`docs/test-design/**`、および既存 policy が
   denyする audit-only governance。clean Pack baselineで許可済みの canonical governanceは変更せず、
   新しい authoring template familyを理由に source tree 全体を許可しない。
-- runtime state: `.ut-tdd/**` は deny。許可されるのは inventory に記載した team sourceを
-  `docs/templates/team/example-review-team.yaml` へ投影する read-only mappingだけで、`.ut-tdd` の
-  path自体は出荷しない。
+- runtime state: `.ut-tdd/**` は deny。許可されるのは inventory に記載した一件の team sourceを
+  選択 revision の blobから `docs/templates/team/example-review-team.yaml` へ投影する read-only
+  mappingだけで、`.ut-tdd` の path自体は出荷しない。source解決前の deny filterを理由に mappingを
+  省略せず、mapping以外の `.ut-tdd` path は全て拒否する。
 - personal/source path: personal absolute path、home/Temp/OneDrive、source checkout、local Pack
   checkout、`~`、`$HOME`、`%APPDATA%` 等の path を content・manifest・commandへ到達させない。
 - Bun: `bun` / `bunx`、Bun shebang、Bun install/setup/action、Bun実行 command を authoring asset、
@@ -151,11 +172,20 @@ Greenと主張しない。familyごとの削除、全体過剰許可、source/ru
 ## 7. 受入条件 / 非スコープ
 
 - [ ] 本 PLAN と paired test design が同じ contract、inventory、deny、worker revisionを参照する。
-- [ ] clean plan、materializer、tar、Pack-only smoke が同一 inventory を検査する設計になっている。
+- [ ] clean plan、materializer、tar、Pack-only smoke が同一 inventory を検査し、明示 projection の
+      source解決→output deny検査順を共有する設計になっている。
 - [ ] skills既存集合を保持し、source-only / `.ut-tdd/**` / personal path / Bun / legacy-HELIX の denyを
       各々独立 mutationで検出できる。
 - [ ] Reverse R0/backfill linkを宣言し、L6-101へ戻す差分だけを後続R4の候補として残す。
 - [ ] 実装、test code、distribution publication、Pack remote mutation、version変更、#418 canaryは
       本 PLAN の完了条件に含めない。
+
+### 7.1 Scope decision record
+
+- `DD-PACKTPL-001` (2026-09-01): #482 の scope-audit comment で要求された再利用 team sample を、
+  任意の runtime state 配布ではなく上記一件の explicit projection として含める。受入条件は required
+  6 artifact、projection bytes／schema／identity、source path 非出力を含む。
+- この decision は設計契約の追加であり、実装 PRで新たな projection方式を発明することを許可しない。
+  後続実装は §3.1 の固定 map と fail-close 条件だけを実装する。任意 team catalog は別 Issue へ送る。
 
 用語更新なし。機能要求更新なし。
