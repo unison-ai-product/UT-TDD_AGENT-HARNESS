@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: confirmed
 created: 2026-08-26
-updated: 2026-08-27
+updated: 2026-09-01
 owner: PO / TL
 github_issue_id: 424
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -25,6 +25,10 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-project-scoped-memory-root-test-design.md
     artifact_type: test_design
+  - artifact_path: src/runtime/project-memory-root.ts
+    artifact_type: source_module
+  - artifact_path: tests/project-memory-root.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
   requires: []
@@ -118,8 +122,10 @@ transient notification busとして共有する。絶対pathはidentityに含め
 
 ## 3. Implementation slices
 
-本PRは契約と対になるcandidateだけをfreezeする。次の成果物はpair-freeze後の原子的な実装PRが所有し、
-本PRの`generates`へ先行登録しない。
+元のpair-freeze（PR #431）では、実装前の契約だけを凍結し、後続実装の成果物を
+`generates`へ先行登録しなかった。現在のPR #512はその後続のbounded Slice 1実装であり、
+下記2件だけをこのPLANの所有成果物として登録する。Memory CLI／wake、provider envelope、
+inventory／recovery、Pack parityは後続sliceであり、このPRはそれらを生成済みと主張しない。
 
 1. canonical root resolverとproject-namespaced transient bus。
 2. Memory CLI、live review、Claude wakeのcanonical root結線。
