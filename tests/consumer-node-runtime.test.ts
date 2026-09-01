@@ -408,7 +408,7 @@ describe("sealed self-contained consumer Node runtime", () => {
       consumerRuntime: { status: "ready", identity: id, bundle: bundleFor(id) },
     });
     expect(plan.ok).toBe(true);
-    expect(plan.checks.find((check) => check.name === "bun>=1.3")?.ok).toBe(false);
+    expect(plan.checks.some((check) => check.name.startsWith("bun"))).toBe(false);
     expect(plan.consumerRuntime).toEqual({ ok: true });
   });
 
