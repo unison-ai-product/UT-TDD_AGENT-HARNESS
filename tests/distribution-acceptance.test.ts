@@ -97,11 +97,11 @@ function writeLocalUtTddShim(root: string): string {
   mkdirSync(binDir, { recursive: true });
   if (process.platform === "win32") {
     const path = join(binDir, "ut-tdd.cmd");
-    writeFileSync(path, '@echo off\r\nbun "%~dp0..\\src\\cli.ts" %*\r\n', "utf8");
+    writeFileSync(path, '@echo off\r\nnode "%~dp0..\\src\\cli.ts" %*\r\n', "utf8");
     return path;
   }
   const path = join(binDir, "ut-tdd");
-  writeFileSync(path, '#!/bin/sh\nexec bun "$(dirname "$0")/../src/cli.ts" "$@"\n', {
+  writeFileSync(path, '#!/bin/sh\nexec node "$(dirname "$0")/../src/cli.ts" "$@"\n', {
     encoding: "utf8",
     mode: 0o755,
   });
