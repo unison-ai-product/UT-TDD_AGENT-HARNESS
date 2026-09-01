@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as bootstrap from "../src/runtime/node-bootstrap.ts";
@@ -55,6 +57,12 @@ const build = (
       writeFileSync(outfile, "export default 1;\n", "utf8");
       return { inputs: options.compileInputs ?? { "src/cli.ts": {} } };
     },
+  });
+
+const buildReal = () =>
+  bootstrap.buildNodeGeneration({
+    repoRoot: root,
+    candidateRevision: candidate,
   });
 
 describe("F0b sealed Node producer candidate oracles", () => {
@@ -139,5 +147,68 @@ describe("F0b sealed Node producer candidate oracles", () => {
     await expect(build({ compileInputs: { "../untracked.ts": {} } })).rejects.toThrow(
       /source-path-escape|source-untracked/,
     );
+  });
+
+  it("CAND-NODEBOOT-B1 real bundle seals its external dependency closure", async () => {
+    rmTestDist(resolve(root, "dist"));
+    const real = await buildReal();
+    const dependencies = real.receipt.external_dependencies as Array<{
+      package_name: string;
+      bundle_files: Array<{ path: string; sha256: string }>;
+    }>;
+    expect(dependencies.length).toBeGreaterThan(0);
+    expect(dependencies.every((dependency) => dependency.bundle_files.length > 0)).toBe(true);
+  });
+
+  it("CAND-NODEBOOT-B1 dependency content mutation breaks verification", async () => {
+    const real = await buildReal();
+    const dependency = real.receipt.external_dependencies[0] as unknown as {
+      bundle_files: Array<{ path: string; sha256: string }>;
+    };
+    const input = dependency.bundle_files[0];
+    const inputPath = resolve(root, input.path);
+    const original = readFileSync(inputPath);
+    try {
+      writeFileSync(inputPath, Buffer.concat([original, Buffer.from("\nmutation\n")]));
+      expect(() => bootstrap.verifyNodeGeneration(root, real.generationPath, candidate)).toThrow(
+        /dependency-(digest|closure)-mismatch/,
+      );
+    } finally {
+      writeFileSync(inputPath, original);
+    }
+  });
+
+  it("CAND-NODEBOOT-B2/B3 runs the authoritative builder and emits real metafile", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "ut-tdd-node-builder-"));
+    try {
+      const outfile = join(fixture, "ut-tdd.mjs");
+      const metafile = join(fixture, "meta.json");
+      execFileSync(process.execPath, [resolve(root, "scripts/build-node.mjs"), outfile, metafile], {
+        cwd: root,
+        stdio: "pipe",
+      });
+      const meta = JSON.parse(readFileSync(metafile, "utf8")) as {
+        inputs?: Record<string, unknown>;
+      };
+      expect(statSync(outfile).size).toBeGreaterThan(0);
+      expect(Object.keys(meta.inputs ?? {}).some((path) => path.includes("node_modules"))).toBe(
+        true,
+      );
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+
+  it("CAND-NODEBOOT-B2 builder digest mutation fails closed", () => {
+    const builderPath = resolve(root, generation.receipt.builder.path);
+    const original = readFileSync(builderPath);
+    try {
+      writeFileSync(builderPath, Buffer.concat([original, Buffer.from("\nmutation\n")]));
+      expect(() =>
+        bootstrap.verifyNodeGeneration(root, generation.generationPath, candidate),
+      ).toThrow(/builder-digest-mismatch/);
+    } finally {
+      writeFileSync(builderPath, original);
+    }
   });
 });
