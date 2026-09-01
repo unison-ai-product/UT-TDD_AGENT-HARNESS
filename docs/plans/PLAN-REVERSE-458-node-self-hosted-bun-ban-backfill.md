@@ -21,6 +21,22 @@ review_evidence: []
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/governance/bun-migration-debt.yaml
+    artifact_type: config
+  - artifact_path: src/lint/bun-permanent-ban.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/cutover-transition.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/cutover-transition.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/runtime-image-observer.ts
+    artifact_type: source_module
+  - artifact_path: tests/bun-permanent-ban.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cutover-transition.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/runtime-image-observer.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
   requires: []
@@ -71,6 +87,22 @@ admission_receipt:
 ---
 
 # PLAN-REVERSE-458: Node self-hosted Bun permanent-ban implementation backfill
+
+## B4 ownership backfill
+
+`PLAN-L7-458` の confirmed 化に伴う `fd7d154e` で `generates` から外れた8件について、
+別の confirmed/completed PLAN に exact path の owner が存在しないことを pair-freeze で確認した。
+本 Reverse は、この8件を未所有のまま残さないための明示的な backfill owner である。実装内容の追加、
+F0c/Q0 の実行、consumer placement、Bun の物理削除はこの ownership 修正の対象外とする。
+
+| artifact family | backfill ownership |
+|---|---|
+| `docs/governance/bun-migration-debt.yaml` / `src/lint/bun-permanent-ban.ts` / `tests/bun-permanent-ban.test.ts` | 本PLANが Bun debt baseline と Node-only ban detector/test の backfill artifact owner |
+| `src/schema/cutover-transition.ts` / `src/runtime/cutover-transition.ts` / `tests/cutover-transition.test.ts` | 本PLANが CutoverTransition schema/runtime/pair-test の backfill artifact owner |
+| `src/runtime/runtime-image-observer.ts` / `tests/runtime-image-observer.test.ts` | 本PLANが runtime-image observer と pair-test の backfill artifact owner |
+
+`generates` と本節の対象集合は一致し、各 path は本PLANだけが所有する。`PLAN-L7-458` はこれらを
+契約参照として保持するが、生成 owner や実装済み artifact としては扱わない。
 
 ## 1. 目的
 
