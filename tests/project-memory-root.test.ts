@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   resolveProjectMemoryRoot,
@@ -106,11 +106,13 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
 
   it("CANDIDATE-U-PMEMROOT-009: 実gitのcanonical project identityを解決する", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-pmemroot-"));
+    const outside = mkdtempSync(join(tmpdir(), "ut-tdd-pmemroot-outside-"));
     try {
       initTrackedProject(root);
       const result = resolveProjectMemoryRoot(root);
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error(result.reason);
+      expect(result.projectId).toBe("fixture/project");
       const canonicalRoot = realpathSync(root);
       expect(result.canonicalProjectRoot.toLowerCase()).toBe(canonicalRoot.toLowerCase());
       expect(result.authoredMemoryRoot.toLowerCase()).toBe(
@@ -119,8 +121,18 @@ describe("project-scoped canonical Memory root (PLAN-L7-512)", () => {
       expect(result.runtimeBusRoot.toLowerCase()).toContain(
         join(canonicalRoot, ".git", "ut-tdd-runtime", "projects").toLowerCase(),
       );
+
+      // Exercise the production symlink/junction walk instead of replacing the
+      // safety port with a fake.  A forged runtime namespace must be denied.
+      mkdirSync(dirname(result.runtimeBusRoot), { recursive: true });
+      symlinkSync(outside, result.runtimeBusRoot, win ? "junction" : "dir");
+      expect(resolveProjectMemoryRoot(root)).toEqual({
+        ok: false,
+        reason: "runtime_root_escape",
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
+      rmSync(outside, { recursive: true, force: true });
     }
   });
 });
