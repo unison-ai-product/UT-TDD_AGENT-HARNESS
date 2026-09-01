@@ -142,8 +142,9 @@ const PULL_REQUEST_ACTIVITY_TYPES = new Set([
 const SOURCE_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
   // Issue #472 (S1-c, PLAN-L7-522): source CI の harness 実行系は node/npm route のみを
-  // required step とする。setup-bun は撤去済み (Pack/consumer acceptance fixture 側の
-  // 残存 bun spawn debt は Issue #134 / PLAN-L7-462 の別 exit criteria に帰属する)。
+  // required step とする。setup-bun は撤去済み。tests 側の実 bun spawn は Issue #506 /
+  // PR #508 で退役済みで、残存 debt は src/cli/distribution.ts の 2 件のみ
+  // (Issue #134 / PLAN-L7-462 の別 exit criteria に帰属する)。
   { label: "setup-node@v4", any: ["actions/setup-node@v4"] },
   { label: "frozen install", any: ["npm ci"] },
   { label: "github guard", any: ["github guard"] },

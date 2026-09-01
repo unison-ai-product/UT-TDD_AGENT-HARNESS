@@ -394,8 +394,9 @@ consumer template、readiness、Node producer、`package.json` の `build` scrip
 ## 8. 検証
 
 対の test-design は `docs/test-design/harness/L7-pack-consumer-bun-path-removal-test-design.md`。
-S1-bの`U-PACKBUN-003` / `004` / `006`は正規IDへ昇格済みであり、未実装候補は
-`CANDIDATE-U-PACKBUN-001` / `002` / `005`である。
+S1-bの`U-PACKBUN-003` / `004` / `006`、S1-dの`007`、S1-cの`005` (PR #509 で昇格、
+tests/github-ci-policy.test.ts の実 workflow parse oracle) は正規IDへ昇格済みであり、
+未実装候補は `CANDIDATE-U-PACKBUN-001` / `002` である。
 prefix `U-PACKBUN` が既存 registry と衝突しないことは
 `grep -o "U-PACKBUN-[0-9]*" docs/test-design/harness/L7-unit-test-design.md` が 0 件であることで
 確認した (2026-08-28 実測)。
