@@ -279,6 +279,21 @@ tuple 一致を成立させる」と読む。`package.json` の実削除は条�
 この 2 点を repo 実測で検証したうえで採択した。Issue #450 のコメントで Codex lane も
 同一の読み替えを承認している (2026-08-28)。
 
+### 4.5 設計判断: S1-c の追加先行条件 — 実 Bun spawn 退役 (#506、採択 2026-09-01)
+
+実装時実測で、source CI から `setup-bun` を除くと `tests/distribution-acceptance.test.ts` の
+`runBun` (10 箇所、skip guard 無し) と `tests/setup.test.ts` U-SETUP-009b 系が runner 上で
+ENOENT になることを確認した (PLAN-L7-462 の exit 条件「実 bun spawn 0 件」が未達)。
+advisor (`ut-tdd advisor --decision implementation --current-model claude-fable-5 --execute`,
+provider=codex / model=`gpt-5.6-sol`) は選択肢 A (独立 slice で先に spawn を退役し、S1-c は hold)
+を推奨し、B (S1-c への同梱) は 1-PR-1-論点違反として却下した。採択: A。
+
+- 先行 slice: Issue #506 (GitHub dependency graph に #472 blocked-by #506 を機械記録済み)。
+- #506 は PR #508 (exact HEAD `4609cfa5`, Sol receipt `d0a48a45` PASS/0) として 2026-09-01 に merge 済み。
+  実 bun spawn 0 件の根拠: `analyzeRuntimePortability` ok / checked=732 / violations=0、
+  repo-wide `git grep -inE "spawnSync(.?['"](bun|bunx)" -- src tests scripts` の実 spawn 0 件。
+- 本 PLAN の S1-c 実装 PR は #508 を含む main へ rebase して提出する。
+
 ## 5. 実装順序契約
 
 ### 5.0 拘束する順序: **S1-b → S1-c** のみ
