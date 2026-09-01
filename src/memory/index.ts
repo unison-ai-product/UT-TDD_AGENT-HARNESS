@@ -67,7 +67,8 @@ function normalizeTags(value: unknown): string[] {
   return [];
 }
 
-function memoryRoot(repoRoot: string): string {
+/** Canonical authored Memory storage location; callers may supply the canonical project root. */
+export function memoryStorageRoot(repoRoot: string): string {
   return join(repoRoot, ".ut-tdd", "memory");
 }
 
@@ -145,7 +146,7 @@ export function parseMemoryFile(
 }
 
 export function loadMemoryEntries(repoRoot: string): MemoryEntry[] {
-  const root = memoryRoot(repoRoot);
+  const root = memoryStorageRoot(repoRoot);
   if (!existsSync(root)) return [];
   return readdirSync(root)
     .filter((name) => name.endsWith(".md"))
