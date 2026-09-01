@@ -50,9 +50,10 @@ SHA-256 化した値である。JSON の key 順、Markdown の表示順、files
 
 tracked source は宣言した `source_revision` の Git object から読み、各 path の
 blob OID と raw bytes の content SHA-256 を両方検証する。index、working tree、
-remote の現在値で補完しない。registry 自身の blob OID は自己参照であるため
-registry digest の preimage から除外し、commit 後の outer custody check で
-検証する。いずれかの blob、digest、revision、canonical digest が欠けるか
+remote の現在値で補完しない。registry 自身の blob は自己参照であるため
+registry digest の preimage から除外し、consumer receipt の `subject_revision`
+（registry landing commit）と `registry_blob.blob_oid` / `registry_blob.content_sha256`
+をouter custody anchorとして検証する。いずれかの blob、digest、revision、canonical digest が欠けるか
 不一致なら `provenance_unavailable` とし、generation 前に fail-close する。
 
 ## 3. Mutation oracle
@@ -68,7 +69,7 @@ registry digest の preimage から除外し、commit 後の outer custody check
 | `CAND-NODEPROV-007` | 未登録 OS/arch、Linux/Windows ARM64、または archive index のみ存在する新 row を注入 | closed platform union に無い入力は `unsupported_platform` / `unreviewed_architecture` で拒否 |
 | `CAND-NODEPROV-008` | source revision、tracked source blob OID、source content SHA-256 のいずれかを変更 | Git objectからの再計算不一致を `provenance_unavailable` とし、working-tree補完 0 |
 | `CAND-NODEPROV-009` | canonical digest の excluded field、encoding、registry digest を変更 | RFC 8785 JCS preimageの再計算不一致を拒否。自己参照を含めて恒真化しない |
-| `CAND-NODEPROV-010` | registry 自身の tracked blobを別bytesへ差替え、または未追跡fixtureだけを更新 | commit後 outer blob custody が不一致となり拒否。fixtureをtrust rootにしない |
+| `CAND-NODEPROV-010` | registry 自身の tracked blobをreceiptが束縛するlanding commit上の別bytesへ差替え、または未追跡fixtureだけを更新 | `consumer_receipt.subject_revision` の tracked blob OID/content SHA-256 と receipt anchor の不一致を拒否。fixtureをtrust rootにしない |
 | `CAND-NODEPROV-011` | `npm_config_user_agent`、PATH上の別npm、同じversion文字列の別CLIを正規値として注入 | 実 executable/version/file digest と registry row の exact一致を要求し拒否 |
 
 `CAND-NODEBOOT-006` は `CAND-NODEPROV-003/004/011` を、

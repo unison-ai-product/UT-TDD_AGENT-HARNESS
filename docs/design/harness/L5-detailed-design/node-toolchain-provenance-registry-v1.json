@@ -116,7 +116,7 @@
     "canonicalization": "RFC 8785 JCS",
     "encoding": "UTF-8 without BOM",
     "preimage": "the registry JSON object with canonical_digest.registry_sha256 omitted",
-    "registry_sha256": "sha256:d4f0129a02d938dc7cf262c4d4ce6b21567dbf8d272cd5facbaecbbf1167c11c"
+    "registry_sha256": "sha256:086478f439a9a68b9b62eaeccaa166992e1d8f36f5fd2c4ef328de803cd9c2d2"
   },
   "git_blob_custody": {
     "source_revision": "git-sha1:f38b78d874e21777f184437211a5d2fee6b587bd",
@@ -139,7 +139,10 @@
     ],
     "registry_blob": {
       "path": "docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json",
-      "verification": "after commit, verify the tracked blob OID and content SHA-256 from the commit that lands this registry, recorded by the consuming receipt's subject_revision; do not include this self-reference in registry_sha256. The external commit binding is required because registry_sha256 alone is self-referential and cannot detect coordinated tampering."
+      "landing_binding": "consumer_receipt.subject_revision",
+      "expected_blob_oid": "consumer_receipt.registry_blob.blob_oid",
+      "expected_content_sha256": "consumer_receipt.registry_blob.content_sha256",
+      "verification": "resolve this path from the exact landing commit recorded as consumer_receipt.subject_revision, then compare its tracked blob OID and raw-byte content SHA-256 with consumer_receipt.registry_blob.blob_oid and consumer_receipt.registry_blob.content_sha256; source_revision is not a lookup target for this self-reference, and the self-reference remains excluded from registry_sha256"
     },
     "fail_close": "missing blob, changed blob OID, changed content SHA-256, source revision mismatch, or registry digest mismatch is typed provenance_unavailable before generation"
   }

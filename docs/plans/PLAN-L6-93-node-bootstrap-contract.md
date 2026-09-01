@@ -143,6 +143,9 @@ Node/npm CLI relative path と file SHA-256、Node/npm version、`packageManager
 固定する。非著者レビュー完了までは `pair_frozen_pending_review` とし、`darwin-*` は typed `unsupported_os` である。
 公式 archive の存在だけから macOS 対応を推論しない。canonical digest は RFC 8785 JCS の registry object
 (self digest field を除外) とし、tracked source は宣言 revision の Git blob OID と raw-byte SHA-256を両方検証する。
+registry 自身の outer blob は宣言した source revision から解決せず、consumer receipt の
+`subject_revision`（registry landing commit）と `registry_blob.blob_oid` / `registry_blob.content_sha256`
+のtupleへ束縛して検証する。
 registry と pair の mutation oracle は `docs/test-design/harness/L7-node-toolchain-provenance-test-design.md` に固定し、
 runtime verifier の設計・実装へ先行して方式を追加しない。`package.json` の engines identity custody は `node` と `npm` に限定する。`engines.bun` は
 `PLAN-L7-488` §2.3 で削除済みであり、registry には収録せず (captured ではなく)、Node toolchain の support/activation authority でもない。

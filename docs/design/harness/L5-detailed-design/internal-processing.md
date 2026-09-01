@@ -404,7 +404,9 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
 2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。`package.json` の engines authority は `node` と `npm` に限定し、`engines.bun` は PLAN-L7-488 §2.3 で削除済みであり、Node toolchain の support/activation authority でもない。
    registry digest は RFC 8785 JCS/UTF-8（`canonical_digest.registry_sha256` 自身を除外）で再計算し、宣言 source revision の各 tracked Git blob OID と
    raw-byte SHA-256 を照合する。不在・改竄・未追跡fixtureによる補完は `provenance_unavailable` で generation 前に
-   fail-close する。registry 自身の Git blob は自己参照を避けて outer custody として commit 後に検証する。
+   fail-close する。registry 自身の Git blob は `source_revision` から解決せず、consumer receipt の
+   `subject_revision`（registry landing commit）と receipt の
+   `registry_blob.blob_oid` / `registry_blob.content_sha256`へouter custodyとして束縛して検証する。
 3. private temporary generationへcompiled ESMとreceiptを生成し、全digest・path containment・symlink境界を再検証する。
 4. generation内fileをflushし、POSIXでは可能な場合parent directoryも同期した後、immutable generation名へrenameする。activation markerはtemporary write→file sync→close後、存在しない一意final名へ同一filesystem renameする。Windows Node-onlyではprocess-crash atomicityを保証するが、power-loss後の最新marker persistenceを保証済みと主張しない。
 5. writerはexact path `dist/node-publish.lock/`をNode標準のatomic `mkdir`だけで取得する。`open("wx")`、別path、OS helper等の代替backendは禁止する。取得後にvalidated markerのmax sequenceを読み、`N+1`を割り当ててpublishし、最後に自分が正常完了した同一process内だけでleaseをreleaseする。同時writerはretryせずfail-closeする。
