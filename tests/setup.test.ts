@@ -980,7 +980,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {
     const ready = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -996,7 +997,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.workspace.monorepo).toBe(true);
     expect(ready.checks.find((c) => c.name === "gh")).toMatchObject({ ok: false });
     expect(ready.checks.find((c) => c.name === "ut-tdd-cli")).toMatchObject({ ok: true });
-    expect(ready.ci.requires).toContain("bun run test");
+    expect(ready.ci.requires).toContain("npm test");
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
     expect(ready.rollback.managedPaths).toContain(".ut-tdd/bin/ut-tdd.mjs");
@@ -1016,7 +1017,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const standaloneReady = buildConsumerReadinessPlan({
-      bunVersion: "1.3.2",
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: false,
       hasUtTddCli: true,
@@ -1034,7 +1036,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     );
 
     const customRepo = buildConsumerReadinessPlan({
-      bunVersion: "1.3.0",
+      nodeVersion: "24.13.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: true,
       hasGh: true,
       hasClaude: false,
@@ -1046,7 +1049,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(customRepo.contracts.tagPin).toBe("github:example/custom-pack#v9.9.9");
 
     const blocked = buildConsumerReadinessPlan({
-      bunVersion: "1.2.9",
+      nodeVersion: "22.0.0",
+      requiredNodeVersion: "24.13.0",
       hasGit: false,
       hasGh: false,
       hasUtTddCli: false,
@@ -1056,7 +1060,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     });
     expect(blocked.ok).toBe(false);
     expect(blocked.checks.filter((c) => !c.ok).map((c) => c.name)).toEqual([
-      "bun>=1.3",
+      "node@24.13.0",
       "git",
       "gh",
       "ut-tdd-cli",
@@ -1065,11 +1069,37 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "Generated Claude/Codex hooks invoke the project-local Node wrapper directly",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Do not rely on a global `bun link`",
+      "Do not rely on a global install",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "Node.js 22.18 or newer must be available",
     );
+    // engines.node follows npm range semantics rather than a numeric minimum:
+    // a compatible patch is accepted, while a new major outside ^24 is not.
+    expect(
+      buildConsumerReadinessPlan({
+        nodeVersion: "24.13.5",
+        requiredNodeVersion: ">=24.13.0 <25",
+        hasGit: true,
+        hasGh: false,
+        hasUtTddCli: true,
+        hasClaude: false,
+        hasCodex: false,
+        repoRoot: "/consumer",
+      }).ok,
+    ).toBe(true);
+    expect(
+      buildConsumerReadinessPlan({
+        nodeVersion: "25.0.0",
+        requiredNodeVersion: "^24.13.0",
+        hasGit: true,
+        hasGh: false,
+        hasUtTddCli: true,
+        hasClaude: false,
+        hasCodex: false,
+        repoRoot: "/consumer",
+      }).ok,
+    ).toBe(false);
   });
 
   it("U-SETUP-005: recordSetupState signals 4 フィールド strip / 上書き / token 非含", () => {

@@ -97,6 +97,11 @@ repositoryReadContracts["tests/claude-wake-generation-upgrade.test.ts"] = {
   mode_calls: { isolated_fixture: 2 },
   reason: "rolling-upgrade oracles read immutable captures from the detached execution fixture",
 };
+repositoryReadContracts["tests/setup-bun-readiness.test.ts"] = {
+  mode_calls: { isolated_fixture: 1 },
+  reason:
+    "Pack readiness runs against a copied clean-consumer fixture rather than the source worktree",
+};
 repositoryReadContracts["tests/support/workspace-roots.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
   reason: "root capability implementation validates both provenance modes",

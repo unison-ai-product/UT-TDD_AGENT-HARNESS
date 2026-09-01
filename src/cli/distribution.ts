@@ -1,4 +1,4 @@
-import { execFileSync, type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   cpSync,
@@ -98,7 +98,7 @@ function runDistributionSecretScan(input: {
 
 /**
  * PLAN-L7-462 step 2: ut-tdd のグローバル CLI は .cmd shim 配布のため、node の
- * spawn では PATH 解決されない。bun probe と同様に win32 は ComSpec 経由で探す
+ * spawn では PATH 解決されない。win32 は ComSpec 経由で CLI shim を探す
  * (fail-soft は従来どおり)。単体テスト U-DIST-CLI-PROBE が「素の spawn に戻すと
  * ENOENT で status=null になる」ことを fail-close で固定する。
  */
@@ -135,25 +135,9 @@ export function registerDistributionCommands(program: Command): void {
     .action((opts: { tag?: string; cleanRepo?: string; packageRoot?: string; json?: boolean }) => {
       const repoRoot = process.cwd();
       const detection = detectMode();
-      let bunVersion: string | null = null;
-      try {
-        // PLAN-L7-462 step 2: node の spawn は Windows で npm 配布の bun.cmd shim を
-        // 解決しないため、win32 のみ ComSpec 経由で probe する (fail-soft は従来どおり)。
-        if (process.platform === "win32") {
-          const cmdExe =
-            process.env.ComSpec ??
-            join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
-          const probe = spawnSync(cmdExe, ["/d", "/c", "bun", "--version"], {
-            encoding: "utf8",
-            windowsHide: true,
-          });
-          bunVersion = probe.status === 0 ? probe.stdout.trim() : null;
-        } else {
-          bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
-        }
-      } catch {
-        bunVersion = null;
-      }
+      // PLAN-L7-522 §2.2 (S1-a): readiness の runtime 検査は Bun ではなく Node を見る。
+      // 実行中の node 自身が観測値であり、外部 probe を spawn しない。
+      const nodeVersion = process.versions.node;
       const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
       const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
       const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
@@ -167,14 +151,29 @@ export function registerDistributionCommands(program: Command): void {
       const sourceSetupEntrypoint = join(packageRoot, "src", "cli.ts");
       const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
       const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
+      // engines.node は consumer package root の package.json が正本 (第二の pin を持たない)。
+      const requiredNodeVersion = ((): string | null => {
+        const manifestPath = join(packageRoot, "package.json");
+        if (!existsSync(manifestPath)) return null;
+        try {
+          const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+            engines?: { node?: unknown };
+          };
+          const node = parsed.engines?.node;
+          return typeof node === "string" && node.trim() !== "" ? node.trim() : null;
+        } catch {
+          return null;
+        }
+      })();
       const utTddCli = utTddCliProbe();
       const hasUtTddCli = hasProjectLocalUtTdd || hasSourceSetupEntrypoint || utTddCli.status === 0;
       const utTddCliObserved =
         utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
+      // PLAN-L7-522 §2.2 (S1-a): global 候補の探索先も Bun 配下を見ない。
       const utTddCliHints = [
-        join(homedir(), ".bun", "bin", "ut-tdd.exe"),
-        join(homedir(), ".bun", "bin", "ut-tdd"),
-        process.env.APPDATA ? join(process.env.APPDATA, "npm", "node_modules", "bun", "bin") : "",
+        process.env.APPDATA ? join(process.env.APPDATA, "npm", "ut-tdd.cmd") : "",
+        join(homedir(), ".npm-global", "bin", "ut-tdd"),
+        join(homedir(), ".local", "bin", "ut-tdd"),
       ].filter((p) => p && existsSync(p));
       const utTddCliMessage = hasUtTddCli
         ? undefined
@@ -194,7 +193,8 @@ export function registerDistributionCommands(program: Command): void {
         cleanRepo: opts.cleanRepo,
       });
       const readiness = buildConsumerReadinessPlan({
-        bunVersion,
+        nodeVersion,
+        requiredNodeVersion,
         hasGit,
         hasGh,
         hasUtTddCli,
