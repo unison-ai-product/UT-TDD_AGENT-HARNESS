@@ -23,12 +23,13 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-517-review-author-provenance.md
     artifact_type: markdown_doc
+  - artifact_path: docs/test-design/harness/L7-review-author-provenance-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
   requires: []
   blocks: []
   references:
-    - docs/test-design/harness/L7-review-author-provenance-test-design.md
     - docs/plans/PLAN-L7-465-cross-review-author-binding.md
     - src/feedback/review-verdict-custody.ts
     - src/feedback/review-attestation.ts
