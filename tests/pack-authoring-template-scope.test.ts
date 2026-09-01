@@ -142,7 +142,7 @@ describe("Issue #482 canonical Pack authoring inventory", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const projected = result.entries.find((entry) => entry.path === teamArtifact);
-    expect(projected?.content).toEqual(teamBytes);
+    expect(projected?.content).toEqual(new Uint8Array(teamBytes));
     expect(result.entries.map((entry) => entry.path)).not.toContain(teamSource);
 
     const drifted = sourceEntries.map((entry) =>
