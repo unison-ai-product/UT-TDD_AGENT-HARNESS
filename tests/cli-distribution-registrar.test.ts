@@ -11,6 +11,7 @@ describe("CLI distribution registrar", () => {
     const distribution = program.commands.find((command) => command.name() === "distribution");
     expect(distribution).toBeDefined();
     expect(distribution?.commands.map((command) => command.name()).sort()).toEqual([
+      "authoring-smoke",
       "package",
       "plan",
       "release-plan",
