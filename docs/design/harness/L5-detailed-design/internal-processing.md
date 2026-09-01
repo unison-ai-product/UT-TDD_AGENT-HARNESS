@@ -401,7 +401,7 @@ config・registry 不在→既定 fail-close / 未知キー→fail-close)。
    status は `pair_frozen_pending_review` とし、`darwin-*` は typed `unsupported_os` とする。公式 archive が存在しても
    macOS を supported と推論しない。実Node/npm executableを絶対pathで解決し、version文字列だけでなく expected
    digest/provenanceへ照合する。
-2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。`engines.bun` は current package identity / legacy migration debt の記録であり、Node toolchain の support/activation authority ではない。
+2. `npm ci`のlock graph、external runtime dependency closure、builder/source graphをcanonical digest化する。同じversionを自己申告する別npm CLIへの差替えもdigest不一致として拒否する。`package.json` の engines authority は `node` と `npm` に限定し、`engines.bun` は PLAN-L7-488 §2.3 で削除済みであり、Node toolchain の support/activation authority でもない。
    registry digest は RFC 8785 JCS/UTF-8（`canonical_digest.registry_sha256` 自身を除外）で再計算し、宣言 source revision の各 tracked Git blob OID と
    raw-byte SHA-256 を照合する。不在・改竄・未追跡fixtureによる補完は `provenance_unavailable` で generation 前に
    fail-close する。registry 自身の Git blob は自己参照を避けて outer custody として commit 後に検証する。

@@ -17,10 +17,9 @@
     "package_manager": "npm@11.6.2+sha512-7iKzNfy8lWYs3zq4oFPa8EXZz5xt9gQNKJZau3B1ErLBb6bF7sBJ00x09485DOvRT2l5Gerbl3VlZNT57MxJVA==",
     "engines": {
       "node": "24.13.0",
-      "npm": "11.6.2",
-      "bun": ">=1.3"
+      "npm": "11.6.2"
     },
-    "engine_authority": "Only node and npm are toolchain authority for this registry; engines.bun is captured current package identity and legacy migration debt, not support or activation authority.",
+    "engine_authority": "Only node and npm are toolchain authority for this registry; engines.bun was removed under PLAN-L7-488 §2.3 and is neither captured nor a support or activation authority.",
     "lock_identity": {
       "path": "package-lock.json",
       "lockfile_version": 3,
@@ -117,7 +116,7 @@
     "canonicalization": "RFC 8785 JCS",
     "encoding": "UTF-8 without BOM",
     "preimage": "the registry JSON object with canonical_digest.registry_sha256 omitted",
-    "registry_sha256": "sha256:a46f53c79ef8ee581d6ce9ba4dc78a6995a27758158d6a8e5ac7ad9580d664b6"
+    "registry_sha256": "sha256:fe7e06d06e3e98a899b6f5eb8c407f4219b79049f2f8713269b4c283ed6c832e"
   },
   "git_blob_custody": {
     "source_revision": "git-sha1:f38b78d874e21777f184437211a5d2fee6b587bd",

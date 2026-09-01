@@ -21,16 +21,16 @@ verifier、Bun の削除、CI、consumer の変更は本書の成果物ではな
 とする。macOS (`darwin-*`) は `unsupported_os` として明示する。
 公式ページに archive があることだけから macOS の対応を推論してはならない。
 
-`engines.bun` は現行 `package.json` の identity を custody するために収録するだけで、
-Node toolchain の support/activation authority ではない。Bun の削除や runtime 切替は
-この pair の scope 外である。
+`package.json` の engines identity custody は `node` と `npm` に限定する。`engines.bun` は
+PLAN-L7-488 §2.3 で削除済みであり、registry には収録せず、Node toolchain の
+support/activation authority でもない。Bun の削除や runtime 切替はこの pair の scope 外である。
 
 ## 1. 固定する入力
 
 | 入力 | 固定内容 |
 |---|---|
 | Node/npm | Node `24.13.0`、同梱 npm `11.6.2` |
-| package manager | `package.json.packageManager` の exact string と engines (`node` / `npm` / `bun`) |
+| package manager | `package.json.packageManager` の exact string と engines (`node` / `npm`) |
 | lock identity | `package-lock.json`、lockfileVersion `3`、name/version、content SHA-256 |
 | archive | supported OS/arch ごとの公式 filename と SHA-256 |
 | archive members | archive root 相対の Node executable と npm CLI path、各 file SHA-256 |
@@ -67,7 +67,7 @@ registry digest の preimage から除外し、commit 後の outer custody check
 | `CAND-NODEPROV-006` | `darwin-x64` または `darwin-arm64` を supported に移す、または unsupported row を削除 | typed `unsupported_os` のまま拒否し、macOS を supported と報告しない |
 | `CAND-NODEPROV-007` | 未登録 OS/arch、Linux/Windows ARM64、または archive index のみ存在する新 row を注入 | closed platform union に無い入力は `unsupported_platform` / `unreviewed_architecture` で拒否 |
 | `CAND-NODEPROV-008` | source revision、tracked source blob OID、source content SHA-256 のいずれかを変更 | Git objectからの再計算不一致を `provenance_unavailable` とし、working-tree補完 0 |
-| `CAND-NODEPROV-009` | canonical digest の key順、excluded field、encoding、registry digest を変更 | RFC 8785 JCS preimageの再計算不一致を拒否。自己参照を含めて恒真化しない |
+| `CAND-NODEPROV-009` | canonical digest の excluded field、encoding、registry digest を変更 | RFC 8785 JCS preimageの再計算不一致を拒否。自己参照を含めて恒真化しない |
 | `CAND-NODEPROV-010` | registry 自身の tracked blobを別bytesへ差替え、または未追跡fixtureだけを更新 | commit後 outer blob custody が不一致となり拒否。fixtureをtrust rootにしない |
 | `CAND-NODEPROV-011` | `npm_config_user_agent`、PATH上の別npm、同じversion文字列の別CLIを正規値として注入 | 実 executable/version/file digest と registry row の exact一致を要求し拒否 |
 
