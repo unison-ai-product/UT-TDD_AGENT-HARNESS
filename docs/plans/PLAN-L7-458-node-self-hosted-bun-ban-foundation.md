@@ -21,8 +21,8 @@ agent_slots:
 review_evidence:
   - reviewer: codex-primary-preflight
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-09-01T05:57:01Z"
-    tests_green_at: "2026-09-01T05:54:00Z"
+    reviewed_at: "2026-09-01T06:08:47Z"
+    tests_green_at: "2026-09-01T06:06:53Z"
     verdict: approve_after_fixes
     scope: "F0b #484 bounded preflight after governance guard corrections; sealed Node generation, immutable receipt, slice admission, portability, repository-isolation, and tracked-canonical checks."
     worker_model: gpt-5.6-luna
@@ -32,10 +32,10 @@ review_evidence:
         runner: node
         scope: targeted
         exit_code: 0
-        completed_at: "2026-09-01T05:54:00Z"
+        completed_at: "2026-09-01T06:06:53Z"
         evidence_path: tests/node-slice-admission.test.ts
         output_digest: "sha256:4c1f8e45c8e107fcfb488affd96c03a584d705a9ccec54fd377963a69b50878f"
-        anchor_commit: e6958f23
+        anchor_commit: be4a548b
       - kind: typecheck
         command: "npx --no-install tsc --noEmit --pretty false"
         runner: node
