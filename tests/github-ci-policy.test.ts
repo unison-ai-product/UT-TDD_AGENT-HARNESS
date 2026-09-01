@@ -1000,6 +1000,61 @@ describe("github-ci-policy lint", () => {
     });
   });
 
+  // Issue #504: forbidden_bun_execution false negative repair. #502 の closing review で
+  // 実測された EVA-1 (`npx bun@<version>`) / EVA-4 (`bun.sh/install` installer 経路) は、
+  // 既存 required step を書き換えずに新規 Bun step を「追加」する経路なので、以下は
+  // required step 群を全て健全なまま保ち、追加 step だけを注入する (issue 本文の実測手順と
+  // 同じ形)。
+  function packWithAppendedStep(step: string): string {
+    const marker = "      - run: node .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke\n";
+    expect(PACK_WORKFLOW).toContain(marker);
+    return PACK_WORKFLOW.replace(marker, `${marker}      - run: ${step}\n`);
+  }
+
+  it.each([
+    ["EVA-1a: npx bun@<version> run build", "npx bun@1.3 run build"],
+    ["EVA-1b: npx bun@latest install", "npx bun@latest install"],
+    ["EVA-1c: npx --yes bun@1.2.4 --version", "npx --yes bun@1.2.4 --version"],
+  ])("U-PACKBUN-008: Pack CI rejects added %s step", (_label, step) => {
+    const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, packWithAppendedStep(step)));
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContainEqual({
+      file: "docs/templates/github/common/pack-harness-check.yml",
+      profile: "pack",
+      reason: "forbidden_bun_execution",
+      detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun",
+    });
+  });
+
+  it.each([
+    ["EVA-4a: curl | bash installer", "curl -fsSL https://bun.sh/install | bash"],
+    ["EVA-4b: curl install.sh | sh installer", "curl -fsSL https://bun.sh/install.sh | sh"],
+    ["EVA-4c: wget | bash installer", "wget -qO- https://bun.sh/install | bash"],
+  ])("U-PACKBUN-008: Pack CI rejects added %s step", (_label, step) => {
+    const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, packWithAppendedStep(step)));
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContainEqual({
+      file: "docs/templates/github/common/pack-harness-check.yml",
+      profile: "pack",
+      reason: "forbidden_bun_execution",
+      detail: "Pack CI must not invoke Bun, bunx, or oven-sh/setup-bun",
+    });
+  });
+
+  it.each([
+    ["npm run bundle", "npm run bundle"],
+    ["cabundle mention", "echo cabundle"],
+    ["bun.sh docs comment without curl/wget pipe", "echo 'see https://bun.sh for docs'"],
+  ])("U-PACKBUN-008: Pack CI does not flag legitimate step: %s", (_label, step) => {
+    const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, packWithAppendedStep(step)));
+
+    expect(
+      result.violations.filter((violation) => violation.reason === "forbidden_bun_execution"),
+    ).toEqual([]);
+  });
+
   // PLAN-L7-455 (troubleshoot, issue #109): doc-only lane 絞り込みが検証弱化にならないことの
   // fail-close regression。実運用に近い classify step + lane 条件付き step 構成を対象にする。
   describe("PLAN-L7-455 doc-only lane skip safety", () => {
