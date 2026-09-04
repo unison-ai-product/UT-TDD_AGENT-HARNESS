@@ -27,9 +27,12 @@ dependencies:
   references:
     - docs/plans/PLAN-L6-93-node-bootstrap-contract.md
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
+    - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
     - docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
 review_evidence: []
 workflow_phase: R0
 status: draft
@@ -59,7 +62,7 @@ admission_receipt:
   origin:
     plan_id: PLAN-L7-530-bun-final-retirement
     revision: 1
-    digest: sha256:11316cc8122064fe93207fe743ad89cc051a9ea6c72f46293fbaffa0791b71
+    digest: sha256:11316ccad8122064fe93207fe743ad89cc051a9ea6c72f46293fbaffa0791b71
   transition:
     direction: implementation_to_design
     implementation_disposition: preserved
@@ -110,8 +113,9 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
 
 実装後に次を区別して上位へ戻す。
 
-- `reachable_production`: package script、wrapper、setup/readiness/CI、Pack/consumer template、
-  generated tree、runtime fallbackから到達可能な Bun surface。1件でも残れば未完了。
+- `reachable_production`: このsliceでは `scripts/git-hooks/secret-scan-diff.ts` のBun shebang/
+  direct-entry と `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`/
+  `UT_TDD_BUN_BINARY` 受渡しだけを実tree inventoryへ置く。1件でも残れば未完了。
 - `retained_fixture`: Q0 detectorが自分自身を検証するための専用fixture。production inventory、
   allowlist、生成Pack、consumer runtimeから参照できないことを実測する。
 - `unobserved`: OS、権限、provider、history、または対象面が観測不能な状態。解決済み扱いせず
@@ -137,8 +141,10 @@ stable昇格、rollback運用まで完了扱いしない。
 ## Scope boundary
 
 このReverseは #487 の実装結果を上位設計へ戻す pair-freeze であり、実装・削除・Q0実行・
-release公開そのものではない。`status: draft` の間は、現行mainのproduction artifactの
-所有を変更せず、実装PRが同一revisionで必要なpathを追加する。
+release公開そのものではない。#470/#471/#472の完了済みconsumer/readiness/source-CI、#500の
+Pack CI policy、#450 program closure、#473のNode producer/`build` scriptを再吸収しない。
+`status: draft` の間は、現行mainのproduction artifactの所有を変更せず、実装PRが同一revisionで
+上記scripts境界の必要pathを追加する。
 
 上位 `PLAN-L6-93` / `PLAN-L7-458` の直接改訂はこのpair-freeze PRのscope外とする。
 既存上位契約は定義元、`PLAN-L7-530` pairは最終撤去の実装・test・evidenceの唯一のownerと

@@ -2101,6 +2101,13 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 設計契約を保持し、`PLAN-L7-458`はQ0から最終撤去へ渡す順序を参照する。候補IDの記述を
 Green実績と解釈せず、実装PRでRed実測後に正式 `U-*` へ昇格する。
 
+`PLAN-L7-530` の現tree scope は `scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direct
+entry と `scripts/run-vitest-snapshot.ts` の `resolveBunBinary` / `UT_TDD_BUN_BINARY` に限る。
+前者はNode pre-push通常経路とは別の直接起動、後者はsnapshot test runnerのBun fixture依存として
+独立Redにする。#470/#471/#472の完了済み生成consumer/readiness/source CI、#500のPack CI policy、
+#450 program closure、#473のNode producer/`build` scriptは `PLAN-L7-522` と上位Node系列の
+ownershipへ残し、本test-designの最終撤去candidateへ再吸収しない。
+
 `CAND-NODEBOOT-018`の固定tupleはL5 `NODE-SLICE-LEGACY-BACKFILL-REGISTRY-v1`の
 `legacy.d0-admission` / `legacy.f0a-custody`を正本とする。前者から
 `LegacyD0AdmissionBackfillReceiptV1`、後者から`LegacyF0aCustodyBackfillReceiptV1`をmintし、
