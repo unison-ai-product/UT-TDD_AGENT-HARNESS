@@ -99,13 +99,13 @@ remote publication、#418 canaryは本Reverseで再定義しない。
   契約を重複宣言せず、Forwardへ`gap-only`で再合流する。実装側のsource path、Pack remote、
   Bun retirement、#432を変更しない。
 
-## 実装時点のR0 evidence（partial, 2026-08-28）
+## 実装時点のR0 evidence（2026-09-04, exact-head baseline / partial）
 
-`PLAN-L7-516`の実装成果物は、rebase後のcode commit
-`4f92ba8c36439078f8a8a375e3a71a2b91a9f94d`と、実filesystem producer testを追加した
-`7c91772814baf1bda94b2f830efbb391be3ede5d`である。専用targetは14/14 Green、typecheckとBiomeも
-成功した。filesystem laneはconsumer-local stagingをsealed bundleへrenameし、single active
-pointerを作成し、別cwdからNode wrapperでcompiled entryを起動する。
+`PLAN-L7-516`の実装成果物は PR #463 exact HEAD
+`9235513ce18515b97a8deee598e55363238c902a` である。専用targetは17/17 Green、required CI
+run `33829631086` も Linux/Windows/aggregate 3/3 Green、typecheckとBiomeも成功した。
+filesystem laneはconsumer-local stagingをsealed bundleへrenameし、single active pointerを作成し、
+別cwdからNode wrapperでcompiled entryを起動する。
 
 R1〜R4の完了、全15 U候補/P候補の1:1 trace、Linux/Windows全境界、receipt-backed L6-93 producer、
 rollback/history chain、external read/open/stat/process counter、非著者review、aggregate CIはまだ
@@ -114,7 +114,8 @@ rollback/history chain、external read/open/stat/process counter、非著者revi
 
 ## R0追加実測（2026-08-28, partial）
 
-`00753263`の17 testsとdetached canonical snapshot 17/17 Greenを確認した。manifest canonical
+exact HEAD `9235513ce18515b97a8deee598e55363238c902a` の17 testsとrequired CI 3/3 Greenを
+確認した。manifest canonical
 digest、compiled ESM digest binding、consumer runtime root/realpath containment、Bunなしreadiness、
 active pointerのexternal escape denyを追加測定した。一方、実bytesを供給するL6-93-owned
 当時はNodeBootstrapReceipt producerが現branchにも`src/tests`にも無く、`PLAN-L6-93`がdraftで

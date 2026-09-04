@@ -82,6 +82,34 @@ review_evidence:
         evidence_path: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
         output_digest: "sha256:94ad3c7e2dfa3edf826a2e645a1ab083876da8aef5797af01b78879c03edbc73"
         anchor_commit: 2b531830de9f40ffcb09b81d19c97802072b76ec
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-09-04T02:54:12Z"
+    tests_green_at: "2026-09-04T02:38:52Z"
+    verdict: "FLAG / blocking 2"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: 9235513ce18515b97a8deee598e55363238c902a
+    subject_head: 9235513ce18515b97a8deee598e55363238c902a
+    scope: >-
+      PR #463の実装scopeをexact HEADで非著者review。Node runtime実装、17 tests、
+      Node-only readiness、宣言traceを確認し、非ancestorのGreen anchorと実装scopeの
+      review evidence不足をblockingとして記録した。修正後のclosing PASSは未取得。
+    citations:
+      - ".ut-tdd/review/receipts/d009f8020f81b6f2f33bb09a733fb798c8c1bc20178d88eeac6e9959cf136d0b.json"
+      - "memory:project:pr-463-exact-head-9235513c-non-author-closing-review-request"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/463"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/consumer-node-runtime.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-09-04T02:38:48Z"
+        evidence_path: tests/consumer-node-runtime.test.ts
+        output_digest: "sha256:91fd6f75d9f656b9216a64a99fea0360e336fd78bf6f6d42ac490bef5d5f623b"
+        anchor_commit: 9235513ce18515b97a8deee598e55363238c902a
 ---
 
 # PLAN-L7-516: sealed self-contained consumer Node runtime
@@ -367,11 +395,10 @@ PF5、#432、#414、Pack remote publicationを重複所有しない。
 
 （pair-freeze記録）docs-only pair-freeze時点では、上記の実装・Green・独立配布を主張しない。
 
-## 10. 実装実測（2026-08-28, scoped / partial）
+## 10. 実装実測（2026-09-04 exact-head baseline, scoped / partial）
 
-pair-freeze後の実装成果物は `4f92ba8c36439078f8a8a375e3a71a2b91a9f94d`（rebase後）と
-`7c91772814baf1bda94b2f830efbb391be3ede5d`（filesystem producer test追加）である。対象testは
-`tests/consumer-node-runtime.test.ts` の14 testsで、identity/digest/path、Node-only wrapper、port順序、
+PR #463の実装成果物は exact HEAD `9235513ce18515b97a8deee598e55363238c902a` である。対象testは
+`tests/consumer-node-runtime.test.ts` の17 testsで、identity/digest/path、Node-only wrapper、port順序、
 pre/post activation fault、read-only reconcile once、lock release、A/B path隔離、setup checkout削除後の
 consumer起動、実filesystemでのstaging→sealed bundle→active pointer→wrapper起動、readiness bypass、
 genesis、P=100 bounded derivationを実測した。
@@ -379,8 +406,8 @@ genesis、P=100 bounded derivationを実測した。
 実行証跡:
 
 - `node scripts/run-vitest-snapshot.ts tests/consumer-node-runtime.test.ts --reporter=dot` は
-  rebase後コードcommit `4f92ba8c...` のsnapshotで13/13 Green（`7c917728...` より前のため、producer testは未収録）。
-- detached snapshot外の専用targetでは同一testが14/14 Green。
+  exact HEAD `9235513c...` の専用targetで17/17 Green。
+- required CI run `33829631086` は exact HEAD `9235513c...` の Linux/Windows/aggregate 3/3 Green。
 - `npx tsc --noEmit --pretty false` exit 0、Biome対象4 files clean、`git diff --check` clean。
 
 これは全候補の完了証跡ではない。Windows junction/reparse・8.3 alias・DAC permission、historyの
@@ -391,15 +418,15 @@ Reverse R1〜R4、実producerのL6-93 receipt入力は未実測であり、実�
 
 ## 10.1 追加hardening実測（2026-08-28）
 
-`00753263`（`fix(runtime): satisfy source parameter guard`、sealed pointer admissionを含む）で、consumer-local
+exact HEAD `9235513ce18515b97a8deee598e55363238c902a` で、consumer-local
 Node wrapperのadmissionを強化した。active pointerのexact keys、canonical bundle digest、manifestの
 identity/Node authority、6 payload digest、compiled ESM digest binding、history genesis/prior、
 runtime rootおよびrealpath containmentをspawn前に検証し、distribution readinessはsealed consumer
 runtimeが供給された場合にBunを要求しない。compiled ESM digest drift、manifest digest forgery、
 external bundle pointer、valid sealed runtime without Bunの各one-axis oracleを追加した。
 
-`tests/consumer-node-runtime.test.ts` は17 testsで専用target 17/17 Green、detached canonical
-snapshotも`00753263`の同一treeで17/17 Greenだった。これは実bytesから起動するconsumer-local
+`tests/consumer-node-runtime.test.ts` は17 testsで専用target 17/17 Green、required CIの
+Linux/Windows/aggregateも3/3 Greenだった。これは実bytesから起動するconsumer-local
 filesystem producer laneを含むが、L6-93所有の実行可能NodeBootstrapReceipt producerではない。
 
 完了条件1および実producer gateは、PR #507のmain統合により開始可能になった。現在の実装PRでは

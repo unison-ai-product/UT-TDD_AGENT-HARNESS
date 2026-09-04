@@ -49,12 +49,11 @@ worktreeを物理削除したfixture、hostile consumer-local source、read/open
 実装対象外は#432 identity bootstrap、#414 remote publication、source側Bun residual cleanup、
 Pack canary/stable、shared L7 test-designへの追記である。これらをこのpairのGreen根拠へ混ぜない。
 
-## 実装昇格の初回記録（2026-08-28, partial）
+## 実装昇格の初回記録（2026-08-28, historical / superseded）
 
 `tests/consumer-node-runtime.test.ts` は、実装成果物の最初の部分測定として CANDIDATE-U-PACKNODE-001〜015
-の契約軸を一部束ねて14 testsへ実装した。`4f92ba8c36439078f8a8a375e3a71a2b91a9f94d`のrebase後
-コードと`7c91772814baf1bda94b2f830efbb391be3ede5d`のfilesystem producer laneを対象に、専用target
-14/14 Greenを確認した。
+の契約軸を一部束ねて14 testsへ実装した。これは後続の17-test実装に置き換えられた部分測定であり、
+現行PRのmerge evidenceとして使用しない。
 
 実装が直接測定した範囲は、identity/digest/path、Node-only active-pointer wrapper、port順序、
 pre/post activation fault、reconcile once、finally release、A/B path隔離、setup checkout削除後の
@@ -67,18 +66,18 @@ Linux/Windows/aggregate CI、非著者closing review、Reverse R1〜R4は未昇�
 `CANDIDATE-*`のdocs-only freezeと既存PACKISO/NODEBOOT候補は保持し、全15 U/P候補Greenや独立配布を
 この記録から主張しない。
 
-## 追加実装昇格（2026-08-28, partial）
+## 追加実装昇格（2026-09-04 exact-head baseline, partial）
 
-`00753263`で17 testsへ更新し、専用targetおよびdetached canonical snapshotを17/17 Greenで
-実測した。追加軸はBunなしのsealed readiness、compiled ESM digest binding、manifest digest
+PR #463 exact HEAD `9235513ce18515b97a8deee598e55363238c902a` で17 testsへ更新し、専用targetを
+17/17 Greenで実測した。required CI run `33829631086`もLinux/Windows/aggregate 3/3 Greenである。
+追加軸はBunなしのsealed readiness、compiled ESM digest binding、manifest digest
 forgery、external bundle pointerであり、wrapperはspawn前にpointer/manifest/identity/Node
 authority、6 payload digest、history genesis/prior、lexical/realpath containmentを検証する。
 これは実bytes fixtureのconsumer-local producer laneを含むが、L6-93の実行可能receipt producerを
-consumer bundleへ接続する実装検証は後続の実装PRで行う。過去の記録時点ではL6-93の実行可能
-receipt producer、Windows境界、history prefix/replay、rollback、external read/open/stat counter、
-hooks、aggregate CI、closing reviewを含まず、producer ownerのREADY Issue/PRを確認できなかった
-ため、全候補Greenや完了条件1を主張せず#420をHard blockedとしていた。この停止理由はPR #507の
-main統合後に解消済みであり、実装PRでは同producerのreceipt-backed接続を検証する。
+consumer bundleへ接続する実装検証、Windows境界、history prefix/replay、rollback、external
+read/open/stat counter、hooks、closing review、Reverse R1〜R4は未完了である。過去に記録した
+producer欠落によるHard blockはPR #507のmain統合後に解消済みであり、現PRでは同producerの
+receipt-backed接続を検証対象とする。全候補Greenや完了条件1はこのbaselineから主張しない。
 
 実装testのlabelsはdocs-only freezeとのalignmentを保つため、`CANDIDATE-U-PACKNODE-*`/
 `CANDIDATE-P-PACKNODE-*`を使用する。各テストは対応候補の一部軸だけを測定し、候補全mutation
