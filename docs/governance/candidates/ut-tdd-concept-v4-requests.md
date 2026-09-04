@@ -33,7 +33,9 @@ A / B の 2 大要求を実現する手段面であり、独立した第 3 の�
 | C. 上流要求エンジン | L1 intake (人間 markdown) → L2 discovery (質問・回答・prototype 反応・candidate 分割/統合・矛盾・defer・agreement を append-only event) → L3 compile (strict typed IR、`compile_ready / backflow_required / human_decision_required / rejected` を exactly one) → 人間承認後だけ freeze | UTV4-BR-009 |
 | D. PoC / プロトタイプ作成 | Discovery PoC を production 工程と別 axis の case-driven model として持ち、S0 backlog → S1 plan → S2 poc → S3 verify → S4 decide。S3 verified は terminal ではなく、S4 decision record (confirmed / rejected / pivot) が無ければ merge / Forward reentry を推測しない。prototype 反応は自由文と構造化 decision を分離して要求 candidate へ還元する | UTV4-BR-010 |
 | E. ハーネスメモリの見直し | memory を最終正本にせず「捕捉 → 正本 (要求 / 設計 / 規則) へ取り込み → 証跡付き退役」の lifecycle を持つ。学習資産は責務 (responsibility) を primary owner とし CASE / SCENE / PATTERN / LOG / VERIFY へ分離、expiry・contradiction・revalidation を状態として持つ | UTV4-BR-011 |
-| F. スキル / ナレッジ管理新体制 | skill の適用範囲を typed identity の versioned registry で持ち、assignment ごとに最小 packet を決定的に compile する。firing / 未使用 / miss を telemetry 化し、stale skill は削除ではなく可逆 quarantine。skill → 機構への昇格は shadow + before/after 測定 + 独立 review + rollback | UTV4-BR-012 |
+| F. スキル / ナレッジ管理新体制 | skill の適用範囲を typed identity の versioned registry で持ち、assignment ごとに最小 packet を決定的に compile する。firing / 未使用 / miss を telemetry 化し、stale skill は削除ではなく可逆 quarantine。skill → 機構への昇格は shadow + before/after 測定 + 独立 review + rollback | UTV4-BR-013 | チームは、利用できる AI provider が 1 社でも本ハーネスを構築・運用でき、独立 review の担保方式 (family 分離 / provider 内 tier・session 分離 / 人間 review) を profile として選び、その evidence tier が receipt に正しく記録されること。 | B-② / 導入可能性 | v3.1 の 4 mode (standalone / claude-only / codex-only / hybrid) を継承し、single-provider を fallback ではなく補償統制付きの第一級 profile へ。CLAUDE.md §委譲と判断層「唯一の回避条件」を profile 契約へ置換 |
+| UTV4-BR-014 | チームは、増え続ける command / subagent / skill / rule / 文書 / schema / archive を、利用実測と authority binding に基づいて可逆に縮退でき、縮退の判断が単一 episode や印象ではなく計測 record で残ること。 | B-③ / 縮退 | 参照元の縮退案件 (surface rationalization、legacy consumer inventory、schema / archive 退役、Document Authority Census) を写像。PLAN-L1-09 §2.5 に UT 側 issue を束縛 |
+| UTV4-BR-012 |
 
 ## L1 要求候補
 
@@ -63,5 +65,6 @@ lease 付きで配り、独立検証し、同一 HEAD の証拠で閉じる。�
 - 949 PLAN の一括 JSON 化 (record 化は新規種別から段階導入)。
 - Issue / DB を意味正本にすること。
 - 完全自動化 (human authority の AI への移譲)。
+- provider 1 社構成での `cross_family` 僭称、同一 session 内の自己 review の独立 review 化。
 - 参照元構想の全面移植 (repository / CLI の rename、Python 恒久意味コア、多軸分類 registry による routeFiling 置換)。
 - provider 固定 topology (provider 名を responsibility や authority の identity にしない)。
