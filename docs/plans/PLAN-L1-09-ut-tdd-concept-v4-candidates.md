@@ -177,7 +177,7 @@ admission が無く PR 単位の人手、依存台帳の暫定 → 確定が手�
 ### 2.8 社内 project の実録 3: 途中からハーネス概念を入れた実稼働システム (UNISON-TECHNOLOGY/seo-agent、PO 提示 2026-09-04)
 
 社内 VPS で実稼働中の SEO 自動運用システム (AI-office-de-seo の前身)。2026-02 起点で、ハーネス (旧 HELIX) の Reverse / system-map を
-途中 (2026-06〜07) から導入した (`gh api repos/UNISON-TECHNOLOGY/seo-agent/git/trees/HEAD?recursive=1` = tracked 5,635 file、
+途中 (2026-06〜07) から導入した (`gh api repos/UNISON-TECHNOLOGY/seo-agent/git/trees/HEAD?recursive=1` の blob 数 = tracked 5,636 file (2026-09-04 再計測、truncated なし)、
 `gh pr list --state all` = 135 件 (merged 132)、`gh api .../commits` 直近 800 commit の type 分布、2026-09-04 実行)。
 PO の狙い: 「設計書の製本の重要性と、変更時の更新の重要性が解ける」実例。
 
