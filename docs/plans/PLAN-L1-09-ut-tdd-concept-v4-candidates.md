@@ -81,7 +81,7 @@ gh issue list --state open --limit 100 --json number,title | jq -r '.[]|select(.
 
 #480 (PLAN 採番の衝突)、#384 / #426 (worktree lifecycle)、#421 (review request の memoryId 分裂) は、いずれも
 「作業単位に owner と lease が無い」ことの症状であり、U23 Execution Ledger (PLAN-L4-30 / L6-83〜85 /
-L7-436〜439、全 draft・実装 0) が契約の受け皿だが複数人間ユーザーを前提にしていない。
+L7-436〜439。基準 ref で L4-30 と L5-23 は confirmed、L6-83〜85 と L7-436〜439 は draft、実装 slice 0) が契約の受け皿だが複数人間ユーザーを前提にしていない。
 
 ### 2.3 正本形式の現状
 

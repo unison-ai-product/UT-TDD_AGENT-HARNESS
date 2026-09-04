@@ -43,7 +43,7 @@ A / B の 2 大要求を実現する手段面であり、独立した第 3 の�
 |---|---|---|---|
 | UTV4-BR-001 | チームは、複数の人間と複数の AI runtime が並行して開発しても、価値・要求・承認・不可逆作用・責務配分の最終 authority を人間側に保持できること。 | B-② / 北極星 | BR-02 (role 境界の機械強制) を人間↔AI 境界へ拡張。CC2 人間主導原則を層別に具体化 |
 | UTV4-BR-002 | チームは、どの層でどの作用に人間が確定・承認・介入するかを一枚の層別境界表で読め、AI はその表の外へ質問を投げず、表の内側を越権しないこと。 | B-② | CLAUDE.md 2026-08-05「反射的エスカレーション禁止」と高影響境界の規約を要求へ昇格 |
-| UTV4-BR-003 | チームは、作業をチケット (exactly-one owner、lease、scope、base/HEAD、証拠) の単位で発行・割当・追跡でき、人間ユーザーも AI lane も同じ割当モデルに載ること。 | B-① | U23 Execution Ledger / GitHub Issue projection (PLAN-L4-30、L6-83〜85、L7-436〜439、draft) を複数人間ユーザー前提へ改訂。github-issue-hierarchy.md を継承 |
+| UTV4-BR-003 | チームは、作業をチケット (exactly-one owner、lease、scope、base/HEAD、証拠) の単位で発行・割当・追跡でき、人間ユーザーも AI lane も同じ割当モデルに載ること。 | B-① | U23 Execution Ledger / GitHub Issue projection (PLAN-L4-30 / L5-23 は confirmed、L6-83〜85 / L7-436〜439 は draft) を複数人間ユーザー前提へ改訂。github-issue-hierarchy.md を継承 |
 | UTV4-BR-004 | チームは、同一ファイル・同一 PLAN・同一 PR に対する並行編集の衝突を lease と fence で事前に検知し、発生した衝突を所有者へ typed に戻せること。 | B-① | foreign-edit guard / PLAN 採番 (#480) / worktree lifecycle (#384、#426) / review request 分裂 (#421) の個別対処を 1 つの要求へ束ねる |
 | UTV4-BR-005 | 利用者は、機械が生成・集計・遷移させる record (チケット・schedule・verdict・receipt・evidence) を構造化正本 (1 record = 1 file) として AI と機械から lossless に読み書きでき、人間が判断のために読む narrative は markdown 正本のまま扱えること。 | A-① | VUP-REQ-03 typed spec IR / VUP-REQ-07 PLAN 資産形式化を継承。charter PLAN-L0-01 §5 第 7 項「DB は authored source を置換しない」と整合 (正本は file、DB は projection) |
 | UTV4-BR-006 | 利用者は、構造化正本と markdown 正本の双方から、表 (スプレッドシート)・ドキュメント・ダッシュボードの人間向け view を即時に生成でき、その view からの変更は admission 経由でのみ構造化正本へ戻ること (markdown 正本への機械書き戻しは行わない)。 | A-② | BR-06 / UX-02 (ダッシュボード) を「generated view」として再定義。生成 view は編集禁止 + 生成元 + hash 照合 |
