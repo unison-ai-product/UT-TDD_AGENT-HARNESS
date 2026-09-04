@@ -212,6 +212,19 @@ PoC 前提で作った実装が製品規模へ育ち、2026-08-18〜19 に Rever
 超過を機械が検知して S4 decision を強制する (FR-059 / AC-072)。再設計側で採られた L0 決定 ID + covers + fail-close gate は、
 v4 の contract compilation の最小実装例として §3 の根拠に使う。
 
+### 2.10 ハーネス自身の CI 実測: 画面検証とデータ整合性 (PO 指摘 2026-09-04)
+
+PO 指摘「画面検証系の CI はほとんど作られていない。データ整合性も」。実測 (HEAD、`.github/workflows/harness-check.yml` の run step、
+`grep -o 'full("[a-z0-9-]*"' src/doctor/check-definition-groups.ts | wc -l` = 100、`grep -rli playwright package.json .github tests src` = 0):
+
+| 領域 | ある | 無い / 弱い |
+|---|---|---|
+| 画面検証 | `screen-impl-pair-freeze` (doc の pair-freeze のみ) | browser / layout / 遷移 / 状態表示の機械検証は 0 (Playwright 等なし)。ハーネスに画面が無いためだが、v4 の人間向け面 (スプシ同期 view・図・digest) を持つ時点で必須になる (FR-056 の dogfooding 条項) |
+| データ整合性 | CI で `db rebuild`、doctor の `db-currency` / `db-projection-coverage` / `db-projection-ingestion` / `change-set-integrity` / `sub-doc-schema-integrity` / `design-doc-cross-integrity` / `telemetry-closure` | (a) projection 鮮度の fail-close (2026-07-28 の PLAN 重複見逃しは graph_nodes の鮮度が真因、issue #169。`telemetry-closure` は 4 table の provenance 欠落を partial で通す)、(b) receipt ↔ PR head ↔ CI run の三方 join を CI が検証する check (今は review-attestation workflow と `ut-tdd pr merge` 側のみ)、(c) harness.db の schema migration 回帰 (rebuild 以外の保護なし)、(d) generated view の決定性 (同一 record → 同一 digest) を測る check、(e) スプレッドシート / 図の同期実装そのもの (`src/export/document-export.ts` に断片のみ) |
+
+所見: v4 が前提にする「機械の認識を人間に見せる層」とその鮮度・決定性・三方 join の整合性 check は、ハーネス自身に対してゼロから建てる。
+工程 (§4) の最初の実装 slice は、この (a)(d)(e) をハーネス自身へ dogfooding する形で切る。
+
 ## 3. 設計判断
 
 ### 3.1 正本の置き場 (advisor design、claude-fable-5、2026-09-04)
