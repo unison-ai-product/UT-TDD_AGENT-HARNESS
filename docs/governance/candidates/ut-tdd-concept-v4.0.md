@@ -163,6 +163,25 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 
 参照元でも中間 tier の退役と 2 層 (判断 = frontier、創出 = 実装量産 tier) への集約が検討されており、single-provider profile はその 2 層構成をそのまま 1 provider 内で実現する形である。
 
+## 標準工程 flow (チーム開発版、PO 提示 2026-09-04)
+
+1 名が収束させる点と集団が発散する区間を交互に置く。発散区間の出口は必ず event / receipt で閉じ、合流点には統合チケットの owner 1 名を置く。
+
+| # | 工程 | 層 | 型 | 収束責任 |
+|---|---|---|---|---|
+| 1 | 企画書 (人間) → 1 名が要求を一定ラインまで整理 → 画面モック 1 枚 | L0〜L2 | 文書 | 1 名 (人間) |
+| 2 | 初期画面ルールを freeze し、集団で画面プロトを作りながら要求を細分化 | L2 discovery | 画面プロトチケット + 反応 event | 発散 |
+| 3 | 細分化要求を 1 名が整理し、確定 / PoC へ割り振り | L2→L3 | compile + PoC 仮説チケット | 1 名 |
+| 4 | PoC を集団で作り、画面と PoC をつないで検証 | Discovery PoC S2〜S3 | PoC チケット、S3 verified evidence | 発散 |
+| 5 | 要求整理 → 要件定義 → 集団で確認 → 確定 (G1/G3) | L3 | 文書 1 名 + review event | 1 名 |
+| 6 | 基本設計を 1 名がまとめる | L4 | 文書 | 1 名 |
+| 7 | 責務 / 依存別に詳細設計・仕様チケットを発行 → 集団対応 → 統合チケットで集計・全体チェック → 個別修正を返す → 再集計 (回数上限) | L5〜L6 | チケット + 統合チケット | 発散→1 名 |
+| 8 | リリース切り分け → 依存単位で実装チケット発行 (path / 依存で分割、lease 非重複) → 集団作業 → 各チケットは main へ rebase して衝突ゼロを確認し merge admission (= 随時受入) | L7 | 実装チケット、merge admission | 発散、受入は admission |
+| 9 | 依存がまとまった合流点では進んでいる担当が統合チケットを takeover receipt 付きで引き取り統合 | L7 合流 | 統合チケット + lease takeover | 1 名 (都度) |
+| 10 | 全体が揃ったらテスト / 検査チケットを発行 → まとめ → チェック → リリース | L8〜L12 + release | 検証チケット (author と別 owner)、release 適格性 | 1 名 |
+
+受入は 2 種を区別する: チケット単位の受入は **main への merge admission** (exact HEAD の CI + 独立 review + rebase 済み) であり、システム受入 (L10〜L12) は release 適格性で別に閉じる。
+
 ## 正規情報 flow
 
 ~~~text
