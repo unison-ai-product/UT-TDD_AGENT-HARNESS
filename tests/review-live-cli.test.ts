@@ -384,7 +384,10 @@ describe("review live CLI composition", () => {
         at: "2026-08-14T00:01:00.000Z",
       },
     };
-    const runReview = vi.fn(() => projection);
+    const runReview = vi.fn(
+      (_input: { repoRoot: string; provider: "codex" | "claude"; args: readonly string[] }) =>
+        projection,
+    );
     const publishReceipt = vi.fn();
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {
