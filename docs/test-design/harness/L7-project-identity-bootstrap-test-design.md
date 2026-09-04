@@ -29,7 +29,7 @@ canonical bytes比較 (§3.1.3)、`origin` remote由来のrepository binding (§
 | CANDIDATE-U-PROJID-005 | 1プロセス内でHEADが別commitへ進んだ直後に再読取 | 古い値をキャッシュせず新HEADの値を再取得する。stale cacheはRed (単純再読取。TOCTOU本体は031) |
 | CANDIDATE-U-PROJID-006 | 重複key/想定外keyを含むJSONがHEADにある | `plan-project-config-invalid` |
 | CANDIDATE-U-PROJID-007 | `repository_identity` がgrammar不正 (path区切り複数、絶対path形状) | `plan-repository-identity-invalid` |
-| CANDIDATE-U-PROJID-008 | 呼び出し側が渡す `expectedRepositoryIdentity` とHEADの値が不一致 | `plan-repository-identity-missing` |
+| CANDIDATE-U-PROJID-008 | network originと`expectedRepositoryIdentity`が矛盾 | `identity_repository_unbound`。origin無しで明示expectedだけがHEAD値と不一致なら`plan-repository-identity-missing` |
 | CANDIDATE-U-PROJID-009 | HEADのファイル先頭にUTF-8 BOMが付与されている (decoder は BOM を除去し JSON.parse は成功する) | canonical bytes 比較で `identity_noncanonical_bytes` として deny (基準 ref 7b18ee4e では accept = Red 起点、010 と対) |
 | CANDIDATE-U-PROJID-010 | HEADのファイルがCRLF化されているがJSONとしては有効 | digest再計算 (bytes自己無矛盾性) だけでは検出できない。検出は034のcanonical bytes比較で行う (新規rule) |
 | CANDIDATE-U-PROJID-031 | `HEAD`をOID解決した直後、`ls-tree`/`show`が読む前に別プロセスがHEADを動かす (TOCTOU) | mixed receipt (sourceCommitと実読み取りcommit不一致) を受理せず `identity_head_toctou` でdenyするか bounded retryで一致するまで再試行する。推測採用はRed (新規rule、loader L66-76の実測が根拠) |
@@ -86,6 +86,8 @@ canonical bytes比較 (§3.1.3)、`origin` remote由来のrepository binding (§
 | CANDIDATE-U-PROJID-037 | `legacy-plan-inventory.ts` の `buildLegacyPlanInventory` 経由で036と同じstale identityを読む | 036と同じくloader内部bindingでdenyされる |
 | CANDIDATE-U-PROJID-038 | `project-memory-root.ts` の `projectIdentityFromHead` (loader を経由しない独立 reader) 経由で036と同じstale identityを読む | `identity_repository_unbound` で deny される。独立 reader 自身が §3.1.4 の binding を行うか、共有 loader へ統合済みであること (loader 側だけの変更で Green にしない)。基準 ref 7b18ee4e では accept される (Red 起点) |
 | CANDIDATE-U-PROJID-039 | `origin` remoteが存在せず、呼び出し側も `expectedRepositoryIdentity` を渡さない状態でHEADにgrammar-valid identityがある | `identity_repository_unbound` でdeny。HEAD値をそのまま信頼しない |
+| CANDIDATE-U-PROJID-040 | detached snapshot cloneの`origin`をlocal Git pathへ設定し、そのsource repositoryだけがcanonical network originを持つ | exactly one Git custody hopで同じidentityへ解決する。local path文字列や二段local originをidentityとして受理しない |
+| CANDIDATE-U-PROJID-041 | canonical network originと異なる明示`expectedRepositoryIdentity`を同時に渡す | tracked identity比較より先に`identity_repository_unbound`でdenyし、到達不能branchにしない |
 
 ## 実 repo regression
 

@@ -66,7 +66,7 @@ directoryの移動、linked worktreeの追加、junction/symlink/8.3/大小文�
 | 005 | 読み取り中に HEAD が進んでも古い値をキャッシュせず再取得する。stale cache は Red (単純再読取のcandidate。TOCTOU本体は031) |
 | 006 | 重複key/想定外keyを含む JSON は `plan-project-config-invalid` |
 | 007 | grammar不正 (path区切り・絶対path形状) な `repository_identity` は `plan-repository-identity-invalid` |
-| 008 | `expectedRepositoryIdentity` 不一致は `plan-repository-identity-missing` |
+| 008 | network originと`expectedRepositoryIdentity`が矛盾すれば`identity_repository_unbound`。origin無しで明示expectedだけがHEAD値と不一致なら`plan-repository-identity-missing` |
 | 009 | UTF-8 BOM付与ファイルは、decoder が BOM を除去して parse に成功しても、§3.1.3 canonical bytes 比較で `identity_noncanonical_bytes` として deny される (基準 ref では accept = Red 起点、010 と対) |
 | 010 | CRLF化ファイルはvalid JSONとしてparseでき、digest再計算 (bytes自己無矛盾性) だけでは検出できない。検出は034のcanonical bytes比較で行う。create契約はCRLFを生成しない (024と対) |
 | 011 | ssh形式 origin (`git@host:owner/repo.git`) から `owner/repo` を導出して作成 |
@@ -98,13 +98,15 @@ directoryの移動、linked worktreeの追加、junction/symlink/8.3/大小文�
 | 037 | `legacy-plan-inventory.ts` の `buildLegacyPlanInventory` 経由で036と同じstale identityを読んでも、036と同じくloader内部bindingでdenyされる |
 | 038 | `project-memory-root.ts` の独立 reader `projectIdentityFromHead` 経由で036と同じstale identityを読んでも `identity_repository_unbound` で deny される。独立 reader 自身の binding または共有 loader への統合を要求し、loader 側だけの変更では Green にしない (基準 ref では accept = Red 起点) |
 | 039 | `origin` remoteが存在せず、呼び出し側も `expectedRepositoryIdentity` を渡さない状態でHEADにgrammar-valid identityがある場合は `identity_repository_unbound` でdeny。HEAD値をそのまま信頼しない |
+| 040 | detached snapshot cloneの`origin`がlocal Git pathの場合、そのrepositoryのnetwork originをexactly one hopだけ解決する。local path自体・二段local path・未知形式からidentityを導出したらRed |
+| 041 | network origin由来identityと明示`expectedRepositoryIdentity`が互いに矛盾する場合は、tracked値との比較より先に`identity_repository_unbound`でdenyする |
 | P-001 | 本harness repo自身のtracked identityを、origin (`unison-ai-product/UT-TDD_AGENT-HARNESS`) から再導出したcanonical bytesと比較して一致することを実repoで確認する |
 | P-002 | 一時clean-consumer fixture repo (identity無し) に対しbootstrap契約を実行し、作成→commit→readの一連が成立することを実repoで確認する |
 | P-003 | fixture repoでcase違い/8.3/junction相当のpath表記を再現し、identity解決が変わらないことを実OS操作で確認する |
 
 Candidate ID inventory (Forward/test-design と同一):
 
-CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030 CANDIDATE-U-PROJID-031 CANDIDATE-U-PROJID-032 CANDIDATE-U-PROJID-033 CANDIDATE-U-PROJID-034 CANDIDATE-U-PROJID-035 CANDIDATE-U-PROJID-036 CANDIDATE-U-PROJID-037 CANDIDATE-U-PROJID-038 CANDIDATE-U-PROJID-039
+CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030 CANDIDATE-U-PROJID-031 CANDIDATE-U-PROJID-032 CANDIDATE-U-PROJID-033 CANDIDATE-U-PROJID-034 CANDIDATE-U-PROJID-035 CANDIDATE-U-PROJID-036 CANDIDATE-U-PROJID-037 CANDIDATE-U-PROJID-038 CANDIDATE-U-PROJID-039 CANDIDATE-U-PROJID-040 CANDIDATE-U-PROJID-041
 
 実 repo regression: `CANDIDATE-P-PROJID-001`、`CANDIDATE-P-PROJID-002`、
 `CANDIDATE-P-PROJID-003`。

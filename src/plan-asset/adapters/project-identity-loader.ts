@@ -115,6 +115,9 @@ export function loadProjectIdentityFromHead(input: {
       return failed("identity_noncanonical_bytes", "project identity bytes are not canonical");
     }
     const bound = repositoryIdentityFromOrigin(repoRoot);
+    if (bound && input.expectedRepositoryIdentity && bound !== input.expectedRepositoryIdentity) {
+      return failed("identity_repository_unbound", "origin and expected identity disagree");
+    }
     if (bound && bound !== loaded.value.repositoryIdentity) {
       return failed("identity_repository_unbound", "project identity does not match origin");
     }
@@ -126,9 +129,6 @@ export function loadProjectIdentityFromHead(input: {
       input.expectedRepositoryIdentity !== loaded.value.repositoryIdentity
     ) {
       return failed("plan-repository-identity-missing", "expected repository identity mismatch");
-    }
-    if (bound && input.expectedRepositoryIdentity && bound !== input.expectedRepositoryIdentity) {
-      return failed("identity_repository_unbound", "origin and expected identity disagree");
     }
     return loaded;
   } catch {
@@ -155,6 +155,14 @@ export function repositoryIdentityFromOrigin(repoRoot: string): string | null {
     if (!remote || remote.includes("\n")) return null;
     const direct = parseRepositoryIdentity(remote);
     if (direct) return direct;
+    // Detached snapshot clones use a local Git repository as origin. Resolve
+    // exactly one custody hop to that repository's canonical network origin;
+    // never derive identity from the local path itself.
+    if (existsSync(remote)) {
+      const sourceRoot = realpathSync(remote);
+      const sourceOrigin = gitText(sourceRoot, ["remote", "get-url", "origin"]).trim();
+      return parseRepositoryIdentity(sourceOrigin);
+    }
     return null;
   } catch {
     return null;

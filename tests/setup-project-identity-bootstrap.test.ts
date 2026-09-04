@@ -29,7 +29,7 @@ const fixtures: string[] = [];
 const win = process.platform === "win32";
 const expectedCandidateIds = new Set([
   ...Array.from(
-    { length: 39 },
+    { length: 41 },
     (_, index) => `CANDIDATE-U-PROJID-${String(index + 1).padStart(3, "0")}`,
   ),
   "CANDIDATE-P-PROJID-001",
@@ -197,7 +197,7 @@ describe("project identity bootstrap", () => {
     const root = trackedFixture();
     expect(
       loadProjectIdentityFromHead({ repoRoot: root, expectedRepositoryIdentity: "other/repo" }),
-    ).toMatchObject({ ok: false, error: { ruleId: "plan-repository-identity-missing" } });
+    ).toMatchObject({ ok: false, error: { ruleId: "identity_repository_unbound" } });
   });
 
   it("CANDIDATE-U-PROJID-009: UTF-8 BOM bytes are noncanonical", () => {
@@ -596,6 +596,25 @@ describe("project identity bootstrap", () => {
       ok: false,
       error: { ruleId: "identity_repository_unbound" },
     });
+  });
+
+  it("CANDIDATE-U-PROJID-040: a local snapshot origin resolves exactly one Git custody hop", () => {
+    const source = trackedFixture();
+    const clone = `${source}-snapshot`;
+    fixtures.push(clone);
+    execFileSync("git", ["clone", "-q", "-c", "core.autocrlf=false", source, clone]);
+    expect(repositoryIdentityFromOrigin(clone)).toBe("acme/widget");
+    expect(loadProjectIdentityFromHead({ repoRoot: clone })).toMatchObject({
+      ok: true,
+      value: { repositoryIdentity: "acme/widget" },
+    });
+  });
+
+  it("CANDIDATE-U-PROJID-041: conflicting origin and explicit identity is unbound", () => {
+    const root = trackedFixture();
+    expect(
+      loadProjectIdentityFromHead({ repoRoot: root, expectedRepositoryIdentity: "other/repo" }),
+    ).toMatchObject({ ok: false, error: { ruleId: "identity_repository_unbound" } });
   });
 
   it("CANDIDATE-P-PROJID-001: the harness identity equals canonical origin-derived bytes", () => {

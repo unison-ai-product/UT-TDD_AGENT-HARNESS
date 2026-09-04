@@ -58,6 +58,9 @@ review_evidence: []
   (git `origin` remote から導出した `owner/repo` 文字列) だけから canonical JSON を書く。
   同じ入力なら byte-identical。既存 identity がある repo での再実行は no-op read であり、
   書き換えない。
+- **snapshot clone**: `origin` がlocal Git pathであるdetached snapshotでは、そのGit repositoryの
+  network `origin`をexactly one hopだけ解決する。local path文字列自体からidentityを導出せず、
+  二段目もlocal path・未知形式・origin無しならtyped denyする。
 - **commit**: `setup` は作成した working tree ファイルを **暗黙に commit しない**。identity は
   HEAD に乗って初めて authoritative になる (§3.3)。
 - **namespace**: 異なる origin を持つ project は disjoint な identity を持ち、repository の移動や
@@ -283,6 +286,9 @@ working tree に書く:
   既知形式に一致しない、正規化結果が `validIdentity` の grammar (§2.3) を満たさない場合は
   **作成せず typed deny** する (directory 名、hostname、絶対path、UUID 生成へのフォールバックを
   許さない)。
+- **detached snapshot origin**: snapshot runnerが生成するcloneの`origin`がlocal Git pathの場合だけ、
+  そのsource repositoryの`origin`をexactly one hop読んで上記network形式へ正規化する。local path
+  自体をidentityへ変換せず、source側originもlocal path・未知形式・欠落ならdenyする (040)。
 - **決定性**: 同じ `origin` remote に対する複数回の実行は byte-identical な出力を生成する。
   canonical serialization は field 順 `schema_version` → `repository_identity`、UTF-8 (BOM無し)、
   LF 改行、2-space indent、末尾改行 1 個で固定する。
@@ -370,14 +376,16 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
 | read (working tree drift、新規) | working tree bytes が HEAD blob bytes と一致 (または未commit生成物としてcreate経路が扱う) | bytes不一致・一方のみ存在は `identity_worktree_drift` で deny。HEAD値をそのまま返したらRed |
 | read (single-commit binding、新規) | `HEAD` を1回だけ OID解決し、`ls-tree`/`show`/receipt再検証すべてが同じOIDを参照する | 解決後にHEADが動いて mixed receipt (sourceCommitと実読み取りcommitが不一致) を受理したらRed。再試行しても不一致なら `identity_head_toctou` で deny |
 | read (canonical bytes、新規) | HEAD bytesが再parse→canonical re-serializationしたbytesと一致 | CRLF化・reorderなど非canonicalなvalid JSONは `identity_noncanonical_bytes` で deny |
-| read (repository binding、新規) | `origin`由来の期待値、または明示`expectedRepositoryIdentity`のいずれかとHEAD値が一致し、両者矛盾が無い | origin無しかつ明示値も無しは `identity_repository_unbound` で deny。origin由来値と明示値が矛盾したらdeny (どちらか一方を優先しない) |
-| create 入力 | `origin` remote が既知形式で `owner/repo` grammar に正規化できる | remote無し・未知形式・grammar不一致は作成せず deny (fallback無し) |
+| read (repository binding、新規) | `origin`由来の期待値、または明示`expectedRepositoryIdentity`のいずれかとHEAD値が一致し、両者矛盾が無い | origin無しかつ明示値も無し、またはorigin由来値と明示値の矛盾は `identity_repository_unbound` で deny。origin無しで明示値だけがHEAD値と異なる場合は `plan-repository-identity-missing` |
+| create 入力 | `origin` remote が既知network形式、または040のone-hop Git custodyで `owner/repo` grammar に正規化できる | remote無し・未知形式・grammar不一致は作成せず deny (path/name由来fallback無し) |
 | create 決定性 | 同一 origin から同一 canonical bytes | field順/改行/BOM/末尾改行の変異は非決定と見なし Red |
 | create 所有者 | `setup` 専用経路のみが create を試みる | read専用呼び出し元 (doctor/plan-admission/legacy-inventory) が create を試みたら Red |
 | rerun | 既存 identity がある repo で `setup` は no-op read | 既存ファイルを書き換えたら Red |
 | commit policy | `setup` は working tree に書くのみ、commit しない (§3.3 B) | `setup` が `git commit` を実行したら Red |
 | namespace | 異なる origin は disjoint identity/namespace、repo移動・worktree追加で不変 | 同一 origin で異なる identity、または移動/worktreeで値が変わったら Red |
 | path非埋め込み | identity 文字列に絶対path/hostname/worktree pathを含まない | 埋め込みが検出されたら Red |
+| stale working tree | 未tracked既存fileがcanonical origin bytesと一致 | 不一致・非regular fileは `identity_stale_worktree` でdeny |
+| identity write | canonical bytesを新規fileへ書込み可能 | 書込み失敗は `identity_write_failed` でdenyし、commitしない |
 | 負系 | junction/symlink/8.3/大小文字/CRLF/BOM/stale copy はいずれも deny または既存正規化で吸収 | いずれかが silent accept になったら Red |
 
 ## 5. Implementation slices (将来の実装 PR)
@@ -393,7 +401,7 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
    独立 reader `projectIdentityFromHead` は §3.1.4 (a) 統合または (b) 自前 binding のいずれかで
    閉じ、038 で確認する (in-scope、この経路は loader 側だけの変更では閉じない)。
 4. `repoRoot` の real path 解決を Git コマンド呼び出し前に固定 (8.3/大小文字/junction 対策)。
-5. `CANDIDATE-U-PROJID-001..039` と `CANDIDATE-P-PROJID-001..003` を同じ oracle で検証する。
+5. `CANDIDATE-U-PROJID-001..041` と `CANDIDATE-P-PROJID-001..003` を同じ oracle で検証する。
 
 consumer runtime placement、Node generation producer、Pack publication、global memory 本文、
 remote mutation、semantic ranking は本 plan の実装 slice に含めない。
@@ -407,7 +415,7 @@ remote mutation、semantic ranking は本 plan の実装 slice に含めない�
 
 Forward/Reverse/test-design が共有する全 U oracle は次のとおりである:
 
-CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030 CANDIDATE-U-PROJID-031 CANDIDATE-U-PROJID-032 CANDIDATE-U-PROJID-033 CANDIDATE-U-PROJID-034 CANDIDATE-U-PROJID-035 CANDIDATE-U-PROJID-036 CANDIDATE-U-PROJID-037 CANDIDATE-U-PROJID-038 CANDIDATE-U-PROJID-039
+CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U-PROJID-004 CANDIDATE-U-PROJID-005 CANDIDATE-U-PROJID-006 CANDIDATE-U-PROJID-007 CANDIDATE-U-PROJID-008 CANDIDATE-U-PROJID-009 CANDIDATE-U-PROJID-010 CANDIDATE-U-PROJID-011 CANDIDATE-U-PROJID-012 CANDIDATE-U-PROJID-013 CANDIDATE-U-PROJID-014 CANDIDATE-U-PROJID-015 CANDIDATE-U-PROJID-016 CANDIDATE-U-PROJID-017 CANDIDATE-U-PROJID-018 CANDIDATE-U-PROJID-019 CANDIDATE-U-PROJID-020 CANDIDATE-U-PROJID-021 CANDIDATE-U-PROJID-022 CANDIDATE-U-PROJID-023 CANDIDATE-U-PROJID-024 CANDIDATE-U-PROJID-025 CANDIDATE-U-PROJID-026 CANDIDATE-U-PROJID-027 CANDIDATE-U-PROJID-028 CANDIDATE-U-PROJID-029 CANDIDATE-U-PROJID-030 CANDIDATE-U-PROJID-031 CANDIDATE-U-PROJID-032 CANDIDATE-U-PROJID-033 CANDIDATE-U-PROJID-034 CANDIDATE-U-PROJID-035 CANDIDATE-U-PROJID-036 CANDIDATE-U-PROJID-037 CANDIDATE-U-PROJID-038 CANDIDATE-U-PROJID-039 CANDIDATE-U-PROJID-040 CANDIDATE-U-PROJID-041
 
 `031`〜`039` は PR #516 の Sol FLAG (非author closing review, receipt 参照:
 `docs/plans/PLAN-L7-529-project-identity-bootstrap.md` 本改訂コミット) を是正するために
@@ -416,6 +424,8 @@ CANDIDATE-U-PROJID-001 CANDIDATE-U-PROJID-002 CANDIDATE-U-PROJID-003 CANDIDATE-U
 bytes 比較 (CRLF化・key順序違い)、`036`〜`038` = §3.1.4 repository binding を
 `node-plan-revision-runner.ts`/`legacy-plan-inventory.ts`/`project-memory-root.ts` の
 3呼び出し元それぞれで確認、`039` = origin無し・明示expected値無しの `identity_repository_unbound`。
+`040`はdetached snapshot cloneのlocal originをexactly one Git custody hopだけ解決する回帰、
+`041`はnetwork originと明示expected値の矛盾を到達可能な分岐として検証する。
 
 実 repo regression は `CANDIDATE-P-PROJID-001`、`CANDIDATE-P-PROJID-002`、
 `CANDIDATE-P-PROJID-003` とする。
