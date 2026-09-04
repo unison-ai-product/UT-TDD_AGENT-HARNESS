@@ -70,6 +70,7 @@ A / B の 2 大要求を実現する手段面であり、独立した第 3 の�
 | UTV4-BR-029 | チームは、リファクタリングと退役 (削る作業) をチケット階層ごとの責務として持ち、発火条件を機械が検出して refactor チケットを発行でき、機能追加と混ぜずに behavior-invariant として受入できること。 | B-③ / F | 原子 = TDD 内、小 = 任意 compose、中 = 必須ゲート、大 = 逆方向発行 |
 | UTV4-BR-030 | チームは、PR の merge lane を author から別の人へ渡す (author ≠ reviewer ≠ admitter の三者分離) 構造をチケット責務として持ち、1 人運用では self-admission を記録して監査でき、人が増えた時は record の値だけで別人へ切り替えられること。 | A-① / B-③ | 人数不変性 (BR-013) の admission 面。4 eyes を record 化 |
 | UTV4-BR-031 | チームは、画面プロトを「要求を整理し要件を固める検証装置」として、初期画面ルール・screen inventory / flow・prototype plan・fixture 契約 (捏造禁止・異常系必須)・mock event 契約・screen finding・依存の暫定 → 確定・受入チェックリスト・機械検証・modernization register を備えた工程で回せ、ハーネス自身の人間向け面にも同じ工程を適用できること。 | A-② / D | FR-028 / FR-039 の工程本体。社内 project の L3-ui-prototype 構成を実録に採る |
+| UTV4-BR-032 | チームは、要求・要件を既定で暫定 (修正が出る前提) として扱い、PoC を通して要件に固定しても違和感が無いと人間が認めたとき、または人間が明示的に固定を宣言したときだけ freeze でき、AI が要求を勝手に確定させないこと。 | A-① / B-③ | AI 間齟齬による勝手 freeze と修正しなおしの再発防止 |
 
 ## 期待する利用体験
 

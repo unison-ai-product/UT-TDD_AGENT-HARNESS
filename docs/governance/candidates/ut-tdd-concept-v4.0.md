@@ -320,6 +320,23 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 
 ## 削る機構: リファクタリングと退役の階層別責務 (PO 指示 2026-09-04)
 
+## 要求の暫定性: AI が要求を勝手に freeze しない (PO 指示 2026-09-04)
+
+実録: AI 間の齟齬から一方の AI が要求を「確定」扱いにし、下流が着工した後に要求修正 → 修正しなおしが発生している。
+要求段階で確定してよいのは **(a) PoC / 画面プロトを通し、要件に固定しても違和感が無いと人間が認めたとき**、または
+**(b) 人間が明示的に「固定で」と言ったとき** の 2 つだけである。それ以外の要求は **provisional (暫定)** が既定であり、
+修正が出る前提で下流を組む。
+
+| 論点 | 方式 |
+|---|---|
+| 状態 | 要求 / 要件 record は `provisional` と `frozen` の 2 状態を持ち、既定は provisional。frozen への遷移は人間の decision record (freeze 宣言) か、S4 confirmed の PoC evidence + 人間 ack のみ。**AI lane・compiler・review verdict は freeze 遷移を起こせない** (deny)。 |
+| 下流の組み方 | provisional な要求から compile したチケットは `provisional_dependency` を持ち、要求改訂時に再 compile される前提で切る (変更が局所化する path 分割、契約の機械可読化)。frozen 依存だけのチケットは再 compile 対象外。 |
+| 表示 | スプシ view と製本物は provisional / frozen を列・印で区別し、provisional を確定値のように見せない (予測の表示規約と同型)。 |
+| freeze の粒度 | 要求単位・要件 IR 単位で個別に freeze する。文書一括 freeze は L3 / L4 owner の明示宣言に限る。 |
+| 指標 | freeze 率を目標にしない。測るのは「freeze 後の改訂件数」 (低いほど freeze 判断が正しい) と「provisional 依存の再 compile 所要」。 |
+| AI 間齟齬 | 要求の解釈が AI 間で食い違ったら、どちらかが確定するのではなく discrepancy record として上流 owner へ上げる (FR-047 / FR-048)。 |
+
+
 足す機構だけでは並行 AI 開発は肥大する。削る作業を人の気分ではなく **発火条件の projection + チケット compile** で発生させ、
 階層ごとに責務を固定する。
 
@@ -333,6 +350,8 @@ subagent ファイル名で allowlist と floor を判定する。同じ「revie
 共通則: (1) refactor チケットは **behavior-invariant** (既存 oracle 不変、新規機能 oracle を追加しない) を受入とし、機能 原子と混ぜない
 
 ## 三者分離: author / reviewer / admitter と merge lane のパス (PO 指示 2026-09-04)
+
+> 本節の前提として、**要求は既定で「修正が出るもの」** である (下記 §要求の暫定性)。
 
 PR の merge lane を author から別の人へ渡す構造を、チケット責務として固定する。「作る」「独立 review する」「main へ入れる判断を
 する」は別の actor であり、compiler は小チケット以上に **admission チケット** (merge lane、lease 付き、assignee ≠ author) を対で発行する。
