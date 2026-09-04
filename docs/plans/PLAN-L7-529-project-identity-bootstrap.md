@@ -92,7 +92,8 @@ ls src/setup
 
 ### 2.2 read は HEAD の Git blob から厳密に再取得する (working tree は今のところ入力にならない)
 
-`src/plan-asset/adapters/project-identity-loader.ts:61-91` (`loadProjectIdentityFromHead`) は
+基準 ref `7b18ee4e` の `src/plan-asset/adapters/project-identity-loader.ts`
+(`loadProjectIdentityFromHead`) は
 `git ls-tree HEAD -- ut-tdd.project.json` の mode/blob を正規表現で検証し
 (`^100644 blob ([a-f0-9]{40|64})\t...$`、L72-75)、一致した blob だけを
 `git show HEAD:ut-tdd.project.json` (L76) で取得する。`validReceipt` (L118-126) は
@@ -136,7 +137,8 @@ clean consumer** での bootstrap である。
 
 ### 2.3 identity grammar は `owner/repo` 形式に限定される
 
-`validIdentity` (`src/plan-asset/adapters/project-identity-loader.ts:128-135`) は
+基準 ref `7b18ee4e` の `src/plan-asset/adapters/project-identity-loader.ts`
+(`validIdentity`) は
 `/^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,38})\/[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,99})$/` かつ
 NFC 正規化・trim済み・`.git` 非終端を要求する。絶対path、hostname、worktree pathの文法は
 この regex を満たさない (`/` は1個だけ許容され、Windows path 区切り `\` や drive letter は
@@ -151,8 +153,8 @@ grep -rln "project-identity-loader" src
 #   src/plan-asset/adapters/legacy-plan-inventory.ts
 ```
 
-`node-plan-revision-runner.ts:381-385` は `repositoryIdentity()` port として
-`loadProjectIdentityFromHead` を呼び、`legacy-plan-inventory.ts:40-41` は
+`src/plan-admission/node-plan-revision-runner.ts` は `repositoryIdentity()` port として
+`loadProjectIdentityFromHead` を呼び、`src/plan-asset/adapters/legacy-plan-inventory.ts` は
 `buildLegacyPlanInventory` の入口で同じ関数を呼ぶ。**identity の bootstrap を誤ると、
 plan revision 台帳と legacy inventory の両方が connectionできなくなる。**
 
@@ -236,7 +238,8 @@ canonical でなければ受理しない)。これも**現状の loader が行�
 #### 3.1.4 owner/repository binding は loader 内部で完結させる (新規 rule)
 
 現行実装は `expectedRepositoryIdentity` を**呼び出し側が渡した場合のみ**照合し
-(L42-47)、`node-plan-revision-runner.ts:382`・`legacy-plan-inventory.ts:40`・
+(L42-47)、`src/plan-admission/node-plan-revision-runner.ts`・
+`src/plan-asset/adapters/legacy-plan-inventory.ts`・
 `project-memory-root.ts` の `projectIdentityFromHead` はいずれもこの引数を渡していない
 (§2.4)。したがって別 repository からコピーされた grammar-valid な identity は、これら
 3 呼び出し元の経路では期待値照合なしに authoritative として読まれてしまう。
@@ -259,7 +262,8 @@ canonical でなければ受理しない)。これも**現状の loader が行�
    優先せず `identity_repository_unbound` として deny する (§4)。
 
 この変更により、`loadProjectIdentityFromHead` を経由する
-`node-plan-revision-runner.ts:382`・`legacy-plan-inventory.ts:40` の 2 呼び出し元は
+`src/plan-admission/node-plan-revision-runner.ts`・
+`src/plan-asset/adapters/legacy-plan-inventory.ts` の 2 呼び出し元は
 **コード変更なしに**この binding の対象になる (binding が loader 内部に移動するため)。
 
 一方 `project-memory-root.ts` の `projectIdentityFromHead` (L168-195) は §2.5 のとおり
@@ -366,7 +370,8 @@ grammar 検証) から導かれる。実装 slice でこれらを独立変異と
   同じ repo を指す場合、両者から得る `repository_identity` は同一でなければならない。
 - **case-only path difference**: 大小文字違いの path 表記が同一 repo (同じ inode/volume) を
   指す場合、identity 生成・解決の結果は同一でなければならない (二重 identity を作らない)。
-- **CRLF/BOM mutation**: 基準 ref の `decodeConfig` (`project-identity-loader.ts:93-116`) が使う
+- **CRLF/BOM mutation**: 基準 ref `7b18ee4e` の
+  `src/plan-asset/adapters/project-identity-loader.ts` (`decodeConfig`) が使う
   `TextDecoder("utf-8", { fatal: true })` は **既定 (`ignoreBOM: false`) で UTF-8 BOM を除去する**ため、
   BOM 付き `{}` は `"{}"` に decode され `JSON.parse` も成功する (実測: PR #516 r1 review、
   2026-09-04)。したがって **BOM 付与も CRLF 化も、現状の loader では silent accept される**
