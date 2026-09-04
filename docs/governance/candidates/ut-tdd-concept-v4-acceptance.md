@@ -56,6 +56,11 @@ falsify できれば受入とみなすか」の宣言であり、実行主体・
 | UTV4-AC-050 | FR-038 | secret / PII / private transcript を含む event を改善 corpus へ export する / project identity の無い intake record を作る / Issue 本文を正本として要件を上書きする | いずれも deny |
 | UTV4-AC-051 | FR-039 | prototype record と反応 event 無しに L3 の画面仕様を freeze する / モック画像を画面仕様の正本として参照する | 前者 compile が backflow_required / 後者 deny (generated 製本物のみ) |
 | UTV4-AC-052 | FR-040 | 実録 provenance の無い skill を ACTIVE へ昇格する / firing しても結果に相関しない skill を照合なしに残置する | 前者 deny / 後者 quarantine 候補として finding |
+| UTV4-AC-053 | FR-041 | judgement record を持たない LLM verdict を admission 入力にする / transcript のみを根拠に判断を再構成する | いずれも deny |
+| UTV4-AC-054 | FR-042 | calibration 未計測の判断種別を分類器へ昇格する / 単一 episode で決定的 check へ昇格する / 昇格後の check と LLM 判断の before/after 差分を持たない | 順に deny / deny / 昇格 deny (shadow へ戻す) |
+| UTV4-AC-055 | FR-043 | 機械判断化済みの判断種別で frontier tier を routing する / tier や cost を review_evidence の品質根拠として記録する | 前者 routing が下位 tier / check へ降格し finding / 後者 deny |
+| UTV4-AC-056 | FR-044 | 選好軸の項目を人間 decision record 無しに deny 条件へ昇格する / 良否軸と選好軸を同一 record に未分離で記録する | いずれも deny |
+| UTV4-AC-057 | FR-045 | 人間可読 view (スプシ同期 / 製本物) を持たない判断種別を機械判断化へ昇格する / view 側の承認を admission を経ずに正本へ反映する | いずれも deny |
 | UTV4-AC-032 | FR-023 | single-provider profile で同 provider の別 session・上位 tier が blind packet で review し receipt を発行する / 同一 session の subagent が review する / receipt に `cross_family` を記録する | 順に: admit され evidence tier は `same_family_separated` / deny / deny (僭称) |
 | UTV4-AC-033 | FR-023 | reviewer session id が author session id と同一、または実在しない session id を持つ receipt / CI が green でない HEAD への verdict | attestation 不成立で deny (typed reason) / deny |
 | UTV4-AC-034 | FR-024 | single-provider profile で高影響境界の merge を人間 review なしに admission する / 利用上限 record なしに hybrid → single-provider へ格下げする / 補償統制の doctor gate が未実装のまま profile を宣言する | いずれも deny |

@@ -233,7 +233,28 @@ GENERIC_PROCEDURE 退役)。BR-018〜021、AC-047〜052、概念 §北極星 / �
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
 へ降格し、参照を一方向更新する (前例: v3.0 → v3.1)。
 
+### 3.11 判断の蓄積と機械判断化・費用非依存の品質・選好判断軸 (PO 指示 2026-09-04)
+
+PO 指示: 「LLM の判断を仕組みとして蓄積する自己学習型のハーネス。ログを機械判断化する。目指すのは高価な AI でなくても
+人間と AI が品質を守りながら開発できること。良い悪いの判断に加え、人間ユーザーが好むシステム (プロダクトが人間に
+使いやすく、AI が裏側で働いても壊しにくい) を作るための判断軸を skill として蓄積する」。
+
+採択: (1) LLM 判断を judgement record として Evidence Ledger に必須記録 (BR-023 / FR-041 / AC-053)。既存の review receipt
+(`.ut-tdd/review/receipts/`) と advisor 発火ログ (`.ut-tdd/logs/session/advisor-*.jsonl`) が record 化の起点。
+(2) 後続事実の back-annotate による calibration と、LLM → 安価モデル → 決定的 check の機械判断化の階段。昇格は FR-022 の
+shadow → before/after → 独立 review を再利用し、単一 episode 昇格を deny (FR-042 / AC-054、原則 7 と不変条件 8 を継承)。
+(3) 費用非依存の品質: frontier tier は未学習の判断と人間ゲート直前の独立 review に限定し、routing に降格方向を持たせる
+(BR-022 / FR-043 / AC-055)。現行 `escalateShallowResponse` は上方向のみで、下方向は新規契約。
+(4) 判断軸を良否 / 選好の 2 軸に分け、選好軸 (人間の使いやすさ・AI 変更耐性) を実録から skill 化して判断パックへ注入、
+選好軸の規約化は人間 decision record 必須 (BR-024 / FR-044 / AC-056)。
+(5) PO 追補: 「AI が分かるだけでは組織的に使いにくい。人間も分かる面が必要で、それがスプシ同期系と画面モック / プロトによる
+ハーネス標準共有機構」— 判断・学習層の全成果物を FR-008 / FR-039 の generated view へ投影し、人間可読 view の無い判断 / skill は
+昇格不可とする (BR-025 / FR-045 / AC-057)。
+非採用: LLM 判断の自動 authority 化 (approval 代行) — 北極星と原則 1 に反する。tier を品質根拠として記録することも deny。
+概念本文には §北極星 (到達点の段落)・§判断の蓄積と機械判断化・不変条件 10 として反映した。
+
 ## 4. 工程
+
 
 | 手順 | mode | 内容 |
 |---|---|---|
