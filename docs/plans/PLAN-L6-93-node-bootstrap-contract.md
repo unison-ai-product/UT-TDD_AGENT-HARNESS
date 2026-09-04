@@ -39,8 +39,6 @@ dependencies:
   references:
     - docs/plans/PLAN-L6-01-function-spec.md
     - docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md
-    - docs/plans/PLAN-L7-530-bun-final-retirement.md
-    - docs/plans/PLAN-REVERSE-530-bun-final-retirement-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/design/harness/L5-detailed-design/node-toolchain-provenance-registry-v1.json
     - docs/test-design/harness/L7-node-toolchain-provenance-test-design.md
@@ -630,13 +628,6 @@ bare-name形と相対PATH entry形については等価性を主張しない。�
 
  実装先は`src/lint/runtime-portability.ts`、pair testは`tests/runtime-portability.test.ts`である。
 candidate段階では正式oracle IDを宣言せず、各test実装とRed実測の同一commitで昇格する。
-
-`CAND-NODEBOOT-023`、`CAND-NODEBOOT-027`、`CAND-NODEBOOT-028` は本節が保持する設計上の
-契約定義である。Q0後の最終撤去における実装・pair test・Red/Green evidence の owner は
-`PLAN-L7-530-bun-final-retirement` と `PLAN-REVERSE-530-bun-final-retirement-backfill`
-へ委譲する。本PLANはこれらの実装artifactを生成済みとは主張せず、後継L7で4要素tupleと
-`CAND-NODEBOOT-208`を同じcandidate revisionへ束縛する。設計定義の重複は許すが、
-実装artifactの所有は後継pairの一箇所だけである。
 
 ### 5.7 Issue #499 provenance pair-freeze
 
