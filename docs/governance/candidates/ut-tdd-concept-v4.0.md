@@ -58,7 +58,7 @@ Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
    一方向に導出する。Issue 本文、候補、互換入力、unknown から current identity を直接生成しない。
 3. **Responsibility First (exactly-one owner)**: actionable behavior、チケット、finding、learning asset は
    exactly-one primary owner を持つ。owner は人間ユーザーまたは logical lane であり、provider 名ではない。
-4. **Bounded Multi-Actor Execution**: 人間・AI を問わず、作業者を assignment (チケット)、branch / worktree、
+4. **Bounded Multi-Actor Execution**: 人間・AI を問わず、作業者を assignment (チケット)、branch / worktree、 人数は record の値であり工程の形ではない: 1 人でもチケットと record を省かず、増減は発行と lease 移転だけで行う (人数不変性)。並行 AI 開発ではチケットは機械が compile し、人は batch で admission する。
    base / HEAD、lease / fence、budget、allowed path へ束縛する。lease の無い書き込みは衝突として扱う。
 5. **Evidence Closure**: 完了は subject identity・実体・oracle・独立 review・CI generation・main read-after の
    exact join で判定する。宣言、marker、path 存在、自己申告では成立しない (v3.1 §2.1.2 の attacker/defender 分離を継承)。
@@ -96,6 +96,10 @@ Requirement IR、設計 registry、責務 graph、workflow identity (routeFiling
 schedule を新たな record 種別として追加する。
 
 ### 3. Control Plane (統制面・チーム協調)
+
+統括 owner 1 名 (program owner、人間) が、チケット・PR・CI・review・merge から生成される進捗 projection を見て判断する: 発散区間の開始 / 終了、合流点の owner 指名と takeover 承認、再集計上限超過の差し戻し先、リリース切り分け、WIP 上限とキャパシティ配分、blocked チケットの escalation。進捗を手で更新する層ではなく判断だけを持つ層である。
+
+チケットは **既定で機械が compile** する: L4 基本設計の typed block (責務 × path × 依存の行列) から詳細設計・仕様・実装チケットと合流点の統合チケットを、L2 の screen id / 仮説 id から画面プロト・PoC チケットを、admission receipt から検証チケットを生成する。人は個票ではなく batch 単位で admission し、AI lane への割当は routing policy で自動、人間 owner の割当だけを手で行う。手発行は例外経路で、理由を record に残す。
 
 queue、assignment (チケット)、owner、branch / worktree、base / HEAD、lease / fence、heartbeat、budget、
 provider capability、PR / review / CI state を管理する。**人間ユーザーも AI lane も同じ assignment model に載る**。

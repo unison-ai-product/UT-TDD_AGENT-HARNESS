@@ -201,7 +201,15 @@ PO が提示したチーム開発の工程 (企画書 → 1 名の要求整理�
 チケット + takeover receipt (FR-030)、再集計上限 (FR-031)、受入 = rebase 済み candidate の merge admission (FR-032)。
 BR-016、AC-041〜043 へ降下。
 
-### 3.7 候補文書の置き場
+### 3.7 人数不変性・統括 owner・チケットの機械発行 (PO 指示 2026-09-04)
+
+PO 指示: 「途中から複数人になるなど柔軟に」「全体の進捗を統括するマネジメント層が必要」「自動チケット発行に
+しないと並行 AI 開発は厳しい」。採択: 人数不変性 (FR-033)、統括 owner 1 名 = 判断だけを持つ層で進捗は projection
+(FR-034)、チケットは ticket compiler が既定で生成し人は batch admission と人間 owner 割当のみ (FR-035)。前提条件は
+L4 基本設計 typed block に責務 × path × 依存の行列を持たせること (A. JSON 化の実利、行列が無い文書からは推測生成
+しない)。BR-017、AC-044〜046 へ降下。
+
+### 3.8 候補文書の置き場
 
 参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
