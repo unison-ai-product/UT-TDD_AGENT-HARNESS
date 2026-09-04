@@ -31,10 +31,7 @@ dependencies:
     - docs/plans/PLAN-REVERSE-458-node-self-hosted-bun-ban-backfill.md
     - docs/test-design/harness/L7-unit-test-design.md
     - docs/plans/PLAN-L7-501-worktree-lifecycle-domain.md
-    - docs/plans/PLAN-L7-522-pack-consumer-bun-path-removal.md
     - docs/plans/PLAN-L7-527-pack-consumer-node-readiness.md
-    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/450
-    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/500
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/487
     - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/473
 review_evidence: []
@@ -128,21 +125,13 @@ package script、runtime wrapper、CI、setup、Pack template、consumer generat
 参照可能であってはならない。fixtureを残したことを「Bunが残っている」と数えるかどうかを
 曖昧にせず、scannerに `fixture` と `reachable_production` の区別を持たせる。
 
-base `6e9aeb99` の実treeを `git grep 6e9aeb99 -- scripts` で再調査した結果、この実装
-sliceが inventory と撤去oracleへ含める reachable surface は次の2系統だけである。
+実装PRで `reachable_production` を0にする対象面は次の通りである。
 
-- `scripts/git-hooks/secret-scan-diff.ts` の `#!/usr/bin/env bun` と Bun direct-entry
-  分岐。`pre-push` がNodeで呼ぶ通常経路とは別に、shebangによる直接起動が残る。
-- `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`、`UT_TDD_BUN_BINARY`、及び
-  snapshot runnerからのBun executable受渡し。test/acceptance runnerがBunを探索・実行・
-  download可能なfixture依存として保持している経路を、production到達と混同せず明示的に
-  inventoryし、撤去又は専用fixture隔離を検証する。
-
-`package.json`/`bun.lock`、setup/readiness、source CI、Pack/consumer template、generated
-consumer treeはこのrevisionで再発見された対象ではない。#470（生成成果物）、#471（readiness）、
-#472（source CI）は完了済み所有を再吸収せず、#500のPack CI policyと#450のprogram closureは
-`PLAN-L7-522`の参照・除外境界に残す。#473のNode producer/`build` script撤去契約も
-`PLAN-L6-93`→`PLAN-L7-458`系列の所有であり、本PLANは実装しない。
+- `package.json` の `build` script と package scriptからの Bun起動
+- `bunAuthority`、`bun.lock`、Bun専用 setup/readiness/CI 導線
+- source wrapper、Pack/consumer template、generated consumer treeのBun launcher
+- `bun`/`bunx`/`tsx`/TypeScript直実行/shell helperへの runtime fallback
+- Pack/consumer acceptance が暗黙に実行・導入・downloadするBun
 
 テスト名称、Red fixture、migration debt台帳の履歴記録は、実行時にproductionへ到達しない
 限り retained として許可する。allowlistへ混ぜてGreen化したり、検出対象から削除して
@@ -169,14 +158,13 @@ state、別のreceipt trust root、別のBun allowlistを作らない。
 してから `generates` と同一revisionへ追加する。
 
 - Bun final retirement admission/verifier とその schema/test
-- production reachable-surface inventory と typed report（上記 `scripts/` 2系統）
-- `secret-scan-diff.ts` shebang/direct entry と snapshot runnerのBun fixture依存の撤去又は隔離
+- production reachable-surface inventory と typed report
+- `package.json` / lock / wrapper / setup / CI / Pack・consumer templateの物理撤去
 - retained Q0 fixture の隔離と detector coverage
 - PLAN/Reverse/test-designの同一revision trace
 
-consumer runtime identity (#463)、Node producer (#473/#484/#515)、#470/#471/#472の完了済み
-consumer/readiness/source-CI所有、#500のPack CI policy、#450のprogram closure、Pack publication、
-Memory/notification (#424)、worktree lifecycle (#391) はこのPRへ混ぜない。
+consumer runtime identity (#463)、Node producer (#484/#515)、Pack publication、Memory/
+notification (#424)、worktree lifecycle (#391) はこのPRへ混ぜない。
 
 ## 5. 完了・Reverse再合流
 
