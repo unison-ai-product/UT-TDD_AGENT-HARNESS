@@ -21,7 +21,7 @@ try {
     format: "esm",
     target: "node24",
     // commander is CommonJS and uses a dynamic builtin require. Provide the
-    // Node ESM bridge so the sealed output is executable by Node, not Bun.
+    // Node ESM bridge so the sealed output is executable by the Node authority.
     banner: {
       js: 'import { createRequire as __nodeCreateRequire } from "node:module"; import { fileURLToPath as __nodeFileURLToPath } from "node:url"; import { dirname as __nodeDirname } from "node:path"; const require = __nodeCreateRequire(import.meta.url); const __filename = __nodeFileURLToPath(import.meta.url); const __dirname = __nodeDirname(__filename);',
     },
