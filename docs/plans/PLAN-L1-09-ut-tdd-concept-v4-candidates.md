@@ -296,6 +296,16 @@ reviewer の oracle 再実行 + 反証試行 1 件以上 (ゼロなら PASS-WEAK
 現行 v3.1 の blind-reviewer (claim-blind / spec-blind 2 lane、`.claude/agents/blind-reviewer.md`) を継承し、FR-049 の role record
 へ移す。非採用: 同 family の同 session 内 review の独立 review 化 (不変条件 5)。概念本文は §Provider topology に段落追加。
 
+### 3.16 削る機構: リファクタリング / 退役の階層別責務と発火条件 (PO 指示 2026-09-04)
+
+PO 提案: 原子は TDD (red → green → refactor) で原子 PR 内に閉じる、小は原則不要 (object 化などの合成は有利)、中は結合テスト
+レベルとしてリファクタリングを持つべき、大は機能群統合なので逆に refactor チケットを発行する flow を持つ。採択: そのまま階層責務
+として固定し (FR-052 / AC-064)、発火条件を依存 graph・責務行列・計測 record からの projection にする (FR-053 / AC-065)。小の
+合成点は任意の compose 原子、中は必須ゲート、大は逆方向発行 + 退役 (FR-025) の owner。共通則は behavior-invariant 受入と機能
+原子との非混在 (1 PR = 1 論点、PR スコープ規律の継承)。起点は現行 `refactor-scout` (advisory only、実装しない) と routeFiling の
+`refactor` mode (refactor kind の route 条件)。非採用: LLM の気づきだけでの発火、feature PR への refactor 積み増し。
+概念本文には §削る機構 として反映した。
+
 ## 4. 工程
 
 
