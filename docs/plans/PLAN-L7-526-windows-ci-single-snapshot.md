@@ -77,8 +77,8 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-08-31T03:43:18Z"
-        evidence_path: tests/windows-ci-single-snapshot.test.ts
-        output_digest: "sha256:1bdde1be5943183b09f8615d595d8a5a58229da820f1ac2f9efd37a12e020571"
+        evidence_path: docs/test-design/harness/L7-windows-ci-single-snapshot-test-design.md
+        output_digest: "sha256:154a64f96a946888618e7c0903d2571688ffe456d501bf0e7cc43da939673919"
         anchor_commit: d4807e09e06adec59f76daa3daddb118ea654f7f
 ---
 
