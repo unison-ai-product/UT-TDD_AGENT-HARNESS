@@ -408,12 +408,12 @@ describe("review live CLI composition", () => {
     } finally {
       process.stdout.write = originalWrite;
     }
-    expect(runReview).toHaveBeenCalledWith({
+    expect(runReview).toHaveBeenCalledTimes(1);
+    const call = runReview.mock.calls[0]?.[0];
+    expect(call).toEqual({
       repoRoot: root,
       provider: "claude",
       args: expect.arrayContaining([
-        "--task-file",
-        memoryPath,
         "--review-head",
         head,
         "--review-author-family",
@@ -421,6 +421,9 @@ describe("review live CLI composition", () => {
         "--execute",
       ]),
     });
+    const taskFileIndex = call?.args.indexOf("--task-file") ?? -1;
+    expect(taskFileIndex).toBeGreaterThanOrEqual(0);
+    expect(realpathSync(call?.args[taskFileIndex + 1] as string)).toBe(realpathSync(memoryPath));
     expect(publishReceipt).toHaveBeenCalledWith(root, projection);
   });
 

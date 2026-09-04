@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -112,9 +112,12 @@ describe("live review projection (U-RVATT-023..026)", () => {
         "review task",
       ].join("\n");
       writeFileSync(join(root, sourcePath), content, "utf8");
-      expect(
-        resolveLiveReviewTaskFile(root, { memoryId: "memory:d3a", memoryPath: sourcePath }),
-      ).toBe(join(root, sourcePath));
+      const resolved = resolveLiveReviewTaskFile(root, {
+        memoryId: "memory:d3a",
+        memoryPath: sourcePath,
+      });
+      expect(resolved).not.toBeNull();
+      expect(realpathSync(resolved as string)).toBe(realpathSync(join(root, sourcePath)));
       expect(
         resolveLiveReviewTaskFile(root, { memoryId: "memory:wrong", memoryPath: sourcePath }),
       ).toBeNull();

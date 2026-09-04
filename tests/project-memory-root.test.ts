@@ -183,7 +183,8 @@ describe("project-scoped Memory routing integration (PLAN-L7-512 Slice 2)", () =
       memoryId: memory.memory_id,
       memoryPath: memory.source_path,
     });
-    expect(task).toBe(join(realpathSync(primary), memory.source_path));
+    expect(task).not.toBeNull();
+    expect(realpathSync(task as string)).toBe(realpathSync(join(primary, memory.source_path)));
 
     const program = new Command().exitOverride();
     registerLiveReviewCommands(program.command("review"), {
