@@ -106,6 +106,31 @@ git grep -n "S0 backlog" b2772064 -- CLAUDE.md                       # 1 (Scrum 
 要求発見 (intake → discovery → compile) の工程は存在せず、typed spec IR (U8〜U12) は宣言部の
 compile のみを対象にしている。
 
+### 2.5 参照元の縮退・是正案件からの写像 (issue / merged PR 追突、2026-09-04)
+
+参照元の直近 merged PR 約 120 本と issue 約 200 件を確認した。UT 側の実測痛点と一対一で対応するものを束縛する
+(新 issue は起こさない。既存 issue の受入条件へ転記する)。
+
+| # | 参照元の解 (要旨) | UT 側の受け皿 | 候補要件 |
+|---|---|---|---|
+| A1 | review receipt を candidate workspace と Node authority に束縛 | PR #516 r1 で receipt が worktree 側に書かれた実測、#424 | FR-027 |
+| A2 | reviewer session attestation、malformed receipt の訂正世代、admission 失敗の typed reason | #505 / #493 / #386 / #393 | FR-027 |
+| A3 | receipt 失効の merge カスケード: 当面は直列運用 (receipt → 即 merge)、恒久案は tree 差分ゼロの update-branch で receipt 継承 | #439 / #218、2026-09-04 merge-order lesson memory | FR-013 (再確認) |
+| A4 | GitHub open branch / PR を read-after 付きで走査する PLAN reservation provider | #480 | FR-004 (U23) |
+| A5 | 証明ベース gc (ancestor + clean のみ、dry-run 既定、audit)、未 commit 残置と未 push / stale base の doctor 化 | #384 / #426 / #444 | FR-027 |
+| A6 | projection writer の silent skip を finding 化 | graph 鮮度 (#169 系)、#242 | FR-027 |
+| A7 | `sync-pack --prune-local` の dry-run 既定 + confirm 必須 + repoRoot 祖先拒否 | UT 側は未計測 (要実測、CLAUDE.md §Distribution Repository) | FR-026 |
+| B1 | Surface Rationalization (7 class + 利用計測で退役) | `skills/` 81 entry、agent-guard allowlist 19 種 (未計測) | FR-025 |
+| B2 | subagent ロスター縮退 (中間 tier 退役、判断 = frontier / 創出 = 量産 tier の 2 層) | CLAUDE.md §Model / Effort Routing (3 層前提) | FR-023 / FR-025 |
+| B3 | team run / pair-agent を互換面化し利用実績で段階廃止 | `ut-tdd team run` (Canonical Commands / rule-drift marker) | FR-025 / FR-026 |
+| B4 | legacy 出力 consumer inventory (current surface × legacy token 完全行列) | #487 / #450 Bun 撤去、旧 9-mode 残骸 | FR-026 |
+| B5 | migration source archive の manifest 化退役、legacy DB schema object の原子的退役 | `docs/migration/` snapshot、harness.db (4.5GB) schema | FR-026 |
+| B6 | Claude native memory の明示無効化 + 再出現 fail-close | #454 / #494 (切り分け候補) | FR-019 |
+| B7 | Document Authority Census (全 tracked doc の class / owner / authority binding) | 949 PLAN + governance の正本判定 (A. JSON 化の前段) | FR-006 / FR-025 |
+
+保留 (時期尚早・対象外): CI critical-path scheduler / verification plan / shard budget、Functional Release Slice、
+post-release lifecycle authority (Pack canary #418 以降)、hosted preflight nonce / capability broker (外部実行 lane 前提)。
+
 ## 3. 設計判断
 
 ### 3.1 正本の置き場 (advisor design、claude-fable-5、2026-09-04)
@@ -133,7 +158,26 @@ retired lifecycle と責務 owner の学習資産、skill applicability の type
 採らない: Python 恒久意味コア (ADR-001 と衝突)、多軸分類 registry による routeFiling 置換
 (別 version-up)、repository / CLI の rename。
 
-### 3.3 候補文書の置き場
+### 3.3 Provider topology (advisor design、claude-fable-5、2026-09-04)
+
+| 案 | 内容 | 評価 |
+|---|---|---|
+| 1 | hybrid の family 分離だけを独立 review とし、single-provider は常に劣化 evidence | 導入障壁が高い (2 社契約が前提)。v3.1 の現状 |
+| **2 (採択)** | **独立性を authoring context 遮断 + reviewer attestation + exact HEAD 束縛で定義**し、family 分離を最強の実装、同 provider 別 session・上位 tier を補償統制付きの第一級 profile とする | 1 社でも成立。evidence tier を 3 段で記録するため僭称と相関エラーを事後識別できる。attestation の機械強制が前提 |
+| 3 | single-provider は全 merge に人間 review 必須 | 安全だが human-on-the-loop の範囲を超え、チーム開発で回らない |
+
+advisor 回答 (要旨):
+
+- 推奨: 案 2。独立 review の本質は「著者の主張・文脈・確証バイアスからの遮断」であり、provider 族は実装手段の一つ。案 1 は単一 provider 構成 (Pack 配布先の単一契約ユーザー) で harness が成立せず、案 3 は自動化基盤の前提を自壊させる。
+- 最小補償統制 4 点: (1) blind packet 必須 (既存 blind-reviewer を昇格)、(2) exact-HEAD 束縛 + attestation を merge 時に一致検証、(3) session / context 分離の機械証跡 (同一 session の review は fail-close、tier 差は維持)、(4) 決定論 oracle (CI green) を verdict の前提条件にし review は残余リスクのみ判定。human sampling は全件でなく merge の 5〜10% の監査 sampling で足りる。
+- 主要リスク: 同族モデルの相関エラー (cross-family の唯一の実質的優位)。evidence tier を 3 段 (cross_family > same_family_separated > intra_runtime) で証跡に残す。attestation の形骸化は doctor fail-close で機械強制しない限り採用しない。
+- 不足証拠: same-family blind review の欠陥検出率が cross-family と比べてどれだけ落ちるかの実測が無い (本 repo の verdict 履歴から方式別 FLAG / PASS-WEAK 率を集計可能)。単一 provider 需要は仮定のまま。
+
+採択: 案 2。補償統制は FR-024 (高影響境界・release 適格性の人間 review、5〜10% 監査 sampling、CI oracle の mutation
+検証) とし、doctor gate で機械強制されるまで第一級昇格を認めない (advisor 条件)。advisor が指摘した不足証拠
+(方式別の検出率実測) は工程 8 で取る。concept §Provider topology、UTV4-BR-013、FR-023 / 024、AC-032〜034 へ降下。
+
+### 3.4 候補文書の置き場
 
 参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
@@ -148,6 +192,8 @@ rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `d
 | 3 | serial | concept v4.0 昇格 + v3.1 archive + 参照更新 (CLAUDE.md / AGENTS.md / README / repository-structure) |
 | 4 | parallel | L1 delta (VUP-REQ-11〜14、additive) を PLAN-L1 系で起票 / charter §4 に後続テーマ 2 行追加 |
 | 5 | parallel | U23 (PLAN-L4-30 系) を複数人間ユーザー前提へ改訂する Reverse 対 / record 正本 schema の L4-L6 設計 PLAN |
+| 7 | parallel | §2.5 A1〜A7 / B1〜B7 を該当 issue の受入条件へ転記 (issue は新設しない)。B2 / B3 の縮退は利用実測 (FR-025) を先に取る |
+| 8 | serial | 既存 verdict 履歴 (`.ut-tdd/review/receipts`、`review_evidence`) から cross_agent と intra_runtime_subagent の FLAG / PASS-WEAK 率を集計し、same_family_separated 昇格の妥当性を実測で裏取りする |
 | 6 | parallel | 4 領域 (C〜F) の L3 設計 PLAN: 要求発見 event / IR compile (VUP-REQ-03 拡張)、PoC S4 record (routeFiling poc kind)、memory retirement + 学習資産 (PLAN-L7-189 系 Reverse 対)、skill applicability registry (`src/skill-engine/`) |
 
 ## 5. 完了条件

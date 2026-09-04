@@ -141,9 +141,26 @@ PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス�
 | C. 上流要求エンジン | Sovereignty → Change Contract Compiler | L1 intake (人間 markdown) → L2 discovery (append-only event) → L3 typed IR compile → 人間承認 freeze。AI は未確定値を補完しない | 別 requirement engine、Issue / DB の意味正本化 |
 | D. PoC / プロトタイプ作成 | Assurance Kernel (case-driven model) | Discovery PoC を production 工程と別 axis で識別、S3 verified ≠ terminal、S4 decision record 必須、prototype 反応の構造化還元 | PoC 成果の production への無審査昇格 |
 | E. ハーネスメモリの見直し | Evidence and State Ledger → Adaptation | captured → canonicalized → retired の lifecycle、責務 owner の学習資産、失効 / 矛盾 / 再検証状態 | memory を進捗・正本・承認の代替にすること |
+| G. 縮退・是正案件 (参照元 issue / PR 追突、2026-09-04) | Adaptation → 全 Plane | surface rationalization (7 class 分類 + 利用計測で退役)、legacy consumer inventory、schema / archive の原子的退役、receipt の workspace 束縛と訂正世代、reviewer attestation、gc / 未 commit 残置 / stale base の doctor 化、projection silent skip の finding 化、Document Authority Census | CI 規模前提の scheduler、release slice、外部実行 lane 前提の統制 |
 | F. スキル / ナレッジ管理新体制 | Adaptation → Control Plane | typed applicability registry、最小 packet の決定的 compile、firing telemetry と可逆 quarantine、shadow + 測定 + 独立 review による昇格 | 全 skill 一括注入、削除による整理、単一 episode 昇格 |
 
 要求・要件・受入への降下は UTV4-BR-009〜012 / UTV4-FR-015〜022 / UTV4-AC-024〜031。
+
+## Provider topology (単一 provider でも成立する構成)
+
+本構想は特定の provider 組合せを前提にしない。独立 review の本質は **authoring context からの分離 + reviewer attestation + exact HEAD / CI generation への束縛** であり、provider family の分離はその最も強い実装であって唯一の実装ではない。チームが利用できる provider は契約・予算・地域で変わるため、次の 3 profile を同じ契約の上で選べるようにする。
+
+| profile | 創出 (worker) | 判断 (review / gate) | 独立性の担保 | evidence tier | 補償統制 |
+|---|---|---|---|---|---|
+| hybrid (既定) | 一方の family | 他方の family の frontier tier | family 分離 + blind packet + attestation | `cross_family` | なし (現行 v3.1 と同じ) |
+| single-provider | 同一 provider の worker tier (例: Sonnet / Luna) | 同一 provider の別 session・上位 tier (例: Fable / Sol)。author session と異なる reviewer session を attestation で検証 | authoring context 遮断 (blind packet)、author claim 非提示、session 分離、exact HEAD 束縛、CI green を前提 | `same_family_separated` | 高影響境界・release 適格性の merge に人間 review、merge の 5〜10% を監査 sampling して FLAG 率 / 見逃し率を hybrid 基準と比較、CI oracle の mutation 検証 |
+| standalone | 人間または単一 model | 人間 | 人間 review | `human_review` | 全 merge を人間が承認 |
+
+evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runtime`) で receipt に記録し、v3.1 の `intra_runtime_subagent` は最下位 tier として残す (同一 session 内 subagent、機械証跡なし)。
+
+不変条件: (1) profile は project 設定の typed record で宣言し、receipt に evidence tier を記録する。上位 tier を僭称しない。(2) 同一 session の自己 review、author runtime 内部 review の独立 review への昇格は全 profile で禁止。(3) profile の格下げ (hybrid → single-provider) は利用上限・契約停止の record を伴う場合だけ自動で許し、格上げは常に許す。(4) routing・agent-guard・delegation-routing は provider 名ではなく role × tier × session 分離で判定し、provider が 1 つでも fail-close しない。(5) 補償統制は doctor の fail-close gate として機械強制されるまで first-class 昇格を認めない。
+
+参照元でも中間 tier の退役と 2 層 (判断 = frontier、創出 = 実装量産 tier) への集約が検討されており、single-provider profile はその 2 層構成をそのまま 1 provider 内で実現する形である。
 
 ## 正規情報 flow
 
