@@ -12,7 +12,7 @@ forward_routing: gap-only
 promotion_strategy: reuse-as-is
 status: draft
 created: 2026-08-27
-updated: 2026-08-27
+updated: 2026-09-04
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
@@ -98,3 +98,29 @@ remote publication、#418 canaryは本Reverseで再定義しない。
 - **R4**: 不足が実証された場合だけ`PLAN-L6-101` §1〜§5へbackfillし、既存`CANDIDATE-PACKISO`
   契約を重複宣言せず、Forwardへ`gap-only`で再合流する。実装側のsource path、Pack remote、
   Bun retirement、#432を変更しない。
+
+## 実装時点のR0 evidence（2026-09-04, exact-head baseline / partial）
+
+`PLAN-L7-516`の実装成果物は PR #463 exact HEAD
+`c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` である。専用targetは17/17 Green、required CI
+run `33837644210` も Linux/Windows/aggregate 3/3 Green、typecheckとBiomeも成功した。
+filesystem laneはconsumer-local stagingをsealed bundleへrenameし、single active pointerを作成し、
+別cwdからNode wrapperでcompiled entryを起動する。
+
+R1〜R4の完了、全15 U候補/P候補の1:1 trace、Linux/Windows全境界、receipt-backed L6-93 producer、
+rollback/history chain、external read/open/stat/process counter、非著者review、aggregate CIはまだ
+証明していない。したがって本Reverseは`status: draft`/R0予約を維持し、未測定差分をbackfill対象として
+残す。上記の実測は既存PACKISO/NODEBOOT候補の代替や全候補Greenの主張ではない。
+
+## R0追加実測（2026-08-28, partial）
+
+exact HEAD `c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` の17 testsとrequired CI 3/3 Greenを
+確認した。manifest canonical
+digest、compiled ESM digest binding、consumer runtime root/realpath containment、Bunなしreadiness、
+active pointerのexternal escape denyを追加測定した。一方、実bytesを供給するL6-93-owned
+当時はNodeBootstrapReceipt producerが現branchにも`src/tests`にも無く、`PLAN-L6-93`がdraftで
+READYなproducer owner Issue/PRを確認できなかった。現在はPR #507がmainへ統合され、producerは
+利用可能になった。従ってR1〜R4、receipt-backed consumer接続、Linux/Windows全境界、rollback/
+history prefix、external read/open/stat counter、closing review、aggregate CIは実装PRで検証する
+未完了項目として残すが、producer欠落を理由としたHard blockは解除済みである。#420ではL6-93
+producerを新設しない。

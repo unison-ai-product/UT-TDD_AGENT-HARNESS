@@ -8,7 +8,7 @@ route_signal: feature_addition
 route_mode: add-feature
 status: confirmed
 created: 2026-08-27
-updated: 2026-08-28
+updated: 2026-09-04
 owner: PM / PO / Codex
 parent_design: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
 pair_artifact: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
@@ -26,6 +26,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-516-pack-self-contained-consumer-runtime.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/consumer-node-runtime.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/distribution.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/consumer-node-runtime.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-101-pack-independent-multi-consumer-acceptance.md
   requires:
@@ -74,6 +82,34 @@ review_evidence:
         evidence_path: docs/test-design/harness/L7-pack-self-contained-consumer-runtime-test-design.md
         output_digest: "sha256:94ad3c7e2dfa3edf826a2e645a1ab083876da8aef5797af01b78879c03edbc73"
         anchor_commit: 2b531830de9f40ffcb09b81d19c97802072b76ec
+  - reviewer: claude-opus-5
+    review_kind: cross_agent
+    reviewed_at: "2026-09-04T02:54:12Z"
+    tests_green_at: "2026-09-04T02:38:52Z"
+    verdict: "FLAG / blocking 2"
+    worker_model: gpt-5.6-luna
+    reviewer_model: claude-opus-5
+    effort: middle
+    plan_revision: c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a
+    subject_head: c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a
+    scope: >-
+      PR #463の実装scopeをexact HEADで非著者review。Node runtime実装、17 tests、
+      Node-only readiness、宣言traceを確認し、非ancestorのGreen anchorと実装scopeの
+      review evidence不足をblockingとして記録した。修正後のclosing PASSは未取得。
+    citations:
+      - ".ut-tdd/review/receipts/d009f8020f81b6f2f33bb09a733fb798c8c1bc20178d88eeac6e9959cf136d0b.json"
+      - "memory:project:pr-463-exact-head-c472bbc6-non-author-closing-review-request"
+      - "https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/pull/463"
+    green_commands:
+      - kind: unit_test
+        command: "node scripts/run-vitest-snapshot.ts tests/consumer-node-runtime.test.ts --reporter=dot"
+        runner: node
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-09-04T02:38:48Z"
+        evidence_path: tests/consumer-node-runtime.test.ts
+        output_digest: "sha256:91fd6f75d9f656b9216a64a99fea0360e336fd78bf6f6d42ac490bef5d5f623b"
+        anchor_commit: c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a
 ---
 
 # PLAN-L7-516: sealed self-contained consumer Node runtime
@@ -91,14 +127,14 @@ cleanupはこのsliceに含めない。Bunを起動する経路、Bun API、Bun 
 `node_modules`内TypeScriptの実行を新たに導入してはならない。
 
 `PLAN-L6-93`の現行§5にあるsealed build receipt／Node parity receiptのtupleを入力契約として
-再利用する。L6-93がconfirmedになり、実装開始に必要なNode generation receiptが利用可能になる
-までは本PLANの実装PRを起動しない。L6-93のreceipt schemaやcutover chainを本PLANで再定義しない。
+再利用する。L6-93 §5のsealed Node generation producerはPR #507（merge commit
+`a2a359f6e3a377838492c1ef90649a75b671b9b1`）でmainへ着地しており、実装開始に必要な
+`NodeBootstrapReceipt`を供給できる。L6-93のreceipt schemaやcutover chainは本PLANで再定義しない。
 
-L6-93全体の`status: draft`を、§5だけのfreeze完了と読み替えてはならない。PR #430 exact HEAD
-`2cd9640c`のcanonical receiptが証明するのは§5と`CANDIDATE-NODEBOOT-021..030`だけである。
-本pair-freezeの非著者PASSと、L6-93側で本PLANが消費するsealed generation tupleの利用可能性が
-同じrevisionへ機械的に束縛されるまで、production source、build script、source workflow、
-`bun.lock`を変更しない。
+過去のpair-freeze時点ではL6-93のproducer未着地を理由に実装を停止していたが、その状態は
+PR #507のmain統合で解消された。以後はproducerの実bytes receiptを実装テストへ入力し、同一
+generation/revisionの束縛を検証する。production source、build script、source workflow、
+`bun.lock`の変更は引き続き本PLANの非Scopeである。
 
 ## 2. 正本とsealed runtime identity
 
@@ -335,9 +371,9 @@ PF5、#432、#414、Pack remote publicationを重複所有しない。
    canonical evidenceとして利用可能であること。
 3. #432のidentity bootstrapを前提にせず、consumer identity入力が既存契約で供給できること。
 4. pair-freezeの非著者PASS、CI Green、Reverse R0が揃うまでproduction sourceを変更しないこと。
-5. build producerを本PLANで新設・変更せず、L6-93が所有する実行可能なproducerと、その出力を
-   実bytesから検証したreceiptを入力として取得できること。script本文の文字列検査だけを
-   producer可用性の証拠にしないこと。
+5. build producerを本PLANで新設・変更せず、L6-93が所有する実行可能なproducer（PR #507
+   merge後のmain）と、その出力を実bytesから検証したreceiptを入力として取得すること。
+   script本文の文字列検査だけをproducer可用性の証拠にしないこと。
 
 ## 9. 完了条件
 
@@ -357,4 +393,49 @@ PF5、#432、#414、Pack remote publicationを重複所有しない。
 5. TypeScript、Biome、専用unit/system test、PLAN lint、scoped doctor、Linux/Windows/aggregate CI、
    非著者closing review、Reverse R1〜R4、正規receipt gateが同一PLAN revision/exact HEADへ束縛される。
 
-docs-only pair-freeze時点では、上記の実装・Green・独立配布を主張しない。
+（pair-freeze記録）docs-only pair-freeze時点では、上記の実装・Green・独立配布を主張しない。
+
+## 10. 実装実測（2026-09-04 exact-head baseline, scoped / partial）
+
+PR #463の実装成果物は exact HEAD `c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` である。対象testは
+`tests/consumer-node-runtime.test.ts` の17 testsで、identity/digest/path、Node-only wrapper、port順序、
+pre/post activation fault、read-only reconcile once、lock release、A/B path隔離、setup checkout削除後の
+consumer起動、実filesystemでのstaging→sealed bundle→active pointer→wrapper起動、readiness bypass、
+genesis、P=100 bounded derivationを実測した。
+
+実行証跡:
+
+- `node scripts/run-vitest-snapshot.ts tests/consumer-node-runtime.test.ts --reporter=dot` は
+  exact HEAD `c472bbc6...` の専用targetで17/17 Green。
+- required CI run `33837644210` は exact HEAD `c472bbc6...` の Linux/Windows/aggregate 3/3 Green。
+- `npx tsc --noEmit --pretty false` exit 0、Biome対象4 files clean、`git diff --check` clean。
+
+これは全候補の完了証跡ではない。Windows junction/reparse・8.3 alias・DAC permission、historyの
+完全prefix/truncate/reorder/fork/replay、attested prior generation rollback selection、外部
+read/open/stat/process counter、Claude/Codex hook実fixture、aggregate CI、非著者closing review、
+Reverse R1〜R4、実producerのL6-93 receipt入力は未実測であり、実装完了・独立配布・全15 oracle Greenを
+主張しない。これらは次のQA/Reverse evidenceで追加測定する。
+
+## 10.1 追加hardening実測（2026-08-28）
+
+exact HEAD `c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` で、consumer-local
+Node wrapperのadmissionを強化した。active pointerのexact keys、canonical bundle digest、manifestの
+identity/Node authority、6 payload digest、compiled ESM digest binding、history genesis/prior、
+runtime rootおよびrealpath containmentをspawn前に検証し、distribution readinessはsealed consumer
+runtimeが供給された場合にBunを要求しない。compiled ESM digest drift、manifest digest forgery、
+external bundle pointer、valid sealed runtime without Bunの各one-axis oracleを追加した。
+
+`tests/consumer-node-runtime.test.ts` は17 testsで専用target 17/17 Green、required CIの
+Linux/Windows/aggregateも3/3 Greenだった。これは実bytesから起動するconsumer-local
+filesystem producer laneを含むが、L6-93所有の実行可能NodeBootstrapReceipt producerではない。
+
+完了条件1および実producer gateは、PR #507のmain統合により開始可能になった。ただし現在の実装PRでは
+`NodeBootstrapReceipt`は**opaqueなdigest束縛bytes**として扱うにとどまる: consumer bundleは
+receipt bytesのdigestをmanifestへ束縛する(`src/setup/consumer-node-runtime.ts` のreceipt digest化)
+だけで、receiptのparse、generation/revision identityの照合、L6-93 producerが実生成した
+bytesの供給は行っておらず、テストfixtureも固定bytes(`tests/consumer-node-runtime.test.ts` の
+`Buffer.from("bootstrap")`)である。したがって**L6-93 receipt-backed producer入力の接続検証は
+未実測**であり(§10・PLAN-REVERSE-516 R0と同じ扱い)、完了条件1および開始条件5のcoverageは
+本PRから主張しない。#420でproducer自体を新設・変更しない。Windows junction/reparse・8.3 alias・
+permission、history prefix/replay、attested rollback、external read/open/stat counter、hooks、
+非著者closing review、Reverse R1〜R4も未実測であり、全15 oracle Greenは主張しない。

@@ -48,3 +48,40 @@ worktreeを物理削除したfixture、hostile consumer-local source、read/open
 
 実装対象外は#432 identity bootstrap、#414 remote publication、source側Bun residual cleanup、
 Pack canary/stable、shared L7 test-designへの追記である。これらをこのpairのGreen根拠へ混ぜない。
+
+## 実装昇格の初回記録（2026-08-28, historical / superseded）
+
+`tests/consumer-node-runtime.test.ts` は、実装成果物の最初の部分測定として CANDIDATE-U-PACKNODE-001〜015
+の契約軸を一部束ねて14 testsへ実装した。これは後続の17-test実装に置き換えられた部分測定であり、
+現行PRのmerge evidenceとして使用しない。
+
+実装が直接測定した範囲は、identity/digest/path、Node-only active-pointer wrapper、port順序、
+pre/post activation fault、reconcile once、finally release、A/B path隔離、setup checkout削除後の
+起動、実filesystem staging→sealed bundle→pointer→wrapper起動、readiness bypass、genesis、P=100
+bounded derivationである。これは各候補の全mutation軸を独立に殺した証跡ではない。
+
+Windows junction/reparse・8.3 alias・permission、history prefix/replay/sequence、attested rollback、
+外部read/open/stat/process counter、Claude/Codex hook実fixture、L6-93 receipt-backed producer、
+Linux/Windows/aggregate CI、非著者closing review、Reverse R1〜R4は未昇格・未実測である。従って
+`CANDIDATE-*`のdocs-only freezeと既存PACKISO/NODEBOOT候補は保持し、全15 U/P候補Greenや独立配布を
+この記録から主張しない。
+
+## 追加実装昇格（2026-09-04 exact-head baseline, partial）
+
+PR #463 exact HEAD `c472bbc6767b5a2d6f9cc52dee6d4830e22a4a7a` で17 testsへ更新し、専用targetを
+17/17 Greenで実測した。required CI run `33837644210`もLinux/Windows/aggregate 3/3 Greenである。
+追加軸はBunなしのsealed readiness、compiled ESM digest binding、manifest digest
+forgery、external bundle pointerであり、wrapperはspawn前にpointer/manifest/identity/Node
+authority、6 payload digest、history genesis/prior、lexical/realpath containmentを検証する。
+これは実bytes fixtureのconsumer-local producer laneを含むが、L6-93の実行可能receipt producerを
+consumer bundleへ接続する実装検証、Windows境界、history prefix/replay、rollback、external
+read/open/stat counter、hooks、closing review、Reverse R1〜R4は未完了である。過去に記録した
+producer欠落によるHard blockはPR #507のmain統合後に解消済みである。ただし現PRの実装は
+`NodeBootstrapReceipt`をopaqueなdigest束縛bytesとして扱い(fixtureは固定bytes
+`Buffer.from("bootstrap")`)、receiptのparseやgeneration/revision identity照合、L6-93 producer
+実生成bytesの供給は行っていない。同producerのreceipt-backed接続は**未実測**として残し、後続の
+実装PR/Reverseで測定する。全候補Greenや完了条件1・開始条件5はこのbaselineから主張しない。
+
+実装testのlabelsはdocs-only freezeとのalignmentを保つため、`CANDIDATE-U-PACKNODE-*`/
+`CANDIDATE-P-PACKNODE-*`を使用する。各テストは対応候補の一部軸だけを測定し、候補全mutation
+matrixの完了やU/P oracleへの昇格を意味しない。
