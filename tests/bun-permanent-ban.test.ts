@@ -6,10 +6,10 @@ import {
   type NodeBanDocuments,
   type NodeBanF0cAggregateBinding,
   type NodeBanGenerationBinding,
-  NodeOnlyProcessObserver,
   runNodeBanAudit,
   verifyNodeBanAuditReceipt,
-} from "../src/runtime/node-ban-audit.ts";
+} from "../src/lint/bun-permanent-ban.ts";
+import { NodeOnlyProcessObserver } from "../src/runtime/runtime-image-observer.ts";
 
 const subjectRevision = "a".repeat(40);
 const artifactDigest = `sha256:${"b".repeat(64)}`;
@@ -19,6 +19,9 @@ const f0c: NodeBanF0cAggregateBinding = {
   generation_id: "node-ci-q0-run-1-1",
   artifact_digest: artifactDigest,
   subject_revision: subjectRevision,
+  workflow_revision: subjectRevision,
+  run_id: "q0-run-1",
+  run_attempt: 1,
 };
 const node: NodeBanGenerationBinding = {
   generation_id: "node-q0-generation",
@@ -93,6 +96,16 @@ describe("Q0 Node-only Bun qualification", () => {
         processObservations: [nodeObservation()],
       }),
     ).toThrow("q0-artifact-digest-mismatch");
+    expect(() =>
+      runNodeBanAudit({
+        repoRoot: process.cwd(),
+        subjectRevision,
+        f0c: { ...f0c, workflow_revision: "c".repeat(40) },
+        node,
+        documents: cleanDocuments(),
+        processObservations: [nodeObservation()],
+      }),
+    ).toThrow("q0-f0c-workflow-revision-mismatch");
   });
 
   it("CAND-NODEBOOT-201 detects independent static Bun axes", () => {
@@ -170,6 +183,13 @@ describe("Q0 Node-only Bun qualification", () => {
       result.receipt,
     );
     expect(() =>
+      verifyNodeBanAuditReceipt(result.receipt, {
+        subjectRevision,
+        f0c: { ...f0c, subject_revision: "c".repeat(40) },
+        node,
+      }),
+    ).toThrow("q0-receipt-binding-mismatch");
+    expect(() =>
       verifyNodeBanAuditReceipt(
         { ...result.receipt, node_artifact_digest: `sha256:${"c".repeat(64)}` },
         { subjectRevision, f0c, node },
@@ -224,5 +244,16 @@ describe("Q0 Node-only Bun qualification", () => {
     });
     expect(forgedSpawn.receipt.qualification).toBe("non_compliant");
     expect(forgedSpawn.findings.some((item) => item.detector === "process-observer")).toBe(true);
+
+    const forgedOutcome = runNodeBanAudit({
+      repoRoot: process.cwd(),
+      subjectRevision,
+      f0c,
+      node,
+      documents: cleanDocuments(),
+      processObservations: [{ ...fallback, outcome: "allowed", spawned: false }],
+    });
+    expect(forgedOutcome.receipt.qualification).toBe("non_compliant");
+    expect(forgedOutcome.findings.some((item) => item.detector === "process-observer")).toBe(true);
   });
 });

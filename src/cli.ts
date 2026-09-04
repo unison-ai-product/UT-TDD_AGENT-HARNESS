@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import {
@@ -31,7 +31,6 @@ import {
 } from "./cli/delegation.ts";
 import { registerDistributionCommands } from "./cli/distribution.ts";
 import { registerFeedbackCommands } from "./cli/feedback.ts";
-import { registerNodeBanAuditCommand } from "./cli/node-ban-audit.ts";
 import { registerPlanAdmissionCommands } from "./cli/plan-admission.ts";
 import { registerPlanAssetCommands } from "./cli/plan-asset.ts";
 import { registerPlanDraftCommand } from "./cli/plan-draft.ts";
@@ -79,6 +78,11 @@ import {
   renderSessionStartDigest,
   selectSessionStartDigest,
 } from "./handover/session-start-digest.ts";
+import {
+  type NodeBanF0cAggregateBinding,
+  nodeBanAuditMessages,
+  runNodeBanAudit,
+} from "./lint/bun-permanent-ban.ts";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact.ts";
 import {
   applyDigestAnchorCandidatesToContent,
@@ -153,6 +157,7 @@ import {
 } from "./runtime/claude-memory-wake.ts";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect.ts";
 import { scanDanglingStops } from "./runtime/forced-stop.ts";
+import { createNodeInvocation, verifyNodeGeneration } from "./runtime/node-bootstrap.ts";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
@@ -161,6 +166,7 @@ import {
 } from "./runtime/provider-handover.ts";
 import { requireRuntimeRepoRoot } from "./runtime/repo-root.ts";
 import { summarizeStagedReview } from "./runtime/review-guard.ts";
+import { NodeOnlyProcessObserver } from "./runtime/runtime-image-observer.ts";
 import {
   dispatch,
   nodeDeps,
@@ -3387,7 +3393,63 @@ team
 
 const audit = program.command("audit").description("read-only repository audits");
 
-registerNodeBanAuditCommand(audit);
+audit
+  .command("node-ban")
+  .description("Q0 Node-only Bun permanent-ban qualification audit")
+  .requiredOption("--generation <path>", "sealed Node generation directory")
+  .requiredOption("--f0c-evidence <path>", "F0c aggregate evidence JSON")
+  .option("--receipt <path>", "write Q0 receipt JSON")
+  .option("--json", "JSON output")
+  .action((opts: { generation: string; f0cEvidence: string; receipt?: string; json?: boolean }) => {
+    try {
+      const repoRoot = process.cwd();
+      const subjectRevision = execFileSync("git", ["rev-parse", "HEAD"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      }).trim();
+      const generation = verifyNodeGeneration(
+        repoRoot,
+        resolve(repoRoot, opts.generation),
+        subjectRevision,
+      );
+      const observer = new NodeOnlyProcessObserver();
+      const invocation = createNodeInvocation(generation, ["status", "--json"]);
+      observer.invoke(invocation, () => {
+        execFileSync(invocation.command, invocation.args, {
+          cwd: repoRoot,
+          ...invocation.options,
+          stdio: "ignore",
+        });
+      });
+      const result = runNodeBanAudit({
+        repoRoot,
+        subjectRevision,
+        f0c: JSON.parse(readFileSync(opts.f0cEvidence, "utf8")) as NodeBanF0cAggregateBinding,
+        node: {
+          generation_id: generation.receipt.generation_id,
+          subject_revision: generation.receipt.subject_revision,
+          artifact_digest: `sha256:${generation.receipt.compiled_cli.sha256}`,
+          runtime: "node",
+        },
+        processObservations: observer.snapshot(),
+      });
+      if (opts.receipt)
+        writeFileSync(
+          resolve(repoRoot, opts.receipt),
+          `${JSON.stringify(result.receipt)}\n`,
+          "utf8",
+        );
+      process.stdout.write(
+        opts.json
+          ? `${JSON.stringify(result.receipt, null, 2)}\n`
+          : `${nodeBanAuditMessages(result).join("\n")}\n`,
+      );
+      process.exitCode = result.receipt.qualification === "qualified" ? 0 : 1;
+    } catch (error) {
+      process.stderr.write(`node-ban-audit failed: ${String(error)}\n`);
+      process.exitCode = 2;
+    }
+  });
 
 audit
   .command("quality")

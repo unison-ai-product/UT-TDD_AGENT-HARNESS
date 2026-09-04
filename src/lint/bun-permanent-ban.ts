@@ -1,26 +1,101 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, join, relative, resolve } from "node:path";
-import { analyzeGithubCiPolicy, type GithubWorkflowDoc } from "../lint/github-ci-policy.ts";
-import { analyzeRuleDrift, type RuleAdapterDocs } from "../lint/rule-drift.ts";
+import { join, relative, resolve } from "node:path";
+import { z } from "zod";
+import {
+  classifyRuntimeImageProcess,
+  type RuntimeImageProcessObservation,
+} from "../runtime/runtime-image-observer.ts";
+import { analyzeGithubCiPolicy, type GithubWorkflowDoc } from "./github-ci-policy.ts";
+import { analyzeRuleDrift, type RuleAdapterDocs } from "./rule-drift.ts";
 import {
   analyzeRuntimePortability,
   loadRuntimePortabilityDocs,
   type RuntimePortabilityDoc,
-} from "../lint/runtime-portability.ts";
-import { analyzeToolchainPin, type ToolchainPinDocs } from "../lint/toolchain-pin.ts";
-import {
-  type NodeBanAuditReceipt,
-  type NodeBanCandidateId,
-  type NodeBanCoverage,
-  type NodeBanFinding,
-  type NodeBanProcessObservation,
-  nodeBanAuditReceiptSchema,
-  nodeBanAuditSchemaVersion,
-  nodeBanF0cAggregateSchema,
-  nodeBanProcessObservationSchema,
-} from "../schema/node-ban-audit.ts";
+} from "./runtime-portability.ts";
+import { analyzeToolchainPin, type ToolchainPinDocs } from "./toolchain-pin.ts";
+
+const nodeBanAuditSchemaVersion = "bun-permanent-ban.v1" as const;
+const nodeBanCandidateIdSchema = z.enum([
+  "CAND-NODEBOOT-020",
+  "CAND-NODEBOOT-201",
+  "CAND-NODEBOOT-202",
+  "CAND-NODEBOOT-203",
+  "CAND-NODEBOOT-204",
+]);
+const nodeBanDigestSchema = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+const nodeBanRevisionSchema = z.string().regex(/^[0-9a-f]{40}$/);
+const nodeBanF0cAggregateSchema = z
+  .object({
+    ok: z.literal(true),
+    schema_version: z.literal("node-generation-aggregate.v1"),
+    generation_id: z.string().min(1),
+    artifact_digest: nodeBanDigestSchema,
+    subject_revision: nodeBanRevisionSchema,
+    workflow_revision: nodeBanRevisionSchema,
+    run_id: z.string().min(1),
+    run_attempt: z.number().int().positive(),
+  })
+  .strict();
+const nodeBanFindingSchema = z
+  .object({
+    detector: z.enum([
+      "runtime-portability",
+      "github-ci-policy",
+      "rule-drift",
+      "toolchain-pin",
+      "process-observer",
+    ]),
+    path: z.string().min(1),
+    rule: z.string().min(1),
+    detail: z.string().min(1),
+  })
+  .strict();
+const nodeBanCoverageSchema = z
+  .object({
+    runtime_files: z.number().int().nonnegative(),
+    workflow_files: z.number().int().nonnegative(),
+    instruction_files: z.number().int().nonnegative(),
+    toolchain_files: z.number().int().nonnegative(),
+    process_observations: z.number().int().nonnegative(),
+    gaps: z.array(z.string()),
+  })
+  .strict();
+const nodeBanProcessObservationSchema = z
+  .object({
+    command: z.string().min(1),
+    args: z.array(z.string()),
+    shell: z.boolean(),
+    outcome: z.enum(["allowed", "blocked"]),
+    spawned: z.boolean(),
+    reason: z.string().min(1),
+  })
+  .strict();
+const nodeBanAuditReceiptSchema = z
+  .object({
+    schema_version: z.literal(nodeBanAuditSchemaVersion),
+    candidate_ids: z.array(nodeBanCandidateIdSchema).min(1),
+    subject_revision: nodeBanRevisionSchema,
+    f0c_generation_id: z.string().min(1),
+    f0c_artifact_digest: nodeBanDigestSchema,
+    node_generation_id: z.string().min(1),
+    node_artifact_digest: nodeBanDigestSchema,
+    runtime: z.literal("node"),
+    coverage: nodeBanCoverageSchema,
+    findings: z.array(nodeBanFindingSchema),
+    process_observations: z.array(nodeBanProcessObservationSchema),
+    qualification: z.enum(["qualified", "non_compliant", "indeterminate"]),
+    evidence_digest: nodeBanDigestSchema,
+    receipt_digest: nodeBanDigestSchema,
+  })
+  .strict();
+
+export type NodeBanCandidateId = z.infer<typeof nodeBanCandidateIdSchema>;
+export type NodeBanCoverage = z.infer<typeof nodeBanCoverageSchema>;
+export type NodeBanFinding = z.infer<typeof nodeBanFindingSchema>;
+export type NodeBanProcessObservation = RuntimeImageProcessObservation;
+export type NodeBanAuditReceipt = z.infer<typeof nodeBanAuditReceiptSchema>;
 
 export const NODE_BAN_CANDIDATE_IDS = [
   "CAND-NODEBOOT-020",
@@ -32,8 +107,6 @@ export const NODE_BAN_CANDIDATE_IDS = [
 
 const REVISION = /^[0-9a-f]{40}$/;
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
-const FORBIDDEN_EXECUTABLE = /^(?:bun|bunx|tsx|bash|sh|powershell|pwsh|cmd)$/i;
-const FORBIDDEN_ARGUMENT = /^(?:bun|bunx|tsx)(?:\.(?:cmd|exe|bat))?$/i;
 
 export interface NodeBanGenerationBinding {
   readonly generation_id: string;
@@ -48,6 +121,9 @@ export interface NodeBanF0cAggregateBinding {
   readonly generation_id: string;
   readonly artifact_digest: string;
   readonly subject_revision: string;
+  readonly workflow_revision: string;
+  readonly run_id: string;
+  readonly run_attempt: number;
 }
 
 export interface NodeBanDocuments {
@@ -64,12 +140,6 @@ export interface NodeBanAuditInput {
   readonly node: NodeBanGenerationBinding;
   readonly documents?: NodeBanDocuments;
   readonly processObservations: readonly NodeBanProcessObservation[];
-}
-
-export interface NodeProcessInput {
-  readonly command: string;
-  readonly args: readonly string[];
-  readonly options: { readonly shell: boolean; readonly windowsHide?: boolean };
 }
 
 export interface NodeBanAuditResult {
@@ -244,48 +314,6 @@ export function collectNodeBanFindings(documents: NodeBanDocuments): NodeBanFind
   return uniqueFindings(findings);
 }
 
-function classifyProcess(command: string, args: readonly string[], shell: boolean): string {
-  if (shell) return "shell-runtime";
-  const executable = basename(command).replace(/\.(?:cmd|exe|bat)$/i, "");
-  if (FORBIDDEN_EXECUTABLE.test(executable)) return `${executable.toLowerCase()}-runtime`;
-  if (!/^node$/i.test(executable)) return "non-node-runtime";
-  if (args.some((arg) => FORBIDDEN_ARGUMENT.test(arg) || /\.(?:ts|tsx)$/i.test(arg))) {
-    return "source-or-bun-fallback";
-  }
-  return "node-only";
-}
-
-export class NodeOnlyProcessObserver {
-  #observations: NodeBanProcessObservation[] = [];
-
-  inspect(input: NodeProcessInput): NodeBanProcessObservation {
-    const reason = classifyProcess(input.command, input.args, input.options.shell);
-    const observation: NodeBanProcessObservation = {
-      command: input.command,
-      args: [...input.args],
-      shell: input.options.shell,
-      outcome: reason === "node-only" ? "allowed" : "blocked",
-      spawned: false,
-      reason,
-    };
-    this.#observations.push(observation);
-    return observation;
-  }
-
-  invoke(input: NodeProcessInput, run: () => void): NodeBanProcessObservation {
-    const inspected = this.inspect(input);
-    if (inspected.outcome === "blocked") return inspected;
-    run();
-    const spawned = { ...inspected, spawned: true };
-    this.#observations[this.#observations.length - 1] = spawned;
-    return spawned;
-  }
-
-  snapshot(): readonly NodeBanProcessObservation[] {
-    return this.#observations.map((item) => ({ ...item, args: [...item.args] }));
-  }
-}
-
 function validateBinding(input: NodeBanAuditInput): void {
   if (!REVISION.test(input.subjectRevision))
     throw new NodeBanAuditError("q0-subject-revision-invalid");
@@ -307,6 +335,8 @@ function validateBinding(input: NodeBanAuditInput): void {
     input.node.subject_revision !== input.subjectRevision
   )
     throw new NodeBanAuditError("q0-subject-revision-mismatch");
+  if (input.f0c.workflow_revision !== input.subjectRevision)
+    throw new NodeBanAuditError("q0-f0c-workflow-revision-mismatch");
   if (input.f0c.artifact_digest !== input.node.artifact_digest)
     throw new NodeBanAuditError("q0-artifact-digest-mismatch");
   if (!input.f0c.generation_id || !input.node.generation_id)
@@ -351,7 +381,11 @@ function coverage(
 
 function processFindings(observations: readonly NodeBanProcessObservation[]): NodeBanFinding[] {
   return observations.flatMap((observation) => {
-    const reason = classifyProcess(observation.command, observation.args, observation.shell);
+    const reason = classifyRuntimeImageProcess(
+      observation.command,
+      observation.args,
+      observation.shell,
+    );
     const expected = reason === "node-only" ? "allowed" : "blocked";
     if (observation.outcome !== expected || (observation.spawned && expected === "blocked")) {
       return [
@@ -420,17 +454,18 @@ export function verifyNodeBanAuditReceipt(
   expected: Pick<NodeBanAuditInput, "subjectRevision" | "f0c" | "node">,
 ): NodeBanAuditReceipt {
   const receipt = nodeBanAuditReceiptSchema.parse(value);
-  if (
-    !nodeBanF0cAggregateSchema.safeParse(expected.f0c).success ||
-    !expected.node ||
-    expected.node.runtime !== "node" ||
-    !REVISION.test(expected.subjectRevision) ||
-    !DIGEST.test(expected.node.artifact_digest) ||
-    !DIGEST.test(expected.f0c.artifact_digest)
-  )
+  try {
+    validateBinding({
+      repoRoot: "",
+      subjectRevision: expected.subjectRevision,
+      f0c: expected.f0c,
+      node: expected.node,
+      processObservations: [],
+    });
+  } catch {
     throw new NodeBanAuditError("q0-receipt-binding-mismatch");
-  const expectedIds = [...NODE_BAN_CANDIDATE_IDS].sort();
-  if (stable([...receipt.candidate_ids].sort()) !== stable(expectedIds))
+  }
+  if (stable(receipt.candidate_ids) !== stable(NODE_BAN_CANDIDATE_IDS))
     throw new NodeBanAuditError("q0-candidate-set-mismatch");
   if (
     receipt.subject_revision !== expected.subjectRevision ||
@@ -447,10 +482,18 @@ export function verifyNodeBanAuditReceipt(
   if (sha256(stable(evidence)) !== evidence_digest)
     throw new NodeBanAuditError("q0-evidence-digest-mismatch");
   if (
-    receipt.qualification === "qualified" &&
-    (receipt.findings.length > 0 || receipt.coverage.gaps.length > 0)
+    receipt.coverage.process_observations !== receipt.process_observations.length ||
+    receipt.process_observations.length === 0
   )
-    throw new NodeBanAuditError("q0-qualified-receipt-invalid");
+    throw new NodeBanAuditError("q0-process-coverage-mismatch");
+  const expectedQualification =
+    receipt.findings.length > 0 || processFindings(receipt.process_observations).length > 0
+      ? "non_compliant"
+      : receipt.coverage.gaps.length > 0
+        ? "indeterminate"
+        : "qualified";
+  if (receipt.qualification !== expectedQualification)
+    throw new NodeBanAuditError("q0-qualification-mismatch");
   return receipt;
 }
 
