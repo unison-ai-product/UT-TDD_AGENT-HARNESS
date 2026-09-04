@@ -78,14 +78,15 @@ Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
 L0 企画・L1 要求・L2 モック・L3 候補承認・不可逆作用・architecture / release decision・**チーム内責務配分**を扱う。
 人間の関与点は次の層別境界表で固定する (要件候補 UTV4-FR-001)。
 
-| 層 | 人間 | AI | 介入点 |
-|---|---|---|---|
-| L0-L2 | 確定 (企画・要求・体験) | 起草補助・候補提示 | 常時 |
-| L3 | 承認 (G1/G3) | 要件起草・compile | 承認ゲート |
-| L4-L6 | 設計判断の採択 (trade-off 実在時のみ) | 設計・pair-freeze | advisor 後の未解決 trade-off、高影響境界 |
-| L7 | チケット割当の確認 | 実装・test・PR | lease 衝突、scope 逸脱、escalation 境界 |
-| L8-L12 | 受入 (G11/G12) | 検証・証拠束縛 | 受入ゲート |
-| L13-L14 | 運用判断・KPI 評価 | 観測・改善候補生成 | 改善候補の採否 |
+| 層 | 人間 | AI | 介入点 | owner cardinality |
+|---|---|---|---|---|
+| L0-L2 | 確定 (企画・要求・体験)。PoC / 画面プロトの反応を出す | 起草補助・候補提示・プロト作成 | 常時 | 文書単位 1 名 (人間)。PoC / 画面プロトは初期画面ルール freeze 後にチケット単位 1 名で分担 |
+| L3 | 承認 (G1/G3)。要件を 1 名がまとめる | 要件起草・compile | 承認ゲート | 文書単位 1 名 (人間、compile と freeze の責任) |
+| L4 | 基本設計を 1 名がまとめ、設計判断を採択 | 設計案・trade-off 提示 | advisor 後の未解決 trade-off、高影響境界 | 文書単位 1 名 (人間)。提案は誰でも、採択・統合は owner |
+| L5-L6 | 設計判断の採択 (trade-off 実在時のみ) | 詳細設計・仕様・pair-freeze | 同上 | チケット単位 1 名 (人間または AI lane) |
+| L7 | チケット割当の確認 | 実装・test・PR | lease 衝突、scope 逸脱、escalation 境界 | チケット単位 1 名 (AI lane 可) |
+| L8-L12 | 受入 (G11/G12) | 検証・証拠束縛 | 受入ゲート | 検証チケット単位 1 名 (author と別) |
+| L13-L14 | 運用判断・KPI 評価 | 観測・改善候補生成 | 改善候補の採否 | 運用 owner 1 名 |
 
 ### 2. Change Contract Compiler (変更契約面)
 
@@ -139,7 +140,7 @@ PO は 2 大要求 (A / B) に加えて、参照元の個人開発ハーネス�
 | 領域 | 写像先 Plane | 採る骨格 | 採らない |
 |---|---|---|---|
 | C. 上流要求エンジン | Sovereignty → Change Contract Compiler | L1 intake (人間 markdown) → L2 discovery (append-only event) → L3 typed IR compile → 人間承認 freeze。AI は未確定値を補完しない | 別 requirement engine、Issue / DB の意味正本化 |
-| D. PoC / プロトタイプ作成 | Assurance Kernel (case-driven model) | Discovery PoC を production 工程と別 axis で識別、S3 verified ≠ terminal、S4 decision record 必須、prototype 反応の構造化還元 | PoC 成果の production への無審査昇格 |
+| D. PoC / プロトタイプ作成 | Assurance Kernel (case-driven model) | Discovery PoC を production 工程と別 axis で識別、S3 verified ≠ terminal、S4 decision record 必須、prototype 反応の構造化還元。初期画面ルール (画面規約 / token / 状態表現) を freeze した後、画面プロトをチケット単位で分担する | PoC 成果の production への無審査昇格、画面ルール freeze 前の分担 |
 | E. ハーネスメモリの見直し | Evidence and State Ledger → Adaptation | captured → canonicalized → retired の lifecycle、責務 owner の学習資産、失効 / 矛盾 / 再検証状態 | memory を進捗・正本・承認の代替にすること |
 | G. 縮退・是正案件 (参照元 issue / PR 追突、2026-09-04) | Adaptation → 全 Plane | surface rationalization (7 class 分類 + 利用計測で退役)、legacy consumer inventory、schema / archive の原子的退役、receipt の workspace 束縛と訂正世代、reviewer attestation、gc / 未 commit 残置 / stale base の doctor 化、projection silent skip の finding 化、Document Authority Census | CI 規模前提の scheduler、release slice、外部実行 lane 前提の統制 |
 | F. スキル / ナレッジ管理新体制 | Adaptation → Control Plane | typed applicability registry、最小 packet の決定的 compile、firing telemetry と可逆 quarantine、shadow + 測定 + 独立 review による昇格 | 全 skill 一括注入、削除による整理、単一 episode 昇格 |

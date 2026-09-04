@@ -185,7 +185,14 @@ PO は「詳細と仕様」をチケット化対象とした。採択: 詳細設
 チケット対象だが本文はチケットに入れず markdown 正本へ束縛する。現行 PLAN (kind=design / add-design) の frontmatter が
 近い形を持つため、FR-007 の PLAN frontmatter record 化は design kind から始める。FR-004 / AC-038 へ降下。
 
-### 3.5 候補文書の置き場
+### 3.5 owner cardinality と上流 PoC / 画面プロトのチケット化 (PO 指示 2026-09-04)
+
+PO 指示: 「要件と基本 (設計) は 1 人がまとめる」「上流の PoC / 画面プロトはチケットにし、初期画面でルールを固定したら
+分担する (地味に時間がかかる)」。採択: 層別境界表に owner cardinality 列を追加 (L0〜L4 = 文書単位 1 名の人間、
+L5〜L7 = チケット単位 1 名、L8〜L12 = author と別の検証 owner 1 名)。PoC / 画面プロトは work item record で発行し、
+複数人分担は初期画面ルール freeze record を前提、反応は L2 discovery event へ。BR-015、FR-028 / 029、AC-039 / 040 へ降下。
+
+### 3.6 候補文書の置き場
 
 参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
