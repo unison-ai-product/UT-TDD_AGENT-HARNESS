@@ -202,7 +202,7 @@ worker/dispatch の actor claim を human の証拠へ置換せず、claim mutat
 ### 3.3 typed unknown と mutation
 
 record 欠落、repository identity 不一致、object 不在、field/signature mismatch、collision、snapshot 差し替え
-は typed `unknown`/`conflict` とする。mint は許しても unknown の attempt/close/merge_ready は許さず、申告
+は typed `unknown`/`conflict` とする。mint は許しても unknown の attempt/close/merge は許さず、申告
 family、human_attested、旧 schema を fallback にしない。record は append-only、訂正は append + supersede とし、
 cross-repo replay、overwrite/delete、receipt 発行後の snapshot mutation を deny する。
 
@@ -293,7 +293,7 @@ self-review も non-author も判定せず、その authority は既存の独立
 3. `beginReviewAttempt` と merge gate の独立再照合、snapshot/receipt binding、typed unknown。
 4. 旧 schema digest 保存と facts 照合必須化、`unknown_provenance_unresolved` の non-terminal 化。
 5. `unverified_family`/`human_attested` の監査保存と verified 昇格禁止。
-6. `CANDIDATE-U-AUTHPROV-001..052` と `CANDIDATE-P-AUTHPROV-001..003` を同じ oracle で検証する。
+6. `CANDIDATE-U-AUTHPROV-001..056` と `CANDIDATE-P-AUTHPROV-001..003` を同じ oracle で検証する (053..056 は §3.2.2 の state モデルと「claim が state 遷移の入力にならない」ことの中核回帰)。
 
 provider-family authority、HMAC/MAC custody、dispatch issuer、human actor authentication、Node generation/runtime
 verifier、Bun deletion、CI/consumer changes は本 plan の実装 slice に含めない。

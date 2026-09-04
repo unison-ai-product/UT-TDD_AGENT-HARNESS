@@ -25,7 +25,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | CANDIDATE-U-AUTHPROV-003 | 002 の逆向き反転 | 002 と同じ。family の双方向 claim は authority にならない |
 | CANDIDATE-U-AUTHPROV-004 | facts conflict/欠落と family/provider claim mismatch が同時成立 | facts の `unknown`/deny を先に返し、claim で補完しない |
 | CANDIDATE-U-AUTHPROV-005 | deny 済み attempt に merge gate を評価 | merge gate も独立再照合して deny |
-| CANDIDATE-U-AUTHPROV-006 | request/receipt/merge が同一 verified Git snapshot | `merge_ready` |
+| CANDIDATE-U-AUTHPROV-006 | request/receipt/merge が同一 verified Git snapshot | provenance state `verified`。provenance 由来の deny を追加しない (merge 可否は exact-HEAD non-author closing-review protocol が別に決める。`merge_ready` を出力しない) |
 
 ## unknown と backfill (§3.3)
 
@@ -33,7 +33,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 |---|---|---|
 | CANDIDATE-U-AUTHPROV-007 | Git facts が無い PR の request mint | mint は成功し typed `unknown` を記録 |
 | CANDIDATE-U-AUTHPROV-008 | unknown request の attempt | typed deny。申告値へ fallback しない |
-| CANDIDATE-U-AUTHPROV-009 | unknown request の merge gate | `merge_ready` に到達しない |
+| CANDIDATE-U-AUTHPROV-009 | unknown request の merge gate | deny (`unknown_provenance_unresolved`)。merge gate は provenance deny を独立再照合して進めない |
 | CANDIDATE-U-AUTHPROV-010 | receipt 前に human claim を backfill | append はできるが `human_attested` のまま。facts unknown の attempt は deny |
 | CANDIDATE-U-AUTHPROV-011 | Git record write failure | 成功扱いにせず unknown |
 
@@ -74,7 +74,7 @@ canonical digest/snapshot である。provider/model/worker/dispatch/family は 
 | CANDIDATE-U-AUTHPROV-032 | record の overwrite/delete | deny。訂正は append + supersede のみ |
 | CANDIDATE-U-AUTHPROV-033 | issuer/attestation claim の欠落・変更 | claim は authority を作らず、Git facts だけで判定 |
 | CANDIDATE-U-AUTHPROV-034 | receipt 後・merge 前の provenance snapshot 差し替え | merge gate が snapshot 不一致を typed deny |
-| CANDIDATE-U-AUTHPROV-035 | request/receipt/merge が同一 snapshot | `merge_ready` |
+| CANDIDATE-U-AUTHPROV-035 | request/receipt/merge が同一 snapshot | provenance state `verified` のまま deny を追加しない。`merge_ready` を出力しない (006 と同一 oracle、snapshot binding 側の正常系) |
 
 ## legacy non-grandfather (§3.4)
 

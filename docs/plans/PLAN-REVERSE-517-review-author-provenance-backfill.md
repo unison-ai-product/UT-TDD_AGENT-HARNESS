@@ -51,7 +51,7 @@ canonical digest mutation、receipt 後の snapshot 差し替えは `unknown`/ty
 | 002–003 | family claim を反転しても Git facts の判定は変わらない。claim 不一致だけで authority を得ない |
 | 004 | facts conflict/欠落を family/provider claim より先に `unknown`/deny |
 | 005 | attempt deny 後も merge gate が独立再照合して deny |
-| 006 | request/receipt/merge が同一 verified Git snapshot なら `merge_ready` |
+| 006 | request/receipt/merge が同一 verified Git snapshot なら provenance state `verified` で deny を追加しない。`merge_ready` は出力しない (merge 可否は closing-review protocol) |
 | 007 | facts 欠落で mint は成功するが typed `unknown` を記録 |
 | 008–009 | unknown attempt/merge は deny、申告 fallback なし |
 | 010 | human backfill は `human_attested` claim を追記するだけ。facts unknown の attempt は deny |
@@ -76,7 +76,7 @@ canonical digest mutation、receipt 後の snapshot 差し替えは `unknown`/ty
 | 032 | overwrite/delete は deny。訂正は append + supersede のみ |
 | 033 | issuer/attestation claim の欠落・変更は authority を作らない。Git facts が唯一の判定根 |
 | 034 | receipt 後の snapshot 差し替えは merge gate が typed deny |
-| 035 | 同一 snapshot の正常系は `merge_ready` |
+| 035 | 同一 snapshot の正常系は state `verified` のまま deny を追加しない。`merge_ready` は出力しない |
 | 036 | 旧 schema でも facts 照合なしの close は deny |
 | 037 | facts unknown は `unknown_provenance_unresolved` の live/merge-blocking のまま |
 | 038 | 旧 digest を再計算せず、verified facts なら close 可 |
@@ -93,6 +93,10 @@ canonical digest mutation、receipt 後の snapshot 差し替えは `unknown`/ty
 | 050 | runtime env/key custody は trust root でなく、観測して authority を付与しない |
 | 051 | human family claim と reviewer family claim の一致は self-review 根拠にならず、既存 review gate を変えない |
 | 052 | `human_attested` を `verified` として伝播したら Red |
+| 053 | Git facts unknown で family claim を same / opposite / 欠落に変異しても全て deny。claim で結果が変われば Red |
+| 054 | Git facts verified で family claim を変異しても state は `verified` のまま。admit / non-author / merge_ready を出力せず、claim で state が変われば Red |
+| 055 | 同一 commit に claim だけ異なる record が併存しても conflict observation の記録のみ。state は facts で決まり deny / 非 deny の反転入力にならない |
+| 056 | provenance record の出力を `admit` / `non_author` / `merge_ready` として消費する呼び出しは Red。merge authority は exact-HEAD non-author closing-review protocol のみ |
 | P-001 | 実 repo で author 文字列から family を導出せず、canonical Git fields を記録 |
 | P-002 | PR #430 型の誤 family claim は authority にならず、Git-recorded facts だけで self-review/non-author を決めない |
 | P-003 | wrapper 内外の provider claim は無視し、Git facts verified/unknown をそのまま適用 |
