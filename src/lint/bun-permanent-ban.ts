@@ -194,7 +194,11 @@ export class CompliancePolicy {
     findings: readonly NodeBanFinding[];
     gaps: readonly string[];
   }): "qualified" | "non_compliant" | "indeterminate" {
-    if (input.baseline.inventory.length > 0 || input.delta.length > 0 || input.findings.length > 0)
+    if (
+      (input.baseline?.inventory.length ?? 0) > 0 ||
+      input.delta.length > 0 ||
+      input.findings.length > 0
+    )
       return "non_compliant";
     if (!input.baseline || input.gaps.length > 0) return "indeterminate";
     return "qualified";
