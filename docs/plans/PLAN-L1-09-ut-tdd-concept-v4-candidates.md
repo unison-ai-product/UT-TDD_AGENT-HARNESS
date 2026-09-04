@@ -131,6 +131,25 @@ compile のみを対象にしている。
 保留 (時期尚早・対象外): CI critical-path scheduler / verification plan / shard budget、Functional Release Slice、
 post-release lifecycle authority (Pack canary #418 以降)、hosted preflight nonce / capability broker (外部実行 lane 前提)。
 
+### 2.6 社内 project の実録 (UNISON-TECHNOLOGY/AI-office-de-seo、PO 提示 2026-09-04)
+
+並行して要求整理と画面プロト詰めを進めている社内 project を、v4 候補の機構が実運用で成立するかの実録として参照する
+(`gh api repos/UNISON-TECHNOLOGY/AI-office-de-seo/git/trees/HEAD?recursive=1`、`gh pr list / gh issue list --repo UNISON-TECHNOLOGY/AI-office-de-seo --state all`、
+2026-09-04 実行、default branch main)。
+
+| 現物 (HEAD 2026-09-04) | v4 候補の対応 | 所見 |
+|---|---|---|
+| L1 要求を 16 分類 (`L1-requirements/categories/`) + logic 5 本に分散、README §3「1 要求 1 正本・ID 参照・UI は計算しない」、`.github/workflows/requirements-audit.yml` → `scripts/audit-requirements.mjs` が REQ / AC の重複・参照切れを検査 | FR-002 / 原則 6 (分散正本)、FR-008 | 分散正本 + 機械照合が実運用で成立している実録 |
+| `scripts/build-requirements-sheet-sync.mjs` が分類別要求 + acceptance-trace をスプレッドシート行へ生成 | FR-008 (スプシ同期 view) | 一方向生成の前例。v4 差分 = admission 経由の書き戻し、生成元 id / revision / digest 列 |
+| `ai-office-de-seo-requirement-dependency-register_v1.md` (必須 / 条件付き / 任意、未成立時の縮退状態、プロト発見の依存は暫定 → 確定) | FR-046 依存 graph、FR-047 discrepancy record | discrepancy record の原型。暫定 → 確定が人間ゲート |
+| README §3.2 順序「L1 → L2 → 画面・遷移・fixture 検証 → 差分を L1/L2 へ反映 → L3 確定」、screen finding、L3 契約は暫定 baseline | FR-039 製本点 (a)、FR-016、FR-048 backflow | 「初期画面でルール固定してから分担」の実装例 |
+| `L3-ui-prototype/ai-office-de-seo-prototype-plan_v3.7.md`: 捏造禁止の fixture 契約 (§4)、異常系 fixture 必須セット PT-X、PT-* 受入チェックリスト (§6)、`ui-layout-check.yml` (Playwright) | FR-039 / AC-051、FR-017 | モック画像を正本にしない具体形。fixture が oracle |
+| Issue #24〜#29「画面ルールを抽出して既存ルールと照合」(open) | FR-047 齟齬検出 | 現状は人手 issue。v4 では compiler が discrepancy record として発行する対象 |
+
+不足 (v4 で埋める側): typed record が無く markdown + 正規表現抽出 (スプシ同期も同様)、screen finding が prose、チケット / lease /
+admission が無く PR 単位の人手、依存台帳の暫定 → 確定が手作業。要求分類・依存台帳・プロト検証の 3 機構は移行コストが低く、
+本 project は v4 の最初の適用先候補になる (採否は昇格条件の後、PO 判断)。
+
 ## 3. 設計判断
 
 ### 3.1 正本の置き場 (advisor design、claude-fable-5、2026-09-04)
