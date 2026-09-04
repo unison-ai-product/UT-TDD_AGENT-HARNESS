@@ -230,6 +230,22 @@ evidence tier は 3 段 (`cross_family` > `same_family_separated` > `intra_runti
 | 齟齬の検出 | 「機械が認識していること」と「人間が認識していること」の差は、人間が図 / スプシ側で行った追加・削除・変更を直接反映せず **discrepancy record** (対象 record id、人間側の主張、機械側の値、差分の種類) として diff し、admission で正本へ戻すか finding として owner へ返す。逆に record が変わって図が古くなった状態 (diagram drift) は doctor が fail-close する。齟齬は会話ではなく record で解消する。 |
 | 適用層 | L1 (要求 → 要件のトレース図)、L3 (要件 IR ↔ 画面遷移)、L4 (責務 × 依存)、L5 / L6 (ER・API・状態遷移)、チケット (大 → 中 → 小 → 原子の入れ子とレース状況)。各層の図は同じ生成契約を使い、層ごとに描画器を発明しない。 |
 
+## 下流から上流への還流 (Reverse) のチーム化 (PO 確認 2026-09-04)
+
+現行の Reverse (R0〜R4、`backprop_decision`、supersedes 双方向) は 1 PLAN 対 1 REVERSE の文書対であり、1 人運用では
+成立している。チームでは次の 4 点を record 化しないと破綻する: (1) 多数の原子 / 小チケットから同じ上流契約へ還流が集中し、
+上流 owner (L3 / L4 は 1 人) が bottleneck になる、(2) 同じ契約に対する還流が lane ごとに重複起票される、(3) 還流中の
+契約に依存する下流チケットが動き続けて手戻りが増える、(4) 契約が改訂された後に既発行チケットの再 compile が手作業になる。
+
+| 論点 | 方式 |
+|---|---|
+| backflow record | 還流は文書対ではなく **backflow record** (発生元チケット / finding、対象層と契約 id、差分の種類 = 契約誤り / 欠落 / 曖昧、owner = 対象層の doc owner、影響下チケットの exact set、decision) として発行する。既存の Reverse 対 PLAN はこの record の projection。 |
+| 収束 (dedupe) | 同一契約 id への backflow は中チケット単位で 1 件に集約し、複数 lane からの同種指摘は event として付く (exactly-one owner)。上流 owner は個別対応ではなく **batch で decision** する (人間ゲート = decision record)。 |
+| fence | backflow が open の間、その契約に依存する下流チケット (依存 graph の projection) の merge admission は fence し、lease は保持したまま停止する (FR-037 の incident fence と同じ機構)。 |
+| 再 compile | 上流契約が改訂されたら ticket compiler が影響下チケットを再 compile し、差分 (無効化 / 変更 / 新規) を owner へ返す。手作業でチケットを書き換えない。 |
+| 昇格の抑制 | 1 件の backflow で規則・機構を変えない (原則 7)。同種 backflow の反復は judgement record の calibration へ入り、契約テンプレートや check の改善候補になる。 |
+
+
 
 
 ## 正規情報 flow

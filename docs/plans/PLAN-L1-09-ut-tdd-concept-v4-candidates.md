@@ -265,6 +265,15 @@ discrepancy record として diff し admission で戻す、diagram drift は do
 原因であり、図の鮮度を fail-close にする根拠)。非採用: 手描き図・画像の正本化、層ごとの独自描画器。
 概念本文には §ハーネス標準共有機構: 機械認識の可視化と齟齬検出 として反映した。
 
+### 3.13 下流→上流還流 (Reverse) のチーム化 (PO 確認 2026-09-04)
+
+PO 質問: 「下流から上流のフィードバック機構は現行でも入っているが、チームでも成立するか」。判断: 現行の Reverse
+(R0〜R4 / backprop_decision / supersedes 双方向、1 PLAN 対 1 REVERSE の文書対) は 1 人運用では成立するが、チームでは
+上流 owner の bottleneck・重複起票・還流中の下流継続・改訂後の手作業再発行の 4 点で破綻する。採択: backflow record
+(集約 = 中チケット単位 exactly-one、batch decision、依存下流の fence、compiler による再 compile) を導入し、既存 Reverse 対
+PLAN はその projection とする (BR-027 / FR-048 / AC-060)。新 engine は作らず FR-037 の fence と FR-034 の compiler を再利用。
+概念本文には §下流から上流への還流 (Reverse) のチーム化 として反映した。
+
 ## 4. 工程
 
 
