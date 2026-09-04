@@ -114,10 +114,25 @@ Forward/test-designと同じ候補をこの Reverse の実装検証境界にも�
 
 実装後に次を区別して上位へ戻す。
 
-- `reachable_production`: `package.json`の`build`、`bunAuthority`、`bun.lock`に加え、
-  `scripts/git-hooks/secret-scan-diff.ts` のBun shebang/direct-entry と
-  `scripts/run-vitest-snapshot.ts` の `resolveBunBinary` / `UT_TDD_BUN_BINARY`受渡しを
-  実tree inventoryへ置く。1件でも残れば未完了。
+- `reachable_production`: `package.json`の`build`、`bunAuthority`、`bun.lock`、
+  `src/cli.ts`のBun shebang/emitted command、`src/state-db/index.ts`のBun driver、
+  `src/setup/distribution.ts`の`bun.lock`、`src/setup/templates.ts`の`bun.lockb`、
+  `.claude/hooks/{agent-guard,session-log,work-guard}.ts`のBun direct-entryに加え、
+  `scripts/git-hooks/secret-scan-diff.ts`のBun shebang/direct-entryと
+  `scripts/run-vitest-snapshot.ts`の`resolveBunBinary`/`UT_TDD_BUN_BINARY`受渡しを
+  全tracked treeからinventoryする。正規コマンドは次で固定し、SHAをpatternとして渡す
+  誤りや`scripts/`限定を許さない。
+
+  ```sh
+  git grep -n -I -i -E '(^|[^[:alnum:]_])(bun|bunx)([[:space:]]|:|/|\\|$)|@oven-sh/setup-bun|bun\\.lockb?' 6e9aeb99 -- . ':(exclude).git/**'
+  git ls-tree -r --name-only 6e9aeb99 -- . ':(exclude).git/**' | grep -E '(^|/)(bun\\.lockb?|.*bun.*)$'
+  ```
+
+  `tests/**`、`**/fixtures/**`、`.ut-tdd/**`、`docs/**`、`vendor/**`、`docs/archive/**`は
+  raw inventoryから削除せず`retained_fixture`/`history`として分類し、production reachability
+  からのみ除外する。#470/#471/#472/#500/#484/#515の所有面は
+  `out_of_scope_owned_elsewhere`として記録し、#487が再所有しない。1件でも未分類・未所有・
+  到達判定不能なら未完了/`Indeterminate`とする。
 - `retained_fixture`: Q0 detectorが自分自身を検証するための専用fixture。production inventory、
   allowlist、生成Pack、consumer runtimeから参照できないことを実測する。
 - `unobserved`: OS、権限、provider、history、または対象面が観測不能な状態。解決済み扱いせず

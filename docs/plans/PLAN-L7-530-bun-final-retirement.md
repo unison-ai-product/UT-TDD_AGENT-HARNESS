@@ -128,15 +128,34 @@ package script、runtime wrapper、CI、setup、Pack template、consumer generat
 参照可能であってはならない。fixtureを残したことを「Bunが残っている」と数えるかどうかを
 曖昧にせず、scannerに `fixture` と `reachable_production` の区別を持たせる。
 
-base `6e9aeb99` の実treeを `git grep 6e9aeb99 -- scripts` で再調査した結果、この実装
-sliceが inventory と撤去oracleへ含める reachable surface は次の2系統だけである。
+base `6e9aeb99` の全tracked treeを、scriptsだけに限定せず次のコマンドで再走査する。
+SHAはpatternではなくtree-ishとして指定し、fixture/historyを先に落として検出漏れを
+作らない。binary lockfileは `git grep` が読まないため、path inventoryも同時に出す。
 
-- `scripts/git-hooks/secret-scan-diff.ts` の `#!/usr/bin/env bun` と Bun direct-entry
-  分岐。`pre-push` がNodeで呼ぶ通常経路とは別に、shebangによる直接起動が残る。
-- `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`、`UT_TDD_BUN_BINARY`、及び
-  snapshot runnerからのBun executable受渡し。test/acceptance runnerがBunを探索・実行・
-  download可能なfixture依存として保持している経路を、production到達と混同せず明示的に
-  inventoryし、撤去又は専用fixture隔離を検証する。
+```sh
+git grep -n -I -i -E '(^|[^[:alnum:]_])(bun|bunx)([[:space:]]|:|/|\\|$)|@oven-sh/setup-bun|bun\\.lockb?' 6e9aeb99 -- . ':(exclude).git/**'
+git ls-tree -r --name-only 6e9aeb99 -- . ':(exclude).git/**' | grep -E '(^|/)(bun\\.lockb?|.*bun.*)$'
+```
+
+raw outputは次の固定分類へ必ず割り当てる。`tests/**`、`**/fixtures/**`、`.ut-tdd/**`、
+`docs/**`、`vendor/**`、`docs/archive/**` は検出結果から削除するのではなく、
+`retained_fixture`/`history`として inventory に残し、production到達判定からだけ除外する。
+
+| base `6e9aeb99` の検出面 | 分類と #487 の扱い |
+|---|---|
+| `src/cli.ts:1` の Bun shebang、`src/cli.ts:2237` の emitted Bun command | `reachable_production`。#487所有、Node経路へ撤去。 |
+| `src/state-db/index.ts` の `currentDriver`/`openNative` と `bun:sqlite` | `reachable_production`。#487所有、Node driverへ切替後にBun branchを撤去。 |
+| `src/setup/distribution.ts:162` の `bun.lock`、`src/setup/templates.ts:227` の `bun.lockb` | setup/templateの生成到達面。#487所有、出荷物から撤去または明示的retained fixtureへ隔離。 |
+| `.claude/hooks/{agent-guard,session-log,work-guard}.ts` の Bun shebang/command | source runtimeの直接起動面。#487所有、Node hook entryへ撤去。 |
+| `scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direct-entry | `reachable_production`。#487所有。 |
+| `scripts/run-vitest-snapshot.ts` の `resolveBunBinary`/`UT_TDD_BUN_BINARY` | test/acceptance runnerの到達面。#487所有、専用fixture隔離後にproduction受渡しを撤去。 |
+| `package.json` の `build`/`bunAuthority`、`bun.lock` | #487がtuple成立後に撤去する中核。 |
+| #470/#471/#472が所有するgenerated consumer/readiness/source-CI面、#500 Pack CI policy、#484/#515 Node producer | `out_of_scope_owned_elsewhere`。raw inventoryには残すが、#487は再所有しない。 |
+| `tests/**`/`**/fixtures/**`/`.ut-tdd/**`/`docs/**`/`vendor/**` の検出語 | `retained_fixture`/`history`。専用fixture root以外からproduction到達しないことだけを検証する。 |
+
+上記表の `reachable_production` は「scripts 2系統だけ」の閉じた集合ではない。各pathを
+独立Red oracleへ束ね、1件でも未分類・未所有・到達判定不能なら `Indeterminate` として
+撤去を0にする。
 
 `package.json` の `build`、`bunAuthority`、`bun.lock` はIssue #487が所有するfinal deletionの中核であり、
 4要素tuple成立後に本PLANで物理撤去する。#470（生成成果物）、#471（readiness）、#472（source CI）の

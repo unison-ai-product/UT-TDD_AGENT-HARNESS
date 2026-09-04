@@ -2101,10 +2101,20 @@ source-side artifact admissionを、consumer runtime隔離の代替証拠とし�
 設計契約を保持し、`PLAN-L7-458`はQ0から最終撤去へ渡す順序を参照する。候補IDの記述を
 Green実績と解釈せず、実装PRでRed実測後に正式 `U-*` へ昇格する。
 
-`PLAN-L7-530` の現tree scope は、Issue #487が明示所有する `package.json` の `build`、
-`bunAuthority`、`bun.lock` と、`scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direct entry、
-`scripts/run-vitest-snapshot.ts` の `resolveBunBinary` / `UT_TDD_BUN_BINARY` である。scripts 2系統は
-各々独立Redにし、package/authority/lockのfinal deletionは4要素tuple成立後だけ許可する。
+`PLAN-L7-530` の全tracked-tree inventoryは `git grep -n -I -i -E
+'(^|[^[:alnum:]_])(bun|bunx)([[:space:]]|:|/|\\|$)|@oven-sh/setup-bun|bun\\.lockb?' 6e9aeb99 -- .` と
+`git ls-tree -r --name-only 6e9aeb99 -- .` の組み合わせを正本とする。SHAをpatternに渡す
+誤りや`scripts/`限定を許さない。#487のreachable scopeは `package.json` の `build`、
+`bunAuthority`、`bun.lock`、`src/cli.ts` の Bun shebang/emitted command、
+`src/state-db/index.ts` の `bun:sqlite` driver、`src/setup/distribution.ts` の `bun.lock`、
+`src/setup/templates.ts` の `bun.lockb`、`.claude/hooks/{agent-guard,session-log,work-guard}.ts` の
+Bun direct-entry、`scripts/git-hooks/secret-scan-diff.ts` の Bun shebang/direct entry、
+`scripts/run-vitest-snapshot.ts` の `resolveBunBinary` / `UT_TDD_BUN_BINARY` である。各pathを
+独立Redへ束ね、1件でも未分類なら`Indeterminate`とする。
+`tests/**`、`**/fixtures/**`、`.ut-tdd/**`、`docs/**`、`vendor/**`、`docs/archive/**`は
+raw inventoryに残したまま`retained_fixture`/`history`としてproduction reachabilityからだけ除外する。
+scripts各系統、source runtime、setup/templateは独立Redにし、package/authority/lockのfinal deletionは
+4要素tuple成立後だけ許可する。
 #470/#471/#472の完了済み生成consumer/readiness/source CI、#500のPack CI policy、#450 program
 closure、#473配下のNode producer (#484/#515)は再吸収しない。#473は親programであって
 `build` final deletionの別ownerではない。
