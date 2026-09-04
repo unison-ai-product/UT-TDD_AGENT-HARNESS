@@ -99,7 +99,9 @@ schedule を新たな record 種別として追加する。
 
 統括 owner 1 名 (program owner、人間) が、チケット・PR・CI・review・merge から生成される進捗 projection を見て判断する: 発散区間の開始 / 終了、合流点の owner 指名と takeover 承認、再集計上限超過の差し戻し先、リリース切り分け、WIP 上限とキャパシティ配分、blocked チケットの escalation。進捗を手で更新する層ではなく判断だけを持つ層である。
 
-チケットは **既定で機械が compile** する: L4 基本設計の typed block (責務 × path × 依存の行列) から詳細設計・仕様・実装チケットと合流点の統合チケットを、L2 の screen id / 仮説 id から画面プロト・PoC チケットを、admission receipt から検証チケットを生成する。人は個票ではなく batch 単位で admission し、AI lane への割当は routing policy で自動、人間 owner の割当だけを手で行う。手発行は例外経路で、理由を record に残す。
+チケットは **既定で機械が compile** する: L4 基本設計の typed block (責務 × path × 依存の行列) から詳細設計・仕様・実装チケットと合流点の統合チケットを、L2 の screen id / 仮説 id から画面プロト・PoC チケットを、admission receipt から検証チケットを生成する。人は個票ではなく batch 単位で admission し、AI lane への割当は routing policy で自動、人間 owner の割当だけを手で行う。手発行は例外経路で、理由を record に残す。発行と判断の重みは層で勾配を持つ: L0〜L3 (企画・画面プロト・PoC・要件) は人が発行・割当し機械は候補起草まで、L4 は文書 1 名でチケット化しない、L5 以下は機械 compile が既定。
+
+チケットは **大・中・小の 3 階層** で発行する。大チケット = リリース切り分け単位 (release slice、統括 owner が人手で発行、受入 = release 適格性)。中チケット = 責務 / 依存単位 (L4 行列の責務行から compile、合流点の統合チケットを兼ねる、受入 = 統合 review と子の admission 全件)。小チケット = path 単位の詳細設計・仕様・実装・検証 (compile、AI lane 可、受入 = main への merge admission)。小は必ず中の子、中は必ず大の子で、親を持たないチケットと 2 親を持つチケットは deny する (canonical parent は 1 件)。
 
 queue、assignment (チケット)、owner、branch / worktree、base / HEAD、lease / fence、heartbeat、budget、
 provider capability、PR / review / CI state を管理する。**人間ユーザーも AI lane も同じ assignment model に載る**。
