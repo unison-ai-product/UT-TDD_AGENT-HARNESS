@@ -1,0 +1,321 @@
+---
+plan_id: PLAN-L7-517-review-author-provenance
+title: "PLAN-L7-517 (add-impl): review request の Git authorship facts を記録する"
+kind: add-impl
+layer: L7
+drive: fullstack
+route_signal: feature_addition
+route_mode: add-feature
+status: draft
+created: 2026-08-27
+updated: 2026-09-04
+owner: PO / TL
+github_issue_id: 437
+parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+pair_artifact: docs/test-design/harness/L7-review-author-provenance-test-design.md
+backprop_decision: required
+backprop_decision_reason: "Git object facts の照合と、申告値を authority にしない境界を Forward/Reverse で同じ candidate に固定する。"
+agent_slots:
+  - role: se
+    slot_label: "SE - Git authorship facts の記録と受理時照合を実装する"
+  - role: qa
+    slot_label: "QA - 欠落・衝突・差し替え・申告値の authority 昇格を独立変異で検証する"
+generates:
+  - artifact_path: docs/plans/PLAN-L7-517-review-author-provenance.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/test-design/harness/L7-review-author-provenance-test-design.md
+    artifact_type: test_design
+dependencies:
+  parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+  requires: []
+  blocks: []
+  references:
+    - docs/plans/PLAN-L7-465-cross-review-author-binding.md
+    - src/feedback/review-verdict-custody.ts
+    - src/feedback/review-attestation.ts
+    - src/feedback/review-merge-gate.ts
+    - src/cli/delegation.ts
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/437
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/439
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/421
+    - https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/issues/429
+supersedes:
+  - PLAN-L7-465-cross-review-author-binding
+review_evidence: []
+---
+
+# PLAN-L7-517: review request の Git authorship facts を記録する
+
+## 1. Outcome
+
+authoring provenance は、対象 repository の Git object から機械的に再確認できる事実だけを記録する。
+対象は repository identity、commit OID、parent/tree、author/committer identity・timestamp、Git が検証した
+署名事実（存在時）である。provider、model、worker、dispatch、`authorFamily`、human claim は Git facts では
+ないため、保存しても `unverified_family`/claim として監査に残すだけで authority に昇格させない。facts が
+取得不能・不一致・衝突した対象は typed `unknown` として受理点と merge gate を fail-close する。
+
+## 2. 起点の実測 (再現コマンド付き、基準 ref = `6b5b1d9c6b381edc64f6e2dea158a05c5237d4d0`)
+
+母集団は **`6b5b1d9c` から辿れる非 merge commit の直近 166 件**と定義する (merge commit は
+author 文字列が GitHub 由来で authoring provenance を表さないため除外する)。以下のコマンドは
+基準 ref を固定しており、そのまま再実行して値を突き合わせられる。
+
+### 2.1 git author 名は provider family を示さない — **0% (166/166)**
+
+```bash
+git log --no-merges -n 166 --format="%an" 6b5b1d9c | sort | uniq -c
+#   166 unison-ai-product
+```
+
+author 名は 1 種類しかなく、`codex` / `claude` を区別しない。**author 文字列から family を
+導出できない。**
+
+### 2.2 `Co-Authored-By` trailer は自由記載 claim — **24.1% (40/166)**
+
+```bash
+git log --no-merges -n 166 --format="%H" 6b5b1d9c   | while read h; do git log -1 --format="%B" "$h" | grep -qi "Co-Authored-By:" && echo x; done   | wc -l
+#   40
+```
+
+trailer を持つのは 4 分の 1 未満であり、値は commit 作成者が自由に書ける文字列である。
+**存在も内容も authority にならない。**
+
+> **訂正 (2026-09-01)**: 本節の初版は 24.7% (41/166) と記載していたが、母集団の定義が
+> 書かれておらず再現できなかった。上記の定義と コマンドで再測した値は **40/166 = 24.1%** である。
+> 差は 1 commit であり結論 (「4 分の 1 未満の自由記載 claim」) は変わらないが、再現不能な値を
+> 残さないため実測値へ置き換えた。
+
+### 2.3 commit sha と provider を結ぶ authoring provenance 列は harness.db に存在しない
+
+```bash
+node --experimental-strip-types -e '
+const {DatabaseSync}=require("node:sqlite");
+const db=new DatabaseSync(".ut-tdd/harness.db",{readOnly:true});
+const tables=db.prepare("SELECT name FROM sqlite_master WHERE type=?").all("table");
+for (const t of tables) {
+  const cols=db.prepare(`PRAGMA table_info(${JSON.stringify(t.name)})`).all().map((c)=>c.name);
+  if (cols.some((c)=>/commit|sha|oid|head/i.test(c)) && cols.some((c)=>/provider|family|runtime|model/i.test(c)))
+    console.log(t.name, cols.join(","));
+}
+db.close();'
+#   github_review_lane_receipts  ... subject_head, worker_model, reviewer_model ...
+```
+
+85 table のうち、commit/sha 系の列と provider/family/model 系の列を**同時に持つ**のは
+`github_review_lane_receipts` 1 件のみである。しかもこれは **review lane の receipt** であり、
+`worker_model` / `reviewer_model` は PLAN の `review_evidence` に**自己申告された**値である。
+**authoring provenance ではなく、commit の作成者を機械的に特定する列は存在しない。**
+したがって runtime / model の時刻相関から authorship を推定してはならない。
+
+### 2.4 authoring attestation は存在しない
+
+review attestation (`.ut-tdd/review/receipts/`) は**レビュー行為**の custody であり、
+成果物を誰が書いたかの証明ではない。review attestation を authoring root へ遡及適用しない。
+
+---
+
+従って provider-family、HMAC/MAC、dispatch issuer、worker custody、human actor authentication を trust
+authority として凍結しない。残す層は Git facts と未検証 claim の二層だけである。
+
+## 3. 設計判断
+
+### 3.1 受理時照合
+
+`beginReviewAttempt` と merge gate が同じ repository から Git object を再取得して比較する。生成時の宣言、
+working tree、provider/model、dispatch log、時刻近接から authorship を推定しない。object を再取得できない
+場合は `unknown` とする。
+
+### 3.2 trust boundary — Git facts と Git blob custody
+
+record の canonical fields は `repository_identity`、`commit_oid`、`parent_oids`、`tree_oid`、`author`、
+`committer`、各 timestamp、`signature_verification`（存在時）、schema version である。受理時に同じ object
+から再計算し、全 field 一致した場合だけ `git_facts_verified` とする。canonical serialization は固定 field
+順、UTF-8、明示的な null/array 規則とし、digest 自身を入力に戻さない。
+
+Git blob custody は対象 commit/tree と canonical record payload を Git object API (`git cat-file`/
+`git hash-object` 相当) で再取得・比較することに限定する。blob OID は payload から除外して自己参照を
+防ぎ、working tree、外部 issuer、秘密、実行環境を custody root にしない。
+
+- provider family、model、worker、dispatch、`authorFamily`、writer/issuer/actor は optional observation。
+  値は常に `unverified_family`/claim として保存し、review authority、self-review、merge_ready の根拠にしない。
+- 鍵、secret、HMAC/MAC、capability、dispatch issuer、同一OSユーザーの分離を trust root としない。
+- 同一 repository・commit の Git facts が異なる record は `conflict` として保持し、先勝ちにしない。
+  family claim の不一致だけでは winner を選ばず、どちらも authority ではない。
+
+### 3.2.1 provider/model/family の非権威化
+
+alias table、dispatch 開始宣言、subagent 親継承、commit author 文字列、trailer は Git facts ではない。
+値は `unverified_family` のままとし、unknown/mixed 解消、reviewer 適格性、merge authority に使わない。
+claim mismatch は監査できるが、Git facts が verified になったことを意味しない。
+
+### 3.2.2 provenance state と review authority の切断 (Sol FLAG at a86271b1 / b116ec0e の解消)
+
+§3.2 / §3.2.1 が「claim を authority の根拠にしない」と述べる一方、旧 §3.6.1 が `authorFamily` claim を入力とする
+既存 gate を温存し、b116ec0e の改訂は「verified facts + opposite-family claim → admit」という行を置いたため、
+同じ verified facts でも claim を same → opposite に変えるだけで deny → admit が反転し、未検証 claim が
+authority を広げる入力になっていた (Sol 指摘、receipt `0798e619…`)。Git facts は provider family を含まないので、
+family claim を判定入力に持つ **admit** を provenance 契約の内側に置く限りこの矛盾は消えない。本節は矛盾を
+「解消」するのではなく、**review authority を本 PLAN の契約から切断する**ことで成立させる。
+
+**本 PLAN の出力は typed provenance state のみ**であり、`admit`・non-author 適格・review authority・
+`merge_ready` は本 PLAN の語彙に存在しない:
+
+| state | 条件 | 本 PLAN が課す効果 |
+|---|---|---|
+| `verified` | 同一 repository の Git object 再取得で全 field 一致 (§3.2) | 効果なし (何も付与しない。「facts が verified である」という記録だけが残る) |
+| `unknown` / `unresolved` | 再取得不能、field 不一致、record 欠落 | deny (`unknown_provenance_unresolved`)。close / merge を進めない (§3.3) |
+| `conflict` | 同一 repository・commit に対し Git facts の異なる record が併存 (§3.2) | deny。先勝ちにしない |
+
+- family / provider / runtime / actor の claim は全て observation として保存されるだけで、上表のどの state
+  遷移の入力にもならない。同一 commit に対する record 間の claim 不一致は **conflict observation として記録
+  するのみ**で、deny / 非 deny のいずれの反転入力にもしない (facts に family が無いため「facts と claim の
+  矛盾」は定義できない。旧 mismatch 行は削除)。
+- **本システムに verified non-authorship は現存しない**。Git author 名は 100% 同一 (§2.1)、trailer は自由記載
+  (§2.2)、authoring attestation は無い (§2.4)。したがって「この reviewer はこの成果物を書いていない」を
+  facts から証明する手段は無く、本 PLAN はそれを証明すると主張しない。
+- **merge authority の根拠は exact-HEAD non-author closing-review protocol** (別 runtime による exact-head
+  receipt、CLAUDE.md §Hybrid 多ランタイム commit 協調) に一本化する。provenance state は「unknown / conflict
+  なら進めない」という fail-close の追加条件であって、merge を許可する根拠にはならない。
+- PLAN-L7-465 由来の family-claim gate (`same_family_reviewer_denied`、反対族 routing、consumer admission)
+  は **provenance ではない process-hygiene 制御**であり、所有は PLAN-L7-465 に留まる。**既知の限界**: 入力は
+  unverified claim であり、claim を変えれば通過可否が変わる。本 PLAN はこの制御に依拠せず、その限界を解消
+  したとも主張しない。限界の解消 (authoring record を commit OID に束縛し Git facts から same-runtime を
+  判定する) は admission を変える authentication 類似の変更であり、PO 承認境界の後継 PLAN として保留する
+  (465 側に限界注記と後継ポインタを置く)。
+- `CANDIDATE-U-AUTHPROV-053`〜`056` は上表 3 state と「claim が state 遷移の入力にならない」ことを固定する。
+- 採択記録: gpt-5.6-sol の FLAG (`3d43920f…`) に対し `ut-tdd advisor --decision design` (`claude-fable-5`、
+  2026-09-04) は A (非対称使用: claim は deny 方向のみ) を推奨し採択したが、Sol が同 head b116ec0e を再度
+  FLAG (`0798e619…`: verified + opposite claim → admit 行で claim が authority を広げる)。再相談で D
+  (本節: admit を語彙から除き authority を切断)、E (Git facts 由来の分離へ置換 = 実装 + PO 境界 + bootstrap
+  全 deny 期間)、F (PO へ即エスカレーション) を提示。advisor 推奨は D (E は終着点として正しいが docs-only
+  pair-freeze の範囲外、F は既存契約から一意に導けるため反射的エスカレーション禁止に該当)。採択 D
+  (override なし)。docs-only であることの確認: `grep -rn "L7-517|author-provenance" src` は 0 件
+  (2026-09-04、b116ec0e) であり、本改訂は実挙動を変えない。
+
+### 3.2.3 human backfill の境界
+
+backfill は `actor_kind=human`、申告 identity、`provenance_grade=human_attested` を append-only ledger に
+残すだけである。人間の認証、commit author との非同一性、provider family、review authority を検証したとは
+記録しない。`human_attested` は `verified` へ昇格せず、facts unknown の attempt/merge を許可しない。
+worker/dispatch の actor claim を human の証拠へ置換せず、claim mutation で authority を変えない。
+
+### 3.3 typed unknown と mutation
+
+record 欠落、repository identity 不一致、object 不在、field/signature mismatch、collision、snapshot 差し替え
+は typed `unknown`/`conflict` とする。mint は許しても unknown の attempt/close/merge は許さず、申告
+family、human_attested、旧 schema を fallback にしない。record は append-only、訂正は append + supersede とし、
+cross-repo replay、overwrite/delete、receipt 発行後の snapshot mutation を deny する。
+
+request/receipt/merge は同一 schema version、commit-set、Git facts snapshot、canonical digest に束縛する。
+receipt 後に snapshot が変われば merge gate は typed deny。provider/family/actor claim mutation は authority の
+昇格や deny 回避を生まない。
+
+### 3.4 identity digest と legacy
+
+既存 `reviewIdentityDigest` は旧 schema の入力規則を保存し、旧 digest を再計算・書換えしない。新 schema の
+canonical digest は Git facts snapshot と version を含む。旧 request も facts 照合を免除されず、照合不能なら
+`unknown_provenance_unresolved` の non-terminal/live/merge-blocking とする。旧 `authorFamily` は互換入力でも
+trust root ではない。
+
+### 3.5 contributor facts と双方向性
+
+contributor facts は provider family ではなく、対象 commit 群の Git object に記録された
+author/committer 文字列と timestamp である。これらは object との一致を検証できるが、人物・provider・
+family の認証を意味しない。一部 unknown、facts conflict、複数 claim は多数派・先勝ち・trailer で
+丸めず deny し、`unverified_family` を contributor set に入れない。codex/claude/human claim を追加・
+削除しても Git facts 判定や authority は変わらない。Git author 文字列と reviewer claim の一致・不一致だけで
+self-review も non-author も判定せず、その authority は既存の独立 review admission/gate に留める。
+
+### 3.6 PLAN-L7-465 の supersede 範囲
+
+本 PLAN が supersede するのは `PLAN-L7-465-cross-review-author-binding` (status: confirmed) の
+**§実装スコープ 2「author 導出元の確定」1 規定のみ**である。465 の family 依存規定を広く撤回する
+ものではない。
+
+| 465 の規定 | 本 PLAN による置換 |
+|---|---|
+| §実装スコープ 2「**author 導出元の確定**: 実装では **commit author / `Co-Authored-By` trailer** を一次の author 導出元とし、自己申告のみに依存しない」 | §3.2.1 / §3.5 — commit author 文字列と `Co-Authored-By` trailer は **Git object に記録された事実**であって認証された identity ではない。provider family の導出元にしない |
+
+**撤回の根拠 (2 つ)**:
+
+1. **測定**: 465 起点の実測 (§2 に再掲) で、git author 名が provider family を示す割合は
+   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.1% (40/166) の自由記載
+   claim であり、commit sha と provider を結ぶ harness.db 列は存在しない。
+2. **実装が既にこの規定に従っていない**: `src/feedback/review-attestation.ts` の
+   `resolveReviewAuthorFamily` は `explicit` (`--review-author-family` フラグ) と
+   `currentRuntime` (委譲を実行している runtime) だけを入力とし、**commit author も trailer も
+   参照しない**。同関数の doc は「著者族は provider から独立した事実、すなわち委譲を実行している
+   runtime から取る。判別できない場合は `null` を返し、呼び出し側で fail-close させる (推測しない)」
+   と述べる。465 §実装スコープ 2 は**文書に残ったまま実装されなかった規定**であり、本 PLAN は
+   その乖離を正す。
+
+### 3.6.1 supersede **しない**範囲 (誤って撤回しないための明示)
+
+以下は 465 の記述のまま**有効である**。いずれも `authorFamily` claim に依存する process-hygiene 制御であり、
+§3.2.2 のとおり本 PLAN の provenance 契約の**外**にある (本 PLAN はこれらに依拠せず、これらの限界を
+解消したとも主張しない)。よって §3.2 / §3.2.1 と矛盾しない。
+
+| 465 の規定 | 存続する理由 |
+|---|---|
+| §機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」 | 465 所有の process-hygiene 制御。attacker/defender 分離の PO 原則も撤回されていない。実装 (`review-verdict-custody.ts` / `review-attestation.ts` の `same_family_reviewer_denied`) は `resolveReviewAuthorFamily` 由来の unverified claim を入力とする。その限界は 465 の訂正注記に明記され、本 PLAN は依拠しない |
+| D1 dispatch の反対族 routing (同族 fallback 禁止、未知 family / 反対族 runtime 不在は delegation 0 / receipt 0) | 委譲先の**選択**であり provenance state の入力ではない。465 所有の hygiene |
+| consumer の反対族 provider 起動と `U-RVATT-024` | 同上 |
+| `provider-family-authority.ts` port と `unverified_family` 終端 | 465 §D3c が「commit trailer・自己申告・PR marker を family authority として受理してはならない」と既に freeze しており、**本 PLAN と同じ立場**である。受理側実装は authentication / authorization を変える外部権限設計として **PO の明示承認**を要し、本 PLAN では触れない |
+| exact HEAD 限定、session log 再利用、未応答 SLA、`stale_head` 終端 | family 導出に依存しない |
+
+### 3.6.2 実装との関係
+
+本 PLAN の撤回は**既存 gate の撤去を要求しない**。既存 gate は §3.2.2 により本 PLAN の provenance 契約の
+外にある process-hygiene 制御と位置づけ、本 PLAN の実装 slice はその挙動を変えない。facts unknown の場合は
+既存 gate の結果に関わらず provenance state による deny が加わる (`CANDIDATE-U-AUTHPROV-053`)。`same_family_reviewer_denied` を返す
+`review-verdict-custody.ts` / `review-attestation.ts`、および `review-evidence.ts` の
+`checkCrossAgentModelPair` (PLAN の `review_evidence` に**宣言された** worker/reviewer model を
+検査するもので Git trailer とは無関係) は、いずれも本 PLAN と矛盾せず、そのまま有効である。
+
+本 PLAN が導入するのは authoring provenance の**記録**であって、family gating の廃止ではない
+(`PLAN-L7-518` §3.6 が本 PLAN を「導入する authoring provenance を前提とする」「信頼根が着地する
+まで」と依存宣言しているのと同じ理解である)。
+
+## 4. Fail-close contract
+
+| 境界 | 正常条件 | 変異時の oracle |
+|---|---|---|
+| Git facts | 同一 repository の object 再取得結果が全 field 一致 | 欠落・不一致は `unknown`/typed deny |
+| blob/digest | canonical bytes と OID/digest が一致、digest は非自己参照 | blob mutation、digest mutation、snapshot 差し替えは deny |
+| family/model/actor | claim は `unverified_family`/`human_attested` として保存し、provenance state 遷移の入力にしない | verified/authority に昇格、または claim の変更で state / deny が変わったら Red |
+| collision/replay | repository identity と commit-set snapshot が一致 | conflict、cross-repo replay、overwrite/delete は deny |
+| legacy | 旧 digest は保存、facts 照合は必須 | grandfather、申告 fallback、unknown close は deny |
+
+## 5. Implementation slices (将来の実装 PR)
+
+1. Git object facts schema、canonical serialization、非自己参照 digest、repository/blob 再取得。
+2. append-only record ledger と conflict/supersede、cross-repo replay、overwrite/delete 検出。
+3. `beginReviewAttempt` と merge gate の独立再照合、snapshot/receipt binding、typed unknown。
+4. 旧 schema digest 保存と facts 照合必須化、`unknown_provenance_unresolved` の non-terminal 化。
+5. `unverified_family`/`human_attested` の監査保存と verified 昇格禁止。
+6. `CANDIDATE-U-AUTHPROV-001..056` と `CANDIDATE-P-AUTHPROV-001..003` を同じ oracle で検証する (053..056 は §3.2.2 の state モデルと「claim が state 遷移の入力にならない」ことの中核回帰)。
+
+provider-family authority、HMAC/MAC custody、dispatch issuer、human actor authentication、Node generation/runtime
+verifier、Bun deletion、CI/consumer changes は本 plan の実装 slice に含めない。
+
+## 6. Scope boundary
+
+本 pair-freeze は設計契約と candidate/oracle の整合だけを確定する。実装 Green、Reverse R4、Issue #437 完了、
+過去 receipt の無効化を意味しない。PR #442 の author remediation はこの docs-only rescope 後の別実装 PR で扱う。
+
+## 6.1 Candidate ID inventory
+
+Forward/Reverse/test-design が共有する全 U oracle は次のとおりである:
+
+CANDIDATE-U-AUTHPROV-001 CANDIDATE-U-AUTHPROV-002 CANDIDATE-U-AUTHPROV-003 CANDIDATE-U-AUTHPROV-004 CANDIDATE-U-AUTHPROV-005 CANDIDATE-U-AUTHPROV-006 CANDIDATE-U-AUTHPROV-007 CANDIDATE-U-AUTHPROV-008 CANDIDATE-U-AUTHPROV-009 CANDIDATE-U-AUTHPROV-010 CANDIDATE-U-AUTHPROV-011 CANDIDATE-U-AUTHPROV-012 CANDIDATE-U-AUTHPROV-013 CANDIDATE-U-AUTHPROV-014 CANDIDATE-U-AUTHPROV-015 CANDIDATE-U-AUTHPROV-016 CANDIDATE-U-AUTHPROV-017 CANDIDATE-U-AUTHPROV-018 CANDIDATE-U-AUTHPROV-019 CANDIDATE-U-AUTHPROV-020 CANDIDATE-U-AUTHPROV-021 CANDIDATE-U-AUTHPROV-022 CANDIDATE-U-AUTHPROV-023 CANDIDATE-U-AUTHPROV-024 CANDIDATE-U-AUTHPROV-025 CANDIDATE-U-AUTHPROV-026 CANDIDATE-U-AUTHPROV-027 CANDIDATE-U-AUTHPROV-028 CANDIDATE-U-AUTHPROV-029 CANDIDATE-U-AUTHPROV-030 CANDIDATE-U-AUTHPROV-031 CANDIDATE-U-AUTHPROV-032 CANDIDATE-U-AUTHPROV-033 CANDIDATE-U-AUTHPROV-034 CANDIDATE-U-AUTHPROV-035 CANDIDATE-U-AUTHPROV-036 CANDIDATE-U-AUTHPROV-037 CANDIDATE-U-AUTHPROV-038 CANDIDATE-U-AUTHPROV-039 CANDIDATE-U-AUTHPROV-040 CANDIDATE-U-AUTHPROV-041 CANDIDATE-U-AUTHPROV-042 CANDIDATE-U-AUTHPROV-043 CANDIDATE-U-AUTHPROV-044 CANDIDATE-U-AUTHPROV-045 CANDIDATE-U-AUTHPROV-046 CANDIDATE-U-AUTHPROV-047 CANDIDATE-U-AUTHPROV-048 CANDIDATE-U-AUTHPROV-049 CANDIDATE-U-AUTHPROV-050 CANDIDATE-U-AUTHPROV-051 CANDIDATE-U-AUTHPROV-052 CANDIDATE-U-AUTHPROV-053 CANDIDATE-U-AUTHPROV-054 CANDIDATE-U-AUTHPROV-055 CANDIDATE-U-AUTHPROV-056
+
+実 repo regression は `CANDIDATE-P-AUTHPROV-001`、`CANDIDATE-P-AUTHPROV-002`、
+`CANDIDATE-P-AUTHPROV-003` とする。
+
+## 7. FLAG 3 rescope decision
+
+PR #442 FLAG 3 は MAC/key custody、provider-family authority、human actor authentication、writer/issuer の
+独立性をこの環境で機械確認できないことを示した。本 plan はそれらを trust authority として撤回する。残す
+機械的根拠は同じ repository の Git object/blob を再取得して比較できる authorship facts と canonical digest/snapshot
+だけである。`human_attested` は申告事実の監査記録に留まり、`unverified_family` はどの段階でも authority へ
+昇格しない。

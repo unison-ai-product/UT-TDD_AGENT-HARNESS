@@ -124,9 +124,48 @@ review_evidence:
 
 # PLAN-L7-465 (add-impl): cross-review セッション実在照合の実装
 
-**本 PLAN は `PLAN-L6-94-cross-review-session-attestation` (issue #131) の L7 実装**である
-(L6-94 §6「降下先」が要求する add-impl + Reverse 対)。照合契約そのもの (4 検査 + 不変条件
-4 件) は L6-94 §2 が正本であり、**ここで再定義しない**。
+## 訂正注記 (2026-09-01): §実装スコープ 2 の author 導出元は PLAN-L7-517 が supersede した
+
+`PLAN-L7-517-review-author-provenance` が本 PLAN を `supersedes` に宣言している。**supersede されたのは
+下記 1 規定のみ**であり、本 PLAN の他の family 依存規定は有効である。
+
+### supersede された規定
+
+**§実装スコープ 2「author 導出元の確定」** — 「実装では **commit author / `Co-Authored-By` trailer**
+を一次の author 導出元とし、自己申告のみに依存しない」(本ファイル :159 付近)。
+
+撤回の根拠は 2 つある:
+
+1. **測定**: origin/main 6b5b1d9c 時点で git author 名が provider family を示す割合は
+   **0% (166/166 が `unison-ai-product`)**、`Co-Authored-By` trailer は 24.1% (40/166) の自由記載
+   claim であり、commit sha と provider を結ぶ harness.db 列は存在しない (PLAN-L7-517 §2)。
+2. **この規定は実装されなかった**: `src/feedback/review-attestation.ts` の
+   `resolveReviewAuthorFamily` は `explicit` (`--review-author-family`) と `currentRuntime`
+   (委譲を実行している runtime) だけを入力とし、commit author も trailer も参照しない。
+   本規定は文書に残ったまま実装と乖離していた。
+
+### 既知の限界と後継ポインタ (2026-09-04、PLAN-L7-517 §3.2.2)
+
+本 PLAN の family 依存 gate (`same_family_reviewer` / 反対族 routing / consumer admission) の入力は
+`resolveReviewAuthorFamily` 由来の **unverified claim** であり、claim を変えれば通過可否が変わる。これは
+provenance ではない process-hygiene 制御であって、verified non-authorship を証明しない (PLAN-L7-517 §3.2.2)。
+この限界の解消 (authoring record を commit OID に束縛し Git facts から same-runtime を判定する) は admission
+を変える authentication 類似の変更であり、**PO 承認を要する後継 PLAN として保留**する。PLAN-L7-517 は
+この解消を取り込まない。
+
+### supersede されていない規定 (有効)
+
+- **§機械化する不変条件 1「同一 family の自己承認を verdict として受理しない (`same_family_reviewer`)」**
+  (本ファイル :239 付近)。PLAN-L7-517 §3.5 は「その authority は**既存の独立 review admission / gate
+  に留める**」と述べており、これは温存である。判定に使う `authorFamily` は上記のとおり Git 文字列
+  由来ではないため、supersede された規定の影響を受けない。
+- **D1 dispatch の反対族 routing** (同族 fallback 禁止、未知 family / 反対族 runtime 不在は
+  delegation 0 / receipt 0 で deny)、**consumer の反対族 provider 起動**と `U-RVATT-024`。
+- **§D3c の `provider-family-authority.ts` port と `unverified_family` 終端**。本 PLAN が既に
+  「commit trailer・自己申告・PR marker を family authority として受理してはならない」と freeze
+  しており、PLAN-L7-517 と同じ立場である。受理側実装は authentication / authorization を変える
+  外部権限設計として **PO の明示承認**を要する。
+- **exact HEAD 限定** (§機械化する不変条件 2)、session log の再利用、未応答 SLA、`stale_head` 終端。
 
 ## 重複解消の記録 (2026-07-28)
 
