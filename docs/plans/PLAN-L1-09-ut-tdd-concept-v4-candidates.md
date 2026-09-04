@@ -67,7 +67,7 @@ Operating System、非公開) から、チーム開発に必要な部分だけ�
 
 ```bash
 git show b2772064:docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md | grep -c "^- \[ \]"   # 7 (完遂条件 8 件中 7 件未達)
-git show b2772064:docs/governance/vmodel-upgrade-schedule.md | grep -c "| yellow \| draft"      # 非 green / 非 confirmed 59 行 / 120 行
+git show b2772064:docs/governance/vmodel-upgrade-schedule.md | grep -c "| yellow \| draft"      # 非 green / 非 confirmed 58〜59 行 / 120 行 (grep 実装差: Linux 58、Git Bash 59)
 ```
 
 charter §4 の後続テーマ 8 本と VUP-REQ-01〜10 に、**構造化正本と generated view (A)、複数人間ユーザーの
@@ -87,7 +87,7 @@ L7-436〜439、全 draft・実装 0) が契約の受け皿だが複数人間ユ�
 
 ```bash
 git show b2772064:docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md | grep -n "DB は authored source を直接置換しない"
-git ls-tree -r --name-only b2772064 docs/plans | wc -l   # 951 PLAN (markdown)
+git ls-tree -r --name-only b2772064 docs/plans | wc -l   # 949 PLAN (markdown)
 ```
 
 typed spec IR (U8〜U12) は confirmed だが対象は宣言部のみ。record 類 (verdict / receipt / evidence) は
@@ -113,7 +113,7 @@ compile のみを対象にしている。
 | 案 | 内容 | 評価 |
 |---|---|---|
 | 1 | markdown 正本を維持し typed block を拡張、双方向 projection を追加 | 双方向書き戻しが lossy。ticket を markdown にすると conflict 率は下がらない |
-| 2 | 正本を構造化 JSON/YAML へ全面移行、markdown は view | 951 PLAN の big-bang 移行、人間の diff review 性を損なう。却下 |
+| 2 | 正本を構造化 JSON/YAML へ全面移行、markdown は view | 949 PLAN の big-bang 移行、人間の diff review 性を損なう。却下 |
 | **3 (採択)** | **artifact class 別 hybrid**: narrative は markdown 正本 + typed block、record (チケット / schedule / verdict / receipt / evidence) は 1 record = 1 file の構造化正本、view は generated | conflict が record 単位に局所化、charter §5 第 7 項と整合、既存 spec IR 経路を流用 |
 
 concept 規則: 「正本形式は artifact の主読者で決める。双方向書き戻しは構造化正本に対してのみ admission 経由で
@@ -160,4 +160,4 @@ rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `d
 ## 6. スコープ境界
 
 本 PLAN は候補の materialize と分解のみを行う。runtime 実装、CLI / `.ut-tdd/` state の変更、DB schema 変更、
-951 PLAN の移行、Issue の意味正本化は行わない。
+949 PLAN の移行、Issue の意味正本化は行わない。

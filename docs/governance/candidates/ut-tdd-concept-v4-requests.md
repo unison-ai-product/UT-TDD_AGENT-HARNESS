@@ -60,7 +60,7 @@ lease 付きで配り、独立検証し、同一 HEAD の証拠で閉じる。�
 
 ## 非要求
 
-- 951 PLAN の一括 JSON 化 (record 化は新規種別から段階導入)。
+- 949 PLAN の一括 JSON 化 (record 化は新規種別から段階導入)。
 - Issue / DB を意味正本にすること。
 - 完全自動化 (human authority の AI への移譲)。
 - 参照元構想の全面移植 (repository / CLI の rename、Python 恒久意味コア、多軸分類 registry による routeFiling 置換)。
