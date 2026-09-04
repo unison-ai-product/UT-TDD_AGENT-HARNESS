@@ -24,7 +24,8 @@ const f0c: NodeBanF0cAggregateBinding = {
   run_attempt: 1,
 };
 const node: NodeBanGenerationBinding = {
-  generation_id: "node-q0-generation",
+  lane: "linux",
+  generation_id: "node-linux",
   subject_revision: subjectRevision,
   artifact_digest: artifactDigest,
   receipt_digest: "d".repeat(64),
@@ -56,10 +57,34 @@ const f0cLanes = [
     conclusion: "success" as const,
   },
 ];
-const observedScopes = ["status", "doctor", "test", "hook", "descendant", "download"] as const;
+const completeRuntimeObservations = () => {
+  const observer = new NodeOnlyProcessObserver();
+  for (const [scope, args] of [
+    ["status", ["ut-tdd.mjs", "status", "--json"]],
+    ["doctor", ["ut-tdd.mjs", "doctor", "--profile", "consumer-toolchain"]],
+    ["test", ["ut-tdd.mjs", "plan", "lint"]],
+    ["hook", ["ut-tdd.mjs", "hook", "work-guard"]],
+  ] as const) {
+    observer.inspect(
+      { command: process.execPath, args, options: { shell: false, windowsHide: true } },
+      scope,
+    );
+  }
+  observer.proveNoFallback("descendant", "child-process port records no descendant launch");
+  observer.proveNoFallback("download", "runtime-image acquisition port is disabled");
+  return observer.snapshot();
+};
 const runNodeBanAudit = (
-  input: Omit<Parameters<typeof runNodeBanAuditBase>[0], "f0cLanes" | "observedScopes">,
-) => runNodeBanAuditBase({ ...input, f0cLanes, observedScopes });
+  input: Omit<Parameters<typeof runNodeBanAuditBase>[0], "f0cLanes" | "observedScopes"> &
+    Partial<Pick<Parameters<typeof runNodeBanAuditBase>[0], "f0cLanes" | "observedScopes">>,
+) =>
+  runNodeBanAuditBase({
+    ...input,
+    f0cLanes: input.f0cLanes ?? f0cLanes,
+    observedScopes: input.observedScopes ?? [
+      ...new Set(input.processObservations.map((observation) => observation.scope)),
+    ],
+  });
 
 const cleanWorkflow = `name: clean\non: {pull_request: {types: [opened]}}\npermissions: {}\nconcurrency: clean\njobs: {build: {runs-on: ubuntu-latest, steps: []}}\n`;
 const cleanDocuments = (): NodeBanDocuments => ({
@@ -105,7 +130,7 @@ describe("Q0 Node-only Bun qualification", () => {
         f0c: { ...f0c, ok: false } as never,
         node,
         documents: cleanDocuments(),
-        processObservations: [nodeObservation()],
+        processObservations: completeRuntimeObservations(),
       }),
     ).toThrow("q0-f0c-prerequisite-invalid");
     expect(() =>
@@ -147,7 +172,7 @@ describe("Q0 Node-only Bun qualification", () => {
         documents: cleanDocuments(),
         f0cLanes: [{ ...f0cLanes[0], generation_id: "node-ci-other" }, f0cLanes[1]],
         processObservations: [nodeObservation()],
-        observedScopes,
+        observedScopes: ["status"],
       }),
     ).toThrow("q0-f0c-lane-evidence-generation-mismatch");
     expect(() =>
@@ -159,7 +184,7 @@ describe("Q0 Node-only Bun qualification", () => {
         documents: cleanDocuments(),
         f0cLanes: [{ ...f0cLanes[0], sealed_generation_id: f0c.generation_id }, f0cLanes[1]],
         processObservations: [nodeObservation()],
-        observedScopes,
+        observedScopes: ["status"],
       }),
     ).toThrow("q0-f0c-sealed-generation-conflated");
   });
@@ -232,7 +257,7 @@ describe("Q0 Node-only Bun qualification", () => {
       f0c,
       node,
       documents: cleanDocuments(),
-      processObservations: [nodeObservation()],
+      processObservations: completeRuntimeObservations(),
     });
     expect(result.receipt.qualification).toBe("qualified");
     expect(
@@ -288,7 +313,7 @@ describe("Q0 Node-only Bun qualification", () => {
       documents: cleanDocuments(),
       processObservations: [fallback],
     });
-    expect(attempted.receipt.qualification).toBe("qualified");
+    expect(attempted.receipt.qualification).toBe("non_compliant");
     expect(attempted.receipt.process_observations).toContainEqual(fallback);
 
     const forgedSpawn = runNodeBanAudit({

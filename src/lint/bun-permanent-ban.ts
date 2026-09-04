@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   classifyRuntimeImageProcess,
   missingRuntimeImageScopes,
+  RUNTIME_IMAGE_SCOPES,
   type RuntimeImageProcessObservation,
   type RuntimeImageScope,
 } from "../runtime/runtime-image-observer.ts";
@@ -71,6 +72,8 @@ const nodeBanCoverageSchema = z
   .strict();
 const nodeBanProcessObservationSchema = z
   .object({
+    scope: z.enum(["status", "doctor", "test", "hook", "descendant", "download"]),
+    mode: z.enum(["invocation", "absence"]),
     command: z.string().min(1),
     args: z.array(z.string()),
     shell: z.boolean(),
@@ -87,6 +90,7 @@ const nodeBanAuditReceiptSchema = z
     f0c_generation_id: z.string().min(1),
     f0c_artifact_digest: nodeBanDigestSchema,
     f0c_lane_set_digest: nodeBanDigestSchema,
+    node_lane: z.enum(["linux", "windows"]),
     node_generation_id: z.string().min(1),
     node_artifact_digest: nodeBanDigestSchema,
     f0b_receipt_digest: nodeBanDigestSchema,
@@ -120,6 +124,7 @@ const REVISION = /^[0-9a-f]{40}$/;
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 
 export interface NodeBanGenerationBinding {
+  readonly lane: "linux" | "windows";
   readonly generation_id: string;
   readonly subject_revision: string;
   readonly artifact_digest: string;
@@ -402,6 +407,8 @@ function validateBinding(input: NodeBanAuditInput): void {
   )
     throw new NodeBanAuditError("q0-node-generation-invalid");
   if (input.node.runtime !== "node") throw new NodeBanAuditError("q0-runtime-not-node");
+  if (input.node.lane !== "linux" && input.node.lane !== "windows")
+    throw new NodeBanAuditError("q0-node-lane-invalid");
   for (const digest of [input.f0c.artifact_digest, input.node.artifact_digest]) {
     if (!DIGEST.test(digest)) throw new NodeBanAuditError("q0-artifact-digest-invalid");
   }
@@ -443,13 +450,24 @@ function validateBinding(input: NodeBanAuditInput): void {
     input.f0cLanes.some((lane) => lane.sealed_generation_id === input.f0c.generation_id)
   )
     throw new NodeBanAuditError("q0-f0c-sealed-generation-conflated");
+  const nodeLane = input.f0cLanes.find((lane) => lane.lane === input.node.lane);
+  if (!nodeLane || nodeLane.sealed_generation_id !== input.node.generation_id)
+    throw new NodeBanAuditError("q0-f0b-f0c-generation-mismatch");
   if (!nodeBanProcessObservationSchema.array().safeParse(input.processObservations).success)
     throw new NodeBanAuditError("q0-process-observation-invalid");
+}
+
+function validateObservationCoverage(input: NodeBanAuditInput): void {
+  const observedFromEvidence = new Set(input.processObservations.map((item) => item.scope));
+  const declaredScopes = new Set(input.observedScopes);
   if (
-    missingRuntimeImageScopes(input.observedScopes).length > 0 &&
-    input.observedScopes.length === 0
+    input.observedScopes.length !== declaredScopes.size ||
+    input.observedScopes.some((scope) => !RUNTIME_IMAGE_SCOPES.includes(scope)) ||
+    input.processObservations.length !== observedFromEvidence.size ||
+    observedFromEvidence.size !== declaredScopes.size ||
+    [...observedFromEvidence].some((scope) => !declaredScopes.has(scope))
   )
-    throw new NodeBanAuditError("q0-runtime-observer-invalid");
+    throw new NodeBanAuditError("q0-runtime-observer-scope-mismatch");
 }
 
 function coverage(
@@ -491,6 +509,28 @@ function coverage(
 
 function processFindings(observations: readonly NodeBanProcessObservation[]): NodeBanFinding[] {
   return observations.flatMap((observation) => {
+    if (observation.mode === "absence") {
+      if (observation.scope !== "descendant" && observation.scope !== "download") {
+        return [
+          finding(
+            "process-observer",
+            observation.scope,
+            "invalid-absence-proof",
+            "absence proof is only valid for descendant/download ports",
+          ),
+        ];
+      }
+      return observation.spawned || observation.outcome !== "allowed"
+        ? [
+            finding(
+              "process-observer",
+              observation.scope,
+              "forbidden-process-execution",
+              `absence proof violated; spawned=${observation.spawned}`,
+            ),
+          ]
+        : [];
+    }
     const reason = classifyRuntimeImageProcess(
       observation.command,
       observation.args,
@@ -527,6 +567,7 @@ function makeReceipt(input: NodeBanAuditInput, documents: NodeBanDocuments): Nod
     f0c_generation_id: input.f0c.generation_id,
     f0c_artifact_digest: input.f0c.artifact_digest,
     f0c_lane_set_digest: sha256(stable(input.f0cLanes)),
+    node_lane: input.node.lane,
     node_generation_id: input.node.generation_id,
     node_artifact_digest: input.node.artifact_digest,
     f0b_receipt_digest: `sha256:${input.node.receipt_digest}`,
@@ -561,6 +602,7 @@ function makeReceipt(input: NodeBanAuditInput, documents: NodeBanDocuments): Nod
 
 export function runNodeBanAudit(input: NodeBanAuditInput): NodeBanAuditResult {
   validateBinding(input);
+  validateObservationCoverage(input);
   const documents = input.documents ?? loadNodeBanDocuments(input.repoRoot);
   const receipt = makeReceipt(input, documents);
   return { receipt, findings: receipt.findings };
@@ -591,6 +633,7 @@ export function verifyNodeBanAuditReceipt(
     receipt.f0c_generation_id !== expected.f0c.generation_id ||
     receipt.f0c_artifact_digest !== expected.f0c.artifact_digest ||
     receipt.f0c_lane_set_digest !== sha256(stable(expected.f0cLanes)) ||
+    receipt.node_lane !== expected.node.lane ||
     receipt.node_generation_id !== expected.node.generation_id ||
     receipt.node_artifact_digest !== expected.node.artifact_digest ||
     receipt.f0b_receipt_digest !== `sha256:${expected.node.receipt_digest}`

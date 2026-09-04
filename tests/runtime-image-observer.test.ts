@@ -28,4 +28,21 @@ describe("RuntimeImageScanner boundary", () => {
       missingRuntimeImageScopes(["status", "doctor", "test", "hook", "descendant", "download"]),
     ).toEqual([]);
   });
+
+  it("records invocation and explicit absence proofs as different evidence modes", () => {
+    const observer = new NodeOnlyProcessObserver();
+    const invocation = observer.invoke(
+      { command: process.execPath, args: ["ut-tdd.mjs", "doctor"], options: { shell: false } },
+      () => undefined,
+      "doctor",
+    );
+    const absence = observer.proveNoFallback("download", "download port is disabled");
+    expect(invocation).toMatchObject({ scope: "doctor", mode: "invocation", spawned: true });
+    expect(absence).toMatchObject({
+      scope: "download",
+      mode: "absence",
+      command: "<none>",
+      spawned: false,
+    });
+  });
 });

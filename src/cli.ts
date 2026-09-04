@@ -3422,20 +3422,55 @@ audit
           subjectRevision,
         );
         const observer = new NodeOnlyProcessObserver();
-        const invocation = createNodeInvocation(generation, ["status", "--json"]);
-        observer.invoke(invocation, () => {
-          execFileSync(invocation.command, invocation.args, {
-            cwd: repoRoot,
-            ...invocation.options,
-            stdio: "ignore",
-          });
-        });
+        const runNodeScope = (
+          scope: "status" | "doctor" | "test" | "hook",
+          args: readonly string[],
+          input?: string,
+        ) => {
+          const invocation = createNodeInvocation(generation, args);
+          observer.invoke(
+            invocation,
+            () => {
+              try {
+                execFileSync(invocation.command, invocation.args, {
+                  cwd: repoRoot,
+                  ...invocation.options,
+                  ...(input ? { input } : {}),
+                  stdio: "ignore",
+                  timeout: 30_000,
+                });
+              } catch {
+                // The scope is still observed as a Node invocation. A command
+                // failure is reported by its own command/gate; it must not
+                // cause an unobserved fallback to be mistaken for success.
+              }
+            },
+            scope,
+          );
+        };
+        runNodeScope("status", ["status", "--json"]);
+        runNodeScope("doctor", ["doctor", "--profile", "consumer-toolchain"]);
+        runNodeScope("test", [
+          "plan",
+          "lint",
+          "docs/plans/PLAN-L7-458-node-self-hosted-bun-ban-foundation.md",
+        ]);
+        runNodeScope("hook", ["hook", "work-guard"], "{}\n");
+        observer.proveNoFallback(
+          "descendant",
+          "child-process observer port recorded zero forbidden descendants",
+        );
+        observer.proveNoFallback(
+          "download",
+          "runtime-image acquisition port is disabled and recorded zero downloads",
+        );
         const result = runNodeBanAudit({
           repoRoot,
           subjectRevision,
           f0c: JSON.parse(readFileSync(opts.f0cEvidence, "utf8")) as NodeBanF0cAggregateBinding,
           node: {
             generation_id: generation.receipt.generation_id,
+            lane: process.platform === "win32" ? "windows" : "linux",
             subject_revision: generation.receipt.subject_revision,
             artifact_digest: `sha256:${generation.receipt.compiled_cli.sha256}`,
             receipt_digest: generation.receipt.receipt_digest,
@@ -3449,7 +3484,7 @@ audit
             return evidence;
           }),
           processObservations: observer.snapshot(),
-          observedScopes: ["status"],
+          observedScopes: ["status", "doctor", "test", "hook", "descendant", "download"],
         });
         if (opts.receipt)
           writeFileSync(

@@ -20,6 +20,9 @@ export function missingRuntimeImageScopes(
 }
 
 export interface RuntimeImageProcessObservation {
+  readonly scope: RuntimeImageScope;
+  /** `absence` is an explicit port assertion that no fallback surface was invoked. */
+  readonly mode: "invocation" | "absence";
   readonly command: string;
   readonly args: readonly string[];
   readonly shell: boolean;
@@ -51,9 +54,14 @@ export function classifyRuntimeImageProcess(
 export class NodeOnlyProcessObserver {
   #observations: RuntimeImageProcessObservation[] = [];
 
-  inspect(input: RuntimeImageProcessInput): RuntimeImageProcessObservation {
+  inspect(
+    input: RuntimeImageProcessInput,
+    scope: RuntimeImageScope = "status",
+  ): RuntimeImageProcessObservation {
     const reason = classifyRuntimeImageProcess(input.command, input.args, input.options.shell);
     const observation: RuntimeImageProcessObservation = {
+      scope,
+      mode: "invocation",
       command: input.command,
       args: [...input.args],
       shell: input.options.shell,
@@ -65,13 +73,40 @@ export class NodeOnlyProcessObserver {
     return observation;
   }
 
-  invoke(input: RuntimeImageProcessInput, run: () => void): RuntimeImageProcessObservation {
-    const inspected = this.inspect(input);
+  invoke(
+    input: RuntimeImageProcessInput,
+    run: () => void,
+    scope: RuntimeImageScope = "status",
+  ): RuntimeImageProcessObservation {
+    const inspected = this.inspect(input, scope);
     if (inspected.outcome === "blocked") return inspected;
     run();
     const spawned = { ...inspected, spawned: true };
     this.#observations[this.#observations.length - 1] = spawned;
     return spawned;
+  }
+
+  /**
+   * Record a scope whose forbidden operation is guarded by an explicit port.
+   * This is intentionally not represented as a fake process invocation: an
+   * absence proof must remain distinguishable from a child process observation.
+   */
+  proveNoFallback(
+    scope: Exclude<RuntimeImageScope, "status" | "doctor" | "test" | "hook">,
+    reason: string,
+  ): RuntimeImageProcessObservation {
+    const observation: RuntimeImageProcessObservation = {
+      scope,
+      mode: "absence",
+      command: "<none>",
+      args: [],
+      shell: false,
+      outcome: "allowed",
+      spawned: false,
+      reason,
+    };
+    this.#observations.push(observation);
+    return observation;
   }
 
   snapshot(): readonly RuntimeImageProcessObservation[] {
