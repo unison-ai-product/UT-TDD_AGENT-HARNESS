@@ -209,7 +209,15 @@ PO 指示: 「途中から複数人になるなど柔軟に」「全体の進捗
 L4 基本設計 typed block に責務 × path × 依存の行列を持たせること (A. JSON 化の実利、行列が無い文書からは推測生成
 しない)。BR-017、AC-044〜046 へ降下。
 
-### 3.8 候補文書の置き場
+### 3.8 チケットの 3 階層と発行の層別勾配 (PO 指示 2026-09-04)
+
+PO 指示: 「要件定義まではチケット発行で割当でよいが設計以下は手では厳しい。上流は人間判断を多めに、下は自動発行」
+「大・中・小チケットに分けたほうがよい」。採択: 発行の勾配 (L0〜L3 = 人が発行・割当、L4 = 文書 1 名、L5 以下 = compiler
+既定) を FR-035 に固定し、3 階層 (大 = リリース切り分け / 中 = 責務・依存 = 統合チケット兼務 / 小 = path 単位) を
+FR-036 として exactly-one parent・lease は小のみ・受入は階層別 (merge admission / 統合 review / release 適格性) で定義。
+AC-047 へ降下。github-issue-hierarchy.md の sub-issue 規約は projection 側の表現として継承する。
+
+### 3.9 候補文書の置き場
 
 参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
