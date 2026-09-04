@@ -49,8 +49,6 @@ dependencies:
     - docs/governance/vmodel-upgrade-schedule.md
     - docs/plans/PLAN-L4-30-execution-ledger-github-architecture.md
     - docs/governance/github-issue-hierarchy.md
-    - https://github.com/RetryYN/HELIX-HARNESS/issues/1496
-    - https://github.com/RetryYN/HELIX-HARNESS/blob/main/docs/governance/candidates/helix-concept-v4.0.md
 ---
 
 # PLAN-L1-09: 構想書 v4.0 候補 (チーム開発版 Verified Change Harness) の L1/L3/L10 分解
@@ -60,8 +58,8 @@ dependencies:
 PO が 2026-09-04 に提示した 2 大要求 (A: JSON 化による AI 開発ライク and 人間対応、B: チーム開発における
 コンフリクト対策・進捗マネジメント機構、枠組み = human-on-the-loop) を、**現行 authority を追い越さない候補**
 として L1 要求 / L3 要件 / L10 受入へ分解し、PO 承認後に concept v3.1 → v4.0 昇格と L1 delta (VUP-REQ-11〜) を
-起こすための入力を作る。個人開発ハーネス HELIX-HARNESS の Concept v4.0 候補 (Issue #1496、Verified Change
-Operating System) から、チーム開発に必要な部分だけを翻案する。
+起こすための入力を作る。PO が提示した個人開発ハーネスの構想 v4.0 候補 (Verified Change
+Operating System、非公開) から、チーム開発に必要な部分だけを翻案する。
 
 ## 2. 起点の実測 (基準 ref = `b27720644a7589dc568c76cad7eb5e068654c824`)
 
@@ -110,17 +108,17 @@ concept 規則: 「正本形式は artifact の主読者で決める。双方向
 残リスク: PLAN frontmatter の record 化は専用 Reverse 対で段階移行 (UTV4-FR-007)、generated view の hash gate
 (UTV4-FR-008)、U23 との重複は改訂で吸収し新規起票しない (UTV4-FR-004)。
 
-### 3.2 HELIX v4.0 からの採否
+### 3.2 参照元構想 v4.0 からの採否
 
 採る: Sovereignty / Change Contract Compiler / Control Plane / Assurance Kernel / Evidence Ledger / Adaptation の
 6 Plane、8 原則のうち 7 (Composable Release は既存 Pack 配布契約へ写像)、exactly-one owner、lease / fence、
 startup packet、evidence の段階 (claimed → current)、GitHub を projection とする一方向同期。
-採らない: Python 恒久意味コア (ADR-010、ADR-001 と衝突)、多軸分類 registry による routeFiling 置換
+採らない: Python 恒久意味コア (ADR-001 と衝突)、多軸分類 registry による routeFiling 置換
 (別 version-up)、repository / CLI の rename。
 
 ### 3.3 候補文書の置き場
 
-HELIX と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
+参照元構想と同じく `docs/governance/candidates/` に置き、承認前は CLAUDE.md 読込順・`docs/governance/README.md`・
 rule-drift marker・doctor gate から参照しない。承認時に v4.0 を `docs/governance/` へ昇格、v3.1 を `docs/archive/`
 へ降格し、参照を一方向更新する (前例: v3.0 → v3.1)。
 

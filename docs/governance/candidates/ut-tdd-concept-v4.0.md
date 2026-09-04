@@ -3,7 +3,7 @@ document_id: UT-TDD-CONCEPT-V4
 concept_version: "4.0"
 status: draft_candidate
 supersedes_after_approval: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-source_concept: https://github.com/RetryYN/HELIX-HARNESS/blob/main/docs/governance/candidates/helix-concept-v4.0.md
+source_concept: 参照元の個人開発ハーネス構想 v4.0 候補 (非公開、PO 提示 2026-09-04)
 evidence_baseline: b27720644a7589dc568c76cad7eb5e068654c824
 plan: docs/plans/PLAN-L1-09-ut-tdd-concept-v4-candidates.md
 ---
@@ -38,11 +38,10 @@ v3.1 は V-model L0-L14、4 artifact + 3 段階 freeze、9-mode、配線、5 役
    どの層で AI が自律し、どこで人間が介入するか」が無いため、PO への反射的エスカレーションと AI の越権が
    両方起きる (CLAUDE.md 2026-08-05 ルールで運用補正中)。
 
-本書は個人開発ハーネス HELIX-HARNESS の Concept v4.0 候補 (Verified Change Operating System、Issue RetryYN/HELIX-HARNESS#1496)
-から、**チーム開発に必要な部分だけ**を翻案する。HELIX の 8 Plane のうち、Sovereignty / Change Contract Compiler /
+本書は PO が提示した個人開発ハーネスの構想 v4.0 候補 (Verified Change Operating System) から、**チーム開発に必要な部分だけ**を翻案する。参照元の 8 Plane のうち、Sovereignty / Change Contract Compiler /
 Control Plane / Assurance Kernel / Evidence Ledger / Adaptation を採り、Execution Plane の provider 非依存 lane と
-Release / Lifecycle Plane は既存の tier-router / Pack 配布 (PLAN-L6-63 系) へ写像するに留める。HELIX の
-Python 恒久意味コア (ADR-010) は採らない (ADR-001: TypeScript/Node 一本)。
+Release / Lifecycle Plane は既存の tier-router / Pack 配布 (PLAN-L6-63 系) へ写像するに留める。参照元の
+Python 恒久意味コアは採らない (ADR-001: TypeScript/Node 一本)。
 
 ## 北極星
 
