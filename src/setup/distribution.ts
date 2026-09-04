@@ -335,7 +335,14 @@ export function buildCleanDistributionPlan(input: {
     (path, index, required) => required.indexOf(path) === index && !artifactSet.has(path),
   );
   const includedSourceSet = new Set(includedSourcePaths);
-  const excludedPaths = normalized.filter((path) => !includedSourceSet.has(path));
+  // A path can pass the source allowlist and still be removed by the output deny fence
+  // (for example the tracked `src/web/` carve-out). Report that source as excluded too;
+  // otherwise callers see neither an artifact nor an exclusion for a denied input.
+  const excludedPaths = normalized.filter(
+    (path) =>
+      !includedSourceSet.has(path) ||
+      isDeniedCleanPath(cleanDistributionArtifactPath(path, inventory)),
+  );
   const authoringInventory = {
     ok: inventoryResult.ok,
     missingFamilies: [...inventoryResult.missingFamilies],
