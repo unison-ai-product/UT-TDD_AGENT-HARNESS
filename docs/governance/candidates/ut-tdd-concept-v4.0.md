@@ -184,7 +184,7 @@ review、TypeScript/Node 一本 (ADR-001)、Pack 配布 (PLAN-L6-63 系) は Ker
 
 prompt 集、persona 集、multi-agent chat room、全会話保存、Issue を意味正本にする project manager、DB を意味正本に
 する workflow engine、latest model 自動追従器ではない。完全自動を理由に human authority を AI へ移さない。
-951 PLAN の一括 JSON 化は行わない (record 化は新規種別から段階導入)。
+949 PLAN の一括 JSON 化は行わない (record 化は新規種別から段階導入)。
 
 ## 昇格条件
 
