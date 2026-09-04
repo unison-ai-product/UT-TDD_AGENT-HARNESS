@@ -26,6 +26,15 @@ import {
 
 const fixtures: string[] = [];
 const win = process.platform === "win32";
+const expectedCandidateIds = new Set([
+  ...Array.from(
+    { length: 39 },
+    (_, index) => `CANDIDATE-U-PROJID-${String(index + 1).padStart(3, "0")}`,
+  ),
+  "CANDIDATE-P-PROJID-001",
+  "CANDIDATE-P-PROJID-002",
+  "CANDIDATE-P-PROJID-003",
+]);
 
 afterEach(() => {
   for (const root of fixtures.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -58,7 +67,16 @@ function trackedFixture(
 }
 
 describe("project identity bootstrap", () => {
-  it("CANDIDATE-U-PROJID-001: creates deterministic canonical bytes without committing", () => {
+  it("candidate inventory is exact and duplicate-free", () => {
+    const source = readFileSync(new URL(import.meta.url), "utf8");
+    const ids = [...source.matchAll(/it\("((?:CANDIDATE-U|CANDIDATE-P)-PROJID-\d{3}):/g)].map(
+      (match) => match[1],
+    );
+    expect(ids).toHaveLength(expectedCandidateIds.size);
+    expect(new Set(ids)).toEqual(expectedCandidateIds);
+  });
+
+  it("bootstrap creates deterministic canonical bytes without committing", () => {
     const root = fixture();
     const result = bootstrapProjectIdentity(root);
     expect(result).toMatchObject({
@@ -198,23 +216,23 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-003: normalizes SSH origin to owner/repository", () => {
+  it("normalizes SSH origin to owner/repository", () => {
     expect(repositoryIdentityFromOrigin(fixture("git@github.com:owner/repository.git"))).toBe(
       "owner/repository",
     );
   });
 
-  it("CANDIDATE-U-PROJID-004: normalizes HTTPS origin to owner/repository", () => {
+  it("normalizes HTTPS origin to owner/repository", () => {
     expect(repositoryIdentityFromOrigin(fixture("https://github.com/owner/repository.git"))).toBe(
       "owner/repository",
     );
   });
 
-  it("CANDIDATE-U-PROJID-005: rejects malformed origin", () => {
+  it("rejects malformed origin", () => {
     expect(repositoryIdentityFromOrigin(fixture("https://github.com/owner/a/b.git"))).toBeNull();
   });
 
-  it("CANDIDATE-U-PROJID-006: missing origin is a typed bootstrap denial", () => {
+  it("missing origin is a typed bootstrap denial", () => {
     const root = fixture("");
     expect(bootstrapProjectIdentity(root)).toMatchObject({
       ok: false,
@@ -223,7 +241,7 @@ describe("project identity bootstrap", () => {
     expect(() => readFileSync(join(root, "ut-tdd.project.json"))).toThrow();
   });
 
-  it("CANDIDATE-U-PROJID-007: preserves stale untracked identity", () => {
+  it("CANDIDATE-U-PROJID-028: preserves stale untracked identity", () => {
     const root = fixture();
     const path = join(root, "ut-tdd.project.json");
     writeFileSync(
@@ -237,7 +255,7 @@ describe("project identity bootstrap", () => {
     expect(readFileSync(path, "utf8")).toContain("other/repo");
   });
 
-  it("CANDIDATE-U-PROJID-008: rejects an identity path symlink", () => {
+  it("rejects an identity path symlink", () => {
     if (win) return;
     const root = fixture();
     const target = join(root, "elsewhere.json");
@@ -249,7 +267,7 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-009: does not implicitly add or commit", () => {
+  it("does not implicitly add or commit", () => {
     const root = fixture();
     expect(bootstrapProjectIdentity(root)).toMatchObject({ ok: true, created: true });
     expect(execFileSync("git", ["diff", "--cached", "--name-only"], { cwd: root }).toString()).toBe(
@@ -260,7 +278,7 @@ describe("project identity bootstrap", () => {
     );
   });
 
-  it("CANDIDATE-U-PROJID-010: canonical output is LF UTF-8 without BOM", () => {
+  it("CANDIDATE-U-PROJID-024: canonical output is LF UTF-8 without BOM", () => {
     const bytes = Buffer.from(canonicalProjectIdentityBytes("acme/widget"));
     expect(bytes[0]).not.toBe(0xef);
     expect(bytes.includes(0x0d)).toBe(false);
@@ -407,7 +425,7 @@ describe("project identity bootstrap", () => {
     );
   });
 
-  it("CANDIDATE-U-PROJID-024: committed CRLF bytes are rejected as noncanonical", () => {
+  it("committed CRLF bytes are rejected as noncanonical", () => {
     const root = fixture();
     const crlf = Buffer.from(
       '{\r\n  "schema_version": "ut-tdd.project/v1",\r\n  "repository_identity": "acme/widget"\r\n}\r\n',
@@ -419,7 +437,7 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-025: committed alternate key order is rejected as noncanonical", () => {
+  it("committed alternate key order is rejected as noncanonical", () => {
     const root = fixture();
     const reordered = Buffer.from(
       '{\n  "repository_identity": "acme/widget",\n  "schema_version": "ut-tdd.project/v1"\n}\n',
@@ -431,7 +449,7 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-026: invalid identity grammar is denied", () => {
+  it("invalid identity grammar is denied", () => {
     const root = fixture();
     commitIdentity(root, canonicalProjectIdentityBytes("not valid/repository"));
     expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
@@ -448,7 +466,7 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-028: deleting a tracked file is typed worktree drift", () => {
+  it("deleting a tracked file is typed worktree drift", () => {
     const root = trackedFixture();
     unlinkSync(join(root, "ut-tdd.project.json"));
     expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
@@ -457,12 +475,11 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-029: a linked repository root is rejected", () => {
-    if (win) return;
+  it("CANDIDATE-U-PROJID-029: a junction or reparse-point repository root is rejected", () => {
     const root = trackedFixture();
     const link = `${root}-root-link`;
     fixtures.push(link);
-    symlinkSync(root, link, "dir");
+    symlinkSync(root, link, win ? "junction" : "dir");
     expect(loadProjectIdentityFromHead({ repoRoot: link })).toMatchObject({
       ok: false,
       error: { ruleId: "identity_worktree_drift" },
@@ -565,7 +582,7 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-P001: setup and loader share the canonical identity oracle", () => {
+  it("CANDIDATE-P-PROJID-001: setup and loader share the canonical identity oracle", () => {
     const root = fixture();
     expect(bootstrapProjectIdentity(root)).toMatchObject({
       ok: true,
@@ -578,7 +595,7 @@ describe("project identity bootstrap", () => {
     });
   });
 
-  it("CANDIDATE-U-PROJID-P002: explicit commit is the only authority transition", () => {
+  it("CANDIDATE-P-PROJID-002: explicit commit is the only authority transition", () => {
     const root = fixture();
     expect(bootstrapProjectIdentity(root)).toMatchObject({ ok: true, commitRequired: true });
     expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({
@@ -589,7 +606,7 @@ describe("project identity bootstrap", () => {
     expect(loadProjectIdentityFromHead({ repoRoot: root })).toMatchObject({ ok: true });
   });
 
-  it("CANDIDATE-U-PROJID-P003: canonical identity remains stable after path relocation", () => {
+  it("CANDIDATE-P-PROJID-003: canonical identity remains stable after path relocation", () => {
     const root = trackedFixture();
     const moved = `${root}-relocated`;
     renameSync(root, moved);
