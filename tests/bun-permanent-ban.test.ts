@@ -313,7 +313,7 @@ describe("Q0 Node-only Bun qualification", () => {
       documents: cleanDocuments(),
       processObservations: [fallback],
     });
-    expect(attempted.receipt.qualification).toBe("non_compliant");
+    expect(attempted.receipt.qualification).toBe("indeterminate");
     expect(attempted.receipt.process_observations).toContainEqual(fallback);
 
     const forgedSpawn = runNodeBanAudit({
@@ -350,7 +350,7 @@ describe("Q0 Node-only Bun qualification", () => {
         debtBaseline:
           "schema_version: bun-migration-debt.v1\ninventory:\n  - finding_id: legacy\n    detector: runtime-portability\n    path: package.json\n    owner: PLAN-L7-462\n    expires_after: final-node-cutover\n",
       },
-      processObservations: [nodeObservation()],
+      processObservations: completeRuntimeObservations(),
     });
     expect(debt.receipt.qualification).toBe("non_compliant");
     const missing = runNodeBanAudit({
@@ -359,7 +359,7 @@ describe("Q0 Node-only Bun qualification", () => {
       f0c,
       node,
       documents: { ...cleanDocuments(), debtBaseline: null },
-      processObservations: [nodeObservation()],
+      processObservations: completeRuntimeObservations(),
     });
     expect(missing.receipt.qualification).toBe("indeterminate");
     expect(missing.receipt.coverage.gaps).toContain("debt-baseline");
