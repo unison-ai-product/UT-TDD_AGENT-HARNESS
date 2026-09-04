@@ -36,7 +36,7 @@ describe("analyzeLintWiring (pure)", () => {
     // Deferred pure policies are classified separately from unreachable dead rules.
     const r = analyzeLintWiring(input(["alpha", "tool-adapter"], ["alpha"]));
     expect(r.ok).toBe(true);
-    expect(r.deferred).toEqual(["node-generation-ci-policy", "tool-adapter"]);
+    expect(r.deferred).toEqual(["tool-adapter"]);
     expect(r.unwired).toEqual([]);
     expect(lintWiringMessages(r)[0]).toContain("tool-adapter");
   });
