@@ -25,6 +25,10 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-project-identity-bootstrap-test-design.md
     artifact_type: test_design
+  - artifact_path: src/setup/project-identity-bootstrap.ts
+    artifact_type: source_code
+  - artifact_path: tests/setup-project-identity-bootstrap.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
   requires: []
