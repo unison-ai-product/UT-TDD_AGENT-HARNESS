@@ -76,8 +76,11 @@ authority、6 payload digest、history genesis/prior、lexical/realpath containm
 これは実bytes fixtureのconsumer-local producer laneを含むが、L6-93の実行可能receipt producerを
 consumer bundleへ接続する実装検証、Windows境界、history prefix/replay、rollback、external
 read/open/stat counter、hooks、closing review、Reverse R1〜R4は未完了である。過去に記録した
-producer欠落によるHard blockはPR #507のmain統合後に解消済みであり、現PRでは同producerの
-receipt-backed接続を検証対象とする。全候補Greenや完了条件1はこのbaselineから主張しない。
+producer欠落によるHard blockはPR #507のmain統合後に解消済みである。ただし現PRの実装は
+`NodeBootstrapReceipt`をopaqueなdigest束縛bytesとして扱い(fixtureは固定bytes
+`Buffer.from("bootstrap")`)、receiptのparseやgeneration/revision identity照合、L6-93 producer
+実生成bytesの供給は行っていない。同producerのreceipt-backed接続は**未実測**として残し、後続の
+実装PR/Reverseで測定する。全候補Greenや完了条件1・開始条件5はこのbaselineから主張しない。
 
 実装testのlabelsはdocs-only freezeとのalignmentを保つため、`CANDIDATE-U-PACKNODE-*`/
 `CANDIDATE-P-PACKNODE-*`を使用する。各テストは対応候補の一部軸だけを測定し、候補全mutation

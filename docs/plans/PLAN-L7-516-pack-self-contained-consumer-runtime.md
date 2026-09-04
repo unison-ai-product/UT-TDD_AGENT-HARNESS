@@ -429,9 +429,13 @@ external bundle pointer、valid sealed runtime without Bunの各one-axis oracle�
 Linux/Windows/aggregateも3/3 Greenだった。これは実bytesから起動するconsumer-local
 filesystem producer laneを含むが、L6-93所有の実行可能NodeBootstrapReceipt producerではない。
 
-完了条件1および実producer gateは、PR #507のmain統合により開始可能になった。現在の実装PRでは
-L6-93 producerが生成した実bytes `NodeBootstrapReceipt`をconsumer bundleへ供給し、同一
-generation/revisionのidentityを検証する。#420でproducer自体を新設・変更しない。Windows
-junction/reparse・8.3 alias・permission、
-history prefix/replay、attested rollback、external read/open/stat counter、hooks、aggregate CI、
+完了条件1および実producer gateは、PR #507のmain統合により開始可能になった。ただし現在の実装PRでは
+`NodeBootstrapReceipt`は**opaqueなdigest束縛bytes**として扱うにとどまる: consumer bundleは
+receipt bytesのdigestをmanifestへ束縛する(`src/setup/consumer-node-runtime.ts` のreceipt digest化)
+だけで、receiptのparse、generation/revision identityの照合、L6-93 producerが実生成した
+bytesの供給は行っておらず、テストfixtureも固定bytes(`tests/consumer-node-runtime.test.ts` の
+`Buffer.from("bootstrap")`)である。したがって**L6-93 receipt-backed producer入力の接続検証は
+未実測**であり(§10・PLAN-REVERSE-516 R0と同じ扱い)、完了条件1および開始条件5のcoverageは
+本PRから主張しない。#420でproducer自体を新設・変更しない。Windows junction/reparse・8.3 alias・
+permission、history prefix/replay、attested rollback、external read/open/stat counter、hooks、
 非著者closing review、Reverse R1〜R4も未実測であり、全15 oracle Greenは主張しない。
